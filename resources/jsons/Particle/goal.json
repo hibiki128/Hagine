@@ -1,0 +1,97 @@
+{
+    "allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "alphaMax": 0.75,
+    "alphaMin": 0.5,
+    "count": 1,
+    "emitFrequency": 0.3499999940395355,
+    "emitterRotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.0
+    },
+    "emitterTranslation": {
+        "x": -1.100000023841858,
+        "y": 9.0,
+        "z": 0.0
+    },
+    "endAcce": {
+        "x": 0.0,
+        "y": 0.05999999865889549,
+        "z": 0.0
+    },
+    "endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fileName": "debug/plane.obj",
+    "isAcceMultiply": false,
+    "isActive": false,
+    "isAllRamdomScale": false,
+    "isBillBoard": true,
+    "isFaceDirection": false,
+    "isRandomColor": false,
+    "isRandomRotate": false,
+    "isRandomScale": true,
+    "isSinMove": false,
+    "isVisible": false,
+    "lifeTimeMax": 2.0,
+    "lifeTimeMin": 1.5,
+    "rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "scaleMax": 1.2000000476837158,
+    "scaleMin": 0.6000000238418579,
+    "startAcce": {
+        "x": 0.0,
+        "y": 0.03999999910593033,
+        "z": 0.0
+    },
+    "startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "texturePath": "particle/circle.png",
+    "velocityMax": {
+        "x": 2.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "velocityMin": {
+        "x": -2.0,
+        "y": 0.0,
+        "z": 0.0
+    }
+}

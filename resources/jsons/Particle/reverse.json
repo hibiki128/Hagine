@@ -1,0 +1,97 @@
+{
+    "allScaleMax": {
+        "x": 0.20000000298023224,
+        "y": 1.0,
+        "z": 0.20000000298023224
+    },
+    "allScaleMin": {
+        "x": 0.05000000074505806,
+        "y": 0.20000000298023224,
+        "z": 0.0
+    },
+    "alphaMax": 1.0,
+    "alphaMin": 0.05000000074505806,
+    "count": 50,
+    "emitFrequency": 0.5,
+    "emitterRotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterTranslation": {
+        "x": -14.800000190734863,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "endAcce": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+    },
+    "endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fileName": "debug/sphere.obj",
+    "isAcceMultiply": true,
+    "isActive": false,
+    "isAllRamdomScale": true,
+    "isBillBoard": false,
+    "isFaceDirection": true,
+    "isRandomColor": false,
+    "isRandomRotate": false,
+    "isRandomScale": false,
+    "isSinMove": false,
+    "isVisible": false,
+    "lifeTimeMax": 1.2000000476837158,
+    "lifeTimeMin": 0.8999999761581421,
+    "rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "scaleMax": 1.0,
+    "scaleMin": 1.0,
+    "startAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "texturePath": "particle/blackBlock1x1.png",
+    "velocityMax": {
+        "x": 20.0,
+        "y": 20.0,
+        "z": 20.0
+    },
+    "velocityMin": {
+        "x": -20.0,
+        "y": -20.0,
+        "z": -20.0
+    }
+}
