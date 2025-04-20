@@ -1,13 +1,5 @@
 #include "DemoScene.h"
-#include "ImGuiManager.h"
 #include "SceneManager.h"
-#include "SrvManager.h"
-
-#ifdef _DEBUG
-#include <imgui.h>
-#endif // _DEBUG
-#include "line/DrawLine3D.h"
-#include <LightGroup.h>
 
 void DemoScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -28,12 +20,6 @@ void DemoScene::Finalize() {
 }
 
 void DemoScene::Update() {
-
-#ifdef _DEBUG
-    // デバッグ
-    Debug();
-#endif // _DEBUG
-
     // カメラ更新
     CameraUpdate();
 
@@ -52,7 +38,7 @@ void DemoScene::Draw() {
 
     objCommon_->DrawCommonSetting();
     //-----3DObjectの描画開始-----
- 
+
     //--------------------------
 
     /// Particleの描画準備
@@ -91,11 +77,14 @@ void DemoScene::DrawForOffScreen() {
     /// -------描画処理終了-------
 }
 
-void DemoScene::Debug() {
-    ImGui::Begin("DemoScene:Debug");
+void DemoScene::AddSceneSetting() {
     debugCamera_->imgui();
-    LightGroup::GetInstance()->imgui();
-    ImGui::End();
+}
+
+void DemoScene::AddObjectSetting() {
+}
+
+void DemoScene::AddParticleSetting() {
     ptEditor_->EditorWindow();
     ptEditor_->DebugAll();
 }

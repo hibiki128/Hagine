@@ -1,7 +1,7 @@
 #include "BaseObject.h"
 
 void BaseObject::Init(const std::string className) {
-    className_ = className;
+    objectName_ = className;
     /// ワールドトランスフォームの初期化
     transform_.Initialize();
     // カラーのセット
@@ -64,24 +64,23 @@ void BaseObject::CreateModel(const std::string modelname) {
 }
 
 void BaseObject::CreateCollider() {
-    Collider::Initialize(className_);
+    Collider::Initialize(objectName_);
     isCollider = true;
 }
 
 void BaseObject::DebugImGui() {
-    ImGui::Begin(className_.c_str());
-    if (ImGui::BeginTabBar(className_.c_str())) {
+
+    if (ImGui::BeginTabBar(objectName_.c_str())) {
         DebugTransform();
         if (isCollider) {
             DebugCollider();
         }
         ImGui::EndTabBar();
     }
-    ImGui::End();
 }
 
 void BaseObject::DebugTransform() {
-    if (ImGui::BeginTabItem("トランスフォーム")) {
+    if (ImGui::BeginTabItem((objectName_ + "トランスフォーム").c_str())) {
         ImGui::DragFloat3("位置", &transform_.translation_.x, 0.1f);
         float rotationDegrees[3] = {
             radiansToDegrees(transform_.rotation_.x),
@@ -102,13 +101,13 @@ void BaseObject::DebugTransform() {
         ImGui::EndTabItem();
     }
     if (obj3d_->GetHaveAnimation()) {
-        if (ImGui::BeginTabItem("アニメーション")) {
+        if (ImGui::BeginTabItem((objectName_ + "アニメーション").c_str())) {
             ImGui::Checkbox("ループ", &isLoop_);
             ImGui::Checkbox("スケルトン描画", &skeletonDraw_);
             if (ImGui::Button("アニメーション再生")) {
                 obj3d_->PlayAnimation();
             }
-            if (ImGui::TreeNode("setAnima")) {
+            if (ImGui::TreeNode("アニメーションセット")) {
                 ShowFileSelector();
                 ImGui::TreePop();
             }
@@ -141,7 +140,7 @@ void BaseObject::SaveToJson() {
 }
 
 void BaseObject::LoadFromJson() {
-    TransformDatas_ = std::make_unique<DataHandler>("Transform", className_);
+    TransformDatas_ = std::make_unique<DataHandler>("Transform", objectName_);
     transform_.translation_ = TransformDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
     transform_.rotation_ = TransformDatas_->Load<Vector3>("rotation", {0.0f, 0.0f, 0.0f});
     transform_.scale_ = TransformDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
@@ -152,7 +151,7 @@ void BaseObject::AnimaSaveToJson() {
 }
 
 void BaseObject::AnimaLoadFromJson() {
-    AnimaDatas_ = std::make_unique<DataHandler>("Animation", className_);
+    AnimaDatas_ = std::make_unique<DataHandler>("Animation", objectName_);
     isLoop_ = AnimaDatas_->Load<bool>("Loop", false);
 }
 
@@ -166,7 +165,7 @@ void BaseObject::ShowFileSelector() {
         fileNames.push_back(filePath.c_str());
     }
 
-    ImGui::Text("Select a GLTF file:");
+    ImGui::Text("GLTFファイル選択");
     ImGui::Separator();
 
     // Comboボックスでファイル選択
@@ -189,8 +188,10 @@ std::vector<std::string> BaseObject::GetGltfFiles() {
     std::filesystem::path baseDir = "resources/models/animation"; // ベースディレクトリ
     for (const auto &entry : std::filesystem::directory_iterator(baseDir)) {
         if (entry.path().extension() == ".gltf") {
-            // フルパスではなく相対パスを取得
-            gltfFiles.push_back(std::filesystem::relative(entry.path(), baseDir.parent_path()).string());
+            // フルパスではなく相対パスを取得し、区切り文字をスラッシュに変更
+            std::string relativePath = std::filesystem::relative(entry.path(), baseDir.parent_path()).string();
+            std::replace(relativePath.begin(), relativePath.end(), '\\', '/'); // バックスラッシュをスラッシュに置換
+            gltfFiles.push_back(relativePath);
         }
     }
     return gltfFiles;

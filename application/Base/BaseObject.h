@@ -1,10 +1,10 @@
 #pragma once
 #include "ObjColor.h"
-#include "Object3d.h"
-#include "ViewProjection.h"
+#include"Object/Object3d.h"
+#include "ViewProjection/ViewProjection.h"
 #include "WorldTransform.h"
 #include "externals/nlohmann/json.hpp"
-#include "myEngine/utility/collider/Collider.h"
+#include "collider/Collider.h"
 #include <string>
 #include"Data/DataHandler.h"
 
@@ -34,7 +34,7 @@ class BaseObject : public Collider {
     bool isLoop_;
     bool skeletonDraw_;
 
-    std::string className_;
+    std::string objectName_;
 
   private:
     using json = nlohmann::json;
@@ -92,6 +92,8 @@ class BaseObject : public Collider {
     void SetParent(const WorldTransform &wt) { transform_.parent_ = &wt; }
     void SetAnima(const std::string &filePath) { obj3d_->SetAnimation(filePath); }
     void SetLoop(bool flag) { isLoop_ = flag; }
+    void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
+
 
   private:
     void DebugTransform();

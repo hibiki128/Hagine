@@ -1,15 +1,5 @@
 #include "TitleScene.h"
-#include "ImGuiManager.h"
 #include "SceneManager.h"
-#include "SrvManager.h"
-
-#ifdef _DEBUG
-#include <imgui.h>
-#endif // _DEBUG
-#include "line/DrawLine3D.h"
-#include <LightGroup.h>
-#include <filesystem>
-#include <iostream>
 
 void TitleScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -23,26 +13,24 @@ void TitleScene::Initialize() {
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
 
-    ParticleEditor::GetInstance()->AddParticleEmitter("arrow_up");
-    emitter_ = std::make_unique<ParticleEmitter>();
-    emitter_ = ParticleEditor::GetInstance()->GetEmitter("arrow_up");
+    test = std::make_unique<BaseObject>();
+    test->Init("test");
+    test->CreateModel("animation/walk.gltf");
+    test->AddAnimation("animation/sneakWalk.gltf");
+    test->AddAnimation("animation/walk.gltf");
 }
 
 void TitleScene::Finalize() {
-   
 }
 
 void TitleScene::Update() {
-#ifdef _DEBUG
-    // デバッグ
-    Debug();
-#endif // _DEBUG
-
     // カメラ更新
     CameraUpdate();
 
     // シーン切り替え
     ChangeScene();
+
+    test->Update();
 }
 
 void TitleScene::Draw() {
@@ -51,19 +39,18 @@ void TitleScene::Draw() {
     /// Spriteの描画準備
     spCommon_->DrawCommonSetting();
     //-----Spriteの描画開始-----
-    
+
     //-------------------------
 
-  
     objCommon_->DrawCommonSetting();
     //-----3DObjectの描画開始-----
-
+    test->Draw(vp_);
     //--------------------------
 
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
     //------Particleの描画開始-------
-    emitter_->Draw(vp_);
+
     //-----------------------------
 
     /// Spriteの描画準備
@@ -102,13 +89,16 @@ void TitleScene::DrawForOffScreen() {
     /// -------描画処理終了-------
 }
 
-void TitleScene::Debug() {
-    ImGui::Begin("TitleScene:Debug");
+void TitleScene::AddSceneSetting() {
     debugCamera_->imgui();
-    LightGroup::GetInstance()->imgui();
-    ImGui::End();
+}
 
-    emitter_->Debug();
+void TitleScene::AddObjectSetting() {
+    test->DebugImGui();
+}
+
+void TitleScene::AddParticleSetting() {
+
 }
 
 void TitleScene::CameraUpdate() {
@@ -120,7 +110,13 @@ void TitleScene::CameraUpdate() {
 }
 
 void TitleScene::ChangeScene() {
+
+#ifdef _DEBUG
+
+#endif // _DEBUG
+#ifndef _DEBUG
     if (input_->TriggerKey(DIK_SPACE)) {
         sceneManager_->NextSceneReservation("GAME");
     }
+#endif // !_DEBUG
 }

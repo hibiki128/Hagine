@@ -1,14 +1,5 @@
 #pragma once
-#include "Audio.h"
 #include "BaseScene.h"
-#include "DebugCamera.h"
-#include "Input.h"
-#include "Object3d.h"
-#include "Object3dCommon.h"
-#include "ParticleCommon.h"
-#include "ParticleEmitter.h"
-#include "SpriteCommon.h"
-#include "WorldTransform.h"
 
 class ClearScene : public BaseScene {
   public: // メンバ関数
@@ -37,11 +28,25 @@ class ClearScene : public BaseScene {
     /// </summary>
     void DrawForOffScreen() override;
 
+    /// <summary>
+    /// シーン設定に追加
+    /// </summary>
+    void AddSceneSetting() override;
+
+    /// <summary>
+    /// オブジェクト設定に追加
+    /// </summary>
+    void AddObjectSetting() override;
+
+    /// <summary>
+    /// パーティクル設定に追加
+    /// </summary>
+    void AddParticleSetting() override;
+
+
     ViewProjection *GetViewProjection() override { return &vp_; }
 
   private:
-    void Debug();
-
     void CameraUpdate();
 
     void ChangeScene();

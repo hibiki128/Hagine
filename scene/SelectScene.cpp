@@ -1,15 +1,5 @@
-#include "ImGuiManager.h"
-#include "SceneManager.h"
-#include "SrvManager.h"
 #include "SelectScene.h"
-
-#ifdef _DEBUG
-#include <imgui.h>
-#endif // _DEBUG
-#include "line/DrawLine3D.h"
-#include <LightGroup.h>
-#include <filesystem>
-#include <iostream>
+#include "SceneManager.h"
 
 void SelectScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -28,11 +18,6 @@ void SelectScene::Finalize() {
 }
 
 void SelectScene::Update() {
-#ifdef _DEBUG
-    // デバッグ
-    Debug();
-#endif // _DEBUG
-
     // カメラ更新
     CameraUpdate();
 
@@ -96,11 +81,14 @@ void SelectScene::DrawForOffScreen() {
     /// -------描画処理終了-------
 }
 
-void SelectScene::Debug() {
-    ImGui::Begin("SelectScene:Debug");
+void SelectScene::AddSceneSetting() {
     debugCamera_->imgui();
-    LightGroup::GetInstance()->imgui();
-    ImGui::End();
+}
+
+void SelectScene::AddObjectSetting() {
+}
+
+void SelectScene::AddParticleSetting() {
 }
 
 void SelectScene::CameraUpdate() {
@@ -112,7 +100,13 @@ void SelectScene::CameraUpdate() {
 }
 
 void SelectScene::ChangeScene() {
+
+#ifdef _DEBUG
+
+#endif // _DEBUG
+#ifndef _DEBUG
     if (input_->TriggerKey(DIK_SPACE)) {
         sceneManager_->NextSceneReservation("GAME");
     }
+#endif // !_DEBUG
 }

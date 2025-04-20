@@ -1,43 +1,70 @@
 #pragma once
-#include"ViewProjection.h"
+#include "Audio.h"
+#include "DebugCamera/DebugCamera.h"
+#include "Input.h"
+#include "LightGroup.h"
+#include "Object/Object3d.h"
+#include "Object/Object3dCommon.h"
+#include "ParticleCommon.h"
+#include "ParticleEditor.h"
+#include "ParticleEmitter.h"
+#include "SpriteCommon.h"
+#include "ViewProjection/ViewProjection.h"
+#include "WorldTransform.h"
+#include "line/DrawLine3D.h"
+#ifdef _DEBUG
+#include <imgui.h>
+#endif // _DEBUG
 class SceneManager;
-class BaseScene
-{
-public:
+class BaseScene {
+  public:
+    virtual ~BaseScene() = default;
 
-	virtual ~BaseScene() = default;
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    virtual void Initialize();
 
-	/// <summary>
-	/// 初期化
-	/// </summary>
-	virtual void Initialize();
+    /// <summary>
+    /// 終了
+    /// </summary>
+    virtual void Finalize();
 
-	/// <summary>
-	/// 終了
-	/// </summary>
-	virtual void Finalize();
+    /// <summary>
+    /// 更新
+    /// </summary>
+    virtual void Update();
 
-	/// <summary>
-	/// 更新
-	/// </summary>
-	virtual void Update();
+    /// <summary>
+    /// 描画
+    /// </summary>
+    virtual void Draw();
 
-	/// <summary>
-	/// 描画
-	/// </summary>
-	virtual void Draw();
+    /// <summary>
+    /// ヒエラルキーに追加
+    /// </summary>
+    virtual void AddSceneSetting();
 
-	/// <summary>
-	/// 描画
-	/// </summary>
-	virtual void DrawForOffScreen();
+    /// <summary>
+    /// インスペクターに追加
+    /// </summary>
+    virtual void AddObjectSetting();
 
-	virtual void SetSceneManager(SceneManager* sceneManager) { sceneManager_ = sceneManager; }
+    /// <summary>
+    /// プロジェクトに追加
+    /// </summary>
+    virtual void AddParticleSetting();
 
-	virtual ViewProjection* GetViewProjection() = 0; 
+    /// <summary>
+    /// 描画
+    /// </summary>
+    virtual void DrawForOffScreen();
 
-protected:
-	// シーンマネージャ
-	SceneManager* sceneManager_ = nullptr;
+    virtual void SetSceneManager(SceneManager *sceneManager) { sceneManager_ = sceneManager; }
+
+    virtual ViewProjection *GetViewProjection() = 0;
+
+  protected:
+    // シーンマネージャ
+    SceneManager *sceneManager_ = nullptr;
 };
-

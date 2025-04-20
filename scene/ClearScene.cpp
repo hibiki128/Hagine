@@ -1,15 +1,5 @@
-#include "ImGuiManager.h"
-#include "SceneManager.h"
-#include "SrvManager.h"
 #include "ClearScene.h"
-
-#ifdef _DEBUG
-#include <imgui.h>
-#endif // _DEBUG
-#include "line/DrawLine3D.h"
-#include <LightGroup.h>
-#include <filesystem>
-#include <iostream>
+#include "SceneManager.h"
 
 void ClearScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -28,11 +18,6 @@ void ClearScene::Finalize() {
 }
 
 void ClearScene::Update() {
-#ifdef _DEBUG
-    // デバッグ
-    Debug();
-#endif // _DEBUG
-
     // カメラ更新
     CameraUpdate();
 
@@ -96,11 +81,14 @@ void ClearScene::DrawForOffScreen() {
     /// -------描画処理終了-------
 }
 
-void ClearScene::Debug() {
-    ImGui::Begin("ClearScene:Debug");
+void ClearScene::AddSceneSetting() {
     debugCamera_->imgui();
-    LightGroup::GetInstance()->imgui();
-    ImGui::End();
+}
+
+void ClearScene::AddObjectSetting() {
+}
+
+void ClearScene::AddParticleSetting() {
 }
 
 void ClearScene::CameraUpdate() {
@@ -112,7 +100,13 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
+
+#ifdef _DEBUG
+    
+#endif // _DEBUG
+#ifndef _DEBUG
     if (input_->TriggerKey(DIK_SPACE)) {
         sceneManager_->NextSceneReservation("TITLE");
     }
+#endif // !_DEBUG
 }

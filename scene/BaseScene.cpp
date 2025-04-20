@@ -16,6 +16,15 @@ void BaseScene::Draw()
 {
 }
 
+void BaseScene::AddSceneSetting() {
+}
+
+void BaseScene::AddObjectSetting() {
+}
+
+void BaseScene::AddParticleSetting() {
+}
+
 void BaseScene::DrawForOffScreen()
 {
 }
