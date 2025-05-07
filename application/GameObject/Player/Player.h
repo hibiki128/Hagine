@@ -3,7 +3,6 @@
 #include "PlayerData.h"
 #include "State/PlayerBaseState.h"
 #include "application/Base/BaseObject.h"
-
 class FollowCamera;
 class Player : public BaseObject {
   public:
@@ -78,4 +77,6 @@ class Player : public BaseObject {
     PlayerBaseState *currentState_ = nullptr;
 
     std::unique_ptr<DataHandler> data_;
+    std::unique_ptr<BaseObject> shadow_;
+
 };

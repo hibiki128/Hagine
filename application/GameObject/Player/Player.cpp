@@ -1,13 +1,13 @@
 #include "Player.h"
 #include "Engine/Frame/Frame.h"
 #include "State/PlayerStateAir.h"
+#include "State/PlayerStateFly.h"
 #include "State/PlayerStateIdle.h"
 #include "State/PlayerStateJump.h"
 #include "State/PlayerStateMove.h"
-#include"State/PlayerStateFly.h"
+#include "application/Camera/FollowCamera.h"
 #include <Input.h>
 #include <cmath> // ベクトル計算に必要
-#include "application/Camera/FollowCamera.h"
 
 Player::Player() {
 }
@@ -28,11 +28,21 @@ void Player::Init(const std::string objectName) {
     isGrounded_ = true; // 初期状態は地面にいる
 
     data_ = std::make_unique<DataHandler>("EntityData", "Player");
-    Load();
+    shadow_ = std::make_unique<BaseObject>();
+    shadow_->Init("shadow");
+    shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
+    shadow_->SetTexture("game/shadow.png");
+    shadow_->GetWorldRotation().x = degreesToRadians(90.0f);
+    shadow_->GetWorldScale() = {1.5f, 1.5f, 1.5f};
 
+    Load();
 }
 
 void Player::Update() {
+
+    shadow_->GetWorldPosition() = {transform_.translation_.x, -0.95f, transform_.translation_.z};
+    shadow_->Update();
+
     if (currentState_) {
         currentState_->Update(*this);
     }
@@ -80,6 +90,7 @@ void Player::Update() {
 }
 
 void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+    shadow_->Draw(viewProjection, offSet);
     BaseObject::Draw(viewProjection, offSet);
 }
 
@@ -149,8 +160,23 @@ void Player::Debug() {
                         velocity_.x, velocity_.y, velocity_.z);
 
             if (ImGui::Button("セーブ")) {
-               
+
                 Save();
+            }
+
+            if (ImGui::TreeNode("操作説明")) {
+                ImGui::Text("WASD : 移動");
+                if (currentState_ != states_["Fly"].get()) {
+                    ImGui::Text("SPACE : ジャンプ\n");
+                    ImGui::Text("空中でSPACE : 浮遊\n");
+                } else {
+                    ImGui::Text("SPACE : 上昇\n");
+                    ImGui::Text("LSHIFT : 下降\n");
+                    ImGui::Text("LSHIFT2回押し : 落下\n");
+                    ImGui::Text("Ctrl : ダッシュ\n");
+                }
+
+                ImGui::TreePop();
             }
 
             ImGui::EndTabItem();
