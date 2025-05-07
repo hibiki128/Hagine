@@ -5,7 +5,22 @@
 #include <cmath> // ベクトル計算に必要
 
 void PlayerStateMove::Enter(Player &player) {
-    // 移動状態の初期化（特に何もしない）
+    // 移動状態の初期化：着地時の衝撃を和らげるため、
+    // 既に持っていた速度を一部継続させる
+    // 水平速度は維持するが、最低速度を確保して滑らかに移動開始
+    float currentHorizontalSpeed = sqrt(player.GetVelocity().x * player.GetVelocity().x +
+                                        player.GetVelocity().z * player.GetVelocity().z);
+
+    if (currentHorizontalSpeed < 2.0f) {
+        player.GetMoveSpeed() = 2.0f; // 最低速度を設定
+    } else {
+        player.GetMoveSpeed() = currentHorizontalSpeed;
+    }
+
+    // 最大速度を超えないように
+    if (player.GetMoveSpeed() > player.GetMaxSpeed()) {
+        player.GetMoveSpeed() = player.GetMaxSpeed();
+    }
 }
 
 void PlayerStateMove::Update(Player &player) {
@@ -52,7 +67,7 @@ void PlayerStateMove::Update(Player &player) {
         player.GetVelocity().z = zInput * player.GetMoveSpeed();
     } else {
         // 入力がない場合は減速
-        player.GetMoveSpeed() -= player.GetAccelRate() * 4.0f * Frame::DeltaTime();
+        player.GetMoveSpeed() -= player.GetAccelRate() * 2.0f * Frame::DeltaTime();
         if (player.GetMoveSpeed() < 0.0f) {
             player.GetMoveSpeed() = 0.0f;
         }

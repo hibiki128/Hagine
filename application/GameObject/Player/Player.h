@@ -4,6 +4,7 @@
 #include "State/PlayerBaseState.h"
 #include "application/Base/BaseObject.h"
 
+class FollowCamera;
 class Player : public BaseObject {
   public:
     /// ==================================================================
@@ -36,6 +37,8 @@ class Player : public BaseObject {
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; } // 追加: 接地判定
 
+    void SetCamera(FollowCamera *camera) { FollowCamera_ = camera; }
+
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
 
@@ -51,6 +54,8 @@ class Player : public BaseObject {
     /// ==================================================================
     /// private varians
     /// ==================================================================
+
+    FollowCamera *FollowCamera_;
 
     Direction dir_;
     MoveDirection moveDir_;

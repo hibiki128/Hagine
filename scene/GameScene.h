@@ -1,7 +1,10 @@
 #pragma once
 #include "BaseScene.h"
 
-#include"application/GameObject/Player/Player.h"
+#include "application/Camera/FollowCamera.h"
+#include "application/GameObject/Field/Ground/Ground.h"
+#include "application/GameObject/Field/SkyDome/SkyDome.h"
+#include "application/GameObject/Player/Player.h"
 
 class GameScene : public BaseScene {
   public: // メンバ関数
@@ -30,7 +33,7 @@ class GameScene : public BaseScene {
     /// </summary>
     void DrawForOffScreen() override;
 
-   /// <summary>
+    /// <summary>
     /// シーン設定に追加
     /// </summary>
     void AddSceneSetting() override;
@@ -44,7 +47,6 @@ class GameScene : public BaseScene {
     /// パーティクル設定に追加
     /// </summary>
     void AddParticleSetting() override;
-
 
     ViewProjection *GetViewProjection() override { return &vp_; }
 
@@ -63,6 +65,15 @@ class GameScene : public BaseScene {
     ViewProjection vp_;
     std::unique_ptr<DebugCamera> debugCamera_;
 
+    // プレイヤー
     std::unique_ptr<Player> player_;
 
+    // 追従カメラ
+    std::unique_ptr<FollowCamera> followCamera_;
+
+    // 天球
+    std::unique_ptr<SkyDome> skyDome_;
+
+    // 地面
+    std::unique_ptr<Ground> ground_;
 };

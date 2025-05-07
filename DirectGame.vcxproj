@@ -118,6 +118,9 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\Primitive\PrimitiveModel.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleGroup.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleGroupManager.cpp" />
+    <ClCompile Include="application\GameObject\Player\State\PlayerStateFly.cpp" />
+    <ClCompile Include="application\Camera\FollowCamera.cpp" />
+    <ClCompile Include="application\GameObject\Field\Ground\Ground.cpp" />
     <ClCompile Include="scene\DemoScene.cpp" />
     <ClCompile Include="scene\ClearScene.cpp" />
     <ClCompile Include="Engine\3d\Animation\ModelAnimation.cpp" />
@@ -181,6 +184,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="scene\SelectScene.cpp" />
     <ClCompile Include="scene\TitleScene.cpp" />
     <ClCompile Include="Engine\3d\Animation\Skin.cpp" />
+    <ClCompile Include="application\GameObject\Field\SkyDome\SkyDome.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -219,6 +223,9 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Primitive\PrimitiveModel.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleGroup.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleGroupManager.h" />
+    <ClInclude Include="application\GameObject\Player\State\PlayerStateFly.h" />
+    <ClInclude Include="application\Camera\FollowCamera.h" />
+    <ClInclude Include="application\GameObject\Field\Ground\Ground.h" />
     <ClInclude Include="scene\DemoScene.h" />
     <ClInclude Include="scene\ClearScene.h" />
     <ClInclude Include="Engine\3d\Animation\ModelAnimation.h" />
@@ -289,6 +296,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="scene\SelectScene.h" />
     <ClInclude Include="scene\TitleScene.h" />
     <ClInclude Include="Engine\3d\Animation\Skin.h" />
+    <ClInclude Include="application\GameObject\Field\SkyDome\SkyDome.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\OffScreen\BoxFilter.PS.hlsl">

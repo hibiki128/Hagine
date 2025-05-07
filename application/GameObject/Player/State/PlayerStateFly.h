@@ -1,12 +1,15 @@
 #pragma once
 #include "PlayerBaseState.h"
-class PlayerStateAir : public PlayerBaseState {
+class PlayerStateFly : public PlayerBaseState {
   public:
-    PlayerStateAir() = default;
     void Enter(Player &player) override;
     void Update(Player &player) override;
     void Exit(Player &player) override;
 
   private:
-    float elapsedTime_ = 0.0f;
+    float spaceHeldTime_ = 0.0f;
+    bool isBoosting_ = false;
+
+    float fallInputTime_ = 0.0f;
+    int fallInputCount_ = 0;
 };
