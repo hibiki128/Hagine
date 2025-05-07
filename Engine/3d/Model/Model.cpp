@@ -1,14 +1,14 @@
 #include "Model.h"
-#include"Texture/TextureManager.h"
-#include "fstream"
 #include "Engine/Frame/Frame.h"
+#include "Object/Object3dCommon.h"
+#include "Texture/TextureManager.h"
+#include "fstream"
 #include "myMath.h"
 #include "sstream"
-#include"Object/Object3dCommon.h"
 
 std::unordered_set<std::string> Model::jointNames = {};
 
-void Model::Initialize(ModelCommon *modelCommon, const std::string &directorypath, const std::string &filename) {
+void Model::CreateModel(ModelCommon *modelCommon, const std::string &directorypath, const std::string &filename) {
     // 引数で受け取ってメンバ変数に記録する
     modelCommon_ = modelCommon;
 
@@ -25,6 +25,19 @@ void Model::Initialize(ModelCommon *modelCommon, const std::string &directorypat
 
     // 単位行列を書き込んでおく
     modelData.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath);
+}
+
+void Model::CreatePrimitiveModel(ModelCommon *modelCommon, const PrimitiveType &type) {
+    modelCommon_ = modelCommon;
+    modelData.vertices = PrimitiveModel::GetInstance()->GetPrimitiveData(type).vertices;
+    modelData.indices = PrimitiveModel::GetInstance()->GetPrimitiveData(type).indices;
+    modelData.material.color = PrimitiveModel::GetInstance()->GetPrimitiveData(type).color;
+    modelData.material.uvTransform = PrimitiveModel::GetInstance()->GetPrimitiveData(type).uvMatrix;
+    modelData.material.textureFilePath = "debug/uvChecker.png";
+    TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
+    modelData.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath);
+    CreateVartexData();
+    CreateIndexResource();
 }
 
 void Model::Draw() {

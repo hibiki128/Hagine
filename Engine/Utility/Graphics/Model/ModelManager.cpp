@@ -22,7 +22,7 @@ void ModelManager::LoadModel(const std::string& filePath)
 
         // モデルの生成とファイル読み込み、初期化
         std::unique_ptr<Model> model = std::make_unique<Model>();
-        model->Initialize(modelCommon, "resources/models/", filePath);
+        model->CreateModel(modelCommon, "resources/models/", filePath);
         model->SetSrv(srvManager);
 
         // モデルをmapコンテナに格納する
@@ -36,9 +36,21 @@ void ModelManager::LoadModel(const std::string& filePath)
     }
 
     std::unique_ptr<Model> model = std::make_unique<Model>();
-    model->Initialize(modelCommon, "resources/models/", filePath);
+    model->CreateModel(modelCommon, "resources/models/", filePath);
     model->SetSrv(srvManager);
     models.insert(std::make_pair(filePath, std::move(model)));
+}
+
+std::string ModelManager::CreatePrimitiveModel(PrimitiveType type) {
+    std::unique_ptr<Model> model = std::make_unique<Model>();
+    model->CreatePrimitiveModel(modelCommon,type);
+    model->SetSrv(srvManager);
+    // モデルのユニークな識別子を生成
+    static int modelIndex = 0;
+    std::string uniqueKey = "PrimitiveModel_" + std::to_string(modelIndex++);
+    // モデルをmapコンテナに格納する
+    models.insert(std::make_pair(uniqueKey, std::move(model)));
+    return uniqueKey;
 }
 
 Model* ModelManager::FindModel(const std::string& filePath)

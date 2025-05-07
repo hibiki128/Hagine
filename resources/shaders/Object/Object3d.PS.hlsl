@@ -41,12 +41,27 @@ struct PointLight
     int BlinnPhong;
 };
 
+struct SpotLight
+{
+    float4 color;
+    float3 position;
+    float intensity;
+    float3 direction;
+    float distance;
+    float decay;
+    float cosAngle;
+    int active;
+    int HalfLambert;
+    int BlinnPhong;
+};
+
 ConstantBuffer<Material> gMaterial : register(b0);
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 ConstantBuffer<Camera> gCamera : register(b2);
-ConstantBuffer<PointLight> gPointLight : register(b3); //<! ポイントライト定数バッファ
+ConstantBuffer<PointLight> gPointLight : register(b3);
+ConstantBuffer<SpotLight> gSpotLight : register(b4);
 
 
 PixelShaderOutput main(VertexShaderOutput input)
@@ -129,6 +144,56 @@ PixelShaderOutput main(VertexShaderOutput input)
                 // 拡散反射 + 鏡面反射
                 output.color.rgb += (diffusePoint + specularPoint) * (gPointLight.color.rgb * gPointLight.intensity * factor);
             }
+        }
+        if (gSpotLight.active != 0)
+        {
+    // HalfLambertの場合
+            if (gSpotLight.HalfLambert != 0)
+            {
+                float3 spotLightDirectionOnSurface = normalize(input.worldPosition - gSpotLight.position);
+                float cosAngle = dot(spotLightDirectionOnSurface, gSpotLight.direction);
+
+                float falloffFactor = saturate((cosAngle - gSpotLight.cosAngle) / (1.0f - gSpotLight.cosAngle));
+
+                float distance = length(gSpotLight.position - input.worldPosition);
+                float attenuationFactor = pow(saturate(-distance / gSpotLight.distance + 1.0f), gSpotLight.decay);
+
+                float NdotL = max(dot(normalize(input.normal), -spotLightDirectionOnSurface), 0.0f);
+                float cos = pow(NdotL * 0.5f + 0.5f, 2.0f); // HalfLambert
+
+                output.color.rgb += gSpotLight.color.rgb * gSpotLight.intensity * attenuationFactor * falloffFactor * cos;
+            }
+
+    // BlinnPhongの場合
+            if (gSpotLight.BlinnPhong != 0)
+            {
+                float3 spotLightDirectionOnSurface = normalize(input.worldPosition - gSpotLight.position);
+                float cosAngle = dot(spotLightDirectionOnSurface, gSpotLight.direction);
+
+                float falloffFactor = saturate((cosAngle - gSpotLight.cosAngle) / (1.0f - gSpotLight.cosAngle));
+
+                float distance = length(gSpotLight.position - input.worldPosition);
+                float attenuationFactor = pow(saturate(-distance / gSpotLight.distance + 1.0f), gSpotLight.decay);
+
+        // 拡散反射計算
+                float NdotLSpot = max(dot(normalize(input.normal), -spotLightDirectionOnSurface), 0.0f);
+                float3 diffuseSpot = gMaterial.color.rgb * textureColor.rgb * gSpotLight.color.rgb * NdotLSpot * gSpotLight.intensity;
+
+        // 鏡面反射計算
+                float3 toEyeSpot = normalize(gCamera.worldPosition - input.worldPosition);
+                float3 halfVectorSpot = normalize(-spotLightDirectionOnSurface + toEyeSpot);
+                float NDotHSpot = dot(normalize(input.normal), halfVectorSpot);
+                float specularFactor = pow(saturate(NDotHSpot), gMaterial.shininess);
+                float3 specularSpot = gSpotLight.color.rgb * gSpotLight.intensity * specularFactor * float3(1.0f, 1.0f, 1.0f);
+
+        // 拡散反射 + 鏡面反射
+                float3 spotLightContribution = (diffuseSpot + specularSpot) * attenuationFactor * falloffFactor;
+
+                output.color.rgb += spotLightContribution;
+            }
+
+    // テクスチャカラーを加算
+            output.color.rgb *= textureColor.rgb;
         }
         output.color.a = gMaterial.color.a * textureColor.a;
     }

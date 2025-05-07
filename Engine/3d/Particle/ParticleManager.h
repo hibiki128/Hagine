@@ -8,6 +8,8 @@
 #include "random"
 #include <Matrix4x4.h>
 #include <WorldTransform.h>
+#include <ModelStructs.h>
+#include <ParticleGroup.h>
 class ParticleManager {
   public:
     /// <summary>
@@ -30,9 +32,18 @@ class ParticleManager {
     /// </summary>
     /// <param name="name"></param>
     /// <param name="textureFilePath"></param>
-    void CreateParticleGroup(const std::string name, const std::string &filename);
+    void AddParticleGroup(ParticleGroup* particleGroup);
 
-    std::string GetTexturePath() { return modelData.material.textureFilePath; }
+    void RemoveParticleGroup(const std::string &name) {
+        // マップやセットなどからグループ本体を削除
+        particleGroups_.erase(name);
+
+        // 名前リスト（vector）からも削除
+        auto it = std::find(particleGroupNames_.begin(), particleGroupNames_.end(), name);
+        if (it != particleGroupNames_.end()) {
+            particleGroupNames_.erase(it);
+        }
+    }
 
     void SetBillBorad(bool isBillBoard) { isBillboard = isBillBoard; }
     void SetRandomRotate(bool isRandomRotate) { isRandomRotate_ = isRandomRotate; }
@@ -42,101 +53,23 @@ class ParticleManager {
     void SetAllRandomSize(bool isAllRandomSize) { isRandomAllSize_ = isAllRandomSize; }
     void SetSinMove(bool isSinMove) { isSinMove_ = isSinMove; }
     void SetFaceDirection(bool flag) { isFaceDirection_ = flag; }
-    void SetTexture(const std::string &filePath);
-    void SetColor(const Vector4 &color) { materialData->color = color; }
     void SetEndScale(bool isEndScale) { isEndScale_ = isEndScale; }
+    void SetOnEdge(bool isOnEdge) { isEmitOnEdge_ = isOnEdge; }
+   
+    void SetGatherMode(bool isGather) { isGatherMode_ = isGather; }
+
+    void SetGatherStartRatio(float ratio) { gatherStartRatio_ = std::clamp(ratio, 0.0f, 1.0f); }
+
+    void SetGatherStrength(float strength) { gatherStrength_ = strength; }
+
+    std::vector<std::string> GetParticleGroupsName() { return particleGroupNames_; }
 
   private:
-    /// <summary>
-    /// 頂点データ作成
-    /// </summary>
-    void CreateVartexData(const std::string &filename);
-
-  private:
-    struct ParticleForGPU {
-        Matrix4x4 WVP;
-        Matrix4x4 World;
-        Vector4 color;
-    };
-
-    // 頂点データ
-    struct VertexData {
-        Vector4 position;
-        Vector2 texcoord;
-    };
-
-    struct MaterialData {
-        std::string textureFilePath;
-        uint32_t textureIndex;
-    };
-
-    struct ModelData {
-        std::vector<VertexData> vertices;
-        MaterialData material;
-    };
-
-    struct Particle {
-        WorldTransform transform; // 位置
-        Vector3 velocity;         // 速度
-        Vector3 Acce;
-        Vector3 startScale;
-        Vector3 endScale;
-        Vector3 startAcce;
-        Vector3 endAcce;
-        Vector3 startRote;
-        Vector3 endRote;
-        Vector3 rotateVelocity;
-        Vector3 fixedDirection;
-        Vector4 color;     // 色
-        float lifeTime;    // ライフタイム
-        float currentTime; // 現在の時間
-        float initialAlpha;
-    };
-
-    // マテリアルデータ
-    struct Material {
-        Vector4 color;
-        Matrix4x4 uvTransform;
-        float padding[3];
-    };
-
-    ModelData modelData;
-
-    struct ParticleGroup {
-        // マテリアルデータ
-        MaterialData material;
-        // パーティクルのリスト (std::list<Particle> 型)
-        std::list<Particle> particles;
-        // インスタンシングデータ用SRVインデックス
-        uint32_t instancingSRVIndex = 0;
-        // インスタンシングリソース
-        Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource = nullptr;
-        // インスタンス数
-        uint32_t instanceCount = 0;
-        // インスタンシングデータを書き込むためのポインタ
-        ParticleForGPU *instancingData = nullptr;
-    };
-
     ParticleCommon *particleCommon = nullptr;
 
-    // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr;
-    // バッファリソース内のデータを指すポインタ
-    VertexData *vertexData = nullptr;
-    // バッファリソースの使い道を補足するバッファビュー
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-
-    // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr;
-    // バッファリソース内のデータを指すポインタ
-    Material *materialData = nullptr;
-
     SrvManager *srvManager_;
-    static std::unordered_map<std::string, ModelData> modelCache;
-    std::unordered_map<std::string, ParticleGroup> particleGroups;
-
-    // Δtを定義
-    static const uint32_t kNumMaxInstance = 10000; // 最大インスタンス数の制限
+    std::unordered_map<std::string, ParticleGroup*> particleGroups_;
+    std::vector<std::string> particleGroupNames_;
 
     std::random_device seedGenerator;
     std::mt19937 randomEngine;
@@ -150,10 +83,14 @@ class ParticleManager {
     bool isSinMove_ = false;
     bool isFaceDirection_ = false;
     bool isEndScale_ = false;
+    bool isEmitOnEdge_ = false;
+    bool isGatherMode_ = false;     // 中心に集まるフラグ
+
+    float gatherStartRatio_ = 0.5f; // ライフタイム何割から中心に集まり始めるか (0.0～1.0)
+    float gatherStrength_ = 2.0f;   // 集まる力の強さ
 
   public:
-    // nameで指定した名前のパーティクルグループにパーティクルを発生させる関数
-    std::list<Particle> Emit(const std::string name, const Vector3 &position, uint32_t count, const Vector3 &scale,
+    std::list<Particle> Emit(const Vector3 &position, uint32_t count, const Vector3 &scale,
                              const Vector3 &velocityMin, const Vector3 &velocityMax, float lifeTimeMin, float lifeTimeMax,
                              const Vector3 &particleStartScale, const Vector3 &particleEndScale, const Vector3 &startAcce, const Vector3 &endAcce,
                              const Vector3 &startRote, const Vector3 &endRote, bool isRandomColor, float alphaMin, float alphaMax,
@@ -163,26 +100,6 @@ class ParticleManager {
                              const Vector3 &rotateStartMax, const Vector3 &rotateStartMin);
 
   private:
-    /// <summary>
-    /// .mtlファイルの読み取り
-    /// </summary>
-    /// <param name="directoryPath"></param>
-    /// <param name="filename"></param>
-    /// <returns></returns>
-    static MaterialData LoadMaterialTemplateFile(const std::string &directoryPath, const std::string &filename);
-
-    /// <summary>
-    ///  .objファイルの読み取り
-    /// </summary>
-    /// <param name="directoryPath"></param>
-    /// <param name="filename"></param>
-    /// <returns></returns>
-    static ModelData LoadObjFile(const std::string &directoryPath, const std::string &filename);
-
-    /// <summary>
-    /// マテリアルデータ作成
-    /// </summary>
-    void CreateMaterial();
 
     Particle MakeNewParticle(std::mt19937 &randomEngine,
                              const Vector3 &translate,

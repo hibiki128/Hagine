@@ -1,5 +1,6 @@
 #include "TitleScene.h"
 #include "SceneManager.h"
+#include <Engine/Frame/Frame.h>
 
 void TitleScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -12,12 +13,6 @@ void TitleScene::Initialize() {
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
-
-    test = std::make_unique<BaseObject>();
-    test->Init("test");
-    test->CreateModel("animation/walk.gltf");
-    test->AddAnimation("animation/sneakWalk.gltf");
-    test->AddAnimation("animation/walk.gltf");
 }
 
 void TitleScene::Finalize() {
@@ -29,8 +24,6 @@ void TitleScene::Update() {
 
     // シーン切り替え
     ChangeScene();
-
-    test->Update();
 }
 
 void TitleScene::Draw() {
@@ -44,13 +37,13 @@ void TitleScene::Draw() {
 
     objCommon_->DrawCommonSetting();
     //-----3DObjectの描画開始-----
-    test->Draw(vp_);
+   
     //--------------------------
 
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
     //------Particleの描画開始-------
-
+ 
     //-----------------------------
 
     /// Spriteの描画準備
@@ -94,11 +87,11 @@ void TitleScene::AddSceneSetting() {
 }
 
 void TitleScene::AddObjectSetting() {
-    test->DebugImGui();
+   
 }
 
 void TitleScene::AddParticleSetting() {
-
+   
 }
 
 void TitleScene::CameraUpdate() {

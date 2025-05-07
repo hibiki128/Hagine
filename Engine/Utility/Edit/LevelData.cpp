@@ -18,7 +18,7 @@ void LevelData::LoadJson(const std::string& jsonFileName) {
 
         // ファイル名を "name.obj" にする
         std::string filePath = name + ".obj";
-        object3d->Initialize(filePath); // Initializeでファイル名を使う
+        object3d->CreateModel(filePath); // Initializeでファイル名を使う
 
         // WorldTransformの生成（unique_ptrで管理）
         std::unique_ptr<WorldTransform> worldTransform = std::make_unique<WorldTransform>();

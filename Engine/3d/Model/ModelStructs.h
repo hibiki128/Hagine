@@ -12,6 +12,8 @@
 #include <span>
 #include <string>
 #include <vector>
+#include <list>
+#include"WorldTransform.h"
 
 struct QuaternionTransform {
     Vector3 scale;
@@ -29,6 +31,7 @@ struct VertexData {
 struct MaterialData {
     std::string textureFilePath;
     uint32_t textureIndex = 0;
+    std::string modelFilePath;
     Matrix4x4 uvTransform;
     Vector4 color;
 };
@@ -114,4 +117,53 @@ struct NodeAnimation {
 struct Animation {
     float duration;
     std::map<std::string, NodeAnimation> nodeAnimations;
+};
+
+struct ParticleForGPU {
+    Matrix4x4 WVP;
+    Matrix4x4 World;
+    Vector4 color;
+};
+
+struct Particle {
+    WorldTransform transform; // 位置
+    Vector3 emitterPosition;
+    Vector3 velocity;         // 速度
+    Vector3 Acce;
+    Vector3 startScale;
+    Vector3 endScale;
+    Vector3 startAcce;
+    Vector3 endAcce;
+    Vector3 startRote;
+    Vector3 endRote;
+    Vector3 rotateVelocity;
+    Vector3 fixedDirection;
+    Vector4 color;     // 色
+    float lifeTime;    // ライフタイム
+    float currentTime; // 現在の時間
+    float initialAlpha;
+};
+
+// マテリアルデータ
+struct Material {
+    Vector4 color;
+    Matrix4x4 uvTransform;
+    float padding[3];
+};
+
+struct ParticleGroupData {
+    // マテリアルデータ
+    MaterialData material;
+    // パーティクルのリスト (std::list<Particle> 型)
+    std::list<Particle> particles;
+    // インスタンシングデータ用SRVインデックス
+    uint32_t instancingSRVIndex = 0;
+    // インスタンシングリソース
+    Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource = nullptr;
+    // インスタンス数
+    uint32_t instanceCount = 0;
+    // インスタンシングデータを書き込むためのポインタ
+    ParticleForGPU *instancingData = nullptr;
+    // グループ名
+    std::string groupName;
 };

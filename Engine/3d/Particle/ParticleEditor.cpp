@@ -1,4 +1,5 @@
 #include "ParticleEditor.h"
+#include "ImGui/ImGuiManager.h"
 
 ParticleEditor *ParticleEditor::instance = nullptr;
 
@@ -15,6 +16,20 @@ void ParticleEditor::Finalize() {
 }
 
 void ParticleEditor::Initialize() {
+    particleGroupManager_ = ParticleGroupManager::GetInstance();
+    // カラーテーマの初期設定
+    SetupColors();
+}
+
+// カラーテーマの設定メソッドを追加
+void ParticleEditor::SetupColors() {
+    // 各CollapsingHeaderに使用する色を定義
+    headerColors_[0] = ImVec4(0.2f, 0.4f, 0.8f, 0.8f); // 青系
+    headerColors_[1] = ImVec4(0.8f, 0.4f, 0.2f, 0.8f); // オレンジ系
+    headerColors_[2] = ImVec4(0.2f, 0.7f, 0.4f, 0.8f); // 緑系
+    headerColors_[3] = ImVec4(0.7f, 0.3f, 0.7f, 0.8f); // 紫系
+    headerColors_[4] = ImVec4(0.7f, 0.7f, 0.2f, 0.8f); // 黄色系
+    headerColors_[5] = ImVec4(0.5f, 0.5f, 0.5f, 0.8f); // グレー系
 }
 
 void ParticleEditor::AddParticleEmitter(const std::string &name, const std::string &fileName, const std::string &texturePath) {
@@ -22,14 +37,7 @@ void ParticleEditor::AddParticleEmitter(const std::string &name, const std::stri
     auto emitter = std::make_unique<ParticleEmitter>();
 
     // 初期化処理
-    emitter->Initialize(name, fileName);
-    if (!texturePath.empty()) {
-        emitter->CreateParticle(name, fileName, texturePath);
-    } else {
-        if (!isLoad_) {
-            emitter->CreateParticle(name, fileName, emitter->GetTexturePath());
-        }
-    }
+    emitter->Initialize(name);
     // マップに追加
     emitters_[name] = std::move(emitter);
 }
@@ -45,6 +53,28 @@ void ParticleEditor::AddParticleEmitter(const std::string &name) {
     emitter->Initialize(name);
     // マップに追加
     emitters_[name] = std::move(emitter);
+}
+
+void ParticleEditor::AddParticleGroup(const std::string &name, const std::string &fileName, const std::string &texturePath) {
+    // 新しい ParticleGroup を作成
+    auto group = std::make_unique<ParticleGroup>();
+    // 初期化処理
+    group->Initialize();
+    // パーティクルグループを作成
+    group->CreateParticleGroup(name, fileName, texturePath);
+    // マップに追加
+    particleGroupManager_->AddParticleGroup(std::move(group));
+}
+
+void ParticleEditor::AddPrimitiveParticleGroup(const std::string &name, const std::string &texturePath, PrimitiveType type) {
+    // 新しい ParticleGroup を作成
+    auto group = std::make_unique<ParticleGroup>();
+    // 初期化処理
+    group->Initialize();
+    // パーティクルグループを作成
+    group->CreatePrimitiveParticleGroup(name, type, texturePath);
+    // マップに追加
+    particleGroupManager_->AddParticleGroup(std::move(group));
 }
 
 void ParticleEditor::EditorWindow() {
@@ -69,177 +99,281 @@ void ParticleEditor::DebugAll() {
     }
 }
 
+// カラー付きCollapsingHeaderを表示するヘルパー関数
+bool ParticleEditor::ColoredCollapsingHeader(const char *label, int colorIndex) {
+    // 現在のImGuiカラーを保存
+    ImVec4 originalColor = ImGui::GetStyleColorVec4(ImGuiCol_Header);
+
+    // 色を設定
+    ImGui::PushStyleColor(ImGuiCol_Header, headerColors_[colorIndex % 6]);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(
+                                                      headerColors_[colorIndex % 6].x + 0.1f,
+                                                      headerColors_[colorIndex % 6].y + 0.1f,
+                                                      headerColors_[colorIndex % 6].z + 0.1f,
+                                                      0.9f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(
+                                                     headerColors_[colorIndex % 6].x + 0.2f,
+                                                     headerColors_[colorIndex % 6].y + 0.2f,
+                                                     headerColors_[colorIndex % 6].z + 0.2f,
+                                                     1.0f));
+
+    // CollapsingHeaderを表示
+    bool opened = ImGui::CollapsingHeader(label);
+
+    // 設定した色をリセット
+    ImGui::PopStyleColor(3);
+
+    return opened;
+}
+
+// テクスチャ選択UIを共通関数化
+void ParticleEditor::ShowTextureSelector(std::string &selectedTexturePath) {
+    // テクスチャファイル選択
+    static std::filesystem::path baseDirTex = "resources/images/";
+    static std::filesystem::path currentDirTex = "resources/images";
+    static std::string selectedFolderTex = "";
+    static std::string selectedFileTex = "";
+
+    // 「戻る」ボタン（テクスチャ用）
+    if (currentDirTex != "resources/images") {
+        if (ImGui::Button("< 戻る(Tex)")) {
+            currentDirTex = currentDirTex.parent_path();
+            selectedFolderTex = "";
+            selectedFileTex = "";
+        }
+    }
+
+    // フォルダ一覧
+    std::vector<std::string> foldersTex;
+    std::vector<std::string> texFiles;
+
+    for (const auto &entry : std::filesystem::directory_iterator(currentDirTex)) {
+        if (entry.is_directory()) {
+            foldersTex.push_back(entry.path().filename().string());
+        } else if (entry.path().extension() == ".png" || entry.path().extension() == ".jpg") {
+            texFiles.push_back(entry.path().filename().string());
+        }
+    }
+
+    // フォルダ選択 (クリックで移動)
+    if (!foldersTex.empty()) {
+        ImGui::Text("フォルダ");
+        ImGui::Separator();
+        for (auto &folder : foldersTex) {
+            std::string folderNameTex = folder + " (Tex)"; // フォルダ名に "(Tex)" を追加
+            if (ImGui::Selectable(folderNameTex.c_str(), selectedFolderTex == folder)) {
+                selectedFolderTex = folderNameTex;
+                currentDirTex = currentDirTex / folder; // フォルダ移動
+                selectedFileTex = "";                   // 新しいフォルダを開いたらファイル選択をリセット
+            }
+            ImGui::Separator();
+        }
+    }
+
+    // `.png`, `.jpg` テクスチャファイル選択
+    if (!texFiles.empty()) {
+        ImGui::Text("テクスチャファイル:");
+        if (ImGui::BeginCombo("ファイル選択 ", selectedFileTex.empty() ? "なし" : selectedFileTex.c_str())) {
+            for (const auto &file : texFiles) {
+                bool isSelected = (file == selectedFileTex);
+                if (ImGui::Selectable(file.c_str(), isSelected)) {
+                    selectedFileTex = file;
+
+                    // `baseDirTex` からの相対パスを取得
+                    std::filesystem::path relativePath = (currentDirTex / file).lexically_relative(baseDirTex);
+
+                    // Windowsのバックスラッシュをスラッシュに変換
+                    std::string pathStr = relativePath.string();
+                    std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
+
+                    // 選択されたテクスチャパスを設定
+                    selectedTexturePath = pathStr;
+                }
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+    }
+}
+
 void ParticleEditor::ShowImGuiEditor() {
     if (ImGui::BeginTabBar("パーティクル")) {
         if (ImGui::BeginTabItem("パーティクル作成")) {
 
-            // 名前の入力
-            char nameBuffer[256];
-            strcpy_s(nameBuffer, sizeof(nameBuffer), localName_.c_str());
-            ImGui::Text("パーティクルの名前");
-            if (ImGui::InputText(" ", nameBuffer, sizeof(nameBuffer))) {
-                localName_ = std::string(nameBuffer);
-            }
-
-            // モデルとテクスチャの処理を分ける
-            ImGui::Spacing();
-
-            // モデル選択アイテム
-            if (ImGui::CollapsingHeader("モデル")) {
-                // モデルファイル選択
-                static std::filesystem::path baseDirObj = "resources/models/";
-                static std::filesystem::path currentDirObj = "resources/models";
-                static std::string selectedFolderObj = "";
-                static std::string selectedFileObj = "";
-
-                // 「戻る」ボタン（上の階層に戻る）
-                if (currentDirObj != "resources/models") {
-                    if (ImGui::Button("< 戻る(Model)")) {
-                        currentDirObj = currentDirObj.parent_path();
-                        selectedFolderObj = "";
-                        selectedFileObj = "";
-                    }
+            // エミッター追加のCollapsingHeader
+            if (ColoredCollapsingHeader("エミッター追加", 0)) {
+                // 名前の入力
+                char nameBuffer[256];
+                strcpy_s(nameBuffer, sizeof(nameBuffer), localEmitterName_.c_str());
+                ImGui::Text("エミッターの名前");
+                if (ImGui::InputText(" ", nameBuffer, sizeof(nameBuffer))) {
+                    localEmitterName_ = std::string(nameBuffer);
                 }
 
-                // フォルダ一覧
-                std::vector<std::string> foldersObj;
-                std::vector<std::string> objFiles;
-
-                for (const auto &entry : std::filesystem::directory_iterator(currentDirObj)) {
-                    if (entry.is_directory()) {
-                        foldersObj.push_back(entry.path().filename().string());
-                    } else if (entry.path().extension() == ".obj") {
-                        objFiles.push_back(entry.path().filename().string());
-                    }
-                }
-
-                // フォルダ選択 (クリックで移動)
-                if (!foldersObj.empty()) {
-                    ImGui::Text("フォルダ");
-                    ImGui::Separator();
-                    for (const auto &folder : foldersObj) {
-                        std::string folderNameTex = folder + " (Model)"; // フォルダ名に "(Tex)" を追加
-                        if (ImGui::Selectable(folderNameTex.c_str(), selectedFolderObj == folder)) {
-                            selectedFolderObj = folderNameTex;
-                            currentDirObj = currentDirObj / folder; // フォルダ移動
-                            selectedFileObj = "";                   // 新しいフォルダを開いたらファイル選択をリセット
-                        }
-                        ImGui::Separator();
-                    }
-                }
-
-                // `.obj` ファイル選択
-                if (!objFiles.empty()) {
-                    ImGui::Text("モデルファイル:");
-                    if (ImGui::BeginCombo("ファイル選択", selectedFileObj.empty() ? "なし" : selectedFileObj.c_str())) {
-                        for (const auto &file : objFiles) {
-                            bool isSelected = (file == selectedFileObj);
-                            if (ImGui::Selectable(file.c_str(), isSelected)) {
-                                selectedFileObj = file;
-
-                                // `baseDirObj` からの相対パスを取得
-                                std::filesystem::path relativePath = (currentDirObj / file).lexically_relative(baseDirObj);
-
-                                // Windowsのバックスラッシュをスラッシュに変換
-                                std::string pathStr = relativePath.string();
-                                std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
-
-                                // `fileNameObj_` に保存
-                                localFileObj_ = pathStr;
-                            }
-                            if (isSelected) {
-                                ImGui::SetItemDefaultFocus();
-                            }
-                        }
-                        ImGui::EndCombo();
+                // エミッター作成ボタン
+                ImGui::Spacing();
+                if (!localEmitterName_.empty()) {
+                    if (ImGui::Button("エミッター生成")) {
+                        AddParticleEmitter(localEmitterName_);
+                        localEmitterName_.clear();
                     }
                 }
             }
 
-            // テクスチャ選択アイテム
-            if (ImGui::CollapsingHeader("テクスチャ")) {
-                // テクスチャファイル選択
-                static std::filesystem::path baseDirTex = "resources/images/";
-                static std::filesystem::path currentDirTex = "resources/images";
-                static std::string selectedFolderTex = "";
-                static std::string selectedFileTex = "";
-
-                // 「戻る」ボタン（テクスチャ用）
-                if (currentDirTex != "resources/images") {
-                    if (ImGui::Button("< 戻る(Tex)")) {
-                        currentDirTex = currentDirTex.parent_path();
-                        selectedFolderTex = "";
-                        selectedFileTex = "";
-                    }
+            // パーティクルグループ作成のCollapsingHeader
+            if (ColoredCollapsingHeader("パーティクルグループ作成", 1)) {
+                // 名前の入力
+                char nameBuffer[256];
+                strcpy_s(nameBuffer, sizeof(nameBuffer), localName_.c_str());
+                ImGui::Text("パーティクルグループの名前");
+                if (ImGui::InputText("  ", nameBuffer, sizeof(nameBuffer))) {
+                    localName_ = std::string(nameBuffer);
                 }
 
-                // フォルダ一覧
-                std::vector<std::string> foldersTex;
-                std::vector<std::string> texFiles;
+                // パーティクルタイプ選択（ラジオボタン）
+                ImGui::Spacing();
+                ImGui::Text("パーティクルタイプ選択");
 
-                for (const auto &entry : std::filesystem::directory_iterator(currentDirTex)) {
-                    if (entry.is_directory()) {
-                        foldersTex.push_back(entry.path().filename().string());
-                    } else if (entry.path().extension() == ".png" || entry.path().extension() == ".jpg") {
-                        texFiles.push_back(entry.path().filename().string());
-                    }
-                }
+                static int selectedType = 0; // 0: モデル, 1: プリミティブ
+                ImGui::RadioButton("モデルパーティクル", &selectedType, 0);
+                ImGui::SameLine();
+                ImGui::RadioButton("プリミティブモデル", &selectedType, 1);
+                ImGui::Separator();
 
-                // フォルダ選択 (クリックで移動)
-                if (!foldersTex.empty()) {
-                    ImGui::Text("フォルダ");
-                    ImGui::Separator();
-                    for (auto &folder : foldersTex) {
-                        std::string folderNameTex = folder + " (Tex)"; // フォルダ名に "(Tex)" を追加
-                        if (ImGui::Selectable(folderNameTex.c_str(), selectedFolderTex == folder)) {
-                            selectedFolderTex = folderNameTex;
-                            currentDirTex = currentDirTex / folder; // フォルダ移動
-                            selectedFileTex = "";                   // 新しいフォルダを開いたらファイル選択をリセット
-                        }
-                        ImGui::Separator();
-                    }
-                }
+                // モデルパーティクル選択時
+                if (selectedType == 0) {
+                    // モデル選択セクション (青色)
+                    if (ColoredCollapsingHeader("モデル選択", 2)) {
+                        // モデルファイル選択
+                        static std::filesystem::path baseDirObj = "resources/models/";
+                        static std::filesystem::path currentDirObj = "resources/models";
+                        static std::string selectedFolderObj = "";
+                        static std::string selectedFileObj = "";
 
-                // `.png`, `.jpg` テクスチャファイル選択
-                if (!texFiles.empty()) {
-                    ImGui::Text("テクスチャファイル:");
-                    if (ImGui::BeginCombo("ファイル選択 ", selectedFileTex.empty() ? "なし" : selectedFileTex.c_str())) {
-                        for (const auto &file : texFiles) {
-                            bool isSelected = (file == selectedFileTex);
-                            if (ImGui::Selectable(file.c_str(), isSelected)) {
-                                selectedFileTex = file;
-
-                                // `baseDirTex` からの相対パスを取得
-                                std::filesystem::path relativePath = (currentDirTex / file).lexically_relative(baseDirTex);
-
-                                // Windowsのバックスラッシュをスラッシュに変換
-                                std::string pathStr = relativePath.string();
-                                std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
-
-                                // `texturePath_` に保存
-                                localTexturePath_ = pathStr;
-                            }
-                            if (isSelected) {
-                                ImGui::SetItemDefaultFocus();
+                        // 「戻る」ボタン（上の階層に戻る）
+                        if (currentDirObj != "resources/models") {
+                            if (ImGui::Button("< 戻る(Model)")) {
+                                currentDirObj = currentDirObj.parent_path();
+                                selectedFolderObj = "";
+                                selectedFileObj = "";
                             }
                         }
-                        ImGui::EndCombo();
+
+                        // フォルダ一覧
+                        std::vector<std::string> foldersObj;
+                        std::vector<std::string> objFiles;
+
+                        for (const auto &entry : std::filesystem::directory_iterator(currentDirObj)) {
+                            if (entry.is_directory()) {
+                                foldersObj.push_back(entry.path().filename().string());
+                            } else if (entry.path().extension() == ".obj") {
+                                objFiles.push_back(entry.path().filename().string());
+                            }
+                        }
+
+                        // フォルダ選択 (クリックで移動)
+                        if (!foldersObj.empty()) {
+                            ImGui::Text("フォルダ");
+                            ImGui::Separator();
+                            for (const auto &folder : foldersObj) {
+                                std::string folderNameTex = folder + " (Model)"; // フォルダ名に "(Model)" を追加
+                                if (ImGui::Selectable(folderNameTex.c_str(), selectedFolderObj == folder)) {
+                                    selectedFolderObj = folderNameTex;
+                                    currentDirObj = currentDirObj / folder; // フォルダ移動
+                                    selectedFileObj = "";                   // 新しいフォルダを開いたらファイル選択をリセット
+                                }
+                                ImGui::Separator();
+                            }
+                        }
+
+                        // `.obj` ファイル選択
+                        if (!objFiles.empty()) {
+                            ImGui::Text("モデルファイル:");
+                            if (ImGui::BeginCombo("ファイル選択", selectedFileObj.empty() ? "なし" : selectedFileObj.c_str())) {
+                                for (const auto &file : objFiles) {
+                                    bool isSelected = (file == selectedFileObj);
+                                    if (ImGui::Selectable(file.c_str(), isSelected)) {
+                                        selectedFileObj = file;
+
+                                        // `baseDirObj` からの相対パスを取得
+                                        std::filesystem::path relativePath = (currentDirObj / file).lexically_relative(baseDirObj);
+
+                                        // Windowsのバックスラッシュをスラッシュに変換
+                                        std::string pathStr = relativePath.string();
+                                        std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
+
+                                        // `fileNameObj_` に保存
+                                        localFileObj_ = pathStr;
+                                    }
+                                    if (isSelected) {
+                                        ImGui::SetItemDefaultFocus();
+                                    }
+                                }
+                                ImGui::EndCombo();
+                            }
+                        }
+                    }
+
+                    // テクスチャ選択セクション (緑色)
+                    if (ColoredCollapsingHeader("テクスチャ選択", 3)) {
+                        ShowTextureSelector(localTexturePath_);
+                    }
+
+                    // パーティクルグループ作成ボタン
+                    ImGui::Spacing();
+                    if (!localName_.empty() && !localFileObj_.empty()) {
+                        if (ImGui::Button("モデルパーティクルグループ生成")) {
+                            AddParticleGroup(localName_, localFileObj_, localTexturePath_);
+                            localName_.clear();
+                            localFileObj_.clear();
+                            localTexturePath_.clear(); // テクスチャのパスもクリア
+                        }
+                    }
+                }
+                // プリミティブモデル選択時
+                else if (selectedType == 1) {
+                    // プリミティブタイプ選択セクション (紫色)
+                    if (ColoredCollapsingHeader("プリミティブタイプ選択", 4)) {
+                        const char *primitiveType[] = {"未選択", "プレーン", "球", "キューブ", "シリンダー", "リング", "三角形", "円錐", "四角錐"};
+                        int currentPrimitiveType = static_cast<int>(localType_);
+                        // 初期値が未選択（None = -1）の場合に対応するため +1 して選択肢に表示
+                        if (ImGui::Combo("タイプ選択", &currentPrimitiveType, primitiveType, IM_ARRAYSIZE(primitiveType))) {
+                            localType_ = static_cast<PrimitiveType>(currentPrimitiveType);
+                        }
+                    }
+
+                    // テクスチャ選択セクション (オレンジ色)
+                    if (ColoredCollapsingHeader("テクスチャ選択", 5)) {
+                        ShowTextureSelector(localTexturePath_);
+                    }
+
+                    // パーティクルグループ作成ボタン
+                    ImGui::Spacing();
+                    if (!localName_.empty()) {
+                        // localType_ が None（未選択）のときはボタンを無効化
+                        bool isTypeInvalid = (localType_ == PrimitiveType::None);
+                        if (isTypeInvalid) {
+                            ImGui::BeginDisabled();
+                        }
+
+                        if (ImGui::Button("プリミティブパーティクルグループ生成")) {
+                            AddPrimitiveParticleGroup(localName_, localTexturePath_, localType_);
+                            localName_.clear();
+                            localTexturePath_.clear();        // テクスチャのパスもクリア
+                            localType_ = PrimitiveType::None; // 初期化
+                        }
+
+                        if (isTypeInvalid) {
+                            ImGui::EndDisabled();
+                        }
                     }
                 }
             }
 
-            // パーティクル作成ボタン
-            ImGui::Spacing();
-            if (!localName_.empty() && !localFileObj_.empty()) {
-                if (ImGui::Button("パーティクル生成")) {
-                    AddParticleEmitter(localName_, localFileObj_, localTexturePath_);
-                    localName_.clear();
-                    localFileObj_.clear();
-                    localTexturePath_.clear(); // テクスチャのパスもクリア
-                }
-            }
-
-            if (ImGui::CollapsingHeader("パーティクルデータのロード")) {
+            // パーティクルデータのロードセクション (黄色系)
+            if (ColoredCollapsingHeader("パーティクルデータのロード", 2)) {
                 ShowFileSelector();
             }
 
@@ -289,7 +423,6 @@ void ParticleEditor::ShowFileSelector() {
 }
 
 std::vector<std::string> ParticleEditor::GetJsonFiles() {
-
     static std::vector<std::string> jsonFiles; // キャッシュされたJSONファイルリスト
     static size_t lastFileCount = 0;           // 最後に取得したJSONファイル数
     std::filesystem::path baseDir = "resources/jsons/Particle";

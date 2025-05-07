@@ -1,0 +1,107 @@
+{
+    "GroupName_0": "Cylinder",
+    "allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "alphaMax": 1.0,
+    "alphaMin": 1.0,
+    "count": 1,
+    "emitFrequency": 0.15000000596046448,
+    "emitterRotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterTranslation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -25.600000381469727
+    },
+    "endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 3.1415927410125732
+    },
+    "endScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "isAcceMultiply": true,
+    "isActive": false,
+    "isAllRamdomScale": false,
+    "isBillBoard": false,
+    "isEndScale": false,
+    "isFaceDirection": false,
+    "isRandomColor": true,
+    "isRandomRotate": true,
+    "isRandomScale": false,
+    "isSinMove": false,
+    "isVisible": true,
+    "lifeTimeMax": 0.5,
+    "lifeTimeMin": 0.5,
+    "rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 3.1415927410125732
+    },
+    "rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 3.1415927410125732
+    },
+    "rotateVelocityMax": {
+        "x": 0.0,
+        "y": 0.07999999821186066,
+        "z": 0.0
+    },
+    "rotateVelocityMin": {
+        "x": 0.0,
+        "y": -0.07999999821186066,
+        "z": 0.0
+    },
+    "scaleMax": 1.0,
+    "scaleMin": 1.0,
+    "startAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 3.1415927410125732
+    },
+    "startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "velocityMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "velocityMin": {
+        "x": -1.0,
+        "y": -1.0,
+        "z": -1.0
+    }
+}

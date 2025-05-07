@@ -44,6 +44,10 @@ void Framework::Initialize() {
     srvManager->Initialize();
     ///--------------------------
 
+    ///--------BaseObjectManager--------
+    baseObjectManager_ = BaseObjectManager::GetInstance();
+    ///---------------------------------
+
     /// ---------ImGui---------
 #ifdef _DEBUG
     imGuiManager_ = ImGuiManager::GetInstance();
@@ -72,6 +76,11 @@ void Framework::Initialize() {
     modelManager_ = ModelManager::GetInstance();
     modelManager_->Initialize(srvManager);
     ///----------------------------------
+
+    ///----------PrimitiveModel-----------
+    primitiveModel = PrimitiveModel::GetInstance();
+    primitiveModel->Initialize();
+    ///-----------------------------------
 
     ///----------SpriteCommon------------
     // スプライト共通部の初期化
@@ -117,8 +126,15 @@ void Framework::Initialize() {
 
     LightGroup::GetInstance()->Initialize();
 
+    ///-------ParticleEditor-------
     particleEditor = ParticleEditor::GetInstance();
     particleEditor->Initialize();
+    ///----------------------------
+
+    ///-------ParticleGroupManager-------
+    particleGroupManager_ = ParticleGroupManager::GetInstance();
+    particleGroupManager_->Initialize();
+    ///---------------------------------
 
     /// 時間の初期化
     Frame::Init();
@@ -138,9 +154,18 @@ void Framework::Finalize() {
     modelManager_->Finalize();
     ///---------------------------
 
+    /// -------PrimitiveModel-------
+    primitiveModel->Finalize();
+    ///-----------------------------
+
+    /// -------ParticleGroupManager-------
+    particleGroupManager_->Finalize();
+    ///---------------------------------
+
 #ifdef _DEBUG
     imGuiManager_->Finalize();
 #endif // _DEBUG
+    baseObjectManager_->Finalize();
     line3d_->Finalize();
     srvManager->Finalize();
     audio->Finalize();
@@ -157,6 +182,8 @@ void Framework::Update() {
 
     /// deltaTimeの更新
     Frame::Update();
+
+    baseObjectManager_->Update();
 
     sceneManager_->Update();
 

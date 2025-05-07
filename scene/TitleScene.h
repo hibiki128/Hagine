@@ -2,6 +2,7 @@
 
 #include "BaseScene.h"
 #include"application/Base/BaseObject.h"
+#include"Easing.h"
 
 class TitleScene : public BaseScene {
   public: // メンバ関数
@@ -61,6 +62,4 @@ class TitleScene : public BaseScene {
 
     ViewProjection vp_;
     std::unique_ptr<DebugCamera> debugCamera_;
-
-    std::unique_ptr<BaseObject> test;
 };

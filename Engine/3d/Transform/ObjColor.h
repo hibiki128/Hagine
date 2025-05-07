@@ -28,13 +28,7 @@ public:
 	/// </summary>
 	void SetGraphicCommand(UINT rootParameterIndex)const;
 
-	/// <summary>
-	/// セッター
-	/// </summary>
-	/// <param name="color"></param>
-	void SetColor(const Vector4& color) { color_ = color; }
-
-	const Vector4& GetColor() const {
+	Vector4& GetColor(){
 		return color_;
 	}
 

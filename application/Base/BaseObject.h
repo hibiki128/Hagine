@@ -45,11 +45,12 @@ class BaseObject : public Collider {
     /// ===================================================
 
     // 初期化、更新、描画
-    virtual void Init(const std::string className);
+    virtual void Init(const std::string objectName);
     virtual void Update();
     virtual void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f,0.0f,0.0f});
 
     virtual void CreateModel(const std::string modelname);
+    virtual void CreatePrimitiveModel(const PrimitiveType &type);
     virtual void CreateCollider();
 
     virtual void DebugImGui();
@@ -65,35 +66,27 @@ class BaseObject : public Collider {
     /// getter
     /// ===================================================
     const WorldTransform &GetTransform() { return transform_; }
-    const Object3d *GetObject3d() { return obj3d_.get(); }
+    std::string& GetName() { return objectName_; }
+    Object3d *GetObject3d() { return obj3d_.get(); }
+    Vector3 &GetWorldPosition() { return transform_.translation_; }
+    Vector3 &GetWorldRotation() { return transform_.rotation_; }
+    Vector3 &GetWorldScale() { return transform_.scale_; }
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
+    bool& GetLighting() { return isLighting_; }
+    bool &GetLoop() { return isLoop_; }
 
     /// ===================================================
     /// setter
     /// ===================================================
-    void SetObjColor(Vector4 c) { objColor_.SetColor(c); }
-    void SetWorldPosition(Vector3 pos) { transform_.translation_ = pos; }
-    void SetWorldPositionY(float pos) { transform_.translation_.y = pos; }
-    void SetWorldPositionX(float pos) { transform_.translation_.x = pos; }
-    void SetWorldPositionZ(float pos) { transform_.translation_.z = pos; }
-    void AddPosition(Vector3 pos) { transform_.translation_ += pos; }
-    void SetRotation(Vector3 rotate) { transform_.rotation_ = rotate; }
-    void SetRotationY(float rotate) { transform_.rotation_.y = rotate; }
-    void SetRotationX(float rotate) { transform_.rotation_.x = rotate; }
-    void SetScale(Vector3 scale) { transform_.scale_ = scale; }
-    void SetLighting(bool isLighting) { isLighting_ = isLighting; }
     void SetTexture(const std::string &filePath) { obj3d_->SetTexture(filePath); }
     void SetParent(const WorldTransform *parent) { transform_.parent_ = parent; }
-    void SetColor(const Vector4 &color) { objColor_.SetColor(color); }
     void SetModel(std::unique_ptr<Object3d> obj) {
         obj3d_ = std::move(obj);
     }
     void SetModel(const std::string &filePath) { obj3d_->SetModel(filePath); }
     void SetParent(const WorldTransform &wt) { transform_.parent_ = &wt; }
     void SetAnima(const std::string &filePath) { obj3d_->SetAnimation(filePath); }
-    void SetLoop(bool flag) { isLoop_ = flag; }
     void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
-
 
   private:
     void DebugTransform();

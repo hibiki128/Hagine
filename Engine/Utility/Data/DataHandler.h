@@ -8,6 +8,7 @@
 #include"iostream"
 #include <memory>
 #include <cstdint>
+#include <Primitive/PrimitiveModel.h>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -63,6 +64,16 @@ inline void from_json(const json &j, Vector4 &v) {
     v.z = j.at("z").get<float>();
     v.w = j.at("w").get<float>();
 }
+
+// JSON変換の定義 (PrimitiveType)
+inline void to_json(json &j, const PrimitiveType &type) {
+    j = static_cast<int>(type);
+}
+
+inline void from_json(const json &j, PrimitiveType &type) {
+    type = static_cast<PrimitiveType>(j.get<int>());
+}
+
 
 // Save (テンプレート関数はここに書く)
 template <typename T>

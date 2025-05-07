@@ -74,7 +74,9 @@ class Object3d {
     /// <summary>
     /// 初期化
     /// </summary>
-    void Initialize(const std::string &filePath);
+    void CreateModel(const std::string &filePath);
+
+    void CreatePrimitiveModel(const PrimitiveType &type);
 
     /// <summary>
     /// 更新

@@ -6,7 +6,7 @@
 #include <Texture/TextureManager.h>
 #include <Model/ModelManager.h>
 
-void Object3d::Initialize(const std::string &filePath) {
+void Object3d::CreateModel(const std::string &filePath) {
     this->obj3dCommon = Object3dCommon::GetInstance();
 
     CreateTransformationMatrix();
@@ -33,6 +33,23 @@ void Object3d::Initialize(const std::string &filePath) {
         model->SetBone(currentModelAnimation_->GetBone());
         model->SetSkin(currentModelAnimation_->GetSkin());
     }
+}
+
+void Object3d::CreatePrimitiveModel(const PrimitiveType &type) {
+
+    this->obj3dCommon = Object3dCommon::GetInstance();
+
+    CreateTransformationMatrix();
+
+    CreateMaterial();
+
+    lightGroup = LightGroup::GetInstance();
+    model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type));
+    materialData->color = model->GetModelData().material.color;
+    materialData->uvTransform = model->GetModelData().material.uvTransform;
+    materialData->textureFilePath = model->GetModelData().material.textureFilePath;
+    materialData->textureIndex = model->GetModelData().material.textureIndex;
+
 }
 
 void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {

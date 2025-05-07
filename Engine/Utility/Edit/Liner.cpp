@@ -5,7 +5,7 @@
 Liner::Liner()
 {
     obj3d_ = std::make_unique<Object3d>();
-    obj3d_->Initialize("line.obj");
+    obj3d_->CreateModel("line.obj");
     worldTransform_.Initialize();
 }
 

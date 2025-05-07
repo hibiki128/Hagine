@@ -44,6 +44,13 @@ public:
 	/// </summary>
 	/// <param name="filePath"></param>
 	void LoadModel(const std::string& filePath);
+
+	/// <summary>
+    /// プリミティブモデルの作成
+	/// </summary>
+	/// <param name="type"></param>
+	std::string CreatePrimitiveModel(PrimitiveType type);
+
 public:
 	std::unordered_map<std::string, std::unique_ptr<Model>> models;
 private:

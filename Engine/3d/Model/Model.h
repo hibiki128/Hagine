@@ -18,6 +18,7 @@
 #include"ModelStructs.h"
 
 #include <unordered_set>
+#include <Primitive/PrimitiveModel.h>
 class Model
 {
 private:
@@ -57,7 +58,9 @@ public:
 	/// 初期化
 	/// </summary>
 	/// <param name="modelCommon"></param>
-	void Initialize(ModelCommon* modelCommon, const std::string& directorypath, const std::string& filename);
+	void CreateModel(ModelCommon* modelCommon, const std::string& directorypath, const std::string& filename);
+
+	void CreatePrimitiveModel(ModelCommon *modelCommon, const PrimitiveType &type);
 
 	/// <summary>
 	/// 描画

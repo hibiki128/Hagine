@@ -18,7 +18,7 @@ class ParticleEmitter {
     // コンストラクタでメンバ変数を初期化
     ParticleEmitter();
 
-    void Initialize(std::string name = {}, std::string filePath = {});
+    void Initialize(std::string name = {});
 
     // 更新処理を行うUpdate関数
     void Update();
@@ -31,7 +31,10 @@ class ParticleEmitter {
 
     void Debug(); // ImGui用の関数を追加
 
-    std::string GetTexturePath() { return Manager_->GetTexturePath(); }
+    void AddParticleGroup(ParticleGroup* particleGroup);
+    void RemoveParticleGroup(const std::string &name) {
+        Manager_->RemoveParticleGroup(name);
+    }
 
     void SetPosition(const Vector3 &position) { transform_.translation_ = position; }
     void SetPositionY(const float &positionY) { transform_.translation_.y = positionY; }
@@ -43,19 +46,15 @@ class ParticleEmitter {
     void SetStartRotate(const Vector3 &startRotate) { startRote_ = startRotate; }
     void SetEndRotate(const Vector3 &endRotate) { endRote_ = endRotate; }
     void SetFrequency(const float &frequency) { emitFrequency_ = frequency; }
-    void SetTexture(const std::string &filePath);
-    void SetColor(const Vector4 &color) { Manager_->SetColor(color); }
     void SetName(const std::string &name) { 
         name_ = name; 
-        Manager_->CreateParticleGroup(name_, fileName_);
     }
-
-    void CreateParticle(const std::string &name, const std::string &fileName, const std::string &texturePath);
   private:
     // パーティクルを発生させるEmit関数
     void Emit();
     void SaveToJson();
     void LoadFromJson();
+    void LoadParticleGroup();
  
     void DebugParticleData();
    
@@ -64,8 +63,6 @@ class ParticleEmitter {
     float elapsedTime_; // 経過時間
 
     std::string name_;         // パーティクルの名前
-    std::string fileName_;     // パーティクルの名前
-    std::string texturePath_;
     WorldTransform transform_; // 位置や回転などのトランスフォーム
     int count_;                // 一度に発生させるパーティクルの数
 
@@ -76,6 +73,8 @@ class ParticleEmitter {
     float alphaMax_;
     float scaleMin_;
     float scaleMax_;
+    float gatherStartRatio_ = 0.5f;
+    float gatherStrength_ = 2.0f;
 
     Vector4 color_;
     Vector3 velocityMin_; // 速度の最小値
@@ -106,7 +105,12 @@ class ParticleEmitter {
     bool isFaceDirection_ = false;
     bool isAuto_ = false;
     bool isEndScale_ = false;
+    bool isEmitOnEdge_ = false;
+    bool isGatherMode_ = false; // 中心に集まるフラグ
+
+    
 
     std::unique_ptr<ParticleManager> Manager_;
     std::unique_ptr<DataHandler> datas_;
+    std::vector<std::string> particleGroupNames_;
 };

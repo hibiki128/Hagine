@@ -11,6 +11,7 @@ ImGuiManager *ImGuiManager::instance = nullptr;
 void ImGuiManager::Initialize(WinApp *winApp) {
 
     dxCommon_ = DirectXCommon::GetInstance();
+    baseObjectManager_ = BaseObjectManager::GetInstance();
 
     // ImGuiのコンテキストを生成
     ImGui::CreateContext();
@@ -307,15 +308,81 @@ void ImGuiManager::ShowMainMenu() {
             // 3Dオブジェクト
             if (ImGui::BeginMenu(ICON_FA_CUBE " 3Dオブジェクト")) {
                 if (ImGui::MenuItem(ICON_FA_CUBE " キューブ")) {
+                    std::string name = "cube_" + std::to_string(++cubeCount);
+                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->Init(name);
+                    object->CreatePrimitiveModel(PrimitiveType::Cube);
+                    object->SetTexture("debug/uvChecker.png");
+                    baseObjectManager_->AddObject(std::move(object));
                 }
+
                 if (ImGui::MenuItem(ICON_FA_CIRCLE " 球体")) {
+                    std::string name = "sphere_" + std::to_string(++sphereCount);
+                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->Init(name);
+                    object->CreatePrimitiveModel(PrimitiveType::Sphere);
+                    object->SetTexture("debug/uvChecker.png");
+                    baseObjectManager_->AddObject(std::move(object));
                 }
+
                 if (ImGui::MenuItem(ICON_FA_CUBE " 平面")) {
+                    std::string name = "plane_" + std::to_string(++planeCount);
+                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->Init(name);
+                    object->CreatePrimitiveModel(PrimitiveType::Plane);
+                    object->SetTexture("debug/uvChecker.png");
+                    baseObjectManager_->AddObject(std::move(object));
                 }
-                if (ImGui::MenuItem(ICON_FA_CUBE " シリンダー")) {
+
+                if (ImGui::MenuItem(ICON_FA_CIRCLE " シリンダー")) {
+                    std::string name = "cylinder_" + std::to_string(++cylinderCount);
+                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->Init(name);
+                    object->CreatePrimitiveModel(PrimitiveType::Cylinder);
+                    object->SetTexture("debug/uvChecker.png");
+                    baseObjectManager_->AddObject(std::move(object));
                 }
-                if (ImGui::MenuItem(ICON_FA_CUBE " カプセル")) {
+
+                if (ImGui::MenuItem(ICON_FA_RING " リング")) {
+                    std::string name = "ring_" + std::to_string(++ringCount);
+                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->Init(name);
+                    object->CreatePrimitiveModel(PrimitiveType::Ring);
+                    object->SetTexture("debug/uvChecker.png");
+                    baseObjectManager_->AddObject(std::move(object));
                 }
+
+                if (ImGui::MenuItem(ICON_FA_CARET_UP " 三角形")) {
+                    std::string name = "triangle_" + std::to_string(++triangleCount);
+                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->Init(name);
+                    object->CreatePrimitiveModel(PrimitiveType::Triangle);
+                    object->SetTexture("debug/uvChecker.png");
+                    baseObjectManager_->AddObject(std::move(object));
+                }
+
+                if (ImGui::MenuItem(ICON_FA_MOUNTAIN " ピラミッド")) {
+                    std::string name = "pyramid_" + std::to_string(++pyramidCount);
+                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->Init(name);
+                    object->CreatePrimitiveModel(PrimitiveType::Pyramid);
+                    object->SetTexture("debug/uvChecker.png");
+                    baseObjectManager_->AddObject(std::move(object));
+                }
+
+                if (ImGui::MenuItem(ICON_FA_CHART_AREA " 円柱")) {
+                    std::string name = "cone_" + std::to_string(++coneCount);
+                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->Init(name);
+                    object->CreatePrimitiveModel(PrimitiveType::Cone);
+                    object->SetTexture("debug/uvChecker.png");
+                    baseObjectManager_->AddObject(std::move(object));
+                }
+
+                  if (ImGui::MenuItem(ICON_FA_TRASH_ALT " オブジェクト全削除")) {
+                    baseObjectManager_->DeleteObject();
+                }
+
                 ImGui::EndMenu();
             }
 
@@ -454,6 +521,7 @@ void ImGuiManager::ShowObjectSettingWindow() {
     ImGui::Begin("オブジェクト設定", &showObjectView_, flags);
 
     currentScene_->AddObjectSetting();
+    baseObjectManager_->DrawImGui();
 
     ImGui::End();
 }

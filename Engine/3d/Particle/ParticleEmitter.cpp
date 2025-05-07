@@ -1,25 +1,22 @@
 #include "ParticleEmitter.h"
 #include "Engine/Frame/Frame.h"
 #include "line/DrawLine3D.h"
+
+#include "ParticleGroupManager.h"
+#include <set>
 // コンストラクタ
 ParticleEmitter::ParticleEmitter() {}
 
-void ParticleEmitter::Initialize(std::string name, std::string filePath) {
+void ParticleEmitter::Initialize(std::string name) {
     transform_.Initialize();
     if (!name.empty()) {
         name_ = name;
         datas_ = std::make_unique<DataHandler>("Particle", name_);
         LoadFromJson();
-        if (!filePath.empty()) {
-            fileName_ = filePath;
-        }
         Manager_ = std::make_unique<ParticleManager>();
         Manager_->Initialize(SrvManager::GetInstance());
-        Manager_->CreateParticleGroup(name_, fileName_);
-        if (texturePath_.empty()) {
-            texturePath_ = Manager_->GetTexturePath();
-        }
-        Manager_->SetTexture(texturePath_);
+        LoadParticleGroup();
+        datas_ = std::make_unique<DataHandler>("Particle", name_);
     }
 }
 
@@ -39,6 +36,10 @@ void ParticleEmitter::Update() {
         Manager_->SetSinMove(isSinMove_);
         Manager_->SetFaceDirection(isFaceDirection_);
         Manager_->SetEndScale(isEndScale_);
+        Manager_->SetOnEdge(isEmitOnEdge_);
+        Manager_->SetGatherMode(isGatherMode_);
+        Manager_->SetGatherStartRatio(gatherStartRatio_);
+        Manager_->SetGatherStrength(gatherStrength_);
         Emit();                         // パーティクルを発生させる
         elapsedTime_ -= emitFrequency_; // 過剰に進んだ時間を考慮
     }
@@ -56,6 +57,10 @@ void ParticleEmitter::UpdateOnce() {
         Manager_->SetSinMove(isSinMove_);
         Manager_->SetFaceDirection(isFaceDirection_);
         Manager_->SetEndScale(isEndScale_);
+        Manager_->SetOnEdge(isEmitOnEdge_);
+        Manager_->SetGatherMode(isGatherMode_);
+        Manager_->SetGatherStartRatio(gatherStartRatio_);
+        Manager_->SetGatherStrength(gatherStrength_);
         Emit(); // パーティクルを発生させる
         isActive_ = true;
     }
@@ -114,16 +119,10 @@ void ParticleEmitter::DrawEmitter() {
     }
 }
 
-void ParticleEmitter::SetTexture(const std::string &filePath) {
-    texturePath_ = filePath;
-    Manager_->SetTexture(filePath);
-}
-
 // Emit関数
 void ParticleEmitter::Emit() {
     // ParticleManagerのEmit関数を呼び出す
     Manager_->Emit(
-        name_,
         transform_.translation_,
         count_,
         transform_.scale_, // スケールを引数として渡す
@@ -149,22 +148,6 @@ void ParticleEmitter::Emit() {
         transform_.rotation_,
         rotateStartMax_,
         rotateStartMin_);
-}
-
-void ParticleEmitter::CreateParticle(const std::string &name, const std::string &fileName, const std::string &texturePath) {
-
-    name_ = name;
-    fileName_ = fileName;
-    Manager_ = std::make_unique<ParticleManager>();
-    Manager_->Initialize(SrvManager::GetInstance());
-    Manager_->CreateParticleGroup(name_, fileName_);
-    if (texturePath_.empty()) {
-        texturePath_ = Manager_->GetTexturePath();
-    }
-    texturePath_ = texturePath;
-    Manager_->SetTexture(texturePath_);
-    datas_ = std::make_unique<DataHandler>("Particle", name_);
-    LoadFromJson();
 }
 
 #pragma region ImGui関連
@@ -207,8 +190,16 @@ void ParticleEmitter::SaveToJson() {
     datas_->Save("isSinMove", isSinMove_);
     datas_->Save("isFaceDirection", isFaceDirection_);
     datas_->Save("isEndScale", isEndScale_);
-    datas_->Save("fileName", fileName_);
-    datas_->Save("texturePath", texturePath_);
+    datas_->Save("isEmitOnEdge", isEmitOnEdge_);
+    datas_->Save("isGatherMode", isGatherMode_);
+    datas_->Save("gatherStartRatio", gatherStartRatio_);
+    datas_->Save("gatherStrength", gatherStrength_);
+    particleGroupNames_ = Manager_->GetParticleGroupsName();
+    int count = 0;
+    for (auto &particleGroupName : particleGroupNames_) {
+        datas_->Save("GroupName_" + std::to_string(count), particleGroupName);
+        count++;
+    }
 }
 
 void ParticleEmitter::LoadFromJson() {
@@ -249,8 +240,23 @@ void ParticleEmitter::LoadFromJson() {
         isSinMove_ = datas_->Load<bool>("isSinMove", false);
         isFaceDirection_ = datas_->Load<bool>("isFaceDirection", false);
         isEndScale_ = datas_->Load<bool>("isEndScale", false);
-        fileName_ = datas_->Load<std::string>("fileName", fileName_);
-        texturePath_ = datas_->Load<std::string>("texturePath", texturePath_);
+        isEmitOnEdge_ = datas_->Load<bool>("isEmitOnEdge", false);
+        isGatherMode_ = datas_->Load<bool>("isGatherMode", false);
+        gatherStartRatio_ = datas_->Load<float>("gatherStartRatio", 0.0f);
+        gatherStrength_ = datas_->Load<float>("gatherStrength", 0.0f);
+        for (size_t i = 0; i < ParticleGroupManager::GetInstance()->GetParticleGroups().size(); i++) {
+            std::string groupName = datas_->Load<std::string>("GroupName_" + std::to_string(i), "");
+            if (groupName == "") {
+                break;
+            }
+            particleGroupNames_.push_back(groupName);
+        }
+    }
+}
+
+void ParticleEmitter::LoadParticleGroup() {
+    for (auto &particleGroupname : particleGroupNames_) {
+        AddParticleGroup(ParticleGroupManager::GetInstance()->GetParticleGroup(particleGroupname));
     }
 }
 
@@ -305,6 +311,18 @@ void ParticleEmitter::DebugParticleData() {
                     ImGui::DragFloat("最小値", &lifeTimeMin_, 0.1f, 0.0f);
                     lifeTimeMin_ = std::clamp(lifeTimeMin_, 0.0f, lifeTimeMax_);
                     lifeTimeMax_ = std::clamp(lifeTimeMax_, lifeTimeMin_, 10.0f);
+                    ImGui::TreePop();
+                }
+
+                ImGui::Separator();
+
+                if (ImGui::TreeNode("位置")) {
+                    ImGui::Checkbox("中心に集める", &isGatherMode_);
+                    if (isGatherMode_) {
+                        ImGui::DragFloat("強さ", &gatherStrength_,0.1f);
+                        ImGui::DragFloat("始まるタイミング", &gatherStartRatio_,0.1f);
+                    }
+                    ImGui::Checkbox("外周", &isEmitOnEdge_);
                     ImGui::TreePop();
                 }
 
@@ -453,6 +471,149 @@ void ParticleEmitter::DebugParticleData() {
                 ImGui::Checkbox("ランダムカラー", &isRandomColor_);
             }
 
+            if (ImGui::CollapsingHeader("グループ")) {
+                // エミッターにアタッチされているグループ名をセットとして扱う（高速検索のため）
+                std::set<std::string> emitterGroupNames(
+                    particleGroupNames_.begin(),
+                    particleGroupNames_.end());
+
+                // 全パーティクルグループを取得
+                std::vector<ParticleGroup *> allGroups = ParticleGroupManager::GetInstance()->GetParticleGroups();
+
+                // 選択状態を保持するインデックス
+                static std::vector<int> leftSelected;
+                static std::vector<int> rightSelected;
+
+                // グループ分類用のリスト
+                std::vector<std::string> availableNames;
+                std::vector<const char *> availableItems;
+                std::vector<std::string> attachedNames;
+                std::vector<const char *> attachedItems;
+
+                // グループを分類する処理
+                for (const auto &group : allGroups) {
+                    const std::string &name = group->GetGroupName();
+                    if (emitterGroupNames.contains(name)) {
+                        attachedNames.push_back(name);
+                    } else {
+                        availableNames.push_back(name);
+                    }
+                }
+
+                // c_str() 変換は最後に行う
+                availableItems.clear();
+                attachedItems.clear();
+                for (auto &name : availableNames) {
+                    availableItems.push_back(name.c_str());
+                }
+                for (auto &name : attachedNames) {
+                    attachedItems.push_back(name.c_str());
+                }
+
+                // 範囲外インデックスを除外
+                while (!leftSelected.empty() && leftSelected.back() >= availableNames.size())
+                    leftSelected.pop_back();
+                while (!rightSelected.empty() && rightSelected.back() >= attachedNames.size())
+                    rightSelected.pop_back();
+
+                // UI横幅の取得
+                float width = ImGui::GetContentRegionAvail().x;
+                float halfWidth = width * 0.45f;
+
+                ImGui::Text("利用可能");
+                ImGui::SameLine(width - halfWidth - 50);
+                ImGui::Text("アタッチ済み");
+
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 4));
+
+                // 左リスト（未アタッチグループ）
+                ImGui::BeginChild("available_groups", ImVec2(halfWidth, 200), true);
+                for (int i = 0; i < availableItems.size(); i++) {
+                    bool isSelected = std::find(leftSelected.begin(), leftSelected.end(), i) != leftSelected.end();
+                    if (ImGui::Selectable(availableItems[i], isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                        if (!ImGui::GetIO().KeyCtrl)
+                            leftSelected.clear();
+
+                        auto it = std::find(leftSelected.begin(), leftSelected.end(), i);
+                        if (it != leftSelected.end())
+                            leftSelected.erase(it);
+                        else
+                            leftSelected.push_back(i);
+
+                        // ダブルクリックで追加
+                        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                            ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(availableNames[i]);
+                            if (group) {
+                                AddParticleGroup(group);
+                            }
+                            leftSelected.clear();
+                        }
+                    }
+                }
+                ImGui::EndChild();
+
+                ImGui::SameLine();
+
+                // 中央の追加・削除ボタン
+                ImGui::BeginGroup();
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 8));
+
+                ImGui::PushID("move_right");
+                if (ImGui::Button(">>", ImVec2(40, 30)) && !leftSelected.empty()) {
+                    for (auto it = leftSelected.rbegin(); it != leftSelected.rend(); ++it) {
+                        int idx = *it;
+                        ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(availableNames[idx]);
+                        if (group) {
+                            AddParticleGroup(group);
+                            particleGroupNames_ = Manager_->GetParticleGroupsName();
+                        }
+                    }
+                    leftSelected.clear();
+                }
+                ImGui::PopID();
+
+                ImGui::PushID("move_left");
+                if (ImGui::Button("<<", ImVec2(40, 30)) && !rightSelected.empty()) {
+                    for (auto it = rightSelected.rbegin(); it != rightSelected.rend(); ++it) {
+                        int idx = *it;
+                        RemoveParticleGroup(attachedNames[idx]);
+                        particleGroupNames_ = Manager_->GetParticleGroupsName();
+                    }
+                    rightSelected.clear();
+                }
+                ImGui::PopID();
+
+                ImGui::PopStyleVar(); // ボタン間の余白復元
+                ImGui::EndGroup();
+
+                ImGui::SameLine();
+
+                // 右リスト（アタッチ済みグループ）
+                ImGui::BeginChild("attached_groups", ImVec2(halfWidth, 200), true);
+                for (int i = 0; i < attachedItems.size(); i++) {
+                    bool isSelected = std::find(rightSelected.begin(), rightSelected.end(), i) != rightSelected.end();
+                    if (ImGui::Selectable(attachedItems[i], isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                        if (!ImGui::GetIO().KeyCtrl)
+                            rightSelected.clear();
+
+                        auto it = std::find(rightSelected.begin(), rightSelected.end(), i);
+                        if (it != rightSelected.end())
+                            rightSelected.erase(it);
+                        else
+                            rightSelected.push_back(i);
+
+                        // ダブルクリックで削除
+                        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                            RemoveParticleGroup(attachedNames[i]);
+                            rightSelected.clear();
+                        }
+                    }
+                }
+                ImGui::EndChild();
+
+                ImGui::PopStyleVar(); // ItemSpacing 戻す
+            }
+
             if (ImGui::Button("セーブ")) {
                 SaveToJson();
                 std::string message = std::format("ParticleData saved.");
@@ -478,5 +639,8 @@ void ParticleEmitter::Debug() {
         DebugParticleData();
     }
 #endif
+}
+void ParticleEmitter::AddParticleGroup(ParticleGroup *particleGroup) {
+    Manager_->AddParticleGroup(particleGroup);
 }
 #pragma endregion

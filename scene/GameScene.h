@@ -1,6 +1,8 @@
 #pragma once
 #include "BaseScene.h"
 
+#include"application/GameObject/Player/Player.h"
+
 class GameScene : public BaseScene {
   public: // メンバ関数
     /// <summary>
@@ -60,4 +62,7 @@ class GameScene : public BaseScene {
 
     ViewProjection vp_;
     std::unique_ptr<DebugCamera> debugCamera_;
+
+    std::unique_ptr<Player> player_;
+
 };

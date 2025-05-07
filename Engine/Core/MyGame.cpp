@@ -11,7 +11,7 @@ void MyGame::Initialize() {
     sceneFactory_ = new SceneFactory();
     // シーンマネージャに最初のシーンをセット
     sceneManager_->SetSceneFactory(sceneFactory_);
-    sceneManager_->NextSceneReservation("TITLE");
+    sceneManager_->NextSceneReservation("GAME");
     // -----------------------
 }
 
@@ -54,11 +54,13 @@ void MyGame::Draw() {
 
     // -----シーンごとの処理------
 
-    object3dCommon->DrawCommonSetting();
     if (sceneManager_->GetTransitionEnd()) {
         collisionManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
     }
     sceneManager_->Draw();
+    object3dCommon->DrawCommonSetting();
+    baseObjectManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
+
 
 #ifdef _DEBUG
     //-----線描画-----

@@ -8,10 +8,13 @@ void GameScene::Initialize() {
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
     vp_.Initialize();
-    vp_.translation_ = {12.0f, -4.0f, -30.0f};
+    vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
+
+    player_ = std::make_unique<Player>();
+    player_->Init("player");
 }
 
 void GameScene::Finalize() {
@@ -23,6 +26,9 @@ void GameScene::Update() {
 
     // シーン切り替え
     ChangeScene();
+
+    player_->Update();
+
 }
 
 void GameScene::Draw() {
@@ -36,7 +42,7 @@ void GameScene::Draw() {
 
     objCommon_->DrawCommonSetting();
     //-----3DObjectの描画開始-----
-
+    player_->Draw(vp_);
     //--------------------------
 
     /// Particleの描画準備
@@ -86,6 +92,7 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
+    player_->Debug();
 }
 
 void GameScene::AddParticleSetting() {

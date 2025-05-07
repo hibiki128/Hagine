@@ -1,0 +1,25 @@
+{
+    "BlinnPhong": 1,
+    "HalfLambert": 0,
+    "active": false,
+    "color": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "cosAngle": 3.0,
+    "decay": 1.0,
+    "direction": {
+        "x": 0.0,
+        "y": -1.0,
+        "z": 0.0
+    },
+    "distance": 10.0,
+    "intensity": 1.0,
+    "position": {
+        "x": 0.0,
+        "y": -4.0,
+        "z": -3.0
+    }
+}

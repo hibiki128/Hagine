@@ -1,9 +1,8 @@
 #include "ParticleManager.h"
-#include"Texture/TextureManager.h"
-#include "fstream"
 #include "Engine/Frame/Frame.h"
+#include "Texture/TextureManager.h"
+#include "fstream"
 #include <random>
-std::unordered_map<std::string, ParticleManager::ModelData> ParticleManager::modelCache;
 
 void ParticleManager::Initialize(SrvManager *srvManager) {
     particleCommon = ParticleCommon::GetInstance();
@@ -25,17 +24,17 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
     // ビルボード行列を逆行列にすることで、カメラに対して正しい向きにする
     billboardMatrix = Inverse(billboardMatrix);
 
-    for (auto &[groupName, particleGroup] : particleGroups) {
+    for (auto &[groupName, particleGroup] : particleGroups_) {
 
         uint32_t numInstance = 0;
 
         // 各パーティクルの更新
-        for (auto particleIterator = particleGroup.particles.begin();
-             particleIterator != particleGroup.particles.end();) {
+        for (auto particleIterator = particleGroup->GetParticleGroupData().particles.begin();
+             particleIterator != particleGroup->GetParticleGroupData().particles.end();) {
 
             // パーティクルの生存時間チェック
             if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
-                particleIterator = particleGroup.particles.erase(particleIterator);
+                particleIterator = particleGroup->GetParticleGroupData().particles.erase(particleIterator);
                 continue;
             }
             // パーティクルの生存時間に基づく進行度 t を計算
@@ -43,9 +42,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
             t = std::clamp(t, 0.0f, 1.0f);
 
             // 拡縮処理
-            // 拡縮処理
             if (isSinMove_) {
-
                 // Sin波の周波数制御 (速度調整)
                 float waveScale = 0.5f * (sin(t * DirectX::XM_PI * 18.0f) + 1.0f); // 0 ～ 1 の範囲
 
@@ -55,48 +52,101 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                 // Sin波スケールと最大スケールの積を適用
                 (*particleIterator).transform.scale_ =
                     (*particleIterator).startScale * waveScale * maxScale;
-            }
-
-            else {
+            } else {
                 // 通常の線形補間
                 (*particleIterator).transform.scale_ =
                     (1.0f - t) * (*particleIterator).startScale + t * (*particleIterator).endScale;
-                // アルファ値の計算
-                (*particleIterator).color.w = (*particleIterator).initialAlpha - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
+
+                // ギャザーモードが有効でない場合のみ、通常のアルファ値計算を行う
+                if (!(isGatherMode_ && t >= gatherStartRatio_)) {
+                    // アルファ値の計算
+                    (*particleIterator).color.w = (*particleIterator).initialAlpha - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
+                }
             }
 
-            (*particleIterator).Acce = (1.0f - t) * (*particleIterator).startAcce + t * (*particleIterator).endAcce;
-            if (isFaceDirection_) {
-                // 固定された進行方向を使用して回転を設定
-                Vector3 forward = (*particleIterator).fixedDirection; // 初期に保存された進行方向
-                Vector3 initialUp = {0.0f, 1.0f, 0.0f};
+            // ギャザーモードとそれ以外の移動処理を分岐
+            bool isGathering = false;
+            if (isGatherMode_ && t >= gatherStartRatio_) {
+                isGathering = true;
+                // ギャザー効果の強さを計算（ライフタイム終盤ほど強く）
+                float gatherFactor = (t - gatherStartRatio_) / (1.0f - gatherStartRatio_);
+                gatherFactor = std::clamp(gatherFactor, 0.0f, 1.0f);
 
-                // 回転軸を計算
-                Vector3 rotationAxis = initialUp.Cross(forward).Normalize();
-                float dotProduct = initialUp.Dot(forward);
-                float angle = acosf(std::clamp(dotProduct, -1.0f, 1.0f)); // 安全な範囲にクランプ
+                // エミッター中心（パーティクル発生元）への方向ベクトル
+                Vector3 toEmitter = (*particleIterator).emitterPosition - (*particleIterator).transform.translation_;
+                float distance = toEmitter.Length();
 
-                // 回転を設定
-                (*particleIterator).transform.rotation_.x = rotationAxis.x * angle;
-                (*particleIterator).transform.rotation_.y = rotationAxis.y * angle;
-                (*particleIterator).transform.rotation_.z = rotationAxis.z * angle;
+                // 中心に近づくほどアルファ値を下げる（フェードアウト効果）
+                // 距離が0に近づくほど透明に
+                float distanceBasedAlpha = distance / (distance + 0.5f); // 調整可能なソフトニング係数
+                (*particleIterator).color.w = (*particleIterator).initialAlpha * (1.0f - gatherFactor) * distanceBasedAlpha;
 
-            } else if (isRandomRotate_) {
-                // ランダム回転の場合の処理
-                (*particleIterator).transform.rotation_ += (*particleIterator).rotateVelocity;
-            } else {
-                // 通常の回転補間
-                (*particleIterator).transform.rotation_ =
-                    (1.0f - t) * (*particleIterator).startRote + t * (*particleIterator).endRote;
+                // 中心に非常に近い場合はパーティクルを削除（震え防止）
+                if (distance < 0.05f) {
+                    // 非常に近い場合は生存時間を終了させて次の更新で削除されるようにする
+                    (*particleIterator).currentTime = (*particleIterator).lifeTime;
+                    ++particleIterator;
+                    continue;
+                }
+
+                // 距離に応じてギャザー速度を緩和（近いほど緩やかに）
+                float distanceFactor = std::min(1.0f, distance); // 距離が1以下の場合は距離自体を係数に
+
+                // 方向ベクトルを正規化
+                toEmitter = toEmitter.Normalize();
+
+                // 中心に向かう速度を計算（近づくほど減速）
+                float gatherSpeed = gatherStrength_ * gatherFactor * distanceFactor * 3.0f; // 調整済み係数
+                Vector3 gatherVelocity = toEmitter * gatherSpeed * Frame::DeltaTime();
+
+                // ギャザー中は通常の速度を無視して、エミッターに向かう速度のみを設定
+                (*particleIterator).velocity = gatherVelocity;
+
+                // ギャザー中のパーティクル位置を更新
+                (*particleIterator).transform.translation_ += (*particleIterator).velocity;
             }
-            if (isAcceMultipy_) {
-                (*particleIterator).velocity *= (*particleIterator).Acce;
-            } else {
-                (*particleIterator).velocity += (*particleIterator).Acce;
+
+            // ギャザー中でない場合のみ通常の移動処理を行う
+            if (!isGathering) {
+                (*particleIterator).Acce = (1.0f - t) * (*particleIterator).startAcce + t * (*particleIterator).endAcce;
+
+                if (isFaceDirection_) {
+                    // 固定された進行方向を使用して回転を設定
+                    Vector3 forward = (*particleIterator).fixedDirection; // 初期に保存された進行方向
+                    Vector3 initialUp = {0.0f, 1.0f, 0.0f};
+
+                    // 回転軸を計算
+                    Vector3 rotationAxis = initialUp.Cross(forward).Normalize();
+                    float dotProduct = initialUp.Dot(forward);
+                    float angle = acosf(std::clamp(dotProduct, -1.0f, 1.0f)); // 安全な範囲にクランプ
+
+                    // 回転を設定
+                    (*particleIterator).transform.rotation_.x = rotationAxis.x * angle;
+                    (*particleIterator).transform.rotation_.y = rotationAxis.y * angle;
+                    (*particleIterator).transform.rotation_.z = rotationAxis.z * angle;
+
+                } else if (isRandomRotate_) {
+                    // ランダム回転の場合の処理
+                    (*particleIterator).transform.rotation_ += (*particleIterator).rotateVelocity;
+                } else {
+                    // 通常の回転補間
+                    (*particleIterator).transform.rotation_ =
+                        (1.0f - t) * (*particleIterator).startRote + t * (*particleIterator).endRote;
+                }
+
+                // 加速度処理
+                if (isAcceMultipy_) {
+                    (*particleIterator).velocity *= (*particleIterator).Acce;
+                } else {
+                    (*particleIterator).velocity += (*particleIterator).Acce;
+                }
+
+                // パーティクルの移動
+                (*particleIterator).transform.translation_ +=
+                    (*particleIterator).velocity * Frame::DeltaTime();
             }
-            // パーティクルの移動
-            (*particleIterator).transform.translation_ +=
-                (*particleIterator).velocity * Frame::DeltaTime();
+
+            // 時間更新はギャザーモードに関わらず行う
             (*particleIterator).currentTime += Frame::DeltaTime();
 
             // ワールド行列の計算
@@ -127,11 +177,11 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
             Matrix4x4 worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
 
             // インスタンスデータに設定
-            if (numInstance < kNumMaxInstance) {
-                particleGroup.instancingData[numInstance].WVP = worldViewProjectionMatrix;
-                particleGroup.instancingData[numInstance].World = worldMatrix;
-                particleGroup.instancingData[numInstance].color = (*particleIterator).color;
-                particleGroup.instancingData[numInstance].color.w = (*particleIterator).color.w; // アルファ値の設定
+            if (numInstance < particleGroup->GetMaxInstance()) {
+                particleGroup->GetParticleGroupData().instancingData[numInstance].WVP = worldViewProjectionMatrix;
+                particleGroup->GetParticleGroupData().instancingData[numInstance].World = worldMatrix;
+                particleGroup->GetParticleGroupData().instancingData[numInstance].color = (*particleIterator).color;
+                particleGroup->GetParticleGroupData().instancingData[numInstance].color.w = (*particleIterator).color.w; // アルファ値の設定
                 ++numInstance;
             }
 
@@ -139,71 +189,35 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
         }
 
         // インスタンス数の更新
-        particleGroup.instanceCount = numInstance;
+        particleGroup->GetParticleGroupData().instanceCount = numInstance;
     }
 }
 
 void ParticleManager::Draw() {
 
-    particleCommon->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
+    for (auto &[groupName, particleGroup] : particleGroups_) {
+        particleCommon->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&particleGroup->GetIndexBufferView());
+        particleCommon->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &particleGroup->GetVertexBufferView());
 
-    for (auto &[groupName, particleGroup] : particleGroups) {
-        if (particleGroup.instanceCount > 0) {
-            particleCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
+        if (particleGroup->GetParticleGroupData().instanceCount > 0) {
+            particleCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(0, particleGroup->GetmaterialResource()->GetGPUVirtualAddress());
 
-            srvManager_->SetGraphicsRootDescriptorTable(1, particleGroup.instancingSRVIndex);
+            srvManager_->SetGraphicsRootDescriptorTable(1, particleGroup->GetParticleGroupData().instancingSRVIndex);
 
-            srvManager_->SetGraphicsRootDescriptorTable(2, modelData.material.textureIndex);
+            srvManager_->SetGraphicsRootDescriptorTable(2, particleGroup->GetParticleGroupData().material.textureIndex);
 
-            particleCommon->GetDxCommon()->GetCommandList()->DrawInstanced(UINT(modelData.vertices.size()), particleGroup.instanceCount, 0, 0);
+            particleCommon->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(UINT(particleGroup->GetModelData().indices.size()), particleGroup->GetParticleGroupData().instanceCount, 0, 0,0);
         }
     }
 }
 
-void ParticleManager::CreateParticleGroup(const std::string name, const std::string &filename) {
-    if (particleGroups.contains(name)) {
-        return;
-    }
-
-    particleGroups[name] = ParticleGroup();
-    ParticleGroup &particleGroup = particleGroups[name];
-    CreateVartexData(filename);
-    particleGroup.material.textureFilePath = modelData.material.textureFilePath;
-    TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
-    modelData.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath);
-    particleGroup.material.textureIndex = modelData.material.textureIndex;
-    particleGroup.instancingResource = particleCommon->GetDxCommon()->CreateBufferResource(sizeof(ParticleForGPU) * kNumMaxInstance);
-    particleGroup.instancingSRVIndex = srvManager_->Allocate() + 1;
-    particleGroup.instancingResource->Map(0, nullptr, reinterpret_cast<void **>(&particleGroup.instancingData));
-
-    srvManager_->CreateSRVforStructuredBuffer(particleGroup.instancingSRVIndex, particleGroup.instancingResource.Get(), kNumMaxInstance, sizeof(ParticleForGPU));
-
-    CreateMaterial();
-    particleGroup.instanceCount = 0;
+void ParticleManager::AddParticleGroup(ParticleGroup *particleGroup) {
+    assert(particleGroup);
+    particleGroups_.insert(std::pair(particleGroup->GetGroupName(), particleGroup));
+    particleGroupNames_.push_back(particleGroup->GetGroupName());
 }
 
-void ParticleManager::SetTexture(const std::string &filePath) {
-    TextureManager::GetInstance()->LoadTexture(filePath);
-    modelData.material.textureFilePath = filePath;
-    modelData.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
-}
-
-void ParticleManager::CreateVartexData(const std::string &filename) {
-    modelData = LoadObjFile("resources/models/", filename);
-
-    // 頂点リソースを作る
-    vertexResource = particleCommon->GetDxCommon()->CreateBufferResource(sizeof(VertexData) * modelData.vertices.size());
-    // 頂点バッファビューを作成する
-    vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();            // リソースの先頭アドレスから使う
-    vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size()); // 使用するリソースのサイズは頂点のサイズ
-    vertexBufferView.StrideInBytes = sizeof(VertexData);                                 // 1頂点当たりのサイズ
-
-    // 頂点リソースにデータを書き込む
-    vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData)); // 書き込むためのアドレスを取得
-    std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());
-}
-
-ParticleManager::Particle ParticleManager::MakeNewParticle(
+Particle ParticleManager::MakeNewParticle(
     std::mt19937 &randomEngine,
     const Vector3 &translate,
     const Vector3 &rotation,
@@ -226,12 +240,60 @@ ParticleManager::Particle ParticleManager::MakeNewParticle(
     std::uniform_real_distribution<float> distAlpha(alphaMin, alphaMax);
 
     Particle particle;
+    Vector3 randomTranslate;
+    particle.emitterPosition = translate;
+    if (isEmitOnEdge_) {
+        // 立方体の12本のエッジ上にパーティクルを生成する場合
+        std::uniform_int_distribution<int> edgeSelector(0, 11);         // 12本のエッジからランダム選択
+        std::uniform_real_distribution<float> edgePosition(0.0f, 1.0f); // エッジ上の位置（0〜1）
 
-    // スケールを考慮したランダムな位置を生成
-    Vector3 randomTranslate = {
-        distribution(randomEngine) * scale.x,
-        distribution(randomEngine) * scale.y,
-        distribution(randomEngine) * scale.z};
+        int selectedEdge = edgeSelector(randomEngine);
+        float position = edgePosition(randomEngine);
+
+        // 立方体の8つの頂点の相対座標（スケール適用前）
+        const Vector3 v0 = {-1.0f, -1.0f, -1.0f}; // 左下手前
+        const Vector3 v1 = {1.0f, -1.0f, -1.0f};  // 右下手前
+        const Vector3 v2 = {-1.0f, 1.0f, -1.0f};  // 左上手前
+        const Vector3 v3 = {1.0f, 1.0f, -1.0f};   // 右上手前
+        const Vector3 v4 = {-1.0f, -1.0f, 1.0f};  // 左下奥
+        const Vector3 v5 = {1.0f, -1.0f, 1.0f};   // 右下奥
+        const Vector3 v6 = {-1.0f, 1.0f, 1.0f};   // 左上奥
+        const Vector3 v7 = {1.0f, 1.0f, 1.0f};    // 右上奥
+
+        // エッジの定義（始点と終点のインデックス）
+        const std::pair<Vector3, Vector3> edges[] = {
+            {v0, v1}, {v1, v3}, {v3, v2}, {v2, v0}, // 前面
+            {v4, v5},
+            {v5, v7},
+            {v7, v6},
+            {v6, v4}, // 背面
+            {v0, v4},
+            {v1, v5},
+            {v2, v6},
+            {v3, v7} // 側面
+        };
+
+        // 選択されたエッジの始点と終点
+        const Vector3 &start = edges[selectedEdge].first;
+        const Vector3 &end = edges[selectedEdge].second;
+
+        // エッジ上の位置を線形補間で計算
+        randomTranslate = {
+            start.x + (end.x - start.x) * position,
+            start.y + (end.y - start.y) * position,
+            start.z + (end.z - start.z) * position};
+
+        // スケールを適用
+        randomTranslate.x *= scale.x;
+        randomTranslate.y *= scale.y;
+        randomTranslate.z *= scale.z;
+    } else {
+        // 通常のランダムな位置生成
+        randomTranslate = {
+            distribution(randomEngine) * scale.x,
+            distribution(randomEngine) * scale.y,
+            distribution(randomEngine) * scale.z};
+    }
 
     // 回転行列を適用してランダムな位置を回転
     Matrix4x4 rotationMatrix = MakeRotateXYZMatrix(rotation);
@@ -340,125 +402,12 @@ ParticleManager::Particle ParticleManager::MakeNewParticle(
     return particle;
 }
 
-ParticleManager::MaterialData ParticleManager::LoadMaterialTemplateFile(const std::string &directoryPath, const std::string &filename) {
-    MaterialData materialData;                          // 構築するMaterialData
-    std::string line;                                   // ファイルから読んだ1行を格納するもの
-    std::ifstream file(directoryPath + "/" + filename); // ファイルを開く
-    assert(file.is_open());                             // 開けなかったら止める
-    while (std::getline(file, line)) {
-        std::string identifier;
-        std::istringstream s(line);
-        s >> identifier;
-
-        // identifierに応じた処理
-        if (identifier == "map_Kd") {
-            std::string textureFilename;
-            s >> textureFilename;
-            // 連結してファイルパスにする
-            materialData.textureFilePath = textureFilename;
-        }
-    }
-
-    // テクスチャが張られていない場合の処理
-    if (materialData.textureFilePath.empty()) {
-        materialData.textureFilePath = "debug/white1x1.png";
-    }
-
-    return materialData;
-}
-
-ParticleManager::ModelData ParticleManager::LoadObjFile(const std::string &directoryPath, const std::string &filename) {
-    std::string fullPath = directoryPath + filename;
-
-    // キャッシュを確認して、既に読み込まれている場合はそれを返す
-    auto it = modelCache.find(fullPath);
-    if (it != modelCache.end()) {
-        return it->second;
-    }
-
-    ModelData modelData;
-    std::vector<Vector4> positions; // 位置
-    std::vector<Vector2> texcoords; // テクスチャ座標
-    std::string line;               // ファイルから読んだ1行目を格納するもの
-
-    // ファイル名からフォルダ部分を取得
-    std::string folderPath;
-    size_t lastSlashPos = filename.find_last_of("/\\");
-    if (lastSlashPos != std::string::npos) {
-        folderPath = filename.substr(0, lastSlashPos);
-    }
-
-    std::ifstream file(fullPath); // ファイルを開く
-    assert(file.is_open());       // ファイルが開けなかったら停止
-
-    while (std::getline(file, line)) {
-        std::string identifier;
-        std::istringstream s(line);
-        s >> identifier;
-
-        if (identifier == "v") {
-            Vector4 position;
-            s >> position.x >> position.y >> position.z;
-            position.x *= -1.0f;
-            position.w = 1.0f;
-            positions.push_back(position);
-        } else if (identifier == "vt") {
-            Vector2 texcoord;
-            s >> texcoord.x >> texcoord.y;
-            texcoord.y = 1.0f - texcoord.y;
-            texcoords.push_back(texcoord);
-        } else if (identifier == "f") {
-            VertexData triangle[3];
-            for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
-                std::string vertexDefinition;
-                s >> vertexDefinition;
-                std::istringstream v(vertexDefinition);
-                uint32_t elementIndices[3];
-                for (int32_t element = 0; element < 3; ++element) {
-                    std::string index;
-                    std::getline(v, index, '/');
-                    elementIndices[element] = std::stoi(index);
-                }
-                Vector4 position = positions[elementIndices[0] - 1];
-                Vector2 texcoord = texcoords[elementIndices[1] - 1];
-                VertexData vertex = {position, texcoord};
-                modelData.vertices.push_back(vertex);
-                triangle[faceVertex] = {position, texcoord};
-            }
-        } else if (identifier == "mtllib") {
-            std::string materialFilename;
-            s >> materialFilename;
-            if (!folderPath.empty()) {
-                modelData.material = LoadMaterialTemplateFile(directoryPath + folderPath, materialFilename);
-            } else {
-                modelData.material = LoadMaterialTemplateFile(directoryPath, materialFilename);
-            }
-        }
-    }
-
-    // キャッシュに保存
-    modelCache[fullPath] = modelData;
-
-    return modelData;
-}
-
-void ParticleManager::CreateMaterial() {
-    // Sprite用のマテリアルリソースをつくる
-    materialResource = particleCommon->GetDxCommon()->CreateBufferResource(sizeof(Material));
-    // 書き込むためのアドレスを取得
-    materialResource->Map(0, nullptr, reinterpret_cast<void **>(&materialData));
-    // 色の設定
-    materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-    // Lightingの設定
-    materialData->uvTransform = MakeIdentity4x4();
-}
-
-std::list<ParticleManager::Particle> ParticleManager::Emit(
-    const std::string name,
+// 全てのパーティクルグループに対してパーティクルを生成する関数
+std::list<Particle> ParticleManager::Emit(
     const Vector3 &position,
     uint32_t count,
-    const Vector3 &scale,                                   // スケールを引数として追加
-    const Vector3 &velocityMin, const Vector3 &velocityMax, // 速度の範囲を引数として追加
+    const Vector3 &scale,
+    const Vector3 &velocityMin, const Vector3 &velocityMax,
     float lifeTimeMin, float lifeTimeMax,
     const Vector3 &particleStartScale, const Vector3 &particleEndScale,
     const Vector3 &startAcce, const Vector3 &endAcce,
@@ -468,44 +417,43 @@ std::list<ParticleManager::Particle> ParticleManager::Emit(
     const Vector3 &allScaleMax, const Vector3 &allScaleMin,
     const float &scaleMin, const float &scaleMax, const Vector3 &rotation,
     const Vector3 &rotateStartMax, const Vector3 &rotateStartMin) {
-    // パーティクルグループが存在するか確認
-    assert(particleGroups.find(name) != particleGroups.end() && "Error: パーティクルグループが存在しません。");
 
-    // 指定されたパーティクルグループを取得
-    ParticleGroup &particleGroup = particleGroups[name];
+    std::list<Particle> allNewParticles; // 生成された全パーティクルを格納
 
-    // 新しいパーティクルを生成し、パーティクルグループに追加
-    std::list<Particle> newParticles;
-    for (uint32_t nowCount = 0; nowCount < count; ++nowCount) {
-        // 新たなパーティクルを作成
-        Particle particle = MakeNewParticle(
-            randomEngine,
-            position,
-            rotation,
-            scale, // 追加されたスケール
-            velocityMin,
-            velocityMax, // 追加された速度の範囲
-            lifeTimeMin,
-            lifeTimeMax, // 追加されたライフタイムの範囲
-            particleStartScale,
-            particleEndScale,
-            startAcce,
-            endAcce,
-            startRote,
-            endRote,
-            isRandomColor,
-            alphaMin,
-            alphaMax,
-            rotateVelocityMin,
-            rotateVelocityMax,
-            allScaleMax, allScaleMin,
-            scaleMin, scaleMax,
-            rotateStartMax, rotateStartMin);
-        newParticles.push_back(particle);
+    // 全てのパーティクルグループに対してループ
+    for (auto &[groupName, particleGroup] : particleGroups_) {
+        std::list<Particle> newParticles; // 各グループごとの新規パーティクルリスト
+
+        for (uint32_t nowCount = 0; nowCount < count; ++nowCount) {
+            // 新しいパーティクルを生成
+            Particle particle = MakeNewParticle(
+                randomEngine,
+                position,
+                rotation,
+                scale,
+                velocityMin, velocityMax,
+                lifeTimeMin, lifeTimeMax,
+                particleStartScale, particleEndScale,
+                startAcce, endAcce,
+                startRote, endRote,
+                isRandomColor,
+                alphaMin, alphaMax,
+                rotateVelocityMin, rotateVelocityMax,
+                allScaleMax, allScaleMin,
+                scaleMin, scaleMax,
+                rotateStartMax, rotateStartMin);
+
+            newParticles.push_back(particle); // 生成したパーティクルをリストに追加
+        }
+
+        // 各グループのパーティクルデータに追加
+        particleGroup->GetParticleGroupData().particles.splice(
+            particleGroup->GetParticleGroupData().particles.end(),
+            newParticles);
+
+        // 全体の返却用リストにも追加
+        allNewParticles.splice(allNewParticles.end(), newParticles);
     }
 
-    // 新たに生成されたパーティクルをグループに追加
-    particleGroup.particles.splice(particleGroup.particles.end(), newParticles);
-
-    return newParticles; // 作成されたパーティクルを返す
+    return allNewParticles; // 全グループに生成されたパーティクルをまとめて返す
 }

@@ -1,12 +1,12 @@
 #include "BaseObject.h"
 
-void BaseObject::Init(const std::string className) {
-    objectName_ = className;
+void BaseObject::Init(const std::string objectName) {
+    objectName_ = objectName;
     /// ワールドトランスフォームの初期化
     transform_.Initialize();
     // カラーのセット
     objColor_.Initialize();
-    objColor_.SetColor(Vector4(1, 1, 1, 1));
+    objColor_.GetColor() = Vector4(1, 1, 1, 1);
     // ライティングのセット
     isLighting_ = true;
     isCollider = false;
@@ -60,7 +60,12 @@ Vector3 BaseObject::GetWorldPosition() const {
 
 void BaseObject::CreateModel(const std::string modelname) {
     obj3d_ = std::make_unique<Object3d>();
-    obj3d_->Initialize(modelname);
+    obj3d_->CreateModel(modelname);
+}
+
+void BaseObject::CreatePrimitiveModel(const PrimitiveType &type) {
+    obj3d_ = std::make_unique<Object3d>();
+    obj3d_->CreatePrimitiveModel(type);
 }
 
 void BaseObject::CreateCollider() {

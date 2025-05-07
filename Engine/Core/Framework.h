@@ -17,6 +17,8 @@
 #include "Engine/offscreen/OffScreen.h"
 #include <line/DrawLine3D.h>
 #include"ImGui/ImGuiManager.h"
+#include"Object/BaseObjectManager.h"
+#include"Particle/ParticleGroupManager.h"
 
 class Framework {
   public: // メンバ関数
@@ -81,11 +83,15 @@ class Framework {
     TextureManager *textureManager_ = nullptr;
     ModelManager *modelManager_ = nullptr;
     ImGuiManager *imGuiManager_ = nullptr;
+    BaseObjectManager *baseObjectManager_ = nullptr;
+    ParticleGroupManager *particleGroupManager_ = nullptr;
 
     SpriteCommon *spriteCommon = nullptr;
     Object3dCommon *object3dCommon = nullptr;
     ParticleCommon *particleCommon = nullptr;
     ParticleEditor *particleEditor = nullptr;
+
+    PrimitiveModel *primitiveModel = nullptr;
 
     std::unique_ptr<CollisionManager> collisionManager_;
     std::unique_ptr<OffScreen> offscreen_;
