@@ -3,7 +3,6 @@
 
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
-    objCommon_ = Object3dCommon::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
@@ -33,6 +32,8 @@ void GameScene::Initialize() {
     /// ===================================================
     followCamera_->SetTarget(&player_->GetWorldTransform());
     player_->SetCamera(followCamera_.get());
+    playerPtr_ = player_.get();
+    BaseObjectManager::GetInstance()->AddObject(std::move(player_));
 }
 
 void GameScene::Finalize() {
@@ -45,7 +46,6 @@ void GameScene::Update() {
     // シーン切り替え
     ChangeScene();
 
-    player_->Update();
     skyDome_->Update();
     ground_->Update();
 }
@@ -59,12 +59,10 @@ void GameScene::Draw() {
 
     //-------------------------
 
-    objCommon_->DrawCommonSetting();
-    //-----3DObjectの描画開始-----
-    player_->Draw(vp_);
+    //-----3DObjectの開始-----
     skyDome_->Draw(vp_);
     ground_->Draw(vp_);
-    //--------------------------
+    //-----------------------
 
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
@@ -92,10 +90,9 @@ void GameScene::DrawForOffScreen() {
 
     //------------------------
 
-    objCommon_->DrawCommonSetting();
-    //-----3DObjectの描画開始-----
+    //-----3DObjectの描画-----
 
-    //--------------------------
+    //-----------------------
 
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
@@ -113,7 +110,7 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
-    player_->Debug();
+    playerPtr_->Debug();
 }
 
 void GameScene::AddParticleSetting() {

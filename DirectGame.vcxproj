@@ -107,6 +107,15 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="application\Camera\FollowCamera.cpp" />
+    <ClCompile Include="application\GameObject\Field\Ground\Ground.cpp" />
+    <ClCompile Include="application\GameObject\Field\SkyDome\SkyDome.cpp" />
+    <ClCompile Include="application\GameObject\Player\Player.cpp" />
+    <ClCompile Include="application\GameObject\Player\State\PlayerStateAir.cpp" />
+    <ClCompile Include="application\GameObject\Player\State\PlayerStateFly.cpp" />
+    <ClCompile Include="application\GameObject\Player\State\PlayerStateIdle.cpp" />
+    <ClCompile Include="application\GameObject\Player\State\PlayerStateJump.cpp" />
+    <ClCompile Include="application\GameObject\Player\State\PlayerStateMove.cpp" />
     <ClCompile Include="Engine\3d\Object\BaseObjectManager.cpp" />
     <ClCompile Include="Engine\Utility\Data\DataHandler.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleEditor.cpp" />
@@ -206,6 +215,17 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="application\Camera\FollowCamera.h" />
+    <ClInclude Include="application\GameObject\Field\Ground\Ground.h" />
+    <ClInclude Include="application\GameObject\Field\SkyDome\SkyDome.h" />
+    <ClInclude Include="application\GameObject\Player\Player.h" />
+    <ClInclude Include="application\GameObject\Player\PlayerData.h" />
+    <ClInclude Include="application\GameObject\Player\State\PlayerBaseState.h" />
+    <ClInclude Include="application\GameObject\Player\State\PlayerStateAir.h" />
+    <ClInclude Include="application\GameObject\Player\State\PlayerStateFly.h" />
+    <ClInclude Include="application\GameObject\Player\State\PlayerStateIdle.h" />
+    <ClInclude Include="application\GameObject\Player\State\PlayerStateJump.h" />
+    <ClInclude Include="application\GameObject\Player\State\PlayerStateMove.h" />
     <ClInclude Include="Engine\3d\Object\BaseObjectManager.h" />
     <ClInclude Include="Engine\Utility\Data\DataHandler.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleEditor.h" />

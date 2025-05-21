@@ -58,7 +58,6 @@ class GameScene : public BaseScene {
   private:
     Audio *audio_;
     Input *input_;
-    Object3dCommon *objCommon_;
     SpriteCommon *spCommon_;
     ParticleCommon *ptCommon_;
 
@@ -67,6 +66,7 @@ class GameScene : public BaseScene {
 
     // プレイヤー
     std::unique_ptr<Player> player_;
+    Player *playerPtr_ = nullptr;
 
     // 追従カメラ
     std::unique_ptr<FollowCamera> followCamera_;
