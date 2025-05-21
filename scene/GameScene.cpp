@@ -3,14 +3,36 @@
 
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
+    objCommon_ = Object3dCommon::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
     vp_.Initialize();
-    vp_.translation_ = {12.0f, -4.0f, -30.0f};
+    vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
+    /// ===================================================
+    /// 生成
+    /// ===================================================
     debugCamera_ = std::make_unique<DebugCamera>();
+    player_ = std::make_unique<Player>();
+    followCamera_ = std::make_unique<FollowCamera>();
+    skyDome_ = std::make_unique<SkyDome>();
+    ground_ = std::make_unique<Ground>();
+
+    /// ===================================================
+    /// 初期化
+    /// ===================================================
     debugCamera_->Initialize(&vp_);
+    player_->Init("player");
+    skyDome_->Init("SkyDome");
+    ground_->Init("Ground");
+    followCamera_->Init();
+
+    /// ===================================================
+    /// セット
+    /// ===================================================
+    followCamera_->SetTarget(&player_->GetWorldTransform());
+    player_->SetCamera(followCamera_.get());
 }
 
 void GameScene::Finalize() {
@@ -22,6 +44,10 @@ void GameScene::Update() {
 
     // シーン切り替え
     ChangeScene();
+
+    player_->Update();
+    skyDome_->Update();
+    ground_->Update();
 }
 
 void GameScene::Draw() {
@@ -32,6 +58,13 @@ void GameScene::Draw() {
     //-----Spriteの描画開始-----
 
     //-------------------------
+
+    objCommon_->DrawCommonSetting();
+    //-----3DObjectの描画開始-----
+    player_->Draw(vp_);
+    skyDome_->Draw(vp_);
+    ground_->Draw(vp_);
+    //--------------------------
 
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
@@ -59,6 +92,11 @@ void GameScene::DrawForOffScreen() {
 
     //------------------------
 
+    objCommon_->DrawCommonSetting();
+    //-----3DObjectの描画開始-----
+
+    //--------------------------
+
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
     //------Particleの描画開始-------
@@ -75,6 +113,7 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
+    player_->Debug();
 }
 
 void GameScene::AddParticleSetting() {
@@ -84,7 +123,10 @@ void GameScene::CameraUpdate() {
     if (debugCamera_->GetActive()) {
         debugCamera_->Update();
     } else {
-        vp_.UpdateMatrix();
+        followCamera_->Update();
+        vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
+        vp_.matView_ = followCamera_->GetViewProjection().matView_;
+        vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
     }
 }
 
