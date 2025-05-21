@@ -37,6 +37,7 @@ void MyGame::Update() {
     imGuiManager_->Begin();
     imGuizmoManager_->BeginFrame();
     imGuizmoManager_->SetViewProjection(sceneManager_->GetBaseScene()->GetViewProjection());
+    imGuiManager_->UpdateIni();
     imGuiManager_->SetCurrentScene(sceneManager_->GetBaseScene());
     imGuiManager_->ShowMainMenu();
     if (imGuiManager_->GetIsShowMainUI()) {
