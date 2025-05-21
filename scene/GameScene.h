@@ -5,6 +5,7 @@
 #include "application/GameObject/Field/Ground/Ground.h"
 #include "application/GameObject/Field/SkyDome/SkyDome.h"
 #include "application/GameObject/Player/Player.h"
+#include"application/GameObject/Enemy/Enemy.h"
 
 class GameScene : public BaseScene {
   public: // メンバ関数
@@ -66,6 +67,9 @@ class GameScene : public BaseScene {
     // プレイヤー
     std::unique_ptr<Player> player_;
     Player *playerPtr_ = nullptr;
+
+    // 敵
+    std::unique_ptr<Enemy> enemy_;
 
     // 追従カメラ
     std::unique_ptr<FollowCamera> followCamera_;

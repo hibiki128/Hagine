@@ -23,62 +23,17 @@ void PlayerStateFly::Enter(Player &player) {
 }
 
 void PlayerStateFly::Update(Player &player) {
-    float dt = Frame::DeltaTime();
-
-    // WASD入力の取得
-    float xInput = 0.0f;
-    float zInput = 0.0f;
-    if (Input::GetInstance()->PushKey(DIK_D))
-        xInput += 1.0f;
-    if (Input::GetInstance()->PushKey(DIK_A))
-        xInput -= 1.0f;
-    if (Input::GetInstance()->PushKey(DIK_W))
-        zInput += 1.0f;
-    if (Input::GetInstance()->PushKey(DIK_S))
-        zInput -= 1.0f;
-
-    bool isMoving = (xInput != 0.0f || zInput != 0.0f);
-
-    // Ctrlキーで最大速度を一時的に2倍に
-    float speedMultiplier = (Input::GetInstance()->PushKey(DIK_LCONTROL) || Input::GetInstance()->PushKey(DIK_RCONTROL)) ? 2.0f : 1.0f;
-    float maxSpeed = player.GetMaxSpeed() * speedMultiplier;
-
-    if (isMoving) {
-        // 正規化（斜め移動対策）
-        float length = sqrt(xInput * xInput + zInput * zInput);
-        xInput /= length;
-        zInput /= length;
-
-        // 加速
-        player.GetMoveSpeed() += player.GetAccelRate() * dt;
-        if (player.GetMoveSpeed() > maxSpeed) {
-            player.GetMoveSpeed() = maxSpeed;
-        }
-
-        // 速度ベクトルを設定
-        player.GetVelocity().x = xInput * player.GetMoveSpeed();
-        player.GetVelocity().z = zInput * player.GetMoveSpeed();
-    } else {
-        // 減速
-        player.GetMoveSpeed() -= player.GetAccelRate() * 2.0f * dt;
-        if (player.GetMoveSpeed() < 0.0f) {
-            player.GetMoveSpeed() = 0.0f;
-        }
-
-        // 慣性でゆっくり止まる
-        player.GetVelocity().x *= 0.9f;
-        player.GetVelocity().z *= 0.9f;
-    }
+    player.Move();
 
     // 上昇処理（Space長押し）
     if (Input::GetInstance()->PushKey(DIK_SPACE)) {
         float &vy = player.GetVelocity().y;
-        vy = std::min(vy + kFlyAcceleration * dt, kFlyMaxSpeed);
+        vy = std::min(vy + kFlyAcceleration * player.GetDt(), kFlyMaxSpeed);
     }
     // 下降処理（LShift長押し）
     else if (Input::GetInstance()->PushKey(DIK_LSHIFT)) {
         float &vy = player.GetVelocity().y;
-        vy = std::max(vy - kFlyAcceleration * dt, -kFlyMaxSpeed);
+        vy = std::max(vy - kFlyAcceleration * player.GetDt(), -kFlyMaxSpeed);
     } else {
         float &vy = player.GetVelocity().y;
         vy *= 0.70f;
@@ -102,7 +57,7 @@ void PlayerStateFly::Update(Player &player) {
         return;
     }
 
-    fallInputTime_ += dt;
+    fallInputTime_ += player.GetDt();
 
     // 地面に到達 → Idleへ
     if (player.GetWorldPosition().y <= 0.0f) {

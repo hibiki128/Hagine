@@ -6,9 +6,10 @@
 #include "State/PlayerStateJump.h"
 #include "State/PlayerStateMove.h"
 #include "application/Camera/FollowCamera.h"
+#include "application/GameObject/Enemy/Enemy.h"
+#include "numbers"
 #include <Input.h>
 #include <cmath>
-#include"numbers"
 
 Player::Player() {
 }
@@ -39,7 +40,7 @@ void Player::Init(const std::string objectName) {
 }
 
 void Player::Update() {
-
+    dt_ = Frame::DeltaTime();
     shadow_->GetWorldPosition() = {transform_.translation_.x, -0.95f, transform_.translation_.z};
     shadow_->Update();
 
@@ -50,6 +51,10 @@ void Player::Update() {
     // 下方向の速度を制限
     if (velocity_.y < -40.0f) {
         velocity_.y = -40.0f;
+    }
+
+    if (Input::GetInstance()->TriggerKey(DIK_L)) {
+        isLockOn_ = !isLockOn_;
     }
 
     CollisionGround();
@@ -110,6 +115,7 @@ void Player::Debug() {
         if (ImGui::BeginTabItem("プレイヤー")) {
             ImGui::Text("Current State: %s", currentStateName);
             ImGui::Text("IsGrounded: %s", isGrounded_ ? "True" : "False");
+            ImGui::Text("IsLockOn: %s", isLockOn_ ? "True" : "False");
             ImGui::Text("向いている方向: %s", GetDirectionName(dir_));
             ImGui::DragFloat("ジャンプ速度", &jumpSpeed_, 0.1f, 0.0f, 50.0f);
             ImGui::DragFloat("落下速度", &fallSpeed_, 0.1f, -20.0f, 0.0f);
@@ -137,6 +143,7 @@ void Player::Debug() {
                     ImGui::Text("LSHIFT2回押し : 落下\n");
                     ImGui::Text("Ctrl : ダッシュ\n");
                 }
+                ImGui::Text("L : ロックオン\n");
 
                 ImGui::TreePop();
             }
@@ -144,6 +151,200 @@ void Player::Debug() {
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
+    }
+}
+
+void Player::Move() {
+    // カメラを取得
+    FollowCamera *camera = GetCamera();
+    if (!camera) {
+        // カメラが取得できない場合は従来の方法で処理
+        DefaultMovement();
+        return;
+    }
+
+    // カメラのViewProjectionを取得
+    ViewProjection &viewProjection = camera->GetViewProjection();
+
+    // カメラのヨー角（水平回転角）を取得
+    float cameraYaw = viewProjection.rotation_.y;
+
+    // 移動入力の取得
+    float xInput = 0.0f;
+    float zInput = 0.0f;
+
+    if (Input::GetInstance()->PushKey(DIK_D)) {
+        xInput += 1.0f; // 右
+    }
+    if (Input::GetInstance()->PushKey(DIK_A)) {
+        xInput -= 1.0f; // 左
+    }
+    if (Input::GetInstance()->PushKey(DIK_W)) {
+        zInput += 1.0f; // 前
+    }
+    if (Input::GetInstance()->PushKey(DIK_S)) {
+        zInput -= 1.0f; // 後ろ
+    }
+
+    // ダッシュ入力の確認
+    bool isDashing = Input::GetInstance()->PushKey(DIK_LCONTROL) || Input::GetInstance()->PushKey(DIK_RCONTROL);
+    float maxSpeedMultiplier = isDashing ? 2.0f : 1.0f;
+
+    // 入力があれば徐々に加速、なければ減速
+    if (xInput != 0.0f || zInput != 0.0f) {
+        // 斜め移動の正規化（ベクトルの長さを1に）
+        if (xInput != 0.0f && zInput != 0.0f) {
+            float length = sqrt(xInput * xInput + zInput * zInput);
+            xInput /= length;
+            zInput /= length;
+        }
+
+        // 加速処理
+        GetMoveSpeed() += GetAccelRate() * dt_;
+
+        if (currentState_ == states_["Fly"].get()) {
+            // 最大速度の制限（ダッシュ中は2倍）
+            if (GetMoveSpeed() > GetMaxSpeed() * maxSpeedMultiplier) {
+                GetMoveSpeed() = GetMaxSpeed() * maxSpeedMultiplier;
+            }
+        } else {
+            // 最大速度の制限
+            if (GetMoveSpeed() > GetMaxSpeed()) {
+                GetMoveSpeed() = GetMaxSpeed();
+            }
+        }
+
+
+        // カメラの向きを基準にした移動ベクトルを計算
+        // カメラのヨー角に基づいて移動方向を回転させる
+        float vx = (xInput * cos(cameraYaw) + zInput * sin(cameraYaw)) * GetMoveSpeed();
+        float vz = (-xInput * sin(cameraYaw) + zInput * cos(cameraYaw)) * GetMoveSpeed();
+
+        // 速度を設定
+        GetVelocity().x = vx;
+        GetVelocity().z = vz;
+
+        // ロックオン状態かどうかチェック
+        bool isLockOn = GetIsLockOn();
+        Enemy *targetEnemy = GetEnemy();
+
+        if (isLockOn && targetEnemy) {
+            // ロックオン中はエネミーの方向を向く
+            Vector3 playerPos = GetWorldPosition();
+            Vector3 enemyPos = targetEnemy->GetWorldPosition();
+
+            // エネミーへの方向ベクトルを計算
+            float dx = enemyPos.x - playerPos.x;
+            float dz = enemyPos.z - playerPos.z;
+
+            // エネミーへの角度を計算
+            float targetRotation = atan2(dx, dz);
+
+            // 現在の回転と目標回転の差を計算
+            float currentRotation = GetWorldRotation().y;
+            float rotationDiff = targetRotation - currentRotation;
+
+            // 回転差を-πからπの範囲に正規化
+            while (rotationDiff > std::numbers::pi_v<float>)
+                rotationDiff -= 2.0f * std::numbers::pi_v<float>;
+            while (rotationDiff < -std::numbers::pi_v<float>)
+                rotationDiff += 2.0f * std::numbers::pi_v<float>;
+
+            // ロックオン時は素早く向きを合わせる（通常よりも速い回転速度）
+            float rotationSpeed = 15.0f * dt_;
+            float rotationAmount = std::min(std::abs(rotationDiff), rotationSpeed);
+            if (rotationDiff < 0)
+                rotationAmount = -rotationAmount;
+
+            // 回転を適用
+            GetWorldRotation().y += rotationAmount;
+
+            // 回転を0から2πの範囲に正規化
+            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetWorldRotation().y < 0.0f)
+                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+        } else if (vx != 0.0f || vz != 0.0f) {
+            // ロックオンしていない場合は通常通り移動方向に向かせる
+            float targetRotation = atan2(vx, vz);
+
+            // 現在の回転と目標回転の差を計算
+            float currentRotation = GetWorldRotation().y;
+            float rotationDiff = targetRotation - currentRotation;
+
+            // 回転差を-πからπの範囲に正規化
+            while (rotationDiff > std::numbers::pi_v<float>)
+                rotationDiff -= 2.0f * std::numbers::pi_v<float>;
+            while (rotationDiff < -std::numbers::pi_v<float>)
+                rotationDiff += 2.0f * std::numbers::pi_v<float>;
+
+            // 回転の補間係数
+            float rotationSpeed = 10.0f * dt_;
+            float rotationAmount = std::min(std::abs(rotationDiff), rotationSpeed);
+            if (rotationDiff < 0)
+                rotationAmount = -rotationAmount;
+
+            // 回転を適用
+            GetWorldRotation().y += rotationAmount;
+
+            // 回転を0から2πの範囲に正規化
+            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetWorldRotation().y < 0.0f)
+                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+        }
+    } else {
+        // 入力がない場合は減速
+        GetMoveSpeed() -= GetAccelRate() * 2.0f * dt_;
+        if (GetMoveSpeed() < 0.0f) {
+            GetMoveSpeed() = 0.0f;
+        }
+
+        // 減速中は前回の方向を維持
+        GetVelocity().x *= 0.95f;
+        GetVelocity().z *= 0.95f;
+
+        // 入力がなくても、ロックオン中はエネミーの方向を向き続ける
+        bool isLockOn = GetIsLockOn();
+        Enemy *targetEnemy = GetEnemy();
+
+        if (isLockOn && targetEnemy) {
+            // ロックオン中はエネミーの方向を向く
+            Vector3 playerPos = GetWorldPosition();
+            Vector3 enemyPos = targetEnemy->GetWorldPosition();
+
+            // エネミーへの方向ベクトルを計算
+            float dx = enemyPos.x - playerPos.x;
+            float dz = enemyPos.z - playerPos.z;
+
+            // エネミーへの角度を計算
+            float targetRotation = atan2(dx, dz);
+
+            // 現在の回転と目標回転の差を計算
+            float currentRotation = GetWorldRotation().y;
+            float rotationDiff = targetRotation - currentRotation;
+
+            // 回転差を-πからπの範囲に正規化
+            while (rotationDiff > std::numbers::pi_v<float>)
+                rotationDiff -= 2.0f * std::numbers::pi_v<float>;
+            while (rotationDiff < -std::numbers::pi_v<float>)
+                rotationDiff += 2.0f * std::numbers::pi_v<float>;
+
+            // ロックオン時は素早く向きを合わせる
+            float rotationSpeed = 15.0f * dt_;
+            float rotationAmount = std::min(std::abs(rotationDiff), rotationSpeed);
+            if (rotationDiff < 0)
+                rotationAmount = -rotationAmount;
+
+            // 回転を適用
+            GetWorldRotation().y += rotationAmount;
+
+            // 回転を0から2πの範囲に正規化
+            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetWorldRotation().y < 0.0f)
+                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+        }
     }
 }
 
@@ -196,11 +397,11 @@ void Player::RotateUpdate() {
 
 void Player::CollisionGround() {
     // 位置更新前に次の位置を計算
-    float nextY = GetWorldPosition().y + velocity_.y * Frame::DeltaTime();
+    float nextY = GetWorldPosition().y + velocity_.y * dt_;
 
     // 通常の位置更新
-    GetWorldPosition().x += velocity_.x * Frame::DeltaTime();
-    GetWorldPosition().z += velocity_.z * Frame::DeltaTime();
+    GetWorldPosition().x += velocity_.x * dt_;
+    GetWorldPosition().z += velocity_.z * dt_;
 
     // Y方向の処理（地面判定含む）
     if (nextY <= 0.0f) {
@@ -237,22 +438,22 @@ Direction Player::CalculateDirectionFromRotation() {
 
     // 8方向の場合の角度範囲（π/4 = 45度ごと）
     // 0度を前方として、時計回りに8方向を判定
-    if (angle >= 7.0f *  std::numbers::pi_v<float> / 4.0f || angle <  std::numbers::pi_v<float> / 4.0f) {
-       
+    if (angle >= 7.0f * std::numbers::pi_v<float> / 4.0f || angle < std::numbers::pi_v<float> / 4.0f) {
+
         return Direction::Forward;
-    } else if (angle >=  std::numbers::pi_v<float> / 4.0f && angle < 2.0f *  std::numbers::pi_v<float> / 4.0f) {
+    } else if (angle >= std::numbers::pi_v<float> / 4.0f && angle < 2.0f * std::numbers::pi_v<float> / 4.0f) {
         return Direction::ForwardRight;
-    } else if (angle >= 2.0f *  std::numbers::pi_v<float> / 4.0f && angle < 3.0f *  std::numbers::pi_v<float> / 4.0f) {
+    } else if (angle >= 2.0f * std::numbers::pi_v<float> / 4.0f && angle < 3.0f * std::numbers::pi_v<float> / 4.0f) {
         return Direction::Right;
-    } else if (angle >= 3.0f *  std::numbers::pi_v<float> / 4.0f && angle < 4.0f *  std::numbers::pi_v<float> / 4.0f) {
+    } else if (angle >= 3.0f * std::numbers::pi_v<float> / 4.0f && angle < 4.0f * std::numbers::pi_v<float> / 4.0f) {
         return Direction::BackwardRight;
-    } else if (angle >= 4.0f *  std::numbers::pi_v<float> / 4.0f && angle < 5.0f *  std::numbers::pi_v<float> / 4.0f) {
+    } else if (angle >= 4.0f * std::numbers::pi_v<float> / 4.0f && angle < 5.0f * std::numbers::pi_v<float> / 4.0f) {
         return Direction::Behind;
-    } else if (angle >= 5.0f *  std::numbers::pi_v<float> / 4.0f && angle < 6.0f *  std::numbers::pi_v<float> / 4.0f) {
+    } else if (angle >= 5.0f * std::numbers::pi_v<float> / 4.0f && angle < 6.0f * std::numbers::pi_v<float> / 4.0f) {
         return Direction::BackwardLeft;
-    } else if (angle >= 6.0f *  std::numbers::pi_v<float> / 4.0f && angle < 7.0f *  std::numbers::pi_v<float> / 4.0f) {
+    } else if (angle >= 6.0f * std::numbers::pi_v<float> / 4.0f && angle < 7.0f * std::numbers::pi_v<float> / 4.0f) {
         return Direction::Left;
-    } else if (angle >= 7.0f *  std::numbers::pi_v<float> / 4.0f && angle < 8.0f *  std::numbers::pi_v<float> / 4.0f) {
+    } else if (angle >= 7.0f * std::numbers::pi_v<float> / 4.0f && angle < 8.0f * std::numbers::pi_v<float> / 4.0f) {
         return Direction::ForwardLeft;
     }
 
@@ -263,7 +464,7 @@ Direction Player::CalculateDirectionFromRotation() {
 // 角度の正規化関数
 float Player::NormalizeAngle(float angle) {
     // 角度を [0, 2π) の範囲に正規化
-    const float TWO_PI = 2.0f *  std::numbers::pi_v<float>;
+    const float TWO_PI = 2.0f * std::numbers::pi_v<float>;
     while (angle < 0.0f) {
         angle += TWO_PI;
     }
@@ -294,5 +495,146 @@ const char *Player::GetDirectionName(Direction dir) {
         return "左前";
     default:
         return "不明";
+    }
+}
+
+void Player::DefaultMovement() {
+    // 移動入力の取得
+    float xInput = 0.0f;
+    float zInput = 0.0f;
+
+    if (Input::GetInstance()->PushKey(DIK_D)) {
+        xInput += 1.0f;
+    }
+    if (Input::GetInstance()->PushKey(DIK_A)) {
+        xInput -= 1.0f;
+    }
+    if (Input::GetInstance()->PushKey(DIK_W)) {
+        zInput += 1.0f;
+    }
+    if (Input::GetInstance()->PushKey(DIK_S)) {
+        zInput -= 1.0f;
+    }
+
+    // ダッシュ入力の確認
+    bool isDashing = Input::GetInstance()->PushKey(DIK_LCONTROL) || Input::GetInstance()->PushKey(DIK_RCONTROL);
+    float maxSpeedMultiplier = isDashing ? 2.0f : 1.0f;
+
+    // 入力があれば徐々に加速、なければ減速
+    if (xInput != 0.0f || zInput != 0.0f) {
+        // 斜め移動の正規化（ベクトルの長さを1に）
+        if (xInput != 0.0f && zInput != 0.0f) {
+            float length = sqrt(xInput * xInput + zInput * zInput);
+            xInput /= length;
+            zInput /= length;
+        }
+
+        // 加速処理
+        GetMoveSpeed() += GetAccelRate() * dt_;
+
+        if (currentState_ == states_["Fly"].get()) {
+            // 最大速度の制限（ダッシュ中は2倍）
+            if (GetMoveSpeed() > GetMaxSpeed() * maxSpeedMultiplier) {
+                GetMoveSpeed() = GetMaxSpeed() * maxSpeedMultiplier;
+            }
+        } else {
+            // 最大速度の制限
+            if (GetMoveSpeed() > GetMaxSpeed()) {
+                GetMoveSpeed() = GetMaxSpeed();
+            }
+        }
+
+        // 正規化したベクトルに速度を掛ける
+        GetVelocity().x = xInput * GetMoveSpeed();
+        GetVelocity().z = zInput * GetMoveSpeed();
+
+        // ロックオン状態かどうかチェック
+        bool isLockOn = GetIsLockOn();
+        Enemy *targetEnemy = GetEnemy();
+
+        // ロックオン中はエネミーの方向を向く（DefaultMovementでも同様に実装）
+        if (isLockOn && targetEnemy) {
+            Vector3 playerPos = GetWorldPosition();
+            Vector3 enemyPos = targetEnemy->GetWorldPosition();
+
+            float dx = enemyPos.x - playerPos.x;
+            float dz = enemyPos.z - playerPos.z;
+
+            float targetRotation = atan2(dx, dz);
+
+            // 現在の回転と目標回転の差を計算
+            float currentRotation = GetWorldRotation().y;
+            float rotationDiff = targetRotation - currentRotation;
+
+            // 回転差を-πからπの範囲に正規化
+            while (rotationDiff > std::numbers::pi_v<float>)
+                rotationDiff -= 2.0f * std::numbers::pi_v<float>;
+            while (rotationDiff < -std::numbers::pi_v<float>)
+                rotationDiff += 2.0f * std::numbers::pi_v<float>;
+
+            // 回転速度
+            float rotationSpeed = 15.0f * dt_;
+            float rotationAmount = std::min(std::abs(rotationDiff), rotationSpeed);
+            if (rotationDiff < 0)
+                rotationAmount = -rotationAmount;
+
+            // 回転を適用
+            GetWorldRotation().y += rotationAmount;
+
+            // 回転を0から2πの範囲に正規化
+            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetWorldRotation().y < 0.0f)
+                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+        }
+    } else {
+        // 入力がない場合は減速
+        GetMoveSpeed() -= GetAccelRate() * 2.0f * dt_;
+        if (GetMoveSpeed() < 0.0f) {
+            GetMoveSpeed() = 0.0f;
+        }
+
+        // 減速中は前回の方向を維持
+        GetVelocity().x *= 0.95f;
+        GetVelocity().z *= 0.95f;
+
+        // 入力がなくても、ロックオン中はエネミーの方向を向き続ける
+        bool isLockOn = GetIsLockOn();
+        Enemy *targetEnemy = GetEnemy();
+
+        if (isLockOn && targetEnemy) {
+            Vector3 playerPos = GetWorldPosition();
+            Vector3 enemyPos = targetEnemy->GetWorldPosition();
+
+            float dx = enemyPos.x - playerPos.x;
+            float dz = enemyPos.z - playerPos.z;
+
+            float targetRotation = atan2(dx, dz);
+
+            // 現在の回転と目標回転の差を計算
+            float currentRotation = GetWorldRotation().y;
+            float rotationDiff = targetRotation - currentRotation;
+
+            // 回転差を-πからπの範囲に正規化
+            while (rotationDiff > std::numbers::pi_v<float>)
+                rotationDiff -= 2.0f * std::numbers::pi_v<float>;
+            while (rotationDiff < -std::numbers::pi_v<float>)
+                rotationDiff += 2.0f * std::numbers::pi_v<float>;
+
+            // 回転速度
+            float rotationSpeed = 15.0f * dt_;
+            float rotationAmount = std::min(std::abs(rotationDiff), rotationSpeed);
+            if (rotationDiff < 0)
+                rotationAmount = -rotationAmount;
+
+            // 回転を適用
+            GetWorldRotation().y += rotationAmount;
+
+            // 回転を0から2πの範囲に正規化
+            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetWorldRotation().y < 0.0f)
+                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+        }
     }
 }

@@ -14,6 +14,7 @@ void GameScene::Initialize() {
     /// ===================================================
     debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
+    enemy_ = std::make_unique<Enemy>();
     followCamera_ = std::make_unique<FollowCamera>();
     skyDome_ = std::make_unique<SkyDome>();
     ground_ = std::make_unique<Ground>();
@@ -23,6 +24,7 @@ void GameScene::Initialize() {
     /// ===================================================
     debugCamera_->Initialize(&vp_);
     player_->Init("player");
+    enemy_->Init("enemy");
     skyDome_->Init("SkyDome");
     ground_->Init("Ground");
     followCamera_->Init();
@@ -32,8 +34,10 @@ void GameScene::Initialize() {
     /// ===================================================
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
+    player_->SetEnemy(enemy_.get());
     playerPtr_ = player_.get();
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
+    BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
 }
 
 void GameScene::Finalize() {

@@ -8,6 +8,5 @@ class PlayerStateMove : public PlayerBaseState {
     void Exit(Player &player) override;
 
 private:
-    // カメラが使用できない場合の従来の移動処理
-    void DefaultMovement(Player &player);
+ 
 };

@@ -368,6 +368,9 @@
     <ClCompile Include="application\GameObject\Field\Ground\Ground.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
+    <ClCompile Include="application\GameObject\Enemy\Enemy.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\Particle\Particle.hlsli">
@@ -627,6 +630,7 @@
     <ClInclude Include="application\GameObject\Player\State\PlayerStateMove.h" />
     <ClInclude Include="application\GameObject\Field\SkyDome\SkyDome.h" />
     <ClInclude Include="application\GameObject\Field\Ground\Ground.h" />
+    <ClInclude Include="application\GameObject\Enemy\Enemy.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Particle\Particle.PS.hlsl">
