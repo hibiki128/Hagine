@@ -18,6 +18,9 @@ void ParticleEmitter::Initialize(std::string name) {
         LoadParticleGroup();
         datas_ = std::make_unique<DataHandler>("Particle", name_);
     }
+    transform_.translation_ = particleSetting_.translate;
+    transform_.rotation_ = particleSetting_.rotation;
+    transform_.scale_ = particleSetting_.scale;
 }
 
 // Update関数
@@ -27,19 +30,6 @@ void ParticleEmitter::Update() {
 
     // 発生頻度に基づいてパーティクルを発生させる
     while (elapsedTime_ >= emitFrequency_) {
-        Manager_->SetRandomRotate(isRandomRotate_);
-        Manager_->SetRotateVelocity(isRotateVelocity_);
-        Manager_->SetAcceMultipy(isAcceMultiply_);
-        Manager_->SetBillBorad(isBillBoard_);
-        Manager_->SetRandomSize(isRandomScale_);
-        Manager_->SetAllRandomSize(isAllRamdomScale_);
-        Manager_->SetSinMove(isSinMove_);
-        Manager_->SetFaceDirection(isFaceDirection_);
-        Manager_->SetEndScale(isEndScale_);
-        Manager_->SetOnEdge(isEmitOnEdge_);
-        Manager_->SetGatherMode(isGatherMode_);
-        Manager_->SetGatherStartRatio(gatherStartRatio_);
-        Manager_->SetGatherStrength(gatherStrength_);
         Emit();                         // パーティクルを発生させる
         elapsedTime_ -= emitFrequency_; // 過剰に進んだ時間を考慮
     }
@@ -48,19 +38,6 @@ void ParticleEmitter::Update() {
 void ParticleEmitter::UpdateOnce() {
     isActive_ = false;
     if (!isActive_) {
-        Manager_->SetRandomRotate(isRandomRotate_);
-        Manager_->SetRotateVelocity(isRotateVelocity_);
-        Manager_->SetAcceMultipy(isAcceMultiply_);
-        Manager_->SetBillBorad(isBillBoard_);
-        Manager_->SetRandomSize(isRandomScale_);
-        Manager_->SetAllRandomSize(isAllRamdomScale_);
-        Manager_->SetSinMove(isSinMove_);
-        Manager_->SetFaceDirection(isFaceDirection_);
-        Manager_->SetEndScale(isEndScale_);
-        Manager_->SetOnEdge(isEmitOnEdge_);
-        Manager_->SetGatherMode(isGatherMode_);
-        Manager_->SetGatherStartRatio(gatherStartRatio_);
-        Manager_->SetGatherStrength(gatherStrength_);
         Emit(); // パーティクルを発生させる
         isActive_ = true;
     }
@@ -70,6 +47,9 @@ void ParticleEmitter::Draw(const ViewProjection &vp_) {
     if (isAuto_) {
         Update();
     }
+    transform_.translation_ = particleSetting_.translate;
+    transform_.rotation_ = particleSetting_.rotation;
+    transform_.scale_ = particleSetting_.scale;
     transform_.UpdateMatrix();
     if (Manager_) {
         Manager_->Update(vp_);
@@ -99,7 +79,7 @@ void ParticleEmitter::DrawEmitter() {
     std::array<Vector3, 8> worldVertices;
 
     // ワールド行列の計算
-    Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scale_, transform_.rotation_, transform_.translation_);
+    Matrix4x4 worldMatrix = MakeAffineMatrix(particleSetting_.scale, particleSetting_.rotation, particleSetting_.translate);
 
     // 頂点のワールド変換
     for (size_t i = 0; i < localVertices.size(); i++) {
@@ -122,128 +102,104 @@ void ParticleEmitter::DrawEmitter() {
 // Emit関数
 void ParticleEmitter::Emit() {
     // ParticleManagerのEmit関数を呼び出す
-    Manager_->Emit(
-        transform_.translation_,
-        count_,
-        transform_.scale_, // スケールを引数として渡す
-        velocityMin_,      // 最小速度を引数として渡す
-        velocityMax_,      // 最大速度を引数として渡す
-        lifeTimeMin_,      // 最小ライフタイムを引数として渡す
-        lifeTimeMax_,      // 最大ライフタイムを引数として渡す
-        startScale_,
-        endScale_,
-        startAcce_,
-        endAcce_,
-        startRote_,
-        endRote_,
-        isRandomColor_,
-        alphaMin_,
-        alphaMax_,
-        rotateVelocityMin_,
-        rotateVelocityMax_,
-        allScaleMax_,
-        allScaleMin_,
-        scaleMin_,
-        scaleMax_,
-        transform_.rotation_,
-        rotateStartMax_,
-        rotateStartMin_);
+    Manager_->SetParticleSetting(particleSetting_);
+    Manager_->Emit();
 }
 
 #pragma region ImGui関連
 
 void ParticleEmitter::SaveToJson() {
 
-    datas_->Save("emitterTranslation", transform_.translation_);
-    datas_->Save("emitterRotation", transform_.rotation_);
-    datas_->Save("emitterScale", transform_.scale_);
-    datas_->Save("count", count_);
+    datas_->Save("emitterTranslation", particleSetting_.translate);
+    datas_->Save("emitterRotation", particleSetting_.rotation);
+    datas_->Save("emitterScale", particleSetting_.scale);
+    datas_->Save("count", particleSetting_.count);
     datas_->Save("emitFrequency", emitFrequency_);
-    datas_->Save("lifeTimeMin", lifeTimeMin_);
-    datas_->Save("lifeTimeMax", lifeTimeMax_);
-    datas_->Save("alphaMin", alphaMin_);
-    datas_->Save("alphaMax", alphaMax_);
-    datas_->Save("scaleMin", scaleMin_);
-    datas_->Save("scaleMax", scaleMax_);
-    datas_->Save("velocityMin", velocityMin_);
-    datas_->Save("velocityMax", velocityMax_);
-    datas_->Save("startScale", startScale_);
-    datas_->Save("endScale", endScale_);
-    datas_->Save("startAcce", startAcce_);
-    datas_->Save("endAcce", endAcce_);
-    datas_->Save("startRote", startRote_);
-    datas_->Save("endRote", endRote_);
-    datas_->Save("rotateStartMax", rotateStartMax_);
-    datas_->Save("rotateStartMin", rotateStartMin_);
-    datas_->Save("rotateVelocityMin", rotateVelocityMin_);
-    datas_->Save("rotateVelocityMax", rotateVelocityMax_);
-    datas_->Save("allScaleMin", allScaleMin_);
-    datas_->Save("allScaleMax", allScaleMax_);
-    datas_->Save("isRandomScale", isRandomScale_);
-    datas_->Save("isAllRamdomScale", isAllRamdomScale_);
-    datas_->Save("isRandomColor", isRandomColor_);
-    datas_->Save("isRandomRotate", isRandomRotate_);
-    datas_->Save("isVisible", isVisible_);
+    datas_->Save("lifeTimeMin", particleSetting_.lifeTimeMin);
+    datas_->Save("lifeTimeMax", particleSetting_.lifeTimeMax);
+    datas_->Save("alphaMin", particleSetting_.alphaMin);
+    datas_->Save("alphaMax", particleSetting_.alphaMax);
+    datas_->Save("scaleMin", particleSetting_.scaleMin);
+    datas_->Save("scaleMax", particleSetting_.scaleMax);
+    datas_->Save("velocityMin", particleSetting_.velocityMin);
+    datas_->Save("velocityMax", particleSetting_.velocityMax);
+    datas_->Save("startScale", particleSetting_.particleStartScale);
+    datas_->Save("endScale", particleSetting_.particleEndScale);
+    datas_->Save("startAcce", particleSetting_.startAcce);
+    datas_->Save("endAcce", particleSetting_.endAcce);
+    datas_->Save("startRote", particleSetting_.startRote);
+    datas_->Save("endRote", particleSetting_.endRote);
+    datas_->Save("rotateStartMax", particleSetting_.rotateStartMax);
+    datas_->Save("rotateStartMin", particleSetting_.rotateStartMin);
+    datas_->Save("rotateVelocityMin", particleSetting_.rotateVelocityMin);
+    datas_->Save("rotateVelocityMax", particleSetting_.rotateVelocityMax);
+    datas_->Save("allScaleMin", particleSetting_.allScaleMin);
+    datas_->Save("allScaleMax", particleSetting_.allScaleMax);
+    datas_->Save("isRandomScale", particleSetting_.isRandomSize);
+    datas_->Save("isAllRamdomScale", particleSetting_.isRandomAllSize);
+    datas_->Save("isRandomColor", particleSetting_.isRandomColor);
+    datas_->Save("isRandomRotate", particleSetting_.isRandomRotate);
+    datas_->Save("isVisible",isVisible_);
     datas_->Save("isBillBoard", isBillBoard_);
     datas_->Save("isActive", isActive_);
-    datas_->Save("isAcceMultiply", isAcceMultiply_);
-    datas_->Save("isSinMove", isSinMove_);
-    datas_->Save("isFaceDirection", isFaceDirection_);
-    datas_->Save("isEndScale", isEndScale_);
-    datas_->Save("isEmitOnEdge", isEmitOnEdge_);
-    datas_->Save("isGatherMode", isGatherMode_);
-    datas_->Save("gatherStartRatio", gatherStartRatio_);
-    datas_->Save("gatherStrength", gatherStrength_);
+    datas_->Save("isAcceMultiply", particleSetting_.isAcceMultiply);
+    datas_->Save("isSinMove", particleSetting_.isSinMove);
+    datas_->Save("isFaceDirection", particleSetting_.isFaceDirection);
+    datas_->Save("isEndScale", particleSetting_.isEndScale);
+    datas_->Save("isEmitOnEdge", particleSetting_.isEmitOnEdge);
+    datas_->Save("isGatherMode", particleSetting_.isGatherMode);
+    datas_->Save("gatherStartRatio", particleSetting_.gatherStartRatio);
+    datas_->Save("gatherStrength", particleSetting_.gatherStrength);
     particleGroupNames_ = Manager_->GetParticleGroupsName();
     int count = 0;
     for (auto &particleGroupName : particleGroupNames_) {
-        datas_->Save("GroupName_" + std::to_string(count), particleGroupName);
+        datas_->Save("GroupName" + std::to_string(count), particleGroupName);
         count++;
     }
 }
 
 void ParticleEmitter::LoadFromJson() {
     if (!name_.empty()) {
-        transform_.translation_ = datas_->Load<Vector3>("emitterTranslation", {0.0f, 0.0f, 0.0f});
-        transform_.rotation_ = datas_->Load<Vector3>("emitterRotation", {0.0f, 0.0f, 0.0f});
-        transform_.scale_ = datas_->Load<Vector3>("emitterScale", {1.0f, 1.0f, 1.0f});
-        count_ = datas_->Load<int>("count", 1);
+        particleSetting_.translate = datas_->Load<Vector3>("emitterTranslation", {0.0f, 0.0f, 0.0f});
+        particleSetting_.rotation = datas_->Load<Vector3>("emitterRotation", {0.0f, 0.0f, 0.0f});
+        particleSetting_.scale = datas_->Load<Vector3>("emitterScale", {1.0f, 1.0f, 1.0f});
+        particleSetting_.count = datas_->Load<int>("count", 1);
         emitFrequency_ = datas_->Load<float>("emitFrequency", 0.1f);
-        lifeTimeMin_ = datas_->Load<float>("lifeTimeMin", 1.0f);
-        lifeTimeMax_ = datas_->Load<float>("lifeTimeMax", 3.0f);
-        alphaMin_ = datas_->Load<float>("alphaMin", 1.0f);
-        alphaMax_ = datas_->Load<float>("alphaMax", 1.0f);
-        scaleMin_ = datas_->Load<float>("scaleMin", 1.0f);
-        scaleMax_ = datas_->Load<float>("scaleMax", 1.0f);
-        velocityMin_ = datas_->Load<Vector3>("velocityMin", {-1.0f, -1.0f, -1.0f});
-        velocityMax_ = datas_->Load<Vector3>("velocityMax", {1.0f, 1.0f, 1.0f});
-        startScale_ = datas_->Load<Vector3>("startScale", {1.0f, 1.0f, 1.0f});
-        endScale_ = datas_->Load<Vector3>("endScale", {0.0f, 0.0f, 0.0f});
-        startAcce_ = datas_->Load<Vector3>("startAcce", {1.0f, 1.0f, 1.0f});
-        endAcce_ = datas_->Load<Vector3>("endAcce", {1.0f, 1.0f, 1.0f});
-        startRote_ = datas_->Load<Vector3>("startRote", {0.0f, 0.0f, 0.0f});
-        endRote_ = datas_->Load<Vector3>("endRote", {0.0f, 0.0f, 0.0f});
-        rotateStartMax_ = datas_->Load<Vector3>("rotateStartMax", {0.0f, 0.0f, 0.0f});
-        rotateStartMin_ = datas_->Load<Vector3>("rotateStartMin", {0.0f, 0.0f, 0.0f});
-        rotateVelocityMin_ = datas_->Load<Vector3>("rotateVelocityMin", {-0.07f, -0.07f, -0.07f});
-        rotateVelocityMax_ = datas_->Load<Vector3>("rotateVelocityMax", {0.07f, 0.07f, 0.07f});
-        allScaleMin_ = datas_->Load<Vector3>("allScaleMin", {0.0f, 0.0f, 0.0f});
-        allScaleMax_ = datas_->Load<Vector3>("allScaleMax", {1.0f, 1.0f, 1.0f});
-        isRandomScale_ = datas_->Load<bool>("isRandomScale", false);
-        isAllRamdomScale_ = datas_->Load<bool>("isAllRamdomScale", false);
-        isRandomColor_ = datas_->Load<bool>("isRandomColor", false);
-        isRandomRotate_ = datas_->Load<bool>("isRandomRotate", false);
+        particleSetting_.lifeTimeMin = datas_->Load<float>("lifeTimeMin", 1.0f);
+        particleSetting_.lifeTimeMax = datas_->Load<float>("lifeTimeMax", 3.0f);
+        particleSetting_.alphaMin = datas_->Load<float>("alphaMin", 1.0f);
+        particleSetting_.alphaMax = datas_->Load<float>("alphaMax", 1.0f);
+        particleSetting_.scaleMin = datas_->Load<float>("scaleMin", 1.0f);
+        particleSetting_.scaleMax = datas_->Load<float>("scaleMax", 1.0f);
+        particleSetting_.velocityMin = datas_->Load<Vector3>("velocityMin", {-1.0f, -1.0f, -1.0f});
+        particleSetting_.velocityMax = datas_->Load<Vector3>("velocityMax", {1.0f, 1.0f, 1.0f});
+        particleSetting_.particleStartScale = datas_->Load<Vector3>("startScale", {1.0f, 1.0f, 1.0f});
+        particleSetting_.particleEndScale = datas_->Load<Vector3>("endScale", {0.0f, 0.0f, 0.0f});
+        particleSetting_.startAcce = datas_->Load<Vector3>("startAcce", {1.0f, 1.0f, 1.0f});
+        particleSetting_.endAcce = datas_->Load<Vector3>("endAcce", {1.0f, 1.0f, 1.0f});
+        particleSetting_.startRote = datas_->Load<Vector3>("startRote", {0.0f, 0.0f, 0.0f});
+        particleSetting_.endRote = datas_->Load<Vector3>("endRote", {0.0f, 0.0f, 0.0f});
+        particleSetting_.rotateStartMax = datas_->Load<Vector3>("rotateStartMax", {0.0f, 0.0f, 0.0f});
+        particleSetting_.rotateStartMin = datas_->Load<Vector3>("rotateStartMin", {0.0f, 0.0f, 0.0f});
+        particleSetting_.rotateVelocityMin = datas_->Load<Vector3>("rotateVelocityMin", {-0.07f, -0.07f, -0.07f});
+        particleSetting_.rotateVelocityMax = datas_->Load<Vector3>("rotateVelocityMax", {0.07f, 0.07f, 0.07f});
+        particleSetting_.allScaleMin = datas_->Load<Vector3>("allScaleMin", {0.0f, 0.0f, 0.0f});
+        particleSetting_.allScaleMax = datas_->Load<Vector3>("allScaleMax", {1.0f, 1.0f, 1.0f});
+        particleSetting_.isRandomSize = datas_->Load<bool>("isRandomScale", false);
+        particleSetting_.isRandomAllSize = datas_->Load<bool>("isAllRamdomScale", false);
+        particleSetting_.isRandomColor = datas_->Load<bool>("isRandomColor", false);
+        particleSetting_.isRandomRotate = datas_->Load<bool>("isRandomRotate", false);
         isVisible_ = datas_->Load<bool>("isVisible", true);
         isBillBoard_ = datas_->Load<bool>("isBillBoard", false);
         isActive_ = datas_->Load<bool>("isActive", false);
-        isAcceMultiply_ = datas_->Load<bool>("isAcceMultiply", false);
-        isSinMove_ = datas_->Load<bool>("isSinMove", false);
-        isFaceDirection_ = datas_->Load<bool>("isFaceDirection", false);
-        isEndScale_ = datas_->Load<bool>("isEndScale", false);
-        isEmitOnEdge_ = datas_->Load<bool>("isEmitOnEdge", false);
-        isGatherMode_ = datas_->Load<bool>("isGatherMode", false);
-        gatherStartRatio_ = datas_->Load<float>("gatherStartRatio", 0.0f);
-        gatherStrength_ = datas_->Load<float>("gatherStrength", 0.0f);
+        particleSetting_.isAcceMultiply = datas_->Load<bool>("isAcceMultiply", false);
+        particleSetting_.isSinMove = datas_->Load<bool>("isSinMove", false);
+        particleSetting_.isFaceDirection = datas_->Load<bool>("isFaceDirection", false);
+        particleSetting_.isEndScale = datas_->Load<bool>("isEndScale", false);
+        particleSetting_.isEmitOnEdge = datas_->Load<bool>("isEmitOnEdge", false);
+        particleSetting_.isGatherMode = datas_->Load<bool>("isGatherMode", false);
+        particleSetting_.gatherStartRatio = datas_->Load<float>("gatherStartRatio", 0.0f);
+        particleSetting_.gatherStrength = datas_->Load<float>("gatherStrength", 0.0f);
         for (size_t i = 0; i < ParticleGroupManager::GetInstance()->GetParticleGroups().size(); i++) {
             std::string groupName = datas_->Load<std::string>("GroupName_" + std::to_string(i), "");
             if (groupName == "") {
@@ -273,27 +229,27 @@ void ParticleEmitter::DebugParticleData() {
                 ImGui::Columns(2, "TransformColumns", false); // 2列レイアウト
                 ImGui::Text("位置");
                 ImGui::NextColumn();
-                ImGui::DragFloat3("##位置", &transform_.translation_.x, 0.1f);
+                ImGui::DragFloat3("##位置", &particleSetting_.translate.x, 0.1f);
                 ImGui::NextColumn();
                 ImGui::Text("回転");
                 ImGui::NextColumn();
                 float rotationDegrees[3] = {
-                    radiansToDegrees(transform_.rotation_.x),
-                    radiansToDegrees(transform_.rotation_.y),
-                    radiansToDegrees(transform_.rotation_.z)};
+                    radiansToDegrees(particleSetting_.rotation.x),
+                    radiansToDegrees(particleSetting_.rotation.y),
+                    radiansToDegrees(particleSetting_.rotation.z)};
 
                 // ドラッグUIを使用し、度数法で値を操作
                 if (ImGui::DragFloat3("##回転 (度)", rotationDegrees, 0.1f, -360.0f, 360.0f)) {
                     // 操作後、度数法からラジアンに戻して保存
-                    transform_.rotation_.x = degreesToRadians(rotationDegrees[0]);
-                    transform_.rotation_.y = degreesToRadians(rotationDegrees[1]);
-                    transform_.rotation_.z = degreesToRadians(rotationDegrees[2]);
+                    particleSetting_.rotation.x = degreesToRadians(rotationDegrees[0]);
+                    particleSetting_.rotation.y = degreesToRadians(rotationDegrees[1]);
+                    particleSetting_.rotation.z = degreesToRadians(rotationDegrees[2]);
                 }
 
                 ImGui::NextColumn();
                 ImGui::Text("大きさ");
                 ImGui::NextColumn();
-                ImGui::DragFloat3("##大きさ", &transform_.scale_.x, 0.1f, 0.0f);
+                ImGui::DragFloat3("##大きさ", &particleSetting_.scale.x, 0.1f, 0.0f);
                 ImGui::Columns(1); // 列終了
                 ImGui::Separator();
 
@@ -307,22 +263,22 @@ void ParticleEmitter::DebugParticleData() {
                 if (ImGui::TreeNode("寿命")) {
                     ImGui::Text("寿命設定:");
                     ImGui::Separator();
-                    ImGui::DragFloat("最大値", &lifeTimeMax_, 0.1f, 0.0f);
-                    ImGui::DragFloat("最小値", &lifeTimeMin_, 0.1f, 0.0f);
-                    lifeTimeMin_ = std::clamp(lifeTimeMin_, 0.0f, lifeTimeMax_);
-                    lifeTimeMax_ = std::clamp(lifeTimeMax_, lifeTimeMin_, 10.0f);
+                    ImGui::DragFloat("最大値", &particleSetting_.lifeTimeMax, 0.1f, 0.0f);
+                    ImGui::DragFloat("最小値", &particleSetting_.lifeTimeMin, 0.1f, 0.0f);
+                    particleSetting_.lifeTimeMin = std::clamp(particleSetting_.lifeTimeMin, 0.0f, particleSetting_.lifeTimeMax);
+                    particleSetting_.lifeTimeMax = std::clamp(particleSetting_.lifeTimeMax, particleSetting_.lifeTimeMin, 10.0f);
                     ImGui::TreePop();
                 }
 
                 ImGui::Separator();
 
                 if (ImGui::TreeNode("位置")) {
-                    ImGui::Checkbox("中心に集める", &isGatherMode_);
-                    if (isGatherMode_) {
-                        ImGui::DragFloat("強さ", &gatherStrength_,0.1f);
-                        ImGui::DragFloat("始まるタイミング", &gatherStartRatio_,0.1f);
+                    ImGui::Checkbox("中心に集める", &particleSetting_.isGatherMode);
+                    if (particleSetting_.isGatherMode) {
+                        ImGui::DragFloat("強さ", &particleSetting_.gatherStrength, 0.1f);
+                        ImGui::DragFloat("始まるタイミング", &particleSetting_.gatherStartRatio, 0.1f);
                     }
-                    ImGui::Checkbox("外周", &isEmitOnEdge_);
+                    ImGui::Checkbox("外周", &particleSetting_.isEmitOnEdge);
                     ImGui::TreePop();
                 }
 
@@ -331,18 +287,18 @@ void ParticleEmitter::DebugParticleData() {
                 // 速度と加速度
                 if (ImGui::TreeNode("速度、加速度")) {
                     ImGui::Text("速度:");
-                    ImGui::DragFloat3("最大値", &velocityMax_.x, 0.1f);
-                    ImGui::DragFloat3("最小値", &velocityMin_.x, 0.1f);
-                    velocityMin_.x = std::clamp(velocityMin_.x, -FLT_MAX, velocityMax_.x);
-                    velocityMax_.x = std::clamp(velocityMax_.x, velocityMin_.x, FLT_MAX);
-                    velocityMin_.y = std::clamp(velocityMin_.y, -FLT_MAX, velocityMax_.y);
-                    velocityMax_.y = std::clamp(velocityMax_.y, velocityMin_.y, FLT_MAX);
-                    velocityMin_.z = std::clamp(velocityMin_.z, -FLT_MAX, velocityMax_.z);
-                    velocityMax_.z = std::clamp(velocityMax_.z, velocityMin_.z, FLT_MAX);
+                    ImGui::DragFloat3("最大値", &particleSetting_.velocityMax.x, 0.1f);
+                    ImGui::DragFloat3("最小値", &particleSetting_.velocityMin.x, 0.1f);
+                    particleSetting_.velocityMin.x = std::clamp(particleSetting_.velocityMin.x, -FLT_MAX, particleSetting_.velocityMax.x);
+                    particleSetting_.velocityMax.x = std::clamp(particleSetting_.velocityMax.x, particleSetting_.velocityMin.x, FLT_MAX);
+                    particleSetting_.velocityMin.y = std::clamp(particleSetting_.velocityMin.y, -FLT_MAX, particleSetting_.velocityMax.y);
+                    particleSetting_.velocityMax.y = std::clamp(particleSetting_.velocityMax.y, particleSetting_.velocityMin.y, FLT_MAX);
+                    particleSetting_.velocityMin.z = std::clamp(particleSetting_.velocityMin.z, -FLT_MAX, particleSetting_.velocityMax.z);
+                    particleSetting_.velocityMax.z = std::clamp(particleSetting_.velocityMax.z, particleSetting_.velocityMin.z, FLT_MAX);
                     ImGui::Text("加速度:");
-                    ImGui::DragFloat3("最初", &startAcce_.x, 0.001f);
-                    ImGui::DragFloat3("最後", &endAcce_.x, 0.001f);
-                    ImGui::Checkbox("乗算", &isAcceMultiply_);
+                    ImGui::DragFloat3("最初", &particleSetting_.startAcce.x, 0.001f);
+                    ImGui::DragFloat3("最後", &particleSetting_.endAcce.x, 0.001f);
+                    ImGui::Checkbox("乗算", &particleSetting_.isAcceMultiply);
                     ImGui::TreePop();
                 }
 
@@ -351,33 +307,33 @@ void ParticleEmitter::DebugParticleData() {
                 // サイズ
                 if (ImGui::TreeNode("大きさ")) {
                     ImGui::Text("大きさ:");
-                    if (isAllRamdomScale_) {
-                        ImGui::Checkbox("最初と最後同じ大きさ", &isEndScale_);
-                        ImGui::DragFloat3("最大値", &allScaleMax_.x, 0.1f, 0.0f);
-                        ImGui::DragFloat3("最小値", &allScaleMin_.x, 0.1f, 0.0f);
-                        allScaleMin_.x = std::clamp(allScaleMin_.x, -FLT_MAX, allScaleMax_.x);
-                        allScaleMax_.x = std::clamp(allScaleMax_.x, allScaleMin_.x, FLT_MAX);
-                        allScaleMin_.y = std::clamp(allScaleMin_.y, -FLT_MAX, allScaleMax_.y);
-                        allScaleMax_.y = std::clamp(allScaleMax_.y, allScaleMin_.y, FLT_MAX);
-                        allScaleMin_.z = std::clamp(allScaleMin_.z, -FLT_MAX, allScaleMax_.z);
-                        allScaleMax_.z = std::clamp(allScaleMax_.z, allScaleMin_.z, FLT_MAX);
-                        if (!isEndScale_) {
-                            ImGui::DragFloat3("最後", &endScale_.x, 0.1f);
+                    if (particleSetting_.isRandomAllSize) {
+                        ImGui::Checkbox("最初と最後同じ大きさ", &particleSetting_.isEndScale);
+                        ImGui::DragFloat3("最大値", &particleSetting_.allScaleMax.x, 0.1f, 0.0f);
+                        ImGui::DragFloat3("最小値", &particleSetting_.allScaleMin.x, 0.1f, 0.0f);
+                        particleSetting_.allScaleMin.x = std::clamp(particleSetting_.allScaleMin.x, -FLT_MAX, particleSetting_.allScaleMax.x);
+                        particleSetting_.allScaleMax.x = std::clamp(particleSetting_.allScaleMax.x, particleSetting_.allScaleMin.x, FLT_MAX);
+                        particleSetting_.allScaleMin.y = std::clamp(particleSetting_.allScaleMin.y, -FLT_MAX, particleSetting_.allScaleMax.y);
+                        particleSetting_.allScaleMax.y = std::clamp(particleSetting_.allScaleMax.y, particleSetting_.allScaleMin.y, FLT_MAX);
+                        particleSetting_.allScaleMin.z = std::clamp(particleSetting_.allScaleMin.z, -FLT_MAX, particleSetting_.allScaleMax.z);
+                        particleSetting_.allScaleMax.z = std::clamp(particleSetting_.allScaleMax.z, particleSetting_.allScaleMin.z, FLT_MAX);
+                        if (!particleSetting_.isEndScale) {
+                            ImGui::DragFloat3("最後", &particleSetting_.particleEndScale.x, 0.1f);
                         }
-                    } else if (isRandomScale_) {
-                        ImGui::DragFloat("最大値", &scaleMax_, 0.1f, 0.0f);
-                        ImGui::DragFloat("最小値", &scaleMin_, 0.1f, 0.0f);
-                        scaleMax_ = std::clamp(scaleMax_, scaleMin_, FLT_MAX);
-                        scaleMin_ = std::clamp(scaleMin_, 0.0f, scaleMax_);
-                    } else if (isSinMove_) {
-                        ImGui::DragFloat3("最初", &startScale_.x, 0.1f, 0.0f);
+                    } else if (particleSetting_.isRandomSize) {
+                        ImGui::DragFloat("最大値", &particleSetting_.scaleMax, 0.1f, 0.0f);
+                        ImGui::DragFloat("最小値", &particleSetting_.scaleMin, 0.1f, 0.0f);
+                        particleSetting_.scaleMax = std::clamp(particleSetting_.scaleMax, particleSetting_.scaleMin, FLT_MAX);
+                        particleSetting_.scaleMin = std::clamp(particleSetting_.scaleMin, 0.0f, particleSetting_.scaleMax);
+                    } else if (particleSetting_.isSinMove) {
+                        ImGui::DragFloat3("最初", &particleSetting_.particleStartScale.x, 0.1f, 0.0f);
                     } else {
-                        ImGui::DragFloat3("最初", &startScale_.x, 0.1f, 0.0f);
-                        ImGui::DragFloat3("最後", &endScale_.x, 0.1f);
+                        ImGui::DragFloat3("最初", &particleSetting_.particleStartScale.x, 0.1f, 0.0f);
+                        ImGui::DragFloat3("最後", &particleSetting_.particleEndScale.x, 0.1f);
                     }
-                    ImGui::Checkbox("均等にランダムな大きさ", &isRandomScale_);
-                    ImGui::Checkbox("ばらばらにランダムな大きさ", &isAllRamdomScale_);
-                    ImGui::Checkbox("sin波の動き", &isSinMove_);
+                    ImGui::Checkbox("均等にランダムな大きさ", &particleSetting_.isRandomSize);
+                    ImGui::Checkbox("ばらばらにランダムな大きさ", &particleSetting_.isRandomAllSize);
+                    ImGui::Checkbox("sin波の動き", &particleSetting_.isSinMove);
                     ImGui::TreePop();
                 }
 
@@ -385,63 +341,63 @@ void ParticleEmitter::DebugParticleData() {
 
                 // 回転
                 if (ImGui::TreeNode("回転")) {
-                    if (!isRandomRotate_) {
+                    if (!particleSetting_.isRandomRotate) {
                         float startRotationDegrees[3] = {
-                            radiansToDegrees(startRote_.x),
-                            radiansToDegrees(startRote_.y),
-                            radiansToDegrees(startRote_.z)};
+                            radiansToDegrees(particleSetting_.startRote.x),
+                            radiansToDegrees(particleSetting_.startRote.y),
+                            radiansToDegrees(particleSetting_.startRote.z)};
                         float endRotationDegrees[3] = {
-                            radiansToDegrees(endRote_.x),
-                            radiansToDegrees(endRote_.y),
-                            radiansToDegrees(endRote_.z)};
+                            radiansToDegrees(particleSetting_.endRote.x),
+                            radiansToDegrees(particleSetting_.endRote.y),
+                            radiansToDegrees(particleSetting_.endRote.z)};
                         if (ImGui::DragFloat3("最初", startRotationDegrees, 0.1f)) {
-                            startRote_.x = degreesToRadians(startRotationDegrees[0]);
-                            startRote_.y = degreesToRadians(startRotationDegrees[1]);
-                            startRote_.z = degreesToRadians(startRotationDegrees[2]);
+                            particleSetting_.startRote.x = degreesToRadians(startRotationDegrees[0]);
+                            particleSetting_.startRote.y = degreesToRadians(startRotationDegrees[1]);
+                            particleSetting_.startRote.z = degreesToRadians(startRotationDegrees[2]);
                         }
                         if (ImGui::DragFloat3("最後", endRotationDegrees, 0.1f)) {
-                            endRote_.x = degreesToRadians(endRotationDegrees[0]);
-                            endRote_.y = degreesToRadians(endRotationDegrees[1]);
-                            endRote_.z = degreesToRadians(endRotationDegrees[2]);
+                            particleSetting_.endRote.x = degreesToRadians(endRotationDegrees[0]);
+                            particleSetting_.endRote.y = degreesToRadians(endRotationDegrees[1]);
+                            particleSetting_.endRote.z = degreesToRadians(endRotationDegrees[2]);
                         }
                     }
-                    if (isRandomRotate_) {
+                    if (particleSetting_.isRandomRotate) {
                         float startRotationDegrees[3] = {
-                            radiansToDegrees(rotateStartMax_.x),
-                            radiansToDegrees(rotateStartMax_.y),
-                            radiansToDegrees(rotateStartMax_.z)};
+                            radiansToDegrees(particleSetting_.rotateStartMax.x),
+                            radiansToDegrees(particleSetting_.rotateStartMax.y),
+                            radiansToDegrees(particleSetting_.rotateStartMax.z)};
                         float endRotationDegrees[3] = {
-                            radiansToDegrees(rotateStartMin_.x),
-                            radiansToDegrees(rotateStartMin_.y),
-                            radiansToDegrees(rotateStartMin_.z)};
+                            radiansToDegrees(particleSetting_.rotateStartMin.x),
+                            radiansToDegrees(particleSetting_.rotateStartMin.y),
+                            radiansToDegrees(particleSetting_.rotateStartMin.z)};
 
                         if (ImGui::DragFloat3("回転 最大値", startRotationDegrees, 0.1f)) {
-                            rotateStartMax_.x = degreesToRadians(std::clamp(startRotationDegrees[0], radiansToDegrees(rotateStartMin_.x), 180.0f));
-                            rotateStartMax_.y = degreesToRadians(std::clamp(startRotationDegrees[1], radiansToDegrees(rotateStartMin_.y), 180.0f));
-                            rotateStartMax_.z = degreesToRadians(std::clamp(startRotationDegrees[2], radiansToDegrees(rotateStartMin_.z), 180.0f));
+                            particleSetting_.rotateStartMax.x = degreesToRadians(std::clamp(startRotationDegrees[0], radiansToDegrees(particleSetting_.rotateStartMin.x), 180.0f));
+                            particleSetting_.rotateStartMax.y = degreesToRadians(std::clamp(startRotationDegrees[1], radiansToDegrees(particleSetting_.rotateStartMin.y), 180.0f));
+                            particleSetting_.rotateStartMax.z = degreesToRadians(std::clamp(startRotationDegrees[2], radiansToDegrees(particleSetting_.rotateStartMin.z), 180.0f));
                         }
 
                         if (ImGui::DragFloat3("回転 最小値", endRotationDegrees, 0.1f)) {
-                            rotateStartMin_.x = degreesToRadians(std::clamp(endRotationDegrees[0], -180.0f, radiansToDegrees(rotateStartMax_.x)));
-                            rotateStartMin_.y = degreesToRadians(std::clamp(endRotationDegrees[1], -180.0f, radiansToDegrees(rotateStartMax_.y)));
-                            rotateStartMin_.z = degreesToRadians(std::clamp(endRotationDegrees[2], -180.0f, radiansToDegrees(rotateStartMax_.z)));
+                            particleSetting_.rotateStartMin.x = degreesToRadians(std::clamp(endRotationDegrees[0], -180.0f, radiansToDegrees(particleSetting_.rotateStartMax.x)));
+                            particleSetting_.rotateStartMin.y = degreesToRadians(std::clamp(endRotationDegrees[1], -180.0f, radiansToDegrees(particleSetting_.rotateStartMax.y)));
+                            particleSetting_.rotateStartMin.z = degreesToRadians(std::clamp(endRotationDegrees[2], -180.0f, radiansToDegrees(particleSetting_.rotateStartMax.z)));
                         }
 
-                        ImGui::Checkbox("ランダムな回転速度", &isRotateVelocity_);
+                        ImGui::Checkbox("ランダムな回転速度", &particleSetting_.isRotateVelocity);
 
-                        if (isRotateVelocity_) {
-                            ImGui::DragFloat3("最大値", &rotateVelocityMax_.x, 0.01f);
-                            ImGui::DragFloat3("最小値", &rotateVelocityMin_.x, 0.01f);
-                            rotateVelocityMin_.x = std::clamp(rotateVelocityMin_.x, -FLT_MAX, rotateVelocityMax_.x);
-                            rotateVelocityMax_.x = std::clamp(rotateVelocityMax_.x, rotateVelocityMin_.x, FLT_MAX);
-                            rotateVelocityMin_.y = std::clamp(rotateVelocityMin_.y, -FLT_MAX, rotateVelocityMax_.y);
-                            rotateVelocityMax_.y = std::clamp(rotateVelocityMax_.y, rotateVelocityMin_.y, FLT_MAX);
-                            rotateVelocityMin_.z = std::clamp(rotateVelocityMin_.z, -FLT_MAX, rotateVelocityMax_.z);
-                            rotateVelocityMax_.z = std::clamp(rotateVelocityMax_.z, rotateVelocityMin_.z, FLT_MAX);
+                        if (particleSetting_.isRotateVelocity) {
+                            ImGui::DragFloat3("最大値", &particleSetting_.rotateVelocityMax.x, 0.01f);
+                            ImGui::DragFloat3("最小値", &particleSetting_.rotateVelocityMin.x, 0.01f);
+                            particleSetting_.rotateVelocityMin.x = std::clamp(particleSetting_.rotateVelocityMin.x, -FLT_MAX, particleSetting_.rotateVelocityMax.x);
+                            particleSetting_.rotateVelocityMax.x = std::clamp(particleSetting_.rotateVelocityMax.x, particleSetting_.rotateVelocityMin.x, FLT_MAX);
+                            particleSetting_.rotateVelocityMin.y = std::clamp(particleSetting_.rotateVelocityMin.y, -FLT_MAX, particleSetting_.rotateVelocityMax.y);
+                            particleSetting_.rotateVelocityMax.y = std::clamp(particleSetting_.rotateVelocityMax.y, particleSetting_.rotateVelocityMin.y, FLT_MAX);
+                            particleSetting_.rotateVelocityMin.z = std::clamp(particleSetting_.rotateVelocityMin.z, -FLT_MAX, particleSetting_.rotateVelocityMax.z);
+                            particleSetting_.rotateVelocityMax.z = std::clamp(particleSetting_.rotateVelocityMax.z, particleSetting_.rotateVelocityMin.z, FLT_MAX);
                         }
                     }
-                    ImGui::Checkbox("ランダムな回転", &isRandomRotate_);
-                    ImGui::Checkbox("進行方向に向ける", &isFaceDirection_);
+                    ImGui::Checkbox("ランダムな回転", &particleSetting_.isRandomRotate);
+                    ImGui::Checkbox("進行方向に向ける", &particleSetting_.isFaceDirection);
                     ImGui::TreePop();
                 }
 
@@ -450,10 +406,10 @@ void ParticleEmitter::DebugParticleData() {
                 // Alphaを折りたたみ可能にする
                 if (ImGui::TreeNode("透明度")) {
                     ImGui::Text("透明度の設定:");
-                    ImGui::DragFloat("最大値", &alphaMax_, 0.01f, 0.0f, 1.0f);
-                    ImGui::DragFloat("最小値", &alphaMin_, 0.01f, 0.0f, 1.0f);
-                    alphaMin_ = std::clamp(alphaMin_, 0.0f, alphaMax_);
-                    alphaMax_ = std::clamp(alphaMax_, alphaMin_, 1.0f);
+                    ImGui::DragFloat("最大値", &particleSetting_.alphaMax, 0.01f, 0.0f, 1.0f);
+                    ImGui::DragFloat("最小値", &particleSetting_.alphaMin, 0.01f, 0.0f, 1.0f);
+                    particleSetting_.alphaMin = std::clamp(particleSetting_.alphaMin, 0.0f, particleSetting_.alphaMax);
+                    particleSetting_.alphaMax = std::clamp(particleSetting_.alphaMax, particleSetting_.alphaMin, 1.0f);
                     ImGui::TreePop();
                 }
             }
@@ -461,14 +417,14 @@ void ParticleEmitter::DebugParticleData() {
             // エミット設定セクション
             if (ImGui::CollapsingHeader("パーティクルの数、間隔")) {
                 ImGui::DragFloat("間隔", &emitFrequency_, 0.001f, 0.001f, 100.0f);
-                ImGui::InputInt("数", &count_, 1, 100);
-                count_ = std::clamp(count_, 0, 10000);
+                ImGui::InputInt("数", reinterpret_cast<int*>(&particleSetting_.count), 1, 100);
+                particleSetting_.count = std::clamp(static_cast<int>(particleSetting_.count), 0, 10000);
             }
 
             // その他の設定セクション
             if (ImGui::CollapsingHeader("各状態の設定")) {
                 ImGui::Checkbox("ビルボード", &isBillBoard_);
-                ImGui::Checkbox("ランダムカラー", &isRandomColor_);
+                ImGui::Checkbox("ランダムカラー", &particleSetting_.isRandomColor);
             }
 
             if (ImGui::CollapsingHeader("グループ")) {

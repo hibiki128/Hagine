@@ -2,20 +2,19 @@
 #include "Matrix4x4.h"
 #include "Model.h"
 #include "ObjColor.h"
+#include "Object/Object3dCommon.h"
 #include "Vector2.h"
 #include "Vector3.h"
 #include "Vector4.h"
-#include"ViewProjection/ViewProjection.h"
+#include "ViewProjection/ViewProjection.h"
 #include "WorldTransform.h"
 #include "animation/ModelAnimation.h"
-#include "d3d12.h"
 #include "light/LightGroup.h"
 #include "string"
 #include "vector"
-#include "wrl.h"
+#include"Material/Material.h"
 
 class ModelCommon;
-class Object3dCommon;
 class Object3d {
   private: // メンバ変数
     struct Transform {
@@ -31,28 +30,19 @@ class Object3d {
         Matrix4x4 WorldInverseTranspose;
     };
 
-    // マテリアルデータ
-    struct Material {
-        Vector4 color;
-        int32_t enableLighting;
-        float padding[3];
-        Matrix4x4 uvTransform;
-        float shininess;
-        std::string textureFilePath;
-        uint32_t textureIndex = 0;
-    };
-
-    Object3dCommon *obj3dCommon = nullptr;
-
+    DirectXCommon *dxCommon_ = nullptr;
+ 
     // バッファリソース
     Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
     // バッファリソース内のデータを指すポインタ
     TransformationMatrix *transformationMatrixData = nullptr;
 
-    // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr;
-    // バッファリソース内のデータを指すポインタ
-    Material *materialData = nullptr;
+    //// バッファリソース
+    //Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr;
+    //// バッファリソース内のデータを指すポインタ
+    //Material *materialData = nullptr;
+
+    std::unique_ptr<Material> material_;
 
     Transform transform;
 
@@ -69,8 +59,12 @@ class Object3d {
     bool HaveAnimation;
 
     std::string filePath_;
+    std::unique_ptr<Object3dCommon> objectCommon_;
+    BlendMode blendMode_ = BlendMode::kNone;
 
   public: // メンバ関数
+    void Initialize();
+
     /// <summary>
     /// 初期化
     /// </summary>
@@ -125,6 +119,7 @@ class Object3d {
     const Vector3 &GetPosition() const { return position; }
     const Vector3 &GetRotation() const { return rotation; }
     const Vector3 &GetSize() const { return size; }
+    const std::string GetTexture() const { return material_->GetMaterialDataGPU()->textureFilePath; }
     const bool &GetHaveAnimation() const { return HaveAnimation; }
     bool IsFinish() { return currentModelAnimation_->IsFinish(); }
 
@@ -138,8 +133,9 @@ class Object3d {
     void SetSize(const Vector3 &size) { this->size = size; }
     void SetModel(const std::string &filePath);
     void SetTexture(const std::string &filePath);
-    void SetUVTransform(const Matrix4x4 &mat) { materialData->uvTransform = mat; }
-    void SetColor(const Vector4 &color) { materialData->color = color; }
+    void SetUVTransform(const Matrix4x4 &mat) { material_->GetMaterialDataGPU()->uvTransform = mat; }
+    void SetColor(const Vector4 &color) { material_->GetMaterialDataGPU()->color = color; }
+    void SetBlendMode(BlendMode blendMode) { blendMode_ = blendMode; }
 
     /// <summary>
     /// 光沢度の設定
@@ -156,7 +152,7 @@ class Object3d {
     /// <summary>
     /// マテリアルデータ作成
     /// </summary>
-    void CreateMaterial();
+   // void CreateMaterial();
 
     Vector3 ExtractTranslation(const Matrix4x4 &matrix) {
         return Vector3(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);

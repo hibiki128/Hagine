@@ -1,10 +1,14 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
+#include "ImGuizmo.h"
+#include "ImGuizmoManager.h"
+#include "SceneManager.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include"SceneManager.h"
+#include <Engine/Frame/Frame.h>
+#include"Engine/Offscreen/OffScreen.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -25,8 +29,9 @@ void ImGuiManager::Initialize(WinApp *winApp) {
 
     // パフォーマンス関連の設定
     io.ConfigMemoryCompactTimer = 300.0f; // メモリ圧縮の間隔を長く
-    io.IniFilename = "imgui.ini";         // 設定ファイルの保存場所
+    io.IniFilename = nullptr;             // 設定ファイルの保存場所
                                           // 設定ファイルの保存場所
+    LoadLayoutForCurrentMode();
 
     io.Fonts->Clear(); // 既存のフォントをクリア
 
@@ -64,6 +69,7 @@ void ImGuiManager::Initialize(WinApp *winApp) {
         srvManager_->GetDescriptorHeap(),
         srvManager_->GetCPUDescriptorHandle(srvIndex),
         srvManager_->GetGPUDescriptorHandle(srvIndex));
+    imGuizmoManager_ = ImGuizmoManager::GetInstance();
 }
 
 void ImGuiManager::SetupTheme() {
@@ -180,6 +186,7 @@ ImGuiManager *ImGuiManager::GetInstance() {
 }
 
 void ImGuiManager::Finalize() {
+    SaveCurrentLayout();
     // 後始末
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
@@ -273,9 +280,9 @@ void ImGuiManager::ShowMainMenu() {
                 ImGui::MenuItem(ICON_FA_BOOK_OPEN " シーンビュー", nullptr, &showSceneView_);
                 ImGui::MenuItem(ICON_FA_CUBE " オブジェクトビュー", nullptr, &showObjectView_);
                 ImGui::MenuItem(ICON_FA_STAR " パーティクルビュー", nullptr, &showParticleView_);
-                // ImGui::MenuItem(ICON_FA_TERMINAL " コンソール", nullptr, &showConsole_);
-                // ImGui::MenuItem(ICON_FA_SITEMAP " ヒエラルキー", nullptr, &showHierarchy_);
-                // ImGui::MenuItem(ICON_FA_SLIDERS_H " インスペクター", nullptr, &showInspector_);
+                ImGui::MenuItem(ICON_FA_DATABASE " FPSビュー", nullptr, &showFPSView_);
+                ImGui::MenuItem(ICON_FA_STAR_OF_DAVID " オフスクリーンビュー", nullptr, &showOfScreenView_);
+                ImGui::MenuItem(ICON_FA_LIGHTBULB " ライトビュー", nullptr, &showLightView_);
                 // ImGui::MenuItem(ICON_FA_FOLDER " プロジェクト", nullptr, &showProject_);
                 ImGui::EndMenu();
             }
@@ -284,12 +291,18 @@ void ImGuiManager::ShowMainMenu() {
             ImGui::Separator();
             if (isShowMainUI_) {
                 if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームモードに切替", "F5")) {
+                    // Dock状態を保存！
+                    SwitchToGameMode();
+                    //BackupDockLayout();
                     isShowMainUI_ = false;
                 }
             } else {
                 if (ImGui::MenuItem(ICON_FA_WRENCH " エディターモードに切替", "F5")) {
                     isShowMainUI_ = true;
                     WinApp::GetInstance()->IsFullScreen() = false;
+                    // Dock状態を復元！
+                   // RestoreDockLayout();
+                    SwitchToEditorMode();
                 }
             }
             ImGui::Separator();
@@ -312,7 +325,6 @@ void ImGuiManager::ShowMainMenu() {
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Cube);
-                    object->SetTexture("debug/uvChecker.png");
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
@@ -321,7 +333,6 @@ void ImGuiManager::ShowMainMenu() {
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Sphere);
-                    object->SetTexture("debug/uvChecker.png");
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
@@ -330,7 +341,6 @@ void ImGuiManager::ShowMainMenu() {
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Plane);
-                    object->SetTexture("debug/uvChecker.png");
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
@@ -339,7 +349,6 @@ void ImGuiManager::ShowMainMenu() {
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Cylinder);
-                    object->SetTexture("debug/uvChecker.png");
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
@@ -348,7 +357,6 @@ void ImGuiManager::ShowMainMenu() {
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Ring);
-                    object->SetTexture("debug/uvChecker.png");
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
@@ -357,7 +365,6 @@ void ImGuiManager::ShowMainMenu() {
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Triangle);
-                    object->SetTexture("debug/uvChecker.png");
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
@@ -366,7 +373,6 @@ void ImGuiManager::ShowMainMenu() {
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Pyramid);
-                    object->SetTexture("debug/uvChecker.png");
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
@@ -375,12 +381,12 @@ void ImGuiManager::ShowMainMenu() {
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Cone);
-                    object->SetTexture("debug/uvChecker.png");
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
-                  if (ImGui::MenuItem(ICON_FA_TRASH_ALT " オブジェクト全削除")) {
+                if (ImGui::MenuItem(ICON_FA_TRASH_ALT " オブジェクト全削除")) {
                     baseObjectManager_->DeleteObject();
+                    imGuizmoManager_->DeleteTarget();
                 }
 
                 ImGui::EndMenu();
@@ -495,12 +501,6 @@ void ImGuiManager::ShowSceneSettingWindow() {
     // パフォーマンス改善: 軽量化フラグを追加
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
-    // ゲームプレイ中など重要でないときは折りたたまれた状態で開始
-    if (!isShowMainUI_) {
-        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
-        flags |= ImGuiWindowFlags_NoBringToFrontOnFocus; // フォーカス時に前面に出さない
-    }
-
     ImGui::Begin("シーン設定", &showSceneView_, flags);
 
     currentScene_->AddSceneSetting();
@@ -513,15 +513,11 @@ void ImGuiManager::ShowObjectSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-    if (!isShowMainUI_) {
-        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
-        flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
-    }
-
+  
     ImGui::Begin("オブジェクト設定", &showObjectView_, flags);
 
     currentScene_->AddObjectSetting();
-    baseObjectManager_->DrawImGui();
+    // baseObjectManager_->DrawImGui();
 
     ImGui::End();
 }
@@ -531,14 +527,49 @@ void ImGuiManager::ShowParticleSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-    if (!isShowMainUI_) {
-        ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
-        flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
-    }
-
+   
     ImGui::Begin("パーティクル設定", &showParticleView_, flags);
 
     currentScene_->AddParticleSetting();
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowFPSWindow() {
+    if (!showFPSView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+   
+    ImGui::Begin("FPS", &showFPSView_, flags);
+
+    DisplayFPS();
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowOffScreenSettingWindow(OffScreen* offscreen) {
+    if (!showOfScreenView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    
+    ImGui::Begin("オフスクリーン設定", &showOfScreenView_, flags);
+
+    offscreen->Setting();
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowLightSettingWindow() {
+    if (!showLightView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+   
+    ImGui::Begin("ライト設定", &showLightView_, flags);
+
+    LightGroup::GetInstance()->imgui();
 
     ImGui::End();
 }
@@ -565,13 +596,16 @@ void ImGuiManager::FixAspectRatio() {
 void ImGuiManager::ShowSceneWindow() {
     // ImGuiウィンドウ開始前にNextWindowSizeは設定しない（手動サイズ変更を許可）
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
-
     // フォーカスされていない場合は描画を最適化
     if (!isShowMainUI_) {
         flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
     }
 
     ImGui::Begin("Scene", nullptr, flags);
+
+    // ウィンドウ内の位置を取得（ImGuizmoのためにシーンウィンドウの絶対位置を計算）
+    ImVec2 sceneWindowPos = ImGui::GetWindowPos();
+    ImVec2 contentPos = ImGui::GetCursorScreenPos();
 
     // 以下は既存の処理を最適化
     // キャッシュされた値を使用し、毎フレーム計算しないようにする
@@ -583,7 +617,6 @@ void ImGuiManager::ShowSceneWindow() {
     if (contentRegion.x != lastContentRegion.x ||
         contentRegion.y != lastContentRegion.y ||
         ImGui::IsWindowFocused()) {
-
         lastContentRegion = contentRegion;
 
         // 横幅ベースで16:9にしたときの高さ
@@ -621,24 +654,44 @@ void ImGuiManager::ShowSceneWindow() {
         backgroundColor = lastBgColor;
     }
 
+    // シーンテクスチャの中央配置のための計算
+    ImVec2 sceneOffset;
+    sceneOffset.x = (contentRegion.x - sceneTextureSize_.x) * 0.5f;
+    sceneOffset.y = (contentRegion.y - sceneTextureSize_.y) * 0.5f;
+
+    // テクスチャ描画位置を調整
+    ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + sceneOffset.x, ImGui::GetCursorPosY() + sceneOffset.y));
+
     // レンダーテクスチャをImGuiウィンドウに描画
     ImGui::ImageWithBg(
         static_cast<ImTextureID>(SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex).ptr),
         sceneTextureSize_, ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f),
         backgroundColor);
 
+    // ImGuizmoのために正確なシーン位置を計算
+    ImVec2 actualScenePos = ImVec2(
+        contentPos.x + sceneOffset.x,
+        contentPos.y + sceneOffset.y);
+        
+    imGuizmoManager_->Update(actualScenePos, sceneTextureSize_);
+    
     ImGui::End();
 }
 
-void ImGuiManager::ShowMainUI() {
-    // シーンウィンドウ
-    ShowSceneWindow();
+void ImGuiManager::ShowMainUI(OffScreen* offscreen) {
+
     // ヒエラルキーウィンドウ
     ShowSceneSettingWindow();
     // インスペクターウィンドウ
     ShowObjectSettingWindow();
     // プロジェクトウィンドウを描画
     ShowParticleSettingWindow();
+    // FPSを描画
+    ShowFPSWindow();
+    // オフスクリーンウィンドウを描画
+    ShowOffScreenSettingWindow(offscreen);
+    // ライトウィンドウを描画
+    ShowLightSettingWindow();
 }
 
 bool &ImGuiManager::GetIsShowMainUI() {
@@ -671,3 +724,104 @@ void ImGuiManager::ShowDockSpace() {
 }
 
 #endif //_DEBUG
+
+void ImGuiManager::DisplayFPS() {
+#ifdef _DEBUG
+    ImGuiIO &io = ImGui::GetIO();
+    // FPSを取得
+    float fps = Frame::GetFPS();
+    float deltaTime = Frame::DeltaTime() * 1000.0f; // ミリ秒単位に変換
+
+    // FPSを色付きで表示
+    ImVec4 color;
+    if (fps >= 59.0f) {
+        color = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // 60FPS付近なら緑色
+    } else if (fps >= 30.0f) {
+        color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // 30-59FPSなら黄色
+    } else {
+        color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 30FPS未満なら赤色
+    }
+
+    ImGui::TextColored(color, "FPS: %.1f", fps);
+    ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
+#endif // _DEBUG
+}
+
+// 現在のDockレイアウトを保存
+void ImGuiManager::BackupDockLayout() {
+    ImGuiContext *context = ImGui::GetCurrentContext();
+    if (context) {
+        // Dockingレイアウトを文字列として保存
+        dockLayoutBackup_ = ImGui::SaveIniSettingsToMemory();
+    }
+}
+
+// 保存したレイアウトを復元
+void ImGuiManager::RestoreDockLayout() {
+    if (!dockLayoutBackup_.empty()) {
+        // メモリ上の設定を再適用
+        ImGui::LoadIniSettingsFromMemory(dockLayoutBackup_.c_str(), dockLayoutBackup_.size());
+    }
+}
+
+void ImGuiManager::SwitchToEditorMode() {
+    if (!isEditorMode_) {
+        // ゲームモードからエディターモードへの切替
+        SaveCurrentLayout(); // 現在のゲームモードレイアウトを保存
+        isEditorMode_ = true;
+        LoadLayoutForCurrentMode(); // エディターモードのレイアウトをロード
+    }
+}
+
+void ImGuiManager::SwitchToGameMode() {
+    if (isEditorMode_) {
+        // エディターモードからゲームモードへの切替
+        SaveCurrentLayout(); // 現在のエディターモードレイアウトを保存
+        isEditorMode_ = false;
+        LoadLayoutForCurrentMode(); // ゲームモードのレイアウトをロード
+    }
+}
+
+void ImGuiManager::SaveCurrentLayout() {
+    // 現在のモードに応じたファイルにレイアウトを保存
+    const char *iniFilePath = isEditorMode_ ? editorIniFilePath_.c_str() : gameIniFilePath_.c_str();
+
+    // メモリからiniデータを取得
+    size_t size = 0;
+    const char *iniData = ImGui::SaveIniSettingsToMemory(&size);
+
+    // ファイルに書き込み
+    FILE *f = nullptr;
+    if (fopen_s(&f, iniFilePath, "wt") == 0 && f) {
+        fwrite(iniData, sizeof(char), size, f);
+        fclose(f);
+    }
+}
+
+void ImGuiManager::LoadLayoutForCurrentMode() {
+    // モードに応じたiniファイルをロード
+    const char *iniFilePath = isEditorMode_ ? editorIniFilePath_.c_str() : gameIniFilePath_.c_str();
+
+    // ファイルが存在する場合はロード
+    FILE *f = nullptr;
+    if (fopen_s(&f, iniFilePath, "rt") == 0 && f) {
+        // ファイルサイズを取得
+        fseek(f, 0, SEEK_END);
+        size_t size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        // バッファを確保してファイル内容を読み込む
+        char *buf = new char[size + 1];
+        if (buf) {
+            size_t read_size = fread(buf, 1, size, f);
+            buf[read_size] = 0;
+
+            // 読み込んだデータをImGuiに適用
+            ImGui::LoadIniSettingsFromMemory(buf, read_size);
+
+            delete[] buf;
+        }
+        fclose(f);
+    }
+    // ファイルが存在しない場合は新規に作成される
+}

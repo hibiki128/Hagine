@@ -6,13 +6,13 @@
 #include <Vector4.h>
 #include <string>
 #include <ViewProjection/ViewProjection.h>
-#include <Object/Object3dCommon.h>
 #include"Data/DataHandler.h"
 enum class LightType {
     Directional,
     Point,
 };
 
+class DirectXCommon;
 class LightGroup {
   private:
     static LightGroup *instance;
@@ -146,7 +146,8 @@ class LightGroup {
     // バッファリソース内のデータを指すポインタ
     CameraForGPU *cameraForGPUData = nullptr;
 
-    Object3dCommon *obj3dCommon = nullptr;
+    DirectXCommon* dxCommon_;
+
     bool isDirectionalLight = true;
     bool isPointLight = false;
     bool isSpotLight = false;

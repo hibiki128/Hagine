@@ -8,40 +8,41 @@
 
 std::unordered_set<std::string> Model::jointNames = {};
 
-void Model::CreateModel(ModelCommon *modelCommon, const std::string &directorypath, const std::string &filename) {
-    // 引数で受け取ってメンバ変数に記録する
+void Model::Initialize(ModelCommon *modelCommon) {
     modelCommon_ = modelCommon;
+    srvManager_ = SrvManager::GetInstance();
+    material_ = std::make_unique<Material>();
+    mesh_ = std::make_unique<Mesh>();
 
+}
+
+void Model::CreateModel(const std::string &directorypath, const std::string &filename) {
+    // 引数で受け取ってメンバ変数に記録する
     directorypath_ = directorypath;
     filename_ = filename;
-    srvManager_ = SrvManager::GetInstance();
+
     // モデル読み込み
     modelData = LoadModelFile(directorypath_, filename_);
-
-    CreateVartexData();
-    CreateIndexResource();
-
-    TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
-
-    // 単位行列を書き込んでおく
-    modelData.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath);
+    mesh_->Initialize();
+    material_->GetMaterialData() = modelData.material;
+    material_->LoadTexture();
+    modelData.material.textureIndex = material_->GetMaterialData().textureIndex;
 }
 
-void Model::CreatePrimitiveModel(ModelCommon *modelCommon, const PrimitiveType &type) {
-    modelCommon_ = modelCommon;
-    modelData.vertices = PrimitiveModel::GetInstance()->GetPrimitiveData(type).vertices;
-    modelData.indices = PrimitiveModel::GetInstance()->GetPrimitiveData(type).indices;
-    modelData.material.color = PrimitiveModel::GetInstance()->GetPrimitiveData(type).color;
-    modelData.material.uvTransform = PrimitiveModel::GetInstance()->GetPrimitiveData(type).uvMatrix;
-    modelData.material.textureFilePath = "debug/uvChecker.png";
-    TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
-    modelData.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData.material.textureFilePath);
-    CreateVartexData();
-    CreateIndexResource();
+void Model::CreatePrimitiveModel(const PrimitiveType &type) {
+    mesh_->PrimitiveInitialize(type);
+    material_->PrimitiveInitialize(type);
+    material_->LoadTexture();
+    mesh_->Initialize();
+    modelData.material = material_->GetMaterialData();
+    modelData.mesh = mesh_->GetMeshData();
 }
 
-void Model::Draw() {
+void Model::Draw(Object3dCommon *objCommon) {
     D3D12_VERTEX_BUFFER_VIEW influenceBufferView;
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView = mesh_->GetVertexBufferView();
+    D3D12_INDEX_BUFFER_VIEW indexBufferView = mesh_->GetIndexBufferView();
+
     uint32_t SrvIndex;
     if (isGltf) {
         influenceBufferView = skin_->GetSkinCluster().influenceBufferView;
@@ -51,8 +52,9 @@ void Model::Draw() {
         SrvIndex = {};
     }
     D3D12_VERTEX_BUFFER_VIEW vbvs[2] = {
-        vertexBufferView, // VertexDataのVBV
-        influenceBufferView};
+        vertexBufferView,
+        influenceBufferView
+    };
     modelCommon_->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&indexBufferView);
     if (isGltf) {
         if (!animator_->HaveAnimation()) {
@@ -65,10 +67,10 @@ void Model::Draw() {
         modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, vbvs); // VBVを設定
     }
     // 描画！（DrawCall/ドローコール）
-    modelCommon_->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(UINT(modelData.indices.size()), 1, 0, 0, 0);
+    modelCommon_->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(UINT(modelData.mesh.indices.size()), 1, 0, 0, 0);
     if (animator_) {
         if (animator_->HaveAnimation()) {
-            Object3dCommon::GetInstance()->DrawCommonSetting();
+            objCommon->DrawCommonSetting();
         }
     }
 }
@@ -78,57 +80,30 @@ void Model::SetTextureIndex(const std::string &filePath) {
     modelData.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
 }
 
-void Model::CreateVartexData() {
-    // Sprite用の頂点リソースを作る
-    vertexResource = modelCommon_->GetDxCommon()->CreateBufferResource(sizeof(VertexData) * modelData.vertices.size());
-    // リソースの先頭のアドレスから使う
-    vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-    // 使用するリソースのサイズは頂点6つ分のサイズ
-    vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());
-    // 1頂点あたりのサイズ
-    vertexBufferView.StrideInBytes = sizeof(VertexData);
+// void Model::CreateVartexData() {
+//     // Sprite用の頂点リソースを作る
+//     vertexResource = modelCommon_->GetDxCommon()->CreateBufferResource(sizeof(VertexData) * modelData.vertices.size());
+//     // リソースの先頭のアドレスから使う
+//     vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
+//     // 使用するリソースのサイズは頂点6つ分のサイズ
+//     vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());
+//     // 1頂点あたりのサイズ
+//     vertexBufferView.StrideInBytes = sizeof(VertexData);
+//
+//     // 頂点データの設定
+//     vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData));
+//
+//     std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());
+// }
 
-    // 頂点データの設定
-    vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData));
-
-    std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());
-}
-
-void Model::CreateIndexResource() {
-    indexResource = modelCommon_->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * modelData.indices.size());
-    indexBufferView.BufferLocation = indexResource->GetGPUVirtualAddress();
-    indexBufferView.SizeInBytes = UINT(sizeof(uint32_t) * modelData.indices.size());
-    indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-    indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
-    std::memcpy(indexData, modelData.indices.data(), sizeof(uint32_t) * modelData.indices.size());
-}
-
-MaterialData Model::LoadMaterialTemplateFile(const std::string &directoryPath, const std::string &filename) {
-    MaterialData materialData;                          // 構築するMaterialData
-    std::string line;                                   // ファイルから読んだ1行を格納するもの
-    std::ifstream file(directoryPath + "/" + filename); // ファイルを開く
-    assert(file.is_open());                             // 開けなかったら止める
-    while (std::getline(file, line)) {
-        std::string identifier;
-        std::istringstream s(line);
-        s >> identifier;
-
-        // identifierに応じた処理
-        if (identifier == "map_Kd") {
-            std::string textureFilename;
-            s >> textureFilename;
-            // 連結してファイルパスにする
-            materialData.textureFilePath = directoryPath + "../images/" + textureFilename;
-        }
-    }
-
-    // テクスチャが張られていない場合の処理
-    if (materialData.textureFilePath.empty()) {
-        materialData.textureFilePath = directoryPath + "/" + "white1x1.png";
-    }
-
-    return materialData;
-}
+// void Model::CreateIndexResource() {
+//     indexResource = modelCommon_->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * modelData.indices.size());
+//     indexBufferView.BufferLocation = indexResource->GetGPUVirtualAddress();
+//     indexBufferView.SizeInBytes = UINT(sizeof(uint32_t) * modelData.indices.size());
+//     indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+//     indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
+//     std::memcpy(indexData, modelData.indices.data(), sizeof(uint32_t) * modelData.indices.size());
+// }
 
 ModelData Model::LoadModelFile(const std::string &directoryPath, const std::string &filename) {
     ModelData modelData;
@@ -159,22 +134,22 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
         aiMesh *mesh = scene->mMeshes[meshIndex];
         assert(mesh->HasNormals());        // 法線がないMeshは今回は非対応
         assert(mesh->HasTextureCoords(0)); // TexcoordがないMeshは今回は非対応
-        modelData.vertices.resize(mesh->mNumVertices);
+        modelData.mesh.vertices.resize(mesh->mNumVertices);
         for (uint32_t vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex) {
             aiVector3D &position = mesh->mVertices[vertexIndex];
             aiVector3D &normal = mesh->mNormals[vertexIndex];
             aiVector3D &texcoord = mesh->mTextureCoords[0][vertexIndex];
             // 右手系->左手系への変換を忘れずに
-            modelData.vertices[vertexIndex].position = {-position.x, position.y, position.z, 1.0f};
-            modelData.vertices[vertexIndex].normal = {-normal.x, normal.y, normal.z};
-            modelData.vertices[vertexIndex].texcoord = {texcoord.x, texcoord.y};
+            modelData.mesh.vertices[vertexIndex].position = {-position.x, position.y, position.z, 1.0f};
+            modelData.mesh.vertices[vertexIndex].normal = {-normal.x, normal.y, normal.z};
+            modelData.mesh.vertices[vertexIndex].texcoord = {texcoord.x, texcoord.y};
         }
         for (uint32_t faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex) {
             aiFace &face = mesh->mFaces[faceIndex];
             assert(face.mNumIndices == 3);
             for (uint32_t element = 0; element < face.mNumIndices; ++element) {
                 uint32_t vertexIndex = face.mIndices[element];
-                modelData.indices.push_back(vertexIndex);
+                modelData.mesh.indices.push_back(vertexIndex);
             }
         }
 

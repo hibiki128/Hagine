@@ -13,12 +13,13 @@ Collider::~Collider() {
     counter--; // カウンターをデクリメント
 }
 
-void Collider::Initialize(const std::string className) {
+Collider &Collider::AddCollider(const std::string &objName) {
+    // CollisionManager にこのコライダーを登録
     CollisionManager::AddCollider(this);
 
     counter++;
 
-    // 初期化
+    // 各コライダー形状の初期化
     SphereOffset_.center = {0.0f, 0.0f, 0.0f};
     SphereOffset_.radius = 0.0f;
     AABBOffset_.min = {0.0f, 0.0f, 0.0f};
@@ -27,9 +28,16 @@ void Collider::Initialize(const std::string className) {
     OBBOffset_.scaleCenter = {0.0f, 0.0f, 0.0f};
     OBBOffset_.size = {1.0f, 1.0f, 1.0f};
 
-    className_ = className;
+    // オブジェクト名を設定
+    objName_ = objName;
+
+    // JSONから設定をロード
     LoadFromJson();
+
+    // 自分自身を参照で返す
+    return *this;
 }
+
 
 void Collider::UpdateWorldTransform() {
 
@@ -225,41 +233,185 @@ void Collider::DrawSphereAtCenter(const ViewProjection &viewProjection, const Ve
 }
 
 void Collider::OffsetImgui() {
-    if (ImGui::BeginTabItem("コライダー")) {
+    // スタイル設定とカラー定義
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 4.0f));
+
+    // ヘッダーカラー
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.6f, 0.55f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.65f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.6f, 0.8f, 0.8f));
+
+    if (ImGui::CollapsingHeader("コライダー")) {
+        ImGui::PopStyleColor(3); // ヘッダーカラー終了
+
+        // 基本設定部分 - フレーム追加
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.18f, 0.18f, 0.2f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.5f, 0.8f, 0.5f, 1.0f));
+
+        ImGui::BeginGroup();
+        ImGui::BeginChild("BasicSettings", ImVec2(0, 40), true);
         ImGui::Checkbox("可視化", &isVisible_);
+        ImGui::SameLine(0, 30.0f);
         ImGui::Checkbox("コライダーの有無", &isCollisionEnabled_);
+        ImGui::EndChild();
+        ImGui::EndGroup();
+
+        ImGui::PopStyleColor(2); // 基本設定カラー終了
 
         if (isCollisionEnabled_) {
-            ImGui::Checkbox("球判定を使用する", &isSphere_);
-            if (isSphere_) {
-                ImGui::DragFloat3("中心点", &SphereOffset_.center.x, 0.1f);
-                ImGui::DragFloat("半径", &SphereOffset_.radius, 0.1f);
-            }
-            ImGui::Separator();
+            // タブバーのスタイル
+            ImGui::PushStyleColor(ImGuiCol_Tab, ImVec4(0.2f, 0.2f, 0.3f, 0.8f));
+            ImGui::PushStyleColor(ImGuiCol_TabHovered, ImVec4(0.4f, 0.4f, 0.5f, 0.8f));
+            ImGui::PushStyleColor(ImGuiCol_TabActive, ImVec4(0.3f, 0.3f, 0.6f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_TabUnfocused, ImVec4(0.15f, 0.15f, 0.2f, 0.8f));
+            ImGui::PushStyleColor(ImGuiCol_TabUnfocusedActive, ImVec4(0.25f, 0.25f, 0.4f, 0.9f));
 
-            ImGui::Checkbox("AABB判定を使用する", &isAABB_);
-            if (isAABB_) {
-                ImGui::DragFloat3("最大値", &AABBOffset_.max.x, 0.1f);
-                ImGui::DragFloat3("最小値", &AABBOffset_.min.x, 0.1f);
-            }
-            ImGui::Separator();
+            // タブバーを使って各コライダータイプを整理
+            ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyScroll | ImGuiTabBarFlags_Reorderable;
+            if (ImGui::BeginTabBar("ColliderTypesTabBar", tab_bar_flags)) {
+                // 球体コライダータブ
+                if (ImGui::BeginTabItem("球体コライダー")) {
+                    ImGui::PopStyleColor(5); // タブバーカラー終了
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.5f, 0.5f));
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.5f, 0.5f, 0.9f, 0.8f));
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.6f, 0.6f, 1.0f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.5f, 0.5f, 1.0f, 1.0f));
 
-            ImGui::Checkbox("OBB判定を使用する", &isOBB_);
-            if (isOBB_) {
-                ImGui::DragFloat3("中心", &OBBOffset_.scaleCenter.x, 0.1f);
-                ImGui::DragFloat3("大きさ", &OBBOffset_.size.x, 0.1f);
+                    ImGui::Checkbox("球判定を使用する", &isSphere_);
+                    if (isSphere_) {
+                        ImGui::Separator();
+                        ImGui::BeginChild("SphereSettings", ImVec2(0, 70), true);
+                        ImGui::Indent(10.0f);
+                        ImGui::PushItemWidth(150.0f);
+
+                        // 横並びにレイアウト
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::Text("中心点:");
+                        ImGui::SameLine();
+                        ImGui::PushID("SphereCenter");
+                        ImGui::DragFloat3("##center", &SphereOffset_.center.x, 0.1f);
+                        ImGui::PopID();
+
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::Text("半径:  ");
+                        ImGui::SameLine();
+                        ImGui::DragFloat("##radius", &SphereOffset_.radius, 0.1f);
+
+                        ImGui::PopItemWidth();
+                        ImGui::Unindent(10.0f);
+                        ImGui::EndChild();
+                    }
+
+                    ImGui::PopStyleColor(4); // 球体コライダーカラー終了
+                    ImGui::EndTabItem();
+                } else {
+                    // タブ外ですので、色だけポップする必要がある
+                    ImGui::PopStyleColor(5); // タブバーカラー終了
+                }
+
+                // AABBコライダータブ
+                ImGui::PushStyleColor(ImGuiCol_Tab, ImVec4(0.2f, 0.3f, 0.2f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_TabHovered, ImVec4(0.4f, 0.5f, 0.4f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_TabActive, ImVec4(0.3f, 0.6f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_TabUnfocused, ImVec4(0.15f, 0.2f, 0.15f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_TabUnfocusedActive, ImVec4(0.25f, 0.4f, 0.25f, 0.9f));
+
+                if (ImGui::BeginTabItem("AABBコライダー")) {
+                    ImGui::PopStyleColor(5); // タブバーカラー終了
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.4f, 0.2f, 0.5f));
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.4f, 0.7f, 0.4f, 0.8f));
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.5f, 0.9f, 0.5f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
+
+                    ImGui::Checkbox("AABB判定を使用する", &isAABB_);
+                    if (isAABB_) {
+                        ImGui::Separator();
+                        ImGui::BeginChild("AABBSettings", ImVec2(0, 70), true);
+                        ImGui::Indent(10.0f);
+                        ImGui::PushItemWidth(150.0f);
+
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::Text("最大値:");
+                        ImGui::SameLine();
+                        ImGui::PushID("AABBMax");
+                        ImGui::DragFloat3("##max", &AABBOffset_.max.x, 0.1f);
+                        ImGui::PopID();
+
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::Text("最小値:");
+                        ImGui::SameLine();
+                        ImGui::PushID("AABBMin");
+                        ImGui::DragFloat3("##min", &AABBOffset_.min.x, 0.1f);
+                        ImGui::PopID();
+
+                        ImGui::PopItemWidth();
+                        ImGui::Unindent(10.0f);
+                        ImGui::EndChild();
+                    }
+
+                    ImGui::PopStyleColor(4); // AABBコライダーカラー終了
+                    ImGui::EndTabItem();
+                } else {
+                    ImGui::PopStyleColor(5); // タブバーカラー終了
+                }
+
+                // OBBコライダータブ
+                ImGui::PushStyleColor(ImGuiCol_Tab, ImVec4(0.3f, 0.2f, 0.2f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_TabHovered, ImVec4(0.5f, 0.4f, 0.4f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_TabActive, ImVec4(0.6f, 0.3f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_TabUnfocused, ImVec4(0.2f, 0.15f, 0.15f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_TabUnfocusedActive, ImVec4(0.4f, 0.25f, 0.25f, 0.9f));
+
+                if (ImGui::BeginTabItem("OBBコライダー")) {
+                    ImGui::PopStyleColor(5); // タブバーカラー終了
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.2f, 0.5f));
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.7f, 0.4f, 0.4f, 0.8f));
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.9f, 0.5f, 0.5f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+
+                    ImGui::Checkbox("OBB判定を使用する", &isOBB_);
+                    if (isOBB_) {
+                        ImGui::Separator();
+                        ImGui::BeginChild("OBBSettings", ImVec2(0, 70), true);
+                        ImGui::Indent(10.0f);
+                        ImGui::PushItemWidth(150.0f);
+
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::Text("中心:  ");
+                        ImGui::SameLine();
+                        ImGui::PushID("OBBCenter");
+                        ImGui::DragFloat3("##center", &OBBOffset_.scaleCenter.x, 0.1f);
+                        ImGui::PopID();
+
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::Text("大きさ:");
+                        ImGui::SameLine();
+                        ImGui::PushID("OBBSize");
+                        ImGui::DragFloat3("##size", &OBBOffset_.size.x, 0.1f);
+                        ImGui::PopID();
+
+                        ImGui::PopItemWidth();
+                        ImGui::Unindent(10.0f);
+                        ImGui::EndChild();
+                    }
+
+                    ImGui::PopStyleColor(4); // OBBコライダーカラー終了
+                    ImGui::EndTabItem();
+                } else {
+                    ImGui::PopStyleColor(5); // タブバーカラー終了
+                }
+
+                ImGui::EndTabBar();
             }
-            ImGui::Separator();
+        } else {
+            ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "コライダーが無効になっています");
         }
-
-        if (ImGui::Button("セーブ")) {
-            SaveToJson();
-            std::string message = std::format("Collider saved.");
-            MessageBoxA(nullptr, message.c_str(), "Object", 0);
-        }
-
-        ImGui::EndTabItem();
+    } else {
+        ImGui::PopStyleColor(3); // 使用されなかったヘッダーカラー終了
     }
+
+    ImGui::PopStyleVar(2); // スタイル変数終了
 }
 
 void Collider::DrawRotationCenter(const ViewProjection &viewProjection) {
@@ -369,7 +521,7 @@ void Collider::SaveToJson() {
 
 void Collider::LoadFromJson() {
     // 各種フラグをJSONから読み込み
-    ColliderDatas_ = std::make_unique<DataHandler>("Collider", className_);
+    ColliderDatas_ = std::make_unique<DataHandler>("Collider", objName_);
     isVisible_ = ColliderDatas_->Load<bool>("isVisible", true);
     isCollisionEnabled_ = ColliderDatas_->Load<bool>("isCollisionEnabled", true);
     isSphere_ = ColliderDatas_->Load<bool>("isSphere", true);

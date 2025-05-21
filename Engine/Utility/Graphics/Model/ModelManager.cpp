@@ -1,19 +1,18 @@
 #include "ModelManager.h"
 #include <fstream>
-#include <sstream>
 #include <functional>
-ModelManager* ModelManager::instance = nullptr;
+#include <sstream>
+ModelManager *ModelManager::instance = nullptr;
 
-ModelManager* ModelManager::GetInstance()
-{
-	if (instance == nullptr) {
-		instance = new ModelManager;
-	}
-	return instance;
+ModelManager *ModelManager::GetInstance() {
+    if (instance == nullptr) {
+        instance = new ModelManager;
+    }
+    return instance;
 }
 
-void ModelManager::LoadModel(const std::string& filePath)
-{
+void ModelManager::LoadModel(const std::string &filePath) {
+
     // .gltfファイルの場合、内容に基づくハッシュを生成しない（毎回新しいモデルを作成）
     if (filePath.substr(filePath.find_last_of(".") + 1) == "gltf") {
         // 新しいユニークな識別子を生成する（例えば、インデックスなど）
@@ -22,7 +21,8 @@ void ModelManager::LoadModel(const std::string& filePath)
 
         // モデルの生成とファイル読み込み、初期化
         std::unique_ptr<Model> model = std::make_unique<Model>();
-        model->CreateModel(modelCommon, "resources/models/", filePath);
+        model->Initialize(modelCommon);
+        model->CreateModel("resources/models/", filePath);
         model->SetSrv(srvManager);
 
         // モデルをmapコンテナに格納する
@@ -36,14 +36,16 @@ void ModelManager::LoadModel(const std::string& filePath)
     }
 
     std::unique_ptr<Model> model = std::make_unique<Model>();
-    model->CreateModel(modelCommon, "resources/models/", filePath);
+    model->Initialize(modelCommon);
+    model->CreateModel("resources/models/", filePath);
     model->SetSrv(srvManager);
     models.insert(std::make_pair(filePath, std::move(model)));
 }
 
 std::string ModelManager::CreatePrimitiveModel(PrimitiveType type) {
     std::unique_ptr<Model> model = std::make_unique<Model>();
-    model->CreatePrimitiveModel(modelCommon,type);
+    model->Initialize(modelCommon);
+    model->CreatePrimitiveModel(type);
     model->SetSrv(srvManager);
     // モデルのユニークな識別子を生成
     static int modelIndex = 0;
@@ -53,15 +55,14 @@ std::string ModelManager::CreatePrimitiveModel(PrimitiveType type) {
     return uniqueKey;
 }
 
-Model* ModelManager::FindModel(const std::string& filePath)
-{
+Model *ModelManager::FindModel(const std::string &filePath) {
     // .gltfファイルの場合はファイルパスにユニークな識別子を使って検索
     if (filePath.substr(filePath.find_last_of(".") + 1) == "gltf") {
         // 同じファイルパスで複数のモデルがある可能性があるので、それを確認
-        std::vector<Model*> matchedModels;
+        std::vector<Model *> matchedModels;
 
         // キーがファイルパスを含むモデルをすべて収集
-        for (const auto& [key, model] : models) {
+        for (const auto &[key, model] : models) {
             if (key.find(filePath) != std::string::npos) {
                 matchedModels.push_back(model.get());
             }
@@ -82,16 +83,13 @@ Model* ModelManager::FindModel(const std::string& filePath)
     return nullptr;
 }
 
-void ModelManager::Initialize(SrvManager* srvManager)
-{
-	modelCommon = new ModelCommon;
-	modelCommon->Initialize();
-	this->srvManager = srvManager;
-
+void ModelManager::Initialize(SrvManager *srvManager) {
+    modelCommon = new ModelCommon;
+    modelCommon->Initialize();
+    this->srvManager = srvManager;
 }
 
-void ModelManager::Finalize()
-{
-	delete instance;
-	instance = nullptr;
+void ModelManager::Finalize() {
+    delete instance;
+    instance = nullptr;
 }

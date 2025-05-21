@@ -1,6 +1,9 @@
 #include "BaseObject.h"
+#include "ShowFolder/ShowFolder.h"
 
 void BaseObject::Init(const std::string objectName) {
+    obj3d_ = std::make_unique<Object3d>();
+    obj3d_->Initialize();
     objectName_ = objectName;
     /// ワールドトランスフォームの初期化
     transform_.Initialize();
@@ -10,9 +13,6 @@ void BaseObject::Init(const std::string objectName) {
     // ライティングのセット
     isLighting_ = true;
     isCollider = false;
-
-    LoadFromJson();
-    AnimaLoadFromJson();
 }
 
 void BaseObject::Update() {
@@ -24,6 +24,7 @@ void BaseObject::Update() {
     if (obj3d_->GetHaveAnimation()) {
         obj3d_->AnimationUpdate(isLoop_);
     }
+    SetBlendMode(blendMode_);
 }
 
 void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -59,33 +60,50 @@ Vector3 BaseObject::GetWorldPosition() const {
 }
 
 void BaseObject::CreateModel(const std::string modelname) {
-    obj3d_ = std::make_unique<Object3d>();
     obj3d_->CreateModel(modelname);
+
+    LoadFromJson();
+    AnimaLoadFromJson();
 }
 
 void BaseObject::CreatePrimitiveModel(const PrimitiveType &type) {
-    obj3d_ = std::make_unique<Object3d>();
     obj3d_->CreatePrimitiveModel(type);
+    LoadFromJson();
 }
 
-void BaseObject::CreateCollider() {
-    Collider::Initialize(objectName_);
+void BaseObject::AddCollider() {
+    colliders_.push_back(&Collider::AddCollider(objectName_));
     isCollider = true;
 }
 
-void BaseObject::DebugImGui() {
+void BaseObject::ImGui() {
 
     if (ImGui::BeginTabBar(objectName_.c_str())) {
-        DebugTransform();
-        if (isCollider) {
-            DebugCollider();
+        if (ImGui::BeginTabItem(objectName_.c_str())) {
+            DebugObject();
+            if (isCollider) {
+                DebugCollider();
+            }
+            if (ImGui::Button("コライダー追加")) {
+                AddCollider();
+            }
+            if (ImGui::Button("セーブ")) {
+                SaveToJson();
+                AnimaSaveToJson();
+                for (auto &collider : colliders_) {
+                    collider->SaveToJson();
+                }
+                std::string message = std::format("ObjectData saved.");
+                MessageBoxA(nullptr, message.c_str(), "Object", 0);
+            }
+            ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
     }
 }
 
-void BaseObject::DebugTransform() {
-    if (ImGui::BeginTabItem((objectName_ + "トランスフォーム").c_str())) {
+void BaseObject::DebugObject() {
+    if (ImGui::CollapsingHeader("トランスフォーム")) {
         ImGui::DragFloat3("位置", &transform_.translation_.x, 0.1f);
         float rotationDegrees[3] = {
             radiansToDegrees(transform_.rotation_.x),
@@ -98,15 +116,23 @@ void BaseObject::DebugTransform() {
             transform_.rotation_.z = degreesToRadians(rotationDegrees[2]);
         }
         ImGui::DragFloat3("大きさ", &transform_.scale_.x, 0.1f);
-        if (ImGui::Button("セーブ")) {
-            SaveToJson();
-            std::string message = std::format("Transform saved.");
-            MessageBoxA(nullptr, message.c_str(), "Object", 0);
+    }
+    if (ImGui::CollapsingHeader("モデル")) {
+        if (ImGui::TreeNode("テクスチャ選択")) {
+            ShowTextureFile(texturePath_);
+            if (ImGui::Button("適応")) {
+                SetTexture(texturePath_);
+                texturePath_.clear();
+            }
+            ImGui::TreePop();
         }
-        ImGui::EndTabItem();
+        if (ImGui::TreeNode("ブレンドモード")) {
+            ShowBlendModeCombo(blendMode_);
+            ImGui::TreePop();
+        }
     }
     if (obj3d_->GetHaveAnimation()) {
-        if (ImGui::BeginTabItem((objectName_ + "アニメーション").c_str())) {
+        if (ImGui::CollapsingHeader("アニメーション")) {
             ImGui::Checkbox("ループ", &isLoop_);
             ImGui::Checkbox("スケルトン描画", &skeletonDraw_);
             if (ImGui::Button("アニメーション再生")) {
@@ -116,18 +142,14 @@ void BaseObject::DebugTransform() {
                 ShowFileSelector();
                 ImGui::TreePop();
             }
-            if (ImGui::Button("セーブ")) {
-                AnimaSaveToJson();
-                std::string message = std::format("Anima saved.");
-                MessageBoxA(nullptr, message.c_str(), "Object", 0);
-            }
-            ImGui::EndTabItem();
         }
     }
 }
 
 void BaseObject::DebugCollider() {
-    Collider::OffsetImgui();
+    for (auto &collider : colliders_) {
+        collider->OffsetImgui();
+    }
 }
 
 Vector3 BaseObject::GetCenterPosition() const {
@@ -142,6 +164,8 @@ void BaseObject::SaveToJson() {
     TransformDatas_->Save<Vector3>("translation", transform_.translation_);
     TransformDatas_->Save<Vector3>("rotation", transform_.rotation_);
     TransformDatas_->Save<Vector3>("scale", transform_.scale_);
+    TransformDatas_->Save<std::string>("texturePath", obj3d_->GetTexture());
+    TransformDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
 }
 
 void BaseObject::LoadFromJson() {
@@ -149,9 +173,14 @@ void BaseObject::LoadFromJson() {
     transform_.translation_ = TransformDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
     transform_.rotation_ = TransformDatas_->Load<Vector3>("rotation", {0.0f, 0.0f, 0.0f});
     transform_.scale_ = TransformDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
+    SetTexture(TransformDatas_->Load<std::string>("texturePath", "debug/uvChecker.png"));
+    blendMode_ = static_cast<BlendMode>(TransformDatas_->Load<int>("blendMode", 0));
 }
 
 void BaseObject::AnimaSaveToJson() {
+    if (!AnimaDatas_) {
+        return;
+    }
     AnimaDatas_->Save<bool>("Loop", isLoop_);
 }
 
@@ -185,6 +214,27 @@ void BaseObject::ShowFileSelector() {
     // ボタンでアニメーションをセット
     if (selectedIndex >= 0 && ImGui::Button("Set Animation")) {
         obj3d_->SetAnimation(gltfFiles[selectedIndex]); // 選択されたファイルをSetAnimationに渡す
+    }
+}
+
+void BaseObject::ShowBlendModeCombo(BlendMode &currentMode) {
+    // コンボボックスに表示する項目（日本語）
+    static const char *blendModeItems[] = {
+        "なし",      // kNone
+        "通常",      // kNormal
+        "加算",      // kAdd
+        "減算",      // kSubtract
+        "乗算",      // kMultiply
+        "スクリーン" // kScreen
+    };
+
+    // 現在の選択状態（enumをintにキャスト）
+    int currentIndex = static_cast<int>(currentMode);
+
+    // コンボボックス表示
+    if (ImGui::Combo("ブレンドモード", &currentIndex, blendModeItems, IM_ARRAYSIZE(blendModeItems))) {
+        // ユーザーが選択を変更したときに反映
+        currentMode = static_cast<BlendMode>(currentIndex);
     }
 }
 

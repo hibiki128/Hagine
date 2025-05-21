@@ -48,9 +48,6 @@ class ParticleEditor {
     // カラー付きCollapsingHeader表示関数
     bool ColoredCollapsingHeader(const char *label, int colorIndex);
 
-    // テクスチャ選択UI表示関数
-    void ShowTextureSelector(std::string &selectedTexturePath);
-
     // ファイルセレクタ表示関数
     void ShowFileSelector();
 

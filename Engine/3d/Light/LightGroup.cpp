@@ -1,4 +1,5 @@
 #include "LightGroup.h"
+#include "DirectXCommon.h"
 #include <filesystem>
 #include <fstream>
 
@@ -17,7 +18,7 @@ void LightGroup::Finalize() {
 }
 
 void LightGroup::Initialize() {
-    obj3dCommon = Object3dCommon::GetInstance();
+    dxCommon_ = DirectXCommon::GetInstance();
     CreateCamera();
     CreatePointLight();
     CreateDirectionLight();
@@ -49,17 +50,16 @@ void LightGroup::Update(const ViewProjection &viewProjection) {
 
 void LightGroup::Draw() {
     // DirectionalLight用のCBufferの場所を設定
-    obj3dCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
 
-    obj3dCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(4, cameraForGPUResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(4, cameraForGPUResource->GetGPUVirtualAddress());
 
-    obj3dCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(5, pointLightResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(5, pointLightResource->GetGPUVirtualAddress());
 
-    obj3dCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(6, spotLightResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(6, spotLightResource->GetGPUVirtualAddress());
 }
 
 void LightGroup::imgui() {
-    ImGui::Begin("ライト設定");
 
     // 共通のタブバーを一つだけ作成
     if (ImGui::BeginTabBar("LightTypeTabs")) {
@@ -151,8 +151,6 @@ void LightGroup::imgui() {
 
         ImGui::EndTabBar();
     }
-
-    ImGui::End();
 }
 
 void LightGroup::SaveDirectionalLight() {
@@ -225,7 +223,7 @@ void LightGroup::LoadSpotLight() {
 }
 
 void LightGroup::CreatePointLight() {
-    pointLightResource = obj3dCommon->GetDxCommon()->CreateBufferResource(sizeof(PointLight));
+    pointLightResource = dxCommon_->CreateBufferResource(sizeof(PointLight));
     // 書き込むためのアドレスを取得
     pointLightResource->Map(0, nullptr, reinterpret_cast<void **>(&pointLightData));
     // デフォルト値
@@ -240,7 +238,7 @@ void LightGroup::CreatePointLight() {
 }
 
 void LightGroup::CreateSpotLight() {
-    spotLightResource = obj3dCommon->GetDxCommon()->CreateBufferResource(sizeof(SpotLight));
+    spotLightResource = dxCommon_->CreateBufferResource(sizeof(SpotLight));
     // 書き込むためのアドレスを取得
     spotLightResource->Map(0, nullptr, reinterpret_cast<void **>(&spotLightData));
     // デフォルト値
@@ -257,7 +255,7 @@ void LightGroup::CreateSpotLight() {
 }
 
 void LightGroup::CreateDirectionLight() {
-    directionalLightResource = obj3dCommon->GetDxCommon()->CreateBufferResource(sizeof(DirectionLight));
+    directionalLightResource = dxCommon_->CreateBufferResource(sizeof(DirectionLight));
     // 書き込むためのアドレスを取得
     directionalLightResource->Map(0, nullptr, reinterpret_cast<void **>(&directionalLightData));
     // デフォルト値
@@ -270,7 +268,7 @@ void LightGroup::CreateDirectionLight() {
 }
 
 void LightGroup::CreateCamera() {
-    cameraForGPUResource = obj3dCommon->GetDxCommon()->CreateBufferResource(sizeof(CameraForGPU));
+    cameraForGPUResource = dxCommon_->CreateBufferResource(sizeof(CameraForGPU));
     cameraForGPUResource->Map(0, nullptr, reinterpret_cast<void **>(&cameraForGPUData));
     cameraForGPUData->worldPosition = {0.0f, 0.0f, -50.0f};
 }

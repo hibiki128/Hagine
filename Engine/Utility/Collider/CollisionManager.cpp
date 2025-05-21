@@ -3,7 +3,7 @@
 #include "Object/Object3dCommon.h"
 #include "myMath.h"
 
-std::list<Collider *> CollisionManager::colliders_;
+std::unordered_map<std::string, Collider *> CollisionManager::colliders_;
 void CollisionManager::Reset() {
     // リストを空っぽにする
     colliders_.clear();
@@ -12,9 +12,11 @@ void CollisionManager::Reset() {
 // Colliderを削除する
 void CollisionManager::RemoveCollider(Collider *collider) {
     // colliderが存在するか確認し、存在すれば削除
-    auto it = std::find(colliders_.begin(), colliders_.end(), collider);
-    if (it != colliders_.end()) {
-        colliders_.erase(it);
+    for (auto it = colliders_.begin(); it != colliders_.end(); ++it) {
+        if (it->second == collider) {
+            colliders_.erase(it);
+            break;
+        }
     }
 }
 
@@ -22,25 +24,28 @@ void CollisionManager::Initialize() {
 }
 
 void CollisionManager::UpdateWorldTransform() {
-    // 全てのコライダーについて
-    for (Collider *collider : colliders_) {
+    for (auto &[name, collider] : colliders_) {
         if (!collider->IsCollisionEnabled()) {
             continue;
         }
-        // 更新
+
+        // ワールド変換行列の更新
         collider->UpdateWorldTransform();
+
+        // 当たっているかで色を変える
         if (collider->IsCollidingInCurrentFrame()) {
             collider->SetHitColor();
         } else {
             collider->SetDefaultColor();
         }
+
+        // フレームごとの衝突フラグリセット
         collider->ResetCollisionFlag();
     }
 }
 
 void CollisionManager::Draw(const ViewProjection &viewProjection) {
-    // 全てのコライダーについて
-    for (Collider *collider : colliders_) {
+    for (auto &[name, collider] : colliders_) {
         collider->DebugDraw(viewProjection);
     }
 }
@@ -58,14 +63,14 @@ void CollisionManager::CheckCollisionPair(Collider *colliderA, Collider *collide
         return;
     }
 
-    //// まずはバウンディングスフィア同士で粗い判定
-    //float roughDistance = (colliderA->GetCenterPosition() - colliderB->GetCenterPosition()).Length();
-    //float roughRadiusSum = colliderA->GetRadius() + colliderB->GetRadius();
+    // まずはバウンディングスフィア同士で粗い判定
+    float roughDistance = (colliderA->GetCenterPosition() - colliderB->GetCenterPosition()).Length();
+    float roughRadiusSum = colliderA->GetRadius() + colliderB->GetRadius();
 
-    //if (roughDistance > roughRadiusSum) {
-    //    // 明らかに衝突していない
-    //    return;
-    //}
+    if (roughDistance > roughRadiusSum) {
+        // 明らかに衝突していない
+        return;
+    }
 
     // ペアをソートしてキーを生成
     auto key = std::make_pair(std::min(colliderA, colliderB), std::max(colliderA, colliderB));
@@ -154,37 +159,48 @@ void CollisionManager::CheckCollisionPair(Collider *colliderA, Collider *collide
 }
 
 void CollisionManager::CheckAllCollisions() {
-    // リスト内のペアを総当たり
-    std::list<Collider *>::iterator itrA = colliders_.begin();
-    for (; itrA != colliders_.end(); ++itrA) {
-        Collider *colliderA = *itrA;
+    // 全てのコライダーペアを総当たり
+    for (auto itrA = colliders_.begin(); itrA != colliders_.end(); ++itrA) {
+        Collider *colliderA = itrA->second;
 
-        // コライダーAが衝突判定無効ならスキップ
+        // Aが衝突無効ならスキップ
         if (!colliderA->IsCollisionEnabled()) {
             continue;
         }
 
-        // イテレータBはイテレータAの次の要素から回す（重複判定を回避）
-        std::list<Collider *>::iterator itrB = itrA;
-        itrB++;
+        // itrBはitrAの次の要素から
+        auto itrB = itrA;
+        ++itrB;
 
         for (; itrB != colliders_.end(); ++itrB) {
-            Collider *colliderB = *itrB;
+            Collider *colliderB = itrB->second;
 
-            // コライダーBが衝突判定無効ならスキップ
+            // Bが衝突無効ならスキップ
             if (!colliderB->IsCollisionEnabled()) {
                 continue;
             }
 
-            // ベアの当たり判定
+            // 当たり判定実行
             CheckCollisionPair(colliderA, colliderB);
         }
     }
 }
 
 void CollisionManager::AddCollider(Collider *collider) {
-    // コライダーをリストに追加する
-    colliders_.push_back(collider);
+    std::string baseName = collider->GetName(); // 元の名前を取得
+    std::string uniqueName = baseName;
+    int suffix = 1;
+
+    // 同名が存在する限り "_1", "_2", ... を追加してユニーク名にする
+    while (colliders_.find(uniqueName) != colliders_.end()) {
+        uniqueName = baseName + "_" + std::to_string(suffix++);
+    }
+
+    // ユニーク名をコライダーに設定
+    collider->GetName() = uniqueName;
+
+    // マップに追加
+    colliders_[uniqueName] = collider;
 }
 
 bool CollisionManager::IsCollision(const AABB &aabb1, const AABB &aabb2) {

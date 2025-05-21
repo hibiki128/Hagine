@@ -42,7 +42,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
             t = std::clamp(t, 0.0f, 1.0f);
 
             // 拡縮処理
-            if (isSinMove_) {
+            if (particleSetting_.isSinMove) {
                 // Sin波の周波数制御 (速度調整)
                 float waveScale = 0.5f * (sin(t * DirectX::XM_PI * 18.0f) + 1.0f); // 0 ～ 1 の範囲
 
@@ -58,7 +58,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                     (1.0f - t) * (*particleIterator).startScale + t * (*particleIterator).endScale;
 
                 // ギャザーモードが有効でない場合のみ、通常のアルファ値計算を行う
-                if (!(isGatherMode_ && t >= gatherStartRatio_)) {
+                if (!(particleSetting_.isGatherMode && t >= particleSetting_.gatherStartRatio)) {
                     // アルファ値の計算
                     (*particleIterator).color.w = (*particleIterator).initialAlpha - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
                 }
@@ -66,10 +66,10 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
 
             // ギャザーモードとそれ以外の移動処理を分岐
             bool isGathering = false;
-            if (isGatherMode_ && t >= gatherStartRatio_) {
+            if (particleSetting_.isGatherMode && t >= particleSetting_.gatherStartRatio) {
                 isGathering = true;
                 // ギャザー効果の強さを計算（ライフタイム終盤ほど強く）
-                float gatherFactor = (t - gatherStartRatio_) / (1.0f - gatherStartRatio_);
+                float gatherFactor = (t - particleSetting_.gatherStartRatio) / (1.0f - particleSetting_.gatherStartRatio);
                 gatherFactor = std::clamp(gatherFactor, 0.0f, 1.0f);
 
                 // エミッター中心（パーティクル発生元）への方向ベクトル
@@ -96,7 +96,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                 toEmitter = toEmitter.Normalize();
 
                 // 中心に向かう速度を計算（近づくほど減速）
-                float gatherSpeed = gatherStrength_ * gatherFactor * distanceFactor * 3.0f; // 調整済み係数
+                float gatherSpeed = particleSetting_.gatherStrength * gatherFactor * distanceFactor * 3.0f; // 調整済み係数
                 Vector3 gatherVelocity = toEmitter * gatherSpeed * Frame::DeltaTime();
 
                 // ギャザー中は通常の速度を無視して、エミッターに向かう速度のみを設定
@@ -110,7 +110,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
             if (!isGathering) {
                 (*particleIterator).Acce = (1.0f - t) * (*particleIterator).startAcce + t * (*particleIterator).endAcce;
 
-                if (isFaceDirection_) {
+                if (particleSetting_.isFaceDirection) {
                     // 固定された進行方向を使用して回転を設定
                     Vector3 forward = (*particleIterator).fixedDirection; // 初期に保存された進行方向
                     Vector3 initialUp = {0.0f, 1.0f, 0.0f};
@@ -125,7 +125,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                     (*particleIterator).transform.rotation_.y = rotationAxis.y * angle;
                     (*particleIterator).transform.rotation_.z = rotationAxis.z * angle;
 
-                } else if (isRandomRotate_) {
+                } else if (particleSetting_.isRandomRotate) {
                     // ランダム回転の場合の処理
                     (*particleIterator).transform.rotation_ += (*particleIterator).rotateVelocity;
                 } else {
@@ -135,7 +135,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                 }
 
                 // 加速度処理
-                if (isAcceMultipy_) {
+                if (particleSetting_.isAcceMultiply) {
                     (*particleIterator).velocity *= (*particleIterator).Acce;
                 } else {
                     (*particleIterator).velocity += (*particleIterator).Acce;
@@ -151,7 +151,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
 
             // ワールド行列の計算
             Matrix4x4 worldMatrix{};
-            if (isBillboard) {
+            if (particleSetting_.isBillboard) {
                 // ビルボード処理の場合、カメラ方向に向ける
                 worldMatrix = MakeScaleMatrix((*particleIterator).transform.scale_) * billboardMatrix *
                               MakeTranslateMatrix((*particleIterator).transform.translation_);
@@ -206,7 +206,7 @@ void ParticleManager::Draw() {
 
             srvManager_->SetGraphicsRootDescriptorTable(2, particleGroup->GetParticleGroupData().material.textureIndex);
 
-            particleCommon->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(UINT(particleGroup->GetModelData().indices.size()), particleGroup->GetParticleGroupData().instanceCount, 0, 0,0);
+            particleCommon->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(UINT(particleGroup->GetModelData().mesh.indices.size()), particleGroup->GetParticleGroupData().instanceCount, 0, 0, 0);
         }
     }
 }
@@ -217,32 +217,18 @@ void ParticleManager::AddParticleGroup(ParticleGroup *particleGroup) {
     particleGroupNames_.push_back(particleGroup->GetGroupName());
 }
 
-Particle ParticleManager::MakeNewParticle(
-    std::mt19937 &randomEngine,
-    const Vector3 &translate,
-    const Vector3 &rotation,
-    const Vector3 &scale,                                   // スケールを引数として受け取る
-    const Vector3 &velocityMin, const Vector3 &velocityMax, // 速度の範囲
-    float lifeTimeMin, float lifeTimeMax,
-    const Vector3 &particleStartScale, const Vector3 &particleEndScale,
-    const Vector3 &startAcce, const Vector3 &endAcce,
-    const Vector3 &startRote, const Vector3 &endRote,
-    bool isRamdomColor, float alphaMin, float alphaMax,
-    const Vector3 &rotateVelocityMin, const Vector3 &rotateVelocityMax,
-    const Vector3 &allScaleMax, const Vector3 &allScaleMin,
-    const float &scaleMin, const float &scaleMax,
-    const Vector3 &rotateStartMax, const Vector3 &rotateStartMin) {
+Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine) {
     std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
-    std::uniform_real_distribution<float> distVelocityX(velocityMin.x, velocityMax.x);
-    std::uniform_real_distribution<float> distVelocityY(velocityMin.y, velocityMax.y);
-    std::uniform_real_distribution<float> distVelocityZ(velocityMin.z, velocityMax.z);
-    std::uniform_real_distribution<float> distLifeTime(lifeTimeMin, lifeTimeMax);
-    std::uniform_real_distribution<float> distAlpha(alphaMin, alphaMax);
+    std::uniform_real_distribution<float> distVelocityX(particleSetting_.velocityMin.x, particleSetting_.velocityMax.x);
+    std::uniform_real_distribution<float> distVelocityY(particleSetting_.velocityMin.y, particleSetting_.velocityMax.y);
+    std::uniform_real_distribution<float> distVelocityZ(particleSetting_.velocityMin.z, particleSetting_.velocityMax.z);
+    std::uniform_real_distribution<float> distLifeTime(particleSetting_.lifeTimeMin, particleSetting_.lifeTimeMax);
+    std::uniform_real_distribution<float> distAlpha(particleSetting_.alphaMin, particleSetting_.alphaMax);
 
     Particle particle;
     Vector3 randomTranslate;
-    particle.emitterPosition = translate;
-    if (isEmitOnEdge_) {
+    particle.emitterPosition = particleSetting_.translate;
+    if (particleSetting_.isEmitOnEdge) {
         // 立方体の12本のエッジ上にパーティクルを生成する場合
         std::uniform_int_distribution<int> edgeSelector(0, 11);         // 12本のエッジからランダム選択
         std::uniform_real_distribution<float> edgePosition(0.0f, 1.0f); // エッジ上の位置（0〜1）
@@ -284,19 +270,19 @@ Particle ParticleManager::MakeNewParticle(
             start.z + (end.z - start.z) * position};
 
         // スケールを適用
-        randomTranslate.x *= scale.x;
-        randomTranslate.y *= scale.y;
-        randomTranslate.z *= scale.z;
+        randomTranslate.x *= particleSetting_.scale.x;
+        randomTranslate.y *= particleSetting_.scale.y;
+        randomTranslate.z *= particleSetting_.scale.z;
     } else {
         // 通常のランダムな位置生成
         randomTranslate = {
-            distribution(randomEngine) * scale.x,
-            distribution(randomEngine) * scale.y,
-            distribution(randomEngine) * scale.z};
+            distribution(randomEngine) * particleSetting_.scale.x,
+            distribution(randomEngine) * particleSetting_.scale.y,
+            distribution(randomEngine) * particleSetting_.scale.z};
     }
 
     // 回転行列を適用してランダムな位置を回転
-    Matrix4x4 rotationMatrix = MakeRotateXYZMatrix(rotation);
+    Matrix4x4 rotationMatrix = MakeRotateXYZMatrix(particleSetting_.rotation);
 
     // ランダム位置を回転行列で変換
     Vector3 rotatedPosition = {
@@ -305,30 +291,30 @@ Particle ParticleManager::MakeNewParticle(
         randomTranslate.x * rotationMatrix.m[0][2] + randomTranslate.y * rotationMatrix.m[1][2] + randomTranslate.z * rotationMatrix.m[2][2]};
 
     // 回転されたランダムな位置をトランスレーションに加算
-    particle.transform.translation_ = translate + rotatedPosition;
+    particle.transform.translation_ = particleSetting_.translate + rotatedPosition;
 
-    if (isRandomAllSize_) {
-        std::uniform_real_distribution<float> distScaleX(allScaleMin.x, allScaleMax.x);
-        std::uniform_real_distribution<float> distScaleY(allScaleMin.y, allScaleMax.y);
-        std::uniform_real_distribution<float> distScaleZ(allScaleMin.z, allScaleMax.z);
+    if (particleSetting_.isRandomAllSize) {
+        std::uniform_real_distribution<float> distScaleX(particleSetting_.allScaleMin.x, particleSetting_.allScaleMax.x);
+        std::uniform_real_distribution<float> distScaleY(particleSetting_.allScaleMin.y, particleSetting_.allScaleMax.y);
+        std::uniform_real_distribution<float> distScaleZ(particleSetting_.allScaleMin.z, particleSetting_.allScaleMax.z);
         particle.startScale = {distScaleX(randomEngine), distScaleY(randomEngine), distScaleZ(randomEngine)};
-        if (isEndScale_) {
+        if (particleSetting_.isEndScale) {
             particle.endScale = particle.startScale;
         }
-    } else if (isRandomSize_) {
-        std::uniform_real_distribution<float> distScale(scaleMin, scaleMax);
+    } else if (particleSetting_.isRandomSize) {
+        std::uniform_real_distribution<float> distScale(particleSetting_.scaleMin, particleSetting_.scaleMax);
         particle.startScale.x = distScale(randomEngine);
         particle.startScale.y = particle.startScale.x;
         particle.startScale.z = particle.startScale.x;
     } else {
-        particle.startScale = particleStartScale;
+        particle.startScale = particleSetting_.particleStartScale;
     }
-    if (!isEndScale_) {
-        particle.endScale = particleEndScale;
+    if (!particleSetting_.isEndScale) {
+        particle.endScale = particleSetting_.particleEndScale;
     }
 
-    particle.startAcce = startAcce;
-    particle.endAcce = endAcce;
+    particle.startAcce = particleSetting_.startAcce;
+    particle.endAcce = particleSetting_.endAcce;
 
     // パーティクルの速度をランダムに設定
     Vector3 randomVelocity = {
@@ -342,35 +328,35 @@ Particle ParticleManager::MakeNewParticle(
         randomVelocity.x * rotationMatrix.m[0][1] + randomVelocity.y * rotationMatrix.m[1][1] + randomVelocity.z * rotationMatrix.m[2][1],
         randomVelocity.x * rotationMatrix.m[0][2] + randomVelocity.y * rotationMatrix.m[1][2] + randomVelocity.z * rotationMatrix.m[2][2]};
 
-    if (isRandomRotate_) {
-        std::uniform_real_distribution<float> distRotateX(rotateStartMin.x, rotateStartMax.x);
-        std::uniform_real_distribution<float> distRotateY(rotateStartMin.y, rotateStartMax.y);
-        std::uniform_real_distribution<float> distRotateZ(rotateStartMin.z, rotateStartMax.z);
+    if (particleSetting_.isRandomRotate) {
+        std::uniform_real_distribution<float> distRotateX(particleSetting_.rotateStartMin.x, particleSetting_.rotateStartMax.x);
+        std::uniform_real_distribution<float> distRotateY(particleSetting_.rotateStartMin.y, particleSetting_.rotateStartMax.y);
+        std::uniform_real_distribution<float> distRotateZ(particleSetting_.rotateStartMin.z, particleSetting_.rotateStartMax.z);
         particle.transform.rotation_.x = distRotateX(randomEngine);
         particle.transform.rotation_.y = distRotateY(randomEngine);
         particle.transform.rotation_.z = distRotateZ(randomEngine);
-        if (isRotateVelocity_) {
+        if (particleSetting_.isRotateVelocity) {
             // 回転速度をランダムに設定
-            std::uniform_real_distribution<float> distRotateXVelocity(rotateVelocityMin.x, rotateVelocityMax.x);
-            std::uniform_real_distribution<float> distRotateYVelocity(rotateVelocityMin.y, rotateVelocityMax.y);
-            std::uniform_real_distribution<float> distRotateZVelocity(rotateVelocityMin.z, rotateVelocityMax.z);
+            std::uniform_real_distribution<float> distRotateXVelocity(particleSetting_.rotateVelocityMin.x, particleSetting_.rotateVelocityMax.x);
+            std::uniform_real_distribution<float> distRotateYVelocity(particleSetting_.rotateVelocityMin.y, particleSetting_.rotateVelocityMax.y);
+            std::uniform_real_distribution<float> distRotateZVelocity(particleSetting_.rotateVelocityMin.z, particleSetting_.rotateVelocityMax.z);
             particle.rotateVelocity.x = distRotateXVelocity(randomEngine);
             particle.rotateVelocity.y = distRotateYVelocity(randomEngine);
             particle.rotateVelocity.z = distRotateZVelocity(randomEngine);
         }
     } else {
-        particle.startRote = startRote;
-        particle.endRote = endRote;
+        particle.startRote = particleSetting_.startRote;
+        particle.endRote = particleSetting_.endRote;
     }
 
-    if (isRamdomColor) {
+    if (particleSetting_.isRandomColor) {
         // ランダムな色を設定
         std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
         particle.color = {distColor(randomEngine), distColor(randomEngine), distColor(randomEngine), distAlpha(randomEngine)};
     } else {
         particle.color = {1.0f, 1.0f, 1.0f, distAlpha(randomEngine)};
     }
-    if (isFaceDirection_) {
+    if (particleSetting_.isFaceDirection) {
 
         // 初期向きは上方向（0, 1, 0）
         Vector3 initialUp = {0.0f, 1.0f, 0.0f};
@@ -403,20 +389,7 @@ Particle ParticleManager::MakeNewParticle(
 }
 
 // 全てのパーティクルグループに対してパーティクルを生成する関数
-std::list<Particle> ParticleManager::Emit(
-    const Vector3 &position,
-    uint32_t count,
-    const Vector3 &scale,
-    const Vector3 &velocityMin, const Vector3 &velocityMax,
-    float lifeTimeMin, float lifeTimeMax,
-    const Vector3 &particleStartScale, const Vector3 &particleEndScale,
-    const Vector3 &startAcce, const Vector3 &endAcce,
-    const Vector3 &startRote, const Vector3 &endRote,
-    bool isRandomColor, float alphaMin, float alphaMax,
-    const Vector3 &rotateVelocityMin, const Vector3 &rotateVelocityMax,
-    const Vector3 &allScaleMax, const Vector3 &allScaleMin,
-    const float &scaleMin, const float &scaleMax, const Vector3 &rotation,
-    const Vector3 &rotateStartMax, const Vector3 &rotateStartMin) {
+std::list<Particle> ParticleManager::Emit() {
 
     std::list<Particle> allNewParticles; // 生成された全パーティクルを格納
 
@@ -424,24 +397,10 @@ std::list<Particle> ParticleManager::Emit(
     for (auto &[groupName, particleGroup] : particleGroups_) {
         std::list<Particle> newParticles; // 各グループごとの新規パーティクルリスト
 
-        for (uint32_t nowCount = 0; nowCount < count; ++nowCount) {
+        for (uint32_t nowCount = 0; nowCount < particleSetting_.count; ++nowCount) {
             // 新しいパーティクルを生成
             Particle particle = MakeNewParticle(
-                randomEngine,
-                position,
-                rotation,
-                scale,
-                velocityMin, velocityMax,
-                lifeTimeMin, lifeTimeMax,
-                particleStartScale, particleEndScale,
-                startAcce, endAcce,
-                startRote, endRote,
-                isRandomColor,
-                alphaMin, alphaMax,
-                rotateVelocityMin, rotateVelocityMax,
-                allScaleMax, allScaleMin,
-                scaleMin, scaleMax,
-                rotateStartMax, rotateStartMin);
+                randomEngine);
 
             newParticles.push_back(particle); // 生成したパーティクルをリストに追加
         }

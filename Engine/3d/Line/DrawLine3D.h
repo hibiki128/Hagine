@@ -67,15 +67,9 @@ private:
 
 	uint32_t indexLine_ = 0;
 
-	DirectXCommon* dxCommon;
+	DirectXCommon *dxCommon = nullptr;
 
-	std::unique_ptr<PipeLineManager> psoManager_ = nullptr;
-
-	// ルートシグネチャ
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
-
-	// グラフィックスパイプライン
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
+	PipeLineManager* psoManager_ = nullptr;
 
 	struct CBuffer {
 		Matrix4x4 viewProject;

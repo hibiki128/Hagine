@@ -56,10 +56,10 @@ class TitleScene : public BaseScene {
   private:
     Audio *audio_;
     Input *input_;
-    Object3dCommon *objCommon_;
     SpriteCommon *spCommon_;
     ParticleCommon *ptCommon_;
 
     ViewProjection vp_;
+    Easing ease_;
     std::unique_ptr<DebugCamera> debugCamera_;
 };

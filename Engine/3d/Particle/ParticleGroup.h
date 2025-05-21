@@ -7,6 +7,12 @@
 #include <list>
 class ParticleGroup {
   public:
+    struct ParticleMaterial {
+        Vector4 color;
+        Matrix4x4 uvTransform;
+        float padding[3];
+    };
+  public:
     void Initialize();
 
     void Update();
@@ -21,6 +27,7 @@ class ParticleGroup {
     ParticleGroupData &GetParticleGroupData() { return particleGroupData_; }
 
     std::string &GetTexturePath() { return particleGroupData_.material.textureFilePath; }
+    std::string &GetModelPath() { return modelFilePath_; }
 
     D3D12_VERTEX_BUFFER_VIEW &GetVertexBufferView() { return vertexBufferView; }
     D3D12_INDEX_BUFFER_VIEW &GetIndexBufferView() { return indexBufferView; }
@@ -53,7 +60,7 @@ class ParticleGroup {
     // バッファリソース
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr;
     // バッファリソース内のデータを指すポインタ
-    Material *materialData = nullptr;
+    ParticleMaterial *materialData = nullptr;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource = nullptr;
     uint32_t *indexData;
@@ -64,4 +71,5 @@ class ParticleGroup {
     ModelData modelData;
     ParticleGroupData particleGroupData_;
     PrimitiveType type_;
+    std::string modelFilePath_;
 };

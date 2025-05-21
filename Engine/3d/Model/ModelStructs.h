@@ -1,4 +1,5 @@
 #pragma once
+#include "WorldTransform.h"
 #include "array"
 #include "wrl.h"
 #include <Matrix4x4.h>
@@ -7,13 +8,12 @@
 #include <Vector3.h>
 #include <Vector4.h>
 #include <d3d12.h>
+#include <list>
 #include <map>
 #include <optional>
 #include <span>
 #include <string>
 #include <vector>
-#include <list>
-#include"WorldTransform.h"
 
 struct QuaternionTransform {
     Vector3 scale;
@@ -29,11 +29,18 @@ struct VertexData {
 };
 
 struct MaterialData {
+    Vector4 color;
+    int32_t enableLighting;
+    float padding[3];
+    Matrix4x4 uvTransform;
+    float shininess;
     std::string textureFilePath;
     uint32_t textureIndex = 0;
-    std::string modelFilePath;
-    Matrix4x4 uvTransform;
-    Vector4 color;
+};
+
+struct MeshData {
+    std::vector<VertexData> vertices;
+    std::vector<uint32_t> indices;
 };
 
 struct Node {
@@ -70,10 +77,9 @@ struct JointWeightData {
 };
 
 struct ModelData {
-    std::map<std::string, JointWeightData> skinClusterData;
-    std::vector<VertexData> vertices;
-    std::vector<uint32_t> indices;
+    MeshData mesh;
     MaterialData material;
+    std::map<std::string, JointWeightData> skinClusterData;
     Node rootNode;
 };
 
@@ -128,7 +134,7 @@ struct ParticleForGPU {
 struct Particle {
     WorldTransform transform; // 位置
     Vector3 emitterPosition;
-    Vector3 velocity;         // 速度
+    Vector3 velocity; // 速度
     Vector3 Acce;
     Vector3 startScale;
     Vector3 endScale;
@@ -142,13 +148,6 @@ struct Particle {
     float lifeTime;    // ライフタイム
     float currentTime; // 現在の時間
     float initialAlpha;
-};
-
-// マテリアルデータ
-struct Material {
-    Vector4 color;
-    Matrix4x4 uvTransform;
-    float padding[3];
 };
 
 struct ParticleGroupData {

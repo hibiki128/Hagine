@@ -2,28 +2,35 @@
 #include "Object3dCommon.h"
 #include "cassert"
 #include "myMath.h"
-#include <line/DrawLine3D.h>
-#include <Texture/TextureManager.h>
 #include <Model/ModelManager.h>
+#include <Texture/TextureManager.h>
+#include <line/DrawLine3D.h>
 
-void Object3d::CreateModel(const std::string &filePath) {
-    this->obj3dCommon = Object3dCommon::GetInstance();
+void Object3d::Initialize() {
+    objectCommon_ = std::make_unique<Object3dCommon>();
+    objectCommon_->Initialize();
+
+    dxCommon_ = DirectXCommon::GetInstance();
+
+    lightGroup = LightGroup::GetInstance();
 
     CreateTransformationMatrix();
 
-    CreateMaterial();
+    material_ = std::make_unique<Material>();
+    material_->Initialize();
+}
+
+void Object3d::CreateModel(const std::string &filePath) {
 
     filePath_ = filePath;
-
-    lightGroup = LightGroup::GetInstance();
 
     ModelManager::GetInstance()->LoadModel(filePath_);
 
     // モデルを検索してセットする
     model = ModelManager::GetInstance()->FindModel(filePath_);
 
-    materialData->textureFilePath = model->GetModelData().material.textureFilePath;
-    materialData->textureIndex = model->GetModelData().material.textureIndex;
+    material_->GetMaterialDataGPU()->textureFilePath = model->GetModelData().material.textureFilePath;
+    material_->GetMaterialDataGPU()->textureIndex = model->GetModelData().material.textureIndex;
     if (model->IsGltf()) {
         currentModelAnimation_ = std::make_unique<ModelAnimation>();
         currentModelAnimation_->SetModelData(model->GetModelData());
@@ -36,20 +43,11 @@ void Object3d::CreateModel(const std::string &filePath) {
 }
 
 void Object3d::CreatePrimitiveModel(const PrimitiveType &type) {
-
-    this->obj3dCommon = Object3dCommon::GetInstance();
-
-    CreateTransformationMatrix();
-
-    CreateMaterial();
-
-    lightGroup = LightGroup::GetInstance();
     model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type));
-    materialData->color = model->GetModelData().material.color;
-    materialData->uvTransform = model->GetModelData().material.uvTransform;
-    materialData->textureFilePath = model->GetModelData().material.textureFilePath;
-    materialData->textureIndex = model->GetModelData().material.textureIndex;
-
+    material_->GetMaterialDataGPU()->color = model->GetModelData().material.color;
+    material_->GetMaterialDataGPU()->uvTransform = model->GetModelData().material.uvTransform;
+    material_->GetMaterialDataGPU()->textureFilePath = model->GetModelData().material.textureFilePath;
+    material_->GetMaterialDataGPU()->textureIndex = model->GetModelData().material.textureIndex;
 }
 
 void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {
@@ -119,31 +117,28 @@ void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &
             return;
     }*/
 
-    if (color) {
-        materialData->color = color->GetColor();
-    }
-    materialData->enableLighting = Lighting;
+    objectCommon_->SetBlendMode(blendMode_);
+
     Update(worldTransform, viewProjection);
 
     if (model->IsGltf()) {
         if (currentModelAnimation_->GetAnimator()->HaveAnimation()) {
             HaveAnimation = true;
-            Object3dCommon::GetInstance()->skinningDrawCommonSetting();
+            objectCommon_->skinningDrawCommonSetting();
         } else {
             HaveAnimation = false;
         }
     }
 
-    obj3dCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
     // wvp用のCBufferの場所を設定
-    obj3dCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
-    SrvManager::GetInstance()->SetGraphicsRootDescriptorTable(2, materialData->textureIndex);
-    if (materialData->enableLighting != 0 && lightGroup) {
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
+    material_->Draw(color->GetColor(), Lighting);
+    if (material_->GetMaterialDataGPU()->enableLighting != 0 && lightGroup) {
         lightGroup->Draw();
     }
     // マテリアルCBufferの場所を設定
     if (model) {
-        model->Draw();
+        model->Draw(objectCommon_.get());
     }
 }
 
@@ -179,8 +174,8 @@ void Object3d::SetModel(const std::string &filePath) {
     ModelManager::GetInstance()->LoadModel(filePath);
     model = ModelManager::GetInstance()->FindModel(filePath);
 
-    materialData->textureFilePath = model->GetModelData().material.textureFilePath;
-    materialData->textureIndex = model->GetModelData().material.textureIndex;
+    material_->GetMaterialDataGPU()->textureFilePath = model->GetModelData().material.textureFilePath;
+    material_->GetMaterialDataGPU()->textureIndex = model->GetModelData().material.textureIndex;
     if (model->IsGltf()) {
 
         currentModelAnimation_->SetModelData(model->GetModelData());
@@ -194,35 +189,22 @@ void Object3d::SetModel(const std::string &filePath) {
 }
 
 void Object3d::SetTexture(const std::string &filePath) {
-    materialData->textureFilePath = filePath;
+    material_->GetMaterialDataGPU()->textureFilePath = filePath;
     TextureManager::GetInstance()->LoadTexture(filePath);
-    materialData->textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
-    model->SetMaterialData({materialData->textureFilePath, materialData->textureIndex});
+    material_->GetMaterialDataGPU()->textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
+    model->SetMaterialData(*material_->GetMaterialDataGPU());
 }
 
 void Object3d::SetShininess(float shininess) {
-    materialData->shininess = shininess;
+    material_->GetMaterialDataGPU()->shininess = shininess;
 }
 
 void Object3d::CreateTransformationMatrix() {
-    transformationMatrixResource = obj3dCommon->GetDxCommon()->CreateBufferResource(sizeof(TransformationMatrix));
+    transformationMatrixResource = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
     // 書き込むかめのアドレスを取得
     transformationMatrixResource->Map(0, nullptr, reinterpret_cast<void **>(&transformationMatrixData));
     // 単位行列を書き込んでおく
     transformationMatrixData->WVP = MakeIdentity4x4();
     transformationMatrixData->World = MakeIdentity4x4();
     transformationMatrixData->WorldInverseTranspose = MakeIdentity4x4();
-}
-
-void Object3d::CreateMaterial() {
-    // Sprite用のマテリアルリソースをつくる
-    materialResource = obj3dCommon->GetDxCommon()->CreateBufferResource(sizeof(Material));
-    // 書き込むためのアドレスを取得
-    materialResource->Map(0, nullptr, reinterpret_cast<void **>(&materialData));
-    // 色の設定
-    materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-    // Lightingの設定
-    materialData->enableLighting = true;
-    materialData->uvTransform = MakeIdentity4x4();
-    materialData->shininess = 20.0f;
 }

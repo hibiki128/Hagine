@@ -11,7 +11,7 @@ void MyGame::Initialize() {
     sceneFactory_ = new SceneFactory();
     // シーンマネージャに最初のシーンをセット
     sceneManager_->SetSceneFactory(sceneFactory_);
-    sceneManager_->NextSceneReservation("GAME");
+    sceneManager_->NextSceneReservation("TITLE");
     // -----------------------
 }
 
@@ -29,19 +29,23 @@ void MyGame::Update() {
     if (input->TriggerKey(DIK_F11)) {
         winApp->ToggleFullScreen();
     }
+    if (input->TriggerKey(DIK_F5)) {
+        imGuiManager_->GetIsShowMainUI() = !imGuiManager_->GetIsShowMainUI();
+    }
 
 #ifdef _DEBUG
     imGuiManager_->Begin();
+    imGuizmoManager_->BeginFrame();
+    imGuizmoManager_->SetViewProjection(sceneManager_->GetBaseScene()->GetViewProjection());
+    imGuiManager_->SetCurrentScene(sceneManager_->GetBaseScene());
     imGuiManager_->ShowMainMenu();
     if (imGuiManager_->GetIsShowMainUI()) {
-        imGuiManager_->SetCurrentScene(sceneManager_->GetBaseScene());
         imGuiManager_->ShowDockSpace();
-        Framework::DisplayFPS();
-        imGuiManager_->ShowMainUI();
-        offscreen_->Setting();
-        LightGroup::GetInstance()->imgui();
+        imGuiManager_->ShowSceneWindow();
     }
+    imGuiManager_->ShowMainUI(offscreen_.get());
     imGuiManager_->End();
+
 #endif // _DEBUG
 
     // -----------------------
@@ -57,10 +61,8 @@ void MyGame::Draw() {
     if (sceneManager_->GetTransitionEnd()) {
         collisionManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
     }
-    sceneManager_->Draw();
-    object3dCommon->DrawCommonSetting();
     baseObjectManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
-
+    sceneManager_->Draw();
 
 #ifdef _DEBUG
     //-----線描画-----

@@ -65,7 +65,7 @@ void ParticleGroupManager::AddParticleGroup(std::unique_ptr<ParticleGroup> parti
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleGroup", particleGroup->GetGroupName());
     data->Save("groupName", particleGroup->GetGroupName());
     data->Save("textrueName", particleGroup->GetParticleGroupData().material.textureFilePath);
-    data->Save("modelfilePath", particleGroup->GetParticleGroupData().material.modelFilePath);
+    data->Save("modelfilePath", particleGroup->GetModelPath());
     data->Save("primitiveType", particleGroup->GetPrimitiveType());
     particleGroups_.emplace_back(std::move(particleGroup));
 }

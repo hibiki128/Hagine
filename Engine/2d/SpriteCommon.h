@@ -14,16 +14,7 @@ private:
 
 private:
 	DirectXCommon* dxCommon_;
-	std::unique_ptr<PipeLineManager> psoManager_ = nullptr;
-
-	// ルートシグネチャ
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
-
-	// グラフィックスパイプライン
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState[5];
-
-	BlendMode blendMode_ = BlendMode::kNormal;
-
+	PipeLineManager* psoManager_ = nullptr;
 public: // メンバ関数
 
 	/// <summary>

@@ -17,8 +17,10 @@
 #include "Engine/offscreen/OffScreen.h"
 #include <line/DrawLine3D.h>
 #include"ImGui/ImGuiManager.h"
+#include"ImGui/ImGuizmoManager.h"
 #include"Object/BaseObjectManager.h"
 #include"Particle/ParticleGroupManager.h"
+#include"PipeLine/PipeLineManager.h"
 
 class Framework {
   public: // メンバ関数
@@ -61,11 +63,6 @@ class Framework {
     /// </summary>
     /// <returns></returns>
     virtual bool IsEndRequest() { return endRequest_; }
-
-    /// <summary>
-    ///  FPS表示
-    /// </summary>
-    void DisplayFPS();
   private:
 
   protected:
@@ -83,11 +80,12 @@ class Framework {
     TextureManager *textureManager_ = nullptr;
     ModelManager *modelManager_ = nullptr;
     ImGuiManager *imGuiManager_ = nullptr;
+    ImGuizmoManager *imGuizmoManager_ = nullptr;
     BaseObjectManager *baseObjectManager_ = nullptr;
     ParticleGroupManager *particleGroupManager_ = nullptr;
+    PipeLineManager *pipeLineManager_ = nullptr;
 
     SpriteCommon *spriteCommon = nullptr;
-    Object3dCommon *object3dCommon = nullptr;
     ParticleCommon *particleCommon = nullptr;
     ParticleEditor *particleEditor = nullptr;
 
@@ -95,7 +93,6 @@ class Framework {
 
     std::unique_ptr<CollisionManager> collisionManager_;
     std::unique_ptr<OffScreen> offscreen_;
-    std::unique_ptr<OffScreen> offscreen2_;
 
     bool endRequest_;
 };

@@ -40,15 +40,15 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton& skeleton, const ModelData& m
 
 
 	// influence用のResourceを確保
-	skinCluster.influenceResource = dxCommon->CreateBufferResource(sizeof(VertexInfluence) * modelData.vertices.size());
+	skinCluster.influenceResource = dxCommon->CreateBufferResource(sizeof(VertexInfluence) * modelData.mesh.vertices.size());
 	VertexInfluence* mappedInfluence = nullptr;
 	skinCluster.influenceResource->Map(0, nullptr, reinterpret_cast<void**>(&mappedInfluence));
-	std::memset(mappedInfluence, 0, sizeof(VertexInfluence) * modelData.vertices.size());
-	skinCluster.mappedInfluence = { mappedInfluence,modelData.vertices.size() };
+	std::memset(mappedInfluence, 0, sizeof(VertexInfluence) * modelData.mesh.vertices.size());
+	skinCluster.mappedInfluence = { mappedInfluence,modelData.mesh.vertices.size() };
 
 	// Influence用のVBVを作成
 	skinCluster.influenceBufferView.BufferLocation = skinCluster.influenceResource->GetGPUVirtualAddress();
-	skinCluster.influenceBufferView.SizeInBytes = UINT(sizeof(VertexInfluence) * modelData.vertices.size());
+	skinCluster.influenceBufferView.SizeInBytes = UINT(sizeof(VertexInfluence) * modelData.mesh.vertices.size());
 	skinCluster.influenceBufferView.StrideInBytes = sizeof(VertexInfluence);
 
 	// InverseBindPoseMatrixの保存領域を作成

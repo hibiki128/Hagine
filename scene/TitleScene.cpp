@@ -4,7 +4,6 @@
 
 void TitleScene::Initialize() {
     audio_ = Audio::GetInstance();
-    objCommon_ = Object3dCommon::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
@@ -19,6 +18,7 @@ void TitleScene::Finalize() {
 }
 
 void TitleScene::Update() {
+
     // カメラ更新
     CameraUpdate();
 
@@ -35,15 +35,10 @@ void TitleScene::Draw() {
 
     //-------------------------
 
-    objCommon_->DrawCommonSetting();
-    //-----3DObjectの描画開始-----
-   
-    //--------------------------
-
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
     //------Particleの描画開始-------
- 
+
     //-----------------------------
 
     /// Spriteの描画準備
@@ -66,11 +61,6 @@ void TitleScene::DrawForOffScreen() {
 
     //------------------------
 
-    objCommon_->DrawCommonSetting();
-    //-----3DObjectの描画開始-----
-
-    //--------------------------
-
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
     //------Particleの描画開始-------
@@ -87,11 +77,19 @@ void TitleScene::AddSceneSetting() {
 }
 
 void TitleScene::AddObjectSetting() {
-   
+    if (ImGui::BeginTabBar("イージング設定")) {
+        if (ImGui::BeginTabItem("イージング設定")) {
+            ImGui::DragFloat("最大時間", &ease_.maxTime, 0.1f);
+            ImGui::DragFloat("イージング時間", &ease_.time, 0.1f);
+            ImGui::DragFloat("振幅", &ease_.amplitude, 0.1f);
+            ImGui::DragFloat("周期", &ease_.period, 0.1f);
+            ImGui::EndTabItem();
+        };
+        ImGui::EndTabBar();
+    }
 }
 
 void TitleScene::AddParticleSetting() {
-   
 }
 
 void TitleScene::CameraUpdate() {

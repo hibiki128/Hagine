@@ -12,6 +12,7 @@
 #include "ViewProjection/ViewProjection.h"
 #include "WorldTransform.h"
 #include "line/DrawLine3D.h"
+#include"Object/BaseObjectManager.h"
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG
