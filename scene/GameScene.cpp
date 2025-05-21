@@ -30,7 +30,7 @@ void GameScene::Initialize() {
     /// ===================================================
     /// セット
     /// ===================================================
-    followCamera_->SetTarget(&player_->GetWorldTransform());
+    followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     playerPtr_ = player_.get();
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
@@ -62,6 +62,7 @@ void GameScene::Draw() {
     //-----3DObjectの開始-----
     skyDome_->Draw(vp_);
     ground_->Draw(vp_);
+    DrawLine3D::GetInstance()->DrawGrid(-0.95f, 64, 1000, {0.0f,0.0f,1.0f,0.75f});
     //-----------------------
 
     /// Particleの描画準備
@@ -107,6 +108,7 @@ void GameScene::DrawForOffScreen() {
 
 void GameScene::AddSceneSetting() {
     debugCamera_->imgui();
+    followCamera_->imgui();
 }
 
 void GameScene::AddObjectSetting() {

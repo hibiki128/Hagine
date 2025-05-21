@@ -1,10 +1,14 @@
 #pragma once
 
 enum class Direction {
-    Right,
-    Left,
     Forward,
+    ForwardRight,
+    Right,
+    BackwardRight,
     Behind,
+    BackwardLeft,
+    Left,
+    ForwardLeft
 };
 
 enum class MoveDirection {
@@ -13,3 +17,4 @@ enum class MoveDirection {
     Forward,
     Behind
 };
+

@@ -23,18 +23,22 @@ class Player : public BaseObject {
     /// Getter
     /// </summary>
 
+    FollowCamera *GetCamera() { return FollowCamera_; }
+
     Vector3 &GetAcceleration() { return acceleration_; }
     Vector3 &GetVelocity() { return velocity_; }
+    Vector3 GetMovementDirection() const;
 
+    float GetVelocityMagnitude() const;
     float &GetFallSpeed() { return fallSpeed_; }
     float &GetMoveSpeed() { return moveSpeed_; }
     float &GetJumpSpeed() { return jumpSpeed_; }
-    float &GetMaxSpeed() { return maxSpeed_; }   // 追加: 最大速度
-    float &GetAccelRate() { return accelRate_; } // 追加: 加速率
+    float &GetMaxSpeed() { return maxSpeed_; }
+    float &GetAccelRate() { return accelRate_; }
 
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
-    bool &GetIsGrounded() { return isGrounded_; } // 追加: 接地判定
+    bool &GetIsGrounded() { return isGrounded_; }
 
     void SetCamera(FollowCamera *camera) { FollowCamera_ = camera; }
 
@@ -48,6 +52,16 @@ class Player : public BaseObject {
 
     void Save();
     void Load();
+
+    void RotateUpdate();
+    void CollisionGround();
+
+    Direction CalculateDirectionFromRotation();
+
+    float NormalizeAngle(float angle);
+
+    // プレイヤーが向いている方向を文字列に変換して表示
+    const char *GetDirectionName(Direction dir);
 
   private:
     /// ==================================================================
@@ -78,5 +92,4 @@ class Player : public BaseObject {
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
-
 };

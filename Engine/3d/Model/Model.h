@@ -67,7 +67,7 @@ class Model {
     void SetBone(Bone *bone) { bone_ = bone; }
     void SetTextureIndex(const std::string &filePath);
     void SetMaterialData(const MaterialData &materialData) { modelData.material = materialData; }
-    MaterialData GetMaterialData() { return modelData.material; }
+    MaterialData& GetMaterialData() { return modelData.material; }
 
     ModelData GetModelData() { return modelData; }
 

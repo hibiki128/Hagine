@@ -23,6 +23,7 @@ void Model::CreateModel(const std::string &directorypath, const std::string &fil
 
     // モデル読み込み
     modelData = LoadModelFile(directorypath_, filename_);
+    mesh_->GetMeshData() = modelData.mesh;
     mesh_->Initialize();
     material_->GetMaterialData() = modelData.material;
     material_->LoadTexture();

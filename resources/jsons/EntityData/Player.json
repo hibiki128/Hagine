@@ -1,7 +1,7 @@
 {
-    "accelRate": 25.0,
-    "fallSpeed": -16.0,
-    "jumpSpeed": 10.0,
-    "maxSpeed": 15.0,
-    "moveSpeed": 13.368684768676758
+  "accelRate": 50.0,
+  "fallSpeed": -40.0,
+  "jumpSpeed": 20.0,
+  "maxSpeed": 20.0,
+  "moveSpeed": 15.459833145141602
 }

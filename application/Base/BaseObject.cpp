@@ -28,14 +28,17 @@ void BaseObject::Update() {
 }
 
 void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
-    // オフセットを加える前の現在の位置を取得
-    Vector3 currentPosition = transform_.translation_;
+    if (offSet != Vector3(0.0f, 0.0f, 0.0f)) {
 
-    // オフセットを加えて新しい位置を計算
-    Vector3 newPosition = currentPosition + offSet;
+        // オフセットを加える前の現在の位置を取得
+        Vector3 currentPosition = transform_.translation_;
 
-    // 新しい位置を設定
-    transform_.translation_ = newPosition;
+        // オフセットを加えて新しい位置を計算
+        Vector3 newPosition = currentPosition + offSet;
+
+        // 新しい位置を設定
+        transform_.translation_ = newPosition;
+    }
 
     // オブジェクトの描画
     obj3d_->Draw(transform_, viewProjection, &objColor_, isLighting_);
@@ -44,9 +47,6 @@ void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (skeletonDraw_) {
         obj3d_->DrawSkeleton(transform_, viewProjection);
     }
-
-    // 描画後に元の位置に戻す場合は、以下の行を追加
-    transform_.translation_ = currentPosition;
 }
 
 Vector3 BaseObject::GetWorldPosition() const {
@@ -173,7 +173,11 @@ void BaseObject::LoadFromJson() {
     transform_.translation_ = TransformDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
     transform_.rotation_ = TransformDatas_->Load<Vector3>("rotation", {0.0f, 0.0f, 0.0f});
     transform_.scale_ = TransformDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
-    SetTexture(TransformDatas_->Load<std::string>("texturePath", "debug/uvChecker.png"));
+    if (obj3d_->GetTexture().empty()) {
+        SetTexture(TransformDatas_->Load<std::string>("texturePath", "debug/uvChecker.png"));
+    } else {
+        SetTexture(TransformDatas_->Load<std::string>("texturePath", obj3d_->GetTexture()));
+    }
     blendMode_ = static_cast<BlendMode>(TransformDatas_->Load<int>("blendMode", 0));
 }
 

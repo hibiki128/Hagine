@@ -54,7 +54,6 @@ class GameScene : public BaseScene {
     void CameraUpdate();
 
     void ChangeScene();
-
   private:
     Audio *audio_;
     Input *input_;

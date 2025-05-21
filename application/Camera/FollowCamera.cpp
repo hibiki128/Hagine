@@ -1,6 +1,8 @@
 #include "FollowCamera.h"
 #include "Input.h"
 #include <cmath>
+#include"application/GameObject/Player/Player.h"
+#include"Easing.h"
 
 void FollowCamera::Init() {
     viewProjection_.farZ = 1100;
@@ -12,33 +14,47 @@ void FollowCamera::Init() {
 }
 
 void FollowCamera::Update() {
-    // 追従対象がいれば
     if (target_) {
-        // カメラの回転処理
         Move();
 
-        // カメラの位置をターゲット基準で計算
-        Vector3 targetPosition = target_->translation_;
-        worldTransform_.translation_.x = targetPosition.x + std::sin(yaw_) * distanceFromTarget_;
-        worldTransform_.translation_.z = targetPosition.z + std::cos(yaw_) * distanceFromTarget_;
-        worldTransform_.translation_.y = targetPosition.y + heightOffset_;
+        // プレイヤーの現在位置
+        Vector3 targetPos = target_->GetWorldPosition();
 
-        // カメラがターゲットの方向を向くよう回転を設定
-        Vector3 lookAt = targetPosition - worldTransform_.translation_;
-        worldTransform_.rotation_.y = std::atan2(lookAt.x, lookAt.z);
+        // プレイヤーの速度ベクトル
+        Vector3 velocity = target_->GetVelocity();
 
-        // 親子関係の更新
+        // X軸方向の速度から肩の方向を計算（-1〜1にクランプ）
+        float dirSign = std::clamp(velocity.x / target_->GetMaxSpeed(), -1.0f, 1.0f);
+
+        // 肩の目標オフセット（左右に最大 shoulderMaxOffset_ 分ずらす）
+        shoulderOffsetTarget_.x = -dirSign * shoulderMaxOffset_;
+
+        // 肩オフセットを滑らかに補間
+        shoulderOffsetCurrent_.x = Lerp(shoulderOffsetCurrent_.x, shoulderOffsetTarget_.x, shoulderLerpSpeed_ * ImGui::GetIO().DeltaTime);
+
+        // 【修正ポイント】プレイヤーを基準にカメラ位置を計算し、最後に肩オフセットを加算する
+        Vector3 cameraPos;
+        cameraPos.x = targetPos.x + std::sin(yaw_) * cameraOffset_.z;
+        cameraPos.z = targetPos.z + std::cos(yaw_) * cameraOffset_.z;
+        cameraPos.y = targetPos.y + cameraOffset_.y;
+
+        // 肩オフセットを適用
+        cameraPos += shoulderOffsetCurrent_;
+
+        // カメラのワールド座標に反映
+        worldTransform_.translation_ = cameraPos;
+
+        // 行列を更新
         worldTransform_.UpdateMatrix();
     }
 
-    // ビュー行列にカメラの位置を反映
+    // ビュープロジェクションの更新
     viewProjection_.translation_ = worldTransform_.translation_;
     viewProjection_.rotation_ = worldTransform_.rotation_;
     viewProjection_.matWorld_ = worldTransform_.matWorld_;
-
-    // ビュー行列の更新
     viewProjection_.UpdateMatrix();
 }
+
 
 void FollowCamera::imgui() {
     ImGui::Begin("FollowCamera");
@@ -48,10 +64,10 @@ void FollowCamera::imgui() {
 }
 
 void FollowCamera::Move() {
-    // if (Input::GetInstance()->PushKey(DIK_LEFT)) {
-    //	yaw_ -= 0.04f; // 左回転
-    // }
-    // if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
-    //	yaw_ += 0.04f; // 右回転
-    // }
+     //if (Input::GetInstance()->PushKey(DIK_LEFT)) {
+    	//yaw_ -= 0.04f; // 左回転
+     //}
+     //if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
+    	//yaw_ += 0.04f; // 右回転
+     //}
 }

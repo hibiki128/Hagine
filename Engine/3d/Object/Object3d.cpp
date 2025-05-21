@@ -29,8 +29,7 @@ void Object3d::CreateModel(const std::string &filePath) {
     // モデルを検索してセットする
     model = ModelManager::GetInstance()->FindModel(filePath_);
 
-    material_->GetMaterialDataGPU()->textureFilePath = model->GetModelData().material.textureFilePath;
-    material_->GetMaterialDataGPU()->textureIndex = model->GetModelData().material.textureIndex;
+    material_->SetMaterialDataGPU(&model->GetMaterialData());
     if (model->IsGltf()) {
         currentModelAnimation_ = std::make_unique<ModelAnimation>();
         currentModelAnimation_->SetModelData(model->GetModelData());
@@ -44,10 +43,7 @@ void Object3d::CreateModel(const std::string &filePath) {
 
 void Object3d::CreatePrimitiveModel(const PrimitiveType &type) {
     model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type));
-    material_->GetMaterialDataGPU()->color = model->GetModelData().material.color;
-    material_->GetMaterialDataGPU()->uvTransform = model->GetModelData().material.uvTransform;
-    material_->GetMaterialDataGPU()->textureFilePath = model->GetModelData().material.textureFilePath;
-    material_->GetMaterialDataGPU()->textureIndex = model->GetModelData().material.textureIndex;
+    material_->SetMaterialDataGPU(&model->GetMaterialData());
 }
 
 void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {
