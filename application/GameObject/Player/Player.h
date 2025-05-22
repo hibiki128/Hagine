@@ -89,14 +89,19 @@ class Player : public BaseObject {
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;
     float jumpSpeed_ = 0.0f;
-    float maxSpeed_ = 0.0f;  // 追加: 最大速度
-    float accelRate_ = 0.0f; // 追加: 加速率
+    float maxSpeed_ = 0.0f; 
+    float accelRate_ = 0.0f;
     float dt_;
+
+    float currentFov_ = 45.0f; 
+    float targetFov_ = 45.0f;  
+    float fovLerpSpeed_ = 5.0f;           
 
     bool canJump_ = false;
     bool isAlive_ = true;
     bool isLockOn_ = false;
-    bool isGrounded_ = true; // 追加: 接地判定
+    bool isGrounded_ = true;
+    bool isDashing_ = false;
 
     std::unordered_map<std::string, std::unique_ptr<PlayerBaseState>> states_;
     PlayerBaseState *currentState_ = nullptr;

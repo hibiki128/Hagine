@@ -62,7 +62,7 @@ void Model::Draw(Object3dCommon *objCommon) {
             modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, vbvs); // VBVを設定
         } else {
             modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 2, vbvs); // VBVを設定
-            srvManager_->SetGraphicsRootDescriptorTable(6, SrvIndex);
+            srvManager_->SetGraphicsRootDescriptorTable(7, SrvIndex);
         }
     } else {
         modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, vbvs); // VBVを設定

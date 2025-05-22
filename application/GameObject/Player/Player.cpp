@@ -57,6 +57,18 @@ void Player::Update() {
         isLockOn_ = !isLockOn_;
     }
 
+     if (isDashing_) {
+        targetFov_ = 55.0f;
+    } else {
+        targetFov_ = 45.0f;
+    }
+
+    // 現在のFOVを滑らかに補間（線形補間）
+    currentFov_ += (targetFov_ - currentFov_) * fovLerpSpeed_ * dt_;
+
+    // FOVをカメラに適用
+    FollowCamera_->SetCameraFov(currentFov_);
+
     CollisionGround();
 
     RotateUpdate();
@@ -187,8 +199,8 @@ void Player::Move() {
     }
 
     // ダッシュ入力の確認
-    bool isDashing = Input::GetInstance()->PushKey(DIK_LCONTROL) || Input::GetInstance()->PushKey(DIK_RCONTROL);
-    float maxSpeedMultiplier = isDashing ? 2.0f : 1.0f;
+    isDashing_ = Input::GetInstance()->PushKey(DIK_LCONTROL) || Input::GetInstance()->PushKey(DIK_RCONTROL);
+    float maxSpeedMultiplier = isDashing_ ? 2.5f : 1.0f;
 
     // 入力があれば徐々に加速、なければ減速
     if (xInput != 0.0f || zInput != 0.0f) {
@@ -213,7 +225,6 @@ void Player::Move() {
                 GetMoveSpeed() = GetMaxSpeed();
             }
         }
-
 
         // カメラの向きを基準にした移動ベクトルを計算
         // カメラのヨー角に基づいて移動方向を回転させる
@@ -517,8 +528,8 @@ void Player::DefaultMovement() {
     }
 
     // ダッシュ入力の確認
-    bool isDashing = Input::GetInstance()->PushKey(DIK_LCONTROL) || Input::GetInstance()->PushKey(DIK_RCONTROL);
-    float maxSpeedMultiplier = isDashing ? 2.0f : 1.0f;
+    isDashing_ = Input::GetInstance()->PushKey(DIK_LCONTROL) || Input::GetInstance()->PushKey(DIK_RCONTROL);
+    float maxSpeedMultiplier = isDashing_ ? 2.5f : 1.0f;
 
     // 入力があれば徐々に加速、なければ減速
     if (xInput != 0.0f || zInput != 0.0f) {
