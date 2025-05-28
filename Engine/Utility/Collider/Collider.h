@@ -1,7 +1,7 @@
 #pragma once
 #include "Data/DataHandler.h"
 #include "Object/Object3d.h"
-#include "Vector3.h"
+#include "type/Vector3.h"
 #include "ViewProjection/ViewProjection.h"
 #include "WorldTransform.h"
 #include "externals/nlohmann/json.hpp"

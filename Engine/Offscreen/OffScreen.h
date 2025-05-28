@@ -4,8 +4,8 @@
 #include "externals/nlohmann/json.hpp"
 #include "myMath.h"
 #include "wrl.h"
-#include <Matrix4x4.h>
-#include <Vector2.h>
+#include <type/Matrix4x4.h>
+#include <type/Vector2.h>
 #include <d3d12.h>
 class DirectXCommon;
 class OffScreen {

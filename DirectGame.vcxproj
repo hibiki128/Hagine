@@ -135,7 +135,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\Particle\ParticleCommon.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleManager.cpp" />
     <ClCompile Include="Engine\Utility\Edit\LevelData.cpp" />
-    <ClCompile Include="math\Quaternion.cpp" />
+    <ClCompile Include="math\type\Quaternion.cpp" />
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp" />
     <ClCompile Include="Engine\Utility\Edit\Liner.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleEmitter.cpp" />
@@ -235,7 +235,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Particle\ParticleCommon.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleManager.h" />
     <ClInclude Include="Engine\Utility\Edit\LevelData.h" />
-    <ClInclude Include="math\Quaternion.h" />
+    <ClInclude Include="math\type\Quaternion.h" />
     <ClInclude Include="Engine\3d\Transform\ObjColor.h" />
     <ClInclude Include="Engine\Utility\Edit\Liner.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleEmitter.h" />
@@ -251,12 +251,12 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\imstb_rectpack.h" />
     <ClInclude Include="externals\imgui\imstb_textedit.h" />
     <ClInclude Include="externals\imgui\imstb_truetype.h" />
-    <ClInclude Include="math\Matrix3x3.h" />
-    <ClInclude Include="math\Matrix4x4.h" />
+    <ClInclude Include="math\type\Matrix3x3.h" />
+    <ClInclude Include="math\type\Matrix4x4.h" />
     <ClInclude Include="math\myMath.h" />
-    <ClInclude Include="math\Vector2.h" />
-    <ClInclude Include="math\Vector3.h" />
-    <ClInclude Include="math\Vector4.h" />
+    <ClInclude Include="math\type\Vector2.h" />
+    <ClInclude Include="math\type\Vector3.h" />
+    <ClInclude Include="math\type\Vector4.h" />
     <ClInclude Include="Engine\Utility\Debug\ResourceLeakChecker\D3DResourceLeakChecker.h" />
     <ClInclude Include="Engine\Base\DirectXCommon.h" />
     <ClInclude Include="Engine\Input\Input.h" />

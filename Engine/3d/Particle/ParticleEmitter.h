@@ -36,19 +36,26 @@ class ParticleEmitter {
         Manager_->RemoveParticleGroup(name);
     }
 
-    void SetPosition(const Vector3 &position) { particleSetting_.translate = position; }
-    void SetPositionY(const float &positionY) { particleSetting_.translate.y = positionY; }
-    void SetRotate(const Vector3 &rotate) { particleSetting_.rotation = rotate; }
-    void SetRotateY(const float &rotateY) { particleSetting_.rotation.y = rotateY; }
-    void SetScale(const Vector3 &scale) { particleSetting_.scale = scale; }
-    void SetCount(const int &count) { particleSetting_.count = count; }
+    int selectedGroupIndex_ = 0;
+
+    void SetPosition(const std::string &groupName, const Vector3 &position) { particleSettings_[groupName].translate = position; }
+    void SetPositionY(const std::string &groupName, float positionY) { particleSettings_[groupName].translate.y = positionY; }
+    void SetRotate(const std::string &groupName, const Vector3 &rotate) { particleSettings_[groupName].rotation = rotate; }
+    void SetRotateY(const std::string &groupName, float rotateY) { particleSettings_[groupName].rotation.y = rotateY; }
+    void SetScale(const std::string &groupName, const Vector3 &scale) { particleSettings_[groupName].scale = scale; }
+    void SetCount(const std::string &groupName, int count) { particleSettings_[groupName].count = count; }
+    void SetStartRotate(const std::string &groupName, const Vector3 &startRotate) { particleSettings_[groupName].startRote = startRotate; }
+    void SetEndRotate(const std::string &groupName, const Vector3 &endRotate) { particleSettings_[groupName].endRote = endRotate; }
     void SetActive(bool isActive) { isActive_ = isActive; }
-    void SetStartRotate(const Vector3 &startRotate) { particleSetting_.startRote = startRotate; }
-    void SetEndRotate(const Vector3 &endRotate) { particleSetting_.endRote = endRotate; }
-    void SetFrequency(const float &frequency) { emitFrequency_ = frequency; }
-    void SetName(const std::string &name) {
-        name_ = name;
-    }
+    void SetFrequency(float frequency) { emitFrequency_ = frequency; }
+    void SetName(const std::string &name) { name_ = name; }
+    void SetTrailEnabled(const std::string &groupName, bool enabled);
+    void SetTrailInterval(const std::string &groupName, float interval);
+    void SetMaxTrailParticles(const std::string &groupName, int maxTrails);
+    void SetTrailLifeScale(const std::string &groupName, float scale);
+    void SetTrailScaleMultiplier(const std::string &groupName, const Vector3 &multiplier);
+    void SetTrailColorMultiplier(const std::string &groupName, const Vector4 &multiplier);
+    void SetTrailVelocityInheritance(const std::string &groupName, bool inherit, float scale = 0.3f);
 
   private:
     // パーティクルを発生させるEmit関数
@@ -56,6 +63,7 @@ class ParticleEmitter {
     void SaveToJson();
     void LoadFromJson();
     void LoadParticleGroup();
+    ParticleSetting DefaultSetting();
 
     void DebugParticleData();
 
@@ -65,14 +73,13 @@ class ParticleEmitter {
     float emitFrequency_; // パーティクルの発生頻度
 
     bool isVisible_ = false;
-    bool isBillBoard_ = false;
     bool isActive_ = false;
     bool isAuto_ = false;
 
     std::string name_;         // パーティクルの名前
     WorldTransform transform_; // 位置や回転などのトランスフォーム
 
-    ParticleSetting particleSetting_;
+    std::unordered_map<std::string, ParticleSetting> particleSettings_;
 
     std::unique_ptr<ParticleManager> Manager_;
     std::unique_ptr<DataHandler> datas_;

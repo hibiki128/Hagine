@@ -1,7 +1,7 @@
 #pragma once
 #include"Model/ModelStructs.h"
-#include <Quaternion.h>
-#include <Vector3.h>
+#include <type/Quaternion.h>
+#include <type/Vector3.h>
 #include <map>
 #include <string>
 #include <unordered_map>

@@ -17,7 +17,7 @@ void BaseObjectManager::Finalize() {
 
 void BaseObjectManager::DeleteObject() {
     baseObjects_.clear();
-
+    ImGuizmoManager::GetInstance()->DeleteTarget();
 }
 
 void BaseObjectManager::AddObject(std::unique_ptr<BaseObject> baseObject) {
@@ -35,6 +35,12 @@ void BaseObjectManager::Update() {
 void BaseObjectManager::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     for (auto &[name, obj] : baseObjects_) {
         obj->Draw(viewProjection, offSet);
+    }
+}
+
+void BaseObjectManager::DrawWireframe(const ViewProjection &viewProjection, Vector3 offSet) {
+    for (auto &[name, obj] : baseObjects_) {
+        obj->DrawWireframe(viewProjection, offSet);
     }
 }
 

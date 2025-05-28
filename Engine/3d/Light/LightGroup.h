@@ -2,8 +2,8 @@
 #include "d3d12.h"
 #include "externals/nlohmann/json.hpp"
 #include "wrl.h"
-#include <Vector3.h>
-#include <Vector4.h>
+#include <type/Vector3.h>
+#include <type/Vector4.h>
 #include <string>
 #include <ViewProjection/ViewProjection.h>
 #include"Data/DataHandler.h"

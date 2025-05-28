@@ -80,6 +80,34 @@ void DrawLine3D::Draw(const ViewProjection &viewProjection) {
     Reset();
 }
 
+void DrawLine3D::DrawGrid(float y, int division, float size, Vector4 color) {
+    // 分割数が無効な場合は何もしない
+    if (division <= 0 || size <= 0.0f) {
+        return;
+    }
+
+    // 一区画の幅
+    float interval = (size * 2.0f) / division;
+
+    // グリッド線の色（薄いグレー）
+    const Vector4 gridColor = color;
+
+    for (int i = 0; i <= division; ++i) {
+        // 現在の位置
+        float offset = -size + i * interval;
+
+        // X方向の線（Zを移動）
+        Vector3 startX = {-size, y, offset};
+        Vector3 endX = {size, y, offset};
+        SetPoints(startX, endX, gridColor);
+
+        // Z方向の線（Xを移動）
+        Vector3 startZ = {offset, y, -size};
+        Vector3 endZ = {offset, y, size};
+        SetPoints(startZ, endZ, gridColor);
+    }
+}
+
 void DrawLine3D::CreateMeshes() {
 
     const UINT maxVertex = kMaxLineCount * kVertexCountLine;

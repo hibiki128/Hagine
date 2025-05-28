@@ -5,7 +5,7 @@
 #include "Object/Object3d.h"
 #include "WorldTransform.h" 
 #include "ViewProjection/ViewProjection.h"
-#include "Vector3.h" 
+#include "type/Vector3.h" 
 
 using json = nlohmann::json;
 

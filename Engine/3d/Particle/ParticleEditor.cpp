@@ -63,6 +63,7 @@ void ParticleEditor::AddParticleGroup(const std::string &name, const std::string
     group->Initialize();
     // パーティクルグループを作成
     group->CreateParticleGroup(name, fileName, texturePath);
+
     // マップに追加
     particleGroupManager_->AddParticleGroup(std::move(group));
 }
@@ -74,6 +75,7 @@ void ParticleEditor::AddPrimitiveParticleGroup(const std::string &name, const st
     group->Initialize();
     // パーティクルグループを作成
     group->CreatePrimitiveParticleGroup(name, type, texturePath);
+
     // マップに追加
     particleGroupManager_->AddParticleGroup(std::move(group));
 }

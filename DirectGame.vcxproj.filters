@@ -218,7 +218,7 @@
     <ClCompile Include="Engine\Utility\Edit\Liner.cpp">
       <Filter>ソースファイル\myEngine\utility\edit</Filter>
     </ClCompile>
-    <ClCompile Include="math\Quaternion.cpp">
+    <ClCompile Include="math\type\Quaternion.cpp">
       <Filter>ソースファイル\math</Filter>
     </ClCompile>
     <ClCompile Include="Engine\3d\Transform\WorldTransform.cpp">
@@ -510,10 +510,10 @@
     <ClInclude Include="math\Easing.h">
       <Filter>ソースファイル\math</Filter>
     </ClInclude>
-    <ClInclude Include="math\Matrix3x3.h">
+    <ClInclude Include="math\type\Matrix3x3.h">
       <Filter>ソースファイル\math</Filter>
     </ClInclude>
-    <ClInclude Include="math\Matrix4x4.h">
+    <ClInclude Include="math\type\Matrix4x4.h">
       <Filter>ソースファイル\math</Filter>
     </ClInclude>
     <ClInclude Include="math\myMath.h">
@@ -522,19 +522,19 @@
     <ClInclude Include="math\random.h">
       <Filter>ソースファイル\math</Filter>
     </ClInclude>
-    <ClInclude Include="math\Vector2.h">
+    <ClInclude Include="math\type\Vector2.h">
       <Filter>ソースファイル\math</Filter>
     </ClInclude>
-    <ClInclude Include="math\Vector3.h">
+    <ClInclude Include="math\type\Vector3.h">
       <Filter>ソースファイル\math</Filter>
     </ClInclude>
-    <ClInclude Include="math\Vector4.h">
+    <ClInclude Include="math\type\Vector4.h">
       <Filter>ソースファイル\math</Filter>
     </ClInclude>
     <ClInclude Include="Engine\3d\Light\LightGroup.h">
       <Filter>ソースファイル\myEngine\light</Filter>
     </ClInclude>
-    <ClInclude Include="math\Quaternion.h">
+    <ClInclude Include="math\type\Quaternion.h">
       <Filter>ソースファイル\math</Filter>
     </ClInclude>
     <ClInclude Include="Engine\3d\Line\DrawLine3D.h">

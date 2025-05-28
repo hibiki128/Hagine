@@ -60,11 +60,13 @@ void ParticleGroupManager::Finalize() {
     delete instance;
     instance = nullptr;
 }
-
 void ParticleGroupManager::AddParticleGroup(std::unique_ptr<ParticleGroup> particleGroup) {
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleGroup", particleGroup->GetGroupName());
     data->Save("groupName", particleGroup->GetGroupName());
-    data->Save("textrueName", particleGroup->GetParticleGroupData().material.textureFilePath);
+    // materialがvectorになったため、最初のmaterialのtextureFilePathを保存
+    const auto& materials = particleGroup->GetParticleGroupData().materials;
+    std::string textureFilePath = (!materials.empty()) ? materials[0].textureFilePath : "";
+    data->Save("textrueName", textureFilePath);
     data->Save("modelfilePath", particleGroup->GetModelPath());
     data->Save("primitiveType", particleGroup->GetPrimitiveType());
     particleGroups_.emplace_back(std::move(particleGroup));

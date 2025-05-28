@@ -1,6 +1,6 @@
 #pragma once
-#include "Vector2.h"
-#include "Vector3.h"
+#include "type/Vector2.h"
+#include "type/Vector3.h"
 
 struct Easing {
 	float time;

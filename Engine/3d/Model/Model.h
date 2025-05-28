@@ -1,11 +1,11 @@
 #pragma once
-#include "Matrix4x4.h"
+#include "type/Matrix4x4.h"
 #include "ModelCommon.h"
-#include "Quaternion.h"
+#include "type/Quaternion.h"
 #include "Srv/SrvManager.h"
-#include "Vector2.h"
-#include "Vector3.h"
-#include "Vector4.h"
+#include "type/Vector2.h"
+#include "type/Vector3.h"
+#include "type/Vector4.h"
 #include "animation/Animator.h"
 #include "animation/Bone.h"
 #include "animation/Skin.h"
@@ -21,6 +21,7 @@
 #include "Object/Object3dCommon.h"
 #include <Primitive/PrimitiveModel.h>
 #include <unordered_set>
+
 class Model {
   private:
     ModelCommon *modelCommon_;
@@ -36,8 +37,10 @@ class Model {
 
     Matrix4x4 localMatrix;
 
-    std::unique_ptr<Mesh> mesh_;
-    std::unique_ptr<Material> material_;
+    // マルチメッシュ対応
+    std::vector<std::unique_ptr<Mesh>> meshes_;
+    // マルチマテリアル対応
+    std::vector<std::unique_ptr<Material>> materials_;
 
     Animator *animator_;
     Skin *skin_;
@@ -49,7 +52,6 @@ class Model {
     /// 初期化
     /// </summary>
     /// <param name="modelCommon"></param>
-
     void Initialize(ModelCommon *modelCommon);
 
     void CreateModel(const std::string &directorypath, const std::string &filename);
@@ -59,19 +61,52 @@ class Model {
     /// <summary>
     /// 描画
     /// </summary>
-    void Draw(Object3dCommon *objCommon);
+    void Draw(Object3dCommon *objCommon,std::vector<Material> materials);
 
+    // Setter methods
     void SetSrv(SrvManager *srvManager) { srvManager_ = srvManager; }
     void SetAnimator(Animator *animator) { animator_ = animator; }
     void SetSkin(Skin *skin) { skin_ = skin; }
     void SetBone(Bone *bone) { bone_ = bone; }
-    void SetTextureIndex(const std::string &filePath);
-    void SetMaterialData(const MaterialData &materialData) { modelData.material = materialData; }
-    MaterialData GetMaterialData() { return modelData.material; }
 
+    // マルチマテリアル対応のテクスチャ設定
+    void SetTextureIndex(const std::string &filePath, uint32_t materialIndex);
+    void SetAllTexturesIndex(const std::string &filePath);
+
+    // マテリアル関連
+    void SetMaterialData(const std::vector<MaterialData> &materialData) { modelData.materials = materialData; }
+    std::vector<MaterialData> &GetMaterialData() { return modelData.materials; }
+
+    // マテリアル色設定
+    void SetMaterialColor(uint32_t materialIndex, const Vector4 &color);
+    void SetAllMaterialsColor(const Vector4 &color);
+
+    // マテリアルの光沢度設定
+    void SetMaterialShininess(uint32_t materialIndex, float shininess);
+    void SetAllMaterialsShininess(float shininess);
+
+    // UV変換設定
+    void SetMaterialUVTransform(uint32_t materialIndex, const Matrix4x4 &uvTransform);
+    void SetAllMaterialsUVTransform(const Matrix4x4 &uvTransform);
+
+    // メッシュとマテリアルの関連付け
+    void SetMeshMaterial(uint32_t meshIndex, uint32_t materialIndex);
+
+    // Getter methods
     ModelData GetModelData() { return modelData; }
-
     bool IsGltf() { return isGltf; }
+
+    // マルチメッシュ・マルチマテリアル情報取得
+    size_t GetMeshCount() const { return meshes_.size(); }
+    size_t GetMaterialCount() const { return materials_.size(); }
+
+    Mesh *GetMesh(uint32_t index) {
+        return (index < meshes_.size()) ? meshes_[index].get() : nullptr;
+    }
+
+    Material *GetMaterial(uint32_t index) {
+        return (index < materials_.size()) ? materials_[index].get() : nullptr;
+    }
 
   private:
     /// <summary>
@@ -88,4 +123,18 @@ class Model {
     /// <param name="node"></param>
     /// <returns></returns>
     static Node ReadNode(aiNode *node);
+
+    /// <summary>
+    /// マテリアルインデックス検証
+    /// </summary>
+    /// <param name="materialIndex"></param>
+    /// <returns></returns>
+    bool IsValidMaterialIndex(uint32_t materialIndex) const;
+
+    /// <summary>
+    /// メッシュインデックス検証
+    /// </summary>
+    /// <param name="meshIndex"></param>
+    /// <returns></returns>
+    bool IsValidMeshIndex(uint32_t meshIndex) const;
 };

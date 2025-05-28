@@ -37,6 +37,7 @@ void MyGame::Update() {
     imGuiManager_->Begin();
     imGuizmoManager_->BeginFrame();
     imGuizmoManager_->SetViewProjection(sceneManager_->GetBaseScene()->GetViewProjection());
+    imGuiManager_->UpdateIni();
     imGuiManager_->SetCurrentScene(sceneManager_->GetBaseScene());
     imGuiManager_->ShowMainMenu();
     if (imGuiManager_->GetIsShowMainUI()) {
@@ -61,9 +62,8 @@ void MyGame::Draw() {
     if (sceneManager_->GetTransitionEnd()) {
         collisionManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
     }
-    baseObjectManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
     sceneManager_->Draw();
-
+    sceneManager_->DrawTransition();
 #ifdef _DEBUG
     //-----線描画-----
     DrawLine3D::GetInstance()->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());

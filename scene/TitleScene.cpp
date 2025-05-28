@@ -12,9 +12,16 @@ void TitleScene::Initialize() {
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
+
+    obj_ = std::make_unique<BaseObject>();
+    obj_->Init("test");
+    obj_->CreateModel("debug/suzannu.obj");
+    BaseObjectManager::GetInstance()->AddObject(std::move(obj_));
+
 }
 
 void TitleScene::Finalize() {
+    BaseScene::Finalize();
 }
 
 void TitleScene::Update() {
@@ -28,6 +35,8 @@ void TitleScene::Update() {
 
 void TitleScene::Draw() {
     /// -------描画処理開始-------
+
+    BaseObjectManager::GetInstance()->DrawWireframe(vp_);
 
     /// Spriteの描画準備
     spCommon_->DrawCommonSetting();
@@ -77,16 +86,7 @@ void TitleScene::AddSceneSetting() {
 }
 
 void TitleScene::AddObjectSetting() {
-    if (ImGui::BeginTabBar("イージング設定")) {
-        if (ImGui::BeginTabItem("イージング設定")) {
-            ImGui::DragFloat("最大時間", &ease_.maxTime, 0.1f);
-            ImGui::DragFloat("イージング時間", &ease_.time, 0.1f);
-            ImGui::DragFloat("振幅", &ease_.amplitude, 0.1f);
-            ImGui::DragFloat("周期", &ease_.period, 0.1f);
-            ImGui::EndTabItem();
-        };
-        ImGui::EndTabBar();
-    }
+ 
 }
 
 void TitleScene::AddParticleSetting() {

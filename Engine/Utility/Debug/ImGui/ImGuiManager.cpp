@@ -1,14 +1,14 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
+#include "Engine/Offscreen/OffScreen.h"
 #include "ImGuizmo.h"
 #include "ImGuizmoManager.h"
 #include "SceneManager.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
+#include <Engine/Frame/Frame.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include <Engine/Frame/Frame.h>
-#include"Engine/Offscreen/OffScreen.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -221,6 +221,14 @@ void ImGuiManager::Draw() {
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 }
 
+void ImGuiManager::UpdateIni() {
+    if (!isShowMainUI_) {
+        SwitchToGameMode();
+    } else {
+        SwitchToEditorMode();
+    }
+}
+
 void ImGuiManager::ShowMainMenu() {
     // メインメニューバー作成
     if (ImGui::BeginMainMenuBar()) {
@@ -291,17 +299,12 @@ void ImGuiManager::ShowMainMenu() {
             ImGui::Separator();
             if (isShowMainUI_) {
                 if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームモードに切替", "F5")) {
-                    // Dock状態を保存！
-                    SwitchToGameMode();
-                    //BackupDockLayout();
                     isShowMainUI_ = false;
+                    SwitchToGameMode();
                 }
             } else {
                 if (ImGui::MenuItem(ICON_FA_WRENCH " エディターモードに切替", "F5")) {
                     isShowMainUI_ = true;
-                    WinApp::GetInstance()->IsFullScreen() = false;
-                    // Dock状態を復元！
-                   // RestoreDockLayout();
                     SwitchToEditorMode();
                 }
             }
@@ -513,7 +516,7 @@ void ImGuiManager::ShowObjectSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-  
+
     ImGui::Begin("オブジェクト設定", &showObjectView_, flags);
 
     currentScene_->AddObjectSetting();
@@ -527,7 +530,7 @@ void ImGuiManager::ShowParticleSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-   
+
     ImGui::Begin("パーティクル設定", &showParticleView_, flags);
 
     currentScene_->AddParticleSetting();
@@ -540,7 +543,7 @@ void ImGuiManager::ShowFPSWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-   
+
     ImGui::Begin("FPS", &showFPSView_, flags);
 
     DisplayFPS();
@@ -548,12 +551,12 @@ void ImGuiManager::ShowFPSWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowOffScreenSettingWindow(OffScreen* offscreen) {
+void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *offscreen) {
     if (!showOfScreenView_)
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-    
+
     ImGui::Begin("オフスクリーン設定", &showOfScreenView_, flags);
 
     offscreen->Setting();
@@ -566,7 +569,7 @@ void ImGuiManager::ShowLightSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-   
+
     ImGui::Begin("ライト設定", &showLightView_, flags);
 
     LightGroup::GetInstance()->imgui();
@@ -672,13 +675,13 @@ void ImGuiManager::ShowSceneWindow() {
     ImVec2 actualScenePos = ImVec2(
         contentPos.x + sceneOffset.x,
         contentPos.y + sceneOffset.y);
-        
+
     imGuizmoManager_->Update(actualScenePos, sceneTextureSize_);
-    
+
     ImGui::End();
 }
 
-void ImGuiManager::ShowMainUI(OffScreen* offscreen) {
+void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
 
     // ヒエラルキーウィンドウ
     ShowSceneSettingWindow();
