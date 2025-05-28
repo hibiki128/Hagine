@@ -1,9 +1,9 @@
 #pragma once
 #include"d3d12.h"
-#include"Vector4.h"
-#include"Vector2.h"
-#include"Vector3.h"
-#include "Matrix4x4.h"
+#include"type/Vector4.h"
+#include"type/Vector2.h"
+#include"type/Vector3.h"
+#include "type/Matrix4x4.h"
 #include"wrl.h"
 #include"string"
 #include "Srv/SrvManager.h"

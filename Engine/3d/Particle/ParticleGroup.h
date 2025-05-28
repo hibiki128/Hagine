@@ -26,7 +26,7 @@ class ParticleGroup {
 
     ParticleGroupData &GetParticleGroupData() { return particleGroupData_; }
 
-    std::string &GetTexturePath() { return particleGroupData_.material.textureFilePath; }
+    std::string &GetTexturePath(uint32_t index) { return particleGroupData_.materials[index].textureFilePath; }
     std::string &GetModelPath() { return modelFilePath_; }
 
     D3D12_VERTEX_BUFFER_VIEW &GetVertexBufferView() { return vertexBufferView; }
@@ -34,7 +34,7 @@ class ParticleGroup {
 
     ModelData GetModelData() { return modelData; }
 
-    MaterialData GetMaterialData() { return modelData.material; }
+    MaterialData GetMaterialData(uint32_t index) { return modelData.materials[index]; }
 
     PrimitiveType GetPrimitiveType() { return type_; }
 

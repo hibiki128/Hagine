@@ -16,6 +16,7 @@ void DemoScene::Initialize() {
 }
 
 void DemoScene::Finalize() {
+    BaseScene::Finalize();
 }
 
 void DemoScene::Update() {

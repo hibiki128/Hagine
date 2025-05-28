@@ -108,7 +108,6 @@ void DrawLine3D::DrawGrid(float y, int division, float size, Vector4 color) {
     }
 }
 
-
 void DrawLine3D::CreateMeshes() {
 
     const UINT maxVertex = kMaxLineCount * kVertexCountLine;

@@ -1,6 +1,6 @@
 #pragma once
-#include"Matrix4x4.h"
-#include"Vector3.h"
+#include"type/Matrix4x4.h"
+#include"type/Vector3.h"
 #include "wrl.h"
 #include"numbers"
 #include "d3d12.h"

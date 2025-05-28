@@ -11,7 +11,6 @@ void ParticleGroup::Initialize() {
 
 void ParticleGroup::Update() {
 }
-
 ParticleGroupData ParticleGroup::CreateParticleGroup(const std::string &groupName, const std::string &filename, const std::string &texturePath) {
     particleGroupData_.groupName = groupName;
     modelFilePath_ = filename;
@@ -20,13 +19,25 @@ ParticleGroupData ParticleGroup::CreateParticleGroup(const std::string &groupNam
     modelData = model_->GetModelData();
     CreateVertexData();
     CreateIndexResource();
+    // マテリアルが複数ある場合は最初のものを使う
+    particleGroupData_.materials.clear();
     if (texturePath.empty()) {
-        particleGroupData_.material.textureFilePath = modelData.material.textureFilePath;
+        if (!modelData.materials.empty()) {
+            particleGroupData_.materials = modelData.materials;
+        } else {
+            particleGroupData_.materials.push_back(MaterialData{});
+        }
     } else {
-        particleGroupData_.material.textureFilePath = texturePath;
+        MaterialData mat;
+        mat.textureFilePath = texturePath;
+        mat.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(texturePath);
+        particleGroupData_.materials.push_back(mat);
     }
-    TextureManager::GetInstance()->LoadTexture(particleGroupData_.material.textureFilePath);
-    particleGroupData_.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(particleGroupData_.material.textureFilePath);
+    // すべてのマテリアルのテクスチャをロード
+    for (auto &mat : particleGroupData_.materials) {
+        TextureManager::GetInstance()->LoadTexture(mat.textureFilePath);
+        mat.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(mat.textureFilePath);
+    }
     particleGroupData_.instancingResource = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(ParticleForGPU) * kNumMaxInstance);
     particleGroupData_.instancingSRVIndex = SrvManager::GetInstance()->Allocate() + 1;
     particleGroupData_.instancingResource->Map(0, nullptr, reinterpret_cast<void **>(&particleGroupData_.instancingData));
@@ -42,16 +53,29 @@ ParticleGroupData ParticleGroup::CreatePrimitiveParticleGroup(const std::string 
     particleGroupData_.groupName = groupName;
     type_ = type;
     model_ = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type));
+    TextureManager::GetInstance()->LoadTexture(texturePath);
     modelData = model_->GetModelData();
     CreateVertexData();
     CreateIndexResource();
+    // マテリアルが複数ある場合は最初のものを使う
+    particleGroupData_.materials.clear();
     if (texturePath.empty()) {
-        particleGroupData_.material.textureFilePath = modelData.material.textureFilePath;
+        if (!modelData.materials.empty()) {
+            particleGroupData_.materials = modelData.materials;
+        } else {
+            particleGroupData_.materials.push_back(MaterialData{});
+        }
     } else {
-        particleGroupData_.material.textureFilePath = texturePath;
+        MaterialData mat;
+        mat.textureFilePath = texturePath;
+        mat.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(texturePath);
+        particleGroupData_.materials.push_back(mat);
     }
-    TextureManager::GetInstance()->LoadTexture(particleGroupData_.material.textureFilePath);
-    particleGroupData_.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(particleGroupData_.material.textureFilePath);
+    // すべてのマテリアルのテクスチャをロード
+    for (auto &mat : particleGroupData_.materials) {
+        TextureManager::GetInstance()->LoadTexture(mat.textureFilePath);
+        mat.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(mat.textureFilePath);
+    }
     particleGroupData_.instancingResource = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(ParticleForGPU) * kNumMaxInstance);
     particleGroupData_.instancingSRVIndex = SrvManager::GetInstance()->Allocate() + 1;
     particleGroupData_.instancingResource->Map(0, nullptr, reinterpret_cast<void **>(&particleGroupData_.instancingData));
@@ -63,18 +87,37 @@ ParticleGroupData ParticleGroup::CreatePrimitiveParticleGroup(const std::string 
     return particleGroupData_;
 }
 
+
 void ParticleGroup::CreateVertexData() {
+    // 複数メッシュ対応: 全メッシュの頂点を連結
+    std::vector<VertexData> allVertices;
+    for (const auto &mesh : modelData.meshes) {
+        allVertices.insert(allVertices.end(), mesh.vertices.begin(), mesh.vertices.end());
+    }
+    vertexResource = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(VertexData) * allVertices.size());
+    vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
+    vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * allVertices.size());
+    vertexBufferView.StrideInBytes = sizeof(VertexData);
+    vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData));
+    std::memcpy(vertexData, allVertices.data(), sizeof(VertexData) * allVertices.size());
+}
 
-    // 頂点リソースを作る
-    vertexResource = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(VertexData) * modelData.mesh.vertices.size());
-    // 頂点バッファビューを作成する
-    vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();            // リソースの先頭アドレスから使う
-    vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.mesh.vertices.size()); // 使用するリソースのサイズは頂点のサイズ
-    vertexBufferView.StrideInBytes = sizeof(VertexData);                                 // 1頂点当たりのサイズ
-
-    // 頂点リソースにデータを書き込む
-    vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData)); // 書き込むためのアドレスを取得
-    std::memcpy(vertexData, modelData.mesh.vertices.data(), sizeof(VertexData) * modelData.mesh.vertices.size());
+void ParticleGroup::CreateIndexResource() {
+    // 複数メッシュ対応: 全メッシュのインデックスを連結し、頂点オフセットを考慮
+    std::vector<uint32_t> allIndices;
+    uint32_t vertexOffset = 0;
+    for (const auto &mesh : modelData.meshes) {
+        for (auto idx : mesh.indices) {
+            allIndices.push_back(idx + vertexOffset);
+        }
+        vertexOffset += static_cast<uint32_t>(mesh.vertices.size());
+    }
+    indexResource = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * allIndices.size());
+    indexBufferView.BufferLocation = indexResource->GetGPUVirtualAddress();
+    indexBufferView.SizeInBytes = UINT(sizeof(uint32_t) * allIndices.size());
+    indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+    indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
+    std::memcpy(indexData, allIndices.data(), sizeof(uint32_t) * allIndices.size());
 }
 
 void ParticleGroup::CreateMaterial() {
@@ -84,13 +127,4 @@ void ParticleGroup::CreateMaterial() {
     materialResource->Map(0, nullptr, reinterpret_cast<void **>(&materialData));
     materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     materialData->uvTransform = MakeIdentity4x4();
-}
-
-void ParticleGroup::CreateIndexResource() {
-    indexResource = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * modelData.mesh.indices.size());
-    indexBufferView.BufferLocation = indexResource->GetGPUVirtualAddress();
-    indexBufferView.SizeInBytes = UINT(sizeof(uint32_t) * modelData.mesh.indices.size());
-    indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-    indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
-    std::memcpy(indexData, modelData.mesh.indices.data(), sizeof(uint32_t) * modelData.mesh.indices.size());
 }

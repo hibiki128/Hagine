@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include "BaseObject.h"
 #include "ShowFolder/ShowFolder.h"
 
@@ -47,6 +48,19 @@ void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (skeletonDraw_) {
         obj3d_->DrawSkeleton(transform_, viewProjection);
     }
+}
+
+void BaseObject::DrawWireframe(const ViewProjection &viewProjection, Vector3 offSet) {
+    // オフセットを加える前の現在の位置を取得
+    Vector3 currentPosition = transform_.translation_;
+
+    // オフセットを加えて新しい位置を計算
+    Vector3 newPosition = currentPosition + offSet;
+
+    // 新しい位置を設定
+    transform_.translation_ = newPosition;
+
+    obj3d_->DrawWireframe(transform_, viewProjection);
 }
 
 Vector3 BaseObject::GetWorldPosition() const {
@@ -118,14 +132,55 @@ void BaseObject::DebugObject() {
         ImGui::DragFloat3("大きさ", &transform_.scale_.x, 0.1f);
     }
     if (ImGui::CollapsingHeader("モデル")) {
+        // マテリアルインデックス選択（Combo）
+        static int selectedMaterialIndex = 1; // 0 はダミーなのでデフォルトを 1 に
+        size_t materialCount = obj3d_->GetMaterialCount();
+
+        // materialCount - 1 にする。ただし1未満にはならないように安全対策
+        int displayCount = static_cast<int>(materialCount);
+        displayCount = std::max(displayCount, 1); // 少なくともダミー含め1つはある
+
+        std::vector<std::string> comboItems;
+        // ダミー(0)は除外して 1 から表示
+        for (int i = 1; i < displayCount; ++i) {
+            comboItems.push_back("Material " + std::to_string(i));
+        }
+
+        if (!comboItems.empty()) {
+            std::vector<const char *> comboItemsCStr;
+            for (const auto &item : comboItems) {
+                comboItemsCStr.push_back(item.c_str());
+            }
+
+            ImGui::Text("マテリアルスロット:");
+
+            // 表示インデックス（0 = Material 1）
+            int displayIndex = selectedMaterialIndex - 1;
+
+            if (ImGui::Combo("##MaterialIndexCombo", &displayIndex, comboItemsCStr.data(), static_cast<int>(comboItemsCStr.size()))) {
+                // コンボボックスの選択結果を実インデックスに変換
+                selectedMaterialIndex = displayIndex + 1;
+            }
+
+            // 範囲外の対策（実インデックスが materialCount を超えないように）
+            selectedMaterialIndex = std::clamp(selectedMaterialIndex, 1, displayCount - 1);
+        }
+
+        // テクスチャ選択ツリー
         if (ImGui::TreeNode("テクスチャ選択")) {
+            // テクスチャ選択UI（パスを表示・取得）
             ShowTextureFile(texturePath_);
-            if (ImGui::Button("適応")) {
-                SetTexture(texturePath_);
+
+            if (ImGui::Button("適用")) {
+                // インデックス付きでテクスチャを適用
+                SetTexture(texturePath_, selectedMaterialIndex);
                 texturePath_.clear();
             }
+
             ImGui::TreePop();
         }
+
+        // ブレンドモード選択ツリー
         if (ImGui::TreeNode("ブレンドモード")) {
             ShowBlendModeCombo(blendMode_);
             ImGui::TreePop();
@@ -164,7 +219,9 @@ void BaseObject::SaveToJson() {
     TransformDatas_->Save<Vector3>("translation", transform_.translation_);
     TransformDatas_->Save<Vector3>("rotation", transform_.rotation_);
     TransformDatas_->Save<Vector3>("scale", transform_.scale_);
-    TransformDatas_->Save<std::string>("texturePath", obj3d_->GetTexture());
+    for (int i = 0; i < obj3d_->GetMaterialCount(); i++) {
+        TransformDatas_->Save<std::string>("texturePath", obj3d_->GetTexture(i));
+    }
     TransformDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
 }
 
@@ -173,10 +230,12 @@ void BaseObject::LoadFromJson() {
     transform_.translation_ = TransformDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
     transform_.rotation_ = TransformDatas_->Load<Vector3>("rotation", {0.0f, 0.0f, 0.0f});
     transform_.scale_ = TransformDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
-    if (obj3d_->GetTexture().empty()) {
-        SetTexture(TransformDatas_->Load<std::string>("texturePath", "debug/uvChecker.png"));
-    } else {
-        SetTexture(TransformDatas_->Load<std::string>("texturePath", obj3d_->GetTexture()));
+    for (int i = 0; i < obj3d_->GetMaterialCount(); i++) {
+        if (obj3d_->GetTexture(i).empty()) {
+            SetTexture(TransformDatas_->Load<std::string>("texturePath", "debug/uvChecker.png"),i);
+        } else {
+            SetTexture(TransformDatas_->Load<std::string>("texturePath", obj3d_->GetTexture(i)),i);
+        }
     }
     blendMode_ = static_cast<BlendMode>(TransformDatas_->Load<int>("blendMode", 0));
 }

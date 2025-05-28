@@ -1,10 +1,10 @@
 #pragma once
-#include"Matrix4x4.h"
-#include "Vector4.h"
+#include"type/Matrix4x4.h"
+#include "type/Vector4.h"
 #include "assert.h"
 #include "cmath"
-#include <Vector3.h>
-#include <Quaternion.h>
+#include <type/Vector3.h>
+#include <type/Quaternion.h>
 
 struct Sphere {
 	Vector3 center; // !< 中心点

@@ -4,7 +4,7 @@
 #include <variant>
 
 #include"ViewProjection/ViewProjection.h"
-#include"Vector2.h"
+#include"type/Vector2.h"
 
 struct MouseMove {
 	LONG lX;

@@ -41,6 +41,7 @@ void GameScene::Initialize() {
 }
 
 void GameScene::Finalize() {
+    BaseScene::Finalize();
 }
 
 void GameScene::Update() {

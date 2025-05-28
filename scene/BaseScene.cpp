@@ -6,6 +6,7 @@ void BaseScene::Initialize()
 
 void BaseScene::Finalize()
 {
+    BaseObjectManager::GetInstance()->DeleteObject();
 }
 
 void BaseScene::Update()

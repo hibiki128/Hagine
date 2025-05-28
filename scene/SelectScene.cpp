@@ -14,6 +14,7 @@ void SelectScene::Initialize() {
 }
 
 void SelectScene::Finalize() {
+    BaseScene::Finalize();
 }
 
 void SelectScene::Update() {

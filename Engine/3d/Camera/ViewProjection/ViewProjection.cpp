@@ -1,7 +1,7 @@
 #define NOMINMAX
 #include "ViewProjection.h"
 #include"myMath.h"
-#include <Vector2.h>
+#include <type/Vector2.h>
 #include"cmath"
 
 void ViewProjection::Initialize()

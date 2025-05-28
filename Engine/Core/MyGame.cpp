@@ -62,9 +62,8 @@ void MyGame::Draw() {
     if (sceneManager_->GetTransitionEnd()) {
         collisionManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
     }
-    baseObjectManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
     sceneManager_->Draw();
-
+    sceneManager_->DrawTransition();
 #ifdef _DEBUG
     //-----線描画-----
     DrawLine3D::GetInstance()->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());

@@ -1,5 +1,5 @@
 #pragma once
-#include"Vector4.h"
+#include"type/Vector4.h"
 #include"d3d12.h"
 #include"wrl.h"
 #include"DirectXCommon.h"

@@ -1,9 +1,9 @@
 #pragma once
 #include "PipeLine/PipeLineManager.h"
 #include "ViewProjection/ViewProjection.h"
-#include <Matrix4x4.h>
-#include <Vector3.h>
-#include <Vector4.h>
+#include <type/Matrix4x4.h>
+#include <type/Vector3.h>
+#include <type/Vector4.h>
 #include <cstdint>
 #include <d3d12.h>
 #include <memory>
@@ -53,7 +53,7 @@ class DrawLine3D {
     void Reset();
 
     void Draw(const ViewProjection &viewProjection);
-    
+
     void DrawGrid(float y, int division, float size, Vector4 color = {0.5f, 0.5f, 0.5f, 1.0f});
 
   private:
