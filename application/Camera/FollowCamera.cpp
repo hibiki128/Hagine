@@ -105,5 +105,4 @@ void FollowCamera::Move() {
             yaw_ += 0.04f; // 右回転
         }
     }
-    // ロックオン中はUpdate内でカメラ位置と向きが自動的に更新される
 }

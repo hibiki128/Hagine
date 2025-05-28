@@ -33,6 +33,7 @@ class FollowCamera {
     ViewProjection viewProjection_;
 
     WorldTransform worldTransform_;
+
     // 追従対象
     Player *target_ = nullptr;
 

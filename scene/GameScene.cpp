@@ -58,6 +58,8 @@ void GameScene::Update() {
 void GameScene::Draw() {
     /// -------描画処理開始-------
 
+     BaseObjectManager::GetInstance()->Draw(vp_);
+
     /// Spriteの描画準備
     spCommon_->DrawCommonSetting();
     //-----Spriteの描画開始-----
