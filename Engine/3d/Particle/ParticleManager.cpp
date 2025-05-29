@@ -23,43 +23,53 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
         uint32_t numInstance = 0;
         ParticleSetting &particleSetting = particleSettings_[groupName];
 
-        for (auto particleIterator = particleGroup->GetParticleGroupData().particles.begin();
-             particleIterator != particleGroup->GetParticleGroupData().particles.end();) {
-
-            if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
-                particleIterator = particleGroup->GetParticleGroupData().particles.erase(particleIterator);
+        auto &particles = particleGroup->GetParticleGroupData().particles;
+        std::list<Particle> aliveParticles;
+        for (auto &particle : particles) {
+            if (particle.lifeTime <= particle.currentTime) {
                 continue;
             }
 
             // 軌跡パーティクル生成処理
-            if (particleSetting.enableTrail && !(*particleIterator).isChild) {
-                (*particleIterator).trailSpawnTimer += Frame::DeltaTime();
-                if ((*particleIterator).trailSpawnTimer >= particleSetting.trailSpawnInterval) {
-                    CreateTrailParticle(*particleIterator, particleSetting);
-                    (*particleIterator).trailSpawnTimer = 0.0f;
+            if (particleSetting.enableTrail && !particle.isChild) {
+                particle.trailSpawnTimer += Frame::DeltaTime();
+                if (particle.trailSpawnTimer >= particleSetting.trailSpawnInterval) {
+                    CreateTrailParticle(particle, particleSetting);
+                    particle.trailSpawnTimer = 0.0f;
                 }
             }
 
-            float t = (*particleIterator).currentTime / (*particleIterator).lifeTime;
+            float t = particle.currentTime / particle.lifeTime;
             t = std::clamp(t, 0.0f, 1.0f);
+
+            // --- 色補間処理を追加 ---
+            if (!particle.isChild) {
+                // 通常パーティクルのみ補間
+                const Vector4 &startColor = particleSetting.startColor;
+                const Vector4 &endColor = particleSetting.endColor;
+                particle.color.x = (1.0f - t) * startColor.x + t * endColor.x;
+                particle.color.y = (1.0f - t) * startColor.y + t * endColor.y;
+                particle.color.z = (1.0f - t) * startColor.z + t * endColor.z;
+                // アルファは既存ロジック
+            }
 
             if (particleSetting.isSinMove) {
                 float waveScale = 0.5f * (sin(t * DirectX::XM_PI * 18.0f) + 1.0f);
                 float maxScale = (1.0f - t);
-                (*particleIterator).transform.scale_ =
-                    (*particleIterator).startScale * waveScale * maxScale;
+                particle.transform.scale_ =
+                    particle.startScale * waveScale * maxScale;
             } else {
-                (*particleIterator).transform.scale_ =
-                    (1.0f - t) * (*particleIterator).startScale + t * (*particleIterator).endScale;
+                particle.transform.scale_ =
+                    (1.0f - t) * particle.startScale + t * particle.endScale;
                 if (!(particleSetting.isGatherMode && t >= particleSetting.gatherStartRatio)) {
-                    (*particleIterator).color.w = (*particleIterator).initialAlpha - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
+                    particle.color.w = particle.initialAlpha - (particle.currentTime / particle.lifeTime);
                 }
             }
 
             bool isGathering = false;
             // トレイルパーティクルで速度継承がオフの場合はギャザリングしない
             bool shouldGather = particleSetting.isGatherMode && t >= particleSetting.gatherStartRatio;
-            if ((*particleIterator).isChild && !particleSetting.trailInheritVelocity) {
+            if (particle.isChild && !particleSetting.trailInheritVelocity) {
                 shouldGather = false;
             }
 
@@ -67,83 +77,83 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                 isGathering = true;
                 float gatherFactor = (t - particleSetting.gatherStartRatio) / (1.0f - particleSetting.gatherStartRatio);
                 gatherFactor = std::clamp(gatherFactor, 0.0f, 1.0f);
-                Vector3 toEmitter = (*particleIterator).emitterPosition - (*particleIterator).transform.translation_;
+                Vector3 toEmitter = particle.emitterPosition - particle.transform.translation_;
                 float distance = toEmitter.Length();
                 float distanceBasedAlpha = distance / (distance + 0.5f);
-                (*particleIterator).color.w = (*particleIterator).initialAlpha * (1.0f - gatherFactor) * distanceBasedAlpha;
+                particle.color.w = particle.initialAlpha * (1.0f - gatherFactor) * distanceBasedAlpha;
                 if (distance < 0.05f) {
-                    (*particleIterator).currentTime = (*particleIterator).lifeTime;
-                    ++particleIterator;
+                    particle.currentTime = particle.lifeTime;
                     continue;
                 }
                 float distanceFactor = std::min(1.0f, distance);
                 toEmitter = toEmitter.Normalize();
                 float gatherSpeed = particleSetting.gatherStrength * gatherFactor * distanceFactor * 3.0f;
                 Vector3 gatherVelocity = toEmitter * gatherSpeed * Frame::DeltaTime();
-                (*particleIterator).velocity = gatherVelocity;
-                (*particleIterator).transform.translation_ += (*particleIterator).velocity;
+                particle.velocity = gatherVelocity;
+                particle.transform.translation_ += particle.velocity;
             }
 
             if (!isGathering) {
-                (*particleIterator).Acce = (1.0f - t) * (*particleIterator).startAcce + t * (*particleIterator).endAcce;
+                particle.Acce = (1.0f - t) * particle.startAcce + t * particle.endAcce;
 
                 if (particleSetting.isFaceDirection) {
-                    Vector3 forward = (*particleIterator).fixedDirection;
+                    Vector3 forward = particle.fixedDirection;
                     Vector3 initialUp = {0.0f, 1.0f, 0.0f};
                     Vector3 rotationAxis = initialUp.Cross(forward).Normalize();
                     float dotProduct = initialUp.Dot(forward);
                     float angle = acosf(std::clamp(dotProduct, -1.0f, 1.0f));
-                    (*particleIterator).transform.rotation_.x = rotationAxis.x * angle;
-                    (*particleIterator).transform.rotation_.y = rotationAxis.y * angle;
-                    (*particleIterator).transform.rotation_.z = rotationAxis.z * angle;
+                    particle.transform.rotation_.x = rotationAxis.x * angle;
+                    particle.transform.rotation_.y = rotationAxis.y * angle;
+                    particle.transform.rotation_.z = rotationAxis.z * angle;
                 } else if (particleSetting.isRandomRotate) {
-                    (*particleIterator).transform.rotation_ += (*particleIterator).rotateVelocity;
+                    particle.transform.rotation_ += particle.rotateVelocity;
                 } else {
-                    (*particleIterator).transform.rotation_ =
-                        (1.0f - t) * (*particleIterator).startRote + t * (*particleIterator).endRote;
+                    particle.transform.rotation_ =
+                        (1.0f - t) * particle.startRote + t * particle.endRote;
                 }
 
                 if (particleSetting.isAcceMultiply) {
-                    (*particleIterator).velocity *= (*particleIterator).Acce;
+                    particle.velocity *= particle.Acce;
                 } else {
-                    (*particleIterator).velocity += (*particleIterator).Acce;
+                    particle.velocity += particle.Acce;
                 }
-                (*particleIterator).transform.translation_ +=
-                    (*particleIterator).velocity * Frame::DeltaTime();
+                particle.transform.translation_ +=
+                    particle.velocity * Frame::DeltaTime();
             }
 
-            (*particleIterator).velocity.y -= particleSetting.gravity * Frame::DeltaTime();
-            (*particleIterator).currentTime += Frame::DeltaTime();
+            particle.velocity.y -= particleSetting.gravity * Frame::DeltaTime();
+            particle.currentTime += Frame::DeltaTime();
             Matrix4x4 worldMatrix{};
             if (particleSetting.isBillboard) {
-                worldMatrix = MakeScaleMatrix((*particleIterator).transform.scale_) * billboardMatrix *
-                              MakeTranslateMatrix((*particleIterator).transform.translation_);
+                worldMatrix = MakeScaleMatrix(particle.transform.scale_) * billboardMatrix *
+                              MakeTranslateMatrix(particle.transform.translation_);
             } else {
-                worldMatrix = MakeAffineMatrix((*particleIterator).transform.scale_,
-                                               (*particleIterator).transform.rotation_,
-                                               (*particleIterator).transform.translation_);
+                worldMatrix = MakeAffineMatrix(particle.transform.scale_,
+                                               particle.transform.rotation_,
+                                               particle.transform.translation_);
             }
             Matrix4x4 worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
             if (numInstance < particleGroup->GetMaxInstance()) {
                 particleGroup->GetParticleGroupData().instancingData[numInstance].WVP = worldViewProjectionMatrix;
                 particleGroup->GetParticleGroupData().instancingData[numInstance].World = worldMatrix;
-                particleGroup->GetParticleGroupData().instancingData[numInstance].color = (*particleIterator).color;
-                particleGroup->GetParticleGroupData().instancingData[numInstance].color.w = (*particleIterator).color.w;
+                particleGroup->GetParticleGroupData().instancingData[numInstance].color = particle.color;
+                particleGroup->GetParticleGroupData().instancingData[numInstance].color.w = particle.color.w;
                 ++numInstance;
             }
-            ++particleIterator;
+            aliveParticles.push_back(std::move(particle));
         }
+        particles.swap(aliveParticles);
         particleGroup->GetParticleGroupData().instanceCount = numInstance;
     }
 }
 
 // 軌跡パーティクル生成メソッド
 void ParticleManager::CreateTrailParticle(const Particle &parent, const ParticleSetting &setting) {
-    // 現在の子パーティクル数をチェック
-    auto &parentParticle = const_cast<Particle &>(parent);
-    if (parentParticle.children.size() >= setting.maxTrailParticles) {
-        return; // 最大数に達している場合は生成しない
-    }
+    //// 現在の子パーティクル数をチェック
+    //auto &parentParticle = const_cast<Particle &>(parent);
+    //if (parentParticle.children.size() >= setting.maxTrailParticles) {
+    //    return; // 最大数に達している場合は生成しない
+    //}
 
     // 軌跡パーティクルを作成
     Particle trailParticle;
@@ -352,7 +362,9 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
         particle.color = {distColor(randomEngine), distColor(randomEngine), distColor(randomEngine), distAlpha(randomEngine)};
     } else {
-        particle.color = {1.0f, 1.0f, 1.0f, distAlpha(randomEngine)};
+        // ここを修正: startColor を使う
+        particle.color = setting.startColor;
+        particle.color.w = distAlpha(randomEngine);
     }
     if (setting.isFaceDirection) {
         Vector3 initialUp = {0.0f, 1.0f, 0.0f};
@@ -364,6 +376,7 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         particle.transform.rotation_.x = rotationAxis.x * angle;
         particle.transform.rotation_.y = rotationAxis.y * angle;
         particle.transform.rotation_.z = rotationAxis.z * angle;
+
     }
     particle.initialAlpha = distAlpha(randomEngine);
     particle.lifeTime = distLifeTime(randomEngine);

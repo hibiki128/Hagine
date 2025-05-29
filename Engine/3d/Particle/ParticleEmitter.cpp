@@ -154,6 +154,8 @@ void ParticleEmitter::SaveToJson() {
         datas_->Save(groupName + "_trailColorMultiplier", setting.trailColorMultiplier);
         datas_->Save(groupName + "_trailInheritVelocity", setting.trailInheritVelocity);
         datas_->Save(groupName + "_trailVelocityScale", setting.trailVelocityScale);
+        datas_->Save(groupName + "_startColor", setting.startColor);
+        datas_->Save(groupName + "_endColor", setting.endColor);
         Manager_->SetParticleSetting(groupName, setting);
     }
 }
@@ -217,6 +219,8 @@ void ParticleEmitter::LoadFromJson() {
         setting.trailColorMultiplier = datas_->Load<Vector4>(groupName + "_trailColorMultiplier", {1.0f, 1.0f, 1.0f, 0.7f});
         setting.trailInheritVelocity = datas_->Load<bool>(groupName + "_trailInheritVelocity", true);
         setting.trailVelocityScale = datas_->Load<float>(groupName + "_trailVelocityScale", 0.3f);
+        setting.startColor = datas_->Load<Vector4>(groupName + "_startColor", {1.0f, 1.0f, 1.0f, 1.0f});
+        setting.endColor = datas_->Load<Vector4>(groupName + "_endColor", {1.0f, 1.0f, 1.0f, 1.0f});
 
         particleSettings_[groupName] = setting;
     }
@@ -276,6 +280,8 @@ ParticleSetting ParticleEmitter::DefaultSetting() {
     setting.trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
     setting.trailInheritVelocity = true;
     setting.trailVelocityScale = 0.3f;
+    setting.startColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    setting.endColor = {1.0f, 1.0f, 1.0f, 1.0f};
     return setting;
 }
 
@@ -515,13 +521,23 @@ void ParticleEmitter::DebugParticleData() {
 
                     ImGui::Separator();
 
-                    // Alphaを折りたたみ可能にする
-                    if (ImGui::TreeNode("透明度")) {
-                        ImGui::Text("透明度の設定:");
-                        ImGui::DragFloat("最大値", &setting.alphaMax, 0.01f, 0.0f, 1.0f);
-                        ImGui::DragFloat("最小値", &setting.alphaMin, 0.01f, 0.0f, 1.0f);
-                        setting.alphaMin = std::clamp(setting.alphaMin, 0.0f, setting.alphaMax);
-                        setting.alphaMax = std::clamp(setting.alphaMax, setting.alphaMin, 1.0f);
+                    if (ImGui::TreeNode("色彩")) {
+
+                         if (ImGui::TreeNode("色")) {
+                            ImGui::ColorEdit4("開始色", &setting.startColor.x);
+                            ImGui::ColorEdit4("終了色", &setting.endColor.x);
+                            ImGui::TreePop();
+                        }
+
+                        // Alphaを折りたたみ可能にする
+                        if (ImGui::TreeNode("透明度")) {
+                            ImGui::Text("透明度の設定:");
+                            ImGui::DragFloat("最大値", &setting.alphaMax, 0.01f, 0.0f, 1.0f);
+                            ImGui::DragFloat("最小値", &setting.alphaMin, 0.01f, 0.0f, 1.0f);
+                            setting.alphaMin = std::clamp(setting.alphaMin, 0.0f, setting.alphaMax);
+                            setting.alphaMax = std::clamp(setting.alphaMax, setting.alphaMin, 1.0f);
+                            ImGui::TreePop();
+                        }
                         ImGui::TreePop();
                     }
                 }

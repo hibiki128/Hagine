@@ -16,6 +16,8 @@ struct ParticleSetting {
     Vector3 translate;
     Vector3 rotation;
     Vector3 scale;
+    Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f}; 
+    Vector4 endColor = {1.0f, 1.0f, 1.0f, 1.0f}; 
     uint32_t count;
     Vector3 velocityMin;
     Vector3 velocityMax;
@@ -96,9 +98,7 @@ class ParticleManager {
     std::list<Particle> Emit();
 
   private:
-    void UpdateTrails();
     void CreateTrailParticle(const Particle &parent, const ParticleSetting &setting);
-    void ManageChildParticles();
 
     Particle MakeNewParticle(std::mt19937 &randomEngine, const ParticleSetting &setting);
 };
