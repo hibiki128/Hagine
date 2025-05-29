@@ -1,9 +1,9 @@
 #include "FollowCamera.h"
 #include "Easing.h"
 #include "Input.h"
+#include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
 #include <cmath>
-#include"application/GameObject/Enemy/Enemy.h"
 
 void FollowCamera::Init() {
     viewProjection_.farZ = 1100;
@@ -25,8 +25,15 @@ void FollowCamera::Update() {
         // プレイヤーの速度ベクトル
         Vector3 velocity = target_->GetVelocity();
 
-        // X軸方向の速度から肩の方向を計算（-1〜1にクランプ）
-        float dirSign = std::clamp(velocity.x / target_->GetMaxSpeed(), -1.0f, 1.0f);
+        // カメラから見たプレイヤーの移動方向を計算
+        // カメラの右方向ベクトル
+        Vector3 cameraRightDir = {std::cos(yaw_), 0.0f, -std::sin(yaw_)};
+
+        // プレイヤーの速度をカメラの右方向に投影して、カメラから見た左右移動成分を取得
+        float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
+
+        // カメラから見た左右方向の速度から肩の方向を計算（-1〜1にクランプ）
+        float dirSign = std::clamp(lateralVelocity / target_->GetMaxSpeed(), -1.0f, 1.0f);
 
         // 肩の目標オフセット（左右に最大 shoulderMaxOffset_ 分ずらす）
         shoulderOffsetTarget_.x = -dirSign * shoulderMaxOffset_;
@@ -67,8 +74,11 @@ void FollowCamera::Update() {
             cameraPos.y = targetPos.y + cameraOffset_.y;
         }
 
-        // 肩オフセットを適用
-        cameraPos += shoulderOffsetCurrent_;
+        // カメラの回転角度を考慮した肩オフセットを適用
+        // カメラから見た左右方向（カメラのローカル座標系）でオフセットを計算
+        Vector3 shoulderOffset = cameraRightDir * shoulderOffsetCurrent_.x;
+
+        cameraPos += shoulderOffset;
 
         // カメラのワールド座標に反映
         worldTransform_.translation_ = cameraPos;

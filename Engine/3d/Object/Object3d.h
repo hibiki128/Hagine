@@ -53,6 +53,7 @@ class Object3d {
     Vector3 rotation = {0.0f, 0.0f, 0.0f};
     Vector3 size = {1.0f, 1.0f, 1.0f};
     bool HaveAnimation;
+    bool isPrimitive_ = false;
 
     std::string filePath_;
     std::unique_ptr<Object3dCommon> objectCommon_;

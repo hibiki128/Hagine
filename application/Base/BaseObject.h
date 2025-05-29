@@ -88,6 +88,7 @@ class BaseObject : public Collider {
     void SetAnima(const std::string &filePath) { obj3d_->SetAnimation(filePath); }
     void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }
+    void SetColor(Vector4 color) { objColor_.GetColor() = color; }
 
   private:
     void DebugObject();

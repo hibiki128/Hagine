@@ -2,10 +2,10 @@
 #include "Object3dCommon.h"
 #include "cassert"
 #include "myMath.h"
+#include <Engine/Frame/Frame.h>
 #include <Model/ModelManager.h>
 #include <Texture/TextureManager.h>
 #include <line/DrawLine3D.h>
-#include <Engine/Frame/Frame.h>
 
 void Object3d::Initialize() {
     objectCommon_ = std::make_unique<Object3dCommon>();
@@ -42,7 +42,7 @@ void Object3d::CreateModel(const std::string &filePath) {
 
 void Object3d::CreatePrimitiveModel(const PrimitiveType &type) {
     model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type));
-
+    isPrimitive_ = true;
     InitializeMaterials();
 }
 
@@ -121,7 +121,7 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
 
     // ====== 時間カウンター（時間ベースで変化）======
     static float timeCounter = 0.0f;
-    timeCounter += Frame::DeltaTime()/10.0f; // 毎フレーム時間加算
+    timeCounter += Frame::DeltaTime() / 10.0f; // 毎フレーム時間加算
     if (timeCounter > 100.0f)
         timeCounter = 0.0f; // オーバーフロー防止
 
@@ -314,12 +314,14 @@ void Object3d::SetTexture(const std::string &filePath, uint32_t materialIndex) {
     if (!IsValidMaterialIndex(materialIndex)) {
         return;
     }
+    if (isPrimitive_) {
+        materialIndex = 0;
+    }
 
     materials_[materialIndex]->GetMaterialDataGPU()->textureFilePath = filePath;
     TextureManager::GetInstance()->LoadTexture(filePath);
     materials_[materialIndex]->GetMaterialDataGPU()->textureIndex =
         TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
-
     // モデルにも反映
     if (model) {
         model->GetMaterialData()[materialIndex] = *materials_[materialIndex]->GetMaterialDataGPU();
@@ -431,5 +433,8 @@ void Object3d::InitializeMaterials() {
 }
 
 bool Object3d::IsValidMaterialIndex(uint32_t materialIndex) const {
+    if (isPrimitive_) {
+        return true;
+    }
     return materialIndex < materials_.size();
 }

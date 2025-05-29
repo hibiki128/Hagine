@@ -1,11 +1,11 @@
 #include "ShowFolder.h"
 #include <algorithm>
+#include <externals/icon/IconsFontAwesome5.h>
 #include <filesystem>
 #include <imgui.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <externals/icon/IconsFontAwesome5.h>
 
 // テクスチャファイルのプレビューキャッシュ用
 struct TextureCache {
@@ -278,5 +278,4 @@ void ShowTextureFile(std::string &selectedTexturePath) {
     // スタイルを元に戻す
     style.ItemSpacing.y = origItemSpacing;
     style.FramePadding.y = origFramePadding;
-    
 }

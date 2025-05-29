@@ -127,6 +127,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\ImGuizmo.cpp" />
     <ClCompile Include="Engine\3d\Model\Material\Material.cpp" />
     <ClCompile Include="Engine\3d\Model\Mesh\Mesh.cpp" />
+    <ClCompile Include="application\GameObject\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="scene\DemoScene.cpp" />
     <ClCompile Include="scene\ClearScene.cpp" />
     <ClCompile Include="Engine\3d\Animation\ModelAnimation.cpp" />
@@ -238,6 +239,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\ImGuizmo.h" />
     <ClInclude Include="Engine\3d\Model\Material\Material.h" />
     <ClInclude Include="Engine\3d\Model\Mesh\Mesh.h" />
+    <ClInclude Include="application\GameObject\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="scene\DemoScene.h" />
     <ClInclude Include="scene\ClearScene.h" />
     <ClInclude Include="Engine\3d\Animation\ModelAnimation.h" />

@@ -57,7 +57,7 @@ void Player::Update() {
         isLockOn_ = !isLockOn_;
     }
 
-     if (isDashing_) {
+    if (isDashing_) {
         targetFov_ = 55.0f;
     } else {
         targetFov_ = 45.0f;
@@ -74,11 +74,28 @@ void Player::Update() {
     RotateUpdate();
 
     BaseObject::Update();
+
+    Shot();
+
+    // 弾の更新と生存チェック
+    for (auto it = bullets_.begin(); it != bullets_.end();) {
+        (*it)->Update();
+
+        // 弾が生きていない場合は削除
+        if (!(*it)->IsAlive()) {
+            it = bullets_.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     shadow_->Draw(viewProjection, offSet);
     BaseObject::Draw(viewProjection, offSet);
+    for (auto &bullet : bullets_) {
+        bullet->Draw(viewProjection, offSet);
+    }
 }
 
 void Player::ChangeState(const std::string &stateName) {
@@ -147,15 +164,16 @@ void Player::Debug() {
             if (ImGui::TreeNode("操作説明")) {
                 ImGui::Text("WASD : 移動");
                 if (currentState_ != states_["Fly"].get()) {
-                    ImGui::Text("SPACE : ジャンプ\n");
-                    ImGui::Text("空中でSPACE : 浮遊\n");
+                    ImGui::Text("SPACE : ジャンプ");
+                    ImGui::Text("空中でSPACE : 浮遊");
                 } else {
-                    ImGui::Text("SPACE : 上昇\n");
-                    ImGui::Text("LSHIFT : 下降\n");
-                    ImGui::Text("LSHIFT2回押し : 落下\n");
-                    ImGui::Text("Ctrl : ダッシュ\n");
+                    ImGui::Text("SPACE : 上昇");
+                    ImGui::Text("LSHIFT : 下降");
+                    ImGui::Text("LSHIFT2回押し : 落下");
+                    ImGui::Text("Ctrl : ダッシュ");
                 }
-                ImGui::Text("L : ロックオン\n");
+                ImGui::Text("J : 射撃");
+                ImGui::Text("L : ロックオン");
 
                 ImGui::TreePop();
             }
@@ -393,6 +411,19 @@ void Player::Load() {
     jumpSpeed_ = data_->Load<float>("jumpSpeed", 10.0f);
     maxSpeed_ = data_->Load<float>("maxSpeed", 10.0f);
     accelRate_ = data_->Load<float>("accelRate", 15.0f);
+}
+
+void Player::Shot() {
+    if (Input::GetInstance()->TriggerKey(DIK_J)) {
+        // 弾の番号をbullets_のサイズで決定
+        std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
+        auto bullet = std::make_unique<PlayerBullet>();
+        bullet->Init(bulletName);
+        bullet->InitTransform(this);
+        bullet->SetScale(0.5f);
+        bullet->SetRadius(0.5f);
+        bullets_.push_back(std::move(bullet));
+    }
 }
 
 void Player::RotateUpdate() {

@@ -371,6 +371,9 @@
     <ClCompile Include="application\GameObject\Enemy\Enemy.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
+    <ClCompile Include="application\GameObject\Player\Bullet\PlayerBullet.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\Particle\Particle.hlsli">
@@ -570,9 +573,6 @@
     <ClInclude Include="Engine\3d\Line\DrawLine3D.h">
       <Filter>ソースファイル\myEngine\3d\line</Filter>
     </ClInclude>
-    <ClInclude Include="math\Quaternion.h">
-      <Filter>ソースファイル\math</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\Offscreen\OffScreen.h">
       <Filter>ソースファイル\myEngine\offscreen</Filter>
     </ClInclude>
@@ -631,6 +631,7 @@
     <ClInclude Include="application\GameObject\Field\SkyDome\SkyDome.h" />
     <ClInclude Include="application\GameObject\Field\Ground\Ground.h" />
     <ClInclude Include="application\GameObject\Enemy\Enemy.h" />
+    <ClInclude Include="application\GameObject\Player\Bullet\PlayerBullet.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Particle\Particle.PS.hlsl">

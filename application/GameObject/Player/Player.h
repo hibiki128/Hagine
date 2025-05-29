@@ -3,6 +3,8 @@
 #include "PlayerData.h"
 #include "State/PlayerBaseState.h"
 #include "application/Base/BaseObject.h"
+#include"Bullet/PlayerBullet.h"
+
 class FollowCamera;
 class Enemy;
 class Player : public BaseObject {
@@ -60,6 +62,8 @@ class Player : public BaseObject {
     void Save();
     void Load();
 
+    void Shot();
+
     void RotateUpdate();
     void CollisionGround();
 
@@ -108,4 +112,6 @@ class Player : public BaseObject {
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
+    std::vector<std::unique_ptr<PlayerBullet>> bullets_;
+
 };

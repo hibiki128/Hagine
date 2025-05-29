@@ -1,4 +1,5 @@
 #include "Enemy.h"
+#include "application/GameObject/Player/Bullet/PlayerBullet.h"
 
 Enemy::Enemy() {
 }
@@ -10,6 +11,8 @@ void Enemy::Init(const std::string objectName) {
 
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
+    BaseObject::AddCollider();
+    BaseObject::SetCollisionType(CollisionType::Sphere);
     BaseObject::objColor_.GetColor() = Vector4(1, 0, 0, 1);
     shadow_ = std::make_unique<BaseObject>();
     shadow_->Init("shadow");
@@ -30,6 +33,12 @@ void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 }
 
 void Enemy::Debug() {
+}
+
+void Enemy::OnCollisionEnter(Collider *other) {
+    if (dynamic_cast<PlayerBullet *>(other)) {
+   
+    }
 }
 
 Vector3 Enemy::GetMovementDirection() const {
@@ -59,4 +68,3 @@ Direction Enemy::CalculateDirectionFromRotation() {
 const char *Enemy::GetDirectionName(Direction dir) {
     return nullptr;
 }
-

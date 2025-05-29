@@ -13,6 +13,8 @@ class Enemy: public BaseObject {
     void Update() override;
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
     void Debug();
+    
+      void OnCollisionEnter([[maybe_unused]] Collider *other) override;
 
     /// <summary>
     /// Getter
