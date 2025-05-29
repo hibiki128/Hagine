@@ -56,6 +56,12 @@ class ParticleEmitter {
     void SetTrailScaleMultiplier(const std::string &groupName, const Vector3 &multiplier);
     void SetTrailColorMultiplier(const std::string &groupName, const Vector4 &multiplier);
     void SetTrailVelocityInheritance(const std::string &groupName, bool inherit, float scale = 0.3f);
+    void SetStartColor(const std::string &groupName, const Vector4 &color) {
+        particleSettings_[groupName].startColor = color;
+    }
+    void SetEndColor(const std::string &groupName, const Vector4 &color) {
+        particleSettings_[groupName].endColor = color;
+    }
 
   private:
     // パーティクルを発生させるEmit関数

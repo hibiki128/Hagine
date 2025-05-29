@@ -15,7 +15,7 @@ void TitleScene::Initialize() {
 
     obj_ = std::make_unique<BaseObject>();
     obj_->Init("test");
-    obj_->CreateModel("debug/suzannu.obj");
+    obj_->CreateModel("animation/walk.gltf");
     BaseObjectManager::GetInstance()->AddObject(std::move(obj_));
 
 }

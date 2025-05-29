@@ -150,8 +150,8 @@ struct Particle {
     float lifeTime;    // ライフタイム
     float currentTime; // 現在の時間
     float initialAlpha;
-    std::weak_ptr<Particle> parent;                  // 親パーティクルへの弱参照
-    std::vector<std::shared_ptr<Particle>> children; // 子パーティクルのリスト
+    //std::weak_ptr<Particle> parent;                  // 親パーティクルへの弱参照
+    //std::vector<std::shared_ptr<Particle>> children; // 子パーティクルのリスト
     Vector3 relativePosition;                        // 親からの相対位置
     Vector3 parentOffset;                            // 親に対するオフセット
     bool isChild;                                    // 子パーティクルかどうか
