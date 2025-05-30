@@ -46,12 +46,12 @@ void ParticleEditor::AddParticleEmitter(const std::string &name, const std::stri
 void ParticleEditor::Load() {
 }
 
-void ParticleEditor::AddParticleEmitter(const std::string &name) {
+void ParticleEditor::AddParticleEmitter(const std::string &name, const std::string &data) {
     // 新しい ParticleEmitter を作成
     auto emitter = std::make_unique<ParticleEmitter>();
 
     // 初期化処理
-    emitter->Initialize(name);
+    emitter->Initialize(name, data);
     // マップに追加
     emitters_[name] = std::move(emitter);
 }
@@ -147,7 +147,7 @@ void ParticleEditor::ShowImGuiEditor() {
                 ImGui::Spacing();
                 if (!localEmitterName_.empty()) {
                     if (ImGui::Button("エミッター生成")) {
-                        AddParticleEmitter(localEmitterName_);
+                        AddParticleEmitter(localEmitterName_,localEmitterName_);
                         localEmitterName_.clear();
                     }
                 }

@@ -1,10 +1,12 @@
 #include "Player.h"
 #include "Engine/Frame/Frame.h"
-#include "State/PlayerStateAir.h"
-#include "State/PlayerStateFly.h"
-#include "State/PlayerStateIdle.h"
-#include "State/PlayerStateJump.h"
-#include "State/PlayerStateMove.h"
+#include "State/Air/PlayerStateAir.h"
+#include "State/Fly/PlayerStateFlyIdle.h"
+
+#include "State/Fly/PlayerStateFlyMove.h"
+#include "State/Ground/PlayerStateIdle.h"
+#include "State/Ground/PlayerStateJump.h"
+#include "State/Ground/PlayerStateMove.h"
 #include "application/Camera/FollowCamera.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "numbers"
@@ -24,7 +26,8 @@ void Player::Init(const std::string objectName) {
     states_["Move"] = std::make_unique<PlayerStateMove>();
     states_["Jump"] = std::make_unique<PlayerStateJump>();
     states_["Air"] = std::make_unique<PlayerStateAir>();
-    states_["Fly"] = std::make_unique<PlayerStateFly>();
+    states_["FlyIdle"] = std::make_unique<PlayerStateFlyIdle>();
+    states_["FlyMove"] = std::make_unique<PlayerStateFlyMove>();
     currentState_ = states_["Idle"].get();
     isGrounded_ = true; // 初期状態は地面にいる
 
@@ -80,6 +83,8 @@ void Player::Update() {
     // 弾の更新と生存チェック
     for (auto it = bullets_.begin(); it != bullets_.end();) {
         (*it)->Update();
+        (*it)->SetSpeed(B_speed_);
+        (*it)->SetAcce(B_acce_);
 
         // 弾が生きていない場合は削除
         if (!(*it)->IsAlive()) {
@@ -95,6 +100,12 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     BaseObject::Draw(viewProjection, offSet);
     for (auto &bullet : bullets_) {
         bullet->Draw(viewProjection, offSet);
+    }
+}
+
+void Player::DrawParticle(const ViewProjection &viewProjection) {
+    for (auto &bullet : bullets_) {
+        bullet->DrawParticle(viewProjection);
     }
 }
 
@@ -156,6 +167,9 @@ void Player::Debug() {
             ImGui::Text("現在速度: X=%.2f, Y=%.2f, Z=%.2f",
                         velocity_.x, velocity_.y, velocity_.z);
 
+            ImGui::DragFloat("弾の速度", &B_speed_, 0.1f);
+            ImGui::DragFloat("弾の加速度", &B_acce_, 0.1f);
+
             if (ImGui::Button("セーブ")) {
 
                 Save();
@@ -163,7 +177,7 @@ void Player::Debug() {
 
             if (ImGui::TreeNode("操作説明")) {
                 ImGui::Text("WASD : 移動");
-                if (currentState_ != states_["Fly"].get()) {
+                if (currentState_ != states_["FlyMove"].get() || currentState_ != states_["FlyIdle"].get()) {
                     ImGui::Text("SPACE : ジャンプ");
                     ImGui::Text("空中でSPACE : 浮遊");
                 } else {
@@ -232,7 +246,7 @@ void Player::Move() {
         // 加速処理
         GetMoveSpeed() += GetAccelRate() * dt_;
 
-        if (currentState_ == states_["Fly"].get()) {
+        if (currentState_ == states_["FlyMove"].get()) {
             // 最大速度の制限（ダッシュ中は2倍）
             if (GetMoveSpeed() > GetMaxSpeed() * maxSpeedMultiplier) {
                 GetMoveSpeed() = GetMaxSpeed() * maxSpeedMultiplier;
@@ -397,12 +411,24 @@ float Player::GetVelocityMagnitude() const {
     return std::sqrt(velocity_.x * velocity_.x + velocity_.y * velocity_.y + velocity_.z * velocity_.z);
 }
 
+std::string Player::GetCurrentStateName() const {
+    // 現在のステートを文字列で返す
+    for (const auto &pair : states_) {
+        if (pair.second.get() == currentState_) {
+            return pair.first;
+        }
+    }
+    return "Unknown"; // エラー時のフォールバック
+}
+
 void Player::Save() {
     data_->Save("fallSpeed", fallSpeed_);
     data_->Save("moveSpeed", moveSpeed_);
     data_->Save("jumpSpeed", jumpSpeed_);
     data_->Save("maxSpeed", maxSpeed_);
     data_->Save("accelRate", accelRate_);
+    data_->Save("bulletSpeed", B_speed_);
+    data_->Save("bulletAcce", B_acce_);
 }
 
 void Player::Load() {
@@ -411,6 +437,8 @@ void Player::Load() {
     jumpSpeed_ = data_->Load<float>("jumpSpeed", 10.0f);
     maxSpeed_ = data_->Load<float>("maxSpeed", 10.0f);
     accelRate_ = data_->Load<float>("accelRate", 15.0f);
+    B_speed_ = data_->Load<float>("bulletSpeed", 60.0f);
+    B_acce_ = data_->Load<float>("bulletAcce", 5.0f);
 }
 
 void Player::Shot() {
@@ -419,10 +447,12 @@ void Player::Shot() {
         std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
         auto bullet = std::make_unique<PlayerBullet>();
         bullet->Init(bulletName);
+        bullet->InitEmitter(count);
         bullet->InitTransform(this);
         bullet->SetScale(0.5f);
         bullet->SetRadius(0.5f);
         bullets_.push_back(std::move(bullet));
+        count++;
     }
 }
 
@@ -574,7 +604,7 @@ void Player::DefaultMovement() {
         // 加速処理
         GetMoveSpeed() += GetAccelRate() * dt_;
 
-        if (currentState_ == states_["Fly"].get()) {
+        if (currentState_ == states_["FlyMove"].get()) {
             // 最大速度の制限（ダッシュ中は2倍）
             if (GetMoveSpeed() > GetMaxSpeed() * maxSpeedMultiplier) {
                 GetMoveSpeed() = GetMaxSpeed() * maxSpeedMultiplier;

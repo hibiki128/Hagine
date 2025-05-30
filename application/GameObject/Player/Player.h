@@ -1,7 +1,7 @@
 #pragma once
 #include "Data/DataHandler.h"
 #include "PlayerData.h"
-#include "State/PlayerBaseState.h"
+#include "State/Base/PlayerBaseState.h"
 #include "application/Base/BaseObject.h"
 #include"Bullet/PlayerBullet.h"
 
@@ -18,6 +18,7 @@ class Player : public BaseObject {
     void Init(const std::string objectName) override;
     void Update() override;
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void DrawParticle(const ViewProjection &viewProjection);
     void ChangeState(const std::string &stateName);
     void DirectionUpdate();
     void Debug();
@@ -53,6 +54,7 @@ class Player : public BaseObject {
 
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
+    std::string GetCurrentStateName() const;
 
   private:
     /// ==================================================================
@@ -99,13 +101,18 @@ class Player : public BaseObject {
 
     float currentFov_ = 45.0f; 
     float targetFov_ = 45.0f;  
-    float fovLerpSpeed_ = 5.0f;           
+    float fovLerpSpeed_ = 5.0f;     
+
+    float B_acce_ = 0.0f;
+    float B_speed_ = 0.0f;
 
     bool canJump_ = false;
     bool isAlive_ = true;
     bool isLockOn_ = false;
     bool isGrounded_ = true;
     bool isDashing_ = false;
+
+    int count = 0;
 
     std::unordered_map<std::string, std::unique_ptr<PlayerBaseState>> states_;
     PlayerBaseState *currentState_ = nullptr;

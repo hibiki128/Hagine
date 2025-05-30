@@ -3,6 +3,7 @@
 #include "Input.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
+#include <Engine/Frame/Frame.h>
 #include <cmath>
 
 void FollowCamera::Init() {
@@ -29,22 +30,52 @@ void FollowCamera::Update() {
         // カメラの右方向ベクトル
         Vector3 cameraRightDir = {std::cos(yaw_), 0.0f, -std::sin(yaw_)};
 
-        // プレイヤーの速度をカメラの右方向に投影して、カメラから見た左右移動成分を取得
-        float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
-
-        // カメラから見た左右方向の速度から肩の方向を計算（-1〜1にクランプ）
-        float dirSign = std::clamp(lateralVelocity / target_->GetMaxSpeed(), -1.0f, 1.0f);
-
-        // 肩の目標オフセット（左右に最大 shoulderMaxOffset_ 分ずらす）
-        shoulderOffsetTarget_.x = -dirSign * shoulderMaxOffset_;
-
-        // 肩オフセットを滑らかに補間
-        shoulderOffsetCurrent_.x = Lerp(shoulderOffsetCurrent_.x, shoulderOffsetTarget_.x, shoulderLerpSpeed_ * ImGui::GetIO().DeltaTime);
-
         Vector3 cameraPos;
 
         // プレイヤーがロックオン状態かチェック
         Player *player = dynamic_cast<Player *>(target_);
+
+        // ロックオン状態に応じて肩オフセットを処理
+        if (player && player->GetIsLockOn() && player->GetEnemy()) {
+            // ロックオン中のみ肩オフセット機能を有効化
+
+            // プレイヤーの速度をカメラの右方向に投影して、カメラから見た左右移動成分を取得
+            float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
+
+            // プレイヤーが動いている場合のみ肩オフセットを更新
+            if (std::abs(lateralVelocity) > 0.1f) { // 閾値を設けて微小な動きは無視
+                // カメラから見た左右方向の速度から肩の方向を計算（-1〜1にクランプ）
+                float dirSign = std::clamp(lateralVelocity / target_->GetMaxSpeed(), -1.0f, 1.0f);
+
+                // 肩の目標オフセット（左右に最大 shoulderMaxOffset_ 分ずらす）
+                shoulderOffsetTarget_.x = -dirSign * shoulderMaxOffset_;
+            }
+            // プレイヤーが止まっている場合は shoulderOffsetTarget_.x を変更しない（現在の値を維持）
+
+        } else {
+            // ロックオンしていない場合は中央に戻す
+            shoulderOffsetTarget_.x = 0.0f;
+        }
+
+        // 肩オフセットを滑らかに補間
+        if (player && player->GetIsLockOn() && player->GetEnemy()) {
+            // ロックオン中：プレイヤーの状態に基づいて補間を制御
+            std::string currentStateName = player->GetCurrentStateName();
+
+            if (currentStateName != "Idle" && currentStateName != "FlyIdle") {
+                if (currentStateName == "FlyMove" &&
+                    (!Input::GetInstance()->PushKey(DIK_SPACE) &&
+                     !Input::GetInstance()->PushKey(DIK_LSHIFT))) {
+                    // Idle以外の状態では補間を行う
+                    shoulderOffsetCurrent_.x = Lerp(shoulderOffsetCurrent_.x, shoulderOffsetTarget_.x, shoulderLerpSpeed_ * Frame::DeltaTime());
+                }
+            }
+            // Idle状態では shoulderOffsetCurrent_.x をそのまま維持（補間しない）
+        } else {
+            // ロックオンしていない時は常に補間して中央に戻す
+            shoulderOffsetCurrent_.x = Lerp(shoulderOffsetCurrent_.x, shoulderOffsetTarget_.x, shoulderLerpSpeed_ * Frame::DeltaTime());
+        }
+
         if (player && player->GetIsLockOn() && player->GetEnemy()) {
             // ロックオン中は常にプレイヤーの後ろにカメラを配置
 
@@ -101,6 +132,8 @@ void FollowCamera::imgui() {
     ImGui::Begin("FollowCamera");
     ImGui::DragFloat3("wt position", &worldTransform_.translation_.x, 0.1f);
     ImGui::DragFloat3("vp position", &viewProjection_.translation_.x, 0.1f);
+    ImGui::DragFloat3("offsetCurrent", &shoulderOffsetCurrent_.x, 0.1f);
+    ImGui::DragFloat3("offsetTarget", &shoulderOffsetTarget_.x, 0.1f);
     ImGui::End();
 }
 

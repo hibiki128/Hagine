@@ -401,3 +401,42 @@ std::list<Particle> ParticleManager::Emit() {
     }
     return allNewParticles;
 }
+
+bool ParticleManager::IsAllParticlesComplete() const {
+    for (const auto &[groupName, particleGroup] : particleGroups_) {
+        const auto &particles = particleGroup->GetParticleGroupData().particles;
+        if (!particles.empty()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ParticleManager::IsParticleGroupComplete(const std::string &groupName) const {
+    auto it = particleGroups_.find(groupName);
+    if (it == particleGroups_.end()) {
+        return true; // グループが存在しない場合はtrueを返す
+    }
+
+    const auto &particles = it->second->GetParticleGroupData().particles;
+    return particles.empty();
+}
+
+size_t ParticleManager::GetActiveParticleCount() const {
+    size_t totalCount = 0;
+    for (const auto &[groupName, particleGroup] : particleGroups_) {
+        const auto &particles = particleGroup->GetParticleGroupData().particles;
+        totalCount += particles.size();
+    }
+    return totalCount;
+}
+
+size_t ParticleManager::GetActiveParticleCount(const std::string &groupName) const {
+    auto it = particleGroups_.find(groupName);
+    if (it == particleGroups_.end()) {
+        return 0; // グループが存在しない場合は0を返す
+    }
+
+    const auto &particles = it->second->GetParticleGroupData().particles;
+    return particles.size();
+}

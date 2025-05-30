@@ -1,8 +1,8 @@
 #pragma once
-#include "PlayerBaseState.h"
-class PlayerStateJump : public PlayerBaseState {
+#include "../Base/PlayerBaseState.h"
+class PlayerStateIdle : public PlayerBaseState {
   public:
-    PlayerStateJump() = default;
+    PlayerStateIdle() = default;
     void Enter(Player &player) override;
     void Update(Player &player) override;
     void Exit(Player &player) override;

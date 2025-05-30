@@ -56,7 +56,7 @@ void Framework::Initialize() {
 #endif // _DEBUG
        /// -----------------------
 
-        /// ---------ImGuizmo---------
+    /// ---------ImGuizmo---------
 #ifdef _DEBUG
     imGuizmoManager_ = ImGuizmoManager::GetInstance();
 #endif // _DEBUG
@@ -211,6 +211,9 @@ void Framework::Update() {
 }
 
 void Framework::LoadResource() {
+    for (int i = 0; i < 100; i++) {
+        particleEditor->AddParticleEmitter("hitEmitter" + std::to_string(i), "hitEmitter");
+    }
 }
 
 void Framework::PlaySounds() {

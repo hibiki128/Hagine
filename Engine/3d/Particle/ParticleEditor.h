@@ -62,7 +62,7 @@ class ParticleEditor {
     // 初期化
     void Initialize();
     // パーティクルエミッター追加（名前指定）
-    void AddParticleEmitter(const std::string &name);
+    void AddParticleEmitter(const std::string &name, const std::string &data);
     // パーティクルエミッター追加（名前・ファイル・テクスチャ指定）
     void AddParticleEmitter(const std::string &name, const std::string &fileName, const std::string &texturePath);
     // パーティクルグループ追加（OBJモデル使用）

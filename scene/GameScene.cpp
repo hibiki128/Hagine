@@ -30,6 +30,11 @@ void GameScene::Initialize() {
     followCamera_->Init();
 
     /// ===================================================
+    /// ポインタ共有
+    /// ===================================================
+    player_ptr = player_.get();
+
+    /// ===================================================
     /// セット
     /// ===================================================
     followCamera_->SetPlayer(player_.get());
@@ -58,7 +63,7 @@ void GameScene::Update() {
 void GameScene::Draw() {
     /// -------描画処理開始-------
 
-     BaseObjectManager::GetInstance()->Draw(vp_);
+    BaseObjectManager::GetInstance()->Draw(vp_);
 
     /// Spriteの描画準備
     spCommon_->DrawCommonSetting();
@@ -69,13 +74,13 @@ void GameScene::Draw() {
     //-----3DObjectの開始-----
     skyDome_->Draw(vp_);
     ground_->Draw(vp_);
-    DrawLine3D::GetInstance()->DrawGrid(-0.95f, 64, 1000, {0.0f,0.0f,1.0f,0.75f});
+    DrawLine3D::GetInstance()->DrawGrid(-0.95f, 64, 1000, {0.0f, 0.0f, 1.0f, 0.75f});
     //-----------------------
 
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
     //------Particleの描画開始-------
-
+    player_ptr->DrawParticle(vp_);
     //-----------------------------
 
     /// Spriteの描画準備

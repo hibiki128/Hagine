@@ -25,7 +25,7 @@ void PlayerStateAir::Update(Player &player) {
 
     // Spaceキーが押された & 経過時間が1秒未満ならFlyへ
     if (elapsedTime_ < 1.0f && Input::GetInstance()->TriggerKey(DIK_SPACE)) {
-        player.ChangeState("Fly");
+        player.ChangeState("FlyIdle");
         return;
     }
 

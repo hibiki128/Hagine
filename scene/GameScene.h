@@ -79,4 +79,6 @@ class GameScene : public BaseScene {
 
     // 地面
     std::unique_ptr<Ground> ground_;
+
+    Player *player_ptr = nullptr;
 };

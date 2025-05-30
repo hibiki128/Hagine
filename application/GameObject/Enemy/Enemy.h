@@ -1,6 +1,7 @@
 #pragma once
 #include"application/Base/BaseObject.h"
 #include <application/GameObject/Player/PlayerData.h>
+
 class Enemy: public BaseObject {
   public:
     /// ==================================================================
@@ -14,7 +15,7 @@ class Enemy: public BaseObject {
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
     void Debug();
     
-      void OnCollisionEnter([[maybe_unused]] Collider *other) override;
+    void OnCollisionEnter([[maybe_unused]] Collider *other) override;
 
     /// <summary>
     /// Getter
@@ -77,4 +78,5 @@ class Enemy: public BaseObject {
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
+
 };

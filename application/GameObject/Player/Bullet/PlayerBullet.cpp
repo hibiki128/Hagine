@@ -1,6 +1,8 @@
 #include "PlayerBullet.h"
+#include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
+#include <Engine/Frame/Frame.h>
 #include <cmath>
 
 void PlayerBullet::Init(const std::string objectName) {
@@ -14,11 +16,25 @@ void PlayerBullet::Init(const std::string objectName) {
     // 弾の生存時間を設定（5秒後に消える）
     lifeTime_ = 5.0f;
     currentLifeTime_ = 0.0f;
+
+    // 加速度の初期設定
+    acce_ = 10.0f; // デフォルトの加速度
+}
+
+void PlayerBullet::InitEmitter(int count) {
+    emitter_ = std::make_unique<ParticleEmitter>();
+    emitter_ = ParticleEditor::GetInstance()->GetEmitter("hitEmitter" + std::to_string(count));
 }
 
 void PlayerBullet::Update() {
+    if (emitter_->IsAllParticlesComplete() && isHit_) {
+        isAlive_ = false;
+    }
+
+    float deltaTime = Frame::DeltaTime();
+
     // 生存時間の更新
-    currentLifeTime_ += ImGui::GetIO().DeltaTime;
+    currentLifeTime_ += deltaTime;
 
     // 生存時間が過ぎたら弾を無効化
     if (currentLifeTime_ >= lifeTime_) {
@@ -55,9 +71,9 @@ void PlayerBullet::Update() {
 
                 // 追尾方向へ徐々に向きを変える
                 Vector3 newDir;
-                newDir.x = currentDir.x + (toEnemy.x - currentDir.x) * homingStrength * ImGui::GetIO().DeltaTime;
-                newDir.y = currentDir.y + (toEnemy.y - currentDir.y) * homingStrength * ImGui::GetIO().DeltaTime;
-                newDir.z = currentDir.z + (toEnemy.z - currentDir.z) * homingStrength * ImGui::GetIO().DeltaTime;
+                newDir.x = currentDir.x + (toEnemy.x - currentDir.x) * homingStrength * deltaTime;
+                newDir.y = currentDir.y + (toEnemy.y - currentDir.y) * homingStrength * deltaTime;
+                newDir.z = currentDir.z + (toEnemy.z - currentDir.z) * homingStrength * deltaTime;
 
                 // 新しい方向を正規化
                 float newDirLength = std::sqrt(newDir.x * newDir.x + newDir.y * newDir.y + newDir.z * newDir.z);
@@ -66,15 +82,38 @@ void PlayerBullet::Update() {
                     newDir.y /= newDirLength;
                     newDir.z /= newDirLength;
 
-                    // 速度を更新
-                    velocity_ = newDir * speed_;
+                    // 現在の速度の大きさを保持しつつ方向を更新
+                    velocity_ = newDir * currentSpeed;
                 }
             }
         }
     }
 
+    // 加速度処理：速度の大きさを更新
+    Vector3 currentDir = velocity_;
+    float currentSpeed = std::sqrt(currentDir.x * currentDir.x + currentDir.y * currentDir.y + currentDir.z * currentDir.z);
+
+    if (currentSpeed > 0.1f) {
+        // 現在の方向を維持しつつ、速度の大きさを加速度で増加
+        currentDir.x /= currentSpeed;
+        currentDir.y /= currentSpeed;
+        currentDir.z /= currentSpeed;
+
+        // 新しい速度 = 現在の速度 + 加速度 * 時間
+        float newSpeed = currentSpeed + acce_ * deltaTime;
+
+        // 最大速度制限（オプション）
+        float maxSpeed = 200.0f;
+        if (newSpeed > maxSpeed) {
+            newSpeed = maxSpeed;
+        }
+
+        // 速度ベクトルを更新
+        velocity_ = currentDir * newSpeed;
+    }
+
     // 位置を更新
-    transform_.translation_ += velocity_ * ImGui::GetIO().DeltaTime;
+    transform_.translation_ += velocity_ * deltaTime;
 }
 
 void PlayerBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -82,6 +121,10 @@ void PlayerBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (isAlive_) {
         BaseObject::Draw(viewProjection, offSet);
     }
+}
+
+void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
+    emitter_->Draw(viewProjection);
 }
 
 void PlayerBullet::InitTransform(Player *player) {
@@ -141,7 +184,8 @@ void PlayerBullet::InitTransform(Player *player) {
 
 void PlayerBullet::OnCollisionEnter(Collider *other) {
     if (dynamic_cast<Enemy *>(other) && isAlive_) {
-        isAlive_ = false;
+        emitter_->UpdateOnce();
         SetCollisionEnabled(false);
+        isHit_ = true;
     }
 }

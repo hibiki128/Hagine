@@ -1,6 +1,6 @@
 #pragma once
-#include "PlayerBaseState.h"
-class PlayerStateFly : public PlayerBaseState {
+#include "../Base/PlayerBaseState.h"
+class PlayerStateFlyIdle : public PlayerBaseState {
   public:
     void Enter(Player &player) override;
     void Update(Player &player) override;

@@ -1,10 +1,9 @@
 #define NOMINMAX
-#include "PlayerStateFly.h"
 #include "Engine/Frame/Frame.h"
 #include "Input.h"
+#include "PlayerStateFlyMove.h"
 #include "application/GameObject/Player/Player.h"
 #include <cmath>
-
 namespace {
 const float kFlyAcceleration = 30.0f;
 const float kFlyMaxSpeed = 15.0f;
@@ -12,7 +11,7 @@ const float kFlyMaxSpeedBoost = 20.0f;
 const float kFallThresholdTime = 0.3f; // 二回押しの間隔
 } // namespace
 
-void PlayerStateFly::Enter(Player &player) {
+void PlayerStateFlyMove::Enter(Player &player) {
     // 浮遊時は重力をゼロに
     player.GetAcceleration().y = 0.0f;
     player.GetVelocity().y = 0.0f;
@@ -22,7 +21,7 @@ void PlayerStateFly::Enter(Player &player) {
     spaceHeldTime_ = 0.0f;
 }
 
-void PlayerStateFly::Update(Player &player) {
+void PlayerStateFlyMove::Update(Player &player) {
     player.Move();
 
     // 上昇処理（Space長押し）
@@ -47,13 +46,14 @@ void PlayerStateFly::Update(Player &player) {
         if (fallInputTime_ < kFallThresholdTime) {
             fallInputCount_++;
         } else {
-            fallInputCount_ = 1;
+            fallInputCount_ = 0;
         }
         fallInputTime_ = 0.0f;
     }
 
-    if (fallInputCount_ >= 2) {
+    if (fallInputCount_ >= 1) {
         player.ChangeState("Air");
+        fallInputCount_ = 0;
         return;
     }
 
@@ -65,10 +65,22 @@ void PlayerStateFly::Update(Player &player) {
         return;
     }
 
+    if (!Input::GetInstance()->TriggerKey(DIK_LSHIFT) &&
+        !Input::GetInstance()->PushKey(DIK_LSHIFT) &&
+        !Input::GetInstance()->PushKey(DIK_SPACE) &&
+        !Input::GetInstance()->PushKey(DIK_D) &&
+        !Input::GetInstance()->PushKey(DIK_A) &&
+        !Input::GetInstance()->PushKey(DIK_W) &&
+        !Input::GetInstance()->PushKey(DIK_S) &&
+        fallInputTime_ > kFallThresholdTime &&
+        fallInputCount_ < 1) {
+        player.ChangeState("FlyIdle");
+        return;
+    }
+
     // 向き更新
     player.DirectionUpdate();
 }
 
-void PlayerStateFly::Exit(Player &player) {
-    // 重力の復帰は次のステートに任せる
+void PlayerStateFlyMove::Exit(Player &player) {
 }

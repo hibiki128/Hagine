@@ -18,7 +18,7 @@ class ParticleEmitter {
     // コンストラクタでメンバ変数を初期化
     ParticleEmitter();
 
-    void Initialize(std::string name = {});
+    void Initialize(std::string name = {}, std::string data = {});
 
     // 更新処理を行うUpdate関数
     void Update();
@@ -30,6 +30,8 @@ class ParticleEmitter {
     void DrawEmitter();
 
     void Debug(); // ImGui用の関数を追加
+
+    bool IsAllParticlesComplete();
 
     void AddParticleGroup(ParticleGroup *particleGroup);
     void RemoveParticleGroup(const std::string &name) {

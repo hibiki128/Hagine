@@ -347,19 +347,19 @@
     <ClCompile Include="application\GameObject\Player\Player.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
-    <ClCompile Include="application\GameObject\Player\State\PlayerStateAir.cpp">
+    <ClCompile Include="application\GameObject\Player\State\Air\PlayerStateAir.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
-    <ClCompile Include="application\GameObject\Player\State\PlayerStateFly.cpp">
+    <ClCompile Include="application\GameObject\Player\State\Fly\PlayerStateFlyIdle.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
-    <ClCompile Include="application\GameObject\Player\State\PlayerStateIdle.cpp">
+    <ClCompile Include="application\GameObject\Player\State\Ground\PlayerStateIdle.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
-    <ClCompile Include="application\GameObject\Player\State\PlayerStateJump.cpp">
+    <ClCompile Include="application\GameObject\Player\State\Ground\PlayerStateJump.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
-    <ClCompile Include="application\GameObject\Player\State\PlayerStateMove.cpp">
+    <ClCompile Include="application\GameObject\Player\State\Ground\PlayerStateMove.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
     <ClCompile Include="application\GameObject\Field\SkyDome\SkyDome.cpp">
@@ -372,6 +372,9 @@
       <Filter>ソースファイル</Filter>
     </ClCompile>
     <ClCompile Include="application\GameObject\Player\Bullet\PlayerBullet.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="application\GameObject\Player\State\Fly\PlayerStateFlyMove.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -622,16 +625,17 @@
     <ClInclude Include="application\Camera\FollowCamera.h" />
     <ClInclude Include="application\GameObject\Player\Player.h" />
     <ClInclude Include="application\GameObject\Player\PlayerData.h" />
-    <ClInclude Include="application\GameObject\Player\State\PlayerBaseState.h" />
-    <ClInclude Include="application\GameObject\Player\State\PlayerStateAir.h" />
-    <ClInclude Include="application\GameObject\Player\State\PlayerStateFly.h" />
-    <ClInclude Include="application\GameObject\Player\State\PlayerStateIdle.h" />
-    <ClInclude Include="application\GameObject\Player\State\PlayerStateJump.h" />
-    <ClInclude Include="application\GameObject\Player\State\PlayerStateMove.h" />
+    <ClInclude Include="application\GameObject\Player\State\Base\PlayerBaseState.h" />
+    <ClInclude Include="application\GameObject\Player\State\Air\PlayerStateAir.h" />
+    <ClInclude Include="application\GameObject\Player\State\Fly\PlayerStateFlyIdle.h" />
+    <ClInclude Include="application\GameObject\Player\State\Ground\PlayerStateIdle.h" />
+    <ClInclude Include="application\GameObject\Player\State\Ground\PlayerStateJump.h" />
+    <ClInclude Include="application\GameObject\Player\State\Ground\PlayerStateMove.h" />
     <ClInclude Include="application\GameObject\Field\SkyDome\SkyDome.h" />
     <ClInclude Include="application\GameObject\Field\Ground\Ground.h" />
     <ClInclude Include="application\GameObject\Enemy\Enemy.h" />
     <ClInclude Include="application\GameObject\Player\Bullet\PlayerBullet.h" />
+    <ClInclude Include="application\GameObject\Player\State\Fly\PlayerStateFlyMove.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Particle\Particle.PS.hlsl">

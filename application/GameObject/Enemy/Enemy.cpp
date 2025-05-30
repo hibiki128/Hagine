@@ -1,4 +1,5 @@
 #include "Enemy.h"
+
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 
 Enemy::Enemy() {
@@ -37,7 +38,7 @@ void Enemy::Debug() {
 
 void Enemy::OnCollisionEnter(Collider *other) {
     if (dynamic_cast<PlayerBullet *>(other)) {
-   
+       
     }
 }
 
