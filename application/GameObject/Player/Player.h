@@ -5,6 +5,7 @@
 #include "application/Base/BaseObject.h"
 #include"Bullet/PlayerBullet.h"
 
+class ChageShot;
 class FollowCamera;
 class Enemy;
 class Player : public BaseObject {
@@ -112,13 +113,12 @@ class Player : public BaseObject {
     bool isGrounded_ = true;
     bool isDashing_ = false;
 
-    int count = 0;
-
     std::unordered_map<std::string, std::unique_ptr<PlayerBaseState>> states_;
     PlayerBaseState *currentState_ = nullptr;
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
     std::vector<std::unique_ptr<PlayerBullet>> bullets_;
+    std::unique_ptr<ChageShot> chageShot_;
 
 };

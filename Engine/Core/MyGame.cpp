@@ -29,11 +29,11 @@ void MyGame::Update() {
     if (input->TriggerKey(DIK_F11)) {
         winApp->ToggleFullScreen();
     }
+
+#ifdef _DEBUG
     if (input->TriggerKey(DIK_F5)) {
         imGuiManager_->GetIsShowMainUI() = !imGuiManager_->GetIsShowMainUI();
     }
-
-#ifdef _DEBUG
     imGuiManager_->Begin();
     imGuizmoManager_->BeginFrame();
     imGuizmoManager_->SetViewProjection(sceneManager_->GetBaseScene()->GetViewProjection());

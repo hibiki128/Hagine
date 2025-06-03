@@ -1,6 +1,8 @@
 #include "ParticleEditor.h"
 #include "ImGui/ImGuiManager.h"
+#ifdef _DEBUG
 #include"ShowFolder/ShowFolder.h"
+#endif // _DEBUG
 
 ParticleEditor *ParticleEditor::instance = nullptr;
 
@@ -46,12 +48,12 @@ void ParticleEditor::AddParticleEmitter(const std::string &name, const std::stri
 void ParticleEditor::Load() {
 }
 
-void ParticleEditor::AddParticleEmitter(const std::string &name, const std::string &data) {
+void ParticleEditor::AddParticleEmitter(const std::string &name) {
     // 新しい ParticleEmitter を作成
     auto emitter = std::make_unique<ParticleEmitter>();
 
     // 初期化処理
-    emitter->Initialize(name, data);
+    emitter->Initialize(name);
     // マップに追加
     emitters_[name] = std::move(emitter);
 }
@@ -147,7 +149,7 @@ void ParticleEditor::ShowImGuiEditor() {
                 ImGui::Spacing();
                 if (!localEmitterName_.empty()) {
                     if (ImGui::Button("エミッター生成")) {
-                        AddParticleEmitter(localEmitterName_,localEmitterName_);
+                        AddParticleEmitter(localEmitterName_);
                         localEmitterName_.clear();
                     }
                 }
@@ -249,7 +251,9 @@ void ParticleEditor::ShowImGuiEditor() {
 
                     // テクスチャ選択セクション (緑色)
                     if (ColoredCollapsingHeader("テクスチャ選択", 3)) {
+#ifdef _DEBUG
                         ShowTextureFile(localTexturePath_);
+#endif // _DEBUG
                     }
 
                     // パーティクルグループ作成ボタン
@@ -277,7 +281,9 @@ void ParticleEditor::ShowImGuiEditor() {
 
                     // テクスチャ選択セクション (オレンジ色)
                     if (ColoredCollapsingHeader("テクスチャ選択", 5)) {
+#ifdef _DEBUG
                         ShowTextureFile(localTexturePath_);
+#endif // _DEBUG
                     }
 
                     // パーティクルグループ作成ボタン

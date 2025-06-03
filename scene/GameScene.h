@@ -66,7 +66,6 @@ class GameScene : public BaseScene {
 
     // プレイヤー
     std::unique_ptr<Player> player_;
-    Player *playerPtr_ = nullptr;
 
     // 敵
     std::unique_ptr<Enemy> enemy_;
@@ -80,5 +79,6 @@ class GameScene : public BaseScene {
     // 地面
     std::unique_ptr<Ground> ground_;
 
+    Enemy *enemy_ptr = nullptr;
     Player *player_ptr = nullptr;
 };

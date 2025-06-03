@@ -377,6 +377,9 @@
     <ClCompile Include="application\GameObject\Player\State\Fly\PlayerStateFlyMove.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
+    <ClCompile Include="application\GameObject\Player\Bullet\ChageShot\ChageShot.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\Particle\Particle.hlsli">
@@ -636,6 +639,7 @@
     <ClInclude Include="application\GameObject\Enemy\Enemy.h" />
     <ClInclude Include="application\GameObject\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="application\GameObject\Player\State\Fly\PlayerStateFlyMove.h" />
+    <ClInclude Include="application\GameObject\Player\Bullet\ChageShot\ChageShot.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Particle\Particle.PS.hlsl">

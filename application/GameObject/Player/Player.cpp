@@ -3,6 +3,7 @@
 #include "State/Air/PlayerStateAir.h"
 #include "State/Fly/PlayerStateFlyIdle.h"
 
+#include "Bullet/ChageShot/ChageShot.h"
 #include "State/Fly/PlayerStateFlyMove.h"
 #include "State/Ground/PlayerStateIdle.h"
 #include "State/Ground/PlayerStateJump.h"
@@ -39,6 +40,9 @@ void Player::Init(const std::string objectName) {
     shadow_->GetWorldRotation().x = degreesToRadians(90.0f);
     shadow_->GetWorldScale() = {1.5f, 1.5f, 1.5f};
 
+    chageShot_ = std::make_unique<ChageShot>();
+    chageShot_->Init("chageShot");
+
     Load();
 }
 
@@ -46,6 +50,10 @@ void Player::Update() {
     dt_ = Frame::DeltaTime();
     shadow_->GetWorldPosition() = {transform_.translation_.x, -0.95f, transform_.translation_.z};
     shadow_->Update();
+    if (chageShot_) {
+        chageShot_->SetPlayer(this);
+        chageShot_->Update();
+    }
 
     if (currentState_) {
         currentState_->Update(*this);
@@ -101,12 +109,11 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     for (auto &bullet : bullets_) {
         bullet->Draw(viewProjection, offSet);
     }
+    chageShot_->Draw(viewProjection, offSet);
 }
 
 void Player::DrawParticle(const ViewProjection &viewProjection) {
-    for (auto &bullet : bullets_) {
-        bullet->DrawParticle(viewProjection);
-    }
+    chageShot_->DrawParticle(viewProjection);
 }
 
 void Player::ChangeState(const std::string &stateName) {
@@ -187,6 +194,7 @@ void Player::Debug() {
                     ImGui::Text("Ctrl : ダッシュ");
                 }
                 ImGui::Text("J : 射撃");
+                ImGui::Text("K長押し : チャージショット");
                 ImGui::Text("L : ロックオン");
 
                 ImGui::TreePop();
@@ -447,12 +455,10 @@ void Player::Shot() {
         std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
         auto bullet = std::make_unique<PlayerBullet>();
         bullet->Init(bulletName);
-        bullet->InitEmitter(count);
         bullet->InitTransform(this);
         bullet->SetScale(0.5f);
         bullet->SetRadius(0.5f);
         bullets_.push_back(std::move(bullet));
-        count++;
     }
 }
 

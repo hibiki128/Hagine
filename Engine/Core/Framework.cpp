@@ -211,9 +211,8 @@ void Framework::Update() {
 }
 
 void Framework::LoadResource() {
-    for (int i = 0; i < 100; i++) {
-        particleEditor->AddParticleEmitter("hitEmitter" + std::to_string(i), "hitEmitter");
-    }
+    particleEditor->AddParticleEmitter("hitEmitter");
+    particleEditor->AddParticleEmitter("chageEmitter");
 }
 
 void Framework::PlaySounds() {

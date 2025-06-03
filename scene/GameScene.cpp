@@ -32,6 +32,7 @@ void GameScene::Initialize() {
     /// ===================================================
     /// ポインタ共有
     /// ===================================================
+    enemy_ptr = enemy_.get();
     player_ptr = player_.get();
 
     /// ===================================================
@@ -40,7 +41,6 @@ void GameScene::Initialize() {
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
-    playerPtr_ = player_.get();
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
     BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
 }
@@ -80,6 +80,7 @@ void GameScene::Draw() {
     /// Particleの描画準備
     ptCommon_->DrawCommonSetting();
     //------Particleの描画開始-------
+    enemy_ptr->DrawParticle(vp_);
     player_ptr->DrawParticle(vp_);
     //-----------------------------
 
@@ -124,7 +125,7 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
-    playerPtr_->Debug();
+    player_ptr->Debug();
 }
 
 void GameScene::AddParticleSetting() {
@@ -147,8 +148,8 @@ void GameScene::ChangeScene() {
 
 #endif // _DEBUG
 #ifndef _DEBUG
-    if (input_->TriggerKey(DIK_SPACE)) {
+ /*   if (input_->TriggerKey(DIK_SPACE)) {
         sceneManager_->NextSceneReservation("TITLE");
-    }
+    }*/
 #endif // !_DEBUG
 }

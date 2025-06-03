@@ -8,16 +8,16 @@
 // コンストラクタ
 ParticleEmitter::ParticleEmitter() {}
 
-void ParticleEmitter::Initialize(std::string name ,std::string data) {
+void ParticleEmitter::Initialize(std::string name) {
     transform_.Initialize();
     if (!name.empty()) {
         name_ = name;
-        datas_ = std::make_unique<DataHandler>("Particle", data);
+        datas_ = std::make_unique<DataHandler>("Particle",name);
         LoadFromJson();
         Manager_ = std::make_unique<ParticleManager>();
         Manager_->Initialize(SrvManager::GetInstance());
         LoadParticleGroup();
-        datas_ = std::make_unique<DataHandler>("Particle", data);
+        datas_ = std::make_unique<DataHandler>("Particle", name);
     }
 }
 

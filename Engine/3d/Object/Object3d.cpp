@@ -401,6 +401,7 @@ void Object3d::SetShininess(float shininess) {
 }
 
 void Object3d::CreateTransformationMatrix() {
+
     transformationMatrixResource = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
     // 書き込むかめのアドレスを取得
     transformationMatrixResource->Map(0, nullptr, reinterpret_cast<void **>(&transformationMatrixData));

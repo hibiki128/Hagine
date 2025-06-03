@@ -1,6 +1,6 @@
 #pragma once
 #include "application/Base/BaseObject.h"
-#include"Particle/ParticleEmitter.h"
+
 class Player;
 class Enemy;
 
@@ -11,10 +11,8 @@ class PlayerBullet : public BaseObject {
     /// ==================================
 
     void Init(const std::string objectName) override;
-    void InitEmitter(int count);
     void Update() override;
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
-    void DrawParticle(const ViewProjection &viewProjection);
     void InitTransform(Player *player);
 
     void OnCollisionEnter([[maybe_unused]] Collider *other) override;
@@ -59,6 +57,4 @@ class PlayerBullet : public BaseObject {
     // ロックオン関連
     bool isLockOnBullet_ = false;  // ロックオン弾かどうか
     Enemy *targetEnemy_ = nullptr; // ターゲットの敵
-
-    std::unique_ptr<ParticleEmitter> emitter_;
 };

@@ -1,5 +1,5 @@
 #include "PlayerBullet.h"
-#include "Particle/ParticleEditor.h"
+
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
 #include <Engine/Frame/Frame.h>
@@ -21,13 +21,8 @@ void PlayerBullet::Init(const std::string objectName) {
     acce_ = 10.0f; // デフォルトの加速度
 }
 
-void PlayerBullet::InitEmitter(int count) {
-    emitter_ = std::make_unique<ParticleEmitter>();
-    emitter_ = ParticleEditor::GetInstance()->GetEmitter("hitEmitter" + std::to_string(count));
-}
-
 void PlayerBullet::Update() {
-    if (emitter_->IsAllParticlesComplete() && isHit_) {
+    if (isHit_) {
         isAlive_ = false;
     }
 
@@ -123,10 +118,6 @@ void PlayerBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     }
 }
 
-void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
-    emitter_->Draw(viewProjection);
-}
-
 void PlayerBullet::InitTransform(Player *player) {
     // プレイヤーの位置を弾の初期位置に設定
     this->transform_.translation_ = player->GetWorldPosition();
@@ -184,7 +175,6 @@ void PlayerBullet::InitTransform(Player *player) {
 
 void PlayerBullet::OnCollisionEnter(Collider *other) {
     if (dynamic_cast<Enemy *>(other) && isAlive_) {
-        emitter_->UpdateOnce();
         SetCollisionEnabled(false);
         isHit_ = true;
     }

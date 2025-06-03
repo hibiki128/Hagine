@@ -1,6 +1,7 @@
 {
     "GroupNames": [
-        "hit"
+        "hit",
+        "fire"
     ],
     "emitFrequency": 1.0,
     "emitterRotation": {
@@ -17,6 +18,141 @@
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
+    },
+    "fire_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "fire_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_alphaMax": 1.0,
+    "fire_alphaMin": 1.0,
+    "fire_count": 10,
+    "fire_enableTrail": true,
+    "fire_endAcce": {
+        "x": 0.8999999761581421,
+        "y": 1.0,
+        "z": 0.8999999761581421
+    },
+    "fire_endColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 0.19354838132858276,
+        "z": 0.0
+    },
+    "fire_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_gatherStartRatio": 0.0,
+    "fire_gatherStrength": 0.0,
+    "fire_gravity": 74.7699966430664,
+    "fire_isAcceMultiply": true,
+    "fire_isAllRamdomScale": false,
+    "fire_isBillboard": false,
+    "fire_isEmitOnEdge": false,
+    "fire_isEndScale": false,
+    "fire_isFaceDirection": false,
+    "fire_isGatherMode": false,
+    "fire_isRandomColor": false,
+    "fire_isRandomRotate": false,
+    "fire_isRandomScale": true,
+    "fire_isSinMove": true,
+    "fire_lifeTimeMax": 0.8999999761581421,
+    "fire_lifeTimeMin": 0.6000000238418579,
+    "fire_maxTrailParticles": 1,
+    "fire_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "fire_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "fire_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_scale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_scaleMax": 1.100000023841858,
+    "fire_scaleMin": 0.20000000298023224,
+    "fire_startAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "fire_startColor": {
+        "w": 1.0,
+        "x": 0.9964157938957214,
+        "y": 0.14999805390834808,
+        "z": 0.0
+    },
+    "fire_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_startScale": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+    },
+    "fire_trailColorMultiplier": {
+        "w": 2.0,
+        "x": 2.0,
+        "y": 2.0,
+        "z": 2.0
+    },
+    "fire_trailInheritVelocity": true,
+    "fire_trailLifeScale": 0.3400000035762787,
+    "fire_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "fire_trailSpawnInterval": 0.008999999612569809,
+    "fire_trailVelocityScale": 0.0,
+    "fire_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_velocityMax": {
+        "x": 30.0,
+        "y": 30.0,
+        "z": 30.0
+    },
+    "fire_velocityMin": {
+        "x": -30.0,
+        "y": 25.0,
+        "z": -30.0
     },
     "hit_allScaleMax": {
         "x": 2.0,

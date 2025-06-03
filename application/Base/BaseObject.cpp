@@ -1,6 +1,8 @@
 #define NOMINMAX
 #include "BaseObject.h"
+#ifdef _DEBUG
 #include "ShowFolder/ShowFolder.h"
+#endif // _DEBUG
 
 void BaseObject::Init(const std::string objectName) {
     obj3d_ = std::make_unique<Object3d>();
@@ -169,7 +171,9 @@ void BaseObject::DebugObject() {
         // テクスチャ選択ツリー
         if (ImGui::TreeNode("テクスチャ選択")) {
             // テクスチャ選択UI（パスを表示・取得）
+#ifdef _DEBUG
             ShowTextureFile(texturePath_);
+#endif // _DEBUG
 
             if (ImGui::Button("適用")) {
                 // インデックス付きでテクスチャを適用

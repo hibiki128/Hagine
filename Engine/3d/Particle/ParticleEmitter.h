@@ -18,7 +18,7 @@ class ParticleEmitter {
     // コンストラクタでメンバ変数を初期化
     ParticleEmitter();
 
-    void Initialize(std::string name = {}, std::string data = {});
+    void Initialize(std::string name = {});
 
     // 更新処理を行うUpdate関数
     void Update();
@@ -40,7 +40,7 @@ class ParticleEmitter {
 
     int selectedGroupIndex_ = 0;
 
-    void SetPosition(const std::string &groupName, const Vector3 &position) { particleSettings_[groupName].translate = position; }
+    void SetPosition(const Vector3 &position) { transform_.translation_= position; }
     void SetPositionY(const std::string &groupName, float positionY) { particleSettings_[groupName].translate.y = positionY; }
     void SetRotate(const std::string &groupName, const Vector3 &rotate) { particleSettings_[groupName].rotation = rotate; }
     void SetRotateY(const std::string &groupName, float rotateY) { particleSettings_[groupName].rotation.y = rotateY; }
