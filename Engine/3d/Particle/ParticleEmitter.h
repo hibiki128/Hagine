@@ -40,6 +40,8 @@ class ParticleEmitter {
 
     int selectedGroupIndex_ = 0;
 
+    std::unique_ptr<ParticleEmitter> Clone() const;
+
     void SetPosition(const Vector3 &position) { transform_.translation_= position; }
     void SetPositionY(const std::string &groupName, float positionY) { particleSettings_[groupName].translate.y = positionY; }
     void SetRotate(const std::string &groupName, const Vector3 &rotate) { particleSettings_[groupName].rotation = rotate; }
