@@ -80,12 +80,6 @@ void ParticleEditor::AddPrimitiveParticleGroup(const std::string &name, const st
     particleGroupManager_->AddParticleGroup(std::move(group));
 }
 
-void ParticleEditor::EditorWindow() {
-    ImGui::Begin("パーティクルエディター");
-    ShowImGuiEditor();
-    ImGui::End();
-}
-
 void ParticleEditor::DrawAll(const ViewProjection &vp_) {
     for (auto &[name, emitter] : emitters_) {
         if (emitter) {
@@ -100,6 +94,29 @@ void ParticleEditor::DebugAll() {
             emitter->Debug();
         }
     }
+}
+
+std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
+    auto it = emitters_.find(name);
+    if (it != emitters_.end()) {
+        // マップから取り出し、所有権を呼び出し元に移動
+        return std::move(it->second);
+    }
+    return nullptr;
+}
+
+std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const std::string &name) {
+    auto it = emitters_.find(name);
+    if (it != emitters_.end() && it->second) {
+        return it->second->Clone(); // コピーを作って返す
+    }
+    return nullptr;
+}
+
+void ParticleEditor::EditorWindow() {
+    ImGui::Begin("パーティクルエディター");
+    ShowImGuiEditor();
+    ImGui::End();
 }
 
 // カラー付きCollapsingHeaderを表示するヘルパー関数
@@ -387,11 +404,3 @@ std::vector<std::string> ParticleEditor::GetJsonFiles() {
     return jsonFiles;
 }
 
-std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
-    auto it = emitters_.find(name);
-    if (it != emitters_.end()) {
-        // マップから取り出し、所有権を呼び出し元に移動
-        return std::move(it->second);
-    }
-    return nullptr;
-}

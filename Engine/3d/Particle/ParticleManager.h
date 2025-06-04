@@ -90,6 +90,7 @@ class ParticleManager {
     SrvManager *srvManager_;
     std::unordered_map<std::string, ParticleGroup *> particleGroups_;
     std::unordered_map<std::string, ParticleSetting> particleSettings_; // ここがポイント
+
     std::vector<std::string> particleGroupNames_;
     std::random_device seedGenerator;
     std::mt19937 randomEngine;

@@ -726,6 +726,10 @@ void ParticleEmitter::Debug() {
     }
 #endif
 }
+bool ParticleEmitter::IsAllParticlesComplete() {
+    return Manager_->IsAllParticlesComplete();
+}
+
 void ParticleEmitter::AddParticleGroup(ParticleGroup *particleGroup) {
     if (!particleGroup)
         return;
@@ -733,14 +737,49 @@ void ParticleEmitter::AddParticleGroup(ParticleGroup *particleGroup) {
     // パーティクルグループ名を取得
     const std::string &groupName = particleGroup->GetGroupName();
 
+    // 独立したコピーを作成
+    ParticleGroup *independentGroup = ParticleGroupManager::GetInstance()->GetIndependentParticleGroup(groupName);
+    if (!independentGroup) {
+        return;
+    }
+
     // 設定が存在しない場合はデフォルト値で初期化
     auto it = particleSettings_.find(groupName);
     if (it == particleSettings_.end()) {
         particleSettings_[groupName] = DefaultSetting();
     }
 
-    Manager_->AddParticleGroup(particleGroup);
+    Manager_->AddParticleGroup(independentGroup);
 }
+
+std::unique_ptr<ParticleEmitter> ParticleEmitter::Clone() const {
+    auto newEmitter = std::make_unique<ParticleEmitter>();
+
+    // コピー元の情報を複製
+    newEmitter->SetName(this->name_ + "_clone");
+    newEmitter->SetFrequency(this->emitFrequency_);
+    newEmitter->SetActive(this->isActive_);
+    newEmitter->isAuto_ = this->isAuto_;
+    newEmitter->isVisible_ = this->isVisible_;
+    newEmitter->transform_ = this->transform_;
+    newEmitter->particleSettings_ = this->particleSettings_;
+    newEmitter->particleGroupNames_ = this->particleGroupNames_;
+
+    // ParticleManager は個別に生成して初期化
+    newEmitter->Manager_ = std::make_unique<ParticleManager>();
+    newEmitter->Manager_->Initialize(SrvManager::GetInstance());
+
+    // 同じグループを再アタッチ（共有参照でOK）
+    for (const auto &groupName : particleGroupNames_) {
+        ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(groupName);
+        if (group) {
+            newEmitter->AddParticleGroup(group);
+        }
+    }
+
+    return newEmitter;
+}
+
 #pragma endregion
 
 void ParticleEmitter::SetTrailEnabled(const std::string &groupName, bool enabled) {
