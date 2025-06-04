@@ -401,3 +401,13 @@ std::list<Particle> ParticleManager::Emit() {
     }
     return allNewParticles;
 }
+
+bool ParticleManager::IsAllParticlesComplete() const {
+    for (const auto &[groupName, particleGroup] : particleGroups_) {
+        const auto &particles = particleGroup->GetParticleGroupData().particles;
+        if (!particles.empty()) {
+            return false;
+        }
+    }
+    return true;
+}

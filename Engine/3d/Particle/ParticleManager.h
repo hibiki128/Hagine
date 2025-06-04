@@ -98,6 +98,8 @@ class ParticleManager {
   public:
     std::list<Particle> Emit();
 
+    bool IsAllParticlesComplete() const;
+
   private:
     void CreateTrailParticle(const Particle &parent, const ParticleSetting &setting);
 
