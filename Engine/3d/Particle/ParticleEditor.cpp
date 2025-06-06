@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include "ParticleEditor.h"
 #include "ImGui/ImGuiManager.h"
 #ifdef _DEBUG
@@ -85,27 +86,65 @@ void ParticleEditor::AddPrimitiveParticleGroup(const std::string &name, const st
 void ParticleEditor::DrawAll(const ViewProjection &vp_) {
     for (auto &[name, emitter] : emitters_) {
         if (emitter) {
+            if (emitter->GetIsAuto()) {
+                emitter->Update();
+            }
             emitter->Draw(vp_);
         }
     }
 }
 
 void ParticleEditor::DebugAll() {
-    for (auto &[name, emitter] : emitters_) {
-        if (emitter) {
-            emitter->Debug();
+    if (emitters_.empty()) {
+        ImGui::Text("エミッターがありません");
+        return;
+    }
+
+    // エミッター名のリストを作成
+    std::vector<std::string> emitterNames;
+    for (const auto &[name, emitter] : emitters_) {
+        emitterNames.push_back(name);
+    }
+
+    // インデックスの範囲チェック
+    if (selectedEmitterIndex_ >= emitterNames.size()) {
+        selectedEmitterIndex_ = std::max(0, (int)emitterNames.size() - 1);
+    }
+
+    // エミッター選択用のCombo
+    std::vector<const char *> emitterNameCStrs;
+    for (const auto &name : emitterNames) {
+        emitterNameCStrs.push_back(name.c_str());
+    }
+
+    if (ImGui::Combo("エミッター選択", &selectedEmitterIndex_,
+                     emitterNameCStrs.data(), (int)emitterNameCStrs.size())) {
+        // 選択が変更された場合、選択されたエミッター名を更新
+        selectedEmitterName_ = emitterNames[selectedEmitterIndex_];
+    }
+
+    // 初回選択時の処理
+    if (selectedEmitterName_.empty() && !emitterNames.empty()) {
+        selectedEmitterName_ = emitterNames[selectedEmitterIndex_];
+    }
+
+    // 選択されたエミッターのDebugを実行
+    if (!selectedEmitterName_.empty()) {
+        auto it = emitters_.find(selectedEmitterName_);
+        if (it != emitters_.end() && it->second) {
+            it->second->Debug();
         }
     }
 }
 
-std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
-    auto it = emitters_.find(name);
-    if (it != emitters_.end()) {
-        // マップから取り出し、所有権を呼び出し元に移動
-        return std::move(it->second);
-    }
-    return nullptr;
-}
+//std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
+//    auto it = emitters_.find(name);
+//    if (it != emitters_.end()) {
+//        // マップから取り出し、所有権を呼び出し元に移動
+//        return std::move(it->second);
+//    }
+//    return nullptr;
+//}
 
 std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const std::string &name) {
     auto it = emitters_.find(name);

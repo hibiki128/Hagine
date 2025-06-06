@@ -43,7 +43,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
             t = std::clamp(t, 0.0f, 1.0f);
 
             // --- 色補間処理を追加 ---
-            if (!particle.isChild) {
+            if (!particle.isChild && !particleSetting.isRandomColor) {
                 // 通常パーティクルのみ補間
                 const Vector4 &startColor = particleSetting.startColor;
                 const Vector4 &endColor = particleSetting.endColor;
@@ -74,6 +74,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
             }
 
             if (shouldGather) {
+                particle.emitterPosition = emitterCenter_;
                 isGathering = true;
                 float gatherFactor = (t - particleSetting.gatherStartRatio) / (1.0f - particleSetting.gatherStartRatio);
                 gatherFactor = std::clamp(gatherFactor, 0.0f, 1.0f);
@@ -123,15 +124,85 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
 
             particle.velocity.y -= particleSetting.gravity * Frame::DeltaTime();
             particle.currentTime += Frame::DeltaTime();
+
             Matrix4x4 worldMatrix{};
-            if (particleSetting.isBillboard) {
-                worldMatrix = MakeScaleMatrix(particle.transform.scale_) * billboardMatrix *
+
+            // === 各軸ビルボード処理 ===
+            if (particleSetting.isBillboard || particleSetting.isBillboardX ||
+                particleSetting.isBillboardY || particleSetting.isBillboardZ) {
+
+                Matrix4x4 customBillboardMatrix = MakeIdentity4x4();
+                Matrix4x4 viewMatrix = viewProjection.matView_;
+
+                // ビューマトリックスから回転成分を抽出
+                Vector3 right = {viewMatrix.m[0][0], viewMatrix.m[1][0], viewMatrix.m[2][0]};
+                Vector3 up = {viewMatrix.m[0][1], viewMatrix.m[1][1], viewMatrix.m[2][1]};
+                Vector3 forward = {viewMatrix.m[0][2], viewMatrix.m[1][2], viewMatrix.m[2][2]};
+
+                if (particleSetting.isBillboard) {
+                    // 従来の完全ビルボード
+                    customBillboardMatrix = billboardMatrix;
+                } else {
+                    // 各軸のビルボード処理
+                    Vector3 finalRight = right;
+                    Vector3 finalUp = up;
+                    Vector3 finalForward = forward;
+
+                    if (!particleSetting.isBillboardX) {
+                        // X軸を固定（World空間のX軸を使用）
+                        finalRight = {1.0f, 0.0f, 0.0f};
+                        finalForward = finalUp.Cross(finalRight).Normalize();
+                        finalUp = finalRight.Cross(finalForward).Normalize();
+                    }
+
+                    if (!particleSetting.isBillboardY) {
+                        // Y軸を固定（World空間のY軸を使用）
+                        finalUp = {0.0f, 1.0f, 0.0f};
+                        finalRight = finalUp.Cross(finalForward).Normalize();
+                        finalForward = finalRight.Cross(finalUp).Normalize();
+                    }
+
+                    if (!particleSetting.isBillboardZ) {
+                        // Z軸を固定（World空間のZ軸を使用）
+                        finalForward = {0.0f, 0.0f, 1.0f};
+                        finalRight = finalUp.Cross(finalForward).Normalize();
+                        finalUp = finalForward.Cross(finalRight).Normalize();
+                    }
+
+                    // カスタムビルボードマトリックス構築
+                    customBillboardMatrix.m[0][0] = finalRight.x;
+                    customBillboardMatrix.m[1][0] = finalRight.y;
+                    customBillboardMatrix.m[2][0] = finalRight.z;
+                    customBillboardMatrix.m[0][1] = finalUp.x;
+                    customBillboardMatrix.m[1][1] = finalUp.y;
+                    customBillboardMatrix.m[2][1] = finalUp.z;
+                    customBillboardMatrix.m[0][2] = finalForward.x;
+                    customBillboardMatrix.m[1][2] = finalForward.y;
+                    customBillboardMatrix.m[2][2] = finalForward.z;
+                    customBillboardMatrix.m[3][3] = 1.0f;
+                }
+
+                // ビルボード後にZ軸回転を適用
+                Matrix4x4 zRotationMatrix = MakeIdentity4x4();
+                if (particleSetting.isRandomRotate ||
+                    (!particleSetting.isFaceDirection && (particle.transform.rotation_.z != 0.0f || particle.rotateVelocity.z != 0.0f))) {
+                    // Z軸回転マトリックスを作成
+                    float cosZ = cosf(particle.transform.rotation_.z);
+                    float sinZ = sinf(particle.transform.rotation_.z);
+                    zRotationMatrix.m[0][0] = cosZ;
+                    zRotationMatrix.m[0][1] = -sinZ;
+                    zRotationMatrix.m[1][0] = sinZ;
+                    zRotationMatrix.m[1][1] = cosZ;
+                }
+
+                worldMatrix = MakeScaleMatrix(particle.transform.scale_) * zRotationMatrix * customBillboardMatrix *
                               MakeTranslateMatrix(particle.transform.translation_);
             } else {
                 worldMatrix = MakeAffineMatrix(particle.transform.scale_,
                                                particle.transform.rotation_,
                                                particle.transform.translation_);
             }
+
             Matrix4x4 worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
             if (numInstance < particleGroup->GetMaxInstance()) {
                 particleGroup->GetParticleGroupData().instancingData[numInstance].WVP = worldViewProjectionMatrix;
@@ -146,15 +217,8 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
         particleGroup->GetParticleGroupData().instanceCount = numInstance;
     }
 }
-
 // 軌跡パーティクル生成メソッド
 void ParticleManager::CreateTrailParticle(const Particle &parent, const ParticleSetting &setting) {
-    //// 現在の子パーティクル数をチェック
-    //auto &parentParticle = const_cast<Particle &>(parent);
-    //if (parentParticle.children.size() >= setting.maxTrailParticles) {
-    //    return; // 最大数に達している場合は生成しない
-    //}
-
     // 軌跡パーティクルを作成
     Particle trailParticle;
     trailParticle.isChild = true;
@@ -376,7 +440,6 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         particle.transform.rotation_.x = rotationAxis.x * angle;
         particle.transform.rotation_.y = rotationAxis.y * angle;
         particle.transform.rotation_.z = rotationAxis.z * angle;
-
     }
     particle.initialAlpha = distAlpha(randomEngine);
     particle.lifeTime = distLifeTime(randomEngine);

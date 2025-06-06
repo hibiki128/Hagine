@@ -23,8 +23,7 @@ void Enemy::Init(const std::string objectName) {
     shadow_->SetTexture("game/shadow.png");
     shadow_->GetWorldRotation().x = degreesToRadians(90.0f);
     shadow_->GetWorldScale() = {1.5f, 1.5f, 1.5f};
-    emitter_ = std::make_unique<ParticleEmitter>();
-    emitter_ = ParticleEditor::GetInstance()->GetEmitter("hitEmitter");
+    emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("hitEmitter");
 }
 
 void Enemy::Update() {

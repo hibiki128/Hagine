@@ -18,6 +18,7 @@ void ChageShot::Init(const std::string objectName) {
     BaseObject::SetColor({0.0f, 0.5f, 1.0f, 1.0f});
     BaseObject::AddCollider();
     BaseObject::SetCollisionType(CollisionType::Sphere);
+    BaseObject::SetVisible(false);
     isAlive_ = false;
     isMaxScale_ = false;
     isFired_ = false;
@@ -25,12 +26,22 @@ void ChageShot::Init(const std::string objectName) {
     velocity_ = {0, 0, 0};
     // 初期位置もリセット
     transform_.translation_ = {0, 0, 0};
-    emitter_ = std::make_unique<ParticleEmitter>();
-    emitter_ = ParticleEditor::GetInstance()->GetEmitter("chageEmitter");
+
+    chageEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
+    bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
 }
 
 void ChageShot::Update() {
     Input *input = Input::GetInstance();
+    if (isAlive_) {
+        bulletEmitter_->Update();
+        bulletEmitter_->SetPosition(transform_.translation_);
+        bulletEmitter_->SetStartScale("chageBullet", transform_.scale_ * 2.0f);
+        if (!isMaxScale_) {
+            bulletEmitter_->SetStartScale("chageAround", {(0.6f + scale_) * 1.4f, (0.6f + scale_) * 1.4f, (0.6f + scale_) * 1.4f});
+            bulletEmitter_->SetEndScale("chageAround", {(0.8f + scale_) * 1.4f, (0.8f + scale_) * 1.4f, (0.8f + scale_) * 1.4f});
+        }
+    }
 
     if (isAlive_ && !isFired_) {
         // チャージ中はプレイヤーの前方にオフセットして配置
@@ -49,7 +60,7 @@ void ChageShot::Update() {
             offset.y = verticalOffset_;
 
             transform_.translation_ = playerPos + offset;
-            emitter_->SetPosition(transform_.translation_);
+            chageEmitter_->SetPosition(transform_.translation_);
         }
     }
 
@@ -68,7 +79,7 @@ void ChageShot::Update() {
                 isMaxScale_ = true;
             }
             if (!isMaxScale_) {
-                emitter_->Update();
+                chageEmitter_->Update();
             }
         }
         if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
@@ -126,10 +137,11 @@ void ChageShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     // スケールを反映
     transform_.scale_ = {scale_, scale_, scale_};
     BaseObject::SetRadius(scale_);
-    BaseObject::Draw(viewProjection, offSet);
+    // BaseObject::Draw(viewProjection, offSet);
 }
 void ChageShot::DrawParticle(const ViewProjection &viewProjection) {
-    emitter_->Draw(viewProjection);
+    chageEmitter_->Draw(viewProjection);
+    bulletEmitter_->Draw(viewProjection);
 }
 
 void ChageShot::imgui() {

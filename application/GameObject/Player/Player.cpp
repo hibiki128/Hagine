@@ -114,6 +114,9 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 
 void Player::DrawParticle(const ViewProjection &viewProjection) {
     chageShot_->DrawParticle(viewProjection);
+    for (auto &bullet : bullets_) {
+        bullet->DrawParticle(viewProjection);
+    }
 }
 
 void Player::ChangeState(const std::string &stateName) {

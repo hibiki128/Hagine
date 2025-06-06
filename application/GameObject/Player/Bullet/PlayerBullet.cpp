@@ -1,5 +1,6 @@
 #include "PlayerBullet.h"
 
+#include "ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
 #include <Engine/Frame/Frame.h>
@@ -12,6 +13,7 @@ void PlayerBullet::Init(const std::string objectName) {
     this->SetCollisionType(CollisionType::Sphere);
     this->SetTexture("debug/white1x1.png");
     BaseObject::SetColor({0.0f, 0.0f, 1.0f, 1.0f});
+    BaseObject::SetVisible(false);
 
     // 弾の生存時間を設定（5秒後に消える）
     lifeTime_ = 5.0f;
@@ -19,11 +21,18 @@ void PlayerBullet::Init(const std::string objectName) {
 
     // 加速度の初期設定
     acce_ = 10.0f; // デフォルトの加速度
+
+    emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("bulletEmitter");
 }
 
 void PlayerBullet::Update() {
-    if (isHit_) {
+    if (isHit_ && emitter_->IsAllParticlesComplete()) {
         isAlive_ = false;
+    }
+
+    if (isAlive_ && !isHit_) {
+        emitter_->SetPosition(GetWorldPosition());
+        emitter_->Update();
     }
 
     float deltaTime = Frame::DeltaTime();
@@ -114,7 +123,14 @@ void PlayerBullet::Update() {
 void PlayerBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     // 生きている場合のみ描画
     if (isAlive_) {
-        BaseObject::Draw(viewProjection, offSet);
+        //BaseObject::SetBlendMode(BlendMode::kAdd);
+        //BaseObject::Draw(viewProjection, offSet);
+    }
+}
+void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
+    // 生きている場合のみ描画
+    if (isAlive_) {
+        emitter_->Draw(viewProjection);
     }
 }
 

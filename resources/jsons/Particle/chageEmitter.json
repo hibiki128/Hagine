@@ -12,10 +12,10 @@
         "y": 0.0,
         "z": 0.0
     },
-    "chage1_alphaMax": 1.0,
-    "chage1_alphaMin": 1.0,
-    "chage1_count": 3,
-    "chage1_enableTrail": true,
+    "chage1_alphaMax": 0.5,
+    "chage1_alphaMin": 0.5,
+    "chage1_count": 4,
+    "chage1_enableTrail": false,
     "chage1_endAcce": {
         "x": 0.0,
         "y": 0.0,
@@ -38,7 +38,7 @@
         "z": 0.0
     },
     "chage1_gatherStartRatio": -0.10000000149011612,
-    "chage1_gatherStrength": 5.0,
+    "chage1_gatherStrength": 10.0,
     "chage1_gravity": 0.0,
     "chage1_isAcceMultiply": false,
     "chage1_isAllRamdomScale": false,
@@ -51,8 +51,8 @@
     "chage1_isRandomRotate": false,
     "chage1_isRandomScale": true,
     "chage1_isSinMove": false,
-    "chage1_lifeTimeMax": 2.0,
-    "chage1_lifeTimeMin": 1.0,
+    "chage1_lifeTimeMax": 1.5,
+    "chage1_lifeTimeMin": 1.5,
     "chage1_maxTrailParticles": 1,
     "chage1_rotateStartMax": {
         "x": 0.0,
@@ -84,8 +84,8 @@
         "y": 10.0,
         "z": 10.0
     },
-    "chage1_scaleMax": 1.899999976158142,
-    "chage1_scaleMin": 0.5,
+    "chage1_scaleMax": 0.5,
+    "chage1_scaleMin": 0.10000000149011612,
     "chage1_startAcce": {
         "x": 0.0,
         "y": 0.0,
@@ -114,7 +114,7 @@
         "z": 2.0
     },
     "chage1_trailInheritVelocity": false,
-    "chage1_trailLifeScale": 0.23000000417232513,
+    "chage1_trailLifeScale": 0.5,
     "chage1_trailScaleMultiplier": {
         "x": 0.75,
         "y": 0.75,
@@ -272,7 +272,7 @@
         "y": -1.0,
         "z": -1.0
     },
-    "emitFrequency": 0.1120000034570694,
+    "emitFrequency": 0.10000000149011612,
     "emitterRotation": {
         "x": 0.0,
         "y": 0.0,
@@ -290,5 +290,5 @@
     },
     "isActive": false,
     "isAuto": false,
-    "isVisible": true
+    "isVisible": false
 }

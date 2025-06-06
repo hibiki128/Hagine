@@ -122,7 +122,7 @@ void Model::Draw(Object3dCommon *objCommon, std::vector<Material> materials) {
         }
 
         // マテリアルの設定（描画前に現在のマテリアルを設定）
-        Vector4 materialColor = modelData.materials[materialIndex].color;
+        Vector4 materialColor = currentMaterial->GetMaterialDataGPU()->color;
         bool enableLighting = true; // 必要に応じて調整
         currentMaterial->Draw(materialColor, enableLighting);
 

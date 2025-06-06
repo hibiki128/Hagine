@@ -42,6 +42,9 @@ struct ParticleSetting {
     Vector3 rotateStartMax;
     Vector3 rotateStartMin;
     bool isBillboard = false;
+    bool isBillboardX = false;
+    bool isBillboardY = false;
+    bool isBillboardZ = false;
     bool isRandomRotate = false;
     bool isRotateVelocity = false;
     bool isAcceMultiply = false;
@@ -64,7 +67,7 @@ struct ParticleSetting {
     float trailVelocityScale;     // 軌跡の速度スケール
 
     ParticleSetting() : enableTrail(false), trailSpawnInterval(0.05f),
-                        maxTrailParticles(20), trailLifeScale(0.5f),
+                        maxTrailParticles(1), trailLifeScale(0.5f),
                         trailScaleMultiplier({0.8f, 0.8f, 0.8f}),
                         trailColorMultiplier({1.0f, 1.0f, 1.0f, 0.7f}),
                         trailInheritVelocity(true), trailVelocityScale(0.3f) {}
@@ -84,6 +87,7 @@ class ParticleManager {
     std::vector<std::string> GetParticleGroupsName();
     void SetTrailEnabled(const std::string &groupName, bool enabled);
     void SetTrailSettings(const std::string &groupName, float interval, int maxTrails);
+    void SetEmitterCenter(Vector3 center) { emitterCenter_ = center; }
 
      // 全てのパーティクルが消えたかチェック
     bool IsAllParticlesComplete() const;
@@ -103,12 +107,10 @@ class ParticleManager {
     std::vector<std::string> particleGroupNames_;
     std::random_device seedGenerator;
     std::mt19937 randomEngine;
+    Vector3 emitterCenter_{};
 
   public:
     std::list<Particle> Emit();
-
-    bool IsAllParticlesComplete() const;
-
   private:
     void CreateTrailParticle(const Particle &parent, const ParticleSetting &setting);
 

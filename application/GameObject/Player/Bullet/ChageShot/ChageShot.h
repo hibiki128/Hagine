@@ -55,5 +55,6 @@ class ChageShot : public BaseObject {
     float offsetMargin_ = 0.5f;   // 余裕距離
     float verticalOffset_ = 1.0f; // 垂直方向のオフセット
 
-    std::unique_ptr<ParticleEmitter> emitter_;
+    std::unique_ptr<ParticleEmitter> chageEmitter_;
+    std::unique_ptr<ParticleEmitter> bulletEmitter_;
 };

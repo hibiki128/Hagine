@@ -42,11 +42,22 @@ class ParticleEmitter {
 
     std::unique_ptr<ParticleEmitter> Clone() const;
 
-    void SetPosition(const Vector3 &position) { transform_.translation_= position; }
+    bool GetIsAuto() { return isAuto_; }
+
+    void SetPosition(const Vector3 &position) { transform_.translation_ = position; }
     void SetPositionY(const std::string &groupName, float positionY) { particleSettings_[groupName].translate.y = positionY; }
     void SetRotate(const std::string &groupName, const Vector3 &rotate) { particleSettings_[groupName].rotation = rotate; }
     void SetRotateY(const std::string &groupName, float rotateY) { particleSettings_[groupName].rotation.y = rotateY; }
-    void SetScale(const std::string &groupName, const Vector3 &scale) { particleSettings_[groupName].scale = scale; }
+    void SetScale(const std::string &groupName, const Vector3 &scale) {
+        particleSettings_[groupName].scale = scale;
+    }
+    void SetStartScale(const std::string &groupName, const Vector3 &scale) {
+        particleSettings_[groupName].particleStartScale = scale;
+    }
+    void SetEndScale(const std::string &groupName, const Vector3 &scale) {
+        particleSettings_[groupName].particleEndScale = scale;
+    }
+
     void SetCount(const std::string &groupName, int count) { particleSettings_[groupName].count = count; }
     void SetStartRotate(const std::string &groupName, const Vector3 &startRotate) { particleSettings_[groupName].startRote = startRotate; }
     void SetEndRotate(const std::string &groupName, const Vector3 &endRotate) { particleSettings_[groupName].endRote = endRotate; }
@@ -65,6 +76,15 @@ class ParticleEmitter {
     }
     void SetEndColor(const std::string &groupName, const Vector4 &color) {
         particleSettings_[groupName].endColor = color;
+    }
+    void SetScaleAll(const Vector3 &scale) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            if (setting.isSinMove) {
+                setting.particleStartScale = scale;
+            } else {
+                setting.scale = scale;
+            }
+        }
     }
 
   private:

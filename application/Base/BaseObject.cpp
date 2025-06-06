@@ -167,7 +167,6 @@ void BaseObject::DebugObject() {
             // 範囲外の対策（実インデックスが materialCount を超えないように）
             selectedMaterialIndex = std::clamp(selectedMaterialIndex, 1, displayCount - 1);
         }
-
         // テクスチャ選択ツリー
         if (ImGui::TreeNode("テクスチャ選択")) {
             // テクスチャ選択UI（パスを表示・取得）
