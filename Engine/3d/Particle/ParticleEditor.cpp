@@ -158,21 +158,6 @@ void ParticleEditor::EditorWindow() {
     ImGui::Begin("パーティクルエディター");
     ShowImGuiEditor();
     ImGui::End();
-    return nullptr;
-}
-
-std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const std::string &name) {
-    auto it = emitters_.find(name);
-    if (it != emitters_.end() && it->second) {
-        return it->second->Clone(); // コピーを作って返す
-    }
-    return nullptr;
-}
-
-void ParticleEditor::EditorWindow() {
-    ImGui::Begin("パーティクルエディター");
-    ShowImGuiEditor();
-    ImGui::End();
 }
 
 // カラー付きCollapsingHeaderを表示するヘルパー関数
