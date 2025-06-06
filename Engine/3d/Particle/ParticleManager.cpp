@@ -1,7 +1,7 @@
 #include "ParticleManager.h"
 #include "Engine/Frame/Frame.h"
 #include "Texture/TextureManager.h"
-#include "fstream"
+#include <fstream>
 #include <random>
 
 void ParticleManager::Initialize(SrvManager *srvManager) {
@@ -11,408 +11,495 @@ void ParticleManager::Initialize(SrvManager *srvManager) {
 }
 
 void ParticleManager::Update(const ViewProjection &viewProjection) {
-    // ビュー射影行列の計算
     Matrix4x4 viewProjectionMatrix = viewProjection.matView_ * viewProjection.matProjection_;
-
-    // カメラの回転成分のみを抽出してビルボード行列を作成
     Matrix4x4 billboardMatrix = viewProjection.matView_;
     billboardMatrix.m[3][0] = 0.0f;
     billboardMatrix.m[3][1] = 0.0f;
     billboardMatrix.m[3][2] = 0.0f;
     billboardMatrix.m[3][3] = 1.0f;
-
-    // ビルボード行列を逆行列にすることで、カメラに対して正しい向きにする
     billboardMatrix = Inverse(billboardMatrix);
 
     for (auto &[groupName, particleGroup] : particleGroups_) {
-
         uint32_t numInstance = 0;
+        ParticleSetting &particleSetting = particleSettings_[groupName];
 
-        // 各パーティクルの更新
-        for (auto particleIterator = particleGroup->GetParticleGroupData().particles.begin();
-             particleIterator != particleGroup->GetParticleGroupData().particles.end();) {
-
-            // パーティクルの生存時間チェック
-            if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
-                particleIterator = particleGroup->GetParticleGroupData().particles.erase(particleIterator);
+        auto &particles = particleGroup->GetParticleGroupData().particles;
+        std::list<Particle> aliveParticles;
+        for (auto &particle : particles) {
+            if (particle.lifeTime <= particle.currentTime) {
                 continue;
             }
-            // パーティクルの生存時間に基づく進行度 t を計算
-            float t = (*particleIterator).currentTime / (*particleIterator).lifeTime;
+
+            // 軌跡パーティクル生成処理
+            if (particleSetting.enableTrail && !particle.isChild) {
+                particle.trailSpawnTimer += Frame::DeltaTime();
+                if (particle.trailSpawnTimer >= particleSetting.trailSpawnInterval) {
+                    CreateTrailParticle(particle, particleSetting);
+                    particle.trailSpawnTimer = 0.0f;
+                }
+            }
+
+            float t = particle.currentTime / particle.lifeTime;
             t = std::clamp(t, 0.0f, 1.0f);
 
-            // 拡縮処理
-            if (particleSetting_.isSinMove) {
-                // Sin波の周波数制御 (速度調整)
-                float waveScale = 0.5f * (sin(t * DirectX::XM_PI * 18.0f) + 1.0f); // 0 ～ 1 の範囲
+            // --- 色補間処理を追加 ---
+            if (!particle.isChild && !particleSetting.isRandomColor) {
+                // 通常パーティクルのみ補間
+                const Vector4 &startColor = particleSetting.startColor;
+                const Vector4 &endColor = particleSetting.endColor;
+                particle.color.x = (1.0f - t) * startColor.x + t * endColor.x;
+                particle.color.y = (1.0f - t) * startColor.y + t * endColor.y;
+                particle.color.z = (1.0f - t) * startColor.z + t * endColor.z;
+                // アルファは既存ロジック
+            }
 
-                // 最大スケールが寿命に応じて縮小し、最終的に0になる
-                float maxScale = (1.0f - t); // 1 -> 0 に線形に縮小
-
-                // Sin波スケールと最大スケールの積を適用
-                (*particleIterator).transform.scale_ =
-                    (*particleIterator).startScale * waveScale * maxScale;
+            if (particleSetting.isSinMove) {
+                float waveScale = 0.5f * (sin(t * DirectX::XM_PI * 18.0f) + 1.0f);
+                float maxScale = (1.0f - t);
+                particle.transform.scale_ =
+                    particle.startScale * waveScale * maxScale;
             } else {
-                // 通常の線形補間
-                (*particleIterator).transform.scale_ =
-                    (1.0f - t) * (*particleIterator).startScale + t * (*particleIterator).endScale;
-
-                // ギャザーモードが有効でない場合のみ、通常のアルファ値計算を行う
-                if (!(particleSetting_.isGatherMode && t >= particleSetting_.gatherStartRatio)) {
-                    // アルファ値の計算
-                    (*particleIterator).color.w = (*particleIterator).initialAlpha - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
+                particle.transform.scale_ =
+                    (1.0f - t) * particle.startScale + t * particle.endScale;
+                if (!(particleSetting.isGatherMode && t >= particleSetting.gatherStartRatio)) {
+                    particle.color.w = particle.initialAlpha - (particle.currentTime / particle.lifeTime);
                 }
             }
 
-            // ギャザーモードとそれ以外の移動処理を分岐
             bool isGathering = false;
-            if (particleSetting_.isGatherMode && t >= particleSetting_.gatherStartRatio) {
+            // トレイルパーティクルで速度継承がオフの場合はギャザリングしない
+            bool shouldGather = particleSetting.isGatherMode && t >= particleSetting.gatherStartRatio;
+            if (particle.isChild && !particleSetting.trailInheritVelocity) {
+                shouldGather = false;
+            }
+
+            if (shouldGather) {
+                particle.emitterPosition = emitterCenter_;
                 isGathering = true;
-                // ギャザー効果の強さを計算（ライフタイム終盤ほど強く）
-                float gatherFactor = (t - particleSetting_.gatherStartRatio) / (1.0f - particleSetting_.gatherStartRatio);
+                float gatherFactor = (t - particleSetting.gatherStartRatio) / (1.0f - particleSetting.gatherStartRatio);
                 gatherFactor = std::clamp(gatherFactor, 0.0f, 1.0f);
-
-                // エミッター中心（パーティクル発生元）への方向ベクトル
-                Vector3 toEmitter = (*particleIterator).emitterPosition - (*particleIterator).transform.translation_;
+                Vector3 toEmitter = particle.emitterPosition - particle.transform.translation_;
                 float distance = toEmitter.Length();
-
-                // 中心に近づくほどアルファ値を下げる（フェードアウト効果）
-                // 距離が0に近づくほど透明に
-                float distanceBasedAlpha = distance / (distance + 0.5f); // 調整可能なソフトニング係数
-                (*particleIterator).color.w = (*particleIterator).initialAlpha * (1.0f - gatherFactor) * distanceBasedAlpha;
-
-                // 中心に非常に近い場合はパーティクルを削除（震え防止）
+                float distanceBasedAlpha = distance / (distance + 0.5f);
+                particle.color.w = particle.initialAlpha * (1.0f - gatherFactor) * distanceBasedAlpha;
                 if (distance < 0.05f) {
-                    // 非常に近い場合は生存時間を終了させて次の更新で削除されるようにする
-                    (*particleIterator).currentTime = (*particleIterator).lifeTime;
-                    ++particleIterator;
+                    particle.currentTime = particle.lifeTime;
                     continue;
                 }
-
-                // 距離に応じてギャザー速度を緩和（近いほど緩やかに）
-                float distanceFactor = std::min(1.0f, distance); // 距離が1以下の場合は距離自体を係数に
-
-                // 方向ベクトルを正規化
+                float distanceFactor = std::min(1.0f, distance);
                 toEmitter = toEmitter.Normalize();
-
-                // 中心に向かう速度を計算（近づくほど減速）
-                float gatherSpeed = particleSetting_.gatherStrength * gatherFactor * distanceFactor * 3.0f; // 調整済み係数
+                float gatherSpeed = particleSetting.gatherStrength * gatherFactor * distanceFactor * 3.0f;
                 Vector3 gatherVelocity = toEmitter * gatherSpeed * Frame::DeltaTime();
-
-                // ギャザー中は通常の速度を無視して、エミッターに向かう速度のみを設定
-                (*particleIterator).velocity = gatherVelocity;
-
-                // ギャザー中のパーティクル位置を更新
-                (*particleIterator).transform.translation_ += (*particleIterator).velocity;
+                particle.velocity = gatherVelocity;
+                particle.transform.translation_ += particle.velocity;
             }
 
-            // ギャザー中でない場合のみ通常の移動処理を行う
             if (!isGathering) {
-                (*particleIterator).Acce = (1.0f - t) * (*particleIterator).startAcce + t * (*particleIterator).endAcce;
+                particle.Acce = (1.0f - t) * particle.startAcce + t * particle.endAcce;
 
-                if (particleSetting_.isFaceDirection) {
-                    // 固定された進行方向を使用して回転を設定
-                    Vector3 forward = (*particleIterator).fixedDirection; // 初期に保存された進行方向
+                if (particleSetting.isFaceDirection) {
+                    Vector3 forward = particle.fixedDirection;
                     Vector3 initialUp = {0.0f, 1.0f, 0.0f};
-
-                    // 回転軸を計算
                     Vector3 rotationAxis = initialUp.Cross(forward).Normalize();
                     float dotProduct = initialUp.Dot(forward);
-                    float angle = acosf(std::clamp(dotProduct, -1.0f, 1.0f)); // 安全な範囲にクランプ
-
-                    // 回転を設定
-                    (*particleIterator).transform.rotation_.x = rotationAxis.x * angle;
-                    (*particleIterator).transform.rotation_.y = rotationAxis.y * angle;
-                    (*particleIterator).transform.rotation_.z = rotationAxis.z * angle;
-
-                } else if (particleSetting_.isRandomRotate) {
-                    // ランダム回転の場合の処理
-                    (*particleIterator).transform.rotation_ += (*particleIterator).rotateVelocity;
+                    float angle = acosf(std::clamp(dotProduct, -1.0f, 1.0f));
+                    particle.transform.rotation_.x = rotationAxis.x * angle;
+                    particle.transform.rotation_.y = rotationAxis.y * angle;
+                    particle.transform.rotation_.z = rotationAxis.z * angle;
+                } else if (particleSetting.isRandomRotate) {
+                    particle.transform.rotation_ += particle.rotateVelocity;
                 } else {
-                    // 通常の回転補間
-                    (*particleIterator).transform.rotation_ =
-                        (1.0f - t) * (*particleIterator).startRote + t * (*particleIterator).endRote;
+                    particle.transform.rotation_ =
+                        (1.0f - t) * particle.startRote + t * particle.endRote;
                 }
 
-                // 加速度処理
-                if (particleSetting_.isAcceMultiply) {
-                    (*particleIterator).velocity *= (*particleIterator).Acce;
+                if (particleSetting.isAcceMultiply) {
+                    particle.velocity *= particle.Acce;
                 } else {
-                    (*particleIterator).velocity += (*particleIterator).Acce;
+                    particle.velocity += particle.Acce;
                 }
-
-                // パーティクルの移動
-                (*particleIterator).transform.translation_ +=
-                    (*particleIterator).velocity * Frame::DeltaTime();
+                particle.transform.translation_ +=
+                    particle.velocity * Frame::DeltaTime();
             }
 
-            // 時間更新はギャザーモードに関わらず行う
-            (*particleIterator).currentTime += Frame::DeltaTime();
+            particle.velocity.y -= particleSetting.gravity * Frame::DeltaTime();
+            particle.currentTime += Frame::DeltaTime();
 
-            // ワールド行列の計算
             Matrix4x4 worldMatrix{};
-            if (particleSetting_.isBillboard) {
-                // ビルボード処理の場合、カメラ方向に向ける
-                worldMatrix = MakeScaleMatrix((*particleIterator).transform.scale_) * billboardMatrix *
-                              MakeTranslateMatrix((*particleIterator).transform.translation_);
+
+            // === 各軸ビルボード処理 ===
+            if (particleSetting.isBillboard || particleSetting.isBillboardX ||
+                particleSetting.isBillboardY || particleSetting.isBillboardZ) {
+
+                Matrix4x4 customBillboardMatrix = MakeIdentity4x4();
+                Matrix4x4 viewMatrix = viewProjection.matView_;
+
+                // ビューマトリックスから回転成分を抽出
+                Vector3 right = {viewMatrix.m[0][0], viewMatrix.m[1][0], viewMatrix.m[2][0]};
+                Vector3 up = {viewMatrix.m[0][1], viewMatrix.m[1][1], viewMatrix.m[2][1]};
+                Vector3 forward = {viewMatrix.m[0][2], viewMatrix.m[1][2], viewMatrix.m[2][2]};
+
+                if (particleSetting.isBillboard) {
+                    // 従来の完全ビルボード
+                    customBillboardMatrix = billboardMatrix;
+                } else {
+                    // 各軸のビルボード処理
+                    Vector3 finalRight = right;
+                    Vector3 finalUp = up;
+                    Vector3 finalForward = forward;
+
+                    if (!particleSetting.isBillboardX) {
+                        // X軸を固定（World空間のX軸を使用）
+                        finalRight = {1.0f, 0.0f, 0.0f};
+                        finalForward = finalUp.Cross(finalRight).Normalize();
+                        finalUp = finalRight.Cross(finalForward).Normalize();
+                    }
+
+                    if (!particleSetting.isBillboardY) {
+                        // Y軸を固定（World空間のY軸を使用）
+                        finalUp = {0.0f, 1.0f, 0.0f};
+                        finalRight = finalUp.Cross(finalForward).Normalize();
+                        finalForward = finalRight.Cross(finalUp).Normalize();
+                    }
+
+                    if (!particleSetting.isBillboardZ) {
+                        // Z軸を固定（World空間のZ軸を使用）
+                        finalForward = {0.0f, 0.0f, 1.0f};
+                        finalRight = finalUp.Cross(finalForward).Normalize();
+                        finalUp = finalForward.Cross(finalRight).Normalize();
+                    }
+
+                    // カスタムビルボードマトリックス構築
+                    customBillboardMatrix.m[0][0] = finalRight.x;
+                    customBillboardMatrix.m[1][0] = finalRight.y;
+                    customBillboardMatrix.m[2][0] = finalRight.z;
+                    customBillboardMatrix.m[0][1] = finalUp.x;
+                    customBillboardMatrix.m[1][1] = finalUp.y;
+                    customBillboardMatrix.m[2][1] = finalUp.z;
+                    customBillboardMatrix.m[0][2] = finalForward.x;
+                    customBillboardMatrix.m[1][2] = finalForward.y;
+                    customBillboardMatrix.m[2][2] = finalForward.z;
+                    customBillboardMatrix.m[3][3] = 1.0f;
+                }
+
+                // ビルボード後にZ軸回転を適用
+                Matrix4x4 zRotationMatrix = MakeIdentity4x4();
+                if (particleSetting.isRandomRotate ||
+                    (!particleSetting.isFaceDirection && (particle.transform.rotation_.z != 0.0f || particle.rotateVelocity.z != 0.0f))) {
+                    // Z軸回転マトリックスを作成
+                    float cosZ = cosf(particle.transform.rotation_.z);
+                    float sinZ = sinf(particle.transform.rotation_.z);
+                    zRotationMatrix.m[0][0] = cosZ;
+                    zRotationMatrix.m[0][1] = -sinZ;
+                    zRotationMatrix.m[1][0] = sinZ;
+                    zRotationMatrix.m[1][1] = cosZ;
+                }
+
+                worldMatrix = MakeScaleMatrix(particle.transform.scale_) * zRotationMatrix * customBillboardMatrix *
+                              MakeTranslateMatrix(particle.transform.translation_);
             } else {
-                // 通常のアフィン変換行列を使用
-                worldMatrix = MakeAffineMatrix((*particleIterator).transform.scale_,
-                                               (*particleIterator).transform.rotation_,
-                                               (*particleIterator).transform.translation_);
+                worldMatrix = MakeAffineMatrix(particle.transform.scale_,
+                                               particle.transform.rotation_,
+                                               particle.transform.translation_);
             }
 
-            // パーティクルのワールド位置をチェック
-            WorldTransform particleWorldTransform;
-            particleWorldTransform.translation_ = (*particleIterator).transform.translation_;
-
-            //// 視野外判定
-            // if (viewProjection.IsOutsideViewFrustum(particleWorldTransform)) {
-            //	// 視野外であれば、パーティクルを削除
-            //	particleIterator = particleGroup.particles.erase(particleIterator);
-            //	continue;
-            // }
-
-            // ワールド・ビュー・プロジェクション行列の計算
             Matrix4x4 worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
-
-            // インスタンスデータに設定
             if (numInstance < particleGroup->GetMaxInstance()) {
                 particleGroup->GetParticleGroupData().instancingData[numInstance].WVP = worldViewProjectionMatrix;
                 particleGroup->GetParticleGroupData().instancingData[numInstance].World = worldMatrix;
-                particleGroup->GetParticleGroupData().instancingData[numInstance].color = (*particleIterator).color;
-                particleGroup->GetParticleGroupData().instancingData[numInstance].color.w = (*particleIterator).color.w; // アルファ値の設定
+                particleGroup->GetParticleGroupData().instancingData[numInstance].color = particle.color;
+                particleGroup->GetParticleGroupData().instancingData[numInstance].color.w = particle.color.w;
                 ++numInstance;
             }
-
-            ++particleIterator;
+            aliveParticles.push_back(std::move(particle));
         }
-
-        // インスタンス数の更新
+        particles.swap(aliveParticles);
         particleGroup->GetParticleGroupData().instanceCount = numInstance;
+    }
+}
+// 軌跡パーティクル生成メソッド
+void ParticleManager::CreateTrailParticle(const Particle &parent, const ParticleSetting &setting) {
+    // 軌跡パーティクルを作成
+    Particle trailParticle;
+    trailParticle.isChild = true;
+    trailParticle.createTrail = false; // 軌跡は軌跡を作らない
+
+    // 親の現在位置に配置
+    trailParticle.transform.translation_ = parent.transform.translation_;
+    trailParticle.transform.rotation_ = parent.transform.rotation_;
+    trailParticle.transform.scale_ = parent.transform.scale_ * setting.trailScaleMultiplier;
+
+    // 速度の設定
+    if (setting.trailInheritVelocity) {
+        trailParticle.velocity = parent.velocity * setting.trailVelocityScale;
+    } else {
+        trailParticle.velocity = {0.0f, 0.0f, 0.0f};
+    }
+
+    // 色と透明度
+    trailParticle.color = parent.color * setting.trailColorMultiplier;
+    trailParticle.initialAlpha = trailParticle.color.w;
+
+    // 寿命
+    trailParticle.lifeTime = parent.lifeTime * setting.trailLifeScale;
+    trailParticle.currentTime = 0.0f;
+
+    // その他のプロパティをコピー
+    trailParticle.startScale = parent.startScale * setting.trailScaleMultiplier;
+    trailParticle.endScale = parent.endScale * setting.trailScaleMultiplier;
+    trailParticle.startAcce = parent.startAcce;
+    trailParticle.endAcce = parent.endAcce;
+
+    // パーティクルグループに追加
+    for (auto &[groupName, particleGroup] : particleGroups_) {
+        if (particleSettings_[groupName].enableTrail) {
+            particleGroup->GetParticleGroupData().particles.push_back(trailParticle);
+            break;
+        }
+    }
+}
+
+void ParticleManager::SetTrailEnabled(const std::string &groupName, bool enabled) {
+    if (particleSettings_.find(groupName) != particleSettings_.end()) {
+        particleSettings_[groupName].enableTrail = enabled;
+    }
+}
+
+void ParticleManager::SetTrailSettings(const std::string &groupName, float interval, int maxTrails) {
+    if (particleSettings_.find(groupName) != particleSettings_.end()) {
+        particleSettings_[groupName].trailSpawnInterval = interval;
+        particleSettings_[groupName].maxTrailParticles = maxTrails;
     }
 }
 
 void ParticleManager::Draw() {
-
     for (auto &[groupName, particleGroup] : particleGroups_) {
-        particleCommon->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&particleGroup->GetIndexBufferView());
-        particleCommon->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &particleGroup->GetVertexBufferView());
-
-        if (particleGroup->GetParticleGroupData().instanceCount > 0) {
-            particleCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(0, particleGroup->GetmaterialResource()->GetGPUVirtualAddress());
-
-            srvManager_->SetGraphicsRootDescriptorTable(1, particleGroup->GetParticleGroupData().instancingSRVIndex);
-
-            srvManager_->SetGraphicsRootDescriptorTable(2, particleGroup->GetParticleGroupData().material.textureIndex);
-
-            particleCommon->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(UINT(particleGroup->GetModelData().mesh.indices.size()), particleGroup->GetParticleGroupData().instanceCount, 0, 0, 0);
+        const auto &meshes = particleGroup->GetModelData().meshes;
+        for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
+            D3D12_INDEX_BUFFER_VIEW indexBufferView = particleGroup->GetIndexBufferView();
+            D3D12_VERTEX_BUFFER_VIEW vertexBufferView = particleGroup->GetVertexBufferView();
+            particleCommon->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&indexBufferView);
+            particleCommon->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
+            if (particleGroup->GetParticleGroupData().instanceCount > 0) {
+                particleCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(0, particleGroup->GetmaterialResource()->GetGPUVirtualAddress());
+                srvManager_->SetGraphicsRootDescriptorTable(1, particleGroup->GetParticleGroupData().instancingSRVIndex);
+                srvManager_->SetGraphicsRootDescriptorTable(2, particleGroup->GetParticleGroupData().materials[meshIndex].textureIndex);
+                particleCommon->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(
+                    UINT(meshes[meshIndex].indices.size()),
+                    particleGroup->GetParticleGroupData().instanceCount,
+                    0, 0, 0);
+            }
         }
     }
 }
 
 void ParticleManager::AddParticleGroup(ParticleGroup *particleGroup) {
     assert(particleGroup);
-    particleGroups_.insert(std::pair(particleGroup->GetGroupName(), particleGroup));
-    particleGroupNames_.push_back(particleGroup->GetGroupName());
+    std::string groupName = particleGroup->GetGroupName();
+    particleGroups_.insert(std::pair(groupName, particleGroup));
+    particleGroupNames_.push_back(groupName);
+    // デフォルト設定を追加
+    if (particleSettings_.find(groupName) == particleSettings_.end()) {
+        particleSettings_[groupName] = ParticleSetting{};
+    }
 }
 
-Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine) {
+void ParticleManager::RemoveParticleGroup(const std::string &name) {
+    // マップから削除
+    particleGroups_.erase(name);
+    particleSettings_.erase(name);
+
+    // vector からも削除
+    auto it = std::find(particleGroupNames_.begin(), particleGroupNames_.end(), name);
+    if (it != particleGroupNames_.end()) {
+        particleGroupNames_.erase(it);
+    }
+}
+
+void ParticleManager::SetParticleSetting(const std::string &groupName, const ParticleSetting &setting) {
+    particleSettings_[groupName] = setting;
+}
+ParticleSetting &ParticleManager::GetParticleSetting(const std::string &groupName) {
+    return particleSettings_[groupName];
+}
+std::vector<std::string> ParticleManager::GetParticleGroupsName() {
+    return particleGroupNames_;
+}
+
+Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const ParticleSetting &setting) {
     std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
-    std::uniform_real_distribution<float> distVelocityX(particleSetting_.velocityMin.x, particleSetting_.velocityMax.x);
-    std::uniform_real_distribution<float> distVelocityY(particleSetting_.velocityMin.y, particleSetting_.velocityMax.y);
-    std::uniform_real_distribution<float> distVelocityZ(particleSetting_.velocityMin.z, particleSetting_.velocityMax.z);
-    std::uniform_real_distribution<float> distLifeTime(particleSetting_.lifeTimeMin, particleSetting_.lifeTimeMax);
-    std::uniform_real_distribution<float> distAlpha(particleSetting_.alphaMin, particleSetting_.alphaMax);
+    std::uniform_real_distribution<float> distVelocityX(setting.velocityMin.x, setting.velocityMax.x);
+    std::uniform_real_distribution<float> distVelocityY(setting.velocityMin.y, setting.velocityMax.y);
+    std::uniform_real_distribution<float> distVelocityZ(setting.velocityMin.z, setting.velocityMax.z);
+    std::uniform_real_distribution<float> distLifeTime(setting.lifeTimeMin, setting.lifeTimeMax);
+    std::uniform_real_distribution<float> distAlpha(setting.alphaMin, setting.alphaMax);
 
     Particle particle;
     Vector3 randomTranslate;
-    particle.emitterPosition = particleSetting_.translate;
-    if (particleSetting_.isEmitOnEdge) {
-        // 立方体の12本のエッジ上にパーティクルを生成する場合
-        std::uniform_int_distribution<int> edgeSelector(0, 11);         // 12本のエッジからランダム選択
-        std::uniform_real_distribution<float> edgePosition(0.0f, 1.0f); // エッジ上の位置（0〜1）
-
+    particle.emitterPosition = setting.translate;
+    if (setting.isEmitOnEdge) {
+        std::uniform_int_distribution<int> edgeSelector(0, 11);
+        std::uniform_real_distribution<float> edgePosition(0.0f, 1.0f);
         int selectedEdge = edgeSelector(randomEngine);
         float position = edgePosition(randomEngine);
-
-        // 立方体の8つの頂点の相対座標（スケール適用前）
-        const Vector3 v0 = {-1.0f, -1.0f, -1.0f}; // 左下手前
-        const Vector3 v1 = {1.0f, -1.0f, -1.0f};  // 右下手前
-        const Vector3 v2 = {-1.0f, 1.0f, -1.0f};  // 左上手前
-        const Vector3 v3 = {1.0f, 1.0f, -1.0f};   // 右上手前
-        const Vector3 v4 = {-1.0f, -1.0f, 1.0f};  // 左下奥
-        const Vector3 v5 = {1.0f, -1.0f, 1.0f};   // 右下奥
-        const Vector3 v6 = {-1.0f, 1.0f, 1.0f};   // 左上奥
-        const Vector3 v7 = {1.0f, 1.0f, 1.0f};    // 右上奥
-
-        // エッジの定義（始点と終点のインデックス）
+        const Vector3 v0 = {-1.0f, -1.0f, -1.0f};
+        const Vector3 v1 = {1.0f, -1.0f, -1.0f};
+        const Vector3 v2 = {-1.0f, 1.0f, -1.0f};
+        const Vector3 v3 = {1.0f, 1.0f, -1.0f};
+        const Vector3 v4 = {-1.0f, -1.0f, 1.0f};
+        const Vector3 v5 = {1.0f, -1.0f, 1.0f};
+        const Vector3 v6 = {-1.0f, 1.0f, 1.0f};
+        const Vector3 v7 = {1.0f, 1.0f, 1.0f};
         const std::pair<Vector3, Vector3> edges[] = {
-            {v0, v1}, {v1, v3}, {v3, v2}, {v2, v0}, // 前面
-            {v4, v5},
-            {v5, v7},
-            {v7, v6},
-            {v6, v4}, // 背面
-            {v0, v4},
-            {v1, v5},
-            {v2, v6},
-            {v3, v7} // 側面
-        };
-
-        // 選択されたエッジの始点と終点
+            {v0, v1}, {v1, v3}, {v3, v2}, {v2, v0}, {v4, v5}, {v5, v7}, {v7, v6}, {v6, v4}, {v0, v4}, {v1, v5}, {v2, v6}, {v3, v7}};
         const Vector3 &start = edges[selectedEdge].first;
         const Vector3 &end = edges[selectedEdge].second;
-
-        // エッジ上の位置を線形補間で計算
         randomTranslate = {
             start.x + (end.x - start.x) * position,
             start.y + (end.y - start.y) * position,
             start.z + (end.z - start.z) * position};
-
-        // スケールを適用
-        randomTranslate.x *= particleSetting_.scale.x;
-        randomTranslate.y *= particleSetting_.scale.y;
-        randomTranslate.z *= particleSetting_.scale.z;
+        randomTranslate.x *= setting.scale.x;
+        randomTranslate.y *= setting.scale.y;
+        randomTranslate.z *= setting.scale.z;
     } else {
-        // 通常のランダムな位置生成
         randomTranslate = {
-            distribution(randomEngine) * particleSetting_.scale.x,
-            distribution(randomEngine) * particleSetting_.scale.y,
-            distribution(randomEngine) * particleSetting_.scale.z};
+            distribution(randomEngine) * setting.scale.x,
+            distribution(randomEngine) * setting.scale.y,
+            distribution(randomEngine) * setting.scale.z};
     }
-
-    // 回転行列を適用してランダムな位置を回転
-    Matrix4x4 rotationMatrix = MakeRotateXYZMatrix(particleSetting_.rotation);
-
-    // ランダム位置を回転行列で変換
+    Matrix4x4 rotationMatrix = MakeRotateXYZMatrix(setting.rotation);
     Vector3 rotatedPosition = {
         randomTranslate.x * rotationMatrix.m[0][0] + randomTranslate.y * rotationMatrix.m[1][0] + randomTranslate.z * rotationMatrix.m[2][0],
         randomTranslate.x * rotationMatrix.m[0][1] + randomTranslate.y * rotationMatrix.m[1][1] + randomTranslate.z * rotationMatrix.m[2][1],
         randomTranslate.x * rotationMatrix.m[0][2] + randomTranslate.y * rotationMatrix.m[1][2] + randomTranslate.z * rotationMatrix.m[2][2]};
+    particle.transform.translation_ = setting.translate + rotatedPosition;
 
-    // 回転されたランダムな位置をトランスレーションに加算
-    particle.transform.translation_ = particleSetting_.translate + rotatedPosition;
-
-    if (particleSetting_.isRandomAllSize) {
-        std::uniform_real_distribution<float> distScaleX(particleSetting_.allScaleMin.x, particleSetting_.allScaleMax.x);
-        std::uniform_real_distribution<float> distScaleY(particleSetting_.allScaleMin.y, particleSetting_.allScaleMax.y);
-        std::uniform_real_distribution<float> distScaleZ(particleSetting_.allScaleMin.z, particleSetting_.allScaleMax.z);
+    if (setting.isRandomAllSize) {
+        std::uniform_real_distribution<float> distScaleX(setting.allScaleMin.x, setting.allScaleMax.x);
+        std::uniform_real_distribution<float> distScaleY(setting.allScaleMin.y, setting.allScaleMax.y);
+        std::uniform_real_distribution<float> distScaleZ(setting.allScaleMin.z, setting.allScaleMax.z);
         particle.startScale = {distScaleX(randomEngine), distScaleY(randomEngine), distScaleZ(randomEngine)};
-        if (particleSetting_.isEndScale) {
+        if (setting.isEndScale) {
             particle.endScale = particle.startScale;
         }
-    } else if (particleSetting_.isRandomSize) {
-        std::uniform_real_distribution<float> distScale(particleSetting_.scaleMin, particleSetting_.scaleMax);
+    } else if (setting.isRandomSize) {
+        std::uniform_real_distribution<float> distScale(setting.scaleMin, setting.scaleMax);
         particle.startScale.x = distScale(randomEngine);
         particle.startScale.y = particle.startScale.x;
         particle.startScale.z = particle.startScale.x;
     } else {
-        particle.startScale = particleSetting_.particleStartScale;
+        particle.startScale = setting.particleStartScale;
     }
-    if (!particleSetting_.isEndScale) {
-        particle.endScale = particleSetting_.particleEndScale;
+    if (!setting.isEndScale) {
+        particle.endScale = setting.particleEndScale;
     }
-
-    particle.startAcce = particleSetting_.startAcce;
-    particle.endAcce = particleSetting_.endAcce;
-
-    // パーティクルの速度をランダムに設定
+    particle.startAcce = setting.startAcce;
+    particle.endAcce = setting.endAcce;
     Vector3 randomVelocity = {
         distVelocityX(randomEngine),
         distVelocityY(randomEngine),
         distVelocityZ(randomEngine)};
-
-    // エミッターの回転を速度ベクトルに適用
     particle.velocity = {
         randomVelocity.x * rotationMatrix.m[0][0] + randomVelocity.y * rotationMatrix.m[1][0] + randomVelocity.z * rotationMatrix.m[2][0],
         randomVelocity.x * rotationMatrix.m[0][1] + randomVelocity.y * rotationMatrix.m[1][1] + randomVelocity.z * rotationMatrix.m[2][1],
         randomVelocity.x * rotationMatrix.m[0][2] + randomVelocity.y * rotationMatrix.m[1][2] + randomVelocity.z * rotationMatrix.m[2][2]};
-
-    if (particleSetting_.isRandomRotate) {
-        std::uniform_real_distribution<float> distRotateX(particleSetting_.rotateStartMin.x, particleSetting_.rotateStartMax.x);
-        std::uniform_real_distribution<float> distRotateY(particleSetting_.rotateStartMin.y, particleSetting_.rotateStartMax.y);
-        std::uniform_real_distribution<float> distRotateZ(particleSetting_.rotateStartMin.z, particleSetting_.rotateStartMax.z);
+    if (setting.isRandomRotate) {
+        std::uniform_real_distribution<float> distRotateX(setting.rotateStartMin.x, setting.rotateStartMax.x);
+        std::uniform_real_distribution<float> distRotateY(setting.rotateStartMin.y, setting.rotateStartMax.y);
+        std::uniform_real_distribution<float> distRotateZ(setting.rotateStartMin.z, setting.rotateStartMax.z);
         particle.transform.rotation_.x = distRotateX(randomEngine);
         particle.transform.rotation_.y = distRotateY(randomEngine);
         particle.transform.rotation_.z = distRotateZ(randomEngine);
-        if (particleSetting_.isRotateVelocity) {
-            // 回転速度をランダムに設定
-            std::uniform_real_distribution<float> distRotateXVelocity(particleSetting_.rotateVelocityMin.x, particleSetting_.rotateVelocityMax.x);
-            std::uniform_real_distribution<float> distRotateYVelocity(particleSetting_.rotateVelocityMin.y, particleSetting_.rotateVelocityMax.y);
-            std::uniform_real_distribution<float> distRotateZVelocity(particleSetting_.rotateVelocityMin.z, particleSetting_.rotateVelocityMax.z);
+        if (setting.isRotateVelocity) {
+            std::uniform_real_distribution<float> distRotateXVelocity(setting.rotateVelocityMin.x, setting.rotateVelocityMax.x);
+            std::uniform_real_distribution<float> distRotateYVelocity(setting.rotateVelocityMin.y, setting.rotateVelocityMax.y);
+            std::uniform_real_distribution<float> distRotateZVelocity(setting.rotateVelocityMin.z, setting.rotateVelocityMax.z);
             particle.rotateVelocity.x = distRotateXVelocity(randomEngine);
             particle.rotateVelocity.y = distRotateYVelocity(randomEngine);
             particle.rotateVelocity.z = distRotateZVelocity(randomEngine);
         }
     } else {
-        particle.startRote = particleSetting_.startRote;
-        particle.endRote = particleSetting_.endRote;
+        particle.startRote = setting.startRote;
+        particle.endRote = setting.endRote;
     }
-
-    if (particleSetting_.isRandomColor) {
-        // ランダムな色を設定
+    if (setting.isRandomColor) {
         std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
         particle.color = {distColor(randomEngine), distColor(randomEngine), distColor(randomEngine), distAlpha(randomEngine)};
     } else {
-        particle.color = {1.0f, 1.0f, 1.0f, distAlpha(randomEngine)};
+        // ここを修正: startColor を使う
+        particle.color = setting.startColor;
+        particle.color.w = distAlpha(randomEngine);
     }
-    if (particleSetting_.isFaceDirection) {
-
-        // 初期向きは上方向（0, 1, 0）
+    if (setting.isFaceDirection) {
         Vector3 initialUp = {0.0f, 1.0f, 0.0f};
-
-        // パーティクルの進行方向（velocity）を正規化
         Vector3 forward = particle.velocity.Normalize();
-
-        // 固定された進行方向として保存
         particle.fixedDirection = forward;
-
-        // 回転軸を計算（初期向きと進行方向の外積）
         Vector3 rotationAxis = initialUp.Cross(forward).Normalize();
-
-        // 初期向きと進行方向のなす角を計算
         float dotProduct = initialUp.Dot(forward);
-        float angle = acosf(std::clamp(dotProduct, -1.0f, 1.0f)); // 安全のためclamp
-
-        // 回転軸と角度から回転を生成
-        particle.transform.rotation_.x = rotationAxis.x * angle; // 軸回転の簡易的な設定
+        float angle = acosf(std::clamp(dotProduct, -1.0f, 1.0f));
+        particle.transform.rotation_.x = rotationAxis.x * angle;
         particle.transform.rotation_.y = rotationAxis.y * angle;
         particle.transform.rotation_.z = rotationAxis.z * angle;
     }
-
     particle.initialAlpha = distAlpha(randomEngine);
-    // ライフタイムをランダムに設定
     particle.lifeTime = distLifeTime(randomEngine);
     particle.currentTime = 0.0f;
 
     return particle;
 }
 
-// 全てのパーティクルグループに対してパーティクルを生成する関数
 std::list<Particle> ParticleManager::Emit() {
-
-    std::list<Particle> allNewParticles; // 生成された全パーティクルを格納
-
-    // 全てのパーティクルグループに対してループ
+    std::list<Particle> allNewParticles;
     for (auto &[groupName, particleGroup] : particleGroups_) {
-        std::list<Particle> newParticles; // 各グループごとの新規パーティクルリスト
-
-        for (uint32_t nowCount = 0; nowCount < particleSetting_.count; ++nowCount) {
-            // 新しいパーティクルを生成
-            Particle particle = MakeNewParticle(
-                randomEngine);
-
-            newParticles.push_back(particle); // 生成したパーティクルをリストに追加
+        std::list<Particle> newParticles;
+        ParticleSetting &setting = particleSettings_[groupName];
+        for (uint32_t nowCount = 0; nowCount < setting.count; ++nowCount) {
+            Particle particle = MakeNewParticle(randomEngine, setting);
+            newParticles.push_back(particle);
         }
-
-        // 各グループのパーティクルデータに追加
         particleGroup->GetParticleGroupData().particles.splice(
             particleGroup->GetParticleGroupData().particles.end(),
             newParticles);
-
-        // 全体の返却用リストにも追加
         allNewParticles.splice(allNewParticles.end(), newParticles);
     }
+    return allNewParticles;
+}
 
-    return allNewParticles; // 全グループに生成されたパーティクルをまとめて返す
+bool ParticleManager::IsAllParticlesComplete() const {
+    for (const auto &[groupName, particleGroup] : particleGroups_) {
+        const auto &particles = particleGroup->GetParticleGroupData().particles;
+        if (!particles.empty()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ParticleManager::IsParticleGroupComplete(const std::string &groupName) const {
+    auto it = particleGroups_.find(groupName);
+    if (it == particleGroups_.end()) {
+        return true; // グループが存在しない場合はtrueを返す
+    }
+
+    const auto &particles = it->second->GetParticleGroupData().particles;
+    return particles.empty();
+}
+
+size_t ParticleManager::GetActiveParticleCount() const {
+    size_t totalCount = 0;
+    for (const auto &[groupName, particleGroup] : particleGroups_) {
+        const auto &particles = particleGroup->GetParticleGroupData().particles;
+        totalCount += particles.size();
+    }
+    return totalCount;
+}
+
+size_t ParticleManager::GetActiveParticleCount(const std::string &groupName) const {
+    auto it = particleGroups_.find(groupName);
+    if (it == particleGroups_.end()) {
+        return 0; // グループが存在しない場合は0を返す
+    }
+
+    const auto &particles = it->second->GetParticleGroupData().particles;
+    return particles.size();
 }

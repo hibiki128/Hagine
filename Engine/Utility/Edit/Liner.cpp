@@ -1,6 +1,6 @@
 #include "Liner.h"
-#include "Vector3.h"
-#include"Quaternion.h"
+#include "type/Vector3.h"
+#include"type/Quaternion.h"
 
 Liner::Liner()
 {

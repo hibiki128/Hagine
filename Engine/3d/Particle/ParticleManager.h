@@ -1,25 +1,29 @@
 #pragma once
 #include "ParticleCommon.h"
 #include "Srv/SrvManager.h"
-#include "Vector2.h"
-#include "Vector3.h"
-#include "Vector4.h"
+#include "type/Vector2.h"
+#include "type/Vector3.h"
+#include "type/Vector4.h"
 #include "ViewProjection/ViewProjection.h"
-#include "random"
-#include <Matrix4x4.h>
+#include <type/Matrix4x4.h>
 #include <ModelStructs.h>
 #include <ParticleGroup.h>
 #include <WorldTransform.h>
+#include <random>
+#include <unordered_map> // 追加
 
 struct ParticleSetting {
     Vector3 translate;
     Vector3 rotation;
-    Vector3 scale; // スケールを引数として受け取る
+    Vector3 scale;
+    Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f}; 
+    Vector4 endColor = {1.0f, 1.0f, 1.0f, 1.0f}; 
     uint32_t count;
     Vector3 velocityMin;
-    Vector3 velocityMax; // 速度の範囲
+    Vector3 velocityMax;
     float lifeTimeMin;
     float lifeTimeMax;
+    float gravity;
     Vector3 particleStartScale;
     Vector3 particleEndScale;
     Vector3 startAcce;
@@ -38,6 +42,9 @@ struct ParticleSetting {
     Vector3 rotateStartMax;
     Vector3 rotateStartMin;
     bool isBillboard = false;
+    bool isBillboardX = false;
+    bool isBillboardY = false;
+    bool isBillboardZ = false;
     bool isRandomRotate = false;
     bool isRotateVelocity = false;
     bool isAcceMultiply = false;
@@ -50,71 +57,62 @@ struct ParticleSetting {
     bool isGatherMode = false;
     float gatherStartRatio = 0.5f;
     float gatherStrength = 2.0f;
+    bool enableTrail;             // 軌跡機能を有効にするか
+    float trailSpawnInterval;     // 軌跡パーティクル生成間隔
+    int maxTrailParticles;        // 最大軌跡パーティクル数
+    float trailLifeScale;         // 軌跡パーティクルの寿命スケール
+    Vector3 trailScaleMultiplier; // 軌跡パーティクルのサイズ倍率
+    Vector4 trailColorMultiplier; // 軌跡パーティクルの色倍率
+    bool trailInheritVelocity;    // 軌跡が親の速度を継承するか
+    float trailVelocityScale;     // 軌跡の速度スケール
+
+    ParticleSetting() : enableTrail(false), trailSpawnInterval(0.05f),
+                        maxTrailParticles(1), trailLifeScale(0.5f),
+                        trailScaleMultiplier({0.8f, 0.8f, 0.8f}),
+                        trailColorMultiplier({1.0f, 1.0f, 1.0f, 0.7f}),
+                        trailInheritVelocity(true), trailVelocityScale(0.3f) {}
 };
 
 class ParticleManager {
-
   public:
-    /// <summary>
-    /// 初期化
-    /// </summary>
     void Initialize(SrvManager *srvManager);
-
-    /// <summary>
-    /// 更新
-    /// </summary>
     void Update(const ViewProjection &viewProjeciton);
-
-    /// <summary>
-    /// 描画
-    /// </summary>
     void Draw();
-
-    /// <summary>
-    /// パーティクルグループの生成
-    /// </summary>
-    /// <param name="name"></param>
-    /// <param name="textureFilePath"></param>
     void AddParticleGroup(ParticleGroup *particleGroup);
+    void RemoveParticleGroup(const std::string &name);
 
-    void RemoveParticleGroup(const std::string &name) {
-        // マップやセットなどからグループ本体を削除
-        particleGroups_.erase(name);
+    // グループごとのParticleSetting
+    void SetParticleSetting(const std::string &groupName, const ParticleSetting &setting);
+    ParticleSetting &GetParticleSetting(const std::string &groupName);
+    std::vector<std::string> GetParticleGroupsName();
+    void SetTrailEnabled(const std::string &groupName, bool enabled);
+    void SetTrailSettings(const std::string &groupName, float interval, int maxTrails);
+    void SetEmitterCenter(Vector3 center) { emitterCenter_ = center; }
 
-        // 名前リスト（vector）からも削除
-        auto it = std::find(particleGroupNames_.begin(), particleGroupNames_.end(), name);
-        if (it != particleGroupNames_.end()) {
-            particleGroupNames_.erase(it);
-        }
-    }
-
-    void SetParticleSetting(const ParticleSetting &particleSetting) {
-        particleSetting_ = particleSetting;
-        SetGatherStartRatio(particleSetting.gatherStartRatio);
-        SetGatherStrength(particleSetting.gatherStrength);
-    }
-
-    std::vector<std::string> GetParticleGroupsName() { return particleGroupNames_; }
+     // 全てのパーティクルが消えたかチェック
+    bool IsAllParticlesComplete() const;
+    // 特定のグループのパーティクルが全て消えたかチェック
+    bool IsParticleGroupComplete(const std::string &groupName) const;
+    // アクティブなパーティクルの総数を取得
+    size_t GetActiveParticleCount() const;
+    // 特定のグループのアクティブなパーティクル数を取得
+    size_t GetActiveParticleCount(const std::string &groupName) const;
 
   private:
     ParticleCommon *particleCommon = nullptr;
-
     SrvManager *srvManager_;
     std::unordered_map<std::string, ParticleGroup *> particleGroups_;
-    std::vector<std::string> particleGroupNames_;
+    std::unordered_map<std::string, ParticleSetting> particleSettings_; // ここがポイント
 
+    std::vector<std::string> particleGroupNames_;
     std::random_device seedGenerator;
     std::mt19937 randomEngine;
-
-    ParticleSetting particleSetting_ = {};
+    Vector3 emitterCenter_{};
 
   public:
     std::list<Particle> Emit();
-
   private:
-    Particle MakeNewParticle(std::mt19937 &randomEngine);
+    void CreateTrailParticle(const Particle &parent, const ParticleSetting &setting);
 
-    void SetGatherStartRatio(float ratio) { particleSetting_.gatherStartRatio = std::clamp(ratio, 0.0f, 1.0f); }
-
-    void SetGatherStrength(float strength) { particleSetting_.gatherStrength = strength; }
+    Particle MakeNewParticle(std::mt19937 &randomEngine, const ParticleSetting &setting);
 };

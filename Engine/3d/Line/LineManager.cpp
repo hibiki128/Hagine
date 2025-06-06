@@ -2,7 +2,7 @@
 #include <random>
 #include"Texture/TextureManager.h"
 #include"fstream"
-#include <Quaternion.h>
+#include <type/Quaternion.h>
 
 void LineManager::Initialize(SrvManager* srvManager)
 {

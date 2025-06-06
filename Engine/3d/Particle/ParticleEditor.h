@@ -21,7 +21,9 @@ class ParticleEditor {
     ParticleEditor &operator=(const ParticleEditor &) = delete;
 
     // パーティクルエミッター保持用マップ
-    std::map<std::string, std::unique_ptr<ParticleEmitter>> emitters_;
+    std::unordered_map<std::string, std::unique_ptr<ParticleEmitter>> emitters_;
+    int selectedEmitterIndex_ = 0;    // 選択されたエミッターのインデックス
+    std::string selectedEmitterName_; // 選択されたエミッターの名前
 
     // パーティクルグループマネージャーポインタ
     ParticleGroupManager *particleGroupManager_ = nullptr;
@@ -70,7 +72,9 @@ class ParticleEditor {
     // パーティクルグループ追加（プリミティブ使用）
     void AddPrimitiveParticleGroup(const std::string &name, const std::string &texturePath, PrimitiveType type);
     // エミッターの取得
-    std::unique_ptr<ParticleEmitter> GetEmitter(const std::string &name);
+    //std::unique_ptr<ParticleEmitter> GetEmitter(const std::string &name);
+
+    std::unique_ptr<ParticleEmitter> CreateEmitterFromTemplate(const std::string &name);
     // ImGuiエディターの表示
     void EditorWindow();
     // すべてのエミッターを描画

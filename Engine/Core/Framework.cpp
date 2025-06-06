@@ -56,7 +56,7 @@ void Framework::Initialize() {
 #endif // _DEBUG
        /// -----------------------
 
-        /// ---------ImGuizmo---------
+    /// ---------ImGuizmo---------
 #ifdef _DEBUG
     imGuizmoManager_ = ImGuizmoManager::GetInstance();
 #endif // _DEBUG
@@ -211,6 +211,10 @@ void Framework::Update() {
 }
 
 void Framework::LoadResource() {
+    particleEditor->AddParticleEmitter("hitEmitter");
+    particleEditor->AddParticleEmitter("chageEmitter");
+    particleEditor->AddParticleEmitter("bulletEmitter");
+    particleEditor->AddParticleEmitter("chageBullet");
 }
 
 void Framework::PlaySounds() {

@@ -28,6 +28,8 @@ class BaseObjectManager {
 
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
 
+    void DrawWireframe(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
+
     void DrawImGui();
 
     BaseObject *GetObjectByName(const std::string &name);

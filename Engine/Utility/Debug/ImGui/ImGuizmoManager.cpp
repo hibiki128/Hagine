@@ -1,4 +1,5 @@
 #define NOMINMAX
+#ifdef _DEBUG
 #include "ImGuizmoManager.h"
 #include "Input.h"
 
@@ -228,3 +229,5 @@ void ImGuizmoManager::DecomposeMatrix(WorldTransform *transform) {
         rotation[2] * DEG_TO_RAD};
     transform->scale_ = {scale[0], scale[1], scale[2]};
 }
+
+#endif // _DEBUG

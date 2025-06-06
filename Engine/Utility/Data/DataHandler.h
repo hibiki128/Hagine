@@ -1,7 +1,7 @@
 #pragma once
-#include <Vector2.h>
-#include <Vector3.h>
-#include"Vector4.h"
+#include <type/Vector2.h>
+#include <type/Vector3.h>
+#include"type/Vector4.h"
 #include <externals/nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>

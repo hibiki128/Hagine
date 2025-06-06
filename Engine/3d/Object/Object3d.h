@@ -1,18 +1,18 @@
 #pragma once
-#include "Matrix4x4.h"
+#include "Material/Material.h"
+#include "type/Matrix4x4.h"
 #include "Model.h"
 #include "ObjColor.h"
 #include "Object/Object3dCommon.h"
-#include "Vector2.h"
-#include "Vector3.h"
-#include "Vector4.h"
+#include "type/Vector2.h"
+#include "type/Vector3.h"
+#include "type/Vector4.h"
 #include "ViewProjection/ViewProjection.h"
 #include "WorldTransform.h"
 #include "animation/ModelAnimation.h"
 #include "light/LightGroup.h"
 #include "string"
 #include "vector"
-#include"Material/Material.h"
 
 class ModelCommon;
 class Object3d {
@@ -31,18 +31,14 @@ class Object3d {
     };
 
     DirectXCommon *dxCommon_ = nullptr;
- 
+
     // バッファリソース
     Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
     // バッファリソース内のデータを指すポインタ
     TransformationMatrix *transformationMatrixData = nullptr;
 
-    //// バッファリソース
-    //Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr;
-    //// バッファリソース内のデータを指すポインタ
-    //Material *materialData = nullptr;
-
-    std::unique_ptr<Material> material_;
+    // マルチマテリアル対応：マテリアル配列
+    std::vector<std::unique_ptr<Material>> materials_;
 
     Transform transform;
 
@@ -57,10 +53,14 @@ class Object3d {
     Vector3 rotation = {0.0f, 0.0f, 0.0f};
     Vector3 size = {1.0f, 1.0f, 1.0f};
     bool HaveAnimation;
+    bool isPrimitive_ = false;
 
     std::string filePath_;
     std::unique_ptr<Object3dCommon> objectCommon_;
     BlendMode blendMode_ = BlendMode::kNone;
+
+       // ピボット（原点）オフセット
+    Vector3 pivotOffset_ = {0.0f, 0.0f, 0.0f};
 
   public: // メンバ関数
     void Initialize();
@@ -100,6 +100,8 @@ class Object3d {
     /// <param name="fileName"></param>
     void AddAnimation(const std::string &fileName);
 
+    void DrawWireframe(const WorldTransform &worldTransform, const ViewProjection &viewProjection);
+
     /// <summary>
     /// 描画
     /// </summary>
@@ -119,10 +121,15 @@ class Object3d {
     const Vector3 &GetPosition() const { return position; }
     const Vector3 &GetRotation() const { return rotation; }
     const Vector3 &GetSize() const { return size; }
-    const std::string GetTexture() const { return material_->GetMaterialDataGPU()->textureFilePath; }
+    const std::string GetTexture(uint32_t index) const {
+        return materials_[index]->GetMaterialDataGPU()->textureFilePath;
+    }
     const bool &GetHaveAnimation() const { return HaveAnimation; }
     bool IsFinish() { return currentModelAnimation_->IsFinish(); }
 
+    // マルチマテリアル用のgetter
+    size_t GetMaterialCount() const { return materials_.size(); }
+    const Vector3 &GetPivotOffset() const { return pivotOffset_; }
     /// <summary>
     /// setter
     /// </summary>
@@ -132,10 +139,24 @@ class Object3d {
     void SetRotation(const Vector3 &rotation) { this->rotation = rotation; }
     void SetSize(const Vector3 &size) { this->size = size; }
     void SetModel(const std::string &filePath);
-    void SetTexture(const std::string &filePath);
-    void SetUVTransform(const Matrix4x4 &mat) { material_->GetMaterialDataGPU()->uvTransform = mat; }
-    void SetColor(const Vector4 &color) { material_->GetMaterialDataGPU()->color = color; }
+    void SetUVTransform(const Matrix4x4 &mat,uint32_t index) {
+        materials_[index]->GetMaterialDataGPU()->uvTransform = mat;
+    }
+    void SetColor(const Vector4 &color,uint32_t index) {
+        materials_[index]->GetMaterialDataGPU()->color = color;
+    }
     void SetBlendMode(BlendMode blendMode) { blendMode_ = blendMode; }
+
+    // マルチマテリアル用のsetter
+    void SetTexture(const std::string &filePath, uint32_t materialIndex);
+    void SetAllTexturesIndex(const std::string &filePath);
+    void SetMaterialColor(uint32_t materialIndex, const Vector4 &color);
+    void SetAllMaterialsColor(const Vector4 &color);
+    void SetMaterialUVTransform(uint32_t materialIndex, const Matrix4x4 &uvTransform);
+    void SetAllMaterialsUVTransform(const Matrix4x4 &uvTransform);
+    void SetMaterialShininess(uint32_t materialIndex, float shininess);
+    void SetAllMaterialsShininess(float shininess);
+    void SetPivotOffset(const Vector3 &offset) { pivotOffset_ = offset; }
 
     /// <summary>
     /// 光沢度の設定
@@ -150,9 +171,16 @@ class Object3d {
     void CreateTransformationMatrix();
 
     /// <summary>
-    /// マテリアルデータ作成
+    /// マテリアル初期化（マルチマテリアル対応）
     /// </summary>
-   // void CreateMaterial();
+    void InitializeMaterials();
+
+    /// <summary>
+    /// マテリアルインデックス検証
+    /// </summary>
+    /// <param name="materialIndex"></param>
+    /// <returns></returns>
+    bool IsValidMaterialIndex(uint32_t materialIndex) const;
 
     Vector3 ExtractTranslation(const Matrix4x4 &matrix) {
         return Vector3(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);

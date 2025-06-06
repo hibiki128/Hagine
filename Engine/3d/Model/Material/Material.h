@@ -18,7 +18,8 @@ class Material {
     void Draw(Vector4 &color, bool &lighting);
 
     MaterialData *GetMaterialDataGPU() { return materialDataGPU_; }
-    MaterialData GetMaterialData() { return materialData_; }
+    MaterialData &GetMaterialData() { return materialData_; }
+    void SetMaterialDataGPU(MaterialData *materialDataGPU) { materialDataGPU_ = materialDataGPU; }
 
   private:
     /// ==========================================

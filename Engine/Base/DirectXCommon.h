@@ -7,7 +7,7 @@
 #include "externals/DirectXTex/DirectXTex.h"
 #include "string"
 #include "wrl.h"
-#include <Vector4.h>
+#include <type/Vector4.h>
 
 // DirectX基盤
 class DirectXCommon {

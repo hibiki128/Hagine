@@ -12,6 +12,7 @@ enum class PrimitiveType {
     Triangle,
     Cone,
     Pyramid,
+    kCount,
 };
 
 

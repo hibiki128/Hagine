@@ -7,7 +7,7 @@
 #include <array>
 #include<memory>
 
-#include"Vector2.h"
+#include"type/Vector2.h"
 
 #define DIRECTNPUT_VERSION 0x0800//バージョン指定
 #include <XInput.h>

@@ -63,6 +63,11 @@ class ImGuiManager {
     void Draw();
 
     /// <summary>
+    /// .iniファイル関連の更新
+    /// </summary>
+    void UpdateIni();
+
+    /// <summary>
     /// メインUI表示
     /// </summary>
     void ShowMainUI(OffScreen *offscreen);
