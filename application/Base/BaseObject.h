@@ -47,6 +47,7 @@ class BaseObject : public Collider {
     virtual void Init(const std::string className);
     virtual void Update();
     virtual void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
+    virtual void DrawWireframe(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
 
     virtual void CreateModel(const std::string modelname);
     virtual void CreatePrimitiveModel(const PrimitiveType &type);
@@ -77,7 +78,7 @@ class BaseObject : public Collider {
     /// ===================================================
     /// setter
     /// ===================================================
-    void SetTexture(const std::string &filePath) { obj3d_->SetTexture(filePath); }
+    void SetTexture(const std::string &filePath,uint32_t index) { obj3d_->SetTexture(filePath,index); }
     void SetParent(const WorldTransform *parent) { transform_.parent_ = parent; }
     void SetModel(std::unique_ptr<Object3d> obj) {
         obj3d_ = std::move(obj);

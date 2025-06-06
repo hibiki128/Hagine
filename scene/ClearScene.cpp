@@ -14,6 +14,7 @@ void ClearScene::Initialize() {
 }
 
 void ClearScene::Finalize() {
+    BaseScene::Finalize();
 }
 
 void ClearScene::Update() {

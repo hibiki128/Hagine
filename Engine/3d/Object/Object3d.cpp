@@ -6,6 +6,7 @@
 #include <Model/ModelManager.h>
 #include <Texture/TextureManager.h>
 #include <line/DrawLine3D.h>
+#include <Engine/Frame/Frame.h>
 
 void Object3d::Initialize() {
     objectCommon_ = std::make_unique<Object3dCommon>();

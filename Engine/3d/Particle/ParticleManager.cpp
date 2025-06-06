@@ -440,6 +440,7 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         particle.transform.rotation_.x = rotationAxis.x * angle;
         particle.transform.rotation_.y = rotationAxis.y * angle;
         particle.transform.rotation_.z = rotationAxis.z * angle;
+
     }
     particle.initialAlpha = distAlpha(randomEngine);
     particle.lifeTime = distLifeTime(randomEngine);
@@ -499,6 +500,8 @@ size_t ParticleManager::GetActiveParticleCount(const std::string &groupName) con
     if (it == particleGroups_.end()) {
         return 0; // グループが存在しない場合は0を返す
     }
+    return allNewParticles;
+}
 
     const auto &particles = it->second->GetParticleGroupData().particles;
     return particles.size();
