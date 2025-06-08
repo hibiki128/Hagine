@@ -544,9 +544,11 @@ void ImGuiManager::ShowFPSWindow() {
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
-    ImGui::Begin("FPS", &showFPSView_, flags);
+    ImGui::Begin("統計", &showFPSView_, flags);
 
     DisplayFPS();
+
+    ParticleEditor::GetInstance()->SceneParticleCount();
 
     ImGui::End();
 }
@@ -730,23 +732,27 @@ void ImGuiManager::ShowDockSpace() {
 
 void ImGuiManager::DisplayFPS() {
 #ifdef _DEBUG
-    ImGuiIO &io = ImGui::GetIO();
-    // FPSを取得
-    float fps = Frame::GetFPS();
-    float deltaTime = Frame::DeltaTime() * 1000.0f; // ミリ秒単位に変換
+    if (ImGui::CollapsingHeader("FPS")) {
 
-    // FPSを色付きで表示
-    ImVec4 color;
-    if (fps >= 59.0f) {
-        color = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // 60FPS付近なら緑色
-    } else if (fps >= 30.0f) {
-        color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // 30-59FPSなら黄色
-    } else {
-        color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 30FPS未満なら赤色
+        ImGuiIO &io = ImGui::GetIO();
+        // FPSを取得
+        float fps = Frame::GetFPS();
+        float deltaTime = Frame::DeltaTime() * 1000.0f; // ミリ秒単位に変換
+
+        // FPSを色付きで表示
+        ImVec4 color;
+        if (fps >= 59.0f) {
+            color = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // 60FPS付近なら緑色
+        } else if (fps >= 30.0f) {
+            color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // 30-59FPSなら黄色
+        } else {
+            color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 30FPS未満なら赤色
+        }
+
+        ImGui::TextColored(color, "FPS: %.1f", fps);
+        ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
+        // ImGui::TreePop();
     }
-
-    ImGui::TextColored(color, "FPS: %.1f", fps);
-    ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
 #endif // _DEBUG
 }
 

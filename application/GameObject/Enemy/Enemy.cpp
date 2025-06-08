@@ -27,6 +27,8 @@ void Enemy::Init(const std::string objectName) {
 }
 
 void Enemy::Update() {
+    ParticleEditor::GetInstance()->SetExternalParticleCount("hitEmitter", emitter_->GetActiveParticleCount());
+    
     shadow_->GetWorldPosition() = {transform_.translation_.x, -0.95f, transform_.translation_.z};
     shadow_->Update();
 }

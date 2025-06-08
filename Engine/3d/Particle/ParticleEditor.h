@@ -28,6 +28,8 @@ class ParticleEditor {
     // パーティクルグループマネージャーポインタ
     ParticleGroupManager *particleGroupManager_ = nullptr;
 
+    std::unordered_map<std::string, size_t> externalParticleCounts_;
+
     // ローカル変数（UIで使用）
     std::string localName_;                         // パーティクルグループ名
     std::string localFileObj_;                      // .objファイルパス
@@ -72,7 +74,16 @@ class ParticleEditor {
     // パーティクルグループ追加（プリミティブ使用）
     void AddPrimitiveParticleGroup(const std::string &name, const std::string &texturePath, PrimitiveType type);
     // エミッターの取得
-    //std::unique_ptr<ParticleEmitter> GetEmitter(const std::string &name);
+    // std::unique_ptr<ParticleEmitter> GetEmitter(const std::string &name);
+
+    // 外部パーティクル数をセット（シーン側から呼び出し）
+    void SetExternalParticleCount(const std::string &name, size_t count);
+    // 外部パーティクル数をクリア
+    void ClearExternalParticleCount(const std::string &name);
+    // 全外部パーティクル数をクリア
+    void ClearAllExternalParticleCounts();
+
+    void SceneParticleCount();
 
     std::unique_ptr<ParticleEmitter> CreateEmitterFromTemplate(const std::string &name);
     // ImGuiエディターの表示

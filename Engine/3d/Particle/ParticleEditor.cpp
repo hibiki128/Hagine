@@ -83,6 +83,21 @@ void ParticleEditor::AddPrimitiveParticleGroup(const std::string &name, const st
     particleGroupManager_->AddParticleGroup(std::move(group));
 }
 
+void ParticleEditor::SetExternalParticleCount(const std::string &name, size_t count) {
+    externalParticleCounts_[name] = count;
+}
+
+void ParticleEditor::ClearExternalParticleCount(const std::string &name) {
+    auto it = externalParticleCounts_.find(name);
+    if (it != externalParticleCounts_.end()) {
+        externalParticleCounts_.erase(it);
+    }
+}
+
+void ParticleEditor::ClearAllExternalParticleCounts() {
+    externalParticleCounts_.clear();
+}
+
 void ParticleEditor::DrawAll(const ViewProjection &vp_) {
     for (auto &[name, emitter] : emitters_) {
         if (emitter) {
@@ -145,6 +160,67 @@ void ParticleEditor::DebugAll() {
 //    }
 //    return nullptr;
 //}
+
+void ParticleEditor::SceneParticleCount() {
+    if (ImGui::CollapsingHeader("パーティクル統計")) {
+        size_t totalParticleCount = 0;
+        size_t editorParticleCount = 0;
+        size_t externalParticleCount = 0;
+
+        ImGui::Text("=== パーティクル統計情報 ===");
+        ImGui::Spacing();
+
+        // エディター内のエミッター統計
+        if (!emitters_.empty()) {
+            if (ImGui::TreeNode("エディター内エミッター")) {
+                for (const auto &[name, emitter] : emitters_) {
+                    if (emitter && emitter->GetParticleManager()) {
+                        size_t emitterParticleCount = emitter->GetParticleManager()->GetActiveParticleCount();
+                        editorParticleCount += emitterParticleCount;
+                        ImGui::Text("・%s: %zu パーティクル", name.c_str(), emitterParticleCount);
+                    }
+                }
+                ImGui::Text("エディター合計: %zu パーティクル", editorParticleCount);
+                ImGui::TreePop();
+            }
+        } else {
+            ImGui::Text("エディター内エミッター: なし");
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // 外部（シーン側）のパーティクル統計
+        if (!externalParticleCounts_.empty()) {
+            if (ImGui::TreeNode("シーン側パーティクル")) {
+                for (const auto &[name, count] : externalParticleCounts_) {
+                    externalParticleCount += count;
+                    ImGui::Text("・%s: %zu パーティクル", name.c_str(), count);
+                }
+                ImGui::Text("シーン側合計: %zu パーティクル", externalParticleCount);
+                ImGui::TreePop();
+            }
+        } else {
+            ImGui::Text("シーン側パーティクル: なし");
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // 総合計
+        totalParticleCount = editorParticleCount + externalParticleCount;
+        ImGui::Text("=== 総パーティクル数: %zu ===", totalParticleCount);
+
+        // 内訳表示
+        if (totalParticleCount > 0) {
+            ImGui::Text("(エディター: %zu + シーン: %zu)", editorParticleCount, externalParticleCount);
+        }
+
+        ImGui::Spacing();
+    }
+}
 
 std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const std::string &name) {
     auto it = emitters_.find(name);

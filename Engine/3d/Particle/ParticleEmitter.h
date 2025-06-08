@@ -87,6 +87,15 @@ class ParticleEmitter {
         }
     }
 
+    size_t GetActiveParticleCount() const {
+        return Manager_ ? Manager_->GetActiveParticleCount() : 0;
+    }
+
+    // パーティクルマネージャーへのアクセス（デバッグ用）
+    ParticleManager *GetParticleManager() const {
+        return Manager_.get();
+    }
+
   private:
     // パーティクルを発生させるEmit関数
     void Emit();

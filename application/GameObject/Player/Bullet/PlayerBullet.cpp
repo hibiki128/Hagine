@@ -26,6 +26,7 @@ void PlayerBullet::Init(const std::string objectName) {
 }
 
 void PlayerBullet::Update() {
+    ParticleEditor::GetInstance()->SetExternalParticleCount("bulletEmitter", emitter_->GetActiveParticleCount());
     if (isHit_ && emitter_->IsAllParticlesComplete()) {
         isAlive_ = false;
     }

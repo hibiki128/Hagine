@@ -32,6 +32,9 @@ void ChageShot::Init(const std::string objectName) {
 }
 
 void ChageShot::Update() {
+    ParticleEditor::GetInstance()->SetExternalParticleCount("chageEmitter", chageEmitter_->GetActiveParticleCount());
+    ParticleEditor::GetInstance()->SetExternalParticleCount("chageBullet", bulletEmitter_->GetActiveParticleCount());
+    
     Input *input = Input::GetInstance();
     if (isAlive_) {
         bulletEmitter_->Update();
