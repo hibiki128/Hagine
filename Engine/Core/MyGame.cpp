@@ -25,6 +25,7 @@ void MyGame::Finalize() {
 
 void MyGame::Update() {
     Framework::Update();
+
     // -----ゲーム固有の処理-----
     if (input->TriggerKey(DIK_F11)) {
         winApp->ToggleFullScreen();
@@ -47,6 +48,9 @@ void MyGame::Update() {
     imGuiManager_->ShowMainUI(offscreen_.get());
     imGuiManager_->End();
 
+#else
+    // Release版でもフラグをリセット
+    ParticleEditor::GetInstance()->ResetFrameFlag();
 #endif // _DEBUG
 
     // -----------------------
@@ -80,11 +84,15 @@ void MyGame::Draw() {
     sceneManager_->DrawForOffScreen();
     sceneManager_->DrawTransition();
 
+    // フレーム統計を更新（ImGui描画前）
+    ParticleEditor::GetInstance()->UpdateFrameStats();
+
 #ifdef _DEBUG
     imGuiManager_->Draw();
 #endif // _DEBUG
        // ------------------------
 
+      
     // -----描画終了-----
     dxCommon->PostDraw();
 }

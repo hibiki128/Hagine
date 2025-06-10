@@ -5,6 +5,7 @@
 
 #include "ParticleGroupManager.h"
 #include <set>
+#include <ParticleEditor.h>
 // コンストラクタ
 ParticleEmitter::ParticleEmitter() {}
 
@@ -50,6 +51,10 @@ void ParticleEmitter::Draw(const ViewProjection &vp_) {
         Manager_->Draw();
     }
     DrawEmitter();
+
+    size_t activeCount = Manager_->GetActiveParticleCount();
+    ParticleEditor::GetInstance()->SetExternalParticleCount(name_, activeCount);
+
 }
 
 void ParticleEmitter::DrawEmitter() {
@@ -1142,8 +1147,8 @@ void ParticleEmitter::AddParticleGroup(ParticleGroup *particleGroup) {
 std::unique_ptr<ParticleEmitter> ParticleEmitter::Clone() const {
     auto newEmitter = std::make_unique<ParticleEmitter>();
 
-    // コピー元の情報を複製
-    newEmitter->SetName(this->name_ + "_clone");
+    // 元の名前を保持（_cloneを付けない）
+    newEmitter->SetName(this->name_); // 変更: _cloneを付けない
     newEmitter->SetFrequency(this->emitFrequency_);
     newEmitter->SetActive(this->isActive_);
     newEmitter->isAuto_ = this->isAuto_;
@@ -1163,7 +1168,6 @@ std::unique_ptr<ParticleEmitter> ParticleEmitter::Clone() const {
             newEmitter->AddParticleGroup(group);
         }
     }
-
     return newEmitter;
 }
 
