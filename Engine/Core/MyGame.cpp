@@ -48,9 +48,6 @@ void MyGame::Update() {
     imGuiManager_->ShowMainUI(offscreen_.get());
     imGuiManager_->End();
 
-#else
-    // Release版でもフラグをリセット
-    ParticleEditor::GetInstance()->ResetFrameFlag();
 #endif // _DEBUG
 
     // -----------------------
