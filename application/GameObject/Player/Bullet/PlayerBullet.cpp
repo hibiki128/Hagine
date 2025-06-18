@@ -5,15 +5,13 @@
 #include "application/GameObject/Player/Player.h"
 #include <Engine/Frame/Frame.h>
 #include <cmath>
+#include"Log/Logger.h"
 
 void PlayerBullet::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     this->CreatePrimitiveModel(PrimitiveType::Sphere);
-    this->AddCollider();
-    this->SetCollisionType(CollisionType::Sphere);
     this->SetTexture("debug/white1x1.png");
     BaseObject::SetColor({0.0f, 0.0f, 1.0f, 1.0f});
-    BaseObject::SetVisible(false);
 
     // 弾の生存時間を設定（5秒後に消える）
     lifeTime_ = 5.0f;
@@ -137,6 +135,11 @@ void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
 void PlayerBullet::InitTransform(Player *player) {
     // プレイヤーの位置を弾の初期位置に設定
     this->transform_.translation_ = player->GetWorldPosition();
+    if (transform_.translation_ == Vector3(0.0f, 0.0f, 0.0f)) {
+        Logger::Log("default");
+    }
+    this->AddCollider();
+    this->SetCollisionType(CollisionType::Sphere);
 
     // プレイヤーがロックオン中かチェック
     if (player->GetIsLockOn() && player->GetEnemy()) {

@@ -77,8 +77,6 @@ void GameScene::Draw() {
     DrawLine3D::GetInstance()->DrawGrid(-0.95f, 64, 1000, {0.0f, 0.0f, 1.0f, 0.75f});
     //-----------------------
 
-    /// Particleの描画準備
-    ptCommon_->DrawCommonSetting();
     //------Particleの描画開始-------
     enemy_ptr->DrawParticle(vp_);
     player_ptr->DrawParticle(vp_);
@@ -104,8 +102,6 @@ void GameScene::DrawForOffScreen() {
 
     //-----------------------
 
-    /// Particleの描画準備
-    ptCommon_->DrawCommonSetting();
     //------Particleの描画開始-------
 
     //-----------------------------

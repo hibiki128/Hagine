@@ -18,7 +18,6 @@ void ChageShot::Init(const std::string objectName) {
     BaseObject::SetColor({0.0f, 0.5f, 1.0f, 1.0f});
     BaseObject::AddCollider();
     BaseObject::SetCollisionType(CollisionType::Sphere);
-    BaseObject::SetVisible(false);
     isAlive_ = false;
     isMaxScale_ = false;
     isFired_ = false;
@@ -34,6 +33,7 @@ void ChageShot::Init(const std::string objectName) {
 void ChageShot::Update() {
     Input *input = Input::GetInstance();
     if (isAlive_) {
+        Collider::SetCollisionEnabled(true);
         bulletEmitter_->Update();
         bulletEmitter_->SetPosition(transform_.translation_);
         bulletEmitter_->SetStartScale("chageBullet", transform_.scale_ * 2.0f);
@@ -129,6 +129,7 @@ void ChageShot::Reset() {
     isMaxScale_ = false;
     velocity_ = {0, 0, 0};
     transform_.translation_ = {0, 0, 0};
+    
 }
 
 void ChageShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -151,6 +152,7 @@ void ChageShot::imgui() {
 void ChageShot::OnCollisionEnter(Collider *other) {
     if (dynamic_cast<Enemy *>(other)) {
         isAlive_ = false;
+        Collider::SetCollisionEnabled(false);
         Reset();
     }
 }

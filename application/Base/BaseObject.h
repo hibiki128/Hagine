@@ -79,7 +79,7 @@ class BaseObject : public Collider {
     /// ===================================================
     /// setter
     /// ===================================================
-    void SetTexture(const std::string &filePath, uint32_t index) { obj3d_->SetTexture(filePath, index); }
+    void SetTexture(const std::string &filePath, uint32_t index = 0) { obj3d_->SetTexture(filePath, index); }
     void SetParent(const WorldTransform *parent) { transform_.parent_ = parent; }
     void SetModel(std::unique_ptr<Object3d> obj) {
         obj3d_ = std::move(obj);

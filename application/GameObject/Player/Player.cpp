@@ -23,6 +23,8 @@ Player::~Player() {
 void Player::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
+    BaseObject::AddCollider();
+    BaseObject::SetCollisionType(CollisionType::OBB);
     states_["Idle"] = std::make_unique<PlayerStateIdle>();
     states_["Move"] = std::make_unique<PlayerStateMove>();
     states_["Jump"] = std::make_unique<PlayerStateJump>();

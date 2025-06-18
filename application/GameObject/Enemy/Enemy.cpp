@@ -15,7 +15,8 @@ void Enemy::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
     BaseObject::AddCollider();
-    BaseObject::SetCollisionType(CollisionType::Sphere);
+    BaseObject::SetCollisionType(CollisionType::OBB);
+    BaseObject::SetTexture("debug/white1x1.png", 0);
     BaseObject::objColor_.GetColor() = Vector4(1, 0, 0, 1);
     shadow_ = std::make_unique<BaseObject>();
     shadow_->Init("shadow");

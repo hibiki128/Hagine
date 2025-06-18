@@ -100,15 +100,6 @@ class ParticleManager {
     // 特定のグループのアクティブなパーティクル数を取得
     size_t GetActiveParticleCount(const std::string &groupName) const;
 
-     // 全てのパーティクルが消えたかチェック
-    bool IsAllParticlesComplete() const;
-    // 特定のグループのパーティクルが全て消えたかチェック
-    bool IsParticleGroupComplete(const std::string &groupName) const;
-    // アクティブなパーティクルの総数を取得
-    size_t GetActiveParticleCount() const;
-    // 特定のグループのアクティブなパーティクル数を取得
-    size_t GetActiveParticleCount(const std::string &groupName) const;
-
   private:
     ParticleCommon *particleCommon = nullptr;
     SrvManager *srvManager_;
