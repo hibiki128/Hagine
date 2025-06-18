@@ -33,7 +33,7 @@ class ParticleEditor {
     // パーティクルグループマネージャーポインタ
     ParticleGroupManager *particleGroupManager_ = nullptr;
 
-std::unordered_map<std::string, ParticleStats> currentFrameStats_; // 現在フレームの統計
+    std::unordered_map<std::string, ParticleStats> currentFrameStats_; // 現在フレームの統計
     std::unordered_map<std::string, ParticleStats> displayStats_;      // 表示用の統計（前フレーム確定分）
     uint64_t currentFrameNumber_ = 0;
     uint64_t lastUpdateFrame_ = 0;

@@ -64,6 +64,32 @@ void Collider::UpdateWorldTransform() {
     UpdateOBB();
 }
 
+void Collider::SetCollisionType(CollisionType collisionType) {
+    switch (collisionType) {
+    case Collider::CollisionType::Sphere:
+        isSphere_ = true;
+        isAABB_ = false;
+        isOBB_ = false;
+        break;
+    case Collider::CollisionType::AABB:
+        isSphere_ = false;
+        isAABB_ = true;
+        isOBB_ = false;
+        break;
+    case Collider::CollisionType::OBB:
+        isSphere_ = false;
+        isAABB_ = false;
+        isOBB_ = true;
+        break;
+    default:
+        isSphere_ = false;
+        isAABB_ = false;
+        isOBB_ = false;
+        break;
+    }
+}
+
+
 void Collider::DebugDraw(const ViewProjection &viewProjection) {
     if (!isVisible_ || !isCollisionEnabled_) {
         return;
@@ -452,30 +478,6 @@ void Collider::DrawRotationCenter(const ViewProjection &viewProjection) {
     }
 }
 
-void Collider::SetCollisionType(CollisionType collisionType) {
-    switch (collisionType) {
-    case Collider::CollisionType::Sphere:
-        isSphere_ = true;
-        isAABB_ = false;
-        isOBB_ = false;
-        break;
-    case Collider::CollisionType::AABB:
-        isSphere_ = false;
-        isAABB_ = true;
-        isOBB_ = false;
-        break;
-    case Collider::CollisionType::OBB:
-        isSphere_ = false;
-        isAABB_ = false;
-        isOBB_ = true;
-        break;
-    default:
-        isSphere_ = false;
-        isAABB_ = false;
-        isOBB_ = false;
-        break;
-    }
-}
 
 void Collider::MakeOBBOrientations(OBB &obb, const Vector3 &rotate) {
     // 回転行列を作成

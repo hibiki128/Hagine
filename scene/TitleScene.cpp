@@ -17,7 +17,6 @@ void TitleScene::Initialize() {
     obj_->Init("test");
     obj_->CreateModel("animation/walk.gltf");
     BaseObjectManager::GetInstance()->AddObject(std::move(obj_));
-
 }
 
 void TitleScene::Finalize() {
@@ -36,27 +35,13 @@ void TitleScene::Update() {
 void TitleScene::Draw() {
     /// -------描画処理開始-------
 
-    BaseObjectManager::GetInstance()->DrawWireframe(vp_);
+    BaseObjectManager::GetInstance()->Draw(vp_);
 
     /// Spriteの描画準備
     spCommon_->DrawCommonSetting();
     //-----Spriteの描画開始-----
 
     //-------------------------
-
-    /// Particleの描画準備
-    ptCommon_->DrawCommonSetting();
-    //------Particleの描画開始-------
-
-    //-----------------------------
-
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
-    //-----Spriteの描画開始-----
-
-    //------------------------------
-
-    /// ----------------------------------
 
     /// -------描画処理終了-------
 }
@@ -69,14 +54,6 @@ void TitleScene::DrawForOffScreen() {
     //-----Spriteの描画開始-----
 
     //------------------------
-
-    /// Particleの描画準備
-    ptCommon_->DrawCommonSetting();
-    //------Particleの描画開始-------
-
-    //-----------------------------
-
-    /// ----------------------------------
 
     /// -------描画処理終了-------
 }

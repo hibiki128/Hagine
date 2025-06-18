@@ -4,6 +4,7 @@
 #include "line/DrawLine3D.h"
 
 #include "ParticleGroupManager.h"
+#include <ParticleEditor.h>
 #include <set>
 #include <ParticleEditor.h>
 // コンストラクタ
@@ -54,7 +55,6 @@ void ParticleEmitter::Draw(const ViewProjection &vp_) {
 
     size_t activeCount = Manager_->GetActiveParticleCount();
     ParticleEditor::GetInstance()->SetExternalParticleCount(name_, activeCount);
-
 }
 
 void ParticleEmitter::DrawEmitter() {
@@ -160,6 +160,7 @@ void ParticleEmitter::SaveToJson() {
         datas_->Save(groupName + "_trailVelocityScale", setting.trailVelocityScale);
         datas_->Save(groupName + "_startColor", setting.startColor);
         datas_->Save(groupName + "_endColor", setting.endColor);
+        datas_->Save(groupName + "_blendMode", setting.blendMode);
         Manager_->SetParticleSetting(groupName, setting);
     }
 }
@@ -228,7 +229,7 @@ void ParticleEmitter::LoadFromJson() {
         setting.trailVelocityScale = datas_->Load<float>(groupName + "_trailVelocityScale", 0.3f);
         setting.startColor = datas_->Load<Vector4>(groupName + "_startColor", {1.0f, 1.0f, 1.0f, 1.0f});
         setting.endColor = datas_->Load<Vector4>(groupName + "_endColor", {1.0f, 1.0f, 1.0f, 1.0f});
-
+        setting.blendMode = datas_->Load<BlendMode>(groupName + "_blendMode", BlendMode::kAdd);
         particleSettings_[groupName] = setting;
     }
 }
@@ -751,35 +752,43 @@ void ParticleEmitter::DebugParticleData() {
 
             ImGui::Separator();
             ImGui::Indent();
+            if (ImGui::TreeNode("ビルボード関連")) {
 
-            ImGui::Checkbox("ビルボード", &setting.isBillboard);
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("パーティクルを常にカメラに向ける");
+                ImGui::Checkbox("ビルボード", &setting.isBillboard);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルを常にカメラに向ける");
+                }
+
+                ImGui::Checkbox("Xビルボード", &setting.isBillboardX);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルのX軸を常にカメラに向ける");
+                }
+
+                ImGui::Checkbox("Yビルボード", &setting.isBillboardY);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルのY軸を常にカメラに向ける");
+                }
+
+                ImGui::Checkbox("Zビルボード", &setting.isBillboardZ);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルのZ軸を常にカメラに向ける");
+                }
+
+                ImGui::Checkbox("ランダムカラー", &setting.isRandomColor);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルごとに異なる色を適用");
+                }
+                ImGui::TreePop();
             }
-
-            ImGui::Checkbox("Xビルボード", &setting.isBillboardX);
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("パーティクルのX軸を常にカメラに向ける");
-            }
-
-            ImGui::Checkbox("Yビルボード", &setting.isBillboardY);
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("パーティクルのY軸を常にカメラに向ける");
-            }
-
-            ImGui::Checkbox("Zビルボード", &setting.isBillboardZ);
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("パーティクルのZ軸を常にカメラに向ける");
-            }
-
-            ImGui::Checkbox("ランダムカラー", &setting.isRandomColor);
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("パーティクルごとに異なる色を適用");
-            }
-
             ImGui::Unindent();
             ImGui::PopStyleColor(3); // CheckMark, FrameBg, FrameBgHovered
             ImGui::Spacing();
+
+            // ブレンドモード選択ツリー
+            if (ImGui::TreeNode("ブレンドモード")) {
+                ShowBlendModeCombo(setting.blendMode);
+                ImGui::TreePop();
+            }
 
         } else {
             ImGui::PopStyleColor(3);
@@ -1218,5 +1227,26 @@ void ParticleEmitter::SetTrailVelocityInheritance(const std::string &groupName, 
     if (particleSettings_.find(groupName) != particleSettings_.end()) {
         particleSettings_[groupName].trailInheritVelocity = inherit;
         particleSettings_[groupName].trailVelocityScale = scale;
+    }
+}
+
+void ParticleEmitter::ShowBlendModeCombo(BlendMode &currentMode) {
+    // コンボボックスに表示する項目（日本語）
+    static const char *blendModeItems[] = {
+        "なし",      // kNone
+        "通常",      // kNormal
+        "加算",      // kAdd
+        "減算",      // kSubtract
+        "乗算",      // kMultiply
+        "スクリーン" // kScreen
+    };
+
+    // 現在の選択状態（enumをintにキャスト）
+    int currentIndex = static_cast<int>(currentMode);
+
+    // コンボボックス表示
+    if (ImGui::Combo("ブレンドモード", &currentIndex, blendModeItems, IM_ARRAYSIZE(blendModeItems))) {
+        // ユーザーが選択を変更したときに反映
+        currentMode = static_cast<BlendMode>(currentIndex);
     }
 }

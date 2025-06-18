@@ -26,9 +26,6 @@ void Object3d::CreateModel(const std::string &filePath) {
     // モデルを検索してセットする
     model = ModelManager::GetInstance()->FindModel(filePath_);
 
-    // マルチマテリアル対応の初期化
-    InitializeMaterials();
-
     if (model->IsGltf()) {
         currentModelAnimation_ = std::make_unique<ModelAnimation>();
         currentModelAnimation_->SetModelData(model->GetModelData());
@@ -43,7 +40,6 @@ void Object3d::CreateModel(const std::string &filePath) {
 void Object3d::CreatePrimitiveModel(const PrimitiveType &type) {
     model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type));
     isPrimitive_ = true;
-    InitializeMaterials();
 }
 
 void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {
@@ -63,6 +59,36 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
     transformationMatrixData->World = worldTransform.matWorld_;
     Matrix4x4 worldInverseMatrix = Inverse(worldMatrix);
     transformationMatrixData->WorldInverseTranspose = Transpose(worldInverseMatrix);
+}
+
+
+void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, ObjColor *color, bool lighting) {
+    objectCommon_->SetBlendMode(blendMode_);
+    Update(worldTransform, viewProjection);
+
+    // アニメーション設定
+    if (model && model->IsGltf()) {
+        if (currentModelAnimation_->GetAnimator()->HaveAnimation()) {
+            HaveAnimation = true;
+            objectCommon_->skinningDrawCommonSetting();
+        } else {
+            HaveAnimation = false;
+        }
+    } 
+
+    // 変換行列設定
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
+
+    // ライティング設定
+    if (lightGroup) {
+        lightGroup->Draw();
+    }
+
+    // モデル描画
+    if (model) {
+        Vector4 drawColor = color ? color->GetColor() : Vector4{1.0f, 1.0f, 1.0f, 1.0f};
+        model->Draw(drawColor, lighting);
+    }
 }
 
 void Object3d::AnimationUpdate(bool roop) {
@@ -121,7 +147,7 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
 
     // ====== 時間カウンター（時間ベースで変化）======
     static float timeCounter = 0.0f;
-    timeCounter += Frame::DeltaTime() / 10.0f; // 毎フレーム時間加算
+    timeCounter += Frame::DeltaTime() / 7.0f; // 毎フレーム時間加算
     if (timeCounter > 100.0f)
         timeCounter = 0.0f; // オーバーフロー防止
 
@@ -227,44 +253,6 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
     }
 }
 
-void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, ObjColor *color, bool Lighting) {
-    objectCommon_->SetBlendMode(blendMode_);
-
-    Update(worldTransform, viewProjection);
-
-    if (model->IsGltf()) {
-        if (currentModelAnimation_->GetAnimator()->HaveAnimation()) {
-            HaveAnimation = true;
-            objectCommon_->skinningDrawCommonSetting();
-        } else {
-            HaveAnimation = false;
-        }
-    }
-
-    // wvp用のCBufferの場所を設定
-    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
-
-    // ライティング設定
-    if (lightGroup) {
-        lightGroup->Draw();
-    }
-
-    if (model) {
-        if (color) {
-            Vector4 overrideColor = color->GetColor();
-            for (size_t i = 0; i < model->GetMaterialCount(); ++i) {
-                model->SetMaterialColor(static_cast<uint32_t>(i), overrideColor);
-            }
-        }
-        std::vector<Material> materialRefs;
-        for (const auto &material : materials_) {
-            materialRefs.push_back(*material);
-        }
-
-        model->Draw(objectCommon_.get(), materialRefs);
-    }
-}
-
 void Object3d::DrawSkeleton(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {
     Update(worldTransform, viewProjection);
     // スケルトンデータを取得
@@ -297,9 +285,6 @@ void Object3d::SetModel(const std::string &filePath) {
     ModelManager::GetInstance()->LoadModel(filePath);
     model = ModelManager::GetInstance()->FindModel(filePath);
 
-    // マルチマテリアル対応の初期化
-    InitializeMaterials();
-
     if (model->IsGltf()) {
         currentModelAnimation_->SetModelData(model->GetModelData());
         currentModelAnimation_->Initialize("resources/models/", filePath);
@@ -308,96 +293,6 @@ void Object3d::SetModel(const std::string &filePath) {
         model->SetBone(currentModelAnimation_->GetBone());
         model->SetSkin(currentModelAnimation_->GetSkin());
     }
-}
-
-void Object3d::SetTexture(const std::string &filePath, uint32_t materialIndex) {
-    if (!IsValidMaterialIndex(materialIndex)) {
-        return;
-    }
-    if (isPrimitive_) {
-        materialIndex = 0;
-    }
-
-    materials_[materialIndex]->GetMaterialDataGPU()->textureFilePath = filePath;
-    TextureManager::GetInstance()->LoadTexture(filePath);
-    materials_[materialIndex]->GetMaterialDataGPU()->textureIndex =
-        TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
-    // モデルにも反映
-    if (model) {
-        model->GetMaterialData()[materialIndex] = *materials_[materialIndex]->GetMaterialDataGPU();
-    }
-}
-
-void Object3d::SetAllTexturesIndex(const std::string &filePath) {
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        SetTexture(filePath, static_cast<uint32_t>(i));
-    }
-}
-
-void Object3d::SetMaterialColor(uint32_t materialIndex, const Vector4 &color) {
-    if (!IsValidMaterialIndex(materialIndex)) {
-        return;
-    }
-
-    materials_[materialIndex]->GetMaterialDataGPU()->color = color;
-
-    // モデルにも反映
-    if (model) {
-        model->GetMaterialData()[materialIndex].color = color;
-    }
-}
-
-void Object3d::SetAllMaterialsColor(const Vector4 &color) {
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        SetMaterialColor(static_cast<uint32_t>(i), color);
-    }
-}
-
-void Object3d::SetMaterialUVTransform(uint32_t materialIndex, const Matrix4x4 &uvTransform) {
-    if (!IsValidMaterialIndex(materialIndex)) {
-        return;
-    }
-
-    materials_[materialIndex]->GetMaterialDataGPU()->uvTransform = uvTransform;
-
-    // モデルにも反映
-    if (model) {
-        model->GetMaterialData()[materialIndex].uvTransform = uvTransform;
-    }
-}
-
-void Object3d::SetAllMaterialsUVTransform(const Matrix4x4 &uvTransform) {
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        SetMaterialUVTransform(static_cast<uint32_t>(i), uvTransform);
-    }
-}
-
-void Object3d::SetMaterialShininess(uint32_t materialIndex, float shininess) {
-    if (!IsValidMaterialIndex(materialIndex)) {
-        return;
-    }
-
-    materials_[materialIndex]->GetMaterialDataGPU()->shininess = shininess;
-
-    // モデルにも反映
-    if (model) {
-        model->GetMaterialData()[materialIndex].shininess = shininess;
-    }
-}
-
-void Object3d::SetAllMaterialsShininess(float shininess) {
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        SetMaterialShininess(static_cast<uint32_t>(i), shininess);
-    }
-}
-
-void Object3d::SetShininess(float shininess) {
-    //// 後方互換性：単一マテリアルがある場合はそれに、なければ全てのマテリアルに適用
-    // if (material_) {
-    //     material_->GetMaterialDataGPU()->shininess = shininess;
-    // } else {
-    //     SetAllMaterialsShininess(shininess);
-    // }
 }
 
 void Object3d::CreateTransformationMatrix() {
@@ -409,33 +304,4 @@ void Object3d::CreateTransformationMatrix() {
     transformationMatrixData->WVP = MakeIdentity4x4();
     transformationMatrixData->World = MakeIdentity4x4();
     transformationMatrixData->WorldInverseTranspose = MakeIdentity4x4();
-}
-
-void Object3d::InitializeMaterials() {
-    if (!model) {
-        return;
-    }
-
-    // モデルのマテリアル数に合わせてマテリアル配列を初期化
-    size_t materialCount = model->GetMaterialCount();
-    materials_.resize(materialCount);
-
-    for (size_t i = 0; i < materialCount; ++i) {
-        materials_[i] = std::make_unique<Material>();
-        materials_[i]->Initialize();
-
-        // モデルのマテリアルデータを取得してセット
-        if (i < model->GetMaterialData().size()) {
-            materials_[i]->GetMaterialData() = model->GetMaterialData()[i];
-            materials_[i]->LoadTexture();
-            materials_[i]->SetMaterialDataGPU(&model->GetMaterialData()[i]);
-        }
-    }
-}
-
-bool Object3d::IsValidMaterialIndex(uint32_t materialIndex) const {
-    if (isPrimitive_) {
-        return true;
-    }
-    return materialIndex < materials_.size();
 }

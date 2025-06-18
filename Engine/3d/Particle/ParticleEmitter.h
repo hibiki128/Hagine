@@ -103,7 +103,7 @@ class ParticleEmitter {
     void LoadFromJson();
     void LoadParticleGroup();
     ParticleSetting DefaultSetting();
-
+    void ShowBlendModeCombo(BlendMode &currentMode);
     void DebugParticleData();
 
   private:

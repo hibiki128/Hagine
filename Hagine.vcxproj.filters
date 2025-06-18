@@ -400,6 +400,7 @@
     <None Include=".editorconfig">
       <Filter>ソースファイル</Filter>
     </None>
+    <None Include="Resources\shaders\Skybox\Skybox.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h">
@@ -700,6 +701,8 @@
       <Filter>リソース ファイル\OffScreen</Filter>
     </FxCompile>
     <FxCompile Include="resources\shaders\Object\Skinning.CS.hlsl" />
+    <FxCompile Include="Resources\shaders\Skybox\Skybox.VS.hlsl" />
+    <FxCompile Include="Resources\shaders\Skybox\Skybox.PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt">

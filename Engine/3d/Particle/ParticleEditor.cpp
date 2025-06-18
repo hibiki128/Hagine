@@ -2,7 +2,7 @@
 #include "ParticleEditor.h"
 #include "ImGui/ImGuiManager.h"
 #ifdef _DEBUG
-#include"ShowFolder/ShowFolder.h"
+#include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG
 
 ParticleEditor *ParticleEditor::instance = nullptr;
@@ -157,14 +157,14 @@ void ParticleEditor::DebugAll() {
     }
 }
 
-//std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
-//    auto it = emitters_.find(name);
-//    if (it != emitters_.end()) {
-//        // マップから取り出し、所有権を呼び出し元に移動
-//        return std::move(it->second);
-//    }
-//    return nullptr;
-//}
+// std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
+//     auto it = emitters_.find(name);
+//     if (it != emitters_.end()) {
+//         // マップから取り出し、所有権を呼び出し元に移動
+//         return std::move(it->second);
+//     }
+//     return nullptr;
+// }
 
 void ParticleEditor::SceneParticleCount() {
     if (ImGui::CollapsingHeader("パーティクル統計")) {
@@ -509,4 +509,3 @@ std::vector<std::string> ParticleEditor::GetJsonFiles() {
 
     return jsonFiles;
 }
-

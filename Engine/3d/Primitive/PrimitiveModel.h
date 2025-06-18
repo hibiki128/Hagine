@@ -64,7 +64,6 @@ class PrimitiveModel {
     void CreateTriangle();
     void CreateCone();
     void CreatePyramid();
-
   private:
     /// ===================================================
     /// private variaus

@@ -30,6 +30,9 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                 continue;
             }
 
+            // ブレンドモード設定
+            particleGroup->GetParticleGroupData().blendMode = particle.blendMode;
+
             // 軌跡パーティクル生成処理
             if (particleSetting.enableTrail && !particle.isChild) {
                 particle.trailSpawnTimer += Frame::DeltaTime();
@@ -274,6 +277,7 @@ void ParticleManager::SetTrailSettings(const std::string &groupName, float inter
 
 void ParticleManager::Draw() {
     for (auto &[groupName, particleGroup] : particleGroups_) {
+        particleCommon->DrawCommonSetting(particleGroup->GetParticleGroupData().blendMode);
         const auto &meshes = particleGroup->GetModelData().meshes;
         for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
             D3D12_INDEX_BUFFER_VIEW indexBufferView = particleGroup->GetIndexBufferView();
@@ -445,6 +449,8 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
     particle.lifeTime = distLifeTime(randomEngine);
     particle.currentTime = 0.0f;
 
+    particle.blendMode = setting.blendMode;
+
     return particle;
 }
 
@@ -499,7 +505,6 @@ size_t ParticleManager::GetActiveParticleCount(const std::string &groupName) con
     if (it == particleGroups_.end()) {
         return 0; // グループが存在しない場合は0を返す
     }
-
     const auto &particles = it->second->GetParticleGroupData().particles;
     return particles.size();
 }

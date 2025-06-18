@@ -1,32 +1,101 @@
-#include <vector>
-#include <string>
-#include <memory>
+#pragma once
+#include "application/Base/BaseObject.h"
+#include "Object/BaseObjectManager.h"
 #include "externals/nlohmann/json.hpp"
-#include "Object/Object3d.h"
-#include "WorldTransform.h" 
-#include "ViewProjection/ViewProjection.h"
-#include "type/Vector3.h" 
-
-using json = nlohmann::json;
+#include <fstream>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 class LevelData {
-private:
-    // メンバ変数
-    std::vector<std::unique_ptr<WorldTransform>> worldTransforms;
-    std::vector<std::unique_ptr<Object3d>> object3dList;    // Object3dのリスト
-    std::vector<std::string> objectNames;                   // 読み込んだオブジェクトの名前リスト
-    std::string directoryPath_ = "resources/jsons";
-    std::string fullpath;
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
 
-public:
-    // JSONファイルを読み込む関数
-    void LoadJson(const std::string& jsonFileName);
+    /// <summary>
+    /// JSONファイルからレベルデータを読み込み
+    /// </summary>
+    /// <param name="filePath">JSONファイルのパス</param>
+    void LoadFromJson(const std::string &filePath);
 
-    // 指定した名前のオブジェクトのtranslation, rotation, scaleを取得する
-    Vector3 GetTranslationByName(const std::string& name) const;
-    Vector3 GetRotationByName(const std::string& name) const;
-    Vector3 GetScaleByName(const std::string& name) const;
+    /// <summary>
+    /// 読み込んだデータを元にオブジェクトを生成・配置
+    /// </summary>
+    void CreateObjects();
 
-    // Draw関数
-    void Draw(const ViewProjection& viewProjection);
+    /// <summary>
+    /// 全オブジェクトをクリア
+    /// </summary>
+    void Clear();
+
+  private:
+    using json = nlohmann::json;
+
+    /// ===================================================
+    /// private structs
+    /// ===================================================
+
+    struct Transform {
+        Vector3 translation = {0.0f, 0.0f, 0.0f};
+        Vector3 rotation = {0.0f, 0.0f, 0.0f};
+        Vector3 scaling = {1.0f, 1.0f, 1.0f};
+    };
+
+    struct ColliderData {
+        std::string type;
+        Vector3 center = {0.0f, 0.0f, 0.0f};
+        Vector3 size = {1.0f, 1.0f, 1.0f};
+    };
+
+    struct ObjectData {
+        std::string type;
+        std::string name;
+        Transform transform;
+        ColliderData collider;
+        std::vector<ObjectData> children;
+        bool hasCollider = false;
+    };
+
+    /// ===================================================
+    /// private methods
+    /// ===================================================
+
+    /// <summary>
+    /// JSONからTransformデータを解析
+    /// </summary>
+    Transform ParseTransform(const json &transformJson);
+
+    /// <summary>
+    /// JSONからColliderデータを解析
+    /// </summary>
+    ColliderData ParseCollider(const json &colliderJson);
+
+    /// <summary>
+    /// JSONからObjectDataを再帰的に解析
+    /// </summary>
+    ObjectData ParseObject(const json &objectJson);
+
+    /// <summary>
+    /// ObjectDataからBaseObjectを生成
+    /// </summary>
+    std::unique_ptr<BaseObject> CreateBaseObject(const ObjectData &objectData);
+
+    /// <summary>
+    /// オブジェクトの親子関係を設定
+    /// </summary>
+    void SetupParentChild(BaseObject *parent, const std::vector<ObjectData> &children);
+
+    /// <summary>
+    /// 度からラジアンに変換
+    /// </summary>
+    float DegreesToRadians(float degrees);
+
+    /// ===================================================
+    /// private variables
+    /// ===================================================
+
+    std::vector<ObjectData> objectsData_;
+    std::unordered_map<std::string, BaseObject *> createdObjects_;
 };

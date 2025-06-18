@@ -9,6 +9,7 @@
 #include <Engine/Frame/Frame.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
+#include"ParticleEditor.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -733,11 +734,11 @@ void ImGuiManager::ShowDockSpace() {
 void ImGuiManager::DisplayFPS() {
 #ifdef _DEBUG
     if (ImGui::CollapsingHeader("FPS")) {
-
-        ImGuiIO &io = ImGui::GetIO();
-        // FPSを取得
-        float fps = Frame::GetFPS();
-        float deltaTime = Frame::DeltaTime() * 1000.0f; // ミリ秒単位に変換
+    
+    ImGuiIO &io = ImGui::GetIO();
+    // FPSを取得
+    float fps = Frame::GetFPS();
+    float deltaTime = Frame::DeltaTime() * 1000.0f; // ミリ秒単位に変換
 
         // FPSを色付きで表示
         ImVec4 color;
@@ -749,9 +750,9 @@ void ImGuiManager::DisplayFPS() {
             color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 30FPS未満なら赤色
         }
 
-        ImGui::TextColored(color, "FPS: %.1f", fps);
-        ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
-        // ImGui::TreePop();
+    ImGui::TextColored(color, "FPS: %.1f", fps);
+    ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
+    //ImGui::TreePop();
     }
 #endif // _DEBUG
 }

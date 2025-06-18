@@ -119,76 +119,87 @@ void BaseObject::ImGui() {
 }
 
 void BaseObject::DebugObject() {
+#ifdef _DEBUG
+
     if (ImGui::CollapsingHeader("トランスフォーム")) {
         ImGui::DragFloat3("位置", &transform_.translation_.x, 0.1f);
+
+        // 回転を度数法に変換してUI表示
         float rotationDegrees[3] = {
             radiansToDegrees(transform_.rotation_.x),
             radiansToDegrees(transform_.rotation_.y),
             radiansToDegrees(transform_.rotation_.z)};
         if (ImGui::DragFloat3("回転", rotationDegrees, 0.1f, -360.0f, 360.0f)) {
-            // 操作後、度数法からラジアンに戻して保存
+            // 操作後、ラジアンに戻して保存
             transform_.rotation_.x = degreesToRadians(rotationDegrees[0]);
             transform_.rotation_.y = degreesToRadians(rotationDegrees[1]);
             transform_.rotation_.z = degreesToRadians(rotationDegrees[2]);
         }
+
         ImGui::DragFloat3("大きさ", &transform_.scale_.x, 0.1f);
     }
-    if (ImGui::CollapsingHeader("モデル")) {
-        // マテリアルインデックス選択（Combo）
-        static int selectedMaterialIndex = 1; // 0 はダミーなのでデフォルトを 1 に
-        size_t materialCount = obj3d_->GetMaterialCount();
 
-        // materialCount - 1 にする。ただし1未満にはならないように安全対策
-        int displayCount = static_cast<int>(materialCount);
-        displayCount = std::max(displayCount, 1); // 少なくともダミー含め1つはある
-
-        std::vector<std::string> comboItems;
-        // ダミー(0)は除外して 1 から表示
-        for (int i = 1; i < displayCount; ++i) {
-            comboItems.push_back("Material " + std::to_string(i));
+    if (ImGui::CollapsingHeader("マテリアル設定")) {
+        // カラー設定
+        Vector4 color = objColor_.GetColor();
+        float colorArray[4] = {color.x, color.y, color.z, color.w};
+        if (ImGui::ColorEdit4("オブジェクトカラー", colorArray)) {
+            objColor_.GetColor() = Vector4(colorArray[0], colorArray[1], colorArray[2], colorArray[3]);
         }
 
-        if (!comboItems.empty()) {
+        // ライティング有効・無効
+        ImGui::Checkbox("ライティング有効", &isLighting_);
+    }
+
+    if (ImGui::CollapsingHeader("モデル")) {
+        static int selectedMaterialIndex = 0; // 選択中のマテリアルインデックス
+
+        size_t materialCount = obj3d_->GetMaterialCount();
+
+        // アニメーションがある場合、最後のマテリアルはダミーなので除外
+        if (obj3d_->GetHaveAnimation() && materialCount > 1) {
+            --materialCount;
+        }
+
+        // マテリアルが複数ある場合のみ、コンボボックスを表示
+        if (materialCount > 1) {
+            std::vector<std::string> comboItems;
+            for (int i = 0; i < static_cast<int>(materialCount); ++i) {
+                comboItems.push_back("Material " + std::to_string(i));
+            }
+
             std::vector<const char *> comboItemsCStr;
             for (const auto &item : comboItems) {
                 comboItemsCStr.push_back(item.c_str());
             }
 
             ImGui::Text("マテリアルスロット:");
-
-            // 表示インデックス（0 = Material 1）
-            int displayIndex = selectedMaterialIndex - 1;
-
-            if (ImGui::Combo("##MaterialIndexCombo", &displayIndex, comboItemsCStr.data(), static_cast<int>(comboItemsCStr.size()))) {
-                // コンボボックスの選択結果を実インデックスに変換
-                selectedMaterialIndex = displayIndex + 1;
+            if (ImGui::Combo("##MaterialIndexCombo", &selectedMaterialIndex, comboItemsCStr.data(), static_cast<int>(comboItemsCStr.size()))) {
+                // 必要なら選択変更時の処理を書く
             }
 
-            // 範囲外の対策（実インデックスが materialCount を超えないように）
-            selectedMaterialIndex = std::clamp(selectedMaterialIndex, 1, displayCount - 1);
+            // 範囲外アクセス防止
+            selectedMaterialIndex = std::clamp(selectedMaterialIndex, 0, static_cast<int>(materialCount) - 1);
+        } else {
+            // マテリアルが1個以下の場合は常に0を選択
+            selectedMaterialIndex = 0;
         }
         // テクスチャ選択ツリー
         if (ImGui::TreeNode("テクスチャ選択")) {
-            // テクスチャ選択UI（パスを表示・取得）
-#ifdef _DEBUG
             ShowTextureFile(texturePath_);
-#endif // _DEBUG
-
             if (ImGui::Button("適用")) {
-                // インデックス付きでテクスチャを適用
                 SetTexture(texturePath_, selectedMaterialIndex);
-                texturePath_.clear();
             }
-
             ImGui::TreePop();
         }
 
-        // ブレンドモード選択ツリー
+        // ブレンドモード設定ツリー
         if (ImGui::TreeNode("ブレンドモード")) {
             ShowBlendModeCombo(blendMode_);
             ImGui::TreePop();
         }
     }
+    // アニメーション設定セクション
     if (obj3d_->GetHaveAnimation()) {
         if (ImGui::CollapsingHeader("アニメーション")) {
             ImGui::Checkbox("ループ", &isLoop_);
@@ -202,28 +213,21 @@ void BaseObject::DebugObject() {
             }
         }
     }
-}
-
-void BaseObject::DebugCollider() {
-    for (auto &collider : colliders_) {
-        collider->OffsetImgui();
-    }
-}
-
-Vector3 BaseObject::GetCenterPosition() const {
-    return transform_.translation_;
-}
-
-Vector3 BaseObject::GetCenterRotation() const {
-    return transform_.rotation_;
+#endif // _DEBUG
 }
 
 void BaseObject::SaveToJson() {
     TransformDatas_->Save<Vector3>("translation", transform_.translation_);
     TransformDatas_->Save<Vector3>("rotation", transform_.rotation_);
     TransformDatas_->Save<Vector3>("scale", transform_.scale_);
+
+    // カラーとライティング設定も保存
+    Vector4 color = objColor_.GetColor();
+    TransformDatas_->Save<Vector4>("objectColor", color);
+    TransformDatas_->Save<bool>("isLighting", isLighting_);
+
     for (int i = 0; i < obj3d_->GetMaterialCount(); i++) {
-        TransformDatas_->Save<std::string>("texturePath", obj3d_->GetTexture(i));
+        TransformDatas_->Save<std::string>("texturePath", obj3d_->GetTextureFilePath(i));
     }
     TransformDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
 }
@@ -233,16 +237,21 @@ void BaseObject::LoadFromJson() {
     transform_.translation_ = TransformDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
     transform_.rotation_ = TransformDatas_->Load<Vector3>("rotation", {0.0f, 0.0f, 0.0f});
     transform_.scale_ = TransformDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
+
+    // カラーとライティング設定も読み込み
+    Vector4 loadedColor = TransformDatas_->Load<Vector4>("objectColor", {1.0f, 1.0f, 1.0f, 1.0f});
+    objColor_.GetColor() = loadedColor;
+    isLighting_ = TransformDatas_->Load<bool>("isLighting", true);
+
     for (int i = 0; i < obj3d_->GetMaterialCount(); i++) {
-        if (obj3d_->GetTexture(i).empty()) {
-            SetTexture(TransformDatas_->Load<std::string>("texturePath", "debug/uvChecker.png"),i);
+        if (obj3d_->GetTextureFilePath(i).empty()) {
+            SetTexture(TransformDatas_->Load<std::string>("texturePath", "debug/uvChecker.png"), i);
         } else {
-            SetTexture(TransformDatas_->Load<std::string>("texturePath", obj3d_->GetTexture(i)),i);
+            SetTexture(TransformDatas_->Load<std::string>("texturePath", obj3d_->GetTextureFilePath(i)), i);
         }
     }
     blendMode_ = static_cast<BlendMode>(TransformDatas_->Load<int>("blendMode", 0));
 }
-
 void BaseObject::AnimaSaveToJson() {
     if (!AnimaDatas_) {
         return;
@@ -316,4 +325,18 @@ std::vector<std::string> BaseObject::GetGltfFiles() {
         }
     }
     return gltfFiles;
+}
+
+void BaseObject::DebugCollider() {
+    for (auto &collider : colliders_) {
+        collider->OffsetImgui();
+    }
+}
+
+Vector3 BaseObject::GetCenterPosition() const {
+    return transform_.translation_;
+}
+
+Vector3 BaseObject::GetCenterRotation() const {
+    return transform_.rotation_;
 }

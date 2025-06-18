@@ -56,12 +56,13 @@ struct SpotLight
 };
 
 ConstantBuffer<Material> gMaterial : register(b0);
-Texture2D<float4> gTexture : register(t0);
-SamplerState gSampler : register(s0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 ConstantBuffer<Camera> gCamera : register(b2);
 ConstantBuffer<PointLight> gPointLight : register(b3);
 ConstantBuffer<SpotLight> gSpotLight : register(b4);
+SamplerState gSampler : register(s0);
+Texture2D<float4> gTexture : register(t0);
+//TextureCube<float4> gEngironmentTexture : register(t1);
 
 
 PixelShaderOutput main(VertexShaderOutput input)
@@ -195,6 +196,13 @@ PixelShaderOutput main(VertexShaderOutput input)
     // テクスチャカラーを加算
             output.color.rgb *= textureColor.rgb;
         }
+        //float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
+        //float3 reflectedVector = reflect(cameraToPosition, normalize(input.normal));
+        //float4 environmentColor = gEngironmentTexture.Sample(gSampler, reflectedVector);
+        
+        //// 環境マップの色を加算
+        //output.color.rgb += environmentColor.rgb;
+        
         output.color.a = gMaterial.color.a * textureColor.a;
     }
     else

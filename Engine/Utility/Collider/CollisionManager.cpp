@@ -64,13 +64,13 @@ void CollisionManager::CheckCollisionPair(Collider *colliderA, Collider *collide
     }
 
     // まずはバウンディングスフィア同士で粗い判定
-    float roughDistance = (colliderA->GetCenterPosition() - colliderB->GetCenterPosition()).Length();
-    float roughRadiusSum = colliderA->GetRadius() + colliderB->GetRadius();
+ /*   float roughDistance = (colliderA->GetCenterPosition() - colliderB->GetCenterPosition()).Length();
+    float roughRadiusSum = colliderA->GetRadius() + colliderB->GetRadius();*/
 
-    if (roughDistance > roughRadiusSum) {
-        // 明らかに衝突していない
-        return;
-    }
+    //if (roughDistance > roughRadiusSum) {
+    //    // 明らかに衝突していない
+    //    return;
+    //}
 
     // ペアをソートしてキーを生成
     auto key = std::make_pair(std::min(colliderA, colliderB), std::max(colliderA, colliderB));
