@@ -30,6 +30,9 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                 continue;
             }
 
+            // ブレンドモード設定
+            particleGroup->GetParticleGroupData().blendMode = particle.blendMode;
+
             // 軌跡パーティクル生成処理
             if (particleSetting.enableTrail && !particle.isChild) {
                 particle.trailSpawnTimer += Frame::DeltaTime();
@@ -274,6 +277,7 @@ void ParticleManager::SetTrailSettings(const std::string &groupName, float inter
 
 void ParticleManager::Draw() {
     for (auto &[groupName, particleGroup] : particleGroups_) {
+        particleCommon->DrawCommonSetting(particleGroup->GetParticleGroupData().blendMode);
         const auto &meshes = particleGroup->GetModelData().meshes;
         for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
             D3D12_INDEX_BUFFER_VIEW indexBufferView = particleGroup->GetIndexBufferView();
@@ -440,11 +444,12 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         particle.transform.rotation_.x = rotationAxis.x * angle;
         particle.transform.rotation_.y = rotationAxis.y * angle;
         particle.transform.rotation_.z = rotationAxis.z * angle;
-
     }
     particle.initialAlpha = distAlpha(randomEngine);
     particle.lifeTime = distLifeTime(randomEngine);
     particle.currentTime = 0.0f;
+
+    particle.blendMode = setting.blendMode;
 
     return particle;
 }

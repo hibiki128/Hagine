@@ -8,6 +8,7 @@
 #include "externals/nlohmann/json.hpp"
 #include <string>
 
+class SkyBox;
 class BaseObject : public Collider {
   private:
     /// ===================================================
@@ -78,7 +79,7 @@ class BaseObject : public Collider {
     /// ===================================================
     /// setter
     /// ===================================================
-    void SetTexture(const std::string &filePath,uint32_t index) { obj3d_->SetTexture(filePath,index); }
+    void SetTexture(const std::string &filePath, uint32_t index) { obj3d_->SetTexture(filePath, index); }
     void SetParent(const WorldTransform *parent) { transform_.parent_ = parent; }
     void SetModel(std::unique_ptr<Object3d> obj) {
         obj3d_ = std::move(obj);
@@ -99,7 +100,7 @@ class BaseObject : public Collider {
     void ShowFileSelector();
     // ブレンドモードの選択UI
     void ShowBlendModeCombo(BlendMode &currentMode);
-   
+
     std::vector<std::string> GetGltfFiles();
     std::vector<Collider *> colliders_;
 

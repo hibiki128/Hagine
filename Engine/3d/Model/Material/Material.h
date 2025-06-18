@@ -15,22 +15,24 @@ class Material {
     void LoadTexture();
     void PrimitiveInitialize(const PrimitiveType &type);
 
-    void Draw(Vector4 &color, bool &lighting);
+    void Draw(const Vector4 &color, bool lighting);
 
-    MaterialData *GetMaterialDataGPU() { return materialDataGPU_; }
     MaterialData &GetMaterialData() { return materialData_; }
-    void SetMaterialDataGPU(MaterialData *materialDataGPU) { materialDataGPU_ = materialDataGPU; }
+    const MaterialData &GetMaterialData() const { return materialData_; }
+
+    // GPU側データの直接アクセス（描画時の一時的な変更用）
+    MaterialDataGPU *GetMaterialDataGPU() { return materialDataGPU_; }
+
+    void SetTexture(const std::string &texturePath);
 
   private:
     /// ==========================================
     /// private variaus
     /// ==========================================
-    MaterialData materialData_;
-
-    // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr;
+    MaterialData materialData_;                               // CPU側データ
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_; // GPUバッファ
+    MaterialDataGPU *materialDataGPU_ = nullptr;              // GPUバッファへのポインタ
     DirectXCommon *dxCommon_ = nullptr;
-    MaterialData *materialDataGPU_;
 
   private:
     /// ==========================================
@@ -40,4 +42,5 @@ class Material {
     MaterialData LoadMaterialTemplateFile(const std::string &directoryPath, const std::string &filename);
 
     void CreateMaterial();
+    void UpdateGPUData();
 };

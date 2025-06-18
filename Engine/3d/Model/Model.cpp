@@ -61,6 +61,7 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type) {
 
     // マテリアルの初期化
     materials_[0] = std::make_unique<Material>();
+    materials_[0]->Initialize();
     materials_[0]->PrimitiveInitialize(type);
     materials_[0]->LoadTexture();
 
@@ -72,154 +73,41 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type) {
     modelData.meshes[0].materialIndex = 0;
 }
 
-void Model::Draw(Object3dCommon *objCommon, std::vector<Material> materials) {
+void Model::Draw(const Vector4 &color, bool lighting) {
     // 各メッシュを描画
     for (size_t meshIndex = 0; meshIndex < meshes_.size(); ++meshIndex) {
-        // 現在のメッシュとそれに対応するマテリアルを取得
         Mesh *currentMesh = meshes_[meshIndex].get();
         uint32_t materialIndex = modelData.meshes[meshIndex].materialIndex;
 
-        // マテリアルインデックスが有効範囲内かチェック
+        // マテリアルインデックスの範囲チェック
         if (materialIndex >= materials_.size()) {
-            materialIndex = 0; // デフォルトマテリアルを使用
+            materialIndex = 0;
         }
-       
-        Material *currentMaterial = &materials[materialIndex];
 
-        // バッファビューの取得
+        Material *currentMaterial = materials_[materialIndex].get();
+
+        // バッファ設定
         D3D12_VERTEX_BUFFER_VIEW vertexBufferView = currentMesh->GetVertexBufferView();
         D3D12_INDEX_BUFFER_VIEW indexBufferView = currentMesh->GetIndexBufferView();
-        D3D12_VERTEX_BUFFER_VIEW influenceBufferView;
-        uint32_t SrvIndex;
 
-        // スキニング情報の設定
-        if (isGltf) {
-            influenceBufferView = skin_->GetSkinCluster().influenceBufferView;
-            SrvIndex = skin_->GetSrvIndex();
-        } else {
-            influenceBufferView = {};
-            SrvIndex = {};
-        }
-
-        // バーテックスバッファビューの配列
-        D3D12_VERTEX_BUFFER_VIEW vbvs[2] = {
-            vertexBufferView,
-            influenceBufferView};
-
-        // インデックスバッファの設定
         modelCommon_->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&indexBufferView);
+        modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
 
-        // バーテックスバッファの設定
-        if (isGltf) {
-            if (!animator_->HaveAnimation()) {
-                modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, vbvs);
-            } else {
-                modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 2, vbvs);
-                srvManager_->SetGraphicsRootDescriptorTable(7, SrvIndex);
-            }
-        } else {
-            modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, vbvs);
+        // スキニング処理（必要に応じて）
+        if (isGltf && animator_ && animator_->HaveAnimation()) {
+            D3D12_VERTEX_BUFFER_VIEW influenceBufferView = skin_->GetSkinCluster().influenceBufferView;
+            D3D12_VERTEX_BUFFER_VIEW vbvs[2] = {vertexBufferView, influenceBufferView};
+            modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 2, vbvs);
+            srvManager_->SetGraphicsRootDescriptorTable(7, skin_->GetSrvIndex());
         }
 
-        // マテリアルの設定（描画前に現在のマテリアルを設定）
-        Vector4 materialColor = currentMaterial->GetMaterialDataGPU()->color;
-        bool enableLighting = true; // 必要に応じて調整
-        currentMaterial->Draw(materialColor, enableLighting);
+        // マテリアル描画
+        currentMaterial->Draw(color, lighting);
 
-        // 描画！（DrawCall/ドローコール） - 現在のメッシュのインデックス数を使用
+        // 描画コール
         modelCommon_->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(
             UINT(modelData.meshes[meshIndex].indices.size()), 1, 0, 0, 0);
     }
-
-    // アニメーション関連の処理
-    if (animator_) {
-        if (animator_->HaveAnimation()) {
-            objCommon->DrawCommonSetting();
-        }
-    }
-}
-
-void Model::SetTextureIndex(const std::string &filePath, uint32_t materialIndex) {
-    // 指定されたマテリアルインデックスが有効範囲内かチェック
-    if (!IsValidMaterialIndex(materialIndex)) {
-        return; // 無効なインデックスの場合は何もしない
-    }
-
-    // テクスチャを読み込み
-    TextureManager::GetInstance()->LoadTexture(filePath);
-    uint32_t textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
-
-    // 指定されたマテリアルのテクスチャインデックスを更新
-    modelData.materials[materialIndex].textureIndex = textureIndex;
-    materials_[materialIndex]->GetMaterialData().textureIndex = textureIndex;
-    materials_[materialIndex]->GetMaterialData().textureFilePath = filePath;
-}
-
-void Model::SetAllTexturesIndex(const std::string &filePath) {
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        SetTextureIndex(filePath, static_cast<uint32_t>(i));
-    }
-}
-
-void Model::SetMaterialColor(uint32_t materialIndex, const Vector4 &color) {
-    if (!IsValidMaterialIndex(materialIndex)) {
-        return;
-    }
-
-    modelData.materials[materialIndex].color = color;
-    materials_[materialIndex]->GetMaterialData().color = color;
-}
-
-void Model::SetAllMaterialsColor(const Vector4 &color) {
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        SetMaterialColor(static_cast<uint32_t>(i), color);
-    }
-}
-
-void Model::SetMaterialShininess(uint32_t materialIndex, float shininess) {
-    if (!IsValidMaterialIndex(materialIndex)) {
-        return;
-    }
-
-    modelData.materials[materialIndex].shininess = shininess;
-    materials_[materialIndex]->GetMaterialData().shininess = shininess;
-}
-
-void Model::SetAllMaterialsShininess(float shininess) {
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        SetMaterialShininess(static_cast<uint32_t>(i), shininess);
-    }
-}
-
-void Model::SetMaterialUVTransform(uint32_t materialIndex, const Matrix4x4 &uvTransform) {
-    if (!IsValidMaterialIndex(materialIndex)) {
-        return;
-    }
-
-    modelData.materials[materialIndex].uvTransform = uvTransform;
-    materials_[materialIndex]->GetMaterialData().uvTransform = uvTransform;
-}
-
-void Model::SetAllMaterialsUVTransform(const Matrix4x4 &uvTransform) {
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        SetMaterialUVTransform(static_cast<uint32_t>(i), uvTransform);
-    }
-}
-
-void Model::SetMeshMaterial(uint32_t meshIndex, uint32_t materialIndex) {
-    if (!IsValidMeshIndex(meshIndex) || !IsValidMaterialIndex(materialIndex)) {
-        return;
-    }
-
-    modelData.meshes[meshIndex].materialIndex = materialIndex;
-}
-
-bool Model::IsValidMaterialIndex(uint32_t materialIndex) const {
-    return materialIndex < materials_.size();
-}
-
-bool Model::IsValidMeshIndex(uint32_t meshIndex) const {
-    return meshIndex < meshes_.size();
 }
 
 ModelData Model::LoadModelFile(const std::string &directoryPath, const std::string &filename) {
@@ -369,32 +257,6 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
 
         // UV変換行列の初期化
         currentMaterial.uvTransform = MakeIdentity4x4();
-    }
-
-    // マテリアルが存在しない場合のフォールバック
-    if (modelData.materials.empty()) {
-        MaterialData defaultMaterial;
-        defaultMaterial.textureFilePath = "debug/white1x1.png";
-        defaultMaterial.color = {1.0f, 1.0f, 1.0f, 1.0f};
-        defaultMaterial.shininess = 32.0f;
-        defaultMaterial.uvTransform = MakeIdentity4x4();
-        modelData.materials.push_back(defaultMaterial);
-    }
-
-    // ここでgltfのときだけjointIndicesを +1 する調整
-    if (isGltf) {
-        // skinClusterDataをコピーし、dummy jointを先頭に追加する例
-        std::map<std::string, JointWeightData> newSkinClusterData;
-
-        // ダミーのJointWeightDataは空で良い
-        newSkinClusterData["dummy_joint"] = JointWeightData{};
-
-        for (const auto &[jointName, jointWeightData] : modelData.skinClusterData) {
-            newSkinClusterData[jointName] = jointWeightData;
-        }
-
-        // skinClusterDataを置き換える
-        modelData.skinClusterData = std::move(newSkinClusterData);
     }
 
     modelData.rootNode = ReadNode(scene->mRootNode);

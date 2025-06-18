@@ -9,6 +9,7 @@
 #include <Engine/Frame/Frame.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
+#include"ParticleEditor.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -544,9 +545,11 @@ void ImGuiManager::ShowFPSWindow() {
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
-    ImGui::Begin("FPS", &showFPSView_, flags);
+    ImGui::Begin("統計", &showFPSView_, flags);
 
     DisplayFPS();
+
+    ParticleEditor::GetInstance()->SceneParticleCount();
 
     ImGui::End();
 }
@@ -730,6 +733,8 @@ void ImGuiManager::ShowDockSpace() {
 
 void ImGuiManager::DisplayFPS() {
 #ifdef _DEBUG
+    if (ImGui::CollapsingHeader("FPS")) {
+    
     ImGuiIO &io = ImGui::GetIO();
     // FPSを取得
     float fps = Frame::GetFPS();
@@ -747,6 +752,8 @@ void ImGuiManager::DisplayFPS() {
 
     ImGui::TextColored(color, "FPS: %.1f", fps);
     ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
+    //ImGui::TreePop();
+    }
 #endif // _DEBUG
 }
 

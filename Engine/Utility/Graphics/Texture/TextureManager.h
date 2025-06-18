@@ -63,6 +63,8 @@ public:
 	/// <returns></returns>
 	const DirectX::TexMetadata& GetMetaData(const std::string& filePath);
 
+	bool GetDDS() { return isDDS_; }
+
 	SrvManager* GetSrvManager() { return srvManager_; }
 
 private:
@@ -79,6 +81,8 @@ private:
 
 	DirectXCommon* dxCommon_ = nullptr;
 	SrvManager* srvManager_ = nullptr;
+
+	bool isDDS_ = false;
 
 	// SRVインデックスの開始番号
 	static uint32_t kSRVIndexTop;

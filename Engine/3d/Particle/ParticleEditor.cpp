@@ -2,7 +2,7 @@
 #include "ParticleEditor.h"
 #include "ImGui/ImGuiManager.h"
 #ifdef _DEBUG
-#include"ShowFolder/ShowFolder.h"
+#include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG
 
 ParticleEditor *ParticleEditor::instance = nullptr;
@@ -83,6 +83,26 @@ void ParticleEditor::AddPrimitiveParticleGroup(const std::string &name, const st
     particleGroupManager_->AddParticleGroup(std::move(group));
 }
 
+void ParticleEditor::SetExternalParticleCount(const std::string &baseName, size_t count) {
+    // 新しいフレームが始まった場合、現在フレームの統計をクリア
+    if (currentFrameNumber_ != lastUpdateFrame_) {
+        currentFrameStats_.clear();
+        lastUpdateFrame_ = currentFrameNumber_;
+    }
+
+    // 現在フレームの統計データを更新
+    currentFrameStats_[baseName].count += count;
+    currentFrameStats_[baseName].instanceCount++;
+}
+
+void ParticleEditor::UpdateFrameStats() {
+    // 現在フレームの統計を表示用にコピー
+    displayStats_ = currentFrameStats_;
+
+    // フレーム番号を進める
+    currentFrameNumber_++;
+}
+
 void ParticleEditor::DrawAll(const ViewProjection &vp_) {
     for (auto &[name, emitter] : emitters_) {
         if (emitter) {
@@ -137,14 +157,54 @@ void ParticleEditor::DebugAll() {
     }
 }
 
-//std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
-//    auto it = emitters_.find(name);
-//    if (it != emitters_.end()) {
-//        // マップから取り出し、所有権を呼び出し元に移動
-//        return std::move(it->second);
-//    }
-//    return nullptr;
-//}
+// std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
+//     auto it = emitters_.find(name);
+//     if (it != emitters_.end()) {
+//         // マップから取り出し、所有権を呼び出し元に移動
+//         return std::move(it->second);
+//     }
+//     return nullptr;
+// }
+
+void ParticleEditor::SceneParticleCount() {
+    if (ImGui::CollapsingHeader("パーティクル統計")) {
+        size_t grandTotal = 0;
+        size_t totalInstances = 0;
+
+        // 合計を計算
+        for (const auto &[name, stats] : displayStats_) {
+            grandTotal += stats.count;
+            totalInstances += stats.instanceCount;
+        }
+
+        // ヘッダー情報
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "合計: %zu個", grandTotal);
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(%zu種類)", displayStats_.size());
+
+        if (!displayStats_.empty()) {
+            ImGui::Separator();
+
+            // シンプルなリスト表示
+            for (const auto &[name, stats] : displayStats_) {
+                // 色付きドット + 名前 + 数値
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "%s", name.c_str());
+                ImGui::SameLine();
+                ImGui::Text(": %zu", stats.count);
+
+                // インスタンス数が1より多い場合のみ表示
+                if (stats.instanceCount > 1) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "×%zu", stats.instanceCount);
+                }
+            }
+        } else {
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "エミッターなし");
+        }
+    }
+}
 
 std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const std::string &name) {
     auto it = emitters_.find(name);
@@ -448,4 +508,3 @@ std::vector<std::string> ParticleEditor::GetJsonFiles() {
 
     return jsonFiles;
 }
-

@@ -11,7 +11,7 @@ void MyGame::Initialize() {
     sceneFactory_ = new SceneFactory();
     // シーンマネージャに最初のシーンをセット
     sceneManager_->SetSceneFactory(sceneFactory_);
-    sceneManager_->NextSceneReservation("GAME");
+    sceneManager_->NextSceneReservation("TITLE");
     // -----------------------
 }
 
@@ -79,6 +79,9 @@ void MyGame::Draw() {
     dxCommon->TransitionDepthBarrier();
     sceneManager_->DrawForOffScreen();
     sceneManager_->DrawTransition();
+
+    // フレーム統計を更新（ImGui描画前）
+    ParticleEditor::GetInstance()->UpdateFrameStats();
 
 #ifdef _DEBUG
     imGuiManager_->Draw();

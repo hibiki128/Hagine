@@ -13,6 +13,7 @@
 #include "WorldTransform.h"
 #include "line/DrawLine3D.h"
 #include"Object/BaseObjectManager.h"
+#include"Sprite.h"
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG

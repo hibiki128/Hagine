@@ -102,6 +102,8 @@ class Collider {
     /// setter
     /// </summary>
     /// <param name="radius"></param>
+    void SetOBBSize(Vector3 size) { OBBOffset_.size = size; }
+    void SetOBBCenter(Vector3 center) { OBBOffset_.scaleCenter = center; }
     void SetRadius(float radius) { radius_ = radius; }
     void SetIsColliding(bool colliding) { isColliding_ = colliding; }
     void SetWasColliding(bool wasColliding) { wasColliding_ = wasColliding; }
