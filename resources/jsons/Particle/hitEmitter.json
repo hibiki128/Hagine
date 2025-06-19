@@ -3,7 +3,7 @@
         "hit",
         "fire"
     ],
-    "emitFrequency": 1.0,
+    "emitFrequency": 0.8080000281333923,
     "emitterRotation": {
         "x": 0.0,
         "y": 0.0,
@@ -31,6 +31,7 @@
     },
     "fire_alphaMax": 1.0,
     "fire_alphaMin": 1.0,
+    "fire_blendMode": 1,
     "fire_count": 10,
     "fire_enableTrail": true,
     "fire_endAcce": {
@@ -60,6 +61,9 @@
     "fire_isAcceMultiply": true,
     "fire_isAllRamdomScale": false,
     "fire_isBillboard": false,
+    "fire_isBillboardX": false,
+    "fire_isBillboardY": false,
+    "fire_isBillboardZ": false,
     "fire_isEmitOnEdge": false,
     "fire_isEndScale": false,
     "fire_isFaceDirection": false,
@@ -166,6 +170,7 @@
     },
     "hit_alphaMax": 1.0,
     "hit_alphaMin": 1.0,
+    "hit_blendMode": 1,
     "hit_count": 30,
     "hit_enableTrail": true,
     "hit_endAcce": {
@@ -195,6 +200,9 @@
     "hit_isAcceMultiply": true,
     "hit_isAllRamdomScale": false,
     "hit_isBillboard": true,
+    "hit_isBillboardX": false,
+    "hit_isBillboardY": false,
+    "hit_isBillboardZ": false,
     "hit_isEmitOnEdge": false,
     "hit_isEndScale": false,
     "hit_isFaceDirection": false,
@@ -290,7 +298,7 @@
         "z": -60.0
     },
     "isActive": true,
-    "isAuto": false,
+    "isAuto": true,
     "isVisible": false,
     "smoke_allScaleMax": {
         "x": 1.0,

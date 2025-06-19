@@ -252,6 +252,7 @@ void BaseObject::LoadFromJson() {
     }
     blendMode_ = static_cast<BlendMode>(TransformDatas_->Load<int>("blendMode", 0));
 }
+
 void BaseObject::AnimaSaveToJson() {
     if (!AnimaDatas_) {
         return;

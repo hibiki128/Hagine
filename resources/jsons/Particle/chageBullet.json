@@ -15,6 +15,7 @@
     },
     "chageAround_alphaMax": 1.0,
     "chageAround_alphaMin": 1.0,
+    "chageAround_blendMode": 5,
     "chageAround_count": 1,
     "chageAround_enableTrail": false,
     "chageAround_endAcce": {
@@ -153,6 +154,7 @@
     },
     "chageBullet_alphaMax": 1.0,
     "chageBullet_alphaMin": 1.0,
+    "chageBullet_blendMode": 5,
     "chageBullet_count": 1,
     "chageBullet_enableTrail": false,
     "chageBullet_endAcce": {

@@ -18,6 +18,7 @@ void ChageShot::Init(const std::string objectName) {
     BaseObject::SetColor({0.0f, 0.5f, 1.0f, 1.0f});
     BaseObject::AddCollider();
     BaseObject::SetCollisionType(CollisionType::Sphere);
+    BaseObject::SetVisible(false);
     isAlive_ = false;
     isMaxScale_ = false;
     isFired_ = false;

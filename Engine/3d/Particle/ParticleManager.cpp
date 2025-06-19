@@ -252,6 +252,7 @@ void ParticleManager::CreateTrailParticle(const Particle &parent, const Particle
     trailParticle.endScale = parent.endScale * setting.trailScaleMultiplier;
     trailParticle.startAcce = parent.startAcce;
     trailParticle.endAcce = parent.endAcce;
+    trailParticle.blendMode = parent.blendMode;
 
     // パーティクルグループに追加
     for (auto &[groupName, particleGroup] : particleGroups_) {

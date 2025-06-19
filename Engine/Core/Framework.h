@@ -21,6 +21,7 @@
 #include"Object/BaseObjectManager.h"
 #include"Particle/ParticleGroupManager.h"
 #include"PipeLine/PipeLineManager.h"
+#include <application/Utility/AttackManager.h>
 
 class Framework {
   public: // メンバ関数
@@ -84,6 +85,7 @@ class Framework {
     BaseObjectManager *baseObjectManager_ = nullptr;
     ParticleGroupManager *particleGroupManager_ = nullptr;
     PipeLineManager *pipeLineManager_ = nullptr;
+    AttackManager *attackManager_ = nullptr;
 
     SpriteCommon *spriteCommon = nullptr;
     ParticleCommon *particleCommon = nullptr;

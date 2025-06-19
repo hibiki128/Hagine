@@ -1,6 +1,8 @@
 #include "GameScene.h"
 #include "SceneManager.h"
 
+#include <application/Utility/AttackManager.h>
+
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
@@ -34,6 +36,8 @@ void GameScene::Initialize() {
     /// ===================================================
     enemy_ptr = enemy_.get();
     player_ptr = player_.get();
+    AttackManager::GetInstance()->Register(player_ptr);
+    AttackManager::GetInstance()->Register(enemy_ptr);
 
     /// ===================================================
     /// セット
@@ -114,6 +118,9 @@ void GameScene::DrawForOffScreen() {
 void GameScene::AddSceneSetting() {
     debugCamera_->imgui();
     followCamera_->imgui();
+
+    AttackManager::GetInstance()->DrawImGui();
+
 }
 
 void GameScene::AddObjectSetting() {

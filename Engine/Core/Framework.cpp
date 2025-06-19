@@ -141,6 +141,10 @@ void Framework::Initialize() {
     particleGroupManager_->Initialize();
     ///---------------------------------
 
+    ///-------AttackManager-------
+    attackManager_ = AttackManager::GetInstance();
+    ///---------------------------
+
     /// 時間の初期化
     Frame::Init();
 }

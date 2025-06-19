@@ -118,6 +118,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\GameObject\Player\State\Ground\PlayerStateMove.cpp" />
     <ClCompile Include="application\GameObject\Enemy\Enemy.cpp" />
     <ClCompile Include="application\GameObject\Player\Bullet\ChageShot\ChageShot.cpp" />
+    <ClCompile Include="application\Utility\AttackManager.cpp" />
     <ClCompile Include="Engine\3d\Object\BaseObjectManager.cpp" />
     <ClCompile Include="Engine\Utility\Data\DataHandler.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleEditor.cpp" />
@@ -237,6 +238,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="application\GameObject\Player\State\Ground\PlayerStateMove.h" />
     <ClInclude Include="application\GameObject\Enemy\Enemy.h" />
     <ClInclude Include="application\GameObject\Player\Bullet\ChageShot\ChageShot.h" />
+    <ClInclude Include="application\Utility\AttackManager.h" />
     <ClInclude Include="Engine\3d\Object\BaseObjectManager.h" />
     <ClInclude Include="Engine\Utility\Data\DataHandler.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleEditor.h" />

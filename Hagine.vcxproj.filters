@@ -380,6 +380,12 @@
     <ClCompile Include="application\GameObject\Player\Bullet\ChageShot\ChageShot.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\3d\SkyBox\SkyBox.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="application\Utility\AttackManager.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\Particle\Particle.hlsli">
@@ -641,6 +647,8 @@
     <ClInclude Include="application\GameObject\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="application\GameObject\Player\State\Fly\PlayerStateFlyMove.h" />
     <ClInclude Include="application\GameObject\Player\Bullet\ChageShot\ChageShot.h" />
+    <ClInclude Include="Engine\3d\SkyBox\SkyBox.h" />
+    <ClInclude Include="application\Utility\AttackManager.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Particle\Particle.PS.hlsl">

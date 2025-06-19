@@ -1,5 +1,6 @@
 #include "MyGame.h"
 #include "SceneFactory.h"
+#include "Engine/Frame/Frame.h"
 
 void MyGame::Initialize() {
     Framework::Initialize();
@@ -47,8 +48,9 @@ void MyGame::Update() {
     }
     imGuiManager_->ShowMainUI(offscreen_.get());
     imGuiManager_->End();
-
 #endif // _DEBUG
+
+    attackManager_->Update(Frame::DeltaTime());
 
     // -----------------------
 }

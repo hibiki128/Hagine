@@ -14,6 +14,7 @@
     },
     "chage1_alphaMax": 0.5,
     "chage1_alphaMin": 0.5,
+    "chage1_blendMode": 5,
     "chage1_count": 4,
     "chage1_enableTrail": true,
     "chage1_endAcce": {
