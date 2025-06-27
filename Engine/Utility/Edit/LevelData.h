@@ -1,5 +1,4 @@
 #pragma once
-#include "application/Base/BaseObject.h"
 #include "Object/BaseObjectManager.h"
 #include "externals/nlohmann/json.hpp"
 #include <fstream>
@@ -7,6 +6,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <type/Vector3.h>
+#include <Object/BaseObject.h>
 
 class LevelData {
   public:

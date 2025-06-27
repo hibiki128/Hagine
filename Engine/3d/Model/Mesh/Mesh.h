@@ -1,6 +1,6 @@
 #pragma once
 #include "wrl.h"
-#include <ModelStructs.h>
+#include <Model/ModelStructs.h>
 #include <Primitive/PrimitiveModel.h>
 #include <d3d12.h>
 class DirectXCommon;
@@ -13,8 +13,6 @@ class Mesh {
 
     void Initialize();
     void PrimitiveInitialize(const PrimitiveType &type);
-
-    void Draw();
 
     MeshData &GetMeshData() { return meshData_; }
     D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() { return vertexBufferView; }

@@ -1,5 +1,4 @@
 #include "GameScene.h"
-#include "SceneManager.h"
 
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();

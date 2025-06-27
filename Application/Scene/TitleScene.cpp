@@ -1,7 +1,7 @@
-#include "DemoScene.h"
-#include "SceneManager.h"
+#include "TitleScene.h"
+#include <Frame.h>
 
-void DemoScene::Initialize() {
+void TitleScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
@@ -12,14 +12,18 @@ void DemoScene::Initialize() {
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
 
-    ptEditor_ = ParticleEditor::GetInstance();
+    obj_ = std::make_unique<BaseObject>();
+    obj_->Init("test");
+    obj_->CreateModel("animation/walk.gltf");
+    BaseObjectManager::GetInstance()->AddObject(std::move(obj_));
 }
 
-void DemoScene::Finalize() {
+void TitleScene::Finalize() {
     BaseScene::Finalize();
 }
 
-void DemoScene::Update() {
+void TitleScene::Update() {
+
     // カメラ更新
     CameraUpdate();
 
@@ -27,23 +31,21 @@ void DemoScene::Update() {
     ChangeScene();
 }
 
-void DemoScene::Draw() {
+void TitleScene::Draw() {
     /// -------描画処理開始-------
+
+    BaseObjectManager::GetInstance()->Draw(vp_);
 
     /// Spriteの描画準備
     spCommon_->DrawCommonSetting();
     //-----Spriteの描画開始-----
 
-    //------------------------------
-
-    ptEditor_->DrawAll(vp_);
-
-    /// ----------------------------------
+    //-------------------------
 
     /// -------描画処理終了-------
 }
 
-void DemoScene::DrawForOffScreen() {
+void TitleScene::DrawForOffScreen() {
     /// -------描画処理開始-------
 
     /// Spriteの描画準備
@@ -55,19 +57,17 @@ void DemoScene::DrawForOffScreen() {
     /// -------描画処理終了-------
 }
 
-void DemoScene::AddSceneSetting() {
+void TitleScene::AddSceneSetting() {
     debugCamera_->imgui();
 }
 
-void DemoScene::AddObjectSetting() {
+void TitleScene::AddObjectSetting() {
 }
 
-void DemoScene::AddParticleSetting() {
-    ptEditor_->EditorWindow();
-    ptEditor_->DebugAll();
+void TitleScene::AddParticleSetting() {
 }
 
-void DemoScene::CameraUpdate() {
+void TitleScene::CameraUpdate() {
     if (debugCamera_->GetActive()) {
         debugCamera_->Update();
     } else {
@@ -75,5 +75,14 @@ void DemoScene::CameraUpdate() {
     }
 }
 
-void DemoScene::ChangeScene() {
+void TitleScene::ChangeScene() {
+
+#ifdef _DEBUG
+
+#endif // _DEBUG
+#ifndef _DEBUG
+    if (input_->TriggerKey(DIK_SPACE)) {
+        sceneManager_->NextSceneReservation("GAME");
+    }
+#endif // !_DEBUG
 }

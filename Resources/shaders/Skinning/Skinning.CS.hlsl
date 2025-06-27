@@ -1,27 +1,4 @@
-struct Vertex
-{
-    float4 position;
-    float2 texcoord;
-    float3 normal;
-};
-
-struct VertexInfluence
-{
-    float4 weight;
-    int4 index;
-};
-
-struct SkinningInformation
-{
-    uint numVertices;
-};
-
-struct Well
-{
-    float4x4 skeletonSpaceMatrix;
-    float4x4 skeletonSpaceInverseTransposeMatrix;
-};
-
+#include "Skinning.hlsli"
 
 StructuredBuffer<Well> gMatrixPalette : register(t0);
 StructuredBuffer<Vertex> gInputVertices : register(t1);

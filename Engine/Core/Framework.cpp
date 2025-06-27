@@ -1,7 +1,5 @@
 #include "Framework.h"
-#include "Engine/Frame/Frame.h"
-#include "ImGui/ImGuiManager.h"
-#include "ResourceLeakChecker/D3DResourceLeakChecker.h"
+#include <Frame.h>
 
 void Framework::Run() {
     // ゲームの初期化
@@ -78,6 +76,11 @@ void Framework::Initialize() {
     pipeLineManager_->Initialize(dxCommon);
     ///-------------------------------------
 
+     ///-----------PipeLineManager-----------
+    computePipeLineManager_ = ComputePipeLineManager::GetInstance();
+    computePipeLineManager_->Initialize(dxCommon);
+    ///-------------------------------------
+  
     ///-----------TextureManager----------
     textureManager_ = TextureManager::GetInstance();
     textureManager_->Initialize(srvManager);
@@ -153,6 +156,10 @@ void Framework::Finalize() {
 
     ///-------PipeLineManager-------
     pipeLineManager_->Finalize();
+    ///-----------------------------
+
+    ///-------ComputePipeLineManager-------
+    computePipeLineManager_->Finalize();
     ///-----------------------------
 
     ///-------TextureManager-------

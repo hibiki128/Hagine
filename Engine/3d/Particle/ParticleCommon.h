@@ -1,6 +1,6 @@
 #pragma once
 #include "DirectXCommon.h"
-#include "PipeLine/PipeLineManager.h"
+#include "Graphics/PipeLine/PipeLineManager.h"
 class ParticleCommon {
   private:
     static ParticleCommon *instance;

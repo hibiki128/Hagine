@@ -2,9 +2,10 @@
 
 #include "SkyBox.h"
 #include "DirectXCommon.h"
-#include "PipeLine/PipeLineManager.h"
-#include "Srv/SrvManager.h"
-#include "Texture/TextureManager.h"
+#include "Graphics/PipeLine/PipeLineManager.h"
+#include "Graphics/Srv/SrvManager.h"
+#include "Graphics/Texture/TextureManager.h"
+#include <myMath.h>
 
 SkyBox::SkyBox() {
     psoManager_ = PipeLineManager::GetInstance();

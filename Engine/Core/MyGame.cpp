@@ -1,5 +1,5 @@
 #include "MyGame.h"
-#include "SceneFactory.h"
+#include "Scene/SceneFactory.h"
 
 void MyGame::Initialize() {
     Framework::Initialize();

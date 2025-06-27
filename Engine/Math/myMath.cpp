@@ -1,6 +1,6 @@
 #include"myMath.h"
 #include <numbers>
-#include"ViewProjection/ViewProjection.h"
+#include <WinApp.h>
 
 float Lerp(float _start, float _end, float _t)
 {

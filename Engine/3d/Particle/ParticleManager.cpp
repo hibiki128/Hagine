@@ -1,6 +1,7 @@
+#define NOMINMAX
 #include "ParticleManager.h"
 #include "Engine/Frame/Frame.h"
-#include "Texture/TextureManager.h"
+#include "Graphics/Texture/TextureManager.h"
 #include <fstream>
 #include <random>
 

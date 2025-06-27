@@ -2,7 +2,6 @@
 
 #include "Collider.h"
 #include "Object/Object3d.h"
-#include "SceneManager.h"
 #include "list"
 #include "myMath.h"
 class CollisionManager {

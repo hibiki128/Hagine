@@ -1,10 +1,5 @@
 #pragma once
-#include "Material/Material.h"
-#include "Model.h"
-#include "ObjColor.h"
 #include "Object/Object3dCommon.h"
-#include "ViewProjection/ViewProjection.h"
-#include "WorldTransform.h"
 #include "animation/ModelAnimation.h"
 #include "light/LightGroup.h"
 #include "string"
@@ -13,6 +8,10 @@
 #include "type/Vector3.h"
 #include "type/Vector4.h"
 #include "vector"
+#include <Model/Model.h>
+#include <Graphics/PipeLine/PipeLineManager.h>
+#include <Transform/ObjColor.h>
+#include"Camera/ViewProjection/ViewProjection.h"
 
 class ModelCommon;
 class Object3d {

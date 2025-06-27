@@ -3,7 +3,7 @@
 #include "ParticleEmitter.h"
 #include "ParticleGroup.h"
 #include "ParticleGroupManager.h"
-#include "ViewProjection/ViewProjection.h"
+#include "Camera/ViewProjection/ViewProjection.h"
 #include <filesystem>
 #include <map>
 #include <memory>

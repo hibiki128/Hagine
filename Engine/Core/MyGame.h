@@ -1,8 +1,6 @@
 #pragma once
 #include"Framework.h"
 #include "memory"
-#include"GameScene.h"
-#include"TitleScene.h"
 
 class MyGame : public Framework
 {

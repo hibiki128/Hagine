@@ -2,7 +2,7 @@
 #include "type/Matrix4x4.h"
 #include "type/Vector2.h"
 #include "type/Vector3.h"
-#include "ViewProjection/ViewProjection.h"
+#include "Camera/ViewProjection/ViewProjection.h"
 class DebugCamera {
   public:
     // X,Y,Z軸回りのローカル回転角

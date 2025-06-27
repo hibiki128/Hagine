@@ -1,6 +1,6 @@
 #pragma once
-#include "PipeLine/PipeLineManager.h"
-#include "ViewProjection/ViewProjection.h"
+#include "Graphics/PipeLine/PipeLineManager.h"
+#include "Camera/ViewProjection/ViewProjection.h"
 #include <type/Matrix4x4.h>
 #include <type/Vector3.h>
 #include <type/Vector4.h>

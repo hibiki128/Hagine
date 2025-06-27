@@ -1,20 +1,21 @@
 #pragma once
-#include "WorldTransform.h"
+#include "Graphics/PipeLine/PipeLineManager.h"
+#include "Transform/WorldTransform.h"
 #include "array"
 #include "wrl.h"
-#include <type/Matrix4x4.h>
-#include <type/Quaternion.h>
-#include <type/Vector2.h>
-#include <type/Vector3.h>
-#include <type/Vector4.h>
+#include <Transform/WorldTransform.h>
 #include <d3d12.h>
 #include <list>
 #include <map>
 #include <optional>
 #include <span>
 #include <string>
+#include <type/Matrix4x4.h>
+#include <type/Quaternion.h>
+#include <type/Vector2.h>
+#include <type/Vector3.h>
+#include <type/Vector4.h>
 #include <vector>
-#include"PipeLine/PipeLineManager.h"
 
 struct QuaternionTransform {
     Vector3 scale;
@@ -104,14 +105,31 @@ struct WellForGPU {
     Matrix4x4 skeletonSpaceInverseTransposeMatrix;
 };
 
+struct SkinningInformationForGPU {
+    uint32_t numVertices;
+};
+
 struct SkinCluster {
     std::vector<Matrix4x4> inverseBindPoseMatrices;
+    //
     Microsoft::WRL::ComPtr<ID3D12Resource> influenceResource;
-    D3D12_VERTEX_BUFFER_VIEW influenceBufferView;
     std::span<VertexInfluence> mappedInfluence;
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> influenceSrvHandle;
+    //
     Microsoft::WRL::ComPtr<ID3D12Resource> paletteResource;
     std::span<WellForGPU> mappedPalette;
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> paletteSrvHandle;
+    //
+    Microsoft::WRL::ComPtr<ID3D12Resource> inputVertexResource;
+    std::span<VertexData> mappedVertex;
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> inputVertexSrvHandle;
+    //
+    Microsoft::WRL::ComPtr<ID3D12Resource> outputVertexResource;
+    D3D12_VERTEX_BUFFER_VIEW outputVertexBufferView; // ← これを追加
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> outputVertexSrvHandle;
+    //
+    Microsoft::WRL::ComPtr<ID3D12Resource> skinningInformationResource;
+    SkinningInformationForGPU *SkinningInfomationData = nullptr;
 };
 
 struct KeyframeVector3 {
@@ -158,16 +176,16 @@ struct Particle {
     float lifeTime;    // ライフタイム
     float currentTime; // 現在の時間
     float initialAlpha;
-    //std::weak_ptr<Particle> parent;                  // 親パーティクルへの弱参照
-    //std::vector<std::shared_ptr<Particle>> children; // 子パーティクルのリスト
-    Vector3 relativePosition;                        // 親からの相対位置
-    Vector3 parentOffset;                            // 親に対するオフセット
-    bool isChild;                                    // 子パーティクルかどうか
-    bool createTrail;                                // 軌跡を作成するか
-    float trailSpawnTimer;                           // 軌跡生成のタイマー
-    float trailSpawnInterval;                        // 軌跡生成間隔
-    int maxChildren;                                 // 最大子供数
-    float childLifeScale;                            // 子の寿命スケール（親より短く）
+    // std::weak_ptr<Particle> parent;                  // 親パーティクルへの弱参照
+    // std::vector<std::shared_ptr<Particle>> children; // 子パーティクルのリスト
+    Vector3 relativePosition; // 親からの相対位置
+    Vector3 parentOffset;     // 親に対するオフセット
+    bool isChild;             // 子パーティクルかどうか
+    bool createTrail;         // 軌跡を作成するか
+    float trailSpawnTimer;    // 軌跡生成のタイマー
+    float trailSpawnInterval; // 軌跡生成間隔
+    int maxChildren;          // 最大子供数
+    float childLifeScale;     // 子の寿命スケール（親より短く）
 
     BlendMode blendMode = BlendMode::kAdd;
 

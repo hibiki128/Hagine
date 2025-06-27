@@ -6,7 +6,7 @@
 #include "type/Matrix4x4.h"
 #include"wrl.h"
 #include"string"
-#include "Srv/SrvManager.h"
+#include <Graphics/Srv/SrvManager.h>
 class SpriteCommon;
 class Sprite
 {

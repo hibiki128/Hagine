@@ -1,7 +1,5 @@
-// SkyBox.h の変更点
-
 #pragma once
-#include <ViewProjection/ViewProjection.h>
+#include <Camera/ViewProjection/ViewProjection.h>
 #include <cstdint>
 #include <d3d12.h>
 #include <type/Matrix4x4.h>

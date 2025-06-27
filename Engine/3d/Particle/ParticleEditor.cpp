@@ -1,6 +1,6 @@
 #define NOMINMAX
 #include "ParticleEditor.h"
-#include "ImGui/ImGuiManager.h"
+#include "Debug/ImGui/ImGuiManager.h"
 #ifdef _DEBUG
 #include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG

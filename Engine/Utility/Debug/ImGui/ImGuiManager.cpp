@@ -1,15 +1,15 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
-#include "Engine/Offscreen/OffScreen.h"
 #include "ImGuizmo.h"
 #include "ImGuizmoManager.h"
-#include "SceneManager.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include <Engine/Frame/Frame.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include"ParticleEditor.h"
+#include"Object/BaseObject.h"
+#include"Scene/SceneManager.h"
+#include"Engine/OffScreen/OffScreen.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 

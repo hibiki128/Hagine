@@ -5,6 +5,7 @@
 #include "cmath"
 #include <type/Vector3.h>
 #include <type/Quaternion.h>
+#include <Camera/ViewProjection/ViewProjection.h>
 
 struct Sphere {
 	Vector3 center; // !< 中心点

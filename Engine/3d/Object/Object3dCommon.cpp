@@ -1,6 +1,7 @@
 #include "Object3dCommon.h"
 void Object3dCommon::Initialize() {
    psoManager_ = PipeLineManager::GetInstance();
+    computePsoManager_ = ComputePipeLineManager::GetInstance();
 }
 
 void Object3dCommon::DrawCommonSetting() {
@@ -9,6 +10,10 @@ void Object3dCommon::DrawCommonSetting() {
 
 void Object3dCommon::skinningDrawCommonSetting() {
     psoManager_->DrawCommonSetting(PipelineType::kSkinning);
+}
+
+void Object3dCommon::computeSkinningDrawCommonSetting() {
+    computePsoManager_->DrawCommonSetting(ComputePipelineType::kSkinning);
 }
 
 void Object3dCommon::SetBlendMode(BlendMode blendMode) {

@@ -1,5 +1,4 @@
 #include "ClearScene.h"
-#include "SceneManager.h"
 
 void ClearScene::Initialize() {
     audio_ = Audio::GetInstance();

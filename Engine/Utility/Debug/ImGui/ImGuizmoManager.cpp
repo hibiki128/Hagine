@@ -2,6 +2,7 @@
 #ifdef _DEBUG
 #include "ImGuizmoManager.h"
 #include "Input.h"
+#include <Transform/WorldTransform.h>
 
 ImGuizmoManager *ImGuizmoManager::instance = nullptr;
 

@@ -4,12 +4,10 @@
 
 #include "imgui.h"
 #include "ImGuizmo.h"
-#include "ViewProjection/ViewProjection.h"
-#include "WorldTransform.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include"application/Base/BaseObject.h"
+#include <Object/BaseObject.h>
 class ImGuizmoManager {
   private:
     static ImGuizmoManager *instance;
