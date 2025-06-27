@@ -100,12 +100,7 @@ void AttackManager::Update(float deltaTime) {
 
         // 再生中でない場合の処理
         if (!motion.isPlaying) {
-            // 経過時間が0で初期位置が記録されている場合、初期位置に戻す
-            if (motion.currentTime == 0.0f && motion.hasInitialTransform) {
-                motion.target->GetWorldPosition() = motion.initialPos;
-                motion.target->GetWorldRotation() = motion.initialRot;
-                motion.target->GetWorldScale() = motion.initialScale;
-            }
+            // 経過時間が0で初期位置が記録されている場合は何もしない（固定しない）
             continue;
         }
 
@@ -283,7 +278,7 @@ void AttackManager::Stop(const std::string &objectName) {
         motion.currentTime = 0.0f;
         motion.onFinished = nullptr;
 
-        // 初期位置に戻す
+        // 初期位置に戻すが固定はしない
         if (motion.hasInitialTransform && motion.target) {
             motion.target->GetWorldPosition() = motion.initialPos;
             motion.target->GetWorldRotation() = motion.initialRot;
@@ -299,7 +294,7 @@ void AttackManager::StopAll() {
         motion.currentTime = 0.0f;
         motion.onFinished = nullptr;
 
-        // 初期位置に戻す
+        // 初期位置に戻すが固定はしない
         if (motion.hasInitialTransform && motion.target) {
             motion.target->GetWorldPosition() = motion.initialPos;
             motion.target->GetWorldRotation() = motion.initialRot;
@@ -396,12 +391,12 @@ void AttackManager::DrawControlPoints() {
     DrawLine3D *drawLine = DrawLine3D::GetInstance();
     const float cubeSize = 0.4f;
 
-    // 基準位置を取得（再生中は basePos、停止中は現在位置）
+    // 基準位置を取得（経過時間が0.0fの時のみ現在位置、それ以外は basePos）
     Vector3 basePos;
-    if (motion.isPlaying) {
-        basePos = motion.basePos; // 再生開始時の位置を固定で使用
+    if (motion.currentTime == 0.0f) {
+        basePos = motion.target->GetWorldPosition(); // 経過時間0.0fの時は現在位置を使用
     } else {
-        basePos = motion.target->GetWorldPosition(); // 停止中は現在位置を使用
+        basePos = motion.basePos; // 再生中・再生後は再生開始時の位置を固定で使用
     }
 
     for (size_t i = 0; i < motion.controlPoints.size(); ++i) {
@@ -449,12 +444,12 @@ void AttackManager::DrawCatmullRomCurve() {
     const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f}; // オレンジ色
     const int curveResolution = 100;                     // 曲線の解像度
 
-    // 基準位置を取得（再生中は basePos、停止中は現在位置）
+    // 基準位置を取得（経過時間が0.0fの時のみ現在位置、それ以外は basePos）
     Vector3 basePos;
-    if (motion.isPlaying) {
-        basePos = motion.basePos; // 再生開始時の位置を固定で使用
+    if (motion.currentTime == 0.0f) {
+        basePos = motion.target->GetWorldPosition(); // 経過時間0.0fの時は現在位置を使用
     } else {
-        basePos = motion.target->GetWorldPosition(); // 停止中は現在位置を使用
+        basePos = motion.basePos; // 再生中・再生後は再生開始時の位置を固定で使用
     }
 
     // 曲線の描画
@@ -487,7 +482,7 @@ void AttackManager::DrawCatmullRomCurve() {
         drawLine->SetPoints(worldPoint1, worldPoint2, debugLineColor);
     }
 
-    // 基準位置を球で表示（再生中は固定位置、停止中は現在位置）
+    // 基準位置を球で表示（経過時間0.0fの時は現在位置、それ以外は固定位置）
     const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f}; // 白色
     drawLine->DrawSphere(basePos, basePosColor, 0.2f, 32);
 
@@ -554,9 +549,6 @@ void AttackManager::DrawImGui() {
             // 制御点追加・削除
             if (ImGui::Button("制御点追加")) {
                 Vector3 newPoint = {0, 0, 0};
-                if (m.target) {
-                    newPoint = m.target->GetWorldPosition();
-                }
                 m.controlPoints.push_back(newPoint);
             }
             ImGui::SameLine();

@@ -328,6 +328,7 @@
     <ClCompile Include="Engine\3d\Transform\WorldTransform.cpp">
       <Filter>ソースファイル\Engine\3d\Transform</Filter>
     </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -622,6 +623,7 @@
     <ClInclude Include="Engine\3d\Transform\WorldTransform.h">
       <Filter>ソースファイル\Engine\3d\Transform</Filter>
     </ClInclude>
+    <ClInclude Include="Application\GameObject\Player\Hand\PlayerHand.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

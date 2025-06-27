@@ -4,6 +4,7 @@
 #include "State/Base/PlayerBaseState.h"
 #include "Object/BaseObject.h"
 #include"Bullet/PlayerBullet.h"
+#include"Hand/PlayerHand.h"
 
 class ChageShot;
 class FollowCamera;
@@ -113,12 +114,22 @@ class Player : public BaseObject {
     bool isGrounded_ = true;
     bool isDashing_ = false;
 
+    // ステート
     std::unordered_map<std::string, std::unique_ptr<PlayerBaseState>> states_;
     PlayerBaseState *currentState_ = nullptr;
 
+    // データ
     std::unique_ptr<DataHandler> data_;
+
+    // 影
     std::unique_ptr<BaseObject> shadow_;
+
+    // 弾
     std::vector<std::unique_ptr<PlayerBullet>> bullets_;
     std::unique_ptr<ChageShot> chageShot_;
+
+    // 両手
+    std::unique_ptr<PlayerHand> leftHand_;
+    std::unique_ptr<PlayerHand> rightHand_;
 
 };

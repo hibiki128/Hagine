@@ -45,10 +45,28 @@ void Player::Init(const std::string objectName) {
     chageShot_ = std::make_unique<ChageShot>();
     chageShot_->Init("chageShot");
 
+    // 手の生成
+    leftHand_ = std::make_unique<PlayerHand>();
+    leftHand_->Init("leftHand");
+    leftHand_->GetWorldScale() = {0.5f, 0.5f, 0.5f};
+    leftHand_->GetWorldPosition() = {-0.5f, 0.0f, 0.0f};
+
+    rightHand_ = std::make_unique<PlayerHand>();
+    rightHand_->Init("rightHand");
+    rightHand_->GetWorldScale() = {0.5f, 0.5f, 0.5f};
+    rightHand_->GetWorldPosition() = {0.5f, 0.0f, 0.0f};
+
+    //leftHand_->SetParent(this->GetTransform());
+    //rightHand_->SetParent(this->GetTransform());
+
     Load();
 }
 
 void Player::Update() {
+
+    rightHand_->Update();
+    leftHand_->Update();
+
     dt_ = Frame::DeltaTime();
     shadow_->GetWorldPosition() = {transform_.translation_.x, -0.95f, transform_.translation_.z};
     shadow_->Update();
@@ -112,6 +130,8 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
         bullet->Draw(viewProjection, offSet);
     }
     chageShot_->Draw(viewProjection, offSet);
+    leftHand_->Draw(viewProjection, offSet);
+    rightHand_->Draw(viewProjection, offSet);
 }
 
 void Player::DrawParticle(const ViewProjection &viewProjection) {
