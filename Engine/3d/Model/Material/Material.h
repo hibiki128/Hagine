@@ -1,6 +1,6 @@
 #pragma once
 #include "wrl.h"
-#include <ModelStructs.h>
+#include <Model/ModelStructs.h>
 #include <Primitive/PrimitiveModel.h>
 #include <d3d12.h>
 class DirectXCommon;

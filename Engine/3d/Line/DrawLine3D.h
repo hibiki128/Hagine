@@ -1,13 +1,13 @@
 #pragma once
-#include "PipeLine/PipeLineManager.h"
-#include "ViewProjection/ViewProjection.h"
+#include "Graphics/PipeLine/PipeLineManager.h"
+#include "Camera/ViewProjection/ViewProjection.h"
+#include <type/Matrix4x4.h>
+#include <type/Vector3.h>
+#include <type/Vector4.h>
 #include <cstdint>
 #include <d3d12.h>
 #include <memory>
 #include <string>
-#include <type/Matrix4x4.h>
-#include <type/Vector3.h>
-#include <type/Vector4.h>
 #include <wrl/client.h>
 
 using namespace Microsoft::WRL;
@@ -56,7 +56,7 @@ class DrawLine3D {
 
     void DrawGrid(float y, int division, float size, Vector4 color = {0.5f, 0.5f, 0.5f, 1.0f});
 
-    // 新たに追加する関数
+    // �V���ɒǉ�����֐�
     void DrawSphere(const Vector3 &position, const Vector4 &color, float radius, int divisions);
     void DrawCube(const Vector3 &position, const Vector4 &color, float size);
 

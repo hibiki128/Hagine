@@ -1,5 +1,5 @@
 #pragma once
-#include "application/Base/BaseObject.h"
+#include "Object/BaseObject.h"
 
 class SkyDome : public BaseObject {
   public:

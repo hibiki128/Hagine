@@ -1,7 +1,6 @@
 #include "GameScene.h"
-#include "SceneManager.h"
 
-#include <application/Utility/AttackManager.h>
+#include <Application/Utility/AttackManager.h>
 
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();

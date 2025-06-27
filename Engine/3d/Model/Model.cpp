@@ -1,7 +1,7 @@
 #include "Model.h"
 #include "Engine/Frame/Frame.h"
+#include "Graphics/Texture/TextureManager.h"
 #include "Object/Object3dCommon.h"
-#include "Texture/TextureManager.h"
 #include "fstream"
 #include "myMath.h"
 #include "sstream"
@@ -73,39 +73,66 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type) {
     modelData.meshes[0].materialIndex = 0;
 }
 
+void Model::Update() {
+    if (isGltf && animator_ && animator_->HaveAnimation()) {
+        // 1. 入力頂点データ更新
+        skin_->UpdateInputVertices(modelData);
+
+        // 2. コンピュートシェーダ実行のためのバリア
+        ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
+
+        //// UAV -> SRV バリア (前回の結果があれば)
+        //D3D12_RESOURCE_BARRIER barrier = {};
+        //barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        //barrier.UAV.pResource = skin_->GetOutputVertexResource();
+        //commandList->ResourceBarrier(1, &barrier);
+
+        // 3. スキニング実行
+        skin_->ExecuteSkinning(commandList);
+
+        //// 4. UAV -> VBV バリア
+        //barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        //barrier.Transition.pResource = skin_->GetOutputVertexResource();
+        //barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        //barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        //commandList->ResourceBarrier(1, &barrier);
+    }
+}
+
 void Model::Draw(const Vector4 &color, bool lighting) {
-    // 各メッシュを描画
+    ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
+
     for (size_t meshIndex = 0; meshIndex < meshes_.size(); ++meshIndex) {
         Mesh *currentMesh = meshes_[meshIndex].get();
         uint32_t materialIndex = modelData.meshes[meshIndex].materialIndex;
-
-        // マテリアルインデックスの範囲チェック
         if (materialIndex >= materials_.size()) {
             materialIndex = 0;
         }
-
         Material *currentMaterial = materials_[materialIndex].get();
 
-        // バッファ設定
-        D3D12_VERTEX_BUFFER_VIEW vertexBufferView = currentMesh->GetVertexBufferView();
+        // インデックスバッファ設定
         D3D12_INDEX_BUFFER_VIEW indexBufferView = currentMesh->GetIndexBufferView();
+        commandList->IASetIndexBuffer(&indexBufferView);
 
-        modelCommon_->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&indexBufferView);
-        modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
-
-        // スキニング処理（必要に応じて）
+        // 頂点バッファ設定 - アニメーション有無で使用するバッファを切り替え
         if (isGltf && animator_ && animator_->HaveAnimation()) {
-            D3D12_VERTEX_BUFFER_VIEW influenceBufferView = skin_->GetSkinCluster().influenceBufferView;
-            D3D12_VERTEX_BUFFER_VIEW vbvs[2] = {vertexBufferView, influenceBufferView};
-            modelCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 2, vbvs);
-            srvManager_->SetGraphicsRootDescriptorTable(7, skin_->GetSrvIndex());
+            // スキニング後の頂点バッファのみを使用
+            D3D12_VERTEX_BUFFER_VIEW vbv = skin_->GetOutputVertexBufferView();
+            commandList->IASetVertexBuffers(0, 1, &vbv);
+
+            // パレット情報をシェーダーに渡す（必要に応じて）
+            srvManager_->SetGraphicsRootDescriptorTable(7, skin_->GetPaletteSrvIndex());
+        } else {
+            // 元の頂点バッファを使用
+            D3D12_VERTEX_BUFFER_VIEW vbv = currentMesh->GetVertexBufferView();
+            commandList->IASetVertexBuffers(0, 1, &vbv);
         }
 
         // マテリアル描画
         currentMaterial->Draw(color, lighting);
 
         // 描画コール
-        modelCommon_->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(
+        commandList->DrawIndexedInstanced(
             UINT(modelData.meshes[meshIndex].indices.size()), 1, 0, 0, 0);
     }
 }

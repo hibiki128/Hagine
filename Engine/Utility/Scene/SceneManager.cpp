@@ -1,5 +1,4 @@
 #include "SceneManager.h"
-#include "ImGui/ImGuiManager.h"
 #include <cassert>
 
 SceneManager *SceneManager::instance = nullptr;

@@ -1,18 +1,19 @@
 #pragma once
 #include "Audio.h"
-#include "DebugCamera/DebugCamera.h"
+#include "Camera/DebugCamera/DebugCamera.h"
 #include "Input.h"
-#include "LightGroup.h"
-#include "Object/Object3d.h"
-#include "ParticleCommon.h"
-#include "ParticleEditor.h"
-#include "ParticleEmitter.h"
+#include "Light/LightGroup.h"
+#include "Object/Object3dCommon.h"
+#include "Particle/ParticleCommon.h"
+#include "Particle/ParticleEditor.h"
+#include "Particle/ParticleEmitter.h"
 #include "SpriteCommon.h"
-#include "ViewProjection/ViewProjection.h"
-#include "WorldTransform.h"
+#include "Camera/ViewProjection/ViewProjection.h"
+#include "Transform/WorldTransform.h"
 #include "line/DrawLine3D.h"
 #include"Object/BaseObjectManager.h"
 #include"Sprite.h"
+#include"Object/BaseObject.h"
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG

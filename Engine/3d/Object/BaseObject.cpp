@@ -119,8 +119,6 @@ void BaseObject::ImGui() {
 }
 
 void BaseObject::DebugObject() {
-#ifdef _DEBUG
-
     if (ImGui::CollapsingHeader("トランスフォーム")) {
         ImGui::DragFloat3("位置", &transform_.translation_.x, 0.1f);
 
@@ -151,7 +149,7 @@ void BaseObject::DebugObject() {
         ImGui::Checkbox("ライティング有効", &isLighting_);
     }
 
-    if (ImGui::CollapsingHeader("モデル")) {
+if (ImGui::CollapsingHeader("モデル")) {
         static int selectedMaterialIndex = 0; // 選択中のマテリアルインデックス
 
         size_t materialCount = obj3d_->GetMaterialCount();
@@ -213,8 +211,8 @@ void BaseObject::DebugObject() {
             }
         }
     }
-#endif // _DEBUG
 }
+
 
 void BaseObject::SaveToJson() {
     TransformDatas_->Save<Vector3>("translation", transform_.translation_);

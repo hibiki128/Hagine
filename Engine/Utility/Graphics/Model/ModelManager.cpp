@@ -2,6 +2,7 @@
 #include <fstream>
 #include <functional>
 #include <sstream>
+
 ModelManager *ModelManager::instance = nullptr;
 
 ModelManager *ModelManager::GetInstance() {

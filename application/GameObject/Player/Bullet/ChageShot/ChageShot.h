@@ -1,7 +1,7 @@
 #pragma once
 #include "Engine/Input/Input.h"
-#include "application/Base/BaseObject.h"
-#include "application/GameObject/Player/Player.h"
+#include "Object/BaseObject.h"
+#include "Application/GameObject/Player/Player.h"
 #include"Particle/ParticleEmitter.h"
 
 class ChageShot : public BaseObject {

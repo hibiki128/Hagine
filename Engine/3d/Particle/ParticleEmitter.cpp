@@ -1,12 +1,11 @@
 #define NOMINMAX
 #include "ParticleEmitter.h"
-#include "Engine/Frame/Frame.h"
+#include "Frame.h"
 #include "line/DrawLine3D.h"
 
 #include "ParticleGroupManager.h"
-#include <ParticleEditor.h>
 #include <set>
-#include <ParticleEditor.h>
+#include <Particle/ParticleEditor.h>
 // コンストラクタ
 ParticleEmitter::ParticleEmitter() {}
 

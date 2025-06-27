@@ -1,5 +1,6 @@
 #include "DrawLine3D.h"
 #include "DirectXCommon.h"
+#include <myMath.h>
 
 DrawLine3D *DrawLine3D::instance = nullptr;
 

@@ -1,6 +1,6 @@
 #include "BaseObjectManager.h"
 #ifdef _DEBUG
-#include"ImGui/ImGuizmoManager.h"
+#include"Debug/ImGui/ImGuizmoManager.h"
 #endif // _DEBUG
 
 BaseObjectManager *BaseObjectManager::instance = nullptr;

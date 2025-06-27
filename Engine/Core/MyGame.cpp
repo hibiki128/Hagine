@@ -1,6 +1,6 @@
 #include "MyGame.h"
-#include "SceneFactory.h"
-#include "Engine/Frame/Frame.h"
+#include "Scene/SceneFactory.h"
+#include <Frame.h>
 
 void MyGame::Initialize() {
     Framework::Initialize();

@@ -1,11 +1,14 @@
 #include "Object3d.h"
+
+#include "DirectXCommon.h"
+#include "Graphics/Model/ModelManager.h"
 #include "Object3dCommon.h"
+#include "Transform/WorldTransform.h"
 #include "cassert"
-#include "myMath.h"
-#include <Engine/Frame/Frame.h>
-#include <Model/ModelManager.h>
-#include <Texture/TextureManager.h>
+#include <Frame.h>
 #include <line/DrawLine3D.h>
+#include <myMath.h>
+#include <type/Matrix4x4.h>
 
 void Object3d::Initialize() {
     objectCommon_ = std::make_unique<Object3dCommon>();
@@ -59,8 +62,14 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
     transformationMatrixData->World = worldTransform.matWorld_;
     Matrix4x4 worldInverseMatrix = Inverse(worldMatrix);
     transformationMatrixData->WorldInverseTranspose = Transpose(worldInverseMatrix);
-}
 
+    if (model && model->IsGltf()) {
+        if (currentModelAnimation_->GetAnimator()->HaveAnimation()) {
+            objectCommon_->computeSkinningDrawCommonSetting();
+            model->Update();
+        }
+    }
+}
 
 void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, ObjColor *color, bool lighting) {
     objectCommon_->SetBlendMode(blendMode_);
@@ -74,7 +83,7 @@ void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &
         } else {
             HaveAnimation = false;
         }
-    } 
+    }
 
     // 変換行列設定
     dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());

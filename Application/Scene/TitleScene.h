@@ -1,9 +1,10 @@
 #pragma once
 
 #include "BaseScene.h"
-#include"application/Base/BaseObject.h"
+#include"Object/BaseObject.h"
 #include"Easing.h"
 #include"SkyBox/SkyBox.h"
+
 class TitleScene : public BaseScene {
   public: // メンバ関数
     /// <summary>

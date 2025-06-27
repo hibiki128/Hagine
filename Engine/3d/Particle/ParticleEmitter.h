@@ -1,7 +1,7 @@
 #pragma once
 #include "ParticleManager.h"
-#include "ViewProjection/ViewProjection.h"
-#include "WorldTransform.h"
+#include "Camera/ViewProjection/ViewProjection.h"
+#include "Transform/WorldTransform.h"
 #include <string>
 #ifdef _DEBUG
 #include "imgui.h"

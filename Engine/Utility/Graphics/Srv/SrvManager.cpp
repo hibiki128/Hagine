@@ -101,6 +101,19 @@ void SrvManager::CreateSRVforDepth(uint32_t srvIndex, ID3D12Resource *pResource)
     dxCommon->GetDevice()->CreateShaderResourceView(pResource, &depthTextureSrvDesc, GetCPUDescriptorHandle(srvIndex));
 }
 
+void SrvManager::CreateUAVStructuredBuffer(uint32_t srvIndex, ID3D12Resource *pResource, UINT numElements, UINT structureByteStride) {
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+    uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+    uavDesc.Buffer.FirstElement = 0;
+    uavDesc.Buffer.NumElements = numElements;
+    uavDesc.Buffer.CounterOffsetInBytes = 0;
+    uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+    uavDesc.Buffer.StructureByteStride = structureByteStride;
+
+    dxCommon->GetDevice()->CreateUnorderedAccessView(pResource, nullptr, &uavDesc, GetCPUDescriptorHandle(srvIndex));
+}
+
 uint32_t SrvManager::Allocate() {
     // 空きインデックスがあれば、それを使用
     if (!freeIndices.empty()) {

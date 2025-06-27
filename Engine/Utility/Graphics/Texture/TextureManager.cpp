@@ -1,6 +1,6 @@
 #include "TextureManager.h"
 #include "DirectXCommon.h"
-#include "StringUtility.h"
+#include <String/StringUtility.h>
 
 TextureManager *TextureManager::instance = nullptr;
 

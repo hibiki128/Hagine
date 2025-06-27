@@ -2,26 +2,28 @@
 #include "DirectXCommon.h"
 #ifdef _DEBUG
 #endif // _DEBUG
-#include "AbstractSceneFactory.h"
 #include "Audio.h"
-#include "CollisionManager.h"
 #include "Input.h"
-#include"Model/ModelManager.h"
 #include"Object/Object3dCommon.h"
-#include "ParticleCommon.h"
-#include "ParticleEditor.h"
-#include "SceneManager.h"
 #include "SpriteCommon.h"
-#include"Srv/SrvManager.h"
-#include"Texture/TextureManager.h"
 #include "Engine/offscreen/OffScreen.h"
 #include <line/DrawLine3D.h>
-#include"ImGui/ImGuiManager.h"
-#include"ImGui/ImGuizmoManager.h"
 #include"Object/BaseObjectManager.h"
 #include"Particle/ParticleGroupManager.h"
-#include"PipeLine/PipeLineManager.h"
-#include <application/Utility/AttackManager.h>
+#include <Graphics/Srv/SrvManager.h>
+#include <Graphics/Texture/TextureManager.h>
+#include <Graphics/Model/ModelManager.h>
+#include <Debug/ImGui/ImGuizmoManager.h>
+#include <Debug/ImGui/ImGuiManager.h>
+#include <Particle/ParticleCommon.h>
+#include <Particle/ParticleEditor.h>
+#include <Collider/CollisionManager.h>
+#include <Scene/AbstractSceneFactory.h>
+#include <Scene/SceneManager.h>
+#include"Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"
+#include"Graphics/PipeLine/PipeLineManager.h"
+#include"Graphics/PipeLine/ComputePipeLineManager.h"
+#include <Application/utility/AttackManager.h>
 
 class Framework {
   public: // メンバ関数
@@ -86,6 +88,7 @@ class Framework {
     ParticleGroupManager *particleGroupManager_ = nullptr;
     PipeLineManager *pipeLineManager_ = nullptr;
     AttackManager *attackManager_ = nullptr;
+    ComputePipeLineManager *computePipeLineManager_ = nullptr;
 
     SpriteCommon *spriteCommon = nullptr;
     ParticleCommon *particleCommon = nullptr;

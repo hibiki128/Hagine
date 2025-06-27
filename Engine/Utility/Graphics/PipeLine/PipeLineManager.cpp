@@ -1,7 +1,7 @@
 #include "PipeLineManager.h"
-#include "Log/Logger.h"
 #include <d3dx12.h>
 #include "ComputePipeLineManager.h"
+#include <Debug/Log/Logger.h>
 PipeLineManager *PipeLineManager::instance = nullptr;
 
 PipeLineManager *PipeLineManager::GetInstance() {
@@ -1022,7 +1022,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSkinningGraph
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Object/SkinningObject3d.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Skinning/Skinning.VS.hlsl", L"vs_6_0");
     assert(vertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Object/Object3d.PS.hlsl", L"ps_6_0");

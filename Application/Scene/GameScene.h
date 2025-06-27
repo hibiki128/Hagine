@@ -1,11 +1,11 @@
 #pragma once
 #include "BaseScene.h"
 
-#include "application/Camera/FollowCamera.h"
-#include "application/GameObject/Field/Ground/Ground.h"
-#include "application/GameObject/Field/SkyDome/SkyDome.h"
-#include "application/GameObject/Player/Player.h"
-#include"application/GameObject/Enemy/Enemy.h"
+#include "Application/Camera/FollowCamera.h"
+#include "Application/GameObject/Field/Ground/Ground.h"
+#include "Application/GameObject/Field/SkyDome/SkyDome.h"
+#include "Application/GameObject/Player/Player.h"
+#include"Application/GameObject/Enemy/Enemy.h"
 
 class GameScene : public BaseScene {
   public: // メンバ関数

@@ -2,7 +2,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <cassert>
-#include <Engine/Frame/Frame.h>
+#include <Frame.h>
 #include <myMath.h>
 
 std::unordered_map<std::string, Animation> Animator::animationCache;

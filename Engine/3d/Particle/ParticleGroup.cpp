@@ -1,8 +1,8 @@
 #include "ParticleGroup.h"
-#include "Model/ModelManager.h"
-#include "Srv/SrvManager.h"
+#include "Graphics/Model/ModelManager.h"
+#include "Graphics/Srv/SrvManager.h"
 #include "fstream"
-#include <Texture/TextureManager.h>
+#include <Graphics/Texture/TextureManager.h>
 
 std::unordered_map<std::string, ModelData> ParticleGroup::modelCache;
 

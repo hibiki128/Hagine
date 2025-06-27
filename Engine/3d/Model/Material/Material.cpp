@@ -1,7 +1,8 @@
 #include "Material.h"
 
 #include "fstream"
-#include <Texture/TextureManager.h>
+#include <Graphics/Texture/TextureManager.h>
+#include <Graphics/Srv/SrvManager.h>
 
 void Material::Initialize() {
     dxCommon_ = DirectXCommon::GetInstance();

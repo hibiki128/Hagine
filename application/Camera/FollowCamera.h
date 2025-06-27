@@ -1,6 +1,6 @@
 #pragma once
-#include "ViewProjection/ViewProjection.h"
-#include "WorldTransform.h"
+#include "Camera/ViewProjection/ViewProjection.h"
+#include "Transform/WorldTransform.h"
 class Player;
 class FollowCamera {
   public:

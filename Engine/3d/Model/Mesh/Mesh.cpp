@@ -12,14 +12,6 @@ void Mesh::PrimitiveInitialize(const PrimitiveType &type) {
     meshData_.indices = PrimitiveModel::GetInstance()->GetPrimitiveData(type).indices;
 }
 
-void Mesh::Draw() {
-    D3D12_VERTEX_BUFFER_VIEW vbvs[1] = {vertexBufferView};
-    ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
-    commandList->IASetIndexBuffer(&indexBufferView);
-    commandList->IASetVertexBuffers(0, 1, vbvs);
-    commandList->DrawIndexedInstanced(UINT(meshData_.indices.size()), 1, 0, 0, 0);
-}
-
 void Mesh::CreateVartexData() {
     vertexResource = dxCommon_->CreateBufferResource(sizeof(VertexData) * meshData_.vertices.size());
     // リソースの先頭のアドレスから使う

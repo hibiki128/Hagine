@@ -91,6 +91,15 @@ class SrvManager {
     void CreateSRVforDepth(uint32_t srvIndex, ID3D12Resource *pResource);
 
     /// <summary>
+    /// UAV作成
+    /// </summary>
+    /// <param name="srvIndex"></param>
+    /// <param name="pResource"></param>
+    /// <param name="numElements"></param>
+    /// <param name="structureByteStride"></param>
+    void CreateUAVStructuredBuffer(uint32_t srvIndex, ID3D12Resource *pResource, UINT numElements, UINT structureByteStride);
+
+    /// <summary>
     /// インデックス割り当て
     /// </summary>
     /// <returns></returns>

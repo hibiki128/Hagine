@@ -1,9 +1,9 @@
 #pragma once
 #include "Data/DataHandler.h"
-#include "ObjColor.h"
+#include "Transform/ObjColor.h"
 #include "Object/Object3d.h"
-#include "ViewProjection/ViewProjection.h"
-#include "WorldTransform.h"
+#include "Camera/ViewProjection/ViewProjection.h"
+#include "Transform/WorldTransform.h"
 #include "collider/Collider.h"
 #include "externals/nlohmann/json.hpp"
 #include <string>

@@ -2,7 +2,6 @@
 #include "type/Matrix4x4.h"
 #include "ModelCommon.h"
 #include "type/Quaternion.h"
-#include "Srv/SrvManager.h"
 #include "type/Vector2.h"
 #include "type/Vector3.h"
 #include "type/Vector4.h"
@@ -21,6 +20,7 @@
 #include "Object/Object3dCommon.h"
 #include <Primitive/PrimitiveModel.h>
 #include <unordered_set>
+#include <Graphics/Srv/SrvManager.h>
 
 class Model {
   private:
@@ -57,6 +57,8 @@ class Model {
     void CreateModel(const std::string &directorypath, const std::string &filename);
 
     void CreatePrimitiveModel(const PrimitiveType &type);
+
+    void Update();
 
     /// <summary>
     /// 描画
