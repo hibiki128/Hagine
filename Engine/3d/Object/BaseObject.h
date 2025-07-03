@@ -26,7 +26,7 @@ class BaseObject : public Collider {
     // モデル配列データ
     std::unique_ptr<Object3d> obj3d_;
     // ベースのワールド変換データ
-    WorldTransform transform_;
+    std::unique_ptr<WorldTransform> transform_;
     // カラー
     ObjColor objColor_;
     // ライティング
@@ -67,7 +67,6 @@ class BaseObject : public Collider {
     Vector3 GetCenterRotation() const override;
 
     // 中心座標取得
-    virtual Vector3 GetWorldPosition() const;
     WorldTransform* GetWorldTransform() { return transform_.get(); }
 
     /// =================================================
@@ -100,12 +99,13 @@ class BaseObject : public Collider {
     /// ===================================================
     /// getter
     /// ===================================================
-    const WorldTransform &GetTransform() { return *transform_; }
+    const WorldTransform &GetTransform() const { return *transform_; }
+    WorldTransform &GetTransform() { return *transform_; }
     std::string &GetName() { return objectName_; }
     Object3d *GetObject3d() { return obj3d_.get(); }
-    Vector3 &GetWorldPosition() { return transform_->translation_; }
-    Vector3 &GetWorldRotation() { return transform_->rotation_; }
-    Vector3 &GetWorldScale() { return transform_->scale_; }
+    Vector3 &GetLocalPosition() { return transform_->translation_; }
+    Vector3 &GetLocalRotation() { return transform_->rotation_; }
+    Vector3 &GetLocalScale() { return transform_->scale_; }
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
     bool &GetLighting() { return isLighting_; }
     bool &GetLoop() { return isLoop_; }
@@ -113,7 +113,7 @@ class BaseObject : public Collider {
     /// ===================================================
     /// setter
     /// ===================================================
-    void SetTexture(const std::string &filePath, uint32_t index) { obj3d_->SetTexture(filePath, index); }
+    void SetTexture(const std::string &filePath, uint32_t index = 0) { obj3d_->SetTexture(filePath, index); }
     void SetModel(std::unique_ptr<Object3d> obj) {
         obj3d_ = std::move(obj);
     }
@@ -122,6 +122,7 @@ class BaseObject : public Collider {
     void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }
     void SetReflect(bool reflect) { reflect_ = reflect; }
+    void SetColor(Vector4 color) { objColor_.GetColor() = color; }
 
   private:
     void DebugObject();

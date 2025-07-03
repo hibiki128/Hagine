@@ -1,7 +1,7 @@
 #define NOMINMAX
+#include "PlayerStateFlyMove.h"
 #include "Engine/Frame/Frame.h"
 #include "Input.h"
-#include "PlayerStateFlyMove.h"
 #include "application/GameObject/Player/Player.h"
 #include <cmath>
 namespace {
@@ -60,9 +60,11 @@ void PlayerStateFlyMove::Update(Player &player) {
     fallInputTime_ += player.GetDt();
 
     // 地面に到達 → Idleへ
-    if (player.GetWorldPosition().y <= 0.0f) {
-        player.ChangeState("Idle");
-        return;
+    if (player.GetWorldTransform()) {
+        if (player.GetLocalPosition().y <= 0.0f) {
+            player.ChangeState("Idle");
+            return;
+        }
     }
 
     if (!Input::GetInstance()->TriggerKey(DIK_LSHIFT) &&

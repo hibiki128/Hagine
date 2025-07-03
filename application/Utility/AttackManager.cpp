@@ -107,9 +107,9 @@ void AttackManager::Update(float deltaTime) {
 
         // 初期位置の記録（再生開始時に一度だけ）
         if (!motion.hasInitialTransform) {
-            motion.initialPos = motion.target->GetWorldPosition();
-            motion.initialRot = motion.target->GetWorldRotation();
-            motion.initialScale = motion.target->GetWorldScale();
+            motion.initialPos = motion.target->GetLocalPosition();
+            motion.initialRot = motion.target->GetLocalRotation();
+            motion.initialScale = motion.target->GetLocalScale();
             motion.hasInitialTransform = true;
         }
 
@@ -129,26 +129,26 @@ void AttackManager::Update(float deltaTime) {
             Vector3 localOffset = CatmullRomInterpolation(motion.controlPoints, t);
 
             // ローカルオフセットをワールド座標に変換
-            Vector3 worldOffset = TransformLocalToWorld(localOffset, motion.target->GetWorldTransform().matWorld_);
-            motion.target->GetWorldPosition() = motion.basePos + worldOffset;
+            Vector3 worldOffset = TransformLocalToWorld(localOffset, motion.target->GetWorldTransform()->matWorld_);
+            motion.target->GetLocalPosition() = motion.basePos + worldOffset;
         } else {
             // 従来のイージング補間（ワールド座標対応）
             float easedT = ApplyEasing(motion.easingType, t, 1.0f);
 
             // ローカルオフセットをワールド座標に変換
-            Vector3 startWorldOffset = TransformLocalToWorld(motion.startPosOffset, motion.target->GetWorldTransform().matWorld_);
-            Vector3 endWorldOffset = TransformLocalToWorld(motion.endPosOffset, motion.target->GetWorldTransform().matWorld_);
+            Vector3 startWorldOffset = TransformLocalToWorld(motion.startPosOffset, motion.target->GetWorldTransform()->matWorld_);
+            Vector3 endWorldOffset = TransformLocalToWorld(motion.endPosOffset, motion.target->GetWorldTransform()->matWorld_);
 
             Vector3 actualStartPos = motion.basePos + startWorldOffset;
             Vector3 actualEndPos = motion.basePos + endWorldOffset;
 
-            motion.target->GetWorldPosition() = Lerp(actualStartPos, actualEndPos, easedT);
+            motion.target->GetLocalPosition() = Lerp(actualStartPos, actualEndPos, easedT);
         }
 
         // 回転とスケールは従来通り（ローカル座標系で適用）
         float easedT = ApplyEasing(motion.easingType, t, 1.0f);
-        motion.target->GetWorldRotation() = Lerp(motion.actualStartRot, motion.actualEndRot, easedT);
-        motion.target->GetWorldScale() = Lerp(motion.actualStartScale, motion.actualEndScale, easedT);
+        motion.target->GetLocalRotation() = Lerp(motion.actualStartRot, motion.actualEndRot, easedT);
+        motion.target->GetLocalScale() = Lerp(motion.actualStartScale, motion.actualEndScale, easedT);
 
         // コライダーON/OFF
         bool enable = motion.currentTime >= motion.colliderOnTime && motion.currentTime <= motion.colliderOffTime;
@@ -204,16 +204,16 @@ void AttackManager::Play(const std::string &objectName) {
 
     // 初期位置の記録（まだ記録されていない場合のみ）
     if (!motion.hasInitialTransform) {
-        motion.initialPos = motion.target->GetWorldPosition();
-        motion.initialRot = motion.target->GetWorldRotation();
-        motion.initialScale = motion.target->GetWorldScale();
+        motion.initialPos = motion.target->GetLocalPosition();
+        motion.initialRot = motion.target->GetLocalRotation();
+        motion.initialScale = motion.target->GetLocalScale();
         motion.hasInitialTransform = true;
     }
 
     // 再生開始時点の現在のTransformを基準として保存
-    motion.basePos = motion.target->GetWorldPosition();
-    motion.baseRot = motion.target->GetWorldRotation();
-    motion.baseScale = motion.target->GetWorldScale();
+    motion.basePos = motion.target->GetLocalPosition();
+    motion.baseRot = motion.target->GetLocalRotation();
+    motion.baseScale = motion.target->GetLocalScale();
 
     // 実際の開始・終了値を計算（ローカルオフセット用）
     motion.actualStartRot = motion.baseRot + motion.startRotOffset;
@@ -266,15 +266,15 @@ bool AttackManager::PlayFromFile(BaseObject *target, const std::string &fileName
     motion.baseScale = motion.initialScale;
 
     // 初期位置の記録
-    motion.initialPos = target->GetWorldPosition();
-    motion.initialRot = target->GetWorldRotation();
-    motion.initialScale = target->GetWorldScale();
+    motion.initialPos = target->GetLocalPosition();
+    motion.initialRot = target->GetLocalRotation();
+    motion.initialScale = target->GetLocalScale();
     motion.hasInitialTransform = true;
 
     // 再生開始時点の現在のTransformを基準として保存
-    motion.basePos = target->GetWorldPosition();
-    motion.baseRot = target->GetWorldRotation();
-    motion.baseScale = target->GetWorldScale();
+    motion.basePos = target->GetLocalPosition();
+    motion.baseRot = target->GetLocalRotation();
+    motion.baseScale = target->GetLocalScale();
 
     // 回転・スケール用の実際の開始・終了値を計算
     motion.actualStartRot = motion.baseRot + motion.startRotOffset;
@@ -319,9 +319,9 @@ void AttackManager::Stop(const std::string &objectName) {
 
         // 初期位置に戻すが固定はしない
         if (motion.hasInitialTransform && motion.target) {
-            motion.target->GetWorldPosition() = motion.initialPos;
-            motion.target->GetWorldRotation() = motion.initialRot;
-            motion.target->GetWorldScale() = motion.initialScale;
+            motion.target->GetLocalPosition() = motion.initialPos;
+            motion.target->GetLocalRotation() = motion.initialRot;
+            motion.target->GetLocalScale() = motion.initialScale;
         }
 
         // 一時的なモーションの場合は削除
@@ -341,9 +341,9 @@ void AttackManager::StopAll() {
 
         // 初期位置に戻すが固定はしない
         if (motion.hasInitialTransform && motion.target) {
-            motion.target->GetWorldPosition() = motion.initialPos;
-            motion.target->GetWorldRotation() = motion.initialRot;
-            motion.target->GetWorldScale() = motion.initialScale;
+            motion.target->GetLocalPosition() = motion.initialPos;
+            motion.target->GetLocalRotation() = motion.initialRot;
+            motion.target->GetLocalScale() = motion.initialScale;
         }
 
         // 一時的なモーションの場合は削除
@@ -359,9 +359,9 @@ void AttackManager::ResetInitialPosition(const std::string &objectName) {
     auto it = motions_.find(objectName);
     if (it != motions_.end() && it->second.target) {
         AttackMotion &motion = it->second;
-        motion.initialPos = motion.target->GetWorldPosition();
-        motion.initialRot = motion.target->GetWorldRotation();
-        motion.initialScale = motion.target->GetWorldScale();
+        motion.initialPos = motion.target->GetLocalPosition();
+        motion.initialRot = motion.target->GetLocalRotation();
+        motion.initialScale = motion.target->GetLocalScale();
         motion.hasInitialTransform = true;
     }
 }
@@ -446,7 +446,7 @@ void AttackManager::DrawControlPoints() {
     // 基準位置を取得（経過時間が0.0fの時のみ現在位置、それ以外は basePos）
     Vector3 basePos;
     if (motion.currentTime == 0.0f) {
-        basePos = motion.target->GetWorldPosition(); // 経過時間0.0fの時は現在位置を使用
+        basePos = motion.target->GetLocalPosition(); // 経過時間0.0fの時は現在位置を使用
     } else {
         basePos = motion.basePos; // 再生中・再生後は再生開始時の位置を固定で使用
     }
@@ -454,7 +454,7 @@ void AttackManager::DrawControlPoints() {
     for (size_t i = 0; i < motion.controlPoints.size(); ++i) {
         // ローカルオフセットをワールド座標に変換
         Vector3 localOffset = motion.controlPoints[i];
-        Vector3 worldOffset = TransformLocalToWorld(localOffset, motion.target->GetWorldTransform().matWorld_);
+        Vector3 worldOffset = TransformLocalToWorld(localOffset, motion.target->GetWorldTransform()->matWorld_);
         Vector3 worldPos = basePos + worldOffset;
 
         // 制御点の種類に応じて色を変更
@@ -499,20 +499,20 @@ void AttackManager::DrawCatmullRomCurve() {
     // 基準位置を取得（経過時間が0.0fの時のみ現在位置、それ以外は basePos）
     Vector3 basePos;
     if (motion.currentTime == 0.0f) {
-        basePos = motion.target->GetWorldPosition(); // 経過時間0.0fの時は現在位置を使用
+        basePos = motion.target->GetLocalPosition(); // 経過時間0.0fの時は現在位置を使用
     } else {
         basePos = motion.basePos; // 再生中・再生後は再生開始時の位置を固定で使用
     }
 
     // 曲線の描画
     Vector3 prevLocalOffset = CatmullRomInterpolation(motion.controlPoints, 0.0f);
-    Vector3 prevWorldOffset = TransformLocalToWorld(prevLocalOffset, motion.target->GetWorldTransform().matWorld_);
+    Vector3 prevWorldOffset = TransformLocalToWorld(prevLocalOffset, motion.target->GetWorldTransform()->matWorld_);
     Vector3 prevWorldPoint = basePos + prevWorldOffset;
 
     for (int i = 1; i <= curveResolution; ++i) {
         float t = (float)i / curveResolution;
         Vector3 currentLocalOffset = CatmullRomInterpolation(motion.controlPoints, t);
-        Vector3 currentWorldOffset = TransformLocalToWorld(currentLocalOffset, motion.target->GetWorldTransform().matWorld_);
+        Vector3 currentWorldOffset = TransformLocalToWorld(currentLocalOffset, motion.target->GetWorldTransform()->matWorld_);
         Vector3 currentWorldPoint = basePos + currentWorldOffset;
 
         drawLine->SetPoints(prevWorldPoint, currentWorldPoint, curveColor);
@@ -525,8 +525,8 @@ void AttackManager::DrawCatmullRomCurve() {
         Vector3 localOffset1 = motion.controlPoints[i];
         Vector3 localOffset2 = motion.controlPoints[i + 1];
 
-        Vector3 worldOffset1 = TransformLocalToWorld(localOffset1, motion.target->GetWorldTransform().matWorld_);
-        Vector3 worldOffset2 = TransformLocalToWorld(localOffset2, motion.target->GetWorldTransform().matWorld_);
+        Vector3 worldOffset1 = TransformLocalToWorld(localOffset1, motion.target->GetWorldTransform()->matWorld_);
+        Vector3 worldOffset2 = TransformLocalToWorld(localOffset2, motion.target->GetWorldTransform()->matWorld_);
 
         Vector3 worldPoint1 = basePos + worldOffset1;
         Vector3 worldPoint2 = basePos + worldOffset2;
@@ -540,7 +540,7 @@ void AttackManager::DrawCatmullRomCurve() {
 
     // 再生中の場合、現在のオブジェクト位置も別の色で表示
     if (motion.status == MotionStatus::Playing) {
-        Vector3 currentPos = motion.target->GetWorldPosition();
+        Vector3 currentPos = motion.target->GetLocalPosition();
         const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f}; // 黄色
         drawLine->DrawSphere(currentPos, currentPosColor, 0.15f, 32);
 
@@ -631,7 +631,7 @@ void AttackManager::DrawImGui() {
                 ImGui::DragFloat3("位置", &point.x, 0.1f);
 
                 if (ImGui::Button("現在のオブジェクト位置に設定") && m.target) {
-                    point = m.target->GetWorldPosition();
+                    point = m.target->GetLocalPosition();
                 }
             }
 
@@ -652,9 +652,9 @@ void AttackManager::DrawImGui() {
             // 現在の基準値表示（読み取り専用）
             if (m.target) {
                 ImGui::SeparatorText("現在の基準Transform（読み取り専用）");
-                Vector3 currentPos = m.target->GetWorldPosition();
-                Vector3 currentRot = m.target->GetWorldRotation();
-                Vector3 currentScale = m.target->GetWorldScale();
+                Vector3 currentPos = m.target->GetLocalPosition();
+                Vector3 currentRot = m.target->GetLocalRotation();
+                Vector3 currentScale = m.target->GetLocalScale();
                 ImGui::Text("現在位置: %.2f, %.2f, %.2f", currentPos.x, currentPos.y, currentPos.z);
                 ImGui::Text("現在回転: %.2f, %.2f, %.2f", currentRot.x, currentRot.y, currentRot.z);
                 ImGui::Text("現在スケール: %.2f, %.2f, %.2f", currentScale.x, currentScale.y, currentScale.z);

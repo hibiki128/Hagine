@@ -13,6 +13,7 @@
 #include "numbers"
 #include <Input.h>
 #include <cmath>
+#include <Application/Utility/AttackManager.h>
 
 Player::Player() {
 }
@@ -39,8 +40,8 @@ void Player::Init(const std::string objectName) {
     shadow_->Init("shadow");
     shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
     shadow_->SetTexture("game/shadow.png");
-    shadow_->GetWorldRotation().x = degreesToRadians(90.0f);
-    shadow_->GetWorldScale() = {1.5f, 1.5f, 1.5f};
+    shadow_->GetLocalRotation().x = degreesToRadians(90.0f);
+    shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
 
     chageShot_ = std::make_unique<ChageShot>();
     chageShot_->Init("chageShot");
@@ -48,16 +49,19 @@ void Player::Init(const std::string objectName) {
     // 手の生成
     leftHand_ = std::make_unique<PlayerHand>();
     leftHand_->Init("leftHand");
-    leftHand_->GetWorldScale() = {0.5f, 0.5f, 0.5f};
-    leftHand_->GetWorldPosition() = {-0.5f, 0.0f, 0.0f};
+    leftHand_->GetLocalScale() = {0.5f, 0.5f, 0.5f};
+    leftHand_->GetLocalPosition() = {-2.0f, 0.0f, 0.0f};
 
     rightHand_ = std::make_unique<PlayerHand>();
     rightHand_->Init("rightHand");
-    rightHand_->GetWorldScale() = {0.5f, 0.5f, 0.5f};
-    rightHand_->GetWorldPosition() = {0.5f, 0.0f, 0.0f};
+    rightHand_->GetLocalScale() = {0.5f, 0.5f, 0.5f};
+    rightHand_->GetLocalPosition() = {2.0f, 0.0f, 0.0f};
 
-    // leftHand_->SetParent(this->GetTransform());
-    // rightHand_->SetParent(this->GetTransform());
+    this->AddChild(leftHand_.get());
+    this->AddChild(rightHand_.get());
+
+    AttackManager::GetInstance()->Register(leftHand_.get());
+    AttackManager::GetInstance()->Register(rightHand_.get());
 
     Load();
 }
@@ -68,7 +72,7 @@ void Player::Update() {
     leftHand_->Update();
 
     dt_ = Frame::DeltaTime();
-    shadow_->GetWorldPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
+    shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
     if (chageShot_) {
         chageShot_->SetPlayer(this);
@@ -195,7 +199,7 @@ void Player::Debug() {
             ImGui::DragFloat("最大速度", &maxSpeed_, 0.1f, 0.0f, 50.0f);
             ImGui::DragFloat("加速率", &accelRate_, 0.1f, 0.0f, 50.0f);
             ImGui::Text("現在位置: X=%.2f, Y=%.2f, Z=%.2f",
-                        GetWorldPosition().x, GetWorldPosition().y, GetWorldPosition().z);
+                        GetLocalPosition().x, GetLocalPosition().y, GetLocalPosition().z);
             ImGui::Text("現在速度: X=%.2f, Y=%.2f, Z=%.2f",
                         velocity_.x, velocity_.y, velocity_.z);
 
@@ -306,8 +310,8 @@ void Player::Move() {
 
         if (isLockOn && targetEnemy) {
             // ロックオン中はエネミーの方向を向く
-            Vector3 playerPos = GetWorldPosition();
-            Vector3 enemyPos = targetEnemy->GetWorldPosition();
+            Vector3 playerPos = GetLocalPosition();
+            Vector3 enemyPos = targetEnemy->GetLocalPosition();
 
             // エネミーへの方向ベクトルを計算
             float dx = enemyPos.x - playerPos.x;
@@ -317,7 +321,7 @@ void Player::Move() {
             float targetRotation = atan2(dx, dz);
 
             // 現在の回転と目標回転の差を計算
-            float currentRotation = GetWorldRotation().y;
+            float currentRotation = GetLocalRotation().y;
             float rotationDiff = targetRotation - currentRotation;
 
             // 回転差を-πからπの範囲に正規化
@@ -333,19 +337,19 @@ void Player::Move() {
                 rotationAmount = -rotationAmount;
 
             // 回転を適用
-            GetWorldRotation().y += rotationAmount;
+            GetLocalRotation().y += rotationAmount;
 
             // 回転を0から2πの範囲に正規化
-            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
-                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
-            while (GetWorldRotation().y < 0.0f)
-                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetLocalRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y < 0.0f)
+                GetLocalRotation().y += 2.0f * std::numbers::pi_v<float>;
         } else if (vx != 0.0f || vz != 0.0f) {
             // ロックオンしていない場合は通常通り移動方向に向かせる
             float targetRotation = atan2(vx, vz);
 
             // 現在の回転と目標回転の差を計算
-            float currentRotation = GetWorldRotation().y;
+            float currentRotation = GetLocalRotation().y;
             float rotationDiff = targetRotation - currentRotation;
 
             // 回転差を-πからπの範囲に正規化
@@ -361,13 +365,13 @@ void Player::Move() {
                 rotationAmount = -rotationAmount;
 
             // 回転を適用
-            GetWorldRotation().y += rotationAmount;
+            GetLocalRotation().y += rotationAmount;
 
             // 回転を0から2πの範囲に正規化
-            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
-                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
-            while (GetWorldRotation().y < 0.0f)
-                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetLocalRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y < 0.0f)
+                GetLocalRotation().y += 2.0f * std::numbers::pi_v<float>;
         }
     } else {
         // 入力がない場合は減速
@@ -386,8 +390,8 @@ void Player::Move() {
 
         if (isLockOn && targetEnemy) {
             // ロックオン中はエネミーの方向を向く
-            Vector3 playerPos = GetWorldPosition();
-            Vector3 enemyPos = targetEnemy->GetWorldPosition();
+            Vector3 playerPos = GetLocalPosition();
+            Vector3 enemyPos = targetEnemy->GetLocalPosition();
 
             // エネミーへの方向ベクトルを計算
             float dx = enemyPos.x - playerPos.x;
@@ -397,7 +401,7 @@ void Player::Move() {
             float targetRotation = atan2(dx, dz);
 
             // 現在の回転と目標回転の差を計算
-            float currentRotation = GetWorldRotation().y;
+            float currentRotation = GetLocalRotation().y;
             float rotationDiff = targetRotation - currentRotation;
 
             // 回転差を-πからπの範囲に正規化
@@ -413,13 +417,13 @@ void Player::Move() {
                 rotationAmount = -rotationAmount;
 
             // 回転を適用
-            GetWorldRotation().y += rotationAmount;
+            GetLocalRotation().y += rotationAmount;
 
             // 回転を0から2πの範囲に正規化
-            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
-                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
-            while (GetWorldRotation().y < 0.0f)
-                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetLocalRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y < 0.0f)
+                GetLocalRotation().y += 2.0f * std::numbers::pi_v<float>;
         }
     }
 }
@@ -481,7 +485,7 @@ void Player::Shot() {
         auto bullet = std::make_unique<PlayerBullet>();
         bullet->Init(bulletName);
         bullet->InitTransform(this);
-        bullet->GetWorldScale() = {0.5f, 0.5f, 0.5f};
+        bullet->GetLocalScale() = {0.5f, 0.5f, 0.5f};
         bullet->SetRadius(0.5f);
         bullets_.push_back(std::move(bullet));
     }
@@ -500,16 +504,16 @@ void Player::RotateUpdate() {
 
 void Player::CollisionGround() {
     // 位置更新前に次の位置を計算
-    float nextY = GetWorldPosition().y + velocity_.y * dt_;
+    float nextY = GetLocalPosition().y + velocity_.y * dt_;
 
     // 通常の位置更新
-    GetWorldPosition().x += velocity_.x * dt_;
-    GetWorldPosition().z += velocity_.z * dt_;
+    GetLocalPosition().x += velocity_.x * dt_;
+    GetLocalPosition().z += velocity_.z * dt_;
 
     // Y方向の処理（地面判定含む）
     if (nextY <= 0.0f) {
         // 地面に接地する場合
-        GetWorldPosition().y = 0.0f;
+        GetLocalPosition().y = 0.0f;
 
         // 前のフレームで空中だった場合のみ着地処理
         if (!isGrounded_) {
@@ -529,7 +533,7 @@ void Player::CollisionGround() {
         }
     } else {
         // 空中にいる場合
-        GetWorldPosition().y = nextY;
+        GetLocalPosition().y = nextY;
         isGrounded_ = false;
     }
 }
@@ -657,8 +661,8 @@ void Player::DefaultMovement() {
 
         // ロックオン中はエネミーの方向を向く（DefaultMovementでも同様に実装）
         if (isLockOn && targetEnemy) {
-            Vector3 playerPos = GetWorldPosition();
-            Vector3 enemyPos = targetEnemy->GetWorldPosition();
+            Vector3 playerPos = GetLocalPosition();
+            Vector3 enemyPos = targetEnemy->GetLocalPosition();
 
             float dx = enemyPos.x - playerPos.x;
             float dz = enemyPos.z - playerPos.z;
@@ -666,7 +670,7 @@ void Player::DefaultMovement() {
             float targetRotation = atan2(dx, dz);
 
             // 現在の回転と目標回転の差を計算
-            float currentRotation = GetWorldRotation().y;
+            float currentRotation = GetLocalRotation().y;
             float rotationDiff = targetRotation - currentRotation;
 
             // 回転差を-πからπの範囲に正規化
@@ -682,13 +686,13 @@ void Player::DefaultMovement() {
                 rotationAmount = -rotationAmount;
 
             // 回転を適用
-            GetWorldRotation().y += rotationAmount;
+            GetLocalRotation().y += rotationAmount;
 
             // 回転を0から2πの範囲に正規化
-            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
-                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
-            while (GetWorldRotation().y < 0.0f)
-                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetLocalRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y < 0.0f)
+                GetLocalRotation().y += 2.0f * std::numbers::pi_v<float>;
         }
     } else {
         // 入力がない場合は減速
@@ -706,8 +710,8 @@ void Player::DefaultMovement() {
         Enemy *targetEnemy = GetEnemy();
 
         if (isLockOn && targetEnemy) {
-            Vector3 playerPos = GetWorldPosition();
-            Vector3 enemyPos = targetEnemy->GetWorldPosition();
+            Vector3 playerPos = GetLocalPosition();
+            Vector3 enemyPos = targetEnemy->GetLocalPosition();
 
             float dx = enemyPos.x - playerPos.x;
             float dz = enemyPos.z - playerPos.z;
@@ -715,7 +719,7 @@ void Player::DefaultMovement() {
             float targetRotation = atan2(dx, dz);
 
             // 現在の回転と目標回転の差を計算
-            float currentRotation = GetWorldRotation().y;
+            float currentRotation = GetLocalRotation().y;
             float rotationDiff = targetRotation - currentRotation;
 
             // 回転差を-πからπの範囲に正規化
@@ -731,13 +735,13 @@ void Player::DefaultMovement() {
                 rotationAmount = -rotationAmount;
 
             // 回転を適用
-            GetWorldRotation().y += rotationAmount;
+            GetLocalRotation().y += rotationAmount;
 
             // 回転を0から2πの範囲に正規化
-            while (GetWorldRotation().y > 2.0f * std::numbers::pi_v<float>)
-                GetWorldRotation().y -= 2.0f * std::numbers::pi_v<float>;
-            while (GetWorldRotation().y < 0.0f)
-                GetWorldRotation().y += 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y > 2.0f * std::numbers::pi_v<float>)
+                GetLocalRotation().y -= 2.0f * std::numbers::pi_v<float>;
+            while (GetLocalRotation().y < 0.0f)
+                GetLocalRotation().y += 2.0f * std::numbers::pi_v<float>;
         }
     }
 }

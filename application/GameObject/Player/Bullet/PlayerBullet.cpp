@@ -29,7 +29,7 @@ void PlayerBullet::Update() {
     }
 
     if (isAlive_ && !isHit_) {
-        emitter_->SetPosition(GetWorldPosition());
+        emitter_->SetPosition(GetLocalPosition());
         emitter_->Update();
     }
 
@@ -46,8 +46,8 @@ void PlayerBullet::Update() {
 
     // ロックオンモードの場合、敵への追尾処理
     if (isLockOnBullet_ && targetEnemy_) {
-        Vector3 bulletPos = GetWorldPosition();
-        Vector3 enemyPos = targetEnemy_->GetWorldPosition();
+        Vector3 bulletPos = GetLocalPosition();
+        Vector3 enemyPos = targetEnemy_->GetLocalPosition();
 
         // 敵への方向ベクトルを計算
         Vector3 toEnemy = enemyPos - bulletPos;
@@ -134,7 +134,7 @@ void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
 
 void PlayerBullet::InitTransform(Player *player) {
     // プレイヤーの位置を弾の初期位置に設定
-    this->transform_->translation_ = player->GetWorldPosition();
+    this->transform_->translation_ = player->GetLocalPosition();
     if (transform_->translation_ == Vector3(0.0f, 0.0f, 0.0f)) {
         Logger::Log("default");
     }
@@ -147,8 +147,8 @@ void PlayerBullet::InitTransform(Player *player) {
         isLockOnBullet_ = true;
         targetEnemy_ = player->GetEnemy();
 
-        Vector3 playerPos = player->GetWorldPosition();
-        Vector3 enemyPos = player->GetEnemy()->GetWorldPosition();
+        Vector3 playerPos = player->GetLocalPosition();
+        Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
 
         // 敵への方向ベクトルを計算
         Vector3 direction = enemyPos - playerPos;
@@ -172,7 +172,7 @@ void PlayerBullet::InitTransform(Player *player) {
         targetEnemy_ = nullptr;
 
         // プレイヤーの回転から方向ベクトルを計算
-        float rotationY = player->GetWorldRotation().y;
+        float rotationY = player->GetLocalRotation().y;
 
         Vector3 direction;
         direction.x = std::sin(rotationY);
@@ -185,9 +185,9 @@ void PlayerBullet::InitTransform(Player *player) {
 
     // 弾を少し前方に配置（プレイヤーの中から出ないように）
     Vector3 forwardOffset;
-    forwardOffset.x = std::sin(player->GetWorldRotation().y) * 2.0f;
+    forwardOffset.x = std::sin(player->GetLocalRotation().y) * 2.0f;
     forwardOffset.y = 1.0f; // 少し上に
-    forwardOffset.z = std::cos(player->GetWorldRotation().y) * 2.0f;
+    forwardOffset.z = std::cos(player->GetLocalRotation().y) * 2.0f;
 
     this->transform_->translation_ += forwardOffset;
 }

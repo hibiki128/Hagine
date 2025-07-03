@@ -22,13 +22,13 @@ void Enemy::Init(const std::string objectName) {
     shadow_->Init("shadow");
     shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
     shadow_->SetTexture("game/shadow.png");
-    shadow_->GetWorldRotation().x = degreesToRadians(90.0f);
-    shadow_->GetWorldScale() = {1.5f, 1.5f, 1.5f};
+    shadow_->GetLocalRotation().x = degreesToRadians(90.0f);
+    shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
     emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("hitEmitter");
 }
 
 void Enemy::Update() {
-   shadow_->GetWorldPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
+   shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
 }
 

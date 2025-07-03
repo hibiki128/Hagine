@@ -21,7 +21,7 @@ void FollowCamera::Update() {
         Move();
 
         // プレイヤーの現在位置
-        Vector3 targetPos = target_->GetWorldPosition();
+        Vector3 targetPos = target_->GetLocalPosition();
 
         // プレイヤーの速度ベクトル
         Vector3 velocity = target_->GetVelocity();
@@ -38,7 +38,6 @@ void FollowCamera::Update() {
         // ロックオン状態に応じて肩オフセットを処理
         if (player && player->GetIsLockOn() && player->GetEnemy()) {
             // ロックオン中のみ肩オフセット機能を有効化
-
             // プレイヤーの速度をカメラの右方向に投影して、カメラから見た左右移動成分を取得
             float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
 
@@ -61,14 +60,11 @@ void FollowCamera::Update() {
         if (player && player->GetIsLockOn() && player->GetEnemy()) {
             // ロックオン中：プレイヤーの状態に基づいて補間を制御
             std::string currentStateName = player->GetCurrentStateName();
-
-            if (currentStateName != "Idle" && currentStateName != "FlyIdle") {
-                if (currentStateName == "FlyMove" &&
-                    (!Input::GetInstance()->PushKey(DIK_SPACE) &&
-                     !Input::GetInstance()->PushKey(DIK_LSHIFT))) {
-                    // Idle以外の状態では補間を行う
-                    shoulderOffsetCurrent_.x = Lerp(shoulderOffsetCurrent_.x, shoulderOffsetTarget_.x, shoulderLerpSpeed_ * Frame::DeltaTime());
-                }
+            if (currentStateName == "FlyMove" &&
+                (!Input::GetInstance()->PushKey(DIK_SPACE) &&
+                 !Input::GetInstance()->PushKey(DIK_LSHIFT))) {
+                // Idle以外の状態では補間を行う
+                shoulderOffsetCurrent_.x = Lerp(shoulderOffsetCurrent_.x, shoulderOffsetTarget_.x, shoulderLerpSpeed_ * Frame::DeltaTime());
             }
             // Idle状態では shoulderOffsetCurrent_.x をそのまま維持（補間しない）
         } else {
@@ -80,7 +76,7 @@ void FollowCamera::Update() {
             // ロックオン中は常にプレイヤーの後ろにカメラを配置
 
             // プレイヤーからエネミーへの方向を計算
-            Vector3 enemyPos = player->GetEnemy()->GetWorldPosition();
+            Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
             Vector3 toEnemyDir = enemyPos - targetPos;
             toEnemyDir.y = 0.0f; // Y軸方向は無視して水平面での方向のみ考慮
 

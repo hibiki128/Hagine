@@ -47,8 +47,8 @@ void ChageShot::Update() {
     if (isAlive_ && !isFired_) {
         // チャージ中はプレイヤーの前方にオフセットして配置
         if (player_) {
-            Vector3 playerPos = player_->GetWorldPosition();
-            Vector3 forwardDir = GetForwardFromRotation(player_->GetWorldRotation());
+            Vector3 playerPos = player_->GetLocalPosition();
+            Vector3 forwardDir = GetForwardFromRotation(player_->GetLocalRotation());
 
             // プレイヤーのサイズとチャージショットの現在のスケールを考慮
             float chargeRadius = scale_; // チャージショットの現在の半径
@@ -90,7 +90,7 @@ void ChageShot::Update() {
             if (player_) {
                 if (player_->GetIsLockOn() && player_->GetEnemy()) {
                     // ロックオン時は敵方向
-                    dir = player_->GetEnemy()->GetWorldPosition() - pos;
+                    dir = player_->GetEnemy()->GetLocalPosition() - pos;
                     float len = std::sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
                     if (len > 0.0001f) {
                         dir.x /= len;
@@ -99,7 +99,7 @@ void ChageShot::Update() {
                     }
                 } else {
                     // プレイヤーの回転から前方ベクトルを算出
-                    dir = GetForwardFromRotation(player_->GetWorldRotation());
+                    dir = GetForwardFromRotation(player_->GetLocalRotation());
                 }
             }
             Fire(pos, dir);
@@ -112,7 +112,7 @@ void ChageShot::Update() {
         transform_->translation_.x += velocity_.x * (1.0f / 60.0f);
         transform_->translation_.y += velocity_.y * (1.0f / 60.0f);
         transform_->translation_.z += velocity_.z * (1.0f / 60.0f);
-        if ((transform_->translation_ - player_->GetWorldPosition()).Length() > 300.0f) {
+        if ((transform_->translation_ - player_->GetLocalPosition()).Length() > 300.0f) {
             Reset();
         }
     }

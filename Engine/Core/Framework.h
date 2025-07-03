@@ -24,6 +24,7 @@
 #include "SkyBox/SkyBox.h"
 #include "SpriteCommon.h"
 #include "line/DrawLine3D.h"
+#include <Application/Utility/AttackManager.h>
 
 class Framework {
   public: // メンバ関数

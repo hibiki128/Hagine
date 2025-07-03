@@ -56,7 +56,7 @@ void PlayerStateFlyIdle::Update(Player &player) {
     }
 
     // 地面に到達 → Idleへ
-    if (player.GetWorldPosition().y <= 0.0f) {
+    if (player.GetLocalPosition().y <= 0.0f) {
         player.ChangeState("Idle");
         return;
     }

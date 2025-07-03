@@ -37,7 +37,6 @@ void BaseObjectManager::Update() {
     for (auto &[name, obj] : baseObjects_) {
         obj->UpdateHierarchy();
         obj->UpdateWorldTransformHierarchy();
-        obj->Update();
     }
 }
 

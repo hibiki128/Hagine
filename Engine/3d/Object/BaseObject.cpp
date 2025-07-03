@@ -29,10 +29,10 @@ void BaseObject::Update() {
 }
 
 void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+    Vector3 currentPosition = transform_->translation_;
     if (offSet != Vector3(0.0f, 0.0f, 0.0f)) {
 
         // オフセットを加える前の現在の位置を取得
-        Vector3 currentPosition = transform_->translation_;
 
         // オフセットを加えて新しい位置を計算
         Vector3 newPosition = currentPosition + offSet;
@@ -93,16 +93,6 @@ void BaseObject::UpdateHierarchy() {
             ++it;
         }
     }
-}
-
-Vector3 BaseObject::GetWorldPosition() const {
-    Vector3 worldPos;
-    // ワールド行列の平行移動成分を取得
-    worldPos.x = transform_->matWorld_.m[3][0];
-    worldPos.y = transform_->matWorld_.m[3][1];
-    worldPos.z = transform_->matWorld_.m[3][2];
-
-    return worldPos;
 }
 
 void BaseObject::SetParent(BaseObject *parent) {
