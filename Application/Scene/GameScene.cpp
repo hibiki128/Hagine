@@ -58,6 +58,11 @@ void GameScene::Update() {
         BaseObjectManager::GetInstance()->Update();
     }
 
+    if (input_->TriggerKey(DIK_Y)) {
+        AttackManager::GetInstance()->PlayFromFile(player_ptr,"test");
+    }
+
+
     // カメラ更新
     CameraUpdate();
 

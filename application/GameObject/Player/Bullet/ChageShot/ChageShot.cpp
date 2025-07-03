@@ -18,14 +18,14 @@ void ChageShot::Init(const std::string objectName) {
     BaseObject::SetColor({0.0f, 0.5f, 1.0f, 1.0f});
     BaseObject::AddCollider();
     BaseObject::SetCollisionType(CollisionType::Sphere);
-    BaseObject::SetVisible(false);
+    BaseObject::SetVisible(true);
     isAlive_ = false;
     isMaxScale_ = false;
     isFired_ = false;
     scale_ = 1.0f;
     velocity_ = {0, 0, 0};
     // 初期位置もリセット
-    transform_.translation_ = {0, 0, 0};
+    transform_->translation_ = {0, 0, 0};
 
     chageEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
     bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
@@ -36,8 +36,8 @@ void ChageShot::Update() {
     if (isAlive_) {
         Collider::SetCollisionEnabled(true);
         bulletEmitter_->Update();
-        bulletEmitter_->SetPosition(transform_.translation_);
-        bulletEmitter_->SetStartScale("chageBullet", transform_.scale_ * 2.0f);
+        bulletEmitter_->SetPosition(transform_->translation_);
+        bulletEmitter_->SetStartScale("chageBullet", transform_->scale_ * 2.0f);
         if (!isMaxScale_) {
             bulletEmitter_->SetStartScale("chageAround", {(0.6f + scale_) * 1.4f, (0.6f + scale_) * 1.4f, (0.6f + scale_) * 1.4f});
             bulletEmitter_->SetEndScale("chageAround", {(0.8f + scale_) * 1.4f, (0.8f + scale_) * 1.4f, (0.8f + scale_) * 1.4f});
@@ -60,8 +60,8 @@ void ChageShot::Update() {
             // Y軸オフセット（プレイヤーの中心付近に配置）
             offset.y = verticalOffset_;
 
-            transform_.translation_ = playerPos + offset;
-            chageEmitter_->SetPosition(transform_.translation_);
+            transform_->translation_ = playerPos + offset;
+            chageEmitter_->SetPosition(transform_->translation_);
         }
     }
 
@@ -86,7 +86,7 @@ void ChageShot::Update() {
         if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
             // 発射方向決定
             Vector3 dir = {0, 0, 1};               // デフォルト前方
-            Vector3 pos = transform_.translation_; // 現在のチャージショット位置から発射
+            Vector3 pos = transform_->translation_; // 現在のチャージショット位置から発射
             if (player_) {
                 if (player_->GetIsLockOn() && player_->GetEnemy()) {
                     // ロックオン時は敵方向
@@ -109,17 +109,17 @@ void ChageShot::Update() {
 
     // 発射後の移動
     if (isFired_ && isAlive_) {
-        transform_.translation_.x += velocity_.x * (1.0f / 60.0f);
-        transform_.translation_.y += velocity_.y * (1.0f / 60.0f);
-        transform_.translation_.z += velocity_.z * (1.0f / 60.0f);
-        if ((transform_.translation_ - player_->GetWorldPosition()).Length() > 300.0f) {
+        transform_->translation_.x += velocity_.x * (1.0f / 60.0f);
+        transform_->translation_.y += velocity_.y * (1.0f / 60.0f);
+        transform_->translation_.z += velocity_.z * (1.0f / 60.0f);
+        if ((transform_->translation_ - player_->GetWorldPosition()).Length() > 300.0f) {
             Reset();
         }
     }
 }
 
 void ChageShot::Fire(const Vector3 &pos, const Vector3 &dir) {
-    transform_.translation_ = pos;
+    transform_->translation_ = pos;
     velocity_ = dir * speed_;
 }
 
@@ -129,7 +129,7 @@ void ChageShot::Reset() {
     scale_ = 1.0f;
     isMaxScale_ = false;
     velocity_ = {0, 0, 0};
-    transform_.translation_ = {0, 0, 0};
+    transform_->translation_ = {0, 0, 0};
     
 }
 
@@ -137,7 +137,7 @@ void ChageShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (!isAlive_)
         return;
     // スケールを反映
-    transform_.scale_ = {scale_, scale_, scale_};
+    transform_->scale_ = {scale_, scale_, scale_};
     BaseObject::SetRadius(scale_);
     // BaseObject::Draw(viewProjection, offSet);
 }

@@ -22,9 +22,6 @@ class PlayerBullet : public BaseObject {
     // 弾が生きているかどうかを取得
     bool IsAlive() const { return isAlive_; }
 
-    void SetScale(float scale) {
-        this->transform_.scale_ = {scale, scale, scale};
-    }
     void SetSpeed(float speed) { speed_ = speed; }
     void SetAcce(float acce) { acce_ = acce; }
 

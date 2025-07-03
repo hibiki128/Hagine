@@ -1,5 +1,7 @@
 #include "AttackManager.h"
+#ifdef _DEBUG
 #include "imgui.h"
+#endif // _DEBUG
 #include <Line/DrawLine3D.h>
 
 AttackManager *AttackManager::instance = nullptr;
@@ -99,8 +101,7 @@ void AttackManager::Update(float deltaTime) {
         }
 
         // 再生中でない場合の処理
-        if (!motion.isPlaying) {
-            // 経過時間が0で初期位置が記録されている場合は何もしない（固定しない）
+        if (motion.status != MotionStatus::Playing) {
             continue;
         }
 
@@ -117,13 +118,7 @@ void AttackManager::Update(float deltaTime) {
         // 再生終了チェック
         if (motion.currentTime >= motion.totalTime) {
             motion.currentTime = motion.totalTime;
-            motion.isPlaying = false;
-
-            // 終了コールバック実行
-            if (motion.onFinished) {
-                motion.onFinished();
-                motion.onFinished = nullptr;
-            }
+            motion.status = MotionStatus::Finished;
             continue;
         }
 
@@ -160,8 +155,23 @@ void AttackManager::Update(float deltaTime) {
         motion.target->SetCollisionEnabled(enable);
     }
 
+    // 終了した一時的なモーションをクリーンアップ
+    CleanupFinishedTemporaryMotions();
+
     DrawControlPoints();
     DrawCatmullRomCurve();
+}
+
+void AttackManager::CleanupFinishedTemporaryMotions() {
+    // 終了した一時的なモーションを削除
+    auto it = motions_.begin();
+    while (it != motions_.end()) {
+        if (it->second.isTemporary && it->second.status == MotionStatus::Finished) {
+            it = motions_.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 Vector3 AttackManager::TransformLocalToWorld(const Vector3 &localOffset, const Matrix4x4 &worldMatrix) {
@@ -181,7 +191,7 @@ Vector3 AttackManager::TransformLocalToWorld(const Vector3 &localOffset, const M
 }
 
 // 登録済みオブジェクトの再生
-void AttackManager::Play(const std::string &objectName, std::function<void()> onFinished) {
+void AttackManager::Play(const std::string &objectName) {
     auto it = motions_.find(objectName);
     if (it == motions_.end()) {
         return; // オブジェクトが登録されていない
@@ -205,7 +215,7 @@ void AttackManager::Play(const std::string &objectName, std::function<void()> on
     motion.baseRot = motion.target->GetWorldRotation();
     motion.baseScale = motion.target->GetWorldScale();
 
-    // 従来の実際の開始・終了値を計算（ローカルオフセット用）
+    // 実際の開始・終了値を計算（ローカルオフセット用）
     motion.actualStartRot = motion.baseRot + motion.startRotOffset;
     motion.actualEndRot = motion.baseRot + motion.endRotOffset;
     motion.actualStartScale = motion.baseScale + motion.startScaleOffset;
@@ -213,35 +223,47 @@ void AttackManager::Play(const std::string &objectName, std::function<void()> on
 
     // 再生開始
     motion.currentTime = 0.0f;
-    motion.isPlaying = true;
-    motion.onFinished = onFinished;
+    motion.status = MotionStatus::Playing;
 }
 
 // ファイルから読み込んで任意のオブジェクトで再生
-void AttackManager::PlayFromFile(BaseObject *target, const std::string &fileName, std::function<void()> onFinished) {
+bool AttackManager::PlayFromFile(BaseObject *target, const std::string &fileName) {
     if (!target) {
-        return;
+        return false;
     }
 
     // 一時的なモーションデータを作成
-    std::string tempName = "temp_" + target->GetName() + "_" + fileName;
+    std::string tempName = GetTemporaryMotionName(target, fileName);
 
     DataHandler data("AttackData", fileName);
     AttackMotion &motion = motions_[tempName];
 
     motion.target = target;
     motion.objectName = tempName;
-    motion.totalTime = data.Load("/totalTime", 1.0f);
-    motion.colliderOnTime = data.Load("/colliderOnTime", 0.3f);
-    motion.colliderOffTime = data.Load("/colliderOffTime", 0.6f);
-    motion.startPosOffset = data.Load<Vector3>("/startPosOffset", {});
-    motion.endPosOffset = data.Load<Vector3>("/endPosOffset", {});
-    motion.startRotOffset = data.Load<Vector3>("/startRotOffset", {});
-    motion.endRotOffset = data.Load<Vector3>("/endRotOffset", {});
-    motion.startScaleOffset = data.Load<Vector3>("/startScaleOffset", {0, 0, 0});
-    motion.endScaleOffset = data.Load<Vector3>("/endScaleOffset", {0, 0, 0});
-    int easingInt = data.Load("/easingType", 0);
+    motion.isTemporary = true;
+    motion.totalTime = data.Load<float>("totalTime", 1.0f);
+    motion.colliderOnTime = data.Load("colliderOnTime", 0.3f);
+    motion.colliderOffTime = data.Load("colliderOffTime", 0.6f);
+    motion.startPosOffset = data.Load<Vector3>("startPosOffset", {});
+    motion.endPosOffset = data.Load<Vector3>("endPosOffset", {});
+    motion.startRotOffset = data.Load<Vector3>("startRotOffset", {});
+    motion.endRotOffset = data.Load<Vector3>("endRotOffset", {});
+    motion.startScaleOffset = data.Load<Vector3>("startScaleOffset", {0, 0, 0});
+    motion.endScaleOffset = data.Load<Vector3>("endScaleOffset", {0, 0, 0});
+    int easingInt = data.Load("easingType", 0);
     motion.easingType = static_cast<EasingType>(easingInt);
+
+    motion.useCatmullRom = data.Load<bool>("useCatmullRom", false);
+    int pointCount = data.Load<int>("controlPointCount", 0);
+    motion.controlPoints.clear();
+    for (int i = 0; i < pointCount; ++i) {
+        Vector3 point = data.Load<Vector3>("controlPoint" + std::to_string(i), {0, 0, 0});
+        motion.controlPoints.push_back(point);
+    }
+    
+    motion.basePos = motion.initialPos;
+    motion.baseRot = motion.initialRot;
+    motion.baseScale = motion.initialScale;
 
     // 初期位置の記録
     motion.initialPos = target->GetWorldPosition();
@@ -254,7 +276,7 @@ void AttackManager::PlayFromFile(BaseObject *target, const std::string &fileName
     motion.baseRot = target->GetWorldRotation();
     motion.baseScale = target->GetWorldScale();
 
-    // 従来の実際の開始・終了値を計算（ローカルオフセット用）
+    // 回転・スケール用の実際の開始・終了値を計算
     motion.actualStartRot = motion.baseRot + motion.startRotOffset;
     motion.actualEndRot = motion.baseRot + motion.endRotOffset;
     motion.actualStartScale = motion.baseScale + motion.startScaleOffset;
@@ -262,21 +284,38 @@ void AttackManager::PlayFromFile(BaseObject *target, const std::string &fileName
 
     // 再生開始
     motion.currentTime = 0.0f;
-    motion.isPlaying = true;
-    motion.onFinished = [this, tempName, onFinished]() {
-        if (onFinished)
-            onFinished();
-        motions_.erase(tempName); // 一時データを削除
-    };
+    motion.status = MotionStatus::Playing;
+
+    return true;
+}
+
+// ステータス確認関数
+MotionStatus AttackManager::GetMotionStatus(const std::string &objectName) {
+    auto it = motions_.find(objectName);
+    if (it == motions_.end()) {
+        return MotionStatus::Stopped;
+    }
+    return it->second.status;
+}
+
+bool AttackManager::IsPlaying(const std::string &objectName) {
+    return GetMotionStatus(objectName) == MotionStatus::Playing;
+}
+
+bool AttackManager::IsFinished(const std::string &objectName) {
+    return GetMotionStatus(objectName) == MotionStatus::Finished;
+}
+
+std::string AttackManager::GetTemporaryMotionName(BaseObject *target, const std::string &fileName) {
+    return "temp_" + target->GetName() + "_" + fileName;
 }
 
 void AttackManager::Stop(const std::string &objectName) {
     auto it = motions_.find(objectName);
     if (it != motions_.end()) {
         AttackMotion &motion = it->second;
-        motion.isPlaying = false;
+        motion.status = MotionStatus::Stopped;
         motion.currentTime = 0.0f;
-        motion.onFinished = nullptr;
 
         // 初期位置に戻すが固定はしない
         if (motion.hasInitialTransform && motion.target) {
@@ -284,21 +323,34 @@ void AttackManager::Stop(const std::string &objectName) {
             motion.target->GetWorldRotation() = motion.initialRot;
             motion.target->GetWorldScale() = motion.initialScale;
         }
+
+        // 一時的なモーションの場合は削除
+        if (motion.isTemporary) {
+            motions_.erase(it);
+        }
     }
 }
 
-// 指定オブジェクトの再生停止
+// 全ての再生停止
 void AttackManager::StopAll() {
-    for (auto &[name, motion] : motions_) {
-        motion.isPlaying = false;
+    auto it = motions_.begin();
+    while (it != motions_.end()) {
+        AttackMotion &motion = it->second;
+        motion.status = MotionStatus::Stopped;
         motion.currentTime = 0.0f;
-        motion.onFinished = nullptr;
 
         // 初期位置に戻すが固定はしない
         if (motion.hasInitialTransform && motion.target) {
             motion.target->GetWorldPosition() = motion.initialPos;
             motion.target->GetWorldRotation() = motion.initialRot;
             motion.target->GetWorldScale() = motion.initialScale;
+        }
+
+        // 一時的なモーションの場合は削除
+        if (motion.isTemporary) {
+            it = motions_.erase(it);
+        } else {
+            ++it;
         }
     }
 }
@@ -487,7 +539,7 @@ void AttackManager::DrawCatmullRomCurve() {
     drawLine->DrawSphere(basePos, basePosColor, 0.2f, 32);
 
     // 再生中の場合、現在のオブジェクト位置も別の色で表示
-    if (motion.isPlaying) {
+    if (motion.status == MotionStatus::Playing) {
         Vector3 currentPos = motion.target->GetWorldPosition();
         const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f}; // 黄色
         drawLine->DrawSphere(currentPos, currentPosColor, 0.15f, 32);
@@ -643,45 +695,45 @@ void AttackManager::DrawImGui() {
 
 void AttackManager::Save(const std::string &fileName) {
     DataHandler data("AttackData", fileName);
-    for (const auto &[name, m] : motions_) {
-        data.Save(name + "/totalTime", m.totalTime);
-        data.Save(name + "/colliderOnTime", m.colliderOnTime);
-        data.Save(name + "/colliderOffTime", m.colliderOffTime);
-        data.Save(name + "/startPosOffset", m.startPosOffset);
-        data.Save(name + "/endPosOffset", m.endPosOffset);
-        data.Save(name + "/startRotOffset", m.startRotOffset);
-        data.Save(name + "/endRotOffset", m.endRotOffset);
-        data.Save(name + "/startScaleOffset", m.startScaleOffset);
-        data.Save(name + "/endScaleOffset", m.endScaleOffset);
-        data.Save(name + "/easingType", static_cast<int>(m.easingType));
-        data.Save(name + "/useCatmullRom", m.useCatmullRom);
-        data.Save(name + "/controlPointCount", (int)m.controlPoints.size());
-        for (int i = 0; i < (int)m.controlPoints.size(); ++i) {
-            data.Save(name + "/controlPoint" + std::to_string(i), m.controlPoints[i]);
-        }
+    AttackMotion &m = motions_[selectedName_];
+
+    data.Save("totalTime", m.totalTime);
+    data.Save("colliderOnTime", m.colliderOnTime);
+    data.Save("colliderOffTime", m.colliderOffTime);
+    data.Save("startPosOffset", m.startPosOffset);
+    data.Save("endPosOffset", m.endPosOffset);
+    data.Save("startRotOffset", m.startRotOffset);
+    data.Save("endRotOffset", m.endRotOffset);
+    data.Save("startScaleOffset", m.startScaleOffset);
+    data.Save("endScaleOffset", m.endScaleOffset);
+    data.Save("easingType", static_cast<int>(m.easingType));
+    data.Save("useCatmullRom", m.useCatmullRom);
+    data.Save("controlPointCount", (int)m.controlPoints.size());
+    for (int i = 0; i < (int)m.controlPoints.size(); ++i) {
+        data.Save("controlPoint" + std::to_string(i), m.controlPoints[i]);
     }
 }
 
-void AttackManager::Load(const std::string &fileName) {
+AttackMotion AttackManager::Load(const std::string &fileName) {
     DataHandler data("AttackData", fileName);
-    for (auto &[name, m] : motions_) {
-        m.totalTime = data.Load(name + "/totalTime", m.totalTime);
-        m.colliderOnTime = data.Load(name + "/colliderOnTime", m.colliderOnTime);
-        m.colliderOffTime = data.Load(name + "/colliderOffTime", m.colliderOffTime);
-        m.startPosOffset = data.Load(name + "/startPosOffset", m.startPosOffset);
-        m.endPosOffset = data.Load(name + "/endPosOffset", m.endPosOffset);
-        m.startRotOffset = data.Load(name + "/startRotOffset", m.startRotOffset);
-        m.endRotOffset = data.Load(name + "/endRotOffset", m.endRotOffset);
-        m.startScaleOffset = data.Load(name + "/startScaleOffset", m.startScaleOffset);
-        m.endScaleOffset = data.Load(name + "/endScaleOffset", m.endScaleOffset);
-        int easingInt = data.Load(name + "/easingType", static_cast<int>(m.easingType));
-        m.easingType = static_cast<EasingType>(easingInt);
-        m.useCatmullRom = data.Load(name + "/useCatmullRom", false);
-        int pointCount = data.Load(name + "/controlPointCount", 0);
-        m.controlPoints.clear();
-        for (int i = 0; i < pointCount; ++i) {
-            Vector3 point = data.Load<Vector3>(name + "/controlPoint" + std::to_string(i), {0, 0, 0});
-            m.controlPoints.push_back(point);
-        }
+    AttackMotion m;
+    m.totalTime = data.Load("totalTime", m.totalTime);
+    m.colliderOnTime = data.Load("colliderOnTime", m.colliderOnTime);
+    m.colliderOffTime = data.Load("colliderOffTime", m.colliderOffTime);
+    m.startPosOffset = data.Load("startPosOffset", m.startPosOffset);
+    m.endPosOffset = data.Load("endPosOffset", m.endPosOffset);
+    m.startRotOffset = data.Load("startRotOffset", m.startRotOffset);
+    m.endRotOffset = data.Load("endRotOffset", m.endRotOffset);
+    m.startScaleOffset = data.Load("startScaleOffset", m.startScaleOffset);
+    m.endScaleOffset = data.Load("endScaleOffset", m.endScaleOffset);
+    int easingInt = data.Load("easingType", static_cast<int>(m.easingType));
+    m.easingType = static_cast<EasingType>(easingInt);
+    m.useCatmullRom = data.Load("useCatmullRom", false);
+    int pointCount = data.Load("controlPointCount", 0);
+    m.controlPoints.clear();
+    for (int i = 0; i < pointCount; ++i) {
+        Vector3 point = data.Load<Vector3>("controlPoint" + std::to_string(i), {0, 0, 0});
+        m.controlPoints.push_back(point);
     }
+    return m;
 }

@@ -1,5 +1,4 @@
 #include "PlayerBullet.h"
-
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
@@ -11,6 +10,7 @@ void PlayerBullet::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     this->CreatePrimitiveModel(PrimitiveType::Sphere);
     this->SetTexture("debug/white1x1.png");
+    this->SetVisible(true);
     BaseObject::SetColor({0.0f, 0.0f, 1.0f, 1.0f});
 
     // 弾の生存時間を設定（5秒後に消える）
@@ -115,7 +115,7 @@ void PlayerBullet::Update() {
     }
 
     // 位置を更新
-    transform_.translation_ += velocity_ * deltaTime;
+    transform_->translation_ += velocity_ * deltaTime;
 }
 
 void PlayerBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -134,8 +134,8 @@ void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
 
 void PlayerBullet::InitTransform(Player *player) {
     // プレイヤーの位置を弾の初期位置に設定
-    this->transform_.translation_ = player->GetWorldPosition();
-    if (transform_.translation_ == Vector3(0.0f, 0.0f, 0.0f)) {
+    this->transform_->translation_ = player->GetWorldPosition();
+    if (transform_->translation_ == Vector3(0.0f, 0.0f, 0.0f)) {
         Logger::Log("default");
     }
     this->AddCollider();
@@ -189,7 +189,7 @@ void PlayerBullet::InitTransform(Player *player) {
     forwardOffset.y = 1.0f; // 少し上に
     forwardOffset.z = std::cos(player->GetWorldRotation().y) * 2.0f;
 
-    this->transform_.translation_ += forwardOffset;
+    this->transform_->translation_ += forwardOffset;
 }
 
 void PlayerBullet::OnCollisionEnter(Collider *other) {

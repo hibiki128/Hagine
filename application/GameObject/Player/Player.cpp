@@ -56,8 +56,8 @@ void Player::Init(const std::string objectName) {
     rightHand_->GetWorldScale() = {0.5f, 0.5f, 0.5f};
     rightHand_->GetWorldPosition() = {0.5f, 0.0f, 0.0f};
 
-    //leftHand_->SetParent(this->GetTransform());
-    //rightHand_->SetParent(this->GetTransform());
+    // leftHand_->SetParent(this->GetTransform());
+    // rightHand_->SetParent(this->GetTransform());
 
     Load();
 }
@@ -68,7 +68,7 @@ void Player::Update() {
     leftHand_->Update();
 
     dt_ = Frame::DeltaTime();
-    shadow_->GetWorldPosition() = {transform_.translation_.x, -0.95f, transform_.translation_.z};
+    shadow_->GetWorldPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
     if (chageShot_) {
         chageShot_->SetPlayer(this);
@@ -481,7 +481,7 @@ void Player::Shot() {
         auto bullet = std::make_unique<PlayerBullet>();
         bullet->Init(bulletName);
         bullet->InitTransform(this);
-        bullet->SetScale(0.5f);
+        bullet->GetWorldScale() = {0.5f, 0.5f, 0.5f};
         bullet->SetRadius(0.5f);
         bullets_.push_back(std::move(bullet));
     }
@@ -490,11 +490,11 @@ void Player::Shot() {
 void Player::RotateUpdate() {
     if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
         // 右回転
-        transform_.rotation_.y += 0.04f;
+        transform_->rotation_.y += 0.04f;
     }
     if (Input::GetInstance()->PushKey(DIK_LEFT)) {
         // 左回転
-        transform_.rotation_.y -= 0.04f;
+        transform_->rotation_.y -= 0.04f;
     }
 }
 
@@ -537,7 +537,7 @@ void Player::CollisionGround() {
 // 新しく追加するメソッド
 Direction Player::CalculateDirectionFromRotation() {
     // プレイヤーの回転角度を [0, 2π) の範囲に正規化
-    float angle = NormalizeAngle(transform_.rotation_.y);
+    float angle = NormalizeAngle(transform_->rotation_.y);
 
     // 8方向の場合の角度範囲（π/4 = 45度ごと）
     // 0度を前方として、時計回りに8方向を判定

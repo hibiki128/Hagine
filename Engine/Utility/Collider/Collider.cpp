@@ -91,7 +91,7 @@ void Collider::SetCollisionType(CollisionType collisionType) {
 
 
 void Collider::DebugDraw(const ViewProjection &viewProjection) {
-    if (!isVisible_ || !isCollisionEnabled_) {
+    if (isVisible_ || !isCollisionEnabled_) {
         return;
     }
     if (isSphere_) {

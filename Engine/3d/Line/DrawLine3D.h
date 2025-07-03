@@ -56,7 +56,6 @@ class DrawLine3D {
 
     void DrawGrid(float y, int division, float size, Vector4 color = {0.5f, 0.5f, 0.5f, 1.0f});
 
-    // �V���ɒǉ�����֐�
     void DrawSphere(const Vector3 &position, const Vector4 &color, float radius, int divisions);
     void DrawCube(const Vector3 &position, const Vector4 &color, float size);
 

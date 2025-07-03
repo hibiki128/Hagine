@@ -412,8 +412,8 @@ void ParticleEmitter::DebugParticleData() {
                 ImGui::Text("寿命設定:");
                 ImGui::Separator();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.2f, 0.4f));
-                ImGui::DragFloat("最大値", &setting.lifeTimeMax, 0.1f, 0.0f);
-                ImGui::DragFloat("最小値", &setting.lifeTimeMin, 0.1f, 0.0f);
+                ImGui::DragFloat("最大値", &setting.lifeTimeMax, 0.01f, 0.0f);
+                ImGui::DragFloat("最小値", &setting.lifeTimeMin, 0.01f, 0.0f);
                 ImGui::PopStyleColor();
 
                 // 正しい順序でクランプする

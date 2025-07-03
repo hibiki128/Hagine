@@ -26,7 +26,13 @@ class BaseObject : public Collider {
     // モデル配列データ
     std::unique_ptr<Object3d> obj3d_;
     // ベースのワールド変換データ
-    WorldTransform transform_;
+    std::unique_ptr<WorldTransform> transform_ = nullptr;
+    // 子オブジェクトのポインタリスト
+    std::list<BaseObject*> children_;
+    // 親オブジェクトのポインタ
+    BaseObject *parent_ = nullptr;
+
+
     // カラー
     ObjColor objColor_;
     // ライティング
@@ -61,17 +67,17 @@ class BaseObject : public Collider {
 
     // 中心座標取得
     virtual Vector3 GetWorldPosition() const;
-    virtual WorldTransform &GetWorldTransform() { return transform_; }
+    virtual WorldTransform &GetWorldTransform() { return *transform_; }
 
     /// ===================================================
     /// getter
     /// ===================================================
-    const WorldTransform &GetTransform() { return transform_; }
+    const WorldTransform &GetTransform() { return *transform_; }
     std::string &GetName() { return objectName_; }
     Object3d *GetObject3d() { return obj3d_.get(); }
-    Vector3 &GetWorldPosition() { return transform_.translation_; }
-    Vector3 &GetWorldRotation() { return transform_.rotation_; }
-    Vector3 &GetWorldScale() { return transform_.scale_; }
+    Vector3 &GetWorldPosition() { return transform_->translation_; }
+    Vector3 &GetWorldRotation() { return transform_->rotation_; }
+    Vector3 &GetWorldScale() { return transform_->scale_; }
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
     bool &GetLighting() { return isLighting_; }
     bool &GetLoop() { return isLoop_; }
@@ -80,12 +86,12 @@ class BaseObject : public Collider {
     /// setter
     /// ===================================================
     void SetTexture(const std::string &filePath, uint32_t index = 0) { obj3d_->SetTexture(filePath, index); }
-    void SetParent(const WorldTransform *parent) { transform_.parent_ = parent; }
+    void SetParent(const WorldTransform *parent) { transform_->parent_ = parent; }
     void SetModel(std::unique_ptr<Object3d> obj) {
         obj3d_ = std::move(obj);
     }
     void SetModel(const std::string &filePath) { obj3d_->SetModel(filePath); }
-    void SetParent(const WorldTransform &wt) { transform_.parent_ = &wt; }
+    void SetParent(const WorldTransform &wt) { transform_->parent_ = &wt; }
     void SetAnima(const std::string &filePath) { obj3d_->SetAnimation(filePath); }
     void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }

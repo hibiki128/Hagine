@@ -39,12 +39,18 @@ enum class EasingType {
     EaseInOutElastic,
 };
 
+enum class MotionStatus {
+    Stopped,
+    Playing,
+    Finished
+};
+
 struct AttackMotion {
     BaseObject *target = nullptr;
     std::string objectName;
     float totalTime = 1.0f;
     float currentTime = 0.0f;
-    bool isPlaying = false;
+    MotionStatus status = MotionStatus::Stopped;
 
     // 既存のオフセット系（ローカル座標系）
     Vector3 startPosOffset, endPosOffset;
@@ -69,7 +75,9 @@ struct AttackMotion {
     EasingType easingType = EasingType::Linear;
     float colliderOnTime = 0.3f;
     float colliderOffTime = 0.6f;
-    std::function<void()> onFinished;
+
+    // 一時的なモーションかどうかのフラグ
+    bool isTemporary = false;
 };
 
 class AttackManager {
@@ -89,16 +97,24 @@ class AttackManager {
     void Update(float deltaTime);
     void DrawImGui();
     void Save(const std::string &fileName);
-    void Load(const std::string &fileName);
+    AttackMotion Load(const std::string &fileName);
     void DrawControlPoints();
     void DrawCatmullRomCurve();
     Vector3 CatmullRomInterpolation(const std::vector<Vector3> &points, float t);
 
-    // 再生関連
-    void Play(const std::string &objectName, std::function<void()> onFinished = nullptr);
-    void PlayFromFile(BaseObject *target, const std::string &fileName, std::function<void()> onFinished = nullptr);
+    // 再生関連（コールバック版は廃止）
+    void Play(const std::string &objectName);
+    bool PlayFromFile(BaseObject *target, const std::string &fileName);
     void Stop(const std::string &objectName);
     void StopAll();
+
+    // ステータス確認関数
+    MotionStatus GetMotionStatus(const std::string &objectName);
+    bool IsPlaying(const std::string &objectName);
+    bool IsFinished(const std::string &objectName);
+
+    // PlayFromFileで作成された一時的なモーション名を取得
+    std::string GetTemporaryMotionName(BaseObject *target, const std::string &fileName);
 
     void ResetInitialPosition(const std::string &objectName);
 
@@ -110,4 +126,7 @@ class AttackManager {
 
     // ヘルパー関数
     Vector3 TransformLocalToWorld(const Vector3 &localOffset, const Matrix4x4 &worldMatrix);
+
+    // 一時モーションのクリーンアップ
+    void CleanupFinishedTemporaryMotions();
 };

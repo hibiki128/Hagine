@@ -9,7 +9,8 @@ void BaseObject::Init(const std::string objectName) {
     obj3d_->Initialize();
     objectName_ = objectName;
     /// ワールドトランスフォームの初期化
-    transform_.Initialize();
+    transform_ = std::make_unique<WorldTransform>();
+    transform_->Initialize();
     // カラーのセット
     objColor_.Initialize();
     objColor_.GetColor() = Vector4(1, 1, 1, 1);
@@ -21,7 +22,7 @@ void BaseObject::Init(const std::string objectName) {
 void BaseObject::Update() {
 
     // 元となるワールドトランスフォームの更新
-    transform_.UpdateMatrix();
+    transform_->UpdateMatrix();
     /// 色転送
     objColor_.TransferMatrix();
     if (obj3d_->GetHaveAnimation()) {
@@ -34,43 +35,43 @@ void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (offSet != Vector3(0.0f, 0.0f, 0.0f)) {
 
         // オフセットを加える前の現在の位置を取得
-        Vector3 currentPosition = transform_.translation_;
+        Vector3 currentPosition = transform_->translation_;
 
         // オフセットを加えて新しい位置を計算
         Vector3 newPosition = currentPosition + offSet;
 
         // 新しい位置を設定
-        transform_.translation_ = newPosition;
+        transform_->translation_ = newPosition;
     }
 
     // オブジェクトの描画
-    obj3d_->Draw(transform_, viewProjection, &objColor_, isLighting_);
+    obj3d_->Draw(*transform_, viewProjection, &objColor_, isLighting_);
 
     // スケルトンの描画が必要な場合
     if (skeletonDraw_) {
-        obj3d_->DrawSkeleton(transform_, viewProjection);
+        obj3d_->DrawSkeleton(*transform_, viewProjection);
     }
 }
 
 void BaseObject::DrawWireframe(const ViewProjection &viewProjection, Vector3 offSet) {
     // オフセットを加える前の現在の位置を取得
-    Vector3 currentPosition = transform_.translation_;
+    Vector3 currentPosition = transform_->translation_;
 
     // オフセットを加えて新しい位置を計算
     Vector3 newPosition = currentPosition + offSet;
 
     // 新しい位置を設定
-    transform_.translation_ = newPosition;
+    transform_->translation_ = newPosition;
 
-    obj3d_->DrawWireframe(transform_, viewProjection);
+    obj3d_->DrawWireframe(*transform_, viewProjection);
 }
 
 Vector3 BaseObject::GetWorldPosition() const {
     Vector3 worldPos;
     // ワールド行列の平行移動成分を取得
-    worldPos.x = transform_.matWorld_.m[3][0];
-    worldPos.y = transform_.matWorld_.m[3][1];
-    worldPos.z = transform_.matWorld_.m[3][2];
+    worldPos.x = transform_->matWorld_.m[3][0];
+    worldPos.y = transform_->matWorld_.m[3][1];
+    worldPos.z = transform_->matWorld_.m[3][2];
 
     return worldPos;
 }
@@ -119,22 +120,23 @@ void BaseObject::ImGui() {
 }
 
 void BaseObject::DebugObject() {
+#ifdef _DEBUG
     if (ImGui::CollapsingHeader("トランスフォーム")) {
-        ImGui::DragFloat3("位置", &transform_.translation_.x, 0.1f);
+        ImGui::DragFloat3("位置", &transform_->translation_.x, 0.1f);
 
         // 回転を度数法に変換してUI表示
         float rotationDegrees[3] = {
-            radiansToDegrees(transform_.rotation_.x),
-            radiansToDegrees(transform_.rotation_.y),
-            radiansToDegrees(transform_.rotation_.z)};
+            radiansToDegrees(transform_->rotation_.x),
+            radiansToDegrees(transform_->rotation_.y),
+            radiansToDegrees(transform_->rotation_.z)};
         if (ImGui::DragFloat3("回転", rotationDegrees, 0.1f, -360.0f, 360.0f)) {
             // 操作後、ラジアンに戻して保存
-            transform_.rotation_.x = degreesToRadians(rotationDegrees[0]);
-            transform_.rotation_.y = degreesToRadians(rotationDegrees[1]);
-            transform_.rotation_.z = degreesToRadians(rotationDegrees[2]);
+            transform_->rotation_.x = degreesToRadians(rotationDegrees[0]);
+            transform_->rotation_.y = degreesToRadians(rotationDegrees[1]);
+            transform_->rotation_.z = degreesToRadians(rotationDegrees[2]);
         }
 
-        ImGui::DragFloat3("大きさ", &transform_.scale_.x, 0.1f);
+        ImGui::DragFloat3("大きさ", &transform_->scale_.x, 0.1f);
     }
 
     if (ImGui::CollapsingHeader("マテリアル設定")) {
@@ -149,7 +151,7 @@ void BaseObject::DebugObject() {
         ImGui::Checkbox("ライティング有効", &isLighting_);
     }
 
-if (ImGui::CollapsingHeader("モデル")) {
+    if (ImGui::CollapsingHeader("モデル")) {
         static int selectedMaterialIndex = 0; // 選択中のマテリアルインデックス
 
         size_t materialCount = obj3d_->GetMaterialCount();
@@ -211,13 +213,13 @@ if (ImGui::CollapsingHeader("モデル")) {
             }
         }
     }
+#endif // _DEBUG
 }
 
-
 void BaseObject::SaveToJson() {
-    TransformDatas_->Save<Vector3>("translation", transform_.translation_);
-    TransformDatas_->Save<Vector3>("rotation", transform_.rotation_);
-    TransformDatas_->Save<Vector3>("scale", transform_.scale_);
+    TransformDatas_->Save<Vector3>("translation", transform_->translation_);
+    TransformDatas_->Save<Vector3>("rotation", transform_->rotation_);
+    TransformDatas_->Save<Vector3>("scale", transform_->scale_);
 
     // カラーとライティング設定も保存
     Vector4 color = objColor_.GetColor();
@@ -232,9 +234,9 @@ void BaseObject::SaveToJson() {
 
 void BaseObject::LoadFromJson() {
     TransformDatas_ = std::make_unique<DataHandler>("Transform", objectName_);
-    transform_.translation_ = TransformDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
-    transform_.rotation_ = TransformDatas_->Load<Vector3>("rotation", {0.0f, 0.0f, 0.0f});
-    transform_.scale_ = TransformDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
+    transform_->translation_ = TransformDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
+    transform_->rotation_ = TransformDatas_->Load<Vector3>("rotation", {0.0f, 0.0f, 0.0f});
+    transform_->scale_ = TransformDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
 
     // カラーとライティング設定も読み込み
     Vector4 loadedColor = TransformDatas_->Load<Vector4>("objectColor", {1.0f, 1.0f, 1.0f, 1.0f});
@@ -333,9 +335,9 @@ void BaseObject::DebugCollider() {
 }
 
 Vector3 BaseObject::GetCenterPosition() const {
-    return transform_.translation_;
+    return transform_->translation_;
 }
 
 Vector3 BaseObject::GetCenterRotation() const {
-    return transform_.rotation_;
+    return transform_->rotation_;
 }

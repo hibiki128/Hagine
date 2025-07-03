@@ -113,19 +113,19 @@
     },
     "chage1_trailColorMultiplier": {
         "w": 5.0,
-        "x": 5.0,
-        "y": 5.0,
+        "x": 1.0,
+        "y": 3.0,
         "z": 5.0
     },
     "chage1_trailInheritVelocity": false,
-    "chage1_trailLifeScale": 0.7699999809265137,
+    "chage1_trailLifeScale": 0.25,
     "chage1_trailScaleMultiplier": {
         "x": 0.75,
         "y": 0.75,
         "z": 0.75
     },
-    "chage1_trailSpawnInterval": 0.0010000000474974513,
-    "chage1_trailVelocityScale": 0.0,
+    "chage1_trailSpawnInterval": 0.009999999776482582,
+    "chage1_trailVelocityScale": -34.720001220703125,
     "chage1_translate": {
         "x": 0.0,
         "y": 0.0,
