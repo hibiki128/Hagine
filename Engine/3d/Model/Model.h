@@ -1,10 +1,8 @@
 #pragma once
-#include "type/Matrix4x4.h"
+#include "Material/Material.h"
+#include "Mesh/Mesh.h"
 #include "ModelCommon.h"
-#include "type/Quaternion.h"
-#include "type/Vector2.h"
-#include "type/Vector3.h"
-#include "type/Vector4.h"
+#include "Object/Object3dCommon.h"
 #include "animation/Animator.h"
 #include "animation/Bone.h"
 #include "animation/Skin.h"
@@ -14,13 +12,14 @@
 #include "assimp/scene.h"
 #include "map"
 #include "span"
-
-#include "Material/Material.h"
-#include "Mesh/Mesh.h"
-#include "Object/Object3dCommon.h"
+#include "type/Matrix4x4.h"
+#include "type/Quaternion.h"
+#include "type/Vector2.h"
+#include "type/Vector3.h"
+#include "type/Vector4.h"
+#include <Graphics/Srv/SrvManager.h>
 #include <Primitive/PrimitiveModel.h>
 #include <unordered_set>
-#include <Graphics/Srv/SrvManager.h>
 
 class Model {
   private:
@@ -63,8 +62,8 @@ class Model {
     /// <summary>
     /// 描画
     /// </summary>
-    void Draw(const Vector4 &color = {1.0f, 1.0f, 1.0f, 1.0f}, bool lighting = true);
-   
+    void Draw(const Vector4 &color, bool lighting, bool reflect);
+
     // Setter methods
     void SetSrv(SrvManager *srvManager) { srvManager_ = srvManager; }
     void SetAnimator(Animator *animator) { animator_ = animator; }
@@ -77,6 +76,12 @@ class Model {
     void SetTexture(const std::string &filePath, uint32_t index) {
         materials_[index]->SetTexture(filePath);
     }
+
+    void SetEnvironmentCoefficients(float value) {
+        for (auto &material : materials_) {
+            material->SetEnvironmentCoefficients(value);
+        }
+    };
 
     // Getter methods
     ModelData GetModelData() { return modelData; }

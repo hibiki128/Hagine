@@ -1,6 +1,6 @@
 #include "BaseObjectManager.h"
 #ifdef _DEBUG
-#include"Debug/ImGui/ImGuizmoManager.h"
+#include "Debug/ImGui/ImGuizmoManager.h"
 #endif // _DEBUG
 
 BaseObjectManager *BaseObjectManager::instance = nullptr;
@@ -20,7 +20,6 @@ void BaseObjectManager::Finalize() {
 void BaseObjectManager::DeleteObject() {
     baseObjects_.clear();
 
-
 #ifdef _DEBUG
     ImGuizmoManager::GetInstance()->DeleteTarget();
 #endif // _DEBUG
@@ -29,13 +28,15 @@ void BaseObjectManager::DeleteObject() {
 void BaseObjectManager::AddObject(std::unique_ptr<BaseObject> baseObject) {
     const std::string &name = baseObject->GetName();
 #ifdef _DEBUG
-    ImGuizmoManager::GetInstance()->AddTarget(baseObject->GetName(),baseObject.get());
+    ImGuizmoManager::GetInstance()->AddTarget(baseObject->GetName(), baseObject.get());
 #endif // _DEBUG
     baseObjects_.emplace(name, std::move(baseObject));
 }
 
 void BaseObjectManager::Update() {
     for (auto &[name, obj] : baseObjects_) {
+        obj->UpdateHierarchy();
+        obj->UpdateWorldTransformHierarchy();
         obj->Update();
     }
 }
@@ -46,16 +47,20 @@ void BaseObjectManager::Draw(const ViewProjection &viewProjection, Vector3 offSe
     }
 }
 
-void BaseObjectManager::DrawWireframe(const ViewProjection &viewProjection, Vector3 offSet) {
-    for (auto &[name, obj] : baseObjects_) {
-        obj->DrawWireframe(viewProjection, offSet);
-    }
-}
-
 void BaseObjectManager::DrawImGui() {
     for (auto &[name, obj] : baseObjects_) {
         obj->ImGui();
     }
+}
+
+void BaseObjectManager::SaveAll() {
+    for (auto &[name, obj] : baseObjects_) {
+        obj->SaveToJson();
+    }
+}
+
+void BaseObjectManager::LoadAll() {
+
 }
 
 BaseObject *BaseObjectManager::GetObjectByName(const std::string &name) {

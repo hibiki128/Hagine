@@ -208,7 +208,7 @@ void LevelData::SetupParentChild(BaseObject *parent, const std::vector<ObjectDat
             auto childObject = CreateBaseObject(childData);
             if (childObject) {
                 // 親子関係を設定
-                childObject->SetParent(parent->GetWorldTransform());
+                childObject->SetParent(parent);
 
                 // 作成したオブジェクトを記録
                 createdObjects_[childData.name] = childObject.get();

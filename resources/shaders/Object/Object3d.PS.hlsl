@@ -6,6 +6,7 @@ struct Material
     int enableLighting;
     float4x4 uvTransform;
     float shininess;
+    float environmentCoefficient;
 };
 
 struct DirectionalLight
@@ -62,7 +63,7 @@ ConstantBuffer<PointLight> gPointLight : register(b3);
 ConstantBuffer<SpotLight> gSpotLight : register(b4);
 SamplerState gSampler : register(s0);
 Texture2D<float4> gTexture : register(t0);
-//TextureCube<float4> gEngironmentTexture : register(t1);
+TextureCube<float4> gEngironmentTexture : register(t1);
 
 
 PixelShaderOutput main(VertexShaderOutput input)
@@ -196,12 +197,12 @@ PixelShaderOutput main(VertexShaderOutput input)
     // テクスチャカラーを加算
             output.color.rgb *= textureColor.rgb;
         }
-        //float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
-        //float3 reflectedVector = reflect(cameraToPosition, normalize(input.normal));
-        //float4 environmentColor = gEngironmentTexture.Sample(gSampler, reflectedVector);
+        float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
+        float3 reflectedVector = reflect(cameraToPosition, normalize(input.normal));
+        float4 environmentColor = gEngironmentTexture.Sample(gSampler, reflectedVector);
         
-        //// 環境マップの色を加算
-        //output.color.rgb += environmentColor.rgb;
+        // 環境マップの色を加算
+        output.color.rgb += environmentColor.rgb * gMaterial.environmentCoefficient;
         
         output.color.a = gMaterial.color.a * textureColor.a;
     }

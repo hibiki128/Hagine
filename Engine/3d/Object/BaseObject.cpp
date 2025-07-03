@@ -5,11 +5,11 @@
 #endif // _DEBUG
 
 void BaseObject::Init(const std::string objectName) {
+    transform_ = std::make_unique<WorldTransform>();
     obj3d_ = std::make_unique<Object3d>();
     obj3d_->Initialize();
     objectName_ = objectName;
     /// ワールドトランスフォームの初期化
-    transform_ = std::make_unique<WorldTransform>();
     transform_->Initialize();
     // カラーのセット
     objColor_.Initialize();
@@ -20,9 +20,6 @@ void BaseObject::Init(const std::string objectName) {
 }
 
 void BaseObject::Update() {
-
-    // 元となるワールドトランスフォームの更新
-    transform_->UpdateMatrix();
     /// 色転送
     objColor_.TransferMatrix();
     if (obj3d_->GetHaveAnimation()) {
@@ -44,26 +41,58 @@ void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
         transform_->translation_ = newPosition;
     }
 
-    // オブジェクトの描画
-    obj3d_->Draw(*transform_, viewProjection, &objColor_, isLighting_);
-
     // スケルトンの描画が必要な場合
     if (skeletonDraw_) {
         obj3d_->DrawSkeleton(*transform_, viewProjection);
     }
+    if (!isWireframe_) {
+        if (isModelDraw_) {
+            // オブジェクトの描画
+            obj3d_->Draw(*transform_, viewProjection, reflect_, &objColor_, isLighting_);
+        }
+    } else {
+        obj3d_->DrawWireframe(*transform_, viewProjection);
+    }
+
+    // 描画後に元の位置に戻す場合は、以下の行を追加
+    transform_->translation_ = currentPosition;
 }
 
-void BaseObject::DrawWireframe(const ViewProjection &viewProjection, Vector3 offSet) {
-    // オフセットを加える前の現在の位置を取得
-    Vector3 currentPosition = transform_->translation_;
+void BaseObject::UpdateWorldTransformHierarchy() {
+    // まず自分のトランスフォームを更新
+    if (transform_) {
+        transform_->UpdateMatrix();
+    }
+    // 子を再帰的に更新
+    for (auto it = children_.begin(); it != children_.end();) {
+        BaseObject *child = *it;
+        child->UpdateWorldTransformHierarchy();
+        if (child->parent_ != this) {
+            it = children_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
 
-    // オフセットを加えて新しい位置を計算
-    Vector3 newPosition = currentPosition + offSet;
+void BaseObject::UpdateHierarchy() {
+    // 自分自身の処理
+    Update();
 
-    // 新しい位置を設定
-    transform_->translation_ = newPosition;
+    // 子リストをイテレート
+    for (auto it = children_.begin(); it != children_.end();) {
+        auto child = *it;
+        // 再帰的に UpdateHierarchy
+        child->UpdateHierarchy();
 
-    obj3d_->DrawWireframe(*transform_, viewProjection);
+        // 子が「DetachParent()」した場合、parent_ == nullptr になる
+        if (child->GetParent() != this) {
+            // リストから削除
+            it = children_.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 Vector3 BaseObject::GetWorldPosition() const {
@@ -74,6 +103,70 @@ Vector3 BaseObject::GetWorldPosition() const {
     worldPos.z = transform_->matWorld_.m[3][2];
 
     return worldPos;
+}
+
+void BaseObject::SetParent(BaseObject *parent) {
+    if (parent_ == parent) {
+        return; // 同じ親を持ってる場合何もしない
+    }
+    if (parent_) {
+        DetachParent(); // もし現在の親がいるなら一旦デタッチ
+    }
+
+    assert(parent != nullptr && "SetParent to nullptr is not allowed.");
+
+    parent_ = parent;
+    // 親の子リストに追加
+    parent_->children_.push_back(this);
+
+    if (transform_) {
+        transform_->parent_ = parent->GetWorldTransform();
+    }
+}
+
+void BaseObject::AddChild(BaseObject *child) {
+    assert(child != nullptr && "AddChild is nullptr");
+    child->SetParent(this);
+}
+
+void BaseObject::DetachParent() {
+    if (parent_) {
+        parent_ = nullptr;
+        if (transform_) {
+            transform_->parent_ = nullptr;
+        }
+    }
+}
+
+void BaseObject::DetachChild(BaseObject *child) {
+    if (!child) {
+        return;
+    }
+    if (child->parent_ != this) {
+        return;
+    }
+    child->parent_ = nullptr;
+    if (child->transform_) {
+        child->transform_->parent_ = nullptr;
+    }
+    children_.remove(child);
+}
+
+BaseObject *BaseObject::GetParent() {
+    return parent_;
+}
+
+std::list<BaseObject *> *BaseObject::GetChildren() {
+    return &children_;
+}
+
+BaseObject *BaseObject::GetChildByName(const std::string &name) {
+    for (auto &child : children_) {
+        if (child->objectName_ == name) {
+            return child;
+        }
+    }
+    return nullptr;
 }
 
 void BaseObject::CreateModel(const std::string modelname) {
@@ -104,6 +197,9 @@ void BaseObject::ImGui() {
             if (ImGui::Button("コライダー追加")) {
                 AddCollider();
             }
+            ImGui::Checkbox("モデル描画", &isModelDraw_);
+            ImGui::Checkbox("ワイヤーフレーム", &isWireframe_);
+
             if (ImGui::Button("セーブ")) {
                 SaveToJson();
                 AnimaSaveToJson();

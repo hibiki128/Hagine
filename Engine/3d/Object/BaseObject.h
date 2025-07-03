@@ -1,8 +1,8 @@
 #pragma once
-#include "Data/DataHandler.h"
-#include "Transform/ObjColor.h"
-#include "Object/Object3d.h"
 #include "Camera/ViewProjection/ViewProjection.h"
+#include "Data/DataHandler.h"
+#include "Object/Object3d.h"
+#include "Transform/ObjColor.h"
 #include "Transform/WorldTransform.h"
 #include "collider/Collider.h"
 #include "externals/nlohmann/json.hpp"
@@ -26,21 +26,21 @@ class BaseObject : public Collider {
     // モデル配列データ
     std::unique_ptr<Object3d> obj3d_;
     // ベースのワールド変換データ
-    std::unique_ptr<WorldTransform> transform_ = nullptr;
-    // 子オブジェクトのポインタリスト
-    std::list<BaseObject*> children_;
-    // 親オブジェクトのポインタ
-    BaseObject *parent_ = nullptr;
-
-
+    WorldTransform transform_;
     // カラー
     ObjColor objColor_;
     // ライティング
-    bool isLighting_;
-    bool isLoop_;
-    bool skeletonDraw_;
+    bool isLighting_ = true;
+    bool isLoop_ = true;
+    bool skeletonDraw_ = false;
+    bool isModelDraw_ = true;
+    bool isWireframe_ = false;
+    bool reflect_ = false;
 
     std::string objectName_;
+
+    BaseObject *parent_ = nullptr;
+    std::list<BaseObject *> children_;
 
   private:
     using json = nlohmann::json;
@@ -54,7 +54,8 @@ class BaseObject : public Collider {
     virtual void Init(const std::string className);
     virtual void Update();
     virtual void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
-    virtual void DrawWireframe(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
+    void UpdateWorldTransformHierarchy();
+    void UpdateHierarchy();
 
     virtual void CreateModel(const std::string modelname);
     virtual void CreatePrimitiveModel(const PrimitiveType &type);
@@ -67,7 +68,34 @@ class BaseObject : public Collider {
 
     // 中心座標取得
     virtual Vector3 GetWorldPosition() const;
-    virtual WorldTransform &GetWorldTransform() { return *transform_; }
+    WorldTransform* GetWorldTransform() { return transform_.get(); }
+
+    /// =================================================
+    /// 親子付け
+    /// =================================================
+
+    void SetParent(BaseObject *parent);
+
+    void AddChild(BaseObject *child);
+
+    void DetachParent();
+
+    void DetachChild(BaseObject *child);
+
+    BaseObject *GetParent();
+
+    std::list<BaseObject*>* GetChildren();
+
+    BaseObject *GetChildByName(const std::string &name);
+
+    /// ===================================================
+    /// セーブロード
+    /// ===================================================
+
+    void SaveToJson();
+    void LoadFromJson();
+    void AnimaSaveToJson();
+    void AnimaLoadFromJson();
 
     /// ===================================================
     /// getter
@@ -85,25 +113,19 @@ class BaseObject : public Collider {
     /// ===================================================
     /// setter
     /// ===================================================
-    void SetTexture(const std::string &filePath, uint32_t index = 0) { obj3d_->SetTexture(filePath, index); }
-    void SetParent(const WorldTransform *parent) { transform_->parent_ = parent; }
+    void SetTexture(const std::string &filePath, uint32_t index) { obj3d_->SetTexture(filePath, index); }
     void SetModel(std::unique_ptr<Object3d> obj) {
         obj3d_ = std::move(obj);
     }
     void SetModel(const std::string &filePath) { obj3d_->SetModel(filePath); }
-    void SetParent(const WorldTransform &wt) { transform_->parent_ = &wt; }
     void SetAnima(const std::string &filePath) { obj3d_->SetAnimation(filePath); }
     void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }
-    void SetColor(Vector4 color) { objColor_.GetColor() = color; }
+    void SetReflect(bool reflect) { reflect_ = reflect; }
 
   private:
     void DebugObject();
     void DebugCollider();
-    void SaveToJson();
-    void LoadFromJson();
-    void AnimaSaveToJson();
-    void AnimaLoadFromJson();
     void ShowFileSelector();
     // ブレンドモードの選択UI
     void ShowBlendModeCombo(BlendMode &currentMode);

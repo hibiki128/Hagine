@@ -1,0 +1,26 @@
+{
+    "blendMode": 0,
+    "isLighting": true,
+    "objectColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "rotation": {
+        "x": 0.0,
+        "y": 3.1415927410125732,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "texturePath": "debug/white1x1.png",
+    "translation": {
+        "x": 0.0,
+        "y": -1.0,
+        "z": -27.0
+    }
+}

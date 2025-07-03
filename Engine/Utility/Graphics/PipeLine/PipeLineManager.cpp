@@ -1,7 +1,7 @@
 #include "PipeLineManager.h"
-#include <d3dx12.h>
 #include "ComputePipeLineManager.h"
 #include <Debug/Log/Logger.h>
+#include <d3dx12.h>
 PipeLineManager *PipeLineManager::instance = nullptr;
 
 PipeLineManager *PipeLineManager::GetInstance() {
@@ -274,8 +274,17 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
     descriptorRange[0].RegisterSpace = 0;
     descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
+    D3D12_DESCRIPTOR_RANGE skyBoxDescriptorRange[1] = {};
+
+    // 通常の2Dテクスチャ t0
+    skyBoxDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    skyBoxDescriptorRange[0].NumDescriptors = 1;
+    skyBoxDescriptorRange[0].BaseShaderRegister = 1; // t0
+    skyBoxDescriptorRange[0].RegisterSpace = 0;
+    skyBoxDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     // RootParameter作成。複数設定できるので配列。
-    D3D12_ROOT_PARAMETER rootParameters[7] = {};
+    D3D12_ROOT_PARAMETER rootParameters[8] = {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;                   // CBVを使う
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;                // VertexShaderで使う
     rootParameters[0].Descriptor.ShaderRegister = 0;                                   // レジスタ番号0とバインド
@@ -300,6 +309,12 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
     rootParameters[6].Descriptor.ShaderRegister = 4;                                   // レジスタ番号1とバインド
     descriptionRootSignature.pParameters = rootParameters;                             // ルートパラメータ配列へのポインタ
     descriptionRootSignature.NumParameters = _countof(rootParameters);                 // 配列の長さ
+    rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[7].DescriptorTable.pDescriptorRanges = skyBoxDescriptorRange;
+    rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(skyBoxDescriptorRange);
+
+
 
     // Smplerの設定
     D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
@@ -880,7 +895,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     descriptionRootSignature.Flags =
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-    // DescriptorRange - テクスチャ用（t0とt1）
+    // DescriptorRange - テクスチャ用（t0）
     D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
 
     // 通常の2Dテクスチャ t0
@@ -890,6 +905,15 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     descriptorRange[0].RegisterSpace = 0;
     descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
+    D3D12_DESCRIPTOR_RANGE skyBoxDescriptorRange[1] = {};
+
+    // SkyBox用のテクスチャt1
+    skyBoxDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    skyBoxDescriptorRange[0].NumDescriptors = 1;
+    skyBoxDescriptorRange[0].BaseShaderRegister = 1; // t1
+    skyBoxDescriptorRange[0].RegisterSpace = 0;
+    skyBoxDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     // descriptorRangeForInstancing（スキニング用）
     D3D12_DESCRIPTOR_RANGE descriptorRangeForInstancing[1] = {};
     descriptorRangeForInstancing[0].BaseShaderRegister = 0;                                                   // t0から始まる（VertexShaderのStructuredBuffer用）
@@ -898,7 +922,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     descriptorRangeForInstancing[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // Offsetを自動計算
 
     // RootParameter作成。複数設定できるので配列。
-    D3D12_ROOT_PARAMETER rootParameters[8] = {};
+    D3D12_ROOT_PARAMETER rootParameters[9] = {};
 
     // rootParameters[0]: Material (b0) - PixelShader
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -936,11 +960,16 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[6].Descriptor.ShaderRegister = 4;
 
-    // rootParameters[7]: スキニング用StructuredBuffer (t0) - VertexShader
     rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-    rootParameters[7].DescriptorTable.pDescriptorRanges = descriptorRangeForInstancing;
-    rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeForInstancing);
+    rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[7].DescriptorTable.pDescriptorRanges = skyBoxDescriptorRange;
+    rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(skyBoxDescriptorRange);
+
+    // rootParameters[8]: スキニング用StructuredBuffer (t0) - VertexShader
+    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[8].DescriptorTable.pDescriptorRanges = descriptorRangeForInstancing;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeForInstancing);
 
     descriptionRootSignature.pParameters = rootParameters;
     descriptionRootSignature.NumParameters = _countof(rootParameters);

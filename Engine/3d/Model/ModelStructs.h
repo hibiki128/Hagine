@@ -37,6 +37,7 @@ struct MaterialData {
     float shininess = 20.0f;
     std::string textureFilePath;
     uint32_t textureIndex = 0;
+    float environmentCoefficient = 1.0f;
 };
 
 struct MaterialDataGPU {
@@ -45,6 +46,7 @@ struct MaterialDataGPU {
     float padding[3];
     Matrix4x4 uvTransform;
     float shininess;
+    float environmentCoefficient;
 };
 
 struct MeshData {

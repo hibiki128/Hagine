@@ -5,6 +5,7 @@
 #include "fstream"
 #include "myMath.h"
 #include "sstream"
+#include <SkyBox/SkyBox.h>
 
 std::unordered_set<std::string> Model::jointNames = {};
 
@@ -81,25 +82,25 @@ void Model::Update() {
         // 2. コンピュートシェーダ実行のためのバリア
         ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
 
-        //// UAV -> SRV バリア (前回の結果があれば)
-        //D3D12_RESOURCE_BARRIER barrier = {};
-        //barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-        //barrier.UAV.pResource = skin_->GetOutputVertexResource();
-        //commandList->ResourceBarrier(1, &barrier);
+        // UAV -> SRV バリア (前回の結果があれば)
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        barrier.UAV.pResource = skin_->GetOutputVertexResource();
+        commandList->ResourceBarrier(1, &barrier);
 
         // 3. スキニング実行
         skin_->ExecuteSkinning(commandList);
 
-        //// 4. UAV -> VBV バリア
-        //barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        //barrier.Transition.pResource = skin_->GetOutputVertexResource();
-        //barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        //barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-        //commandList->ResourceBarrier(1, &barrier);
+        // 4. UAV -> VBV バリア
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = skin_->GetOutputVertexResource();
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        commandList->ResourceBarrier(1, &barrier);
     }
 }
 
-void Model::Draw(const Vector4 &color, bool lighting) {
+void Model::Draw(const Vector4 &color, bool lighting, bool reflect) {
     ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
 
     for (size_t meshIndex = 0; meshIndex < meshes_.size(); ++meshIndex) {
@@ -121,11 +122,19 @@ void Model::Draw(const Vector4 &color, bool lighting) {
             commandList->IASetVertexBuffers(0, 1, &vbv);
 
             // パレット情報をシェーダーに渡す（必要に応じて）
-            srvManager_->SetGraphicsRootDescriptorTable(7, skin_->GetPaletteSrvIndex());
+            srvManager_->SetGraphicsRootDescriptorTable(8, skin_->GetPaletteSrvIndex());
         } else {
             // 元の頂点バッファを使用
             D3D12_VERTEX_BUFFER_VIEW vbv = currentMesh->GetVertexBufferView();
             commandList->IASetVertexBuffers(0, 1, &vbv);
+        }
+
+        commandList->SetGraphicsRootDescriptorTable(7, srvManager_->GetGPUDescriptorHandle(SkyBox::GetInstance()->GetTextureIndex()));
+        if (reflect) {
+            // 環境係数を有効化
+            SetEnvironmentCoefficients(1.0f);
+        } else {
+            SetEnvironmentCoefficients(0.0f); // 環境係数を無効化
         }
 
         // マテリアル描画

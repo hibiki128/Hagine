@@ -11,6 +11,35 @@ class DirectXCommon;
 class SrvManager;
 class SkyBox {
   private:
+    /// ===========================================
+    /// private methods
+    /// ===========================================
+    static SkyBox *instance;
+
+    SkyBox() = default;
+    ~SkyBox() = default;
+    SkyBox(SkyBox &) = delete;
+    SkyBox &operator=(SkyBox &) = delete;
+
+    void Update(const ViewProjection &viewProjection);
+    void CreateShape();
+    void CreateVertex();
+    void CreateIndex();
+    void CreateSkyBox();
+    void CreateCamera();
+
+  public:
+    /// ============================================
+    /// public methods
+    /// ============================================
+
+    void Initialize(std::string filePath);
+    void Draw(const ViewProjection &viewProjection);
+    static SkyBox *GetInstance();
+    void Finalize();
+    uint32_t GetTextureIndex() const { return textureIndex_; }
+
+  private:
     /// <summary>
     /// 背景ボックスの頂点データ
     /// </summary>
@@ -35,20 +64,6 @@ class SkyBox {
         float padding;
     };
 
-  public:
-    SkyBox();
-    void Initialize(std::string filePath);
-    void Draw(const ViewProjection &viewProjection);
-
-  private:
-    void Update(const ViewProjection &viewProjection);
-    void CreateShape();
-    void CreateVertex();
-    void CreateIndex();
-    void CreateSkyBox();
-    void CreateCamera();
-
-  private:
     DirectXCommon *dxCommon_ = nullptr;
     SrvManager *srvManager_ = nullptr;
     PipeLineManager *psoManager_ = nullptr;
