@@ -24,6 +24,7 @@ class Material {
     MaterialDataGPU *GetMaterialDataGPU() { return materialDataGPU_; }
 
     void SetTexture(const std::string &texturePath);
+    void SetEnvironmentCoefficients(float environmentCoefficients);
 
   private:
     /// ==========================================

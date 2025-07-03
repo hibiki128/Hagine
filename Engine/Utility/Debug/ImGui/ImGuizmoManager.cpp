@@ -176,7 +176,7 @@ void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSiz
         return;
 
     float matrix[16];
-    ConvertMatrix4x4ToFloat16(targetTransform->GetWorldTransform().matWorld_, matrix);
+    ConvertMatrix4x4ToFloat16(targetTransform->GetWorldTransform()->matWorld_, matrix);
 
     float viewMatrix[16];
     float projMatrix[16];
@@ -194,9 +194,9 @@ void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSiz
         matrix);
 
     if (manipulated) {
-        ConvertFloat16ToMatrix4x4(matrix, targetTransform->GetWorldTransform().matWorld_);
-        DecomposeMatrix(&targetTransform->GetWorldTransform());
-        targetTransform->GetWorldTransform().TransferMatrix();
+        ConvertFloat16ToMatrix4x4(matrix, targetTransform->GetWorldTransform()->matWorld_);
+        DecomposeMatrix(targetTransform->GetWorldTransform());
+        targetTransform->GetWorldTransform()->TransferMatrix();
     }
 }
 

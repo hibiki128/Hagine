@@ -165,6 +165,9 @@
     <Filter Include="ソースファイル\Engine\Math\type">
       <UniqueIdentifier>{8a4c6dc9-c4eb-4582-b04f-aac12dc363d9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="リソース ファイル\Skinning">
+      <UniqueIdentifier>{4051fada-0c9e-47fa-89db-da4df8cce377}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="externals\imgui\imgui.cpp">
@@ -433,7 +436,9 @@
     <None Include="README.md">
       <Filter>ソースファイル</Filter>
     </None>
-    <None Include="Resources\shaders\Skinning\Skinning.hlsli" />
+    <None Include="Resources\shaders\Skinning\Skinning.hlsli">
+      <Filter>リソース ファイル\Skinning</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h">
@@ -738,14 +743,17 @@
     <FxCompile Include="resources\shaders\OffScreen\Cinematic.PS.hlsl">
       <Filter>リソース ファイル\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Skinning\Skinning.CS.hlsl">
-      <Filter>リソース ファイル\Object</Filter>
-    </FxCompile>
     <FxCompile Include="Resources\shaders\Skybox\Skybox.VS.hlsl">
       <Filter>リソース ファイル\Skybox</Filter>
     </FxCompile>
     <FxCompile Include="Resources\shaders\Skybox\Skybox.PS.hlsl">
       <Filter>リソース ファイル\Skybox</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Skinning\Skinning.CS.hlsl">
+      <Filter>リソース ファイル\Skinning</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Skinning\Skinning.VS.hlsl">
+      <Filter>リソース ファイル\Skinning</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

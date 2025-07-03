@@ -1,5 +1,3 @@
-// SkyBox.cpp の修正版
-
 #include "SkyBox.h"
 #include "DirectXCommon.h"
 #include "Graphics/PipeLine/PipeLineManager.h"
@@ -7,7 +5,23 @@
 #include "Graphics/Texture/TextureManager.h"
 #include <myMath.h>
 
-SkyBox::SkyBox() {
+SkyBox *SkyBox::instance = nullptr;
+
+SkyBox *SkyBox::GetInstance() {
+    if (instance == nullptr) {
+        instance = new SkyBox();
+    }
+    return instance;
+}
+
+void SkyBox::Finalize() {
+    if (instance) {
+        delete instance;
+        instance = nullptr;
+    }
+}
+
+void SkyBox::Initialize(std::string filePath) {
     psoManager_ = PipeLineManager::GetInstance();
     dxCommon_ = DirectXCommon::GetInstance();
     srvManager_ = SrvManager::GetInstance();
@@ -16,9 +30,6 @@ SkyBox::SkyBox() {
     CreateIndex();
     CreateSkyBox();
     CreateCamera();
-}
-
-void SkyBox::Initialize(std::string filePath) {
     TextureManager::GetInstance()->LoadTexture(filePath);
     textureIndex_ = TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
 }
@@ -31,7 +42,7 @@ void SkyBox::Update(const ViewProjection &viewProjection) {
     Matrix4x4 translationMatrix = MakeTranslateMatrix(cameraPosition);
 
     // スケール行列（必要に応じてスカイボックスのサイズを調整）
-    float skyboxScale = 100.0f;
+    float skyboxScale = 10000.0f;
     Matrix4x4 scaleMatrix = MakeScaleMatrix({skyboxScale, skyboxScale, skyboxScale});
 
     // ワールド行列を更新（スケール × 平行移動）

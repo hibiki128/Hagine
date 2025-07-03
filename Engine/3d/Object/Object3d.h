@@ -54,10 +54,6 @@ class Object3d {
     std::string filePath_;
     std::unique_ptr<Object3dCommon> objectCommon_;
     BlendMode blendMode_ = BlendMode::kNone;
-
-    // ピボット（原点）オフセット
-    Vector3 pivotOffset_ = {0.0f, 0.0f, 0.0f};
-
   public: // メンバ関数
     void Initialize();
 
@@ -101,7 +97,7 @@ class Object3d {
     /// <summary>
     /// 描画
     /// </summary>
-    void Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, ObjColor *color = nullptr, bool Lighting = true);
+    void Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, ObjColor *color = nullptr, bool Lighting = true);
 
     /// <summary>
     /// スケルトン描画
@@ -125,7 +121,6 @@ class Object3d {
     const bool &GetHaveAnimation() const { return HaveAnimation; }
     bool IsFinish() { return currentModelAnimation_->IsFinish(); }
 
-    const Vector3 &GetPivotOffset() const { return pivotOffset_; }
     /// <summary>
     /// setter
     /// </summary>
@@ -141,13 +136,21 @@ class Object3d {
     void SetTexture(const std::string &filePath, uint32_t materialIndex) {
         model->SetTexture(filePath, materialIndex);
     }
-    void SetPivotOffset(const Vector3 &offset) { pivotOffset_ = offset; }
+    
+    void SetEnvironmentCoefficients(float value) {
+        model->SetEnvironmentCoefficients(value);
+    }
+
 
   private: // メンバ関数
     /// <summary>
     /// 座標変換行列データ作成
     /// </summary>
     void CreateTransformationMatrix();
+    
+    void DrawBoneArmature(const Vector3 &parentPos, const Vector3 &childPos);
+
+    void DrawArmatureShape(const Vector3 &startPos, const Vector3 &endPos, float baseWidth, float tipWidth, const Vector4 &color);
 
     Vector3 ExtractTranslation(const Matrix4x4 &matrix) {
         return Vector3(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);

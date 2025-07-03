@@ -123,3 +123,90 @@ void DrawLine3D::CreateResource() {
     cBufferResource_->Map(0, nullptr, reinterpret_cast<void **>(&cBufferData_));
     cBufferData_->viewProject = MakeIdentity4x4();
 }
+
+void DrawLine3D::DrawCube(const Vector3 &position, const Vector4 &color, float size) {
+    // 半サイズ（中心から各辺までの距離）
+    float hs = size * 0.5f;
+
+    // 立方体の8頂点（左手座標系）
+    Vector3 corners[8] = {
+        {position.x - hs, position.y - hs, position.z - hs}, // 0: 左下前
+        {position.x + hs, position.y - hs, position.z - hs}, // 1: 右下前
+        {position.x + hs, position.y + hs, position.z - hs}, // 2: 右上前
+        {position.x - hs, position.y + hs, position.z - hs}, // 3: 左上前
+        {position.x - hs, position.y - hs, position.z + hs}, // 4: 左下後
+        {position.x + hs, position.y - hs, position.z + hs}, // 5: 右下後
+        {position.x + hs, position.y + hs, position.z + hs}, // 6: 右上後
+        {position.x - hs, position.y + hs, position.z + hs}, // 7: 左上後
+    };
+
+    // 各辺を線で結ぶ（合計12本）
+    int edges[12][2] = {
+        {0, 1}, {1, 2}, {2, 3}, {3, 0}, // 前面
+        {4, 5},
+        {5, 6},
+        {6, 7},
+        {7, 4}, // 背面
+        {0, 4},
+        {1, 5},
+        {2, 6},
+        {3, 7} // 側面
+    };
+
+    for (int i = 0; i < 12; ++i) {
+        SetPoints(corners[edges[i][0]], corners[edges[i][1]], color);
+    }
+}
+
+void DrawLine3D::DrawSphere(const Vector3 &position, const Vector4 &color, float radius, int divisions) {
+    // 分割数が最低限必要
+    if (divisions < 3)
+        return;
+
+    const float PI = 3.1415926535f;
+
+    // 緯度方向（Y軸周り）の分割
+    for (int i = 0; i <= divisions; ++i) {
+        float theta1 = PI * (float)(i) / divisions - PI / 2.0f;
+        float theta2 = PI * (float)(i + 1) / divisions - PI / 2.0f;
+
+        for (int j = 0; j <= divisions; ++j) {
+            float phi = 2.0f * PI * (float)(j) / divisions;
+
+            // 緯線用の点1・点2
+            Vector3 p1 = {
+                position.x + radius * cosf(theta1) * cosf(phi),
+                position.y + radius * sinf(theta1),
+                position.z + radius * cosf(theta1) * sinf(phi)};
+
+            Vector3 p2 = {
+                position.x + radius * cosf(theta2) * cosf(phi),
+                position.y + radius * sinf(theta2),
+                position.z + radius * cosf(theta2) * sinf(phi)};
+
+            SetPoints(p1, p2, color);
+        }
+    }
+
+    // 経度方向（Z軸周り）の分割
+    for (int j = 0; j <= divisions; ++j) {
+        float phi1 = 2.0f * PI * (float)(j) / divisions;
+        float phi2 = 2.0f * PI * (float)(j + 1) / divisions;
+
+        for (int i = 0; i <= divisions; ++i) {
+            float theta = PI * (float)(i) / divisions - PI / 2.0f;
+
+            Vector3 p1 = {
+                position.x + radius * cosf(theta) * cosf(phi1),
+                position.y + radius * sinf(theta),
+                position.z + radius * cosf(theta) * sinf(phi1)};
+
+            Vector3 p2 = {
+                position.x + radius * cosf(theta) * cosf(phi2),
+                position.y + radius * sinf(theta),
+                position.z + radius * cosf(theta) * sinf(phi2)};
+
+            SetPoints(p1, p2, color);
+        }
+    }
+}

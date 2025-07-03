@@ -49,6 +49,11 @@ void Material::SetTexture(const std::string &texturePath) {
     UpdateGPUData();
 }
 
+void Material::SetEnvironmentCoefficients(float environmentCoefficients) {
+    materialData_.environmentCoefficient = environmentCoefficients;
+    UpdateGPUData();
+}
+
 MaterialData Material::LoadMaterialTemplateFile(const std::string &directoryPath, const std::string &filename) {
     MaterialData materialData;                          // 構築するMaterialData
     std::string line;                                   // ファイルから読んだ1行を格納するもの
@@ -91,5 +96,6 @@ void Material::UpdateGPUData() {
         materialDataGPU_->enableLighting = materialData_.enableLighting ? 1 : 0;
         materialDataGPU_->uvTransform = materialData_.uvTransform;
         materialDataGPU_->shininess = materialData_.shininess;
+        materialDataGPU_->environmentCoefficient = materialData_.environmentCoefficient;
     }
 }
