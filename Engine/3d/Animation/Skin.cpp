@@ -23,7 +23,7 @@ void Skin::Update(const Skeleton &skeleton) {
 
 void Skin::UpdateInputVertices(const ModelData &modelData) {
     // 入力頂点データを更新
-    size_t vertexOffset = 0;
+   
     for (const auto &mesh : modelData.meshes) {
         // メッシュごとの頂点データをコピー
         for (size_t i = 0; i < mesh.vertices.size(); ++i) {
@@ -115,6 +115,13 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
                 }
             }
         }
+    }
+
+    meshVertexOffsets_.clear();
+    size_t offset = 0;
+    for (const auto &mesh : modelData.meshes) {
+        meshVertexOffsets_.push_back(offset);
+        offset += mesh.vertices.size();
     }
 
     return skinCluster;

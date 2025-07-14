@@ -11,18 +11,6 @@ void TitleScene::Initialize() {
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
-
-    obj_ = std::make_unique<BaseObject>();
-    obj_->Init("test");
-    obj_->CreateModel("animation/walk.gltf");
-    childObj_ = std::make_unique<BaseObject>();
-    childObj_->Init("child");
-    childObj_->CreateModel("debug/suzannu.obj");
-
-    obj_->AddChild(childObj_.get());
-
-    BaseObjectManager::GetInstance()->AddObject(std::move(obj_));
-    BaseObjectManager::GetInstance()->AddObject(std::move(childObj_));
 }
 
 void TitleScene::Finalize() {
@@ -30,7 +18,6 @@ void TitleScene::Finalize() {
 }
 
 void TitleScene::Update() {
-
     // カメラ更新
     CameraUpdate();
 
@@ -83,13 +70,4 @@ void TitleScene::CameraUpdate() {
 }
 
 void TitleScene::ChangeScene() {
-
-#ifdef _DEBUG
-
-#endif // _DEBUG
-#ifndef _DEBUG
-    if (input_->TriggerKey(DIK_SPACE)) {
-        sceneManager_->NextSceneReservation("GAME");
-    }
-#endif // !_DEBUG
 }

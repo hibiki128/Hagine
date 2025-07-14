@@ -1,0 +1,302 @@
+{
+    "GroupNames": [
+        "fire"
+    ],
+    "aa_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "aa_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "aa_alphaMax": 1.0,
+    "aa_alphaMin": 1.0,
+    "aa_blendMode": 2,
+    "aa_count": 1,
+    "aa_enableTrail": false,
+    "aa_endAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "aa_endColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "aa_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "aa_endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "aa_gatherStartRatio": 0.0,
+    "aa_gatherStrength": 0.0,
+    "aa_gravity": 0.0,
+    "aa_isAcceMultiply": false,
+    "aa_isAllRamdomScale": false,
+    "aa_isBillboard": false,
+    "aa_isBillboardX": false,
+    "aa_isBillboardY": false,
+    "aa_isBillboardZ": false,
+    "aa_isEmitOnEdge": false,
+    "aa_isEndScale": false,
+    "aa_isFaceDirection": false,
+    "aa_isGatherMode": false,
+    "aa_isRandomColor": false,
+    "aa_isRandomRotate": false,
+    "aa_isRandomScale": false,
+    "aa_isSinMove": false,
+    "aa_lifeTimeMax": 3.0,
+    "aa_lifeTimeMin": 1.0,
+    "aa_maxTrailParticles": 20,
+    "aa_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "aa_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "aa_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "aa_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "aa_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "aa_scale": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+    },
+    "aa_scaleMax": 1.0,
+    "aa_scaleMin": 1.0,
+    "aa_startAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "aa_startColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "aa_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "aa_startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "aa_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "aa_trailInheritVelocity": true,
+    "aa_trailLifeScale": 0.5,
+    "aa_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "aa_trailSpawnInterval": 0.05000000074505806,
+    "aa_trailVelocityScale": 0.30000001192092896,
+    "aa_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 8.699999809265137
+    },
+    "aa_velocityMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "aa_velocityMin": {
+        "x": -1.0,
+        "y": -1.0,
+        "z": -1.0
+    },
+    "emitFrequency": 0.0010000000474974513,
+    "emitterRotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 0.05000000074505806,
+        "y": 0.05000000074505806,
+        "z": 0.05000000074505806
+    },
+    "emitterTranslation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -28.5
+    },
+    "fire_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "fire_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_alphaMax": 1.0,
+    "fire_alphaMin": 1.0,
+    "fire_blendMode": 2,
+    "fire_count": 1,
+    "fire_enableTrail": false,
+    "fire_endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_endColor": {
+        "w": 1.0,
+        "x": 0.9677419662475586,
+        "y": 0.31803038716316223,
+        "z": 0.06590355187654495
+    },
+    "fire_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_gatherStartRatio": 0.0,
+    "fire_gatherStrength": 0.0,
+    "fire_gravity": 0.0,
+    "fire_isAcceMultiply": false,
+    "fire_isAllRamdomScale": false,
+    "fire_isBillboard": true,
+    "fire_isBillboardX": false,
+    "fire_isBillboardY": false,
+    "fire_isBillboardZ": false,
+    "fire_isEmitOnEdge": false,
+    "fire_isEndScale": false,
+    "fire_isFaceDirection": false,
+    "fire_isGatherMode": false,
+    "fire_isRandomColor": false,
+    "fire_isRandomRotate": false,
+    "fire_isRandomScale": true,
+    "fire_isSinMove": false,
+    "fire_lifeTimeMax": 1.5,
+    "fire_lifeTimeMin": 1.100000023841858,
+    "fire_maxTrailParticles": 20,
+    "fire_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "fire_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "fire_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_scale": {
+        "x": 0.05000000074505806,
+        "y": 0.05000000074505806,
+        "z": 0.05000000074505806
+    },
+    "fire_scaleMax": 0.10000000149011612,
+    "fire_scaleMin": 0.05000000074505806,
+    "fire_startAcce": {
+        "x": 0.0,
+        "y": 0.004999999888241291,
+        "z": 0.004999999888241291
+    },
+    "fire_startColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 0.017921149730682373,
+        "z": 0.017921149730682373
+    },
+    "fire_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "fire_startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "fire_trailColorMultiplier": {
+        "w": 0.75,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "fire_trailInheritVelocity": false,
+    "fire_trailLifeScale": 0.12999999523162842,
+    "fire_trailScaleMultiplier": {
+        "x": 0.75,
+        "y": 0.75,
+        "z": 0.75
+    },
+    "fire_trailSpawnInterval": 0.009999999776482582,
+    "fire_trailVelocityScale": 0.30000001192092896,
+    "fire_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -28.5
+    },
+    "fire_velocityMax": {
+        "x": 0.05000000074505806,
+        "y": 1.0,
+        "z": 0.05000000074505806
+    },
+    "fire_velocityMin": {
+        "x": -0.05000000074505806,
+        "y": -0.05000000074505806,
+        "z": -0.05000000074505806
+    },
+    "isActive": true,
+    "isAuto": true,
+    "isVisible": true
+}

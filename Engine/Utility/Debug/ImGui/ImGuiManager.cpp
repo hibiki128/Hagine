@@ -7,7 +7,7 @@
 #include <Engine/Frame/Frame.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include"Object/BaseObject.h"
+#include"Object/Base/BaseObject.h"
 #include"Scene/SceneManager.h"
 #include"Engine/OffScreen/OffScreen.h"
 
@@ -235,21 +235,14 @@ void ImGuiManager::ShowMainMenu() {
     if (ImGui::BeginMainMenuBar()) {
         // ファイルメニュー
         if (ImGui::BeginMenu(ICON_FA_FILE " ファイル")) {
-            if (ImGui::MenuItem(ICON_FA_PLUS " 新規作成", "Ctrl+N")) {
-                // 新規プロジェクト作成処理
+            // シーン管理セクション
+            if (ImGui::MenuItem(ICON_FA_DOWNLOAD " シーン保存")) {
+                // BaseObjectManagerのシーン保存モーダルを開く
+                baseObjectManager_->OpenSceneSaveModal();
             }
-            if (ImGui::MenuItem(ICON_FA_FOLDER_OPEN " 開く", "Ctrl+O")) {
-                // プロジェクトを開く処理
-            }
-            if (ImGui::MenuItem(ICON_FA_SAVE " 保存", "Ctrl+S")) {
-                // プロジェクト保存処理
-            }
-            if (ImGui::MenuItem(ICON_FA_SAVE " 名前を付けて保存", "Ctrl+Shift+S")) {
-                // 名前を付けて保存処理
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_FILE_EXPORT " エクスポート")) {
-                // エクスポート処理
+            if (ImGui::MenuItem(ICON_FA_UPLOAD " シーン読み込み")) {
+                // BaseObjectManagerのシーン読み込みモーダルを開く
+                baseObjectManager_->OpenSceneLoadModal();
             }
             ImGui::Separator();
             if (ImGui::MenuItem(ICON_FA_DOOR_OPEN " 終了", "Alt+F4")) {
@@ -320,6 +313,7 @@ void ImGuiManager::ShowMainMenu() {
         if (ImGui::BeginMenu(ICON_FA_CUBE " オブジェクト")) {
             if (ImGui::MenuItem(ICON_FA_PLUS " 新規オブジェクト", "Ctrl+Shift+N")) {
                 // 新規オブジェクト作成
+                baseObjectManager_->OpenObjectCreationModal();
             }
 
             // 3Dオブジェクト
@@ -389,7 +383,7 @@ void ImGuiManager::ShowMainMenu() {
                 }
 
                 if (ImGui::MenuItem(ICON_FA_TRASH_ALT " オブジェクト全削除")) {
-                    baseObjectManager_->DeleteObject();
+                    baseObjectManager_->RemoveAllObjects();
                     imGuizmoManager_->DeleteTarget();
                 }
 
@@ -698,6 +692,7 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowOffScreenSettingWindow(offscreen);
     // ライトウィンドウを描画
     ShowLightSettingWindow();
+    baseObjectManager_->UpdateImGui();
 }
 
 bool &ImGuiManager::GetIsShowMainUI() {

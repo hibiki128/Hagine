@@ -11,9 +11,9 @@
 #include "Camera/ViewProjection/ViewProjection.h"
 #include "Transform/WorldTransform.h"
 #include "line/DrawLine3D.h"
-#include"Object/BaseObjectManager.h"
+#include"Object/Base/BaseObjectManager.h"
 #include"Sprite.h"
-#include"Object/BaseObject.h"
+#include"Object/Base/BaseObject.h"
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG

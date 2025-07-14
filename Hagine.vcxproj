@@ -112,7 +112,11 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Scene\GameScene.cpp" />
     <ClCompile Include="Application\Scene\SelectScene.cpp" />
     <ClCompile Include="Application\Scene\TitleScene.cpp" />
-    <ClCompile Include="Engine\3d\Object\BaseObject.cpp" />
+    <ClCompile Include="Application\Utility\HitStop\HitStop.cpp" />
+    <ClCompile Include="Application\Utility\MotionEditor\MotionEditor.cpp" />
+    <ClCompile Include="Application\Utility\Shake\Shake.cpp" />
+    <ClCompile Include="Engine\3d\Camera\FollowCamera\FollowCamera.cpp" />
+    <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp" />
     <ClCompile Include="Engine\Math\Easing.cpp" />
     <ClCompile Include="Engine\Math\myMath.cpp" />
@@ -120,7 +124,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Math\type\Quaternion.cpp" />
     <ClCompile Include="Engine\Scene\BaseScene.cpp" />
     <ClCompile Include="Engine\Utility\Graphics\PipeLine\ComputePipeLineManager.cpp" />
-    <ClCompile Include="Engine\3d\Object\BaseObjectManager.cpp" />
+    <ClCompile Include="Engine\3d\Object\Base\BaseObjectManager.cpp" />
     <ClCompile Include="Engine\Utility\Data\DataHandler.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleEditor.cpp" />
     <ClCompile Include="Engine\3d\Primitive\PrimitiveModel.cpp" />
@@ -225,7 +229,11 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Scene\GameScene.h" />
     <ClInclude Include="Application\Scene\SelectScene.h" />
     <ClInclude Include="Application\Scene\TitleScene.h" />
-    <ClInclude Include="Engine\3d\Object\BaseObject.h" />
+    <ClInclude Include="Application\Utility\HitStop\HitStop.h" />
+    <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h" />
+    <ClInclude Include="Application\Utility\Shake\Shake.h" />
+    <ClInclude Include="Engine\3d\Camera\FollowCamera\FollowCamera.h" />
+    <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
     <ClInclude Include="Engine\3d\Transform\ObjColor.h" />
     <ClInclude Include="Engine\Math\Easing.h" />
     <ClInclude Include="Engine\Math\myMath.h" />
@@ -238,7 +246,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Math\type\Vector4.h" />
     <ClInclude Include="Engine\Scene\BaseScene.h" />
     <ClInclude Include="Engine\Utility\Graphics\PipeLine\ComputePipeLineManager.h" />
-    <ClInclude Include="Engine\3d\Object\BaseObjectManager.h" />
+    <ClInclude Include="Engine\3d\Object\Base\BaseObjectManager.h" />
     <ClInclude Include="Engine\Utility\Data\DataHandler.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleEditor.h" />
     <ClInclude Include="Engine\3d\Primitive\PrimitiveModel.h" />

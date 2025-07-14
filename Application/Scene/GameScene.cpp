@@ -67,13 +67,4 @@ void GameScene::CameraUpdate() {
 }
 
 void GameScene::ChangeScene() {
-
-#ifdef _DEBUG
-
-#endif // _DEBUG
-#ifndef _DEBUG
-    if (input_->TriggerKey(DIK_SPACE)) {
-        sceneManager_->NextSceneReservation("TITLE");
-    }
-#endif // !_DEBUG
 }

@@ -1,7 +1,12 @@
 #include "WorldTransform.h"
 
-void WorldTransform::Initialize()
-{
+WorldTransform::WorldTransform() {
+}
+
+WorldTransform::~WorldTransform() {
+}
+
+void WorldTransform::Initialize() {
 	// スケール、回転、平行移動を初期化
 	scale_ = { 1.0f, 1.0f, 1.0f }; // デフォルトのスケール
 	rotation_ = { 0.0f, 0.0f, 0.0f }; // デフォルトの回転

@@ -168,6 +168,27 @@
     <Filter Include="リソース ファイル\Skinning">
       <UniqueIdentifier>{4051fada-0c9e-47fa-89db-da4df8cce377}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Camera\NewFilter1">
+      <UniqueIdentifier>{0fa5e3be-7afc-4fa3-ae1e-c8baedfdfb5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Camera\NewFilter2">
+      <UniqueIdentifier>{48ce93bc-5a79-4154-bae6-fc64a8ab807e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Camera\FollowCamera">
+      <UniqueIdentifier>{8a3b28d4-fe8d-4f04-bbb5-c5328b93caba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Utility">
+      <UniqueIdentifier>{0832fd50-213d-42e6-a6db-72924dc86a66}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Utility\Shake">
+      <UniqueIdentifier>{652bacc9-3e58-4b45-82bb-196f639a121c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Utility\HitStop">
+      <UniqueIdentifier>{b214682d-3a13-421d-a061-2027ad87af62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Utility\MotionEditor">
+      <UniqueIdentifier>{1a68c74f-5fb3-4d87-ba88-e37761fef3f2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="externals\imgui\imgui.cpp">
@@ -320,10 +341,10 @@
     <ClCompile Include="Engine\3d\Model\Mesh\Mesh.cpp">
       <Filter>ソースファイル\Engine\3d\Model\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\3d\Object\BaseObject.cpp">
+    <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp">
       <Filter>ソースファイル\Engine\3d\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\3d\Object\BaseObjectManager.cpp">
+    <ClCompile Include="Engine\3d\Object\Base\BaseObjectManager.cpp">
       <Filter>ソースファイル\Engine\3d\Object</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Scene\BaseScene.cpp">
@@ -394,6 +415,18 @@
     </ClCompile>
     <ClCompile Include="Engine\Utility\ShowFolder\ShowFolder.cpp">
       <Filter>ソースファイル\Engine\Utility\ShowFolder</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\Camera\FollowCamera\FollowCamera.cpp">
+      <Filter>ソースファイル\Engine\3d\Camera\FollowCamera</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Utility\MotionEditor\MotionEditor.cpp">
+      <Filter>ソースファイル\Application\Utility\MotionEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Utility\Shake\Shake.cpp">
+      <Filter>ソースファイル\Application\Utility\Shake</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Utility\HitStop\HitStop.cpp">
+      <Filter>ソースファイル\Application\Utility\HitStop</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -588,10 +621,10 @@
     <ClInclude Include="Engine\3d\Model\Mesh\Mesh.h">
       <Filter>ソースファイル\Engine\3d\Model\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\3d\Object\BaseObject.h">
+    <ClInclude Include="Engine\3d\Object\Base\BaseObject.h">
       <Filter>ソースファイル\Engine\3d\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\3d\Object\BaseObjectManager.h">
+    <ClInclude Include="Engine\3d\Object\Base\BaseObjectManager.h">
       <Filter>ソースファイル\Engine\3d\Object</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Scene\BaseScene.h">
@@ -686,6 +719,18 @@
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>ソースファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\3d\Camera\FollowCamera\FollowCamera.h">
+      <Filter>ソースファイル\Engine\3d\Camera\FollowCamera</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h">
+      <Filter>ソースファイル\Application\Utility\MotionEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Utility\Shake\Shake.h">
+      <Filter>ソースファイル\Application\Utility\Shake</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Utility\HitStop\HitStop.h">
+      <Filter>ソースファイル\Application\Utility\HitStop</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

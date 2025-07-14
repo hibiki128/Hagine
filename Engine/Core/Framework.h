@@ -14,7 +14,7 @@
 #include "Graphics/Srv/SrvManager.h"
 #include "Graphics/Texture/TextureManager.h"
 #include "Input.h"
-#include "Object/BaseObjectManager.h"
+#include "Object/Base/BaseObjectManager.h"
 #include "Object/Object3dCommon.h"
 #include "Particle/ParticleCommon.h"
 #include "Particle/ParticleEditor.h"

@@ -71,6 +71,7 @@ class SceneManager {
     void SceneChange();
 
     BaseScene *GetBaseScene() { return scene_; }
+    std::string GetCurrentSceneName() const { return currentSceneName_; }
 
   private:
     // 今のシーン(実行中のシーン)
@@ -80,6 +81,8 @@ class SceneManager {
     // シーンファクトリー
     AbstractSceneFactory *sceneFactory_ = nullptr;
     std::unique_ptr<SceneTransition> transition_;
+
+    std::string currentSceneName_;
 
     bool transitionEnd = false;
     bool firstChange = false;
