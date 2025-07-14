@@ -1,8 +1,8 @@
 #pragma once
 #include"Transform/WorldTransform.h"
 #include "Camera/ViewProjection/ViewProjection.h"
-class FollowCamera {
-public:
+class BaseFollowCamera {
+  public:
 	/// ===================================================
 	///public method
 	/// ===================================================

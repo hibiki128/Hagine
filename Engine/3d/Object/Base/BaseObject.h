@@ -132,7 +132,7 @@ class BaseObject : public Collider {
     /// ===================================================
     /// setter
     /// ===================================================
-    void SetTexture(const std::string &filePath, uint32_t index) {
+    void SetTexture(const std::string &filePath, uint32_t index = 0) {
         if (filePath.empty()) {
             return; // ファイルパスが空なら何もしない
         }
@@ -146,6 +146,7 @@ class BaseObject : public Collider {
     // void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }
     void SetReflect(bool reflect) { reflect_ = reflect; }
+    void SetColor(const Vector4 &color) { objColor_.GetColor() = color; }
 
   private:
     void DebugObject();

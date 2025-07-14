@@ -1,8 +1,8 @@
-#include "FollowCamera.h"
+#include "BaseFollowCamera.h"
 #include"Input.h"
 #include <cmath>
 
-void FollowCamera::Init() {
+void BaseFollowCamera::Init() {
 	viewProjection_.farZ = 1100;
 	viewProjection_.Initialize();
 	worldTransform_.Initialize();
@@ -11,7 +11,7 @@ void FollowCamera::Init() {
 	heightOffset_ = 1.5f; // ターゲットの上方オフセット
 }
 
-void FollowCamera::Update() {
+void BaseFollowCamera::Update() {
 	// 追従対象がいれば
 	if (target_) {
 		// カメラの回転処理
@@ -40,14 +40,14 @@ void FollowCamera::Update() {
 	viewProjection_.UpdateMatrix();
 }
 
-void FollowCamera::imgui() {
+void BaseFollowCamera::imgui() {
 	ImGui::Begin("FollowCamera");
 	ImGui::DragFloat3("wt position", &worldTransform_.translation_.x, 0.1f);
 	ImGui::DragFloat3("vp position", &viewProjection_.translation_.x, 0.1f);
 	ImGui::End();
 }
 
-void FollowCamera::Move() {
+void BaseFollowCamera::Move() {
 	if (Input::GetInstance()->PushKey(DIK_LEFT)) {
 		yaw_ -= 0.04f; // 左回転
 	}

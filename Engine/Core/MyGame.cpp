@@ -51,7 +51,7 @@ void MyGame::Update() {
     imGuiManager_->End();
 #endif // _DEBUG
 
-    attackManager_->Update(Frame::DeltaTime());
+    motionEditor_->Update(Frame::DeltaTime());
 
     // -----------------------
 }

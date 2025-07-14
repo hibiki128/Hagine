@@ -150,7 +150,7 @@ void Framework::Initialize() {
     ///---------------------------------
 
     ///-------AttackManager-------
-    attackManager_ = AttackManager::GetInstance();
+    motionEditor_ = MotionEditor::GetInstance();
     ///---------------------------
 
     /// 時間の初期化
@@ -195,6 +195,7 @@ void Framework::Finalize() {
     skyBox_->Finalize();
     srvManager_->Finalize();
     audio_->Finalize();
+    motionEditor_->Finalize();
     LightGroup::GetInstance()->Finalize();
     particleEditor_->Finalize();
     spriteCommon_->Finalize();

@@ -13,7 +13,7 @@
 #include "numbers"
 #include <Input.h>
 #include <cmath>
-#include <Application/Utility/AttackManager.h>
+#include <Application/Utility/MotionEditor/MotionEditor.h>
 
 Player::Player() {
 }
@@ -60,8 +60,8 @@ void Player::Init(const std::string objectName) {
     this->AddChild(leftHand_.get());
     this->AddChild(rightHand_.get());
 
-    AttackManager::GetInstance()->Register(leftHand_.get());
-    AttackManager::GetInstance()->Register(rightHand_.get());
+    MotionEditor::GetInstance()->Register(leftHand_.get());
+    MotionEditor::GetInstance()->Register(rightHand_.get());
 
     Load();
 }

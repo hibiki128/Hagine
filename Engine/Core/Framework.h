@@ -24,7 +24,7 @@
 #include "SkyBox/SkyBox.h"
 #include "SpriteCommon.h"
 #include "line/DrawLine3D.h"
-#include <Application/Utility/AttackManager.h>
+#include <Application/Utility/MotionEditor/MotionEditor.h>
 
 class Framework {
   public: // メンバ関数
@@ -89,7 +89,7 @@ class Framework {
     BaseObjectManager *baseObjectManager_ = nullptr;
     ParticleGroupManager *particleGroupManager_ = nullptr;
     PipeLineManager *pipeLineManager_ = nullptr;
-    AttackManager *attackManager_ = nullptr;
+    MotionEditor *motionEditor_ = nullptr;
     ComputePipeLineManager *computePipeLineManager_ = nullptr;
 
     SpriteCommon *spriteCommon_ = nullptr;

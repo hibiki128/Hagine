@@ -126,7 +126,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Utility\HitStop\HitStop.cpp" />
     <ClCompile Include="Application\Utility\MotionEditor\MotionEditor.cpp" />
     <ClCompile Include="Application\Utility\Shake\Shake.cpp" />
-    <ClCompile Include="Engine\3d\Camera\FollowCamera\FollowCamera.cpp" />
+    <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp" />
     <ClCompile Include="Engine\Math\Easing.cpp" />
@@ -238,6 +238,19 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Application\Camera\FollowCamera.h" />
+    <ClInclude Include="Application\GameObject\Enemy\Enemy.h" />
+    <ClInclude Include="Application\GameObject\Field\Ground\Ground.h" />
+    <ClInclude Include="Application\GameObject\Field\SkyDome\SkyDome.h" />
+    <ClInclude Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.h" />
+    <ClInclude Include="Application\GameObject\Player\Player.h" />
+    <ClInclude Include="Application\GameObject\Player\PlayerData.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Air\PlayerStateAir.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Base\PlayerBaseState.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Fly\PlayerStateFlyIdle.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateIdle.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateJump.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateMove.h" />
     <ClInclude Include="Application\Scene\ClearScene.h" />
     <ClInclude Include="Application\Scene\DemoScene.h" />
     <ClInclude Include="Application\Scene\GameScene.h" />
@@ -246,7 +259,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Utility\HitStop\HitStop.h" />
     <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h" />
     <ClInclude Include="Application\Utility\Shake\Shake.h" />
-    <ClInclude Include="Engine\3d\Camera\FollowCamera\FollowCamera.h" />
+    <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
     <ClInclude Include="Engine\3d\Transform\ObjColor.h" />
     <ClInclude Include="Engine\Math\Easing.h" />

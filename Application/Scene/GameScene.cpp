@@ -1,6 +1,6 @@
 #include "GameScene.h"
 
-#include <Application/Utility/AttackManager.h>
+#include <Application/Utility/MotionEditor/MotionEditor.h>
 
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -35,8 +35,8 @@ void GameScene::Initialize() {
     /// ===================================================
     enemy_ptr = enemy_.get();
     player_ptr = player_.get();
-    AttackManager::GetInstance()->Register(player_ptr);
-    AttackManager::GetInstance()->Register(enemy_ptr);
+    MotionEditor::GetInstance()->Register(player_ptr);
+    MotionEditor::GetInstance()->Register(enemy_ptr);
 
     /// ===================================================
     /// セット
@@ -123,7 +123,7 @@ void GameScene::AddSceneSetting() {
     debugCamera_->imgui();
     followCamera_->imgui();
 
-    AttackManager::GetInstance()->DrawImGui();
+    MotionEditor::GetInstance()->DrawImGui();
 
 }
 

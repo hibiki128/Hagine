@@ -1,6 +1,5 @@
 #pragma once
 #include "BaseScene.h"
-
 #include "Application/Camera/FollowCamera.h"
 #include "Application/GameObject/Field/Ground/Ground.h"
 #include "Application/GameObject/Field/SkyDome/SkyDome.h"
@@ -52,19 +51,19 @@ class GameScene : public BaseScene {
     ViewProjection vp_;
     std::unique_ptr<DebugCamera> debugCamera_;
 
-    // ƒvƒŒƒCƒ„[
+    // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼
     std::unique_ptr<Player> player_;
 
-    // “G
+    // æ•µ
     std::unique_ptr<Enemy> enemy_;
 
-    // ’Ç]ƒJƒƒ‰
+    // è¿½å¾“ã‚«ãƒ¡ãƒ©
     std::unique_ptr<FollowCamera> followCamera_;
 
-    // “V‹…
+    // å¤©çƒ
     std::unique_ptr<SkyDome> skyDome_;
 
-    // ’n–Ê
+    // åœ°é¢
     std::unique_ptr<Ground> ground_;
 
     Enemy *enemy_ptr = nullptr;
