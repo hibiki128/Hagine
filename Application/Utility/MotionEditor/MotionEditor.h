@@ -124,6 +124,10 @@ class MotionEditor {
 
     void ResetInitialPosition(const std::string &objectName);
 
+     // UI用の制御点操作関数
+    void AddControlPoint(const std::string &objectName, const Vector3 &worldPosition);
+    void UpdateControlPoint(const std::string &objectName, int index, const Vector3 &worldPosition);
+
   private:
     /// ====================================
     /// private variaus
@@ -143,4 +147,9 @@ class MotionEditor {
 
     // 一時モーションのクリーンアップ
     void CleanupFinishedTemporaryMotions();
+
+        // 親子関係対応のヘルパー関数
+    Matrix4x4 GetParentInverseWorldMatrix(BaseObject *object);
+    Vector3 GetLocalControlPointPosition(BaseObject *object, const Vector3 &worldPos);
+    Vector3 TransformLocalControlPointToWorld(BaseObject *object, const Vector3 &localPos);
 };
