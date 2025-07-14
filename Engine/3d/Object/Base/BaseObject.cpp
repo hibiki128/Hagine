@@ -91,16 +91,6 @@ void BaseObject::UpdateHierarchy() {
     }
 }
 
-Vector3 BaseObject::GetWorldPosition() const {
-    Vector3 worldPos;
-    // ワールド行列の平行移動成分を取得
-    worldPos.x = transform_->matWorld_.m[3][0];
-    worldPos.y = transform_->matWorld_.m[3][1];
-    worldPos.z = transform_->matWorld_.m[3][2];
-
-    return worldPos;
-}
-
 void BaseObject::SetParent(BaseObject *parent) {
     if (parent_ == parent) {
         return; // 同じ親を持ってる場合何もしない
@@ -232,8 +222,8 @@ std::vector<std::string> BaseObject::GetChildrenNames() const {
 }
 
 // ワールド座標を取得（親の位置は加算不要）
-Vector3 &BaseObject::GetWorldPosition() {
-    static Vector3 worldPos; // 参照を返すため static に保持
+Vector3 BaseObject::GetWorldPosition() const {
+    Vector3 worldPos; 
     // ワールド行列の平行移動成分を取得
     worldPos.x = transform_->matWorld_.m[3][0];
     worldPos.y = transform_->matWorld_.m[3][1];
@@ -242,8 +232,8 @@ Vector3 &BaseObject::GetWorldPosition() {
 }
 
 // ワールド回転を取得（簡易的にオイラー角変換）
-Vector3 &BaseObject::GetWorldRotation() {
-    static Vector3 worldRot;
+Vector3 BaseObject::GetWorldRotation() const {
+    Vector3 worldRot;
     // ワールド行列から回転角（オイラー角）を抽出
     const Matrix4x4 &m = transform_->matWorld_;
     worldRot.y = std::asin(-m.m[2][0]); // Pitch
@@ -260,8 +250,8 @@ Vector3 &BaseObject::GetWorldRotation() {
 }
 
 // ワールドスケールを取得（回転を考慮）
-Vector3 &BaseObject::GetWorldScale() {
-    static Vector3 worldScale;
+Vector3 BaseObject::GetWorldScale() const {
+    Vector3 worldScale;
     const Matrix4x4 &m = transform_->matWorld_;
 
     // 各軸のベクトルの長さをスケールとして取得
@@ -773,9 +763,9 @@ void BaseObject::DebugCollider() {
 }
 
 Vector3 BaseObject::GetCenterPosition() const {
-    return transform_->translation_;
+    return GetWorldPosition();
 }
 
 Vector3 BaseObject::GetCenterRotation() const {
-    return transform_->rotation_;
+    return GetWorldRotation();
 }
