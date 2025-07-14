@@ -1,6 +1,9 @@
+#define NOMINMAX
 #include "ParticleEditor.h"
-#include "ImGui/ImGuiManager.h"
-#include"ShowFolder/ShowFolder.h"
+#include "Debug/ImGui/ImGuiManager.h"
+#ifdef _DEBUG
+#include "ShowFolder/ShowFolder.h"
+#endif // _DEBUG
 
 ParticleEditor *ParticleEditor::instance = nullptr;
 
@@ -80,26 +83,142 @@ void ParticleEditor::AddPrimitiveParticleGroup(const std::string &name, const st
     particleGroupManager_->AddParticleGroup(std::move(group));
 }
 
-void ParticleEditor::EditorWindow() {
-    ImGui::Begin("パーティクルエディター");
-    ShowImGuiEditor();
-    ImGui::End();
+void ParticleEditor::SetExternalParticleCount(const std::string &baseName, size_t count) {
+    // 新しいフレームが始まった場合、現在フレームの統計をクリア
+    if (currentFrameNumber_ != lastUpdateFrame_) {
+        currentFrameStats_.clear();
+        lastUpdateFrame_ = currentFrameNumber_;
+    }
+
+    // 現在フレームの統計データを更新
+    currentFrameStats_[baseName].count += count;
+    currentFrameStats_[baseName].instanceCount++;
+}
+
+void ParticleEditor::UpdateFrameStats() {
+    // 現在フレームの統計を表示用にコピー
+    displayStats_ = currentFrameStats_;
+
+    // フレーム番号を進める
+    currentFrameNumber_++;
 }
 
 void ParticleEditor::DrawAll(const ViewProjection &vp_) {
     for (auto &[name, emitter] : emitters_) {
         if (emitter) {
+            if (emitter->GetIsAuto()) {
+                emitter->Update();
+            }
             emitter->Draw(vp_);
         }
     }
 }
 
 void ParticleEditor::DebugAll() {
-    for (auto &[name, emitter] : emitters_) {
-        if (emitter) {
-            emitter->Debug();
+    if (emitters_.empty()) {
+        ImGui::Text("エミッターがありません");
+        return;
+    }
+
+    // エミッター名のリストを作成
+    std::vector<std::string> emitterNames;
+    for (const auto &[name, emitter] : emitters_) {
+        emitterNames.push_back(name);
+    }
+
+    // インデックスの範囲チェック
+    if (selectedEmitterIndex_ >= emitterNames.size()) {
+        selectedEmitterIndex_ = std::max(0, (int)emitterNames.size() - 1);
+    }
+
+    // エミッター選択用のCombo
+    std::vector<const char *> emitterNameCStrs;
+    for (const auto &name : emitterNames) {
+        emitterNameCStrs.push_back(name.c_str());
+    }
+
+    if (ImGui::Combo("エミッター選択", &selectedEmitterIndex_,
+                     emitterNameCStrs.data(), (int)emitterNameCStrs.size())) {
+        // 選択が変更された場合、選択されたエミッター名を更新
+        selectedEmitterName_ = emitterNames[selectedEmitterIndex_];
+    }
+
+    // 初回選択時の処理
+    if (selectedEmitterName_.empty() && !emitterNames.empty()) {
+        selectedEmitterName_ = emitterNames[selectedEmitterIndex_];
+    }
+
+    // 選択されたエミッターのDebugを実行
+    if (!selectedEmitterName_.empty()) {
+        auto it = emitters_.find(selectedEmitterName_);
+        if (it != emitters_.end() && it->second) {
+            it->second->Debug();
         }
     }
+}
+
+// std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
+//     auto it = emitters_.find(name);
+//     if (it != emitters_.end()) {
+//         // マップから取り出し、所有権を呼び出し元に移動
+//         return std::move(it->second);
+//     }
+//     return nullptr;
+// }
+
+void ParticleEditor::SceneParticleCount() {
+    if (ImGui::CollapsingHeader("パーティクル統計")) {
+        size_t grandTotal = 0;
+        size_t totalInstances = 0;
+
+        // 合計を計算
+        for (const auto &[name, stats] : displayStats_) {
+            grandTotal += stats.count;
+            totalInstances += stats.instanceCount;
+        }
+
+        // ヘッダー情報
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "合計: %zu個", grandTotal);
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(%zu種類)", displayStats_.size());
+
+        if (!displayStats_.empty()) {
+            ImGui::Separator();
+
+            // シンプルなリスト表示
+            for (const auto &[name, stats] : displayStats_) {
+                // 色付きドット + 名前 + 数値
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "%s", name.c_str());
+                ImGui::SameLine();
+                ImGui::Text(": %zu", stats.count);
+
+                // インスタンス数が1より多い場合のみ表示
+                if (stats.instanceCount > 1) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "×%zu", stats.instanceCount);
+                }
+            }
+        } else {
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "エミッターなし");
+        }
+    }
+}
+
+
+std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const std::string &name) {
+    auto it = emitters_.find(name);
+    if (it != emitters_.end() && it->second) {
+        return it->second->Clone(); // コピーを作って返す
+    }
+    return nullptr;
+}
+
+void ParticleEditor::EditorWindow() {
+    ImGui::Begin("パーティクルエディター");
+    ShowImGuiEditor();
+    ImGui::End();
 }
 
 // カラー付きCollapsingHeaderを表示するヘルパー関数
@@ -249,7 +368,9 @@ void ParticleEditor::ShowImGuiEditor() {
 
                     // テクスチャ選択セクション (緑色)
                     if (ColoredCollapsingHeader("テクスチャ選択", 3)) {
+#ifdef _DEBUG
                         ShowTextureFile(localTexturePath_);
+#endif // _DEBUG
                     }
 
                     // パーティクルグループ作成ボタン
@@ -277,7 +398,9 @@ void ParticleEditor::ShowImGuiEditor() {
 
                     // テクスチャ選択セクション (オレンジ色)
                     if (ColoredCollapsingHeader("テクスチャ選択", 5)) {
+#ifdef _DEBUG
                         ShowTextureFile(localTexturePath_);
+#endif // _DEBUG
                     }
 
                     // パーティクルグループ作成ボタン
@@ -385,13 +508,4 @@ std::vector<std::string> ParticleEditor::GetJsonFiles() {
     }
 
     return jsonFiles;
-}
-
-std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
-    auto it = emitters_.find(name);
-    if (it != emitters_.end()) {
-        // マップから取り出し、所有権を呼び出し元に移動
-        return std::move(it->second);
-    }
-    return nullptr;
 }

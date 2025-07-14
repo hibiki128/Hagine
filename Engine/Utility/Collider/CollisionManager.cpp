@@ -51,82 +51,66 @@ void CollisionManager::Draw(const ViewProjection &viewProjection) {
 }
 
 void CollisionManager::Update() {
-    CheckAllCollisions();
     UpdateWorldTransform();
+    CheckAllCollisions();
 }
 
 void CollisionManager::CheckCollisionPair(Collider *colliderA, Collider *colliderB) {
-    bool isCollidingNow = false;
-
     // コリジョンが無効化されている場合はチェックをスキップ
     if (!colliderA->IsCollisionEnabled() || !colliderB->IsCollisionEnabled()) {
         return;
     }
 
-    // まずはバウンディングスフィア同士で粗い判定
-    float roughDistance = (colliderA->GetCenterPosition() - colliderB->GetCenterPosition()).Length();
-    float roughRadiusSum = colliderA->GetRadius() + colliderB->GetRadius();
-
-    if (roughDistance > roughRadiusSum) {
-        // 明らかに衝突していない
-        return;
-    }
-
     // ペアをソートしてキーを生成
     auto key = std::make_pair(std::min(colliderA, colliderB), std::max(colliderA, colliderB));
+    bool isCollidingNow = false;
 
-    // 球の衝突チェック
-    if ((colliderA->IsSphere() && colliderB->IsSphere()) && !isCollidingNow) {
+    // 詳細な衝突判定
+    // 球同士の衝突チェック
+    if (colliderA->IsSphere() && colliderB->IsSphere()) {
         isCollidingNow = IsCollision(colliderA->GetSphere(), colliderB->GetSphere());
     }
-
-    // AABBの衝突チェック
-    if ((colliderA->IsAABB() && colliderB->IsAABB()) && !isCollidingNow) {
+    // AABB同士の衝突チェック
+    else if (colliderA->IsAABB() && colliderB->IsAABB()) {
         isCollidingNow = IsCollision(colliderA->GetAABB(), colliderB->GetAABB());
     }
-
     // OBB同士の衝突チェック
-    if ((colliderA->IsOBB() && colliderB->IsOBB()) && !isCollidingNow) {
+    else if (colliderA->IsOBB() && colliderB->IsOBB()) {
         OBB obbA = colliderA->GetOBB();
         OBB obbB = colliderB->GetOBB();
         isCollidingNow = IsCollision(obbA, obbB);
     }
-
     // AABBと球の衝突チェック
-    if ((colliderA->IsAABB() && colliderB->IsSphere() && !isCollidingNow) ||
-        (colliderA->IsSphere() && colliderB->IsAABB() && !isCollidingNow)) {
-
+    else if ((colliderA->IsAABB() && colliderB->IsSphere()) ||
+             (colliderA->IsSphere() && colliderB->IsAABB())) {
         if (colliderA->IsAABB() && colliderB->IsSphere()) {
             isCollidingNow = IsCollision(colliderA->GetAABB(), colliderB->GetSphere());
-        } else if (colliderA->IsSphere() && colliderB->IsAABB()) {
+        } else {
             isCollidingNow = IsCollision(colliderB->GetAABB(), colliderA->GetSphere());
         }
     }
-
     // OBBと球の衝突チェック
-    if ((colliderA->IsOBB() && colliderB->IsSphere() && !isCollidingNow) ||
-        (colliderA->IsSphere() && colliderB->IsOBB() && !isCollidingNow)) {
-
+    else if ((colliderA->IsOBB() && colliderB->IsSphere()) ||
+             (colliderA->IsSphere() && colliderB->IsOBB())) {
         if (colliderA->IsOBB() && colliderB->IsSphere()) {
             Matrix4x4 rotateMatrix = MakeRotateXYZMatrix(colliderA->GetCenterRotation());
             isCollidingNow = IsCollision(colliderA->GetOBB(), colliderB->GetSphere(), rotateMatrix);
-        } else if (colliderA->IsSphere() && colliderB->IsOBB()) {
+        } else {
             Matrix4x4 rotateMatrix = MakeRotateXYZMatrix(colliderB->GetCenterRotation());
             isCollidingNow = IsCollision(colliderB->GetOBB(), colliderA->GetSphere(), rotateMatrix);
         }
     }
-
     // AABBとOBBの衝突チェック
-    if ((colliderA->IsAABB() && colliderB->IsOBB() && !isCollidingNow) ||
-        (colliderA->IsOBB() && colliderB->IsAABB() && !isCollidingNow)) {
-
+    else if ((colliderA->IsAABB() && colliderB->IsOBB()) ||
+             (colliderA->IsOBB() && colliderB->IsAABB())) {
         if (colliderA->IsAABB() && colliderB->IsOBB()) {
             isCollidingNow = IsCollision(colliderA->GetAABB(), colliderB->GetOBB());
-        } else if (colliderA->IsOBB() && colliderB->IsAABB()) {
+        } else {
             isCollidingNow = IsCollision(colliderB->GetAABB(), colliderA->GetOBB());
         }
     }
 
+    // 衝突状態の設定
     colliderA->SetIsColliding(isCollidingNow);
     colliderB->SetIsColliding(isCollidingNow);
 
@@ -136,6 +120,7 @@ void CollisionManager::CheckCollisionPair(Collider *colliderA, Collider *collide
     if (isCollidingNow) {
         colliderA->SetIsCollidingInCurrentFrame(true);
         colliderB->SetIsCollidingInCurrentFrame(true);
+
         // 前フレームで衝突していなかった場合に発生
         if (!wasColliding) {
             colliderA->OnCollisionEnter(colliderB);
@@ -145,7 +130,6 @@ void CollisionManager::CheckCollisionPair(Collider *colliderA, Collider *collide
         // 既に衝突している場合
         colliderA->OnCollision(colliderB);
         colliderB->OnCollision(colliderA);
-
     } else {
         // 衝突が終わった場合
         if (wasColliding) {
@@ -204,13 +188,9 @@ void CollisionManager::AddCollider(Collider *collider) {
 }
 
 bool CollisionManager::IsCollision(const AABB &aabb1, const AABB &aabb2) {
-    // 軸ごとに判定
-    if ((aabb1.min.x <= aabb2.max.x && aabb1.max.x >= aabb2.min.x) &&
-        (aabb1.min.y <= aabb2.max.y && aabb1.max.y >= aabb2.min.y) &&
-        (aabb1.min.z <= aabb2.max.z && aabb1.max.z >= aabb2.min.z)) {
-        return true;
-    }
-    return false;
+    return (aabb1.min.x <= aabb2.max.x && aabb1.max.x >= aabb2.min.x) &&
+           (aabb1.min.y <= aabb2.max.y && aabb1.max.y >= aabb2.min.y) &&
+           (aabb1.min.z <= aabb2.max.z && aabb1.max.z >= aabb2.min.z);
 }
 
 bool CollisionManager::IsCollision(const OBB &obb1, const OBB &obb2) {
@@ -245,17 +225,15 @@ bool CollisionManager::IsCollision(const OBB &obb1, const OBB &obb2) {
 
 bool CollisionManager::IsCollision(const AABB &aabb, const Sphere &sphere) {
     // 最近接点を求める
-    Vector3 closestPoint{std::clamp(sphere.center.x, aabb.min.x, aabb.max.x), std::clamp(sphere.center.y, aabb.min.y, aabb.max.y), std::clamp(sphere.center.z, aabb.min.z, aabb.max.z)};
+    Vector3 closestPoint{
+        std::clamp(sphere.center.x, aabb.min.x, aabb.max.x),
+        std::clamp(sphere.center.y, aabb.min.y, aabb.max.y),
+        std::clamp(sphere.center.z, aabb.min.z, aabb.max.z)};
 
-    // 最近接点と球の中心との距離を求める
-    float distance = (closestPoint - sphere.center).Length();
+    Vector3 diff = closestPoint - sphere.center;
+    float distanceSquared = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
 
-    // 距離が半径より小さければ衝突
-    if (distance <= sphere.radius) {
-        return true;
-    } else {
-        return false;
-    }
+    return distanceSquared <= (sphere.radius * sphere.radius);
 }
 
 bool CollisionManager::IsCollision(const OBB &obb, const Sphere &sphere, const Matrix4x4 &rotateMatrix) {
@@ -274,23 +252,17 @@ bool CollisionManager::IsCollision(const OBB &obb, const Sphere &sphere, const M
     // ローカル空間でのSphere
     Sphere sphereOBBLocal{centerInOBBLocalSpace, sphere.radius};
 
-    Vector3 closestPoint = {
-        std::max(aabbOBBLocal.min.x, std::min(sphereOBBLocal.center.x, aabbOBBLocal.max.x)), std::max(aabbOBBLocal.min.y, std::min(sphereOBBLocal.center.y, aabbOBBLocal.max.y)),
-        std::max(aabbOBBLocal.min.z, std::min(sphereOBBLocal.center.z, aabbOBBLocal.max.z))};
-    Vector3 distance = closestPoint - sphereOBBLocal.center;
-    return distance.Dot(distance) <= (sphereOBBLocal.radius * sphereOBBLocal.radius);
+    // ローカル空間でのAABB-Sphere判定を使用
+    return IsCollision(aabbOBBLocal, sphereOBBLocal);
 }
 
 bool CollisionManager::IsCollision(const Sphere &s1, const Sphere &s2) {
-    float distance = (s2.center - s1.center).Length();
+    // 距離の二乗と半径の和の二乗を比較（平方根計算を避ける）
+    Vector3 diff = s2.center - s1.center;
+    float distanceSquared = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+    float radiusSum = s1.radius + s2.radius;
 
-    if (distance <= s1.radius + s2.radius) {
-        // 当たったとき
-        return true;
-    } else {
-        // 当たっていないとき
-        return false;
-    }
+    return distanceSquared <= (radiusSum * radiusSum);
 }
 
 bool CollisionManager::IsCollision(const AABB &aabb, const OBB &obb) {

@@ -5,9 +5,9 @@ void Ground::Init(const std::string className) {
     BaseObject::CreatePrimitiveModel(PrimitiveType::Plane);
     BaseObject::SetTexture("debug/ground.png");
     Collider::SetCollisionEnabled(false);
-    transform_.translation_.y = -1.0f;
-    transform_.scale_ = {1000.0f, 1000.0f, 1000.0f};
-    transform_.rotation_.x = degreesToRadians(-90.0f);
+    transform_->translation_.y = -1.0f;
+    transform_->scale_ = {1000.0f, 1000.0f, 1000.0f};
+    transform_->rotation_.x = degreesToRadians(-90.0f);
 }
 
 void Ground::Update() {

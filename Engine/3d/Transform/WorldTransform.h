@@ -23,8 +23,8 @@ public:
 	// 親となるワールド変換へのポインタ
 	const WorldTransform* parent_ = nullptr;
 
-	WorldTransform() = default;
-	~WorldTransform() = default;
+	WorldTransform();
+	~WorldTransform();
 
 	/// <summary>
 	/// 初期化

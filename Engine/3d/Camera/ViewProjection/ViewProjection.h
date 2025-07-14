@@ -5,7 +5,6 @@
 #include"numbers"
 #include "d3d12.h"
 #include"DirectXCommon.h"
-#include <WorldTransform.h>
 
 struct ConstBufferDataViewProjection {
 	Matrix4x4 view;
@@ -81,7 +80,6 @@ public:
 	/// <returns>定数バッファ</returns>
 	const Microsoft::WRL::ComPtr<ID3D12Resource>& GetConstBuffer() const { return constBuffer_; }
 
-	bool IsOutsideViewFrustum(const WorldTransform& worldTransform) const;
 private:
 
 	DirectXCommon* dxCommon_ = nullptr;

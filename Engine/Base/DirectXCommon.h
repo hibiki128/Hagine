@@ -73,7 +73,7 @@ class DirectXCommon {
         const wchar_t *profile);
 
     // Resourceの作成
-    Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(size_t sizeInBytes);
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(size_t sizeInBytes, bool isUAV = false);
 
     // DirectX12のTextureResourceを作る
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(const DirectX::TexMetadata &metadata);

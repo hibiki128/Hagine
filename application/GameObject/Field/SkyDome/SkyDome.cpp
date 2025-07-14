@@ -5,7 +5,7 @@ void SkyDome::Init(const std::string className) {
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);
     BaseObject::SetTexture("debug/Fine_Basin.jpg");
     Collider::SetCollisionEnabled(false);
-    transform_.scale_ = {1000.0f, 1000.0f, 1000.0f};
+    transform_->scale_ = {1000.0f, 1000.0f, 1000.0f};
 }
 
 void SkyDome::Update() {

@@ -1,11 +1,8 @@
 #pragma once
-#include "type/Matrix4x4.h"
+#include "Material/Material.h"
+#include "Mesh/Mesh.h"
 #include "ModelCommon.h"
-#include "type/Quaternion.h"
-#include "Srv/SrvManager.h"
-#include "type/Vector2.h"
-#include "type/Vector3.h"
-#include "type/Vector4.h"
+#include "Object/Object3dCommon.h"
 #include "animation/Animator.h"
 #include "animation/Bone.h"
 #include "animation/Skin.h"
@@ -15,10 +12,12 @@
 #include "assimp/scene.h"
 #include "map"
 #include "span"
-
-#include "Material/Material.h"
-#include "Mesh/Mesh.h"
-#include "Object/Object3dCommon.h"
+#include "type/Matrix4x4.h"
+#include "type/Quaternion.h"
+#include "type/Vector2.h"
+#include "type/Vector3.h"
+#include "type/Vector4.h"
+#include <Graphics/Srv/SrvManager.h>
 #include <Primitive/PrimitiveModel.h>
 #include <unordered_set>
 
@@ -58,10 +57,12 @@ class Model {
 
     void CreatePrimitiveModel(const PrimitiveType &type);
 
+    void Update();
+
     /// <summary>
     /// 描画
     /// </summary>
-    void Draw(Object3dCommon *objCommon,std::vector<Material> materials);
+    void Draw(const Vector4 &color, bool lighting, bool reflect);
 
     // Setter methods
     void SetSrv(SrvManager *srvManager) { srvManager_ = srvManager; }
@@ -69,28 +70,18 @@ class Model {
     void SetSkin(Skin *skin) { skin_ = skin; }
     void SetBone(Bone *bone) { bone_ = bone; }
 
-    // マルチマテリアル対応のテクスチャ設定
-    void SetTextureIndex(const std::string &filePath, uint32_t materialIndex);
-    void SetAllTexturesIndex(const std::string &filePath);
-
     // マテリアル関連
     void SetMaterialData(const std::vector<MaterialData> &materialData) { modelData.materials = materialData; }
     std::vector<MaterialData> &GetMaterialData() { return modelData.materials; }
+    void SetTexture(const std::string &filePath, uint32_t index) {
+        materials_[index]->SetTexture(filePath);
+    }
 
-    // マテリアル色設定
-    void SetMaterialColor(uint32_t materialIndex, const Vector4 &color);
-    void SetAllMaterialsColor(const Vector4 &color);
-
-    // マテリアルの光沢度設定
-    void SetMaterialShininess(uint32_t materialIndex, float shininess);
-    void SetAllMaterialsShininess(float shininess);
-
-    // UV変換設定
-    void SetMaterialUVTransform(uint32_t materialIndex, const Matrix4x4 &uvTransform);
-    void SetAllMaterialsUVTransform(const Matrix4x4 &uvTransform);
-
-    // メッシュとマテリアルの関連付け
-    void SetMeshMaterial(uint32_t meshIndex, uint32_t materialIndex);
+    void SetEnvironmentCoefficients(float value) {
+        for (auto &material : materials_) {
+            material->SetEnvironmentCoefficients(value);
+        }
+    };
 
     // Getter methods
     ModelData GetModelData() { return modelData; }
@@ -123,18 +114,4 @@ class Model {
     /// <param name="node"></param>
     /// <returns></returns>
     static Node ReadNode(aiNode *node);
-
-    /// <summary>
-    /// マテリアルインデックス検証
-    /// </summary>
-    /// <param name="materialIndex"></param>
-    /// <returns></returns>
-    bool IsValidMaterialIndex(uint32_t materialIndex) const;
-
-    /// <summary>
-    /// メッシュインデックス検証
-    /// </summary>
-    /// <param name="meshIndex"></param>
-    /// <returns></returns>
-    bool IsValidMeshIndex(uint32_t meshIndex) const;
 };

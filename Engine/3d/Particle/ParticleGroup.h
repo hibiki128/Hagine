@@ -1,9 +1,9 @@
 #pragma once
 #include "Model/Model.h"
 #include "Primitive/PrimitiveModel.h"
-#include <ModelStructs.h>
-#include <ParticleCommon.h>
-#include <WorldTransform.h>
+#include <Model/ModelStructs.h>
+#include"ParticleCommon.h"
+#include <Transform/WorldTransform.h>
 #include <list>
 class ParticleGroup {
   public:

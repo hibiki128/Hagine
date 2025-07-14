@@ -1,5 +1,6 @@
 #include "MyGame.h"
-#include "SceneFactory.h"
+#include "Scene/SceneFactory.h"
+#include <Frame.h>
 
 void MyGame::Initialize() {
     Framework::Initialize();
@@ -25,15 +26,16 @@ void MyGame::Finalize() {
 
 void MyGame::Update() {
     Framework::Update();
+
     // -----ゲーム固有の処理-----
-    if (input->TriggerKey(DIK_F11)) {
-        winApp->ToggleFullScreen();
-    }
-    if (input->TriggerKey(DIK_F5)) {
-        imGuiManager_->GetIsShowMainUI() = !imGuiManager_->GetIsShowMainUI();
+    if (input_->TriggerKey(DIK_F11)) {
+        winApp_->ToggleFullScreen();
     }
 
 #ifdef _DEBUG
+    if (input_->TriggerKey(DIK_F5)) {
+        imGuiManager_->GetIsShowMainUI() = !imGuiManager_->GetIsShowMainUI();
+    }
     imGuiManager_->Begin();
     imGuizmoManager_->BeginFrame();
     imGuizmoManager_->SetViewProjection(sceneManager_->GetBaseScene()->GetViewProjection());
@@ -45,16 +47,18 @@ void MyGame::Update() {
         imGuiManager_->ShowSceneWindow();
     }
     imGuiManager_->ShowMainUI(offscreen_.get());
+    baseObjectManager_->DrawImGui();
     imGuiManager_->End();
-
 #endif // _DEBUG
+
+    motionEditor_->Update(Frame::DeltaTime());
 
     // -----------------------
 }
 
 void MyGame::Draw() {
-    dxCommon->PreRenderTexture();
-    srvManager->PreDraw();
+    dxCommon_->PreRenderTexture();
+    srvManager_->PreDraw();
     // -----描画開始-----
 
     // -----シーンごとの処理------
@@ -70,21 +74,25 @@ void MyGame::Draw() {
     //---------------
 #endif // _DEBUG
 
-    dxCommon->PreDraw();
+    dxCommon_->PreDraw();
 
     offscreen_->SetProjection(sceneManager_->GetBaseScene()->GetViewProjection()->matProjection_);
 
     offscreen_->Draw();
 
-    dxCommon->TransitionDepthBarrier();
+    dxCommon_->TransitionDepthBarrier();
     sceneManager_->DrawForOffScreen();
     sceneManager_->DrawTransition();
+
+    // フレーム統計を更新（ImGui描画前）
+    ParticleEditor::GetInstance()->UpdateFrameStats();
 
 #ifdef _DEBUG
     imGuiManager_->Draw();
 #endif // _DEBUG
        // ------------------------
 
+      
     // -----描画終了-----
-    dxCommon->PostDraw();
+    dxCommon_->PostDraw();
 }

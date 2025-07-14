@@ -1,7 +1,5 @@
 #include "Framework.h"
-#include "Engine/Frame/Frame.h"
-#include "ImGui/ImGuiManager.h"
-#include "ResourceLeakChecker/D3DResourceLeakChecker.h"
+#include <Frame.h>
 
 void Framework::Run() {
     // ゲームの初期化
@@ -28,20 +26,20 @@ void Framework::Initialize() {
 
     ///---------WinApp--------
     // WindowsAPIの初期化
-    winApp = WinApp::GetInstance();
-    winApp->Initialize();
+    winApp_ = WinApp::GetInstance();
+    winApp_->Initialize();
     ///-----------------------
 
     ///---------DirectXCommon----------
     // DirectXCommonの初期化
-    dxCommon = DirectXCommon::GetInstance();
-    dxCommon->Initialize(winApp);
+    dxCommon_ = DirectXCommon::GetInstance();
+    dxCommon_->Initialize(winApp_);
     ///--------------------------------
 
     ///--------SRVManager--------
     // SRVマネージャの初期化
-    srvManager = SrvManager::GetInstance();
-    srvManager->Initialize();
+    srvManager_ = SrvManager::GetInstance();
+    srvManager_->Initialize();
     ///--------------------------
 
     ///--------BaseObjectManager--------
@@ -51,62 +49,67 @@ void Framework::Initialize() {
     /// ---------ImGui---------
 #ifdef _DEBUG
     imGuiManager_ = ImGuiManager::GetInstance();
-    imGuiManager_->Initialize(winApp);
+    imGuiManager_->Initialize(winApp_);
     imGuiManager_->GetIsShowMainUI() = true;
 #endif // _DEBUG
        /// -----------------------
 
-        /// ---------ImGuizmo---------
+    /// ---------ImGuizmo---------
 #ifdef _DEBUG
     imGuizmoManager_ = ImGuizmoManager::GetInstance();
 #endif // _DEBUG
        /// -----------------------
 
     // offscreenのSRV作成
-    dxCommon->CreateOffscreenSRV();
+    dxCommon_->CreateOffscreenSRV();
     // depthのSRV作成
-    dxCommon->CreateDepthSRV();
+    dxCommon_->CreateDepthSRV();
 
     ///----------Input-----------
     // 入力の初期化
-    input = Input::GetInstance();
-    input->Init(winApp->GetHInstance(), winApp->GetHwnd());
+    input_ = Input::GetInstance();
+    input_->Init(winApp_->GetHInstance(), winApp_->GetHwnd());
     ///--------------------------
 
     ///-----------PipeLineManager-----------
     pipeLineManager_ = PipeLineManager::GetInstance();
-    pipeLineManager_->Initialize(dxCommon);
+    pipeLineManager_->Initialize(dxCommon_);
     ///-------------------------------------
 
+     ///-----------PipeLineManager-----------
+    computePipeLineManager_ = ComputePipeLineManager::GetInstance();
+    computePipeLineManager_->Initialize(dxCommon_);
+    ///-------------------------------------
+  
     ///-----------TextureManager----------
     textureManager_ = TextureManager::GetInstance();
-    textureManager_->Initialize(srvManager);
+    textureManager_->Initialize(srvManager_);
     ///-----------------------------------
 
     ///-----------ModelManager------------
     modelManager_ = ModelManager::GetInstance();
-    modelManager_->Initialize(srvManager);
+    modelManager_->Initialize(srvManager_);
     ///----------------------------------
 
     ///----------PrimitiveModel-----------
-    primitiveModel = PrimitiveModel::GetInstance();
-    primitiveModel->Initialize();
+    primitiveModel_ = PrimitiveModel::GetInstance();
+    primitiveModel_->Initialize();
     ///-----------------------------------
 
     ///----------SpriteCommon------------
     // スプライト共通部の初期化
-    spriteCommon = SpriteCommon::GetInstance();
-    spriteCommon->Initialize();
+    spriteCommon_ = SpriteCommon::GetInstance();
+    spriteCommon_->Initialize();
     ///----------------------------------
 
     ///----------ParticleCommon------------
-    particleCommon = ParticleCommon::GetInstance();
-    particleCommon->Initialize(dxCommon);
+    particleCommon_ = ParticleCommon::GetInstance();
+    particleCommon_->Initialize(dxCommon_);
     ///------------------------------------
 
     ///---------Audio-------------
-    audio = Audio::GetInstance();
-    audio->Initialize();
+    audio_ = Audio::GetInstance();
+    audio_->Initialize();
     ///---------------------------
 
     ///-------CollisionManager--------------
@@ -129,17 +132,26 @@ void Framework::Initialize() {
     line3d_->Initialize();
     ///------------------------
 
+    ///-------SkyBox-------
+    skyBox_ = SkyBox::GetInstance();
+    skyBox_->Initialize("debug/rostock_laage_airport_4k.dds");
+    ///--------------------
+
     LightGroup::GetInstance()->Initialize();
 
     ///-------ParticleEditor-------
-    particleEditor = ParticleEditor::GetInstance();
-    particleEditor->Initialize();
+    particleEditor_ = ParticleEditor::GetInstance();
+    particleEditor_->Initialize();
     ///----------------------------
 
     ///-------ParticleGroupManager-------
     particleGroupManager_ = ParticleGroupManager::GetInstance();
     particleGroupManager_->Initialize();
     ///---------------------------------
+
+    ///-------AttackManager-------
+    motionEditor_ = MotionEditor::GetInstance();
+    ///---------------------------
 
     /// 時間の初期化
     Frame::Init();
@@ -149,10 +161,14 @@ void Framework::Finalize() {
     sceneManager_->Finalize();
 
     // WindowsAPIの終了処理
-    winApp->Finalize();
+    winApp_->Finalize();
 
     ///-------PipeLineManager-------
     pipeLineManager_->Finalize();
+    ///-----------------------------
+
+    ///-------ComputePipeLineManager-------
+    computePipeLineManager_->Finalize();
     ///-----------------------------
 
     ///-------TextureManager-------
@@ -164,7 +180,7 @@ void Framework::Finalize() {
     ///---------------------------
 
     ///-------PrimitiveModel-------
-    primitiveModel->Finalize();
+    primitiveModel_->Finalize();
     ///-----------------------------
 
     ///-------ParticleGroupManager-------
@@ -176,13 +192,15 @@ void Framework::Finalize() {
 #endif // _DEBUG
     baseObjectManager_->Finalize();
     line3d_->Finalize();
-    srvManager->Finalize();
-    audio->Finalize();
+    skyBox_->Finalize();
+    srvManager_->Finalize();
+    audio_->Finalize();
+    motionEditor_->Finalize();
     LightGroup::GetInstance()->Finalize();
-    particleEditor->Finalize();
-    spriteCommon->Finalize();
-    particleCommon->Finalize();
-    dxCommon->Finalize();
+    particleEditor_->Finalize();
+    spriteCommon_->Finalize();
+    particleCommon_->Finalize();
+    dxCommon_->Finalize();
     delete sceneFactory_;
 }
 
@@ -191,9 +209,9 @@ void Framework::Update() {
     /// deltaTimeの更新
     Frame::Update();
 
-    baseObjectManager_->Update();
-
     sceneManager_->Update();
+
+    baseObjectManager_->Update();
 
     collisionManager_->Update();
 
@@ -203,14 +221,18 @@ void Framework::Update() {
 
     // -------Input-------
     // 入力の更新
-    input->Update();
+    input_->Update();
     // -------------------
 
     /// -------更新処理終了----------
-    endRequest_ = winApp->ProcessMessage();
+    endRequest_ = winApp_->ProcessMessage();
 }
 
 void Framework::LoadResource() {
+    particleEditor_->AddParticleEmitter("hitEmitter");
+    particleEditor_->AddParticleEmitter("chageEmitter");
+    particleEditor_->AddParticleEmitter("bulletEmitter");
+    particleEditor_->AddParticleEmitter("chageBullet");
 }
 
 void Framework::PlaySounds() {

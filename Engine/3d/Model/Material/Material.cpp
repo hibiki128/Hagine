@@ -1,7 +1,8 @@
 #include "Material.h"
 
-#include <Texture/TextureManager.h>
 #include "fstream"
+#include <Graphics/Texture/TextureManager.h>
+#include <Graphics/Srv/SrvManager.h>
 
 void Material::Initialize() {
     dxCommon_ = DirectXCommon::GetInstance();
@@ -20,12 +21,37 @@ void Material::PrimitiveInitialize(const PrimitiveType &type) {
     materialData_.textureFilePath = "debug/uvChecker.png";
 }
 
-void Material::Draw(Vector4 &color,bool &lighting) {
-    ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
+// デバッグ用: Material::Draw()でテクスチャインデックスを確認
+void Material::Draw(const Vector4 &color, bool lighting) {
+    // 描画時の一時的な値設定
     materialDataGPU_->color = color;
-    materialDataGPU_->enableLighting = lighting;
-    commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
-    SrvManager::GetInstance()->SetGraphicsRootDescriptorTable(2, materialDataGPU_->textureIndex);
+    materialDataGPU_->enableLighting = lighting ? 1 : 0;
+
+    ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
+    commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+
+    SrvManager::GetInstance()->SetGraphicsRootDescriptorTable(2, materialData_.textureIndex);
+}
+
+
+void Material::SetTexture(const std::string &texturePath) {
+    if (materialData_.textureFilePath == texturePath)
+        return;
+
+    // テクスチャを読み込み
+    TextureManager::GetInstance()->LoadTexture(texturePath);
+
+    // MaterialDataを更新
+    materialData_.textureFilePath = texturePath;
+    materialData_.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(texturePath);
+
+    // GPU側のデータも更新（色や他のパラメータも含む）
+    UpdateGPUData();
+}
+
+void Material::SetEnvironmentCoefficients(float environmentCoefficients) {
+    materialData_.environmentCoefficient = environmentCoefficients;
+    UpdateGPUData();
 }
 
 MaterialData Material::LoadMaterialTemplateFile(const std::string &directoryPath, const std::string &filename) {
@@ -56,14 +82,20 @@ MaterialData Material::LoadMaterialTemplateFile(const std::string &directoryPath
 }
 
 void Material::CreateMaterial() {
-    // Sprite用のマテリアルリソースをつくる
-    materialResource = dxCommon_->CreateBufferResource(sizeof(Material));
-    // 書き込むためのアドレスを取得
-    materialResource->Map(0, nullptr, reinterpret_cast<void **>(&materialDataGPU_));
-    // 色の設定
-    materialDataGPU_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-    // Lightingの設定
-    materialDataGPU_->enableLighting = true;
-    materialDataGPU_->uvTransform = MakeIdentity4x4();
-    materialDataGPU_->shininess = 20.0f;
+    // GPUバッファの作成
+    materialResource_ = dxCommon_->CreateBufferResource(sizeof(MaterialDataGPU));
+    materialResource_->Map(0, nullptr, reinterpret_cast<void **>(&materialDataGPU_));
+
+    // 初期値設定
+    UpdateGPUData();
+}
+
+void Material::UpdateGPUData() {
+    if (materialDataGPU_) {
+        materialDataGPU_->color = materialData_.color;
+        materialDataGPU_->enableLighting = materialData_.enableLighting ? 1 : 0;
+        materialDataGPU_->uvTransform = materialData_.uvTransform;
+        materialDataGPU_->shininess = materialData_.shininess;
+        materialDataGPU_->environmentCoefficient = materialData_.environmentCoefficient;
+    }
 }

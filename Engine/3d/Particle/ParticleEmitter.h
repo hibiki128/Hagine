@@ -1,7 +1,7 @@
 #pragma once
 #include "ParticleManager.h"
-#include "ViewProjection/ViewProjection.h"
-#include "WorldTransform.h"
+#include "Camera/ViewProjection/ViewProjection.h"
+#include "Transform/WorldTransform.h"
 #include <string>
 #ifdef _DEBUG
 #include "imgui.h"
@@ -31,6 +31,8 @@ class ParticleEmitter {
 
     void Debug(); // ImGui用の関数を追加
 
+    bool IsAllParticlesComplete();
+
     void AddParticleGroup(ParticleGroup *particleGroup);
     void RemoveParticleGroup(const std::string &name) {
         Manager_->RemoveParticleGroup(name);
@@ -38,11 +40,27 @@ class ParticleEmitter {
 
     int selectedGroupIndex_ = 0;
 
-    void SetPosition(const std::string &groupName, const Vector3 &position) { particleSettings_[groupName].translate = position; }
+    std::unique_ptr<ParticleEmitter> Clone() const;
+
+    bool GetIsAuto() { return isAuto_; }
+    Matrix4x4 GetWorldMatrix() { return transform_.matWorld_; }
+
+    void SetPosition(const Vector3 &position) { transform_.translation_ = position; }
     void SetPositionY(const std::string &groupName, float positionY) { particleSettings_[groupName].translate.y = positionY; }
     void SetRotate(const std::string &groupName, const Vector3 &rotate) { particleSettings_[groupName].rotation = rotate; }
     void SetRotateY(const std::string &groupName, float rotateY) { particleSettings_[groupName].rotation.y = rotateY; }
-    void SetScale(const std::string &groupName, const Vector3 &scale) { particleSettings_[groupName].scale = scale; }
+    void SetScale(const std::string &groupName, const Vector3 &scale) {
+        particleSettings_[groupName].scale = scale;
+    }
+    void SetStartScale(const std::string &groupName, const Vector3 &scale) {
+        particleSettings_[groupName].particleStartScale = scale;
+    }
+    void SetEndScale(const std::string &groupName, const Vector3 &scale) {
+        particleSettings_[groupName].particleEndScale = scale;
+    }
+    void SetWorldMatrix(const Matrix4x4 &worldMatrix) {
+        transform_.matWorld_ = worldMatrix;
+    }
     void SetCount(const std::string &groupName, int count) { particleSettings_[groupName].count = count; }
     void SetStartRotate(const std::string &groupName, const Vector3 &startRotate) { particleSettings_[groupName].startRote = startRotate; }
     void SetEndRotate(const std::string &groupName, const Vector3 &endRotate) { particleSettings_[groupName].endRote = endRotate; }
@@ -62,6 +80,44 @@ class ParticleEmitter {
     void SetEndColor(const std::string &groupName, const Vector4 &color) {
         particleSettings_[groupName].endColor = color;
     }
+    void SetScaleAll(const Vector3 &scale) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            if (setting.isSinMove) {
+                setting.particleStartScale = scale;
+            } else {
+                setting.scale = scale;
+            }
+        }
+    }
+    void SetStartAcce(const Vector3& acce) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            setting.startAcce = acce;
+        }
+    }
+    void SetStartAcceX(const float &acce) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            setting.startAcce.x = acce;
+        }
+    }
+    void SetStartAcceZ(const float &acce) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            setting.startAcce.z = acce;
+        }
+    }
+    void SetEndAcce(const Vector3& acce) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            setting.endAcce = acce;
+        }
+    }
+
+    size_t GetActiveParticleCount() const {
+        return Manager_ ? Manager_->GetActiveParticleCount() : 0;
+    }
+
+    // パーティクルマネージャーへのアクセス（デバッグ用）
+    ParticleManager *GetParticleManager() const {
+        return Manager_.get();
+    }
 
   private:
     // パーティクルを発生させるEmit関数
@@ -70,7 +126,7 @@ class ParticleEmitter {
     void LoadFromJson();
     void LoadParticleGroup();
     ParticleSetting DefaultSetting();
-
+    void ShowBlendModeCombo(BlendMode &currentMode);
     void DebugParticleData();
 
   private:

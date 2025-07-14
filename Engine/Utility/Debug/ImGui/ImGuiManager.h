@@ -1,11 +1,8 @@
 #pragma once
 #include "DirectXCommon.h"
-#include "Srv/SrvManager.h"
 #include "WinApp.h"
 #include <BaseScene.h>
-#include <application/Base/BaseObject.h>
-
-#include "Object/BaseObjectManager.h"
+#include "Object/Base/BaseObjectManager.h"
 
 class ImGuizmoManager;
 class OffScreen;

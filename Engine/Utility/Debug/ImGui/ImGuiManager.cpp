@@ -1,14 +1,15 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
-#include "Engine/Offscreen/OffScreen.h"
 #include "ImGuizmo.h"
 #include "ImGuizmoManager.h"
-#include "SceneManager.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include <Engine/Frame/Frame.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
+#include"Object/Base/BaseObject.h"
+#include"Scene/SceneManager.h"
+#include"Engine/OffScreen/OffScreen.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -234,21 +235,14 @@ void ImGuiManager::ShowMainMenu() {
     if (ImGui::BeginMainMenuBar()) {
         // ファイルメニュー
         if (ImGui::BeginMenu(ICON_FA_FILE " ファイル")) {
-            if (ImGui::MenuItem(ICON_FA_PLUS " 新規作成", "Ctrl+N")) {
-                // 新規プロジェクト作成処理
+            // シーン管理セクション
+            if (ImGui::MenuItem(ICON_FA_DOWNLOAD " シーン保存")) {
+                // BaseObjectManagerのシーン保存モーダルを開く
+                baseObjectManager_->OpenSceneSaveModal();
             }
-            if (ImGui::MenuItem(ICON_FA_FOLDER_OPEN " 開く", "Ctrl+O")) {
-                // プロジェクトを開く処理
-            }
-            if (ImGui::MenuItem(ICON_FA_SAVE " 保存", "Ctrl+S")) {
-                // プロジェクト保存処理
-            }
-            if (ImGui::MenuItem(ICON_FA_SAVE " 名前を付けて保存", "Ctrl+Shift+S")) {
-                // 名前を付けて保存処理
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_FILE_EXPORT " エクスポート")) {
-                // エクスポート処理
+            if (ImGui::MenuItem(ICON_FA_UPLOAD " シーン読み込み")) {
+                // BaseObjectManagerのシーン読み込みモーダルを開く
+                baseObjectManager_->OpenSceneLoadModal();
             }
             ImGui::Separator();
             if (ImGui::MenuItem(ICON_FA_DOOR_OPEN " 終了", "Alt+F4")) {
@@ -319,6 +313,7 @@ void ImGuiManager::ShowMainMenu() {
         if (ImGui::BeginMenu(ICON_FA_CUBE " オブジェクト")) {
             if (ImGui::MenuItem(ICON_FA_PLUS " 新規オブジェクト", "Ctrl+Shift+N")) {
                 // 新規オブジェクト作成
+                baseObjectManager_->OpenObjectCreationModal();
             }
 
             // 3Dオブジェクト
@@ -388,7 +383,7 @@ void ImGuiManager::ShowMainMenu() {
                 }
 
                 if (ImGui::MenuItem(ICON_FA_TRASH_ALT " オブジェクト全削除")) {
-                    baseObjectManager_->DeleteObject();
+                    baseObjectManager_->RemoveAllObjects();
                     imGuizmoManager_->DeleteTarget();
                 }
 
@@ -544,9 +539,11 @@ void ImGuiManager::ShowFPSWindow() {
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
-    ImGui::Begin("FPS", &showFPSView_, flags);
+    ImGui::Begin("統計", &showFPSView_, flags);
 
     DisplayFPS();
+
+    ParticleEditor::GetInstance()->SceneParticleCount();
 
     ImGui::End();
 }
@@ -695,6 +692,7 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowOffScreenSettingWindow(offscreen);
     // ライトウィンドウを描画
     ShowLightSettingWindow();
+    baseObjectManager_->UpdateImGui();
 }
 
 bool &ImGuiManager::GetIsShowMainUI() {
@@ -730,23 +728,27 @@ void ImGuiManager::ShowDockSpace() {
 
 void ImGuiManager::DisplayFPS() {
 #ifdef _DEBUG
+    if (ImGui::CollapsingHeader("FPS")) {
+    
     ImGuiIO &io = ImGui::GetIO();
     // FPSを取得
     float fps = Frame::GetFPS();
     float deltaTime = Frame::DeltaTime() * 1000.0f; // ミリ秒単位に変換
 
-    // FPSを色付きで表示
-    ImVec4 color;
-    if (fps >= 59.0f) {
-        color = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // 60FPS付近なら緑色
-    } else if (fps >= 30.0f) {
-        color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // 30-59FPSなら黄色
-    } else {
-        color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 30FPS未満なら赤色
-    }
+        // FPSを色付きで表示
+        ImVec4 color;
+        if (fps >= 59.0f) {
+            color = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // 60FPS付近なら緑色
+        } else if (fps >= 30.0f) {
+            color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // 30-59FPSなら黄色
+        } else {
+            color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 30FPS未満なら赤色
+        }
 
     ImGui::TextColored(color, "FPS: %.1f", fps);
     ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
+    //ImGui::TreePop();
+    }
 #endif // _DEBUG
 }
 

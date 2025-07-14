@@ -1,5 +1,4 @@
 #include "SceneManager.h"
-#include "ImGui/ImGuiManager.h"
 #include <cassert>
 
 SceneManager *SceneManager::instance = nullptr;
@@ -85,6 +84,8 @@ void SceneManager::NextSceneReservation(const std::string &sceneName) {
     transition_->Reset();
     assert(sceneFactory_);
     assert(nextScene_ == nullptr);
+
+    currentSceneName_ = sceneName;
 
     // 次シーンを生成
     nextScene_ = sceneFactory_->CreateScene(sceneName);

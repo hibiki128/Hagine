@@ -2,25 +2,29 @@
 #include "DirectXCommon.h"
 #ifdef _DEBUG
 #endif // _DEBUG
-#include "AbstractSceneFactory.h"
 #include "Audio.h"
-#include "CollisionManager.h"
-#include "Input.h"
-#include"Model/ModelManager.h"
-#include"Object/Object3dCommon.h"
-#include "ParticleCommon.h"
-#include "ParticleEditor.h"
-#include "SceneManager.h"
-#include "SpriteCommon.h"
-#include"Srv/SrvManager.h"
-#include"Texture/TextureManager.h"
+#include "Collider/CollisionManager.h"
+#include "Debug/ImGui/ImGuiManager.h"
+#include "Debug/ImGui/ImGuizmoManager.h"
+#include "Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"
 #include "Engine/offscreen/OffScreen.h"
-#include <line/DrawLine3D.h>
-#include"ImGui/ImGuiManager.h"
-#include"ImGui/ImGuizmoManager.h"
-#include"Object/BaseObjectManager.h"
-#include"Particle/ParticleGroupManager.h"
-#include"PipeLine/PipeLineManager.h"
+#include "Graphics/Model/ModelManager.h"
+#include "Graphics/PipeLine/ComputePipeLineManager.h"
+#include "Graphics/PipeLine/PipeLineManager.h"
+#include "Graphics/Srv/SrvManager.h"
+#include "Graphics/Texture/TextureManager.h"
+#include "Input.h"
+#include "Object/Base/BaseObjectManager.h"
+#include "Object/Object3dCommon.h"
+#include "Particle/ParticleCommon.h"
+#include "Particle/ParticleEditor.h"
+#include "Particle/ParticleGroupManager.h"
+#include "Scene/AbstractSceneFactory.h"
+#include "Scene/SceneManager.h"
+#include "SkyBox/SkyBox.h"
+#include "SpriteCommon.h"
+#include "line/DrawLine3D.h"
+#include <Application/Utility/MotionEditor/MotionEditor.h>
 
 class Framework {
   public: // メンバ関数
@@ -63,20 +67,21 @@ class Framework {
     /// </summary>
     /// <returns></returns>
     virtual bool IsEndRequest() { return endRequest_; }
-  private:
 
+  private:
   protected:
-    Input *input = nullptr;
-    Audio *audio = nullptr;
-    DirectXCommon *dxCommon = nullptr;
-    WinApp *winApp = nullptr;
+    Input *input_ = nullptr;
+    Audio *audio_ = nullptr;
+    DirectXCommon *dxCommon_ = nullptr;
+    WinApp *winApp_ = nullptr;
     DrawLine3D *line3d_ = nullptr;
+    SkyBox *skyBox_ = nullptr;
 
     // シーンファクトリー
     AbstractSceneFactory *sceneFactory_ = nullptr;
 
     SceneManager *sceneManager_ = nullptr;
-    SrvManager *srvManager = nullptr;
+    SrvManager *srvManager_ = nullptr;
     TextureManager *textureManager_ = nullptr;
     ModelManager *modelManager_ = nullptr;
     ImGuiManager *imGuiManager_ = nullptr;
@@ -84,12 +89,14 @@ class Framework {
     BaseObjectManager *baseObjectManager_ = nullptr;
     ParticleGroupManager *particleGroupManager_ = nullptr;
     PipeLineManager *pipeLineManager_ = nullptr;
+    MotionEditor *motionEditor_ = nullptr;
+    ComputePipeLineManager *computePipeLineManager_ = nullptr;
 
-    SpriteCommon *spriteCommon = nullptr;
-    ParticleCommon *particleCommon = nullptr;
-    ParticleEditor *particleEditor = nullptr;
+    SpriteCommon *spriteCommon_ = nullptr;
+    ParticleCommon *particleCommon_ = nullptr;
+    ParticleEditor *particleEditor_ = nullptr;
 
-    PrimitiveModel *primitiveModel = nullptr;
+    PrimitiveModel *primitiveModel_ = nullptr;
 
     std::unique_ptr<CollisionManager> collisionManager_;
     std::unique_ptr<OffScreen> offscreen_;
