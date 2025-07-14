@@ -76,11 +76,11 @@ void Framework::Initialize() {
     pipeLineManager_->Initialize(dxCommon_);
     ///-------------------------------------
 
-     ///-----------PipeLineManager-----------
+    ///-----------PipeLineManager-----------
     computePipeLineManager_ = ComputePipeLineManager::GetInstance();
     computePipeLineManager_->Initialize(dxCommon_);
     ///-------------------------------------
-  
+
     ///-----------TextureManager----------
     textureManager_ = TextureManager::GetInstance();
     textureManager_->Initialize(srvManager_);
@@ -158,6 +158,7 @@ void Framework::Initialize() {
 }
 
 void Framework::Finalize() {
+    baseObjectManager_->Finalize();
     sceneManager_->Finalize();
 
     // WindowsAPIの終了処理
@@ -190,7 +191,7 @@ void Framework::Finalize() {
 #ifdef _DEBUG
     imGuiManager_->Finalize();
 #endif // _DEBUG
-    baseObjectManager_->Finalize();
+
     line3d_->Finalize();
     skyBox_->Finalize();
     srvManager_->Finalize();

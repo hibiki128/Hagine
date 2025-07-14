@@ -190,105 +190,6 @@ Vector3 MotionEditor::TransformLocalToWorld(const Vector3 &localOffset, const Ma
     return {worldOffset4.x, worldOffset4.y, worldOffset4.z};
 }
 
-// 登録済みオブジェクトの再生
-void MotionEditor::Play(const std::string &objectName) {
-    auto it = motions_.find(objectName);
-    if (it == motions_.end()) {
-        return; // オブジェクトが登録されていない
-    }
-
-    Motion &motion = it->second;
-    if (!motion.target) {
-        return; // ターゲットが無効
-    }
-
-    // 初期位置の記録（まだ記録されていない場合のみ）
-    if (!motion.hasInitialTransform) {
-        motion.initialPos = motion.target->GetLocalPosition();
-        motion.initialRot = motion.target->GetLocalRotation();
-        motion.initialScale = motion.target->GetLocalScale();
-        motion.hasInitialTransform = true;
-    }
-
-    // 再生開始時点の現在のTransformを基準として保存
-    motion.basePos = motion.target->GetLocalPosition();
-    motion.baseRot = motion.target->GetLocalRotation();
-    motion.baseScale = motion.target->GetLocalScale();
-
-    // 実際の開始・終了値を計算（ローカルオフセット用）
-    motion.actualStartRot = motion.baseRot + motion.startRotOffset;
-    motion.actualEndRot = motion.baseRot + motion.endRotOffset;
-    motion.actualStartScale = motion.baseScale + motion.startScaleOffset;
-    motion.actualEndScale = motion.baseScale + motion.endScaleOffset;
-
-    // 再生開始
-    motion.currentTime = 0.0f;
-    motion.status = MotionStatus::Playing;
-}
-
-// ファイルから読み込んで任意のオブジェクトで再生
-bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName) {
-    if (!target) {
-        return false;
-    }
-
-    // 一時的なモーションデータを作成
-    std::string tempName = GetTemporaryMotionName(target, fileName);
-
-    DataHandler data("AttackData", fileName);
-    Motion &motion = motions_[tempName];
-
-    motion.target = target;
-    motion.objectName = tempName;
-    motion.isTemporary = true;
-    motion.totalTime = data.Load<float>("totalTime", 1.0f);
-    motion.colliderOnTime = data.Load("colliderOnTime", 0.3f);
-    motion.colliderOffTime = data.Load("colliderOffTime", 0.6f);
-    motion.startPosOffset = data.Load<Vector3>("startPosOffset", {});
-    motion.endPosOffset = data.Load<Vector3>("endPosOffset", {});
-    motion.startRotOffset = data.Load<Vector3>("startRotOffset", {});
-    motion.endRotOffset = data.Load<Vector3>("endRotOffset", {});
-    motion.startScaleOffset = data.Load<Vector3>("startScaleOffset", {0, 0, 0});
-    motion.endScaleOffset = data.Load<Vector3>("endScaleOffset", {0, 0, 0});
-    int easingInt = data.Load("easingType", 0);
-    motion.easingType = static_cast<EasingType>(easingInt);
-
-    motion.useCatmullRom = data.Load<bool>("useCatmullRom", false);
-    int pointCount = data.Load<int>("controlPointCount", 0);
-    motion.controlPoints.clear();
-    for (int i = 0; i < pointCount; ++i) {
-        Vector3 point = data.Load<Vector3>("controlPoint" + std::to_string(i), {0, 0, 0});
-        motion.controlPoints.push_back(point);
-    }
-    
-    motion.basePos = motion.initialPos;
-    motion.baseRot = motion.initialRot;
-    motion.baseScale = motion.initialScale;
-
-    // 初期位置の記録
-    motion.initialPos = target->GetLocalPosition();
-    motion.initialRot = target->GetLocalRotation();
-    motion.initialScale = target->GetLocalScale();
-    motion.hasInitialTransform = true;
-
-    // 再生開始時点の現在のTransformを基準として保存
-    motion.basePos = target->GetLocalPosition();
-    motion.baseRot = target->GetLocalRotation();
-    motion.baseScale = target->GetLocalScale();
-
-    // 回転・スケール用の実際の開始・終了値を計算
-    motion.actualStartRot = motion.baseRot + motion.startRotOffset;
-    motion.actualEndRot = motion.baseRot + motion.endRotOffset;
-    motion.actualStartScale = motion.baseScale + motion.startScaleOffset;
-    motion.actualEndScale = motion.baseScale + motion.endScaleOffset;
-
-    // 再生開始
-    motion.currentTime = 0.0f;
-    motion.status = MotionStatus::Playing;
-
-    return true;
-}
-
 // ステータス確認関数
 MotionStatus MotionEditor::GetMotionStatus(const std::string &objectName) {
     auto it = motions_.find(objectName);
@@ -310,50 +211,6 @@ std::string MotionEditor::GetTemporaryMotionName(BaseObject *target, const std::
     return "temp_" + target->GetName() + "_" + fileName;
 }
 
-void MotionEditor::Stop(const std::string &objectName) {
-    auto it = motions_.find(objectName);
-    if (it != motions_.end()) {
-        Motion &motion = it->second;
-        motion.status = MotionStatus::Stopped;
-        motion.currentTime = 0.0f;
-
-        // 初期位置に戻すが固定はしない
-        if (motion.hasInitialTransform && motion.target) {
-            motion.target->GetLocalPosition() = motion.initialPos;
-            motion.target->GetLocalRotation() = motion.initialRot;
-            motion.target->GetLocalScale() = motion.initialScale;
-        }
-
-        // 一時的なモーションの場合は削除
-        if (motion.isTemporary) {
-            motions_.erase(it);
-        }
-    }
-}
-
-// 全ての再生停止
-void MotionEditor::StopAll() {
-    auto it = motions_.begin();
-    while (it != motions_.end()) {
-        Motion &motion = it->second;
-        motion.status = MotionStatus::Stopped;
-        motion.currentTime = 0.0f;
-
-        // 初期位置に戻すが固定はしない
-        if (motion.hasInitialTransform && motion.target) {
-            motion.target->GetLocalPosition() = motion.initialPos;
-            motion.target->GetLocalRotation() = motion.initialRot;
-            motion.target->GetLocalScale() = motion.initialScale;
-        }
-
-        // 一時的なモーションの場合は削除
-        if (motion.isTemporary) {
-            it = motions_.erase(it);
-        } else {
-            ++it;
-        }
-    }
-}
 
 void MotionEditor::ResetInitialPosition(const std::string &objectName) {
     auto it = motions_.find(objectName);
@@ -443,19 +300,17 @@ void MotionEditor::DrawControlPoints() {
     DrawLine3D *drawLine = DrawLine3D::GetInstance();
     const float cubeSize = 0.4f;
 
-    // 基準位置を取得（経過時間が0.0fの時のみ現在位置、それ以外は basePos）
+    // 基準位置を取得（ローカル座標系での位置）
     Vector3 basePos;
     if (motion.currentTime == 0.0f) {
-        basePos = motion.target->GetLocalPosition(); // 経過時間0.0fの時は現在位置を使用
+        basePos = motion.target->GetLocalPosition(); // 経過時間0.0fの時は現在のローカル位置を使用
     } else {
-        basePos = motion.basePos; // 再生中・再生後は再生開始時の位置を固定で使用
+        basePos = motion.basePos; // 再生中・再生後は再生開始時のローカル位置を固定で使用
     }
 
     for (size_t i = 0; i < motion.controlPoints.size(); ++i) {
-        // ローカルオフセットをワールド座標に変換
-        Vector3 localOffset = motion.controlPoints[i];
-        Vector3 worldOffset = TransformLocalToWorld(localOffset, motion.target->GetWorldTransform()->matWorld_);
-        Vector3 worldPos = basePos + worldOffset;
+        // ローカルオフセットをローカル座標系で直接使用
+        Vector3 localPos = basePos + motion.controlPoints[i];
 
         // 制御点の種類に応じて色を変更
         Vector4 controlPointColor;
@@ -474,13 +329,13 @@ void MotionEditor::DrawControlPoints() {
             controlPointColor.z = std::min(controlPointColor.z + 0.5f, 1.0f);
         }
 
-        // 立方体で制御点を描画
-        drawLine->DrawSphere(worldPos, controlPointColor, cubeSize, 8);
+        // 立方体で制御点を描画（ローカル座標系で）
+        drawLine->DrawSphere(localPos, controlPointColor, cubeSize, 8);
 
         // 制御点番号表示用の小さな線（上向き）
-        Vector3 numberPos = worldPos;
+        Vector3 numberPos = localPos;
         numberPos.y += cubeSize + 0.2f;
-        drawLine->SetPoints(worldPos, numberPos, controlPointColor);
+        drawLine->SetPoints(localPos, numberPos, controlPointColor);
     }
 }
 
@@ -496,45 +351,37 @@ void MotionEditor::DrawCatmullRomCurve() {
     const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f}; // オレンジ色
     const int curveResolution = 100;                     // 曲線の解像度
 
-    // 基準位置を取得（経過時間が0.0fの時のみ現在位置、それ以外は basePos）
+    // 基準位置を取得（ローカル座標系での位置）
     Vector3 basePos;
     if (motion.currentTime == 0.0f) {
-        basePos = motion.target->GetLocalPosition(); // 経過時間0.0fの時は現在位置を使用
+        basePos = motion.target->GetLocalPosition(); // 経過時間0.0fの時は現在のローカル位置を使用
     } else {
-        basePos = motion.basePos; // 再生中・再生後は再生開始時の位置を固定で使用
+        basePos = motion.basePos; // 再生中・再生後は再生開始時のローカル位置を固定で使用
     }
 
-    // 曲線の描画
+    // 曲線の描画（ローカル座標系で）
     Vector3 prevLocalOffset = CatmullRomInterpolation(motion.controlPoints, 0.0f);
-    Vector3 prevWorldOffset = TransformLocalToWorld(prevLocalOffset, motion.target->GetWorldTransform()->matWorld_);
-    Vector3 prevWorldPoint = basePos + prevWorldOffset;
+    Vector3 prevLocalPoint = basePos + prevLocalOffset;
 
     for (int i = 1; i <= curveResolution; ++i) {
         float t = (float)i / curveResolution;
         Vector3 currentLocalOffset = CatmullRomInterpolation(motion.controlPoints, t);
-        Vector3 currentWorldOffset = TransformLocalToWorld(currentLocalOffset, motion.target->GetWorldTransform()->matWorld_);
-        Vector3 currentWorldPoint = basePos + currentWorldOffset;
+        Vector3 currentLocalPoint = basePos + currentLocalOffset;
 
-        drawLine->SetPoints(prevWorldPoint, currentWorldPoint, curveColor);
-        prevWorldPoint = currentWorldPoint;
+        drawLine->SetPoints(prevLocalPoint, currentLocalPoint, curveColor);
+        prevLocalPoint = currentLocalPoint;
     }
 
     // デバッグ用：制御点間を直線で結ぶ（薄い色）
     const Vector4 debugLineColor = {0.3f, 0.3f, 0.3f, 1.0f}; // 薄いグレー
     for (size_t i = 0; i < motion.controlPoints.size() - 1; ++i) {
-        Vector3 localOffset1 = motion.controlPoints[i];
-        Vector3 localOffset2 = motion.controlPoints[i + 1];
+        Vector3 localPoint1 = basePos + motion.controlPoints[i];
+        Vector3 localPoint2 = basePos + motion.controlPoints[i + 1];
 
-        Vector3 worldOffset1 = TransformLocalToWorld(localOffset1, motion.target->GetWorldTransform()->matWorld_);
-        Vector3 worldOffset2 = TransformLocalToWorld(localOffset2, motion.target->GetWorldTransform()->matWorld_);
-
-        Vector3 worldPoint1 = basePos + worldOffset1;
-        Vector3 worldPoint2 = basePos + worldOffset2;
-
-        drawLine->SetPoints(worldPoint1, worldPoint2, debugLineColor);
+        drawLine->SetPoints(localPoint1, localPoint2, debugLineColor);
     }
 
-    // 基準位置を球で表示（経過時間0.0fの時は現在位置、それ以外は固定位置）
+    // 基準位置を球で表示（ローカル座標系で）
     const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f}; // 白色
     drawLine->DrawSphere(basePos, basePosColor, 0.2f, 32);
 
@@ -736,4 +583,148 @@ Motion MotionEditor::Load(const std::string &fileName) {
         m.controlPoints.push_back(point);
     }
     return m;
+}
+
+// 登録済みオブジェクトの再生
+void MotionEditor::Play(const std::string &objectName) {
+    auto it = motions_.find(objectName);
+    if (it == motions_.end()) {
+        return; // オブジェクトが登録されていない
+    }
+
+    Motion &motion = it->second;
+    if (!motion.target) {
+        return; // ターゲットが無効
+    }
+
+    // 初期位置の記録（まだ記録されていない場合のみ）
+    if (!motion.hasInitialTransform) {
+        motion.initialPos = motion.target->GetLocalPosition();
+        motion.initialRot = motion.target->GetLocalRotation();
+        motion.initialScale = motion.target->GetLocalScale();
+        motion.hasInitialTransform = true;
+    }
+
+    // 再生開始時点の現在のTransformを基準として保存
+    motion.basePos = motion.target->GetLocalPosition();
+    motion.baseRot = motion.target->GetLocalRotation();
+    motion.baseScale = motion.target->GetLocalScale();
+
+    // 実際の開始・終了値を計算（ローカルオフセット用）
+    motion.actualStartRot = motion.baseRot + motion.startRotOffset;
+    motion.actualEndRot = motion.baseRot + motion.endRotOffset;
+    motion.actualStartScale = motion.baseScale + motion.startScaleOffset;
+    motion.actualEndScale = motion.baseScale + motion.endScaleOffset;
+
+    // 再生開始
+    motion.currentTime = 0.0f;
+    motion.status = MotionStatus::Playing;
+}
+
+// ファイルから読み込んで任意のオブジェクトで再生
+bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName) {
+    if (!target) {
+        return false;
+    }
+
+    // 一時的なモーションデータを作成
+    std::string tempName = GetTemporaryMotionName(target, fileName);
+
+    DataHandler data("AttackData", fileName);
+    Motion &motion = motions_[tempName];
+
+    motion.target = target;
+    motion.objectName = tempName;
+    motion.isTemporary = true;
+    motion.totalTime = data.Load<float>("totalTime", 1.0f);
+    motion.colliderOnTime = data.Load("colliderOnTime", 0.3f);
+    motion.colliderOffTime = data.Load("colliderOffTime", 0.6f);
+    motion.startPosOffset = data.Load<Vector3>("startPosOffset", {});
+    motion.endPosOffset = data.Load<Vector3>("endPosOffset", {});
+    motion.startRotOffset = data.Load<Vector3>("startRotOffset", {});
+    motion.endRotOffset = data.Load<Vector3>("endRotOffset", {});
+    motion.startScaleOffset = data.Load<Vector3>("startScaleOffset", {0, 0, 0});
+    motion.endScaleOffset = data.Load<Vector3>("endScaleOffset", {0, 0, 0});
+    int easingInt = data.Load("easingType", 0);
+    motion.easingType = static_cast<EasingType>(easingInt);
+
+    motion.useCatmullRom = data.Load<bool>("useCatmullRom", false);
+    int pointCount = data.Load<int>("controlPointCount", 0);
+    motion.controlPoints.clear();
+    for (int i = 0; i < pointCount; ++i) {
+        Vector3 point = data.Load<Vector3>("controlPoint" + std::to_string(i), {0, 0, 0});
+        motion.controlPoints.push_back(point);
+    }
+
+    motion.basePos = motion.initialPos;
+    motion.baseRot = motion.initialRot;
+    motion.baseScale = motion.initialScale;
+
+    // 初期位置の記録
+    motion.initialPos = target->GetLocalPosition();
+    motion.initialRot = target->GetLocalRotation();
+    motion.initialScale = target->GetLocalScale();
+    motion.hasInitialTransform = true;
+
+    // 再生開始時点の現在のTransformを基準として保存
+    motion.basePos = target->GetLocalPosition();
+    motion.baseRot = target->GetLocalRotation();
+    motion.baseScale = target->GetLocalScale();
+
+    // 回転・スケール用の実際の開始・終了値を計算
+    motion.actualStartRot = motion.baseRot + motion.startRotOffset;
+    motion.actualEndRot = motion.baseRot + motion.endRotOffset;
+    motion.actualStartScale = motion.baseScale + motion.startScaleOffset;
+    motion.actualEndScale = motion.baseScale + motion.endScaleOffset;
+
+    // 再生開始
+    motion.currentTime = 0.0f;
+    motion.status = MotionStatus::Playing;
+
+    return true;
+}
+
+void MotionEditor::Stop(const std::string &objectName) {
+    auto it = motions_.find(objectName);
+    if (it != motions_.end()) {
+        Motion &motion = it->second;
+        motion.status = MotionStatus::Stopped;
+        motion.currentTime = 0.0f;
+
+        // 初期位置に戻すが固定はしない
+        if (motion.hasInitialTransform && motion.target) {
+            motion.target->GetLocalPosition() = motion.initialPos;
+            motion.target->GetLocalRotation() = motion.initialRot;
+            motion.target->GetLocalScale() = motion.initialScale;
+        }
+
+        // 一時的なモーションの場合は削除
+        if (motion.isTemporary) {
+            motions_.erase(it);
+        }
+    }
+}
+
+// 全ての再生停止
+void MotionEditor::StopAll() {
+    auto it = motions_.begin();
+    while (it != motions_.end()) {
+        Motion &motion = it->second;
+        motion.status = MotionStatus::Stopped;
+        motion.currentTime = 0.0f;
+
+        // 初期位置に戻すが固定はしない
+        if (motion.hasInitialTransform && motion.target) {
+            motion.target->GetLocalPosition() = motion.initialPos;
+            motion.target->GetLocalRotation() = motion.initialRot;
+            motion.target->GetLocalScale() = motion.initialScale;
+        }
+
+        // 一時的なモーションの場合は削除
+        if (motion.isTemporary) {
+            it = motions_.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }

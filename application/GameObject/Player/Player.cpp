@@ -14,6 +14,7 @@
 #include <Input.h>
 #include <cmath>
 #include <Application/Utility/MotionEditor/MotionEditor.h>
+#include"Object/Base/BaseObjectManager.h"
 
 Player::Player() {
 }
@@ -63,13 +64,13 @@ void Player::Init(const std::string objectName) {
     MotionEditor::GetInstance()->Register(leftHand_.get());
     MotionEditor::GetInstance()->Register(rightHand_.get());
 
+    BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
+    BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
+
     Load();
 }
 
 void Player::Update() {
-
-    rightHand_->Update();
-    leftHand_->Update();
 
     dt_ = Frame::DeltaTime();
     shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
@@ -134,8 +135,6 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
         bullet->Draw(viewProjection, offSet);
     }
     chageShot_->Draw(viewProjection, offSet);
-    leftHand_->Draw(viewProjection, offSet);
-    rightHand_->Draw(viewProjection, offSet);
 }
 
 void Player::DrawParticle(const ViewProjection &viewProjection) {
