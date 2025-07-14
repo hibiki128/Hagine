@@ -47,6 +47,7 @@ void MyGame::Update() {
         imGuiManager_->ShowSceneWindow();
     }
     imGuiManager_->ShowMainUI(offscreen_.get());
+    baseObjectManager_->DrawImGui();
     imGuiManager_->End();
 #endif // _DEBUG
 

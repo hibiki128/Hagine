@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "Object3d.h"
+#include "Debug/Log/Logger.h"
 #include "DirectXCommon.h"
 #include "Graphics/Model/ModelManager.h"
 #include "Object3dCommon.h"
@@ -22,21 +23,22 @@ void Object3d::Initialize() {
 }
 
 void Object3d::CreateModel(const std::string &filePath) {
-    filePath_ = filePath;
+    modelFilePath_ = filePath;
 
-    ModelManager::GetInstance()->LoadModel(filePath_);
+    ModelManager::GetInstance()->LoadModel(modelFilePath_);
 
     // モデルを検索してセットする
-    model = ModelManager::GetInstance()->FindModel(filePath_);
+    model = ModelManager::GetInstance()->FindModel(modelFilePath_);
 
     if (model->IsGltf()) {
         currentModelAnimation_ = std::make_unique<ModelAnimation>();
         currentModelAnimation_->SetModelData(model->GetModelData());
-        currentModelAnimation_->Initialize("resources/models/", filePath_);
+        currentModelAnimation_->Initialize("resources/models/", modelFilePath_);
 
         model->SetAnimator(currentModelAnimation_->GetAnimator());
         model->SetBone(currentModelAnimation_->GetBone());
         model->SetSkin(currentModelAnimation_->GetSkin());
+        // AddAnimation(modelFilePath_);
     }
 }
 
@@ -71,7 +73,7 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
     }
 }
 
-void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, ObjColor *color, bool lighting) {
+void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, ObjColor *color, bool lighting, bool modelDraw) {
     objectCommon_->SetBlendMode(blendMode_);
     Update(worldTransform, viewProjection);
 
@@ -94,45 +96,104 @@ void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &
     }
 
     // モデル描画
-    if (model) {
-        Vector4 drawColor = color ? color->GetColor() : Vector4{1.0f, 1.0f, 1.0f, 1.0f};
-        model->Draw(drawColor, lighting, reflect);
+    if (modelDraw) {
+        if (model) {
+            Vector4 drawColor = color ? color->GetColor() : Vector4{1.0f, 1.0f, 1.0f, 1.0f};
+            model->Draw(drawColor, lighting, reflect);
+        }
     }
 }
 
 void Object3d::AnimationUpdate(bool roop) {
     if (currentModelAnimation_) {
         currentModelAnimation_->Update(roop);
+
+        // 補間完了後の切り替え処理
+        if (isAnimationSwitchPending_) {
+            Animator *currentAnimator = currentModelAnimation_->GetAnimator();
+
+            // 補間が完了しているかチェック
+            if (!currentAnimator->IsBlending()) {
+                // ファイル名の比較（パスを除いた部分のみ比較）
+                std::string currentFile = currentAnimator->GetCurrentFilename();
+                std::string nextFile = nextAnimationFileName_;
+
+                // ファイル名が異なる場合のみ更新
+                if (currentFile != nextFile) {
+                    currentAnimator->UpdateCurrentFileInfo("resources/models/", nextFile);
+                    modelFilePath_ = nextFile;
+                }
+
+                // 切り替え完了フラグをリセット
+                isAnimationSwitchPending_ = false;
+                nextAnimationFileName_.clear();
+            }
+        }
     }
 }
 
-void Object3d::SetAnimation(const std::string &fileName) {
-    // すでにセット済みのアニメーションなら何もしない
-    if (fileName == filePath_) {
+bool Object3d::IsAnimationBlending() const {
+    if (currentModelAnimation_ && currentModelAnimation_->GetAnimator()) {
+        return currentModelAnimation_->GetAnimator()->IsBlending();
+    }
+    return false;
+}
+
+void Object3d::SetAnimationImmediate(const std::string &fileName) {
+    if (fileName == modelFilePath_) {
         return;
     }
 
-    // modelAnimations_ 内に fileName に対応するアニメーションがあるか検索
     auto it = modelAnimations_.find(fileName);
-
-    // アニメーションが見つからなかった場合、強制的にプログラムを停止
     assert(it != modelAnimations_.end() && "Error: Animation file not found in modelAnimations_!");
 
-    // 見つかったアニメーションを shared_ptr に格納
     currentModelAnimation_ = it->second;
+    currentModelAnimation_->GetAnimator()->SetAnimationTime(0.0f);
+    currentModelAnimation_->GetAnimator()->SetIsAnimation(true);
 
-    // Animator などを model にセット
     model->SetAnimator(currentModelAnimation_->GetAnimator());
     model->SetBone(currentModelAnimation_->GetBone());
     model->SetSkin(currentModelAnimation_->GetSkin());
-    currentModelAnimation_->GetAnimator()->SetIsAnimation(true);
-    currentModelAnimation_->GetAnimator()->SetAnimationTime(0.0f);
 
-    // ファイルパスを更新
-    filePath_ = fileName;
+    modelFilePath_ = fileName;
+}
+
+void Object3d::SetAnimation(const std::string &animationFileName) {
+    if (!currentModelAnimation_) {
+        return;
+    }
+
+    Animator *animator = currentModelAnimation_->GetAnimator();
+    if (!animator) {
+        return;
+    }
+
+    // 現在のファイル名と比較
+    std::string currentFile = animator->GetCurrentFilename();
+
+    // 同じアニメーションの場合は何もしない
+    if (currentFile == animationFileName && !isAnimationSwitchPending_) {
+        return;
+    }
+
+    // 既に同じアニメーションへの切り替えが待機中の場合は何もしない
+    if (isAnimationSwitchPending_ && nextAnimationFileName_ == animationFileName) {
+        return;
+    }
+
+    // 新しいアニメーションへの補間開始
+    animator->BlendToAnimation("resources/models/", animationFileName, 0.5f); // 0.5秒で補間
+
+    // 切り替え待機状態にする
+    isAnimationSwitchPending_ = true;
+    nextAnimationFileName_ = animationFileName;
 }
 
 void Object3d::AddAnimation(const std::string &fileName) {
+    if (modelAnimations_.count(fileName) > 0) {
+        return;
+    }
+
     auto animation = std::make_unique<ModelAnimation>();
 
     animation->SetModelData(model->GetModelData());
@@ -142,7 +203,7 @@ void Object3d::AddAnimation(const std::string &fileName) {
     modelAnimations_.emplace(fileName, std::move(animation));
 }
 
-void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {
+void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool isRainbow) {
     // worldTransformを更新
     Update(worldTransform, viewProjection);
     if (!model) {
@@ -152,7 +213,7 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
     const ModelData &modelData = model->GetModelData();
 
     // ====== フラグで切り替え可能 ======
-    static bool gamingMode = false;
+    bool gamingMode = isRainbow;
 
     // ====== 時間カウンター（時間ベースで変化）======
     static float timeCounter = 0.0f;
@@ -266,6 +327,7 @@ void Object3d::DrawSkeleton(const WorldTransform &worldTransform, const ViewProj
         worldTransform.scale_,
         worldTransform.rotation_,
         worldTransform.translation_);
+
     if (worldTransform.parent_) {
         worldMatrix *= worldTransform.parent_->matWorld_;
     }
@@ -275,8 +337,10 @@ void Object3d::DrawSkeleton(const WorldTransform &worldTransform, const ViewProj
         Matrix4x4 jointWorldMat = joint.skeletonSpaceMatrix * worldMatrix;
         Vector3 jointPosition = ExtractTranslation(jointWorldMat);
 
+        // Jointの大きさに応じて半径を決定
+        float jointRadius = 0.03f * worldTransform.scale_.x;
+
         Vector4 jointColor = {0.8f, 0.2f, 0.2f, 1.0f};
-        float jointRadius = 0.03f;
         DrawLine3D::GetInstance()->DrawSphere(jointPosition, jointColor, jointRadius, 8);
 
         if (!joint.parent.has_value()) {
@@ -287,11 +351,12 @@ void Object3d::DrawSkeleton(const WorldTransform &worldTransform, const ViewProj
         Matrix4x4 parentWorldMat = parentJoint.skeletonSpaceMatrix * worldMatrix;
         Vector3 parentPosition = ExtractTranslation(parentWorldMat);
 
-        DrawBoneArmature(parentPosition, jointPosition);
+        // アーマチュアの描画
+        DrawBoneArmature(parentPosition, jointPosition, worldTransform.scale_.x);
     }
 }
 
-void Object3d::DrawBoneArmature(const Vector3 &parentPos, const Vector3 &childPos) {
+void Object3d::DrawBoneArmature(const Vector3 &parentPos, const Vector3 &childPos, float scale) {
     // ボーンの方向ベクトル
     Vector3 boneDirection = childPos - parentPos;
     float boneLength = boneDirection.Length();
@@ -299,16 +364,13 @@ void Object3d::DrawBoneArmature(const Vector3 &parentPos, const Vector3 &childPo
     if (boneLength < 0.001f)
         return; // 長さが短すぎる場合はスキップ
 
-    // 正規化された方向ベクトル
-    Vector3 normalizedDirection = boneDirection.Normalize();
-
-    // ボーンの太さ（長さに比例）
-    float baseWidth = boneLength * 0.1f; // 基部の太さ
-    float tipWidth = boneLength * 0.02f; // 先端の太さ
+    // ボーンの太さ（長さに応じてスケーリング）
+    float baseWidth = boneLength * 0.1f * scale; // 基部の太さ
+    float tipWidth = boneLength * 0.02f * scale; // 先端の太さ
 
     // 最小・最大の太さを制限
-    baseWidth = std::max(0.02f, std::min(baseWidth, 0.15f));
-    tipWidth = std::max(0.005f, std::min(tipWidth, 0.05f));
+    baseWidth = std::max(0.02f, std::min(baseWidth, 0.15f * scale / 5.0f));
+    tipWidth = std::max(0.005f, std::min(tipWidth, 0.05f * scale / 5.0f));
 
     // ボーンの色
     Vector4 boneColor = {0.2f, 0.6f, 1.0f, 1.0f}; // 青系の色

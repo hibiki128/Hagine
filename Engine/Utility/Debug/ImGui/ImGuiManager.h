@@ -2,7 +2,7 @@
 #include "DirectXCommon.h"
 #include "WinApp.h"
 #include <BaseScene.h>
-#include "Object/BaseObjectManager.h"
+#include "Object/Base/BaseObjectManager.h"
 
 class ImGuizmoManager;
 class OffScreen;

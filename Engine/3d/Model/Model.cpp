@@ -103,6 +103,8 @@ void Model::Update() {
 void Model::Draw(const Vector4 &color, bool lighting, bool reflect) {
     ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
 
+    INT vertexOffset = 0;
+
     for (size_t meshIndex = 0; meshIndex < meshes_.size(); ++meshIndex) {
         Mesh *currentMesh = meshes_[meshIndex].get();
         uint32_t materialIndex = modelData.meshes[meshIndex].materialIndex;
@@ -123,6 +125,7 @@ void Model::Draw(const Vector4 &color, bool lighting, bool reflect) {
 
             // パレット情報をシェーダーに渡す（必要に応じて）
             srvManager_->SetGraphicsRootDescriptorTable(8, skin_->GetPaletteSrvIndex());
+            vertexOffset = static_cast<INT>(skin_->GetMeshVertexOffset(meshIndex));
         } else {
             // 元の頂点バッファを使用
             D3D12_VERTEX_BUFFER_VIEW vbv = currentMesh->GetVertexBufferView();
@@ -142,7 +145,7 @@ void Model::Draw(const Vector4 &color, bool lighting, bool reflect) {
 
         // 描画コール
         commandList->DrawIndexedInstanced(
-            UINT(modelData.meshes[meshIndex].indices.size()), 1, 0, 0, 0);
+            UINT(modelData.meshes[meshIndex].indices.size()), 1, 0, vertexOffset, 0);
     }
 }
 

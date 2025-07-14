@@ -12,10 +12,12 @@ class Skin {
     uint32_t skinClusterInputVertexSrvIndex_ = 0;
 
     size_t totalVertexCount = 0;
+    size_t vertexOffset = 0;
 
     DirectXCommon *dxCommon_;
     SrvManager *srvManager_;
 
+    std::vector<size_t> meshVertexOffsets_;
   public:
     void Initialize(const Skeleton &skeleton, const ModelData &modelData);
     void Update(const Skeleton &skeleton);
@@ -38,6 +40,13 @@ class Skin {
     void UpdateInputVertices(const ModelData &modelData);
     void ExecuteSkinning(ID3D12GraphicsCommandList *commandList);
 
+    size_t GetMeshVertexOffset(size_t meshIndex) const {
+        if (meshIndex < meshVertexOffsets_.size()) {
+            return meshVertexOffsets_[meshIndex];
+        }
+        return 0;
+    }
+
   private:
     /// <summary>
     /// SkinClusterの生成
@@ -55,6 +64,4 @@ class Skin {
     void CreateInputVertexResource(SkinCluster &skinCluster, const Skeleton &skeleton);
     void CreateOutputVertexResource(SkinCluster &skinCluster, const Skeleton &skeleton);
     void CreateSkinningInformationResource(SkinCluster &skinCluster, const Skeleton &skeleton);
-    size_t GetMeshVertexOffset(size_t meshIndex) const;
-    size_t GetMeshVertexCount(size_t meshIndex, const ModelData &modelData) const;
 };

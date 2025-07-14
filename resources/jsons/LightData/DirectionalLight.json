@@ -1,6 +1,6 @@
 {
-    "BlinnPghong": 1,
-    "HalfLambert": 0,
+    "BlinnPghong": 0,
+    "HalfLambert": 1,
     "active": true,
     "color": {
         "w": 1.0,

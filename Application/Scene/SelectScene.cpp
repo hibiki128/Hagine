@@ -67,13 +67,4 @@ void SelectScene::CameraUpdate() {
 }
 
 void SelectScene::ChangeScene() {
-
-#ifdef _DEBUG
-
-#endif // _DEBUG
-#ifndef _DEBUG
-    //if (input_->TriggerKey(DIK_SPACE)) {
-    //    sceneManager_->NextSceneReservation("GAME");
-    //}
-#endif // !_DEBUG
 }

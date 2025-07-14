@@ -8,54 +8,42 @@
 #include"Application/GameObject/Enemy/Enemy.h"
 
 class GameScene : public BaseScene {
-  public: // メンバ関数
-    /// <summary>
-    /// 初期化
-    /// </summary>
+  public:
+    /// ====================================
+    /// public methods
+    /// ====================================
+
     void Initialize() override;
 
-    /// <summary>
-    /// 終了
-    /// </summary>
     void Finalize() override;
 
-    /// <summary>
-    /// 更新
-    /// </summary>
     void Update() override;
 
-    /// <summary>
-    /// 描画
-    /// </summary>
     void Draw() override;
 
-    /// <summary>
-    /// オフスクリーン上に描画
-    /// </summary>
     void DrawForOffScreen() override;
 
-    /// <summary>
-    /// シーン設定に追加
-    /// </summary>
     void AddSceneSetting() override;
 
-    /// <summary>
-    /// オブジェクト設定に追加
-    /// </summary>
     void AddObjectSetting() override;
 
-    /// <summary>
-    /// パーティクル設定に追加
-    /// </summary>
     void AddParticleSetting() override;
 
     ViewProjection *GetViewProjection() override { return &vp_; }
 
   private:
+    /// ====================================
+    /// private methods
+    /// ====================================
+
     void CameraUpdate();
 
     void ChangeScene();
   private:
+    /// ====================================
+    /// private variaus
+    /// ====================================
+
     Audio *audio_;
     Input *input_;
     SpriteCommon *spCommon_;
@@ -64,19 +52,19 @@ class GameScene : public BaseScene {
     ViewProjection vp_;
     std::unique_ptr<DebugCamera> debugCamera_;
 
-    // プレイヤー
+    // �v���C���[
     std::unique_ptr<Player> player_;
 
-    // 敵
+    // �G
     std::unique_ptr<Enemy> enemy_;
 
-    // 追従カメラ
+    // �Ǐ]�J����
     std::unique_ptr<FollowCamera> followCamera_;
 
-    // 天球
+    // �V��
     std::unique_ptr<SkyDome> skyDome_;
 
-    // 地面
+    // �n��
     std::unique_ptr<Ground> ground_;
 
     Enemy *enemy_ptr = nullptr;

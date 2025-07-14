@@ -69,7 +69,7 @@ void LevelData::Clear() {
     objectsData_.clear();
     createdObjects_.clear();
 
-    BaseObjectManager::GetInstance()->DeleteObject();
+    BaseObjectManager::GetInstance()->RemoveAllObjects();
 }
 
 LevelData::Transform LevelData::ParseTransform(const json &transformJson) {

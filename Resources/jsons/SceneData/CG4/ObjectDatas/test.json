@@ -1,0 +1,34 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 9,
+    "blendMode": 0,
+    "childrenNames": [],
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "animation/BrainStem.gltf",
+    "objectColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "objectName": "test",
+    "parentName": "",
+    "rotation": {
+        "x": 0.0,
+        "y": -0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 20.0,
+        "y": 20.0,
+        "z": 20.0
+    },
+    "skeletonDraw": false,
+    "textureName": "debug/white1x1.png",
+    "translation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 100.0
+    }
+}

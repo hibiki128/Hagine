@@ -85,6 +85,8 @@ void SceneManager::NextSceneReservation(const std::string &sceneName) {
     assert(sceneFactory_);
     assert(nextScene_ == nullptr);
 
+    currentSceneName_ = sceneName;
+
     // 次シーンを生成
     nextScene_ = sceneFactory_->CreateScene(sceneName);
     if (!firstChange) {

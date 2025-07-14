@@ -43,6 +43,7 @@ class ParticleEmitter {
     std::unique_ptr<ParticleEmitter> Clone() const;
 
     bool GetIsAuto() { return isAuto_; }
+    Matrix4x4 GetWorldMatrix() { return transform_.matWorld_; }
 
     void SetPosition(const Vector3 &position) { transform_.translation_ = position; }
     void SetPositionY(const std::string &groupName, float positionY) { particleSettings_[groupName].translate.y = positionY; }
@@ -57,7 +58,9 @@ class ParticleEmitter {
     void SetEndScale(const std::string &groupName, const Vector3 &scale) {
         particleSettings_[groupName].particleEndScale = scale;
     }
-
+    void SetWorldMatrix(const Matrix4x4 &worldMatrix) {
+        transform_.matWorld_ = worldMatrix;
+    }
     void SetCount(const std::string &groupName, int count) { particleSettings_[groupName].count = count; }
     void SetStartRotate(const std::string &groupName, const Vector3 &startRotate) { particleSettings_[groupName].startRote = startRotate; }
     void SetEndRotate(const std::string &groupName, const Vector3 &endRotate) { particleSettings_[groupName].endRote = endRotate; }
@@ -84,6 +87,26 @@ class ParticleEmitter {
             } else {
                 setting.scale = scale;
             }
+        }
+    }
+    void SetStartAcce(const Vector3& acce) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            setting.startAcce = acce;
+        }
+    }
+    void SetStartAcceX(const float &acce) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            setting.startAcce.x = acce;
+        }
+    }
+    void SetStartAcceZ(const float &acce) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            setting.startAcce.z = acce;
+        }
+    }
+    void SetEndAcce(const Vector3& acce) {
+        for (auto &[groupName, setting] : particleSettings_) {
+            setting.endAcce = acce;
         }
     }
 

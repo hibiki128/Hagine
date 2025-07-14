@@ -1,69 +1,194 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <FxCompile Include="resources\shaders\OffScreen\BoxFilter.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\Cinematic.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\CopyImage.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\DepthBasedOutline.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\FullScreen.VS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\GaussianFilter.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\Grayscale.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\Line\Line3d.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\Line</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\Line\Line3d.VS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\Line</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\LuminanceBasedOutline.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\Object\Object3d.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\Object</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\Object\Object3d.VS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\Object</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\Particle\Particle.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\Particle</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\Particle\Particle.VS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\Particle</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\RadialBlur.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
-    <FxCompile Include="Resources\shaders\Skinning\Skinning.CS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\Skinning</Filter>
-    </FxCompile>
-    <FxCompile Include="Resources\shaders\Skybox\Skybox.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\SkyBox</Filter>
-    </FxCompile>
-    <FxCompile Include="Resources\shaders\Skybox\Skybox.VS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\SkyBox</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\Sprite\Sprite.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\Sprite</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\Sprite\Sprite.VS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\Sprite</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\Vignette.PS.hlsl">
-      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
-    </FxCompile>
+    <Filter Include="リソース ファイル">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{3d13508f-1cee-436e-904f-558850330397}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="リソース ファイル\Object">
+      <UniqueIdentifier>{0226e07c-4ede-45da-825c-2e1f5be040df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Sprite">
+      <UniqueIdentifier>{26eb816e-f16f-4759-86ab-980798da84a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Particle">
+      <UniqueIdentifier>{a9306e47-6760-4a8e-88b0-bcafc82f4997}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Line">
+      <UniqueIdentifier>{acf81abf-30cd-4e8d-9eb3-371234ccf0fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\OffScreen">
+      <UniqueIdentifier>{9ad29c48-6718-4748-b2ff-1126d4c8443b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application">
+      <UniqueIdentifier>{ca298d3a-6a09-4beb-b1fc-25b93b845b9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Base">
+      <UniqueIdentifier>{faf8b8dc-bf7d-4fc7-ad07-1dd625a6b9a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Scene">
+      <UniqueIdentifier>{b08ef83a-1109-47b3-9f30-c84cbb0e78a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Skybox">
+      <UniqueIdentifier>{de06fbcc-755c-4fdc-8276-681091594045}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine">
+      <UniqueIdentifier>{896340e0-97b9-4790-961d-abe4a7409e9b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\2d">
+      <UniqueIdentifier>{4d625683-5017-40d0-9c3b-321a86cf8d75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d">
+      <UniqueIdentifier>{9bb60b31-2438-4430-9b71-65b46ab3db37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Camera">
+      <UniqueIdentifier>{21c52767-1bd0-451a-aace-436ad80cb82d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Camera\DebugCamera">
+      <UniqueIdentifier>{f46201c0-e0d7-4d3d-9b93-fed043f18350}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Camera\ViewProjection">
+      <UniqueIdentifier>{3b94e03e-aea9-4d2d-a391-e49fb3d222e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Model">
+      <UniqueIdentifier>{9fc84f4b-7211-4507-a9ee-26883e694488}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Model\Material">
+      <UniqueIdentifier>{557a36f4-7193-4b90-8ddd-be086e13c042}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Model\Mesh">
+      <UniqueIdentifier>{adcb1d78-622c-4945-bdd8-bf6eab70ad8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Transform">
+      <UniqueIdentifier>{873222c9-bf91-438d-8445-ff8816e191fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Particle">
+      <UniqueIdentifier>{5f933ab0-68d6-4252-8412-c3497cd78c54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Line">
+      <UniqueIdentifier>{9b71ce02-e930-4a1b-9211-f79b51440955}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Animation">
+      <UniqueIdentifier>{5664a915-ffd7-478b-9a68-317277f8fcbc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Light">
+      <UniqueIdentifier>{05ed5a95-a3ad-441a-ae86-6dfc527e721b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Object">
+      <UniqueIdentifier>{692c357d-b3b9-47ca-9620-b87f5b124f2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Primitive">
+      <UniqueIdentifier>{42f1c8d1-1244-4cac-82bd-34283401755d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\SkyBox">
+      <UniqueIdentifier>{63219d1e-2153-464c-bbb3-28388ef3fb09}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\base">
+      <UniqueIdentifier>{881a7094-c083-40dc-8f06-5c3b0da07b63}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility">
+      <UniqueIdentifier>{4a2289e7-55fd-4bb6-87eb-2942627fc277}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Graphics">
+      <UniqueIdentifier>{29276edd-624f-47e2-9075-28459bbcad54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Graphics\Model">
+      <UniqueIdentifier>{3ff759df-7fd5-458d-ba5f-55694d1df01a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Graphics\PipeLine">
+      <UniqueIdentifier>{352d01b4-b67c-4034-bc58-2eed730b55d1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Graphics\Srv">
+      <UniqueIdentifier>{f7636445-2fce-468a-b340-c7dc9e3f6f0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Graphics\Texture">
+      <UniqueIdentifier>{eee286be-7154-4f16-ace8-cd03d495428d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Debug">
+      <UniqueIdentifier>{d1d91727-6305-481f-a8bd-1f6de763b71e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Debug\ImGui">
+      <UniqueIdentifier>{7ec0fb02-2ec0-47a0-967c-3f2071ac9740}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Debug\Log">
+      <UniqueIdentifier>{4f2a03a7-6c2b-40bf-8612-871e9747ea32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Debug\ResourceLeakChecker">
+      <UniqueIdentifier>{685576c5-1626-4946-a408-cbc1a086f995}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\String">
+      <UniqueIdentifier>{aa74c090-f15a-4ca4-9a79-785f91e13866}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Scene">
+      <UniqueIdentifier>{dd6651c2-42e3-40d0-8c88-b87489664c41}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Edit">
+      <UniqueIdentifier>{54deca81-c90e-4f6b-9d27-f4774c60ac8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Collider">
+      <UniqueIdentifier>{b688f89f-3884-4cf3-bbce-92334b223c0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Data">
+      <UniqueIdentifier>{fe82350d-f4ba-4f7b-a5b7-272b7c0cdd79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\ShowFolder">
+      <UniqueIdentifier>{cf396feb-ba38-4ed6-944a-996a948365b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\input">
+      <UniqueIdentifier>{35755e99-aeb2-4196-b11d-146358fade0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\audio">
+      <UniqueIdentifier>{5d87997a-1fc4-4c23-bbe2-3c2ef5890241}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\core">
+      <UniqueIdentifier>{5e0afa5b-eced-4948-821f-d10e3417bccd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Frame">
+      <UniqueIdentifier>{db2ca9f7-7d81-4782-ba2a-8ee0c36909df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Offscreen">
+      <UniqueIdentifier>{f3377a96-430d-4131-a498-b9bbfca1239a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Scene">
+      <UniqueIdentifier>{c6673ef5-7119-417a-9d05-db2d6315a29a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Math">
+      <UniqueIdentifier>{4518b2f9-472f-48f2-af4c-7f54572a8871}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Math\type">
+      <UniqueIdentifier>{8a4c6dc9-c4eb-4582-b04f-aac12dc363d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Skinning">
+      <UniqueIdentifier>{4051fada-0c9e-47fa-89db-da4df8cce377}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Camera\NewFilter1">
+      <UniqueIdentifier>{0fa5e3be-7afc-4fa3-ae1e-c8baedfdfb5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Camera\NewFilter2">
+      <UniqueIdentifier>{48ce93bc-5a79-4154-bae6-fc64a8ab807e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Camera\FollowCamera">
+      <UniqueIdentifier>{8a3b28d4-fe8d-4f04-bbb5-c5328b93caba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Utility">
+      <UniqueIdentifier>{0832fd50-213d-42e6-a6db-72924dc86a66}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Utility\Shake">
+      <UniqueIdentifier>{652bacc9-3e58-4b45-82bb-196f639a121c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Utility\HitStop">
+      <UniqueIdentifier>{b214682d-3a13-421d-a061-2027ad87af62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Utility\MotionEditor">
+      <UniqueIdentifier>{1a68c74f-5fb3-4d87-ba88-e37761fef3f2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -214,10 +339,10 @@
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp">
       <Filter>ソースファイル\Engine\3d\Transform</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\3d\Object\Object3d.cpp">
+    <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp">
       <Filter>ソースファイル\Engine\3d\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\3d\Object\Object3dCommon.cpp">
+    <ClCompile Include="Engine\3d\Object\Base\BaseObjectManager.cpp">
       <Filter>ソースファイル\Engine\3d\Object</Filter>
     </ClCompile>
     <ClCompile Include="Engine\OffScreen\OffScreen.cpp">
@@ -328,7 +453,62 @@
     <ClCompile Include="Engine\3d\Transform\WorldTransform.cpp">
       <Filter>ソースファイル\Engine\3d\Transform</Filter>
     </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
+    <ClCompile Include="Engine\3d\Camera\FollowCamera\FollowCamera.cpp">
+      <Filter>ソースファイル\Engine\3d\Camera\FollowCamera</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Utility\MotionEditor\MotionEditor.cpp">
+      <Filter>ソースファイル\Application\Utility\MotionEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Utility\Shake\Shake.cpp">
+      <Filter>ソースファイル\Application\Utility\Shake</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Utility\HitStop\HitStop.cpp">
+      <Filter>ソースファイル\Application\Utility\HitStop</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\shaders\Particle\Particle.hlsli">
+      <Filter>リソース ファイル\Particle</Filter>
+    </None>
+    <None Include="resources\shaders\Sprite\Sprite.hlsli">
+      <Filter>リソース ファイル\Sprite</Filter>
+    </None>
+    <None Include="resources\shaders\Object\Object3d.hlsli">
+      <Filter>リソース ファイル\Object</Filter>
+    </None>
+    <None Include="resources\shaders\Line\Line3d.hlsli">
+      <Filter>リソース ファイル\Line</Filter>
+    </None>
+    <None Include="resources\shaders\OffScreen\FullScreen.hlsli">
+      <Filter>リソース ファイル\OffScreen</Filter>
+    </None>
+    <None Include=".editorconfig">
+      <Filter>ソースファイル</Filter>
+    </None>
+    <None Include="Resources\shaders\Skybox\Skybox.hlsli">
+      <Filter>リソース ファイル\Skybox</Filter>
+    </None>
+    <None Include=".claudiaideconfig">
+      <Filter>ソースファイル</Filter>
+    </None>
+    <None Include=".gitattributes">
+      <Filter>ソースファイル</Filter>
+    </None>
+    <None Include=".gitignore">
+      <Filter>ソースファイル</Filter>
+    </None>
+    <None Include="imgui_editor.ini">
+      <Filter>ソースファイル</Filter>
+    </None>
+    <None Include="imgui_game.ini">
+      <Filter>ソースファイル</Filter>
+    </None>
+    <None Include="README.md">
+      <Filter>ソースファイル</Filter>
+    </None>
+    <None Include="Resources\shaders\Skinning\Skinning.hlsli">
+      <Filter>リソース ファイル\Skinning</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -506,11 +686,11 @@
     <ClInclude Include="Engine\3d\Particle\ParticleCommon.h">
       <Filter>ソースファイル\Engine\3d\Particle</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\3d\Particle\ParticleEditor.h">
-      <Filter>ソースファイル\Engine\3d\Particle</Filter>
+    <ClInclude Include="Engine\3d\Object\Base\BaseObject.h">
+      <Filter>ソースファイル\Engine\3d\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\3d\Particle\ParticleEmitter.h">
-      <Filter>ソースファイル\Engine\3d\Particle</Filter>
+    <ClInclude Include="Engine\3d\Object\Base\BaseObjectManager.h">
+      <Filter>ソースファイル\Engine\3d\Object</Filter>
     </ClInclude>
     <ClInclude Include="Engine\3d\Particle\ParticleGroup.h">
       <Filter>ソースファイル\Engine\3d\Particle</Filter>
@@ -617,13 +797,18 @@
     <ClInclude Include="Engine\3d\Camera\ViewProjection\ViewProjection.h">
       <Filter>ソースファイル\Engine\3d\Camera\ViewProjection</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Base\WinApp.h">
-      <Filter>ソースファイル\Engine\Base</Filter>
+    <ClInclude Include="Engine\3d\Camera\FollowCamera\FollowCamera.h">
+      <Filter>ソースファイル\Engine\3d\Camera\FollowCamera</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\3d\Transform\WorldTransform.h">
-      <Filter>ソースファイル\Engine\3d\Transform</Filter>
+    <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h">
+      <Filter>ソースファイル\Application\Utility\MotionEditor</Filter>
     </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\Hand\PlayerHand.h" />
+    <ClInclude Include="Application\Utility\Shake\Shake.h">
+      <Filter>ソースファイル\Application\Utility\Shake</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Utility\HitStop\HitStop.h">
+      <Filter>ソースファイル\Application\Utility\HitStop</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
