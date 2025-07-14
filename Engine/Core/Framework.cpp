@@ -210,6 +210,8 @@ void Framework::Update() {
 
     sceneManager_->Update();
 
+    baseObjectManager_->Update();
+
     collisionManager_->Update();
 
     LightGroup::GetInstance()->Update(*sceneManager_->GetBaseScene()->GetViewProjection());

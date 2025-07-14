@@ -54,9 +54,9 @@ void GameScene::Finalize() {
 
 void GameScene::Update() {
 
-    if (!debugCamera_->GetActive()) {
+   /* if (!debugCamera_->GetActive()) {
         BaseObjectManager::GetInstance()->Update();
-    }
+    }*/
 
     // カメラ更新
     CameraUpdate();
