@@ -1,6 +1,6 @@
 {
     "GroupNames": [
-        "fire"
+        "lowPoriFire"
     ],
     "aa_allScaleMax": {
         "x": 1.0,
@@ -141,7 +141,7 @@
         "y": -1.0,
         "z": -1.0
     },
-    "emitFrequency": 0.0010000000474974513,
+    "emitFrequency": 0.004999999888241291,
     "emitterRotation": {
         "x": 0.0,
         "y": 0.0,
@@ -154,7 +154,7 @@
     },
     "emitterTranslation": {
         "x": 0.0,
-        "y": 0.0,
+        "y": -0.20000000298023224,
         "z": -28.5
     },
     "fire_allScaleMax": {
@@ -283,7 +283,7 @@
     "fire_trailVelocityScale": 0.30000001192092896,
     "fire_translate": {
         "x": 0.0,
-        "y": 0.0,
+        "y": -0.20000000298023224,
         "z": -28.5
     },
     "fire_velocityMax": {
@@ -298,5 +298,144 @@
     },
     "isActive": true,
     "isAuto": true,
-    "isVisible": true
+    "isVisible": false,
+    "lowPoriFire_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "lowPoriFire_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "lowPoriFire_alphaMax": 1.0,
+    "lowPoriFire_alphaMin": 0.0,
+    "lowPoriFire_blendMode": 1,
+    "lowPoriFire_count": 2,
+    "lowPoriFire_enableTrail": false,
+    "lowPoriFire_endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "lowPoriFire_endColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 0.47843137383461,
+        "z": 0.08627451211214066
+    },
+    "lowPoriFire_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "lowPoriFire_endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "lowPoriFire_gatherStartRatio": 0.0,
+    "lowPoriFire_gatherStrength": 0.0,
+    "lowPoriFire_gravity": 0.0,
+    "lowPoriFire_isAcceMultiply": false,
+    "lowPoriFire_isAllRamdomScale": false,
+    "lowPoriFire_isBillboard": true,
+    "lowPoriFire_isBillboardX": false,
+    "lowPoriFire_isBillboardY": false,
+    "lowPoriFire_isBillboardZ": false,
+    "lowPoriFire_isEmitOnEdge": false,
+    "lowPoriFire_isEndScale": false,
+    "lowPoriFire_isFaceDirection": false,
+    "lowPoriFire_isGatherMode": false,
+    "lowPoriFire_isRandomColor": false,
+    "lowPoriFire_isRandomRotate": false,
+    "lowPoriFire_isRandomScale": true,
+    "lowPoriFire_isSinMove": false,
+    "lowPoriFire_lifeTimeMax": 0.699999988079071,
+    "lowPoriFire_lifeTimeMin": 0.30000001192092896,
+    "lowPoriFire_maxTrailParticles": 20,
+    "lowPoriFire_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "lowPoriFire_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "lowPoriFire_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "lowPoriFire_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "lowPoriFire_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "lowPoriFire_scale": {
+        "x": 0.05000000074505806,
+        "y": 0.05000000074505806,
+        "z": 0.05000000074505806
+    },
+    "lowPoriFire_scaleMax": 0.05000000074505806,
+    "lowPoriFire_scaleMin": 0.009999999776482582,
+    "lowPoriFire_startAcce": {
+        "x": 0.0,
+        "y": 0.009999999776482582,
+        "z": 0.0
+    },
+    "lowPoriFire_startColor": {
+        "w": 1.0,
+        "x": 0.6980392336845398,
+        "y": 0.03921568766236305,
+        "z": 0.03921568766236305
+    },
+    "lowPoriFire_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "lowPoriFire_startScale": {
+        "x": 0.10000000149011612,
+        "y": 0.10000000149011612,
+        "z": 0.10000000149011612
+    },
+    "lowPoriFire_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "lowPoriFire_trailInheritVelocity": true,
+    "lowPoriFire_trailLifeScale": 0.5,
+    "lowPoriFire_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "lowPoriFire_trailSpawnInterval": 0.05000000074505806,
+    "lowPoriFire_trailVelocityScale": 0.30000001192092896,
+    "lowPoriFire_translate": {
+        "x": 0.0,
+        "y": -0.20000000298023224,
+        "z": -28.5
+    },
+    "lowPoriFire_velocityMax": {
+        "x": 0.0,
+        "y": 0.5,
+        "z": 0.0
+    },
+    "lowPoriFire_velocityMin": {
+        "x": 0.0,
+        "y": 0.4000000059604645,
+        "z": 0.0
+    }
 }

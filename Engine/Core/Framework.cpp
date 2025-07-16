@@ -46,17 +46,17 @@ void Framework::Initialize() {
     baseObjectManager_ = BaseObjectManager::GetInstance();
     ///---------------------------------
 
-    /// ---------ImGui---------
-#ifdef _DEBUG
-    imGuiManager_ = ImGuiManager::GetInstance();
-    imGuiManager_->Initialize(winApp_);
-    imGuiManager_->GetIsShowMainUI() = true;
-#endif // _DEBUG
-       /// -----------------------
-
     /// ---------ImGuizmo---------
 #ifdef _DEBUG
     imGuizmoManager_ = ImGuizmoManager::GetInstance();
+#endif // _DEBUG
+       /// -----------------------
+
+    /// ---------ImGui---------
+#ifdef _DEBUG
+    imGuiManager_ = ImGuiManager::GetInstance();
+    imGuiManager_->Initialize(winApp_, imGuizmoManager_);
+    imGuiManager_->GetIsShowMainUI() = true;
 #endif // _DEBUG
        /// -----------------------
 
@@ -76,14 +76,19 @@ void Framework::Initialize() {
     pipeLineManager_->Initialize(dxCommon_);
     ///-------------------------------------
 
-     ///-----------PipeLineManager-----------
+    ///-----------PipeLineManager-----------
     computePipeLineManager_ = ComputePipeLineManager::GetInstance();
     computePipeLineManager_->Initialize(dxCommon_);
     ///-------------------------------------
-  
+
     ///-----------TextureManager----------
     textureManager_ = TextureManager::GetInstance();
     textureManager_->Initialize(srvManager_);
+    ///-----------------------------------
+
+    ///-----------ModelCommon-------------
+    modelCommon_ = ModelCommon::GetInstance();
+    modelCommon_->Initialize();
     ///-----------------------------------
 
     ///-----------ModelManager------------
@@ -137,7 +142,10 @@ void Framework::Initialize() {
     skyBox_->Initialize("debug/rostock_laage_airport_4k.dds");
     ///--------------------
 
-    LightGroup::GetInstance()->Initialize();
+    ///--------LightGroup------------
+    lightGroup_ = LightGroup::GetInstance();
+    lightGroup_->Initialize();
+    ///------------------------------
 
     ///-------ParticleEditor-------
     particleEditor_ = ParticleEditor::GetInstance();
@@ -148,6 +156,11 @@ void Framework::Initialize() {
     particleGroupManager_ = ParticleGroupManager::GetInstance();
     particleGroupManager_->Initialize();
     ///---------------------------------
+
+    ///--------ShortcutManager------------
+    shortcutManager_ = ShortcutManager::GetInstance();
+    shortcutManager_->Initialize(input_);
+    ///-----------------------------------
 
     /// 時間の初期化
     Frame::Init();
@@ -185,18 +198,70 @@ void Framework::Finalize() {
 
 #ifdef _DEBUG
     imGuiManager_->Finalize();
+    imGuizmoManager_->Finalize();
 #endif // _DEBUG
+    shortcutManager_->Finalize();
     baseObjectManager_->Finalize();
     line3d_->Finalize();
     skyBox_->Finalize();
     srvManager_->Finalize();
     audio_->Finalize();
-    LightGroup::GetInstance()->Finalize();
+    lightGroup_->Finalize();
     particleEditor_->Finalize();
     spriteCommon_->Finalize();
     particleCommon_->Finalize();
+    modelCommon_->Finalize();
     dxCommon_->Finalize();
     delete sceneFactory_;
+}
+
+void Framework::RegisterShortcutKey() {
+#ifdef _DEBUG
+    // フルスクリーン
+    shortcutManager_->RegisterShortcut("FullScreen", DIK_F11, [this]() {
+        winApp_->ToggleFullScreen();
+    });
+    // 終了
+    shortcutManager_->RegisterShortcut("End", {DIK_LALT, DIK_F4}, [this]() {
+        winApp_->ClosedWindow();
+    });
+    // シーンセーブ
+    shortcutManager_->RegisterShortcut("SceneSave", {DIK_LCONTROL, DIK_S}, [this]() {
+        baseObjectManager_->OpenSceneSaveModal();
+    });
+    // シーン読み込み
+    shortcutManager_->RegisterShortcut("SceneLoad", {DIK_LCONTROL, DIK_L}, [this]() {
+        baseObjectManager_->OpenSceneLoadModal();
+    });
+    // モデル作成
+    shortcutManager_->RegisterShortcut("CreateModel", {DIK_LCONTROL, DIK_LSHIFT, DIK_N}, [this]() {
+        baseObjectManager_->OpenObjectCreationModal();
+    });
+    // タイトル
+    shortcutManager_->RegisterShortcut("TitleScene", {DIK_LCONTROL, DIK_1}, [this]() {
+        sceneManager_->SceneSelection("TITLE");
+    });
+    // セレクト
+    shortcutManager_->RegisterShortcut("SelectScene", {DIK_LCONTROL, DIK_2}, [this]() {
+        sceneManager_->SceneSelection("SELECT");
+    });
+    // ゲーム
+    shortcutManager_->RegisterShortcut("GameScene", {DIK_LCONTROL, DIK_3}, [this]() {
+        sceneManager_->SceneSelection("GAME");
+    });
+    // クリア
+    shortcutManager_->RegisterShortcut("ClearScene", {DIK_LCONTROL, DIK_4}, [this]() {
+        sceneManager_->SceneSelection("CLEAR");
+    });
+    // デモ
+    shortcutManager_->RegisterShortcut("DemoScene", {DIK_LCONTROL, DIK_5}, [this]() {
+        sceneManager_->SceneSelection("DEMO");
+    });
+    // ゲームデバッグ画面切り替え
+    shortcutManager_->RegisterShortcut("SwichMode", DIK_F5, [this]() {
+        imGuiManager_->GetIsShowMainUI() = !imGuiManager_->GetIsShowMainUI();
+    });
+#endif // _DEBUG
 }
 
 void Framework::Update() {
@@ -212,18 +277,15 @@ void Framework::Update() {
 
     LightGroup::GetInstance()->Update(*sceneManager_->GetBaseScene()->GetViewProjection());
 
-    /// -------更新処理開始----------
-
-    // -------Input-------
-    // 入力の更新
     input_->Update();
-    // -------------------
 
-    /// -------更新処理終了----------
+    shortcutManager_->Update();
+
     endRequest_ = winApp_->ProcessMessage();
 }
 
 void Framework::LoadResource() {
+    particleEditor_->AddParticleEmitter("fire");
 }
 
 void Framework::PlaySounds() {

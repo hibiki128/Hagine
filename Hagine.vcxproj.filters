@@ -428,6 +428,9 @@
     <ClCompile Include="Application\Utility\HitStop\HitStop.cpp">
       <Filter>ソースファイル\Application\Utility\HitStop</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\Particle\Particle.hlsli">
@@ -732,6 +735,7 @@
     <ClInclude Include="Application\Utility\HitStop\HitStop.h">
       <Filter>ソースファイル\Application\Utility\HitStop</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Particle\Particle.PS.hlsl">

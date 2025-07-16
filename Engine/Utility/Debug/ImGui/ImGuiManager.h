@@ -29,7 +29,7 @@ class ImGuiManager {
     /// <summary>
     /// 初期化
     /// </summary>
-    void Initialize(WinApp *winApp);
+    void Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager);
 
     void SetupTheme();
 

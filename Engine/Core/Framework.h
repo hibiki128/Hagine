@@ -7,6 +7,7 @@
 #include "Debug/ImGui/ImGuiManager.h"
 #include "Debug/ImGui/ImGuizmoManager.h"
 #include "Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"
+#include "Edit/ShortcutManager/ShortcutManager.h"
 #include "Engine/offscreen/OffScreen.h"
 #include "Graphics/Model/ModelManager.h"
 #include "Graphics/PipeLine/ComputePipeLineManager.h"
@@ -14,8 +15,8 @@
 #include "Graphics/Srv/SrvManager.h"
 #include "Graphics/Texture/TextureManager.h"
 #include "Input.h"
+#include "Model/ModelCommon.h"
 #include "Object/Base/BaseObjectManager.h"
-#include "Object/Object3dCommon.h"
 #include "Particle/ParticleCommon.h"
 #include "Particle/ParticleEditor.h"
 #include "Particle/ParticleGroupManager.h"
@@ -43,6 +44,11 @@ class Framework {
     /// 終了
     /// </summary>
     virtual void Finalize();
+
+    /// <summary>
+    /// ショートカットキーの登録
+    /// </summary>
+    void RegisterShortcutKey();
 
     /// <summary>
     /// 更新
@@ -89,9 +95,14 @@ class Framework {
     ParticleGroupManager *particleGroupManager_ = nullptr;
     PipeLineManager *pipeLineManager_ = nullptr;
     ComputePipeLineManager *computePipeLineManager_ = nullptr;
+    ShortcutManager *shortcutManager_ = nullptr;
 
     SpriteCommon *spriteCommon_ = nullptr;
     ParticleCommon *particleCommon_ = nullptr;
+    ModelCommon *modelCommon_ = nullptr;
+
+    LightGroup *lightGroup_ = nullptr;
+
     ParticleEditor *particleEditor_ = nullptr;
 
     PrimitiveModel *primitiveModel_ = nullptr;

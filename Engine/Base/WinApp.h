@@ -48,6 +48,8 @@ class WinApp {
     /// </summary>
     void ToggleFullScreen();
 
+    void ClosedWindow();
+
     /// <summary>
     /// getter
     /// </summary>

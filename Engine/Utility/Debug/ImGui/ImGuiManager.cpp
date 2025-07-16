@@ -1,19 +1,19 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
+#include "Engine/OffScreen/OffScreen.h"
 #include "ImGuizmo.h"
 #include "ImGuizmoManager.h"
+#include "Object/Base/BaseObject.h"
+#include "Scene/SceneManager.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include <Engine/Frame/Frame.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include"Object/Base/BaseObject.h"
-#include"Scene/SceneManager.h"
-#include"Engine/OffScreen/OffScreen.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
-void ImGuiManager::Initialize(WinApp *winApp) {
+void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) {
 
     dxCommon_ = DirectXCommon::GetInstance();
     baseObjectManager_ = BaseObjectManager::GetInstance();
@@ -70,7 +70,7 @@ void ImGuiManager::Initialize(WinApp *winApp) {
         srvManager_->GetDescriptorHeap(),
         srvManager_->GetCPUDescriptorHandle(srvIndex),
         srvManager_->GetGPUDescriptorHandle(srvIndex));
-    imGuizmoManager_ = ImGuizmoManager::GetInstance();
+    imGuizmoManager_ = imguizmoManager;
 }
 
 void ImGuiManager::SetupTheme() {
@@ -236,7 +236,7 @@ void ImGuiManager::ShowMainMenu() {
         // ファイルメニュー
         if (ImGui::BeginMenu(ICON_FA_FILE " ファイル")) {
             // シーン管理セクション
-            if (ImGui::MenuItem(ICON_FA_DOWNLOAD " シーン保存")) {
+            if (ImGui::MenuItem(ICON_FA_DOWNLOAD " シーン保存", "Ctrl+S")) {
                 // BaseObjectManagerのシーン保存モーダルを開く
                 baseObjectManager_->OpenSceneSaveModal();
             }
@@ -247,7 +247,7 @@ void ImGuiManager::ShowMainMenu() {
             ImGui::Separator();
             if (ImGui::MenuItem(ICON_FA_DOOR_OPEN " 終了", "Alt+F4")) {
                 // アプリケーション終了処理
-                WinApp::GetInstance()->ProcessMessage(); // 終了メッセージ送信
+                WinApp::GetInstance()->ClosedWindow(); // 終了メッセージ送信
             }
             ImGui::EndMenu();
         }
@@ -269,7 +269,6 @@ void ImGuiManager::ShowMainMenu() {
             }
             ImGui::Separator();
             if (ImGui::MenuItem(ICON_FA_COG " 環境設定", "Ctrl+,")) {
-                // showSettingsWindow_ = true;
             }
             ImGui::EndMenu();
         }
@@ -469,19 +468,19 @@ void ImGuiManager::ShowMainMenu() {
         // シーンメニュー
         if (ImGui::BeginMenu(ICON_FA_GLOBE " シーン選択")) { // 地球アイコン（意味：全体メニュー）
 
-            if (ImGui::MenuItem(ICON_FA_HOME " タイトルシーン")) { // home アイコン
+            if (ImGui::MenuItem(ICON_FA_HOME " タイトルシーン", "Ctrl+1")) { // home アイコン
                 SceneManager::GetInstance()->SceneSelection("TITLE");
             }
-            if (ImGui::MenuItem(ICON_FA_BARS " セレクトシーン")) { // bars アイコン（メニュー選択感）
+            if (ImGui::MenuItem(ICON_FA_BARS " セレクトシーン", "Ctrl+2")) { // bars アイコン（メニュー選択感）
                 SceneManager::GetInstance()->SceneSelection("SELECT");
             }
-            if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームシーン")) { // gamepad アイコン
+            if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームシーン", "Ctrl+3")) { // gamepad アイコン
                 SceneManager::GetInstance()->SceneSelection("GAME");
             }
-            if (ImGui::MenuItem(ICON_FA_TROPHY " クリアシーン")) { // trophy アイコン
+            if (ImGui::MenuItem(ICON_FA_TROPHY " クリアシーン", "Ctrl+4")) { // trophy アイコン
                 SceneManager::GetInstance()->SceneSelection("CLEAR");
             }
-            if (ImGui::MenuItem(ICON_FA_FILM " デモシーン")) { // film アイコン
+            if (ImGui::MenuItem(ICON_FA_FILM " デモシーン", "Ctrl+5")) { // film アイコン
                 SceneManager::GetInstance()->SceneSelection("DEMO");
             }
 
@@ -729,25 +728,25 @@ void ImGuiManager::ShowDockSpace() {
 void ImGuiManager::DisplayFPS() {
 #ifdef _DEBUG
     if (ImGui::CollapsingHeader("FPS")) {
-    
-    ImGuiIO &io = ImGui::GetIO();
-    // FPSを取得
-    float fps = Frame::GetFPS();
-    float deltaTime = Frame::DeltaTime() * 1000.0f; // ミリ秒単位に変換
 
-    // FPSを色付きで表示
-    ImVec4 color;
-    if (fps >= 59.0f) {
-        color = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // 60FPS付近なら緑色
-    } else if (fps >= 30.0f) {
-        color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // 30-59FPSなら黄色
-    } else {
-        color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 30FPS未満なら赤色
-    }
+        ImGuiIO &io = ImGui::GetIO();
+        // FPSを取得
+        float fps = Frame::GetFPS();
+        float deltaTime = Frame::DeltaTime() * 1000.0f; // ミリ秒単位に変換
 
-    ImGui::TextColored(color, "FPS: %.1f", fps);
-    ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
-    //ImGui::TreePop();
+        // FPSを色付きで表示
+        ImVec4 color;
+        if (fps >= 59.0f) {
+            color = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // 60FPS付近なら緑色
+        } else if (fps >= 30.0f) {
+            color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // 30-59FPSなら黄色
+        } else {
+            color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 30FPS未満なら赤色
+        }
+
+        ImGui::TextColored(color, "FPS: %.1f", fps);
+        ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
+        // ImGui::TreePop();
     }
 #endif // _DEBUG
 }

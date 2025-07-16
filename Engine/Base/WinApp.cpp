@@ -137,3 +137,11 @@ void WinApp::ToggleFullScreen() {
         isFullScreen_ = false;
     }
 }
+
+void WinApp::ClosedWindow() {
+    // ウィンドウハンドルが有効な場合のみ処理
+    if (hwnd != nullptr) {
+        // WM_CLOSEメッセージを送信してウィンドウを終了
+        PostMessage(hwnd, WM_CLOSE, 0, 0);
+    }
+}

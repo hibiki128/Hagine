@@ -160,72 +160,73 @@ void BaseObjectManager::OpenObjectCreationModal() {
     showObjectCreationModal_ = true;
 }
 
-
 void BaseObjectManager::ShowParentChildHierarchy() {
 #ifdef _DEBUG
 
-            if (ImGui::CollapsingHeader("親子関係設定", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("親子関係設定", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-                // 親子付けセクション
-                ImGui::Separator();
-                ImGui::Text("親子付け:");
+        // 親子付けセクション
+        ImGui::Separator();
+        ImGui::Text("親子付け:");
 
-                static int selectedChild = 0;
-                static int selectedParent = 0;
+        static int selectedChild = 0;
+        static int selectedParent = 0;
 
-                std::vector<std::string> objectNames = GetObjectNames();
+        std::vector<std::string> objectNames = GetObjectNames();
 
-                if (!objectNames.empty()) {
-                    std::vector<const char *> objectNamesCStr;
-                    for (const auto &name : objectNames) {
-                        objectNamesCStr.push_back(name.c_str());
-                    }
-
-                    ImGui::Text("子オブジェクト:");
-                    ImGui::SameLine();
-                    ImGui::PushItemWidth(150);
-                    ImGui::Combo("##ChildObject", &selectedChild, objectNamesCStr.data(), static_cast<int>(objectNamesCStr.size()));
-                    ImGui::PopItemWidth();
-
-                    ImGui::Text("親オブジェクト:");
-                    ImGui::SameLine();
-                    ImGui::PushItemWidth(150);
-                    ImGui::Combo("##ParentObject", &selectedParent, objectNamesCStr.data(), static_cast<int>(objectNamesCStr.size()));
-                    ImGui::PopItemWidth();
-
-                    selectedChild = std::clamp(selectedChild, 0, static_cast<int>(objectNames.size()) - 1);
-                    selectedParent = std::clamp(selectedParent, 0, static_cast<int>(objectNames.size()) - 1);
-
-                    if (ImGui::Button("親子付け")) {
-                        if (selectedChild != selectedParent) {
-                            SetParentChild(objectNames[selectedChild], objectNames[selectedParent]);
-                        }
-                    }
-
-                    ImGui::SameLine();
-                    if (ImGui::Button("親子解除")) {
-                        RemoveParentChild(objectNames[selectedChild]);
-                    }
-                }
-
-                ImGui::Separator();
-                ImGui::Text("階層表示:");
-
-                // 階層構造を表示
-                ImGui::BeginChild("HierarchyView", ImVec2(0, 300), true);
-
-                for (auto &[name, obj] : baseObjects_) {
-                    if (!obj->GetParent()) { // ルートオブジェクトのみ表示
-                        ShowObjectHierarchy(obj.get(), 0);
-                    }
-                }
-
-                ImGui::EndChild();
+        if (!objectNames.empty()) {
+            std::vector<const char *> objectNamesCStr;
+            for (const auto &name : objectNames) {
+                objectNamesCStr.push_back(name.c_str());
             }
+
+            ImGui::Text("子オブジェクト:");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(150);
+            ImGui::Combo("##ChildObject", &selectedChild, objectNamesCStr.data(), static_cast<int>(objectNamesCStr.size()));
+            ImGui::PopItemWidth();
+
+            ImGui::Text("親オブジェクト:");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(150);
+            ImGui::Combo("##ParentObject", &selectedParent, objectNamesCStr.data(), static_cast<int>(objectNamesCStr.size()));
+            ImGui::PopItemWidth();
+
+            selectedChild = std::clamp(selectedChild, 0, static_cast<int>(objectNames.size()) - 1);
+            selectedParent = std::clamp(selectedParent, 0, static_cast<int>(objectNames.size()) - 1);
+
+            if (ImGui::Button("親子付け")) {
+                if (selectedChild != selectedParent) {
+                    SetParentChild(objectNames[selectedChild], objectNames[selectedParent]);
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("親子解除")) {
+                RemoveParentChild(objectNames[selectedChild]);
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::Text("階層表示:");
+
+        // 階層構造を表示
+        ImGui::BeginChild("HierarchyView", ImVec2(0, 300), true);
+
+        for (auto &[name, obj] : baseObjects_) {
+            if (!obj->GetParent()) { // ルートオブジェクトのみ表示
+                ShowObjectHierarchy(obj.get(), 0);
+            }
+        }
+
+        ImGui::EndChild();
+    }
 #endif // _DEBUG
 }
 
 void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth) {
+#ifdef _DEBUG
+
     if (!obj)
         return;
 
@@ -249,6 +250,7 @@ void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth) {
         }
         ImGui::TreePop();
     }
+#endif // _DEBUG
 }
 
 void BaseObjectManager::SetParentChild(const std::string &childName, const std::string &parentName) {
@@ -349,6 +351,7 @@ void BaseObjectManager::RemoveObject(const std::string &name) {
 
 // シーン保存モーダルの描画
 void BaseObjectManager::DrawSceneSaveModal() {
+#ifdef _DEBUG
     // メニューから呼び出された場合のモーダル表示
     if (showSceneSaveModal_) {
         ImGui::OpenPopup("シーン保存");
@@ -381,10 +384,12 @@ void BaseObjectManager::DrawSceneSaveModal() {
 
         ImGui::EndPopup();
     }
+#endif // _DEBUG
 }
 
 // シーン読み込みモーダルの描画
 void BaseObjectManager::DrawSceneLoadModal() {
+#ifdef _DEBUG
     // メニューから呼び出された場合のモーダル表示
     if (showSceneLoadModal_) {
         ImGui::OpenPopup("シーン読み込み");
@@ -416,10 +421,12 @@ void BaseObjectManager::DrawSceneLoadModal() {
 
         ImGui::EndPopup();
     }
+#endif // _DEBUG
 }
 
 // オブジェクト生成モーダルの描画
 void BaseObjectManager::DrawObjectCreationModal() {
+#ifdef _DEBUG
     // メニューから呼び出された場合のモーダル表示
     if (showObjectCreationModal_) {
         ImGui::OpenPopup("オブジェクト生成");
@@ -511,6 +518,7 @@ void BaseObjectManager::DrawObjectCreationModal() {
 
         ImGui::EndPopup();
     }
+#endif // _DEBUG
 }
 
 void BaseObjectManager::DrawImGui() {

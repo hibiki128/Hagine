@@ -21,6 +21,9 @@ Generated/
 /externals/DirectXTex/Bin/
 /externals/imgui/x64/
 /x64
+imgui_editor.ini
+imgui_game.ini
+
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
