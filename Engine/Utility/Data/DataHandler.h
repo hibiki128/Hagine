@@ -65,6 +65,17 @@ inline void from_json(const json &j, Vector4 &v) {
     v.w = j.at("w").get<float>();
 }
 
+inline void to_json(json &j, const Quaternion &q) {
+    j = json{{"x", q.x}, {"y", q.y}, {"z", q.z}, {"w", q.w}};
+}
+
+inline void from_json(const json &j, Quaternion &q) {
+    q.x = j.at("x").get<float>();
+    q.y = j.at("y").get<float>();
+    q.z = j.at("z").get<float>();
+    q.w = j.at("w").get<float>();
+}
+
 // JSON変換の定義 (PrimitiveType)
 inline void to_json(json &j, const PrimitiveType &type) {
     j = static_cast<int>(type);

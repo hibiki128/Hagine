@@ -25,6 +25,8 @@ class Player : public BaseObject {
     void DirectionUpdate();
     void Debug();
 
+    float CalculateShortestRotation(float from, float to);
+
     void Move();
 
     /// <summary>

@@ -111,10 +111,10 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                     particle.transform.rotation_.y = rotationAxis.y * angle;
                     particle.transform.rotation_.z = rotationAxis.z * angle;
                 } else if (particleSetting.isRandomRotate) {
-                    particle.transform.rotation_ += particle.rotateVelocity;
+                    particle.transform.rotation_ += Quaternion::FromEulerAngles(particle.rotateVelocity);
                 } else {
                     particle.transform.rotation_ =
-                        (1.0f - t) * particle.startRote + t * particle.endRote;
+                        Quaternion::FromEulerAngles((1.0f - t) * particle.startRote + t * particle.endRote);
                 }
 
                 if (particleSetting.isAcceMultiply) {

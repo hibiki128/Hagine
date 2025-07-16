@@ -21,9 +21,6 @@ void Framework::Run() {
 }
 
 void Framework::Initialize() {
-
-    D3DResourceLeakChecker();
-
     ///---------WinApp--------
     // WindowsAPIの初期化
     winApp_ = WinApp::GetInstance();

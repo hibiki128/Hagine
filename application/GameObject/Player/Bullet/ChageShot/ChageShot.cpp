@@ -18,7 +18,6 @@ void ChageShot::Init(const std::string objectName) {
     BaseObject::SetColor({0.0f, 0.5f, 1.0f, 1.0f});
     BaseObject::AddCollider();
     BaseObject::SetCollisionType(CollisionType::Sphere);
-    BaseObject::SetVisible(true);
     isAlive_ = false;
     isMaxScale_ = false;
     isFired_ = false;
@@ -48,7 +47,7 @@ void ChageShot::Update() {
         // チャージ中はプレイヤーの前方にオフセットして配置
         if (player_) {
             Vector3 playerPos = player_->GetLocalPosition();
-            Vector3 forwardDir = GetForwardFromRotation(player_->GetLocalRotation());
+            Vector3 forwardDir = GetForwardFromRotation(player_->GetLocalRotation().ToEulerAngles());
 
             // プレイヤーのサイズとチャージショットの現在のスケールを考慮
             float chargeRadius = scale_; // チャージショットの現在の半径
@@ -99,7 +98,7 @@ void ChageShot::Update() {
                     }
                 } else {
                     // プレイヤーの回転から前方ベクトルを算出
-                    dir = GetForwardFromRotation(player_->GetLocalRotation());
+                    dir = GetForwardFromRotation(player_->GetLocalRotation().ToEulerAngles());
                 }
             }
             Fire(pos, dir);

@@ -55,7 +55,7 @@ class Model {
 
     void CreateModel(const std::string &directorypath, const std::string &filename);
 
-    void CreatePrimitiveModel(const PrimitiveType &type);
+    void CreatePrimitiveModel(const PrimitiveType &type, std::string texPath);
 
     void Update();
 

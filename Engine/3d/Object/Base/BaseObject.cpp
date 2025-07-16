@@ -164,9 +164,8 @@ void BaseObject::CreateModel(const std::string modelname) {
 }
 
 void BaseObject::CreatePrimitiveModel(const PrimitiveType &type) {
-    obj3d_->CreatePrimitiveModel(type);
+    obj3d_->CreatePrimitiveModel(type,texturePath_);
     type_ = type;
-    isPrimitive_ = true;
 }
 
 void BaseObject::AddCollider() {
@@ -221,7 +220,6 @@ std::vector<std::string> BaseObject::GetChildrenNames() const {
     return names;
 }
 
-// ワールド座標を取得（親の位置は加算不要）
 Vector3 BaseObject::GetWorldPosition() const {
     Vector3 worldPos; 
     // ワールド行列の平行移動成分を取得
@@ -231,23 +229,45 @@ Vector3 BaseObject::GetWorldPosition() const {
     return worldPos;
 }
 
-// ワールド回転を取得（簡易的にオイラー角変換）
-Vector3 BaseObject::GetWorldRotation() const {
-    Vector3 worldRot;
-    // ワールド行列から回転角（オイラー角）を抽出
+// ワールド行列からクォータニオンを取得
+Quaternion BaseObject::GetWorldRotation() const {
     const Matrix4x4 &m = transform_->matWorld_;
-    worldRot.y = std::asin(-m.m[2][0]); // Pitch
 
-    if (std::cos(worldRot.y) > 0.0001f) {
-        worldRot.x = std::atan2(m.m[2][1], m.m[2][2]); // Yaw
-        worldRot.z = std::atan2(m.m[1][0], m.m[0][0]); // Roll
+    // 回転行列の要素からクォータニオンを生成
+    float trace = m.m[0][0] + m.m[1][1] + m.m[2][2];
+    Quaternion q;
+
+    if (trace > 0.0f) {
+        float s = 0.5f / sqrtf(trace + 1.0f);
+        q.w = 0.25f / s;
+        q.x = (m.m[2][1] - m.m[1][2]) * s;
+        q.y = (m.m[0][2] - m.m[2][0]) * s;
+        q.z = (m.m[1][0] - m.m[0][1]) * s;
     } else {
-        worldRot.x = std::atan2(-m.m[1][2], m.m[1][1]);
-        worldRot.z = 0.0f;
+        if (m.m[0][0] > m.m[1][1] && m.m[0][0] > m.m[2][2]) {
+            float s = 2.0f * sqrtf(1.0f + m.m[0][0] - m.m[1][1] - m.m[2][2]);
+            q.w = (m.m[2][1] - m.m[1][2]) / s;
+            q.x = 0.25f * s;
+            q.y = (m.m[0][1] + m.m[1][0]) / s;
+            q.z = (m.m[0][2] + m.m[2][0]) / s;
+        } else if (m.m[1][1] > m.m[2][2]) {
+            float s = 2.0f * sqrtf(1.0f + m.m[1][1] - m.m[0][0] - m.m[2][2]);
+            q.w = (m.m[0][2] - m.m[2][0]) / s;
+            q.x = (m.m[0][1] + m.m[1][0]) / s;
+            q.y = 0.25f * s;
+            q.z = (m.m[1][2] + m.m[2][1]) / s;
+        } else {
+            float s = 2.0f * sqrtf(1.0f + m.m[2][2] - m.m[0][0] - m.m[1][1]);
+            q.w = (m.m[1][0] - m.m[0][1]) / s;
+            q.x = (m.m[0][2] + m.m[2][0]) / s;
+            q.y = (m.m[1][2] + m.m[2][1]) / s;
+            q.z = 0.25f * s;
+        }
     }
 
-    return worldRot;
+    return q.Normalize(); // 正規化して返す
 }
+
 
 // ワールドスケールを取得（回転を考慮）
 Vector3 BaseObject::GetWorldScale() const {
@@ -271,7 +291,7 @@ void BaseObject::SaveToJson() {
     ObjectDatas_->Save<std::string>("textureName", texturePath_);
     ObjectDatas_->Save<std::string>("objectName", objectName_);
     ObjectDatas_->Save<Vector3>("translation", transform_->translation_);
-    ObjectDatas_->Save<Vector3>("rotation", transform_->rotation_);
+    ObjectDatas_->Save<Quaternion>("rotation", transform_->rotation_);
     ObjectDatas_->Save<Vector3>("scale", transform_->scale_);
     ObjectDatas_->Save<bool>("Lighting", isLighting_);
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
@@ -294,7 +314,7 @@ void BaseObject::LoadFromJson() {
 
     // 基本トランスフォームを読み込み
     transform_->translation_ = ObjectDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
-    transform_->rotation_ = ObjectDatas_->Load<Vector3>("rotation", {0.0f, 0.0f, 0.0f});
+    transform_->rotation_ = ObjectDatas_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
     transform_->scale_ = ObjectDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
     isLighting_ = ObjectDatas_->Load<bool>("Lighting", true);
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::kCount);
@@ -427,27 +447,34 @@ void BaseObject::DebugObject() {
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("位置をリセット");
 
-        // 回転設定
+       // 回転設定
         ImGui::AlignTextToFramePadding();
         ImGui::Text("回転:");
         ImGui::SameLine(80);
         ImGui::PushItemWidth(200);
 
+        // クォータニオンからオイラー角を取得してデグリーに変換
+        Vector3 eulerAngles = transform_->GetRotationEuler();
         float rotationDegrees[3] = {
-            radiansToDegrees(transform_->rotation_.x),
-            radiansToDegrees(transform_->rotation_.y),
-            radiansToDegrees(transform_->rotation_.z)};
+            radiansToDegrees(eulerAngles.x),
+            radiansToDegrees(eulerAngles.y),
+            radiansToDegrees(eulerAngles.z)};
 
         if (ImGui::DragFloat3("##Rotation", rotationDegrees, 1.0f, -360.0f, 360.0f, "%.1f°")) {
-            transform_->rotation_.x = degreesToRadians(rotationDegrees[0]);
-            transform_->rotation_.y = degreesToRadians(rotationDegrees[1]);
-            transform_->rotation_.z = degreesToRadians(rotationDegrees[2]);
+            // オイラー角をラジアンに変換してクォータニオンに設定
+            Vector3 newRotation = {
+                degreesToRadians(rotationDegrees[0]),
+                degreesToRadians(rotationDegrees[1]),
+                degreesToRadians(rotationDegrees[2])};
+            transform_->SetRotationEuler(newRotation);
+            transform_->UpdateMatrix(); // 行列を更新
         }
-        ImGui::PopItemWidth();
 
+        ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("リセット##ResetRot")) {
-            transform_->rotation_ = {0.0f, 0.0f, 0.0f};
+            transform_->SetRotationQuaternion(Quaternion::IdentityQuaternion());
+            transform_->UpdateMatrix(); // 行列を更新
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("回転をリセット");
@@ -477,7 +504,7 @@ void BaseObject::DebugObject() {
 
         // ワールド座標の取得
         Vector3 worldPos = GetWorldPosition();
-        Vector3 worldRot = GetWorldRotation();
+        Quaternion worldRot = GetWorldRotation();
         Vector3 worldScale = GetWorldScale();
 
         // ワールド位置（読み取り専用）
@@ -492,17 +519,20 @@ void BaseObject::DebugObject() {
         ImGui::PopStyleColor(2);
         ImGui::PopItemWidth();
 
-        // ワールド回転（読み取り専用、度数で表示）
+    // ワールド回転（読み取り専用、度数で表示）
         ImGui::AlignTextToFramePadding();
         ImGui::Text("回転:");
         ImGui::SameLine(80);
         ImGui::PushItemWidth(200);
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.15f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
+
+        // クォータニオンからワールド回転を取得
         float worldRotDegrees[3] = {
             radiansToDegrees(worldRot.x),
             radiansToDegrees(worldRot.y),
             radiansToDegrees(worldRot.z)};
+
         ImGui::InputFloat3("##WorldRotation", worldRotDegrees, "%.1f°", ImGuiInputTextFlags_ReadOnly);
         ImGui::PopStyleColor(2);
         ImGui::PopItemWidth();
@@ -766,6 +796,6 @@ Vector3 BaseObject::GetCenterPosition() const {
     return GetWorldPosition();
 }
 
-Vector3 BaseObject::GetCenterRotation() const {
+Quaternion BaseObject::GetCenterRotation() const {
     return GetWorldRotation();
 }

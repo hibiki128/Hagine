@@ -47,7 +47,7 @@ void Model::CreateModel(const std::string &directorypath, const std::string &fil
     }
 }
 
-void Model::CreatePrimitiveModel(const PrimitiveType &type) {
+void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath) {
     // プリミティブモデルは通常単一メッシュ・単一マテリアルなので、
     // 配列サイズを1に設定
     meshes_.resize(1);
@@ -64,6 +64,7 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type) {
     materials_[0] = std::make_unique<Material>();
     materials_[0]->Initialize();
     materials_[0]->PrimitiveInitialize(type);
+    materials_[0]->GetMaterialData().textureFilePath = texPath;
     materials_[0]->LoadTexture();
 
     // modelDataに反映

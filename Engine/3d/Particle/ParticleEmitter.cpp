@@ -4,8 +4,9 @@
 #include "line/DrawLine3D.h"
 
 #include "ParticleGroupManager.h"
-#include <set>
 #include <Particle/ParticleEditor.h>
+#include <set>
+#include <type/Quaternion.h>
 // コンストラクタ
 ParticleEmitter::ParticleEmitter() {}
 
@@ -89,7 +90,7 @@ void ParticleEmitter::Emit() {
         for (auto &[groupName, setting] : particleSettings_) {
             // ここでtransform_の値をParticleSettingに反映
             setting.translate = transform_.translation_;
-            setting.rotation = transform_.rotation_;
+            setting.rotation = transform_.rotation_.ToEulerAngles();
             setting.scale = transform_.scale_;
             Manager_->SetParticleSetting(groupName, setting);
         }
@@ -166,7 +167,7 @@ void ParticleEmitter::SaveToJson() {
 
 void ParticleEmitter::LoadFromJson() {
     transform_.translation_ = datas_->Load<Vector3>("emitterTranslation", {0, 0, 0});
-    transform_.rotation_ = datas_->Load<Vector3>("emitterRotation", {0, 0, 0});
+    transform_.rotation_ = datas_->Load<Quaternion>("emitterRotation", Quaternion::IdentityQuaternion());
     transform_.scale_ = datas_->Load<Vector3>("emitterScale", {1, 1, 1});
     particleGroupNames_ = datas_->Load<std::vector<std::string>>("GroupNames", {});
     emitFrequency_ = datas_->Load<float>("emitFrequency", 0.1f);

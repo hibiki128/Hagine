@@ -10,7 +10,6 @@ void PlayerBullet::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     this->CreatePrimitiveModel(PrimitiveType::Sphere);
     this->SetTexture("debug/white1x1.png");
-    this->SetVisible(true);
     BaseObject::SetColor({0.0f, 0.0f, 1.0f, 1.0f});
 
     // 弾の生存時間を設定（5秒後に消える）

@@ -54,18 +54,18 @@ struct Motion {
 
     // 既存のオフセット系（ローカル座標系）
     Vector3 startPosOffset, endPosOffset;
-    Vector3 startRotOffset, endRotOffset;
+    Vector3 startRotOffset, endRotOffset; // オイラー角のオフセット（保存用）
     Vector3 startScaleOffset = {0, 0, 0}, endScaleOffset = {0, 0, 0};
 
     // 基準値（再生開始時の値）
-    Vector3 basePos, baseRot, baseScale;
+    Vector3 basePos, baseRot, baseScale; // baseRotはオイラー角として保持
 
     // 動き始めた時の初期位置を記録（リセット用）
-    Vector3 initialPos, initialRot, initialScale;
-    bool hasInitialTransform = false; // 初期位置が記録されているかのフラグ
+    Vector3 initialPos, initialRot, initialScale; // initialRotはオイラー角として保持
+    bool hasInitialTransform = false;             // 初期位置が記録されているかのフラグ
 
     // 実際の開始・終了値（回転・スケール用）
-    Vector3 actualStartRot, actualEndRot;
+    Quaternion actualStartRot, actualEndRot; // クォータニオンとして計算
     Vector3 actualStartScale, actualEndScale;
 
     // Catmull-Rom曲線用の制御点（ローカル座標オフセット）
@@ -124,7 +124,7 @@ class MotionEditor {
 
     void ResetInitialPosition(const std::string &objectName);
 
-     // UI用の制御点操作関数
+    // UI用の制御点操作関数
     void AddControlPoint(const std::string &objectName, const Vector3 &worldPosition);
     void UpdateControlPoint(const std::string &objectName, int index, const Vector3 &worldPosition);
 
@@ -132,7 +132,7 @@ class MotionEditor {
     /// ====================================
     /// private variaus
     /// ====================================
-    
+
     std::unordered_map<std::string, Motion> motions_;
     std::string selectedName_;
     std::string jsonName_;
@@ -148,7 +148,7 @@ class MotionEditor {
     // 一時モーションのクリーンアップ
     void CleanupFinishedTemporaryMotions();
 
-        // 親子関係対応のヘルパー関数
+    // 親子関係対応のヘルパー関数
     Matrix4x4 GetParentInverseWorldMatrix(BaseObject *object);
     Vector3 GetLocalControlPointPosition(BaseObject *object, const Vector3 &worldPos);
     Vector3 TransformLocalControlPointToWorld(BaseObject *object, const Vector3 &localPos);

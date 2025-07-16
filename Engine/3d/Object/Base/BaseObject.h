@@ -71,7 +71,7 @@ class BaseObject : public Collider {
     virtual void ImGui();
 
     Vector3 GetCenterPosition() const override;
-    Vector3 GetCenterRotation() const override;
+    Quaternion GetCenterRotation() const override;
 
     // 中心座標取得
     WorldTransform *GetWorldTransform() { return transform_.get(); }
@@ -119,11 +119,11 @@ class BaseObject : public Collider {
     Object3d *GetObject3d() { return obj3d_.get(); }
     PrimitiveType GetPrimitiveType() { return type_; }
     Vector3 &GetLocalPosition() { return transform_->translation_; }
-    Vector3 &GetLocalRotation() { return transform_->rotation_; }
+    Quaternion &GetLocalRotation() { return transform_->rotation_; }
     Vector3 &GetLocalScale() { return transform_->scale_; }
-    Vector3 GetWorldPosition()const;
-    Vector3 GetWorldRotation()const;
-    Vector3 GetWorldScale()const;
+    Vector3 GetWorldPosition() const;
+    Quaternion GetWorldRotation() const;
+    Vector3 GetWorldScale() const;
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
     bool &GetLighting() { return isLighting_; }
     bool &GetLoop() { return isLoop_; }

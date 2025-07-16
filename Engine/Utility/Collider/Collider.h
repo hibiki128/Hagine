@@ -65,7 +65,7 @@ class Collider {
     float GetRadius() { return radius_; }
     // 中心座標を取得
     virtual Vector3 GetCenterPosition() const = 0;
-    virtual Vector3 GetCenterRotation() const = 0;
+    virtual Quaternion GetCenterRotation() const = 0;
 
     AABB GetAABB() { return aabb_; }
     OBB GetOBB() { return obb_; }
@@ -114,7 +114,7 @@ class Collider {
 #pragma endregion
 
   private:
-    void MakeOBBOrientations(OBB &obb, const Vector3 &rotate);
+    void MakeOBBOrientations(OBB &obb, const Quaternion &rotateQuat);
     void UpdateOBB();
     void LoadFromJson();
 

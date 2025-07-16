@@ -42,8 +42,8 @@ void Object3d::CreateModel(const std::string &filePath) {
     }
 }
 
-void Object3d::CreatePrimitiveModel(const PrimitiveType &type) {
-    model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type));
+void Object3d::CreatePrimitiveModel(const PrimitiveType &type,std::string texPath) {
+    model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type,texPath));
     isPrimitive_ = true;
 }
 

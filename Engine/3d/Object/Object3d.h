@@ -65,7 +65,7 @@ class Object3d {
     /// </summary>
     void CreateModel(const std::string &filePath);
 
-    void CreatePrimitiveModel(const PrimitiveType &type);
+    void CreatePrimitiveModel(const PrimitiveType &type, std::string texPath);
 
     /// <summary>
     /// 更新

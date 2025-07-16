@@ -43,10 +43,10 @@ void ModelManager::LoadModel(const std::string &filePath) {
     models.insert(std::make_pair(filePath, std::move(model)));
 }
 
-std::string ModelManager::CreatePrimitiveModel(PrimitiveType type) {
+std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string texPath) {
     std::unique_ptr<Model> model = std::make_unique<Model>();
     model->Initialize(modelCommon);
-    model->CreatePrimitiveModel(type);
+    model->CreatePrimitiveModel(type,texPath);
     model->SetSrv(srvManager);
     // モデルのユニークな識別子を生成
     static int modelIndex = 0;

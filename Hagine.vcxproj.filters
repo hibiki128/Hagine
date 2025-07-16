@@ -30,9 +30,6 @@
     <Filter Include="ソースファイル\Application">
       <UniqueIdentifier>{ca298d3a-6a09-4beb-b1fc-25b93b845b9f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ソースファイル\Application\Base">
-      <UniqueIdentifier>{faf8b8dc-bf7d-4fc7-ad07-1dd625a6b9a6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ソースファイル\Application\Scene">
       <UniqueIdentifier>{b08ef83a-1109-47b3-9f30-c84cbb0e78a6}</UniqueIdentifier>
     </Filter>
@@ -168,12 +165,6 @@
     <Filter Include="リソース ファイル\Skinning">
       <UniqueIdentifier>{4051fada-0c9e-47fa-89db-da4df8cce377}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ソースファイル\Engine\3d\Camera\NewFilter1">
-      <UniqueIdentifier>{0fa5e3be-7afc-4fa3-ae1e-c8baedfdfb5f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Engine\3d\Camera\NewFilter2">
-      <UniqueIdentifier>{48ce93bc-5a79-4154-bae6-fc64a8ab807e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ソースファイル\Engine\3d\Camera\FollowCamera">
       <UniqueIdentifier>{8a3b28d4-fe8d-4f04-bbb5-c5328b93caba}</UniqueIdentifier>
     </Filter>
@@ -194,6 +185,9 @@
     </Filter>
     <Filter Include="ソースファイル\Application\GameObject\Player\Hand">
       <UniqueIdentifier>{0b5bf4df-19c8-4c4c-8beb-b072e9c9b3f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\Edit\ShotcutManager">
+      <UniqueIdentifier>{3df90e8a-db9b-4f43-a83b-b978ead57f6b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -456,9 +450,6 @@
     <ClCompile Include="Application\Utility\HitStop\HitStop.cpp">
       <Filter>ソースファイル\Application\Utility\HitStop</Filter>
     </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp">
-      <Filter>ソースファイル</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\3d\Object\Object3dCommon.cpp">
       <Filter>ソースファイル\Engine\3d\Object</Filter>
     </ClCompile>
@@ -470,6 +461,12 @@
     </ClCompile>
     <ClCompile Include="Engine\3d\Object\Base\BaseObjectManager.cpp">
       <Filter>ソースファイル\Engine\3d\Object\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.cpp">
+      <Filter>ソースファイル\Engine\Utility\Edit\ShotcutManager</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp">
+      <Filter>ソースファイル\Application\GameObject\Player\Hand</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -820,6 +817,9 @@
     </ClInclude>
     <ClInclude Include="Engine\3d\Transform\WorldTransform.h">
       <Filter>ソースファイル\Engine\3d\Transform</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h">
+      <Filter>ソースファイル\Engine\Utility\Edit\ShotcutManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -70,8 +70,6 @@ Matrix4x4 MakeRotateZMatrix(float radian);
 // X,Y,Z軸回転行列を合成した行列
 Matrix4x4 MakeRotateXYZMatrix(const Vector3& radian);
 
-Matrix4x4 MakeRotateXYZMatrix(const Quaternion& quat);
-
 Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate);
 
 // tanθの逆数
@@ -87,11 +85,6 @@ Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float botto
 Matrix4x4 MakeViewPortMatrix(float left, float top, float width, float height, float minDepth, float maxDepth);
 
 // クォータニオンから回転軸(Vector3)を計算する関数
-Vector3 QuaternionToAxis(const Quaternion& q);
-
-Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Quaternion& rotate, const Vector3& translate);
-
-Matrix4x4 QuaternionToMatrix4x4(const Quaternion& q);
 
 float LerpShortAngle(float a, float b, float t);
 
@@ -106,7 +99,15 @@ float radiansToDegrees(float radians);
 
 float degreesToRadians(float degrees);
 
-Quaternion Slerp(Quaternion q0, Quaternion q1, float t);
+Vector3 QuaternionToAxis(const Quaternion& q);
+
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Quaternion& rotate, const Vector3& translate);
+
+Matrix4x4 QuaternionToMatrix4x4(const Quaternion& q);
+
+Quaternion Slerp(const Quaternion &q0, const Quaternion &q1, float t);
+
+Matrix4x4 MakeRotateXYZMatrix(const Quaternion &quat);
 
 //// デバッグ用
 //void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);

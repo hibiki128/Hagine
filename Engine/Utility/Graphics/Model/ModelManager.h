@@ -51,7 +51,7 @@ public:
     /// プリミティブモデルの作成
 	/// </summary>
 	/// <param name="type"></param>
-	std::string CreatePrimitiveModel(PrimitiveType type);
+        std::string CreatePrimitiveModel(PrimitiveType type, std::string texPath);
 
 public:
 	std::unordered_map<std::string, std::unique_ptr<Model>> models;

@@ -6,8 +6,8 @@
     },
     "isAABB": false,
     "isCollisionEnabled": true,
-    "isOBB": true,
-    "isSphere": false,
+    "isOBB": false,
+    "isSphere": true,
     "isVisible": false,
     "max": {
         "x": 0.0,
@@ -19,7 +19,7 @@
         "y": 0.0,
         "z": 0.0
     },
-    "radius": 0.0,
+    "radius": -0.4000000059604645,
     "scaleCenter": {
         "x": 0.0,
         "y": 0.0,

@@ -52,7 +52,7 @@ ParticleGroupData ParticleGroup::CreateParticleGroup(const std::string &groupNam
 ParticleGroupData ParticleGroup::CreatePrimitiveParticleGroup(const std::string &groupName, PrimitiveType type, const std::string &texturePath) {
     particleGroupData_.groupName = groupName;
     type_ = type;
-    model_ = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type));
+    model_ = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type,texturePath));
     TextureManager::GetInstance()->LoadTexture(texturePath);
     modelData = model_->GetModelData();
     CreateVertexData();

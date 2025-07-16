@@ -109,6 +109,8 @@ class Framework {
 
     PrimitiveModel *primitiveModel_ = nullptr;
 
+    D3DResourceLeakChecker LeakChecker_;
+
     std::unique_ptr<CollisionManager> collisionManager_;
     std::unique_ptr<OffScreen> offscreen_;
 

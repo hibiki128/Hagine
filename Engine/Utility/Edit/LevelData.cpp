@@ -186,7 +186,7 @@ std::unique_ptr<BaseObject> LevelData::CreateBaseObject(const ObjectData &object
 
     // トランスフォームを設定
     baseObject->GetLocalPosition() = objectData.transform.translation;
-    baseObject->GetLocalRotation() = objectData.transform.rotation;
+    baseObject->GetLocalRotation() = Quaternion::FromEulerAngles(objectData.transform.rotation);
     baseObject->GetLocalScale() = objectData.transform.scaling;
 
     // コライダーを追加（OBBを使用）

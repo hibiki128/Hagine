@@ -258,7 +258,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
 
             if (!fromNode.rotate.empty()) {
                 Quaternion fromRotate = CalculateValue(fromNode.rotate, blendState_.fromAnimationTime);
-                Quaternion blendedRotate = Slerp(fromRotate, defaultRotate, blendState_.blendFactor);
+                Quaternion blendedRotate =Quaternion::Slerp(fromRotate, defaultRotate, blendState_.blendFactor);
 
                 KeyframeQuaternion keyframe = {blendedRotate, animationTime};
                 blendedNode.rotate.push_back(keyframe);

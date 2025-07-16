@@ -2,8 +2,8 @@
 #ifdef _DEBUG
 #include "ImGuizmoManager.h"
 #include "Input.h"
-#include <Transform/WorldTransform.h>
 #include <Object/Base/BaseObjectManager.h>
+#include <Transform/WorldTransform.h>
 
 ImGuizmoManager *ImGuizmoManager::instance = nullptr;
 
@@ -317,10 +317,9 @@ void ImGuizmoManager::DecomposeMatrixToLocal(const Matrix4x4 &matrix, WorldTrans
     const float DEG_TO_RAD = 0.01745329251f;
 
     transform->translation_ = {translation[0], translation[1], translation[2]};
-    transform->rotation_ = {
-        rotation[0] * DEG_TO_RAD,
-        rotation[1] * DEG_TO_RAD,
-        rotation[2] * DEG_TO_RAD};
+    transform->rotation_ = Quaternion::FromEulerAngles({rotation[0] * DEG_TO_RAD,
+                                                        rotation[1] * DEG_TO_RAD,
+                                                        rotation[2] * DEG_TO_RAD});
     transform->scale_ = {scale[0], scale[1], scale[2]};
 }
 
@@ -370,10 +369,9 @@ void ImGuizmoManager::ApplyLocalMatrix(const Matrix4x4 &matrix, WorldTransform *
 
     // ローカル座標として直接設定
     transform->translation_ = {translation[0], translation[1], translation[2]};
-    transform->rotation_ = {
-        rotation[0] * DEG_TO_RAD,
-        rotation[1] * DEG_TO_RAD,
-        rotation[2] * DEG_TO_RAD};
+    transform->rotation_ = Quaternion::FromEulerAngles({rotation[0] * DEG_TO_RAD,
+                                                        rotation[1] * DEG_TO_RAD,
+                                                        rotation[2] * DEG_TO_RAD});
     transform->scale_ = {scale[0], scale[1], scale[2]};
 }
 
@@ -401,10 +399,9 @@ void ImGuizmoManager::DecomposeMatrix(WorldTransform *transform) {
     const float DEG_TO_RAD = 0.01745329251f;
 
     transform->translation_ = {translation[0], translation[1], translation[2]};
-    transform->rotation_ = {
-        rotation[0] * DEG_TO_RAD,
-        rotation[1] * DEG_TO_RAD,
-        rotation[2] * DEG_TO_RAD};
+    transform->rotation_ = Quaternion::FromEulerAngles({rotation[0] * DEG_TO_RAD,
+                                                        rotation[1] * DEG_TO_RAD,
+                                                        rotation[2] * DEG_TO_RAD});
     transform->scale_ = {scale[0], scale[1], scale[2]};
 }
 
