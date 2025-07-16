@@ -199,6 +199,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Utility\ShowFolder\ShowFolder.cpp" />
     <ClCompile Include="Engine\3d\SkyBox\SkyBox.cpp" />
     <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
+    <ClCompile Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".claudiaideconfig" />
@@ -340,6 +341,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\SkyBox\SkyBox.h" />
     <ClInclude Include="Application\GameObject\Player\Hand\PlayerHand.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\Skinning\Skinning.CS.hlsl">

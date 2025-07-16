@@ -225,6 +225,8 @@ void BaseObjectManager::ShowParentChildHierarchy() {
 }
 
 void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth) {
+#ifdef _DEBUG
+
     if (!obj)
         return;
 
@@ -248,6 +250,7 @@ void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth) {
         }
         ImGui::TreePop();
     }
+#endif // _DEBUG
 }
 
 void BaseObjectManager::SetParentChild(const std::string &childName, const std::string &parentName) {
@@ -424,7 +427,6 @@ void BaseObjectManager::DrawSceneLoadModal() {
 // オブジェクト生成モーダルの描画
 void BaseObjectManager::DrawObjectCreationModal() {
 #ifdef _DEBUG
-
     // メニューから呼び出された場合のモーダル表示
     if (showObjectCreationModal_) {
         ImGui::OpenPopup("オブジェクト生成");

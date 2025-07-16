@@ -9,7 +9,7 @@ ImGuizmoManager *ImGuizmoManager::instance = nullptr;
 
 ImGuizmoManager *ImGuizmoManager::GetInstance() {
     if (instance == nullptr) {
-        instance = new ImGuizmoManager;
+        instance = new ImGuizmoManager();
     }
     return instance;
 }
@@ -17,6 +17,8 @@ ImGuizmoManager *ImGuizmoManager::GetInstance() {
 void ImGuizmoManager::Finalize() {
     transformMap.clear();
     selectedName.clear();
+    delete instance;
+    instance = nullptr;
 }
 
 void ImGuizmoManager::BeginFrame() {
