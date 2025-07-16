@@ -236,11 +236,11 @@ void ImGuiManager::ShowMainMenu() {
         // ファイルメニュー
         if (ImGui::BeginMenu(ICON_FA_FILE " ファイル")) {
             // シーン管理セクション
-            if (ImGui::MenuItem(ICON_FA_DOWNLOAD " シーン保存", "Ctrl+S")) {
+            if (ImGui::MenuItem(ICON_FA_DOWNLOAD " シーン保存", "Ctrl+Shift+S")) {
                 // BaseObjectManagerのシーン保存モーダルを開く
                 baseObjectManager_->OpenSceneSaveModal();
             }
-            if (ImGui::MenuItem(ICON_FA_UPLOAD " シーン読み込み")) {
+            if (ImGui::MenuItem(ICON_FA_UPLOAD " シーン読み込み", "Ctrl+Shift+L")) {
                 // BaseObjectManagerのシーン読み込みモーダルを開く
                 baseObjectManager_->OpenSceneLoadModal();
             }

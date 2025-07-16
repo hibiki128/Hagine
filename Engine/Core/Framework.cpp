@@ -171,6 +171,8 @@ void Framework::Initialize() {
 }
 
 void Framework::Finalize() {
+    baseObjectManager_->Finalize();
+
     sceneManager_->Finalize();
 
     // WindowsAPIの終了処理
@@ -205,7 +207,6 @@ void Framework::Finalize() {
     imGuizmoManager_->Finalize();
 #endif // _DEBUG
     shortcutManager_->Finalize();
-    baseObjectManager_->Finalize();
 
     line3d_->Finalize();
     skyBox_->Finalize();
@@ -233,11 +234,11 @@ void Framework::RegisterShortcutKey() {
         winApp_->ClosedWindow();
     });
     // シーンセーブ
-    shortcutManager_->RegisterShortcut("SceneSave", {DIK_LCONTROL, DIK_S}, [this]() {
+    shortcutManager_->RegisterShortcut("SceneSave", {DIK_LCONTROL, DIK_LSHIFT, DIK_S}, [this]() {
         baseObjectManager_->OpenSceneSaveModal();
     });
     // シーン読み込み
-    shortcutManager_->RegisterShortcut("SceneLoad", {DIK_LCONTROL, DIK_L}, [this]() {
+    shortcutManager_->RegisterShortcut("SceneLoad", {DIK_LCONTROL, DIK_LSHIFT, DIK_L}, [this]() {
         baseObjectManager_->OpenSceneLoadModal();
     });
     // モデル作成
