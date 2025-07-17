@@ -488,12 +488,12 @@ void Player::Move() {
             Vector3 toEnemy = enemyPos - playerPos;
             toEnemy.y = 0.0f;
             if (toEnemy.Length() > 0.001f) {
-                targetRot = Quaternion::FromLookRotation(toEnemy.Normalize(), {0, 1, 0});
+                targetRot = Quaternion::FromLookRotation(toEnemy.Normalize(), {0, 1, 0}).Normalize();
             }
         } else {
             // 移動方向を向く
             if (moveDir.Length() > 0.001f) {
-                targetRot = Quaternion::FromLookRotation(moveDir.Normalize(), {0, 1, 0});
+                targetRot = Quaternion::FromLookRotation(moveDir.Normalize(), {0, 1, 0}).Normalize();
             }
         }
 
@@ -521,7 +521,7 @@ void Player::Move() {
             Vector3 toEnemy = enemyPos - playerPos;
             toEnemy.y = 0.0f;
             if (toEnemy.Length() > 0.001f) {
-                GetLocalRotation() = Quaternion::FromLookRotation(toEnemy.Normalize(), {0, 1, 0});
+                GetLocalRotation() = Quaternion::FromLookRotation(toEnemy.Normalize(), {0, 1, 0}).Normalize();
             }
         }
     }
@@ -580,12 +580,12 @@ void Player::DefaultMovement() {
 
             if (toEnemy.Length() > 0.001f) {
                 Vector3 normalizedDirection = toEnemy.Normalize();
-                targetRotation = Quaternion::FromLookRotation(normalizedDirection.Normalize(), {0, 1, 0});
+                targetRotation = Quaternion::FromLookRotation(normalizedDirection.Normalize(), {0, 1, 0}).Normalize();
             }
         } else {
             // 移動方向を向く
             if (inputDirection.Length() > 0.001f) {
-                targetRotation = Quaternion::FromLookRotation(inputDirection.Normalize(), {0, 1, 0});
+                targetRotation = Quaternion::FromLookRotation(inputDirection.Normalize(), {0, 1, 0}).Normalize();
             }
         }
 
@@ -618,7 +618,7 @@ void Player::DefaultMovement() {
 
             if (toEnemy.Length() > 0.001f) {
                 Vector3 normalizedDirection = toEnemy.Normalize();
-                Quaternion targetRotation = Quaternion::FromLookRotation(normalizedDirection.Normalize(), {0, 1, 0});
+                Quaternion targetRotation = Quaternion::FromLookRotation(normalizedDirection.Normalize(), {0, 1, 0}).Normalize();
 
                 float rotationSpeed = 15.0f * dt_;
                 rotationSpeed = std::clamp(rotationSpeed, 0.0f, 1.0f);
