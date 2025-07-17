@@ -60,6 +60,8 @@ class Player : public BaseObject {
     MoveDirection &GetMoveDirection() { return moveDir_; }
     std::string GetCurrentStateName() const;
 
+    std::vector<std::unique_ptr<PlayerBullet>> &GetBullets() { return bullets_; }
+
   private:
     /// ==================================================================
     /// private methods
@@ -79,8 +81,6 @@ class Player : public BaseObject {
 
     // プレイヤーが向いている方向を文字列に変換して表示
     const char *GetDirectionName(Direction dir);
-
-    void DefaultMovement();
 
   private:
     /// ==================================================================

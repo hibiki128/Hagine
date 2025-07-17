@@ -220,8 +220,8 @@ std::vector<std::string> BaseObject::GetChildrenNames() const {
     return names;
 }
 
-Vector3 BaseObject::GetWorldPosition() const {
-    Vector3 worldPos;
+Vector3 BaseObject::GetWorldPosition() {
+
     // ワールド行列の平行移動成分を取得
     worldPos.x = transform_->matWorld_.m[3][0];
     worldPos.y = transform_->matWorld_.m[3][1];
@@ -230,12 +230,12 @@ Vector3 BaseObject::GetWorldPosition() const {
 }
 
 // ワールド行列からクォータニオンを取得
-Quaternion BaseObject::GetWorldRotation() const {
+Quaternion BaseObject::GetWorldRotation(){
     const Matrix4x4 &m = transform_->matWorld_;
 
     // 回転行列の要素からクォータニオンを生成
     float trace = m.m[0][0] + m.m[1][1] + m.m[2][2];
-    Quaternion q;
+  
 
     if (trace > 0.0f) {
         float s = 0.5f / sqrtf(trace + 1.0f);
@@ -269,8 +269,8 @@ Quaternion BaseObject::GetWorldRotation() const {
 }
 
 // ワールドスケールを取得（回転を考慮）
-Vector3 BaseObject::GetWorldScale() const {
-    Vector3 worldScale;
+Vector3 BaseObject::GetWorldScale() {
+  
     const Matrix4x4 &m = transform_->matWorld_;
 
     // 各軸のベクトルの長さをスケールとして取得
@@ -357,6 +357,22 @@ void BaseObject::AnimaLoadFromJson() {
     AnimaDatas_ = std::make_unique<DataHandler>("Animation", objectName_);
     isLoop_ = AnimaDatas_->Load<bool>("Loop", false);
 }
+
+
+void BaseObject::DebugCollider() {
+    for (auto &collider : colliders_) {
+        collider->OffsetImgui();
+    }
+}
+
+Vector3 BaseObject::GetCenterPosition() {
+    return GetWorldPosition();
+}
+
+Quaternion BaseObject::GetCenterRotation() {
+    return GetWorldRotation();
+}
+
 
 void BaseObject::ImGui() {
 #ifdef _DEBUG
@@ -787,18 +803,4 @@ std::vector<std::string> BaseObject::GetGltfFiles() {
         }
     }
     return gltfFiles;
-}
-
-void BaseObject::DebugCollider() {
-    for (auto &collider : colliders_) {
-        collider->OffsetImgui();
-    }
-}
-
-Vector3 BaseObject::GetCenterPosition() const {
-    return GetWorldPosition();
-}
-
-Quaternion BaseObject::GetCenterRotation() const {
-    return GetWorldRotation();
 }

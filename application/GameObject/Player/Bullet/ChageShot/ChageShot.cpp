@@ -5,12 +5,6 @@
 #include <algorithm>
 #include <cmath>
 
-// 前方ベクトルを回転値から算出（Y軸回転のみ考慮の例）
-static Vector3 GetForwardFromRotation(const Vector3 &rotation) {
-    float y = rotation.y;
-    return Vector3(std::sinf(y), 0.0f, std::cosf(y));
-}
-
 void ChageShot::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);
@@ -32,8 +26,11 @@ void ChageShot::Init(const std::string objectName) {
 
 void ChageShot::Update() {
     Input *input = Input::GetInstance();
+
     if (isAlive_) {
         Collider::SetCollisionEnabled(true);
+
+        // 弾エミッターの更新と位置・スケール設定
         bulletEmitter_->Update();
         bulletEmitter_->SetPosition(transform_->translation_);
         bulletEmitter_->SetStartScale("chageBullet", transform_->scale_ * 2.0f);
@@ -44,23 +41,46 @@ void ChageShot::Update() {
     }
 
     if (isAlive_ && !isFired_) {
-        // チャージ中はプレイヤーの前方にオフセットして配置
         if (player_) {
+            // プレイヤー位置を取得
             Vector3 playerPos = player_->GetLocalPosition();
-            Vector3 forwardDir = GetForwardFromRotation(player_->GetLocalRotation().ToEulerAngles());
 
-            // プレイヤーのサイズとチャージショットの現在のスケールを考慮
-            float chargeRadius = scale_; // チャージショットの現在の半径
+            // プレイヤーの回転（クォータニオン）を取得
+            Quaternion rot = player_->GetLocalRotation();
+
+            // 前方基準ベクトル（ローカルZ+方向）
+            Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
+
+            // プレイヤーの回転をかけて前方ベクトルを計算
+            Vector3 forwardDir = rot * baseForward;
+
+            // 左右が逆ならX軸反転（必要に応じてコメント外す）
+            forwardDir.x = -forwardDir.x;
+
+            // 前後が逆ならZ軸反転（必要に応じてコメント外す）
+            // forwardDir.z = -forwardDir.z;
+
+            // 正規化してからオフセット距離をかける
+            Vector3 normForward = forwardDir.Normalize();
+
+            // チャージ弾のオフセット距離
+            float chargeRadius = scale_;
             float offsetDistance = playerRadius_ + chargeRadius + offsetMargin_;
 
-            // 前方方向にオフセット
-            Vector3 offset = forwardDir * offsetDistance;
+            // オフセット計算
+            Vector3 offset = normForward * offsetDistance;
 
-            // Y軸オフセット（プレイヤーの中心付近に配置）
+            // 高さ（Y軸）オフセット
             offset.y = verticalOffset_;
 
+            // チャージ弾の位置更新
             transform_->translation_ = playerPos + offset;
+
+            // エミッター位置も更新
             chageEmitter_->SetPosition(transform_->translation_);
+
+            // オイラー角も表示（player_->GetLocalRotation() をオイラーに変換できる関数が必要）
+            Vector3 playerEuler = rot.ToEulerAngles(); // 例：ToEulerAngles()がある想定
         }
     }
 
@@ -83,38 +103,48 @@ void ChageShot::Update() {
             }
         }
         if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
-            // 発射方向決定
-            Vector3 dir = {0, 0, 1};               // デフォルト前方
-            Vector3 pos = transform_->translation_; // 現在のチャージショット位置から発射
+            Vector3 dir = {0, 0, 1}; // デフォルト前方
+            Vector3 pos = transform_->translation_;
+
             if (player_) {
                 if (player_->GetIsLockOn() && player_->GetEnemy()) {
-                    // ロックオン時は敵方向
+                    // ロックオン時は敵方向に向けて発射
                     dir = player_->GetEnemy()->GetLocalPosition() - pos;
-                    float len = std::sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+                    float len = dir.Length();
                     if (len > 0.0001f) {
-                        dir.x /= len;
-                        dir.y /= len;
-                        dir.z /= len;
+                        dir = dir / len; // 正規化
                     }
                 } else {
-                    // プレイヤーの回転から前方ベクトルを算出
-                    dir = GetForwardFromRotation(player_->GetLocalRotation().ToEulerAngles());
+                    // プレイヤーの回転をかけて発射方向を計算
+                    dir = (player_->GetLocalRotation() * Vector3(0.0f, 0.0f, 1.0f)).Normalize();
+
+                    // 左右反転補正が必要ならこちらも反映
+                    dir.x = -dir.x;
+
+                    // 前後反転補正が必要ならこちらも反映
+                    // dir.z = -dir.z;
                 }
             }
+
             Fire(pos, dir);
             isFired_ = true;
         }
     }
 
-    // 発射後の移動
+    // 発射後の移動処理
     if (isFired_ && isAlive_) {
         transform_->translation_.x += velocity_.x * (1.0f / 60.0f);
         transform_->translation_.y += velocity_.y * (1.0f / 60.0f);
         transform_->translation_.z += velocity_.z * (1.0f / 60.0f);
+
+        // プレイヤーから一定距離離れたらリセット
         if ((transform_->translation_ - player_->GetLocalPosition()).Length() > 300.0f) {
             Reset();
         }
     }
+
+    // 階層的ワールド変換更新
+    BaseObject::UpdateWorldTransformHierarchy();
 }
 
 void ChageShot::Fire(const Vector3 &pos, const Vector3 &dir) {

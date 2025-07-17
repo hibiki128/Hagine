@@ -64,8 +64,8 @@ class Collider {
     // 半径を取得
     float GetRadius() { return radius_; }
     // 中心座標を取得
-    virtual Vector3 GetCenterPosition() const = 0;
-    virtual Quaternion GetCenterRotation() const = 0;
+    virtual Vector3 GetCenterPosition() = 0;
+    virtual Quaternion GetCenterRotation() = 0;
 
     AABB GetAABB() { return aabb_; }
     OBB GetOBB() { return obb_; }

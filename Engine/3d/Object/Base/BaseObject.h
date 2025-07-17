@@ -27,6 +27,10 @@ class BaseObject : public Collider {
     std::unique_ptr<Object3d> obj3d_;
     // ベースのワールド変換データ
     std::unique_ptr<WorldTransform> transform_;
+
+    Vector3 worldPos;
+    Quaternion q;
+    Vector3 worldScale;
     // カラー
     ObjColor objColor_;
     // ライティング
@@ -70,8 +74,8 @@ class BaseObject : public Collider {
 
     virtual void ImGui();
 
-    Vector3 GetCenterPosition() const override;
-    Quaternion GetCenterRotation() const override;
+    Vector3 GetCenterPosition() override;
+    Quaternion GetCenterRotation() override;
 
     // 中心座標取得
     WorldTransform *GetWorldTransform() { return transform_.get(); }
@@ -121,9 +125,9 @@ class BaseObject : public Collider {
     Vector3 &GetLocalPosition() { return transform_->translation_; }
     Quaternion &GetLocalRotation() { return transform_->rotation_; }
     Vector3 &GetLocalScale() { return transform_->scale_; }
-    Vector3 GetWorldPosition() const;
-    Quaternion GetWorldRotation() const;
-    Vector3 GetWorldScale() const;
+    Vector3 GetWorldPosition();
+    Quaternion GetWorldRotation();
+    Vector3 GetWorldScale();
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
     bool &GetLighting() { return isLighting_; }
     bool &GetLoop() { return isLoop_; }

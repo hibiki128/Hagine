@@ -4,6 +4,7 @@
 #include "State/Fly/PlayerStateFlyIdle.h"
 
 #include "Bullet/ChageShot/ChageShot.h"
+#include "Object/Base/BaseObjectManager.h"
 #include "State/Fly/PlayerStateFlyMove.h"
 #include "State/Ground/PlayerStateIdle.h"
 #include "State/Ground/PlayerStateJump.h"
@@ -11,10 +12,9 @@
 #include "application/Camera/FollowCamera.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "numbers"
+#include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Input.h>
 #include <cmath>
-#include <Application/Utility/MotionEditor/MotionEditor.h>
-#include"Object/Base/BaseObjectManager.h"
 
 Player::Player() {
 }
@@ -118,6 +118,7 @@ void Player::Update() {
         (*it)->Update();
         (*it)->SetSpeed(B_speed_);
         (*it)->SetAcce(B_acce_);
+        (*it)->UpdateWorldTransformHierarchy();
 
         // 弾が生きていない場合は削除
         if (!(*it)->IsAlive()) {
@@ -234,7 +235,6 @@ void Player::Debug() {
     }
 }
 
-
 Vector3 Player::GetMovementDirection() const {
     Vector3 dir = velocity_;
     float len = GetVelocityMagnitude();
@@ -299,6 +299,21 @@ void Player::Shot() {
 }
 
 void Player::RotateUpdate() {
+
+       if (isLockOn_ && enemy_) {
+        Vector3 toEnemy = enemy_->GetLocalPosition() - GetLocalPosition();
+        toEnemy.y = 0.0f; // 高さは無視してXZ平面のみで向き計算
+
+        if (toEnemy.Length() > 0.001f) {
+            toEnemy = toEnemy.Normalize();
+            float targetYaw = std::atan2(-toEnemy.x, toEnemy.z);
+            Quaternion targetRot = Quaternion::FromEulerAngles({0.0f, targetYaw, 0.0f});
+
+            float rotateSpeed = 10.0f;
+            transform_->rotation_ = Quaternion::Slerp(transform_->rotation_, targetRot, rotateSpeed * dt_);
+        }
+    }
+
     Vector3 euler = transform_->rotation_.ToEulerAngles();
 
     // 右回転はY軸マイナス、左回転はY軸プラス
@@ -374,8 +389,6 @@ Direction Player::CalculateDirectionFromRotation() {
     return Direction::Forward;
 }
 
-
-
 // GetDirectionName メソッドを更新
 const char *Player::GetDirectionName(Direction dir) {
     switch (dir) {
@@ -429,204 +442,69 @@ float Player::CalculateShortestRotation(float from, float to) {
 }
 
 void Player::Move() {
-    FollowCamera *camera = GetCamera();
-    if (!camera) {
-        DefaultMovement();
+    // 入力取得（WASD）
+    float xInput = 0.0f;
+    float zInput = 0.0f;
+
+    if (Input::GetInstance()->PushKey(DIK_D))
+        xInput += 1.0f;
+    if (Input::GetInstance()->PushKey(DIK_A))
+        xInput -= 1.0f;
+    if (Input::GetInstance()->PushKey(DIK_W))
+        zInput += 1.0f;
+    if (Input::GetInstance()->PushKey(DIK_S))
+        zInput -= 1.0f;
+
+    // 減速処理（入力がない場合）
+    if (xInput == 0.0f && zInput == 0.0f) {
+        velocity_.x *= 0.65f;
+        velocity_.z *= 0.65f;
+        if (std::abs(velocity_.x) < 0.01f)
+            velocity_.x = 0.0f;
+        if (std::abs(velocity_.z) < 0.01f)
+            velocity_.z = 0.0f;
+        isDashing_ = false;
         return;
     }
 
-    // 入力取得
-    float xInput = 0.0f;
-    float zInput = 0.0f;
-    if (Input::GetInstance()->PushKey(DIK_D))
-        xInput += 1.0f;
-    if (Input::GetInstance()->PushKey(DIK_A))
-        xInput -= 1.0f;
-    if (Input::GetInstance()->PushKey(DIK_W))
-        zInput += 1.0f;
-    if (Input::GetInstance()->PushKey(DIK_S))
-        zInput -= 1.0f;
+    // カメラの方向ベクトル取得
+    FollowCamera *camera = GetCamera();
+    if (!camera)
+        return;
 
-    isDashing_ = Input::GetInstance()->PushKey(DIK_LCONTROL) || Input::GetInstance()->PushKey(DIK_RCONTROL);
-    float maxSpeedMultiplier = isDashing_ ? 2.5f : 1.0f;
+    float yaw = camera->GetYaw();
 
-    if (xInput != 0.0f || zInput != 0.0f) {
-        // 入力ベクトルを正規化
-        Vector3 inputDir = {xInput, 0.0f, zInput};
-        float length = std::sqrt(xInput * xInput + zInput * zInput);
-        if (length > 0.0f) {
-            inputDir.x /= length;
-            inputDir.z /= length;
-        }
+    // カメラの前方向と右方向ベクトル（XZ平面）
+    Vector3 cameraForward = {std::sin(yaw), 0.0f, std::cos(yaw)};
+    Vector3 cameraRight = {std::cos(yaw), 0.0f, -std::sin(yaw)};
 
-        // カメラのYawで回転
-        float cameraYaw = camera->GetYaw();
-        Quaternion camRot = Quaternion::FromAxisAngle({0, 1, 0}, cameraYaw);
-        Vector3 moveDir = camRot * inputDir;
+    // 入力方向をカメラベースで合成
+    Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
 
-        // 加速
-        GetMoveSpeed() += GetAccelRate() * dt_;
-        float maxSpeed = GetMaxSpeed() * (currentState_ == states_["FlyMove"].get() ? maxSpeedMultiplier : 1.0f);
-        if (GetMoveSpeed() > maxSpeed)
-            GetMoveSpeed() = maxSpeed;
+    // 正規化（斜め方向も一定速度にする）
+    moveDir = moveDir.Normalize();
 
-        // 移動速度反映
-        GetVelocity().x = moveDir.x * GetMoveSpeed();
-        GetVelocity().z = moveDir.z * GetMoveSpeed();
-
-        // 回転処理
-        bool isLockOn = GetIsLockOn();
-        Enemy *targetEnemy = GetEnemy();
-
-        Quaternion currentRot = GetLocalRotation();
-        Quaternion targetRot = currentRot;
-
-        if (isLockOn && targetEnemy) {
-            // ロックオン時は敵方向
-            Vector3 playerPos = GetLocalPosition();
-            Vector3 enemyPos = targetEnemy->GetLocalPosition();
-            Vector3 toEnemy = enemyPos - playerPos;
-            toEnemy.y = 0.0f;
-            if (toEnemy.Length() > 0.001f) {
-                targetRot = Quaternion::FromLookRotation(toEnemy.Normalize(), {0, 1, 0}).Normalize();
-            }
-        } else {
-            // 移動方向を向く
-            if (moveDir.Length() > 0.001f) {
-                targetRot = Quaternion::FromLookRotation(moveDir.Normalize(), {0, 1, 0}).Normalize();
-            }
-        }
-
-        // 補間率（回転速度）を調整F
-        float rotationLerp = (isLockOn ? 15.0f : 10.0f) * dt_;
-        rotationLerp = std::clamp(rotationLerp, 0.0f, 1.0f);
-
-        // Slerpで補間
-        Quaternion newRot = Quaternion::Slerp(currentRot, targetRot, rotationLerp);
-        GetLocalRotation() = newRot;
-    } else {
-        // 減速処理
-        GetMoveSpeed() -= GetAccelRate() * 2.0f * dt_;
-        if (GetMoveSpeed() < 0.0f)
-            GetMoveSpeed() = 0.0f;
-        GetVelocity().x *= 0.95f;
-        GetVelocity().z *= 0.95f;
-
-        // ロックオン中は敵の方向を向く
-        bool isLockOn = GetIsLockOn();
-        Enemy *targetEnemy = GetEnemy();
-        if (isLockOn && targetEnemy) {
-            Vector3 playerPos = GetLocalPosition();
-            Vector3 enemyPos = targetEnemy->GetLocalPosition();
-            Vector3 toEnemy = enemyPos - playerPos;
-            toEnemy.y = 0.0f;
-            if (toEnemy.Length() > 0.001f) {
-                GetLocalRotation() = Quaternion::FromLookRotation(toEnemy.Normalize(), {0, 1, 0}).Normalize();
-            }
-        }
+    // --- 回転処理 ---
+    if (!isLockOn_) {
+        float targetYaw = std::atan2(-moveDir.x, moveDir.z);
+        Quaternion targetRot = Quaternion::FromEulerAngles({0.0f, targetYaw, 0.0f});
+        float rotateSpeed = 10.0f;
+        transform_->rotation_ = Quaternion::Slerp(transform_->rotation_, targetRot, rotateSpeed * dt_);
     }
-}
+    // --- 移動処理 ---
+    float currentMaxSpeed = maxSpeed_;
+    isDashing_ = Input::GetInstance()->PushKey(DIK_LCONTROL);
+    if (isDashing_) {
+        currentMaxSpeed *= 1.5f;
+    }
 
+    velocity_.x += moveDir.x * accelRate_ * dt_;
+    velocity_.z += moveDir.z * accelRate_ * dt_;
 
-void Player::DefaultMovement() {
-    // 入力取得
-    float xInput = 0.0f;
-    float zInput = 0.0f;
-    if (Input::GetInstance()->PushKey(DIK_D))
-        xInput += 1.0f;
-    if (Input::GetInstance()->PushKey(DIK_A))
-        xInput -= 1.0f;
-    if (Input::GetInstance()->PushKey(DIK_W))
-        zInput += 1.0f;
-    if (Input::GetInstance()->PushKey(DIK_S))
-        zInput -= 1.0f;
-
-    // ダッシュ入力
-    isDashing_ = Input::GetInstance()->PushKey(DIK_LCONTROL) || Input::GetInstance()->PushKey(DIK_RCONTROL);
-    float maxSpeedMultiplier = isDashing_ ? 2.5f : 1.0f;
-
-    if (xInput != 0.0f || zInput != 0.0f) {
-        // 入力ベクトルを正規化
-        Vector3 inputDirection = {xInput, 0.0f, zInput};
-        float length = std::sqrt(xInput * xInput + zInput * zInput);
-        if (length > 0.0f) {
-            inputDirection.x /= length;
-            inputDirection.z /= length;
-        }
-
-        // 加速
-        GetMoveSpeed() += GetAccelRate() * dt_;
-        float maxSpeed = GetMaxSpeed() * (currentState_ == states_["FlyMove"].get() ? maxSpeedMultiplier : 1.0f);
-        if (GetMoveSpeed() > maxSpeed) {
-            GetMoveSpeed() = maxSpeed;
-        }
-
-        // 移動速度反映
-        GetVelocity().x = inputDirection.x * GetMoveSpeed();
-        GetVelocity().z = inputDirection.z * GetMoveSpeed();
-
-        // 回転処理（ロックオン対応）
-        bool isLockOn = GetIsLockOn();
-        Enemy *targetEnemy = GetEnemy();
-
-        Quaternion targetRotation = GetLocalRotation();
-
-        if (isLockOn && targetEnemy) {
-            // ロックオン時は敵の方向を向く
-            Vector3 playerPos = GetLocalPosition();
-            Vector3 enemyPos = targetEnemy->GetLocalPosition();
-            Vector3 toEnemy = enemyPos - playerPos;
-            toEnemy.y = 0.0f; // Y軸は無視
-
-            if (toEnemy.Length() > 0.001f) {
-                Vector3 normalizedDirection = toEnemy.Normalize();
-                targetRotation = Quaternion::FromLookRotation(normalizedDirection.Normalize(), {0, 1, 0}).Normalize();
-            }
-        } else {
-            // 移動方向を向く
-            if (inputDirection.Length() > 0.001f) {
-                targetRotation = Quaternion::FromLookRotation(inputDirection.Normalize(), {0, 1, 0}).Normalize();
-            }
-        }
-
-        // 現在の回転から目標回転への補間
-        float rotationSpeed = (isLockOn ? 15.0f : 10.0f) * dt_;
-        rotationSpeed = std::clamp(rotationSpeed, 0.0f, 1.0f);
-
-        Quaternion currentRotation = GetLocalRotation();
-        Quaternion newRotation = Quaternion::Slerp(currentRotation, targetRotation, rotationSpeed);
-        GetLocalRotation() = newRotation;
-
-    } else {
-        // 減速処理
-        GetMoveSpeed() -= GetAccelRate() * 2.0f * dt_;
-        if (GetMoveSpeed() < 0.0f)
-            GetMoveSpeed() = 0.0f;
-
-        GetVelocity().x *= 0.95f;
-        GetVelocity().z *= 0.95f;
-
-        // ロックオン中は敵の方向を向く
-        bool isLockOn = GetIsLockOn();
-        Enemy *targetEnemy = GetEnemy();
-
-        if (isLockOn && targetEnemy) {
-            Vector3 playerPos = GetLocalPosition();
-            Vector3 enemyPos = targetEnemy->GetLocalPosition();
-            Vector3 toEnemy = enemyPos - playerPos;
-            toEnemy.y = 0.0f;
-
-            if (toEnemy.Length() > 0.001f) {
-                Vector3 normalizedDirection = toEnemy.Normalize();
-                Quaternion targetRotation = Quaternion::FromLookRotation(normalizedDirection.Normalize(), {0, 1, 0}).Normalize();
-
-                float rotationSpeed = 15.0f * dt_;
-                rotationSpeed = std::clamp(rotationSpeed, 0.0f, 1.0f);
-
-                Quaternion currentRotation = GetLocalRotation();
-                Quaternion newRotation = Quaternion::Slerp(currentRotation, targetRotation, rotationSpeed);
-                GetLocalRotation() = newRotation;
-            }
-        }
+    float speed = std::sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
+    if (speed > currentMaxSpeed) {
+        float scale = currentMaxSpeed / speed;
+        velocity_.x *= scale;
+        velocity_.z *= scale;
     }
 }

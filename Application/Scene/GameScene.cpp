@@ -129,6 +129,10 @@ void GameScene::AddSceneSetting() {
 
 void GameScene::AddObjectSetting() {
     player_ptr->Debug();
+
+    for (auto& bullet:player_ptr->GetBullets()) {
+        bullet->ImGui();
+    }
 }
 
 void GameScene::AddParticleSetting() {
