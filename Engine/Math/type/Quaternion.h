@@ -74,4 +74,14 @@ class Quaternion final {
 
     // 軸と角度からクォータニオンを作成
     static Quaternion FromAxisAngle(const Vector3 &axis, float angle);
+
+    static Quaternion FromEulerDegrees(const Vector3 &eulerDegrees);
+    Vector3 ToEulerDegrees() const;
+
+    // ジンバルロックを回避するための改良されたメソッド
+    static Quaternion FromEulerAnglesSafe(const Vector3 &eulerAngles);
+    Vector3 ToEulerAnglesSafe() const;
+    
+    // 軸回転を個別に適用するメソッド
+    static Quaternion FromAxisRotations(const Vector3 &axisRotations);
 };

@@ -44,8 +44,8 @@ void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
         obj3d_->DrawSkeleton(*transform_, viewProjection);
     }
     if (!isWireframe_) {
-            // オブジェクトの描画
-            obj3d_->Draw(*transform_, viewProjection, reflect_, &objColor_, isLighting_,isModelDraw_);
+        // オブジェクトの描画
+        obj3d_->Draw(*transform_, viewProjection, reflect_, &objColor_, isLighting_, isModelDraw_);
     } else {
         obj3d_->DrawWireframe(*transform_, viewProjection, isRainbow_);
     }
@@ -92,7 +92,7 @@ void BaseObject::UpdateHierarchy() {
 }
 
 void BaseObject::SetParent(BaseObject *parent) {
-    if (parent_ == parent) {
+    if (parent_ == parent || parent == nullptr) {
         return; // 同じ親を持ってる場合何もしない
     }
     if (parent_) {
@@ -164,7 +164,7 @@ void BaseObject::CreateModel(const std::string modelname) {
 }
 
 void BaseObject::CreatePrimitiveModel(const PrimitiveType &type) {
-    obj3d_->CreatePrimitiveModel(type,texturePath_);
+    obj3d_->CreatePrimitiveModel(type, texturePath_);
     type_ = type;
 }
 
@@ -221,7 +221,7 @@ std::vector<std::string> BaseObject::GetChildrenNames() const {
 }
 
 Vector3 BaseObject::GetWorldPosition() const {
-    Vector3 worldPos; 
+    Vector3 worldPos;
     // ワールド行列の平行移動成分を取得
     worldPos.x = transform_->matWorld_.m[3][0];
     worldPos.y = transform_->matWorld_.m[3][1];
@@ -267,7 +267,6 @@ Quaternion BaseObject::GetWorldRotation() const {
 
     return q.Normalize(); // 正規化して返す
 }
-
 
 // ワールドスケールを取得（回転を考慮）
 Vector3 BaseObject::GetWorldScale() const {
@@ -409,7 +408,6 @@ void BaseObject::ImGui() {
     }
 
 #endif // _DEBUG
-
 }
 
 void BaseObject::DebugObject() {
@@ -447,37 +445,42 @@ void BaseObject::DebugObject() {
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("位置をリセット");
 
-       // 回転設定
+        // 回転設定
         ImGui::AlignTextToFramePadding();
         ImGui::Text("回転:");
         ImGui::SameLine(80);
         ImGui::PushItemWidth(200);
-
-        // クォータニオンからオイラー角を取得してデグリーに変換
-        Vector3 eulerAngles = transform_->GetRotationEuler();
-        float rotationDegrees[3] = {
-            radiansToDegrees(eulerAngles.x),
-            radiansToDegrees(eulerAngles.y),
-            radiansToDegrees(eulerAngles.z)};
-
-        if (ImGui::DragFloat3("##Rotation", rotationDegrees, 1.0f, -360.0f, 360.0f, "%.1f°")) {
-            // オイラー角をラジアンに変換してクォータニオンに設定
-            Vector3 newRotation = {
-                degreesToRadians(rotationDegrees[0]),
-                degreesToRadians(rotationDegrees[1]),
-                degreesToRadians(rotationDegrees[2])};
-            transform_->SetRotationEuler(newRotation);
-            transform_->UpdateMatrix(); // 行列を更新
+        static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
+        if (ImGui::DragFloat3("##Rotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°")) {
+            // --- 修正版: 各軸ごとにクォータニオンを生成し合成 ---
+            Quaternion currentRotation = transform_->GetRotationQuaternion();
+            Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
+            Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
+            Quaternion deltaQuatZ = Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
+            // ローカル軸回転として合成（Y→X→Zの順。用途に応じて順序は調整可）
+            Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
+            Quaternion newRotation = currentRotation * deltaQuat;
+            transform_->SetRotationQuaternion(newRotation.Normalize());
+            transform_->UpdateMatrix();
+            deltaRotation = {0.0f, 0.0f, 0.0f};
         }
-
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("リセット##ResetRot")) {
             transform_->SetRotationQuaternion(Quaternion::IdentityQuaternion());
-            transform_->UpdateMatrix(); // 行列を更新
+            transform_->UpdateMatrix();
+            deltaRotation = {0.0f, 0.0f, 0.0f};
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("回転をリセット");
+
+        // 現在の回転を表示（参考用）
+        ImGui::Text("現在の回転:");
+        Vector3 currentEuler = transform_->GetRotationEuler();
+        ImGui::Text("X: %.1f°, Y: %.1f°, Z: %.1f°",
+                    currentEuler.x * 180.0f / std::numbers::pi_v<float>,
+                    currentEuler.y * 180.0f / std::numbers::pi_v<float>,
+                    currentEuler.z * 180.0f / std::numbers::pi_v<float>);
 
         // スケール設定
         ImGui::AlignTextToFramePadding();
@@ -519,7 +522,7 @@ void BaseObject::DebugObject() {
         ImGui::PopStyleColor(2);
         ImGui::PopItemWidth();
 
-    // ワールド回転（読み取り専用、度数で表示）
+        // ワールド回転（読み取り専用、度数で表示）
         ImGui::AlignTextToFramePadding();
         ImGui::Text("回転:");
         ImGui::SameLine(80);

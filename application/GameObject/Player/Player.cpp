@@ -299,16 +299,17 @@ void Player::Shot() {
 }
 
 void Player::RotateUpdate() {
-    Vector3 euler = transform_->rotation_.ToEuler(); // ← クォータニオン → オイラー角に変換
+    Vector3 euler = transform_->rotation_.ToEulerAngles();
 
+    // 右回転はY軸マイナス、左回転はY軸プラス
     if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
-        euler.y += 0.04f;
-    }
-    if (Input::GetInstance()->PushKey(DIK_LEFT)) {
         euler.y -= 0.04f;
     }
+    if (Input::GetInstance()->PushKey(DIK_LEFT)) {
+        euler.y += 0.04f;
+    }
 
-    transform_->rotation_ = Quaternion::FromEulerAngles(euler); // ← 再度クォータニオンに戻す
+    transform_->rotation_ = Quaternion::FromEulerAngles(euler);
 }
 
 void Player::CollisionGround() {
@@ -347,15 +348,13 @@ void Player::CollisionGround() {
     }
 }
 
-// 新しく追加するメソッド
 Direction Player::CalculateDirectionFromRotation() {
-    // プレイヤーの回転角度を [0, 2π) の範囲に正規化
-    float angle = NormalizeAngle(transform_->rotation_.y);
+    // クォータニオンからオイラー角（Yaw）を取得
+    float yaw = transform_->rotation_.ToEulerAngles().y;
+    float angle = NormalizeAngle(yaw);
 
     // 8方向の場合の角度範囲（π/4 = 45度ごと）
-    // 0度を前方として、時計回りに8方向を判定
     if (angle >= 7.0f * std::numbers::pi_v<float> / 4.0f || angle < std::numbers::pi_v<float> / 4.0f) {
-
         return Direction::Forward;
     } else if (angle >= std::numbers::pi_v<float> / 4.0f && angle < 2.0f * std::numbers::pi_v<float> / 4.0f) {
         return Direction::ForwardRight;
@@ -372,8 +371,6 @@ Direction Player::CalculateDirectionFromRotation() {
     } else if (angle >= 7.0f * std::numbers::pi_v<float> / 4.0f && angle < 8.0f * std::numbers::pi_v<float> / 4.0f) {
         return Direction::ForwardLeft;
     }
-
-    // デフォルト（通常はここに来ないはず）
     return Direction::Forward;
 }
 
@@ -477,7 +474,7 @@ void Player::Move() {
         GetVelocity().x = moveDir.x * GetMoveSpeed();
         GetVelocity().z = moveDir.z * GetMoveSpeed();
 
-      // 回転処理
+        // 回転処理
         bool isLockOn = GetIsLockOn();
         Enemy *targetEnemy = GetEnemy();
 
@@ -500,7 +497,7 @@ void Player::Move() {
             }
         }
 
-        // 補間率（回転速度）を調整
+        // 補間率（回転速度）を調整F
         float rotationLerp = (isLockOn ? 15.0f : 10.0f) * dt_;
         rotationLerp = std::clamp(rotationLerp, 0.0f, 1.0f);
 
@@ -530,6 +527,7 @@ void Player::Move() {
     }
 }
 
+
 void Player::DefaultMovement() {
     // 入力取得
     float xInput = 0.0f;
@@ -549,10 +547,11 @@ void Player::DefaultMovement() {
 
     if (xInput != 0.0f || zInput != 0.0f) {
         // 入力ベクトルを正規化
-        if (xInput != 0.0f && zInput != 0.0f) {
-            float length = std::sqrt(xInput * xInput + zInput * zInput);
-            xInput /= length;
-            zInput /= length;
+        Vector3 inputDirection = {xInput, 0.0f, zInput};
+        float length = std::sqrt(xInput * xInput + zInput * zInput);
+        if (length > 0.0f) {
+            inputDirection.x /= length;
+            inputDirection.z /= length;
         }
 
         // 加速
@@ -563,35 +562,40 @@ void Player::DefaultMovement() {
         }
 
         // 移動速度反映
-        GetVelocity().x = xInput * GetMoveSpeed();
-        GetVelocity().z = zInput * GetMoveSpeed();
+        GetVelocity().x = inputDirection.x * GetMoveSpeed();
+        GetVelocity().z = inputDirection.z * GetMoveSpeed();
 
         // 回転処理（ロックオン対応）
         bool isLockOn = GetIsLockOn();
         Enemy *targetEnemy = GetEnemy();
 
-        Vector3 currentEuler = GetLocalRotation().ToEuler();
-        float currentYaw = -currentEuler.y; // 座標系の修正
-        float targetYaw = currentYaw;
+        Quaternion targetRotation = GetLocalRotation();
 
         if (isLockOn && targetEnemy) {
+            // ロックオン時は敵の方向を向く
             Vector3 playerPos = GetLocalPosition();
             Vector3 enemyPos = targetEnemy->GetLocalPosition();
-            float dx = enemyPos.x - playerPos.x;
-            float dz = enemyPos.z - playerPos.z;
-            targetYaw = std::atan2(dx, dz);
+            Vector3 toEnemy = enemyPos - playerPos;
+            toEnemy.y = 0.0f; // Y軸は無視
+
+            if (toEnemy.Length() > 0.001f) {
+                Vector3 normalizedDirection = toEnemy.Normalize();
+                targetRotation = Quaternion::FromLookRotation(normalizedDirection.Normalize(), {0, 1, 0});
+            }
         } else {
-            // プレイヤーの入力方向に向ける
-            targetYaw = std::atan2(xInput, zInput);
+            // 移動方向を向く
+            if (inputDirection.Length() > 0.001f) {
+                targetRotation = Quaternion::FromLookRotation(inputDirection.Normalize(), {0, 1, 0});
+            }
         }
 
-        float rotationDiff = CalculateShortestRotation(currentYaw, targetYaw);
+        // 現在の回転から目標回転への補間
         float rotationSpeed = (isLockOn ? 15.0f : 10.0f) * dt_;
-        float rotationAmount = std::clamp(rotationDiff, -rotationSpeed, rotationSpeed);
+        rotationSpeed = std::clamp(rotationSpeed, 0.0f, 1.0f);
 
-        // 回転適用（座標系を考慮して-yを使用）
-        currentEuler.y = -(currentYaw + rotationAmount);
-        GetLocalRotation() = Quaternion::FromEulerAngles(currentEuler);
+        Quaternion currentRotation = GetLocalRotation();
+        Quaternion newRotation = Quaternion::Slerp(currentRotation, targetRotation, rotationSpeed);
+        GetLocalRotation() = newRotation;
 
     } else {
         // 減速処理
@@ -609,20 +613,20 @@ void Player::DefaultMovement() {
         if (isLockOn && targetEnemy) {
             Vector3 playerPos = GetLocalPosition();
             Vector3 enemyPos = targetEnemy->GetLocalPosition();
+            Vector3 toEnemy = enemyPos - playerPos;
+            toEnemy.y = 0.0f;
 
-            float dx = enemyPos.x - playerPos.x;
-            float dz = enemyPos.z - playerPos.z;
+            if (toEnemy.Length() > 0.001f) {
+                Vector3 normalizedDirection = toEnemy.Normalize();
+                Quaternion targetRotation = Quaternion::FromLookRotation(normalizedDirection.Normalize(), {0, 1, 0});
 
-            float targetYaw = std::atan2(dx, dz);
-            Vector3 currentEuler = GetLocalRotation().ToEuler();
-            float currentYaw = -currentEuler.y; // 座標系の修正
+                float rotationSpeed = 15.0f * dt_;
+                rotationSpeed = std::clamp(rotationSpeed, 0.0f, 1.0f);
 
-            float rotationDiff = CalculateShortestRotation(currentYaw, targetYaw);
-            float rotationSpeed = 15.0f * dt_;
-            float rotationAmount = std::clamp(rotationDiff, -rotationSpeed, rotationSpeed);
-
-            currentEuler.y = -(currentYaw + rotationAmount);
-            GetLocalRotation() = Quaternion::FromEulerAngles(currentEuler);
+                Quaternion currentRotation = GetLocalRotation();
+                Quaternion newRotation = Quaternion::Slerp(currentRotation, targetRotation, rotationSpeed);
+                GetLocalRotation() = newRotation;
+            }
         }
     }
 }

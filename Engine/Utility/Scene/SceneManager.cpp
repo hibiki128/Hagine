@@ -102,6 +102,7 @@ void SceneManager::SceneChange() {
         if (scene_) {
             scene_->Finalize();
             delete scene_;
+            BaseObjectManager::GetInstance()->RemoveAllObjects();
         }
         // シーンの切り替え
         scene_ = nextScene_;

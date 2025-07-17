@@ -6,7 +6,7 @@ void BaseScene::Initialize()
 
 void BaseScene::Finalize()
 {
-    BaseObjectManager::GetInstance()->RemoveAllObjects();
+    
 }
 
 void BaseScene::Update()

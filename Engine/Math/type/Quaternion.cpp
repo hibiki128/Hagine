@@ -267,3 +267,25 @@ Quaternion Quaternion::FromAxisAngle(const Vector3 &axis, float angle) {
         normalizedAxis.z * sinHalfAngle,
         std::cos(halfAngle));
 }
+
+Quaternion Quaternion::FromEulerDegrees(const Vector3& eulerDegrees) {
+    // 度数をラジアンに変換
+    Vector3 eulerRadians = {
+        eulerDegrees.x * std::numbers::pi_v<float> / 180.0f,
+        eulerDegrees.y * std::numbers::pi_v<float> / 180.0f,
+        eulerDegrees.z * std::numbers::pi_v<float> / 180.0f
+    };
+    
+    return FromEulerAngles(eulerRadians);
+}
+
+// クォータニオンを度数のオイラー角に変換
+Vector3 Quaternion::ToEulerDegrees() const {
+    Vector3 eulerRadians = ToEulerAngles();
+    
+    return {
+        eulerRadians.x * 180.0f / std::numbers::pi_v<float>,
+        eulerRadians.y * 180.0f / std::numbers::pi_v<float>,
+        eulerRadians.z * 180.0f / std::numbers::pi_v<float>
+    };
+}
