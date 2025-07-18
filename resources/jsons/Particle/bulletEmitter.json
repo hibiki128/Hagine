@@ -49,7 +49,7 @@
     "bullet_isBillboardZ": false,
     "bullet_isEmitOnEdge": false,
     "bullet_isEndScale": false,
-    "bullet_isFaceDirection": false,
+    "bullet_isFaceDirection": true,
     "bullet_isGatherMode": false,
     "bullet_isRandomColor": false,
     "bullet_isRandomRotate": false,
@@ -143,6 +143,7 @@
     },
     "emitFrequency": 0.0010000000474974513,
     "emitterRotation": {
+        "w": 1.0,
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -158,6 +159,6 @@
         "z": 0.0
     },
     "isActive": true,
-    "isAuto": true,
+    "isAuto": false,
     "isVisible": false
 }

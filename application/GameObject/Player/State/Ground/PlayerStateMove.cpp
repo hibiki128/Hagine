@@ -2,8 +2,8 @@
 #include "Engine/Frame/Frame.h"
 #include "Input.h"
 #include "application/Camera/FollowCamera.h"
+#include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
-#include"application/GameObject/Enemy/Enemy.h"
 #include <cmath> // ベクトル計算に必要
 
 void PlayerStateMove::Enter(Player &player) {
@@ -32,13 +32,14 @@ void PlayerStateMove::Update(Player &player) {
 
     player.Move();
 
-       // 速度がほぼゼロになったらアイドル状態に戻る
-    if (player.GetMoveSpeed() < 0.1f) {
+    if (!Input::GetInstance()->PushKey(DIK_W)&&
+        !Input::GetInstance()->PushKey(DIK_A) &&
+        !Input::GetInstance()->PushKey(DIK_S) &&
+        !Input::GetInstance()->PushKey(DIK_D)) {
         player.ChangeState("Idle");
         return;
     }
 
-   
     // ジャンプ入力があればジャンプ状態へ
     if (Input::GetInstance()->TriggerKey(DIK_SPACE) && player.GetCanJump()) {
         player.ChangeState("Jump");
@@ -48,7 +49,6 @@ void PlayerStateMove::Update(Player &player) {
     // 方向の更新
     player.DirectionUpdate();
 }
-
 
 void PlayerStateMove::Exit(Player &player) {
     // 特に何もしない

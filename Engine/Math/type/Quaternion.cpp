@@ -97,40 +97,52 @@ Quaternion Quaternion::Normalize() const {
 
 Quaternion Quaternion::FromLookRotation(const Vector3 &direction, const Vector3 &up) {
     Vector3 forward = direction.Normalize();
-    Vector3 right = up.Cross(forward).Normalize();
-    Vector3 newUp = forward.Cross(right);
+    Vector3 right = up.Cross(forward).Normalize(); // ← up と forward から右方向
+    Vector3 newUp = forward.Cross(right);          // ← forward と right から上方向
 
-    // 修正されたクォータニオン計算
-    float trace = right.x + newUp.y + forward.z;
+    // 回転行列の列ベクトルを各軸として渡す（列優先）
+    float m00 = right.x;
+    float m01 = right.y;
+    float m02 = right.z;
+
+    float m10 = newUp.x;
+    float m11 = newUp.y;
+    float m12 = newUp.z;
+
+    float m20 = forward.x;
+    float m21 = forward.y;
+    float m22 = forward.z;
+
+    float trace = m00 + m11 + m22;
 
     if (trace > 0.0f) {
         float s = std::sqrt(trace + 1.0f) * 2.0f;
         return Quaternion(
-            (newUp.z - forward.y) / s,
-            (forward.x - right.z) / s,
-            (right.y - newUp.x) / s,
-            s / 4.0f);
-    } else if (right.x > newUp.y && right.x > forward.z) {
-        float s = std::sqrt(1.0f + right.x - newUp.y - forward.z) * 2.0f;
+            (m12 - m21) / s,
+            (m20 - m02) / s,
+            (m01 - m10) / s,
+            0.25f * s);
+    } else if (m00 > m11 && m00 > m22) {
+        float s = std::sqrt(1.0f + m00 - m11 - m22) * 2.0f;
         return Quaternion(
-            s / 4.0f,
-            (right.y + newUp.x) / s,
-            (forward.x + right.z) / s,
-            (newUp.z - forward.y) / s);
-    } else if (newUp.y > forward.z) {
-        float s = std::sqrt(1.0f + newUp.y - right.x - forward.z) * 2.0f;
+            0.25f * s,
+            (m01 + m10) / s,
+            (m02 + m20) / s,
+            (m12 - m21) / s);
+    } else if (m11 > m22) {
+        float s = std::sqrt(1.0f + m11 - m00 - m22) * 2.0f;
         return Quaternion(
-            (right.y + newUp.x) / s,
-            s / 4.0f,
-            (newUp.z + forward.y) / s,
-            (forward.x - right.z) / s);
+            (m01 + m10) / s,
+            0.25f * s,
+            (m12 + m21) / s,
+            (m20 - m02) / s);
     } else {
-        float s = std::sqrt(1.0f + forward.z - right.x - newUp.y) * 2.0f;
+        float s = std::sqrt(1.0f + m22 - m00 - m11) * 2.0f;
         return Quaternion(
-            (forward.x + right.z) / s,
-            (newUp.z + forward.y) / s,
-            s / 4.0f,
-            (right.y - newUp.x) / s);
+            (m02 + m20) / s,
+            (m12 + m21) / s,
+            0.25f * s,
+            (m01 - m10) / s);
     }
 }
 

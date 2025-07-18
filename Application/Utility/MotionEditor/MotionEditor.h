@@ -78,6 +78,13 @@ struct Motion {
 
     // 一時的なモーションかどうかのフラグ
     bool isTemporary = false;
+
+    // 元の位置に戻すかどうかのフラグ
+    bool returnToOriginal = false;
+
+    // 最初のモーション開始時の位置（コンボ全体の基準位置）
+    Vector3 comboStartPos, comboStartRot, comboStartScale;
+    bool hasComboStartTransform = false;
 };
 
 class MotionEditor {
@@ -109,8 +116,7 @@ class MotionEditor {
     Vector3 CatmullRomInterpolation(const std::vector<Vector3> &points, float t);
 
     // 再生関連
-    void Play(const std::string &objectName);
-    bool PlayFromFile(BaseObject *target, const std::string &fileName);
+    void Play(const std::string &jsonName);
     void Stop(const std::string &objectName);
     void StopAll();
 
@@ -118,22 +124,42 @@ class MotionEditor {
     MotionStatus GetMotionStatus(const std::string &objectName);
     bool IsPlaying(const std::string &objectName);
     bool IsFinished(const std::string &objectName);
+     // 元の位置に戻すフラグ付きでモーションを再生
+    bool PlayFromFile(BaseObject *target, const std::string &fileName, bool returnToOriginal = false);
 
     // PlayFromFileで作成された一時的なモーション名を取得
     std::string GetTemporaryMotionName(BaseObject *target, const std::string &fileName);
 
     void ResetInitialPosition(const std::string &objectName);
+    // コンボの開始位置を設定
+    void SetComboStartPosition(BaseObject *target);
+    // コンボ終了時に元の位置に戻す
+    void ReturnToComboStart(BaseObject *target);
 
-    // UI用の制御点操作関数
-    void AddControlPoint(const std::string &objectName, const Vector3 &worldPosition);
-    void UpdateControlPoint(const std::string &objectName, int index, const Vector3 &worldPosition);
+    void ClearComboStartPosition(BaseObject *target);
+
+    void ClearAllComboStartPositions();
+
+   bool IsAttackFinished(BaseObject *target);
+    bool IsAttackFinishedWithInterval(BaseObject *target);
+    void SetAttackEndInterval(BaseObject *target, float interval = 0.3f);
+    void ClearAttackEndInterval(BaseObject *target);
+
+    // 一時的なモーションの状態チェック
+    bool IsTemporaryMotionFinished(BaseObject *target, const std::string &fileName);
+
 
   private:
     /// ====================================
     /// private variaus
     /// ====================================
 
+    std::unordered_map<BaseObject *, Vector3> comboStartPositions_;
+    std::unordered_map<BaseObject *, Vector3> comboStartRotations_;
+    std::unordered_map<BaseObject *, Vector3> comboStartScales_;
     std::unordered_map<std::string, Motion> motions_;
+    std::unordered_map<BaseObject *, float> attackEndIntervals_;
+    static const float ATTACK_END_INTERVAL; // 攻撃終了後のインターバル時間
     std::string selectedName_;
     std::string jsonName_;
     int selectedControlPoint_ = -1;
@@ -153,3 +179,4 @@ class MotionEditor {
     Vector3 GetLocalControlPointPosition(BaseObject *object, const Vector3 &worldPos);
     Vector3 TransformLocalControlPointToWorld(BaseObject *object, const Vector3 &localPos);
 };
+

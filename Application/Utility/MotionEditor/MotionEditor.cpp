@@ -6,30 +6,8 @@
 #include <Line/DrawLine3D.h>
 
 MotionEditor *MotionEditor::instance = nullptr;
+const float MotionEditor::ATTACK_END_INTERVAL = 0.1f;
 
-MotionEditor *MotionEditor::GetInstance() {
-    if (instance == nullptr) {
-        instance = new MotionEditor;
-    }
-    return instance;
-}
-
-void MotionEditor::Finalize() {
-    delete instance;
-    instance = nullptr;
-}
-
-// 登録処理
-void MotionEditor::Register(BaseObject *object) {
-    if (!object)
-        return;
-    std::string name = object->GetName();
-    motions_[name] = Motion();
-    motions_[name].target = object;
-    motions_[name].objectName = name;
-}
-
-// イージング適用ヘルパー関数
 float ApplyEasing(EasingType type, float t, float total) {
     switch (type) {
     case EasingType::EaseInSine:
@@ -93,6 +71,39 @@ float ApplyEasing(EasingType type, float t, float total) {
     default:
         return t;
     }
+}
+
+
+MotionEditor *MotionEditor::GetInstance() {
+    if (instance == nullptr) {
+        instance = new MotionEditor;
+    }
+    return instance;
+}
+
+void MotionEditor::Finalize() {
+    delete instance;
+    instance = nullptr;
+}
+
+// 登録処理
+void MotionEditor::Register(BaseObject *object) {
+    // nullチェック
+    if (!object)
+        return;
+
+    // オブジェクト名を取得
+    std::string name = object->GetName();
+
+    // 既に登録済みかチェック
+    if (motions_.find(name) != motions_.end()) {
+        return; // 登録済みなら早期リターン
+    }
+
+    // 新しくモーションを登録
+    motions_[name] = Motion();
+    motions_[name].target = object;
+    motions_[name].objectName = name;
 }
 
 void MotionEditor::CleanupFinishedTemporaryMotions() {
@@ -294,7 +305,22 @@ Vector3 MotionEditor::TransformLocalControlPointToWorld(BaseObject *object, cons
     return {worldPos4.x, worldPos4.y, worldPos4.z};
 }
 
+// Updateメソッドの修正：モーション終了時の処理
 void MotionEditor::Update(float deltaTime) {
+    // インターバルタイマーの更新
+    for (auto it = attackEndIntervals_.begin(); it != attackEndIntervals_.end();) {
+        it->second -= deltaTime;
+        if (it->second <= 0.0f) {
+            // インターバル終了、当たり判定を無効化
+            if (it->first) {
+                it->first->SetCollisionEnabled(false);
+            }
+            it = attackEndIntervals_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
     for (auto &[name, motion] : motions_) {
         if (!motion.target) {
             continue;
@@ -319,53 +345,52 @@ void MotionEditor::Update(float deltaTime) {
         if (motion.currentTime >= motion.totalTime) {
             motion.currentTime = motion.totalTime;
             motion.status = MotionStatus::Finished;
+
+            // 一時的なモーションの場合の処理
+            if (motion.isTemporary) {
+                // 攻撃終了後のインターバルを設定
+                SetAttackEndInterval(motion.target, ATTACK_END_INTERVAL);
+
+                // 元の位置に戻すフラグが立っている場合
+                if (motion.returnToOriginal) {
+                    ReturnToComboStart(motion.target);
+                }
+            }
+
             continue;
         }
 
+        // モーション処理（既存のコード）
         float t = motion.currentTime / motion.totalTime;
 
         if (motion.useCatmullRom && motion.controlPoints.size() >= 4) {
-            // Catmull-Rom曲線による補間（完全にローカル座標系で処理）
             Vector3 localOffset = CatmullRomInterpolation(motion.controlPoints, t);
-
-            // ベース位置 + ローカルオフセットで新しいローカル位置を設定
             motion.target->GetLocalPosition() = motion.basePos + localOffset;
         } else {
-            // 従来のイージング補間（完全にローカル座標系で処理）
             float easedT = ApplyEasing(motion.easingType, t, 1.0f);
-
-            // ローカル座標系で直接計算
             Vector3 actualStartPos = motion.basePos + motion.startPosOffset;
             Vector3 actualEndPos = motion.basePos + motion.endPosOffset;
-
             motion.target->GetLocalPosition() = Lerp(actualStartPos, actualEndPos, easedT);
         }
 
-        // 回転はSlerpで補間（クォータニオンとして処理）
         float easedT = ApplyEasing(motion.easingType, t, 1.0f);
-
-        // クォータニオンでSlerpを実行
         Quaternion interpolatedRot = Slerp(motion.actualStartRot, motion.actualEndRot, easedT);
         motion.target->GetWorldTransform()->rotation_ = interpolatedRot;
 
-        // スケールは従来通り
         motion.target->GetLocalScale() = Lerp(motion.actualStartScale, motion.actualEndScale, easedT);
 
-        // コライダーON/OFF
         bool enable = motion.currentTime >= motion.colliderOnTime && motion.currentTime <= motion.colliderOffTime;
         motion.target->SetCollisionEnabled(enable);
     }
 
-    // 終了した一時的なモーションをクリーンアップ
     CleanupFinishedTemporaryMotions();
-
     DrawControlPoints();
     DrawCatmullRomCurve();
 }
 
 // 登録済みオブジェクトの再生
-void MotionEditor::Play(const std::string &objectName) {
-    auto it = motions_.find(objectName);
+void MotionEditor::Play(const std::string &jsonName) {
+    auto it = motions_.find(jsonName);
     if (it == motions_.end()) {
         return; // オブジェクトが登録されていない
     }
@@ -400,7 +425,7 @@ void MotionEditor::Play(const std::string &objectName) {
 }
 
 // ファイルから読み込んで任意のオブジェクトで再生
-bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName) {
+bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName, bool returnToOriginal) {
     if (!target) {
         return false;
     }
@@ -414,6 +439,7 @@ bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName)
     motion.target = target;
     motion.objectName = tempName;
     motion.isTemporary = true;
+    motion.returnToOriginal = returnToOriginal;
     motion.totalTime = data.Load<float>("totalTime", 1.0f);
     motion.colliderOnTime = data.Load("colliderOnTime", 0.3f);
     motion.colliderOffTime = data.Load("colliderOffTime", 0.6f);
@@ -433,10 +459,6 @@ bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName)
         Vector3 point = data.Load<Vector3>("controlPoint" + std::to_string(i), {0, 0, 0});
         motion.controlPoints.push_back(point);
     }
-
-    motion.basePos = motion.initialPos;
-    motion.baseRot = motion.initialRot;
-    motion.baseScale = motion.initialScale;
 
     // 初期位置の記録
     motion.initialPos = target->GetLocalPosition();
@@ -461,6 +483,52 @@ bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName)
 
     return true;
 }
+
+
+void MotionEditor::SetComboStartPosition(BaseObject *target) {
+    if (!target)
+        return;
+
+    // オブジェクトごとにコンボ開始位置を保存
+    comboStartPositions_[target] = target->GetLocalPosition();
+    comboStartRotations_[target] = target->GetLocalRotation().ToEulerAngles();
+    comboStartScales_[target] = target->GetLocalScale();
+}
+
+void MotionEditor::ReturnToComboStart(BaseObject *target) {
+    if (!target)
+        return;
+
+    // 保存されたコンボ開始位置があるかチェック
+    auto posIt = comboStartPositions_.find(target);
+    auto rotIt = comboStartRotations_.find(target);
+    auto scaleIt = comboStartScales_.find(target);
+
+    if (posIt != comboStartPositions_.end() &&
+        rotIt != comboStartRotations_.end() &&
+        scaleIt != comboStartScales_.end()) {
+
+        target->GetLocalPosition() = posIt->second;
+        target->GetLocalRotation() = Quaternion::FromEulerAngles(rotIt->second);
+        target->GetLocalScale() = scaleIt->second;
+    }
+}
+
+void MotionEditor::ClearComboStartPosition(BaseObject *target) {
+    if (!target)
+        return;
+
+    comboStartPositions_.erase(target);
+    comboStartRotations_.erase(target);
+    comboStartScales_.erase(target);
+}
+
+void MotionEditor::ClearAllComboStartPositions() {
+    comboStartPositions_.clear();
+    comboStartRotations_.clear();
+    comboStartScales_.clear();
+}
+
 
 void MotionEditor::Stop(const std::string &objectName) {
     auto it = motions_.find(objectName);
@@ -505,6 +573,71 @@ void MotionEditor::StopAll() {
             ++it;
         }
     }
+}
+
+// 攻撃が終了したかどうかをチェック（インターバルなし）
+bool MotionEditor::IsAttackFinished(BaseObject *target) {
+    if (!target)
+        return false;
+
+    // 一時的なモーションが存在するかチェック
+    for (const auto &[name, motion] : motions_) {
+        if (motion.target == target && motion.isTemporary) {
+            return motion.status == MotionStatus::Finished;
+        }
+    }
+
+    return true; // 攻撃モーションが見つからない場合は終了扱い
+}
+
+// 攻撃が終了してインターバルも過ぎたかどうかをチェック
+bool MotionEditor::IsAttackFinishedWithInterval(BaseObject *target) {
+    if (!target)
+        return false;
+
+    // まず攻撃が終了しているかチェック
+    if (!IsAttackFinished(target)) {
+        return false;
+    }
+
+    // インターバルがあるかチェック
+    auto it = attackEndIntervals_.find(target);
+    if (it != attackEndIntervals_.end()) {
+        return it->second <= 0.0f; // インターバルが終了していればtrue
+    }
+
+    return true; // インターバルが設定されていなければtrue
+}
+
+// 攻撃終了後のインターバルを設定
+void MotionEditor::SetAttackEndInterval(BaseObject *target, float interval) {
+    if (!target)
+        return;
+
+    attackEndIntervals_[target] = interval;
+}
+
+// 攻撃終了後のインターバルをクリア
+void MotionEditor::ClearAttackEndInterval(BaseObject *target) {
+    if (!target)
+        return;
+
+    attackEndIntervals_.erase(target);
+}
+
+// 特定のファイル名の一時的なモーションが終了したかチェック
+bool MotionEditor::IsTemporaryMotionFinished(BaseObject *target, const std::string &fileName) {
+    if (!target)
+        return false;
+
+    std::string tempName = GetTemporaryMotionName(target, fileName);
+    auto it = motions_.find(tempName);
+
+    if (it != motions_.end()) {
+        return it->second.status == MotionStatus::Finished;
+    }
+
+    return true; // モーションが見つからない場合は終了扱い
 }
 
 void MotionEditor::DrawControlPoints() {
@@ -623,48 +756,6 @@ void MotionEditor::DrawCatmullRomCurve() {
         const Vector4 connectionColor = {0.5f, 0.5f, 0.5f, 1.0f}; // グレー
         drawLine->SetPoints(worldBasePos, currentWorldPos, connectionColor);
     }
-}
-
-// 制御点追加時の処理修正（UI側で呼ばれると想定）
-void MotionEditor::AddControlPoint(const std::string &objectName, const Vector3 &worldPosition) {
-    auto it = motions_.find(objectName);
-    if (it == motions_.end() || !it->second.target) {
-        return;
-    }
-
-    Motion &motion = it->second;
-
-    // ワールド座標をローカル座標に変換
-    Vector3 localPosition = GetLocalControlPointPosition(motion.target, worldPosition);
-
-    // ベース位置からのオフセットとして保存
-    Vector3 basePos = motion.target->GetLocalPosition();
-    Vector3 offset = localPosition - basePos;
-
-    motion.controlPoints.push_back(offset);
-    motion.useCatmullRom = motion.controlPoints.size() >= 2;
-}
-
-// 制御点編集時の処理修正（UI側で呼ばれると想定）
-void MotionEditor::UpdateControlPoint(const std::string &objectName, int index, const Vector3 &worldPosition) {
-    auto it = motions_.find(objectName);
-    if (it == motions_.end() || !it->second.target) {
-        return;
-    }
-
-    Motion &motion = it->second;
-    if (index < 0 || index >= static_cast<int>(motion.controlPoints.size())) {
-        return;
-    }
-
-    // ワールド座標をローカル座標に変換
-    Vector3 localPosition = GetLocalControlPointPosition(motion.target, worldPosition);
-
-    // ベース位置からのオフセットとして保存
-    Vector3 basePos = motion.target->GetLocalPosition();
-    Vector3 offset = localPosition - basePos;
-
-    motion.controlPoints[index] = offset;
 }
 
 void MotionEditor::DrawImGui() {

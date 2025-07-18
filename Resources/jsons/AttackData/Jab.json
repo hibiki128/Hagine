@@ -1,0 +1,16 @@
+{
+    "colliderOffTime": 0.15,
+    "colliderOnTime": 0.00,
+    "controlPoint0": { "x": 0.0, "y": 0.0, "z": 0.0 },
+    "controlPoint1": { "x": 0.0, "y": 0.0, "z": 3.0 },
+    "controlPointCount": 2,
+    "easingType": 1,
+    "endPosOffset": { "x": 0.0, "y": 0.0, "z": 3.0 },
+    "endRotOffset": { "x": 0.0, "y": 10.0, "z": 0.0 },
+    "endScaleOffset": { "x": 0.0, "y": 0.0, "z": 0.0 },
+    "startPosOffset": { "x": 0.0, "y": 0.0, "z": 0.0 },
+    "startRotOffset": { "x": 0.0, "y": -10.0, "z": 0.0 },
+    "startScaleOffset": { "x": 0.0, "y": 0.0, "z": 0.0 },
+    "totalTime": 0.15,
+    "useCatmullRom": false
+}

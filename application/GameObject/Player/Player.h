@@ -1,10 +1,11 @@
 #pragma once
+#include "Bullet/PlayerBullet.h"
 #include "Data/DataHandler.h"
+#include "Hand/PlayerHand.h"
+#include "Object/Base/BaseObject.h"
 #include "PlayerData.h"
 #include "State/Base/PlayerBaseState.h"
-#include "Object/Base/BaseObject.h"
-#include"Bullet/PlayerBullet.h"
-#include"Hand/PlayerHand.h"
+#include <application/Utility/ComboSystem/ComboSystem.h>
 
 class ChageShot;
 class FollowCamera;
@@ -53,6 +54,9 @@ class Player : public BaseObject {
     bool &GetIsGrounded() { return isGrounded_; }
     bool &GetIsLockOn() { return isLockOn_; }
 
+    PlayerHand *GetRightHand() { return rightHand_ptr_; }
+    PlayerHand *GetLeftHand() { return leftHand_ptr_; }
+
     void SetCamera(FollowCamera *camera) { FollowCamera_ = camera; }
     void SetEnemy(Enemy *enemy) { enemy_ = enemy; }
 
@@ -99,13 +103,13 @@ class Player : public BaseObject {
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;
     float jumpSpeed_ = 0.0f;
-    float maxSpeed_ = 0.0f; 
+    float maxSpeed_ = 0.0f;
     float accelRate_ = 0.0f;
     float dt_;
 
-    float currentFov_ = 45.0f; 
-    float targetFov_ = 45.0f;  
-    float fovLerpSpeed_ = 5.0f;     
+    float currentFov_ = 45.0f;
+    float targetFov_ = 45.0f;
+    float fovLerpSpeed_ = 5.0f;
 
     float B_acce_ = 0.0f;
     float B_speed_ = 0.0f;
@@ -115,6 +119,9 @@ class Player : public BaseObject {
     bool isLockOn_ = false;
     bool isGrounded_ = true;
     bool isDashing_ = false;
+
+    ComboSystem punchCombo_;
+    bool comboInitialized_ = false;
 
     // ステート
     std::unordered_map<std::string, std::unique_ptr<PlayerBaseState>> states_;
@@ -133,5 +140,6 @@ class Player : public BaseObject {
     // 両手
     std::unique_ptr<PlayerHand> leftHand_;
     std::unique_ptr<PlayerHand> rightHand_;
-
+    PlayerHand *leftHand_ptr_;
+    PlayerHand *rightHand_ptr_;
 };

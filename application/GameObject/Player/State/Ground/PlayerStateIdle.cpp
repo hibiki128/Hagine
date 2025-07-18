@@ -1,8 +1,11 @@
 #include "PlayerStateIdle.h"
 #include "Input.h"
 #include "application/GameObject/Player/Player.h"
+#include <Frame.h>
+#include <application/Utility/MotionEditor/MotionEditor.h>
 
 void PlayerStateIdle::Enter(Player &player) {
+    
 }
 
 void PlayerStateIdle::Update(Player &player) {

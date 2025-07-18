@@ -61,6 +61,7 @@ class ParticleEmitter {
     void SetWorldMatrix(const Matrix4x4 &worldMatrix) {
         transform_.matWorld_ = worldMatrix;
     }
+    void SetIsAuto(bool isAuto) { isAuto_ = isAuto; }
     void SetCount(const std::string &groupName, int count) { particleSettings_[groupName].count = count; }
     void SetStartRotate(const std::string &groupName, const Vector3 &startRotate) { particleSettings_[groupName].startRote = startRotate; }
     void SetEndRotate(const std::string &groupName, const Vector3 &endRotate) { particleSettings_[groupName].endRote = endRotate; }

@@ -101,20 +101,16 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
             if (!isGathering) {
                 particle.Acce = (1.0f - t) * particle.startAcce + t * particle.endAcce;
 
-                if (particleSetting.isFaceDirection) {
-                    Vector3 forward = particle.fixedDirection;
-                    Vector3 initialUp = {0.0f, 1.0f, 0.0f};
-                    Vector3 rotationAxis = initialUp.Cross(forward).Normalize();
-                    float dotProduct = initialUp.Dot(forward);
-                    float angle = acosf(std::clamp(dotProduct, -1.0f, 1.0f));
-                    particle.transform.rotation_.x = rotationAxis.x * angle;
-                    particle.transform.rotation_.y = rotationAxis.y * angle;
-                    particle.transform.rotation_.z = rotationAxis.z * angle;
+            if (particleSetting.isFaceDirection) {
+                    Vector3 fwd = particle.velocity.Normalize();
+                    particle.transform.rotation_ = Quaternion::FromLookRotation(fwd, {0, 1, 0});
                 } else if (particleSetting.isRandomRotate) {
-                    particle.transform.rotation_ += Quaternion::FromEulerAngles(particle.rotateVelocity);
+                    Quaternion rotVel = Quaternion::FromEulerAngles(particle.rotateVelocity);
+                    particle.transform.rotation_ = (particle.transform.rotation_ * rotVel).Normalize();
                 } else {
-                    particle.transform.rotation_ =
-                        Quaternion::FromEulerAngles((1.0f - t) * particle.startRote + t * particle.endRote);
+                    Quaternion startQ = Quaternion::FromEulerAngles(particle.startRote);
+                    Quaternion endQ = Quaternion::FromEulerAngles(particle.endRote);
+                    particle.transform.rotation_ = Quaternion::Slerp(startQ, endQ, t);
                 }
 
                 if (particleSetting.isAcceMultiply) {
@@ -202,9 +198,10 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
                 worldMatrix = MakeScaleMatrix(particle.transform.scale_) * zRotationMatrix * customBillboardMatrix *
                               MakeTranslateMatrix(particle.transform.translation_);
             } else {
-                worldMatrix = MakeAffineMatrix(particle.transform.scale_,
-                                               particle.transform.rotation_,
-                                               particle.transform.translation_);
+                Matrix4x4 rotMat = QuaternionToMatrix4x4(particle.transform.rotation_);
+                worldMatrix = MakeScaleMatrix(particle.transform.scale_) *
+                              rotMat *
+                              MakeTranslateMatrix(particle.transform.translation_);
             }
 
             Matrix4x4 worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
@@ -413,18 +410,27 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         std::uniform_real_distribution<float> distRotateX(setting.rotateStartMin.x, setting.rotateStartMax.x);
         std::uniform_real_distribution<float> distRotateY(setting.rotateStartMin.y, setting.rotateStartMax.y);
         std::uniform_real_distribution<float> distRotateZ(setting.rotateStartMin.z, setting.rotateStartMax.z);
-        particle.transform.rotation_.x = distRotateX(randomEngine);
-        particle.transform.rotation_.y = distRotateY(randomEngine);
-        particle.transform.rotation_.z = distRotateZ(randomEngine);
+        // ランダム回転角を生成してオイラー角からクォータニオンを作成
+        Vector3 randomEuler = {
+            distRotateX(randomEngine),
+            distRotateY(randomEngine),
+            distRotateZ(randomEngine)};
+        particle.transform.rotation_ = Quaternion::FromEulerAngles(randomEuler);
+
         if (setting.isRotateVelocity) {
             std::uniform_real_distribution<float> distRotateXVelocity(setting.rotateVelocityMin.x, setting.rotateVelocityMax.x);
             std::uniform_real_distribution<float> distRotateYVelocity(setting.rotateVelocityMin.y, setting.rotateVelocityMax.y);
             std::uniform_real_distribution<float> distRotateZVelocity(setting.rotateVelocityMin.z, setting.rotateVelocityMax.z);
-            particle.rotateVelocity.x = distRotateXVelocity(randomEngine);
-            particle.rotateVelocity.y = distRotateYVelocity(randomEngine);
-            particle.rotateVelocity.z = distRotateZVelocity(randomEngine);
+
+            // 毎フレームの回転速度（これもオイラー角→クォータニオン変換用）
+            particle.rotateVelocity = {
+                distRotateXVelocity(randomEngine),
+                distRotateYVelocity(randomEngine),
+                distRotateZVelocity(randomEngine)};
         }
     } else {
+        // オイラー角からクォータニオンへ
+        particle.transform.rotation_ = Quaternion::FromEulerAngles(setting.startRote);
         particle.startRote = setting.startRote;
         particle.endRote = setting.endRote;
     }

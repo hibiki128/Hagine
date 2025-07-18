@@ -206,7 +206,6 @@ void ParticleEditor::SceneParticleCount() {
     }
 }
 
-
 std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const std::string &name) {
     auto it = emitters_.find(name);
     if (it != emitters_.end() && it->second) {
@@ -430,6 +429,21 @@ void ParticleEditor::ShowImGuiEditor() {
             if (ColoredCollapsingHeader("パーティクルデータのロード", 2)) {
                 ShowFileSelector();
             }
+
+              ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));        // 赤系
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f)); // ホバー時
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));  // 押下時
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);                        // 角丸
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20.0f, 10.0f));         // パディング
+
+            if (ImGui::Button("全パーティクルを止める", ImVec2(200, 40))) {
+                for (auto &emitter : emitters_) {
+                    emitter.second->SetIsAuto(false);
+                }
+            }
+
+            ImGui::PopStyleVar(2);
+            ImGui::PopStyleColor(3);
 
             ImGui::EndTabItem();
         }

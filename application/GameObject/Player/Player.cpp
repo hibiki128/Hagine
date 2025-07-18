@@ -50,13 +50,9 @@ void Player::Init(const std::string objectName) {
     // 手の生成
     leftHand_ = std::make_unique<PlayerHand>();
     leftHand_->Init("leftHand");
-    leftHand_->GetLocalScale() = {0.5f, 0.5f, 0.5f};
-    leftHand_->GetLocalPosition() = {-2.0f, 0.0f, 0.0f};
 
     rightHand_ = std::make_unique<PlayerHand>();
     rightHand_->Init("rightHand");
-    rightHand_->GetLocalScale() = {0.5f, 0.5f, 0.5f};
-    rightHand_->GetLocalPosition() = {2.0f, 0.0f, 0.0f};
 
     this->AddChild(leftHand_.get());
     this->AddChild(rightHand_.get());
@@ -64,13 +60,41 @@ void Player::Init(const std::string objectName) {
     MotionEditor::GetInstance()->Register(leftHand_.get());
     MotionEditor::GetInstance()->Register(rightHand_.get());
 
+    rightHand_ptr_ = rightHand_.get();
+    leftHand_ptr_ = leftHand_.get();
+
     BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
     BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
 
     Load();
+
+    if (!comboInitialized_) {
+        punchCombo_.Add(GetRightHand(), "Jab") // 1段目：右手ジャブ
+            .Add(GetLeftHand(), "Hook")        // 2段目：左手フック
+            .Add(GetRightHand(), "Cross")      // 3段目：右手クロス
+            .Add(GetLeftHand(), "Uppercut")    // 4段目：左手アッパーカット
+            .Add(GetRightHand(), "Overhand")   // 5段目：右手オーバーハンド
+            .Add(GetLeftHand(), "Swing")       // 6段目：左手スイング
+            .Add(GetRightHand(), "Elbow")      // 7段目：右手肘打ち
+            .Add(GetLeftHand(), "Slam");       // 8段目：左手スラム
+
+        comboInitialized_ = true;
+    }
 }
 
 void Player::Update() {
+
+    // 毎フレーム更新
+    punchCombo_.Update(Frame::DeltaTime());
+
+    // 入力処理
+    if (Input::GetInstance()->TriggerKey(DIK_H)) {
+        punchCombo_.TryExecuteCombo();
+    }
+    if (punchCombo_.IsComboActive()) {
+        GetRightHand()->SetCollisionEnabled(punchCombo_.IsObjectAttackCompleted(GetRightHand()));
+        GetLeftHand()->SetCollisionEnabled(punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
+    }
 
     dt_ = Frame::DeltaTime();
     shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
@@ -300,7 +324,7 @@ void Player::Shot() {
 
 void Player::RotateUpdate() {
 
-       if (isLockOn_ && enemy_) {
+    if (isLockOn_ && enemy_) {
         Vector3 toEnemy = enemy_->GetLocalPosition() - GetLocalPosition();
         toEnemy.y = 0.0f; // 高さは無視してXZ平面のみで向き計算
 

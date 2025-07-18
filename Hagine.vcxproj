@@ -126,6 +126,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Utility\HitStop\HitStop.cpp" />
     <ClCompile Include="Application\Utility\MotionEditor\MotionEditor.cpp" />
     <ClCompile Include="Application\Utility\Shake\Shake.cpp" />
+    <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp" />
     <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp" />
@@ -260,6 +261,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Utility\HitStop\HitStop.h" />
     <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h" />
     <ClInclude Include="Application\Utility\Shake\Shake.h" />
+    <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
     <ClInclude Include="Engine\3d\Transform\ObjColor.h" />
