@@ -204,9 +204,6 @@
     <ClCompile Include="Engine\3d\Animation\Bone.cpp">
       <Filter>ソースファイル\Engine\3d\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player\Bullet\ChageShot</Filter>
-    </ClCompile>
     <ClCompile Include="Application\Scene\ClearScene.cpp">
       <Filter>ソースファイル\Application\Scene</Filter>
     </ClCompile>
@@ -237,12 +234,6 @@
     <ClCompile Include="Engine\Math\Easing.cpp">
       <Filter>ソースファイル\Engine\Math</Filter>
     </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp">
-      <Filter>ソースファイル\Application\GameObject\Enemy</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\Camera\FollowCamera.cpp">
-      <Filter>ソースファイル\Application\Camera</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\Frame\Frame.cpp">
       <Filter>ソースファイル\Engine\Frame</Filter>
     </ClCompile>
@@ -254,9 +245,6 @@
     </ClCompile>
     <ClCompile Include="Application\Scene\GameScene.cpp">
       <Filter>ソースファイル\Application\Scene</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp">
-      <Filter>ソースファイル\Application\GameObject\Field\Ground</Filter>
     </ClCompile>
     <ClCompile Include="externals\imgui\imgui.cpp">
       <Filter>imgui関連</Filter>
@@ -354,30 +342,6 @@
     <ClCompile Include="Engine\Utility\Graphics\PipeLine\PipeLineManager.cpp">
       <Filter>ソースファイル\Engine\Utility\Graphics\PipeLine</Filter>
     </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\Player.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player\Bullet</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\State\Air\PlayerStateAir.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Air</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\State\Fly\PlayerStateFlyIdle.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Fly</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\State\Fly\PlayerStateFlyMove.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Fly</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateIdle.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Ground</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateJump.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Ground</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateMove.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Ground</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\3d\Primitive\PrimitiveModel.cpp">
       <Filter>ソースファイル\Engine\3d\Primitive</Filter>
     </ClCompile>
@@ -407,9 +371,6 @@
     </ClCompile>
     <ClCompile Include="Engine\3d\SkyBox\SkyBox.cpp">
       <Filter>ソースファイル\Engine\3d\SkyBox</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Field\SkyDome\SkyDome.cpp">
-      <Filter>ソースファイル\Application\GameObject\Field\SkyDome</Filter>
     </ClCompile>
     <ClCompile Include="Engine\2d\Sprite.cpp">
       <Filter>ソースファイル\Engine\2d</Filter>
@@ -464,9 +425,6 @@
     </ClCompile>
     <ClCompile Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.cpp">
       <Filter>ソースファイル\Engine\Utility\Edit\ShotcutManager</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp">
-      <Filter>ソースファイル\Application\GameObject\Player\Hand</Filter>
     </ClCompile>
     <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp">
       <Filter>ソースファイル</Filter>
@@ -683,12 +641,6 @@
     <ClInclude Include="Engine\Utility\Graphics\PipeLine\PipeLineManager.h">
       <Filter>ソースファイル\Engine\Utility\Graphics\PipeLine</Filter>
     </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\Bullet\PlayerBullet.h">
-      <Filter>ソースファイル\Application\GameObject\Player\Bullet</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\State\Fly\PlayerStateFlyMove.h">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Fly</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\3d\Primitive\PrimitiveModel.h">
       <Filter>ソースファイル\Engine\3d\Primitive</Filter>
     </ClInclude>
@@ -761,18 +713,6 @@
     <ClInclude Include="Application\Utility\HitStop\HitStop.h">
       <Filter>ソースファイル\Application\Utility\HitStop</Filter>
     </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.h">
-      <Filter>ソースファイル\Application\GameObject\Player\Bullet\ChageShot</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\Enemy.h">
-      <Filter>ソースファイル\Application\GameObject\Enemy</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\Camera\FollowCamera.h">
-      <Filter>ソースファイル\Application\Camera</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Field\Ground\Ground.h">
-      <Filter>ソースファイル\Application\GameObject\Field\Ground</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\3d\Particle\ParticleEmitter.h">
       <Filter>ソースファイル\Engine\3d\Particle</Filter>
     </ClInclude>
@@ -784,36 +724,6 @@
     </ClInclude>
     <ClInclude Include="Engine\3d\Object\Base\BaseObjectManager.h">
       <Filter>ソースファイル\Engine\3d\Object\Base</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\State\Base\PlayerBaseState.h">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Base</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\Player.h">
-      <Filter>ソースファイル\Application\GameObject\Player</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\PlayerData.h">
-      <Filter>ソースファイル\Application\GameObject\Player</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\Hand\PlayerHand.h">
-      <Filter>ソースファイル\Application\GameObject\Player\Hand</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\State\Air\PlayerStateAir.h">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Air</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\State\Fly\PlayerStateFlyIdle.h">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Fly</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateIdle.h">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Ground</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateJump.h">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Ground</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateMove.h">
-      <Filter>ソースファイル\Application\GameObject\Player\State\Ground</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Field\SkyDome\SkyDome.h">
-      <Filter>ソースファイル\Application\GameObject\Field\SkyDome</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Base\WinApp.h">
       <Filter>ソースファイル\Engine\base</Filter>

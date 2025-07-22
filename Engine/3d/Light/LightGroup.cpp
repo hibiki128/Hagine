@@ -214,7 +214,7 @@ void LightGroup::imgui() {
 
                 // 減衰設定セクション
                 if (ImGui::BeginChild("PointAttenuation", ImVec2(0, 100), true, ImGuiWindowFlags_NoScrollbar)) {
-                    ImGui::Text("📉 減衰設定");
+                    ImGui::Text("減衰設定");
                     ImGui::Spacing();
 
                     ImGui::Columns(2, nullptr, false);
@@ -243,7 +243,7 @@ void LightGroup::imgui() {
 
                 // 光源タイプセクション
                 if (ImGui::BeginChild("PointType", ImVec2(0, 80), true, ImGuiWindowFlags_NoScrollbar)) {
-                    ImGui::Text("💡 光源タイプ");
+                    ImGui::Text("光源タイプ");
                     ImGui::Spacing();
 
                     const char *lightingTypes[] = {"HalfLambert", "BlinnPhong"};
@@ -264,7 +264,7 @@ void LightGroup::imgui() {
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.5f, 0.1f, 1.0f));
 
-                if (ImGui::Button("💾 設定を保存", ImVec2(150, 30))) {
+                if (ImGui::Button("設定を保存", ImVec2(150, 30))) {
                     SavePointLight();
                     std::string message = std::format("PointLight saved.");
                     MessageBoxA(nullptr, message.c_str(), "LightGroup", 0);
@@ -275,7 +275,7 @@ void LightGroup::imgui() {
         }
 
         // スポットライトタブ
-        if (ImGui::BeginTabItem("🔦 スポットライト")) {
+        if (ImGui::BeginTabItem("スポットライト")) {
             ImGui::Spacing();
 
             // アクティブ状態
@@ -290,7 +290,7 @@ void LightGroup::imgui() {
 
                 // 位置・方向セクション
                 if (ImGui::BeginChild("SpotPositionDirection", ImVec2(0, 120), true, ImGuiWindowFlags_NoScrollbar)) {
-                    ImGui::Text("🎯 位置・方向設定");
+                    ImGui::Text("位置・方向設定");
                     ImGui::Spacing();
 
                     ImGui::Columns(2, nullptr, false);
@@ -328,7 +328,7 @@ void LightGroup::imgui() {
 
                 // 範囲設定セクション
                 if (ImGui::BeginChild("SpotRange", ImVec2(0, 140), true, ImGuiWindowFlags_NoScrollbar)) {
-                    ImGui::Text("📐 範囲設定");
+                    ImGui::Text("範囲設定");
                     ImGui::Spacing();
 
                     ImGui::Columns(2, nullptr, false);
