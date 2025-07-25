@@ -1,0 +1,163 @@
+{
+    "GroupNames": [
+        "paper"
+    ],
+    "emitFrequency": 0.019999999552965164,
+    "emitterRotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "emitterTranslation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "isActive": false,
+    "isAuto": true,
+    "isVisible": false,
+    "paper_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "paper_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "paper_alphaMax": 1.0,
+    "paper_alphaMin": 1.0,
+    "paper_blendMode": 2,
+    "paper_count": 2,
+    "paper_enableTrail": false,
+    "paper_endAcce": {
+        "x": 0.5,
+        "y": 1.0,
+        "z": 0.0
+    },
+    "paper_endColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "paper_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "paper_endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "paper_gatherStartRatio": 0.0,
+    "paper_gatherStrength": 0.0,
+    "paper_gravity": 45.0,
+    "paper_isAcceMultiply": true,
+    "paper_isAllRamdomScale": false,
+    "paper_isBillboard": false,
+    "paper_isBillboardX": false,
+    "paper_isBillboardY": false,
+    "paper_isBillboardZ": false,
+    "paper_isEmitOnEdge": false,
+    "paper_isEndScale": false,
+    "paper_isFaceDirection": false,
+    "paper_isGatherMode": false,
+    "paper_isRandomColor": true,
+    "paper_isRandomRotate": true,
+    "paper_isRandomScale": true,
+    "paper_isSinMove": false,
+    "paper_lifeTimeMax": 2.0,
+    "paper_lifeTimeMin": 1.5,
+    "paper_maxTrailParticles": 20,
+    "paper_rotateStartMax": {
+        "x": 3.1415927410125732,
+        "y": 3.1415927410125732,
+        "z": 3.1415927410125732
+    },
+    "paper_rotateStartMin": {
+        "x": -3.1415927410125732,
+        "y": -3.1415927410125732,
+        "z": -3.1415927410125732
+    },
+    "paper_rotateVelocityMax": {
+        "x": 0.1599999964237213,
+        "y": 0.1599999964237213,
+        "z": 0.1599999964237213
+    },
+    "paper_rotateVelocityMin": {
+        "x": -0.1599999964237213,
+        "y": -0.1599999964237213,
+        "z": -0.1599999964237213
+    },
+    "paper_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "paper_scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "paper_scaleMax": 4.0,
+    "paper_scaleMin": 1.0,
+    "paper_startAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 0.0
+    },
+    "paper_startColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "paper_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "paper_startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "paper_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "paper_trailInheritVelocity": true,
+    "paper_trailLifeScale": 0.5,
+    "paper_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "paper_trailSpawnInterval": 0.05000000074505806,
+    "paper_trailVelocityScale": 0.30000001192092896,
+    "paper_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "paper_velocityMax": {
+        "x": 30.0,
+        "y": 30.0,
+        "z": 0.0
+    },
+    "paper_velocityMin": {
+        "x": -30.0,
+        "y": 15.0,
+        "z": 0.0
+    }
+}

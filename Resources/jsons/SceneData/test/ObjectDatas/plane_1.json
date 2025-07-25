@@ -1,0 +1,35 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 1,
+    "blendMode": 0,
+    "childrenNames": [],
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "",
+    "objectColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "objectName": "plane_1",
+    "parentName": "",
+    "rotation": {
+        "w": -0.7071062922477722,
+        "x": 0.7071073055267334,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 1000.0,
+        "y": 1000.0,
+        "z": 1000.0
+    },
+    "skeletonDraw": false,
+    "textureName": "debug/ground.png",
+    "translation": {
+        "x": 0.0,
+        "y": -7.599999904632568,
+        "z": 0.0
+    }
+}

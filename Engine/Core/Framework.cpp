@@ -222,6 +222,9 @@ void Framework::Finalize() {
 
 void Framework::RegisterShortcutKey() {
 #ifdef _DEBUG
+    shortcutManager_->RegisterShortcut("ShowShortcuts", DIK_F1, [this]() {
+        imGuiManager_->SetShortcutWindow(true);
+    });
     // フルスクリーン
     shortcutManager_->RegisterShortcut("FullScreen", DIK_F11, [this]() {
         winApp_->ToggleFullScreen();

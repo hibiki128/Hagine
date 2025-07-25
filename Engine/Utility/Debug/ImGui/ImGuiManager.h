@@ -88,6 +88,10 @@ class ImGuiManager {
         imGuizmoManager_ = manager;
     }
 
+    void SetShortcutWindow(bool show) {
+        showShortcutWindow = show;
+    }
+
     // 必要に応じてImGuizmoManagerへのアクセサを追加
     ImGuizmoManager *GetImGuizmoManager() const {
         return imGuizmoManager_;
@@ -96,7 +100,7 @@ class ImGuiManager {
     /// <summary>
     /// シーン表示
     /// </summary>
-    void ShowSceneWindow();
+    void ShowSceneWindow(OffScreen *offScreen);
 
   private:
     /// ====================================
@@ -133,6 +137,7 @@ class ImGuiManager {
     void SwitchToGameMode();
     void SaveCurrentLayout();
     void LoadLayoutForCurrentMode();
+    void ShowHelpWindow();
 
   private:
     /// ====================================
@@ -174,6 +179,7 @@ class ImGuiManager {
     bool showOfScreenView_ = true;
     bool showLightView_ = true;
     bool isEditorMode_ = true; // エディターモードフラグ
+    bool showShortcutWindow = false;
 
     BaseObjectManager *baseObjectManager_ = nullptr;
 

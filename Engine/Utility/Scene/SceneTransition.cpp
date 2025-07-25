@@ -50,9 +50,6 @@ void SceneTransition::Update() {
 }
 
 void SceneTransition::Draw() {
-    SpriteCommon::GetInstance()->DrawCommonSetting();
-    /* sprite_->Draw();*/
-
     // 各スプライトを描画
     for (const auto &row : transition_) {
         for (const auto &sprite : row) {

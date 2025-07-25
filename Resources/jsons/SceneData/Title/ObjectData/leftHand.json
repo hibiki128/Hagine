@@ -1,0 +1,35 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 2,
+    "blendMode": 0,
+    "childrenNames": [],
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "",
+    "objectColor": {
+        "w": 1.0,
+        "x": 0.9019607901573181,
+        "y": 0.6274510025978088,
+        "z": 0.35686275362968445
+    },
+    "objectName": "leftHand",
+    "parentName": "player",
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "skeletonDraw": false,
+    "textureName": "debug/white1x1.png",
+    "translation": {
+        "x": -2.509999990463257,
+        "y": 0.0,
+        "z": 1.0
+    }
+}

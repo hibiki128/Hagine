@@ -429,6 +429,21 @@
     <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectChain.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectRenderer.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\RendererBuffer.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParameters.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectDataManager.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\Particle\Particle.hlsli">
@@ -735,6 +750,11 @@
       <Filter>ソースファイル\Engine\Utility\Edit\ShotcutManager</Filter>
     </ClInclude>
     <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectChain.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectRenderer.h" />
+    <ClInclude Include="Engine\OffScreen\RendererBuffer.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParameters.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
@@ -1069,5 +1089,8 @@
     <FxCompile Include="resources\shaders\Sprite\Sprite.PS.hlsl">
       <Filter>リソース ファイル\Sprite</Filter>
     </FxCompile>
+    <FxCompile Include="Resources\shaders\OffScreen\Dissolve.PS.hlsl" />
+    <FxCompile Include="Resources\shaders\OffScreen\Random.PS.hlsl" />
+    <FxCompile Include="Resources\shaders\OffScreen\FocusLine.PS.hlsl" />
   </ItemGroup>
 </Project>

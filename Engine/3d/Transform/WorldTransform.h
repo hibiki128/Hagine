@@ -12,12 +12,18 @@ struct ConstBufferDataWorldTransform {
 
 class WorldTransform {
   public:
+    // クォータニオン角を使うかどうか（falseの場合はオイラー角）
+    bool isUseQuaternion_ = true;
+
     // ローカルスケール
     Vector3 scale_ = {1.0f, 1.0f, 1.0f};
+    // ローカル回転（オイラー角用）
+    Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};
     // ローカル回転（クォータニオン）
-    Quaternion rotation_ = Quaternion::IdentityQuaternion();
+    Quaternion quateRotation_ = Quaternion::IdentityQuaternion();
     // ローカル座標
     Vector3 translation_ = {0.0f, 0.0f, 0.0f};
+
     // ローカルからワールド変換行列
     Matrix4x4 matWorld_;
     // 親となるワールド変換へのポインタ
@@ -35,16 +41,6 @@ class WorldTransform {
     /// 行列の転送
     /// </summary>
     void TransferMatrix();
-
-    /// <summary>
-    /// 定数バッファ生成
-    /// </summary>
-    void CreateConstBuffer();
-
-    /// <summary>
-    /// マッピングする
-    /// </summary>
-    void Map();
 
     /// <summary>
     /// 行列を計算・転送する
@@ -94,6 +90,25 @@ class WorldTransform {
     const Microsoft::WRL::ComPtr<ID3D12Resource> &GetConstBuffer() const { return constBuffer_; }
 
   private:
+    
+    /// <summary>
+    /// 定数バッファ生成
+    /// </summary>
+    void CreateConstBuffer();
+
+    /// <summary>
+    /// マッピングする
+    /// </summary>
+    void Map();
+
+     // オイラー角→クォータニオン変換用
+    Vector3 preRotate_ = {0.0f, 0.0f, 0.0f};
+
+    void UpdateEuler();
+    void UpdateQuaternion();
+    void RotateQuaternion();
+
+  private:
     DirectXCommon *dxCommon_ = nullptr;
 
     // 定数バッファ
@@ -104,4 +119,4 @@ class WorldTransform {
     // WorldTransform(const WorldTransform&) = delete;
     // WorldTransform& operator=(const WorldTransform&) = delete;
 };
-// static_assert(!std::is_copy_assignable_v<WorldTransform>);
+

@@ -290,7 +290,7 @@ void BaseObject::SaveToJson() {
     ObjectDatas_->Save<std::string>("textureName", texturePath_);
     ObjectDatas_->Save<std::string>("objectName", objectName_);
     ObjectDatas_->Save<Vector3>("translation", transform_->translation_);
-    ObjectDatas_->Save<Quaternion>("rotation", transform_->rotation_);
+    ObjectDatas_->Save<Quaternion>("rotation", transform_->quateRotation_);
     ObjectDatas_->Save<Vector3>("scale", transform_->scale_);
     ObjectDatas_->Save<bool>("Lighting", isLighting_);
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
@@ -313,7 +313,7 @@ void BaseObject::LoadFromJson() {
 
     // 基本トランスフォームを読み込み
     transform_->translation_ = ObjectDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
-    transform_->rotation_ = ObjectDatas_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    transform_->quateRotation_ = ObjectDatas_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
     transform_->scale_ = ObjectDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
     isLighting_ = ObjectDatas_->Load<bool>("Lighting", true);
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::kCount);

@@ -243,7 +243,7 @@ void PipeLineManager::CreateSpritePipelines() {
 // レンダーパイプラインの作成
 void PipeLineManager::CreateRenderPipelines() {
     // 各シェーダーモード用のルートシグネチャとパイプラインを作成
-    for (int i = 0; i <= static_cast<int>(ShaderMode::kCinematic); i++) {
+    for (int i = 0; i <= static_cast<int>(ShaderMode::kCount) - 1; i++) {
         ShaderMode shaderMode = static_cast<ShaderMode>(i);
 
         // ルートシグネチャを作成し、マップに格納
@@ -313,8 +313,6 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
     rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[7].DescriptorTable.pDescriptorRanges = skyBoxDescriptorRange;
     rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(skyBoxDescriptorRange);
-
-
 
     // Smplerの設定
     D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
@@ -854,6 +852,12 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRenderRootSig
         return CreateBlurRootSignature();
     case ShaderMode::kCinematic:
         return CreateCinematicRootSignature();
+    case ShaderMode::kDissolve:
+        return CreateDissolveRootSignature();
+    case ShaderMode::kRandom:
+        return CreateRandomRootSignature();
+    case ShaderMode::kFocusLine:
+        return CreateFocusLineRootSignature();
     default:
         return CreateBaseRootSignature();
     }
@@ -882,6 +886,12 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRenderGraphic
         return CreateBlurGraphicsPipeLine(rootSignature);
     case ShaderMode::kCinematic:
         return CreateCinematicGraphicsPipeLine(rootSignature);
+    case ShaderMode::kDissolve:
+        return CreateDissolveGraphicsPipeLine(rootSignature);
+    case ShaderMode::kRandom:
+        return CreateRandomGraphicsPipeLine(rootSignature);
+    case ShaderMode::kFocusLine:
+        return CreateFocusLineGraphicsPipeLine(rootSignature);
     default:
         return CreateNoneGraphicsPipeLine(rootSignature);
     }
@@ -1500,6 +1510,208 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateCinematicRoot
     return CreateCommonRootSignature(true);
 }
 
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDissolveRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    // RootSignatureの設定
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    // DescriptorRangeの設定（SRV用: gTexture, gDepthTexture）
+    D3D12_DESCRIPTOR_RANGE descriptorRanges[2] = {};
+    descriptorRanges[0].BaseShaderRegister = 0; // gTexture用 (t0)
+    descriptorRanges[0].NumDescriptors = 1;     // 1つのSRV
+    descriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    descriptorRanges[1].BaseShaderRegister = 1; // gDepthTexture用 (t1)
+    descriptorRanges[1].NumDescriptors = 1;     // 1つのSRV
+    descriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // RootParameterの設定
+    D3D12_ROOT_PARAMETER rootParameters[3] = {};
+
+    // DescriptorTable (SRV用)
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderで使用
+    rootParameters[0].DescriptorTable.pDescriptorRanges = &descriptorRanges[0];
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+
+    // ConstantBuffer用 (gMaterial)
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[1].Descriptor.ShaderRegister = 0; // b0
+
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderで使用
+    rootParameters[2].DescriptorTable.pDescriptorRanges = &descriptorRanges[1];
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
+
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+
+    // Samplerの設定
+    D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+
+    // サンプラー: gSampler (s0)
+    staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR; // バイリニアフィルタ
+    staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+    staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+    staticSamplers[0].ShaderRegister = 0; // s0
+    staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+    descriptionRootSignature.pStaticSamplers = staticSamplers;
+    descriptionRootSignature.NumStaticSamplers = _countof(staticSamplers);
+
+    // RootSignatureのシリアライズと作成
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        if (errorBlob) {
+            Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        }
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRandomRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    // RootSignatureの設定
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    // DescriptorRangeの設定（SRV用: gTexture）
+    D3D12_DESCRIPTOR_RANGE descriptorRanges[1] = {};
+    descriptorRanges[0].BaseShaderRegister = 0; // gTexture用 (t0)
+    descriptorRanges[0].NumDescriptors = 1;     // 1つのSRV
+    descriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // RootParameterの設定
+    D3D12_ROOT_PARAMETER rootParameters[2] = {};
+
+    // DescriptorTable (SRV用)
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderで使用
+    rootParameters[0].DescriptorTable.pDescriptorRanges = &descriptorRanges[0];
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+
+    // ConstantBuffer用 (gMaterial)
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[1].Descriptor.ShaderRegister = 0; // b0
+
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+
+    // Samplerの設定
+    D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+
+    // サンプラー: gSampler (s0)
+    staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR; // バイリニアフィルタ
+    staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+    staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+    staticSamplers[0].ShaderRegister = 0; // s0
+    staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+    descriptionRootSignature.pStaticSamplers = staticSamplers;
+    descriptionRootSignature.NumStaticSamplers = _countof(staticSamplers);
+
+    // RootSignatureのシリアライズと作成
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        if (errorBlob) {
+            Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        }
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateFocusLineRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    // RootSignatureの設定
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    // DescriptorRangeの設定（SRV用: gTexture）
+    D3D12_DESCRIPTOR_RANGE descriptorRanges[1] = {};
+    descriptorRanges[0].BaseShaderRegister = 0; // gTexture用 (t0)
+    descriptorRanges[0].NumDescriptors = 1;     // 1つのSRV
+    descriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // RootParameterの設定
+    D3D12_ROOT_PARAMETER rootParameters[2] = {};
+
+    // DescriptorTable (SRV用)
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderで使用
+    rootParameters[0].DescriptorTable.pDescriptorRanges = &descriptorRanges[0];
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+
+    // ConstantBuffer用 (gMaterial)
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[1].Descriptor.ShaderRegister = 0; // b0
+
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+
+    // Samplerの設定
+    D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+
+    // サンプラー: gSampler (s0)
+    staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR; // バイリニアフィルタ
+    staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+    staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+    staticSamplers[0].ShaderRegister = 0; // s0
+    staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+    descriptionRootSignature.pStaticSamplers = staticSamplers;
+    descriptionRootSignature.NumStaticSamplers = _countof(staticSamplers);
+
+    // RootSignatureのシリアライズと作成
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        if (errorBlob) {
+            Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        }
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+
+    return rootSignature;
+}
+
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/CopyImage.PS.hlsl", rootSignature);
@@ -1543,4 +1755,19 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBlurGraphicsP
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateCinematicGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Cinematic.PS.hlsl", rootSignature);
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateDissolveGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    SettingDepthStencilDesc(false);
+    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Dissolve.PS.hlsl", rootSignature);
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRandomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    SettingDepthStencilDesc(false);
+    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Random.PS.hlsl", rootSignature);
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFocusLineGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    SettingDepthStencilDesc(false);
+    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/FocusLine.PS.hlsl", rootSignature);
 }

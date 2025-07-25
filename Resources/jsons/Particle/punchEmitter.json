@@ -1,0 +1,164 @@
+{
+    "GroupNames": [
+        "directionTest"
+    ],
+    "directionTest_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "directionTest_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_alphaMax": 1.0,
+    "directionTest_alphaMin": 1.0,
+    "directionTest_blendMode": 2,
+    "directionTest_count": 1,
+    "directionTest_enableTrail": false,
+    "directionTest_endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_endColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "directionTest_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_gatherStartRatio": 0.0,
+    "directionTest_gatherStrength": 0.0,
+    "directionTest_gravity": 0.0,
+    "directionTest_isAcceMultiply": true,
+    "directionTest_isAllRamdomScale": false,
+    "directionTest_isBillboard": false,
+    "directionTest_isBillboardX": false,
+    "directionTest_isBillboardY": false,
+    "directionTest_isBillboardZ": false,
+    "directionTest_isEmitOnEdge": false,
+    "directionTest_isEndScale": false,
+    "directionTest_isFaceDirection": true,
+    "directionTest_isGatherMode": false,
+    "directionTest_isRandomColor": false,
+    "directionTest_isRandomRotate": false,
+    "directionTest_isRandomScale": false,
+    "directionTest_isSinMove": false,
+    "directionTest_lifeTimeMax": 3.0,
+    "directionTest_lifeTimeMin": 1.0,
+    "directionTest_maxTrailParticles": 20,
+    "directionTest_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "directionTest_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "directionTest_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "directionTest_scaleMax": 1.0,
+    "directionTest_scaleMin": 1.0,
+    "directionTest_startAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_startColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "directionTest_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "directionTest_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "directionTest_trailInheritVelocity": true,
+    "directionTest_trailLifeScale": 0.5,
+    "directionTest_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "directionTest_trailSpawnInterval": 0.05000000074505806,
+    "directionTest_trailVelocityScale": 0.30000001192092896,
+    "directionTest_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_velocityMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "directionTest_velocityMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitFrequency": 0.10000000149011612,
+    "emitterRotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "emitterTranslation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "isActive": false,
+    "isAuto": true,
+    "isVisible": true
+}

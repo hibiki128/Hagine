@@ -71,7 +71,7 @@ void ParticleEmitter::DrawEmitter() {
         Vector3{-1.0f, 1.0f, 1.0f},
         Vector3{1.0f, 1.0f, 1.0f}};
     std::array<Vector3, 8> worldVertices;
-    Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scale_, transform_.rotation_, transform_.translation_);
+    Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scale_, transform_.quateRotation_, transform_.translation_);
     for (size_t i = 0; i < localVertices.size(); i++) {
         worldVertices[i] = Transformation(localVertices[i], worldMatrix);
     }
@@ -90,7 +90,7 @@ void ParticleEmitter::Emit() {
         for (auto &[groupName, setting] : particleSettings_) {
             // ここでtransform_の値をParticleSettingに反映
             setting.translate = transform_.translation_;
-            setting.rotation = transform_.rotation_.ToEulerAngles();
+            setting.rotation = transform_.quateRotation_.ToEulerAngles();
             setting.scale = transform_.scale_;
             Manager_->SetParticleSetting(groupName, setting);
         }
@@ -100,7 +100,7 @@ void ParticleEmitter::Emit() {
 
 void ParticleEmitter::SaveToJson() {
     datas_->Save("emitterTranslation", transform_.translation_);
-    datas_->Save("emitterRotation", transform_.rotation_);
+    datas_->Save("emitterRotation", transform_.quateRotation_);
     datas_->Save("emitterScale", transform_.scale_);
     datas_->Save("GroupNames", particleGroupNames_);
     datas_->Save("emitFrequency", emitFrequency_);
@@ -167,7 +167,7 @@ void ParticleEmitter::SaveToJson() {
 
 void ParticleEmitter::LoadFromJson() {
     transform_.translation_ = datas_->Load<Vector3>("emitterTranslation", {0, 0, 0});
-    transform_.rotation_ = datas_->Load<Quaternion>("emitterRotation", Quaternion::IdentityQuaternion());
+    transform_.quateRotation_ = datas_->Load<Quaternion>("emitterRotation", Quaternion::IdentityQuaternion());
     transform_.scale_ = datas_->Load<Vector3>("emitterScale", {1, 1, 1});
     particleGroupNames_ = datas_->Load<std::vector<std::string>>("GroupNames", {});
     emitFrequency_ = datas_->Load<float>("emitFrequency", 0.1f);
@@ -363,15 +363,15 @@ void ParticleEmitter::DebugParticleData() {
             ImGui::PopStyleColor();
             ImGui::NextColumn();
             float rotationDegrees[3] = {
-                radiansToDegrees(transform_.rotation_.x),
-                radiansToDegrees(transform_.rotation_.y),
-                radiansToDegrees(transform_.rotation_.z)};
+                radiansToDegrees(transform_.quateRotation_.x),
+                radiansToDegrees(transform_.quateRotation_.y),
+                radiansToDegrees(transform_.quateRotation_.z)};
 
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.4f, 0.5f));
             if (ImGui::DragFloat3("##回転 (度)", rotationDegrees, 0.1f, -360.0f, 360.0f)) {
-                transform_.rotation_.x = degreesToRadians(rotationDegrees[0]);
-                transform_.rotation_.y = degreesToRadians(rotationDegrees[1]);
-                transform_.rotation_.z = degreesToRadians(rotationDegrees[2]);
+                transform_.quateRotation_.x = degreesToRadians(rotationDegrees[0]);
+                transform_.quateRotation_.y = degreesToRadians(rotationDegrees[1]);
+                transform_.quateRotation_.z = degreesToRadians(rotationDegrees[2]);
             }
             ImGui::PopStyleColor();
             ImGui::NextColumn();

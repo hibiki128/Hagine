@@ -375,7 +375,7 @@ void MotionEditor::Update(float deltaTime) {
 
         float easedT = ApplyEasing(motion.easingType, t, 1.0f);
         Quaternion interpolatedRot = Slerp(motion.actualStartRot, motion.actualEndRot, easedT);
-        motion.target->GetWorldTransform()->rotation_ = interpolatedRot;
+        motion.target->GetWorldTransform()->quateRotation_ = interpolatedRot;
 
         motion.target->GetLocalScale() = Lerp(motion.actualStartScale, motion.actualEndScale, easedT);
 

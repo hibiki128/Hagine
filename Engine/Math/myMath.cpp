@@ -291,34 +291,32 @@ Matrix4x4 MakeAffineMatrix(const Vector3 &scale, const Quaternion &rotate, const
 }
 
 Matrix4x4 QuaternionToMatrix4x4(const Quaternion &q) {
-    // 正規化されたクォータニオンを使用
-    Quaternion norm = q.Normalize();
-
-    float xx = norm.x * norm.x;
-    float yy = norm.y * norm.y;
-    float zz = norm.z * norm.z;
-    float xy = norm.x * norm.y;
-    float xz = norm.x * norm.z;
-    float yz = norm.y * norm.z;
-    float wx = norm.w * norm.x;
-    float wy = norm.w * norm.y;
-    float wz = norm.w * norm.z;
-
     Matrix4x4 mat;
 
-    // 正しい回転行列の計算
+    // クォータニオンの各成分の積を計算
+    float xx = q.x * q.x;
+    float yy = q.y * q.y;
+    float zz = q.z * q.z;
+    float xy = q.x * q.y;
+    float xz = q.x * q.z;
+    float yz = q.y * q.z;
+    float wx = q.w * q.x;
+    float wy = q.w * q.y;
+    float wz = q.w * q.z;
+
+    // 左手座標系用の回転行列を設定
     mat.m[0][0] = 1.0f - 2.0f * (yy + zz);
-    mat.m[0][1] = 2.0f * (xy - wz);
-    mat.m[0][2] = 2.0f * (xz + wy);
+    mat.m[0][1] = 2.0f * (xy + wz);
+    mat.m[0][2] = 2.0f * (xz - wy);
     mat.m[0][3] = 0.0f;
 
-    mat.m[1][0] = 2.0f * (xy + wz);
+    mat.m[1][0] = 2.0f * (xy - wz);
     mat.m[1][1] = 1.0f - 2.0f * (xx + zz);
-    mat.m[1][2] = 2.0f * (yz - wx);
+    mat.m[1][2] = 2.0f * (yz + wx);
     mat.m[1][3] = 0.0f;
 
-    mat.m[2][0] = 2.0f * (xz - wy);
-    mat.m[2][1] = 2.0f * (yz + wx);
+    mat.m[2][0] = 2.0f * (xz + wy);
+    mat.m[2][1] = 2.0f * (yz - wx);
     mat.m[2][2] = 1.0f - 2.0f * (xx + yy);
     mat.m[2][3] = 0.0f;
 
