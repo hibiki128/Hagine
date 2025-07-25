@@ -3,6 +3,8 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 
 void GameScene::Initialize() {
+
+    BaseObjectManager::GetInstance()->LoadAll("CG5");
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
