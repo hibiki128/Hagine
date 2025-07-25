@@ -1,0 +1,32 @@
+{
+    "cinematic_brightness": 0.12999999523162842,
+    "cinematic_contrast": 1.0499999523162842,
+    "cinematic_resolution": {
+        "x": 1280.0,
+        "y": 720.0
+    },
+    "cinematic_saturation": 0.6800000071525574,
+    "depth_kernelSize": 7,
+    "effect0_enabled": true,
+    "effect0_shaderMode": 6,
+    "effect1_enabled": true,
+    "effect1_shaderMode": 1,
+    "effect2_enabled": true,
+    "effect2_shaderMode": 4,
+    "effectCount": 0,
+    "gaussian_kernelSize": 5,
+    "gaussian_sigma": 10.0,
+    "radial_blurWidth": 0.009999999776482582,
+    "radial_center": {
+        "x": 0.5,
+        "y": 0.5
+    },
+    "smooth_kernelSize": 3,
+    "vignette_center": {
+        "x": 0.5,
+        "y": 0.5
+    },
+    "vignette_exponent": 1.0,
+    "vignette_radius": 1.0,
+    "vignette_strength": 1.0
+}
