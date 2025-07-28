@@ -2,7 +2,6 @@
 #include <Frame.h>
 
 void TitleScene::Initialize() {
-    
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
@@ -12,7 +11,6 @@ void TitleScene::Initialize() {
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
-
 }
 
 void TitleScene::Finalize() {

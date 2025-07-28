@@ -100,7 +100,7 @@ class ImGuiManager {
     /// <summary>
     /// シーン表示
     /// </summary>
-    void ShowSceneWindow(OffScreen *offScreen);
+    void ShowSceneWindow(OffScreen *offScreen, const std::string &sceneName);
 
   private:
     /// ====================================

@@ -549,14 +549,14 @@ void ImGuiManager::FixAspectRatio() {
     }
 }
 
-void ImGuiManager::ShowSceneWindow(OffScreen *offScreen) {
+void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string& sceneName) {
     // ImGuiウィンドウ開始前にNextWindowSizeは設定しない（手動サイズ変更を許可）
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
     // フォーカスされていない場合は描画を最適化
     if (!isShowMainUI_) {
         flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
     }
-    ImGui::Begin("Scene", nullptr, flags);
+    ImGui::Begin(sceneName.c_str(), nullptr, flags);
 
     // ウィンドウ内の位置を取得（ImGuizmoのためにシーンウィンドウの絶対位置を計算）
     ImVec2 sceneWindowPos = ImGui::GetWindowPos();

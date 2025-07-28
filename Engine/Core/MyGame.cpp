@@ -39,7 +39,7 @@ void MyGame::Update() {
     imGuiManager_->ShowMainMenu();
     if (imGuiManager_->GetIsShowMainUI()) {
         imGuiManager_->ShowDockSpace();
-        imGuiManager_->ShowSceneWindow(offscreen_.get());
+        imGuiManager_->ShowSceneWindow(offscreen_.get(), sceneManager_->GetCurrentSceneName());
     }
     imGuiManager_->ShowMainUI(offscreen_.get());
     baseObjectManager_->DrawImGui();
@@ -76,7 +76,7 @@ void MyGame::Draw() {
     dxCommon_->TransitionDepthBarrier();
     sceneManager_->DrawTransition();
     sceneManager_->DrawForOffScreen();
-    
+
     // フレーム統計を更新（ImGui描画前）
     ParticleEditor::GetInstance()->UpdateFrameStats();
 
@@ -85,7 +85,6 @@ void MyGame::Draw() {
 #endif // _DEBUG
        // ------------------------
 
-      
     // -----描画終了-----
     dxCommon_->PostDraw();
 }
