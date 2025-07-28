@@ -97,7 +97,7 @@ void FollowCamera::Update() {
         worldTransform_.translation_ = cameraPos;
 
         // クォータニオンで回転をセット（yawのみ回転、ピッチ・ロールは0）
-        worldTransform_.rotation_ = Quaternion::FromEulerAngles({0.0f, -yaw_, 0.0f});
+        worldTransform_.quateRotation_ = Quaternion::FromEulerAngles({0.0f, -yaw_, 0.0f});
 
         // 行列更新
         worldTransform_.UpdateMatrix();
@@ -105,7 +105,7 @@ void FollowCamera::Update() {
 
     // ビュープロジェクション更新
     viewProjection_.translation_ = worldTransform_.translation_;
-    viewProjection_.rotation_ = worldTransform_.rotation_;
+    viewProjection_.rotation_ = worldTransform_.quateRotation_;
     viewProjection_.matWorld_ = worldTransform_.matWorld_;
     viewProjection_.UpdateMatrix();
 }

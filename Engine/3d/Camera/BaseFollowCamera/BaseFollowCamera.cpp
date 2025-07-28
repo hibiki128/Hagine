@@ -25,7 +25,7 @@ void BaseFollowCamera::Update() {
 
 		// カメラがターゲットの方向を向くよう回転を設定
 		Vector3 lookAt = targetPosition - worldTransform_.translation_;
-		worldTransform_.rotation_.y = std::atan2(lookAt.x, lookAt.z);
+		worldTransform_.quateRotation_.y = std::atan2(lookAt.x, lookAt.z);
 
 		// 親子関係の更新
 		worldTransform_.UpdateMatrix();
@@ -33,7 +33,7 @@ void BaseFollowCamera::Update() {
 
 	// ビュー行列にカメラの位置を反映
 	viewProjection_.translation_ = worldTransform_.translation_;
-	viewProjection_.rotation_ = worldTransform_.rotation_;
+	viewProjection_.rotation_ = worldTransform_.quateRotation_;
 	viewProjection_.matWorld_ = worldTransform_.matWorld_;
 
 	// ビュー行列の更新

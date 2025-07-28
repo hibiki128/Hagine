@@ -334,11 +334,11 @@ void Player::RotateUpdate() {
             Quaternion targetRot = Quaternion::FromEulerAngles({0.0f, targetYaw, 0.0f});
 
             float rotateSpeed = 10.0f;
-            transform_->rotation_ = Quaternion::Slerp(transform_->rotation_, targetRot, rotateSpeed * dt_);
+            transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
         }
     }
 
-    Vector3 euler = transform_->rotation_.ToEulerAngles();
+    Vector3 euler = transform_->quateRotation_.ToEulerAngles();
 
     // 右回転はY軸マイナス、左回転はY軸プラス
     if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
@@ -348,7 +348,7 @@ void Player::RotateUpdate() {
         euler.y += 0.04f;
     }
 
-    transform_->rotation_ = Quaternion::FromEulerAngles(euler);
+    transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
 }
 
 void Player::CollisionGround() {
@@ -389,7 +389,7 @@ void Player::CollisionGround() {
 
 Direction Player::CalculateDirectionFromRotation() {
     // クォータニオンからオイラー角（Yaw）を取得
-    float yaw = transform_->rotation_.ToEulerAngles().y;
+    float yaw = transform_->quateRotation_.ToEulerAngles().y;
     float angle = NormalizeAngle(yaw);
 
     // 8方向の場合の角度範囲（π/4 = 45度ごと）
@@ -513,7 +513,7 @@ void Player::Move() {
         float targetYaw = std::atan2(-moveDir.x, moveDir.z);
         Quaternion targetRot = Quaternion::FromEulerAngles({0.0f, targetYaw, 0.0f});
         float rotateSpeed = 10.0f;
-        transform_->rotation_ = Quaternion::Slerp(transform_->rotation_, targetRot, rotateSpeed * dt_);
+        transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
     }
     // --- 移動処理 ---
     float currentMaxSpeed = maxSpeed_;

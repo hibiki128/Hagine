@@ -83,6 +83,14 @@ class DirectXCommon {
     [[nodiscard]]
     Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage &mipImages);
 
+    /// <summary>
+    /// バリアを貼る
+    /// </summary>
+    /// <param name="pResource"></param>
+    /// <param name="Before"></param>
+    /// <param name="After"></param>
+    void BarrierTransition(ID3D12Resource *pResource, D3D12_RESOURCE_STATES Before, D3D12_RESOURCE_STATES After);
+    D3D12_CPU_DESCRIPTOR_HANDLE CreateAdditionalRTV(ID3D12Resource *resource, int index);
 #pragma region getter
     /// <summary>
     /// RTVの指定番号のCPUデスクリプタハンドルを取得する
@@ -155,6 +163,9 @@ class DirectXCommon {
     D3D12_GPU_DESCRIPTOR_HANDLE GetDepthGPUHandle() { return depthSrvHandleGPU; }
     D3D12_CPU_DESCRIPTOR_HANDLE GetDepthCPUHandle() { return depthSrvHandleCPU; }
     uint32_t GetDepthSrvIndex() { return depthSrvIndex; }
+    D3D12_CLEAR_VALUE GetClearColorValue() const { return clearColorValue; }
+    IDXGISwapChain4 *GetSwapChain() { return swapChain.Get(); }
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetRTVDescriptorHeap() { return rtvDescriptorHeap; }
 #pragma endregion
 
   private: // メンバ関数
@@ -249,14 +260,6 @@ class DirectXCommon {
     /// <param name="index"></param>
     /// <returns></returns>
     static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap, uint32_t descriptorSize, uint32_t index); // GPU
-
-    /// <summary>
-    /// バリアを貼る
-    /// </summary>
-    /// <param name="pResource"></param>
-    /// <param name="Before"></param>
-    /// <param name="After"></param>
-    void BarrierTransition(ID3D12Resource *pResource, D3D12_RESOURCE_STATES Before, D3D12_RESOURCE_STATES After);
 
   private:
     // WindowsAPI

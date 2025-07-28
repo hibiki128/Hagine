@@ -1,0 +1,35 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 2,
+    "blendMode": 0,
+    "childrenNames": [],
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "",
+    "objectColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "objectName": "sphere_1",
+    "parentName": "",
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "skeletonDraw": false,
+    "textureName": "debug/uvChecker.png",
+    "translation": {
+        "x": 2.0383949279785156,
+        "y": 2.8647782802581787,
+        "z": 0.0
+    }
+}
