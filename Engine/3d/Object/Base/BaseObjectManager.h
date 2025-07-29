@@ -40,6 +40,7 @@ class BaseObjectManager {
     void OpenSceneSaveModal();
     void OpenSceneLoadModal();
     void OpenObjectCreationModal();
+    void OpenObjectLoadModal();
 
     /// ===================================================
     /// 親子付け関連
@@ -57,9 +58,13 @@ class BaseObjectManager {
     void RemoveObject(const std::string &name);
   private:
     // 各機能を個別に描画するメソッド
-    void DrawSceneSaveModal();
-    void DrawSceneLoadModal();
-    void DrawObjectCreationModal();
+    void DrawSceneSaveModel();
+    void DrawSceneLoadModel();
+    void DrawObjectCreationModel();
+    void DrawObjectLoadModel();
+    void LoadObjectFromJson(const std::string &startPath, const std::string &objectName);
+
+    void RestoreParentChildRelationshipForObject(BaseObject *object);
 
     void CreateObject(std::string objectName, std::string modelPath, std::string texturePath = "");
 
@@ -73,4 +78,6 @@ class BaseObjectManager {
     bool showSceneSaveModal_ = false;
     bool showSceneLoadModal_ = false;
     bool showObjectCreationModal_ = false;
+    bool showObjectLoadModal_ = false;
+    std::string selectedJsonPath_;
 };

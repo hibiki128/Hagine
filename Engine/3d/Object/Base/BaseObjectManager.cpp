@@ -3,6 +3,7 @@
 #include "Debug/ImGui/ImGuizmoManager.h"
 #endif // _DEBUG
 #include <ShowFolder/ShowFolder.h>
+#include <Debug/Log/Logger.h>
 
 BaseObjectManager *BaseObjectManager::instance = nullptr;
 
@@ -59,17 +60,18 @@ void BaseObjectManager::Draw(const ViewProjection &viewProjection, Vector3 offSe
 
 void BaseObjectManager::UpdateImGui() {
 #ifdef _DEBUG
-    DrawSceneSaveModal();
-    DrawSceneLoadModal();
-    DrawObjectCreationModal();
+    DrawSceneSaveModel();
+    DrawSceneLoadModel();
+    DrawObjectCreationModel();
+    DrawObjectLoadModel();
 #endif // _DEBUG
 }
 
 void BaseObjectManager::SaveAll() {
     for (auto &[name, obj] : baseObjects_) {
         obj->SetFolderPath("SceneData/" + sceneName_ + "/ObjectDatas");
-        obj->SaveToJson();
-        obj->SaveParentChildRelationship(); // 親子関係を保存
+        obj->SceneSaveToJson();
+        obj->SaveParentChildRelationship(); 
     }
 }
 
@@ -158,6 +160,10 @@ void BaseObjectManager::OpenSceneLoadModal() {
 
 void BaseObjectManager::OpenObjectCreationModal() {
     showObjectCreationModal_ = true;
+}
+
+void BaseObjectManager::OpenObjectLoadModal() {
+    showObjectLoadModal_ = true;
 }
 
 void BaseObjectManager::ShowParentChildHierarchy() {
@@ -350,7 +356,7 @@ void BaseObjectManager::RemoveObject(const std::string &name) {
 }
 
 // シーン保存モーダルの描画
-void BaseObjectManager::DrawSceneSaveModal() {
+void BaseObjectManager::DrawSceneSaveModel() {
 #ifdef _DEBUG
     // メニューから呼び出された場合のモーダル表示
     if (showSceneSaveModal_) {
@@ -388,7 +394,7 @@ void BaseObjectManager::DrawSceneSaveModal() {
 }
 
 // シーン読み込みモーダルの描画
-void BaseObjectManager::DrawSceneLoadModal() {
+void BaseObjectManager::DrawSceneLoadModel() {
 #ifdef _DEBUG
     // メニューから呼び出された場合のモーダル表示
     if (showSceneLoadModal_) {
@@ -425,7 +431,7 @@ void BaseObjectManager::DrawSceneLoadModal() {
 }
 
 // オブジェクト生成モーダルの描画
-void BaseObjectManager::DrawObjectCreationModal() {
+void BaseObjectManager::DrawObjectCreationModel() {
 #ifdef _DEBUG
     // メニューから呼び出された場合のモーダル表示
     if (showObjectCreationModal_) {
@@ -519,6 +525,120 @@ void BaseObjectManager::DrawObjectCreationModal() {
         ImGui::EndPopup();
     }
 #endif // _DEBUG
+}
+
+void BaseObjectManager::DrawObjectLoadModel() {
+#ifdef _DEBUG
+    // メニューから呼び出された場合のモーダル表示
+    if (showObjectLoadModal_) {
+        ImGui::OpenPopup("保存済みオブジェクト呼び出し");
+        showObjectLoadModal_ = false;
+    }
+    std::string startPath = "ObjectDatas";
+    // オブジェクト呼び出しモーダルウィンドウ
+    if (ImGui::BeginPopupModal("保存済みオブジェクト呼び出し", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("保存済みのオブジェクトを読み込みます");
+
+        // JSONファイル選択セクション
+        ImGui::Text("保存済みオブジェクト選択:");
+        ImGui::BeginChild("JsonFileSelector", ImVec2(600, 400), true);
+        ShowJsonFile(selectedJsonPath_, startPath);
+        ImGui::EndChild();
+        ImGui::Separator();
+
+        // 選択状況の表示とオブジェクト名の自動設定
+        ImGui::Text("選択されたファイル: %s", selectedJsonPath_.empty() ? "未選択" : selectedJsonPath_.c_str());
+
+        // JSONファイルが選択されている場合、ファイル名からオブジェクト名を取得
+        std::string autoObjectName = "";
+        if (!selectedJsonPath_.empty()) {
+            std::filesystem::path jsonPath(selectedJsonPath_);
+            autoObjectName = jsonPath.stem().string(); // 拡張子なしのファイル名を取得
+            ImGui::Text("オブジェクト名: %s", autoObjectName.c_str());
+        }
+
+        ImGui::Separator();
+
+        // 読み込みボタンとキャンセルボタン
+        bool canLoad = !selectedJsonPath_.empty();
+        if (!canLoad) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+        }
+        if (ImGui::Button("読み込み", ImVec2(120, 0))) {
+            if (canLoad) {
+                LoadObjectFromJson(startPath, autoObjectName);
+                // パスをリセット
+                selectedJsonPath_ = "";
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        if (!canLoad) {
+            ImGui::PopStyleColor(3);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("キャンセル", ImVec2(120, 0))) {
+            // パスをリセット
+            selectedJsonPath_ = "";
+            ImGui::CloseCurrentPopup();
+        }
+        // 読み込みできない場合の理由を表示
+        if (!canLoad) {
+            ImGui::Separator();
+            ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "読み込みするには:");
+            if (selectedJsonPath_.empty()) {
+                ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "・JSONファイルを選択してください");
+            }
+        }
+        ImGui::EndPopup();
+    }
+#endif // _DEBUG
+}
+
+void BaseObjectManager::LoadObjectFromJson(const std::string &startPath, const std::string &objectName) {
+    // フルパスを構築 (startPath/objectName.json)
+    std::string fullPath = "resources/jsons/" + startPath + "/" + objectName + ".json";
+
+    // BaseObjectのLoadFromJson機能を使用してオブジェクトを作成
+    auto newObject = std::make_unique<BaseObject>();
+    newObject->Init(objectName);
+    newObject->GetName() = objectName;
+    newObject->LoadFromJson(startPath, objectName);
+    if (!newObject->GetModelPath().empty()) {
+        newObject->CreateModel(newObject->GetModelPath());
+    } else {
+        newObject->CreatePrimitiveModel(newObject->GetPrimitiveType());
+    }
+
+    // 親子関係の復元
+    RestoreParentChildRelationshipForObject(newObject.get());
+
+    this->AddObject(std::move(newObject));
+    Logger::Log("オブジェクト読み込み完了: " + objectName + " (" + fullPath + ")");
+}
+
+void BaseObjectManager::RestoreParentChildRelationshipForObject(BaseObject *object) {
+    if (!object)
+        return;
+
+    // 親の復元
+    std::string parentName = object->GetParentName();
+    if (!parentName.empty()) {
+        auto it = baseObjects_.find(parentName);
+        if (it != baseObjects_.end()) {
+            object->SetParent(it->second.get());
+        }
+    }
+
+    // 子の復元
+    std::vector<std::string> childrenNames = object->GetChildrenNames();
+    for (const std::string &childName : childrenNames) {
+        auto it = baseObjects_.find(childName);
+        if (it != baseObjects_.end()) {
+            object->AddChild(it->second.get());
+        }
+    }
 }
 
 void BaseObjectManager::DrawImGui() {

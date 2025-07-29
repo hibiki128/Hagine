@@ -1,0 +1,39 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 3,
+    "blendMode": 0,
+    "childrenNames": [
+        "leftHand",
+        "rightHand",
+        "cube_1"
+    ],
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "",
+    "objectColor": {
+        "w": 1.0,
+        "x": 0.14954842627048492,
+        "y": 0.21131840348243713,
+        "z": 0.8599033951759338
+    },
+    "objectName": "player",
+    "parentName": "",
+    "rotation": {
+        "w": -0.7069846987724304,
+        "x": 1.0677015183091498e-07,
+        "y": 0.7072288393974304,
+        "z": 1.0677015183091498e-07
+    },
+    "scale": {
+        "x": 0.9999999403953552,
+        "y": 1.0,
+        "z": 0.9999999403953552
+    },
+    "skeletonDraw": false,
+    "textureName": "debug/white1x1.png",
+    "translation": {
+        "x": -27.52056312561035,
+        "y": 0.0,
+        "z": -103.78479766845703
+    }
+}

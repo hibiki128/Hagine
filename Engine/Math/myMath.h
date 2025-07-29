@@ -108,7 +108,7 @@ Matrix4x4 QuaternionToMatrix4x4(const Quaternion& q);
 Quaternion Slerp(const Quaternion &q0, const Quaternion &q1, float t);
 
 Matrix4x4 MakeRotateXYZMatrix(const Quaternion &quat);
-
-//// デバッグ用
+Matrix4x4 MakeRotateMatrix(const Vector3 &right, const Vector3 &up, const Vector3 &forward);
+    //// デバッグ用
 //void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 //void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);

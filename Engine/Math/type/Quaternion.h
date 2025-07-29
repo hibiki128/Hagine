@@ -2,6 +2,7 @@
 #include "Vector3.h"
 #include <cmath>
 #include <numbers>
+#include "Matrix4x4.h"
 
 class Quaternion final {
   public:
@@ -32,6 +33,9 @@ class Quaternion final {
     Quaternion operator-=(const Quaternion &other);
 
     Vector3 operator*(const Vector3 &v) const;
+
+    // 単項マイナス演算子（符号反転）
+    Quaternion operator-() const;
 
     // 2つのベクトルの間の回転を計算
     void SetFromTo(const Vector3 &from, const Vector3 &to);
@@ -77,6 +81,8 @@ class Quaternion final {
 
     static Quaternion FromEulerDegrees(const Vector3 &eulerDegrees);
     Vector3 ToEulerDegrees() const;
+
+    static Quaternion FromMatrix(const Matrix4x4 &matrix);
 
     // ジンバルロックを回避するための改良されたメソッド
     static Quaternion FromEulerAnglesSafe(const Vector3 &eulerAngles);

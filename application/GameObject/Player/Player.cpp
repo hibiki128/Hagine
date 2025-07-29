@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include "Player.h"
 #include "Engine/Frame/Frame.h"
 #include "State/Air/PlayerStateAir.h"
@@ -41,7 +42,7 @@ void Player::Init(const std::string objectName) {
     shadow_->Init("shadow");
     shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
     shadow_->SetTexture("game/shadow.png");
-    shadow_->GetLocalRotation() = Quaternion::FromEulerAngles(Vector3(degreesToRadians(-90.0f), 0.0f, 0.0f));
+    shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(-90.0f), 0.0f, 0.0f));
     shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
 
     chageShot_ = std::make_unique<ChageShot>();
@@ -151,15 +152,19 @@ void Player::Update() {
             ++it;
         }
     }
+    UpdateShadowScale();
 }
 
 void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
-    shadow_->Draw(viewProjection, offSet);
     BaseObject::Draw(viewProjection, offSet);
     for (auto &bullet : bullets_) {
         bullet->Draw(viewProjection, offSet);
     }
     chageShot_->Draw(viewProjection, offSet);
+    if (transform_->translation_.y < 0) {
+        return;
+    }
+    shadow_->Draw(viewProjection, offSet);
 }
 
 void Player::DrawParticle(const ViewProjection &viewProjection) {
@@ -323,32 +328,47 @@ void Player::Shot() {
 }
 
 void Player::RotateUpdate() {
-
     if (isLockOn_ && enemy_) {
-        Vector3 toEnemy = enemy_->GetLocalPosition() - GetLocalPosition();
-        toEnemy.y = 0.0f; // 高さは無視してXZ平面のみで向き計算
-
+        Vector3 toEnemy = enemy_->GetWorldPosition() - GetWorldPosition();
         if (toEnemy.Length() > 0.001f) {
             toEnemy = toEnemy.Normalize();
-            float targetYaw = std::atan2(-toEnemy.x, toEnemy.z);
-            Quaternion targetRot = Quaternion::FromEulerAngles({0.0f, targetYaw, 0.0f});
+
+            // プレイヤーの正面方向（+Z方向）を敵の方向に向ける
+            Vector3 forward = toEnemy;
+            Vector3 worldUp = {0.0f, 1.0f, 0.0f}; // ワールドの上方向
+
+            // forwardとworldUpが平行になる場合の対処（真上や真下を向く場合）
+            Vector3 right;
+            if (std::abs(forward.Dot(worldUp)) > 0.999f) {
+                right = {1.0f, 0.0f, 0.0f}; // X軸を右方向として使用
+            } else {
+                right = (worldUp.Cross(forward)).Normalize();
+            }
+
+            Vector3 up = (forward.Cross(right)).Normalize();
+
+            // 回転行列から目標クォータニオンを作成
+            Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
+            Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
 
             float rotateSpeed = 10.0f;
             transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
         }
+    } else {
+        Vector3 euler = transform_->quateRotation_.ToEulerAngles();
+        bool rotationChanged = false;
+        if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
+            euler.y -= 0.04f;
+            rotationChanged = true;
+        }
+        if (Input::GetInstance()->PushKey(DIK_LEFT)) {
+            euler.y += 0.04f;
+            rotationChanged = true;
+        }
+        if (rotationChanged) {
+            transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
+        }
     }
-
-    Vector3 euler = transform_->quateRotation_.ToEulerAngles();
-
-    // 右回転はY軸マイナス、左回転はY軸プラス
-    if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
-        euler.y -= 0.04f;
-    }
-    if (Input::GetInstance()->PushKey(DIK_LEFT)) {
-        euler.y += 0.04f;
-    }
-
-    transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
 }
 
 void Player::CollisionGround() {
@@ -464,15 +484,14 @@ float Player::CalculateShortestRotation(float from, float to) {
 
     return diff;
 }
-
 void Player::Move() {
     // 入力取得（WASD）
     float xInput = 0.0f;
     float zInput = 0.0f;
 
-    if (Input::GetInstance()->PushKey(DIK_D))
-        xInput += 1.0f;
     if (Input::GetInstance()->PushKey(DIK_A))
+        xInput += 1.0f;
+    if (Input::GetInstance()->PushKey(DIK_D))
         xInput -= 1.0f;
     if (Input::GetInstance()->PushKey(DIK_W))
         zInput += 1.0f;
@@ -498,9 +517,9 @@ void Player::Move() {
 
     float yaw = camera->GetYaw();
 
-    // カメラの前方向と右方向ベクトル（XZ平面）
+    // カメラの前方向と右方向ベクトル（XZ平面）- 座標系を修正
     Vector3 cameraForward = {std::sin(yaw), 0.0f, std::cos(yaw)};
-    Vector3 cameraRight = {std::cos(yaw), 0.0f, -std::sin(yaw)};
+    Vector3 cameraRight = {-std::cos(yaw), 0.0f, std::sin(yaw)}; // 右方向を修正
 
     // 入力方向をカメラベースで合成
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
@@ -510,11 +529,12 @@ void Player::Move() {
 
     // --- 回転処理 ---
     if (!isLockOn_) {
-        float targetYaw = std::atan2(-moveDir.x, moveDir.z);
+        float targetYaw = std::atan2(-moveDir.x, moveDir.z); // 元に戻す
         Quaternion targetRot = Quaternion::FromEulerAngles({0.0f, targetYaw, 0.0f});
         float rotateSpeed = 10.0f;
         transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
     }
+
     // --- 移動処理 ---
     float currentMaxSpeed = maxSpeed_;
     isDashing_ = Input::GetInstance()->PushKey(DIK_LCONTROL);
@@ -531,4 +551,14 @@ void Player::Move() {
         velocity_.x *= scale;
         velocity_.z *= scale;
     }
+}
+
+void Player::UpdateShadowScale() {
+    if (transform_->translation_.y < 0) {
+        return;
+    }
+    float height = transform_->translation_.y;
+    float baseScale = 1.5f;
+    float scaleFactor = std::max(0.3f, baseScale - height * 0.1f);
+    shadow_->GetLocalScale() = {scaleFactor, scaleFactor, scaleFactor};
 }

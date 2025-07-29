@@ -59,6 +59,66 @@ Quaternion Quaternion::FromEulerAngles(const Vector3 &eulerAngles) {
     );
 }
 
+Quaternion Quaternion::FromEulerAnglesSafe(const Vector3 &eulerAngles) {
+    // YXZ回転順序でジンバルロックを回避
+    float halfX = eulerAngles.x * 0.5f;
+    float halfY = eulerAngles.y * 0.5f;
+    float halfZ = eulerAngles.z * 0.5f;
+
+    float cosX = std::cos(halfX);
+    float sinX = std::sin(halfX);
+    float cosY = std::cos(halfY);
+    float sinY = std::sin(halfY);
+    float cosZ = std::cos(halfZ);
+    float sinZ = std::sin(halfZ);
+
+    return Quaternion(
+        sinX * cosY * cosZ + cosX * sinY * sinZ,
+        cosX * sinY * cosZ - sinX * cosY * sinZ,
+        cosX * cosY * sinZ + sinX * sinY * cosZ,
+        cosX * cosY * cosZ - sinX * sinY * sinZ);
+}
+
+
+
+Vector3 Quaternion::ToEulerAnglesSafe() const {
+    Vector3 angles;
+
+    // YXZ順序での変換
+    float test = x * y + z * w;
+    if (test > 0.499f) { // 特異点（北極）
+        angles.y = 2.0f * std::atan2(x, w);
+        angles.x = std::numbers::pi_v<float> / 2.0f;
+        angles.z = 0.0f;
+        return angles;
+    }
+    if (test < -0.499f) { // 特異点（南極）
+        angles.y = -2.0f * std::atan2(x, w);
+        angles.x = -std::numbers::pi_v<float> / 2.0f;
+        angles.z = 0.0f;
+        return angles;
+    }
+
+    float sqx = x * x;
+    float sqy = y * y;
+    float sqz = z * z;
+
+    angles.y = std::atan2(2.0f * y * w - 2.0f * x * z, 1.0f - 2.0f * sqy - 2.0f * sqz);
+    angles.x = std::asin(2.0f * test);
+    angles.z = std::atan2(2.0f * x * w - 2.0f * y * z, 1.0f - 2.0f * sqx - 2.0f * sqz);
+
+    return angles;
+}
+
+
+Quaternion Quaternion::FromAxisRotations(const Vector3 &axisRotations) {
+    Quaternion qx = FromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), axisRotations.x);
+    Quaternion qy = FromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), axisRotations.y);
+    Quaternion qz = FromAxisAngle(Vector3(0.0f, 0.0f, 1.0f), axisRotations.z);
+    
+    return qy * qx * qz; // YXZ順序
+}
+
 Vector3 Quaternion::ToEulerAngles() const {
     Vector3 angles;
 
@@ -97,52 +157,57 @@ Quaternion Quaternion::Normalize() const {
 
 Quaternion Quaternion::FromLookRotation(const Vector3 &direction, const Vector3 &up) {
     Vector3 forward = direction.Normalize();
-    Vector3 right = up.Cross(forward).Normalize(); // ← up と forward から右方向
-    Vector3 newUp = forward.Cross(right);          // ← forward と right から上方向
+    Vector3 upNorm = up.Normalize();
 
-    // 回転行列の列ベクトルを各軸として渡す（列優先）
+    // 右手座標系での正しい外積計算
+    Vector3 right = upNorm.Cross(forward).Normalize();
+    Vector3 newUp = forward.Cross(right).Normalize();
+
+    // 回転行列を正しく構築（行列の列として配置）
     float m00 = right.x;
-    float m01 = right.y;
-    float m02 = right.z;
-
-    float m10 = newUp.x;
+    float m01 = newUp.x;
+    float m02 = forward.x;
+    float m10 = right.y;
     float m11 = newUp.y;
-    float m12 = newUp.z;
-
-    float m20 = forward.x;
-    float m21 = forward.y;
+    float m12 = forward.y;
+    float m20 = right.z;
+    float m21 = newUp.z;
     float m22 = forward.z;
 
     float trace = m00 + m11 + m22;
 
     if (trace > 0.0f) {
-        float s = std::sqrt(trace + 1.0f) * 2.0f;
+        float s = std::sqrt(trace + 1.0f) * 2.0f; // s = 4 * qw
         return Quaternion(
-            (m12 - m21) / s,
-            (m20 - m02) / s,
-            (m01 - m10) / s,
-            0.25f * s);
+            (m21 - m12) / s, // qx
+            (m02 - m20) / s, // qy
+            (m10 - m01) / s, // qz
+            0.25f * s        // qw
+        );
     } else if (m00 > m11 && m00 > m22) {
-        float s = std::sqrt(1.0f + m00 - m11 - m22) * 2.0f;
+        float s = std::sqrt(1.0f + m00 - m11 - m22) * 2.0f; // s = 4 * qx
         return Quaternion(
-            0.25f * s,
-            (m01 + m10) / s,
-            (m02 + m20) / s,
-            (m12 - m21) / s);
+            0.25f * s,       // qx
+            (m01 + m10) / s, // qy
+            (m02 + m20) / s, // qz
+            (m21 - m12) / s  // qw
+        );
     } else if (m11 > m22) {
-        float s = std::sqrt(1.0f + m11 - m00 - m22) * 2.0f;
+        float s = std::sqrt(1.0f + m11 - m00 - m22) * 2.0f; // s = 4 * qy
         return Quaternion(
-            (m01 + m10) / s,
-            0.25f * s,
-            (m12 + m21) / s,
-            (m20 - m02) / s);
+            (m01 + m10) / s, // qx
+            0.25f * s,       // qy
+            (m12 + m21) / s, // qz
+            (m02 - m20) / s  // qw
+        );
     } else {
-        float s = std::sqrt(1.0f + m22 - m00 - m11) * 2.0f;
+        float s = std::sqrt(1.0f + m22 - m00 - m11) * 2.0f; // s = 4 * qz
         return Quaternion(
-            (m02 + m20) / s,
-            (m12 + m21) / s,
-            0.25f * s,
-            (m01 - m10) / s);
+            (m02 + m20) / s, // qx
+            (m12 + m21) / s, // qy
+            0.25f * s,       // qz
+            (m01 - m10) / s  // qw
+        );
     }
 }
 
@@ -192,6 +257,10 @@ Vector3 Quaternion::operator*(const Vector3 &v) const {
     Quaternion qv(v.x, v.y, v.z, 0.0f);
     Quaternion res = (*this) * qv * this->Conjugate();
     return {res.x, res.y, res.z};
+}
+
+Quaternion Quaternion::operator-() const {
+    return Quaternion(-x, -y, -z, -w);
 }
 
 Quaternion Quaternion::IdentityQuaternion() {
@@ -300,4 +369,38 @@ Vector3 Quaternion::ToEulerDegrees() const {
         eulerRadians.y * 180.0f / std::numbers::pi_v<float>,
         eulerRadians.z * 180.0f / std::numbers::pi_v<float>
     };
+}
+
+Quaternion Quaternion::FromMatrix(const Matrix4x4 &matrix) {
+    Quaternion result;
+
+    float trace = matrix.m[0][0] + matrix.m[1][1] + matrix.m[2][2];
+
+    if (trace > 0.0f) {
+        float s = std::sqrt(trace + 1.0f) * 2.0f; // s = 4 * qw
+        result.w = 0.25f * s;
+        result.x = (matrix.m[2][1] - matrix.m[1][2]) / s;
+        result.y = (matrix.m[0][2] - matrix.m[2][0]) / s;
+        result.z = (matrix.m[1][0] - matrix.m[0][1]) / s;
+    } else if (matrix.m[0][0] > matrix.m[1][1] && matrix.m[0][0] > matrix.m[2][2]) {
+        float s = std::sqrt(1.0f + matrix.m[0][0] - matrix.m[1][1] - matrix.m[2][2]) * 2.0f; // s = 4 * qx
+        result.w = (matrix.m[2][1] - matrix.m[1][2]) / s;
+        result.x = 0.25f * s;
+        result.y = (matrix.m[0][1] + matrix.m[1][0]) / s;
+        result.z = (matrix.m[0][2] + matrix.m[2][0]) / s;
+    } else if (matrix.m[1][1] > matrix.m[2][2]) {
+        float s = std::sqrt(1.0f + matrix.m[1][1] - matrix.m[0][0] - matrix.m[2][2]) * 2.0f; // s = 4 * qy
+        result.w = (matrix.m[0][2] - matrix.m[2][0]) / s;
+        result.x = (matrix.m[0][1] + matrix.m[1][0]) / s;
+        result.y = 0.25f * s;
+        result.z = (matrix.m[1][2] + matrix.m[2][1]) / s;
+    } else {
+        float s = std::sqrt(1.0f + matrix.m[2][2] - matrix.m[0][0] - matrix.m[1][1]) * 2.0f; // s = 4 * qz
+        result.w = (matrix.m[1][0] - matrix.m[0][1]) / s;
+        result.x = (matrix.m[0][2] + matrix.m[2][0]) / s;
+        result.y = (matrix.m[1][2] + matrix.m[2][1]) / s;
+        result.z = 0.25f * s;
+    }
+
+    return result;
 }

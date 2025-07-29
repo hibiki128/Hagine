@@ -103,8 +103,10 @@ class BaseObject : public Collider {
     /// セーブロード
     /// ===================================================
 
+    void SceneSaveToJson();
     void SaveToJson();
     void LoadFromJson();
+    void LoadFromJson(std::string folderPath, std::string jsonName);
     void AnimaSaveToJson();
     void AnimaLoadFromJson();
     void SaveParentChildRelationship();
@@ -163,4 +165,5 @@ class BaseObject : public Collider {
 
     bool isCollider = false;
     BlendMode blendMode_;
+    std::string parentName_;
 };

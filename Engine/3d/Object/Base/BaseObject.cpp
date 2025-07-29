@@ -108,6 +108,7 @@ void BaseObject::SetParent(BaseObject *parent) {
     if (transform_) {
         transform_->parent_ = parent->GetWorldTransform();
     }
+    parentName_ = parent_->GetName();
 }
 
 void BaseObject::AddChild(BaseObject *child) {
@@ -202,12 +203,10 @@ void BaseObject::LoadParentChildRelationship() {
 
     // 子の名前リストを読み込み（実際の子付けはBaseObjectManagerで行う）
     std::vector<std::string> childrenNames = ObjectDatas_->Load<std::vector<std::string>>("childrenNames", std::vector<std::string>());
-
-    // 注意: 実際の親子関係の復元はBaseObjectManagerで全オブジェクト読み込み後に行う
 }
 
 std::string BaseObject::GetParentName() const {
-    return parent_ ? parent_->GetName() : "";
+    return parent_ ? parentName_ : "";
 }
 
 std::vector<std::string> BaseObject::GetChildrenNames() const {
@@ -283,6 +282,34 @@ Vector3 BaseObject::GetWorldScale() {
 
 void BaseObject::SaveToJson() {
     // JSONデータを扱うハンドラを作成
+    ObjectDatas_ = std::make_unique<DataHandler>("ObjectDatas", objectName_);
+    modelPath_ = obj3d_->GetModelFilePath();
+    texturePath_ = obj3d_->GetTextureFilePath(0);
+    ObjectDatas_->Save<std::string>("modelName", modelPath_);
+    ObjectDatas_->Save<std::string>("textureName", texturePath_);
+    ObjectDatas_->Save<std::string>("objectName", objectName_);
+    ObjectDatas_->Save<Vector3>("translation", transform_->translation_);
+    ObjectDatas_->Save<Quaternion>("rotation", transform_->quateRotation_);
+    ObjectDatas_->Save<Vector3>("scale", transform_->scale_);
+    ObjectDatas_->Save<bool>("Lighting", isLighting_);
+    ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
+    ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
+    ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
+    ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
+
+    // カラーとライティング設定も保存
+    Vector4 color = objColor_.GetColor();
+    ObjectDatas_->Save<Vector4>("objectColor", color);
+    ObjectDatas_->Save<bool>("isLighting", isLighting_);
+
+    ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
+
+    SaveParentChildRelationship();
+}
+
+
+void BaseObject::SceneSaveToJson() {
+    // JSONデータを扱うハンドラを作成
     ObjectDatas_ = std::make_unique<DataHandler>(foldarPath_, objectName_);
     modelPath_ = obj3d_->GetModelFilePath();
     texturePath_ = obj3d_->GetTextureFilePath(0);
@@ -296,6 +323,7 @@ void BaseObject::SaveToJson() {
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
+    ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
 
     // カラーとライティング設定も保存
     Vector4 color = objColor_.GetColor();
@@ -319,6 +347,47 @@ void BaseObject::LoadFromJson() {
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::kCount);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
+    parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
+
+    // モデルパスが未設定でプリミティブでなければデフォルトモデルを使用
+    if (modelPath_.empty() && !isPrimitive_) {
+        modelPath_ = "debug/suzannu.obj";
+    }
+
+    // モデルパスをJSONから読み込み（上書きされる可能性あり）
+    modelPath_ = ObjectDatas_->Load<std::string>("modelName", modelPath_);
+
+    // テクスチャパスが未設定ならデフォルトにする
+    if (texturePath_.empty()) {
+        texturePath_ = "debug/uvChecker.png";
+    }
+
+    texturePath_ = ObjectDatas_->Load<std::string>("textureName", texturePath_);
+
+    // オブジェクトカラーとライティングの設定を読み込み
+    objColor_.GetColor() = ObjectDatas_->Load<Vector4>("objectColor", {1.0f, 1.0f, 1.0f, 1.0f});
+    isLighting_ = ObjectDatas_->Load<bool>("isLighting", true);
+
+    // ブレンドモードの設定を読み込み
+    blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", 0));
+
+    // 親子関係の情報を読み込み（実際の親子付けはBaseObjectManagerで行う）
+    LoadParentChildRelationship();
+}
+
+void BaseObject::LoadFromJson(std::string folderPath,std::string jsonName) {
+    // JSONデータを扱うハンドラを作成
+    ObjectDatas_ = std::make_unique<DataHandler>(folderPath, jsonName);
+
+    // 基本トランスフォームを読み込み
+    transform_->translation_ = ObjectDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
+    transform_->quateRotation_ = ObjectDatas_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    transform_->scale_ = ObjectDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
+    isLighting_ = ObjectDatas_->Load<bool>("Lighting", true);
+    type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::kCount);
+    skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
+    isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
+    parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
     // モデルパスが未設定でプリミティブでなければデフォルトモデルを使用
     if (modelPath_.empty() && !isPrimitive_) {

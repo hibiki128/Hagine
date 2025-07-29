@@ -313,6 +313,11 @@ void ImGuiManager::ShowMainMenu() {
                 baseObjectManager_->OpenObjectCreationModal();
             }
 
+            if (ImGui::MenuItem(ICON_FA_PLUS " オブジェクト読み込み", "Ctrl+Shift+M")) {
+                // 新規オブジェクト作成
+                baseObjectManager_->OpenObjectLoadModal();
+            }
+
             // 3Dオブジェクト
             if (ImGui::BeginMenu(ICON_FA_CUBE " 3Dオブジェクト")) {
                 if (ImGui::MenuItem(ICON_FA_CUBE " キューブ")) {

@@ -291,7 +291,7 @@ Matrix4x4 MakeAffineMatrix(const Vector3 &scale, const Quaternion &rotate, const
 }
 
 Matrix4x4 QuaternionToMatrix4x4(const Quaternion &q) {
-    // 正規化されたクォータニオンを使用
+      // 正規化されたクォータニオンを使用
     Quaternion norm = q.Normalize();
 
     float xx = norm.x * norm.x;
@@ -337,4 +337,28 @@ Quaternion Slerp(const Quaternion &q0, const Quaternion &q1, float t) {
 Matrix4x4 MakeRotateXYZMatrix(const Quaternion &quat) {
     // QuaternionToMatrix4x4と同じ実装
     return QuaternionToMatrix4x4(quat);
+}
+
+Matrix4x4 MakeRotateMatrix(const Vector3 &right, const Vector3 &up, const Vector3 &forward) {
+    Matrix4x4 result;
+
+    // 回転行列の各成分を設定
+    result.m[0][0] = right.x;
+    result.m[0][1] = right.y;
+    result.m[0][2] = right.z;
+    result.m[0][3] = 0.0f;
+    result.m[1][0] = up.x;
+    result.m[1][1] = up.y;
+    result.m[1][2] = up.z;
+    result.m[1][3] = 0.0f;
+    result.m[2][0] = forward.x;
+    result.m[2][1] = forward.y;
+    result.m[2][2] = forward.z;
+    result.m[2][3] = 0.0f;
+    result.m[3][0] = 0.0f;
+    result.m[3][1] = 0.0f;
+    result.m[3][2] = 0.0f;
+    result.m[3][3] = 1.0f;
+
+    return result;
 }

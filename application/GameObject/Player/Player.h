@@ -76,6 +76,9 @@ class Player : public BaseObject {
 
     void Shot();
 
+    Quaternion LookRotation(const Vector3 &forward, const Vector3 &up);
+
+    void UpdateShadowScale();
     void RotateUpdate();
     void CollisionGround();
 

@@ -524,15 +524,15 @@ void ShowModelFile(std::string &selectedModelPath) {
     style.FramePadding.y = origFramePadding;
 }
 
-void ShowJsonFile(std::string &selectedJsonPath) {
+void ShowJsonFile(std::string &selectedJsonPath, std::string &startPath) {
     // スタイルの設定
     ImGuiStyle &style = ImGui::GetStyle();
     const float origItemSpacing = style.ItemSpacing.y;
     const float origFramePadding = style.FramePadding.y;
 
     // JSONファイル選択
-    static std::filesystem::path baseDirJson = "resources/jsons/";
-    static std::filesystem::path currentDirJson = "resources/jsons";
+    static std::filesystem::path baseDirJson = "resources/jsons/" + startPath;
+    static std::filesystem::path currentDirJson = "resources/jsons/" + startPath;
     static std::string selectedFolderJson = "";
     static std::string selectedFileJson = "";
     static ImGuiTextFilter filter;

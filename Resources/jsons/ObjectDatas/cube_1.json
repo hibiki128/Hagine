@@ -1,0 +1,35 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 3,
+    "blendMode": 0,
+    "childrenNames": [],
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "",
+    "objectColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "objectName": "cube_1",
+    "parentName": "player",
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+    },
+    "skeletonDraw": false,
+    "textureName": "debug/uvChecker.png",
+    "translation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 5.0
+    }
+}

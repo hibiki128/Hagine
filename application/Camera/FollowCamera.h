@@ -44,6 +44,6 @@ class FollowCamera {
     float yaw_;
     float distanceFromTarget_;
     float heightOffset_;
-    float shoulderMaxOffset_ = 7.5f;  // 肩のズレ最大距離（左右）
+    float shoulderMaxOffset_ = 12.5f;  // 肩のズレ最大距離（左右）
     float shoulderLerpSpeed_ = 10.0f; // 補間速度（大きいほど速く追従）
 };

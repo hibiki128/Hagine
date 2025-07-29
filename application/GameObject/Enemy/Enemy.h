@@ -48,6 +48,7 @@ class Enemy: public BaseObject {
     void Save();
     void Load();
 
+    void UpdateShadowScale();
     void RotateUpdate();
     void CollisionGround();
 

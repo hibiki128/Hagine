@@ -229,6 +229,10 @@ void Framework::RegisterShortcutKey() {
     shortcutManager_->RegisterShortcut("FullScreen", DIK_F11, [this]() {
         winApp_->ToggleFullScreen();
     });
+    // オブジェクトロード
+    shortcutManager_->RegisterShortcut("FullScreen", {DIK_LSHIFT, DIK_LCONTROL, DIK_M}, [this]() {
+        baseObjectManager_->OpenObjectLoadModal();
+    });
     // 終了
     shortcutManager_->RegisterShortcut("End", {DIK_LALT, DIK_F4}, [this]() {
         winApp_->ClosedWindow();

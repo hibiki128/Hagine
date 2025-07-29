@@ -1,8 +1,8 @@
+#define NOMINMAX
 #include "Enemy.h"
-
-#include "application/GameObject/Player/Bullet/PlayerBullet.h"
-#include "application/GameObject/Player/Bullet/ChageShot/ChageShot.h"
 #include "Particle/ParticleEditor.h"
+#include "application/GameObject/Player/Bullet/ChageShot/ChageShot.h"
+#include "application/GameObject/Player/Bullet/PlayerBullet.h"
 
 Enemy::Enemy() {
 }
@@ -22,19 +22,23 @@ void Enemy::Init(const std::string objectName) {
     shadow_->Init("shadow");
     shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
     shadow_->SetTexture("game/shadow.png");
-    shadow_->GetLocalRotation().x = degreesToRadians(90.0f);
+    shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(-90.0f), 0.0f, 0.0f));
     shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
     emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("hitEmitter");
 }
 
 void Enemy::Update() {
-   shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
+    shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
+    UpdateShadowScale();
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
-    shadow_->Draw(viewProjection, offSet);
     BaseObject::Draw(viewProjection, offSet);
+    if (transform_->translation_.y < 0) {
+        return;
+    }
+    shadow_->Draw(viewProjection, offSet);
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {
@@ -45,7 +49,7 @@ void Enemy::Debug() {
 }
 
 void Enemy::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<PlayerBullet *>(other)||dynamic_cast<ChageShot*>(other)) {
+    if (dynamic_cast<PlayerBullet *>(other) || dynamic_cast<ChageShot *>(other)) {
         emitter_->UpdateOnce();
     }
 }
@@ -62,6 +66,16 @@ void Enemy::Save() {
 }
 
 void Enemy::Load() {
+}
+
+void Enemy::UpdateShadowScale() {
+    if (transform_->translation_.y < 0) {
+        return;
+    }
+    float height = transform_->translation_.y;
+    float baseScale = 1.5f;
+    float scaleFactor = std::max(0.3f, baseScale - height * 0.1f);
+    shadow_->GetLocalScale() = {scaleFactor, scaleFactor, scaleFactor};
 }
 
 void Enemy::RotateUpdate() {
