@@ -35,24 +35,33 @@ void SkyBox::Initialize(std::string filePath) {
 }
 
 void SkyBox::Update(const ViewProjection &viewProjection) {
-    // スカイボックスをカメラの位置に追従させる
+    // カメラ位置を抽出
     Vector3 cameraPosition = viewProjection.translation_;
 
-    // 平行移動行列を作成（カメラの位置にスカイボックスを配置）
+    // 平行移動（カメラの位置に置く）
     Matrix4x4 translationMatrix = MakeTranslateMatrix(cameraPosition);
 
-    // スケール行列（必要に応じてスカイボックスのサイズを調整）
+    // スケール
     float skyboxScale = 10000.0f;
     Matrix4x4 scaleMatrix = MakeScaleMatrix({skyboxScale, skyboxScale, skyboxScale});
 
-    // ワールド行列を更新（スケール × 平行移動）
+    // ワールド行列
     skyBoxData_->worldMatrix = scaleMatrix * translationMatrix;
 
-    // カメラデータをGPUに送信
-    Matrix4x4 viewProjectionMatrix = viewProjection.matView_ * viewProjection.matProjection_;
+    // カメラの位置を消したビュー行列を作る
+    Matrix4x4 viewWithoutTranslation = viewProjection.matView_;
+    viewWithoutTranslation.m[3][0] = 0.0f;
+    viewWithoutTranslation.m[3][1] = 0.0f;
+    viewWithoutTranslation.m[3][2] = 0.0f;
+
+    // ビュー×プロジェクション
+    Matrix4x4 viewProjectionMatrix = viewWithoutTranslation * viewProjection.matProjection_;
+
+    // GPUに送信
     cameraData_->viewProjection = viewProjectionMatrix;
-    cameraData_->worldPosition = viewProjection.translation_;
+    cameraData_->worldPosition = cameraPosition;
 }
+
 
 void SkyBox::Draw(const ViewProjection &viewProjection) {
     Update(viewProjection);

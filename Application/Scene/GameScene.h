@@ -5,6 +5,7 @@
 #include "Application/GameObject/Field/SkyDome/SkyDome.h"
 #include "Application/GameObject/Player/Player.h"
 #include"Application/GameObject/Enemy/Enemy.h"
+#include"SkyBox/SkyBox.h"
 
 class GameScene : public BaseScene {
   public:
@@ -65,6 +66,8 @@ class GameScene : public BaseScene {
 
     // 地面
     std::unique_ptr<Ground> ground_;
+
+    SkyBox *skyBox_ = nullptr;
 
     Enemy *enemy_ptr = nullptr;
     Player *player_ptr = nullptr;

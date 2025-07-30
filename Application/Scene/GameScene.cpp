@@ -17,8 +17,9 @@ void GameScene::Initialize() {
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
     followCamera_ = std::make_unique<FollowCamera>();
-    skyDome_ = std::make_unique<SkyDome>();
+   //skyDome_ = std::make_unique<SkyDome>();
     ground_ = std::make_unique<Ground>();
+    skyBox_ = SkyBox::GetInstance();
 
     /// ===================================================
     /// 初期化
@@ -26,9 +27,10 @@ void GameScene::Initialize() {
     debugCamera_->Initialize(&vp_);
     player_->Init("player");
     enemy_->Init("enemy");
-    skyDome_->Init("SkyDome");
+   // skyDome_->Init("SkyDome");
     ground_->Init("Ground");
     followCamera_->Init();
+    skyBox_->Initialize("game/skybox.dds");
 
     /// ===================================================
     /// ポインタ共有
@@ -64,12 +66,13 @@ void GameScene::Update() {
     // シーン切り替え
     ChangeScene();
 
-    skyDome_->Update();
+  //  skyDome_->Update();
     ground_->Update();
 }
 
 void GameScene::Draw() {
     /// -------描画処理開始-------
+    skyBox_->Draw(vp_);
 
     BaseObjectManager::GetInstance()->Draw(vp_);
 
@@ -80,7 +83,7 @@ void GameScene::Draw() {
     //-------------------------
 
     //-----3DObjectの開始-----
-    skyDome_->Draw(vp_);
+   // skyDome_->Draw(vp_);
     ground_->Draw(vp_);
     DrawLine3D::GetInstance()->DrawGrid(-0.95f, 64, 1000, {0.0f, 0.0f, 1.0f, 0.75f});
     //-----------------------
