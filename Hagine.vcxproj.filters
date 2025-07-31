@@ -189,6 +189,15 @@
     <Filter Include="ソースファイル\Engine\Utility\Edit\ShotcutManager">
       <UniqueIdentifier>{3df90e8a-db9b-4f43-a83b-b978ead57f6b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソースファイル\Application\Utility\ComboSystem">
+      <UniqueIdentifier>{6003f696-780f-4c18-a3f2-b14f0a74dde4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\GameObject\Player\State\Action">
+      <UniqueIdentifier>{e7116fd9-07e8-47ea-9580-69953ce0c6c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Offscreen\PostEffect">
+      <UniqueIdentifier>{cc353d23-4e73-4217-8197-85af8d7c1881}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -469,25 +478,25 @@
       <Filter>ソースファイル\Application\GameObject\Player\Hand</Filter>
     </ClCompile>
     <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp">
-      <Filter>ソースファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectChain.cpp">
-      <Filter>ソースファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectRenderer.cpp">
-      <Filter>ソースファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\OffScreen\RendererBuffer.cpp">
-      <Filter>ソースファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParameters.cpp">
-      <Filter>ソースファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectDataManager.cpp">
-      <Filter>ソースファイル</Filter>
+      <Filter>ソースファイル\Application\Utility\ComboSystem</Filter>
     </ClCompile>
     <ClCompile Include="application\GameObject\Player\State\Action\PlayerStateRush.cpp">
-      <Filter>ソースファイル</Filter>
+      <Filter>ソースファイル\Application\GameObject\Player\State\Action</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectChain.cpp">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectDataManager.cpp">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParameters.cpp">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectRenderer.cpp">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\RendererBuffer.cpp">
+      <Filter>ソースファイル\Engine\Offscreen</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -842,13 +851,27 @@
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h">
       <Filter>ソースファイル\Engine\Utility\Edit\ShotcutManager</Filter>
     </ClInclude>
-    <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
-    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectChain.h" />
-    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectRenderer.h" />
-    <ClInclude Include="Engine\OffScreen\RendererBuffer.h" />
-    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParameters.h" />
-    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h" />
-    <ClInclude Include="application\GameObject\Player\State\Action\PlayerStateRush.h" />
+    <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h">
+      <Filter>ソースファイル\Application\Utility\ComboSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="application\GameObject\Player\State\Action\PlayerStateRush.h">
+      <Filter>ソースファイル\Application\GameObject\Player\State\Action</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectChain.h">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParameters.h">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectRenderer.h">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\RendererBuffer.h">
+      <Filter>ソースファイル\Engine\Offscreen</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
@@ -1079,12 +1102,6 @@
     <Filter Include="ソースファイル\Resources\sounds">
       <UniqueIdentifier>{8f2ef303-14eb-45b5-9e1e-9780d0b4d477}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ソースファイル\Resources\shaders\Line">
-      <UniqueIdentifier>{7539ec9a-c58e-4b3c-94f1-76b597f7a23d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Resources\shaders\Object">
-      <UniqueIdentifier>{5348ba0e-53c2-48c8-96b4-3cb5aeea19ff}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ソースファイル\Resources\shaders\OffScreen">
       <UniqueIdentifier>{276d88a0-c678-4986-85d9-533e572bb576}</UniqueIdentifier>
     </Filter>
@@ -1183,8 +1200,14 @@
     <FxCompile Include="resources\shaders\Sprite\Sprite.PS.hlsl">
       <Filter>リソース ファイル\Sprite</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\OffScreen\Dissolve.PS.hlsl" />
-    <FxCompile Include="Resources\shaders\OffScreen\Random.PS.hlsl" />
-    <FxCompile Include="Resources\shaders\OffScreen\FocusLine.PS.hlsl" />
+    <FxCompile Include="Resources\shaders\OffScreen\Random.PS.hlsl">
+      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\OffScreen\Dissolve.PS.hlsl">
+      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\OffScreen\FocusLine.PS.hlsl">
+      <Filter>ソースファイル\Resources\shaders\OffScreen</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

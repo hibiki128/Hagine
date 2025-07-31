@@ -116,7 +116,7 @@ void Player::Update() {
         targetFov_ = 45.0f;
     }
 
-    // 現在のFOVを滑らかに補間（線形補間）
+    // 現在のFOVを滑らかに補間
     currentFov_ += (targetFov_ - currentFov_) * fovLerpSpeed_ * dt_;
 
     // FOVをカメラに適用
@@ -201,7 +201,6 @@ void Player::DirectionUpdate() {
 
 void Player::Shot() {
     if (Input::GetInstance()->TriggerKey(DIK_J)) {
-        // 弾の番号をbullets_のサイズで決定
         std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
         auto bullet = std::make_unique<PlayerBullet>();
         bullet->Init(bulletName);
@@ -220,9 +219,9 @@ void Player::RotateUpdate() {
 
             // プレイヤーの正面方向（+Z方向）を敵の方向に向ける
             Vector3 forward = toEnemy;
-            Vector3 worldUp = {0.0f, 1.0f, 0.0f}; // ワールドの上方向
+            Vector3 worldUp = {0.0f, 1.0f, 0.0f}; // 上方向
 
-            // forwardとworldUpが平行になる場合の対処（真上や真下を向く場合）
+            // forwardとworldUpが平行になる場合の対処
             Vector3 right;
             if (std::abs(forward.Dot(worldUp)) > 0.999f) {
                 right = {1.0f, 0.0f, 0.0f}; // X軸を右方向として使用
@@ -303,9 +302,8 @@ void Player::Move() {
 
     float yaw = camera->GetYaw();
 
-    // カメラの前方向と右方向ベクトル（XZ平面）- 座標系を修正
     Vector3 cameraForward = {std::sin(yaw), 0.0f, std::cos(yaw)};
-    Vector3 cameraRight = {-std::cos(yaw), 0.0f, std::sin(yaw)}; // 右方向を修正
+    Vector3 cameraRight = {-std::cos(yaw), 0.0f, std::sin(yaw)}; 
 
     // 入力方向をカメラベースで合成
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
@@ -315,7 +313,7 @@ void Player::Move() {
 
     // --- 回転処理 ---
     if (!isLockOn_) {
-        float targetYaw = std::atan2(-moveDir.x, moveDir.z); // 元に戻す
+        float targetYaw = std::atan2(-moveDir.x, moveDir.z);
         Quaternion targetRot = Quaternion::FromEulerAngles({0.0f, targetYaw, 0.0f});
         float rotateSpeed = 10.0f;
         transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
@@ -440,7 +438,6 @@ const char *Player::GetDirectionName(Direction dir) {
 }
 // 角度の正規化関数
 float Player::NormalizeAngle(float angle) {
-    // 角度を [0, 2π) の範囲に正規化
     const float TWO_PI = 2.0f * std::numbers::pi_v<float>;
     while (angle < 0.0f) {
         angle += TWO_PI;
@@ -456,7 +453,6 @@ float Player::CalculateShortestRotation(float from, float to) {
     float diff = to - from;
     const float PI = std::numbers::pi_v<float>;
 
-    // 差分を [-π, π] の範囲に正規化
     while (diff > PI) {
         diff -= 2.0f * PI;
     }
@@ -531,7 +527,7 @@ void Player::ChangeRush() {
         if (lControlInputCount_ == 1) {
             lControlInputTime_ = 0.0f;
         } else if (lControlInputCount_ == 2 && GetIsLockOn() && GetEnemy()) {
-            // ダブルプッシュ成功、急接近ステートに遷移
+            // 急接近ステートに遷移
             ChangeState("Rush");
             return;
         }
@@ -551,7 +547,6 @@ Vector3 Player::GetMovementDirection() const {
     Vector3 dir = velocity_;
     float len = GetVelocityMagnitude();
 
-    // ゼロ除算を防ぐ
     if (len > 0.001f) {
         dir.x /= len;
         dir.y /= len;

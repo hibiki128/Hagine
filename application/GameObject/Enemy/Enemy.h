@@ -32,7 +32,7 @@ class Enemy: public BaseObject {
     Vector3 GetUp() const;       // 敵の上方向
     Vector3 GetDown() const;     // 敵の下方向
 
-    // 敵の周囲の位置を取得（プレイヤーがワープする位置として使用）
+    // 敵の周囲の位置を取得
     Vector3 GetPositionBehind(float distance = 3.0f) const; // 敵の後ろの位置
     Vector3 GetPositionFront(float distance = 3.0f) const;  // 敵の前の位置
     Vector3 GetPositionRight(float distance = 3.0f) const;  // 敵の右の位置
@@ -84,13 +84,13 @@ class Enemy: public BaseObject {
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;
     float jumpSpeed_ = 0.0f;
-    float maxSpeed_ = 0.0f;  // 追加: 最大速度
-    float accelRate_ = 0.0f; // 追加: 加速率
+    float maxSpeed_ = 0.0f;  
+    float accelRate_ = 0.0f;
 
     bool canJump_ = false;
     bool isAlive_ = true;
     bool isLockOn_ = false;
-    bool isGrounded_ = true; // 追加: 接地判定
+    bool isGrounded_ = true; 
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;

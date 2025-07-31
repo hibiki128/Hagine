@@ -9,17 +9,14 @@ void PlayerStateIdle::Enter(Player &player) {
 }
 
 void PlayerStateIdle::Update(Player &player) {
-    // 接地している場合のみジャンプ可能
     player.GetCanJump() = player.GetIsGrounded();
 
-    // 重力をわずかに適用して地面にとどまるようにする
     player.GetVelocity().y = -0.1f;
 
     // --- 減速処理（X,Z方向） ---
     float &vx = player.GetVelocity().x;
     float &vz = player.GetVelocity().z;
 
-    // 慣性を表す減衰率
     const float damping = 0.75f;
 
     // 一定以下になったら止める
@@ -35,7 +32,6 @@ void PlayerStateIdle::Update(Player &player) {
         vz *= damping;
     }
 
-    // 完全に止まっているときは移動速度もゼロに
     if (vx == 0.0f && vz == 0.0f) {
         player.GetMoveSpeed() = 0.0f;
     }
@@ -58,5 +54,4 @@ void PlayerStateIdle::Update(Player &player) {
 }
 
 void PlayerStateIdle::Exit(Player &player) {
-    // 特に何もしない
 }
