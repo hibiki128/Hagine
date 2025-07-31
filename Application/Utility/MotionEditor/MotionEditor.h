@@ -52,37 +52,29 @@ struct Motion {
     float currentTime = 0.0f;
     MotionStatus status = MotionStatus::Stopped;
 
-    // 既存のオフセット系（ローカル座標系）
     Vector3 startPosOffset, endPosOffset;
-    Vector3 startRotOffset, endRotOffset; // オイラー角のオフセット（保存用）
+    Vector3 startRotOffset, endRotOffset;
     Vector3 startScaleOffset = {0, 0, 0}, endScaleOffset = {0, 0, 0};
 
-    // 基準値（再生開始時の値）
-    Vector3 basePos, baseRot, baseScale; // baseRotはオイラー角として保持
+    Vector3 basePos, baseRot, baseScale; 
 
-    // 動き始めた時の初期位置を記録（リセット用）
-    Vector3 initialPos, initialRot, initialScale; // initialRotはオイラー角として保持
-    bool hasInitialTransform = false;             // 初期位置が記録されているかのフラグ
+    Vector3 initialPos, initialRot, initialScale; 
+    bool hasInitialTransform = false;          
 
-    // 実際の開始・終了値（回転・スケール用）
-    Quaternion actualStartRot, actualEndRot; // クォータニオンとして計算
+    Quaternion actualStartRot, actualEndRot; 
     Vector3 actualStartScale, actualEndScale;
 
-    // Catmull-Rom曲線用の制御点（ローカル座標オフセット）
     std::vector<Vector3> controlPoints;
-    bool useCatmullRom = false; // イージングとCatmull-Romを切り替え
+    bool useCatmullRom = false;
 
     EasingType easingType = EasingType::Linear;
     float colliderOnTime = 0.3f;
     float colliderOffTime = 0.6f;
 
-    // 一時的なモーションかどうかのフラグ
     bool isTemporary = false;
 
-    // 元の位置に戻すかどうかのフラグ
     bool returnToOriginal = false;
 
-    // 最初のモーション開始時の位置（コンボ全体の基準位置）
     Vector3 comboStartPos, comboStartRot, comboStartScale;
     bool hasComboStartTransform = false;
 };
