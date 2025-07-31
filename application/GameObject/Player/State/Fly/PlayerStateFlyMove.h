@@ -8,6 +8,9 @@ class PlayerStateFlyMove : public PlayerBaseState {
     void Exit(Player &player) override;
 
   private:
+    void AirMove(Player &player);
+    void ChangeState(Player &player);
+
     float spaceHeldTime_ = 0.0f;
     bool isBoosting_ = false;
 

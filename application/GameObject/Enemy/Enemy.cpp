@@ -91,3 +91,54 @@ Direction Enemy::CalculateDirectionFromRotation() {
 const char *Enemy::GetDirectionName(Direction dir) {
     return nullptr;
 }
+
+Vector3 Enemy::GetForward() const {
+    // クォータニオンから前方向ベクトルを計算（Z軸の負方向が前方向）
+    return TransformNormal(Vector3(0.0f, 0.0f, -1.0f), QuaternionToMatrix4x4(transform_->quateRotation_));
+}
+
+Vector3 Enemy::GetBackward() const {
+    return -GetForward();
+}
+
+Vector3 Enemy::GetRight() const {
+    // クォータニオンから右方向ベクトルを計算（X軸の正方向が右方向）
+    return TransformNormal(Vector3(1.0f, 0.0f, 0.0f), QuaternionToMatrix4x4(transform_->quateRotation_));
+}
+
+Vector3 Enemy::GetLeft() const {
+    return -GetRight();
+}
+
+Vector3 Enemy::GetUp() const {
+    // クォータニオンから上方向ベクトルを計算（Y軸の正方向が上方向）
+    return TransformNormal(Vector3(0.0f, 1.0f, 0.0f), QuaternionToMatrix4x4(transform_->quateRotation_));
+}
+
+Vector3 Enemy::GetDown() const {
+    return -GetUp();
+}
+
+Vector3 Enemy::GetPositionBehind(float distance) const {
+    return transform_->translation_ + GetBackward() * distance;
+}
+
+Vector3 Enemy::GetPositionFront(float distance) const {
+    return transform_->translation_ + GetForward() * distance;
+}
+
+Vector3 Enemy::GetPositionRight(float distance) const {
+    return transform_->translation_ + GetRight() * distance;
+}
+
+Vector3 Enemy::GetPositionLeft(float distance) const {
+    return transform_->translation_ + GetLeft() * distance;
+}
+
+Vector3 Enemy::GetPositionAbove(float distance) const {
+    return transform_->translation_ + GetUp() * distance;
+}
+
+Vector3 Enemy::GetPositionBelow(float distance) const {
+    return transform_->translation_ + GetDown() * distance;
+}

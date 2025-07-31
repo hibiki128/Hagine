@@ -26,6 +26,8 @@ class Player : public BaseObject {
     void DirectionUpdate();
     void Debug();
 
+    void ChangeRush();
+
     float CalculateShortestRotation(float from, float to);
 
     void Move();
@@ -40,6 +42,20 @@ class Player : public BaseObject {
     Vector3 &GetAcceleration() { return acceleration_; }
     Vector3 &GetVelocity() { return velocity_; }
     Vector3 GetMovementDirection() const;
+    Vector3 GetForward() const;  // プレイヤーの前方向
+    Vector3 GetBackward() const; // プレイヤーの後方向
+    Vector3 GetRight() const;    // プレイヤーの右方向
+    Vector3 GetLeft() const;     // プレイヤーの左方向
+    Vector3 GetUp() const;       // プレイヤーの上方向
+    Vector3 GetDown() const;     // プレイヤーの下方向
+
+    // プレイヤーの周囲の位置を取得
+    Vector3 GetPositionBehind(float distance = 3.0f) const; // プレイヤーの後ろの位置
+    Vector3 GetPositionFront(float distance = 3.0f) const;  // プレイヤーの前の位置
+    Vector3 GetPositionRight(float distance = 3.0f) const;  // プレイヤーの右の位置
+    Vector3 GetPositionLeft(float distance = 3.0f) const;   // プレイヤーの左の位置
+    Vector3 GetPositionAbove(float distance = 3.0f) const;  // プレイヤーの上の位置
+    Vector3 GetPositionBelow(float distance = 3.0f) const;  // プレイヤーの下の位置
 
     float GetVelocityMagnitude() const;
     float &GetFallSpeed() { return fallSpeed_; }
@@ -59,6 +75,10 @@ class Player : public BaseObject {
 
     void SetCamera(FollowCamera *camera) { FollowCamera_ = camera; }
     void SetEnemy(Enemy *enemy) { enemy_ = enemy; }
+    void ResetControlCount() {
+        lControlInputTime_ = 0.0f;
+        lControlInputCount_ = 0;
+    }
 
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
@@ -73,10 +93,8 @@ class Player : public BaseObject {
 
     void Save();
     void Load();
-
+    void ComboUpdate();
     void Shot();
-
-    Quaternion LookRotation(const Vector3 &forward, const Vector3 &up);
 
     void UpdateShadowScale();
     void RotateUpdate();
@@ -109,6 +127,10 @@ class Player : public BaseObject {
     float maxSpeed_ = 0.0f;
     float accelRate_ = 0.0f;
     float dt_;
+
+    float lControlInputTime_ = 0.0f;
+    int lControlInputCount_ = 0;
+    const float INPUT_RESET_TIME = 0.3f;
 
     float currentFov_ = 45.0f;
     float targetFov_ = 45.0f;

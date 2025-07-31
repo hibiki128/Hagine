@@ -237,7 +237,7 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
                 aiQuaternion rotate;
                 bindPoseMatrixAssimp.Decompose(scale, rotate, translate);
 
-                Matrix4x4 bindPoseMatrix = MakeAffineMatrix(
+                Matrix4x4 bindPoseMatrix = MakeBoneMatrix(
                     {scale.x, scale.y, scale.z},
                     {rotate.x, -rotate.y, -rotate.z, rotate.w},
                     {-translate.x, translate.y, translate.z});
@@ -313,7 +313,7 @@ Node Model::ReadNode(aiNode *node) {
     result.transform.rotate = {rotate.x, -rotate.y, -rotate.z, rotate.w};
     result.transform.translate = {-translate.x, translate.y, translate.z};
 
-    result.localMatrix = MakeAffineMatrix(result.transform.scale, result.transform.rotate, result.transform.translate);
+    result.localMatrix = MakeBoneMatrix(result.transform.scale, result.transform.rotate, result.transform.translate);
 
     result.name = node->mName.C_Str();          // node名を格納
     result.children.resize(node->mNumChildren); // 子供の数だけ確保

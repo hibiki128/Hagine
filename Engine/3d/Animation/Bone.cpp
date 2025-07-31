@@ -12,7 +12,7 @@ void Bone::Update(const Animation& animation, float animationTime)
 	ApplyAnimation(animation, animationTime);
 	// すべてのJointを更新。親が若いので通常ループで処理可能
 	for (Joint& joint : skeleton_.joints) {
-		joint.localMatrix = MakeAffineMatrix(joint.transform.scale, joint.transform.rotate, joint.transform.translate);
+            joint.localMatrix = MakeBoneMatrix(joint.transform.scale, joint.transform.rotate, joint.transform.translate);
 		if (joint.parent) { // 親がいれば親の行列を掛ける
 			joint.skeletonSpaceMatrix = joint.localMatrix * skeleton_.joints[*joint.parent].skeletonSpaceMatrix;
 		}

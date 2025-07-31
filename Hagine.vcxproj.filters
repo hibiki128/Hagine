@@ -486,6 +486,9 @@
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectDataManager.cpp">
       <Filter>ソースファイル</Filter>
     </ClCompile>
+    <ClCompile Include="application\GameObject\Player\State\Action\PlayerStateRush.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\Particle\Particle.hlsli">
@@ -845,6 +848,7 @@
     <ClInclude Include="Engine\OffScreen\RendererBuffer.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParameters.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h" />
+    <ClInclude Include="application\GameObject\Player\State\Action\PlayerStateRush.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

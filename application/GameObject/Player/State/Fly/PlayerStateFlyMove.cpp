@@ -24,6 +24,21 @@ void PlayerStateFlyMove::Enter(Player &player) {
 void PlayerStateFlyMove::Update(Player &player) {
     player.Move();
 
+    AirMove(player);
+
+    ChangeState(player);
+
+    fallInputTime_ += player.GetDt();
+
+    // 向き更新
+    player.DirectionUpdate();
+}
+
+void PlayerStateFlyMove::Exit(Player &player) {
+}
+
+void PlayerStateFlyMove::AirMove(Player &player) {
+
     // 上昇処理（Space長押し）
     if (Input::GetInstance()->PushKey(DIK_SPACE)) {
         float &vy = player.GetVelocity().y;
@@ -50,14 +65,17 @@ void PlayerStateFlyMove::Update(Player &player) {
         }
         fallInputTime_ = 0.0f;
     }
+}
+
+void PlayerStateFlyMove::ChangeState(Player &player) {
+
+   player.ChangeRush();
 
     if (fallInputCount_ >= 1) {
         player.ChangeState("Air");
         fallInputCount_ = 0;
         return;
     }
-
-    fallInputTime_ += player.GetDt();
 
     // 地面に到達 → Idleへ
     if (player.GetWorldTransform()) {
@@ -79,10 +97,4 @@ void PlayerStateFlyMove::Update(Player &player) {
         player.ChangeState("FlyIdle");
         return;
     }
-
-    // 向き更新
-    player.DirectionUpdate();
-}
-
-void PlayerStateFlyMove::Exit(Player &player) {
 }

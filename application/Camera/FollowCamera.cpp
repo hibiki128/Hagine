@@ -27,6 +27,22 @@ void FollowCamera::Update() {
 
         Player *player = dynamic_cast<Player *>(target_);
 
+        // Rush状態の場合は追従を停止
+        if (player) {
+            std::string currentStateName = player->GetCurrentStateName();
+            if (currentStateName == "Rush") {
+                // Rush中は現在のカメラ位置を維持
+                worldTransform_.UpdateMatrix();
+
+                // ビュープロジェクション更新
+                viewProjection_.translation_ = worldTransform_.translation_;
+                viewProjection_.rotation_ = worldTransform_.quateRotation_;
+                viewProjection_.matWorld_ = worldTransform_.matWorld_;
+                viewProjection_.UpdateMatrix();
+                return;
+            }
+        }
+
         // ロックオン状態に応じて肩オフセットを処理
         if (player && player->GetIsLockOn() && player->GetEnemy()) {
             // カメラ位置とヨー角の計算を先に行う
@@ -50,6 +66,9 @@ void FollowCamera::Update() {
             if (std::abs(lateralVelocity) > 0.1f) {
                 float dirSign = std::clamp(lateralVelocity / target_->GetMaxSpeed(), -1.0f, 1.0f);
                 shoulderOffsetTarget_.x = -dirSign * shoulderMaxOffset_;
+            } else {
+                // 入力がない場合はデフォルトで右肩にオフセット
+                shoulderOffsetTarget_.x = shoulderMaxOffset_;
             }
         } else {
             shoulderOffsetTarget_.x = 0.0f;
@@ -61,9 +80,7 @@ void FollowCamera::Update() {
         // 肩オフセットを滑らかに補間
         if (player && player->GetIsLockOn() && player->GetEnemy()) {
             std::string currentStateName = player->GetCurrentStateName();
-            if (currentStateName == "FlyMove" &&
-                (!Input::GetInstance()->PushKey(DIK_SPACE) &&
-                 !Input::GetInstance()->PushKey(DIK_LSHIFT))) {
+            if (currentStateName == "FlyMove") {
                 shoulderOffsetCurrent_.x = Lerp(shoulderOffsetCurrent_.x, shoulderOffsetTarget_.x, shoulderLerpSpeed_ * Frame::DeltaTime());
             }
         } else {

@@ -14,12 +14,6 @@ struct VertexShaderInput
     float3 normal : NORMAL0;
 };
 
-struct Skinned
-{
-    float4 position;
-    float3 normal;
-};
-
 ConstantBuffer<TransformationMatrix> gTransformationMatrix : register(b0);
 StructuredBuffer<Well> gMatrixPalette : register(t0);
 

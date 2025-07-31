@@ -23,6 +23,18 @@ void PlayerStateFlyIdle::Enter(Player &player) {
 }
 
 void PlayerStateFlyIdle::Update(Player &player) {
+    AirMove(player);
+
+    ChangeState(player);
+  
+    player.DirectionUpdate();
+}
+
+void PlayerStateFlyIdle::Exit(Player &player) {
+    // 重力の復帰は次のステートに任せる
+}
+
+void PlayerStateFlyIdle::AirMove(Player& player) {
     // --- 減速処理（X,Z方向） ---
     float &vx = player.GetVelocity().x;
     float &vz = player.GetVelocity().z;
@@ -55,6 +67,12 @@ void PlayerStateFlyIdle::Update(Player &player) {
         player.GetMoveSpeed() = 0.0f;
     }
 
+}
+
+void PlayerStateFlyIdle::ChangeState(Player& player) {
+
+    player.ChangeRush();
+
     // 地面に到達 → Idleへ
     if (player.GetLocalPosition().y <= 0.0f) {
         player.ChangeState("Idle");
@@ -71,10 +89,4 @@ void PlayerStateFlyIdle::Update(Player &player) {
         player.ChangeState("FlyMove");
         return;
     }
-
-    player.DirectionUpdate();
-}
-
-void PlayerStateFlyIdle::Exit(Player &player) {
-    // 重力の復帰は次のステートに任せる
 }
