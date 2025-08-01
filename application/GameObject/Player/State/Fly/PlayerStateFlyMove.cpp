@@ -8,11 +8,10 @@ namespace {
 const float kFlyAcceleration = 30.0f;
 const float kFlyMaxSpeed = 15.0f;
 const float kFlyMaxSpeedBoost = 20.0f;
-const float kFallThresholdTime = 0.3f; // 二回押しの間隔
-} // namespace
+const float kFallThresholdTime = 0.3f;
+}
 
 void PlayerStateFlyMove::Enter(Player &player) {
-    // 浮遊時は重力をゼロに
     player.GetAcceleration().y = 0.0f;
     player.GetVelocity().y = 0.0f;
     fallInputTime_ = 0.0f;

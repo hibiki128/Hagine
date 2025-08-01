@@ -86,18 +86,15 @@ void MotionEditor::Finalize() {
     instance = nullptr;
 }
 
-// 登録処理
 void MotionEditor::Register(BaseObject *object) {
-    // nullチェック
     if (!object)
         return;
 
-    // オブジェクト名を取得
     std::string name = object->GetName();
 
     // 既に登録済みかチェック
     if (motions_.find(name) != motions_.end()) {
-        return; // 登録済みなら早期リターン
+        return; 
     }
 
     // 新しくモーションを登録
@@ -107,7 +104,6 @@ void MotionEditor::Register(BaseObject *object) {
 }
 
 void MotionEditor::CleanupFinishedTemporaryMotions() {
-    // 終了した一時的なモーションを削除
     auto it = motions_.begin();
     while (it != motions_.end()) {
         if (it->second.isTemporary && it->second.status == MotionStatus::Finished) {
@@ -170,7 +166,6 @@ Vector3 MotionEditor::CatmullRomInterpolation(const std::vector<Vector3> &points
     if (points.size() < 2)
         return Vector3{0, 0, 0};
 
-    // 2つまたは3つの制御点の場合は線形補間
     if (points.size() == 2) {
         return Lerp(points[0], points[1], t);
     }
@@ -182,9 +177,8 @@ Vector3 MotionEditor::CatmullRomInterpolation(const std::vector<Vector3> &points
         }
     }
 
-    // 4つ以上の制御点がある場合のCatmull-Rom補間
-    int numSegments = static_cast<int>(points.size() - 1); // セグメント数を修正
-    float segmentT = t * (numSegments - 2);                // 実際に使用するセグメント範囲を調整
+    int numSegments = static_cast<int>(points.size() - 1); 
+    float segmentT = t * (numSegments - 2); 
     int segment = (int)segmentT;
     float localT = segmentT - segment;
 
@@ -198,13 +192,11 @@ Vector3 MotionEditor::CatmullRomInterpolation(const std::vector<Vector3> &points
         localT = 1.0f;
     }
 
-    // インデックス計算（最初と最後の制御点も使用するように修正）
     int i0 = segment;
     int i1 = segment + 1;
     int i2 = segment + 2;
     int i3 = segment + 3;
 
-    // 境界処理
     if (i0 < 0)
         i0 = 0;
     if (i3 >= (int)points.size())
@@ -232,10 +224,6 @@ Vector3 MotionEditor::CatmullRomInterpolation(const std::vector<Vector3> &points
     return result;
 }
 
-// 親のワールド変換行列の逆行列を取得するヘルパー関数
-// MotionEditor.cpp の修正部分
-
-// 親のワールド変換行列の逆行列を取得するヘルパー関数
 Matrix4x4 MotionEditor::GetParentInverseWorldMatrix(BaseObject *object) {
     if (!object || !object->GetParent()) {
         // 親がない場合は単位行列を返す
@@ -248,14 +236,12 @@ Matrix4x4 MotionEditor::GetParentInverseWorldMatrix(BaseObject *object) {
     // 逆行列を計算して返す（逆行列計算が失敗した場合は単位行列を返す）
     Matrix4x4 inverseMatrix = Inverse(parentWorldMatrix);
 
-    // 逆行列が正しく計算されているかチェック
     // 単位行列との積で確認
     Matrix4x4 identity = parentWorldMatrix * inverseMatrix;
 
     return inverseMatrix;
 }
 
-// ローカル座標系での制御点位置を取得するヘルパー関数
 Vector3 MotionEditor::GetLocalControlPointPosition(BaseObject *object, const Vector3 &worldPos) {
     if (!object) {
         return worldPos;
@@ -271,9 +257,6 @@ Vector3 MotionEditor::GetLocalControlPointPosition(BaseObject *object, const Vec
 
     // ワールド座標をローカル座標に変換
     Vector4 worldPos4 = {worldPos.x, worldPos.y, worldPos.z, 1.0f};
-
-    // デバッグ用：変換前の値を確認
-    // assert(worldPos4.w == 1.0f);
 
     Vector4 localPos4 = Transformation(worldPos4, parentInverseMatrix);
 
@@ -296,9 +279,6 @@ Vector3 MotionEditor::TransformLocalControlPointToWorld(BaseObject *object, cons
 
     // ローカル座標をワールド座標に変換
     Vector4 localPos4 = {localPos.x, localPos.y, localPos.z, 1.0f};
-
-    // デバッグ用：変換前の値を確認
-    // assert(localPos4.w == 1.0f);
 
     Vector4 worldPos4 = Transformation(localPos4, parentWorldMatrix);
 
@@ -392,15 +372,14 @@ void MotionEditor::Update(float deltaTime) {
 void MotionEditor::Play(const std::string &jsonName) {
     auto it = motions_.find(jsonName);
     if (it == motions_.end()) {
-        return; // オブジェクトが登録されていない
+        return;
     }
 
     Motion &motion = it->second;
     if (!motion.target) {
-        return; // ターゲットが無効
+        return; 
     }
 
-    // 初期位置の記録（まだ記録されていない場合のみ）
     if (!motion.hasInitialTransform) {
         motion.initialPos = motion.target->GetLocalPosition();
         motion.initialRot = motion.target->GetLocalRotation().ToEulerAngles();
@@ -408,7 +387,6 @@ void MotionEditor::Play(const std::string &jsonName) {
         motion.hasInitialTransform = true;
     }
 
-    // 再生開始時点の現在のTransformを基準として保存
     motion.basePos = motion.target->GetLocalPosition();
     motion.baseRot = motion.target->GetLocalRotation().ToEulerAngles();
     motion.baseScale = motion.target->GetLocalScale();
@@ -424,13 +402,11 @@ void MotionEditor::Play(const std::string &jsonName) {
     motion.status = MotionStatus::Playing;
 }
 
-// ファイルから読み込んで任意のオブジェクトで再生
 bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName, bool returnToOriginal) {
     if (!target) {
         return false;
     }
 
-    // 一時的なモーションデータを作成
     std::string tempName = GetTemporaryMotionName(target, fileName);
 
     DataHandler data("AttackData", fileName);
@@ -460,18 +436,15 @@ bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName,
         motion.controlPoints.push_back(point);
     }
 
-    // 初期位置の記録
     motion.initialPos = target->GetLocalPosition();
     motion.initialRot = target->GetLocalRotation().ToEulerAngles();
     motion.initialScale = target->GetLocalScale();
     motion.hasInitialTransform = true;
 
-    // 再生開始時点の現在のTransformを基準として保存
     motion.basePos = target->GetLocalPosition();
     motion.baseRot = target->GetLocalRotation().ToEulerAngles();
     motion.baseScale = target->GetLocalScale();
 
-    // 回転・スケール用の実際の開始・終了値を計算
     motion.actualStartRot = Quaternion::FromEulerAngles(motion.baseRot + motion.startRotOffset);
     motion.actualEndRot = Quaternion::FromEulerAngles(motion.baseRot + motion.endRotOffset);
     motion.actualStartScale = motion.baseScale + motion.startScaleOffset;
@@ -543,8 +516,6 @@ void MotionEditor::Stop(const std::string &objectName) {
             motion.target->GetLocalRotation() = Quaternion::FromEulerAngles(motion.initialRot);
             motion.target->GetLocalScale() = motion.initialScale;
         }
-
-        // 一時的なモーションの場合は削除
         if (motion.isTemporary) {
             motions_.erase(it);
         }
@@ -559,14 +530,12 @@ void MotionEditor::StopAll() {
         motion.status = MotionStatus::Stopped;
         motion.currentTime = 0.0f;
 
-        // 初期位置に戻すが固定はしない
         if (motion.hasInitialTransform && motion.target) {
             motion.target->GetLocalPosition() = motion.initialPos;
             motion.target->GetLocalRotation() = Quaternion::FromEulerAngles(motion.initialRot);
             motion.target->GetLocalScale() = motion.initialScale;
         }
 
-        // 一時的なモーションの場合は削除
         if (motion.isTemporary) {
             it = motions_.erase(it);
         } else {
@@ -575,19 +544,17 @@ void MotionEditor::StopAll() {
     }
 }
 
-// 攻撃が終了したかどうかをチェック（インターバルなし）
 bool MotionEditor::IsAttackFinished(BaseObject *target) {
     if (!target)
         return false;
 
-    // 一時的なモーションが存在するかチェック
     for (const auto &[name, motion] : motions_) {
         if (motion.target == target && motion.isTemporary) {
             return motion.status == MotionStatus::Finished;
         }
     }
 
-    return true; // 攻撃モーションが見つからない場合は終了扱い
+    return true; 
 }
 
 // 攻撃が終了してインターバルも過ぎたかどうかをチェック
@@ -595,15 +562,13 @@ bool MotionEditor::IsAttackFinishedWithInterval(BaseObject *target) {
     if (!target)
         return false;
 
-    // まず攻撃が終了しているかチェック
     if (!IsAttackFinished(target)) {
         return false;
     }
 
-    // インターバルがあるかチェック
     auto it = attackEndIntervals_.find(target);
     if (it != attackEndIntervals_.end()) {
-        return it->second <= 0.0f; // インターバルが終了していればtrue
+        return it->second <= 0.0f;
     }
 
     return true; // インターバルが設定されていなければtrue
@@ -625,7 +590,6 @@ void MotionEditor::ClearAttackEndInterval(BaseObject *target) {
     attackEndIntervals_.erase(target);
 }
 
-// 特定のファイル名の一時的なモーションが終了したかチェック
 bool MotionEditor::IsTemporaryMotionFinished(BaseObject *target, const std::string &fileName) {
     if (!target)
         return false;
@@ -637,7 +601,7 @@ bool MotionEditor::IsTemporaryMotionFinished(BaseObject *target, const std::stri
         return it->second.status == MotionStatus::Finished;
     }
 
-    return true; // モーションが見つからない場合は終了扱い
+    return true; 
 }
 
 void MotionEditor::DrawControlPoints() {
@@ -651,7 +615,6 @@ void MotionEditor::DrawControlPoints() {
     DrawLine3D *drawLine = DrawLine3D::GetInstance();
     const float cubeSize = 0.4f;
 
-    // 基準位置を取得（ローカル座標系での位置）
     Vector3 basePos;
     if (motion.currentTime == 0.0f) {
         basePos = motion.target->GetLocalPosition();
@@ -660,20 +623,18 @@ void MotionEditor::DrawControlPoints() {
     }
 
     for (size_t i = 0; i < motion.controlPoints.size(); ++i) {
-        // ローカル座標系で制御点位置を計算
+
         Vector3 localPos = basePos + motion.controlPoints[i];
 
-        // 描画のためにワールド座標に変換
         Vector3 worldPos = TransformLocalControlPointToWorld(motion.target, localPos);
 
-        // 制御点の種類に応じて色を変更
         Vector4 controlPointColor;
         if (i == 0) {
-            controlPointColor = {0.0f, 1.0f, 0.0f, 1.0f}; // 最初の点：緑
+            controlPointColor = {0.0f, 1.0f, 0.0f, 1.0f}; 
         } else if (i == motion.controlPoints.size() - 1) {
-            controlPointColor = {0.0f, 0.0f, 1.0f, 1.0f}; // 最後の点：青
+            controlPointColor = {0.0f, 0.0f, 1.0f, 1.0f};
         } else {
-            controlPointColor = {1.0f, 0.0f, 0.0f, 1.0f}; // 中間点：赤
+            controlPointColor = {1.0f, 0.0f, 0.0f, 1.0f};
         }
 
         // 選択中の制御点は明るくする
@@ -683,7 +644,6 @@ void MotionEditor::DrawControlPoints() {
             controlPointColor.z = std::min(controlPointColor.z + 0.5f, 1.0f);
         }
 
-        // 立方体で制御点を描画（ワールド座標系で）
         drawLine->DrawSphere(worldPos, controlPointColor, cubeSize, 8);
 
         // 制御点番号表示用の小さな線（上向き）
@@ -702,10 +662,9 @@ void MotionEditor::DrawCatmullRomCurve() {
         return;
 
     DrawLine3D *drawLine = DrawLine3D::GetInstance();
-    const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f}; // オレンジ色
+    const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f}; 
     const int curveResolution = 100;
 
-    // 基準位置を取得（ローカル座標系での位置）
     Vector3 basePos;
     if (motion.currentTime == 0.0f) {
         basePos = motion.target->GetLocalPosition();
@@ -713,7 +672,6 @@ void MotionEditor::DrawCatmullRomCurve() {
         basePos = motion.basePos;
     }
 
-    // 曲線の描画（ローカル座標系で計算してワールド座標系で描画）
     Vector3 prevLocalOffset = CatmullRomInterpolation(motion.controlPoints, 0.0f);
     Vector3 prevLocalPoint = basePos + prevLocalOffset;
     Vector3 prevWorldPoint = TransformLocalControlPointToWorld(motion.target, prevLocalPoint);
@@ -728,7 +686,6 @@ void MotionEditor::DrawCatmullRomCurve() {
         prevWorldPoint = currentWorldPoint;
     }
 
-    // デバッグ用：制御点間を直線で結ぶ（薄い色）
     const Vector4 debugLineColor = {0.3f, 0.3f, 0.3f, 1.0f};
     for (size_t i = 0; i < motion.controlPoints.size() - 1; ++i) {
         Vector3 localPoint1 = basePos + motion.controlPoints[i];
@@ -740,26 +697,24 @@ void MotionEditor::DrawCatmullRomCurve() {
         drawLine->SetPoints(worldPoint1, worldPoint2, debugLineColor);
     }
 
-    // 基準位置を球で表示（ワールド座標系で）
     Vector3 worldBasePos = TransformLocalControlPointToWorld(motion.target, basePos);
-    const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f}; // 白色
+    const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f}; 
     drawLine->DrawSphere(worldBasePos, basePosColor, 0.2f, 32);
 
-    // 再生中の場合、現在のオブジェクト位置も別の色で表示
     if (motion.status == MotionStatus::Playing) {
         Vector3 currentLocalPos = motion.target->GetLocalPosition();
         Vector3 currentWorldPos = TransformLocalControlPointToWorld(motion.target, currentLocalPos);
-        const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f}; // 黄色
+        const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f}; 
         drawLine->DrawSphere(currentWorldPos, currentPosColor, 0.15f, 32);
 
         // 基準位置と現在位置を線で結ぶ
-        const Vector4 connectionColor = {0.5f, 0.5f, 0.5f, 1.0f}; // グレー
+        const Vector4 connectionColor = {0.5f, 0.5f, 0.5f, 1.0f}; 
         drawLine->SetPoints(worldBasePos, currentWorldPos, connectionColor);
     }
 }
 
 void MotionEditor::DrawImGui() {
-    ImGui::Begin("アタックマネージャ");
+    ImGui::Begin("モーションエディター");
 
     if (!motions_.empty()) {
         std::vector<const char *> names;

@@ -9,11 +9,10 @@ namespace {
 const float kFlyAcceleration = 30.0f;
 const float kFlyMaxSpeed = 15.0f;
 const float kFlyMaxSpeedBoost = 20.0f;
-const float kFallThresholdTime = 0.3f; // 二回押しの間隔
-} // namespace
+const float kFallThresholdTime = 0.3f;
+} 
 
 void PlayerStateFlyIdle::Enter(Player &player) {
-    // 浮遊時は重力をゼロに
     player.GetAcceleration().y = 0.0f;
     player.GetVelocity().y = 0.0f;
     fallInputTime_ = 0.0f;
@@ -31,7 +30,6 @@ void PlayerStateFlyIdle::Update(Player &player) {
 }
 
 void PlayerStateFlyIdle::Exit(Player &player) {
-    // 重力の復帰は次のステートに任せる
 }
 
 void PlayerStateFlyIdle::AirMove(Player& player) {
@@ -73,7 +71,6 @@ void PlayerStateFlyIdle::ChangeState(Player& player) {
 
     player.ChangeRush();
 
-    // 地面に到達 → Idleへ
     if (player.GetLocalPosition().y <= 0.0f) {
         player.ChangeState("Idle");
         return;

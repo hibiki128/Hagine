@@ -15,9 +15,7 @@ void PlayerBullet::Init(const std::string objectName) {
     // 弾の生存時間を設定（5秒後に消える）
     lifeTime_ = 5.0f;
     currentLifeTime_ = 0.0f;
-
-    // 加速度の初期設定
-    acce_ = 10.0f; // デフォルトの加速度
+    acce_ = 10.0f;
 
     emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("bulletEmitter");
 }
@@ -88,11 +86,6 @@ void PlayerBullet::Update() {
     transform_->translation_ += velocity_ * deltaTime;
 }
 void PlayerBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
-    // 生きている場合のみ描画
-    if (isAlive_) {
-        //BaseObject::SetBlendMode(BlendMode::kAdd);
-        //BaseObject::Draw(viewProjection, offSet);
-    }
 }
 void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
     // 生きている場合のみ描画
@@ -128,26 +121,18 @@ void PlayerBullet::InitTransform(Player *player) {
 
         velocity_ = direction * speed_;
     } else {
-        // 通常時：プレイヤーの回転から方向ベクトルを計算
         isLockOnBullet_ = false;
         targetEnemy_ = nullptr;
 
-        // プレイヤーの回転（クォータニオン）を使って前方ベクトルを計算
         Quaternion rot = player->GetLocalRotation();
         Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
         Vector3 direction = rot * baseForward;
 
-        // 左右反転補正（必要に応じて有効化）
         direction.x = -direction.x;
 
-        // 前後反転補正（基本は不要）
-        // direction.z = -direction.z;
-
-        // 速度ベクトル設定
         velocity_ = direction.Normalize() * speed_;
     }
 
-    // 弾を少し前方に配置（プレイヤーの中から出ないように）
     Vector3 forwardOffset = velocity_.Normalize() * 2.0f;
     forwardOffset.y += 1.0f; // 少し上に
 

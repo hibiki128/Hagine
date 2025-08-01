@@ -4,6 +4,7 @@
 #include "application/GameObject/Enemy/Enemy.h"
 #include <algorithm>
 #include <cmath>
+#include <Frame.h>
 
 void ChageShot::Init(const std::string objectName) {
     BaseObject::Init(objectName);
@@ -42,25 +43,16 @@ void ChageShot::Update() {
 
     if (isAlive_ && !isFired_) {
         if (player_) {
-            // プレイヤー位置を取得
             Vector3 playerPos = player_->GetLocalPosition();
 
-            // プレイヤーの回転（クォータニオン）を取得
             Quaternion rot = player_->GetLocalRotation();
 
-            // 前方基準ベクトル（ローカルZ+方向）
             Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
 
-            // プレイヤーの回転をかけて前方ベクトルを計算
             Vector3 forwardDir = rot * baseForward;
 
-            // 左右が逆ならX軸反転（必要に応じてコメント外す）
             forwardDir.x = -forwardDir.x;
 
-            // 前後が逆ならZ軸反転（必要に応じてコメント外す）
-            // forwardDir.z = -forwardDir.z;
-
-            // 正規化してからオフセット距離をかける
             Vector3 normForward = forwardDir.Normalize();
 
             // チャージ弾のオフセット距離
@@ -79,8 +71,7 @@ void ChageShot::Update() {
             // エミッター位置も更新
             chageEmitter_->SetPosition(transform_->translation_);
 
-            // オイラー角も表示（player_->GetLocalRotation() をオイラーに変換できる関数が必要）
-            Vector3 playerEuler = rot.ToEulerAngles(); // 例：ToEulerAngles()がある想定
+            Vector3 playerEuler = rot.ToEulerAngles();
         }
     }
 
@@ -93,7 +84,7 @@ void ChageShot::Update() {
         }
     } else {
         if (input->PushKey(DIK_K) && !isFired_) {
-            scale_ += scaleSpeed_ * (1.0f / 60.0f); // 60FPS前提
+            scale_ += scaleSpeed_ * (Frame::DeltaTime); 
             if (scale_ >= maxScale_) {
                 scale_ = maxScale_;
                 isMaxScale_ = true;
@@ -103,7 +94,7 @@ void ChageShot::Update() {
             }
         }
         if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
-            Vector3 dir = {0, 0, 1}; // デフォルト前方
+            Vector3 dir = {0, 0, 1};
             Vector3 pos = transform_->translation_;
 
             if (player_) {
@@ -112,17 +103,13 @@ void ChageShot::Update() {
                     dir = player_->GetEnemy()->GetLocalPosition() - pos;
                     float len = dir.Length();
                     if (len > 0.0001f) {
-                        dir = dir / len; // 正規化
+                        dir = dir / len;
                     }
                 } else {
                     // プレイヤーの回転をかけて発射方向を計算
                     dir = (player_->GetLocalRotation() * Vector3(0.0f, 0.0f, 1.0f)).Normalize();
 
-                    // 左右反転補正が必要ならこちらも反映
                     dir.x = -dir.x;
-
-                    // 前後反転補正が必要ならこちらも反映
-                    // dir.z = -dir.z;
                 }
             }
 
@@ -168,7 +155,6 @@ void ChageShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     // スケールを反映
     transform_->scale_ = {scale_, scale_, scale_};
     BaseObject::SetRadius(scale_);
-    // BaseObject::Draw(viewProjection, offSet);
 }
 void ChageShot::DrawParticle(const ViewProjection &viewProjection) {
     chageEmitter_->Draw(viewProjection);

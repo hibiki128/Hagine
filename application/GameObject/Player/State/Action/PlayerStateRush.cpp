@@ -10,13 +10,11 @@ void PlayerStateRush::Enter(Player &player) {
         targetPosition_ = enemy->GetPositionBehind(distance_);
         startPosition_ = player.GetTransform().translation_;
 
-        // 弧の経路を計算（新しい方法）
         CalculateArcPath(startPosition_, targetPosition_, player);
 
         isRushing_ = true;
         elapsedTime_ = 0.0f;
 
-        // 急接近中は重力を無効化
         player.GetVelocity().y = 0.0f;
     }
 }
@@ -84,7 +82,7 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
     Vector3 toTarget = targetPos - startPos;
     float distance = toTarget.Length();
 
-    // 弧の制御点を計算（ベジエ曲線のような考え方）
+    // 弧の制御点を計算
     Vector3 midPoint = (startPos + targetPos) * 0.5f;
 
     // 敵の方向ベクトルを取得
@@ -101,7 +99,7 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
     float upDot = playerToEnemy.Dot(enemyUp);
 
     // 弧の高さと横方向のオフセットを設定
-    float arcHeight = distance * 0.25f; // 少し控えめに
+    float arcHeight = distance * 0.25f;
     float sideOffset = distance * 0.4f;
 
     // プレイヤーの位置に応じて制御点の方向を決定
@@ -110,7 +108,7 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
     // 横方向のオフセット（プレイヤーが左にいるなら右に、右にいるなら左に）
     controlDirection += enemyRight * (rightDot > 0 ? -sideOffset : sideOffset);
 
-    // 縦方向のオフセット（プレイヤーが上にいるなら下寄りに、下にいるなら上寄りに）
+    // 縦方向のオフセット
     if (upDot > 0.3f) {
         // プレイヤーが敵の上方にいる場合は、あまり上に行かない
         controlDirection += enemyUp * (arcHeight * 0.3f);
@@ -122,7 +120,7 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
         controlDirection += enemyUp * arcHeight;
     }
 
-    // 前後方向にも少しオフセットを追加（よりダイナミックな軌道のため）
+    // 前後方向にも少しオフセットを追加
     Vector3 startToTarget = (targetPos - startPos).Normalize();
     Vector3 forwardComponent = enemyForward * (startToTarget.Dot(enemyForward));
     controlDirection += forwardComponent * (distance * 0.2f);
@@ -188,7 +186,6 @@ Vector3 PlayerStateRush::CalculateMovementDirection(float progress, Player &play
     // 移動方向を計算
     Vector3 direction = (nextPos - arcPos).Normalize();
 
-    // 進行度が後半になったら直接ターゲットに向かう方向も考慮
     if (progress > blendStartProgress_) {
         Vector3 currentPos = player.GetTransform().translation_;
         Vector3 directDirection = (targetPosition_ - currentPos).Normalize();

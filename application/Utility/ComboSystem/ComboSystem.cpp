@@ -67,7 +67,7 @@ void ComboSystem::Update(float deltaTime) {
         inputBuffered_ = false;
         inputBufferTime_ = 0.0f;
         ExecuteComboAttack();
-        attackExecuted = true; // 攻撃が実行されたことを記録
+        attackExecuted = true;
     }
 
     // 入力バッファのタイムアウト
@@ -116,7 +116,6 @@ void ComboSystem::ExecuteComboAttack() {
                 // 攻撃が完全に終了（インターバル込み）しているかチェック
                 if (MotionEditor::GetInstance()->IsAttackFinishedWithInterval(prevTarget)) {
                     MotionEditor::GetInstance()->ReturnToComboStart(prevTarget);
-                    // インターバルもクリア
                     MotionEditor::GetInstance()->ClearAttackEndInterval(prevTarget);
                 }
                 break; // 最初に見つかった同じオブジェクトだけを処理
@@ -175,15 +174,6 @@ void ComboSystem::SaveComboStartPositions() {
             MotionEditor::GetInstance()->SetComboStartPosition(obj);
         }
     }
-}
-
-void ComboSystem::PrintDebugInfo() const {
-    // デバッグ情報を出力
-    // Debug::Print("ComboIndex: %d/%d, Started: %s, Waiting: %s, Buffered: %s",
-    //             comboIndex_, static_cast<int>(comboData_.size()),
-    //             comboStarted_ ? "true" : "false",
-    //             waitingForReturn_ ? "true" : "false",
-    //             inputBuffered_ ? "true" : "false");
 }
 
 bool ComboSystem::IsObjectAttackCompleted(BaseObject *target) const {

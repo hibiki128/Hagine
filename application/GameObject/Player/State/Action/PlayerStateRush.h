@@ -16,14 +16,14 @@ class PlayerStateRush : public PlayerBaseState {
     Vector3 targetPosition_;
     Vector3 rushDirection_;
     Vector3 startPosition_;
-    Vector3 arcControlPoint_; // ベジエ曲線の制御点
+    Vector3 arcControlPoint_;
     float distance_ = 3.0f;
-    float rushSpeed_ = 200.0f; // 急接近時の速度
+    float rushSpeed_ = 200.0f;
     float elapsedTime_ = 0.0f;
-    float rotationSpeed_ = 10.0f; // 回転速度
+    float rotationSpeed_ = 10.0f;
     float arcLength_ = 0.0f;
-    float arrivalDistance_ = 4.0f;    // 到達判定距離
-    float blendStartProgress_ = 0.7f; // 直線ブレンド開始進行度
+    float arrivalDistance_ = 4.0f;   
+    float blendStartProgress_ = 0.7f; 
     bool isRushing_ = false;
 
     void CalculateArcPath(const Vector3 &startPos, const Vector3 &targetPos, Player &player);

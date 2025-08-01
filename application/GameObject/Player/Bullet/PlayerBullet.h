@@ -44,8 +44,8 @@ class PlayerBullet : public BaseObject {
     /// ==================================
 
     Vector3 velocity_;
-    float speed_ = 60.0f; // 弾の初期速度
-    float acce_ = 10.0f;  // 弾の加速度（単位：速度/秒）
+    float speed_ = 60.0f; 
+    float acce_ = 10.0f;  
 
     // 生存時間関連
     float lifeTime_ = 5.0f;        // 弾の生存時間（秒）

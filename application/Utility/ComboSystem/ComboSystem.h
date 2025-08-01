@@ -2,8 +2,8 @@
 #include <string>
 #include <vector>
 
-class BaseObject;   // 前方宣言
-class MotionEditor; // 前方宣言
+class BaseObject;   
+class MotionEditor; 
 
 class ComboSystem {
   private:
@@ -27,7 +27,6 @@ class ComboSystem {
     bool inputBuffered_;
     float inputBufferTime_;
 
-    // 設定値
     static const float COMBO_INTERVAL;
     static const float INPUT_BUFFER_DURATION;
     static const float FINAL_RETURN_DELAY;
@@ -55,9 +54,6 @@ class ComboSystem {
 
     // 毎フレーム呼び出し（時間管理用）
     void Update(float deltaTime);
-
-    // デバッグ情報
-    void PrintDebugInfo() const;
 
     // 現在のコンボ状態を取得
     bool IsComboActive() const { return comboStarted_; }
