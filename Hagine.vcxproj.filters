@@ -477,10 +477,10 @@
     <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp">
       <Filter>ソースファイル\Application\GameObject\Player\Hand</Filter>
     </ClCompile>
-    <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp">
+    <ClCompile Include="Application\Utility\ComboSystem\ComboSystem.cpp">
       <Filter>ソースファイル\Application\Utility\ComboSystem</Filter>
     </ClCompile>
-    <ClCompile Include="application\GameObject\Player\State\Action\PlayerStateRush.cpp">
+    <ClCompile Include="Application\GameObject\Player\State\Action\PlayerStateRush.cpp">
       <Filter>ソースファイル\Application\GameObject\Player\State\Action</Filter>
     </ClCompile>
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectChain.cpp">
@@ -851,10 +851,10 @@
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h">
       <Filter>ソースファイル\Engine\Utility\Edit\ShotcutManager</Filter>
     </ClInclude>
-    <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h">
+    <ClInclude Include="Application\Utility\ComboSystem\ComboSystem.h">
       <Filter>ソースファイル\Application\Utility\ComboSystem</Filter>
     </ClInclude>
-    <ClInclude Include="application\GameObject\Player\State\Action\PlayerStateRush.h">
+    <ClInclude Include="Application\GameObject\Player\State\Action\PlayerStateRush.h">
       <Filter>ソースファイル\Application\GameObject\Player\State\Action</Filter>
     </ClInclude>
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectChain.h">

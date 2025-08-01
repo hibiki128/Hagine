@@ -84,7 +84,7 @@ void ChageShot::Update() {
         }
     } else {
         if (input->PushKey(DIK_K) && !isFired_) {
-            scale_ += scaleSpeed_ * (Frame::DeltaTime); 
+            scale_ += scaleSpeed_ * (Frame::DeltaTime()); 
             if (scale_ >= maxScale_) {
                 scale_ = maxScale_;
                 isMaxScale_ = true;

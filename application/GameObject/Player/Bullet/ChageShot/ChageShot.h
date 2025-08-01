@@ -48,13 +48,13 @@ class ChageShot : public BaseObject {
     /// ==============================================
 
     Vector3 offset_{};
+    Vector3 velocity_{};
     bool isAlive_ = false;
     bool isMaxScale_ = false;
     bool isFired_ = false;
     float scale_ = 1.0f;
     float scaleSpeed_ = 1.25f;
     float maxScale_ = 4.0f;
-    Vector3 velocity_{};
     float speed_ = 60.0f;
     Player *player_ = nullptr;
 
