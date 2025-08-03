@@ -74,7 +74,11 @@ class Player : public BaseObject {
     PlayerHand *GetLeftHand() { return leftHand_ptr_; }
 
     void SetCamera(FollowCamera *camera) { FollowCamera_ = camera; }
-    void SetEnemy(Enemy *enemy) { enemy_ = enemy; }
+    void SetEnemy(Enemy *enemy) { 
+        enemy_ = enemy;
+        leftHand_ptr_->SetEnemy(enemy);
+        rightHand_ptr_->SetEnemy(enemy);
+    }
     void ResetControlCount() {
         lControlInputTime_ = 0.0f;
         lControlInputCount_ = 0;
