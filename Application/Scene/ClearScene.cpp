@@ -1,5 +1,5 @@
 #include "ClearScene.h"
-
+#include "Engine/Utility/Scene/SceneManager.h"
 void ClearScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
@@ -10,6 +10,11 @@ void ClearScene::Initialize() {
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
+
+    clearLogo_ = std::make_unique<Sprite>();
+    clearLogo_->Initialize("game/Clear.png", clearLogoPosition_, {1.0f, 1.0f, 1.0f, 1.0f}, {0.5f, 0.5f});
+    titleButton_ = std::make_unique<Sprite>();
+    titleButton_->Initialize("game/titleButton.png", titleButtonPosition_, {1.0f, 1.0f, 1.0f, 1.0f}, {0.5f, 0.5f});
 }
 
 void ClearScene::Finalize() {
@@ -22,6 +27,11 @@ void ClearScene::Update() {
 
     // シーン切り替え
     ChangeScene();
+
+    clearLogo_->SetPosition(clearLogoPosition_);
+    clearLogo_->SetSize(clearLogo_->GetTexSize() * clearLogoSize_);
+    titleButton_->SetPosition(titleButtonPosition_);
+    titleButton_->SetSize(titleButton_->GetTexSize() * titleButtonSize_);
 }
 
 void ClearScene::Draw() {
@@ -30,7 +40,8 @@ void ClearScene::Draw() {
     /// Spriteの描画準備
     spCommon_->DrawCommonSetting();
     //-----Spriteの描画開始-----
-
+    clearLogo_->Draw();
+    titleButton_->Draw();
     //------------------------
 
     /// -------描画処理終了-------
@@ -67,4 +78,8 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
+    if (input_->TriggerKey(DIK_SPACE)) {
+        // シーンを変更
+        sceneManager_->NextSceneReservation("TITLE");
+    }
 }

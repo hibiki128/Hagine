@@ -1,7 +1,7 @@
 #include "GameScene.h"
 
+#include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
-
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
@@ -47,10 +47,9 @@ void GameScene::Initialize() {
     player_ptr = player_.get();
     MotionEditor::GetInstance()->Register(player_ptr);
     MotionEditor::GetInstance()->Register(enemy_ptr);
-    
+
     playerUI_->Init(player_ptr);
     enemyUI_->Init(enemy_ptr);
-
 
     /// ===================================================
     /// オブジェクトマネージャに追加
@@ -84,14 +83,12 @@ void GameScene::Update() {
 
 void GameScene::Draw() {
     /// -------描画処理開始-------
+    playerUI_->Draw();
+    enemyUI_->Draw();
+
     skyBox_->Draw(vp_);
 
     BaseObjectManager::GetInstance()->Draw(vp_);
-
-    //-----Spriteの描画開始-----
-    playerUI_->Draw();
-    enemyUI_->Draw();
-    //-------------------------
 
     //-----3DObjectの開始-----
     // skyDome_->Draw(vp_);
@@ -165,4 +162,7 @@ void GameScene::CameraUpdate() {
 }
 
 void GameScene::ChangeScene() {
+    if (!enemy_ptr->GetAlive()) {
+        sceneManager_->NextSceneReservation("CLEAR");
+    }
 }

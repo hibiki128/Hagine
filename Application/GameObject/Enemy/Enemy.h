@@ -46,6 +46,8 @@ class Enemy: public BaseObject {
     float &GetJumpSpeed() { return jumpSpeed_; }
     float &GetMaxSpeed() { return maxSpeed_; }
     float &GetAccelRate() { return accelRate_; }
+    int GetHP() const { return HP_; }
+    int GetMaxHP() const { return maxHP_; }
 
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }

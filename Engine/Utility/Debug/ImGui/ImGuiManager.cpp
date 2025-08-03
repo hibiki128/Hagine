@@ -561,8 +561,8 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string& scen
     if (!isShowMainUI_) {
         flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
     }
-    ImGui::Begin(sceneName.c_str(), nullptr, flags);
-
+    ImGui::Begin("Scene", nullptr, flags);
+    sceneName;
     // ウィンドウ内の位置を取得（ImGuizmoのためにシーンウィンドウの絶対位置を計算）
     ImVec2 sceneWindowPos = ImGui::GetWindowPos();
     ImVec2 contentPos = ImGui::GetCursorScreenPos();
