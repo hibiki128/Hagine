@@ -31,15 +31,40 @@ void FollowCamera::Update() {
         if (player) {
             std::string currentStateName = player->GetCurrentStateName();
             if (currentStateName == "Rush") {
-                // Rush中は現在のカメラ位置を維持
-                worldTransform_.UpdateMatrix();
+                // プレイヤーが目標位置に近づいているかチェック
+                Vector3 currentPos = player->GetLocalPosition();
 
-                // ビュープロジェクション更新
-                viewProjection_.translation_ = worldTransform_.translation_;
-                viewProjection_.rotation_ = worldTransform_.quateRotation_;
-                viewProjection_.matWorld_ = worldTransform_.matWorld_;
-                viewProjection_.UpdateMatrix();
-                return;
+                if (player->GetIsLockOn() && player->GetEnemy()) {
+                    Vector3 targetPos = player->GetEnemy()->GetPositionBehind(3.0f);
+                    float distanceToTarget = (targetPos - currentPos).Length();
+
+                    // 目標位置に十分近づいていない場合はカメラ追従を停止
+                    if (distanceToTarget > rushCameraResumeDistance_) {
+                        // Rush中のカメラ位置・回転を保存
+                        rushCameraPosition_ = worldTransform_.translation_;
+                        rushCameraRotation_ = worldTransform_.quateRotation_;
+                        isResumeFromRush_ = false;
+
+                        worldTransform_.UpdateMatrix();
+                        viewProjection_.translation_ = worldTransform_.translation_;
+                        viewProjection_.rotation_ = worldTransform_.quateRotation_;
+                        viewProjection_.matWorld_ = worldTransform_.matWorld_;
+                        viewProjection_.UpdateMatrix();
+                        return;
+                    } else {
+                        // 追従再開の準備
+                        if (!isResumeFromRush_) {
+                            isResumeFromRush_ = true;
+                            rushCameraPosition_ = worldTransform_.translation_;
+                            rushCameraRotation_ = worldTransform_.quateRotation_;
+                        }
+                    }
+                }
+            } else {
+                // Rush状態以外になったらフラグをリセット
+                if (isResumeFromRush_) {
+                    isResumeFromRush_ = false;
+                }
             }
         }
 
@@ -133,6 +158,29 @@ void FollowCamera::Update() {
 
         Vector3 shoulderOffset = cameraRightDir * shoulderOffsetCurrent_.x;
         cameraPos += shoulderOffset;
+
+        
+        if (isResumeFromRush_) {
+            // 通常の追従で計算された位置・回転を目標値として使用
+            Vector3 targetCameraPos = worldTransform_.translation_;
+            Quaternion targetCameraRot = worldTransform_.quateRotation_;
+
+            // Rush中の固定位置から目標位置へ高速補間
+            worldTransform_.translation_ = Lerp(rushCameraPosition_, targetCameraPos, rushResumeBlendSpeed_ * Frame::DeltaTime());
+            worldTransform_.quateRotation_ = Quaternion::Slerp(rushCameraRotation_, targetCameraRot, rushResumeBlendSpeed_ * Frame::DeltaTime());
+
+            // 補間がほぼ完了したらフラグを解除
+            float positionDiff = (worldTransform_.translation_ - targetCameraPos).Length();
+            float rotationDiff = std::abs(1.0f - std::abs(worldTransform_.quateRotation_.Dot(targetCameraRot)));
+
+            if (positionDiff < 0.5f && rotationDiff < 0.01f) {
+                isResumeFromRush_ = false;
+            }
+
+            // Rush復帰補間中の値を更新
+            rushCameraPosition_ = worldTransform_.translation_;
+            rushCameraRotation_ = worldTransform_.quateRotation_;
+        }
 
         worldTransform_.translation_ = cameraPos;
 

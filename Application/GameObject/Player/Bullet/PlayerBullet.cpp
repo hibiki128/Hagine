@@ -140,8 +140,9 @@ void PlayerBullet::InitTransform(Player *player) {
 }
 
 void PlayerBullet::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<Enemy *>(other) && isAlive_) {
+    if (dynamic_cast<Enemy *>(other) && isAlive_ && targetEnemy_->GetAlive()) {
         SetCollisionEnabled(false);
         isHit_ = true;
+        targetEnemy_->SetDamage(2);
     }
 }

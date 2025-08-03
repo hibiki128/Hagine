@@ -127,6 +127,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Utility\MotionEditor\MotionEditor.cpp" />
     <ClCompile Include="Application\Utility\Shake\Shake.cpp" />
     <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp" />
+    <ClCompile Include="Application\UI\Enemy\EnemyUI.cpp" />
     <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp" />
@@ -207,6 +208,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParameters.cpp" />
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectDataManager.cpp" />
     <ClCompile Include="application\GameObject\Player\State\Action\PlayerStateRush.cpp" />
+    <ClCompile Include="Application\UI\Player\PlayerUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".claudiaideconfig" />
@@ -268,6 +270,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h" />
     <ClInclude Include="Application\Utility\Shake\Shake.h" />
     <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
+    <ClInclude Include="Application\UI\Enemy\EnemyUI.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
     <ClInclude Include="Engine\3d\Transform\ObjColor.h" />
@@ -354,6 +357,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h" />
     <ClInclude Include="Application\GameObject\Player\Hand\PlayerHand.h" />
     <ClInclude Include="application\GameObject\Player\State\Action\PlayerStateRush.h" />
+    <ClInclude Include="Application\UI\Player\PlayerUI.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
   </ItemGroup>

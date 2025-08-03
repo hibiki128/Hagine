@@ -17,9 +17,11 @@ void GameScene::Initialize() {
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
     followCamera_ = std::make_unique<FollowCamera>();
-   //skyDome_ = std::make_unique<SkyDome>();
+    // skyDome_ = std::make_unique<SkyDome>();
     ground_ = std::make_unique<Ground>();
     skyBox_ = SkyBox::GetInstance();
+    playerUI_ = std::make_unique<PlayerUI>();
+    enemyUI_ = std::make_unique<EnemyUI>();
 
     /// ===================================================
     /// 初期化
@@ -27,10 +29,16 @@ void GameScene::Initialize() {
     debugCamera_->Initialize(&vp_);
     player_->Init("player");
     enemy_->Init("enemy");
-   // skyDome_->Init("SkyDome");
+    // skyDome_->Init("SkyDome");
     ground_->Init("Ground");
     followCamera_->Init();
     skyBox_->Initialize("game/skybox.dds");
+    /// ===================================================
+    /// セット
+    /// ===================================================
+    followCamera_->SetPlayer(player_.get());
+    player_->SetCamera(followCamera_.get());
+    player_->SetEnemy(enemy_.get());
 
     /// ===================================================
     /// ポインタ共有
@@ -39,13 +47,14 @@ void GameScene::Initialize() {
     player_ptr = player_.get();
     MotionEditor::GetInstance()->Register(player_ptr);
     MotionEditor::GetInstance()->Register(enemy_ptr);
+    
+    playerUI_->Init(player_ptr);
+    enemyUI_->Init(enemy_ptr);
+
 
     /// ===================================================
-    /// セット
+    /// オブジェクトマネージャに追加
     /// ===================================================
-    followCamera_->SetPlayer(player_.get());
-    player_->SetCamera(followCamera_.get());
-    player_->SetEnemy(enemy_.get());
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
     BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
 }
@@ -56,9 +65,9 @@ void GameScene::Finalize() {
 
 void GameScene::Update() {
 
-   /* if (!debugCamera_->GetActive()) {
-        BaseObjectManager::GetInstance()->Update();
-    }*/
+    /* if (!debugCamera_->GetActive()) {
+         BaseObjectManager::GetInstance()->Update();
+     }*/
 
     // カメラ更新
     CameraUpdate();
@@ -66,8 +75,11 @@ void GameScene::Update() {
     // シーン切り替え
     ChangeScene();
 
-  //  skyDome_->Update();
+    //  skyDome_->Update();
     ground_->Update();
+
+    playerUI_->Update();
+    enemyUI_->Update();
 }
 
 void GameScene::Draw() {
@@ -76,14 +88,13 @@ void GameScene::Draw() {
 
     BaseObjectManager::GetInstance()->Draw(vp_);
 
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
     //-----Spriteの描画開始-----
-
+    playerUI_->Draw();
+    enemyUI_->Draw();
     //-------------------------
 
     //-----3DObjectの開始-----
-   // skyDome_->Draw(vp_);
+    // skyDome_->Draw(vp_);
     ground_->Draw(vp_);
     DrawLine3D::GetInstance()->DrawGrid(-0.95f, 64, 1000, {0.0f, 0.0f, 1.0f, 0.75f});
     //-----------------------
@@ -127,13 +138,14 @@ void GameScene::AddSceneSetting() {
     followCamera_->imgui();
 
     MotionEditor::GetInstance()->DrawImGui();
-
 }
 
 void GameScene::AddObjectSetting() {
+    playerUI_->Debug();
+    enemyUI_->Debug();
     player_ptr->Debug();
-
-    for (auto& bullet:player_ptr->GetBullets()) {
+    enemy_ptr->Debug();
+    for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
     }
 }

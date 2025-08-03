@@ -48,6 +48,7 @@ void Player::Init(const std::string objectName) {
     shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
 
     chageShot_ = std::make_unique<ChageShot>();
+    chageShot_->SetPlayer(this);
     chageShot_->Init("chageShot");
 
     // 手の生成
@@ -93,7 +94,6 @@ void Player::Update() {
     shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
     if (chageShot_) {
-        chageShot_->SetPlayer(this);
         chageShot_->Update();
     }
 

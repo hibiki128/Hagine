@@ -54,6 +54,8 @@ class Enemy: public BaseObject {
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
 
+    void SetDamage(int damage) { damage_ = damage; }
+
   private:
     /// ==================================================================
     /// private methods
@@ -80,6 +82,10 @@ class Enemy: public BaseObject {
 
     Vector3 velocity_{};
     Vector3 acceleration_{};
+
+    int HP_ = 100;
+    int maxHP_ = 100;
+    int damage_ = 0;
 
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;
