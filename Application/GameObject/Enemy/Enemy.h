@@ -46,6 +46,8 @@ class Enemy: public BaseObject {
     float &GetJumpSpeed() { return jumpSpeed_; }
     float &GetMaxSpeed() { return maxSpeed_; }
     float &GetAccelRate() { return accelRate_; }
+    int GetHP() const { return HP_; }
+    int GetMaxHP() const { return maxHP_; }
 
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
@@ -53,6 +55,8 @@ class Enemy: public BaseObject {
 
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
+
+    void SetDamage(int damage) { damage_ = damage; }
 
   private:
     /// ==================================================================
@@ -80,6 +84,10 @@ class Enemy: public BaseObject {
 
     Vector3 velocity_{};
     Vector3 acceleration_{};
+
+    int HP_ = 100;
+    int maxHP_ = 100;
+    int damage_ = 0;
 
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;

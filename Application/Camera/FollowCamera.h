@@ -46,4 +46,9 @@ class FollowCamera {
     float heightOffset_;
     float shoulderMaxOffset_ = 12.5f;  // 肩のズレ最大距離（左右）
     float shoulderLerpSpeed_ = 10.0f; // 補間速度（大きいほど速く追従）
+    float rushCameraResumeDistance_ = 50.0f; // この距離以下になったらカメラ追従を再開
+    bool isResumeFromRush_ = false;          // Rush状態からの復帰中かどうか
+    float rushResumeBlendSpeed_ = 8.0f;      // Rush復帰時の補間速度（通常より高速）
+    Vector3 rushCameraPosition_;             // Rush中に固定されていたカメラ位置
+    Quaternion rushCameraRotation_;          // Rush中に固定されていたカメラ回転
 };

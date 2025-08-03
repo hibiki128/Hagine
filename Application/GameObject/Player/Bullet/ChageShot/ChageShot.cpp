@@ -1,10 +1,11 @@
+#define NOMINMAX
 #include "ChageShot.h"
 #include "Engine/Input/Input.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
+#include <Frame.h>
 #include <algorithm>
 #include <cmath>
-#include <Frame.h>
 
 void ChageShot::Init(const std::string objectName) {
     BaseObject::Init(objectName);
@@ -19,8 +20,8 @@ void ChageShot::Init(const std::string objectName) {
     scale_ = 1.0f;
     velocity_ = {0, 0, 0};
     // 初期位置もリセット
-    transform_->translation_ = {0, 0, 0};
-
+    transform_->translation_ = player_->GetWorldPosition();
+    Collider::SetCollisionEnabled(false);
     chageEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
     bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
 }
@@ -77,6 +78,7 @@ void ChageShot::Update() {
 
     if (!isAlive_) {
         if (input->TriggerKey(DIK_K)) {
+            Collider::SetCollisionEnabled(true);
             isAlive_ = true;
             isFired_ = false;
             scale_ = 1.0f;
@@ -84,7 +86,7 @@ void ChageShot::Update() {
         }
     } else {
         if (input->PushKey(DIK_K) && !isFired_) {
-            scale_ += scaleSpeed_ * (Frame::DeltaTime()); 
+            scale_ += scaleSpeed_ * (Frame::DeltaTime());
             if (scale_ >= maxScale_) {
                 scale_ = maxScale_;
                 isMaxScale_ = true;
@@ -146,7 +148,15 @@ void ChageShot::Reset() {
     isMaxScale_ = false;
     velocity_ = {0, 0, 0};
     transform_->translation_ = {0, 0, 0};
-    
+}
+
+int ChageShot::GetDamage() const {
+    // スケールの割合を計算（1.0f〜maxScale_の範囲を0.0f〜1.0fに正規化）
+    float scaleRatio = (scale_ - 1.0f) / (maxScale_ - 1.0f);
+
+    // 割合に応じてダメージを計算（最小1ダメージは保証）
+    int damage = static_cast<int>(maxDamage_ * scaleRatio);
+    return std::max(1, damage);
 }
 
 void ChageShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -166,9 +176,14 @@ void ChageShot::imgui() {
 }
 
 void ChageShot::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<Enemy *>(other)) {
+    if (dynamic_cast<Enemy *>(other) && player_->GetEnemy()->GetAlive()) {
         isAlive_ = false;
         Collider::SetCollisionEnabled(false);
+
+        // チャージ度合いに応じたダメージを計算して適用
+        int damage = GetDamage();
+        player_->GetEnemy()->SetDamage(damage);
+
         Reset();
     }
 }

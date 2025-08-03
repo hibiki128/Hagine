@@ -1,8 +1,8 @@
 #pragma once
+#include "Application/GameObject/Player/Player.h"
 #include "Engine/Input/Input.h"
 #include "Object/Base/BaseObject.h"
-#include "Application/GameObject/Player/Player.h"
-#include"Particle/ParticleEmitter.h"
+#include "Particle/ParticleEmitter.h"
 
 class ChageShot : public BaseObject {
   public:
@@ -42,6 +42,8 @@ class ChageShot : public BaseObject {
     void SetOffsetMargin(float margin) { offsetMargin_ = margin; }
     void SetVerticalOffset(float yOffset) { verticalOffset_ = yOffset; }
 
+    int GetDamage() const;
+
   private:
     /// ==============================================
     /// private varians
@@ -57,6 +59,8 @@ class ChageShot : public BaseObject {
     float maxScale_ = 4.0f;
     float speed_ = 60.0f;
     Player *player_ = nullptr;
+
+    static constexpr int maxDamage_ = 15;
 
     // オフセット調整用のパラメータ
     float playerRadius_ = 1.0f;   // プレイヤーの半径

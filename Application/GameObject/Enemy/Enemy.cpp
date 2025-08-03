@@ -30,10 +30,22 @@ void Enemy::Init(const std::string objectName) {
 void Enemy::Update() {
     shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
+
+    if (damage_ > 0) {
+        HP_ -= damage_;
+        damage_ = 0;
+    }
+    if (HP_ <= 0) {
+        isAlive_ = false;
+        HP_ = 0;
+    }
     UpdateShadowScale();
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+    if (!isAlive_) {
+        return;
+    }
     BaseObject::Draw(viewProjection, offSet);
     if (transform_->translation_.y < 0) {
         return;
@@ -46,6 +58,18 @@ void Enemy::DrawParticle(const ViewProjection &viewProjection) {
 }
 
 void Enemy::Debug() {
+    if (ImGui::BeginTabBar("敵情報")) {
+        if (ImGui::BeginTabItem("敵情報")) {
+
+            ImGui::Text("敵のHP %d", HP_);
+            if (ImGui::Button("HP回復")) {
+                HP_ = maxHP_;
+            }
+
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
 }
 
 void Enemy::OnCollisionEnter(Collider *other) {

@@ -498,6 +498,12 @@
     <ClCompile Include="Engine\OffScreen\RendererBuffer.cpp">
       <Filter>ソースファイル\Engine\Offscreen</Filter>
     </ClCompile>
+    <ClCompile Include="Application\UI\Enemy\EnemyUI.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\UI\Player\PlayerUI.cpp">
+      <Filter>ソースファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\Particle\Particle.hlsli">
@@ -872,6 +878,8 @@
     <ClInclude Include="Engine\OffScreen\RendererBuffer.h">
       <Filter>ソースファイル\Engine\Offscreen</Filter>
     </ClInclude>
+    <ClInclude Include="Application\UI\Enemy\EnemyUI.h" />
+    <ClInclude Include="Application\UI\Player\PlayerUI.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
