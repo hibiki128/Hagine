@@ -8,6 +8,7 @@
 #include"Application/UI/Player/PlayerUI.h"
 #include"Application/UI/Enemy/EnemyUI.h"
 #include"SkyBox/SkyBox.h"
+#include <BaseScene.h>
 
 class GameScene : public BaseScene {
   public:
