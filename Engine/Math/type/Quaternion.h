@@ -90,4 +90,6 @@ class Quaternion final {
     
     // 軸回転を個別に適用するメソッド
     static Quaternion FromAxisRotations(const Vector3 &axisRotations);
+
+    Vector3 Rotate(const Vector3 &v) const;
 };

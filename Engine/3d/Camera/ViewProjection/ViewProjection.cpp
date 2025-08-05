@@ -49,10 +49,21 @@ void ViewProjection::TransferMatrix()
 	}
 }
 
-void ViewProjection::UpdateViewMatrix()
-{
-	matView_ = Inverse(MakeAffineMatrix({ 1.0f,1.0f,1.0f }, rotation_, translation_));
+void ViewProjection::UpdateViewMatrix() {
+    Matrix4x4 worldMatrix;
+
+    if (isUseQuaternion_) {
+        // クォータニオンから回転行列を作成
+        worldMatrix = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, quateRotation_, translation_);
+    } else {
+        // オイラー角から回転行列を作成
+        worldMatrix = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, eulerRotation_, translation_);
+    }
+
+    // ビュー行列はワールド行列の逆行列
+    matView_ = Inverse(worldMatrix);
 }
+
 
 void ViewProjection::UpdateProjectionMatrix()
 {

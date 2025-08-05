@@ -1,6 +1,5 @@
 #include "GameScene.h"
 
-
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
@@ -19,9 +18,9 @@ void GameScene::Finalize() {
 
 void GameScene::Update() {
 
-   /* if (!debugCamera_->GetActive()) {
-        BaseObjectManager::GetInstance()->Update();
-    }*/
+    /* if (!debugCamera_->GetActive()) {
+         BaseObjectManager::GetInstance()->Update();
+     }*/
 
     // カメラ更新
     CameraUpdate();
@@ -32,7 +31,8 @@ void GameScene::Update() {
 
 void GameScene::Draw() {
     /// -------描画処理開始-------
-  
+
+    BaseObjectManager::GetInstance()->Draw(vp_);
     /// Spriteの描画準備
     spCommon_->DrawCommonSetting();
     //-----Spriteの描画開始-----
@@ -40,11 +40,11 @@ void GameScene::Draw() {
     //-------------------------
 
     //-----3DObjectの開始-----
-  
+
     //-----------------------
 
     //------Particleの描画開始-------
-   
+
     //-----------------------------
 
     /// Spriteの描画準備
@@ -81,7 +81,6 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
-   
 }
 
 void GameScene::AddParticleSetting() {

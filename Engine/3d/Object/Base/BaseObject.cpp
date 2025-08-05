@@ -118,6 +118,7 @@ void BaseObject::AddChild(BaseObject *child) {
 
 void BaseObject::DetachParent() {
     if (parent_) {
+        parent_->children_.remove(this);
         parent_ = nullptr;
         if (transform_) {
             transform_->parent_ = nullptr;
@@ -220,64 +221,17 @@ std::vector<std::string> BaseObject::GetChildrenNames() const {
 }
 
 Vector3 BaseObject::GetWorldPosition() {
-
-    // ワールド行列の平行移動成分を取得
-    worldPos.x = transform_->matWorld_.m[3][0];
-    worldPos.y = transform_->matWorld_.m[3][1];
-    worldPos.z = transform_->matWorld_.m[3][2];
-    return worldPos;
+    return transform_->GetWorldPosition();
 }
 
 // ワールド行列からクォータニオンを取得
-Quaternion BaseObject::GetWorldRotation(){
-    const Matrix4x4 &m = transform_->matWorld_;
-
-    // 回転行列の要素からクォータニオンを生成
-    float trace = m.m[0][0] + m.m[1][1] + m.m[2][2];
-  
-
-    if (trace > 0.0f) {
-        float s = 0.5f / sqrtf(trace + 1.0f);
-        q.w = 0.25f / s;
-        q.x = (m.m[2][1] - m.m[1][2]) * s;
-        q.y = (m.m[0][2] - m.m[2][0]) * s;
-        q.z = (m.m[1][0] - m.m[0][1]) * s;
-    } else {
-        if (m.m[0][0] > m.m[1][1] && m.m[0][0] > m.m[2][2]) {
-            float s = 2.0f * sqrtf(1.0f + m.m[0][0] - m.m[1][1] - m.m[2][2]);
-            q.w = (m.m[2][1] - m.m[1][2]) / s;
-            q.x = 0.25f * s;
-            q.y = (m.m[0][1] + m.m[1][0]) / s;
-            q.z = (m.m[0][2] + m.m[2][0]) / s;
-        } else if (m.m[1][1] > m.m[2][2]) {
-            float s = 2.0f * sqrtf(1.0f + m.m[1][1] - m.m[0][0] - m.m[2][2]);
-            q.w = (m.m[0][2] - m.m[2][0]) / s;
-            q.x = (m.m[0][1] + m.m[1][0]) / s;
-            q.y = 0.25f * s;
-            q.z = (m.m[1][2] + m.m[2][1]) / s;
-        } else {
-            float s = 2.0f * sqrtf(1.0f + m.m[2][2] - m.m[0][0] - m.m[1][1]);
-            q.w = (m.m[1][0] - m.m[0][1]) / s;
-            q.x = (m.m[0][2] + m.m[2][0]) / s;
-            q.y = (m.m[1][2] + m.m[2][1]) / s;
-            q.z = 0.25f * s;
-        }
-    }
-
-    return q.Normalize(); // 正規化して返す
+Quaternion BaseObject::GetWorldRotation() {
+    return transform_->GetWorldRotation();
 }
 
 // ワールドスケールを取得（回転を考慮）
 Vector3 BaseObject::GetWorldScale() {
-  
-    const Matrix4x4 &m = transform_->matWorld_;
-
-    // 各軸のベクトルの長さをスケールとして取得
-    worldScale.x = std::sqrt(m.m[0][0] * m.m[0][0] + m.m[0][1] * m.m[0][1] + m.m[0][2] * m.m[0][2]);
-    worldScale.y = std::sqrt(m.m[1][0] * m.m[1][0] + m.m[1][1] * m.m[1][1] + m.m[1][2] * m.m[1][2]);
-    worldScale.z = std::sqrt(m.m[2][0] * m.m[2][0] + m.m[2][1] * m.m[2][1] + m.m[2][2] * m.m[2][2]);
-
-    return worldScale;
+    return transform_->GetWorldScale();
 }
 
 void BaseObject::SaveToJson() {
@@ -307,7 +261,6 @@ void BaseObject::SaveToJson() {
     SaveParentChildRelationship();
 }
 
-
 void BaseObject::SceneSaveToJson() {
     // JSONデータを扱うハンドラを作成
     ObjectDatas_ = std::make_unique<DataHandler>(foldarPath_, objectName_);
@@ -323,7 +276,9 @@ void BaseObject::SceneSaveToJson() {
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
-    ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
+    if (parent_) {
+        ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
+    }
 
     // カラーとライティング設定も保存
     Vector4 color = objColor_.GetColor();
@@ -375,7 +330,7 @@ void BaseObject::LoadFromJson() {
     LoadParentChildRelationship();
 }
 
-void BaseObject::LoadFromJson(std::string folderPath,std::string jsonName) {
+void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
     // JSONデータを扱うハンドラを作成
     ObjectDatas_ = std::make_unique<DataHandler>(folderPath, jsonName);
 
@@ -427,7 +382,6 @@ void BaseObject::AnimaLoadFromJson() {
     isLoop_ = AnimaDatas_->Load<bool>("Loop", false);
 }
 
-
 void BaseObject::DebugCollider() {
     for (auto &collider : colliders_) {
         collider->OffsetImgui();
@@ -441,7 +395,6 @@ Vector3 BaseObject::GetCenterPosition() {
 Quaternion BaseObject::GetCenterRotation() {
     return GetWorldRotation();
 }
-
 
 void BaseObject::ImGui() {
 #ifdef _DEBUG

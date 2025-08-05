@@ -15,9 +15,15 @@ struct ConstBufferDataViewProjection {
 
 class ViewProjection {
   public:
-    // ローカル回転角
-    Quaternion rotation_ = Quaternion::IdentityQuaternion();
-    // ローカル座標
+    // 回転モード切り替えフラグ（trueならクォータニオン、falseならオイラー角）
+    bool isUseQuaternion_ = true;
+
+    // クォータニオン回転
+    Quaternion quateRotation_ = Quaternion::IdentityQuaternion();
+
+    // オイラー角回転（ラジアン）
+    Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};
+
     Vector3 translation_ = {0.0f, 0.0f, -10.0f};
 
     // 垂直方向視野角

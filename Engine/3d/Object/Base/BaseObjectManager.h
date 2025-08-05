@@ -25,7 +25,7 @@ class BaseObjectManager {
     void AddObject(std::unique_ptr<BaseObject> baseObject);
 
     void Update();
-    void DrawImGui();
+    void DrawHierarchyEditor();
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
 
     void UpdateImGui();

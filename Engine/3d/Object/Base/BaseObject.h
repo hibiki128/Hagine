@@ -28,9 +28,7 @@ class BaseObject : public Collider {
     // ベースのワールド変換データ
     std::unique_ptr<WorldTransform> transform_;
 
-    Vector3 worldPos;
     Quaternion q;
-    Vector3 worldScale;
     // カラー
     ObjColor objColor_;
     // ライティング

@@ -107,17 +107,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Application\Camera\FollowCamera.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp" />
-    <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp" />
-    <ClCompile Include="Application\GameObject\Field\SkyDome\SkyDome.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Player.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Air\PlayerStateAir.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Fly\PlayerStateFlyIdle.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateIdle.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateJump.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateMove.cpp" />
     <ClCompile Include="Application\Scene\ClearScene.cpp" />
     <ClCompile Include="Application\Scene\DemoScene.cpp" />
     <ClCompile Include="Application\Scene\GameScene.cpp" />
@@ -128,6 +117,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Utility\Shake\Shake.cpp" />
     <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp" />
     <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
+    <ClCompile Include="Engine\3d\Camera\FollowCamera\FollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp" />
     <ClCompile Include="Engine\Math\Easing.cpp" />
@@ -146,8 +136,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\ImGuizmo.cpp" />
     <ClCompile Include="Engine\3d\Model\Material\Material.cpp" />
     <ClCompile Include="Engine\3d\Model\Mesh\Mesh.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Fly\PlayerStateFlyMove.cpp" />
     <ClCompile Include="Engine\3d\Animation\ModelAnimation.cpp" />
     <ClCompile Include="Engine\3d\Animation\Bone.cpp" />
     <ClCompile Include="Engine\3d\Animation\Animator.cpp" />
@@ -199,14 +187,12 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\Animation\Skin.cpp" />
     <ClCompile Include="Engine\Utility\ShowFolder\ShowFolder.cpp" />
     <ClCompile Include="Engine\3d\SkyBox\SkyBox.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
     <ClCompile Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.cpp" />
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectChain.cpp" />
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectRenderer.cpp" />
     <ClCompile Include="Engine\OffScreen\RendererBuffer.cpp" />
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParameters.cpp" />
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectDataManager.cpp" />
-    <ClCompile Include="application\GameObject\Player\State\Action\PlayerStateRush.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".claudiaideconfig" />
@@ -246,19 +232,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application\Camera\FollowCamera.h" />
-    <ClInclude Include="Application\GameObject\Enemy\Enemy.h" />
-    <ClInclude Include="Application\GameObject\Field\Ground\Ground.h" />
-    <ClInclude Include="Application\GameObject\Field\SkyDome\SkyDome.h" />
-    <ClInclude Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.h" />
-    <ClInclude Include="Application\GameObject\Player\Player.h" />
-    <ClInclude Include="Application\GameObject\Player\PlayerData.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Air\PlayerStateAir.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Base\PlayerBaseState.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Fly\PlayerStateFlyIdle.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateIdle.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateJump.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateMove.h" />
     <ClInclude Include="Application\Scene\ClearScene.h" />
     <ClInclude Include="Application\Scene\DemoScene.h" />
     <ClInclude Include="Application\Scene\GameScene.h" />
@@ -268,7 +241,9 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h" />
     <ClInclude Include="Application\Utility\Shake\Shake.h" />
     <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
+    <ClInclude Include="Engine\2d\SpriteStruct.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
+    <ClInclude Include="Engine\3d\Camera\FollowCamera\FollowCamera.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
     <ClInclude Include="Engine\3d\Transform\ObjColor.h" />
     <ClInclude Include="Engine\Math\Easing.h" />
@@ -292,8 +267,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\ImGuizmo.h" />
     <ClInclude Include="Engine\3d\Model\Material\Material.h" />
     <ClInclude Include="Engine\3d\Model\Mesh\Mesh.h" />
-    <ClInclude Include="Application\GameObject\Player\Bullet\PlayerBullet.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Fly\PlayerStateFlyMove.h" />
     <ClInclude Include="Engine\3d\Animation\ModelAnimation.h" />
     <ClInclude Include="Engine\3d\Animation\Bone.h" />
     <ClInclude Include="Engine\3d\Animation\Animator.h" />
@@ -352,8 +325,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\OffScreen\RendererBuffer.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParameters.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h" />
-    <ClInclude Include="Application\GameObject\Player\Hand\PlayerHand.h" />
-    <ClInclude Include="application\GameObject\Player\State\Action\PlayerStateRush.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
   </ItemGroup>
