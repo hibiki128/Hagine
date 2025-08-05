@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include "Sprite.h"
 #include "SpriteCommon.h"
 #include <Graphics/Texture/TextureManager.h>
@@ -6,6 +7,7 @@
 void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Vector4 color, Vector2 anchorpoint, bool isFlipX, bool isFlipY) {
     // 引数で受け取ってメンバ変数に記録する
     spriteCommon_ = SpriteCommon::GetInstance();
+    srvManager_ = TextureManager::GetInstance()->GetSrvManager();
 
     fullpath = textureFilePath;
 
@@ -24,6 +26,19 @@ void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Ve
     isFlipY_ = isFlipY;
 
     AdjustTextureSize();
+}
+
+void Sprite::SetInstanceCount(uint32_t count) {
+    // バッファサイズを超えないようにチェック
+    const uint32_t maxInstances = 1000; // CreateTransformationMatrixと同じ値
+    instanceCount = std::min(count, maxInstances);
+}
+
+void Sprite::SetInstanceTransform(uint32_t index, const TransformationMatrix &transform) {
+    const uint32_t maxInstances = 1000; // 最大インスタンス数
+    if (index < instanceCount && index < maxInstances && transformationMatrixData != nullptr) {
+        transformationMatrixData[index] = transform;
+    }
 }
 
 void Sprite::Update(bool isbackmost_) {
@@ -96,19 +111,15 @@ void Sprite::Update(bool isbackmost_) {
 void Sprite::Draw(bool isBackMost) {
     Update(isBackMost);
     SpriteCommon::GetInstance()->DrawCommonSetting();
-    // Spriteの描画。変更が必要な物だけ変更する
-    spriteCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView); // VBVを設定
-    // IBVを設定
+
+    spriteCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
     spriteCommon_->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&indexBufferView);
-    // マテリアルCBufferの場所を設定
     spriteCommon_->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
-    // TransformationMatrixCBufferの場所を設定
-    spriteCommon_->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
-    // 使うSRVの切り替え
-    srvManager_ = TextureManager::GetInstance()->GetSrvManager();
+
+    srvManager_->SetGraphicsRootDescriptorTable(1, transformationMatrixSrvIndex);
     srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(fullpath));
-    // 描画！(DrawCall/ドローコール)
-    spriteCommon_->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+    spriteCommon_->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(6, instanceCount, 0, 0, 0);
 }
 
 void Sprite::SetTexturePath(std::string textureFilePath) {
@@ -119,13 +130,13 @@ void Sprite::SetTexturePath(std::string textureFilePath) {
 
 void Sprite::CreateVartexData() {
     // Sprite用の頂点リソースを作る
-    vertexResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(VertexData) * 6);
+    vertexResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(SpriteVertexData) * 6);
     // リソースの先頭のアドレスから使う
     vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
     // 使用するリソースのサイズは頂点6つ分のサイズ
-    vertexBufferView.SizeInBytes = sizeof(VertexData) * 6;
+    vertexBufferView.SizeInBytes = sizeof(SpriteVertexData) * 6;
     // 1頂点あたりのサイズ
-    vertexBufferView.StrideInBytes = sizeof(VertexData);
+    vertexBufferView.StrideInBytes = sizeof(SpriteVertexData);
 
     // 頂点データの設定
     vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData));
@@ -145,7 +156,7 @@ void Sprite::CreateVartexData() {
 
 void Sprite::CreateMaterial() {
     // Sprite用のマテリアルリソースをつくる
-    materialResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(Material));
+    materialResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(SpriteMaterial));
     // 書き込むためのアドレスを取得
     materialResource->Map(0, nullptr, reinterpret_cast<void **>(&materialData));
     // 色の設定
@@ -155,12 +166,20 @@ void Sprite::CreateMaterial() {
 }
 
 void Sprite::CreateTransformationMatrix() {
-    transformationMatrixResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(TransformationMatrix));
-    // 書き込むかめのアドレスを取得
+    // 最大インスタンス数を想定してバッファを作成
+    uint32_t maxInstances = 1000; // または必要な最大数
+    transformationMatrixResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(TransformationMatrix) * maxInstances);
     transformationMatrixResource->Map(0, nullptr, reinterpret_cast<void **>(&transformationMatrixData));
-    // 単位行列を書き込んでおく
-    transformationMatrixData->WVP = MakeIdentity4x4();
-    transformationMatrixData->World = MakeIdentity4x4();
+
+    // 初期化
+    for (uint32_t i = 0; i < maxInstances; ++i) {
+        transformationMatrixData[i].WVP = MakeIdentity4x4();
+        transformationMatrixData[i].World = MakeIdentity4x4();
+    }
+
+    srvManager_ = TextureManager::GetInstance()->GetSrvManager();
+    transformationMatrixSrvIndex = srvManager_->Allocate() + 1;
+    srvManager_->CreateSRVforStructuredBuffer(transformationMatrixSrvIndex, transformationMatrixResource.Get(), maxInstances, sizeof(TransformationMatrix));
 }
 
 void Sprite::AdjustTextureSize() {

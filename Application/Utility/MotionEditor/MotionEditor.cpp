@@ -714,7 +714,6 @@ void MotionEditor::DrawCatmullRomCurve() {
 }
 
 void MotionEditor::DrawImGui() {
-    ImGui::Begin("モーションエディター");
 
     if (!motions_.empty()) {
         std::vector<const char *> names;
@@ -853,7 +852,6 @@ void MotionEditor::DrawImGui() {
             }
         }
     }
-    ImGui::End();
 }
 
 void MotionEditor::Save(const std::string &fileName) {

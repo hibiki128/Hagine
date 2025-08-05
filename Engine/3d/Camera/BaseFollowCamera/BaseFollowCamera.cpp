@@ -33,7 +33,7 @@ void BaseFollowCamera::Update() {
 
 	// ビュー行列にカメラの位置を反映
 	viewProjection_.translation_ = worldTransform_.translation_;
-	viewProjection_.rotation_ = worldTransform_.quateRotation_;
+	viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
 	viewProjection_.matWorld_ = worldTransform_.matWorld_;
 
 	// ビュー行列の更新

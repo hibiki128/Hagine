@@ -10,9 +10,6 @@ void GameScene::Initialize() {
     vp_.Initialize();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
-    /// ===================================================
-    /// 生成
-    /// ===================================================
     debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
@@ -97,8 +94,7 @@ void GameScene::Draw() {
     //-----------------------
 
     //------Particleの描画開始-------
-    enemy_ptr->DrawParticle(vp_);
-    player_ptr->DrawParticle(vp_);
+
     //-----------------------------
 
     /// Spriteの描画準備

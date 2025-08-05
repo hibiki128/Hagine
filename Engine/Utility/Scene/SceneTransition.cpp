@@ -1,9 +1,10 @@
 #include "SceneTransition.h"
 #include "Easing.h"
+#include "Engine/Frame/Frame.h"
 #include "SpriteCommon.h"
 #include "algorithm"
-#include "Engine/Frame/Frame.h"
 #include <vector>
+#include"myMath.h"
 
 SceneTransition::SceneTransition() {}
 
@@ -13,36 +14,38 @@ void SceneTransition::Initialize() {
     sprite_ = std::make_unique<Sprite>();
     sprite_->Initialize("debug/black1x1.png", {0, 0}, {1.0f, 1.0f, 1.0f, 1.0f});
     sprite_->SetSize(Vector2(WinApp::kClientWidth, WinApp::kClientHeight)); // 画面全体を覆うサイズ
-    sprite_->SetAlpha(0.0f);              // 最初は完全に透明
-    duration_ = 1.0f;                     // フェードの持続時間（例: 1秒）
-    counter_ = 0.0f;                      // 経過時間カウンターを初期化
+    sprite_->SetAlpha(0.0f);                                                // 最初は完全に透明
+    duration_ = 1.0f;                                                       // フェードの持続時間（例: 1秒）
+    counter_ = 0.0f;                                                        // 経過時間カウンターを初期化
     fadeInFinish = false;
     fadeOutFinish = false;
     fadeInStart = false;
     fadeOutStart = false;
     isEnd = false;
 
-    // transition_ 配列の初期化
-    int rows = 15;                                   // 縦方向のスプライト数
-    int cols = 23;                                   // 横方向のスプライト数
+    // インスタンシング用の初期化
+    rows_ = 15;                                      // 縦方向のスプライト数
+    cols_ = 23;                                      // 横方向のスプライト数
     float size = 0.0f;                               // 初期サイズを 0.0f に設定
     Vector4 defaultColor = {1.0f, 1.0f, 1.0f, 1.0f}; // スプライトの初期色
 
-    // 配列のサイズを設定
-    transition_.resize(rows);
+    // インスタンシング用Spriteを作成
+    transitionSprite_ = std::make_unique<Sprite>();
+    transitionSprite_->Initialize("debug/black1x1.png", {0, 0}, defaultColor, {0.5f, 0.5f});
+    transitionSprite_->SetSize(Vector2(size, size));
 
-    // 各スプライトを初期化
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < cols; ++col) {
-            auto sprite = std::make_unique<Sprite>();
-            sprite->Initialize("debug/black1x1.png",
-                               {col * 80.0f, row * 80.0f}, // 位置を設定
-                               defaultColor,
-                               {0.5f, 0.5f});     // 中心をアンカーポイントに
-            sprite->SetSize(Vector2(size, size)); // 初期サイズを 0 に設定
-            transition_[row].emplace_back(std::move(sprite));
-        }
+    // インスタンス数を設定
+    totalInstances_ = rows_ * cols_;
+    transitionSprite_->SetInstanceCount(totalInstances_);
+
+    // 各インスタンスのサイズを保存する配列を初期化
+    instanceSizes_.resize(rows_);
+    for (int row = 0; row < rows_; ++row) {
+        instanceSizes_[row].resize(cols_, size);
     }
+
+    // 初期の変換行列を設定
+    UpdateTransitionInstances();
 }
 
 void SceneTransition::Update() {
@@ -50,12 +53,8 @@ void SceneTransition::Update() {
 }
 
 void SceneTransition::Draw() {
-    // 各スプライトを描画
-    for (const auto &row : transition_) {
-        for (const auto &sprite : row) {
-            sprite->Draw();
-        }
-    }
+    // インスタンシング描画で一度に全てのスプライトを描画
+    transitionSprite_->Draw();
 }
 
 void SceneTransition::Debug() {
@@ -88,7 +87,7 @@ void SceneTransition::FadeUpdate() {
 
 void SceneTransition::FadeIn() {
     // DefaultFadeIn();
-   ReverseFadeIn();
+    ReverseFadeIn();
 
     counter_ += 1.0f / 60.0f; // フレームレートを基にカウント（1フレームごとに0.0167秒進む）
     if (counter_ >= duration_) {
@@ -122,57 +121,100 @@ void SceneTransition::DefaultFadeOut() {
 }
 
 void SceneTransition::ReverseFadeIn() {
-    int rows = static_cast<int>(transition_.size());
-    int cols = static_cast<int>(transition_[0].size());
     // 遅延の最大値（秒）
     const float maxDelay = 0.3f;
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < cols; ++col) {
+    bool needsUpdate = false;
+
+    for (int row = 0; row < rows_; ++row) {
+        for (int col = 0; col < cols_; ++col) {
             // 位置に基づいて遅延を計算（左上から右下へ）
-            float delay = ((float)(row + col) / (float)(rows + cols - 2)) * maxDelay;
+            float delay = ((float)(row + col) / (float)(rows_ + cols_ - 2)) * maxDelay;
             // カウンターから遅延を引いた値を使用
             float localTime = counter_ - delay;
+            float newSize = 0.0f; // 毎フレーム初期化
+
             if (localTime >= 0.0f && localTime <= duration_) {
                 // イージング関数で0 → 80に拡大
                 float progress = localTime / duration_;
-                float newSize = EaseInSine<float>(0.0f, 80.0f, progress, 0.4f);
-                transition_[row][col]->SetSize(Vector2(newSize, newSize));
+                newSize = EaseInSine<float>(0.0f, 80.0f, progress, 0.4f);
             } else if (localTime > duration_) {
                 // 最大サイズに到達したら固定
-                transition_[row][col]->SetSize(Vector2(80.0f, 80.0f));
-            } else if (localTime < 0.0f) {
+                newSize = 80.0f;
+            } else {
                 // 遅延待ち中は初期サイズを維持
-                transition_[row][col]->SetSize(Vector2(0.0f, 0.0f));
+                newSize = 0.0f;
             }
+
+            // 常に更新（サイズが変わらなくても）
+            instanceSizes_[row][col] = newSize;
+            needsUpdate = true;
         }
+    }
+
+    // 毎フレーム更新
+    if (needsUpdate) {
+        UpdateTransitionInstances();
     }
 }
 
 void SceneTransition::ReverseFadeOut() {
-    int rows = static_cast<int>(transition_.size());
-    int cols = static_cast<int>(transition_[0].size());
     // 遅延の最大値（秒）
     const float maxDelay = 0.3f;
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < cols; ++col) {
+    bool needsUpdate = false;
+
+    for (int row = 0; row < rows_; ++row) {
+        for (int col = 0; col < cols_; ++col) {
             // 位置に基づいて遅延を計算（右下から左上へ）
             // (rows-1-row)と(cols-1-col)で座標を反転
-            float delay = ((float)((rows - 1 - row) + (cols - 1 - col)) / (float)(rows + cols - 2)) * maxDelay;
+            float delay = ((float)((rows_ - 1 - row) + (cols_ - 1 - col)) / (float)(rows_ + cols_ - 2)) * maxDelay;
 
             // カウンターから遅延を引いた値を使用
             float localTime = counter_ - delay;
+            float newSize = instanceSizes_[row][col];
+
             if (localTime >= 0.0f && localTime <= duration_) {
                 // counter_が1→0で変化
                 float progress = localTime / duration_;
-                float newSize = EaseInSine<float>(0.0f, 80.0f, progress, 0.4f);
-                transition_[row][col]->SetSize(Vector2(newSize, newSize));
+                newSize = EaseInSine<float>(0.0f, 80.0f, progress, 0.4f);
+                needsUpdate = true;
             } else if (localTime > duration_) {
                 // サイズが 0 に到達したら固定
-                transition_[row][col]->SetSize(Vector2(0.0f, 0.0f));
+                newSize = 0.0f;
             } else if (localTime < 0.0f) {
                 // 遅延待ち中も0サイズを維持
-                transition_[row][col]->SetSize(Vector2(0.0f, 0.0f));
+                newSize = 0.0f;
             }
+
+            if (instanceSizes_[row][col] != newSize) {
+                instanceSizes_[row][col] = newSize;
+                needsUpdate = true;
+            }
+        }
+    }
+
+    if (needsUpdate) {
+        UpdateTransitionInstances();
+    }
+}
+
+void SceneTransition::UpdateTransitionInstances() {
+    int instanceIndex = 0;
+    for (int row = 0; row < rows_; ++row) {
+        for (int col = 0; col < cols_; ++col) {
+            Vector2 position = {col * 80.0f, row * 80.0f};
+            float size = instanceSizes_[row][col];
+
+            Transform transform{{size, size, 1.0f}, {0.0f, 0.0f, 0.0f}, {position.x, position.y, 0.0f}};
+            Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+            Matrix4x4 viewMatrix = MakeIdentity4x4();
+            Matrix4x4 projectionMatrix = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
+
+            TransformationMatrix transformMatrix;
+            transformMatrix.WVP = worldMatrix * viewMatrix * projectionMatrix;
+            transformMatrix.World = worldMatrix;
+
+            transitionSprite_->SetInstanceTransform(instanceIndex, transformMatrix);
+            instanceIndex++;
         }
     }
 }
@@ -186,4 +228,12 @@ void SceneTransition::Reset() {
     fadeOutStart = false;
     isEnd = false;
     sprite_->SetAlpha(0.0f); // 最初の透明状態に戻す
+
+    // 全インスタンスのサイズを0にリセット
+    for (int row = 0; row < rows_; ++row) {
+        for (int col = 0; col < cols_; ++col) {
+            instanceSizes_[row][col] = 0.0f;
+        }
+    }
+    UpdateTransitionInstances();
 }

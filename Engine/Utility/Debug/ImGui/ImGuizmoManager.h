@@ -8,6 +8,11 @@
 #include <unordered_map>
 #include <vector>
 
+struct Ray {
+    Vector3 origin;
+    Vector3 direction;
+};
+
 class ImGuizmoManager {
   private:
     static ImGuizmoManager *instance;
@@ -47,22 +52,26 @@ class ImGuizmoManager {
     void AddTarget(const std::string &name, BaseObject *transform);
 
     /// <summary>ImGui更新処理（sceneWindowの位置・サイズが必要）</summary>
+    void imgui();
+
     void Update(const ImVec2 &scenePosition, const ImVec2 &sceneSize);
-
-    void DecomposeMatrixToLocal(const Matrix4x4 &matrix, WorldTransform *transform);
-
-    Matrix4x4 CreateLocalMatrix(WorldTransform *transform);
 
     /// <summary>現在選択されているWorldTransformを取得</summary>
     BaseObject *GetSelectedTarget();
 
     void DeleteTarget() { transformMap.clear(); }
-    void DeleteSelectedObject();
   private:
-    void ApplyLocalMatrix(const Matrix4x4 &matrix, WorldTransform *transform);
-    void ConvertMatrix4x4ToFloat16(const Matrix4x4 &matrix, float *outMatrix);
-    void ConvertFloat16ToMatrix4x4(const float *inMatrix, Matrix4x4 &outMatrix);
-    void DecomposeMatrix(WorldTransform *transform);
+
+    void ShowSelectedObjectImGui();
+    void DeleteSelectedObject();
+    void CollectChildrenForDeletion(BaseObject *obj, std::vector<std::string> &deleteList);
+    void HandleMouseSelection(const ImVec2 &scenePosition, const ImVec2 &sceneSize);
+    void DisplayGizmo(WorldTransform *transform);
+    void DecomposeMatrix(const Matrix4x4 &matrix, Vector3 &position, Quaternion &rotation, Vector3 &scale);
+    Ray CreateMouseRay(const ImVec2 &mousePos, const ImVec2 &scenePosition, const ImVec2 &sceneSize);
+    bool RayIntersectObject(const Ray &ray, BaseObject *obj, float &distance);
+    bool RayIntersectSphere(const Ray &ray, const Vector3 &center, float radius, float &distance);
+    bool WorldToScreen(const Vector3 &worldPos, Vector3 &screenPos, const ImVec2 &scenePosition, const ImVec2 &sceneSize);
 };
 
 #endif // _DEBUG

@@ -2,6 +2,7 @@
 #ifdef _DEBUG
 #include "ImGuizmoManager.h"
 #include "Input.h"
+#include <Line/DrawLine3D.h>
 #include <Object/Base/BaseObjectManager.h>
 #include <Transform/WorldTransform.h>
 
@@ -43,120 +44,68 @@ BaseObject *ImGuizmoManager::GetSelectedTarget() {
     return (it != transformMap.end()) ? it->second : nullptr;
 }
 
-void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSize) {
-    // メインウィンドウのスタイル設定
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12, 12));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 6));
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.8f, 0.3f));
+void ImGuizmoManager::imgui() {
+    if (!viewProjection) {
+        return;
+    }
+    BaseObject *selectedObject = GetSelectedTarget();
 
-    ImGui::Begin("トランスフォームマネージャ", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
-    BaseObject *targetTransform = nullptr;
-
-    // === オブジェクト選択セクション ===
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.6f, 1.0f));
-    ImGui::Text("オブジェクト選択");
-    ImGui::PopStyleColor();
-    ImGui::Separator();
-
-    if (!transformMap.empty()) {
-        std::vector<const char *> names;
-        int currentIndex = 0;
-        int i = 0;
-        for (const auto &pair : transformMap) {
-            names.push_back(pair.first.c_str());
-            if (pair.first == selectedName)
-                currentIndex = i;
-            i++;
-        }
-
-        ImGui::PushItemWidth(200);
-        if (ImGui::Combo("##ObjectSelector", &currentIndex, names.data(), static_cast<int>(names.size()))) {
-            selectedName = names[currentIndex];
-        }
-        ImGui::PopItemWidth();
-
-        ImGui::SameLine();
-        if (ImGui::Button("更新"))
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("リフレッシュ");
-
-        // 選択されたオブジェクト情報を表示
-        if (!selectedName.empty()) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 1.0f, 0.7f, 1.0f));
-            ImGui::Text("選択中: %s", selectedName.c_str());
-            ImGui::PopStyleColor();
-        }
-
-        targetTransform = GetSelectedTarget();
-    } else {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
-        ImGui::Text("Transformが登録されていません。");
-        ImGui::PopStyleColor();
+    // 操作モード選択
+    if (ImGui::RadioButton("移動", currentOperation == ImGuizmo::TRANSLATE)) {
+        currentOperation = ImGuizmo::TRANSLATE;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("回転", currentOperation == ImGuizmo::ROTATE)) {
+        currentOperation = ImGuizmo::ROTATE;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("スケール", currentOperation == ImGuizmo::SCALE)) {
+        currentOperation = ImGuizmo::SCALE;
     }
 
-    ImGui::Spacing();
-    ImGui::Spacing();
+    // 座標系選択
+    if (ImGui::RadioButton("ローカル", currentMode == ImGuizmo::LOCAL)) {
+        currentMode = ImGuizmo::LOCAL;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("ワールド", currentMode == ImGuizmo::WORLD)) {
+        currentMode = ImGuizmo::WORLD;
+    }
 
-    // === 操作モードセクション ===
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.6f, 1.0f));
-    ImGui::Text("操作モード");
-    ImGui::PopStyleColor();
     ImGui::Separator();
 
-    // 操作タイプ選択
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.6f, 0.3f, 0.8f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+    // オブジェクト選択コンボボックス
+    if (ImGui::BeginCombo("選択オブジェクト", selectedName.empty() ? "なし" : selectedName.c_str())) {
+        // "なし"オプションを追加
+        bool isNoneSelected = selectedName.empty();
+        if (ImGui::Selectable("なし", isNoneSelected)) {
+            selectedName.clear();
+        }
+        if (isNoneSelected) {
+            ImGui::SetItemDefaultFocus();
+        }
 
-    if (ImGui::RadioButton("位置", currentOperation == ImGuizmo::TRANSLATE))
-        currentOperation = ImGuizmo::TRANSLATE;
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("オブジェクトを移動します");
-
-    ImGui::SameLine();
-    if (ImGui::RadioButton("回転", currentOperation == ImGuizmo::ROTATE))
-        currentOperation = ImGuizmo::ROTATE;
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("オブジェクトを回転します");
-
-    ImGui::SameLine();
-    if (ImGui::RadioButton("大きさ", currentOperation == ImGuizmo::SCALE))
-        currentOperation = ImGuizmo::SCALE;
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("オブジェクトのサイズを変更します");
-
-    ImGui::PopStyleColor(2);
-
-    ImGui::Spacing();
-
-    // 座標系選択
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.3f, 0.6f, 0.8f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.4f, 0.8f, 1.0f));
-
-    if (ImGui::RadioButton("ローカル", currentMode == ImGuizmo::LOCAL))
-        currentMode = ImGuizmo::LOCAL;
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("オブジェクトのローカル座標系で操作");
-
-    ImGui::SameLine();
-    if (ImGui::RadioButton("ワールド", currentMode == ImGuizmo::WORLD))
-        currentMode = ImGuizmo::WORLD;
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("ワールド座標系で操作");
-
-    ImGui::PopStyleColor(2);
-
-    ImGui::Spacing();
+        for (const auto &pair : transformMap) {
+            bool isSelected = (selectedName == pair.first);
+            if (ImGui::Selectable(pair.first.c_str(), isSelected)) {
+                selectedName = pair.first;
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
     ImGui::Spacing();
 
     // === オブジェクト詳細セクション ===
-    if (targetTransform) {
+    if (selectedObject) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.6f, 1.0f));
         ImGui::Text("オブジェクト詳細");
         ImGui::PopStyleColor();
         ImGui::Separator();
 
-        targetTransform->ImGui();
+        ShowSelectedObjectImGui();
 
         ImGui::Spacing();
         ImGui::Spacing();
@@ -176,159 +125,38 @@ void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSiz
         ImGui::PopStyleColor(3);
     }
 
-    ImGui::PopStyleColor(); // Header color
-    ImGui::PopStyleVar(2);  // Window padding and item spacing
-    ImGui::End();
+    ImGui::Separator();
+}
 
-    if (!viewProjection)
+void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSize) {
+    if (!viewProjection) {
         return;
-
-    // === マウスピック処理 ===
-    float mouseX = Input::GetInstance()->GetMousePos().x;
-    float mouseY = Input::GetInstance()->GetMousePos().y;
-    bool leftClicked = Input::GetInstance()->IsTriggerMouse(0);
-
-    static std::string lastPickedName;
-    static bool gizmoActive = false;
-
-    // シーンウィンドウ内か判定
-    if (mouseX >= scenePosition.x && mouseX <= scenePosition.x + sceneSize.x &&
-        mouseY >= scenePosition.y && mouseY <= scenePosition.y + sceneSize.y) {
-
-        if (leftClicked) {
-            // 最も近いオブジェクトを1つだけ判定
-            float minDistSq = std::numeric_limits<float>::max();
-            std::string pickedName;
-            for (const auto &pair : transformMap) {
-                BaseObject *obj = pair.second;
-                // ワールド座標を使用
-                Vector3 worldPos = obj->GetWorldPosition();
-
-                // ワールド座標をスクリーン座標に変換
-                Vector3 screenPos;
-                {
-                    // ビュー射影変換
-                    Vector3 v = worldPos;
-                    float x = v.x * viewProjection->matView_.m[0][0] + v.y * viewProjection->matView_.m[1][0] + v.z * viewProjection->matView_.m[2][0] + viewProjection->matView_.m[3][0];
-                    float y = v.x * viewProjection->matView_.m[0][1] + v.y * viewProjection->matView_.m[1][1] + v.z * viewProjection->matView_.m[2][1] + viewProjection->matView_.m[3][1];
-                    float z = v.x * viewProjection->matView_.m[0][2] + v.y * viewProjection->matView_.m[1][2] + v.z * viewProjection->matView_.m[2][2] + viewProjection->matView_.m[3][2];
-                    float w = v.x * viewProjection->matView_.m[0][3] + v.y * viewProjection->matView_.m[1][3] + v.z * viewProjection->matView_.m[2][3] + viewProjection->matView_.m[3][3];
-                    // 射影
-                    float px = x * viewProjection->matProjection_.m[0][0] + y * viewProjection->matProjection_.m[1][0] + z * viewProjection->matProjection_.m[2][0] + w * viewProjection->matProjection_.m[3][0];
-                    float py = x * viewProjection->matProjection_.m[0][1] + y * viewProjection->matProjection_.m[1][1] + z * viewProjection->matProjection_.m[2][1] + w * viewProjection->matProjection_.m[3][1];
-                    float pz = x * viewProjection->matProjection_.m[0][2] + y * viewProjection->matProjection_.m[1][2] + z * viewProjection->matProjection_.m[2][2] + w * viewProjection->matProjection_.m[3][2];
-                    float pw = x * viewProjection->matProjection_.m[0][3] + y * viewProjection->matProjection_.m[1][3] + z * viewProjection->matProjection_.m[2][3] + w * viewProjection->matProjection_.m[3][3];
-                    if (pw != 0.0f) {
-                        screenPos.x = px / pw;
-                        screenPos.y = py / pw;
-                        screenPos.z = pz / pw;
-                    } else {
-                        screenPos.x = screenPos.y = screenPos.z = 0.0f;
-                    }
-                }
-                // NDC→ウィンドウ座標
-                float sx = scenePosition.x + (screenPos.x * 0.5f + 0.5f) * sceneSize.x;
-                float sy = scenePosition.y + (0.5f - screenPos.y * 0.5f) * sceneSize.y;
-
-                float dx = mouseX - sx;
-                float dy = mouseY - sy;
-                float distSq = dx * dx + dy * dy;
-
-                // ワールドスケールを使用
-                Vector3 worldScale = obj->GetWorldScale();
-                float radius = worldScale.x;
-                float screenRadius = radius * 100.0f; // 適当なスケール（必要に応じて調整）
-
-                if (distSq < screenRadius * screenRadius && distSq < minDistSq) {
-                    minDistSq = distSq;
-                    pickedName = pair.first;
-                }
-            }
-            if (!pickedName.empty()) {
-                selectedName = pickedName;
-                gizmoActive = true;
-                lastPickedName = pickedName;
-            } else {
-                gizmoActive = false;
-            }
-        }
     }
 
-    // === ImGuizmoの処理は必要条件を満たすときのみ ===
-    targetTransform = GetSelectedTarget();
-    if (!targetTransform || !gizmoActive)
-        return;
-
-    BaseObject *parent = targetTransform->GetParent();
-    Matrix4x4 operationMatrix;
-
-    if (parent != nullptr) {
-        // 親がいる場合：ローカル行列を使用
-        operationMatrix = CreateLocalMatrix(targetTransform->GetWorldTransform());
-    } else {
-        // 親がいない場合：ワールド行列を使用
-        operationMatrix = targetTransform->GetWorldTransform()->matWorld_;
-    }
-
-    float matrix[16];
-    ConvertMatrix4x4ToFloat16(operationMatrix, matrix);
-
-    float viewMatrix[16];
-    float projMatrix[16];
-    ConvertMatrix4x4ToFloat16(viewProjection->matView_, viewMatrix);
-    ConvertMatrix4x4ToFloat16(viewProjection->matProjection_, projMatrix);
-
-    ImGuizmo::SetDrawlist();
+    // ギズモ描画範囲の設定 (UIウィンドウが開いてなくても常に設定)
     ImGuizmo::SetRect(scenePosition.x, scenePosition.y, sceneSize.x, sceneSize.y);
+    ImGuizmo::SetDrawlist();
 
-    bool manipulated = ImGuizmo::Manipulate(
-        viewMatrix,
-        projMatrix,
-        currentOperation,
-        currentMode,
-        matrix);
+    // マウスクリック判定による選択（ギズモ操作中でない場合のみ）
+    if (!ImGuizmo::IsUsing()) {
+        HandleMouseSelection(scenePosition, sceneSize);
+    }
 
-    if (manipulated) {
-        Matrix4x4 newMatrix;
-        ConvertFloat16ToMatrix4x4(matrix, newMatrix);
-
-        if (parent != nullptr) {
-            // 親がいる場合：ローカル行列として処理
-            ApplyLocalMatrix(newMatrix, targetTransform->GetWorldTransform());
-        } else {
-            // 親がいない場合：従来通り
-            targetTransform->GetWorldTransform()->matWorld_ = newMatrix;
-            DecomposeMatrix(targetTransform->GetWorldTransform());
+    // 選択中オブジェクトに対してギズモ操作
+    BaseObject *selectedObject = GetSelectedTarget();
+    if (selectedObject) {
+        WorldTransform *transform = selectedObject->GetWorldTransform();
+        if (transform) {
+            DisplayGizmo(transform); // ImGuizmo::Manipulateを内部で呼ぶ
         }
-
-        targetTransform->GetWorldTransform()->TransferMatrix();
     }
 }
 
-void ImGuizmoManager::DecomposeMatrixToLocal(const Matrix4x4 &matrix, WorldTransform *transform) {
-    float matrixArray[16];
-    ConvertMatrix4x4ToFloat16(matrix, matrixArray);
-
-    float translation[3], rotation[3], scale[3];
-    ImGuizmo::DecomposeMatrixToComponents(
-        matrixArray,
-        translation, rotation, scale);
-
-    const float DEG_TO_RAD = 0.01745329251f;
-
-    transform->translation_ = {translation[0], translation[1], translation[2]};
-    transform->quateRotation_ = Quaternion::FromEulerAngles({rotation[0] * DEG_TO_RAD,
-                                                        rotation[1] * DEG_TO_RAD,
-                                                        rotation[2] * DEG_TO_RAD});
-    transform->scale_ = {scale[0], scale[1], scale[2]};
-}
-
-Matrix4x4 ImGuizmoManager::CreateLocalMatrix(WorldTransform *transform) {
-    Matrix4x4 scaleMatrix = MakeScaleMatrix(transform->scale_);
-    Matrix4x4 rotateMatrix = MakeRotateXYZMatrix(transform->quateRotation_);
-    Matrix4x4 translateMatrix = MakeTranslateMatrix(transform->translation_);
-
-    return (scaleMatrix * rotateMatrix) * translateMatrix;
+void ImGuizmoManager::ShowSelectedObjectImGui() {
+    BaseObject *selectedObject = GetSelectedTarget();
+    if (selectedObject && !selectedName.empty()) {
+        selectedObject->ImGui();
+    }
 }
 
 void ImGuizmoManager::DeleteSelectedObject() {
@@ -354,55 +182,335 @@ void ImGuizmoManager::DeleteSelectedObject() {
     }
 }
 
-// ローカル行列を適用
-void ImGuizmoManager::ApplyLocalMatrix(const Matrix4x4 &matrix, WorldTransform *transform) {
-    // 行列をローカル座標成分に分解
+void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const ImVec2 &sceneSize) {
+    ImVec2 mousePos = ImGui::GetMousePos();
+    bool isInScene = (mousePos.x >= scenePosition.x && mousePos.x <= scenePosition.x + sceneSize.x &&
+                      mousePos.y >= scenePosition.y && mousePos.y <= scenePosition.y + sceneSize.y);
+
+    if (!isInScene || !Input::IsTriggerMouse(0) || ImGuizmo::IsOver() || !viewProjection) {
+        return;
+    }
+
+    // より大きな判定範囲でフォールバック判定も追加
+    float minDistSq = std::numeric_limits<float>::max();
+    std::string pickedName;
+    bool foundRayHit = false;
+
+    // まずレイキャスティングで試す
+    Ray mouseRay = CreateMouseRay(mousePos, scenePosition, sceneSize);
+
+    for (const auto &pair : transformMap) {
+        BaseObject *obj = pair.second;
+        if (!obj)
+            continue;
+
+        float distance;
+        if (RayIntersectObject(mouseRay, obj, distance)) {
+            if (distance < minDistSq) {
+                minDistSq = distance;
+                pickedName = pair.first;
+                foundRayHit = true;
+            }
+        }
+    }
+
+    // レイキャスティングで見つからなかった場合、スクリーン座標での判定も試す
+    if (!foundRayHit) {
+        minDistSq = std::numeric_limits<float>::max();
+
+        for (const auto &pair : transformMap) {
+            BaseObject *obj = pair.second;
+            if (!obj)
+                continue;
+
+            Vector3 worldPos = obj->GetWorldPosition();
+            Vector3 screenPos;
+
+            // ワールド座標をスクリーン座標に変換
+            if (WorldToScreen(worldPos, screenPos, scenePosition, sceneSize)) {
+                float dx = mousePos.x - screenPos.x;
+                float dy = mousePos.y - screenPos.y;
+                float distSq = dx * dx + dy * dy;
+
+                Vector3 objScale = obj->GetWorldScale();
+                float maxScale = std::max({objScale.x, objScale.y, objScale.z});
+                float screenRadius = std::max(maxScale * 50.0f, 30.0f); // より大きな判定範囲
+
+                if (distSq < screenRadius * screenRadius && distSq < minDistSq) {
+                    minDistSq = distSq;
+                    pickedName = pair.first;
+                }
+            }
+        }
+    }
+
+    // 結果に応じて選択を更新
+    if (!pickedName.empty()) {
+        selectedName = pickedName;
+    } else {
+        selectedName.clear();
+    }
+}
+
+void ImGuizmoManager::DisplayGizmo(WorldTransform *transform) {
+    if (!transform || !viewProjection)
+        return;
+
+    BaseObject *selectedObject = GetSelectedTarget();
+    if (!selectedObject)
+        return;
+
+    Matrix4x4 worldMatrix;
+    Matrix4x4 parentMatrix = MakeIdentity4x4();
+
+    // 現在の操作モードに応じて適切な行列を使用
+    if (currentMode == ImGuizmo::LOCAL) {
+        // ローカルモード：親の変換を考慮したローカル変換行列を使用
+        if (selectedObject->GetParent()) {
+            // 親のワールド行列を取得
+            BaseObject *parent = selectedObject->GetParent();
+            WorldTransform *parentTransform = parent->GetWorldTransform();
+            if (parentTransform) {
+                parentMatrix = parentTransform->matWorld_;
+            }
+        }
+
+        // ローカル変換行列を作成
+        Matrix4x4 scaleMatrix = MakeScaleMatrix(selectedObject->GetLocalScale());
+        Matrix4x4 rotateMatrix = MakeRotateXYZMatrix(selectedObject->GetLocalRotation());
+        Matrix4x4 translateMatrix = MakeTranslateMatrix(selectedObject->GetLocalPosition());
+        Matrix4x4 localMatrix = scaleMatrix * rotateMatrix * translateMatrix;
+
+        worldMatrix = localMatrix * parentMatrix;
+    } else {
+        // ワールドモード：ワールド変換行列をそのまま使用
+        worldMatrix = transform->matWorld_;
+    }
+
+    // ImGuizmoで使用するため、行列を配列形式に変換
     float matrixArray[16];
-    ConvertMatrix4x4ToFloat16(matrix, matrixArray);
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            matrixArray[i * 4 + j] = worldMatrix.m[i][j];
+        }
+    }
 
-    float translation[3], rotation[3], scale[3];
-    ImGuizmo::DecomposeMatrixToComponents(
-        matrixArray,
-        translation, rotation, scale);
+    // ビューとプロジェクション行列も配列形式に変換
+    float viewArray[16], projArray[16];
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            viewArray[i * 4 + j] = viewProjection->matView_.m[i][j];
+            projArray[i * 4 + j] = viewProjection->matProjection_.m[i][j];
+        }
+    }
 
-    const float DEG_TO_RAD = 0.01745329251f;
+    // Gizmoを表示・操作
+    if (ImGuizmo::Manipulate(viewArray, projArray, currentOperation, currentMode, matrixArray)) {
+        // 操作された行列から変換情報を抽出
+        Matrix4x4 newMatrix;
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                newMatrix.m[i][j] = matrixArray[i * 4 + j];
+            }
+        }
 
-    // ローカル座標として直接設定
-    transform->translation_ = {translation[0], translation[1], translation[2]};
-    transform->quateRotation_ = Quaternion::FromEulerAngles({rotation[0] * DEG_TO_RAD,
-                                                        rotation[1] * DEG_TO_RAD,
-                                                        rotation[2] * DEG_TO_RAD});
-    transform->scale_ = {scale[0], scale[1], scale[2]};
+        if (currentMode == ImGuizmo::LOCAL && selectedObject->GetParent()) {
+            // ローカルモード：親の逆変換を適用してローカル座標に変換
+            Matrix4x4 invParentMatrix = Inverse(parentMatrix);
+            Matrix4x4 localMatrix = newMatrix * invParentMatrix;
+
+            Vector3 position, scale;
+            Quaternion rotation;
+            DecomposeMatrix(localMatrix, position, rotation, scale);
+
+            // ローカル座標として設定
+            selectedObject->GetLocalPosition() = position;
+            selectedObject->GetLocalRotation() = rotation.Normalize();
+            selectedObject->GetLocalScale() = scale;
+        } else {
+            // ワールドモードまたは親がない場合
+            Vector3 position, scale;
+            Quaternion rotation;
+            DecomposeMatrix(newMatrix, position, rotation, scale);
+
+            if (selectedObject->GetParent()) {
+                // 親がある場合：ワールド座標をローカル座標に変換
+                Matrix4x4 invParentMatrix = Inverse(parentMatrix);
+                Vector4 localPos4 = Transformation(Vector4(position.x, position.y, position.z, 1.0f), invParentMatrix);
+                Vector3 localPos = Vector3(localPos4.x, localPos4.y, localPos4.z);
+
+                // 回転もローカルに変換
+                Quaternion parentRotation = selectedObject->GetParent()->GetWorldRotation();
+                Quaternion invParentRotation = parentRotation.Conjugate();
+                Quaternion localRotation = rotation * invParentRotation;
+
+                selectedObject->GetLocalPosition() = localPos;
+                selectedObject->GetLocalRotation() = localRotation.Normalize();
+                selectedObject->GetLocalScale() = scale; // スケールはそのまま
+            } else {
+                // 親がない場合：そのまま設定
+                selectedObject->GetLocalPosition() = position;
+                selectedObject->GetLocalRotation() = rotation.Normalize();
+                selectedObject->GetLocalScale() = scale;
+            }
+        }
+
+        // ワールドトランスフォームを更新
+        transform->translation_ = selectedObject->GetLocalPosition();
+        transform->quateRotation_ = selectedObject->GetLocalRotation();
+        transform->scale_ = selectedObject->GetLocalScale();
+        transform->UpdateMatrix();
+
+        // 階層全体を更新
+        selectedObject->UpdateWorldTransformHierarchy();
+    }
 }
 
-// 行列 → float[16]
-void ImGuizmoManager::ConvertMatrix4x4ToFloat16(const Matrix4x4 &matrix, float *outMatrix) {
-    for (int i = 0; i < 4; ++i)
-        for (int j = 0; j < 4; ++j)
-            outMatrix[i * 4 + j] = matrix.m[i][j];
+void ImGuizmoManager::DecomposeMatrix(const Matrix4x4 &matrix, Vector3 &position, Quaternion &rotation, Vector3 &scale) {
+    // 位置の抽出
+    position = {matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]};
+
+    // スケールの抽出
+    Vector3 col0 = {matrix.m[0][0], matrix.m[0][1], matrix.m[0][2]};
+    Vector3 col1 = {matrix.m[1][0], matrix.m[1][1], matrix.m[1][2]};
+    Vector3 col2 = {matrix.m[2][0], matrix.m[2][1], matrix.m[2][2]};
+
+    scale.x = col0.Length();
+    scale.y = col1.Length();
+    scale.z = col2.Length();
+
+    // 回転行列の抽出（スケールを除去）
+    Matrix4x4 rotMatrix = matrix;
+    if (scale.x != 0.0f) {
+        rotMatrix.m[0][0] /= scale.x;
+        rotMatrix.m[0][1] /= scale.x;
+        rotMatrix.m[0][2] /= scale.x;
+    }
+    if (scale.y != 0.0f) {
+        rotMatrix.m[1][0] /= scale.y;
+        rotMatrix.m[1][1] /= scale.y;
+        rotMatrix.m[1][2] /= scale.y;
+    }
+    if (scale.z != 0.0f) {
+        rotMatrix.m[2][0] /= scale.z;
+        rotMatrix.m[2][1] /= scale.z;
+        rotMatrix.m[2][2] /= scale.z;
+    }
+
+    // 回転行列からクォータニオンを抽出
+    rotation = Quaternion::FromMatrix(rotMatrix);
 }
 
-// float[16] → 行列
-void ImGuizmoManager::ConvertFloat16ToMatrix4x4(const float *inMatrix, Matrix4x4 &outMatrix) {
-    for (int i = 0; i < 4; ++i)
-        for (int j = 0; j < 4; ++j)
-            outMatrix.m[i][j] = inMatrix[i * 4 + j];
+Ray ImGuizmoManager::CreateMouseRay(const ImVec2 &mousePos, const ImVec2 &scenePosition, const ImVec2 &sceneSize) {
+    // マウス位置を正規化デバイス座標系に変換
+    float ndcX = ((mousePos.x - scenePosition.x) / sceneSize.x) * 2.0f - 1.0f;
+    float ndcY = 1.0f - ((mousePos.y - scenePosition.y) / sceneSize.y) * 2.0f;
+
+    // ビュー行列とプロジェクション行列の逆行列を計算
+    Matrix4x4 invView = Inverse(viewProjection->matView_);
+    Matrix4x4 invProj = Inverse(viewProjection->matProjection_);
+
+    // NDC座標からビュー空間の座標に変換
+    Vector4 nearPoint = {ndcX, ndcY, -1.0f, 1.0f}; // Near plane
+    Vector4 farPoint = {ndcX, ndcY, 1.0f, 1.0f};   // Far plane
+
+    // プロジェクション逆変換
+    nearPoint = Transformation(nearPoint, invProj);
+    farPoint = Transformation(farPoint, invProj);
+
+    // 同次座標系から3D座標に変換
+    if (nearPoint.w != 0.0f) {
+        nearPoint.x /= nearPoint.w;
+        nearPoint.y /= nearPoint.w;
+        nearPoint.z /= nearPoint.w;
+    }
+    if (farPoint.w != 0.0f) {
+        farPoint.x /= farPoint.w;
+        farPoint.y /= farPoint.w;
+        farPoint.z /= farPoint.w;
+    }
+
+    // ビュー空間からワールド空間に変換
+    Vector4 worldNear = Transformation(nearPoint, invView);
+    Vector4 worldFar = Transformation(farPoint, invView);
+
+    Ray ray;
+    ray.origin = {worldNear.x, worldNear.y, worldNear.z};
+    Vector3 farPos = {worldFar.x, worldFar.y, worldFar.z};
+    ray.direction = (farPos - ray.origin).Normalize();
+
+    return ray;
 }
 
-// **重要**: 旧版と同じImGuizmoのビルトイン関数を使用
-void ImGuizmoManager::DecomposeMatrix(WorldTransform *transform) {
-    float translation[3], rotation[3], scale[3];
-    ImGuizmo::DecomposeMatrixToComponents(
-        reinterpret_cast<float *>(&transform->matWorld_.m[0][0]),
-        translation, rotation, scale);
+bool ImGuizmoManager::RayIntersectObject(const Ray &ray, BaseObject *obj, float &distance) {
+    Vector3 objPos = obj->GetWorldPosition();
+    Vector3 objScale = obj->GetWorldScale();
 
-    const float DEG_TO_RAD = 0.01745329251f;
+    // より大きな判定半径
+    float maxScale = std::max({objScale.x, objScale.y, objScale.z});
+    float radius = maxScale * 1.2f;
+    radius = std::max(radius, 1.0f);
 
-    transform->translation_ = {translation[0], translation[1], translation[2]};
-    transform->quateRotation_ = Quaternion::FromEulerAngles({rotation[0] * DEG_TO_RAD,
-                                                        rotation[1] * DEG_TO_RAD,
-                                                        rotation[2] * DEG_TO_RAD});
-    transform->scale_ = {scale[0], scale[1], scale[2]};
+    return RayIntersectSphere(ray, objPos, radius, distance);
+}
+
+bool ImGuizmoManager::RayIntersectSphere(const Ray &ray, const Vector3 &center, float radius, float &distance) {
+    Vector3 oc = ray.origin - center;
+    float a = ray.direction.Dot(ray.direction);
+    float b = 2.0f * oc.Dot(ray.direction);
+    float c = oc.Dot(oc) - radius * radius;
+
+    float discriminant = b * b - 4 * a * c;
+    if (discriminant < 0) {
+        return false; // 交差なし
+    }
+
+    float t1 = (-b - std::sqrt(discriminant)) / (2.0f * a);
+    float t2 = (-b + std::sqrt(discriminant)) / (2.0f * a);
+
+    // 最も近い正の交点を選択
+    if (t1 > 0) {
+        distance = t1;
+        return true;
+    } else if (t2 > 0) {
+        distance = t2;
+        return true;
+    }
+
+    return false;
+}
+
+bool ImGuizmoManager::WorldToScreen(const Vector3 &worldPos, Vector3 &screenPos, const ImVec2 &scenePosition, const ImVec2 &sceneSize) {
+    // ビュー射影変換
+    Vector4 clipPos;
+    {
+        Vector3 v = worldPos;
+        float x = v.x * viewProjection->matView_.m[0][0] + v.y * viewProjection->matView_.m[1][0] + v.z * viewProjection->matView_.m[2][0] + viewProjection->matView_.m[3][0];
+        float y = v.x * viewProjection->matView_.m[0][1] + v.y * viewProjection->matView_.m[1][1] + v.z * viewProjection->matView_.m[2][1] + viewProjection->matView_.m[3][1];
+        float z = v.x * viewProjection->matView_.m[0][2] + v.y * viewProjection->matView_.m[1][2] + v.z * viewProjection->matView_.m[2][2] + viewProjection->matView_.m[3][2];
+        float w = v.x * viewProjection->matView_.m[0][3] + v.y * viewProjection->matView_.m[1][3] + v.z * viewProjection->matView_.m[2][3] + viewProjection->matView_.m[3][3];
+
+        // 射影変換
+        clipPos.x = x * viewProjection->matProjection_.m[0][0] + y * viewProjection->matProjection_.m[1][0] + z * viewProjection->matProjection_.m[2][0] + w * viewProjection->matProjection_.m[3][0];
+        clipPos.y = x * viewProjection->matProjection_.m[0][1] + y * viewProjection->matProjection_.m[1][1] + z * viewProjection->matProjection_.m[2][1] + w * viewProjection->matProjection_.m[3][1];
+        clipPos.z = x * viewProjection->matProjection_.m[0][2] + y * viewProjection->matProjection_.m[1][2] + z * viewProjection->matProjection_.m[2][2] + w * viewProjection->matProjection_.m[3][2];
+        clipPos.w = x * viewProjection->matProjection_.m[0][3] + y * viewProjection->matProjection_.m[1][3] + z * viewProjection->matProjection_.m[2][3] + w * viewProjection->matProjection_.m[3][3];
+    }
+
+    if (clipPos.w <= 0.0f) {
+        return false; // カメラの後ろにある
+    }
+
+    // NDC座標に変換
+    float ndcX = clipPos.x / clipPos.w;
+    float ndcY = clipPos.y / clipPos.w;
+
+    // スクリーン座標に変換
+    screenPos.x = scenePosition.x + (ndcX * 0.5f + 0.5f) * sceneSize.x;
+    screenPos.y = scenePosition.y + (0.5f - ndcY * 0.5f) * sceneSize.y;
+    screenPos.z = clipPos.z / clipPos.w;
+
+    return true;
 }
 
 #endif // _DEBUG

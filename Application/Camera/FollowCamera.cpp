@@ -47,7 +47,7 @@ void FollowCamera::Update() {
 
                         worldTransform_.UpdateMatrix();
                         viewProjection_.translation_ = worldTransform_.translation_;
-                        viewProjection_.rotation_ = worldTransform_.quateRotation_;
+                        viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
                         viewProjection_.matWorld_ = worldTransform_.matWorld_;
                         viewProjection_.UpdateMatrix();
                         return;
@@ -190,7 +190,7 @@ void FollowCamera::Update() {
 
     // ビュープロジェクション更新
     viewProjection_.translation_ = worldTransform_.translation_;
-    viewProjection_.rotation_ = worldTransform_.quateRotation_;
+    viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
     viewProjection_.matWorld_ = worldTransform_.matWorld_;
     viewProjection_.UpdateMatrix();
 }

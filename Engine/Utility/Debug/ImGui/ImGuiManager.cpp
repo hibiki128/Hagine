@@ -10,6 +10,8 @@
 #include <Engine/Frame/Frame.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
+#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include <Line/DrawLine3D.h>
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -223,6 +225,9 @@ void ImGuiManager::Draw() {
 }
 
 void ImGuiManager::UpdateIni() {
+    if (showGrid_) {
+        DrawLine3D::GetInstance()->DrawGrid(gridY_, gridDivision_, gridSize_, gridColor_);
+    }
     if (!isShowMainUI_) {
         SwitchToGameMode();
     } else {
@@ -283,8 +288,67 @@ void ImGuiManager::ShowMainMenu() {
                 ImGui::MenuItem(ICON_FA_DATABASE " FPSビュー", nullptr, &showFPSView_);
                 ImGui::MenuItem(ICON_FA_STAR_OF_DAVID " オフスクリーンビュー", nullptr, &showOfScreenView_);
                 ImGui::MenuItem(ICON_FA_LIGHTBULB " ライトビュー", nullptr, &showLightView_);
+                ImGui::MenuItem(ICON_FA_ARROWS_ALT " ギズモビュー", nullptr, &showGizmoView_);
+                ImGui::MenuItem(ICON_FA_PROJECT_DIAGRAM " ヒエラルキービュー", nullptr, &showHierarchyView_);
+                ImGui::MenuItem(ICON_FA_CODE_BRANCH " モーションエディタービュー", nullptr, &showMotionEditorView_);
                 ImGui::EndMenu();
             }
+
+            // グリッド設定
+            ImGui::MenuItem(ICON_FA_BORDER_ALL " グリッド表示", nullptr, &showGrid_);
+
+            if (showGrid_) {
+                // グリッド設定項目（インデント付き）
+                ImGui::Indent();
+
+                // Y座標設定
+                ImGui::PushItemWidth(120.0f);
+                if (ImGui::DragFloat(ICON_FA_ARROWS_ALT_V " Y座標", &gridY_, 0.1f, -100.0f, 100.0f, "%.1f")) {
+                    // リアルタイム更新
+                }
+
+                // 分割数設定
+                if (ImGui::DragInt(ICON_FA_TH " 分割数", &gridDivision_, 1, 1, 100)) {
+                    // リアルタイム更新
+                }
+
+                // サイズ設定
+                if (ImGui::DragFloat(ICON_FA_EXPAND_ARROWS_ALT " サイズ", &gridSize_, 0.1f, 0.1f, 500.0f, "%.1f")) {
+                    // リアルタイム更新
+                }
+                ImGui::PopItemWidth();
+
+                // 色設定
+                ImGui::ColorEdit4(ICON_FA_PALETTE " グリッド色", &gridColor_.x, ImGuiColorEditFlags_NoInputs);
+
+                // プリセット（サブメニュー）
+                if (ImGui::BeginMenu(ICON_FA_SWATCHBOOK " プリセット")) {
+                    if (ImGui::MenuItem("デフォルト (グレー)")) {
+                        gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
+                    }
+                    if (ImGui::MenuItem("白")) {
+                        gridColor_ = {1.0f, 1.0f, 1.0f, 1.0f};
+                    }
+                    if (ImGui::MenuItem("青")) {
+                        gridColor_ = {0.3f, 0.5f, 1.0f, 1.0f};
+                    }
+                    if (ImGui::MenuItem("緑")) {
+                        gridColor_ = {0.3f, 1.0f, 0.5f, 1.0f};
+                    }
+                    ImGui::EndMenu();
+                }
+
+                // リセットボタン
+                if (ImGui::Button(ICON_FA_UNDO " リセット")) {
+                    gridY_ = 0.0f;
+                    gridDivision_ = 10;
+                    gridSize_ = 1.0f;
+                    gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
+                }
+
+                ImGui::Unindent();
+            }
+            ImGui::Separator();
 
             // 表示モード切替
             ImGui::Separator();
@@ -305,6 +369,7 @@ void ImGuiManager::ShowMainMenu() {
             }
             ImGui::EndMenu();
         }
+
 
         // オブジェクトメニュー
         if (ImGui::BeginMenu(ICON_FA_CUBE " オブジェクト")) {
@@ -535,6 +600,45 @@ void ImGuiManager::ShowLightSettingWindow() {
     ImGui::End();
 }
 
+void ImGuiManager::ShowGizmoWindow() {
+    if (!showGizmoView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    ImGui::Begin("トランスフォームマネージャ", &showGizmoView_, flags);
+
+    imGuizmoManager_->imgui();
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowHierarchyWindow() {
+    if (!showHierarchyView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    ImGui::Begin("階層エディター", &showHierarchyView_, flags);
+
+    baseObjectManager_->DrawHierarchyEditor();
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowMotionEditorWindow() {
+    if (!showMotionEditorView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    ImGui::Begin("モーションエディター", &showMotionEditorView_, flags);
+
+    MotionEditor::GetInstance()->DrawImGui();
+
+    ImGui::End();
+}
+
 void ImGuiManager::FixAspectRatio() {
 
     // 横幅ベースで16:9に合わせた高さ
@@ -554,7 +658,7 @@ void ImGuiManager::FixAspectRatio() {
     }
 }
 
-void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string& sceneName) {
+void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &sceneName) {
     // ImGuiウィンドウ開始前にNextWindowSizeは設定しない（手動サイズ変更を許可）
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
     // フォーカスされていない場合は描画を最適化
@@ -638,10 +742,10 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string& scen
         backgroundColor);
 
     // ImGuizmoのために正確なシーン位置を計算
-    ImVec2 actualScenePos = ImVec2(
+    actualScenePos_ = ImVec2(
         contentPos.x + sceneOffset.x,
         contentPos.y + sceneOffset.y);
-    imGuizmoManager_->Update(actualScenePos, sceneTextureSize_);
+    imGuizmoManager_->Update(actualScenePos_, sceneTextureSize_);
 
     ImGui::End();
 }
@@ -660,6 +764,12 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowOffScreenSettingWindow(offscreen);
     // ライトウィンドウを描画
     ShowLightSettingWindow();
+    // ギズモウィンドウを描画
+    ShowGizmoWindow();
+    // 階層エディターウィンドウを描画
+    ShowHierarchyWindow();
+    // モーションエディターウィンドウを描画
+    ShowMotionEditorWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();

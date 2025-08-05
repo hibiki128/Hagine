@@ -83,6 +83,16 @@ class WorldTransform {
     /// <returns>ワールド回転（クォータニオン）</returns>
     Quaternion GetWorldRotationQuaternion() const;
 
+    // ローカル座標の取得
+    Vector3 GetLocalPosition() const { return translation_; }
+    Quaternion GetLocalRotation() const { return quateRotation_; }
+    Vector3 GetLocalScale() const { return scale_; }
+
+    // ワールド座標の取得（位置、回転、スケール）
+    Vector3 GetWorldPosition() const;
+    Quaternion GetWorldRotation() const;
+    Vector3 GetWorldScale() const;
+
     /// <summary>
     /// 定数バッファの取得
     /// </summary>

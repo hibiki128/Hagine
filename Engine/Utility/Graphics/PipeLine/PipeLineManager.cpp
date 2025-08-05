@@ -662,34 +662,47 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateParticleGraph
 
 Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSpriteRootSignature() {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
-
     HRESULT hr;
-    // RootSignature作成
+
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
-    descriptionRootSignature.Flags =
-        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
     // DescriptorRange
-    D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
-    descriptorRange[0].BaseShaderRegister = 0;                                                   // 0から始まる
-    descriptorRange[0].NumDescriptors = 1;                                                       // 数は1つ
-    descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;                              // SRVを使う
-    descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // Offsetを自動計算
+    D3D12_DESCRIPTOR_RANGE descriptorRange[2] = {};
+    // StructuredBuffer用（頂点シェーダーのt0）
+    descriptorRange[0].BaseShaderRegister = 0;
+    descriptorRange[0].NumDescriptors = 1;
+    descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    // RootParameter作成。複数設定できるので配列。
+    // Texture用（ピクセルシェーダーのt1）
+    descriptorRange[1].BaseShaderRegister = 1;
+    descriptorRange[1].NumDescriptors = 1;
+    descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRange[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // RootParameter
     D3D12_ROOT_PARAMETER rootParameters[3] = {};
-    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;                   // CBVを使う
-    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;                // PixelShaderで使う
-    rootParameters[0].Descriptor.ShaderRegister = 0;                                   // レジスタ番号0とバインド
-    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;                   // CBVをつかう
-    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;               // VertexShaderで使う
-    rootParameters[1].Descriptor.ShaderRegister = 0;                                   // レジスタ番号0とバインド
-    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;      // DescriptorTableを使う
-    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;                // PixelShaderで使う
-    rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;             // Tableの中身の配列を指定
-    rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange); // Tableで利用する数
-    descriptionRootSignature.pParameters = rootParameters;                             // ルートパラメータ配列へのポインタ
-    descriptionRootSignature.NumParameters = _countof(rootParameters);                 // 配列の長さ
+
+    // Material CBV (b0)
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[0].Descriptor.ShaderRegister = 0;
+
+    // StructuredBuffer SRV (t0) - 頂点シェーダー用
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
+
+    // Texture SRV (t1) - ピクセルシェーダー用
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
+
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
 
     // Smplerの設定
     D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
