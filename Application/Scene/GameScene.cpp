@@ -94,7 +94,7 @@ void GameScene::Draw() {
     //-----------------------
 
     //------Particleの描画開始-------
-
+    player_ptr->DrawParticle(vp_);
     //-----------------------------
 
     /// Spriteの描画準備
