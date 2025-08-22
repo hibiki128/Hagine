@@ -17,6 +17,7 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Input.h>
 #include <cmath>
+#include <Particle/ParticleEditor.h>
 
 Player::Player() {
 }
@@ -86,6 +87,7 @@ void Player::Init(const std::string objectName) {
     }
 
     shake_ = std::make_unique<Shake>();
+    rushEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("RushEmitter");
 }
 
 void Player::Update() {
@@ -166,9 +168,12 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 
 void Player::DrawParticle(const ViewProjection &viewProjection) {
     chageShot_->DrawParticle(viewProjection);
+    rushEmitter_->Draw(viewProjection);
     for (auto &bullet : bullets_) {
         bullet->DrawParticle(viewProjection);
     }
+    leftHand_ptr_->DrawParticle(viewProjection);
+    rightHand_ptr_->DrawParticle(viewProjection);
 }
 
 void Player::ChangeState(const std::string &stateName) {
@@ -536,6 +541,10 @@ void Player::ChangeRush() {
         } else if (lControlInputCount_ == 2 && GetIsLockOn() && GetEnemy()) {
             // 急接近ステートに遷移
             ChangeState("Rush");
+            rushEmitter_->SetStartRotate("Burst", GetWorldRotation().ToEulerDegrees());
+            rushEmitter_->SetEndRotate("Burst", GetWorldRotation().ToEulerDegrees());
+            rushEmitter_->SetPosition(GetWorldPosition());
+            rushEmitter_->UpdateOnce();
             return;
         }
     }

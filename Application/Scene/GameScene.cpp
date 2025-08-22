@@ -37,6 +37,7 @@ void GameScene::Initialize() {
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
     player_->SetVp(&vp_);
+    enemy_->SetVp(&vp_);
 
     /// ===================================================
     /// ポインタ共有
@@ -96,6 +97,7 @@ void GameScene::Draw() {
 
     //------Particleの描画開始-------
     player_ptr->DrawParticle(vp_);
+    enemy_ptr->DrawParticle(vp_);
     //-----------------------------
 
     /// Spriteの描画準備

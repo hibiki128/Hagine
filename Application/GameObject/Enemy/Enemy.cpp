@@ -25,6 +25,7 @@ void Enemy::Init(const std::string objectName) {
     shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(-90.0f), 0.0f, 0.0f));
     shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
     emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("hitEmitter");
+    chageShake_ = std::make_unique<Shake>();
 }
 
 void Enemy::Update() {
@@ -40,6 +41,7 @@ void Enemy::Update() {
         HP_ = 0;
     }
     UpdateShadowScale();
+    chageShake_->Update();
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -75,6 +77,10 @@ void Enemy::Debug() {
 void Enemy::OnCollisionEnter(Collider *other) {
     if (dynamic_cast<PlayerBullet *>(other) || dynamic_cast<ChageShot *>(other)) {
         emitter_->UpdateOnce();
+    }
+
+    if (dynamic_cast<ChageShot *>(other)) {
+        chageShake_->StartShake();
     }
 }
 
@@ -165,4 +171,8 @@ Vector3 Enemy::GetPositionAbove(float distance) const {
 
 Vector3 Enemy::GetPositionBelow(float distance) const {
     return transform_->translation_ + GetDown() * distance;
+}
+
+void Enemy::SetVp(ViewProjection *vp) {
+    chageShake_->Initialize(vp, "chagehit");
 }

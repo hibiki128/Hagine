@@ -1,6 +1,6 @@
 {
     "GroupNames": [
-        "directionTest"
+        "punchHit"
     ],
     "directionTest_allScaleMax": {
         "x": 1.0,
@@ -84,9 +84,9 @@
         "z": 0.0
     },
     "directionTest_scale": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
     },
     "directionTest_scaleMax": 1.0,
     "directionTest_scaleMin": 1.0,
@@ -141,7 +141,7 @@
         "y": 0.0,
         "z": 0.0
     },
-    "emitFrequency": 0.10000000149011612,
+    "emitFrequency": 1.0,
     "emitterRotation": {
         "w": 1.0,
         "x": 0.0,
@@ -149,9 +149,9 @@
         "z": 0.0
     },
     "emitterScale": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
     },
     "emitterTranslation": {
         "x": 0.0,
@@ -160,5 +160,144 @@
     },
     "isActive": false,
     "isAuto": true,
-    "isVisible": true
+    "isVisible": true,
+    "punchHit_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "punchHit_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_alphaMax": 1.0,
+    "punchHit_alphaMin": 1.0,
+    "punchHit_blendMode": 2,
+    "punchHit_count": 5,
+    "punchHit_enableTrail": true,
+    "punchHit_endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_endColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 0.43529412150382996,
+        "z": 0.003921568859368563
+    },
+    "punchHit_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_endScale": {
+        "x": 2.5,
+        "y": 2.5,
+        "z": 2.5
+    },
+    "punchHit_gatherStartRatio": 0.0,
+    "punchHit_gatherStrength": 0.0,
+    "punchHit_gravity": 0.0,
+    "punchHit_isAcceMultiply": true,
+    "punchHit_isAllRamdomScale": false,
+    "punchHit_isBillboard": true,
+    "punchHit_isBillboardX": false,
+    "punchHit_isBillboardY": false,
+    "punchHit_isBillboardZ": false,
+    "punchHit_isEmitOnEdge": false,
+    "punchHit_isEndScale": false,
+    "punchHit_isFaceDirection": false,
+    "punchHit_isGatherMode": false,
+    "punchHit_isRandomColor": false,
+    "punchHit_isRandomRotate": false,
+    "punchHit_isRandomScale": false,
+    "punchHit_isSinMove": false,
+    "punchHit_lifeTimeMax": 0.15000000596046448,
+    "punchHit_lifeTimeMin": 0.15000000596046448,
+    "punchHit_maxTrailParticles": 20,
+    "punchHit_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "punchHit_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "punchHit_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_scale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_scaleMax": 2.0999999046325684,
+    "punchHit_scaleMin": 0.0,
+    "punchHit_startAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_startColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 0.43645089864730835,
+        "z": 0.0042552947998046875
+    },
+    "punchHit_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_startScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_trailColorMultiplier": {
+        "w": 5.0,
+        "x": 5.0,
+        "y": 5.0,
+        "z": 5.0
+    },
+    "punchHit_trailInheritVelocity": false,
+    "punchHit_trailLifeScale": 1.0,
+    "punchHit_trailScaleMultiplier": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "punchHit_trailSpawnInterval": 0.10000000149011612,
+    "punchHit_trailVelocityScale": 0.30000001192092896,
+    "punchHit_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "punchHit_velocityMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "punchHit_velocityMin": {
+        "x": -1.0,
+        "y": -1.0,
+        "z": -1.0
+    }
 }

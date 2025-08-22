@@ -1,0 +1,164 @@
+{
+    "Burst_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "Burst_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "Burst_alphaMax": 1.0,
+    "Burst_alphaMin": 1.0,
+    "Burst_blendMode": 2,
+    "Burst_count": 10,
+    "Burst_enableTrail": true,
+    "Burst_endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "Burst_endColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "Burst_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "Burst_endScale": {
+        "x": 15.0,
+        "y": 15.0,
+        "z": 15.0
+    },
+    "Burst_gatherStartRatio": 0.0,
+    "Burst_gatherStrength": 0.0,
+    "Burst_gravity": 0.0,
+    "Burst_isAcceMultiply": true,
+    "Burst_isAllRamdomScale": false,
+    "Burst_isBillboard": false,
+    "Burst_isBillboardX": false,
+    "Burst_isBillboardY": false,
+    "Burst_isBillboardZ": false,
+    "Burst_isEmitOnEdge": false,
+    "Burst_isEndScale": false,
+    "Burst_isFaceDirection": false,
+    "Burst_isGatherMode": false,
+    "Burst_isRandomColor": false,
+    "Burst_isRandomRotate": false,
+    "Burst_isRandomScale": false,
+    "Burst_isSinMove": false,
+    "Burst_lifeTimeMax": 0.25,
+    "Burst_lifeTimeMin": 0.25,
+    "Burst_maxTrailParticles": 20,
+    "Burst_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 3.1415927410125732
+    },
+    "Burst_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -3.1415927410125732
+    },
+    "Burst_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "Burst_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "Burst_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "Burst_scale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "Burst_scaleMax": 1.0,
+    "Burst_scaleMin": 1.0,
+    "Burst_startAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "Burst_startColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "Burst_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "Burst_startScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "Burst_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "Burst_trailInheritVelocity": false,
+    "Burst_trailLifeScale": 1.0,
+    "Burst_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "Burst_trailSpawnInterval": 0.10000000149011612,
+    "Burst_trailVelocityScale": 0.30000001192092896,
+    "Burst_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "Burst_velocityMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "Burst_velocityMin": {
+        "x": -1.0,
+        "y": -1.0,
+        "z": -1.0
+    },
+    "GroupNames": [
+        "Burst"
+    ],
+    "emitFrequency": 0.10000000149011612,
+    "emitterRotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterTranslation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "isActive": true,
+    "isAuto": false,
+    "isVisible": true
+}

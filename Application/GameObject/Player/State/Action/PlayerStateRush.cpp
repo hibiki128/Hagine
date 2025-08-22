@@ -20,6 +20,7 @@ void PlayerStateRush::Enter(Player &player) {
     shake_ = std::make_unique<Shake>();
     shake_->Initialize(&player.GetViewProjection(), "RushShake");
     shake_->StartShake();
+
 }
 
 void PlayerStateRush::Update(Player &player) {

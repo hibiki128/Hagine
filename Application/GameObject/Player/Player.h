@@ -179,4 +179,6 @@ class Player : public BaseObject {
     ViewProjection *vp_;
 
     std::unique_ptr<Shake> shake_;
+
+    std::unique_ptr<ParticleEmitter> rushEmitter_;
 };
