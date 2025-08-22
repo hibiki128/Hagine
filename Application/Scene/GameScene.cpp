@@ -36,6 +36,7 @@ void GameScene::Initialize() {
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
+    player_->SetVp(&vp_);
 
     /// ===================================================
     /// ポインタ共有

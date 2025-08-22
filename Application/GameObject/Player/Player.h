@@ -5,6 +5,7 @@
 #include "Object/Base/BaseObject.h"
 #include "PlayerData.h"
 #include "State/Base/PlayerBaseState.h"
+#include <Application/Utility/Shake/Shake.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
 
 class ChageShot;
@@ -69,12 +70,15 @@ class Player : public BaseObject {
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
     bool &GetIsLockOn() { return isLockOn_; }
+    ViewProjection &GetViewProjection();
 
     PlayerHand *GetRightHand() { return rightHand_ptr_; }
     PlayerHand *GetLeftHand() { return leftHand_ptr_; }
 
-    void SetCamera(FollowCamera *camera) { FollowCamera_ = camera; }
-    void SetEnemy(Enemy *enemy) { 
+    void SetCamera(FollowCamera *camera);
+    void SetVp(ViewProjection *vp);
+
+    void SetEnemy(Enemy *enemy) {
         enemy_ = enemy;
         leftHand_ptr_->SetEnemy(enemy);
         rightHand_ptr_->SetEnemy(enemy);
@@ -171,4 +175,8 @@ class Player : public BaseObject {
     std::unique_ptr<PlayerHand> rightHand_;
     PlayerHand *leftHand_ptr_;
     PlayerHand *rightHand_ptr_;
+
+    ViewProjection *vp_;
+
+    std::unique_ptr<Shake> shake_;
 };

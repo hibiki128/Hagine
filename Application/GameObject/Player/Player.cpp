@@ -84,6 +84,8 @@ void Player::Init(const std::string objectName) {
 
         comboInitialized_ = true;
     }
+
+    shake_ = std::make_unique<Shake>();
 }
 
 void Player::Update() {
@@ -144,6 +146,9 @@ void Player::Update() {
             ++it;
         }
     }
+    
+    shake_->Update();
+
     UpdateShadowScale();
 }
 
@@ -303,7 +308,7 @@ void Player::Move() {
     float yaw = camera->GetYaw();
 
     Vector3 cameraForward = {std::sin(yaw), 0.0f, std::cos(yaw)};
-    Vector3 cameraRight = {-std::cos(yaw), 0.0f, std::sin(yaw)}; 
+    Vector3 cameraRight = {-std::cos(yaw), 0.0f, std::sin(yaw)};
 
     // 入力方向をカメラベースで合成
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
@@ -519,6 +524,8 @@ void Player::Debug() {
         }
         ImGui::EndTabBar();
     }
+
+    shake_->imgui();
 }
 
 void Player::ChangeRush() {
@@ -641,4 +648,17 @@ Vector3 Player::GetPositionAbove(float distance) const {
 
 Vector3 Player::GetPositionBelow(float distance) const {
     return transform_->translation_ + GetDown() * distance;
+}
+
+ViewProjection &Player::GetViewProjection() {
+    return *vp_;
+}
+
+void Player::SetCamera(FollowCamera *camera) {
+    FollowCamera_ = camera;
+}
+
+void Player::SetVp(ViewProjection *vp) {
+    vp_ = vp;
+    shake_->Initialize(vp_);
 }

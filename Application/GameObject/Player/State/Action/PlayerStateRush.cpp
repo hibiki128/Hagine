@@ -17,6 +17,9 @@ void PlayerStateRush::Enter(Player &player) {
 
         player.GetVelocity().y = 0.0f;
     }
+    shake_ = std::make_unique<Shake>();
+    shake_->Initialize(&player.GetViewProjection(), "RushShake");
+    shake_->StartShake();
 }
 
 void PlayerStateRush::Update(Player &player) {
@@ -44,6 +47,8 @@ void PlayerStateRush::Update(Player &player) {
 
     // 回転処理
     UpdateRotation(player);
+
+    shake_->Update();
 }
 
 void PlayerStateRush::Exit(Player &player) {
