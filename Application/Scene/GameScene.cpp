@@ -92,7 +92,7 @@ void GameScene::Draw() {
     //-----3DObjectの開始-----
     // skyDome_->Draw(vp_);
     ground_->Draw(vp_);
-    DrawLine3D::GetInstance()->DrawGrid(-0.95f, 64, 1000, {0.0f, 0.0f, 1.0f, 0.75f});
+    //DrawLine3D::GetInstance()->DrawGrid(-0.95f, 64, 1000, {0.0f, 0.0f, 1.0f, 0.75f});
     //-----------------------
 
     //------Particleの描画開始-------
