@@ -23,14 +23,14 @@ void BaseObject::Update() {
 }
 
 void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
-    // オフセットを加える前の現在の位置を取得
-    Vector3 currentPosition = transform_->translation_;
+    // オフセットを適用する場合は、一時的にローカル位置を変更
+    Vector3 originalPosition = transform_->translation_;
 
-    // オフセットを加えて新しい位置を計算
-    Vector3 newPosition = currentPosition + offSet;
-
-    // 新しい位置を設定
-    transform_->translation_ = newPosition;
+    if (offSet.x != 0.0f || offSet.y != 0.0f || offSet.z != 0.0f) {
+        transform_->translation_ = originalPosition + offSet;
+        // オフセット適用時は行列を更新
+        transform_->UpdateMatrix();
+    }
 
     // スケルトンの描画が必要な場合
     if (skeletonDraw_) {
@@ -43,8 +43,12 @@ void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
         obj3d_->DrawWireframe(*transform_, viewProjection, isRainbow_);
     }
 
-    // 描画後に元の位置に戻す場合は、以下の行を追加
-    transform_->translation_ = currentPosition;
+    // オフセットを適用した場合は元の位置に戻す
+    if (offSet.x != 0.0f || offSet.y != 0.0f || offSet.z != 0.0f) {
+        transform_->translation_ = originalPosition;
+        // 元の位置に戻した後も行列を更新
+        transform_->UpdateMatrix();
+    }
 }
 
 void BaseObject::UpdateWorldTransformHierarchy() {

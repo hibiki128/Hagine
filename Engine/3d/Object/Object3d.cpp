@@ -79,7 +79,15 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
         lightGroup->Update(viewProjection);
     }
 
-    Matrix4x4 worldMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quateRotation_, worldTransform.translation_);
+    // ローカル行列を作成
+    Matrix4x4 localMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quateRotation_, worldTransform.translation_);
+
+    // ワールド行列を計算（親がいる場合は親の行列と合成）
+    Matrix4x4 worldMatrix = localMatrix;
+    if (worldTransform.parent_) {
+        worldMatrix = localMatrix * worldTransform.parent_->matWorld_;
+    }
+
     Matrix4x4 worldViewProjectionMatrix;
     const Matrix4x4 &viewProjectionMatrix = viewProjection.matView_ * viewProjection.matProjection_;
     worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
@@ -106,10 +114,6 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
             objectCommon_->computeSkinningDrawCommonSetting();
             model->Update();
         }
-    }
-
-    if (worldTransform.parent_) {
-        worldMatrix *= worldTransform.parent_->matWorld_;
     }
 
     for (auto &color : color_) {
