@@ -44,6 +44,7 @@ class DemoScene : public BaseScene {
     SpriteCommon *spCommon_;
     ParticleCommon *ptCommon_;
     ParticleEditor *ptEditor_;
+    ParticleCSEditor *ptCSEditor_;
 
     ViewProjection vp_;
     std::unique_ptr<DebugCamera> debugCamera_;

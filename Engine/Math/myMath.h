@@ -48,6 +48,8 @@ float getProjection(const Vector3 &axis, const OBB &obb);
 // 座標変換
 Vector3 Transformation(const Vector3 &vector, const Matrix4x4 &matrix);
 Vector4 Transformation(const Vector4 &vector, const Matrix4x4 &matrix);
+// Ray生成用の変換関数（正規化しない版）
+Vector4 TransformationRaw(const Vector4 &vector, const Matrix4x4 &matrix);
 
 Vector3 TransformNormal(const Vector3 &v, const Matrix4x4 &m);
 
@@ -110,6 +112,13 @@ Matrix4x4 MakeRotateMatrix(const Vector3 &right, const Vector3 &up, const Vector
 Matrix4x4 MakeBoneMatrix(const Vector3 &scale, const Quaternion &rotate, const Vector3 &translate);
 
 Matrix4x4 QuaternionToBoneMatrix(const Quaternion &q);
-//// デバッグ用
+
+// Matrix4x4からクォータニオンを抽出する関数
+Quaternion MatrixToQuaternion(const Matrix4x4 &matrix);
+// クォータニオンでベクトルを回転する関数
+Vector3 RotateVector(const Vector3 &vec, const Quaternion &quat);
+
+Vector3 ExtractScale(const Matrix4x4 &matrix);
+    //// デバッグ用
 // void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 // void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);

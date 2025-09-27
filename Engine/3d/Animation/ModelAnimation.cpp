@@ -8,15 +8,17 @@ void ModelAnimation::Initialize(const std::string &directorypath, const std::str
     skin_ = std::make_unique<Skin>();
     animator_->Initialize(directorypath_, filename_);
 
-    if (animator_->HaveAnimation()) {
+    if (modelData_.hasBones) {
         bone_->Initialize(modelData_);
         skin_->Initialize(bone_->GetSkeleton(), modelData_);
     }
 }
 
 void ModelAnimation::Update(bool roop) {
-    if (animator_->HaveAnimation()) {
+    if (modelData_.hasAnimations) {
         animator_->Update(roop);
+    }
+    if (modelData_.hasBones) {
         bone_->Update(animator_->GetCurrentAnimation(), animator_->GetAnimationTime());
         skin_->Update(bone_->GetSkeleton());
     }

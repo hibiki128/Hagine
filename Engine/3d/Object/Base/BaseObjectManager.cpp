@@ -2,9 +2,9 @@
 #ifdef _DEBUG
 #include "Debug/ImGui/ImGuizmoManager.h"
 #endif // _DEBUG
-#include <ShowFolder/ShowFolder.h>
+#include "Application/Utility/MotionEditor/MotionEditor.h"
 #include <Debug/Log/Logger.h>
-#include"Application/Utility/MotionEditor/MotionEditor.h"
+#include <ShowFolder/ShowFolder.h>
 
 BaseObjectManager *BaseObjectManager::instance = nullptr;
 
@@ -71,9 +71,11 @@ void BaseObjectManager::UpdateImGui() {
 
 void BaseObjectManager::SaveAll() {
     for (auto &[name, obj] : baseObjects_) {
-        obj->SetFolderPath("SceneData/" + sceneName_ + "/ObjectDatas");
-        obj->SceneSaveToJson();
-        obj->SaveParentChildRelationship(); 
+        if (obj->GetShouldSave()) { // セーブ対象フラグをチェック
+            obj->SetFolderPath("SceneData/" + sceneName_ + "/ObjectDatas");
+            obj->SceneSaveToJson();
+            obj->SaveParentChildRelationship();
+        }
     }
 }
 
@@ -105,26 +107,22 @@ void BaseObjectManager::LoadAll(std::string sceneName) {
 
         // 新しいオブジェクトを作成
         std::unique_ptr<BaseObject> newObject = std::make_unique<BaseObject>();
-
+        std::string foldarPath = "SceneData/" + sceneName + "/ObjectDatas";
         // フォルダパスを設定
         newObject->SetFolderPath("SceneData/" + sceneName + "/ObjectDatas");
-
+        std::unique_ptr<DataHandler> ObjectDatas = std::make_unique<DataHandler>(foldarPath, objectName);
         // オブジェクト名でInit
         newObject->Init(objectName);
+        newObject->SetIsScene(true);
 
         // 読み込んだデータからモデルとテクスチャのパスを取得
-        std::string modelPath = newObject->GetModelPath();
-        std::string texturePath = newObject->GetTexturePath();
+        std::string modelPath = ObjectDatas->Load<std::string>("modelName", "");
 
         // モデルとテクスチャを設定
         if (!modelPath.empty()) {
             newObject->CreateModel(modelPath);
         } else {
             newObject->CreatePrimitiveModel(newObject->GetPrimitiveType());
-        }
-
-        if (!texturePath.empty()) {
-            newObject->SetTexture(texturePath, 0);
         }
 
         // オブジェクトマネージャーに追加
@@ -171,7 +169,7 @@ void BaseObjectManager::OpenObjectLoadModal() {
 void BaseObjectManager::ShowParentChildHierarchy() {
 #ifdef _DEBUG
 
-    if (ImGui::CollapsingHeader("親子関係設定", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("階層エディター", ImGuiTreeNodeFlags_DefaultOpen)) {
 
         // 親子付けセクション
         ImGui::Separator();
@@ -354,6 +352,197 @@ void BaseObjectManager::RemoveObject(const std::string &name) {
     }
 }
 
+void BaseObjectManager::ShowSaveTargetManager() {
+#ifdef _DEBUG
+    if (ImGui::CollapsingHeader("セーブ対象管理##SaveTargetManagement", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Spacing();
+
+        std::vector<std::string> saveTargets;
+        std::vector<std::string> nonSaveTargets;
+
+        // オブジェクトを分類
+        for (const auto &[name, obj] : baseObjects_) {
+            if (obj->GetShouldSave()) {
+                saveTargets.push_back(name);
+            } else {
+                nonSaveTargets.push_back(name);
+            }
+        }
+
+        static std::vector<int> leftSelected;
+        static std::vector<int> rightSelected;
+
+        // 選択インデックスの範囲チェック
+        leftSelected.erase(std::remove_if(leftSelected.begin(), leftSelected.end(),
+                                          [&](int i) { return i >= (int)nonSaveTargets.size(); }),
+                           leftSelected.end());
+        rightSelected.erase(std::remove_if(rightSelected.begin(), rightSelected.end(),
+                                           [&](int i) { return i >= (int)saveTargets.size(); }),
+                            rightSelected.end());
+
+        float availableWidth = ImGui::GetContentRegionAvail().x;
+        float buttonWidth = 90.0f; // ボタン幅を固定
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float listWidth = (availableWidth - buttonWidth - spacing * 2) * 0.5f;
+
+        // ヘッダーテキスト
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.9f, 1.0f, 1.0f));
+        ImGui::Text("セーブしない");
+        ImGui::SameLine(listWidth + spacing + buttonWidth + spacing);
+        ImGui::Text("セーブする");
+        ImGui::PopStyleColor();
+
+        // 左リスト（セーブしない）
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.1f, 0.1f, 0.8f));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.5f, 0.3f, 0.3f, 0.8f));
+
+        ImGui::BeginChild("non_save_targets##NonSaveTargets", ImVec2(listWidth, 200), true);
+
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.6f, 0.2f, 0.2f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.7f, 0.3f, 0.3f, 0.8f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.8f, 0.4f, 0.4f, 1.0f));
+
+        if (nonSaveTargets.empty()) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+            ImGui::TextWrapped("セーブ対象外のオブジェクトがありません");
+            ImGui::PopStyleColor();
+        } else {
+            for (int i = 0; i < nonSaveTargets.size(); ++i) {
+                bool selected = std::find(leftSelected.begin(), leftSelected.end(), i) != leftSelected.end();
+                std::string selectableId = nonSaveTargets[i] + "##NonSave" + std::to_string(i);
+                if (ImGui::Selectable(selectableId.c_str(), selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                    if (!ImGui::GetIO().KeyCtrl)
+                        leftSelected.clear();
+
+                    auto it = std::find(leftSelected.begin(), leftSelected.end(), i);
+                    if (it != leftSelected.end())
+                        leftSelected.erase(it);
+                    else
+                        leftSelected.push_back(i);
+
+                    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                        AddToSaveTargets(nonSaveTargets[i]);
+                        leftSelected.clear();
+                    }
+                }
+            }
+        }
+
+        ImGui::PopStyleColor(3);
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        // 中央のボタン群
+        ImGui::BeginGroup();
+
+        // 垂直中央揃えのためのスペース調整
+        ImGui::Dummy(ImVec2(0, 60));
+
+        bool canMoveRight = !leftSelected.empty();
+        if (!canMoveRight) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+        }
+
+        if (ImGui::Button("追加 >>##SaveAddButton", ImVec2(buttonWidth, 30)) && canMoveRight) {
+            for (int idx : leftSelected) {
+                AddToSaveTargets(nonSaveTargets[idx]);
+            }
+            leftSelected.clear();
+        }
+
+        ImGui::PopStyleColor(3);
+
+        bool canMoveLeft = !rightSelected.empty();
+        if (!canMoveLeft) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 0.8f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.4f, 0.4f, 1.0f));
+        }
+
+        if (ImGui::Button("<< 削除##SaveRemoveButton", ImVec2(buttonWidth, 30)) && canMoveLeft) {
+            for (int idx : rightSelected) {
+                RemoveFromSaveTargets(saveTargets[idx]);
+            }
+            rightSelected.clear();
+        }
+
+        ImGui::PopStyleColor(3);
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        // 右リスト（セーブする）
+        ImGui::BeginChild("save_targets##SaveTargets", ImVec2(listWidth, 200), true);
+
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.6f, 0.2f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.7f, 0.3f, 0.8f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+
+        if (saveTargets.empty()) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+            ImGui::TextWrapped("セーブ対象のオブジェクトがありません");
+            ImGui::PopStyleColor();
+        } else {
+            for (int i = 0; i < saveTargets.size(); ++i) {
+                bool selected = std::find(rightSelected.begin(), rightSelected.end(), i) != rightSelected.end();
+                std::string selectableId = saveTargets[i] + "##Save" + std::to_string(i);
+                if (ImGui::Selectable(selectableId.c_str(), selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                    if (!ImGui::GetIO().KeyCtrl)
+                        rightSelected.clear();
+
+                    auto it = std::find(rightSelected.begin(), rightSelected.end(), i);
+                    if (it != rightSelected.end())
+                        rightSelected.erase(it);
+                    else
+                        rightSelected.push_back(i);
+
+                    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                        RemoveFromSaveTargets(saveTargets[i]);
+                        rightSelected.clear();
+                    }
+                }
+            }
+        }
+
+        ImGui::PopStyleColor(3);
+        ImGui::EndChild();
+
+        ImGui::PopStyleColor(2);
+
+        ImGui::Spacing();
+
+        // 操作説明
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+        ImGui::TextWrapped("操作: Ctrlキー + クリックで複数選択, ダブルクリックで追加/削除");
+        ImGui::PopStyleColor();
+    }
+#endif // _DEBUG
+}
+void BaseObjectManager::AddToSaveTargets(const std::string &objectName) {
+    BaseObject *obj = GetObjectByName(objectName);
+    if (obj) {
+        obj->SetShouldSave(true);
+    }
+}
+
+void BaseObjectManager::RemoveFromSaveTargets(const std::string &objectName) {
+    BaseObject *obj = GetObjectByName(objectName);
+    if (obj) {
+        obj->SetShouldSave(false);
+    }
+}
+
 // シーン保存モーダルの描画
 void BaseObjectManager::DrawSceneSaveModel() {
 #ifdef _DEBUG
@@ -374,7 +563,9 @@ void BaseObjectManager::DrawSceneSaveModel() {
 
         // 横並びに「保存」ボタンと「キャンセル」ボタン
         if (ImGui::Button("保存", ImVec2(120, 0))) {
-            sceneName_ = sceneNameBuffer;      // 入力内容を保存
+            sceneName_ = sceneNameBuffer; // 入力内容を保存
+            std::unique_ptr<DataHandler> datas_ = std::make_unique<DataHandler>("SceneData/" + sceneName_ + "/ObjectDatas", "");
+            datas_->DeleteAllJsonsInFolder();
             SaveAll();                         // 実際の保存処理
             SaveAllParentChildRelationships(); // 親子関係も保存
             ImGui::CloseCurrentPopup();        // モーダルを閉じる
@@ -642,9 +833,10 @@ void BaseObjectManager::RestoreParentChildRelationshipForObject(BaseObject *obje
 
 void BaseObjectManager::DrawHierarchyEditor() {
 #ifdef _DEBUG
-    ImGui::Begin("階層エディター");
+    ImGui::Begin("オブジェクトマネージャ");
 
     ShowParentChildHierarchy();
+    ShowSaveTargetManager();
 
     ImGui::End();
 #endif // _DEBUG

@@ -1,15 +1,20 @@
 #pragma once
+#include "Data/DataHandler.h"
 #include "d3d12.h"
 #include "externals/nlohmann/json.hpp"
 #include "wrl.h"
+#include <Camera/ViewProjection/ViewProjection.h>
+#include <string>
 #include <type/Vector3.h>
 #include <type/Vector4.h>
-#include <string>
-#include <Camera/ViewProjection/ViewProjection.h>
-#include"Data/DataHandler.h"
+
+#define MAX_POINT_LIGHTS 5
+#define MAX_SPOT_LIGHTS 5
+
 enum class LightType {
     Directional,
     Point,
+    Spot
 };
 
 class DirectXCommon;
@@ -54,16 +59,9 @@ class LightGroup {
     /// </summary>
     void imgui();
 
-    /// <summary>
-    /// json関連
-    /// </summary>
-    /// <param name="filePath"></param>
-    void SaveDirectionalLight();
-    void SavePointLight();
-    void SaveSpotLight();
-    void LoadDirectionalLight();
-    void LoadPointLight();
-    void LoadSpotLight();
+    void SaveLightData(const std::string &fileName);
+
+    void LoadLightData(const std::string &fileName);
 
   private:
     /// <summary>
@@ -72,19 +70,52 @@ class LightGroup {
     void CreateDirectionLight();
 
     /// <summary>
-    /// 点光源データ作成
+    /// ポイントライト配列データ作成
     /// </summary>
-    void CreatePointLight();
+    void CreatePointLights();
 
     /// <summary>
-    /// スポットライト作成
+    /// スポットライト配列データ作成
     /// </summary>
-    void CreateSpotLight();
+    void CreateSpotLights();
 
     /// <summary>
     /// カメラ作成
     /// </summary>
     void CreateCamera();
+
+    /// <summary>
+    /// ポイントライト追加
+    /// </summary>
+    void AddPointLight();
+
+    /// <summary>
+    /// ポイントライト削除
+    /// </summary>
+    void RemovePointLight(int index);
+
+    /// <summary>
+    /// スポットライト追加
+    /// </summary>
+    void AddSpotLight();
+
+    /// <summary>
+    /// スポットライト削除
+    /// </summary>
+    void RemoveSpotLight(int index);
+
+    /// <summary>
+    /// ポイントライトデータ更新
+    /// </summary>
+    void UpdatePointLightBuffer();
+
+    /// <summary>
+    /// スポットライトデータ更新
+    /// </summary>
+    void UpdateSpotLightBuffer();
+
+    void DrawLightVisualization(); // 光源可視化描画
+    void SetShowLightVisualization(bool show) { showLightVisualization_ = show; }
 
   private:
     struct PointLight {
@@ -96,6 +127,14 @@ class LightGroup {
         float decay;
         int32_t HalfLambert;
         int32_t BlinnPhong;
+        float padding[3];
+    };
+
+    // ポイントライト配列用構造体
+    struct PointLights {
+        alignas(16) PointLight lights[MAX_POINT_LIGHTS];
+        int32_t count;
+        float padding[3];
     };
 
     // 平行光源データ
@@ -119,7 +158,14 @@ class LightGroup {
         int32_t active;
         int32_t HalfLambert;
         int32_t BlinnPhong;
-        float padding[2];
+        float padding[3];
+    };
+
+    // スポットライト配列用構造体
+    struct SpotLights {
+        SpotLight lights[MAX_SPOT_LIGHTS];
+        int32_t count;
+        float padding[3];
     };
 
     struct CameraForGPU {
@@ -131,27 +177,31 @@ class LightGroup {
     // バッファリソース内のデータを指すポインタ
     DirectionLight *directionalLightData = nullptr;
 
-    // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> pointLightResource;
+    // ポイントライト配列バッファリソース
+    Microsoft::WRL::ComPtr<ID3D12Resource> pointLightsResource;
     // バッファリソース内のデータを指すポインタ
-    PointLight *pointLightData = nullptr;
+    PointLights *pointLightsData = nullptr;
 
-    // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> spotLightResource;
+    // スポットライト配列バッファリソース
+    Microsoft::WRL::ComPtr<ID3D12Resource> spotLightsResource;
     // バッファリソース内のデータを指すポインタ
-    SpotLight *spotLightData = nullptr;
+    SpotLights *spotLightsData = nullptr;
 
     // バッファリソース
     Microsoft::WRL::ComPtr<ID3D12Resource> cameraForGPUResource;
     // バッファリソース内のデータを指すポインタ
     CameraForGPU *cameraForGPUData = nullptr;
 
-    DirectXCommon* dxCommon_;
+    DirectXCommon *dxCommon_;
+
+    // CPU側のライトデータ管理
+    std::vector<PointLight> pointLights_;
+    std::vector<SpotLight> spotLights_;
+
+    std::string saveMessage_;
+    int saveMessageTimer_ = 0;
 
     bool isDirectionalLight = true;
-    bool isPointLight = false;
-    bool isSpotLight = false;
+    bool showLightVisualization_ = true;
     std::unique_ptr<DataHandler> DLightData_ = nullptr;
-    std::unique_ptr<DataHandler> PLightData_ = nullptr;
-    std::unique_ptr<DataHandler> SLightData_ = nullptr;
 };

@@ -43,7 +43,8 @@ enum class PipelineType {
     kRender,
     kSkinning,
     kLine3d,
-    kSkybox
+    kSkybox,
+    kGPUParticle,
 };
 
 class PipeLineManager {
@@ -97,6 +98,11 @@ class PipeLineManager {
     void CreateParticlePipelines();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateParticleRootSignature();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateParticleGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode);
+
+    // GPUパーティクル関連
+    void CreateGPUParticlePipelines();
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateGPUParticleRootSignature();
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGPUParticleGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode);
 
     // スプライト関連
     void CreateSpritePipelines();

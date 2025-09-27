@@ -9,11 +9,13 @@
 
 void DebugCamera::Initialize(ViewProjection *viewProjection) {
     viewProjection_ = viewProjection;
-    translation_ = {0.0f, 0.0f, -50.0f};
-    rotation_ = {0.0f, 0.0f, 0.0f};
+    translation_ = viewProjection->translation_;
+    isUseQuaternion_ = viewProjection->isUseQuaternion_;
+    eulerRotation_ = viewProjection->eulerRotation_;
+    quateRotation_ = viewProjection->quateRotation_;
     matRot_ = MakeIdentity4x4();
     isActive_ = false;
-    lockCamera_ = true;
+    lockCamera_ = false;
     mouseSensitivity = 0.003f;
     moveZspeed = 0.005f;
     mouse = {0.0f, 0.0f};
@@ -21,37 +23,54 @@ void DebugCamera::Initialize(ViewProjection *viewProjection) {
 
 void DebugCamera::Update() {
     if (isActive_) {
-        if (lockCamera_) {
-            CameraMove(rotation_, translation_, mouse);
+        if (!lockCamera_) {
+            CameraMove(eulerRotation_, translation_, mouse); // rotation_をeulerRotation_に変更
         }
 
-        // 回転行列を更新せず、直接MakeAffineMatrixで渡す
-        rotateXYZMatrix = MakeRotateXMatrix(rotation_.x) *
-                          MakeRotateYMatrix(rotation_.y) *
-                          MakeRotateZMatrix(rotation_.z); // デバッグ用に保持
+        Matrix4x4 cameraMatrix;
 
-        // カメラ行列の作成（回転はオイラー角ベースで）
-        Matrix4x4 cameraMatrix = MakeAffineMatrix(
-            {1.0f, 1.0f, 1.0f},
-            rotation_,
-            translation_);
+        if (isUseQuaternion_) {
+            // クォータニオン使用時
+            cameraMatrix = MakeAffineMatrix(
+                {1.0f, 1.0f, 1.0f},
+                quateRotation_,
+                translation_);
+        } else {
+            // オイラー角使用時
+            cameraMatrix = MakeAffineMatrix(
+                {1.0f, 1.0f, 1.0f},
+                eulerRotation_,
+                translation_);
+        }
 
         // ビュー・プロジェクション行列の設定
         viewProjection_->matWorld_ = cameraMatrix;
         viewProjection_->matView_ = Inverse(cameraMatrix);
+        viewProjection_->translation_ = translation_;
+        viewProjection_->eulerRotation_ = eulerRotation_;
+        viewProjection_->quateRotation_ = quateRotation_;
+        viewProjection_->isUseQuaternion_ = isUseQuaternion_;
         viewProjection_->matProjection_ = MakePerspectiveFovMatrix(
             45.0f * std::numbers::pi_v<float> / 180.0f,
             float(WinApp::kClientWidth) / float(WinApp::kClientHeight),
             0.1f, 1000.0f);
+    } else {
+        viewProjection_->UpdateMatrix();
     }
 }
 
 void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Vector2 &clickPosition) {
-    // 各方向ベクトル（回転行列適用後）
-    Matrix4x4 matRot = MakeRotateXMatrix(rotation_.x) * MakeRotateYMatrix(rotation_.y);
+    // 各方向ベクトル（現在の回転に基づいて計算）
+    Matrix4x4 matRot;
+    if (isUseQuaternion_) {
+        matRot = QuaternionToMatrix4x4(quateRotation_);
+    } else {
+        matRot = MakeRotateXMatrix(eulerRotation_.x) * MakeRotateYMatrix(eulerRotation_.y);
+    }
+
     Vector3 forward = TransformNormal({0.0f, 0.0f, -2.0f}, matRot);
     Vector3 right = TransformNormal({2.0f, 0.0f, 0.0f}, matRot);
-    Vector3 up = {0.0f, 2.0f, 0.0f}; // ワールド上方向は固定
+    Vector3 up = {0.0f, 2.0f, 0.0f};
 
     // ---------- キーボードによるカメラ移動 ----------
     if (useKey_) {
@@ -95,7 +114,7 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
         }
 
         // ホイール回転でカメラの前後移動（Z軸）
-        int wheel = Input::GetInstance()->GetWheel(); // 正:奥へ, 負:手前へ
+        int wheel = Input::GetInstance()->GetWheel();
         if (wheel != 0) {
             translation_ -= forward * static_cast<float>(wheel) * mouseSensitivity;
         }
@@ -104,22 +123,34 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
     // ---------- マウス右クリックによる視点回転 ----------
     if (Input::GetInstance()->IsPressMouse(1)) {
         Vector2 currentMousePos = Input::GetInstance()->GetMousePos();
-
         float deltaX = static_cast<float>(currentMousePos.x - clickPosition.x);
         float deltaY = static_cast<float>(currentMousePos.y - clickPosition.y);
 
-        // 視点回転を加算（Yaw：Y軸、Pitch：X軸）
-        cameraRotate.y += deltaX * mouseSensitivity;
-        cameraRotate.x += deltaY * mouseSensitivity;
+        if (isUseQuaternion_) {
+            // クォータニオンでの回転処理
+            Quaternion yawRotation = Quaternion::FromAxisAngle({0, 1, 0}, deltaX * mouseSensitivity);
+            Quaternion pitchRotation = Quaternion::FromAxisAngle({1, 0, 0}, deltaY * mouseSensitivity);
 
-        // 上下反転制限
-        const float pi_2 = std::numbers::pi_v<float> / 2.0f - 0.01f;
-        cameraRotate.x = std::clamp(cameraRotate.x, -pi_2, pi_2);
+            quateRotation_ = yawRotation * pitchRotation * quateRotation_;
+            quateRotation_ = quateRotation_.Normalize();
 
-        // マウス位置更新
+            // 参考用にオイラー角も更新
+            eulerRotation_ = quateRotation_.ToEulerAngles();
+        } else {
+            // オイラー角での回転処理
+            cameraRotate.y += deltaX * mouseSensitivity;
+            cameraRotate.x += deltaY * mouseSensitivity;
+
+            // 上下反転制限
+            const float pi_2 = std::numbers::pi_v<float> / 2.0f - 0.01f;
+            cameraRotate.x = std::clamp(cameraRotate.x, -pi_2, pi_2);
+
+            // 参考用にクォータニオンも更新
+            quateRotation_ = Quaternion::FromEulerAngles(eulerRotation_);
+        }
+
         clickPosition = currentMousePos;
     } else if (!Input::GetInstance()->IsPressMouse(2)) {
-        // 右クリックでもホイールクリックでもないときに初期化
         clickPosition = Input::GetInstance()->GetMousePos();
     }
 }
@@ -148,19 +179,49 @@ void DebugCamera::imgui() {
             ImGui::DragFloat3("位置", &translation_.x, 0.01f, -1000.0f, 1000.0f, "%.2f");
             ImGui::PopStyleColor();
 
-            Vector3 rotate = GetEulerAnglesFromMatrix(matRot_);
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.8f, 0.3f, 0.2f));
-            if (ImGui::DragFloat3("回転", &rotate.x, 0.01f, -360.0f, 360.0f, "%.2f度")) {
-                // 回転が変更された場合の処理をここに追加
+            // 回転モード切り替え
+            ImGui::Text("回転モード: %s", isUseQuaternion_ ? "クォータニオン" : "オイラー角");
+            ImGui::Checkbox("クォータニオンを使用", &isUseQuaternion_);
+
+            ImGui::Spacing();
+
+            // 回転調整
+            if (isUseQuaternion_) {
+                ImGui::Text("クォータニオン回転");
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.8f, 0.3f, 0.2f));
+                ImGui::DragFloat4("##quaternion", &quateRotation_.x, 0.01f, -1.0f, 1.0f, "%.3f");
+                ImGui::PopStyleColor();
+
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "オイラー角 (参考): %.1f°, %.1f°, %.1f°",
+                                   eulerRotation_.x * 180.0f / std::numbers::pi_v<float>,
+                                   eulerRotation_.y * 180.0f / std::numbers::pi_v<float>,
+                                   eulerRotation_.z * 180.0f / std::numbers::pi_v<float>);
+            } else {
+                ImGui::Text("オイラー角回転 (度)");
+                Vector3 eulerDegrees = {
+                    eulerRotation_.x * 180.0f / std::numbers::pi_v<float>,
+                    eulerRotation_.y * 180.0f / std::numbers::pi_v<float>,
+                    eulerRotation_.z * 180.0f / std::numbers::pi_v<float>};
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.8f, 0.3f, 0.2f));
+                if (ImGui::DragFloat3("##euler", &eulerDegrees.x, 1.0f, -360.0f, 360.0f, "%.1f°")) {
+                    eulerRotation_ = {
+                        eulerDegrees.x * std::numbers::pi_v<float> / 180.0f,
+                        eulerDegrees.y * std::numbers::pi_v<float> / 180.0f,
+                        eulerDegrees.z * std::numbers::pi_v<float> / 180.0f};
+                }
+                ImGui::PopStyleColor();
+
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "クォータニオン (参考): %.3f, %.3f, %.3f, %.3f",
+                                   quateRotation_.x, quateRotation_.y, quateRotation_.z, quateRotation_.w);
             }
-            ImGui::PopStyleColor();
 
             // リセットボタン
             if (ImGui::Button("位置リセット", ImVec2(-1, 0))) {
                 translation_ = {0.0f, 0.0f, -50.0f};
             }
             if (ImGui::Button("回転リセット", ImVec2(-1, 0))) {
-                matRot_ = MakeIdentity4x4();
+                eulerRotation_ = {0.0f, 0.0f, 0.0f};
+                quateRotation_ = Quaternion::IdentityQuaternion();
             }
         }
 

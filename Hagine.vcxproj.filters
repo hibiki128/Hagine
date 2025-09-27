@@ -183,11 +183,26 @@
     <Filter Include="ソースファイル\Engine\3d\Object\Base">
       <UniqueIdentifier>{cbccf457-8406-4a38-b361-038f2aba04d6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Player\Hand">
-      <UniqueIdentifier>{0b5bf4df-19c8-4c4c-8beb-b072e9c9b3f5}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ソースファイル\Engine\Utility\Edit\ShotcutManager">
       <UniqueIdentifier>{3df90e8a-db9b-4f43-a83b-b978ead57f6b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\3d\Particle\CSParticle">
+      <UniqueIdentifier>{26d063c4-e181-4ac2-ad77-d5eb57593b77}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Offscreen\PostEffect">
+      <UniqueIdentifier>{94163314-520c-41fd-b0e4-9eacd56fda9a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Application\Utility\ComboSystem">
+      <UniqueIdentifier>{f9421474-64d0-4003-83f5-82fb03ff9fb3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Random">
+      <UniqueIdentifier>{8ac63fb6-93a7-4cf8-baf6-ff20aee7c767}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\LoadFile">
+      <UniqueIdentifier>{21ed8146-a5be-46ec-92bb-6fb98127adc6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソースファイル\Engine\Utility\LoadFile\Csv">
+      <UniqueIdentifier>{8c275819-355f-452c-b2c4-7dd2d0960b84}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -426,26 +441,44 @@
     <ClCompile Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.cpp">
       <Filter>ソースファイル\Engine\Utility\Edit\ShotcutManager</Filter>
     </ClCompile>
-    <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp">
-      <Filter>ソースファイル</Filter>
+    <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSGroup.cpp">
+      <Filter>ソースファイル\Engine\3d\Particle\CSParticle</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectChain.cpp">
-      <Filter>ソースファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectRenderer.cpp">
-      <Filter>ソースファイル</Filter>
+    <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSEmitter.cpp">
+      <Filter>ソースファイル\Engine\3d\Particle\CSParticle</Filter>
     </ClCompile>
     <ClCompile Include="Engine\OffScreen\RendererBuffer.cpp">
-      <Filter>ソースファイル</Filter>
+      <Filter>ソースファイル\Engine\Offscreen</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParameters.cpp">
-      <Filter>ソースファイル</Filter>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectChain.cpp">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
     </ClCompile>
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectDataManager.cpp">
-      <Filter>ソースファイル</Filter>
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\3d\Camera\FollowCamera\FollowCamera.cpp">
-      <Filter>ソースファイル</Filter>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParameters.cpp">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectRenderer.cpp">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\Particle\ParticleStruct.cpp">
+      <Filter>ソースファイル\Engine\3d\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp">
+      <Filter>ソースファイル\Application\Utility\ComboSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\2d\SpriteManager.cpp">
+      <Filter>ソースファイル\Engine\2d</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSEditor.cpp">
+      <Filter>ソースファイル\Engine\3d\Particle\CSParticle</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSGroupManager.cpp">
+      <Filter>ソースファイル\Engine\3d\Particle\CSParticle</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Utility\LoadFile\Csv\CsvLoad.cpp">
+      <Filter>ソースファイル\Engine\Utility\LoadFile\Csv</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -490,6 +523,12 @@
     </None>
     <None Include="Resources\shaders\Skinning\Skinning.hlsli">
       <Filter>リソース ファイル\Skinning</Filter>
+    </None>
+    <None Include="Resources\shaders\Particle\Particle.VS.hlsl">
+      <Filter>ソースファイル\Resources\shaders\Particle</Filter>
+    </None>
+    <None Include="Resources\shaders\Random\Random.hlsli">
+      <Filter>リソース ファイル\Random</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -752,14 +791,48 @@
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h">
       <Filter>ソースファイル\Engine\Utility\Edit\ShotcutManager</Filter>
     </ClInclude>
-    <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
-    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectChain.h" />
-    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectRenderer.h" />
-    <ClInclude Include="Engine\OffScreen\RendererBuffer.h" />
-    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParameters.h" />
-    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h" />
-    <ClInclude Include="Engine\3d\Camera\FollowCamera\FollowCamera.h" />
-    <ClInclude Include="Engine\2d\SpriteStruct.h" />
+    <ClInclude Include="Engine\3d\Particle\ParticleStruct.h">
+      <Filter>ソースファイル\Engine\3d\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSEmitter.h">
+      <Filter>ソースファイル\Engine\3d\Particle\CSParticle</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSGroup.h">
+      <Filter>ソースファイル\Engine\3d\Particle\CSParticle</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\RendererBuffer.h">
+      <Filter>ソースファイル\Engine\Offscreen</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectChain.h">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParameters.h">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectRenderer.h">
+      <Filter>ソースファイル\Engine\Offscreen\PostEffect</Filter>
+    </ClInclude>
+    <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h">
+      <Filter>ソースファイル\Application\Utility\ComboSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\2d\SpriteStruct.h">
+      <Filter>ソースファイル\Engine\2d</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\2d\SpriteManager.h">
+      <Filter>ソースファイル\Engine\2d</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSGroupManager.h">
+      <Filter>ソースファイル\Engine\3d\Particle\CSParticle</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSEditor.h">
+      <Filter>ソースファイル\Engine\3d\Particle\CSParticle</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Utility\LoadFile\Csv\CsvLoad.h">
+      <Filter>ソースファイル\Engine\Utility\LoadFile\Csv</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
@@ -936,41 +1009,11 @@
     <Filter Include="ソースファイル\Engine\Utility\Graphics\Texture">
       <UniqueIdentifier>{7dd5cae1-a209-47f8-8ac6-1eb7e5897b56}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ソースファイル\Application\Camera">
-      <UniqueIdentifier>{c58c4059-93a5-4e55-9f39-45920e033589}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject">
-      <UniqueIdentifier>{cbfc5534-c04e-425b-9328-1d22abf1404f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ソースファイル\Application\Scene">
       <UniqueIdentifier>{7546c456-ae95-4a1a-99ce-f999713a0551}</UniqueIdentifier>
     </Filter>
     <Filter Include="ソースファイル\Application\Utility">
       <UniqueIdentifier>{c4cca83d-3dda-4494-b3dc-49917b7bff82}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Enemy">
-      <UniqueIdentifier>{9a0592ce-4e78-462e-ba5c-b4926c2974a8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Field">
-      <UniqueIdentifier>{31a2f8c3-df8b-4cc7-af41-c70390b837b9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Player">
-      <UniqueIdentifier>{e503c333-5f9b-4a40-9102-9a3b2b1e3a30}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Player\Bullet">
-      <UniqueIdentifier>{438b6241-a7b1-43ac-91bd-0a091771fa6f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Player\State">
-      <UniqueIdentifier>{05960d66-369f-4803-b79b-c1c8e28d935f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Player\Bullet\ChageShot">
-      <UniqueIdentifier>{f28e1cc8-b15c-447f-8260-5027b6adb0c7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Field\Ground">
-      <UniqueIdentifier>{91c8f279-0b5d-42a3-b7ed-9dc0ebe92574}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Field\SkyDome">
-      <UniqueIdentifier>{422fabaa-355e-4da3-b90c-707c523f1555}</UniqueIdentifier>
     </Filter>
     <Filter Include="ソースファイル\Resources\fonts">
       <UniqueIdentifier>{66a41fed-8e3c-4295-936b-9c477e5d8e3f}</UniqueIdentifier>
@@ -1013,18 +1056,6 @@
     </Filter>
     <Filter Include="imgui関連">
       <UniqueIdentifier>{a4c9fbfa-c271-44e5-85d0-d5ba109a705e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Player\State\Air">
-      <UniqueIdentifier>{10cdce4b-8da0-4b33-9dc6-4bfe2fb1655c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Player\State\Base">
-      <UniqueIdentifier>{d6feff1b-b002-40a8-a36c-53694c5bdfe4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Player\State\Fly">
-      <UniqueIdentifier>{96d9aa06-043e-406e-b73d-b665f79337ce}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ソースファイル\Application\GameObject\Player\State\Ground">
-      <UniqueIdentifier>{76b4803a-ec50-4288-81c0-23b9f3a834aa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -1070,10 +1101,10 @@
     <FxCompile Include="resources\shaders\Object\Object3d.VS.hlsl">
       <Filter>リソース ファイル\Object</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Particle\Particle.PS.hlsl">
+    <FxCompile Include="resources\shaders\Particle\ParticleCS.PS.hlsl">
       <Filter>リソース ファイル\Particle</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Particle\Particle.VS.hlsl">
+    <FxCompile Include="resources\shaders\Particle\ParticleCS.VS.hlsl">
       <Filter>リソース ファイル\Particle</Filter>
     </FxCompile>
     <FxCompile Include="Resources\shaders\Skinning\Skinning.CS.hlsl">
@@ -1094,8 +1125,26 @@
     <FxCompile Include="resources\shaders\Sprite\Sprite.PS.hlsl">
       <Filter>リソース ファイル\Sprite</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\OffScreen\Dissolve.PS.hlsl" />
-    <FxCompile Include="Resources\shaders\OffScreen\Random.PS.hlsl" />
-    <FxCompile Include="Resources\shaders\OffScreen\FocusLine.PS.hlsl" />
+    <FxCompile Include="Resources\shaders\Particle\EmitParticle.CS.hlsl">
+      <Filter>ソースファイル\Resources\shaders\Particle</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\InitParticle.CS.hlsl">
+      <Filter>ソースファイル\Resources\shaders\Particle</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\Particle.PS.hlsl">
+      <Filter>ソースファイル\Resources\shaders\Particle</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\UpdateParticle.CS.hlsl">
+      <Filter>ソースファイル\Resources\shaders\Particle</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\OffScreen\Dissolve.PS.hlsl">
+      <Filter>リソース ファイル\OffScreen</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\OffScreen\FocusLine.PS.hlsl">
+      <Filter>リソース ファイル\OffScreen</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\OffScreen\Random.PS.hlsl">
+      <Filter>リソース ファイル\Random</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

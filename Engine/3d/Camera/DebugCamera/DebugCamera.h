@@ -30,13 +30,16 @@ class DebugCamera {
   private:
     ViewProjection *viewProjection_;
     Vector2 mouse;
+    Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f}; // rotation_の代わり
+    // カメラの移動速度
+    float mouseSensitivity = 0.003f;
+    float moveZspeed = 0.005f;
     bool lockCamera_ = true;
     bool useKey_ = true;
     bool useMouse_ = false;
-    float mouseSensitivity = 0.003f;
-    // カメラの移動速度
-    float moveZspeed = 0.005f;
-    Matrix4x4 matRotDelta;
-    Matrix4x4 rotateXYZMatrix;
     bool isActive_ = false;
+    bool isUseQuaternion_ = false; // デフォルトはオイラー角
+    Quaternion quateRotation_ = Quaternion::IdentityQuaternion();
+    Matrix4x4 rotateXYZMatrix;
+    Matrix4x4 matRotDelta;
 };

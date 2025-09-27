@@ -66,6 +66,9 @@ class DirectXCommon {
     /// </summary>
     void PostDraw();
 
+    void TransitionUAVBarrier(ID3D12Resource* pResource);
+    void TransitionSRVBarrier();
+
     IDxcBlob *CompileShader(
         // CompilerするShaderファイルへのパス
         const std::wstring &filePath,

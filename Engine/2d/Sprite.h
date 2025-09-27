@@ -38,6 +38,10 @@ class Sprite {
     const Vector2 &GetTexLeftTop() const { return textureLeftTop; }
     const Vector2 &GetTexSize() const { return textureSize; }
     uint32_t &GetInstanceCount() { return instanceCount; }
+    Matrix4x4 GetUVTransform() { return materialData->uvTransform; }
+    Vector2 GetUVPosition() { return uvPosition_; }
+    Vector2 GetUVSize() { return uvSize_; }
+    float GetUVRotate() { return uvRotate_; }
 
     /// <summary>
     /// setter
@@ -54,7 +58,17 @@ class Sprite {
     void SetFlipY(bool isFlipY) { isFlipY_ = isFlipY; }
     void SetTexLeftTop(const Vector2 &textureLeftTop) { this->textureLeftTop = textureLeftTop; }
     void SetTexSize(const Vector2 &textureSize) { this->textureSize = textureSize; }
-    void SetUVTransform(const Matrix4x4 &uvTransform) { materialData->uvTransform = uvTransform; }
+    void SetUVTransform(const Matrix4x4 &uvTransform) {
+        materialData->uvTransform = uvTransform;
+        uvSize_.x = sqrt(uvTransform.m[0][0] * uvTransform.m[0][0] + uvTransform.m[1][0] * uvTransform.m[1][0]);
+        uvSize_.y = sqrt(uvTransform.m[0][1] * uvTransform.m[0][1] + uvTransform.m[1][1] * uvTransform.m[1][1]);
+        uvRotate_ = atan2(uvTransform.m[1][0], uvTransform.m[0][0]);
+        uvPosition_.x = uvTransform.m[3][0];
+        uvPosition_.y = uvTransform.m[3][1];
+    }
+    void SetUVPosition(const Vector2 &position) { uvPosition_ = position; }
+    void SetUVSize(const Vector2 &size) { uvSize_ = size; }
+    void SetUVRotate(const float &rotate) { uvRotate_ = rotate; }
     void SetInstanceCount(uint32_t count);
     void SetInstanceTransform(uint32_t index, const TransformationMatrix &transform);
 
@@ -132,4 +146,8 @@ class Sprite {
 
     uint32_t instanceCount = 1; // デフォルトは1個
     uint32_t transformationMatrixSrvIndex = 0;
+
+    float uvRotate_ = 0.0f;
+    Vector2 uvSize_ = {1.0f, 1.0f};
+    Vector2 uvPosition_ = {0.0f, 0.0f};
 };

@@ -1,8 +1,7 @@
 #pragma once
-
 #include "BaseScene.h"
-#include"Object/Base/BaseObject.h"
-#include"Easing.h"
+#include"Particle/CSParticle/ParticleCSEmitter.h"
+#include"Particle/CSParticle/ParticleCSGroup.h"
 
 class TitleScene : public BaseScene {
   public:
