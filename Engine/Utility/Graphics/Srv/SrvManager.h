@@ -52,7 +52,7 @@ class SrvManager {
     /// <summary>
     /// 描画前処理
     /// </summary>
-    void PreDraw();
+    void SetDescriptorHeap();
 
     /// <summary>
     /// SRV生成(テクスチャ用)

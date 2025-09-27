@@ -20,13 +20,14 @@
 #include <Graphics/Srv/SrvManager.h>
 #include <Primitive/PrimitiveModel.h>
 #include <unordered_set>
+#include <Transform/ObjColor.h>
 
 class Model {
   private:
     ModelCommon *modelCommon_;
 
     // Objファイルのデータ
-    ModelData modelData;
+    ModelData modelData_;
     SrvManager *srvManager_;
 
     std::string filename_;
@@ -38,8 +39,6 @@ class Model {
 
     // マルチメッシュ対応
     std::vector<std::unique_ptr<Mesh>> meshes_;
-    // マルチマテリアル対応
-    std::vector<std::unique_ptr<Material>> materials_;
 
     Animator *animator_;
     Skin *skin_;
@@ -62,42 +61,29 @@ class Model {
     /// <summary>
     /// 描画
     /// </summary>
-    void Draw(const Vector4 &color, bool lighting, bool reflect);
+    void Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect);
 
     // Setter methods
     void SetSrv(SrvManager *srvManager) { srvManager_ = srvManager; }
-    void SetAnimator(Animator *animator) { animator_ = animator; }
+    void SetAnimator(Animator *animator) {
+        animator_ = animator;
+        animator_->SetModelData(modelData_);
+    }
     void SetSkin(Skin *skin) { skin_ = skin; }
     void SetBone(Bone *bone) { bone_ = bone; }
 
-    // マテリアル関連
-    void SetMaterialData(const std::vector<MaterialData> &materialData) { modelData.materials = materialData; }
-    std::vector<MaterialData> &GetMaterialData() { return modelData.materials; }
-    void SetTexture(const std::string &filePath, uint32_t index) {
-        materials_[index]->SetTexture(filePath);
-    }
-
-    void SetEnvironmentCoefficients(float value) {
-        for (auto &material : materials_) {
-            material->SetEnvironmentCoefficients(value);
-        }
-    };
-
     // Getter methods
-    ModelData GetModelData() { return modelData; }
+    ModelData GetModelData() { return modelData_; }
     bool IsGltf() { return isGltf; }
 
     // マルチメッシュ・マルチマテリアル情報取得
     size_t GetMeshCount() const { return meshes_.size(); }
-    size_t GetMaterialCount() const { return materials_.size(); }
 
     Mesh *GetMesh(uint32_t index) {
         return (index < meshes_.size()) ? meshes_[index].get() : nullptr;
     }
 
-    Material *GetMaterial(uint32_t index) {
-        return (index < materials_.size()) ? materials_[index].get() : nullptr;
-    }
+    Animator *GetAnimator() { return animator_; }
 
   private:
     /// <summary>

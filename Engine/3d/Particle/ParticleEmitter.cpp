@@ -1156,8 +1156,7 @@ void ParticleEmitter::AddParticleGroup(ParticleGroup *particleGroup) {
 std::unique_ptr<ParticleEmitter> ParticleEmitter::Clone() const {
     auto newEmitter = std::make_unique<ParticleEmitter>();
 
-    // 元の名前を保持（_cloneを付けない）
-    newEmitter->SetName(this->name_); // 変更: _cloneを付けない
+    newEmitter->SetName(this->name_);
     newEmitter->SetFrequency(this->emitFrequency_);
     newEmitter->SetActive(this->isActive_);
     newEmitter->isAuto_ = this->isAuto_;

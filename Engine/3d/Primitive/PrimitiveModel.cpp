@@ -263,7 +263,7 @@ void PrimitiveModel::CreateRing() {
 
     const uint32_t kRingDivide = 32;
     const float kOuterRadius = 1.0f;
-    const float kInnerRadius = 0.5f;
+    const float kInnerRadius = 0.8f;
     const float radianPerDivide = 2.0f * std::numbers::pi_v<float> / float(kRingDivide);
 
     // 頂点の生成（垂直にするためにX軸90度回転）

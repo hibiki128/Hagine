@@ -159,6 +159,20 @@ void DirectXCommon::PostDraw() {
     assert(SUCCEEDED(hr));
 }
 
+void DirectXCommon::TransitionUAVBarrier(ID3D12Resource *pResource) {
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = pResource;
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    commandList->ResourceBarrier(1, &barrier);
+}
+
+void DirectXCommon::TransitionSRVBarrier() {
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+    commandList->ResourceBarrier(1, &barrier);
+}
+
 void DirectXCommon::DeviceInitialize() {
 
 #ifdef _DEBUG

@@ -1,14 +1,14 @@
 #pragma once
-#include <type/Vector2.h>
-#include <type/Vector3.h>
-#include"type/Vector4.h"
+#include "iostream"
+#include "type/Vector4.h"
+#include <Primitive/PrimitiveModel.h>
+#include <cstdint>
 #include <externals/nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>
-#include"iostream"
 #include <memory>
-#include <cstdint>
-#include <Primitive/PrimitiveModel.h>
+#include <type/Vector2.h>
+#include <type/Vector3.h>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -30,6 +30,19 @@ class DataHandler {
     // JSONデータをロード
     template <typename T>
     T Load(const std::string &key, const T &defaultValue);
+
+    /// <summary>
+    /// jsonファイル探索関数
+    /// あるときtrue
+    /// ないときfalse
+    /// </summary>
+    /// <returns></returns>
+    bool Exists() const;
+
+    /// <summary>
+    /// 対象フォルダ内のすべての json ファイルを削除（ファイルごと消す）
+    /// </summary>
+    void DeleteAllJsonsInFolder();
 };
 
 // JSON変換の定義 (Vector2)
@@ -55,7 +68,7 @@ inline void from_json(const json &j, Vector3 &v) {
 
 // JSON変換の定義 (Vector3)
 inline void to_json(json &j, const Vector4 &v) {
-    j = json{{"x", v.x}, {"y", v.y}, {"z", v.z}, {"w",v.w}};
+    j = json{{"x", v.x}, {"y", v.y}, {"z", v.z}, {"w", v.w}};
 }
 
 inline void from_json(const json &j, Vector4 &v) {
@@ -76,6 +89,26 @@ inline void from_json(const json &j, Quaternion &q) {
     q.w = j.at("w").get<float>();
 }
 
+// JSON変換の定義 (Matrix4x4)
+inline void to_json(json &j, const Matrix4x4 &matrix) {
+    j = json::array();
+    for (int i = 0; i < 4; ++i) {
+        json row = json::array();
+        for (int k = 0; k < 4; ++k) {
+            row.push_back(matrix.m[i][k]);
+        }
+        j.push_back(row);
+    }
+}
+
+inline void from_json(const json &j, Matrix4x4 &matrix) {
+    for (int i = 0; i < 4; ++i) {
+        for (int k = 0; k < 4; ++k) {
+            matrix.m[i][k] = j[i][k].get<float>();
+        }
+    }
+}
+
 // JSON変換の定義 (PrimitiveType)
 inline void to_json(json &j, const PrimitiveType &type) {
     j = static_cast<int>(type);
@@ -84,7 +117,6 @@ inline void to_json(json &j, const PrimitiveType &type) {
 inline void from_json(const json &j, PrimitiveType &type) {
     type = static_cast<PrimitiveType>(j.get<int>());
 }
-
 
 // Save (テンプレート関数はここに書く)
 template <typename T>

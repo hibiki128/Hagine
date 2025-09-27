@@ -7,7 +7,6 @@ void TitleScene::Initialize() {
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
     vp_.Initialize();
-    vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
@@ -62,6 +61,7 @@ void TitleScene::DrawForOffScreen() {
 
 void TitleScene::AddSceneSetting() {
     debugCamera_->imgui();
+    vp_.ShowDebugInfo();
 }
 
 void TitleScene::AddObjectSetting() {
@@ -83,11 +83,7 @@ void TitleScene::AddParticleSetting() {
 }
 
 void TitleScene::CameraUpdate() {
-    if (debugCamera_->GetActive()) {
-        debugCamera_->Update();
-    } else {
-        vp_.UpdateMatrix();
-    }
+    debugCamera_->Update();
 }
 
 void TitleScene::ChangeScene() {

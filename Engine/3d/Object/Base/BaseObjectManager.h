@@ -56,6 +56,7 @@ class BaseObjectManager {
     void SaveAllParentChildRelationships();
     void LoadAllParentChildRelationships();
     void RemoveObject(const std::string &name);
+    void ShowSaveTargetManager();
   private:
     // 各機能を個別に描画するメソッド
     void DrawSceneSaveModel();
@@ -63,7 +64,8 @@ class BaseObjectManager {
     void DrawObjectCreationModel();
     void DrawObjectLoadModel();
     void LoadObjectFromJson(const std::string &startPath, const std::string &objectName);
-
+    void AddToSaveTargets(const std::string &objectName);
+    void RemoveFromSaveTargets(const std::string &objectName);
     void RestoreParentChildRelationshipForObject(BaseObject *object);
 
     void CreateObject(std::string objectName, std::string modelPath, std::string texturePath = "");

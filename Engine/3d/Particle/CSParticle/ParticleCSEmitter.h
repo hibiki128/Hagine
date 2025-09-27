@@ -1,0 +1,184 @@
+#pragma once
+#include "Graphics/Model/ModelManager.h"
+#include "Particle/ParticleStruct.h"
+#include "ParticleCSGroup.h"
+#include <Camera/ViewProjection/ViewProjection.h>
+#include <DirectXCommon.h>
+#include <Graphics/Srv/SrvManager.h>
+#include <Particle/ParticleCommon.h>
+#include <set>
+#include <vector>
+
+class ParticleCSEmitter {
+
+  public:
+    /// ==============================================
+    /// public methods
+    /// ==============================================
+    void Initialize(const std::string &name);
+    void Initialize(const std::string &name, const std::string &modelPath, EmitterType type);
+    void Initialize(const std::string &name, PrimitiveType primitiveType, EmitterType type);
+    void Update();
+    void Draw(const ViewProjection &vp);
+    void DrawImGui();
+    void AddParticleGroup(ParticleCSGroup *particleGroup);
+    void RemoveParticleGroup(const std::string &groupName);
+
+    void SetName(const std::string &name) { name_ = name; }
+    void SetFrequency(float frequency) {
+        if (emitterSphereData_)
+            emitterSphereData_->frequency = frequency;
+        if (emitterMeshData_)
+            emitterMeshData_->frequency = frequency;
+    }
+    void SetActive(bool isActive) { isActive_ = isActive; }
+    void SetAuto(bool isAuto) { isAuto_ = isAuto; }
+
+    std::string GetName() const { return name_; }
+
+    std::unique_ptr<ParticleCSEmitter> Clone() const;
+
+    void SetTranslate(Vector3 transform) {
+        if (emitterSphereData_)
+            emitterSphereData_->translate = transform;
+        if (emitterMeshData_)
+            emitterMeshData_->translate = transform;
+    }
+
+    void SetRotation(Vector3 rotation) {
+        if (emitterSphereData_)
+            emitterSphereData_->rotation = rotation;
+        if (emitterMeshData_)
+            emitterMeshData_->rotation = rotation;
+    }
+
+    void SetScale(Vector3 scale) {
+        if (emitterSphereData_)
+            emitterSphereData_->scale = scale;
+        if (emitterMeshData_)
+            emitterMeshData_->scale = scale;
+    }
+
+    void SetRadius(Vector3 radius) {
+        if (emitterSphereData_)
+            emitterSphereData_->radius = radius;
+    }
+
+    Vector3 GetTranslate() const {
+        if (emitterSphereData_)
+            return emitterSphereData_->translate;
+        if (emitterMeshData_)
+            return emitterMeshData_->translate;
+        return Vector3(0.0f, 0.0f, 0.0f);
+    }
+
+    Vector3 GetRotation() const {
+        if (emitterSphereData_)
+            return emitterSphereData_->rotation;
+        if (emitterMeshData_)
+            return emitterMeshData_->rotation;
+        return Vector3(0.0f, 0.0f, 0.0f);
+    }
+
+    Vector3 GetScale() const {
+        if (emitterSphereData_)
+            return emitterSphereData_->scale;
+        if (emitterMeshData_)
+            return emitterMeshData_->scale;
+        return Vector3(1.0f, 1.0f, 1.0f);
+    }
+
+    Vector3 GetRadius() const {
+        if (emitterSphereData_)
+            return emitterSphereData_->radius;
+        return Vector3(1.0f, 1.0f, 1.0f);
+    }
+
+    // nameCounterをクリアする静的関数
+    static void ClearNameCounter() {
+        GetNameCounter().clear();
+    }
+
+    // 特定のベース名のカウンターのみクリア
+    static void ClearNameCounter(const std::string &baseName) {
+        GetNameCounter().erase(baseName);
+    }
+
+    void SetEmitterType(EmitterType type) { SwitchEmitterType(type); }
+    void SetMeshData(const MeshData &meshData);
+    void CreateTriangleSRV();
+    EmitterType GetEmitterType() const { return currentEmitterType_; }
+
+  private:
+    /// ==============================================
+    /// private methods
+    /// ==============================================
+
+    void CreateEmitterMeshResource();
+    void CreateTriangleResource(const MeshData &meshData);
+    void SwitchEmitterType(EmitterType type);
+    void CreateEmitterSphereResource();
+    void CreateEmitterSettingsResource();
+    void EmitterUpdate();
+    void EmitterDisPatch();
+    void DrawEmitter();
+
+    void SaveSetting();
+    void LoadSetting();
+    void LoadCloneSetting();
+
+    void LoadModel(const std::string &modelPath);
+    void LoadPrimitiveModel(PrimitiveType type);
+    void CreateModelTriangles();
+
+  private:
+    /// ==============================================
+    /// private variables
+    /// ==============================================
+    ///
+
+    static std::unordered_map<std::string, int> &GetNameCounter() {
+        static std::unordered_map<std::string, int> nameCounter;
+        return nameCounter;
+    }
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> emitterSettingsResource_ = nullptr;
+    EmitterSettings *emitterSettingsData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> emitterSphereResource_ = nullptr;
+    EmitterSphere *emitterSphereData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> emitterMeshResource_ = nullptr;
+    EmitterMesh *emitterMeshData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> triangleResource_ = nullptr;
+    Triangle *triangleData_ = nullptr;
+
+    DirectXCommon *dxCommon_ = nullptr;
+    ID3D12GraphicsCommandList *commandList = nullptr;
+    ParticleCommon *particleCommon_ = nullptr;
+    SrvManager *srvManager_ = nullptr;
+
+    std::vector<ParticleCSGroup *> particleGroups_;
+    std::set<std::string> particleGroupNames_;
+
+    EmitterType currentEmitterType_ = EmitterType::Sphere;
+
+    uint32_t triangleSrvIndex_ = 0;
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> triangleSrvHandle_;
+
+    std::vector<Triangle> triangles_;
+
+    // Model data for mesh emitters
+    Model *model_ = nullptr;
+    ModelData modelData_;
+    std::string modelPath_;
+    PrimitiveType primitiveType_ = PrimitiveType::None;
+
+    std::string name_;
+    int groupNum_ = 0;
+
+    bool isAuto_ = false;
+    bool isActive_ = false;
+    bool isVisible_ = true;
+};

@@ -18,6 +18,23 @@ void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Ve
     CreateMaterial();
 
     CreateTransformationMatrix();
+    SetInstanceCount(1);
+
+    if (instanceCount <= 1) {
+        Transform transform{
+            {size.x, size.y, 1.0f},          // scale
+            {0.0f, 0.0f, rotation},          // rotation
+            {position_.x, position_.y, 0.0f} // translation
+        };
+
+        Matrix4x4 world = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+        Matrix4x4 view = MakeIdentity4x4();
+        Matrix4x4 proj = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
+        Matrix4x4 wvp = world * (view * proj);
+
+        transformationMatrixData[0].World = world;
+        transformationMatrixData[0].WVP = wvp;
+    }
 
     position_ = position;
     materialData->color = color;
@@ -41,22 +58,18 @@ void Sprite::SetInstanceTransform(uint32_t index, const TransformationMatrix &tr
     }
 }
 
-void Sprite::Update(bool isbackmost_) {
-
+void Sprite::Update(bool isBackMost) {
+    // 頂点座標の計算
     float left = 0.0f - anchorPoint_.x;
     float right = 1.0f - anchorPoint_.x;
     float top = 0.0f - anchorPoint_.y;
     float bottom = 1.0f - anchorPoint_.y;
 
-    // 左右反転
     if (isFlipX_) {
-        left = -left;
-        right = -right;
+        std::swap(left, right);
     }
-    // 上下反転
     if (isFlipY_) {
-        top = -top;
-        bottom = -bottom;
+        std::swap(top, bottom);
     }
 
     const DirectX::TexMetadata &metadata = TextureManager::GetInstance()->GetMetaData(fullpath);
@@ -67,21 +80,12 @@ void Sprite::Update(bool isbackmost_) {
 
     // 頂点データの設定
     vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData));
-    // 1枚目の三角形
-    vertexData[0].position = {left, bottom, 0.0f, 1.0f}; // 左下
-    vertexData[0].texcoord = {tex_left, tex_bottom};
+    vertexData[0] = {{left, bottom, 0.0f, 1.0f}, {tex_left, tex_bottom}};
+    vertexData[1] = {{left, top, 0.0f, 1.0f}, {tex_left, tex_top}};
+    vertexData[2] = {{right, bottom, 0.0f, 1.0f}, {tex_right, tex_bottom}};
+    vertexData[3] = {{right, top, 0.0f, 1.0f}, {tex_right, tex_top}};
 
-    vertexData[1].position = {left, top, 0.0f, 1.0f}; // 左上
-    vertexData[1].texcoord = {tex_left, tex_top};
-
-    vertexData[2].position = {right, bottom, 0.0f, 1.0f}; // 右下
-    vertexData[2].texcoord = {tex_right, tex_bottom};
-
-    vertexData[3].position = {right, top, 0.0f, 1.0f}; // 右上
-    vertexData[3].texcoord = {tex_right, tex_top};
-    ///==========================================================
-
-    // インデックスリソースにデータを書き込む（sprite用）
+    // インデックスの設定
     indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
     indexData[0] = 0;
     indexData[1] = 1;
@@ -89,23 +93,30 @@ void Sprite::Update(bool isbackmost_) {
     indexData[3] = 1;
     indexData[4] = 3;
     indexData[5] = 2;
-    ///=======================================================
 
-    Transform transform{{1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
-    if (isbackmost_) {
-        transform.translate = {position_.x, position_.y, 10000.0f};
-    } else {
-        transform.translate = {position_.x, position_.y, 0.0f};
+    // 単体描画のときだけTransform更新
+    if (instanceCount <= 1) {
+        Transform transform;
+        transform.scale = {size.x, size.y, 1.0f};
+        transform.rotate = {0.0f, 0.0f, rotation};
+        transform.translate = {
+            position_.x,
+            position_.y,
+            isBackMost ? 10000.0f : 0.0f};
+
+        Matrix4x4 world = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+        Matrix4x4 view = MakeIdentity4x4();
+        Matrix4x4 proj = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
+        Matrix4x4 wvp = world * (view * proj);
+
+        transformationMatrixData[0].WVP = wvp;
+        transformationMatrixData[0].World = world;
     }
-    transform.rotate = {0.0f, 0.0f, rotation};
-    transform.scale = {size.x, size.y, 1.0f};
 
-    Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
-    Matrix4x4 viewMatrix = MakeIdentity4x4();
-    Matrix4x4 projectionMatrix = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
-    Matrix4x4 worldProjectionMatrix = (worldMatrix * (viewMatrix * projectionMatrix));
-    transformationMatrixData->WVP = worldProjectionMatrix;
-    transformationMatrixData->World = worldMatrix;
+    Vector3 pos = {uvPosition_.x, uvPosition_.y, 0.0f};
+    Vector3 scale = {uvSize_.x, uvSize_.y, 1.0f};
+    Vector3 rotate = {0.0f, 0.0f, uvRotate_};
+    materialData->uvTransform = MakeAffineMatrix(scale, rotate, pos);
 }
 
 void Sprite::Draw(bool isBackMost) {

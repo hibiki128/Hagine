@@ -23,12 +23,12 @@ ParticleGroupData ParticleGroup::CreateParticleGroup(const std::string &groupNam
     particleGroupData_.materials.clear();
     if (texturePath.empty()) {
         if (!modelData.materials.empty()) {
-            particleGroupData_.materials = modelData.materials;
+            particleGroupData_.materials = ForParticleMaterials(modelData.materials);
         } else {
-            particleGroupData_.materials.push_back(MaterialData{});
+            particleGroupData_.materials.push_back(ParticleMaterial{});
         }
     } else {
-        MaterialData mat;
+        ParticleMaterial mat;
         mat.textureFilePath = texturePath;
         mat.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(texturePath);
         particleGroupData_.materials.push_back(mat);
@@ -52,7 +52,7 @@ ParticleGroupData ParticleGroup::CreateParticleGroup(const std::string &groupNam
 ParticleGroupData ParticleGroup::CreatePrimitiveParticleGroup(const std::string &groupName, PrimitiveType type, const std::string &texturePath) {
     particleGroupData_.groupName = groupName;
     type_ = type;
-    model_ = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type,texturePath));
+    model_ = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type, texturePath));
     TextureManager::GetInstance()->LoadTexture(texturePath);
     modelData = model_->GetModelData();
     CreateVertexData();
@@ -61,12 +61,12 @@ ParticleGroupData ParticleGroup::CreatePrimitiveParticleGroup(const std::string 
     particleGroupData_.materials.clear();
     if (texturePath.empty()) {
         if (!modelData.materials.empty()) {
-            particleGroupData_.materials = modelData.materials;
+            particleGroupData_.materials = ForParticleMaterials(modelData.materials);
         } else {
-            particleGroupData_.materials.push_back(MaterialData{});
+            particleGroupData_.materials.push_back(ParticleMaterial{});
         }
     } else {
-        MaterialData mat;
+        ParticleMaterial mat;
         mat.textureFilePath = texturePath;
         mat.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(texturePath);
         particleGroupData_.materials.push_back(mat);
@@ -86,7 +86,6 @@ ParticleGroupData ParticleGroup::CreatePrimitiveParticleGroup(const std::string 
     particleGroupData_.instanceCount = 0;
     return particleGroupData_;
 }
-
 
 void ParticleGroup::CreateVertexData() {
     // 複数メッシュ対応: 全メッシュの頂点を連結

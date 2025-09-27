@@ -20,30 +20,16 @@ void Model::CreateModel(const std::string &directorypath, const std::string &fil
     filename_ = filename;
 
     // モデル読み込み
-    modelData = LoadModelFile(directorypath_, filename_);
+    modelData_ = LoadModelFile(directorypath_, filename_);
 
     // メッシュ配列のサイズを調整
-    meshes_.resize(modelData.meshes.size());
+    meshes_.resize(modelData_.meshes.size());
 
     // 各メッシュの初期化
-    for (size_t i = 0; i < modelData.meshes.size(); ++i) {
+    for (size_t i = 0; i < modelData_.meshes.size(); ++i) {
         meshes_[i] = std::make_unique<Mesh>();
-        meshes_[i]->GetMeshData() = modelData.meshes[i];
+        meshes_[i]->GetMeshData() = modelData_.meshes[i];
         meshes_[i]->Initialize();
-    }
-
-    // マテリアル配列のサイズを調整
-    materials_.resize(modelData.materials.size());
-
-    // 各マテリアルの初期化
-    for (size_t i = 0; i < modelData.materials.size(); ++i) {
-        materials_[i] = std::make_unique<Material>();
-        materials_[i]->Initialize();
-        materials_[i]->GetMaterialData() = modelData.materials[i];
-        materials_[i]->LoadTexture();
-
-        // テクスチャインデックスを元のmodelDataにも反映
-        modelData.materials[i].textureIndex = materials_[i]->GetMaterialData().textureIndex;
     }
 }
 
@@ -51,34 +37,23 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath)
     // プリミティブモデルは通常単一メッシュ・単一マテリアルなので、
     // 配列サイズを1に設定
     meshes_.resize(1);
-    materials_.resize(1);
-    modelData.meshes.resize(1);
-    modelData.materials.resize(1);
+    modelData_.meshes.resize(1);
 
     // メッシュの初期化
     meshes_[0] = std::make_unique<Mesh>();
     meshes_[0]->PrimitiveInitialize(type);
     meshes_[0]->Initialize();
 
-    // マテリアルの初期化
-    materials_[0] = std::make_unique<Material>();
-    materials_[0]->Initialize();
-    materials_[0]->PrimitiveInitialize(type);
-    materials_[0]->GetMaterialData().textureFilePath = texPath;
-    materials_[0]->LoadTexture();
-
-    // modelDataに反映
-    modelData.materials[0] = materials_[0]->GetMaterialData();
-    modelData.meshes[0] = meshes_[0]->GetMeshData();
+    modelData_.meshes[0] = meshes_[0]->GetMeshData();
 
     // メッシュのマテリアルインデックスを設定
-    modelData.meshes[0].materialIndex = 0;
+    modelData_.meshes[0].materialIndex = 0;
 }
 
 void Model::Update() {
-    if (isGltf && animator_ && animator_->HaveAnimation()) {
+    if (isGltf && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
         // 1. 入力頂点データ更新
-        skin_->UpdateInputVertices(modelData);
+        skin_->UpdateInputVertices(modelData_);
 
         // 2. コンピュートシェーダ実行のためのバリア
         ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
@@ -101,25 +76,25 @@ void Model::Update() {
     }
 }
 
-void Model::Draw(const Vector4 &color, bool lighting, bool reflect) {
+void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect) {
     ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
 
     INT vertexOffset = 0;
 
     for (size_t meshIndex = 0; meshIndex < meshes_.size(); ++meshIndex) {
         Mesh *currentMesh = meshes_[meshIndex].get();
-        uint32_t materialIndex = modelData.meshes[meshIndex].materialIndex;
-        if (materialIndex >= materials_.size()) {
+        uint32_t materialIndex = modelData_.meshes[meshIndex].materialIndex;
+        if (materialIndex >= materials.size()) {
             materialIndex = 0;
         }
-        Material *currentMaterial = materials_[materialIndex].get();
+        Material *currentMaterial = materials[materialIndex].get();
 
         // インデックスバッファ設定
         D3D12_INDEX_BUFFER_VIEW indexBufferView = currentMesh->GetIndexBufferView();
         commandList->IASetIndexBuffer(&indexBufferView);
 
         // 頂点バッファ設定 - アニメーション有無で使用するバッファを切り替え
-        if (isGltf && animator_ && animator_->HaveAnimation()) {
+        if (isGltf && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
             // スキニング後の頂点バッファのみを使用
             D3D12_VERTEX_BUFFER_VIEW vbv = skin_->GetOutputVertexBufferView();
             commandList->IASetVertexBuffers(0, 1, &vbv);
@@ -136,17 +111,17 @@ void Model::Draw(const Vector4 &color, bool lighting, bool reflect) {
         commandList->SetGraphicsRootDescriptorTable(7, srvManager_->GetGPUDescriptorHandle(SkyBox::GetInstance()->GetTextureIndex()));
         if (reflect) {
             // 環境係数を有効化
-            SetEnvironmentCoefficients(1.0f);
+            currentMaterial->SetEnvironmentCoefficients(1.0f);
         } else {
-            SetEnvironmentCoefficients(0.0f); // 環境係数を無効化
+            currentMaterial->SetEnvironmentCoefficients(0.0f); // 環境係数を無効化
         }
 
         // マテリアル描画
-        currentMaterial->Draw(color, lighting);
+        currentMaterial->Draw(color[materialIndex].GetColor(), lighting);
 
         // 描画コール
         commandList->DrawIndexedInstanced(
-            UINT(modelData.meshes[meshIndex].indices.size()), 1, 0, vertexOffset, 0);
+            UINT(modelData_.meshes[meshIndex].indices.size()), 1, 0, vertexOffset, 0);
     }
 }
 
@@ -167,6 +142,12 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
     std::string filePath = directoryPath + "/" + filename;
     const aiScene *scene = importer.ReadFile(filePath.c_str(), aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
 
+    if (scene && scene->HasAnimations()) {
+        modelData.hasAnimations = true;
+    } else {
+        modelData.hasAnimations = false;
+    }
+
     // メッシュが存在しない場合
     if (!scene || !scene->HasMeshes()) {
         // デフォルトのメッシュとマテリアルを作成
@@ -186,6 +167,12 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
     for (uint32_t meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
         aiMesh *mesh = scene->mMeshes[meshIndex];
         assert(mesh->HasNormals()); // 法線がないMeshは今回は非対応（これは残す）
+
+        if (mesh->HasBones()) {
+            modelData.hasBones = true;
+        } else {
+            modelData.hasBones = false;
+        }
 
         MeshData &currentMesh = modelData.meshes[meshIndex];
         currentMesh.vertices.resize(mesh->mNumVertices);
@@ -297,6 +284,15 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
 
         // UV変換行列の初期化
         currentMaterial.uvTransform = MakeIdentity4x4();
+    }
+
+    if (modelData.materials.empty()) {
+        MaterialData defaultMaterial;
+        defaultMaterial.textureFilePath = "debug/white1x1.png";
+        defaultMaterial.color = {1.0f, 1.0f, 1.0f, 1.0f};
+        defaultMaterial.shininess = 32.0f;
+        defaultMaterial.uvTransform = MakeIdentity4x4();
+        modelData.materials.push_back(defaultMaterial);
     }
 
     modelData.rootNode = ReadNode(scene->mRootNode);

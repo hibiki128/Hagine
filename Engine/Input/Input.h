@@ -15,8 +15,31 @@
 // input
 #include "Mouse.h"
 #include <Camera/ViewProjection/ViewProjection.h>
+#include <myMath.h>
 #include <type/Vector3.h>
+#include <type/Vector4.h>
 
+struct Ray {
+    Vector3 origin;    // レイの開始点
+    Vector3 direction; // レイの方向（正規化済み）
+    float length;      // レイの最大長
+};
+
+struct RayHitInfo {
+    bool hit;               // ヒットしたかどうか
+    Vector3 hitPoint;       // ヒット点
+    Vector3 hitNormal;      // ヒット面の法線
+    float distance;         // レイの開始点からヒット点までの距離
+    std::string objectName; // ヒットしたオブジェクトのID
+};
+
+// ImGuiシーン描画領域情報
+struct SceneViewport {
+    Vector2 position; // シーンウィンドウの左上座標
+    Vector2 size;     // シーンウィンドウのサイズ
+};
+
+class BaseObject;
 class Input {
 
   private:
@@ -43,6 +66,9 @@ class Input {
     std::vector<Joystick> joysticks_;
     // マウス
     static std::unique_ptr<Mouse> mouse_;
+
+    Ray currentRay_;
+    SceneViewport currentViewport_;
 
   public:
     // シングルトンインスタンスの取得
@@ -156,6 +182,69 @@ class Input {
     /// <param name="depthFactor"></param>
     /// <returns></returns>
     static Vector3 GetMousePos3D(const ViewProjection &viewprojection, float depthFactor, float blockSpacing = 1.0f);
+
+    /// <summary>
+    /// レイを更新する（毎フレーム呼び出す）
+    /// </summary>
+    /// <param name="viewprojection">カメラのビュープロジェクション</param>
+    /// <param name="viewport">ImGuiシーンの描画領域情報</param>
+    /// <param name="rayLength">レイの最大長</param>
+    void UpdateRay(const ViewProjection &viewprojection, const SceneViewport &viewport, float rayLength = 1000.0f);
+
+    /// <summary>
+    /// 現在のレイを取得する
+    /// </summary>
+    /// <returns>現在のレイ</returns>
+    const Ray &GetCurrentRay() const { return currentRay_; }
+
+    /// <summary>
+    /// レイとAABBの衝突判定
+    /// </summary>
+    /// <param name="ray">レイ</param>
+    /// <param name="aabb">バウンディングボックス</param>
+    /// <param name="worldMatrix">オブジェクトのワールドマトリックス</param>
+    /// <param name="hitInfo">ヒット情報（出力）</param>
+    /// <returns>衝突したかどうか</returns>
+    static bool RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,
+                                 const AABB &aabb = {Vector3(-1.0f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f)});
+
+    /// <summary>
+    /// レイとスフィアの衝突判定
+    /// </summary>
+    /// <param name="ray">レイ</param>
+    /// <param name="sphere">球</param>
+    /// <param name="worldMatrix">オブジェクトのワールドマトリックス</param>
+    /// <param name="hitInfo">ヒット情報（出力）</param>
+    /// <returns>衝突したかどうか</returns>
+    static bool RayIntersectSphere(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,
+                                   const Sphere &sphere = {Vector3(0.0f, 0.0f, 0.0f), 1.0f});
+
+    /// <summary>
+    /// マウス位置からシーン内でのレイを生成する
+    /// </summary>
+    /// <param name="mousePos">マウス位置（ウィンドウ座標系）</param>
+    /// <param name="viewprojection">カメラのビュープロジェクション</param>
+    /// <param name="viewport">シーンの描画領域</param>
+    /// <param name="rayLength">レイの長さ</param>
+    /// <returns>生成されたレイ</returns>
+    static Ray CreateRayFromMouse(const Vector2 &mousePos, const ViewProjection &viewprojection,
+                                  const SceneViewport &viewport, float rayLength = 1000.0f);
+
+    /// <summary>
+    /// 複数のマトリックスに対してAABBレイキャストを行う
+    /// </summary>
+    /// <param name="ray">レイ</param>
+    /// <param name="worldMatrices">ワールドマトリックスのリスト</param>
+    /// <returns>最も近いヒット情報</returns>
+    static RayHitInfo RaycastMultipleAABB(const Ray &ray, const std::vector<BaseObject *> baseObjects);
+
+    /// <summary>
+    /// 複数のマトリックスに対してスフィアレイキャストを行う
+    /// </summary>
+    /// <param name="ray">レイ</param>
+    /// <param name="worldMatrices">ワールドマトリックスのリスト</param>
+    /// <returns>最も近いヒット情報</returns>
+    static RayHitInfo RaycastMultipleSphere(const Ray &ray, const std::vector<BaseObject *> baseObjects);
 
     const BYTE *GetKeyState() const { return key_.data(); }
     const BYTE *GetPreviousKeyState() const { return keyPre_.data(); }

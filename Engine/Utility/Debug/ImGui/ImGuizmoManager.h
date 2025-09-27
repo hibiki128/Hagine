@@ -3,15 +3,13 @@
 
 #include "imgui.h"
 #include "ImGuizmo.h"
+#include <Input.h>
 #include <Object/Base/BaseObject.h>
+#include <algorithm> // std::max用
+#include <cmath>     // std::sqrt用
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-struct Ray {
-    Vector3 origin;
-    Vector3 direction;
-};
 
 class ImGuizmoManager {
   private:
@@ -25,7 +23,13 @@ class ImGuizmoManager {
     // 操作対象一覧（名前付き）
     std::unordered_map<std::string, BaseObject *> transformMap;
     // 選択されているオブジェクト名
-    std::string selectedName;
+    std::unordered_set<std::string> selectedNames;
+    BaseObject *copiedObject = nullptr;
+    std::vector<BaseObject *> copiedObjects; // 複数コピー対応
+
+     bool isMultiSelecting = false;
+
+     bool isDrawDebug_ = true;
 
     // カメラのビュープロジェクション（1つで十分）
     const ViewProjection *viewProjection = nullptr;
@@ -34,6 +38,13 @@ class ImGuizmoManager {
     ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
     // 現在の操作空間
     ImGuizmo::MODE currentMode = ImGuizmo::LOCAL;
+
+    bool showDebugRaycast = true;
+    bool showDebugAABB = true;      // AABB表示ON/OFF
+    bool showDebugSphere = true;    // Sphere表示ON/OFF
+    bool showDebugHitPoints = true; // ヒット点表示ON/OFF
+    char searchBuffer_[256] = "";   // 検索用バッファ
+    std::vector<std::string> filteredNames_; // フィルタされた名前リスト
 
   public:
     /// <summary>シングルトンインスタンスの取得</summary>
@@ -59,19 +70,46 @@ class ImGuizmoManager {
     /// <summary>現在選択されているWorldTransformを取得</summary>
     BaseObject *GetSelectedTarget();
 
-    void DeleteTarget() { transformMap.clear(); }
-  private:
+    std::vector<BaseObject *> GetSelectedTargets();
 
+    /// <summary>選択中のオブジェクトをコピー</summary>
+  //  void CopySelectedObject();
+
+    /// <summary>コピーしたオブジェクトをペースト</summary>
+  //  void PasteObject();
+
+    void DeleteTarget() { transformMap.clear(); }
+
+    //void DeleteSelectedObject();
+
+    void CopySelectedObjects();
+
+    void PasteObjects();
+
+    void DeleteSelectedObjects();
+
+    void DrawSelectedObjectHighlight();
+
+    void DrawSelectionMarker(const Vector3 &worldPosition);
+
+    void UpdateFilteredNames();
+
+  private:
     void ShowSelectedObjectImGui();
-    void DeleteSelectedObject();
-    void CollectChildrenForDeletion(BaseObject *obj, std::vector<std::string> &deleteList);
     void HandleMouseSelection(const ImVec2 &scenePosition, const ImVec2 &sceneSize);
     void DisplayGizmo(WorldTransform *transform);
     void DecomposeMatrix(const Matrix4x4 &matrix, Vector3 &position, Quaternion &rotation, Vector3 &scale);
-    Ray CreateMouseRay(const ImVec2 &mousePos, const ImVec2 &scenePosition, const ImVec2 &sceneSize);
-    bool RayIntersectObject(const Ray &ray, BaseObject *obj, float &distance);
-    bool RayIntersectSphere(const Ray &ray, const Vector3 &center, float radius, float &distance);
     bool WorldToScreen(const Vector3 &worldPos, Vector3 &screenPos, const ImVec2 &scenePosition, const ImVec2 &sceneSize);
+
+    /// <summary>ユニークな名前を生成</summary>
+    std::string GenerateUniqueName(const std::string &baseName);
+
+    void DrawDebugRaycast();
+    void DrawAABBWireframe(const Matrix4x4 &worldMatrix, const Vector4 &color);
+    void DrawSphereWireframe(const Matrix4x4 &worldMatrix, const Vector4 &color);
+    void TestAndDrawRayHit(const Ray &ray, BaseObject *targetObject, const std::string &objectName);
+
+    RayHitInfo hitInfo;
 };
 
 #endif // _DEBUG

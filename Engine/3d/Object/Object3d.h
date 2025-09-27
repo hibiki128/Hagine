@@ -10,6 +10,7 @@
 #include "type/Vector4.h"
 #include "vector"
 #include <Graphics/PipeLine/PipeLineManager.h>
+#include <Model/Material/Material.h>
 #include <Model/Model.h>
 #include <Transform/ObjColor.h>
 
@@ -41,6 +42,8 @@ class Object3d {
     Model *model = nullptr;
     std::shared_ptr<ModelAnimation> currentModelAnimation_ = nullptr;
     std::map<std::string, std::shared_ptr<ModelAnimation>> modelAnimations_;
+    std::vector<std::unique_ptr<Material>> materials_;
+    std::vector<ObjColor> color_;
     ModelCommon *modelCommon = nullptr;
     LightGroup *lightGroup = nullptr;
 
@@ -48,7 +51,6 @@ class Object3d {
     Vector3 position = {0.0f, 0.0f, 0.0f};
     Vector3 rotation = {0.0f, 0.0f, 0.0f};
     Vector3 size = {1.0f, 1.0f, 1.0f};
-    bool HaveAnimation;
     bool isPrimitive_ = false;
     bool isAnimationSwitchPending_ = false;
     std::string nextAnimationFileName_;
@@ -100,7 +102,7 @@ class Object3d {
     /// <summary>
     /// 描画
     /// </summary>
-    void Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, ObjColor *color = nullptr, bool Lighting = true, bool modelDraw = true);
+    void Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, bool Lighting = true, bool modelDraw = true);
 
     /// <summary>
     /// スケルトン描画
@@ -116,17 +118,29 @@ class Object3d {
     const Vector3 &GetPosition() const { return position; }
     const Vector3 &GetRotation() const { return rotation; }
     const Vector3 &GetSize() const { return size; }
-    size_t GetMaterialCount() const { return model->GetMaterialCount(); }
+    size_t GetMaterialCount() const { return materials_.size(); }
     std::string GetModelFilePath() const { return modelFilePath_; }
     std::string GetTextureFilePath(uint32_t materialIndex) const {
-        return model->GetMaterial(materialIndex)->GetMaterialData().textureFilePath;
+        return materials_[materialIndex]->GetMaterialData().textureFilePath;
+    }
+    std::vector<std::string> GetAllTextruePath() {
+        std::vector<std::string> texturePaths = {};
+        for (int i = 0; i < GetMaterialCount(); i++) {
+            texturePaths.push_back(materials_[i]->GetMaterialData().textureFilePath);
+        }
+        return texturePaths;
     }
     ModelAnimation *GetCurrentModelAnimation() const {
         return currentModelAnimation_.get();
     }
 
-    const bool &GetHaveAnimation() const { return HaveAnimation; }
+    const bool GetHaveAnimation() const { return model->GetModelData().hasAnimations; }
     bool IsFinish() { return currentModelAnimation_->IsFinish(); }
+
+    Material *GetMaterial(uint32_t index) {
+        return (index < materials_.size()) ? materials_[index].get() : nullptr;
+    }
+    Vector4 GetColor(int index = 0) { return color_[index].GetColor(); }
 
     /// <summary>
     /// setter
@@ -138,15 +152,12 @@ class Object3d {
     void SetSize(const Vector3 &size) { this->size = size; }
     void SetModel(const std::string &filePath);
     void SetBlendMode(BlendMode blendMode) { blendMode_ = blendMode; }
+    void SetColor(Vector4 color, int index = 0) { color_[index].SetColor(color); }
 
     // マルチマテリアル用のsetter
-    void SetTexture(const std::string &filePath, uint32_t materialIndex) {
-        model->SetTexture(filePath, materialIndex);
-    }
+    void SetTexture(const std::string &filePath, uint32_t materialIndex);
 
-    void SetEnvironmentCoefficients(float value) {
-        model->SetEnvironmentCoefficients(value);
-    }
+    void SetEnvironmentCoefficients(float value);
 
   private: // メンバ関数
     /// <summary>
@@ -159,6 +170,8 @@ class Object3d {
     /// 座標変換行列データ作成
     /// </summary>
     void CreateTransformationMatrix();
+
+    void CreateIndependentMaterials();
 
     void DrawBoneArmature(const Vector3 &parentPos, const Vector3 &childPos, float scale);
 

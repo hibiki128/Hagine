@@ -15,7 +15,7 @@ class Material {
     void LoadTexture();
     void PrimitiveInitialize(const PrimitiveType &type);
 
-    void Draw(const Vector4 &color, bool lighting);
+    void Draw(const Vector4 color, bool lighting);
 
     MaterialData &GetMaterialData() { return materialData_; }
     const MaterialData &GetMaterialData() const { return materialData_; }
@@ -25,6 +25,10 @@ class Material {
 
     void SetTexture(const std::string &texturePath);
     void SetEnvironmentCoefficients(float environmentCoefficients);
+
+    void SetUVPosition(const Vector3 &pos) { materialData_.uvPosition = pos; }
+    void SetUVSize(const Vector3 &size) { materialData_.uvSize = size; }
+    void SetUVRotate(const Vector3 &rotate) { materialData_.uvRotate = rotate; }
 
   private:
     /// ==========================================

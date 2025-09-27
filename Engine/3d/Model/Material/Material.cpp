@@ -1,8 +1,8 @@
 #include "Material.h"
 
 #include "fstream"
-#include <Graphics/Texture/TextureManager.h>
 #include <Graphics/Srv/SrvManager.h>
+#include <Graphics/Texture/TextureManager.h>
 
 void Material::Initialize() {
     dxCommon_ = DirectXCommon::GetInstance();
@@ -22,17 +22,17 @@ void Material::PrimitiveInitialize(const PrimitiveType &type) {
 }
 
 // デバッグ用: Material::Draw()でテクスチャインデックスを確認
-void Material::Draw(const Vector4 &color, bool lighting) {
-    // 描画時の一時的な値設定
+void Material::Draw(const Vector4 color, bool lighting) {
     materialDataGPU_->color = color;
     materialDataGPU_->enableLighting = lighting ? 1 : 0;
+
+    materialData_.uvTransform = MakeAffineMatrix(materialData_.uvSize, materialData_.uvRotate, materialData_.uvPosition);
 
     ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
     commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
 
     SrvManager::GetInstance()->SetGraphicsRootDescriptorTable(2, materialData_.textureIndex);
 }
-
 
 void Material::SetTexture(const std::string &texturePath) {
     if (materialData_.textureFilePath == texturePath)
@@ -95,7 +95,7 @@ void Material::UpdateGPUData() {
         materialDataGPU_->color = materialData_.color;
         materialDataGPU_->enableLighting = materialData_.enableLighting ? 1 : 0;
         materialDataGPU_->uvTransform = materialData_.uvTransform;
-        materialDataGPU_->shininess = materialData_.shininess;
+        materialDataGPU_->shininess = 32.0f;
         materialDataGPU_->environmentCoefficient = materialData_.environmentCoefficient;
     }
 }

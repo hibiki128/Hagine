@@ -6,7 +6,7 @@
 #include <string>
 #include <unordered_map>
 
-enum class EasingType {
+enum class MotionEasingType {
     Linear,
     EaseInSine,
     EaseOutSine,
@@ -67,7 +67,7 @@ struct Motion {
     std::vector<Vector3> controlPoints;
     bool useCatmullRom = false;
 
-    EasingType easingType = EasingType::Linear;
+    MotionEasingType easingType = MotionEasingType::Linear;
     float colliderOnTime = 0.3f;
     float colliderOffTime = 0.6f;
 
