@@ -8,11 +8,11 @@
 
 void FollowCamera::Init() {
     viewProjection_.farZ = 1100;
-    viewProjection_.Initialize();
+    viewProjection_.Initialize(""); // 空文字列を渡して初期化
     worldTransform_.Initialize();
-    yaw_ = 0.0f;                  // 水平回転角度を初期化
-    distanceFromTarget_ = -25.0f; // ターゲットからの距離を初期化
-    heightOffset_ = 3.0f;         // ターゲットの上方オフセット
+    yaw_ = 0.0f;
+    distanceFromTarget_ = -25.0f;
+    heightOffset_ = 3.0f;
 }
 
 void FollowCamera::Update() {
@@ -68,7 +68,7 @@ void FollowCamera::Update() {
                     // カメラ回転：敵＋プレイヤー中間方向
                     Vector3 toEnemy = (player->GetEnemy()->GetLocalPosition() - worldTransform_.translation_).Normalize();
                     Vector3 toPlayer = (currentPos - worldTransform_.translation_).Normalize();
-                    Vector3 blendedDir = Lerp(toEnemy, toPlayer, 0.3f).Normalize(); // 0.3はプレイヤー寄り
+                    Vector3 blendedDir = Lerp(toEnemy, toPlayer, 0.3f).Normalize();
 
                     Vector3 forward = blendedDir;
                     Vector3 worldUp = {0.0f, 1.0f, 0.0f};
@@ -89,9 +89,11 @@ void FollowCamera::Update() {
                     rushCameraRotation_ = worldTransform_.quateRotation_;
 
                     worldTransform_.UpdateMatrix();
+
+                    // ViewProjectionを更新（修正箇所）
                     viewProjection_.translation_ = worldTransform_.translation_;
+                    viewProjection_.isUseQuaternion_ = true; // クォータニオンモードに設定
                     viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
-                    viewProjection_.matWorld_ = worldTransform_.matWorld_;
                     viewProjection_.UpdateMatrix();
                     return;
                 } else {
@@ -189,12 +191,12 @@ void FollowCamera::Update() {
 
     worldTransform_.UpdateMatrix();
 
+    // ViewProjectionを更新（修正箇所）
     viewProjection_.translation_ = worldTransform_.translation_;
+    viewProjection_.isUseQuaternion_ = true; // クォータニオンモードに設定
     viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
-    viewProjection_.matWorld_ = worldTransform_.matWorld_;
     viewProjection_.UpdateMatrix();
 }
-
 void FollowCamera::imgui() {
     ImGui::Begin("FollowCamera");
     ImGui::DragFloat3("wt position", &worldTransform_.translation_.x, 0.1f);

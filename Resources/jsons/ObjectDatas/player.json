@@ -4,9 +4,14 @@
     "blendMode": 0,
     "childrenNames": [
         "leftHand",
-        "rightHand",
-        "cube_1"
+        "rightHand"
     ],
+    "color_0": {
+        "w": 1.0,
+        "x": 0.18008145689964294,
+        "y": 0.3677408695220947,
+        "z": 0.9404255151748657
+    },
     "isLighting": true,
     "isModelDraw": true,
     "modelName": "",
@@ -19,10 +24,10 @@
     "objectName": "player",
     "parentName": "",
     "rotation": {
-        "w": -0.7069846987724304,
-        "x": 1.0677015183091498e-07,
-        "y": 0.7072288393974304,
-        "z": 1.0677015183091498e-07
+        "w": 0.9982596039772034,
+        "x": -2.802596928649634e-45,
+        "y": 0.05897362157702446,
+        "z": -2.802596928649634e-45
     },
     "scale": {
         "x": 0.9999999403953552,
@@ -31,9 +36,10 @@
     },
     "skeletonDraw": false,
     "textureName": "debug/white1x1.png",
+    "textureName_0": "debug/uvChecker.png",
     "translation": {
-        "x": -27.52056312561035,
+        "x": 6.772829532623291,
         "y": 0.0,
-        "z": -103.78479766845703
+        "z": -11.308271408081055
     }
 }

@@ -202,6 +202,6 @@ class LightGroup {
     int saveMessageTimer_ = 0;
 
     bool isDirectionalLight = true;
-    bool showLightVisualization_ = true;
+    bool showLightVisualization_ = false;
     std::unique_ptr<DataHandler> DLightData_ = nullptr;
 };

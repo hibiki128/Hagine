@@ -1121,6 +1121,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showHierarchyView", showHierarchyView_);
     data->Save("showMotionEditorView", showMotionEditorView_);
     data->Save("showShortcutWindow", showShortcutWindow);
+    data->Save("showSpriteManagerView", showSpriteManagerView_);
     data->Save("isEditorMode", isEditorMode_);
 }
 
@@ -1138,5 +1139,6 @@ void ImGuiManager::LoadFlag() {
     showHierarchyView_ = data->Load("showHierarchyView", true);
     showMotionEditorView_ = data->Load("showMotionEditorView", false);
     showShortcutWindow = data->Load("showShortcutWindow", false);
+    showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
     isEditorMode_ = data->Load("isEditorMode", true);
 }
