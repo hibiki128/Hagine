@@ -331,7 +331,6 @@ void Framework::Update() {
 }
 
 void Framework::LoadResource() {
-    particleCSEditor_->AddParticleEmitter("teste");
 }
 
 void Framework::PlaySounds() {

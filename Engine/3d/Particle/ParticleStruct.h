@@ -21,11 +21,6 @@ struct ParticleMaterial {
 
 /// ===== GPUParticle =====
 
-enum class EmitterType {
-    Sphere = 0,
-    Mesh = 1
-};
-
 struct EmitterMesh {
     Vector3 translate;
     uint32_t triangleCount;
@@ -44,11 +39,6 @@ struct Triangle {
     Vector3 v2;
 };
 
-struct EmitterSettings {
-    uint32_t isSphere;
-    Vector3 padding;
-};
-
 struct CSParticle {
     Vector3 translate;
     Vector3 scale;
@@ -63,19 +53,6 @@ struct PerView {
     Matrix4x4 billboardMatrix;
 };
 
-struct EmitterSphere {
-    Vector3 translate;
-    float padding1;
-    Vector3 radius;
-    float frequency;
-    float frequencyTime;
-    uint32_t emit;
-    Vector3 rotation;
-    float padding2;
-    Vector3 scale;
-    float padding3;
-};
-
 struct PerFrame {
     float time;
     float deltaTime;
@@ -83,19 +60,8 @@ struct PerFrame {
     float padding;
 };
 
-struct GPUParticleEmitter {
-    EmitterSphere *emitter;
-    Microsoft::WRL::ComPtr<ID3D12Resource> emitterResource;
-    bool isEmit = false;
-    int emitterIndex = 0;
-};
-
 struct EmitterData {
-    EmitterType type = EmitterType::Sphere;
-    union {
-        EmitterSphere sphere;
-        EmitterMesh mesh;
-    };
+    EmitterMesh mesh;
 };
 
 struct ParticleCSGroupData {

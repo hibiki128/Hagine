@@ -21,20 +21,6 @@ struct PerView
     float4x4 billboardMatrix;
 };
 
-struct EmitterSphere
-{
-    float3 translate;
-    float padding1;
-    float3 radius;
-    float frequency;
-    float frequencyTime;
-    int emit;
-    float3 rotation;
-    float padding2;
-    float3 scale;  
-    float padding3;
-};
-
 struct EmitterMesh
 {
     float3 translate;
@@ -46,12 +32,6 @@ struct EmitterMesh
     float frequencyTime;
     uint emit;
     float padding2;
-};
-
-struct EmitterSettings
-{
-    uint isSphere;
-    float3 padding;
 };
 
 struct Triangle

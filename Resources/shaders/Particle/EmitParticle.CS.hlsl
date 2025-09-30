@@ -1,11 +1,9 @@
 #include"Particle.hlsli"
 #include"../Random/Random.hlsli"
 
-ConstantBuffer<EmitterSettings> gEmitterSettings : register(b0);
-ConstantBuffer<EmitterSphere> gEmitterSphere : register(b1);
-ConstantBuffer<EmitterMesh> gEmitterMesh : register(b2);
-ConstantBuffer<PerFrame> gPerFrame : register(b3);
-ConstantBuffer<ParticleCSSettings> gSettings : register(b4);
+ConstantBuffer<EmitterMesh> gEmitterMesh : register(b0);
+ConstantBuffer<PerFrame> gPerFrame : register(b1);
+ConstantBuffer<ParticleCSSettings> gSettings : register(b2);
 RWStructuredBuffer<Particle> gParticles : register(u0);
 RWStructuredBuffer<int> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint> gFreeList : register(u2);
@@ -54,6 +52,16 @@ float3 ApplyScale(float3 vertex, float3 scale)
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+    if (gEmitterMesh.emit == 0)
+    {
+        return;
+    }
+    
+    if (DTid.x >= gSettings.emitCount)
+    {
+        return;
+    }
+    
     RandomGenerator generator;
     generator.seed = float3(
         DTid.x + gPerFrame.time * 1000.0f + gPerFrame.groupId * 9973.0f,
@@ -71,58 +79,31 @@ void main(uint3 DTid : SV_DispatchThreadID)
         gParticles[particleIndex].scale = float3(scaleValue, scaleValue, scaleValue);
         
         float3 emitPosition;
-        if (gEmitterSettings.isSphere)
+       
+        // メッシュの処理
+        uint triangleIndex = uint(generator.Generate1d() * gEmitterMesh.triangleCount) % gEmitterMesh.triangleCount;
+        Triangle tri = gTriangles[triangleIndex];
+            
+        float r1 = generator.Generate1d();
+        float r2 = generator.Generate1d();
+        if (r1 + r2 > 1.0f)
         {
-            // 球体の処理（楕円体に対応）
-            float3 rawDirection = generator.Generate3d() * 2.0f - 1.0f;
-            if (length(rawDirection) < 0.001f)
-            {
-                rawDirection = float3(0.577f, 0.577f, 0.577f);
-            }
-            float3 randomDirection = normalize(rawDirection);
-            
-            // 楕円体の半径を適用
-            float3 ellipsoidRadius = gEmitterSphere.radius * gEmitterSphere.scale;
-            
-            // 楕円体内部のランダムな点を生成
-            float r1 = pow(generator.Generate1d(), 1.0f / 3.0f);
-            float3 randomPoint = randomDirection * r1;
-            
-            // 楕円体の形状を適用
-            randomPoint *= ellipsoidRadius;
-            
-            // 回転を適用
-            float3x3 rotMatrix = CreateRotationMatrix(gEmitterSphere.rotation);
-            randomPoint = mul(rotMatrix, randomPoint);
-            
-            emitPosition = gEmitterSphere.translate + randomPoint;
+            r1 = 1.0f - r1;
+            r2 = 1.0f - r2;
         }
-        else
-        {
-            // メッシュの処理
-            uint triangleIndex = uint(generator.Generate1d() * gEmitterMesh.triangleCount) % gEmitterMesh.triangleCount;
-            Triangle tri = gTriangles[triangleIndex];
+        float r3 = 1.0f - r1 - r2;
             
-            float r1 = generator.Generate1d();
-            float r2 = generator.Generate1d();
-            if (r1 + r2 > 1.0f)
-            {
-                r1 = 1.0f - r1;
-                r2 = 1.0f - r2;
-            }
-            float r3 = 1.0f - r1 - r2;
-            
-            float3 randomPoint = r1 * tri.v0 + r2 * tri.v1 + r3 * tri.v2;
+        float3 randomPoint = r1 * tri.v0 + r2 * tri.v1 + r3 * tri.v2;
             
             // スケールを適用
-            randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
+        randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
             
             // 回転を適用
-            float3x3 rotMatrix = CreateRotationMatrix(gEmitterMesh.rotation);
-            randomPoint = mul(rotMatrix, randomPoint);
+        float3x3 rotMatrix = CreateRotationMatrix(gEmitterMesh.rotation);
+        randomPoint = mul(rotMatrix, randomPoint);
             
-            emitPosition = gEmitterMesh.translate + randomPoint;
-        }
+        emitPosition = gEmitterMesh.translate + randomPoint;
+        
         
         gParticles[particleIndex].translate = emitPosition;
         

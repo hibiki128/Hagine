@@ -16,8 +16,8 @@ class ParticleCSEmitter {
     /// public methods
     /// ==============================================
     void Initialize(const std::string &name);
-    void Initialize(const std::string &name, const std::string &modelPath, EmitterType type);
-    void Initialize(const std::string &name, PrimitiveType primitiveType, EmitterType type);
+    void Initialize(const std::string &name, const std::string &modelPath);
+    void Initialize(const std::string &name, PrimitiveType primitiveType);
     void Update();
     void Draw(const ViewProjection &vp);
     void DrawImGui();
@@ -26,8 +26,6 @@ class ParticleCSEmitter {
 
     void SetName(const std::string &name) { name_ = name; }
     void SetFrequency(float frequency) {
-        if (emitterSphereData_)
-            emitterSphereData_->frequency = frequency;
         if (emitterMeshData_)
             emitterMeshData_->frequency = frequency;
     }
@@ -39,58 +37,39 @@ class ParticleCSEmitter {
     std::unique_ptr<ParticleCSEmitter> Clone() const;
 
     void SetTranslate(Vector3 transform) {
-        if (emitterSphereData_)
-            emitterSphereData_->translate = transform;
         if (emitterMeshData_)
             emitterMeshData_->translate = transform;
     }
 
     void SetRotation(Vector3 rotation) {
-        if (emitterSphereData_)
-            emitterSphereData_->rotation = rotation;
         if (emitterMeshData_)
             emitterMeshData_->rotation = rotation;
     }
 
     void SetScale(Vector3 scale) {
-        if (emitterSphereData_)
-            emitterSphereData_->scale = scale;
         if (emitterMeshData_)
             emitterMeshData_->scale = scale;
     }
 
-    void SetRadius(Vector3 radius) {
-        if (emitterSphereData_)
-            emitterSphereData_->radius = radius;
-    }
-
     Vector3 GetTranslate() const {
-        if (emitterSphereData_)
-            return emitterSphereData_->translate;
         if (emitterMeshData_)
             return emitterMeshData_->translate;
         return Vector3(0.0f, 0.0f, 0.0f);
     }
 
     Vector3 GetRotation() const {
-        if (emitterSphereData_)
-            return emitterSphereData_->rotation;
         if (emitterMeshData_)
             return emitterMeshData_->rotation;
         return Vector3(0.0f, 0.0f, 0.0f);
     }
 
     Vector3 GetScale() const {
-        if (emitterSphereData_)
-            return emitterSphereData_->scale;
         if (emitterMeshData_)
             return emitterMeshData_->scale;
         return Vector3(1.0f, 1.0f, 1.0f);
     }
 
     Vector3 GetRadius() const {
-        if (emitterSphereData_)
-            return emitterSphereData_->radius;
         return Vector3(1.0f, 1.0f, 1.0f);
     }
 
@@ -104,10 +83,8 @@ class ParticleCSEmitter {
         GetNameCounter().erase(baseName);
     }
 
-    void SetEmitterType(EmitterType type) { SwitchEmitterType(type); }
     void SetMeshData(const MeshData &meshData);
     void CreateTriangleSRV();
-    EmitterType GetEmitterType() const { return currentEmitterType_; }
 
   private:
     /// ==============================================
@@ -116,9 +93,6 @@ class ParticleCSEmitter {
 
     void CreateEmitterMeshResource();
     void CreateTriangleResource(const MeshData &meshData);
-    void SwitchEmitterType(EmitterType type);
-    void CreateEmitterSphereResource();
-    void CreateEmitterSettingsResource();
     void EmitterUpdate();
     void EmitterDisPatch();
     void DrawEmitter();
@@ -142,12 +116,6 @@ class ParticleCSEmitter {
         return nameCounter;
     }
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> emitterSettingsResource_ = nullptr;
-    EmitterSettings *emitterSettingsData_ = nullptr;
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> emitterSphereResource_ = nullptr;
-    EmitterSphere *emitterSphereData_ = nullptr;
-
     Microsoft::WRL::ComPtr<ID3D12Resource> emitterMeshResource_ = nullptr;
     EmitterMesh *emitterMeshData_ = nullptr;
 
@@ -161,8 +129,6 @@ class ParticleCSEmitter {
 
     std::vector<ParticleCSGroup *> particleGroups_;
     std::set<std::string> particleGroupNames_;
-
-    EmitterType currentEmitterType_ = EmitterType::Sphere;
 
     uint32_t triangleSrvIndex_ = 0;
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> triangleSrvHandle_;

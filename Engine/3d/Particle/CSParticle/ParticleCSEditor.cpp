@@ -41,17 +41,17 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name) {
     emitters_[name] = std::move(emitter);
 }
 
-void ParticleCSEditor::AddParticleEmitter(const std::string &name, const std::string &modelPath, EmitterType type) {
+void ParticleCSEditor::AddParticleEmitter(const std::string &name, const std::string &modelPath) {
     // Create model-based emitter
     auto emitter = std::make_unique<ParticleCSEmitter>();
-    emitter->Initialize(name, modelPath, type);
+    emitter->Initialize(name, modelPath);
     emitters_[name] = std::move(emitter);
 }
 
-void ParticleCSEditor::AddParticleEmitter(const std::string &name, PrimitiveType primitiveType, EmitterType type) {
+void ParticleCSEditor::AddParticleEmitter(const std::string &name, PrimitiveType primitiveType) {
     // Create primitive model-based emitter
     auto emitter = std::make_unique<ParticleCSEmitter>();
-    emitter->Initialize(name, primitiveType, type);
+    emitter->Initialize(name, primitiveType);
     emitters_[name] = std::move(emitter);
 }
 
@@ -196,27 +196,14 @@ void ParticleCSEditor::ShowImGuiEditor() {
                 ImGui::Spacing();
                 ImGui::Text("エミッタータイプ選択");
 
-                static int selectedEmitterType = 0; // 0: Sphere, 1: Model, 2: Primitive
-                ImGui::RadioButton("球体エミッター", &selectedEmitterType, 0);
+                static int selectedEmitterType = 0; // 0: Model, 1: Primitive
+                ImGui::RadioButton("モデルエミッター", &selectedEmitterType, 0);
                 ImGui::SameLine();
-                ImGui::RadioButton("モデルエミッター", &selectedEmitterType, 1);
-                ImGui::SameLine();
-                ImGui::RadioButton("プリミティブエミッター", &selectedEmitterType, 2);
+                ImGui::RadioButton("プリミティブエミッター", &selectedEmitterType, 1);
                 ImGui::Separator();
 
-                // 球体エミッター選択時
-                if (selectedEmitterType == 0) {
-                    ImGui::Text("標準的な球体型のエミッターを作成します");
-
-                    if (!localEmitterName_.empty()) {
-                        if (ImGui::Button("球体エミッター生成")) {
-                            AddParticleEmitter(localEmitterName_);
-                            localEmitterName_.clear();
-                        }
-                    }
-                }
                 // モデルエミッター選択時
-                else if (selectedEmitterType == 1) {
+                if (selectedEmitterType == 0) {
                     if (ColoredCollapsingHeader("モデル選択", 2)) {
                         // モデルファイル選択 (既存のコードと同じ)
                         static std::filesystem::path baseDirObj = "resources/models/";
@@ -290,14 +277,14 @@ void ParticleCSEditor::ShowImGuiEditor() {
 
                     if (!localEmitterName_.empty() && !localEmitterModelPath_.empty()) {
                         if (ImGui::Button("モデルエミッター生成")) {
-                            AddParticleEmitter(localEmitterName_, localEmitterModelPath_, EmitterType::Mesh);
+                            AddParticleEmitter(localEmitterName_, localEmitterModelPath_);
                             localEmitterName_.clear();
                             localEmitterModelPath_.clear();
                         }
                     }
                 }
                 // プリミティブエミッター選択時
-                else if (selectedEmitterType == 2) {
+                else if (selectedEmitterType == 1) {
                     if (ColoredCollapsingHeader("プリミティブタイプ選択", 4)) {
                         const char *primitiveType[] = {"未選択", "プレーン", "球", "キューブ", "シリンダー", "リング", "三角形", "円錐", "四角錐"};
                         int currentPrimitiveType = static_cast<int>(localEmitterType_);
@@ -308,7 +295,7 @@ void ParticleCSEditor::ShowImGuiEditor() {
 
                     if (!localEmitterName_.empty() && localEmitterType_ != PrimitiveType::None) {
                         if (ImGui::Button("プリミティブエミッター生成")) {
-                            AddParticleEmitter(localEmitterName_, localEmitterType_, EmitterType::Mesh);
+                            AddParticleEmitter(localEmitterName_, localEmitterType_);
                             localEmitterName_.clear();
                             localEmitterType_ = PrimitiveType::None;
                         }
