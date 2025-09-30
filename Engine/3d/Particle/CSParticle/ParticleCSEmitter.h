@@ -73,19 +73,15 @@ class ParticleCSEmitter {
         return Vector3(1.0f, 1.0f, 1.0f);
     }
 
-    // nameCounterをクリアする静的関数
+    // nameCounterã‚’ã‚¯ãƒªã‚¢ã™ã‚‹é™çš„é–¢æ•°
     static void ClearNameCounter() {
         GetNameCounter().clear();
     }
 
-    // 特定のベース名のカウンターのみクリア
+    // ç‰¹å®šã®ãƒ™ãƒ¼ã‚¹åã®ã‚«ã‚¦ãƒ³ã‚¿ãƒ¼ã®ã¿ã‚¯ãƒªã‚¢
     static void ClearNameCounter(const std::string &baseName) {
         GetNameCounter().erase(baseName);
     }
-
-    void SetMeshData(const MeshData &meshData);
-
-    void CreateSurfacePointSRV();
 
   private:
     /// ==============================================
@@ -127,11 +123,18 @@ class ParticleCSEmitter {
     std::vector<ParticleCSGroup *> particleGroups_;
     std::set<std::string> particleGroupNames_;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> surfacePointResource_ = nullptr;
-    SurfacePoint *surfacePointData_ = nullptr;
-    std::vector<SurfacePoint> surfacePoints_;
-    uint32_t surfacePointSrvIndex_ = 0;
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> surfacePointSrvHandle_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> triangleInfoResource_ = nullptr;
+    TriangleInfo *triangleInfoData_ = nullptr;
+    std::vector<TriangleInfo> triangleInfoList_;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> triangleCDFResource_ = nullptr;
+    float *triangleCDFData_ = nullptr;
+    std::vector<float> triangleCDF_; // ç´¯ç©åˆ†å¸ƒé–¢æ•°
+
+    uint32_t triangleInfoSrvIndex_ = 0;
+    uint32_t triangleCDFSrvIndex_ = 0;
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> triangleInfoSrvHandle_;
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> triangleCDFSrvHandle_;
 
     // Model data for mesh emitters
     Model *model_ = nullptr;

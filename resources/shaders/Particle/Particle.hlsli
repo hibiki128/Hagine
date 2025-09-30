@@ -72,3 +72,13 @@ struct SurfacePoint
     float3 position;
     float padding;
 };
+
+struct TriangleInfo
+{
+    float3 v0;
+    float padding0;
+    float3 v1;
+    float padding1;
+    float3 v2;
+    float padding2;
+};

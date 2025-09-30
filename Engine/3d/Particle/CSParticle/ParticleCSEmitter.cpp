@@ -4,6 +4,7 @@
 #include <Frame.h>
 #include <Line/DrawLine3D.h>
 #include <Particle/ParticleCommon.h>
+#include <random>
 #include <regex>
 
 void ParticleCSEmitter::Initialize(const std::string &name) {
@@ -75,7 +76,7 @@ void ParticleCSEmitter::Update() {
     if (isAuto_) {
         EmitterUpdate();
     } else {
-            emitterMeshData_->emit = 0;
+        emitterMeshData_->emit = 0;
     }
 }
 
@@ -83,8 +84,8 @@ void ParticleCSEmitter::DrawEmitter() {
     if (!isVisible_)
         return;
 
+    // çƒä½“ã‚¨ãƒŸãƒƒã‚¿ãƒ¼ã®å ´åˆ
     if (emitterMeshData_->triangleCount == 0) {
-        // 球体エミッター（triangleCountが0の場合）
         Vector3 center = emitterMeshData_->translate;
         Vector3 scale = emitterMeshData_->scale;
         Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f};
@@ -93,7 +94,7 @@ void ParticleCSEmitter::DrawEmitter() {
         DrawLine3D::GetInstance()->DrawSphere(center, color, maxRadius, 16);
 
     } else {
-        // メッシュエミッター
+        // ãƒ¡ãƒƒã‚·ãƒ¥ã‚¨ãƒŸãƒƒã‚¿ãƒ¼ã®ãƒˆãƒ©ãƒ³ã‚¹ãƒ•ã‚©ãƒ¼ãƒ è¡Œåˆ—ã‚’ä½œæˆ
         Vector4 color = {0.0f, 1.0f, 0.0f, 1.0f};
         Vector3 translate = emitterMeshData_->translate;
         Vector3 rotation = emitterMeshData_->rotation;
@@ -106,6 +107,23 @@ void ParticleCSEmitter::DrawEmitter() {
         Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
 
         Matrix4x4 transformMatrix = translateMatrix * rotateMatrixZ * rotateMatrixY * rotateMatrixX * scaleMatrix;
+
+        // ä¸‰è§’å½¢ã®å¯è¦–åŒ–
+        for (const auto &tri : triangleInfoList_) {
+            Vector3 v0 = tri.v0;
+            Vector3 v1 = tri.v1;
+            Vector3 v2 = tri.v2;
+
+            // ãƒ¯ãƒ¼ãƒ«ãƒ‰ç©ºé–“ã¸å¤‰æ›
+            v0 = Transformation(v0, transformMatrix);
+            v1 = Transformation(v1, transformMatrix);
+            v2 = Transformation(v2, transformMatrix);
+
+            // ä¸‰è§’å½¢ã®è¾ºã‚’ç·šã§æç”»
+            DrawLine3D::GetInstance()->SetPoints(v0, v1);
+            DrawLine3D::GetInstance()->SetPoints(v1, v2);
+            DrawLine3D::GetInstance()->SetPoints(v2, v0);
+        }
     }
 }
 
@@ -135,13 +153,13 @@ void ParticleCSEmitter::RemoveParticleGroup(const std::string &groupName) {
 }
 
 void ParticleCSEmitter::EmitterUpdate() {
-        emitterMeshData_->frequencyTime += Frame::DeltaTime();
-        if (emitterMeshData_->frequency <= emitterMeshData_->frequencyTime) {
-            emitterMeshData_->frequencyTime -= emitterMeshData_->frequency;
-            emitterMeshData_->emit = 1;
-        } else {
-            emitterMeshData_->emit = 0;
-        }
+    emitterMeshData_->frequencyTime += Frame::DeltaTime();
+    if (emitterMeshData_->frequency <= emitterMeshData_->frequencyTime) {
+        emitterMeshData_->frequencyTime -= emitterMeshData_->frequency;
+        emitterMeshData_->emit = 1;
+    } else {
+        emitterMeshData_->emit = 0;
+    }
 }
 void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshResource_ = dxCommon_->CreateBufferResource(sizeof(EmitterMesh));
@@ -149,8 +167,8 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->frequency = 0.5f;
     emitterMeshData_->frequencyTime = 0.0f;
     emitterMeshData_->translate = Vector3(0.0f, 0.0f, 0.0f);
-    emitterMeshData_->rotation = Vector3(0.0f, 0.0f, 0.0f); // 回転を初期化
-    emitterMeshData_->scale = Vector3(1.0f, 1.0f, 1.0f);    // スケールを初期化
+    emitterMeshData_->rotation = Vector3(0.0f, 0.0f, 0.0f); // å›žè»¢ã‚’åˆæœŸåŒ–
+    emitterMeshData_->scale = Vector3(1.0f, 1.0f, 1.0f);    // ã‚¹ã‚±ãƒ¼ãƒ«ã‚’åˆæœŸåŒ–
     emitterMeshData_->triangleCount = 0;
     emitterMeshData_->emit = 0;
 }
@@ -170,9 +188,11 @@ void ParticleCSEmitter::EmitterDisPatch() {
         commandList->SetComputeRootConstantBufferView(4, group->GetPerFrameResource()->GetGPUVirtualAddress());
         commandList->SetComputeRootConstantBufferView(5, group->GetSettingsResource()->GetGPUVirtualAddress());
 
-    if (emitterMeshData_->triangleCount > 0 && surfacePointResource_) {
-            commandList->SetComputeRootDescriptorTable(6, surfacePointSrvHandle_.second);
+        if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
+            commandList->SetComputeRootDescriptorTable(6, triangleInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(7, triangleCDFSrvHandle_.second);
         }
+
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
         commandList->Dispatch(dispatchCount, 1, 1);
 
@@ -205,24 +225,13 @@ std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const {
     return newEmitter;
 }
 
-void ParticleCSEmitter::CreateSurfacePointSRV() {
-    if (surfacePointResource_ && !surfacePoints_.empty()) {
-        surfacePointSrvIndex_ = srvManager_->Allocate() + 1;
-        surfacePointSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(surfacePointSrvIndex_);
-        surfacePointSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(surfacePointSrvIndex_);
-        srvManager_->CreateSRVforStructuredBuffer(surfacePointSrvIndex_, surfacePointResource_.Get(),
-                                                  static_cast<uint32_t>(surfacePoints_.size()), sizeof(SurfacePoint));
-    }
-}
-
 void ParticleCSEmitter::CreateModelTriangles() {
     if (modelData_.meshes.empty())
         return;
 
-    surfacePoints_.clear();
-
-    // 三角形から表面の点を生成
-    const int pointsPerTriangle = 10; // 1つの三角形あたりの点数
+    triangleInfoList_.clear();
+    triangleCDF_.clear();
+    std::vector<float> triangleAreas;
 
     for (const auto &mesh : modelData_.meshes) {
         for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
@@ -237,46 +246,83 @@ void ParticleCSEmitter::CreateModelTriangles() {
             Vector3 v1(mesh.vertices[i1].position.x, mesh.vertices[i1].position.y, mesh.vertices[i1].position.z);
             Vector3 v2(mesh.vertices[i2].position.x, mesh.vertices[i2].position.y, mesh.vertices[i2].position.z);
 
-            // 三角形の面積を計算
             Vector3 edge1 = v1 - v0;
             Vector3 edge2 = v2 - v0;
             Vector3 crossProd = edge1.Cross(edge2);
             float area = crossProd.Length() * 0.5f;
 
-            // 面積に応じて点の数を調整
-            int numPoints = std::max(1, static_cast<int>(area * pointsPerTriangle * 100.0f));
+            if (area > 1e-6f) {
+                triangleAreas.push_back(area);
 
-            // 三角形内にランダムに点を配置
-            for (int p = 0; p < numPoints; ++p) {
-                float r1 = static_cast<float>(rand()) / RAND_MAX;
-                float r2 = static_cast<float>(rand()) / RAND_MAX;
+                TriangleInfo triInfo;
+                triInfo.v0 = v0;
+                triInfo.v1 = v1;
+                triInfo.v2 = v2;
+                triInfo.padding0 = 0.0f;
+                triInfo.padding1 = 0.0f;
+                triInfo.padding2 = 0.0f;
 
-                if (r1 + r2 > 1.0f) {
-                    r1 = 1.0f - r1;
-                    r2 = 1.0f - r2;
-                }
-                float r3 = 1.0f - r1 - r2;
-
-                Vector3 point = v0 * r1 + v1 * r2 + v2 * r3;
-
-                SurfacePoint sp;
-                sp.position = point;
-                sp.padding = 0.0f;
-                surfacePoints_.push_back(sp);
+                triangleInfoList_.push_back(triInfo);
             }
         }
     }
 
-    if (!surfacePoints_.empty()) {
-        // サーフェスポイントのリソース作成
-        size_t bufferSize = sizeof(SurfacePoint) * surfacePoints_.size();
-        surfacePointResource_ = dxCommon_->CreateBufferResource(bufferSize);
-        surfacePointResource_->Map(0, nullptr, reinterpret_cast<void **>(&surfacePointData_));
-        std::memcpy(surfacePointData_, surfacePoints_.data(), bufferSize);
-        CreateSurfacePointSRV();
+    if (triangleInfoList_.empty())
+        return;
 
-        emitterMeshData_->triangleCount = static_cast<uint32_t>(surfacePoints_.size());
+    std::vector<size_t> indices(triangleInfoList_.size());
+    for (size_t i = 0; i < indices.size(); i++) {
+        indices[i] = i;
     }
+
+    std::vector<TriangleInfo> shuffledTriangles;
+    std::vector<float> shuffledAreas;
+    shuffledTriangles.reserve(triangleInfoList_.size());
+    shuffledAreas.reserve(triangleAreas.size());
+
+    for (size_t idx : indices) {
+        shuffledTriangles.push_back(triangleInfoList_[idx]);
+        shuffledAreas.push_back(triangleAreas[idx]);
+    }
+
+    triangleInfoList_ = std::move(shuffledTriangles);
+    triangleAreas = std::move(shuffledAreas);
+
+    float totalArea = 0.0f;
+    for (float area : triangleAreas) {
+        totalArea += area;
+    }
+
+    triangleCDF_.resize(triangleAreas.size());
+    float accum = 0.0f;
+    for (size_t i = 0; i < triangleAreas.size(); i++) {
+        accum += triangleAreas[i] / totalArea;
+        triangleCDF_[i] = accum;
+    }
+
+    size_t triangleInfoBufferSize = sizeof(TriangleInfo) * triangleInfoList_.size();
+    triangleInfoResource_ = dxCommon_->CreateBufferResource(triangleInfoBufferSize);
+    triangleInfoResource_->Map(0, nullptr, reinterpret_cast<void **>(&triangleInfoData_));
+    std::memcpy(triangleInfoData_, triangleInfoList_.data(), triangleInfoBufferSize);
+
+    triangleInfoSrvIndex_ = srvManager_->Allocate() + 1;
+    triangleInfoSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(triangleInfoSrvIndex_);
+    triangleInfoSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(triangleInfoSrvIndex_);
+    srvManager_->CreateSRVforStructuredBuffer(triangleInfoSrvIndex_, triangleInfoResource_.Get(),
+                                              static_cast<uint32_t>(triangleInfoList_.size()), sizeof(TriangleInfo));
+
+    size_t cdfBufferSize = sizeof(float) * triangleCDF_.size();
+    triangleCDFResource_ = dxCommon_->CreateBufferResource(cdfBufferSize);
+    triangleCDFResource_->Map(0, nullptr, reinterpret_cast<void **>(&triangleCDFData_));
+    std::memcpy(triangleCDFData_, triangleCDF_.data(), cdfBufferSize);
+
+    triangleCDFSrvIndex_ = srvManager_->Allocate() + 1;
+    triangleCDFSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(triangleCDFSrvIndex_);
+    triangleCDFSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(triangleCDFSrvIndex_);
+    srvManager_->CreateSRVforStructuredBuffer(triangleCDFSrvIndex_, triangleCDFResource_.Get(),
+                                              static_cast<uint32_t>(triangleCDF_.size()), sizeof(float));
+
+    emitterMeshData_->triangleCount = static_cast<uint32_t>(triangleInfoList_.size());
 }
 
 void ParticleCSEmitter::SaveSetting() {

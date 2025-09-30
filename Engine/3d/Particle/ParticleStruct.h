@@ -33,12 +33,6 @@ struct EmitterMesh {
     float padding2;
 };
 
-struct Triangle {
-    Vector3 v0;
-    Vector3 v1;
-    Vector3 v2;
-};
-
 struct CSParticle {
     Vector3 translate;
     Vector3 scale;
@@ -51,6 +45,15 @@ struct CSParticle {
 struct PerView {
     Matrix4x4 viewProjection;
     Matrix4x4 billboardMatrix;
+};
+
+struct TriangleInfo {
+    Vector3 v0;
+    float padding0;
+    Vector3 v1;
+    float padding1;
+    Vector3 v2;
+    float padding2;
 };
 
 struct PerFrame {
