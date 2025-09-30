@@ -7,7 +7,7 @@ ConstantBuffer<ParticleCSSettings> gSettings : register(b2);
 RWStructuredBuffer<Particle> gParticles : register(u0);
 RWStructuredBuffer<int> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint> gFreeList : register(u2);
-StructuredBuffer<Triangle> gTriangles : register(t0);
+StructuredBuffer<SurfacePoint> gSurfacePoints : register(t0);
 
 // 3x3回転行列を作成する関数
 float3x3 CreateRotationMatrix(float3 rotation)
@@ -79,32 +79,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
         gParticles[particleIndex].scale = float3(scaleValue, scaleValue, scaleValue);
         
         float3 emitPosition;
-       
-        // メッシュの処理
-        uint triangleIndex = uint(generator.Generate1d() * gEmitterMesh.triangleCount) % gEmitterMesh.triangleCount;
-        Triangle tri = gTriangles[triangleIndex];
-            
-        float r1 = generator.Generate1d();
-        float r2 = generator.Generate1d();
-        if (r1 + r2 > 1.0f)
-        {
-            r1 = 1.0f - r1;
-            r2 = 1.0f - r2;
-        }
-        float r3 = 1.0f - r1 - r2;
-            
-        float3 randomPoint = r1 * tri.v0 + r2 * tri.v1 + r3 * tri.v2;
-            
-            // スケールを適用
+
+        // ランダムにポイントを選択
+        uint pointIndex = uint(generator.Generate1d() * gEmitterMesh.triangleCount) % gEmitterMesh.triangleCount;
+        float3 randomPoint = gSurfacePoints[pointIndex].position;
+
+        // スケールを適用
         randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
-            
-            // 回転を適用
+
+        // 回転を適用
         float3x3 rotMatrix = CreateRotationMatrix(gEmitterMesh.rotation);
         randomPoint = mul(rotMatrix, randomPoint);
-            
+
         emitPosition = gEmitterMesh.translate + randomPoint;
-        
-        
+
         gParticles[particleIndex].translate = emitPosition;
         
         // 色、速度、寿命設定は既存のコードと同じ

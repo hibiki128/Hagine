@@ -84,7 +84,8 @@ class ParticleCSEmitter {
     }
 
     void SetMeshData(const MeshData &meshData);
-    void CreateTriangleSRV();
+
+    void CreateSurfacePointSRV();
 
   private:
     /// ==============================================
@@ -92,7 +93,6 @@ class ParticleCSEmitter {
     /// ==============================================
 
     void CreateEmitterMeshResource();
-    void CreateTriangleResource(const MeshData &meshData);
     void EmitterUpdate();
     void EmitterDisPatch();
     void DrawEmitter();
@@ -119,9 +119,6 @@ class ParticleCSEmitter {
     Microsoft::WRL::ComPtr<ID3D12Resource> emitterMeshResource_ = nullptr;
     EmitterMesh *emitterMeshData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> triangleResource_ = nullptr;
-    Triangle *triangleData_ = nullptr;
-
     DirectXCommon *dxCommon_ = nullptr;
     ID3D12GraphicsCommandList *commandList = nullptr;
     ParticleCommon *particleCommon_ = nullptr;
@@ -130,10 +127,11 @@ class ParticleCSEmitter {
     std::vector<ParticleCSGroup *> particleGroups_;
     std::set<std::string> particleGroupNames_;
 
-    uint32_t triangleSrvIndex_ = 0;
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> triangleSrvHandle_;
-
-    std::vector<Triangle> triangles_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> surfacePointResource_ = nullptr;
+    SurfacePoint *surfacePointData_ = nullptr;
+    std::vector<SurfacePoint> surfacePoints_;
+    uint32_t surfacePointSrvIndex_ = 0;
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> surfacePointSrvHandle_;
 
     // Model data for mesh emitters
     Model *model_ = nullptr;

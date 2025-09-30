@@ -1,0 +1,25 @@
+{
+    "frequency": 0.0010000000474974513,
+    "frequencyTime": 38.26393508911133,
+    "isAuto": true,
+    "isVisible": false,
+    "modelPath": "debug/suzannu.obj",
+    "particleGroupCount": 1,
+    "particleGroup_": "test",
+    "primitiveType": 0,
+    "rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    }
+}

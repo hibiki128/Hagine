@@ -66,3 +66,9 @@ struct ParticleCSSettings
     int maxParticleCount;
     float padding3;
 };
+
+struct SurfacePoint
+{
+    float3 position;
+    float padding;
+};

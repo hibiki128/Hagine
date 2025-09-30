@@ -64,6 +64,11 @@ struct EmitterData {
     EmitterMesh mesh;
 };
 
+struct SurfacePoint {
+    Vector3 position;
+    float padding;
+};
+
 struct ParticleCSGroupData {
     // マテリアルデータ
     std::vector<ParticleMaterial> materials;
