@@ -31,7 +31,7 @@ float3 ApplyScale(float3 vertex, float3 scale)
     return vertex * scale;
 }
 
-[numthreads(64, 1, 1)]
+[numthreads(1024, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
     if (gEmitterMesh.emit == 0)
