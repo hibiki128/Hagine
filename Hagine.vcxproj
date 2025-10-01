@@ -110,6 +110,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Camera\FollowCamera.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp" />
     <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp" />
+    <ClCompile Include="Application\GameObject\Field\SkyDome\SkyDome.cpp" />
     <ClCompile Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.cpp" />
     <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
@@ -265,6 +266,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Camera\FollowCamera.h" />
     <ClInclude Include="Application\GameObject\Enemy\Enemy.h" />
     <ClInclude Include="Application\GameObject\Field\Ground\Ground.h" />
+    <ClInclude Include="Application\GameObject\Field\SkyDome\SkyDome.h" />
     <ClInclude Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.h" />
     <ClInclude Include="Application\GameObject\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="Application\GameObject\Player\Player.h" />
