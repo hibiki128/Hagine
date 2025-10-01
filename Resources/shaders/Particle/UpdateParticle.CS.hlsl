@@ -38,7 +38,26 @@ void main(uint3 DTid : SV_DispatchThreadID)
             if (gSettings.enableLifetimeScale)
             {
                 float scaleMultiplier = 1.0f - lifeRatio;
-                gParticles[particleIndex].scale *= scaleMultiplier;
+                gParticles[particleIndex].scale = gParticles[particleIndex].initialScale * scaleMultiplier;
+            }
+
+            // Sin波による拡縮
+            if (gSettings.enableSinScale)
+            {
+            // sin波: -1 ~ 1 → 0 ~ 1 の範囲に変換
+                float sinWave = sin(gParticles[particleIndex].currentTime * gSettings.sinScaleFrequency) * 0.5f + 0.5f;
+            // 振幅を適用: (1.0 - amplitude) ~ (1.0 + amplitude) の範囲でスケール
+                float sinMultiplier = 1.0f + (sinWave * 2.0f - 1.0f) * gSettings.sinScaleAmplitude;
+                gParticles[particleIndex].scale = gParticles[particleIndex].initialScale * sinMultiplier;
+            }
+
+            // 両方有効な場合は組み合わせる
+            if (gSettings.enableLifetimeScale && gSettings.enableSinScale)
+            {
+                float lifetimeMultiplier = 1.0f - lifeRatio;
+                float sinWave = sin(gParticles[particleIndex].currentTime * gSettings.sinScaleFrequency) * 0.5f + 0.5f;
+                float sinMultiplier = 1.0f + (sinWave * 2.0f - 1.0f) * gSettings.sinScaleAmplitude;
+                gParticles[particleIndex].scale = gParticles[particleIndex].initialScale * lifetimeMultiplier * sinMultiplier;
             }
             
             // アルファ値設定

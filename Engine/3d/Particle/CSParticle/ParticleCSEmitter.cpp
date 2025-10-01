@@ -270,17 +270,6 @@ void ParticleCSEmitter::CreateModelTriangles() {
     if (triangleInfoList_.empty())
         return;
 
-    OutputDebugStringA(("Triangle count: " + std::to_string(triangleInfoList_.size()) + "\n").c_str());
-
-    float minArea = *std::min_element(triangleAreas.begin(), triangleAreas.end());
-    float maxArea = *std::max_element(triangleAreas.begin(), triangleAreas.end());
-    float avgArea = std::accumulate(triangleAreas.begin(), triangleAreas.end(), 0.0f) / triangleAreas.size();
-
-    OutputDebugStringA(("Area - Min: " + std::to_string(minArea) +
-                        ", Max: " + std::to_string(maxArea) +
-                        ", Avg: " + std::to_string(avgArea) + "\n")
-                           .c_str());
-
     std::vector<size_t> indices(triangleInfoList_.size());
     for (size_t i = 0; i < indices.size(); i++) {
         indices[i] = i;
@@ -290,8 +279,6 @@ void ParticleCSEmitter::CreateModelTriangles() {
     for (float area : triangleAreas) {
         totalArea += area;
     }
-
-    OutputDebugStringA(("Total area: " + std::to_string(totalArea) + "\n").c_str());
 
    triangleCDF_.resize(triangleAreas.size());
     float accum = 0.0f;
@@ -305,7 +292,6 @@ void ParticleCSEmitter::CreateModelTriangles() {
         triangleCDF_.back() = 1.0f;
     }
 
-    OutputDebugStringA("CDF Distribution Check:\n");
     int histogram[10] = {0};
     for (float cdf : triangleCDF_) {
         int bucket = static_cast<int>(cdf * 10.0f);
@@ -313,14 +299,6 @@ void ParticleCSEmitter::CreateModelTriangles() {
             bucket = 9;
         histogram[bucket]++;
     }
-    for (int i = 0; i < 10; i++) {
-        OutputDebugStringA(("  " + std::to_string(i * 10) + "-" + std::to_string((i + 1) * 10) +
-                            "%: " + std::to_string(histogram[i]) + " triangles\n")
-                               .c_str());
-    }
-
-    
-    OutputDebugStringA(("Final CDF value: " + std::to_string(triangleCDF_.back()) + "\n").c_str());
 
     size_t triangleInfoBufferSize = sizeof(TriangleInfo) * triangleInfoList_.size();
     triangleInfoResource_ = dxCommon_->CreateBufferResource(triangleInfoBufferSize);
@@ -349,11 +327,9 @@ void ParticleCSEmitter::CreateModelTriangles() {
 
 void ParticleCSEmitter::SaveSetting() {
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
-    std::unique_ptr<DataHandler> groupData;
 
     data->Save("isAuto", isAuto_);
     data->Save("isVisible", isVisible_);
-
     data->Save("frequency", emitterMeshData_->frequency);
     data->Save("frequencyTime", emitterMeshData_->frequencyTime);
     data->Save<Vector3>("translate", emitterMeshData_->translate);
@@ -363,33 +339,35 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("primitiveType", static_cast<int>(primitiveType_));
 
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
-    int index = 0;
-    for (auto &group : particleGroups_) {
-        data->Save("particleGroup_" + index, group->GetGroupName());
-        groupData = std::make_unique<DataHandler>("ParticleCSGroup", group->GetGroupName());
-        groupData->Save("minLifetime", group->GetSettingsData()->lifeTimeMin);
-        groupData->Save("maxLifetime", group->GetSettingsData()->lifeTimeMax);
-        groupData->Save("minScale", group->GetSettingsData()->scaleMin);
-        groupData->Save("maxScale", group->GetSettingsData()->scaleMax);
-        groupData->Save("minVelocity", group->GetSettingsData()->velocityMin);
-        groupData->Save("maxVelocity", group->GetSettingsData()->velocityMax);
-        groupData->Save("startColor", group->GetSettingsData()->startColor);
-        groupData->Save("endColor", group->GetSettingsData()->endColor);
-        groupData->Save("isLifetimeScale", group->GetSettingsData()->enableLifetimeScale);
-        groupData->Save("isRandomColor", group->GetSettingsData()->enableRandomColor);
-        groupData->Save("emitCount", group->GetSettingsData()->emitCount);
-        groupData->Save("blendMode", group->GetParticleGroupData().blendMode);
-        index++;
+
+    for (int i = 0; i < particleGroups_.size(); i++) {
+        auto &group = particleGroups_[i];
+        std::string prefix = "group_" + std::to_string(i) + "_";
+
+        data->Save(prefix + "name", group->GetGroupName());
+        data->Save(prefix + "minLifetime", group->GetSettingsData()->lifeTimeMin);
+        data->Save(prefix + "maxLifetime", group->GetSettingsData()->lifeTimeMax);
+        data->Save(prefix + "minScale", group->GetSettingsData()->scaleMin);
+        data->Save(prefix + "maxScale", group->GetSettingsData()->scaleMax);
+        data->Save(prefix + "minVelocity", group->GetSettingsData()->velocityMin);
+        data->Save(prefix + "maxVelocity", group->GetSettingsData()->velocityMax);
+        data->Save(prefix + "startColor", group->GetSettingsData()->startColor);
+        data->Save(prefix + "endColor", group->GetSettingsData()->endColor);
+        data->Save(prefix + "enableLifetimeScale", group->GetSettingsData()->enableLifetimeScale);
+        data->Save(prefix + "enableRandomColor", group->GetSettingsData()->enableRandomColor);
+        data->Save(prefix + "enableSinScale", group->GetSettingsData()->enableSinScale);      
+        data->Save(prefix + "sinScaleFrequency", group->GetSettingsData()->sinScaleFrequency);
+        data->Save(prefix + "sinScaleAmplitude", group->GetSettingsData()->sinScaleAmplitude);
+        data->Save(prefix + "emitCount", group->GetSettingsData()->emitCount);
+        data->Save(prefix + "blendMode", static_cast<int>(group->GetParticleGroupData().blendMode));
     }
 }
 
 void ParticleCSEmitter::LoadSetting() {
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
-    std::unique_ptr<DataHandler> groupData;
 
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
-
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
@@ -406,29 +384,37 @@ void ParticleCSEmitter::LoadSetting() {
         LoadPrimitiveModel(primitiveType_);
         CreateModelTriangles();
     }
-    // Load particle groups (rest remains the same)
+
     groupNum_ = data->Load("particleGroupCount", 0);
     for (int i = 0; i < groupNum_; i++) {
-        auto group = ParticleCSGroupManager::GetInstance()->GetIndependentParticleGroup(data->Load("particleGroup_" + i, std::string("")));
-        groupData = std::make_unique<DataHandler>("ParticleCSGroup", group->GetGroupName());
-        group->SetSettingData({groupData->Load("minLifetime", 1.0f),
-                               groupData->Load("maxLifetime", 1.0f),
-                               groupData->Load("minScale", 1.0f),
-                               groupData->Load("maxScale", 1.0f),
-                               groupData->Load<Vector3>("minVelocity", {0.0f, 0.0f, 0.0f}),
-                               {},
-                               groupData->Load<Vector3>("maxVelocity", {0.0f, 0.0f, 0.0f}),
-                               {},
-                               groupData->Load("startColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f)),
-                               groupData->Load("endColor", Vector4(1.0f, 1.0f, 1.0f, 0.0f)),
-                               groupData->Load<uint32_t>("isLifetimeScale", 0),
-                               groupData->Load<uint32_t>("isRandomColor", 0),
-                               uint32_t(groupData->Load("emitCount", 10)),
-                               group->GetMaxParticleCount()});
-        group->SetBlendMode(static_cast<BlendMode>(groupData->Load<int>("blendMode", static_cast<int>(BlendMode::kAdd))));
-        if (group) {
-            AddParticleGroup(group);
-        }
+        std::string prefix = "group_" + std::to_string(i) + "_";
+        std::string groupName = data->Load(prefix + "name", std::string(""));
+
+        auto group = ParticleCSGroupManager::GetInstance()->GetIndependentParticleGroup(groupName);
+        if (!group)
+            continue;
+
+        ParticleCSSettings settings;
+        settings.lifeTimeMin = data->Load(prefix + "minLifetime", 1.0f);
+        settings.lifeTimeMax = data->Load(prefix + "maxLifetime", 1.0f);
+        settings.scaleMin = data->Load(prefix + "minScale", 1.0f);
+        settings.scaleMax = data->Load(prefix + "maxScale", 1.0f);
+        settings.velocityMin = data->Load<Vector3>(prefix + "minVelocity", {0.0f, 0.0f, 0.0f});
+        settings.velocityMax = data->Load<Vector3>(prefix + "maxVelocity", {0.0f, 0.0f, 0.0f});
+        settings.startColor = data->Load(prefix + "startColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        settings.endColor = data->Load(prefix + "endColor", Vector4(1.0f, 1.0f, 1.0f, 0.0f));
+        settings.enableLifetimeScale = data->Load<uint32_t>(prefix + "enableLifetimeScale", 0);
+        settings.enableRandomColor = data->Load<uint32_t>(prefix + "enableRandomColor", 0);
+        settings.enableSinScale = data->Load<uint32_t>(prefix + "enableSinScale", 0);
+        settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f); 
+        settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f); 
+        settings.emitCount = static_cast<uint32_t>(data->Load(prefix + "emitCount", 10));
+        settings.maxParticleCount = group->GetMaxParticleCount();
+
+        group->SetSettingData(settings);
+        group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
+
+        AddParticleGroup(group);
     }
 }
 
@@ -440,7 +426,6 @@ void ParticleCSEmitter::LoadCloneSetting() {
 
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
-
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
@@ -456,6 +441,38 @@ void ParticleCSEmitter::LoadCloneSetting() {
     } else if (primitiveType_ != PrimitiveType::None) {
         LoadPrimitiveModel(primitiveType_);
         CreateModelTriangles();
+    }
+
+    groupNum_ = data->Load("particleGroupCount", 0);
+    for (int i = 0; i < groupNum_; i++) {
+        std::string prefix = "group_" + std::to_string(i) + "_";
+        std::string groupName = data->Load(prefix + "name", std::string(""));
+
+        auto group = ParticleCSGroupManager::GetInstance()->GetIndependentParticleGroup(groupName);
+        if (!group)
+            continue;
+
+        ParticleCSSettings settings;
+        settings.lifeTimeMin = data->Load(prefix + "minLifetime", 1.0f);
+        settings.lifeTimeMax = data->Load(prefix + "maxLifetime", 1.0f);
+        settings.scaleMin = data->Load(prefix + "minScale", 1.0f);
+        settings.scaleMax = data->Load(prefix + "maxScale", 1.0f);
+        settings.velocityMin = data->Load<Vector3>(prefix + "minVelocity", {0.0f, 0.0f, 0.0f});
+        settings.velocityMax = data->Load<Vector3>(prefix + "maxVelocity", {0.0f, 0.0f, 0.0f});
+        settings.startColor = data->Load(prefix + "startColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        settings.endColor = data->Load(prefix + "endColor", Vector4(1.0f, 1.0f, 1.0f, 0.0f));
+        settings.enableLifetimeScale = data->Load<uint32_t>(prefix + "enableLifetimeScale", 0);
+        settings.enableRandomColor = data->Load<uint32_t>(prefix + "enableRandomColor", 0);
+        settings.enableSinScale = data->Load<uint32_t>(prefix + "enableSinScale", 0);
+        settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f);
+        settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f);
+        settings.emitCount = static_cast<uint32_t>(data->Load(prefix + "emitCount", 10));
+        settings.maxParticleCount = group->GetMaxParticleCount();
+
+        group->SetSettingData(settings);
+        group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
+
+        AddParticleGroup(group);
     }
 }
 
@@ -521,43 +538,33 @@ void ParticleCSEmitter::DrawImGui() {
 
             // パーティクルグループ設定セクション（既存のコードと同じ）
             if (!particleGroups_.empty()) {
-                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.2f, 0.8f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.5f, 0.3f, 0.9f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.6f, 0.4f, 1.0f));
+                static int selectedGroupIndex = 0;
+                if (selectedGroupIndex >= static_cast<int>(particleGroups_.size())) {
+                    selectedGroupIndex = 0;
+                }
 
-                if (ImGui::CollapsingHeader("パーティクルグループ設定##GroupSettings")) {
-                    ImGui::PopStyleColor(3);
+                std::vector<std::string> groupNames;
+                for (const auto &group : particleGroups_) {
+                    groupNames.push_back(group->GetGroupName());
+                }
 
-                    static int selectedGroupIndex = 0;
-                    if (selectedGroupIndex >= static_cast<int>(particleGroups_.size())) {
-                        selectedGroupIndex = 0;
-                    }
+                std::vector<const char *> groupNameCStrs;
+                for (auto &n : groupNames)
+                    groupNameCStrs.push_back(n.c_str());
 
-                    std::vector<std::string> groupNames;
-                    for (const auto &group : particleGroups_) {
-                        groupNames.push_back(group->GetGroupName());
-                    }
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.4f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.9f));
 
-                    std::vector<const char *> groupNameCStrs;
-                    for (auto &n : groupNames)
-                        groupNameCStrs.push_back(n.c_str());
+                ImGui::SetNextItemWidth(200.0f);
+                ImGui::Combo("選択中のグループ##GroupCombo", &selectedGroupIndex, groupNameCStrs.data(), (int)groupNameCStrs.size());
 
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.4f, 0.8f));
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 0.8f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.9f));
+                ImGui::PopStyleColor(3);
 
-                    ImGui::SetNextItemWidth(200.0f);
-                    ImGui::Combo("選択中のグループ##GroupCombo", &selectedGroupIndex, groupNameCStrs.data(), (int)groupNameCStrs.size());
-
-                    ImGui::PopStyleColor(3);
-
-                    if (selectedGroupIndex >= 0 && selectedGroupIndex < static_cast<int>(particleGroups_.size())) {
-                        ImGui::Separator();
-                        particleGroups_[selectedGroupIndex]->SetFrequency(emitterMeshData_->frequency);
-                        particleGroups_[selectedGroupIndex]->DrawImGui();
-                    }
-                } else {
-                    ImGui::PopStyleColor(3);
+                if (selectedGroupIndex >= 0 && selectedGroupIndex < static_cast<int>(particleGroups_.size())) {
+                    ImGui::Separator();
+                    particleGroups_[selectedGroupIndex]->SetFrequency(emitterMeshData_->frequency);
+                    particleGroups_[selectedGroupIndex]->DrawImGui();
                 }
             } else {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.6f, 0.6f, 1.0f));

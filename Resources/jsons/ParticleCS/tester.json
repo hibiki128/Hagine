@@ -1,9 +1,9 @@
 {
     "frequency": 0.0010000000474974513,
-    "frequencyTime": 211.8421173095703,
-    "group_0_blendMode": 2,
-    "group_0_emitCount": 1000,
-    "group_0_enableLifetimeScale": 0,
+    "frequencyTime": 173.7353515625,
+    "group_0_blendMode": 4,
+    "group_0_emitCount": 996,
+    "group_0_enableLifetimeScale": 1,
     "group_0_enableRandomColor": 1,
     "group_0_endColor": {
         "w": 0.0,
@@ -12,14 +12,14 @@
         "z": 1.0
     },
     "group_0_maxLifetime": 1.0,
-    "group_0_maxScale": 0.007000000216066837,
+    "group_0_maxScale": 0.019999999552965164,
     "group_0_maxVelocity": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
     },
     "group_0_minLifetime": 1.0,
-    "group_0_minScale": 0.007000000216066837,
+    "group_0_minScale": 0.019999999552965164,
     "group_0_minVelocity": {
         "x": 0.0,
         "y": 0.0,
@@ -34,7 +34,7 @@
     },
     "isAuto": true,
     "isVisible": false,
-    "modelPath": "debug/suzannu.obj",
+    "modelPath": "debug/multiMesh.obj",
     "particleGroupCount": 1,
     "particleGroup_": "test",
     "primitiveType": 0,
@@ -49,7 +49,7 @@
         "z": 1.0
     },
     "translate": {
-        "x": 0.0,
+        "x": -2.200000047683716,
         "y": 0.0,
         "z": 0.0
     }

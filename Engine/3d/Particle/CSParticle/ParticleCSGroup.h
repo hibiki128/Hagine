@@ -105,7 +105,6 @@ class ParticleCSGroup {
         particleGroupData_.blendMode = blendMode;
     }
 
-
     std::string GetGroupName() { return particleGroupData_.groupName; }
 
     PrimitiveType GetPrimitiveType() { return type_; }

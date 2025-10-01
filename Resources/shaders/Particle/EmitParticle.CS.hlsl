@@ -55,6 +55,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         
         float scaleValue = lerp(gSettings.scaleMin, gSettings.scaleMax, generator.Generate1d());
         gParticles[particleIndex].scale = float3(scaleValue, scaleValue, scaleValue);
+        gParticles[particleIndex].initialScale = float3(scaleValue, scaleValue, scaleValue);
         
         float3 emitPosition;
 

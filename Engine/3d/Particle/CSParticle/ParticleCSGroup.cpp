@@ -17,232 +17,6 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     CreateFreeListResource();
 }
 
-void ParticleCSGroup::DrawImGui() {
-    if (!settingsData_)
-        return;
-
-    // パーティクルデータセクション
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.2f, 0.8f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.5f, 0.3f, 0.9f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.6f, 0.4f, 1.0f));
-
-    if (ImGui::CollapsingHeader("パーティクル基本設定")) {
-        ImGui::PopStyleColor(3);
-
-        // 出現数設定
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
-        if (ImGui::TreeNode("出現数")) {
-            ImGui::PopStyleColor();
-
-            int emitCount = static_cast<int>(settingsData_->emitCount);
-            int dynamicMaxCount = CalculateOptimalEmitCount();
-            int maxCount = std::min(static_cast<int>(settingsData_->maxParticleCount), dynamicMaxCount);
-
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.2f, 0.4f));
-            if (ImGui::DragInt("出現数（emitCount）", &emitCount, 1, 0, maxCount)) {
-                emitCount = std::clamp(emitCount, 0, maxCount);
-                settingsData_->emitCount = static_cast<uint32_t>(emitCount);
-            }
-            ImGui::PopStyleColor();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.6f, 1.0f));
-            ImGui::Text("推奨上限: %d (最大寿命%.2fs / 発生間隔%.2fs)",
-                        dynamicMaxCount, settingsData_->lifeTimeMax, frequency_);
-            ImGui::Text("絶対上限: %d", static_cast<int>(settingsData_->maxParticleCount));
-            ImGui::PopStyleColor();
-
-            ImGui::TreePop();
-        } else {
-            ImGui::PopStyleColor();
-        }
-
-        ImGui::Separator();
-
-        // 寿命設定
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
-        if (ImGui::TreeNode("寿命")) {
-            ImGui::PopStyleColor();
-
-            ImGui::Text("寿命設定:");
-            ImGui::Separator();
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.2f, 0.4f));
-            ImGui::DragFloat("最小寿命", &settingsData_->lifeTimeMin, 0.1f, 0.1f, 10.0f);
-            ImGui::DragFloat("最大寿命", &settingsData_->lifeTimeMax, 0.1f, 0.1f, 10.0f);
-            ImGui::PopStyleColor();
-
-            if (settingsData_->lifeTimeMin > settingsData_->lifeTimeMax) {
-                settingsData_->lifeTimeMax = settingsData_->lifeTimeMin;
-            }
-
-            ImGui::TreePop();
-        } else {
-            ImGui::PopStyleColor();
-        }
-
-        ImGui::Separator();
-
-        // サイズ設定
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.6f, 1.0f));
-        if (ImGui::TreeNode("大きさ")) {
-            ImGui::PopStyleColor();
-
-            ImGui::Text("大きさ:");
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.4f, 0.2f, 0.4f));
-            ImGui::DragFloat("最小サイズ", &settingsData_->scaleMin, 0.01f);
-            ImGui::DragFloat("最大サイズ", &settingsData_->scaleMax, 0.01f);
-            ImGui::PopStyleColor();
-
-            if (settingsData_->scaleMin > settingsData_->scaleMax) {
-                settingsData_->scaleMax = settingsData_->scaleMin;
-            }
-
-            ImGui::TreePop();
-        } else {
-            ImGui::PopStyleColor();
-        }
-
-        ImGui::Separator();
-
-        // 速度設定
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 1.0f, 1.0f));
-        if (ImGui::TreeNode("速度")) {
-            ImGui::PopStyleColor();
-
-            ImGui::Text("速度:");
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.4f, 0.4f));
-            ImGui::DragFloat3("最小速度", &settingsData_->velocityMin.x, 0.01f);
-            ImGui::DragFloat3("最大速度", &settingsData_->velocityMax.x, 0.01f);
-            ImGui::PopStyleColor();
-
-            ImGui::TreePop();
-        } else {
-            ImGui::PopStyleColor();
-        }
-
-        ImGui::Separator();
-
-        // 色彩設定
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.8f, 1.0f));
-        if (ImGui::TreeNode("色彩")) {
-            ImGui::PopStyleColor();
-
-            bool enableRandomColor = settingsData_->enableRandomColor != 0;
-            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
-            if (ImGui::Checkbox("ランダムカラー", &enableRandomColor)) {
-                settingsData_->enableRandomColor = enableRandomColor ? 1 : 0;
-            }
-            ImGui::PopStyleColor();
-
-            if (!enableRandomColor) {
-                ImGui::ColorEdit4("開始時の色", &settingsData_->startColor.x);
-                ImGui::ColorEdit4("終了時の色", &settingsData_->endColor.x);
-            }
-
-            ImGui::TreePop();
-        } else {
-            ImGui::PopStyleColor();
-        }
-
-    } else {
-        ImGui::PopStyleColor(3);
-    }
-
-    ImGui::Spacing();
-
-    // 動作設定セクション
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.3f, 0.3f, 0.8f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.4f, 0.4f, 0.9f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
-
-    if (ImGui::CollapsingHeader("動作設定")) {
-        ImGui::PopStyleColor(3);
-
-        ImGui::Spacing();
-
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.7f, 1.0f));
-        ImGui::Text("特殊効果:");
-        ImGui::PopStyleColor();
-
-        ImGui::Separator();
-
-        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
-        bool enableLifetimeScale = settingsData_->enableLifetimeScale != 0;
-        if (ImGui::Checkbox("寿命で小さくなる", &enableLifetimeScale)) {
-            settingsData_->enableLifetimeScale = enableLifetimeScale ? 1 : 0;
-        }
-        ImGui::PopStyleColor();
-
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("パーティクルが時間経過と共に小さくなります");
-        }
-
-        ImGui::Spacing();
-        ImGui::Separator();
-
-        // ブレンドモード設定
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.7f, 1.0f));
-        ImGui::Text("ブレンドモード:");
-        ImGui::PopStyleColor();
-
-        const char *blendModeNames[] = {
-            "なし",
-            "通常",
-            "加算",
-            "減算",
-            "乗算",
-            "スクリーン"};
-
-        int currentBlendMode = static_cast<int>(particleGroupData_.blendMode);
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.5f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.6f, 0.8f));
-        if (ImGui::Combo("##BlendMode", &currentBlendMode, blendModeNames, IM_ARRAYSIZE(blendModeNames))) {
-            particleGroupData_.blendMode = static_cast<BlendMode>(currentBlendMode);
-        }
-        ImGui::PopStyleColor(3);
-
-    } else {
-        ImGui::PopStyleColor(3);
-    }
-
-    ImGui::Spacing();
-
-    // 詳細情報セクション
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.2f, 0.4f, 0.8f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.5f, 0.9f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.4f, 0.6f, 1.0f));
-
-    if (ImGui::CollapsingHeader("詳細情報")) {
-        ImGui::PopStyleColor(3);
-
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
-        ImGui::Text("現在の設定値:");
-        ImGui::PopStyleColor();
-
-        ImGui::Separator();
-
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.9f, 0.7f, 1.0f));
-        ImGui::Text("寿命: %.2f - %.2f", settingsData_->lifeTimeMin, settingsData_->lifeTimeMax);
-        ImGui::Text("サイズ: %.2f - %.2f", settingsData_->scaleMin, settingsData_->scaleMax);
-        ImGui::Text("速度X: %.2f - %.2f", settingsData_->velocityMin.x, settingsData_->velocityMax.x);
-        ImGui::Text("速度Y: %.2f - %.2f", settingsData_->velocityMin.y, settingsData_->velocityMax.y);
-        ImGui::Text("速度Z: %.2f - %.2f", settingsData_->velocityMin.z, settingsData_->velocityMax.z);
-        ImGui::PopStyleColor();
-
-        bool enableLifetimeScale = settingsData_->enableLifetimeScale != 0;
-        bool enableRandomColor = settingsData_->enableRandomColor != 0;
-
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.7f, 0.9f, 1.0f));
-        ImGui::Text("寿命スケール: %s", enableLifetimeScale ? "有効" : "無効");
-        ImGui::Text("ランダムカラー: %s", enableRandomColor ? "有効" : "無効");
-        ImGui::Text("出現数: %d / %d", settingsData_->emitCount, settingsData_->maxParticleCount);
-        ImGui::PopStyleColor();
-
-    } else {
-        ImGui::PopStyleColor(3);
-    }
-}
-
 int ParticleCSGroup::CalculateOptimalEmitCount() const {
     if (frequency_ <= 0.0f || settingsData_->lifeTimeMax <= 0.0f) {
         return static_cast<int>(settingsData_->maxParticleCount);
@@ -478,7 +252,214 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->startColor = {1.0f, 1.0f, 1.0f, 1.0f};
     settingsData_->endColor = {1.0f, 1.0f, 1.0f, 0.0f};
     settingsData_->enableLifetimeScale = 0;
-    settingsData_->enableRandomColor = 1; // デフォルトでランダムカラー有効
+    settingsData_->enableRandomColor = 1;
+    settingsData_->enableSinScale = 0;
+    settingsData_->sinScaleFrequency = 5.0f;
+    settingsData_->sinScaleAmplitude = 0.3f;
     settingsData_->maxParticleCount = 10000;
     settingsData_->emitCount = 0;
+}
+
+
+void ParticleCSGroup::DrawImGui() {
+    if (!settingsData_)
+        return;
+
+    // パーティクル基本設定セクション
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.2f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.5f, 0.3f, 0.9f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.6f, 0.4f, 1.0f));
+
+    if (ImGui::CollapsingHeader("パーティクル基本設定")) {
+        ImGui::PopStyleColor(3);
+
+        // 出現数設定
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
+        if (ImGui::TreeNode("出現数")) {
+            ImGui::PopStyleColor();
+
+            int emitCount = static_cast<int>(settingsData_->emitCount);
+            int dynamicMaxCount = CalculateOptimalEmitCount();
+            int maxCount = std::min(static_cast<int>(settingsData_->maxParticleCount), dynamicMaxCount);
+
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.2f, 0.4f));
+            if (ImGui::DragInt("出現数（emitCount）", &emitCount, 1, 0, maxCount)) {
+                emitCount = std::clamp(emitCount, 0, maxCount);
+                settingsData_->emitCount = static_cast<uint32_t>(emitCount);
+            }
+            ImGui::PopStyleColor();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.6f, 1.0f));
+            ImGui::Text("推奨上限: %d (最大寿命%.2fs / 発生間隔%.2fs)",
+                        dynamicMaxCount, settingsData_->lifeTimeMax, frequency_);
+            ImGui::Text("絶対上限: %d", static_cast<int>(settingsData_->maxParticleCount));
+            ImGui::PopStyleColor();
+
+            ImGui::TreePop();
+        } else {
+            ImGui::PopStyleColor();
+        }
+
+        ImGui::Separator();
+
+        // 寿命設定
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
+        if (ImGui::TreeNode("寿命")) {
+            ImGui::PopStyleColor();
+
+            ImGui::Text("寿命設定:");
+            ImGui::Separator();
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.2f, 0.4f));
+            ImGui::DragFloat("最小寿命", &settingsData_->lifeTimeMin, 0.1f, 0.1f, 10.0f);
+            ImGui::DragFloat("最大寿命", &settingsData_->lifeTimeMax, 0.1f, 0.1f, 10.0f);
+            ImGui::PopStyleColor();
+
+            if (settingsData_->lifeTimeMin > settingsData_->lifeTimeMax) {
+                settingsData_->lifeTimeMax = settingsData_->lifeTimeMin;
+            }
+
+            ImGui::TreePop();
+        } else {
+            ImGui::PopStyleColor();
+        }
+
+        ImGui::Separator();
+
+        // サイズ設定
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.6f, 1.0f));
+        if (ImGui::TreeNode("大きさ")) {
+            ImGui::PopStyleColor();
+
+            ImGui::Text("大きさ:");
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.4f, 0.2f, 0.4f));
+            ImGui::DragFloat("最小サイズ", &settingsData_->scaleMin, 0.01f);
+            ImGui::DragFloat("最大サイズ", &settingsData_->scaleMax, 0.01f);
+            ImGui::PopStyleColor();
+
+            if (settingsData_->scaleMin > settingsData_->scaleMax) {
+                settingsData_->scaleMax = settingsData_->scaleMin;
+            }
+
+            ImGui::TreePop();
+        } else {
+            ImGui::PopStyleColor();
+        }
+
+        ImGui::Separator();
+
+        // 速度設定
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 1.0f, 1.0f));
+        if (ImGui::TreeNode("速度")) {
+            ImGui::PopStyleColor();
+
+            ImGui::Text("速度:");
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.4f, 0.4f));
+            ImGui::DragFloat3("最小速度", &settingsData_->velocityMin.x, 0.01f);
+            ImGui::DragFloat3("最大速度", &settingsData_->velocityMax.x, 0.01f);
+            ImGui::PopStyleColor();
+
+            ImGui::TreePop();
+        } else {
+            ImGui::PopStyleColor();
+        }
+
+        ImGui::Separator();
+
+        // 色彩設定
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.8f, 1.0f));
+        if (ImGui::TreeNode("色彩")) {
+            ImGui::PopStyleColor();
+
+            bool enableRandomColor = settingsData_->enableRandomColor != 0;
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
+            if (ImGui::Checkbox("ランダムカラー", &enableRandomColor)) {
+                settingsData_->enableRandomColor = enableRandomColor ? 1 : 0;
+            }
+            ImGui::PopStyleColor();
+
+            if (!enableRandomColor) {
+                ImGui::ColorEdit4("開始時の色", &settingsData_->startColor.x);
+                ImGui::ColorEdit4("終了時の色", &settingsData_->endColor.x);
+            }
+
+            ImGui::TreePop();
+        } else {
+            ImGui::PopStyleColor();
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // 動作設定をTreeNodeとして追加
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.7f, 1.0f));
+        if (ImGui::TreeNode("動作設定")) {
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.7f, 1.0f));
+            ImGui::Text("特殊効果:");
+            ImGui::PopStyleColor();
+
+            ImGui::Separator();
+
+           ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
+            bool enableLifetimeScale = settingsData_->enableLifetimeScale != 0;
+            if (ImGui::Checkbox("寿命で小さくなる", &enableLifetimeScale)) {
+                settingsData_->enableLifetimeScale = enableLifetimeScale ? 1 : 0;
+            }
+
+            bool enableSinScale = settingsData_->enableSinScale != 0;
+            if (ImGui::Checkbox("Sin波で拡縮", &enableSinScale)) {
+                settingsData_->enableSinScale = enableSinScale ? 1 : 0;
+            }
+            ImGui::PopStyleColor();
+
+            if (enableSinScale) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
+                ImGui::DragFloat("周波数##SinFreq", &settingsData_->sinScaleFrequency, 0.1f);
+                ImGui::DragFloat("振幅##SinAmp", &settingsData_->sinScaleAmplitude, 0.01f);
+                ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("パーティクルが時間経過と共に小さくなります");
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            // ブレンドモード設定
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.7f, 1.0f));
+            ImGui::Text("ブレンドモード:");
+            ImGui::PopStyleColor();
+
+            const char *blendModeNames[] = {
+                "なし",
+                "通常",
+                "加算",
+                "減算",
+                "乗算",
+                "スクリーン"};
+
+            int currentBlendMode = static_cast<int>(particleGroupData_.blendMode);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.5f, 0.6f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.6f, 0.8f));
+            if (ImGui::Combo("##BlendMode", &currentBlendMode, blendModeNames, IM_ARRAYSIZE(blendModeNames))) {
+                particleGroupData_.blendMode = static_cast<BlendMode>(currentBlendMode);
+            }
+            ImGui::PopStyleColor(3);
+
+            ImGui::TreePop();
+        } else {
+            ImGui::PopStyleColor();
+        }
+
+    } else {
+        ImGui::PopStyleColor(3);
+    }
 }

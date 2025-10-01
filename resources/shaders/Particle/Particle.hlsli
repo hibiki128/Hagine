@@ -13,6 +13,8 @@ struct Particle
     float3 velocity;
     float currentTime;
     float4 color;
+    float3 initialScale;
+    float padding;
 };
 
 struct PerView
@@ -62,8 +64,11 @@ struct ParticleCSSettings
     float4 endColor;
     int enableLifetimeScale;
     int enableRandomColor;
+    int enableSinScale;
     int emitCount;
     int maxParticleCount;
+    float sinScaleFrequency;
+    float sinScaleAmplitude;
     float padding3;
 };
 

@@ -40,6 +40,8 @@ struct CSParticle {
     Vector3 velocity;
     float currentTime;
     Vector4 color;
+    Vector3 initialScale;
+    float padding;
 };
 
 struct PerView {
@@ -98,10 +100,13 @@ struct ParticleCSSettings {
     float padding2;
     Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f};
     Vector4 endColor = {1.0f, 1.0f, 1.0f, 0.0f};
-    uint32_t enableLifetimeScale = 0; // 寿命に応じて小さくなるフラグ
-    uint32_t enableRandomColor = 0;   // ランダムカラーフラグ
+    uint32_t enableLifetimeScale = 0;
+    uint32_t enableRandomColor = 0;
+    uint32_t enableSinScale = 0;
     uint32_t emitCount = 0;
     uint32_t maxParticleCount = 10000;
+    float sinScaleFrequency;
+    float sinScaleAmplitude;
     float padding3[1];
 };
 
