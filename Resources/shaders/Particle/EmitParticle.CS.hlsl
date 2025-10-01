@@ -1,17 +1,15 @@
 #include"Particle.hlsli"
 #include"../Random/Random.hlsli"
 
-ConstantBuffer<EmitterSettings> gEmitterSettings : register(b0);
-ConstantBuffer<EmitterSphere> gEmitterSphere : register(b1);
-ConstantBuffer<EmitterMesh> gEmitterMesh : register(b2);
-ConstantBuffer<PerFrame> gPerFrame : register(b3);
-ConstantBuffer<ParticleCSSettings> gSettings : register(b4);
+ConstantBuffer<EmitterMesh> gEmitterMesh : register(b0);
+ConstantBuffer<PerFrame> gPerFrame : register(b1);
+ConstantBuffer<ParticleCSSettings> gSettings : register(b2);
 RWStructuredBuffer<Particle> gParticles : register(u0);
 RWStructuredBuffer<int> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint> gFreeList : register(u2);
-StructuredBuffer<Triangle> gTriangles : register(t0);
+StructuredBuffer<TriangleInfo> gTriangles : register(t0);
+StructuredBuffer<float> gTriangleCDF : register(t1);
 
-// 3x3回転行列を作成する関数
 float3x3 CreateRotationMatrix(float3 rotation)
 {
     float cosX = cos(rotation.x);
@@ -21,44 +19,32 @@ float3x3 CreateRotationMatrix(float3 rotation)
     float cosZ = cos(rotation.z);
     float sinZ = sin(rotation.z);
     
-    // X軸回転行列
-    float3x3 rotX = float3x3(
-        1.0f, 0.0f, 0.0f,
-        0.0f, cosX, -sinX,
-        0.0f, sinX, cosX
-    );
-    
-    // Y軸回転行列
-    float3x3 rotY = float3x3(
-        cosY, 0.0f, sinY,
-        0.0f, 1.0f, 0.0f,
-        -sinY, 0.0f, cosY
-    );
-    
-    // Z軸回転行列
-    float3x3 rotZ = float3x3(
-        cosZ, -sinZ, 0.0f,
-        sinZ, cosZ, 0.0f,
-        0.0f, 0.0f, 1.0f
-    );
+    float3x3 rotX = float3x3(1.0f, 0.0f, 0.0f, 0.0f, cosX, -sinX, 0.0f, sinX, cosX);
+    float3x3 rotY = float3x3(cosY, 0.0f, sinY, 0.0f, 1.0f, 0.0f, -sinY, 0.0f, cosY);
+    float3x3 rotZ = float3x3(cosZ, -sinZ, 0.0f, sinZ, cosZ, 0.0f, 0.0f, 0.0f, 1.0f);
     
     return mul(mul(rotZ, rotY), rotX);
 }
 
-// スケール行列を適用する関数
 float3 ApplyScale(float3 vertex, float3 scale)
 {
     return vertex * scale;
 }
 
-[numthreads(64, 1, 1)]
+[numthreads(1024, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+    if (gEmitterMesh.emit == 0)
+        return;
+    
+    if (DTid.x >= gSettings.emitCount)
+        return;
+    
     RandomGenerator generator;
-    generator.seed = float3(
-        DTid.x + gPerFrame.time * 1000.0f + gPerFrame.groupId * 9973.0f,
-        DTid.x * 73.0f + gPerFrame.time * 127.0f + gPerFrame.groupId * 7919.0f,
-        DTid.x * 151.0f + gPerFrame.time * 223.0f + gPerFrame.groupId * 6547.0f
+    // XorShift版の初期化方法に変更
+    generator.InitSeed(
+        uint3(DTid.x, gPerFrame.groupId, DTid.x * 7919),
+        gPerFrame.time
     );
     
     int freeListIndex;
@@ -69,67 +55,62 @@ void main(uint3 DTid : SV_DispatchThreadID)
         
         float scaleValue = lerp(gSettings.scaleMin, gSettings.scaleMax, generator.Generate1d());
         gParticles[particleIndex].scale = float3(scaleValue, scaleValue, scaleValue);
+        gParticles[particleIndex].initialScale = float3(scaleValue, scaleValue, scaleValue);
         
         float3 emitPosition;
-        if (gEmitterSettings.isSphere)
+
+        if (gEmitterMesh.triangleCount > 0)
         {
-            // 球体の処理（楕円体に対応）
-            float3 rawDirection = generator.Generate3d() * 2.0f - 1.0f;
-            if (length(rawDirection) < 0.001f)
+            float particleRatio = generator.Generate1d();
+            
+            uint triIndex = 0;
+            uint left = 0;
+            uint right = gEmitterMesh.triangleCount - 1;
+            
+            while (left < right)
             {
-                rawDirection = float3(0.577f, 0.577f, 0.577f);
+                uint mid = (left + right) / 2;
+                if (gTriangleCDF[mid] < particleRatio)
+                {
+                    left = mid + 1;
+                }
+                else
+                {
+                    right = mid;
+                }
             }
-            float3 randomDirection = normalize(rawDirection);
+            triIndex = left;
             
-            // 楕円体の半径を適用
-            float3 ellipsoidRadius = gEmitterSphere.radius * gEmitterSphere.scale;
+            float3 v0 = gTriangles[triIndex].v0;
+            float3 v1 = gTriangles[triIndex].v1;
+            float3 v2 = gTriangles[triIndex].v2;
             
-            // 楕円体内部のランダムな点を生成
-            float r1 = pow(generator.Generate1d(), 1.0f / 3.0f);
-            float3 randomPoint = randomDirection * r1;
-            
-            // 楕円体の形状を適用
-            randomPoint *= ellipsoidRadius;
-            
-            // 回転を適用
-            float3x3 rotMatrix = CreateRotationMatrix(gEmitterSphere.rotation);
-            randomPoint = mul(rotMatrix, randomPoint);
-            
-            emitPosition = gEmitterSphere.translate + randomPoint;
-        }
-        else
-        {
-            // メッシュの処理
-            uint triangleIndex = uint(generator.Generate1d() * gEmitterMesh.triangleCount) % gEmitterMesh.triangleCount;
-            Triangle tri = gTriangles[triangleIndex];
-            
-            float r1 = generator.Generate1d();
-            float r2 = generator.Generate1d();
-            if (r1 + r2 > 1.0f)
+            float u = generator.Generate1d();
+            float v = generator.Generate1d();
+            if (u + v > 1.0f)
             {
-                r1 = 1.0f - r1;
-                r2 = 1.0f - r2;
+                u = 1.0f - u;
+                v = 1.0f - v;
             }
-            float r3 = 1.0f - r1 - r2;
+            float3 randomPoint = v0 + u * (v1 - v0) + v * (v2 - v0);
             
-            float3 randomPoint = r1 * tri.v0 + r2 * tri.v1 + r3 * tri.v2;
-            
-            // スケールを適用
             randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
-            
-            // 回転を適用
             float3x3 rotMatrix = CreateRotationMatrix(gEmitterMesh.rotation);
             randomPoint = mul(rotMatrix, randomPoint);
             
             emitPosition = gEmitterMesh.translate + randomPoint;
         }
-        
+        else
+        {
+            emitPosition = gEmitterMesh.translate;
+        }
+
         gParticles[particleIndex].translate = emitPosition;
         
-        // 色、速度、寿命設定は既存のコードと同じ
         if (gSettings.enableRandomColor)
         {
-            gParticles[particleIndex].color.rgb = generator.Generate3d();
+            // Generate3dの戻り値が[-1,1]なので[0,1]に変換
+            gParticles[particleIndex].color.rgb = generator.Generate3d() * 0.5f + 0.5f;
             gParticles[particleIndex].color.a = 1.0f;
         }
         else

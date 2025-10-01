@@ -13,26 +13,14 @@ struct Particle
     float3 velocity;
     float currentTime;
     float4 color;
+    float3 initialScale;
+    float padding;
 };
 
 struct PerView
 {
     float4x4 viewProjection;
     float4x4 billboardMatrix;
-};
-
-struct EmitterSphere
-{
-    float3 translate;
-    float padding1;
-    float3 radius;
-    float frequency;
-    float frequencyTime;
-    int emit;
-    float3 rotation;
-    float padding2;
-    float3 scale;  
-    float padding3;
 };
 
 struct EmitterMesh
@@ -46,12 +34,6 @@ struct EmitterMesh
     float frequencyTime;
     uint emit;
     float padding2;
-};
-
-struct EmitterSettings
-{
-    uint isSphere;
-    float3 padding;
 };
 
 struct Triangle
@@ -82,7 +64,26 @@ struct ParticleCSSettings
     float4 endColor;
     int enableLifetimeScale;
     int enableRandomColor;
+    int enableSinScale;
     int emitCount;
     int maxParticleCount;
+    float sinScaleFrequency;
+    float sinScaleAmplitude;
     float padding3;
+};
+
+struct SurfacePoint
+{
+    float3 position;
+    float padding;
+};
+
+struct TriangleInfo
+{
+    float3 v0;
+    float padding0;
+    float3 v1;
+    float padding1;
+    float3 v2;
+    float padding2;
 };

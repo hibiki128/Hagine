@@ -1,9 +1,10 @@
-
+#define NOMINMAX
 #include "ParticleCSEmitter.h"
 #include "ParticleCSGroupManager.h"
 #include <Frame.h>
 #include <Line/DrawLine3D.h>
 #include <Particle/ParticleCommon.h>
+#include <random>
 #include <regex>
 
 void ParticleCSEmitter::Initialize(const std::string &name) {
@@ -12,38 +13,22 @@ void ParticleCSEmitter::Initialize(const std::string &name) {
     commandList = dxCommon_->GetCommandList().Get();
     srvManager_ = SrvManager::GetInstance();
     name_ = name;
-    CreateEmitterSphereResource();
-    CreateEmitterSettingsResource();
+    CreateEmitterMeshResource();
     LoadSetting();
 }
 
-void ParticleCSEmitter::Initialize(const std::string &name, const std::string &modelPath, EmitterType type) {
+void ParticleCSEmitter::Initialize(const std::string &name, const std::string &modelPath) {
     Initialize(name);
-    currentEmitterType_ = type;
     modelPath_ = modelPath;
-
-    if (type == EmitterType::Mesh) {
-        LoadModel(modelPath);
-        CreateModelTriangles();
-        CreateEmitterMeshResource();
-    }
-
-    CreateEmitterSettingsResource();
+    LoadModel(modelPath);
+    CreateModelTriangles();
 }
 
-void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primitiveType, EmitterType type) {
+void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primitiveType) {
     Initialize(name);
-
-    currentEmitterType_ = type;
     primitiveType_ = primitiveType;
-
-    if (type == EmitterType::Mesh) {
-        LoadPrimitiveModel(primitiveType);
-        CreateModelTriangles();
-        CreateEmitterMeshResource();
-    }
-
-    CreateEmitterSettingsResource();
+    LoadPrimitiveModel(primitiveType);
+    CreateModelTriangles();
 }
 
 void ParticleCSEmitter::Draw(const ViewProjection &vp) {
@@ -91,12 +76,7 @@ void ParticleCSEmitter::Update() {
     if (isAuto_) {
         EmitterUpdate();
     } else {
-        if (emitterMeshData_) {
-            emitterMeshData_->emit = 0;
-        }
-        if (emitterSphereData_) {
-            emitterSphereData_->emit = 0;
-        }
+        emitterMeshData_->emit = 0;
     }
 }
 
@@ -104,59 +84,45 @@ void ParticleCSEmitter::DrawEmitter() {
     if (!isVisible_)
         return;
 
-    if (currentEmitterType_ == EmitterType::Sphere && emitterSphereData_) {
-        Vector3 center = emitterSphereData_->translate;
-        Vector3 radius = emitterSphereData_->radius;
-        Vector3 rotation = emitterSphereData_->rotation;
-        Vector3 scale = emitterSphereData_->scale;
-        Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f}; // Yellow
+    // çƒä½“ã‚¨ãƒŸãƒƒã‚¿ãƒ¼ã®å ´åˆ
+    if (emitterMeshData_->triangleCount == 0) {
+        Vector3 center = emitterMeshData_->translate;
+        Vector3 scale = emitterMeshData_->scale;
+        Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f};
 
-        // スケールを適用した半径で楕円体を描画
-        Vector3 scaledRadius = {
-            radius.x * scale.x,
-            radius.y * scale.y,
-            radius.z * scale.z};
-
-        // 回転とスケールを考慮した楕円体として描画
-        // 簡単な実装として、X軸方向の半径を使用
-        float maxRadius = max(max(scaledRadius.x, scaledRadius.y), scaledRadius.z);
+        float maxRadius = std::max(std::max(scale.x, scale.y), scale.z);
         DrawLine3D::GetInstance()->DrawSphere(center, color, maxRadius, 16);
 
-    } else if (currentEmitterType_ == EmitterType::Mesh && !triangles_.empty() && emitterMeshData_) {
-        Vector4 color = {0.0f, 1.0f, 0.0f, 1.0f}; // Green for mesh emitters
+    } else {
+        // ãƒ¡ãƒƒã‚·ãƒ¥ã‚¨ãƒŸãƒƒã‚¿ãƒ¼ã®ãƒˆãƒ©ãƒ³ã‚¹ãƒ•ã‚©ãƒ¼ãƒ è¡Œåˆ—ã‚’ä½œæˆ
+        Vector4 color = {0.0f, 1.0f, 0.0f, 1.0f};
         Vector3 translate = emitterMeshData_->translate;
         Vector3 rotation = emitterMeshData_->rotation;
         Vector3 scale = emitterMeshData_->scale;
 
-        // 変換行列を作成
         Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
         Matrix4x4 rotateMatrixX = MakeRotateXMatrix(rotation.x);
         Matrix4x4 rotateMatrixY = MakeRotateYMatrix(rotation.y);
         Matrix4x4 rotateMatrixZ = MakeRotateZMatrix(rotation.z);
         Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
 
-        // 変換行列の合成：スケール -> 回転 -> 平行移動
         Matrix4x4 transformMatrix = translateMatrix * rotateMatrixZ * rotateMatrixY * rotateMatrixX * scaleMatrix;
 
-        // 各三角形の頂点を変換して描画
-        for (const auto &triangle : triangles_) {
-            // 各頂点を変換
-            Vector4 v0_4 = {triangle.v0.x, triangle.v0.y, triangle.v0.z, 1.0f};
-            Vector4 v1_4 = {triangle.v1.x, triangle.v1.y, triangle.v1.z, 1.0f};
-            Vector4 v2_4 = {triangle.v2.x, triangle.v2.y, triangle.v2.z, 1.0f};
+        // ä¸‰è§’å½¢ã®å¯è¦–åŒ–
+        for (const auto &tri : triangleInfoList_) {
+            Vector3 v0 = tri.v0;
+            Vector3 v1 = tri.v1;
+            Vector3 v2 = tri.v2;
 
-            v0_4 = Transformation(v0_4, transformMatrix);
-            v1_4 = Transformation(v1_4, transformMatrix);
-            v2_4 = Transformation(v2_4, transformMatrix);
+            // ãƒ¯ãƒ¼ãƒ«ãƒ‰ç©ºé–“ã¸å¤‰æ›
+            v0 = Transformation(v0, transformMatrix);
+            v1 = Transformation(v1, transformMatrix);
+            v2 = Transformation(v2, transformMatrix);
 
-            Vector3 v0 = {v0_4.x, v0_4.y, v0_4.z};
-            Vector3 v1 = {v1_4.x, v1_4.y, v1_4.z};
-            Vector3 v2 = {v2_4.x, v2_4.y, v2_4.z};
-
-            // 三角形の3つの辺を描画
-            DrawLine3D::GetInstance()->SetPoints(v0, v1, color);
-            DrawLine3D::GetInstance()->SetPoints(v1, v2, color);
-            DrawLine3D::GetInstance()->SetPoints(v2, v0, color);
+            // ä¸‰è§’å½¢ã®è¾ºã‚’ç·šã§æç”»
+            DrawLine3D::GetInstance()->SetPoints(v0, v1);
+            DrawLine3D::GetInstance()->SetPoints(v1, v2);
+            DrawLine3D::GetInstance()->SetPoints(v2, v0);
         }
     }
 }
@@ -187,45 +153,22 @@ void ParticleCSEmitter::RemoveParticleGroup(const std::string &groupName) {
 }
 
 void ParticleCSEmitter::EmitterUpdate() {
-    if (currentEmitterType_ == EmitterType::Sphere && emitterSphereData_) {
-        emitterSphereData_->frequencyTime += Frame::DeltaTime();
-        if (emitterSphereData_->frequency <= emitterSphereData_->frequencyTime) {
-            emitterSphereData_->frequencyTime -= emitterSphereData_->frequency;
-            emitterSphereData_->emit = 1;
-        } else {
-            emitterSphereData_->emit = 0;
-        }
-    } else if (currentEmitterType_ == EmitterType::Mesh && emitterMeshData_) {
-        emitterMeshData_->frequencyTime += Frame::DeltaTime();
-        if (emitterMeshData_->frequency <= emitterMeshData_->frequencyTime) {
-            emitterMeshData_->frequencyTime -= emitterMeshData_->frequency;
-            emitterMeshData_->emit = 1;
-        } else {
-            emitterMeshData_->emit = 0;
-        }
+    emitterMeshData_->frequencyTime += Frame::DeltaTime();
+    if (emitterMeshData_->frequency <= emitterMeshData_->frequencyTime) {
+        emitterMeshData_->frequencyTime -= emitterMeshData_->frequency;
+        emitterMeshData_->emit = 1;
+    } else {
+        emitterMeshData_->emit = 0;
     }
 }
-
-void ParticleCSEmitter::CreateEmitterSphereResource() {
-    emitterSphereResource_ = dxCommon_->CreateBufferResource(sizeof(EmitterSphere));
-    emitterSphereResource_->Map(0, nullptr, reinterpret_cast<void **>(&emitterSphereData_));
-    emitterSphereData_->frequency = 0.5f;
-    emitterSphereData_->frequencyTime = 0.0f;
-    emitterSphereData_->translate = Vector3(0.0f, 0.0f, 0.0f);
-    emitterSphereData_->radius = Vector3(1.0f, 1.0f, 1.0f);   // Vector3に変更
-    emitterSphereData_->rotation = Vector3(0.0f, 0.0f, 0.0f); // 回転を初期化
-    emitterSphereData_->scale = Vector3(1.0f, 1.0f, 1.0f);    // スケールを初期化
-    emitterSphereData_->emit = 0;
-}
-
 void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshResource_ = dxCommon_->CreateBufferResource(sizeof(EmitterMesh));
     emitterMeshResource_->Map(0, nullptr, reinterpret_cast<void **>(&emitterMeshData_));
     emitterMeshData_->frequency = 0.5f;
     emitterMeshData_->frequencyTime = 0.0f;
     emitterMeshData_->translate = Vector3(0.0f, 0.0f, 0.0f);
-    emitterMeshData_->rotation = Vector3(0.0f, 0.0f, 0.0f); // 回転を初期化
-    emitterMeshData_->scale = Vector3(1.0f, 1.0f, 1.0f);    // スケールを初期化
+    emitterMeshData_->rotation = Vector3(0.0f, 0.0f, 0.0f); // å›žè»¢ã‚’åˆæœŸåŒ–
+    emitterMeshData_->scale = Vector3(1.0f, 1.0f, 1.0f);    // ã‚¹ã‚±ãƒ¼ãƒ«ã‚’åˆæœŸåŒ–
     emitterMeshData_->triangleCount = 0;
     emitterMeshData_->emit = 0;
 }
@@ -241,21 +184,14 @@ void ParticleCSEmitter::EmitterDisPatch() {
         commandList->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(2, group->GetFreeListSrvHandle().second);
 
-        // EmitterSettings
-        commandList->SetComputeRootConstantBufferView(3, emitterSettingsResource_->GetGPUVirtualAddress());
-        // EmitterSphere
-        commandList->SetComputeRootConstantBufferView(4, emitterSphereResource_->GetGPUVirtualAddress());
-        // EmitterMesh
-        if (emitterMeshResource_) {
-            commandList->SetComputeRootConstantBufferView(5, emitterMeshResource_->GetGPUVirtualAddress());
-        }
-        // Triangle SRV
-        if (currentEmitterType_ == EmitterType::Mesh && triangleResource_) {
-            commandList->SetComputeRootDescriptorTable(6, triangleSrvHandle_.second);
-        }
+        commandList->SetComputeRootConstantBufferView(3, emitterMeshResource_->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(4, group->GetPerFrameResource()->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(5, group->GetSettingsResource()->GetGPUVirtualAddress());
 
-        commandList->SetComputeRootConstantBufferView(7, group->GetPerFrameResource()->GetGPUVirtualAddress());
-        commandList->SetComputeRootConstantBufferView(8, group->GetSettingsResource()->GetGPUVirtualAddress());
+        if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
+            commandList->SetComputeRootDescriptorTable(6, triangleInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(7, triangleCDFSrvHandle_.second);
+        }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
         commandList->Dispatch(dispatchCount, 1, 1);
@@ -267,19 +203,14 @@ void ParticleCSEmitter::EmitterDisPatch() {
 std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const {
     auto newEmitter = std::make_unique<ParticleCSEmitter>();
 
-    // 静的関数を使用してnameCounterを取得
     auto &nameCounter = GetNameCounter();
-
-    // ベース名を抽出
     std::string baseName = name_;
     std::regex suffixRegex("_(\\d+)$");
     baseName = std::regex_replace(baseName, suffixRegex, "");
 
-    // 次の番号を決定
     int &counter = nameCounter[baseName];
     ++counter;
 
-    // 新しい名前を作成
     std::string newName = baseName + "_" + std::to_string(counter);
 
     newEmitter->Initialize(baseName);
@@ -289,225 +220,201 @@ std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const {
     newEmitter->isAuto_ = this->isAuto_;
     newEmitter->isVisible_ = this->isVisible_;
 
-    // エミッターリソースを再生成して値だけコピーする
-    if (currentEmitterType_ == EmitterType::Sphere) {
-        newEmitter->CreateEmitterSphereResource();
-        *newEmitter->emitterSphereData_ = *this->emitterSphereData_;
-    } else if (currentEmitterType_ == EmitterType::Mesh) {
-        newEmitter->CreateEmitterMeshResource();
-        *newEmitter->emitterMeshData_ = *this->emitterMeshData_;
-    }
+    *newEmitter->emitterMeshData_ = *this->emitterMeshData_;
 
     return newEmitter;
-}
-
-void ParticleCSEmitter::CreateTriangleResource(const MeshData &meshData) {
-    // インデックスから三角形を生成
-    triangles_.clear();
-    for (size_t i = 0; i < meshData.indices.size(); i += 3) {
-        Triangle tri;
-        // Vector4からVector3に変換（w成分を除く）
-        tri.v0 = Vector3(meshData.vertices[meshData.indices[i]].position.x,
-                         meshData.vertices[meshData.indices[i]].position.y,
-                         meshData.vertices[meshData.indices[i]].position.z);
-        tri.v1 = Vector3(meshData.vertices[meshData.indices[i + 1]].position.x,
-                         meshData.vertices[meshData.indices[i + 1]].position.y,
-                         meshData.vertices[meshData.indices[i + 1]].position.z);
-        tri.v2 = Vector3(meshData.vertices[meshData.indices[i + 2]].position.x,
-                         meshData.vertices[meshData.indices[i + 2]].position.y,
-                         meshData.vertices[meshData.indices[i + 2]].position.z);
-        triangles_.push_back(tri);
-    }
-
-    if (!triangles_.empty()) {
-        size_t bufferSize = sizeof(Triangle) * triangles_.size();
-        triangleResource_ = dxCommon_->CreateBufferResource(bufferSize, true);
-        triangleResource_->Map(0, nullptr, reinterpret_cast<void **>(&triangleData_));
-        std::memcpy(triangleData_, triangles_.data(), bufferSize);
-
-        // SRVを作成
-        CreateTriangleSRV();
-
-        if (emitterMeshData_) {
-            emitterMeshData_->triangleCount = static_cast<uint32_t>(triangles_.size());
-        }
-    }
-}
-
-void ParticleCSEmitter::SetMeshData(const MeshData &meshData) {
-    if (currentEmitterType_ == EmitterType::Mesh) {
-        CreateTriangleResource(meshData);
-    }
-}
-
-void ParticleCSEmitter::CreateTriangleSRV() {
-    if (triangleResource_ && !triangles_.empty()) {
-        triangleSrvIndex_ = srvManager_->Allocate() + 1;
-        triangleSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(triangleSrvIndex_);
-        triangleSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(triangleSrvIndex_);
-        srvManager_->CreateSRVforStructuredBuffer(triangleSrvIndex_, triangleResource_.Get(),
-                                                  static_cast<uint32_t>(triangles_.size()), sizeof(Triangle));
-    }
-}
-
-void ParticleCSEmitter::CreateEmitterSettingsResource() {
-    emitterSettingsResource_ = dxCommon_->CreateBufferResource(sizeof(EmitterSettings));
-    emitterSettingsResource_->Map(0, nullptr, reinterpret_cast<void **>(&emitterSettingsData_));
-    emitterSettingsData_->isSphere = (currentEmitterType_ == EmitterType::Sphere) ? 1 : 0;
-}
-
-void ParticleCSEmitter::SwitchEmitterType(EmitterType type) {
-    currentEmitterType_ = type;
-    if (emitterSettingsData_) {
-        emitterSettingsData_->isSphere = (type == EmitterType::Sphere) ? 1 : 0;
-    }
 }
 
 void ParticleCSEmitter::CreateModelTriangles() {
     if (modelData_.meshes.empty())
         return;
 
-    triangles_.clear();
+    triangleInfoList_.clear();
+    triangleCDF_.clear();
+    std::vector<float> triangleAreas;
 
-    // Process all meshes in the model
     for (const auto &mesh : modelData_.meshes) {
-        for (size_t i = 0; i < mesh.indices.size(); i += 3) {
-            Triangle tri;
-            // Convert Vector4 positions to Vector3 (remove w component)
-            tri.v0 = Vector3(mesh.vertices[mesh.indices[i]].position.x,
-                             mesh.vertices[mesh.indices[i]].position.y,
-                             mesh.vertices[mesh.indices[i]].position.z);
-            tri.v1 = Vector3(mesh.vertices[mesh.indices[i + 1]].position.x,
-                             mesh.vertices[mesh.indices[i + 1]].position.y,
-                             mesh.vertices[mesh.indices[i + 1]].position.z);
-            tri.v2 = Vector3(mesh.vertices[mesh.indices[i + 2]].position.x,
-                             mesh.vertices[mesh.indices[i + 2]].position.y,
-                             mesh.vertices[mesh.indices[i + 2]].position.z);
-            triangles_.push_back(tri);
+        for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
+            uint32_t i0 = mesh.indices[i];
+            uint32_t i1 = mesh.indices[i + 1];
+            uint32_t i2 = mesh.indices[i + 2];
+
+            if (i0 >= mesh.vertices.size() || i1 >= mesh.vertices.size() || i2 >= mesh.vertices.size())
+                continue;
+
+            Vector3 v0(mesh.vertices[i0].position.x, mesh.vertices[i0].position.y, mesh.vertices[i0].position.z);
+            Vector3 v1(mesh.vertices[i1].position.x, mesh.vertices[i1].position.y, mesh.vertices[i1].position.z);
+            Vector3 v2(mesh.vertices[i2].position.x, mesh.vertices[i2].position.y, mesh.vertices[i2].position.z);
+
+            Vector3 edge1 = v1 - v0;
+            Vector3 edge2 = v2 - v0;
+            Vector3 crossProd = edge1.Cross(edge2);
+            float area = crossProd.Length() * 0.5f;
+
+            if (area > 1e-6f) {
+                triangleAreas.push_back(area);
+
+                TriangleInfo triInfo;
+                triInfo.v0 = v0;
+                triInfo.v1 = v1;
+                triInfo.v2 = v2;
+                triInfo.padding0 = 0.0f;
+                triInfo.padding1 = 0.0f;
+                triInfo.padding2 = 0.0f;
+
+                triangleInfoList_.push_back(triInfo);
+            }
         }
     }
 
-    if (!triangles_.empty()) {
-        size_t bufferSize = sizeof(Triangle) * triangles_.size();
-        triangleResource_ = dxCommon_->CreateBufferResource(bufferSize);
-        triangleResource_->Map(0, nullptr, reinterpret_cast<void **>(&triangleData_));
-        std::memcpy(triangleData_, triangles_.data(), bufferSize);
+    if (triangleInfoList_.empty())
+        return;
 
-        CreateTriangleSRV();
-
-        if (emitterMeshData_) {
-            emitterMeshData_->triangleCount = static_cast<uint32_t>(triangles_.size());
-        }
+    std::vector<size_t> indices(triangleInfoList_.size());
+    for (size_t i = 0; i < indices.size(); i++) {
+        indices[i] = i;
     }
+
+    float totalArea = 0.0f;
+    for (float area : triangleAreas) {
+        totalArea += area;
+    }
+
+   triangleCDF_.resize(triangleAreas.size());
+    float accum = 0.0f;
+    for (size_t i = 0; i < triangleAreas.size(); i++) {
+        accum += triangleAreas[i] / totalArea;
+        triangleCDF_[i] = accum;
+    }
+
+    // 最後の値を強制的に1.0にして誤差を修正
+    if (!triangleCDF_.empty()) {
+        triangleCDF_.back() = 1.0f;
+    }
+
+    int histogram[10] = {0};
+    for (float cdf : triangleCDF_) {
+        int bucket = static_cast<int>(cdf * 10.0f);
+        if (bucket >= 10)
+            bucket = 9;
+        histogram[bucket]++;
+    }
+
+    size_t triangleInfoBufferSize = sizeof(TriangleInfo) * triangleInfoList_.size();
+    triangleInfoResource_ = dxCommon_->CreateBufferResource(triangleInfoBufferSize);
+    triangleInfoResource_->Map(0, nullptr, reinterpret_cast<void **>(&triangleInfoData_));
+    std::memcpy(triangleInfoData_, triangleInfoList_.data(), triangleInfoBufferSize);
+
+    triangleInfoSrvIndex_ = srvManager_->Allocate() + 1;
+    triangleInfoSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(triangleInfoSrvIndex_);
+    triangleInfoSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(triangleInfoSrvIndex_);
+    srvManager_->CreateSRVforStructuredBuffer(triangleInfoSrvIndex_, triangleInfoResource_.Get(),
+                                              static_cast<uint32_t>(triangleInfoList_.size()), sizeof(TriangleInfo));
+
+    size_t cdfBufferSize = sizeof(float) * triangleCDF_.size();
+    triangleCDFResource_ = dxCommon_->CreateBufferResource(cdfBufferSize);
+    triangleCDFResource_->Map(0, nullptr, reinterpret_cast<void **>(&triangleCDFData_));
+    std::memcpy(triangleCDFData_, triangleCDF_.data(), cdfBufferSize);
+
+    triangleCDFSrvIndex_ = srvManager_->Allocate() + 1;
+    triangleCDFSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(triangleCDFSrvIndex_);
+    triangleCDFSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(triangleCDFSrvIndex_);
+    srvManager_->CreateSRVforStructuredBuffer(triangleCDFSrvIndex_, triangleCDFResource_.Get(),
+                                              static_cast<uint32_t>(triangleCDF_.size()), sizeof(float));
+
+    emitterMeshData_->triangleCount = static_cast<uint32_t>(triangleInfoList_.size());
 }
 
 void ParticleCSEmitter::SaveSetting() {
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
-    std::unique_ptr<DataHandler> groupData;
 
     data->Save("isAuto", isAuto_);
     data->Save("isVisible", isVisible_);
-    data->Save("emitterType", static_cast<int>(currentEmitterType_));
-
-    if (currentEmitterType_ == EmitterType::Sphere) {
-        data->Save("frequency", emitterSphereData_->frequency);
-        data->Save("frequencyTime", emitterSphereData_->frequencyTime);
-        data->Save("radius", emitterSphereData_->radius);
-        data->Save<Vector3>("translate", emitterSphereData_->translate);
-        data->Save<Vector3>("rotation", emitterSphereData_->rotation);
-        data->Save<Vector3>("scale", emitterSphereData_->scale);
-    } else if (currentEmitterType_ == EmitterType::Mesh) {
-        data->Save("frequency", emitterMeshData_->frequency);
-        data->Save("frequencyTime", emitterMeshData_->frequencyTime);
-        data->Save<Vector3>("translate", emitterMeshData_->translate);
-        data->Save<Vector3>("rotation", emitterMeshData_->rotation);
-        data->Save<Vector3>("scale", emitterMeshData_->scale);
-        data->Save("modelPath", modelPath_);
-        data->Save("primitiveType", static_cast<int>(primitiveType_));
-    }
+    data->Save("frequency", emitterMeshData_->frequency);
+    data->Save("frequencyTime", emitterMeshData_->frequencyTime);
+    data->Save<Vector3>("translate", emitterMeshData_->translate);
+    data->Save<Vector3>("rotation", emitterMeshData_->rotation);
+    data->Save<Vector3>("scale", emitterMeshData_->scale);
+    data->Save("modelPath", modelPath_);
+    data->Save("primitiveType", static_cast<int>(primitiveType_));
 
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
-    int index = 0;
-    for (auto &group : particleGroups_) {
-        data->Save("particleGroup_" + index, group->GetGroupName());
-        groupData = std::make_unique<DataHandler>("ParticleCSGroup", group->GetGroupName());
-        groupData->Save("minLifetime", group->GetSettingsData()->lifeTimeMin);
-        groupData->Save("maxLifetime", group->GetSettingsData()->lifeTimeMax);
-        groupData->Save("minScale", group->GetSettingsData()->scaleMin);
-        groupData->Save("maxScale", group->GetSettingsData()->scaleMax);
-        groupData->Save("minVelocity", group->GetSettingsData()->velocityMin);
-        groupData->Save("maxVelocity", group->GetSettingsData()->velocityMax);
-        groupData->Save("startColor", group->GetSettingsData()->startColor);
-        groupData->Save("endColor", group->GetSettingsData()->endColor);
-        groupData->Save("isLifetimeScale", group->GetSettingsData()->enableLifetimeScale);
-        groupData->Save("isRandomColor", group->GetSettingsData()->enableRandomColor);
-        groupData->Save("emitCount", group->GetSettingsData()->emitCount);
-        groupData->Save("blendMode", group->GetParticleGroupData().blendMode);
-        index++;
+
+    for (int i = 0; i < particleGroups_.size(); i++) {
+        auto &group = particleGroups_[i];
+        std::string prefix = "group_" + std::to_string(i) + "_";
+
+        data->Save(prefix + "name", group->GetGroupName());
+        data->Save(prefix + "minLifetime", group->GetSettingsData()->lifeTimeMin);
+        data->Save(prefix + "maxLifetime", group->GetSettingsData()->lifeTimeMax);
+        data->Save(prefix + "minScale", group->GetSettingsData()->scaleMin);
+        data->Save(prefix + "maxScale", group->GetSettingsData()->scaleMax);
+        data->Save(prefix + "minVelocity", group->GetSettingsData()->velocityMin);
+        data->Save(prefix + "maxVelocity", group->GetSettingsData()->velocityMax);
+        data->Save(prefix + "startColor", group->GetSettingsData()->startColor);
+        data->Save(prefix + "endColor", group->GetSettingsData()->endColor);
+        data->Save(prefix + "enableLifetimeScale", group->GetSettingsData()->enableLifetimeScale);
+        data->Save(prefix + "enableRandomColor", group->GetSettingsData()->enableRandomColor);
+        data->Save(prefix + "enableSinScale", group->GetSettingsData()->enableSinScale);      
+        data->Save(prefix + "sinScaleFrequency", group->GetSettingsData()->sinScaleFrequency);
+        data->Save(prefix + "sinScaleAmplitude", group->GetSettingsData()->sinScaleAmplitude);
+        data->Save(prefix + "emitCount", group->GetSettingsData()->emitCount);
+        data->Save(prefix + "blendMode", static_cast<int>(group->GetParticleGroupData().blendMode));
     }
 }
 
 void ParticleCSEmitter::LoadSetting() {
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
-    std::unique_ptr<DataHandler> groupData;
 
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
-    currentEmitterType_ = static_cast<EmitterType>(data->Load("emitterType", static_cast<int>(EmitterType::Sphere)));
+    emitterMeshData_->frequency = data->Load("frequency", 0.1f);
+    emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
+    emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
+    emitterMeshData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
+    emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
 
-    if (currentEmitterType_ == EmitterType::Sphere) {
-        CreateEmitterSphereResource();
-        emitterSphereData_->frequency = data->Load("frequency", 0.1f);
-        emitterSphereData_->frequencyTime = data->Load("frequencyTime", 0.0f);
-        emitterSphereData_->radius = data->Load("radius", 1.0f);
-        emitterSphereData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-        emitterSphereData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
-        emitterSphereData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
-    } else if (currentEmitterType_ == EmitterType::Mesh) {
-        CreateEmitterMeshResource();
-        emitterMeshData_->frequency = data->Load("frequency", 0.1f);
-        emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
-        emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-        emitterMeshData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
-        emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
+    modelPath_ = data->Load("modelPath", std::string(""));
+    primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
 
-        modelPath_ = data->Load("modelPath", std::string(""));
-        primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
-
-        if (!modelPath_.empty()) {
-            LoadModel(modelPath_);
-        } else if (primitiveType_ != PrimitiveType::None) {
-            LoadPrimitiveModel(primitiveType_);
-        }
-
+    if (!modelPath_.empty()) {
+        LoadModel(modelPath_);
+        CreateModelTriangles();
+    } else if (primitiveType_ != PrimitiveType::None) {
+        LoadPrimitiveModel(primitiveType_);
         CreateModelTriangles();
     }
 
-    CreateEmitterSettingsResource();
-
-    // Load particle groups (rest remains the same)
     groupNum_ = data->Load("particleGroupCount", 0);
     for (int i = 0; i < groupNum_; i++) {
-        auto group = ParticleCSGroupManager::GetInstance()->GetIndependentParticleGroup(data->Load("particleGroup_" + i, std::string("")));
-        groupData = std::make_unique<DataHandler>("ParticleCSGroup", group->GetGroupName());
-        group->SetSettingData({groupData->Load("minLifetime", 1.0f),
-                               groupData->Load("maxLifetime", 1.0f),
-                               groupData->Load("minScale", 1.0f),
-                               groupData->Load("maxScale", 1.0f),
-                               groupData->Load<Vector3>("minVelocity", {0.0f, 0.0f, 0.0f}),
-                               {},
-                               groupData->Load<Vector3>("maxVelocity", {0.0f, 0.0f, 0.0f}),
-                               {},
-                               groupData->Load("startColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f)),
-                               groupData->Load("endColor", Vector4(1.0f, 1.0f, 1.0f, 0.0f)),
-                               groupData->Load<uint32_t>("isLifetimeScale", 0),
-                               groupData->Load<uint32_t>("isRandomColor", 0),
-                               uint32_t(groupData->Load("emitCount", 10)),
-                               group->GetMaxParticleCount()});
-        group->SetBlendMode(static_cast<BlendMode>(groupData->Load<int>("blendMode", static_cast<int>(BlendMode::kAdd))));
-        if (group) {
-            AddParticleGroup(group);
-        }
+        std::string prefix = "group_" + std::to_string(i) + "_";
+        std::string groupName = data->Load(prefix + "name", std::string(""));
+
+        auto group = ParticleCSGroupManager::GetInstance()->GetIndependentParticleGroup(groupName);
+        if (!group)
+            continue;
+
+        ParticleCSSettings settings;
+        settings.lifeTimeMin = data->Load(prefix + "minLifetime", 1.0f);
+        settings.lifeTimeMax = data->Load(prefix + "maxLifetime", 1.0f);
+        settings.scaleMin = data->Load(prefix + "minScale", 1.0f);
+        settings.scaleMax = data->Load(prefix + "maxScale", 1.0f);
+        settings.velocityMin = data->Load<Vector3>(prefix + "minVelocity", {0.0f, 0.0f, 0.0f});
+        settings.velocityMax = data->Load<Vector3>(prefix + "maxVelocity", {0.0f, 0.0f, 0.0f});
+        settings.startColor = data->Load(prefix + "startColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        settings.endColor = data->Load(prefix + "endColor", Vector4(1.0f, 1.0f, 1.0f, 0.0f));
+        settings.enableLifetimeScale = data->Load<uint32_t>(prefix + "enableLifetimeScale", 0);
+        settings.enableRandomColor = data->Load<uint32_t>(prefix + "enableRandomColor", 0);
+        settings.enableSinScale = data->Load<uint32_t>(prefix + "enableSinScale", 0);
+        settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f); 
+        settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f); 
+        settings.emitCount = static_cast<uint32_t>(data->Load(prefix + "emitCount", 10));
+        settings.maxParticleCount = group->GetMaxParticleCount();
+
+        group->SetSettingData(settings);
+        group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
+
+        AddParticleGroup(group);
     }
 }
 
@@ -516,39 +423,57 @@ void ParticleCSEmitter::LoadCloneSetting() {
     if (!data->Exists()) {
         return;
     }
+
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
-    currentEmitterType_ = static_cast<EmitterType>(data->Load("emitterType", static_cast<int>(EmitterType::Sphere)));
+    emitterMeshData_->frequency = data->Load("frequency", 0.1f);
+    emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
+    emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
+    emitterMeshData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
+    emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
 
-    if (currentEmitterType_ == EmitterType::Sphere) {
-        CreateEmitterSphereResource();
-        emitterSphereData_->frequency = data->Load("frequency", 0.1f);
-        emitterSphereData_->frequencyTime = data->Load("frequencyTime", 0.0f);
-        emitterSphereData_->radius = data->Load("radius", 1.0f);
-        emitterSphereData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-        emitterSphereData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
-        emitterSphereData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
-    } else if (currentEmitterType_ == EmitterType::Mesh) {
-        CreateEmitterMeshResource();
-        emitterMeshData_->frequency = data->Load("frequency", 0.1f);
-        emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
-        emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-        emitterMeshData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
-        emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
+    modelPath_ = data->Load("modelPath", std::string(""));
+    primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
 
-        modelPath_ = data->Load("modelPath", std::string(""));
-        primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
-
-        if (!modelPath_.empty()) {
-            LoadModel(modelPath_);
-        } else if (primitiveType_ != PrimitiveType::None) {
-            LoadPrimitiveModel(primitiveType_);
-        }
-
+    if (!modelPath_.empty()) {
+        LoadModel(modelPath_);
+        CreateModelTriangles();
+    } else if (primitiveType_ != PrimitiveType::None) {
+        LoadPrimitiveModel(primitiveType_);
         CreateModelTriangles();
     }
 
-    CreateEmitterSettingsResource();
+    groupNum_ = data->Load("particleGroupCount", 0);
+    for (int i = 0; i < groupNum_; i++) {
+        std::string prefix = "group_" + std::to_string(i) + "_";
+        std::string groupName = data->Load(prefix + "name", std::string(""));
+
+        auto group = ParticleCSGroupManager::GetInstance()->GetIndependentParticleGroup(groupName);
+        if (!group)
+            continue;
+
+        ParticleCSSettings settings;
+        settings.lifeTimeMin = data->Load(prefix + "minLifetime", 1.0f);
+        settings.lifeTimeMax = data->Load(prefix + "maxLifetime", 1.0f);
+        settings.scaleMin = data->Load(prefix + "minScale", 1.0f);
+        settings.scaleMax = data->Load(prefix + "maxScale", 1.0f);
+        settings.velocityMin = data->Load<Vector3>(prefix + "minVelocity", {0.0f, 0.0f, 0.0f});
+        settings.velocityMax = data->Load<Vector3>(prefix + "maxVelocity", {0.0f, 0.0f, 0.0f});
+        settings.startColor = data->Load(prefix + "startColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        settings.endColor = data->Load(prefix + "endColor", Vector4(1.0f, 1.0f, 1.0f, 0.0f));
+        settings.enableLifetimeScale = data->Load<uint32_t>(prefix + "enableLifetimeScale", 0);
+        settings.enableRandomColor = data->Load<uint32_t>(prefix + "enableRandomColor", 0);
+        settings.enableSinScale = data->Load<uint32_t>(prefix + "enableSinScale", 0);
+        settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f);
+        settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f);
+        settings.emitCount = static_cast<uint32_t>(data->Load(prefix + "emitCount", 10));
+        settings.maxParticleCount = group->GetMaxParticleCount();
+
+        group->SetSettingData(settings);
+        group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
+
+        AddParticleGroup(group);
+    }
 }
 
 void ParticleCSEmitter::DrawImGui() {
@@ -556,49 +481,6 @@ void ParticleCSEmitter::DrawImGui() {
         if (ImGui::BeginTabItem(name_.c_str())) {
             ImGuiStyle &style = ImGui::GetStyle();
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.13f, 0.14f, 0.15f, 1.00f));
-
-            // エミッタータイプ表示・切り替えセクション
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.3f, 0.6f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.4f, 0.7f, 0.9f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.5f, 0.5f, 0.8f, 1.0f));
-
-            if (ImGui::CollapsingHeader("エミッタータイプ設定##EmitterType")) {
-                ImGui::PopStyleColor(3);
-
-                ImGui::Text("現在のエミッタータイプ: %s",
-                            (currentEmitterType_ == EmitterType::Sphere) ? "球体" : "メッシュ");
-
-                // エミッタータイプ変更
-                static int currentTypeSelection = (currentEmitterType_ == EmitterType::Sphere) ? 0 : 1;
-                if (ImGui::RadioButton("球体エミッター", &currentTypeSelection, 0)) {
-                    if (currentEmitterType_ != EmitterType::Sphere) {
-                        SwitchEmitterType(EmitterType::Sphere);
-                    }
-                }
-                ImGui::SameLine();
-                if (ImGui::RadioButton("メッシュエミッター", &currentTypeSelection, 1)) {
-                    if (currentEmitterType_ != EmitterType::Mesh) {
-                        SwitchEmitterType(EmitterType::Mesh);
-                    }
-                }
-
-                if (currentEmitterType_ == EmitterType::Mesh) {
-                    ImGui::Spacing();
-                    ImGui::Text("モデル情報:");
-                    if (!modelPath_.empty()) {
-                        ImGui::Text("モデルファイル: %s", modelPath_.c_str());
-                    } else if (primitiveType_ != PrimitiveType::None) {
-                        const char *primitiveNames[] = {"なし", "プレーン", "球", "キューブ", "シリンダー", "リング", "三角形", "円錐", "四角錐"};
-                        int typeIndex = static_cast<int>(primitiveType_);
-                        if (typeIndex >= 0 && typeIndex < sizeof(primitiveNames) / sizeof(primitiveNames[0])) {
-                            ImGui::Text("プリミティブタイプ: %s", primitiveNames[typeIndex]);
-                        }
-                    }
-                    ImGui::Text("三角形数: %d", static_cast<int>(triangles_.size()));
-                }
-            } else {
-                ImGui::PopStyleColor(3);
-            }
 
             // エミッターデータセクション
             ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.2f, 0.2f, 0.8f));
@@ -616,40 +498,30 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.4f, 0.2f, 0.5f));
 
-                if (currentEmitterType_ == EmitterType::Sphere && emitterSphereData_) {
-                    ImGui::DragFloat("発生間隔##SphereFreq", &emitterSphereData_->frequency, 0.001f, 0.001f, 10.0f);
-                    ImGui::DragFloat3("エミッタの座標##SphereTranslate", &emitterSphereData_->translate.x, 0.1f);
+                ImGui::DragFloat("発生間隔##Freq", &emitterMeshData_->frequency, 0.001f, 0.001f, 10.0f);
+                ImGui::DragFloat3("エミッタの座標##Translate", &emitterMeshData_->translate.x, 0.1f);
 
-                    // 度数法で表示・編集
-                    Vector3 rotationDegrees = {
-                        emitterSphereData_->rotation.x * 180.0f / 3.14159f,
-                        emitterSphereData_->rotation.y * 180.0f / 3.14159f,
-                        emitterSphereData_->rotation.z * 180.0f / 3.14159f};
-                    if (ImGui::DragFloat3("エミッタの回転##SphereRotation", &rotationDegrees.x, 1.0f, -360.0f, 360.0f)) {
-                        // ラジアンに変換して保存
-                        emitterSphereData_->rotation.x = rotationDegrees.x * 3.14159f / 180.0f;
-                        emitterSphereData_->rotation.y = rotationDegrees.y * 3.14159f / 180.0f;
-                        emitterSphereData_->rotation.z = rotationDegrees.z * 3.14159f / 180.0f;
+                Vector3 rotationDegrees = {
+                    emitterMeshData_->rotation.x * 180.0f / 3.14159f,
+                    emitterMeshData_->rotation.y * 180.0f / 3.14159f,
+                    emitterMeshData_->rotation.z * 180.0f / 3.14159f};
+                if (ImGui::DragFloat3("エミッタの回転##Rotation", &rotationDegrees.x, 1.0f, -360.0f, 360.0f)) {
+                    emitterMeshData_->rotation.x = rotationDegrees.x * 3.14159f / 180.0f;
+                    emitterMeshData_->rotation.y = rotationDegrees.y * 3.14159f / 180.0f;
+                    emitterMeshData_->rotation.z = rotationDegrees.z * 3.14159f / 180.0f;
+                }
+
+                ImGui::DragFloat3("エミッタの大きさ##Scale", &emitterMeshData_->scale.x, 0.1f);
+
+                // モデル情報表示
+                if (emitterMeshData_->triangleCount > 0) {
+                    ImGui::Spacing();
+                    ImGui::Text("三角形数: %d", emitterMeshData_->triangleCount);
+                    if (!modelPath_.empty()) {
+                        ImGui::Text("モデル: %s", modelPath_.c_str());
+                    } else if (primitiveType_ != PrimitiveType::None) {
+                        ImGui::Text("プリミティブタイプ");
                     }
-
-                    ImGui::DragFloat3("エミッタの半径##SphereRadius", &emitterSphereData_->radius.x, 0.1f);
-                } else if (currentEmitterType_ == EmitterType::Mesh && emitterMeshData_) {
-                    ImGui::DragFloat("発生間隔##MeshFreq", &emitterMeshData_->frequency, 0.001f, 0.001f, 10.0f);
-                    ImGui::DragFloat3("エミッタの座標##MeshTranslate", &emitterMeshData_->translate.x, 0.1f);
-
-                    // 度数法で表示・編集
-                    Vector3 rotationDegrees = {
-                        radiansToDegrees(emitterMeshData_->rotation.x),
-                        radiansToDegrees(emitterMeshData_->rotation.y),
-                        radiansToDegrees(emitterMeshData_->rotation.z)};
-                    if (ImGui::DragFloat3("エミッタの回転##MeshRotation", &rotationDegrees.x, 1.0f, -360.0f, 360.0f)) {
-                        // ラジアンに変換して保存
-                        emitterMeshData_->rotation.x = degreesToRadians(rotationDegrees.x);
-                        emitterMeshData_->rotation.y = degreesToRadians(rotationDegrees.y);
-                        emitterMeshData_->rotation.z = degreesToRadians(rotationDegrees.z);
-                    }
-
-                    ImGui::DragFloat3("エミッタの大きさ##MeshScale", &emitterMeshData_->scale.x, 0.1f);
                 }
 
                 ImGui::PopStyleColor();
@@ -666,47 +538,33 @@ void ParticleCSEmitter::DrawImGui() {
 
             // パーティクルグループ設定セクション（既存のコードと同じ）
             if (!particleGroups_.empty()) {
-                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.2f, 0.8f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.5f, 0.3f, 0.9f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.6f, 0.4f, 1.0f));
+                static int selectedGroupIndex = 0;
+                if (selectedGroupIndex >= static_cast<int>(particleGroups_.size())) {
+                    selectedGroupIndex = 0;
+                }
 
-                if (ImGui::CollapsingHeader("パーティクルグループ設定##GroupSettings")) {
-                    ImGui::PopStyleColor(3);
+                std::vector<std::string> groupNames;
+                for (const auto &group : particleGroups_) {
+                    groupNames.push_back(group->GetGroupName());
+                }
 
-                    static int selectedGroupIndex = 0;
-                    if (selectedGroupIndex >= static_cast<int>(particleGroups_.size())) {
-                        selectedGroupIndex = 0;
-                    }
+                std::vector<const char *> groupNameCStrs;
+                for (auto &n : groupNames)
+                    groupNameCStrs.push_back(n.c_str());
 
-                    std::vector<std::string> groupNames;
-                    for (const auto &group : particleGroups_) {
-                        groupNames.push_back(group->GetGroupName());
-                    }
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.4f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.9f));
 
-                    std::vector<const char *> groupNameCStrs;
-                    for (auto &n : groupNames)
-                        groupNameCStrs.push_back(n.c_str());
+                ImGui::SetNextItemWidth(200.0f);
+                ImGui::Combo("選択中のグループ##GroupCombo", &selectedGroupIndex, groupNameCStrs.data(), (int)groupNameCStrs.size());
 
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.4f, 0.8f));
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 0.8f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.9f));
+                ImGui::PopStyleColor(3);
 
-                    ImGui::SetNextItemWidth(200.0f);
-                    ImGui::Combo("選択中のグループ##GroupCombo", &selectedGroupIndex, groupNameCStrs.data(), (int)groupNameCStrs.size());
-
-                    ImGui::PopStyleColor(3);
-
-                    if (selectedGroupIndex >= 0 && selectedGroupIndex < static_cast<int>(particleGroups_.size())) {
-                        ImGui::Separator();
-                        if (currentEmitterType_ == EmitterType::Sphere) {
-                            particleGroups_[selectedGroupIndex]->SetFrequency(emitterSphereData_->frequency);
-                        } else if (currentEmitterType_ == EmitterType::Mesh) {
-                            particleGroups_[selectedGroupIndex]->SetFrequency(emitterMeshData_->frequency);
-                        }
-                        particleGroups_[selectedGroupIndex]->DrawImGui();
-                    }
-                } else {
-                    ImGui::PopStyleColor(3);
+                if (selectedGroupIndex >= 0 && selectedGroupIndex < static_cast<int>(particleGroups_.size())) {
+                    ImGui::Separator();
+                    particleGroups_[selectedGroupIndex]->SetFrequency(emitterMeshData_->frequency);
+                    particleGroups_[selectedGroupIndex]->DrawImGui();
                 }
             } else {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.6f, 0.6f, 1.0f));

@@ -65,8 +65,8 @@ class ParticleCSEditor {
     void Initialize();
     // パーティクルエミッター追加（名前指定）
     void AddParticleEmitter(const std::string &name);
-    void AddParticleEmitter(const std::string &name, const std::string &modelPath, EmitterType type);
-    void AddParticleEmitter(const std::string &name, PrimitiveType primitiveType, EmitterType type);
+    void AddParticleEmitter(const std::string &name, const std::string &modelPath);
+    void AddParticleEmitter(const std::string &name, PrimitiveType primitiveType);
     // パーティクルグループ追加（OBJモデル使用）
     void AddParticleGroup(const std::string &name, const std::string &fileName, uint32_t maxParticleCount, const std::string &texturePath);
     // パーティクルグループ追加（プリミティブ使用）

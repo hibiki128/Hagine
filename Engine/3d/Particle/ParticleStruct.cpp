@@ -18,4 +18,4 @@ std::vector<ParticleMaterial> ForParticleMaterials(std::vector<MaterialData> mat
 }
 
 uint32_t threadsPerGroup_ = 1024;
-int threadGroupSize_ = 64;
+int threadGroupSize_ = 1024;

@@ -21,11 +21,6 @@ struct ParticleMaterial {
 
 /// ===== GPUParticle =====
 
-enum class EmitterType {
-    Sphere = 0,
-    Mesh = 1
-};
-
 struct EmitterMesh {
     Vector3 translate;
     uint32_t triangleCount;
@@ -38,17 +33,6 @@ struct EmitterMesh {
     float padding2;
 };
 
-struct Triangle {
-    Vector3 v0;
-    Vector3 v1;
-    Vector3 v2;
-};
-
-struct EmitterSettings {
-    uint32_t isSphere;
-    Vector3 padding;
-};
-
 struct CSParticle {
     Vector3 translate;
     Vector3 scale;
@@ -56,6 +40,8 @@ struct CSParticle {
     Vector3 velocity;
     float currentTime;
     Vector4 color;
+    Vector3 initialScale;
+    float padding;
 };
 
 struct PerView {
@@ -63,17 +49,13 @@ struct PerView {
     Matrix4x4 billboardMatrix;
 };
 
-struct EmitterSphere {
-    Vector3 translate;
+struct TriangleInfo {
+    Vector3 v0;
+    float padding0;
+    Vector3 v1;
     float padding1;
-    Vector3 radius;
-    float frequency;
-    float frequencyTime;
-    uint32_t emit;
-    Vector3 rotation;
+    Vector3 v2;
     float padding2;
-    Vector3 scale;
-    float padding3;
 };
 
 struct PerFrame {
@@ -83,19 +65,13 @@ struct PerFrame {
     float padding;
 };
 
-struct GPUParticleEmitter {
-    EmitterSphere *emitter;
-    Microsoft::WRL::ComPtr<ID3D12Resource> emitterResource;
-    bool isEmit = false;
-    int emitterIndex = 0;
+struct EmitterData {
+    EmitterMesh mesh;
 };
 
-struct EmitterData {
-    EmitterType type = EmitterType::Sphere;
-    union {
-        EmitterSphere sphere;
-        EmitterMesh mesh;
-    };
+struct SurfacePoint {
+    Vector3 position;
+    float padding;
 };
 
 struct ParticleCSGroupData {
@@ -124,10 +100,13 @@ struct ParticleCSSettings {
     float padding2;
     Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f};
     Vector4 endColor = {1.0f, 1.0f, 1.0f, 0.0f};
-    uint32_t enableLifetimeScale = 0; // 寿命に応じて小さくなるフラグ
-    uint32_t enableRandomColor = 0;   // ランダムカラーフラグ
+    uint32_t enableLifetimeScale = 0;
+    uint32_t enableRandomColor = 0;
+    uint32_t enableSinScale = 0;
     uint32_t emitCount = 0;
     uint32_t maxParticleCount = 10000;
+    float sinScaleFrequency;
+    float sinScaleAmplitude;
     float padding3[1];
 };
 
