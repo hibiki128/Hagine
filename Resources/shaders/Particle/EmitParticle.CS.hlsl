@@ -41,10 +41,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
         return;
     
     RandomGenerator generator;
-    generator.seed = float3(
-        DTid.x + gPerFrame.time * 1000.0f + gPerFrame.groupId * 9973.0f,
-        DTid.x * 73.0f + gPerFrame.time * 127.0f + gPerFrame.groupId * 7919.0f,
-        DTid.x * 151.0f + gPerFrame.time * 223.0f + gPerFrame.groupId * 6547.0f
+    // XorShift版の初期化方法に変更
+    generator.InitSeed(
+        uint3(DTid.x, gPerFrame.groupId, DTid.x * 7919),
+        gPerFrame.time
     );
     
     int freeListIndex;
@@ -60,12 +60,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
         if (gEmitterMesh.triangleCount > 0)
         {
-            // ハイブリッド方式：基本は順序的だが、ランダムなブレを加える
-            float baseRatio = float(DTid.x) / float(gSettings.emitCount);
-            float randomOffset = (generator.Generate1d() - 0.5f) * 0.2f; // ±10%のブレ
-            float particleRatio = saturate(baseRatio + randomOffset);
+            float particleRatio = generator.Generate1d();
             
-            // 二分探索で三角形を選択
             uint triIndex = 0;
             uint left = 0;
             uint right = gEmitterMesh.triangleCount - 1;
@@ -88,7 +84,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
             float3 v1 = gTriangles[triIndex].v1;
             float3 v2 = gTriangles[triIndex].v2;
             
-            // 三角形面上のランダムな点
             float u = generator.Generate1d();
             float v = generator.Generate1d();
             if (u + v > 1.0f)
@@ -113,7 +108,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
         
         if (gSettings.enableRandomColor)
         {
-            gParticles[particleIndex].color.rgb = generator.Generate3d();
+            // Generate3dの戻り値が[-1,1]なので[0,1]に変換
+            gParticles[particleIndex].color.rgb = generator.Generate3d() * 0.5f + 0.5f;
             gParticles[particleIndex].color.a = 1.0f;
         }
         else

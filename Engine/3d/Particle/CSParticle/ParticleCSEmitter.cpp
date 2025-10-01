@@ -270,35 +270,57 @@ void ParticleCSEmitter::CreateModelTriangles() {
     if (triangleInfoList_.empty())
         return;
 
+    OutputDebugStringA(("Triangle count: " + std::to_string(triangleInfoList_.size()) + "\n").c_str());
+
+    float minArea = *std::min_element(triangleAreas.begin(), triangleAreas.end());
+    float maxArea = *std::max_element(triangleAreas.begin(), triangleAreas.end());
+    float avgArea = std::accumulate(triangleAreas.begin(), triangleAreas.end(), 0.0f) / triangleAreas.size();
+
+    OutputDebugStringA(("Area - Min: " + std::to_string(minArea) +
+                        ", Max: " + std::to_string(maxArea) +
+                        ", Avg: " + std::to_string(avgArea) + "\n")
+                           .c_str());
+
     std::vector<size_t> indices(triangleInfoList_.size());
     for (size_t i = 0; i < indices.size(); i++) {
         indices[i] = i;
     }
-
-    std::vector<TriangleInfo> shuffledTriangles;
-    std::vector<float> shuffledAreas;
-    shuffledTriangles.reserve(triangleInfoList_.size());
-    shuffledAreas.reserve(triangleAreas.size());
-
-    for (size_t idx : indices) {
-        shuffledTriangles.push_back(triangleInfoList_[idx]);
-        shuffledAreas.push_back(triangleAreas[idx]);
-    }
-
-    triangleInfoList_ = std::move(shuffledTriangles);
-    triangleAreas = std::move(shuffledAreas);
 
     float totalArea = 0.0f;
     for (float area : triangleAreas) {
         totalArea += area;
     }
 
-    triangleCDF_.resize(triangleAreas.size());
+    OutputDebugStringA(("Total area: " + std::to_string(totalArea) + "\n").c_str());
+
+   triangleCDF_.resize(triangleAreas.size());
     float accum = 0.0f;
     for (size_t i = 0; i < triangleAreas.size(); i++) {
         accum += triangleAreas[i] / totalArea;
         triangleCDF_[i] = accum;
     }
+
+    // 最後の値を強制的に1.0にして誤差を修正
+    if (!triangleCDF_.empty()) {
+        triangleCDF_.back() = 1.0f;
+    }
+
+    OutputDebugStringA("CDF Distribution Check:\n");
+    int histogram[10] = {0};
+    for (float cdf : triangleCDF_) {
+        int bucket = static_cast<int>(cdf * 10.0f);
+        if (bucket >= 10)
+            bucket = 9;
+        histogram[bucket]++;
+    }
+    for (int i = 0; i < 10; i++) {
+        OutputDebugStringA(("  " + std::to_string(i * 10) + "-" + std::to_string((i + 1) * 10) +
+                            "%: " + std::to_string(histogram[i]) + " triangles\n")
+                               .c_str());
+    }
+
+    
+    OutputDebugStringA(("Final CDF value: " + std::to_string(triangleCDF_.back()) + "\n").c_str());
 
     size_t triangleInfoBufferSize = sizeof(TriangleInfo) * triangleInfoList_.size();
     triangleInfoResource_ = dxCommon_->CreateBufferResource(triangleInfoBufferSize);
@@ -459,31 +481,31 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.4f, 0.2f, 0.5f));
 
-                    ImGui::DragFloat("発生間隔##Freq", &emitterMeshData_->frequency, 0.001f, 0.001f, 10.0f);
-                    ImGui::DragFloat3("エミッタの座標##Translate", &emitterMeshData_->translate.x, 0.1f);
+                ImGui::DragFloat("発生間隔##Freq", &emitterMeshData_->frequency, 0.001f, 0.001f, 10.0f);
+                ImGui::DragFloat3("エミッタの座標##Translate", &emitterMeshData_->translate.x, 0.1f);
 
-                    Vector3 rotationDegrees = {
-                        emitterMeshData_->rotation.x * 180.0f / 3.14159f,
-                        emitterMeshData_->rotation.y * 180.0f / 3.14159f,
-                        emitterMeshData_->rotation.z * 180.0f / 3.14159f};
-                    if (ImGui::DragFloat3("エミッタの回転##Rotation", &rotationDegrees.x, 1.0f, -360.0f, 360.0f)) {
-                        emitterMeshData_->rotation.x = rotationDegrees.x * 3.14159f / 180.0f;
-                        emitterMeshData_->rotation.y = rotationDegrees.y * 3.14159f / 180.0f;
-                        emitterMeshData_->rotation.z = rotationDegrees.z * 3.14159f / 180.0f;
+                Vector3 rotationDegrees = {
+                    emitterMeshData_->rotation.x * 180.0f / 3.14159f,
+                    emitterMeshData_->rotation.y * 180.0f / 3.14159f,
+                    emitterMeshData_->rotation.z * 180.0f / 3.14159f};
+                if (ImGui::DragFloat3("エミッタの回転##Rotation", &rotationDegrees.x, 1.0f, -360.0f, 360.0f)) {
+                    emitterMeshData_->rotation.x = rotationDegrees.x * 3.14159f / 180.0f;
+                    emitterMeshData_->rotation.y = rotationDegrees.y * 3.14159f / 180.0f;
+                    emitterMeshData_->rotation.z = rotationDegrees.z * 3.14159f / 180.0f;
+                }
+
+                ImGui::DragFloat3("エミッタの大きさ##Scale", &emitterMeshData_->scale.x, 0.1f);
+
+                // モデル情報表示
+                if (emitterMeshData_->triangleCount > 0) {
+                    ImGui::Spacing();
+                    ImGui::Text("三角形数: %d", emitterMeshData_->triangleCount);
+                    if (!modelPath_.empty()) {
+                        ImGui::Text("モデル: %s", modelPath_.c_str());
+                    } else if (primitiveType_ != PrimitiveType::None) {
+                        ImGui::Text("プリミティブタイプ");
                     }
-
-                    ImGui::DragFloat3("エミッタの大きさ##Scale", &emitterMeshData_->scale.x, 0.1f);
-
-                    // モデル情報表示
-                    if (emitterMeshData_->triangleCount > 0) {
-                        ImGui::Spacing();
-                        ImGui::Text("三角形数: %d", emitterMeshData_->triangleCount);
-                        if (!modelPath_.empty()) {
-                            ImGui::Text("モデル: %s", modelPath_.c_str());
-                        } else if (primitiveType_ != PrimitiveType::None) {
-                            ImGui::Text("プリミティブタイプ");
-                        }
-                    } 
+                }
 
                 ImGui::PopStyleColor();
 
