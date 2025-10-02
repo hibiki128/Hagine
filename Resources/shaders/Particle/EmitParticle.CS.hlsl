@@ -61,43 +61,56 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
         if (gEmitterMesh.triangleCount > 0)
         {
-            float particleRatio = generator.Generate1d();
-            
-            uint triIndex = 0;
-            uint left = 0;
-            uint right = gEmitterMesh.triangleCount - 1;
-            
-            while (left < right)
+            float3 randomPoint;
+    
+            if (gEmitterMesh.emitFromSurface == 1)
             {
-                uint mid = (left + right) / 2;
-                if (gTriangleCDF[mid] < particleRatio)
+                float particleRatio = generator.Generate1d();
+        
+                uint triIndex = 0;
+                uint left = 0;
+                uint right = gEmitterMesh.triangleCount - 1;
+        
+                while (left < right)
                 {
-                    left = mid + 1;
+                    uint mid = (left + right) / 2;
+                    if (gTriangleCDF[mid] < particleRatio)
+                    {
+                        left = mid + 1;
+                    }
+                    else
+                    {
+                        right = mid;
+                    }
                 }
-                else
+                triIndex = left;
+        
+                float3 v0 = gTriangles[triIndex].v0;
+                float3 v1 = gTriangles[triIndex].v1;
+                float3 v2 = gTriangles[triIndex].v2;
+        
+                float u = generator.Generate1d();
+                float v = generator.Generate1d();
+                if (u + v > 1.0f)
                 {
-                    right = mid;
+                    u = 1.0f - u;
+                    v = 1.0f - v;
                 }
+                randomPoint = v0 + u * (v1 - v0) + v * (v2 - v0);
             }
-            triIndex = left;
-            
-            float3 v0 = gTriangles[triIndex].v0;
-            float3 v1 = gTriangles[triIndex].v1;
-            float3 v2 = gTriangles[triIndex].v2;
-            
-            float u = generator.Generate1d();
-            float v = generator.Generate1d();
-            if (u + v > 1.0f)
+            else
             {
-                u = 1.0f - u;
-                v = 1.0f - v;
+                randomPoint = float3(
+            generator.Generate1d() * 2.0f - 1.0f,
+            generator.Generate1d() * 2.0f - 1.0f,
+            generator.Generate1d() * 2.0f - 1.0f
+        );
             }
-            float3 randomPoint = v0 + u * (v1 - v0) + v * (v2 - v0);
-            
+    
             randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
             float3x3 rotMatrix = CreateRotationMatrix(gEmitterMesh.rotation);
             randomPoint = mul(rotMatrix, randomPoint);
-            
+    
             emitPosition = gEmitterMesh.translate + randomPoint;
         }
         else
@@ -109,7 +122,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
         
         if (gSettings.enableRandomColor)
         {
-            // Generate3dの戻り値が[-1,1]なので[0,1]に変換
             gParticles[particleIndex].color.rgb = generator.Generate3d() * 0.5f + 0.5f;
             gParticles[particleIndex].color.a = 1.0f;
         }

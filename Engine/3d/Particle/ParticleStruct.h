@@ -25,7 +25,7 @@ struct EmitterMesh {
     Vector3 translate;
     uint32_t triangleCount;
     Vector3 rotation;
-    float padding1;
+    uint32_t emitFromSurface;
     Vector3 scale;
     float frequency;
     float frequencyTime;

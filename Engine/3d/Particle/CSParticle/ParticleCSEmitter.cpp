@@ -166,6 +166,7 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->scale = Vector3(1.0f, 1.0f, 1.0f);
     emitterMeshData_->triangleCount = 0;
     emitterMeshData_->emit = 0;
+    emitterMeshData_->emitFromSurface = 1;
 }
 
 void ParticleCSEmitter::EmitterDisPatch() {
@@ -330,6 +331,7 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save<Vector3>("translate", emitterMeshData_->translate);
     data->Save<Vector3>("rotation", emitterMeshData_->rotation);
     data->Save<Vector3>("scale", emitterMeshData_->scale);
+    data->Save("emitFromSurface", emitterMeshData_->emitFromSurface);
     data->Save("modelPath", modelPath_);
     data->Save("primitiveType", static_cast<int>(primitiveType_));
 
@@ -370,6 +372,7 @@ void ParticleCSEmitter::LoadSetting() {
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
     emitterMeshData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
+    emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
@@ -430,6 +433,7 @@ void ParticleCSEmitter::LoadCloneSetting() {
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
     emitterMeshData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
+    emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
@@ -513,6 +517,34 @@ void ParticleCSEmitter::DrawImGui() {
                 }
 
                 ImGui::DragFloat3("エミッタの大きさ##Scale", &emitterMeshData_->scale.x, 0.1f);
+
+                ImGui::PopStyleColor();
+
+                ImGui::Spacing();
+                ImGui::Separator();
+
+                // 発生位置設定
+                if (emitterMeshData_->triangleCount > 0) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.9f, 0.6f, 1.0f));
+                    ImGui::Text("発生位置:");
+                    ImGui::PopStyleColor();
+
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
+                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
+
+                    bool emitFromSurface = emitterMeshData_->emitFromSurface != 0;
+                    if (ImGui::Checkbox("表面から発生##EmitFromSurface", &emitFromSurface)) {
+                        emitterMeshData_->emitFromSurface = emitFromSurface ? 1 : 0;
+                    }
+
+                    ImGui::PopStyleColor(2);
+
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip(emitFromSurface ? "メッシュの表面からパーティクルが発生します" : "メッシュの内側全体からパーティクルが発生します");
+                    }
+                }
+
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.4f, 0.2f, 0.5f));
 
                 // モデル情報表示
                 if (emitterMeshData_->triangleCount > 0) {
