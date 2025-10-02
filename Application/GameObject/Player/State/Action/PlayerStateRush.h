@@ -1,5 +1,6 @@
 #pragma once
 #include "../Base/PlayerBaseState.h"
+#include "Application/Utility/Shake/Shake.h"
 #include <type/Quaternion.h>
 #include <type/Vector3.h>
 
@@ -22,8 +23,8 @@ class PlayerStateRush : public PlayerBaseState {
     float elapsedTime_ = 0.0f;
     float rotationSpeed_ = 10.0f;
     float arcLength_ = 0.0f;
-    float arrivalDistance_ = 4.0f;   
-    float blendStartProgress_ = 0.7f; 
+    float arrivalDistance_ = 4.0f;
+    float blendStartProgress_ = 0.7f;
     bool isRushing_ = false;
 
     void CalculateArcPath(const Vector3 &startPos, const Vector3 &targetPos, Player &player);
@@ -35,4 +36,6 @@ class PlayerStateRush : public PlayerBaseState {
     void UpdateMovement(Player &player);
     Vector3 CalculateMovementDirection(float progress, Player &player);
     void UpdateRotation(Player &player);
+
+    std::unique_ptr<Shake> shake_;
 };

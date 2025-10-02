@@ -10,10 +10,7 @@
 #include <string>
 #include <vector>
 
-struct ParticleStats {
-    size_t count = 0;
-    size_t instanceCount = 0; // 同じ名前のエミッター数
-};
+#include"ParticleStruct.h"
 
 class ParticleEditor {
   private:

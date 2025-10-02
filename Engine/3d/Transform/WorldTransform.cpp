@@ -119,3 +119,49 @@ void WorldTransform::RotateQuaternion() {
         quateRotation_ = Quaternion::FromEulerAngles(eulerRotation_);
     }
 }
+
+Vector3 WorldTransform::GetWorldPosition() const {
+    Vector3 worldPos;
+    // ワールド行列の平行移動成分を取得
+    worldPos.x = matWorld_.m[3][0];
+    worldPos.y = matWorld_.m[3][1];
+    worldPos.z = matWorld_.m[3][2];
+    return worldPos;
+}
+
+// ワールド座標（回転）
+Quaternion WorldTransform::GetWorldRotation() const {
+    const Matrix4x4 &m = matWorld_;
+
+    // スケールを除去した回転行列を作成
+    Vector3 scale = GetWorldScale();
+    Matrix4x4 rotationMatrix = m;
+
+    // スケールを正規化
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (i == 0)
+                rotationMatrix.m[j][i] /= scale.x;
+            else if (i == 1)
+                rotationMatrix.m[j][i] /= scale.y;
+            else if (i == 2)
+                rotationMatrix.m[j][i] /= scale.z;
+        }
+    }
+
+    // 回転行列からクォータニオンを生成
+    return Quaternion::FromMatrix(rotationMatrix);
+}
+
+// ワールド座標（スケール）
+Vector3 WorldTransform::GetWorldScale() const {
+    Vector3 worldScale;
+    const Matrix4x4 &m = matWorld_;
+
+    // 各軸のベクトルの長さをスケールとして取得
+    worldScale.x = std::sqrt(m.m[0][0] * m.m[0][0] + m.m[0][1] * m.m[0][1] + m.m[0][2] * m.m[0][2]);
+    worldScale.y = std::sqrt(m.m[1][0] * m.m[1][0] + m.m[1][1] * m.m[1][1] + m.m[1][2] * m.m[1][2]);
+    worldScale.z = std::sqrt(m.m[2][0] * m.m[2][0] + m.m[2][1] * m.m[2][1] + m.m[2][2] * m.m[2][2]);
+
+    return worldScale;
+}

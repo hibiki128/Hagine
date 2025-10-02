@@ -8,65 +8,65 @@
 MotionEditor *MotionEditor::instance = nullptr;
 const float MotionEditor::ATTACK_END_INTERVAL = 0.1f;
 
-float ApplyEasing(EasingType type, float t, float total) {
+float ApplyMotionEasing(MotionEasingType type, float t, float total) {
     switch (type) {
-    case EasingType::EaseInSine:
+    case MotionEasingType::EaseInSine:
         return EaseInSine(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutSine:
+    case MotionEasingType::EaseOutSine:
         return EaseOutSine(0.0f, 1.0f, t, total);
-    case EasingType::EaseInOutSine:
+    case MotionEasingType::EaseInOutSine:
         return EaseInOutSine(0.0f, 1.0f, t, total);
-    case EasingType::EaseInBack:
+    case MotionEasingType::EaseInBack:
         return EaseInBack(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutBack:
+    case MotionEasingType::EaseOutBack:
         return EaseOutBack(0.0f, 1.0f, t, total);
-    case EasingType::EaseInOutBack:
+    case MotionEasingType::EaseInOutBack:
         return EaseInOutBack(0.0f, 1.0f, t, total);
-    case EasingType::EaseInQuint:
+    case MotionEasingType::EaseInQuint:
         return EaseInQuint(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutQuint:
+    case MotionEasingType::EaseOutQuint:
         return EaseOutQuint(0.0f, 1.0f, t, total);
-    case EasingType::EaseInOutQuint:
+    case MotionEasingType::EaseInOutQuint:
         return EaseInOutQuint(0.0f, 1.0f, t, total);
-    case EasingType::EaseInCirc:
+    case MotionEasingType::EaseInCirc:
         return EaseInCirc(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutCirc:
+    case MotionEasingType::EaseOutCirc:
         return EaseOutCirc(0.0f, 1.0f, t, total);
-    case EasingType::EaseInOutCirc:
+    case MotionEasingType::EaseInOutCirc:
         return EaseInOutCirc(0.0f, 1.0f, t, total);
-    case EasingType::EaseInExpo:
+    case MotionEasingType::EaseInExpo:
         return EaseInExpo(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutExpo:
+    case MotionEasingType::EaseOutExpo:
         return EaseOutExpo(0.0f, 1.0f, t, total);
-    case EasingType::EaseInOutExpo:
+    case MotionEasingType::EaseInOutExpo:
         return EaseInOutExpo(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutCubic:
+    case MotionEasingType::EaseOutCubic:
         return EaseOutCubic(0.0f, 1.0f, t, total);
-    case EasingType::EaseInCubic:
+    case MotionEasingType::EaseInCubic:
         return EaseInCubic(0.0f, 1.0f, t, total);
-    case EasingType::EaseInOutCubic:
+    case MotionEasingType::EaseInOutCubic:
         return EaseInOutCubic(0.0f, 1.0f, t, total);
-    case EasingType::EaseInQuad:
+    case MotionEasingType::EaseInQuad:
         return EaseInQuad(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutQuad:
+    case MotionEasingType::EaseOutQuad:
         return EaseOutQuad(0.0f, 1.0f, t, total);
-    case EasingType::EaseInOutQuad:
+    case MotionEasingType::EaseInOutQuad:
         return EaseInOutQuad(0.0f, 1.0f, t, total);
-    case EasingType::EaseInQuart:
+    case MotionEasingType::EaseInQuart:
         return EaseInQuart(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutQuart:
+    case MotionEasingType::EaseOutQuart:
         return EaseOutQuart(0.0f, 1.0f, t, total);
-    case EasingType::EaseInBounce:
+    case MotionEasingType::EaseInBounce:
         return EaseInBounce(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutBounce:
+    case MotionEasingType::EaseOutBounce:
         return EaseOutBounce(0.0f, 1.0f, t, total);
-    case EasingType::EaseInOutBounce:
+    case MotionEasingType::EaseInOutBounce:
         return EaseInOutBounce(0.0f, 1.0f, t, total);
-    case EasingType::EaseInElastic:
+    case MotionEasingType::EaseInElastic:
         return EaseInElastic(0.0f, 1.0f, t, total);
-    case EasingType::EaseOutElastic:
+    case MotionEasingType::EaseOutElastic:
         return EaseOutElastic(0.0f, 1.0f, t, total);
-    case EasingType::EaseInOutElastic:
+    case MotionEasingType::EaseInOutElastic:
         return EaseInOutElastic(0.0f, 1.0f, t, total);
     default:
         return t;
@@ -347,13 +347,13 @@ void MotionEditor::Update(float deltaTime) {
             Vector3 localOffset = CatmullRomInterpolation(motion.controlPoints, t);
             motion.target->GetLocalPosition() = motion.basePos + localOffset;
         } else {
-            float easedT = ApplyEasing(motion.easingType, t, 1.0f);
+            float easedT = ApplyMotionEasing(motion.easingType, t, 1.0f);
             Vector3 actualStartPos = motion.basePos + motion.startPosOffset;
             Vector3 actualEndPos = motion.basePos + motion.endPosOffset;
             motion.target->GetLocalPosition() = Lerp(actualStartPos, actualEndPos, easedT);
         }
 
-        float easedT = ApplyEasing(motion.easingType, t, 1.0f);
+        float easedT = ApplyMotionEasing(motion.easingType, t, 1.0f);
         Quaternion interpolatedRot = Slerp(motion.actualStartRot, motion.actualEndRot, easedT);
         motion.target->GetWorldTransform()->quateRotation_ = interpolatedRot;
 
@@ -426,7 +426,7 @@ bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName,
     motion.startScaleOffset = data.Load<Vector3>("startScaleOffset", {0, 0, 0});
     motion.endScaleOffset = data.Load<Vector3>("endScaleOffset", {0, 0, 0});
     int easingInt = data.Load("easingType", 0);
-    motion.easingType = static_cast<EasingType>(easingInt);
+    motion.easingType = static_cast<MotionEasingType>(easingInt);
 
     motion.useCatmullRom = data.Load<bool>("useCatmullRom", false);
     int pointCount = data.Load<int>("controlPointCount", 0);
@@ -714,7 +714,6 @@ void MotionEditor::DrawCatmullRomCurve() {
 }
 
 void MotionEditor::DrawImGui() {
-    ImGui::Begin("モーションエディター");
 
     if (!motions_.empty()) {
         std::vector<const char *> names;
@@ -836,7 +835,7 @@ void MotionEditor::DrawImGui() {
                 "EaseInElastic", "EaseOutElastic", "EaseInOutElastic"};
             int easingIdx = static_cast<int>(m.easingType);
             if (ImGui::Combo("イージングタイプ", &easingIdx, easingNames, IM_ARRAYSIZE(easingNames))) {
-                m.easingType = static_cast<EasingType>(easingIdx);
+                m.easingType = static_cast<MotionEasingType>(easingIdx);
             }
         }
         char nameBuffer[256];
@@ -853,7 +852,6 @@ void MotionEditor::DrawImGui() {
             }
         }
     }
-    ImGui::End();
 }
 
 void MotionEditor::Save(const std::string &fileName) {
@@ -890,7 +888,7 @@ Motion MotionEditor::Load(const std::string &fileName) {
     m.startScaleOffset = data.Load("startScaleOffset", m.startScaleOffset);
     m.endScaleOffset = data.Load("endScaleOffset", m.endScaleOffset);
     int easingInt = data.Load("easingType", static_cast<int>(m.easingType));
-    m.easingType = static_cast<EasingType>(easingInt);
+    m.easingType = static_cast<MotionEasingType>(easingInt);
     m.useCatmullRom = data.Load("useCatmullRom", false);
     int pointCount = data.Load("controlPointCount", 0);
     m.controlPoints.clear();

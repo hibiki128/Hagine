@@ -50,7 +50,7 @@ class ParticleGroupManager {
         auto copiedGroup = std::make_unique<ParticleGroup>();
 
         // プリミティブタイプか通常のモデルかを判定してコピー
-        if (originalGroup->GetPrimitiveType() != PrimitiveType::kCount) {
+        if (originalGroup->GetPrimitiveType() != PrimitiveType::None) {
             // プリミティブパーティクルグループの場合
             std::string texturePath = originalGroup->GetParticleGroupData().materials.empty() ? "" : originalGroup->GetParticleGroupData().materials[0].textureFilePath;
             copiedGroup->CreatePrimitiveParticleGroup(name, originalGroup->GetPrimitiveType(), texturePath);

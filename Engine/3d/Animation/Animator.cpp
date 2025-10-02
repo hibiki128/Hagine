@@ -9,7 +9,6 @@
 std::unordered_map<std::string, Animation> Animator::animationCache;
 
 void Animator::Initialize(const std::string &directorypath, const std::string &filename) {
-    haveAnimation = false;
     directorypath_ = directorypath;
     filename_ = filename;
 
@@ -94,11 +93,25 @@ void Animator::UpdateSingle(bool loop) {
         // ループアニメーションの場合、アニメーション時間を進めて、超えたら最初に戻る
         animationTime += Frame::DeltaTime();
         animationTime = std::fmod(animationTime, currentAnimation_.duration);
+        if (!modelData_.hasBones) {
+            NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
+            Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
+            Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime);
+            Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime);
+            localMatrix = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
+        }
     } else {
         // ループしない場合、アニメーションが終了するまで進行
         if (animationTime < currentAnimation_.duration) {
             isFinish_ = false;
             animationTime += Frame::DeltaTime();
+            if (!modelData_.hasBones) {
+                NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
+                Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
+                Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime);
+                Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime);
+                localMatrix = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
+            }
             // 時間がdurationを超えたら停止
             if (animationTime >= currentAnimation_.duration) {
                 animationTime = currentAnimation_.duration;
@@ -258,7 +271,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
 
             if (!fromNode.rotate.empty()) {
                 Quaternion fromRotate = CalculateValue(fromNode.rotate, blendState_.fromAnimationTime);
-                Quaternion blendedRotate =Quaternion::Slerp(fromRotate, defaultRotate, blendState_.blendFactor);
+                Quaternion blendedRotate = Quaternion::Slerp(fromRotate, defaultRotate, blendState_.blendFactor);
 
                 KeyframeQuaternion keyframe = {blendedRotate, animationTime};
                 blendedNode.rotate.push_back(keyframe);
@@ -318,18 +331,15 @@ Animation Animator::LoadAnimationFile(const std::string &directoryPath, const st
     // キャッシュチェック
     auto it = animationCache.find(filePath);
     if (it != animationCache.end()) {
-        haveAnimation = true;
         return it->second;
     }
 
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFile(filePath.c_str(), 0);
     if (!scene || scene->mNumAnimations == 0) {
-        haveAnimation = false;
         return animation;
     }
 
-    haveAnimation = true;
     aiAnimation *animationAssimp = scene->mAnimations[0];
     animation.duration = float(animationAssimp->mDuration / animationAssimp->mTicksPerSecond);
 

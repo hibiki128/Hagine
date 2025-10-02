@@ -25,13 +25,14 @@ class Animator {
   private:
     std::string filename_;
     std::string directorypath_;
-    bool haveAnimation = false;
     float animationTime = 0.0f;
     Animation currentAnimation_;
     AnimationBlendState blendState_;
+    Matrix4x4 localMatrix;
     bool isAnimation_ = true;
     bool isFinish_ = false;
     static std::unordered_map<std::string, Animation> animationCache;
+    ModelData modelData_;
 
   public:
     void Initialize(const std::string &directorypath, const std::string &filename);
@@ -77,11 +78,12 @@ class Animator {
     Animation GetAnimation() const { return currentAnimation_; }
     void SetIsAnimation(bool isAnimation) { isAnimation_ = isAnimation; }
     void SetAnimationTime(float time) { animationTime = time; }
-    bool HaveAnimation() const { return haveAnimation; }
     bool IsFinish() const { return isFinish_; }
     float GetAnimationTime() const { return animationTime; }
     std::string GetCurrentFilename() const { return filename_; }
     std::string GetCurrentDirectoryPath() const { return directorypath_; }
+    Matrix4x4 GetLocalMatrix() { return localMatrix; }
+    void SetModelData(ModelData modelData) { modelData_ = modelData; }
 
      /// <summary>
     /// 値の計算(Vector3)

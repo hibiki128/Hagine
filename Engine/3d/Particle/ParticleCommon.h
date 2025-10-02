@@ -1,6 +1,7 @@
 #pragma once
 #include "DirectXCommon.h"
 #include "Graphics/PipeLine/PipeLineManager.h"
+#include <Graphics/PipeLine/ComputePipeLineManager.h>
 class ParticleCommon {
   private:
     static ParticleCommon *instance;
@@ -32,9 +33,24 @@ class ParticleCommon {
     /// </summary>
     void DrawCommonSetting(BlendMode blendMode);
 
+    void GPUDrawCommonSetting(BlendMode blendMode);
+
+    /// <summary>
+    /// 共通描画処理
+    /// </summary>
+    /// <param name="blendMode"></param>
+    void ComputeInitDrawCommonSetting();
+
+    void ComputeEmitterDrawCommonSetting();
+
+    void ComputeUpdateEmitterDrawCommonSetting();
+
+    void ComputeCountDrawCommonSetting();
+
     DirectXCommon *GetDxCommon() const { return dxCommon_; }
 
   private:
     DirectXCommon *dxCommon_ = nullptr;
     PipeLineManager *psoManager_ = nullptr;
+    ComputePipeLineManager *computePsoManager_ = nullptr;
 };

@@ -3,6 +3,7 @@
 #include "Debug/Log/Logger.h"
 #include "DirectXCommon.h"
 #include "Graphics/Model/ModelManager.h"
+#include "Model/Mesh/Mesh.h"
 #include "Object3dCommon.h"
 #include "Transform/WorldTransform.h"
 #include "cassert"
@@ -30,60 +31,104 @@ void Object3d::CreateModel(const std::string &filePath) {
     // モデルを検索してセットする
     model = ModelManager::GetInstance()->FindModel(modelFilePath_);
 
+    // マテリアル配列のサイズを調整
+    materials_.resize(model->GetModelData().materials.size());
+    color_.resize(model->GetModelData().materials.size());
+
+    // 各マテリアルの初期化
+    for (size_t i = 0; i < model->GetModelData().materials.size(); ++i) {
+        materials_[i] = std::make_unique<Material>();
+        materials_[i]->Initialize();
+        materials_[i]->GetMaterialData() = model->GetModelData().materials[i];
+        materials_[i]->LoadTexture();
+        color_[i].Initialize();
+        color_[i].SetColor(model->GetModelData().materials[i].color);
+    }
+
     if (model->IsGltf()) {
         currentModelAnimation_ = std::make_unique<ModelAnimation>();
         currentModelAnimation_->SetModelData(model->GetModelData());
         currentModelAnimation_->Initialize("resources/models/", modelFilePath_);
 
         model->SetAnimator(currentModelAnimation_->GetAnimator());
-        model->SetBone(currentModelAnimation_->GetBone());
-        model->SetSkin(currentModelAnimation_->GetSkin());
-        // AddAnimation(modelFilePath_);
+        if (model->GetModelData().hasBones) {
+            model->SetBone(currentModelAnimation_->GetBone());
+            model->SetSkin(currentModelAnimation_->GetSkin());
+        }
     }
 }
 
-void Object3d::CreatePrimitiveModel(const PrimitiveType &type,std::string texPath) {
-    model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type,texPath));
+void Object3d::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath) {
+    model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type, texPath));
     isPrimitive_ = true;
+    materials_.resize(1);
+    color_.resize(1);
+
+    // マテリアルの初期化
+    materials_[0] = std::make_unique<Material>();
+    materials_[0]->Initialize();
+    materials_[0]->PrimitiveInitialize(type);
+    materials_[0]->GetMaterialData().textureFilePath = texPath;
+    materials_[0]->LoadTexture();
+    color_[0].Initialize();
+    color_[0].SetColor({1.0f, 1.0f, 1.0f, 1.0f});
 }
 
 void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {
     if (lightGroup) {
         lightGroup->Update(viewProjection);
     }
-    Matrix4x4 worldMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quateRotation_, worldTransform.translation_);
 
+    // ローカル行列を作成
+    Matrix4x4 localMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quateRotation_, worldTransform.translation_);
+
+    // ワールド行列を計算（親がいる場合は親の行列と合成）
+    Matrix4x4 worldMatrix = localMatrix;
     if (worldTransform.parent_) {
-        worldMatrix *= worldTransform.parent_->matWorld_;
+        worldMatrix = localMatrix * worldTransform.parent_->matWorld_;
     }
+
     Matrix4x4 worldViewProjectionMatrix;
     const Matrix4x4 &viewProjectionMatrix = viewProjection.matView_ * viewProjection.matProjection_;
     worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
-
-    transformationMatrixData->WVP = worldViewProjectionMatrix;
-    transformationMatrixData->World = worldMatrix;
     Matrix4x4 worldInverseMatrix = Inverse(worldMatrix);
-    transformationMatrixData->WorldInverseTranspose = Transpose(worldInverseMatrix);
+
+    if (!model->GetModelData().hasAnimations) {
+        transformationMatrixData->WVP = worldViewProjectionMatrix;
+        transformationMatrixData->World = worldMatrix;
+        transformationMatrixData->WorldInverseTranspose = Transpose(worldInverseMatrix);
+    } else {
+        if (model->GetModelData().hasBones) {
+            transformationMatrixData->WVP = worldViewProjectionMatrix;
+            transformationMatrixData->World = worldMatrix;
+            transformationMatrixData->WorldInverseTranspose = Transpose(worldInverseMatrix);
+        } else {
+            transformationMatrixData->WVP = model->GetAnimator()->GetLocalMatrix() * worldViewProjectionMatrix;
+            transformationMatrixData->World = model->GetAnimator()->GetLocalMatrix() * worldMatrix;
+            transformationMatrixData->WorldInverseTranspose = MakeIdentity4x4();
+        }
+    }
 
     if (model && model->IsGltf()) {
-        if (currentModelAnimation_->GetAnimator()->HaveAnimation()) {
+        if (model->GetModelData().hasAnimations) {
             objectCommon_->computeSkinningDrawCommonSetting();
             model->Update();
         }
     }
+
+    for (auto &color : color_) {
+        color.TransferMatrix();
+    }
 }
 
-void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, ObjColor *color, bool lighting, bool modelDraw) {
+void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, bool lighting, bool modelDraw) {
     objectCommon_->SetBlendMode(blendMode_);
     Update(worldTransform, viewProjection);
 
     // アニメーション設定
     if (model && model->IsGltf()) {
-        if (currentModelAnimation_->GetAnimator()->HaveAnimation()) {
-            HaveAnimation = true;
+        if (model->GetModelData().hasAnimations) {
             objectCommon_->skinningDrawCommonSetting();
-        } else {
-            HaveAnimation = false;
         }
     }
 
@@ -98,8 +143,7 @@ void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &
     // モデル描画
     if (modelDraw) {
         if (model) {
-            Vector4 drawColor = color ? color->GetColor() : Vector4{1.0f, 1.0f, 1.0f, 1.0f};
-            model->Draw(drawColor, lighting, reflect);
+            model->Draw(materials_, color_, lighting, reflect);
         }
     }
 }
@@ -469,4 +513,37 @@ void Object3d::CreateTransformationMatrix() {
     transformationMatrixData->WVP = MakeIdentity4x4();
     transformationMatrixData->World = MakeIdentity4x4();
     transformationMatrixData->WorldInverseTranspose = MakeIdentity4x4();
+}
+
+void Object3d::CreateIndependentMaterials() {
+    if (!model)
+        return;
+
+    size_t materialCount = materials_.size();
+    materials_.clear();
+    materials_.resize(materialCount);
+
+    for (size_t i = 0; i < materialCount; ++i) {
+        materials_[i] = std::make_unique<Material>();
+        materials_[i]->Initialize();
+
+        // 元のマテリアルデータをコピー
+        const Material *originalMaterial = GetMaterial(uint32_t(i));
+        if (originalMaterial) {
+            materials_[i]->GetMaterialData() = originalMaterial->GetMaterialData();
+            materials_[i]->LoadTexture();
+        }
+    }
+}
+
+void Object3d::SetTexture(const std::string &filePath, uint32_t materialIndex) {
+    if (materialIndex < materials_.size()) {
+        materials_[materialIndex]->SetTexture(filePath);
+    }
+}
+
+void Object3d::SetEnvironmentCoefficients(float value) {
+    for (auto &material : materials_) {
+        material->SetEnvironmentCoefficients(value);
+    }
 }

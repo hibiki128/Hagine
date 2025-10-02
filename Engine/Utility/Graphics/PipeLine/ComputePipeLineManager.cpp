@@ -74,8 +74,48 @@ void ComputePipeLineManager::CreateSkinningPipelines() {
     pipelines_[MakePipelineKey(ComputePipelineType::kSkinning, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
 }
 
+void ComputePipeLineManager::CreateInitParticlePipelines() {
+    // ルートシグネチャを作成し、マップに格納
+    auto rootSignature = CreateInitParticleRootSignature();
+    rootSignatures_[MakeRootSignatureKey(ComputePipelineType::kInitParticle, ShaderMode::kNone)] = rootSignature;
+    // パイプラインを作成し、マップに格納
+    auto pipeline = CreateInitParticleGraphicsPipeLine(rootSignature);
+    pipelines_[MakePipelineKey(ComputePipelineType::kInitParticle, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
+}
+
+void ComputePipeLineManager::CreateEmitterPipelines() {
+    // ルートシグネチャを作成し、マップに格納
+    auto rootSignature = CreateEmitterRootSignature();
+    rootSignatures_[MakeRootSignatureKey(ComputePipelineType::kEmitter, ShaderMode::kNone)] = rootSignature;
+    // パイプラインを作成し、マップに格納
+    auto pipeline = CreateEmitterGraphicsPipeLine(rootSignature);
+    pipelines_[MakePipelineKey(ComputePipelineType::kEmitter, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
+}
+
+void ComputePipeLineManager::CreateUpdateEmitterPipelines() {
+    // ルートシグネチャを作成し、マップに格納
+    auto rootSignature = CreateUpdateEmitterRootSignature();
+    rootSignatures_[MakeRootSignatureKey(ComputePipelineType::kUpdateEmitter, ShaderMode::kNone)] = rootSignature;
+    // パイプラインを作成し、マップに格納
+    auto pipeline = CreateUpdateEmitterGraphicsPipeLine(rootSignature);
+    pipelines_[MakePipelineKey(ComputePipelineType::kUpdateEmitter, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
+}
+
+void ComputePipeLineManager::CreateCountPipelines() {
+    // ルートシグネチャを作成し、マップに格納
+    auto rootSignature = CreateCountRootSignature();
+    rootSignatures_[MakeRootSignatureKey(ComputePipelineType::kCount, ShaderMode::kNone)] = rootSignature;
+    // パイプラインを作成し、マップに格納
+    auto pipeline = CreateCountGraphicsPipeLine(rootSignature);
+    pipelines_[MakePipelineKey(ComputePipelineType::kCount, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
+}
+
 void ComputePipeLineManager::CreateAllPipelines() {
     CreateSkinningPipelines();
+    CreateInitParticlePipelines();
+    CreateEmitterPipelines();
+    CreateUpdateEmitterPipelines();
+    CreateCountPipelines();
 }
 
 std::string ComputePipeLineManager::MakePipelineKey(ComputePipelineType type, BlendMode blendMode, ShaderMode shaderMode) {
@@ -161,7 +201,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateSkinni
     staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
     staticSamplers[0].ShaderRegister = 0;
     staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-   
+
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
     descriptionRootSignature.NumParameters = _countof(rootParameters);
     descriptionRootSignature.pParameters = rootParameters;
@@ -185,9 +225,373 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateSkinni
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateSkinningGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
-    
+
     IDxcBlob *computerShaderBlob = nullptr;
     computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Skinning/Skinning.CS.hlsl", L"cs_6_0");
+    assert(computerShaderBlob != nullptr);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+    computePipelineStateDesc.CS = {
+        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
+        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+    };
+    computePipelineStateDesc.pRootSignature = rootSignature.Get();
+    HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+
+    assert(SUCCEEDED(hr));
+    return graphicsPipelineState;
+}
+
+Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateInitParticleRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    D3D12_DESCRIPTOR_RANGE uavRange0[1] = {};
+    uavRange0[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange0[0].NumDescriptors = 1;
+    uavRange0[0].BaseShaderRegister = 0;
+    uavRange0[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange1[1] = {};
+    uavRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange1[0].NumDescriptors = 1;
+    uavRange1[0].BaseShaderRegister = 1;
+    uavRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange2[1] = {};
+    uavRange2[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange2[0].NumDescriptors = 1;
+    uavRange2[0].BaseShaderRegister = 2;
+    uavRange2[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[4] = {};
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE; // CBVからDESCRIPTOR_TABLEに変更
+    rootParameters[0].DescriptorTable.pDescriptorRanges = uavRange0;              // UAVレンジを設定
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = _countof(uavRange0);  // レンジ数を設定
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = uavRange1;
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(uavRange1);
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = uavRange2;
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(uavRange2);
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[3].Descriptor.ShaderRegister = 0;
+    rootParameters[3].Descriptor.RegisterSpace = 0;
+
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumStaticSamplers = 0;     // コンピュートシェーダーではサンプラー不要
+    descriptionRootSignature.pStaticSamplers = nullptr; // コンピュートシェーダーではサンプラー不要
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    // シリアライズしてバイナリにする
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
+                                                     signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateInitParticleGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
+
+    IDxcBlob *computerShaderBlob = nullptr;
+    computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/InitParticle.CS.hlsl", L"cs_6_0");
+    assert(computerShaderBlob != nullptr);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+    computePipelineStateDesc.CS = {
+        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
+        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+    };
+    computePipelineStateDesc.pRootSignature = rootSignature.Get();
+    HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+
+    assert(SUCCEEDED(hr));
+    return graphicsPipelineState;
+}
+
+Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitterRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    D3D12_DESCRIPTOR_RANGE uavRange0[1] = {};
+    uavRange0[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange0[0].NumDescriptors = 1;
+    uavRange0[0].BaseShaderRegister = 0;
+    uavRange0[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange1[1] = {};
+    uavRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange1[0].NumDescriptors = 1;
+    uavRange1[0].BaseShaderRegister = 1;
+    uavRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange2[1] = {};
+    uavRange2[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange2[0].NumDescriptors = 1;
+    uavRange2[0].BaseShaderRegister = 2;
+    uavRange2[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // Triangle用のSRV範囲を追加
+    D3D12_DESCRIPTOR_RANGE srvRange0[1] = {};
+    srvRange0[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRange0[0].NumDescriptors = 1;
+    srvRange0[0].BaseShaderRegister = 0; // register(t0)
+    srvRange0[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE srvRange1[1] = {};
+    srvRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRange1[0].NumDescriptors = 1;
+    srvRange1[0].BaseShaderRegister = 1; // register(t0)
+    srvRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[8] = {};
+
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].DescriptorTable.pDescriptorRanges = uavRange0;
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = _countof(uavRange0);
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = uavRange1;
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(uavRange1);
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = uavRange2;
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(uavRange2);
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[3].Descriptor.ShaderRegister = 0;
+    rootParameters[3].Descriptor.RegisterSpace = 0;
+
+    rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[4].Descriptor.ShaderRegister = 1;
+    rootParameters[4].Descriptor.RegisterSpace = 0;
+
+    rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[5].Descriptor.ShaderRegister = 2;
+    rootParameters[5].Descriptor.RegisterSpace = 0;
+
+    rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[6].DescriptorTable.pDescriptorRanges = srvRange0;
+    rootParameters[6].DescriptorTable.NumDescriptorRanges = _countof(srvRange0);
+    rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[7].DescriptorTable.pDescriptorRanges = srvRange1;
+    rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(srvRange1);
+    rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumStaticSamplers = 0;     // コンピュートシェーダーではサンプラー不要
+    descriptionRootSignature.pStaticSamplers = nullptr; // コンピュートシェーダーではサンプラー不要
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    // シリアライズしてバイナリにする
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
+                                                     signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateEmitterGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
+
+    IDxcBlob *computerShaderBlob = nullptr;
+    computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/EmitParticle.CS.hlsl", L"cs_6_0");
+    assert(computerShaderBlob != nullptr);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+    computePipelineStateDesc.CS = {
+        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
+        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+    };
+    computePipelineStateDesc.pRootSignature = rootSignature.Get();
+    HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+
+    assert(SUCCEEDED(hr));
+    return graphicsPipelineState;
+}
+
+Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdateEmitterRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    D3D12_DESCRIPTOR_RANGE uavRange0[1] = {};
+    uavRange0[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange0[0].NumDescriptors = 1;
+    uavRange0[0].BaseShaderRegister = 0;
+    uavRange0[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange1[1] = {};
+    uavRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange1[0].NumDescriptors = 1;
+    uavRange1[0].BaseShaderRegister = 1;
+    uavRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange2[1] = {};
+    uavRange2[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange2[0].NumDescriptors = 1;
+    uavRange2[0].BaseShaderRegister = 2;
+    uavRange2[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[5] = {};
+
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].DescriptorTable.pDescriptorRanges = uavRange0;
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = _countof(uavRange0);
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = uavRange1;
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(uavRange1);
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = uavRange2;
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(uavRange2);
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[3].Descriptor.ShaderRegister = 0;
+    rootParameters[3].Descriptor.RegisterSpace = 0;
+
+    rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[4].Descriptor.ShaderRegister = 1;
+    rootParameters[4].Descriptor.RegisterSpace = 0;
+
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumStaticSamplers = 0;     // コンピュートシェーダーではサンプラー不要
+    descriptionRootSignature.pStaticSamplers = nullptr; // コンピュートシェーダーではサンプラー不要
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    // シリアライズしてバイナリにする
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
+                                                     signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateUpdateEmitterGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
+
+    IDxcBlob *computerShaderBlob = nullptr;
+    computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/UpdateParticle.CS.hlsl", L"cs_6_0");
+    assert(computerShaderBlob != nullptr);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+    computePipelineStateDesc.CS = {
+        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
+        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+    };
+    computePipelineStateDesc.pRootSignature = rootSignature.Get();
+    HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+
+    assert(SUCCEEDED(hr));
+    return graphicsPipelineState;
+}
+
+
+Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateCountRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    D3D12_DESCRIPTOR_RANGE uavRange0[1] = {};
+    uavRange0[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange0[0].NumDescriptors = 1;
+    uavRange0[0].BaseShaderRegister = 0;
+    uavRange0[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange1[1] = {};
+    uavRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange1[0].NumDescriptors = 1;
+    uavRange1[0].BaseShaderRegister = 1;
+    uavRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[3] = {};
+
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[0].Descriptor.ShaderRegister = 0;
+    rootParameters[0].Descriptor.RegisterSpace = 0;
+
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = uavRange0;
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(uavRange0);
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = uavRange1;
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(uavRange1);
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumStaticSamplers = 0;     // コンピュートシェーダーではサンプラー不要
+    descriptionRootSignature.pStaticSamplers = nullptr; // コンピュートシェーダーではサンプラー不要
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    // シリアライズしてバイナリにする
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
+                                                     signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateCountGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
+
+    IDxcBlob *computerShaderBlob = nullptr;
+    computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/CountParticle.CS.hlsl", L"cs_6_0");
     assert(computerShaderBlob != nullptr);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};

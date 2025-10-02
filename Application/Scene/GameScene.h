@@ -1,4 +1,5 @@
 #pragma once
+#include "BaseScene.h"
 #include "Application/Camera/FollowCamera.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Field/Ground/Ground.h"
@@ -8,7 +9,6 @@
 #include"Application/UI/Player/PlayerUI.h"
 #include"Application/UI/Enemy/EnemyUI.h"
 #include"SkyBox/SkyBox.h"
-#include <BaseScene.h>
 
 class GameScene : public BaseScene {
   public:

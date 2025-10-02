@@ -10,11 +10,29 @@ struct Easing {
 	float period;
 };
 
+enum class EasingType {
+    Linear,
+    InSine, OutSine, InOutSine,
+    InQuad, OutQuad, InOutQuad,
+    InCubic, OutCubic, InOutCubic,
+    InQuart, OutQuart, InOutQuart,
+    InQuint, OutQuint, InOutQuint,
+    InCirc, OutCirc, InOutCirc,
+    InExpo, OutExpo, InOutExpo,
+    InBack, OutBack, InOutBack,
+    InElastic, OutElastic, InOutElastic,
+    InBounce, OutBounce, InOutBounce
+};
+
+class Quaternion;
+
 float LerpE(const float& start, const float& end, float t);
 
 Vector3 LerpE(const Vector3& start, const Vector3& end, float t);
 
 Vector2 LerpE(const Vector2& start, const Vector2& end, float t);
+
+Quaternion LerpE(const Quaternion &start, const Quaternion &end, float t);
 
 Vector3 SLerp(const Vector3& start, const Vector3& end, float t);
 
@@ -23,6 +41,8 @@ float EaseInElasticAmplitude(float t, const float& totaltime, const float& ampli
 float EaseOutElasticAmplitude(float t, float totaltime, float amplitude, float period);
 
 float EaseInOutElasticAmplitude(float t, float totaltime, float amplitude, float period);
+
+template <typename T> T ApplyEasing(EasingType type, const T &start, const T &end, float x, float totalX);
 
 template<typename T> T EaseAmplitudeScale(const T& initScale, const float& easeT, const float& totalTime, const float& amplitude, const float& period);
 

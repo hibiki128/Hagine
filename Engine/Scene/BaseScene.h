@@ -6,6 +6,7 @@
 #include "Object/Object3dCommon.h"
 #include "Particle/ParticleCommon.h"
 #include "Particle/ParticleEditor.h"
+#include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleEmitter.h"
 #include "SpriteCommon.h"
 #include "Camera/ViewProjection/ViewProjection.h"

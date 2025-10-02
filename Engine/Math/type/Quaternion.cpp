@@ -119,6 +119,14 @@ Quaternion Quaternion::FromAxisRotations(const Vector3 &axisRotations) {
     return qy * qx * qz; // YXZ順序
 }
 
+Vector3 Quaternion::Rotate(const Vector3 &v) const {
+    // q * v * q^-1 の計算でベクトルを回転させる
+    Quaternion p = Quaternion(v.x, v.y, v.z, 0.0f);
+    Quaternion q_inv = this->Inverse(); // 逆クォータニオン
+    Quaternion rotated = (*this) * p * q_inv;
+    return Vector3(rotated.x, rotated.y, rotated.z);
+}
+
 Vector3 Quaternion::ToEulerAngles() const {
     Vector3 angles;
 

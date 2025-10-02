@@ -30,6 +30,11 @@ void MyGame::Update() {
 
     // -----ゲーム固有の処理-----
 #ifdef _DEBUG
+    if (imGuiManager_->GetEditorMode()) {
+        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()},10000.0f);
+    } else {
+        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(winApp_->kClientWidth, winApp_->kClientHeight)},10000.0f);
+    }
 
     imGuiManager_->Begin();
     imGuizmoManager_->BeginFrame();
@@ -42,8 +47,10 @@ void MyGame::Update() {
         imGuiManager_->ShowSceneWindow(offscreen_.get(), sceneManager_->GetCurrentSceneName());
     }
     imGuiManager_->ShowMainUI(offscreen_.get());
-    baseObjectManager_->DrawImGui();
     imGuiManager_->End();
+#endif // _DEBUG
+#ifndef _DEBUG
+    input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(winApp_->kClientWidth, winApp_->kClientHeight)});
 #endif // _DEBUG
 
     motionEditor_->Update(Frame::DeltaTime());
@@ -53,7 +60,7 @@ void MyGame::Update() {
 
 void MyGame::Draw() {
     dxCommon_->PreRenderTexture();
-    srvManager_->PreDraw();
+    srvManager_->SetDescriptorHeap();
     // -----描画開始-----
 
     // -----シーンごとの処理------

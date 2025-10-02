@@ -10,19 +10,12 @@ void BaseObject::Init(const std::string objectName) {
     objectName_ = objectName;
     /// ワールドトランスフォームの初期化
     transform_->Initialize();
-    // カラーのセット
-    objColor_.Initialize();
-    objColor_.GetColor() = Vector4(1, 1, 1, 1);
     // ライティングのセット
     isLighting_ = true;
     isCollider = false;
-    LoadFromJson();
-    AnimaLoadFromJson();
 }
 
 void BaseObject::Update() {
-    /// 色転送
-    objColor_.TransferMatrix();
     if (obj3d_->GetHaveAnimation()) {
         obj3d_->AnimationUpdate(isLoop_);
     }
@@ -30,14 +23,14 @@ void BaseObject::Update() {
 }
 
 void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
-    // オフセットを加える前の現在の位置を取得
-    Vector3 currentPosition = transform_->translation_;
+    // オフセットを適用する場合は、一時的にローカル位置を変更
+    Vector3 originalPosition = transform_->translation_;
 
-    // オフセットを加えて新しい位置を計算
-    Vector3 newPosition = currentPosition + offSet;
-
-    // 新しい位置を設定
-    transform_->translation_ = newPosition;
+    if (offSet.x != 0.0f || offSet.y != 0.0f || offSet.z != 0.0f) {
+        transform_->translation_ = originalPosition + offSet;
+        // オフセット適用時は行列を更新
+        transform_->UpdateMatrix();
+    }
 
     // スケルトンの描画が必要な場合
     if (skeletonDraw_) {
@@ -45,13 +38,17 @@ void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     }
     if (!isWireframe_) {
         // オブジェクトの描画
-        obj3d_->Draw(*transform_, viewProjection, reflect_, &objColor_, isLighting_, isModelDraw_);
+        obj3d_->Draw(*transform_, viewProjection, reflect_, isLighting_, isModelDraw_);
     } else {
         obj3d_->DrawWireframe(*transform_, viewProjection, isRainbow_);
     }
 
-    // 描画後に元の位置に戻す場合は、以下の行を追加
-    transform_->translation_ = currentPosition;
+    // オフセットを適用した場合は元の位置に戻す
+    if (offSet.x != 0.0f || offSet.y != 0.0f || offSet.z != 0.0f) {
+        transform_->translation_ = originalPosition;
+        // 元の位置に戻した後も行列を更新
+        transform_->UpdateMatrix();
+    }
 }
 
 void BaseObject::UpdateWorldTransformHierarchy() {
@@ -118,6 +115,7 @@ void BaseObject::AddChild(BaseObject *child) {
 
 void BaseObject::DetachParent() {
     if (parent_) {
+        parent_->children_.remove(this);
         parent_ = nullptr;
         if (transform_) {
             transform_->parent_ = nullptr;
@@ -157,16 +155,64 @@ BaseObject *BaseObject::GetChildByName(const std::string &name) {
 }
 
 void BaseObject::CreateModel(const std::string modelname) {
-    obj3d_->CreateModel(modelname);
     modelPath_ = modelname;
-    texturePath_ = obj3d_->GetTextureFilePath(0);
-    LoadFromJson();
+    isPrimitive_ = false;
+
+    obj3d_->CreateModel(modelname);
+
+    // テクスチャパスを3Dモデル用にリサイズ
+    texturePaths_.resize(obj3d_->GetMaterialCount());
+
+    // デフォルトのテクスチャパスを設定
+    auto allTexturePaths = obj3d_->GetAllTextruePath();
+    for (int i = 0; i < texturePaths_.size() && i < allTexturePaths.size(); i++) {
+        texturePaths_[i] = allTexturePaths[i];
+    }
+
+    // JSONファイルが存在する場合は読み込み（modelPath_は上書きされない）
+    if (isScene_) {
+        LoadFromJson();
+    } else {
+        LoadFromJson("ObjectDatas", objectName_);
+    }
+
+    // JSONから読み込んだカラー設定を適用
+    if (ObjectDatas_) {
+        for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++) {
+            SetColor(ObjectDatas_->Load<Vector4>("color_" + std::to_string(i), GetColor(i)), i);
+        }
+    }
+
+    // テクスチャを設定
+    for (int i = 0; i < texturePaths_.size(); i++) {
+        obj3d_->SetTexture(texturePaths_[i], i);
+    }
+
     AnimaLoadFromJson();
 }
 
 void BaseObject::CreatePrimitiveModel(const PrimitiveType &type) {
-    obj3d_->CreatePrimitiveModel(type, texturePath_);
+    modelPath_ = ""; // プリミティブの場合は空文字列
+    isPrimitive_ = true;
     type_ = type;
+
+    // プリミティブ用にテクスチャパスを設定（1枚のみ）
+    texturePaths_.resize(1);
+    texturePaths_[0] = "debug/uvChecker.png"; // デフォルト値
+
+    // JSONファイルが存在する場合は読み込み
+    if (isScene_) {
+        LoadFromJson();
+    } else {
+        LoadFromJson("ObjectDatas", objectName_);
+    }
+
+    // プリミティブモデルを作成
+    obj3d_->CreatePrimitiveModel(type_, texturePaths_[0]);
+
+    SetColor(ObjectDatas_->Load<Vector4>("color_" + std::to_string(0), {1.0f, 1.0f, 1.0f, 1.0f}), 0);
+
+    AnimaLoadFromJson();
 }
 
 void BaseObject::AddCollider() {
@@ -220,73 +266,24 @@ std::vector<std::string> BaseObject::GetChildrenNames() const {
 }
 
 Vector3 BaseObject::GetWorldPosition() {
-
-    // ワールド行列の平行移動成分を取得
-    worldPos.x = transform_->matWorld_.m[3][0];
-    worldPos.y = transform_->matWorld_.m[3][1];
-    worldPos.z = transform_->matWorld_.m[3][2];
-    return worldPos;
+    return transform_->GetWorldPosition();
 }
 
 // ワールド行列からクォータニオンを取得
-Quaternion BaseObject::GetWorldRotation(){
-    const Matrix4x4 &m = transform_->matWorld_;
-
-    // 回転行列の要素からクォータニオンを生成
-    float trace = m.m[0][0] + m.m[1][1] + m.m[2][2];
-  
-
-    if (trace > 0.0f) {
-        float s = 0.5f / sqrtf(trace + 1.0f);
-        q.w = 0.25f / s;
-        q.x = (m.m[2][1] - m.m[1][2]) * s;
-        q.y = (m.m[0][2] - m.m[2][0]) * s;
-        q.z = (m.m[1][0] - m.m[0][1]) * s;
-    } else {
-        if (m.m[0][0] > m.m[1][1] && m.m[0][0] > m.m[2][2]) {
-            float s = 2.0f * sqrtf(1.0f + m.m[0][0] - m.m[1][1] - m.m[2][2]);
-            q.w = (m.m[2][1] - m.m[1][2]) / s;
-            q.x = 0.25f * s;
-            q.y = (m.m[0][1] + m.m[1][0]) / s;
-            q.z = (m.m[0][2] + m.m[2][0]) / s;
-        } else if (m.m[1][1] > m.m[2][2]) {
-            float s = 2.0f * sqrtf(1.0f + m.m[1][1] - m.m[0][0] - m.m[2][2]);
-            q.w = (m.m[0][2] - m.m[2][0]) / s;
-            q.x = (m.m[0][1] + m.m[1][0]) / s;
-            q.y = 0.25f * s;
-            q.z = (m.m[1][2] + m.m[2][1]) / s;
-        } else {
-            float s = 2.0f * sqrtf(1.0f + m.m[2][2] - m.m[0][0] - m.m[1][1]);
-            q.w = (m.m[1][0] - m.m[0][1]) / s;
-            q.x = (m.m[0][2] + m.m[2][0]) / s;
-            q.y = (m.m[1][2] + m.m[2][1]) / s;
-            q.z = 0.25f * s;
-        }
-    }
-
-    return q.Normalize(); // 正規化して返す
+Quaternion BaseObject::GetWorldRotation() {
+    return transform_->GetWorldRotation();
 }
 
 // ワールドスケールを取得（回転を考慮）
 Vector3 BaseObject::GetWorldScale() {
-  
-    const Matrix4x4 &m = transform_->matWorld_;
-
-    // 各軸のベクトルの長さをスケールとして取得
-    worldScale.x = std::sqrt(m.m[0][0] * m.m[0][0] + m.m[0][1] * m.m[0][1] + m.m[0][2] * m.m[0][2]);
-    worldScale.y = std::sqrt(m.m[1][0] * m.m[1][0] + m.m[1][1] * m.m[1][1] + m.m[1][2] * m.m[1][2]);
-    worldScale.z = std::sqrt(m.m[2][0] * m.m[2][0] + m.m[2][1] * m.m[2][1] + m.m[2][2] * m.m[2][2]);
-
-    return worldScale;
+    return transform_->GetWorldScale();
 }
 
 void BaseObject::SaveToJson() {
     // JSONデータを扱うハンドラを作成
-    ObjectDatas_ = std::make_unique<DataHandler>("ObjectDatas", objectName_);
     modelPath_ = obj3d_->GetModelFilePath();
-    texturePath_ = obj3d_->GetTextureFilePath(0);
+    ObjectDatas_ = std::make_unique<DataHandler>("ObjectDatas", objectName_);
     ObjectDatas_->Save<std::string>("modelName", modelPath_);
-    ObjectDatas_->Save<std::string>("textureName", texturePath_);
     ObjectDatas_->Save<std::string>("objectName", objectName_);
     ObjectDatas_->Save<Vector3>("translation", transform_->translation_);
     ObjectDatas_->Save<Quaternion>("rotation", transform_->quateRotation_);
@@ -295,11 +292,15 @@ void BaseObject::SaveToJson() {
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
-    ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
+    if (parent_) {
+        ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
+    }
+    for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++) {
+        texturePaths_.push_back(obj3d_->GetTextureFilePath(i));
+        ObjectDatas_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
+        ObjectDatas_->Save("color_" + std::to_string(i), GetColor(i));
+    }
 
-    // カラーとライティング設定も保存
-    Vector4 color = objColor_.GetColor();
-    ObjectDatas_->Save<Vector4>("objectColor", color);
     ObjectDatas_->Save<bool>("isLighting", isLighting_);
 
     ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
@@ -307,14 +308,11 @@ void BaseObject::SaveToJson() {
     SaveParentChildRelationship();
 }
 
-
 void BaseObject::SceneSaveToJson() {
     // JSONデータを扱うハンドラを作成
     ObjectDatas_ = std::make_unique<DataHandler>(foldarPath_, objectName_);
     modelPath_ = obj3d_->GetModelFilePath();
-    texturePath_ = obj3d_->GetTextureFilePath(0);
     ObjectDatas_->Save<std::string>("modelName", modelPath_);
-    ObjectDatas_->Save<std::string>("textureName", texturePath_);
     ObjectDatas_->Save<std::string>("objectName", objectName_);
     ObjectDatas_->Save<Vector3>("translation", transform_->translation_);
     ObjectDatas_->Save<Quaternion>("rotation", transform_->quateRotation_);
@@ -323,11 +321,16 @@ void BaseObject::SceneSaveToJson() {
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
-    ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
+    if (parent_) {
+        ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
+    }
 
-    // カラーとライティング設定も保存
-    Vector4 color = objColor_.GetColor();
-    ObjectDatas_->Save<Vector4>("objectColor", color);
+    for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++) {
+        texturePaths_.push_back(obj3d_->GetTextureFilePath(i));
+        ObjectDatas_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
+        ObjectDatas_->Save("color_" + std::to_string(i), GetColor(i));
+    }
+
     ObjectDatas_->Save<bool>("isLighting", isLighting_);
 
     ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
@@ -349,33 +352,39 @@ void BaseObject::LoadFromJson() {
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
-    // モデルパスが未設定でプリミティブでなければデフォルトモデルを使用
-    if (modelPath_.empty() && !isPrimitive_) {
-        modelPath_ = "debug/suzannu.obj";
+    // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
+    std::string loadedModelPath = ObjectDatas_->Load<std::string>("modelName", "");
+    if (!loadedModelPath.empty()) {
+        modelPath_ = loadedModelPath;
     }
 
-    // モデルパスをJSONから読み込み（上書きされる可能性あり）
-    modelPath_ = ObjectDatas_->Load<std::string>("modelName", modelPath_);
-
-    // テクスチャパスが未設定ならデフォルトにする
-    if (texturePath_.empty()) {
-        texturePath_ = "debug/uvChecker.png";
+    // 現在のmodelPath_の状態でプリミティブかどうかを判断
+    if (modelPath_.empty()) {
+        // プリミティブの場合
+        isPrimitive_ = true;
+        if (texturePaths_.empty()) {
+            texturePaths_.resize(1);
+            texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", "debug/uvChecker.png");
+        }
+    } else {
+        // 3Dモデルの場合
+        isPrimitive_ = false;
+        // obj3d_が既に作成されている場合のみテクスチャパスを読み込み
+        if (obj3d_ && obj3d_->GetMaterialCount() > 0) {
+            texturePaths_.resize(obj3d_->GetMaterialCount());
+            for (int i = 0; i < texturePaths_.size(); i++) {
+                texturePaths_[i] = ObjectDatas_->Load<std::string>("textureName_" + std::to_string(i), "debug/uvChecker.png");
+            }
+        }
     }
 
-    texturePath_ = ObjectDatas_->Load<std::string>("textureName", texturePath_);
-
-    // オブジェクトカラーとライティングの設定を読み込み
-    objColor_.GetColor() = ObjectDatas_->Load<Vector4>("objectColor", {1.0f, 1.0f, 1.0f, 1.0f});
     isLighting_ = ObjectDatas_->Load<bool>("isLighting", true);
+    blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", int(BlendMode::kNormal)));
 
-    // ブレンドモードの設定を読み込み
-    blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", 0));
-
-    // 親子関係の情報を読み込み（実際の親子付けはBaseObjectManagerで行う）
     LoadParentChildRelationship();
 }
 
-void BaseObject::LoadFromJson(std::string folderPath,std::string jsonName) {
+void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
     // JSONデータを扱うハンドラを作成
     ObjectDatas_ = std::make_unique<DataHandler>(folderPath, jsonName);
 
@@ -384,34 +393,40 @@ void BaseObject::LoadFromJson(std::string folderPath,std::string jsonName) {
     transform_->quateRotation_ = ObjectDatas_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
     transform_->scale_ = ObjectDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
     isLighting_ = ObjectDatas_->Load<bool>("Lighting", true);
-    type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::kCount);
+    type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", type_);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
-    // モデルパスが未設定でプリミティブでなければデフォルトモデルを使用
-    if (modelPath_.empty() && !isPrimitive_) {
-        modelPath_ = "debug/suzannu.obj";
+    // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
+    std::string loadedModelPath = ObjectDatas_->Load<std::string>("modelName", "");
+    if (!loadedModelPath.empty()) {
+        modelPath_ = loadedModelPath;
     }
 
-    // モデルパスをJSONから読み込み（上書きされる可能性あり）
-    modelPath_ = ObjectDatas_->Load<std::string>("modelName", modelPath_);
-
-    // テクスチャパスが未設定ならデフォルトにする
-    if (texturePath_.empty()) {
-        texturePath_ = "debug/uvChecker.png";
+    // 現在のmodelPath_の状態でプリミティブかどうかを判断
+    if (modelPath_.empty()) {
+        // プリミティブの場合
+        isPrimitive_ = true;
+        if (texturePaths_.empty()) {
+            texturePaths_.resize(1);
+            texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", "debug/uvChecker.png");
+        }
+    } else {
+        // 3Dモデルの場合
+        isPrimitive_ = false;
+        // obj3d_が既に作成されている場合のみテクスチャパスを読み込み
+        if (obj3d_ && obj3d_->GetMaterialCount() > 0) {
+            texturePaths_.resize(obj3d_->GetMaterialCount());
+            for (int i = 0; i < texturePaths_.size(); i++) {
+                texturePaths_[i] = ObjectDatas_->Load<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
+            }
+        }
     }
 
-    texturePath_ = ObjectDatas_->Load<std::string>("textureName", texturePath_);
-
-    // オブジェクトカラーとライティングの設定を読み込み
-    objColor_.GetColor() = ObjectDatas_->Load<Vector4>("objectColor", {1.0f, 1.0f, 1.0f, 1.0f});
     isLighting_ = ObjectDatas_->Load<bool>("isLighting", true);
+    blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", int(BlendMode::kNormal)));
 
-    // ブレンドモードの設定を読み込み
-    blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", 0));
-
-    // 親子関係の情報を読み込み（実際の親子付けはBaseObjectManagerで行う）
     LoadParentChildRelationship();
 }
 
@@ -427,7 +442,6 @@ void BaseObject::AnimaLoadFromJson() {
     isLoop_ = AnimaDatas_->Load<bool>("Loop", false);
 }
 
-
 void BaseObject::DebugCollider() {
     for (auto &collider : colliders_) {
         collider->OffsetImgui();
@@ -441,7 +455,6 @@ Vector3 BaseObject::GetCenterPosition() {
 Quaternion BaseObject::GetCenterRotation() {
     return GetWorldRotation();
 }
-
 
 void BaseObject::ImGui() {
 #ifdef _DEBUG
@@ -647,20 +660,6 @@ void BaseObject::DebugObject() {
 
     if (ImGui::CollapsingHeader("マテリアル設定")) {
         ImGui::Indent(10);
-
-        // カラー設定
-        ImGui::Text("カラー:");
-        ImGui::SameLine(80);
-        Vector4 color = objColor_.GetColor();
-        float colorArray[4] = {color.x, color.y, color.z, color.w};
-        ImGui::PushItemWidth(200);
-        if (ImGui::ColorEdit4("##ObjectColor", colorArray, ImGuiColorEditFlags_AlphaBar)) {
-            objColor_.GetColor() = Vector4(colorArray[0], colorArray[1], colorArray[2], colorArray[3]);
-        }
-        ImGui::PopItemWidth();
-
-        ImGui::Spacing();
-
         // ライティング設定
         ImGui::Text("ライティング:");
         ImGui::SameLine(120);
@@ -729,6 +728,26 @@ void BaseObject::DebugObject() {
 
         ImGui::Spacing();
 
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.3f, 0.7f, 0.3f));
+        if (ImGui::TreeNode("マテリアル色設定")) {
+            Vector4 currentColor = GetColor(selectedMaterialIndex);
+            float color[4] = {currentColor.x, currentColor.y, currentColor.z, currentColor.w};
+
+            if (ImGui::ColorEdit4("色", color)) {
+                SetColor(Vector4(color[0], color[1], color[2], color[3]), selectedMaterialIndex);
+            }
+
+            ImGui::Spacing();
+            if (ImGui::Button("リセット", ImVec2(80, 0))) {
+                SetColor(Vector4(1.0f, 1.0f, 1.0f, 1.0f), selectedMaterialIndex);
+            }
+
+            ImGui::TreePop();
+        }
+        ImGui::PopStyleColor();
+
+        ImGui::Spacing();
+
         // テクスチャ設定
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.7f, 0.3f, 0.3f));
         if (ImGui::TreeNode("テクスチャ設定")) {
@@ -737,6 +756,7 @@ void BaseObject::DebugObject() {
 
             if (ImGui::Button("適用", ImVec2(80, 0))) {
                 SetTexture(texturePath_, selectedMaterialIndex);
+                texturePaths_[selectedMaterialIndex] = texturePath_;
             }
 
             ImGui::SameLine();
@@ -802,6 +822,13 @@ void BaseObject::DebugObject() {
 
     ImGui::PopStyleColor(6);
     ImGui::PopStyleVar(2);
+
+    if (ImGui::CollapsingHeader("ギズモ設定")) {
+        ImGui::Checkbox("ギズモで選択可能", &isGizmoSelectable_);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("オフにするとマウスクリックやギズモ操作の対象外になります");
+        }
+    }
 #endif // _DEBUG
 }
 

@@ -28,8 +28,12 @@ public:
 	/// </summary>
 	void SetGraphicCommand(UINT rootParameterIndex)const;
 
-	Vector4& GetColor(){
+	const Vector4 GetColor(){
 		return color_;
+	}
+
+	void SetColor(Vector4 color) {
+            color_ = color;
 	}
 
 private:

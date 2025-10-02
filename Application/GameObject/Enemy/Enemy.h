@@ -2,6 +2,7 @@
 #include"Object/Base/BaseObject.h"
 #include <application/GameObject/Player/PlayerData.h>
 #include"Particle/ParticleEmitter.h"
+#include"Application/Utility/Shake/Shake.h"
 class Enemy: public BaseObject {
   public:
     /// ==================================================================
@@ -57,6 +58,7 @@ class Enemy: public BaseObject {
     MoveDirection &GetMoveDirection() { return moveDir_; }
 
     void SetDamage(int damage) { damage_ = damage; }
+    void SetVp(ViewProjection *vp);
 
   private:
     /// ==================================================================
@@ -103,4 +105,5 @@ class Enemy: public BaseObject {
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
     std::unique_ptr<ParticleEmitter> emitter_;
+    std::unique_ptr<Shake> chageShake_;
 };

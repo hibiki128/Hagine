@@ -2,16 +2,12 @@
 #include "Model/Model.h"
 #include "Primitive/PrimitiveModel.h"
 #include <Model/ModelStructs.h>
+#include"ParticleStruct.h"
 #include"ParticleCommon.h"
 #include <Transform/WorldTransform.h>
 #include <list>
+
 class ParticleGroup {
-  public:
-    struct ParticleMaterial {
-        Vector4 color;
-        Matrix4x4 uvTransform;
-        float padding[3];
-    };
   public:
     void Initialize();
 

@@ -51,4 +51,7 @@ class FollowCamera {
     float rushResumeBlendSpeed_ = 8.0f;      // Rush復帰時の補間速度（通常より高速）
     Vector3 rushCameraPosition_;             // Rush中に固定されていたカメラ位置
     Quaternion rushCameraRotation_;          // Rush中に固定されていたカメラ回転
+    bool isRushCameraActive_ = false;
+    Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f};
+    float rushCameraFollowRate_ = 0.3f; // Rush中の追従率（0.0-1.0）
 };

@@ -6,13 +6,14 @@
 #include "json.hpp"
 #include <type/Vector2.h>
 #include <fstream>
+#include"Engine/Utility/Data/DataHandler.h"
 
 class Shake {
   public:
     /// ====================================
     /// public methods
     /// ====================================
-    void Initialize(ViewProjection *viewProjection);
+    void Initialize(ViewProjection *viewProjection,std::string jsonName = {});
     void Update();
     void imgui();
     void StartShake();
@@ -21,8 +22,8 @@ class Shake {
     /// ====================================
     /// private methods
     /// ====================================
-    void LoadSettings();
-    void SaveSettings();
+    void LoadSettings(std::string jsonName);
+    void SaveSettings(std::string jsonName);
 
   private:
     /// ====================================
@@ -37,4 +38,5 @@ class Shake {
     int shakeDuration_ = 30; // 揺れの持続時間
     int currentFrame_ = 0;
     bool isShaking_ = false;
+    std::unique_ptr<DataHandler> dataHandler_;
 };

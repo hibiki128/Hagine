@@ -7,6 +7,7 @@ void GameScene::Initialize() {
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
+    LightGroup::GetInstance()->LoadLightData("GameLight");
     vp_.Initialize();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
@@ -39,6 +40,8 @@ void GameScene::Initialize() {
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
+    player_->SetVp(&vp_);
+    enemy_->SetVp(&vp_);
 
     /// ===================================================
     /// ポインタ共有
@@ -63,11 +66,6 @@ void GameScene::Finalize() {
 }
 
 void GameScene::Update() {
-
-    /* if (!debugCamera_->GetActive()) {
-         BaseObjectManager::GetInstance()->Update();
-     }*/
-
     // カメラ更新
     CameraUpdate();
 
@@ -91,14 +89,12 @@ void GameScene::Draw() {
     BaseObjectManager::GetInstance()->Draw(vp_);
 
     //-----3DObjectの開始-----
-    // skyDome_->Draw(vp_);
     ground_->Draw(vp_);
-    DrawLine3D::GetInstance()->DrawGrid(-0.95f, 64, 1000, {0.0f, 0.0f, 1.0f, 0.75f});
     //-----------------------
 
     //------Particleの描画開始-------
-    enemy_ptr->DrawParticle(vp_);
     player_ptr->DrawParticle(vp_);
+    enemy_ptr->DrawParticle(vp_);
     //-----------------------------
 
     /// Spriteの描画準備
@@ -133,7 +129,7 @@ void GameScene::DrawForOffScreen() {
 void GameScene::AddSceneSetting() {
     debugCamera_->imgui();
     followCamera_->imgui();
-
+    vp_.ShowDebugInfo();
     MotionEditor::GetInstance()->DrawImGui();
 }
 

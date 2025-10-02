@@ -3,6 +3,7 @@
 #include "WinApp.h"
 #include <BaseScene.h>
 #include "Object/Base/BaseObjectManager.h"
+#include"SpriteManager.h"
 
 class ImGuizmoManager;
 class OffScreen;
@@ -102,6 +103,17 @@ class ImGuiManager {
     /// </summary>
     void ShowSceneWindow(OffScreen *offScreen, const std::string &sceneName);
 
+    Vector2 GetSceneSize() const {
+        return Vector2(sceneTextureSize_.x, sceneTextureSize_.y);
+    }
+    Vector2 GetScenePos() const {
+        return Vector2(actualScenePos_.x, actualScenePos_.y);
+    }
+
+    bool GetEditorMode() const {
+        return isEditorMode_;
+    }
+
   private:
     /// ====================================
     /// private method
@@ -121,11 +133,19 @@ class ImGuiManager {
 
     void ShowParticleSettingWindow();
 
-    void ShowFPSWindow();
+    void ShowStatisticsWindow();
 
     void ShowOffScreenSettingWindow(OffScreen *offscreen);
 
     void ShowLightSettingWindow();
+    
+    void ShowGizmoWindow();
+
+    void ShowHierarchyWindow();
+
+    void ShowMotionEditorWindow();
+
+    void ShowSpriteManagerWindow();
 
     void FixAspectRatio();
 
@@ -138,6 +158,9 @@ class ImGuiManager {
     void SaveCurrentLayout();
     void LoadLayoutForCurrentMode();
     void ShowHelpWindow();
+
+    void SaveFlag();
+    void LoadFlag();
 
   private:
     /// ====================================
@@ -158,6 +181,7 @@ class ImGuiManager {
 
     // シーンウィンドウ
     ImVec2 sceneTextureSize_ = {800.0f, 450.0f};
+    ImVec2 actualScenePos_ = {};
 
     int cubeCount = 0;
     int sphereCount = 0;
@@ -170,8 +194,8 @@ class ImGuiManager {
     int coneCount = 0;
 
     // エンジンのウィンドウを描画するフラグ
-    bool isShowMainUI_ = false;
     // 重いUIコンポーネントの表示状態管理
+    bool isShowMainUI_ = false;
     bool showSceneView_ = true;
     bool showObjectView_ = true;
     bool showParticleView_ = true;
@@ -180,8 +204,20 @@ class ImGuiManager {
     bool showLightView_ = true;
     bool isEditorMode_ = true; // エディターモードフラグ
     bool showShortcutWindow = false;
+    bool showGizmoView_ = true;
+    bool showHierarchyView_ = true;
+    bool showMotionEditorView_ = true;
+    bool showSpriteManagerView_ = true;
+
+    // グリッド設定用メンバ変数
+    bool showGrid_ = false;
+    float gridY_ = 0.0f;
+    int gridDivision_ = 10;
+    float gridSize_ = 1.0f;
+    Vector4 gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f}; // グレー
 
     BaseObjectManager *baseObjectManager_ = nullptr;
+    SpriteManager *spriteManager_ = nullptr;
 
     std::string editorIniFilePath_ = "imgui_editor.ini";
     std::string gameIniFilePath_ = "imgui_game.ini";

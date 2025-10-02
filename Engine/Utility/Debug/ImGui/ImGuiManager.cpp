@@ -7,7 +7,10 @@
 #include "Scene/SceneManager.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
+#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include <Data/DataHandler.h>
 #include <Engine/Frame/Frame.h>
+#include <Line/DrawLine3D.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
 
@@ -17,7 +20,8 @@ void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) 
 
     dxCommon_ = DirectXCommon::GetInstance();
     baseObjectManager_ = BaseObjectManager::GetInstance();
-
+    spriteManager_ = SpriteManager::GetInstance();
+    LoadFlag();
     // ImGuiのコンテキストを生成
     ImGui::CreateContext();
 
@@ -196,6 +200,8 @@ void ImGuiManager::Finalize() {
     // デスクリプタヒープを解放
     srvHeap_.Reset();
 
+    SaveFlag();
+
     delete instance;
     instance = nullptr;
 }
@@ -223,6 +229,9 @@ void ImGuiManager::Draw() {
 }
 
 void ImGuiManager::UpdateIni() {
+    if (showGrid_) {
+        DrawLine3D::GetInstance()->DrawGrid(gridY_, gridDivision_, gridSize_, gridColor_);
+    }
     if (!isShowMainUI_) {
         SwitchToGameMode();
     } else {
@@ -283,8 +292,68 @@ void ImGuiManager::ShowMainMenu() {
                 ImGui::MenuItem(ICON_FA_DATABASE " FPSビュー", nullptr, &showFPSView_);
                 ImGui::MenuItem(ICON_FA_STAR_OF_DAVID " オフスクリーンビュー", nullptr, &showOfScreenView_);
                 ImGui::MenuItem(ICON_FA_LIGHTBULB " ライトビュー", nullptr, &showLightView_);
+                ImGui::MenuItem(ICON_FA_ARROWS_ALT " ギズモビュー", nullptr, &showGizmoView_);
+                ImGui::MenuItem(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャビュー", nullptr, &showHierarchyView_);
+                ImGui::MenuItem(ICON_FA_CODE_BRANCH " モーションエディタービュー", nullptr, &showMotionEditorView_);
+                ImGui::MenuItem(ICON_FA_SQUARE " スプライトマネージャビュー", nullptr, &showSpriteManagerView_);
                 ImGui::EndMenu();
             }
+
+            // グリッド設定
+            ImGui::MenuItem(ICON_FA_BORDER_ALL " グリッド表示", nullptr, &showGrid_);
+
+            if (showGrid_) {
+                // グリッド設定項目（インデント付き）
+                ImGui::Indent();
+
+                // Y座標設定
+                ImGui::PushItemWidth(120.0f);
+                if (ImGui::DragFloat(ICON_FA_ARROWS_ALT_V " Y座標", &gridY_, 0.1f, -100.0f, 100.0f, "%.1f")) {
+                    // リアルタイム更新
+                }
+
+                // 分割数設定
+                if (ImGui::DragInt(ICON_FA_TH " 分割数", &gridDivision_, 1, 1, 100)) {
+                    // リアルタイム更新
+                }
+
+                // サイズ設定
+                if (ImGui::DragFloat(ICON_FA_EXPAND_ARROWS_ALT " サイズ", &gridSize_, 0.1f, 0.1f, 500.0f, "%.1f")) {
+                    // リアルタイム更新
+                }
+                ImGui::PopItemWidth();
+
+                // 色設定
+                ImGui::ColorEdit4(ICON_FA_PALETTE " グリッド色", &gridColor_.x, ImGuiColorEditFlags_NoInputs);
+
+                // プリセット（サブメニュー）
+                if (ImGui::BeginMenu(ICON_FA_SWATCHBOOK " プリセット")) {
+                    if (ImGui::MenuItem("デフォルト (グレー)")) {
+                        gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
+                    }
+                    if (ImGui::MenuItem("白")) {
+                        gridColor_ = {1.0f, 1.0f, 1.0f, 1.0f};
+                    }
+                    if (ImGui::MenuItem("青")) {
+                        gridColor_ = {0.3f, 0.5f, 1.0f, 1.0f};
+                    }
+                    if (ImGui::MenuItem("緑")) {
+                        gridColor_ = {0.3f, 1.0f, 0.5f, 1.0f};
+                    }
+                    ImGui::EndMenu();
+                }
+
+                // リセットボタン
+                if (ImGui::Button(ICON_FA_UNDO " リセット")) {
+                    gridY_ = 0.0f;
+                    gridDivision_ = 10;
+                    gridSize_ = 1.0f;
+                    gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
+                }
+
+                ImGui::Unindent();
+            }
+            ImGui::Separator();
 
             // 表示モード切替
             ImGui::Separator();
@@ -322,7 +391,11 @@ void ImGuiManager::ShowMainMenu() {
             if (ImGui::BeginMenu(ICON_FA_CUBE " 3Dオブジェクト")) {
                 if (ImGui::MenuItem(ICON_FA_CUBE " キューブ")) {
                     std::string name = "cube_" + std::to_string(++cubeCount);
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                        name = "cube_" + std::to_string(++cubeCount);
+                    }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->SetPrimitive(true);
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Cube);
                     baseObjectManager_->AddObject(std::move(object));
@@ -330,7 +403,11 @@ void ImGuiManager::ShowMainMenu() {
 
                 if (ImGui::MenuItem(ICON_FA_CIRCLE " 球体")) {
                     std::string name = "sphere_" + std::to_string(++sphereCount);
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                        name = "sphere_" + std::to_string(++sphereCount);
+                    }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->SetPrimitive(true);
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Sphere);
                     baseObjectManager_->AddObject(std::move(object));
@@ -338,7 +415,11 @@ void ImGuiManager::ShowMainMenu() {
 
                 if (ImGui::MenuItem(ICON_FA_CUBE " 平面")) {
                     std::string name = "plane_" + std::to_string(++planeCount);
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                        name = "plane_" + std::to_string(++planeCount);
+                    }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->SetPrimitive(true);
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Plane);
                     baseObjectManager_->AddObject(std::move(object));
@@ -346,7 +427,11 @@ void ImGuiManager::ShowMainMenu() {
 
                 if (ImGui::MenuItem(ICON_FA_CIRCLE " シリンダー")) {
                     std::string name = "cylinder_" + std::to_string(++cylinderCount);
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                        name = "cylinder_" + std::to_string(++cylinderCount);
+                    }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->SetPrimitive(true);
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Cylinder);
                     baseObjectManager_->AddObject(std::move(object));
@@ -354,7 +439,11 @@ void ImGuiManager::ShowMainMenu() {
 
                 if (ImGui::MenuItem(ICON_FA_RING " リング")) {
                     std::string name = "ring_" + std::to_string(++ringCount);
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                        name = "ring_" + std::to_string(++ringCount);
+                    }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->SetPrimitive(true);
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Ring);
                     baseObjectManager_->AddObject(std::move(object));
@@ -362,7 +451,11 @@ void ImGuiManager::ShowMainMenu() {
 
                 if (ImGui::MenuItem(ICON_FA_CARET_UP " 三角形")) {
                     std::string name = "triangle_" + std::to_string(++triangleCount);
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                        name = "triangle_" + std::to_string(++triangleCount);
+                    }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->SetPrimitive(true);
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Triangle);
                     baseObjectManager_->AddObject(std::move(object));
@@ -370,7 +463,11 @@ void ImGuiManager::ShowMainMenu() {
 
                 if (ImGui::MenuItem(ICON_FA_MOUNTAIN " ピラミッド")) {
                     std::string name = "pyramid_" + std::to_string(++pyramidCount);
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                        name = "pyramid_" + std::to_string(++pyramidCount);
+                    }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->SetPrimitive(true);
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Pyramid);
                     baseObjectManager_->AddObject(std::move(object));
@@ -378,7 +475,11 @@ void ImGuiManager::ShowMainMenu() {
 
                 if (ImGui::MenuItem(ICON_FA_CHART_AREA " 円柱")) {
                     std::string name = "cone_" + std::to_string(++coneCount);
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                        name = "cone_" + std::to_string(++coneCount);
+                    }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
+                    object->SetPrimitive(true);
                     object->Init(name);
                     object->CreatePrimitiveModel(PrimitiveType::Cone);
                     baseObjectManager_->AddObject(std::move(object));
@@ -395,6 +496,7 @@ void ImGuiManager::ShowMainMenu() {
             // 2Dオブジェクト
             if (ImGui::BeginMenu(ICON_FA_SQUARE " 2Dオブジェクト")) {
                 if (ImGui::MenuItem(ICON_FA_SQUARE " スプライト")) {
+                    spriteManager_->ShowSpriteCreationModal();
                 }
                 if (ImGui::MenuItem(ICON_FA_FONT " テキスト")) {
                 }
@@ -494,7 +596,7 @@ void ImGuiManager::ShowParticleSettingWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowFPSWindow() {
+void ImGuiManager::ShowStatisticsWindow() {
     if (!showFPSView_)
         return; // 表示しない場合は早期リターン
 
@@ -505,6 +607,8 @@ void ImGuiManager::ShowFPSWindow() {
     DisplayFPS();
 
     ParticleEditor::GetInstance()->SceneParticleCount();
+
+    ParticleCSEditor::GetInstance()->ShowGPUParticleStatistics();
 
     ImGui::End();
 }
@@ -535,6 +639,58 @@ void ImGuiManager::ShowLightSettingWindow() {
     ImGui::End();
 }
 
+void ImGuiManager::ShowGizmoWindow() {
+    if (!showGizmoView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    ImGui::Begin("トランスフォームマネージャ", &showGizmoView_, flags);
+
+    imGuizmoManager_->imgui();
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowHierarchyWindow() {
+    if (!showHierarchyView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    ImGui::Begin("オブジェクトマネージャ", &showHierarchyView_, flags);
+
+    baseObjectManager_->DrawHierarchyEditor();
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowMotionEditorWindow() {
+    if (!showMotionEditorView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    ImGui::Begin("モーションエディター", &showMotionEditorView_, flags);
+
+    MotionEditor::GetInstance()->DrawImGui();
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowSpriteManagerWindow() {
+    if (!showSpriteManagerView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    ImGui::Begin("スプライトマネージャ", &showSpriteManagerView_, flags);
+
+    spriteManager_->DrawSpriteManager();
+
+    ImGui::End();
+}
+
 void ImGuiManager::FixAspectRatio() {
 
     // 横幅ベースで16:9に合わせた高さ
@@ -554,7 +710,7 @@ void ImGuiManager::FixAspectRatio() {
     }
 }
 
-void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string& sceneName) {
+void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &sceneName) {
     // ImGuiウィンドウ開始前にNextWindowSizeは設定しない（手動サイズ変更を許可）
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
     // フォーカスされていない場合は描画を最適化
@@ -638,10 +794,10 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string& scen
         backgroundColor);
 
     // ImGuizmoのために正確なシーン位置を計算
-    ImVec2 actualScenePos = ImVec2(
+    actualScenePos_ = ImVec2(
         contentPos.x + sceneOffset.x,
         contentPos.y + sceneOffset.y);
-    imGuizmoManager_->Update(actualScenePos, sceneTextureSize_);
+    imGuizmoManager_->Update(actualScenePos_, sceneTextureSize_);
 
     ImGui::End();
 }
@@ -655,14 +811,22 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     // プロジェクトウィンドウを描画
     ShowParticleSettingWindow();
     // FPSを描画
-    ShowFPSWindow();
+    ShowStatisticsWindow();
     // オフスクリーンウィンドウを描画
     ShowOffScreenSettingWindow(offscreen);
     // ライトウィンドウを描画
     ShowLightSettingWindow();
+    // ギズモウィンドウを描画
+    ShowGizmoWindow();
+    // 階層エディターウィンドウを描画
+    ShowHierarchyWindow();
+    // モーションエディターウィンドウを描画
+    ShowMotionEditorWindow();
+    ShowSpriteManagerWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();
+    spriteManager_->UpdateImGui();
 }
 
 bool &ImGuiManager::GetIsShowMainUI() {
@@ -902,6 +1066,31 @@ void ImGuiManager::ShowHelpWindow() {
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("Ctrl + 5");
 
+                // オブジェクト操作
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextColored(ImVec4(0.8f, 0.9f, 1.0f, 1.0f), ICON_FA_CUBES " 選択オブジェクト操作");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  オブジェクトコピー");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("Ctrl + C");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  オブジェクトペースト");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("Ctrl + V");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  オブジェクト削除");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("Delete");
+
                 ImGui::EndTable();
             }
 
@@ -918,4 +1107,40 @@ void ImGuiManager::ShowHelpWindow() {
         ImGui::End();
     }
 #endif // _DEBUG
+}
+
+void ImGuiManager::SaveFlag() {
+    std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ImGuiSetting", "Frags");
+    data->Save("IsShowMainUI", isShowMainUI_);
+    data->Save("ShowGrid", showGrid_);
+    data->Save("showSceneView", showSceneView_);
+    data->Save("showObjectView", showObjectView_);
+    data->Save("showParticleView", showParticleView_);
+    data->Save("showFPSView", showFPSView_);
+    data->Save("showOfScreenView", showOfScreenView_);
+    data->Save("showLightView", showLightView_);
+    data->Save("showGizmoView", showGizmoView_);
+    data->Save("showHierarchyView", showHierarchyView_);
+    data->Save("showMotionEditorView", showMotionEditorView_);
+    data->Save("showShortcutWindow", showShortcutWindow);
+    data->Save("showSpriteManagerView", showSpriteManagerView_);
+    data->Save("isEditorMode", isEditorMode_);
+}
+
+void ImGuiManager::LoadFlag() {
+    std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ImGuiSetting", "Frags");
+    isShowMainUI_ = data->Load("IsShowMainUI", true);
+    showGrid_ = data->Load("ShowGrid", true);
+    showSceneView_ = data->Load("showSceneView", true);
+    showObjectView_ = data->Load("showObjectView", true);
+    showParticleView_ = data->Load("showParticleView", false);
+    showFPSView_ = data->Load("showFPSView", true);
+    showOfScreenView_ = data->Load("showOfScreenView", false);
+    showLightView_ = data->Load("showLightView", false);
+    showGizmoView_ = data->Load("showGizmoView", false);
+    showHierarchyView_ = data->Load("showHierarchyView", true);
+    showMotionEditorView_ = data->Load("showMotionEditorView", false);
+    showShortcutWindow = data->Load("showShortcutWindow", false);
+    showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
+    isEditorMode_ = data->Load("isEditorMode", true);
 }

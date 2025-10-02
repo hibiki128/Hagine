@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 
 /// <summary>
 /// 2次元ベクトル
@@ -54,6 +55,8 @@ struct Vector2 final {
         y /= scalar;
         return *this;
     }
+
+    float Length() const { return std::sqrt(x * x + y * y); }
 };
 
 struct Vector2Int final {

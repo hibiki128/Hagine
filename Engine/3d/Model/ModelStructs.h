@@ -38,15 +38,19 @@ struct MaterialData {
     std::string textureFilePath;
     uint32_t textureIndex = 0;
     float environmentCoefficient = 1.0f;
+    Vector3 uvPosition = 0.0f;
+    Vector3 uvSize = 0.0f;
+    Vector3 uvRotate = 0.0f;
 };
 
 struct MaterialDataGPU {
     Vector4 color;
     int32_t enableLighting;
-    float padding[3];
+    float padding[3]; // この部分が問題
     Matrix4x4 uvTransform;
     float shininess;
     float environmentCoefficient;
+    float padding2[2]; // 追加のパディングが必要
 };
 
 struct MeshData {
@@ -94,6 +98,8 @@ struct ModelData {
     std::vector<MaterialData> materials;
     std::map<std::string, JointWeightData> skinClusterData;
     Node rootNode;
+    bool hasBones;
+    bool hasAnimations;
 };
 
 static const uint32_t kNumMaxInfluence = 4;
@@ -127,7 +133,7 @@ struct SkinCluster {
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> inputVertexSrvHandle;
     //
     Microsoft::WRL::ComPtr<ID3D12Resource> outputVertexResource;
-    D3D12_VERTEX_BUFFER_VIEW outputVertexBufferView; // ← これを追加
+    D3D12_VERTEX_BUFFER_VIEW outputVertexBufferView;
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> outputVertexSrvHandle;
     //
     Microsoft::WRL::ComPtr<ID3D12Resource> skinningInformationResource;
@@ -153,63 +159,4 @@ struct NodeAnimation {
 struct Animation {
     float duration;
     std::map<std::string, NodeAnimation> nodeAnimations;
-};
-
-struct ParticleForGPU {
-    Matrix4x4 WVP;
-    Matrix4x4 World;
-    Vector4 color;
-};
-
-struct Particle {
-    WorldTransform transform; // 位置
-    Vector3 emitterPosition;
-    Vector3 velocity; // 速度
-    Vector3 Acce;
-    Vector3 startScale;
-    Vector3 endScale;
-    Vector3 startAcce;
-    Vector3 endAcce;
-    Vector3 startRote;
-    Vector3 endRote;
-    Vector3 rotateVelocity;
-    Vector3 fixedDirection;
-    Vector4 color;     // 色
-    float lifeTime;    // ライフタイム
-    float currentTime; // 現在の時間
-    float initialAlpha;
-    // std::weak_ptr<Particle> parent;                  // 親パーティクルへの弱参照
-    // std::vector<std::shared_ptr<Particle>> children; // 子パーティクルのリスト
-    Vector3 relativePosition; // 親からの相対位置
-    Vector3 parentOffset;     // 親に対するオフセット
-    bool isChild;             // 子パーティクルかどうか
-    bool createTrail;         // 軌跡を作成するか
-    float trailSpawnTimer;    // 軌跡生成のタイマー
-    float trailSpawnInterval; // 軌跡生成間隔
-    int maxChildren;          // 最大子供数
-    float childLifeScale;     // 子の寿命スケール（親より短く）
-
-    BlendMode blendMode = BlendMode::kAdd;
-
-    Particle() : isChild(false), createTrail(false), trailSpawnTimer(0.0f),
-                 trailSpawnInterval(0.1f), maxChildren(10), childLifeScale(0.8f) {}
-};
-
-struct ParticleGroupData {
-    // マテリアルデータ
-    std::vector<MaterialData> materials;
-    // パーティクルのリスト (std::list<Particle> 型)
-    std::list<Particle> particles;
-    // インスタンシングデータ用SRVインデックス
-    uint32_t instancingSRVIndex = 0;
-    // インスタンシングリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource = nullptr;
-    // インスタンス数
-    uint32_t instanceCount = 0;
-    // インスタンシングデータを書き込むためのポインタ
-    ParticleForGPU *instancingData = nullptr;
-    // グループ名
-    std::string groupName;
-    // ブレンドモード
-    BlendMode blendMode = BlendMode::kAdd;
 };

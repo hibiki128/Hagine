@@ -1,17 +1,19 @@
 #include "DemoScene.h"
+#include"SpriteManager.h"
 
 void DemoScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
-    vp_.Initialize();
-    vp_.translation_ = {0.0f, 0.0f, -30.0f};
+    vp_.Initialize("DemoCamera");
+    LightGroup::GetInstance()->LoadLightData("DemoLight");
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
 
     ptEditor_ = ParticleEditor::GetInstance();
+    ptCSEditor_ = ParticleCSEditor::GetInstance();
 }
 
 void DemoScene::Finalize() {
@@ -29,13 +31,11 @@ void DemoScene::Update() {
 void DemoScene::Draw() {
     /// -------描画処理開始-------
 
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
-    //-----Spriteの描画開始-----
-
-    //------------------------------
+    SpriteManager::GetInstance()->DrawAll();
+    BaseObjectManager::GetInstance()->Draw(vp_);
 
     ptEditor_->DrawAll(vp_);
+    ptCSEditor_->DrawAll(vp_);
 
     /// ----------------------------------
 
@@ -56,14 +56,27 @@ void DemoScene::DrawForOffScreen() {
 
 void DemoScene::AddSceneSetting() {
     debugCamera_->imgui();
+    vp_.ShowDebugInfo();
 }
 
 void DemoScene::AddObjectSetting() {
 }
 
 void DemoScene::AddParticleSetting() {
-    ptEditor_->EditorWindow();
-    ptEditor_->DebugAll();
+    // CPUとGPUパーティクルをタブで分ける
+    if (ImGui::BeginTabBar("ParticleSystemTabs")) {
+        if (ImGui::BeginTabItem("CPU パーティクル")) {
+            ptEditor_->ShowImGuiEditor();
+            ptEditor_->DebugAll();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("GPU パーティクル (CS)")) {
+            ptCSEditor_->ShowImGuiEditor();
+            ptCSEditor_->DebugAll();
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
 }
 
 void DemoScene::CameraUpdate() {

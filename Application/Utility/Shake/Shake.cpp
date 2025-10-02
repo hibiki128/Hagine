@@ -1,12 +1,13 @@
 #include "Shake.h"
-#include <random>
 #include <filesystem>
 #include <myMath.h>
+#include <random>
 
-
-void Shake::Initialize(ViewProjection *viewProjection) {
+void Shake::Initialize(ViewProjection *viewProjection, std::string jsonName) {
     viewProjection_ = viewProjection;
-    LoadSettings();
+    if (!jsonName.empty()) {
+        LoadSettings(jsonName);
+    }
 }
 
 void Shake::Update() {
@@ -40,42 +41,26 @@ void Shake::StartShake() {
     currentFrame_ = 0;
 }
 
-void Shake::LoadSettings() {
-    std::ifstream file("resources/jsons/Shake/shake.json");
-    if (!file)
-        return;
+void Shake::LoadSettings(std::string jsonName) {
+    dataHandler_ = std::make_unique<DataHandler>("Shake", jsonName);
 
-    nlohmann::json json;
-    file >> json;
-    file.close();
-
-    shakeMin_ = {json["shakeMinX"], json["shakeMinY"]};
-    shakeMax_ = {json["shakeMaxX"], json["shakeMaxY"]};
-    rotationShakeMin_ = json["rotationShakeMin"];
-    rotationShakeMax_ = json["rotationShakeMax"];
-    shakeInterval_ = json["shakeInterval"];
-    shakeDuration_ = json["shakeDuration"];
+    shakeMin_ = dataHandler_->Load<Vector2>("shakeMin", {0, 0});
+    shakeMax_ = dataHandler_->Load<Vector2>("shakeMax", {0, 0});
+    rotationShakeMin_ = dataHandler_->Load<float>("rotationShakeMin", 0);
+    rotationShakeMax_ = dataHandler_->Load<float>("rotationShakeMax", 0);
+    shakeInterval_ = dataHandler_->Load<int>("shakeInterval", 0);
+    shakeDuration_ = dataHandler_->Load<int>("shakeDuration", 0);
 }
 
-void Shake::SaveSettings() {
-    // フォルダが存在しなければ作成
-    std::filesystem::create_directories("resources/jsons/Shake");
+void Shake::SaveSettings(std::string jsonName) {
+    dataHandler_ = std::make_unique<DataHandler>("Shake", jsonName);
 
-    nlohmann::json json;
-    json["shakeMinX"] = shakeMin_.x;
-    json["shakeMinY"] = shakeMin_.y;
-    json["shakeMaxX"] = shakeMax_.x;
-    json["shakeMaxY"] = shakeMax_.y;
-    json["rotationShakeMin"] = rotationShakeMin_;
-    json["rotationShakeMax"] = rotationShakeMax_;
-    json["shakeInterval"] = shakeInterval_;
-    json["shakeDuration"] = shakeDuration_;
-
-    std::ofstream file("resources/jsons/Shake/shake.json");
-    if (file) {
-        file << json.dump(4);
-        file.close();
-    }
+    dataHandler_->Save("shakeMin", shakeMin_);
+    dataHandler_->Save("shakeMax", shakeMax_);
+    dataHandler_->Save("rotationShakeMin", rotationShakeMin_);
+    dataHandler_->Save("rotationShakeMax", rotationShakeMax_);
+    dataHandler_->Save("shakeInterval", shakeInterval_);
+    dataHandler_->Save("shakeDuration", shakeDuration_);
 }
 
 void Shake::imgui() {
@@ -88,10 +73,19 @@ void Shake::imgui() {
         ImGui::DragInt("揺れの間隔 (フレーム)", &shakeInterval_, 1, 1, 10);
         ImGui::DragInt("揺れの持続時間 (フレーム)", &shakeDuration_, 1, 1, 300);
 
+        // セーブ名入力用のバッファ（静的変数として保持）
+        static char saveNameBuffer[256] = "";
+        ImGui::InputText("セーブ名", saveNameBuffer, sizeof(saveNameBuffer));
+
         if (ImGui::Button("セーブ")) {
-            SaveSettings();
-            std::string message = std::format("Shake saved.");
-            MessageBoxA(nullptr, message.c_str(), "Effect", 0);
+            std::string saveName = saveNameBuffer;
+            if (!saveName.empty()) {
+                SaveSettings(saveName);
+                std::string message = std::format("Shake saved as: {}", saveName);
+                MessageBoxA(nullptr, message.c_str(), "Effect", 0);
+            } else {
+                MessageBoxA(nullptr, "セーブ名を入力してください", "Error", 0);
+            }
         }
 
         if (ImGui::Button("シェイク開始")) {

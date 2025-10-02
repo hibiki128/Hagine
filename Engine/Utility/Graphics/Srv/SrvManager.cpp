@@ -1,7 +1,8 @@
 #include "SrvManager.h"
 #include "DirectXCommon.h"
+#include <cstdlib>
 
-const uint32_t SrvManager::kMaxSRVCount = 8192;
+const uint32_t SrvManager::kMaxSRVCount = 49152;
 
 SrvManager *SrvManager::instance = nullptr;
 
@@ -26,10 +27,10 @@ void SrvManager::Initialize() {
     descriptorSize = dxCommon->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
-void SrvManager::PreDraw() {
-    // 描画用のDescriptorHeapの設定
+void SrvManager::SetDescriptorHeap() {
+    ID3D12GraphicsCommandList *commandList = dxCommon->GetCommandList().Get();
     ID3D12DescriptorHeap *descriptorHeaps[] = {descriptorHeap.Get()};
-    dxCommon->GetCommandList()->SetDescriptorHeaps(1, descriptorHeaps);
+    commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 }
 
 void SrvManager::CreateSRVforTexture2D(uint32_t srvIndex, ID3D12Resource *pResource, DirectX::TexMetadata metaData, UINT MipLevels) {

@@ -81,6 +81,15 @@ Vector4 Transformation(const Vector4& vector, const Matrix4x4& matrix) {
 	return result;
 }
 
+// Ray生成用の変換関数（正規化しない版）
+Vector4 TransformationRaw(const Vector4 &vector, const Matrix4x4 &matrix) {
+    Vector4 result;
+    result.x = vector.x * matrix.m[0][0] + vector.y * matrix.m[1][0] + vector.z * matrix.m[2][0] + vector.w * matrix.m[3][0];
+    result.y = vector.x * matrix.m[0][1] + vector.y * matrix.m[1][1] + vector.z * matrix.m[2][1] + vector.w * matrix.m[3][1];
+    result.z = vector.x * matrix.m[0][2] + vector.y * matrix.m[1][2] + vector.z * matrix.m[2][2] + vector.w * matrix.m[3][2];
+    result.w = vector.x * matrix.m[0][3] + vector.y * matrix.m[1][3] + vector.z * matrix.m[2][3] + vector.w * matrix.m[3][3];
+    return result;
+}
 
 Vector3 TransformNormal(const Vector3& v, const Matrix4x4& m) {
 	Vector3 result{
@@ -403,4 +412,55 @@ Matrix4x4 MakeRotateMatrix(const Vector3 &right, const Vector3 &up, const Vector
     result.m[3][3] = 1.0f;
 
     return result;
+}
+
+// Matrix4x4からクォータニオンを抽出する関数
+Quaternion MatrixToQuaternion(const Matrix4x4 &matrix) {
+    Quaternion q;
+    float trace = matrix.m[0][0] + matrix.m[1][1] + matrix.m[2][2];
+
+    if (trace > 0.0f) {
+        float s = sqrt(trace + 1.0f);
+        q.w = s * 0.5f;
+        s = 0.5f / s;
+        q.x = (matrix.m[2][1] - matrix.m[1][2]) * s;
+        q.y = (matrix.m[0][2] - matrix.m[2][0]) * s;
+        q.z = (matrix.m[1][0] - matrix.m[0][1]) * s;
+    } else {
+        if (matrix.m[0][0] >= matrix.m[1][1] && matrix.m[0][0] >= matrix.m[2][2]) {
+            float s = sqrt(1.0f + matrix.m[0][0] - matrix.m[1][1] - matrix.m[2][2]) * 2.0f;
+            q.w = (matrix.m[2][1] - matrix.m[1][2]) / s;
+            q.x = 0.25f * s;
+            q.y = (matrix.m[0][1] + matrix.m[1][0]) / s;
+            q.z = (matrix.m[0][2] + matrix.m[2][0]) / s;
+        } else if (matrix.m[1][1] > matrix.m[2][2]) {
+            float s = sqrt(1.0f + matrix.m[1][1] - matrix.m[0][0] - matrix.m[2][2]) * 2.0f;
+            q.w = (matrix.m[0][2] - matrix.m[2][0]) / s;
+            q.x = (matrix.m[0][1] + matrix.m[1][0]) / s;
+            q.y = 0.25f * s;
+            q.z = (matrix.m[1][2] + matrix.m[2][1]) / s;
+        } else {
+            float s = sqrt(1.0f + matrix.m[2][2] - matrix.m[0][0] - matrix.m[1][1]) * 2.0f;
+            q.w = (matrix.m[1][0] - matrix.m[0][1]) / s;
+            q.x = (matrix.m[0][2] + matrix.m[2][0]) / s;
+            q.y = (matrix.m[1][2] + matrix.m[2][1]) / s;
+            q.z = 0.25f * s;
+        }
+    }
+    return q;
+}
+
+// クォータニオンでベクトルを回転する関数
+Vector3 RotateVector(const Vector3 &vec, const Quaternion &quat) {
+    Quaternion vecQuat = {vec.x, vec.y, vec.z, 0.0f};
+    Quaternion result = quat * vecQuat * (quat).Conjugate();
+    return Vector3(result.x, result.y, result.z);
+}
+
+Vector3 ExtractScale(const Matrix4x4 &matrix) {
+    Vector3 scale;
+    scale.x = sqrt(matrix.m[0][0] * matrix.m[0][0] + matrix.m[0][1] * matrix.m[0][1] + matrix.m[0][2] * matrix.m[0][2]);
+    scale.y = sqrt(matrix.m[1][0] * matrix.m[1][0] + matrix.m[1][1] * matrix.m[1][1] + matrix.m[1][2] * matrix.m[1][2]);
+    scale.z = sqrt(matrix.m[2][0] * matrix.m[2][0] + matrix.m[2][1] * matrix.m[2][1] + matrix.m[2][2] * matrix.m[2][2]);
+    return scale;
 }

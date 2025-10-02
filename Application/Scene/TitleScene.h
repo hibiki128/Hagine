@@ -1,5 +1,4 @@
 #pragma once
-
 #include "BaseScene.h"
 #include "Easing.h"
 #include "Object/Base/BaseObject.h"

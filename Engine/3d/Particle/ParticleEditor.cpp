@@ -115,45 +115,50 @@ void ParticleEditor::DrawAll(const ViewProjection &vp_) {
 }
 
 void ParticleEditor::DebugAll() {
-    if (emitters_.empty()) {
-        ImGui::Text("エミッターがありません");
-        return;
-    }
+    if (ImGui::BeginTabBar("CPUパーティクル")) {
+        if (ImGui::BeginTabItem("CPUエミッター設定")) {
+            if (emitters_.empty()) {
+                ImGui::Text("エミッターがありません");
+            } else {
+                // エミッター名のリストを作成
+                std::vector<std::string> emitterNames;
+                for (const auto &[name, emitter] : emitters_) {
+                    emitterNames.push_back(name);
+                }
 
-    // エミッター名のリストを作成
-    std::vector<std::string> emitterNames;
-    for (const auto &[name, emitter] : emitters_) {
-        emitterNames.push_back(name);
-    }
+                // インデックスの範囲チェック
+                if (selectedEmitterIndex_ >= emitterNames.size()) {
+                    selectedEmitterIndex_ = std::max(0, (int)emitterNames.size() - 1);
+                }
 
-    // インデックスの範囲チェック
-    if (selectedEmitterIndex_ >= emitterNames.size()) {
-        selectedEmitterIndex_ = std::max(0, (int)emitterNames.size() - 1);
-    }
+                // エミッター選択用のCombo
+                std::vector<const char *> emitterNameCStrs;
+                for (const auto &name : emitterNames) {
+                    emitterNameCStrs.push_back(name.c_str());
+                }
 
-    // エミッター選択用のCombo
-    std::vector<const char *> emitterNameCStrs;
-    for (const auto &name : emitterNames) {
-        emitterNameCStrs.push_back(name.c_str());
-    }
+                if (ImGui::Combo("エミッター選択", &selectedEmitterIndex_,
+                                 emitterNameCStrs.data(), (int)emitterNameCStrs.size())) {
+                    // 選択が変更された場合、選択されたエミッター名を更新
+                    selectedEmitterName_ = emitterNames[selectedEmitterIndex_];
+                }
 
-    if (ImGui::Combo("エミッター選択", &selectedEmitterIndex_,
-                     emitterNameCStrs.data(), (int)emitterNameCStrs.size())) {
-        // 選択が変更された場合、選択されたエミッター名を更新
-        selectedEmitterName_ = emitterNames[selectedEmitterIndex_];
-    }
+                // 初回選択時の処理
+                if (selectedEmitterName_.empty() && !emitterNames.empty()) {
+                    selectedEmitterName_ = emitterNames[selectedEmitterIndex_];
+                }
 
-    // 初回選択時の処理
-    if (selectedEmitterName_.empty() && !emitterNames.empty()) {
-        selectedEmitterName_ = emitterNames[selectedEmitterIndex_];
-    }
-
-    // 選択されたエミッターのDebugを実行
-    if (!selectedEmitterName_.empty()) {
-        auto it = emitters_.find(selectedEmitterName_);
-        if (it != emitters_.end() && it->second) {
-            it->second->Debug();
+                // 選択されたエミッターのDebugを実行
+                if (!selectedEmitterName_.empty()) {
+                    auto it = emitters_.find(selectedEmitterName_);
+                    if (it != emitters_.end() && it->second) {
+                        it->second->Debug();
+                    }
+                }
+            }
+            ImGui::EndTabItem();
         }
+        ImGui::EndTabBar();
     }
 }
 
@@ -248,7 +253,7 @@ bool ParticleEditor::ColoredCollapsingHeader(const char *label, int colorIndex) 
 }
 
 void ParticleEditor::ShowImGuiEditor() {
-    if (ImGui::BeginTabBar("パーティクル")) {
+    if (ImGui::BeginTabBar("CPUパーティクル")) {
         if (ImGui::BeginTabItem("パーティクル作成")) {
 
             // エミッター追加のCollapsingHeader
@@ -430,7 +435,7 @@ void ParticleEditor::ShowImGuiEditor() {
                 ShowFileSelector();
             }
 
-              ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));        // 赤系
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));        // 赤系
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f)); // ホバー時
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));  // 押下時
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);                        // 角丸

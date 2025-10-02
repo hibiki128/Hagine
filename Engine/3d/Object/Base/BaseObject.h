@@ -28,11 +28,7 @@ class BaseObject : public Collider {
     // ベースのワールド変換データ
     std::unique_ptr<WorldTransform> transform_;
 
-    Vector3 worldPos;
     Quaternion q;
-    Vector3 worldScale;
-    // カラー
-    ObjColor objColor_;
     // ライティング
     bool isLighting_ = true;
     bool isLoop_ = true;
@@ -42,9 +38,11 @@ class BaseObject : public Collider {
     bool reflect_ = false;
     bool isPrimitive_ = false;
     bool isRainbow_ = false;
+    bool isScene_ = false;
 
     std::string objectName_;
     std::string modelPath_;
+    std::vector<std::string> texturePaths_;
     std::string texturePath_;
     std::string foldarPath_ = "SceneData/Title/ObjectData";
 
@@ -119,7 +117,7 @@ class BaseObject : public Collider {
     const WorldTransform &GetTransform() { return *transform_; }
     std::string &GetName() { return objectName_; }
     std::string &GetModelPath() { return modelPath_; }
-    std::string &GetTexturePath() { return texturePath_; }
+    std::string &GetTexturePath(int index = 0) { return texturePaths_[index]; }
     std::string GetParentName() const;
     std::vector<std::string> GetChildrenNames() const;
     Object3d *GetObject3d() { return obj3d_.get(); }
@@ -133,6 +131,13 @@ class BaseObject : public Collider {
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
     bool &GetLighting() { return isLighting_; }
     bool &GetLoop() { return isLoop_; }
+    bool GetShouldSave() const { return shouldSave_; }
+    bool IsPrimitive() const { return isPrimitive_; }
+    const Vector4 GetColor(int index = 0) { return obj3d_->GetColor(index); }
+    bool IsGizmoSelectable() const { return isGizmoSelectable_; }
+    Material *GetMaterial(uint32_t index = 0) {
+        obj3d_->GetMaterial(index);
+    }
 
     /// ===================================================
     /// setter
@@ -151,7 +156,11 @@ class BaseObject : public Collider {
     // void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }
     void SetReflect(bool reflect) { reflect_ = reflect; }
-    void SetColor(const Vector4 &color) { objColor_.GetColor() = color; }
+    void SetColor(const Vector4 &color, int index = 0) { obj3d_->SetColor(color, index); }
+    void SetShouldSave(bool shouldSave) { shouldSave_ = shouldSave; }
+    void SetPrimitive(bool isPrimitive) { isPrimitive_ = isPrimitive; }
+    void SetIsScene(bool isScene) { isScene_ = isScene; }
+    void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; }
 
   private:
     void DebugObject();
@@ -164,6 +173,8 @@ class BaseObject : public Collider {
     std::vector<Collider *> colliders_;
 
     bool isCollider = false;
+    bool shouldSave_ = true;
+    bool isGizmoSelectable_ = true;
     BlendMode blendMode_;
     std::string parentName_;
 };

@@ -1,98 +1,107 @@
 #pragma once
-#include"Sprite.h"
-#include"memory"
-#include"vector"
-class SceneTransition
-{
-public:
-	SceneTransition();
-	~SceneTransition();
+#include "Sprite.h"
+#include "memory"
+#include "vector"
+class SceneTransition {
+  public:
+    SceneTransition();
+    ~SceneTransition();
 
-	/// <summary>
-	/// 初期化
-	/// </summary>
-	void Initialize();
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    void Initialize();
 
-	/// <summary>
-	/// 更新
-	/// </summary>
-	void Update();
+    /// <summary>
+    /// 更新
+    /// </summary>
+    void Update();
 
-	/// <summary>
-	/// 描画
-	/// </summary>
-	void Draw();
+    /// <summary>
+    /// 描画
+    /// </summary>
+    void Draw();
 
-	void Debug();
+    void Debug();
 
-	/// <summary>
-	/// セット
-	/// </summary>
-	/// <param name="start"></param>
-	void SetFadeInStart(bool start) { fadeInStart = start; }
-	void SetFadeOutStart(bool start) { fadeOutStart = start; }
-	void SetFadeInFinish(bool finish) { fadeInFinish = finish; }
+    /// <summary>
+    /// セット
+    /// </summary>
+    /// <param name="start"></param>
+    void SetFadeInStart(bool start) { fadeInStart = start; }
+    void SetFadeOutStart(bool start) { fadeOutStart = start; }
+    void SetFadeInFinish(bool finish) { fadeInFinish = finish; }
 
-	/// <summary>
-	/// getter
-	/// </summary>
-	/// <returns></returns>
-	bool IsEnd() { return isEnd; }
-	bool FadeInFinish() { return fadeInFinish; }
-	bool FadeInStart() { return fadeInStart; }
+    /// <summary>
+    /// getter
+    /// </summary>
+    /// <returns></returns>
+    bool IsEnd() { return isEnd; }
+    bool FadeInFinish() { return fadeInFinish; }
+    bool FadeInStart() { return fadeInStart; }
 
-	/// <summary>
-	/// リセット
-	/// </summary>
-	void Reset();
+    /// <summary>
+    /// リセット
+    /// </summary>
+    void Reset();
 
-private:
+  private:
+    /// <summary>
+    /// フェードアップデート
+    /// </summary>
+    void FadeUpdate();
 
-	/// <summary>
-	/// フェードアップデート
-	/// </summary>
-	void FadeUpdate();
+    /// <summary>
+    /// フェードイン
+    /// </summary>
+    void FadeIn();
 
-	/// <summary>
-	/// フェードイン
-	/// </summary>
-	void FadeIn();
+    /// <summary>
+    /// フェードアウト
+    /// </summary>
+    void FadeOut();
 
-	/// <summary>
-	/// フェードアウト
-	/// </summary>
-	void FadeOut();
-	
-	/// <summary>
-	/// デフォルトフェードイン
-	/// </summary>
-	void DefaultFadeIn();
-	
-	/// <summary>
-	/// デフォルトフェードアウト
-	/// </summary>
-	void DefaultFadeOut();
+    /// <summary>
+    /// デフォルトフェードイン
+    /// </summary>
+    void DefaultFadeIn();
 
-	void ReverseFadeIn();
+    /// <summary>
+    /// デフォルトフェードアウト
+    /// </summary>
+    void DefaultFadeOut();
 
-	void ReverseFadeOut();
+    void ReverseFadeIn();
 
-private:
-	// フェードの持続時間
-	float duration_ = 0.0f;
-	// 経過時間カウンター
-	float counter_ = 0.0f;
+    void ReverseFadeOut();
 
-	std::unique_ptr<Sprite> sprite_ = nullptr;
-	std::vector<std::vector<std::unique_ptr<Sprite>>> transition_;
+    /// <summary>
+    /// インスタンシング用の変換行列更新
+    /// </summary>
+    void UpdateTransitionInstances();
 
-	Vector2 spPos_ = { 0.0f,0.0f };
+  private:
+    // フェードの持続時間
+    float duration_ = 0.0f;
+    // 経過時間カウンター
+    float counter_ = 0.0f;
 
-	bool fadeInStart = false;
-	bool fadeOutStart = false;
-	bool fadeInFinish = false;
-	bool fadeOutFinish = false;
-	bool isEnd = false;
+    std::unique_ptr<Sprite> sprite_ = nullptr;
 
+    // インスタンシング用Sprite
+    std::unique_ptr<Sprite> transitionSprite_ = nullptr;
+    int totalInstances_;
+    int rows_;
+    int cols_;
+
+    // 各インスタンスのサイズを保存する配列
+    std::vector<std::vector<float>> instanceSizes_;
+
+    Vector2 spPos_ = {0.0f, 0.0f};
+
+    bool fadeInStart = false;
+    bool fadeOutStart = false;
+    bool fadeInFinish = false;
+    bool fadeOutFinish = false;
+    bool isEnd = false;
 };
-
