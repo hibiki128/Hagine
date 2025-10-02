@@ -107,7 +107,9 @@ struct ParticleCSSettings {
     uint32_t maxParticleCount = 10000;
     float sinScaleFrequency;
     float sinScaleAmplitude;
-    float padding3[1];
+    uint32_t enableGravity = 0;           
+    Vector3 gravity = {0.0f, -9.8f, 0.0f};
+    float padding3[1];                    
 };
 
 /// =======================

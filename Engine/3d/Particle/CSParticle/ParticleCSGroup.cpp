@@ -258,8 +258,9 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->sinScaleAmplitude = 0.3f;
     settingsData_->maxParticleCount = 10000;
     settingsData_->emitCount = 0;
+    settingsData_->enableGravity = 0;
+    settingsData_->gravity = {0.0f, -9.8f, 0.0f};
 }
-
 
 void ParticleCSGroup::DrawImGui() {
     if (!settingsData_)
@@ -404,7 +405,7 @@ void ParticleCSGroup::DrawImGui() {
 
             ImGui::Separator();
 
-           ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
             bool enableLifetimeScale = settingsData_->enableLifetimeScale != 0;
             if (ImGui::Checkbox("寿命で小さくなる", &enableLifetimeScale)) {
                 settingsData_->enableLifetimeScale = enableLifetimeScale ? 1 : 0;
@@ -414,7 +415,20 @@ void ParticleCSGroup::DrawImGui() {
             if (ImGui::Checkbox("Sin波で拡縮", &enableSinScale)) {
                 settingsData_->enableSinScale = enableSinScale ? 1 : 0;
             }
+
+            bool enableGravity = settingsData_->enableGravity != 0;
+            if (ImGui::Checkbox("重力を有効化", &enableGravity)) {
+                settingsData_->enableGravity = enableGravity ? 1 : 0;
+            }
             ImGui::PopStyleColor();
+
+            if (enableGravity) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
+                ImGui::DragFloat3("重力ベクトル##Gravity", &settingsData_->gravity.x, 0.1f);
+                ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
 
             if (enableSinScale) {
                 ImGui::Indent();

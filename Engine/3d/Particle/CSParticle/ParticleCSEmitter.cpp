@@ -84,7 +84,6 @@ void ParticleCSEmitter::DrawEmitter() {
     if (!isVisible_)
         return;
 
-    // çƒä½“ã‚¨ãƒŸãƒƒã‚¿ãƒ¼ã®å ´åˆ
     if (emitterMeshData_->triangleCount == 0) {
         Vector3 center = emitterMeshData_->translate;
         Vector3 scale = emitterMeshData_->scale;
@@ -94,7 +93,6 @@ void ParticleCSEmitter::DrawEmitter() {
         DrawLine3D::GetInstance()->DrawSphere(center, color, maxRadius, 16);
 
     } else {
-        // ãƒ¡ãƒƒã‚·ãƒ¥ã‚¨ãƒŸãƒƒã‚¿ãƒ¼ã®ãƒˆãƒ©ãƒ³ã‚¹ãƒ•ã‚©ãƒ¼ãƒ è¡Œåˆ—ã‚’ä½œæˆ
         Vector4 color = {0.0f, 1.0f, 0.0f, 1.0f};
         Vector3 translate = emitterMeshData_->translate;
         Vector3 rotation = emitterMeshData_->rotation;
@@ -108,18 +106,15 @@ void ParticleCSEmitter::DrawEmitter() {
 
         Matrix4x4 transformMatrix = translateMatrix * rotateMatrixZ * rotateMatrixY * rotateMatrixX * scaleMatrix;
 
-        // ä¸‰è§’å½¢ã®å¯è¦–åŒ–
         for (const auto &tri : triangleInfoList_) {
             Vector3 v0 = tri.v0;
             Vector3 v1 = tri.v1;
             Vector3 v2 = tri.v2;
 
-            // ãƒ¯ãƒ¼ãƒ«ãƒ‰ç©ºé–“ã¸å¤‰æ›
             v0 = Transformation(v0, transformMatrix);
             v1 = Transformation(v1, transformMatrix);
             v2 = Transformation(v2, transformMatrix);
 
-            // ä¸‰è§’å½¢ã®è¾ºã‚’ç·šã§æç”»
             DrawLine3D::GetInstance()->SetPoints(v0, v1);
             DrawLine3D::GetInstance()->SetPoints(v1, v2);
             DrawLine3D::GetInstance()->SetPoints(v2, v0);
@@ -167,8 +162,8 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->frequency = 0.5f;
     emitterMeshData_->frequencyTime = 0.0f;
     emitterMeshData_->translate = Vector3(0.0f, 0.0f, 0.0f);
-    emitterMeshData_->rotation = Vector3(0.0f, 0.0f, 0.0f); // å›žè»¢ã‚’åˆæœŸåŒ–
-    emitterMeshData_->scale = Vector3(1.0f, 1.0f, 1.0f);    // ã‚¹ã‚±ãƒ¼ãƒ«ã‚’åˆæœŸåŒ–
+    emitterMeshData_->rotation = Vector3(0.0f, 0.0f, 0.0f);
+    emitterMeshData_->scale = Vector3(1.0f, 1.0f, 1.0f);
     emitterMeshData_->triangleCount = 0;
     emitterMeshData_->emit = 0;
 }
@@ -280,7 +275,7 @@ void ParticleCSEmitter::CreateModelTriangles() {
         totalArea += area;
     }
 
-   triangleCDF_.resize(triangleAreas.size());
+    triangleCDF_.resize(triangleAreas.size());
     float accum = 0.0f;
     for (size_t i = 0; i < triangleAreas.size(); i++) {
         accum += triangleAreas[i] / totalArea;
@@ -355,10 +350,12 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "endColor", group->GetSettingsData()->endColor);
         data->Save(prefix + "enableLifetimeScale", group->GetSettingsData()->enableLifetimeScale);
         data->Save(prefix + "enableRandomColor", group->GetSettingsData()->enableRandomColor);
-        data->Save(prefix + "enableSinScale", group->GetSettingsData()->enableSinScale);      
+        data->Save(prefix + "enableSinScale", group->GetSettingsData()->enableSinScale);
         data->Save(prefix + "sinScaleFrequency", group->GetSettingsData()->sinScaleFrequency);
         data->Save(prefix + "sinScaleAmplitude", group->GetSettingsData()->sinScaleAmplitude);
         data->Save(prefix + "emitCount", group->GetSettingsData()->emitCount);
+        data->Save(prefix + "enableGravity", group->GetSettingsData()->enableGravity);
+        data->Save(prefix + "gravity", group->GetSettingsData()->gravity);
         data->Save(prefix + "blendMode", static_cast<int>(group->GetParticleGroupData().blendMode));
     }
 }
@@ -406,9 +403,11 @@ void ParticleCSEmitter::LoadSetting() {
         settings.enableLifetimeScale = data->Load<uint32_t>(prefix + "enableLifetimeScale", 0);
         settings.enableRandomColor = data->Load<uint32_t>(prefix + "enableRandomColor", 0);
         settings.enableSinScale = data->Load<uint32_t>(prefix + "enableSinScale", 0);
-        settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f); 
-        settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f); 
+        settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f);
+        settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f);
         settings.emitCount = static_cast<uint32_t>(data->Load(prefix + "emitCount", 10));
+        settings.enableGravity = data->Load<bool>(prefix + "enableGravity", false);
+        settings.gravity = data->Load<Vector3>(prefix + "gravity", {0.0f, 0.0f, 0.0f});
         settings.maxParticleCount = group->GetMaxParticleCount();
 
         group->SetSettingData(settings);
@@ -467,6 +466,8 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f);
         settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f);
         settings.emitCount = static_cast<uint32_t>(data->Load(prefix + "emitCount", 10));
+        settings.enableGravity = data->Load<bool>(prefix + "enableGravity", false);
+        settings.gravity = data->Load<Vector3>(prefix + "gravity", {0.0f, 0.0f, 0.0f});
         settings.maxParticleCount = group->GetMaxParticleCount();
 
         group->SetSettingData(settings);

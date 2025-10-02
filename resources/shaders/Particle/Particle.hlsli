@@ -69,6 +69,8 @@ struct ParticleCSSettings
     int maxParticleCount;
     float sinScaleFrequency;
     float sinScaleAmplitude;
+    int enableGravity;
+    float3 gravity;
     float padding3;
 };
 
