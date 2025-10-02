@@ -1,5 +1,5 @@
-#include"Particle.hlsli"
-#include"../Random/Random.hlsli"
+#include "../../Random/Random.hlsli"
+#include"../Particle.hlsli"
 
 ConstantBuffer<EmitterMesh> gEmitterMesh : register(b0);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);

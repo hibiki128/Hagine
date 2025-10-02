@@ -39,6 +39,7 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
         dxCommon_->TransitionUAVBarrier(group->GetOutputParticleResource().Get());
         EmitterDisPatch();
         group->UpdateParticleCSDisPatch();
+        group->CountAliveParticles();
         dxCommon_->TransitionSRVBarrier();
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
         const auto &meshes = group->GetModelData().meshes;
@@ -319,6 +320,27 @@ void ParticleCSEmitter::CreateModelTriangles() {
                                               static_cast<uint32_t>(triangleCDF_.size()), sizeof(float));
 
     emitterMeshData_->triangleCount = static_cast<uint32_t>(triangleInfoList_.size());
+}
+
+size_t ParticleCSEmitter::GetTotalAliveParticles() {
+    size_t total = 0;
+    for (auto &group : particleGroups_) {
+        total += group->GetAliveParticleCount();
+    }
+    return total;
+}
+
+std::vector<ParticleCSEmitter::GroupStatistics> ParticleCSEmitter::GetGroupStatistics() {
+    std::vector<GroupStatistics> stats;
+
+    for (auto &group : particleGroups_) {
+        GroupStatistics stat;
+        stat.groupName = group->GetGroupName();
+        stat.aliveCount = group->GetAliveParticleCount();
+        stats.push_back(stat);
+    }
+
+    return stats;
 }
 
 void ParticleCSEmitter::SaveSetting() {

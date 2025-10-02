@@ -96,6 +96,45 @@ std::unique_ptr<ParticleCSEmitter> ParticleCSEditor::CreateEmitterFromTemplate(c
     return originalEmitter->Clone();
 }
 
+void ParticleCSEditor::ShowGPUParticleStatistics() {
+    if (ImGui::CollapsingHeader("GPUパーティクル統計")) {
+
+        // エミッター名ごとに集計
+        std::map<std::string, size_t> emitterStats;
+        size_t grandTotal = 0;
+
+        for (const auto &[name, emitter] : emitters_) {
+            if (!emitter)
+                continue;
+
+            size_t emitterTotal = emitter->GetTotalAliveParticles();
+
+            emitterStats[name] = emitterTotal;
+            grandTotal += emitterTotal;
+        }
+
+        // ヘッダー情報
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "合計: %zu個", grandTotal);
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(%zu種類)", emitterStats.size());
+
+        if (!emitterStats.empty()) {
+            ImGui::Separator();
+
+            // エミッターごとに表示
+            for (const auto &[emitterName, count] : emitterStats) {
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "%s", emitterName.c_str());
+                ImGui::SameLine();
+                ImGui::Text(": %zu", count);
+            }
+        } else {
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "エミッターなし");
+        }
+    }
+}
+
 
 void ParticleCSEditor::DebugAll() {
     if (ImGui::BeginTabBar("GPUパーティクル")) {

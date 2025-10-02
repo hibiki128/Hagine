@@ -1,4 +1,4 @@
-#include "Particle.hlsli"
+#include "../Particle.hlsli"
 
 ConstantBuffer<PerFrame> gPerFrame : register(b0);
 ConstantBuffer<ParticleCSSettings> gSettings : register(b1);

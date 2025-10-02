@@ -1101,10 +1101,10 @@
     <FxCompile Include="resources\shaders\Object\Object3d.VS.hlsl">
       <Filter>リソース ファイル\Object</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Particle\ParticleCS.PS.hlsl">
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\ParticleCS.PS.hlsl">
       <Filter>リソース ファイル\Particle</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Particle\ParticleCS.VS.hlsl">
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\ParticleCS.VS.hlsl">
       <Filter>リソース ファイル\Particle</Filter>
     </FxCompile>
     <FxCompile Include="Resources\shaders\Skinning\Skinning.CS.hlsl">
@@ -1125,16 +1125,16 @@
     <FxCompile Include="resources\shaders\Sprite\Sprite.PS.hlsl">
       <Filter>リソース ファイル\Sprite</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\EmitParticle.CS.hlsl">
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\EmitParticle.CS.hlsl">
       <Filter>ソースファイル\Resources\shaders\Particle</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\InitParticle.CS.hlsl">
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\InitParticle.CS.hlsl">
       <Filter>ソースファイル\Resources\shaders\Particle</Filter>
     </FxCompile>
     <FxCompile Include="Resources\shaders\Particle\Particle.PS.hlsl">
       <Filter>ソースファイル\Resources\shaders\Particle</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\UpdateParticle.CS.hlsl">
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\UpdateParticle.CS.hlsl">
       <Filter>ソースファイル\Resources\shaders\Particle</Filter>
     </FxCompile>
     <FxCompile Include="Resources\shaders\OffScreen\Dissolve.PS.hlsl">
@@ -1146,5 +1146,6 @@
     <FxCompile Include="Resources\shaders\OffScreen\Random.PS.hlsl">
       <Filter>リソース ファイル\Random</Filter>
     </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\CountParticle.CS.hlsl" />
   </ItemGroup>
 </Project>

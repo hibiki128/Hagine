@@ -40,3 +40,7 @@ void ParticleCommon::ComputeEmitterDrawCommonSetting() {
 void ParticleCommon::ComputeUpdateEmitterDrawCommonSetting() {
     computePsoManager_->DrawCommonSetting(ComputePipelineType::kUpdateEmitter);
 }
+
+void ParticleCommon::ComputeCountDrawCommonSetting() {
+    computePsoManager_->DrawCommonSetting(ComputePipelineType::kCount);
+}
