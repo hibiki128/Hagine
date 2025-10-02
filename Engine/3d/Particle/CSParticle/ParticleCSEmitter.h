@@ -73,15 +73,24 @@ class ParticleCSEmitter {
         return Vector3(1.0f, 1.0f, 1.0f);
     }
 
-    // nameCounterã‚’ã‚¯ãƒªã‚¢ã™ã‚‹é™çš„é–¢æ•°
     static void ClearNameCounter() {
         GetNameCounter().clear();
     }
 
-    // ç‰¹å®šã®ãƒ™ãƒ¼ã‚¹åã®ã‚«ã‚¦ãƒ³ã‚¿ãƒ¼ã®ã¿ã‚¯ãƒªã‚¢
     static void ClearNameCounter(const std::string &baseName) {
         GetNameCounter().erase(baseName);
     }
+
+     size_t GetTotalAliveParticles();
+
+    // グループごとの統計情報
+    struct GroupStatistics {
+        std::string groupName;
+        uint32_t aliveCount;
+    };
+
+    // 全グループの統計を取得
+    std::vector<GroupStatistics> GetGroupStatistics();
 
   private:
     /// ==============================================

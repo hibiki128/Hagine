@@ -15,6 +15,7 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     CreatePerFrameResource();
     CreateFreeListIndexResource();
     CreateFreeListResource();
+    CreateAliveCountResource();
 }
 
 int ParticleCSGroup::CalculateOptimalEmitCount() const {
@@ -258,8 +259,84 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->sinScaleAmplitude = 0.3f;
     settingsData_->maxParticleCount = 10000;
     settingsData_->emitCount = 0;
+    settingsData_->enableGravity = 0;
+    settingsData_->gravity = {0.0f, -9.8f, 0.0f};
 }
 
+void ParticleCSGroup::CreateAliveCountResource() {
+    // GPU側のカウント用バッファ (UAV)
+    aliveCountResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t), true);
+
+    aliveCountSrvIndex_ = srvManager_->Allocate() + 1;
+    aliveCountSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(aliveCountSrvIndex_);
+    aliveCountSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(aliveCountSrvIndex_);
+    srvManager_->CreateUAVStructuredBuffer(aliveCountSrvIndex_, aliveCountResource_.Get(), 1, sizeof(uint32_t));
+
+    // CPU読み取り用のReadbackバッファ
+    D3D12_HEAP_PROPERTIES readbackHeapProps{};
+    readbackHeapProps.Type = D3D12_HEAP_TYPE_READBACK;
+
+    D3D12_RESOURCE_DESC readbackDesc{};
+    readbackDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    readbackDesc.Width = sizeof(uint32_t);
+    readbackDesc.Height = 1;
+    readbackDesc.DepthOrArraySize = 1;
+    readbackDesc.MipLevels = 1;
+    readbackDesc.SampleDesc.Count = 1;
+    readbackDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+    dxCommon_->GetDevice()->CreateCommittedResource(
+        &readbackHeapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &readbackDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&aliveCountReadbackResource_));
+}
+
+void ParticleCSGroup::CountAliveParticles() {
+    // CountParticle.CSを実行
+    particleCommon_->ComputeCountDrawCommonSetting();
+
+    commandList->SetComputeRootConstantBufferView(0, settingsResource_->GetGPUVirtualAddress());
+    commandList->SetComputeRootDescriptorTable(1, aliveCountSrvHandle_.second);
+    commandList->SetComputeRootDescriptorTable(2, outputParticleSrvHandle_.second);
+
+    int dispatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
+    commandList->Dispatch(dispatchCount, 1, 1);
+
+    // UAVバリア（UAV書き込み完了を保証）
+    dxCommon_->TransitionUAVBarrier(aliveCountResource_.Get());
+
+    // CopyResource前にリソース状態を遷移（自作関数を使う）
+    dxCommon_->BarrierTransition(
+        aliveCountResource_.Get(),
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        D3D12_RESOURCE_STATE_COPY_SOURCE);
+
+    // GPU→CPUへコピー
+    commandList->CopyResource(aliveCountReadbackResource_.Get(), aliveCountResource_.Get());
+
+    // 戻す（次のDispatch用に再びUAV状態へ）
+    dxCommon_->BarrierTransition(
+        aliveCountResource_.Get(),
+        D3D12_RESOURCE_STATE_COPY_SOURCE,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+}
+
+uint32_t ParticleCSGroup::GetAliveParticleCount() {
+    // Readbackバッファから読み取り
+    uint32_t *mappedData = nullptr;
+    D3D12_RANGE readRange{0, sizeof(uint32_t)};
+
+    HRESULT hr = aliveCountReadbackResource_->Map(0, &readRange, reinterpret_cast<void **>(&mappedData));
+    if (SUCCEEDED(hr) && mappedData) {
+        cachedAliveCount_ = *mappedData;
+        aliveCountReadbackResource_->Unmap(0, nullptr);
+    }
+
+    return cachedAliveCount_;
+}
 
 void ParticleCSGroup::DrawImGui() {
     if (!settingsData_)
@@ -404,7 +481,7 @@ void ParticleCSGroup::DrawImGui() {
 
             ImGui::Separator();
 
-           ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
             bool enableLifetimeScale = settingsData_->enableLifetimeScale != 0;
             if (ImGui::Checkbox("寿命で小さくなる", &enableLifetimeScale)) {
                 settingsData_->enableLifetimeScale = enableLifetimeScale ? 1 : 0;
@@ -414,7 +491,20 @@ void ParticleCSGroup::DrawImGui() {
             if (ImGui::Checkbox("Sin波で拡縮", &enableSinScale)) {
                 settingsData_->enableSinScale = enableSinScale ? 1 : 0;
             }
+
+            bool enableGravity = settingsData_->enableGravity != 0;
+            if (ImGui::Checkbox("重力を有効化", &enableGravity)) {
+                settingsData_->enableGravity = enableGravity ? 1 : 0;
+            }
             ImGui::PopStyleColor();
+
+            if (enableGravity) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
+                ImGui::DragFloat3("重力ベクトル##Gravity", &settingsData_->gravity.x, 0.1f);
+                ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
 
             if (enableSinScale) {
                 ImGui::Indent();

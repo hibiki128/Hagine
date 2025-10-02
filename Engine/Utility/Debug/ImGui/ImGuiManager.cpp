@@ -608,6 +608,8 @@ void ImGuiManager::ShowStatisticsWindow() {
 
     ParticleEditor::GetInstance()->SceneParticleCount();
 
+    ParticleCSEditor::GetInstance()->ShowGPUParticleStatistics();
+
     ImGui::End();
 }
 

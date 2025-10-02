@@ -1,4 +1,4 @@
-#include "Particle.hlsli"
+#include "../Particle.hlsli"
 
 ConstantBuffer<PerFrame> gPerFrame : register(b0);
 ConstantBuffer<ParticleCSSettings> gSettings : register(b1);
@@ -14,6 +14,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
     {
         if (gParticles[particleIndex].color.a != 0)
         {
+            // 重力の適用 (追加)
+            if (gSettings.enableGravity)
+            {
+                gParticles[particleIndex].velocity += gSettings.gravity * gPerFrame.deltaTime;
+            }
+            
             // 位置更新
             gParticles[particleIndex].translate += gParticles[particleIndex].velocity * gPerFrame.deltaTime;
             

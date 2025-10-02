@@ -17,7 +17,7 @@ class ParticleCSGroup {
     /// public methods
     /// ===================================
 
-    ParticleCSGroupData CreateParticleGroup(const std::string &groupName, const std::string &filename, uint32_t maxParticleCount = 10000, const std::string &texturePath = {},BlendMode blendMode = BlendMode::kAdd);
+    ParticleCSGroupData CreateParticleGroup(const std::string &groupName, const std::string &filename, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
     ParticleCSGroupData CreatePrimitiveParticleGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
     void Update(const ViewProjection &vp);
     void DrawImGui();
@@ -111,6 +111,12 @@ class ParticleCSGroup {
 
     std::string GetModelPath() { return modelFilePath_; }
 
+    // 生存パーティクル数を取得
+    uint32_t GetAliveParticleCount();
+
+    // カウント処理を実行
+    void CountAliveParticles();
+
   private:
     /// ===================================
     /// private methods
@@ -126,6 +132,7 @@ class ParticleCSGroup {
     void CreateFreeListIndexResource();
     void CreateFreeListResource();
     void CreateSettingsResource();
+    void CreateAliveCountResource();
 
   private:
     /// ===================================
@@ -164,6 +171,12 @@ class ParticleCSGroup {
 
     Microsoft::WRL::ComPtr<ID3D12Resource> settingsResource_;
     ParticleCSSettings *settingsData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> aliveCountResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> aliveCountReadbackResource_;
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveCountSrvHandle_;
+    uint32_t aliveCountSrvIndex_ = 0;
+    uint32_t cachedAliveCount_ = 0;
 
     ID3D12GraphicsCommandList *commandList;
 

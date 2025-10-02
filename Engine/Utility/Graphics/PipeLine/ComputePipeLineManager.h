@@ -11,6 +11,7 @@ enum class ComputePipelineType {
     kInitParticle,
     kEmitter,
     kUpdateEmitter,
+    kCount,
 };
 
 class ComputePipeLineManager {
@@ -74,6 +75,11 @@ class ComputePipeLineManager {
     void CreateUpdateEmitterPipelines();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateUpdateEmitterRootSignature();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateUpdateEmitterGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
+
+    // パーティクルカウント関連
+    void CreateCountPipelines();
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateCountRootSignature();
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateCountGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
 
   private:
     DirectXCommon *dxCommon_;
