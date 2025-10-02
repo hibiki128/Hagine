@@ -28,21 +28,6 @@
     <FxCompile Include="Resources\shaders\Particle\Particle.PS.hlsl">
       <Filter>Resources\shaders\Particle</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Particle\ParticleCS.PS.hlsl">
-      <Filter>Resources\shaders\Particle</Filter>
-    </FxCompile>
-    <FxCompile Include="resources\shaders\Particle\ParticleCS.VS.hlsl">
-      <Filter>Resources\shaders\Particle</Filter>
-    </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\EmitParticle.CS.hlsl">
-      <Filter>Resources\shaders\Particle</Filter>
-    </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\InitParticle.CS.hlsl">
-      <Filter>Resources\shaders\Particle</Filter>
-    </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\UpdateParticle.CS.hlsl">
-      <Filter>Resources\shaders\Particle</Filter>
-    </FxCompile>
     <FxCompile Include="resources\shaders\Object\Object3d.PS.hlsl">
       <Filter>Resources\shaders\Object</Filter>
     </FxCompile>
@@ -87,6 +72,24 @@
     </FxCompile>
     <FxCompile Include="resources\shaders\OffScreen\Vignette.PS.hlsl">
       <Filter>Resources\shaders\OffScreen</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\EmitParticle.CS.hlsl">
+      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\CountParticle.CS.hlsl">
+      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\InitParticle.CS.hlsl">
+      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\ParticleCS.PS.hlsl">
+      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\ParticleCS.VS.hlsl">
+      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\shaders\Particle\CSParticle\UpdateParticle.CS.hlsl">
+      <Filter>Resources\shaders\Particle\CSParticle</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1107,6 +1110,9 @@
     </Filter>
     <Filter Include="Resources\shaders\Sprite">
       <UniqueIdentifier>{2a0da68a-7f77-42be-ac9f-728eedfb6959}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\shaders\Particle\CSParticle">
+      <UniqueIdentifier>{50eb7f6a-9f9e-4eda-9b15-7d4945c73893}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
