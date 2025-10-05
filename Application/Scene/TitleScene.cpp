@@ -1,22 +1,26 @@
 #include "TitleScene.h"
 #include "Engine/Utility/Scene/SceneManager.h"
+#include "myMath.h"
 #include <Frame.h>
 void TitleScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
-    vp_.Initialize();
-
+    LightGroup::GetInstance()->LoadLightData("TitleScene");
+    vp_.eulerRotation_ = {
+        degreesToRadians(26.3f),
+        degreesToRadians(-122.7f),
+        degreesToRadians(0.0f)};
+    vp_.Initialize("CurrentCamera");
+    BaseObjectManager::GetInstance()->LoadAll("TitleScene");
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
     skyBox_ = SkyBox::GetInstance();
     skyBox_->Initialize("game/skybox.dds");
 
-    titleLogo_ = std::make_unique<Sprite>();
-    titleLogo_->Initialize("game/titleLogo.png", titleLogoPosition_, {1.0f, 1.0f, 1.0f, 1.0f}, {0.5f, 0.5f});
-    startButton_ = std::make_unique<Sprite>();
-    startButton_->Initialize("game/startButton.png", startButtonPosition_, {1.0f, 1.0f, 1.0f, 1.0f}, {0.5f, 0.5f});
+    titleUI_ = std::make_unique<TitleUI>();
+    titleUI_->Initialize();
 }
 
 void TitleScene::Finalize() {
@@ -29,20 +33,23 @@ void TitleScene::Update() {
 
     // シーン切り替え
     ChangeScene();
+    time_ += Frame::DeltaTime();
+    if (time_ >= kMaxTime_) {
+        vp_.EaseCameraMove(EasingType::InCubic, "TitleMovedCamera", 1.0f);
+    }
 
-    titleLogo_->SetPosition(titleLogoPosition_);
-    titleLogo_->SetSize(titleLogo_->GetTexSize() * titleLogoSize_);
-    startButton_->SetPosition(startButtonPosition_);
-    startButton_->SetSize(startButton_->GetTexSize() * startButtonSize_);
+    titleUI_->Update();
 }
 
 void TitleScene::Draw() {
     /// -------描画処理開始-------
-    titleLogo_->Draw();
-    startButton_->Draw();
     skyBox_->Draw(vp_);
 
     BaseObjectManager::GetInstance()->Draw(vp_);
+
+    SpriteManager::GetInstance()->DrawAll();
+
+    titleUI_->Draw(vp_);
 
     /// -------描画処理終了-------
 }
@@ -65,18 +72,6 @@ void TitleScene::AddSceneSetting() {
 }
 
 void TitleScene::AddObjectSetting() {
-    if (ImGui::CollapsingHeader("UI")) {
-        if (ImGui::TreeNode("タイトル")) {
-            ImGui::DragFloat2("位置", &titleLogoPosition_.x, 0.1f);
-            ImGui::DragFloat("サイズ", &titleLogoSize_, 0.1f);
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNode("スタートボタン")) {
-            ImGui::DragFloat2("位置", &startButtonPosition_.x, 0.1f);
-            ImGui::DragFloat("サイズ", &startButtonSize_, 0.1f);
-            ImGui::TreePop();
-        }
-    }
 }
 
 void TitleScene::AddParticleSetting() {
@@ -87,7 +82,7 @@ void TitleScene::CameraUpdate() {
 }
 
 void TitleScene::ChangeScene() {
-    if (input_->TriggerKey(DIK_SPACE)) {
+    if (input_->TriggerKey(DIK_SPACE) && time_ >= 3.5f) {
         sceneManager_->NextSceneReservation("GAME");
     }
 }

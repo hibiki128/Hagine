@@ -216,6 +216,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSGroupManager.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSEditor.cpp" />
     <ClCompile Include="Engine\2d\SpriteManager.cpp" />
+    <ClCompile Include="Application\UI\Scene\Title\TitleUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".claudiaideconfig" />
@@ -383,6 +384,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
+    <ClInclude Include="Application\UI\Scene\Title\TitleUI.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\OffScreen\Dissolve.PS.hlsl">
