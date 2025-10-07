@@ -81,7 +81,7 @@ class ParticleCSEmitter {
         GetNameCounter().erase(baseName);
     }
 
-     size_t GetTotalAliveParticles();
+    size_t GetTotalAliveParticles();
 
     // グループごとの統計情報
     struct GroupStatistics {
@@ -109,6 +109,7 @@ class ParticleCSEmitter {
     void LoadModel(const std::string &modelPath);
     void LoadPrimitiveModel(PrimitiveType type);
     void CreateModelTriangles();
+    void CreateModelEdges();
 
   private:
     /// ==============================================
@@ -138,12 +139,19 @@ class ParticleCSEmitter {
 
     Microsoft::WRL::ComPtr<ID3D12Resource> triangleCDFResource_ = nullptr;
     float *triangleCDFData_ = nullptr;
-    std::vector<float> triangleCDF_; // ç´¯ç©åˆ†å¸ƒé–¢æ•°
+    std::vector<float> triangleCDF_;
 
     uint32_t triangleInfoSrvIndex_ = 0;
     uint32_t triangleCDFSrvIndex_ = 0;
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> triangleInfoSrvHandle_;
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> triangleCDFSrvHandle_;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> edgeInfoResource_ = nullptr;
+    EdgeInfo *edgeInfoData_ = nullptr;
+    std::vector<EdgeInfo> edgeInfoList_;
+
+    uint32_t edgeInfoSrvIndex_ = 0;
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> edgeInfoSrvHandle_;
 
     // Model data for mesh emitters
     Model *model_ = nullptr;

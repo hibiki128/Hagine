@@ -22,6 +22,7 @@ void ParticleCSEmitter::Initialize(const std::string &name, const std::string &m
     modelPath_ = modelPath;
     LoadModel(modelPath);
     CreateModelTriangles();
+    CreateModelEdges();
 }
 
 void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primitiveType) {
@@ -29,6 +30,7 @@ void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primit
     primitiveType_ = primitiveType;
     LoadPrimitiveModel(primitiveType);
     CreateModelTriangles();
+    CreateModelEdges();
 }
 
 void ParticleCSEmitter::Draw(const ViewProjection &vp) {
@@ -85,41 +87,40 @@ void ParticleCSEmitter::DrawEmitter() {
     if (!isVisible_)
         return;
 
-    if (emitterMeshData_->triangleCount == 0) {
-        Vector3 center = emitterMeshData_->translate;
-        Vector3 scale = emitterMeshData_->scale;
-        Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f};
+    Vector3 translate = emitterMeshData_->translate;
+    Vector3 rotation = emitterMeshData_->rotation;
+    Vector3 scale = emitterMeshData_->scale;
 
-        float maxRadius = std::max(std::max(scale.x, scale.y), scale.z);
-        DrawLine3D::GetInstance()->DrawSphere(center, color, maxRadius, 16);
+    Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
+    Matrix4x4 rotateMatrixX = MakeRotateXMatrix(rotation.x);
+    Matrix4x4 rotateMatrixY = MakeRotateYMatrix(rotation.y);
+    Matrix4x4 rotateMatrixZ = MakeRotateZMatrix(rotation.z);
+    Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
+    Matrix4x4 transformMatrix = translateMatrix * rotateMatrixZ * rotateMatrixY * rotateMatrixX * scaleMatrix;
 
-    } else {
+    if (emitterMeshData_->emitFromSurface == 2 && !edgeInfoList_.empty()) {
+        Vector4 color = {1.0f, 0.5f, 0.0f, 1.0f};
+        for (const auto &edge : edgeInfoList_) {
+            Vector3 v0 = Transformation(edge.v0, transformMatrix);
+            Vector3 v1 = Transformation(edge.v1, transformMatrix);
+            DrawLine3D::GetInstance()->SetPoints(v0, v1);
+        }
+    } else if (!triangleInfoList_.empty()) {
         Vector4 color = {0.0f, 1.0f, 0.0f, 1.0f};
-        Vector3 translate = emitterMeshData_->translate;
-        Vector3 rotation = emitterMeshData_->rotation;
-        Vector3 scale = emitterMeshData_->scale;
-
-        Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
-        Matrix4x4 rotateMatrixX = MakeRotateXMatrix(rotation.x);
-        Matrix4x4 rotateMatrixY = MakeRotateYMatrix(rotation.y);
-        Matrix4x4 rotateMatrixZ = MakeRotateZMatrix(rotation.z);
-        Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
-
-        Matrix4x4 transformMatrix = translateMatrix * rotateMatrixZ * rotateMatrixY * rotateMatrixX * scaleMatrix;
-
         for (const auto &tri : triangleInfoList_) {
-            Vector3 v0 = tri.v0;
-            Vector3 v1 = tri.v1;
-            Vector3 v2 = tri.v2;
-
-            v0 = Transformation(v0, transformMatrix);
-            v1 = Transformation(v1, transformMatrix);
-            v2 = Transformation(v2, transformMatrix);
+            Vector3 v0 = Transformation(tri.v0, transformMatrix);
+            Vector3 v1 = Transformation(tri.v1, transformMatrix);
+            Vector3 v2 = Transformation(tri.v2, transformMatrix);
 
             DrawLine3D::GetInstance()->SetPoints(v0, v1);
             DrawLine3D::GetInstance()->SetPoints(v1, v2);
             DrawLine3D::GetInstance()->SetPoints(v2, v0);
         }
+    } else {
+        Vector3 center = emitterMeshData_->translate;
+        Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f};
+        float maxRadius = std::max(std::max(scale.x, scale.y), scale.z);
+        DrawLine3D::GetInstance()->DrawSphere(center, color, maxRadius, 16);
     }
 }
 
@@ -168,6 +169,7 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->triangleCount = 0;
     emitterMeshData_->emit = 0;
     emitterMeshData_->emitFromSurface = 1;
+    emitterMeshData_->edgeCount = 0;
 }
 
 void ParticleCSEmitter::EmitterDisPatch() {
@@ -185,9 +187,15 @@ void ParticleCSEmitter::EmitterDisPatch() {
         commandList->SetComputeRootConstantBufferView(4, group->GetPerFrameResource()->GetGPUVirtualAddress());
         commandList->SetComputeRootConstantBufferView(5, group->GetSettingsResource()->GetGPUVirtualAddress());
 
+        // 三角形情報を設定
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
             commandList->SetComputeRootDescriptorTable(6, triangleInfoSrvHandle_.second);
             commandList->SetComputeRootDescriptorTable(7, triangleCDFSrvHandle_.second);
+        }
+
+        // エッジ情報を設定
+        if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
+            commandList->SetComputeRootDescriptorTable(8, edgeInfoSrvHandle_.second);
         }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
@@ -322,6 +330,90 @@ void ParticleCSEmitter::CreateModelTriangles() {
     emitterMeshData_->triangleCount = static_cast<uint32_t>(triangleInfoList_.size());
 }
 
+void ParticleCSEmitter::CreateModelEdges() {
+    if (modelData_.meshes.empty())
+        return;
+
+    edgeInfoList_.clear();
+
+    std::map<std::pair<uint32_t, uint32_t>, int> edgeMap;
+
+    for (const auto &mesh : modelData_.meshes) {
+        for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
+            uint32_t i0 = mesh.indices[i];
+            uint32_t i1 = mesh.indices[i + 1];
+            uint32_t i2 = mesh.indices[i + 2];
+
+            if (i0 >= mesh.vertices.size() || i1 >= mesh.vertices.size() || i2 >= mesh.vertices.size())
+                continue;
+
+            std::array<std::pair<uint32_t, uint32_t>, 3> edges = {{{std::min(i0, i1), std::max(i0, i1)},
+                                                                   {std::min(i1, i2), std::max(i1, i2)},
+                                                                   {std::min(i2, i0), std::max(i2, i0)}}};
+
+            for (const auto &edge : edges) {
+                edgeMap[edge]++;
+            }
+        }
+    }
+
+    bool isClosedMesh = true;
+    for (const auto &[edge, count] : edgeMap) {
+        if (count == 1) {
+            isClosedMesh = false;
+            break;
+        }
+    }
+
+    for (const auto &[edge, count] : edgeMap) {
+        if (!isClosedMesh && count != 1)
+            continue;
+
+        uint32_t idx0 = edge.first;
+        uint32_t idx1 = edge.second;
+
+        Vector3 v0, v1;
+        bool found = false;
+        for (const auto &mesh : modelData_.meshes) {
+            if (idx0 < mesh.vertices.size() && idx1 < mesh.vertices.size()) {
+                v0 = Vector3(mesh.vertices[idx0].position.x,
+                             mesh.vertices[idx0].position.y,
+                             mesh.vertices[idx0].position.z);
+                v1 = Vector3(mesh.vertices[idx1].position.x,
+                             mesh.vertices[idx1].position.y,
+                             mesh.vertices[idx1].position.z);
+                found = true;
+                break;
+            }
+        }
+
+        if (found) {
+            EdgeInfo edgeInfo;
+            edgeInfo.v0 = v0;
+            edgeInfo.v1 = v1;
+            edgeInfo.padding0 = 0.0f;
+            edgeInfo.padding1 = 0.0f;
+            edgeInfoList_.push_back(edgeInfo);
+        }
+    }
+
+    if (edgeInfoList_.empty())
+        return;
+
+    size_t edgeInfoBufferSize = sizeof(EdgeInfo) * edgeInfoList_.size();
+    edgeInfoResource_ = dxCommon_->CreateBufferResource(edgeInfoBufferSize);
+    edgeInfoResource_->Map(0, nullptr, reinterpret_cast<void **>(&edgeInfoData_));
+    std::memcpy(edgeInfoData_, edgeInfoList_.data(), edgeInfoBufferSize);
+
+    edgeInfoSrvIndex_ = srvManager_->Allocate() + 1;
+    edgeInfoSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(edgeInfoSrvIndex_);
+    edgeInfoSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(edgeInfoSrvIndex_);
+    srvManager_->CreateSRVforStructuredBuffer(edgeInfoSrvIndex_, edgeInfoResource_.Get(),
+                                              static_cast<uint32_t>(edgeInfoList_.size()), sizeof(EdgeInfo));
+
+    emitterMeshData_->edgeCount = static_cast<uint32_t>(edgeInfoList_.size());
+}
+
 size_t ParticleCSEmitter::GetTotalAliveParticles() {
     size_t total = 0;
     for (auto &group : particleGroups_) {
@@ -405,6 +497,7 @@ void ParticleCSEmitter::LoadSetting() {
     } else if (primitiveType_ != PrimitiveType::None) {
         LoadPrimitiveModel(primitiveType_);
         CreateModelTriangles();
+        CreateModelEdges();
     }
 
     groupNum_ = data->Load("particleGroupCount", 0);
@@ -463,9 +556,11 @@ void ParticleCSEmitter::LoadCloneSetting() {
     if (!modelPath_.empty()) {
         LoadModel(modelPath_);
         CreateModelTriangles();
+        CreateModelEdges();
     } else if (primitiveType_ != PrimitiveType::None) {
         LoadPrimitiveModel(primitiveType_);
         CreateModelTriangles();
+        CreateModelEdges();
     }
 
     groupNum_ = data->Load("particleGroupCount", 0);
@@ -509,7 +604,6 @@ void ParticleCSEmitter::DrawImGui() {
             ImGuiStyle &style = ImGui::GetStyle();
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.13f, 0.14f, 0.15f, 1.00f));
 
-            // エミッターデータセクション
             ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.2f, 0.2f, 0.8f));
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.5f, 0.3f, 0.3f, 0.9f));
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.6f, 0.4f, 0.4f, 1.0f));
@@ -545,8 +639,8 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::Spacing();
                 ImGui::Separator();
 
-                // 発生位置設定
-                if (emitterMeshData_->triangleCount > 0) {
+                // 発生位置設定（ラジオボタンで3択）
+                if (emitterMeshData_->triangleCount > 0 || emitterMeshData_->edgeCount > 0) {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.9f, 0.6f, 1.0f));
                     ImGui::Text("発生位置:");
                     ImGui::PopStyleColor();
@@ -554,15 +648,28 @@ void ParticleCSEmitter::DrawImGui() {
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
                     ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
 
-                    bool emitFromSurface = emitterMeshData_->emitFromSurface != 0;
-                    if (ImGui::Checkbox("表面から発生##EmitFromSurface", &emitFromSurface)) {
-                        emitterMeshData_->emitFromSurface = emitFromSurface ? 1 : 0;
-                    }
+                    int emitMode = static_cast<int>(emitterMeshData_->emitFromSurface);
+
+                    ImGui::RadioButton("内部から発生##EmitInternal", &emitMode, 0);
+                    ImGui::SameLine();
+                    ImGui::RadioButton("表面から発生##EmitSurface", &emitMode, 1);
+                    ImGui::SameLine();
+                    ImGui::RadioButton("線上から発生##EmitEdge", &emitMode, 2);
+
+                    emitterMeshData_->emitFromSurface = static_cast<uint32_t>(emitMode);
 
                     ImGui::PopStyleColor(2);
 
+                    // ツールチップ
                     if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip(emitFromSurface ? "メッシュの表面からパーティクルが発生します" : "メッシュの内側全体からパーティクルが発生します");
+                        const char *tooltip = "";
+                        if (emitMode == 0)
+                            tooltip = "メッシュの内側全体からパーティクルが発生します";
+                        else if (emitMode == 1)
+                            tooltip = "メッシュの表面からパーティクルが発生します";
+                        else if (emitMode == 2)
+                            tooltip = "メッシュのエッジ（線）上からパーティクルが発生します";
+                        ImGui::SetTooltip("%s", tooltip);
                     }
                 }
 
@@ -572,6 +679,9 @@ void ParticleCSEmitter::DrawImGui() {
                 if (emitterMeshData_->triangleCount > 0) {
                     ImGui::Spacing();
                     ImGui::Text("三角形数: %d", emitterMeshData_->triangleCount);
+                    if (emitterMeshData_->edgeCount > 0) {
+                        ImGui::Text("エッジ数: %d", emitterMeshData_->edgeCount);
+                    }
                     if (!modelPath_.empty()) {
                         ImGui::Text("モデル: %s", modelPath_.c_str());
                     } else if (primitiveType_ != PrimitiveType::None) {
