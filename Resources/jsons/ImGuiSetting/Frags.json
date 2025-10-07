@@ -9,7 +9,7 @@
     "showMotionEditorView": false,
     "showObjectView": false,
     "showOfScreenView": false,
-    "showParticleView": true,
+    "showParticleView": false,
     "showSceneView": true,
     "showShortcutWindow": false,
     "showSpriteManagerView": true

@@ -82,7 +82,9 @@ void TitleScene::CameraUpdate() {
 }
 
 void TitleScene::ChangeScene() {
-    if (input_->TriggerKey(DIK_SPACE) && time_ >= 3.5f) {
+#ifndef _DEBUG
+    if (input_->TriggerKey(DIK_SPACE) && time_ >= 2.5f) {
         sceneManager_->NextSceneReservation("GAME");
     }
+#endif // !_DEBUG
 }

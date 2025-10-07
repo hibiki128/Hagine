@@ -29,7 +29,7 @@ class TitleUI {
     Vector2 pressStartEndPos_ = {};
 
     float time_ = 0.0f;
-    const float kMaxTime_ = 3.0f;
+    const float kMaxTime_ = 2.0f;
 
     std::unique_ptr<ParticleEmitter> chargeBullet_ = nullptr;
     std::unique_ptr<ParticleEmitter> chargeEffect_ = nullptr;

@@ -53,7 +53,7 @@ class TitleScene : public BaseScene {
     std::unique_ptr<DebugCamera> debugCamera_;
 
     float time_ = 0.0f;
-    const float kMaxTime_ = 3.0f;
+    const float kMaxTime_ = 2.0f;
 
     SkyBox *skyBox_ = nullptr;
 
