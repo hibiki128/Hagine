@@ -7,7 +7,7 @@
     "showHierarchyView": false,
     "showLightView": true,
     "showMotionEditorView": false,
-    "showObjectView": false,
+    "showObjectView": true,
     "showOfScreenView": false,
     "showParticleView": true,
     "showSceneView": true,

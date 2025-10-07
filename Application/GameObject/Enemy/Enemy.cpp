@@ -3,6 +3,7 @@
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChageShot/ChageShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
+#include <Frame.h>
 
 Enemy::Enemy() {
 }
@@ -40,6 +41,15 @@ void Enemy::Update() {
         isAlive_ = false;
         HP_ = 0;
     }
+
+    // ビヘイビアツリー実行
+    if (behaviorRoot_) {
+        behaviorRoot_->Execute(*this, Frame::DeltaTime());
+    }
+
+    // 位置更新
+    CollisionGround();
+
     UpdateShadowScale();
     chageShake_->Update();
 }
@@ -112,6 +122,22 @@ void Enemy::RotateUpdate() {
 }
 
 void Enemy::CollisionGround() {
+    float nextY = GetLocalPosition().y + velocity_.y * Frame::DeltaTime();
+
+    GetLocalPosition().x += velocity_.x * Frame::DeltaTime();
+    GetLocalPosition().z += velocity_.z * Frame::DeltaTime();
+
+    if (nextY <= 0.0f) {
+        GetLocalPosition().y = 0.0f;
+
+        if (!isGrounded_) {
+            velocity_.y = 0.0f;
+            isGrounded_ = true;
+        }
+    } else {
+        GetLocalPosition().y = nextY;
+        isGrounded_ = false;
+    }
 }
 
 Direction Enemy::CalculateDirectionFromRotation() {
