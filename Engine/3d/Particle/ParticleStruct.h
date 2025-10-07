@@ -30,7 +30,7 @@ struct EmitterMesh {
     float frequency;
     float frequencyTime;
     uint32_t emit;
-    float padding2;
+    uint32_t edgeCount;
 };
 
 struct CSParticle {
@@ -72,6 +72,13 @@ struct EmitterData {
 struct SurfacePoint {
     Vector3 position;
     float padding;
+};
+
+ struct EdgeInfo {
+    Vector3 v0;
+    float padding0;
+    Vector3 v1;
+    float padding1;
 };
 
 struct ParticleCSGroupData {

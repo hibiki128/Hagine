@@ -9,6 +9,7 @@ RWStructuredBuffer<int> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint> gFreeList : register(u2);
 StructuredBuffer<TriangleInfo> gTriangles : register(t0);
 StructuredBuffer<float> gTriangleCDF : register(t1);
+StructuredBuffer<EdgeInfo> gEdges : register(t2);
 
 float3x3 CreateRotationMatrix(float3 rotation)
 {
@@ -41,7 +42,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
         return;
     
     RandomGenerator generator;
-    // XorShift版の初期化方法に変更
     generator.InitSeed(
         uint3(DTid.x, gPerFrame.groupId, DTid.x * 7919),
         gPerFrame.time
@@ -59,12 +59,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
         
         float3 emitPosition;
 
-        if (gEmitterMesh.triangleCount > 0)
+        if (gEmitterMesh.triangleCount > 0 || gEmitterMesh.edgeCount > 0)
         {
             float3 randomPoint;
     
-            if (gEmitterMesh.emitFromSurface == 1)
+            if (gEmitterMesh.emitFromSurface == 2 && gEmitterMesh.edgeCount > 0)
             {
+                // エッジモード: 線上に発生
+                uint edgeIndex = uint(generator.Generate1d() * float(gEmitterMesh.edgeCount)) % gEmitterMesh.edgeCount;
+                float t = generator.Generate1d();
+            
+                float3 v0 = gEdges[edgeIndex].v0;
+                float3 v1 = gEdges[edgeIndex].v1;
+            
+                randomPoint = lerp(v0, v1, t);
+            }
+            else if (gEmitterMesh.emitFromSurface == 1 && gEmitterMesh.triangleCount > 0)
+            {
+                // 表面モード: 三角形の表面に発生
                 float particleRatio = generator.Generate1d();
         
                 uint triIndex = 0;
@@ -100,11 +112,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
             }
             else
             {
+                // 内部モード: ボリューム内に発生
                 randomPoint = float3(
-            generator.Generate1d() * 2.0f - 1.0f,
-            generator.Generate1d() * 2.0f - 1.0f,
-            generator.Generate1d() * 2.0f - 1.0f
-        );
+                    generator.Generate1d() * 2.0f - 1.0f,
+                    generator.Generate1d() * 2.0f - 1.0f,
+                    generator.Generate1d() * 2.0f - 1.0f
+                );
             }
     
             randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
