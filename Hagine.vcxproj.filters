@@ -419,10 +419,10 @@
       <Filter>Externals\imgui</Filter>
     </ClCompile>
     <ClCompile Include="Application\UI\Scene\Title\TitleUI.cpp" />
-    <ClCompile Include="Application\Utility\BehaviorTree\Nodes\SequenceNode.cpp" />
-    <ClCompile Include="Application\Utility\BehaviorTree\Nodes\ActionNodes.cpp" />
-    <ClCompile Include="Application\Utility\BehaviorTree\Nodes\ConditionNodes.cpp" />
-    <ClCompile Include="Application\Utility\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\SequenceNode.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -784,11 +784,11 @@
       <Filter>Externals\imgui</Filter>
     </ClInclude>
     <ClInclude Include="Application\UI\Scene\Title\TitleUI.h" />
-    <ClInclude Include="Application\Utility\BehaviorTree\BehaviorNode\BehaviorNode.h" />
-    <ClInclude Include="Application\Utility\BehaviorTree\Nodes\SequenceNode.h" />
-    <ClInclude Include="Application\Utility\BehaviorTree\Nodes\ActionNodes.h" />
-    <ClInclude Include="Application\Utility\BehaviorTree\Nodes\ConditionNodes.h" />
-    <ClInclude Include="Application\Utility\BehaviorTree\Editor\BehaviorTreeEditor.h" />
+    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\BehaviorNode\BehaviorNode.h" />
+    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\SequenceNode.h" />
+    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
+    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.h" />
+    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

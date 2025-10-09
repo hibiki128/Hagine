@@ -6,9 +6,9 @@
 #include "Application/GameObject/Player/Player.h"
 #include "Application/UI/Enemy/EnemyUI.h"
 #include "Application/UI/Player/PlayerUI.h"
-#include "Application/Utility/BehaviorTree/Editor/BehaviorTreeEditor.h"
 #include "BaseScene.h"
 #include "SkyBox/SkyBox.h"
+#include <Application/GameObject/Enemy/BehaviorTree/Editor/BehaviorTreeEditor.h>
 
 class GameScene : public BaseScene {
   public:
@@ -42,8 +42,6 @@ class GameScene : public BaseScene {
     void CameraUpdate();
 
     void ChangeScene();
-
-    void InitEnemyBehaviorTree();
 
   private:
     /// ====================================

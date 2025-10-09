@@ -2,8 +2,6 @@
 
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
-#include <Application/Utility/BehaviorTree/Nodes/ConditionNodes.h>
-#include <Application/Utility/BehaviorTree/Nodes/ActionNodes.h>
 
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -58,7 +56,7 @@ void GameScene::Initialize() {
     /// ===================================================
     /// ビヘイビアツリーの構築
     /// ===================================================
-   // InitEnemyBehaviorTree();
+    //enemy_->InitializeBehaviorTree();
 
     /// ===================================================
     /// オブジェクトマネージャに追加
@@ -148,10 +146,10 @@ void GameScene::AddObjectSetting() {
         bullet->ImGui();
     }
 
-    //// ビヘイビアツリーエディターの表示
-    //if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
-    //    behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
-    //}
+    // ビヘイビアツリーエディターの表示
+    if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
+        behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
+    }
 }
 
 void GameScene::AddParticleSetting() {
@@ -172,32 +170,4 @@ void GameScene::ChangeScene() {
     if (!enemy_ptr->GetAlive()) {
         sceneManager_->NextSceneReservation("CLEAR");
     }
-}
-
-void GameScene::InitEnemyBehaviorTree() {
-    // ルートセレクター
-    auto root = std::make_unique<SelectorNode>();
-
-    // === 地上での行動シーケンス ===
-    auto groundSequence = std::make_unique<SequenceNode>();
-    groundSequence->AddChild(std::make_unique<IsGroundedNode>());
-    groundSequence->AddChild(std::make_unique<HasTargetNode>());
-    groundSequence->AddChild(std::make_unique<MoveToTargetNode>(8.0f));
-
-    // === 空中での行動シーケンス ===
-    auto airSequence = std::make_unique<SequenceNode>();
-    airSequence->AddChild(std::make_unique<IsInAirNode>());
-    airSequence->AddChild(std::make_unique<ApplyGravityNode>());
-
-    // === 飛行モードの行動シーケンス ===
-    auto flySequence = std::make_unique<SequenceNode>();
-    flySequence->AddChild(std::make_unique<HasTargetNode>());
-    flySequence->AddChild(std::make_unique<DistanceToTargetNode>(10.0f, 50.0f));
-    flySequence->AddChild(std::make_unique<FlyIdleNode>());
-
-    root->AddChild(std::move(groundSequence));
-    root->AddChild(std::move(flySequence));
-    root->AddChild(std::move(airSequence));
-
-    enemy_ptr->SetBehaviorTree(std::move(root));
 }

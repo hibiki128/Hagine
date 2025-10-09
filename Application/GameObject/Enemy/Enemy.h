@@ -4,7 +4,8 @@
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
 #include <application/GameObject/Player/PlayerData.h>
-#include <Application/Utility/BehaviorTree/BehaviorNode/BehaviorNode.h>
+#include"BehaviorTree/BehaviorNode/BehaviorNode.h"
+#include <Application/GameObject/Player/Player.h>
 class Enemy : public BaseObject {
   public:
     /// ==================================================================
@@ -14,6 +15,7 @@ class Enemy : public BaseObject {
     Enemy();
     ~Enemy();
     void Init(const std::string objectName) override;
+    void InitializeBehaviorTree();
     void Update() override;
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
     void DrawParticle(const ViewProjection &viewProjection);
@@ -56,14 +58,14 @@ class Enemy : public BaseObject {
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
 
-    BaseObject *GetTarget() { return target_; }
+    Player *GetTarget() { return target_; }
 
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
 
     void SetDamage(int damage) { damage_ = damage; }
     void SetVp(ViewProjection *vp);
-    void SetTarget(BaseObject *target) { target_ = target; }
+    void SetTarget(Player *target) { target_ = target; }
     void SetBehaviorTree(std::unique_ptr<BehaviorNode> root) {
         behaviorRoot_ = std::move(root);
     }
@@ -96,7 +98,7 @@ class Enemy : public BaseObject {
 
     Vector3 velocity_{};
     Vector3 acceleration_{};
-    BaseObject *target_ = nullptr;
+    Player *target_ = nullptr;
     std::unique_ptr<BehaviorNode> behaviorRoot_;
 
     int HP_ = 1000000;
