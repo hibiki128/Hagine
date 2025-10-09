@@ -107,6 +107,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Application\Utility\BehaviorTree\Nodes\ActionNodes.cpp" />
     <ClCompile Include="Application\Camera\FollowCamera.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp" />
     <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp" />
@@ -131,6 +132,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Utility\Shake\Shake.cpp" />
     <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp" />
     <ClCompile Include="Application\UI\Enemy\EnemyUI.cpp" />
+    <ClCompile Include="Application\Utility\BehaviorTree\Nodes\ConditionNodes.cpp" />
+    <ClCompile Include="Application\Utility\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
     <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleStruct.cpp" />
@@ -216,6 +219,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSGroupManager.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSEditor.cpp" />
     <ClCompile Include="Engine\2d\SpriteManager.cpp" />
+    <ClCompile Include="Application\UI\Scene\Title\TitleUI.cpp" />
+    <ClCompile Include="Application\Utility\BehaviorTree\Nodes\SequenceNode.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".claudiaideconfig" />
@@ -263,6 +268,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Application\Utility\BehaviorTree\Nodes\ActionNodes.h" />
     <ClInclude Include="Application\Camera\FollowCamera.h" />
     <ClInclude Include="Application\GameObject\Enemy\Enemy.h" />
     <ClInclude Include="Application\GameObject\Field\Ground\Ground.h" />
@@ -288,6 +294,9 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Utility\Shake\Shake.h" />
     <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
     <ClInclude Include="Application\UI\Enemy\EnemyUI.h" />
+    <ClInclude Include="Application\Utility\BehaviorTree\BehaviorNode\BehaviorNode.h" />
+    <ClInclude Include="Application\Utility\BehaviorTree\Nodes\ConditionNodes.h" />
+    <ClInclude Include="Application\Utility\BehaviorTree\Editor\BehaviorTreeEditor.h" />
     <ClInclude Include="Engine\2d\SpriteStruct.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
@@ -383,6 +392,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
+    <ClInclude Include="Application\UI\Scene\Title\TitleUI.h" />
+    <ClInclude Include="Application\Utility\BehaviorTree\Nodes\SequenceNode.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\OffScreen\Dissolve.PS.hlsl">

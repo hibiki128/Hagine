@@ -9,23 +9,18 @@ RWStructuredBuffer<int> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint> gFreeList : register(u2);
 StructuredBuffer<TriangleInfo> gTriangles : register(t0);
 StructuredBuffer<float> gTriangleCDF : register(t1);
+StructuredBuffer<EdgeInfo> gEdges : register(t2);
 
-float3x3 CreateRotationMatrix(float3 rotation)
+float3x3 CreateRotationMatrixFromQuaternion(float4 q)
 {
-    float cosX = cos(rotation.x);
-    float sinX = sin(rotation.x);
-    float cosY = cos(rotation.y);
-    float sinY = sin(rotation.y);
-    float cosZ = cos(rotation.z);
-    float sinZ = sin(rotation.z);
+    float x = -q.x, y = -q.y, z = -q.z, w = q.w;
     
-    float3x3 rotX = float3x3(1.0f, 0.0f, 0.0f, 0.0f, cosX, -sinX, 0.0f, sinX, cosX);
-    float3x3 rotY = float3x3(cosY, 0.0f, sinY, 0.0f, 1.0f, 0.0f, -sinY, 0.0f, cosY);
-    float3x3 rotZ = float3x3(cosZ, -sinZ, 0.0f, sinZ, cosZ, 0.0f, 0.0f, 0.0f, 1.0f);
-    
-    return mul(mul(rotZ, rotY), rotX);
+    return float3x3(
+        1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y),
+        2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x),
+        2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)
+    );
 }
-
 float3 ApplyScale(float3 vertex, float3 scale)
 {
     return vertex * scale;
@@ -41,7 +36,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
         return;
     
     RandomGenerator generator;
-    // XorShift版の初期化方法に変更
     generator.InitSeed(
         uint3(DTid.x, gPerFrame.groupId, DTid.x * 7919),
         gPerFrame.time
@@ -59,12 +53,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
         
         float3 emitPosition;
 
-        if (gEmitterMesh.triangleCount > 0)
+        if (gEmitterMesh.triangleCount > 0 || gEmitterMesh.edgeCount > 0)
         {
             float3 randomPoint;
     
-            if (gEmitterMesh.emitFromSurface == 1)
+            if (gEmitterMesh.emitFromSurface == 2 && gEmitterMesh.edgeCount > 0)
             {
+                // エッジモード: 線上に発生
+                uint edgeIndex = uint(generator.Generate1d() * float(gEmitterMesh.edgeCount)) % gEmitterMesh.edgeCount;
+                float t = generator.Generate1d();
+            
+                float3 v0 = gEdges[edgeIndex].v0;
+                float3 v1 = gEdges[edgeIndex].v1;
+            
+                randomPoint = lerp(v0, v1, t);
+            }
+            else if (gEmitterMesh.emitFromSurface == 1 && gEmitterMesh.triangleCount > 0)
+            {
+                // 表面モード: 三角形の表面に発生
                 float particleRatio = generator.Generate1d();
         
                 uint triIndex = 0;
@@ -100,15 +106,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
             }
             else
             {
+                // 内部モード: ボリューム内に発生
                 randomPoint = float3(
-            generator.Generate1d() * 2.0f - 1.0f,
-            generator.Generate1d() * 2.0f - 1.0f,
-            generator.Generate1d() * 2.0f - 1.0f
-        );
+                    generator.Generate1d() * 2.0f - 1.0f,
+                    generator.Generate1d() * 2.0f - 1.0f,
+                    generator.Generate1d() * 2.0f - 1.0f
+                );
             }
     
             randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
-            float3x3 rotMatrix = CreateRotationMatrix(gEmitterMesh.rotation);
+            float3x3 rotMatrix = CreateRotationMatrixFromQuaternion(gEmitterMesh.rotation);
             randomPoint = mul(rotMatrix, randomPoint);
     
             emitPosition = gEmitterMesh.translate + randomPoint;

@@ -4,6 +4,7 @@
 #include "Object/Base/BaseObject.h"
 
 #include "SkyBox/SkyBox.h"
+#include"Application/UI/Scene/Title/TitleUI.h"
 
 class TitleScene : public BaseScene {
   public:
@@ -51,13 +52,10 @@ class TitleScene : public BaseScene {
     ViewProjection vp_;
     std::unique_ptr<DebugCamera> debugCamera_;
 
+    float time_ = 0.0f;
+    const float kMaxTime_ = 2.0f;
+
     SkyBox *skyBox_ = nullptr;
 
-    std::unique_ptr<Sprite> titleLogo_;
-    std::unique_ptr<Sprite> startButton_;
-
-    Vector2 startButtonPosition_ = {880.0f, 600.0f};
-    float startButtonSize_ = 2.5f;
-    Vector2 titleLogoPosition_ = {880.0f, 400.0f};
-    float titleLogoSize_ = 2.0f;
+    std::unique_ptr<TitleUI> titleUI_ = nullptr;
 };

@@ -21,12 +21,11 @@ void Material::PrimitiveInitialize(const PrimitiveType &type) {
     materialData_.textureFilePath = "debug/uvChecker.png";
 }
 
-// デバッグ用: Material::Draw()でテクスチャインデックスを確認
 void Material::Draw(const Vector4 color, bool lighting) {
     materialDataGPU_->color = color;
     materialDataGPU_->enableLighting = lighting ? 1 : 0;
 
-    materialData_.uvTransform = MakeAffineMatrix(materialData_.uvSize, materialData_.uvRotate, materialData_.uvPosition);
+    materialData_.uvTransform = MakeAffineMatrix({materialData_.uvSize.x, materialData_.uvSize.y, 1.0f}, {0.0f, 0.0f, materialData_.uvRotate}, {materialData_.uvPosition.x, materialData_.uvPosition.y, 0.0f});
 
     ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
     commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());

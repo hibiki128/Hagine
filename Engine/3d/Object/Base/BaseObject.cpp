@@ -365,6 +365,8 @@ void BaseObject::LoadFromJson() {
         if (texturePaths_.empty()) {
             texturePaths_.resize(1);
             texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", "debug/uvChecker.png");
+        } else {
+            texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", texturePaths_[0]);
         }
     } else {
         // 3Dモデルの場合
@@ -411,6 +413,8 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
         if (texturePaths_.empty()) {
             texturePaths_.resize(1);
             texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", "debug/uvChecker.png");
+        } else {
+            texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", texturePaths_[0]);
         }
     } else {
         // 3Dモデルの場合
@@ -550,12 +554,10 @@ void BaseObject::DebugObject() {
         ImGui::PushItemWidth(200);
         static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
         if (ImGui::DragFloat3("##Rotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°")) {
-            // --- 修正版: 各軸ごとにクォータニオンを生成し合成 ---
             Quaternion currentRotation = transform_->GetRotationQuaternion();
             Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
             Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
             Quaternion deltaQuatZ = Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
-            // ローカル軸回転として合成（Y→X→Zの順。用途に応じて順序は調整可）
             Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
             Quaternion newRotation = currentRotation * deltaQuat;
             transform_->SetRotationQuaternion(newRotation.Normalize());

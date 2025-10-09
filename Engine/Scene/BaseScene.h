@@ -15,6 +15,7 @@
 #include"Object/Base/BaseObjectManager.h"
 #include"Sprite.h"
 #include"Object/Base/BaseObject.h"
+#include"SpriteManager.h"
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG

@@ -91,6 +91,8 @@ class ViewProjection {
 
     void ShowDebugInfo();
 
+    bool GetIsCameraMove() { return isEasing_; }
+
   private:
     DirectXCommon *dxCommon_ = nullptr;
     // イージング関連

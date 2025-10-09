@@ -128,6 +128,7 @@ class BaseObject : public Collider {
     Vector3 GetWorldPosition();
     Quaternion GetWorldRotation();
     Vector3 GetWorldScale();
+    Matrix4x4 GetWorldMatrix() { return transform_->matWorld_; }
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
     bool &GetLighting() { return isLighting_; }
     bool &GetLoop() { return isLoop_; }

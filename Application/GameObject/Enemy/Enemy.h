@@ -1,9 +1,11 @@
 #pragma once
-#include"Object/Base/BaseObject.h"
+#include "Application/Utility/Shake/Shake.h"
+
+#include "Object/Base/BaseObject.h"
+#include "Particle/ParticleEmitter.h"
 #include <application/GameObject/Player/PlayerData.h>
-#include"Particle/ParticleEmitter.h"
-#include"Application/Utility/Shake/Shake.h"
-class Enemy: public BaseObject {
+#include <Application/Utility/BehaviorTree/BehaviorNode/BehaviorNode.h>
+class Enemy : public BaseObject {
   public:
     /// ==================================================================
     /// public methods
@@ -16,7 +18,7 @@ class Enemy: public BaseObject {
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
     void DrawParticle(const ViewProjection &viewProjection);
     void Debug();
-    
+
     void OnCollisionEnter([[maybe_unused]] Collider *other) override;
 
     /// <summary>
@@ -54,11 +56,19 @@ class Enemy: public BaseObject {
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
 
+    BaseObject *GetTarget() { return target_; }
+
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
 
     void SetDamage(int damage) { damage_ = damage; }
     void SetVp(ViewProjection *vp);
+    void SetTarget(BaseObject *target) { target_ = target; }
+    void SetBehaviorTree(std::unique_ptr<BehaviorNode> root) {
+        behaviorRoot_ = std::move(root);
+    }
+
+    BehaviorNode *GetBehaviorRoot() { return behaviorRoot_.get(); }
 
   private:
     /// ==================================================================
@@ -86,21 +96,23 @@ class Enemy: public BaseObject {
 
     Vector3 velocity_{};
     Vector3 acceleration_{};
+    BaseObject *target_ = nullptr;
+    std::unique_ptr<BehaviorNode> behaviorRoot_;
 
-    int HP_ = 100;
-    int maxHP_ = 100;
+    int HP_ = 1000000;
+    int maxHP_ = 1000000;
     int damage_ = 0;
 
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;
     float jumpSpeed_ = 0.0f;
-    float maxSpeed_ = 0.0f;  
+    float maxSpeed_ = 0.0f;
     float accelRate_ = 0.0f;
 
     bool canJump_ = false;
     bool isAlive_ = true;
     bool isLockOn_ = false;
-    bool isGrounded_ = true; 
+    bool isGrounded_ = true;
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;

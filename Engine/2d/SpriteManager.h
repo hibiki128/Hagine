@@ -45,6 +45,15 @@ struct SpriteData {
 };
 
 class SpriteManager {
+  private:
+    // シングルトンインスタンス
+    static SpriteManager *instance;
+    // プライベートコンストラクタ
+    SpriteManager() = default;
+    // コピー禁止
+    SpriteManager(const SpriteManager &) = delete;
+    SpriteManager &operator=(const SpriteManager &) = delete;
+
   public:
     static SpriteManager *GetInstance();
 
@@ -65,6 +74,8 @@ class SpriteManager {
     void ShowSpriteCreationModal() { showSpriteCreationModal_ = true; }
     void DrawSpriteCreationModal();
     void DrawSpriteManager();
+
+    void Finalize();
 
     // 特定のスプライトを取得
     SpriteData *GetSprite(const std::string &name);
@@ -100,11 +111,6 @@ class SpriteManager {
     void Clear();
 
   private:
-    SpriteManager() = default;
-    ~SpriteManager() = default;
-    SpriteManager(const SpriteManager &) = delete;
-    SpriteManager &operator=(const SpriteManager &) = delete;
-
     void SaveDrawOrder();
     void LoadDrawOrder();
     SpriteData *FindSpriteByName(const std::string &name);

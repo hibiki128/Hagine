@@ -4,7 +4,7 @@
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
 
-class ChageShot : public BaseObject {
+class ChargeShot : public BaseObject {
   public:
     /// ==============================================
     /// public methods
@@ -43,6 +43,7 @@ class ChageShot : public BaseObject {
     void SetVerticalOffset(float yOffset) { verticalOffset_ = yOffset; }
 
     int GetDamage() const;
+    bool GetIsCharge() const { return isCharge; }
 
   private:
     /// ==============================================
@@ -54,6 +55,7 @@ class ChageShot : public BaseObject {
     bool isAlive_ = false;
     bool isMaxScale_ = false;
     bool isFired_ = false;
+    bool isCharge = false;
     float scale_ = 1.0f;
     float scaleSpeed_ = 1.25f;
     float maxScale_ = 4.0f;
@@ -67,6 +69,6 @@ class ChageShot : public BaseObject {
     float offsetMargin_ = 0.5f;   // 余裕距離
     float verticalOffset_ = 1.0f; // 垂直方向のオフセット
 
-    std::unique_ptr<ParticleEmitter> chageEmitter_;
+    std::unique_ptr<ParticleEmitter> chargeEmitter_;
     std::unique_ptr<ParticleEmitter> bulletEmitter_;
 };

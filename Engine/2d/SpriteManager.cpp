@@ -6,9 +6,18 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
+SpriteManager *SpriteManager::instance = nullptr;
+
 SpriteManager *SpriteManager::GetInstance() {
-    static SpriteManager instance;
-    return &instance;
+    if (instance == nullptr) {
+        instance = new SpriteManager();
+    }
+    return instance;
+}
+
+void SpriteManager::Finalize() {
+    delete instance;
+    instance = nullptr;
 }
 
 void SpriteManager::RegisterSprite(const std::string &name, const std::string &textureFilePath, const SpriteTransform &transform) {

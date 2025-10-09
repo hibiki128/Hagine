@@ -2,6 +2,9 @@
 
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
+#include <Application/Utility/BehaviorTree/Nodes/ConditionNodes.h>
+#include <Application/Utility/BehaviorTree/Nodes/ActionNodes.h>
+
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
@@ -18,11 +21,11 @@ void GameScene::Initialize() {
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
     followCamera_ = std::make_unique<FollowCamera>();
-    // skyDome_ = std::make_unique<SkyDome>();
     ground_ = std::make_unique<Ground>();
     skyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
     enemyUI_ = std::make_unique<EnemyUI>();
+    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
 
     /// ===================================================
     /// 初期化
@@ -30,10 +33,10 @@ void GameScene::Initialize() {
     debugCamera_->Initialize(&vp_);
     player_->Init("player");
     enemy_->Init("enemy");
-    // skyDome_->Init("SkyDome");
     ground_->Init("Ground");
     followCamera_->Init();
     skyBox_->Initialize("game/skybox.dds");
+
     /// ===================================================
     /// セット
     /// ===================================================
@@ -42,6 +45,7 @@ void GameScene::Initialize() {
     player_->SetEnemy(enemy_.get());
     player_->SetVp(&vp_);
     enemy_->SetVp(&vp_);
+    enemy_->SetTarget(player_.get());
 
     /// ===================================================
     /// ポインタ共有
@@ -53,6 +57,11 @@ void GameScene::Initialize() {
 
     playerUI_->Init(player_ptr);
     enemyUI_->Init(enemy_ptr);
+
+    /// ===================================================
+    /// ビヘイビアツリーの構築
+    /// ===================================================
+   // InitEnemyBehaviorTree();
 
     /// ===================================================
     /// オブジェクトマネージャに追加
@@ -141,6 +150,11 @@ void GameScene::AddObjectSetting() {
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
     }
+
+    //// ビヘイビアツリーエディターの表示
+    //if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
+    //    behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
+    //}
 }
 
 void GameScene::AddParticleSetting() {
@@ -161,4 +175,32 @@ void GameScene::ChangeScene() {
     if (!enemy_ptr->GetAlive()) {
         sceneManager_->NextSceneReservation("CLEAR");
     }
+}
+
+void GameScene::InitEnemyBehaviorTree() {
+    // ルートセレクター
+    auto root = std::make_unique<SelectorNode>();
+
+    // === 地上での行動シーケンス ===
+    auto groundSequence = std::make_unique<SequenceNode>();
+    groundSequence->AddChild(std::make_unique<IsGroundedNode>());
+    groundSequence->AddChild(std::make_unique<HasTargetNode>());
+    groundSequence->AddChild(std::make_unique<MoveToTargetNode>(8.0f));
+
+    // === 空中での行動シーケンス ===
+    auto airSequence = std::make_unique<SequenceNode>();
+    airSequence->AddChild(std::make_unique<IsInAirNode>());
+    airSequence->AddChild(std::make_unique<ApplyGravityNode>());
+
+    // === 飛行モードの行動シーケンス ===
+    auto flySequence = std::make_unique<SequenceNode>();
+    flySequence->AddChild(std::make_unique<HasTargetNode>());
+    flySequence->AddChild(std::make_unique<DistanceToTargetNode>(10.0f, 50.0f));
+    flySequence->AddChild(std::make_unique<FlyIdleNode>());
+
+    root->AddChild(std::move(groundSequence));
+    root->AddChild(std::move(flySequence));
+    root->AddChild(std::move(airSequence));
+
+    enemy_ptr->SetBehaviorTree(std::move(root));
 }

@@ -7,8 +7,9 @@
 #include "State/Base/PlayerBaseState.h"
 #include <Application/Utility/Shake/Shake.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
+#include <Particle/CSParticle/ParticleCSEmitter.h>
 
-class ChageShot;
+class ChargeShot;
 class FollowCamera;
 class Enemy;
 class Player : public BaseObject {
@@ -168,7 +169,7 @@ class Player : public BaseObject {
 
     // 弾
     std::vector<std::unique_ptr<PlayerBullet>> bullets_;
-    std::unique_ptr<ChageShot> chageShot_;
+    std::unique_ptr<ChargeShot> chargeShot_;
 
     // 両手
     std::unique_ptr<PlayerHand> leftHand_;
@@ -180,5 +181,9 @@ class Player : public BaseObject {
 
     std::unique_ptr<Shake> shake_;
 
+
+    ///  ============パーティクル関連============
+    std::unique_ptr<ParticleCSEmitter> auraEmitter_;
     std::unique_ptr<ParticleEmitter> rushEmitter_;
+
 };

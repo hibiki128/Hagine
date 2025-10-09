@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-void ChageShot::Init(const std::string objectName) {
+void ChargeShot::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);
     BaseObject::SetTexture("debug/white1x1.png");
@@ -22,11 +22,11 @@ void ChageShot::Init(const std::string objectName) {
     // 初期位置もリセット
     transform_->translation_ = player_->GetWorldPosition();
     Collider::SetCollisionEnabled(false);
-    chageEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
+    chargeEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
     bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
 }
 
-void ChageShot::Update() {
+void ChargeShot::Update() {
     Input *input = Input::GetInstance();
 
     if (isAlive_) {
@@ -70,7 +70,7 @@ void ChageShot::Update() {
             transform_->translation_ = playerPos + offset;
 
             // エミッター位置も更新
-            chageEmitter_->SetPosition(transform_->translation_);
+            chargeEmitter_->SetPosition(transform_->translation_);
 
             Vector3 playerEuler = rot.ToEulerAngles();
         }
@@ -92,8 +92,9 @@ void ChageShot::Update() {
                 isMaxScale_ = true;
             }
             if (!isMaxScale_) {
-                chageEmitter_->Update();
+                chargeEmitter_->Update();
             }
+            isCharge = true;
         }
         if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
             Vector3 dir = {0, 0, 1};
@@ -117,6 +118,7 @@ void ChageShot::Update() {
 
             Fire(pos, dir);
             isFired_ = true;
+            isCharge = false;
         }
     }
 
@@ -136,12 +138,12 @@ void ChageShot::Update() {
     BaseObject::UpdateWorldTransformHierarchy();
 }
 
-void ChageShot::Fire(const Vector3 &pos, const Vector3 &dir) {
+void ChargeShot::Fire(const Vector3 &pos, const Vector3 &dir) {
     transform_->translation_ = pos;
     velocity_ = dir * speed_;
 }
 
-void ChageShot::Reset() {
+void ChargeShot::Reset() {
     isAlive_ = false;
     isFired_ = false;
     scale_ = 1.0f;
@@ -150,7 +152,7 @@ void ChageShot::Reset() {
     transform_->translation_ = {0, 0, 0};
 }
 
-int ChageShot::GetDamage() const {
+int ChargeShot::GetDamage() const {
     // スケールの割合を計算（1.0f〜maxScale_の範囲を0.0f〜1.0fに正規化）
     float scaleRatio = (scale_ - 1.0f) / (maxScale_ - 1.0f);
 
@@ -159,23 +161,23 @@ int ChageShot::GetDamage() const {
     return std::max(1, damage);
 }
 
-void ChageShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void ChargeShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (!isAlive_)
         return;
     // スケールを反映
     transform_->scale_ = {scale_, scale_, scale_};
     BaseObject::SetRadius(scale_);
 }
-void ChageShot::DrawParticle(const ViewProjection &viewProjection) {
-    chageEmitter_->Draw(viewProjection);
+void ChargeShot::DrawParticle(const ViewProjection &viewProjection) {
+    chargeEmitter_->Draw(viewProjection);
     bulletEmitter_->Draw(viewProjection);
 }
 
-void ChageShot::imgui() {
+void ChargeShot::imgui() {
     // デバッグ用
 }
 
-void ChageShot::OnCollisionEnter(Collider *other) {
+void ChargeShot::OnCollisionEnter(Collider *other) {
     if (dynamic_cast<Enemy *>(other) && player_->GetEnemy()->GetAlive()) {
         isAlive_ = false;
         Collider::SetCollisionEnabled(false);

@@ -24,13 +24,13 @@ struct ParticleMaterial {
 struct EmitterMesh {
     Vector3 translate;
     uint32_t triangleCount;
-    Vector3 rotation;
+    Quaternion rotation;
     uint32_t emitFromSurface;
     Vector3 scale;
     float frequency;
     float frequencyTime;
     uint32_t emit;
-    float padding2;
+    uint32_t edgeCount;
 };
 
 struct CSParticle {
@@ -72,6 +72,13 @@ struct EmitterData {
 struct SurfacePoint {
     Vector3 position;
     float padding;
+};
+
+ struct EdgeInfo {
+    Vector3 v0;
+    float padding0;
+    Vector3 v1;
+    float padding1;
 };
 
 struct ParticleCSGroupData {

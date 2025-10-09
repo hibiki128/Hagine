@@ -27,13 +27,13 @@ struct EmitterMesh
 {
     float3 translate;
     uint triangleCount;
-    float3 rotation;
+    float4 rotation;
     uint emitFromSurface;
     float3 scale;
     float frequency;
     float frequencyTime;
     uint emit;
-    float padding2;
+    uint edgeCount;
 };
 
 struct Triangle
@@ -48,6 +48,14 @@ struct PerFrame
     float time;
     float deltaTime;
     int groupId;
+};
+
+struct EdgeInfo
+{
+    float3 v0;
+    float padding0;
+    float3 v1;
+    float padding1;
 };
 
 struct ParticleCSSettings

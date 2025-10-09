@@ -357,10 +357,16 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitte
     D3D12_DESCRIPTOR_RANGE srvRange1[1] = {};
     srvRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     srvRange1[0].NumDescriptors = 1;
-    srvRange1[0].BaseShaderRegister = 1; // register(t0)
+    srvRange1[0].BaseShaderRegister = 1; // register(t1)
     srvRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[8] = {};
+    D3D12_DESCRIPTOR_RANGE srvRange2[1] = {};
+    srvRange2[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRange2[0].NumDescriptors = 1;
+    srvRange2[0].BaseShaderRegister = 2; // register(t2)
+    srvRange2[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[9] = {};
 
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[0].DescriptorTable.pDescriptorRanges = uavRange0;
@@ -401,6 +407,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitte
     rootParameters[7].DescriptorTable.pDescriptorRanges = srvRange1;
     rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(srvRange1);
     rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[8].DescriptorTable.pDescriptorRanges = srvRange2;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(srvRange2);
+    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
     descriptionRootSignature.NumParameters = _countof(rootParameters);
@@ -531,7 +542,6 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateUpdate
     return graphicsPipelineState;
 }
 
-
 Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateCountRootSignature() {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
@@ -564,7 +574,6 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateCountR
     rootParameters[2].DescriptorTable.pDescriptorRanges = uavRange1;
     rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(uavRange1);
     rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
     descriptionRootSignature.NumParameters = _countof(rootParameters);
