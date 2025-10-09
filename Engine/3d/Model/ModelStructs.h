@@ -38,9 +38,9 @@ struct MaterialData {
     std::string textureFilePath;
     uint32_t textureIndex = 0;
     float environmentCoefficient = 1.0f;
-    Vector3 uvPosition = 0.0f;
-    Vector3 uvSize = 0.0f;
-    Vector3 uvRotate = 0.0f;
+    Vector2 uvPosition{};
+    Vector2 uvSize = {1.0f, 1.0f};
+    float uvRotate = 0.0f;
 };
 
 struct MaterialDataGPU {

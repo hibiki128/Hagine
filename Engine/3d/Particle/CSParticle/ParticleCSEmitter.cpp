@@ -86,17 +86,14 @@ void ParticleCSEmitter::Update() {
 void ParticleCSEmitter::DrawEmitter() {
     if (!isVisible_)
         return;
-
     Vector3 translate = emitterMeshData_->translate;
-    Vector3 rotation = emitterMeshData_->rotation;
+    Quaternion rotation = emitterMeshData_->rotation;
     Vector3 scale = emitterMeshData_->scale;
 
     Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
-    Matrix4x4 rotateMatrixX = MakeRotateXMatrix(rotation.x);
-    Matrix4x4 rotateMatrixY = MakeRotateYMatrix(rotation.y);
-    Matrix4x4 rotateMatrixZ = MakeRotateZMatrix(rotation.z);
+    Matrix4x4 rotateMatrix = MakeRotateXYZMatrix(rotation);
     Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
-    Matrix4x4 transformMatrix = translateMatrix * rotateMatrixZ * rotateMatrixY * rotateMatrixX * scaleMatrix;
+    Matrix4x4 transformMatrix = MakeAffineMatrix(scale, rotation, translate);
 
     if (emitterMeshData_->emitFromSurface == 2 && !edgeInfoList_.empty()) {
         Vector4 color = {1.0f, 0.5f, 0.0f, 1.0f};
@@ -164,7 +161,7 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->frequency = 0.5f;
     emitterMeshData_->frequencyTime = 0.0f;
     emitterMeshData_->translate = Vector3(0.0f, 0.0f, 0.0f);
-    emitterMeshData_->rotation = Vector3(0.0f, 0.0f, 0.0f);
+    emitterMeshData_->rotation = Quaternion::IdentityQuaternion();
     emitterMeshData_->scale = Vector3(1.0f, 1.0f, 1.0f);
     emitterMeshData_->triangleCount = 0;
     emitterMeshData_->emit = 0;
@@ -443,7 +440,7 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("frequency", emitterMeshData_->frequency);
     data->Save("frequencyTime", emitterMeshData_->frequencyTime);
     data->Save<Vector3>("translate", emitterMeshData_->translate);
-    data->Save<Vector3>("rotation", emitterMeshData_->rotation);
+    data->Save<Quaternion>("rotation", emitterMeshData_->rotation);
     data->Save<Vector3>("scale", emitterMeshData_->scale);
     data->Save("emitFromSurface", emitterMeshData_->emitFromSurface);
     data->Save("modelPath", modelPath_);
@@ -484,7 +481,7 @@ void ParticleCSEmitter::LoadSetting() {
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-    emitterMeshData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
+    emitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
     emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
 
@@ -523,8 +520,8 @@ void ParticleCSEmitter::LoadSetting() {
         settings.enableSinScale = data->Load<uint32_t>(prefix + "enableSinScale", 0);
         settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f);
         settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f);
-        settings.emitCount = static_cast<uint32_t>(data->Load(prefix + "emitCount", 10));
-        settings.enableGravity = data->Load<bool>(prefix + "enableGravity", false);
+        settings.emitCount = data->Load<uint32_t>(prefix + "emitCount", 10);
+        settings.enableGravity = data->Load<uint32_t>(prefix + "enableGravity", false);
         settings.gravity = data->Load<Vector3>(prefix + "gravity", {0.0f, 0.0f, 0.0f});
         settings.maxParticleCount = group->GetMaxParticleCount();
 
@@ -546,7 +543,7 @@ void ParticleCSEmitter::LoadCloneSetting() {
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-    emitterMeshData_->rotation = data->Load<Vector3>("rotation", Vector3(0.0f, 0.0f, 0.0f));
+    emitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
     emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
 
@@ -586,8 +583,8 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.enableSinScale = data->Load<uint32_t>(prefix + "enableSinScale", 0);
         settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f);
         settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f);
-        settings.emitCount = static_cast<uint32_t>(data->Load(prefix + "emitCount", 10));
-        settings.enableGravity = data->Load<bool>(prefix + "enableGravity", false);
+        settings.emitCount = data->Load<uint32_t>(prefix + "emitCount", 10);
+        settings.enableGravity = data->Load<uint32_t>(prefix + "enableGravity", false);
         settings.gravity = data->Load<Vector3>(prefix + "gravity", {0.0f, 0.0f, 0.0f});
         settings.maxParticleCount = group->GetMaxParticleCount();
 
@@ -622,14 +619,25 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::DragFloat("発生間隔##Freq", &emitterMeshData_->frequency, 0.001f, 0.001f, 10.0f);
                 ImGui::DragFloat3("エミッタの座標##Translate", &emitterMeshData_->translate.x, 0.1f);
 
-                Vector3 rotationDegrees = {
-                    emitterMeshData_->rotation.x * 180.0f / 3.14159f,
-                    emitterMeshData_->rotation.y * 180.0f / 3.14159f,
-                    emitterMeshData_->rotation.z * 180.0f / 3.14159f};
-                if (ImGui::DragFloat3("エミッタの回転##Rotation", &rotationDegrees.x, 1.0f, -360.0f, 360.0f)) {
-                    emitterMeshData_->rotation.x = rotationDegrees.x * 3.14159f / 180.0f;
-                    emitterMeshData_->rotation.y = rotationDegrees.y * 3.14159f / 180.0f;
-                    emitterMeshData_->rotation.z = rotationDegrees.z * 3.14159f / 180.0f;
+                Vector3 currentEuler = emitterMeshData_->rotation.ToEulerDegrees();
+                ImGui::Text("現在の回転: %.1f° %.1f° %.1f°", currentEuler.x, currentEuler.y, currentEuler.z);
+
+                static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
+                if (ImGui::DragFloat3("##EmitterRotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°")) {
+                    Quaternion currentRotation = emitterMeshData_->rotation;
+                    Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
+                    Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
+                    Quaternion deltaQuatZ = Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
+                    Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
+                    Quaternion newRotation = currentRotation * deltaQuat;
+                    emitterMeshData_->rotation = newRotation.Normalize();
+                    deltaRotation = {0.0f, 0.0f, 0.0f};
+                }
+
+                ImGui::SameLine();
+                if (ImGui::Button("リセット##EmitterRotation")) {
+                    emitterMeshData_->rotation = Quaternion::IdentityQuaternion();
+                    deltaRotation = {0.0f, 0.0f, 0.0f};
                 }
 
                 ImGui::DragFloat3("エミッタの大きさ##Scale", &emitterMeshData_->scale.x, 0.1f);

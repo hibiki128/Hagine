@@ -24,7 +24,7 @@ struct ParticleMaterial {
 struct EmitterMesh {
     Vector3 translate;
     uint32_t triangleCount;
-    Vector3 rotation;
+    Quaternion rotation;
     uint32_t emitFromSurface;
     Vector3 scale;
     float frequency;

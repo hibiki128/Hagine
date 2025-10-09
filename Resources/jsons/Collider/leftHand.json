@@ -8,7 +8,7 @@
     "isCollisionEnabled": true,
     "isOBB": false,
     "isSphere": true,
-    "isVisible": false,
+    "isVisible": true,
     "max": {
         "x": 0.0,
         "y": 0.0,

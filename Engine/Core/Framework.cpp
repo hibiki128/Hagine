@@ -222,6 +222,7 @@ void Framework::Finalize() {
     imGuizmoManager_->Finalize();
 #endif // _DEBUG
     shortcutManager_->Finalize();
+    spriteManager_->Finalize();
 
     line3d_->Finalize();
     skyBox_->Finalize();
@@ -338,6 +339,7 @@ void Framework::LoadResource() {
     particleEditor_->AddParticleEmitter("chageBullet");
     particleEditor_->AddParticleEmitter("RushEmitter");
     particleEditor_->AddParticleEmitter("punchEmitter");
+    particleCSEditor_->AddParticleEmitter("playerAura");
 }
 
 void Framework::PlaySounds() {

@@ -41,9 +41,9 @@ class ParticleCSEmitter {
             emitterMeshData_->translate = transform;
     }
 
-    void SetRotation(Vector3 rotation) {
+    void SetRotation(Quaternion rotation) {
         if (emitterMeshData_)
-            emitterMeshData_->rotation = rotation;
+            emitterMeshData_->rotation = -rotation;
     }
 
     void SetScale(Vector3 scale) {
@@ -57,10 +57,10 @@ class ParticleCSEmitter {
         return Vector3(0.0f, 0.0f, 0.0f);
     }
 
-    Vector3 GetRotation() const {
+    Quaternion GetRotation() const {
         if (emitterMeshData_)
             return emitterMeshData_->rotation;
-        return Vector3(0.0f, 0.0f, 0.0f);
+        return Quaternion::IdentityQuaternion();
     }
 
     Vector3 GetScale() const {

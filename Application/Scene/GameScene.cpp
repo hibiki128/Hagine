@@ -58,7 +58,7 @@ void GameScene::Initialize() {
     /// ===================================================
     /// ビヘイビアツリーの構築
     /// ===================================================
-    InitEnemyBehaviorTree();
+   // InitEnemyBehaviorTree();
 
     /// ===================================================
     /// オブジェクトマネージャに追加
@@ -148,10 +148,10 @@ void GameScene::AddObjectSetting() {
         bullet->ImGui();
     }
 
-    // ビヘイビアツリーエディターの表示
-    if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
-        behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
-    }
+    //// ビヘイビアツリーエディターの表示
+    //if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
+    //    behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
+    //}
 }
 
 void GameScene::AddParticleSetting() {

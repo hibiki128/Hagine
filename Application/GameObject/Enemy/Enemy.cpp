@@ -85,11 +85,11 @@ void Enemy::Debug() {
 }
 
 void Enemy::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<PlayerBullet *>(other) || dynamic_cast<ChageShot *>(other)) {
+    if (dynamic_cast<PlayerBullet *>(other) || dynamic_cast<ChargeShot *>(other)) {
         emitter_->UpdateOnce();
     }
 
-    if (dynamic_cast<ChageShot *>(other)) {
+    if (dynamic_cast<ChargeShot *>(other)) {
         chageShake_->StartShake();
     }
 }

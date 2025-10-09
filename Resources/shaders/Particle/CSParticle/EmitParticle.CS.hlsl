@@ -11,22 +11,16 @@ StructuredBuffer<TriangleInfo> gTriangles : register(t0);
 StructuredBuffer<float> gTriangleCDF : register(t1);
 StructuredBuffer<EdgeInfo> gEdges : register(t2);
 
-float3x3 CreateRotationMatrix(float3 rotation)
+float3x3 CreateRotationMatrixFromQuaternion(float4 q)
 {
-    float cosX = cos(rotation.x);
-    float sinX = sin(rotation.x);
-    float cosY = cos(rotation.y);
-    float sinY = sin(rotation.y);
-    float cosZ = cos(rotation.z);
-    float sinZ = sin(rotation.z);
+    float x = -q.x, y = -q.y, z = -q.z, w = q.w;
     
-    float3x3 rotX = float3x3(1.0f, 0.0f, 0.0f, 0.0f, cosX, -sinX, 0.0f, sinX, cosX);
-    float3x3 rotY = float3x3(cosY, 0.0f, sinY, 0.0f, 1.0f, 0.0f, -sinY, 0.0f, cosY);
-    float3x3 rotZ = float3x3(cosZ, -sinZ, 0.0f, sinZ, cosZ, 0.0f, 0.0f, 0.0f, 1.0f);
-    
-    return mul(mul(rotZ, rotY), rotX);
+    return float3x3(
+        1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y),
+        2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x),
+        2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)
+    );
 }
-
 float3 ApplyScale(float3 vertex, float3 scale)
 {
     return vertex * scale;
@@ -121,7 +115,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
             }
     
             randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
-            float3x3 rotMatrix = CreateRotationMatrix(gEmitterMesh.rotation);
+            float3x3 rotMatrix = CreateRotationMatrixFromQuaternion(gEmitterMesh.rotation);
             randomPoint = mul(rotMatrix, randomPoint);
     
             emitPosition = gEmitterMesh.translate + randomPoint;

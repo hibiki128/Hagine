@@ -16,8 +16,9 @@
 #include "numbers"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Input.h>
-#include <cmath>
+#include <Particle/CSParticle/ParticleCSEditor.h>
 #include <Particle/ParticleEditor.h>
+#include <cmath>
 
 Player::Player() {
 }
@@ -48,9 +49,9 @@ void Player::Init(const std::string objectName) {
     shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(-90.0f), 0.0f, 0.0f));
     shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
 
-    chageShot_ = std::make_unique<ChageShot>();
-    chageShot_->SetPlayer(this);
-    chageShot_->Init("chageShot");
+    chargeShot_ = std::make_unique<ChargeShot>();
+    chargeShot_->SetPlayer(this);
+    chargeShot_->Init("chageShot");
 
     // 手の生成
     leftHand_ = std::make_unique<PlayerHand>();
@@ -87,7 +88,10 @@ void Player::Init(const std::string objectName) {
     }
 
     shake_ = std::make_unique<Shake>();
+
     rushEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("RushEmitter");
+
+    auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
 }
 
 void Player::Update() {
@@ -97,8 +101,8 @@ void Player::Update() {
     dt_ = Frame::DeltaTime();
     shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
-    if (chageShot_) {
-        chageShot_->Update();
+    if (chargeShot_) {
+        chargeShot_->Update();
     }
 
     if (currentState_) {
@@ -148,8 +152,20 @@ void Player::Update() {
             ++it;
         }
     }
-    
+
     shake_->Update();
+
+    auraEmitter_->SetTranslate(GetWorldPosition());
+    auraEmitter_->SetRotation(-GetWorldRotation());
+    auraEmitter_->Update();
+
+    if (chargeShot_) {
+        if (chargeShot_->GetIsCharge()) {
+            auraEmitter_->SetAuto(chargeShot_->GetIsCharge());
+        } else {
+            auraEmitter_->SetAuto(false);
+        }
+    }
 
     UpdateShadowScale();
 }
@@ -159,7 +175,7 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     for (auto &bullet : bullets_) {
         bullet->Draw(viewProjection, offSet);
     }
-    chageShot_->Draw(viewProjection, offSet);
+    chargeShot_->Draw(viewProjection, offSet);
     if (transform_->translation_.y < 0) {
         return;
     }
@@ -167,8 +183,9 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 }
 
 void Player::DrawParticle(const ViewProjection &viewProjection) {
-    chageShot_->DrawParticle(viewProjection);
+    chargeShot_->DrawParticle(viewProjection);
     rushEmitter_->Draw(viewProjection);
+    auraEmitter_->Draw(viewProjection);
     for (auto &bullet : bullets_) {
         bullet->DrawParticle(viewProjection);
     }
@@ -498,6 +515,11 @@ void Player::Debug() {
                         GetLocalPosition().x, GetLocalPosition().y, GetLocalPosition().z);
             ImGui::Text("現在速度: X=%.2f, Y=%.2f, Z=%.2f",
                         velocity_.x, velocity_.y, velocity_.z);
+
+            ImGui::Text("現在角度(クォータニオン): X=%.2f, Y=%.2f, Z=%.2f, W=%.2f",
+                        GetLocalRotation().x, GetLocalRotation().y, GetLocalRotation().z, GetLocalRotation().w);
+            ImGui::Text("現在角度(オイラー): X=%.2f, Y=%.2f, Z=%.2f, W=%.2f",
+                        GetLocalRotation().ToEulerAngles().x, GetLocalRotation().ToEulerAngles().y, GetLocalRotation().ToEulerAngles().z);
 
             ImGui::DragFloat("弾の速度", &B_speed_, 0.1f);
             ImGui::DragFloat("弾の加速度", &B_acce_, 0.1f);

@@ -5,9 +5,9 @@
     "childrenNames": [],
     "color_0": {
         "w": 1.0,
-        "x": 0.9686274528503418,
-        "y": 0.8235294222831726,
-        "z": 0.6352941393852234
+        "x": 1.0,
+        "y": 0.6274510025978088,
+        "z": 0.27450981736183167
     },
     "isLighting": true,
     "isModelDraw": true,
@@ -26,7 +26,7 @@
         "z": 0.75
     },
     "skeletonDraw": false,
-    "textureName_0": "debug/uvChecker.png",
+    "textureName_0": "debug/white1x1.png",
     "translation": {
         "x": 1.5,
         "y": -0.6000000238418579,

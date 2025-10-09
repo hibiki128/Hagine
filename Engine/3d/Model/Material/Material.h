@@ -26,9 +26,9 @@ class Material {
     void SetTexture(const std::string &texturePath);
     void SetEnvironmentCoefficients(float environmentCoefficients);
 
-    void SetUVPosition(const Vector3 &pos) { materialData_.uvPosition = pos; }
-    void SetUVSize(const Vector3 &size) { materialData_.uvSize = size; }
-    void SetUVRotate(const Vector3 &rotate) { materialData_.uvRotate = rotate; }
+    void SetUVPosition(const Vector2 &pos) { materialData_.uvPosition = pos; }
+    void SetUVSize(const Vector2 &size) { materialData_.uvSize = size; }
+    void SetUVRotate(const float &rotate) { materialData_.uvRotate = rotate; }
 
   private:
     /// ==========================================
