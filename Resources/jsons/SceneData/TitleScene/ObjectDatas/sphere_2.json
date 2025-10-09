@@ -1,0 +1,35 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 2,
+    "blendMode": 0,
+    "childrenNames": [],
+    "color_0": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 0.6274510025978088,
+        "z": 0.27450981736183167
+    },
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "",
+    "objectName": "sphere_2",
+    "parentName": "cube_1",
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 0.75,
+        "y": 0.75,
+        "z": 0.75
+    },
+    "skeletonDraw": false,
+    "textureName_0": "debug/white1x1.png",
+    "translation": {
+        "x": 1.5,
+        "y": -0.6000000238418579,
+        "z": 3.9000000953674316
+    }
+}
