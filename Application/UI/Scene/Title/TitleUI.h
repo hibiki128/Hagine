@@ -2,6 +2,7 @@
 #include <Particle/ParticleEmitter.h>
 #include <SpriteManager.h>
 #include <memory>
+#include"Particle/CSParticle/ParticleCSEmitter.h"
 class TitleUI {
   public:
     void Initialize();
@@ -33,6 +34,7 @@ class TitleUI {
 
     std::unique_ptr<ParticleEmitter> chargeBullet_ = nullptr;
     std::unique_ptr<ParticleEmitter> chargeEffect_ = nullptr;
+    std::unique_ptr<ParticleCSEmitter> playerAura_ = nullptr;
 
     std::array<SpriteData *, kMaxSprite> sprites_;
 };

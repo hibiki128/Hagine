@@ -1,14 +1,27 @@
 #include "TitleUI.h"
+#include "Particle/CSParticle/ParticleCSEditor.h"
 #include "SpriteManager.h"
 #include <Frame.h>
+#include <Object/Base/BaseObjectManager.h>
 #include <Particle/ParticleEditor.h>
 
 void TitleUI::Initialize() {
+
     chargeBullet_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
     chargeEffect_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
+    playerAura_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
 
-    chargeBullet_->SetPosition({14.5f, 15.5f, 32.0f});
-    chargeEffect_->SetPosition({14.5f, 15.5f, 32.0f});
+    chargeBullet_->SetPosition(
+        {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
+         BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + 6.5f,
+         BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});
+    chargeEffect_->SetPosition(
+        {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
+         BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + 6.5f,
+         BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});
+
+    playerAura_->SetTranslate(BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition());
+    playerAura_->SetRotation(BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalRotation());
 
     chargeScale_ = 0.0f;
     isMaxChargeScale_ = false;
@@ -78,11 +91,13 @@ void TitleUI::Update() {
         }
         chargeBullet_->Update();
         chargeEffect_->Update();
+        playerAura_->SetActive(true);
+        playerAura_->Update();
     }
 }
-
 
 void TitleUI::Draw(const ViewProjection &vp_) {
     chargeBullet_->Draw(vp_);
     chargeEffect_->Draw(vp_);
+    playerAura_->Draw(vp_);
 }
