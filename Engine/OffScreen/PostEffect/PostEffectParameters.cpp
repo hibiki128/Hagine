@@ -1,7 +1,7 @@
 #include "PostEffectParameters.h"
+#include <Graphics/PipeLine/PipeLineManager.h>
 #include <Graphics/Srv/SrvManager.h>
 #include <Graphics/Texture/TextureManager.h>
-#include <Graphics/PipeLine/PipeLineManager.h>
 #include <d3d12.h>
 
 void PostEffectParameters::Initialize(DirectXCommon *dxCommon) {
@@ -43,6 +43,12 @@ void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCo
     case ShaderMode::kFocusLine:
         commandList->SetGraphicsRootConstantBufferView(1, focusLineResource->GetGPUVirtualAddress());
         break;
+    case ShaderMode::kPixelate:
+        commandList->SetGraphicsRootConstantBufferView(1, pixelateResource->GetGPUVirtualAddress());
+        break;
+    case ShaderMode::kTransition:
+        commandList->SetGraphicsRootConstantBufferView(1, transitionResource->GetGPUVirtualAddress());
+        break;
     }
 }
 
@@ -55,7 +61,7 @@ void PostEffectParameters::UpdateTimeParameters(float deltaTime) {
     }
 }
 
-void PostEffectParameters::SaveParameters(DataHandler *dataHandler)const {
+void PostEffectParameters::SaveParameters(DataHandler *dataHandler) const {
     // Vignette パラメータ
     if (vignetteData) {
         dataHandler->Save<float>("vignette_exponent", vignetteData->vignetteExponent);
@@ -240,6 +246,21 @@ void PostEffectParameters::DrawParameterUI(ShaderMode mode) {
             ImGui::ColorEdit3("Color", &focusLineData->lineColor.x);
         }
         break;
+    case ShaderMode::kPixelate:
+        if (pixelateData) {
+            ImGui::DragFloat("ブロックサイズ", &pixelateData->blockSize, 0.001f, 0.001f, 1.0f);
+            ImGui::DragFloat("中心X", &pixelateData->centerX, 0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat("中心Y", &pixelateData->centerY,0.01f, 0.0f, 1.0f);
+        }
+        break;
+    case ShaderMode::kTransition:
+        if (transitionData) {
+            ImGui::SliderFloat("進行度", &transitionData->progress, 0.0f, 1.0f, "%.2f");
+            ImGui::DragFloat("切れ込みスピード", &transitionData->splitSpeed, 0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat("スライドスピード", &transitionData->slideSpeed, 0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat("切れ込み幅", &transitionData->splitWidth, 0.001f, 0.0f, 0.5f);
+        }
+        break;
     }
 #endif // _DEBUG
 }
@@ -254,6 +275,8 @@ void PostEffectParameters::CreateAllBuffers() {
     CreateDissolve();
     CreateRandom();
     CreateFocusLine();
+    CreatePixelate();
+    CreateTransition();
 }
 
 void PostEffectParameters::CreateSmooth() {
@@ -323,4 +346,21 @@ void PostEffectParameters::CreateFocusLine() {
     focusLineData->width = 0.01f;
     focusLineData->speed = 1.0f;
     focusLineData->intensity = 0.3f;
+}
+
+void PostEffectParameters::CreatePixelate() {
+    pixelateResource = dxCommon_->CreateBufferResource(sizeof(Pixelate));
+    pixelateResource->Map(0, nullptr, reinterpret_cast<void **>(&pixelateData));
+    pixelateData->blockSize = 0.1f;
+    pixelateData->centerX = 0.5f;
+    pixelateData->centerY = 0.5f;
+}
+
+void PostEffectParameters::CreateTransition() {
+    transitionResource = dxCommon_->CreateBufferResource(sizeof(Transition));
+    transitionResource->Map(0, nullptr, reinterpret_cast<void **>(&transitionData));
+    transitionData->progress = 0.0f;  
+    transitionData->splitSpeed = 0.1f;
+    transitionData->slideSpeed = 0.1f;
+    transitionData->splitWidth = 0.01f;
 }

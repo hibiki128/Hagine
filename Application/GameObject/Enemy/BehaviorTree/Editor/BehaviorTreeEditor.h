@@ -1,11 +1,14 @@
 #pragma once
 #include "Application/GameObject/Enemy/BehaviorTree/BehaviorNode/BehaviorNode.h"
+#ifdef _DEBUG
 #include "imgui.h"
+#endif // DEBUG
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 class BehaviorTreeEditor {
+#ifdef _DEBUG
   public:
     void DrawEditor(BehaviorNode *root);
     void SaveSettings(const std::string &treeName);
@@ -48,4 +51,5 @@ class BehaviorTreeEditor {
 
     // セーブ/ロード用のツリー名
     char treeNameBuffer_[256] = "DefaultTree";
+#endif // _DEBUG
 };

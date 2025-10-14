@@ -54,6 +54,8 @@ class TitleScene : public BaseScene {
 
     float time_ = 0.0f;
     const float kMaxTime_ = 2.0f;
+    bool firstMove_ = false;
+    bool secondMove_ = false;
 
     SkyBox *skyBox_ = nullptr;
 

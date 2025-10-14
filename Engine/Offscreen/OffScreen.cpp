@@ -46,7 +46,7 @@ void OffScreen::Setting() {
     const char *shaderModeItems[] = {
         "なし", "グレイ", "ビネット", "スムース", "ガウス",
         "アウトライン(エッジ検出)", "アウトライン(深度ベース)",
-        "ブラー", "シネマティック", "ディゾルブ", "ランダム", "集中線"};
+        "ブラー", "シネマティック", "ディゾルブ", "ランダム", "集中線", "ピクセル化", "遷移"};
     static int selectedEffect = 0;
 
     ImGui::Combo("追加するエフェクト", &selectedEffect, shaderModeItems, IM_ARRAYSIZE(shaderModeItems));

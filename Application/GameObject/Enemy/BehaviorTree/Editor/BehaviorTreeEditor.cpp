@@ -4,6 +4,8 @@
 #include <Application/GameObject/Enemy/BehaviorTree/Nodes/ConditionNodes.h>
 #include <Application/GameObject/Enemy/BehaviorTree/Nodes/SequenceNode.h>
 #include <algorithm>
+#ifdef _DEBUG
+
 
 void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
     if (!root)
@@ -498,3 +500,5 @@ void BehaviorTreeEditor::AddExecutionHistory(BehaviorNode *node) {
         executionHistory_.erase(executionHistory_.begin());
     }
 }
+
+#endif // _DEBUG

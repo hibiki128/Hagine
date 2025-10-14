@@ -91,6 +91,8 @@
     <FxCompile Include="Resources\shaders\Particle\CSParticle\UpdateParticle.CS.hlsl">
       <Filter>Resources\shaders\Particle\CSParticle</Filter>
     </FxCompile>
+    <FxCompile Include="Resources\shaders\OffScreen\Pixelate.PS.hlsl" />
+    <FxCompile Include="Resources\shaders\OffScreen\Transition.PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -423,6 +425,7 @@
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
+    <ClCompile Include="Application\Staging\Transition\FadeOut.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -789,6 +792,7 @@
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.h" />
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.h" />
+    <ClInclude Include="Application\Staging\Transition\FadeOut.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

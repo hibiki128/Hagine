@@ -3,9 +3,25 @@
 #include "memory"
 #include "vector"
 class SceneTransition {
+  private:
+    static SceneTransition *instance;
+
+    SceneTransition() = default;
+    ~SceneTransition() = default;
+    SceneTransition(SceneTransition &) = delete;
+    SceneTransition &operator=(SceneTransition &) = delete;
+
   public:
-    SceneTransition();
-    ~SceneTransition();
+    /// <summary>
+    /// シングルトンインスタンスの取得
+    /// </summary>
+    /// <returns></returns>
+    static SceneTransition *GetInstance();
+
+    /// <summary>
+    /// 終了
+    /// </summary>
+    void Finalize();
 
     /// <summary>
     /// 初期化
@@ -31,6 +47,7 @@ class SceneTransition {
     void SetFadeInStart(bool start) { fadeInStart = start; }
     void SetFadeOutStart(bool start) { fadeOutStart = start; }
     void SetFadeInFinish(bool finish) { fadeInFinish = finish; }
+    void SetUseTransition(bool use) { useTransition = use; }
 
     /// <summary>
     /// getter
@@ -39,6 +56,7 @@ class SceneTransition {
     bool IsEnd() { return isEnd; }
     bool FadeInFinish() { return fadeInFinish; }
     bool FadeInStart() { return fadeInStart; }
+    bool GetUseTransition() const { return useTransition; }
 
     /// <summary>
     /// リセット
@@ -104,4 +122,5 @@ class SceneTransition {
     bool fadeInFinish = false;
     bool fadeOutFinish = false;
     bool isEnd = false;
+    bool useTransition = true; // デフォルトはトランジションを使用
 };

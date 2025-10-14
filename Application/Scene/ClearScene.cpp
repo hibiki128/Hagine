@@ -8,17 +8,19 @@ void ClearScene::Initialize() {
     vp_.Initialize();
     vp_.translation_ = {12.0f, -4.0f, -30.0f};
 
+    BaseObjectManager::GetInstance()->LoadAll("ClearScene");
+
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
 
-    clearLogo_ = std::make_unique<Sprite>();
-    clearLogo_->Initialize("game/Clear.png", clearLogoPosition_, {1.0f, 1.0f, 1.0f, 1.0f}, {0.5f, 0.5f});
-    titleButton_ = std::make_unique<Sprite>();
-    titleButton_->Initialize("game/titleButton.png", titleButtonPosition_, {1.0f, 1.0f, 1.0f, 1.0f}, {0.5f, 0.5f});
+    fadeOut_ = std::make_unique<FadeOut>();
+    fadeOut_->Initialize();
+    timer_ = 0.0f;
 }
 
 void ClearScene::Finalize() {
     BaseScene::Finalize();
+    fadeOut_->Finalize();
 }
 
 void ClearScene::Update() {
@@ -28,33 +30,24 @@ void ClearScene::Update() {
     // シーン切り替え
     ChangeScene();
 
-    clearLogo_->SetPosition(clearLogoPosition_);
-    clearLogo_->SetSize(clearLogo_->GetTexSize() * clearLogoSize_);
-    titleButton_->SetPosition(titleButtonPosition_);
-    titleButton_->SetSize(titleButton_->GetTexSize() * titleButtonSize_);
+    fadeOut_->Update();
+
+    timer_ += 1.0f / 60.0f;
 }
 
 void ClearScene::Draw() {
     /// -------描画処理開始-------
 
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
-    //-----Spriteの描画開始-----
-    clearLogo_->Draw();
-    titleButton_->Draw();
-    //------------------------
+    fadeOut_->Draw(vp_);
+    if (timer_ >= 1.5f) {
+        BaseObjectManager::GetInstance()->Draw(vp_);
+    }
 
     /// -------描画処理終了-------
 }
 
 void ClearScene::DrawForOffScreen() {
     /// -------描画処理開始-------
-
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
-    //-----Spriteの描画開始-----
-
-    //------------------------
 
     /// -------描画処理終了-------
 }
@@ -67,6 +60,7 @@ void ClearScene::AddObjectSetting() {
 }
 
 void ClearScene::AddParticleSetting() {
+    fadeOut_->ImGui();
 }
 
 void ClearScene::CameraUpdate() {
@@ -78,7 +72,7 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
-    if (input_->TriggerKey(DIK_SPACE)) {
+    if (input_->TriggerKey(DIK_SPACE) && timer_ >= 1.5f) {
         // シーンを変更
         sceneManager_->NextSceneReservation("TITLE");
     }

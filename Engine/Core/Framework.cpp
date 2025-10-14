@@ -177,14 +177,18 @@ void Framework::Initialize() {
     motionEditor_ = MotionEditor::GetInstance();
     ///---------------------------
 
+    ///-------SceneTransition-------
+    sceneTransition_ = SceneTransition::GetInstance();
+    ///-----------------------------
+
     /// 時間の初期化
     Frame::Init();
 }
 
 void Framework::Finalize() {
     baseObjectManager_->Finalize();
-
     sceneManager_->Finalize();
+    sceneTransition_->Finalize();
 
     // WindowsAPIの終了処理
     winApp_->Finalize();
@@ -340,6 +344,7 @@ void Framework::LoadResource() {
     particleEditor_->AddParticleEmitter("RushEmitter");
     particleEditor_->AddParticleEmitter("punchEmitter");
     particleCSEditor_->AddParticleEmitter("playerAura");
+    particleCSEditor_->AddParticleEmitter("FadeOut");
 }
 
 void Framework::PlaySounds() {

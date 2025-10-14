@@ -56,7 +56,7 @@ void GameScene::Initialize() {
     /// ===================================================
     /// ビヘイビアツリーの構築
     /// ===================================================
-    enemy_->InitializeBehaviorTree();
+    // enemy_->InitializeBehaviorTree();
 
     /// ===================================================
     /// オブジェクトマネージャに追加
@@ -145,11 +145,12 @@ void GameScene::AddObjectSetting() {
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
     }
-
+#ifdef _DEBUG
     // ビヘイビアツリーエディターの表示
     if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
         behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
     }
+#endif // _DEBUG
 }
 
 void GameScene::AddParticleSetting() {
