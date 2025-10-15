@@ -7,7 +7,7 @@ class TitleUI {
   public:
     void Initialize();
     void Update();
-    void Draw(const ViewProjection &vp_);
+    void Draw(ViewProjection &vp_);
 
     bool GetIsFinish() const { return isFinish_; }
 
@@ -32,6 +32,7 @@ class TitleUI {
     bool isSpriteVisible_ = false;
     bool secondMove_ = false;
     bool isFinish_ = false;
+    bool cameraMove_ = false;
 
     Vector2 titleLogoStartPos_ = {-1100.0f, 0.0f}; // 画面外の開始位置（左から）
     Vector2 pressStartStartPos_ = {2000.0f, 0.0f}; // 画面外の開始位置（右から）

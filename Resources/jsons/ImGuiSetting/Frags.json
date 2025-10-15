@@ -3,7 +3,7 @@
     "ShowGrid": false,
     "isEditorMode": false,
     "showFPSView": true,
-    "showGizmoView": true,
+    "showGizmoView": false,
     "showHierarchyView": false,
     "showLightView": false,
     "showMotionEditorView": false,

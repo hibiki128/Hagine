@@ -105,6 +105,7 @@ void SceneManager::SceneChange() {
             delete scene_;
             BaseObjectManager::GetInstance()->RemoveAllObjects();
             SpriteManager::GetInstance()->Clear();
+            ParticleCSGroupManager::GetInstance()->ClearIndependentGroups();
         }
         // シーンの切り替え
         scene_ = nextScene_;

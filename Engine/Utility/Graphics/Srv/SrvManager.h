@@ -112,7 +112,7 @@ class SrvManager {
     void Free(uint32_t srvIndex);
 
     bool CanAllocate() const;
-
+    void ClearDescriptor(uint32_t srvIndex);
     /// <summary>
     /// getter
     /// </summary>

@@ -25,7 +25,7 @@ class ParticleCSGroupManager {
 
     void AddParticleCSGroup(std::unique_ptr<ParticleCSGroup> particleCSGroup);
 
-    void CreateParticleCSGroup(const std::string &groupName, const std::string &fileName, uint32_t maxParticleCount = 10000, const std::string &texturePath = {},BlendMode blendMode = BlendMode::kAdd);
+    void CreateParticleCSGroup(const std::string &groupName, const std::string &fileName, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
     void CreatePrimitiveParticleCSGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
 
     ParticleCSGroup *GetParticleCSGroup(const std::string &name) {
@@ -79,6 +79,19 @@ class ParticleCSGroupManager {
             result.push_back(group.get()); // unique_ptr から生ポインタを取得
         }
         return result;
+    }
+
+    void ClearIndependentGroups() {
+        independentGroups_.clear();
+    }
+
+    void RemoveUnusedIndependentGroups(const std::unordered_set<std::string> &usedGroupNames) {
+        independentGroups_.erase(
+            std::remove_if(independentGroups_.begin(), independentGroups_.end(),
+                           [&usedGroupNames](const std::unique_ptr<ParticleCSGroup> &group) {
+                               return usedGroupNames.find(group->GetGroupName()) == usedGroupNames.end();
+                           }),
+            independentGroups_.end());
     }
 
   private:

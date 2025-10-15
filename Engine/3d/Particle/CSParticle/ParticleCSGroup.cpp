@@ -16,6 +16,8 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     CreateFreeListIndexResource();
     CreateFreeListResource();
     CreateAliveCountResource();
+
+    isInitialized_ = true;
 }
 
 int ParticleCSGroup::CalculateOptimalEmitCount() const {
@@ -33,6 +35,32 @@ int ParticleCSGroup::CalculateOptimalEmitCount() const {
     }
 
     return std::clamp(result, 1, static_cast<int>(settingsData_->maxParticleCount));
+}
+
+ParticleCSGroup::~ParticleCSGroup() {
+    if (!isInitialized_) {
+        return;
+    }
+
+    // Map済みリソースのUnmap
+    if (settingsResource_) {
+        settingsResource_->Unmap(0, nullptr);
+    }
+    if (perViewResource_) {
+        perViewResource_->Unmap(0, nullptr);
+    }
+    if (perFrameResource_) {
+        perFrameResource_->Unmap(0, nullptr);
+    }
+    if (materialResource_) {
+        materialResource_->Unmap(0, nullptr);
+    }
+    if (vertexResource_) {
+        vertexResource_->Unmap(0, nullptr);
+    }
+    if (indexResource_) {
+        indexResource_->Unmap(0, nullptr);
+    }
 }
 
 ParticleCSGroupData ParticleCSGroup::CreateParticleGroup(const std::string &groupName, const std::string &filename, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {

@@ -40,7 +40,7 @@ void TitleScene::Update() {
         vp_.EaseCameraMove(EasingType::InCubic, "TitleMovedCamera", 1.0f);
         firstMove_ = true;
     }
-    if (time_ >= 2.5f && input_->TriggerKey(DIK_SPACE) && !secondMove_) {
+    if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
         vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
         secondMove_ = true;
     }

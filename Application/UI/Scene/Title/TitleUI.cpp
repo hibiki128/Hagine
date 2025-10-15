@@ -53,6 +53,7 @@ void TitleUI::Initialize() {
     isSpriteExiting_ = false;
     spriteExitTimer_ = 0.0f;
     isFinish_ = false;
+    cameraMove_ = false;
 }
 
 void TitleUI::Update() {
@@ -105,7 +106,7 @@ void TitleUI::Update() {
         }
     }
 
-    if (time_ >= 2.5f && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_) {
+    if (time_ >= 3.0f && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_ && !cameraMove_) {
         secondMove_ = true;
         isSpriteExiting_ = true;
         spriteExitTimer_ = 0.0f;
@@ -140,8 +141,9 @@ void TitleUI::Update() {
     }
 }
 
-void TitleUI::Draw(const ViewProjection &vp_) {
+void TitleUI::Draw(ViewProjection &vp_) {
     chargeBullet_->Draw(vp_);
     chargeEffect_->Draw(vp_);
     playerAura_->Draw(vp_);
+    cameraMove_ = vp_.GetIsCameraMove();
 }
