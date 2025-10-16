@@ -1,54 +1,91 @@
 #pragma once
+#include "Application/Staging/Transition/FadeOut.h"
 #include "BaseScene.h"
-#include"Application/Staging/Transition/FadeOut.h"
 
+/// <summary>
+/// クリア画面のシーンクラス
+/// ゲームクリア時の処理と表示を管理する
+/// </summary>
 class ClearScene : public BaseScene {
-  public: 
-    /// ====================================
-    /// public methods
-    /// ====================================
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
     void Initialize() override;
 
+    /// <summary>
+    /// 終了処理
+    /// </summary>
     void Finalize() override;
 
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update() override;
 
+    /// <summary>
+    /// 描画処理
+    /// </summary>
     void Draw() override;
 
+    /// <summary>
+    /// オフスクリーン描画処理
+    /// </summary>
     void DrawForOffScreen() override;
 
+    /// <summary>
+    /// シーン設定を追加
+    /// </summary>
     void AddSceneSetting() override;
 
+    /// <summary>
+    /// オブジェクト設定を追加
+    /// </summary>
     void AddObjectSetting() override;
 
+    /// <summary>
+    /// パーティクル設定を追加
+    /// </summary>
     void AddParticleSetting() override;
 
+    /// <summary>
+    /// ビュープロジェクションを取得
+    /// </summary>
+    /// <returns>ViewProjection*: ビュープロジェクションのポインタ</returns>
     ViewProjection *GetViewProjection() override { return &vp_; }
 
   private:
-    /// ====================================
-    /// private methods
-    /// ====================================
-   
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// カメラを更新
+    /// </summary>
     void CameraUpdate();
 
+    /// <summary>
+    /// シーン遷移を実行
+    /// </summary>
     void ChangeScene();
 
   private:
-    /// ====================================
-    /// private variaus
-    /// ====================================
+    /// ===================================================
+    /// private varians
+    /// ===================================================
 
     Audio *audio_;
     Input *input_;
-   SpriteCommon *spCommon_;
+    SpriteCommon *spCommon_;
     ParticleCommon *ptCommon_;
-
     ViewProjection vp_;
+
     std::unique_ptr<DebugCamera> debugCamera_;
     std::unique_ptr<FadeOut> fadeOut_;
 
-    float timer_ = 0.0f;
-
+    float timer_ = 0.0f; // 経過時間
 };

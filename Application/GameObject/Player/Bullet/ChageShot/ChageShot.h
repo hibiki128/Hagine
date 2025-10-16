@@ -4,69 +4,146 @@
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
 
+/// <summary>
+/// チャージショットのゲームオブジェクトクラス
+/// プレイヤーがチャージして発射する特殊な弾
+/// </summary>
 class ChargeShot : public BaseObject {
   public:
-    /// ==============================================
-    /// public methods
-    /// ==============================================
+    /// ===================================================
+    /// public method
+    /// ===================================================
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    /// <param name="objectName">オブジェクト名</param>
     void Init(const std::string objectName) override;
+
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update() override;
+
+    /// <summary>
+    /// 描画処理
+    /// </summary>
+    /// <param name="viewProjection">ビュープロジェクション</param>
+    /// <param name="offSet">描画オフセット</param>
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+
+    /// <summary>
+    /// パーティクルの描画処理
+    /// </summary>
+    /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const ViewProjection &viewProjection);
+
+    /// <summary>
+    /// ImGui表示
+    /// </summary>
     void imgui();
 
+    /// <summary>
+    /// 衝突判定時の処理
+    /// </summary>
+    /// <param name="other">衝突したコライダー</param>
     void OnCollisionEnter([[maybe_unused]] Collider *other) override;
 
-    // ChageShotが生きているか
+    /// <summary>
+    /// 生存状態を取得
+    /// </summary>
+    /// <returns>bool: 生存フラグ</returns>
     bool IsAlive() const { return isAlive_; }
-    // 最大スケールに到達したか
+
+    /// <summary>
+    /// 最大スケールに到達したかを取得
+    /// </summary>
+    /// <returns>bool: 最大スケール到達フラグ</returns>
     bool IsMaxScale() const { return isMaxScale_; }
-    // ChageShotのスケール取得
+
+    /// <summary>
+    /// スケール値を取得
+    /// </summary>
+    /// <returns>float: 現在のスケール値</returns>
     float GetScale() const { return scale_; }
 
-    // 発射済みか
+    /// <summary>
+    /// 発射済みかを取得
+    /// </summary>
+    /// <returns>bool: 発射済みフラグ</returns>
     bool IsFired() const { return isFired_; }
 
-    // ChageShotの発射処理
+    /// <summary>
+    /// チャージショットの発射処理
+    /// </summary>
+    /// <param name="pos">発射位置</param>
+    /// <param name="dir">発射方向</param>
     void Fire(const Vector3 &pos, const Vector3 &dir);
 
-    // ChageShotのリセット
+    /// <summary>
+    /// チャージショットのリセット
+    /// </summary>
     void Reset();
 
-    // プレイヤー参照セット
+    /// <summary>
+    /// プレイヤー参照を設定
+    /// </summary>
+    /// <param name="player">設定するプレイヤーのポインタ</param>
     void SetPlayer(Player *player) { player_ = player; }
 
-    // オフセット設定用のセッター
+    /// <summary>
+    /// プレイヤーの半径を設定
+    /// </summary>
+    /// <param name="radius">設定する半径</param>
     void SetPlayerRadius(float radius) { playerRadius_ = radius; }
+
+    /// <summary>
+    /// オフセット余裕距離を設定
+    /// </summary>
+    /// <param name="margin">設定する余裕距離</param>
     void SetOffsetMargin(float margin) { offsetMargin_ = margin; }
+
+    /// <summary>
+    /// 垂直方向のオフセットを設定
+    /// </summary>
+    /// <param name="yOffset">設定するY方向オフセット</param>
     void SetVerticalOffset(float yOffset) { verticalOffset_ = yOffset; }
 
+    /// <summary>
+    /// ダメージ値を取得
+    /// </summary>
+    /// <returns>int: ダメージ値</returns>
     int GetDamage() const;
+
+    /// <summary>
+    /// チャージ中かを取得
+    /// </summary>
+    /// <returns>bool: チャージ状態フラグ</returns>
     bool GetIsCharge() const { return isCharge; }
 
   private:
-    /// ==============================================
+    /// ===================================================
     /// private varians
-    /// ==============================================
+    /// ===================================================
 
     Vector3 offset_{};
-    bool isAlive_ = false;
-    bool isMaxScale_ = false;
-    bool isFired_ = false;
-    bool isCharge = false;
-    float scale_ = 1.0f;
-    float scaleSpeed_ = 1.25f;
-    float maxScale_ = 4.0f;
+    bool isAlive_ = false;    // 生存フラグ
+    bool isMaxScale_ = false; // 最大スケール到達フラグ
+    bool isFired_ = false;    // 発射済みフラグ
+    bool isCharge = false;    // チャージ中フラグ
+
+    float scale_ = 1.0f;       // 現在のスケール
+    float scaleSpeed_ = 1.25f; // スケール増加速度
+    float maxScale_ = 4.0f;    // 最大スケール値
+
     Vector3 velocity_{};
-    float speed_ = 60.0f;
+    float speed_ = 60.0f; // 発射速度
+
     Player *player_ = nullptr;
+    static constexpr int maxDamage_ = 15; // 最大ダメージ値
 
-    static constexpr int maxDamage_ = 15;
-
-    // オフセット調整用のパラメータ
     float playerRadius_ = 1.0f;   // プレイヤーの半径
-    float offsetMargin_ = 0.5f;   // 余裕距離
+    float offsetMargin_ = 0.5f;   // オフセット余裕距離
     float verticalOffset_ = 1.0f; // 垂直方向のオフセット
 
     std::unique_ptr<ParticleEmitter> chargeEmitter_;

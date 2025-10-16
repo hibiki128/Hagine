@@ -1,52 +1,81 @@
 #pragma once
-#include"DirectXCommon.h"
+#include "DirectXCommon.h"
 #include <Graphics/PipeLine/PipeLineManager.h>
-class SpriteCommon
-{
 
-private:
-	static SpriteCommon* instance;
+/// <summary>
+/// スプライト描画に必要な共通処理を管理するシングルトンクラス
+/// DirectX、パイプライン、ブレンドモードなどを制御
+/// </summary>
+class SpriteCommon {
+  private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
 
-	SpriteCommon() = default;
-	~SpriteCommon() = default;
-	SpriteCommon(SpriteCommon&) = delete;
-	SpriteCommon& operator=(SpriteCommon&) = delete;
+    /// <summary>
+    /// プライベートコンストラクタ
+    /// </summary>
+    SpriteCommon() = default;
 
-private:
-	DirectXCommon* dxCommon_;
-	PipeLineManager* psoManager_ = nullptr;
-public: // メンバ関数
+    /// <summary>
+    /// プライベートデストラクタ
+    /// </summary>
+    ~SpriteCommon() = default;
 
-	/// <summary>
-	/// シングルトンインスタンスの取得
-	/// </summary>
-	/// <returns></returns>
-	static SpriteCommon* GetInstance();
+    /// <summary>
+    /// コピーコンストラクタ削除
+    /// </summary>
+    SpriteCommon(SpriteCommon &) = delete;
 
-	/// <summary>
-	/// 終了
-	/// </summary>
-	void Finalize();
+    /// <summary>
+    /// 代入演算子削除
+    /// </summary>
+    SpriteCommon &operator=(SpriteCommon &) = delete;
 
-	/// <summary>
-	///  初期化
-	/// </summary>
-	void  Initialize();
+  private:
+    /// ===================================================
+    /// private varians
+    /// ===================================================
 
-	/// <summary>
-	/// 共通描画設定
-	/// </summary>
-	void DrawCommonSetting();
+    static SpriteCommon *instance;
+    DirectXCommon *dxCommon_;
+    PipeLineManager *psoManager_ = nullptr;
 
-	/// <summary>
-	///  getter
-	/// </summary>
-	/// <returns></returns>
-	DirectXCommon* GetDxCommon()const { return dxCommon_; }
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
 
-	/// <summary>
-	/// ブレンドモードの切り替え
-	/// </summary>
-	void SetBlendMode(BlendMode blendMode);
+    /// <summary>
+    /// シングルトンインスタンスを取得
+    /// </summary>
+    /// <returns>SpriteCommon*: インスタンスのポインタ</returns>
+    static SpriteCommon *GetInstance();
+
+    /// <summary>
+    /// 終了処理
+    /// </summary>
+    void Finalize();
+
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    void Initialize();
+
+    /// <summary>
+    /// 共通描画設定を適用
+    /// </summary>
+    void DrawCommonSetting();
+
+    /// <summary>
+    /// DirectXCommonを取得
+    /// </summary>
+    /// <returns>DirectXCommon*: DirectXCommonのポインタ</returns>
+    DirectXCommon *GetDxCommon() const { return dxCommon_; }
+
+    /// <summary>
+    /// ブレンドモードを設定
+    /// </summary>
+    /// <param name="blendMode">設定するブレンドモード</param>
+    void SetBlendMode(BlendMode blendMode);
 };
-
