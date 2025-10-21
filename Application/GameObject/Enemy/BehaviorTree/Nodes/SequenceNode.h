@@ -17,15 +17,7 @@ class SequenceNode : public BehaviorNode {
     /// <param name="enemy">対象のEnemy参照</param>
     /// <param name="deltaTime">フレームの経過時間</param>
     /// <returns>ノードの実行結果</returns>
-    NodeStatus Execute(Enemy &enemy, float deltaTime) override {
-        for (auto &child : children_) {
-            NodeStatus status = child->Execute(enemy, deltaTime);
-            if (status != NodeStatus::Success) {
-                return status;
-            }
-        }
-        return NodeStatus::Success;
-    }
+    NodeStatus Execute(Enemy &enemy, float deltaTime) override;
 
     /// <summary>
     /// ノード名取得
@@ -37,9 +29,7 @@ class SequenceNode : public BehaviorNode {
     /// 子ノードを追加
     /// </summary>
     /// <param name="child">追加する子ノード</param>
-    void AddChild(std::unique_ptr<BehaviorNode> child) {
-        children_.push_back(std::move(child));
-    }
+    void AddChild(std::unique_ptr<BehaviorNode> child);
 
     /// <summary>
     /// 子ノードの一覧を取得
@@ -71,15 +61,7 @@ class SelectorNode : public BehaviorNode {
     /// <param name="enemy">対象のEnemy参照</param>
     /// <param name="deltaTime">フレームの経過時間</param>
     /// <returns>ノードの実行結果</returns>
-    NodeStatus Execute(Enemy &enemy, float deltaTime) override {
-        for (auto &child : children_) {
-            NodeStatus status = child->Execute(enemy, deltaTime);
-            if (status != NodeStatus::Failure) {
-                return status;
-            }
-        }
-        return NodeStatus::Failure;
-    }
+    NodeStatus Execute(Enemy &enemy, float deltaTime) override;
 
     /// <summary>
     /// ノード名取得
@@ -91,9 +73,7 @@ class SelectorNode : public BehaviorNode {
     /// 子ノードを追加
     /// </summary>
     /// <param name="child">追加する子ノード</param>
-    void AddChild(std::unique_ptr<BehaviorNode> child) {
-        children_.push_back(std::move(child));
-    }
+    void AddChild(std::unique_ptr<BehaviorNode> child);
 
     /// <summary>
     /// 子ノードの一覧を取得

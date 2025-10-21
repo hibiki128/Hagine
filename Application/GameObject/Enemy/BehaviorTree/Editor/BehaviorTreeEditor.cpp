@@ -8,8 +8,15 @@
 
 
 void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
-    if (!root)
+    if (!root) {
+        ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+        ImGui::Begin("ビヘイビアツリーエディター");
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
+                           "エラー: ビヘイビアツリーが初期化されていません");
+        ImGui::Text("Enemy::InitializeBehaviorTree()を呼び出してください");
+        ImGui::End();
         return;
+    }
 
     ImGui::SetNextWindowSize(ImVec2(1200, 800), ImGuiCond_FirstUseEver);
     ImGui::Begin("ビヘイビアツリーエディター");
@@ -418,13 +425,18 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
 
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("BehaviorTree", treeName);
 
-    // エディター設定の読み込み
+    // エディター設定の読み込み（デフォルト値を指定）
     zoom_ = data->Load("zoom", 1.0f);
     Vector2 panOffset = data->Load<Vector2>("panOffset", Vector2(0.0f, 0.0f));
     panOffset_ = ImVec2(panOffset.x, panOffset.y);
 
     // ノードの重み付け情報を読み込み
     int weightCount = data->Load("nodeWeightCount", 0);
+
+    // weightCountが0の場合は読み込みをスキップ（初回起動時など）
+    if (weightCount <= 0) {
+        return;
+    }
 
     // ノードIDからノードへのマップを作成（再帰的に構築）
     std::unordered_map<int, BehaviorNode *> nodeMap;
@@ -452,6 +464,8 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
 
     for (int i = 0; i < weightCount; i++) {
         std::string prefix = "weight_" + std::to_string(i) + "_";
+
+        // 各値を安全に読み込み
         int nodeId = data->Load(prefix + "nodeId", -1);
         std::string nodeName = data->Load(prefix + "nodeName", std::string(""));
         float weight = data->Load(prefix + "weight", 1.0f);

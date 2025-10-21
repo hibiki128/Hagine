@@ -8,9 +8,10 @@ void FadeOut::Initialize() {
     SpriteManager::GetInstance()->LoadAllSprites();
     fadeOut_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("FadeOut");
     fadeOut_->SetAuto(true);
-    fadeOut_->SetTranslate({12.0f, -4.0f, -27.6f});
     timer_ = 0.0f;
-
+    fadeOut_->SetTranslate({0.0f, 40.6f, -79.1f});
+    Quaternion rotation = Quaternion::FromEulerAngles({degreesToRadians(-30.0f), 0.0f, 0.0f});
+    fadeOut_->SetRotation(rotation);
     SceneTransition::GetInstance()->SetUseTransition(true);
 }
 
@@ -29,6 +30,9 @@ void FadeOut::Draw(const ViewProjection &vp) {
         fadeOut_->SetAuto(false);
     }
     fadeOut_->Draw(vp);
+    if (timer_ >= 2.0f) {
+        isFinish_ = true;
+    }
 }
 
 void FadeOut::Finalize() {

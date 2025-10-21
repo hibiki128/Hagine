@@ -295,6 +295,10 @@ class Player : public BaseObject {
     /// <param name="vp">設定するビュープロジェクションのポインタ</param>
     void SetVp(ViewProjection *vp);
 
+    void SetStart(bool flag) {
+        started_ = flag;
+    }
+
     /// <summary>
     /// 敵を設定
     /// </summary>
@@ -434,6 +438,8 @@ class Player : public BaseObject {
     bool isLockOn_ = false;  // ロックオンフラグ
     bool isGrounded_ = true; // 接地フラグ
     bool isDashing_ = false; // ダッシュ中フラグ
+
+    bool started_ = false; // ゲーム開始フラグ
 
     ComboSystem punchCombo_;
     bool comboInitialized_ = false; // コンボ初期化済みフラグ

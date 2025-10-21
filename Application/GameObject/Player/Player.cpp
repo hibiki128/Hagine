@@ -105,8 +105,11 @@ void Player::Update() {
         chargeShot_->Update();
     }
 
-    if (currentState_) {
-        currentState_->Update(*this);
+    if (started_) {
+        if (currentState_) {
+            currentState_->Update(*this);
+        }
+        RotateUpdate();
     }
 
     // 下方向の速度を制限
@@ -131,8 +134,6 @@ void Player::Update() {
     FollowCamera_->SetCameraFov(currentFov_);
 
     CollisionGround();
-
-    RotateUpdate();
 
     BaseObject::Update();
 

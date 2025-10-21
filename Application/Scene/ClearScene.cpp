@@ -12,15 +12,10 @@ void ClearScene::Initialize() {
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
-
-    fadeOut_ = std::make_unique<FadeOut>();
-    fadeOut_->Initialize();
-    timer_ = 0.0f;
 }
 
 void ClearScene::Finalize() {
     BaseScene::Finalize();
-    fadeOut_->Finalize();
 }
 
 void ClearScene::Update() {
@@ -30,19 +25,11 @@ void ClearScene::Update() {
     // シーン切り替え
     ChangeScene();
 
-    fadeOut_->Update();
-
-    timer_ += 1.0f / 60.0f;
 }
 
 void ClearScene::Draw() {
     /// -------描画処理開始-------
-
-    fadeOut_->Draw(vp_);
-    if (timer_ >= 1.5f) {
-        BaseObjectManager::GetInstance()->Draw(vp_);
-    }
-
+    BaseObjectManager::GetInstance()->Draw(vp_);
     /// -------描画処理終了-------
 }
 
@@ -60,7 +47,6 @@ void ClearScene::AddObjectSetting() {
 }
 
 void ClearScene::AddParticleSetting() {
-    fadeOut_->ImGui();
 }
 
 void ClearScene::CameraUpdate() {
@@ -72,7 +58,7 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
-    if (input_->TriggerKey(DIK_SPACE) && timer_ >= 1.5f) {
+    if (input_->TriggerKey(DIK_SPACE)) {
         // シーンを変更
         sceneManager_->NextSceneReservation("TITLE");
     }

@@ -36,6 +36,12 @@ class FadeOut {
     /// ImGui表示
     /// </summary>
     void ImGui();
+    
+    /// <summary>
+    /// フェードアウトの終了判定
+    /// </summary>
+    /// <returns></returns>
+    bool IsFinish() const { return isFinish_; }
 
   private:
     /// ===================================================
@@ -44,4 +50,5 @@ class FadeOut {
 
     std::unique_ptr<ParticleCSEmitter> fadeOut_ = nullptr;
     float timer_ = 0.0f; // 経過時間
+    bool isFinish_ = false;
 };

@@ -426,6 +426,8 @@
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
     <ClCompile Include="Application\Staging\Transition\FadeOut.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\BehaviorNode\BehaviorNode.cpp" />
+    <ClCompile Include="Application\Camera\StartCamera.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -793,6 +795,7 @@
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.h" />
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.h" />
     <ClInclude Include="Application\Staging\Transition\FadeOut.h" />
+    <ClInclude Include="Application\Camera\StartCamera.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

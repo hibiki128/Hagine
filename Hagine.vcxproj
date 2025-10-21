@@ -107,6 +107,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\BehaviorNode\BehaviorNode.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.cpp" />
     <ClCompile Include="Application\Camera\FollowCamera.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp" />
@@ -222,6 +223,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\2d\SpriteManager.cpp" />
     <ClCompile Include="Application\UI\Scene\Title\TitleUI.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\SequenceNode.cpp" />
+    <ClCompile Include="Application\Camera\StartCamera.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".claudiaideconfig" />
@@ -396,6 +398,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\2d\SpriteManager.h" />
     <ClInclude Include="Application\UI\Scene\Title\TitleUI.h" />
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\SequenceNode.h" />
+    <ClInclude Include="Application\Camera\StartCamera.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\OffScreen\Pixelate.PS.hlsl">

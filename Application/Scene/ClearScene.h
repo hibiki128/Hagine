@@ -85,7 +85,4 @@ class ClearScene : public BaseScene {
     ViewProjection vp_;
 
     std::unique_ptr<DebugCamera> debugCamera_;
-    std::unique_ptr<FadeOut> fadeOut_;
-
-    float timer_ = 0.0f; // 経過時間
 };

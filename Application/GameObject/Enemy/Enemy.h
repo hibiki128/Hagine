@@ -279,6 +279,16 @@ class Enemy : public BaseObject {
     /// <returns>ルートノードのポインタ</returns>
     BehaviorNode *GetBehaviorRoot() { return behaviorRoot_.get(); }
 
+    #ifdef _DEBUG
+    /// <summary>
+    /// ビヘイビアツリーエディターを設定
+    /// </summary>
+    /// <param name="editor">設定するBehaviorTreeEditorへのポインタ</param>
+    void SetBehaviorTreeEditor(BehaviorTreeEditor *editor) {
+        BehaviorNode::SetEditor(editor);
+    }
+#endif
+
   private:
     /// ===================================================
     /// private method
