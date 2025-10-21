@@ -90,7 +90,7 @@ void TitleScene::CameraUpdate() {
 void TitleScene::ChangeScene() {
     if (secondMove_ && !vp_.GetIsCameraMove()&&titleUI_->GetIsFinish()) {
         SceneTransition::GetInstance()->SetUseTransition(false);
-        sceneManager_->NextSceneReservation("CLEAR");
+        sceneManager_->NextSceneReservation("GAME");
     }
 #ifndef _DEBUG
 #endif // !_DEBUG
