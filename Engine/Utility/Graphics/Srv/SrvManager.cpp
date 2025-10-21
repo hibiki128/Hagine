@@ -134,6 +134,9 @@ uint32_t SrvManager::Allocate() {
 }
 
 void SrvManager::Free(uint32_t srvIndex) {
+    // ディスクリプタをクリアしてから解放
+    ClearDescriptor(srvIndex);
+
     // 解放するインデックスを空きリストに追加
     freeIndices.push(srvIndex);
 }
@@ -142,4 +145,15 @@ void SrvManager::Free(uint32_t srvIndex) {
 bool SrvManager::CanAllocate() const {
     // useIndexがkMaxSRVCount未満、もしくは空きインデックスがあればtrueを返す
     return useIndex < kMaxSRVCount || !freeIndices.empty();
+}
+
+void SrvManager::ClearDescriptor(uint32_t srvIndex) {
+    // ダミーのNULL SRVを作成してディスクリプタを無効化
+    D3D12_SHADER_RESOURCE_VIEW_DESC nullDesc{};
+    nullDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    nullDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    nullDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    nullDesc.Texture2D.MipLevels = 1;
+
+    dxCommon->GetDevice()->CreateShaderResourceView(nullptr, &nullDesc, GetCPUDescriptorHandle(srvIndex));
 }

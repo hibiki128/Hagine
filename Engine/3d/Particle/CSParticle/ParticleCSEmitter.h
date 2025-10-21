@@ -33,6 +33,11 @@ class ParticleCSEmitter {
     void SetAuto(bool isAuto) { isAuto_ = isAuto; }
 
     std::string GetName() const { return name_; }
+    void SetEnableGravity(bool enable) {
+        for (auto &group : particleGroups_) {
+            group->GetSettingsData()->enableGravity = enable;
+        }
+    }
 
     std::unique_ptr<ParticleCSEmitter> Clone() const;
 

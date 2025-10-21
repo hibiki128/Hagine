@@ -533,19 +533,19 @@ void ImGuiManager::ShowMainMenu() {
         if (ImGui::BeginMenu(ICON_FA_GLOBE " シーン選択")) { // 地球アイコン（意味：全体メニュー）
 
             if (ImGui::MenuItem(ICON_FA_HOME " タイトルシーン", "Ctrl+1")) { // home アイコン
-                SceneManager::GetInstance()->SceneSelection("TITLE");
+                SceneManager::GetInstance()->NextSceneReservation("TITLE");
             }
             if (ImGui::MenuItem(ICON_FA_BARS " セレクトシーン", "Ctrl+2")) { // bars アイコン（メニュー選択感）
-                SceneManager::GetInstance()->SceneSelection("SELECT");
+                SceneManager::GetInstance()->NextSceneReservation("SELECT");
             }
             if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームシーン", "Ctrl+3")) { // gamepad アイコン
-                SceneManager::GetInstance()->SceneSelection("GAME");
+                SceneManager::GetInstance()->NextSceneReservation("GAME");
             }
             if (ImGui::MenuItem(ICON_FA_TROPHY " クリアシーン", "Ctrl+4")) { // trophy アイコン
-                SceneManager::GetInstance()->SceneSelection("CLEAR");
+                SceneManager::GetInstance()->NextSceneReservation("CLEAR");
             }
             if (ImGui::MenuItem(ICON_FA_FILM " デモシーン", "Ctrl+5")) { // film アイコン
-                SceneManager::GetInstance()->SceneSelection("DEMO");
+                SceneManager::GetInstance()->NextSceneReservation("DEMO");
             }
 
             ImGui::EndMenu();

@@ -44,6 +44,7 @@ class ParticleEmitter {
 
     bool GetIsAuto() { return isAuto_; }
     Matrix4x4 GetWorldMatrix() { return transform_.matWorld_; }
+    Vector3 GetPosition() { return transform_.translation_; }
 
     void SetPosition(const Vector3 &position) { transform_.translation_ = position; }
     void SetPositionY(const std::string &groupName, float positionY) { particleSettings_[groupName].translate.y = positionY; }

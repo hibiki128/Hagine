@@ -21,6 +21,8 @@ void TitleScene::Initialize() {
 
     titleUI_ = std::make_unique<TitleUI>();
     titleUI_->Initialize();
+    firstMove_ = false;
+    secondMove_ = false;
 }
 
 void TitleScene::Finalize() {
@@ -34,10 +36,14 @@ void TitleScene::Update() {
     // シーン切り替え
     ChangeScene();
     time_ += Frame::DeltaTime();
-    if (time_ >= kMaxTime_) {
+    if (time_ >= kMaxTime_ && !firstMove_) {
         vp_.EaseCameraMove(EasingType::InCubic, "TitleMovedCamera", 1.0f);
+        firstMove_ = true;
     }
-
+    if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
+        vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
+        secondMove_ = true;
+    }
     titleUI_->Update();
 }
 
@@ -82,9 +88,10 @@ void TitleScene::CameraUpdate() {
 }
 
 void TitleScene::ChangeScene() {
-#ifndef _DEBUG
-    if (input_->TriggerKey(DIK_SPACE) && time_ >= 2.5f) {
+    if (secondMove_ && !vp_.GetIsCameraMove()&&titleUI_->GetIsFinish()) {
+        SceneTransition::GetInstance()->SetUseTransition(false);
         sceneManager_->NextSceneReservation("GAME");
     }
+#ifndef _DEBUG
 #endif // !_DEBUG
 }

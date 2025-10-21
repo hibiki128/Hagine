@@ -1,49 +1,83 @@
 #pragma once
 #include "Application/Camera/FollowCamera.h"
+#include"Application/Camera/StartCamera.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Field/Ground/Ground.h"
 #include "Application/GameObject/Field/SkyDome/SkyDome.h"
 #include "Application/GameObject/Player/Player.h"
 #include "Application/UI/Enemy/EnemyUI.h"
 #include "Application/UI/Player/PlayerUI.h"
-#include "Application/Utility/BehaviorTree/Editor/BehaviorTreeEditor.h"
 #include "BaseScene.h"
 #include "SkyBox/SkyBox.h"
+#include <Application/GameObject/Enemy/BehaviorTree/Editor/BehaviorTreeEditor.h>
+#include <Application/Staging/Transition/FadeOut.h>
 
 class GameScene : public BaseScene {
   public:
-    /// ====================================
-    /// public methods
-    /// ====================================
+    /// ===================================================
+    /// public method
+    /// ===================================================
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
     void Initialize() override;
 
+    /// <summary>
+    /// 終了処理
+    /// </summary>
     void Finalize() override;
 
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update() override;
 
+    /// <summary>
+    /// 描画処理
+    /// </summary>
     void Draw() override;
 
+    /// <summary>
+    /// オフスクリーン描画処理
+    /// </summary>
     void DrawForOffScreen() override;
 
+    /// <summary>
+    /// シーン設定を追加
+    /// </summary>
     void AddSceneSetting() override;
 
+    /// <summary>
+    /// オブジェクト設定を追加
+    /// </summary>
     void AddObjectSetting() override;
 
+    /// <summary>
+    /// パーティクル設定を追加
+    /// </summary>
     void AddParticleSetting() override;
 
+    /// <summary>
+    /// ビュープロジェクションを取得
+    /// </summary>
+    /// <returns>ViewProjection*: ビュープロジェクションのポインタ</returns>
     ViewProjection *GetViewProjection() override { return &vp_; }
 
   private:
-    /// ====================================
-    /// private methods
-    /// ====================================
+    /// ===================================================
+    /// private method
+    /// ===================================================
 
+    /// <summary>
+    /// カメラを更新
+    /// </summary>
     void CameraUpdate();
 
+    /// <summary>
+    /// シーン遷移を実行
+    /// </summary>
     void ChangeScene();
-
-    void InitEnemyBehaviorTree();
 
   private:
     /// ====================================
@@ -67,6 +101,9 @@ class GameScene : public BaseScene {
     // 追従カメラ
     std::unique_ptr<FollowCamera> followCamera_;
 
+    // 開始時カメラ
+    std::unique_ptr<StartCamera> startCamera_;
+
     // 地面
     std::unique_ptr<Ground> ground_;
 
@@ -74,6 +111,8 @@ class GameScene : public BaseScene {
     std::unique_ptr<EnemyUI> enemyUI_;
 
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
+
+    std::unique_ptr<FadeOut> fadeOut_;
 
     SkyBox *skyBox_ = nullptr;
 

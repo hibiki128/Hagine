@@ -536,6 +536,9 @@ void ParticleCSEmitter::LoadCloneSetting() {
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
     if (!data->Exists()) {
         return;
+    } else {
+        particleGroups_.clear();
+        particleGroupNames_.clear();
     }
 
     isAuto_ = data->Load("isAuto", false);

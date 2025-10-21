@@ -29,6 +29,7 @@
 #include "SpriteManager.h"
 #include "line/DrawLine3D.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
+#include"Scene/SceneTransition.h"
 
 class Framework {
   public: // メンバ関数
@@ -88,6 +89,7 @@ class Framework {
 
     // シーンファクトリー
     AbstractSceneFactory *sceneFactory_ = nullptr;
+    SceneTransition *sceneTransition_ = nullptr;
 
     SceneManager *sceneManager_ = nullptr;
     SrvManager *srvManager_ = nullptr;

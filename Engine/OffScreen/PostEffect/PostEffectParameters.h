@@ -27,6 +27,8 @@ class PostEffectParameters {
     void CreateDissolve();
     void CreateRandom();
     void CreateFocusLine();
+    void CreatePixelate();
+    void CreateTransition();
 
   private:
 
@@ -92,6 +94,19 @@ class PostEffectParameters {
         Vector4 lineColor;
     };
 
+    struct Pixelate {
+        float blockSize;
+        float centerX;
+        float centerY;
+    };
+    
+    struct Transition {
+        float progress;   // 遷移の進行度
+        float splitSpeed; // 切れ込みが入るスピード
+        float slideSpeed; // 上下にはけるスピード
+        float splitWidth; // 切れ込みの幅
+    };
+
     // バッファリソース（既存のまま）
     Microsoft::WRL::ComPtr<ID3D12Resource> vignetteResource;
     VignetteParameter *vignetteData = nullptr;
@@ -121,6 +136,12 @@ class PostEffectParameters {
 
     Microsoft::WRL::ComPtr<ID3D12Resource> focusLineResource;
     FocusLine *focusLineData = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> pixelateResource;
+    Pixelate *pixelateData = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> transitionResource;
+    Transition *transitionData = nullptr;
 
     std::string texPath_ = "debug/noise0.png";
 };

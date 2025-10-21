@@ -17,6 +17,7 @@ class ParticleCSGroup {
     /// public methods
     /// ===================================
 
+    ~ParticleCSGroup();
     ParticleCSGroupData CreateParticleGroup(const std::string &groupName, const std::string &filename, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
     ParticleCSGroupData CreatePrimitiveParticleGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
     void Update(const ViewProjection &vp);
@@ -195,4 +196,5 @@ class ParticleCSGroup {
 
     float frequency_ = 0.1f;
     bool isRandomColor_ = false;
+    bool isInitialized_ = false;
 };

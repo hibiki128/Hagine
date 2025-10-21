@@ -3,12 +3,22 @@
 #include "Engine/Frame/Frame.h"
 #include "SpriteCommon.h"
 #include "algorithm"
+#include "myMath.h"
 #include <vector>
-#include"myMath.h"
 
-SceneTransition::SceneTransition() {}
+SceneTransition *SceneTransition::instance = nullptr;
 
-SceneTransition::~SceneTransition() {}
+SceneTransition *SceneTransition::GetInstance() {
+    if (instance == nullptr) {
+        instance = new SceneTransition;
+    }
+    return instance;
+}
+
+void SceneTransition::Finalize() {
+    delete instance;
+    instance = nullptr;
+}
 
 void SceneTransition::Initialize() {
     sprite_ = std::make_unique<Sprite>();
@@ -22,6 +32,7 @@ void SceneTransition::Initialize() {
     fadeInStart = false;
     fadeOutStart = false;
     isEnd = false;
+    useTransition = true; // デフォルトはトランジションを使用
 
     // インスタンシング用の初期化
     rows_ = 15;                                      // 縦方向のスプライト数
@@ -49,10 +60,31 @@ void SceneTransition::Initialize() {
 }
 
 void SceneTransition::Update() {
+    // トランジションを使用しない場合は即座に完了状態にする
+    if (!useTransition) {
+        if (fadeInStart && !fadeInFinish) {
+            fadeInFinish = true;
+        }
+        if (fadeOutStart && !fadeOutFinish) {
+            fadeOutFinish = true;
+        }
+        if (fadeInFinish && fadeOutFinish) {
+            isEnd = true;
+            fadeInStart = false;
+            fadeOutStart = false;
+        }
+        return;
+    }
+
     FadeUpdate();
 }
 
 void SceneTransition::Draw() {
+    // トランジションを使用しない場合は描画しない
+    if (!useTransition) {
+        return;
+    }
+
     // インスタンシング描画で一度に全てのスプライトを描画
     transitionSprite_->Draw();
 }
@@ -60,6 +92,7 @@ void SceneTransition::Draw() {
 void SceneTransition::Debug() {
     ImGui::Begin("遷移");
     ImGui::DragFloat2("位置", &spPos_.x, 0.1f);
+    ImGui::Checkbox("トランジション使用", &useTransition);
     ImGui::End();
 }
 

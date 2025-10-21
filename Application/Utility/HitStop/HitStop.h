@@ -5,29 +5,63 @@
 #include "json.hpp"
 #include <fstream>
 
+/// <summary>
+/// ヒットストップ機能を管理するクラス
+/// 攻撃ヒット時に時間を止める演出を制御
+/// </summary>
 class HitStop {
   public:
-    /// ====================================
-    /// public methods
-    /// ====================================
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// 初期化
+    /// </summary>
     void Initialize();
+
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update();
+
+    /// <summary>
+    /// ヒットストップを開始
+    /// </summary>
     void Start();
+
+    /// <summary>
+    /// ImGui表示
+    /// </summary>
     void imgui();
+
+    /// <summary>
+    /// ヒットストップがアクティブかを取得
+    /// </summary>
+    /// <returns>bool: アクティブフラグ</returns>
     bool IsActive() const { return isActive_; }
 
   private:
-    /// ====================================
-    /// private methods
-    /// ====================================
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// 設定を読み込み
+    /// </summary>
     void LoadSettings();
+
+    /// <summary>
+    /// 設定を保存
+    /// </summary>
     void SaveSettings();
 
   private:
-    /// ====================================
-    /// private variaus
-    /// ====================================
+    /// ===================================================
+    /// private varians
+    /// ===================================================
+
     float stopDuration_ = 0.1f; // 停止時間（秒）
     float elapsedTime_ = 0.0f;  // 経過時間
-    bool isActive_ = false;
+    bool isActive_ = false;     // アクティブフラグ
 };

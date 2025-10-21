@@ -43,7 +43,7 @@ class SceneManager {
     /// </summary>
     void DrawForOffScreen();
 
-    void SceneSelection(const std::string & sceneName);
+    void SceneSelection(const std::string &sceneName);
 
     /// <summary>
     /// 遷移描画
@@ -80,7 +80,7 @@ class SceneManager {
     BaseScene *nextScene_ = nullptr;
     // シーンファクトリー
     AbstractSceneFactory *sceneFactory_ = nullptr;
-    std::unique_ptr<SceneTransition> transition_;
+    SceneTransition *transition_ = nullptr;
 
     std::string currentSceneName_;
 

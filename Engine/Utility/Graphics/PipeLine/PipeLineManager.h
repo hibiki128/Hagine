@@ -33,6 +33,8 @@ enum class ShaderMode {
     kDissolve,
     kRandom,
     kFocusLine,
+    kPixelate,
+    kTransition,
     kCount,
 };
 
@@ -143,7 +145,9 @@ class PipeLineManager {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateDissolveRootSignature();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRandomRootSignature();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateFocusLineRootSignature();
-
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreatePixelateRootSignature();
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateTransitionRootSignature();
+    
     // シェーダーモード別のパイプライン作成
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGrayGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
@@ -157,7 +161,9 @@ class PipeLineManager {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateDissolveGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateRandomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateFocusLineGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreatePixelateGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTransitionGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
+    
   private:
     DirectXCommon *dxCommon_;
 
