@@ -107,9 +107,9 @@ void GameScene::Draw() {
     playerUI_->Draw();
     enemyUI_->Draw();
 
-    skyBox_->Draw(vp_);
-
     BaseObjectManager::GetInstance()->Draw(vp_);
+
+    skyBox_->Draw(vp_);
 
     ground_->Draw(vp_);
 

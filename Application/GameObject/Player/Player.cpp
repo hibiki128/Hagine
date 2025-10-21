@@ -96,20 +96,37 @@ void Player::Init(const std::string objectName) {
 
 void Player::Update() {
 
-    ComboUpdate();
-
     dt_ = Frame::DeltaTime();
     shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
-    if (chargeShot_) {
-        chargeShot_->Update();
-    }
 
     if (started_) {
+        ComboUpdate();
         if (currentState_) {
             currentState_->Update(*this);
         }
         RotateUpdate();
+
+        if (chargeShot_) {
+            chargeShot_->Update();
+        }
+
+        Shot();
+
+        // 弾の更新と生存チェック
+        for (auto it = bullets_.begin(); it != bullets_.end();) {
+            (*it)->Update();
+            (*it)->SetSpeed(B_speed_);
+            (*it)->SetAcce(B_acce_);
+            (*it)->UpdateWorldTransformHierarchy();
+
+            // 弾が生きていない場合は削除
+            if (!(*it)->IsAlive()) {
+                it = bullets_.erase(it);
+            } else {
+                ++it;
+            }
+        }
     }
 
     // 下方向の速度を制限
@@ -137,23 +154,6 @@ void Player::Update() {
 
     BaseObject::Update();
 
-    Shot();
-
-    // 弾の更新と生存チェック
-    for (auto it = bullets_.begin(); it != bullets_.end();) {
-        (*it)->Update();
-        (*it)->SetSpeed(B_speed_);
-        (*it)->SetAcce(B_acce_);
-        (*it)->UpdateWorldTransformHierarchy();
-
-        // 弾が生きていない場合は削除
-        if (!(*it)->IsAlive()) {
-            it = bullets_.erase(it);
-        } else {
-            ++it;
-        }
-    }
-
     shake_->Update();
 
     auraEmitter_->SetTranslate(GetWorldPosition());
@@ -173,6 +173,7 @@ void Player::Update() {
 
 void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     BaseObject::Draw(viewProjection, offSet);
+    shadow_->Draw(viewProjection, offSet);
     for (auto &bullet : bullets_) {
         bullet->Draw(viewProjection, offSet);
     }
@@ -180,7 +181,6 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (transform_->translation_.y < 0) {
         return;
     }
-    shadow_->Draw(viewProjection, offSet);
 }
 
 void Player::DrawParticle(const ViewProjection &viewProjection) {
