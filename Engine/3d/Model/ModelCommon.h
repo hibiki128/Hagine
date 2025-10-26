@@ -1,28 +1,52 @@
 #pragma once
 #include "DirectXCommon.h"
+
+/// <summary>
+/// モデル共通クラス
+/// モデルシステムで共有するDirectXCommonを管理する
+/// </summary>
 class ModelCommon {
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// シングルトンインスタンスの取得
+    /// </summary>
+    /// <returns>ModelCommon*: インスタンスのポインタ</returns>
+    static ModelCommon *GetInstance();
+
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    void Initialize();
+
+    /// <summary>
+    /// 終了処理
+    /// </summary>
+    void Finalize();
+
+    /// <summary>
+    /// Getter
+    /// </summary>
+    DirectXCommon *GetDxCommon() const { return dxCommon_; }
+
   private:
-    DirectXCommon *dxCommon_;
-    static ModelCommon *instance;
+    /// ===================================================
+    /// private method
+    /// ===================================================
 
     ModelCommon() = default;
     ~ModelCommon() = default;
     ModelCommon(ModelCommon &) = delete;
     ModelCommon &operator=(ModelCommon &) = delete;
-  public:
-    static ModelCommon *GetInstance();
 
-    void Finalize();
+  private:
+    /// ===================================================
+    /// private varians
+    /// ===================================================
 
-    /// <summary>
-    /// 初期化
-    /// </summary>
-    /// <param name="dxCommon"></param>
-    void Initialize();
-
-    /// <summary>
-    /// getter
-    /// </summary>
-    /// <returns></returns>
-    DirectXCommon *GetDxCommon() const { return dxCommon_; }
+    static ModelCommon *instance; // シングルトンインスタンス
+    DirectXCommon *dxCommon_;     // DirectX共通クラス
 };

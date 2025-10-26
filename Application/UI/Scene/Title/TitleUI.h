@@ -31,9 +31,8 @@ class TitleUI {
     void Draw(ViewProjection &vp_);
 
     /// <summary>
-    /// 完了状態を取得
+    /// Getter
     /// </summary>
-    /// <returns>bool: 完了フラグ</returns>
     bool GetIsFinish() const { return isFinish_; }
 
   private:

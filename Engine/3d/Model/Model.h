@@ -19,51 +19,65 @@
 #include "type/Vector4.h"
 #include <Graphics/Srv/SrvManager.h>
 #include <Primitive/PrimitiveModel.h>
-#include <unordered_set>
 #include <Transform/ObjColor.h>
+#include <unordered_set>
 
+/// <summary>
+/// モデルクラス
+/// 3Dモデルのメッシュ、マテリアル、アニメーションを管理する
+/// </summary>
 class Model {
-  private:
-    ModelCommon *modelCommon_;
-
-    // Objファイルのデータ
-    ModelData modelData_;
-    SrvManager *srvManager_;
-
-    std::string filename_;
-    std::string directorypath_;
-
-    bool isGltf;
-
-    Matrix4x4 localMatrix;
-
-    // マルチメッシュ対応
-    std::vector<std::unique_ptr<Mesh>> meshes_;
-
-    Animator *animator_;
-    Skin *skin_;
-    Bone *bone_;
-    static std::unordered_set<std::string> jointNames;
-
   public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="modelCommon"></param>
+    /// <param name="modelCommon">モデル共通クラス</param>
     void Initialize(ModelCommon *modelCommon);
 
+    /// <summary>
+    /// モデル作成
+    /// </summary>
+    /// <param name="directorypath">ディレクトリパス</param>
+    /// <param name="filename">ファイル名</param>
     void CreateModel(const std::string &directorypath, const std::string &filename);
 
+    /// <summary>
+    /// プリミティブモデル作成
+    /// </summary>
+    /// <param name="type">プリミティブタイプ</param>
+    /// <param name="texPath">テクスチャパス</param>
     void CreatePrimitiveModel(const PrimitiveType &type, std::string texPath);
 
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update();
 
     /// <summary>
-    /// 描画
+    /// 描画処理
     /// </summary>
+    /// <param name="materials">マテリアル配列</param>
+    /// <param name="color">色配列</param>
+    /// <param name="lighting">ライティング有効フラグ</param>
+    /// <param name="reflect">反射有効フラグ</param>
     void Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect);
 
-    // Setter methods
+    /// <summary>
+    /// Getter
+    /// </summary>
+    ModelData GetModelData() { return modelData_; }
+    bool IsGltf() { return isGltf; }
+    size_t GetMeshCount() const { return meshes_.size(); }
+    Mesh *GetMesh(uint32_t index) { return (index < meshes_.size()) ? meshes_[index].get() : nullptr; }
+    Animator *GetAnimator() { return animator_; }
+
+    /// <summary>
+    /// Setter
+    /// </summary>
     void SetSrv(SrvManager *srvManager) { srvManager_ = srvManager; }
     void SetAnimator(Animator *animator) {
         animator_ = animator;
@@ -72,32 +86,46 @@ class Model {
     void SetSkin(Skin *skin) { skin_ = skin; }
     void SetBone(Bone *bone) { bone_ = bone; }
 
-    // Getter methods
-    ModelData GetModelData() { return modelData_; }
-    bool IsGltf() { return isGltf; }
-
-    // マルチメッシュ・マルチマテリアル情報取得
-    size_t GetMeshCount() const { return meshes_.size(); }
-
-    Mesh *GetMesh(uint32_t index) {
-        return (index < meshes_.size()) ? meshes_[index].get() : nullptr;
-    }
-
-    Animator *GetAnimator() { return animator_; }
-
   private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
     /// <summary>
-    ///  .objファイルの読み取り
+    /// モデルファイル読み込み
     /// </summary>
-    /// <param name="directoryPath"></param>
-    /// <param name="filename"></param>
-    /// <returns></returns>
+    /// <param name="directoryPath">ディレクトリパス</param>
+    /// <param name="filename">ファイル名</param>
+    /// <returns>ModelData: 読み込んだモデルデータ</returns>
     ModelData LoadModelFile(const std::string &directoryPath, const std::string &filename);
 
     /// <summary>
     /// ノード読み取り
     /// </summary>
-    /// <param name="node"></param>
-    /// <returns></returns>
+    /// <param name="node">Assimpノード</param>
+    /// <returns>Node: 変換したノードデータ</returns>
     static Node ReadNode(aiNode *node);
+
+  private:
+    /// ===================================================
+    /// private varians
+    /// ===================================================
+
+    ModelCommon *modelCommon_;  // モデル共通クラス
+    SrvManager *srvManager_;    // SRVマネージャー
+    ModelData modelData_;       // モデルデータ
+    std::string filename_;      // ファイル名
+    std::string directorypath_; // ディレクトリパス
+    bool isGltf;                // GLTFフォーマットフラグ
+    Matrix4x4 localMatrix;      // ローカル行列
+
+    // マルチメッシュ対応
+    std::vector<std::unique_ptr<Mesh>> meshes_; // メッシュ配列
+
+    // アニメーション関連
+    Animator *animator_; // アニメーター
+    Skin *skin_;         // スキン
+    Bone *bone_;         // ボーン
+
+    static std::unordered_set<std::string> jointNames; // ジョイント名セット
 };

@@ -27,22 +27,19 @@ class StartCamera {
     void imgui();
 
     /// <summary>
-    /// カメラのViewProjectionを取得する関数
-    /// </summary>
-    /// <returns> ViewProjection </returns>
-    ViewProjection &GetViewProjection() { return vp_; }
-
-    /// <summary>
     /// カメラの動きの関数
     /// </summary>
     void Move();
 
     /// <summary>
-    /// カメラの動きが完了したかを取得
+    /// Getter
     /// </summary>
-    /// <returns> 完了フラグ </returns>
+    ViewProjection &GetViewProjection() { return vp_; }
     bool IsComplete() const { return isComplete_; }
 
+    /// <summary>
+    /// Setter
+    /// </summary>
     void SetTargetVp(ViewProjection &vp) {
         targetVp_.matWorld_ = vp.matWorld_;
         targetVp_.matView_ = vp.matView_;

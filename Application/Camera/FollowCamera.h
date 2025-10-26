@@ -29,30 +29,19 @@ class FollowCamera {
     void imgui();
 
     /// <summary>
-    /// カメラのYawを取得
+    /// Getter
     /// </summary>
-    /// <returns> float </returns>
     float GetYaw() { return yaw_; }
+    ViewProjection &GetViewProjection() { return viewProjection_; }
 
     /// <summary>
-    /// ターゲットをセットする関数
+    /// Setter
     /// </summary>
-    /// <param name="target"></param>
     void SetPlayer(Player *target) { target_ = target; }
-    
-    /// <summary>
-    /// カメラのFovを設定する関数
-    /// </summary>
-    /// <param name="fov"></param>
     void SetCameraFov(float fov) { 
         viewProjection_.fovAngleY = fov * std::numbers::pi_v<float> / 180.0f;
     }
 
-    /// <summary>
-    /// カメラのViewProjectionを取得する関数
-    /// </summary>
-    /// <returns> ViewProjection </returns>
-    ViewProjection &GetViewProjection() { return viewProjection_; }
 
   private:
     /// ===================================================

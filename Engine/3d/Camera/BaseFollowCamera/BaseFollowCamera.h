@@ -1,38 +1,62 @@
 #pragma once
-#include"Transform/WorldTransform.h"
 #include "Camera/ViewProjection/ViewProjection.h"
+#include "Transform/WorldTransform.h"
+
+/// <summary>
+/// 基本追従カメラクラス
+/// ターゲットを追従するカメラの基本機能を提供する
+/// </summary>
 class BaseFollowCamera {
   public:
-	/// ===================================================
-	///public method
-	/// ===================================================
-	void Init();
+    /// ===================================================
+    /// public method
+    /// ===================================================
 
-	void Update();
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    void Init();
 
-	void imgui();
+    /// <summary>
+    /// 更新処理
+    /// </summary>
+    void Update();
 
-	float GetYaw() { return yaw_; }
+    /// <summary>
+    /// ImGui表示
+    /// </summary>
+    void imgui();
 
-	void SetTarget(const WorldTransform* target) { target_ = target; }
-	ViewProjection& GetViewProjection() { return viewProjection_; }
+    /// <summary>
+    /// Getter
+    /// </summary>
+    float GetYaw() { return yaw_; }
+    ViewProjection &GetViewProjection() { return viewProjection_; }
 
-private:
-	/// ===================================================
-	///private method
-	/// ===================================================
+    /// <summary>
+    /// Setter
+    /// </summary>
+    void SetTarget(const WorldTransform *target) { target_ = target; }
 
-	void Move();
+  private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
 
-private:
-	// ビュープロジェクション
-	ViewProjection viewProjection_;
+    /// <summary>
+    /// 移動処理
+    /// </summary>
+    void Move();
 
-	WorldTransform worldTransform_;
-	// 追従対象
-	const WorldTransform* target_ = nullptr;
+  private:
+    /// ===================================================
+    /// private varians
+    /// ===================================================
 
-	float yaw_;
-	float distanceFromTarget_;
-	float heightOffset_;
+    ViewProjection viewProjection_;          // ビュープロジェクション
+    WorldTransform worldTransform_;          // ワールド変換
+    const WorldTransform *target_ = nullptr; // 追従対象
+    float yaw_;                              // ヨー角
+    float distanceFromTarget_;               // ターゲットからの距離
+    float heightOffset_;                     // 高さオフセット
 };

@@ -116,33 +116,11 @@ class ComboSystem {
     void Update(float deltaTime);
 
     /// <summary>
-    /// コンボがアクティブかを取得
+    /// Getter
     /// </summary>
-    /// <returns>bool: コンボアクティブフラグ</returns>
     bool IsComboActive() const { return comboStarted_; }
-
-    /// <summary>
-    /// 現在のコンボインデックスを取得
-    /// </summary>
-    /// <returns>int: 現在のインデックス</returns>
-    int GetCurrentComboIndex() const { return comboIndex_; }
-
-    /// <summary>
-    /// コンボの長さを取得
-    /// </summary>
-    /// <returns>int: コンボの攻撃数</returns>
-    int GetComboLength() const { return static_cast<int>(comboData_.size()); }
-
-    /// <summary>
-    /// 特定のオブジェクトの攻撃が完全に終了したかチェック
-    /// </summary>
-    /// <param name="target">対象オブジェクトのポインタ</param>
-    /// <returns>bool: 攻撃終了状態</returns>
     bool IsObjectAttackCompleted(BaseObject *target) const;
-
-    /// <summary>
-    /// 現在のコンボ攻撃が完全に終了したかチェック
-    /// </summary>
-    /// <returns>bool: 攻撃終了状態</returns>
     bool IsCurrentAttackCompleted() const;
+    int GetCurrentComboIndex() const { return comboIndex_; }
+    int GetComboLength() const { return static_cast<int>(comboData_.size()); }
 };
