@@ -165,6 +165,7 @@ class BaseObject : public Collider {
     void SetIsScene(bool isScene) { isScene_ = isScene; }
     void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; }
     void SetIsAlive(bool flag) { isAlive_ = flag; }
+    void SetIsModelDraw(bool isModelDraw) { isModelDraw_ = isModelDraw; }
 
   private:
     void DebugObject();

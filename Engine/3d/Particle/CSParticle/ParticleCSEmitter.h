@@ -39,11 +39,41 @@ class ParticleCSEmitter {
         }
     }
 
+    void SetEnableLifeTimeScale(bool enable) {
+        for (auto &group : particleGroups_) {
+            group->GetSettingsData()->enableLifetimeScale = enable;
+        }
+    }
+
+    void SetMinVelocity(Vector3 minVelocity) {
+        for (auto &group : particleGroups_) {
+            group->GetSettingsData()->velocityMin = minVelocity;
+        }
+    }
+
+    void SetMaxVelocity(Vector3 maxVelocity) {
+        for (auto &group : particleGroups_) {
+            group->GetSettingsData()->velocityMax = maxVelocity;
+        }
+    }
+
     std::unique_ptr<ParticleCSEmitter> Clone() const;
 
     void SetTranslate(Vector3 transform) {
         if (emitterMeshData_)
             emitterMeshData_->translate = transform;
+    }
+
+    void SetStartColor(Vector4 color) {
+        for (auto &group : particleGroups_) {
+            group->GetSettingsData()->startColor = color;
+        }
+    }
+
+    void SetEndColor(Vector4 color) {
+        for (auto &group : particleGroups_) {
+            group->GetSettingsData()->endColor = color;
+        }
     }
 
     void SetRotation(Quaternion rotation) {

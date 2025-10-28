@@ -17,7 +17,7 @@ void FadeOut::Initialize() {
 
 void FadeOut::Update() {
     fadeOut_->Update();
-    timer_ += 1.0f / 60.0f; // フレーム時間を加算（60FPS想定）
+    timer_ += 1.0f / 60.0f;
 }
 
 void FadeOut::Draw(const ViewProjection &vp) {

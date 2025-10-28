@@ -132,7 +132,7 @@ void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (transform_->translation_.y < 0) {
         return;
     }
-    shadow_->Draw(viewProjection, offSet);
+//    shadow_->Draw(viewProjection, offSet);
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {

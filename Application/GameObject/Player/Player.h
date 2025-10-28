@@ -9,6 +9,8 @@
 #include <Particle/CSParticle/ParticleCSEmitter.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
 
+#include"Application/Staging/Death/DeathStaging.h"
+
 class ChargeShot;
 class FollowCamera;
 class Enemy;
@@ -157,6 +159,9 @@ class Player : public BaseObject {
         leftHand_ptr_->SetEnemy(enemy);
         rightHand_ptr_->SetEnemy(enemy);
     }
+    void SetIsDeathStaging(bool flag) {
+        isDeathStaging_ = flag;
+    }
 
   private:
     /// ===================================================
@@ -256,6 +261,7 @@ class Player : public BaseObject {
     bool isDashing_ = false; // ダッシュ中フラグ
 
     bool started_ = false; // ゲーム開始フラグ
+    bool isDeathStaging_ = false; // 死亡演出中フラグ
 
     ComboSystem punchCombo_;
     bool comboInitialized_ = false; // コンボ初期化済みフラグ
@@ -279,4 +285,6 @@ class Player : public BaseObject {
 
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<ParticleEmitter> rushEmitter_;   // 突撃パーティクル
+
+    std::unique_ptr<DeathStaging> deathStaging_; // 死亡演出
 };

@@ -2,6 +2,7 @@
 
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
+#include <Frame.h>
 
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -17,6 +18,7 @@ void GameScene::Initialize() {
     enemy_ = std::make_unique<Enemy>();
     followCamera_ = std::make_unique<FollowCamera>();
     startCamera_ = std::make_unique<StartCamera>();
+    deathCamera_ = std::make_unique<DeathCamera>();
     ground_ = std::make_unique<Ground>();
     skyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
@@ -33,6 +35,7 @@ void GameScene::Initialize() {
     ground_->Init("Ground");
     followCamera_->Init();
     startCamera_->Init();
+    deathCamera_->Init();
     skyBox_->Initialize("game/skybox.dds");
     fadeOut_->Initialize();
 
@@ -60,15 +63,15 @@ void GameScene::Initialize() {
     /// ===================================================
     /// ビヘイビアツリーの構築
     /// ===================================================
-    enemy_ptr->InitializeBehaviorTree();
-
-#ifdef _DEBUG
-    // エディターとビヘイビアツリーを連携
-    enemy_ptr->SetBehaviorTreeEditor(behaviorTreeEditor_.get());
-    if (enemy_ptr->GetBehaviorRoot()) {
-        behaviorTreeEditor_->LoadSettings("DefaultTree", enemy_ptr->GetBehaviorRoot());
-    }
-#endif
+    //    enemy_ptr->InitializeBehaviorTree();
+    //
+    // #ifdef _DEBUG
+    //    // エディターとビヘイビアツリーを連携
+    //    enemy_ptr->SetBehaviorTreeEditor(behaviorTreeEditor_.get());
+    //    if (enemy_ptr->GetBehaviorRoot()) {
+    //        behaviorTreeEditor_->LoadSettings("DefaultTree", enemy_ptr->GetBehaviorRoot());
+    //    }
+    // #endif
 
     /// ===================================================
     /// オブジェクトマネージャに追加
@@ -97,13 +100,26 @@ void GameScene::Update() {
 
     fadeOut_->Update();
 
-#ifdef _DEBUG
     player_ptr->SetStart(true);
+#ifdef _DEBUG
 #else
-    if (startCamera_->IsComplete()) {
-        player_ptr->SetStart(true);
-    }
+    /* if (startCamera_->IsComplete()) {
+         player_ptr->SetStart(true);
+     }*/
 #endif // _DEBUG
+
+     if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
+        enemy_ptr->SetIsModelDraw(false);
+    }
+
+    if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
+        GameOverTimer_ += Frame::DeltaTime();
+        player_ptr->SetIsDeathStaging(true);
+        if (GameOverTimer_ >= 2.0f && !isGameOver_) {
+            sceneManager_->NextSceneReservation("GAME");
+            isGameOver_ = true;
+        }
+    }
 }
 
 void GameScene::Draw() {
@@ -148,12 +164,12 @@ void GameScene::AddObjectSetting() {
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
     }
-#ifdef _DEBUG
-    // ビヘイビアツリーエディターの表示
-    if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
-        behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
-    }
-#endif // _DEBUG
+    // #ifdef _DEBUG
+    //     // ビヘイビアツリーエディターの表示
+    //     if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
+    //         behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
+    //     }
+    // #endif // _DEBUG
 }
 
 void GameScene::AddParticleSetting() {
@@ -162,34 +178,48 @@ void GameScene::AddParticleSetting() {
 }
 
 void GameScene::CameraUpdate() {
-    if (debugCamera_->GetActive()) {
-        debugCamera_->Update();
-    } else {
-        followCamera_->Update();
+    if (player_ptr->GetIsAlive()) {
+        if (debugCamera_->GetActive()) {
+            debugCamera_->Update();
+        } else {
+            followCamera_->Update();
 #ifndef _DEBUG
 
-        if (!startCamera_->IsComplete()) {
-            if (fadeOut_->IsFinish()) {
-                startCamera_->Move();
-            }
-            startCamera_->SetTargetVp(followCamera_->GetViewProjection());
-            startCamera_->Update();
-            vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
-            vp_.matView_ = startCamera_->GetViewProjection().matView_;
-            vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
-        } else {
+            // if (!startCamera_->IsComplete()) {
+            //     if (fadeOut_->IsFinish()) {
+            //         startCamera_->Move();
+            //     }
+            //     startCamera_->SetTargetVp(followCamera_->GetViewProjection());
+            //     startCamera_->Update();
+            //     vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
+            //     vp_.matView_ = startCamera_->GetViewProjection().matView_;
+            //     vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
+            // } else {
+#endif // !_DEBUG
+#ifndef _DEBUG
+            //  }
 #endif // !_DEBUG
             vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
             vp_.matView_ = followCamera_->GetViewProjection().matView_;
             vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
-#ifndef _DEBUG
         }
-#endif // !_DEBUG
+    } else {
+        if (!deathCamera_->IsComplete() && !deathCameraStarted_) {
+            deathCamera_->StartEasing(
+                followCamera_->GetViewProjection(),
+                player_ptr->GetWorldPosition());
+            deathCameraStarted_ = true;
+        }
+
+        deathCamera_->Update();
+        vp_.matWorld_ = deathCamera_->GetViewProjection().matWorld_;
+        vp_.matView_ = deathCamera_->GetViewProjection().matView_;
+        vp_.matProjection_ = deathCamera_->GetViewProjection().matProjection_;
     }
 }
 
 void GameScene::ChangeScene() {
-    if (!enemy_ptr->GetAlive()) {
-        sceneManager_->NextSceneReservation("CLEAR");
-    }
+    /* if () {
+         sceneManager_->NextSceneReservation("GAME");
+     }*/
 }
