@@ -39,6 +39,7 @@ class BaseObject : public Collider {
     bool isPrimitive_ = false;
     bool isRainbow_ = false;
     bool isScene_ = false;
+    bool isAlive_ = true;
 
     std::string objectName_;
     std::string modelPath_;
@@ -136,6 +137,7 @@ class BaseObject : public Collider {
     bool IsPrimitive() const { return isPrimitive_; }
     const Vector4 GetColor(int index = 0) { return obj3d_->GetColor(index); }
     bool IsGizmoSelectable() const { return isGizmoSelectable_; }
+    bool GetIsAlive() const { return isAlive_; }
     Material *GetMaterial(uint32_t index = 0) {
         obj3d_->GetMaterial(index);
     }
@@ -162,6 +164,7 @@ class BaseObject : public Collider {
     void SetPrimitive(bool isPrimitive) { isPrimitive_ = isPrimitive; }
     void SetIsScene(bool isScene) { isScene_ = isScene; }
     void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; }
+    void SetIsAlive(bool flag) { isAlive_ = flag; }
 
   private:
     void DebugObject();

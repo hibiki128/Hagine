@@ -64,6 +64,12 @@ class Player : public BaseObject {
     void ChangeState(const std::string &stateName);
 
     /// <summary>
+    /// 当たった瞬間
+    /// </summary>
+    /// <param name="other"></param>
+    void OnCollisionEnter([[maybe_unused]] Collider *other)override;
+
+    /// <summary>
     /// 方向情報を更新
     /// </summary>
     void DirectionUpdate();
@@ -245,7 +251,6 @@ class Player : public BaseObject {
     float B_speed_ = 0.0f; // ブーストの速度
 
     bool canJump_ = false;   // ジャンプ可能フラグ
-    bool isAlive_ = true;    // 生存フラグ
     bool isLockOn_ = false;  // ロックオンフラグ
     bool isGrounded_ = true; // 接地フラグ
     bool isDashing_ = false; // ダッシュ中フラグ

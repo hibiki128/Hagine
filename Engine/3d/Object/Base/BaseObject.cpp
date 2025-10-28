@@ -13,9 +13,13 @@ void BaseObject::Init(const std::string objectName) {
     // ライティングのセット
     isLighting_ = true;
     isCollider = false;
+    isAlive_ = true;
 }
 
 void BaseObject::Update() {
+    if (!isAlive_) {
+        return;
+    }
     if (obj3d_->GetHaveAnimation()) {
         obj3d_->AnimationUpdate(isLoop_);
     }
@@ -23,6 +27,9 @@ void BaseObject::Update() {
 }
 
 void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+    if (!isAlive_) {
+        return;
+    }
     // オフセットを適用する場合は、一時的にローカル位置を変更
     Vector3 originalPosition = transform_->translation_;
 
@@ -52,6 +59,9 @@ void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 }
 
 void BaseObject::UpdateWorldTransformHierarchy() {
+    if (!isAlive_) {
+        return;
+    }
     // まず自分のトランスフォームを更新
     if (transform_) {
         transform_->UpdateMatrix();
@@ -69,6 +79,9 @@ void BaseObject::UpdateWorldTransformHierarchy() {
 }
 
 void BaseObject::UpdateHierarchy() {
+    if (!isAlive_) {
+        return;
+    }
     // 自分自身の処理
     Update();
 

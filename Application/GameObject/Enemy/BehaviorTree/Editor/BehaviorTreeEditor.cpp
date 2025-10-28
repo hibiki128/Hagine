@@ -6,6 +6,17 @@
 #include <algorithm>
 #ifdef _DEBUG
 
+BehaviorTreeEditor::BehaviorTreeEditor() {
+    ed::Config config;
+    config.SettingsFile = "BehaviorTreeEditor.json";
+    editorContext_ = ed::CreateEditor(&config);
+}
+
+BehaviorTreeEditor::~BehaviorTreeEditor() {
+    if (editorContext_) {
+        ed::DestroyEditor(editorContext_);
+    }
+}
 
 void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
     if (!root) {
@@ -21,79 +32,29 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
     ImGui::SetNextWindowSize(ImVec2(1200, 800), ImGuiCond_FirstUseEver);
     ImGui::Begin("ビヘイビアツリーエディター");
 
-    // ツールバー
     DrawToolbar(std::string(treeNameBuffer_));
-
     ImGui::Separator();
 
-    // レイアウト分割（ツリー表示 + プロパティパネル）
     float windowWidth = ImGui::GetContentRegionAvail().x;
-    float treeViewWidth = std::max(600.0f, windowWidth * 0.7f);                    // 最小600px
-    float propertiesWidth = std::max(300.0f, windowWidth - treeViewWidth - 20.0f); // 最小300px
+    float treeViewWidth = std::max(600.0f, windowWidth * 0.7f);
+    float propertiesWidth = std::max(300.0f, windowWidth - treeViewWidth - 20.0f);
 
-    // ツリー表示エリア
-    ImGui::BeginChild("TreeView", ImVec2(treeViewWidth, -1), true, ImGuiWindowFlags_NoScrollbar);
+    // ノードエディタ領域
+    ImGui::BeginChild("NodeEditor", ImVec2(treeViewWidth, -1), true);
 
-    // ズーム操作の説明
-    ImGui::TextDisabled("操作: マウスホイールでズーム / 中クリックでパン / 左クリックでノード選択");
+    ed::SetCurrentEditor(editorContext_);
+    ed::Begin("BehaviorTreeCanvas");
 
-    // マウスホイールでズーム
-    ImGuiIO &io = ImGui::GetIO();
-    if (ImGui::IsWindowHovered()) {
-        if (io.MouseWheel != 0.0f) {
-            float zoomDelta = io.MouseWheel * 0.1f;
-            zoom_ = std::clamp(zoom_ + zoomDelta, 0.3f, 3.0f);
-        }
-    }
+    BuildNodeEditorData(root);
 
-    // 中クリックでパン
-    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
-        isPanning_ = true;
-        panStartPos_ = ImGui::GetMousePos();
-    }
-    if (isPanning_) {
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
-            ImVec2 currentPos = ImGui::GetMousePos();
-            ImVec2 delta = ImVec2(currentPos.x - panStartPos_.x, currentPos.y - panStartPos_.y);
-            panOffset_.x += delta.x;
-            panOffset_.y += delta.y;
-            panStartPos_ = currentPos;
-        } else {
-            isPanning_ = false;
-        }
-    }
-
-    // ズーム情報の表示
-    ImGui::Text("ズーム: %.1f%%", zoom_ * 100.0f);
-
-    ImGui::Separator();
-
-    // 描画領域の開始位置を保存
-    ImVec2 canvasP0 = ImGui::GetCursorScreenPos();
-    ImVec2 canvasSize = ImGui::GetContentRegionAvail();
-    ImVec2 canvasP1 = ImVec2(canvasP0.x + canvasSize.x, canvasP0.y + canvasSize.y);
-
-    // 描画リストの取得
-    ImDrawList *drawList = ImGui::GetWindowDrawList();
-
-    // 背景を描画（デバッグ用）
-    drawList->AddRectFilled(canvasP0, canvasP1, IM_COL32(50, 50, 50, 255));
-
-    // クリッピング領域を設定
-    drawList->PushClipRect(canvasP0, canvasP1, true);
-
-    // ツリーの描画（ズーム・パンを適用）
-    nodeIdCounter_ = 0;
-    ImVec2 startPos = ImVec2(canvasSize.x * 0.5f, 50.0f);
-    DrawNode(root, startPos, 0, canvasP0);
-
-    drawList->PopClipRect();
+    ed::End();
+    ed::SetCurrentEditor(nullptr);
 
     ImGui::EndChild();
 
     ImGui::SameLine();
 
-    // プロパティパネル
+    // プロパティパネル（既存のコード）
     ImGui::BeginChild("Properties", ImVec2(propertiesWidth, -1), true);
     ImGui::Text("ノードプロパティ");
     ImGui::Separator();
@@ -107,7 +68,7 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // 実行履歴の表示
+    // 実行履歴の表示（既存のコード）
     ImGui::Text("実行履歴");
     ImGui::Separator();
 
@@ -117,7 +78,7 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
         ImGui::TextWrapped("最新 → 古い順:");
         ImGui::Spacing();
 
-        for (size_t i = executionHistory_.size() - 1; i >= 0; i--) {
+        for (int i = static_cast<int>(executionHistory_.size()) - 1; i >= 0; i--) {
             BehaviorNode *historyNode = executionHistory_[i];
             bool isCurrent = (historyNode == executingNode_);
 
@@ -132,8 +93,108 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
     }
 
     ImGui::EndChild();
-
     ImGui::End();
+}
+
+void BehaviorTreeEditor::BuildNodeEditorData(BehaviorNode *root) {
+    if (!root)
+        return;
+
+    nodeToEditorId_.clear();
+    editorIdToNode_.clear();
+    nextEditorNodeId_ = 1;
+    nextEditorLinkId_ = 1;
+
+    std::function<void(BehaviorNode *, BehaviorNode *)> drawNodeRecursive =
+        [&](BehaviorNode *node, BehaviorNode *parent) {
+            if (!node)
+                return;
+
+            int nodeId = GetOrCreateNodeId(node);
+
+            ed::BeginNode(nodeId);
+
+            ImGui::PushID(nodeId);
+
+            // ノードの色を決定
+            ImVec4 color;
+            bool isExecuting = (executingNode_ == node);
+            bool isSelected = (selectedNode_ == node);
+            bool isInHistory = (std::find(executionHistory_.begin(), executionHistory_.end(), node) != executionHistory_.end());
+
+            if (isExecuting) {
+                color = ImVec4(0.2f, 0.8f, 0.2f, 1.0f);
+            } else if (isSelected) {
+                color = ImVec4(0.8f, 0.2f, 0.2f, 1.0f);
+            } else if (isInHistory) {
+                color = ImVec4(0.8f, 0.8f, 0.2f, 1.0f);
+            } else {
+                color = ImVec4(0.2f, 0.6f, 0.8f, 1.0f);
+            }
+
+            ImGui::PushStyleColor(ImGuiCol_Header, color);
+            ImGui::Text("%s", node->GetNodeName());
+            ImGui::PopStyleColor();
+
+            // 入力ピン
+            ed::BeginPin(nodeId * 1000, ed::PinKind::Input);
+            ImGui::Text("→ In");
+            ed::EndPin();
+
+            ImGui::SameLine();
+
+            // 出力ピン
+            ed::BeginPin(nodeId * 1000 + 1, ed::PinKind::Output);
+            ImGui::Text("Out →");
+            ed::EndPin();
+
+            ImGui::PopID();
+
+            ed::EndNode();
+
+            // クリック検出
+            if (ed::GetSelectedObjectCount() > 0) {
+                std::vector<ed::NodeId> selectedNodes;
+                selectedNodes.resize(ed::GetSelectedObjectCount());
+                ed::GetSelectedNodes(selectedNodes.data(), static_cast<int>(selectedNodes.size()));
+
+                if (!selectedNodes.empty() && selectedNodes[0].Get() == nodeId) {
+                    selectedNode_ = node;
+                }
+            }
+
+            // 親ノードとの接続を描画
+            if (parent) {
+                int parentId = GetOrCreateNodeId(parent);
+                int linkId = nextEditorLinkId_++;
+                ed::Link(linkId, parentId * 1000 + 1, nodeId * 1000);
+            }
+
+            // 子ノードを再帰的に描画
+            if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
+                for (auto &child : sequence->GetChildren()) {
+                    drawNodeRecursive(child.get(), node);
+                }
+            } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
+                for (auto &child : selector->GetChildren()) {
+                    drawNodeRecursive(child.get(), node);
+                }
+            }
+        };
+
+    drawNodeRecursive(root, nullptr);
+}
+
+int BehaviorTreeEditor::GetOrCreateNodeId(BehaviorNode *node) {
+    auto it = nodeToEditorId_.find(node);
+    if (it != nodeToEditorId_.end()) {
+        return it->second;
+    }
+
+    int newId = nextEditorNodeId_++;
+    nodeToEditorId_[node] = newId;
+    editorIdToNode_[newId] = node;
+    return newId;
 }
 
 void BehaviorTreeEditor::DrawToolbar(const std::string &treeName) {
@@ -180,14 +241,12 @@ void BehaviorTreeEditor::DrawToolbar(const std::string &treeName) {
 void BehaviorTreeEditor::DrawNode(BehaviorNode *node, ImVec2 pos, int depth, ImVec2 canvasOrigin) {
     if (!node)
         return;
-
     node->nodeId = nodeIdCounter_++;
 
     // ズームとパンを適用した最終座標を計算
     ImVec2 finalPos = ImVec2(
         canvasOrigin.x + (pos.x + panOffset_.x) * zoom_,
         canvasOrigin.y + (pos.y + panOffset_.y) * zoom_);
-
     float zoomedWidth = NODE_WIDTH * zoom_;
     float zoomedHeight = NODE_HEIGHT * zoom_;
 
@@ -198,16 +257,12 @@ void BehaviorTreeEditor::DrawNode(BehaviorNode *node, ImVec2 pos, int depth, ImV
 
     ImVec4 color;
     if (isExecuting) {
-        // 実行中のノード（緑）
         color = ImVec4(0.2f, 0.8f, 0.2f, 1.0f);
     } else if (isSelected) {
-        // 選択中のノード（赤）
         color = ImVec4(0.8f, 0.2f, 0.2f, 1.0f);
     } else if (isInHistory) {
-        // 実行履歴にあるノード（黄色）
         color = ImVec4(0.8f, 0.8f, 0.2f, 1.0f);
     } else {
-        // 通常のノード（青）
         color = ImVec4(0.2f, 0.6f, 0.8f, 1.0f);
     }
 
@@ -227,7 +282,8 @@ void BehaviorTreeEditor::DrawNode(BehaviorNode *node, ImVec2 pos, int depth, ImV
     // ズームが小さすぎる場合はテキストを省略
     if (zoom_ >= 0.4f) {
         ImFont *font = ImGui::GetFont();
-        float fontSize = font->FontSize * zoom_;
+        float baseFontSize = ImGui::GetFontSize(); // 修正: FontSize → GetFontSize()
+        float fontSize = baseFontSize * zoom_;
 
         // テキストサイズを計算（ズーム適用後）
         ImVec2 textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, nodeName);
@@ -239,7 +295,6 @@ void BehaviorTreeEditor::DrawNode(BehaviorNode *node, ImVec2 pos, int depth, ImV
     }
 
     // クリック判定
-    // マウスがノードの範囲内にあるかチェック
     ImVec2 mousePos = ImGui::GetMousePos();
     bool isHovered = (mousePos.x >= finalPos.x && mousePos.x <= finalPos.x + zoomedWidth &&
                       mousePos.y >= finalPos.y && mousePos.y <= finalPos.y + zoomedHeight);

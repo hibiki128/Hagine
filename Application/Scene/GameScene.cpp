@@ -60,15 +60,15 @@ void GameScene::Initialize() {
     /// ===================================================
     /// ビヘイビアツリーの構築
     /// ===================================================
-    // enemy_->InitializeBehaviorTree();
+    enemy_ptr->InitializeBehaviorTree();
 
-    // #ifdef _DEBUG
-    //     // エディターとビヘイビアツリーを連携
-    //     enemy_->SetBehaviorTreeEditor(behaviorTreeEditor_.get());
-    //      if (enemy_->GetBehaviorRoot()) {
-    //          behaviorTreeEditor_->LoadSettings("DefaultTree", enemy_->GetBehaviorRoot());
-    //      }
-    // #endif
+#ifdef _DEBUG
+    // エディターとビヘイビアツリーを連携
+    enemy_ptr->SetBehaviorTreeEditor(behaviorTreeEditor_.get());
+    if (enemy_ptr->GetBehaviorRoot()) {
+        behaviorTreeEditor_->LoadSettings("DefaultTree", enemy_ptr->GetBehaviorRoot());
+    }
+#endif
 
     /// ===================================================
     /// オブジェクトマネージャに追加
@@ -97,8 +97,13 @@ void GameScene::Update() {
 
     fadeOut_->Update();
 
-    player_ptr->SetStart(startCamera_->IsComplete());
-
+#ifdef _DEBUG
+    player_ptr->SetStart(true);
+#else
+    if (startCamera_->IsComplete()) {
+        player_ptr->SetStart(true);
+    }
+#endif // _DEBUG
 }
 
 void GameScene::Draw() {
@@ -143,12 +148,12 @@ void GameScene::AddObjectSetting() {
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
     }
-    // #ifdef _DEBUG
-    //     // ビヘイビアツリーエディターの表示
-    //     if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
-    //         behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
-    //     }
-    // #endif // _DEBUG
+#ifdef _DEBUG
+    // ビヘイビアツリーエディターの表示
+    if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
+        behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
+    }
+#endif // _DEBUG
 }
 
 void GameScene::AddParticleSetting() {
@@ -161,6 +166,8 @@ void GameScene::CameraUpdate() {
         debugCamera_->Update();
     } else {
         followCamera_->Update();
+#ifndef _DEBUG
+
         if (!startCamera_->IsComplete()) {
             if (fadeOut_->IsFinish()) {
                 startCamera_->Move();
@@ -171,10 +178,13 @@ void GameScene::CameraUpdate() {
             vp_.matView_ = startCamera_->GetViewProjection().matView_;
             vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
         } else {
+#endif // !_DEBUG
             vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
             vp_.matView_ = followCamera_->GetViewProjection().matView_;
             vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
+#ifndef _DEBUG
         }
+#endif // !_DEBUG
     }
 }
 

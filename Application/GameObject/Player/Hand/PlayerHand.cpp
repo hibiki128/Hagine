@@ -1,6 +1,6 @@
 #include "PlayerHand.h"
 #include "Application/GameObject/Enemy/Enemy.h"
-#include"Particle/ParticleEditor.h"
+#include "Particle/ParticleEditor.h"
 #include <Scene/SceneManager.h>
 void PlayerHand::Init(const std::string objectName) {
     BaseObject::Init(objectName);
@@ -22,7 +22,7 @@ void PlayerHand::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     BaseObject::Draw(viewProjection, offSet);
 }
 
-void PlayerHand::DrawParticle(const ViewProjection& viewProjection) {
+void PlayerHand::DrawParticle(const ViewProjection &viewProjection) {
     hitEmitter_->Draw(viewProjection);
 }
 

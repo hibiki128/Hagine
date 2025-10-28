@@ -2,10 +2,15 @@
 #include "Application/GameObject/Enemy/BehaviorTree/BehaviorNode/BehaviorNode.h"
 #ifdef _DEBUG
 #include "imgui.h"
+#include "imgui_node_editor.h"
 #endif // DEBUG
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#ifdef _DEBUG
+namespace ed = ax::NodeEditor;
+#endif
 
 /// <summary>
 /// デバッグ用のビヘイビアツリーエディター（_DEBUG ビルド時有効)
@@ -16,6 +21,16 @@ class BehaviorTreeEditor {
     /// ===================================================
     /// public method
     /// ===================================================
+
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
+    BehaviorTreeEditor();
+
+    /// <summary>
+    /// デストラクタ
+    /// </summary>
+    ~BehaviorTreeEditor();
 
     /// <summary>
     /// エディターの描画
@@ -63,6 +78,19 @@ class BehaviorTreeEditor {
     /// ===================================================
 
     /// <summary>
+    /// imgui-node-editor用のノードとリンクを構築して描画
+    /// </summary>
+    /// <param name="root">描画するツリーのルートノードへのポインタ</param>
+    void BuildNodeEditorData(BehaviorNode *root);
+
+    /// <summary>
+    /// BehaviorNodeに対応するエディタ用のノードIDを取得または作成
+    /// </summary>
+    /// <param name="node">IDを取得したい BehaviorNode へのポインタ</param>
+    /// <returns>エディタ内で使用する一意のノードID</returns>
+    int GetOrCreateNodeId(BehaviorNode *node);
+
+    /// <summary>
     /// ノードの描画
     /// </summary>
     /// <param name="node">描画するノードへのポインタ</param>
@@ -100,11 +128,11 @@ class BehaviorTreeEditor {
     /// <param name="treeName">描画対象のツリーを識別する名前（const std::string&）</param>
     void DrawToolbar(const std::string &treeName);
 
-    private:
+  private:
     /// ===================================================
     /// private varians
     /// ===================================================
-    
+
     int nodeIdCounter_ = 0;
     BehaviorNode *selectedNode_ = nullptr;
     BehaviorNode *executingNode_ = nullptr;        // 現在実行中のノード
@@ -127,5 +155,12 @@ class BehaviorTreeEditor {
 
     // セーブ/ロード用のツリー名
     char treeNameBuffer_[256] = "DefaultTree";
+
+    ed::EditorContext *editorContext_ = nullptr;
+    std::unordered_map<BehaviorNode *, int> nodeToEditorId_;
+    std::unordered_map<int, BehaviorNode *> editorIdToNode_;
+    int nextEditorNodeId_ = 1;
+    int nextEditorLinkId_ = 1;
+
 #endif // _DEBUG
 };

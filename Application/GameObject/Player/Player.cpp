@@ -97,6 +97,7 @@ void Player::Init(const std::string objectName) {
 void Player::Update() {
 
     dt_ = Frame::DeltaTime();
+
     shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
 
@@ -202,6 +203,14 @@ void Player::ChangeState(const std::string &stateName) {
         }
         currentState_ = it->second.get();
         currentState_->Enter(*this);
+    }
+}
+
+void Player::OnCollisionEnter(Collider *other) {
+    if (dynamic_cast<Enemy *>(other)) {
+        isAlive_ = false;
+        leftHand_ptr_->SetIsAlive(false);
+        rightHand_ptr_->SetIsAlive(false);
     }
 }
 
