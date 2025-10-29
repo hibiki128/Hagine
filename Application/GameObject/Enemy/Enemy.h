@@ -172,8 +172,8 @@ class Enemy : public BaseObject {
     Player *target_ = nullptr;
     std::unique_ptr<BehaviorNode> behaviorRoot_;
 
-    int HP_ = 40;
-    int maxHP_ = 40;
+    int HP_ = 1000000;
+    int maxHP_ = 1000000;
     int damage_ = 0;
 
     float moveSpeed_ = 0.0f;

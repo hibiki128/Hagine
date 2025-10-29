@@ -63,15 +63,15 @@ void GameScene::Initialize() {
     /// ===================================================
     /// ビヘイビアツリーの構築
     /// ===================================================
-    //    enemy_ptr->InitializeBehaviorTree();
-    //
-    // #ifdef _DEBUG
-    //    // エディターとビヘイビアツリーを連携
-    //    enemy_ptr->SetBehaviorTreeEditor(behaviorTreeEditor_.get());
-    //    if (enemy_ptr->GetBehaviorRoot()) {
-    //        behaviorTreeEditor_->LoadSettings("DefaultTree", enemy_ptr->GetBehaviorRoot());
-    //    }
-    // #endif
+    enemy_ptr->InitializeBehaviorTree();
+
+#ifdef _DEBUG
+    // エディターとビヘイビアツリーを連携
+    enemy_ptr->SetBehaviorTreeEditor(behaviorTreeEditor_.get());
+    if (enemy_ptr->GetBehaviorRoot()) {
+        behaviorTreeEditor_->LoadSettings("DefaultTree", enemy_ptr->GetBehaviorRoot());
+    }
+#endif
 
     /// ===================================================
     /// オブジェクトマネージャに追加
@@ -103,12 +103,12 @@ void GameScene::Update() {
     player_ptr->SetStart(true);
 #ifdef _DEBUG
 #else
-    /* if (startCamera_->IsComplete()) {
-         player_ptr->SetStart(true);
-     }*/
+    if (startCamera_->IsComplete()) {
+        player_ptr->SetStart(true);
+    }
 #endif // _DEBUG
 
-     if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
+    if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
         enemy_ptr->SetIsModelDraw(false);
     }
 
@@ -137,6 +137,13 @@ void GameScene::Draw() {
     player_ptr->DrawParticle(vp_);
     enemy_ptr->DrawParticle(vp_);
 
+#ifdef _DEBUG
+    // ビヘイビアツリーエディターの実行履歴をクリア（フレームごと）
+    if (behaviorTreeEditor_) {
+        behaviorTreeEditor_->ClearExecutingNode();
+    }
+#endif
+
     fadeOut_->Draw(vp_);
 
     /// -------描画処理終了-------
@@ -164,12 +171,12 @@ void GameScene::AddObjectSetting() {
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
     }
-    // #ifdef _DEBUG
-    //     // ビヘイビアツリーエディターの表示
-    //     if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
-    //         behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
-    //     }
-    // #endif // _DEBUG
+#ifdef _DEBUG
+    // ビヘイビアツリーエディターの表示
+    if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
+        behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
+    }
+#endif // _DEBUG
 }
 
 void GameScene::AddParticleSetting() {
@@ -185,19 +192,19 @@ void GameScene::CameraUpdate() {
             followCamera_->Update();
 #ifndef _DEBUG
 
-            // if (!startCamera_->IsComplete()) {
-            //     if (fadeOut_->IsFinish()) {
-            //         startCamera_->Move();
-            //     }
-            //     startCamera_->SetTargetVp(followCamera_->GetViewProjection());
-            //     startCamera_->Update();
-            //     vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
-            //     vp_.matView_ = startCamera_->GetViewProjection().matView_;
-            //     vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
-            // } else {
+            if (!startCamera_->IsComplete()) {
+                if (fadeOut_->IsFinish()) {
+                    startCamera_->Move();
+                }
+                startCamera_->SetTargetVp(followCamera_->GetViewProjection());
+                startCamera_->Update();
+                vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
+                vp_.matView_ = startCamera_->GetViewProjection().matView_;
+                vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
+            } else {
 #endif // !_DEBUG
 #ifndef _DEBUG
-            //  }
+            }
 #endif // !_DEBUG
             vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
             vp_.matView_ = followCamera_->GetViewProjection().matView_;

@@ -115,11 +115,13 @@ NodeStatus FlyToTargetNode::Execute(Enemy &enemy, float deltaTime) {
 
 NodeStatus RushAttackNode::Execute(Enemy &enemy, float deltaTime) {
     if (!enemy.GetTarget()) {
+        rushElapsedTime_ = 0.0f; // ターゲットがいない場合もリセット
         return NodeStatus::Failure;
     }
 
     Player *target = dynamic_cast<Player *>(enemy.GetTarget());
     if (!target) {
+        rushElapsedTime_ = 0.0f;
         return NodeStatus::Failure;
     }
 
@@ -132,11 +134,20 @@ NodeStatus RushAttackNode::Execute(Enemy &enemy, float deltaTime) {
         return NodeStatus::Success;
     }
 
+    // 突進開始時のみ方向を記録
     if (rushElapsedTime_ == 0.0f) {
         rushDirection_ = toTarget.Normalize();
     }
 
     rushElapsedTime_ += deltaTime;
+
+    // 一定時間経過したら突進終了してリセット
+    if (rushElapsedTime_ > 3.0f) { // 3秒で突進終了
+        rushElapsedTime_ = 0.0f;
+        enemy.GetVelocity() = {0.0f, 0.0f, 0.0f};
+        return NodeStatus::Success;
+    }
+
     enemy.GetVelocity() = rushDirection_ * rushSpeed_;
 
     // 回転処理

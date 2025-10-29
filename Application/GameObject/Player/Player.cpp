@@ -228,10 +228,10 @@ void Player::ChangeState(const std::string &stateName) {
 }
 
 void Player::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<Enemy *>(other)) {
+   /* if (dynamic_cast<Enemy *>(other)) {
         isAlive_ = false;
         
-    }
+    }*/
 }
 
 void Player::DirectionUpdate() {

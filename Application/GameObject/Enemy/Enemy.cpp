@@ -33,31 +33,29 @@ void Enemy::Init(const std::string objectName) {
 }
 
 void Enemy::InitializeBehaviorTree() {
-    // ルートは Selector（最初に成功したノードを実行）
     auto root = std::make_unique<SelectorNode>();
 
     // =========== Branch 1: プレイヤーが空中 ===========
     auto playerAirborneSequence = std::make_unique<SequenceNode>();
     playerAirborneSequence->AddChild(std::make_unique<IsPlayerAirborneNode>());
 
-    // 距離に応じた優先度制御用 Selector
     auto airborneDistanceSelector = std::make_unique<SelectorNode>();
 
-    // 距離が遠い場合（>15.0f）：Rush を優先
+    // 距離が遠い場合（>20.0f）：Rush を優先
     auto farRushSequence = std::make_unique<SequenceNode>();
-    farRushSequence->AddChild(std::make_unique<DistanceThresholdNode>(15.0f));
+    farRushSequence->AddChild(std::make_unique<DistanceThresholdNode>(20.0f));
     farRushSequence->AddChild(std::make_unique<RushAttackNode>(250.0f, 3.0f));
     airborneDistanceSelector->AddChild(std::move(farRushSequence));
 
-    // 中距離（7.0f～15.0f）：通常の飛行移動
+    // 中距離（10.0f～20.0f）：通常の飛行移動
     auto midRangeSequence = std::make_unique<SequenceNode>();
-    midRangeSequence->AddChild(std::make_unique<DistanceToTargetNode>(7.0f, 15.0f));
+    midRangeSequence->AddChild(std::make_unique<DistanceToTargetNode>(10.0f, 20.0f));
     midRangeSequence->AddChild(std::make_unique<FlyToTargetNode>(100.0f));
     airborneDistanceSelector->AddChild(std::move(midRangeSequence));
 
-    // 近距離（<7.0f）：通常の飛行移動
+    // 近距離（<10.0f）：ゆっくり飛行移動
     auto closeRangeSequence = std::make_unique<SequenceNode>();
-    closeRangeSequence->AddChild(std::make_unique<DistanceToTargetNode>(0.0f, 7.0f));
+    closeRangeSequence->AddChild(std::make_unique<DistanceToTargetNode>(0.0f, 10.0f));
     closeRangeSequence->AddChild(std::make_unique<FlyToTargetNode>(80.0f));
     airborneDistanceSelector->AddChild(std::move(closeRangeSequence));
 
@@ -70,21 +68,21 @@ void Enemy::InitializeBehaviorTree() {
 
     auto groundedDistanceSelector = std::make_unique<SelectorNode>();
 
-    // 距離が遠い場合（>15.0f）：Rush を優先
+    // 距離が遠い場合（>20.0f）：Rush を優先
     auto groundFarRushSequence = std::make_unique<SequenceNode>();
-    groundFarRushSequence->AddChild(std::make_unique<DistanceThresholdNode>(15.0f));
+    groundFarRushSequence->AddChild(std::make_unique<DistanceThresholdNode>(20.0f));
     groundFarRushSequence->AddChild(std::make_unique<RushAttackNode>(200.0f, 3.0f));
     groundedDistanceSelector->AddChild(std::move(groundFarRushSequence));
 
-    // 中距離：通常の移動
+    // 中距離（5.0f～20.0f）：通常の移動
     auto groundMidSequence = std::make_unique<SequenceNode>();
-    groundMidSequence->AddChild(std::make_unique<DistanceToTargetNode>(3.0f, 15.0f));
+    groundMidSequence->AddChild(std::make_unique<DistanceToTargetNode>(5.0f, 20.0f));
     groundMidSequence->AddChild(std::make_unique<MoveToTargetNode>(80.0f));
     groundedDistanceSelector->AddChild(std::move(groundMidSequence));
 
-    // 近距離：ゆっくり移動
+    // 近距離（<5.0f）：ゆっくり移動
     auto groundCloseSequence = std::make_unique<SequenceNode>();
-    groundCloseSequence->AddChild(std::make_unique<DistanceToTargetNode>(0.0f, 3.0f));
+    groundCloseSequence->AddChild(std::make_unique<DistanceToTargetNode>(0.0f, 5.0f));
     groundCloseSequence->AddChild(std::make_unique<MoveToTargetNode>(50.0f));
     groundedDistanceSelector->AddChild(std::move(groundCloseSequence));
 
