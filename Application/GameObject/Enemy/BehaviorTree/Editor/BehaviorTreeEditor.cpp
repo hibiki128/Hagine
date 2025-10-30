@@ -25,6 +25,7 @@ BehaviorTreeEditor::~BehaviorTreeEditor() {
 }
 
 void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
+    currentRoot_ = root;
     if (!root) {
         ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
         ImGui::Begin("ビヘイビアツリーエディター");
@@ -375,7 +376,7 @@ void BehaviorTreeEditor::DrawToolbar(const std::string &treeName) {
 
     ImGui::SameLine();
     if (ImGui::Button("保存")) {
-        SaveSettings(std::string(treeNameBuffer_));
+        ImGui::OpenPopup("SaveConfirm");
     }
 
     ImGui::SameLine();
@@ -383,13 +384,36 @@ void BehaviorTreeEditor::DrawToolbar(const std::string &treeName) {
         ImGui::OpenPopup("LoadConfirm");
     }
 
-    // 確認ポップアップ
+    // 保存確認ポップアップ
+    if (ImGui::BeginPopupModal("SaveConfirm", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("設定を保存しますか?");
+        ImGui::Text("ツリー名: %s", treeNameBuffer_);
+        ImGui::Separator();
+
+        if (ImGui::Button("保存", ImVec2(120, 0))) {
+            if (currentRoot_) {
+                SaveSettings(std::string(treeNameBuffer_), currentRoot_);
+                ImGui::Text("保存しました!");
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("キャンセル", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    // 読み込み確認ポップアップ
     if (ImGui::BeginPopupModal("LoadConfirm", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("設定を読み込みますか?");
         ImGui::Text("現在の編集内容は保存されていない可能性があります。");
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+        if (ImGui::Button("読み込み", ImVec2(120, 0))) {
+            if (currentRoot_) {
+                LoadSettings(std::string(treeNameBuffer_), currentRoot_);
+            }
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -509,73 +533,88 @@ void BehaviorTreeEditor::DrawNodeProperties(BehaviorNode *node) {
     ImGui::PopTextWrapPos();
 }
 
-void BehaviorTreeEditor::SaveSettings(const std::string &treeName) {
-    std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("BehaviorTree", treeName);
-
-    // ノードの重み付け情報を保存
-    data->Save("nodeWeightCount", static_cast<int>(nodeWeights_.size()));
-
-    int index = 0;
-    for (const auto &[node, weight] : nodeWeights_) {
-        std::string prefix = "weight_" + std::to_string(index) + "_";
-        data->Save(prefix + "nodeId", node->nodeId);
-        data->Save(prefix + "nodeName", std::string(node->GetNodeName()));
-        data->Save(prefix + "weight", weight);
-
-        // ノード固有のパラメータを保存
-        if (auto *approachNode = dynamic_cast<ApproachNode *>(node)) {
-            data->Save(prefix + "speed", approachNode->GetSpeed());
-            data->Save(prefix + "speedType", static_cast<int>(approachNode->GetSpeedType()));
-        } else if (auto *closeNode = dynamic_cast<CloseApproachNode *>(node)) {
-            data->Save(prefix + "speed", closeNode->GetSpeed());
-            data->Save(prefix + "targetDistance", closeNode->GetTargetDistance());
-        } else if (auto *strafeNode = dynamic_cast<StrafeNode *>(node)) {
-            data->Save(prefix + "speed", strafeNode->GetSpeed());
-        } else if (auto *retreatNode = dynamic_cast<RetreatNode *>(node)) {
-            data->Save(prefix + "speed", retreatNode->GetSpeed());
-            data->Save(prefix + "retreatDistance", retreatNode->GetRetreatDistance());
-        } else if (auto *distNode = dynamic_cast<DistanceCheckNode *>(node)) {
-            data->Save(prefix + "minDistance", distNode->GetMinDistance());
-            data->Save(prefix + "maxDistance", distNode->GetMaxDistance());
-        }
-
-        index++;
+void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode *root) {
+    if (!root) {
+        return;
     }
 
-    // WeightedSelectorの重み情報を保存
-    std::function<void(BehaviorNode *, int &)> saveWeightedSelectors = [&](BehaviorNode *node, int &selectorIndex) {
+    std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("BehaviorTree", treeName);
+
+    // 全ノードを収集し、IDを割り当て
+    std::vector<BehaviorNode *> allNodes;
+    int currentId = 0;
+
+    std::function<void(BehaviorNode *)> collectNodes = [&](BehaviorNode *node) {
         if (!node)
             return;
 
-        if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
-            std::string prefix = "weightedSelector_" + std::to_string(selectorIndex) + "_";
-            data->Save(prefix + "nodeId", node->nodeId);
+        // ノードIDを割り当て
+        node->nodeId = currentId++;
+        allNodes.push_back(node);
 
-            auto &weights = weightedSelector->GetWeights();
-            data->Save(prefix + "childCount", static_cast<int>(weights.size()));
-
-            for (size_t i = 0; i < weights.size(); i++) {
-                data->Save(prefix + "weight_" + std::to_string(i), weights[i]);
-            }
-
-            selectorIndex++;
-        }
-
-        // 子ノードを再帰的に処理
         if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
             for (auto &child : sequence->GetChildren()) {
-                saveWeightedSelectors(child.get(), selectorIndex);
+                collectNodes(child.get());
             }
         } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
             for (auto &child : selector->GetChildren()) {
-                saveWeightedSelectors(child.get(), selectorIndex);
+                collectNodes(child.get());
             }
         } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
             for (auto &child : weightedSelector->GetChildren()) {
-                saveWeightedSelectors(child.get(), selectorIndex);
+                collectNodes(child.get());
             }
         }
     };
+
+    // rootから全ノードを収集
+    collectNodes(root);
+
+    // ノード情報を保存
+    data->Save("nodeCount", static_cast<int>(allNodes.size()));
+
+    for (size_t i = 0; i < allNodes.size(); i++) {
+        BehaviorNode *node = allNodes[i];
+        std::string prefix = "node_" + std::to_string(i) + "_";
+
+        data->Save(prefix + "nodeId", node->nodeId);
+        data->Save(prefix + "nodeName", std::string(node->GetNodeName()));
+
+        // ノード固有のパラメータを保存
+        if (auto *approachNode = dynamic_cast<ApproachNode *>(node)) {
+            data->Save(prefix + "type", std::string("Approach"));
+            data->Save(prefix + "speed", approachNode->GetSpeed());
+            data->Save(prefix + "speedType", static_cast<int>(approachNode->GetSpeedType()));
+        } else if (auto *closeNode = dynamic_cast<CloseApproachNode *>(node)) {
+            data->Save(prefix + "type", std::string("CloseApproach"));
+            data->Save(prefix + "speed", closeNode->GetSpeed());
+            data->Save(prefix + "targetDistance", closeNode->GetTargetDistance());
+        } else if (auto *strafeNode = dynamic_cast<StrafeNode *>(node)) {
+            data->Save(prefix + "type", std::string("Strafe"));
+            data->Save(prefix + "speed", strafeNode->GetSpeed());
+        } else if (auto *retreatNode = dynamic_cast<RetreatNode *>(node)) {
+            data->Save(prefix + "type", std::string("Retreat"));
+            data->Save(prefix + "speed", retreatNode->GetSpeed());
+            data->Save(prefix + "retreatDistance", retreatNode->GetRetreatDistance());
+        } else if (auto *distNode = dynamic_cast<DistanceCheckNode *>(node)) {
+            data->Save(prefix + "type", std::string("DistanceCheck"));
+            data->Save(prefix + "minDistance", distNode->GetMinDistance());
+            data->Save(prefix + "maxDistance", distNode->GetMaxDistance());
+        } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+            data->Save(prefix + "type", std::string("WeightedSelector"));
+            auto &weights = weightedSelector->GetWeights();
+            data->Save(prefix + "childCount", static_cast<int>(weights.size()));
+            for (size_t j = 0; j < weights.size(); j++) {
+                data->Save(prefix + "weight_" + std::to_string(j), weights[j]);
+            }
+        } else if (dynamic_cast<SequenceNode *>(node)) {
+            data->Save(prefix + "type", std::string("Sequence"));
+        } else if (dynamic_cast<SelectorNode *>(node)) {
+            data->Save(prefix + "type", std::string("Selector"));
+        } else if (dynamic_cast<StopNode *>(node)) {
+            data->Save(prefix + "type", std::string("Stop"));
+        }
+    }
 }
 
 void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode *root) {
@@ -584,23 +623,26 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
 
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("BehaviorTree", treeName);
 
-    // エディター設定の読み込み（デフォルト値を指定）
-    Vector2 panOffset = data->Load<Vector2>("panOffset", Vector2(0.0f, 0.0f));
+    // ノード数を読み込み
+    int nodeCount = data->Load("nodeCount", 0);
 
-    // ノードの重み付け情報を読み込み
-    int weightCount = data->Load("nodeWeightCount", 0);
-
-    // weightCountが0の場合は読み込みをスキップ（初回起動時など）
-    if (weightCount <= 0) {
+    if (nodeCount <= 0) {
         return;
     }
 
-    // ノードIDからノードへのマップを作成（再帰的に構築）
+    // ノードIDからノードへのマップを作成
     std::unordered_map<int, BehaviorNode *> nodeMap;
+    std::vector<BehaviorNode *> allNodes;
+    int currentId = 0;
+
     std::function<void(BehaviorNode *)> buildNodeMap = [&](BehaviorNode *node) {
         if (!node)
             return;
+
+        // ノードIDを割り当て
+        node->nodeId = currentId++;
         nodeMap[node->nodeId] = node;
+        allNodes.push_back(node);
 
         if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
             for (auto &child : sequence->GetChildren()) {
@@ -617,24 +659,25 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
         }
     };
 
-    // まずツリーを一度描画してnodeIdを設定
-    nodeIdCounter_ = 0;
     buildNodeMap(root);
 
-    nodeWeights_.clear();
+    // 保存されたノード数とツリーのノード数が一致するか確認
+    if (nodeCount != static_cast<int>(allNodes.size())) {
+        // 警告を出す
+        return;
+    }
 
-    for (int i = 0; i < weightCount; i++) {
-        std::string prefix = "weight_" + std::to_string(i) + "_";
+    // 保存されたノード情報を読み込んで適用
+    for (int i = 0; i < nodeCount; i++) {
+        std::string prefix = "node_" + std::to_string(i) + "_";
 
-        // 各値を安全に読み込み
-        int nodeId = data->Load(prefix + "nodeId", -1);
+        int savedNodeId = data->Load(prefix + "nodeId", -1);
         std::string nodeName = data->Load(prefix + "nodeName", std::string(""));
-        float weight = data->Load(prefix + "weight", 1.0f);
+        std::string nodeType = data->Load(prefix + "type", std::string(""));
 
-        // ノードIDからノードを検索
-        if (nodeMap.find(nodeId) != nodeMap.end()) {
-            BehaviorNode *node = nodeMap[nodeId];
-            nodeWeights_[node] = weight;
+        // インデックスiのノードに対応するデータを読み込む
+        if (i < static_cast<int>(allNodes.size())) {
+            BehaviorNode *node = allNodes[i];
 
             // ノード固有のパラメータを読み込み
             if (auto *approachNode = dynamic_cast<ApproachNode *>(node)) {
@@ -659,45 +702,15 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
                 float minDist = data->Load(prefix + "minDistance", 0.0f);
                 float maxDist = data->Load(prefix + "maxDistance", 100.0f);
                 distNode->SetDistances(minDist, maxDist);
+            } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+                int childCount = data->Load(prefix + "childCount", 0);
+                auto &weights = weightedSelector->GetWeights();
+                for (int j = 0; j < childCount && j < static_cast<int>(weights.size()); j++) {
+                    weights[j] = data->Load(prefix + "weight_" + std::to_string(j), 1.0f);
+                }
             }
         }
     }
-
-    // WeightedSelectorの重み情報を読み込み
-    std::function<void(BehaviorNode *, int &)> loadWeightedSelectors = [&](BehaviorNode *node, int &selectorIndex) {
-        if (!node)
-            return;
-
-        if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
-            std::string prefix = "weightedSelector_" + std::to_string(selectorIndex) + "_";
-            int childCount = data->Load(prefix + "childCount", 0);
-
-            auto &weights = weightedSelector->GetWeights();
-            for (int i = 0; i < childCount && i < static_cast<int>(weights.size()); i++) {
-                weights[i] = data->Load(prefix + "weight_" + std::to_string(i), 1.0f);
-            }
-
-            selectorIndex++;
-        }
-
-        // 子ノードを再帰的に処理
-        if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
-            for (auto &child : sequence->GetChildren()) {
-                loadWeightedSelectors(child.get(), selectorIndex);
-            }
-        } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
-            for (auto &child : selector->GetChildren()) {
-                loadWeightedSelectors(child.get(), selectorIndex);
-            }
-        } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
-            for (auto &child : weightedSelector->GetChildren()) {
-                loadWeightedSelectors(child.get(), selectorIndex);
-            }
-        }
-    };
-
-    int selectorIndex = 0;
-    loadWeightedSelectors(root, selectorIndex);
 }
 
 void BehaviorTreeEditor::AddExecutionHistory(BehaviorNode *node) {

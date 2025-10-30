@@ -1,13 +1,13 @@
 #define NOMINMAX
 #include "Enemy.h"
+#include "BehaviorTree/BehaviorNode/BehaviorNode.h"
+#include "BehaviorTree/Nodes/ActionNodes.h"
+#include "BehaviorTree/Nodes/CompositeNodes.h"
+#include "BehaviorTree/Nodes/ConditionNodes.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChageShot/ChageShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include <Frame.h>
-#include "BehaviorTree/BehaviorNode/BehaviorNode.h"
-#include "BehaviorTree/Nodes/ActionNodes.h"
-#include "BehaviorTree/Nodes/ConditionNodes.h"
-#include "BehaviorTree/Nodes/CompositeNodes.h"
 #ifdef _DEBUG
 #include "BehaviorTree/Editor/BehaviorTreeEditor.h"
 #endif
@@ -123,7 +123,7 @@ void Enemy::InitializeBehaviorTree() {
 
 #ifdef _DEBUG
     // エディターに設定をロード
-    behaviorTreeEditor_->LoadSettings("EnemyTree", behaviorTreeRoot_.get());
+    behaviorTreeEditor_->LoadSettings("default", behaviorTreeRoot_.get());
 #endif
 }
 
@@ -137,6 +137,12 @@ void Enemy::ExecuteBehaviorTree(float deltaTime) {
         behaviorTreeEditor_->ClearExecutingNode();
     }
 #endif
+
+    if (isStop_) {
+        velocity_.x = 0.0f;
+        velocity_.z = 0.0f;
+        return;
+    }
 
     // ツリーを実行(各ノード内でエディター通知される)
     NodeStatus status = behaviorTreeRoot_->Execute(*this, deltaTime);
@@ -175,6 +181,8 @@ void Enemy::Debug() {
             if (ImGui::Button("HP回復")) {
                 HP_ = maxHP_;
             }
+
+            ImGui::Checkbox("ストップ", &isStop_);
 
             ImGui::EndTabItem();
         }

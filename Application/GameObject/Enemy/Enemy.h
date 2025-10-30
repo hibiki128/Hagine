@@ -187,6 +187,7 @@ class Enemy : public BaseObject {
     bool isAlive_ = true;
     bool isLockOn_ = false;
     bool isGrounded_ = true;
+    bool isStop_ = false;
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;

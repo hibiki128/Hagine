@@ -42,7 +42,8 @@ class BehaviorTreeEditor {
     /// 各ノードの設定を保存
     /// </summary>
     /// <param name="treeName"> ツリーノードの名前 </param>
-    void SaveSettings(const std::string &treeName);
+    /// <param name="root"> ルートノード </param>
+    void SaveSettings(const std::string &treeName, BehaviorNode *root);
 
     /// <summary>
     /// 各ノードの設定を読み込み
@@ -123,6 +124,7 @@ class BehaviorTreeEditor {
     int nodeIdCounter_ = 0;
     BehaviorNode *selectedNode_ = nullptr;
     BehaviorNode *executingNode_ = nullptr;
+    BehaviorNode *currentRoot_ = nullptr;
     std::vector<BehaviorNode *> executionHistory_;
     const int MAX_HISTORY = 10;
 
