@@ -1,240 +1,98 @@
 #pragma once
-#include "Application/GameObject/Enemy/BehaviorTree/BehaviorNode/BehaviorNode.h"
-#include "Application/GameObject/Enemy/Enemy.h"
-#include "Input.h"
+#include "../BehaviorNode/BehaviorNode.h"
+
+// 移動速度の種類
+enum class MoveSpeedType {
+    Fast, // 速い
+    Slow  // 遅い
+};
+
+// 近距離行動の種類
+enum class CloseRangeAction {
+    Approach, // さらに近づく
+    Strafe,   // 横に移動
+    Retreat   // 後退
+};
 
 /// <summary>
-/// ターゲットに移動するビヘイビアノード
+/// プレイヤーに近づく行動ノード
 /// </summary>
-class MoveToTargetNode : public BehaviorNode {
+class ApproachNode : public BehaviorNode {
   public:
-    /// ===================================================
-    /// public method
-    /// ===================================================
-
-    /// <summary>
-    /// コンストラクタ
-    /// </summary>
-    /// <param name="speed">移動速度</param>
-    MoveToTargetNode(float speed) : moveSpeed_(speed) {}
-
-    /// <summary>
-    /// ノードの実行処理
-    /// </summary>
-    /// <param name="enemy">対象のEnemy参照</param>
-    /// <param name="deltaTime">フレームの経過時間</param>
-    /// <returns>ノードの実行結果</returns>
+    ApproachNode(MoveSpeedType speedType = MoveSpeedType::Fast);
     NodeStatus Execute(Enemy &enemy, float deltaTime) override;
+    const char *GetNodeName() const override { return "Approach"; }
 
-    /// <summary>
-    /// ノード名取得
-    /// </summary>
-    /// <returns>ノードの名前</returns>
-    const char *GetNodeName() const override { return "MoveToTarget"; }
-
-    /// <summary>
-    /// 移動速度を取得
-    /// </summary>
-    /// <returns>現在の移動速度</returns>
-    float GetSpeed() const { return moveSpeed_; }
-
-    /// <summary>
-    /// 移動速度を設定
-    /// </summary>
-    /// <param name="speed">設定する移動速度</param>
-    void SetSpeed(float speed) { moveSpeed_ = speed; }
+    // 速度設定
+    void SetSpeedType(MoveSpeedType type) { speedType_ = type; }
+    MoveSpeedType GetSpeedType() const { return speedType_; }
+    float GetSpeed() const { return speed_; }
+    void SetSpeed(float speed) { speed_ = speed; }
 
   private:
-    /// ===================================================
-    /// private varians
-    /// ===================================================
-
-    float moveSpeed_; // 移動速度
+    MoveSpeedType speedType_;
+    float speed_ = 10.0f;
 };
 
 /// <summary>
-/// ジャンプアクションを実行するビヘイビアノード
+/// 停止行動ノード
 /// </summary>
-class JumpNode : public BehaviorNode {
+class StopNode : public BehaviorNode {
   public:
-    /// ===================================================
-    /// public method
-    /// ===================================================
-
-    /// <summary>
-    /// ノードの実行処理
-    /// </summary>
-    /// <param name="enemy">対象のEnemy参照</param>
-    /// <param name="deltaTime">フレームの経過時間</param>
-    /// <returns>ノードの実行結果</returns>
     NodeStatus Execute(Enemy &enemy, float deltaTime) override;
-
-    /// <summary>
-    /// ノード名取得
-    /// </summary>
-    /// <returns>ノードの名前</returns>
-    const char *GetNodeName() const override { return "Jump"; }
+    const char *GetNodeName() const override { return "Stop"; }
 };
 
 /// <summary>
-/// 飛行中のアイドル状態を実行するビヘイビアノード
+/// 近距離行動ノード(さらに近づく)
 /// </summary>
-class FlyIdleNode : public BehaviorNode {
+class CloseApproachNode : public BehaviorNode {
   public:
-    /// ===================================================
-    /// public method
-    /// ===================================================
-
-    /// <summary>
-    /// ノードの実行処理
-    /// </summary>
-    /// <param name="enemy">対象のEnemy参照</param>
-    /// <param name="deltaTime">フレームの経過時間</param>
-    /// <returns>ノードの実行結果</returns>
     NodeStatus Execute(Enemy &enemy, float deltaTime) override;
+    const char *GetNodeName() const override { return "CloseApproach"; }
 
-    /// <summary>
-    /// ノード名取得
-    /// </summary>
-    /// <returns>ノードの名前</returns>
-    const char *GetNodeName() const override { return "FlyIdle"; }
-};
-
-/// <summary>
-/// 重力を適用するビヘイビアノード
-/// </summary>
-class ApplyGravityNode : public BehaviorNode {
-  public:
-    /// ===================================================
-    /// public method
-    /// ===================================================
-
-    /// <summary>
-    /// ノードの実行処理
-    /// </summary>
-    /// <param name="enemy">対象のEnemy参照</param>
-    /// <param name="deltaTime">フレームの経過時間</param>
-    /// <returns>ノードの実行結果</returns>
-    NodeStatus Execute(Enemy &enemy, float deltaTime) override;
-
-    /// <summary>
-    /// ノード名取得
-    /// </summary>
-    /// <returns>ノードの名前</returns>
-    const char *GetNodeName() const override { return "ApplyGravity"; }
-};
-
-/// <summary>
-/// ターゲットに向かって飛行するビヘイビアノード
-/// </summary>
-class FlyToTargetNode : public BehaviorNode {
-  public:
-    /// ===================================================
-    /// public method
-    /// ===================================================
-
-    /// <summary>
-    /// コンストラクタ
-    /// </summary>
-    /// <param name="speed">飛行速度</param>
-    FlyToTargetNode(float speed) : moveSpeed_(speed) {}
-
-    /// <summary>
-    /// ノードの実行処理
-    /// </summary>
-    /// <param name="enemy">対象のEnemy参照</param>
-    /// <param name="deltaTime">フレームの経過時間</param>
-    /// <returns>ノードの実行結果</returns>
-    NodeStatus Execute(Enemy &enemy, float deltaTime) override;
-
-    /// <summary>
-    /// ノード名取得
-    /// </summary>
-    /// <returns>ノードの名前</returns>
-    const char *GetNodeName() const override { return "FlyToTarget"; }
-
-    /// <summary>
-    /// 飛行速度を取得
-    /// </summary>
-    /// <returns>現在の飛行速度</returns>
-    float GetSpeed() const { return moveSpeed_; }
-
-    /// <summary>
-    /// 飛行速度を設定
-    /// </summary>
-    /// <param name="speed">設定する飛行速度</param>
-    void SetSpeed(float speed) { moveSpeed_ = speed; }
+    float GetSpeed() const { return speed_; }
+    void SetSpeed(float speed) { speed_ = speed; }
+    float GetTargetDistance() const { return targetDistance_; }
+    void SetTargetDistance(float distance) { targetDistance_ = distance; }
 
   private:
-    /// ===================================================
-    /// private varians
-    /// ===================================================
-
-    float moveSpeed_; // 飛行速度
+    float speed_ = 5.0f;
+    float targetDistance_ = 2.0f;
 };
 
 /// <summary>
-/// 突撃攻撃を実行するビヘイビアノード
+/// 横移動行動ノード
 /// </summary>
-class RushAttackNode : public BehaviorNode {
+class StrafeNode : public BehaviorNode {
   public:
-    /// ===================================================
-    /// public method
-    /// ===================================================
-
-    /// <summary>
-    /// コンストラクタ
-    /// </summary>
-    /// <param name="speed">突撃速度</param>
-    /// <param name="minDistance">最小距離</param>
-    RushAttackNode(float speed, float minDistance)
-        : rushSpeed_(speed), minDistance_(minDistance) {}
-
-    /// <summary>
-    /// ノードの実行処理
-    /// </summary>
-    /// <param name="enemy">対象のEnemy参照</param>
-    /// <param name="deltaTime">フレームの経過時間</param>
-    /// <returns>ノードの実行結果</returns>
     NodeStatus Execute(Enemy &enemy, float deltaTime) override;
+    const char *GetNodeName() const override { return "Strafe"; }
 
-    /// <summary>
-    /// ノード名取得
-    /// </summary>
-    /// <returns>ノードの名前</returns>
-    const char *GetNodeName() const override { return "RushAttack"; }
-
-    /// <summary>
-    /// 突撃速度を取得
-    /// </summary>
-    /// <returns>現在の突撃速度</returns>
-    float GetRushSpeed() const { return rushSpeed_; }
-
-    /// <summary>
-    /// 突撃速度を設定
-    /// </summary>
-    /// <param name="speed">設定する突撃速度</param>
-    void SetRushSpeed(float speed) { rushSpeed_ = speed; }
-
-    /// <summary>
-    /// 最小距離を取得
-    /// </summary>
-    /// <returns>現在の最小距離</returns>
-    float GetMinDistance() const { return minDistance_; }
-
-    /// <summary>
-    /// 最小距離を設定
-    /// </summary>
-    /// <param name="dist">設定する最小距離</param>
-    void SetMinDistance(float dist) { minDistance_ = dist; }
+    float GetSpeed() const { return speed_; }
+    void SetSpeed(float speed) { speed_ = speed; }
 
   private:
-    /// ===================================================
-    /// private varians
-    /// ===================================================
+    float speed_ = 8.0f;
+    float strafeTime_ = 0.0f;
+    float maxStrafeTime_ = 1.0f;
+    int strafeDirection_ = 1; // 1: 右, -1: 左
+};
 
-    float rushSpeed_;                            // 突撃速度
-    float minDistance_;                          // 最小距離
-    Vector3 rushDirection_ = {0.0f, 0.0f, 0.0f}; // 突撃方向
-    float rushElapsedTime_ = 0.0f;               // 突撃経過時間
+/// <summary>
+/// 後退行動ノード
+/// </summary>
+class RetreatNode : public BehaviorNode {
+  public:
+    NodeStatus Execute(Enemy &enemy, float deltaTime) override;
+    const char *GetNodeName() const override { return "Retreat"; }
+
+    float GetSpeed() const { return speed_; }
+    void SetSpeed(float speed) { speed_ = speed; }
+    float GetRetreatDistance() const { return retreatDistance_; }
+    void SetRetreatDistance(float distance) { retreatDistance_ = distance; }
+
+  private:
+    float speed_ = 7.0f;
+    float retreatDistance_ = 5.0f;
 };

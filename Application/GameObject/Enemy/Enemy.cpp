@@ -4,9 +4,13 @@
 #include "application/GameObject/Player/Bullet/ChageShot/ChageShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include <Frame.h>
-#include "BehaviorTree/Nodes/SequenceNode.h"
-#include "BehaviorTree/Nodes/ConditionNodes.h"
+#include "BehaviorTree/BehaviorNode/BehaviorNode.h"
 #include "BehaviorTree/Nodes/ActionNodes.h"
+#include "BehaviorTree/Nodes/ConditionNodes.h"
+#include "BehaviorTree/Nodes/CompositeNodes.h"
+#ifdef _DEBUG
+#include "BehaviorTree/Editor/BehaviorTreeEditor.h"
+#endif
 
 Enemy::Enemy() {
 }
@@ -30,71 +34,9 @@ void Enemy::Init(const std::string objectName) {
     shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
     emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("hitEmitter");
     chageShake_ = std::make_unique<Shake>();
-}
 
-void Enemy::InitializeBehaviorTree() {
-    auto root = std::make_unique<SelectorNode>();
-
-    // =========== Branch 1: プレイヤーが空中 ===========
-    auto playerAirborneSequence = std::make_unique<SequenceNode>();
-    playerAirborneSequence->AddChild(std::make_unique<IsPlayerAirborneNode>());
-
-    auto airborneDistanceSelector = std::make_unique<SelectorNode>();
-
-    // 距離が遠い場合（>20.0f）：Rush を優先
-    auto farRushSequence = std::make_unique<SequenceNode>();
-    farRushSequence->AddChild(std::make_unique<DistanceThresholdNode>(20.0f));
-    farRushSequence->AddChild(std::make_unique<RushAttackNode>(250.0f, 3.0f));
-    airborneDistanceSelector->AddChild(std::move(farRushSequence));
-
-    // 中距離（10.0f～20.0f）：通常の飛行移動
-    auto midRangeSequence = std::make_unique<SequenceNode>();
-    midRangeSequence->AddChild(std::make_unique<DistanceToTargetNode>(10.0f, 20.0f));
-    midRangeSequence->AddChild(std::make_unique<FlyToTargetNode>(100.0f));
-    airborneDistanceSelector->AddChild(std::move(midRangeSequence));
-
-    // 近距離（<10.0f）：ゆっくり飛行移動
-    auto closeRangeSequence = std::make_unique<SequenceNode>();
-    closeRangeSequence->AddChild(std::make_unique<DistanceToTargetNode>(0.0f, 10.0f));
-    closeRangeSequence->AddChild(std::make_unique<FlyToTargetNode>(80.0f));
-    airborneDistanceSelector->AddChild(std::move(closeRangeSequence));
-
-    playerAirborneSequence->AddChild(std::move(airborneDistanceSelector));
-    root->AddChild(std::move(playerAirborneSequence));
-
-    // =========== Branch 2: プレイヤーが地上 ===========
-    auto playerGroundedSequence = std::make_unique<SequenceNode>();
-    playerGroundedSequence->AddChild(std::make_unique<HasTargetNode>());
-
-    auto groundedDistanceSelector = std::make_unique<SelectorNode>();
-
-    // 距離が遠い場合（>20.0f）：Rush を優先
-    auto groundFarRushSequence = std::make_unique<SequenceNode>();
-    groundFarRushSequence->AddChild(std::make_unique<DistanceThresholdNode>(20.0f));
-    groundFarRushSequence->AddChild(std::make_unique<RushAttackNode>(200.0f, 3.0f));
-    groundedDistanceSelector->AddChild(std::move(groundFarRushSequence));
-
-    // 中距離（5.0f～20.0f）：通常の移動
-    auto groundMidSequence = std::make_unique<SequenceNode>();
-    groundMidSequence->AddChild(std::make_unique<DistanceToTargetNode>(5.0f, 20.0f));
-    groundMidSequence->AddChild(std::make_unique<MoveToTargetNode>(80.0f));
-    groundedDistanceSelector->AddChild(std::move(groundMidSequence));
-
-    // 近距離（<5.0f）：ゆっくり移動
-    auto groundCloseSequence = std::make_unique<SequenceNode>();
-    groundCloseSequence->AddChild(std::make_unique<DistanceToTargetNode>(0.0f, 5.0f));
-    groundCloseSequence->AddChild(std::make_unique<MoveToTargetNode>(50.0f));
-    groundedDistanceSelector->AddChild(std::move(groundCloseSequence));
-
-    playerGroundedSequence->AddChild(std::move(groundedDistanceSelector));
-    root->AddChild(std::move(playerGroundedSequence));
-
-    // =========== Fallback: 何もできない場合 ===========
-    auto idleSequence = std::make_unique<SequenceNode>();
-    idleSequence->AddChild(std::make_unique<ApplyGravityNode>());
-    root->AddChild(std::move(idleSequence));
-
-    behaviorRoot_ = std::move(root);
+    // ビヘイビアツリーの初期化
+    InitializeBehaviorTree();
 }
 
 void Enemy::Update() {
@@ -110,9 +52,9 @@ void Enemy::Update() {
         HP_ = 0;
     }
 
-    // ビヘイビアツリー実行
-    if (behaviorRoot_) {
-        behaviorRoot_->Execute(*this, Frame::DeltaTime());
+    // ビヘイビアツリーの実行
+    if (isAlive_) {
+        ExecuteBehaviorTree(Frame::DeltaTime());
     }
 
     // 位置更新
@@ -120,6 +62,94 @@ void Enemy::Update() {
 
     UpdateShadowScale();
     chageShake_->Update();
+}
+
+void Enemy::InitializeBehaviorTree() {
+#ifdef _DEBUG
+    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
+    BehaviorNode::SetEditor(behaviorTreeEditor_.get());
+#endif
+
+    // ルートノード(シーケンス)を作成
+    auto rootSequence = std::make_unique<SequenceNode>();
+
+    // 1. 遠距離時の接近行動
+    auto farDistCheck = std::make_unique<DistanceCheckNode>(10.0f, 100.0f);
+    auto fastApproach = std::make_unique<ApproachNode>(MoveSpeedType::Fast);
+
+    auto farSequence = std::make_unique<SequenceNode>();
+    farSequence->AddChild(std::move(farDistCheck));
+    farSequence->AddChild(std::move(fastApproach));
+
+    // 2. 中距離時の接近行動
+    auto midDistCheck = std::make_unique<DistanceCheckNode>(5.0f, 10.0f);
+    auto slowApproach = std::make_unique<ApproachNode>(MoveSpeedType::Slow);
+
+    auto midSequence = std::make_unique<SequenceNode>();
+    midSequence->AddChild(std::move(midDistCheck));
+    midSequence->AddChild(std::move(slowApproach));
+
+    // 3. 近距離時の重み付き行動選択
+    auto closeDistCheck = std::make_unique<DistanceCheckNode>(0.0f, 5.0f);
+
+    // 近距離での3つの行動オプション
+    auto closeApproach = std::make_unique<CloseApproachNode>();
+    auto strafe = std::make_unique<StrafeNode>();
+    auto retreat = std::make_unique<RetreatNode>();
+
+    // 重み付きセレクターを作成
+    auto weightedSelector = std::make_unique<WeightedSelectorNode>();
+    weightedSelector->AddChild(std::move(closeApproach), 1.0f); // さらに近づく: 重み1.0
+    weightedSelector->AddChild(std::move(strafe), 1.5f);        // 横移動: 重み1.5
+    weightedSelector->AddChild(std::move(retreat), 1.0f);       // 後退: 重み1.0
+
+    auto closeSequence = std::make_unique<SequenceNode>();
+    closeSequence->AddChild(std::move(closeDistCheck));
+    closeSequence->AddChild(std::move(weightedSelector));
+
+    // 4. 全体をセレクターでまとめる
+    auto mainSelector = std::make_unique<SelectorNode>();
+    mainSelector->AddChild(std::move(closeSequence)); // 近距離を最優先
+    mainSelector->AddChild(std::move(midSequence));   // 中距離
+    mainSelector->AddChild(std::move(farSequence));   // 遠距離
+
+    // 停止ノードをフォールバック用に追加
+    auto stopNode = std::make_unique<StopNode>();
+    mainSelector->AddChild(std::move(stopNode));
+
+    rootSequence->AddChild(std::move(mainSelector));
+
+    behaviorTreeRoot_ = std::move(rootSequence);
+
+#ifdef _DEBUG
+    // エディターに設定をロード
+    behaviorTreeEditor_->LoadSettings("EnemyTree", behaviorTreeRoot_.get());
+#endif
+}
+
+void Enemy::ExecuteBehaviorTree(float deltaTime) {
+    if (!behaviorTreeRoot_) {
+        return;
+    }
+
+#ifdef _DEBUG
+    if (behaviorTreeEditor_) {
+        behaviorTreeEditor_->ClearExecutingNode();
+    }
+#endif
+
+    // ツリーを実行(各ノード内でエディター通知される)
+    NodeStatus status = behaviorTreeRoot_->Execute(*this, deltaTime);
+
+    (void)status;
+}
+
+void Enemy::DrawBehaviorTreeEditor() {
+#ifdef _DEBUG
+    if (behaviorTreeEditor_) {
+        behaviorTreeEditor_->DrawEditor(behaviorTreeRoot_.get());
+    }
+#endif
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -130,7 +160,7 @@ void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (transform_->translation_.y < 0) {
         return;
     }
-//    shadow_->Draw(viewProjection, offSet);
+    shadow_->Draw(viewProjection, offSet);
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {

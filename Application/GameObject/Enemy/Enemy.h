@@ -1,11 +1,12 @@
 #pragma once
 #include "Application/Utility/Shake/Shake.h"
-
-#include "BehaviorTree/BehaviorNode/BehaviorNode.h"
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
 #include <Application/GameObject/Player/Player.h>
 #include <application/GameObject/Player/PlayerData.h>
+
+class BehaviorNode;
+class BehaviorTreeEditor;
 
 /// <summary>
 /// 敵のゲームオブジェクトクラス
@@ -32,11 +33,6 @@ class Enemy : public BaseObject {
     /// </summary>
     /// <param name="objectName">オブジェクト名</param>
     void Init(const std::string objectName) override;
-
-    /// <summary>
-    /// ビヘイビアツリーの初期化
-    /// </summary>
-    void InitializeBehaviorTree();
 
     /// <summary>
     /// 更新処理
@@ -68,9 +64,23 @@ class Enemy : public BaseObject {
     void OnCollisionEnter([[maybe_unused]] Collider *other) override;
 
     /// <summary>
+    /// ビヘイビアツリーを初期化
+    /// </summary>
+    void InitializeBehaviorTree();
+
+    /// <summary>
+    /// ビヘイビアツリーを実行
+    /// </summary>
+    void ExecuteBehaviorTree(float deltaTime);
+
+    /// <summary>
+    /// ビヘイビアツリーエディターを描画
+    /// </summary>
+    void DrawBehaviorTreeEditor();
+
+    /// <summary>
     /// Getter
     /// </summary>
-    BehaviorNode *GetBehaviorRoot() { return behaviorRoot_.get(); }
     Vector3 &GetAcceleration() { return acceleration_; }
     Vector3 &GetVelocity() { return velocity_; }
     Vector3 GetMovementDirection() const;
@@ -107,14 +117,6 @@ class Enemy : public BaseObject {
     void SetDamage(int damage) { damage_ = damage; }
     void SetVp(ViewProjection *vp);
     void SetTarget(Player *target) { target_ = target; }
-    void SetBehaviorTree(std::unique_ptr<BehaviorNode> root) {
-        behaviorRoot_ = std::move(root);
-    }
-    #ifdef _DEBUG
-    void SetBehaviorTreeEditor(BehaviorTreeEditor *editor) {
-        BehaviorNode::SetEditor(editor);
-    }
-#endif
 
   private:
     /// ===================================================
@@ -170,7 +172,6 @@ class Enemy : public BaseObject {
     Vector3 velocity_{};
     Vector3 acceleration_{};
     Player *target_ = nullptr;
-    std::unique_ptr<BehaviorNode> behaviorRoot_;
 
     int HP_ = 1000000;
     int maxHP_ = 1000000;
@@ -191,4 +192,10 @@ class Enemy : public BaseObject {
     std::unique_ptr<BaseObject> shadow_;
     std::unique_ptr<ParticleEmitter> emitter_;
     std::unique_ptr<Shake> chageShake_;
+
+    // ビヘイビアツリー関連
+#ifdef _DEBUG
+    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
+#endif
+    std::unique_ptr<BehaviorNode> behaviorTreeRoot_;
 };

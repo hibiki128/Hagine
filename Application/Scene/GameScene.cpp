@@ -61,19 +61,6 @@ void GameScene::Initialize() {
     enemyUI_->Init(enemy_ptr);
 
     /// ===================================================
-    /// ビヘイビアツリーの構築
-    /// ===================================================
-    enemy_ptr->InitializeBehaviorTree();
-
-#ifdef _DEBUG
-    // エディターとビヘイビアツリーを連携
-    enemy_ptr->SetBehaviorTreeEditor(behaviorTreeEditor_.get());
-    if (enemy_ptr->GetBehaviorRoot()) {
-        behaviorTreeEditor_->LoadSettings("DefaultTree", enemy_ptr->GetBehaviorRoot());
-    }
-#endif
-
-    /// ===================================================
     /// オブジェクトマネージャに追加
     /// ===================================================
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
@@ -137,13 +124,6 @@ void GameScene::Draw() {
     player_ptr->DrawParticle(vp_);
     enemy_ptr->DrawParticle(vp_);
 
-#ifdef _DEBUG
-    // ビヘイビアツリーエディターの実行履歴をクリア（フレームごと）
-    if (behaviorTreeEditor_) {
-        behaviorTreeEditor_->ClearExecutingNode();
-    }
-#endif
-
     fadeOut_->Draw(vp_);
 
     /// -------描画処理終了-------
@@ -168,15 +148,15 @@ void GameScene::AddObjectSetting() {
     enemyUI_->Debug();
     player_ptr->Debug();
     enemy_ptr->Debug();
+
+    // ビヘイビアツリーエディターの表示
+    if (ImGui::CollapsingHeader("BehaviorTree")) {
+        enemy_ptr->DrawBehaviorTreeEditor();
+    }
+
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
     }
-#ifdef _DEBUG
-    // ビヘイビアツリーエディターの表示
-    if (ImGui::CollapsingHeader("Behavior Tree Editor")) {
-        behaviorTreeEditor_->DrawEditor(enemy_ptr->GetBehaviorRoot());
-    }
-#endif // _DEBUG
 }
 
 void GameScene::AddParticleSetting() {
