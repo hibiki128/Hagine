@@ -62,12 +62,12 @@ class DebugCamera {
     /// private varians
     /// ===================================================
 
-    ViewProjection *viewProjection_;                              // ビュープロジェクション
-    Vector2 mouse;                                                // マウス座標
+    ViewProjection *viewProjection_{};                            // ビュープロジェクション
+    Vector2 mouse{};                                              // マウス座標
     Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                  // オイラー角回転
     Quaternion quateRotation_ = Quaternion::IdentityQuaternion(); // クォータニオン回転
-    Matrix4x4 rotateXYZMatrix;                                    // XYZ回転行列
-    Matrix4x4 matRotDelta;                                        // 回転差分行列
+    Matrix4x4 rotateXYZMatrix{};                                  // XYZ回転行列
+    Matrix4x4 matRotDelta{};                                      // 回転差分行列
     float mouseSensitivity = 0.003f;                              // マウス感度
     float moveZspeed = 0.005f;                                    // Z軸移動速度
     bool lockCamera_ = true;                                      // カメラロックフラグ

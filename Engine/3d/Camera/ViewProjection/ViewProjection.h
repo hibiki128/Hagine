@@ -98,9 +98,9 @@ class ViewProjection {
     float aspectRatio = float(WinApp::kClientWidth) / float(WinApp::kClientHeight); // アスペクト比
     float nearZ = 0.1f;                                                             // 深度限界（手前側）
     float farZ = 1000.0f;                                                           // 深度限界（奥側）
-    Matrix4x4 matView_;                                                             // ビュー行列
-    Matrix4x4 matProjection_;                                                       // 射影行列
-    Matrix4x4 matWorld_;                                                            // ワールド行列
+    Matrix4x4 matView_{};                                                           // ビュー行列
+    Matrix4x4 matProjection_{};                                                     // 射影行列
+    Matrix4x4 matWorld_{};                                                          // ワールド行列
 
   private:
     /// ===================================================
@@ -137,17 +137,17 @@ class ViewProjection {
     EasingType currentEasingType_ = EasingType::OutQuad; // イージングタイプ
 
     // 開始時の値
-    Vector3 startTranslation_;           // 開始座標
-    Vector3 startEulerRotation_;         // 開始オイラー角
-    Quaternion startQuaternionRotation_; // 開始クォータニオン
+    Vector3 startTranslation_{};           // 開始座標
+    Vector3 startEulerRotation_{};         // 開始オイラー角
+    Quaternion startQuaternionRotation_{}; // 開始クォータニオン
 
     // 目標値（JSONから読み込み）
-    Vector3 targetTranslation_;           // 目標座標
-    Vector3 targetEulerRotation_;         // 目標オイラー角
-    Quaternion targetQuaternionRotation_; // 目標クォータニオン
+    Vector3 targetTranslation_{};         // 目標座標
+    Vector3 targetEulerRotation_{};       // 目標オイラー角
+    Quaternion targetQuaternionRotation_{}; // 目標クォータニオン
 
     // 定数バッファ
-    Microsoft::WRL::ComPtr<ID3D12Resource> constBuffer_; // 定数バッファ
+    Microsoft::WRL::ComPtr<ID3D12Resource> constBuffer_{}; // 定数バッファ
     ConstBufferDataViewProjection *constMap = nullptr;   // マッピング済みアドレス
 };
 

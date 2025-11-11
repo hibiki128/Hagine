@@ -7,6 +7,7 @@
 #include "collider/Collider.h"
 #include "externals/nlohmann/json.hpp"
 #include <string>
+#include <Graphics/PipeLine/PipeLineManager.h>
 
 class SkyBox;
 class BaseObject : public Collider {
@@ -15,8 +16,8 @@ class BaseObject : public Collider {
     /// private variaus
     /// ===================================================
 
-    std::unique_ptr<DataHandler> ObjectDatas_;
-    std::unique_ptr<DataHandler> AnimaDatas_;
+    std::unique_ptr<DataHandler> ObjectDatas_{};
+    std::unique_ptr<DataHandler> AnimaDatas_{};
 
   protected:
     /// ===================================================
@@ -24,11 +25,11 @@ class BaseObject : public Collider {
     /// ===================================================
 
     // モデル配列データ
-    std::unique_ptr<Object3d> obj3d_;
+    std::unique_ptr<Object3d> obj3d_{};
     // ベースのワールド変換データ
-    std::unique_ptr<WorldTransform> transform_;
+    std::unique_ptr<WorldTransform> transform_{};
 
-    Quaternion q;
+    Quaternion q{};
     // ライティング
     bool isLighting_ = true;
     bool isLoop_ = true;
@@ -41,14 +42,14 @@ class BaseObject : public Collider {
     bool isScene_ = false;
     bool isAlive_ = true;
 
-    std::string objectName_;
-    std::string modelPath_;
-    std::vector<std::string> texturePaths_;
-    std::string texturePath_;
+    std::string objectName_{};
+    std::string modelPath_{};
+    std::vector<std::string> texturePaths_{};
+    std::string texturePath_{};
     std::string foldarPath_ = "SceneData/Title/ObjectData";
 
     BaseObject *parent_ = nullptr;
-    std::list<BaseObject *> children_;
+    std::list<BaseObject *> children_{};
 
     PrimitiveType type_ = PrimitiveType::kCount;
 
@@ -175,11 +176,11 @@ class BaseObject : public Collider {
     void ShowBlendModeCombo(BlendMode &currentMode);
 
     std::vector<std::string> GetGltfFiles();
-    std::vector<Collider *> colliders_;
+    std::vector<Collider *> colliders_{};
 
     bool isCollider = false;
     bool shouldSave_ = true;
     bool isGizmoSelectable_ = true;
-    BlendMode blendMode_;
-    std::string parentName_;
+    BlendMode blendMode_ = BlendMode::kNormal;
+    std::string parentName_{};
 };
