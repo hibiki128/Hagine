@@ -165,7 +165,7 @@ void StartCamera::Update() {
 void StartCamera::Move() {
     angle_ += speed_ * Frame::DeltaTime();
 
-    if (angle_ > 1.0f * std::numbers::pi_v<float> && !isEasing_) {
+    if (angle_ > 0.5f * std::numbers::pi_v<float> && !isEasing_) {
         isEasing_ = true;
         easingPhase_ = 1;
         easingTimer_ = 0.0f;

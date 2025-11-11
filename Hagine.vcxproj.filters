@@ -154,6 +154,7 @@
     <ClCompile Include="Engine\2d\SpriteManager.cpp" />
     <ClCompile Include="Application\UI\Scene\Title\TitleUI.cpp" />
     <ClCompile Include="Application\Camera\StartCamera.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
@@ -286,6 +287,7 @@
     <ClInclude Include="Engine\2d\SpriteManager.h" />
     <ClInclude Include="Application\UI\Scene\Title\TitleUI.h" />
     <ClInclude Include="Application\Camera\StartCamera.h" />
+    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

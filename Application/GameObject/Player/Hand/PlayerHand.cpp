@@ -42,5 +42,16 @@ void PlayerHand::OnCollisionEnter(Collider *other) {
         hitEmitter_->UpdateOnce();
 
         shake_->StartShake();
+
+        // エネルギー回復処理を追加
+        if (player_) {
+            float currentEnergy = player_->GetEnergy();
+            float maxEnergy = player_->GetMaxEnergy();
+            float newEnergy = currentEnergy + energyRecoveryAmount_;
+            if (newEnergy > maxEnergy) {
+                newEnergy = maxEnergy;
+            }
+            player_->GetEnergy() = newEnergy; // 直接参照で代入
+        }
     }
 }

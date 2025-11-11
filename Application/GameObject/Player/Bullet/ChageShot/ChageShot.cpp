@@ -78,6 +78,12 @@ void ChargeShot::Update() {
 
     if (!isAlive_) {
         if (input->TriggerKey(DIK_K)) {
+            // チャージ開始前にエネルギーチェックを追加
+            if (player_ && player_->GetEnergy() < 50.0f) {
+                // エネルギー不足でチャージ開始できない
+                return;
+            }
+
             Collider::SetCollisionEnabled(true);
             isAlive_ = true;
             isFired_ = false;
@@ -97,6 +103,18 @@ void ChargeShot::Update() {
             isCharge = true;
         }
         if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
+            // エネルギー消費量を計算(チャージ率に応じて5〜50)
+            float scaleRatio = (scale_ - 1.0f) / (maxScale_ - 1.0f);
+            float energyCost = 5.0f + (45.0f * scaleRatio);
+
+            // エネルギーチェック
+            if (!player_->ConsumeEnergy(energyCost)) {
+                // エネルギー不足ならリセット
+                Reset();
+                isCharge = false;
+                return;
+            }
+
             Vector3 dir = {0, 0, 1};
             Vector3 pos = transform_->translation_;
 

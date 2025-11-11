@@ -87,25 +87,31 @@ void GameScene::Update() {
 
     fadeOut_->Update();
 
-    player_ptr->SetStart(true);
+    // player_ptr->SetStart(true);
 #ifdef _DEBUG
 #else
     if (startCamera_->IsComplete()) {
         player_ptr->SetStart(true);
+        enemy_ptr->SetStart(true);
     }
 #endif // _DEBUG
 
     if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
         enemy_ptr->SetIsModelDraw(false);
+        enemy_ptr->SetDrawShadow(false);
     }
 
     if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
         GameOverTimer_ += Frame::DeltaTime();
         player_ptr->SetIsDeathStaging(true);
         if (GameOverTimer_ >= 2.0f && !isGameOver_) {
-            sceneManager_->NextSceneReservation("GAME");
+            sceneManager_->NextSceneReservation("CLEAR");
             isGameOver_ = true;
         }
+    }
+
+    if (!enemy_ptr->GetIsAlive()) {
+        sceneManager_->NextSceneReservation("CLEAR");
     }
 }
 
@@ -171,8 +177,6 @@ void GameScene::CameraUpdate() {
             debugCamera_->Update();
         } else {
             followCamera_->Update();
-#ifndef _DEBUG
-
             if (!startCamera_->IsComplete()) {
                 if (fadeOut_->IsFinish()) {
                     startCamera_->Move();
@@ -183,13 +187,10 @@ void GameScene::CameraUpdate() {
                 vp_.matView_ = startCamera_->GetViewProjection().matView_;
                 vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
             } else {
-#endif // !_DEBUG
-#ifndef _DEBUG
+                vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
+                vp_.matView_ = followCamera_->GetViewProjection().matView_;
+                vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
             }
-#endif // !_DEBUG
-            vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
-            vp_.matView_ = followCamera_->GetViewProjection().matView_;
-            vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
         }
     } else {
         if (!deathCamera_->IsComplete() && !deathCameraStarted_) {

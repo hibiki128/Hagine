@@ -19,15 +19,21 @@ void PlayerUI::Init(Player *player) {
     playerIcon_->Initialize("UI/playerIcon.png", playerIconPosition_);
 }
 
-
 void PlayerUI::Update() {
     if (player_) {
+
+        float hpRatio = static_cast<float>(player_->GetHP()) / static_cast<float>(player_->GetMaxHP());
+        float energyRatio = static_cast<float>(player_->GetEnergy()) / static_cast<float>(player_->GetMaxEnergy());
+
+        Vector2 currentHPBarSize = {hpBarSize_.x * hpRatio, hpBarSize_.y};
+        Vector2 currentEnergyBarSize = {energyBarSize_.x * energyRatio, energyBarSize_.y};
+
         hpBar_->SetPosition(hpBarPosition_);
-        hpBar_->SetSize(hpBarSize_);
+        hpBar_->SetSize(currentHPBarSize);
         barFrame_->SetPosition(barFramePosition_);
         barFrame_->SetSize(barSize_);
         energyBar_->SetPosition(energyBarPosition_);
-        energyBar_->SetSize(energyBarSize_);
+        energyBar_->SetSize(currentEnergyBarSize);
         energyBarFrame_->SetPosition(energyBarFramePosition_);
         energyBarFrame_->SetSize(energyBarFrameSize_);
         playerIcon_->SetPosition(playerIconPosition_);

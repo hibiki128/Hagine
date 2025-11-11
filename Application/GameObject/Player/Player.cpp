@@ -53,12 +53,14 @@ void Player::Init(const std::string objectName) {
     chargeShot_->SetPlayer(this);
     chargeShot_->Init("chageShot");
 
-    // 手の生成
+   // 手の生成
     leftHand_ = std::make_unique<PlayerHand>();
     leftHand_->Init("leftHand");
+    leftHand_->SetPlayer(this);
 
     rightHand_ = std::make_unique<PlayerHand>();
     rightHand_->Init("rightHand");
+    rightHand_->SetPlayer(this);
 
     this->AddChild(leftHand_.get());
     this->AddChild(rightHand_.get());
@@ -106,7 +108,16 @@ void Player::Update() {
         shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
         shadow_->Update();
 
+         if (isInvincible_) {
+            invincibleTime_ += dt_;
+            if (invincibleTime_ >= invincibleDuration_) {
+                isInvincible_ = false;
+                invincibleTime_ = 0.0f;
+            }
+        }
+        
         if (started_) {
+            RecoverEnergy();
             ComboUpdate();
             if (currentState_) {
                 currentState_->Update(*this);
@@ -175,6 +186,9 @@ void Player::Update() {
         }
 
         UpdateShadowScale();
+        if (HP_ <= 0) {
+            isAlive_ = false;
+        }
     }
 }
 
@@ -228,10 +242,15 @@ void Player::ChangeState(const std::string &stateName) {
 }
 
 void Player::OnCollisionEnter(Collider *other) {
-   /* if (dynamic_cast<Enemy *>(other)) {
-        isAlive_ = false;
-        
-    }*/
+    if (dynamic_cast<Enemy *>(other)) {
+        // 無敵状態でなければダメージを受ける
+        if (!isInvincible_) {
+            HP_ -= 7.5f;
+            // ダメージを受けたら無敵状態にする
+            isInvincible_ = true;
+            invincibleTime_ = 0.0f;
+        }
+    }
 }
 
 void Player::DirectionUpdate() {
@@ -258,6 +277,11 @@ void Player::DirectionUpdate() {
 
 void Player::Shot() {
     if (Input::GetInstance()->TriggerKey(DIK_J)) {
+        // エネルギーチェックを追加
+        if (!ConsumeEnergy(5.0f)) {
+            return; // エネルギー不足なら発射しない
+        }
+
         std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
         auto bullet = std::make_unique<PlayerBullet>();
         bullet->Init(bulletName);
@@ -265,6 +289,8 @@ void Player::Shot() {
         bullet->GetLocalScale() = {0.5f, 0.5f, 0.5f};
         bullet->SetRadius(0.5f);
         bullets_.push_back(std::move(bullet));
+
+        timeSinceLastShot_ = 0.0f; // 射撃タイマーをリセット
     }
 }
 
@@ -404,6 +430,27 @@ void Player::UpdateShadowScale() {
     shadow_->GetLocalScale() = {scaleFactor, scaleFactor, scaleFactor};
 }
 
+bool Player::ConsumeEnergy(float amount) {
+    if (energy_ >= amount) {
+        energy_ -= amount;
+        timeSinceLastShot_ = 0.0f;
+        return true;
+    }
+    return false;
+}
+
+void Player::RecoverEnergy() {
+    timeSinceLastShot_ += dt_;
+
+    // 1秒以上経過していたら回復開始
+    if (timeSinceLastShot_ >= energyRecoveryDelay_) {
+        energy_ += energyRecoveryRate_ * dt_;
+        if (energy_ > maxEnergy_) {
+            energy_ = maxEnergy_;
+        }
+    }
+}
+
 void Player::CollisionGround() {
     // 位置更新前に次の位置を計算
     float nextY = GetLocalPosition().y + velocity_.y * dt_;
@@ -533,7 +580,15 @@ void Player::Debug() {
     if (ImGui::BeginTabBar("プレイヤー")) {
         if (ImGui::BeginTabItem("プレイヤー")) {
 
-            ImGui::Text("手の位置 x = %f, y = %f, z = %f", leftHand_ptr_->GetWorldPosition().x, leftHand_ptr_->GetWorldPosition().y, leftHand_ptr_->GetWorldPosition().z);
+             ImGui::Text("エネルギー: %.1f / %.1f", energy_, maxEnergy_);
+            ImGui::DragFloat("エネルギー回復速度", &energyRecoveryRate_, 0.1f, 0.0f, 50.0f);
+            ImGui::DragFloat("回復開始遅延", &energyRecoveryDelay_, 0.1f, 0.0f, 5.0f);
+
+            ImGui::Text("無敵状態: %s", isInvincible_ ? "True" : "False");
+            if (isInvincible_) {
+                ImGui::Text("無敵残り時間: %.2f秒", invincibleDuration_ - invincibleTime_);
+            }
+            ImGui::DragFloat("無敵時間", &invincibleDuration_, 0.01f, 0.0f, 2.0f);
 
             ImGui::Text("Current State: %s", currentStateName);
             ImGui::Text("lControlInputCount: %d", lControlInputCount_);
@@ -656,6 +711,10 @@ void Player::Save() {
     data_->Save("accelRate", accelRate_);
     data_->Save("bulletSpeed", B_speed_);
     data_->Save("bulletAcce", B_acce_);
+    data_->Save("maxEnergy", maxEnergy_);
+    data_->Save("energyRecoveryRate", energyRecoveryRate_);
+    data_->Save("energyRecoveryDelay", energyRecoveryDelay_);
+    data_->Save("invincibleDuration", invincibleDuration_);
 }
 
 void Player::Load() {
@@ -666,6 +725,11 @@ void Player::Load() {
     accelRate_ = data_->Load<float>("accelRate", 15.0f);
     B_speed_ = data_->Load<float>("bulletSpeed", 60.0f);
     B_acce_ = data_->Load<float>("bulletAcce", 5.0f);
+    maxEnergy_ = data_->Load<float>("maxEnergy", 100.0f);
+    energyRecoveryRate_ = data_->Load<float>("energyRecoveryRate", 10.0f);
+    energyRecoveryDelay_ = data_->Load<float>("energyRecoveryDelay", 1.0f);
+    energy_ = maxEnergy_; // 初期化時は最大値
+    invincibleDuration_ = data_->Load<float>("invincibleDuration", 0.25f);
 }
 
 Vector3 Player::GetForward() const {

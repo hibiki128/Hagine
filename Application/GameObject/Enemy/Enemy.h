@@ -119,6 +119,8 @@ class Enemy : public BaseObject {
     void SetVp(ViewProjection *vp);
     void SetTarget(Player *target) { target_ = target; }
     void SetGuarding(bool guarding) { isGuarding_ = guarding; }
+    void SetStart(bool flag) { started_ = flag; }
+    void SetDrawShadow(bool flag) { drawShadow_ = flag; }
 
   private:
     /// ===================================================
@@ -175,8 +177,8 @@ class Enemy : public BaseObject {
     Vector3 acceleration_{};
     Player *target_ = nullptr;
 
-    float HP_ = 1000000.0f;
-    float maxHP_ = 1000000.0f;
+    float HP_ = 100.0f;
+    float maxHP_ = 100.0f;
     int damage_ = 0;
     bool isGuarding_ = false; // ガード状態
 
@@ -187,10 +189,11 @@ class Enemy : public BaseObject {
     float accelRate_ = 0.0f;
 
     bool canJump_ = false;
-    bool isAlive_ = true;
     bool isLockOn_ = false;
     bool isGrounded_ = true;
     bool isStop_ = false;
+    bool started_ = false;
+    bool drawShadow_ = true;
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;

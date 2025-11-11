@@ -107,6 +107,9 @@ class Player : public BaseObject {
         lControlInputCount_ = 0;
     }
 
+    bool ConsumeEnergy(float amount); // エネルギー消費処理
+    void RecoverEnergy();             // エネルギー回復処理
+
     /// <summary>
     /// Getter
     /// </summary>
@@ -134,6 +137,11 @@ class Player : public BaseObject {
     float &GetMaxSpeed() { return maxSpeed_; }
     float &GetAccelRate() { return accelRate_; }
     float &GetDt() { return dt_; }
+    float GetHP() const { return HP_; }
+    float GetMaxHP() const { return maxHP_; }
+    float GetEnergy() const { return energy_; }
+    float &GetEnergy() { return energy_; }
+    float GetMaxEnergy() const { return maxEnergy_; }
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
@@ -243,6 +251,13 @@ class Player : public BaseObject {
     float maxSpeed_ = 0.0f;  // 最大速度
     float accelRate_ = 0.0f; // 加速度レート
     float dt_;               // デルタタイム
+    float HP_ = 100.0f;
+    float maxHP_ = 100.0f;
+    float energy_ = 100.0f;    // 現在のエネルギー
+    float maxEnergy_ = 100.0f; // 最大エネルギー
+    float energyRecoveryRate_ = 0.1f; // エネルギー回復速度(秒速)
+    float energyRecoveryDelay_ = 1.0f; // 回復開始までの遅延時間
+    float timeSinceLastShot_ = 0.0f;   // 最後に撃ってからの経過時間
 
     float lControlInputTime_ = 0.0f;     // L操作入力の保持時間
     int lControlInputCount_ = 0;         // L操作入力の回数
@@ -262,6 +277,10 @@ class Player : public BaseObject {
 
     bool started_ = false; // ゲーム開始フラグ
     bool isDeathStaging_ = false; // 死亡演出中フラグ
+
+    bool isInvincible_ = false;        // 無敵状態フラグ
+    float invincibleTime_ = 0.0f;      // 無敵時間の経過時間
+    float invincibleDuration_ = 0.25f; // 無敵時間の長さ(秒)
 
     ComboSystem punchCombo_;
     bool comboInitialized_ = false; // コンボ初期化済みフラグ

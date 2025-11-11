@@ -3,6 +3,7 @@
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
 class Enemy;
+class Player;
 
 /// <summary>
 /// プレイヤーの手（攻撃判定）のゲームオブジェクトクラス
@@ -48,12 +49,28 @@ class PlayerHand : public BaseObject {
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
     void OnCollisionEnter([[maybe_unused]] Collider *other) override;
+
+    /// <summary>
+    /// エネルギー回復量を設定
+    /// </summary>
+    /// <param name="amount">回復量</param>
+    void SetEnergyRecoveryAmount(float amount) { energyRecoveryAmount_ = amount; }
+
+    /// <summary>
+    /// プレイヤー参照を設定
+    /// </summary>
+    /// <param name="player">設定するプレイヤーのポインタ</param>
+    void SetPlayer(class Player *player) { player_ = player; }
+
   private:
     /// ===================================================
     /// private varians
     /// ===================================================
 
     Enemy *enemy_ = nullptr;
+    Player *player_ = nullptr;
+
+    float energyRecoveryAmount_ = 5.0f;
 
     std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> shake_;

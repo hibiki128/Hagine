@@ -260,6 +260,10 @@ void BehaviorTreeEditor::BuildNodeEditorData(BehaviorNode *root) {
                 for (auto &child : weightedSelector->GetChildren()) {
                     drawNodeRecursive(child.get(), node);
                 }
+            } else if (auto *interruptSelector = dynamic_cast<InterruptSelectorNode *>(node)) {
+                for (auto &child : interruptSelector->GetChildren()) {
+                    drawNodeRecursive(child.get(), node);
+                }
             }
         };
 
@@ -481,29 +485,75 @@ void BehaviorTreeEditor::DrawNodeProperties(BehaviorNode *node) {
         if (ImGui::Combo("速度タイプ", &speedType, "Fast\0Slow\0")) {
             approachNode->SetSpeedType(static_cast<MoveSpeedType>(speedType));
         }
+
+        ImGui::Separator();
+        ImGui::Text("割り込み設定:");
+        float interruptDist = approachNode->GetInterruptDistance();
+        float interruptChance = approachNode->GetInterruptChance();
+
+        if (ImGui::DragFloat("割り込み距離##approach", &interruptDist, 0.5f, 0.0f, 50.0f)) {
+            approachNode->SetInterruptDistance(interruptDist);
+        }
+        ImGui::TextDisabled("プレイヤーがこの距離以上離れたら割り込み判定");
+
+        if (ImGui::SliderFloat("割り込み確率##approach", &interruptChance, 0.0f, 1.0f, "%.2f")) {
+            approachNode->SetInterruptChance(interruptChance);
+        }
+        ImGui::TextDisabled("割り込み発動確率: %.0f%%", interruptChance * 100.0f);
     } else if (auto *closeNode = dynamic_cast<CloseApproachNode *>(node)) {
         float speed = closeNode->GetSpeed();
-        float targetDist = closeNode->GetTargetDistance();
+        float minDist = closeNode->GetMinTargetDistance();
+        float maxDist = closeNode->GetMaxTargetDistance();
+
         if (ImGui::DragFloat("接近速度##close", &speed, 0.5f, 0.0f, 30.0f)) {
             closeNode->SetSpeed(speed);
         }
-        if (ImGui::DragFloat("目標距離##close", &targetDist, 0.1f, 0.0f, 10.0f)) {
-            closeNode->SetTargetDistance(targetDist);
+
+        ImGui::Separator();
+        ImGui::Text("目標距離のランダム範囲:");
+        if (ImGui::DragFloat("最小距離##close", &minDist, 0.1f, 0.0f, maxDist)) {
+            closeNode->SetTargetDistanceRange(minDist, maxDist);
         }
+        if (ImGui::DragFloat("最大距離##close", &maxDist, 0.1f, minDist, 20.0f)) {
+            closeNode->SetTargetDistanceRange(minDist, maxDist);
+        }
+        ImGui::TextDisabled("実行ごとに %.1f ~ %.1f の範囲でランダム決定", minDist, maxDist);
     } else if (auto *strafeNode = dynamic_cast<StrafeNode *>(node)) {
         float speed = strafeNode->GetSpeed();
+        float minTime = strafeNode->GetMinStrafeTime();
+        float maxTime = strafeNode->GetMaxStrafeTime();
+
         if (ImGui::DragFloat("横移動速度##strafe", &speed, 0.5f, 0.0f, 30.0f)) {
             strafeNode->SetSpeed(speed);
         }
+
+        ImGui::Separator();
+        ImGui::Text("横移動時間のランダム範囲:");
+        if (ImGui::DragFloat("最小時間(秒)##strafe", &minTime, 0.1f, 0.1f, maxTime)) {
+            strafeNode->SetStrafeTimeRange(minTime, maxTime);
+        }
+        if (ImGui::DragFloat("最大時間(秒)##strafe", &maxTime, 0.1f, minTime, 10.0f)) {
+            strafeNode->SetStrafeTimeRange(minTime, maxTime);
+        }
+        ImGui::TextDisabled("実行ごとに %.1f ~ %.1f 秒の範囲でランダム決定", minTime, maxTime);
     } else if (auto *retreatNode = dynamic_cast<RetreatNode *>(node)) {
         float speed = retreatNode->GetSpeed();
-        float retreatDist = retreatNode->GetRetreatDistance();
+        float minDist = retreatNode->GetMinRetreatDistance();
+        float maxDist = retreatNode->GetMaxRetreatDistance();
+
         if (ImGui::DragFloat("後退速度##retreat", &speed, 0.5f, 0.0f, 30.0f)) {
             retreatNode->SetSpeed(speed);
         }
-        if (ImGui::DragFloat("後退距離##retreat", &retreatDist, 0.1f, 0.0f, 20.0f)) {
-            retreatNode->SetRetreatDistance(retreatDist);
+
+        ImGui::Separator();
+        ImGui::Text("後退距離のランダム範囲:");
+        if (ImGui::DragFloat("最小距離##retreat", &minDist, 0.1f, 0.0f, maxDist)) {
+            retreatNode->SetRetreatDistanceRange(minDist, maxDist);
         }
+        if (ImGui::DragFloat("最大距離##retreat", &maxDist, 0.1f, minDist, 30.0f)) {
+            retreatNode->SetRetreatDistanceRange(minDist, maxDist);
+        }
+        ImGui::TextDisabled("実行ごとに %.1f ~ %.1f の範囲でランダム決定", minDist, maxDist);
     } else if (auto *distNode = dynamic_cast<DistanceCheckNode *>(node)) {
         float minDist = distNode->GetMinDistance();
         float maxDist = distNode->GetMaxDistance();
@@ -514,17 +564,23 @@ void BehaviorTreeEditor::DrawNodeProperties(BehaviorNode *node) {
             distNode->SetDistances(minDist, maxDist);
         }
     } else if (auto *guardNode = dynamic_cast<GuardNode *>(node)) {
-        float duration = guardNode->GetGuardDuration();
+        float minDuration = guardNode->GetMinGuardDuration();
+        float maxDuration = guardNode->GetMaxGuardDuration();
         float reduction = guardNode->GetDamageReduction();
 
-        if (ImGui::DragFloat("ガード時間##guard", &duration, 0.1f, 0.1f, 10.0f)) {
-            guardNode->SetGuardDuration(duration);
+        ImGui::Text("ガード時間のランダム範囲:");
+        if (ImGui::DragFloat("最小時間(秒)##guard", &minDuration, 0.1f, 0.1f, maxDuration)) {
+            guardNode->SetGuardDurationRange(minDuration, maxDuration);
         }
+        if (ImGui::DragFloat("最大時間(秒)##guard", &maxDuration, 0.1f, minDuration, 10.0f)) {
+            guardNode->SetGuardDurationRange(minDuration, maxDuration);
+        }
+        ImGui::TextDisabled("実行ごとに %.1f ~ %.1f 秒の範囲でランダム決定", minDuration, maxDuration);
 
+        ImGui::Separator();
         if (ImGui::SliderFloat("ダメージ軽減率##guard", &reduction, 0.0f, 1.0f, "%.2f")) {
             guardNode->SetDamageReduction(reduction);
         }
-
         ImGui::TextDisabled("軽減率 %.0f%% (%.0f%%のダメージを受ける)",
                             reduction * 100.0f, (1.0f - reduction) * 100.0f);
     }
@@ -578,6 +634,10 @@ void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode 
             for (auto &child : weightedSelector->GetChildren()) {
                 collectNodes(child.get());
             }
+        } else if (auto *interruptSelector = dynamic_cast<InterruptSelectorNode *>(node)) {
+            for (auto &child : interruptSelector->GetChildren()) {
+                collectNodes(child.get());
+            }
         }
     };
 
@@ -599,17 +659,28 @@ void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode 
             data->Save(prefix + "type", std::string("Approach"));
             data->Save(prefix + "speed", approachNode->GetSpeed());
             data->Save(prefix + "speedType", static_cast<int>(approachNode->GetSpeedType()));
+            data->Save(prefix + "interruptDistance", approachNode->GetInterruptDistance());
+            data->Save(prefix + "interruptChance", approachNode->GetInterruptChance());
         } else if (auto *closeNode = dynamic_cast<CloseApproachNode *>(node)) {
             data->Save(prefix + "type", std::string("CloseApproach"));
             data->Save(prefix + "speed", closeNode->GetSpeed());
-            data->Save(prefix + "targetDistance", closeNode->GetTargetDistance());
+            data->Save(prefix + "minTargetDistance", closeNode->GetMinTargetDistance());
+            data->Save(prefix + "maxTargetDistance", closeNode->GetMaxTargetDistance());
         } else if (auto *strafeNode = dynamic_cast<StrafeNode *>(node)) {
             data->Save(prefix + "type", std::string("Strafe"));
             data->Save(prefix + "speed", strafeNode->GetSpeed());
+            data->Save(prefix + "minStrafeTime", strafeNode->GetMinStrafeTime());
+            data->Save(prefix + "maxStrafeTime", strafeNode->GetMaxStrafeTime());
         } else if (auto *retreatNode = dynamic_cast<RetreatNode *>(node)) {
             data->Save(prefix + "type", std::string("Retreat"));
             data->Save(prefix + "speed", retreatNode->GetSpeed());
-            data->Save(prefix + "retreatDistance", retreatNode->GetRetreatDistance());
+            data->Save(prefix + "minRetreatDistance", retreatNode->GetMinRetreatDistance());
+            data->Save(prefix + "maxRetreatDistance", retreatNode->GetMaxRetreatDistance());
+        } else if (auto *guardNode = dynamic_cast<GuardNode *>(node)) {
+            data->Save(prefix + "type", std::string("Guard"));
+            data->Save(prefix + "minGuardDuration", guardNode->GetMinGuardDuration());
+            data->Save(prefix + "maxGuardDuration", guardNode->GetMaxGuardDuration());
+            data->Save(prefix + "damageReduction", guardNode->GetDamageReduction());
         } else if (auto *distNode = dynamic_cast<DistanceCheckNode *>(node)) {
             data->Save(prefix + "type", std::string("DistanceCheck"));
             data->Save(prefix + "minDistance", distNode->GetMinDistance());
@@ -621,16 +692,16 @@ void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode 
             for (size_t j = 0; j < weights.size(); j++) {
                 data->Save(prefix + "weight_" + std::to_string(j), weights[j]);
             }
+        } else if (dynamic_cast<InterruptSelectorNode *>(node)) {
+            data->Save(prefix + "type", std::string("InterruptSelector"));
         } else if (dynamic_cast<SequenceNode *>(node)) {
             data->Save(prefix + "type", std::string("Sequence"));
         } else if (dynamic_cast<SelectorNode *>(node)) {
             data->Save(prefix + "type", std::string("Selector"));
         } else if (dynamic_cast<StopNode *>(node)) {
             data->Save(prefix + "type", std::string("Stop"));
-        } else if (auto *guardNode = dynamic_cast<GuardNode *>(node)) {
-            data->Save(prefix + "type", std::string("Guard"));
-            data->Save(prefix + "guardDuration", guardNode->GetGuardDuration());
-            data->Save(prefix + "damageReduction", guardNode->GetDamageReduction());
+        } else if (dynamic_cast<DodgeBulletNode *>(node)) {
+            data->Save(prefix + "type", std::string("DodgeBullet"));
         }
     }
 }
@@ -674,6 +745,10 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
             for (auto &child : weightedSelector->GetChildren()) {
                 buildNodeMap(child.get());
             }
+        } else if (auto *interruptSelector = dynamic_cast<InterruptSelectorNode *>(node)) {
+            for (auto &child : interruptSelector->GetChildren()) {
+                buildNodeMap(child.get());
+            }
         }
     };
 
@@ -701,21 +776,36 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
             if (auto *approachNode = dynamic_cast<ApproachNode *>(node)) {
                 float speed = data->Load(prefix + "speed", 15.0f);
                 int speedType = data->Load(prefix + "speedType", 0);
+                float interruptDist = data->Load(prefix + "interruptDistance", 15.0f);
+                float interruptChance = data->Load(prefix + "interruptChance", 0.8f);
                 approachNode->SetSpeed(speed);
                 approachNode->SetSpeedType(static_cast<MoveSpeedType>(speedType));
+                approachNode->SetInterruptDistance(interruptDist);
+                approachNode->SetInterruptChance(interruptChance);
             } else if (auto *closeNode = dynamic_cast<CloseApproachNode *>(node)) {
                 float speed = data->Load(prefix + "speed", 5.0f);
-                float targetDist = data->Load(prefix + "targetDistance", 2.0f);
+                float minDist = data->Load(prefix + "minTargetDistance", 1.5f);
+                float maxDist = data->Load(prefix + "maxTargetDistance", 3.0f);
                 closeNode->SetSpeed(speed);
-                closeNode->SetTargetDistance(targetDist);
+                closeNode->SetTargetDistanceRange(minDist, maxDist);
             } else if (auto *strafeNode = dynamic_cast<StrafeNode *>(node)) {
                 float speed = data->Load(prefix + "speed", 8.0f);
+                float minTime = data->Load(prefix + "minStrafeTime", 0.5f);
+                float maxTime = data->Load(prefix + "maxStrafeTime", 2.0f);
                 strafeNode->SetSpeed(speed);
+                strafeNode->SetStrafeTimeRange(minTime, maxTime);
             } else if (auto *retreatNode = dynamic_cast<RetreatNode *>(node)) {
                 float speed = data->Load(prefix + "speed", 7.0f);
-                float retreatDist = data->Load(prefix + "retreatDistance", 5.0f);
+                float minDist = data->Load(prefix + "minRetreatDistance", 3.0f);
+                float maxDist = data->Load(prefix + "maxRetreatDistance", 7.0f);
                 retreatNode->SetSpeed(speed);
-                retreatNode->SetRetreatDistance(retreatDist);
+                retreatNode->SetRetreatDistanceRange(minDist, maxDist);
+            } else if (auto *guardNode = dynamic_cast<GuardNode *>(node)) {
+                float minDuration = data->Load(prefix + "minGuardDuration", 1.0f);
+                float maxDuration = data->Load(prefix + "maxGuardDuration", 3.0f);
+                float reduction = data->Load(prefix + "damageReduction", 0.85f);
+                guardNode->SetGuardDurationRange(minDuration, maxDuration);
+                guardNode->SetDamageReduction(reduction);
             } else if (auto *distNode = dynamic_cast<DistanceCheckNode *>(node)) {
                 float minDist = data->Load(prefix + "minDistance", 0.0f);
                 float maxDist = data->Load(prefix + "maxDistance", 100.0f);
@@ -726,12 +816,9 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
                 for (int j = 0; j < childCount && j < static_cast<int>(weights.size()); j++) {
                     weights[j] = data->Load(prefix + "weight_" + std::to_string(j), 1.0f);
                 }
-            } else if (auto *guardNode = dynamic_cast<GuardNode *>(node)) {
-                float duration = data->Load(prefix + "guardDuration", 2.0f);
-                float reduction = data->Load(prefix + "damageReduction", 0.85f);
-                guardNode->SetGuardDuration(duration);
-                guardNode->SetDamageReduction(reduction);
             }
+            // InterruptSelectorNode, SequenceNode, SelectorNode, StopNode, DodgeBulletNodeは
+            // 固有のパラメータがないので読み込み不要
         }
     }
 }
