@@ -18,6 +18,10 @@ void FollowCamera::Init() {
     shoulderResetTimer_ = 0.0f;
     shoulderLerpTimer_ = 0.0f;
     shoulderLerpStartValue_ = 0.0f;
+
+    // 高さオフセットの初期化
+    lockOnHeightOffsetCurrent_ = lockOnGroundedHeight_;
+    lockOnHeightOffsetTarget_ = lockOnGroundedHeight_;
 }
 
 void FollowCamera::Update() {
@@ -160,11 +164,28 @@ void FollowCamera::Update() {
             // ターゲットが大きく変わった場合のみリセット
             if (std::abs(newTarget - shoulderOffsetTarget_.x) > 0.1f) {
                 shoulderLerpTimer_ = 0.0f;
-                shoulderLerpStartValue_ = shoulderOffsetCurrent_.x; // 現在値から開始
+                shoulderLerpStartValue_ = shoulderOffsetCurrent_.x;
             }
 
             shoulderOffsetTarget_.x = newTarget;
             isResettingShoulderOffset_ = false;
+        }
+
+        // ロックオン時の高さオフセット更新
+        if (player->GetIsGrounded()) {
+            lockOnHeightOffsetTarget_ = lockOnGroundedHeight_;
+        } else {
+            lockOnHeightOffsetTarget_ = lockOnAirborneHeight_;
+        }
+
+        // 高さオフセットの補間
+        float deltaTime = Frame::DeltaTime();
+        float heightDiff = lockOnHeightOffsetTarget_ - lockOnHeightOffsetCurrent_;
+        lockOnHeightOffsetCurrent_ += heightDiff * lockOnHeightLerpSpeed_ * deltaTime;
+
+        // 微小な差は切り捨て
+        if (std::abs(heightDiff) < 0.01f) {
+            lockOnHeightOffsetCurrent_ = lockOnHeightOffsetTarget_;
         }
     }
 
@@ -181,7 +202,7 @@ void FollowCamera::Update() {
             isResettingShoulderOffset_ = false;
         }
     } else {
-        // 常にスムーズに追従（イージングなしの単純な補間）
+        // 常にスムーズに追従(イージングなしの単純な補間)
         float deltaTime = Frame::DeltaTime();
         float lerpSpeed = shoulderLerpSpeed_ * deltaTime;
 
@@ -204,6 +225,9 @@ void FollowCamera::Update() {
             toEnemyDir = toEnemyDir.Normalize();
 
         cameraPos = targetPos - toEnemyDir * std::abs(cameraOffset_.z);
+
+        // ロックオン時の高さオフセットを適用
+        cameraPos.y += lockOnHeightOffsetCurrent_;
 
         Vector3 forward = toEnemyDir;
         Vector3 worldUp = {0.0f, 1.0f, 0.0f};
@@ -266,6 +290,15 @@ void FollowCamera::imgui() {
     ImGui::DragFloat3("vp position", &viewProjection_.translation_.x, 0.1f);
     ImGui::DragFloat3("offsetCurrent", &shoulderOffsetCurrent_.x, 0.1f);
     ImGui::DragFloat3("offsetTarget", &shoulderOffsetTarget_.x, 0.1f);
+
+    // 高さオフセット設定UI
+    ImGui::Separator();
+    ImGui::Text("Lock-On Height Offset");
+    ImGui::DragFloat("Current Height Offset", &lockOnHeightOffsetCurrent_, 0.1f, 0.0f, 10.0f);
+    ImGui::DragFloat("Target Height Offset", &lockOnHeightOffsetTarget_, 0.1f, 0.0f, 10.0f);
+    ImGui::DragFloat("Grounded Height", &lockOnGroundedHeight_, 0.1f, 0.0f, 10.0f);
+    ImGui::DragFloat("Airborne Height", &lockOnAirborneHeight_, 0.1f, 0.0f, 10.0f);
+    ImGui::DragFloat("Height Lerp Speed", &lockOnHeightLerpSpeed_, 0.1f, 0.1f, 20.0f);
 
     // イージングタイプの選択UI
     ImGui::Separator();
