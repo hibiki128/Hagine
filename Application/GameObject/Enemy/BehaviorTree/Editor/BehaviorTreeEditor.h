@@ -2,10 +2,15 @@
 #include "Application/GameObject/Enemy/BehaviorTree/BehaviorNode/BehaviorNode.h"
 #ifdef _DEBUG
 #include "imgui.h"
+#include "imgui_node_editor.h"
 #endif // DEBUG
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#ifdef _DEBUG
+namespace ed = ax::NodeEditor;
+#endif
 
 /// <summary>
 /// デバッグ用のビヘイビアツリーエディター（_DEBUG ビルド時有効)
@@ -18,6 +23,16 @@ class BehaviorTreeEditor {
     /// ===================================================
 
     /// <summary>
+    /// コンストラクタ
+    /// </summary>
+    BehaviorTreeEditor();
+
+    /// <summary>
+    /// デストラクタ
+    /// </summary>
+    ~BehaviorTreeEditor();
+
+    /// <summary>
     /// エディターの描画
     /// </summary>
     /// <param name="root"> デバッグしたいツリーノードの登録 </param>
@@ -27,7 +42,8 @@ class BehaviorTreeEditor {
     /// 各ノードの設定を保存
     /// </summary>
     /// <param name="treeName"> ツリーノードの名前 </param>
-    void SaveSettings(const std::string &treeName);
+    /// <param name="root"> ルートノード </param>
+    void SaveSettings(const std::string &treeName, BehaviorNode *root);
 
     /// <summary>
     /// 各ノードの設定を読み込み
@@ -63,23 +79,23 @@ class BehaviorTreeEditor {
     /// ===================================================
 
     /// <summary>
-    /// ノードの描画
+    /// ツリー全体のノード位置を初期化
     /// </summary>
-    /// <param name="node">描画するノードへのポインタ</param>
-    /// <param name="pos">ノードを描画する座標（ImVec2型）</param>
-    /// <param name="depth">ツリーの深さ（階層）</param>
-    /// <param name="canvasOrigin">キャンバスの原点座標（ImVec2型）</param>
-    void DrawNode(BehaviorNode *node, ImVec2 pos, int depth, ImVec2 canvasOrigin);
+    /// <param name="root">ルートノード</param>
+    void InitializeNodePositions(BehaviorNode *root);
 
     /// <summary>
-    /// 子ノードの描画
+    /// imgui-node-editor用のノードとリンクを構築して描画
     /// </summary>
-    /// <param name="children"> 子ノードの登録(vector<unique_ptr>型)( </param>
-    /// <param name="parentPos"> 親ノードの座標 </param>
-    /// <param name="depth"> ツリーの深さ </param>
-    /// <param name="canvasOrigin"> キャンバスの原点座標（ImVec2型) </param>
-    void DrawChildren(std::vector<std::unique_ptr<BehaviorNode>> &children,
-                      ImVec2 parentPos, int depth, ImVec2 canvasOrigin);
+    /// <param name="root">描画するツリーのルートノードへのポインタ</param>
+    void BuildNodeEditorData(BehaviorNode *root);
+
+    /// <summary>
+    /// BehaviorNodeに対応するエディタ用のノードIDを取得または作成
+    /// </summary>
+    /// <param name="node">IDを取得したい BehaviorNode へのポインタ</param>
+    /// <returns>エディタ内で使用する一意のノードID</returns>
+    int GetOrCreateNodeId(BehaviorNode *node);
 
     /// <summary>
     /// 指定したノードを根とするツリーの幅を計算
@@ -100,32 +116,32 @@ class BehaviorTreeEditor {
     /// <param name="treeName">描画対象のツリーを識別する名前（const std::string&）</param>
     void DrawToolbar(const std::string &treeName);
 
-    private:
+  private:
     /// ===================================================
     /// private varians
     /// ===================================================
-    
+
     int nodeIdCounter_ = 0;
     BehaviorNode *selectedNode_ = nullptr;
-    BehaviorNode *executingNode_ = nullptr;        // 現在実行中のノード
-    std::vector<BehaviorNode *> executionHistory_; // 実行履歴（最大10個）
+    BehaviorNode *executingNode_ = nullptr;
+    BehaviorNode *currentRoot_ = nullptr;
+    std::vector<BehaviorNode *> executionHistory_;
     const int MAX_HISTORY = 10;
-
-    const float NODE_WIDTH = 120.0f;
-    const float NODE_HEIGHT = 40.0f;
-    const float HORIZONTAL_SPACING = 30.0f;
-    const float VERTICAL_SPACING = 80.0f;
-
-    // ズーム・パン機能
-    float zoom_ = 1.0f;
-    ImVec2 panOffset_ = ImVec2(0.0f, 0.0f);
-    bool isPanning_ = false;
-    ImVec2 panStartPos_ = ImVec2(0.0f, 0.0f);
 
     // ノードの重み付け情報
     std::unordered_map<BehaviorNode *, float> nodeWeights_;
 
     // セーブ/ロード用のツリー名
     char treeNameBuffer_[256] = "DefaultTree";
+
+    ed::EditorContext *editorContext_ = nullptr;
+    std::unordered_map<BehaviorNode *, int> nodeToEditorId_;
+    std::unordered_map<int, BehaviorNode *> editorIdToNode_;
+    int nextEditorNodeId_ = 1;
+    int nextEditorLinkId_ = 1;
+
+    std::unordered_map<BehaviorNode *, ImVec2> nodePositions_;
+    bool needsInitialLayout_ = true;
+    bool needsNavigateToContent_ = false;
 #endif // _DEBUG
 };

@@ -13,6 +13,7 @@ void BaseObject::Init(const std::string objectName) {
     // ライティングのセット
     isLighting_ = true;
     isCollider = false;
+    isAlive_ = true;
 }
 
 void BaseObject::Update() {

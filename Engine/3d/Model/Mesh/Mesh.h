@@ -3,46 +3,41 @@
 #include <Model/ModelStructs.h>
 #include <Primitive/PrimitiveModel.h>
 #include <d3d12.h>
+
 class DirectXCommon;
+
+/// <summary>
+/// メッシュクラス
+/// 頂点データとインデックスデータを管理する
+/// </summary>
 class Mesh {
-
   public:
-    /// ==========================================
-    /// public methods
-    /// ==========================================
+    /// ===================================================
+    /// public method
+    /// ===================================================
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
     void Initialize();
+
+    /// <summary>
+    /// プリミティブ初期化
+    /// </summary>
+    /// <param name="type">プリミティブタイプ</param>
     void PrimitiveInitialize(const PrimitiveType &type);
 
+    /// <summary>
+    /// Getter
+    /// </summary>
     MeshData &GetMeshData() { return meshData_; }
     D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() { return vertexBufferView; }
     D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() { return indexBufferView; }
 
   private:
-    /// ==========================================
-    /// private variaus
-    /// ==========================================
-
-    // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr;
-    // バッファリソース内のデータを指すポインタ
-    VertexData *vertexData = nullptr;
-    // バッファリソースの使い道を補足するバッファビュー
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-
-    // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource = nullptr;
-    uint32_t *indexData;
-    // バッファリソースの使い道を補足するバッファビュー
-    D3D12_INDEX_BUFFER_VIEW indexBufferView;
-
-    MeshData meshData_;
-    DirectXCommon *dxCommon_;
-
-  private:
-    /// ==========================================
-    /// private methods
-    /// ==========================================
+    /// ===================================================
+    /// private method
+    /// ===================================================
 
     /// <summary>
     /// 頂点データ作成
@@ -50,7 +45,25 @@ class Mesh {
     void CreateVartexData();
 
     /// <summary>
-    /// indexの作成
+    /// インデックスリソース作成
     /// </summary>
     void CreateIndexResource();
+
+  private:
+    /// ===================================================
+    /// private varians
+    /// ===================================================
+
+    DirectXCommon *dxCommon_; // DirectX共通クラス
+    MeshData meshData_;       // メッシュデータ
+
+    // 頂点バッファ
+    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr; // バッファリソース
+    VertexData *vertexData = nullptr;                                // データポインタ
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;                       // バッファビュー
+
+    // インデックスバッファ
+    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource = nullptr; // バッファリソース
+    uint32_t *indexData;                                            // データポインタ
+    D3D12_INDEX_BUFFER_VIEW indexBufferView;                        // バッファビュー
 };

@@ -48,13 +48,13 @@ class PlayerHand : public BaseObject {
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
     void OnCollisionEnter([[maybe_unused]] Collider *other) override;
-
   private:
     /// ===================================================
     /// private varians
     /// ===================================================
 
     Enemy *enemy_ = nullptr;
+
     std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> shake_;
 };

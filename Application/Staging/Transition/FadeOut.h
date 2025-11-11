@@ -38,9 +38,8 @@ class FadeOut {
     void ImGui();
     
     /// <summary>
-    /// フェードアウトの終了判定
+    /// Getter
     /// </summary>
-    /// <returns></returns>
     bool IsFinish() const { return isFinish_; }
 
   private:

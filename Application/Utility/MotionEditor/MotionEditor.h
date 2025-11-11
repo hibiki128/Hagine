@@ -131,26 +131,10 @@ class MotionEditor {
     void CleanupFinishedTemporaryMotions();
 
     /// <summary>
-    /// 親オブジェクトの逆ワールドマトリックスを取得
+    /// Getter
     /// </summary>
-    /// <param name="object">対象オブジェクト</param>
-    /// <returns>Matrix4x4: 親の逆ワールドマトリックス</returns>
     Matrix4x4 GetParentInverseWorldMatrix(BaseObject *object);
-
-    /// <summary>
-    /// ワールド座標のコントロールポイントをローカル座標に変換
-    /// </summary>
-    /// <param name="object">対象オブジェクト</param>
-    /// <param name="worldPos">ワールド座標</param>
-    /// <returns>Vector3: ローカル座標</returns>
     Vector3 GetLocalControlPointPosition(BaseObject *object, const Vector3 &worldPos);
-
-    /// <summary>
-    /// ローカル座標のコントロールポイントをワールド座標に変換
-    /// </summary>
-    /// <param name="object">対象オブジェクト</param>
-    /// <param name="localPos">ローカル座標</param>
-    /// <returns>Vector3: ワールド座標</returns>
     Vector3 TransformLocalControlPointToWorld(BaseObject *object, const Vector3 &localPos);
 
   public:
@@ -235,27 +219,6 @@ class MotionEditor {
     void StopAll();
 
     /// <summary>
-    /// モーションの再生状態を取得
-    /// </summary>
-    /// <param name="objectName">オブジェクト名</param>
-    /// <returns>MotionStatus: モーション状態</returns>
-    MotionStatus GetMotionStatus(const std::string &objectName);
-
-    /// <summary>
-    /// モーションが再生中かを判定
-    /// </summary>
-    /// <param name="objectName">オブジェクト名</param>
-    /// <returns>bool: 再生中フラグ</returns>
-    bool IsPlaying(const std::string &objectName);
-
-    /// <summary>
-    /// モーションが終了したかを判定
-    /// </summary>
-    /// <param name="objectName">オブジェクト名</param>
-    /// <returns>bool: 終了フラグ</returns>
-    bool IsFinished(const std::string &objectName);
-
-    /// <summary>
     /// 元の位置に戻すフラグ付きでモーションをファイルから再生
     /// </summary>
     /// <param name="target">対象オブジェクト</param>
@@ -263,14 +226,6 @@ class MotionEditor {
     /// <param name="returnToOriginal">元の位置に戻すか</param>
     /// <returns>bool: 再生成功フラグ</returns>
     bool PlayFromFile(BaseObject *target, const std::string &fileName, bool returnToOriginal = false);
-
-    /// <summary>
-    /// PlayFromFileで作成された一時的なモーション名を取得
-    /// </summary>
-    /// <param name="target">対象オブジェクト</param>
-    /// <param name="fileName">ファイル名</param>
-    /// <returns>std::string: 一時モーション名</returns>
-    std::string GetTemporaryMotionName(BaseObject *target, const std::string &fileName);
 
     /// <summary>
     /// 初期位置をリセット
@@ -335,6 +290,15 @@ class MotionEditor {
     /// <param name="fileName">ファイル名</param>
     /// <returns>bool: 終了フラグ</returns>
     bool IsTemporaryMotionFinished(BaseObject *target, const std::string &fileName);
+
+    /// <summary>
+    /// Getter
+    /// </summary>
+    MotionStatus GetMotionStatus(const std::string &objectName);
+    bool IsPlaying(const std::string &objectName);
+    bool IsFinished(const std::string &objectName);
+    std::string GetTemporaryMotionName(BaseObject *target, const std::string &fileName);
+
 
   private:
     /// ===================================================

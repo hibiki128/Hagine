@@ -51,7 +51,7 @@ class ParticleGroup {
     // バッファリソース内のデータを指すポインタ
     VertexData *vertexData = nullptr;
     // バッファリソースの使い道を補足するバッファビュー
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
 
     // バッファリソース
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr;
@@ -59,13 +59,13 @@ class ParticleGroup {
     ParticleMaterial *materialData = nullptr;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource = nullptr;
-    uint32_t *indexData;
+    uint32_t *indexData{};
     // バッファリソースの使い道を補足するバッファビュー
-    D3D12_INDEX_BUFFER_VIEW indexBufferView;
+    D3D12_INDEX_BUFFER_VIEW indexBufferView{};
 
-    Model *model_;
-    ModelData modelData;
-    ParticleGroupData particleGroupData_;
-    PrimitiveType type_;
-    std::string modelFilePath_;
+    Model *model_{};
+    ModelData modelData{};
+    ParticleGroupData particleGroupData_{};
+    PrimitiveType type_{};
+    std::string modelFilePath_{};
 };

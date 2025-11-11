@@ -9,6 +9,8 @@
 #include <Particle/CSParticle/ParticleCSEmitter.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
 
+#include"Application/Staging/Death/DeathStaging.h"
+
 class ChargeShot;
 class FollowCamera;
 class Enemy;
@@ -64,6 +66,12 @@ class Player : public BaseObject {
     void ChangeState(const std::string &stateName);
 
     /// <summary>
+    /// 当たった瞬間
+    /// </summary>
+    /// <param name="other"></param>
+    void OnCollisionEnter([[maybe_unused]] Collider *other)override;
+
+    /// <summary>
     /// 方向情報を更新
     /// </summary>
     void DirectionUpdate();
@@ -92,224 +100,6 @@ class Player : public BaseObject {
     void Move();
 
     /// <summary>
-    /// カメラを取得
-    /// </summary>
-    /// <returns>FollowCamera*: フォローカメラのポインタ</returns>
-    FollowCamera *GetCamera() { return FollowCamera_; }
-
-    /// <summary>
-    /// 敵を取得
-    /// </summary>
-    /// <returns>Enemy*: 敵のポインタ</returns>
-    Enemy *GetEnemy() { return enemy_; }
-
-    /// <summary>
-    /// 加速度を取得
-    /// </summary>
-    /// <returns>Vector3&: 加速度ベクトルの参照</returns>
-    Vector3 &GetAcceleration() { return acceleration_; }
-
-    /// <summary>
-    /// 速度を取得
-    /// </summary>
-    /// <returns>Vector3&: 速度ベクトルの参照</returns>
-    Vector3 &GetVelocity() { return velocity_; }
-
-    /// <summary>
-    /// 移動方向を取得
-    /// </summary>
-    /// <returns>Vector3: 移動方向ベクトル</returns>
-    Vector3 GetMovementDirection() const;
-
-    /// <summary>
-    /// 前方向を取得
-    /// </summary>
-    /// <returns>Vector3: 前方向ベクトル</returns>
-    Vector3 GetForward() const;
-
-    /// <summary>
-    /// 後方向を取得
-    /// </summary>
-    /// <returns>Vector3: 後方向ベクトル</returns>
-    Vector3 GetBackward() const;
-
-    /// <summary>
-    /// 右方向を取得
-    /// </summary>
-    /// <returns>Vector3: 右方向ベクトル</returns>
-    Vector3 GetRight() const;
-
-    /// <summary>
-    /// 左方向を取得
-    /// </summary>
-    /// <returns>Vector3: 左方向ベクトル</returns>
-    Vector3 GetLeft() const;
-
-    /// <summary>
-    /// 上方向を取得
-    /// </summary>
-    /// <returns>Vector3: 上方向ベクトル</returns>
-    Vector3 GetUp() const;
-
-    /// <summary>
-    /// 下方向を取得
-    /// </summary>
-    /// <returns>Vector3: 下方向ベクトル</returns>
-    Vector3 GetDown() const;
-
-    /// <summary>
-    /// 後ろの位置を取得
-    /// </summary>
-    /// <param name="distance">距離</param>
-    /// <returns>Vector3: 後ろの位置座標</returns>
-    Vector3 GetPositionBehind(float distance = 3.0f) const;
-
-    /// <summary>
-    /// 前の位置を取得
-    /// </summary>
-    /// <param name="distance">距離</param>
-    /// <returns>Vector3: 前の位置座標</returns>
-    Vector3 GetPositionFront(float distance = 3.0f) const;
-
-    /// <summary>
-    /// 右の位置を取得
-    /// </summary>
-    /// <param name="distance">距離</param>
-    /// <returns>Vector3: 右の位置座標</returns>
-    Vector3 GetPositionRight(float distance = 3.0f) const;
-
-    /// <summary>
-    /// 左の位置を取得
-    /// </summary>
-    /// <param name="distance">距離</param>
-    /// <returns>Vector3: 左の位置座標</returns>
-    Vector3 GetPositionLeft(float distance = 3.0f) const;
-
-    /// <summary>
-    /// 上の位置を取得
-    /// </summary>
-    /// <param name="distance">距離</param>
-    /// <returns>Vector3: 上の位置座標</returns>
-    Vector3 GetPositionAbove(float distance = 3.0f) const;
-
-    /// <summary>
-    /// 下の位置を取得
-    /// </summary>
-    /// <param name="distance">距離</param>
-    /// <returns>Vector3: 下の位置座標</returns>
-    Vector3 GetPositionBelow(float distance = 3.0f) const;
-
-    /// <summary>
-    /// 速度の大きさを取得
-    /// </summary>
-    /// <returns>float: 速度の大きさ</returns>
-    float GetVelocityMagnitude() const;
-
-    /// <summary>
-    /// 落下速度を取得
-    /// </summary>
-    /// <returns>float&: 落下速度の参照</returns>
-    float &GetFallSpeed() { return fallSpeed_; }
-
-    /// <summary>
-    /// 移動速度を取得
-    /// </summary>
-    /// <returns>float&: 移動速度の参照</returns>
-    float &GetMoveSpeed() { return moveSpeed_; }
-
-    /// <summary>
-    /// ジャンプ速度を取得
-    /// </summary>
-    /// <returns>float&: ジャンプ速度の参照</returns>
-    float &GetJumpSpeed() { return jumpSpeed_; }
-
-    /// <summary>
-    /// 最大速度を取得
-    /// </summary>
-    /// <returns>float&: 最大速度の参照</returns>
-    float &GetMaxSpeed() { return maxSpeed_; }
-
-    /// <summary>
-    /// 加速度レートを取得
-    /// </summary>
-    /// <returns>float&: 加速度レートの参照</returns>
-    float &GetAccelRate() { return accelRate_; }
-
-    /// <summary>
-    /// デルタタイムを取得
-    /// </summary>
-    /// <returns>float&: デルタタイムの参照</returns>
-    float &GetDt() { return dt_; }
-
-    /// <summary>
-    /// ジャンプ可能かを取得
-    /// </summary>
-    /// <returns>bool&: ジャンプ可能フラグの参照</returns>
-    bool &GetCanJump() { return canJump_; }
-
-    /// <summary>
-    /// 生存状態を取得
-    /// </summary>
-    /// <returns>bool&: 生存フラグの参照</returns>
-    bool &GetAlive() { return isAlive_; }
-
-    /// <summary>
-    /// 接地状態を取得
-    /// </summary>
-    /// <returns>bool&: 接地フラグの参照</returns>
-    bool &GetIsGrounded() { return isGrounded_; }
-
-    /// <summary>
-    /// ロックオン状態を取得
-    /// </summary>
-    /// <returns>bool&: ロックオンフラグの参照</returns>
-    bool &GetIsLockOn() { return isLockOn_; }
-
-    /// <summary>
-    /// ビュープロジェクションを取得
-    /// </summary>
-    /// <returns>ViewProjection&: ビュープロジェクションの参照</returns>
-    ViewProjection &GetViewProjection();
-
-    /// <summary>
-    /// 右手を取得
-    /// </summary>
-    /// <returns>PlayerHand*: 右手のポインタ</returns>
-    PlayerHand *GetRightHand() { return rightHand_ptr_; }
-
-    /// <summary>
-    /// 左手を取得
-    /// </summary>
-    /// <returns>PlayerHand*: 左手のポインタ</returns>
-    PlayerHand *GetLeftHand() { return leftHand_ptr_; }
-
-    /// <summary>
-    /// カメラを設定
-    /// </summary>
-    /// <param name="camera">設定するカメラのポインタ</param>
-    void SetCamera(FollowCamera *camera);
-
-    /// <summary>
-    /// ビュープロジェクションを設定
-    /// </summary>
-    /// <param name="vp">設定するビュープロジェクションのポインタ</param>
-    void SetVp(ViewProjection *vp);
-
-    void SetStart(bool flag) {
-        started_ = flag;
-    }
-
-    /// <summary>
-    /// 敵を設定
-    /// </summary>
-    /// <param name="enemy">設定する敵のポインタ</param>
-    void SetEnemy(Enemy *enemy) {
-        enemy_ = enemy;
-        leftHand_ptr_->SetEnemy(enemy);
-        rightHand_ptr_->SetEnemy(enemy);
-    }
-
-    /// <summary>
     /// コントロール入力カウントをリセット
     /// </summary>
     void ResetControlCount() {
@@ -318,28 +108,60 @@ class Player : public BaseObject {
     }
 
     /// <summary>
-    /// 向きを取得
+    /// Getter
     /// </summary>
-    /// <returns>Direction&: 向きの参照</returns>
+    FollowCamera *GetCamera() { return FollowCamera_; }
+    Enemy *GetEnemy() { return enemy_; }
+    Vector3 &GetAcceleration() { return acceleration_; }
+    Vector3 &GetVelocity() { return velocity_; }
+    Vector3 GetMovementDirection() const;
+    Vector3 GetForward() const;
+    Vector3 GetBackward() const;
+    Vector3 GetRight() const;
+    Vector3 GetLeft() const;
+    Vector3 GetUp() const;
+    Vector3 GetDown() const;
+    Vector3 GetPositionBehind(float distance = 3.0f) const;
+    Vector3 GetPositionFront(float distance = 3.0f) const;
+    Vector3 GetPositionRight(float distance = 3.0f) const;
+    Vector3 GetPositionLeft(float distance = 3.0f) const;
+    Vector3 GetPositionAbove(float distance = 3.0f) const;
+    Vector3 GetPositionBelow(float distance = 3.0f) const;
+    float GetVelocityMagnitude() const;
+    float &GetFallSpeed() { return fallSpeed_; }
+    float &GetMoveSpeed() { return moveSpeed_; }
+    float &GetJumpSpeed() { return jumpSpeed_; }
+    float &GetMaxSpeed() { return maxSpeed_; }
+    float &GetAccelRate() { return accelRate_; }
+    float &GetDt() { return dt_; }
+    bool &GetCanJump() { return canJump_; }
+    bool &GetAlive() { return isAlive_; }
+    bool &GetIsGrounded() { return isGrounded_; }
+    bool &GetIsLockOn() { return isLockOn_; }
+    ViewProjection &GetViewProjection();
+    PlayerHand *GetRightHand() { return rightHand_ptr_; }
+    PlayerHand *GetLeftHand() { return leftHand_ptr_; }
     Direction &GetDirection() { return dir_; }
-
-    /// <summary>
-    /// 移動方向を取得
-    /// </summary>
-    /// <returns>MoveDirection&: 移動方向の参照</returns>
     MoveDirection &GetMoveDirection() { return moveDir_; }
-
-    /// <summary>
-    /// 現在の状態名を取得
-    /// </summary>
-    /// <returns>std::string: 現在の状態名</returns>
     std::string GetCurrentStateName() const;
+    std::vector<std::unique_ptr<PlayerBullet>> &GetBullets() { return bullets_; }
 
     /// <summary>
-    /// 発射した弾の一覧を取得
+    /// Setter
     /// </summary>
-    /// <returns>std::vector<std::unique_ptr<PlayerBullet>>&: 弾のvector参照</returns>
-    std::vector<std::unique_ptr<PlayerBullet>> &GetBullets() { return bullets_; }
+    void SetCamera(FollowCamera *camera);
+    void SetVp(ViewProjection *vp);
+    void SetStart(bool flag) {
+        started_ = flag;
+    }
+    void SetEnemy(Enemy *enemy) {
+        enemy_ = enemy;
+        leftHand_ptr_->SetEnemy(enemy);
+        rightHand_ptr_->SetEnemy(enemy);
+    }
+    void SetIsDeathStaging(bool flag) {
+        isDeathStaging_ = flag;
+    }
 
   private:
     /// ===================================================
@@ -434,12 +256,12 @@ class Player : public BaseObject {
     float B_speed_ = 0.0f; // ブーストの速度
 
     bool canJump_ = false;   // ジャンプ可能フラグ
-    bool isAlive_ = true;    // 生存フラグ
     bool isLockOn_ = false;  // ロックオンフラグ
     bool isGrounded_ = true; // 接地フラグ
     bool isDashing_ = false; // ダッシュ中フラグ
 
     bool started_ = false; // ゲーム開始フラグ
+    bool isDeathStaging_ = false; // 死亡演出中フラグ
 
     ComboSystem punchCombo_;
     bool comboInitialized_ = false; // コンボ初期化済みフラグ
@@ -463,4 +285,6 @@ class Player : public BaseObject {
 
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<ParticleEmitter> rushEmitter_;   // 突撃パーティクル
+
+    std::unique_ptr<DeathStaging> deathStaging_; // 死亡演出
 };

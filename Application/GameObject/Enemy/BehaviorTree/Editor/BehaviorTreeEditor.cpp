@@ -1,13 +1,31 @@
 #define NOMINMAX
 #include "BehaviorTreeEditor.h"
 #include <Application/GameObject/Enemy/BehaviorTree/Nodes/ActionNodes.h>
+#include <Application/GameObject/Enemy/BehaviorTree/Nodes/CompositeNodes.h>
 #include <Application/GameObject/Enemy/BehaviorTree/Nodes/ConditionNodes.h>
-#include <Application/GameObject/Enemy/BehaviorTree/Nodes/SequenceNode.h>
 #include <algorithm>
+#include <functional>
+#include <Data/DataHandler.h>
 #ifdef _DEBUG
 
+BehaviorTreeEditor::BehaviorTreeEditor() {
+    ed::Config config;
+    config.SettingsFile = "BehaviorTreeEditor.json";
+    editorContext_ = ed::CreateEditor(&config);
+
+    // 初期化時にレイアウトが必要
+    needsInitialLayout_ = true;
+    needsNavigateToContent_ = false;
+}
+
+BehaviorTreeEditor::~BehaviorTreeEditor() {
+    if (editorContext_) {
+        ed::DestroyEditor(editorContext_);
+    }
+}
 
 void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
+    currentRoot_ = root;
     if (!root) {
         ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
         ImGui::Begin("ビヘイビアツリーエディター");
@@ -21,80 +39,36 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
     ImGui::SetNextWindowSize(ImVec2(1200, 800), ImGuiCond_FirstUseEver);
     ImGui::Begin("ビヘイビアツリーエディター");
 
-    // ツールバー
     DrawToolbar(std::string(treeNameBuffer_));
-
     ImGui::Separator();
 
-    // レイアウト分割（ツリー表示 + プロパティパネル）
     float windowWidth = ImGui::GetContentRegionAvail().x;
-    float treeViewWidth = std::max(600.0f, windowWidth * 0.7f);                    // 最小600px
-    float propertiesWidth = std::max(300.0f, windowWidth - treeViewWidth - 20.0f); // 最小300px
+    float windowHeight = ImGui::GetContentRegionAvail().y;
+    float treeViewWidth = std::max(600.0f, windowWidth * 0.7f);
+    float propertiesWidth = std::max(300.0f, windowWidth - treeViewWidth - 20.0f);
 
-    // ツリー表示エリア
-    ImGui::BeginChild("TreeView", ImVec2(treeViewWidth, -1), true, ImGuiWindowFlags_NoScrollbar);
+    ImGui::BeginGroup();
 
-    // ズーム操作の説明
-    ImGui::TextDisabled("操作: マウスホイールでズーム / 中クリックでパン / 左クリックでノード選択");
+    ed::SetCurrentEditor(editorContext_);
+    ed::Begin("BehaviorTreeCanvas", ImVec2(treeViewWidth, windowHeight));
 
-    // マウスホイールでズーム
-    ImGuiIO &io = ImGui::GetIO();
-    if (ImGui::IsWindowHovered()) {
-        if (io.MouseWheel != 0.0f) {
-            float zoomDelta = io.MouseWheel * 0.1f;
-            zoom_ = std::clamp(zoom_ + zoomDelta, 0.3f, 3.0f);
-        }
+    BuildNodeEditorData(root);
+
+    if (needsNavigateToContent_) {
+        ed::NavigateToContent(0.1f);
+        needsNavigateToContent_ = false;
     }
 
-    // 中クリックでパン
-    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
-        isPanning_ = true;
-        panStartPos_ = ImGui::GetMousePos();
-    }
-    if (isPanning_) {
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
-            ImVec2 currentPos = ImGui::GetMousePos();
-            ImVec2 delta = ImVec2(currentPos.x - panStartPos_.x, currentPos.y - panStartPos_.y);
-            panOffset_.x += delta.x;
-            panOffset_.y += delta.y;
-            panStartPos_ = currentPos;
-        } else {
-            isPanning_ = false;
-        }
-    }
+    ed::End();
+    ed::SetCurrentEditor(nullptr);
 
-    // ズーム情報の表示
-    ImGui::Text("ズーム: %.1f%%", zoom_ * 100.0f);
-
-    ImGui::Separator();
-
-    // 描画領域の開始位置を保存
-    ImVec2 canvasP0 = ImGui::GetCursorScreenPos();
-    ImVec2 canvasSize = ImGui::GetContentRegionAvail();
-    ImVec2 canvasP1 = ImVec2(canvasP0.x + canvasSize.x, canvasP0.y + canvasSize.y);
-
-    // 描画リストの取得
-    ImDrawList *drawList = ImGui::GetWindowDrawList();
-
-    // 背景を描画（デバッグ用）
-    drawList->AddRectFilled(canvasP0, canvasP1, IM_COL32(50, 50, 50, 255));
-
-    // クリッピング領域を設定
-    drawList->PushClipRect(canvasP0, canvasP1, true);
-
-    // ツリーの描画（ズーム・パンを適用）
-    nodeIdCounter_ = 0;
-    ImVec2 startPos = ImVec2(canvasSize.x * 0.5f, 50.0f);
-    DrawNode(root, startPos, 0, canvasP0);
-
-    drawList->PopClipRect();
-
-    ImGui::EndChild();
+    ImGui::EndGroup();
 
     ImGui::SameLine();
 
-    // プロパティパネル
-    ImGui::BeginChild("Properties", ImVec2(propertiesWidth, -1), true);
+    // 右側: プロパティパネル
+    ImGui::BeginGroup();
+    ImGui::BeginChild("Properties", ImVec2(0, 0), true);
     ImGui::Text("ノードプロパティ");
     ImGui::Separator();
 
@@ -107,7 +81,6 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // 実行履歴の表示
     ImGui::Text("実行履歴");
     ImGui::Separator();
 
@@ -117,7 +90,7 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
         ImGui::TextWrapped("最新 → 古い順:");
         ImGui::Spacing();
 
-        for (size_t i = executionHistory_.size() - 1; i >= 0; i--) {
+        for (int i = static_cast<int>(executionHistory_.size()) - 1; i >= 0; i--) {
             BehaviorNode *historyNode = executionHistory_[i];
             bool isCurrent = (historyNode == executingNode_);
 
@@ -132,8 +105,267 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
     }
 
     ImGui::EndChild();
+    ImGui::EndGroup();
 
     ImGui::End();
+}
+
+void BehaviorTreeEditor::BuildNodeEditorData(BehaviorNode *root) {
+    if (!root)
+        return;
+
+    // 初回のみノード位置を初期化
+    if (needsInitialLayout_) {
+        InitializeNodePositions(root);
+        needsInitialLayout_ = false;
+        needsNavigateToContent_ = true;
+    }
+
+    nodeToEditorId_.clear();
+    editorIdToNode_.clear();
+    nextEditorNodeId_ = 1;
+    nextEditorLinkId_ = 1;
+
+    std::function<void(BehaviorNode *, BehaviorNode *)> drawNodeRecursive =
+        [&](BehaviorNode *node, BehaviorNode *parent) {
+            if (!node)
+                return;
+
+            int nodeId = GetOrCreateNodeId(node);
+
+            ed::BeginNode(nodeId);
+
+            // 初回レイアウト時のみ位置を設定
+            if (nodePositions_.find(node) != nodePositions_.end()) {
+                ImVec2 nodePos = nodePositions_[node];
+                ed::SetNodePosition(nodeId, nodePos);
+                nodePositions_.erase(node);
+            }
+
+            ImGui::PushID(nodeId);
+
+            // ノードの色を決定
+            ImVec4 headerColor;
+            ImVec4 bgColor;
+            bool isExecuting = (executingNode_ == node);
+            bool isSelected = (selectedNode_ == node);
+            bool isInHistory = (std::find(executionHistory_.begin(), executionHistory_.end(), node) != executionHistory_.end());
+
+            if (isExecuting) {
+                // 実行中のノードは明るい緑色
+                headerColor = ImVec4(0.2f, 0.9f, 0.2f, 1.0f);
+                bgColor = ImVec4(0.1f, 0.4f, 0.1f, 0.9f);
+            } else if (isInHistory) {
+                // 履歴にあるノードは黄色
+                headerColor = ImVec4(1.0f, 0.8f, 0.2f, 1.0f);
+                bgColor = ImVec4(0.4f, 0.35f, 0.1f, 0.9f);
+            } else if (isSelected) {
+                // 選択中のノードは赤色
+                headerColor = ImVec4(0.9f, 0.3f, 0.3f, 1.0f);
+                bgColor = ImVec4(0.3f, 0.1f, 0.1f, 0.9f);
+            } else {
+                // デフォルトは青色
+                headerColor = ImVec4(0.3f, 0.6f, 0.9f, 1.0f);
+                bgColor = ImVec4(0.15f, 0.25f, 0.35f, 0.9f);
+            }
+
+            // ノードの背景色を設定
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, bgColor);
+            ImGui::PushStyleColor(ImGuiCol_Header, headerColor);
+
+            // ヘッダー部分
+            ImGui::BeginGroup();
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 4.0f));
+
+            // ノード名を表示
+            ImGui::Spacing();
+            ImGui::Indent(8.0f);
+            ImGui::Text("%s", node->GetNodeName());
+
+            // 実行状態を表示
+            if (isExecuting) {
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), " [Running]");
+            }
+
+            ImGui::Unindent(8.0f);
+            ImGui::Spacing();
+
+            ImGui::PopStyleVar();
+            ImGui::EndGroup();
+
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // 入力ピン
+            ed::BeginPin(nodeId * 1000, ed::PinKind::Input);
+            ImGui::Indent(8.0f);
+            ImGui::Text("In");
+            ImGui::Unindent(8.0f);
+            ed::EndPin();
+
+            ImGui::Spacing();
+
+            // 出力ピン
+            ed::BeginPin(nodeId * 1000 + 1, ed::PinKind::Output);
+            ImGui::Indent(8.0f);
+            ImGui::Text("Out");
+            ImGui::Unindent(8.0f);
+            ed::EndPin();
+
+            ImGui::Spacing();
+
+            ImGui::PopStyleColor(2);
+            ImGui::PopID();
+            ed::EndNode();
+
+            // クリック検出
+            if (ed::GetSelectedObjectCount() > 0) {
+                std::vector<ed::NodeId> selectedNodes;
+                selectedNodes.resize(ed::GetSelectedObjectCount());
+                ed::GetSelectedNodes(selectedNodes.data(), static_cast<int>(selectedNodes.size()));
+
+                if (!selectedNodes.empty() && selectedNodes[0].Get() == nodeId) {
+                    selectedNode_ = node;
+                }
+            }
+
+            // 親ノードとの接続を描画
+            if (parent) {
+                int parentId = GetOrCreateNodeId(parent);
+                int linkId = nextEditorLinkId_++;
+
+                // 実行中のノードへの接続は緑色にする
+                if (isExecuting || isInHistory) {
+                    ed::PushStyleColor(ed::StyleColor_Flow, ImVec4(0.2f, 1.0f, 0.2f, 1.0f));
+                    ed::PushStyleVar(ed::StyleVar_FlowSpeed, 100.0f);
+                    ed::Link(linkId, parentId * 1000 + 1, nodeId * 1000, ImVec4(0.2f, 1.0f, 0.2f, 1.0f), 2.0f);
+                    ed::PopStyleVar();
+                    ed::PopStyleColor();
+                } else {
+                    ed::Link(linkId, parentId * 1000 + 1, nodeId * 1000);
+                }
+            }
+
+            // 子ノードを再帰的に描画
+            if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
+                for (auto &child : sequence->GetChildren()) {
+                    drawNodeRecursive(child.get(), node);
+                }
+            } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
+                for (auto &child : selector->GetChildren()) {
+                    drawNodeRecursive(child.get(), node);
+                }
+            } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+                for (auto &child : weightedSelector->GetChildren()) {
+                    drawNodeRecursive(child.get(), node);
+                }
+            }
+        };
+
+    drawNodeRecursive(root, nullptr);
+}
+
+void BehaviorTreeEditor::InitializeNodePositions(BehaviorNode *root) {
+    if (!root)
+        return;
+
+    nodePositions_.clear();
+
+    // ツリー全体のサイズを事前計算
+    std::unordered_map<BehaviorNode *, int> subtreeWidths;
+    std::function<int(BehaviorNode *)> calcWidth = [&](BehaviorNode *node) -> int {
+        if (!node)
+            return 0;
+
+        std::vector<std::unique_ptr<BehaviorNode>> *children = nullptr;
+        if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
+            children = &sequence->GetChildren();
+        } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
+            children = &selector->GetChildren();
+        } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+            children = &weightedSelector->GetChildren();
+        }
+
+        if (!children || children->empty()) {
+            subtreeWidths[node] = 1;
+            return 1;
+        }
+
+        int totalWidth = 0;
+        for (auto &child : *children) {
+            totalWidth += calcWidth(child.get());
+        }
+        subtreeWidths[node] = totalWidth;
+        return totalWidth;
+    };
+
+    int totalTreeWidth = calcWidth(root);
+
+    // ノード間のスペーシング(調整)
+    const float nodeWidth = 180.0f;
+    const float nodeHeight = 100.0f;
+    const float horizontalSpacing = 80.0f;
+    const float verticalSpacing = 120.0f;
+
+    std::function<void(BehaviorNode *, int, float)> layoutNodes =
+        [&](BehaviorNode *node, int depth, float centerX) {
+            if (!node)
+                return;
+
+            // 現在のノードの位置
+            float y = 50.0f + depth * (nodeHeight + verticalSpacing);
+            nodePositions_[node] = ImVec2(centerX, y);
+
+            // 子ノードの処理
+            std::vector<std::unique_ptr<BehaviorNode>> *children = nullptr;
+            if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
+                children = &sequence->GetChildren();
+            } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
+                children = &selector->GetChildren();
+            } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+                children = &weightedSelector->GetChildren();
+            }
+
+            if (children && !children->empty()) {
+                // 子ノード全体の幅を計算
+                float totalChildWidth = 0.0f;
+                for (auto &child : *children) {
+                    totalChildWidth += subtreeWidths[child.get()] * (nodeWidth + horizontalSpacing);
+                }
+                totalChildWidth -= horizontalSpacing;
+
+                // 子ノードの開始位置(中央揃え)
+                float startX = centerX - totalChildWidth * 0.5f;
+                float currentX = startX;
+
+                for (auto &child : *children) {
+                    int childWidth = subtreeWidths[child.get()];
+                    float childTreeWidth = childWidth * (nodeWidth + horizontalSpacing) - horizontalSpacing;
+                    float childCenterX = currentX + childTreeWidth * 0.5f;
+
+                    layoutNodes(child.get(), depth + 1, childCenterX);
+
+                    currentX += childTreeWidth + horizontalSpacing;
+                }
+            }
+        };
+
+    // ルートを画面中央付近に配置
+    float rootX = 100.0f + totalTreeWidth * (nodeWidth + horizontalSpacing) * 0.5f;
+    layoutNodes(root, 0, rootX);
+}
+
+int BehaviorTreeEditor::GetOrCreateNodeId(BehaviorNode *node) {
+    auto it = nodeToEditorId_.find(node);
+    if (it != nodeToEditorId_.end()) {
+        return it->second;
+    }
+
+    int newId = nextEditorNodeId_++;
+    nodeToEditorId_[node] = newId;
+    editorIdToNode_[newId] = node;
+    return newId;
 }
 
 void BehaviorTreeEditor::DrawToolbar(const std::string &treeName) {
@@ -144,23 +376,44 @@ void BehaviorTreeEditor::DrawToolbar(const std::string &treeName) {
 
     ImGui::SameLine();
     if (ImGui::Button("保存")) {
-        SaveSettings(std::string(treeNameBuffer_));
+        ImGui::OpenPopup("SaveConfirm");
     }
 
     ImGui::SameLine();
     if (ImGui::Button("読み込み")) {
-        // 読み込みはルートノードが必要なので、外部で呼ぶ必要があります
         ImGui::OpenPopup("LoadConfirm");
     }
 
-    // 確認ポップアップ
+    // 保存確認ポップアップ
+    if (ImGui::BeginPopupModal("SaveConfirm", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("設定を保存しますか?");
+        ImGui::Text("ツリー名: %s", treeNameBuffer_);
+        ImGui::Separator();
+
+        if (ImGui::Button("保存", ImVec2(120, 0))) {
+            if (currentRoot_) {
+                SaveSettings(std::string(treeNameBuffer_), currentRoot_);
+                ImGui::Text("保存しました!");
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("キャンセル", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    // 読み込み確認ポップアップ
     if (ImGui::BeginPopupModal("LoadConfirm", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("設定を読み込みますか？");
+        ImGui::Text("設定を読み込みますか?");
         ImGui::Text("現在の編集内容は保存されていない可能性があります。");
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            // ロード処理は外部から呼ぶ
+        if (ImGui::Button("読み込み", ImVec2(120, 0))) {
+            if (currentRoot_) {
+                LoadSettings(std::string(treeNameBuffer_), currentRoot_);
+            }
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -171,134 +424,13 @@ void BehaviorTreeEditor::DrawToolbar(const std::string &treeName) {
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("ズームリセット")) {
-        zoom_ = 1.0f;
-        panOffset_ = ImVec2(0.0f, 0.0f);
-    }
-}
-
-void BehaviorTreeEditor::DrawNode(BehaviorNode *node, ImVec2 pos, int depth, ImVec2 canvasOrigin) {
-    if (!node)
-        return;
-
-    node->nodeId = nodeIdCounter_++;
-
-    // ズームとパンを適用した最終座標を計算
-    ImVec2 finalPos = ImVec2(
-        canvasOrigin.x + (pos.x + panOffset_.x) * zoom_,
-        canvasOrigin.y + (pos.y + panOffset_.y) * zoom_);
-
-    float zoomedWidth = NODE_WIDTH * zoom_;
-    float zoomedHeight = NODE_HEIGHT * zoom_;
-
-    // ノードのインタラクティブな描画
-    bool isSelected = (selectedNode_ == node);
-    bool isExecuting = (executingNode_ == node);
-    bool isInHistory = (std::find(executionHistory_.begin(), executionHistory_.end(), node) != executionHistory_.end());
-
-    ImVec4 color;
-    if (isExecuting) {
-        // 実行中のノード（緑）
-        color = ImVec4(0.2f, 0.8f, 0.2f, 1.0f);
-    } else if (isSelected) {
-        // 選択中のノード（赤）
-        color = ImVec4(0.8f, 0.2f, 0.2f, 1.0f);
-    } else if (isInHistory) {
-        // 実行履歴にあるノード（黄色）
-        color = ImVec4(0.8f, 0.8f, 0.2f, 1.0f);
-    } else {
-        // 通常のノード（青）
-        color = ImVec4(0.2f, 0.6f, 0.8f, 1.0f);
+    if (ImGui::Button("ビューをフィット")) {
+        needsNavigateToContent_ = true;
     }
 
-    ImDrawList *drawList = ImGui::GetWindowDrawList();
-
-    // ノードの矩形を描画
-    drawList->AddRectFilled(finalPos,
-                            ImVec2(finalPos.x + zoomedWidth, finalPos.y + zoomedHeight),
-                            ImGui::ColorConvertFloat4ToU32(color), 4.0f * zoom_);
-    drawList->AddRect(finalPos,
-                      ImVec2(finalPos.x + zoomedWidth, finalPos.y + zoomedHeight),
-                      IM_COL32(255, 255, 255, 255), 4.0f * zoom_, 0, 2.0f * zoom_);
-
-    // テキストを描画（ズームに合わせてサイズ変更）
-    const char *nodeName = node->GetNodeName();
-
-    // ズームが小さすぎる場合はテキストを省略
-    if (zoom_ >= 0.4f) {
-        ImFont *font = ImGui::GetFont();
-        float fontSize = font->FontSize * zoom_;
-
-        // テキストサイズを計算（ズーム適用後）
-        ImVec2 textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, nodeName);
-        ImVec2 textPos = ImVec2(
-            finalPos.x + (zoomedWidth - textSize.x) * 0.5f,
-            finalPos.y + (zoomedHeight - textSize.y) * 0.5f);
-
-        drawList->AddText(font, fontSize, textPos, IM_COL32(255, 255, 255, 255), nodeName);
-    }
-
-    // クリック判定
-    // マウスがノードの範囲内にあるかチェック
-    ImVec2 mousePos = ImGui::GetMousePos();
-    bool isHovered = (mousePos.x >= finalPos.x && mousePos.x <= finalPos.x + zoomedWidth &&
-                      mousePos.y >= finalPos.y && mousePos.y <= finalPos.y + zoomedHeight);
-
-    if (isHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-        selectedNode_ = node;
-    }
-
-    // 子ノードの描画
-    if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
-        DrawChildren(sequence->GetChildren(), pos, depth, canvasOrigin);
-    } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
-        DrawChildren(selector->GetChildren(), pos, depth, canvasOrigin);
-    }
-}
-
-void BehaviorTreeEditor::DrawChildren(std::vector<std::unique_ptr<BehaviorNode>> &children,
-                                      ImVec2 parentPos, int depth, ImVec2 canvasOrigin) {
-    if (children.empty())
-        return;
-
-    ImVec2 parentCenter(parentPos.x + NODE_WIDTH * 0.5f, parentPos.y + NODE_HEIGHT);
-
-    float totalWidth = 0.0f;
-    for (auto &child : children) {
-        int childTreeWidth = CalculateTreeWidth(child.get());
-        totalWidth += childTreeWidth * (NODE_WIDTH + HORIZONTAL_SPACING);
-    }
-
-    if (!children.empty()) {
-        totalWidth -= HORIZONTAL_SPACING;
-    }
-
-    float startX = parentCenter.x - totalWidth * 0.5f;
-    float currentX = startX;
-    float childY = parentPos.y + VERTICAL_SPACING;
-
-    ImDrawList *drawList = ImGui::GetWindowDrawList();
-
-    for (size_t i = 0; i < children.size(); ++i) {
-        int childTreeWidth = CalculateTreeWidth(children[i].get());
-        float childWidth = childTreeWidth * (NODE_WIDTH + HORIZONTAL_SPACING) - HORIZONTAL_SPACING;
-
-        float childCenterX = currentX + childWidth * 0.5f;
-        ImVec2 childPos(childCenterX - NODE_WIDTH * 0.5f, childY);
-
-        // ラインを描画（ズーム適用）
-        ImVec2 p1(
-            canvasOrigin.x + (parentCenter.x + panOffset_.x) * zoom_,
-            canvasOrigin.y + (parentCenter.y + panOffset_.y) * zoom_);
-        ImVec2 p2(
-            canvasOrigin.x + (childCenterX + panOffset_.x) * zoom_,
-            canvasOrigin.y + (childY + panOffset_.y) * zoom_);
-
-        drawList->AddLine(p1, p2, IM_COL32(255, 255, 255, 200), 2.0f * zoom_);
-
-        DrawNode(children[i].get(), childPos, depth + 1, canvasOrigin);
-
-        currentX += childWidth + HORIZONTAL_SPACING;
+    ImGui::SameLine();
+    if (ImGui::Button("レイアウト再計算")) {
+        needsInitialLayout_ = true;
     }
 }
 
@@ -338,40 +470,41 @@ void BehaviorTreeEditor::DrawNodeProperties(BehaviorNode *node) {
     ImGui::TextWrapped("%s", node->GetNodeName());
     ImGui::Separator();
 
-    // 重み付け（優先度）設定
-    if (nodeWeights_.find(node) == nodeWeights_.end()) {
-        nodeWeights_[node] = 1.0f;
-    }
-
-    float weight = nodeWeights_[node];
-    ImGui::DragFloat("優先度ウェイト", &weight, 0.1f, 0.0f, 10.0f);
-    nodeWeights_[node] = weight;
-
-    ImGui::Separator();
-    ImGui::Text("ノード固有の設定:");
-    ImGui::Spacing();
-
     // ノードタイプごとの設定
-    if (auto *moveNode = dynamic_cast<MoveToTargetNode *>(node)) {
-        float speed = moveNode->GetSpeed();
-        if (ImGui::DragFloat("移動速度##move", &speed, 0.5f, 0.0f, 500.0f)) {
-            moveNode->SetSpeed(speed);
+    if (auto *approachNode = dynamic_cast<ApproachNode *>(node)) {
+        float speed = approachNode->GetSpeed();
+        if (ImGui::DragFloat("移動速度##approach", &speed, 0.5f, 0.0f, 50.0f)) {
+            approachNode->SetSpeed(speed);
         }
-    } else if (auto *flyNode = dynamic_cast<FlyToTargetNode *>(node)) {
-        float speed = flyNode->GetSpeed();
-        if (ImGui::DragFloat("飛行速度##fly", &speed, 0.5f, 0.0f, 500.0f)) {
-            flyNode->SetSpeed(speed);
+
+        int speedType = static_cast<int>(approachNode->GetSpeedType());
+        if (ImGui::Combo("速度タイプ", &speedType, "Fast\0Slow\0")) {
+            approachNode->SetSpeedType(static_cast<MoveSpeedType>(speedType));
         }
-    } else if (auto *rushNode = dynamic_cast<RushAttackNode *>(node)) {
-        float speed = rushNode->GetRushSpeed();
-        float minDist = rushNode->GetMinDistance();
-        if (ImGui::DragFloat("突進速度##rush", &speed, 0.5f, 0.0f, 500.0f)) {
-            rushNode->SetRushSpeed(speed);
+    } else if (auto *closeNode = dynamic_cast<CloseApproachNode *>(node)) {
+        float speed = closeNode->GetSpeed();
+        float targetDist = closeNode->GetTargetDistance();
+        if (ImGui::DragFloat("接近速度##close", &speed, 0.5f, 0.0f, 30.0f)) {
+            closeNode->SetSpeed(speed);
         }
-        if (ImGui::DragFloat("最小距離##rush", &minDist, 0.1f, 0.0f, 50.0f)) {
-            rushNode->SetMinDistance(minDist);
+        if (ImGui::DragFloat("目標距離##close", &targetDist, 0.1f, 0.0f, 10.0f)) {
+            closeNode->SetTargetDistance(targetDist);
         }
-    } else if (auto *distNode = dynamic_cast<DistanceToTargetNode *>(node)) {
+    } else if (auto *strafeNode = dynamic_cast<StrafeNode *>(node)) {
+        float speed = strafeNode->GetSpeed();
+        if (ImGui::DragFloat("横移動速度##strafe", &speed, 0.5f, 0.0f, 30.0f)) {
+            strafeNode->SetSpeed(speed);
+        }
+    } else if (auto *retreatNode = dynamic_cast<RetreatNode *>(node)) {
+        float speed = retreatNode->GetSpeed();
+        float retreatDist = retreatNode->GetRetreatDistance();
+        if (ImGui::DragFloat("後退速度##retreat", &speed, 0.5f, 0.0f, 30.0f)) {
+            retreatNode->SetSpeed(speed);
+        }
+        if (ImGui::DragFloat("後退距離##retreat", &retreatDist, 0.1f, 0.0f, 20.0f)) {
+            retreatNode->SetRetreatDistance(retreatDist);
+        }
+    } else if (auto *distNode = dynamic_cast<DistanceCheckNode *>(node)) {
         float minDist = distNode->GetMinDistance();
         float maxDist = distNode->GetMaxDistance();
         if (ImGui::DragFloat("最小距離##dist", &minDist, 0.1f, 0.0f, 100.0f)) {
@@ -382,40 +515,105 @@ void BehaviorTreeEditor::DrawNodeProperties(BehaviorNode *node) {
         }
     }
 
+    // 重み付きセレクターの重み設定
+    if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+        ImGui::Separator();
+        ImGui::Text("子ノードの重み設定:");
+        auto &children = weightedSelector->GetChildren();
+        auto &weights = weightedSelector->GetWeights();
+
+        for (size_t i = 0; i < children.size() && i < weights.size(); i++) {
+            std::string label = "重み##" + std::to_string(i);
+            ImGui::DragFloat(label.c_str(), &weights[i], 0.1f, 0.0f, 10.0f);
+            ImGui::SameLine();
+            ImGui::TextDisabled("(%s)", children[i]->GetNodeName());
+        }
+    }
+
     ImGui::PopTextWrapPos();
 }
 
-void BehaviorTreeEditor::SaveSettings(const std::string &treeName) {
+void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode *root) {
+    if (!root) {
+        return;
+    }
+
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("BehaviorTree", treeName);
 
-    // エディター設定の保存
-    data->Save("zoom", zoom_);
-    data->Save<Vector2>("panOffset", Vector2(panOffset_.x, panOffset_.y));
+    // 全ノードを収集し、IDを割り当て
+    std::vector<BehaviorNode *> allNodes;
+    int currentId = 0;
 
-    // ノードの重み付け情報を保存
-    data->Save("nodeWeightCount", static_cast<int>(nodeWeights_.size()));
+    std::function<void(BehaviorNode *)> collectNodes = [&](BehaviorNode *node) {
+        if (!node)
+            return;
 
-    int index = 0;
-    for (const auto &[node, weight] : nodeWeights_) {
-        std::string prefix = "weight_" + std::to_string(index) + "_";
+        // ノードIDを割り当て
+        node->nodeId = currentId++;
+        allNodes.push_back(node);
+
+        if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
+            for (auto &child : sequence->GetChildren()) {
+                collectNodes(child.get());
+            }
+        } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
+            for (auto &child : selector->GetChildren()) {
+                collectNodes(child.get());
+            }
+        } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+            for (auto &child : weightedSelector->GetChildren()) {
+                collectNodes(child.get());
+            }
+        }
+    };
+
+    // rootから全ノードを収集
+    collectNodes(root);
+
+    // ノード情報を保存
+    data->Save("nodeCount", static_cast<int>(allNodes.size()));
+
+    for (size_t i = 0; i < allNodes.size(); i++) {
+        BehaviorNode *node = allNodes[i];
+        std::string prefix = "node_" + std::to_string(i) + "_";
+
         data->Save(prefix + "nodeId", node->nodeId);
         data->Save(prefix + "nodeName", std::string(node->GetNodeName()));
-        data->Save(prefix + "weight", weight);
 
         // ノード固有のパラメータを保存
-        if (auto *moveNode = dynamic_cast<MoveToTargetNode *>(node)) {
-            data->Save(prefix + "speed", moveNode->GetSpeed());
-        } else if (auto *flyNode = dynamic_cast<FlyToTargetNode *>(node)) {
-            data->Save(prefix + "speed", flyNode->GetSpeed());
-        } else if (auto *rushNode = dynamic_cast<RushAttackNode *>(node)) {
-            data->Save(prefix + "rushSpeed", rushNode->GetRushSpeed());
-            data->Save(prefix + "minDistance", rushNode->GetMinDistance());
-        } else if (auto *distNode = dynamic_cast<DistanceToTargetNode *>(node)) {
+        if (auto *approachNode = dynamic_cast<ApproachNode *>(node)) {
+            data->Save(prefix + "type", std::string("Approach"));
+            data->Save(prefix + "speed", approachNode->GetSpeed());
+            data->Save(prefix + "speedType", static_cast<int>(approachNode->GetSpeedType()));
+        } else if (auto *closeNode = dynamic_cast<CloseApproachNode *>(node)) {
+            data->Save(prefix + "type", std::string("CloseApproach"));
+            data->Save(prefix + "speed", closeNode->GetSpeed());
+            data->Save(prefix + "targetDistance", closeNode->GetTargetDistance());
+        } else if (auto *strafeNode = dynamic_cast<StrafeNode *>(node)) {
+            data->Save(prefix + "type", std::string("Strafe"));
+            data->Save(prefix + "speed", strafeNode->GetSpeed());
+        } else if (auto *retreatNode = dynamic_cast<RetreatNode *>(node)) {
+            data->Save(prefix + "type", std::string("Retreat"));
+            data->Save(prefix + "speed", retreatNode->GetSpeed());
+            data->Save(prefix + "retreatDistance", retreatNode->GetRetreatDistance());
+        } else if (auto *distNode = dynamic_cast<DistanceCheckNode *>(node)) {
+            data->Save(prefix + "type", std::string("DistanceCheck"));
             data->Save(prefix + "minDistance", distNode->GetMinDistance());
             data->Save(prefix + "maxDistance", distNode->GetMaxDistance());
+        } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+            data->Save(prefix + "type", std::string("WeightedSelector"));
+            auto &weights = weightedSelector->GetWeights();
+            data->Save(prefix + "childCount", static_cast<int>(weights.size()));
+            for (size_t j = 0; j < weights.size(); j++) {
+                data->Save(prefix + "weight_" + std::to_string(j), weights[j]);
+            }
+        } else if (dynamic_cast<SequenceNode *>(node)) {
+            data->Save(prefix + "type", std::string("Sequence"));
+        } else if (dynamic_cast<SelectorNode *>(node)) {
+            data->Save(prefix + "type", std::string("Selector"));
+        } else if (dynamic_cast<StopNode *>(node)) {
+            data->Save(prefix + "type", std::string("Stop"));
         }
-
-        index++;
     }
 }
 
@@ -425,25 +623,26 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
 
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("BehaviorTree", treeName);
 
-    // エディター設定の読み込み（デフォルト値を指定）
-    zoom_ = data->Load("zoom", 1.0f);
-    Vector2 panOffset = data->Load<Vector2>("panOffset", Vector2(0.0f, 0.0f));
-    panOffset_ = ImVec2(panOffset.x, panOffset.y);
+    // ノード数を読み込み
+    int nodeCount = data->Load("nodeCount", 0);
 
-    // ノードの重み付け情報を読み込み
-    int weightCount = data->Load("nodeWeightCount", 0);
-
-    // weightCountが0の場合は読み込みをスキップ（初回起動時など）
-    if (weightCount <= 0) {
+    if (nodeCount <= 0) {
         return;
     }
 
-    // ノードIDからノードへのマップを作成（再帰的に構築）
+    // ノードIDからノードへのマップを作成
     std::unordered_map<int, BehaviorNode *> nodeMap;
+    std::vector<BehaviorNode *> allNodes;
+    int currentId = 0;
+
     std::function<void(BehaviorNode *)> buildNodeMap = [&](BehaviorNode *node) {
         if (!node)
             return;
+
+        // ノードIDを割り当て
+        node->nodeId = currentId++;
         nodeMap[node->nodeId] = node;
+        allNodes.push_back(node);
 
         if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
             for (auto &child : sequence->GetChildren()) {
@@ -453,44 +652,62 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
             for (auto &child : selector->GetChildren()) {
                 buildNodeMap(child.get());
             }
+        } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+            for (auto &child : weightedSelector->GetChildren()) {
+                buildNodeMap(child.get());
+            }
         }
     };
 
-    // まずツリーを一度描画してnodeIdを設定
-    nodeIdCounter_ = 0;
     buildNodeMap(root);
 
-    nodeWeights_.clear();
+    // 保存されたノード数とツリーのノード数が一致するか確認
+    if (nodeCount != static_cast<int>(allNodes.size())) {
+        // 警告を出す
+        return;
+    }
 
-    for (int i = 0; i < weightCount; i++) {
-        std::string prefix = "weight_" + std::to_string(i) + "_";
+    // 保存されたノード情報を読み込んで適用
+    for (int i = 0; i < nodeCount; i++) {
+        std::string prefix = "node_" + std::to_string(i) + "_";
 
-        // 各値を安全に読み込み
-        int nodeId = data->Load(prefix + "nodeId", -1);
+        int savedNodeId = data->Load(prefix + "nodeId", -1);
         std::string nodeName = data->Load(prefix + "nodeName", std::string(""));
-        float weight = data->Load(prefix + "weight", 1.0f);
+        std::string nodeType = data->Load(prefix + "type", std::string(""));
 
-        // ノードIDからノードを検索
-        if (nodeMap.find(nodeId) != nodeMap.end()) {
-            BehaviorNode *node = nodeMap[nodeId];
-            nodeWeights_[node] = weight;
+        // インデックスiのノードに対応するデータを読み込む
+        if (i < static_cast<int>(allNodes.size())) {
+            BehaviorNode *node = allNodes[i];
 
             // ノード固有のパラメータを読み込み
-            if (auto *moveNode = dynamic_cast<MoveToTargetNode *>(node)) {
-                float speed = data->Load(prefix + "speed", 10.0f);
-                moveNode->SetSpeed(speed);
-            } else if (auto *flyNode = dynamic_cast<FlyToTargetNode *>(node)) {
-                float speed = data->Load(prefix + "speed", 10.0f);
-                flyNode->SetSpeed(speed);
-            } else if (auto *rushNode = dynamic_cast<RushAttackNode *>(node)) {
-                float rushSpeed = data->Load(prefix + "rushSpeed", 20.0f);
-                float minDist = data->Load(prefix + "minDistance", 5.0f);
-                rushNode->SetRushSpeed(rushSpeed);
-                rushNode->SetMinDistance(minDist);
-            } else if (auto *distNode = dynamic_cast<DistanceToTargetNode *>(node)) {
+            if (auto *approachNode = dynamic_cast<ApproachNode *>(node)) {
+                float speed = data->Load(prefix + "speed", 15.0f);
+                int speedType = data->Load(prefix + "speedType", 0);
+                approachNode->SetSpeed(speed);
+                approachNode->SetSpeedType(static_cast<MoveSpeedType>(speedType));
+            } else if (auto *closeNode = dynamic_cast<CloseApproachNode *>(node)) {
+                float speed = data->Load(prefix + "speed", 5.0f);
+                float targetDist = data->Load(prefix + "targetDistance", 2.0f);
+                closeNode->SetSpeed(speed);
+                closeNode->SetTargetDistance(targetDist);
+            } else if (auto *strafeNode = dynamic_cast<StrafeNode *>(node)) {
+                float speed = data->Load(prefix + "speed", 8.0f);
+                strafeNode->SetSpeed(speed);
+            } else if (auto *retreatNode = dynamic_cast<RetreatNode *>(node)) {
+                float speed = data->Load(prefix + "speed", 7.0f);
+                float retreatDist = data->Load(prefix + "retreatDistance", 5.0f);
+                retreatNode->SetSpeed(speed);
+                retreatNode->SetRetreatDistance(retreatDist);
+            } else if (auto *distNode = dynamic_cast<DistanceCheckNode *>(node)) {
                 float minDist = data->Load(prefix + "minDistance", 0.0f);
                 float maxDist = data->Load(prefix + "maxDistance", 100.0f);
                 distNode->SetDistances(minDist, maxDist);
+            } else if (auto *weightedSelector = dynamic_cast<WeightedSelectorNode *>(node)) {
+                int childCount = data->Load(prefix + "childCount", 0);
+                auto &weights = weightedSelector->GetWeights();
+                for (int j = 0; j < childCount && j < static_cast<int>(weights.size()); j++) {
+                    weights[j] = data->Load(prefix + "weight_" + std::to_string(j), 1.0f);
+                }
             }
         }
     }

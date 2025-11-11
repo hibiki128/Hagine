@@ -1,6 +1,6 @@
 #include "PlayerHand.h"
 #include "Application/GameObject/Enemy/Enemy.h"
-#include"Particle/ParticleEditor.h"
+#include "Particle/ParticleEditor.h"
 #include <Scene/SceneManager.h>
 void PlayerHand::Init(const std::string objectName) {
     BaseObject::Init(objectName);
@@ -14,15 +14,22 @@ void PlayerHand::Init(const std::string objectName) {
 }
 
 void PlayerHand::Update() {
-    BaseObject::Update();
-    shake_->Update();
+    if (!isAlive_) {
+    } else {
+        BaseObject::Update();
+        shake_->Update();
+    }
 }
 
 void PlayerHand::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
-    BaseObject::Draw(viewProjection, offSet);
+    if (!isAlive_) {
+    } else {
+
+        BaseObject::Draw(viewProjection, offSet);
+    }
 }
 
-void PlayerHand::DrawParticle(const ViewProjection& viewProjection) {
+void PlayerHand::DrawParticle(const ViewProjection &viewProjection) {
     hitEmitter_->Draw(viewProjection);
 }
 

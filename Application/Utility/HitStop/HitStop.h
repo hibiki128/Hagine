@@ -36,9 +36,8 @@ class HitStop {
     void imgui();
 
     /// <summary>
-    /// ヒットストップがアクティブかを取得
+    /// Getter
     /// </summary>
-    /// <returns>bool: アクティブフラグ</returns>
     bool IsActive() const { return isActive_; }
 
   private:

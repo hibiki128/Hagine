@@ -197,114 +197,26 @@ class SpriteManager {
     void Finalize();
 
     /// <summary>
-    /// 特定のスプライトを取得
+    /// Getter
     /// </summary>
-    /// <param name="name">取得するスプライト名</param>
-    /// <returns>SpriteData*: スプライトデータのポインタ</returns>
     SpriteData *GetSprite(const std::string &name);
-
-    /// <summary>
-    /// テクスチャファイルパスを取得
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <returns>std::string: テクスチャファイルパス</returns>
     std::string GetTextureFilePath(const std::string &name);
 
     /// <summary>
-    /// インスタンスのSRTデータを設定
+    /// Setter
     /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="index">インスタンスインデックス</param>
-    /// <param name="srt">設定するSRTデータ</param>
     void SetInstanceSRT(const std::string &name, uint32_t index, const InstanceSRT &srt);
-
-    /// <summary>
-    /// インスタンスのスケールを設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="index">インスタンスインデックス</param>
-    /// <param name="scale">設定するスケール</param>
     void SetInstanceScale(const std::string &name, uint32_t index, const Vector3 &scale);
-
-    /// <summary>
-    /// インスタンスの回転を設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="index">インスタンスインデックス</param>
-    /// <param name="rotation">設定する回転</param>
     void SetInstanceRotation(const std::string &name, uint32_t index, const Vector3 &rotation);
-
-    /// <summary>
-    /// インスタンスの移動を設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="index">インスタンスインデックス</param>
-    /// <param name="translation">設定する移動</param>
     void SetInstanceTranslation(const std::string &name, uint32_t index, const Vector3 &translation);
-
-    /// <summary>
-    /// インスタンスの表示状態を設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="index">インスタンスインデックス</param>
-    /// <param name="isActive">表示フラグ</param>
     void SetInstanceActive(const std::string &name, uint32_t index, bool isActive);
-
-    /// <summary>
-    /// インスタンスのSRTデータを取得
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="index">インスタンスインデックス</param>
-    /// <returns>InstanceSRT*: SRTデータのポインタ</returns>
     InstanceSRT *GetInstanceSRT(const std::string &name, uint32_t index);
-
-    /// <summary>
-    /// スプライトの表示状態を設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="visible">表示フラグ</param>
     void SetSpriteVisible(const std::string &name, bool visible);
-
-    /// <summary>
-    /// スプライトの背面フラグを設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="isBackMost">背面フラグ</param>
     void SetSpriteBackMost(const std::string &name, bool isBackMost);
-
-    /// <summary>
-    /// スプライトの位置を設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="position">設定する位置</param>
     void SetSpritePosition(const std::string &name, const Vector2 &position);
-
-    /// <summary>
-    /// スプライトのサイズを設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="size">設定するサイズ</param>
     void SetSpriteSize(const std::string &name, const Vector2 &size);
-
-    /// <summary>
-    /// スプライトの色を設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="color">設定する色</param>
     void SetSpriteColor(const std::string &name, const Vector4 &color);
-
-    /// <summary>
-    /// テクスチャファイルパスを設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="textureFilePath">設定するテクスチャファイルパス</param>
     void SetTextureFilePath(const std::string &name, const std::string &textureFilePath);
-
-    /// <summary>
-    /// カスタム更新関数を設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="updateFunc">設定する更新関数</param>
     void SetUpdateFunction(const std::string &name, std::function<void(SpriteData &, float)> updateFunc);
 
     /// <summary>

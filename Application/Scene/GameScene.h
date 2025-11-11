@@ -11,6 +11,7 @@
 #include "SkyBox/SkyBox.h"
 #include <Application/GameObject/Enemy/BehaviorTree/Editor/BehaviorTreeEditor.h>
 #include <Application/Staging/Transition/FadeOut.h>
+#include <Application/Camera/DeathCamera.h>
 
 class GameScene : public BaseScene {
   public:
@@ -104,6 +105,9 @@ class GameScene : public BaseScene {
     // 開始時カメラ
     std::unique_ptr<StartCamera> startCamera_;
 
+    // 死亡時カメラ
+    std::unique_ptr<DeathCamera> deathCamera_;
+
     // 地面
     std::unique_ptr<Ground> ground_;
 
@@ -118,4 +122,8 @@ class GameScene : public BaseScene {
 
     Enemy *enemy_ptr = nullptr;
     Player *player_ptr = nullptr;
+
+    bool isGameOver_ = false;
+    bool deathCameraStarted_ = false;
+    float GameOverTimer_ = 0.0f;
 };

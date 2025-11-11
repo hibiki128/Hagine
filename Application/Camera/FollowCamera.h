@@ -29,30 +29,19 @@ class FollowCamera {
     void imgui();
 
     /// <summary>
-    /// カメラのYawを取得
+    /// Getter
     /// </summary>
-    /// <returns> float </returns>
     float GetYaw() { return yaw_; }
+    ViewProjection &GetViewProjection() { return viewProjection_; }
 
     /// <summary>
-    /// ターゲットをセットする関数
+    /// Setter
     /// </summary>
-    /// <param name="target"></param>
     void SetPlayer(Player *target) { target_ = target; }
-    
-    /// <summary>
-    /// カメラのFovを設定する関数
-    /// </summary>
-    /// <param name="fov"></param>
     void SetCameraFov(float fov) { 
         viewProjection_.fovAngleY = fov * std::numbers::pi_v<float> / 180.0f;
     }
 
-    /// <summary>
-    /// カメラのViewProjectionを取得する関数
-    /// </summary>
-    /// <returns> ViewProjection </returns>
-    ViewProjection &GetViewProjection() { return viewProjection_; }
 
   private:
     /// ===================================================
@@ -81,9 +70,9 @@ class FollowCamera {
     Vector3 shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f};  // ターゲット肩オフセット
     Vector3 shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f}; // 現在の補間値
 
-    float yaw_;
-    float distanceFromTarget_;
-    float heightOffset_;
+    float yaw_{};
+    float distanceFromTarget_{};
+    float heightOffset_{};
     float shoulderMaxOffset_ = 12.5f;  // 肩のズレ最大距離（左右）
     float shoulderLerpSpeed_ = 10.0f; // 補間速度（大きいほど速く追従）
     float rushCameraResumeDistance_ = 50.0f; // この距離以下になったらカメラ追従を再開

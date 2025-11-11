@@ -345,6 +345,8 @@ void Framework::LoadResource() {
     particleEditor_->AddParticleEmitter("punchEmitter");
     particleCSEditor_->AddParticleEmitter("playerAura");
     particleCSEditor_->AddParticleEmitter("FadeOut");
+    particleCSEditor_->AddParticleEmitter("death");
+    particleCSEditor_->AddParticleEmitter("death_arm");
 }
 
 void Framework::PlaySounds() {

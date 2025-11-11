@@ -100,10 +100,9 @@ void PlayerBullet::InitTransform(Player *player) {
     this->AddCollider();
     this->SetCollisionType(CollisionType::Sphere);
 
-    if (player->GetIsLockOn() && player->GetEnemy()) {
-        // ロックオン時：敵に向かって発射
-        isLockOnBullet_ = true;
         targetEnemy_ = player->GetEnemy();
+    if (player->GetIsLockOn() && player->GetEnemy()) {
+        isLockOnBullet_ = true;
 
         Vector3 playerPos = player->GetLocalPosition();
         Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
@@ -122,7 +121,6 @@ void PlayerBullet::InitTransform(Player *player) {
         velocity_ = direction * speed_;
     } else {
         isLockOnBullet_ = false;
-        targetEnemy_ = nullptr;
 
         Quaternion rot = player->GetLocalRotation();
         Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);

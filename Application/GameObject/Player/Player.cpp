@@ -92,87 +92,100 @@ void Player::Init(const std::string objectName) {
     rushEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("RushEmitter");
 
     auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
+
+    deathStaging_ = std::make_unique<DeathStaging>();
 }
 
 void Player::Update() {
 
-    ComboUpdate();
-
     dt_ = Frame::DeltaTime();
-    shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
-    shadow_->Update();
-    if (chargeShot_) {
-        chargeShot_->Update();
-    }
+    if (!isAlive_) {
 
-    if (started_) {
-        if (currentState_) {
-            currentState_->Update(*this);
-        }
-        RotateUpdate();
-    }
-
-    // 下方向の速度を制限
-    if (velocity_.y < -40.0f) {
-        velocity_.y = -40.0f;
-    }
-
-    if (Input::GetInstance()->TriggerKey(DIK_L)) {
-        isLockOn_ = !isLockOn_;
-    }
-
-    if (isDashing_) {
-        targetFov_ = 55.0f;
     } else {
-        targetFov_ = 45.0f;
-    }
 
-    // 現在のFOVを滑らかに補間
-    currentFov_ += (targetFov_ - currentFov_) * fovLerpSpeed_ * dt_;
+        shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
+        shadow_->Update();
 
-    // FOVをカメラに適用
-    FollowCamera_->SetCameraFov(currentFov_);
+        if (started_) {
+            ComboUpdate();
+            if (currentState_) {
+                currentState_->Update(*this);
+            }
+            RotateUpdate();
 
-    CollisionGround();
+            if (chargeShot_) {
+                chargeShot_->Update();
+            }
 
-    BaseObject::Update();
+            Shot();
 
-    Shot();
+            // 弾の更新と生存チェック
+            for (auto it = bullets_.begin(); it != bullets_.end();) {
+                (*it)->Update();
+                (*it)->SetSpeed(B_speed_);
+                (*it)->SetAcce(B_acce_);
+                (*it)->UpdateWorldTransformHierarchy();
 
-    // 弾の更新と生存チェック
-    for (auto it = bullets_.begin(); it != bullets_.end();) {
-        (*it)->Update();
-        (*it)->SetSpeed(B_speed_);
-        (*it)->SetAcce(B_acce_);
-        (*it)->UpdateWorldTransformHierarchy();
-
-        // 弾が生きていない場合は削除
-        if (!(*it)->IsAlive()) {
-            it = bullets_.erase(it);
-        } else {
-            ++it;
+                // 弾が生きていない場合は削除
+                if (!(*it)->IsAlive()) {
+                    it = bullets_.erase(it);
+                } else {
+                    ++it;
+                }
+            }
         }
-    }
 
-    shake_->Update();
-
-    auraEmitter_->SetTranslate(GetWorldPosition());
-    auraEmitter_->SetRotation(-GetWorldRotation());
-    auraEmitter_->Update();
-
-    if (chargeShot_) {
-        if (chargeShot_->GetIsCharge()) {
-            auraEmitter_->SetAuto(chargeShot_->GetIsCharge());
-        } else {
-            auraEmitter_->SetAuto(false);
+        // 下方向の速度を制限
+        if (velocity_.y < -40.0f) {
+            velocity_.y = -40.0f;
         }
-    }
 
-    UpdateShadowScale();
+        if (Input::GetInstance()->TriggerKey(DIK_L)) {
+            isLockOn_ = !isLockOn_;
+        }
+
+        if (isDashing_) {
+            targetFov_ = 55.0f;
+        } else {
+            targetFov_ = 45.0f;
+        }
+
+        // 現在のFOVを滑らかに補間
+        currentFov_ += (targetFov_ - currentFov_) * fovLerpSpeed_ * dt_;
+
+        // FOVをカメラに適用
+        FollowCamera_->SetCameraFov(currentFov_);
+
+        CollisionGround();
+
+        BaseObject::Update();
+
+        shake_->Update();
+
+        auraEmitter_->SetTranslate(GetWorldPosition());
+        auraEmitter_->SetRotation(-GetWorldRotation());
+        auraEmitter_->Update();
+
+        if (chargeShot_) {
+            if (chargeShot_->GetIsCharge()) {
+                auraEmitter_->SetAuto(chargeShot_->GetIsCharge());
+            } else {
+                auraEmitter_->SetAuto(false);
+            }
+        }
+
+        UpdateShadowScale();
+    }
 }
 
 void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+    if (deathStaging_->GetIsStart()) {
+        leftHand_ptr_->SetIsAlive(false);
+        rightHand_ptr_->SetIsAlive(false);
+        return;
+    }
     BaseObject::Draw(viewProjection, offSet);
+    shadow_->Draw(viewProjection, offSet);
     for (auto &bullet : bullets_) {
         bullet->Draw(viewProjection, offSet);
     }
@@ -180,10 +193,19 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (transform_->translation_.y < 0) {
         return;
     }
-    shadow_->Draw(viewProjection, offSet);
 }
 
 void Player::DrawParticle(const ViewProjection &viewProjection) {
+
+    if (!isAlive_ && isDeathStaging_) {
+        deathStaging_->Initialize(
+            GetWorldPosition(), GetColor(),
+            rightHand_ptr_->GetWorldPosition(), rightHand_ptr_->GetColor(),
+            leftHand_ptr_->GetWorldPosition(), leftHand_ptr_->GetColor());
+        deathStaging_->Update();
+        deathStaging_->Draw(viewProjection);
+    }
+
     chargeShot_->DrawParticle(viewProjection);
     rushEmitter_->Draw(viewProjection);
     auraEmitter_->Draw(viewProjection);
@@ -203,6 +225,13 @@ void Player::ChangeState(const std::string &stateName) {
         currentState_ = it->second.get();
         currentState_->Enter(*this);
     }
+}
+
+void Player::OnCollisionEnter(Collider *other) {
+   /* if (dynamic_cast<Enemy *>(other)) {
+        isAlive_ = false;
+        
+    }*/
 }
 
 void Player::DirectionUpdate() {
@@ -502,6 +531,9 @@ void Player::Debug() {
     }
     if (ImGui::BeginTabBar("プレイヤー")) {
         if (ImGui::BeginTabItem("プレイヤー")) {
+
+            ImGui::Text("手の位置 x = %f, y = %f, z = %f", leftHand_ptr_->GetWorldPosition().x, leftHand_ptr_->GetWorldPosition().y, leftHand_ptr_->GetWorldPosition().z);
+
             ImGui::Text("Current State: %s", currentStateName);
             ImGui::Text("lControlInputCount: %d", lControlInputCount_);
             ImGui::Text("IsGrounded: %s", isGrounded_ ? "True" : "False");
@@ -554,6 +586,9 @@ void Player::Debug() {
     }
 
     shake_->imgui();
+    if (!isAlive_) {
+        deathStaging_->imgui();
+    }
 }
 
 void Player::ChangeRush() {
