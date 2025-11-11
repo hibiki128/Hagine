@@ -192,10 +192,12 @@ ImGuiManager *ImGuiManager::GetInstance() {
 
 void ImGuiManager::Finalize() {
     SaveCurrentLayout();
-    // 後始末
+// 後始末
+#ifdef USE_IMGUI
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
+#endif // USE_IMGUI
 
     // デスクリプタヒープを解放
     srvHeap_.Reset();
