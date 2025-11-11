@@ -2,9 +2,9 @@
 #include "Windows.h"
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif //  USE_IMGUI
 #include <cstdint>
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 // WindowsAPI
 class WinApp {
   private:

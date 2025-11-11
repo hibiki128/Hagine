@@ -27,6 +27,7 @@ void ParticleEditor::Initialize() {
 
 // カラーテーマの設定メソッドを追加
 void ParticleEditor::SetupColors() {
+#ifdef USE_IMGUI
     // 各CollapsingHeaderに使用する色を定義
     headerColors_[0] = ImVec4(0.2f, 0.4f, 0.8f, 0.8f); // 青系
     headerColors_[1] = ImVec4(0.8f, 0.4f, 0.2f, 0.8f); // オレンジ系
@@ -34,6 +35,7 @@ void ParticleEditor::SetupColors() {
     headerColors_[3] = ImVec4(0.7f, 0.3f, 0.7f, 0.8f); // 紫系
     headerColors_[4] = ImVec4(0.7f, 0.7f, 0.2f, 0.8f); // 黄色系
     headerColors_[5] = ImVec4(0.5f, 0.5f, 0.5f, 0.8f); // グレー系
+#endif // USE_IMGUI
 }
 
 void ParticleEditor::AddParticleEmitter(const std::string &name, const std::string &fileName, const std::string &texturePath) {
@@ -115,6 +117,7 @@ void ParticleEditor::DrawAll(const ViewProjection &vp_) {
 }
 
 void ParticleEditor::DebugAll() {
+#ifdef USE_IMGUI
     if (ImGui::BeginTabBar("CPUパーティクル")) {
         if (ImGui::BeginTabItem("CPUエミッター設定")) {
             if (emitters_.empty()) {
@@ -160,6 +163,7 @@ void ParticleEditor::DebugAll() {
         }
         ImGui::EndTabBar();
     }
+#endif // USE_IMGUI
 }
 
 // std::unique_ptr<ParticleEmitter> ParticleEditor::GetEmitter(const std::string &name) {
@@ -172,6 +176,7 @@ void ParticleEditor::DebugAll() {
 // }
 
 void ParticleEditor::SceneParticleCount() {
+#ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("パーティクル統計")) {
         size_t grandTotal = 0;
         size_t totalInstances = 0;
@@ -209,6 +214,7 @@ void ParticleEditor::SceneParticleCount() {
             ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "エミッターなし");
         }
     }
+#endif // USE_IMGUI
 }
 
 std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const std::string &name) {
@@ -220,13 +226,16 @@ std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const
 }
 
 void ParticleEditor::EditorWindow() {
+#ifdef USE_IMGUI
     ImGui::Begin("パーティクルエディター");
     ShowImGuiEditor();
     ImGui::End();
+#endif // USE_IMGUI
 }
 
 // カラー付きCollapsingHeaderを表示するヘルパー関数
 bool ParticleEditor::ColoredCollapsingHeader(const char *label, int colorIndex) {
+#ifdef USE_IMGUI
     // 現在のImGuiカラーを保存
     ImVec4 originalColor = ImGui::GetStyleColorVec4(ImGuiCol_Header);
 
@@ -250,9 +259,11 @@ bool ParticleEditor::ColoredCollapsingHeader(const char *label, int colorIndex) 
     ImGui::PopStyleColor(3);
 
     return opened;
+#endif // USE_IMGUI
 }
 
 void ParticleEditor::ShowImGuiEditor() {
+#ifdef USE_IMGUI
     if (ImGui::BeginTabBar("CPUパーティクル")) {
         if (ImGui::BeginTabItem("パーティクル作成")) {
 
@@ -454,9 +465,11 @@ void ParticleEditor::ShowImGuiEditor() {
         }
         ImGui::EndTabBar();
     }
+#endif // USE_IMGUI
 }
 
 void ParticleEditor::ShowFileSelector() {
+#ifdef USE_IMGUI
     static int selectedIndex = -1;
     std::vector<std::string> jsonFiles = GetJsonFiles();
 
@@ -493,6 +506,7 @@ void ParticleEditor::ShowFileSelector() {
         AddParticleEmitter(name_, fileName_, texturePath_);
         isLoad_ = false;
     }
+#endif // USE_IMGUI
 }
 
 std::vector<std::string> ParticleEditor::GetJsonFiles() {

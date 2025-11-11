@@ -714,7 +714,7 @@ void MotionEditor::DrawCatmullRomCurve() {
 }
 
 void MotionEditor::DrawImGui() {
-
+#ifdef USE_IMGUI
     if (!motions_.empty()) {
         std::vector<const char *> names;
         for (auto &[name, _] : motions_)
@@ -852,6 +852,7 @@ void MotionEditor::DrawImGui() {
             }
         }
     }
+#endif // USE_IMGUI
 }
 
 void MotionEditor::Save(const std::string &fileName) {

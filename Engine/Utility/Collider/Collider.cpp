@@ -270,6 +270,7 @@ void Collider::DrawSphereAtCenter(const ViewProjection &viewProjection, const Ve
 }
 
 void Collider::OffsetImgui() {
+#ifdef USE_IMGUI
     // スタイル設定とカラー定義
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 4.0f));
@@ -449,6 +450,7 @@ void Collider::OffsetImgui() {
     }
 
     ImGui::PopStyleVar(2); // スタイル変数終了
+#endif // USE_IMGUI
 }
 
 void Collider::DrawRotationCenter(const ViewProjection &viewProjection) {

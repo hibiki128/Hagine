@@ -44,12 +44,20 @@ void Enemy::Update() {
     shadow_->Update();
 
     if (damage_ > 0) {
-        HP_ -= damage_;
+        float actualDamage = static_cast<float>(damage_);
+
+        // ガード中はダメージを85%軽減
+        if (isGuarding_) {
+            actualDamage *= 0.15f; // 15%のダメージのみ受ける
+        }
+
+        HP_ -= actualDamage;
         damage_ = 0;
     }
-    if (HP_ <= 0) {
+
+    if (HP_ <= 0.0f) {
         isAlive_ = false;
-        HP_ = 0;
+        HP_ = 0.0f;
     }
 
     // ビヘイビアツリーの実行
@@ -70,13 +78,11 @@ void Enemy::InitializeBehaviorTree() {
     BehaviorNode::SetEditor(behaviorTreeEditor_.get());
 #endif
 
-    // ルートノード(シーケンス)を作成
     auto rootSequence = std::make_unique<SequenceNode>();
 
     // 1. 遠距離時の接近行動
     auto farDistCheck = std::make_unique<DistanceCheckNode>(10.0f, 100.0f);
     auto fastApproach = std::make_unique<ApproachNode>(MoveSpeedType::Fast);
-
     auto farSequence = std::make_unique<SequenceNode>();
     farSequence->AddChild(std::move(farDistCheck));
     farSequence->AddChild(std::move(fastApproach));
@@ -84,24 +90,25 @@ void Enemy::InitializeBehaviorTree() {
     // 2. 中距離時の接近行動
     auto midDistCheck = std::make_unique<DistanceCheckNode>(5.0f, 10.0f);
     auto slowApproach = std::make_unique<ApproachNode>(MoveSpeedType::Slow);
-
     auto midSequence = std::make_unique<SequenceNode>();
     midSequence->AddChild(std::move(midDistCheck));
     midSequence->AddChild(std::move(slowApproach));
 
-    // 3. 近距離時の重み付き行動選択
+    // 3. 近距離時の重み付け行動選択
     auto closeDistCheck = std::make_unique<DistanceCheckNode>(0.0f, 5.0f);
 
-    // 近距離での3つの行動オプション
+    // 近距離での行動オプション(ガードを追加)
     auto closeApproach = std::make_unique<CloseApproachNode>();
     auto strafe = std::make_unique<StrafeNode>();
     auto retreat = std::make_unique<RetreatNode>();
+    auto guard = std::make_unique<GuardNode>(); // ガード行動を追加
 
     // 重み付きセレクターを作成
     auto weightedSelector = std::make_unique<WeightedSelectorNode>();
     weightedSelector->AddChild(std::move(closeApproach), 1.0f); // さらに近づく: 重み1.0
     weightedSelector->AddChild(std::move(strafe), 1.5f);        // 横移動: 重み1.5
     weightedSelector->AddChild(std::move(retreat), 1.0f);       // 後退: 重み1.0
+    weightedSelector->AddChild(std::move(guard), 1.2f);         // ガード: 重み1.2
 
     auto closeSequence = std::make_unique<SequenceNode>();
     closeSequence->AddChild(std::move(closeDistCheck));
@@ -109,20 +116,17 @@ void Enemy::InitializeBehaviorTree() {
 
     // 4. 全体をセレクターでまとめる
     auto mainSelector = std::make_unique<SelectorNode>();
-    mainSelector->AddChild(std::move(closeSequence)); // 近距離を最優先
-    mainSelector->AddChild(std::move(midSequence));   // 中距離
-    mainSelector->AddChild(std::move(farSequence));   // 遠距離
+    mainSelector->AddChild(std::move(closeSequence));
+    mainSelector->AddChild(std::move(midSequence));
+    mainSelector->AddChild(std::move(farSequence));
 
-    // 停止ノードをフォールバック用に追加
     auto stopNode = std::make_unique<StopNode>();
     mainSelector->AddChild(std::move(stopNode));
 
     rootSequence->AddChild(std::move(mainSelector));
-
     behaviorTreeRoot_ = std::move(rootSequence);
 
 #ifdef _DEBUG
-    // エディターに設定をロード
     behaviorTreeEditor_->LoadSettings("default", behaviorTreeRoot_.get());
 #endif
 }
@@ -174,24 +178,35 @@ void Enemy::DrawParticle(const ViewProjection &viewProjection) {
 }
 
 void Enemy::Debug() {
+#ifdef USE_IMGUI
     if (ImGui::BeginTabBar("敵情報")) {
         if (ImGui::BeginTabItem("敵情報")) {
 
-            ImGui::Text("敵のHP %d", HP_);
+            ImGui::Text("敵のHP %.1f / %.1f", HP_, maxHP_);
             if (ImGui::Button("HP回復")) {
                 HP_ = maxHP_;
             }
 
             ImGui::Checkbox("ストップ", &isStop_);
 
+            // ガード状態の表示
+            ImGui::Separator();
+            ImGui::Text("ガード状態: %s", isGuarding_ ? "ON" : "OFF");
+            if (isGuarding_) {
+                ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f),
+                                   "ダメージ85%%軽減中");
+            }
+
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
     }
+#endif // USE_IMGUI
 }
 
 void Enemy::OnCollisionEnter(Collider *other) {
     if (dynamic_cast<PlayerBullet *>(other) || dynamic_cast<ChargeShot *>(other)) {
+        emitter_->SetPosition(transform_->translation_);
         emitter_->UpdateOnce();
     }
 

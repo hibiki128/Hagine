@@ -61,6 +61,7 @@ void PlayerUI::Draw() {
 }
 
 void PlayerUI::Debug() {
+#ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("プレイヤーUI")) {
         if (ImGui::TreeNode("HPバー")) {
             ImGui::DragFloat2("位置", &hpBarPosition_.x, 0.1f);
@@ -88,4 +89,5 @@ void PlayerUI::Debug() {
             ImGui::TreePop();
         }
     }
+#endif // USE_IMGUI
 }

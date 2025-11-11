@@ -102,14 +102,15 @@ class Enemy : public BaseObject {
     float &GetJumpSpeed() { return jumpSpeed_; }
     float &GetMaxSpeed() { return maxSpeed_; }
     float &GetAccelRate() { return accelRate_; }
-    int GetHP() const { return HP_; }
-    int GetMaxHP() const { return maxHP_; }
+    float GetHP() const { return HP_; }
+    float GetMaxHP() const { return maxHP_; }
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
     Player *GetTarget() { return target_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
+    bool IsGuarding() const { return isGuarding_; }
 
     /// <summary>
     /// Setter
@@ -117,6 +118,7 @@ class Enemy : public BaseObject {
     void SetDamage(int damage) { damage_ = damage; }
     void SetVp(ViewProjection *vp);
     void SetTarget(Player *target) { target_ = target; }
+    void SetGuarding(bool guarding) { isGuarding_ = guarding; }
 
   private:
     /// ===================================================
@@ -173,9 +175,10 @@ class Enemy : public BaseObject {
     Vector3 acceleration_{};
     Player *target_ = nullptr;
 
-    int HP_ = 1000000;
-    int maxHP_ = 1000000;
+    float HP_ = 1000000.0f;
+    float maxHP_ = 1000000.0f;
     int damage_ = 0;
+    bool isGuarding_ = false; // ガード状態
 
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;

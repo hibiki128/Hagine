@@ -134,3 +134,36 @@ NodeStatus RetreatNode::Execute(Enemy &enemy, float deltaTime) {
 
     return NodeStatus::Running;
 }
+
+NodeStatus GuardNode::Execute(Enemy &enemy, float deltaTime) {
+#ifdef _DEBUG
+    if (editor_) {
+        editor_->SetExecutingNode(this);
+        editor_->AddExecutionHistory(this);
+    }
+#endif
+
+    // ガード開始
+    if (!guardStarted_) {
+        enemy.SetGuarding(true);
+        guardStarted_ = true;
+        guardTimer_ = 0.0f;
+    }
+
+    // 移動を停止
+    enemy.GetVelocity().x = 0.0f;
+    enemy.GetVelocity().z = 0.0f;
+
+    // タイマー更新
+    guardTimer_ += deltaTime;
+
+    // ガード時間終了
+    if (guardTimer_ >= guardDuration_) {
+        enemy.SetGuarding(false);
+        guardStarted_ = false;
+        guardTimer_ = 0.0f;
+        return NodeStatus::Success;
+    }
+
+    return NodeStatus::Running;
+}

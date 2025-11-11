@@ -111,6 +111,7 @@ void ViewProjection::EaseCameraMove(EasingType easeType, const std::string &json
 }
 
 void ViewProjection::ShowDebugInfo() {
+#ifdef USE_IMGUI
     if (ImGui::Begin("カメラ設定 デバッグ")) {
 
         // 基本情報セクション
@@ -380,6 +381,7 @@ void ViewProjection::ShowDebugInfo() {
     }
 
     ImGui::End();
+#endif // USE_IMGUI
 }
 
 void ViewProjection::Save(std::string jsonFile) {

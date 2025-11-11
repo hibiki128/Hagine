@@ -513,6 +513,20 @@ void BehaviorTreeEditor::DrawNodeProperties(BehaviorNode *node) {
         if (ImGui::DragFloat("最大距離##dist", &maxDist, 0.1f, 0.0f, 100.0f)) {
             distNode->SetDistances(minDist, maxDist);
         }
+    } else if (auto *guardNode = dynamic_cast<GuardNode *>(node)) {
+        float duration = guardNode->GetGuardDuration();
+        float reduction = guardNode->GetDamageReduction();
+
+        if (ImGui::DragFloat("ガード時間##guard", &duration, 0.1f, 0.1f, 10.0f)) {
+            guardNode->SetGuardDuration(duration);
+        }
+
+        if (ImGui::SliderFloat("ダメージ軽減率##guard", &reduction, 0.0f, 1.0f, "%.2f")) {
+            guardNode->SetDamageReduction(reduction);
+        }
+
+        ImGui::TextDisabled("軽減率 %.0f%% (%.0f%%のダメージを受ける)",
+                            reduction * 100.0f, (1.0f - reduction) * 100.0f);
     }
 
     // 重み付きセレクターの重み設定
@@ -613,6 +627,10 @@ void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode 
             data->Save(prefix + "type", std::string("Selector"));
         } else if (dynamic_cast<StopNode *>(node)) {
             data->Save(prefix + "type", std::string("Stop"));
+        } else if (auto *guardNode = dynamic_cast<GuardNode *>(node)) {
+            data->Save(prefix + "type", std::string("Guard"));
+            data->Save(prefix + "guardDuration", guardNode->GetGuardDuration());
+            data->Save(prefix + "damageReduction", guardNode->GetDamageReduction());
         }
     }
 }
@@ -708,6 +726,11 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
                 for (int j = 0; j < childCount && j < static_cast<int>(weights.size()); j++) {
                     weights[j] = data->Load(prefix + "weight_" + std::to_string(j), 1.0f);
                 }
+            } else if (auto *guardNode = dynamic_cast<GuardNode *>(node)) {
+                float duration = data->Load(prefix + "guardDuration", 2.0f);
+                float reduction = data->Load(prefix + "damageReduction", 0.85f);
+                guardNode->SetGuardDuration(duration);
+                guardNode->SetDamageReduction(reduction);
             }
         }
     }

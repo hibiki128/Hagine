@@ -66,6 +66,7 @@ void EnemyUI::Draw() {
 }
 
 void EnemyUI::Debug() {
+#ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("エネミーUI")) {
         if (ImGui::TreeNode("HPバー")) {
             ImGui::DragFloat2("位置", &hpBarPosition_.x, 0.1f);
@@ -93,4 +94,5 @@ void EnemyUI::Debug() {
             ImGui::TreePop();
         }
     }
+#endif // USE_IMGUI
 }

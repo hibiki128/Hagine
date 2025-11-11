@@ -890,19 +890,23 @@ void ImGuiManager::DisplayFPS() {
 
 // 現在のDockレイアウトを保存
 void ImGuiManager::BackupDockLayout() {
+#ifdef USE_IMGUI
     ImGuiContext *context = ImGui::GetCurrentContext();
     if (context) {
         // Dockingレイアウトを文字列として保存
         dockLayoutBackup_ = ImGui::SaveIniSettingsToMemory();
     }
+#endif // USE_IMGUI
 }
 
 // 保存したレイアウトを復元
 void ImGuiManager::RestoreDockLayout() {
+#ifdef USE_IMGUI
     if (!dockLayoutBackup_.empty()) {
         // メモリ上の設定を再適用
         ImGui::LoadIniSettingsFromMemory(dockLayoutBackup_.c_str(), dockLayoutBackup_.size());
     }
+#endif // USE_IMGUI
 }
 
 void ImGuiManager::SwitchToEditorMode() {
@@ -924,6 +928,7 @@ void ImGuiManager::SwitchToGameMode() {
 }
 
 void ImGuiManager::SaveCurrentLayout() {
+#ifdef USE_IMGUI
     // 現在のモードに応じたファイルにレイアウトを保存
     const char *iniFilePath = isEditorMode_ ? editorIniFilePath_.c_str() : gameIniFilePath_.c_str();
 
@@ -937,9 +942,11 @@ void ImGuiManager::SaveCurrentLayout() {
         fwrite(iniData, sizeof(char), size, f);
         fclose(f);
     }
+#endif // USE_IMGUI
 }
 
 void ImGuiManager::LoadLayoutForCurrentMode() {
+#ifdef USE_IMGUI
     // モードに応じたiniファイルをロード
     const char *iniFilePath = isEditorMode_ ? editorIniFilePath_.c_str() : gameIniFilePath_.c_str();
 
@@ -965,6 +972,7 @@ void ImGuiManager::LoadLayoutForCurrentMode() {
         fclose(f);
     }
     // ファイルが存在しない場合は新規に作成される
+#endif // USE_IMGUI
 }
 
 void ImGuiManager::ShowHelpWindow() {

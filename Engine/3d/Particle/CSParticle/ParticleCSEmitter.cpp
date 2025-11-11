@@ -599,6 +599,7 @@ void ParticleCSEmitter::LoadCloneSetting() {
 }
 
 void ParticleCSEmitter::DrawImGui() {
+#ifdef USE_IMGUI
     if (ImGui::BeginTabBar("EmitterTabBar")) {
         if (ImGui::BeginTabItem(name_.c_str())) {
             ImGuiStyle &style = ImGui::GetStyle();
@@ -989,4 +990,5 @@ void ParticleCSEmitter::DrawImGui() {
         }
         ImGui::EndTabBar();
     }
+#endif // USE_IMGUI
 }

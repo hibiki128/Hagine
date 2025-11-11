@@ -1,4 +1,4 @@
- #include "GameScene.h"
+#include "GameScene.h"
 
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
@@ -144,11 +144,11 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
+#ifdef USE_IMGUI
     playerUI_->Debug();
     enemyUI_->Debug();
     player_ptr->Debug();
     enemy_ptr->Debug();
-
     // ビヘイビアツリーエディターの表示
     if (ImGui::CollapsingHeader("BehaviorTree")) {
         enemy_ptr->DrawBehaviorTreeEditor();
@@ -157,6 +157,7 @@ void GameScene::AddObjectSetting() {
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
     }
+#endif // USE_IMGUI
 }
 
 void GameScene::AddParticleSetting() {

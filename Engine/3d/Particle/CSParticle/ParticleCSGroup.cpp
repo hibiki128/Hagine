@@ -367,6 +367,7 @@ uint32_t ParticleCSGroup::GetAliveParticleCount() {
 }
 
 void ParticleCSGroup::DrawImGui() {
+#ifdef USE_IMGUI
     if (!settingsData_)
         return;
 
@@ -580,4 +581,5 @@ void ParticleCSGroup::DrawImGui() {
     } else {
         ImGui::PopStyleColor(3);
     }
+#endif // USE_IMGUI
 }

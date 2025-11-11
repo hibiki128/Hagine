@@ -521,6 +521,7 @@ float Player::CalculateShortestRotation(float from, float to) {
 }
 
 void Player::Debug() {
+#ifdef USE_IMGUI
     // 現在のステート名を取得
     const char *currentStateName = "Unknown";
     for (const auto &[named, state] : states_) {
@@ -589,6 +590,7 @@ void Player::Debug() {
     if (!isAlive_) {
         deathStaging_->imgui();
     }
+#endif // USE_IMGUI
 }
 
 void Player::ChangeRush() {

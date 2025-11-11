@@ -175,9 +175,11 @@ void StartCamera::Move() {
 }
 
 void StartCamera::imgui() {
+#ifdef USE_IMGUI
     ImGui::Begin("StartCamera");
     ImGui::DragFloat("Speed", &speed_, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat3("Center", &centerPos_.x, 0.1f, -100.0f, 100.0f);
     ImGui::DragFloat("Radius", &radius_, 0.1f, 1.0f, 200.0f);
     ImGui::End();
+#endif // USE_IMGUI
 }

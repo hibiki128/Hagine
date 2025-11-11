@@ -96,3 +96,24 @@ class RetreatNode : public BehaviorNode {
     float speed_ = 7.0f;
     float retreatDistance_ = 5.0f;
 };
+
+/// <summary>
+/// ガード行動ノード
+/// 一定時間ガード状態を維持し、ダメージを軽減する
+/// </summary>
+class GuardNode : public BehaviorNode {
+  public:
+    NodeStatus Execute(Enemy &enemy, float deltaTime) override;
+    const char *GetNodeName() const override { return "Guard"; }
+
+    float GetGuardDuration() const { return guardDuration_; }
+    void SetGuardDuration(float duration) { guardDuration_ = duration; }
+    float GetDamageReduction() const { return damageReduction_; }
+    void SetDamageReduction(float reduction) { damageReduction_ = reduction; }
+
+  private:
+    float guardDuration_ = 2.0f;    // ガード継続時間(秒)
+    float damageReduction_ = 0.85f; // ダメージ軽減率(85%)
+    float guardTimer_ = 0.0f;       // ガード経過時間
+    bool guardStarted_ = false;     // ガード開始フラグ
+};
