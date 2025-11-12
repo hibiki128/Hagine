@@ -87,8 +87,9 @@ void GameScene::Update() {
 
     fadeOut_->Update();
 
-    // player_ptr->SetStart(true);
 #ifdef _DEBUG
+    player_ptr->SetStart(true);
+    enemy_ptr->SetStart(true);
 #else
     if (startCamera_->IsComplete()) {
         player_ptr->SetStart(true);
@@ -177,6 +178,7 @@ void GameScene::CameraUpdate() {
             debugCamera_->Update();
         } else {
             followCamera_->Update();
+#ifndef _DEBUG
             if (!startCamera_->IsComplete()) {
                 if (fadeOut_->IsFinish()) {
                     startCamera_->Move();
@@ -187,10 +189,14 @@ void GameScene::CameraUpdate() {
                 vp_.matView_ = startCamera_->GetViewProjection().matView_;
                 vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
             } else {
+#endif // !_DEBUG
+
                 vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
                 vp_.matView_ = followCamera_->GetViewProjection().matView_;
                 vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
+#ifndef _DEBUG
             }
+#endif // !_DEBUG
         }
     } else {
         if (!deathCamera_->IsComplete() && !deathCameraStarted_) {

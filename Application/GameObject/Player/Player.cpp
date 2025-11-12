@@ -242,6 +242,10 @@ void Player::ChangeState(const std::string &stateName) {
 }
 
 void Player::OnCollisionEnter(Collider *other) {
+    
+}
+
+void Player::OnCollision(Collider *other) {
     if (dynamic_cast<Enemy *>(other)) {
         // 無敵状態でなければダメージを受ける
         if (!isInvincible_) {

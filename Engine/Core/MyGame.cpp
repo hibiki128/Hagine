@@ -13,7 +13,11 @@ void MyGame::Initialize() {
     sceneFactory_ = new SceneFactory();
     // シーンマネージャに最初のシーンをセット
     sceneManager_->SetSceneFactory(sceneFactory_);
+#ifdef _DEBUG
+    sceneManager_->NextSceneReservation("GAME");
+#else
     sceneManager_->NextSceneReservation("TITLE");
+#endif // _DEBUG 
     // -----------------------
 }
 
@@ -31,9 +35,9 @@ void MyGame::Update() {
     // -----ゲーム固有の処理-----
 #ifdef _DEBUG
     if (imGuiManager_->GetEditorMode()) {
-        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()},10000.0f);
+        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()}, 10000.0f);
     } else {
-        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(winApp_->kClientWidth, winApp_->kClientHeight)},10000.0f);
+        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(winApp_->kClientWidth, winApp_->kClientHeight)}, 10000.0f);
     }
 
     imGuiManager_->Begin();

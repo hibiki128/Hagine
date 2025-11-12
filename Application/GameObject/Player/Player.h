@@ -72,6 +72,12 @@ class Player : public BaseObject {
     void OnCollisionEnter([[maybe_unused]] Collider *other)override;
 
     /// <summary>
+    /// 当たってる間
+    /// </summary>
+    /// <param name="other"></param>
+    void OnCollision([maybe_unused] Collider *other) override;
+
+    /// <summary>
     /// 方向情報を更新
     /// </summary>
     void DirectionUpdate();
@@ -255,7 +261,7 @@ class Player : public BaseObject {
     float maxHP_ = 100.0f;
     float energy_ = 100.0f;    // 現在のエネルギー
     float maxEnergy_ = 100.0f; // 最大エネルギー
-    float energyRecoveryRate_ = 0.1f; // エネルギー回復速度(秒速)
+    float energyRecoveryRate_ = 0.01f; // エネルギー回復速度(秒速)
     float energyRecoveryDelay_ = 1.0f; // 回復開始までの遅延時間
     float timeSinceLastShot_ = 0.0f;   // 最後に撃ってからの経過時間
 
