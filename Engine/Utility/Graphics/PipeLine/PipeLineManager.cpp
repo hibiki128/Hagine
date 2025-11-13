@@ -1085,8 +1085,6 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRenderRootSig
         return CreateFocusLineRootSignature();
     case ShaderMode::kPixelate:
         return CreatePixelateRootSignature();
-    case ShaderMode::kTransition:
-        return CreateTransitionRootSignature();
     default:
         return CreateBaseRootSignature();
     }
@@ -1123,8 +1121,6 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRenderGraphic
         return CreateFocusLineGraphicsPipeLine(rootSignature);
     case ShaderMode::kPixelate:
         return CreatePixelateGraphicsPipeLine(rootSignature);
-    case ShaderMode::kTransition:
-        return CreateTransitionGraphicsPipeLine(rootSignature);
     default:
         return CreateNoneGraphicsPipeLine(rootSignature);
     }
@@ -1829,10 +1825,6 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreatePixelateRootS
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateTransitionRootSignature() {
-    return CreateCommonRootSignature(true);
-}
-
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/CopyImage.PS.hlsl", rootSignature);
@@ -1896,9 +1888,4 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFocusLineGrap
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreatePixelateGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Pixelate.PS.hlsl", rootSignature);
-}
-
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateTransitionGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
-    SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Transition.PS.hlsl", rootSignature);
 }
