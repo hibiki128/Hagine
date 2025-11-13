@@ -1,5 +1,4 @@
 #pragma once
-#include "Application/Staging/Transition/FadeOut.h"
 #include "BaseScene.h"
 
 /// <summary>

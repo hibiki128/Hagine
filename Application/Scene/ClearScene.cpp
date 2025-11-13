@@ -8,8 +8,6 @@ void ClearScene::Initialize() {
     vp_.Initialize();
     vp_.translation_ = {12.0f, -4.0f, -30.0f};
 
-    BaseObjectManager::GetInstance()->LoadAll("ClearScene");
-
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
 }

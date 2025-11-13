@@ -1,10 +1,5 @@
 #pragma once
 #include "BaseScene.h"
-#include "Easing.h"
-#include "Object/Base/BaseObject.h"
-
-#include "SkyBox/SkyBox.h"
-#include"Application/UI/Scene/Title/TitleUI.h"
 
 class TitleScene : public BaseScene {
   public:
@@ -86,13 +81,4 @@ class TitleScene : public BaseScene {
 
     ViewProjection vp_;
     std::unique_ptr<DebugCamera> debugCamera_;
-
-    float time_ = 0.0f;
-    const float kMaxTime_ = 2.0f;
-    bool firstMove_ = false;
-    bool secondMove_ = false;
-
-    SkyBox *skyBox_ = nullptr;
-
-    std::unique_ptr<TitleUI> titleUI_ = nullptr;
 };

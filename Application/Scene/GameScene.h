@@ -1,18 +1,5 @@
 #pragma once
-#include "Application/Camera/FollowCamera.h"
-#include"Application/Camera/StartCamera.h"
-#include "Application/GameObject/Enemy/Enemy.h"
-#include "Application/GameObject/Field/Ground/Ground.h"
-#include "Application/GameObject/Field/SkyDome/SkyDome.h"
-#include "Application/GameObject/Player/Player.h"
-#include "Application/UI/Enemy/EnemyUI.h"
-#include "Application/UI/Player/PlayerUI.h"
 #include "BaseScene.h"
-#include "SkyBox/SkyBox.h"
-#include <Application/GameObject/Enemy/BehaviorTree/Editor/BehaviorTreeEditor.h>
-#include <Application/Staging/Transition/FadeOut.h>
-#include <Application/Camera/DeathCamera.h>
-
 class GameScene : public BaseScene {
   public:
     /// ===================================================
@@ -92,38 +79,4 @@ class GameScene : public BaseScene {
 
     ViewProjection vp_;
     std::unique_ptr<DebugCamera> debugCamera_;
-
-    // プレイヤー
-    std::unique_ptr<Player> player_;
-
-    // 敵
-    std::unique_ptr<Enemy> enemy_;
-
-    // 追従カメラ
-    std::unique_ptr<FollowCamera> followCamera_;
-
-    // 開始時カメラ
-    std::unique_ptr<StartCamera> startCamera_;
-
-    // 死亡時カメラ
-    std::unique_ptr<DeathCamera> deathCamera_;
-
-    // 地面
-    std::unique_ptr<Ground> ground_;
-
-    std::unique_ptr<PlayerUI> playerUI_;
-    std::unique_ptr<EnemyUI> enemyUI_;
-
-    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
-
-    std::unique_ptr<FadeOut> fadeOut_;
-
-    SkyBox *skyBox_ = nullptr;
-
-    Enemy *enemy_ptr = nullptr;
-    Player *player_ptr = nullptr;
-
-    bool isGameOver_ = false;
-    bool deathCameraStarted_ = false;
-    float GameOverTimer_ = 0.0f;
 };

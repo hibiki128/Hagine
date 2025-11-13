@@ -336,17 +336,6 @@ void Framework::Update() {
 }
 
 void Framework::LoadResource() {
-    particleEditor_->AddParticleEmitter("fire");
-    particleEditor_->AddParticleEmitter("hitEmitter");
-    particleEditor_->AddParticleEmitter("chageEmitter");
-    particleEditor_->AddParticleEmitter("bulletEmitter");
-    particleEditor_->AddParticleEmitter("chageBullet");
-    particleEditor_->AddParticleEmitter("RushEmitter");
-    particleEditor_->AddParticleEmitter("punchEmitter");
-    particleCSEditor_->AddParticleEmitter("playerAura");
-    particleCSEditor_->AddParticleEmitter("FadeOut");
-    particleCSEditor_->AddParticleEmitter("death");
-    particleCSEditor_->AddParticleEmitter("death_arm");
 }
 
 void Framework::PlaySounds() {

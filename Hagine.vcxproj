@@ -107,22 +107,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\BehaviorNode\BehaviorNode.cpp" />
-    <ClCompile Include="Application\Camera\FollowCamera.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp" />
-    <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp" />
-    <ClCompile Include="Application\GameObject\Field\SkyDome\SkyDome.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Player.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Air\PlayerStateAir.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Fly\PlayerStateFlyIdle.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Fly\PlayerStateFlyMove.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateIdle.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateJump.cpp" />
-    <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateMove.cpp" />
     <ClCompile Include="Application\Scene\ClearScene.cpp" />
     <ClCompile Include="Application\Scene\DemoScene.cpp" />
     <ClCompile Include="Application\Scene\GameScene.cpp" />
@@ -132,12 +116,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Utility\MotionEditor\MotionEditor.cpp" />
     <ClCompile Include="Application\Utility\Shake\Shake.cpp" />
     <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp" />
-    <ClCompile Include="Application\UI\Enemy\EnemyUI.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
-    <ClCompile Include="Application\Staging\Death\DeathStaging.cpp" />
-    <ClCompile Include="Application\Camera\DeathCamera.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.cpp" />
     <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleStruct.cpp" />
@@ -184,8 +162,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="externals\imgui\imgui_tables.cpp" />
     <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="Application\Staging\Transition\FadeOut.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\Utility\Debug\ResourceLeakChecker\D3DResourceLeakChecker.cpp" />
     <ClCompile Include="Engine\Base\DirectXCommon.cpp" />
@@ -218,15 +194,11 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\OffScreen\RendererBuffer.cpp" />
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParameters.cpp" />
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectDataManager.cpp" />
-    <ClCompile Include="application\GameObject\Player\State\Action\PlayerStateRush.cpp" />
-    <ClCompile Include="Application\UI\Player\PlayerUI.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSEmitter.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSGroup.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSGroupManager.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSEditor.cpp" />
     <ClCompile Include="Engine\2d\SpriteManager.cpp" />
-    <ClCompile Include="Application\UI\Scene\Title\TitleUI.cpp" />
-    <ClCompile Include="Application\Camera\StartCamera.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".claudiaideconfig" />
@@ -274,22 +246,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
-    <ClInclude Include="Application\Camera\FollowCamera.h" />
-    <ClInclude Include="Application\GameObject\Enemy\Enemy.h" />
-    <ClInclude Include="Application\GameObject\Field\Ground\Ground.h" />
-    <ClInclude Include="Application\GameObject\Field\SkyDome\SkyDome.h" />
-    <ClInclude Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.h" />
-    <ClInclude Include="Application\GameObject\Player\Bullet\PlayerBullet.h" />
-    <ClInclude Include="Application\GameObject\Player\Player.h" />
-    <ClInclude Include="Application\GameObject\Player\PlayerData.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Air\PlayerStateAir.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Base\PlayerBaseState.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Fly\PlayerStateFlyIdle.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Fly\PlayerStateFlyMove.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateIdle.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateJump.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Ground\PlayerStateMove.h" />
     <ClInclude Include="Application\Scene\ClearScene.h" />
     <ClInclude Include="Application\Scene\DemoScene.h" />
     <ClInclude Include="Application\Scene\GameScene.h" />
@@ -299,13 +255,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h" />
     <ClInclude Include="Application\Utility\Shake\Shake.h" />
     <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
-    <ClInclude Include="Application\UI\Enemy\EnemyUI.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\BehaviorNode\BehaviorNode.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.h" />
-    <ClInclude Include="Application\Staging\Death\DeathStaging.h" />
-    <ClInclude Include="Application\Camera\DeathCamera.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.h" />
     <ClInclude Include="Engine\2d\SpriteStruct.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
@@ -391,20 +340,13 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\OffScreen\RendererBuffer.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParameters.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h" />
-    <ClInclude Include="Application\GameObject\Player\Hand\PlayerHand.h" />
-    <ClInclude Include="application\GameObject\Player\State\Action\PlayerStateRush.h" />
-    <ClInclude Include="Application\UI\Player\PlayerUI.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSEmitter.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSGroup.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSGroupManager.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSEditor.h" />
-    <ClInclude Include="Application\Staging\Transition\FadeOut.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
-    <ClInclude Include="Application\UI\Scene\Title\TitleUI.h" />
-    <ClInclude Include="Application\Camera\StartCamera.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\OffScreen\Pixelate.PS.hlsl">
@@ -430,10 +372,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="Resources\shaders\OffScreen\Transition.PS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Resources\shaders\Particle\CSParticle\EmitParticle.CS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>

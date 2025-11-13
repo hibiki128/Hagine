@@ -7,22 +7,11 @@ void TitleScene::Initialize() {
     spCommon_ = SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
-    LightGroup::GetInstance()->LoadLightData("TitleScene");
-    vp_.eulerRotation_ = {
-        degreesToRadians(26.3f),
-        degreesToRadians(-122.7f),
-        degreesToRadians(0.0f)};
-    vp_.Initialize("CurrentCamera");
-    BaseObjectManager::GetInstance()->LoadAll("TitleScene");
+    vp_.Initialize();
+    vp_.translation_ = {12.0f, -4.0f, -30.0f};
+
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
-    skyBox_ = SkyBox::GetInstance();
-    skyBox_->Initialize("game/skybox.dds");
-
-    titleUI_ = std::make_unique<TitleUI>();
-    titleUI_->Initialize();
-    firstMove_ = false;
-    secondMove_ = false;
 }
 
 void TitleScene::Finalize() {
@@ -35,46 +24,22 @@ void TitleScene::Update() {
 
     // シーン切り替え
     ChangeScene();
-    time_ += Frame::DeltaTime();
-    if (time_ >= kMaxTime_ && !firstMove_) {
-        vp_.EaseCameraMove(EasingType::InCubic, "TitleMovedCamera", 1.0f);
-        firstMove_ = true;
-    }
-    if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
-        vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
-        secondMove_ = true;
-    }
-    titleUI_->Update();
 }
 
 void TitleScene::Draw() {
     /// -------描画処理開始-------
-    skyBox_->Draw(vp_);
-
-    BaseObjectManager::GetInstance()->Draw(vp_);
-
-    SpriteManager::GetInstance()->DrawAll();
-
-    titleUI_->Draw(vp_);
-
+  
     /// -------描画処理終了-------
 }
 
 void TitleScene::DrawForOffScreen() {
     /// -------描画処理開始-------
 
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
-    //-----Spriteの描画開始-----
-
-    //------------------------
-
     /// -------描画処理終了-------
 }
 
 void TitleScene::AddSceneSetting() {
     debugCamera_->imgui();
-    vp_.ShowDebugInfo();
 }
 
 void TitleScene::AddObjectSetting() {
@@ -84,14 +49,13 @@ void TitleScene::AddParticleSetting() {
 }
 
 void TitleScene::CameraUpdate() {
-    debugCamera_->Update();
+    if (debugCamera_->GetActive()) {
+        debugCamera_->Update();
+    } else {
+        vp_.UpdateMatrix();
+    }
 }
 
 void TitleScene::ChangeScene() {
-    if (secondMove_ && !vp_.GetIsCameraMove()&&titleUI_->GetIsFinish()) {
-        SceneTransition::GetInstance()->SetUseTransition(false);
-        sceneManager_->NextSceneReservation("GAME");
-    }
-#ifndef _DEBUG
-#endif // !_DEBUG
+
 }
