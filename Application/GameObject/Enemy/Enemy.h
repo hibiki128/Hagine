@@ -191,7 +191,7 @@ class Enemy : public BaseObject {
     bool canJump_ = false;
     bool isLockOn_ = false;
     bool isGrounded_ = true;
-    bool isStop_ = false;
+    bool isStop_ = true;
     bool started_ = false;
     bool drawShadow_ = true;
 
