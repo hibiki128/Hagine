@@ -125,4 +125,6 @@ class GameScene : public BaseScene {
     bool isGameOver_ = false;
     bool deathCameraStarted_ = false;
     float GameOverTimer_ = 0.0f;
+
+    float ClearTimer_ = 0.0f;
 };

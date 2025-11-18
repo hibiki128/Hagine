@@ -70,8 +70,13 @@ class SceneManager {
     /// </summary>
     void SceneChange();
 
+    float GetClearTime() const { return ClaerTime_; }
+    float GetHP() const { return HP_; }
+
     BaseScene *GetBaseScene() { return scene_; }
     std::string GetCurrentSceneName() const { return currentSceneName_; }
+    void SetClearTime(float time) { ClaerTime_ = time; }
+    void SetHP(float hp) { HP_ = hp; }
 
   private:
     // 今のシーン(実行中のシーン)
@@ -86,4 +91,7 @@ class SceneManager {
 
     bool transitionEnd = false;
     bool firstChange = false;
+
+    float ClaerTime_ = 0.0f;
+    float HP_ = 0.0f;
 };

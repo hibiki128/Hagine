@@ -177,7 +177,7 @@ class Enemy : public BaseObject {
     Vector3 acceleration_{};
     Player *target_ = nullptr;
 
-    float HP_ = 100.0f;
+    float HP_ = 1.0f;
     float maxHP_ = 100.0f;
     int damage_ = 0;
     bool isGuarding_ = false; // ガード状態

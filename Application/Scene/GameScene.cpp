@@ -73,6 +73,10 @@ void GameScene::Initialize() {
 void GameScene::Finalize() {
     BaseScene::Finalize();
     fadeOut_->Finalize();
+    sceneManager_->SetClearTime(ClearTimer_);
+    if (player_ptr->GetIsAlive()) {
+        sceneManager_->SetHP(player_ptr->GetHP());
+    }
 }
 
 void GameScene::Update() {
@@ -97,6 +101,9 @@ void GameScene::Update() {
     if (startCamera_->IsComplete()) {
         player_ptr->SetStart(true);
         enemy_ptr->SetStart(true);
+        if (enemy_ptr->GetIsAlive()) {
+            ClearTimer_ += Frame::DeltaTime();
+        }
     }
 #endif // _DEBUG
 

@@ -71,4 +71,7 @@ class BaseScene {
   protected:
     // シーンマネージャ
     SceneManager *sceneManager_ = nullptr;
+
+    float ClearTime_ = 0.0f;
+    float HP_ = 0.0f;
 };

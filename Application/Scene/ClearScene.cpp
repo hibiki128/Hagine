@@ -33,6 +33,13 @@ void ClearScene::Initialize() {
     resultStaging_->Initialize();
     resultUI_->Initialize();
     vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
+
+    /// ===================================================
+    /// セット
+    /// ===================================================
+    resultUI_->SetClearTime(sceneManager_->GetClearTime());
+    resultUI_->SetHP(sceneManager_->GetHP());
+
 }
 
 void ClearScene::Finalize() {
@@ -99,8 +106,8 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
-    // if (input_->TriggerKey(DIK_SPACE)) {
-    //     // シーンを変更
-    //     sceneManager_->NextSceneReservation("TITLE");
-    // }
+     if (input_->TriggerKey(DIK_SPACE)) {
+         // シーンを変更
+         sceneManager_->NextSceneReservation("GAME");
+     }
 }

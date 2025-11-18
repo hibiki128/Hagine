@@ -1,8 +1,17 @@
 {
     "sprite_0": "ResultBackGround",
     "sprite_1": "Result",
+    "sprite_10": "HpHund",
+    "sprite_11": "HpTens",
+    "sprite_12": "HpOnes",
+    "sprite_13": "percent",
     "sprite_2": "ClearTime",
     "sprite_3": "HP",
     "sprite_4": "Rank",
-    "sprite_count": 5
+    "sprite_5": "minTens",
+    "sprite_6": "minOnes",
+    "sprite_7": "coron",
+    "sprite_8": "secTens",
+    "sprite_9": "secOnes",
+    "sprite_count": 14
 }
