@@ -1,5 +1,6 @@
 #pragma once
 #include "Sprite.h"
+#include <Graphics/PipeLine/PipeLineManager.h>
 #include <functional>
 #include <memory>
 #include <string>
@@ -57,6 +58,7 @@ struct SpriteData {
     std::function<void(SpriteData &, float)> updateFunction; // カスタム更新関数
     bool isVisible = true;                                   // 表示フラグ
     bool isBackMost = false;                                 // 背面フラグ
+    BlendMode blendMode = BlendMode::kNormal;
 
     /// <summary>
     /// コンストラクタ
@@ -224,6 +226,13 @@ class SpriteManager {
     /// </summary>
     /// <param name="folderName">設定するフォルダ名</param>
     void SetSaveFolder(const std::string &folderName);
+
+    /// <summary>
+    /// スプライトのブレンドモードを設定
+    /// </summary>
+    /// <param name="name">スプライト名</param>
+    /// <param name="blendMode">ブレンドモード</param>
+    void SetSpriteBlendMode(const std::string &name, BlendMode blendMode);
 
     /// <summary>
     /// すべてのスプライトを保存

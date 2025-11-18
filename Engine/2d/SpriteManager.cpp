@@ -1,9 +1,11 @@
 #include "SpriteManager.h"
+#include "SpriteCommon.h"
 #include "WinApp.h"
 #include "myMath.h"
 #include <Data/DataHandler.h>
 #include <ShowFolder/ShowFolder.h>
 #include <filesystem>
+
 namespace fs = std::filesystem;
 
 SpriteManager *SpriteManager::instance = nullptr;
@@ -54,8 +56,17 @@ void SpriteManager::UnregisterSprite(const std::string &name) {
 void SpriteManager::DrawAll() {
     for (auto &spriteData : sprites_) {
         if (spriteData->isVisible) {
+            // ブレンドモードを設定してから描画
+            SpriteCommon::GetInstance()->SetBlendMode(spriteData->blendMode);
             spriteData->sprite->Draw(spriteData->isBackMost);
         }
+    }
+}
+
+void SpriteManager::SetSpriteBlendMode(const std::string &name, BlendMode blendMode) {
+    auto spriteData = GetSprite(name);
+    if (spriteData) {
+        spriteData->blendMode = blendMode;
     }
 }
 
@@ -522,6 +533,15 @@ void SpriteManager::DrawSpriteManager() {
                         managedSprite->sprite->SetRotation(rotation);
                     }
 
+                    ImGui::Text("ブレンドモード:");
+                    const char *blendModeNames[] = {
+                        "なし", "通常", "加算", "減算", "乗算", "スクリーン"};
+                    int currentBlendMode = static_cast<int>(managedSprite->blendMode);
+                    ImGui::SetNextItemWidth(200);
+                    if (ImGui::Combo("##blendmode", &currentBlendMode, blendModeNames, IM_ARRAYSIZE(blendModeNames))) {
+                        managedSprite->blendMode = static_cast<BlendMode>(currentBlendMode);
+                    }
+
                     ImGui::TreePop();
                 }
 
@@ -734,6 +754,7 @@ void SpriteManager::SaveAllSprites() {
         data->Save("rotation", rotation);
         data->Save("anchor", anchor);
         data->Save("uvTransform", uvTransform);
+        data->Save("blendMode", static_cast<int>(spriteData->blendMode));
     }
 }
 
@@ -764,6 +785,7 @@ void SpriteManager::LoadAllSprites() {
         float rotation = data->Load<float>("rotation", 0.0f);
         Vector2 anchor = data->Load<Vector2>("anchor", {0.0f, 0.0f});
         Matrix4x4 uvTransform = data->Load<Matrix4x4>("uvTransform", MakeIdentity4x4());
+        int blendModeInt = data->Load<int>("blendMode", static_cast<int>(BlendMode::kNormal));
 
         SpriteTransform transform;
         transform.position = position;
@@ -778,6 +800,7 @@ void SpriteManager::LoadAllSprites() {
             sprite->sprite->SetSize(size);
             sprite->sprite->SetRotation(rotation);
             sprite->sprite->SetUVTransform(uvTransform);
+            sprite->blendMode = static_cast<BlendMode>(blendModeInt);
         }
     }
 

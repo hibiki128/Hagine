@@ -121,7 +121,6 @@ void Sprite::Update(bool isBackMost) {
 
 void Sprite::Draw(bool isBackMost) {
     Update(isBackMost);
-    SpriteCommon::GetInstance()->DrawCommonSetting();
 
     spriteCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
     spriteCommon_->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&indexBufferView);

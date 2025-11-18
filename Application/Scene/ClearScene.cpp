@@ -28,6 +28,8 @@ void ClearScene::Initialize() {
     /// ===================================================
     BaseObjectManager::GetInstance()->LoadAll("ClearScene");
     LightGroup::GetInstance()->LoadLightData("GameLight");
+    SpriteManager::GetInstance()->SetSaveFolder("Result");
+    SpriteManager::GetInstance()->LoadAllSprites();
 
     /// ===================================================
     /// ポインタ共有
@@ -72,11 +74,14 @@ void ClearScene::Update() {
 
 void ClearScene::Draw() {
     /// -------描画処理開始-------
+
     BaseObjectManager::GetInstance()->Draw(vp_);
 
     skyBox_->Draw(vp_);
 
     ground_->Draw(vp_);
+
+    SpriteManager::GetInstance()->DrawAll();
 
     /// -------描画処理終了-------
 }

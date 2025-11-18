@@ -80,6 +80,7 @@ void SceneTransition::Update() {
 }
 
 void SceneTransition::Draw() {
+    SpriteCommon::GetInstance()->DrawCommonSetting();
     // トランジションを使用しない場合は描画しない
     if (!useTransition) {
         return;
