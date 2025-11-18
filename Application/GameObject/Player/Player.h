@@ -75,7 +75,7 @@ class Player : public BaseObject {
     /// 当たってる間
     /// </summary>
     /// <param name="other"></param>
-    void OnCollision([maybe_unused] Collider *other) override;
+    void OnCollision([[maybe_unused]] Collider *other) override;
 
     /// <summary>
     /// 方向情報を更新

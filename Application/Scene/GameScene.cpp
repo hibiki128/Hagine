@@ -13,6 +13,9 @@ void GameScene::Initialize() {
     vp_.Initialize();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
+    /// ===================================================
+    /// インスタンス生成
+    /// ===================================================
     debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();

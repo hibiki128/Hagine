@@ -1,6 +1,8 @@
 #pragma once
+#include "Application/GameObject/Field/Ground/Ground.h"
 #include "Application/Staging/Transition/FadeOut.h"
 #include "BaseScene.h"
+#include "SkyBox/SkyBox.h"
 
 /// <summary>
 /// クリア画面のシーンクラス
@@ -85,4 +87,15 @@ class ClearScene : public BaseScene {
     ViewProjection vp_;
 
     std::unique_ptr<DebugCamera> debugCamera_;
+
+    // 地面
+    std::unique_ptr<Ground> ground_;
+
+    BaseObject *RightHand_ = nullptr;
+    BaseObject *LeftHand_ = nullptr;
+
+    SkyBox *skyBox_ = nullptr;
+
+    bool secondMove_ = false;
+    bool motionStarted_ = false;
 };

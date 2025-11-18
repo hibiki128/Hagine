@@ -3,15 +3,14 @@
 #include"Application/Camera/StartCamera.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Field/Ground/Ground.h"
-#include "Application/GameObject/Field/SkyDome/SkyDome.h"
 #include "Application/GameObject/Player/Player.h"
 #include "Application/UI/Enemy/EnemyUI.h"
 #include "Application/UI/Player/PlayerUI.h"
-#include "BaseScene.h"
-#include "SkyBox/SkyBox.h"
 #include <Application/GameObject/Enemy/BehaviorTree/Editor/BehaviorTreeEditor.h>
 #include <Application/Staging/Transition/FadeOut.h>
 #include <Application/Camera/DeathCamera.h>
+#include "SkyBox/SkyBox.h"
+#include "BaseScene.h"
 
 class GameScene : public BaseScene {
   public:

@@ -6,10 +6,10 @@
     "showGizmoView": true,
     "showHierarchyView": false,
     "showLightView": false,
-    "showMotionEditorView": false,
-    "showObjectView": true,
+    "showMotionEditorView": true,
+    "showObjectView": false,
     "showOfScreenView": false,
-    "showParticleView": true,
+    "showParticleView": false,
     "showSceneView": true,
     "showShortcutWindow": false,
     "showSpriteManagerView": false
