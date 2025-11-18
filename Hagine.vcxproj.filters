@@ -155,6 +155,8 @@
     <ClCompile Include="Application\UI\Scene\Title\TitleUI.cpp" />
     <ClCompile Include="Application\Camera\StartCamera.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp" />
+    <ClCompile Include="Application\UI\Scene\Result\ResultUI.cpp" />
+    <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
@@ -288,6 +290,8 @@
     <ClInclude Include="Application\UI\Scene\Title\TitleUI.h" />
     <ClInclude Include="Application\Camera\StartCamera.h" />
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h" />
+    <ClInclude Include="Application\UI\Scene\Result\ResultUI.h" />
+    <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

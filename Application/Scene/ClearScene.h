@@ -1,6 +1,8 @@
 #pragma once
 #include "Application/GameObject/Field/Ground/Ground.h"
+#include "Application/Staging/Result/ResultStaging.h"
 #include "Application/Staging/Transition/FadeOut.h"
+#include "Application/UI/Scene/Result/ResultUI.h"
 #include "BaseScene.h"
 #include "SkyBox/SkyBox.h"
 
@@ -91,11 +93,11 @@ class ClearScene : public BaseScene {
     // 地面
     std::unique_ptr<Ground> ground_;
 
-    BaseObject *RightHand_ = nullptr;
-    BaseObject *LeftHand_ = nullptr;
+    // リザルト演出
+    std::unique_ptr<ResultStaging> resultStaging_;
+
+    // リザルトUI
+    std::unique_ptr<ResultUI> resultUI_;
 
     SkyBox *skyBox_ = nullptr;
-
-    bool secondMove_ = false;
-    bool motionStarted_ = false;
 };

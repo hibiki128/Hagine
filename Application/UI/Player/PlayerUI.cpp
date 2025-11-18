@@ -1,4 +1,5 @@
 #include "PlayerUI.h"
+#include"SpriteCommon.h"
 
 void PlayerUI::Init(Player *player) {
     player_ = player;
@@ -42,6 +43,7 @@ void PlayerUI::Update() {
 }
 
 void PlayerUI::Draw() {
+    SpriteCommon::GetInstance()->DrawCommonSetting();
     if (player_) {
         // バーフレームの描画
         if (barFrame_) {

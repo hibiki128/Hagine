@@ -9,10 +9,18 @@ void ClearScene::Initialize() {
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
     /// ===================================================
+    /// ロード
+    /// ===================================================
+    BaseObjectManager::GetInstance()->LoadAll("ClearScene");
+    LightGroup::GetInstance()->LoadLightData("GameLight");
+
+    /// ===================================================
     /// インスタンス生成
     /// ===================================================
     debugCamera_ = std::make_unique<DebugCamera>();
     ground_ = std::make_unique<Ground>();
+    resultStaging_ = std::make_unique<ResultStaging>();
+    resultUI_ = std::make_unique<ResultUI>();
     skyBox_ = SkyBox::GetInstance();
 
     /// ===================================================
@@ -22,26 +30,9 @@ void ClearScene::Initialize() {
     ground_->Init("Ground");
     skyBox_->Initialize("game/skybox.dds");
     vp_.Initialize("P_StartCamera");
-
-    /// ===================================================
-    /// ロード
-    /// ===================================================
-    BaseObjectManager::GetInstance()->LoadAll("ClearScene");
-    LightGroup::GetInstance()->LoadLightData("GameLight");
-    SpriteManager::GetInstance()->SetSaveFolder("Result");
-    SpriteManager::GetInstance()->LoadAllSprites();
-
-    /// ===================================================
-    /// ポインタ共有
-    /// ===================================================
-    RightHand_ = BaseObjectManager::GetInstance()->GetObjectByName("sphere_1");
-    LeftHand_ = BaseObjectManager::GetInstance()->GetObjectByName("sphere_2");
-
-    /// ===================================================
-    /// 登録
-    /// ===================================================
-    MotionEditor::GetInstance()->Register(RightHand_);
-    MotionEditor::GetInstance()->Register(LeftHand_);
+    resultStaging_->Initialize();
+    resultUI_->Initialize();
+    vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
 }
 
 void ClearScene::Finalize() {
@@ -52,24 +43,18 @@ void ClearScene::Update() {
     // カメラ更新
     CameraUpdate();
 
+    if (!vp_.GetIsCameraMove()) {
+        resultUI_->SetIsStartEasing(true);
+    }
+
     // シーン切り替え
     ChangeScene();
 
     ground_->Update();
 
-    if (!secondMove_ && !motionStarted_) {
-        MotionEditor::GetInstance()->PlayFromFile(LeftHand_, "LeftPunch");
-        MotionEditor::GetInstance()->PlayFromFile(RightHand_, "RightBack");
-        motionStarted_ = true;
-    }
+    resultStaging_->Update();
 
-    if (!secondMove_ &&
-        MotionEditor::GetInstance()->IsAttackFinished(LeftHand_) &&
-        MotionEditor::GetInstance()->IsAttackFinished(RightHand_)) {
-        secondMove_ = true;
-        MotionEditor::GetInstance()->PlayFromFile(LeftHand_, "LeftBack");
-        MotionEditor::GetInstance()->PlayFromFile(RightHand_, "RightPunch");
-    }
+    resultUI_->Update();
 }
 
 void ClearScene::Draw() {
@@ -80,6 +65,8 @@ void ClearScene::Draw() {
     skyBox_->Draw(vp_);
 
     ground_->Draw(vp_);
+
+    resultUI_->Draw();
 
     SpriteManager::GetInstance()->DrawAll();
 
@@ -95,6 +82,7 @@ void ClearScene::DrawForOffScreen() {
 void ClearScene::AddSceneSetting() {
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
+    ImGui::Text("カメラがイージング中かどうか %s", vp_.GetIsCameraMove() ? "true" : "false");
 }
 
 void ClearScene::AddObjectSetting() {
@@ -108,7 +96,6 @@ void ClearScene::CameraUpdate() {
         debugCamera_->Update();
     } else {
         vp_.UpdateMatrix();
-        vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
     }
 }
 

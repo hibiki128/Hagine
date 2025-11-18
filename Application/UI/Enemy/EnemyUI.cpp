@@ -1,4 +1,5 @@
 #include "EnemyUI.h"
+#include "SpriteCommon.h"
 
 void EnemyUI::Init(Enemy *enemy) {
     enemy_ = enemy;
@@ -41,6 +42,7 @@ void EnemyUI::Update() {
 }
 
 void EnemyUI::Draw() {
+    SpriteCommon::GetInstance()->DrawCommonSetting();
     if (enemy_) {
         // バーフレームの描画
         if (barFrame_) {

@@ -2,14 +2,6 @@
 #include "type/Vector2.h"
 #include "type/Vector3.h"
 
-struct Easing {
-	float time;
-	float maxTime;
-	float incrementTime_;
-	float amplitude;
-	float period;
-};
-
 enum class EasingType {
     Linear,
     InSine, OutSine, InOutSine,
@@ -22,6 +14,54 @@ enum class EasingType {
     InBack, OutBack, InOutBack,
     InElastic, OutElastic, InOutElastic,
     InBounce, OutBounce, InOutBounce
+};
+
+template <typename T>
+struct EasingData {
+    T start;
+    T end;
+    T current;
+    float time;
+    float maxTime;
+    EasingType type;
+    bool isActive;
+
+    // コンストラクタ
+    EasingData()
+        : time(0.0f), maxTime(0.0f), type(EasingType::Linear), isActive(false) {}
+
+    EasingData(const T &startVal, const T &endVal, float duration, EasingType easingType = EasingType::Linear)
+        : start(startVal), end(endVal), current(startVal),
+          time(0.0f), maxTime(duration), type(easingType), isActive(true) {}
+
+    // イージングを更新して現在値を返す
+    T Update(float deltaTime) {
+        if (!isActive)
+            return current;
+
+        time += deltaTime;
+        if (time >= maxTime) {
+            time = maxTime;
+            isActive = false;
+        }
+
+        current = ApplyEasing(type, start, end, time, maxTime);
+        return current;
+    }
+
+    // イージングをリセット
+    void Reset(const T &newStart, const T &newEnd, float duration, EasingType easingType) {
+        start = newStart;
+        end = newEnd;
+        current = newStart;
+        time = 0.0f;
+        maxTime = duration;
+        type = easingType;
+        isActive = true;
+    }
+
+    // 完了しているか
+    bool IsFinished() const { return !isActive; }
 };
 
 class Quaternion;
