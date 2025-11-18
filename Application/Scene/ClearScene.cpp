@@ -82,7 +82,6 @@ void ClearScene::DrawForOffScreen() {
 void ClearScene::AddSceneSetting() {
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
-    ImGui::Text("カメラがイージング中かどうか %s", vp_.GetIsCameraMove() ? "true" : "false");
 }
 
 void ClearScene::AddObjectSetting() {

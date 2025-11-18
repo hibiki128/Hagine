@@ -1,4 +1,8 @@
 {
     "sprite_0": "ResultBackGround",
-    "sprite_count": 1
+    "sprite_1": "Result",
+    "sprite_2": "ClearTime",
+    "sprite_3": "HP",
+    "sprite_4": "Rank",
+    "sprite_count": 5
 }
