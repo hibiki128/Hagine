@@ -8,7 +8,7 @@ void TitleScene::Initialize() {
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
     vp_.Initialize();
-    vp_.translation_ = {12.0f, -4.0f, -30.0f};
+    vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
@@ -29,6 +29,8 @@ void TitleScene::Update() {
 void TitleScene::Draw() {
     /// -------描画処理開始-------
   
+    BaseObjectManager::GetInstance()->Draw(vp_);
+
     /// -------描画処理終了-------
 }
 

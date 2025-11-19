@@ -293,7 +293,7 @@ void MotionEditor::Update(float deltaTime) {
         if (it->second <= 0.0f) {
             // インターバル終了、当たり判定を無効化
             if (it->first) {
-                it->first->SetCollisionEnabled(false);
+                //it->first->SetCollisionEnabled(false);
             }
             it = attackEndIntervals_.erase(it);
         } else {
@@ -360,7 +360,7 @@ void MotionEditor::Update(float deltaTime) {
         motion.target->GetLocalScale() = Lerp(motion.actualStartScale, motion.actualEndScale, easedT);
 
         bool enable = motion.currentTime >= motion.colliderOnTime && motion.currentTime <= motion.colliderOffTime;
-        motion.target->SetCollisionEnabled(enable);
+        //motion.target->SetCollisionEnabled(enable);
     }
 
     CleanupFinishedTemporaryMotions();

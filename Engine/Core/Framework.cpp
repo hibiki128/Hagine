@@ -123,6 +123,10 @@ void Framework::Initialize() {
     collisionManager_->Initialize();
     ///-------------------------------------
 
+    ///-------TestCollisionManager--------
+    testCollisionManager_ = TestCollisionManager::GetInstance();
+    ///----------------------------------
+
     ///-------SceneManager--------
     sceneManager_ = SceneManager::GetInstance();
     sceneManager_->Initialize();
@@ -324,7 +328,9 @@ void Framework::Update() {
 
     spriteManager_->UpdateAll(Frame::DeltaTime());
 
-    collisionManager_->Update();
+   // collisionManager_->Update();
+
+    testCollisionManager_->Update();
 
     LightGroup::GetInstance()->Update(*sceneManager_->GetBaseScene()->GetViewProjection());
 

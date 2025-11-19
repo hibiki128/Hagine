@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "BaseObject.h"
+#include "Collider/TestCollisionManager.h"
 #include "Scene/SceneManager.h"
 #include "ShowFolder/ShowFolder.h"
 
@@ -12,7 +13,6 @@ void BaseObject::Init(const std::string objectName) {
     transform_->Initialize();
     // ライティングのセット
     isLighting_ = true;
-    isCollider = false;
     isAlive_ = true;
 }
 
@@ -214,11 +214,6 @@ void BaseObject::CreatePrimitiveModel(const PrimitiveType &type) {
     SetColor(ObjectDatas_->Load<Vector4>("color_" + std::to_string(0), {1.0f, 1.0f, 1.0f, 1.0f}), 0);
 
     AnimaLoadFromJson();
-}
-
-void BaseObject::AddCollider() {
-    colliders_.push_back(&Collider::AddCollider(objectName_));
-    isCollider = true;
 }
 
 void BaseObject::SaveParentChildRelationship() {
@@ -448,17 +443,108 @@ void BaseObject::AnimaLoadFromJson() {
 }
 
 void BaseObject::DebugCollider() {
-    for (auto &collider : colliders_) {
-        collider->OffsetImgui();
+#ifdef _DEBUG
+    if (colliders_.empty()) {
+        ImGui::Text("コライダーなし");
+        return;
     }
-}
 
-Vector3 BaseObject::GetCenterPosition() {
-    return GetWorldPosition();
-}
+    for (size_t i = 0; i < colliders_.size(); ++i) {
+        auto *collider = colliders_[i];
+        if (!collider)
+            continue;
 
-Quaternion BaseObject::GetCenterRotation() {
-    return GetWorldRotation();
+        ImGui::PushID(static_cast<int>(i));
+
+        if (ImGui::TreeNode(collider->GetName().c_str())) {
+            // コライダーの有効/無効
+            bool enabled = collider->IsEnabled();
+            if (ImGui::Checkbox("有効", &enabled)) {
+                collider->SetEnabled(enabled);
+            }
+
+            // 可視性
+            bool visible = collider->IsVisible();
+            if (ImGui::Checkbox("表示", &visible)) {
+                collider->SetVisible(visible);
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // タグ設定UI（新システム）
+            collider->ImGuiTagSettings();
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // 型に応じた詳細設定
+            if (auto *sphere = dynamic_cast<SphereCollider *>(collider)) {
+                ImGui::Text("【球体コライダー】");
+                float radius = sphere->GetRadius();
+                if (ImGui::DragFloat("半径", &radius, 0.1f, 0.1f, 100.0f)) {
+                    sphere->SetRadius(radius);
+                }
+
+                Vector3 offset = sphere->GetOffset();
+                if (ImGui::DragFloat3("オフセット", &offset.x, 0.1f)) {
+                    sphere->SetOffset(offset);
+                }
+            } else if (auto *aabb = dynamic_cast<AABBCollider *>(collider)) {
+                ImGui::Text("【AABBコライダー】");
+                Vector3 size = aabb->GetSize();
+                if (ImGui::DragFloat3("サイズ", &size.x, 0.1f, 0.1f, 100.0f)) {
+                    aabb->SetSize(size);
+                }
+
+                Vector3 offset = aabb->GetOffset();
+                if (ImGui::DragFloat3("オフセット", &offset.x, 0.1f)) {
+                    aabb->SetOffset(offset);
+                }
+            } else if (auto *obb = dynamic_cast<OBBCollider *>(collider)) {
+                ImGui::Text("【OBBコライダー】");
+                Vector3 size = obb->GetSize();
+                if (ImGui::DragFloat3("サイズ", &size.x, 0.1f, 0.1f, 100.0f)) {
+                    obb->SetSize(size);
+                }
+
+                Vector3 rotOffset = obb->GetRotationOffset();
+                if (ImGui::DragFloat3("回転オフセット", &rotOffset.x, 0.1f)) {
+                    obb->SetRotationOffset(rotOffset);
+                }
+
+                Vector3 scaleOffset = obb->GetScaleOffset();
+                if (ImGui::DragFloat3("スケールオフセット", &scaleOffset.x, 0.1f)) {
+                    obb->SetScaleOffset(scaleOffset);
+                }
+            }
+
+            ImGui::Spacing();
+
+            // セーブボタン
+            if (ImGui::Button("保存", ImVec2(80, 0))) {
+                collider->SaveToJson();
+            }
+
+            // 削除ボタン
+            ImGui::SameLine();
+            if (ImGui::Button("削除", ImVec2(80, 0))) {
+                TestCollisionManager::GetInstance()->Unregister(collider);
+                delete collider;
+                colliders_.erase(colliders_.begin() + i);
+                ImGui::TreePop();
+                ImGui::PopID();
+                break; // イテレータが無効になるのでループを抜ける
+            }
+
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    }
+#endif
 }
 
 void BaseObject::ImGui() {
@@ -467,25 +553,63 @@ void BaseObject::ImGui() {
         if (ImGui::BeginTabItem(objectName_.c_str())) {
             DebugObject();
 
-            // コライダーの設定
-            if (isCollider) {
+            if (ImGui::CollapsingHeader("コライダー設定", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Indent(10);
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                // コライダー追加ボタン
+                if (ImGui::Button("コライダー追加")) {
+                    ImGui::OpenPopup("AddColliderPopup");
+                }
+
+                if (ImGui::BeginPopup("AddColliderPopup")) {
+                    if (ImGui::MenuItem("球体コライダー")) {
+                        auto *collider = AddSphereCollider();
+                        collider->SetTag("Environment");
+                        collider->AddCollisionMask("Player");
+                        collider->SetRadius(1.0f);
+                    }
+
+                    if (ImGui::MenuItem("AABBコライダー")) {
+                        auto *collider = AddAABBCollider();
+                        collider->SetTag("Environment");
+                        collider->AddCollisionMask("Player");
+                        collider->SetSize({2.0f, 2.0f, 2.0f});
+                    }
+
+                    if (ImGui::MenuItem("OBBコライダー")) {
+                        auto *collider = AddOBBCollider();
+                        collider->SetTag("Environment");
+                        collider->AddCollisionMask("Player");
+                        collider->SetSize({2.0f, 2.0f, 2.0f});
+                    }
+
+                    ImGui::EndPopup();
+                }
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                // コライダーのデバッグ情報を表示
                 DebugCollider();
+
+                ImGui::Unindent(10);
             }
-            if (ImGui::Button("コライダー追加")) {
-                AddCollider();
-            }
+
+            ImGui::Spacing();
 
             // モデル描画チェックボックス
             bool modelDrawChanged = ImGui::Checkbox("モデル描画", &isModelDraw_);
             if (modelDrawChanged && isModelDraw_) {
-                // モデル描画がオンになったときはワイヤーフレームをオフにする
                 isWireframe_ = false;
             }
 
             // ワイヤーフレームチェックボックス
             bool wireframeChanged = ImGui::Checkbox("ワイヤーフレーム", &isWireframe_);
             if (wireframeChanged && isWireframe_) {
-                // ワイヤーフレームがオンになったときはモデル描画をオフにする
                 isModelDraw_ = false;
             }
             if (isWireframe_) {
@@ -509,8 +633,53 @@ void BaseObject::ImGui() {
         }
         ImGui::EndTabBar();
     }
-
 #endif // _DEBUG
+}
+
+SphereCollider *BaseObject::AddSphereCollider(const std::string &name) {
+    auto *collider = new SphereCollider();
+
+    std::string colliderName = name.empty() ? objectName_ + "_SphereCollider" : name;
+    collider->SetName(colliderName);
+
+    // 位置と回転の取得関数を設定
+    collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+    collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+
+    colliders_.push_back(collider);
+    TestCollisionManager::GetInstance()->Register(collider);
+
+    return collider;
+}
+
+AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
+    auto *collider = new AABBCollider();
+
+    std::string colliderName = name.empty() ? objectName_ + "_AABBCollider" : name;
+    collider->SetName(colliderName);
+
+    collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+    collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+
+    colliders_.push_back(collider);
+    TestCollisionManager::GetInstance()->Register(collider);
+
+    return collider;
+}
+
+OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
+    auto *collider = new OBBCollider();
+
+    std::string colliderName = name.empty() ? objectName_ + "_OBBCollider" : name;
+    collider->SetName(colliderName);
+
+    collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+    collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+
+    colliders_.push_back(collider);
+    TestCollisionManager::GetInstance()->Register(collider);
+
+    return collider;
 }
 
 void BaseObject::DebugObject() {

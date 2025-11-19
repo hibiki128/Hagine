@@ -191,11 +191,11 @@ std::unique_ptr<BaseObject> LevelData::CreateBaseObject(const ObjectData &object
 
     // コライダーを追加（OBBを使用）
     if (objectData.hasCollider) {
-        baseObject->AddCollider();
-        baseObject->SetOBBSize(objectData.collider.size + Vector3(objectData.transform.scaling.x - 1.0f, objectData.transform.scaling.y - 1.0f, objectData.transform.scaling.z - 1.0f));
-        baseObject->SetOBBCenter(objectData.collider.center);
-        // コライダータイプをOBBに設定
-        baseObject->SetCollisionType(Collider::CollisionType::OBB);
+        //baseObject->AddCollider();
+        //baseObject->SetOBBSize(objectData.collider.size + Vector3(objectData.transform.scaling.x - 1.0f, objectData.transform.scaling.y - 1.0f, objectData.transform.scaling.z - 1.0f));
+        //baseObject->SetOBBCenter(objectData.collider.center);
+        //// コライダータイプをOBBに設定
+        //baseObject->SetCollisionType(Collider::CollisionType::OBB);
     }
 
     return baseObject;

@@ -13,6 +13,7 @@
 #include <Line/DrawLine3D.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
+#include"Collider/TestCollisionManager.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -298,6 +299,7 @@ void ImGuiManager::ShowMainMenu() {
                 ImGui::MenuItem(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャビュー", nullptr, &showHierarchyView_);
                 ImGui::MenuItem(ICON_FA_CODE_BRANCH " モーションエディタービュー", nullptr, &showMotionEditorView_);
                 ImGui::MenuItem(ICON_FA_SQUARE " スプライトマネージャビュー", nullptr, &showSpriteManagerView_);
+                ImGui::MenuItem(ICON_FA_SHAPES " コライダービュー", nullptr, &showColliderTagManagerView_);
                 ImGui::EndMenu();
             }
 
@@ -693,6 +695,16 @@ void ImGuiManager::ShowSpriteManagerWindow() {
     ImGui::End();
 }
 
+void ImGuiManager::ShowColliderTagManagerWindow() {
+    if (!showColliderTagManagerView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    TestCollisionManager::GetInstance()->ImGuiTagManager();
+
+}
+
 void ImGuiManager::FixAspectRatio() {
 
     // 横幅ベースで16:9に合わせた高さ
@@ -824,7 +836,10 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowHierarchyWindow();
     // モーションエディターウィンドウを描画
     ShowMotionEditorWindow();
+    // スプライトマネージャウィンドウを描画
     ShowSpriteManagerWindow();
+    // コライダータグマネージャウィンドウを描画
+    ShowColliderTagManagerWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();

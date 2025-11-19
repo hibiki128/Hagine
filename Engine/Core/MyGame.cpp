@@ -14,7 +14,7 @@ void MyGame::Initialize() {
     // シーンマネージャに最初のシーンをセット
     sceneManager_->SetSceneFactory(sceneFactory_);
 #ifdef _DEBUG
-    sceneManager_->NextSceneReservation("GAME");
+    sceneManager_->NextSceneReservation("TITLE");
 #else
     sceneManager_->NextSceneReservation("TITLE");
 #endif // _DEBUG 
@@ -77,6 +77,9 @@ void MyGame::Draw() {
     //-----線描画-----
     DrawLine3D::GetInstance()->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
     //---------------
+
+    testCollisionManager_->DebugDraw(*sceneManager_->GetBaseScene()->GetViewProjection());
+
 #endif // _DEBUG
 
     dxCommon_->PreDraw();

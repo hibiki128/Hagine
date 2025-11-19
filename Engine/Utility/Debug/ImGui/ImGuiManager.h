@@ -148,6 +148,8 @@ class ImGuiManager {
 
     void ShowSpriteManagerWindow();
 
+    void ShowColliderTagManagerWindow();
+
     void FixAspectRatio();
 
     void BackupDockLayout();
@@ -210,6 +212,7 @@ class ImGuiManager {
     bool showHierarchyView_ = true;
     bool showMotionEditorView_ = true;
     bool showSpriteManagerView_ = true;
+    bool showColliderTagManagerView_ = false;
 
     // グリッド設定用メンバ変数
     bool showGrid_ = false;
