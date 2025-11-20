@@ -1,8 +1,10 @@
 #pragma once
 #include "Windows.h"
+#ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
-#include <cstdint>
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#endif //  USE_IMGUI
+#include <cstdint>
 // WindowsAPI
 class WinApp {
   private:
@@ -56,7 +58,7 @@ class WinApp {
     /// <returns></returns>
     HWND GetHwnd() const { return hwnd; }
     HINSTANCE GetHInstance() const { return wc.hInstance; }
-    bool& IsFullScreen() { return isFullScreen_; }
+    bool &IsFullScreen() { return isFullScreen_; }
 
   public: // 定数
     // クライアント領域のサイズ

@@ -36,10 +36,11 @@ void ViewProjection::Map() {
 void ViewProjection::UpdateMatrix() {
     // イージング処理
     if (isEasing_) {
-        easingTime_ += Frame::DeltaTime(); // 60FPS想定でフレーム時間を加算
+        easingTime_ += Frame::DeltaTime();
 
         if (easingTime_ >= easingDuration_) {
             // イージング完了
+            easingTime_ = easingDuration_;
             translation_ = targetTranslation_;
             eulerRotation_ = targetEulerRotation_;
             quateRotation_ = targetQuaternionRotation_;
@@ -111,6 +112,7 @@ void ViewProjection::EaseCameraMove(EasingType easeType, const std::string &json
 }
 
 void ViewProjection::ShowDebugInfo() {
+#ifdef USE_IMGUI
     if (ImGui::Begin("カメラ設定 デバッグ")) {
 
         // 基本情報セクション
@@ -380,6 +382,7 @@ void ViewProjection::ShowDebugInfo() {
     }
 
     ImGui::End();
+#endif // USE_IMGUI
 }
 
 void ViewProjection::Save(std::string jsonFile) {

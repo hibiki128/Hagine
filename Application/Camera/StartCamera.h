@@ -65,7 +65,7 @@ class StartCamera {
 
     WorldTransform wt_;
 
-    float speed_ = 1.0f;
+    float speed_ = 1.5f;
     float angle_ = 0.0f;
     float radius_ = 60.0f;
     Vector3 centerPos_ = {0.0f, 0.0f, -21.0f};

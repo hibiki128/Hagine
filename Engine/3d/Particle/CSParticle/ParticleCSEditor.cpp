@@ -25,6 +25,7 @@ void ParticleCSEditor::Initialize() {
 
 // カラーテーマの設定メソッドを追加
 void ParticleCSEditor::SetupColors() {
+#ifdef USE_IMGUI
     // 各CollapsingHeaderに使用する色を定義
     headerColors_[0] = ImVec4(0.2f, 0.4f, 0.8f, 0.8f); // 青系
     headerColors_[1] = ImVec4(0.8f, 0.4f, 0.2f, 0.8f); // オレンジ系
@@ -32,6 +33,7 @@ void ParticleCSEditor::SetupColors() {
     headerColors_[3] = ImVec4(0.7f, 0.3f, 0.7f, 0.8f); // 紫系
     headerColors_[4] = ImVec4(0.7f, 0.7f, 0.2f, 0.8f); // 黄色系
     headerColors_[5] = ImVec4(0.5f, 0.5f, 0.5f, 0.8f); // グレー系
+#endif // USE_IMGUI
 }
 
 void ParticleCSEditor::AddParticleEmitter(const std::string &name) {
@@ -97,6 +99,7 @@ std::unique_ptr<ParticleCSEmitter> ParticleCSEditor::CreateEmitterFromTemplate(c
 }
 
 void ParticleCSEditor::ShowGPUParticleStatistics() {
+#ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("GPUパーティクル統計")) {
 
         // エミッター名ごとに集計
@@ -133,10 +136,12 @@ void ParticleCSEditor::ShowGPUParticleStatistics() {
             ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "エミッターなし");
         }
     }
+#endif // USE_IMGUI
 }
 
 
 void ParticleCSEditor::DebugAll() {
+#ifdef USE_IMGUI
     if (ImGui::BeginTabBar("GPUパーティクル")) {
         if (ImGui::BeginTabItem("GPUエミッター設定")) {
             if (emitters_.empty()) {
@@ -181,17 +186,21 @@ void ParticleCSEditor::DebugAll() {
         }
         ImGui::EndTabBar();
     }
+#endif // USE_IMGUI
 }
 
 
 void ParticleCSEditor::EditorWindow() {
+#ifdef USE_IMGUI
     ImGui::Begin("CSパーティクルエディター");
     ShowImGuiEditor();
     ImGui::End();
+#endif // USE_IMGUI
 }
 
 // カラー付きCollapsingHeaderを表示するヘルパー関数
 bool ParticleCSEditor::ColoredCollapsingHeader(const char *label, int colorIndex) {
+#ifdef USE_IMGUI
     // 現在のImGuiカラーを保存
     ImVec4 originalColor = ImGui::GetStyleColorVec4(ImGuiCol_Header);
 
@@ -215,9 +224,11 @@ bool ParticleCSEditor::ColoredCollapsingHeader(const char *label, int colorIndex
     ImGui::PopStyleColor(3);
 
     return opened;
+#endif // USE_IMGUI
 }
 
 void ParticleCSEditor::ShowImGuiEditor() {
+#ifdef USE_IMGUI
     if (ImGui::BeginTabBar("GPUパーティクル")) {
         if (ImGui::BeginTabItem("パーティクル作成")) {
 
@@ -537,9 +548,11 @@ void ParticleCSEditor::ShowImGuiEditor() {
         }
         ImGui::EndTabBar();
     }
+#endif // USE_IMGUI
 }
 
 void ParticleCSEditor::ShowFileSelector() {
+#ifdef USE_IMGUI
     static int selectedIndex = -1;
     std::vector<std::string> jsonFiles = GetJsonFiles();
 
@@ -576,6 +589,7 @@ void ParticleCSEditor::ShowFileSelector() {
         AddParticleEmitter(name_);
         isLoad_ = false;
     }
+#endif // USE_IMGUI
 }
 
 std::vector<std::string> ParticleCSEditor::GetJsonFiles() {

@@ -183,6 +183,8 @@ void LightGroup::CreateCamera() {
 
 
 void LightGroup::imgui() {
+#ifdef USE_IMGUI
+
     // スタイル設定
     ImGuiStyle &style = ImGui::GetStyle();
     float originalRounding = style.ChildRounding;
@@ -549,6 +551,7 @@ void LightGroup::imgui() {
     // スタイルを元に戻す
     style.ChildRounding = originalRounding;
     style.FramePadding = ImVec2(originalPadding, style.FramePadding.y);
+#endif // USE_IMGUI
 }
 
 void LightGroup::SaveLightData(const std::string &fileName) {

@@ -13,7 +13,11 @@ void MyGame::Initialize() {
     sceneFactory_ = new SceneFactory();
     // シーンマネージャに最初のシーンをセット
     sceneManager_->SetSceneFactory(sceneFactory_);
-    sceneManager_->NextSceneReservation("GAME");
+#ifdef _DEBUG
+    sceneManager_->NextSceneReservation("TITLE");
+#else
+    sceneManager_->NextSceneReservation("TITLE");
+#endif // _DEBUG 
     // -----------------------
 }
 
@@ -31,9 +35,9 @@ void MyGame::Update() {
     // -----ゲーム固有の処理-----
 #ifdef _DEBUG
     if (imGuiManager_->GetEditorMode()) {
-        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()},10000.0f);
+        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()}, 10000.0f);
     } else {
-        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(winApp_->kClientWidth, winApp_->kClientHeight)},10000.0f);
+        input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(winApp_->kClientWidth, winApp_->kClientHeight)}, 10000.0f);
     }
 
     imGuiManager_->Begin();
@@ -65,14 +69,14 @@ void MyGame::Draw() {
 
     // -----シーンごとの処理------
 
-    if (sceneManager_->GetTransitionEnd()) {
-        collisionManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
-    }
     sceneManager_->Draw();
 #ifdef _DEBUG
     //-----線描画-----
     DrawLine3D::GetInstance()->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
     //---------------
+
+    collisionManager_->DebugDraw(*sceneManager_->GetBaseScene()->GetViewProjection());
+
 #endif // _DEBUG
 
     dxCommon_->PreDraw();

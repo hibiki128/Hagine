@@ -80,10 +80,12 @@ void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &ta
 }
 
 void DeathCamera::imgui() {
+#ifdef USE_IMGUI
     ImGui::Begin("DeathCamera");
     ImGui::DragFloat3("Offset", &cameraOffset_.x, 0.1f, -10.0f, 10.0f);
     ImGui::DragFloat("Duration", &easingDuration_, 0.1f, 0.5f, 5.0f);
     ImGui::Checkbox("Is Easing", &isEasing_);
     ImGui::Checkbox("Is Complete", &isComplete_);
     ImGui::End();
+#endif // USE_IMGUI
 }

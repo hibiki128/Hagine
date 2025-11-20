@@ -22,8 +22,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     PixelShaderOutput output;
     output.color = gMaterial.color * textureColor;
     
-    // より高い閾値で透明ピクセルを破棄
-    if (textureColor.a < 0.5f)
+    if (output.color.a == 0.0f)
     {
         discard;
     }

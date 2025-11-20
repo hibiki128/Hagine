@@ -58,7 +58,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;USE_IMGUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 /IGNORE:4049 /IGNORE:4099 </AdditionalOptions>
@@ -147,6 +147,11 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Math\random.cpp" />
     <ClCompile Include="Engine\Math\type\Quaternion.cpp" />
     <ClCompile Include="Engine\Scene\BaseScene.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\ColliderBase.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\ColliderTagManager.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\AABBCollider.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\OBBCollider.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\SphereCollider.cpp" />
     <ClCompile Include="Engine\Utility\Graphics\PipeLine\ComputePipeLineManager.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObjectManager.cpp" />
     <ClCompile Include="Engine\Utility\Data\DataHandler.cpp" />
@@ -167,7 +172,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\Line\DrawLine3D.cpp" />
     <ClCompile Include="Engine\Frame\Frame.cpp" />
     <ClCompile Include="Engine\Input\Mouse.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\Collider.cpp" />
     <ClCompile Include="Engine\Utility\Collider\CollisionManager.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleCommon.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleManager.cpp" />
@@ -185,6 +189,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\imgui_tables.cpp" />
     <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Application\Staging\Transition\FadeOut.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\Utility\Debug\ResourceLeakChecker\D3DResourceLeakChecker.cpp" />
     <ClCompile Include="Engine\Base\DirectXCommon.cpp" />
@@ -226,6 +231,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\2d\SpriteManager.cpp" />
     <ClCompile Include="Application\UI\Scene\Title\TitleUI.cpp" />
     <ClCompile Include="Application\Camera\StartCamera.cpp" />
+    <ClCompile Include="Application\UI\Scene\Result\ResultUI.cpp" />
+    <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".claudiaideconfig" />
@@ -320,6 +327,12 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Math\type\Vector3.h" />
     <ClInclude Include="Engine\Math\type\Vector4.h" />
     <ClInclude Include="Engine\Scene\BaseScene.h" />
+    <ClInclude Include="Engine\Utility\Collider\ColliderBase.h" />
+    <ClInclude Include="Engine\Utility\Collider\ColliderTagManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\CollosionManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\AABBCollider.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\OBBCollider.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\SphereCollider.h" />
     <ClInclude Include="Engine\Utility\Graphics\PipeLine\ComputePipeLineManager.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObjectManager.h" />
     <ClInclude Include="Engine\Utility\Data\DataHandler.h" />
@@ -341,8 +354,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Model\ModelStructs.h" />
     <ClInclude Include="Engine\Frame\Frame.h" />
     <ClInclude Include="Engine\Input\Mouse.h" />
-    <ClInclude Include="Engine\Utility\Collider\Collider.h" />
-    <ClInclude Include="Engine\Utility\Collider\CollisionManager.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleCommon.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleManager.h" />
     <ClInclude Include="Engine\Utility\Edit\LevelData.h" />
@@ -398,11 +409,14 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSGroupManager.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSEditor.h" />
     <ClInclude Include="Application\Staging\Transition\FadeOut.h" />
+    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
     <ClInclude Include="Application\UI\Scene\Title\TitleUI.h" />
     <ClInclude Include="Application\Camera\StartCamera.h" />
+    <ClInclude Include="Application\UI\Scene\Result\ResultUI.h" />
+    <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\OffScreen\Pixelate.PS.hlsl">

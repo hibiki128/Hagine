@@ -12,16 +12,25 @@ void ChargeShot::Init(const std::string objectName) {
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);
     BaseObject::SetTexture("debug/white1x1.png");
     BaseObject::SetColor({0.0f, 0.5f, 1.0f, 1.0f});
-    BaseObject::AddCollider();
-    BaseObject::SetCollisionType(CollisionType::Sphere);
+
+    transform_->translation_ = player_->GetWorldPosition();
+
+    bulletCollider_ = AddSphereCollider("ChargeShot_Collider");
+    bulletCollider_->SetTag("PlayerChargeBullet");
+    bulletCollider_->AddCollisionMask("Enemy");
+    bulletCollider_->SetRadius(scale_);
+    bulletCollider_->SetEnabled(false);
+
+    bulletCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollisionEnterCallback(other);
+    });
+
     isAlive_ = false;
     isMaxScale_ = false;
     isFired_ = false;
     scale_ = 1.0f;
     velocity_ = {0, 0, 0};
     // 初期位置もリセット
-    transform_->translation_ = player_->GetWorldPosition();
-    Collider::SetCollisionEnabled(false);
     chargeEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
     bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
 }
@@ -30,7 +39,10 @@ void ChargeShot::Update() {
     Input *input = Input::GetInstance();
 
     if (isAlive_) {
-        Collider::SetCollisionEnabled(true);
+        if (bulletCollider_) {
+            bulletCollider_->SetEnabled(true);
+            bulletCollider_->SetRadius(scale_);
+        }
 
         // 弾エミッターの更新と位置・スケール設定
         bulletEmitter_->Update();
@@ -73,12 +85,19 @@ void ChargeShot::Update() {
             chargeEmitter_->SetPosition(transform_->translation_);
 
             Vector3 playerEuler = rot.ToEulerAngles();
+            if (bulletCollider_) {
+                bulletCollider_->SetEnabled(true);
+            }
         }
     }
 
     if (!isAlive_) {
         if (input->TriggerKey(DIK_K)) {
-            Collider::SetCollisionEnabled(true);
+            // チャージ開始前にエネルギーチェックを追加
+            if (player_ && player_->GetEnergy() < 50.0f) {
+                // エネルギー不足でチャージ開始できない
+                return;
+            }
             isAlive_ = true;
             isFired_ = false;
             scale_ = 1.0f;
@@ -97,6 +116,18 @@ void ChargeShot::Update() {
             isCharge = true;
         }
         if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
+            // エネルギー消費量を計算(チャージ率に応じて5〜50)
+            float scaleRatio = (scale_ - 1.0f) / (maxScale_ - 1.0f);
+            float energyCost = 5.0f + (45.0f * scaleRatio);
+
+            // エネルギーチェック
+            if (!player_->ConsumeEnergy(energyCost)) {
+                // エネルギー不足ならリセット
+                Reset();
+                isCharge = false;
+                return;
+            }
+
             Vector3 dir = {0, 0, 1};
             Vector3 pos = transform_->translation_;
 
@@ -144,6 +175,11 @@ void ChargeShot::Fire(const Vector3 &pos, const Vector3 &dir) {
 }
 
 void ChargeShot::Reset() {
+
+    if (bulletCollider_) {
+        bulletCollider_->SetEnabled(false);
+    }
+
     isAlive_ = false;
     isFired_ = false;
     scale_ = 1.0f;
@@ -166,26 +202,29 @@ void ChargeShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
         return;
     // スケールを反映
     transform_->scale_ = {scale_, scale_, scale_};
-    BaseObject::SetRadius(scale_);
 }
 void ChargeShot::DrawParticle(const ViewProjection &viewProjection) {
+    if (!isAlive_)
+        return;
     chargeEmitter_->Draw(viewProjection);
     bulletEmitter_->Draw(viewProjection);
 }
 
 void ChargeShot::imgui() {
-    // デバッグ用
 }
 
-void ChargeShot::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<Enemy *>(other) && player_->GetEnemy()->GetAlive()) {
-        isAlive_ = false;
-        Collider::SetCollisionEnabled(false);
+void ChargeShot::OnCollisionEnterCallback(ColliderBase *other) {
+    // Enemyタグを持つコライダーと衝突した場合
+    if (other->GetTag() == "Enemy") {
+        // プレイヤーの敵が存在し、生きている場合
+        if (player_ && player_->GetEnemy() && player_->GetEnemy()->GetAlive()) {
+            isAlive_ = false;
 
-        // チャージ度合いに応じたダメージを計算して適用
-        int damage = GetDamage();
-        player_->GetEnemy()->SetDamage(damage);
+            // チャージ度合いに応じたダメージを計算して適用
+            int damage = GetDamage();
+            player_->GetEnemy()->SetDamage(damage);
 
-        Reset();
+            Reset();
+        }
     }
 }

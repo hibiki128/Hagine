@@ -296,6 +296,7 @@ ParticleSetting ParticleEmitter::DefaultSetting() {
 #pragma region ImGui関連
 
 void ParticleEmitter::DebugParticleData() {
+#ifdef USE_IMGUI
     if (!Manager_)
         return;
 
@@ -1116,6 +1117,7 @@ void ParticleEmitter::DebugParticleData() {
 
     // メインウィンドウの背景色をポップ
     ImGui::PopStyleColor();
+#endif // USE_IMGUI
 }
 
 // ImGuiで値を動かす関数
@@ -1230,6 +1232,7 @@ void ParticleEmitter::SetTrailVelocityInheritance(const std::string &groupName, 
 }
 
 void ParticleEmitter::ShowBlendModeCombo(BlendMode &currentMode) {
+#ifdef USE_IMGUI
     // コンボボックスに表示する項目（日本語）
     static const char *blendModeItems[] = {
         "なし",      // kNone
@@ -1248,4 +1251,5 @@ void ParticleEmitter::ShowBlendModeCombo(BlendMode &currentMode) {
         // ユーザーが選択を変更したときに反映
         currentMode = static_cast<BlendMode>(currentIndex);
     }
+#endif // USE_IMGUI
 }

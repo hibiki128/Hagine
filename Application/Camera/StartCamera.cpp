@@ -165,7 +165,7 @@ void StartCamera::Update() {
 void StartCamera::Move() {
     angle_ += speed_ * Frame::DeltaTime();
 
-    if (angle_ > 1.0f * std::numbers::pi_v<float> && !isEasing_) {
+    if (angle_ > 0.5f * std::numbers::pi_v<float> && !isEasing_) {
         isEasing_ = true;
         easingPhase_ = 1;
         easingTimer_ = 0.0f;
@@ -175,9 +175,11 @@ void StartCamera::Move() {
 }
 
 void StartCamera::imgui() {
+#ifdef USE_IMGUI
     ImGui::Begin("StartCamera");
     ImGui::DragFloat("Speed", &speed_, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat3("Center", &centerPos_.x, 0.1f, -100.0f, 100.0f);
     ImGui::DragFloat("Radius", &radius_, 0.1f, 1.0f, 200.0f);
     ImGui::End();
+#endif // USE_IMGUI
 }

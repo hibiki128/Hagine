@@ -102,13 +102,14 @@ class ImGuiManager {
     /// シーン表示
     /// </summary>
     void ShowSceneWindow(OffScreen *offScreen, const std::string &sceneName);
-
+#ifdef USE_IMGUI
     Vector2 GetSceneSize() const {
         return Vector2(sceneTextureSize_.x, sceneTextureSize_.y);
     }
     Vector2 GetScenePos() const {
         return Vector2(actualScenePos_.x, actualScenePos_.y);
     }
+#endif // USE_IMGUI
 
     bool GetEditorMode() const {
         return isEditorMode_;
@@ -147,6 +148,8 @@ class ImGuiManager {
 
     void ShowSpriteManagerWindow();
 
+    void ShowColliderTagManagerWindow();
+
     void FixAspectRatio();
 
     void BackupDockLayout();
@@ -175,7 +178,7 @@ class ImGuiManager {
     BaseScene *currentScene_ = nullptr;
 
     DirectXCommon *dxCommon_;
-
+#ifdef USE_IMGUI
     // ヒエラルキーウィンドウ
     ImVec2 hierarchyWindowPosition_ = {0.0f, 64.0f};
 
@@ -183,6 +186,7 @@ class ImGuiManager {
     ImVec2 sceneTextureSize_ = {800.0f, 450.0f};
     ImVec2 actualScenePos_ = {};
 
+#endif // USE_IMGUI
     int cubeCount = 0;
     int sphereCount = 0;
     int planeCount = 0;
@@ -208,6 +212,7 @@ class ImGuiManager {
     bool showHierarchyView_ = true;
     bool showMotionEditorView_ = true;
     bool showSpriteManagerView_ = true;
+    bool showColliderTagManagerView_ = false;
 
     // グリッド設定用メンバ変数
     bool showGrid_ = false;

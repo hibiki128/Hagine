@@ -36,8 +36,10 @@ class ParticleCSEditor {
     int localMaxParticleCount_ = 1000;
     PrimitiveType localType_ = PrimitiveType::None;
 
+#ifdef USE_IMGUI
     // CollapsingHeaderの色を定義
     ImVec4 headerColors_[6];
+#endif // USE_IMGUI
 
     bool isLoad_ = false;
     std::string name_;

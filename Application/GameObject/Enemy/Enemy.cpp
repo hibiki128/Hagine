@@ -22,8 +22,17 @@ void Enemy::Init(const std::string objectName) {
 
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
-    BaseObject::AddCollider();
-    BaseObject::SetCollisionType(CollisionType::OBB);
+    enemyCollider_ = AddOBBCollider("enemy_Collider");
+    enemyCollider_->SetTag("Enemy");
+    enemyCollider_->AddCollisionMask("PlayerBullet");
+    enemyCollider_->AddCollisionMask("Player");
+    enemyCollider_->AddCollisionMask("PlayerHand");
+    enemyCollider_->AddCollisionMask("PlayerChargeBullet");
+
+    enemyCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollisionEnter(other);
+    });
+
     BaseObject::SetTexture("debug/white1x1.png", 0);
     BaseObject::SetColor(Vector4(1, 0, 0, 1));
     shadow_ = std::make_unique<BaseObject>();
@@ -34,7 +43,7 @@ void Enemy::Init(const std::string objectName) {
     shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
     emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("hitEmitter");
     chageShake_ = std::make_unique<Shake>();
-
+    isGuarding_ = false;
     // ビヘイビアツリーの初期化
     InitializeBehaviorTree();
 }
@@ -43,25 +52,50 @@ void Enemy::Update() {
     shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
     shadow_->Update();
 
-    if (damage_ > 0) {
-        HP_ -= damage_;
-        damage_ = 0;
-    }
-    if (HP_ <= 0) {
-        isAlive_ = false;
-        HP_ = 0;
+    if (started_) {
+        if (damage_ > 0) {
+            float actualDamage = static_cast<float>(damage_);
+
+            // ガード中はダメージを85%軽減
+            if (isGuarding_) {
+                actualDamage *= 0.15f;
+            }
+
+            HP_ -= actualDamage;
+            damage_ = 0;
+        }
+
+        if (HP_ <= 0.0f) {
+            isAlive_ = false;
+            HP_ = 0.0f;
+        }
+
+        // ガード中点滅処理
+        if (isGuarding_) {
+            const float blinkInterval = 0.1f;
+            int blinkCount = static_cast<int>(Frame::Time() / blinkInterval);
+            if (blinkCount % 2 == 0) {
+                SetColor(Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            } else {
+                SetColor(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+            }
+        } else {
+            SetColor(Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+        }
+
+        // 生存中のみ行動
+        if (isAlive_ && target_->GetAlive()) {
+            ExecuteBehaviorTree(Frame::DeltaTime());
+        }
+
+        // 向きを更新
+        RotateUpdate();
+
+        UpdateShadowScale();
+        chageShake_->Update();
     }
 
-    // ビヘイビアツリーの実行
-    if (isAlive_) {
-        ExecuteBehaviorTree(Frame::DeltaTime());
-    }
-
-    // 位置更新
     CollisionGround();
-
-    UpdateShadowScale();
-    chageShake_->Update();
 }
 
 void Enemy::InitializeBehaviorTree() {
@@ -70,61 +104,62 @@ void Enemy::InitializeBehaviorTree() {
     BehaviorNode::SetEditor(behaviorTreeEditor_.get());
 #endif
 
-    // ルートノード(シーケンス)を作成
-    auto rootSequence = std::make_unique<SequenceNode>();
+    //==================== 通常行動ツリー構築 ====================
 
-    // 1. 遠距離時の接近行動
+    //--- 遠距離時の接近 ---
     auto farDistCheck = std::make_unique<DistanceCheckNode>(10.0f, 100.0f);
     auto fastApproach = std::make_unique<ApproachNode>(MoveSpeedType::Fast);
-
     auto farSequence = std::make_unique<SequenceNode>();
     farSequence->AddChild(std::move(farDistCheck));
     farSequence->AddChild(std::move(fastApproach));
 
-    // 2. 中距離時の接近行動
+    //--- 中距離時の接近 ---
     auto midDistCheck = std::make_unique<DistanceCheckNode>(5.0f, 10.0f);
     auto slowApproach = std::make_unique<ApproachNode>(MoveSpeedType::Slow);
-
     auto midSequence = std::make_unique<SequenceNode>();
     midSequence->AddChild(std::move(midDistCheck));
     midSequence->AddChild(std::move(slowApproach));
 
-    // 3. 近距離時の重み付き行動選択
+    //--- 近距離時の行動 ---
     auto closeDistCheck = std::make_unique<DistanceCheckNode>(0.0f, 5.0f);
-
-    // 近距離での3つの行動オプション
     auto closeApproach = std::make_unique<CloseApproachNode>();
     auto strafe = std::make_unique<StrafeNode>();
     auto retreat = std::make_unique<RetreatNode>();
+    auto guard = std::make_unique<GuardNode>();
 
-    // 重み付きセレクターを作成
     auto weightedSelector = std::make_unique<WeightedSelectorNode>();
-    weightedSelector->AddChild(std::move(closeApproach), 1.0f); // さらに近づく: 重み1.0
-    weightedSelector->AddChild(std::move(strafe), 1.5f);        // 横移動: 重み1.5
-    weightedSelector->AddChild(std::move(retreat), 1.0f);       // 後退: 重み1.0
+    weightedSelector->AddChild(std::move(closeApproach), 1.0f);
+    weightedSelector->AddChild(std::move(strafe), 1.5f);
+    weightedSelector->AddChild(std::move(retreat), 1.0f);
+    weightedSelector->AddChild(std::move(guard), 1.2f);
 
     auto closeSequence = std::make_unique<SequenceNode>();
     closeSequence->AddChild(std::move(closeDistCheck));
     closeSequence->AddChild(std::move(weightedSelector));
 
-    // 4. 全体をセレクターでまとめる
+    //--- 全距離まとめ ---
     auto mainSelector = std::make_unique<SelectorNode>();
-    mainSelector->AddChild(std::move(closeSequence)); // 近距離を最優先
-    mainSelector->AddChild(std::move(midSequence));   // 中距離
-    mainSelector->AddChild(std::move(farSequence));   // 遠距離
+    mainSelector->AddChild(std::move(closeSequence));
+    mainSelector->AddChild(std::move(midSequence));
+    mainSelector->AddChild(std::move(farSequence));
 
-    // 停止ノードをフォールバック用に追加
-    auto stopNode = std::make_unique<StopNode>();
-    mainSelector->AddChild(std::move(stopNode));
+    //--- 停止ノードを最後に ---
+    mainSelector->AddChild(std::make_unique<StopNode>());
 
-    rootSequence->AddChild(std::move(mainSelector));
+    //==================== 割り込み対応ルート構築 ====================
 
-    behaviorTreeRoot_ = std::move(rootSequence);
+    // InterruptSelectorNode が各子ノードの割り込み条件を監視
+    auto interruptRoot = std::make_unique<InterruptSelectorNode>();
+
+    // 通常行動全体をまとめて追加
+    interruptRoot->AddChild(std::move(mainSelector));
+
+    // ルートノード設定
+    behaviorTreeRoot_ = std::move(interruptRoot);
 
 #ifdef _DEBUG
-    // エディターに設定をロード
     behaviorTreeEditor_->LoadSettings("default", behaviorTreeRoot_.get());
-#endif
+#endif // _DEBUG
 }
 
 void Enemy::ExecuteBehaviorTree(float deltaTime) {
@@ -160,12 +195,14 @@ void Enemy::DrawBehaviorTreeEditor() {
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (!isAlive_) {
+        enemyCollider_->SetEnabled(false);
         return;
     }
     BaseObject::Draw(viewProjection, offSet);
     if (transform_->translation_.y < 0) {
         return;
     }
+    shadow_->SetIsModelDraw(drawShadow_);
     shadow_->Draw(viewProjection, offSet);
 }
 
@@ -174,28 +211,38 @@ void Enemy::DrawParticle(const ViewProjection &viewProjection) {
 }
 
 void Enemy::Debug() {
+#ifdef USE_IMGUI
     if (ImGui::BeginTabBar("敵情報")) {
         if (ImGui::BeginTabItem("敵情報")) {
 
-            ImGui::Text("敵のHP %d", HP_);
+            ImGui::Text("敵のHP %.1f / %.1f", HP_, maxHP_);
             if (ImGui::Button("HP回復")) {
                 HP_ = maxHP_;
             }
 
             ImGui::Checkbox("ストップ", &isStop_);
 
+            // ガード状態の表示
+            ImGui::Separator();
+            ImGui::Text("ガード状態: %s", isGuarding_ ? "ON" : "OFF");
+            if (isGuarding_) {
+                ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f),
+                                   "ダメージ85%%軽減中");
+            }
+
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
     }
+#endif // USE_IMGUI
 }
 
-void Enemy::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<PlayerBullet *>(other) || dynamic_cast<ChargeShot *>(other)) {
+void Enemy::OnCollisionEnter(ColliderBase *other) {
+    if (other->GetTag() == "PlayerBullet") {
+        emitter_->SetPosition(transform_->translation_);
         emitter_->UpdateOnce();
     }
-
-    if (dynamic_cast<ChargeShot *>(other)) {
+    if (other->GetTag() == "PlayerChargeBullet") {
         chageShake_->StartShake();
     }
 }
@@ -225,6 +272,47 @@ void Enemy::UpdateShadowScale() {
 }
 
 void Enemy::RotateUpdate() {
+    // ターゲットがいなければ何もしない
+    if (!target_) {
+        return;
+    }
+
+    // 自分とターゲットのワールド座標を取得
+    Vector3 toTarget = target_->GetWorldPosition() - GetWorldPosition();
+
+    // ほぼ同じ位置なら回転しない
+    if (toTarget.Length() < 0.001f) {
+        return;
+    }
+
+    // 正規化して方向ベクトルに
+    toTarget = toTarget.Normalize();
+
+    // プレイヤーと同様に基準ベクトルを作成
+    Vector3 forward = toTarget;           // 敵の正面方向（ターゲット方向）
+    Vector3 worldUp = {0.0f, 1.0f, 0.0f}; // 上方向
+    Vector3 right;                        // 右方向
+
+    // forwardとupがほぼ平行なら補正
+    if (std::abs(forward.Dot(worldUp)) > 0.999f) {
+        right = {1.0f, 0.0f, 0.0f};
+    } else {
+        right = (worldUp.Cross(forward)).Normalize();
+    }
+
+    // upを再計算して正規直交化
+    Vector3 up = (forward.Cross(right)).Normalize();
+
+    // 回転行列からクォータニオンを生成
+    Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
+    Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
+
+    // 回転速度（大きいほど素早く向く）
+    float rotateSpeed = 8.0f;
+    transform_->quateRotation_ = Quaternion::Slerp(
+        transform_->quateRotation_,
+        targetRot,
+        rotateSpeed * Frame::DeltaTime());
 }
 
 void Enemy::CollisionGround() {

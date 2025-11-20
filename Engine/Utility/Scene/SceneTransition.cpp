@@ -80,6 +80,7 @@ void SceneTransition::Update() {
 }
 
 void SceneTransition::Draw() {
+    SpriteCommon::GetInstance()->DrawCommonSetting();
     // トランジションを使用しない場合は描画しない
     if (!useTransition) {
         return;
@@ -90,10 +91,12 @@ void SceneTransition::Draw() {
 }
 
 void SceneTransition::Debug() {
+#ifdef USE_IMGUI
     ImGui::Begin("遷移");
     ImGui::DragFloat2("位置", &spPos_.x, 0.1f);
     ImGui::Checkbox("トランジション使用", &useTransition);
     ImGui::End();
+#endif // USE_IMGUI
 }
 
 void SceneTransition::FadeUpdate() {

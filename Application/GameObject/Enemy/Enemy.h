@@ -26,7 +26,7 @@ class Enemy : public BaseObject {
     /// <summary>
     /// デストラクタ
     /// </summary>
-    ~Enemy();
+    ~Enemy()override;
 
     /// <summary>
     /// 初期化
@@ -61,7 +61,7 @@ class Enemy : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter([[maybe_unused]] Collider *other) override;
+    void OnCollisionEnter(ColliderBase* collider);
 
     /// <summary>
     /// ビヘイビアツリーを初期化
@@ -102,14 +102,15 @@ class Enemy : public BaseObject {
     float &GetJumpSpeed() { return jumpSpeed_; }
     float &GetMaxSpeed() { return maxSpeed_; }
     float &GetAccelRate() { return accelRate_; }
-    int GetHP() const { return HP_; }
-    int GetMaxHP() const { return maxHP_; }
+    float GetHP() const { return HP_; }
+    float GetMaxHP() const { return maxHP_; }
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
     Player *GetTarget() { return target_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
+    bool IsGuarding() const { return isGuarding_; }
 
     /// <summary>
     /// Setter
@@ -117,6 +118,9 @@ class Enemy : public BaseObject {
     void SetDamage(int damage) { damage_ = damage; }
     void SetVp(ViewProjection *vp);
     void SetTarget(Player *target) { target_ = target; }
+    void SetGuarding(bool guarding) { isGuarding_ = guarding; }
+    void SetStart(bool flag) { started_ = flag; }
+    void SetDrawShadow(bool flag) { drawShadow_ = flag; }
 
   private:
     /// ===================================================
@@ -173,9 +177,10 @@ class Enemy : public BaseObject {
     Vector3 acceleration_{};
     Player *target_ = nullptr;
 
-    int HP_ = 1000000;
-    int maxHP_ = 1000000;
+    float HP_ = 1.0f;
+    float maxHP_ = 100.0f;
     int damage_ = 0;
+    bool isGuarding_ = false; // ガード状態
 
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;
@@ -184,10 +189,11 @@ class Enemy : public BaseObject {
     float accelRate_ = 0.0f;
 
     bool canJump_ = false;
-    bool isAlive_ = true;
     bool isLockOn_ = false;
     bool isGrounded_ = true;
-    bool isStop_ = false;
+    bool isStop_ = true;
+    bool started_ = false;
+    bool drawShadow_ = true;
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
@@ -199,4 +205,6 @@ class Enemy : public BaseObject {
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
 #endif
     std::unique_ptr<BehaviorNode> behaviorTreeRoot_;
+
+    OBBCollider *enemyCollider_ = nullptr;
 };

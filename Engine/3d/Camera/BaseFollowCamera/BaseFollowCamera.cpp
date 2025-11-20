@@ -41,10 +41,12 @@ void BaseFollowCamera::Update() {
 }
 
 void BaseFollowCamera::imgui() {
+#ifdef USE_IMGUI
 	ImGui::Begin("FollowCamera");
 	ImGui::DragFloat3("wt position", &worldTransform_.translation_.x, 0.1f);
 	ImGui::DragFloat3("vp position", &viewProjection_.translation_.x, 0.1f);
 	ImGui::End();
+#endif // USE_IMGUI
 }
 
 void BaseFollowCamera::Move() {

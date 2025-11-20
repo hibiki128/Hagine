@@ -63,6 +63,7 @@ void DemoScene::AddObjectSetting() {
 }
 
 void DemoScene::AddParticleSetting() {
+#ifdef USE_IMGUI
     // CPUとGPUパーティクルをタブで分ける
     if (ImGui::BeginTabBar("ParticleSystemTabs")) {
         if (ImGui::BeginTabItem("CPU パーティクル")) {
@@ -77,6 +78,7 @@ void DemoScene::AddParticleSetting() {
         }
         ImGui::EndTabBar();
     }
+#endif // USE_IMGUI
 }
 
 void DemoScene::CameraUpdate() {

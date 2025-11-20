@@ -1,16 +1,16 @@
 #pragma once
 
+#include "Camera/ViewProjection/ViewProjection.h"
 #include "ParticleEmitter.h"
 #include "ParticleGroup.h"
 #include "ParticleGroupManager.h"
-#include "Camera/ViewProjection/ViewProjection.h"
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include"ParticleStruct.h"
+#include "ParticleStruct.h"
 
 class ParticleEditor {
   private:
@@ -42,8 +42,10 @@ class ParticleEditor {
     std::string localEmitterName_;                  // エミッター名
     PrimitiveType localType_ = PrimitiveType::None; // プリミティブタイプ
 
+#ifdef USE_IMGUI
     // CollapsingHeaderの色を定義
     ImVec4 headerColors_[6];
+#endif // USE_IMGUI
 
     // ロード関連変数
     bool isLoad_ = false;

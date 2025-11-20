@@ -1,4 +1,5 @@
 #include "EnemyUI.h"
+#include "SpriteCommon.h"
 
 void EnemyUI::Init(Enemy *enemy) {
     enemy_ = enemy;
@@ -41,6 +42,7 @@ void EnemyUI::Update() {
 }
 
 void EnemyUI::Draw() {
+    SpriteCommon::GetInstance()->DrawCommonSetting();
     if (enemy_) {
         // バーフレームの描画
         if (barFrame_) {
@@ -66,6 +68,7 @@ void EnemyUI::Draw() {
 }
 
 void EnemyUI::Debug() {
+#ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("エネミーUI")) {
         if (ImGui::TreeNode("HPバー")) {
             ImGui::DragFloat2("位置", &hpBarPosition_.x, 0.1f);
@@ -93,4 +96,5 @@ void EnemyUI::Debug() {
             ImGui::TreePop();
         }
     }
+#endif // USE_IMGUI
 }

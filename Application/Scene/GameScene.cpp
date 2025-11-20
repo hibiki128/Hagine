@@ -1,4 +1,4 @@
- #include "GameScene.h"
+#include "GameScene.h"
 
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
@@ -14,7 +14,7 @@ void GameScene::Initialize() {
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
     /// ===================================================
-    /// 生成
+    /// インスタンス生成
     /// ===================================================
     debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
@@ -73,6 +73,10 @@ void GameScene::Initialize() {
 void GameScene::Finalize() {
     BaseScene::Finalize();
     fadeOut_->Finalize();
+    sceneManager_->SetClearTime(ClearTimer_);
+    if (player_ptr->GetIsAlive()) {
+        sceneManager_->SetHP(player_ptr->GetHP());
+    }
 }
 
 void GameScene::Update() {
@@ -90,25 +94,35 @@ void GameScene::Update() {
 
     fadeOut_->Update();
 
-    player_ptr->SetStart(true);
 #ifdef _DEBUG
+    player_ptr->SetStart(true);
+    enemy_ptr->SetStart(true);
 #else
     if (startCamera_->IsComplete()) {
         player_ptr->SetStart(true);
+        enemy_ptr->SetStart(true);
+        if (enemy_ptr->GetIsAlive()) {
+            ClearTimer_ += Frame::DeltaTime();
+        }
     }
 #endif // _DEBUG
 
     if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
         enemy_ptr->SetIsModelDraw(false);
+        enemy_ptr->SetDrawShadow(false);
     }
 
     if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
         GameOverTimer_ += Frame::DeltaTime();
         player_ptr->SetIsDeathStaging(true);
         if (GameOverTimer_ >= 2.0f && !isGameOver_) {
-            sceneManager_->NextSceneReservation("GAME");
+            sceneManager_->NextSceneReservation("CLEAR");
             isGameOver_ = true;
         }
+    }
+
+    if (!enemy_ptr->GetIsAlive()) {
+        sceneManager_->NextSceneReservation("CLEAR");
     }
 }
 
@@ -147,11 +161,11 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
+#ifdef USE_IMGUI
     playerUI_->Debug();
     enemyUI_->Debug();
     player_ptr->Debug();
     enemy_ptr->Debug();
-
     // ビヘイビアツリーエディターの表示
     if (ImGui::CollapsingHeader("BehaviorTree")) {
         enemy_ptr->DrawBehaviorTreeEditor();
@@ -160,6 +174,7 @@ void GameScene::AddObjectSetting() {
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
     }
+#endif // USE_IMGUI
 }
 
 void GameScene::AddParticleSetting() {
@@ -174,7 +189,6 @@ void GameScene::CameraUpdate() {
         } else {
             followCamera_->Update();
 #ifndef _DEBUG
-
             if (!startCamera_->IsComplete()) {
                 if (fadeOut_->IsFinish()) {
                     startCamera_->Move();
@@ -186,12 +200,13 @@ void GameScene::CameraUpdate() {
                 vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
             } else {
 #endif // !_DEBUG
+
+                vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
+                vp_.matView_ = followCamera_->GetViewProjection().matView_;
+                vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
 #ifndef _DEBUG
             }
 #endif // !_DEBUG
-            vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
-            vp_.matView_ = followCamera_->GetViewProjection().matView_;
-            vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
         }
     } else {
         if (!deathCamera_->IsComplete() && !deathCameraStarted_) {

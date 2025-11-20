@@ -1,8 +1,8 @@
 #include "WinApp.h"
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui_impl_win32.h"
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 #pragma comment(lib, "winmm.lib")
 

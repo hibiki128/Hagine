@@ -7,6 +7,7 @@
 // 静的メンバ変数の定義
 std::chrono::high_resolution_clock::time_point Frame::lastTime_ = std::chrono::high_resolution_clock::now();
 std::chrono::high_resolution_clock::time_point Frame::fpsCalcTime_ = std::chrono::high_resolution_clock::now();
+std::chrono::high_resolution_clock::time_point Frame::startTime_ = std::chrono::high_resolution_clock::now();
 float Frame::deltaTime_ = 0.0f;
 float Frame::fps_ = 0.0f;
 int Frame::frameCount_ = 0;
@@ -67,4 +68,10 @@ float Frame::DeltaTime() {
 /// <returns>現在のFPS</returns>
 float Frame::GetFPS() {
     return fps_; // 現在のFPSを返す
+}
+
+float Frame::Time() {
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float> elapsed = now - startTime_;
+    return elapsed.count();
 }

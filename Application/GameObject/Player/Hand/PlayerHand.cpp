@@ -5,8 +5,13 @@
 void PlayerHand::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);
-    BaseObject::AddCollider();
-    BaseObject::SetCollisionType(CollisionType::Sphere);
+    collider_ = AddSphereCollider("player_Hand");
+    collider_->SetTag("PlayerHand");
+    collider_->AddCollisionMask("Enemy");
+
+    collider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollisionEnter(other);
+    });
 
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("punchEmitter");
     shake_ = std::make_unique<Shake>();
@@ -33,8 +38,9 @@ void PlayerHand::DrawParticle(const ViewProjection &viewProjection) {
     hitEmitter_->Draw(viewProjection);
 }
 
-void PlayerHand::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<Enemy *>(other)) {
+void PlayerHand::OnCollisionEnter(ColliderBase *other) {
+    if (other->GetTag() == "Enemy") {
+
         enemy_->SetDamage(4);
         hitEmitter_->SetPosition(GetWorldPosition());
         hitEmitter_->SetStartRotate("punchHit", GetWorldRotation().ToEulerDegrees());
@@ -42,5 +48,16 @@ void PlayerHand::OnCollisionEnter(Collider *other) {
         hitEmitter_->UpdateOnce();
 
         shake_->StartShake();
+
+        // エネルギー回復処理を追加
+        if (player_) {
+            float currentEnergy = player_->GetEnergy();
+            float maxEnergy = player_->GetMaxEnergy();
+            float newEnergy = currentEnergy + energyRecoveryAmount_;
+            if (newEnergy > maxEnergy) {
+                newEnergy = maxEnergy;
+            }
+            player_->GetEnergy() = newEnergy; // 直接参照で代入
+        }
     }
 }
