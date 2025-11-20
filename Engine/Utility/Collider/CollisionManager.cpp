@@ -285,39 +285,33 @@ bool CollisionManager::IsCollision(const AABB &aabb, const Sphere &sphere) {
 }
 
 bool CollisionManager::IsCollision(const OBB &obb, const Sphere &sphere) {
-    Matrix4x4 rotateMatrix{};
+    // OBBのローカル空間に球を変換する方法
 
-    rotateMatrix.m[0][0] = obb.orientations[0].x;
-    rotateMatrix.m[1][0] = obb.orientations[0].y;
-    rotateMatrix.m[2][0] = obb.orientations[0].z;
-    rotateMatrix.m[3][0] = 0.0f;
+    // OBBの中心から球の中心へのベクトル
+    Vector3 diff = sphere.center - obb.scaleCenterRotated;
 
-    rotateMatrix.m[0][1] = obb.orientations[1].x;
-    rotateMatrix.m[1][1] = obb.orientations[1].y;
-    rotateMatrix.m[2][1] = obb.orientations[1].z;
-    rotateMatrix.m[3][1] = 0.0f;
+    // そのベクトルをOBBのローカル座標系に変換
+    Vector3 localDiff = {
+        diff.Dot(obb.orientations[0]),
+        diff.Dot(obb.orientations[1]),
+        diff.Dot(obb.orientations[2])};
 
-    rotateMatrix.m[0][2] = obb.orientations[2].x;
-    rotateMatrix.m[1][2] = obb.orientations[2].y;
-    rotateMatrix.m[2][2] = obb.orientations[2].z;
-    rotateMatrix.m[3][2] = 0.0f;
+    // OBBをAABBとして扱う（ローカル空間では軸に平行）
+    Vector3 halfSize = obb.size;
 
-    rotateMatrix.m[0][3] = 0.0f;
-    rotateMatrix.m[1][3] = 0.0f;
-    rotateMatrix.m[2][3] = 0.0f;
-    rotateMatrix.m[3][3] = 1.0f;
+    // AABBの最も近い点を求める
+    Vector3 closestPoint = {
+        std::clamp(localDiff.x, -halfSize.x, halfSize.x),
+        std::clamp(localDiff.y, -halfSize.y, halfSize.y),
+        std::clamp(localDiff.z, -halfSize.z, halfSize.z)};
 
-    Matrix4x4 obbWorldMatrix = MakeOBBWorldMatrix(obb, rotateMatrix);
+    // 最も近い点と球の中心（ローカル空間）との距離を計算
+    Vector3 closestDiff = localDiff - closestPoint;
+    float distanceSquared = closestDiff.x * closestDiff.x +
+                            closestDiff.y * closestDiff.y +
+                            closestDiff.z * closestDiff.z;
 
-    Matrix4x4 obbWorldMatrixInverse = Inverse(obbWorldMatrix);
-
-    Vector3 centerInOBBLocalSpace = Transformation(sphere.center, obbWorldMatrixInverse);
-
-    AABB aabbOBBLocal = ConvertOBBToAABB(obb);
-
-    Sphere sphereOBBLocal{centerInOBBLocalSpace, sphere.radius};
-
-    return IsCollision(aabbOBBLocal, sphereOBBLocal);
+    return distanceSquared <= (sphere.radius * sphere.radius);
 }
 
 bool CollisionManager::IsCollision(const AABB &aabb, const OBB &obb) {
