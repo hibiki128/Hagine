@@ -69,16 +69,13 @@ void MyGame::Draw() {
 
     // -----シーンごとの処理------
 
-    if (sceneManager_->GetTransitionEnd()) {
-        collisionManager_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
-    }
     sceneManager_->Draw();
 #ifdef _DEBUG
     //-----線描画-----
     DrawLine3D::GetInstance()->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
     //---------------
 
-    testCollisionManager_->DebugDraw(*sceneManager_->GetBaseScene()->GetViewProjection());
+    collisionManager_->DebugDraw(*sceneManager_->GetBaseScene()->GetViewProjection());
 
 #endif // _DEBUG
 

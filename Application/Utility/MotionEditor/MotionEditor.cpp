@@ -285,7 +285,6 @@ Vector3 MotionEditor::TransformLocalControlPointToWorld(BaseObject *object, cons
     return {worldPos4.x, worldPos4.y, worldPos4.z};
 }
 
-// Updateメソッドの修正：モーション終了時の処理
 void MotionEditor::Update(float deltaTime) {
     // インターバルタイマーの更新
     for (auto it = attackEndIntervals_.begin(); it != attackEndIntervals_.end();) {
@@ -293,7 +292,13 @@ void MotionEditor::Update(float deltaTime) {
         if (it->second <= 0.0f) {
             // インターバル終了、当たり判定を無効化
             if (it->first) {
-                //it->first->SetCollisionEnabled(false);
+                // 全てのコライダーを無効化
+                auto &colliders = it->first->GetColliders();
+                for (auto *collider : colliders) {
+                    if (collider) {
+                        collider->SetEnabled(false);
+                    }
+                }
             }
             it = attackEndIntervals_.erase(it);
         } else {
@@ -336,11 +341,10 @@ void MotionEditor::Update(float deltaTime) {
                     ReturnToComboStart(motion.target);
                 }
             }
-
             continue;
         }
 
-        // モーション処理（既存のコード）
+        // モーション処理
         float t = motion.currentTime / motion.totalTime;
 
         if (motion.useCatmullRom && motion.controlPoints.size() >= 4) {
@@ -356,11 +360,16 @@ void MotionEditor::Update(float deltaTime) {
         float easedT = ApplyMotionEasing(motion.easingType, t, 1.0f);
         Quaternion interpolatedRot = Slerp(motion.actualStartRot, motion.actualEndRot, easedT);
         motion.target->GetWorldTransform()->quateRotation_ = interpolatedRot;
-
         motion.target->GetLocalScale() = Lerp(motion.actualStartScale, motion.actualEndScale, easedT);
 
+        // コライダーの有効/無効を時間で制御
         bool enable = motion.currentTime >= motion.colliderOnTime && motion.currentTime <= motion.colliderOffTime;
-        //motion.target->SetCollisionEnabled(enable);
+        auto &colliders = motion.target->GetColliders();
+        for (auto *collider : colliders) {
+            if (collider) {
+                collider->SetEnabled(enable);
+            }
+        }
     }
 
     CleanupFinishedTemporaryMotions();

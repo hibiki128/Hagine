@@ -13,7 +13,7 @@
 #include <Line/DrawLine3D.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include"Collider/TestCollisionManager.h"
+#include"Collider/CollosionManager.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -701,7 +701,7 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
-    TestCollisionManager::GetInstance()->ImGuiTagManager();
+    CollisionManager::GetInstance()->ImGuiTagManager();
 
 }
 

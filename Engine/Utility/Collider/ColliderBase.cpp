@@ -1,5 +1,5 @@
 #include "ColliderBase.h"
-#include"TestCollisionManager.h"
+#include"Collider/CollosionManager.h"
 
 void ColliderBase::SetTag(const std::string &tag) {
     if (!ColliderTagManager::GetInstance()->HasTag(tag)) {
@@ -11,7 +11,7 @@ void ColliderBase::SetTag(const std::string &tag) {
 
     // タグが変更され、かつ既に登録されている場合は再登録
     if (oldTag != tag && isRegistered_) {
-        TestCollisionManager::GetInstance()->UpdateColliderTag(this, oldTag, tag);
+        CollisionManager::GetInstance()->UpdateColliderTag(this, oldTag, tag);
     }
 }
 

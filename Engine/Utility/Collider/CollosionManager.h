@@ -7,10 +7,10 @@
 #include <unordered_map>
 #include <vector>
 
-class TestCollisionManager {
+class CollisionManager {
   public:
-    static TestCollisionManager *GetInstance() {
-        static TestCollisionManager instance;
+    static CollisionManager *GetInstance() {
+        static CollisionManager instance;
         return &instance;
     }
 
@@ -31,10 +31,10 @@ class TestCollisionManager {
 #endif
 
   private:
-    TestCollisionManager() = default;
-    ~TestCollisionManager() = default;
-    TestCollisionManager(const TestCollisionManager &) = delete;
-    TestCollisionManager &operator=(const TestCollisionManager &) = delete;
+    CollisionManager() = default;
+    ~CollisionManager() = default;
+    CollisionManager(const CollisionManager &) = delete;
+    CollisionManager &operator=(const CollisionManager &) = delete;
 
     void UpdateColliders();
     void CheckCollisions();

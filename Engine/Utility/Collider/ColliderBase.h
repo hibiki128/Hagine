@@ -15,7 +15,7 @@ enum class ColliderType {
     OBB
 };
 
-class TestCollisionManager;
+class CollisionManager;
 
 class ColliderBase {
   public:

@@ -175,6 +175,7 @@ LevelData::ObjectData LevelData::ParseObject(const json &objectJson) {
 
 std::unique_ptr<BaseObject> LevelData::CreateBaseObject(const ObjectData &objectData) {
     auto baseObject = std::make_unique<BaseObject>();
+
     // 初期化
     baseObject->Init(objectData.name);
 
@@ -191,11 +192,25 @@ std::unique_ptr<BaseObject> LevelData::CreateBaseObject(const ObjectData &object
 
     // コライダーを追加（OBBを使用）
     if (objectData.hasCollider) {
-        //baseObject->AddCollider();
-        //baseObject->SetOBBSize(objectData.collider.size + Vector3(objectData.transform.scaling.x - 1.0f, objectData.transform.scaling.y - 1.0f, objectData.transform.scaling.z - 1.0f));
-        //baseObject->SetOBBCenter(objectData.collider.center);
-        //// コライダータイプをOBBに設定
-        //baseObject->SetCollisionType(Collider::CollisionType::OBB);
+        // OBBコライダーを追加
+        auto *obbCollider = baseObject->AddOBBCollider(objectData.name + "_Collider");
+
+        // サイズを設定（スケールを考慮）
+        Vector3 colliderSize = objectData.collider.size +
+                               Vector3(objectData.transform.scaling.x - 1.0f,
+                                       objectData.transform.scaling.y - 1.0f,
+                                       objectData.transform.scaling.z - 1.0f);
+        obbCollider->SetSize(colliderSize);
+
+        // センター（スケールオフセット）を設定
+        obbCollider->SetScaleOffset(objectData.collider.center);
+
+        // タグを設定（必要に応じて）
+        obbCollider->SetTag("Environment");
+
+        // 衝突マスクを設定（必要に応じて）
+        obbCollider->AddCollisionMask("Player");
+        obbCollider->AddCollisionMask("Enemy");
     }
 
     return baseObject;

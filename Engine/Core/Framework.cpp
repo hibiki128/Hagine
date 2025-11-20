@@ -118,13 +118,8 @@ void Framework::Initialize() {
     audio_->Initialize();
     ///---------------------------
 
-    ///-------CollisionManager--------------
-    collisionManager_ = std::make_unique<CollisionManager>();
-    collisionManager_->Initialize();
-    ///-------------------------------------
-
-    ///-------TestCollisionManager--------
-    testCollisionManager_ = TestCollisionManager::GetInstance();
+    ///-------CollisionManager--------
+    collisionManager_ = CollisionManager::GetInstance();
     ///----------------------------------
 
     ///-------SceneManager--------
@@ -328,9 +323,7 @@ void Framework::Update() {
 
     spriteManager_->UpdateAll(Frame::DeltaTime());
 
-   // collisionManager_->Update();
-
-    testCollisionManager_->Update();
+    collisionManager_->Update();
 
     LightGroup::GetInstance()->Update(*sceneManager_->GetBaseScene()->GetViewProjection());
 

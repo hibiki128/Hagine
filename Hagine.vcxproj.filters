@@ -72,8 +72,6 @@
     <ClCompile Include="Engine\3d\Line\DrawLine3D.cpp" />
     <ClCompile Include="Engine\Frame\Frame.cpp" />
     <ClCompile Include="Engine\Input\Mouse.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\Collider.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\CollisionManager.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleCommon.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleManager.cpp" />
     <ClCompile Include="Engine\Utility\Edit\LevelData.cpp" />
@@ -131,7 +129,7 @@
     <ClCompile Include="Engine\Utility\Collider\type\OBBCollider.cpp" />
     <ClCompile Include="Engine\Utility\Collider\type\SphereCollider.cpp" />
     <ClCompile Include="Engine\Utility\Collider\ColliderTagManager.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\TestCollisionManager.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\CollisionManager.cpp" />
     <ClCompile Include="CollisionTagManager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -180,8 +178,6 @@
     <ClInclude Include="Engine\3d\Model\ModelStructs.h" />
     <ClInclude Include="Engine\Frame\Frame.h" />
     <ClInclude Include="Engine\Input\Mouse.h" />
-    <ClInclude Include="Engine\Utility\Collider\Collider.h" />
-    <ClInclude Include="Engine\Utility\Collider\CollisionManager.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleCommon.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleManager.h" />
     <ClInclude Include="Engine\Utility\Edit\LevelData.h" />
@@ -237,7 +233,7 @@
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
     <ClInclude Include="Engine\Utility\Collider\ColliderBase.h" />
-    <ClInclude Include="Engine\Utility\Collider\TestCollisionManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\CollosionManager.h" />
     <ClInclude Include="Engine\Utility\Collider\type\AABBCollider.h" />
     <ClInclude Include="Engine\Utility\Collider\type\OBBCollider.h" />
     <ClInclude Include="Engine\Utility\Collider\type\SphereCollider.h" />

@@ -1,0 +1,23 @@
+{
+    "collisionMask": [
+        "Enemy"
+    ],
+    "isEnabled": true,
+    "isVisible": true,
+    "rotationOffset": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scaleOffset": {
+        "x": 5.400000095367432,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "size": {
+        "x": 3.5,
+        "y": 3.5,
+        "z": 2.0
+    },
+    "tag": "Player"
+}

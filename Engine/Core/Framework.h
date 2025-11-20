@@ -3,7 +3,7 @@
 #ifdef _DEBUG
 #endif // _DEBUG
 #include "Audio.h"
-#include "Collider/CollisionManager.h"
+#include"Collider/CollosionManager.h"
 #include "Debug/ImGui/ImGuiManager.h"
 #include "Debug/ImGui/ImGuizmoManager.h"
 #include "Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"
@@ -30,7 +30,6 @@
 #include "line/DrawLine3D.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include"Scene/SceneTransition.h"
-#include"Collider/TestCollisionManager.h"
 
 class Framework {
   public: // メンバ関数
@@ -120,9 +119,8 @@ class Framework {
 
     D3DResourceLeakChecker LeakChecker_;
 
-    TestCollisionManager *testCollisionManager_ = nullptr;
+    CollisionManager *collisionManager_ = nullptr;
 
-    std::unique_ptr<CollisionManager> collisionManager_;
     std::unique_ptr<OffScreen> offscreen_;
 
     bool endRequest_;

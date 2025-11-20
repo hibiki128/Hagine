@@ -1,0 +1,68 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 3,
+    "blendMode": 1,
+    "childrenNames": [],
+    "colliderCount": 2,
+    "collider_0_collisionMask": [
+        "Player"
+    ],
+    "collider_0_isEnabled": true,
+    "collider_0_isVisible": true,
+    "collider_0_name": "cube_1_SphereCollider",
+    "collider_0_offset": {
+        "x": 5.800000190734863,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "collider_0_radius": 2.0,
+    "collider_0_tag": "Enemy",
+    "collider_0_type": 0,
+    "collider_1_collisionMask": [
+        "Player"
+    ],
+    "collider_1_isEnabled": true,
+    "collider_1_isVisible": true,
+    "collider_1_name": "cube_1_AABBCollider",
+    "collider_1_offset": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "collider_1_size": {
+        "x": 5.599999904632568,
+        "y": 6.400000095367432,
+        "z": 2.0
+    },
+    "collider_1_tag": "Enemy",
+    "collider_1_type": 1,
+    "color_0": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "",
+    "objectName": "cube_1",
+    "parentName": "",
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "skeletonDraw": false,
+    "textureName_0": "debug/uvChecker.png",
+    "translation": {
+        "x": 4.6182098388671875,
+        "y": 5.021832466125488,
+        "z": 0.0
+    }
+}

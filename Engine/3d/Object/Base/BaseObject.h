@@ -8,7 +8,6 @@
 #include "Object/Object3d.h"
 #include "Transform/ObjColor.h"
 #include "Transform/WorldTransform.h"
-#include "collider/Collider.h"
 #include "externals/nlohmann/json.hpp"
 #include <Graphics/PipeLine/PipeLineManager.h>
 #include <string>
@@ -111,6 +110,8 @@ class BaseObject {
     void SaveToJson();
     void LoadFromJson();
     void LoadFromJson(std::string folderPath, std::string jsonName);
+    void SaveColliders();
+    void LoadColliders();
     void AnimaSaveToJson();
     void AnimaLoadFromJson();
     void DebugCollider();

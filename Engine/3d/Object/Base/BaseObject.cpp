@@ -1,8 +1,9 @@
 #define NOMINMAX
 #include "BaseObject.h"
-#include "Collider/TestCollisionManager.h"
 #include "Scene/SceneManager.h"
 #include "ShowFolder/ShowFolder.h"
+#include"Collider/CollosionManager.h"
+
 
 void BaseObject::Init(const std::string objectName) {
     transform_ = std::make_unique<WorldTransform>();
@@ -298,10 +299,12 @@ void BaseObject::SaveToJson() {
     }
 
     ObjectDatas_->Save<bool>("isLighting", isLighting_);
-
     ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
 
     SaveParentChildRelationship();
+
+    // コライダー情報を保存
+    SaveColliders();
 }
 
 void BaseObject::SceneSaveToJson() {
@@ -328,10 +331,12 @@ void BaseObject::SceneSaveToJson() {
     }
 
     ObjectDatas_->Save<bool>("isLighting", isLighting_);
-
     ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
 
     SaveParentChildRelationship();
+
+    // コライダー情報を保存
+    SaveColliders();
 }
 
 void BaseObject::LoadFromJson() {
@@ -380,6 +385,9 @@ void BaseObject::LoadFromJson() {
     blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", int(BlendMode::kNormal)));
 
     LoadParentChildRelationship();
+
+    // コライダー情報を読み込み
+    LoadColliders();
 }
 
 void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
@@ -428,6 +436,135 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
     blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", int(BlendMode::kNormal)));
 
     LoadParentChildRelationship();
+
+    // コライダー情報を読み込み
+    LoadColliders();
+}
+
+void BaseObject::SaveColliders() {
+    if (!ObjectDatas_) {
+        return;
+    }
+
+    // コライダー数を保存
+    ObjectDatas_->Save<int>("colliderCount", static_cast<int>(colliders_.size()));
+
+    // 各コライダーの情報を保存
+    for (size_t i = 0; i < colliders_.size(); ++i) {
+        auto *collider = colliders_[i];
+        if (!collider)
+            continue;
+
+        std::string prefix = "collider_" + std::to_string(i) + "_";
+
+        // 共通情報
+        ObjectDatas_->Save<std::string>(prefix + "name", collider->GetName());
+        ObjectDatas_->Save<int>(prefix + "type", static_cast<int>(collider->GetType()));
+        ObjectDatas_->Save<std::string>(prefix + "tag", collider->GetTag());
+        ObjectDatas_->Save<bool>(prefix + "isEnabled", collider->IsEnabled());
+        ObjectDatas_->Save<bool>(prefix + "isVisible", collider->IsVisible());
+
+        // 衝突マスクを保存
+        const auto &mask = collider->GetCollisionMask();
+        std::vector<std::string> maskList(mask.begin(), mask.end());
+        ObjectDatas_->Save<std::vector<std::string>>(prefix + "collisionMask", maskList);
+
+        // 型別の詳細情報を保存
+        if (auto *sphere = dynamic_cast<SphereCollider *>(collider)) {
+            ObjectDatas_->Save<float>(prefix + "radius", sphere->GetRadius());
+            ObjectDatas_->Save<Vector3>(prefix + "offset", sphere->GetOffset());
+        } else if (auto *aabb = dynamic_cast<AABBCollider *>(collider)) {
+            ObjectDatas_->Save<Vector3>(prefix + "size", aabb->GetSize());
+            ObjectDatas_->Save<Vector3>(prefix + "offset", aabb->GetOffset());
+        } else if (auto *obb = dynamic_cast<OBBCollider *>(collider)) {
+            ObjectDatas_->Save<Vector3>(prefix + "size", obb->GetSize());
+            ObjectDatas_->Save<Vector3>(prefix + "rotationOffset", obb->GetRotationOffset());
+            ObjectDatas_->Save<Vector3>(prefix + "scaleOffset", obb->GetScaleOffset());
+        }
+    }
+}
+
+void BaseObject::LoadColliders() {
+    if (!ObjectDatas_) {
+        return;
+    }
+
+    // 既存のコライダーをクリア
+    for (auto *collider : colliders_) {
+        if (collider) {
+            CollisionManager::GetInstance()->Unregister(collider);
+            delete collider;
+        }
+    }
+    colliders_.clear();
+
+    // コライダー数を読み込み
+    int colliderCount = ObjectDatas_->Load<int>("colliderCount", 0);
+
+    // 各コライダーを読み込んで作成
+    for (int i = 0; i < colliderCount; ++i) {
+        std::string prefix = "collider_" + std::to_string(i) + "_";
+
+        // 型を読み込み
+        ColliderType type = static_cast<ColliderType>(
+            ObjectDatas_->Load<int>(prefix + "type", 0));
+
+        ColliderBase *collider = nullptr;
+
+        // 型に応じてコライダーを作成
+        switch (type) {
+        case ColliderType::Sphere: {
+            auto *sphere = new SphereCollider();
+            sphere->SetRadius(ObjectDatas_->Load<float>(prefix + "radius", 1.0f));
+            sphere->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
+            collider = sphere;
+            break;
+        }
+        case ColliderType::AABB: {
+            auto *aabb = new AABBCollider();
+            aabb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
+            aabb->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
+            collider = aabb;
+            break;
+        }
+        case ColliderType::OBB: {
+            auto *obb = new OBBCollider();
+            obb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
+            obb->SetRotationOffset(ObjectDatas_->Load<Vector3>(prefix + "rotationOffset", {0.0f, 0.0f, 0.0f}));
+            obb->SetScaleOffset(ObjectDatas_->Load<Vector3>(prefix + "scaleOffset", {0.0f, 0.0f, 0.0f}));
+            collider = obb;
+            break;
+        }
+        default:
+            continue;
+        }
+
+        if (!collider)
+            continue;
+
+        // 共通情報を設定
+        std::string name = ObjectDatas_->Load<std::string>(prefix + "name", objectName_ + "_Collider" + std::to_string(i));
+        collider->SetName(name);
+        collider->SetTag(ObjectDatas_->Load<std::string>(prefix + "tag", "None"));
+        collider->SetEnabled(ObjectDatas_->Load<bool>(prefix + "isEnabled", true));
+        collider->SetVisible(ObjectDatas_->Load<bool>(prefix + "isVisible", true));
+
+        // 衝突マスクを読み込み
+        auto maskList = ObjectDatas_->Load<std::vector<std::string>>(
+            prefix + "collisionMask",
+            std::vector<std::string>());
+        for (const auto &maskTag : maskList) {
+            collider->AddCollisionMask(maskTag);
+        }
+
+        // 位置と回転の取得関数を設定
+        collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+        collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+
+        // リストに追加して登録
+        colliders_.push_back(collider);
+        CollisionManager::GetInstance()->Register(collider);
+    }
 }
 
 void BaseObject::AnimaSaveToJson() {
@@ -539,7 +676,7 @@ void BaseObject::DebugCollider() {
             // 削除ボタン
             ImGui::SameLine();
             if (ImGui::Button("削除", ImVec2(80, 0))) {
-                TestCollisionManager::GetInstance()->Unregister(collider);
+                CollisionManager::GetInstance()->Unregister(collider);
                 delete collider;
                 colliders_.erase(colliders_.begin() + i);
                 ImGui::TreePop();
@@ -655,7 +792,7 @@ SphereCollider *BaseObject::AddSphereCollider(const std::string &name) {
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
     colliders_.push_back(collider);
-    TestCollisionManager::GetInstance()->Register(collider);
+    CollisionManager::GetInstance()->Register(collider);
 
     return collider;
 }
@@ -670,7 +807,7 @@ AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
     colliders_.push_back(collider);
-    TestCollisionManager::GetInstance()->Register(collider);
+    CollisionManager::GetInstance()->Register(collider);
 
     return collider;
 }
@@ -685,7 +822,7 @@ OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
     colliders_.push_back(collider);
-    TestCollisionManager::GetInstance()->Register(collider);
+    CollisionManager::GetInstance()->Register(collider);
 
     return collider;
 }
