@@ -48,7 +48,7 @@ class PlayerHand : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter([[maybe_unused]] Collider *other) override;
+    void OnCollisionEnter(ColliderBase* other);
 
     /// <summary>
     /// エネルギー回復量を設定
@@ -62,6 +62,12 @@ class PlayerHand : public BaseObject {
     /// <param name="player">設定するプレイヤーのポインタ</param>
     void SetPlayer(class Player *player) { player_ = player; }
 
+    void SetColliderEnabled(bool enabled) {
+        if (collider_) {
+            collider_->SetEnabled(enabled);
+        }
+    }
+
   private:
     /// ===================================================
     /// private varians
@@ -74,4 +80,6 @@ class PlayerHand : public BaseObject {
 
     std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> shake_;
+
+    SphereCollider *collider_ = nullptr;
 };

@@ -47,7 +47,7 @@ class PlayerBullet : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter([[maybe_unused]] Collider *other) override;
+    void OnCollisionEnter(ColliderBase* collider);
 
     /// <summary>
     /// 弾が生きているかを取得
@@ -81,6 +81,12 @@ class PlayerBullet : public BaseObject {
         return std::sqrt(velocity_.x * velocity_.x + velocity_.y * velocity_.y + velocity_.z * velocity_.z);
     }
 
+    void SetColliderRadius(float radius) {
+        if (collider_) {
+            collider_->SetRadius(radius);
+        }
+    }
+    
   private:
     /// ===================================================
     /// private method
@@ -103,4 +109,6 @@ class PlayerBullet : public BaseObject {
     bool isLockOnBullet_ = false;  // ロックオン弾かどうか
     Enemy *targetEnemy_ = nullptr; // ターゲットの敵
     std::unique_ptr<ParticleEmitter> emitter_;
+
+    SphereCollider *collider_ = nullptr;
 };

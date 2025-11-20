@@ -29,8 +29,14 @@ Player::~Player() {
 void Player::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
-    BaseObject::AddCollider();
-    BaseObject::SetCollisionType(CollisionType::OBB);
+    playerCollider_ = AddOBBCollider("player_Collider");
+    playerCollider_->SetTag("Player");
+    playerCollider_->AddCollisionMask("Enemy");
+
+    playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollision(other);
+    });
+
     states_["Idle"] = std::make_unique<PlayerStateIdle>();
     states_["Move"] = std::make_unique<PlayerStateMove>();
     states_["Jump"] = std::make_unique<PlayerStateJump>();
@@ -53,7 +59,7 @@ void Player::Init(const std::string objectName) {
     chargeShot_->SetPlayer(this);
     chargeShot_->Init("chageShot");
 
-   // 手の生成
+    // 手の生成
     leftHand_ = std::make_unique<PlayerHand>();
     leftHand_->Init("leftHand");
     leftHand_->SetPlayer(this);
@@ -108,14 +114,14 @@ void Player::Update() {
         shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
         shadow_->Update();
 
-         if (isInvincible_) {
+        if (isInvincible_) {
             invincibleTime_ += dt_;
             if (invincibleTime_ >= invincibleDuration_) {
                 isInvincible_ = false;
                 invincibleTime_ = 0.0f;
             }
         }
-        
+
         if (started_) {
             RecoverEnergy();
             ComboUpdate();
@@ -241,12 +247,8 @@ void Player::ChangeState(const std::string &stateName) {
     }
 }
 
-void Player::OnCollisionEnter(Collider *other) {
-    
-}
-
-void Player::OnCollision(Collider *other) {
-    if (dynamic_cast<Enemy *>(other)) {
+void Player::OnCollision(ColliderBase *other) {
+    if (other->GetTag() == "Enemy") {
         // 無敵状態でなければダメージを受ける
         if (!isInvincible_) {
             HP_ -= 7.5f;
@@ -291,7 +293,7 @@ void Player::Shot() {
         bullet->Init(bulletName);
         bullet->InitTransform(this);
         bullet->GetLocalScale() = {0.5f, 0.5f, 0.5f};
-        bullet->SetRadius(0.5f);
+        bullet->SetColliderRadius(0.5f);
         bullets_.push_back(std::move(bullet));
 
         timeSinceLastShot_ = 0.0f; // 射撃タイマーをリセット
@@ -351,8 +353,8 @@ void Player::ComboUpdate() {
         punchCombo_.TryExecuteCombo();
     }
     if (punchCombo_.IsComboActive()) {
-        GetRightHand()->SetCollisionEnabled(punchCombo_.IsObjectAttackCompleted(GetRightHand()));
-        GetLeftHand()->SetCollisionEnabled(punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
+        GetRightHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetRightHand()));
+        GetLeftHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
     }
 }
 
@@ -584,7 +586,7 @@ void Player::Debug() {
     if (ImGui::BeginTabBar("プレイヤー")) {
         if (ImGui::BeginTabItem("プレイヤー")) {
 
-             ImGui::Text("エネルギー: %.1f / %.1f", energy_, maxEnergy_);
+            ImGui::Text("エネルギー: %.1f / %.1f", energy_, maxEnergy_);
             ImGui::DragFloat("エネルギー回復速度", &energyRecoveryRate_, 0.1f, 0.0f, 50.0f);
             ImGui::DragFloat("回復開始遅延", &energyRecoveryDelay_, 0.1f, 0.0f, 5.0f);
 

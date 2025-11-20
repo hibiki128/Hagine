@@ -66,16 +66,10 @@ class Player : public BaseObject {
     void ChangeState(const std::string &stateName);
 
     /// <summary>
-    /// 当たった瞬間
-    /// </summary>
-    /// <param name="other"></param>
-    void OnCollisionEnter([[maybe_unused]] Collider *other)override;
-
-    /// <summary>
     /// 当たってる間
     /// </summary>
     /// <param name="other"></param>
-    void OnCollision([[maybe_unused]] Collider *other) override;
+    void OnCollision(ColliderBase *other);
 
     /// <summary>
     /// 方向情報を更新
@@ -312,4 +306,6 @@ class Player : public BaseObject {
     std::unique_ptr<ParticleEmitter> rushEmitter_;   // 突撃パーティクル
 
     std::unique_ptr<DeathStaging> deathStaging_; // 死亡演出
+
+    OBBCollider *playerCollider_ = nullptr;
 };

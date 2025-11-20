@@ -95,7 +95,6 @@
     <ClCompile Include="Engine\3d\Line\DrawLine3D.cpp" />
     <ClCompile Include="Engine\Frame\Frame.cpp" />
     <ClCompile Include="Engine\Input\Mouse.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\Collider.cpp" />
     <ClCompile Include="Engine\Utility\Collider\CollisionManager.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleCommon.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleManager.cpp" />
@@ -157,6 +156,11 @@
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp" />
     <ClCompile Include="Application\UI\Scene\Result\ResultUI.cpp" />
     <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\ColliderBase.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\ColliderTagManager.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\AABBCollider.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\OBBCollider.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\SphereCollider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
@@ -227,8 +231,6 @@
     <ClInclude Include="Engine\3d\Model\ModelStructs.h" />
     <ClInclude Include="Engine\Frame\Frame.h" />
     <ClInclude Include="Engine\Input\Mouse.h" />
-    <ClInclude Include="Engine\Utility\Collider\Collider.h" />
-    <ClInclude Include="Engine\Utility\Collider\CollisionManager.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleCommon.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleManager.h" />
     <ClInclude Include="Engine\Utility\Edit\LevelData.h" />
@@ -292,6 +294,12 @@
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h" />
     <ClInclude Include="Application\UI\Scene\Result\ResultUI.h" />
     <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
+    <ClInclude Include="Engine\Utility\Collider\ColliderBase.h" />
+    <ClInclude Include="Engine\Utility\Collider\ColliderTagManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\CollosionManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\AABBCollider.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\OBBCollider.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\SphereCollider.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

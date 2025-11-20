@@ -73,6 +73,7 @@ float ApplyMotionEasing(MotionEasingType type, float t, float total) {
     }
 }
 
+
 MotionEditor *MotionEditor::GetInstance() {
     if (instance == nullptr) {
         instance = new MotionEditor;
@@ -93,7 +94,7 @@ void MotionEditor::Register(BaseObject *object) {
 
     // 既に登録済みかチェック
     if (motions_.find(name) != motions_.end()) {
-        return;
+        return; 
     }
 
     // 新しくモーションを登録
@@ -176,8 +177,8 @@ Vector3 MotionEditor::CatmullRomInterpolation(const std::vector<Vector3> &points
         }
     }
 
-    int numSegments = static_cast<int>(points.size() - 1);
-    float segmentT = t * (numSegments - 2);
+    int numSegments = static_cast<int>(points.size() - 1); 
+    float segmentT = t * (numSegments - 2); 
     int segment = (int)segmentT;
     float localT = segmentT - segment;
 
@@ -284,7 +285,6 @@ Vector3 MotionEditor::TransformLocalControlPointToWorld(BaseObject *object, cons
     return {worldPos4.x, worldPos4.y, worldPos4.z};
 }
 
-// Updateメソッドの修正：モーション終了時の処理
 void MotionEditor::Update(float deltaTime) {
     // インターバルタイマーの更新
     for (auto it = attackEndIntervals_.begin(); it != attackEndIntervals_.end();) {
@@ -292,7 +292,13 @@ void MotionEditor::Update(float deltaTime) {
         if (it->second <= 0.0f) {
             // インターバル終了、当たり判定を無効化
             if (it->first) {
-                it->first->SetCollisionEnabled(false);
+                // 全てのコライダーを無効化
+                auto &colliders = it->first->GetColliders();
+                for (auto *collider : colliders) {
+                    if (collider) {
+                        collider->SetEnabled(false);
+                    }
+                }
             }
             it = attackEndIntervals_.erase(it);
         } else {
@@ -335,11 +341,10 @@ void MotionEditor::Update(float deltaTime) {
                     ReturnToComboStart(motion.target);
                 }
             }
-
             continue;
         }
 
-        // モーション処理（既存のコード）
+        // モーション処理
         float t = motion.currentTime / motion.totalTime;
 
         if (motion.useCatmullRom && motion.controlPoints.size() >= 4) {
@@ -355,11 +360,16 @@ void MotionEditor::Update(float deltaTime) {
         float easedT = ApplyMotionEasing(motion.easingType, t, 1.0f);
         Quaternion interpolatedRot = Slerp(motion.actualStartRot, motion.actualEndRot, easedT);
         motion.target->GetWorldTransform()->quateRotation_ = interpolatedRot;
-
         motion.target->GetLocalScale() = Lerp(motion.actualStartScale, motion.actualEndScale, easedT);
 
+        // コライダーの有効/無効を時間で制御
         bool enable = motion.currentTime >= motion.colliderOnTime && motion.currentTime <= motion.colliderOffTime;
-        motion.target->SetCollisionEnabled(enable);
+        auto &colliders = motion.target->GetColliders();
+        for (auto *collider : colliders) {
+            if (collider) {
+                collider->SetEnabled(enable);
+            }
+        }
     }
 
     CleanupFinishedTemporaryMotions();
@@ -376,7 +386,7 @@ void MotionEditor::Play(const std::string &jsonName) {
 
     Motion &motion = it->second;
     if (!motion.target) {
-        return;
+        return; 
     }
 
     if (!motion.hasInitialTransform) {
@@ -456,6 +466,7 @@ bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName,
     return true;
 }
 
+
 void MotionEditor::SetComboStartPosition(BaseObject *target) {
     if (!target)
         return;
@@ -499,6 +510,7 @@ void MotionEditor::ClearAllComboStartPositions() {
     comboStartRotations_.clear();
     comboStartScales_.clear();
 }
+
 
 void MotionEditor::Stop(const std::string &objectName) {
     auto it = motions_.find(objectName);
@@ -551,7 +563,7 @@ bool MotionEditor::IsAttackFinished(BaseObject *target) {
         }
     }
 
-    return true;
+    return true; 
 }
 
 // 攻撃が終了してインターバルも過ぎたかどうかをチェック
@@ -598,7 +610,7 @@ bool MotionEditor::IsTemporaryMotionFinished(BaseObject *target, const std::stri
         return it->second.status == MotionStatus::Finished;
     }
 
-    return true;
+    return true; 
 }
 
 void MotionEditor::DrawControlPoints() {
@@ -627,7 +639,7 @@ void MotionEditor::DrawControlPoints() {
 
         Vector4 controlPointColor;
         if (i == 0) {
-            controlPointColor = {0.0f, 1.0f, 0.0f, 1.0f};
+            controlPointColor = {0.0f, 1.0f, 0.0f, 1.0f}; 
         } else if (i == motion.controlPoints.size() - 1) {
             controlPointColor = {0.0f, 0.0f, 1.0f, 1.0f};
         } else {
@@ -659,7 +671,7 @@ void MotionEditor::DrawCatmullRomCurve() {
         return;
 
     DrawLine3D *drawLine = DrawLine3D::GetInstance();
-    const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f};
+    const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f}; 
     const int curveResolution = 100;
 
     Vector3 basePos;
@@ -695,17 +707,17 @@ void MotionEditor::DrawCatmullRomCurve() {
     }
 
     Vector3 worldBasePos = TransformLocalControlPointToWorld(motion.target, basePos);
-    const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f}; 
     drawLine->DrawSphere(worldBasePos, basePosColor, 0.2f, 32);
 
     if (motion.status == MotionStatus::Playing) {
         Vector3 currentLocalPos = motion.target->GetLocalPosition();
         Vector3 currentWorldPos = TransformLocalControlPointToWorld(motion.target, currentLocalPos);
-        const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f};
+        const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f}; 
         drawLine->DrawSphere(currentWorldPos, currentPosColor, 0.15f, 32);
 
         // 基準位置と現在位置を線で結ぶ
-        const Vector4 connectionColor = {0.5f, 0.5f, 0.5f, 1.0f};
+        const Vector4 connectionColor = {0.5f, 0.5f, 0.5f, 1.0f}; 
         drawLine->SetPoints(worldBasePos, currentWorldPos, connectionColor);
     }
 }
@@ -845,24 +857,6 @@ void MotionEditor::DrawImGui() {
         if (!jsonName_.empty()) {
             if (ImGui::Button("セーブ")) {
                 Save(jsonName_);
-                jsonName_.clear();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("ロード")) {
-                Motion loadedMotion = Load(jsonName_);
-                // 現在選択中のモーションにロードしたデータを適用
-                m.totalTime = loadedMotion.totalTime;
-                m.colliderOnTime = loadedMotion.colliderOnTime;
-                m.colliderOffTime = loadedMotion.colliderOffTime;
-                m.startPosOffset = loadedMotion.startPosOffset;
-                m.endPosOffset = loadedMotion.endPosOffset;
-                m.startRotOffset = loadedMotion.startRotOffset;
-                m.endRotOffset = loadedMotion.endRotOffset;
-                m.startScaleOffset = loadedMotion.startScaleOffset;
-                m.endScaleOffset = loadedMotion.endScaleOffset;
-                m.easingType = loadedMotion.easingType;
-                m.useCatmullRom = loadedMotion.useCatmullRom;
-                m.controlPoints = loadedMotion.controlPoints;
                 jsonName_.clear();
             }
         }

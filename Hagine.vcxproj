@@ -147,6 +147,11 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Math\random.cpp" />
     <ClCompile Include="Engine\Math\type\Quaternion.cpp" />
     <ClCompile Include="Engine\Scene\BaseScene.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\ColliderBase.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\ColliderTagManager.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\AABBCollider.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\OBBCollider.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\SphereCollider.cpp" />
     <ClCompile Include="Engine\Utility\Graphics\PipeLine\ComputePipeLineManager.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObjectManager.cpp" />
     <ClCompile Include="Engine\Utility\Data\DataHandler.cpp" />
@@ -167,7 +172,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\Line\DrawLine3D.cpp" />
     <ClCompile Include="Engine\Frame\Frame.cpp" />
     <ClCompile Include="Engine\Input\Mouse.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\Collider.cpp" />
     <ClCompile Include="Engine\Utility\Collider\CollisionManager.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleCommon.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleManager.cpp" />
@@ -323,6 +327,12 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Math\type\Vector3.h" />
     <ClInclude Include="Engine\Math\type\Vector4.h" />
     <ClInclude Include="Engine\Scene\BaseScene.h" />
+    <ClInclude Include="Engine\Utility\Collider\ColliderBase.h" />
+    <ClInclude Include="Engine\Utility\Collider\ColliderTagManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\CollosionManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\AABBCollider.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\OBBCollider.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\SphereCollider.h" />
     <ClInclude Include="Engine\Utility\Graphics\PipeLine\ComputePipeLineManager.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObjectManager.h" />
     <ClInclude Include="Engine\Utility\Data\DataHandler.h" />
@@ -344,8 +354,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Model\ModelStructs.h" />
     <ClInclude Include="Engine\Frame\Frame.h" />
     <ClInclude Include="Engine\Input\Mouse.h" />
-    <ClInclude Include="Engine\Utility\Collider\Collider.h" />
-    <ClInclude Include="Engine\Utility\Collider\CollisionManager.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleCommon.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleManager.h" />
     <ClInclude Include="Engine\Utility\Edit\LevelData.h" />

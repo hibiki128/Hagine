@@ -2,6 +2,19 @@
 #include "BaseObject.h"
 #include "Scene/SceneManager.h"
 #include "ShowFolder/ShowFolder.h"
+#include"Collider/CollosionManager.h"
+
+
+BaseObject::~BaseObject() {
+    // すべてのコライダーを削除
+    for (auto *collider : colliders_) {
+        if (collider) {
+            CollisionManager::GetInstance()->Unregister(collider);
+            delete collider;
+        }
+    }
+    colliders_.clear();
+}
 
 void BaseObject::Init(const std::string objectName) {
     transform_ = std::make_unique<WorldTransform>();
@@ -12,7 +25,6 @@ void BaseObject::Init(const std::string objectName) {
     transform_->Initialize();
     // ライティングのセット
     isLighting_ = true;
-    isCollider = false;
     isAlive_ = true;
 }
 
@@ -216,11 +228,6 @@ void BaseObject::CreatePrimitiveModel(const PrimitiveType &type) {
     AnimaLoadFromJson();
 }
 
-void BaseObject::AddCollider() {
-    colliders_.push_back(&Collider::AddCollider(objectName_));
-    isCollider = true;
-}
-
 void BaseObject::SaveParentChildRelationship() {
     if (!ObjectDatas_) {
         return;
@@ -303,10 +310,12 @@ void BaseObject::SaveToJson() {
     }
 
     ObjectDatas_->Save<bool>("isLighting", isLighting_);
-
     ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
 
     SaveParentChildRelationship();
+
+    // コライダー情報を保存
+    SaveColliders();
 }
 
 void BaseObject::SceneSaveToJson() {
@@ -333,10 +342,12 @@ void BaseObject::SceneSaveToJson() {
     }
 
     ObjectDatas_->Save<bool>("isLighting", isLighting_);
-
     ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
 
     SaveParentChildRelationship();
+
+    // コライダー情報を保存
+    SaveColliders();
 }
 
 void BaseObject::LoadFromJson() {
@@ -385,6 +396,9 @@ void BaseObject::LoadFromJson() {
     blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", int(BlendMode::kNormal)));
 
     LoadParentChildRelationship();
+
+    // コライダー情報を読み込み
+    LoadColliders();
 }
 
 void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
@@ -433,6 +447,135 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
     blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", int(BlendMode::kNormal)));
 
     LoadParentChildRelationship();
+
+    // コライダー情報を読み込み
+    LoadColliders();
+}
+
+void BaseObject::SaveColliders() {
+    if (!ObjectDatas_) {
+        return;
+    }
+
+    // コライダー数を保存
+    ObjectDatas_->Save<int>("colliderCount", static_cast<int>(colliders_.size()));
+
+    // 各コライダーの情報を保存
+    for (size_t i = 0; i < colliders_.size(); ++i) {
+        auto *collider = colliders_[i];
+        if (!collider)
+            continue;
+
+        std::string prefix = "collider_" + std::to_string(i) + "_";
+
+        // 共通情報
+        ObjectDatas_->Save<std::string>(prefix + "name", collider->GetName());
+        ObjectDatas_->Save<int>(prefix + "type", static_cast<int>(collider->GetType()));
+        ObjectDatas_->Save<std::string>(prefix + "tag", collider->GetTag());
+        ObjectDatas_->Save<bool>(prefix + "isEnabled", collider->IsEnabled());
+        ObjectDatas_->Save<bool>(prefix + "isVisible", collider->IsVisible());
+
+        // 衝突マスクを保存
+        const auto &mask = collider->GetCollisionMask();
+        std::vector<std::string> maskList(mask.begin(), mask.end());
+        ObjectDatas_->Save<std::vector<std::string>>(prefix + "collisionMask", maskList);
+
+        // 型別の詳細情報を保存
+        if (auto *sphere = dynamic_cast<SphereCollider *>(collider)) {
+            ObjectDatas_->Save<float>(prefix + "radius", sphere->GetRadius());
+            ObjectDatas_->Save<Vector3>(prefix + "offset", sphere->GetOffset());
+        } else if (auto *aabb = dynamic_cast<AABBCollider *>(collider)) {
+            ObjectDatas_->Save<Vector3>(prefix + "size", aabb->GetSize());
+            ObjectDatas_->Save<Vector3>(prefix + "offset", aabb->GetOffset());
+        } else if (auto *obb = dynamic_cast<OBBCollider *>(collider)) {
+            ObjectDatas_->Save<Vector3>(prefix + "size", obb->GetSize());
+            ObjectDatas_->Save<Vector3>(prefix + "rotationOffset", obb->GetRotationOffset());
+            ObjectDatas_->Save<Vector3>(prefix + "scaleOffset", obb->GetScaleOffset());
+        }
+    }
+}
+
+void BaseObject::LoadColliders() {
+    if (!ObjectDatas_) {
+        return;
+    }
+
+    // 既存のコライダーをクリア
+    for (auto *collider : colliders_) {
+        if (collider) {
+            CollisionManager::GetInstance()->Unregister(collider);
+            delete collider;
+        }
+    }
+    colliders_.clear();
+
+    // コライダー数を読み込み
+    int colliderCount = ObjectDatas_->Load<int>("colliderCount", 0);
+
+    // 各コライダーを読み込んで作成
+    for (int i = 0; i < colliderCount; ++i) {
+        std::string prefix = "collider_" + std::to_string(i) + "_";
+
+        // 型を読み込み
+        ColliderType type = static_cast<ColliderType>(
+            ObjectDatas_->Load<int>(prefix + "type", 0));
+
+        ColliderBase *collider = nullptr;
+
+        // 型に応じてコライダーを作成
+        switch (type) {
+        case ColliderType::Sphere: {
+            auto *sphere = new SphereCollider();
+            sphere->SetRadius(ObjectDatas_->Load<float>(prefix + "radius", 1.0f));
+            sphere->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
+            collider = sphere;
+            break;
+        }
+        case ColliderType::AABB: {
+            auto *aabb = new AABBCollider();
+            aabb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
+            aabb->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
+            collider = aabb;
+            break;
+        }
+        case ColliderType::OBB: {
+            auto *obb = new OBBCollider();
+            obb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
+            obb->SetRotationOffset(ObjectDatas_->Load<Vector3>(prefix + "rotationOffset", {0.0f, 0.0f, 0.0f}));
+            obb->SetScaleOffset(ObjectDatas_->Load<Vector3>(prefix + "scaleOffset", {0.0f, 0.0f, 0.0f}));
+            collider = obb;
+            break;
+        }
+        default:
+            continue;
+        }
+
+        if (!collider)
+            continue;
+
+        // 共通情報を設定
+        std::string name = ObjectDatas_->Load<std::string>(prefix + "name", objectName_ + "_Collider" + std::to_string(i));
+        collider->SetName(name);
+        collider->SetTag(ObjectDatas_->Load<std::string>(prefix + "tag", "None"));
+        collider->SetEnabled(ObjectDatas_->Load<bool>(prefix + "isEnabled", true));
+        collider->SetVisible(ObjectDatas_->Load<bool>(prefix + "isVisible", true));
+
+        // 衝突マスクを読み込み
+        auto maskList = ObjectDatas_->Load<std::vector<std::string>>(
+            prefix + "collisionMask",
+            std::vector<std::string>());
+        for (const auto &maskTag : maskList) {
+            collider->AddCollisionMask(maskTag);
+        }
+
+        // 位置と回転の取得関数を設定
+        collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+        collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+
+        // リストに追加して登録
+        colliders_.push_back(collider);
+        CollisionManager::GetInstance()->Register(collider);
+    }
 }
 
 void BaseObject::AnimaSaveToJson() {
@@ -448,17 +591,116 @@ void BaseObject::AnimaLoadFromJson() {
 }
 
 void BaseObject::DebugCollider() {
-    for (auto &collider : colliders_) {
-        collider->OffsetImgui();
+#ifdef _DEBUG
+    if (colliders_.empty()) {
+        ImGui::Text("コライダーなし");
+        return;
     }
-}
 
-Vector3 BaseObject::GetCenterPosition() {
-    return GetWorldPosition();
-}
+    for (size_t i = 0; i < colliders_.size(); ++i) {
+        auto *collider = colliders_[i];
+        if (!collider)
+            continue;
 
-Quaternion BaseObject::GetCenterRotation() {
-    return GetWorldRotation();
+        ImGui::PushID(static_cast<int>(i));
+
+        if (ImGui::TreeNode(collider->GetName().c_str())) {
+            // 有効/無効
+            bool enabled = collider->IsEnabled();
+            if (ImGui::Checkbox("有効", &enabled)) {
+                collider->SetEnabled(enabled);
+            }
+
+            // 可視性
+            bool visible = collider->IsVisible();
+            if (ImGui::Checkbox("表示", &visible)) {
+                collider->SetVisible(visible);
+            }
+
+            ImGui::Spacing();
+
+            // 衝突状態の表示（新規追加）
+            bool isColliding = collider->IsCollidingInCurrentFrame();
+            ImGui::PushStyleColor(ImGuiCol_Text, isColliding ? ImVec4(1.0f, 0.3f, 0.3f, 1.0f) : ImVec4(0.3f, 1.0f, 0.3f, 1.0f));
+            ImGui::Text("衝突状態: %s", isColliding ? "衝突中" : "非衝突");
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // タグ設定UI
+            collider->ImGuiTagSettings();
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // 型に応じた詳細設定
+            if (auto *sphere = dynamic_cast<SphereCollider *>(collider)) {
+                ImGui::Text("【球体コライダー】");
+                float radius = sphere->GetRadius();
+                if (ImGui::DragFloat("半径", &radius, 0.1f, 0.1f, 100.0f)) {
+                    sphere->SetRadius(radius);
+                }
+
+                Vector3 offset = sphere->GetOffset();
+                if (ImGui::DragFloat3("オフセット", &offset.x, 0.1f)) {
+                    sphere->SetOffset(offset);
+                }
+            } else if (auto *aabb = dynamic_cast<AABBCollider *>(collider)) {
+                ImGui::Text("【AABBコライダー】");
+                Vector3 size = aabb->GetSize();
+                if (ImGui::DragFloat3("サイズ", &size.x, 0.1f, 0.1f, 100.0f)) {
+                    aabb->SetSize(size);
+                }
+
+                Vector3 offset = aabb->GetOffset();
+                if (ImGui::DragFloat3("オフセット", &offset.x, 0.1f)) {
+                    aabb->SetOffset(offset);
+                }
+            } else if (auto *obb = dynamic_cast<OBBCollider *>(collider)) {
+                ImGui::Text("【OBBコライダー】");
+                Vector3 size = obb->GetSize();
+                if (ImGui::DragFloat3("サイズ", &size.x, 0.1f, 0.1f, 100.0f)) {
+                    obb->SetSize(size);
+                }
+
+                Vector3 rotOffset = obb->GetRotationOffset();
+                if (ImGui::DragFloat3("回転オフセット", &rotOffset.x, 0.1f)) {
+                    obb->SetRotationOffset(rotOffset);
+                }
+
+                Vector3 scaleOffset = obb->GetScaleOffset();
+                if (ImGui::DragFloat3("スケールオフセット", &scaleOffset.x, 0.1f)) {
+                    obb->SetScaleOffset(scaleOffset);
+                }
+            }
+
+            ImGui::Spacing();
+
+            // セーブボタン
+            if (ImGui::Button("保存", ImVec2(80, 0))) {
+                collider->SaveToJson();
+            }
+
+            // 削除ボタン
+            ImGui::SameLine();
+            if (ImGui::Button("削除", ImVec2(80, 0))) {
+                CollisionManager::GetInstance()->Unregister(collider);
+                delete collider;
+                colliders_.erase(colliders_.begin() + i);
+                ImGui::TreePop();
+                ImGui::PopID();
+                break;
+            }
+
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    }
+#endif
 }
 
 void BaseObject::ImGui() {
@@ -467,25 +709,63 @@ void BaseObject::ImGui() {
         if (ImGui::BeginTabItem(objectName_.c_str())) {
             DebugObject();
 
-            // コライダーの設定
-            if (isCollider) {
+            if (ImGui::CollapsingHeader("コライダー設定", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Indent(10);
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                // コライダー追加ボタン
+                if (ImGui::Button("コライダー追加")) {
+                    ImGui::OpenPopup("AddColliderPopup");
+                }
+
+                if (ImGui::BeginPopup("AddColliderPopup")) {
+                    if (ImGui::MenuItem("球体コライダー")) {
+                        auto *collider = AddSphereCollider();
+                        collider->SetTag("Environment");
+                        collider->AddCollisionMask("Player");
+                        collider->SetRadius(1.0f);
+                    }
+
+                    if (ImGui::MenuItem("AABBコライダー")) {
+                        auto *collider = AddAABBCollider();
+                        collider->SetTag("Environment");
+                        collider->AddCollisionMask("Player");
+                        collider->SetSize({2.0f, 2.0f, 2.0f});
+                    }
+
+                    if (ImGui::MenuItem("OBBコライダー")) {
+                        auto *collider = AddOBBCollider();
+                        collider->SetTag("Environment");
+                        collider->AddCollisionMask("Player");
+                        collider->SetSize({2.0f, 2.0f, 2.0f});
+                    }
+
+                    ImGui::EndPopup();
+                }
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                // コライダーのデバッグ情報を表示
                 DebugCollider();
+
+                ImGui::Unindent(10);
             }
-            if (ImGui::Button("コライダー追加")) {
-                AddCollider();
-            }
+
+            ImGui::Spacing();
 
             // モデル描画チェックボックス
             bool modelDrawChanged = ImGui::Checkbox("モデル描画", &isModelDraw_);
             if (modelDrawChanged && isModelDraw_) {
-                // モデル描画がオンになったときはワイヤーフレームをオフにする
                 isWireframe_ = false;
             }
 
             // ワイヤーフレームチェックボックス
             bool wireframeChanged = ImGui::Checkbox("ワイヤーフレーム", &isWireframe_);
             if (wireframeChanged && isWireframe_) {
-                // ワイヤーフレームがオンになったときはモデル描画をオフにする
                 isModelDraw_ = false;
             }
             if (isWireframe_) {
@@ -509,8 +789,53 @@ void BaseObject::ImGui() {
         }
         ImGui::EndTabBar();
     }
-
 #endif // _DEBUG
+}
+
+SphereCollider *BaseObject::AddSphereCollider(const std::string &name) {
+    auto *collider = new SphereCollider();
+
+    std::string colliderName = name.empty() ? objectName_ + "_SphereCollider" : name;
+    collider->SetName(colliderName);
+
+    // 位置と回転の取得関数を設定
+    collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+    collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+
+    colliders_.push_back(collider);
+    CollisionManager::GetInstance()->Register(collider);
+
+    return collider;
+}
+
+AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
+    auto *collider = new AABBCollider();
+
+    std::string colliderName = name.empty() ? objectName_ + "_AABBCollider" : name;
+    collider->SetName(colliderName);
+
+    collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+    collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+
+    colliders_.push_back(collider);
+    CollisionManager::GetInstance()->Register(collider);
+
+    return collider;
+}
+
+OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
+    auto *collider = new OBBCollider();
+
+    std::string colliderName = name.empty() ? objectName_ + "_OBBCollider" : name;
+    collider->SetName(colliderName);
+
+    collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+    collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+
+    colliders_.push_back(collider);
+    CollisionManager::GetInstance()->Register(collider);
+
+    return collider;
 }
 
 void BaseObject::DebugObject() {

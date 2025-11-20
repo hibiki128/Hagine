@@ -47,7 +47,7 @@ class ChargeShot : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter([[maybe_unused]] Collider *other) override;
+    void OnCollisionEnterCallback(ColliderBase *other);
 
     /// <summary>
     /// 生存状態を取得
@@ -148,4 +148,6 @@ class ChargeShot : public BaseObject {
 
     std::unique_ptr<ParticleEmitter> chargeEmitter_;
     std::unique_ptr<ParticleEmitter> bulletEmitter_;
+
+    SphereCollider *bulletCollider_ = nullptr;
 };

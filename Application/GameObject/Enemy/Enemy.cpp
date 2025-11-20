@@ -22,8 +22,17 @@ void Enemy::Init(const std::string objectName) {
 
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
-    BaseObject::AddCollider();
-    BaseObject::SetCollisionType(CollisionType::OBB);
+    enemyCollider_ = AddOBBCollider("enemy_Collider");
+    enemyCollider_->SetTag("Enemy");
+    enemyCollider_->AddCollisionMask("PlayerBullet");
+    enemyCollider_->AddCollisionMask("Player");
+    enemyCollider_->AddCollisionMask("PlayerHand");
+    enemyCollider_->AddCollisionMask("PlayerChargeBullet");
+
+    enemyCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollisionEnter(other);
+    });
+
     BaseObject::SetTexture("debug/white1x1.png", 0);
     BaseObject::SetColor(Vector4(1, 0, 0, 1));
     shadow_ = std::make_unique<BaseObject>();
@@ -186,6 +195,7 @@ void Enemy::DrawBehaviorTreeEditor() {
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (!isAlive_) {
+        enemyCollider_->SetEnabled(false);
         return;
     }
     BaseObject::Draw(viewProjection, offSet);
@@ -227,13 +237,12 @@ void Enemy::Debug() {
 #endif // USE_IMGUI
 }
 
-void Enemy::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<PlayerBullet *>(other) || dynamic_cast<ChargeShot *>(other)) {
+void Enemy::OnCollisionEnter(ColliderBase *other) {
+    if (other->GetTag() == "PlayerBullet") {
         emitter_->SetPosition(transform_->translation_);
         emitter_->UpdateOnce();
     }
-
-    if (dynamic_cast<ChargeShot *>(other)) {
+    if (other->GetTag() == "PlayerChargeBullet") {
         chageShake_->StartShake();
     }
 }

@@ -1,24 +1,27 @@
 #pragma once
 #include "Camera/ViewProjection/ViewProjection.h"
+#include "Collider/ColliderBase.h"
+#include "Collider/type/AABBCollider.h"
+#include "Collider/type/OBBCollider.h"
+#include "Collider/type/SphereCollider.h"
 #include "Data/DataHandler.h"
 #include "Object/Object3d.h"
 #include "Transform/ObjColor.h"
 #include "Transform/WorldTransform.h"
-#include "collider/Collider.h"
 #include "externals/nlohmann/json.hpp"
-#include <string>
 #include <Graphics/PipeLine/PipeLineManager.h>
+#include <string>
 
 class SkyBox;
-class BaseObject : public Collider {
+class BaseObject {
   public:
     /// ===================================================
-    /// private variaus
+    /// public variaus
     /// ===================================================
 
     std::unique_ptr<DataHandler> ObjectDatas_{};
     std::unique_ptr<DataHandler> AnimaDatas_{};
-
+    virtual ~BaseObject();
   protected:
     /// ===================================================
     /// protected variaus
@@ -70,12 +73,12 @@ class BaseObject : public Collider {
 
     virtual void CreateModel(const std::string modelname);
     virtual void CreatePrimitiveModel(const PrimitiveType &type);
-    virtual void AddCollider();
 
     virtual void ImGui();
 
-    Vector3 GetCenterPosition() override;
-    Quaternion GetCenterRotation() override;
+    SphereCollider *AddSphereCollider(const std::string &name = "");
+    AABBCollider *AddAABBCollider(const std::string &name = "");
+    OBBCollider *AddOBBCollider(const std::string &name = "");
 
     // 中心座標取得
     WorldTransform *GetWorldTransform() { return transform_.get(); }
@@ -107,8 +110,11 @@ class BaseObject : public Collider {
     void SaveToJson();
     void LoadFromJson();
     void LoadFromJson(std::string folderPath, std::string jsonName);
+    void SaveColliders();
+    void LoadColliders();
     void AnimaSaveToJson();
     void AnimaLoadFromJson();
+    void DebugCollider();
     void SaveParentChildRelationship();
     void LoadParentChildRelationship();
     void SetFolderPath(const std::string &folderPath) { foldarPath_ = folderPath; }
@@ -142,6 +148,7 @@ class BaseObject : public Collider {
     Material *GetMaterial(uint32_t index = 0) {
         obj3d_->GetMaterial(index);
     }
+    std::vector<ColliderBase *> &GetColliders() { return colliders_; }
 
     /// ===================================================
     /// setter
@@ -170,17 +177,16 @@ class BaseObject : public Collider {
 
   private:
     void DebugObject();
-    void DebugCollider();
     void ShowFileSelector();
     // ブレンドモードの選択UI
     void ShowBlendModeCombo(BlendMode &currentMode);
 
     std::vector<std::string> GetGltfFiles();
-    std::vector<Collider *> colliders_{};
 
-    bool isCollider = false;
     bool shouldSave_ = true;
     bool isGizmoSelectable_ = true;
     BlendMode blendMode_ = BlendMode::kNormal;
     std::string parentName_{};
+
+    std::vector<ColliderBase *> colliders_;
 };

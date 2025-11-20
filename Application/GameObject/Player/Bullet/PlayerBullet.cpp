@@ -1,10 +1,11 @@
 #include "PlayerBullet.h"
+#include "Debug/Log/Logger.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
 #include <Engine/Frame/Frame.h>
 #include <cmath>
-#include"Debug/Log/Logger.h"
+#include"Collider/CollosionManager.h"
 
 void PlayerBullet::Init(const std::string objectName) {
     BaseObject::Init(objectName);
@@ -87,20 +88,26 @@ void PlayerBullet::Update() {
 }
 void PlayerBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 }
+
 void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
     // 生きている場合のみ描画
     if (isAlive_) {
         emitter_->Draw(viewProjection);
     }
 }
+
 void PlayerBullet::InitTransform(Player *player) {
     // プレイヤーの位置を弾の初期位置に設定
     this->transform_->translation_ = player->GetLocalPosition();
+    collider_ = AddSphereCollider("player_bullet");
+    collider_->SetTag("PlayerBullet");
+    collider_->AddCollisionMask("Enemy");
 
-    this->AddCollider();
-    this->SetCollisionType(CollisionType::Sphere);
+    collider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollisionEnter(other);
+    });
 
-        targetEnemy_ = player->GetEnemy();
+    targetEnemy_ = player->GetEnemy();
     if (player->GetIsLockOn() && player->GetEnemy()) {
         isLockOnBullet_ = true;
 
@@ -137,9 +144,8 @@ void PlayerBullet::InitTransform(Player *player) {
     this->transform_->translation_ += forwardOffset;
 }
 
-void PlayerBullet::OnCollisionEnter(Collider *other) {
-    if (dynamic_cast<Enemy *>(other) && isAlive_ && targetEnemy_->GetAlive()) {
-        SetCollisionEnabled(false);
+void PlayerBullet::OnCollisionEnter(ColliderBase *other) {
+    if (other->GetTag() == "Enemy" && isAlive_ && targetEnemy_->GetAlive()) {
         isHit_ = true;
         targetEnemy_->SetDamage(1);
     }

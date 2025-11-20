@@ -26,7 +26,7 @@ class Enemy : public BaseObject {
     /// <summary>
     /// デストラクタ
     /// </summary>
-    ~Enemy();
+    ~Enemy()override;
 
     /// <summary>
     /// 初期化
@@ -61,7 +61,7 @@ class Enemy : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter([[maybe_unused]] Collider *other) override;
+    void OnCollisionEnter(ColliderBase* collider);
 
     /// <summary>
     /// ビヘイビアツリーを初期化
@@ -205,4 +205,6 @@ class Enemy : public BaseObject {
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
 #endif
     std::unique_ptr<BehaviorNode> behaviorTreeRoot_;
+
+    OBBCollider *enemyCollider_ = nullptr;
 };

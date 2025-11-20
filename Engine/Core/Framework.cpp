@@ -118,10 +118,9 @@ void Framework::Initialize() {
     audio_->Initialize();
     ///---------------------------
 
-    ///-------CollisionManager--------------
-    collisionManager_ = std::make_unique<CollisionManager>();
-    collisionManager_->Initialize();
-    ///-------------------------------------
+    ///-------CollisionManager--------
+    collisionManager_ = CollisionManager::GetInstance();
+    ///----------------------------------
 
     ///-------SceneManager--------
     sceneManager_ = SceneManager::GetInstance();

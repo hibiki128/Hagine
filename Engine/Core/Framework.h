@@ -3,7 +3,7 @@
 #ifdef _DEBUG
 #endif // _DEBUG
 #include "Audio.h"
-#include "Collider/CollisionManager.h"
+#include"Collider/CollosionManager.h"
 #include "Debug/ImGui/ImGuiManager.h"
 #include "Debug/ImGui/ImGuizmoManager.h"
 #include "Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"
@@ -119,7 +119,8 @@ class Framework {
 
     D3DResourceLeakChecker LeakChecker_;
 
-    std::unique_ptr<CollisionManager> collisionManager_;
+    CollisionManager *collisionManager_ = nullptr;
+
     std::unique_ptr<OffScreen> offscreen_;
 
     bool endRequest_;
