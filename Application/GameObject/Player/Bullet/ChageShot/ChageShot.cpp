@@ -54,43 +54,6 @@ void ChargeShot::Update() {
         }
     }
 
-    if (isAlive_ && !isFired_) {
-        if (player_) {
-            Vector3 playerPos = player_->GetLocalPosition();
-
-            Quaternion rot = player_->GetLocalRotation();
-
-            Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
-
-            Vector3 forwardDir = rot * baseForward;
-
-            forwardDir.x = -forwardDir.x;
-
-            Vector3 normForward = forwardDir.Normalize();
-
-            // チャージ弾のオフセット距離
-            float chargeRadius = scale_;
-            float offsetDistance = playerRadius_ + chargeRadius + offsetMargin_;
-
-            // オフセット計算
-            Vector3 offset = normForward * offsetDistance;
-
-            // 高さ（Y軸）オフセット
-            offset.y = verticalOffset_;
-
-            // チャージ弾の位置更新
-            transform_->translation_ = playerPos + offset;
-
-            // エミッター位置も更新
-            chargeEmitter_->SetPosition(transform_->translation_);
-
-            Vector3 playerEuler = rot.ToEulerAngles();
-            if (bulletCollider_) {
-                bulletCollider_->SetEnabled(true);
-            }
-        }
-    }
-
     if (!isAlive_) {
         if (input->TriggerKey(DIK_K)) {
             // チャージ開始前にエネルギーチェックを追加
@@ -165,6 +128,42 @@ void ChargeShot::Update() {
         }
     }
 
+    if (isAlive_ && !isFired_) {
+        if (player_) {
+            Vector3 playerPos = player_->GetLocalPosition();
+
+            Quaternion rot = player_->GetLocalRotation();
+
+            Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
+
+            Vector3 forwardDir = rot * baseForward;
+
+            forwardDir.x = -forwardDir.x;
+
+            Vector3 normForward = forwardDir.Normalize();
+
+            // チャージ弾のオフセット距離
+            float chargeRadius = scale_;
+            float offsetDistance = playerRadius_ + chargeRadius + offsetMargin_;
+
+            // オフセット計算
+            Vector3 offset = normForward * offsetDistance;
+
+            // 高さ（Y軸）オフセット
+            offset.y = verticalOffset_;
+
+            // チャージ弾の位置更新
+            transform_->translation_ = playerPos + offset;
+
+            // エミッター位置も更新
+            chargeEmitter_->SetPosition(transform_->translation_);
+
+            Vector3 playerEuler = rot.ToEulerAngles();
+            if (bulletCollider_) {
+                bulletCollider_->SetEnabled(true);
+            }
+        }
+    }
     // 階層的ワールド変換更新
     BaseObject::UpdateWorldTransformHierarchy();
 }
