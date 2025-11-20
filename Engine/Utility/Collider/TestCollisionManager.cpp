@@ -119,10 +119,26 @@ void TestCollisionManager::CheckCollisionPair(ColliderBase *a, ColliderBase *b) 
         pair = {b, a};
     }
 
+    // 双方向チェック: どちらかが判定を望んでいる場合のみ衝突判定を行う
+    bool shouldCheck = a->ShouldCollideWith(b) || b->ShouldCollideWith(a);
+
+    if (!shouldCheck) {
+        // 判定が不要な場合は、以前の衝突状態をクリア
+        auto it = collisionStates_.find(pair);
+        if (it != collisionStates_.end() && it->second) {
+            // 以前衝突していた場合はExitイベントを発火
+            a->TriggerCollisionExit(b);
+            b->TriggerCollisionExit(a);
+        }
+        collisionStates_[pair] = false;
+        return;
+    }
+
     bool isCollidingNow = TestCollision(a, b);
     bool wasColliding = collisionStates_[pair];
 
     if (isCollidingNow) {
+        // 両方に衝突フラグを設定（視覚的フィードバック用）
         a->SetCollidingInCurrentFrame(true);
         b->SetCollidingInCurrentFrame(true);
 

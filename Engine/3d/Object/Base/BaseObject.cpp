@@ -457,7 +457,7 @@ void BaseObject::DebugCollider() {
         ImGui::PushID(static_cast<int>(i));
 
         if (ImGui::TreeNode(collider->GetName().c_str())) {
-            // コライダーの有効/無効
+            // 有効/無効
             bool enabled = collider->IsEnabled();
             if (ImGui::Checkbox("有効", &enabled)) {
                 collider->SetEnabled(enabled);
@@ -470,10 +470,18 @@ void BaseObject::DebugCollider() {
             }
 
             ImGui::Spacing();
+
+            // 衝突状態の表示（新規追加）
+            bool isColliding = collider->IsCollidingInCurrentFrame();
+            ImGui::PushStyleColor(ImGuiCol_Text, isColliding ? ImVec4(1.0f, 0.3f, 0.3f, 1.0f) : ImVec4(0.3f, 1.0f, 0.3f, 1.0f));
+            ImGui::Text("衝突状態: %s", isColliding ? "衝突中" : "非衝突");
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
 
-            // タグ設定UI（新システム）
+            // タグ設定UI
             collider->ImGuiTagSettings();
 
             ImGui::Spacing();
@@ -536,7 +544,7 @@ void BaseObject::DebugCollider() {
                 colliders_.erase(colliders_.begin() + i);
                 ImGui::TreePop();
                 ImGui::PopID();
-                break; // イテレータが無効になるのでループを抜ける
+                break;
             }
 
             ImGui::TreePop();
