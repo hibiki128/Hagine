@@ -167,6 +167,7 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->emit = 0;
     emitterMeshData_->emitFromSurface = 1;
     emitterMeshData_->edgeCount = 0;
+    emitterMeshData_->anchorPoint = Vector3(0.5f, 0.5f, 0.5f);
 }
 
 void ParticleCSEmitter::EmitterDisPatch() {
@@ -648,6 +649,16 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::PopStyleColor();
 
+                ImGui::Spacing();
+                ImGui::Separator();
+
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.7f, 0.9f, 1.0f));
+                ImGui::Text("アンカーポイント:");
+                ImGui::PopStyleColor();
+
+                ImGui::DragFloat3("基準点##AnchorPoint", &emitterMeshData_->anchorPoint.x, 0.01f, 0.0f, 1.0f, "%.2f");
+                
                 ImGui::Spacing();
                 ImGui::Separator();
 

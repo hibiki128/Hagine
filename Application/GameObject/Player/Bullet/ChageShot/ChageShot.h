@@ -113,7 +113,7 @@ class ChargeShot : public BaseObject {
     /// ダメージ値を取得
     /// </summary>
     /// <returns>int: ダメージ値</returns>
-    int GetDamage() const;
+    float GetDamage() const;
 
     /// <summary>
     /// チャージ中かを取得
@@ -140,7 +140,7 @@ class ChargeShot : public BaseObject {
     float speed_ = 60.0f; // 発射速度
 
     Player *player_ = nullptr;
-    static constexpr int maxDamage_ = 15; // 最大ダメージ値
+    static constexpr int maxDamage_ = 7; // 最大ダメージ値
 
     float playerRadius_ = 1.0f;   // プレイヤーの半径
     float offsetMargin_ = 0.5f;   // オフセット余裕距離

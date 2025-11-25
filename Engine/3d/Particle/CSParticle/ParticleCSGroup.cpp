@@ -383,29 +383,33 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
         if (ImGui::TreeNode("出現数")) {
             ImGui::PopStyleColor();
-
             int emitCount = static_cast<int>(settingsData_->emitCount);
             int dynamicMaxCount = CalculateOptimalEmitCount();
-            int maxCount = std::min(static_cast<int>(settingsData_->maxParticleCount), dynamicMaxCount);
+            int absoluteMaxCount = static_cast<int>(settingsData_->maxParticleCount);
 
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.2f, 0.4f));
-            if (ImGui::DragInt("出現数（emitCount）", &emitCount, 1, 0, maxCount)) {
-                emitCount = std::clamp(emitCount, 0, maxCount);
+            if (ImGui::DragInt("出現数（emitCount）", &emitCount, 1, 0, absoluteMaxCount)) {
+                emitCount = std::clamp(emitCount, 0, absoluteMaxCount);
                 settingsData_->emitCount = static_cast<uint32_t>(emitCount);
             }
             ImGui::PopStyleColor();
 
+            // 推奨上限を超えている場合は警告表示
+            if (emitCount > dynamicMaxCount) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.3f, 1.0f));
+                ImGui::Text("推奨上限を超えています");
+                ImGui::PopStyleColor();
+            }
+
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.6f, 1.0f));
             ImGui::Text("推奨上限: %d (最大寿命%.2fs / 発生間隔%.2fs)",
                         dynamicMaxCount, settingsData_->lifeTimeMax, frequency_);
-            ImGui::Text("絶対上限: %d", static_cast<int>(settingsData_->maxParticleCount));
+            ImGui::Text("絶対上限: %d", absoluteMaxCount);
             ImGui::PopStyleColor();
-
             ImGui::TreePop();
         } else {
             ImGui::PopStyleColor();
         }
-
         ImGui::Separator();
 
         // 寿命設定

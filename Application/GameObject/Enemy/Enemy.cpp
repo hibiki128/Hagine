@@ -24,10 +24,11 @@ void Enemy::Init(const std::string objectName) {
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
     enemyCollider_ = AddOBBCollider("enemy_Collider");
     enemyCollider_->SetTag("Enemy");
-    enemyCollider_->AddCollisionMask("PlayerBullet");
+    enemyCollider_->AddCollisionMask("player_bullet");
     enemyCollider_->AddCollisionMask("Player");
     enemyCollider_->AddCollisionMask("PlayerHand");
     enemyCollider_->AddCollisionMask("PlayerChargeBullet");
+    enemyCollider_->AddCollisionMask("makan");
 
     enemyCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         this->OnCollisionEnter(other);
@@ -238,11 +239,11 @@ void Enemy::Debug() {
 }
 
 void Enemy::OnCollisionEnter(ColliderBase *other) {
-    if (other->GetTag() == "PlayerBullet") {
+    if (other->GetTag() == "PlayerBullet" || other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
         emitter_->SetPosition(transform_->translation_);
         emitter_->UpdateOnce();
     }
-    if (other->GetTag() == "PlayerChargeBullet") {
+    if (other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
         chageShake_->StartShake();
     }
 }

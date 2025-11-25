@@ -31,6 +31,8 @@ struct EmitterMesh {
     float frequencyTime;
     uint32_t emit;
     uint32_t edgeCount;
+    Vector3 anchorPoint;
+    float padding;      
 };
 
 struct CSParticle {

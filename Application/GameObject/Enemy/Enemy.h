@@ -115,7 +115,7 @@ class Enemy : public BaseObject {
     /// <summary>
     /// Setter
     /// </summary>
-    void SetDamage(int damage) { damage_ = damage; }
+    void SetDamage(float damage) { damage_ = damage; }
     void SetVp(ViewProjection *vp);
     void SetTarget(Player *target) { target_ = target; }
     void SetGuarding(bool guarding) { isGuarding_ = guarding; }
@@ -177,9 +177,9 @@ class Enemy : public BaseObject {
     Vector3 acceleration_{};
     Player *target_ = nullptr;
 
-    float HP_ = 1.0f;
-    float maxHP_ = 100.0f;
-    int damage_ = 0;
+    float HP_ = 10000.0f;
+    float maxHP_ = 10000.0f;
+    float damage_ = 0.0f;
     bool isGuarding_ = false; // ガード状態
 
     float moveSpeed_ = 0.0f;

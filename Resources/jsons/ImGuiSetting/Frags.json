@@ -2,15 +2,15 @@
     "IsShowMainUI": true,
     "ShowGrid": false,
     "isEditorMode": true,
-    "showFPSView": false,
-    "showGizmoView": false,
+    "showFPSView": true,
+    "showGizmoView": true,
     "showHierarchyView": false,
     "showLightView": false,
     "showMotionEditorView": false,
-    "showObjectView": false,
+    "showObjectView": true,
     "showOfScreenView": false,
-    "showParticleView": false,
+    "showParticleView": true,
     "showSceneView": true,
     "showShortcutWindow": false,
-    "showSpriteManagerView": true
+    "showSpriteManagerView": false
 }

@@ -79,8 +79,6 @@ Quaternion Quaternion::FromEulerAnglesSafe(const Vector3 &eulerAngles) {
         cosX * cosY * cosZ - sinX * sinY * sinZ);
 }
 
-
-
 Vector3 Quaternion::ToEulerAnglesSafe() const {
     Vector3 angles;
 
@@ -110,20 +108,20 @@ Vector3 Quaternion::ToEulerAnglesSafe() const {
     return angles;
 }
 
-
 Quaternion Quaternion::FromAxisRotations(const Vector3 &axisRotations) {
     Quaternion qx = FromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), axisRotations.x);
     Quaternion qy = FromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), axisRotations.y);
     Quaternion qz = FromAxisAngle(Vector3(0.0f, 0.0f, 1.0f), axisRotations.z);
-    
+
     return qy * qx * qz; // YXZ順序
 }
 
 Vector3 Quaternion::Rotate(const Vector3 &v) const {
-    // q * v * q^-1 の計算でベクトルを回転させる
-    Quaternion p = Quaternion(v.x, v.y, v.z, 0.0f);
-    Quaternion q_inv = this->Inverse(); // 逆クォータニオン
-    Quaternion rotated = (*this) * p * q_inv;
+    Quaternion q = this->Normalize();     // 回転用クォータニオン
+    Quaternion p = {v.x, v.y, v.z, 0.0f}; // 回転対象ベクトル
+
+    // q * p * q^-1
+    Quaternion rotated = q * p * q.Inverse();
     return Vector3(rotated.x, rotated.y, rotated.z);
 }
 
@@ -167,11 +165,14 @@ Quaternion Quaternion::FromLookRotation(const Vector3 &direction, const Vector3 
     Vector3 forward = direction.Normalize();
     Vector3 upNorm = up.Normalize();
 
-    // 右手座標系での正しい外積計算
-    Vector3 right = upNorm.Cross(forward).Normalize();
-    Vector3 newUp = forward.Cross(right).Normalize();
+    // 正しい右手座標系の右方向
+    // forward × up
+    Vector3 right = forward.Cross(upNorm).Normalize();
 
-    // 回転行列を正しく構築（行列の列として配置）
+    // 上方向を再計算
+    Vector3 newUp = right.Cross(forward).Normalize();
+
+    // 回転行列の列として配置
     float m00 = right.x;
     float m01 = newUp.x;
     float m02 = forward.x;
@@ -185,37 +186,33 @@ Quaternion Quaternion::FromLookRotation(const Vector3 &direction, const Vector3 
     float trace = m00 + m11 + m22;
 
     if (trace > 0.0f) {
-        float s = std::sqrt(trace + 1.0f) * 2.0f; // s = 4 * qw
+        float s = std::sqrt(trace + 1.0f) * 2.0f;
         return Quaternion(
-            (m21 - m12) / s, // qx
-            (m02 - m20) / s, // qy
-            (m10 - m01) / s, // qz
-            0.25f * s        // qw
-        );
+            (m21 - m12) / s,
+            (m02 - m20) / s,
+            (m10 - m01) / s,
+            0.25f * s);
     } else if (m00 > m11 && m00 > m22) {
-        float s = std::sqrt(1.0f + m00 - m11 - m22) * 2.0f; // s = 4 * qx
+        float s = std::sqrt(1.0f + m00 - m11 - m22) * 2.0f;
         return Quaternion(
-            0.25f * s,       // qx
-            (m01 + m10) / s, // qy
-            (m02 + m20) / s, // qz
-            (m21 - m12) / s  // qw
-        );
+            0.25f * s,
+            (m01 + m10) / s,
+            (m02 + m20) / s,
+            (m21 - m12) / s);
     } else if (m11 > m22) {
-        float s = std::sqrt(1.0f + m11 - m00 - m22) * 2.0f; // s = 4 * qy
+        float s = std::sqrt(1.0f + m11 - m00 - m22) * 2.0f;
         return Quaternion(
-            (m01 + m10) / s, // qx
-            0.25f * s,       // qy
-            (m12 + m21) / s, // qz
-            (m02 - m20) / s  // qw
-        );
+            (m01 + m10) / s,
+            0.25f * s,
+            (m12 + m21) / s,
+            (m02 - m20) / s);
     } else {
-        float s = std::sqrt(1.0f + m22 - m00 - m11) * 2.0f; // s = 4 * qz
+        float s = std::sqrt(1.0f + m22 - m00 - m11) * 2.0f;
         return Quaternion(
-            (m02 + m20) / s, // qx
-            (m12 + m21) / s, // qy
-            0.25f * s,       // qz
-            (m01 - m10) / s  // qw
-        );
+            (m02 + m20) / s,
+            (m12 + m21) / s,
+            0.25f * s,
+            (m01 - m10) / s);
     }
 }
 
@@ -262,9 +259,14 @@ Quaternion Quaternion::operator-=(const Quaternion &other) {
 }
 
 Vector3 Quaternion::operator*(const Vector3 &v) const {
-    Quaternion qv(v.x, v.y, v.z, 0.0f);
-    Quaternion res = (*this) * qv * this->Conjugate();
-    return {res.x, res.y, res.z};
+    Quaternion q = this->Normalize(); // クォータニオンを正規化
+    Quaternion p = {v.x, v.y, v.z, 0.0f};
+
+    // 正しい回転 q * p * q^-1
+    Quaternion res = q * p * q.Inverse();
+
+    // Vector3として返す
+    return Vector3(res.x, res.y, res.z);
 }
 
 Quaternion Quaternion::operator-() const {
@@ -357,26 +359,24 @@ Quaternion Quaternion::FromAxisAngle(const Vector3 &axis, float angle) {
         std::cos(halfAngle));
 }
 
-Quaternion Quaternion::FromEulerDegrees(const Vector3& eulerDegrees) {
+Quaternion Quaternion::FromEulerDegrees(const Vector3 &eulerDegrees) {
     // 度数をラジアンに変換
     Vector3 eulerRadians = {
         eulerDegrees.x * std::numbers::pi_v<float> / 180.0f,
         eulerDegrees.y * std::numbers::pi_v<float> / 180.0f,
-        eulerDegrees.z * std::numbers::pi_v<float> / 180.0f
-    };
-    
+        eulerDegrees.z * std::numbers::pi_v<float> / 180.0f};
+
     return FromEulerAngles(eulerRadians);
 }
 
 // クォータニオンを度数のオイラー角に変換
 Vector3 Quaternion::ToEulerDegrees() const {
     Vector3 eulerRadians = ToEulerAngles();
-    
+
     return {
         eulerRadians.x * 180.0f / std::numbers::pi_v<float>,
         eulerRadians.y * 180.0f / std::numbers::pi_v<float>,
-        eulerRadians.z * 180.0f / std::numbers::pi_v<float>
-    };
+        eulerRadians.z * 180.0f / std::numbers::pi_v<float>};
 }
 
 Quaternion Quaternion::FromMatrix(const Matrix4x4 &matrix) {

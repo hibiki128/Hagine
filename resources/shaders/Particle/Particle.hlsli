@@ -34,6 +34,7 @@ struct EmitterMesh
     float frequencyTime;
     uint emit;
     uint edgeCount;
+    float3 anchorPoint;
 };
 
 struct Triangle

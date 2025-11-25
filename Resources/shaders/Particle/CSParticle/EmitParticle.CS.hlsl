@@ -59,7 +59,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
             if (gEmitterMesh.emitFromSurface == 2 && gEmitterMesh.edgeCount > 0)
             {
-                // エッジモード: 線上に発生
                 uint edgeIndex = uint(generator.Generate1d() * float(gEmitterMesh.edgeCount)) % gEmitterMesh.edgeCount;
                 float t = generator.Generate1d();
             
@@ -70,7 +69,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
             }
             else if (gEmitterMesh.emitFromSurface == 1 && gEmitterMesh.triangleCount > 0)
             {
-                // 表面モード: 三角形の表面に発生
                 float particleRatio = generator.Generate1d();
         
                 uint triIndex = 0;
@@ -106,14 +104,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
             }
             else
             {
-                // 内部モード: ボリューム内に発生
-                randomPoint = float3(
-                    generator.Generate1d() * 2.0f - 1.0f,
-                    generator.Generate1d() * 2.0f - 1.0f,
-                    generator.Generate1d() * 2.0f - 1.0f
+                float3 randomPoint01 = float3(
+                    generator.Generate1d(),
+                    generator.Generate1d(),
+                    generator.Generate1d()
                 );
+                
+                float3 offset = (gEmitterMesh.anchorPoint - 0.5f) * 4.0f;
+                float3 rangeMin = -1.0f + offset;
+                float3 rangeMax = 1.0f + offset;
+                
+                randomPoint = lerp(rangeMin, rangeMax, randomPoint01);
             }
-    
+
             randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
             float3x3 rotMatrix = CreateRotationMatrixFromQuaternion(gEmitterMesh.rotation);
             randomPoint = mul(rotMatrix, randomPoint);

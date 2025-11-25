@@ -8,8 +8,8 @@
 #include <Application/Utility/Shake/Shake.h>
 #include <Particle/CSParticle/ParticleCSEmitter.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
-
 #include"Application/Staging/Death/DeathStaging.h"
+#include"Skill/MakanAttackSkill.h"
 
 class ChargeShot;
 class FollowCamera;
@@ -58,7 +58,7 @@ class Player : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const ViewProjection &viewProjection);
-
+    
     /// <summary>
     /// 状態を変更
     /// </summary>
@@ -197,6 +197,11 @@ class Player : public BaseObject {
     void Shot();
 
     /// <summary>
+    /// スキルショット
+    /// </summary>
+    void SkillShot();
+
+    /// <summary>
     /// 影のスケールを更新
     /// </summary>
     void UpdateShadowScale();
@@ -253,8 +258,8 @@ class Player : public BaseObject {
     float dt_;               // デルタタイム
     float HP_ = 100.0f;
     float maxHP_ = 100.0f;
-    float energy_ = 100.0f;    // 現在のエネルギー
-    float maxEnergy_ = 100.0f; // 最大エネルギー
+    float energy_ = 100.0f;            // 現在のエネルギー
+    float maxEnergy_ = 100.0f;         // 最大エネルギー
     float energyRecoveryRate_ = 0.01f; // エネルギー回復速度(秒速)
     float energyRecoveryDelay_ = 1.0f; // 回復開始までの遅延時間
     float timeSinceLastShot_ = 0.0f;   // 最後に撃ってからの経過時間
@@ -275,7 +280,7 @@ class Player : public BaseObject {
     bool isGrounded_ = true; // 接地フラグ
     bool isDashing_ = false; // ダッシュ中フラグ
 
-    bool started_ = false; // ゲーム開始フラグ
+    bool started_ = false;        // ゲーム開始フラグ
     bool isDeathStaging_ = false; // 死亡演出中フラグ
 
     bool isInvincible_ = false;        // 無敵状態フラグ
@@ -286,26 +291,24 @@ class Player : public BaseObject {
     bool comboInitialized_ = false; // コンボ初期化済みフラグ
 
     std::unordered_map<std::string, std::unique_ptr<PlayerBaseState>> states_; // 状態マップ
-    PlayerBaseState *currentState_ = nullptr;                                  // 現在の状態
-
-    std::unique_ptr<DataHandler> data_;
-    std::unique_ptr<BaseObject> shadow_;
 
     std::vector<std::unique_ptr<PlayerBullet>> bullets_; // 発射した弾
-    std::unique_ptr<ChargeShot> chargeShot_;             // チャージショット
 
-    std::unique_ptr<PlayerHand> leftHand_;  // 左手
-    std::unique_ptr<PlayerHand> rightHand_; // 右手
-    PlayerHand *leftHand_ptr_;
-    PlayerHand *rightHand_ptr_;
-
-    ViewProjection *vp_;
-    std::unique_ptr<Shake> shake_;
-
+    std::unique_ptr<DataHandler> data_;              // データ管理
+    std::unique_ptr<BaseObject> shadow_;             // 影
+    std::unique_ptr<ChargeShot> chargeShot_;         // チャージショット
+    std::unique_ptr<PlayerHand> leftHand_;           // 左手
+    std::unique_ptr<PlayerHand> rightHand_;          // 右手
+    std::unique_ptr<Shake> shake_;                   // シェイク
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<ParticleEmitter> rushEmitter_;   // 突撃パーティクル
-
-    std::unique_ptr<DeathStaging> deathStaging_; // 死亡演出
-
-    OBBCollider *playerCollider_ = nullptr;
+    std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
+    std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
+                                                  
+    ViewProjection *vp_;                             // カメラ
+    OBBCollider *playerCollider_ = nullptr;          // コライダー
+    PlayerHand *leftHand_ptr_;                       // 左手
+    PlayerHand *rightHand_ptr_;                      // 右手
+    PlayerBaseState *currentState_ = nullptr;        // 現在の状態
+    MakanAttackSkill *makanAttack_ptr_ = nullptr;   // 必殺技
 };
