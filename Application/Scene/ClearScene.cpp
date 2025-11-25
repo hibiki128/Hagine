@@ -106,8 +106,9 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
-     if (input_->TriggerKey(DIK_SPACE)) {
-         // シーンを変更
-         sceneManager_->NextSceneReservation("GAME");
-     }
+    // リザルト演出が完全に終了しているかチェック
+    if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
+        // シーンを変更
+        sceneManager_->NextSceneReservation("TITLE");
+    }
 }

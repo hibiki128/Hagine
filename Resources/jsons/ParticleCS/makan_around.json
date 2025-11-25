@@ -42,7 +42,7 @@
         "y": 0.0,
         "z": 1.0
     },
-    "isAuto": true,
+    "isAuto": false,
     "isVisible": false,
     "modelPath": "debug/sphere.obj",
     "particleGroupCount": 1,

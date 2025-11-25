@@ -196,6 +196,17 @@ void ResultUI::Update() {
     }
 
     UpdateNumberSprites();
+
+    if (currentEasingIndex_ >= kMaxSprite && numberAnimState_ == kFinished) {
+        bool allFinished = true;
+        for (int i = 0; i < kMaxSprite; ++i) {
+            if (!positionEasings_[i].IsFinished()) {
+                allFinished = false;
+                break;
+            }
+        }
+        isAllAnimationFinished_ = allFinished;
+    }
 }
 
 void ResultUI::UpdateNumberSprites() {

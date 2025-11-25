@@ -160,6 +160,9 @@ void MakanAttackSkill::OnCollisionEnter(ColliderBase *other) {
 }
 
 void MakanAttackSkill::DebugImGui() {
+#ifdef _DEBUG
+
+
     if (ImGui::TreeNode("MakanAttackSkill Debug")) {
         ImGui::Checkbox("Is Active", &isActive_);
         ImGui::Text("Current Length: %.2f / %.2f", currentLength_, maxLength_);
@@ -218,4 +221,5 @@ void MakanAttackSkill::DebugImGui() {
 
         ImGui::TreePop();
     }
+#endif // _DEBUG
 }

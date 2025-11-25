@@ -177,8 +177,8 @@ class Enemy : public BaseObject {
     Vector3 acceleration_{};
     Player *target_ = nullptr;
 
-    float HP_ = 10000.0f;
-    float maxHP_ = 10000.0f;
+    float HP_ = 100.0f;
+    float maxHP_ = 100.0f;
     float damage_ = 0.0f;
     bool isGuarding_ = false; // ガード状態
 
@@ -191,7 +191,7 @@ class Enemy : public BaseObject {
     bool canJump_ = false;
     bool isLockOn_ = false;
     bool isGrounded_ = true;
-    bool isStop_ = true;
+    bool isStop_ = false;
     bool started_ = false;
     bool drawShadow_ = true;
 

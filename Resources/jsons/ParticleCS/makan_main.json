@@ -1,9 +1,9 @@
 {
     "emitFromSurface": 0,
-    "frequency": 0.0010000000474974513,
+    "frequency": 0.0050000000474974513,
     "frequencyTime": 435.59521484375,
     "group_0_blendMode": 2,
-    "group_0_emitCount": 1000,
+    "group_0_emitCount": 750,
     "group_0_enableGravity": 0,
     "group_0_enableLifetimeScale": 1,
     "group_0_enableRandomColor": 0,
