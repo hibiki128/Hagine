@@ -38,6 +38,7 @@ class MakanAttackSkill : public BaseObject {
     /// ImGuiでのデバッグ表示
     /// </summary>
     void DebugImGui();
+
   private:
     /// <summary>
     /// 当たってる間

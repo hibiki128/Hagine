@@ -14,7 +14,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     {
         if (gParticles[particleIndex].color.a != 0)
         {
-            // 重力の適用 (追加)
+            // 重力の適用
             if (gSettings.enableGravity)
             {
                 gParticles[particleIndex].velocity += gSettings.gravity * gPerFrame.deltaTime;
@@ -50,9 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
             // Sin波による拡縮
             if (gSettings.enableSinScale)
             {
-            // sin波: -1 ~ 1 → 0 ~ 1 の範囲に変換
                 float sinWave = sin(gParticles[particleIndex].currentTime * gSettings.sinScaleFrequency) * 0.5f + 0.5f;
-            // 振幅を適用: (1.0 - amplitude) ~ (1.0 + amplitude) の範囲でスケール
                 float sinMultiplier = 1.0f + (sinWave * 2.0f - 1.0f) * gSettings.sinScaleAmplitude;
                 gParticles[particleIndex].scale = gParticles[particleIndex].initialScale * sinMultiplier;
             }
@@ -68,21 +66,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
             
             // アルファ値設定
             gParticles[particleIndex].color.a = saturate(alpha);
-        }
-        
-        // パーティクルが死んだ場合の処理
-        if (gParticles[particleIndex].color.a <= 0.0f)
-        {
-            gParticles[particleIndex].scale = float3(0.0f, 0.0f, 0.0f);
-            int freeListIndex;
-            InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
-            if ((freeListIndex + 1) < gSettings.maxParticleCount)
+            
+            // パーティクルが死んだかチェック
+            if (gParticles[particleIndex].color.a <= 0.0f)
             {
-                gFreeList[freeListIndex + 1] = particleIndex;
-            }
-            else
-            {
-                InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
+                gParticles[particleIndex].scale = float3(0.0f, 0.0f, 0.0f);
+                
+                int freeListIndex;
+                InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
+                
+                // 範囲チェックしてから書き込み（Interlocked不要）
+                if (freeListIndex + 1 < gSettings.maxParticleCount)
+                {
+                    gFreeList[freeListIndex + 1] = particleIndex;
+                }
             }
         }
     }
