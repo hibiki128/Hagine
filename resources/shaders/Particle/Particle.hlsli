@@ -1,3 +1,5 @@
+// Particle.hlsli
+
 struct VertexShaderOutput
 {
     float4 position : SV_POSITION;
@@ -15,7 +17,29 @@ struct Particle
     float4 color;
     float3 initialScale;
     float padding;
+    uint isTrailParticle;
+    uint parentIndex;
+    float trailSpawnTimer;
+    float trailSpawnInterval;
 };
+
+Particle CreateEmptyParticle()
+{
+    Particle p;
+    p.translate = float3(0, 0, 0);
+    p.scale = float3(0, 0, 0);
+    p.lifeTime = 0.0f;
+    p.velocity = float3(0, 0, 0);
+    p.currentTime = 0.0f;
+    p.color = float4(0, 0, 0, 0);
+    p.initialScale = float3(0, 0, 0);
+    p.padding = 0.0f;
+    p.isTrailParticle = 0;
+    p.parentIndex = 0xFFFFFFFF;
+    p.trailSpawnTimer = 0.0f;
+    p.trailSpawnInterval = 0.0f;
+    return p;
+}
 
 struct PerView
 {
@@ -37,26 +61,11 @@ struct EmitterMesh
     float3 anchorPoint;
 };
 
-struct Triangle
-{
-    float3 v0;
-    float3 v1;
-    float3 v2;
-};
-
 struct PerFrame
 {
     float time;
     float deltaTime;
     int groupId;
-};
-
-struct EdgeInfo
-{
-    float3 v0;
-    float padding0;
-    float3 v1;
-    float padding1;
 };
 
 struct ParticleCSSettings
@@ -80,13 +89,24 @@ struct ParticleCSSettings
     float sinScaleAmplitude;
     int enableGravity;
     float3 gravity;
+    int enableTrail;
+    float trailSpawnInterval;
+    int maxTrailPerParticle;
+    float trailLifeTimeScale;
+    float3 trailScaleMultiplier;
     float padding3;
+    float4 trailColorMultiplier;
+    float trailVelocityScale;
+    int trailInheritVelocity;
+    float padding4[2];
 };
 
-struct SurfacePoint
+struct EdgeInfo
 {
-    float3 position;
-    float padding;
+    float3 v0;
+    float padding0;
+    float3 v1;
+    float padding1;
 };
 
 struct TriangleInfo

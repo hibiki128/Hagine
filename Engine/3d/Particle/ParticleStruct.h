@@ -32,7 +32,7 @@ struct EmitterMesh {
     uint32_t emit;
     uint32_t edgeCount;
     Vector3 anchorPoint;
-    float padding;      
+    float padding;
 };
 
 struct CSParticle {
@@ -44,6 +44,10 @@ struct CSParticle {
     Vector4 color;
     Vector3 initialScale;
     float padding;
+    uint32_t isTrailParticle;
+    uint32_t parentIndex;
+    float trailSpawnTimer;
+    float trailSpawnInterval;
 };
 
 struct PerView {
@@ -76,7 +80,7 @@ struct SurfacePoint {
     float padding;
 };
 
- struct EdgeInfo {
+struct EdgeInfo {
     Vector3 v0;
     float padding0;
     Vector3 v1;
@@ -116,9 +120,27 @@ struct ParticleCSSettings {
     uint32_t maxParticleCount = 10000;
     float sinScaleFrequency{};
     float sinScaleAmplitude{};
-    uint32_t enableGravity = 0;           
+    uint32_t enableGravity = 0;
     Vector3 gravity = {0.0f, -9.8f, 0.0f};
-    float padding3[1]{};
+    uint32_t enableTrail = 0;
+    float trailSpawnInterval = 0.05f;
+    uint32_t maxTrailPerParticle = 5;
+    float trailLifeTimeScale = 0.5f;
+    Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
+    float padding3;
+    Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
+    float trailVelocityScale = 0.3f;
+    uint32_t trailInheritVelocity = 1;
+    float padding4[2];
+};
+
+struct TrailSpawnInfo {
+    uint32_t parentIndex;
+    Vector3 position;
+    Vector3 velocity;
+    Vector3 scale;
+    Vector4 color;
+    float remainingLifeTime;
 };
 
 /// =======================
@@ -161,7 +183,7 @@ struct ParticleSetting {
     Vector4 endColor = {1.0f, 1.0f, 1.0f, 1.0f};
     Vector4 trailColorMultiplier{}; // 軌跡パーティクルの色倍率
     uint32_t count{};
-    bool enableTrail{};        // 軌跡機能を有効にするか
+    bool enableTrail{};          // 軌跡機能を有効にするか
     bool trailInheritVelocity{}; // 軌跡が親の速度を継承するか
     bool isRandomColor{};
     bool isBillboard = false;
@@ -212,8 +234,8 @@ struct Particle {
     Vector3 endRote{};
     Vector3 rotateVelocity{};
     Vector3 fixedDirection{};
-    Vector4 color{};   // 色
-    float lifeTime{};  // ライフタイム
+    Vector4 color{};     // 色
+    float lifeTime{};    // ライフタイム
     float currentTime{}; // 現在の時間
     float initialAlpha{};
     // std::weak_ptr<Particle> parent;                  // 親パーティクルへの弱参照

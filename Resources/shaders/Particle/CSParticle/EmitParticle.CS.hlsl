@@ -21,6 +21,7 @@ float3x3 CreateRotationMatrixFromQuaternion(float4 q)
         2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)
     );
 }
+
 float3 ApplyScale(float3 vertex, float3 scale)
 {
     return vertex * scale;
@@ -38,7 +39,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
     int freeListIndex;
     InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
     
-    // 範囲外なら何もせずリターン（戻す処理も不要）
     if (freeListIndex < 0 || freeListIndex >= gSettings.maxParticleCount)
     {
         return;
@@ -154,4 +154,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
     gParticles[particleIndex].lifeTime = lerp(gSettings.lifeTimeMin, gSettings.lifeTimeMax, generator.Generate1d());
     gParticles[particleIndex].currentTime = 0.0f;
+    
+    // トレイル関連の初期化
+    gParticles[particleIndex].isTrailParticle = 0; // 親パーティクルとして生成
+    gParticles[particleIndex].parentIndex = 0xFFFFFFFF; // 無効なインデックス
+    gParticles[particleIndex].trailSpawnTimer = 0.0f;
+    gParticles[particleIndex].trailSpawnInterval = gSettings.trailSpawnInterval;
 }
