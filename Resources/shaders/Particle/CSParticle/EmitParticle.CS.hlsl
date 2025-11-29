@@ -134,6 +134,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     }
 
     gParticles[particleIndex].translate = emitPosition;
+    gParticles[particleIndex].lastTrailPosition = emitPosition;
     
     if (gSettings.enableRandomColor)
     {
@@ -156,8 +157,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     gParticles[particleIndex].currentTime = 0.0f;
     
     // トレイル関連の初期化
-    gParticles[particleIndex].isTrailParticle = 0; // 親パーティクルとして生成
-    gParticles[particleIndex].parentIndex = 0xFFFFFFFF; // 無効なインデックス
-    gParticles[particleIndex].trailSpawnTimer = 0.0f;
-    gParticles[particleIndex].trailSpawnInterval = gSettings.trailSpawnInterval;
+    gParticles[particleIndex].isTrailParticle = 0;
+    gParticles[particleIndex].parentIndex = 0xFFFFFFFF;
+    gParticles[particleIndex].trailSpawnDistance = gSettings.trailSpawnDistance;
 }

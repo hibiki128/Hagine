@@ -471,6 +471,17 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "enableGravity", group->GetSettingsData()->enableGravity);
         data->Save(prefix + "gravity", group->GetSettingsData()->gravity);
         data->Save(prefix + "blendMode", static_cast<int>(group->GetParticleGroupData().blendMode));
+
+        // ★ トレイル設定の保存
+        data->Save(prefix + "enableTrail", group->GetSettingsData()->enableTrail);
+        data->Save(prefix + "trailSpawnDistance", group->GetSettingsData()->trailSpawnDistance);
+        data->Save(prefix + "maxTrailPerParticle", group->GetSettingsData()->maxTrailPerParticle);
+        data->Save(prefix + "trailLifeTimeScale", group->GetSettingsData()->trailLifeTimeScale);
+        data->Save(prefix + "trailScaleMultiplier", group->GetSettingsData()->trailScaleMultiplier);
+        data->Save(prefix + "trailColorMultiplier", group->GetSettingsData()->trailColorMultiplier);
+        data->Save(prefix + "trailVelocityScale", group->GetSettingsData()->trailVelocityScale);
+        data->Save(prefix + "trailInheritVelocity", group->GetSettingsData()->trailInheritVelocity);
+        data->Save(prefix + "trailMinLifeTime", group->GetSettingsData()->trailMinLifeTime);
     }
 }
 
@@ -525,6 +536,17 @@ void ParticleCSEmitter::LoadSetting() {
         settings.enableGravity = data->Load<uint32_t>(prefix + "enableGravity", false);
         settings.gravity = data->Load<Vector3>(prefix + "gravity", {0.0f, 0.0f, 0.0f});
         settings.maxParticleCount = group->GetMaxParticleCount();
+
+        // ★ トレイル設定のロード
+        settings.enableTrail = data->Load<uint32_t>(prefix + "enableTrail", 0);
+        settings.trailSpawnDistance = data->Load(prefix + "trailSpawnDistance", 0.1f);
+        settings.maxTrailPerParticle = data->Load<uint32_t>(prefix + "maxTrailPerParticle", 5);
+        settings.trailLifeTimeScale = data->Load(prefix + "trailLifeTimeScale", 1.0f);
+        settings.trailScaleMultiplier = data->Load<Vector3>(prefix + "trailScaleMultiplier", {0.8f, 0.8f, 0.8f});
+        settings.trailColorMultiplier = data->Load(prefix + "trailColorMultiplier", Vector4(1.0f, 1.0f, 1.0f, 0.7f));
+        settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
+        settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
+        settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -591,6 +613,17 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.enableGravity = data->Load<uint32_t>(prefix + "enableGravity", false);
         settings.gravity = data->Load<Vector3>(prefix + "gravity", {0.0f, 0.0f, 0.0f});
         settings.maxParticleCount = group->GetMaxParticleCount();
+
+        // ★ トレイル設定のロード
+        settings.enableTrail = data->Load<uint32_t>(prefix + "enableTrail", 0);
+        settings.trailSpawnDistance = data->Load(prefix + "trailSpawnDistance", 0.1f);
+        settings.maxTrailPerParticle = data->Load<uint32_t>(prefix + "maxTrailPerParticle", 5);
+        settings.trailLifeTimeScale = data->Load(prefix + "trailLifeTimeScale", 1.0f);
+        settings.trailScaleMultiplier = data->Load<Vector3>(prefix + "trailScaleMultiplier", {0.8f, 0.8f, 0.8f});
+        settings.trailColorMultiplier = data->Load(prefix + "trailColorMultiplier", Vector4(1.0f, 1.0f, 1.0f, 0.7f));
+        settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
+        settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
+        settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));

@@ -19,12 +19,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
         gParticles[particleIndex].color = float4(0, 0, 0, 0);
         gParticles[particleIndex].initialScale = float3(0, 0, 0);
         gParticles[particleIndex].padding = 0.0f;
+        
         gParticles[particleIndex].isTrailParticle = 0;
         gParticles[particleIndex].parentIndex = 0xFFFFFFFF;
-        gParticles[particleIndex].trailSpawnTimer = 0.0f;
-        gParticles[particleIndex].trailSpawnInterval = 0.0f;
+        gParticles[particleIndex].lastTrailPosition = float3(0, 0, 0);
+        gParticles[particleIndex].trailSpawnDistance = 0.1f;
         
-        // フリーリストの設定
         gFreeList[particleIndex] = particleIndex;
         
         if (particleIndex == 0)

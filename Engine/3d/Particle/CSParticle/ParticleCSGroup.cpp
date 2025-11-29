@@ -289,14 +289,17 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->emitCount = 0;
     settingsData_->enableGravity = 0;
     settingsData_->gravity = {0.0f, -9.8f, 0.0f};
+
+    // トレイル設定のデフォルト値
     settingsData_->enableTrail = 0;
-    settingsData_->trailSpawnInterval = 0.05f;
+    settingsData_->trailSpawnDistance = 0.1f; // デフォルトを短く
     settingsData_->maxTrailPerParticle = 5;
-    settingsData_->trailLifeTimeScale = 0.5f;
+    settingsData_->trailLifeTimeScale = 1.0f; // 親と同じ寿命割合に
     settingsData_->trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
     settingsData_->trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
     settingsData_->trailVelocityScale = 0.3f;
     settingsData_->trailInheritVelocity = 1;
+    settingsData_->trailMinLifeTime = 0.5f;   // 最小寿命を長めに
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -584,103 +587,105 @@ void ParticleCSGroup::DrawImGui() {
                 particleGroupData_.blendMode = static_cast<BlendMode>(currentBlendMode);
             }
             ImGui::PopStyleColor(3);
-
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 1.0f, 0.8f, 1.0f));
-            if (ImGui::TreeNode("トレイル設定")) {
-                ImGui::PopStyleColor();
-
-                bool enableTrail = settingsData_->enableTrail != 0;
-                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
-                if (ImGui::Checkbox("トレイルを有効化", &enableTrail)) {
-                    settingsData_->enableTrail = enableTrail ? 1 : 0;
-                }
-                ImGui::PopStyleColor();
-
-                if (enableTrail) {
-                    ImGui::Indent();
-
-                    ImGui::Text("基本設定:");
-                    ImGui::Separator();
-
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.2f, 0.4f));
-
-                    ImGui::DragFloat("生成間隔（秒）", &settingsData_->trailSpawnInterval, 0.01f, 0.01f, 1.0f);
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("トレイルパーティクルが生成される時間間隔");
-                    }
-
-                    int maxTrail = static_cast<int>(settingsData_->maxTrailPerParticle);
-                    if (ImGui::DragInt("最大トレイル数/親", &maxTrail, 1, 1, 20)) {
-                        settingsData_->maxTrailPerParticle = static_cast<uint32_t>(maxTrail);
-                    }
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("1つの親パーティクルあたりの最大トレイル数");
-                    }
-
-                    ImGui::PopStyleColor();
-
-                    ImGui::Spacing();
-                    ImGui::Text("トレイル特性:");
-                    ImGui::Separator();
-
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.2f, 0.4f));
-
-                    ImGui::DragFloat("寿命倍率", &settingsData_->trailLifeTimeScale, 0.01f, 0.1f, 2.0f);
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("親の残り寿命に対するトレイルの寿命の割合");
-                    }
-
-                    ImGui::DragFloat3("スケール倍率", &settingsData_->trailScaleMultiplier.x, 0.01f, 0.1f, 2.0f);
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("親のサイズに対するトレイルのサイズの割合");
-                    }
-
-                    ImGui::ColorEdit4("色倍率", &settingsData_->trailColorMultiplier.x);
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("親の色に対するトレイルの色の倍率（アルファ含む）");
-                    }
-
-                    ImGui::PopStyleColor();
-
-                    ImGui::Spacing();
-                    ImGui::Text("速度設定:");
-                    ImGui::Separator();
-
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.2f, 0.4f));
-
-                    bool inheritVelocity = settingsData_->trailInheritVelocity != 0;
-                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
-                    if (ImGui::Checkbox("親の速度を継承", &inheritVelocity)) {
-                        settingsData_->trailInheritVelocity = inheritVelocity ? 1 : 0;
-                    }
-                    ImGui::PopStyleColor();
-
-                    if (inheritVelocity) {
-                        ImGui::DragFloat("速度倍率", &settingsData_->trailVelocityScale, 0.01f, 0.0f, 2.0f);
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::SetTooltip("親の速度に対するトレイルの速度の割合");
-                        }
-                    }
-
-                    ImGui::PopStyleColor();
-
-                    ImGui::Unindent();
-                }
-
-                ImGui::TreePop();
-            } else {
-                ImGui::PopStyleColor();
-            }
-
+           
             ImGui::TreePop();
         } else {
             ImGui::PopStyleColor();
         }
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
 
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 1.0f, 0.8f, 1.0f));
+        if (ImGui::TreeNode("トレイル設定")) {
+            ImGui::PopStyleColor();
+
+            bool enableTrail = settingsData_->enableTrail != 0;
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
+            if (ImGui::Checkbox("トレイルを有効化", &enableTrail)) {
+                settingsData_->enableTrail = enableTrail ? 1 : 0;
+            }
+            ImGui::PopStyleColor();
+
+            if (enableTrail) {
+                ImGui::Indent();
+                ImGui::Text("基本設定:");
+                ImGui::Separator();
+
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.2f, 0.4f));
+
+                ImGui::DragFloat("生成距離間隔", &settingsData_->trailSpawnDistance, 0.01f, 0.01f, 1.0f, "%.2f");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("この距離ごとにトレイルが生成されます\n小さいほど滑らか（推奨: 0.05-0.15）");
+                }
+
+                ImGui::PopStyleColor();
+
+                int maxTrail = static_cast<int>(settingsData_->maxTrailPerParticle);
+                if (ImGui::DragInt("最大トレイル数/親", &maxTrail, 1, 1, 20)) {
+                    settingsData_->maxTrailPerParticle = static_cast<uint32_t>(maxTrail);
+                }
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("1つの親パーティクルあたりの最大トレイル数");
+                }
+                ImGui::Spacing();
+                ImGui::Text("トレイル特性:");
+                ImGui::Separator();
+
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.2f, 0.4f));
+
+                ImGui::DragFloat("寿命倍率", &settingsData_->trailLifeTimeScale, 0.05f, 0.3f, 3.0f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("親の残り寿命に対するトレイルの寿命の割合\n大きいほど長く残ります（推奨: 0.8-1.5）");
+                }
+
+                ImGui::DragFloat("最小寿命（秒）", &settingsData_->trailMinLifeTime, 0.05f, 0.1f, 2.0f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("トレイルが必ず持つ最小寿命\n軌跡が途切れる場合は増やしてください");
+                }
+
+                ImGui::DragFloat3("スケール倍率", &settingsData_->trailScaleMultiplier.x, 0.01f, 0.1f, 2.0f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("親のサイズに対するトレイルのサイズの割合");
+                }
+
+                ImGui::ColorEdit4("色倍率", &settingsData_->trailColorMultiplier.x);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("親の色に対するトレイルの色の倍率（アルファ含む）");
+                }
+
+                ImGui::PopStyleColor(); // FrameBg
+
+                ImGui::Spacing();
+                ImGui::Text("速度設定:");
+                ImGui::Separator();
+
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.2f, 0.4f));
+
+                bool inheritVelocity = settingsData_->trailInheritVelocity != 0;
+                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
+                if (ImGui::Checkbox("親の速度を継承", &inheritVelocity)) {
+                    settingsData_->trailInheritVelocity = inheritVelocity ? 1 : 0;
+                }
+                ImGui::PopStyleColor(); // CheckMark
+
+                if (inheritVelocity) {
+                    ImGui::DragFloat("速度倍率", &settingsData_->trailVelocityScale, 0.01f, 0.0f, 2.0f);
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("親の速度に対するトレイルの速度の割合");
+                    }
+                }
+
+                ImGui::PopStyleColor(); // FrameBg
+
+                ImGui::Unindent();
+            }
+
+            ImGui::TreePop();
+        } else {
+            ImGui::PopStyleColor(); // Text
+        }
     } else {
         ImGui::PopStyleColor(3);
     }

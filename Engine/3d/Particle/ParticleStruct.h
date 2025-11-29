@@ -35,6 +35,7 @@ struct EmitterMesh {
     float padding;
 };
 
+
 struct CSParticle {
     Vector3 translate;
     Vector3 scale;
@@ -44,10 +45,10 @@ struct CSParticle {
     Vector4 color;
     Vector3 initialScale;
     float padding;
-    uint32_t isTrailParticle;
-    uint32_t parentIndex;
-    float trailSpawnTimer;
-    float trailSpawnInterval;
+    uint32_t isTrailParticle; 
+    uint32_t parentIndex; 
+    Vector3 lastTrailPosition;
+    float trailSpawnDistance;
 };
 
 struct PerView {
@@ -122,18 +123,20 @@ struct ParticleCSSettings {
     float sinScaleAmplitude{};
     uint32_t enableGravity = 0;
     Vector3 gravity = {0.0f, -9.8f, 0.0f};
-    uint32_t enableTrail = 0;
-    float trailSpawnInterval = 0.05f;
-    uint32_t maxTrailPerParticle = 5;
-    float trailLifeTimeScale = 0.5f;
-    Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
+    uint32_t enableTrail = 0;                          // トレイル機能を有効にするか 
+    float trailSpawnDistance = 0.1f;
+    uint32_t maxTrailPerParticle = 5;                  // 1つの親あたりの最大トレイル数
+    float trailLifeTimeScale = 0.5f;                   // トレイルの寿命倍率（親の寿命 × この値）
+    Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f}; // トレイルのスケール倍率
     float padding3;
-    Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
-    float trailVelocityScale = 0.3f;
-    uint32_t trailInheritVelocity = 1;
-    float padding4[2];
+    Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f}; // トレイルの色倍率
+    float trailVelocityScale = 0.3f;                         // トレイルの速度倍率
+    uint32_t trailInheritVelocity = 1;                       // トレイルが親の速度を継承するか
+    float trailMinLifeTime = 0.3f;                           // トレイルの最小寿命（秒）
+    float padding4{};                                        // パディング追加（16バイトアライメント）
 };
 
+// トレイル生成情報を保持する構造体
 struct TrailSpawnInfo {
     uint32_t parentIndex;
     Vector3 position;

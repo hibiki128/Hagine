@@ -19,10 +19,11 @@ struct Particle
     float padding;
     uint isTrailParticle;
     uint parentIndex;
-    float trailSpawnTimer;
-    float trailSpawnInterval;
+    float3 lastTrailPosition;
+    float trailSpawnDistance;
 };
 
+// 補助関数: Particleの初期化
 Particle CreateEmptyParticle()
 {
     Particle p;
@@ -36,8 +37,6 @@ Particle CreateEmptyParticle()
     p.padding = 0.0f;
     p.isTrailParticle = 0;
     p.parentIndex = 0xFFFFFFFF;
-    p.trailSpawnTimer = 0.0f;
-    p.trailSpawnInterval = 0.0f;
     return p;
 }
 
@@ -90,7 +89,7 @@ struct ParticleCSSettings
     int enableGravity;
     float3 gravity;
     int enableTrail;
-    float trailSpawnInterval;
+    float trailSpawnDistance;
     int maxTrailPerParticle;
     float trailLifeTimeScale;
     float3 trailScaleMultiplier;
@@ -98,7 +97,8 @@ struct ParticleCSSettings
     float4 trailColorMultiplier;
     float trailVelocityScale;
     int trailInheritVelocity;
-    float padding4[2];
+    float trailMinLifeTime;
+    float padding4; // 16バイトアライメント用パディング
 };
 
 struct EdgeInfo

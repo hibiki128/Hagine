@@ -10,7 +10,7 @@
     "showObjectView": false,
     "showOfScreenView": false,
     "showParticleView": true,
-    "showSceneView": true,
+    "showSceneView": false,
     "showShortcutWindow": false,
     "showSpriteManagerView": false
 }
