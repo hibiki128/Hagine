@@ -180,20 +180,21 @@ void ParticleCSEmitter::EmitterDisPatch() {
         commandList->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(2, group->GetFreeListSrvHandle().second);
+        commandList->SetComputeRootDescriptorTable(3, group->GetFreeListTrailIndexSrvHandle().second);
 
-        commandList->SetComputeRootConstantBufferView(3, emitterMeshResource_->GetGPUVirtualAddress());
-        commandList->SetComputeRootConstantBufferView(4, group->GetPerFrameResource()->GetGPUVirtualAddress());
-        commandList->SetComputeRootConstantBufferView(5, group->GetSettingsResource()->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(4, emitterMeshResource_->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(5, group->GetPerFrameResource()->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(6, group->GetSettingsResource()->GetGPUVirtualAddress());
 
         // 三角形情報を設定
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
-            commandList->SetComputeRootDescriptorTable(6, triangleInfoSrvHandle_.second);
-            commandList->SetComputeRootDescriptorTable(7, triangleCDFSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(7, triangleInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(8, triangleCDFSrvHandle_.second);
         }
 
         // エッジ情報を設定
         if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
-            commandList->SetComputeRootDescriptorTable(8, edgeInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(9, edgeInfoSrvHandle_.second);
         }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;

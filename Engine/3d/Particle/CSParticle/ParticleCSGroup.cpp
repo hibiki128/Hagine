@@ -1,6 +1,7 @@
 #include "ParticleCSGroup.h"
 #include <Frame.h>
 #include <Graphics/Model/ModelManager.h>
+#include <d3dx12.h>
 
 void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
@@ -14,6 +15,7 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     CreatePerViewResource();
     CreatePerFrameResource();
     CreateFreeListIndexResource();
+    CreateFreeListTrailIndexResource();
     CreateFreeListResource();
     CreateAliveCountResource();
 
@@ -146,7 +148,8 @@ void ParticleCSGroup::InitParticle() {
     commandList->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
     commandList->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
     commandList->SetComputeRootDescriptorTable(2, freeListSrvHandle_.second);
-    commandList->SetComputeRootConstantBufferView(3, settingsResource_->GetGPUVirtualAddress());
+    commandList->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
+    commandList->SetComputeRootConstantBufferView(4, settingsResource_->GetGPUVirtualAddress());
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
     commandList->Dispatch(disPatchCount, 1, 1);
 
@@ -159,8 +162,9 @@ void ParticleCSGroup::UpdateParticleCSDisPatch() {
     commandList->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
     commandList->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
     commandList->SetComputeRootDescriptorTable(2, freeListSrvHandle_.second);
-    commandList->SetComputeRootConstantBufferView(3, perFrameResource_->GetGPUVirtualAddress());
-    commandList->SetComputeRootConstantBufferView(4, settingsResource_->GetGPUVirtualAddress());
+    commandList->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
+    commandList->SetComputeRootConstantBufferView(4, perFrameResource_->GetGPUVirtualAddress());
+    commandList->SetComputeRootConstantBufferView(5, settingsResource_->GetGPUVirtualAddress());
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
     commandList->Dispatch(disPatchCount, 1, 1);
 }
@@ -176,6 +180,8 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     perViewData_->billboardMatrix.m[3][2] = 0.0f;
     perViewData_->billboardMatrix.m[3][3] = 1.0f;
     perViewData_->billboardMatrix = Inverse(perViewData_->billboardMatrix);
+
+    CopyDebugDataToReadback();
 }
 
 void ParticleCSGroup::CreateOutputParticleResource() {
@@ -255,6 +261,81 @@ void ParticleCSGroup::CreateFreeListIndexResource() {
     freeListIndexSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(freeListIndexSrvIndex_);
     freeListIndexSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(freeListIndexSrvIndex_);
     srvManager_->CreateUAVStructuredBuffer(freeListIndexSrvIndex_, freeListIndexResource_.Get(), 1, sizeof(int));
+
+    D3D12_HEAP_PROPERTIES heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
+
+    // リソース設定: int 1個分 (4バイト)
+    D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(int32_t));
+
+    // バッファ作成
+    dxCommon_->GetDevice()->CreateCommittedResource(
+        &heapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &bufferDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&freeListIndexReadbackBuffer_));
+    freeListIndexReadbackBuffer_->SetName(L"FreeListIndex_Readback");
+}
+
+void ParticleCSGroup::CreateFreeListTrailIndexResource() {
+    freeListTrailIndexResource_ = dxCommon_->CreateBufferResource(sizeof(int), true);
+
+    freeListTrailIndexSrvIndex_ = srvManager_->Allocate() + 1;
+    freeListTrailIndexSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(freeListTrailIndexSrvIndex_);
+    freeListTrailIndexSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(freeListTrailIndexSrvIndex_);
+    srvManager_->CreateUAVStructuredBuffer(freeListTrailIndexSrvIndex_, freeListTrailIndexResource_.Get(), 1, sizeof(int));
+
+    // ★ Readbackバッファも作成
+    D3D12_HEAP_PROPERTIES heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
+    D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(int32_t));
+
+    dxCommon_->GetDevice()->CreateCommittedResource(
+        &heapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &bufferDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&freeListTrailIndexReadbackBuffer_));
+    freeListTrailIndexReadbackBuffer_->SetName(L"FreeListTrailIndex_Readback");
+}
+
+void ParticleCSGroup::CopyDebugDataToReadback() {
+    // === Head (freeListIndex) のコピー ===
+    auto barrierHeadToCopy = CD3DX12_RESOURCE_BARRIER::Transition(
+        freeListIndexResource_.Get(),
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        D3D12_RESOURCE_STATE_COPY_SOURCE);
+    commandList->ResourceBarrier(1, &barrierHeadToCopy);
+
+    commandList->CopyBufferRegion(
+        freeListIndexReadbackBuffer_.Get(), 0,
+        freeListIndexResource_.Get(), 0,
+        sizeof(int32_t));
+
+    auto barrierHeadToUAV = CD3DX12_RESOURCE_BARRIER::Transition(
+        freeListIndexResource_.Get(),
+        D3D12_RESOURCE_STATE_COPY_SOURCE,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    commandList->ResourceBarrier(1, &barrierHeadToUAV);
+
+    // === Tail (freeListTrailIndex) のコピー ===
+    auto barrierTailToCopy = CD3DX12_RESOURCE_BARRIER::Transition(
+        freeListTrailIndexResource_.Get(),
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        D3D12_RESOURCE_STATE_COPY_SOURCE);
+    commandList->ResourceBarrier(1, &barrierTailToCopy);
+
+    commandList->CopyBufferRegion(
+        freeListTrailIndexReadbackBuffer_.Get(), 0,
+        freeListTrailIndexResource_.Get(), 0,
+        sizeof(int32_t));
+
+    auto barrierTailToUAV = CD3DX12_RESOURCE_BARRIER::Transition(
+        freeListTrailIndexResource_.Get(),
+        D3D12_RESOURCE_STATE_COPY_SOURCE,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    commandList->ResourceBarrier(1, &barrierTailToUAV);
 }
 
 void ParticleCSGroup::CreateFreeListResource() {
@@ -299,7 +380,7 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
     settingsData_->trailVelocityScale = 0.3f;
     settingsData_->trailInheritVelocity = 1;
-    settingsData_->trailMinLifeTime = 0.5f;   // 最小寿命を長めに
+    settingsData_->trailMinLifeTime = 0.5f; // 最小寿命を長めに
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -587,7 +668,7 @@ void ParticleCSGroup::DrawImGui() {
                 particleGroupData_.blendMode = static_cast<BlendMode>(currentBlendMode);
             }
             ImGui::PopStyleColor(3);
-           
+
             ImGui::TreePop();
         } else {
             ImGui::PopStyleColor();
@@ -686,6 +767,59 @@ void ParticleCSGroup::DrawImGui() {
         } else {
             ImGui::PopStyleColor(); // Text
         }
+        // headを読む
+        int32_t headValue = 0;
+        int32_t *mappedHead = nullptr;
+        D3D12_RANGE readRangeHead = {0, sizeof(int32_t)};
+        if (SUCCEEDED(freeListIndexReadbackBuffer_->Map(0, &readRangeHead, reinterpret_cast<void **>(&mappedHead)))) {
+            headValue = *mappedHead;
+            freeListIndexReadbackBuffer_->Unmap(0, nullptr);
+        }
+
+        // tailを読む
+        int32_t tailValue = 0;
+        int32_t *mappedTail = nullptr;
+        D3D12_RANGE readRangeTail = {0, sizeof(int32_t)};
+        if (SUCCEEDED(freeListTrailIndexReadbackBuffer_->Map(0, &readRangeTail, reinterpret_cast<void **>(&mappedTail)))) {
+            tailValue = *mappedTail;
+            freeListTrailIndexReadbackBuffer_->Unmap(0, nullptr);
+        }
+
+        // 実際の空き数を計算
+        int32_t actualFreeCount = tailValue - headValue;
+        int32_t usedCount = settingsData_->maxParticleCount - actualFreeCount;
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("Debug Info");
+
+        // 使用率を計算
+        float usageRate = (float)usedCount / (float)settingsData_->maxParticleCount;
+        char overlay[64];
+        sprintf_s(overlay, "%d / %d 使用中 (%d 空き)", usedCount, settingsData_->maxParticleCount, actualFreeCount);
+
+        // 文字色を真っ黒に
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+        // バーの背景（空き部分）を白に
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+        // バーの中身（使用部分）の色設定
+        if (usageRate >= 0.9f)
+            // 赤 (危険)
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+        else if (usageRate >= 0.7f)
+            // 黄色 (警告)
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.9f, 0.2f, 1.0f));
+        else
+            // 緑 (安全)
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 1.0f, 0.4f, 1.0f));
+
+        ImGui::ProgressBar(usageRate, ImVec2(-1.0f, 0.0f), overlay);
+
+        ImGui::PopStyleColor(3);
+
+        // 詳細情報
+        ImGui::Text("使用率: %.1f%%", usageRate * 100.0f);
     } else {
         ImGui::PopStyleColor(3);
     }

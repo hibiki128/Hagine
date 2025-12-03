@@ -32,6 +32,7 @@ class ParticleCSGroup {
 
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetOutputParticleSrvHandle() const { return outputParticleSrvHandle_; }
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListIndexSrvHandle() const { return freeListIndexSrvHandle_; }
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListTrailIndexSrvHandle() const { return freeListTrailIndexSrvHandle_; }
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListSrvHandle() const { return freeListSrvHandle_; }
     Microsoft::WRL::ComPtr<ID3D12Resource> GetPerFrameResource() const { return perFrameResource_; }
     Microsoft::WRL::ComPtr<ID3D12Resource> GetMaterialResource() const { return materialResource_; }
@@ -75,6 +76,8 @@ class ParticleCSGroup {
     void CreateVertexResource();
     void CreatePerFrameResource();
     void CreateFreeListIndexResource();
+    void CreateFreeListTrailIndexResource();
+    void CopyDebugDataToReadback();
     void CreateFreeListResource();
     void CreateSettingsResource();
     void CreateAliveCountResource();
@@ -110,6 +113,10 @@ class ParticleCSGroup {
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> freeListIndexSrvHandle_{};
     uint32_t freeListIndexSrvIndex_ = 0;
 
+    Microsoft::WRL::ComPtr<ID3D12Resource> freeListTrailIndexResource_{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> freeListTrailIndexSrvHandle_{};
+    uint32_t freeListTrailIndexSrvIndex_ = 0;
+
     Microsoft::WRL::ComPtr<ID3D12Resource> freeListResource_{};
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> freeListSrvHandle_{};
     uint32_t freeListSrvIndex_ = 0;
@@ -141,4 +148,10 @@ class ParticleCSGroup {
     float frequency_ = 0.1f;
     bool isRandomColor_ = false;
     bool isInitialized_ = false;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> freeListIndexReadbackBuffer_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> freeListTrailIndexReadbackBuffer_;
+
+    int32_t debugFreeListCount_ = 0;
+    int32_t debugFreeListTailCount_ = 0;
 };

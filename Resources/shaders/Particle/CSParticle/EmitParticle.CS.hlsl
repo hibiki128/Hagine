@@ -7,6 +7,7 @@ ConstantBuffer<ParticleCSSettings> gSettings : register(b2);
 RWStructuredBuffer<Particle> gParticles : register(u0);
 RWStructuredBuffer<int> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint> gFreeList : register(u2);
+RWStructuredBuffer<int> gFreeListTailIndex : register(u3);
 StructuredBuffer<TriangleInfo> gTriangles : register(t0);
 StructuredBuffer<float> gTriangleCDF : register(t1);
 StructuredBuffer<EdgeInfo> gEdges : register(t2);
@@ -36,15 +37,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
     if (DTid.x >= gSettings.emitCount)
         return;
     
-    int freeListIndex;
-    InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
+    uint headOld;
+    InterlockedAdd(gFreeListIndex[0], 1, headOld);
+    uint tailVal = gFreeListTailIndex[0];
     
-    if (freeListIndex < 0 || freeListIndex >= gSettings.maxParticleCount)
+    if (headOld >= tailVal)
     {
+        int dummy;
+        InterlockedAdd(gFreeListIndex[0], -1, dummy);
         return;
     }
     
-    int particleIndex = gFreeList[freeListIndex];
+    uint freePos = headOld % gSettings.maxParticleCount;
+    uint particleIndex = gFreeList[freePos];
     
     RandomGenerator generator;
     generator.InitSeed(
@@ -156,7 +161,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
     gParticles[particleIndex].lifeTime = lerp(gSettings.lifeTimeMin, gSettings.lifeTimeMax, generator.Generate1d());
     gParticles[particleIndex].currentTime = 0.0f;
     
-    // トレイル関連の初期化
     gParticles[particleIndex].isTrailParticle = 0;
     gParticles[particleIndex].parentIndex = 0xFFFFFFFF;
     gParticles[particleIndex].trailSpawnDistance = gSettings.trailSpawnDistance;

@@ -23,7 +23,6 @@ struct Particle
     float trailSpawnDistance;
 };
 
-// 補助関数: Particleの初期化
 Particle CreateEmptyParticle()
 {
     Particle p;
@@ -98,7 +97,7 @@ struct ParticleCSSettings
     float trailVelocityScale;
     int trailInheritVelocity;
     float trailMinLifeTime;
-    float padding4; // 16バイトアライメント用パディング
+    float padding4;
 };
 
 struct EdgeInfo
