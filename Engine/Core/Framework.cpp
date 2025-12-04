@@ -346,6 +346,8 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("FadeOut");
     particleCSEditor_->AddParticleEmitter("death");
     particleCSEditor_->AddParticleEmitter("death_arm");
+    particleCSEditor_->AddParticleEmitter("makan_main");
+    particleCSEditor_->AddParticleEmitter("makan_around");
 }
 
 void Framework::PlaySounds() {

@@ -29,6 +29,11 @@ class ResultUI {
     void UpdateNumberSprites();
 
     /// <summary>
+    /// 全てのアニメーションが終了したか
+    /// </summary>
+    bool IsAllAnimationFinished() const { return isAllAnimationFinished_; }
+
+    /// <summary>
     /// Setter
     /// </summary>
     void SetIsStartEasing(bool isStart) { isStartEasing_ = isStart; }
@@ -73,10 +78,11 @@ class ResultUI {
     std::array<Vector2, kMaxSprite> endPositions_;
 
     bool isStartEasing_ = false;
+    bool isAllAnimationFinished_ = false; // 全アニメーション完了フラグ
 
     int currentEasingIndex_ = 0;   // 現在イージング中のスプライトインデックス
     float delayTimer_ = 0.0f;      // 次のスプライトまでの遅延タイマー
-    const float kDelayTime = 0.4f; // スプライト間の遅延時間
+    const float kDelayTime = 0.25f; // スプライト間の遅延時間
 
     // 数字のカウントアップ用
     enum NumberAnimState {
@@ -89,7 +95,7 @@ class ResultUI {
 
     NumberAnimState numberAnimState_ = kWaiting;
     float animTimer_ = 0.0f;
-    const float kAnimDuration = 1.5f; // アニメーション時間
+    const float kAnimDuration = 0.5f; // アニメーション時間
 
     float displayedTime_ = 0.0f; // 表示中のタイム
     float displayedHP_ = 0.0f;   // 表示中のHP

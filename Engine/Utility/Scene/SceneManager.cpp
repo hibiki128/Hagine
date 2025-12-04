@@ -1,6 +1,6 @@
 #include "SceneManager.h"
-#include <cassert>
 #include <SpriteManager.h>
+#include <cassert>
 
 SceneManager *SceneManager::instance = nullptr;
 
@@ -105,7 +105,9 @@ void SceneManager::SceneChange() {
             delete scene_;
             BaseObjectManager::GetInstance()->RemoveAllObjects();
             SpriteManager::GetInstance()->Clear();
+#ifndef _DEBUG
             ParticleCSGroupManager::GetInstance()->ClearIndependentGroups();
+#endif // _DEBUG
         }
         // シーンの切り替え
         scene_ = nextScene_;

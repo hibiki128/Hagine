@@ -68,6 +68,9 @@ void Player::Init(const std::string objectName) {
     rightHand_->Init("rightHand");
     rightHand_->SetPlayer(this);
 
+    makanAttack_ = std::make_unique<MakanAttackSkill>();
+    makanAttack_->Init("makanAttack");
+
     this->AddChild(leftHand_.get());
     this->AddChild(rightHand_.get());
 
@@ -76,9 +79,11 @@ void Player::Init(const std::string objectName) {
 
     rightHand_ptr_ = rightHand_.get();
     leftHand_ptr_ = leftHand_.get();
+    makanAttack_ptr_ = makanAttack_.get();
 
     BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
     BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
+    BaseObjectManager::GetInstance()->AddObject(std::move(makanAttack_));
 
     Load();
 
@@ -107,6 +112,11 @@ void Player::Init(const std::string objectName) {
 void Player::Update() {
 
     dt_ = Frame::DeltaTime();
+
+    if (makanAttack_ptr_->IsActive()) {
+        return;
+    }
+
     if (!isAlive_) {
 
     } else {
@@ -150,6 +160,8 @@ void Player::Update() {
                     ++it;
                 }
             }
+
+            SkillShot();
         }
 
         // 下方向の速度を制限
@@ -234,6 +246,9 @@ void Player::DrawParticle(const ViewProjection &viewProjection) {
     }
     leftHand_ptr_->DrawParticle(viewProjection);
     rightHand_ptr_->DrawParticle(viewProjection);
+    if (makanAttack_ptr_) {
+        makanAttack_ptr_->DrawParticle(viewProjection);
+    }
 }
 
 void Player::ChangeState(const std::string &stateName) {
@@ -297,6 +312,19 @@ void Player::Shot() {
         bullets_.push_back(std::move(bullet));
 
         timeSinceLastShot_ = 0.0f; // 射撃タイマーをリセット
+    }
+}
+
+void Player::SkillShot() {
+    if (Input::GetInstance()->TriggerKey(DIK_G)) {
+        if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive()) {
+            return; // 既に発動中なら何もしない
+        }
+        if (!ConsumeEnergy(65.0f)) {
+            return; // エネルギー不足なら発射しない
+        }
+        makanAttack_ptr_->SetPlayer(this);
+        makanAttack_ptr_->Activate(transform_.get());
     }
 }
 
@@ -651,6 +679,9 @@ void Player::Debug() {
     if (!isAlive_) {
         deathStaging_->imgui();
     }
+
+    makanAttack_ptr_->DebugImGui();
+
 #endif // USE_IMGUI
 }
 

@@ -203,7 +203,7 @@ std::unique_ptr<BaseObject> LevelData::CreateBaseObject(const ObjectData &object
         obbCollider->SetSize(colliderSize);
 
         // センター（スケールオフセット）を設定
-        obbCollider->SetScaleOffset(objectData.collider.center);
+        obbCollider->SetPositionOffSet(objectData.collider.center);
 
         // タグを設定（必要に応じて）
         obbCollider->SetTag("Environment");

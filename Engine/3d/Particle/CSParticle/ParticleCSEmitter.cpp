@@ -167,6 +167,7 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->emit = 0;
     emitterMeshData_->emitFromSurface = 1;
     emitterMeshData_->edgeCount = 0;
+    emitterMeshData_->anchorPoint = Vector3(0.5f, 0.5f, 0.5f);
 }
 
 void ParticleCSEmitter::EmitterDisPatch() {
@@ -176,23 +177,30 @@ void ParticleCSEmitter::EmitterDisPatch() {
     for (auto &group : particleGroups_) {
         group->GetPerFrameData()->groupId = groupIndex;
 
+        ParticleCSSettings *settings = group->GetSettingsData();
+
+        if (settings->enableEmitterCenter) {
+            settings->gatherTarget = emitterMeshData_->translate;
+        }
+
         commandList->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(2, group->GetFreeListSrvHandle().second);
+        commandList->SetComputeRootDescriptorTable(3, group->GetFreeListTrailIndexSrvHandle().second);
 
-        commandList->SetComputeRootConstantBufferView(3, emitterMeshResource_->GetGPUVirtualAddress());
-        commandList->SetComputeRootConstantBufferView(4, group->GetPerFrameResource()->GetGPUVirtualAddress());
-        commandList->SetComputeRootConstantBufferView(5, group->GetSettingsResource()->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(4, emitterMeshResource_->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(5, group->GetPerFrameResource()->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(6, group->GetSettingsResource()->GetGPUVirtualAddress());
 
         // 三角形情報を設定
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
-            commandList->SetComputeRootDescriptorTable(6, triangleInfoSrvHandle_.second);
-            commandList->SetComputeRootDescriptorTable(7, triangleCDFSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(7, triangleInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(8, triangleCDFSrvHandle_.second);
         }
 
         // エッジ情報を設定
         if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
-            commandList->SetComputeRootDescriptorTable(8, edgeInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(9, edgeInfoSrvHandle_.second);
         }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
@@ -470,6 +478,17 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "enableGravity", group->GetSettingsData()->enableGravity);
         data->Save(prefix + "gravity", group->GetSettingsData()->gravity);
         data->Save(prefix + "blendMode", static_cast<int>(group->GetParticleGroupData().blendMode));
+
+        // ★ トレイル設定の保存
+        data->Save(prefix + "enableTrail", group->GetSettingsData()->enableTrail);
+        data->Save(prefix + "trailSpawnDistance", group->GetSettingsData()->trailSpawnDistance);
+        data->Save(prefix + "maxTrailPerParticle", group->GetSettingsData()->maxTrailPerParticle);
+        data->Save(prefix + "trailLifeTimeScale", group->GetSettingsData()->trailLifeTimeScale);
+        data->Save(prefix + "trailScaleMultiplier", group->GetSettingsData()->trailScaleMultiplier);
+        data->Save(prefix + "trailColorMultiplier", group->GetSettingsData()->trailColorMultiplier);
+        data->Save(prefix + "trailVelocityScale", group->GetSettingsData()->trailVelocityScale);
+        data->Save(prefix + "trailInheritVelocity", group->GetSettingsData()->trailInheritVelocity);
+        data->Save(prefix + "trailMinLifeTime", group->GetSettingsData()->trailMinLifeTime);
     }
 }
 
@@ -524,6 +543,17 @@ void ParticleCSEmitter::LoadSetting() {
         settings.enableGravity = data->Load<uint32_t>(prefix + "enableGravity", false);
         settings.gravity = data->Load<Vector3>(prefix + "gravity", {0.0f, 0.0f, 0.0f});
         settings.maxParticleCount = group->GetMaxParticleCount();
+
+        // ★ トレイル設定のロード
+        settings.enableTrail = data->Load<uint32_t>(prefix + "enableTrail", 0);
+        settings.trailSpawnDistance = data->Load(prefix + "trailSpawnDistance", 0.1f);
+        settings.maxTrailPerParticle = data->Load<uint32_t>(prefix + "maxTrailPerParticle", 5);
+        settings.trailLifeTimeScale = data->Load(prefix + "trailLifeTimeScale", 1.0f);
+        settings.trailScaleMultiplier = data->Load<Vector3>(prefix + "trailScaleMultiplier", {0.8f, 0.8f, 0.8f});
+        settings.trailColorMultiplier = data->Load(prefix + "trailColorMultiplier", Vector4(1.0f, 1.0f, 1.0f, 0.7f));
+        settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
+        settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
+        settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -591,6 +621,17 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.gravity = data->Load<Vector3>(prefix + "gravity", {0.0f, 0.0f, 0.0f});
         settings.maxParticleCount = group->GetMaxParticleCount();
 
+        // ★ トレイル設定のロード
+        settings.enableTrail = data->Load<uint32_t>(prefix + "enableTrail", 0);
+        settings.trailSpawnDistance = data->Load(prefix + "trailSpawnDistance", 0.1f);
+        settings.maxTrailPerParticle = data->Load<uint32_t>(prefix + "maxTrailPerParticle", 5);
+        settings.trailLifeTimeScale = data->Load(prefix + "trailLifeTimeScale", 1.0f);
+        settings.trailScaleMultiplier = data->Load<Vector3>(prefix + "trailScaleMultiplier", {0.8f, 0.8f, 0.8f});
+        settings.trailColorMultiplier = data->Load(prefix + "trailColorMultiplier", Vector4(1.0f, 1.0f, 1.0f, 0.7f));
+        settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
+        settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
+        settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
+
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
 
@@ -648,6 +689,16 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::PopStyleColor();
 
+                ImGui::Spacing();
+                ImGui::Separator();
+
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.7f, 0.9f, 1.0f));
+                ImGui::Text("アンカーポイント:");
+                ImGui::PopStyleColor();
+
+                ImGui::DragFloat3("基準点##AnchorPoint", &emitterMeshData_->anchorPoint.x, 0.01f, 0.0f, 1.0f, "%.2f");
+                
                 ImGui::Spacing();
                 ImGui::Separator();
 

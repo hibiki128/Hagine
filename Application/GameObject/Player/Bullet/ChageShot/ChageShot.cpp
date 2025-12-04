@@ -54,47 +54,10 @@ void ChargeShot::Update() {
         }
     }
 
-    if (isAlive_ && !isFired_) {
-        if (player_) {
-            Vector3 playerPos = player_->GetLocalPosition();
-
-            Quaternion rot = player_->GetLocalRotation();
-
-            Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
-
-            Vector3 forwardDir = rot * baseForward;
-
-            forwardDir.x = -forwardDir.x;
-
-            Vector3 normForward = forwardDir.Normalize();
-
-            // チャージ弾のオフセット距離
-            float chargeRadius = scale_;
-            float offsetDistance = playerRadius_ + chargeRadius + offsetMargin_;
-
-            // オフセット計算
-            Vector3 offset = normForward * offsetDistance;
-
-            // 高さ（Y軸）オフセット
-            offset.y = verticalOffset_;
-
-            // チャージ弾の位置更新
-            transform_->translation_ = playerPos + offset;
-
-            // エミッター位置も更新
-            chargeEmitter_->SetPosition(transform_->translation_);
-
-            Vector3 playerEuler = rot.ToEulerAngles();
-            if (bulletCollider_) {
-                bulletCollider_->SetEnabled(true);
-            }
-        }
-    }
-
     if (!isAlive_) {
         if (input->TriggerKey(DIK_K)) {
             // チャージ開始前にエネルギーチェックを追加
-            if (player_ && player_->GetEnergy() < 50.0f) {
+            if (player_ && player_->GetEnergy() < 20.0f) {
                 // エネルギー不足でチャージ開始できない
                 return;
             }
@@ -118,7 +81,7 @@ void ChargeShot::Update() {
         if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
             // エネルギー消費量を計算(チャージ率に応じて5〜50)
             float scaleRatio = (scale_ - 1.0f) / (maxScale_ - 1.0f);
-            float energyCost = 5.0f + (45.0f * scaleRatio);
+            float energyCost = 5.0f + (15.0f * scaleRatio);
 
             // エネルギーチェック
             if (!player_->ConsumeEnergy(energyCost)) {
@@ -165,6 +128,42 @@ void ChargeShot::Update() {
         }
     }
 
+    if (isAlive_ && !isFired_) {
+        if (player_) {
+            Vector3 playerPos = player_->GetLocalPosition();
+
+            Quaternion rot = player_->GetLocalRotation();
+
+            Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
+
+            Vector3 forwardDir = rot * baseForward;
+
+            forwardDir.x = -forwardDir.x;
+
+            Vector3 normForward = forwardDir.Normalize();
+
+            // チャージ弾のオフセット距離
+            float chargeRadius = scale_;
+            float offsetDistance = playerRadius_ + chargeRadius + offsetMargin_;
+
+            // オフセット計算
+            Vector3 offset = normForward * offsetDistance;
+
+            // 高さ（Y軸）オフセット
+            offset.y = verticalOffset_;
+
+            // チャージ弾の位置更新
+            transform_->translation_ = playerPos + offset;
+
+            // エミッター位置も更新
+            chargeEmitter_->SetPosition(transform_->translation_);
+
+            Vector3 playerEuler = rot.ToEulerAngles();
+            if (bulletCollider_) {
+                bulletCollider_->SetEnabled(true);
+            }
+        }
+    }
     // 階層的ワールド変換更新
     BaseObject::UpdateWorldTransformHierarchy();
 }
@@ -188,13 +187,13 @@ void ChargeShot::Reset() {
     transform_->translation_ = {0, 0, 0};
 }
 
-int ChargeShot::GetDamage() const {
+float ChargeShot::GetDamage() const {
     // スケールの割合を計算（1.0f〜maxScale_の範囲を0.0f〜1.0fに正規化）
     float scaleRatio = (scale_ - 1.0f) / (maxScale_ - 1.0f);
 
     // 割合に応じてダメージを計算（最小1ダメージは保証）
-    int damage = static_cast<int>(maxDamage_ * scaleRatio);
-    return std::max(1, damage);
+    float damage = maxDamage_ * scaleRatio;
+    return std::max(1.0f, damage);
 }
 
 void ChargeShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -221,7 +220,7 @@ void ChargeShot::OnCollisionEnterCallback(ColliderBase *other) {
             isAlive_ = false;
 
             // チャージ度合いに応じたダメージを計算して適用
-            int damage = GetDamage();
+            float damage = GetDamage();
             player_->GetEnemy()->SetDamage(damage);
 
             Reset();

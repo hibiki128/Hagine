@@ -86,6 +86,17 @@ class ParticleCSEmitter {
             emitterMeshData_->scale = scale;
     }
 
+    void SetAnchorPoint(Vector3 anchor) {
+        if (emitterMeshData_)
+            emitterMeshData_->anchorPoint = anchor;
+    }
+
+    Vector3 GetAnchorPoint() const {
+        if (emitterMeshData_)
+            return emitterMeshData_->anchorPoint;
+        return Vector3(0.5f, 0.5f, 0.5f);
+    }
+
     Vector3 GetTranslate() const {
         if (emitterMeshData_)
             return emitterMeshData_->translate;

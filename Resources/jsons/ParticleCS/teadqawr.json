@@ -1,0 +1,84 @@
+{
+    "emitFromSurface": 1,
+    "frequency": 0.14399999380111694,
+    "frequencyTime": 0.08585168421268463,
+    "group_0_blendMode": 2,
+    "group_0_emitCount": 10,
+    "group_0_enableGravity": 0,
+    "group_0_enableLifetimeScale": 0,
+    "group_0_enableRandomColor": 1,
+    "group_0_enableSinScale": 0,
+    "group_0_enableTrail": 0,
+    "group_0_endColor": {
+        "w": 0.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "group_0_gravity": {
+        "x": 0.0,
+        "y": -3.5,
+        "z": 0.0
+    },
+    "group_0_maxLifetime": 1.0,
+    "group_0_maxScale": 0.25,
+    "group_0_maxTrailPerParticle": 20,
+    "group_0_maxVelocity": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_minLifetime": 1.0,
+    "group_0_minScale": 0.25,
+    "group_0_minVelocity": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_name": "test",
+    "group_0_sinScaleAmplitude": 0.30000001192092896,
+    "group_0_sinScaleFrequency": 5.0,
+    "group_0_startColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "group_0_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "group_0_trailInheritVelocity": 0,
+    "group_0_trailLifeTimeScale": 0.30000001192092896,
+    "group_0_trailMinLifeTime": 2.0,
+    "group_0_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "group_0_trailSpawnDistance": 0.009999999776482582,
+    "group_0_trailVelocityScale": 0.30000001192092896,
+    "isAuto": true,
+    "isVisible": true,
+    "modelPath": "",
+    "particleGroupCount": 1,
+    "primitiveType": 3,
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "translate": {
+        "x": 0.20000000298023224,
+        "y": 0.0,
+        "z": 0.0
+    }
+}

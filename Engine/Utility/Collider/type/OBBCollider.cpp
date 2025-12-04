@@ -6,7 +6,13 @@
 
 void OBBCollider::UpdateWorldTransform() {
     cachedOBB_.rotationCenter = GetCenterPosition() + rotationOffset_;
-    cachedOBB_.scaleCenter = GetCenterPosition() + scaleOffset_;
+
+    Vector3 anchorOffset = Vector3(
+        (anchorPoint_.x - 0.5f) * size_.x * 2.0f,
+        (anchorPoint_.y - 0.5f) * size_.y * 2.0f,
+        (anchorPoint_.z - 0.5f) * size_.z * 2.0f);
+
+    cachedOBB_.scaleCenter = GetCenterPosition() + positionOffset_ + anchorOffset;
     cachedOBB_.size = size_;
 
     MakeOBBOrientations(GetCenterRotation());
@@ -103,7 +109,8 @@ void OBBCollider::SaveToJson() {
 
     dataHandler_->Save("size", size_);
     dataHandler_->Save("rotationOffset", rotationOffset_);
-    dataHandler_->Save("scaleOffset", scaleOffset_);
+    dataHandler_->Save("scaleOffset", positionOffset_);
+    dataHandler_->Save("anchorPoint", anchorPoint_);
 }
 
 void OBBCollider::LoadFromJson() {
@@ -111,5 +118,6 @@ void OBBCollider::LoadFromJson() {
 
     size_ = dataHandler_->Load<Vector3>("size", {1.0f, 1.0f, 1.0f});
     rotationOffset_ = dataHandler_->Load<Vector3>("rotationOffset", {0.0f, 0.0f, 0.0f});
-    scaleOffset_ = dataHandler_->Load<Vector3>("scaleOffset", {0.0f, 0.0f, 0.0f});
+    positionOffset_ = dataHandler_->Load<Vector3>("scaleOffset", {0.0f, 0.0f, 0.0f});
+    anchorPoint_ = dataHandler_->Load<Vector3>("anchorPoint", {0.5f, 0.5f, 0.5f});
 }

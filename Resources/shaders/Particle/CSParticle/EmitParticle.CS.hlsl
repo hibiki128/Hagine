@@ -7,6 +7,7 @@ ConstantBuffer<ParticleCSSettings> gSettings : register(b2);
 RWStructuredBuffer<Particle> gParticles : register(u0);
 RWStructuredBuffer<int> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint> gFreeList : register(u2);
+RWStructuredBuffer<int> gFreeListTailIndex : register(u3);
 StructuredBuffer<TriangleInfo> gTriangles : register(t0);
 StructuredBuffer<float> gTriangleCDF : register(t1);
 StructuredBuffer<EdgeInfo> gEdges : register(t2);
@@ -21,6 +22,7 @@ float3x3 CreateRotationMatrixFromQuaternion(float4 q)
         2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)
     );
 }
+
 float3 ApplyScale(float3 vertex, float3 scale)
 {
     return vertex * scale;
@@ -35,120 +37,131 @@ void main(uint3 DTid : SV_DispatchThreadID)
     if (DTid.x >= gSettings.emitCount)
         return;
     
+    uint headOld;
+    InterlockedAdd(gFreeListIndex[0], 1, headOld);
+    uint tailVal = gFreeListTailIndex[0];
+    
+    if (headOld >= tailVal)
+    {
+        int dummy;
+        InterlockedAdd(gFreeListIndex[0], -1, dummy);
+        return;
+    }
+    
+    uint freePos = headOld % gSettings.maxParticleCount;
+    uint particleIndex = gFreeList[freePos];
+    
     RandomGenerator generator;
     generator.InitSeed(
         uint3(DTid.x, gPerFrame.groupId, DTid.x * 7919),
         gPerFrame.time
     );
     
-    int freeListIndex;
-    InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
-    if (0 <= freeListIndex && freeListIndex < gSettings.maxParticleCount)
+    float scaleValue = lerp(gSettings.scaleMin, gSettings.scaleMax, generator.Generate1d());
+    gParticles[particleIndex].scale = float3(scaleValue, scaleValue, scaleValue);
+    gParticles[particleIndex].initialScale = float3(scaleValue, scaleValue, scaleValue);
+    
+    float3 emitPosition;
+
+    if (gEmitterMesh.triangleCount > 0 || gEmitterMesh.edgeCount > 0)
     {
-        int particleIndex = gFreeList[freeListIndex];
-        
-        float scaleValue = lerp(gSettings.scaleMin, gSettings.scaleMax, generator.Generate1d());
-        gParticles[particleIndex].scale = float3(scaleValue, scaleValue, scaleValue);
-        gParticles[particleIndex].initialScale = float3(scaleValue, scaleValue, scaleValue);
-        
-        float3 emitPosition;
+        float3 randomPoint;
 
-        if (gEmitterMesh.triangleCount > 0 || gEmitterMesh.edgeCount > 0)
+        if (gEmitterMesh.emitFromSurface == 2 && gEmitterMesh.edgeCount > 0)
         {
-            float3 randomPoint;
+            uint edgeIndex = uint(generator.Generate1d() * float(gEmitterMesh.edgeCount)) % gEmitterMesh.edgeCount;
+            float t = generator.Generate1d();
+        
+            float3 v0 = gEdges[edgeIndex].v0;
+            float3 v1 = gEdges[edgeIndex].v1;
+        
+            randomPoint = lerp(v0, v1, t);
+        }
+        else if (gEmitterMesh.emitFromSurface == 1 && gEmitterMesh.triangleCount > 0)
+        {
+            float particleRatio = generator.Generate1d();
     
-            if (gEmitterMesh.emitFromSurface == 2 && gEmitterMesh.edgeCount > 0)
+            uint triIndex = 0;
+            uint left = 0;
+            uint right = gEmitterMesh.triangleCount - 1;
+    
+            while (left < right)
             {
-                // エッジモード: 線上に発生
-                uint edgeIndex = uint(generator.Generate1d() * float(gEmitterMesh.edgeCount)) % gEmitterMesh.edgeCount;
-                float t = generator.Generate1d();
-            
-                float3 v0 = gEdges[edgeIndex].v0;
-                float3 v1 = gEdges[edgeIndex].v1;
-            
-                randomPoint = lerp(v0, v1, t);
-            }
-            else if (gEmitterMesh.emitFromSurface == 1 && gEmitterMesh.triangleCount > 0)
-            {
-                // 表面モード: 三角形の表面に発生
-                float particleRatio = generator.Generate1d();
-        
-                uint triIndex = 0;
-                uint left = 0;
-                uint right = gEmitterMesh.triangleCount - 1;
-        
-                while (left < right)
+                uint mid = (left + right) / 2;
+                if (gTriangleCDF[mid] < particleRatio)
                 {
-                    uint mid = (left + right) / 2;
-                    if (gTriangleCDF[mid] < particleRatio)
-                    {
-                        left = mid + 1;
-                    }
-                    else
-                    {
-                        right = mid;
-                    }
+                    left = mid + 1;
                 }
-                triIndex = left;
-        
-                float3 v0 = gTriangles[triIndex].v0;
-                float3 v1 = gTriangles[triIndex].v1;
-                float3 v2 = gTriangles[triIndex].v2;
-        
-                float u = generator.Generate1d();
-                float v = generator.Generate1d();
-                if (u + v > 1.0f)
+                else
                 {
-                    u = 1.0f - u;
-                    v = 1.0f - v;
+                    right = mid;
                 }
-                randomPoint = v0 + u * (v1 - v0) + v * (v2 - v0);
             }
-            else
+            triIndex = left;
+    
+            float3 v0 = gTriangles[triIndex].v0;
+            float3 v1 = gTriangles[triIndex].v1;
+            float3 v2 = gTriangles[triIndex].v2;
+    
+            float u = generator.Generate1d();
+            float v = generator.Generate1d();
+            if (u + v > 1.0f)
             {
-                // 内部モード: ボリューム内に発生
-                randomPoint = float3(
-                    generator.Generate1d() * 2.0f - 1.0f,
-                    generator.Generate1d() * 2.0f - 1.0f,
-                    generator.Generate1d() * 2.0f - 1.0f
-                );
+                u = 1.0f - u;
+                v = 1.0f - v;
             }
-    
-            randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
-            float3x3 rotMatrix = CreateRotationMatrixFromQuaternion(gEmitterMesh.rotation);
-            randomPoint = mul(rotMatrix, randomPoint);
-    
-            emitPosition = gEmitterMesh.translate + randomPoint;
+            randomPoint = v0 + u * (v1 - v0) + v * (v2 - v0);
         }
         else
         {
-            emitPosition = gEmitterMesh.translate;
+            float3 randomPoint01 = float3(
+                generator.Generate1d(),
+                generator.Generate1d(),
+                generator.Generate1d()
+            );
+            
+            float3 offset = (gEmitterMesh.anchorPoint - 0.5f) * 4.0f;
+            float3 rangeMin = -1.0f + offset;
+            float3 rangeMax = 1.0f + offset;
+            
+            randomPoint = lerp(rangeMin, rangeMax, randomPoint01);
         }
 
-        gParticles[particleIndex].translate = emitPosition;
-        
-        if (gSettings.enableRandomColor)
-        {
-            gParticles[particleIndex].color.rgb = generator.Generate3d() * 0.5f + 0.5f;
-            gParticles[particleIndex].color.a = 1.0f;
-        }
-        else
-        {
-            gParticles[particleIndex].color = gSettings.startColor;
-        }
-        
-        float3 vel = float3(
-            lerp(gSettings.velocityMin.x, gSettings.velocityMax.x, generator.Generate1d()),
-            lerp(gSettings.velocityMin.y, gSettings.velocityMax.y, generator.Generate1d()),
-            lerp(gSettings.velocityMin.z, gSettings.velocityMax.z, generator.Generate1d())
-        );
-        gParticles[particleIndex].velocity = vel;
-        
-        gParticles[particleIndex].lifeTime = lerp(gSettings.lifeTimeMin, gSettings.lifeTimeMax, generator.Generate1d());
-        gParticles[particleIndex].currentTime = 0.0f;
+        randomPoint = ApplyScale(randomPoint, gEmitterMesh.scale);
+        float3x3 rotMatrix = CreateRotationMatrixFromQuaternion(gEmitterMesh.rotation);
+        randomPoint = mul(rotMatrix, randomPoint);
+
+        emitPosition = gEmitterMesh.translate + randomPoint;
     }
     else
     {
-        InterlockedAdd(gFreeListIndex[0], 1);
+        emitPosition = gEmitterMesh.translate;
     }
+
+    gParticles[particleIndex].translate = emitPosition;
+    gParticles[particleIndex].lastTrailPosition = emitPosition;
+    
+    if (gSettings.enableRandomColor)
+    {
+        gParticles[particleIndex].color.rgb = generator.Generate3d() * 0.5f + 0.5f;
+        gParticles[particleIndex].color.a = 1.0f;
+    }
+    else
+    {
+        gParticles[particleIndex].color = gSettings.startColor;
+    }
+    
+    float3 vel = float3(
+        lerp(gSettings.velocityMin.x, gSettings.velocityMax.x, generator.Generate1d()),
+        lerp(gSettings.velocityMin.y, gSettings.velocityMax.y, generator.Generate1d()),
+        lerp(gSettings.velocityMin.z, gSettings.velocityMax.z, generator.Generate1d())
+    );
+    gParticles[particleIndex].velocity = vel;
+    
+    gParticles[particleIndex].lifeTime = lerp(gSettings.lifeTimeMin, gSettings.lifeTimeMax, generator.Generate1d());
+    gParticles[particleIndex].currentTime = 0.0f;
+    
+    gParticles[particleIndex].isTrailParticle = 0;
+    gParticles[particleIndex].parentIndex = 0xFFFFFFFF;
+    gParticles[particleIndex].trailSpawnDistance = gSettings.trailSpawnDistance;
 }

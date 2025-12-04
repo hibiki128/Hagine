@@ -30,90 +30,35 @@ class ParticleCSGroup {
     /// Getter
     /// ===================================
 
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetOutputParticleSrvHandle() const {
-        return outputParticleSrvHandle_;
-    }
-
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListIndexSrvHandle() const {
-        return freeListIndexSrvHandle_;
-    }
-
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListSrvHandle() const {
-        return freeListSrvHandle_;
-    }
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetPerFrameResource() const {
-        return perFrameResource_;
-    }
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetMaterialResource() const {
-        return materialResource_;
-    }
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetOutputParticleResource() const {
-        return outputParticleResource_;
-    }
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetPerViewResource() const {
-        return perViewResource_;
-    }
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetSettingsResource() const {
-        return settingsResource_;
-    }
-
-    D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() const {
-        return indexBufferView_;
-    }
-
-    D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const {
-        return vertexBufferView_;
-    }
-
-    uint32_t GetOutputParticleSrvIndex() const {
-        return outputParticleSrvIndex_;
-    }
-
-    uint32_t GetOutputParticleSrvForVSIndex() const {
-        return outputParticleSrvForVSIndex_;
-    }
-
-    ModelData GetModelData() const {
-        return modelData;
-    }
-
-    PerFrame *GetPerFrameData() const {
-        return perFrameData_;
-    }
-
-    uint32_t GetMaxParticleCount() const {
-        return settingsData_->maxParticleCount;
-    }
-
-    ParticleCSSettings *GetSettingsData() const {
-        return settingsData_;
-    }
-
-    void SetFrequency(float frequency) {
-        frequency_ = frequency;
-    }
-
-    void SetSettingData(const ParticleCSSettings &settings) {
-        *settingsData_ = settings;
-    }
-
-    void SetBlendMode(BlendMode blendMode) {
-        particleGroupData_.blendMode = blendMode;
-    }
-
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetOutputParticleSrvHandle() const { return outputParticleSrvHandle_; }
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListIndexSrvHandle() const { return freeListIndexSrvHandle_; }
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListTrailIndexSrvHandle() const { return freeListTrailIndexSrvHandle_; }
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListSrvHandle() const { return freeListSrvHandle_; }
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetPerFrameResource() const { return perFrameResource_; }
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetMaterialResource() const { return materialResource_; }
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetOutputParticleResource() const { return outputParticleResource_; }
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetPerViewResource() const { return perViewResource_; }
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetSettingsResource() const { return settingsResource_; }
+    D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() const { return indexBufferView_; }
+    D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const { return vertexBufferView_; }
+    uint32_t GetOutputParticleSrvIndex() const { return outputParticleSrvIndex_; }
+    uint32_t GetOutputParticleSrvForVSIndex() const { return outputParticleSrvForVSIndex_; }
+    ModelData GetModelData() const { return modelData; }
+    PerFrame *GetPerFrameData() const { return perFrameData_; }
+    uint32_t GetMaxParticleCount() const { return settingsData_->maxParticleCount; }
+    ParticleCSSettings *GetSettingsData() const { return settingsData_; }
     std::string GetGroupName() { return particleGroupData_.groupName; }
-
     PrimitiveType GetPrimitiveType() { return type_; }
-
     std::string GetModelPath() { return modelFilePath_; }
-
-    // 生存パーティクル数を取得
     uint32_t GetAliveParticleCount();
+
+    /// ===================================
+    /// Setter
+    /// ===================================
+
+    void SetFrequency(float frequency) { frequency_ = frequency; }
+    void SetSettingData(const ParticleCSSettings &settings) { *settingsData_ = settings; }
+    void SetBlendMode(BlendMode blendMode) { particleGroupData_.blendMode = blendMode; }
 
     // カウント処理を実行
     void CountAliveParticles();
@@ -131,6 +76,8 @@ class ParticleCSGroup {
     void CreateVertexResource();
     void CreatePerFrameResource();
     void CreateFreeListIndexResource();
+    void CreateFreeListTrailIndexResource();
+    void CopyDebugDataToReadback();
     void CreateFreeListResource();
     void CreateSettingsResource();
     void CreateAliveCountResource();
@@ -166,6 +113,10 @@ class ParticleCSGroup {
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> freeListIndexSrvHandle_{};
     uint32_t freeListIndexSrvIndex_ = 0;
 
+    Microsoft::WRL::ComPtr<ID3D12Resource> freeListTrailIndexResource_{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> freeListTrailIndexSrvHandle_{};
+    uint32_t freeListTrailIndexSrvIndex_ = 0;
+
     Microsoft::WRL::ComPtr<ID3D12Resource> freeListResource_{};
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> freeListSrvHandle_{};
     uint32_t freeListSrvIndex_ = 0;
@@ -197,4 +148,10 @@ class ParticleCSGroup {
     float frequency_ = 0.1f;
     bool isRandomColor_ = false;
     bool isInitialized_ = false;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> freeListIndexReadbackBuffer_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> freeListTrailIndexReadbackBuffer_;
+
+    int32_t debugFreeListCount_ = 0;
+    int32_t debugFreeListTailCount_ = 0;
 };

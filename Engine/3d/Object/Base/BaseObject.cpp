@@ -490,7 +490,7 @@ void BaseObject::SaveColliders() {
         } else if (auto *obb = dynamic_cast<OBBCollider *>(collider)) {
             ObjectDatas_->Save<Vector3>(prefix + "size", obb->GetSize());
             ObjectDatas_->Save<Vector3>(prefix + "rotationOffset", obb->GetRotationOffset());
-            ObjectDatas_->Save<Vector3>(prefix + "scaleOffset", obb->GetScaleOffset());
+            ObjectDatas_->Save<Vector3>(prefix + "scaleOffset", obb->GetPositionOffset());
         }
     }
 }
@@ -542,7 +542,7 @@ void BaseObject::LoadColliders() {
             auto *obb = new OBBCollider();
             obb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
             obb->SetRotationOffset(ObjectDatas_->Load<Vector3>(prefix + "rotationOffset", {0.0f, 0.0f, 0.0f}));
-            obb->SetScaleOffset(ObjectDatas_->Load<Vector3>(prefix + "scaleOffset", {0.0f, 0.0f, 0.0f}));
+            obb->SetPositionOffSet(ObjectDatas_->Load<Vector3>(prefix + "scaleOffset", {0.0f, 0.0f, 0.0f}));
             collider = obb;
             break;
         }
@@ -671,9 +671,9 @@ void BaseObject::DebugCollider() {
                     obb->SetRotationOffset(rotOffset);
                 }
 
-                Vector3 scaleOffset = obb->GetScaleOffset();
+                Vector3 scaleOffset = obb->GetPositionOffset();
                 if (ImGui::DragFloat3("スケールオフセット", &scaleOffset.x, 0.1f)) {
-                    obb->SetScaleOffset(scaleOffset);
+                    obb->SetPositionOffSet(scaleOffset);
                 }
             }
 

@@ -4,26 +4,43 @@ ConstantBuffer<ParticleCSSettings> gSettings : register(b0);
 RWStructuredBuffer<uint> gAliveCount : register(u0);
 RWStructuredBuffer<Particle> gParticles : register(u1);
 
+groupshared uint groupAliveCount;
+
 [numthreads(1024, 1, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+void main(uint3 GTid : SV_GroupThreadID, uint3 DTid : SV_DispatchThreadID)
 {
     uint particleIndex = DTid.x;
     
-    // 最初のスレッドでカウンターを初期化
-    if (particleIndex == 0)
+    // グループ内の最初のスレッドでグループ共有メモリを初期化
+    if (GTid.x == 0)
     {
-        gAliveCount[0] = 0;
+        groupAliveCount = 0;
+        
+        // さらに全体の最初のスレッドならグローバルカウンターも初期化
+        if (DTid.x == 0)
+        {
+            gAliveCount[0] = 0;
+        }
     }
     
-    // 全スレッドが初期化を待つ
+    // グループ内の全スレッドが初期化を待つ
     GroupMemoryBarrierWithGroupSync();
     
+    // 各スレッドがパーティクルをチェック
     if (particleIndex < gSettings.maxParticleCount)
     {
-        // アルファ値が0より大きければ生存中
         if (gParticles[particleIndex].color.a > 0.0f)
         {
-            InterlockedAdd(gAliveCount[0], 1);
+            InterlockedAdd(groupAliveCount, 1);
         }
+    }
+    
+    // グループ内の全スレッドが完了するのを待つ
+    GroupMemoryBarrierWithGroupSync();
+    
+    // グループ内の最初のスレッドがグローバルカウンターに加算
+    if (GTid.x == 0 && groupAliveCount > 0)
+    {
+        InterlockedAdd(gAliveCount[0], groupAliveCount);
     }
 }
