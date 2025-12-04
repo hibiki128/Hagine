@@ -98,6 +98,12 @@ struct ParticleCSSettings
     int trailInheritVelocity;
     float trailMinLifeTime;
     float padding4;
+    int enableGather;
+    float gatherStartRatio;
+    float gatherStrength;
+    float3 gatherTarget;
+    int enableEmitterCenter;
+    float padding5;
 };
 
 struct EdgeInfo

@@ -381,6 +381,13 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->trailVelocityScale = 0.3f;
     settingsData_->trailInheritVelocity = 1;
     settingsData_->trailMinLifeTime = 0.5f; // 最小寿命を長めに
+
+    // ギャザー設定のデフォルト値を追加
+    settingsData_->enableGather = 0;
+    settingsData_->gatherStartRatio = 0.5f;
+    settingsData_->gatherStrength = 2.0f;
+    settingsData_->gatherTarget = {0.0f, 0.0f, 0.0f};
+    settingsData_->enableEmitterCenter = 0;
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -617,11 +624,19 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->enableSinScale = enableSinScale ? 1 : 0;
             }
 
+            if (enableSinScale) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
+                ImGui::DragFloat("周波数##SinFreq", &settingsData_->sinScaleFrequency, 0.1f);
+                ImGui::DragFloat("振幅##SinAmp", &settingsData_->sinScaleAmplitude, 0.01f);
+                ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
+
             bool enableGravity = settingsData_->enableGravity != 0;
             if (ImGui::Checkbox("重力を有効化", &enableGravity)) {
                 settingsData_->enableGravity = enableGravity ? 1 : 0;
             }
-            ImGui::PopStyleColor();
 
             if (enableGravity) {
                 ImGui::Indent();
@@ -631,14 +646,39 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::Unindent();
             }
 
-            if (enableSinScale) {
+            bool enableGather = settingsData_->enableGather != 0;
+            if (ImGui::Checkbox("ギャザーを有効化", &enableGather)) {
+                settingsData_->enableGather = enableGather ? 1 : 0;
+            }
+
+            if (enableGather) {
                 ImGui::Indent();
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
-                ImGui::DragFloat("周波数##SinFreq", &settingsData_->sinScaleFrequency, 0.1f);
-                ImGui::DragFloat("振幅##SinAmp", &settingsData_->sinScaleAmplitude, 0.01f);
-                ImGui::PopStyleColor();
+
+                ImGui::DragFloat("開始タイミング", &settingsData_->gatherStartRatio, 0.01f, 0.0f, 1.0f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("寿命の何%からギャザーを開始するか(0.0-1.0)");
+                }
+
+                ImGui::DragFloat("ギャザー強度", &settingsData_->gatherStrength, 0.1f, 0.0f, 20.0f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("目標地点への引き寄せる力の強さ");
+                }
+
+                bool useEmitterCenter = settingsData_->enableEmitterCenter != 0;
+                ImGui::Checkbox("エミッターの中心に集める", &useEmitterCenter);
+                settingsData_->enableEmitterCenter = useEmitterCenter ? 1 : 0;
+
+                if (!useEmitterCenter) {
+                    ImGui::DragFloat3("目標座標", &settingsData_->gatherTarget.x, 0.1f);
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("パーティクルが集まる目標地点");
+                    }
+                }
+
                 ImGui::Unindent();
             }
+
+            ImGui::PopStyleColor();
 
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("パーティクルが時間経過と共に小さくなります");

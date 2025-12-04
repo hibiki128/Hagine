@@ -123,17 +123,23 @@ struct ParticleCSSettings {
     float sinScaleAmplitude{};
     uint32_t enableGravity = 0;
     Vector3 gravity = {0.0f, -9.8f, 0.0f};
-    uint32_t enableTrail = 0;                          // トレイル機能を有効にするか 
+    uint32_t enableTrail = 0;
     float trailSpawnDistance = 0.1f;
-    uint32_t maxTrailPerParticle = 5;                  // 1つの親あたりの最大トレイル数
-    float trailLifeTimeScale = 0.5f;                   // トレイルの寿命倍率（親の寿命 × この値）
-    Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f}; // トレイルのスケール倍率
-    float padding3;
-    Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f}; // トレイルの色倍率
-    float trailVelocityScale = 0.3f;                         // トレイルの速度倍率
-    uint32_t trailInheritVelocity = 1;                       // トレイルが親の速度を継承するか
-    float trailMinLifeTime = 0.3f;                           // トレイルの最小寿命（秒）
-    float padding4{};                                        // パディング追加（16バイトアライメント）
+    uint32_t maxTrailPerParticle = 5;
+    float trailLifeTimeScale = 0.5f;
+    Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
+    float padding3{};
+    Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
+    float trailVelocityScale = 0.3f;
+    uint32_t trailInheritVelocity = 1;
+    float trailMinLifeTime = 0.3f;
+    float padding4{};
+    uint32_t enableGather = 0;
+    float gatherStartRatio = 0.5f;
+    float gatherStrength = 2.0f;
+    uint32_t enableEmitterCenter = 0;
+    Vector3 gatherTarget = {0, 0, 0};
+    float padding5{};
 };
 
 // トレイル生成情報を保持する構造体

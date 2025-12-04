@@ -112,9 +112,32 @@ void main(uint3 DTid : SV_DispatchThreadID)
             return;
         }
         
+        // 重力処理
         if (gSettings.enableGravity)
         {
             gParticles[particleIndex].velocity += gSettings.gravity * gPerFrame.deltaTime;
+        }
+        
+        // ギャザー処理を追加
+        if (gSettings.enableGather)
+        {
+            float lifeRatio = gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime;
+            
+            // gatherStartRatio以降でギャザー開始
+            if (lifeRatio >= gSettings.gatherStartRatio)
+            {
+                float3 targetPosition = gSettings.gatherTarget;
+                float3 toTarget = targetPosition - gParticles[particleIndex].translate;
+                float distance = length(toTarget);
+                
+                if (distance > 0.001f)
+                {
+                    float3 gatherForce = normalize(toTarget) * gSettings.gatherStrength;
+                    // ギャザー比率に応じて強度を増加
+                    float gatherRatio = (lifeRatio - gSettings.gatherStartRatio) / (1.0f - gSettings.gatherStartRatio);
+                    gParticles[particleIndex].velocity += gatherForce * gatherRatio * gPerFrame.deltaTime;
+                }
+            }
         }
         
         float3 previousPosition = gParticles[particleIndex].translate;

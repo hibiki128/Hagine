@@ -177,6 +177,12 @@ void ParticleCSEmitter::EmitterDisPatch() {
     for (auto &group : particleGroups_) {
         group->GetPerFrameData()->groupId = groupIndex;
 
+        ParticleCSSettings *settings = group->GetSettingsData();
+
+        if (settings->enableEmitterCenter) {
+            settings->gatherTarget = emitterMeshData_->translate;
+        }
+
         commandList->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(2, group->GetFreeListSrvHandle().second);
