@@ -1,7 +1,7 @@
 {
     "emitFromSurface": 1,
     "frequency": 0.009999999776482582,
-    "frequencyTime": 3.7175168991088867,
+    "frequencyTime": 23.833629608154297,
     "group_0_blendMode": 2,
     "group_0_emitCount": 1,
     "group_0_enableGravity": 1,
@@ -50,16 +50,16 @@
         "y": 1.0,
         "z": 1.0
     },
-    "group_0_trailInheritVelocity": 1,
-    "group_0_trailLifeTimeScale": 0.4000000059604645,
-    "group_0_trailMinLifeTime": 2.0,
+    "group_0_trailInheritVelocity": 0,
+    "group_0_trailLifeTimeScale": 0.30000001192092896,
+    "group_0_trailMinLifeTime": 0.10000000149011612,
     "group_0_trailScaleMultiplier": {
         "x": 1.0,
         "y": 1.0,
         "z": 1.0
     },
     "group_0_trailSpawnDistance": 0.009999999776482582,
-    "group_0_trailVelocityScale": 2.0,
+    "group_0_trailVelocityScale": 0.8199999928474426,
     "isAuto": true,
     "isVisible": false,
     "modelPath": "",

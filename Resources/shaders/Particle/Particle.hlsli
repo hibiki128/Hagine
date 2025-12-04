@@ -91,6 +91,7 @@ struct ParticleCSSettings
     float trailSpawnDistance;
     int maxTrailPerParticle;
     float trailLifeTimeScale;
+    float paddingTrail;
     float3 trailScaleMultiplier;
     float padding3;
     float4 trailColorMultiplier;
@@ -101,9 +102,15 @@ struct ParticleCSSettings
     int enableGather;
     float gatherStartRatio;
     float gatherStrength;
+    int enableEmitterCenter; 
     float3 gatherTarget;
-    int enableEmitterCenter;
-    float padding5;
+    int enableGatherForTrail;
+    int enableVortex;
+    float vortexStrength;
+    int enableVortexForTrail;
+    float padding6;
+    float3 vortexAxis;
+    float padding7;
 };
 
 struct EdgeInfo
