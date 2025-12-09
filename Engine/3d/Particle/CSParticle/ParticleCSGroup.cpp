@@ -1,6 +1,7 @@
 #include "ParticleCSGroup.h"
 #include <Frame.h>
 #include <Graphics/Model/ModelManager.h>
+#include <Line/DrawLine3D.h>
 #include <d3dx12.h>
 
 void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
@@ -387,7 +388,6 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->gatherStartRatio = 0.5f;
     settingsData_->gatherStrength = 2.0f;
     settingsData_->gatherTarget = {0.0f, 0.0f, 0.0f};
-    settingsData_->enableEmitterCenter = 0;
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -668,16 +668,12 @@ void ParticleCSGroup::DrawImGui() {
                     ImGui::SetTooltip("目標地点への引き寄せる力の強さ");
                 }
 
-                bool useEmitterCenter = settingsData_->enableEmitterCenter != 0;
-                ImGui::Checkbox("エミッターの中心に集める", &useEmitterCenter);
-                settingsData_->enableEmitterCenter = useEmitterCenter ? 1 : 0;
-
-                if (!useEmitterCenter) {
-                    ImGui::DragFloat3("目標座標", &settingsData_->gatherTarget.x, 0.1f);
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("パーティクルが集まる目標地点");
-                    }
+                ImGui::DragFloat3("ギャザー目標座標", &settingsData_->gatherTargetOffset.x, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルが集まる目標地点");
                 }
+
+                DrawLine3D::GetInstance()->DrawSphere(settingsData_->gatherTarget, {1.0f, 0.0f, 1.0f, 1.0f}, 0.1f, 8);
 
                 bool enableGatherForTrail = settingsData_->enableGatherForTrail != 0;
                 ImGui::Checkbox("トレイルにもギャザーを適用", &enableGatherForTrail);
@@ -697,6 +693,13 @@ void ParticleCSGroup::DrawImGui() {
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("プラスで正回転、マイナスで逆回転");
                 }
+
+                ImGui::DragFloat3("渦巻きの目標座標", &settingsData_->vortexTargetOffset.x, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルが集まる目標地点");
+                }
+
+                DrawLine3D::GetInstance()->DrawSphere(settingsData_->vortexTarget, {0.5f, 1.0f, 0.0f, 1.0f}, 0.1f, 8);
 
                 // トレイルへの適用
                 bool enableVortexTrail = settingsData_->enableVortexForTrail != 0;

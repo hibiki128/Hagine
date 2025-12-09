@@ -155,8 +155,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
             // 「トレイルではない」 または 「トレイルかつ渦巻き有効」 の場合のみ実行
             if (!isTrail || gSettings.enableVortexForTrail)
             {
-                // 中心点は gatherTarget を使用
-                float3 center = gSettings.gatherTarget;
+                float3 center = gSettings.vortexTarget;
                 float3 toParticle = gParticles[particleIndex].translate - center;
                 float dist = length(toParticle);
                 

@@ -179,9 +179,8 @@ void ParticleCSEmitter::EmitterDisPatch() {
 
         ParticleCSSettings *settings = group->GetSettingsData();
 
-        if (settings->enableEmitterCenter || settings->enableVortex) {
-            settings->gatherTarget = emitterMeshData_->translate;
-        }
+        settings->gatherTarget = emitterMeshData_->translate + settings->gatherTargetOffset;
+        settings->vortexTarget = emitterMeshData_->translate + settings->vortexTargetOffset;
 
         commandList->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
@@ -493,10 +492,12 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "enableGather", group->GetSettingsData()->enableGather);
         data->Save(prefix + "gatherStartRatio", group->GetSettingsData()->gatherStartRatio);
         data->Save(prefix + "gatherStrength", group->GetSettingsData()->gatherStrength);
-        data->Save(prefix + "enableEmitterCenter", group->GetSettingsData()->enableEmitterCenter);
         data->Save(prefix + "gatherTarget", group->GetSettingsData()->gatherTarget);
+        data->Save(prefix + "gatherTargetOffset", group->GetSettingsData()->gatherTargetOffset);
         data->Save(prefix + "enableGatherForTrail", group->GetSettingsData()->enableGatherForTrail);
         data->Save(prefix + "enableVortex", group->GetSettingsData()->enableVortex);
+        data->Save(prefix + "vortexTarget", group->GetSettingsData()->vortexTarget);
+        data->Save(prefix + "vortexTargetOffset", group->GetSettingsData()->vortexTargetOffset);
         data->Save(prefix + "vortexStrength", group->GetSettingsData()->vortexStrength);
         data->Save(prefix + "enableVortexForTrail", group->GetSettingsData()->enableVortexForTrail);
         data->Save(prefix + "vortexAxis", group->GetSettingsData()->vortexAxis);
@@ -569,10 +570,12 @@ void ParticleCSEmitter::LoadSetting() {
         settings.enableGather = data->Load(prefix + "enableGather", 0);
         settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
         settings.gatherStrength = data->Load(prefix + "gatherStrength", 1.0f);
-        settings.enableEmitterCenter = data->Load<uint32_t>(prefix + "enableEmitterCenter", 0);
         settings.gatherTarget = data->Load<Vector3>(prefix + "gatherTarget", {0.0f, 0.0f, 0.0f});
+        settings.gatherTargetOffset = data->Load<Vector3>(prefix + "gatherTargetOffset", {0.0f, 0.0f, 0.0f});
         settings.enableGatherForTrail = data->Load<uint32_t>(prefix + "enableGatherForTrail", 0);
         settings.enableVortex = data->Load<uint32_t>(prefix + "enableVortex", 0);
+        settings.vortexTarget = data->Load<Vector3>(prefix + "vortexTarget", {0.0f, 0.0f, 0.0f});
+        settings.vortexTargetOffset = data->Load<Vector3>(prefix + "vortexTargetOffset", {0.0f, 0.0f, 0.0f});
         settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
         settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
         settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
@@ -657,10 +660,12 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.enableGather = data->Load(prefix + "enableGather", 0);
         settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
         settings.gatherStrength = data->Load(prefix + "gatherStrength", 1.0f);
-        settings.enableEmitterCenter = data->Load<uint32_t>(prefix + "enableEmitterCenter", 0);
         settings.gatherTarget = data->Load<Vector3>(prefix + "gatherTarget", {0.0f, 0.0f, 0.0f});
+        settings.gatherTargetOffset = data->Load<Vector3>(prefix + "gatherTargetOffset", {0.0f, 0.0f, 0.0f});
         settings.enableGatherForTrail = data->Load<uint32_t>(prefix + "enableGatherForTrail", 0);
         settings.enableVortex = data->Load<uint32_t>(prefix + "enableVortex", 0);
+        settings.vortexTarget = data->Load<Vector3>(prefix + "vortexTarget", {0.0f, 0.0f, 0.0f});
+        settings.vortexTargetOffset = data->Load<Vector3>(prefix + "vortexTargetOffset", {0.0f, 0.0f, 0.0f});
         settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
         settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
         settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
