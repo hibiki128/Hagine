@@ -1,15 +1,15 @@
 #pragma once
+#include "Application/Staging/Death/DeathStaging.h"
 #include "Bullet/PlayerBullet.h"
 #include "Data/DataHandler.h"
 #include "Hand/PlayerHand.h"
 #include "Object/Base/BaseObject.h"
 #include "PlayerData.h"
+#include "Skill/MakanAttackSkill.h"
 #include "State/Base/PlayerBaseState.h"
 #include <Application/Utility/Shake/Shake.h>
 #include <Particle/CSParticle/ParticleCSEmitter.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
-#include"Application/Staging/Death/DeathStaging.h"
-#include"Skill/MakanAttackSkill.h"
 
 class ChargeShot;
 class FollowCamera;
@@ -58,7 +58,7 @@ class Player : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const ViewProjection &viewProjection);
-    
+
     /// <summary>
     /// 状態を変更
     /// </summary>
@@ -304,11 +304,18 @@ class Player : public BaseObject {
     std::unique_ptr<ParticleEmitter> rushEmitter_;   // 突撃パーティクル
     std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
-                                                  
-    ViewProjection *vp_;                             // カメラ
-    OBBCollider *playerCollider_ = nullptr;          // コライダー
-    PlayerHand *leftHand_ptr_;                       // 左手
-    PlayerHand *rightHand_ptr_;                      // 右手
-    PlayerBaseState *currentState_ = nullptr;        // 現在の状態
-    MakanAttackSkill *makanAttack_ptr_ = nullptr;   // 必殺技
+
+    ViewProjection *vp_;                          // カメラ
+    OBBCollider *playerCollider_ = nullptr;       // コライダー
+    PlayerHand *leftHand_ptr_;                    // 左手
+    PlayerHand *rightHand_ptr_;                   // 右手
+    PlayerBaseState *currentState_ = nullptr;     // 現在の状態
+    MakanAttackSkill *makanAttack_ptr_ = nullptr; // 必殺技
+
+    bool isDamageReact_ = false;       // リアクション中かどうか
+    float damageReactTimer_ = 0.0f;    // 経過時間
+    float damageReactDuration_ = 0.5f; // リアクション時間
+    EasingData<float> tiltEase_;       // 回転角イージング
+    Quaternion baseRotation_;          // 通常時の向き
+    Quaternion tiltRotation_;          // のけぞり用の回転
 };
