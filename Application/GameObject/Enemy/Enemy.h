@@ -26,7 +26,7 @@ class Enemy : public BaseObject {
     /// <summary>
     /// デストラクタ
     /// </summary>
-    ~Enemy()override;
+    ~Enemy() override;
 
     /// <summary>
     /// 初期化
@@ -61,7 +61,7 @@ class Enemy : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter(ColliderBase* collider);
+    void OnCollisionEnter(ColliderBase *collider);
 
     /// <summary>
     /// ビヘイビアツリーを初期化
@@ -199,6 +199,13 @@ class Enemy : public BaseObject {
     std::unique_ptr<BaseObject> shadow_;
     std::unique_ptr<ParticleEmitter> emitter_;
     std::unique_ptr<Shake> chageShake_;
+
+    bool isDamageReact_ = false;        // リアクション中かどうか
+    float damageReactTimer_ = 0.0f;     // 経過時間
+    float damageReactDuration_ = 0.5f; // 少し短めの時間
+    EasingData<float> tiltEase_;        // 回転角イージング
+    Quaternion baseRotation_;           // 通常時の向き
+    Quaternion tiltRotation_;           // のけぞり用の回転
 
     // ビヘイビアツリー関連
 #ifdef _DEBUG

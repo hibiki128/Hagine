@@ -24,7 +24,7 @@ void Enemy::Init(const std::string objectName) {
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
     enemyCollider_ = AddOBBCollider("enemy_Collider");
     enemyCollider_->SetTag("Enemy");
-    enemyCollider_->AddCollisionMask("player_bullet");
+    enemyCollider_->AddCollisionMask("PlayerBullet");
     enemyCollider_->AddCollisionMask("Player");
     enemyCollider_->AddCollisionMask("PlayerHand");
     enemyCollider_->AddCollisionMask("PlayerChargeBullet");
@@ -57,7 +57,6 @@ void Enemy::Update() {
         if (damage_ > 0) {
             float actualDamage = static_cast<float>(damage_);
 
-            // ガード中はダメージを85%軽減
             if (isGuarding_) {
                 actualDamage *= 0.15f;
             }
@@ -71,7 +70,6 @@ void Enemy::Update() {
             HP_ = 0.0f;
         }
 
-        // ガード中点滅処理
         if (isGuarding_) {
             const float blinkInterval = 0.1f;
             int blinkCount = static_cast<int>(Frame::Time() / blinkInterval);
@@ -84,16 +82,42 @@ void Enemy::Update() {
             SetColor(Vector4(1.0f, 0.0f, 0.0f, 1.0f));
         }
 
-        // 生存中のみ行動
         if (isAlive_ && target_->GetAlive()) {
             ExecuteBehaviorTree(Frame::DeltaTime());
         }
 
-        // 向きを更新
-        RotateUpdate();
+        // ダメージリアクション中でない時のみ向きを更新
+        if (!isDamageReact_) {
+            RotateUpdate();
+        }
 
         UpdateShadowScale();
         chageShake_->Update();
+
+        if (isDamageReact_) {
+            damageReactTimer_ += Frame::DeltaTime();
+
+            // イージングされたX回転角(ラジアン)
+            float angleX = tiltEase_.Update(Frame::DeltaTime());
+
+            // ワールド空間のX軸で回転を作成
+            tiltRotation_ = Quaternion::FromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), angleX);
+
+            // 重要: tiltRotation_ × baseRotation_ の順序（ワールド空間での回転を先に適用）
+            transform_->quateRotation_ = tiltRotation_ * baseRotation_;
+
+            // 高速点滅
+            float blinkInterval = 0.03f;
+            int blink = static_cast<int>(damageReactTimer_ / blinkInterval);
+            SetAlpha((blink % 2 == 0) ? 0.0f : 1.0f);
+
+            // 終了処理
+            if (damageReactTimer_ >= damageReactDuration_) {
+                isDamageReact_ = false;
+                transform_->quateRotation_ = baseRotation_;
+                SetAlpha(1.0f);
+            }
+        }
     }
 
     CollisionGround();
@@ -239,13 +263,26 @@ void Enemy::Debug() {
 }
 
 void Enemy::OnCollisionEnter(ColliderBase *other) {
+
     if (other->GetTag() == "PlayerBullet" || other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
-        emitter_->SetPosition(transform_->translation_);
-        emitter_->UpdateOnce();
+        // emitter_->SetPosition(transform_->translation_);
+        // emitter_->UpdateOnce();
     }
     if (other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
         chageShake_->StartShake();
     }
+
+    // ダメージリアクション開始
+    isDamageReact_ = true;
+    damageReactTimer_ = 0.0f;
+
+    // 今の向きを保存
+    baseRotation_ = transform_->quateRotation_;
+
+    // X軸回転のみをイージング（上向きに8度）
+    float startAngle = transform_->quateRotation_.x;
+    float endAngle = degreesToRadians(20.0f);
+    tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
 }
 
 Vector3 Enemy::GetMovementDirection() const {

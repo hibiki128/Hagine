@@ -335,6 +335,9 @@ void Framework::Update() {
 }
 
 void Framework::LoadResource() {
+
+    textureManager_->LoadAllTextures();
+
     particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");
     particleEditor_->AddParticleEmitter("chageEmitter");

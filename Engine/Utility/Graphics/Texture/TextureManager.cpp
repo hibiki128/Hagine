@@ -1,6 +1,7 @@
 #include "TextureManager.h"
 #include "DirectXCommon.h"
 #include <String/StringUtility.h>
+#include <filesystem>
 
 TextureManager *TextureManager::instance = nullptr;
 
@@ -115,4 +116,45 @@ const DirectX::TexMetadata &TextureManager::GetMetaData(const std::string &fileP
 
     TextureData &textureData = textureDatas[fullPath];
     return textureData.metadata;
+}
+
+void TextureManager::LoadAllTextures() {
+
+    // 読み込み開始ディレクトリ
+    std::filesystem::path baseDir = "resources/images";
+
+    // ディレクトリが存在しない場合は早期リターン
+    if (!std::filesystem::exists(baseDir)) {
+        return;
+    }
+
+    // 再帰的探索
+    for (auto &entry : std::filesystem::recursive_directory_iterator(baseDir)) {
+
+        // ファイルでなければスキップ
+        if (!entry.is_regular_file())
+            continue;
+
+        // 拡張子を取得
+        std::string ext = entry.path().extension().string();
+
+        // png 以外は無視（必要なら jpg 等も追加）
+        if (ext != ".png" && ext != ".jpg")
+            continue;
+
+        // baseDir からの相対パスを作成
+        std::filesystem::path relative = entry.path().lexically_relative(baseDir);
+
+        // Windows だとパス区切りが \ なので / に統一する
+        std::string file = relative.string();
+        std::replace(file.begin(), file.end(), '\\', '/');
+
+        // 既にロード済みならスキップ
+        if (textureDatas.contains("resources/images/" + file)) {
+            continue;
+        }
+
+        // テクスチャを読み込む
+        LoadTexture(file);
+    }
 }

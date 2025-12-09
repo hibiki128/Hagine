@@ -64,6 +64,8 @@ class TextureManager {
 
     SrvManager *GetSrvManager() { return srvManager_; }
 
+    void LoadAllTextures();
+
   private:
     // テクスチャ１枚分のデータ
     struct TextureData {

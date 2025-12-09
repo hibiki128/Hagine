@@ -1,5 +1,7 @@
 #ifdef _DEBUG
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "ShowFolder.h"
+#include <Graphics/Texture/TextureManager.h>
 #include <algorithm>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <filesystem>
@@ -7,11 +9,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-// テクスチャファイルのプレビューキャッシュ用
-struct TextureCache {
-    // ここにテクスチャハンドル等を保存する実装を追加
-};
 
 void ShowTextureFile(std::string &selectedTexturePath) {
     // スタイルの設定
@@ -26,7 +23,6 @@ void ShowTextureFile(std::string &selectedTexturePath) {
     static std::string selectedFileTex = "";
     static std::unordered_map<std::string, TextureCache> textureCache;
     static ImGuiTextFilter filter;
-    static bool showDetails = true;
 
     // パンくずリスト表示
     {
@@ -68,11 +64,6 @@ void ShowTextureFile(std::string &selectedTexturePath) {
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         filter.Draw("##検索", ImGui::GetContentRegionAvail().x - 60);
         ImGui::SameLine();
-
-        // 詳細表示切り替えボタン
-        if (ImGui::Button(showDetails ? "シンプル表示" : "詳細表示")) {
-            showDetails = !showDetails;
-        }
     }
 
     ImGui::Spacing();
@@ -148,99 +139,93 @@ void ShowTextureFile(std::string &selectedTexturePath) {
 
     // テクスチャファイル表示セクション
     if (!texFiles.empty()) {
+
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.7f, 0.3f, 0.5f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.8f, 0.4f, 0.6f));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.5f, 0.9f, 0.5f, 0.7f));
 
         if (ImGui::CollapsingHeader("テクスチャファイル", ImGuiTreeNodeFlags_DefaultOpen)) {
+
             ImGui::Indent(10.0f);
 
-            if (showDetails) {
-                // 詳細表示モード（リスト形式）
-                ImGui::Columns(2, "ファイルリスト", true);
-                ImGui::SetColumnWidth(0, ImGui::GetWindowWidth() * 0.7f);
-                ImGui::Text("ファイル名");
-                ImGui::NextColumn();
-                ImGui::Text("拡張子");
-                ImGui::NextColumn();
-                ImGui::Separator();
+            // ---- グリッド表示 固定 ----
+            float cellSize = 110.0f;
+            float panelWidth = ImGui::GetContentRegionAvail().x;
+            int numColumns = static_cast<int>(panelWidth / cellSize);
+            if (numColumns < 1)
+                numColumns = 1;
 
-                for (const auto &file : texFiles) {
-                    if (filter.PassFilter(file.c_str())) {
-                        std::filesystem::path filePath(file);
-                        std::string extension = filePath.extension().string();
+            ImGui::Columns(numColumns, "FileGrid", false);
 
-                        // ファイルアイコンを表示
-                        ImGui::PushStyleColor(ImGuiCol_Text,
-                                              extension == ".png" ? ImVec4(0.4f, 0.8f, 1.0f, 1.0f) : ImVec4(1.0f, 0.6f, 0.4f, 1.0f));
-                        ImGui::Text(ICON_FA_FILE_IMAGE); // FontAwesomeアイコンを使用（要設定）
-                        ImGui::PopStyleColor();
+           for (const auto &file : texFiles) {
 
-                        ImGui::SameLine();
-                        bool isSelected = (file == selectedFileTex);
-                        if (ImGui::Selectable(file.c_str(), isSelected, ImGuiSelectableFlags_SpanAllColumns)) {
-                            selectedFileTex = file;
-                            // `baseDirTex` からの相対パスを取得
-                            std::filesystem::path relativePath = (currentDirTex / file).lexically_relative(baseDirTex);
-                            // Windowsのバックスラッシュをスラッシュに変換
-                            std::string pathStr = relativePath.string();
-                            std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
-                            // 選択されたテクスチャパスを設定
-                            selectedTexturePath = pathStr;
-                        }
+                if (!filter.PassFilter(file.c_str()))
+                    continue;
 
-                        ImGui::NextColumn();
-                        ImGui::Text("%s", extension.c_str());
-                        ImGui::NextColumn();
-                    }
+                std::filesystem::path fullPath = currentDirTex / file;
+                std::string relative = fullPath.lexically_relative(baseDirTex).string();
+                std::replace(relative.begin(), relative.end(), '\\', '/');
+
+                // キャッシュされていなければロード
+                if (!textureCache.contains(relative)) {
+                    TextureManager *texMgr = TextureManager::GetInstance();
+                    texMgr->LoadTexture(relative);
+
+                    uint32_t idx = texMgr->GetTextureIndexByFilePath(relative);
+                    auto &meta = texMgr->GetMetaData(relative);
+
+                    TextureCache cache;
+                    cache.srvIndex = idx;
+                    cache.handle = texMgr->GetSrvManager()->GetGPUDescriptorHandle(idx);
+                    cache.width = static_cast<int>(meta.width);
+                    cache.height = static_cast<int>(meta.height);
+
+                    textureCache[relative] = cache;
                 }
 
-                ImGui::Columns(1);
-            } else {
-                // シンプル表示モード（グリッド形式）
-                float cellSize = 100.0f;
-                float panelWidth = ImGui::GetContentRegionAvail().x;
-                int numColumns = static_cast<int>(panelWidth / cellSize);
-                if (numColumns < 1)
-                    numColumns = 1;
+                TextureCache &cache = textureCache[relative];
 
-                ImGui::Columns(numColumns, "ファイルグリッド", false);
+                ImGui::PushID(file.c_str());
 
-                for (const auto &file : texFiles) {
-                    if (filter.PassFilter(file.c_str())) {
-                        bool isSelected = (file == selectedFileTex);
-                        ImGui::PushStyleColor(ImGuiCol_Button, isSelected ? ImVec4(0.5f, 0.5f, 0.7f, 0.7f) : ImVec4(0.3f, 0.3f, 0.3f, 0.0f));
+                // 選択状態の背景色
+                bool isSelected = (selectedTexturePath == relative);
+                if (isSelected) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.6f, 0.8f, 0.5f));
+                } else {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.3f));
+                }
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.7f, 0.9f, 0.6f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.8f, 1.0f, 0.7f));
 
-                        ImGui::PushID(file.c_str());
-                        if (ImGui::Button("", ImVec2(cellSize - 10, cellSize - 10))) {
-                            selectedFileTex = file;
-                            // `baseDirTex` からの相対パスを取得
-                            std::filesystem::path relativePath = (currentDirTex / file).lexically_relative(baseDirTex);
-                            // Windowsのバックスラッシュをスラッシュに変換
-                            std::string pathStr = relativePath.string();
-                            std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
-                            // 選択されたテクスチャパスを設定
-                            selectedTexturePath = pathStr;
-                        }
-                        ImGui::PopID();
-
-                        ImGui::PopStyleColor();
-
-                        // ファイル名を表示（短縮する必要がある場合）
-                        if (file.length() > 8) {
-                            std::string shortName = file.substr(0, 9) + "...";
-                            ImGui::TextWrapped("%s", shortName.c_str());
-                        } else {
-                            ImGui::TextWrapped("%s", file.c_str());
-                        }
-
-                        ImGui::NextColumn();
-                    }
+                // クリック可能なボタン領域
+                if (ImGui::Button("##texButton", ImVec2(cellSize - 10, cellSize - 10))) {
+                    selectedTexturePath = relative;
                 }
 
-                ImGui::Columns(1);
+                ImGui::PopStyleColor(3);
+
+                // ボタンの上に画像とテキストを重ねて描画
+                ImVec2 buttonMin = ImGui::GetItemRectMin();
+                ImVec2 buttonMax = ImGui::GetItemRectMax();
+
+                // サムネイル画像描画
+                ImVec2 imagePos = ImVec2(buttonMin.x + 5, buttonMin.y + 5);
+                ImVec2 imageSize = ImVec2(cellSize - 20, cellSize - 40);
+                ImGui::GetWindowDrawList()->AddImage(
+                    (ImTextureID)cache.handle.ptr,
+                    imagePos,
+                    ImVec2(imagePos.x + imageSize.x, imagePos.y + imageSize.y));
+
+                // ファイル名描画
+                std::string shortName = file.size() > 14 ? file.substr(0, 14) + "..." : file;
+                ImVec2 textPos = ImVec2(buttonMin.x + 5, buttonMax.y - 20);
+                ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32(255, 255, 255, 255), shortName.c_str());
+
+                ImGui::PopID();
+                ImGui::NextColumn();
             }
 
+            ImGui::Columns(1);
             ImGui::Unindent(10.0f);
         }
 
