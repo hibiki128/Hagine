@@ -1,6 +1,7 @@
 #include "ParticleCSGroup.h"
 #include <Frame.h>
 #include <Graphics/Model/ModelManager.h>
+#include <Line/DrawLine3D.h>
 #include <d3dx12.h>
 
 void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
@@ -387,7 +388,6 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->gatherStartRatio = 0.5f;
     settingsData_->gatherStrength = 2.0f;
     settingsData_->gatherTarget = {0.0f, 0.0f, 0.0f};
-    settingsData_->enableEmitterCenter = 0;
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -619,6 +619,10 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->enableLifetimeScale = enableLifetimeScale ? 1 : 0;
             }
 
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("パーティクルが時間経過と共に小さくなります");
+            }
+
             bool enableSinScale = settingsData_->enableSinScale != 0;
             if (ImGui::Checkbox("Sin波で拡縮", &enableSinScale)) {
                 settingsData_->enableSinScale = enableSinScale ? 1 : 0;
@@ -647,7 +651,7 @@ void ParticleCSGroup::DrawImGui() {
             }
 
             bool enableGather = settingsData_->enableGather != 0;
-            if (ImGui::Checkbox("ギャザーを有効化", &enableGather)) {
+            if (ImGui::Checkbox("ギャザー(集合)を有効化", &enableGather)) {
                 settingsData_->enableGather = enableGather ? 1 : 0;
             }
 
@@ -664,25 +668,68 @@ void ParticleCSGroup::DrawImGui() {
                     ImGui::SetTooltip("目標地点への引き寄せる力の強さ");
                 }
 
-                bool useEmitterCenter = settingsData_->enableEmitterCenter != 0;
-                ImGui::Checkbox("エミッターの中心に集める", &useEmitterCenter);
-                settingsData_->enableEmitterCenter = useEmitterCenter ? 1 : 0;
-
-                if (!useEmitterCenter) {
-                    ImGui::DragFloat3("目標座標", &settingsData_->gatherTarget.x, 0.1f);
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("パーティクルが集まる目標地点");
-                    }
+                ImGui::DragFloat3("ギャザー目標座標", &settingsData_->gatherTargetOffset.x, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルが集まる目標地点");
                 }
+
+                bool enableGatherForTrail = settingsData_->enableGatherForTrail != 0;
+                ImGui::Checkbox("トレイルにもギャザーを適用", &enableGatherForTrail);
+                settingsData_->enableGatherForTrail = enableGatherForTrail ? 1 : 0;
 
                 ImGui::Unindent();
             }
 
-            ImGui::PopStyleColor();
-
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("パーティクルが時間経過と共に小さくなります");
+            bool enableVortex = settingsData_->enableVortex != 0;
+            if (ImGui::Checkbox("渦巻き(Vortex)を有効化", &enableVortex)) {
+                settingsData_->enableVortex = enableVortex ? 1 : 0;
             }
+
+            if (enableVortex) {
+                // 強度
+                ImGui::DragFloat("回転強度", &settingsData_->vortexStrength, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("プラスで正回転、マイナスで逆回転");
+                }
+
+                ImGui::DragFloat3("渦巻きの目標座標", &settingsData_->vortexTargetOffset.x, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルが集まる目標地点");
+                }
+
+                // トレイルへの適用
+                bool enableVortexTrail = settingsData_->enableVortexForTrail != 0;
+                if (ImGui::Checkbox("トレイルにも適用", &enableVortexTrail)) {
+                    settingsData_->enableVortexForTrail = enableVortexTrail ? 1 : 0;
+                }
+
+                ImGui::Separator();
+                ImGui::Text("回転軸設定:");
+
+                // プリセットボタン (X, Y, Z)
+                float buttonWidth = 40.0f;
+                if (ImGui::Button("X軸", ImVec2(buttonWidth, 0))) {
+                    settingsData_->vortexAxis = {1.0f, 0.0f, 0.0f};
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Y軸", ImVec2(buttonWidth, 0))) {
+                    settingsData_->vortexAxis = {0.0f, 1.0f, 0.0f};
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Z軸", ImVec2(buttonWidth, 0))) {
+                    settingsData_->vortexAxis = {0.0f, 0.0f, 1.0f};
+                }
+
+                // 自由設定スライダー
+                ImGui::DragFloat3("軸ベクトル", &settingsData_->vortexAxis.x, 0.05f, -1.0f, 1.0f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("回転の軸となるベクトル。\n(1,1,0)のように斜め軸も設定可能");
+                }
+                ImGui::Unindent();
+            }
+            // -------------------------------------
+
+            ImGui::PopStyleColor();
 
             ImGui::Spacing();
             ImGui::Separator();
@@ -776,7 +823,7 @@ void ParticleCSGroup::DrawImGui() {
                     ImGui::SetTooltip("親の色に対するトレイルの色の倍率（アルファ含む）");
                 }
 
-                ImGui::PopStyleColor(); // FrameBg
+                ImGui::PopStyleColor();
 
                 ImGui::Spacing();
                 ImGui::Text("速度設定:");
@@ -789,7 +836,7 @@ void ParticleCSGroup::DrawImGui() {
                 if (ImGui::Checkbox("親の速度を継承", &inheritVelocity)) {
                     settingsData_->trailInheritVelocity = inheritVelocity ? 1 : 0;
                 }
-                ImGui::PopStyleColor(); // CheckMark
+                ImGui::PopStyleColor();
 
                 if (inheritVelocity) {
                     ImGui::DragFloat("速度倍率", &settingsData_->trailVelocityScale, 0.01f, 0.0f, 2.0f);
@@ -798,14 +845,14 @@ void ParticleCSGroup::DrawImGui() {
                     }
                 }
 
-                ImGui::PopStyleColor(); // FrameBg
+                ImGui::PopStyleColor();
 
                 ImGui::Unindent();
             }
 
             ImGui::TreePop();
         } else {
-            ImGui::PopStyleColor(); // Text
+            ImGui::PopStyleColor();
         }
         // headを読む
         int32_t headValue = 0;
@@ -862,6 +909,12 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::Text("使用率: %.1f%%", usageRate * 100.0f);
     } else {
         ImGui::PopStyleColor(3);
+    }
+    if (settingsData_->enableGather) {
+        DrawLine3D::GetInstance()->DrawSphere(settingsData_->gatherTarget, {1.0f, 0.0f, 1.0f, 1.0f}, 0.1f, 8);
+    }
+    if (settingsData_->enableVortex) {
+        DrawLine3D::GetInstance()->DrawSphere(settingsData_->vortexTarget, {0.5f, 1.0f, 0.0f, 1.0f}, 0.1f, 8);
     }
 #endif // USE_IMGUI
 }

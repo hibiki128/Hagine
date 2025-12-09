@@ -22,6 +22,7 @@ class BaseObject {
     std::unique_ptr<DataHandler> ObjectDatas_{};
     std::unique_ptr<DataHandler> AnimaDatas_{};
     virtual ~BaseObject();
+
   protected:
     /// ===================================================
     /// protected variaus
@@ -168,6 +169,14 @@ class BaseObject {
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }
     void SetReflect(bool reflect) { reflect_ = reflect; }
     void SetColor(const Vector4 &color, int index = 0) { obj3d_->SetColor(color, index); }
+    void SetAlpha(const float &alpha, int index = 0) {
+        Vector4 color;
+        color.x = obj3d_->GetColor().x;
+        color.y = obj3d_->GetColor().y;
+        color.z = obj3d_->GetColor().z;
+        color.w = alpha;
+        obj3d_->SetColor(color, index);
+    }
     void SetShouldSave(bool shouldSave) { shouldSave_ = shouldSave; }
     void SetPrimitive(bool isPrimitive) { isPrimitive_ = isPrimitive; }
     void SetIsScene(bool isScene) { isScene_ = isScene; }

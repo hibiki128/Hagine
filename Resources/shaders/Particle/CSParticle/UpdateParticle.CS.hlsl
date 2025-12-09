@@ -108,45 +108,83 @@ void main(uint3 DTid : SV_DispatchThreadID)
     if (particleIndex < gSettings.maxParticleCount)
     {
         if (gParticles[particleIndex].color.a <= 0.0f)
-        {
             return;
-        }
         
-        // 重力処理
+        // 1. 重力処理
         if (gSettings.enableGravity)
         {
             gParticles[particleIndex].velocity += gSettings.gravity * gPerFrame.deltaTime;
         }
         
-        // ギャザー処理を追加
+        // 2. ギャザー処理
         if (gSettings.enableGather)
         {
-            float lifeRatio = gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime;
+            bool isTrail = (gParticles[particleIndex].isTrailParticle != 0);
             
-            // gatherStartRatio以降でギャザー開始
-            if (lifeRatio >= gSettings.gatherStartRatio)
+            if (!isTrail || gSettings.enableGatherForTrail)
             {
-                float3 targetPosition = gSettings.gatherTarget;
-                float3 toTarget = targetPosition - gParticles[particleIndex].translate;
-                float distance = length(toTarget);
-                
-                if (distance > 0.001f)
+                float lifeRatio = gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime;
+        
+                if (lifeRatio >= gSettings.gatherStartRatio)
                 {
-                    float3 gatherForce = normalize(toTarget) * gSettings.gatherStrength;
-                    // ギャザー比率に応じて強度を増加
-                    float gatherRatio = (lifeRatio - gSettings.gatherStartRatio) / (1.0f - gSettings.gatherStartRatio);
-                    gParticles[particleIndex].velocity += gatherForce * gatherRatio * gPerFrame.deltaTime;
+                    float3 targetPosition = gSettings.gatherTarget;
+                    float3 toTarget = targetPosition - gParticles[particleIndex].translate;
+                    float distance = length(toTarget);
+
+                    if (distance > 0.01f)
+                    {
+                        float3 dirToTarget = normalize(toTarget);
+                        float t = (lifeRatio - gSettings.gatherStartRatio) / (1.0f - gSettings.gatherStartRatio);
+                        t = t * t;
+                        
+                        float3 desiredVelocity = dirToTarget * gSettings.gatherStrength;
+                        float lerpFactor = 5.0f * gPerFrame.deltaTime;
+                
+                        gParticles[particleIndex].velocity = lerp(gParticles[particleIndex].velocity, desiredVelocity, lerpFactor * t * 10.0f);
+                    }
+                }
+            }
+        }
+
+        // 3. 渦巻き（Vortex）処理
+        if (gSettings.enableVortex)
+        {
+            // トレイル判定
+            bool isTrail = (gParticles[particleIndex].isTrailParticle != 0);
+            
+            // 「トレイルではない」 または 「トレイルかつ渦巻き有効」 の場合のみ実行
+            if (!isTrail || gSettings.enableVortexForTrail)
+            {
+                float3 center = gSettings.vortexTarget;
+                float3 toParticle = gParticles[particleIndex].translate - center;
+                float dist = length(toParticle);
+                
+                // 中心に近すぎる場合は計算しない
+                if (dist > 0.05f)
+                {
+                    // 軸の長さが0だとバグるのでnormalize対策をしておく
+                    float3 axis = gSettings.vortexAxis;
+                    if (length(axis) < 0.001f)
+                        axis = float3(0, 1, 0); // 安全策
+                    else
+                        axis = normalize(axis);
+
+                    // 外積で接線方向を計算
+                    float3 tangent = cross(normalize(toParticle), axis);
+
+                    // 接線方向に力を加える
+                    gParticles[particleIndex].velocity += tangent * gSettings.vortexStrength * gPerFrame.deltaTime;
                 }
             }
         }
         
+        // 4. 移動更新
         float3 previousPosition = gParticles[particleIndex].translate;
-        
         gParticles[particleIndex].translate += gParticles[particleIndex].velocity * gPerFrame.deltaTime;
         gParticles[particleIndex].currentTime += gPerFrame.deltaTime;
-        
         float3 currentPosition = gParticles[particleIndex].translate;
         
+        // 5. 各種パラメータ更新
         float lifeRatio = gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime;
         float alpha = 1.0f - lifeRatio;
         
@@ -182,6 +220,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         
         gParticles[particleIndex].color.a = saturate(alpha);
         
+        // 6. トレイル生成
         if (gSettings.enableTrail &&
             gParticles[particleIndex].isTrailParticle == 0 &&
             gParticles[particleIndex].color.a > 0.05f)
@@ -189,6 +228,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
             SpawnTrailParticles(particleIndex, currentPosition);
         }
         
+        // 死亡判定
         if (gParticles[particleIndex].color.a <= 0.0f)
         {
             gParticles[particleIndex].scale = float3(0.0f, 0.0f, 0.0f);

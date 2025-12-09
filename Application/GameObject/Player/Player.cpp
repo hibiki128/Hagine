@@ -138,7 +138,11 @@ void Player::Update() {
             if (currentState_) {
                 currentState_->Update(*this);
             }
-            RotateUpdate();
+
+            // ダメージリアクション中でない時のみ向きを更新
+            if (!isDamageReact_) {
+                RotateUpdate();
+            }
 
             if (chargeShot_) {
                 chargeShot_->Update();
@@ -153,7 +157,6 @@ void Player::Update() {
                 (*it)->SetAcce(B_acce_);
                 (*it)->UpdateWorldTransformHierarchy();
 
-                // 弾が生きていない場合は削除
                 if (!(*it)->IsAlive()) {
                     it = bullets_.erase(it);
                 } else {
@@ -162,6 +165,29 @@ void Player::Update() {
             }
 
             SkillShot();
+        }
+
+        // ダメージリアクション処理
+        if (isDamageReact_) {
+            damageReactTimer_ += dt_;
+
+            float angleX = tiltEase_.Update(dt_);
+
+            tiltRotation_ = Quaternion::FromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), angleX);
+
+            transform_->quateRotation_ = tiltRotation_ * baseRotation_;
+
+            // 高速点滅
+            float blinkInterval = 0.05f;
+            int blink = static_cast<int>(damageReactTimer_ / blinkInterval);
+            SetAlpha((blink % 2 == 0) ? 0.3f : 1.0f);
+
+            // 終了処理
+            if (damageReactTimer_ >= damageReactDuration_) {
+                isDamageReact_ = false;
+                transform_->quateRotation_ = baseRotation_;
+                SetAlpha(1.0f);
+            }
         }
 
         // 下方向の速度を制限
@@ -270,6 +296,18 @@ void Player::OnCollision(ColliderBase *other) {
             // ダメージを受けたら無敵状態にする
             isInvincible_ = true;
             invincibleTime_ = 0.0f;
+
+            // ダメージリアクション開始
+            isDamageReact_ = true;
+            damageReactTimer_ = 0.0f;
+
+            // 今の向きを保存
+            baseRotation_ = transform_->quateRotation_;
+
+            // X軸回転のみをイージング（後ろに倒れる）
+            float startAngle = 0.0f;
+            float endAngle = degreesToRadians(20.0f); // 負の値で後ろに倒れる
+            tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
         }
     }
 }

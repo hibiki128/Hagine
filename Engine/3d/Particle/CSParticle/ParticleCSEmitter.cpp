@@ -179,9 +179,8 @@ void ParticleCSEmitter::EmitterDisPatch() {
 
         ParticleCSSettings *settings = group->GetSettingsData();
 
-        if (settings->enableEmitterCenter) {
-            settings->gatherTarget = emitterMeshData_->translate;
-        }
+        settings->gatherTarget = emitterMeshData_->translate + settings->gatherTargetOffset;
+        settings->vortexTarget = emitterMeshData_->translate + settings->vortexTargetOffset;
 
         commandList->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
@@ -489,6 +488,19 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "trailVelocityScale", group->GetSettingsData()->trailVelocityScale);
         data->Save(prefix + "trailInheritVelocity", group->GetSettingsData()->trailInheritVelocity);
         data->Save(prefix + "trailMinLifeTime", group->GetSettingsData()->trailMinLifeTime);
+
+        data->Save(prefix + "enableGather", group->GetSettingsData()->enableGather);
+        data->Save(prefix + "gatherStartRatio", group->GetSettingsData()->gatherStartRatio);
+        data->Save(prefix + "gatherStrength", group->GetSettingsData()->gatherStrength);
+        data->Save(prefix + "gatherTarget", group->GetSettingsData()->gatherTarget);
+        data->Save(prefix + "gatherTargetOffset", group->GetSettingsData()->gatherTargetOffset);
+        data->Save(prefix + "enableGatherForTrail", group->GetSettingsData()->enableGatherForTrail);
+        data->Save(prefix + "enableVortex", group->GetSettingsData()->enableVortex);
+        data->Save(prefix + "vortexTarget", group->GetSettingsData()->vortexTarget);
+        data->Save(prefix + "vortexTargetOffset", group->GetSettingsData()->vortexTargetOffset);
+        data->Save(prefix + "vortexStrength", group->GetSettingsData()->vortexStrength);
+        data->Save(prefix + "enableVortexForTrail", group->GetSettingsData()->enableVortexForTrail);
+        data->Save(prefix + "vortexAxis", group->GetSettingsData()->vortexAxis);
     }
 }
 
@@ -554,6 +566,19 @@ void ParticleCSEmitter::LoadSetting() {
         settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
         settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
         settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
+
+        settings.enableGather = data->Load(prefix + "enableGather", 0);
+        settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
+        settings.gatherStrength = data->Load(prefix + "gatherStrength", 1.0f);
+        settings.gatherTarget = data->Load<Vector3>(prefix + "gatherTarget", {0.0f, 0.0f, 0.0f});
+        settings.gatherTargetOffset = data->Load<Vector3>(prefix + "gatherTargetOffset", {0.0f, 0.0f, 0.0f});
+        settings.enableGatherForTrail = data->Load<uint32_t>(prefix + "enableGatherForTrail", 0);
+        settings.enableVortex = data->Load<uint32_t>(prefix + "enableVortex", 0);
+        settings.vortexTarget = data->Load<Vector3>(prefix + "vortexTarget", {0.0f, 0.0f, 0.0f});
+        settings.vortexTargetOffset = data->Load<Vector3>(prefix + "vortexTargetOffset", {0.0f, 0.0f, 0.0f});
+        settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
+        settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
+        settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -632,6 +657,19 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
         settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
 
+        settings.enableGather = data->Load(prefix + "enableGather", 0);
+        settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
+        settings.gatherStrength = data->Load(prefix + "gatherStrength", 1.0f);
+        settings.gatherTarget = data->Load<Vector3>(prefix + "gatherTarget", {0.0f, 0.0f, 0.0f});
+        settings.gatherTargetOffset = data->Load<Vector3>(prefix + "gatherTargetOffset", {0.0f, 0.0f, 0.0f});
+        settings.enableGatherForTrail = data->Load<uint32_t>(prefix + "enableGatherForTrail", 0);
+        settings.enableVortex = data->Load<uint32_t>(prefix + "enableVortex", 0);
+        settings.vortexTarget = data->Load<Vector3>(prefix + "vortexTarget", {0.0f, 0.0f, 0.0f});
+        settings.vortexTargetOffset = data->Load<Vector3>(prefix + "vortexTargetOffset", {0.0f, 0.0f, 0.0f});
+        settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
+        settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
+        settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
+
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
 
@@ -698,7 +736,7 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PopStyleColor();
 
                 ImGui::DragFloat3("基準点##AnchorPoint", &emitterMeshData_->anchorPoint.x, 0.01f, 0.0f, 1.0f, "%.2f");
-                
+
                 ImGui::Spacing();
                 ImGui::Separator();
 

@@ -35,7 +35,6 @@ struct EmitterMesh {
     float padding;
 };
 
-
 struct CSParticle {
     Vector3 translate;
     Vector3 scale;
@@ -45,8 +44,8 @@ struct CSParticle {
     Vector4 color;
     Vector3 initialScale;
     float padding;
-    uint32_t isTrailParticle; 
-    uint32_t parentIndex; 
+    uint32_t isTrailParticle;
+    uint32_t parentIndex;
     Vector3 lastTrailPosition;
     float trailSpawnDistance;
 };
@@ -127,6 +126,7 @@ struct ParticleCSSettings {
     float trailSpawnDistance = 0.1f;
     uint32_t maxTrailPerParticle = 5;
     float trailLifeTimeScale = 0.5f;
+    float paddingTrail{};
     Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
     float padding3{};
     Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
@@ -137,19 +137,17 @@ struct ParticleCSSettings {
     uint32_t enableGather = 0;
     float gatherStartRatio = 0.5f;
     float gatherStrength = 2.0f;
-    uint32_t enableEmitterCenter = 0;
-    Vector3 gatherTarget = {0, 0, 0};
     float padding5{};
-};
-
-// トレイル生成情報を保持する構造体
-struct TrailSpawnInfo {
-    uint32_t parentIndex;
-    Vector3 position;
-    Vector3 velocity;
-    Vector3 scale;
-    Vector4 color;
-    float remainingLifeTime;
+    Vector3 gatherTarget = {0, 0, 0};
+    float padding6{};
+    Vector3 gatherTargetOffset = {0, 0, 0};
+    uint32_t enableGatherForTrail = 0;
+    uint32_t enableVortex = 0;
+    Vector3 vortexTarget = {0, 0, 0};
+    Vector3 vortexTargetOffset = {0, 0, 0};
+    float vortexStrength = 5.0f;
+    uint32_t enableVortexForTrail = 0;
+    Vector3 vortexAxis = {0.0f, 1.0f, 0.0f};
 };
 
 /// =======================

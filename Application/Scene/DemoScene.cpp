@@ -1,5 +1,5 @@
 #include "DemoScene.h"
-#include"SpriteManager.h"
+#include "SpriteManager.h"
 
 void DemoScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -65,19 +65,16 @@ void DemoScene::AddObjectSetting() {
 void DemoScene::AddParticleSetting() {
 #ifdef USE_IMGUI
     // CPUとGPUパーティクルをタブで分ける
-    if (ImGui::BeginTabBar("ParticleSystemTabs")) {
-        if (ImGui::BeginTabItem("CPU パーティクル")) {
-            ptEditor_->ShowImGuiEditor();
-            ptEditor_->DebugAll();
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem("GPU パーティクル (CS)")) {
-            ptCSEditor_->ShowImGuiEditor();
-            ptCSEditor_->DebugAll();
-            ImGui::EndTabItem();
-        }
-        ImGui::EndTabBar();
-    }
+    ImGui::Begin("CPUパーティクル");
+    ptEditor_->ShowImGuiEditor();
+    ptEditor_->DebugAll();
+    ImGui::End();
+
+    ImGui::Begin("GPUパーティクル");
+    ptCSEditor_->ShowImGuiEditor();
+    ptCSEditor_->DebugAll();
+    ImGui::End();
+
 #endif // USE_IMGUI
 }
 

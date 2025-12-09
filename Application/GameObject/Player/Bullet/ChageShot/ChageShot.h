@@ -3,6 +3,7 @@
 #include "Engine/Input/Input.h"
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
+#include <Particle/CSParticle/ParticleCSEmitter.h>
 
 /// <summary>
 /// チャージショットのゲームオブジェクトクラス
@@ -146,7 +147,7 @@ class ChargeShot : public BaseObject {
     float offsetMargin_ = 0.5f;   // オフセット余裕距離
     float verticalOffset_ = 1.0f; // 垂直方向のオフセット
 
-    std::unique_ptr<ParticleEmitter> chargeEmitter_;
+    std::unique_ptr<ParticleCSEmitter> chargeEmitter_;
     std::unique_ptr<ParticleEmitter> bulletEmitter_;
 
     SphereCollider *bulletCollider_ = nullptr;
