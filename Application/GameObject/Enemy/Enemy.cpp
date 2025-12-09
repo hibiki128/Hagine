@@ -42,7 +42,7 @@ void Enemy::Init(const std::string objectName) {
     shadow_->SetTexture("game/shadow.png");
     shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(-90.0f), 0.0f, 0.0f));
     shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
-    emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("hitEmitter");
+    hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
     chageShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
     // ビヘイビアツリーの初期化
@@ -232,7 +232,7 @@ void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {
-    emitter_->Draw(viewProjection);
+    hitEmitter_->Draw(viewProjection);
 }
 
 void Enemy::Debug() {
@@ -265,8 +265,8 @@ void Enemy::Debug() {
 void Enemy::OnCollisionEnter(ColliderBase *other) {
 
     if (other->GetTag() == "PlayerBullet" || other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
-        // emitter_->SetPosition(transform_->translation_);
-        // emitter_->UpdateOnce();
+         hitEmitter_->SetPosition(transform_->translation_);
+         hitEmitter_->UpdateOnce();
     }
     if (other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
         chageShake_->StartShake();

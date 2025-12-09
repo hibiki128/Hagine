@@ -1284,6 +1284,7 @@
     <ClCompile Include="Engine\Utility\Collider\type\OBBCollider.cpp" />
     <ClCompile Include="Engine\Utility\Collider\type\SphereCollider.cpp" />
     <ClCompile Include="Application\GameObject\Player\Skill\MakanAttackSkill.cpp" />
+    <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyChageState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
@@ -1424,6 +1425,7 @@
     <ClInclude Include="Engine\Utility\Collider\type\OBBCollider.h" />
     <ClInclude Include="Engine\Utility\Collider\type\SphereCollider.h" />
     <ClInclude Include="Application\GameObject\Player\Skill\MakanAttackSkill.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Action\PlayerEnergyChageState.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
