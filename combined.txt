@@ -3516,7 +3516,7 @@ void Enemy::Init(const std::string objectName) {
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
     enemyCollider_ = AddOBBCollider("enemy_Collider");
     enemyCollider_->SetTag("Enemy");
-    enemyCollider_->AddCollisionMask("player_bullet");
+    enemyCollider_->AddCollisionMask("PlayerBullet");
     enemyCollider_->AddCollisionMask("Player");
     enemyCollider_->AddCollisionMask("PlayerHand");
     enemyCollider_->AddCollisionMask("PlayerChargeBullet");
@@ -3549,7 +3549,6 @@ void Enemy::Update() {
         if (damage_ > 0) {
             float actualDamage = static_cast<float>(damage_);
 
-            // ガード中はダメージを85%軽減
             if (isGuarding_) {
                 actualDamage *= 0.15f;
             }
@@ -3563,7 +3562,6 @@ void Enemy::Update() {
             HP_ = 0.0f;
         }
 
-        // ガード中点滅処理
         if (isGuarding_) {
             const float blinkInterval = 0.1f;
             int blinkCount = static_cast<int>(Frame::Time() / blinkInterval);
@@ -3576,16 +3574,42 @@ void Enemy::Update() {
             SetColor(Vector4(1.0f, 0.0f, 0.0f, 1.0f));
         }
 
-        // 生存中のみ行動
         if (isAlive_ && target_->GetAlive()) {
             ExecuteBehaviorTree(Frame::DeltaTime());
         }
 
-        // 向きを更新
-        RotateUpdate();
+        // ダメージリアクション中でない時のみ向きを更新
+        if (!isDamageReact_) {
+            RotateUpdate();
+        }
 
         UpdateShadowScale();
         chageShake_->Update();
+
+        if (isDamageReact_) {
+            damageReactTimer_ += Frame::DeltaTime();
+
+            // イージングされたX回転角(ラジアン)
+            float angleX = tiltEase_.Update(Frame::DeltaTime());
+
+            // ワールド空間のX軸で回転を作成
+            tiltRotation_ = Quaternion::FromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), angleX);
+
+            // 重要: tiltRotation_ × baseRotation_ の順序（ワールド空間での回転を先に適用）
+            transform_->quateRotation_ = tiltRotation_ * baseRotation_;
+
+            // 高速点滅
+            float blinkInterval = 0.03f;
+            int blink = static_cast<int>(damageReactTimer_ / blinkInterval);
+            SetAlpha((blink % 2 == 0) ? 0.0f : 1.0f);
+
+            // 終了処理
+            if (damageReactTimer_ >= damageReactDuration_) {
+                isDamageReact_ = false;
+                transform_->quateRotation_ = baseRotation_;
+                SetAlpha(1.0f);
+            }
+        }
     }
 
     CollisionGround();
@@ -3731,13 +3755,26 @@ void Enemy::Debug() {
 }
 
 void Enemy::OnCollisionEnter(ColliderBase *other) {
+
     if (other->GetTag() == "PlayerBullet" || other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
-        emitter_->SetPosition(transform_->translation_);
-        emitter_->UpdateOnce();
+        // emitter_->SetPosition(transform_->translation_);
+        // emitter_->UpdateOnce();
     }
     if (other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
         chageShake_->StartShake();
     }
+
+    // ダメージリアクション開始
+    isDamageReact_ = true;
+    damageReactTimer_ = 0.0f;
+
+    // 今の向きを保存
+    baseRotation_ = transform_->quateRotation_;
+
+    // X軸回転のみをイージング（上向きに8度）
+    float startAngle = transform_->quateRotation_.x;
+    float endAngle = degreesToRadians(20.0f);
+    tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
 }
 
 Vector3 Enemy::GetMovementDirection() const {
@@ -3921,7 +3958,7 @@ class Enemy : public BaseObject {
     /// <summary>
     /// デストラクタ
     /// </summary>
-    ~Enemy()override;
+    ~Enemy() override;
 
     /// <summary>
     /// 初期化
@@ -3956,7 +3993,7 @@ class Enemy : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter(ColliderBase* collider);
+    void OnCollisionEnter(ColliderBase *collider);
 
     /// <summary>
     /// ビヘイビアツリーを初期化
@@ -4095,6 +4132,13 @@ class Enemy : public BaseObject {
     std::unique_ptr<ParticleEmitter> emitter_;
     std::unique_ptr<Shake> chageShake_;
 
+    bool isDamageReact_ = false;        // リアクション中かどうか
+    float damageReactTimer_ = 0.0f;     // 経過時間
+    float damageReactDuration_ = 0.5f; // 少し短めの時間
+    EasingData<float> tiltEase_;        // 回転角イージング
+    Quaternion baseRotation_;           // 通常時の向き
+    Quaternion tiltRotation_;           // のけぞり用の回転
+
     // ビヘイビアツリー関連
 #ifdef _DEBUG
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
@@ -4230,6 +4274,7 @@ File Path: Application/GameObject/Player/Bullet/ChageShot/ChageShot.cpp
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include <Frame.h>
+#include <Particle/CSParticle/ParticleCSEditor.h>
 #include <algorithm>
 #include <cmath>
 
@@ -4257,7 +4302,7 @@ void ChargeShot::Init(const std::string objectName) {
     scale_ = 1.0f;
     velocity_ = {0, 0, 0};
     // 初期位置もリセット
-    chargeEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
+    chargeEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("chargeEmitter");
     bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
 }
 
@@ -4382,7 +4427,7 @@ void ChargeShot::Update() {
             transform_->translation_ = playerPos + offset;
 
             // エミッター位置も更新
-            chargeEmitter_->SetPosition(transform_->translation_);
+            chargeEmitter_->SetTranslate(transform_->translation_);
 
             Vector3 playerEuler = rot.ToEulerAngles();
             if (bulletCollider_) {
@@ -4462,6 +4507,7 @@ File Path: Application/GameObject/Player/Bullet/ChageShot/ChageShot.h
 #include "Engine/Input/Input.h"
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
+#include <Particle/CSParticle/ParticleCSEmitter.h>
 
 /// <summary>
 /// チャージショットのゲームオブジェクトクラス
@@ -4605,7 +4651,7 @@ class ChargeShot : public BaseObject {
     float offsetMargin_ = 0.5f;   // オフセット余裕距離
     float verticalOffset_ = 1.0f; // 垂直方向のオフセット
 
-    std::unique_ptr<ParticleEmitter> chargeEmitter_;
+    std::unique_ptr<ParticleCSEmitter> chargeEmitter_;
     std::unique_ptr<ParticleEmitter> bulletEmitter_;
 
     SphereCollider *bulletCollider_ = nullptr;
@@ -5185,7 +5231,11 @@ void Player::Update() {
             if (currentState_) {
                 currentState_->Update(*this);
             }
-            RotateUpdate();
+
+            // ダメージリアクション中でない時のみ向きを更新
+            if (!isDamageReact_) {
+                RotateUpdate();
+            }
 
             if (chargeShot_) {
                 chargeShot_->Update();
@@ -5200,7 +5250,6 @@ void Player::Update() {
                 (*it)->SetAcce(B_acce_);
                 (*it)->UpdateWorldTransformHierarchy();
 
-                // 弾が生きていない場合は削除
                 if (!(*it)->IsAlive()) {
                     it = bullets_.erase(it);
                 } else {
@@ -5209,6 +5258,29 @@ void Player::Update() {
             }
 
             SkillShot();
+        }
+
+        // ダメージリアクション処理
+        if (isDamageReact_) {
+            damageReactTimer_ += dt_;
+
+            float angleX = tiltEase_.Update(dt_);
+
+            tiltRotation_ = Quaternion::FromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), angleX);
+
+            transform_->quateRotation_ = tiltRotation_ * baseRotation_;
+
+            // 高速点滅
+            float blinkInterval = 0.05f;
+            int blink = static_cast<int>(damageReactTimer_ / blinkInterval);
+            SetAlpha((blink % 2 == 0) ? 0.3f : 1.0f);
+
+            // 終了処理
+            if (damageReactTimer_ >= damageReactDuration_) {
+                isDamageReact_ = false;
+                transform_->quateRotation_ = baseRotation_;
+                SetAlpha(1.0f);
+            }
         }
 
         // 下方向の速度を制限
@@ -5317,6 +5389,18 @@ void Player::OnCollision(ColliderBase *other) {
             // ダメージを受けたら無敵状態にする
             isInvincible_ = true;
             invincibleTime_ = 0.0f;
+
+            // ダメージリアクション開始
+            isDamageReact_ = true;
+            damageReactTimer_ = 0.0f;
+
+            // 今の向きを保存
+            baseRotation_ = transform_->quateRotation_;
+
+            // X軸回転のみをイージング（後ろに倒れる）
+            float startAngle = 0.0f;
+            float endAngle = degreesToRadians(20.0f); // 負の値で後ろに倒れる
+            tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
         }
     }
 }
@@ -5885,17 +5969,17 @@ void Player::SetVp(ViewProjection *vp) {
 File Path: Application/GameObject/Player/Player.h
 ============================================================
 #pragma once
+#include "Application/Staging/Death/DeathStaging.h"
 #include "Bullet/PlayerBullet.h"
 #include "Data/DataHandler.h"
 #include "Hand/PlayerHand.h"
 #include "Object/Base/BaseObject.h"
 #include "PlayerData.h"
+#include "Skill/MakanAttackSkill.h"
 #include "State/Base/PlayerBaseState.h"
 #include <Application/Utility/Shake/Shake.h>
 #include <Particle/CSParticle/ParticleCSEmitter.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
-#include"Application/Staging/Death/DeathStaging.h"
-#include"Skill/MakanAttackSkill.h"
 
 class ChargeShot;
 class FollowCamera;
@@ -5944,7 +6028,7 @@ class Player : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const ViewProjection &viewProjection);
-    
+
     /// <summary>
     /// 状態を変更
     /// </summary>
@@ -6190,13 +6274,20 @@ class Player : public BaseObject {
     std::unique_ptr<ParticleEmitter> rushEmitter_;   // 突撃パーティクル
     std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
-                                                  
-    ViewProjection *vp_;                             // カメラ
-    OBBCollider *playerCollider_ = nullptr;          // コライダー
-    PlayerHand *leftHand_ptr_;                       // 左手
-    PlayerHand *rightHand_ptr_;                      // 右手
-    PlayerBaseState *currentState_ = nullptr;        // 現在の状態
-    MakanAttackSkill *makanAttack_ptr_ = nullptr;   // 必殺技
+
+    ViewProjection *vp_;                          // カメラ
+    OBBCollider *playerCollider_ = nullptr;       // コライダー
+    PlayerHand *leftHand_ptr_;                    // 左手
+    PlayerHand *rightHand_ptr_;                   // 右手
+    PlayerBaseState *currentState_ = nullptr;     // 現在の状態
+    MakanAttackSkill *makanAttack_ptr_ = nullptr; // 必殺技
+
+    bool isDamageReact_ = false;       // リアクション中かどうか
+    float damageReactTimer_ = 0.0f;    // 経過時間
+    float damageReactDuration_ = 0.5f; // リアクション時間
+    EasingData<float> tiltEase_;       // 回転角イージング
+    Quaternion baseRotation_;          // 通常時の向き
+    Quaternion tiltRotation_;          // のけぞり用の回転
 };
 
 ============================================================
@@ -7817,7 +7908,7 @@ class ClearScene : public BaseScene {
 File Path: Application/Scene/DemoScene.cpp
 ============================================================
 #include "DemoScene.h"
-#include"SpriteManager.h"
+#include "SpriteManager.h"
 
 void DemoScene::Initialize() {
     audio_ = Audio::GetInstance();
@@ -7883,19 +7974,16 @@ void DemoScene::AddObjectSetting() {
 void DemoScene::AddParticleSetting() {
 #ifdef USE_IMGUI
     // CPUとGPUパーティクルをタブで分ける
-    if (ImGui::BeginTabBar("ParticleSystemTabs")) {
-        if (ImGui::BeginTabItem("CPU パーティクル")) {
-            ptEditor_->ShowImGuiEditor();
-            ptEditor_->DebugAll();
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem("GPU パーティクル (CS)")) {
-            ptCSEditor_->ShowImGuiEditor();
-            ptCSEditor_->DebugAll();
-            ImGui::EndTabItem();
-        }
-        ImGui::EndTabBar();
-    }
+    ImGui::Begin("CPUパーティクル");
+    ptEditor_->ShowImGuiEditor();
+    ptEditor_->DebugAll();
+    ImGui::End();
+
+    ImGui::Begin("GPUパーティクル");
+    ptCSEditor_->ShowImGuiEditor();
+    ptCSEditor_->DebugAll();
+    ImGui::End();
+
 #endif // USE_IMGUI
 }
 
@@ -9802,14 +9890,14 @@ File Path: Application/UI/Scene/Title/TitleUI.cpp
 void TitleUI::Initialize() {
 
     chargeBullet_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
-    chargeEffect_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
+    chargeEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("chargeEmitter");
     playerAura_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
 
     chargeBullet_->SetPosition(
         {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + 6.5f,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});
-    chargeEffect_->SetPosition(
+    chargeEffect_->SetTranslate(
         {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + 6.5f,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});
@@ -10028,7 +10116,7 @@ class TitleUI {
     float timer_ = 0.0f;
 
     std::unique_ptr<ParticleEmitter> chargeBullet_ = nullptr; // チャージ弾パーティクル
-    std::unique_ptr<ParticleEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
+    std::unique_ptr<ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
     std::unique_ptr<ParticleCSEmitter> playerAura_ = nullptr; // プレイヤーオーラパーティクル
 
     std::array<SpriteData *, kMaxSprite> sprites_;
@@ -19677,6 +19765,7 @@ class BaseObject {
     std::unique_ptr<DataHandler> ObjectDatas_{};
     std::unique_ptr<DataHandler> AnimaDatas_{};
     virtual ~BaseObject();
+
   protected:
     /// ===================================================
     /// protected variaus
@@ -19823,6 +19912,14 @@ class BaseObject {
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }
     void SetReflect(bool reflect) { reflect_ = reflect; }
     void SetColor(const Vector4 &color, int index = 0) { obj3d_->SetColor(color, index); }
+    void SetAlpha(const float &alpha, int index = 0) {
+        Vector4 color;
+        color.x = obj3d_->GetColor().x;
+        color.y = obj3d_->GetColor().y;
+        color.z = obj3d_->GetColor().z;
+        color.w = alpha;
+        obj3d_->SetColor(color, index);
+    }
     void SetShouldSave(bool shouldSave) { shouldSave_ = shouldSave; }
     void SetPrimitive(bool isPrimitive) { isPrimitive_ = isPrimitive; }
     void SetIsScene(bool isScene) { isScene_ = isScene; }
@@ -22498,9 +22595,8 @@ void ParticleCSEmitter::EmitterDisPatch() {
 
         ParticleCSSettings *settings = group->GetSettingsData();
 
-        if (settings->enableEmitterCenter) {
-            settings->gatherTarget = emitterMeshData_->translate;
-        }
+        settings->gatherTarget = emitterMeshData_->translate + settings->gatherTargetOffset;
+        settings->vortexTarget = emitterMeshData_->translate + settings->vortexTargetOffset;
 
         commandList->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
         commandList->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
@@ -22808,6 +22904,19 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "trailVelocityScale", group->GetSettingsData()->trailVelocityScale);
         data->Save(prefix + "trailInheritVelocity", group->GetSettingsData()->trailInheritVelocity);
         data->Save(prefix + "trailMinLifeTime", group->GetSettingsData()->trailMinLifeTime);
+
+        data->Save(prefix + "enableGather", group->GetSettingsData()->enableGather);
+        data->Save(prefix + "gatherStartRatio", group->GetSettingsData()->gatherStartRatio);
+        data->Save(prefix + "gatherStrength", group->GetSettingsData()->gatherStrength);
+        data->Save(prefix + "gatherTarget", group->GetSettingsData()->gatherTarget);
+        data->Save(prefix + "gatherTargetOffset", group->GetSettingsData()->gatherTargetOffset);
+        data->Save(prefix + "enableGatherForTrail", group->GetSettingsData()->enableGatherForTrail);
+        data->Save(prefix + "enableVortex", group->GetSettingsData()->enableVortex);
+        data->Save(prefix + "vortexTarget", group->GetSettingsData()->vortexTarget);
+        data->Save(prefix + "vortexTargetOffset", group->GetSettingsData()->vortexTargetOffset);
+        data->Save(prefix + "vortexStrength", group->GetSettingsData()->vortexStrength);
+        data->Save(prefix + "enableVortexForTrail", group->GetSettingsData()->enableVortexForTrail);
+        data->Save(prefix + "vortexAxis", group->GetSettingsData()->vortexAxis);
     }
 }
 
@@ -22873,6 +22982,19 @@ void ParticleCSEmitter::LoadSetting() {
         settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
         settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
         settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
+
+        settings.enableGather = data->Load(prefix + "enableGather", 0);
+        settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
+        settings.gatherStrength = data->Load(prefix + "gatherStrength", 1.0f);
+        settings.gatherTarget = data->Load<Vector3>(prefix + "gatherTarget", {0.0f, 0.0f, 0.0f});
+        settings.gatherTargetOffset = data->Load<Vector3>(prefix + "gatherTargetOffset", {0.0f, 0.0f, 0.0f});
+        settings.enableGatherForTrail = data->Load<uint32_t>(prefix + "enableGatherForTrail", 0);
+        settings.enableVortex = data->Load<uint32_t>(prefix + "enableVortex", 0);
+        settings.vortexTarget = data->Load<Vector3>(prefix + "vortexTarget", {0.0f, 0.0f, 0.0f});
+        settings.vortexTargetOffset = data->Load<Vector3>(prefix + "vortexTargetOffset", {0.0f, 0.0f, 0.0f});
+        settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
+        settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
+        settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -22951,6 +23073,19 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
         settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
 
+        settings.enableGather = data->Load(prefix + "enableGather", 0);
+        settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
+        settings.gatherStrength = data->Load(prefix + "gatherStrength", 1.0f);
+        settings.gatherTarget = data->Load<Vector3>(prefix + "gatherTarget", {0.0f, 0.0f, 0.0f});
+        settings.gatherTargetOffset = data->Load<Vector3>(prefix + "gatherTargetOffset", {0.0f, 0.0f, 0.0f});
+        settings.enableGatherForTrail = data->Load<uint32_t>(prefix + "enableGatherForTrail", 0);
+        settings.enableVortex = data->Load<uint32_t>(prefix + "enableVortex", 0);
+        settings.vortexTarget = data->Load<Vector3>(prefix + "vortexTarget", {0.0f, 0.0f, 0.0f});
+        settings.vortexTargetOffset = data->Load<Vector3>(prefix + "vortexTargetOffset", {0.0f, 0.0f, 0.0f});
+        settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
+        settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
+        settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
+
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
 
@@ -23017,7 +23152,7 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PopStyleColor();
 
                 ImGui::DragFloat3("基準点##AnchorPoint", &emitterMeshData_->anchorPoint.x, 0.01f, 0.0f, 1.0f, "%.2f");
-                
+
                 ImGui::Spacing();
                 ImGui::Separator();
 
@@ -23588,6 +23723,7 @@ File Path: Engine/3d/Particle/CSParticle/ParticleCSGroup.cpp
 #include "ParticleCSGroup.h"
 #include <Frame.h>
 #include <Graphics/Model/ModelManager.h>
+#include <Line/DrawLine3D.h>
 #include <d3dx12.h>
 
 void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
@@ -23974,7 +24110,6 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->gatherStartRatio = 0.5f;
     settingsData_->gatherStrength = 2.0f;
     settingsData_->gatherTarget = {0.0f, 0.0f, 0.0f};
-    settingsData_->enableEmitterCenter = 0;
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -24206,6 +24341,10 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->enableLifetimeScale = enableLifetimeScale ? 1 : 0;
             }
 
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("パーティクルが時間経過と共に小さくなります");
+            }
+
             bool enableSinScale = settingsData_->enableSinScale != 0;
             if (ImGui::Checkbox("Sin波で拡縮", &enableSinScale)) {
                 settingsData_->enableSinScale = enableSinScale ? 1 : 0;
@@ -24234,7 +24373,7 @@ void ParticleCSGroup::DrawImGui() {
             }
 
             bool enableGather = settingsData_->enableGather != 0;
-            if (ImGui::Checkbox("ギャザーを有効化", &enableGather)) {
+            if (ImGui::Checkbox("ギャザー(集合)を有効化", &enableGather)) {
                 settingsData_->enableGather = enableGather ? 1 : 0;
             }
 
@@ -24251,25 +24390,68 @@ void ParticleCSGroup::DrawImGui() {
                     ImGui::SetTooltip("目標地点への引き寄せる力の強さ");
                 }
 
-                bool useEmitterCenter = settingsData_->enableEmitterCenter != 0;
-                ImGui::Checkbox("エミッターの中心に集める", &useEmitterCenter);
-                settingsData_->enableEmitterCenter = useEmitterCenter ? 1 : 0;
-
-                if (!useEmitterCenter) {
-                    ImGui::DragFloat3("目標座標", &settingsData_->gatherTarget.x, 0.1f);
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("パーティクルが集まる目標地点");
-                    }
+                ImGui::DragFloat3("ギャザー目標座標", &settingsData_->gatherTargetOffset.x, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルが集まる目標地点");
                 }
+
+                bool enableGatherForTrail = settingsData_->enableGatherForTrail != 0;
+                ImGui::Checkbox("トレイルにもギャザーを適用", &enableGatherForTrail);
+                settingsData_->enableGatherForTrail = enableGatherForTrail ? 1 : 0;
 
                 ImGui::Unindent();
             }
 
-            ImGui::PopStyleColor();
-
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("パーティクルが時間経過と共に小さくなります");
+            bool enableVortex = settingsData_->enableVortex != 0;
+            if (ImGui::Checkbox("渦巻き(Vortex)を有効化", &enableVortex)) {
+                settingsData_->enableVortex = enableVortex ? 1 : 0;
             }
+
+            if (enableVortex) {
+                // 強度
+                ImGui::DragFloat("回転強度", &settingsData_->vortexStrength, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("プラスで正回転、マイナスで逆回転");
+                }
+
+                ImGui::DragFloat3("渦巻きの目標座標", &settingsData_->vortexTargetOffset.x, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルが集まる目標地点");
+                }
+
+                // トレイルへの適用
+                bool enableVortexTrail = settingsData_->enableVortexForTrail != 0;
+                if (ImGui::Checkbox("トレイルにも適用", &enableVortexTrail)) {
+                    settingsData_->enableVortexForTrail = enableVortexTrail ? 1 : 0;
+                }
+
+                ImGui::Separator();
+                ImGui::Text("回転軸設定:");
+
+                // プリセットボタン (X, Y, Z)
+                float buttonWidth = 40.0f;
+                if (ImGui::Button("X軸", ImVec2(buttonWidth, 0))) {
+                    settingsData_->vortexAxis = {1.0f, 0.0f, 0.0f};
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Y軸", ImVec2(buttonWidth, 0))) {
+                    settingsData_->vortexAxis = {0.0f, 1.0f, 0.0f};
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Z軸", ImVec2(buttonWidth, 0))) {
+                    settingsData_->vortexAxis = {0.0f, 0.0f, 1.0f};
+                }
+
+                // 自由設定スライダー
+                ImGui::DragFloat3("軸ベクトル", &settingsData_->vortexAxis.x, 0.05f, -1.0f, 1.0f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("回転の軸となるベクトル。\n(1,1,0)のように斜め軸も設定可能");
+                }
+                ImGui::Unindent();
+            }
+            // -------------------------------------
+
+            ImGui::PopStyleColor();
 
             ImGui::Spacing();
             ImGui::Separator();
@@ -24363,7 +24545,7 @@ void ParticleCSGroup::DrawImGui() {
                     ImGui::SetTooltip("親の色に対するトレイルの色の倍率（アルファ含む）");
                 }
 
-                ImGui::PopStyleColor(); // FrameBg
+                ImGui::PopStyleColor();
 
                 ImGui::Spacing();
                 ImGui::Text("速度設定:");
@@ -24376,7 +24558,7 @@ void ParticleCSGroup::DrawImGui() {
                 if (ImGui::Checkbox("親の速度を継承", &inheritVelocity)) {
                     settingsData_->trailInheritVelocity = inheritVelocity ? 1 : 0;
                 }
-                ImGui::PopStyleColor(); // CheckMark
+                ImGui::PopStyleColor();
 
                 if (inheritVelocity) {
                     ImGui::DragFloat("速度倍率", &settingsData_->trailVelocityScale, 0.01f, 0.0f, 2.0f);
@@ -24385,14 +24567,14 @@ void ParticleCSGroup::DrawImGui() {
                     }
                 }
 
-                ImGui::PopStyleColor(); // FrameBg
+                ImGui::PopStyleColor();
 
                 ImGui::Unindent();
             }
 
             ImGui::TreePop();
         } else {
-            ImGui::PopStyleColor(); // Text
+            ImGui::PopStyleColor();
         }
         // headを読む
         int32_t headValue = 0;
@@ -24450,9 +24632,14 @@ void ParticleCSGroup::DrawImGui() {
     } else {
         ImGui::PopStyleColor(3);
     }
+    if (settingsData_->enableGather) {
+        DrawLine3D::GetInstance()->DrawSphere(settingsData_->gatherTarget, {1.0f, 0.0f, 1.0f, 1.0f}, 0.1f, 8);
+    }
+    if (settingsData_->enableVortex) {
+        DrawLine3D::GetInstance()->DrawSphere(settingsData_->vortexTarget, {0.5f, 1.0f, 0.0f, 1.0f}, 0.1f, 8);
+    }
 #endif // USE_IMGUI
 }
-
 
 ============================================================
 File Path: Engine/3d/Particle/CSParticle/ParticleCSGroup.h
@@ -28052,7 +28239,6 @@ struct EmitterMesh {
     float padding;
 };
 
-
 struct CSParticle {
     Vector3 translate;
     Vector3 scale;
@@ -28062,8 +28248,8 @@ struct CSParticle {
     Vector4 color;
     Vector3 initialScale;
     float padding;
-    uint32_t isTrailParticle; 
-    uint32_t parentIndex; 
+    uint32_t isTrailParticle;
+    uint32_t parentIndex;
     Vector3 lastTrailPosition;
     float trailSpawnDistance;
 };
@@ -28144,6 +28330,7 @@ struct ParticleCSSettings {
     float trailSpawnDistance = 0.1f;
     uint32_t maxTrailPerParticle = 5;
     float trailLifeTimeScale = 0.5f;
+    float paddingTrail{};
     Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
     float padding3{};
     Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
@@ -28154,19 +28341,17 @@ struct ParticleCSSettings {
     uint32_t enableGather = 0;
     float gatherStartRatio = 0.5f;
     float gatherStrength = 2.0f;
-    uint32_t enableEmitterCenter = 0;
-    Vector3 gatherTarget = {0, 0, 0};
     float padding5{};
-};
-
-// トレイル生成情報を保持する構造体
-struct TrailSpawnInfo {
-    uint32_t parentIndex;
-    Vector3 position;
-    Vector3 velocity;
-    Vector3 scale;
-    Vector4 color;
-    float remainingLifeTime;
+    Vector3 gatherTarget = {0, 0, 0};
+    float padding6{};
+    Vector3 gatherTargetOffset = {0, 0, 0};
+    uint32_t enableGatherForTrail = 0;
+    uint32_t enableVortex = 0;
+    Vector3 vortexTarget = {0, 0, 0};
+    Vector3 vortexTargetOffset = {0, 0, 0};
+    float vortexStrength = 5.0f;
+    uint32_t enableVortexForTrail = 0;
+    Vector3 vortexAxis = {0.0f, 1.0f, 0.0f};
 };
 
 /// =======================
@@ -31683,9 +31868,11 @@ void Framework::Update() {
 }
 
 void Framework::LoadResource() {
+
+    textureManager_->LoadAllTextures();
+
     particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");
-    particleEditor_->AddParticleEmitter("chageEmitter");
     particleEditor_->AddParticleEmitter("bulletEmitter");
     particleEditor_->AddParticleEmitter("chageBullet");
     particleEditor_->AddParticleEmitter("RushEmitter");
@@ -31696,6 +31883,7 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("death_arm");
     particleCSEditor_->AddParticleEmitter("makan_main");
     particleCSEditor_->AddParticleEmitter("makan_around");
+    particleCSEditor_->AddParticleEmitter("chargeEmitter");
 }
 
 void Framework::PlaySounds() {
@@ -31856,7 +32044,7 @@ void MyGame::Initialize() {
     // シーンマネージャに最初のシーンをセット
     sceneManager_->SetSceneFactory(sceneFactory_);
 #ifdef _DEBUG
-    sceneManager_->NextSceneReservation("DEMO");
+    sceneManager_->NextSceneReservation("TITLE");
 #else
     sceneManager_->NextSceneReservation("TITLE");
 #endif // _DEBUG 
@@ -44491,6 +44679,7 @@ File Path: Engine/Utility/Graphics/Texture/TextureManager.cpp
 #include "TextureManager.h"
 #include "DirectXCommon.h"
 #include <String/StringUtility.h>
+#include <filesystem>
 
 TextureManager *TextureManager::instance = nullptr;
 
@@ -44607,6 +44796,46 @@ const DirectX::TexMetadata &TextureManager::GetMetaData(const std::string &fileP
     return textureData.metadata;
 }
 
+void TextureManager::LoadAllTextures() {
+
+    // 読み込み開始ディレクトリ
+    std::filesystem::path baseDir = "resources/images";
+
+    // ディレクトリが存在しない場合は早期リターン
+    if (!std::filesystem::exists(baseDir)) {
+        return;
+    }
+
+    // 再帰的探索
+    for (auto &entry : std::filesystem::recursive_directory_iterator(baseDir)) {
+
+        // ファイルでなければスキップ
+        if (!entry.is_regular_file())
+            continue;
+
+        // 拡張子を取得
+        std::string ext = entry.path().extension().string();
+
+        // png 以外は無視（必要なら jpg 等も追加）
+        if (ext != ".png" && ext != ".jpg")
+            continue;
+
+        // baseDir からの相対パスを作成
+        std::filesystem::path relative = entry.path().lexically_relative(baseDir);
+
+        // Windows だとパス区切りが \ なので / に統一する
+        std::string file = relative.string();
+        std::replace(file.begin(), file.end(), '\\', '/');
+
+        // 既にロード済みならスキップ
+        if (textureDatas.contains("resources/images/" + file)) {
+            continue;
+        }
+
+        // テクスチャを読み込む
+        LoadTexture(file);
+    }
+}
 
 ============================================================
 File Path: Engine/Utility/Graphics/Texture/TextureManager.h
@@ -44676,6 +44905,8 @@ class TextureManager {
     bool GetDDS() { return isDDS_; }
 
     SrvManager *GetSrvManager() { return srvManager_; }
+
+    void LoadAllTextures();
 
   private:
     // テクスチャ１枚分のデータ
@@ -45538,7 +45769,9 @@ class SceneTransition {
 File Path: Engine/Utility/ShowFolder/ShowFolder.cpp
 ============================================================
 #ifdef _DEBUG
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "ShowFolder.h"
+#include <Graphics/Texture/TextureManager.h>
 #include <algorithm>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <filesystem>
@@ -45546,11 +45779,6 @@ File Path: Engine/Utility/ShowFolder/ShowFolder.cpp
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-// テクスチャファイルのプレビューキャッシュ用
-struct TextureCache {
-    // ここにテクスチャハンドル等を保存する実装を追加
-};
 
 void ShowTextureFile(std::string &selectedTexturePath) {
     // スタイルの設定
@@ -45565,7 +45793,6 @@ void ShowTextureFile(std::string &selectedTexturePath) {
     static std::string selectedFileTex = "";
     static std::unordered_map<std::string, TextureCache> textureCache;
     static ImGuiTextFilter filter;
-    static bool showDetails = true;
 
     // パンくずリスト表示
     {
@@ -45607,11 +45834,6 @@ void ShowTextureFile(std::string &selectedTexturePath) {
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         filter.Draw("##検索", ImGui::GetContentRegionAvail().x - 60);
         ImGui::SameLine();
-
-        // 詳細表示切り替えボタン
-        if (ImGui::Button(showDetails ? "シンプル表示" : "詳細表示")) {
-            showDetails = !showDetails;
-        }
     }
 
     ImGui::Spacing();
@@ -45687,99 +45909,93 @@ void ShowTextureFile(std::string &selectedTexturePath) {
 
     // テクスチャファイル表示セクション
     if (!texFiles.empty()) {
+
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.7f, 0.3f, 0.5f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.8f, 0.4f, 0.6f));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.5f, 0.9f, 0.5f, 0.7f));
 
         if (ImGui::CollapsingHeader("テクスチャファイル", ImGuiTreeNodeFlags_DefaultOpen)) {
+
             ImGui::Indent(10.0f);
 
-            if (showDetails) {
-                // 詳細表示モード（リスト形式）
-                ImGui::Columns(2, "ファイルリスト", true);
-                ImGui::SetColumnWidth(0, ImGui::GetWindowWidth() * 0.7f);
-                ImGui::Text("ファイル名");
-                ImGui::NextColumn();
-                ImGui::Text("拡張子");
-                ImGui::NextColumn();
-                ImGui::Separator();
+            // ---- グリッド表示 固定 ----
+            float cellSize = 110.0f;
+            float panelWidth = ImGui::GetContentRegionAvail().x;
+            int numColumns = static_cast<int>(panelWidth / cellSize);
+            if (numColumns < 1)
+                numColumns = 1;
 
-                for (const auto &file : texFiles) {
-                    if (filter.PassFilter(file.c_str())) {
-                        std::filesystem::path filePath(file);
-                        std::string extension = filePath.extension().string();
+            ImGui::Columns(numColumns, "FileGrid", false);
 
-                        // ファイルアイコンを表示
-                        ImGui::PushStyleColor(ImGuiCol_Text,
-                                              extension == ".png" ? ImVec4(0.4f, 0.8f, 1.0f, 1.0f) : ImVec4(1.0f, 0.6f, 0.4f, 1.0f));
-                        ImGui::Text(ICON_FA_FILE_IMAGE); // FontAwesomeアイコンを使用（要設定）
-                        ImGui::PopStyleColor();
+           for (const auto &file : texFiles) {
 
-                        ImGui::SameLine();
-                        bool isSelected = (file == selectedFileTex);
-                        if (ImGui::Selectable(file.c_str(), isSelected, ImGuiSelectableFlags_SpanAllColumns)) {
-                            selectedFileTex = file;
-                            // `baseDirTex` からの相対パスを取得
-                            std::filesystem::path relativePath = (currentDirTex / file).lexically_relative(baseDirTex);
-                            // Windowsのバックスラッシュをスラッシュに変換
-                            std::string pathStr = relativePath.string();
-                            std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
-                            // 選択されたテクスチャパスを設定
-                            selectedTexturePath = pathStr;
-                        }
+                if (!filter.PassFilter(file.c_str()))
+                    continue;
 
-                        ImGui::NextColumn();
-                        ImGui::Text("%s", extension.c_str());
-                        ImGui::NextColumn();
-                    }
+                std::filesystem::path fullPath = currentDirTex / file;
+                std::string relative = fullPath.lexically_relative(baseDirTex).string();
+                std::replace(relative.begin(), relative.end(), '\\', '/');
+
+                // キャッシュされていなければロード
+                if (!textureCache.contains(relative)) {
+                    TextureManager *texMgr = TextureManager::GetInstance();
+                    texMgr->LoadTexture(relative);
+
+                    uint32_t idx = texMgr->GetTextureIndexByFilePath(relative);
+                    auto &meta = texMgr->GetMetaData(relative);
+
+                    TextureCache cache;
+                    cache.srvIndex = idx;
+                    cache.handle = texMgr->GetSrvManager()->GetGPUDescriptorHandle(idx);
+                    cache.width = static_cast<int>(meta.width);
+                    cache.height = static_cast<int>(meta.height);
+
+                    textureCache[relative] = cache;
                 }
 
-                ImGui::Columns(1);
-            } else {
-                // シンプル表示モード（グリッド形式）
-                float cellSize = 100.0f;
-                float panelWidth = ImGui::GetContentRegionAvail().x;
-                int numColumns = static_cast<int>(panelWidth / cellSize);
-                if (numColumns < 1)
-                    numColumns = 1;
+                TextureCache &cache = textureCache[relative];
 
-                ImGui::Columns(numColumns, "ファイルグリッド", false);
+                ImGui::PushID(file.c_str());
 
-                for (const auto &file : texFiles) {
-                    if (filter.PassFilter(file.c_str())) {
-                        bool isSelected = (file == selectedFileTex);
-                        ImGui::PushStyleColor(ImGuiCol_Button, isSelected ? ImVec4(0.5f, 0.5f, 0.7f, 0.7f) : ImVec4(0.3f, 0.3f, 0.3f, 0.0f));
+                // 選択状態の背景色
+                bool isSelected = (selectedTexturePath == relative);
+                if (isSelected) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.6f, 0.8f, 0.5f));
+                } else {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.3f));
+                }
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.7f, 0.9f, 0.6f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.8f, 1.0f, 0.7f));
 
-                        ImGui::PushID(file.c_str());
-                        if (ImGui::Button("", ImVec2(cellSize - 10, cellSize - 10))) {
-                            selectedFileTex = file;
-                            // `baseDirTex` からの相対パスを取得
-                            std::filesystem::path relativePath = (currentDirTex / file).lexically_relative(baseDirTex);
-                            // Windowsのバックスラッシュをスラッシュに変換
-                            std::string pathStr = relativePath.string();
-                            std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
-                            // 選択されたテクスチャパスを設定
-                            selectedTexturePath = pathStr;
-                        }
-                        ImGui::PopID();
-
-                        ImGui::PopStyleColor();
-
-                        // ファイル名を表示（短縮する必要がある場合）
-                        if (file.length() > 8) {
-                            std::string shortName = file.substr(0, 9) + "...";
-                            ImGui::TextWrapped("%s", shortName.c_str());
-                        } else {
-                            ImGui::TextWrapped("%s", file.c_str());
-                        }
-
-                        ImGui::NextColumn();
-                    }
+                // クリック可能なボタン領域
+                if (ImGui::Button("##texButton", ImVec2(cellSize - 10, cellSize - 10))) {
+                    selectedTexturePath = relative;
                 }
 
-                ImGui::Columns(1);
+                ImGui::PopStyleColor(3);
+
+                // ボタンの上に画像とテキストを重ねて描画
+                ImVec2 buttonMin = ImGui::GetItemRectMin();
+                ImVec2 buttonMax = ImGui::GetItemRectMax();
+
+                // サムネイル画像描画
+                ImVec2 imagePos = ImVec2(buttonMin.x + 5, buttonMin.y + 5);
+                ImVec2 imageSize = ImVec2(cellSize - 20, cellSize - 40);
+                ImGui::GetWindowDrawList()->AddImage(
+                    (ImTextureID)cache.handle.ptr,
+                    imagePos,
+                    ImVec2(imagePos.x + imageSize.x, imagePos.y + imageSize.y));
+
+                // ファイル名描画
+                std::string shortName = file.size() > 14 ? file.substr(0, 14) + "..." : file;
+                ImVec2 textPos = ImVec2(buttonMin.x + 5, buttonMax.y - 20);
+                ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32(255, 255, 255, 255), shortName.c_str());
+
+                ImGui::PopID();
+                ImGui::NextColumn();
             }
 
+            ImGui::Columns(1);
             ImGui::Unindent(10.0f);
         }
 
@@ -46336,10 +46552,21 @@ File Path: Engine/Utility/ShowFolder/ShowFolder.h
 ============================================================
 #pragma once
 #include <string>
+#include <d3d12.h>
+#include <unordered_map>
+
+struct TextureCache {
+    uint32_t srvIndex = 0;              // SRV index
+    D3D12_GPU_DESCRIPTOR_HANDLE handle; // GPU handle
+    int width = 0;
+    int height = 0;
+};
 
 void ShowTextureFile(std::string &selectedTexturePath);
 void ShowModelFile(std::string &selectedModelPath);
 void ShowJsonFile(std::string &selectedJsonPath, std::string &startPath);
+
+static std::unordered_map<std::string, TextureCache> textureCache;
 
 ============================================================
 File Path: Engine/Utility/String/StringUtility.cpp
@@ -58757,9 +58984,7 @@ File Path: main.cpp
 #include "d3dx12.h"
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
-    //_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); 
-    //_CrtSetBreakAlloc(152);
-
+  
     std::unique_ptr<Framework> game = std::make_unique<MyGame>();
 
     game->Run();
