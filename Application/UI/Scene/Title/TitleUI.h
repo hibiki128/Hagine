@@ -82,7 +82,7 @@ class TitleUI {
     float timer_ = 0.0f;
 
     std::unique_ptr<ParticleEmitter> chargeBullet_ = nullptr; // チャージ弾パーティクル
-    std::unique_ptr<ParticleEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
+    std::unique_ptr<ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
     std::unique_ptr<ParticleCSEmitter> playerAura_ = nullptr; // プレイヤーオーラパーティクル
 
     std::array<SpriteData *, kMaxSprite> sprites_;

@@ -340,7 +340,6 @@ void Framework::LoadResource() {
 
     particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");
-    particleEditor_->AddParticleEmitter("chageEmitter");
     particleEditor_->AddParticleEmitter("bulletEmitter");
     particleEditor_->AddParticleEmitter("chageBullet");
     particleEditor_->AddParticleEmitter("RushEmitter");
@@ -351,6 +350,7 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("death_arm");
     particleCSEditor_->AddParticleEmitter("makan_main");
     particleCSEditor_->AddParticleEmitter("makan_around");
+    particleCSEditor_->AddParticleEmitter("chargeEmitter");
 }
 
 void Framework::PlaySounds() {

@@ -673,8 +673,6 @@ void ParticleCSGroup::DrawImGui() {
                     ImGui::SetTooltip("パーティクルが集まる目標地点");
                 }
 
-                DrawLine3D::GetInstance()->DrawSphere(settingsData_->gatherTarget, {1.0f, 0.0f, 1.0f, 1.0f}, 0.1f, 8);
-
                 bool enableGatherForTrail = settingsData_->enableGatherForTrail != 0;
                 ImGui::Checkbox("トレイルにもギャザーを適用", &enableGatherForTrail);
                 settingsData_->enableGatherForTrail = enableGatherForTrail ? 1 : 0;
@@ -698,8 +696,6 @@ void ParticleCSGroup::DrawImGui() {
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("パーティクルが集まる目標地点");
                 }
-
-                DrawLine3D::GetInstance()->DrawSphere(settingsData_->vortexTarget, {0.5f, 1.0f, 0.0f, 1.0f}, 0.1f, 8);
 
                 // トレイルへの適用
                 bool enableVortexTrail = settingsData_->enableVortexForTrail != 0;
@@ -913,6 +909,12 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::Text("使用率: %.1f%%", usageRate * 100.0f);
     } else {
         ImGui::PopStyleColor(3);
+    }
+    if (settingsData_->enableGather) {
+        DrawLine3D::GetInstance()->DrawSphere(settingsData_->gatherTarget, {1.0f, 0.0f, 1.0f, 1.0f}, 0.1f, 8);
+    }
+    if (settingsData_->enableVortex) {
+        DrawLine3D::GetInstance()->DrawSphere(settingsData_->vortexTarget, {0.5f, 1.0f, 0.0f, 1.0f}, 0.1f, 8);
     }
 #endif // USE_IMGUI
 }

@@ -9,14 +9,14 @@
 void TitleUI::Initialize() {
 
     chargeBullet_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
-    chargeEffect_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
+    chargeEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("chargeEmitter");
     playerAura_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
 
     chargeBullet_->SetPosition(
         {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + 6.5f,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});
-    chargeEffect_->SetPosition(
+    chargeEffect_->SetTranslate(
         {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + 6.5f,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});

@@ -4,6 +4,7 @@
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include <Frame.h>
+#include <Particle/CSParticle/ParticleCSEditor.h>
 #include <algorithm>
 #include <cmath>
 
@@ -31,7 +32,7 @@ void ChargeShot::Init(const std::string objectName) {
     scale_ = 1.0f;
     velocity_ = {0, 0, 0};
     // 初期位置もリセット
-    chargeEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageEmitter");
+    chargeEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("chargeEmitter");
     bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
 }
 
@@ -156,7 +157,7 @@ void ChargeShot::Update() {
             transform_->translation_ = playerPos + offset;
 
             // エミッター位置も更新
-            chargeEmitter_->SetPosition(transform_->translation_);
+            chargeEmitter_->SetTranslate(transform_->translation_);
 
             Vector3 playerEuler = rot.ToEulerAngles();
             if (bulletCollider_) {

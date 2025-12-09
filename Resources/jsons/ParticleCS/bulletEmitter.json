@@ -1,0 +1,116 @@
+{
+    "emitFromSurface": 1,
+    "frequency": 0.0010000000474974513,
+    "frequencyTime": 518.4068603515625,
+    "group_0_blendMode": 5,
+    "group_0_emitCount": 10,
+    "group_0_enableGather": 0,
+    "group_0_enableGatherForTrail": 0,
+    "group_0_enableGravity": 0,
+    "group_0_enableLifetimeScale": 0,
+    "group_0_enableRandomColor": 0,
+    "group_0_enableSinScale": 1,
+    "group_0_enableTrail": 0,
+    "group_0_enableVortex": 0,
+    "group_0_enableVortexForTrail": 0,
+    "group_0_endColor": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.10588235408067703,
+        "z": 1.0
+    },
+    "group_0_gatherStartRatio": 0.5,
+    "group_0_gatherStrength": 2.0,
+    "group_0_gatherTarget": {
+        "x": -4.699999809265137,
+        "y": 0.0,
+        "z": 3.5
+    },
+    "group_0_gatherTargetOffset": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_gravity": {
+        "x": 0.0,
+        "y": -9.800000190734863,
+        "z": 0.0
+    },
+    "group_0_maxLifetime": 0.07999999821186066,
+    "group_0_maxScale": 0.800000011920929,
+    "group_0_maxTrailPerParticle": 40,
+    "group_0_maxVelocity": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_minLifetime": 0.019999999552965164,
+    "group_0_minScale": 0.10000000149011612,
+    "group_0_minVelocity": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_name": "bullet",
+    "group_0_sinScaleAmplitude": 34.0099983215332,
+    "group_0_sinScaleFrequency": 0.10000000149011612,
+    "group_0_startColor": {
+        "w": 1.0,
+        "x": 0.3960784375667572,
+        "y": 1.0,
+        "z": 0.9529411792755127
+    },
+    "group_0_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "group_0_trailInheritVelocity": 1,
+    "group_0_trailLifeTimeScale": 0.30000001192092896,
+    "group_0_trailMinLifeTime": 0.10000000149011612,
+    "group_0_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "group_0_trailSpawnDistance": 0.009999999776482582,
+    "group_0_trailVelocityScale": 0.30000001192092896,
+    "group_0_vortexAxis": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_vortexStrength": 0.0,
+    "group_0_vortexTarget": {
+        "x": -4.699999809265137,
+        "y": 0.0,
+        "z": 3.5
+    },
+    "group_0_vortexTargetOffset": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "isAuto": true,
+    "isVisible": true,
+    "modelPath": "",
+    "particleGroupCount": 1,
+    "primitiveType": 3,
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "translate": {
+        "x": -4.699999809265137,
+        "y": 0.0,
+        "z": 3.5
+    }
+}
