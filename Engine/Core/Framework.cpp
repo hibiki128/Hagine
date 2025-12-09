@@ -344,6 +344,7 @@ void Framework::LoadResource() {
     particleEditor_->AddParticleEmitter("chageBullet");
     particleEditor_->AddParticleEmitter("RushEmitter");
     particleEditor_->AddParticleEmitter("punchEmitter");
+    particleEditor_->AddParticleEmitter("smokeEmitter");
     particleCSEditor_->AddParticleEmitter("playerAura");
     particleCSEditor_->AddParticleEmitter("FadeOut");
     particleCSEditor_->AddParticleEmitter("death");

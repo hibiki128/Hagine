@@ -1,0 +1,444 @@
+{
+    "GroupNames": [
+        "smoke3",
+        "smoke2",
+        "smoke1"
+    ],
+    "emitFrequency": 1.0,
+    "emitterRotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 0.25,
+        "y": 0.25,
+        "z": 0.25
+    },
+    "emitterTranslation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "isActive": true,
+    "isAuto": true,
+    "isVisible": false,
+    "smoke1_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke1_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke1_alphaMax": 1.0,
+    "smoke1_alphaMin": 1.0,
+    "smoke1_blendMode": 1,
+    "smoke1_count": 2,
+    "smoke1_enableTrail": false,
+    "smoke1_endAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke1_endColor": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke1_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke1_endScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke1_gatherStartRatio": 0.10000000149011612,
+    "smoke1_gatherStrength": 0.0,
+    "smoke1_gravity": 0.0,
+    "smoke1_isAcceMultiply": true,
+    "smoke1_isAllRamdomScale": false,
+    "smoke1_isBillboard": true,
+    "smoke1_isBillboardX": false,
+    "smoke1_isBillboardY": false,
+    "smoke1_isBillboardZ": false,
+    "smoke1_isEmitOnEdge": false,
+    "smoke1_isEndScale": false,
+    "smoke1_isFaceDirection": false,
+    "smoke1_isGatherMode": false,
+    "smoke1_isRandomColor": false,
+    "smoke1_isRandomRotate": true,
+    "smoke1_isRandomScale": true,
+    "smoke1_isSinMove": false,
+    "smoke1_lifeTimeMax": 0.75,
+    "smoke1_lifeTimeMin": 0.5,
+    "smoke1_maxTrailParticles": 20,
+    "smoke1_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 3.1415927410125732
+    },
+    "smoke1_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -3.1415927410125732
+    },
+    "smoke1_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "smoke1_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "smoke1_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke1_scale": {
+        "x": 0.25,
+        "y": 0.25,
+        "z": 0.25
+    },
+    "smoke1_scaleMax": 2.0,
+    "smoke1_scaleMin": 1.5,
+    "smoke1_startAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke1_startColor": {
+        "w": 1.0,
+        "x": 0.28315412998199463,
+        "y": 0.02435733750462532,
+        "z": 0.0
+    },
+    "smoke1_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke1_startScale": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+    },
+    "smoke1_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke1_trailInheritVelocity": true,
+    "smoke1_trailLifeScale": 0.5,
+    "smoke1_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "smoke1_trailSpawnInterval": 0.05000000074505806,
+    "smoke1_trailVelocityScale": 0.30000001192092896,
+    "smoke1_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke1_velocityMax": {
+        "x": 2.5,
+        "y": 2.5,
+        "z": 2.5
+    },
+    "smoke1_velocityMin": {
+        "x": -2.5,
+        "y": -2.5,
+        "z": -2.5
+    },
+    "smoke2_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke2_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke2_alphaMax": 1.0,
+    "smoke2_alphaMin": 1.0,
+    "smoke2_blendMode": 1,
+    "smoke2_count": 3,
+    "smoke2_enableTrail": false,
+    "smoke2_endAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke2_endColor": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke2_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke2_endScale": {
+        "x": 1.5,
+        "y": 1.5,
+        "z": 1.5
+    },
+    "smoke2_gatherStartRatio": 0.0,
+    "smoke2_gatherStrength": 0.0,
+    "smoke2_gravity": 0.0,
+    "smoke2_isAcceMultiply": true,
+    "smoke2_isAllRamdomScale": false,
+    "smoke2_isBillboard": true,
+    "smoke2_isBillboardX": false,
+    "smoke2_isBillboardY": false,
+    "smoke2_isBillboardZ": false,
+    "smoke2_isEmitOnEdge": false,
+    "smoke2_isEndScale": false,
+    "smoke2_isFaceDirection": false,
+    "smoke2_isGatherMode": false,
+    "smoke2_isRandomColor": false,
+    "smoke2_isRandomRotate": true,
+    "smoke2_isRandomScale": true,
+    "smoke2_isSinMove": false,
+    "smoke2_lifeTimeMax": 0.75,
+    "smoke2_lifeTimeMin": 0.5,
+    "smoke2_maxTrailParticles": 20,
+    "smoke2_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 3.1415927410125732
+    },
+    "smoke2_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -3.1415927410125732
+    },
+    "smoke2_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "smoke2_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "smoke2_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke2_scale": {
+        "x": 0.25,
+        "y": 0.25,
+        "z": 0.25
+    },
+    "smoke2_scaleMax": 2.0,
+    "smoke2_scaleMin": 1.5,
+    "smoke2_startAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke2_startColor": {
+        "w": 1.0,
+        "x": 0.24313725531101227,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke2_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke2_startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke2_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke2_trailInheritVelocity": true,
+    "smoke2_trailLifeScale": 0.5,
+    "smoke2_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "smoke2_trailSpawnInterval": 0.05000000074505806,
+    "smoke2_trailVelocityScale": 0.30000001192092896,
+    "smoke2_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke2_velocityMax": {
+        "x": 2.5,
+        "y": 2.5,
+        "z": 2.5
+    },
+    "smoke2_velocityMin": {
+        "x": -2.5,
+        "y": -2.5,
+        "z": -2.5
+    },
+    "smoke3_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke3_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke3_alphaMax": 1.0,
+    "smoke3_alphaMin": 1.0,
+    "smoke3_blendMode": 1,
+    "smoke3_count": 3,
+    "smoke3_enableTrail": false,
+    "smoke3_endAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke3_endColor": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke3_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke3_endScale": {
+        "x": 1.5,
+        "y": 1.5,
+        "z": 1.5
+    },
+    "smoke3_gatherStartRatio": 0.0,
+    "smoke3_gatherStrength": 0.0,
+    "smoke3_gravity": 0.0,
+    "smoke3_isAcceMultiply": true,
+    "smoke3_isAllRamdomScale": false,
+    "smoke3_isBillboard": true,
+    "smoke3_isBillboardX": false,
+    "smoke3_isBillboardY": false,
+    "smoke3_isBillboardZ": false,
+    "smoke3_isEmitOnEdge": false,
+    "smoke3_isEndScale": false,
+    "smoke3_isFaceDirection": false,
+    "smoke3_isGatherMode": false,
+    "smoke3_isRandomColor": false,
+    "smoke3_isRandomRotate": true,
+    "smoke3_isRandomScale": true,
+    "smoke3_isSinMove": false,
+    "smoke3_lifeTimeMax": 0.75,
+    "smoke3_lifeTimeMin": 0.5,
+    "smoke3_maxTrailParticles": 20,
+    "smoke3_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 3.1415927410125732
+    },
+    "smoke3_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -3.1415927410125732
+    },
+    "smoke3_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "smoke3_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "smoke3_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke3_scale": {
+        "x": 0.25,
+        "y": 0.25,
+        "z": 0.25
+    },
+    "smoke3_scaleMax": 2.0,
+    "smoke3_scaleMin": 1.5,
+    "smoke3_startAcce": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke3_startColor": {
+        "w": 1.0,
+        "x": 0.24372762441635132,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke3_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke3_startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke3_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "smoke3_trailInheritVelocity": true,
+    "smoke3_trailLifeScale": 0.5,
+    "smoke3_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "smoke3_trailSpawnInterval": 0.05000000074505806,
+    "smoke3_trailVelocityScale": 0.30000001192092896,
+    "smoke3_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "smoke3_velocityMax": {
+        "x": 2.5,
+        "y": 2.5,
+        "z": 2.5
+    },
+    "smoke3_velocityMin": {
+        "x": -2.5,
+        "y": -2.5,
+        "z": -2.5
+    }
+}

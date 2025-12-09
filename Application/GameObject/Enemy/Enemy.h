@@ -197,7 +197,7 @@ class Enemy : public BaseObject {
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
-    std::unique_ptr<ParticleEmitter> emitter_;
+    std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> chageShake_;
 
     bool isDamageReact_ = false;        // リアクション中かどうか
