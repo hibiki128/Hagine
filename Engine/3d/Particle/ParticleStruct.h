@@ -148,6 +148,18 @@ struct ParticleCSSettings {
     float vortexStrength = 5.0f;
     uint32_t enableVortexForTrail = 0;
     Vector3 vortexAxis = {0.0f, 1.0f, 0.0f};
+    uint32_t enableAcceleration = 0;
+    Vector3 acceleration = {0.0f, 0.0f, 0.0f};
+    uint32_t enableVelocityDamping = 0;
+    float velocityDampingFactor = 0.0f;
+    uint32_t enableLifetimeVelocityDamping = 0;
+    float lifetimeVelocityDampingStart = 0.0f;
+    uint32_t enableRadialVelocity = 0;
+    float radialVelocityStrength = 0.0f;
+    float radialVelocityRandomness = 0.0f;
+    float padding7{};
+    Vector3 radialVelocityCenter = {0.0f, 0.0f, 0.0f};
+    float padding8{};
 };
 
 /// =======================
