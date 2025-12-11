@@ -23,6 +23,7 @@ class ParticleCSEmitter {
     void DrawImGui();
     void AddParticleGroup(ParticleCSGroup *particleGroup);
     void RemoveParticleGroup(const std::string &groupName);
+    void EmitOnce();
 
     void SetName(const std::string &name) { name_ = name; }
     void SetFrequency(float frequency) {
@@ -211,4 +212,5 @@ class ParticleCSEmitter {
     bool isAuto_ = false;
     bool isActive_ = false;
     bool isVisible_ = true;
+    bool emitOnce_ = false;
 };

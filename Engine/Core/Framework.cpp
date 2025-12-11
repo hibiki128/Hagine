@@ -352,6 +352,8 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("makan_main");
     particleCSEditor_->AddParticleEmitter("makan_around");
     particleCSEditor_->AddParticleEmitter("chargeEmitter");
+    particleCSEditor_->AddParticleEmitter("fireWork_explosion");
+    particleCSEditor_->AddParticleEmitter("fireWork_Trail");
 }
 
 void Framework::PlaySounds() {
