@@ -6,6 +6,7 @@
 
 #include "Bullet/ChageShot/ChageShot.h"
 #include "Object/Base/BaseObjectManager.h"
+#include "State/Action/PlayerEnergyCharge.h"
 #include "State/Action/PlayerStateRush.h"
 #include "State/Fly/PlayerStateFlyMove.h"
 #include "State/Ground/PlayerStateIdle.h"
@@ -44,6 +45,7 @@ void Player::Init(const std::string objectName) {
     states_["FlyIdle"] = std::make_unique<PlayerStateFlyIdle>();
     states_["FlyMove"] = std::make_unique<PlayerStateFlyMove>();
     states_["Rush"] = std::make_unique<PlayerStateRush>();
+    states_["EnergyCharge"] = std::make_unique<PlayerEnergyCharge>();
     currentState_ = states_["Idle"].get();
     isGrounded_ = true; // 初期状態は地面にいる
 
@@ -105,6 +107,8 @@ void Player::Init(const std::string objectName) {
     rushEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("RushEmitter");
 
     auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
+
+    chargeAuraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("ChargeAura");
 
     deathStaging_ = std::make_unique<DeathStaging>();
 }
@@ -233,6 +237,8 @@ void Player::Update() {
         if (HP_ <= 0) {
             isAlive_ = false;
         }
+
+        ChangeEnergyCharge();
     }
 }
 
@@ -267,6 +273,7 @@ void Player::DrawParticle(const ViewProjection &viewProjection) {
     chargeShot_->DrawParticle(viewProjection);
     rushEmitter_->Draw(viewProjection);
     auraEmitter_->Draw(viewProjection);
+    chargeAuraEmitter_->Draw(viewProjection);
     for (auto &bullet : bullets_) {
         bullet->DrawParticle(viewProjection);
     }
@@ -280,6 +287,7 @@ void Player::DrawParticle(const ViewProjection &viewProjection) {
 void Player::ChangeState(const std::string &stateName) {
     auto it = states_.find(stateName);
     if (it != states_.end()) {
+        previousStateName = GetCurrentStateName();
         if (currentState_) {
             currentState_->Exit(*this);
         }
@@ -512,10 +520,23 @@ bool Player::ConsumeEnergy(float amount) {
 }
 
 void Player::RecoverEnergy() {
-    timeSinceLastShot_ += dt_;
+    // エネルギー回復が可能かどうか
+    bool canRecover = false;
 
-    // 1秒以上経過していたら回復開始
-    if (timeSinceLastShot_ >= energyRecoveryDelay_) {
+    // エナジーチャージ中なら即回復
+    if (currentState_ == states_["EnergyCharge"].get()) {
+        canRecover = true;
+    }
+    // それ以外は、最後の射撃から一定時間経過していれば回復
+    else {
+        timeSinceLastShot_ += dt_;
+        if (timeSinceLastShot_ >= energyRecoveryDelay_) {
+            canRecover = true;
+        }
+    }
+
+    // 回復処理は共通化
+    if (canRecover) {
         energy_ += energyRecoveryRate_ * dt_;
         if (energy_ > maxEnergy_) {
             energy_ = maxEnergy_;
@@ -749,6 +770,26 @@ void Player::ChangeRush() {
     }
 }
 
+void Player::ChangeEnergyCharge() {
+    chargeAuraEmitter_->Update();
+
+    if (currentState_ != states_["Rush"].get() &&
+        currentState_ != states_["Jump"].get() &&
+        currentState_ != states_["Air"].get()) {
+        if (Input::GetInstance()->TriggerKey(DIK_C) &&
+            currentState_ != states_["EnergyCharge"].get() &&
+            energy_ < maxEnergy_) {
+            ChangeState("EnergyCharge");
+        }
+    }
+    if (currentState_ == states_["EnergyCharge"].get()) {
+        chargeAuraEmitter_->SetTranslate({GetWorldPosition().x, GetWorldPosition().y - 1.5f, GetWorldPosition().z});
+        chargeAuraEmitter_->SetAuto(true);
+    } else {
+        chargeAuraEmitter_->SetAuto(false);
+    }
+}
+
 Vector3 Player::GetMovementDirection() const {
     Vector3 dir = velocity_;
     float len = GetVelocityMagnitude();
@@ -801,7 +842,7 @@ void Player::Load() {
     B_speed_ = data_->Load<float>("bulletSpeed", 60.0f);
     B_acce_ = data_->Load<float>("bulletAcce", 5.0f);
     maxEnergy_ = data_->Load<float>("maxEnergy", 100.0f);
-    energyRecoveryRate_ = data_->Load<float>("energyRecoveryRate", 10.0f);
+    energyRecoveryRate_ = data_->Load<float>("energyRecoveryRate", 0.01f);
     energyRecoveryDelay_ = data_->Load<float>("energyRecoveryDelay", 1.0f);
     energy_ = maxEnergy_; // 初期化時は最大値
     invincibleDuration_ = data_->Load<float>("invincibleDuration", 0.25f);

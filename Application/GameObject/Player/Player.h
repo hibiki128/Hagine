@@ -87,6 +87,11 @@ class Player : public BaseObject {
     void ChangeRush();
 
     /// <summary>
+    /// チャージ状態に変更
+    /// </summary>
+    void ChangeEnergyCharge();
+
+    /// <summary>
     /// 最短回転角度を計算
     /// </summary>
     /// <param name="from">開始角度</param>
@@ -142,6 +147,7 @@ class Player : public BaseObject {
     float GetEnergy() const { return energy_; }
     float &GetEnergy() { return energy_; }
     float GetMaxEnergy() const { return maxEnergy_; }
+    float GetChargeRate() const { return energyRecoveryRate_; }
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
@@ -152,6 +158,7 @@ class Player : public BaseObject {
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
     std::string GetCurrentStateName() const;
+    std::string GetPreviewStateName() const { return previousStateName; }
     std::vector<std::unique_ptr<PlayerBullet>> &GetBullets() { return bullets_; }
 
     /// <summary>
@@ -170,6 +177,7 @@ class Player : public BaseObject {
     void SetIsDeathStaging(bool flag) {
         isDeathStaging_ = flag;
     }
+    void SetEnergyRecoveryRate(float Rate) { energyRecoveryRate_ = Rate; }
 
   private:
     /// ===================================================
@@ -301,6 +309,7 @@ class Player : public BaseObject {
     std::unique_ptr<PlayerHand> rightHand_;          // 右手
     std::unique_ptr<Shake> shake_;                   // シェイク
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
+    std::unique_ptr<ParticleCSEmitter> chargeAuraEmitter_; // チャージオーラパーティクル
     std::unique_ptr<ParticleEmitter> rushEmitter_;   // 突撃パーティクル
     std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
@@ -318,4 +327,6 @@ class Player : public BaseObject {
     EasingData<float> tiltEase_;       // 回転角イージング
     Quaternion baseRotation_;          // 通常時の向き
     Quaternion tiltRotation_;          // のけぞり用の回転
+
+    std::string previousStateName = "";
 };

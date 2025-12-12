@@ -1,11 +1,12 @@
 #pragma once
 #include "../Base/PlayerBaseState.h"
+#include <string>
 
 /// <summary>
 /// プレイヤーのエネルギーチャージ状態を管理するクラス
 /// エネルギーを回復する
 /// </summary>
-class PlayerEnergyChageState : public PlayerBaseState {
+class PlayerEnergyCharge : public PlayerBaseState {
   public:
     /// ===================================================
     /// public method
@@ -14,7 +15,7 @@ class PlayerEnergyChageState : public PlayerBaseState {
     /// <summary>
     /// デフォルトコンストラクタ
     /// </summary>
-    PlayerEnergyChageState() = default;
+    PlayerEnergyCharge() = default;
 
     /// <summary>
     /// 状態開始時の処理
@@ -41,5 +42,7 @@ class PlayerEnergyChageState : public PlayerBaseState {
     /// private varians
     /// ===================================================
 
-    float chargeRate_ = 1.0f; // エネルギーチャージ速度
+    float chargeRate_ = 15.0f; // エネルギーチャージ速度
+    float beforeChargeRate_ = 0.0f;
+    std::string beforeState_ = "";
 };
