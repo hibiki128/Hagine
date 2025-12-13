@@ -1,7 +1,7 @@
 {
     "emitFromSurface": 1,
     "frequency": 1.0,
-    "frequencyTime": 0.06765858829021454,
+    "frequencyTime": 0.8332359790802002,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -84,7 +84,7 @@
         "z": 1.0
     },
     "group_0_trailInheritVelocity": 1,
-    "group_0_trailLifeTimeScale": 0.15000000596046448,
+    "group_0_trailLifeTimeScale": 0.07999999821186066,
     "group_0_trailMinLifeTime": 0.10000000149011612,
     "group_0_trailScaleMultiplier": {
         "x": 0.800000011920929,
@@ -110,7 +110,7 @@
         "y": 0.0,
         "z": 0.0
     },
-    "isAuto": false,
+    "isAuto": true,
     "isVisible": true,
     "modelPath": "",
     "particleGroupCount": 1,

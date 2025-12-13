@@ -101,7 +101,7 @@ class ClearScene : public BaseScene {
 
     SkyBox *skyBox_ = nullptr;
 
-    const float cameraStartTimer_ = 3.0f;
+    const float cameraStartTimer_ = 5.0f;
     float currentCameraStartTimer_ = 0.0f;
     bool cameraStart_ = false;
 };
