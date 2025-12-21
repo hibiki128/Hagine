@@ -3,6 +3,7 @@
 #include "Application/Utility/Shake/Shake.h"
 #include <type/Quaternion.h>
 #include <type/Vector3.h>
+#include <Particle/ParticleEmitter.h>
 
 /// <summary>
 /// プレイヤーの突撃状態を管理するクラス
@@ -36,6 +37,13 @@ class PlayerStateRush : public PlayerBaseState {
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
     void Exit(Player &player) override;
+
+    /// <summary>
+    /// パーティクル描画処理
+    /// </summary>
+    /// <param name="player">プレイヤー参照</param>
+    /// <param name="viewProjection">ビュープロジェクション</param>
+    void DrawParticle(Player &player, const ViewProjection &viewProjection) override;
 
   private:
     /// ===================================================
@@ -125,4 +133,5 @@ class PlayerStateRush : public PlayerBaseState {
     bool isRushing_ = false; // 突撃中フラグ
 
     std::unique_ptr<Shake> shake_;
+    std::unique_ptr<ParticleEmitter> rushEmitter_; // 突撃パーティクル
 };

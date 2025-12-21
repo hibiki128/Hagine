@@ -104,11 +104,7 @@ void Player::Init(const std::string objectName) {
 
     shake_ = std::make_unique<Shake>();
 
-    rushEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("RushEmitter");
-
     auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
-
-    chargeAuraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("ChargeAura");
 
     deathStaging_ = std::make_unique<DeathStaging>();
 }
@@ -271,16 +267,24 @@ void Player::DrawParticle(const ViewProjection &viewProjection) {
     }
 
     chargeShot_->DrawParticle(viewProjection);
-    rushEmitter_->Draw(viewProjection);
     auraEmitter_->Draw(viewProjection);
-    chargeAuraEmitter_->Draw(viewProjection);
+
     for (auto &bullet : bullets_) {
         bullet->DrawParticle(viewProjection);
     }
+
     leftHand_ptr_->DrawParticle(viewProjection);
     rightHand_ptr_->DrawParticle(viewProjection);
+
     if (makanAttack_ptr_) {
         makanAttack_ptr_->DrawParticle(viewProjection);
+    }
+
+    // 全ステートのパーティクル描画を呼び出す
+    for (const auto &[name, state] : states_) {
+        if (state) {
+            state->DrawParticle(*this, viewProjection);
+        }
     }
 }
 
@@ -752,10 +756,6 @@ void Player::ChangeRush() {
         } else if (lControlInputCount_ == 2 && GetIsLockOn() && GetEnemy()) {
             // 急接近ステートに遷移
             ChangeState("Rush");
-            rushEmitter_->SetStartRotate("Burst", GetWorldRotation().ToEulerDegrees());
-            rushEmitter_->SetEndRotate("Burst", GetWorldRotation().ToEulerDegrees());
-            rushEmitter_->SetPosition(GetWorldPosition());
-            rushEmitter_->UpdateOnce();
             return;
         }
     }
@@ -771,8 +771,6 @@ void Player::ChangeRush() {
 }
 
 void Player::ChangeEnergyCharge() {
-    chargeAuraEmitter_->Update();
-
     if (currentState_ != states_["Rush"].get() &&
         currentState_ != states_["Jump"].get() &&
         currentState_ != states_["Air"].get()) {
@@ -781,12 +779,6 @@ void Player::ChangeEnergyCharge() {
             energy_ < maxEnergy_) {
             ChangeState("EnergyCharge");
         }
-    }
-    if (currentState_ == states_["EnergyCharge"].get()) {
-        chargeAuraEmitter_->SetTranslate({GetWorldPosition().x, GetWorldPosition().y - 1.5f, GetWorldPosition().z});
-        chargeAuraEmitter_->SetAuto(true);
-    } else {
-        chargeAuraEmitter_->SetAuto(false);
     }
 }
 

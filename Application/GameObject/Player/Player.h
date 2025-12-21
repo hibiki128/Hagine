@@ -309,8 +309,6 @@ class Player : public BaseObject {
     std::unique_ptr<PlayerHand> rightHand_;          // 右手
     std::unique_ptr<Shake> shake_;                   // シェイク
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
-    std::unique_ptr<ParticleCSEmitter> chargeAuraEmitter_; // チャージオーラパーティクル
-    std::unique_ptr<ParticleEmitter> rushEmitter_;   // 突撃パーティクル
     std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
 

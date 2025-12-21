@@ -2,6 +2,7 @@
 #include "Input.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
+#include <Particle/ParticleEditor.h>
 
 void PlayerStateRush::Enter(Player &player) {
     Enemy *enemy = player.GetEnemy();
@@ -20,7 +21,12 @@ void PlayerStateRush::Enter(Player &player) {
     shake_ = std::make_unique<Shake>();
     shake_->Initialize(&player.GetViewProjection(), "RushShake");
     shake_->StartShake();
+    rushEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("RushEmitter");
 
+    rushEmitter_->SetStartRotate("Burst", player.GetWorldRotation().ToEulerDegrees());
+    rushEmitter_->SetEndRotate("Burst", player.GetWorldRotation().ToEulerDegrees());
+    rushEmitter_->SetPosition(player.GetWorldPosition());
+    rushEmitter_->UpdateOnce();
 }
 
 void PlayerStateRush::Update(Player &player) {
@@ -57,6 +63,12 @@ void PlayerStateRush::Exit(Player &player) {
     elapsedTime_ = 0.0f;
     player.GetVelocity() = {0.0f, 0.0f, 0.0f};
     player.ResetControlCount();
+}
+
+void PlayerStateRush::DrawParticle(Player &player, const ViewProjection &viewProjection) {
+    if (rushEmitter_) {
+        rushEmitter_->Draw(viewProjection);
+    }
 }
 
 Quaternion PlayerStateRush::LookRotation(const Vector3 &forward, const Vector3 &up) {
@@ -139,7 +151,7 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
 }
 
 Vector3 PlayerStateRush::GetArcPosition(float progress) {
-  float t = progress;
+    float t = progress;
     float oneMinusT = 1.0f - t;
 
     Vector3 result = oneMinusT * oneMinusT * startPosition_ +

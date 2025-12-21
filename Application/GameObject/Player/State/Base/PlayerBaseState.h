@@ -1,4 +1,5 @@
 #pragma once
+#include <Camera/ViewProjection/ViewProjection.h>
 class Player;
 
 /// <summary>
@@ -33,4 +34,11 @@ class PlayerBaseState {
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
     virtual void Exit(Player &player) = 0;
+
+    /// <summary>
+    /// パーティクル描画処理
+    /// </summary>
+    /// <param name="player">プレイヤー参照</param>
+    /// <param name="viewProjection">ビュープロジェクション</param>
+    virtual void DrawParticle(Player &player, const ViewProjection &viewProjection) {}
 };
