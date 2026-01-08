@@ -67,6 +67,21 @@ class ResultUI {
     };
 
   private:
+    // 定数定義
+    static constexpr float kDelayTime = 0.25f;         // スプライト間の遅延時間(秒)
+    static constexpr float kAnimDuration = 0.5f;       // カウントアップアニメーション時間(秒)
+    static constexpr float kEasingDuration = 1.5f;     // イージング時間(秒)
+    static constexpr float kDefaultHP = 50.0f;         // デフォルトHP
+    static constexpr float kDefaultClearTime = 180.0f; // デフォルトクリアタイム(秒)
+    static constexpr int kSecondsPerMinute = 60;       // 1分の秒数
+    static constexpr int kDigitDivisor = 10;           // 桁の除数
+    static constexpr int kHundredDivisor = 100;        // 百の位の除数
+    static constexpr float kUVStep = 0.1f;             // UV座標のステップ幅
+    static constexpr float kAlphaVisible = 1.0f;       // 完全表示のアルファ値
+    static constexpr float kAlphaInvisible = 0.0f;     // 非表示のアルファ値
+    static constexpr float kNormalizeValue = 1.0f;     // 正規化値
+    static constexpr int kZeroValue = 0;               // ゼロ値
+
     // スプライト配列
     std::array<SpriteData *, kMaxSprite> sprites_;
 
@@ -80,9 +95,8 @@ class ResultUI {
     bool isStartEasing_ = false;
     bool isAllAnimationFinished_ = false; // 全アニメーション完了フラグ
 
-    int currentEasingIndex_ = 0;   // 現在イージング中のスプライトインデックス
-    float delayTimer_ = 0.0f;      // 次のスプライトまでの遅延タイマー
-    const float kDelayTime = 0.25f; // スプライト間の遅延時間
+    int currentEasingIndex_ = 0; // 現在イージング中のスプライトインデックス
+    float delayTimer_ = 0.0f;    // 次のスプライトまでの遅延タイマー
 
     // 数字のカウントアップ用
     enum NumberAnimState {
@@ -95,12 +109,11 @@ class ResultUI {
 
     NumberAnimState numberAnimState_ = kWaiting;
     float animTimer_ = 0.0f;
-    const float kAnimDuration = 0.5f; // アニメーション時間
 
     float displayedTime_ = 0.0f; // 表示中のタイム
     float displayedHP_ = 0.0f;   // 表示中のHP
 
-    float HP_ = 50.0f;         // 残り体力(記録値)
-    float ClearTime_ = 180.0f; // クリアタイム(記録値)
+    float HP_ = kDefaultHP;               // 残り体力(記録値)
+    float ClearTime_ = kDefaultClearTime; // クリアタイム(記録値)
     std::string Rank_ = "A";
 };

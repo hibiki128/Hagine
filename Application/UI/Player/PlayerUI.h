@@ -38,6 +38,42 @@ class PlayerUI {
     /// private varians
     /// ===================================================
 
+    // 定数定義
+    static constexpr float kHPBarPositionX = 200.0f;          // HPバー位置X
+    static constexpr float kHPBarPositionY = 45.0f;           // HPバー位置Y
+    static constexpr float kHPBarSizeX = 400.0f;              // HPバー幅
+    static constexpr float kHPBarSizeY = 40.0f;               // HPバー高さ
+    static constexpr float kPlayerIconPositionX = -80.0f;     // プレイヤーアイコン位置X
+    static constexpr float kPlayerIconPositionY = -30.0f;     // プレイヤーアイコン位置Y
+    static constexpr float kIconSizeX = 384.0f;               // アイコン幅
+    static constexpr float kIconSizeY = 216.0f;               // アイコン高さ
+    static constexpr float kEnergyBarPositionX = 200.0f;      // エネルギーバー位置X
+    static constexpr float kEnergyBarPositionY = 93.0f;       // エネルギーバー位置Y
+    static constexpr float kEnergyBarSizeX = 300.0f;          // エネルギーバー幅
+    static constexpr float kEnergyBarSizeY = 20.0f;           // エネルギーバー高さ
+    static constexpr float kBarFramePositionX = 198.0f;       // バーフレーム位置X
+    static constexpr float kBarFramePositionY = 43.0f;        // バーフレーム位置Y
+    static constexpr float kBarSizeX = 410.0f;                // バーフレーム幅
+    static constexpr float kBarSizeY = 50.0f;                 // バーフレーム高さ
+    static constexpr float kEnergyBarFramePositionX = 198.0f; // エネルギーバーフレーム位置X
+    static constexpr float kEnergyBarFramePositionY = 91.0f;  // エネルギーバーフレーム位置Y
+    static constexpr float kEnergyBarFrameSizeX = 310.0f;     // エネルギーバーフレーム幅
+    static constexpr float kEnergyBarFrameSizeY = 30.0f;      // エネルギーバーフレーム高さ
+
+    // 色定数
+    static constexpr float kHPBarColorR = 0.1f;     // HPバー色(R)
+    static constexpr float kHPBarColorG = 0.2f;     // HPバー色(G)
+    static constexpr float kHPBarColorB = 1.0f;     // HPバー色(B)
+    static constexpr float kHPBarColorA = 1.0f;     // HPバー色(A)
+    static constexpr float kFrameColorR = 0.3f;     // フレーム色(R)
+    static constexpr float kFrameColorG = 0.3f;     // フレーム色(G)
+    static constexpr float kFrameColorB = 0.3f;     // フレーム色(B)
+    static constexpr float kFrameColorA = 0.6f;     // フレーム色(A)
+    static constexpr float kEnergyBarColorR = 1.0f; // エネルギーバー色(R)
+    static constexpr float kEnergyBarColorG = 1.0f; // エネルギーバー色(G)
+    static constexpr float kEnergyBarColorB = 0.0f; // エネルギーバー色(B)
+    static constexpr float kEnergyBarColorA = 1.0f; // エネルギーバー色(A)
+
     Player *player_ = nullptr;
 
     std::unique_ptr<Sprite> hpBar_;
@@ -46,14 +82,14 @@ class PlayerUI {
     std::unique_ptr<Sprite> barFrame_;
     std::unique_ptr<Sprite> energyBarFrame_;
 
-    Vector2 hpBarPosition_ = {200.0f, 45.0f};          // HPバーの位置
-    Vector2 hpBarSize_ = {400.0f, 40.0f};              // HPバーのサイズ
-    Vector2 playerIconPosition_ = {-80.0f, -30.0f};    // プレイヤーアイコンの位置
-    Vector2 iconSize_ = {384.0f, 216.0f};              // プレイヤーアイコンのサイズ
-    Vector2 energyBarPosition_ = {200.0f, 93.0f};      // エネルギーバーの位置
-    Vector2 energyBarSize_ = {300.0f, 20.0f};          // エネルギーバーのサイズ
-    Vector2 barFramePosition_ = {198.0f, 43.0f};       // バーフレームの位置
-    Vector2 barSize_ = {410.0f, 50.0f};                // バーのサイズ
-    Vector2 energyBarFramePosition_ = {198.0f, 91.0f}; // エネルギーバーフレームの位置
-    Vector2 energyBarFrameSize_ = {310.0f, 30.0f};     // エネルギーバーフレームのサイズ
+    Vector2 hpBarPosition_ = {kHPBarPositionX, kHPBarPositionY};                            // HPバーの位置
+    Vector2 hpBarSize_ = {kHPBarSizeX, kHPBarSizeY};                                        // HPバーのサイズ
+    Vector2 playerIconPosition_ = {kPlayerIconPositionX, kPlayerIconPositionY};             // プレイヤーアイコンの位置
+    Vector2 iconSize_ = {kIconSizeX, kIconSizeY};                                           // プレイヤーアイコンのサイズ
+    Vector2 energyBarPosition_ = {kEnergyBarPositionX, kEnergyBarPositionY};                // エネルギーバーの位置
+    Vector2 energyBarSize_ = {kEnergyBarSizeX, kEnergyBarSizeY};                            // エネルギーバーのサイズ
+    Vector2 barFramePosition_ = {kBarFramePositionX, kBarFramePositionY};                   // バーフレームの位置
+    Vector2 barSize_ = {kBarSizeX, kBarSizeY};                                              // バーのサイズ
+    Vector2 energyBarFramePosition_ = {kEnergyBarFramePositionX, kEnergyBarFramePositionY}; // エネルギーバーフレームの位置
+    Vector2 energyBarFrameSize_ = {kEnergyBarFrameSizeX, kEnergyBarFrameSizeY};             // エネルギーバーフレームのサイズ
 };

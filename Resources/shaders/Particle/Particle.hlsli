@@ -113,6 +113,18 @@ struct ParticleCSSettings
     float vortexStrength;
     uint enableVortexForTrail;
     float3 vortexAxis;
+    uint enableAcceleration; 
+    float3 acceleration;
+    uint enableVelocityDamping; 
+    float velocityDampingFactor; 
+    uint enableLifetimeVelocityDamping;
+    float lifetimeVelocityDampingStart; 
+    uint enableRadialVelocity;
+    float radialVelocityStrength;
+    float radialVelocityRandomness;
+    float padding7;
+    float3 radialVelocityCenter;
+    float padding8;
 };
 
 struct EdgeInfo

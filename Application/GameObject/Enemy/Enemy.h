@@ -170,6 +170,75 @@ class Enemy : public BaseObject {
     /// private varians
     /// ===================================================
 
+    // 初期化定数
+    static constexpr int kTextureIndex = 0;
+    static constexpr float kShadowRotationDegrees = -90.0f;
+    static constexpr float kShadowScale = 1.5f;
+    static constexpr float kShadowYPosition = -0.95f;
+
+    // ダメージ・HP関連定数
+    static constexpr float kNoDamage = 0.0f;
+    static constexpr float kMinHP = 0.0f;
+    static constexpr float kGuardDamageMultiplier = 0.15f;
+
+    // 色関連定数
+    static constexpr float kColorRed = 1.0f;
+    static constexpr float kColorZero = 0.0f;
+    static constexpr float kColorOpaque = 1.0f;
+
+    // 点滅関連定数
+    static constexpr float kBlinkInterval = 0.1f;
+    static constexpr float kDamageBlinkInterval = 0.03f;
+    static constexpr int kBlinkModulo = 2;
+    static constexpr int kEvenBlink = 0;
+
+    // 透明度定数
+    static constexpr float kAlphaTransparent = 0.0f;
+    static constexpr float kAlphaOpaque = 1.0f;
+
+    // 回転・ベクトル定数
+    static constexpr float kRotationZero = 0.0f;
+    static constexpr float kTimerReset = 0.0f;
+    static constexpr float kDamageTiltDegrees = 20.0f;
+    static constexpr float kXAxisX = 1.0f;
+    static constexpr float kXAxisY = 0.0f;
+    static constexpr float kXAxisZ = 0.0f;
+    static constexpr float kForwardVectorX = 0.0f;
+    static constexpr float kForwardVectorY = 0.0f;
+    static constexpr float kForwardVectorZ = -1.0f;
+    static constexpr float kRightVectorX = 1.0f;
+    static constexpr float kRightVectorY = 0.0f;
+    static constexpr float kRightVectorZ = 0.0f;
+    static constexpr float kUpVectorX = 0.0f;
+    static constexpr float kUpVectorY = 1.0f;
+    static constexpr float kUpVectorZ = 0.0f;
+
+    // 距離・閾値定数
+    static constexpr float kMinRotationDistance = 0.001f;
+    static constexpr float kParallelThreshold = 0.999f;
+    static constexpr float kRotationSpeed = 8.0f;
+    static constexpr float kGroundLevel = 0.0f;
+    static constexpr float kVelocityZero = 0.0f;
+
+    // 影のスケール関連定数
+    static constexpr float kShadowBaseScale = 1.5f;
+    static constexpr float kShadowMinScale = 0.3f;
+    static constexpr float kShadowScaleFactor = 0.1f;
+
+    // ビヘイビアツリー距離定数
+    static constexpr float kFarDistanceMin = 10.0f;
+    static constexpr float kFarDistanceMax = 100.0f;
+    static constexpr float kMidDistanceMin = 5.0f;
+    static constexpr float kMidDistanceMax = 10.0f;
+    static constexpr float kCloseDistanceMin = 0.0f;
+    static constexpr float kCloseDistanceMax = 5.0f;
+
+    // ビヘイビアツリー重み定数
+    static constexpr float kCloseApproachWeight = 1.0f;
+    static constexpr float kStrafeWeight = 1.5f;
+    static constexpr float kRetreatWeight = 1.0f;
+    static constexpr float kGuardWeight = 1.2f;
+
     Direction dir_;
     MoveDirection moveDir_;
 
@@ -200,12 +269,12 @@ class Enemy : public BaseObject {
     std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> chageShake_;
 
-    bool isDamageReact_ = false;        // リアクション中かどうか
-    float damageReactTimer_ = 0.0f;     // 経過時間
+    bool isDamageReact_ = false;       // リアクション中かどうか
+    float damageReactTimer_ = 0.0f;    // 経過時間
     float damageReactDuration_ = 0.5f; // 少し短めの時間
-    EasingData<float> tiltEase_;        // 回転角イージング
-    Quaternion baseRotation_;           // 通常時の向き
-    Quaternion tiltRotation_;           // のけぞり用の回転
+    EasingData<float> tiltEase_;       // 回転角イージング
+    Quaternion baseRotation_;          // 通常時の向き
+    Quaternion tiltRotation_;          // のけぞり用の回転
 
     // ビヘイビアツリー関連
 #ifdef _DEBUG

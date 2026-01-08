@@ -78,9 +78,16 @@ void ParticleCSEmitter::LoadPrimitiveModel(PrimitiveType type) {
 void ParticleCSEmitter::Update() {
     if (isAuto_) {
         EmitterUpdate();
+    } else if (emitOnce_) {
+        emitterMeshData_->emit = 1;
+        emitOnce_ = false;
     } else {
         emitterMeshData_->emit = 0;
     }
+}
+
+void ParticleCSEmitter::EmitOnce() {
+    emitOnce_ = true;
 }
 
 void ParticleCSEmitter::DrawEmitter() {
@@ -501,6 +508,17 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "vortexStrength", group->GetSettingsData()->vortexStrength);
         data->Save(prefix + "enableVortexForTrail", group->GetSettingsData()->enableVortexForTrail);
         data->Save(prefix + "vortexAxis", group->GetSettingsData()->vortexAxis);
+
+        data->Save(prefix + "enableAcceleration", group->GetSettingsData()->enableAcceleration);
+        data->Save(prefix + "acceleration", group->GetSettingsData()->acceleration);
+        data->Save(prefix + "enableVelocityDamping", group->GetSettingsData()->enableVelocityDamping);
+        data->Save(prefix + "velocityDampingFactor", group->GetSettingsData()->velocityDampingFactor);
+        data->Save(prefix + "enableLifetimeVelocityDamping", group->GetSettingsData()->enableLifetimeVelocityDamping);
+        data->Save(prefix + "lifetimeVelocityDampingStart", group->GetSettingsData()->lifetimeVelocityDampingStart);
+        data->Save(prefix + "enableRadialVelocity", group->GetSettingsData()->enableRadialVelocity);
+        data->Save(prefix + "radialVelocityStrength", group->GetSettingsData()->radialVelocityStrength);
+        data->Save(prefix + "radialVelocityRandomness", group->GetSettingsData()->radialVelocityRandomness);
+        data->Save(prefix + "radialVelocityCenter", group->GetSettingsData()->radialVelocityCenter);
     }
 }
 
@@ -579,6 +597,17 @@ void ParticleCSEmitter::LoadSetting() {
         settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
         settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
         settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
+
+        settings.enableAcceleration = data->Load<uint32_t>(prefix + "enableAcceleration", 0);
+        settings.acceleration = data->Load<Vector3>(prefix + "acceleration", {0.0f, 0.0f, 0.0f});
+        settings.enableVelocityDamping = data->Load<uint32_t>(prefix + "enableVelocityDamping", 0);
+        settings.velocityDampingFactor = data->Load(prefix + "velocityDampingFactor", 0.0f);
+        settings.enableLifetimeVelocityDamping = data->Load<uint32_t>(prefix + "enableLifetimeVelocityDamping", 0);
+        settings.lifetimeVelocityDampingStart = data->Load(prefix + "lifetimeVelocityDampingStart", 0.0f);
+        settings.enableRadialVelocity = data->Load<uint32_t>(prefix + "enableRadialVelocity", 0);
+        settings.radialVelocityStrength = data->Load(prefix + "radialVelocityStrength", 0.0f);
+        settings.radialVelocityRandomness = data->Load(prefix + "radialVelocityRandomness", 0.0f);
+        settings.radialVelocityCenter = data->Load<Vector3>(prefix + "radialVelocityCenter", {0.0f, 0.0f, 0.0f});
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -669,6 +698,17 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
         settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
         settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
+
+        settings.enableAcceleration = data->Load<uint32_t>(prefix + "enableAcceleration", 0);
+        settings.acceleration = data->Load<Vector3>(prefix + "acceleration", {0.0f, 0.0f, 0.0f});
+        settings.enableVelocityDamping = data->Load<uint32_t>(prefix + "enableVelocityDamping", 0);
+        settings.velocityDampingFactor = data->Load(prefix + "velocityDampingFactor", 0.0f);
+        settings.enableLifetimeVelocityDamping = data->Load<uint32_t>(prefix + "enableLifetimeVelocityDamping", 0);
+        settings.lifetimeVelocityDampingStart = data->Load(prefix + "lifetimeVelocityDampingStart", 0.0f);
+        settings.enableRadialVelocity = data->Load<uint32_t>(prefix + "enableRadialVelocity", 0);
+        settings.radialVelocityStrength = data->Load(prefix + "radialVelocityStrength", 0.0f);
+        settings.radialVelocityRandomness = data->Load(prefix + "radialVelocityRandomness", 0.0f);
+        settings.radialVelocityCenter = data->Load<Vector3>(prefix + "radialVelocityCenter", {0.0f, 0.0f, 0.0f});
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -794,6 +834,10 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
                 ImGui::Checkbox("自動更新##Auto", &isAuto_);
+                ImGui::SameLine();
+                if (ImGui::Button("一回発生##EmitOnce")) {
+                    EmitOnce();
+                }
                 ImGui::Checkbox("エミッター表示##Visible", &isVisible_);
                 ImGui::PopStyleColor();
             } else {

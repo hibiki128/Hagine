@@ -33,4 +33,15 @@ class PlayerStateIdle : public PlayerBaseState {
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
     void Exit(Player &player) override;
+
+  private:
+    /// ==================================================
+    /// private varians
+    /// ==================================================
+
+    static constexpr float kGroundPullVelocity = -0.1f;    // 地面への引き付け速度
+    static constexpr float kDampingFactor = 0.75f;         // 減衰率
+    static constexpr float kVelocityStopThreshold = 0.01f; // 速度停止閾値
+    static constexpr float kVelocityZero = 0.0f;           // 速度ゼロ
+    static constexpr float kMoveSpeedZero = 0.0f;          // 移動速度ゼロ
 };

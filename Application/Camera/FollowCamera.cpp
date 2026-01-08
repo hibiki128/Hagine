@@ -7,17 +7,17 @@
 #include <cmath>
 
 void FollowCamera::Init() {
-    viewProjection_.farZ = 1100;
+    viewProjection_.farZ = kFarZ;
     viewProjection_.Initialize("");
     worldTransform_.Initialize();
-    yaw_ = 0.0f;
-    shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f};
-    shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f};
+    yaw_ = kInitialYaw;
+    shoulderOffsetTarget_ = {kVectorZero, kVectorZero, kVectorZero};
+    shoulderOffsetCurrent_ = {kVectorZero, kVectorZero, kVectorZero};
     wasLockedOn_ = false;
     isResettingShoulderOffset_ = false;
-    shoulderResetTimer_ = 0.0f;
-    shoulderLerpTimer_ = 0.0f;
-    shoulderLerpStartValue_ = 0.0f;
+    shoulderResetTimer_ = kTimerReset;
+    shoulderLerpTimer_ = kTimerReset;
+    shoulderLerpStartValue_ = kTimerReset;
 
     // 高さオフセットの初期化
     lockOnHeightOffsetCurrent_ = lockOnGroundedHeight_;
@@ -43,9 +43,9 @@ void FollowCamera::Update() {
     if (wasLockedOn_ && !isCurrentlyLockedOn) {
         // 肩オフセットのリセットを開始
         isResettingShoulderOffset_ = true;
-        shoulderResetTimer_ = 0.0f;
+        shoulderResetTimer_ = kTimerReset;
         shoulderOffsetStart_ = shoulderOffsetCurrent_;
-        shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f};
+        shoulderOffsetTarget_ = {kVectorZero, kVectorZero, kVectorZero};
     }
 
     // 現在のロックオン状態を保存
@@ -58,7 +58,7 @@ void FollowCamera::Update() {
             Vector3 currentPos = player->GetLocalPosition();
 
             if (player->GetIsLockOn() && player->GetEnemy()) {
-                Vector3 enemyTargetPos = player->GetEnemy()->GetPositionBehind(3.0f);
+                Vector3 enemyTargetPos = player->GetEnemy()->GetPositionBehind(rushEnemyBehindOffset_);
                 float distanceToTarget = (enemyTargetPos - currentPos).Length();
 
                 if (distanceToTarget > rushCameraResumeDistance_) {
@@ -73,29 +73,29 @@ void FollowCamera::Update() {
                     Vector3 playerToCameraDir = worldTransform_.translation_ - currentPos;
                     float playerCameraDistance = playerToCameraDir.Length();
                     float dynamicFollowRate = rushCameraFollowRate_;
-                    if (playerCameraDistance > 35.0f) {
-                        dynamicFollowRate = std::min(1.0f, rushCameraFollowRate_ * 3.0f);
-                    } else if (playerCameraDistance > 25.0f) {
-                        dynamicFollowRate = rushCameraFollowRate_ * 2.0f;
+                    if (playerCameraDistance > rushHighDistThreshold_) {
+                        dynamicFollowRate = std::min(kMaxFollowRate, rushCameraFollowRate_ * kHighDistSpeedMultiplier);
+                    } else if (playerCameraDistance > rushMidDistThreshold_) {
+                        dynamicFollowRate = rushCameraFollowRate_ * kMidDistSpeedMultiplier;
                     }
 
                     float deltaTime = Frame::DeltaTime();
                     rushBlendTimer_ += deltaTime;
-                    float t = std::min(rushBlendTimer_ / (1.0f / dynamicFollowRate), 1.0f);
-                    Vector3 blendedPos = ApplyEasing(rushCameraEasingType_, rushCameraPosition_, targetCameraPos, t, 1.0f);
+                    float t = std::min(rushBlendTimer_ / (kNormalizedValue / dynamicFollowRate), kMaxBlendValue);
+                    Vector3 blendedPos = ApplyEasing(rushCameraEasingType_, rushCameraPosition_, targetCameraPos, t, kEasingMaxValue);
                     worldTransform_.translation_ = blendedPos;
                     rushCameraPosition_ = blendedPos;
 
                     Vector3 toEnemy = (player->GetEnemy()->GetLocalPosition() - worldTransform_.translation_).Normalize();
                     Vector3 toPlayer = (currentPos - worldTransform_.translation_).Normalize();
-                    Vector3 blendedDir = ApplyEasing(rushCameraEasingType_, toEnemy, toPlayer, 0.3f, 1.0f).Normalize();
+                    Vector3 blendedDir = ApplyEasing(rushCameraEasingType_, toEnemy, toPlayer, kRushDirectionBlendRatio, kEasingMaxValue).Normalize();
 
                     Vector3 forward = blendedDir;
-                    Vector3 worldUp = {0.0f, 1.0f, 0.0f};
+                    Vector3 worldUp = {kVectorZero, kUpVectorY, kVectorZero};
 
                     Vector3 right;
-                    if (std::abs(forward.Dot(worldUp)) > 0.999f) {
-                        right = {1.0f, 0.0f, 0.0f};
+                    if (std::abs(forward.Dot(worldUp)) > kParallelThreshold) {
+                        right = {kRightVectorX, kVectorZero, kVectorZero};
                     } else {
                         right = (worldUp.Cross(forward)).Normalize();
                     }
@@ -104,10 +104,10 @@ void FollowCamera::Update() {
                     Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
 
                     rushRotationTimer_ += deltaTime;
-                    float rotT = std::min(rushRotationTimer_ / (1.0f / (dynamicFollowRate * 0.5f)), 1.0f);
+                    float rotT = std::min(rushRotationTimer_ / (kNormalizedValue / (dynamicFollowRate * kRotationSpeedMultiplier)), kMaxBlendValue);
                     worldTransform_.quateRotation_ = Quaternion::Slerp(
                         rushCameraRotation_, targetRot,
-                        ApplyEasing(rushCameraEasingType_, 0.0f, 1.0f, rotT, 1.0f));
+                        ApplyEasing(rushCameraEasingType_, kVectorZero, kEasingMaxValue, rotT, kEasingMaxValue));
                     rushCameraRotation_ = worldTransform_.quateRotation_;
 
                     worldTransform_.UpdateMatrix();
@@ -120,7 +120,7 @@ void FollowCamera::Update() {
                 } else {
                     if (!isResumeFromRush_) {
                         isResumeFromRush_ = true;
-                        rushResumeTimer_ = 0.0f;
+                        rushResumeTimer_ = kTimerReset;
                         rushCameraPosition_ = worldTransform_.translation_;
                         rushCameraRotation_ = worldTransform_.quateRotation_;
                     }
@@ -131,8 +131,8 @@ void FollowCamera::Update() {
             if (isResumeFromRush_)
                 isResumeFromRush_ = false;
             isRushCameraActive_ = false;
-            rushBlendTimer_ = 0.0f;
-            rushRotationTimer_ = 0.0f;
+            rushBlendTimer_ = kTimerReset;
+            rushRotationTimer_ = kTimerReset;
         }
     }
 
@@ -142,13 +142,13 @@ void FollowCamera::Update() {
         Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
         Vector3 toEnemyDir = enemyPos - targetPos;
 
-        Vector3 toEnemyDirXZ = {toEnemyDir.x, 0.0f, toEnemyDir.z};
+        Vector3 toEnemyDirXZ = {toEnemyDir.x, kVectorZero, toEnemyDir.z};
         float lengthXZ = toEnemyDirXZ.Length();
-        if (lengthXZ > 0.001f)
+        if (lengthXZ > kEpsilon)
             toEnemyDirXZ = toEnemyDirXZ.Normalize();
         yaw_ = std::atan2(toEnemyDirXZ.x, toEnemyDirXZ.z);
 
-        Vector3 cameraRightDir = {std::cos(yaw_), 0.0f, -std::sin(yaw_)};
+        Vector3 cameraRightDir = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
         float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
 
         hasInput = Input::GetInstance()->PushKey(DIK_W) ||
@@ -157,13 +157,13 @@ void FollowCamera::Update() {
                    Input::GetInstance()->PushKey(DIK_D);
 
         // 入力がある場合のみターゲットを更新
-        if (hasInput && std::abs(lateralVelocity) > 0.1f) {
-            float dirSign = std::clamp(lateralVelocity / target_->GetMaxSpeed(), -1.0f, 1.0f);
+        if (hasInput && std::abs(lateralVelocity) > kVelocityThreshold) {
+            float dirSign = std::clamp(lateralVelocity / target_->GetMaxSpeed(), kMinClamp, kMaxClamp);
             float newTarget = -dirSign * shoulderMaxOffset_;
 
             // ターゲットが大きく変わった場合のみリセット
-            if (std::abs(newTarget - shoulderOffsetTarget_.x) > 0.1f) {
-                shoulderLerpTimer_ = 0.0f;
+            if (std::abs(newTarget - shoulderOffsetTarget_.x) > kShoulderTargetThreshold) {
+                shoulderLerpTimer_ = kTimerReset;
                 shoulderLerpStartValue_ = shoulderOffsetCurrent_.x;
             }
 
@@ -184,21 +184,21 @@ void FollowCamera::Update() {
         lockOnHeightOffsetCurrent_ += heightDiff * lockOnHeightLerpSpeed_ * deltaTime;
 
         // 微小な差は切り捨て
-        if (std::abs(heightDiff) < 0.01f) {
+        if (std::abs(heightDiff) < kHeightDiffThreshold) {
             lockOnHeightOffsetCurrent_ = lockOnHeightOffsetTarget_;
         }
     }
 
     // 肩オフセットの補間処理
-    Vector3 cameraRightDir = {std::cos(yaw_), 0.0f, -std::sin(yaw_)};
+    Vector3 cameraRightDir = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
 
     if (isResettingShoulderOffset_) {
         // リセット中はイージングを使用
         shoulderResetTimer_ += Frame::DeltaTime();
-        float t = std::min(shoulderResetTimer_ / shoulderResetDuration_, 1.0f);
-        shoulderOffsetCurrent_ = ApplyEasing(shoulderResetEasingType_, shoulderOffsetStart_, shoulderOffsetTarget_, t, 1.0f);
+        float t = std::min(shoulderResetTimer_ / shoulderResetDuration_, kMaxBlendValue);
+        shoulderOffsetCurrent_ = ApplyEasing(shoulderResetEasingType_, shoulderOffsetStart_, shoulderOffsetTarget_, t, kEasingMaxValue);
 
-        if (t >= 1.0f) {
+        if (t >= kMaxBlendValue) {
             isResettingShoulderOffset_ = false;
         }
     } else {
@@ -207,12 +207,12 @@ void FollowCamera::Update() {
         float lerpSpeed = shoulderLerpSpeed_ * deltaTime;
 
         float diff = shoulderOffsetTarget_.x - shoulderOffsetCurrent_.x;
-        if (std::abs(diff) < 0.01f) {
+        if (std::abs(diff) < kShoulderDiffThreshold) {
             shoulderOffsetCurrent_.x = shoulderOffsetTarget_.x;
         } else {
             // OutQuadイージングを使用した追従
-            float t = std::min(lerpSpeed, 1.0f);
-            shoulderOffsetCurrent_.x += diff * ApplyEasing(shoulderEasingType_, 0.0f, 1.0f, t, 1.0f);
+            float t = std::min(lerpSpeed, kMaxBlendValue);
+            shoulderOffsetCurrent_.x += diff * ApplyEasing(shoulderEasingType_, kVectorZero, kEasingMaxValue, t, kEasingMaxValue);
         }
     }
 
@@ -221,7 +221,7 @@ void FollowCamera::Update() {
         Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
         Vector3 toEnemyDir = enemyPos - targetPos;
         float length = toEnemyDir.Length();
-        if (length > 0.001f)
+        if (length > kEpsilon)
             toEnemyDir = toEnemyDir.Normalize();
 
         cameraPos = targetPos - toEnemyDir * std::abs(cameraOffset_.z);
@@ -230,10 +230,10 @@ void FollowCamera::Update() {
         cameraPos.y += lockOnHeightOffsetCurrent_;
 
         Vector3 forward = toEnemyDir;
-        Vector3 worldUp = {0.0f, 1.0f, 0.0f};
+        Vector3 worldUp = {kVectorZero, kUpVectorY, kVectorZero};
         Vector3 right;
-        if (std::abs(forward.Dot(worldUp)) > 0.999f) {
-            right = {1.0f, 0.0f, 0.0f};
+        if (std::abs(forward.Dot(worldUp)) > kParallelThreshold) {
+            right = {kRightVectorX, kVectorZero, kVectorZero};
         } else {
             right = (worldUp.Cross(forward)).Normalize();
         }
@@ -244,7 +244,7 @@ void FollowCamera::Update() {
         cameraPos.x = targetPos.x + std::sin(yaw_) * cameraOffset_.z;
         cameraPos.z = targetPos.z + std::cos(yaw_) * cameraOffset_.z;
         cameraPos.y = targetPos.y + cameraOffset_.y;
-        worldTransform_.quateRotation_ = Quaternion::FromEulerAngles({0.0f, -yaw_, 0.0f});
+        worldTransform_.quateRotation_ = Quaternion::FromEulerAngles({kVectorZero, -yaw_, kVectorZero});
     }
 
     cameraPos += cameraRightDir * shoulderOffsetCurrent_.x;
@@ -255,18 +255,17 @@ void FollowCamera::Update() {
         Quaternion targetCameraRot = worldTransform_.quateRotation_;
 
         rushResumeTimer_ += Frame::DeltaTime();
-        float t = std::min(rushResumeTimer_ / (1.0f / rushResumeBlendSpeed_), 1.0f);
+        float t = std::min(rushResumeTimer_ / (kNormalizedValue / rushResumeBlendSpeed_), kMaxBlendValue);
 
-        worldTransform_.translation_ = ApplyEasing(rushResumeEasingType_, rushCameraPosition_, targetCameraPos, t, 1.0f);
+        worldTransform_.translation_ = ApplyEasing(rushResumeEasingType_, rushCameraPosition_, targetCameraPos, t, kEasingMaxValue);
         worldTransform_.quateRotation_ = Quaternion::Slerp(
             rushCameraRotation_, targetCameraRot,
-            ApplyEasing(rushResumeEasingType_, 0.0f, 1.0f, t, 1.0f));
+            ApplyEasing(rushResumeEasingType_, kVectorZero, kEasingMaxValue, t, kEasingMaxValue));
 
         float positionDiff = (worldTransform_.translation_ - targetCameraPos).Length();
-        float rotationDiff = std::abs(1.0f - std::abs(worldTransform_.quateRotation_.Dot(targetCameraRot)));
-        if (positionDiff < 0.5f && rotationDiff < 0.01f) {
+        float rotationDiff = std::abs(kNormalizedValue - std::abs(worldTransform_.quateRotation_.Dot(targetCameraRot)));
+        if (positionDiff < rushPosArrivalThreshold_ && rotationDiff < rushRotationArrivalThreshold_) {
             isResumeFromRush_ = false;
-            rushResumeTimer_ = 0.0f;
         }
 
         rushCameraPosition_ = worldTransform_.translation_;
@@ -344,10 +343,10 @@ void FollowCamera::Move() {
     Player *player = dynamic_cast<Player *>(target_);
     if (!player || !player->GetIsLockOn()) {
         if (Input::GetInstance()->PushKey(DIK_LEFT)) {
-            yaw_ -= 0.04f;
+            yaw_ -= manualYawSpeed_;
         }
         if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
-            yaw_ += 0.04f;
+            yaw_ += manualYawSpeed_;
         }
     }
 }

@@ -26,41 +26,41 @@ void DeathStaging::Update() {
     deathParticle_->Update();
     deathParticle_L_Arm->Update();
     deathParticle_R_Arm->Update();
-    if (time_ <= 0.6f) {
+    if (time_ <= kParticleActiveTime) {
         deathParticle_->SetTranslate(position_);
         deathParticle_->SetStartColor(color_);
-        deathParticle_->SetEndColor({color_.x, color_.y, color_.z, 0.0f});
+        deathParticle_->SetEndColor({color_.x, color_.y, color_.z, kAlphaZero});
         deathParticle_->SetAuto(true);
 
         deathParticle_R_Arm->SetTranslate(position_R_Arm);
         deathParticle_R_Arm->SetStartColor(color_R_Arm);
-        deathParticle_R_Arm->SetEndColor({color_R_Arm.x, color_R_Arm.y, color_R_Arm.z, 0.0f});
+        deathParticle_R_Arm->SetEndColor({color_R_Arm.x, color_R_Arm.y, color_R_Arm.z, kAlphaZero});
         deathParticle_R_Arm->SetAuto(true);
 
         deathParticle_L_Arm->SetTranslate(position_L_Arm);
         deathParticle_L_Arm->SetStartColor(color_L_Arm);
-        deathParticle_L_Arm->SetEndColor({color_L_Arm.x, color_L_Arm.y, color_L_Arm.z, 0.0f});
+        deathParticle_L_Arm->SetEndColor({color_L_Arm.x, color_L_Arm.y, color_L_Arm.z, kAlphaZero});
         deathParticle_L_Arm->SetAuto(true);
     } else {
         deathParticle_->SetAuto(false);
         deathParticle_R_Arm->SetAuto(false);
         deathParticle_L_Arm->SetAuto(false);
     }
-    if (time_ >= 0.3f) {
+    if (time_ >= kGravityStartTime) {
         deathParticle_->SetEnableGravity(true);
         deathParticle_->SetEnableLifeTimeScale(true);
-        deathParticle_->SetMaxVelocity({0.5f, 0.0f, 0.5f});
-        deathParticle_->SetMinVelocity({-0.5f, -1.0f, -0.5f});
+        deathParticle_->SetMaxVelocity({kMaxVelocityX, kMaxVelocityY, kMaxVelocityZ});
+        deathParticle_->SetMinVelocity({kMinVelocityX, kMinVelocityY, kMinVelocityZ});
 
         deathParticle_R_Arm->SetEnableGravity(true);
         deathParticle_R_Arm->SetEnableLifeTimeScale(true);
-        deathParticle_R_Arm->SetMaxVelocity({0.5f, 0.0f, 0.5f});
-        deathParticle_R_Arm->SetMinVelocity({-0.5f, -1.0f, -0.5f});
+        deathParticle_R_Arm->SetMaxVelocity({kMaxVelocityX, kMaxVelocityY, kMaxVelocityZ});
+        deathParticle_R_Arm->SetMinVelocity({kMinVelocityX, kMinVelocityY, kMinVelocityZ});
 
         deathParticle_L_Arm->SetEnableGravity(true);
         deathParticle_L_Arm->SetEnableLifeTimeScale(true);
-        deathParticle_L_Arm->SetMaxVelocity({0.5f, 0.0f, 0.5f});
-        deathParticle_L_Arm->SetMinVelocity({-0.5f, -1.0f, -0.5f});
+        deathParticle_L_Arm->SetMaxVelocity({kMaxVelocityX, kMaxVelocityY, kMaxVelocityZ});
+        deathParticle_L_Arm->SetMinVelocity({kMinVelocityX, kMinVelocityY, kMinVelocityZ});
 
         isStart_ = true;
     }
@@ -74,10 +74,10 @@ void DeathStaging::Draw(const ViewProjection &vp) {
 }
 
 void DeathStaging::imgui() {
-   /* if (ImGui::CollapsingHeader("右手")) {
-        deathParticle_R_Arm->DrawImGui();
-    }
-    if (ImGui::CollapsingHeader("左手")) {
-        deathParticle_L_Arm->DrawImGui();
-    }*/
+    /* if (ImGui::CollapsingHeader("右手")) {
+         deathParticle_R_Arm->DrawImGui();
+     }
+     if (ImGui::CollapsingHeader("左手")) {
+         deathParticle_L_Arm->DrawImGui();
+     }*/
 }

@@ -58,6 +58,48 @@ class FollowCamera {
     /// private varians
     /// ===================================================
 
+    // カメラ設定
+    static constexpr float kFarZ = 1100.0f;
+
+    // 閾値定数
+    static constexpr float kEpsilon = 0.001f;
+    static constexpr float kRotationEpsilon = 0.01f;
+    static constexpr float kParallelThreshold = 0.999f;
+    static constexpr float kVelocityThreshold = 0.1f;
+    static constexpr float kShoulderTargetThreshold = 0.1f;
+    static constexpr float kShoulderDiffThreshold = 0.01f;
+    static constexpr float kHeightDiffThreshold = 0.01f;
+
+    // ベクトル定数
+    static constexpr float kVectorZero = 0.0f;
+    static constexpr float kUpVectorY = 1.0f;
+    static constexpr float kRightVectorX = 1.0f;
+
+    // 初期値
+    static constexpr float kInitialYaw = 0.0f;
+    static constexpr float kTimerReset = 0.0f;
+
+    // 正規化・クランプ値
+    static constexpr float kNormalizedValue = 1.0f;
+    static constexpr float kMaxBlendValue = 1.0f;
+    static constexpr float kMaxFollowRate = 1.0f;
+    static constexpr float kMinClamp = -1.0f;
+    static constexpr float kMaxClamp = 1.0f;
+    static constexpr float kEasingMaxValue = 1.0f;
+
+    // Rush関連の倍率
+    static constexpr float kHighDistSpeedMultiplier = 3.0f;
+    static constexpr float kMidDistSpeedMultiplier = 2.0f;
+    static constexpr float kRotationSpeedMultiplier = 0.5f;
+    static constexpr float kRushDirectionBlendRatio = 0.3f;
+
+    float manualYawSpeed_ = 0.04f;               // 手動回転速度
+    float rushEnemyBehindOffset_ = 3.0f;         // 敵の背後にとる距離
+    float rushHighDistThreshold_ = 35.0f;        // Rushカメラが高速追従する距離(遠)
+    float rushMidDistThreshold_ = 25.0f;         // Rushカメラが中速追従する距離(中)
+    float rushPosArrivalThreshold_ = 0.5f;       // Rush復帰時の完了判定距離
+    float rushRotationArrivalThreshold_ = 0.01f; // Rush復帰時の完了判定回転差
+
     // ビュープロジェクション
     ViewProjection viewProjection_;
 

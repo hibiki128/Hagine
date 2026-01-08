@@ -4,13 +4,13 @@
 #include "application/Camera/FollowCamera.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
-#include <cmath> // ベクトル計算に必要
+#include <cmath>
 
 void PlayerStateMove::Enter(Player &player) {
     float currentHorizontalSpeed = sqrt(player.GetVelocity().x * player.GetVelocity().x +
                                         player.GetVelocity().z * player.GetVelocity().z);
-    if (currentHorizontalSpeed < 2.0f) {
-        player.GetMoveSpeed() = 2.0f;
+    if (currentHorizontalSpeed < kMinInitialSpeed) {
+        player.GetMoveSpeed() = kMinInitialSpeed;
     } else {
         player.GetMoveSpeed() = currentHorizontalSpeed;
     }
@@ -22,11 +22,11 @@ void PlayerStateMove::Enter(Player &player) {
 void PlayerStateMove::Update(Player &player) {
     player.GetCanJump() = player.GetIsGrounded();
 
-    player.GetVelocity().y = -0.1f;
+    player.GetVelocity().y = kGroundPullVelocity;
 
     player.Move();
 
-    if (!Input::GetInstance()->PushKey(DIK_W)&&
+    if (!Input::GetInstance()->PushKey(DIK_W) &&
         !Input::GetInstance()->PushKey(DIK_A) &&
         !Input::GetInstance()->PushKey(DIK_S) &&
         !Input::GetInstance()->PushKey(DIK_D)) {
@@ -39,7 +39,6 @@ void PlayerStateMove::Update(Player &player) {
         return;
     }
 
-    // 方向の更新
     player.DirectionUpdate();
 }
 

@@ -1,6 +1,7 @@
 #include "ClearScene.h"
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
+#include <Frame.h>
 void ClearScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
@@ -12,7 +13,7 @@ void ClearScene::Initialize() {
     /// ロード
     /// ===================================================
     BaseObjectManager::GetInstance()->LoadAll("ClearScene");
-    LightGroup::GetInstance()->LoadLightData("GameLight");
+    LightGroup::GetInstance()->LoadLightData("ClearLight");
 
     /// ===================================================
     /// インスタンス生成
@@ -32,14 +33,14 @@ void ClearScene::Initialize() {
     vp_.Initialize("P_StartCamera");
     resultStaging_->Initialize();
     resultUI_->Initialize();
-    vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
+
+    skyBox_->Initialize("game/skybox_night.dds");
 
     /// ===================================================
     /// セット
     /// ===================================================
     resultUI_->SetClearTime(sceneManager_->GetClearTime());
     resultUI_->SetHP(sceneManager_->GetHP());
-
 }
 
 void ClearScene::Finalize() {
@@ -47,11 +48,19 @@ void ClearScene::Finalize() {
 }
 
 void ClearScene::Update() {
+
+    currentCameraStartTimer_ += Frame::DeltaTime();
+    if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
+        vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
+        cameraStart_ = true;
+        resultStaging_->SetStartEasing(true);
+    }
     // カメラ更新
     CameraUpdate();
 
-    if (!vp_.GetIsCameraMove()) {
+    if (!vp_.GetIsCameraMove() && cameraStart_) {
         resultUI_->SetIsStartEasing(true);
+        resultStaging_->SetfireWorkStarted(true);
     }
 
     // シーン切り替え
@@ -75,6 +84,8 @@ void ClearScene::Draw() {
 
     resultUI_->Draw();
 
+    resultStaging_->Draw(vp_);
+
     SpriteManager::GetInstance()->DrawAll();
 
     /// -------描画処理終了-------
@@ -89,6 +100,8 @@ void ClearScene::DrawForOffScreen() {
 void ClearScene::AddSceneSetting() {
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
+
+    resultStaging_->DrawImGui();
 }
 
 void ClearScene::AddObjectSetting() {
@@ -106,9 +119,11 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
+#ifndef _DEBUG
     // リザルト演出が完全に終了しているかチェック
     if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
         // シーンを変更
         sceneManager_->NextSceneReservation("TITLE");
     }
+#endif // !_DEBUG
 }

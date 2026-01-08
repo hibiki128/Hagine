@@ -30,4 +30,9 @@ class PlayerStateMove : public PlayerBaseState {
     void Exit(Player &player) override;
 
   private:
+    /// ===================================================
+    /// private varians
+    /// ===================================================
+    static constexpr float kMinInitialSpeed = 2.0f;     // 最小初期速度
+    static constexpr float kGroundPullVelocity = -0.1f; // 地面への引き付け速度
 };

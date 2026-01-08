@@ -388,6 +388,17 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->gatherStartRatio = 0.5f;
     settingsData_->gatherStrength = 2.0f;
     settingsData_->gatherTarget = {0.0f, 0.0f, 0.0f};
+
+    settingsData_->enableAcceleration = 0;
+    settingsData_->acceleration = {0.0f, 0.0f, 0.0f};
+    settingsData_->enableVelocityDamping = 0;
+    settingsData_->velocityDampingFactor = 0.98f;
+    settingsData_->enableLifetimeVelocityDamping = 0;
+    settingsData_->lifetimeVelocityDampingStart = 0.5f;
+    settingsData_->enableRadialVelocity = 0;
+    settingsData_->radialVelocityStrength = 1.0f;
+    settingsData_->radialVelocityRandomness = 0.2f;
+    settingsData_->radialVelocityCenter = {0.0f, 0.0f, 0.0f};
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -647,6 +658,135 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
                 ImGui::DragFloat3("重力ベクトル##Gravity", &settingsData_->gravity.x, 0.1f);
                 ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
+
+            bool enableAcceleration = settingsData_->enableAcceleration != 0;
+            if (ImGui::Checkbox("加速度を有効化", &enableAcceleration)) {
+                settingsData_->enableAcceleration = enableAcceleration ? 1 : 0;
+            }
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("一定の加速度を速度に追加します\n重力とは別に設定できます");
+            }
+
+            if (enableAcceleration) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
+                ImGui::DragFloat3("加速度ベクトル##Accel", &settingsData_->acceleration.x, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("毎フレーム速度に加算される値");
+                }
+                ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
+
+            // 速度減衰設定
+            bool enableVelocityDamping = settingsData_->enableVelocityDamping != 0;
+            if (ImGui::Checkbox("速度減衰を有効化", &enableVelocityDamping)) {
+                settingsData_->enableVelocityDamping = enableVelocityDamping ? 1 : 0;
+            }
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("空気抵抗のように徐々に減速します\n花火の演出に最適");
+            }
+
+            if (enableVelocityDamping) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
+                ImGui::DragFloat("減衰係数##VelDamp", &settingsData_->velocityDampingFactor, 0.001f, 0.8f, 0.999f, "%.3f");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("値が小さいほど強く減衰\n推奨: 0.95-0.99");
+                }
+                ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
+
+            // ライフタイム速度減衰設定
+            bool enableLifetimeVelocityDamping = settingsData_->enableLifetimeVelocityDamping != 0;
+            if (ImGui::Checkbox("寿命による速度減衰", &enableLifetimeVelocityDamping)) {
+                settingsData_->enableLifetimeVelocityDamping = enableLifetimeVelocityDamping ? 1 : 0;
+            }
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("寿命の終わりに向けて速度が0に近づきます\n花火が最後に止まる演出に");
+            }
+
+            if (enableLifetimeVelocityDamping) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.6f));
+                ImGui::DragFloat("減衰開始タイミング##LifeDamp", &settingsData_->lifetimeVelocityDampingStart, 0.01f, 0.0f, 1.0f, "%.2f");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("寿命の何%から減速を開始するか\n0.0=最初から 1.0=最後だけ\n推奨: 0.5-0.8");
+                }
+                ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // 放射状速度設定（新しいサブセクション）
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.7f, 0.5f, 1.0f));
+            ImGui::Text("放射状速度設定:");
+            ImGui::PopStyleColor();
+
+            bool enableRadialVelocity = settingsData_->enableRadialVelocity != 0;
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
+            if (ImGui::Checkbox("放射状速度を有効化", &enableRadialVelocity)) {
+                settingsData_->enableRadialVelocity = enableRadialVelocity ? 1 : 0;
+            }
+            ImGui::PopStyleColor();
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("中心点から放射状に飛び散る速度を設定\n花火や爆発の演出に最適");
+            }
+
+            if (enableRadialVelocity) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.3f, 0.2f, 0.6f));
+
+                ImGui::DragFloat("放射強度##RadialStr", &settingsData_->radialVelocityStrength, 0.1f, 0.1f, 20.0f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("放射速度の倍率\n大きいほど激しく飛び散ります");
+                }
+
+                ImGui::DragFloat("ランダム性##RadialRand", &settingsData_->radialVelocityRandomness, 0.01f, 0.0f, 1.0f, "%.2f");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("放射方向のランダムさ\n0=完全放射状 1=完全ランダム\n推奨: 0.1-0.3");
+                }
+
+                ImGui::DragFloat3("放射中心座標##RadialCenter", &settingsData_->radialVelocityCenter.x, 0.1f);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("パーティクルが飛び散る中心点\n通常はエミッター位置と同じにします");
+                }
+
+                ImGui::PopStyleColor();
+
+                // プリセットボタン
+                ImGui::Spacing();
+                ImGui::Text("プリセット:");
+                if (ImGui::Button("花火風", ImVec2(80, 0))) {
+                    settingsData_->enableRadialVelocity = 1;
+                    settingsData_->radialVelocityStrength = 5.0f;
+                    settingsData_->radialVelocityRandomness = 0.2f;
+                    settingsData_->enableGravity = 1;
+                    settingsData_->gravity = {0.0f, -9.8f, 0.0f};
+                    settingsData_->enableVelocityDamping = 1;
+                    settingsData_->velocityDampingFactor = 0.95f;
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("爆発風", ImVec2(80, 0))) {
+                    settingsData_->enableRadialVelocity = 1;
+                    settingsData_->radialVelocityStrength = 8.0f;
+                    settingsData_->radialVelocityRandomness = 0.3f;
+                    settingsData_->enableGravity = 1;
+                    settingsData_->gravity = {0.0f, -9.8f, 0.0f};
+                    settingsData_->enableLifetimeVelocityDamping = 1;
+                    settingsData_->lifetimeVelocityDampingStart = 0.7f;
+                }
+
                 ImGui::Unindent();
             }
 

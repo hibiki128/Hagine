@@ -100,4 +100,8 @@ class ClearScene : public BaseScene {
     std::unique_ptr<ResultUI> resultUI_;
 
     SkyBox *skyBox_ = nullptr;
+
+    const float cameraStartTimer_ = 5.0f;
+    float currentCameraStartTimer_ = 0.0f;
+    bool cameraStart_ = false;
 };

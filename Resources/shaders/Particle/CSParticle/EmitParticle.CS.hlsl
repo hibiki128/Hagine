@@ -141,6 +141,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
     gParticles[particleIndex].translate = emitPosition;
     gParticles[particleIndex].lastTrailPosition = emitPosition;
     
+    
+    
     if (gSettings.enableRandomColor)
     {
         gParticles[particleIndex].color.rgb = generator.Generate3d() * 0.5f + 0.5f;
@@ -151,11 +153,39 @@ void main(uint3 DTid : SV_DispatchThreadID)
         gParticles[particleIndex].color = gSettings.startColor;
     }
     
-    float3 vel = float3(
-        lerp(gSettings.velocityMin.x, gSettings.velocityMax.x, generator.Generate1d()),
-        lerp(gSettings.velocityMin.y, gSettings.velocityMax.y, generator.Generate1d()),
-        lerp(gSettings.velocityMin.z, gSettings.velocityMax.z, generator.Generate1d())
-    );
+    float3 vel;
+    
+    if (gSettings.enableRadialVelocity)
+    {
+        // 放射状の速度を計算
+        float3 radialDirection = normalize(emitPosition - gSettings.radialVelocityCenter);
+        
+        // ランダム性を追加
+        if (gSettings.radialVelocityRandomness > 0.0f)
+        {
+            float3 randomOffset = float3(
+                (generator.Generate1d() - 0.5f) * 2.0f,
+                (generator.Generate1d() - 0.5f) * 2.0f,
+                (generator.Generate1d() - 0.5f) * 2.0f
+            ) * gSettings.radialVelocityRandomness;
+            
+            radialDirection = normalize(radialDirection + randomOffset);
+        }
+        
+        // 放射速度を設定
+        float speed = lerp(gSettings.velocityMin.x, gSettings.velocityMax.x, generator.Generate1d());
+        vel = radialDirection * speed * gSettings.radialVelocityStrength;
+    }
+    else
+    {
+        // 通常の速度設定
+        vel = float3(
+            lerp(gSettings.velocityMin.x, gSettings.velocityMax.x, generator.Generate1d()),
+            lerp(gSettings.velocityMin.y, gSettings.velocityMax.y, generator.Generate1d()),
+            lerp(gSettings.velocityMin.z, gSettings.velocityMax.z, generator.Generate1d())
+        );
+    }
+    
     gParticles[particleIndex].velocity = vel;
     
     gParticles[particleIndex].lifeTime = lerp(gSettings.lifeTimeMin, gSettings.lifeTimeMax, generator.Generate1d());

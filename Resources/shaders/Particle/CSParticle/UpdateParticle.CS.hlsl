@@ -110,10 +110,40 @@ void main(uint3 DTid : SV_DispatchThreadID)
         if (gParticles[particleIndex].color.a <= 0.0f)
             return;
         
-        // 1. 重力処理
+           // 1. 加速度処理(重力の前に追加)
+        if (gSettings.enableAcceleration)
+        {
+            gParticles[particleIndex].velocity += gSettings.acceleration * gPerFrame.deltaTime;
+        }
+        
+        // 2. 重力処理
         if (gSettings.enableGravity)
         {
             gParticles[particleIndex].velocity += gSettings.gravity * gPerFrame.deltaTime;
+        }
+        
+        // 3. 速度減衰処理(ギャザーの前に追加)
+        if (gSettings.enableVelocityDamping)
+        {
+            // 減衰係数を適用 (0.0で完全停止、1.0で減衰なし)
+            gParticles[particleIndex].velocity *= pow(gSettings.velocityDampingFactor, gPerFrame.deltaTime * 60.0f);
+        }
+        
+        // 4. ライフタイムに応じた速度減衰
+        if (gSettings.enableLifetimeVelocityDamping)
+        {
+            float lifeRatio = gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime;
+            
+            if (lifeRatio >= gSettings.lifetimeVelocityDampingStart)
+            {
+                // 減衰開始点からの進行度を計算
+                float dampingProgress = (lifeRatio - gSettings.lifetimeVelocityDampingStart) /
+                                       (1.0f - gSettings.lifetimeVelocityDampingStart);
+                
+                // 二乗カーブで滑らかに0に近づける
+                float dampingMultiplier = 1.0f - (dampingProgress * dampingProgress);
+                gParticles[particleIndex].velocity *= dampingMultiplier;
+            }
         }
         
         // 2. ギャザー処理

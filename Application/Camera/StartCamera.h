@@ -58,6 +58,27 @@ class StartCamera {
     /// private varians
     /// ===================================================
 
+    // カメラ設定
+    static constexpr float kFarZ = 1100.0f;
+    static constexpr float kInitialHeight = 42.0f;
+    static constexpr float kInitialAngleDegrees = -90.0f;
+
+    // 数値定数
+    static constexpr float kTimerReset = 0.0f;
+    static constexpr float kMaxBlendValue = 1.0f;
+    static constexpr float kEasingMaxValue = 1.0f;
+    static constexpr float kZeroRotation = 0.0f;
+    static constexpr float kHalfPi = 0.5f * std::numbers::pi_v<float>;
+
+    // フェーズ定数
+    static constexpr int kPhaseEasing1 = 1;
+    static constexpr int kPhaseWait1 = 2;
+    static constexpr int kPhaseEasing2 = 3;
+    static constexpr int kPhaseWait2 = 4;
+    static constexpr int kPhaseEasing3 = 5;
+    static constexpr int kPhaseWait3 = 6;
+    static constexpr int kPhaseComplete = 7;
+
     // ビュープロジェクション
     ViewProjection vp_;
 
