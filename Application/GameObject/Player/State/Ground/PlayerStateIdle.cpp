@@ -5,38 +5,32 @@
 #include <application/Utility/MotionEditor/MotionEditor.h>
 
 void PlayerStateIdle::Enter(Player &player) {
-    
 }
 
 void PlayerStateIdle::Update(Player &player) {
     player.GetCanJump() = player.GetIsGrounded();
 
-    player.GetVelocity().y = -0.1f;
+    player.GetVelocity().y = kGroundPullVelocity;
 
-    // --- 減速処理（X,Z方向） ---
     float &vx = player.GetVelocity().x;
     float &vz = player.GetVelocity().z;
 
-    const float damping = 0.75f;
-
-    // 一定以下になったら止める
-    if (std::abs(vx) < 0.01f) {
-        vx = 0.0f;
+    if (std::abs(vx) < kVelocityStopThreshold) {
+        vx = kVelocityZero;
     } else {
-        vx *= damping;
+        vx *= kDampingFactor;
     }
 
-    if (std::abs(vz) < 0.01f) {
-        vz = 0.0f;
+    if (std::abs(vz) < kVelocityStopThreshold) {
+        vz = kVelocityZero;
     } else {
-        vz *= damping;
+        vz *= kDampingFactor;
     }
 
-    if (vx == 0.0f && vz == 0.0f) {
-        player.GetMoveSpeed() = 0.0f;
+    if (vx == kVelocityZero && vz == kVelocityZero) {
+        player.GetMoveSpeed() = kMoveSpeedZero;
     }
 
-    // --- 入力処理 ---
     if (Input::GetInstance()->PushKey(DIK_A) ||
         Input::GetInstance()->PushKey(DIK_D) ||
         Input::GetInstance()->PushKey(DIK_S) ||

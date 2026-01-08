@@ -3,16 +3,16 @@
 #include <Frame.h>
 
 void StartCamera::Init() {
-    vp_.farZ = 1100;
+    vp_.farZ = kFarZ;
     vp_.Initialize("");
     wt_.Initialize();
 
     // 初期角度を設定(真東から開始)
-    angle_ = degreesToRadians(-90.0f);
+    angle_ = degreesToRadians(kInitialAngleDegrees);
 
     // 初期位置を計算(中心点の周りに配置)
     wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
-    wt_.translation_.y = 42.0f;
+    wt_.translation_.y = kInitialHeight;
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
 
     wt_.UpdateMatrix();
@@ -25,13 +25,13 @@ void StartCamera::Update() {
         switch (easingPhase_) {
         case 1: // 1回目のイージング
         {
-            float t = std::min(easingTimer_ / easingDuration_, 1.0f);
+            float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
             // 位置のイージング
-            wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, 1.0f);
+            wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, kEasingMaxValue);
 
             // 回転のイージング
-            wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot_, t, 1.0f);
+            wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot_, t, kEasingMaxValue);
 
             wt_.UpdateMatrix();
 
@@ -41,9 +41,9 @@ void StartCamera::Update() {
             vp_.UpdateMatrix();
 
             // 1回目のイージング完了チェック
-            if (t >= 1.0f) {
-                easingPhase_ = 2; // 待機フェーズへ
-                easingTimer_ = 0.0f;
+            if (t >= kMaxBlendValue) {
+                easingPhase_ = kPhaseWait1;
+                easingTimer_ = kTimerReset;
             }
             break;
         }
@@ -52,8 +52,8 @@ void StartCamera::Update() {
         {
             if (easingTimer_ >= waitDuration_) {
                 // 2回目のイージング開始
-                easingPhase_ = 3;
-                easingTimer_ = 0.0f;
+                easingPhase_ = kPhaseEasing2;
+                easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
                 easingStartRot_ = wt_.eulerRotation_;
             }
@@ -62,13 +62,13 @@ void StartCamera::Update() {
 
         case 3: // 2回目のイージング
         {
-            float t = std::min(easingTimer_ / easingDuration_, 1.0f);
+            float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
             // 位置のイージング
-            wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos2_, t, 1.0f);
+            wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos2_, t, kEasingMaxValue);
 
             // 回転のイージング
-            wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot2_, t, 1.0f);
+            wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot2_, t, kEasingMaxValue);
 
             wt_.UpdateMatrix();
 
@@ -78,19 +78,19 @@ void StartCamera::Update() {
             vp_.UpdateMatrix();
 
             // 2回目のイージング完了チェック
-            if (t >= 1.0f) {
-                easingPhase_ = 4; // 最終待機フェーズへ
-                easingTimer_ = 0.0f;
+            if (t >= kMaxBlendValue) {
+                easingPhase_ = kPhaseWait2;
+                easingTimer_ = kTimerReset;
             }
             break;
         }
 
-       case 4: // 2回目完了後の待機
+        case 4: // 2回目完了後の待機
         {
             if (easingTimer_ >= waitDuration_) {
                 // 3回目のイージング開始（targetVpへ）
-                easingPhase_ = 5;
-                easingTimer_ = 0.0f;
+                easingPhase_ = kPhaseEasing3;
+                easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
                 easingStartRot_ = wt_.eulerRotation_;
             }
@@ -99,13 +99,13 @@ void StartCamera::Update() {
 
         case 5: // 3回目のイージング（targetVpへ）
         {
-            float t = std::min(easingTimer_ / easingDuration_, 1.0f);
+            float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
             // 位置のイージング
-            wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, targetVp_.translation_, t, 1.0f);
+            wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, targetVp_.translation_, t, kEasingMaxValue);
 
             // 回転のイージング
-            wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, targetVp_.eulerRotation_, t, 1.0f);
+            wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, targetVp_.eulerRotation_, t, kEasingMaxValue);
 
             wt_.UpdateMatrix();
 
@@ -115,9 +115,9 @@ void StartCamera::Update() {
             vp_.UpdateMatrix();
 
             // 3回目のイージング完了チェック
-            if (t >= 1.0f) {
-                easingPhase_ = 6; // 最終待機フェーズへ
-                easingTimer_ = 0.0f;
+            if (t >= kMaxBlendValue) {
+                easingPhase_ = kPhaseWait3;
+                easingTimer_ = kTimerReset;
             }
             break;
         }
@@ -126,7 +126,7 @@ void StartCamera::Update() {
         {
             if (easingTimer_ >= finalWaitDuration_) {
                 // 完了
-                easingPhase_ = 7;
+                easingPhase_ = kPhaseComplete;
                 isEasing_ = false;
                 isComplete_ = true;
             }
@@ -139,7 +139,7 @@ void StartCamera::Update() {
 
     // カメラ位置を計算(中心点の周りを回転)
     wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
-    wt_.translation_.y = 42.0f;
+    wt_.translation_.y = kInitialHeight;
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
 
     // カメラから中心点への方向ベクトルを計算
@@ -152,7 +152,7 @@ void StartCamera::Update() {
     float horizontalDistance = std::sqrt(toCenter.x * toCenter.x + toCenter.z * toCenter.z);
     float pitch = std::atan2(-toCenter.y, horizontalDistance);
 
-    wt_.eulerRotation_ = {pitch, yaw, 0.0f};
+    wt_.eulerRotation_ = {pitch, yaw, kZeroRotation};
 
     wt_.UpdateMatrix();
 
@@ -165,10 +165,10 @@ void StartCamera::Update() {
 void StartCamera::Move() {
     angle_ += speed_ * Frame::DeltaTime();
 
-    if (angle_ > 0.5f * std::numbers::pi_v<float> && !isEasing_) {
+    if (angle_ > kHalfPi && !isEasing_) {
         isEasing_ = true;
-        easingPhase_ = 1;
-        easingTimer_ = 0.0f;
+        easingPhase_ = kPhaseEasing1;
+        easingTimer_ = kTimerReset;
         easingStartPos_ = wt_.translation_;
         easingStartRot_ = wt_.eulerRotation_;
     }

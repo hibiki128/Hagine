@@ -45,12 +45,30 @@ class DeathCamera {
     /// private varians
     /// ===================================================
 
+    // カメラ設定
+    static constexpr float kFarZ = 1100.0f;
+
+    // イージング設定
+    static constexpr float kHalfwayRatio = 0.5f;
+    static constexpr float kEasingEndThreshold = 1.0f;
+    static constexpr float kEasingMaxValue = 1.0f;
+    static constexpr float kTimerReset = 0.0f;
+
+    // ベクトル設定
+    static constexpr float kParallelThreshold = 0.999f;
+    static constexpr float kUpVectorX = 0.0f;
+    static constexpr float kUpVectorY = 1.0f;
+    static constexpr float kUpVectorZ = 0.0f;
+    static constexpr float kRightVectorX = 1.0f;
+    static constexpr float kRightVectorY = 0.0f;
+    static constexpr float kRightVectorZ = 0.0f;
+
     ViewProjection vp_;
     WorldTransform wt_;
 
     bool isEasing_ = false;
     bool isComplete_ = false;
-    bool isHalfway_ = false; 
+    bool isHalfway_ = false;
     float easingTimer_ = 0.0f;
     float easingDuration_ = 0.8f;
 

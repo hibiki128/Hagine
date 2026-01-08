@@ -127,25 +127,43 @@ class ChargeShot : public BaseObject {
     /// private varians
     /// ===================================================
 
+    // 定数定義
+    static constexpr float kInitialScale = 1.0f;                  // 初期スケール値
+    static constexpr float kScaleSpeed = 1.25f;                   // スケール増加速度
+    static constexpr float kMaxScale = 4.0f;                      // 最大スケール値
+    static constexpr float kSpeed = 60.0f;                        // 発射速度
+    static constexpr float kMaxDistance = 300.0f;                 // プレイヤーからの最大距離
+    static constexpr float kMinEnergyCost = 5.0f;                 // 最小エネルギー消費量
+    static constexpr float kMaxEnergyCost = 20.0f;                // 最大エネルギー消費量(5 + 15)
+    static constexpr float kMinEnergyToStart = 20.0f;             // チャージ開始に必要な最小エネルギー
+    static constexpr float kMinDamage = 1.0f;                     // 最小ダメージ値
+    static constexpr int kMaxDamage = 7;                          // 最大ダメージ値
+    static constexpr float kDefaultPlayerRadius = 1.0f;           // デフォルトのプレイヤー半径
+    static constexpr float kDefaultOffsetMargin = 0.5f;           // デフォルトのオフセット余裕距離
+    static constexpr float kDefaultVerticalOffset = 1.0f;         // デフォルトの垂直方向オフセット
+    static constexpr float kParticleScaleBase = 0.6f;             // パーティクルスケールの基準値
+    static constexpr float kParticleScaleMultiplier = 1.4f;       // パーティクルスケールの倍率
+    static constexpr float kParticleEndScaleOffset = 0.2f;        // パーティクル終了時のスケールオフセット
+    static constexpr float kBulletParticleScaleMultiplier = 2.0f; // 弾パーティクルのスケール倍率
+
     Vector3 offset_{};
     bool isAlive_ = false;    // 生存フラグ
     bool isMaxScale_ = false; // 最大スケール到達フラグ
     bool isFired_ = false;    // 発射済みフラグ
     bool isCharge = false;    // チャージ中フラグ
 
-    float scale_ = 1.0f;       // 現在のスケール
-    float scaleSpeed_ = 1.25f; // スケール増加速度
-    float maxScale_ = 4.0f;    // 最大スケール値
+    float scale_ = kInitialScale;    // 現在のスケール
+    float scaleSpeed_ = kScaleSpeed; // スケール増加速度
+    float maxScale_ = kMaxScale;     // 最大スケール値
 
     Vector3 velocity_{};
-    float speed_ = 60.0f; // 発射速度
+    float speed_ = kSpeed; // 発射速度
 
     Player *player_ = nullptr;
-    static constexpr int maxDamage_ = 7; // 最大ダメージ値
 
-    float playerRadius_ = 1.0f;   // プレイヤーの半径
-    float offsetMargin_ = 0.5f;   // オフセット余裕距離
-    float verticalOffset_ = 1.0f; // 垂直方向のオフセット
+    float playerRadius_ = kDefaultPlayerRadius;     // プレイヤーの半径
+    float offsetMargin_ = kDefaultOffsetMargin;     // オフセット余裕距離
+    float verticalOffset_ = kDefaultVerticalOffset; // 垂直方向のオフセット
 
     std::unique_ptr<ParticleCSEmitter> chargeEmitter_;
     std::unique_ptr<ParticleEmitter> bulletEmitter_;

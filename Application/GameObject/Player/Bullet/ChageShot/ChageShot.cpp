@@ -29,7 +29,7 @@ void ChargeShot::Init(const std::string objectName) {
     isAlive_ = false;
     isMaxScale_ = false;
     isFired_ = false;
-    scale_ = 1.0f;
+    scale_ = kInitialScale;
     velocity_ = {0, 0, 0};
     // 初期位置もリセット
     chargeEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("chargeEmitter");
@@ -48,23 +48,27 @@ void ChargeShot::Update() {
         // 弾エミッターの更新と位置・スケール設定
         bulletEmitter_->Update();
         bulletEmitter_->SetPosition(transform_->translation_);
-        bulletEmitter_->SetStartScale("chageBullet", transform_->scale_ * 2.0f);
+        bulletEmitter_->SetStartScale("chageBullet", transform_->scale_ * kBulletParticleScaleMultiplier);
         if (!isMaxScale_) {
-            bulletEmitter_->SetStartScale("chageAround", {(0.6f + scale_) * 1.4f, (0.6f + scale_) * 1.4f, (0.6f + scale_) * 1.4f});
-            bulletEmitter_->SetEndScale("chageAround", {(0.8f + scale_) * 1.4f, (0.8f + scale_) * 1.4f, (0.8f + scale_) * 1.4f});
+            bulletEmitter_->SetStartScale("chageAround", {(kParticleScaleBase + scale_) * kParticleScaleMultiplier,
+                                                          (kParticleScaleBase + scale_) * kParticleScaleMultiplier,
+                                                          (kParticleScaleBase + scale_) * kParticleScaleMultiplier});
+            bulletEmitter_->SetEndScale("chageAround", {(kParticleScaleBase + kParticleEndScaleOffset + scale_) * kParticleScaleMultiplier,
+                                                        (kParticleScaleBase + kParticleEndScaleOffset + scale_) * kParticleScaleMultiplier,
+                                                        (kParticleScaleBase + kParticleEndScaleOffset + scale_) * kParticleScaleMultiplier});
         }
     }
 
     if (!isAlive_) {
         if (input->TriggerKey(DIK_K)) {
             // チャージ開始前にエネルギーチェックを追加
-            if (player_ && player_->GetEnergy() < 20.0f) {
+            if (player_ && player_->GetEnergy() < kMinEnergyToStart) {
                 // エネルギー不足でチャージ開始できない
                 return;
             }
             isAlive_ = true;
             isFired_ = false;
-            scale_ = 1.0f;
+            scale_ = kInitialScale;
             isMaxScale_ = false;
         }
     } else {
@@ -80,9 +84,9 @@ void ChargeShot::Update() {
             isCharge = true;
         }
         if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
-            // エネルギー消費量を計算(チャージ率に応じて5〜50)
-            float scaleRatio = (scale_ - 1.0f) / (maxScale_ - 1.0f);
-            float energyCost = 5.0f + (15.0f * scaleRatio);
+            // エネルギー消費量を計算(チャージ率に応じて5~20)
+            float scaleRatio = (scale_ - kInitialScale) / (maxScale_ - kInitialScale);
+            float energyCost = kMinEnergyCost + ((kMaxEnergyCost - kMinEnergyCost) * scaleRatio);
 
             // エネルギーチェック
             if (!player_->ConsumeEnergy(energyCost)) {
@@ -124,7 +128,7 @@ void ChargeShot::Update() {
         transform_->translation_.z += velocity_.z * (1.0f / 60.0f);
 
         // プレイヤーから一定距離離れたらリセット
-        if ((transform_->translation_ - player_->GetLocalPosition()).Length() > 300.0f) {
+        if ((transform_->translation_ - player_->GetLocalPosition()).Length() > kMaxDistance) {
             Reset();
         }
     }
@@ -150,7 +154,7 @@ void ChargeShot::Update() {
             // オフセット計算
             Vector3 offset = normForward * offsetDistance;
 
-            // 高さ（Y軸）オフセット
+            // 高さ(Y軸)オフセット
             offset.y = verticalOffset_;
 
             // チャージ弾の位置更新
@@ -182,19 +186,19 @@ void ChargeShot::Reset() {
 
     isAlive_ = false;
     isFired_ = false;
-    scale_ = 1.0f;
+    scale_ = kInitialScale;
     isMaxScale_ = false;
     velocity_ = {0, 0, 0};
     transform_->translation_ = {0, 0, 0};
 }
 
 float ChargeShot::GetDamage() const {
-    // スケールの割合を計算（1.0f〜maxScale_の範囲を0.0f〜1.0fに正規化）
-    float scaleRatio = (scale_ - 1.0f) / (maxScale_ - 1.0f);
+    // スケールの割合を計算(1.0f~maxScale_の範囲を0.0f~1.0fに正規化)
+    float scaleRatio = (scale_ - kInitialScale) / (maxScale_ - kInitialScale);
 
-    // 割合に応じてダメージを計算（最小1ダメージは保証）
-    float damage = maxDamage_ * scaleRatio;
-    return std::max(1.0f, damage);
+    // 割合に応じてダメージを計算(最小1ダメージは保証)
+    float damage = kMaxDamage * scaleRatio;
+    return std::max(kMinDamage, damage);
 }
 
 void ChargeShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {

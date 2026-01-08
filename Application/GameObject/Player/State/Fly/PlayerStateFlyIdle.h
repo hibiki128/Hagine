@@ -51,6 +51,15 @@ class PlayerStateFlyIdle : public PlayerBaseState {
     /// private varians
     /// ===================================================
 
+    static constexpr float kDampingFactor = 0.75f;         // 減衰率
+    static constexpr float kVelocityStopThreshold = 0.01f; // 速度停止閾値
+    static constexpr float kVelocityZero = 0.0f;           // 速度ゼロ
+    static constexpr float kAccelerationZero = 0.0f;       // 加速度ゼロ
+    static constexpr float kMoveSpeedZero = 0.0f;          // 移動速度ゼロ
+    static constexpr float kGroundLevel = 0.0f;            // 地面レベル
+    static constexpr float kInitialTime = 0.0f;            // 初期時間
+    static constexpr int kInitialCount = 0;                // 初期カウント
+
     float spaceHeldTime_ = 0.0f;         // スペースキー保持時間
     bool isBoosting_ = false;            // ブースト中フラグ
     float fallInputTime_ = 0.0f;         // 落下入力の保持時間

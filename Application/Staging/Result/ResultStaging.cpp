@@ -72,7 +72,7 @@ void ResultStaging::Update() {
                 state.phase = FireWorkState::Phase::Rising;
                 state.timer = 0.0f;
                 state.startPosition = GetRandomPositionInArea();
-                state.explodePosition = state.startPosition + Vector3(0.0f, 90.5f, 0.0f);
+                state.explodePosition = state.startPosition + Vector3(0.0f, kFireWorkHeightOffset, 0.0f);
 
                 // 花火軌跡を発生
                 fireWorks_trails_[availableIndex]->SetTranslate(state.startPosition);
@@ -95,7 +95,7 @@ void ResultStaging::Update() {
                 state.timer += deltaTime;
 
                 // 3秒経過したら爆発
-                if (state.timer >= 2.5f) {
+                if (state.timer >= kFireWorkRisingTime) {
                     state.phase = FireWorkState::Phase::Exploding;
                     state.timer = 0.0f;
 
@@ -109,7 +109,7 @@ void ResultStaging::Update() {
                 state.timer += deltaTime;
 
                 // 1秒経過したら待機状態に戻す
-                if (state.timer >= 1.2f) {
+                if (state.timer >= kFireWorkExplodingTime) {
                     state.phase = FireWorkState::Phase::Ready;
                     state.timer = 0.0f;
                 }
@@ -134,9 +134,9 @@ void ResultStaging::Draw(const ViewProjection &viewProjection) {
 Vector3 ResultStaging::GetRandomPositionInArea() {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> distX(-0.5f, 0.5f);
-    std::uniform_real_distribution<float> distY(-0.5f, 0.5f);
-    std::uniform_real_distribution<float> distZ(-0.5f, 0.5f);
+    std::uniform_real_distribution<float> distX(-kRandomPositionRange, kRandomPositionRange);
+    std::uniform_real_distribution<float> distY(-kRandomPositionRange, kRandomPositionRange);
+    std::uniform_real_distribution<float> distZ(-kRandomPositionRange, kRandomPositionRange);
 
     // ローカル空間でランダムな位置を生成
     Vector3 localPos(
@@ -163,7 +163,7 @@ int ResultStaging::FindAvailableFireWork() {
 
 void ResultStaging::DrawFireWorkArea() {
     // 立方体の8つの頂点をローカル座標で定義
-    Vector3 halfSize = fireWorkAreaSize_ * 0.5f;
+    Vector3 halfSize = fireWorkAreaSize_ * kAreaHalfSizeMultiplier;
     Vector3 vertices[8] = {
         {-halfSize.x, -halfSize.y, -halfSize.z}, // 0: 左下奥
         {halfSize.x, -halfSize.y, -halfSize.z},  // 1: 右下奥
@@ -183,7 +183,7 @@ void ResultStaging::DrawFireWorkArea() {
     }
 
     // 線の色
-    Vector4 lineColor = {1.0f, 0.5f, 0.0f, 1.0f}; // オレンジ色
+    Vector4 lineColor = {kLineColorR, kLineColorG, kLineColorB, kLineColorA}; // オレンジ色
 
     // 底面の4本
     DrawLine3D::GetInstance()->SetPoints(worldVertices[0], worldVertices[1], lineColor);

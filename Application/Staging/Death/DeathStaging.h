@@ -46,6 +46,17 @@ class DeathStaging {
     /// private varians
     /// ===================================================
 
+    // 定数定義
+    static constexpr float kParticleActiveTime = 0.6f; // パーティクルの有効時間(秒)
+    static constexpr float kGravityStartTime = 0.3f;   // 重力開始時間(秒)
+    static constexpr float kAlphaZero = 0.0f;          // アルファ値ゼロ
+    static constexpr float kMaxVelocityX = 0.5f;       // X方向最大速度
+    static constexpr float kMaxVelocityY = 0.0f;       // Y方向最大速度
+    static constexpr float kMaxVelocityZ = 0.5f;       // Z方向最大速度
+    static constexpr float kMinVelocityX = -0.5f;      // X方向最小速度
+    static constexpr float kMinVelocityY = -1.0f;      // Y方向最小速度
+    static constexpr float kMinVelocityZ = -0.5f;      // Z方向最小速度
+
     Vector3 position_{};
     Vector3 position_R_Arm{};
     Vector3 position_L_Arm{};

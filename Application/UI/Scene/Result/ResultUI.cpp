@@ -41,7 +41,7 @@ void ResultUI::Initialize() {
 
     for (int i = 0; i < kMaxSprite; ++i) {
         startPositions_[i] = sprites_[i]->sprite->GetPosition();
-        positionEasings_[i] = EasingData<Vector2>(startPositions_[i], endPositions_[i], 1.5f, EasingType::InOutQuint);
+        positionEasings_[i] = EasingData<Vector2>(startPositions_[i], endPositions_[i], kEasingDuration, EasingType::InOutQuint);
         positionEasings_[i].isActive = false;
     }
 
@@ -173,8 +173,8 @@ void ResultUI::Update() {
         animTimer_ += Frame::DeltaTime();
         float t = animTimer_ / kAnimDuration;
 
-        if (t >= 1.0f) {
-            t = 1.0f;
+        if (t >= kNormalizeValue) {
+            t = kNormalizeValue;
             displayedTime_ = ClearTime_;
             numberAnimState_ = kWaitingForHP;
             delayTimer_ = 0.0f;
@@ -185,8 +185,8 @@ void ResultUI::Update() {
         animTimer_ += Frame::DeltaTime();
         float t = animTimer_ / kAnimDuration;
 
-        if (t >= 1.0f) {
-            t = 1.0f;
+        if (t >= kNormalizeValue) {
+            t = kNormalizeValue;
             displayedHP_ = HP_;
             numberAnimState_ = kFinished;
             delayTimer_ = 0.0f;
@@ -212,56 +212,56 @@ void ResultUI::Update() {
 void ResultUI::UpdateNumberSprites() {
     // 表示用の値を使用(カウントアップアニメーション用)
     int totalSeconds = static_cast<int>(displayedTime_);
-    int minutes = totalSeconds / 60;
-    int seconds = totalSeconds % 60;
+    int minutes = totalSeconds / kSecondsPerMinute;
+    int seconds = totalSeconds % kSecondsPerMinute;
 
     // 分の十の位
-    int minTens = minutes / 10;
-    sprites_[kMinTens]->sprite->SetUVPosition({static_cast<float>(minTens) * 0.1f, 0.0f});
-    if (minTens == 0) {
-        sprites_[kMinTens]->sprite->SetAlpha(0.0f);
+    int minTens = minutes / kDigitDivisor;
+    sprites_[kMinTens]->sprite->SetUVPosition({static_cast<float>(minTens) * kUVStep, 0.0f});
+    if (minTens == kZeroValue) {
+        sprites_[kMinTens]->sprite->SetAlpha(kAlphaInvisible);
     } else {
-        sprites_[kMinTens]->sprite->SetAlpha(1.0f);
+        sprites_[kMinTens]->sprite->SetAlpha(kAlphaVisible);
     }
 
     // 分の一の位
-    int minOnes = minutes % 10;
-    sprites_[kMinOnes]->sprite->SetUVPosition({static_cast<float>(minOnes) * 0.1f, 0.0f});
-    sprites_[kMinOnes]->sprite->SetAlpha(1.0f);
+    int minOnes = minutes % kDigitDivisor;
+    sprites_[kMinOnes]->sprite->SetUVPosition({static_cast<float>(minOnes) * kUVStep, 0.0f});
+    sprites_[kMinOnes]->sprite->SetAlpha(kAlphaVisible);
 
     // 秒の十の位
-    int secTens = seconds / 10;
-    sprites_[kSecTens]->sprite->SetUVPosition({static_cast<float>(secTens) * 0.1f, 0.0f});
+    int secTens = seconds / kDigitDivisor;
+    sprites_[kSecTens]->sprite->SetUVPosition({static_cast<float>(secTens) * kUVStep, 0.0f});
 
     // 秒の一の位
-    int secOnes = seconds % 10;
-    sprites_[kSecOnes]->sprite->SetUVPosition({static_cast<float>(secOnes) * 0.1f, 0.0f});
+    int secOnes = seconds % kDigitDivisor;
+    sprites_[kSecOnes]->sprite->SetUVPosition({static_cast<float>(secOnes) * kUVStep, 0.0f});
 
     // HPの各桁を計算(表示用の値を使用)
     int hp = static_cast<int>(displayedHP_);
 
     // HPの百の位
-    int hpHund = hp / 100;
-    sprites_[kHPHund]->sprite->SetUVPosition({static_cast<float>(hpHund) * 0.1f, 0.0f});
-    if (hpHund == 0) {
-        sprites_[kHPHund]->sprite->SetAlpha(0.0f);
+    int hpHund = hp / kHundredDivisor;
+    sprites_[kHPHund]->sprite->SetUVPosition({static_cast<float>(hpHund) * kUVStep, 0.0f});
+    if (hpHund == kZeroValue) {
+        sprites_[kHPHund]->sprite->SetAlpha(kAlphaInvisible);
     } else {
-        sprites_[kHPHund]->sprite->SetAlpha(1.0f);
+        sprites_[kHPHund]->sprite->SetAlpha(kAlphaVisible);
     }
 
     // HPの十の位
-    int hpTens = (hp % 100) / 10;
-    sprites_[kHPTens]->sprite->SetUVPosition({static_cast<float>(hpTens) * 0.1f, 0.0f});
+    int hpTens = (hp % kHundredDivisor) / kDigitDivisor;
+    sprites_[kHPTens]->sprite->SetUVPosition({static_cast<float>(hpTens) * kUVStep, 0.0f});
     // 百の位が0で十の位も0なら非表示
-    if (hpHund == 0 && hpTens == 0) {
-        sprites_[kHPTens]->sprite->SetAlpha(0.0f);
+    if (hpHund == kZeroValue && hpTens == kZeroValue) {
+        sprites_[kHPTens]->sprite->SetAlpha(kAlphaInvisible);
     } else {
-        sprites_[kHPTens]->sprite->SetAlpha(1.0f);
+        sprites_[kHPTens]->sprite->SetAlpha(kAlphaVisible);
     }
 
     // HPの一の位
-    int hpOnes = hp % 10;
-    sprites_[kHPOnes]->sprite->SetUVPosition({static_cast<float>(hpOnes) * 0.1f, 0.0f});
+    int hpOnes = hp % kDigitDivisor;
+    sprites_[kHPOnes]->sprite->SetUVPosition({static_cast<float>(hpOnes) * kUVStep, 0.0f});
 }
 
 void ResultUI::Draw() {

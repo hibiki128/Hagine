@@ -35,6 +35,20 @@ class ResultStaging {
     void SetStartEasing(bool started) { startEasing_ = started; }
 
   private:
+    // 定数定義
+    static constexpr int kFireWorksCount = 10;             // 花火の数
+    static constexpr float kFireWorkRisingTime = 2.5f;     // 花火上昇時間(秒)
+    static constexpr float kFireWorkExplodingTime = 1.2f;  // 花火爆発表示時間(秒)
+    static constexpr float kFireWorkHeightOffset = 90.5f;  // 花火の高さオフセット
+    static constexpr float kMinFireWorkInterval = 0.3f;    // 花火発射の最小間隔(秒)
+    static constexpr float kMaxFireWorkInterval = 1.2f;    // 花火発射の最大間隔(秒)
+    static constexpr float kRandomPositionRange = 0.5f;    // ランダム位置生成範囲
+    static constexpr float kAreaHalfSizeMultiplier = 0.5f; // エリア半分サイズ乗数
+    static constexpr float kLineColorR = 1.0f;             // ライン色(R)
+    static constexpr float kLineColorG = 0.5f;             // ライン色(G)
+    static constexpr float kLineColorB = 0.0f;             // ライン色(B)
+    static constexpr float kLineColorA = 1.0f;             // ライン色(A)
+
     BaseObject *RightHand_ = nullptr;
     BaseObject *LeftHand_ = nullptr;
 
@@ -46,7 +60,7 @@ class ResultStaging {
     bool fireWorkStarted_ = false;
     bool startEasing_ = false;
 
-    int fireWorks_count_ = 10;
+    int fireWorks_count_ = kFireWorksCount;
 
     struct FireWorkState {
         enum class Phase {
@@ -67,8 +81,8 @@ class ResultStaging {
     Quaternion fireWorkAreaRotation_ = Quaternion::IdentityQuaternion();
 
     float nextFireWorkTimer_ = 0.0f;
-    float minFireWorkInterval_ = 0.3f;
-    float maxFireWorkInterval_ = 1.2f;
+    float minFireWorkInterval_ = kMinFireWorkInterval;
+    float maxFireWorkInterval_ = kMaxFireWorkInterval;
 
     // ヘルパー関数
     Vector3 GetRandomPositionInArea();

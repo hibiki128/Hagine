@@ -1,8 +1,8 @@
 #pragma once
 #include "../Base/PlayerBaseState.h"
-#include <string>
 #include <Camera/ViewProjection/ViewProjection.h>
 #include <Particle/CSParticle/ParticleCSEmitter.h>
+#include <string>
 
 /// <summary>
 /// プレイヤーのエネルギーチャージ状態を管理するクラス
@@ -51,8 +51,13 @@ class PlayerEnergyCharge : public PlayerBaseState {
     /// private varians
     /// ===================================================
 
-    float chargeRate_ = 15.0f; // エネルギーチャージ速度
-    float beforeChargeRate_ = 0.0f;
+    static constexpr float kChargeRate = 15.0f;       // エネルギーチャージ速度
+    static constexpr float kInitialChargeRate = 0.0f; // 初期チャージレート
+    static constexpr float kVelocityZero = 0.0f;      // 速度ゼロ
+    static constexpr float kParticleYOffset = -1.5f;  // パーティクルY座標オフセット
+
+    float chargeRate_ = kChargeRate;
+    float beforeChargeRate_ = kInitialChargeRate;
     std::string beforeState_ = "";
     std::unique_ptr<ParticleCSEmitter> chargeAuraEmitter_; // チャージオーラパーティクル
 };

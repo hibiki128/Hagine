@@ -6,7 +6,7 @@
 void PlayerEnergyCharge::Enter(Player &player) {
     beforeChargeRate_ = player.GetChargeRate();
     beforeState_ = player.GetPreviewStateName();
-    player.GetVelocity() = {0.0f, 0.0f, 0.0f};
+    player.GetVelocity() = {kVelocityZero, kVelocityZero, kVelocityZero};
     player.SetEnergyRecoveryRate(chargeRate_);
 
     chargeAuraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("ChargeAura");
@@ -14,7 +14,7 @@ void PlayerEnergyCharge::Enter(Player &player) {
 
 void PlayerEnergyCharge::Update(Player &player) {
     chargeAuraEmitter_->Update();
-    chargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y - 1.5f, player.GetWorldPosition().z});
+    chargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y + kParticleYOffset, player.GetWorldPosition().z});
     chargeAuraEmitter_->SetAuto(true);
     if (Input::GetInstance()->ReleaseKey(DIK_C) ||
         player.GetEnergy() >= player.GetMaxEnergy()) {
@@ -37,7 +37,7 @@ void PlayerEnergyCharge::Exit(Player &player) {
 }
 
 void PlayerEnergyCharge::DrawParticle(Player &player, const ViewProjection &viewProjection) {
-    
+
     if (chargeAuraEmitter_) {
         chargeAuraEmitter_->Draw(viewProjection);
     }

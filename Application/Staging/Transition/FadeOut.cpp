@@ -9,28 +9,28 @@ void FadeOut::Initialize() {
     fadeOut_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("FadeOut");
     fadeOut_->SetAuto(true);
     timer_ = 0.0f;
-    fadeOut_->SetTranslate({0.0f, 40.6f, -79.1f});
-    Quaternion rotation = Quaternion::FromEulerAngles({degreesToRadians(-30.0f), 0.0f, 0.0f});
+    fadeOut_->SetTranslate({kPositionX, kPositionY, kPositionZ});
+    Quaternion rotation = Quaternion::FromEulerAngles({degreesToRadians(kRotationX), 0.0f, 0.0f});
     fadeOut_->SetRotation(rotation);
     SceneTransition::GetInstance()->SetUseTransition(true);
 }
 
 void FadeOut::Update() {
     fadeOut_->Update();
-    timer_ += 1.0f / 60.0f;
+    timer_ += kDeltaTime;
 }
 
 void FadeOut::Draw(const ViewProjection &vp) {
-    if (timer_ <= 0.5f) {
+    if (timer_ <= kSpriteDrawTime) {
         SpriteManager::GetInstance()->DrawAll();
     } else {
         fadeOut_->SetEnableGravity(true);
     }
-    if (timer_ >= 0.6f) {
+    if (timer_ >= kParticleStopTime) {
         fadeOut_->SetAuto(false);
     }
     fadeOut_->Draw(vp);
-    if (timer_ >= 2.0f) {
+    if (timer_ >= kFinishTime) {
         isFinish_ = true;
     }
 }

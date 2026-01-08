@@ -1,11 +1,11 @@
 #include "PlayerBullet.h"
+#include "Collider/CollosionManager.h"
 #include "Debug/Log/Logger.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
 #include <Engine/Frame/Frame.h>
 #include <cmath>
-#include"Collider/CollosionManager.h"
 
 void PlayerBullet::Init(const std::string objectName) {
     BaseObject::Init(objectName);
@@ -13,10 +13,10 @@ void PlayerBullet::Init(const std::string objectName) {
     this->SetTexture("debug/white1x1.png");
     BaseObject::SetColor({0.0f, 0.0f, 1.0f, 1.0f});
 
-    // 弾の生存時間を設定（5秒後に消える）
-    lifeTime_ = 5.0f;
+    // 弾の生存時間を設定(5秒後に消える)
+    lifeTime_ = kDefaultLifeTime;
     currentLifeTime_ = 0.0f;
-    acce_ = 10.0f;
+    acce_ = kDefaultAcceleration;
 
     emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("bulletEmitter");
 }
@@ -47,20 +47,19 @@ void PlayerBullet::Update() {
         Vector3 toEnemy = enemyPos - bulletPos;
         float distance = toEnemy.Length();
 
-        if (distance > 0.1f) {
+        if (distance > kMinDistanceThreshold) {
             toEnemy = toEnemy / distance;
 
-            float homingStrength = 2.0f;
             Vector3 currentDir = velocity_;
             float currentSpeed = currentDir.Length();
 
-            if (currentSpeed > 0.1f) {
+            if (currentSpeed > kMinSpeedThreshold) {
                 currentDir = currentDir / currentSpeed;
 
-                Vector3 newDir = currentDir + (toEnemy - currentDir) * homingStrength * deltaTime;
+                Vector3 newDir = currentDir + (toEnemy - currentDir) * kHomingStrength * deltaTime;
                 float newDirLength = newDir.Length();
 
-                if (newDirLength > 0.1f) {
+                if (newDirLength > kMinSpeedThreshold) {
                     newDir = newDir / newDirLength;
                     velocity_ = newDir * currentSpeed;
                 }
@@ -72,13 +71,12 @@ void PlayerBullet::Update() {
     Vector3 currentDir = velocity_;
     float currentSpeed = currentDir.Length();
 
-    if (currentSpeed > 0.1f) {
+    if (currentSpeed > kMinSpeedThreshold) {
         currentDir = currentDir / currentSpeed;
 
         float newSpeed = currentSpeed + acce_ * deltaTime;
-        float maxSpeed = 200.0f;
-        if (newSpeed > maxSpeed)
-            newSpeed = maxSpeed;
+        if (newSpeed > kMaxSpeed)
+            newSpeed = kMaxSpeed;
 
         velocity_ = currentDir * newSpeed;
     }
@@ -117,7 +115,7 @@ void PlayerBullet::InitTransform(Player *player) {
         Vector3 direction = enemyPos - playerPos;
 
         float length = std::sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
-        if (length > 0.1f) {
+        if (length > kMinSpeedThreshold) {
             direction.x /= length;
             direction.y /= length;
             direction.z /= length;
@@ -138,8 +136,8 @@ void PlayerBullet::InitTransform(Player *player) {
         velocity_ = direction.Normalize() * speed_;
     }
 
-    Vector3 forwardOffset = velocity_.Normalize() * 2.0f;
-    forwardOffset.y += 1.0f; // 少し上に
+    Vector3 forwardOffset = velocity_.Normalize() * kForwardOffsetDistance;
+    forwardOffset.y += kVerticalOffset; // 少し上に
 
     this->transform_->translation_ += forwardOffset;
 }
@@ -147,6 +145,6 @@ void PlayerBullet::InitTransform(Player *player) {
 void PlayerBullet::OnCollisionEnter(ColliderBase *other) {
     if (other->GetTag() == "Enemy" && isAlive_ && targetEnemy_->GetAlive()) {
         isHit_ = true;
-        targetEnemy_->SetDamage(1);
+        targetEnemy_->SetDamage(kBulletDamage);
     }
 }

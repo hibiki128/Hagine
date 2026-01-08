@@ -249,6 +249,73 @@ class Player : public BaseObject {
     /// private varians
     /// ===================================================
 
+    // 初期化定数
+    static constexpr float kShadowRotationDegrees = -90.0f;
+    static constexpr float kShadowScale = 1.5f;
+    static constexpr float kShadowYPosition = -0.95f;
+    static constexpr float kRotationZero = 0.0f;
+
+    // ダメージ・HP関連定数
+    static constexpr float kMinHP = 0.0f;
+    static constexpr float kEnemyCollisionDamage = 7.5f;
+    static constexpr float kTimerReset = 0.0f;
+    static constexpr float kPlayerDamageTiltDegrees = 20.0f;
+
+    // 点滅関連定数
+    static constexpr float kPlayerBlinkInterval = 0.05f;
+    static constexpr int kBlinkModulo = 2;
+    static constexpr int kEvenBlink = 0;
+    static constexpr float kPlayerAlphaTransparent = 0.3f;
+    static constexpr float kAlphaOpaque = 1.0f;
+
+    // 回転・ベクトル定数
+    static constexpr float kXAxisX = 1.0f;
+    static constexpr float kXAxisY = 0.0f;
+    static constexpr float kXAxisZ = 0.0f;
+    static constexpr float kForwardVectorX = 0.0f;
+    static constexpr float kForwardVectorY = 0.0f;
+    static constexpr float kForwardVectorZ = -1.0f;
+    static constexpr float kRightVectorX = 1.0f;
+    static constexpr float kRightVectorY = 0.0f;
+    static constexpr float kRightVectorZ = 0.0f;
+    static constexpr float kUpVectorX = 0.0f;
+    static constexpr float kUpVectorY = 1.0f;
+    static constexpr float kUpVectorZ = 0.0f;
+
+    // 速度・移動関連定数
+    static constexpr float kMaxFallVelocity = -40.0f;
+    static constexpr float kGroundLevel = 0.0f;
+    static constexpr float kVelocityZero = 0.0f;
+    static constexpr float kRushGroundOffset = 0.1f;
+    static constexpr float kLandingSpeedThreshold = 0.5f;
+    static constexpr float kMinRotationDistance = 0.001f;
+    static constexpr float kParallelThreshold = 0.999f;
+    static constexpr float kPlayerRotationSpeed = 10.0f;
+    static constexpr float kManualRotationSpeed = 0.04f;
+
+    // 入力・移動制御定数
+    static constexpr float kInputZero = 0.0f;
+    static constexpr float kInputValue = 1.0f;
+    static constexpr float kDecelerationFactor = 0.65f;
+    static constexpr float kVelocityStopThreshold = 0.01f;
+    static constexpr float kYComponentZero = 0.0f;
+    static constexpr float kDashSpeedMultiplier = 1.5f;
+
+    // 弾丸関連定数
+    static constexpr float kBulletScale = 0.5f;
+    static constexpr float kBulletColliderRadius = 0.5f;
+    static constexpr float kNormalShotEnergyCost = 5.0f;
+    static constexpr float kSkillShotEnergyCost = 65.0f;
+
+    // FOV関連定数
+    static constexpr float kNormalFov = 45.0f;
+    static constexpr float kDashingFov = 55.0f;
+
+    // 影のスケール関連定数
+    static constexpr float kShadowBaseScale = 1.5f;
+    static constexpr float kShadowMinScale = 0.3f;
+    static constexpr float kShadowScaleFactor = 0.1f;
+
     FollowCamera *FollowCamera_;
     Enemy *enemy_ = nullptr;
 

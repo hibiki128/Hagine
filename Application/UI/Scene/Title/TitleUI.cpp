@@ -14,19 +14,19 @@ void TitleUI::Initialize() {
 
     chargeBullet_->SetPosition(
         {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
-         BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + 6.5f,
+         BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + kPlayerPositionOffsetY,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});
     chargeEffect_->SetTranslate(
         {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
-         BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + 6.5f,
+         BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + kPlayerPositionOffsetY,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});
 
-    targetPos_ = {-4.5f, -3.1f, 5.7f};
+    targetPos_ = {kTargetPosX, kTargetPosY, kTargetPosZ};
 
     playerAura_->SetTranslate(BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition());
     playerAura_->SetRotation(BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalRotation());
 
-    chargeScale_ = 0.0f;
+    chargeScale_ = kInitialChargeScale;
     isMaxChargeScale_ = false;
 
     SpriteManager::GetInstance()->SetSaveFolder("TitleScene");
@@ -57,7 +57,7 @@ void TitleUI::Initialize() {
 }
 
 void TitleUI::Update() {
-    time_ += 1.0f / 60.0f;
+    time_ += kDeltaTime;
 
     // タイマーがkMaxTime以上でスプライト表示開始
     if (time_ >= kMaxTime_ && !isSpriteVisible_) {
@@ -67,7 +67,7 @@ void TitleUI::Update() {
 
     // スプライトの移動処理
     if (isSpriteVisible_ && spriteEaseTimer_ < spriteEaseDuration_) {
-        spriteEaseTimer_ += 1.0f / 60.0f;
+        spriteEaseTimer_ += kDeltaTime;
 
         // イージングで位置を計算
         Vector2 titleLogoPos = ApplyEasing(EasingType::OutCubic, titleLogoStartPos_, titleLogoEndPos_, spriteEaseTimer_, spriteEaseDuration_);
@@ -81,7 +81,7 @@ void TitleUI::Update() {
     if (time_ >= kMaxTime_) {
         // スケール拡大処理
         if (!isMaxChargeScale_) {
-            chargeScale_ += chargeScaleSpeed_ * Frame::DeltaTime() / 1.25f;
+            chargeScale_ += chargeScaleSpeed_ * Frame::DeltaTime() / kParticleScaleSpeedDivisor;
             if (chargeScale_ >= maxChargeScale_) {
                 chargeScale_ = maxChargeScale_;
                 isMaxChargeScale_ = true;
@@ -90,36 +90,36 @@ void TitleUI::Update() {
         // パーティクルのスケール設定
         if (!isMaxChargeScale_) {
             // chageAroundのエンドスケール
-            float aroundEndScale = (0.8f + chargeScale_) * 1.4f;
-            float aroundStartScale = aroundEndScale - 0.3f;
-            float bulletScale = aroundEndScale + 1.0f;
+            float aroundEndScale = (kParticleScaleBase + chargeScale_) * kParticleScaleMultiplier;
+            float aroundStartScale = aroundEndScale - kParticleScaleOffset;
+            float bulletScale = aroundEndScale + kBulletScaleOffset;
             chargeBullet_->SetStartScale("chageAround", {aroundStartScale, aroundStartScale, aroundStartScale});
             chargeBullet_->SetEndScale("chageAround", {aroundEndScale, aroundEndScale, aroundEndScale});
             chargeBullet_->SetStartScale("chageBullet", {bulletScale, bulletScale, bulletScale});
         }
         chargeBullet_->Update();
     }
-    if (time_ >= kMaxTime_ - 0.5f) {
+    if (time_ >= kMaxTime_ - kChargeEffectStartTime) {
         if (!secondMove_) {
             chargeEffect_->Update();
             playerAura_->Update();
         }
     }
 
-    if (time_ >= 3.0f && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_ && !cameraMove_) {
+    if (time_ >= kMinStartInputTime && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_ && !cameraMove_) {
         secondMove_ = true;
         isSpriteExiting_ = true;
         spriteExitTimer_ = 0.0f;
     }
 
     if (secondMove_) {
-        bulletEaseTimer_ += 1.0f / 60.0f;
+        bulletEaseTimer_ += kDeltaTime;
 
         // スプライト横出し処理
         if (isSpriteExiting_ && spriteExitTimer_ < spriteEaseDuration_) {
-            spriteExitTimer_ += 1.0f / 60.0f;
+            spriteExitTimer_ += kDeltaTime;
 
-            // 逆方向にイージング（開始位置に戻す）
+            // 逆方向にイージング(開始位置に戻す)
             Vector2 titleLogoPos = ApplyEasing(EasingType::InCubic, titleLogoEndPos_, titleLogoStartPos_, spriteExitTimer_, spriteEaseDuration_);
             Vector2 pressStartPos = ApplyEasing(EasingType::InCubic, pressStartEndPos_, pressStartStartPos_, spriteExitTimer_, spriteEaseDuration_);
 
@@ -132,11 +132,11 @@ void TitleUI::Update() {
         }
     }
 
-    chargeBullet_->SetPosition(ApplyEasing(EasingType::InSine, chargeBullet_->GetPosition(), targetPos_, bulletEaseTimer_, 7.0f));
+    chargeBullet_->SetPosition(ApplyEasing(EasingType::InSine, chargeBullet_->GetPosition(), targetPos_, bulletEaseTimer_, kBulletEaseDuration));
     if (chargeBullet_->GetPosition() == targetPos_) {
-        timer_ += 1.0f / 60.0f;
+        timer_ += kDeltaTime;
     }
-    if (timer_ >= 0.3f) {
+    if (timer_ >= kFinishDelayTime) {
         isFinish_ = true;
     }
 }

@@ -3,7 +3,7 @@
 #include <Frame.h>
 
 void DeathCamera::Init() {
-    vp_.farZ = 1100;
+    vp_.farZ = kFarZ;
     vp_.Initialize("");
     wt_.Initialize();
 }
@@ -13,15 +13,15 @@ void DeathCamera::Update() {
         return;
     }
     easingTimer_ += Frame::DeltaTime();
-    float t = std::min(easingTimer_ / easingDuration_, 1.0f);
+    float t = std::min(easingTimer_ / easingDuration_, kEasingEndThreshold);
 
     // 半分到達チェック（一度だけフラグを立てる）
-    if (!isHalfway_ && easingTimer_ >= easingDuration_ * 0.5f) {
+    if (!isHalfway_ && easingTimer_ >= easingDuration_ * kHalfwayRatio) {
         isHalfway_ = true;
     }
 
     // 位置のイージング
-    wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, 1.0f);
+    wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, kEasingMaxValue);
     // 回転のイージング（クォータニオン補間）
     wt_.quateRotation_ = Quaternion::Slerp(easingStartRot_, easingTargetRot_, t);
     wt_.UpdateMatrix();
@@ -31,7 +31,7 @@ void DeathCamera::Update() {
     vp_.quateRotation_ = wt_.quateRotation_;
     vp_.UpdateMatrix();
     // イージング完了チェック
-    if (t >= 1.0f) {
+    if (t >= kEasingMaxValue) {
         isEasing_ = false;
         isComplete_ = true;
     }
@@ -41,7 +41,7 @@ void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &ta
     isEasing_ = true;
     isComplete_ = false;
     isHalfway_ = false;
-    easingTimer_ = 0.0f;
+    easingTimer_ = kTimerReset;
 
     // 現在のカメラ状態を保存
     easingStartPos_ = currentVp.translation_;
@@ -60,11 +60,11 @@ void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &ta
     Vector3 toTarget = (targetPosition - easingTargetPos_).Normalize();
 
     Vector3 forward = toTarget;
-    Vector3 worldUp = {0.0f, 1.0f, 0.0f};
+    Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ};
 
     Vector3 right;
-    if (std::abs(forward.Dot(worldUp)) > 0.999f) {
-        right = {1.0f, 0.0f, 0.0f};
+    if (std::abs(forward.Dot(worldUp)) > kParallelThreshold) {
+        right = {kRightVectorX, kRightVectorY, kRightVectorZ};
     } else {
         right = (worldUp.Cross(forward)).Normalize();
     }

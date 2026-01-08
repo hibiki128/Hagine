@@ -56,6 +56,18 @@ class PlayerStateFlyMove : public PlayerBaseState {
     /// private varians
     /// ===================================================
 
+    static constexpr float kFlyAcceleration = 30.0f;       // 飛行加速度
+    static constexpr float kFlyMaxSpeed = 15.0f;           // 飛行最大速度
+    static constexpr float kVelocityDampingFactor = 0.70f; // 速度減衰率
+    static constexpr float kVelocityStopThreshold = 0.05f; // 速度停止閾値
+    static constexpr float kFallThresholdTime = 0.3f;      // 落下入力閾値時間
+    static constexpr float kVelocityZero = 0.0f;           // 速度ゼロ
+    static constexpr float kAccelerationZero = 0.0f;       // 加速度ゼロ
+    static constexpr float kGroundLevel = 0.0f;            // 地面レベル
+    static constexpr float kInitialTime = 0.0f;            // 初期時間
+    static constexpr int kInitialCount = 0;                // 初期カウント
+    static constexpr int kFallInputThreshold = 1;          // 落下入力閾値
+
     float spaceHeldTime_ = 0.0f; // スペースキー保持時間
     bool isBoosting_ = false;    // ブースト中フラグ
     float fallInputTime_ = 0.0f; // 落下入力の保持時間

@@ -1,9 +1,9 @@
 #pragma once
 #include "../Base/PlayerBaseState.h"
 #include "Application/Utility/Shake/Shake.h"
+#include <Particle/ParticleEmitter.h>
 #include <type/Quaternion.h>
 #include <type/Vector3.h>
-#include <Particle/ParticleEmitter.h>
 
 /// <summary>
 /// プレイヤーの突撃状態を管理するクラス
@@ -116,6 +116,29 @@ class PlayerStateRush : public PlayerBaseState {
     /// ===================================================
     /// private varians
     /// ===================================================
+
+    static constexpr float kMidPointFactor = 0.5f;         // 中点計算係数
+    static constexpr float kArcHeightFactor = 0.25f;       // 弧の高さ係数
+    static constexpr float kSideOffsetFactor = 0.4f;       // 横オフセット係数
+    static constexpr float kVelocityZero = 0.0f;           // 速度ゼロ
+    static constexpr float kUpDotHighThreshold = 0.3f;     // 上方向内積閾値（高）
+    static constexpr float kUpDotLowThreshold = -0.3f;     // 上方向内積閾値（低）
+    static constexpr float kUpHeightLowMultiplier = 0.3f;  // 低位置時の高さ倍率
+    static constexpr float kUpHeightHighMultiplier = 1.2f; // 高位置時の高さ倍率
+    static constexpr float kForwardOffsetFactor = 0.2f;    // 前方オフセット係数
+    static constexpr float kTwoFactor = 2.0f;              // ベジェ曲線の2倍係数
+    static constexpr float kProgressIncrement = 0.01f;     // 進捗増分
+    static constexpr float kMaxProgress = 1.0f;            // 最大進捗
+    static constexpr float kUpVectorY = 1.0f;              // 上方向ベクトルY成分
+    static constexpr float kVectorZero = 0.0f;             // ベクトル成分ゼロ
+
+    // 行列インデックス定数
+    static constexpr int kMatrixRow0 = 0;
+    static constexpr int kMatrixRow1 = 1;
+    static constexpr int kMatrixRow2 = 2;
+    static constexpr int kMatrixCol0 = 0;
+    static constexpr int kMatrixCol1 = 1;
+    static constexpr int kMatrixCol2 = 2;
 
     Vector3 targetPosition_;  // 目標位置
     Vector3 rushDirection_;   // 突撃方向

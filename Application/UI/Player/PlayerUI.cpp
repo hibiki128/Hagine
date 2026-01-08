@@ -1,20 +1,20 @@
 #include "PlayerUI.h"
-#include"SpriteCommon.h"
+#include "SpriteCommon.h"
 
 void PlayerUI::Init(Player *player) {
     player_ = player;
     // HPバーの初期化
     hpBar_ = std::make_unique<Sprite>();
-    hpBar_->Initialize("debug/white1x1.png", hpBarPosition_, {0.1f, 0.2f, 1.0f, 1.0f});
+    hpBar_->Initialize("debug/white1x1.png", hpBarPosition_, {kHPBarColorR, kHPBarColorG, kHPBarColorB, kHPBarColorA});
     // バーフレームの初期化
     barFrame_ = std::make_unique<Sprite>();
-    barFrame_->Initialize("debug/white1x1.png", barFramePosition_, {0.3f, 0.3f, 0.3f, 0.6f});
+    barFrame_->Initialize("debug/white1x1.png", barFramePosition_, {kFrameColorR, kFrameColorG, kFrameColorB, kFrameColorA});
     // エネルギーバーの描画
     energyBar_ = std::make_unique<Sprite>();
-    energyBar_->Initialize("debug/white1x1.png", energyBarPosition_, {1.0f, 1.0f, 0.0f, 1.0f});
+    energyBar_->Initialize("debug/white1x1.png", energyBarPosition_, {kEnergyBarColorR, kEnergyBarColorG, kEnergyBarColorB, kEnergyBarColorA});
     // エネルギーバーフレームの初期化
     energyBarFrame_ = std::make_unique<Sprite>();
-    energyBarFrame_->Initialize("debug/white1x1.png", energyBarFramePosition_, {0.3f, 0.3f, 0.3f, 0.6f});
+    energyBarFrame_->Initialize("debug/white1x1.png", energyBarFramePosition_, {kFrameColorR, kFrameColorG, kFrameColorB, kFrameColorA});
     // プレイヤーアイコンの初期化
     playerIcon_ = std::make_unique<Sprite>();
     playerIcon_->Initialize("UI/playerIcon.png", playerIconPosition_);

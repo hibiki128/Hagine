@@ -54,8 +54,8 @@ void Player::Init(const std::string objectName) {
     shadow_->Init("shadow");
     shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
     shadow_->SetTexture("game/shadow.png");
-    shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(-90.0f), 0.0f, 0.0f));
-    shadow_->GetLocalScale() = {1.5f, 1.5f, 1.5f};
+    shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(kShadowRotationDegrees), kRotationZero, kRotationZero));
+    shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};
 
     chargeShot_ = std::make_unique<ChargeShot>();
     chargeShot_->SetPlayer(this);
@@ -90,14 +90,14 @@ void Player::Init(const std::string objectName) {
     Load();
 
     if (!comboInitialized_) {
-        punchCombo_.Add(GetRightHand(), "Jab") // 1段目：右手ジャブ
-            .Add(GetLeftHand(), "Hook")        // 2段目：左手フック
-            .Add(GetRightHand(), "Cross")      // 3段目：右手クロス
-            .Add(GetLeftHand(), "Uppercut")    // 4段目：左手アッパーカット
-            .Add(GetRightHand(), "Overhand")   // 5段目：右手オーバーハンド
-            .Add(GetLeftHand(), "Swing")       // 6段目：左手スイング
-            .Add(GetRightHand(), "Elbow")      // 7段目：右手肘打ち
-            .Add(GetLeftHand(), "Slam");       // 8段目：左手スラム
+        punchCombo_.Add(GetRightHand(), "Jab") // 1段目:右手ジャブ
+            .Add(GetLeftHand(), "Hook")        // 2段目:左手フック
+            .Add(GetRightHand(), "Cross")      // 3段目:右手クロス
+            .Add(GetLeftHand(), "Uppercut")    // 4段目:左手アッパーカット
+            .Add(GetRightHand(), "Overhand")   // 5段目:右手オーバーハンド
+            .Add(GetLeftHand(), "Swing")       // 6段目:左手スイング
+            .Add(GetRightHand(), "Elbow")      // 7段目:右手肘打ち
+            .Add(GetLeftHand(), "Slam");       // 8段目:左手スラム
 
         comboInitialized_ = true;
     }
@@ -121,14 +121,14 @@ void Player::Update() {
 
     } else {
 
-        shadow_->GetLocalPosition() = {transform_->translation_.x, -0.95f, transform_->translation_.z};
+        shadow_->GetLocalPosition() = {transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
         shadow_->Update();
 
         if (isInvincible_) {
             invincibleTime_ += dt_;
             if (invincibleTime_ >= invincibleDuration_) {
                 isInvincible_ = false;
-                invincibleTime_ = 0.0f;
+                invincibleTime_ = kTimerReset;
             }
         }
 
@@ -173,26 +173,26 @@ void Player::Update() {
 
             float angleX = tiltEase_.Update(dt_);
 
-            tiltRotation_ = Quaternion::FromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), angleX);
+            tiltRotation_ = Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
 
             transform_->quateRotation_ = tiltRotation_ * baseRotation_;
 
             // 高速点滅
-            float blinkInterval = 0.05f;
+            float blinkInterval = kPlayerBlinkInterval;
             int blink = static_cast<int>(damageReactTimer_ / blinkInterval);
-            SetAlpha((blink % 2 == 0) ? 0.3f : 1.0f);
+            SetAlpha((blink % kBlinkModulo == kEvenBlink) ? kPlayerAlphaTransparent : kAlphaOpaque);
 
             // 終了処理
             if (damageReactTimer_ >= damageReactDuration_) {
                 isDamageReact_ = false;
                 transform_->quateRotation_ = baseRotation_;
-                SetAlpha(1.0f);
+                SetAlpha(kAlphaOpaque);
             }
         }
 
         // 下方向の速度を制限
-        if (velocity_.y < -40.0f) {
-            velocity_.y = -40.0f;
+        if (velocity_.y < kMaxFallVelocity) {
+            velocity_.y = kMaxFallVelocity;
         }
 
         if (Input::GetInstance()->TriggerKey(DIK_L)) {
@@ -200,9 +200,9 @@ void Player::Update() {
         }
 
         if (isDashing_) {
-            targetFov_ = 55.0f;
+            targetFov_ = kDashingFov;
         } else {
-            targetFov_ = 45.0f;
+            targetFov_ = kNormalFov;
         }
 
         // 現在のFOVを滑らかに補間
@@ -230,7 +230,7 @@ void Player::Update() {
         }
 
         UpdateShadowScale();
-        if (HP_ <= 0) {
+        if (HP_ <= kMinHP) {
             isAlive_ = false;
         }
 
@@ -250,7 +250,7 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
         bullet->Draw(viewProjection, offSet);
     }
     chargeShot_->Draw(viewProjection, offSet);
-    if (transform_->translation_.y < 0) {
+    if (transform_->translation_.y < kGroundLevel) {
         return;
     }
 }
@@ -304,21 +304,21 @@ void Player::OnCollision(ColliderBase *other) {
     if (other->GetTag() == "Enemy") {
         // 無敵状態でなければダメージを受ける
         if (!isInvincible_) {
-            HP_ -= 7.5f;
+            HP_ -= kEnemyCollisionDamage;
             // ダメージを受けたら無敵状態にする
             isInvincible_ = true;
-            invincibleTime_ = 0.0f;
+            invincibleTime_ = kTimerReset;
 
             // ダメージリアクション開始
             isDamageReact_ = true;
-            damageReactTimer_ = 0.0f;
+            damageReactTimer_ = kTimerReset;
 
             // 今の向きを保存
             baseRotation_ = transform_->quateRotation_;
 
             // X軸回転のみをイージング（後ろに倒れる）
-            float startAngle = 0.0f;
-            float endAngle = degreesToRadians(20.0f); // 負の値で後ろに倒れる
+            float startAngle = kRotationZero;
+            float endAngle = degreesToRadians(kPlayerDamageTiltDegrees);
             tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
         }
     }
@@ -349,7 +349,7 @@ void Player::DirectionUpdate() {
 void Player::Shot() {
     if (Input::GetInstance()->TriggerKey(DIK_J)) {
         // エネルギーチェックを追加
-        if (!ConsumeEnergy(5.0f)) {
+        if (!ConsumeEnergy(kNormalShotEnergyCost)) {
             return; // エネルギー不足なら発射しない
         }
 
@@ -357,11 +357,11 @@ void Player::Shot() {
         auto bullet = std::make_unique<PlayerBullet>();
         bullet->Init(bulletName);
         bullet->InitTransform(this);
-        bullet->GetLocalScale() = {0.5f, 0.5f, 0.5f};
-        bullet->SetColliderRadius(0.5f);
+        bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
+        bullet->SetColliderRadius(kBulletColliderRadius);
         bullets_.push_back(std::move(bullet));
 
-        timeSinceLastShot_ = 0.0f; // 射撃タイマーをリセット
+        timeSinceLastShot_ = kTimerReset; // 射撃タイマーをリセット
     }
 }
 
@@ -370,7 +370,7 @@ void Player::SkillShot() {
         if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive()) {
             return; // 既に発動中なら何もしない
         }
-        if (!ConsumeEnergy(65.0f)) {
+        if (!ConsumeEnergy(kSkillShotEnergyCost)) {
             return; // エネルギー不足なら発射しない
         }
         makanAttack_ptr_->SetPlayer(this);
@@ -381,17 +381,17 @@ void Player::SkillShot() {
 void Player::RotateUpdate() {
     if (isLockOn_ && enemy_) {
         Vector3 toEnemy = enemy_->GetWorldPosition() - GetWorldPosition();
-        if (toEnemy.Length() > 0.001f) {
+        if (toEnemy.Length() > kMinRotationDistance) {
             toEnemy = toEnemy.Normalize();
 
             // プレイヤーの正面方向（+Z方向）を敵の方向に向ける
             Vector3 forward = toEnemy;
-            Vector3 worldUp = {0.0f, 1.0f, 0.0f}; // 上方向
+            Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ}; // 上方向
 
             // forwardとworldUpが平行になる場合の対処
             Vector3 right;
-            if (std::abs(forward.Dot(worldUp)) > 0.999f) {
-                right = {1.0f, 0.0f, 0.0f}; // X軸を右方向として使用
+            if (std::abs(forward.Dot(worldUp)) > kParallelThreshold) {
+                right = {kRightVectorX, kRightVectorY, kRightVectorZ}; // X軸を右方向として使用
             } else {
                 right = (worldUp.Cross(forward)).Normalize();
             }
@@ -402,18 +402,18 @@ void Player::RotateUpdate() {
             Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
             Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
 
-            float rotateSpeed = 10.0f;
+            float rotateSpeed = kPlayerRotationSpeed;
             transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
         }
     } else {
         Vector3 euler = transform_->quateRotation_.ToEulerAngles();
         bool rotationChanged = false;
         if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
-            euler.y -= 0.04f;
+            euler.y -= kManualRotationSpeed;
             rotationChanged = true;
         }
         if (Input::GetInstance()->PushKey(DIK_LEFT)) {
-            euler.y += 0.04f;
+            euler.y += kManualRotationSpeed;
             rotationChanged = true;
         }
         if (rotationChanged) {
@@ -438,26 +438,26 @@ void Player::ComboUpdate() {
 
 void Player::Move() {
     // 入力取得（WASD）
-    float xInput = 0.0f;
-    float zInput = 0.0f;
+    float xInput = kInputZero;
+    float zInput = kInputZero;
 
     if (Input::GetInstance()->PushKey(DIK_A))
-        xInput += 1.0f;
+        xInput += kInputValue;
     if (Input::GetInstance()->PushKey(DIK_D))
-        xInput -= 1.0f;
+        xInput -= kInputValue;
     if (Input::GetInstance()->PushKey(DIK_W))
-        zInput += 1.0f;
+        zInput += kInputValue;
     if (Input::GetInstance()->PushKey(DIK_S))
-        zInput -= 1.0f;
+        zInput -= kInputValue;
 
     // 減速処理（入力がない場合）
-    if (xInput == 0.0f && zInput == 0.0f) {
-        velocity_.x *= 0.65f;
-        velocity_.z *= 0.65f;
-        if (std::abs(velocity_.x) < 0.01f)
-            velocity_.x = 0.0f;
-        if (std::abs(velocity_.z) < 0.01f)
-            velocity_.z = 0.0f;
+    if (xInput == kInputZero && zInput == kInputZero) {
+        velocity_.x *= kDecelerationFactor;
+        velocity_.z *= kDecelerationFactor;
+        if (std::abs(velocity_.x) < kVelocityStopThreshold)
+            velocity_.x = kVelocityZero;
+        if (std::abs(velocity_.z) < kVelocityStopThreshold)
+            velocity_.z = kVelocityZero;
         isDashing_ = false;
         return;
     }
@@ -469,8 +469,8 @@ void Player::Move() {
 
     float yaw = camera->GetYaw();
 
-    Vector3 cameraForward = {std::sin(yaw), 0.0f, std::cos(yaw)};
-    Vector3 cameraRight = {-std::cos(yaw), 0.0f, std::sin(yaw)};
+    Vector3 cameraForward = {std::sin(yaw), kYComponentZero, std::cos(yaw)};
+    Vector3 cameraRight = {-std::cos(yaw), kYComponentZero, std::sin(yaw)};
 
     // 入力方向をカメラベースで合成
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
@@ -481,8 +481,8 @@ void Player::Move() {
     // --- 回転処理 ---
     if (!isLockOn_) {
         float targetYaw = std::atan2(-moveDir.x, moveDir.z);
-        Quaternion targetRot = Quaternion::FromEulerAngles({0.0f, targetYaw, 0.0f});
-        float rotateSpeed = 10.0f;
+        Quaternion targetRot = Quaternion::FromEulerAngles({kRotationZero, targetYaw, kRotationZero});
+        float rotateSpeed = kPlayerRotationSpeed;
         transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
     }
 
@@ -490,7 +490,7 @@ void Player::Move() {
     float currentMaxSpeed = maxSpeed_;
     isDashing_ = Input::GetInstance()->PushKey(DIK_LCONTROL);
     if (isDashing_) {
-        currentMaxSpeed *= 1.5f;
+        currentMaxSpeed *= kDashSpeedMultiplier;
     }
 
     velocity_.x += moveDir.x * accelRate_ * dt_;
@@ -505,19 +505,19 @@ void Player::Move() {
 }
 
 void Player::UpdateShadowScale() {
-    if (transform_->translation_.y < 0) {
+    if (transform_->translation_.y < kGroundLevel) {
         return;
     }
     float height = transform_->translation_.y;
-    float baseScale = 1.5f;
-    float scaleFactor = std::max(0.3f, baseScale - height * 0.1f);
+    float baseScale = kShadowBaseScale;
+    float scaleFactor = std::max(kShadowMinScale, baseScale - height * kShadowScaleFactor);
     shadow_->GetLocalScale() = {scaleFactor, scaleFactor, scaleFactor};
 }
 
 bool Player::ConsumeEnergy(float amount) {
     if (energy_ >= amount) {
         energy_ -= amount;
-        timeSinceLastShot_ = 0.0f;
+        timeSinceLastShot_ = kTimerReset;
         return true;
     }
     return false;
@@ -556,25 +556,25 @@ void Player::CollisionGround() {
     GetLocalPosition().z += velocity_.z * dt_;
 
     // Y方向の処理（地面判定含む）
-    if (nextY <= 0.0f) {
+    if (nextY <= kGroundLevel) {
         // Rush状態の場合は地面から押し戻す
         if (currentState_ == states_["Rush"].get()) {
-            GetLocalPosition().y = 0.1f; // 地面から少し浮いた位置に強制移動
-            velocity_.y = 0.0f;          // Y方向の速度をリセット
-            return;                      // 状態遷移は行わない
+            GetLocalPosition().y = kRushGroundOffset; // 地面から少し浮いた位置に強制移動
+            velocity_.y = kVelocityZero;              // Y方向の速度をリセット
+            return;                                   // 状態遷移は行わない
         }
 
         // 地面に接地する場合（Rush以外の状態）
-        GetLocalPosition().y = 0.0f;
+        GetLocalPosition().y = kGroundLevel;
         // 前のフレームで空中だった場合のみ着地処理
         if (!isGrounded_) {
-            velocity_.y = 0.0f; // Y方向の速度をリセット
+            velocity_.y = kVelocityZero; // Y方向の速度をリセット
             isGrounded_ = true;
             // 空中からの着地で状態遷移
             if (currentState_ == states_["Air"].get()) {
                 // 水平方向に動いていれば移動状態、そうでなければアイドル状態へ
                 float horizontalSpeed = sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
-                if (horizontalSpeed > 0.5f) {
+                if (horizontalSpeed > kLandingSpeedThreshold) {
                     ChangeState("Move");
                 } else {
                     ChangeState("Idle");
@@ -842,7 +842,7 @@ void Player::Load() {
 
 Vector3 Player::GetForward() const {
     // クォータニオンから前方向ベクトルを計算（Z軸の負方向が前方向）
-    return TransformNormal(Vector3(0.0f, 0.0f, -1.0f), QuaternionToMatrix4x4(transform_->quateRotation_));
+    return TransformNormal(Vector3(kForwardVectorX, kForwardVectorY, kForwardVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
 Vector3 Player::GetBackward() const {
@@ -851,7 +851,7 @@ Vector3 Player::GetBackward() const {
 
 Vector3 Player::GetRight() const {
     // クォータニオンから右方向ベクトルを計算（X軸の正方向が右方向）
-    return TransformNormal(Vector3(1.0f, 0.0f, 0.0f), QuaternionToMatrix4x4(transform_->quateRotation_));
+    return TransformNormal(Vector3(kRightVectorX, kRightVectorY, kRightVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
 Vector3 Player::GetLeft() const {
@@ -860,7 +860,7 @@ Vector3 Player::GetLeft() const {
 
 Vector3 Player::GetUp() const {
     // クォータニオンから上方向ベクトルを計算（Y軸の正方向が上方向）
-    return TransformNormal(Vector3(0.0f, 1.0f, 0.0f), QuaternionToMatrix4x4(transform_->quateRotation_));
+    return TransformNormal(Vector3(kUpVectorX, kUpVectorY, kUpVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
 Vector3 Player::GetDown() const {
