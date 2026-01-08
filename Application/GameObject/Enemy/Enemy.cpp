@@ -5,7 +5,7 @@
 #include "BehaviorTree/Nodes/CompositeNodes.h"
 #include "BehaviorTree/Nodes/ConditionNodes.h"
 #include "Particle/ParticleEditor.h"
-#include "application/GameObject/Player/Bullet/ChageShot/ChageShot.h"
+#include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include <Frame.h>
 #ifdef _DEBUG

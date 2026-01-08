@@ -1,5 +1,5 @@
 #define NOMINMAX
-#include "ChageShot.h"
+#include "ChargeShot.h"
 #include "Engine/Input/Input.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"

@@ -4,7 +4,7 @@
 #include "State/Air/PlayerStateAir.h"
 #include "State/Fly/PlayerStateFlyIdle.h"
 
-#include "Bullet/ChageShot/ChageShot.h"
+#include "Bullet/ChargeShot/ChargeShot.h"
 #include "Object/Base/BaseObjectManager.h"
 #include "State/Action/PlayerEnergyCharge.h"
 #include "State/Action/PlayerStateRush.h"

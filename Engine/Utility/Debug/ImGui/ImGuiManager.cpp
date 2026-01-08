@@ -13,7 +13,7 @@
 #include <Line/DrawLine3D.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 

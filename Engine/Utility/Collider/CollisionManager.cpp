@@ -1,4 +1,4 @@
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 #include "myMath.h"
 #include <algorithm>
 
