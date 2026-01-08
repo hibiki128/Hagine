@@ -72,8 +72,8 @@
     <ClCompile Include="Engine\3d\Particle\ParticleStruct.cpp" />
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp" />
     <ClCompile Include="Engine\Math\Easing.cpp" />
-    <ClCompile Include="Engine\Math\myMath.cpp" />
-    <ClCompile Include="Engine\Math\random.cpp" />
+    <ClCompile Include="Engine\Math\MyMath.cpp" />
+    <ClCompile Include="Engine\Math\Random.cpp" />
     <ClCompile Include="Engine\Math\type\Quaternion.cpp" />
     <ClCompile Include="Engine\Scene\BaseScene.cpp" />
     <ClCompile Include="Engine\Utility\Collider\ColliderBase.cpp" />
@@ -204,8 +204,8 @@
     <ClInclude Include="Engine\3d\Particle\ParticleStruct.h" />
     <ClInclude Include="Engine\3d\Transform\ObjColor.h" />
     <ClInclude Include="Engine\Math\Easing.h" />
-    <ClInclude Include="Engine\Math\myMath.h" />
-    <ClInclude Include="Engine\Math\random.h" />
+    <ClInclude Include="Engine\Math\MyMath.h" />
+    <ClInclude Include="Engine\Math\Random.h" />
     <ClInclude Include="Engine\Math\type\Matrix3x3.h" />
     <ClInclude Include="Engine\Math\type\Matrix4x4.h" />
     <ClInclude Include="Engine\Math\type\Quaternion.h" />

@@ -1,4 +1,4 @@
-#include"myMath.h"
+#include"MyMath.h"
 #include <numbers>
 #include <WinApp.h>
 
