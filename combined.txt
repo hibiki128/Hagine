@@ -37,9 +37,9 @@
 └── └── └──     └── SkyDome.h
 └── └── └── Player/
 └── └──     ├── Bullet/
-└── └──     └── ├── ChageShot/
-└── └──     └── └── ├── ChageShot.cpp
-└── └──     └── └── └── ChageShot.h
+└── └──     └── ├── ChargeShot/
+└── └──     └── └── ├── ChargeShot.cpp
+└── └──     └── └── └── ChargeShot.h
 └── └──     └── ├── PlayerBullet.cpp
 └── └──     └── └── PlayerBullet.h
 └── └──     ├── Hand/
@@ -275,7 +275,7 @@
 └──     └── ├── ColliderTagManager.cpp
 └──     └── ├── ColliderTagManager.h
 └──     └── ├── CollisionManager.cpp
-└──     └── ├── CollosionManager.h
+└──     └── ├── CollisionManager.h
 └──     └── └── type/
 └──     └──     ├── AABBCollider.cpp
 └──     └──     ├── AABBCollider.h
@@ -3580,7 +3580,7 @@ File Path: Application/GameObject/Enemy/Enemy.cpp
 #include "BehaviorTree/Nodes/CompositeNodes.h"
 #include "BehaviorTree/Nodes/ConditionNodes.h"
 #include "Particle/ParticleEditor.h"
-#include "application/GameObject/Player/Bullet/ChageShot/ChageShot.h"
+#include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include <Frame.h>
 #ifdef _DEBUG
@@ -4418,10 +4418,10 @@ class SkyDome : public BaseObject {
 };
 
 ============================================================
-File Path: Application/GameObject/Player/Bullet/ChageShot/ChageShot.cpp
+File Path: Application/GameObject/Player/Bullet/ChargeShot/ChargeShot.cpp
 ============================================================
 #define NOMINMAX
-#include "ChageShot.h"
+#include "ChargeShot.h"
 #include "Engine/Input/Input.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
@@ -4656,7 +4656,7 @@ void ChargeShot::OnCollisionEnterCallback(ColliderBase *other) {
 }
 
 ============================================================
-File Path: Application/GameObject/Player/Bullet/ChageShot/ChageShot.h
+File Path: Application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h
 ============================================================
 #pragma once
 #include "Application/GameObject/Player/Player.h"
@@ -4835,7 +4835,7 @@ class ChargeShot : public BaseObject {
 File Path: Application/GameObject/Player/Bullet/PlayerBullet.cpp
 ============================================================
 #include "PlayerBullet.h"
-#include "Collider/CollosionManager.h"
+#include "Collider/CollisionManager.h"
 #include "Debug/Log/Logger.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
@@ -5285,7 +5285,7 @@ File Path: Application/GameObject/Player/Player.cpp
 #include "State/Air/PlayerStateAir.h"
 #include "State/Fly/PlayerStateFlyIdle.h"
 
-#include "Bullet/ChageShot/ChageShot.h"
+#include "Bullet/ChargeShot/ChargeShot.h"
 #include "Object/Base/BaseObjectManager.h"
 #include "State/Action/PlayerEnergyCharge.h"
 #include "State/Action/PlayerStateRush.h"
@@ -19404,7 +19404,7 @@ File Path: Engine/3d/Object/Base/BaseObject.cpp
 #include "BaseObject.h"
 #include "Scene/SceneManager.h"
 #include "ShowFolder/ShowFolder.h"
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 
 
 BaseObject::~BaseObject() {
@@ -32997,7 +32997,7 @@ File Path: Engine/Core/Framework.h
 #ifdef _DEBUG
 #endif // _DEBUG
 #include "Audio.h"
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 #include "Debug/ImGui/ImGuiManager.h"
 #include "Debug/ImGui/ImGuizmoManager.h"
 #include "Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"
@@ -35105,7 +35105,7 @@ T EaseInOutElastic(const T& start, const T& end, float x, float totalX);
 ============================================================
 File Path: Engine/Math/myMath.cpp
 ============================================================
-#include"myMath.h"
+#include"MyMath.h"
 #include <numbers>
 #include <WinApp.h>
 
@@ -38044,7 +38044,7 @@ class BaseScene {
 File Path: Engine/Utility/Collider/ColliderBase.cpp
 ============================================================
 #include "ColliderBase.h"
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 
 void ColliderBase::SetTag(const std::string &tag) {
     if (!ColliderTagManager::GetInstance()->HasTag(tag)) {
@@ -38416,7 +38416,7 @@ class ColliderTagManager {
 ============================================================
 File Path: Engine/Utility/Collider/CollisionManager.cpp
 ============================================================
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 #include "myMath.h"
 #include <algorithm>
 
@@ -38830,7 +38830,7 @@ bool CollisionManager::TestAxis(const Vector3 &axis, const AABB &aabb, const OBB
 }
 
 ============================================================
-File Path: Engine/Utility/Collider/CollosionManager.h
+File Path: Engine/Utility/Collider/CollisionManager.h
 ============================================================
 #pragma once
 #define NOMINMAX
@@ -39516,7 +39516,7 @@ File Path: Engine/Utility/Debug/ImGui/ImGuiManager.cpp
 #include <Line/DrawLine3D.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -58984,7 +58984,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp" />
     <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp" />
     <ClCompile Include="Application\GameObject\Field\SkyDome\SkyDome.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.cpp" />
+    <ClCompile Include="Application\GameObject\Player\Bullet\ChargeShot\ChargeShot.cpp" />
     <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
     <ClCompile Include="Application\GameObject\Player\Player.cpp" />
@@ -59015,8 +59015,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\Particle\ParticleStruct.cpp" />
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp" />
     <ClCompile Include="Engine\Math\Easing.cpp" />
-    <ClCompile Include="Engine\Math\myMath.cpp" />
-    <ClCompile Include="Engine\Math\random.cpp" />
+    <ClCompile Include="Engine\Math\MyMath.cpp" />
+    <ClCompile Include="Engine\Math\Random.cpp" />
     <ClCompile Include="Engine\Math\type\Quaternion.cpp" />
     <ClCompile Include="Engine\Scene\BaseScene.cpp" />
     <ClCompile Include="Engine\Utility\Collider\ColliderBase.cpp" />
@@ -59158,7 +59158,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\GameObject\Enemy\Enemy.h" />
     <ClInclude Include="Application\GameObject\Field\Ground\Ground.h" />
     <ClInclude Include="Application\GameObject\Field\SkyDome\SkyDome.h" />
-    <ClInclude Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.h" />
+    <ClInclude Include="Application\GameObject\Player\Bullet\ChargeShot\ChargeShot.h" />
     <ClInclude Include="Application\GameObject\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="Application\GameObject\Player\Player.h" />
     <ClInclude Include="Application\GameObject\Player\PlayerData.h" />
@@ -59192,8 +59192,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Particle\ParticleStruct.h" />
     <ClInclude Include="Engine\3d\Transform\ObjColor.h" />
     <ClInclude Include="Engine\Math\Easing.h" />
-    <ClInclude Include="Engine\Math\myMath.h" />
-    <ClInclude Include="Engine\Math\random.h" />
+    <ClInclude Include="Engine\Math\MyMath.h" />
+    <ClInclude Include="Engine\Math\Random.h" />
     <ClInclude Include="Engine\Math\type\Matrix3x3.h" />
     <ClInclude Include="Engine\Math\type\Matrix4x4.h" />
     <ClInclude Include="Engine\Math\type\Quaternion.h" />
@@ -59203,7 +59203,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Scene\BaseScene.h" />
     <ClInclude Include="Engine\Utility\Collider\ColliderBase.h" />
     <ClInclude Include="Engine\Utility\Collider\ColliderTagManager.h" />
-    <ClInclude Include="Engine\Utility\Collider\CollosionManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\CollisionManager.h" />
     <ClInclude Include="Engine\Utility\Collider\type\AABBCollider.h" />
     <ClInclude Include="Engine\Utility\Collider\type\OBBCollider.h" />
     <ClInclude Include="Engine\Utility\Collider\type\SphereCollider.h" />
@@ -60658,7 +60658,7 @@ File Path: Hagine.vcxproj.filters
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp" />
     <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp" />
     <ClCompile Include="Application\GameObject\Field\SkyDome\SkyDome.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.cpp" />
+    <ClCompile Include="Application\GameObject\Player\Bullet\ChargeShot\ChargeShot.cpp" />
     <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
     <ClCompile Include="Application\GameObject\Player\Player.cpp" />
@@ -60683,15 +60683,21 @@ File Path: Hagine.vcxproj.filters
     <ClCompile Include="Application\Camera\DeathCamera.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.cpp" />
+    <ClCompile Include="Application\GameObject\Player\Skill\MakanAttackSkill.cpp" />
     <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleStruct.cpp" />
     <ClCompile Include="Engine\3d\Transform\ObjColor.cpp" />
     <ClCompile Include="Engine\Math\Easing.cpp" />
-    <ClCompile Include="Engine\Math\myMath.cpp" />
-    <ClCompile Include="Engine\Math\random.cpp" />
+    <ClCompile Include="Engine\Math\MyMath.cpp" />
+    <ClCompile Include="Engine\Math\Random.cpp" />
     <ClCompile Include="Engine\Math\type\Quaternion.cpp" />
     <ClCompile Include="Engine\Scene\BaseScene.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\ColliderBase.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\ColliderTagManager.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\AABBCollider.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\OBBCollider.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\SphereCollider.cpp" />
     <ClCompile Include="Engine\Utility\Graphics\PipeLine\ComputePipeLineManager.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObjectManager.cpp" />
     <ClCompile Include="Engine\Utility\Data\DataHandler.cpp" />
@@ -60729,6 +60735,7 @@ File Path: Hagine.vcxproj.filters
     <ClCompile Include="externals\imgui\imgui_tables.cpp" />
     <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Application\Staging\Transition\FadeOut.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\Utility\Debug\ResourceLeakChecker\D3DResourceLeakChecker.cpp" />
     <ClCompile Include="Engine\Base\DirectXCommon.cpp" />
@@ -60770,15 +60777,8 @@ File Path: Hagine.vcxproj.filters
     <ClCompile Include="Engine\2d\SpriteManager.cpp" />
     <ClCompile Include="Application\UI\Scene\Title\TitleUI.cpp" />
     <ClCompile Include="Application\Camera\StartCamera.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp" />
     <ClCompile Include="Application\UI\Scene\Result\ResultUI.cpp" />
     <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\ColliderBase.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\ColliderTagManager.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\type\AABBCollider.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\type\OBBCollider.cpp" />
-    <ClCompile Include="Engine\Utility\Collider\type\SphereCollider.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Skill\MakanAttackSkill.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -60787,7 +60787,7 @@ File Path: Hagine.vcxproj.filters
     <ClInclude Include="Application\GameObject\Enemy\Enemy.h" />
     <ClInclude Include="Application\GameObject\Field\Ground\Ground.h" />
     <ClInclude Include="Application\GameObject\Field\SkyDome\SkyDome.h" />
-    <ClInclude Include="Application\GameObject\Player\Bullet\ChageShot\ChageShot.h" />
+    <ClInclude Include="Application\GameObject\Player\Bullet\ChargeShot\ChargeShot.h" />
     <ClInclude Include="Application\GameObject\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="Application\GameObject\Player\Player.h" />
     <ClInclude Include="Application\GameObject\Player\PlayerData.h" />
@@ -60814,14 +60814,15 @@ File Path: Hagine.vcxproj.filters
     <ClInclude Include="Application\Camera\DeathCamera.h" />
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.h" />
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.h" />
+    <ClInclude Include="Application\GameObject\Player\Skill\MakanAttackSkill.h" />
     <ClInclude Include="Engine\2d\SpriteStruct.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
     <ClInclude Include="Engine\3d\Particle\ParticleStruct.h" />
     <ClInclude Include="Engine\3d\Transform\ObjColor.h" />
     <ClInclude Include="Engine\Math\Easing.h" />
-    <ClInclude Include="Engine\Math\myMath.h" />
-    <ClInclude Include="Engine\Math\random.h" />
+    <ClInclude Include="Engine\Math\MyMath.h" />
+    <ClInclude Include="Engine\Math\Random.h" />
     <ClInclude Include="Engine\Math\type\Matrix3x3.h" />
     <ClInclude Include="Engine\Math\type\Matrix4x4.h" />
     <ClInclude Include="Engine\Math\type\Quaternion.h" />
@@ -60829,6 +60830,12 @@ File Path: Hagine.vcxproj.filters
     <ClInclude Include="Engine\Math\type\Vector3.h" />
     <ClInclude Include="Engine\Math\type\Vector4.h" />
     <ClInclude Include="Engine\Scene\BaseScene.h" />
+    <ClInclude Include="Engine\Utility\Collider\ColliderBase.h" />
+    <ClInclude Include="Engine\Utility\Collider\ColliderTagManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\CollisionManager.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\AABBCollider.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\OBBCollider.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\SphereCollider.h" />
     <ClInclude Include="Engine\Utility\Graphics\PipeLine\ComputePipeLineManager.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObjectManager.h" />
     <ClInclude Include="Engine\Utility\Data\DataHandler.h" />
@@ -60905,22 +60912,15 @@ File Path: Hagine.vcxproj.filters
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSGroupManager.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSEditor.h" />
     <ClInclude Include="Application\Staging\Transition\FadeOut.h" />
+    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
     <ClInclude Include="Application\UI\Scene\Title\TitleUI.h" />
     <ClInclude Include="Application\Camera\StartCamera.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h" />
     <ClInclude Include="Application\UI\Scene\Result\ResultUI.h" />
     <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
-    <ClInclude Include="Engine\Utility\Collider\ColliderBase.h" />
-    <ClInclude Include="Engine\Utility\Collider\ColliderTagManager.h" />
-    <ClInclude Include="Engine\Utility\Collider\CollosionManager.h" />
-    <ClInclude Include="Engine\Utility\Collider\type\AABBCollider.h" />
-    <ClInclude Include="Engine\Utility\Collider\type\OBBCollider.h" />
-    <ClInclude Include="Engine\Utility\Collider\type\SphereCollider.h" />
-    <ClInclude Include="Application\GameObject\Player\Skill\MakanAttackSkill.h" />
-    <ClInclude Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
