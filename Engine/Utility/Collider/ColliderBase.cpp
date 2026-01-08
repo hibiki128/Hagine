@@ -1,5 +1,5 @@
 #include "ColliderBase.h"
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 
 void ColliderBase::SetTag(const std::string &tag) {
     if (!ColliderTagManager::GetInstance()->HasTag(tag)) {

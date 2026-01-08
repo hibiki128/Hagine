@@ -3,7 +3,7 @@
 #ifdef _DEBUG
 #endif // _DEBUG
 #include "Audio.h"
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 #include "Debug/ImGui/ImGuiManager.h"
 #include "Debug/ImGui/ImGuizmoManager.h"
 #include "Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"

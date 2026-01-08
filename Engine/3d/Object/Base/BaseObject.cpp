@@ -2,7 +2,7 @@
 #include "BaseObject.h"
 #include "Scene/SceneManager.h"
 #include "ShowFolder/ShowFolder.h"
-#include"Collider/CollosionManager.h"
+#include"Collider/CollisionManager.h"
 
 
 BaseObject::~BaseObject() {
