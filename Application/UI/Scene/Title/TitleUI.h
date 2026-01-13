@@ -3,6 +3,7 @@
 #include <Particle/ParticleEmitter.h>
 #include <SpriteManager.h>
 #include <memory>
+#include <GamePad.h>
 
 /// <summary>
 /// タイトル画面のUI管理クラス
@@ -109,6 +110,7 @@ class TitleUI {
     std::unique_ptr<ParticleEmitter> chargeBullet_ = nullptr;   // チャージ弾パーティクル
     std::unique_ptr<ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
     std::unique_ptr<ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
 
     std::array<SpriteData *, kMaxSprite> sprites_;
 };

@@ -23,6 +23,9 @@ void TitleScene::Initialize() {
     titleUI_->Initialize();
     firstMove_ = false;
     secondMove_ = false;
+
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
 }
 
 void TitleScene::Finalize() {
@@ -30,6 +33,7 @@ void TitleScene::Finalize() {
 }
 
 void TitleScene::Update() {
+    gamePad_->Update();
     // カメラ更新
     CameraUpdate();
 
@@ -40,9 +44,16 @@ void TitleScene::Update() {
         vp_.EaseCameraMove(EasingType::InCubic, "TitleMovedCamera", 1.0f);
         firstMove_ = true;
     }
-    if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
-        vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
-        secondMove_ = true;
+    if (!gamePad_->IsConnected()) {
+        if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
+            vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
+            secondMove_ = true;
+        }
+    } else {
+        if (time_ >= 3.0f && gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !secondMove_ && !vp_.GetIsCameraMove()) {
+            vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
+            secondMove_ = true;
+        }
     }
     titleUI_->Update();
 }
@@ -88,7 +99,7 @@ void TitleScene::CameraUpdate() {
 }
 
 void TitleScene::ChangeScene() {
-    if (secondMove_ && !vp_.GetIsCameraMove()&&titleUI_->GetIsFinish()) {
+    if (secondMove_ && !vp_.GetIsCameraMove() && titleUI_->GetIsFinish()) {
         SceneTransition::GetInstance()->SetUseTransition(false);
         sceneManager_->NextSceneReservation("GAME");
     }

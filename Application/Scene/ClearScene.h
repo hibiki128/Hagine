@@ -5,6 +5,7 @@
 #include "Application/UI/Scene/Result/ResultUI.h"
 #include "BaseScene.h"
 #include "SkyBox/SkyBox.h"
+#include <GamePad.h>
 
 /// <summary>
 /// クリア画面のシーンクラス
@@ -98,6 +99,8 @@ class ClearScene : public BaseScene {
 
     // リザルトUI
     std::unique_ptr<ResultUI> resultUI_;
+
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
 
     SkyBox *skyBox_ = nullptr;
 

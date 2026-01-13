@@ -54,9 +54,13 @@ void TitleUI::Initialize() {
     spriteExitTimer_ = 0.0f;
     isFinish_ = false;
     cameraMove_ = false;
+
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
 }
 
 void TitleUI::Update() {
+    gamePad_->Update();
     time_ += kDeltaTime;
 
     // タイマーがkMaxTime以上でスプライト表示開始
@@ -105,11 +109,18 @@ void TitleUI::Update() {
             playerAura_->Update();
         }
     }
-
-    if (time_ >= kMinStartInputTime && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_ && !cameraMove_) {
-        secondMove_ = true;
-        isSpriteExiting_ = true;
-        spriteExitTimer_ = 0.0f;
+    if (!gamePad_->IsConnected()) {
+        if (time_ >= kMinStartInputTime && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_ && !cameraMove_) {
+            secondMove_ = true;
+            isSpriteExiting_ = true;
+            spriteExitTimer_ = 0.0f;
+        }
+    } else {
+        if (time_ >= kMinStartInputTime && gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !secondMove_ && !cameraMove_) {
+            secondMove_ = true;
+            isSpriteExiting_ = true;
+            spriteExitTimer_ = 0.0f;
+        }
     }
 
     if (secondMove_) {
