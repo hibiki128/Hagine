@@ -1,7 +1,7 @@
 #include "MyGame.h"
 #include "Scene/SceneFactory.h"
 #include <Frame.h>
-
+namespace Hagine::Core {
 void MyGame::Initialize() {
     Framework::Initialize();
     Framework::LoadResource();
@@ -17,7 +17,7 @@ void MyGame::Initialize() {
     sceneManager_->NextSceneReservation("CLEAR");
 #else
     sceneManager_->NextSceneReservation("TITLE");
-#endif // _DEBUG 
+#endif // _DEBUG
     // -----------------------
 }
 
@@ -99,3 +99,4 @@ void MyGame::Draw() {
     // -----描画終了-----
     dxCommon_->PostDraw();
 }
+} // namespace Hagine::Core

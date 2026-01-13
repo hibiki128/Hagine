@@ -9,6 +9,7 @@
 class PipeLineManager;
 class DirectXCommon;
 class SrvManager;
+namespace Hagine::Graphics {
 class SkyBox {
   private:
     /// ===========================================
@@ -21,7 +22,7 @@ class SkyBox {
     SkyBox(SkyBox &) = delete;
     SkyBox &operator=(SkyBox &) = delete;
 
-    void Update(const ViewProjection &viewProjection);
+    void Update(const Camera::ViewProjection &viewProjection);
     void CreateShape();
     void CreateVertex();
     void CreateIndex();
@@ -34,7 +35,7 @@ class SkyBox {
     /// ============================================
 
     void Initialize(std::string filePath);
-    void Draw(const ViewProjection &viewProjection);
+    void Draw(const Camera::ViewProjection &viewProjection);
     static SkyBox *GetInstance();
     void Finalize();
     uint32_t GetTextureIndex() const { return textureIndex_; }
@@ -87,3 +88,4 @@ class SkyBox {
 
     uint32_t textureIndex_ = 0;
 };
+} // namespace Hagine::Graphics

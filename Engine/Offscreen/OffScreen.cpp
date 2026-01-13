@@ -5,9 +5,9 @@
 #ifdef _DEBUG
 #include "imgui.h"
 #endif // _DEBUG
-
+namespace Hagine::Graphics {
 void OffScreen::Initialize() {
-    DirectXCommon *dxCommon = DirectXCommon::GetInstance();
+    Core::DirectXCommon *dxCommon = Core::DirectXCommon::GetInstance();
     SrvManager *srvManager = SrvManager::GetInstance();
     PipeLineManager *psoManager = PipeLineManager::GetInstance();
 
@@ -25,7 +25,7 @@ void OffScreen::Draw() {
     renderer_.Draw(effectChain_, parameters_);
 }
 
-void OffScreen::SetProjection(Matrix4x4 projectionMatrix) {
+void OffScreen::SetProjection(Math::Matrix4x4 projectionMatrix) {
     projectionMatrix_ = projectionMatrix;
     parameters_.SetProjection(projectionMatrix);
 }
@@ -103,3 +103,4 @@ void OffScreen::Setting() {
     }
 #endif // _DEBUG
 }
+} // namespace Hagine::Graphics

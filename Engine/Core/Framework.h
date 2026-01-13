@@ -3,7 +3,7 @@
 #ifdef _DEBUG
 #endif // _DEBUG
 #include "Audio.h"
-#include"Collider/CollisionManager.h"
+#include "Collider/CollisionManager.h"
 #include "Debug/ImGui/ImGuiManager.h"
 #include "Debug/ImGui/ImGuizmoManager.h"
 #include "Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"
@@ -24,13 +24,13 @@
 #include "Particle/ParticleGroupManager.h"
 #include "Scene/AbstractSceneFactory.h"
 #include "Scene/SceneManager.h"
+#include "Scene/SceneTransition.h"
 #include "SkyBox/SkyBox.h"
 #include "SpriteCommon.h"
 #include "SpriteManager.h"
 #include "line/DrawLine3D.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
-#include"Scene/SceneTransition.h"
-
+namespace Hagine::Core {
 class Framework {
   public: // メンバ関数
     virtual ~Framework() = default;
@@ -81,11 +81,11 @@ class Framework {
   private:
   protected:
     Input *input_ = nullptr;
-    Audio *audio_ = nullptr;
-    DirectXCommon *dxCommon_ = nullptr;
-    WinApp *winApp_ = nullptr;
-    DrawLine3D *line3d_ = nullptr;
-    SkyBox *skyBox_ = nullptr;
+    Audio::Audio *audio_ = nullptr;
+    Core::DirectXCommon *dxCommon_ = nullptr;
+    Core::WinApp *winApp_ = nullptr;
+    Graphics::Line::DrawLine3D *line3d_ = nullptr;
+    Graphics::SkyBox *skyBox_ = nullptr;
 
     // シーンファクトリー
     AbstractSceneFactory *sceneFactory_ = nullptr;
@@ -97,25 +97,25 @@ class Framework {
     ModelManager *modelManager_ = nullptr;
     ImGuiManager *imGuiManager_ = nullptr;
     ImGuizmoManager *imGuizmoManager_ = nullptr;
-    BaseObjectManager *baseObjectManager_ = nullptr;
-    ParticleGroupManager *particleGroupManager_ = nullptr;
-    ParticleCSGroupManager *particleCSGroupManager_ = nullptr;
+    Graphics::BaseObjectManager *baseObjectManager_ = nullptr;
+    Graphics::ParticleGroupManager *particleGroupManager_ = nullptr;
+    Graphics::ParticleCSGroupManager *particleCSGroupManager_ = nullptr;
     PipeLineManager *pipeLineManager_ = nullptr;
     MotionEditor *motionEditor_ = nullptr;
     ComputePipeLineManager *computePipeLineManager_ = nullptr;
     ShortcutManager *shortcutManager_ = nullptr;
-    SpriteManager *spriteManager_ = nullptr;
+    Graphics::SpriteManager *spriteManager_ = nullptr;
 
-    SpriteCommon *spriteCommon_ = nullptr;
-    ParticleCommon *particleCommon_ = nullptr;
-    ModelCommon *modelCommon_ = nullptr;
+    Graphics::SpriteCommon *spriteCommon_ = nullptr;
+    Graphics::ParticleCommon *particleCommon_ = nullptr;
+    Graphics::ModelCommon *modelCommon_ = nullptr;
 
-    LightGroup *lightGroup_ = nullptr;
+    Graphics::Light::LightGroup *lightGroup_ = nullptr;
 
-    ParticleEditor *particleEditor_ = nullptr;
-    ParticleCSEditor *particleCSEditor_ = nullptr;
+    Graphics::ParticleEditor *particleEditor_ = nullptr;
+    Graphics::ParticleCSEditor *particleCSEditor_ = nullptr;
 
-    PrimitiveModel *primitiveModel_ = nullptr;
+    Graphics::PrimitiveModel *primitiveModel_ = nullptr;
 
     D3DResourceLeakChecker LeakChecker_;
 
@@ -125,3 +125,4 @@ class Framework {
 
     bool endRequest_;
 };
+} // namespace Hagine::Core

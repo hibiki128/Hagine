@@ -1,5 +1,6 @@
 #include "Frame.h"
 #include <chrono>
+namespace Hagine {
 
 /// <summary>
 /// 静的メンバ変数の定義
@@ -53,7 +54,6 @@ void Frame::Update() {
     lastTime_ = currentTime;
 }
 
-
 /// <summary>
 /// 前回の更新からの経過時間を取得
 /// </summary>
@@ -75,3 +75,4 @@ float Frame::Time() {
     std::chrono::duration<float> elapsed = now - startTime_;
     return elapsed.count();
 }
+} // namespace Hagine

@@ -2,14 +2,15 @@
 #include <cmath>
 #include"myMath.h"
 #include<assert.h>
-void Mouse::Init(Microsoft::WRL::ComPtr<IDirectInput8>directInput,HWND hWnd) {
+namespace Hagine {
+void Mouse::Init(Microsoft::WRL::ComPtr<IDirectInput8> directInput, HWND hWnd) {
     hWnd_ = hWnd;
-    //マウスデバイスの生成
-  HRESULT  result = directInput->CreateDevice(GUID_SysMouse, &devMouse_, NULL);
+    // マウスデバイスの生成
+    HRESULT result = directInput->CreateDevice(GUID_SysMouse, &devMouse_, NULL);
     assert(SUCCEEDED(result));
-    mousePosition_ = { 0.0f, 0.0f }; // 初期値の確認
+    mousePosition_ = {0.0f, 0.0f}; // 初期値の確認
 
-    //入力データ形式のセット
+    // 入力データ形式のセット
     result = devMouse_->SetDataFormat(&c_dfDIMouse2);
     assert(SUCCEEDED(result));
 
@@ -25,13 +26,13 @@ void Mouse::Update() {
     devMouse_->GetDeviceState(sizeof(mouse_), &mouse_);
 }
 
-//マウス****************************************************************
+// マウス****************************************************************
 
-bool Mouse::IsPressMouse(int32_t buttonNumber)const {
-    return(mouse_.rgbButtons[buttonNumber] & 0x80);
+bool Mouse::IsPressMouse(int32_t buttonNumber) const {
+    return (mouse_.rgbButtons[buttonNumber] & 0x80);
 }
 
-bool Mouse::IsTriggerMouse(int32_t buttonNumber)const {
+bool Mouse::IsTriggerMouse(int32_t buttonNumber) const {
     return (mouse_.rgbButtons[buttonNumber] & 0x80) && !(mousePre_.rgbButtons[buttonNumber] & 0x80);
 }
 
@@ -43,7 +44,7 @@ MouseMove Mouse::GetMouseMove() {
     return move;
 }
 
-Vector3 Mouse::GetMousePos3D(const ViewProjection& viewprojection, float depthFactor, float blockSize) const {
+Vector3 Mouse::GetMousePos3D(const Graphics::Camera::ViewProjection &viewprojection, float depthFactor, float blockSize) const {
     // 2Dマウス座標を取得
     Vector2 mousePos = mousePosition_;
 
@@ -57,7 +58,7 @@ Vector3 Mouse::GetMousePos3D(const ViewProjection& viewprojection, float depthFa
     float ndcZ = depthFactor; // Z軸の奥行きを調整するパラメータ
 
     // NDC座標をVector3に変換（NDCのZ値をdepthFactorで調整）
-    Vector3 clipPos = { ndcX, ndcY, ndcZ };
+    Vector3 clipPos = {ndcX, ndcY, ndcZ};
 
     // 逆射影行列を使ってクリップ空間からビュー空間へ変換
     Matrix4x4 invProj = Inverse(viewprojection.matProjection_);
@@ -92,3 +93,4 @@ Vector2 Mouse::GetMousePos() {
 
     return mousePosition_;
 }
+} // namespace Hagine

@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <fstream>
 
+namespace Hagine::Graphics::Light {
+
 LightGroup *LightGroup::instance = nullptr;
 
 LightGroup *LightGroup::GetInstance() {
@@ -26,7 +28,7 @@ void LightGroup::Initialize() {
     CreateSpotLights();
 }
 
-void LightGroup::Update(const ViewProjection &viewProjection) {
+void LightGroup::Update(const Camera::ViewProjection &viewProjection) {
     cameraForGPUData->worldPosition = viewProjection.translation_;
 
     if (isDirectionalLight) {
@@ -181,7 +183,6 @@ void LightGroup::CreateCamera() {
     cameraForGPUData->worldPosition = {0.0f, 0.0f, -50.0f};
 }
 
-
 void LightGroup::imgui() {
 #ifdef USE_IMGUI
 
@@ -279,7 +280,6 @@ void LightGroup::imgui() {
                 ImGui::EndChild();
 
                 ImGui::Spacing();
-
             }
             ImGui::EndTabItem();
         }
@@ -648,7 +648,7 @@ void LightGroup::DrawLightVisualization() {
     if (!showLightVisualization_)
         return;
 
-    DrawLine3D *drawLine = DrawLine3D::GetInstance();
+    Line::DrawLine3D *drawLine = Line::DrawLine3D::GetInstance();
 
     // 平行光源の可視化
     if (isDirectionalLight && directionalLightData->active) {
@@ -735,3 +735,5 @@ void LightGroup::DrawLightVisualization() {
         }
     }
 }
+
+} // namespace Hagine::Graphics::Light

@@ -7,6 +7,8 @@
 #endif // _DEBUG
 #include "algorithm"
 
+namespace Hagine::Graphics::Camera {
+
 void DebugCamera::Initialize(ViewProjection *viewProjection) {
     viewProjection_ = viewProjection;
     translation_ = viewProjection->translation_;
@@ -335,3 +337,4 @@ void DebugCamera::imgui() {
     }
 #endif // _DEBUG
 }
+} // namespace Hagine

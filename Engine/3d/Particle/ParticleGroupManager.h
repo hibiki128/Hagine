@@ -3,7 +3,7 @@
 #include "Data/DataHandler.h"
 #include "ParticleGroup.h"
 #include "memory"
-
+namespace Hagine::Graphics {
 class ParticleGroupManager {
   private:
     /// ===================================================
@@ -92,3 +92,4 @@ class ParticleGroupManager {
     // エミッター用の独立したパーティクルグループを管理
     std::vector<std::unique_ptr<ParticleGroup>> independentGroups_;
 };
+} // namespace Hagine::Graphics

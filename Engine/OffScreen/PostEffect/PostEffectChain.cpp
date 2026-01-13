@@ -1,6 +1,6 @@
 #include "PostEffectChain.h"
 
-
+namespace Hagine::Graphics {
 // エフェクト管理メソッド
 void PostEffectChain::AddEffect(ShaderMode mode) {
     PostEffectSettings settings;
@@ -57,3 +57,4 @@ bool PostEffectChain::HasEnabledEffects() const {
     }
     return false;
 }
+} // namespace Hagine::Graphics

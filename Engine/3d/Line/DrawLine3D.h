@@ -12,6 +12,8 @@
 
 using namespace Microsoft::WRL;
 
+namespace Hagine::Graphics::Line {
+
 /// <summary>
 /// 3D線描画クラス
 /// デバッグ用の線、グリッド、図形を描画する
@@ -95,7 +97,7 @@ class DrawLine3D {
     /// 描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void Draw(const ViewProjection &viewProjection);
+    void Draw(const Camera::ViewProjection &viewProjection);
 
     /// <summary>
     /// グリッド描画
@@ -171,3 +173,5 @@ class DrawLine3D {
     ComPtr<ID3D12Resource> cBufferResource_ = nullptr; // 定数バッファリソース
     CBuffer *cBufferData_ = nullptr;                   // 定数バッファデータ
 };
+
+} // namespace Hagine::Graphics::Line

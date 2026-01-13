@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "ParticleStruct.h"
-
+namespace Hagine::Graphics {
 class ParticleEditor {
   private:
     // シングルトンインスタンス
@@ -104,3 +104,4 @@ class ParticleEditor {
     // データのロード
     void Load();
 };
+} // namespace Hagine::Graphics

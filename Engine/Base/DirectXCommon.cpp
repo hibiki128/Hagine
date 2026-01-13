@@ -17,7 +17,7 @@ using namespace StringUtility;
 #pragma comment(lib, "dxcompiler.lib")
 
 using namespace Microsoft::WRL;
-
+namespace Hagine::Core {
 DirectXCommon *DirectXCommon::instance = nullptr;
 
 DirectXCommon *DirectXCommon::GetInstance() {
@@ -742,3 +742,4 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(Microsof
 }
 
 #pragma endregion
+} // namespace Hagine::Core

@@ -4,7 +4,7 @@
 #ifdef _DEBUG
 #include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG
-
+namespace Hagine::Graphics {
 ParticleEditor *ParticleEditor::instance = nullptr;
 
 ParticleEditor *ParticleEditor::GetInstance() {
@@ -35,7 +35,7 @@ void ParticleEditor::SetupColors() {
     headerColors_[3] = ImVec4(0.7f, 0.3f, 0.7f, 0.8f); // 紫系
     headerColors_[4] = ImVec4(0.7f, 0.7f, 0.2f, 0.8f); // 黄色系
     headerColors_[5] = ImVec4(0.5f, 0.5f, 0.5f, 0.8f); // グレー系
-#endif // USE_IMGUI
+#endif                                                 // USE_IMGUI
 }
 
 void ParticleEditor::AddParticleEmitter(const std::string &name, const std::string &fileName, const std::string &texturePath) {
@@ -542,3 +542,4 @@ std::vector<std::string> ParticleEditor::GetJsonFiles() {
 
     return jsonFiles;
 }
+} // namespace Hagine::Graphics

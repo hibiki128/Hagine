@@ -6,7 +6,7 @@
 #include <Particle/ParticleCommon.h>
 #include <random>
 #include <regex>
-
+namespace Hagine::Graphics {
 void ParticleCSEmitter::Initialize(const std::string &name) {
     particleCommon_ = ParticleCommon::GetInstance();
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
@@ -33,7 +33,7 @@ void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primit
     CreateModelEdges();
 }
 
-void ParticleCSEmitter::Draw(const ViewProjection &vp) {
+void ParticleCSEmitter::Draw(const Camera::ViewProjection &vp) {
     DrawEmitter();
 
     for (auto &group : particleGroups_) {
@@ -107,7 +107,7 @@ void ParticleCSEmitter::DrawEmitter() {
         for (const auto &edge : edgeInfoList_) {
             Vector3 v0 = Transformation(edge.v0, transformMatrix);
             Vector3 v1 = Transformation(edge.v1, transformMatrix);
-            DrawLine3D::GetInstance()->SetPoints(v0, v1);
+            Line::DrawLine3D::GetInstance()->SetPoints(v0, v1);
         }
     } else if (!triangleInfoList_.empty()) {
         Vector4 color = {0.0f, 1.0f, 0.0f, 1.0f};
@@ -116,15 +116,15 @@ void ParticleCSEmitter::DrawEmitter() {
             Vector3 v1 = Transformation(tri.v1, transformMatrix);
             Vector3 v2 = Transformation(tri.v2, transformMatrix);
 
-            DrawLine3D::GetInstance()->SetPoints(v0, v1);
-            DrawLine3D::GetInstance()->SetPoints(v1, v2);
-            DrawLine3D::GetInstance()->SetPoints(v2, v0);
+            Line::DrawLine3D::GetInstance()->SetPoints(v0, v1);
+            Line::DrawLine3D::GetInstance()->SetPoints(v1, v2);
+            Line::DrawLine3D::GetInstance()->SetPoints(v2, v0);
         }
     } else {
         Vector3 center = emitterMeshData_->translate;
         Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f};
         float maxRadius = std::max(std::max(scale.x, scale.y), scale.z);
-        DrawLine3D::GetInstance()->DrawSphere(center, color, maxRadius, 16);
+        Line::DrawLine3D::GetInstance()->DrawSphere(center, color, maxRadius, 16);
     }
 }
 
@@ -1125,3 +1125,4 @@ void ParticleCSEmitter::DrawImGui() {
     }
 #endif // USE_IMGUI
 }
+} // namespace Hagine::Graphics

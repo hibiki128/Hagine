@@ -4,7 +4,7 @@
 #include "ShowFolder/ShowFolder.h"
 #include"Collider/CollisionManager.h"
 
-
+namespace Hagine::Graphics {
 BaseObject::~BaseObject() {
     // すべてのコライダーを削除
     for (auto *collider : colliders_) {
@@ -35,7 +35,7 @@ void BaseObject::Update() {
     SetBlendMode(blendMode_);
 }
 
-void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void BaseObject::Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet) {
     // オフセットを適用する場合は、一時的にローカル位置を変更
     Vector3 originalPosition = transform_->translation_;
 
@@ -1227,4 +1227,5 @@ std::vector<std::string> BaseObject::GetGltfFiles() {
         }
     }
     return gltfFiles;
+}
 }

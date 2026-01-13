@@ -13,6 +13,7 @@
 #include <string>
 
 class SkyBox;
+namespace Hagine::Graphics {
 class BaseObject {
   public:
     /// ===================================================
@@ -68,7 +69,7 @@ class BaseObject {
     // 初期化、更新、描画
     virtual void Init(const std::string className);
     virtual void Update();
-    virtual void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
+    virtual void Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
     void UpdateWorldTransformHierarchy();
     void UpdateHierarchy();
 
@@ -83,7 +84,7 @@ class BaseObject {
 
     // 中心座標取得
     WorldTransform *GetWorldTransform() { return transform_.get(); }
-    ModelAnimation *GetModelAnimation() { return obj3d_->GetCurrentModelAnimation(); }
+    Animation::ModelAnimation *GetModelAnimation() { return obj3d_->GetCurrentModelAnimation(); }
 
     /// =================================================
     /// 親子付け
@@ -199,3 +200,4 @@ class BaseObject {
 
     std::vector<ColliderBase *> colliders_;
 };
+} // namespace Hagine::Graphics

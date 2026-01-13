@@ -1,7 +1,7 @@
 #pragma once
 #include "DirectXCommon.h"
 #include <Graphics/PipeLine/PipeLineManager.h>
-
+namespace Hagine::Graphics {
 /// <summary>
 /// スプライト描画に必要な共通処理を管理するシングルトンクラス
 /// DirectX、パイプライン、ブレンドモードなどを制御
@@ -79,3 +79,5 @@ class SpriteCommon {
     /// <param name="blendMode">設定するブレンドモード</param>
     void SetBlendMode(BlendMode blendMode);
 };
+
+} // namespace Hagine

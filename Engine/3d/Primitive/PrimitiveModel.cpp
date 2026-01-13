@@ -2,7 +2,7 @@
 #include <DirectXMath.h>
 #include <myMath.h>
 using namespace DirectX;
-
+namespace Hagine::Graphics {
 PrimitiveModel *PrimitiveModel::instance = nullptr;
 
 void PrimitiveModel::Initialize() {
@@ -543,3 +543,4 @@ void PrimitiveModel::CreatePyramid() {
     // PrimitiveTypeを追加する必要があります
     primitiveDataMap_.insert(std::make_pair(PrimitiveType::Pyramid, primitiveData));
 }
+} // namespace Hagine::Graphics

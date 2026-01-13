@@ -5,6 +5,8 @@
 #include <cassert>
 #include <myMath.h>
 
+namespace Hagine::Graphics::Animation {
+
 void Skin::Initialize(const Skeleton &skeleton, const ModelData &modelData) {
     dxCommon_ = DirectXCommon::GetInstance();
     srvManager_ = SrvManager::GetInstance();
@@ -23,7 +25,7 @@ void Skin::Update(const Skeleton &skeleton) {
 
 void Skin::UpdateInputVertices(const ModelData &modelData) {
     // 入力頂点データを更新
-   
+
     for (const auto &mesh : modelData.meshes) {
         // メッシュごとの頂点データをコピー
         for (size_t i = 0; i < mesh.vertices.size(); ++i) {
@@ -193,3 +195,5 @@ void Skin::CreateSkinningInformationResource(SkinCluster &skinCluster, const Ske
     skinCluster.skinningInformationResource->Map(0, nullptr, reinterpret_cast<void **>(&skinCluster.SkinningInfomationData));
     skinCluster.SkinningInfomationData->numVertices = static_cast<uint32_t>(totalVertexCount);
 }
+
+} // namespace Hagine

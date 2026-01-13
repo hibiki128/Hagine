@@ -1,5 +1,5 @@
 #include "ParticleStruct.h"
-
+namespace Hagine::Graphics {
 ParticleMaterial ForParticleMaterial(MaterialData material) {
     ParticleMaterial result;
     result.color = material.color;
@@ -19,3 +19,4 @@ std::vector<ParticleMaterial> ForParticleMaterials(std::vector<MaterialData> mat
 
 uint32_t threadsPerGroup_ = 1024;
 int threadGroupSize_ = 1024;
+} // namespace Hagine::Graphics

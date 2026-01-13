@@ -2,6 +2,8 @@
 #include "DirectXCommon.h"
 #include <myMath.h>
 
+namespace Hagine::Graphics::Line {
+
 DrawLine3D *DrawLine3D::instance = nullptr;
 
 DrawLine3D *DrawLine3D::GetInstance() {
@@ -65,7 +67,7 @@ void DrawLine3D::Reset() {
     indexLine_ = 0;
 }
 
-void DrawLine3D::Draw(const ViewProjection &viewProjection) {
+void DrawLine3D::Draw(const Camera::ViewProjection &viewProjection) {
 
     if (indexLine_ == 0) {
         return;
@@ -210,3 +212,4 @@ void DrawLine3D::DrawSphere(const Vector3 &position, const Vector4 &color, float
         }
     }
 }
+} // namespace Hagine::Graphics::Line

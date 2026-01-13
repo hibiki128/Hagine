@@ -7,6 +7,8 @@
 
 class SpriteCommon;
 
+namespace Hagine::Graphics {
+
 /// <summary>
 /// スプライト描画を管理するクラス
 /// 2D画像の描画、トランスフォーム、UV変換などを制御
@@ -78,7 +80,7 @@ class Sprite {
     void SetUVSize(const Vector2 &size) { uvSize_ = size; }
     void SetUVRotate(const float &rotate) { uvRotate_ = rotate; }
     void SetInstanceCount(uint32_t count);
-    void SetInstanceTransform(uint32_t index, const TransformationMatrix &transform);
+    void SetInstanceTransform(uint32_t index, const SpriteTransformationMatrix &transform);
 
   private:
     /// ===================================================
@@ -130,7 +132,7 @@ class Sprite {
     SpriteMaterial *materialData = nullptr;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
-    TransformationMatrix *transformationMatrixData = nullptr;
+    SpriteTransformationMatrix *transformationMatrixData = nullptr;
 
     Vector2 position_ = {0.0f, 0.0f}; // 座標
     float rotation = 0.0f;            // 回転角度
@@ -153,3 +155,4 @@ class Sprite {
     Vector2 uvSize_ = {1.0f, 1.0f};     // UVサイズ
     Vector2 uvPosition_ = {0.0f, 0.0f}; // UV座標
 };
+} // namespace Hagine

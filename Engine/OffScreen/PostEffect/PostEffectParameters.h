@@ -2,11 +2,11 @@
 #include "Data/DataHandler.h"
 #include <memory>
 #include"Graphics/Srv/SrvManager.h"
-
+namespace Hagine::Graphics {
 class PostEffectParameters {
   public:
-    void Initialize(DirectXCommon *dxCommon);
-    void SetShaderParameters(ShaderMode mode, ID3D12GraphicsCommandList *commandList, SrvManager *srvManager, DirectXCommon *dxCommon);
+    void Initialize(Core::DirectXCommon *dxCommon);
+    void SetShaderParameters(ShaderMode mode, ID3D12GraphicsCommandList *commandList, SrvManager *srvManager, Core::DirectXCommon *dxCommon);
     void UpdateTimeParameters(float deltaTime);
 
     void SaveParameters(DataHandler *dataHandler) const;
@@ -14,7 +14,8 @@ class PostEffectParameters {
 
     // ImGui用のパラメータ設定UI
     void DrawParameterUI(ShaderMode mode);
-    void SetProjection(Matrix4x4 projectionMatrix) { projectionInverse_ = projectionMatrix; }
+    void SetProjection(Math::Matrix4x4 projectionMatrix) { projectionInverse_ = projectionMatrix; }
+
   private:
     void CreateAllBuffers();
 
@@ -31,8 +32,7 @@ class PostEffectParameters {
     void CreateTransition();
 
   private:
-
-      DirectXCommon *dxCommon_ = nullptr;
+    Core::DirectXCommon *dxCommon_ = nullptr;
 
     struct KernelSettings {
         int kernelSize;
@@ -48,21 +48,21 @@ class PostEffectParameters {
         float vignetteRadius;
         float vignetteExponent;
         float padding;
-        Vector2 vignetteCenter;
+        Math::Vector2 vignetteCenter;
     };
 
     struct Depth {
-        Matrix4x4 projectionInverse;
+        Math::Matrix4x4 projectionInverse;
         int kernelSize;
     };
 
     struct RadialBlur {
-        Vector2 kCenter;
+        Math::Vector2 kCenter;
         float kBlurWidth;
     };
 
     struct Cinematic {
-        Vector2 iResolution;
+        Math::Vector2 iResolution;
         float contrast;
         float saturation;
         float brightness;
@@ -72,7 +72,7 @@ class PostEffectParameters {
         float threshold;
         float edgeWidth;
         float _pad[2];
-        Vector3 edgeColor;
+        Math::Vector3 edgeColor;
         float _pad1;
         bool invert;
         float _pad2[3];
@@ -91,7 +91,7 @@ class PostEffectParameters {
         float centerRadius;
         float maxDistance;
         float padding1;
-        Vector4 lineColor;
+        Math::Vector4 lineColor;
     };
 
     struct Pixelate {
@@ -99,7 +99,7 @@ class PostEffectParameters {
         float centerX;
         float centerY;
     };
-    
+
     struct Transition {
         float progress;   // 遷移の進行度
         float splitSpeed; // 切れ込みが入るスピード
@@ -120,7 +120,7 @@ class PostEffectParameters {
     Microsoft::WRL::ComPtr<ID3D12Resource> depthResouce;
     Depth *depthData = nullptr;
 
-    Matrix4x4 projectionInverse_;
+    Math::Matrix4x4 projectionInverse_;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> radialResource;
     RadialBlur *radialData = nullptr;
@@ -145,3 +145,4 @@ class PostEffectParameters {
 
     std::string texPath_ = "debug/noise0.png";
 };
+} // namespace Hagine::Graphics

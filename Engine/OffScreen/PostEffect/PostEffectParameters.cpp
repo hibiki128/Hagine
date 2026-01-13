@@ -3,15 +3,15 @@
 #include <Graphics/Srv/SrvManager.h>
 #include <Graphics/Texture/TextureManager.h>
 #include <d3d12.h>
-
-void PostEffectParameters::Initialize(DirectXCommon *dxCommon) {
+namespace Hagine::Graphics {
+void PostEffectParameters::Initialize(Core::DirectXCommon *dxCommon) {
     dxCommon_ = dxCommon;
     TextureManager::GetInstance()->LoadTexture(texPath_);
     CreateAllBuffers();
 }
 
 void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCommandList *commandList,
-                                               SrvManager *srvManager, DirectXCommon *dxCommon) {
+                                               SrvManager *srvManager, Core::DirectXCommon *dxCommon) {
     switch (mode) {
     case ShaderMode::kVigneet:
         commandList->SetGraphicsRootConstantBufferView(1, vignetteResource->GetGPUVirtualAddress());
@@ -23,9 +23,9 @@ void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCo
         commandList->SetGraphicsRootConstantBufferView(1, gaussianResouce->GetGPUVirtualAddress());
         break;
     case ShaderMode::kDepth:
-        depthData->projectionInverse = Inverse(projectionInverse_);
+        depthData->projectionInverse = Math::Inverse(projectionInverse_);
         commandList->SetGraphicsRootConstantBufferView(1, depthResouce->GetGPUVirtualAddress());
-        commandList->SetGraphicsRootDescriptorTable(2, dxCommon->GetDepthGPUHandle());
+        commandList->SetGraphicsRootDescriptorTable(2, dxCommon_->GetDepthGPUHandle());
         break;
     case ShaderMode::kBlur:
         commandList->SetGraphicsRootConstantBufferView(1, radialResource->GetGPUVirtualAddress());
@@ -67,7 +67,7 @@ void PostEffectParameters::SaveParameters(DataHandler *dataHandler) const {
         dataHandler->Save<float>("vignette_exponent", vignetteData->vignetteExponent);
         dataHandler->Save<float>("vignette_radius", vignetteData->vignetteRadius);
         dataHandler->Save<float>("vignette_strength", vignetteData->vignetteStrength);
-        dataHandler->Save<Vector2>("vignette_center", vignetteData->vignetteCenter);
+        dataHandler->Save<Math::Vector2>("vignette_center", vignetteData->vignetteCenter);
     }
 
     // Smooth パラメータ
@@ -88,13 +88,13 @@ void PostEffectParameters::SaveParameters(DataHandler *dataHandler) const {
 
     // Radial Blur パラメータ
     if (radialData) {
-        dataHandler->Save<Vector2>("radial_center", radialData->kCenter);
+        dataHandler->Save<Math::Vector2>("radial_center", radialData->kCenter);
         dataHandler->Save<float>("radial_blurWidth", radialData->kBlurWidth);
     }
 
     // Cinematic パラメータ
     if (cinematicData) {
-        dataHandler->Save<Vector2>("cinematic_resolution", cinematicData->iResolution);
+        dataHandler->Save<Math::Vector2>("cinematic_resolution", cinematicData->iResolution);
         dataHandler->Save<float>("cinematic_contrast", cinematicData->contrast);
         dataHandler->Save<float>("cinematic_saturation", cinematicData->saturation);
         dataHandler->Save<float>("cinematic_brightness", cinematicData->brightness);
@@ -104,7 +104,7 @@ void PostEffectParameters::SaveParameters(DataHandler *dataHandler) const {
     if (dissolveData) {
         dataHandler->Save<float>("dissolve_threshold", dissolveData->threshold);
         dataHandler->Save<float>("dissolve_edgeWidth", dissolveData->edgeWidth);
-        dataHandler->Save<Vector3>("dissolve_edgeColor", dissolveData->edgeColor);
+        dataHandler->Save<Math::Vector3>("dissolve_edgeColor", dissolveData->edgeColor);
     }
 
     // Focus Line パラメータ
@@ -115,7 +115,7 @@ void PostEffectParameters::SaveParameters(DataHandler *dataHandler) const {
         dataHandler->Save<float>("focusLine_intensity", focusLineData->intensity);
         dataHandler->Save<float>("focusLine_centerRadius", focusLineData->centerRadius);
         dataHandler->Save<float>("focusLine_maxDistance", focusLineData->maxDistance);
-        dataHandler->Save<Vector4>("focusLine_lineColor", focusLineData->lineColor);
+        dataHandler->Save<Math::Vector4>("focusLine_lineColor", focusLineData->lineColor);
     }
 }
 
@@ -125,7 +125,7 @@ void PostEffectParameters::LoadParameters(DataHandler *dataHandler) {
         vignetteData->vignetteExponent = dataHandler->Load<float>("vignette_exponent", 1.0f);
         vignetteData->vignetteRadius = dataHandler->Load<float>("vignette_radius", 1.0f);
         vignetteData->vignetteStrength = dataHandler->Load<float>("vignette_strength", 1.0f);
-        vignetteData->vignetteCenter = dataHandler->Load<Vector2>("vignette_center", {0.5f, 0.5f});
+        vignetteData->vignetteCenter = dataHandler->Load<Math::Vector2>("vignette_center", {0.5f, 0.5f});
     }
 
     // Smooth パラメータ
@@ -146,13 +146,13 @@ void PostEffectParameters::LoadParameters(DataHandler *dataHandler) {
 
     // Radial Blur パラメータ
     if (radialData) {
-        radialData->kCenter = dataHandler->Load<Vector2>("radial_center", {0.5f, 0.5f});
+        radialData->kCenter = dataHandler->Load<Math::Vector2>("radial_center", {0.5f, 0.5f});
         radialData->kBlurWidth = dataHandler->Load<float>("radial_blurWidth", 0.01f);
     }
 
     // Cinematic パラメータ
     if (cinematicData) {
-        cinematicData->iResolution = dataHandler->Load<Vector2>("cinematic_resolution", {1280.0f, 720.0f});
+        cinematicData->iResolution = dataHandler->Load<Math::Vector2>("cinematic_resolution", {1280.0f, 720.0f});
         cinematicData->contrast = dataHandler->Load<float>("cinematic_contrast", 1.05f);
         cinematicData->saturation = dataHandler->Load<float>("cinematic_saturation", 0.68f);
         cinematicData->brightness = dataHandler->Load<float>("cinematic_brightness", 0.13f);
@@ -162,7 +162,7 @@ void PostEffectParameters::LoadParameters(DataHandler *dataHandler) {
     if (dissolveData) {
         dissolveData->threshold = dataHandler->Load<float>("dissolve_threshold", 0.0f);
         dissolveData->edgeWidth = dataHandler->Load<float>("dissolve_edgeWidth", 0.01f);
-        dissolveData->edgeColor = dataHandler->Load<Vector3>("dissolve_edgeColor", {1.0f, 0.0f, 0.0f});
+        dissolveData->edgeColor = dataHandler->Load<Math::Vector3>("dissolve_edgeColor", {1.0f, 0.0f, 0.0f});
     }
 
     // Focus Line パラメータ
@@ -173,7 +173,7 @@ void PostEffectParameters::LoadParameters(DataHandler *dataHandler) {
         focusLineData->intensity = dataHandler->Load<float>("focusLine_intensity", 0.3f);
         focusLineData->centerRadius = dataHandler->Load<float>("focusLine_centerRadius", 0.5f);
         focusLineData->maxDistance = dataHandler->Load<float>("focusLine_maxDistance", 1.0f);
-        focusLineData->lineColor = dataHandler->Load<Vector4>("focusLine_lineColor", {1.0f, 1.0f, 1.0f, 1.0f});
+        focusLineData->lineColor = dataHandler->Load<Math::Vector4>("focusLine_lineColor", {1.0f, 1.0f, 1.0f, 1.0f});
     }
 }
 
@@ -250,7 +250,7 @@ void PostEffectParameters::DrawParameterUI(ShaderMode mode) {
         if (pixelateData) {
             ImGui::DragFloat("ブロックサイズ", &pixelateData->blockSize, 0.001f, 0.001f, 1.0f);
             ImGui::DragFloat("中心X", &pixelateData->centerX, 0.01f, 0.0f, 1.0f);
-            ImGui::DragFloat("中心Y", &pixelateData->centerY,0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat("中心Y", &pixelateData->centerY, 0.01f, 0.0f, 1.0f);
         }
         break;
     case ShaderMode::kTransition:
@@ -304,7 +304,7 @@ void PostEffectParameters::CreateVignette() {
 void PostEffectParameters::CreateDepth() {
     depthResouce = dxCommon_->CreateBufferResource(sizeof(Depth));
     depthResouce->Map(0, nullptr, reinterpret_cast<void **>(&depthData));
-    depthData->projectionInverse = MakeIdentity4x4();
+    depthData->projectionInverse = Math::MakeIdentity4x4();
     depthData->kernelSize = 3;
 }
 
@@ -359,8 +359,9 @@ void PostEffectParameters::CreatePixelate() {
 void PostEffectParameters::CreateTransition() {
     transitionResource = dxCommon_->CreateBufferResource(sizeof(Transition));
     transitionResource->Map(0, nullptr, reinterpret_cast<void **>(&transitionData));
-    transitionData->progress = 0.0f;  
+    transitionData->progress = 0.0f;
     transitionData->splitSpeed = 0.1f;
     transitionData->slideSpeed = 0.1f;
     transitionData->splitWidth = 0.01f;
 }
+} // namespace Hagine::Graphics

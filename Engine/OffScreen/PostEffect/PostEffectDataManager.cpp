@@ -1,5 +1,5 @@
 #include "PostEffectDataManager.h"
-
+namespace Hagine::Graphics {
 void PostEffectDataManager::Initialize() {
     dataHandler_ = std::make_unique<DataHandler>("OffScreen", "OffScreenData");
 }
@@ -51,3 +51,4 @@ void PostEffectDataManager::LoadData(PostEffectChain &chain, PostEffectParameter
     // エフェクトパラメータの読み込み
     params.LoadParameters(dataHandler_.get());
 }
+} // namespace Hagine::Graphics

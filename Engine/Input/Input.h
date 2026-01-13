@@ -18,7 +18,7 @@
 #include <myMath.h>
 #include <type/Vector3.h>
 #include <type/Vector4.h>
-
+namespace Hagine {
 struct Ray {
     Vector3 origin;    // レイの開始点
     Vector3 direction; // レイの方向（正規化済み）
@@ -181,7 +181,7 @@ class Input {
     /// <param name="viewprojection"></param>
     /// <param name="depthFactor"></param>
     /// <returns></returns>
-    static Vector3 GetMousePos3D(const ViewProjection &viewprojection, float depthFactor, float blockSpacing = 1.0f);
+    static Vector3 GetMousePos3D(const Graphics::Camera::ViewProjection &viewprojection, float depthFactor, float blockSpacing = 1.0f);
 
     /// <summary>
     /// レイを更新する（毎フレーム呼び出す）
@@ -189,7 +189,7 @@ class Input {
     /// <param name="viewprojection">カメラのビュープロジェクション</param>
     /// <param name="viewport">ImGuiシーンの描画領域情報</param>
     /// <param name="rayLength">レイの最大長</param>
-    void UpdateRay(const ViewProjection &viewprojection, const SceneViewport &viewport, float rayLength = 1000.0f);
+    void UpdateRay(const Graphics::Camera::ViewProjection &viewprojection, const SceneViewport &viewport, float rayLength = 1000.0f);
 
     /// <summary>
     /// 現在のレイを取得する
@@ -205,7 +205,7 @@ class Input {
     /// <param name="worldMatrix">オブジェクトのワールドマトリックス</param>
     /// <param name="hitInfo">ヒット情報（出力）</param>
     /// <returns>衝突したかどうか</returns>
-    static bool RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,
+    static bool RayIntersectAABB(const Ray &ray, Graphics::BaseObject *targetObject, RayHitInfo &hitInfo,
                                  const AABB &aabb = {Vector3(-1.0f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f)});
 
     /// <summary>
@@ -216,7 +216,7 @@ class Input {
     /// <param name="worldMatrix">オブジェクトのワールドマトリックス</param>
     /// <param name="hitInfo">ヒット情報（出力）</param>
     /// <returns>衝突したかどうか</returns>
-    static bool RayIntersectSphere(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,
+    static bool RayIntersectSphere(const Ray &ray, Graphics::BaseObject *targetObject, RayHitInfo &hitInfo,
                                    const Sphere &sphere = {Vector3(0.0f, 0.0f, 0.0f), 1.0f});
 
     /// <summary>
@@ -227,7 +227,7 @@ class Input {
     /// <param name="viewport">シーンの描画領域</param>
     /// <param name="rayLength">レイの長さ</param>
     /// <returns>生成されたレイ</returns>
-    static Ray CreateRayFromMouse(const Vector2 &mousePos, const ViewProjection &viewprojection,
+    static Ray CreateRayFromMouse(const Vector2 &mousePos, const Graphics::Camera::ViewProjection &viewprojection,
                                   const SceneViewport &viewport, float rayLength = 1000.0f);
 
     /// <summary>
@@ -236,7 +236,7 @@ class Input {
     /// <param name="ray">レイ</param>
     /// <param name="worldMatrices">ワールドマトリックスのリスト</param>
     /// <returns>最も近いヒット情報</returns>
-    static RayHitInfo RaycastMultipleAABB(const Ray &ray, const std::vector<BaseObject *> baseObjects);
+    static RayHitInfo RaycastMultipleAABB(const Ray &ray, const std::vector<Graphics::BaseObject *> baseObjects);
 
     /// <summary>
     /// 複数のマトリックスに対してスフィアレイキャストを行う
@@ -244,8 +244,9 @@ class Input {
     /// <param name="ray">レイ</param>
     /// <param name="worldMatrices">ワールドマトリックスのリスト</param>
     /// <returns>最も近いヒット情報</returns>
-    static RayHitInfo RaycastMultipleSphere(const Ray &ray, const std::vector<BaseObject *> baseObjects);
+    static RayHitInfo RaycastMultipleSphere(const Ray &ray, const std::vector<Graphics::BaseObject *> baseObjects);
 
     const BYTE *GetKeyState() const { return key_.data(); }
     const BYTE *GetPreviousKeyState() const { return keyPre_.data(); }
 };
+} // namespace Hagine

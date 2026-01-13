@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <Graphics/PipeLine/PipeLineManager.h>
-
+namespace Hagine::Graphics {
 struct PostEffectSettings {
     ShaderMode shaderMode = ShaderMode::kNone;
     bool enabled = false;
@@ -24,3 +24,4 @@ class PostEffectChain {
   private:
     std::vector<PostEffectSettings> effects_;
 };
+} // namespace Hagine::Graphics

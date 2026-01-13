@@ -1,6 +1,9 @@
 #pragma once
 #include "Object/Base/BaseObject.h"
 #include "unordered_map"
+
+namespace Hagine::Graphics {
+
 class BaseObjectManager {
   private:
     /// ===================================================
@@ -57,6 +60,7 @@ class BaseObjectManager {
     void LoadAllParentChildRelationships();
     void RemoveObject(const std::string &name);
     void ShowSaveTargetManager();
+
   private:
     // 各機能を個別に描画するメソッド
     void DrawSceneSaveModel();
@@ -83,3 +87,4 @@ class BaseObjectManager {
     bool showObjectLoadModal_ = false;
     std::string selectedJsonPath_;
 };
+} // namespace Hagine::Graphics

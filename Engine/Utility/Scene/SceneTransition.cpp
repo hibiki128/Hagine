@@ -240,12 +240,12 @@ void SceneTransition::UpdateTransitionInstances() {
             Vector2 position = {col * 80.0f, row * 80.0f};
             float size = instanceSizes_[row][col];
 
-            Transform transform{{size, size, 1.0f}, {0.0f, 0.0f, 0.0f}, {position.x, position.y, 0.0f}};
+            SpriteTransform transform{{size, size, 1.0f}, {0.0f, 0.0f, 0.0f}, {position.x, position.y, 0.0f}};
             Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
             Matrix4x4 viewMatrix = MakeIdentity4x4();
             Matrix4x4 projectionMatrix = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
 
-            TransformationMatrix transformMatrix;
+            SpriteTransformationMatrix transformMatrix;
             transformMatrix.WVP = worldMatrix * viewMatrix * projectionMatrix;
             transformMatrix.World = worldMatrix;
 

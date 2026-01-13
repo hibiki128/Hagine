@@ -8,7 +8,7 @@
 #include "string"
 #include "wrl.h"
 #include <type/Vector4.h>
-
+namespace Hagine::Core {
 // DirectX基盤
 class DirectXCommon {
   private:
@@ -66,7 +66,7 @@ class DirectXCommon {
     /// </summary>
     void PostDraw();
 
-    void TransitionUAVBarrier(ID3D12Resource* pResource);
+    void TransitionUAVBarrier(ID3D12Resource *pResource);
     void TransitionSRVBarrier();
 
     IDxcBlob *CompileShader(
@@ -328,3 +328,4 @@ class DirectXCommon {
     const double targetFPS_ = 60.0;
     const std::chrono::microseconds frameTime_{static_cast<uint64_t>(1000000.0 / targetFPS_)};
 };
+} // namespace Hagine::Core

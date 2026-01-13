@@ -15,6 +15,7 @@
 #include <Transform/ObjColor.h>
 
 class ModelCommon;
+namespace Hagine::Graphics {
 class Object3d {
   private: // メンバ変数
     struct Transform {
@@ -40,12 +41,12 @@ class Object3d {
     Transform transform;
 
     Model *model = nullptr;
-    std::shared_ptr<ModelAnimation> currentModelAnimation_ = nullptr;
-    std::map<std::string, std::shared_ptr<ModelAnimation>> modelAnimations_;
+    std::shared_ptr<Animation::ModelAnimation> currentModelAnimation_ = nullptr;
+    std::map<std::string, std::shared_ptr<Animation::ModelAnimation>> modelAnimations_;
     std::vector<std::unique_ptr<Material>> materials_;
     std::vector<ObjColor> color_;
     ModelCommon *modelCommon = nullptr;
-    LightGroup *lightGroup = nullptr;
+    Light::LightGroup *lightGroup = nullptr;
 
     // 移動させる用各SRT
     Vector3 position = {0.0f, 0.0f, 0.0f};
@@ -72,7 +73,7 @@ class Object3d {
     /// <summary>
     /// 更新
     /// </summary>
-    void Update(const WorldTransform &worldTransform, const ViewProjection &viewProjection);
+    void Update(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection);
 
     /// <summary>
     /// アニメーションの更新
@@ -97,17 +98,17 @@ class Object3d {
     /// <param name="anime"></param>
     void SetStopAnimation(bool anime) { currentModelAnimation_->SetIsAnimation(anime); }
 
-    void DrawWireframe(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool isRainbow = false);
+    void DrawWireframe(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection, bool isRainbow = false);
 
     /// <summary>
     /// 描画
     /// </summary>
-    void Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, bool Lighting = true, bool modelDraw = true);
+    void Draw(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection, bool reflect, bool Lighting = true, bool modelDraw = true);
 
     /// <summary>
     /// スケルトン描画
     /// </summary>
-    void DrawSkeleton(const WorldTransform &worldTransform, const ViewProjection &viewProjection);
+    void DrawSkeleton(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection);
 
     void PlayAnimation() { currentModelAnimation_->PlayAnimation(); }
 
@@ -130,7 +131,7 @@ class Object3d {
         }
         return texturePaths;
     }
-    ModelAnimation *GetCurrentModelAnimation() const {
+    Animation::ModelAnimation *GetCurrentModelAnimation() const {
         return currentModelAnimation_.get();
     }
 
@@ -181,3 +182,4 @@ class Object3d {
         return Vector3(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);
     }
 };
+} // namespace Hagine::Graphics

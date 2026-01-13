@@ -8,7 +8,7 @@
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "xinput.lib")
 #include "Object/Base/BaseObject.h"
-
+namespace Hagine {
 std::unique_ptr<Mouse> Input::mouse_ = nullptr;
 
 template bool Input::GetJoystickState<DIJOYSTATE2>(int32_t stickNo, DIJOYSTATE2 &out) const;
@@ -183,7 +183,7 @@ MouseMove Input::GetMouseMove() {
     return mouse_->GetMouseMove();
 }
 
-Vector3 Input::GetMousePos3D(const ViewProjection &viewprojection, float depthFactor, float blockSpacing) {
+Vector3 Input::GetMousePos3D(const Graphics::Camera::ViewProjection &viewprojection, float depthFactor, float blockSpacing) {
     return mouse_->GetMousePos3D(viewprojection, depthFactor, blockSpacing);
 }
 
@@ -197,7 +197,7 @@ Vector2 Input::GetMousePos() {
 
 // レイ*****************************************************************
 
-void Input::UpdateRay(const ViewProjection &viewprojection, const SceneViewport &viewport, float rayLength) {
+void Input::UpdateRay(const Graphics::Camera::ViewProjection &viewprojection, const SceneViewport &viewport, float rayLength) {
     // ビューポート情報を更新
     currentViewport_ = viewport;
 
@@ -208,7 +208,7 @@ void Input::UpdateRay(const ViewProjection &viewprojection, const SceneViewport 
     currentRay_ = CreateRayFromMouse(mousePos, viewprojection, viewport, rayLength);
 }
 
-Ray Input::CreateRayFromMouse(const Vector2 &mousePos, const ViewProjection &viewprojection,
+Ray Input::CreateRayFromMouse(const Vector2 &mousePos, const Graphics::Camera::ViewProjection &viewprojection,
                               const SceneViewport &viewport, float rayLength) {
     Ray ray;
 
@@ -247,7 +247,7 @@ Ray Input::CreateRayFromMouse(const Vector2 &mousePos, const ViewProjection &vie
     return ray;
 }
 
-bool Input::RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,const AABB &aabb) {
+bool Input::RayIntersectAABB(const Ray &ray, Graphics::BaseObject *targetObject, RayHitInfo &hitInfo, const AABB &aabb) {
     Vector3 localCorners[8] = {
         {-1.0f, -1.0f, -1.0f},
         {1.0f, -1.0f, -1.0f},
@@ -347,7 +347,7 @@ bool Input::RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInf
     return false;
 }
 
-bool Input::RayIntersectSphere(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,const Sphere &sphere) {
+bool Input::RayIntersectSphere(const Ray &ray, Graphics::BaseObject *targetObject, RayHitInfo &hitInfo, const Sphere &sphere) {
     Matrix4x4 worldMatrix = targetObject->GetWorldTransform()->matWorld_;
     // スフィアの中心をワールド座標に変換
     Vector3 worldCenter = Transformation(sphere.center, worldMatrix);
@@ -400,7 +400,7 @@ bool Input::RayIntersectSphere(const Ray &ray, BaseObject *targetObject, RayHitI
     return false;
 }
 
-RayHitInfo Input::RaycastMultipleAABB(const Ray &ray, const std::vector<BaseObject *> baseObjects) {
+RayHitInfo Input::RaycastMultipleAABB(const Ray &ray, const std::vector<Graphics::BaseObject *> baseObjects) {
     RayHitInfo closestHit;
     closestHit.hit = false;
     closestHit.distance = FLT_MAX;
@@ -419,7 +419,7 @@ RayHitInfo Input::RaycastMultipleAABB(const Ray &ray, const std::vector<BaseObje
     return closestHit;
 }
 
-RayHitInfo Input::RaycastMultipleSphere(const Ray &ray, const std::vector<BaseObject *> baseObjects) {
+RayHitInfo Input::RaycastMultipleSphere(const Ray &ray, const std::vector<Graphics::BaseObject *> baseObjects) {
     RayHitInfo closestHit;
     closestHit.hit = false;
     closestHit.distance = FLT_MAX;
@@ -437,3 +437,4 @@ RayHitInfo Input::RaycastMultipleSphere(const Ray &ray, const std::vector<BaseOb
 
     return closestHit;
 }
+} // namespace Hagine

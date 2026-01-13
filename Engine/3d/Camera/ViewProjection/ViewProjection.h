@@ -8,6 +8,8 @@
 #include "type/Vector3.h"
 #include "wrl.h"
 
+namespace Hagine::Graphics::Camera {
+
 /// <summary>
 /// ビュープロジェクション定数バッファデータ
 /// </summary>
@@ -142,13 +144,14 @@ class ViewProjection {
     Quaternion startQuaternionRotation_{}; // 開始クォータニオン
 
     // 目標値（JSONから読み込み）
-    Vector3 targetTranslation_{};         // 目標座標
-    Vector3 targetEulerRotation_{};       // 目標オイラー角
+    Vector3 targetTranslation_{};           // 目標座標
+    Vector3 targetEulerRotation_{};         // 目標オイラー角
     Quaternion targetQuaternionRotation_{}; // 目標クォータニオン
 
     // 定数バッファ
     Microsoft::WRL::ComPtr<ID3D12Resource> constBuffer_{}; // 定数バッファ
-    ConstBufferDataViewProjection *constMap = nullptr;   // マッピング済みアドレス
+    ConstBufferDataViewProjection *constMap = nullptr;     // マッピング済みアドレス
 };
 
 static_assert(!std::is_copy_assignable_v<ViewProjection>);
+} // namespace Hagine::Graphics::Camera

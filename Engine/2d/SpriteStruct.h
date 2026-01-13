@@ -1,10 +1,12 @@
 #pragma once
+#include <type/Matrix4x4.h>
+#include <type/Vector2.h>
 #include <type/Vector3.h>
 #include <type/Vector4.h>
-#include <type/Vector2.h>
-#include <type/Matrix4x4.h>
 
-struct Transform {
+namespace Hagine::Graphics {
+
+struct SpriteTransform {
     Vector3 scale;
     Vector3 rotate;
     Vector3 translate;
@@ -24,7 +26,9 @@ struct SpriteMaterial {
 };
 
 // 座標変換行列データ
-struct TransformationMatrix {
+struct SpriteTransformationMatrix {
     Matrix4x4 WVP;
     Matrix4x4 World;
 };
+
+} // namespace Hagine

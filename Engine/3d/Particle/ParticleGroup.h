@@ -6,7 +6,7 @@
 #include"ParticleCommon.h"
 #include <Transform/WorldTransform.h>
 #include <list>
-
+namespace Hagine::Graphics {
 class ParticleGroup {
   public:
     void Initialize();
@@ -69,3 +69,4 @@ class ParticleGroup {
     PrimitiveType type_{};
     std::string modelFilePath_{};
 };
+} // namespace Hagine::Graphics

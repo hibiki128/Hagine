@@ -1,6 +1,8 @@
 #pragma once
 #include "DirectXCommon.h"
 
+namespace Hagine::Graphics {
+
 /// <summary>
 /// モデル共通クラス
 /// モデルシステムで共有するDirectXCommonを管理する
@@ -50,3 +52,5 @@ class ModelCommon {
     static ModelCommon *instance; // シングルトンインスタンス
     DirectXCommon *dxCommon_;     // DirectX共通クラス
 };
+
+} // namespace Hagine::Graphics

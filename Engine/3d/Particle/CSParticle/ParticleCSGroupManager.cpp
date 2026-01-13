@@ -1,5 +1,5 @@
 #include "ParticleCSGroupManager.h"
-
+namespace Hagine::Graphics {
 ParticleCSGroupManager *ParticleCSGroupManager::instance = nullptr;
 
 ParticleCSGroupManager *ParticleCSGroupManager::GetInstance() {
@@ -42,14 +42,14 @@ void ParticleCSGroupManager::Initialize() {
                 BlendMode blendMode = static_cast<BlendMode>(jsonData.value("blendMode", 2));
 
                 if (!modelPath.empty()) {
-                    CreateParticleCSGroup(groupName, modelPath, maxParticleCount, texturePath,blendMode);
+                    CreateParticleCSGroup(groupName, modelPath, maxParticleCount, texturePath, blendMode);
                 } else if (jsonData.contains("primitiveType")) {
                     int primitiveValue = jsonData["primitiveType"].get<int>();
 
                     // enum が有効範囲（0以上）であることをチェック
                     if (primitiveValue >= 0) {
                         PrimitiveType type = static_cast<PrimitiveType>(primitiveValue);
-                        CreatePrimitiveParticleCSGroup(groupName, type, maxParticleCount, texturePath,blendMode);
+                        CreatePrimitiveParticleCSGroup(groupName, type, maxParticleCount, texturePath, blendMode);
                     }
                 }
 
@@ -66,13 +66,13 @@ void ParticleCSGroupManager::Finalize() {
 
 void ParticleCSGroupManager::CreateParticleCSGroup(const std::string &groupName, const std::string &fileName, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {
     auto particleGroup = std::make_unique<ParticleCSGroup>();
-    particleGroup->CreateParticleGroup(groupName, fileName, maxParticleCount, texturePath,blendMode);
+    particleGroup->CreateParticleGroup(groupName, fileName, maxParticleCount, texturePath, blendMode);
     AddParticleCSGroup(std::move(particleGroup));
 }
 
 void ParticleCSGroupManager::CreatePrimitiveParticleCSGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {
     auto particleGroup = std::make_unique<ParticleCSGroup>();
-    particleGroup->CreatePrimitiveParticleGroup(groupName, type, maxParticleCount, texturePath,blendMode);
+    particleGroup->CreatePrimitiveParticleGroup(groupName, type, maxParticleCount, texturePath, blendMode);
     AddParticleCSGroup(std::move(particleGroup));
 }
 
@@ -89,3 +89,4 @@ void ParticleCSGroupManager::AddParticleCSGroup(std::unique_ptr<ParticleCSGroup>
     data->Save("blendMode", particleCSGroup->GetParticleGroupData().blendMode);
     particleGroups_.emplace_back(std::move(particleCSGroup));
 }
+} // namespace Hagine::Graphics

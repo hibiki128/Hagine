@@ -1,5 +1,7 @@
 #include "ModelAnimation.h"
 
+namespace Hagine::Graphics::Animation {
+
 void ModelAnimation::Initialize(const std::string &directorypath, const std::string &filename) {
     directorypath_ = directorypath;
     filename_ = filename;
@@ -28,3 +30,4 @@ void ModelAnimation::PlayAnimation() {
     animator_->SetIsAnimation(true);
     animator_->SetAnimationTime(0.0f);
 }
+} // namespace Hagine::Graphics::Animation

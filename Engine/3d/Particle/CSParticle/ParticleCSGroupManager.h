@@ -2,6 +2,7 @@
 #include "Data/DataHandler.h"
 #include <Particle/CSParticle/ParticleCSGroup.h>
 #include <memory>
+namespace Hagine::Graphics {
 class ParticleCSGroupManager {
   private:
     /// ===================================================
@@ -103,3 +104,4 @@ class ParticleCSGroupManager {
 
     std::vector<std::unique_ptr<ParticleCSGroup>> independentGroups_;
 };
+} // namespace Hagine::Graphics

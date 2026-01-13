@@ -4,13 +4,13 @@
 #include "PostEffect/PostEffectParameters.h"
 #include "PostEffect/PostEffectRenderer.h"
 #include <type/Matrix4x4.h>
-
+namespace Hagine::Graphics {
 class OffScreen {
   public:
     void Initialize();
     void Draw();
     void Setting();
-    void SetProjection(Matrix4x4 projectionMatrix);
+    void SetProjection(Math::Matrix4x4 projectionMatrix);
 
     uint32_t GetFinalResultSrvIndex() const;
     void CopyFinalResultToBackBuffer();
@@ -21,5 +21,6 @@ class OffScreen {
     PostEffectParameters parameters_;
     PostEffectDataManager dataManager_;
 
-    Matrix4x4 projectionMatrix_;
+    Math::Matrix4x4 projectionMatrix_;
 };
+} // namespace Hagine::Graphics

@@ -22,6 +22,7 @@
 #include <Transform/ObjColor.h>
 #include <unordered_set>
 
+namespace Hagine::Graphics {
 /// <summary>
 /// モデルクラス
 /// 3Dモデルのメッシュ、マテリアル、アニメーションを管理する
@@ -73,18 +74,18 @@ class Model {
     bool IsGltf() { return isGltf; }
     size_t GetMeshCount() const { return meshes_.size(); }
     Mesh *GetMesh(uint32_t index) { return (index < meshes_.size()) ? meshes_[index].get() : nullptr; }
-    Animator *GetAnimator() { return animator_; }
+    Animation::Animator *GetAnimator() { return animator_; }
 
     /// <summary>
     /// Setter
     /// </summary>
     void SetSrv(SrvManager *srvManager) { srvManager_ = srvManager; }
-    void SetAnimator(Animator *animator) {
+    void SetAnimator(Animation::Animator *animator) {
         animator_ = animator;
         animator_->SetModelData(modelData_);
     }
-    void SetSkin(Skin *skin) { skin_ = skin; }
-    void SetBone(Bone *bone) { bone_ = bone; }
+    void SetSkin(Animation::Skin *skin) { skin_ = skin; }
+    void SetBone(Animation::Bone *bone) { bone_ = bone; }
 
   private:
     /// ===================================================
@@ -123,9 +124,11 @@ class Model {
     std::vector<std::unique_ptr<Mesh>> meshes_; // メッシュ配列
 
     // アニメーション関連
-    Animator *animator_; // アニメーター
-    Skin *skin_;         // スキン
-    Bone *bone_;         // ボーン
+    Animation::Animator *animator_; // アニメーター
+    Animation::Skin *skin_;         // スキン
+    Animation::Bone *bone_;         // ボーン
 
     static std::unordered_set<std::string> jointNames; // ジョイント名セット
 };
+
+} // namespace Hagine

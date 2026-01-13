@@ -1,6 +1,8 @@
 #pragma once
 #include "Model/ModelStructs.h"
 
+namespace Hagine::Graphics::Animation {
+
 /// <summary>
 /// ボーン管理クラス
 /// スケルトン構造の構築、アニメーション適用、ジョイント情報の取得を行う
@@ -92,3 +94,5 @@ class Bone {
 
     Skeleton skeleton_; // スケルトンデータ
 };
+
+} // namespace Hagine

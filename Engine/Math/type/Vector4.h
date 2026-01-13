@@ -1,7 +1,7 @@
 #pragma once
 
 #include"cmath"
-
+namespace Hagine::Math {
 /// <summary>
 /// 4次元ベクトル
 /// </summary>
@@ -130,3 +130,4 @@ struct Vector4 final {
         return x * other.x + y * other.y + z * other.z + w * other.w;
     }
 };
+} // namespace Hagine::Math

@@ -1,15 +1,17 @@
 #pragma once
 #include <random>
-
+namespace Hagine::Math {
 class Random {
-public:
+  public:
     // int型のランダムな値を返す（minからmaxまで）
     static int Range(int min, int max);
 
     // float型のランダムな値を返す（minからmaxまで）
     static float Range(float min, float max);
 
-private:
+  private:
     // 乱数生成器（メルセンヌ・ツイスタ）
-    static std::mt19937& GetEngine();
+    static std::mt19937 &GetEngine();
 };
+
+} // namespace Hagine::Math

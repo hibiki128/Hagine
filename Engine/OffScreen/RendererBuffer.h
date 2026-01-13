@@ -2,9 +2,11 @@
 #include "DirectXCommon.h"
 #include <Graphics/Srv/SrvManager.h>
 
+namespace Hagine::Graphics {
+
 class RenderBuffer {
   public:
-    void Initialize(DirectXCommon *dxCommon, SrvManager *srvManager);
+    void Initialize(Core::DirectXCommon *dxCommon, SrvManager *srvManager);
 
     // ピンポンバッファ関連
     D3D12_CPU_DESCRIPTOR_HANDLE GetPingPongRtvHandle(int index) const { return pingPongRtvHandles_[index]; }
@@ -27,7 +29,7 @@ class RenderBuffer {
 
     int currentPingPongBuffer_ = 0;
 
-    DirectXCommon *dxCommon_ = nullptr;
+    Core::DirectXCommon *dxCommon_ = nullptr;
     SrvManager *srvManager_ = nullptr;
 
     static const int kPingPongBufferCount = 2;
@@ -43,3 +45,4 @@ class RenderBuffer {
     D3D12_CPU_DESCRIPTOR_HANDLE finalResultSrvHandleCPU_;
     D3D12_GPU_DESCRIPTOR_HANDLE finalResultSrvHandleGPU_;
 };
+} // namespace Hagine::Graphics

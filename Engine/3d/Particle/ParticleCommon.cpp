@@ -1,5 +1,5 @@
 #include "ParticleCommon.h"
-
+namespace Hagine::Graphics {
 ParticleCommon *ParticleCommon::instance = nullptr;
 
 ParticleCommon *ParticleCommon::GetInstance() {
@@ -14,7 +14,7 @@ void ParticleCommon::Finalize() {
     instance = nullptr;
 }
 
-void ParticleCommon::Initialize(DirectXCommon *dxCommon) {
+void ParticleCommon::Initialize(Core::DirectXCommon *dxCommon) {
     assert(dxCommon);
     dxCommon_ = dxCommon;
     psoManager_ = PipeLineManager::GetInstance();
@@ -44,3 +44,4 @@ void ParticleCommon::ComputeUpdateEmitterDrawCommonSetting() {
 void ParticleCommon::ComputeCountDrawCommonSetting() {
     computePsoManager_->DrawCommonSetting(ComputePipelineType::kCount);
 }
+} // namespace Hagine::Graphics

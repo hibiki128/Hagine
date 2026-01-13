@@ -1,6 +1,6 @@
 #include "RendererBuffer.h"
-
-void RenderBuffer::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager) {
+namespace Hagine::Graphics {
+void RenderBuffer::Initialize(Core::DirectXCommon *dxCommon, SrvManager *srvManager) {
     assert(dxCommon);
     assert(srvManager);
     dxCommon_ = dxCommon;
@@ -13,7 +13,7 @@ void RenderBuffer::CreatePingPongBuffers() {
     // ピンポンバッファを作成
     for (int i = 0; i < kPingPongBufferCount; ++i) {
         // レンダーターゲットリソースを作成
-        pingPongResources_[i] = dxCommon_->CreateRenderTextureResource(WinApp::kClientWidth, WinApp::kClientHeight, dxCommon_->GetClearColorValue().Format, dxCommon_->GetClearColorValue());
+        pingPongResources_[i] = dxCommon_->CreateRenderTextureResource(Core::WinApp::kClientWidth, Core::WinApp::kClientHeight, dxCommon_->GetClearColorValue().Format, dxCommon_->GetClearColorValue());
 
         // SRV作成
         pingPongSrvIndices_[i] = srvManager_->Allocate() + 1;
@@ -42,8 +42,8 @@ void RenderBuffer::CreatePingPongBuffers() {
 void RenderBuffer::CreateFinalResultTexture() {
     // 最終結果用のレンダーターゲットリソースを作成
     finalResultResource_ = dxCommon_->CreateRenderTextureResource(
-        WinApp::kClientWidth,
-        WinApp::kClientHeight,
+        Core::WinApp::kClientWidth,
+        Core::WinApp::kClientHeight,
         dxCommon_->GetClearColorValue().Format,
         dxCommon_->GetClearColorValue());
 
@@ -67,3 +67,4 @@ void RenderBuffer::CreateFinalResultTexture() {
 
     dxCommon_->GetDevice()->CreateRenderTargetView(finalResultResource_.Get(), &rtvDesc, finalResultRtvHandle_);
 }
+} // namespace Hagine::Graphics

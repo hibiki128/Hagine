@@ -2,6 +2,9 @@
 #include "DirectXCommon.h"
 #include "Graphics/PipeLine/PipeLineManager.h"
 #include <Graphics/PipeLine/ComputePipeLineManager.h>
+
+namespace Hagine::Graphics {
+
 class ParticleCommon {
   private:
     static ParticleCommon *instance;
@@ -26,7 +29,7 @@ class ParticleCommon {
     /// <summary>
     /// 初期化
     /// </summary>
-    void Initialize(DirectXCommon *dxCommon);
+    void Initialize(Core::DirectXCommon *dxCommon);
 
     /// <summary>
     /// 共通描画処理
@@ -47,10 +50,12 @@ class ParticleCommon {
 
     void ComputeCountDrawCommonSetting();
 
-    DirectXCommon *GetDxCommon() const { return dxCommon_; }
+    Core::DirectXCommon *GetDxCommon() const { return dxCommon_; }
 
   private:
-    DirectXCommon *dxCommon_ = nullptr;
+    Core::DirectXCommon *dxCommon_ = nullptr;
     PipeLineManager *psoManager_ = nullptr;
     ComputePipeLineManager *computePsoManager_ = nullptr;
 };
+
+} // namespace Hagine::Graphics

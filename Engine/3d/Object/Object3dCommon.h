@@ -1,6 +1,8 @@
 #pragma once
 #include "Graphics/PipeLine/ComputePipeLineManager.h"
 #include "Graphics/PipeLine/PipeLineManager.h"
+namespace Hagine::Graphics {
+
 class Object3dCommon {
   public: // メンバ関数
     /// <summary>
@@ -32,3 +34,4 @@ class Object3dCommon {
     PipeLineManager *psoManager_ = nullptr;
     ComputePipeLineManager *computePsoManager_ = nullptr;
 };
+} // namespace Hagine::Graphics

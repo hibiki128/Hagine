@@ -3,7 +3,7 @@
 #include <cmath>
 #include <numbers>
 #include "Matrix4x4.h"
-
+namespace Hagine::Math {
 class Quaternion final {
   public:
     float x, y, z, w;
@@ -87,9 +87,10 @@ class Quaternion final {
     // ジンバルロックを回避するための改良されたメソッド
     static Quaternion FromEulerAnglesSafe(const Vector3 &eulerAngles);
     Vector3 ToEulerAnglesSafe() const;
-    
+
     // 軸回転を個別に適用するメソッド
     static Quaternion FromAxisRotations(const Vector3 &axisRotations);
 
     Vector3 Rotate(const Vector3 &v) const;
 };
+} // namespace Hagine::Math

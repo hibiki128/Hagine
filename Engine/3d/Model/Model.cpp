@@ -7,6 +7,8 @@
 #include "sstream"
 #include <SkyBox/SkyBox.h>
 
+namespace Hagine::Graphics {
+
 std::unordered_set<std::string> Model::jointNames = {};
 
 void Model::Initialize(ModelCommon *modelCommon) {
@@ -319,3 +321,4 @@ Node Model::ReadNode(aiNode *node) {
     }
     return result;
 }
+} // namespace Hagine

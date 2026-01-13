@@ -3,6 +3,7 @@
 #include "SpriteCommon.h"
 #include <Graphics/Texture/TextureManager.h>
 #include <myMath.h>
+namespace Hagine::Graphics {
 
 void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Vector4 color, Vector2 anchorpoint, bool isFlipX, bool isFlipY) {
     // 引数で受け取ってメンバ変数に記録する
@@ -21,7 +22,7 @@ void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Ve
     SetInstanceCount(1);
 
     if (instanceCount <= 1) {
-        Transform transform{
+        SpriteTransform transform{
             {size.x, size.y, 1.0f},          // scale
             {0.0f, 0.0f, rotation},          // rotation
             {position_.x, position_.y, 0.0f} // translation
@@ -51,7 +52,7 @@ void Sprite::SetInstanceCount(uint32_t count) {
     instanceCount = std::min(count, maxInstances);
 }
 
-void Sprite::SetInstanceTransform(uint32_t index, const TransformationMatrix &transform) {
+void Sprite::SetInstanceTransform(uint32_t index, const SpriteTransformationMatrix &transform) {
     const uint32_t maxInstances = 1000; // 最大インスタンス数
     if (index < instanceCount && index < maxInstances && transformationMatrixData != nullptr) {
         transformationMatrixData[index] = transform;
@@ -96,7 +97,7 @@ void Sprite::Update(bool isBackMost) {
 
     // 単体描画のときだけTransform更新
     if (instanceCount <= 1) {
-        Transform transform;
+        SpriteTransform transform;
         transform.scale = {size.x, size.y, 1.0f};
         transform.rotate = {0.0f, 0.0f, rotation};
         transform.translate = {
@@ -178,7 +179,7 @@ void Sprite::CreateMaterial() {
 void Sprite::CreateTransformationMatrix() {
     // 最大インスタンス数を想定してバッファを作成
     uint32_t maxInstances = 1000; // または必要な最大数
-    transformationMatrixResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(TransformationMatrix) * maxInstances);
+    transformationMatrixResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(SpriteTransformationMatrix) * maxInstances);
     transformationMatrixResource->Map(0, nullptr, reinterpret_cast<void **>(&transformationMatrixData));
 
     // 初期化
@@ -189,7 +190,7 @@ void Sprite::CreateTransformationMatrix() {
 
     srvManager_ = TextureManager::GetInstance()->GetSrvManager();
     transformationMatrixSrvIndex = srvManager_->Allocate() + 1;
-    srvManager_->CreateSRVforStructuredBuffer(transformationMatrixSrvIndex, transformationMatrixResource.Get(), maxInstances, sizeof(TransformationMatrix));
+    srvManager_->CreateSRVforStructuredBuffer(transformationMatrixSrvIndex, transformationMatrixResource.Get(), maxInstances, sizeof(SpriteTransformationMatrix));
 }
 
 void Sprite::AdjustTextureSize() {
@@ -201,3 +202,5 @@ void Sprite::AdjustTextureSize() {
     // 画像サイズをテクスチャサイズに合わせる
     size = textureSize;
 }
+
+} // namespace Hagine

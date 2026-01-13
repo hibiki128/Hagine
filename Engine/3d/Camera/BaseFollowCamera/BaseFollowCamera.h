@@ -2,6 +2,8 @@
 #include "Camera/ViewProjection/ViewProjection.h"
 #include "Transform/WorldTransform.h"
 
+namespace Hagine::Graphics::Camera {
+
 /// <summary>
 /// 基本追従カメラクラス
 /// ターゲットを追従するカメラの基本機能を提供する
@@ -60,3 +62,4 @@ class BaseFollowCamera {
     float distanceFromTarget_;               // ターゲットからの距離
     float heightOffset_;                     // 高さオフセット
 };
+} // namespace Hagine

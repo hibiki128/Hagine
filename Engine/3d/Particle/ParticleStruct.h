@@ -10,7 +10,7 @@
 #include <list>
 #include <string>
 #include <vector>
-
+namespace Hagine::Graphics {
 struct ParticleMaterial {
     Vector4 color;
     Matrix4x4 uvTransform;
@@ -298,3 +298,4 @@ struct ParticleGroupData {
 ParticleMaterial ForParticleMaterial(MaterialData material);
 
 std::vector<ParticleMaterial> ForParticleMaterials(std::vector<MaterialData> materials);
+} // namespace Hagine::Graphics

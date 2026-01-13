@@ -1,11 +1,11 @@
 #include "ModelCommon.h"
+namespace Hagine::Graphics {
+ModelCommon *ModelCommon::instance = nullptr;
 
-ModelCommon* ModelCommon::instance = nullptr;
-
-ModelCommon* ModelCommon::GetInstance() {
+ModelCommon *ModelCommon::GetInstance() {
     if (instance == nullptr) {
         instance = new ModelCommon();
-	}
+    }
     return instance;
 }
 
@@ -14,8 +14,9 @@ void ModelCommon::Finalize() {
     instance = nullptr;
 }
 
-void ModelCommon::Initialize()
-{
-	// 引数で受け取ってメンバ変数に記録する
-	dxCommon_ = DirectXCommon::GetInstance();
+void ModelCommon::Initialize() {
+    // 引数で受け取ってメンバ変数に記録する
+    dxCommon_ = DirectXCommon::GetInstance();
 }
+
+} // namespace Hagine::Graphics

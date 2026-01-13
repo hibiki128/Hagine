@@ -5,7 +5,7 @@
 #include <d3d12.h>
 
 class DirectXCommon;
-
+namespace Hagine::Graphics {
 /// <summary>
 /// マテリアルクラス
 /// テクスチャ、色、ライティング設定を管理する
@@ -88,3 +88,4 @@ class Material {
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_; // GPUバッファリソース
     MaterialDataGPU *materialDataGPU_ = nullptr;              // GPUバッファデータポインタ
 };
+} // namespace Hagine::Graphics

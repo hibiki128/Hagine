@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+namespace Hagine::Graphics {
+
 /// <summary>
 /// インスタンス単位でのSRTデータ構造体
 /// </summary>
@@ -249,3 +251,4 @@ class SpriteManager {
     /// </summary>
     void Clear();
 };
+} // namespace Hagine

@@ -11,14 +11,14 @@
 #include <line/DrawLine3D.h>
 #include <myMath.h>
 #include <type/Matrix4x4.h>
-
+namespace Hagine::Graphics {
 void Object3d::Initialize() {
     objectCommon_ = std::make_unique<Object3dCommon>();
     objectCommon_->Initialize();
 
     dxCommon_ = DirectXCommon::GetInstance();
 
-    lightGroup = LightGroup::GetInstance();
+    lightGroup = Light::LightGroup::GetInstance();
 
     CreateTransformationMatrix();
 }
@@ -46,7 +46,7 @@ void Object3d::CreateModel(const std::string &filePath) {
     }
 
     if (model->IsGltf()) {
-        currentModelAnimation_ = std::make_unique<ModelAnimation>();
+        currentModelAnimation_ = std::make_unique<Animation::ModelAnimation>();
         currentModelAnimation_->SetModelData(model->GetModelData());
         currentModelAnimation_->Initialize("resources/models/", modelFilePath_);
 
@@ -74,7 +74,7 @@ void Object3d::CreatePrimitiveModel(const PrimitiveType &type, std::string texPa
     color_[0].SetColor({1.0f, 1.0f, 1.0f, 1.0f});
 }
 
-void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {
+void Object3d::Update(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection) {
     if (lightGroup) {
         lightGroup->Update(viewProjection);
     }
@@ -121,7 +121,7 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
     }
 }
 
-void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, bool lighting, bool modelDraw) {
+void Object3d::Draw(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection, bool reflect, bool lighting, bool modelDraw) {
     objectCommon_->SetBlendMode(blendMode_);
     Update(worldTransform, viewProjection);
 
@@ -154,7 +154,7 @@ void Object3d::AnimationUpdate(bool roop) {
 
         // 補間完了後の切り替え処理
         if (isAnimationSwitchPending_) {
-            Animator *currentAnimator = currentModelAnimation_->GetAnimator();
+            Animation::Animator *currentAnimator = currentModelAnimation_->GetAnimator();
 
             // 補間が完了しているかチェック
             if (!currentAnimator->IsBlending()) {
@@ -207,7 +207,7 @@ void Object3d::SetAnimation(const std::string &animationFileName) {
         return;
     }
 
-    Animator *animator = currentModelAnimation_->GetAnimator();
+    Animation::Animator *animator = currentModelAnimation_->GetAnimator();
     if (!animator) {
         return;
     }
@@ -238,7 +238,7 @@ void Object3d::AddAnimation(const std::string &fileName) {
         return;
     }
 
-    auto animation = std::make_unique<ModelAnimation>();
+    auto animation = std::make_unique<Animation::ModelAnimation>();
 
     animation->SetModelData(model->GetModelData());
     animation->Initialize("resources/models/", fileName);
@@ -247,7 +247,7 @@ void Object3d::AddAnimation(const std::string &fileName) {
     modelAnimations_.emplace(fileName, std::move(animation));
 }
 
-void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool isRainbow) {
+void Object3d::DrawWireframe(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection, bool isRainbow) {
     // worldTransformを更新
     Update(worldTransform, viewProjection);
     if (!model) {
@@ -323,14 +323,14 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
                 Vector4 c0 = GetTimeGradientColor(v0);
                 Vector4 c1 = GetTimeGradientColor(v1);
                 Vector4 c2 = GetTimeGradientColor(v2);
-                DrawLine3D::GetInstance()->SetPoints(v0, v1, c0);
-                DrawLine3D::GetInstance()->SetPoints(v1, v2, c1);
-                DrawLine3D::GetInstance()->SetPoints(v2, v0, c2);
+                Line::DrawLine3D::GetInstance()->SetPoints(v0, v1, c0);
+                Line::DrawLine3D::GetInstance()->SetPoints(v1, v2, c1);
+                Line::DrawLine3D::GetInstance()->SetPoints(v2, v0, c2);
             } else {
                 Vector4 wireframeColor = {1.0f, 1.0f, 1.0f, 1.0f};
-                DrawLine3D::GetInstance()->SetPoints(v0, v1, wireframeColor);
-                DrawLine3D::GetInstance()->SetPoints(v1, v2, wireframeColor);
-                DrawLine3D::GetInstance()->SetPoints(v2, v0, wireframeColor);
+                Line::DrawLine3D::GetInstance()->SetPoints(v0, v1, wireframeColor);
+                Line::DrawLine3D::GetInstance()->SetPoints(v1, v2, wireframeColor);
+                Line::DrawLine3D::GetInstance()->SetPoints(v2, v0, wireframeColor);
             }
         };
 
@@ -363,7 +363,7 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
     }
 }
 
-void Object3d::DrawSkeleton(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {
+void Object3d::DrawSkeleton(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection) {
     const Skeleton &skeleton = currentModelAnimation_->GetSkeletonData();
 
     // モデルに適用されているワールド変換を生成
@@ -385,7 +385,7 @@ void Object3d::DrawSkeleton(const WorldTransform &worldTransform, const ViewProj
         float jointRadius = 0.03f * worldTransform.scale_.x;
 
         Vector4 jointColor = {0.8f, 0.2f, 0.2f, 1.0f};
-        DrawLine3D::GetInstance()->DrawSphere(jointPosition, jointColor, jointRadius, 8);
+        Line::DrawLine3D::GetInstance()->DrawSphere(jointPosition, jointColor, jointRadius, 8);
 
         if (!joint.parent.has_value()) {
             continue;
@@ -472,21 +472,21 @@ void Object3d::DrawArmatureShape(const Vector3 &startPos, const Vector3 &endPos,
             Vector3 p2_2 = pos2 + (right * cosf(angle2) + up * sinf(angle2)) * width2;
 
             // 円周の線
-            DrawLine3D::GetInstance()->SetPoints(p1_1, p1_2, color);
-            DrawLine3D::GetInstance()->SetPoints(p2_1, p2_2, color);
+            Line::DrawLine3D::GetInstance()->SetPoints(p1_1, p1_2, color);
+            Line::DrawLine3D::GetInstance()->SetPoints(p2_1, p2_2, color);
 
             // 縦の線（長さ方向）
-            DrawLine3D::GetInstance()->SetPoints(p1_1, p2_1, color);
+            Line::DrawLine3D::GetInstance()->SetPoints(p1_1, p2_1, color);
 
             // 最後のセグメントの場合、先端を中心点に収束させる
             if (i == lengthSegments - 1) {
-                DrawLine3D::GetInstance()->SetPoints(p2_1, endPos, color);
+                Line::DrawLine3D::GetInstance()->SetPoints(p2_1, endPos, color);
             }
         }
     }
 
     // 基部から中心軸への線も描画（強調用）
-    DrawLine3D::GetInstance()->SetPoints(startPos, endPos, {color.x * 1.2f, color.y * 1.2f, color.z * 1.2f, color.w});
+    Line::DrawLine3D::GetInstance()->SetPoints(startPos, endPos, {color.x * 1.2f, color.y * 1.2f, color.z * 1.2f, color.w});
 }
 
 void Object3d::SetModel(const std::string &filePath) {
@@ -547,3 +547,4 @@ void Object3d::SetEnvironmentCoefficients(float value) {
         material->SetEnvironmentCoefficients(value);
     }
 }
+} // namespace Hagine::Graphics

@@ -10,7 +10,7 @@
 #include <d3d12.h>
 #include <utility>
 #include <wrl.h>
-
+namespace Hagine::Graphics {
 class ParticleCSGroup {
   public:
     /// ===================================
@@ -20,7 +20,7 @@ class ParticleCSGroup {
     ~ParticleCSGroup();
     ParticleCSGroupData CreateParticleGroup(const std::string &groupName, const std::string &filename, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
     ParticleCSGroupData CreatePrimitiveParticleGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
-    void Update(const ViewProjection &vp);
+    void Update(const Camera::ViewProjection &vp);
     void DrawImGui();
     int CalculateOptimalEmitCount() const;
     void UpdateParticleCSDisPatch();
@@ -155,3 +155,4 @@ class ParticleCSGroup {
     int32_t debugFreeListCount_ = 0;
     int32_t debugFreeListTailCount_ = 0;
 };
+} // namespace Hagine::Graphics

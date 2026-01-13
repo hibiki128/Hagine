@@ -8,6 +8,8 @@
 
 namespace fs = std::filesystem;
 
+namespace Hagine::Graphics {
+
 SpriteManager *SpriteManager::instance = nullptr;
 
 SpriteManager *SpriteManager::GetInstance() {
@@ -224,7 +226,7 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData) {
     for (uint32_t i = 0; i < spriteData->instanceData.size(); ++i) {
         const auto &instanceSRT = spriteData->instanceData[i];
 
-        Transform transform;
+        SpriteTransform transform;
         transform.scale = instanceSRT.scale;
         transform.rotate = instanceSRT.rotation;
         transform.translate = instanceSRT.translation;
@@ -245,7 +247,7 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData) {
             float(WinApp::kClientHeight),
             0.0f, 100.0f);
 
-        TransformationMatrix transformMatrix;
+        SpriteTransformationMatrix transformMatrix;
         transformMatrix.WVP = worldMatrix * viewMatrix * projectionMatrix;
         transformMatrix.World = worldMatrix;
 
@@ -807,3 +809,4 @@ void SpriteManager::LoadAllSprites() {
     // 描画順をロード
     LoadDrawOrder();
 }
+} // namespace Hagine

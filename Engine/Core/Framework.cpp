@@ -1,6 +1,6 @@
 #include "Framework.h"
 #include <Frame.h>
-
+namespace Hagine::Core {
 void Framework::Run() {
     // ゲームの初期化
     Initialize();
@@ -40,11 +40,11 @@ void Framework::Initialize() {
     ///--------------------------
 
     ///--------BaseObjectManager--------
-    baseObjectManager_ = BaseObjectManager::GetInstance();
+    baseObjectManager_ = Graphics::BaseObjectManager::GetInstance();
     ///---------------------------------
 
     ///--------SpriteManager--------
-    spriteManager_ = SpriteManager::GetInstance();
+    spriteManager_ = Graphics::SpriteManager::GetInstance();
     ///---------------------------------
 
     /// ---------ImGuizmo---------
@@ -88,7 +88,7 @@ void Framework::Initialize() {
     ///-----------------------------------
 
     ///-----------ModelCommon-------------
-    modelCommon_ = ModelCommon::GetInstance();
+    modelCommon_ = Graphics::ModelCommon::GetInstance();
     modelCommon_->Initialize();
     ///-----------------------------------
 
@@ -98,23 +98,23 @@ void Framework::Initialize() {
     ///----------------------------------
 
     ///----------PrimitiveModel-----------
-    primitiveModel_ = PrimitiveModel::GetInstance();
+    primitiveModel_ = Graphics::PrimitiveModel::GetInstance();
     primitiveModel_->Initialize();
     ///-----------------------------------
 
     ///----------SpriteCommon------------
     // スプライト共通部の初期化
-    spriteCommon_ = SpriteCommon::GetInstance();
+    spriteCommon_ = Graphics::SpriteCommon::GetInstance();
     spriteCommon_->Initialize();
     ///----------------------------------
 
     ///----------ParticleCommon------------
-    particleCommon_ = ParticleCommon::GetInstance();
+    particleCommon_ = Graphics::ParticleCommon::GetInstance();
     particleCommon_->Initialize(dxCommon_);
     ///------------------------------------
 
     ///---------Audio-------------
-    audio_ = Audio::GetInstance();
+    audio_ = Audio::Audio::GetInstance();
     audio_->Initialize();
     ///---------------------------
 
@@ -133,37 +133,37 @@ void Framework::Initialize() {
     ///------------------------
 
     ///-------DrawLine3D-------
-    line3d_ = DrawLine3D::GetInstance();
+    line3d_ = Graphics::Line::DrawLine3D::GetInstance();
     line3d_->Initialize();
     ///------------------------
 
     ///-------SkyBox-------
-    skyBox_ = SkyBox::GetInstance();
+    skyBox_ = Graphics::SkyBox::GetInstance();
     skyBox_->Initialize("debug/rostock_laage_airport_4k.dds");
     ///--------------------
 
     ///--------LightGroup------------
-    lightGroup_ = LightGroup::GetInstance();
+    lightGroup_ = Graphics::Light::LightGroup::GetInstance();
     lightGroup_->Initialize();
     ///------------------------------
 
     ///-------ParticleEditor-------
-    particleEditor_ = ParticleEditor::GetInstance();
+    particleEditor_ = Graphics::ParticleEditor::GetInstance();
     particleEditor_->Initialize();
     ///----------------------------
 
     ///-------ParticleGroupManager-------
-    particleGroupManager_ = ParticleGroupManager::GetInstance();
+    particleGroupManager_ = Graphics::ParticleGroupManager::GetInstance();
     particleGroupManager_->Initialize();
     ///---------------------------------
 
     ///-------ParticleCSEditor-------
-    particleCSEditor_ = ParticleCSEditor::GetInstance();
+    particleCSEditor_ = Graphics::ParticleCSEditor::GetInstance();
     particleCSEditor_->Initialize();
     ///----------------------------
 
     ///-------ParticleCSGroupManager-------
-    particleCSGroupManager_ = ParticleCSGroupManager::GetInstance();
+    particleCSGroupManager_ = Graphics::ParticleCSGroupManager::GetInstance();
     particleCSGroupManager_->Initialize();
     ///---------------------------------
 
@@ -233,7 +233,7 @@ void Framework::Finalize() {
     audio_->Finalize();
     lightGroup_->Finalize();
     motionEditor_->Finalize();
-    LightGroup::GetInstance()->Finalize();
+    lightGroup_->Finalize();
     particleEditor_->Finalize();
     particleCSEditor_->Finalize();
     spriteCommon_->Finalize();
@@ -325,7 +325,7 @@ void Framework::Update() {
 
     collisionManager_->Update();
 
-    LightGroup::GetInstance()->Update(*sceneManager_->GetBaseScene()->GetViewProjection());
+    lightGroup_->Update(*sceneManager_->GetBaseScene()->GetViewProjection());
 
     input_->Update();
 
@@ -362,3 +362,4 @@ void Framework::PlaySounds() {
 
 void Framework::Draw() {
 }
+} // namespace Hagine::Core

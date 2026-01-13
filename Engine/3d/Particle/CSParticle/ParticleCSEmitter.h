@@ -8,7 +8,7 @@
 #include <Particle/ParticleCommon.h>
 #include <set>
 #include <vector>
-
+namespace Hagine::Graphics {
 class ParticleCSEmitter {
 
   public:
@@ -19,7 +19,7 @@ class ParticleCSEmitter {
     void Initialize(const std::string &name, const std::string &modelPath);
     void Initialize(const std::string &name, PrimitiveType primitiveType);
     void Update();
-    void Draw(const ViewProjection &vp);
+    void Draw(const Camera::ViewProjection &vp);
     void DrawImGui();
     void AddParticleGroup(ParticleCSGroup *particleGroup);
     void RemoveParticleGroup(const std::string &groupName);
@@ -214,3 +214,4 @@ class ParticleCSEmitter {
     bool isVisible_ = true;
     bool emitOnce_ = false;
 };
+} // namespace Hagine::Graphics

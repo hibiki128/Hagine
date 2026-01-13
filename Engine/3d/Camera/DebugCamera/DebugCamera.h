@@ -4,6 +4,8 @@
 #include "type/Vector2.h"
 #include "type/Vector3.h"
 
+namespace Hagine::Graphics::Camera {
+
 /// <summary>
 /// デバッグカメラクラス
 /// 開発時のカメラ操作とデバッグ用の機能を提供する
@@ -76,3 +78,4 @@ class DebugCamera {
     bool isActive_ = false;                                       // アクティブフラグ
     bool isUseQuaternion_ = false;                                // クォータニオン使用フラグ
 };
+} // namespace Hagine

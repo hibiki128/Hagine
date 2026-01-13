@@ -12,7 +12,7 @@
 #include "Data/DataHandler.h"
 #include <filesystem>
 #include <fstream>
-
+namespace Hagine::Graphics {
 class ParticleEmitter {
   public:
     // コンストラクタでメンバ変数を初期化
@@ -91,7 +91,7 @@ class ParticleEmitter {
             }
         }
     }
-    void SetStartAcce(const Vector3& acce) {
+    void SetStartAcce(const Vector3 &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.startAcce = acce;
         }
@@ -106,7 +106,7 @@ class ParticleEmitter {
             setting.startAcce.z = acce;
         }
     }
-    void SetEndAcce(const Vector3& acce) {
+    void SetEndAcce(const Vector3 &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.endAcce = acce;
         }
@@ -149,3 +149,4 @@ class ParticleEmitter {
     std::unique_ptr<DataHandler> datas_;
     std::vector<std::string> particleGroupNames_;
 };
+} // namespace Hagine::Graphics

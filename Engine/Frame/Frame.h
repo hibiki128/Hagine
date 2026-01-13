@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+namespace Hagine {
 
 /// <summary>
 /// フレームクラス
@@ -15,7 +16,7 @@ class Frame {
     static int frameCount_;  ///< フレームカウント
     static float deltaTime_; ///< 前回のフレームからの経過時間
     static float fps_;       ///< FPS
-  
+
   public:
     /// ========================================================
     /// 静的メンバ関数
@@ -26,3 +27,5 @@ class Frame {
     static float GetFPS();    ///< 現在のFPSを取得
     static float Time();      ///< 起動からの経過時間を秒単位で返す
 };
+
+} // namespace Hagine

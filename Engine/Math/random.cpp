@@ -1,7 +1,7 @@
 #include "Random.h"
-
+namespace Hagine::Math {
 // 乱数生成器を初期化する関数
-std::mt19937& Random::GetEngine() {
+std::mt19937 &Random::GetEngine() {
     // 静的変数として一度だけ初期化
     static std::random_device rd;
     static std::mt19937 engine(rd());
@@ -19,3 +19,4 @@ float Random::Range(float min, float max) {
     std::uniform_real_distribution<float> dist(min, max);
     return dist(GetEngine());
 }
+} // namespace Hagine::Math

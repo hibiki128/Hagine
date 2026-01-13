@@ -2,7 +2,7 @@
 #include "Data/DataHandler.h"
 #include "PostEffectChain.h"
 #include "PostEffectParameters.h"
-
+namespace Hagine::Graphics {
 class PostEffectDataManager {
   public:
     void Initialize();
@@ -12,3 +12,4 @@ class PostEffectDataManager {
   private:
     std::unique_ptr<DataHandler> dataHandler_;
 };
+} // namespace Hagine::Graphics

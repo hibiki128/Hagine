@@ -5,7 +5,7 @@
 #include <d3d12.h>
 
 class DirectXCommon;
-
+namespace Hagine::Graphics{
 /// <summary>
 /// メッシュクラス
 /// 頂点データとインデックスデータを管理する
@@ -67,3 +67,4 @@ class Mesh {
     uint32_t *indexData;                                            // データポインタ
     D3D12_INDEX_BUFFER_VIEW indexBufferView;                        // バッファビュー
 };
+} // namespace Hagine::Graphics

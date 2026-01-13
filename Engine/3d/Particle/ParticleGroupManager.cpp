@@ -1,5 +1,5 @@
 #include "ParticleGroupManager.h"
-
+namespace Hagine::Graphics {
 ParticleGroupManager *ParticleGroupManager::instance = nullptr;
 
 ParticleGroupManager *ParticleGroupManager::GetInstance() {
@@ -55,7 +55,6 @@ void ParticleGroupManager::Initialize() {
     }
 }
 
-
 void ParticleGroupManager::Finalize() {
     delete instance;
     instance = nullptr;
@@ -64,7 +63,7 @@ void ParticleGroupManager::AddParticleGroup(std::unique_ptr<ParticleGroup> parti
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleGroup", particleGroup->GetGroupName());
     data->Save("groupName", particleGroup->GetGroupName());
     // materialがvectorになったため、最初のmaterialのtextureFilePathを保存
-    const auto& materials = particleGroup->GetParticleGroupData().materials;
+    const auto &materials = particleGroup->GetParticleGroupData().materials;
     std::string textureFilePath = (!materials.empty()) ? materials[0].textureFilePath : "";
     data->Save("textrueName", textureFilePath);
     data->Save("modelfilePath", particleGroup->GetModelPath());
@@ -83,3 +82,4 @@ void ParticleGroupManager::CreatePrimitiveParticleGroup(const std::string &group
     particleGroup->CreatePrimitiveParticleGroup(groupName, type, texturePath);
     AddParticleGroup(std::move(particleGroup));
 }
+} // namespace Hagine::Graphics

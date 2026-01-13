@@ -2,7 +2,7 @@
 #include "ParticleCSEditor.h"
 #include <ShowFolder/ShowFolder.h>
 #include <Camera/ViewProjection/ViewProjection.h>
-
+namespace Hagine::Graphics {
 ParticleCSEditor *ParticleCSEditor::instance = nullptr;
 
 ParticleCSEditor *ParticleCSEditor::GetInstance() {
@@ -33,7 +33,7 @@ void ParticleCSEditor::SetupColors() {
     headerColors_[3] = ImVec4(0.7f, 0.3f, 0.7f, 0.8f); // 紫系
     headerColors_[4] = ImVec4(0.7f, 0.7f, 0.2f, 0.8f); // 黄色系
     headerColors_[5] = ImVec4(0.5f, 0.5f, 0.5f, 0.8f); // グレー系
-#endif // USE_IMGUI
+#endif                                                 // USE_IMGUI
 }
 
 void ParticleCSEditor::AddParticleEmitter(const std::string &name) {
@@ -57,7 +57,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, PrimitiveType
     emitters_[name] = std::move(emitter);
 }
 
-void ParticleCSEditor::DrawAll(const ViewProjection &vp_) {
+void ParticleCSEditor::DrawAll(const Camera::ViewProjection &vp_) {
     for (auto &[name, emitter] : emitters_) {
         emitter->Update();
         emitter->Draw(vp_);
@@ -139,7 +139,6 @@ void ParticleCSEditor::ShowGPUParticleStatistics() {
 #endif // USE_IMGUI
 }
 
-
 void ParticleCSEditor::DebugAll() {
 #ifdef USE_IMGUI
     if (ImGui::BeginTabBar("GPUパーティクル")) {
@@ -188,7 +187,6 @@ void ParticleCSEditor::DebugAll() {
     }
 #endif // USE_IMGUI
 }
-
 
 void ParticleCSEditor::EditorWindow() {
 #ifdef USE_IMGUI
@@ -625,3 +623,4 @@ std::vector<std::string> ParticleCSEditor::GetJsonFiles() {
 
     return jsonFiles;
 }
+} // namespace Hagine::Graphics

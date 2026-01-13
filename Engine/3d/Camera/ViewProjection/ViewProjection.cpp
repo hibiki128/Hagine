@@ -6,6 +6,8 @@
 #include "myMath.h"
 #include <type/Vector2.h>
 
+namespace Hagine::Graphics::Camera {
+
 void ViewProjection::Initialize(std::string jsonFile) {
 
     matView_ = MakeIdentity4x4();
@@ -420,3 +422,5 @@ void ViewProjection::Load(std::string jsonFile) {
     farZ = data->Load("farZ", farZ);
     aspectRatio = data->Load("aspectRatio", aspectRatio);
 }
+
+} // namespace Hagine::Graphics::Camera

@@ -1,4 +1,5 @@
 #include "SpriteCommon.h"
+namespace Hagine::Graphics {
 
 SpriteCommon *SpriteCommon::instance = nullptr;
 
@@ -27,3 +28,5 @@ void SpriteCommon::DrawCommonSetting() {
 void SpriteCommon::SetBlendMode(BlendMode blendMode) {
     psoManager_->DrawCommonSetting(PipelineType::kSprite, blendMode);
 }
+
+} // namespace Hagine

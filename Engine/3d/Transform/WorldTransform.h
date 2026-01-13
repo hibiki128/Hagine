@@ -4,7 +4,7 @@
 #include "d3d12.h"
 #include "myMath.h"
 #include "wrl.h"
-
+namespace Hagine::Transform {
 // 定数バッファ用データ構造体
 struct ConstBufferDataWorldTransform {
     Matrix4x4 matWorld; // ローカル → ワールド変換行列
@@ -100,7 +100,6 @@ class WorldTransform {
     const Microsoft::WRL::ComPtr<ID3D12Resource> &GetConstBuffer() const { return constBuffer_; }
 
   private:
-    
     /// <summary>
     /// 定数バッファ生成
     /// </summary>
@@ -111,7 +110,7 @@ class WorldTransform {
     /// </summary>
     void Map();
 
-     // オイラー角→クォータニオン変換用
+    // オイラー角→クォータニオン変換用
     Vector3 preRotate_ = {0.0f, 0.0f, 0.0f};
 
     void UpdateEuler();
@@ -130,3 +129,4 @@ class WorldTransform {
     // WorldTransform& operator=(const WorldTransform&) = delete;
 };
 
+} // namespace Hagine::Graphics

@@ -17,11 +17,13 @@
 #include <type/Vector4.h>
 #include <vector>
 
+namespace Hagine::Graphics {
+
 /// <summary>
 /// クォータニオン変換データ
 /// </summary>
 struct QuaternionTransform {
-    Vector3 scale{};   // スケール
+    Vector3 scale{};     // スケール
     Quaternion rotate{}; // 回転
     Vector3 translate{}; // 平行移動
 };
@@ -55,11 +57,11 @@ struct MaterialData {
 /// マテリアルデータ（GPU側）
 /// </summary>
 struct MaterialDataGPU {
-    Vector4 color{};              // 色
-    int32_t enableLighting{};     // ライティング有効フラグ
-    float padding[3]{};           // パディング
-    Matrix4x4 uvTransform{};      // UV変換行列
-    float shininess{};            // 光沢度
+    Vector4 color{};                // 色
+    int32_t enableLighting{};       // ライティング有効フラグ
+    float padding[3]{};             // パディング
+    Matrix4x4 uvTransform{};        // UV変換行列
+    float shininess{};              // 光沢度
     float environmentCoefficient{}; // 環境マップ係数
     float padding2[2]{};            // パディング
 };
@@ -70,7 +72,7 @@ struct MaterialDataGPU {
 struct MeshData {
     std::vector<VertexData> vertices{}; // 頂点配列
     std::vector<uint32_t> indices{};    // インデックス配列
-    uint32_t materialIndex = 0;       // マテリアルインデックス
+    uint32_t materialIndex = 0;         // マテリアルインデックス
 };
 
 /// <summary>
@@ -100,7 +102,7 @@ struct Joint {
 /// スケルトンデータ
 /// </summary>
 struct Skeleton {
-    int32_t root{};                          // ルートジョイントインデックス
+    int32_t root{};                            // ルートジョイントインデックス
     std::map<std::string, int32_t> jointMap{}; // ジョイント名マップ
     std::vector<Joint> joints{};               // ジョイント配列
 };
@@ -118,7 +120,7 @@ struct VertexWeightData {
 /// ジョイントウェイトデータ
 /// </summary>
 struct JointWeightData {
-    Matrix4x4 inverseBindPoseMatrix{};           // 逆バインドポーズ行列
+    Matrix4x4 inverseBindPoseMatrix{};             // 逆バインドポーズ行列
     std::vector<VertexWeightData> vertexWeights{}; // 頂点ウェイト配列
 };
 
@@ -126,8 +128,8 @@ struct JointWeightData {
 /// モデルデータ
 /// </summary>
 struct ModelData {
-    std::vector<MeshData> meshes{};                         // メッシュ配列
-    std::vector<MaterialData> materials{};                  // マテリアル配列
+    std::vector<MeshData> meshes{};                           // メッシュ配列
+    std::vector<MaterialData> materials{};                    // マテリアル配列
     std::map<std::string, JointWeightData> skinClusterData{}; // スキンクラスターデータ
     Node rootNode{};                                          // ルートノード
     bool hasBones{};                                          // ボーン有無フラグ
@@ -140,7 +142,7 @@ static const uint32_t kNumMaxInfluence = 4; // 最大影響数
 /// 頂点影響度データ
 /// </summary>
 struct VertexInfluence {
-    std::array<float, kNumMaxInfluence> weights{};      // ウェイト配列
+    std::array<float, kNumMaxInfluence> weights{};        // ウェイト配列
     std::array<int32_t, kNumMaxInfluence> jointIndices{}; // ジョイントインデックス配列
 };
 
@@ -148,7 +150,7 @@ struct VertexInfluence {
 /// GPU用ウェルデータ
 /// </summary>
 struct WellForGPU {
-    Matrix4x4 skeletonSpaceMatrix{};               // スケルトン空間行列
+    Matrix4x4 skeletonSpaceMatrix{};                 // スケルトン空間行列
     Matrix4x4 skeletonSpaceInverseTransposeMatrix{}; // スケルトン空間逆転置行列
 };
 
@@ -166,28 +168,28 @@ struct SkinCluster {
     std::vector<Matrix4x4> inverseBindPoseMatrices{}; // 逆バインドポーズ行列配列
 
     // 影響度データ
-    Microsoft::WRL::ComPtr<ID3D12Resource> influenceResource{};                             // リソース
-    std::span<VertexInfluence> mappedInfluence{};                                           // マップデータ
+    Microsoft::WRL::ComPtr<ID3D12Resource> influenceResource{};                               // リソース
+    std::span<VertexInfluence> mappedInfluence{};                                             // マップデータ
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> influenceSrvHandle{}; // SRVハンドル
 
     // パレットデータ
-    Microsoft::WRL::ComPtr<ID3D12Resource> paletteResource{};                             // リソース
-    std::span<WellForGPU> mappedPalette{};                                                // マップデータ
+    Microsoft::WRL::ComPtr<ID3D12Resource> paletteResource{};                               // リソース
+    std::span<WellForGPU> mappedPalette{};                                                  // マップデータ
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> paletteSrvHandle{}; // SRVハンドル
 
     // 入力頂点データ
-    Microsoft::WRL::ComPtr<ID3D12Resource> inputVertexResource{};                             // リソース
-    std::span<VertexData> mappedVertex{};                                                     // マップデータ
+    Microsoft::WRL::ComPtr<ID3D12Resource> inputVertexResource{};                               // リソース
+    std::span<VertexData> mappedVertex{};                                                       // マップデータ
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> inputVertexSrvHandle{}; // SRVハンドル
 
     // 出力頂点データ
-    Microsoft::WRL::ComPtr<ID3D12Resource> outputVertexResource{};                             // リソース
-    D3D12_VERTEX_BUFFER_VIEW outputVertexBufferView{};                                         // 頂点バッファビュー
+    Microsoft::WRL::ComPtr<ID3D12Resource> outputVertexResource{};                               // リソース
+    D3D12_VERTEX_BUFFER_VIEW outputVertexBufferView{};                                           // 頂点バッファビュー
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> outputVertexSrvHandle{}; // SRVハンドル
 
     // スキニング情報
     Microsoft::WRL::ComPtr<ID3D12Resource> skinningInformationResource{}; // リソース
-    SkinningInformationForGPU *SkinningInfomationData = nullptr;        // データポインタ
+    SkinningInformationForGPU *SkinningInfomationData = nullptr;          // データポインタ
 };
 
 /// <summary>
@@ -215,10 +217,15 @@ struct NodeAnimation {
     std::vector<KeyframeVector3> scale{};     // スケールキーフレーム
 };
 
+namespace Animation {
 /// <summary>
 /// アニメーションデータ
 /// </summary>
 struct Animation {
-    float duration{};                                    // アニメーション時間
+    float duration{};                                      // アニメーション時間
     std::map<std::string, NodeAnimation> nodeAnimations{}; // ノードアニメーションマップ
 };
+
+} // namespace Animation
+
+} // namespace Hagine::Graphics

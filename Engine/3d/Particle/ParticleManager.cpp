@@ -4,14 +4,14 @@
 #include "Graphics/Texture/TextureManager.h"
 #include <fstream>
 #include <random>
-
+namespace Hagine::Graphics {
 void ParticleManager::Initialize(SrvManager *srvManager) {
     particleCommon = ParticleCommon::GetInstance();
     srvManager_ = srvManager;
     randomEngine.seed(seedGenerator());
 }
 
-void ParticleManager::Update(const ViewProjection &viewProjection) {
+void ParticleManager::Update(const Camera::ViewProjection &viewProjection) {
     Matrix4x4 viewProjectionMatrix = viewProjection.matView_ * viewProjection.matProjection_;
     Matrix4x4 billboardMatrix = viewProjection.matView_;
     billboardMatrix.m[3][0] = 0.0f;
@@ -512,3 +512,4 @@ size_t ParticleManager::GetActiveParticleCount(const std::string &groupName) con
     const auto &particles = it->second->GetParticleGroupData().particles;
     return particles.size();
 }
+} // namespace Hagine::Graphics

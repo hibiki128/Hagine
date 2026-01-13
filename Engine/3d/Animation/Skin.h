@@ -5,6 +5,8 @@
 class DirectXCommon;
 class SrvManager;
 
+namespace Hagine::Graphics::Animation {
+
 /// <summary>
 /// スキニング管理クラス
 /// ボーンの変形情報を頂点に適用し、スキンメッシュアニメーションを実現する
@@ -129,3 +131,4 @@ class Skin {
     SrvManager *srvManager_;                       // SRVマネージャー
     std::vector<size_t> meshVertexOffsets_;        // メッシュごとの頂点オフセット
 };
+} // namespace Hagine

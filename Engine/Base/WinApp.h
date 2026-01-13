@@ -5,6 +5,9 @@
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif //  USE_IMGUI
 #include <cstdint>
+
+namespace Hagine::Core {
+
 // WindowsAPI
 class WinApp {
   private:
@@ -71,3 +74,4 @@ class WinApp {
     // ウィンドウモードの復元用の矩形
     RECT windowRect_ = {0, 0, kClientWidth, kClientHeight};
 };
+} // namespace Hagine::Core

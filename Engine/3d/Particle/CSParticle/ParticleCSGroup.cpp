@@ -3,7 +3,7 @@
 #include <Graphics/Model/ModelManager.h>
 #include <Line/DrawLine3D.h>
 #include <d3dx12.h>
-
+namespace Hagine::Graphics {
 void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
     srvManager_ = SrvManager::GetInstance();
@@ -170,7 +170,7 @@ void ParticleCSGroup::UpdateParticleCSDisPatch() {
     commandList->Dispatch(disPatchCount, 1, 1);
 }
 
-void ParticleCSGroup::Update(const ViewProjection &vp) {
+void ParticleCSGroup::Update(const Camera::ViewProjection &vp) {
     perFrameData_->time += Frame::DeltaTime();
     perFrameData_->deltaTime = Frame::DeltaTime();
 
@@ -1051,10 +1051,11 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::PopStyleColor(3);
     }
     if (settingsData_->enableGather) {
-        DrawLine3D::GetInstance()->DrawSphere(settingsData_->gatherTarget, {1.0f, 0.0f, 1.0f, 1.0f}, 0.1f, 8);
+        Line::DrawLine3D::GetInstance()->DrawSphere(settingsData_->gatherTarget, {1.0f, 0.0f, 1.0f, 1.0f}, 0.1f, 8);
     }
     if (settingsData_->enableVortex) {
-        DrawLine3D::GetInstance()->DrawSphere(settingsData_->vortexTarget, {0.5f, 1.0f, 0.0f, 1.0f}, 0.1f, 8);
+        Line::DrawLine3D::GetInstance()->DrawSphere(settingsData_->vortexTarget, {0.5f, 1.0f, 0.0f, 1.0f}, 0.1f, 8);
     }
 #endif // USE_IMGUI
 }
+} // namespace Hagine::Graphics

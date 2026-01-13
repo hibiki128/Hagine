@@ -1,5 +1,5 @@
 #include "WorldTransform.h"
-
+namespace Hagine::Transform {
 WorldTransform::WorldTransform() {
 }
 
@@ -165,3 +165,4 @@ Vector3 WorldTransform::GetWorldScale() const {
 
     return worldScale;
 }
+} // namespace Hagine::Transform

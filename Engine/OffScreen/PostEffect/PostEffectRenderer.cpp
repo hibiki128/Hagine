@@ -1,6 +1,6 @@
 #include "PostEffectRenderer.h"
-
-void PostEffectRenderer::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager, PipeLineManager *psoManager) {
+namespace Hagine::Graphics {
+void PostEffectRenderer::Initialize(Core::DirectXCommon * dxCommon, SrvManager *srvManager, PipeLineManager *psoManager) {
     dxCommon_ = dxCommon;
     srvManager_ = srvManager;
     psoManager_ = psoManager;
@@ -43,7 +43,7 @@ void PostEffectRenderer::Draw(const PostEffectChain &effectChain, PostEffectPara
             DrawSingleEffect(effectChain.GetEffects()[i].shaderMode, isFirstInput, currentPingPongBuffer, -2, parameters); // -2は最終結果を示す特別な値
         } else {
             // 中間エフェクトはピンポンバッファに描画
-            DrawSingleEffect(effectChain.GetEffects()[i].shaderMode, isFirstInput, currentPingPongBuffer, outputBuffer,parameters);
+            DrawSingleEffect(effectChain.GetEffects()[i].shaderMode, isFirstInput, currentPingPongBuffer, outputBuffer, parameters);
             currentPingPongBuffer = outputBuffer;
             outputBuffer = 1 - outputBuffer;
             isFirstInput = false;
@@ -103,7 +103,7 @@ void PostEffectRenderer::CopyFinalResultToBackBuffer() {
 }
 
 void PostEffectRenderer::DrawSingleEffect(ShaderMode mode, bool isFirstInput, int inputPingPongIndex, int outputRtvIndex,
-                          PostEffectParameters &parameters) {
+                                          PostEffectParameters &parameters) {
     // DirectXCommonからクリアカラーを取得
     D3D12_CLEAR_VALUE clearValue = dxCommon_->GetClearColorValue();
     const float clearColor[4] = {
@@ -112,7 +112,7 @@ void PostEffectRenderer::DrawSingleEffect(ShaderMode mode, bool isFirstInput, in
         clearValue.Color[2],
         clearValue.Color[3]};
 
-   // 出力先を設定
+    // 出力先を設定
     if (outputRtvIndex == -2) {
         // 最終結果テクスチャに描画
         dxCommon_->GetCommandList()->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
@@ -168,3 +168,4 @@ void PostEffectRenderer::DrawSingleEffect(ShaderMode mode, bool isFirstInput, in
                                      D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
     }
 }
+} // namespace Hagine::Graphics

@@ -4,7 +4,7 @@
 #include "Graphics/Srv/SrvManager.h"
 #include "Graphics/Texture/TextureManager.h"
 #include <myMath.h>
-
+namespace Hagine::Graphics {
 SkyBox *SkyBox::instance = nullptr;
 
 SkyBox *SkyBox::GetInstance() {
@@ -34,7 +34,7 @@ void SkyBox::Initialize(std::string filePath) {
     textureIndex_ = TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
 }
 
-void SkyBox::Update(const ViewProjection &viewProjection) {
+void SkyBox::Update(const Camera::ViewProjection &viewProjection) {
     // カメラ位置を抽出
     Vector3 cameraPosition = viewProjection.translation_;
 
@@ -62,8 +62,7 @@ void SkyBox::Update(const ViewProjection &viewProjection) {
     cameraData_->worldPosition = cameraPosition;
 }
 
-
-void SkyBox::Draw(const ViewProjection &viewProjection) {
+void SkyBox::Draw(const Camera::ViewProjection &viewProjection) {
     Update(viewProjection);
     ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
     psoManager_->DrawCommonSetting(PipelineType::kSkybox);
@@ -173,3 +172,4 @@ void SkyBox::CreateCamera() {
     cameraData_->worldPosition = {0.0f, 0.0f, 0.0f};
     cameraData_->padding = 0.0f;
 }
+} // namespace Hagine::Graphics

@@ -2,6 +2,8 @@
 #include "Model/ModelStructs.h"
 #include <unordered_map>
 
+namespace Hagine::Graphics {
+
 enum class PrimitiveType {
     None = 0,
     Plane,
@@ -14,7 +16,6 @@ enum class PrimitiveType {
     Pyramid,
     kCount,
 };
-
 
 class PrimitiveModel {
   private:
@@ -64,6 +65,7 @@ class PrimitiveModel {
     void CreateTriangle();
     void CreateCone();
     void CreatePyramid();
+
   private:
     /// ===================================================
     /// private variaus
@@ -71,3 +73,4 @@ class PrimitiveModel {
 
     std::unordered_map<PrimitiveType, PrimitiveData> primitiveDataMap_;
 };
+} // namespace Hagine::Graphics

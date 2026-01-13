@@ -1,5 +1,6 @@
 #include "Mesh.h"
 #include "DirectXCommon.h"
+namespace Hagine::Graphics {
 void Mesh::Initialize() {
     dxCommon_ = DirectXCommon::GetInstance();
 
@@ -35,3 +36,4 @@ void Mesh::CreateIndexResource() {
     indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
     std::memcpy(indexData, meshData_.indices.data(), sizeof(uint32_t) * meshData_.indices.size());
 }
+} // namespace Hagine::Graphics

@@ -4,6 +4,8 @@
 #include "Skin.h"
 #include <memory>
 
+namespace Hagine::Graphics::Animation {
+
 /// <summary>
 /// モデルアニメーション管理クラス
 /// Animator、Bone、Skinを統合してモデルのアニメーションを制御する
@@ -59,3 +61,4 @@ class ModelAnimation {
     std::string filename_;               // ファイル名
     ModelData modelData_;                // モデルデータ
 };
+} // namespace Hagine

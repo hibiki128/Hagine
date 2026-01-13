@@ -1,7 +1,7 @@
 #include "Quaternion.h"
 #include <cmath>
 #include <numbers>
-
+namespace Hagine::Math {
 void Quaternion::SetFromTo(const Vector3 &from, const Vector3 &to) {
     Vector3 f = from.Normalize();
     Vector3 t = to.Normalize();
@@ -412,3 +412,4 @@ Quaternion Quaternion::FromMatrix(const Matrix4x4 &matrix) {
 
     return result;
 }
+} // namespace Hagine::Math

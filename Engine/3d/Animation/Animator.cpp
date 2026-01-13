@@ -6,6 +6,8 @@
 #include <myMath.h>
 #include <set>
 
+namespace Hagine::Graphics::Animation {
+
 std::unordered_map<std::string, Animation> Animator::animationCache;
 
 void Animator::Initialize(const std::string &directorypath, const std::string &filename) {
@@ -431,3 +433,5 @@ Quaternion Animator::CalculateBlendedValue(
     Quaternion toValue = CalculateValue(toKeyframes, toTime);
     return Slerp(fromValue, toValue, blendFactor);
 }
+
+} // namespace Hagine

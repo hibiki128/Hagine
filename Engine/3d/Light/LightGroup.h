@@ -10,6 +10,9 @@
 
 #define MAX_POINT_LIGHTS 5
 #define MAX_SPOT_LIGHTS 5
+class DirectXCommon;
+
+namespace Hagine::Graphics::Light {
 
 /// <summary>
 /// ライトタイプ列挙型
@@ -19,8 +22,6 @@ enum class LightType {
     Point,       // ポイントライト
     Spot         // スポットライト
 };
-
-class DirectXCommon;
 
 /// <summary>
 /// ライトグループクラス
@@ -52,7 +53,7 @@ class LightGroup {
     /// 更新処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void Update(const ViewProjection &viewProjection);
+    void Update(const Camera::ViewProjection &viewProjection);
 
     /// <summary>
     /// 描画処理
@@ -261,3 +262,5 @@ class LightGroup {
 
     std::unique_ptr<DataHandler> DLightData_ = nullptr; // データハンドラー
 };
+
+} // namespace Hagine::Graphics::Light

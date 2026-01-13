@@ -5,7 +5,7 @@
 #include "Application/Utility/MotionEditor/MotionEditor.h"
 #include <Debug/Log/Logger.h>
 #include <ShowFolder/ShowFolder.h>
-
+namespace Hagine::Graphics {
 BaseObjectManager *BaseObjectManager::instance = nullptr;
 
 BaseObjectManager *BaseObjectManager::GetInstance() {
@@ -841,3 +841,4 @@ void BaseObjectManager::DrawHierarchyEditor() {
     ImGui::End();
 #endif // _DEBUG
 }
+} // namespace Hagine::Graphics

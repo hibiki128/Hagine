@@ -7,6 +7,7 @@
 #include <Particle/ParticleEditor.h>
 #include <set>
 #include <type/Quaternion.h>
+namespace Hagine::Graphics {
 // コンストラクタ
 ParticleEmitter::ParticleEmitter() {}
 
@@ -80,7 +81,7 @@ void ParticleEmitter::DrawEmitter() {
         std::make_pair(4, 5), std::make_pair(5, 7), std::make_pair(7, 6), std::make_pair(6, 4),
         std::make_pair(0, 4), std::make_pair(1, 5), std::make_pair(2, 6), std::make_pair(3, 7)};
     for (const auto &edge : edges) {
-        DrawLine3D::GetInstance()->SetPoints(worldVertices[edge.first], worldVertices[edge.second]);
+        Line::DrawLine3D::GetInstance()->SetPoints(worldVertices[edge.first], worldVertices[edge.second]);
     }
 }
 
@@ -1252,4 +1253,5 @@ void ParticleEmitter::ShowBlendModeCombo(BlendMode &currentMode) {
         currentMode = static_cast<BlendMode>(currentIndex);
     }
 #endif // USE_IMGUI
+}
 }

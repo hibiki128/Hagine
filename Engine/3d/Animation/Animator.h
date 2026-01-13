@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+namespace Hagine::Graphics::Animation {
+
 /// <summary>
 /// アニメーション補間の状態を管理する構造体
 /// </summary>
@@ -191,3 +193,5 @@ class Animator {
 
     static std::unordered_map<std::string, Animation> animationCache; // アニメーションキャッシュ
 };
+
+} // namespace Hagine

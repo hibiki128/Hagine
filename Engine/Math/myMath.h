@@ -6,7 +6,7 @@
 #include <Camera/ViewProjection/ViewProjection.h>
 #include <type/Quaternion.h>
 #include <type/Vector3.h>
-
+namespace Hagine::Math {
 struct Sphere {
     Vector3 center; // !< 中心点
     float radius;   // !< 半径
@@ -92,7 +92,7 @@ float LerpShortAngle(float a, float b, float t);
 // 行列から回転成分をオイラー角に変換して取得
 Vector3 GetEulerAnglesFromMatrix(const Matrix4x4 &mat);
 
-Vector3 ScreenTransform(Vector3 worldPos, const ViewProjection &viewProjection);
+Vector3 ScreenTransform(Vector3 worldPos, const Graphics::Camera::ViewProjection &viewProjection);
 
 float radiansToDegrees(float radians);
 
@@ -119,6 +119,7 @@ Quaternion MatrixToQuaternion(const Matrix4x4 &matrix);
 Vector3 RotateVector(const Vector3 &vec, const Quaternion &quat);
 
 Vector3 ExtractScale(const Matrix4x4 &matrix);
-    //// デバッグ用
+//// デバッグ用
 // void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 // void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);
+} // namespace Hagine::Math

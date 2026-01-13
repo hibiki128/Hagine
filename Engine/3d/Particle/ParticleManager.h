@@ -12,11 +12,11 @@
 #include <type/Matrix4x4.h>
 #include <unordered_map>
 #include"ParticleStruct.h"
-
+namespace Hagine::Graphics {
 class ParticleManager {
   public:
     void Initialize(SrvManager *srvManager);
-    void Update(const ViewProjection &viewProjeciton);
+    void Update(const Camera::ViewProjection &viewProjeciton);
     void Draw();
     void AddParticleGroup(ParticleGroup *particleGroup);
     void RemoveParticleGroup(const std::string &name);
@@ -57,3 +57,4 @@ class ParticleManager {
 
     Particle MakeNewParticle(std::mt19937 &randomEngine, const ParticleSetting &setting);
 };
+} // namespace Hagine::Graphics
