@@ -182,6 +182,11 @@ class Player : public BaseObject {
         isDeathStaging_ = flag;
     }
     void SetEnergyRecoveryRate(float Rate) { energyRecoveryRate_ = Rate; }
+    void SetDashing(bool flag) { isDashing_ = flag; }
+    void SetDashInput(float x, float z) {
+        dashInputX_ = x;
+        dashInputZ_ = z;
+    }
 
   private:
     /// ===================================================
@@ -247,6 +252,8 @@ class Player : public BaseObject {
     /// <param name="dir">方向の値</param>
     /// <returns>const char*: 方向の名前文字列</returns>
     const char *GetDirectionName(Direction dir);
+
+     void UpdateDashState();
 
   private:
     /// ===================================================
@@ -364,10 +371,10 @@ class Player : public BaseObject {
     bool isGrounded_ = true; // 接地フラグ
     bool isDashing_ = false; // ダッシュ中フラグ
     bool isSkillMenu_ = false;
-    bool rushXButtonPressed_ = false; // Xボタンが押された状態
-    bool rushAButtonPressed_ = false; // Aボタンが押された状態
-    float rushXButtonTime_ = 0.0f;    // Xボタンが押されてからの経過時間
-    float rushAButtonTime_ = 0.0f;    // Aボタンが押されてからの経過時間
+    float dashInputX_ = 0.0f;         // ダッシュ開始時のスティックX入力
+    float dashInputZ_ = 0.0f;         // ダッシュ開始時のスティックZ入力
+    bool dashStartedThisFrame_ = false; // ダッシュ開始フラグ
+    float dashDuration_ = 0.0f;         // ダッシュ継続時間
 
     bool started_ = false;        // ゲーム開始フラグ
     bool isDeathStaging_ = false; // 死亡演出中フラグ

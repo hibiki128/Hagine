@@ -37,9 +37,9 @@ void PlayerStateFlyMove::AirMove(Player &player) {
         descendTrigger = Input::GetInstance()->TriggerKey(DIK_LSHIFT);
     } else {
         // ゲームパッド入力
-        ascendInput = player.GetGamePad()->IsPress(XINPUT_GAMEPAD_LEFT_SHOULDER); // LB → 上昇
-        descendInput = player.GetGamePad()->GetLeftTrigger() > 0.25f;             // LT → 下降
-        descendTrigger = player.GetGamePad()->IsLeftTriggerTriggered(0.25f);      // LT トリガー判定
+        ascendInput = player.GetGamePad()->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER); // RB → 上昇
+        descendInput = player.GetGamePad()->GetRightTrigger() > 0.25f;             // RT → 下降
+        descendTrigger = player.GetGamePad()->IsRightTriggerTriggered(0.25f);      // RT トリガー判定
     }
 
     if (ascendInput) {
@@ -68,6 +68,10 @@ void PlayerStateFlyMove::AirMove(Player &player) {
 
 void PlayerStateFlyMove::ChangeState(Player &player) {
     player.ChangeRush();
+
+    if (player.GetCurrentStateName() == "Rush") {
+        return;
+    }
 
     if (fallInputCount_ >= kFallInputThreshold) {
         player.ChangeState("Air");
@@ -100,9 +104,9 @@ void PlayerStateFlyMove::ChangeState(Player &player) {
         float leftStickX = player.GetGamePad()->GetLeftStickX();
         float leftStickY = player.GetGamePad()->GetLeftStickY();
 
-        if (player.GetGamePad()->IsLeftTriggerTriggered(0.25f) ||         // LT トリガー
-            player.GetGamePad()->GetLeftTrigger() > 0.25f ||              // LT 押下
-            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_LEFT_SHOULDER) || // LB 押下
+        if (player.GetGamePad()->IsRightTriggerTriggered(0.25f) ||         // RT トリガー
+            player.GetGamePad()->GetRightTrigger() > 0.25f ||              // RT 押下
+            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER) || // RB 押下
             leftStickX != 0.0f || leftStickY != 0.0f) {
             hasInput = true;
         }

@@ -63,7 +63,7 @@ void PlayerStateIdle::Update(Player &player) {
         jumpInput = Input::GetInstance()->TriggerKey(DIK_SPACE);
     } else {
         // ゲームパッド入力
-        jumpInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER);
+        jumpInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER);
     }
 
     if (jumpInput && player.GetCanJump()) {

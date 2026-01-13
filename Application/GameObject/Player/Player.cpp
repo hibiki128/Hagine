@@ -141,6 +141,9 @@ void Player::Update() {
         if (started_) {
             RecoverEnergy();
             ComboUpdate();
+
+            UpdateDashState();
+
             if (currentState_) {
                 currentState_->Update(*this);
             }
@@ -208,10 +211,10 @@ void Player::Update() {
             }
         } else {
             // ゲームパッド入力（将来の実装用）
-            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER)) {
+            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
                 isLockOn_ = !isLockOn_;
             }
-            if (gamePad_->GetRightTrigger() > 0.25f) {
+            if (gamePad_->GetLeftTrigger() > 0.25f) {
                 isSkillMenu_ = true;
             } else {
                 isSkillMenu_ = false;
@@ -576,7 +579,7 @@ void Player::Move() {
     float zInput = kInputZero;
 
     if (!gamePad_->IsConnected()) {
-        // キーボード入力
+        // --- キーボード入力 (既存のロジックを維持) ---
         if (input_->PushKey(DIK_A))
             xInput += kInputValue;
         if (input_->PushKey(DIK_D))
@@ -585,21 +588,62 @@ void Player::Move() {
             zInput += kInputValue;
         if (input_->PushKey(DIK_S))
             zInput -= kInputValue;
+        isDashing_ = input_->PushKey(DIK_LCONTROL);
     } else {
-        // ゲームパッド入力 - 左スティック
-        xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸（左がプラス）
-        zInput = gamePad_->GetLeftStickY();  // 左スティックY軸（上がプラス）
+        // --- ゲームパッド入力 ---
+        xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
+        zInput = gamePad_->GetLeftStickY();  // 左スティックY軸
+
+        bool isLTHeld = gamePad_->GetLeftTrigger() > 0.25f;
+
+        if (isLTHeld) {
+            // エネルギーがマックスの場合
+            if (energy_ >= maxEnergy_) {
+                // Aボタンが押された瞬間にダッシュ開始
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
+                    // ダッシュ開始時のスティック入力を記録(敵への方向決定用)
+                    dashInputX_ = xInput;
+                    dashInputZ_ = zInput;
+                    isDashing_ = true;
+                    dashStartedThisFrame_ = true; // ダッシュ開始フラグを立てる
+                    dashDuration_ = 0.0f;         // ダッシュ時間をリセット
+                }
+                // ダッシュ中は現在のスティック入力を使用(自由に動ける)
+            } else {
+                // Aボタンが押された瞬間にダッシュ開始
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
+                    // ダッシュ開始時のスティック入力を記録(敵への方向決定用)
+                    dashInputX_ = xInput;
+                    dashInputZ_ = zInput;
+                    isDashing_ = true;
+                    dashStartedThisFrame_ = true; // ダッシュ開始フラグを立てる
+                    dashDuration_ = 0.0f;         // ダッシュ時間をリセット
+                }
+
+                // ダッシュ中でないなら、LTを押していても移動させない
+                if (!isDashing_) {
+                    xInput = kInputZero;
+                    zInput = kInputZero;
+                }
+            }
+        } else {
+            // LTを離したらダッシュ解除
+            isDashing_ = false;
+            dashInputX_ = kInputZero;
+            dashInputZ_ = kInputZero;
+            dashDuration_ = 0.0f;
+            dashStartedThisFrame_ = false;
+        }
     }
 
-    // 減速処理(入力がない場合)
-    if (xInput == kInputZero && zInput == kInputZero) {
+    // 減速処理 (ダッシュ中以外で入力がない場合)
+    if (xInput == kInputZero && zInput == kInputZero && !isDashing_) {
         velocity_.x *= kDecelerationFactor;
         velocity_.z *= kDecelerationFactor;
         if (std::abs(velocity_.x) < kVelocityStopThreshold)
             velocity_.x = kVelocityZero;
         if (std::abs(velocity_.z) < kVelocityStopThreshold)
             velocity_.z = kVelocityZero;
-        isDashing_ = false;
         return;
     }
 
@@ -609,48 +653,51 @@ void Player::Move() {
         return;
 
     float yaw = camera->GetYaw();
-
     Vector3 cameraForward = {std::sin(yaw), kYComponentZero, std::cos(yaw)};
     Vector3 cameraRight = {-std::cos(yaw), kYComponentZero, std::sin(yaw)};
 
-    // 入力方向をカメラベースで合成
+    // 入力方向を計算
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
 
-    // 正規化(斜め方向も一定速度にする)
-    moveDir = moveDir.Normalize();
+    // --- 特殊処理: ダッシュ開始時のみ方向を固定 ---
+    if (dashStartedThisFrame_ && dashInputX_ == kInputZero && dashInputZ_ == kInputZero) {
+        // ダッシュ開始時にスティック入力がない場合、敵の方を向く
+        if (enemy_) {
+            Vector3 toEnemy = enemy_->GetWorldPosition() - GetWorldPosition();
+            toEnemy.y = 0; // 高低差を無視
+            if (toEnemy.Length() > 0.001f) {
+                moveDir = toEnemy.Normalize();
+            }
+        } else {
+            // 敵がいない場合は自機の正面方向
+            moveDir = GetForward();
+            moveDir.y = 0;
+            moveDir = moveDir.Normalize();
+        }
+    } else if (moveDir.Length() > 0.001f) {
+        // 通常の移動方向正規化
+        moveDir = moveDir.Normalize();
+    }
 
     // --- 回転処理 ---
-    if (!isLockOn_) {
+    if (!isLockOn_ && moveDir.Length() > 0.001f) {
         float targetYaw = std::atan2(-moveDir.x, moveDir.z);
         Quaternion targetRot = Quaternion::FromEulerAngles({kRotationZero, targetYaw, kRotationZero});
         float rotateSpeed = kPlayerRotationSpeed;
         transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
     }
 
-    // --- 移動処理 ---
+    // --- 移動速度の決定 ---
     float currentMaxSpeed = maxSpeed_;
-
-    if (!gamePad_->IsConnected()) {
-        // キーボード入力
-        isDashing_ = input_->PushKey(DIK_LCONTROL);
-    } else {
-        // ゲームパッド入力 - LTトリガー
-        if (gamePad_->GetRightTrigger() > 0.25f) {
-            if (gamePad_->IsPress(XINPUT_GAMEPAD_A)) {
-                isDashing_ = true;
-            }
-        } else {
-            isDashing_ = false;
-        }
-    }
-
     if (isDashing_) {
         currentMaxSpeed *= kDashSpeedMultiplier;
     }
 
+    // 速度加算
     velocity_.x += moveDir.x * accelRate_ * dt_;
     velocity_.z += moveDir.z * accelRate_ * dt_;
 
+    // 最高速度制限
     float speed = std::sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
     if (speed > currentMaxSpeed) {
         float scale = currentMaxSpeed / speed;
@@ -792,6 +839,7 @@ const char *Player::GetDirectionName(Direction dir) {
         return "不明";
     }
 }
+
 // 角度の正規化関数
 float Player::NormalizeAngle(float angle) {
     const float TWO_PI = 2.0f * std::numbers::pi_v<float>;
@@ -837,6 +885,9 @@ void Player::Debug() {
             ImGui::DragFloat("回復開始遅延", &energyRecoveryDelay_, 0.1f, 0.0f, 5.0f);
 
             ImGui::Text("無敵状態: %s", isInvincible_ ? "True" : "False");
+            ImGui::Text("ダッシュ始めたフレームかどうか: %s", dashStartedThisFrame_ ? "True" : "False");
+            ImGui::Text("ダッシュ時間: %f", dashDuration_);
+
             if (isInvincible_) {
                 ImGui::Text("無敵残り時間: %.2f秒", invincibleDuration_ - invincibleTime_);
             }
@@ -905,7 +956,7 @@ void Player::Debug() {
 
 void Player::ChangeRush() {
     if (!gamePad_->IsConnected()) {
-        // キーボード入力
+        // キーボード入力 (既存のロジックを維持)
         if (input_->TriggerKey(DIK_LCONTROL)) {
             lControlInputCount_++;
             if (lControlInputCount_ == 1) {
@@ -919,53 +970,23 @@ void Player::ChangeRush() {
             }
         }
     } else {
-        // ゲームパッド入力 - タイミングベースの2ボタン入力
-        const float rushInputWindow = 0.1f; // 入力受付時間(秒)
+        // ゲームパッド入力 - ダッシュ中のAボタン押下でRush
 
-        // Xボタンがトリガーされた
-        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_X)) {
-            rushXButtonTime_ = 0.0f;
-            rushXButtonPressed_ = true;
-        }
+        // ダッシュ中かつロックオン中の場合のみRush可能
+        if (isDashing_ && GetIsLockOn() && GetEnemy()) {
+            // ダッシュ開始から一定時間経過後のAボタントリガーでRush発動
+            // dashStartedThisFrame_がtrueの場合はスキップ(ダッシュ開始直後を除外)
+            if (!dashStartedThisFrame_ &&
+                dashDuration_ > 0.1f && // ダッシュ開始から0.1秒以上経過
+                gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
 
-        // Aボタンがトリガーされた
-        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
-            rushAButtonTime_ = 0.0f;
-            rushAButtonPressed_ = true;
-        }
-
-        // タイマー更新
-        if (rushXButtonPressed_) {
-            rushXButtonTime_ += GetDt();
-            // 時間切れでリセット
-            if (rushXButtonTime_ > rushInputWindow) {
-                rushXButtonPressed_ = false;
-                rushXButtonTime_ = 0.0f;
-            }
-        }
-
-        if (rushAButtonPressed_) {
-            rushAButtonTime_ += GetDt();
-            // 時間切れでリセット
-            if (rushAButtonTime_ > rushInputWindow) {
-                rushAButtonPressed_ = false;
-                rushAButtonTime_ = 0.0f;
-            }
-        }
-
-        // 両方のボタンが受付時間内に押されたかチェック
-        if (rushXButtonPressed_ && rushAButtonPressed_) {
-            if (GetIsLockOn() && GetEnemy()) {
-                // 急接近ステートに遷移 (エネルギー消費判定を追加)
+                // エネルギー消費してRushステートへ
                 if (ConsumeEnergy(kRushEnergyCost)) {
                     ChangeState("Rush");
+                    // フラグをリセット
+                    isDashing_ = false;
+                    dashDuration_ = 0.0f;
                 }
-
-                // フラグとタイマーをリセット
-                rushXButtonPressed_ = false;
-                rushAButtonPressed_ = false;
-                rushXButtonTime_ = 0.0f;
-                rushAButtonTime_ = 0.0f;
                 return;
             }
         }
@@ -993,9 +1014,9 @@ void Player::ChangeEnergyCharge() {
                 ChangeState("EnergyCharge");
             }
         } else {
-            // ゲームパッド入力 - RTトリガー
+            // ゲームパッド入力 - LTトリガー
             static bool wasRTPressed = false;
-            bool isRTPressed = gamePad_->GetRightTrigger() > 0.25f;
+            bool isRTPressed = gamePad_->GetLeftTrigger() > 0.25f;
 
             // RTが押された瞬間で、YボタンもAボタンも押されていない時のみチャージ状態へ
             if (isRTPressed && !wasRTPressed &&
@@ -1009,6 +1030,27 @@ void Player::ChangeEnergyCharge() {
             wasRTPressed = isRTPressed;
         }
     }
+}
+
+void Player::UpdateDashState() {
+    if (!gamePad_->IsConnected()) {
+        return; // キーボードの場合は何もしない
+    }
+
+    bool isLTHeld = gamePad_->GetLeftTrigger() > 0.25f;
+    static bool wasDashing = false;
+
+    if (isLTHeld && isDashing_) {
+        // ダッシュ継続時間を更新
+        dashDuration_ += dt_;
+    }
+
+    // ダッシュ開始フラグは次フレームでリセット
+    if (dashStartedThisFrame_ && wasDashing) {
+        dashStartedThisFrame_ = false;
+    }
+
+    wasDashing = isDashing_;
 }
 
 Vector3 Player::GetMovementDirection() const {

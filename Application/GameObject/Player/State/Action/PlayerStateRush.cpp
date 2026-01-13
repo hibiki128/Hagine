@@ -17,6 +17,11 @@ void PlayerStateRush::Enter(Player &player) {
 
         player.GetVelocity().y = kVelocityZero;
     }
+
+    if (player.GetGamePad()) {
+        player.GetGamePad()->SetVibration(60000, 60000);
+    }
+
     shake_ = std::make_unique<Shake>();
     shake_->Initialize(&player.GetViewProjection(), "RushShake");
     shake_->StartShake();
@@ -41,6 +46,10 @@ void PlayerStateRush::Update(Player &player) {
 
     elapsedTime_ += player.GetDt();
 
+    if (elapsedTime_ >= 0.2f && player.GetGamePad()) {
+        player.GetGamePad()->StopVibration();
+    }
+
     if (CheckReachedTarget(player)) {
         FinishRush(player);
         return;
@@ -56,6 +65,9 @@ void PlayerStateRush::Exit(Player &player) {
     elapsedTime_ = kVelocityZero;
     player.GetVelocity() = {kVelocityZero, kVelocityZero, kVelocityZero};
     player.ResetControlCount();
+    if (player.GetGamePad()) {
+        player.GetGamePad()->StopVibration();
+    }
 }
 
 void PlayerStateRush::DrawParticle(Player &player, const ViewProjection &viewProjection) {

@@ -54,6 +54,10 @@ void PlayerStateFlyIdle::AirMove(Player &player) {
 void PlayerStateFlyIdle::ChangeState(Player &player) {
     player.ChangeRush();
 
+    if (player.GetCurrentStateName() == "Rush") {
+        return;
+    }
+
     if (player.GetLocalPosition().y <= kGroundLevel) {
         player.ChangeState("Idle");
         return;
@@ -77,8 +81,8 @@ void PlayerStateFlyIdle::ChangeState(Player &player) {
         float leftStickY = player.GetGamePad()->GetLeftStickY();
 
         if (leftStickX != 0.0f || leftStickY != 0.0f ||
-            player.GetGamePad()->GetLeftTrigger() > 0.25f ||
-            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
+            player.GetGamePad()->GetRightTrigger() > 0.25f ||
+            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER)) {
             hasInput = true;
         }
     }

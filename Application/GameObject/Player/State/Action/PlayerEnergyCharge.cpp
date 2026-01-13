@@ -25,32 +25,31 @@ void PlayerEnergyCharge::Update(Player &player) {
         chargeRelease = Input::GetInstance()->ReleaseKey(DIK_C);
     } else {
         // ゲームパッド入力
+        bool isLTHeld = player.GetGamePad()->GetLeftTrigger() > 0.25f;
 
-        // Yボタンが押された時、スキルが実際に打てる場合のみチャージを中断
-        if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_Y)) {
-            const float kSkillShotEnergyCost = 65.0f;
-            if (player.GetEnergy() >= kSkillShotEnergyCost) {
+        // LTが押されていない場合はチャージ解除
+        if (!isLTHeld) {
+            shouldExitCharge = true;
+        } else {
+            // LT押しながらAボタンが押された場合、ダッシュフラグを立ててチャージ解除
+            if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_A)) {
+                float leftStickX = -player.GetGamePad()->GetLeftStickX();
+                float leftStickY = player.GetGamePad()->GetLeftStickY();
+
+                // ダッシュ入力を記録
+                player.SetDashInput(leftStickX, leftStickY);
+                player.SetDashing(true);
                 shouldExitCharge = true;
             }
-        }
 
-        // Aボタンが押された時、左スティック入力がある場合のみチャージを中断
-        if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_A)) {
-            float leftStickX = player.GetGamePad()->GetLeftStickX();
-            float leftStickY = player.GetGamePad()->GetLeftStickY();
-
-            if (leftStickX != 0.0f || leftStickY != 0.0f) {
-                shouldExitCharge = true;
+            // Yボタンが押された時、スキルが実際に打てる場合のみチャージを中断
+            if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_Y)) {
+                const float kSkillShotEnergyCost = 65.0f;
+                if (player.GetEnergy() >= kSkillShotEnergyCost) {
+                    shouldExitCharge = true;
+                }
             }
         }
-
-        // RTトリガーのリリース検出
-        static bool wasRTPressed = false;
-        bool isRTPressed = player.GetGamePad()->GetRightTrigger() > 0.25f;
-
-        chargeRelease = wasRTPressed && !isRTPressed;
-
-        wasRTPressed = isRTPressed;
     }
 
     // チャージ解除条件
