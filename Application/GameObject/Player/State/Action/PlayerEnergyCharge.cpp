@@ -18,12 +18,33 @@ void PlayerEnergyCharge::Update(Player &player) {
     chargeAuraEmitter_->SetAuto(true);
 
     bool chargeRelease = false;
+    bool shouldExitCharge = false;
 
     if (!player.GetGamePad()->IsConnected()) {
         // キーボード入力
         chargeRelease = Input::GetInstance()->ReleaseKey(DIK_C);
     } else {
-        // ゲームパッド入力 - RTトリガーのリリース検出
+        // ゲームパッド入力
+
+        // Yボタンが押された時、スキルが実際に打てる場合のみチャージを中断
+        if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_Y)) {
+            const float kSkillShotEnergyCost = 65.0f;
+            if (player.GetEnergy() >= kSkillShotEnergyCost) {
+                shouldExitCharge = true;
+            }
+        }
+
+        // Aボタンが押された時、左スティック入力がある場合のみチャージを中断
+        if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_A)) {
+            float leftStickX = player.GetGamePad()->GetLeftStickX();
+            float leftStickY = player.GetGamePad()->GetLeftStickY();
+
+            if (leftStickX != 0.0f || leftStickY != 0.0f) {
+                shouldExitCharge = true;
+            }
+        }
+
+        // RTトリガーのリリース検出
         static bool wasRTPressed = false;
         bool isRTPressed = player.GetGamePad()->GetRightTrigger() > 0.25f;
 
@@ -32,7 +53,8 @@ void PlayerEnergyCharge::Update(Player &player) {
         wasRTPressed = isRTPressed;
     }
 
-    if (chargeRelease || player.GetEnergy() >= player.GetMaxEnergy()) {
+    // チャージ解除条件
+    if (chargeRelease || shouldExitCharge || player.GetEnergy() >= player.GetMaxEnergy()) {
         if (beforeState_ == "Idle" ||
             beforeState_ == "Move") {
             player.ChangeState("Idle");

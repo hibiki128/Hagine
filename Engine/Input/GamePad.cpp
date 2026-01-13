@@ -1,5 +1,5 @@
-#include <algorithm>
 #include "GamePad.h"
+#include <algorithm>
 
 void GamePad::Init(int32_t playerIndex) {
     playerIndex_ = playerIndex;
@@ -107,6 +107,44 @@ float GamePad::GetRightTrigger() const {
     }
     return (trigger - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) /
            static_cast<float>(255 - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+}
+
+bool GamePad::IsLeftTriggerTriggered(float threshold) const {
+    if (!isConnected_)
+        return false;
+
+    // 現在のトリガー値を取得
+    float currentTrigger = GetLeftTrigger();
+
+    // 前フレームのトリガー値を計算
+    BYTE triggerPre = statePre_.Gamepad.bLeftTrigger;
+    float prevTrigger = 0.0f;
+    if (triggerPre >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+        prevTrigger = (triggerPre - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) /
+                      static_cast<float>(255 - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+    }
+
+    // 前フレームは閾値未満、現在フレームは閾値以上
+    return currentTrigger >= threshold && prevTrigger < threshold;
+}
+
+bool GamePad::IsRightTriggerTriggered(float threshold) const {
+    if (!isConnected_)
+        return false;
+
+    // 現在のトリガー値を取得
+    float currentTrigger = GetRightTrigger();
+
+    // 前フレームのトリガー値を計算
+    BYTE triggerPre = statePre_.Gamepad.bRightTrigger;
+    float prevTrigger = 0.0f;
+    if (triggerPre >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+        prevTrigger = (triggerPre - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) /
+                      static_cast<float>(255 - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+    }
+
+    // 前フレームは閾値未満、現在フレームは閾値以上
+    return currentTrigger >= threshold && prevTrigger < threshold;
 }
 
 // ===== 振動 =====

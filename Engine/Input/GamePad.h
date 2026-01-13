@@ -1,6 +1,7 @@
 #pragma once
 #include <wrl.h>
 #include <XInput.h>
+#include <cstdint>
 
 /// <summary>
 /// ゲームパッド入力を管理するクラス
@@ -91,6 +92,20 @@ class GamePad {
     /// </summary>
     /// <returns>正規化された入力値</returns>
     float GetRightTrigger() const;
+
+    /// <summary>
+    /// 左トリガーが押された瞬間か
+    /// </summary>
+    /// <param name="threshold">判定閾値 (0.0f ~ 1.0f)</param>
+    /// <returns>押された瞬間か</returns>
+    bool IsLeftTriggerTriggered(float threshold = 0.25f) const;
+
+    /// <summary>
+    /// 右トリガーが押された瞬間か
+    /// </summary>
+    /// <param name="threshold">判定閾値 (0.0f ~ 1.0f)</param>
+    /// <returns>押された瞬間か</returns>
+    bool IsRightTriggerTriggered(float threshold = 0.25f) const;
 
     // ===== 振動 =====
 

@@ -32,7 +32,7 @@ void PlayerStateIdle::Update(Player &player) {
     }
 
     bool isMoving = false;
-    
+
     if (!player.GetGamePad()->IsConnected()) {
         // キーボード入力
         if (Input::GetInstance()->PushKey(DIK_A) ||
@@ -45,7 +45,7 @@ void PlayerStateIdle::Update(Player &player) {
         // ゲームパッド入力 - 左スティック
         float leftStickX = player.GetGamePad()->GetLeftStickX();
         float leftStickY = player.GetGamePad()->GetLeftStickY();
-        
+
         if (leftStickX != 0.0f || leftStickY != 0.0f) {
             isMoving = true;
         }
@@ -57,13 +57,13 @@ void PlayerStateIdle::Update(Player &player) {
     }
 
     bool jumpInput = false;
-    
+
     if (!player.GetGamePad()->IsConnected()) {
         // キーボード入力
         jumpInput = Input::GetInstance()->TriggerKey(DIK_SPACE);
     } else {
         // ゲームパッド入力
-        jumpInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_A);
+        jumpInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER);
     }
 
     if (jumpInput && player.GetCanJump()) {

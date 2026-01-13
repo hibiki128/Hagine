@@ -28,7 +28,7 @@ void PlayerStateAir::Update(Player &player) {
         flyInput = Input::GetInstance()->TriggerKey(DIK_SPACE);
     } else {
         // ゲームパッド入力
-        flyInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_A);
+        flyInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER);
     }
 
     if (elapsedTime_ < kFlyTransitionTime && flyInput) {

@@ -77,8 +77,8 @@ void PlayerStateFlyIdle::ChangeState(Player &player) {
         float leftStickY = player.GetGamePad()->GetLeftStickY();
 
         if (leftStickX != 0.0f || leftStickY != 0.0f ||
-            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_A) ||
-            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_B)) {
+            player.GetGamePad()->GetLeftTrigger() > 0.25f ||
+            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
             hasInput = true;
         }
     }

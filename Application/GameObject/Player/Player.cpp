@@ -208,10 +208,10 @@ void Player::Update() {
             }
         } else {
             // ゲームパッド入力（将来の実装用）
-            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
+            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER)) {
                 isLockOn_ = !isLockOn_;
             }
-            if (gamePad_->GetLeftTrigger() > 0.25f) {
+            if (gamePad_->GetRightTrigger() > 0.25f) {
                 isSkillMenu_ = true;
             } else {
                 isSkillMenu_ = false;
@@ -454,7 +454,7 @@ void Player::Shot() {
 }
 
 void Player::SkillShot() {
-    if (currentState_ != states_["EnergyCharge"].get() && !chargeShot_->GetIsCharge()) {
+    if (!chargeShot_->GetIsCharge()) {
         if (!gamePad_->IsConnected()) {
             // キーボード入力
             if (input_->TriggerKey(DIK_G)) {
@@ -638,8 +638,6 @@ void Player::Move() {
         if (gamePad_->GetRightTrigger() > 0.25f) {
             if (gamePad_->IsPress(XINPUT_GAMEPAD_A)) {
                 isDashing_ = true;
-            } else {
-                isDashing_ = false;
             }
         } else {
             isDashing_ = false;
@@ -999,9 +997,12 @@ void Player::ChangeEnergyCharge() {
             static bool wasRTPressed = false;
             bool isRTPressed = gamePad_->GetRightTrigger() > 0.25f;
 
+            // RTが押された瞬間で、YボタンもAボタンも押されていない時のみチャージ状態へ
             if (isRTPressed && !wasRTPressed &&
                 currentState_ != states_["EnergyCharge"].get() &&
-                energy_ < maxEnergy_) {
+                energy_ < maxEnergy_ &&
+                !gamePad_->IsPress(XINPUT_GAMEPAD_Y) &&
+                !gamePad_->IsPress(XINPUT_GAMEPAD_A)) {
                 ChangeState("EnergyCharge");
             }
 
