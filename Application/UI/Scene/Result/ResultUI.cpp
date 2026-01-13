@@ -1,5 +1,7 @@
 #include "ResultUI.h"
 #include <Frame.h>
+#include <GamePad.h>
+#include <Input.h>
 
 void ResultUI::Initialize() {
     SpriteManager::GetInstance()->SetSaveFolder("Result");
@@ -54,11 +56,95 @@ void ResultUI::Initialize() {
     displayedTime_ = 0.0f;
     displayedHP_ = 0.0f;
 
+    // スキップ管理の初期化
+    skipPhase_ = kNoSkip;
+
     UpdateNumberSprites();
+
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
+
+    input_ = Input::GetInstance();
+}
+
+bool ResultUI::CheckSkipInput() {
+    if (!input_ || !gamePad_) {
+        return false;
+    }
+
+    if (!gamePad_->IsConnected()) {
+        // キーボード操作
+        return input_->TriggerKey(DIK_SPACE);
+    } else {
+        // コントローラー操作
+        return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
+    }
+}
+
+void ResultUI::SkipTimeAnimation() {
+    // クリアタイムのカウントアップを即座に完了
+    displayedTime_ = ClearTime_;
+    animTimer_ = kAnimDuration;
+    numberAnimState_ = kWaitingForHP;
+    delayTimer_ = 0.0f;
+    skipPhase_ = kSkipTime;
+    UpdateNumberSprites();
+}
+
+void ResultUI::SkipHPAnimation() {
+    // HPのイージングを即座に完了
+    positionEasings_[kHP].isActive = true;
+    sprites_[kHP]->sprite->SetPosition(endPositions_[kHP]);
+    positionEasings_[kHP].time = kEasingDuration;
+
+    for (int i = kHPHund; i <= kPercent; ++i) {
+        positionEasings_[i].isActive = true;
+        sprites_[i]->sprite->SetPosition(endPositions_[i]);
+        positionEasings_[i].time = kEasingDuration;
+    }
+
+    // HPのカウントアップを即座に完了
+    displayedHP_ = HP_;
+    animTimer_ = kAnimDuration;
+    numberAnimState_ = kFinished;
+    delayTimer_ = 0.0f;
+    currentEasingIndex_ = kPercent + 1;
+    skipPhase_ = kSkipHP;
+    UpdateNumberSprites();
+}
+
+void ResultUI::SkipRankDisplay() {
+    // ランクの表示を即座に完了
+    positionEasings_[kRank].isActive = true;
+    sprites_[kRank]->sprite->SetPosition(endPositions_[kRank]);
+    positionEasings_[kRank].time = kEasingDuration;
+    currentEasingIndex_ = kMaxSprite;
+    skipPhase_ = kAllSkipped;
 }
 
 void ResultUI::Update() {
     if (isStartEasing_) {
+        gamePad_->Update();
+        // スキップ入力チェック
+        if (CheckSkipInput()) {
+            if (skipPhase_ == kNoSkip) {
+                // 最初の入力：クリアタイムのアニメーションをスキップ
+                if (numberAnimState_ == kAnimatingTime) {
+                    SkipTimeAnimation();
+                }
+            } else if (skipPhase_ == kSkipTime) {
+                // 2回目の入力：HPのアニメーションをスキップ
+                if (numberAnimState_ == kWaitingForHP || numberAnimState_ == kWaiting || numberAnimState_ == kAnimatingHP) {
+                    SkipHPAnimation();
+                }
+            } else if (skipPhase_ == kSkipHP) {
+                // 3回目の入力：ランクの表示をスキップ
+                if (currentEasingIndex_ < kMaxSprite || numberAnimState_ == kFinished) {
+                    SkipRankDisplay();
+                }
+            }
+        }
+
         // 背景のイージング
         if (currentEasingIndex_ == kBackground) {
             positionEasings_[kBackground].isActive = true;

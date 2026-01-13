@@ -1,6 +1,8 @@
 #define NOMINMAX
 #include "StartCamera.h"
 #include <Frame.h>
+#include <GamePad.h>
+#include <Input.h>
 
 void StartCamera::Init() {
     vp_.farZ = kFarZ;
@@ -16,11 +18,47 @@ void StartCamera::Init() {
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
 
     wt_.UpdateMatrix();
+
+    // 入力の初期化
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
+    input_ = Input::GetInstance();
+
+    isSkipping_ = false;
+}
+
+bool StartCamera::CheckSkipInput() {
+    if (!input_ || !gamePad_) {
+        return false;
+    }
+
+    if (!gamePad_->IsConnected()) {
+        // キーボード操作
+        return input_->TriggerKey(DIK_SPACE);
+    } else {
+        // コントローラー操作
+        return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
+    }
 }
 
 void StartCamera::Update() {
+    // ゲームパッドの更新
+    if (gamePad_) {
+        gamePad_->Update();
+    }
+
+    // スキップ入力チェック
+    if (CheckSkipInput() && !isComplete_) {
+        isSkipping_ = true;
+    }
+
     if (isEasing_) {
-        easingTimer_ += Frame::DeltaTime();
+        // スキップ中はタイマーを加速
+        float deltaTime = Frame::DeltaTime();
+        if (isSkipping_) {
+            deltaTime *= kSkipSpeedMultiplier;
+        }
+        easingTimer_ += deltaTime;
 
         switch (easingPhase_) {
         case 1: // 1回目のイージング
@@ -44,6 +82,7 @@ void StartCamera::Update() {
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait1;
                 easingTimer_ = kTimerReset;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
@@ -56,6 +95,7 @@ void StartCamera::Update() {
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
                 easingStartRot_ = wt_.eulerRotation_;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
@@ -81,6 +121,7 @@ void StartCamera::Update() {
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait2;
                 easingTimer_ = kTimerReset;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
@@ -88,16 +129,17 @@ void StartCamera::Update() {
         case 4: // 2回目完了後の待機
         {
             if (easingTimer_ >= waitDuration_) {
-                // 3回目のイージング開始（targetVpへ）
+                // 3回目のイージング開始(targetVpへ)
                 easingPhase_ = kPhaseEasing3;
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
                 easingStartRot_ = wt_.eulerRotation_;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
 
-        case 5: // 3回目のイージング（targetVpへ）
+        case 5: // 3回目のイージング(targetVpへ)
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
@@ -118,6 +160,7 @@ void StartCamera::Update() {
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait3;
                 easingTimer_ = kTimerReset;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
@@ -129,6 +172,7 @@ void StartCamera::Update() {
                 easingPhase_ = kPhaseComplete;
                 isEasing_ = false;
                 isComplete_ = true;
+                isSkipping_ = false;
             }
             break;
         }
@@ -163,7 +207,12 @@ void StartCamera::Update() {
 }
 
 void StartCamera::Move() {
-    angle_ += speed_ * Frame::DeltaTime();
+    // スキップ中は角度を加速
+    float deltaTime = Frame::DeltaTime();
+    if (isSkipping_) {
+        deltaTime *= kSkipSpeedMultiplier;
+    }
+    angle_ += speed_ * deltaTime;
 
     if (angle_ > kHalfPi && !isEasing_) {
         isEasing_ = true;
@@ -171,6 +220,7 @@ void StartCamera::Move() {
         easingTimer_ = kTimerReset;
         easingStartPos_ = wt_.translation_;
         easingStartRot_ = wt_.eulerRotation_;
+        isSkipping_ = false; // イージング開始時にスキップをリセット
     }
 }
 
@@ -180,6 +230,7 @@ void StartCamera::imgui() {
     ImGui::DragFloat("Speed", &speed_, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat3("Center", &centerPos_.x, 0.1f, -100.0f, 100.0f);
     ImGui::DragFloat("Radius", &radius_, 0.1f, 1.0f, 200.0f);
+    ImGui::Checkbox("IsSkipping", &isSkipping_);
     ImGui::End();
 #endif // USE_IMGUI
 }

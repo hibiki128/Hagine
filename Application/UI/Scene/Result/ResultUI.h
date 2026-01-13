@@ -2,6 +2,11 @@
 #include "Easing.h"
 #include <SpriteManager.h>
 #include <array>
+
+// 前方宣言
+class Input;
+class GamePad;
+
 class ResultUI {
   public:
     /// ===================================================
@@ -40,6 +45,31 @@ class ResultUI {
     void SetHP(float hp) { HP_ = hp; }
     void SetClearTime(float time) { ClearTime_ = time; }
 
+    private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// スキップ入力チェック
+    /// </summary>
+    bool CheckSkipInput();
+
+    /// <summary>
+    /// タイムアニメーションをスキップ
+    /// </summary>
+    void SkipTimeAnimation();
+
+    /// <summary>
+    /// HPアニメーションをスキップ
+    /// </summary>
+    void SkipHPAnimation();
+
+    /// <summary>
+    /// ランク表示をスキップ
+    /// </summary>
+    void SkipRankDisplay();
+
   private:
     /// ===================================================
     /// private enum
@@ -64,6 +94,17 @@ class ResultUI {
         kPercent,    // パーセント
         kRank,       // ランク
         kMaxSprite
+    };
+
+    /// <summary>
+    /// スキップ段階
+    /// </summary>
+    enum SkipPhase {
+        kNoSkip,    // スキップなし
+        kSkipTime,  // クリアタイムをスキップ
+        kSkipHP,    // HPをスキップ
+        kSkipRank,  // ランクをスキップ
+        kAllSkipped // 全てスキップ済み
     };
 
   private:
@@ -116,4 +157,11 @@ class ResultUI {
     float HP_ = kDefaultHP;               // 残り体力(記録値)
     float ClearTime_ = kDefaultClearTime; // クリアタイム(記録値)
     std::string Rank_ = "A";
+
+    // 入力関連
+    Input *input_ = nullptr;
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
+
+    // スキップ管理
+    SkipPhase skipPhase_ = kNoSkip;
 };

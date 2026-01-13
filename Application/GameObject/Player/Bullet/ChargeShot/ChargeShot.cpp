@@ -228,9 +228,9 @@ void ChargeShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     transform_->scale_ = {scale_, scale_, scale_};
 }
 void ChargeShot::DrawParticle(const ViewProjection &viewProjection) {
+    chargeEmitter_->Draw(viewProjection);
     if (!isAlive_)
         return;
-    chargeEmitter_->Draw(viewProjection);
     bulletEmitter_->Draw(viewProjection);
 }
 
