@@ -1,7 +1,7 @@
 {
-    "IsShowMainUI": true,
+    "IsShowMainUI": false,
     "ShowGrid": false,
-    "isEditorMode": true,
+    "isEditorMode": false,
     "showFPSView": false,
     "showGizmoView": false,
     "showHierarchyView": false,

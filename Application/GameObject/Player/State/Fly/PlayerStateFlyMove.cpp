@@ -26,10 +26,26 @@ void PlayerStateFlyMove::Exit(Player &player) {
 }
 
 void PlayerStateFlyMove::AirMove(Player &player) {
-    if (Input::GetInstance()->PushKey(DIK_SPACE)) {
+    bool ascendInput = false;
+    bool descendInput = false;
+    bool descendTrigger = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        ascendInput = Input::GetInstance()->PushKey(DIK_SPACE);
+        descendInput = Input::GetInstance()->PushKey(DIK_LSHIFT);
+        descendTrigger = Input::GetInstance()->TriggerKey(DIK_LSHIFT);
+    } else {
+        // ゲームパッド入力
+        ascendInput = player.GetGamePad()->IsPress(XINPUT_GAMEPAD_A);
+        descendInput = player.GetGamePad()->IsPress(XINPUT_GAMEPAD_B);
+        descendTrigger = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_B);
+    }
+
+    if (ascendInput) {
         float &vy = player.GetVelocity().y;
         vy = std::min(vy + kFlyAcceleration * player.GetDt(), kFlyMaxSpeed);
-    } else if (Input::GetInstance()->PushKey(DIK_LSHIFT)) {
+    } else if (descendInput) {
         float &vy = player.GetVelocity().y;
         vy = std::max(vy - kFlyAcceleration * player.GetDt(), -kFlyMaxSpeed);
     } else {
@@ -40,7 +56,7 @@ void PlayerStateFlyMove::AirMove(Player &player) {
         }
     }
 
-    if (Input::GetInstance()->TriggerKey(DIK_LSHIFT)) {
+    if (descendTrigger) {
         if (fallInputTime_ < kFallThresholdTime) {
             fallInputCount_++;
         } else {
@@ -66,13 +82,33 @@ void PlayerStateFlyMove::ChangeState(Player &player) {
         }
     }
 
-    if (!Input::GetInstance()->TriggerKey(DIK_LSHIFT) &&
-        !Input::GetInstance()->PushKey(DIK_LSHIFT) &&
-        !Input::GetInstance()->PushKey(DIK_SPACE) &&
-        !Input::GetInstance()->PushKey(DIK_D) &&
-        !Input::GetInstance()->PushKey(DIK_A) &&
-        !Input::GetInstance()->PushKey(DIK_W) &&
-        !Input::GetInstance()->PushKey(DIK_S) &&
+    bool hasInput = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        if (Input::GetInstance()->TriggerKey(DIK_LSHIFT) ||
+            Input::GetInstance()->PushKey(DIK_LSHIFT) ||
+            Input::GetInstance()->PushKey(DIK_SPACE) ||
+            Input::GetInstance()->PushKey(DIK_D) ||
+            Input::GetInstance()->PushKey(DIK_A) ||
+            Input::GetInstance()->PushKey(DIK_W) ||
+            Input::GetInstance()->PushKey(DIK_S)) {
+            hasInput = true;
+        }
+    } else {
+        // ゲームパッド入力
+        float leftStickX = player.GetGamePad()->GetLeftStickX();
+        float leftStickY = player.GetGamePad()->GetLeftStickY();
+
+        if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_B) ||
+            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_B) ||
+            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_A) ||
+            leftStickX != 0.0f || leftStickY != 0.0f) {
+            hasInput = true;
+        }
+    }
+
+    if (!hasInput &&
         fallInputTime_ > kFallThresholdTime &&
         fallInputCount_ < kFallInputThreshold) {
         player.ChangeState("FlyIdle");

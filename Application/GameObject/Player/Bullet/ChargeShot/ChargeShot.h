@@ -169,4 +169,5 @@ class ChargeShot : public BaseObject {
     std::unique_ptr<ParticleEmitter> bulletEmitter_;
 
     SphereCollider *bulletCollider_ = nullptr;
+    float chargeStartTimer_ = 0.0f;
 };

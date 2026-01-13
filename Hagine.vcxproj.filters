@@ -163,6 +163,7 @@
     <ClCompile Include="Application\UI\Scene\Result\ResultUI.cpp" />
     <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.cpp" />
+    <ClCompile Include="Engine\Input\GamePad.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
@@ -304,6 +305,7 @@
     <ClInclude Include="Application\Camera\StartCamera.h" />
     <ClInclude Include="Application\UI\Scene\Result\ResultUI.h" />
     <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
+    <ClInclude Include="Engine\Input\GamePad.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
