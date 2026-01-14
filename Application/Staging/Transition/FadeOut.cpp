@@ -22,8 +22,9 @@ void FadeOut::Update() {
 
 void FadeOut::Draw(const ViewProjection &vp) {
     if (timer_ <= kSpriteDrawTime) {
-        SpriteManager::GetInstance()->DrawAll();
+        SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(1.0f);
     } else {
+        SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(0.0f);
         fadeOut_->SetEnableGravity(true);
     }
     if (timer_ >= kParticleStopTime) {

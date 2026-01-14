@@ -198,7 +198,7 @@ void Enemy::ExecuteBehaviorTree(float deltaTime) {
     }
 #endif
 
-    if (isStop_) {
+    if (isStop_ || isPause_) {
         velocity_.x = kVelocityZero;
         velocity_.z = kVelocityZero;
         return;

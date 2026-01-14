@@ -28,6 +28,7 @@ void GameScene::Initialize() {
     enemyUI_ = std::make_unique<EnemyUI>();
     behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
     fadeOut_ = std::make_unique<FadeOut>();
+    gameUI_ = std::make_unique<GameUI>();
 
     /// ===================================================
     /// 初期化
@@ -41,6 +42,7 @@ void GameScene::Initialize() {
     deathCamera_->Init();
     skyBox_->Initialize("game/skybox.dds");
     fadeOut_->Initialize();
+    gameUI_->Initialize();
 
     /// ===================================================
     /// セット
@@ -124,6 +126,10 @@ void GameScene::Update() {
     if (!enemy_ptr->GetIsAlive()) {
         sceneManager_->NextSceneReservation("CLEAR");
     }
+
+    gameUI_->Update();
+    player_ptr->SetPause(gameUI_->GetIsPause());
+    enemy_ptr->SetPause(gameUI_->GetIsPause());
 }
 
 void GameScene::Draw() {
@@ -142,6 +148,10 @@ void GameScene::Draw() {
     enemy_ptr->DrawParticle(vp_);
 
     fadeOut_->Draw(vp_);
+
+    gameUI_->Draw();
+
+    SpriteManager::GetInstance()->DrawAll();
 
     /// -------描画処理終了-------
 }

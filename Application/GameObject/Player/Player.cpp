@@ -138,7 +138,7 @@ void Player::Update() {
             }
         }
 
-        if (started_) {
+        if (started_ && !isPause_) {
             RecoverEnergy();
             ComboUpdate();
 
@@ -257,6 +257,10 @@ void Player::Update() {
         }
 
         ChangeEnergyCharge();
+    }
+
+    if (isPause_) {
+        velocity_ = {0.0f, 0.0f, 0.0f};
     }
 }
 

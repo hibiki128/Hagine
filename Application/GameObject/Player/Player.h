@@ -173,6 +173,9 @@ class Player : public BaseObject {
     void SetStart(bool flag) {
         started_ = flag;
     }
+    void SetPause(bool flag){
+        isPause_ = flag;
+    }
     void SetEnemy(Enemy *enemy) {
         enemy_ = enemy;
         leftHand_ptr_->SetEnemy(enemy);
@@ -377,6 +380,7 @@ class Player : public BaseObject {
     float dashDuration_ = 0.0f;         // ダッシュ継続時間
 
     bool started_ = false;        // ゲーム開始フラグ
+    bool isPause_ = false;        // ポーズ中フラグ
     bool isDeathStaging_ = false; // 死亡演出中フラグ
 
     bool isInvincible_ = false;        // 無敵状態フラグ
