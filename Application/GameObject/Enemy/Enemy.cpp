@@ -9,7 +9,6 @@
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include <Frame.h>
 #ifdef _DEBUG
-#include "BehaviorTree/Editor/BehaviorTreeEditor.h"
 #endif
 
 Enemy::Enemy() {
@@ -121,101 +120,6 @@ void Enemy::Update() {
     }
 
     CollisionGround();
-}
-
-void Enemy::InitializeBehaviorTree() {
-#ifdef _DEBUG
-    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
-    BehaviorNode::SetEditor(behaviorTreeEditor_.get());
-#endif
-
-    //==================== 通常行動ツリー構築 ====================
-
-    //--- 遠距離時の接近 ---
-    auto farDistCheck = std::make_unique<DistanceCheckNode>(kFarDistanceMin, kFarDistanceMax);
-    auto fastApproach = std::make_unique<ApproachNode>(MoveSpeedType::Fast);
-    auto farSequence = std::make_unique<SequenceNode>();
-    farSequence->AddChild(std::move(farDistCheck));
-    farSequence->AddChild(std::move(fastApproach));
-
-    //--- 中距離時の接近 ---
-    auto midDistCheck = std::make_unique<DistanceCheckNode>(kMidDistanceMin, kMidDistanceMax);
-    auto slowApproach = std::make_unique<ApproachNode>(MoveSpeedType::Slow);
-    auto midSequence = std::make_unique<SequenceNode>();
-    midSequence->AddChild(std::move(midDistCheck));
-    midSequence->AddChild(std::move(slowApproach));
-
-    //--- 近距離時の行動 ---
-    auto closeDistCheck = std::make_unique<DistanceCheckNode>(kCloseDistanceMin, kCloseDistanceMax);
-    auto closeApproach = std::make_unique<CloseApproachNode>();
-    auto strafe = std::make_unique<StrafeNode>();
-    auto retreat = std::make_unique<RetreatNode>();
-    auto guard = std::make_unique<GuardNode>();
-
-    auto weightedSelector = std::make_unique<WeightedSelectorNode>();
-    weightedSelector->AddChild(std::move(closeApproach), kCloseApproachWeight);
-    weightedSelector->AddChild(std::move(strafe), kStrafeWeight);
-    weightedSelector->AddChild(std::move(retreat), kRetreatWeight);
-    weightedSelector->AddChild(std::move(guard), kGuardWeight);
-
-    auto closeSequence = std::make_unique<SequenceNode>();
-    closeSequence->AddChild(std::move(closeDistCheck));
-    closeSequence->AddChild(std::move(weightedSelector));
-
-    //--- 全距離まとめ ---
-    auto mainSelector = std::make_unique<SelectorNode>();
-    mainSelector->AddChild(std::move(closeSequence));
-    mainSelector->AddChild(std::move(midSequence));
-    mainSelector->AddChild(std::move(farSequence));
-
-    //--- 停止ノードを最後に ---
-    mainSelector->AddChild(std::make_unique<StopNode>());
-
-    //==================== 割り込み対応ルート構築 ====================
-
-    // InterruptSelectorNode が各子ノードの割り込み条件を監視
-    auto interruptRoot = std::make_unique<InterruptSelectorNode>();
-
-    // 通常行動全体をまとめて追加
-    interruptRoot->AddChild(std::move(mainSelector));
-
-    // ルートノード設定
-    behaviorTreeRoot_ = std::move(interruptRoot);
-
-#ifdef _DEBUG
-    behaviorTreeEditor_->LoadSettings("default", behaviorTreeRoot_.get());
-#endif // _DEBUG
-}
-
-void Enemy::ExecuteBehaviorTree(float deltaTime) {
-    if (!behaviorTreeRoot_) {
-        return;
-    }
-
-#ifdef _DEBUG
-    if (behaviorTreeEditor_) {
-        behaviorTreeEditor_->ClearExecutingNode();
-    }
-#endif
-
-    if (isStop_ || isPause_) {
-        velocity_.x = kVelocityZero;
-        velocity_.z = kVelocityZero;
-        return;
-    }
-
-    // ツリーを実行(各ノード内でエディター通知される)
-    NodeStatus status = behaviorTreeRoot_->Execute(*this, deltaTime);
-
-    (void)status;
-}
-
-void Enemy::DrawBehaviorTreeEditor() {
-#ifdef _DEBUG
-    if (behaviorTreeEditor_) {
-        behaviorTreeEditor_->DrawEditor(behaviorTreeRoot_.get());
-    }
-#endif
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {

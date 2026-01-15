@@ -6,7 +6,6 @@
 #include "Application/GameObject/Player/Player.h"
 #include "Application/UI/Enemy/EnemyUI.h"
 #include "Application/UI/Player/PlayerUI.h"
-#include <Application/GameObject/Enemy/BehaviorTree/Editor/BehaviorTreeEditor.h>
 #include <Application/Staging/Transition/FadeOut.h>
 #include <Application/Camera/DeathCamera.h>
 #include "SkyBox/SkyBox.h"
@@ -113,8 +112,6 @@ class GameScene : public BaseScene {
 
     std::unique_ptr<PlayerUI> playerUI_;
     std::unique_ptr<EnemyUI> enemyUI_;
-
-    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
 
     std::unique_ptr<FadeOut> fadeOut_;
     

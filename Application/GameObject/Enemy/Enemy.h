@@ -5,9 +5,6 @@
 #include <Application/GameObject/Player/Player.h>
 #include <application/GameObject/Player/PlayerData.h>
 
-class BehaviorNode;
-class BehaviorTreeEditor;
-
 /// <summary>
 /// 敵のゲームオブジェクトクラス
 /// ビヘイビアツリーに基づいて行動し、プレイヤーとの相互作用を管理する
@@ -62,21 +59,6 @@ class Enemy : public BaseObject {
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
     void OnCollisionEnter(ColliderBase *collider);
-
-    /// <summary>
-    /// ビヘイビアツリーを初期化
-    /// </summary>
-    void InitializeBehaviorTree();
-
-    /// <summary>
-    /// ビヘイビアツリーを実行
-    /// </summary>
-    void ExecuteBehaviorTree(float deltaTime);
-
-    /// <summary>
-    /// ビヘイビアツリーエディターを描画
-    /// </summary>
-    void DrawBehaviorTreeEditor();
 
     /// <summary>
     /// Getter
@@ -277,12 +259,6 @@ class Enemy : public BaseObject {
     EasingData<float> tiltEase_;       // 回転角イージング
     Quaternion baseRotation_;          // 通常時の向き
     Quaternion tiltRotation_;          // のけぞり用の回転
-
-    // ビヘイビアツリー関連
-#ifdef _DEBUG
-    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
-#endif
-    std::unique_ptr<BehaviorNode> behaviorTreeRoot_;
 
     OBBCollider *enemyCollider_ = nullptr;
 };

@@ -26,7 +26,6 @@ void GameScene::Initialize() {
     skyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
     enemyUI_ = std::make_unique<EnemyUI>();
-    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
     fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
 
@@ -176,10 +175,6 @@ void GameScene::AddObjectSetting() {
     enemyUI_->Debug();
     player_ptr->Debug();
     enemy_ptr->Debug();
-    // ビヘイビアツリーエディターの表示
-    if (ImGui::CollapsingHeader("BehaviorTree")) {
-        enemy_ptr->DrawBehaviorTreeEditor();
-    }
 
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
