@@ -14,7 +14,7 @@ void MyGame::Initialize() {
     // シーンマネージャに最初のシーンをセット
     sceneManager_->SetSceneFactory(sceneFactory_);
 #ifdef _DEBUG
-    sceneManager_->NextSceneReservation("CLEAR");
+    sceneManager_->NextSceneReservation("GAME");
 #else
     sceneManager_->NextSceneReservation("TITLE");
 #endif // _DEBUG 
