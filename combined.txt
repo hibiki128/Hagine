@@ -103,6 +103,9 @@
 └── └── └── ├── PlayerUI.cpp
 └── └── └── └── PlayerUI.h
 └── └── └── Scene/
+└── └──     ├── Game/
+└── └──     └── ├── GameUI.cpp
+└── └──     └── └── GameUI.h
 └── └──     ├── Result/
 └── └──     └── ├── ResultUI.cpp
 └── └──     └── └── ResultUI.h
@@ -231,6 +234,8 @@
 └── └── ├── Frame.cpp
 └── └── └── Frame.h
 └── ├── Input/
+└── └── ├── GamePad.cpp
+└── └── ├── GamePad.h
 └── └── ├── Input.cpp
 └── └── ├── Input.h
 └── └── ├── Mouse.cpp
@@ -383,6 +388,7 @@
 └── └── └──     └── ObjectDatas/
 └── └── ├── Shake/
 └── └── └── Sprites/
+└── └──     ├── GameScene/
 └── └──     ├── Result/
 └── └──     ├── TitleScene/
 └── └──     └── Transition/
@@ -743,10 +749,20 @@ void FollowCamera::Update() {
         Vector3 cameraRightDir = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
         float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
 
-        hasInput = Input::GetInstance()->PushKey(DIK_W) ||
-                   Input::GetInstance()->PushKey(DIK_A) ||
-                   Input::GetInstance()->PushKey(DIK_S) ||
-                   Input::GetInstance()->PushKey(DIK_D);
+        if (!player->GetGamePad()->IsConnected()) {
+            // キーボード入力
+            hasInput = Input::GetInstance()->PushKey(DIK_W) ||
+                       Input::GetInstance()->PushKey(DIK_A) ||
+                       Input::GetInstance()->PushKey(DIK_S) ||
+                       Input::GetInstance()->PushKey(DIK_D);
+        } else {
+            // ゲームパッド入力 - 左スティック
+            float leftStickX = player->GetGamePad()->GetLeftStickX();
+            float leftStickY = player->GetGamePad()->GetLeftStickY();
+
+            // スティックの入力があるかチェック
+            hasInput = (leftStickX != 0.0f || leftStickY != 0.0f);
+        }
 
         // 入力がある場合のみターゲットを更新
         if (hasInput && std::abs(lateralVelocity) > kVelocityThreshold) {
@@ -933,12 +949,24 @@ void FollowCamera::imgui() {
 
 void FollowCamera::Move() {
     Player *player = dynamic_cast<Player *>(target_);
-    if (!player || !player->GetIsLockOn()) {
-        if (Input::GetInstance()->PushKey(DIK_LEFT)) {
+    GamePad *gamePad = player->GetGamePad();
+    if (player && player->GetIsLockOn()) {
+        return;
+    }
+    if (!gamePad->IsConnected()) {
+        Input *input = Input::GetInstance();
+        // キーボード
+        if (input->PushKey(DIK_LEFT)) {
             yaw_ -= manualYawSpeed_;
         }
-        if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
+        if (input->PushKey(DIK_RIGHT)) {
             yaw_ += manualYawSpeed_;
+        }
+    } else {
+        // ゲームパッド - 右スティック
+        if (player) {
+            const float stickSensitivity = 0.05f;
+            yaw_ += gamePad->GetRightStickX() * stickSensitivity;
         }
     }
 }
@@ -1109,6 +1137,8 @@ File Path: Application/Camera/StartCamera.cpp
 #define NOMINMAX
 #include "StartCamera.h"
 #include <Frame.h>
+#include <GamePad.h>
+#include <Input.h>
 
 void StartCamera::Init() {
     vp_.farZ = kFarZ;
@@ -1124,11 +1154,47 @@ void StartCamera::Init() {
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
 
     wt_.UpdateMatrix();
+
+    // 入力の初期化
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
+    input_ = Input::GetInstance();
+
+    isSkipping_ = false;
+}
+
+bool StartCamera::CheckSkipInput() {
+    if (!input_ || !gamePad_) {
+        return false;
+    }
+
+    if (!gamePad_->IsConnected()) {
+        // キーボード操作
+        return input_->TriggerKey(DIK_SPACE);
+    } else {
+        // コントローラー操作
+        return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
+    }
 }
 
 void StartCamera::Update() {
+    // ゲームパッドの更新
+    if (gamePad_) {
+        gamePad_->Update();
+    }
+
+    // スキップ入力チェック
+    if (CheckSkipInput() && !isComplete_) {
+        isSkipping_ = true;
+    }
+
     if (isEasing_) {
-        easingTimer_ += Frame::DeltaTime();
+        // スキップ中はタイマーを加速
+        float deltaTime = Frame::DeltaTime();
+        if (isSkipping_) {
+            deltaTime *= kSkipSpeedMultiplier;
+        }
+        easingTimer_ += deltaTime;
 
         switch (easingPhase_) {
         case 1: // 1回目のイージング
@@ -1152,6 +1218,7 @@ void StartCamera::Update() {
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait1;
                 easingTimer_ = kTimerReset;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
@@ -1164,6 +1231,7 @@ void StartCamera::Update() {
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
                 easingStartRot_ = wt_.eulerRotation_;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
@@ -1189,6 +1257,7 @@ void StartCamera::Update() {
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait2;
                 easingTimer_ = kTimerReset;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
@@ -1196,16 +1265,17 @@ void StartCamera::Update() {
         case 4: // 2回目完了後の待機
         {
             if (easingTimer_ >= waitDuration_) {
-                // 3回目のイージング開始（targetVpへ）
+                // 3回目のイージング開始(targetVpへ)
                 easingPhase_ = kPhaseEasing3;
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
                 easingStartRot_ = wt_.eulerRotation_;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
 
-        case 5: // 3回目のイージング（targetVpへ）
+        case 5: // 3回目のイージング(targetVpへ)
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
@@ -1226,6 +1296,7 @@ void StartCamera::Update() {
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait3;
                 easingTimer_ = kTimerReset;
+                isSkipping_ = false; // 次のフェーズでスキップをリセット
             }
             break;
         }
@@ -1237,6 +1308,7 @@ void StartCamera::Update() {
                 easingPhase_ = kPhaseComplete;
                 isEasing_ = false;
                 isComplete_ = true;
+                isSkipping_ = false;
             }
             break;
         }
@@ -1271,7 +1343,12 @@ void StartCamera::Update() {
 }
 
 void StartCamera::Move() {
-    angle_ += speed_ * Frame::DeltaTime();
+    // スキップ中は角度を加速
+    float deltaTime = Frame::DeltaTime();
+    if (isSkipping_) {
+        deltaTime *= kSkipSpeedMultiplier;
+    }
+    angle_ += speed_ * deltaTime;
 
     if (angle_ > kHalfPi && !isEasing_) {
         isEasing_ = true;
@@ -1279,6 +1356,7 @@ void StartCamera::Move() {
         easingTimer_ = kTimerReset;
         easingStartPos_ = wt_.translation_;
         easingStartRot_ = wt_.eulerRotation_;
+        isSkipping_ = false; // イージング開始時にスキップをリセット
     }
 }
 
@@ -1288,6 +1366,7 @@ void StartCamera::imgui() {
     ImGui::DragFloat("Speed", &speed_, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat3("Center", &centerPos_.x, 0.1f, -100.0f, 100.0f);
     ImGui::DragFloat("Radius", &radius_, 0.1f, 1.0f, 200.0f);
+    ImGui::Checkbox("IsSkipping", &isSkipping_);
     ImGui::End();
 #endif // USE_IMGUI
 }
@@ -1298,6 +1377,10 @@ File Path: Application/Camera/StartCamera.h
 #pragma once
 #include <Camera/ViewProjection/ViewProjection.h>
 #include <Transform/WorldTransform.h>
+
+// 前方宣言
+class Input;
+class GamePad;
 
 /// <summary>
 /// スタート時のカメラの動きを行うカメラクラス
@@ -1350,6 +1433,11 @@ class StartCamera {
     /// private method
     /// ===================================================
 
+    /// <summary>
+    /// スキップ入力チェック
+    /// </summary>
+    bool CheckSkipInput();
+
   private:
     /// ===================================================
     /// private varians
@@ -1376,6 +1464,9 @@ class StartCamera {
     static constexpr int kPhaseWait3 = 6;
     static constexpr int kPhaseComplete = 7;
 
+    // スキップ時のスピード倍率
+    static constexpr float kSkipSpeedMultiplier = 5.0f;
+
     // ビュープロジェクション
     ViewProjection vp_;
 
@@ -1401,6 +1492,13 @@ class StartCamera {
     float waitDuration_ = 1.0f;
     Vector3 easingTargetPos2_ = {5.0f, 1.8f, -33.0f};
     Vector3 easingTargetRot2_ = {degreesToRadians(9.6f), degreesToRadians(-149.0f), degreesToRadians(0.0f)};
+
+    // 入力関連
+    Input *input_ = nullptr;
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
+
+    // スキップ関連
+    bool isSkipping_ = false;
 };
 
 ============================================================
@@ -3773,7 +3871,7 @@ void Enemy::ExecuteBehaviorTree(float deltaTime) {
     }
 #endif
 
-    if (isStop_) {
+    if (isStop_ || isPause_) {
         velocity_.x = kVelocityZero;
         velocity_.z = kVelocityZero;
         return;
@@ -4135,6 +4233,7 @@ class Enemy : public BaseObject {
     void SetTarget(Player *target) { target_ = target; }
     void SetGuarding(bool guarding) { isGuarding_ = guarding; }
     void SetStart(bool flag) { started_ = flag; }
+    void SetPause(bool flag) { isPause_ = flag; }
     void SetDrawShadow(bool flag) { drawShadow_ = flag; }
 
   private:
@@ -4277,6 +4376,7 @@ class Enemy : public BaseObject {
     bool isGrounded_ = true;
     bool isStop_ = false;
     bool started_ = false;
+    bool isPause_ = false;
     bool drawShadow_ = true;
 
     std::unique_ptr<DataHandler> data_;
@@ -4481,20 +4581,44 @@ void ChargeShot::Update() {
         }
     }
 
+    bool chargeHold = false;
+    bool chargeRelease = false;
+
+    if (!player_->GetGamePad()->IsConnected()) {
+        // キーボード入力
+        chargeHold = input->PushKey(DIK_K);
+        chargeRelease = input->ReleaseMomentKey(DIK_K);
+    } else {
+        // ゲームパッド入力 - Yボタン
+        chargeHold = player_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y);
+        chargeRelease = player_->GetGamePad()->IsRelease(XINPUT_GAMEPAD_Y);
+    }
+
     if (!isAlive_) {
-        if (input->TriggerKey(DIK_K)) {
-            // チャージ開始前にエネルギーチェックを追加
-            if (player_ && player_->GetEnergy() < kMinEnergyToStart) {
-                // エネルギー不足でチャージ開始できない
-                return;
+        // チャージ開始判定：ボタンが押され続けている時間を計測
+        if (chargeHold) {
+            chargeStartTimer_ += Frame::DeltaTime();
+
+            // kChargeStartThreshold以上押され続けた場合のみチャージ開始
+            if (chargeStartTimer_ >= player_->GetChargeThreshold()) {
+                // エネルギーチェック
+                if (player_ && player_->GetEnergy() < kMinEnergyToStart) {
+                    // エネルギー不足でチャージ開始できない
+                    chargeStartTimer_ = 0.0f;
+                    return;
+                }
+                isAlive_ = true;
+                isFired_ = false;
+                scale_ = kInitialScale;
+                isMaxScale_ = false;
+                isCharge = true;
             }
-            isAlive_ = true;
-            isFired_ = false;
-            scale_ = kInitialScale;
-            isMaxScale_ = false;
+        } else {
+            // ボタンが離されたらタイマーリセット
+            chargeStartTimer_ = 0.0f;
         }
     } else {
-        if (input->PushKey(DIK_K) && !isFired_) {
+        if (chargeHold && !isFired_) {
             scale_ += scaleSpeed_ * (Frame::DeltaTime());
             if (scale_ >= maxScale_) {
                 scale_ = maxScale_;
@@ -4505,7 +4629,7 @@ void ChargeShot::Update() {
             }
             isCharge = true;
         }
-        if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
+        if (chargeRelease && !isFired_) {
             // エネルギー消費量を計算(チャージ率に応じて5~20)
             float scaleRatio = (scale_ - kInitialScale) / (maxScale_ - kInitialScale);
             float energyCost = kMinEnergyCost + ((kMaxEnergyCost - kMinEnergyCost) * scaleRatio);
@@ -4515,6 +4639,7 @@ void ChargeShot::Update() {
                 // エネルギー不足ならリセット
                 Reset();
                 isCharge = false;
+                chargeStartTimer_ = 0.0f;
                 return;
             }
 
@@ -4532,7 +4657,6 @@ void ChargeShot::Update() {
                 } else {
                     // プレイヤーの回転をかけて発射方向を計算
                     dir = (player_->GetLocalRotation() * Vector3(0.0f, 0.0f, 1.0f)).Normalize();
-
                     dir.x = -dir.x;
                 }
             }
@@ -4540,6 +4664,7 @@ void ChargeShot::Update() {
             Fire(pos, dir);
             isFired_ = true;
             isCharge = false;
+            chargeStartTimer_ = 0.0f;
         }
     }
 
@@ -4558,15 +4683,10 @@ void ChargeShot::Update() {
     if (isAlive_ && !isFired_) {
         if (player_) {
             Vector3 playerPos = player_->GetLocalPosition();
-
             Quaternion rot = player_->GetLocalRotation();
-
             Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
-
             Vector3 forwardDir = rot * baseForward;
-
             forwardDir.x = -forwardDir.x;
-
             Vector3 normForward = forwardDir.Normalize();
 
             // チャージ弾のオフセット距離
@@ -4630,9 +4750,9 @@ void ChargeShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     transform_->scale_ = {scale_, scale_, scale_};
 }
 void ChargeShot::DrawParticle(const ViewProjection &viewProjection) {
+    chargeEmitter_->Draw(viewProjection);
     if (!isAlive_)
         return;
-    chargeEmitter_->Draw(viewProjection);
     bulletEmitter_->Draw(viewProjection);
 }
 
@@ -4829,6 +4949,7 @@ class ChargeShot : public BaseObject {
     std::unique_ptr<ParticleEmitter> bulletEmitter_;
 
     SphereCollider *bulletCollider_ = nullptr;
+    float chargeStartTimer_ = 0.0f;
 };
 
 ============================================================
@@ -5297,7 +5418,6 @@ File Path: Application/GameObject/Player/Player.cpp
 #include "application/GameObject/Enemy/Enemy.h"
 #include "numbers"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
-#include <Input.h>
 #include <Particle/CSParticle/ParticleCSEditor.h>
 #include <Particle/ParticleEditor.h>
 #include <cmath>
@@ -5388,6 +5508,11 @@ void Player::Init(const std::string objectName) {
     auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
 
     deathStaging_ = std::make_unique<DeathStaging>();
+
+    input_ = Input::GetInstance();
+
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
 }
 
 void Player::Update() {
@@ -5402,6 +5527,8 @@ void Player::Update() {
 
     } else {
 
+        gamePad_->Update();
+
         shadow_->GetLocalPosition() = {transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
         shadow_->Update();
 
@@ -5413,9 +5540,12 @@ void Player::Update() {
             }
         }
 
-        if (started_) {
+        if (started_ && !isPause_) {
             RecoverEnergy();
             ComboUpdate();
+
+            UpdateDashState();
+
             if (currentState_) {
                 currentState_->Update(*this);
             }
@@ -5425,7 +5555,7 @@ void Player::Update() {
                 RotateUpdate();
             }
 
-            if (chargeShot_) {
+            if (chargeShot_ && !isSkillMenu_) {
                 chargeShot_->Update();
             }
 
@@ -5476,8 +5606,21 @@ void Player::Update() {
             velocity_.y = kMaxFallVelocity;
         }
 
-        if (Input::GetInstance()->TriggerKey(DIK_L)) {
-            isLockOn_ = !isLockOn_;
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_L)) {
+                isLockOn_ = !isLockOn_;
+            }
+        } else {
+            // ゲームパッド入力（将来の実装用）
+            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
+                isLockOn_ = !isLockOn_;
+            }
+            if (gamePad_->GetLeftTrigger() > 0.25f) {
+                isSkillMenu_ = true;
+            } else {
+                isSkillMenu_ = false;
+            }
         }
 
         if (isDashing_) {
@@ -5516,6 +5659,10 @@ void Player::Update() {
         }
 
         ChangeEnergyCharge();
+    }
+
+    if (isPause_) {
+        velocity_ = {0.0f, 0.0f, 0.0f};
     }
 }
 
@@ -5606,20 +5753,48 @@ void Player::OnCollision(ColliderBase *other) {
 }
 
 void Player::DirectionUpdate() {
-    if (Input::GetInstance()->PushKey(DIK_D)) {
-        // 右
-        moveDir_ = MoveDirection::Right;
-    } else if (Input::GetInstance()->PushKey(DIK_A)) {
-        // 左
-        moveDir_ = MoveDirection::Left;
-    } else if (Input::GetInstance()->PushKey(DIK_W)) {
-        // 前
-        moveDir_ = MoveDirection::Forward;
-    } else if (Input::GetInstance()->PushKey(DIK_S)) {
-        // 後ろ
-        moveDir_ = MoveDirection::Behind;
+    if (!gamePad_->IsConnected()) {
+        // キーボード入力
+        if (input_->PushKey(DIK_D)) {
+            // 右
+            moveDir_ = MoveDirection::Right;
+        } else if (input_->PushKey(DIK_A)) {
+            // 左
+            moveDir_ = MoveDirection::Left;
+        } else if (input_->PushKey(DIK_W)) {
+            // 前
+            moveDir_ = MoveDirection::Forward;
+        } else if (input_->PushKey(DIK_S)) {
+            // 後ろ
+            moveDir_ = MoveDirection::Behind;
+        }
+    } else {
+        // ゲームパッド入力 - 左スティック
+        float xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸(左がプラス)
+        float zInput = gamePad_->GetLeftStickY();  // 左スティックY軸(上がプラス)
+
+        // スティック入力から方向を判定
+        if (xInput != 0.0f || zInput != 0.0f) {
+            // 角度を計算(atan2を使用)
+            float angle = std::atan2(xInput, zInput);
+
+            // 8方向に分類
+            const float PI = std::numbers::pi_v<float>;
+            const float segment = PI / 4.0f; // 45度
+
+            if (angle >= -segment && angle < segment) {
+                moveDir_ = MoveDirection::Forward;
+            } else if (angle >= segment && angle < segment * 3.0f) {
+                moveDir_ = MoveDirection::Right;
+            } else if (angle >= segment * 3.0f || angle < -segment * 3.0f) {
+                moveDir_ = MoveDirection::Behind;
+            } else if (angle >= -segment * 3.0f && angle < -segment) {
+                moveDir_ = MoveDirection::Left;
+            }
+        }
     }
-    // 向いてる方向は回転値から計算（ロックオン時以外）
+
+    // 向いてる方向は回転値から計算(ロックオン時以外)
     if (!isLockOn_) {
         dir_ = CalculateDirectionFromRotation();
     } else {
@@ -5628,34 +5803,94 @@ void Player::DirectionUpdate() {
 }
 
 void Player::Shot() {
-    if (Input::GetInstance()->TriggerKey(DIK_J)) {
-        // エネルギーチェックを追加
-        if (!ConsumeEnergy(kNormalShotEnergyCost)) {
-            return; // エネルギー不足なら発射しない
+    if (currentState_ != states_["EnergyCharge"].get() && !isSkillMenu_) {
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_J)) {
+                // エネルギーチェックを追加
+                if (!ConsumeEnergy(kNormalShotEnergyCost)) {
+                    return; // エネルギー不足なら発射しない
+                }
+
+                std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
+                auto bullet = std::make_unique<PlayerBullet>();
+                bullet->Init(bulletName);
+                bullet->InitTransform(this);
+                bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
+                bullet->SetColliderRadius(kBulletColliderRadius);
+                bullets_.push_back(std::move(bullet));
+
+                timeSinceLastShot_ = kTimerReset; // 射撃タイマーをリセット
+            }
+        } else {
+            // ゲームパッド入力
+            // Yボタンが押されている時間を計測
+            if (gamePad_->IsPress(XINPUT_GAMEPAD_Y) && !isSkillMenu_) {
+                yButtonHoldTime_ += dt_;
+            }
+
+            // Yボタンが離された瞬間
+            if (gamePad_->IsRelease(XINPUT_GAMEPAD_Y) && !isSkillMenu_) {
+                // 長押し判定閾値未満なら通常弾を発射
+                if (yButtonHoldTime_ < kYButtonChargeThreshold) {
+                    // エネルギーチェックを追加
+                    if (!ConsumeEnergy(kNormalShotEnergyCost)) {
+                        yButtonHoldTime_ = 0.0f;
+                        return; // エネルギー不足なら発射しない
+                    }
+
+                    std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
+                    auto bullet = std::make_unique<PlayerBullet>();
+                    bullet->Init(bulletName);
+                    bullet->InitTransform(this);
+                    bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
+                    bullet->SetColliderRadius(kBulletColliderRadius);
+                    bullets_.push_back(std::move(bullet));
+
+                    timeSinceLastShot_ = kTimerReset; // 射撃タイマーをリセット
+                }
+
+                // 押下時間をリセット
+                yButtonHoldTime_ = 0.0f;
+            }
+
+            // Yボタンが押されていない時はタイマーをリセット
+            if (!gamePad_->IsPress(XINPUT_GAMEPAD_Y)) {
+                yButtonHoldTime_ = 0.0f;
+            }
         }
-
-        std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
-        auto bullet = std::make_unique<PlayerBullet>();
-        bullet->Init(bulletName);
-        bullet->InitTransform(this);
-        bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
-        bullet->SetColliderRadius(kBulletColliderRadius);
-        bullets_.push_back(std::move(bullet));
-
-        timeSinceLastShot_ = kTimerReset; // 射撃タイマーをリセット
     }
 }
 
 void Player::SkillShot() {
-    if (Input::GetInstance()->TriggerKey(DIK_G)) {
-        if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive()) {
-            return; // 既に発動中なら何もしない
+    if (!chargeShot_->GetIsCharge()) {
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_G)) {
+                if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive()) {
+                    return; // 既に発動中なら何もしない
+                }
+                if (!ConsumeEnergy(kSkillShotEnergyCost)) {
+                    return; // エネルギー不足なら発射しない
+                }
+                makanAttack_ptr_->SetPlayer(this);
+                makanAttack_ptr_->Activate(transform_.get());
+            }
+        } else {
+            // ゲームパッド入力（将来の実装用）
+            if (isSkillMenu_) {
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_Y)) {
+                    if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive()) {
+                        return; // 既に発動中なら何もしない
+                    }
+                    if (!ConsumeEnergy(kSkillShotEnergyCost)) {
+                        return; // エネルギー不足なら発射しない
+                    }
+                    makanAttack_ptr_->SetPlayer(this);
+                    makanAttack_ptr_->Activate(transform_.get());
+                }
+            }
         }
-        if (!ConsumeEnergy(kSkillShotEnergyCost)) {
-            return; // エネルギー不足なら発射しない
-        }
-        makanAttack_ptr_->SetPlayer(this);
-        makanAttack_ptr_->Activate(transform_.get());
     }
 }
 
@@ -5665,7 +5900,7 @@ void Player::RotateUpdate() {
         if (toEnemy.Length() > kMinRotationDistance) {
             toEnemy = toEnemy.Normalize();
 
-            // プレイヤーの正面方向（+Z方向）を敵の方向に向ける
+            // プレイヤーの正面方向(+Z方向)を敵の方向に向ける
             Vector3 forward = toEnemy;
             Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ}; // 上方向
 
@@ -5687,59 +5922,134 @@ void Player::RotateUpdate() {
             transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
         }
     } else {
-        Vector3 euler = transform_->quateRotation_.ToEulerAngles();
-        bool rotationChanged = false;
-        if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
-            euler.y -= kManualRotationSpeed;
-            rotationChanged = true;
-        }
-        if (Input::GetInstance()->PushKey(DIK_LEFT)) {
-            euler.y += kManualRotationSpeed;
-            rotationChanged = true;
-        }
-        if (rotationChanged) {
-            transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            Vector3 euler = transform_->quateRotation_.ToEulerAngles();
+            bool rotationChanged = false;
+            if (input_->PushKey(DIK_RIGHT)) {
+                euler.y -= kManualRotationSpeed;
+                rotationChanged = true;
+            }
+            if (input_->PushKey(DIK_LEFT)) {
+                euler.y += kManualRotationSpeed;
+                rotationChanged = true;
+            }
+            if (rotationChanged) {
+                transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
+            }
+        } else {
+            // ゲームパッド入力 - 右スティック
+            float rightStickX = gamePad_->GetRightStickX();
+            float rightStickY = gamePad_->GetRightStickY();
+
+            // 右スティックで回転
+            if (rightStickX != 0.0f || rightStickY != 0.0f) {
+                Vector3 euler = transform_->quateRotation_.ToEulerAngles();
+
+                // 右スティックのX軸で左右回転
+                euler.y += rightStickX * kManualRotationSpeed * 2.0f;
+
+                transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
+            }
         }
     }
 }
 
 void Player::ComboUpdate() {
-    // 毎フレーム更新
-    punchCombo_.Update(Frame::DeltaTime());
+    if (currentState_ != states_["EnergyCharge"].get() && !chargeShot_->GetIsCharge()) {
+        // 毎フレーム更新
+        punchCombo_.Update(Frame::DeltaTime());
 
-    // 入力処理
-    if (Input::GetInstance()->TriggerKey(DIK_H)) {
-        punchCombo_.TryExecuteCombo();
-    }
-    if (punchCombo_.IsComboActive()) {
-        GetRightHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetRightHand()));
-        GetLeftHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_H)) {
+                punchCombo_.TryExecuteCombo();
+            }
+        } else {
+            // ゲームパッド入力（将来の実装用）
+            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_X)) {
+                punchCombo_.TryExecuteCombo();
+            }
+        }
+
+        if (punchCombo_.IsComboActive()) {
+            GetRightHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetRightHand()));
+            GetLeftHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
+        }
     }
 }
 
 void Player::Move() {
-    // 入力取得（WASD）
+    // 入力取得
     float xInput = kInputZero;
     float zInput = kInputZero;
 
-    if (Input::GetInstance()->PushKey(DIK_A))
-        xInput += kInputValue;
-    if (Input::GetInstance()->PushKey(DIK_D))
-        xInput -= kInputValue;
-    if (Input::GetInstance()->PushKey(DIK_W))
-        zInput += kInputValue;
-    if (Input::GetInstance()->PushKey(DIK_S))
-        zInput -= kInputValue;
+    if (!gamePad_->IsConnected()) {
+        // --- キーボード入力 (既存のロジックを維持) ---
+        if (input_->PushKey(DIK_A))
+            xInput += kInputValue;
+        if (input_->PushKey(DIK_D))
+            xInput -= kInputValue;
+        if (input_->PushKey(DIK_W))
+            zInput += kInputValue;
+        if (input_->PushKey(DIK_S))
+            zInput -= kInputValue;
+        isDashing_ = input_->PushKey(DIK_LCONTROL);
+    } else {
+        // --- ゲームパッド入力 ---
+        xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
+        zInput = gamePad_->GetLeftStickY();  // 左スティックY軸
 
-    // 減速処理（入力がない場合）
-    if (xInput == kInputZero && zInput == kInputZero) {
+        bool isLTHeld = gamePad_->GetLeftTrigger() > 0.25f;
+
+        if (isLTHeld) {
+            // エネルギーがマックスの場合
+            if (energy_ >= maxEnergy_) {
+                // Aボタンが押された瞬間にダッシュ開始
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
+                    // ダッシュ開始時のスティック入力を記録(敵への方向決定用)
+                    dashInputX_ = xInput;
+                    dashInputZ_ = zInput;
+                    isDashing_ = true;
+                    dashStartedThisFrame_ = true; // ダッシュ開始フラグを立てる
+                    dashDuration_ = 0.0f;         // ダッシュ時間をリセット
+                }
+                // ダッシュ中は現在のスティック入力を使用(自由に動ける)
+            } else {
+                // Aボタンが押された瞬間にダッシュ開始
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
+                    // ダッシュ開始時のスティック入力を記録(敵への方向決定用)
+                    dashInputX_ = xInput;
+                    dashInputZ_ = zInput;
+                    isDashing_ = true;
+                    dashStartedThisFrame_ = true; // ダッシュ開始フラグを立てる
+                    dashDuration_ = 0.0f;         // ダッシュ時間をリセット
+                }
+
+                // ダッシュ中でないなら、LTを押していても移動させない
+                if (!isDashing_) {
+                    xInput = kInputZero;
+                    zInput = kInputZero;
+                }
+            }
+        } else {
+            // LTを離したらダッシュ解除
+            isDashing_ = false;
+            dashInputX_ = kInputZero;
+            dashInputZ_ = kInputZero;
+            dashDuration_ = 0.0f;
+            dashStartedThisFrame_ = false;
+        }
+    }
+
+    // 減速処理 (ダッシュ中以外で入力がない場合)
+    if (xInput == kInputZero && zInput == kInputZero && !isDashing_) {
         velocity_.x *= kDecelerationFactor;
         velocity_.z *= kDecelerationFactor;
         if (std::abs(velocity_.x) < kVelocityStopThreshold)
             velocity_.x = kVelocityZero;
         if (std::abs(velocity_.z) < kVelocityStopThreshold)
             velocity_.z = kVelocityZero;
-        isDashing_ = false;
         return;
     }
 
@@ -5749,34 +6059,51 @@ void Player::Move() {
         return;
 
     float yaw = camera->GetYaw();
-
     Vector3 cameraForward = {std::sin(yaw), kYComponentZero, std::cos(yaw)};
     Vector3 cameraRight = {-std::cos(yaw), kYComponentZero, std::sin(yaw)};
 
-    // 入力方向をカメラベースで合成
+    // 入力方向を計算
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
 
-    // 正規化（斜め方向も一定速度にする）
-    moveDir = moveDir.Normalize();
+    // --- 特殊処理: ダッシュ開始時のみ方向を固定 ---
+    if (dashStartedThisFrame_ && dashInputX_ == kInputZero && dashInputZ_ == kInputZero) {
+        // ダッシュ開始時にスティック入力がない場合、敵の方を向く
+        if (enemy_) {
+            Vector3 toEnemy = enemy_->GetWorldPosition() - GetWorldPosition();
+            toEnemy.y = 0; // 高低差を無視
+            if (toEnemy.Length() > 0.001f) {
+                moveDir = toEnemy.Normalize();
+            }
+        } else {
+            // 敵がいない場合は自機の正面方向
+            moveDir = GetForward();
+            moveDir.y = 0;
+            moveDir = moveDir.Normalize();
+        }
+    } else if (moveDir.Length() > 0.001f) {
+        // 通常の移動方向正規化
+        moveDir = moveDir.Normalize();
+    }
 
     // --- 回転処理 ---
-    if (!isLockOn_) {
+    if (!isLockOn_ && moveDir.Length() > 0.001f) {
         float targetYaw = std::atan2(-moveDir.x, moveDir.z);
         Quaternion targetRot = Quaternion::FromEulerAngles({kRotationZero, targetYaw, kRotationZero});
         float rotateSpeed = kPlayerRotationSpeed;
         transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
     }
 
-    // --- 移動処理 ---
+    // --- 移動速度の決定 ---
     float currentMaxSpeed = maxSpeed_;
-    isDashing_ = Input::GetInstance()->PushKey(DIK_LCONTROL);
     if (isDashing_) {
         currentMaxSpeed *= kDashSpeedMultiplier;
     }
 
+    // 速度加算
     velocity_.x += moveDir.x * accelRate_ * dt_;
     velocity_.z += moveDir.z * accelRate_ * dt_;
 
+    // 最高速度制限
     float speed = std::sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
     if (speed > currentMaxSpeed) {
         float scale = currentMaxSpeed / speed;
@@ -5918,6 +6245,7 @@ const char *Player::GetDirectionName(Direction dir) {
         return "不明";
     }
 }
+
 // 角度の正規化関数
 float Player::NormalizeAngle(float angle) {
     const float TWO_PI = 2.0f * std::numbers::pi_v<float>;
@@ -5963,6 +6291,9 @@ void Player::Debug() {
             ImGui::DragFloat("回復開始遅延", &energyRecoveryDelay_, 0.1f, 0.0f, 5.0f);
 
             ImGui::Text("無敵状態: %s", isInvincible_ ? "True" : "False");
+            ImGui::Text("ダッシュ始めたフレームかどうか: %s", dashStartedThisFrame_ ? "True" : "False");
+            ImGui::Text("ダッシュ時間: %f", dashDuration_);
+
             if (isInvincible_) {
                 ImGui::Text("無敵残り時間: %.2f秒", invincibleDuration_ - invincibleTime_);
             }
@@ -6030,18 +6361,44 @@ void Player::Debug() {
 }
 
 void Player::ChangeRush() {
-    if (Input::GetInstance()->TriggerKey(DIK_LCONTROL)) {
-        lControlInputCount_++;
-        if (lControlInputCount_ == 1) {
-            lControlInputTime_ = 0.0f;
-        } else if (lControlInputCount_ == 2 && GetIsLockOn() && GetEnemy()) {
-            // 急接近ステートに遷移
-            ChangeState("Rush");
-            return;
+    if (!gamePad_->IsConnected()) {
+        // キーボード入力 (既存のロジックを維持)
+        if (input_->TriggerKey(DIK_LCONTROL)) {
+            lControlInputCount_++;
+            if (lControlInputCount_ == 1) {
+                lControlInputTime_ = 0.0f;
+            } else if (lControlInputCount_ == 2 && GetIsLockOn() && GetEnemy()) {
+                // 急接近ステートに遷移 (エネルギー消費判定を追加)
+                if (ConsumeEnergy(kRushEnergyCost)) {
+                    ChangeState("Rush");
+                }
+                return;
+            }
+        }
+    } else {
+        // ゲームパッド入力 - ダッシュ中のAボタン押下でRush
+
+        // ダッシュ中かつロックオン中の場合のみRush可能
+        if (isDashing_ && GetIsLockOn() && GetEnemy()) {
+            // ダッシュ開始から一定時間経過後のAボタントリガーでRush発動
+            // dashStartedThisFrame_がtrueの場合はスキップ(ダッシュ開始直後を除外)
+            if (!dashStartedThisFrame_ &&
+                dashDuration_ > 0.1f && // ダッシュ開始から0.1秒以上経過
+                gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
+
+                // エネルギー消費してRushステートへ
+                if (ConsumeEnergy(kRushEnergyCost)) {
+                    ChangeState("Rush");
+                    // フラグをリセット
+                    isDashing_ = false;
+                    dashDuration_ = 0.0f;
+                }
+                return;
+            }
         }
     }
 
-    // 入力リセット処理
+    // 入力リセット処理(キーボード用)
     if (lControlInputCount_ > 0) {
         lControlInputTime_ += GetDt();
         if (lControlInputTime_ >= INPUT_RESET_TIME) {
@@ -6055,12 +6412,51 @@ void Player::ChangeEnergyCharge() {
     if (currentState_ != states_["Rush"].get() &&
         currentState_ != states_["Jump"].get() &&
         currentState_ != states_["Air"].get()) {
-        if (Input::GetInstance()->TriggerKey(DIK_C) &&
-            currentState_ != states_["EnergyCharge"].get() &&
-            energy_ < maxEnergy_) {
-            ChangeState("EnergyCharge");
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_C) &&
+                currentState_ != states_["EnergyCharge"].get() &&
+                energy_ < maxEnergy_) {
+                ChangeState("EnergyCharge");
+            }
+        } else {
+            // ゲームパッド入力 - LTトリガー
+            static bool wasRTPressed = false;
+            bool isRTPressed = gamePad_->GetLeftTrigger() > 0.25f;
+
+            // RTが押された瞬間で、YボタンもAボタンも押されていない時のみチャージ状態へ
+            if (isRTPressed && !wasRTPressed &&
+                currentState_ != states_["EnergyCharge"].get() &&
+                energy_ < maxEnergy_ &&
+                !gamePad_->IsPress(XINPUT_GAMEPAD_Y) &&
+                !gamePad_->IsPress(XINPUT_GAMEPAD_A)) {
+                ChangeState("EnergyCharge");
+            }
+
+            wasRTPressed = isRTPressed;
         }
     }
+}
+
+void Player::UpdateDashState() {
+    if (!gamePad_->IsConnected()) {
+        return; // キーボードの場合は何もしない
+    }
+
+    bool isLTHeld = gamePad_->GetLeftTrigger() > 0.25f;
+    static bool wasDashing = false;
+
+    if (isLTHeld && isDashing_) {
+        // ダッシュ継続時間を更新
+        dashDuration_ += dt_;
+    }
+
+    // ダッシュ開始フラグは次フレームでリセット
+    if (dashStartedThisFrame_ && wasDashing) {
+        dashStartedThisFrame_ = false;
+    }
+
+    wasDashing = isDashing_;
 }
 
 Vector3 Player::GetMovementDirection() const {
@@ -6192,12 +6588,14 @@ File Path: Application/GameObject/Player/Player.h
 #include "Application/Staging/Death/DeathStaging.h"
 #include "Bullet/PlayerBullet.h"
 #include "Data/DataHandler.h"
+#include "GamePad.h"
 #include "Hand/PlayerHand.h"
 #include "Object/Base/BaseObject.h"
 #include "PlayerData.h"
 #include "Skill/MakanAttackSkill.h"
 #include "State/Base/PlayerBaseState.h"
 #include <Application/Utility/Shake/Shake.h>
+#include <Input.h>
 #include <Particle/CSParticle/ParticleCSEmitter.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
 
@@ -6308,6 +6706,7 @@ class Player : public BaseObject {
     /// <summary>
     /// Getter
     /// </summary>
+    GamePad *GetGamePad() { return gamePad_.get(); }
     FollowCamera *GetCamera() { return FollowCamera_; }
     Enemy *GetEnemy() { return enemy_; }
     Vector3 &GetAcceleration() { return acceleration_; }
@@ -6331,6 +6730,7 @@ class Player : public BaseObject {
     float &GetJumpSpeed() { return jumpSpeed_; }
     float &GetMaxSpeed() { return maxSpeed_; }
     float &GetAccelRate() { return accelRate_; }
+    float GetChargeThreshold() const { return kYButtonChargeThreshold; }
     float &GetDt() { return dt_; }
     float GetHP() const { return HP_; }
     float GetMaxHP() const { return maxHP_; }
@@ -6359,6 +6759,9 @@ class Player : public BaseObject {
     void SetStart(bool flag) {
         started_ = flag;
     }
+    void SetPause(bool flag){
+        isPause_ = flag;
+    }
     void SetEnemy(Enemy *enemy) {
         enemy_ = enemy;
         leftHand_ptr_->SetEnemy(enemy);
@@ -6368,6 +6771,11 @@ class Player : public BaseObject {
         isDeathStaging_ = flag;
     }
     void SetEnergyRecoveryRate(float Rate) { energyRecoveryRate_ = Rate; }
+    void SetDashing(bool flag) { isDashing_ = flag; }
+    void SetDashInput(float x, float z) {
+        dashInputX_ = x;
+        dashInputZ_ = z;
+    }
 
   private:
     /// ===================================================
@@ -6434,9 +6842,11 @@ class Player : public BaseObject {
     /// <returns>const char*: 方向の名前文字列</returns>
     const char *GetDirectionName(Direction dir);
 
+     void UpdateDashState();
+
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // 初期化定数
@@ -6497,6 +6907,9 @@ class Player : public BaseObject {
     static constexpr float kNormalShotEnergyCost = 5.0f;
     static constexpr float kSkillShotEnergyCost = 65.0f;
 
+    // 移動コスト定数
+    static constexpr float kRushEnergyCost = 30.0f;
+
     // FOV関連定数
     static constexpr float kNormalFov = 45.0f;
     static constexpr float kDashingFov = 55.0f;
@@ -6523,11 +6936,13 @@ class Player : public BaseObject {
     float dt_;               // デルタタイム
     float HP_ = 100.0f;
     float maxHP_ = 100.0f;
-    float energy_ = 100.0f;            // 現在のエネルギー
-    float maxEnergy_ = 100.0f;         // 最大エネルギー
-    float energyRecoveryRate_ = 0.01f; // エネルギー回復速度(秒速)
-    float energyRecoveryDelay_ = 1.0f; // 回復開始までの遅延時間
-    float timeSinceLastShot_ = 0.0f;   // 最後に撃ってからの経過時間
+    float energy_ = 100.0f;                      // 現在のエネルギー
+    float maxEnergy_ = 100.0f;                   // 最大エネルギー
+    float energyRecoveryRate_ = 0.01f;           // エネルギー回復速度(秒速)
+    float energyRecoveryDelay_ = 1.0f;           // 回復開始までの遅延時間
+    float timeSinceLastShot_ = 0.0f;             // 最後に撃ってからの経過時間
+    float yButtonHoldTime_ = 0.0f;               // Yボタン押下時間
+    const float kYButtonChargeThreshold = 0.15f; // チャージ判定閾値(秒)
 
     float lControlInputTime_ = 0.0f;     // L操作入力の保持時間
     int lControlInputCount_ = 0;         // L操作入力の回数
@@ -6544,8 +6959,14 @@ class Player : public BaseObject {
     bool isLockOn_ = false;  // ロックオンフラグ
     bool isGrounded_ = true; // 接地フラグ
     bool isDashing_ = false; // ダッシュ中フラグ
+    bool isSkillMenu_ = false;
+    float dashInputX_ = 0.0f;         // ダッシュ開始時のスティックX入力
+    float dashInputZ_ = 0.0f;         // ダッシュ開始時のスティックZ入力
+    bool dashStartedThisFrame_ = false; // ダッシュ開始フラグ
+    float dashDuration_ = 0.0f;         // ダッシュ継続時間
 
     bool started_ = false;        // ゲーム開始フラグ
+    bool isPause_ = false;        // ポーズ中フラグ
     bool isDeathStaging_ = false; // 死亡演出中フラグ
 
     bool isInvincible_ = false;        // 無敵状態フラグ
@@ -6568,6 +6989,7 @@ class Player : public BaseObject {
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
+    std::unique_ptr<GamePad> gamePad_;
 
     ViewProjection *vp_;                          // カメラ
     OBBCollider *playerCollider_ = nullptr;       // コライダー
@@ -6584,6 +7006,8 @@ class Player : public BaseObject {
     Quaternion tiltRotation_;          // のけぞり用の回転
 
     std::string previousStateName = "";
+
+    Input *input_ = nullptr;
 };
 
 ============================================================
@@ -6943,8 +7367,44 @@ void PlayerEnergyCharge::Update(Player &player) {
     chargeAuraEmitter_->Update();
     chargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y + kParticleYOffset, player.GetWorldPosition().z});
     chargeAuraEmitter_->SetAuto(true);
-    if (Input::GetInstance()->ReleaseKey(DIK_C) ||
-        player.GetEnergy() >= player.GetMaxEnergy()) {
+
+    bool chargeRelease = false;
+    bool shouldExitCharge = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        chargeRelease = Input::GetInstance()->ReleaseKey(DIK_C);
+    } else {
+        // ゲームパッド入力
+        bool isLTHeld = player.GetGamePad()->GetLeftTrigger() > 0.25f;
+
+        // LTが押されていない場合はチャージ解除
+        if (!isLTHeld) {
+            shouldExitCharge = true;
+        } else {
+            // LT押しながらAボタンが押された場合、ダッシュフラグを立ててチャージ解除
+            if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_A)) {
+                float leftStickX = -player.GetGamePad()->GetLeftStickX();
+                float leftStickY = player.GetGamePad()->GetLeftStickY();
+
+                // ダッシュ入力を記録
+                player.SetDashInput(leftStickX, leftStickY);
+                player.SetDashing(true);
+                shouldExitCharge = true;
+            }
+
+            // Yボタンが押された時、スキルが実際に打てる場合のみチャージを中断
+            if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_Y)) {
+                const float kSkillShotEnergyCost = 65.0f;
+                if (player.GetEnergy() >= kSkillShotEnergyCost) {
+                    shouldExitCharge = true;
+                }
+            }
+        }
+    }
+
+    // チャージ解除条件
+    if (chargeRelease || shouldExitCharge || player.GetEnergy() >= player.GetMaxEnergy()) {
         if (beforeState_ == "Idle" ||
             beforeState_ == "Move") {
             player.ChangeState("Idle");
@@ -7059,6 +7519,11 @@ void PlayerStateRush::Enter(Player &player) {
 
         player.GetVelocity().y = kVelocityZero;
     }
+
+    if (player.GetGamePad()) {
+        player.GetGamePad()->SetVibration(60000, 60000);
+    }
+
     shake_ = std::make_unique<Shake>();
     shake_->Initialize(&player.GetViewProjection(), "RushShake");
     shake_->StartShake();
@@ -7083,6 +7548,10 @@ void PlayerStateRush::Update(Player &player) {
 
     elapsedTime_ += player.GetDt();
 
+    if (elapsedTime_ >= 0.2f && player.GetGamePad()) {
+        player.GetGamePad()->StopVibration();
+    }
+
     if (CheckReachedTarget(player)) {
         FinishRush(player);
         return;
@@ -7098,6 +7567,9 @@ void PlayerStateRush::Exit(Player &player) {
     elapsedTime_ = kVelocityZero;
     player.GetVelocity() = {kVelocityZero, kVelocityZero, kVelocityZero};
     player.ResetControlCount();
+    if (player.GetGamePad()) {
+        player.GetGamePad()->StopVibration();
+    }
 }
 
 void PlayerStateRush::DrawParticle(Player &player, const ViewProjection &viewProjection) {
@@ -7429,7 +7901,17 @@ void PlayerStateAir::Update(Player &player) {
 
     elapsedTime_ += Frame::DeltaTime();
 
-    if (elapsedTime_ < kFlyTransitionTime && Input::GetInstance()->TriggerKey(DIK_SPACE)) {
+    bool flyInput = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        flyInput = Input::GetInstance()->TriggerKey(DIK_SPACE);
+    } else {
+        // ゲームパッド入力
+        flyInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER);
+    }
+
+    if (elapsedTime_ < kFlyTransitionTime && flyInput) {
         player.ChangeState("FlyIdle");
         return;
     }
@@ -7595,17 +8077,40 @@ void PlayerStateFlyIdle::AirMove(Player &player) {
 void PlayerStateFlyIdle::ChangeState(Player &player) {
     player.ChangeRush();
 
+    if (player.GetCurrentStateName() == "Rush") {
+        return;
+    }
+
     if (player.GetLocalPosition().y <= kGroundLevel) {
         player.ChangeState("Idle");
         return;
     }
 
-    if (Input::GetInstance()->PushKey(DIK_A) ||
-        Input::GetInstance()->PushKey(DIK_D) ||
-        Input::GetInstance()->PushKey(DIK_S) ||
-        Input::GetInstance()->PushKey(DIK_W) ||
-        Input::GetInstance()->PushKey(DIK_SPACE) ||
-        Input::GetInstance()->PushKey(DIK_LSHIFT)) {
+    bool hasInput = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        if (Input::GetInstance()->PushKey(DIK_A) ||
+            Input::GetInstance()->PushKey(DIK_D) ||
+            Input::GetInstance()->PushKey(DIK_S) ||
+            Input::GetInstance()->PushKey(DIK_W) ||
+            Input::GetInstance()->PushKey(DIK_SPACE) ||
+            Input::GetInstance()->PushKey(DIK_LSHIFT)) {
+            hasInput = true;
+        }
+    } else {
+        // ゲームパッド入力
+        float leftStickX = player.GetGamePad()->GetLeftStickX();
+        float leftStickY = player.GetGamePad()->GetLeftStickY();
+
+        if (leftStickX != 0.0f || leftStickY != 0.0f ||
+            player.GetGamePad()->GetRightTrigger() > 0.25f ||
+            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER)) {
+            hasInput = true;
+        }
+    }
+
+    if (hasInput) {
         player.ChangeState("FlyMove");
         return;
     }
@@ -7716,10 +8221,26 @@ void PlayerStateFlyMove::Exit(Player &player) {
 }
 
 void PlayerStateFlyMove::AirMove(Player &player) {
-    if (Input::GetInstance()->PushKey(DIK_SPACE)) {
+    bool ascendInput = false;
+    bool descendInput = false;
+    bool descendTrigger = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        ascendInput = Input::GetInstance()->PushKey(DIK_SPACE);
+        descendInput = Input::GetInstance()->PushKey(DIK_LSHIFT);
+        descendTrigger = Input::GetInstance()->TriggerKey(DIK_LSHIFT);
+    } else {
+        // ゲームパッド入力
+        ascendInput = player.GetGamePad()->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER); // RB → 上昇
+        descendInput = player.GetGamePad()->GetRightTrigger() > 0.25f;             // RT → 下降
+        descendTrigger = player.GetGamePad()->IsRightTriggerTriggered(0.25f);      // RT トリガー判定
+    }
+
+    if (ascendInput) {
         float &vy = player.GetVelocity().y;
         vy = std::min(vy + kFlyAcceleration * player.GetDt(), kFlyMaxSpeed);
-    } else if (Input::GetInstance()->PushKey(DIK_LSHIFT)) {
+    } else if (descendInput) {
         float &vy = player.GetVelocity().y;
         vy = std::max(vy - kFlyAcceleration * player.GetDt(), -kFlyMaxSpeed);
     } else {
@@ -7730,7 +8251,7 @@ void PlayerStateFlyMove::AirMove(Player &player) {
         }
     }
 
-    if (Input::GetInstance()->TriggerKey(DIK_LSHIFT)) {
+    if (descendTrigger) {
         if (fallInputTime_ < kFallThresholdTime) {
             fallInputCount_++;
         } else {
@@ -7742,6 +8263,10 @@ void PlayerStateFlyMove::AirMove(Player &player) {
 
 void PlayerStateFlyMove::ChangeState(Player &player) {
     player.ChangeRush();
+
+    if (player.GetCurrentStateName() == "Rush") {
+        return;
+    }
 
     if (fallInputCount_ >= kFallInputThreshold) {
         player.ChangeState("Air");
@@ -7756,13 +8281,33 @@ void PlayerStateFlyMove::ChangeState(Player &player) {
         }
     }
 
-    if (!Input::GetInstance()->TriggerKey(DIK_LSHIFT) &&
-        !Input::GetInstance()->PushKey(DIK_LSHIFT) &&
-        !Input::GetInstance()->PushKey(DIK_SPACE) &&
-        !Input::GetInstance()->PushKey(DIK_D) &&
-        !Input::GetInstance()->PushKey(DIK_A) &&
-        !Input::GetInstance()->PushKey(DIK_W) &&
-        !Input::GetInstance()->PushKey(DIK_S) &&
+    bool hasInput = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        if (Input::GetInstance()->TriggerKey(DIK_LSHIFT) ||
+            Input::GetInstance()->PushKey(DIK_LSHIFT) ||
+            Input::GetInstance()->PushKey(DIK_SPACE) ||
+            Input::GetInstance()->PushKey(DIK_D) ||
+            Input::GetInstance()->PushKey(DIK_A) ||
+            Input::GetInstance()->PushKey(DIK_W) ||
+            Input::GetInstance()->PushKey(DIK_S)) {
+            hasInput = true;
+        }
+    } else {
+        // ゲームパッド入力
+        float leftStickX = player.GetGamePad()->GetLeftStickX();
+        float leftStickY = player.GetGamePad()->GetLeftStickY();
+
+        if (player.GetGamePad()->IsRightTriggerTriggered(0.25f) ||         // RT トリガー
+            player.GetGamePad()->GetRightTrigger() > 0.25f ||              // RT 押下
+            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER) || // RB 押下
+            leftStickX != 0.0f || leftStickY != 0.0f) {
+            hasInput = true;
+        }
+    }
+
+    if (!hasInput &&
         fallInputTime_ > kFallThresholdTime &&
         fallInputCount_ < kFallInputThreshold) {
         player.ChangeState("FlyIdle");
@@ -7885,15 +8430,42 @@ void PlayerStateIdle::Update(Player &player) {
         player.GetMoveSpeed() = kMoveSpeedZero;
     }
 
-    if (Input::GetInstance()->PushKey(DIK_A) ||
-        Input::GetInstance()->PushKey(DIK_D) ||
-        Input::GetInstance()->PushKey(DIK_S) ||
-        Input::GetInstance()->PushKey(DIK_W)) {
+    bool isMoving = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        if (Input::GetInstance()->PushKey(DIK_A) ||
+            Input::GetInstance()->PushKey(DIK_D) ||
+            Input::GetInstance()->PushKey(DIK_S) ||
+            Input::GetInstance()->PushKey(DIK_W)) {
+            isMoving = true;
+        }
+    } else {
+        // ゲームパッド入力 - 左スティック
+        float leftStickX = player.GetGamePad()->GetLeftStickX();
+        float leftStickY = player.GetGamePad()->GetLeftStickY();
+
+        if (leftStickX != 0.0f || leftStickY != 0.0f) {
+            isMoving = true;
+        }
+    }
+
+    if (isMoving) {
         player.ChangeState("Move");
         return;
     }
 
-    if (Input::GetInstance()->TriggerKey(DIK_SPACE) && player.GetCanJump()) {
+    bool jumpInput = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        jumpInput = Input::GetInstance()->TriggerKey(DIK_SPACE);
+    } else {
+        // ゲームパッド入力
+        jumpInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER);
+    }
+
+    if (jumpInput && player.GetCanJump()) {
         player.ChangeState("Jump");
         return;
     }
@@ -8045,15 +8617,42 @@ void PlayerStateMove::Update(Player &player) {
 
     player.Move();
 
-    if (!Input::GetInstance()->PushKey(DIK_W) &&
-        !Input::GetInstance()->PushKey(DIK_A) &&
-        !Input::GetInstance()->PushKey(DIK_S) &&
-        !Input::GetInstance()->PushKey(DIK_D)) {
+    bool isMoving = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        if (Input::GetInstance()->PushKey(DIK_W) ||
+            Input::GetInstance()->PushKey(DIK_A) ||
+            Input::GetInstance()->PushKey(DIK_S) ||
+            Input::GetInstance()->PushKey(DIK_D)) {
+            isMoving = true;
+        }
+    } else {
+        // ゲームパッド入力 - 左スティック
+        float leftStickX = player.GetGamePad()->GetLeftStickX();
+        float leftStickY = player.GetGamePad()->GetLeftStickY();
+
+        if (leftStickX != 0.0f || leftStickY != 0.0f) {
+            isMoving = true;
+        }
+    }
+
+    if (!isMoving) {
         player.ChangeState("Idle");
         return;
     }
 
-    if (Input::GetInstance()->TriggerKey(DIK_SPACE) && player.GetCanJump()) {
+    bool jumpInput = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        jumpInput = Input::GetInstance()->TriggerKey(DIK_SPACE);
+    } else {
+        // ゲームパッド入力
+        jumpInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER);
+    }
+
+    if (jumpInput && player.GetCanJump()) {
         player.ChangeState("Jump");
         return;
     }
@@ -8134,6 +8733,7 @@ void ClearScene::Initialize() {
     resultStaging_ = std::make_unique<ResultStaging>();
     resultUI_ = std::make_unique<ResultUI>();
     skyBox_ = SkyBox::GetInstance();
+    gamePad_ = std::make_unique<GamePad>();
 
     /// ===================================================
     /// 初期化
@@ -8146,6 +8746,7 @@ void ClearScene::Initialize() {
     resultUI_->Initialize();
 
     skyBox_->Initialize("game/skybox_night.dds");
+    gamePad_->Init(0);
 
     /// ===================================================
     /// セット
@@ -8159,7 +8760,7 @@ void ClearScene::Finalize() {
 }
 
 void ClearScene::Update() {
-
+    gamePad_->Update();
     currentCameraStartTimer_ += Frame::DeltaTime();
     if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
         vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
@@ -8230,12 +8831,20 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
-#ifndef _DEBUG
-    // リザルト演出が完全に終了しているかチェック
-    if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
-        // シーンを変更
-        sceneManager_->NextSceneReservation("TITLE");
+    if (!gamePad_->IsConnected()) {
+        // リザルト演出が完全に終了しているかチェック
+        if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
+            // シーンを変更
+            sceneManager_->NextSceneReservation("TITLE");
+        }
+    } else {
+        // リザルト演出が完全に終了しているかチェック
+        if (resultUI_->IsAllAnimationFinished() && gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
+            // シーンを変更
+            sceneManager_->NextSceneReservation("TITLE");
+        }
     }
+#ifndef _DEBUG
 #endif // !_DEBUG
 }
 
@@ -8249,6 +8858,7 @@ File Path: Application/Scene/ClearScene.h
 #include "Application/UI/Scene/Result/ResultUI.h"
 #include "BaseScene.h"
 #include "SkyBox/SkyBox.h"
+#include <GamePad.h>
 
 /// <summary>
 /// クリア画面のシーンクラス
@@ -8343,9 +8953,11 @@ class ClearScene : public BaseScene {
     // リザルトUI
     std::unique_ptr<ResultUI> resultUI_;
 
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
+
     SkyBox *skyBox_ = nullptr;
 
-    const float cameraStartTimer_ = 5.0f;
+    const float cameraStartTimer_ = 3.0f;
     float currentCameraStartTimer_ = 0.0f;
     bool cameraStart_ = false;
 };
@@ -8569,6 +9181,7 @@ void GameScene::Initialize() {
     enemyUI_ = std::make_unique<EnemyUI>();
     behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
     fadeOut_ = std::make_unique<FadeOut>();
+    gameUI_ = std::make_unique<GameUI>();
 
     /// ===================================================
     /// 初期化
@@ -8582,6 +9195,7 @@ void GameScene::Initialize() {
     deathCamera_->Init();
     skyBox_->Initialize("game/skybox.dds");
     fadeOut_->Initialize();
+    gameUI_->Initialize();
 
     /// ===================================================
     /// セット
@@ -8665,6 +9279,10 @@ void GameScene::Update() {
     if (!enemy_ptr->GetIsAlive()) {
         sceneManager_->NextSceneReservation("CLEAR");
     }
+
+    gameUI_->Update();
+    player_ptr->SetPause(gameUI_->GetIsPause());
+    enemy_ptr->SetPause(gameUI_->GetIsPause());
 }
 
 void GameScene::Draw() {
@@ -8683,6 +9301,10 @@ void GameScene::Draw() {
     enemy_ptr->DrawParticle(vp_);
 
     fadeOut_->Draw(vp_);
+
+    gameUI_->Draw();
+
+    SpriteManager::GetInstance()->DrawAll();
 
     /// -------描画処理終了-------
 }
@@ -8786,6 +9408,7 @@ File Path: Application/Scene/GameScene.h
 #include <Application/Camera/DeathCamera.h>
 #include "SkyBox/SkyBox.h"
 #include "BaseScene.h"
+#include <Application/UI/Scene/Game/GameUI.h>
 
 class GameScene : public BaseScene {
   public:
@@ -8891,6 +9514,8 @@ class GameScene : public BaseScene {
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
 
     std::unique_ptr<FadeOut> fadeOut_;
+    
+    std::unique_ptr<GameUI> gameUI_;
 
     SkyBox *skyBox_ = nullptr;
 
@@ -9095,6 +9720,9 @@ void TitleScene::Initialize() {
     titleUI_->Initialize();
     firstMove_ = false;
     secondMove_ = false;
+
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
 }
 
 void TitleScene::Finalize() {
@@ -9102,6 +9730,7 @@ void TitleScene::Finalize() {
 }
 
 void TitleScene::Update() {
+    gamePad_->Update();
     // カメラ更新
     CameraUpdate();
 
@@ -9112,9 +9741,16 @@ void TitleScene::Update() {
         vp_.EaseCameraMove(EasingType::InCubic, "TitleMovedCamera", 1.0f);
         firstMove_ = true;
     }
-    if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
-        vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
-        secondMove_ = true;
+    if (!gamePad_->IsConnected()) {
+        if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
+            vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
+            secondMove_ = true;
+        }
+    } else {
+        if (time_ >= 3.0f && gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !secondMove_ && !vp_.GetIsCameraMove()) {
+            vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
+            secondMove_ = true;
+        }
     }
     titleUI_->Update();
 }
@@ -9160,7 +9796,7 @@ void TitleScene::CameraUpdate() {
 }
 
 void TitleScene::ChangeScene() {
-    if (secondMove_ && !vp_.GetIsCameraMove()&&titleUI_->GetIsFinish()) {
+    if (secondMove_ && !vp_.GetIsCameraMove() && titleUI_->GetIsFinish()) {
         SceneTransition::GetInstance()->SetUseTransition(false);
         sceneManager_->NextSceneReservation("GAME");
     }
@@ -9178,6 +9814,7 @@ File Path: Application/Scene/TitleScene.h
 
 #include "SkyBox/SkyBox.h"
 #include"Application/UI/Scene/Title/TitleUI.h"
+#include <GamePad.h>
 
 class TitleScene : public BaseScene {
   public:
@@ -9267,6 +9904,7 @@ class TitleScene : public BaseScene {
     SkyBox *skyBox_ = nullptr;
 
     std::unique_ptr<TitleUI> titleUI_ = nullptr;
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
 };
 
 
@@ -9852,8 +10490,9 @@ void FadeOut::Update() {
 
 void FadeOut::Draw(const ViewProjection &vp) {
     if (timer_ <= kSpriteDrawTime) {
-        SpriteManager::GetInstance()->DrawAll();
+        SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(1.0f);
     } else {
+        SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(0.0f);
         fadeOut_->SetEnableGravity(true);
     }
     if (timer_ >= kParticleStopTime) {
@@ -10351,10 +10990,94 @@ class PlayerUI {
 };
 
 ============================================================
+File Path: Application/UI/Scene/Game/GameUI.cpp
+============================================================
+#include "GameUI.h"
+#include <Input.h>
+
+void GameUI::Initialize() {
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
+    SpriteManager::GetInstance()->SetSaveFolder("GameScene");
+    SpriteManager::GetInstance()->LoadAllSprites();
+    sprites_[MenuButton] = SpriteManager::GetInstance()->GetSprite("menuButton");
+    sprites_[Controller] = SpriteManager::GetInstance()->GetSprite("controllerIcon");
+    sprites_[BlackMask] = SpriteManager::GetInstance()->GetSprite("BlackMask");
+    // sprites_[AttackButton] = SpriteManager::GetInstance()->GetSprite("attackButton");
+    // sprites_[BulletButton] = SpriteManager::GetInstance()->GetSprite("bulletButton");
+}
+
+void GameUI::Update() {
+    gamePad_->Update();
+    // ポーズボタン入力検出
+    if (!gamePad_->IsConnected()) {
+        // キーボード入力
+        if (Input::GetInstance()->TriggerKey(DIK_RETURN)) {
+            isPause_ = !isPause_;
+        }
+    } else {
+        // ゲームパッド入力
+        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START)) {
+            isPause_ = !isPause_;
+        }
+    }
+
+    if (isPause_) {
+        sprites_[BlackMask]->sprite->SetAlpha(0.8f);
+        sprites_[Controller]->sprite->SetAlpha(1.0f);
+        sprites_[MenuButton]->sprite->SetAlpha(0.0f);
+    } else {
+        sprites_[BlackMask]->sprite->SetAlpha(0.0f);
+        sprites_[Controller]->sprite->SetAlpha(0.0f);
+        sprites_[MenuButton]->sprite->SetAlpha(1.0f);
+    }
+}
+
+void GameUI::Draw() {
+}
+
+============================================================
+File Path: Application/UI/Scene/Game/GameUI.h
+============================================================
+#pragma once
+#include <GamePad.h>
+#include <SpriteManager.h>
+#include <array>
+class GameUI {
+  public:
+    void Initialize();
+
+    void Update();
+
+    void Draw();
+
+    enum SpriteIndex {
+        MenuButton,
+        Controller,
+        AttackButton,
+        BulletButton,
+        BlackMask,
+        kMaxSprite,
+    };
+
+    bool GetIsPause() const { return isPause_; }
+
+  private:
+
+    bool isPause_ = false;
+
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
+    std::array<SpriteData *, kMaxSprite> sprites_;
+};
+
+
+============================================================
 File Path: Application/UI/Scene/Result/ResultUI.cpp
 ============================================================
 #include "ResultUI.h"
 #include <Frame.h>
+#include <GamePad.h>
+#include <Input.h>
 
 void ResultUI::Initialize() {
     SpriteManager::GetInstance()->SetSaveFolder("Result");
@@ -10409,11 +11132,95 @@ void ResultUI::Initialize() {
     displayedTime_ = 0.0f;
     displayedHP_ = 0.0f;
 
+    // スキップ管理の初期化
+    skipPhase_ = kNoSkip;
+
     UpdateNumberSprites();
+
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
+
+    input_ = Input::GetInstance();
+}
+
+bool ResultUI::CheckSkipInput() {
+    if (!input_ || !gamePad_) {
+        return false;
+    }
+
+    if (!gamePad_->IsConnected()) {
+        // キーボード操作
+        return input_->TriggerKey(DIK_SPACE);
+    } else {
+        // コントローラー操作
+        return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
+    }
+}
+
+void ResultUI::SkipTimeAnimation() {
+    // クリアタイムのカウントアップを即座に完了
+    displayedTime_ = ClearTime_;
+    animTimer_ = kAnimDuration;
+    numberAnimState_ = kWaitingForHP;
+    delayTimer_ = 0.0f;
+    skipPhase_ = kSkipTime;
+    UpdateNumberSprites();
+}
+
+void ResultUI::SkipHPAnimation() {
+    // HPのイージングを即座に完了
+    positionEasings_[kHP].isActive = true;
+    sprites_[kHP]->sprite->SetPosition(endPositions_[kHP]);
+    positionEasings_[kHP].time = kEasingDuration;
+
+    for (int i = kHPHund; i <= kPercent; ++i) {
+        positionEasings_[i].isActive = true;
+        sprites_[i]->sprite->SetPosition(endPositions_[i]);
+        positionEasings_[i].time = kEasingDuration;
+    }
+
+    // HPのカウントアップを即座に完了
+    displayedHP_ = HP_;
+    animTimer_ = kAnimDuration;
+    numberAnimState_ = kFinished;
+    delayTimer_ = 0.0f;
+    currentEasingIndex_ = kPercent + 1;
+    skipPhase_ = kSkipHP;
+    UpdateNumberSprites();
+}
+
+void ResultUI::SkipRankDisplay() {
+    // ランクの表示を即座に完了
+    positionEasings_[kRank].isActive = true;
+    sprites_[kRank]->sprite->SetPosition(endPositions_[kRank]);
+    positionEasings_[kRank].time = kEasingDuration;
+    currentEasingIndex_ = kMaxSprite;
+    skipPhase_ = kAllSkipped;
 }
 
 void ResultUI::Update() {
     if (isStartEasing_) {
+        gamePad_->Update();
+        // スキップ入力チェック
+        if (CheckSkipInput()) {
+            if (skipPhase_ == kNoSkip) {
+                // 最初の入力：クリアタイムのアニメーションをスキップ
+                if (numberAnimState_ == kAnimatingTime) {
+                    SkipTimeAnimation();
+                }
+            } else if (skipPhase_ == kSkipTime) {
+                // 2回目の入力：HPのアニメーションをスキップ
+                if (numberAnimState_ == kWaitingForHP || numberAnimState_ == kWaiting || numberAnimState_ == kAnimatingHP) {
+                    SkipHPAnimation();
+                }
+            } else if (skipPhase_ == kSkipHP) {
+                // 3回目の入力：ランクの表示をスキップ
+                if (currentEasingIndex_ < kMaxSprite || numberAnimState_ == kFinished) {
+                    SkipRankDisplay();
+                }
+            }
+        }
+
         // 背景のイージング
         if (currentEasingIndex_ == kBackground) {
             positionEasings_[kBackground].isActive = true;
@@ -10629,6 +11436,11 @@ File Path: Application/UI/Scene/Result/ResultUI.h
 #include "Easing.h"
 #include <SpriteManager.h>
 #include <array>
+
+// 前方宣言
+class Input;
+class GamePad;
+
 class ResultUI {
   public:
     /// ===================================================
@@ -10667,6 +11479,31 @@ class ResultUI {
     void SetHP(float hp) { HP_ = hp; }
     void SetClearTime(float time) { ClearTime_ = time; }
 
+    private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// スキップ入力チェック
+    /// </summary>
+    bool CheckSkipInput();
+
+    /// <summary>
+    /// タイムアニメーションをスキップ
+    /// </summary>
+    void SkipTimeAnimation();
+
+    /// <summary>
+    /// HPアニメーションをスキップ
+    /// </summary>
+    void SkipHPAnimation();
+
+    /// <summary>
+    /// ランク表示をスキップ
+    /// </summary>
+    void SkipRankDisplay();
+
   private:
     /// ===================================================
     /// private enum
@@ -10691,6 +11528,17 @@ class ResultUI {
         kPercent,    // パーセント
         kRank,       // ランク
         kMaxSprite
+    };
+
+    /// <summary>
+    /// スキップ段階
+    /// </summary>
+    enum SkipPhase {
+        kNoSkip,    // スキップなし
+        kSkipTime,  // クリアタイムをスキップ
+        kSkipHP,    // HPをスキップ
+        kSkipRank,  // ランクをスキップ
+        kAllSkipped // 全てスキップ済み
     };
 
   private:
@@ -10743,6 +11591,13 @@ class ResultUI {
     float HP_ = kDefaultHP;               // 残り体力(記録値)
     float ClearTime_ = kDefaultClearTime; // クリアタイム(記録値)
     std::string Rank_ = "A";
+
+    // 入力関連
+    Input *input_ = nullptr;
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
+
+    // スキップ管理
+    SkipPhase skipPhase_ = kNoSkip;
 };
 
 ============================================================
@@ -10804,9 +11659,13 @@ void TitleUI::Initialize() {
     spriteExitTimer_ = 0.0f;
     isFinish_ = false;
     cameraMove_ = false;
+
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
 }
 
 void TitleUI::Update() {
+    gamePad_->Update();
     time_ += kDeltaTime;
 
     // タイマーがkMaxTime以上でスプライト表示開始
@@ -10855,11 +11714,18 @@ void TitleUI::Update() {
             playerAura_->Update();
         }
     }
-
-    if (time_ >= kMinStartInputTime && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_ && !cameraMove_) {
-        secondMove_ = true;
-        isSpriteExiting_ = true;
-        spriteExitTimer_ = 0.0f;
+    if (!gamePad_->IsConnected()) {
+        if (time_ >= kMinStartInputTime && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_ && !cameraMove_) {
+            secondMove_ = true;
+            isSpriteExiting_ = true;
+            spriteExitTimer_ = 0.0f;
+        }
+    } else {
+        if (time_ >= kMinStartInputTime && gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !secondMove_ && !cameraMove_) {
+            secondMove_ = true;
+            isSpriteExiting_ = true;
+            spriteExitTimer_ = 0.0f;
+        }
     }
 
     if (secondMove_) {
@@ -10906,6 +11772,7 @@ File Path: Application/UI/Scene/Title/TitleUI.h
 #include <Particle/ParticleEmitter.h>
 #include <SpriteManager.h>
 #include <memory>
+#include <GamePad.h>
 
 /// <summary>
 /// タイトル画面のUI管理クラス
@@ -11012,6 +11879,7 @@ class TitleUI {
     std::unique_ptr<ParticleEmitter> chargeBullet_ = nullptr;   // チャージ弾パーティクル
     std::unique_ptr<ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
     std::unique_ptr<ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
 
     std::array<SpriteData *, kMaxSprite> sprites_;
 };
@@ -33375,6 +34243,373 @@ class Frame {
     static float Time();      ///< 起動からの経過時間を秒単位で返す
 };
 
+
+============================================================
+File Path: Engine/Input/GamePad.cpp
+============================================================
+#include "GamePad.h"
+#include <algorithm>
+
+void GamePad::Init(int32_t playerIndex) {
+    playerIndex_ = playerIndex;
+    isConnected_ = false;
+
+    // デフォルトのデッドゾーン設定 (XInputの標準値を0-1の範囲に正規化)
+    leftStickDeadZone_ = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE / 32767.0f;
+    rightStickDeadZone_ = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE / 32767.0f;
+
+    // 状態の初期化
+    ZeroMemory(&state_, sizeof(XINPUT_STATE));
+    ZeroMemory(&statePre_, sizeof(XINPUT_STATE));
+
+    // 接続チェック
+    XINPUT_STATE testState;
+    if (XInputGetState(playerIndex_, &testState) == ERROR_SUCCESS) {
+        isConnected_ = true;
+        state_ = testState;
+        statePre_ = testState;
+    }
+}
+
+void GamePad::Update() {
+    // 前フレームの状態を保存
+    statePre_ = state_;
+
+    // 現在の状態を取得
+    DWORD result = XInputGetState(playerIndex_, &state_);
+
+    // 接続状態を更新
+    isConnected_ = (result == ERROR_SUCCESS);
+}
+
+// ===== ボタン入力 =====
+
+bool GamePad::IsPress(WORD button) const {
+    if (!isConnected_)
+        return false;
+    return (state_.Gamepad.wButtons & button) != 0;
+}
+
+bool GamePad::IsTrigger(WORD button) const {
+    if (!isConnected_)
+        return false;
+    bool currentPress = (state_.Gamepad.wButtons & button) != 0;
+    bool previousPress = (statePre_.Gamepad.wButtons & button) != 0;
+    return currentPress && !previousPress;
+}
+
+bool GamePad::IsRelease(WORD button) const {
+    if (!isConnected_)
+        return false;
+    bool currentPress = (state_.Gamepad.wButtons & button) != 0;
+    bool previousPress = (statePre_.Gamepad.wButtons & button) != 0;
+    return !currentPress && previousPress;
+}
+
+// ===== スティック入力 =====
+
+float GamePad::GetLeftStickX() const {
+    if (!isConnected_)
+        return 0.0f;
+    return ApplyDeadZone(state_.Gamepad.sThumbLX, leftStickDeadZone_);
+}
+
+float GamePad::GetLeftStickY() const {
+    if (!isConnected_)
+        return 0.0f;
+    return ApplyDeadZone(state_.Gamepad.sThumbLY, leftStickDeadZone_);
+}
+
+float GamePad::GetRightStickX() const {
+    if (!isConnected_)
+        return 0.0f;
+    return ApplyDeadZone(state_.Gamepad.sThumbRX, rightStickDeadZone_);
+}
+
+float GamePad::GetRightStickY() const {
+    if (!isConnected_)
+        return 0.0f;
+    return ApplyDeadZone(state_.Gamepad.sThumbRY, rightStickDeadZone_);
+}
+
+// ===== トリガー入力 =====
+
+float GamePad::GetLeftTrigger() const {
+    if (!isConnected_)
+        return 0.0f;
+    // トリガーは 0-255 の範囲
+    BYTE trigger = state_.Gamepad.bLeftTrigger;
+    // デッドゾーン適用 (XInputの標準値: 30)
+    if (trigger < XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+        return 0.0f;
+    }
+    return (trigger - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) /
+           static_cast<float>(255 - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+}
+
+float GamePad::GetRightTrigger() const {
+    if (!isConnected_)
+        return 0.0f;
+    BYTE trigger = state_.Gamepad.bRightTrigger;
+    if (trigger < XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+        return 0.0f;
+    }
+    return (trigger - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) /
+           static_cast<float>(255 - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+}
+
+bool GamePad::IsLeftTriggerTriggered(float threshold) const {
+    if (!isConnected_)
+        return false;
+
+    // 現在のトリガー値を取得
+    float currentTrigger = GetLeftTrigger();
+
+    // 前フレームのトリガー値を計算
+    BYTE triggerPre = statePre_.Gamepad.bLeftTrigger;
+    float prevTrigger = 0.0f;
+    if (triggerPre >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+        prevTrigger = (triggerPre - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) /
+                      static_cast<float>(255 - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+    }
+
+    // 前フレームは閾値未満、現在フレームは閾値以上
+    return currentTrigger >= threshold && prevTrigger < threshold;
+}
+
+bool GamePad::IsRightTriggerTriggered(float threshold) const {
+    if (!isConnected_)
+        return false;
+
+    // 現在のトリガー値を取得
+    float currentTrigger = GetRightTrigger();
+
+    // 前フレームのトリガー値を計算
+    BYTE triggerPre = statePre_.Gamepad.bRightTrigger;
+    float prevTrigger = 0.0f;
+    if (triggerPre >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+        prevTrigger = (triggerPre - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) /
+                      static_cast<float>(255 - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+    }
+
+    // 前フレームは閾値未満、現在フレームは閾値以上
+    return currentTrigger >= threshold && prevTrigger < threshold;
+}
+
+// ===== 振動 =====
+
+void GamePad::SetVibration(WORD leftMotor, WORD rightMotor) {
+    if (!isConnected_)
+        return;
+
+    XINPUT_VIBRATION vibration;
+    vibration.wLeftMotorSpeed = leftMotor;
+    vibration.wRightMotorSpeed = rightMotor;
+    XInputSetState(playerIndex_, &vibration);
+}
+
+void GamePad::StopVibration() {
+    SetVibration(0, 0);
+}
+
+// ===== デッドゾーン設定 =====
+
+void GamePad::SetLeftStickDeadZone(float deadZone) {
+    leftStickDeadZone_ = std::clamp(deadZone, 0.0f, 1.0f);
+}
+
+void GamePad::SetRightStickDeadZone(float deadZone) {
+    rightStickDeadZone_ = std::clamp(deadZone, 0.0f, 1.0f);
+}
+
+// ===== プライベート関数 =====
+
+float GamePad::ApplyDeadZone(SHORT value, float deadZone) const {
+    // -32768 ~ 32767 の範囲を -1.0f ~ 1.0f に正規化
+    float normalizedValue = value / 32767.0f;
+
+    // デッドゾーン適用
+    float absValue = std::abs(normalizedValue);
+    if (absValue < deadZone) {
+        return 0.0f;
+    }
+
+    // デッドゾーンを超えた部分を0-1の範囲に再マッピング
+    float sign = (normalizedValue > 0.0f) ? 1.0f : -1.0f;
+    float remappedValue = (absValue - deadZone) / (1.0f - deadZone);
+
+    return sign * std::clamp(remappedValue, 0.0f, 1.0f);
+}
+
+============================================================
+File Path: Engine/Input/GamePad.h
+============================================================
+#pragma once
+#include <wrl.h>
+#include <XInput.h>
+#include <cstdint>
+
+/// <summary>
+/// ゲームパッド入力を管理するクラス
+/// XInput専用のラッパークラス
+/// </summary>
+class GamePad {
+  private:
+    XINPUT_STATE state_;    // 現在の状態
+    XINPUT_STATE statePre_; // 前フレームの状態
+    int32_t playerIndex_;   // プレイヤー番号 (0-3)
+    bool isConnected_;      // 接続されているか
+
+    // デッドゾーン設定
+    float leftStickDeadZone_;  // 左スティックのデッドゾーン
+    float rightStickDeadZone_; // 右スティックのデッドゾーン
+
+  public:
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    /// <param name="playerIndex">プレイヤー番号 (0-3)</param>
+    void Init(int32_t playerIndex = 0);
+
+    /// <summary>
+    /// 更新（毎フレーム呼び出す）
+    /// </summary>
+    void Update();
+
+    // ===== ボタン入力 =====
+
+    /// <summary>
+    /// ボタンが押されているか
+    /// </summary>
+    /// <param name="button">ボタン (XINPUT_GAMEPAD_A など)</param>
+    /// <returns>押されているか</returns>
+    bool IsPress(WORD button) const;
+
+    /// <summary>
+    /// ボタンが押された瞬間か
+    /// </summary>
+    /// <param name="button">ボタン</param>
+    /// <returns>押された瞬間か</returns>
+    bool IsTrigger(WORD button) const;
+
+    /// <summary>
+    /// ボタンが離された瞬間か
+    /// </summary>
+    /// <param name="button">ボタン</param>
+    /// <returns>離された瞬間か</returns>
+    bool IsRelease(WORD button) const;
+
+    // ===== スティック入力 =====
+
+    /// <summary>
+    /// 左スティックのX軸入力を取得 (-1.0f ~ 1.0f)
+    /// </summary>
+    /// <returns>正規化された入力値</returns>
+    float GetLeftStickX() const;
+
+    /// <summary>
+    /// 左スティックのY軸入力を取得 (-1.0f ~ 1.0f)
+    /// </summary>
+    /// <returns>正規化された入力値</returns>
+    float GetLeftStickY() const;
+
+    /// <summary>
+    /// 右スティックのX軸入力を取得 (-1.0f ~ 1.0f)
+    /// </summary>
+    /// <returns>正規化された入力値</returns>
+    float GetRightStickX() const;
+
+    /// <summary>
+    /// 右スティックのY軸入力を取得 (-1.0f ~ 1.0f)
+    /// </summary>
+    /// <returns>正規化された入力値</returns>
+    float GetRightStickY() const;
+
+    // ===== トリガー入力 =====
+
+    /// <summary>
+    /// 左トリガーの入力を取得 (0.0f ~ 1.0f)
+    /// </summary>
+    /// <returns>正規化された入力値</returns>
+    float GetLeftTrigger() const;
+
+    /// <summary>
+    /// 右トリガーの入力を取得 (0.0f ~ 1.0f)
+    /// </summary>
+    /// <returns>正規化された入力値</returns>
+    float GetRightTrigger() const;
+
+    /// <summary>
+    /// 左トリガーが押された瞬間か
+    /// </summary>
+    /// <param name="threshold">判定閾値 (0.0f ~ 1.0f)</param>
+    /// <returns>押された瞬間か</returns>
+    bool IsLeftTriggerTriggered(float threshold = 0.25f) const;
+
+    /// <summary>
+    /// 右トリガーが押された瞬間か
+    /// </summary>
+    /// <param name="threshold">判定閾値 (0.0f ~ 1.0f)</param>
+    /// <returns>押された瞬間か</returns>
+    bool IsRightTriggerTriggered(float threshold = 0.25f) const;
+
+    // ===== 振動 =====
+
+    /// <summary>
+    /// 振動を設定する
+    /// </summary>
+    /// <param name="leftMotor">左モーターの強度 (0-65535)</param>
+    /// <param name="rightMotor">右モーターの強度 (0-65535)</param>
+    void SetVibration(WORD leftMotor, WORD rightMotor);
+
+    /// <summary>
+    /// 振動を停止する
+    /// </summary>
+    void StopVibration();
+
+    // ===== デッドゾーン設定 =====
+
+    /// <summary>
+    /// 左スティックのデッドゾーンを設定
+    /// </summary>
+    /// <param name="deadZone">デッドゾーン (0.0f ~ 1.0f)</param>
+    void SetLeftStickDeadZone(float deadZone);
+
+    /// <summary>
+    /// 右スティックのデッドゾーンを設定
+    /// </summary>
+    /// <param name="deadZone">デッドゾーン (0.0f ~ 1.0f)</param>
+    void SetRightStickDeadZone(float deadZone);
+
+    // ===== 接続状態 =====
+
+    /// <summary>
+    /// コントローラーが接続されているか
+    /// </summary>
+    /// <returns>接続されているか</returns>
+    bool IsConnected() const { return isConnected_; }
+
+    /// <summary>
+    /// 生のXINPUT_STATEを取得（特殊な処理用）
+    /// </summary>
+    /// <returns>現在の状態</returns>
+    const XINPUT_STATE &GetState() const { return state_; }
+
+    /// <summary>
+    /// 前フレームの生のXINPUT_STATEを取得（特殊な処理用）
+    /// </summary>
+    /// <returns>前フレームの状態</returns>
+    const XINPUT_STATE &GetStatePrevious() const { return statePre_; }
+
+  private:
+    /// <summary>
+    /// スティック入力にデッドゾーンを適用して正規化
+    /// </summary>
+    /// <param name="value">生の入力値 (-32768 ~ 32767)</param>
+    /// <param name="deadZone">デッドゾーン (0.0f ~ 1.0f)</param>
+    /// <returns>正規化された値 (-1.0f ~ 1.0f)</returns>
+    float ApplyDeadZone(SHORT value, float deadZone) const;
+};
 
 ============================================================
 File Path: Engine/Input/Input.cpp
@@ -59062,6 +60297,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Application\Staging\Transition\FadeOut.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp" />
+    <ClCompile Include="Engine\Input\GamePad.cpp" />
+    <ClCompile Include="Application\UI\Scene\Game\GameUI.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\Utility\Debug\ResourceLeakChecker\D3DResourceLeakChecker.cpp" />
     <ClCompile Include="Engine\Base\DirectXCommon.cpp" />
@@ -59285,6 +60522,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Staging\Transition\FadeOut.h" />
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h" />
     <ClInclude Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.h" />
+    <ClInclude Include="Engine\Input\GamePad.h" />
+    <ClInclude Include="Application\UI\Scene\Game\GameUI.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
@@ -60780,6 +62019,8 @@ File Path: Hagine.vcxproj.filters
     <ClCompile Include="Application\UI\Scene\Result\ResultUI.cpp" />
     <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.cpp" />
+    <ClCompile Include="Engine\Input\GamePad.cpp" />
+    <ClCompile Include="Application\UI\Scene\Game\GameUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
@@ -60921,6 +62162,8 @@ File Path: Hagine.vcxproj.filters
     <ClInclude Include="Application\Camera\StartCamera.h" />
     <ClInclude Include="Application\UI\Scene\Result\ResultUI.h" />
     <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
+    <ClInclude Include="Engine\Input\GamePad.h" />
+    <ClInclude Include="Application\UI\Scene\Game\GameUI.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
