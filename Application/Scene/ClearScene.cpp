@@ -23,6 +23,7 @@ void ClearScene::Initialize() {
     resultStaging_ = std::make_unique<ResultStaging>();
     resultUI_ = std::make_unique<ResultUI>();
     skyBox_ = SkyBox::GetInstance();
+    gamePad_ = std::make_unique<GamePad>();
 
     /// ===================================================
     /// 初期化
@@ -35,6 +36,7 @@ void ClearScene::Initialize() {
     resultUI_->Initialize();
 
     skyBox_->Initialize("game/skybox_night.dds");
+    gamePad_->Init(0);
 
     /// ===================================================
     /// セット
@@ -48,7 +50,7 @@ void ClearScene::Finalize() {
 }
 
 void ClearScene::Update() {
-
+    gamePad_->Update();
     currentCameraStartTimer_ += Frame::DeltaTime();
     if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
         vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
@@ -119,11 +121,19 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
-#ifndef _DEBUG
-    // リザルト演出が完全に終了しているかチェック
-    if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
-        // シーンを変更
-        sceneManager_->NextSceneReservation("TITLE");
+    if (!gamePad_->IsConnected()) {
+        // リザルト演出が完全に終了しているかチェック
+        if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
+            // シーンを変更
+            sceneManager_->NextSceneReservation("TITLE");
+        }
+    } else {
+        // リザルト演出が完全に終了しているかチェック
+        if (resultUI_->IsAllAnimationFinished() && gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
+            // シーンを変更
+            sceneManager_->NextSceneReservation("TITLE");
+        }
     }
+#ifndef _DEBUG
 #endif // !_DEBUG
 }

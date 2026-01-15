@@ -54,17 +54,40 @@ void PlayerStateFlyIdle::AirMove(Player &player) {
 void PlayerStateFlyIdle::ChangeState(Player &player) {
     player.ChangeRush();
 
+    if (player.GetCurrentStateName() == "Rush") {
+        return;
+    }
+
     if (player.GetLocalPosition().y <= kGroundLevel) {
         player.ChangeState("Idle");
         return;
     }
 
-    if (Input::GetInstance()->PushKey(DIK_A) ||
-        Input::GetInstance()->PushKey(DIK_D) ||
-        Input::GetInstance()->PushKey(DIK_S) ||
-        Input::GetInstance()->PushKey(DIK_W) ||
-        Input::GetInstance()->PushKey(DIK_SPACE) ||
-        Input::GetInstance()->PushKey(DIK_LSHIFT)) {
+    bool hasInput = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        if (Input::GetInstance()->PushKey(DIK_A) ||
+            Input::GetInstance()->PushKey(DIK_D) ||
+            Input::GetInstance()->PushKey(DIK_S) ||
+            Input::GetInstance()->PushKey(DIK_W) ||
+            Input::GetInstance()->PushKey(DIK_SPACE) ||
+            Input::GetInstance()->PushKey(DIK_LSHIFT)) {
+            hasInput = true;
+        }
+    } else {
+        // ゲームパッド入力
+        float leftStickX = player.GetGamePad()->GetLeftStickX();
+        float leftStickY = player.GetGamePad()->GetLeftStickY();
+
+        if (leftStickX != 0.0f || leftStickY != 0.0f ||
+            player.GetGamePad()->GetRightTrigger() > 0.25f ||
+            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER)) {
+            hasInput = true;
+        }
+    }
+
+    if (hasInput) {
         player.ChangeState("FlyMove");
         return;
     }

@@ -151,10 +151,20 @@ void FollowCamera::Update() {
         Vector3 cameraRightDir = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
         float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
 
-        hasInput = Input::GetInstance()->PushKey(DIK_W) ||
-                   Input::GetInstance()->PushKey(DIK_A) ||
-                   Input::GetInstance()->PushKey(DIK_S) ||
-                   Input::GetInstance()->PushKey(DIK_D);
+        if (!player->GetGamePad()->IsConnected()) {
+            // キーボード入力
+            hasInput = Input::GetInstance()->PushKey(DIK_W) ||
+                       Input::GetInstance()->PushKey(DIK_A) ||
+                       Input::GetInstance()->PushKey(DIK_S) ||
+                       Input::GetInstance()->PushKey(DIK_D);
+        } else {
+            // ゲームパッド入力 - 左スティック
+            float leftStickX = player->GetGamePad()->GetLeftStickX();
+            float leftStickY = player->GetGamePad()->GetLeftStickY();
+
+            // スティックの入力があるかチェック
+            hasInput = (leftStickX != 0.0f || leftStickY != 0.0f);
+        }
 
         // 入力がある場合のみターゲットを更新
         if (hasInput && std::abs(lateralVelocity) > kVelocityThreshold) {
@@ -341,12 +351,24 @@ void FollowCamera::imgui() {
 
 void FollowCamera::Move() {
     Player *player = dynamic_cast<Player *>(target_);
-    if (!player || !player->GetIsLockOn()) {
-        if (Input::GetInstance()->PushKey(DIK_LEFT)) {
+    GamePad *gamePad = player->GetGamePad();
+    if (player && player->GetIsLockOn()) {
+        return;
+    }
+    if (!gamePad->IsConnected()) {
+        Input *input = Input::GetInstance();
+        // キーボード
+        if (input->PushKey(DIK_LEFT)) {
             yaw_ -= manualYawSpeed_;
         }
-        if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
+        if (input->PushKey(DIK_RIGHT)) {
             yaw_ += manualYawSpeed_;
+        }
+    } else {
+        // ゲームパッド - 右スティック
+        if (player) {
+            const float stickSensitivity = 0.05f;
+            yaw_ += gamePad->GetRightStickX() * stickSensitivity;
         }
     }
 }

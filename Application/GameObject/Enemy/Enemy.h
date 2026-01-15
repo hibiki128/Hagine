@@ -120,6 +120,7 @@ class Enemy : public BaseObject {
     void SetTarget(Player *target) { target_ = target; }
     void SetGuarding(bool guarding) { isGuarding_ = guarding; }
     void SetStart(bool flag) { started_ = flag; }
+    void SetPause(bool flag) { isPause_ = flag; }
     void SetDrawShadow(bool flag) { drawShadow_ = flag; }
 
   private:
@@ -262,6 +263,7 @@ class Enemy : public BaseObject {
     bool isGrounded_ = true;
     bool isStop_ = false;
     bool started_ = false;
+    bool isPause_ = false;
     bool drawShadow_ = true;
 
     std::unique_ptr<DataHandler> data_;

@@ -21,7 +21,17 @@ void PlayerStateAir::Update(Player &player) {
 
     elapsedTime_ += Frame::DeltaTime();
 
-    if (elapsedTime_ < kFlyTransitionTime && Input::GetInstance()->TriggerKey(DIK_SPACE)) {
+    bool flyInput = false;
+
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力
+        flyInput = Input::GetInstance()->TriggerKey(DIK_SPACE);
+    } else {
+        // ゲームパッド入力
+        flyInput = player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER);
+    }
+
+    if (elapsedTime_ < kFlyTransitionTime && flyInput) {
         player.ChangeState("FlyIdle");
         return;
     }

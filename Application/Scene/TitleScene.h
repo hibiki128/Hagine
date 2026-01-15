@@ -5,6 +5,7 @@
 
 #include "SkyBox/SkyBox.h"
 #include"Application/UI/Scene/Title/TitleUI.h"
+#include <GamePad.h>
 
 class TitleScene : public BaseScene {
   public:
@@ -94,4 +95,5 @@ class TitleScene : public BaseScene {
     SkyBox *skyBox_ = nullptr;
 
     std::unique_ptr<TitleUI> titleUI_ = nullptr;
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
 };

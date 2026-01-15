@@ -2,12 +2,14 @@
 #include "Application/Staging/Death/DeathStaging.h"
 #include "Bullet/PlayerBullet.h"
 #include "Data/DataHandler.h"
+#include "GamePad.h"
 #include "Hand/PlayerHand.h"
 #include "Object/Base/BaseObject.h"
 #include "PlayerData.h"
 #include "Skill/MakanAttackSkill.h"
 #include "State/Base/PlayerBaseState.h"
 #include <Application/Utility/Shake/Shake.h>
+#include <Input.h>
 #include <Particle/CSParticle/ParticleCSEmitter.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
 
@@ -118,6 +120,7 @@ class Player : public BaseObject {
     /// <summary>
     /// Getter
     /// </summary>
+    GamePad *GetGamePad() { return gamePad_.get(); }
     FollowCamera *GetCamera() { return FollowCamera_; }
     Enemy *GetEnemy() { return enemy_; }
     Vector3 &GetAcceleration() { return acceleration_; }
@@ -141,6 +144,7 @@ class Player : public BaseObject {
     float &GetJumpSpeed() { return jumpSpeed_; }
     float &GetMaxSpeed() { return maxSpeed_; }
     float &GetAccelRate() { return accelRate_; }
+    float GetChargeThreshold() const { return kYButtonChargeThreshold; }
     float &GetDt() { return dt_; }
     float GetHP() const { return HP_; }
     float GetMaxHP() const { return maxHP_; }
@@ -169,6 +173,9 @@ class Player : public BaseObject {
     void SetStart(bool flag) {
         started_ = flag;
     }
+    void SetPause(bool flag){
+        isPause_ = flag;
+    }
     void SetEnemy(Enemy *enemy) {
         enemy_ = enemy;
         leftHand_ptr_->SetEnemy(enemy);
@@ -178,6 +185,11 @@ class Player : public BaseObject {
         isDeathStaging_ = flag;
     }
     void SetEnergyRecoveryRate(float Rate) { energyRecoveryRate_ = Rate; }
+    void SetDashing(bool flag) { isDashing_ = flag; }
+    void SetDashInput(float x, float z) {
+        dashInputX_ = x;
+        dashInputZ_ = z;
+    }
 
   private:
     /// ===================================================
@@ -244,9 +256,11 @@ class Player : public BaseObject {
     /// <returns>const char*: 方向の名前文字列</returns>
     const char *GetDirectionName(Direction dir);
 
+     void UpdateDashState();
+
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // 初期化定数
@@ -307,6 +321,9 @@ class Player : public BaseObject {
     static constexpr float kNormalShotEnergyCost = 5.0f;
     static constexpr float kSkillShotEnergyCost = 65.0f;
 
+    // 移動コスト定数
+    static constexpr float kRushEnergyCost = 30.0f;
+
     // FOV関連定数
     static constexpr float kNormalFov = 45.0f;
     static constexpr float kDashingFov = 55.0f;
@@ -333,11 +350,13 @@ class Player : public BaseObject {
     float dt_;               // デルタタイム
     float HP_ = 100.0f;
     float maxHP_ = 100.0f;
-    float energy_ = 100.0f;            // 現在のエネルギー
-    float maxEnergy_ = 100.0f;         // 最大エネルギー
-    float energyRecoveryRate_ = 0.01f; // エネルギー回復速度(秒速)
-    float energyRecoveryDelay_ = 1.0f; // 回復開始までの遅延時間
-    float timeSinceLastShot_ = 0.0f;   // 最後に撃ってからの経過時間
+    float energy_ = 100.0f;                      // 現在のエネルギー
+    float maxEnergy_ = 100.0f;                   // 最大エネルギー
+    float energyRecoveryRate_ = 0.01f;           // エネルギー回復速度(秒速)
+    float energyRecoveryDelay_ = 1.0f;           // 回復開始までの遅延時間
+    float timeSinceLastShot_ = 0.0f;             // 最後に撃ってからの経過時間
+    float yButtonHoldTime_ = 0.0f;               // Yボタン押下時間
+    const float kYButtonChargeThreshold = 0.15f; // チャージ判定閾値(秒)
 
     float lControlInputTime_ = 0.0f;     // L操作入力の保持時間
     int lControlInputCount_ = 0;         // L操作入力の回数
@@ -354,8 +373,14 @@ class Player : public BaseObject {
     bool isLockOn_ = false;  // ロックオンフラグ
     bool isGrounded_ = true; // 接地フラグ
     bool isDashing_ = false; // ダッシュ中フラグ
+    bool isSkillMenu_ = false;
+    float dashInputX_ = 0.0f;         // ダッシュ開始時のスティックX入力
+    float dashInputZ_ = 0.0f;         // ダッシュ開始時のスティックZ入力
+    bool dashStartedThisFrame_ = false; // ダッシュ開始フラグ
+    float dashDuration_ = 0.0f;         // ダッシュ継続時間
 
     bool started_ = false;        // ゲーム開始フラグ
+    bool isPause_ = false;        // ポーズ中フラグ
     bool isDeathStaging_ = false; // 死亡演出中フラグ
 
     bool isInvincible_ = false;        // 無敵状態フラグ
@@ -378,6 +403,7 @@ class Player : public BaseObject {
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
+    std::unique_ptr<GamePad> gamePad_;
 
     ViewProjection *vp_;                          // カメラ
     OBBCollider *playerCollider_ = nullptr;       // コライダー
@@ -394,4 +420,6 @@ class Player : public BaseObject {
     Quaternion tiltRotation_;          // のけぞり用の回転
 
     std::string previousStateName = "";
+
+    Input *input_ = nullptr;
 };

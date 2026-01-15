@@ -11,6 +11,7 @@
 #include <Application/Camera/DeathCamera.h>
 #include "SkyBox/SkyBox.h"
 #include "BaseScene.h"
+#include <Application/UI/Scene/Game/GameUI.h>
 
 class GameScene : public BaseScene {
   public:
@@ -116,6 +117,8 @@ class GameScene : public BaseScene {
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
 
     std::unique_ptr<FadeOut> fadeOut_;
+    
+    std::unique_ptr<GameUI> gameUI_;
 
     SkyBox *skyBox_ = nullptr;
 

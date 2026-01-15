@@ -16,7 +16,6 @@
 #include "application/GameObject/Enemy/Enemy.h"
 #include "numbers"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
-#include <Input.h>
 #include <Particle/CSParticle/ParticleCSEditor.h>
 #include <Particle/ParticleEditor.h>
 #include <cmath>
@@ -107,6 +106,11 @@ void Player::Init(const std::string objectName) {
     auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
 
     deathStaging_ = std::make_unique<DeathStaging>();
+
+    input_ = Input::GetInstance();
+
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
 }
 
 void Player::Update() {
@@ -121,6 +125,8 @@ void Player::Update() {
 
     } else {
 
+        gamePad_->Update();
+
         shadow_->GetLocalPosition() = {transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
         shadow_->Update();
 
@@ -132,9 +138,12 @@ void Player::Update() {
             }
         }
 
-        if (started_) {
+        if (started_ && !isPause_) {
             RecoverEnergy();
             ComboUpdate();
+
+            UpdateDashState();
+
             if (currentState_) {
                 currentState_->Update(*this);
             }
@@ -144,7 +153,7 @@ void Player::Update() {
                 RotateUpdate();
             }
 
-            if (chargeShot_) {
+            if (chargeShot_ && !isSkillMenu_) {
                 chargeShot_->Update();
             }
 
@@ -195,8 +204,21 @@ void Player::Update() {
             velocity_.y = kMaxFallVelocity;
         }
 
-        if (Input::GetInstance()->TriggerKey(DIK_L)) {
-            isLockOn_ = !isLockOn_;
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_L)) {
+                isLockOn_ = !isLockOn_;
+            }
+        } else {
+            // ゲームパッド入力（将来の実装用）
+            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
+                isLockOn_ = !isLockOn_;
+            }
+            if (gamePad_->GetLeftTrigger() > 0.25f) {
+                isSkillMenu_ = true;
+            } else {
+                isSkillMenu_ = false;
+            }
         }
 
         if (isDashing_) {
@@ -235,6 +257,10 @@ void Player::Update() {
         }
 
         ChangeEnergyCharge();
+    }
+
+    if (isPause_) {
+        velocity_ = {0.0f, 0.0f, 0.0f};
     }
 }
 
@@ -325,20 +351,48 @@ void Player::OnCollision(ColliderBase *other) {
 }
 
 void Player::DirectionUpdate() {
-    if (Input::GetInstance()->PushKey(DIK_D)) {
-        // 右
-        moveDir_ = MoveDirection::Right;
-    } else if (Input::GetInstance()->PushKey(DIK_A)) {
-        // 左
-        moveDir_ = MoveDirection::Left;
-    } else if (Input::GetInstance()->PushKey(DIK_W)) {
-        // 前
-        moveDir_ = MoveDirection::Forward;
-    } else if (Input::GetInstance()->PushKey(DIK_S)) {
-        // 後ろ
-        moveDir_ = MoveDirection::Behind;
+    if (!gamePad_->IsConnected()) {
+        // キーボード入力
+        if (input_->PushKey(DIK_D)) {
+            // 右
+            moveDir_ = MoveDirection::Right;
+        } else if (input_->PushKey(DIK_A)) {
+            // 左
+            moveDir_ = MoveDirection::Left;
+        } else if (input_->PushKey(DIK_W)) {
+            // 前
+            moveDir_ = MoveDirection::Forward;
+        } else if (input_->PushKey(DIK_S)) {
+            // 後ろ
+            moveDir_ = MoveDirection::Behind;
+        }
+    } else {
+        // ゲームパッド入力 - 左スティック
+        float xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸(左がプラス)
+        float zInput = gamePad_->GetLeftStickY();  // 左スティックY軸(上がプラス)
+
+        // スティック入力から方向を判定
+        if (xInput != 0.0f || zInput != 0.0f) {
+            // 角度を計算(atan2を使用)
+            float angle = std::atan2(xInput, zInput);
+
+            // 8方向に分類
+            const float PI = std::numbers::pi_v<float>;
+            const float segment = PI / 4.0f; // 45度
+
+            if (angle >= -segment && angle < segment) {
+                moveDir_ = MoveDirection::Forward;
+            } else if (angle >= segment && angle < segment * 3.0f) {
+                moveDir_ = MoveDirection::Right;
+            } else if (angle >= segment * 3.0f || angle < -segment * 3.0f) {
+                moveDir_ = MoveDirection::Behind;
+            } else if (angle >= -segment * 3.0f && angle < -segment) {
+                moveDir_ = MoveDirection::Left;
+            }
+        }
     }
-    // 向いてる方向は回転値から計算（ロックオン時以外）
+
+    // 向いてる方向は回転値から計算(ロックオン時以外)
     if (!isLockOn_) {
         dir_ = CalculateDirectionFromRotation();
     } else {
@@ -347,34 +401,94 @@ void Player::DirectionUpdate() {
 }
 
 void Player::Shot() {
-    if (Input::GetInstance()->TriggerKey(DIK_J)) {
-        // エネルギーチェックを追加
-        if (!ConsumeEnergy(kNormalShotEnergyCost)) {
-            return; // エネルギー不足なら発射しない
+    if (currentState_ != states_["EnergyCharge"].get() && !isSkillMenu_) {
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_J)) {
+                // エネルギーチェックを追加
+                if (!ConsumeEnergy(kNormalShotEnergyCost)) {
+                    return; // エネルギー不足なら発射しない
+                }
+
+                std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
+                auto bullet = std::make_unique<PlayerBullet>();
+                bullet->Init(bulletName);
+                bullet->InitTransform(this);
+                bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
+                bullet->SetColliderRadius(kBulletColliderRadius);
+                bullets_.push_back(std::move(bullet));
+
+                timeSinceLastShot_ = kTimerReset; // 射撃タイマーをリセット
+            }
+        } else {
+            // ゲームパッド入力
+            // Yボタンが押されている時間を計測
+            if (gamePad_->IsPress(XINPUT_GAMEPAD_Y) && !isSkillMenu_) {
+                yButtonHoldTime_ += dt_;
+            }
+
+            // Yボタンが離された瞬間
+            if (gamePad_->IsRelease(XINPUT_GAMEPAD_Y) && !isSkillMenu_) {
+                // 長押し判定閾値未満なら通常弾を発射
+                if (yButtonHoldTime_ < kYButtonChargeThreshold) {
+                    // エネルギーチェックを追加
+                    if (!ConsumeEnergy(kNormalShotEnergyCost)) {
+                        yButtonHoldTime_ = 0.0f;
+                        return; // エネルギー不足なら発射しない
+                    }
+
+                    std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
+                    auto bullet = std::make_unique<PlayerBullet>();
+                    bullet->Init(bulletName);
+                    bullet->InitTransform(this);
+                    bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
+                    bullet->SetColliderRadius(kBulletColliderRadius);
+                    bullets_.push_back(std::move(bullet));
+
+                    timeSinceLastShot_ = kTimerReset; // 射撃タイマーをリセット
+                }
+
+                // 押下時間をリセット
+                yButtonHoldTime_ = 0.0f;
+            }
+
+            // Yボタンが押されていない時はタイマーをリセット
+            if (!gamePad_->IsPress(XINPUT_GAMEPAD_Y)) {
+                yButtonHoldTime_ = 0.0f;
+            }
         }
-
-        std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
-        auto bullet = std::make_unique<PlayerBullet>();
-        bullet->Init(bulletName);
-        bullet->InitTransform(this);
-        bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
-        bullet->SetColliderRadius(kBulletColliderRadius);
-        bullets_.push_back(std::move(bullet));
-
-        timeSinceLastShot_ = kTimerReset; // 射撃タイマーをリセット
     }
 }
 
 void Player::SkillShot() {
-    if (Input::GetInstance()->TriggerKey(DIK_G)) {
-        if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive()) {
-            return; // 既に発動中なら何もしない
+    if (!chargeShot_->GetIsCharge()) {
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_G)) {
+                if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive()) {
+                    return; // 既に発動中なら何もしない
+                }
+                if (!ConsumeEnergy(kSkillShotEnergyCost)) {
+                    return; // エネルギー不足なら発射しない
+                }
+                makanAttack_ptr_->SetPlayer(this);
+                makanAttack_ptr_->Activate(transform_.get());
+            }
+        } else {
+            // ゲームパッド入力（将来の実装用）
+            if (isSkillMenu_) {
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_Y)) {
+                    if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive()) {
+                        return; // 既に発動中なら何もしない
+                    }
+                    if (!ConsumeEnergy(kSkillShotEnergyCost)) {
+                        return; // エネルギー不足なら発射しない
+                    }
+                    makanAttack_ptr_->SetPlayer(this);
+                    makanAttack_ptr_->Activate(transform_.get());
+                }
+            }
         }
-        if (!ConsumeEnergy(kSkillShotEnergyCost)) {
-            return; // エネルギー不足なら発射しない
-        }
-        makanAttack_ptr_->SetPlayer(this);
-        makanAttack_ptr_->Activate(transform_.get());
     }
 }
 
@@ -384,7 +498,7 @@ void Player::RotateUpdate() {
         if (toEnemy.Length() > kMinRotationDistance) {
             toEnemy = toEnemy.Normalize();
 
-            // プレイヤーの正面方向（+Z方向）を敵の方向に向ける
+            // プレイヤーの正面方向(+Z方向)を敵の方向に向ける
             Vector3 forward = toEnemy;
             Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ}; // 上方向
 
@@ -406,59 +520,134 @@ void Player::RotateUpdate() {
             transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
         }
     } else {
-        Vector3 euler = transform_->quateRotation_.ToEulerAngles();
-        bool rotationChanged = false;
-        if (Input::GetInstance()->PushKey(DIK_RIGHT)) {
-            euler.y -= kManualRotationSpeed;
-            rotationChanged = true;
-        }
-        if (Input::GetInstance()->PushKey(DIK_LEFT)) {
-            euler.y += kManualRotationSpeed;
-            rotationChanged = true;
-        }
-        if (rotationChanged) {
-            transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            Vector3 euler = transform_->quateRotation_.ToEulerAngles();
+            bool rotationChanged = false;
+            if (input_->PushKey(DIK_RIGHT)) {
+                euler.y -= kManualRotationSpeed;
+                rotationChanged = true;
+            }
+            if (input_->PushKey(DIK_LEFT)) {
+                euler.y += kManualRotationSpeed;
+                rotationChanged = true;
+            }
+            if (rotationChanged) {
+                transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
+            }
+        } else {
+            // ゲームパッド入力 - 右スティック
+            float rightStickX = gamePad_->GetRightStickX();
+            float rightStickY = gamePad_->GetRightStickY();
+
+            // 右スティックで回転
+            if (rightStickX != 0.0f || rightStickY != 0.0f) {
+                Vector3 euler = transform_->quateRotation_.ToEulerAngles();
+
+                // 右スティックのX軸で左右回転
+                euler.y += rightStickX * kManualRotationSpeed * 2.0f;
+
+                transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
+            }
         }
     }
 }
 
 void Player::ComboUpdate() {
-    // 毎フレーム更新
-    punchCombo_.Update(Frame::DeltaTime());
+    if (currentState_ != states_["EnergyCharge"].get() && !chargeShot_->GetIsCharge()) {
+        // 毎フレーム更新
+        punchCombo_.Update(Frame::DeltaTime());
 
-    // 入力処理
-    if (Input::GetInstance()->TriggerKey(DIK_H)) {
-        punchCombo_.TryExecuteCombo();
-    }
-    if (punchCombo_.IsComboActive()) {
-        GetRightHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetRightHand()));
-        GetLeftHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_H)) {
+                punchCombo_.TryExecuteCombo();
+            }
+        } else {
+            // ゲームパッド入力（将来の実装用）
+            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_X)) {
+                punchCombo_.TryExecuteCombo();
+            }
+        }
+
+        if (punchCombo_.IsComboActive()) {
+            GetRightHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetRightHand()));
+            GetLeftHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
+        }
     }
 }
 
 void Player::Move() {
-    // 入力取得（WASD）
+    // 入力取得
     float xInput = kInputZero;
     float zInput = kInputZero;
 
-    if (Input::GetInstance()->PushKey(DIK_A))
-        xInput += kInputValue;
-    if (Input::GetInstance()->PushKey(DIK_D))
-        xInput -= kInputValue;
-    if (Input::GetInstance()->PushKey(DIK_W))
-        zInput += kInputValue;
-    if (Input::GetInstance()->PushKey(DIK_S))
-        zInput -= kInputValue;
+    if (!gamePad_->IsConnected()) {
+        // --- キーボード入力 (既存のロジックを維持) ---
+        if (input_->PushKey(DIK_A))
+            xInput += kInputValue;
+        if (input_->PushKey(DIK_D))
+            xInput -= kInputValue;
+        if (input_->PushKey(DIK_W))
+            zInput += kInputValue;
+        if (input_->PushKey(DIK_S))
+            zInput -= kInputValue;
+        isDashing_ = input_->PushKey(DIK_LCONTROL);
+    } else {
+        // --- ゲームパッド入力 ---
+        xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
+        zInput = gamePad_->GetLeftStickY();  // 左スティックY軸
 
-    // 減速処理（入力がない場合）
-    if (xInput == kInputZero && zInput == kInputZero) {
+        bool isLTHeld = gamePad_->GetLeftTrigger() > 0.25f;
+
+        if (isLTHeld) {
+            // エネルギーがマックスの場合
+            if (energy_ >= maxEnergy_) {
+                // Aボタンが押された瞬間にダッシュ開始
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
+                    // ダッシュ開始時のスティック入力を記録(敵への方向決定用)
+                    dashInputX_ = xInput;
+                    dashInputZ_ = zInput;
+                    isDashing_ = true;
+                    dashStartedThisFrame_ = true; // ダッシュ開始フラグを立てる
+                    dashDuration_ = 0.0f;         // ダッシュ時間をリセット
+                }
+                // ダッシュ中は現在のスティック入力を使用(自由に動ける)
+            } else {
+                // Aボタンが押された瞬間にダッシュ開始
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
+                    // ダッシュ開始時のスティック入力を記録(敵への方向決定用)
+                    dashInputX_ = xInput;
+                    dashInputZ_ = zInput;
+                    isDashing_ = true;
+                    dashStartedThisFrame_ = true; // ダッシュ開始フラグを立てる
+                    dashDuration_ = 0.0f;         // ダッシュ時間をリセット
+                }
+
+                // ダッシュ中でないなら、LTを押していても移動させない
+                if (!isDashing_) {
+                    xInput = kInputZero;
+                    zInput = kInputZero;
+                }
+            }
+        } else {
+            // LTを離したらダッシュ解除
+            isDashing_ = false;
+            dashInputX_ = kInputZero;
+            dashInputZ_ = kInputZero;
+            dashDuration_ = 0.0f;
+            dashStartedThisFrame_ = false;
+        }
+    }
+
+    // 減速処理 (ダッシュ中以外で入力がない場合)
+    if (xInput == kInputZero && zInput == kInputZero && !isDashing_) {
         velocity_.x *= kDecelerationFactor;
         velocity_.z *= kDecelerationFactor;
         if (std::abs(velocity_.x) < kVelocityStopThreshold)
             velocity_.x = kVelocityZero;
         if (std::abs(velocity_.z) < kVelocityStopThreshold)
             velocity_.z = kVelocityZero;
-        isDashing_ = false;
         return;
     }
 
@@ -468,34 +657,51 @@ void Player::Move() {
         return;
 
     float yaw = camera->GetYaw();
-
     Vector3 cameraForward = {std::sin(yaw), kYComponentZero, std::cos(yaw)};
     Vector3 cameraRight = {-std::cos(yaw), kYComponentZero, std::sin(yaw)};
 
-    // 入力方向をカメラベースで合成
+    // 入力方向を計算
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
 
-    // 正規化（斜め方向も一定速度にする）
-    moveDir = moveDir.Normalize();
+    // --- 特殊処理: ダッシュ開始時のみ方向を固定 ---
+    if (dashStartedThisFrame_ && dashInputX_ == kInputZero && dashInputZ_ == kInputZero) {
+        // ダッシュ開始時にスティック入力がない場合、敵の方を向く
+        if (enemy_) {
+            Vector3 toEnemy = enemy_->GetWorldPosition() - GetWorldPosition();
+            toEnemy.y = 0; // 高低差を無視
+            if (toEnemy.Length() > 0.001f) {
+                moveDir = toEnemy.Normalize();
+            }
+        } else {
+            // 敵がいない場合は自機の正面方向
+            moveDir = GetForward();
+            moveDir.y = 0;
+            moveDir = moveDir.Normalize();
+        }
+    } else if (moveDir.Length() > 0.001f) {
+        // 通常の移動方向正規化
+        moveDir = moveDir.Normalize();
+    }
 
     // --- 回転処理 ---
-    if (!isLockOn_) {
+    if (!isLockOn_ && moveDir.Length() > 0.001f) {
         float targetYaw = std::atan2(-moveDir.x, moveDir.z);
         Quaternion targetRot = Quaternion::FromEulerAngles({kRotationZero, targetYaw, kRotationZero});
         float rotateSpeed = kPlayerRotationSpeed;
         transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
     }
 
-    // --- 移動処理 ---
+    // --- 移動速度の決定 ---
     float currentMaxSpeed = maxSpeed_;
-    isDashing_ = Input::GetInstance()->PushKey(DIK_LCONTROL);
     if (isDashing_) {
         currentMaxSpeed *= kDashSpeedMultiplier;
     }
 
+    // 速度加算
     velocity_.x += moveDir.x * accelRate_ * dt_;
     velocity_.z += moveDir.z * accelRate_ * dt_;
 
+    // 最高速度制限
     float speed = std::sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
     if (speed > currentMaxSpeed) {
         float scale = currentMaxSpeed / speed;
@@ -637,6 +843,7 @@ const char *Player::GetDirectionName(Direction dir) {
         return "不明";
     }
 }
+
 // 角度の正規化関数
 float Player::NormalizeAngle(float angle) {
     const float TWO_PI = 2.0f * std::numbers::pi_v<float>;
@@ -682,6 +889,9 @@ void Player::Debug() {
             ImGui::DragFloat("回復開始遅延", &energyRecoveryDelay_, 0.1f, 0.0f, 5.0f);
 
             ImGui::Text("無敵状態: %s", isInvincible_ ? "True" : "False");
+            ImGui::Text("ダッシュ始めたフレームかどうか: %s", dashStartedThisFrame_ ? "True" : "False");
+            ImGui::Text("ダッシュ時間: %f", dashDuration_);
+
             if (isInvincible_) {
                 ImGui::Text("無敵残り時間: %.2f秒", invincibleDuration_ - invincibleTime_);
             }
@@ -749,18 +959,44 @@ void Player::Debug() {
 }
 
 void Player::ChangeRush() {
-    if (Input::GetInstance()->TriggerKey(DIK_LCONTROL)) {
-        lControlInputCount_++;
-        if (lControlInputCount_ == 1) {
-            lControlInputTime_ = 0.0f;
-        } else if (lControlInputCount_ == 2 && GetIsLockOn() && GetEnemy()) {
-            // 急接近ステートに遷移
-            ChangeState("Rush");
-            return;
+    if (!gamePad_->IsConnected()) {
+        // キーボード入力 (既存のロジックを維持)
+        if (input_->TriggerKey(DIK_LCONTROL)) {
+            lControlInputCount_++;
+            if (lControlInputCount_ == 1) {
+                lControlInputTime_ = 0.0f;
+            } else if (lControlInputCount_ == 2 && GetIsLockOn() && GetEnemy()) {
+                // 急接近ステートに遷移 (エネルギー消費判定を追加)
+                if (ConsumeEnergy(kRushEnergyCost)) {
+                    ChangeState("Rush");
+                }
+                return;
+            }
+        }
+    } else {
+        // ゲームパッド入力 - ダッシュ中のAボタン押下でRush
+
+        // ダッシュ中かつロックオン中の場合のみRush可能
+        if (isDashing_ && GetIsLockOn() && GetEnemy()) {
+            // ダッシュ開始から一定時間経過後のAボタントリガーでRush発動
+            // dashStartedThisFrame_がtrueの場合はスキップ(ダッシュ開始直後を除外)
+            if (!dashStartedThisFrame_ &&
+                dashDuration_ > 0.1f && // ダッシュ開始から0.1秒以上経過
+                gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
+
+                // エネルギー消費してRushステートへ
+                if (ConsumeEnergy(kRushEnergyCost)) {
+                    ChangeState("Rush");
+                    // フラグをリセット
+                    isDashing_ = false;
+                    dashDuration_ = 0.0f;
+                }
+                return;
+            }
         }
     }
 
-    // 入力リセット処理
+    // 入力リセット処理(キーボード用)
     if (lControlInputCount_ > 0) {
         lControlInputTime_ += GetDt();
         if (lControlInputTime_ >= INPUT_RESET_TIME) {
@@ -774,12 +1010,51 @@ void Player::ChangeEnergyCharge() {
     if (currentState_ != states_["Rush"].get() &&
         currentState_ != states_["Jump"].get() &&
         currentState_ != states_["Air"].get()) {
-        if (Input::GetInstance()->TriggerKey(DIK_C) &&
-            currentState_ != states_["EnergyCharge"].get() &&
-            energy_ < maxEnergy_) {
-            ChangeState("EnergyCharge");
+        if (!gamePad_->IsConnected()) {
+            // キーボード入力
+            if (input_->TriggerKey(DIK_C) &&
+                currentState_ != states_["EnergyCharge"].get() &&
+                energy_ < maxEnergy_) {
+                ChangeState("EnergyCharge");
+            }
+        } else {
+            // ゲームパッド入力 - LTトリガー
+            static bool wasRTPressed = false;
+            bool isRTPressed = gamePad_->GetLeftTrigger() > 0.25f;
+
+            // RTが押された瞬間で、YボタンもAボタンも押されていない時のみチャージ状態へ
+            if (isRTPressed && !wasRTPressed &&
+                currentState_ != states_["EnergyCharge"].get() &&
+                energy_ < maxEnergy_ &&
+                !gamePad_->IsPress(XINPUT_GAMEPAD_Y) &&
+                !gamePad_->IsPress(XINPUT_GAMEPAD_A)) {
+                ChangeState("EnergyCharge");
+            }
+
+            wasRTPressed = isRTPressed;
         }
     }
+}
+
+void Player::UpdateDashState() {
+    if (!gamePad_->IsConnected()) {
+        return; // キーボードの場合は何もしない
+    }
+
+    bool isLTHeld = gamePad_->GetLeftTrigger() > 0.25f;
+    static bool wasDashing = false;
+
+    if (isLTHeld && isDashing_) {
+        // ダッシュ継続時間を更新
+        dashDuration_ += dt_;
+    }
+
+    // ダッシュ開始フラグは次フレームでリセット
+    if (dashStartedThisFrame_ && wasDashing) {
+        dashStartedThisFrame_ = false;
+    }
+
+    wasDashing = isDashing_;
 }
 
 Vector3 Player::GetMovementDirection() const {

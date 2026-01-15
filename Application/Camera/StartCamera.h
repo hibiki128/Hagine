@@ -2,6 +2,10 @@
 #include <Camera/ViewProjection/ViewProjection.h>
 #include <Transform/WorldTransform.h>
 
+// 前方宣言
+class Input;
+class GamePad;
+
 /// <summary>
 /// スタート時のカメラの動きを行うカメラクラス
 /// </summary>
@@ -53,6 +57,11 @@ class StartCamera {
     /// private method
     /// ===================================================
 
+    /// <summary>
+    /// スキップ入力チェック
+    /// </summary>
+    bool CheckSkipInput();
+
   private:
     /// ===================================================
     /// private varians
@@ -79,6 +88,9 @@ class StartCamera {
     static constexpr int kPhaseWait3 = 6;
     static constexpr int kPhaseComplete = 7;
 
+    // スキップ時のスピード倍率
+    static constexpr float kSkipSpeedMultiplier = 5.0f;
+
     // ビュープロジェクション
     ViewProjection vp_;
 
@@ -104,4 +116,11 @@ class StartCamera {
     float waitDuration_ = 1.0f;
     Vector3 easingTargetPos2_ = {5.0f, 1.8f, -33.0f};
     Vector3 easingTargetRot2_ = {degreesToRadians(9.6f), degreesToRadians(-149.0f), degreesToRadians(0.0f)};
+
+    // 入力関連
+    Input *input_ = nullptr;
+    std::unique_ptr<GamePad> gamePad_ = nullptr;
+
+    // スキップ関連
+    bool isSkipping_ = false;
 };

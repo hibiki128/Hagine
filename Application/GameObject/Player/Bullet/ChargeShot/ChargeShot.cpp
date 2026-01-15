@@ -59,20 +59,44 @@ void ChargeShot::Update() {
         }
     }
 
+    bool chargeHold = false;
+    bool chargeRelease = false;
+
+    if (!player_->GetGamePad()->IsConnected()) {
+        // キーボード入力
+        chargeHold = input->PushKey(DIK_K);
+        chargeRelease = input->ReleaseMomentKey(DIK_K);
+    } else {
+        // ゲームパッド入力 - Yボタン
+        chargeHold = player_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y);
+        chargeRelease = player_->GetGamePad()->IsRelease(XINPUT_GAMEPAD_Y);
+    }
+
     if (!isAlive_) {
-        if (input->TriggerKey(DIK_K)) {
-            // チャージ開始前にエネルギーチェックを追加
-            if (player_ && player_->GetEnergy() < kMinEnergyToStart) {
-                // エネルギー不足でチャージ開始できない
-                return;
+        // チャージ開始判定：ボタンが押され続けている時間を計測
+        if (chargeHold) {
+            chargeStartTimer_ += Frame::DeltaTime();
+
+            // kChargeStartThreshold以上押され続けた場合のみチャージ開始
+            if (chargeStartTimer_ >= player_->GetChargeThreshold()) {
+                // エネルギーチェック
+                if (player_ && player_->GetEnergy() < kMinEnergyToStart) {
+                    // エネルギー不足でチャージ開始できない
+                    chargeStartTimer_ = 0.0f;
+                    return;
+                }
+                isAlive_ = true;
+                isFired_ = false;
+                scale_ = kInitialScale;
+                isMaxScale_ = false;
+                isCharge = true;
             }
-            isAlive_ = true;
-            isFired_ = false;
-            scale_ = kInitialScale;
-            isMaxScale_ = false;
+        } else {
+            // ボタンが離されたらタイマーリセット
+            chargeStartTimer_ = 0.0f;
         }
     } else {
-        if (input->PushKey(DIK_K) && !isFired_) {
+        if (chargeHold && !isFired_) {
             scale_ += scaleSpeed_ * (Frame::DeltaTime());
             if (scale_ >= maxScale_) {
                 scale_ = maxScale_;
@@ -83,7 +107,7 @@ void ChargeShot::Update() {
             }
             isCharge = true;
         }
-        if (input->ReleaseMomentKey(DIK_K) && !isFired_) {
+        if (chargeRelease && !isFired_) {
             // エネルギー消費量を計算(チャージ率に応じて5~20)
             float scaleRatio = (scale_ - kInitialScale) / (maxScale_ - kInitialScale);
             float energyCost = kMinEnergyCost + ((kMaxEnergyCost - kMinEnergyCost) * scaleRatio);
@@ -93,6 +117,7 @@ void ChargeShot::Update() {
                 // エネルギー不足ならリセット
                 Reset();
                 isCharge = false;
+                chargeStartTimer_ = 0.0f;
                 return;
             }
 
@@ -110,7 +135,6 @@ void ChargeShot::Update() {
                 } else {
                     // プレイヤーの回転をかけて発射方向を計算
                     dir = (player_->GetLocalRotation() * Vector3(0.0f, 0.0f, 1.0f)).Normalize();
-
                     dir.x = -dir.x;
                 }
             }
@@ -118,6 +142,7 @@ void ChargeShot::Update() {
             Fire(pos, dir);
             isFired_ = true;
             isCharge = false;
+            chargeStartTimer_ = 0.0f;
         }
     }
 
@@ -136,15 +161,10 @@ void ChargeShot::Update() {
     if (isAlive_ && !isFired_) {
         if (player_) {
             Vector3 playerPos = player_->GetLocalPosition();
-
             Quaternion rot = player_->GetLocalRotation();
-
             Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
-
             Vector3 forwardDir = rot * baseForward;
-
             forwardDir.x = -forwardDir.x;
-
             Vector3 normForward = forwardDir.Normalize();
 
             // チャージ弾のオフセット距離
@@ -208,9 +228,9 @@ void ChargeShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     transform_->scale_ = {scale_, scale_, scale_};
 }
 void ChargeShot::DrawParticle(const ViewProjection &viewProjection) {
+    chargeEmitter_->Draw(viewProjection);
     if (!isAlive_)
         return;
-    chargeEmitter_->Draw(viewProjection);
     bulletEmitter_->Draw(viewProjection);
 }
 
