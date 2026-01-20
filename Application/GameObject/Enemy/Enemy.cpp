@@ -1,15 +1,10 @@
 #define NOMINMAX
 #include "Enemy.h"
-#include "BehaviorTree/BehaviorNode/BehaviorNode.h"
-#include "BehaviorTree/Nodes/ActionNodes.h"
-#include "BehaviorTree/Nodes/CompositeNodes.h"
-#include "BehaviorTree/Nodes/ConditionNodes.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include <Frame.h>
-#ifdef _DEBUG
-#endif
+#include <Debug/Log/Logger.h>
 
 Enemy::Enemy() {
 }
@@ -42,10 +37,8 @@ void Enemy::Init(const std::string objectName) {
     shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(kShadowRotationDegrees), kRotationZero, kRotationZero));
     shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
-    chageShake_ = std::make_unique<Shake>();
+    chargeShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
-    // ビヘイビアツリーの初期化
-    InitializeBehaviorTree();
 }
 
 void Enemy::Update() {
@@ -81,17 +74,13 @@ void Enemy::Update() {
             SetColor(Vector4(kColorOpaque, kColorZero, kColorZero, kColorOpaque));
         }
 
-        if (isAlive_ && target_->GetAlive()) {
-            ExecuteBehaviorTree(Frame::DeltaTime());
-        }
-
         // ダメージリアクション中でない時のみ向きを更新
         if (!isDamageReact_) {
             RotateUpdate();
         }
 
         UpdateShadowScale();
-        chageShake_->Update();
+        chargeShake_->Update();
 
         if (isDamageReact_) {
             damageReactTimer_ += Frame::DeltaTime();
@@ -117,9 +106,37 @@ void Enemy::Update() {
                 SetAlpha(kAlphaOpaque);
             }
         }
+
+        
+    if (rootNode_) {
+            // ターゲット情報などが変わっているかもしれないので更新しても良い
+            rootNode_->SetContext(this, target_);
+
+            rootNode_->Tick();
+        }
+
+        BaseObject::Update();
     }
 
     CollisionGround();
+
+}
+
+void Enemy::MoveToTarget(const Vector3 &targetPos) {
+    // シンプルな追尾ロジックの例
+    Vector3 direction = targetPos - transform_->translation_;
+    direction.y = 0; // 高さは合わせない場合
+    direction = direction.Normalize();
+
+    float speed = 0.1f;
+    transform_->translation_ += direction * speed;
+
+    // 向きを変えるなどの処理もここに記述
+}
+
+void Enemy::PerformAttack() {
+    // 攻撃ログを出力したり、アニメーションを再生したりする
+    Logger::Log("Attack\n");
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -173,7 +190,7 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
         hitEmitter_->UpdateOnce();
     }
     if (other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
-        chageShake_->StartShake();
+        chargeShake_->StartShake();
     }
 
     // ダメージリアクション開始
@@ -336,5 +353,5 @@ Vector3 Enemy::GetPositionBelow(float distance) const {
 }
 
 void Enemy::SetVp(ViewProjection *vp) {
-    chageShake_->Initialize(vp, "chagehit");
+    chargeShake_->Initialize(vp, "chagehit");
 }

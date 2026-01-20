@@ -4,6 +4,7 @@
 #include "Particle/ParticleEmitter.h"
 #include <Application/GameObject/Player/Player.h>
 #include <application/GameObject/Player/PlayerData.h>
+#include <Application/GameObject/BehaviorTree/Node/BehaviorNode.h>
 
 /// <summary>
 /// 敵のゲームオブジェクトクラス
@@ -64,7 +65,7 @@ class Enemy : public BaseObject {
     /// Getter
     /// </summary>
     Vector3 &GetAcceleration() { return acceleration_; }
-    Vector3 &GetVelocity() { return velocity_; }
+    Vector3 GetVelocity() { return velocity_; }
     Vector3 GetMovementDirection() const;
     Vector3 GetForward() const;
     Vector3 GetBackward() const;
@@ -78,6 +79,7 @@ class Enemy : public BaseObject {
     Vector3 GetPositionLeft(float distance = 3.0f) const;
     Vector3 GetPositionAbove(float distance = 3.0f) const;
     Vector3 GetPositionBelow(float distance = 3.0f) const;
+    Vector3 GetPosition() const { return transform_->translation_; }
     float GetVelocityMagnitude() const;
     float &GetFallSpeed() { return fallSpeed_; }
     float &GetMoveSpeed() { return moveSpeed_; }
@@ -89,10 +91,10 @@ class Enemy : public BaseObject {
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
+    bool IsGuarding() const { return isGuarding_; }
     Player *GetTarget() { return target_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
-    bool IsGuarding() const { return isGuarding_; }
 
     /// <summary>
     /// Setter
@@ -104,6 +106,21 @@ class Enemy : public BaseObject {
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
     void SetDrawShadow(bool flag) { drawShadow_ = flag; }
+    void SetVelocity(const Vector3 &vel) { velocity_ = vel; }
+
+    void SetBehaviorTree(std::shared_ptr<BTNode> rootNode) {
+        rootNode_ = rootNode;
+        // ツリーに自分とターゲットを教える
+        if (rootNode_) {
+            rootNode_->SetContext(this, target_);
+        }
+    }
+
+    void MoveToTarget(const Vector3 &targetPos);
+    void PerformAttack();
+
+    // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
+    Vector3 GetWorldPosition() const { return transform_->translation_; }
 
   private:
     /// ===================================================
@@ -251,7 +268,8 @@ class Enemy : public BaseObject {
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
     std::unique_ptr<ParticleEmitter> hitEmitter_;
-    std::unique_ptr<Shake> chageShake_;
+    std::unique_ptr<Shake> chargeShake_;
+    std::shared_ptr<BTNode> rootNode_ = nullptr;
 
     bool isDamageReact_ = false;       // リアクション中かどうか
     float damageReactTimer_ = 0.0f;    // 経過時間

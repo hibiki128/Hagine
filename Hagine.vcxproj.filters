@@ -159,6 +159,8 @@
     <ClCompile Include="Application\UI\Scene\Result\ResultUI.cpp" />
     <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.cpp" />
+    <ClCompile Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.cpp" />
+    <ClCompile Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\Camera\FollowCamera.h" />
@@ -296,6 +298,8 @@
     <ClInclude Include="Application\Camera\StartCamera.h" />
     <ClInclude Include="Application\UI\Scene\Result\ResultUI.h" />
     <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
+    <ClInclude Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.h" />
+    <ClInclude Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

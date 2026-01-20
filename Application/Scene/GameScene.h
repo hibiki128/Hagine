@@ -12,6 +12,8 @@
 #include "BaseScene.h"
 #include <Application/UI/Scene/Game/GameUI.h>
 
+#include"Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.h"
+
 class GameScene : public BaseScene {
   public:
     /// ===================================================
@@ -127,4 +129,6 @@ class GameScene : public BaseScene {
     float GameOverTimer_ = 0.0f;
 
     float ClearTimer_ = 0.0f;
+
+    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
 };
