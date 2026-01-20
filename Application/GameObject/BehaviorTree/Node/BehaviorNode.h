@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <random.h>
 
 class Enemy;
 class Player;
@@ -57,6 +58,37 @@ class CompositeNode : public BTNode {
     void OnEnter() override;
     std::vector<std::shared_ptr<BTNode>> m_Children;
     int m_CurrentChildIndex = 0;
+};
+
+// =========================================================
+// 時間制限付きアクションの基底クラス (便利なので作成)
+// =========================================================
+class TimedActionNode : public ContextNode {
+  public:
+    // minTime:最小時間, maxTime:最大時間, speed:移動速度
+    TimedActionNode(float minTime, float maxTime, float speed)
+        : m_MinTime(minTime), m_MaxTime(maxTime), m_Speed(speed) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_CurrentTimer = 0.0f;
+        m_TargetDuration = 0.0f;
+    }
+
+  protected:
+    void OnEnter() override;
+
+    NodeStatus OnUpdate() override;
+
+    // 派生クラスで実装する
+    virtual void ExecuteAction() = 0;
+    virtual void SetupAction() {} // 必要ならオーバーライド
+
+    float m_MinTime;
+    float m_MaxTime;
+    float m_Speed;
+    float m_CurrentTimer = 0.0f;
+    float m_TargetDuration = 0.0f;
 };
 
 // ---------------------------------------------------------
@@ -129,9 +161,40 @@ class IsHealthLowNode : public ContextNode {
 // 具体的なアクションノード
 // =========================================================
 
-class EnemyApproachNode : public ContextNode {
+// 通常接近
+class EnemyApproachNode : public TimedActionNode {
+  public:
+    using TimedActionNode::TimedActionNode; // コンストラクタ継承
   protected:
-    NodeStatus OnUpdate() override;
+    void ExecuteAction() override;
+};
+
+// 高速接近 (ロジックは接近と同じだが、エディタでパラメータを変えて使い分ける)
+class EnemyDashNode : public TimedActionNode {
+  public:
+    using TimedActionNode::TimedActionNode;
+
+  protected:
+    void ExecuteAction() override; // 中身はApproachと同じでOK
+};
+
+// 左右移動 (Strafe)
+class EnemyStrafeNode : public TimedActionNode {
+  public:
+    using TimedActionNode::TimedActionNode;
+
+  protected:
+    void SetupAction() override; // ここで左右どちらに行くか決める
+    void ExecuteAction() override;
+};
+
+// 後退 (Retreat)
+class EnemyRetreatNode : public TimedActionNode {
+  public:
+    using TimedActionNode::TimedActionNode;
+
+  protected:
+    void ExecuteAction() override;
 };
 
 class EnemyAttackNode : public ContextNode {

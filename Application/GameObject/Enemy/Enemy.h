@@ -107,7 +107,8 @@ class Enemy : public BaseObject {
     void SetPause(bool flag) { isPause_ = flag; }
     void SetDrawShadow(bool flag) { drawShadow_ = flag; }
     void SetVelocity(const Vector3 &vel) { velocity_ = vel; }
-
+    void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
+    void SetStrafeDirection(int dir) { strafeDirection_ = dir; }
     void SetBehaviorTree(std::shared_ptr<BTNode> rootNode) {
         rootNode_ = rootNode;
         // ツリーに自分とターゲットを教える
@@ -115,12 +116,13 @@ class Enemy : public BaseObject {
             rootNode_->SetContext(this, target_);
         }
     }
+    // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
+    Vector3 GetWorldPosition() const { return transform_->translation_; }
 
     void MoveToTarget(const Vector3 &targetPos);
     void PerformAttack();
-
-    // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
-    Vector3 GetWorldPosition() const { return transform_->translation_; }
+    void MoveStrafe();                           // 左右移動
+    void MoveRetreat();                          // 後退
 
   private:
     /// ===================================================
@@ -246,10 +248,11 @@ class Enemy : public BaseObject {
     Vector3 acceleration_{};
     Player *target_ = nullptr;
 
+    int strafeDirection_ = 1;
+
     float HP_ = 100.0f;
     float maxHP_ = 100.0f;
     float damage_ = 0.0f;
-    bool isGuarding_ = false; // ガード状態
 
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;
@@ -264,6 +267,7 @@ class Enemy : public BaseObject {
     bool started_ = false;
     bool isPause_ = false;
     bool drawShadow_ = true;
+    bool isGuarding_ = false; // ガード状態
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;

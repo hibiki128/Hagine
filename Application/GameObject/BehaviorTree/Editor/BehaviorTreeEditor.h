@@ -15,6 +15,9 @@ enum class EditorNodeType {
     ConditionPlayerClose,
     ConditionHealthLow,
     ActionApproach,
+    ActionDash,    
+    ActionStrafe,  
+    ActionRetreat, 
     ActionAttack
 };
 
@@ -28,7 +31,8 @@ struct EditorNode {
 
     // パラメータ
     float Parameter = 0.0f;
-    float Parameter2 = 0.0f; // ★追加: 2つ目のパラメータ(最大距離など)
+    float Parameter2 = 0.0f;
+    float Parameter3 = 0.0f;
 
     EditorNode(int id, const std::string &title, EditorNodeType type);
 };

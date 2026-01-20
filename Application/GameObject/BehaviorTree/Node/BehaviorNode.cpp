@@ -1,6 +1,6 @@
 #include "BehaviorNode.h"
 #include <iostream>
-// 環境に合わせてパスを修正してください
+
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
 
@@ -78,19 +78,58 @@ NodeStatus RunActionNode::OnUpdate() {
     return NodeStatus::Success;
 }
 
-NodeStatus EnemyApproachNode::OnUpdate() {
+void TimedActionNode::OnEnter() {
+    m_CurrentTimer = 0.0f;
+    // ランダムな実行時間を決定
+    m_TargetDuration = Random::Range(m_MinTime, m_MaxTime);
+    // 速度をセット (Enemyポインタがあれば)
+    if (m_Enemy) {
+        m_Enemy->SetMoveSpeed(m_Speed);
+        SetupAction(); // 各派生クラスごとの初期化（方向決めなど）
+    }
+}
+
+NodeStatus TimedActionNode::OnUpdate() {
     if (!m_Enemy || !m_Player)
         return NodeStatus::Failure;
-    m_Enemy->MoveToTarget(m_Player->GetWorldPosition());
 
-    // 接近完了判定 (例: 2m以内)
-    float dist = (m_Enemy->GetWorldPosition() - m_Player->GetWorldPosition()).Length();
-    if (dist <= 2.0f)
-        return NodeStatus::Success;
+    // 具体的な行動を実行
+    ExecuteAction();
 
+    // 時間経過チェック (60fps想定)
+    m_CurrentTimer += 1.0f / 60.0f;
+    if (m_CurrentTimer >= m_TargetDuration) {
+        return NodeStatus::Success; // 指定時間動いたら完了
+    }
     return NodeStatus::Running;
 }
 
+// 通常接近 & 高速接近 (中身は同じMoveToTargetだが、速度設定が異なる)
+void EnemyApproachNode::ExecuteAction() {
+    m_Enemy->MoveToTarget(m_Player->GetWorldPosition());
+}
+
+void EnemyDashNode::ExecuteAction() {
+    m_Enemy->MoveToTarget(m_Player->GetWorldPosition());
+}
+
+// 左右移動
+void EnemyStrafeNode::SetupAction() {
+    // 開始時に左右どちらに行くかランダムで決める
+    int dir = (Random::Range(0, 1) == 0) ? -1 : 1;
+    m_Enemy->SetStrafeDirection(dir);
+}
+
+void EnemyStrafeNode::ExecuteAction() {
+    m_Enemy->MoveStrafe();
+}
+
+// 後退
+void EnemyRetreatNode::ExecuteAction() {
+    m_Enemy->MoveRetreat();
+}
+
+// 攻撃 (既存)
 NodeStatus EnemyAttackNode::OnUpdate() {
     if (!m_Enemy)
         return NodeStatus::Failure;

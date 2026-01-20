@@ -23,11 +23,30 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
     InputPinID = id * 10 + 1;
     OutputPinID = id * 10 + 2;
 
+    // デフォルト値設定
     if (type == EditorNodeType::ConditionPlayerClose) {
-        Parameter = 0.0f;   // 最小距離
-        Parameter2 = 10.0f; // 最大距離 (デフォルト10m)
+        Parameter = 0.0f;   // Min Dist
+        Parameter2 = 10.0f; // Max Dist
     } else if (type == EditorNodeType::ConditionHealthLow) {
         Parameter = 0.3f;
+    }
+    // 移動系ノードのデフォルト値
+    else if (type == EditorNodeType::ActionApproach) {
+        Parameter = 1.0f;  // Min Time
+        Parameter2 = 3.0f; // Max Time
+        Parameter3 = 0.1f; // Speed (通常)
+    } else if (type == EditorNodeType::ActionDash) {
+        Parameter = 0.5f;  // Min Time
+        Parameter2 = 1.5f; // Max Time
+        Parameter3 = 0.3f; // Speed (高速)
+    } else if (type == EditorNodeType::ActionStrafe) {
+        Parameter = 1.0f;
+        Parameter2 = 2.0f;
+        Parameter3 = 0.08f;
+    } else if (type == EditorNodeType::ActionRetreat) {
+        Parameter = 1.0f;
+        Parameter2 = 2.0f;
+        Parameter3 = 0.15f;
     }
 }
 
@@ -183,22 +202,49 @@ void BehaviorTreeEditor::OnImGuiRender() {
         ed::EndPin();
 
         // ★修正: パラメータUI
+        ImGui::PushItemWidth(80);
+
         if (node.Type == EditorNodeType::ConditionPlayerClose) {
-            ImGui::PushItemWidth(80);
-            ImGui::Text("Min:");
+            ImGui::Text("Min Dist");
             ImGui::SameLine();
-            ImGui::DragFloat("##min", &node.Parameter, 0.1f, 0.0f, 100.0f, "%.1f");
-            ImGui::Text("Max:");
+            ImGui::DragFloat("##min", &node.Parameter, 0.1f, 0.0f, 100.0f, "%.1fm");
+            ImGui::Text("Max Dist");
             ImGui::SameLine();
-            ImGui::DragFloat("##max", &node.Parameter2, 0.1f, 0.0f, 100.0f, "%.1f");
-            ImGui::PopItemWidth();
+            ImGui::DragFloat("##max", &node.Parameter2, 0.1f, 0.0f, 100.0f, "%.1fm");
         } else if (node.Type == EditorNodeType::ConditionHealthLow) {
-            ImGui::PushItemWidth(80);
-            ImGui::DragFloat("%", &node.Parameter, 0.01f, 0.0f, 1.0f, "%.2f");
-            ImGui::PopItemWidth();
+            ImGui::Text("HP Ratio");
+            ImGui::SameLine();
+            ImGui::DragFloat("##hp", &node.Parameter, 0.01f, 0.0f, 1.0f, "%.2f");
+        }
+        // 移動系アクションのパラメータ (Time Min/Max, Speed)
+        else if (node.Type == EditorNodeType::ActionApproach ||
+                 node.Type == EditorNodeType::ActionDash ||
+                 node.Type == EditorNodeType::ActionStrafe ||
+                 node.Type == EditorNodeType::ActionRetreat) {
+
+            ImGui::Text("Time Min");
+            ImGui::SameLine();
+            ImGui::DragFloat("##tmin", &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs");
+            ImGui::Text("Time Max");
+            ImGui::SameLine();
+            ImGui::DragFloat("##tmax", &node.Parameter2, 0.1f, 0.0f, 10.0f, "%.1fs");
+            ImGui::Text("Speed");
+            ImGui::SameLine();
+            ImGui::DragFloat("##spd", &node.Parameter3, 0.01f, 0.0f, 5.0f, "%.2f");
         }
 
-        bool isLeaf = (node.Type == EditorNodeType::ActionRun || node.Type == EditorNodeType::ConditionPlayerClose || node.Type == EditorNodeType::ConditionHealthLow || node.Type == EditorNodeType::ActionApproach || node.Type == EditorNodeType::ActionAttack);
+        ImGui::PopItemWidth();
+
+        // Outピン表示判定
+        bool isLeaf = (node.Type == EditorNodeType::ActionRun ||
+                       node.Type == EditorNodeType::ConditionPlayerClose ||
+                       node.Type == EditorNodeType::ConditionHealthLow ||
+                       node.Type == EditorNodeType::ActionApproach ||
+                       node.Type == EditorNodeType::ActionDash ||
+                       node.Type == EditorNodeType::ActionStrafe ||
+                       node.Type == EditorNodeType::ActionRetreat ||
+                       node.Type == EditorNodeType::ActionAttack);
+
         if (!isLeaf) {
             ImGui::SameLine();
             ed::BeginPin(node.OutputPinID, ed::PinKind::Output);
@@ -206,6 +252,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
             ed::EndPin();
         }
         ed::EndNode();
+
         if (showHighlight)
             ed::PopStyleColor(status == NodeStatus::Running ? 2 : 1);
     }
@@ -242,12 +289,17 @@ void BehaviorTreeEditor::OnImGuiRender() {
         if (ImGui::MenuItem("Check: Health Low"))
             CreateNode("Check HP", EditorNodeType::ConditionHealthLow);
         ImGui::Separator();
-        if (ImGui::MenuItem("Action: Approach"))
+        if (ImGui::MenuItem("Act: Approach"))
             CreateNode("Approach", EditorNodeType::ActionApproach);
-        if (ImGui::MenuItem("Action: Attack"))
+        if (ImGui::MenuItem("Act: Dash"))
+            CreateNode("Dash", EditorNodeType::ActionDash);
+        if (ImGui::MenuItem("Act: Strafe"))
+            CreateNode("Strafe", EditorNodeType::ActionStrafe);
+        if (ImGui::MenuItem("Act: Retreat"))
+            CreateNode("Retreat", EditorNodeType::ActionRetreat);
+
+        if (ImGui::MenuItem("Act: Attack"))
             CreateNode("Attack", EditorNodeType::ActionAttack);
-        if (ImGui::MenuItem("Action: Run (Dummy)"))
-            CreateNode("Run", EditorNodeType::ActionRun);
         ImGui::EndPopup();
     }
     ed::Resume();
@@ -326,16 +378,28 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     case EditorNodeType::ActionRun:
         runtimeNode = std::make_shared<RunActionNode>();
         break;
-    // ★修正: パラメータを2つ渡す
+
     case EditorNodeType::ConditionPlayerClose:
         runtimeNode = std::make_shared<IsPlayerCloseNode>(eNode.Parameter, eNode.Parameter2);
         break;
     case EditorNodeType::ConditionHealthLow:
         runtimeNode = std::make_shared<IsHealthLowNode>(eNode.Parameter);
         break;
+
+    // 移動系 (MinTime, MaxTime, Speed を渡す)
     case EditorNodeType::ActionApproach:
-        runtimeNode = std::make_shared<EnemyApproachNode>();
+        runtimeNode = std::make_shared<EnemyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
         break;
+    case EditorNodeType::ActionDash:
+        runtimeNode = std::make_shared<EnemyDashNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionStrafe:
+        runtimeNode = std::make_shared<EnemyStrafeNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionRetreat:
+        runtimeNode = std::make_shared<EnemyRetreatNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+
     case EditorNodeType::ActionAttack:
         runtimeNode = std::make_shared<EnemyAttackNode>();
         break;
@@ -401,7 +465,8 @@ void BehaviorTreeEditor::SaveTree() {
         n["x"] = pos.x;
         n["y"] = pos.y;
         n["param"] = node.Parameter;
-        n["param2"] = node.Parameter2; // ★追加: 第2パラメータ保存
+        n["param2"] = node.Parameter2;
+        n["param3"] = node.Parameter3;
         nodesJson.push_back(n);
     }
     handler.Save("nodes", nodesJson);
@@ -437,7 +502,8 @@ void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
         float x = n["x"].get<float>();
         float y = n["y"].get<float>();
         float param = n.value("param", 0.0f);
-        float param2 = n.value("param2", 0.0f); // ★追加: 第2パラメータ読込
+        float param2 = n.value("param2", 0.0f);
+        float param3 = n.value("param3", 0.0f);
 
         EditorNode node(id, title, type);
         node.Parameter = param;

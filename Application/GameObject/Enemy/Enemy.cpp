@@ -134,6 +134,27 @@ void Enemy::MoveToTarget(const Vector3 &targetPos) {
     // 向きを変えるなどの処理もここに記述
 }
 
+void Enemy::MoveStrafe() {
+    if (!target_)
+        return;
+
+    Vector3 right = GetRight();
+
+    velocity_ = right * (float)strafeDirection_ * moveSpeed_;
+}
+
+void Enemy::MoveRetreat() {
+    if (!target_)
+        return;
+
+    // ターゲットと逆方向へ
+    Vector3 direction = transform_->translation_ - target_->GetWorldPosition();
+    direction.y = 0;
+    direction = direction.Normalize();
+
+    velocity_ = direction * moveSpeed_;
+}
+
 void Enemy::PerformAttack() {
     // 攻撃ログを出力したり、アニメーションを再生したりする
     Logger::Log("Attack\n");
