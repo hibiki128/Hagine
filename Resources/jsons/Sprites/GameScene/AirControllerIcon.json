@@ -1,26 +1,26 @@
 {
     "anchor": {
-        "x": 0.5,
-        "y": 0.5
+        "x": 0.0,
+        "y": 0.0
     },
     "blendMode": 1,
     "color": {
-        "w": 0.0,
+        "w": 1.0,
         "x": 1.0,
         "y": 1.0,
         "z": 1.0
     },
-    "name": "menuButton",
+    "name": "AirControllerIcon",
     "position": {
-        "x": 1624.0,
-        "y": 946.0
+        "x": 973.0,
+        "y": 232.0
     },
     "rotation": 0.0,
     "size": {
-        "x": 320.0,
-        "y": 64.0
+        "x": 763.75,
+        "y": 576.0
     },
-    "texturePath": "UI/explanation.png",
+    "texturePath": "UI/Controller_AirExplanation.png",
     "uvTransform": [
         [
             1.0,

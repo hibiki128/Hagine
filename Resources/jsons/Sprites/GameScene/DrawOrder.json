@@ -1,7 +1,8 @@
 {
     "sprite_0": "BlackMask",
     "sprite_1": "controllerIcon",
-    "sprite_2": "transition",
+    "sprite_2": "AirControllerIcon",
     "sprite_3": "menuButton",
-    "sprite_count": 4
+    "sprite_4": "transition",
+    "sprite_count": 5
 }

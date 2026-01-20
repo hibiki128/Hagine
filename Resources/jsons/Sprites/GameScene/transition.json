@@ -17,8 +17,8 @@
     },
     "rotation": 0.0,
     "size": {
-        "x": 1760.0,
-        "y": 990.0
+        "x": 1.0,
+        "y": 1.0
     },
     "texturePath": "debug/white1x1.png",
     "uvTransform": [

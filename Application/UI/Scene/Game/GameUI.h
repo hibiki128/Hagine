@@ -13,6 +13,7 @@ class GameUI {
     enum SpriteIndex {
         MenuButton,
         Controller,
+        AirController,
         AttackButton,
         BulletButton,
         BlackMask,
