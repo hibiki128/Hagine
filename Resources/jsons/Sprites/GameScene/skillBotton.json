@@ -1,26 +1,26 @@
 {
     "anchor": {
-        "x": 0.0,
-        "y": 0.0
+        "x": 0.5,
+        "y": 0.5
     },
     "blendMode": 1,
     "color": {
-        "w": 0.9750000238418579,
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
     },
-    "name": "BlackMask",
+    "name": "skillBotton",
     "position": {
-        "x": 0.0,
-        "y": 0.0
+        "x": 880.0,
+        "y": 880.0
     },
     "rotation": 0.0,
     "size": {
-        "x": 2000.0,
-        "y": 2000.0
+        "x": 600.0,
+        "y": 75.0
     },
-    "texturePath": "debug/black1x1.png",
+    "texturePath": "UI/Skill_explanation.png",
     "uvTransform": [
         [
             1.0,

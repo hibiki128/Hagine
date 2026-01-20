@@ -4,5 +4,7 @@
     "sprite_2": "AirControllerIcon",
     "sprite_3": "menuButton",
     "sprite_4": "transition",
-    "sprite_count": 5
+    "sprite_5": "transition",
+    "sprite_6": "skillBotton",
+    "sprite_count": 7
 }
