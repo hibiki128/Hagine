@@ -1,10 +1,10 @@
 #include "BehaviorTreeEditor.h"
 
-// ★修正: includeパス
+// ユーザー様の環境に合わせてパスを調整しています
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
 #include "Input.h"
-#include <ShowFolder/ShowFolder.h> // ★修正
+#include <ShowFolder/ShowFolder.h>
 
 #include <algorithm>
 #include <filesystem>
@@ -27,6 +27,8 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
     if (type == EditorNodeType::ConditionPlayerClose) {
         Parameter = 0.0f;   // Min Dist
         Parameter2 = 10.0f; // Max Dist
+    } else if (type == EditorNodeType::DecoratorWeight) {
+        Parameter = 1.0f;
     } else if (type == EditorNodeType::ConditionHealthLow) {
         Parameter = 0.3f;
     }
@@ -64,8 +66,9 @@ BehaviorTreeEditor::BehaviorTreeEditor() {
 }
 
 BehaviorTreeEditor::~BehaviorTreeEditor() {
-    if (m_Context)
+    if (m_Context) {
         ed::DestroyEditor(m_Context);
+    }
 }
 
 bool BehaviorTreeEditor::IsInputPin(ed::PinId pinId) { return (pinId.Get() % 10) == 1; }
@@ -85,6 +88,7 @@ void BehaviorTreeEditor::ParsePathToFolderAndFile(const std::string &fullPath, s
 // OnImGuiRender
 // ---------------------------------------------------------
 void BehaviorTreeEditor::OnImGuiRender() {
+    // コンテキスト設定を一番最初に行う
     ed::SetCurrentEditor(m_Context);
 
     // --- 上部コントロール ---
@@ -96,11 +100,13 @@ void BehaviorTreeEditor::OnImGuiRender() {
     ImGui::Text(".json");
 
     ImGui::SameLine();
-    if (ImGui::Button("Save"))
+    if (ImGui::Button("Save")) {
         SaveTree();
+    }
     ImGui::SameLine();
-    if (ImGui::Button("Load"))
+    if (ImGui::Button("Load")) {
         m_ShowLoadWindow = true;
+    }
 
     ImGui::SameLine();
     ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
@@ -116,7 +122,6 @@ void BehaviorTreeEditor::OnImGuiRender() {
     if (ImGui::Button("Stop")) {
         m_IsRunning = false;
         m_RuntimeRoot = nullptr;
-        // ★修正: SetVelocityを使用
         if (m_DebugEnemy)
             m_DebugEnemy->SetVelocity({0, 0, 0});
         m_LastResultText = "停止中";
@@ -129,7 +134,6 @@ void BehaviorTreeEditor::OnImGuiRender() {
     // --- ロードウィンドウ ---
     if (m_ShowLoadWindow) {
         ImGui::Begin("Load Behavior Tree", &m_ShowLoadWindow);
-        // ★修正: startPathの変更
         static std::string startPath = "BehaviorTree";
         ShowJsonFile(m_SelectedFileName, startPath);
 
@@ -145,7 +149,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
     ImGui::Spacing();
     ImGui::Separator();
 
-    // --- ステータス更新 ---
+    // --- ステータス更新 (視覚化用) ---
     if (m_IsRunning && m_RuntimeRoot) {
         NodeStatus rootResult = m_RuntimeRoot->Tick();
         if (rootResult == NodeStatus::Success) {
@@ -156,8 +160,9 @@ void BehaviorTreeEditor::OnImGuiRender() {
             m_LastResultColor = ImVec4(1, 0, 0, 1);
         }
         for (auto const &[nodeId, runtimeNode] : m_nodeInstanceMap) {
-            if (runtimeNode->GetStatus() != NodeStatus::Idle)
+            if (runtimeNode->GetStatus() != NodeStatus::Idle) {
                 m_statusTimers[nodeId] = 0.5f;
+            }
         }
     }
     float dt = ImGui::GetIO().DeltaTime;
@@ -173,11 +178,15 @@ void BehaviorTreeEditor::OnImGuiRender() {
     ed::Begin("My Behavior Tree", ImVec2(0, 0));
 
     for (auto &node : m_Nodes) {
+        // ★重要: IDスコープを開始 (同じラベル名の干渉を防ぐ)
+        ImGui::PushID((int)node.ID.Get());
+
         int nodeId = (int)node.ID.Get();
         NodeStatus status = NodeStatus::Idle;
         bool showHighlight = false;
-        if (m_IsRunning && m_nodeInstanceMap.count(nodeId))
+        if (m_IsRunning && m_nodeInstanceMap.count(nodeId)) {
             status = m_nodeInstanceMap[nodeId]->GetStatus();
+        }
         if (status != NodeStatus::Idle || m_statusTimers.count(nodeId)) {
             showHighlight = true;
             if (status == NodeStatus::Idle && m_nodeInstanceMap.count(nodeId))
@@ -188,10 +197,11 @@ void BehaviorTreeEditor::OnImGuiRender() {
             if (status == NodeStatus::Running) {
                 ed::PushStyleColor(ed::StyleColor_NodeBg, ImVec4(0.8f, 0.6f, 0.1f, 1.0f));
                 ed::PushStyleColor(ed::StyleColor_NodeBorder, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
-            } else if (status == NodeStatus::Success)
+            } else if (status == NodeStatus::Success) {
                 ed::PushStyleColor(ed::StyleColor_NodeBg, ImVec4(0.2f, 0.7f, 0.2f, 1.0f));
-            else if (status == NodeStatus::Failure)
+            } else if (status == NodeStatus::Failure) {
                 ed::PushStyleColor(ed::StyleColor_NodeBg, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+            }
         }
 
         ed::BeginNode(node.ID);
@@ -201,7 +211,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
         ImGui::Text("-> In");
         ed::EndPin();
 
-        // ★修正: パラメータUI
+        // --- パラメータUI ---
         ImGui::PushItemWidth(80);
 
         if (node.Type == EditorNodeType::ConditionPlayerClose) {
@@ -231,6 +241,14 @@ void BehaviorTreeEditor::OnImGuiRender() {
             ImGui::Text("Speed");
             ImGui::SameLine();
             ImGui::DragFloat("##spd", &node.Parameter3, 0.01f, 0.0f, 5.0f, "%.2f");
+        } else if (node.Type == EditorNodeType::DecoratorWeight) {
+            ImGui::Text("Weight (0-1)");
+            ImGui::SameLine();
+            // 0.0 ～ 10.0 くらいまで設定できるようにしておく
+            ImGui::DragFloat("##weight", &node.Parameter, 0.05f, 0.0f, 10.0f, "%.2f");
+
+            // わかりやすく % 表記も出す場合
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "(%.0f%%)", node.Parameter * 100.0f);
         }
 
         ImGui::PopItemWidth();
@@ -253,19 +271,26 @@ void BehaviorTreeEditor::OnImGuiRender() {
         }
         ed::EndNode();
 
-        if (showHighlight)
+        if (showHighlight) {
             ed::PopStyleColor(status == NodeStatus::Running ? 2 : 1);
+        }
+
+        // ★重要: IDスコープを閉じる
+        ImGui::PopID();
     }
 
-    for (auto &link : m_Links)
+    for (auto &link : m_Links) {
         ed::Link(link.ID, link.StartPinID, link.EndPinID);
+    }
 
     static ed::LinkId contextLinkId;
-    if (ed::ShowLinkContextMenu(&contextLinkId))
+    if (ed::ShowLinkContextMenu(&contextLinkId)) {
         ImGui::OpenPopup("LinkContextMenu");
+    }
     if (ImGui::BeginPopup("LinkContextMenu")) {
-        if (ImGui::MenuItem("Delete Link"))
+        if (ImGui::MenuItem("Delete Link")) {
             ed::DeleteLink(contextLinkId);
+        }
         ImGui::EndPopup();
     }
 
@@ -283,6 +308,11 @@ void BehaviorTreeEditor::OnImGuiRender() {
             CreateNode("Sequence", EditorNodeType::Sequence);
         if (ImGui::MenuItem("Selector"))
             CreateNode("Selector", EditorNodeType::Selector);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Random Selector"))
+            CreateNode("Random Sel", EditorNodeType::SelectorRandom);
+        if (ImGui::MenuItem("Weight (Wrapper)"))
+            CreateNode("Weight", EditorNodeType::DecoratorWeight);
         ImGui::Separator();
         if (ImGui::MenuItem("Check: Range"))
             CreateNode("Check Dist", EditorNodeType::ConditionPlayerClose);
@@ -314,10 +344,11 @@ void BehaviorTreeEditor::HandleCreateAction() {
     if (ed::BeginCreate()) {
         ed::PinId startPinId, endPinId;
         if (ed::QueryNewLink(&startPinId, &endPinId)) {
-            if (IsInputPin(startPinId) == IsInputPin(endPinId))
+            if (IsInputPin(startPinId) == IsInputPin(endPinId)) {
                 ed::RejectNewItem(ImColor(255, 0, 0), 2.0f);
-            else if (ed::AcceptNewItem())
+            } else if (ed::AcceptNewItem()) {
                 m_Links.emplace_back(m_NextLinkId++, startPinId, endPinId);
+            }
         }
     }
     ed::EndCreate();
@@ -357,8 +388,9 @@ void BehaviorTreeEditor::BuildAndRunTree() {
     if (rootId == -1)
         return;
     m_RuntimeRoot = BuildNodeRecursive(rootId);
-    if (m_RuntimeRoot)
+    if (m_RuntimeRoot) {
         m_RuntimeRoot->SetContext(m_DebugEnemy, m_DebugPlayer);
+    }
 }
 
 std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId) {
@@ -386,7 +418,6 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         runtimeNode = std::make_shared<IsHealthLowNode>(eNode.Parameter);
         break;
 
-    // 移動系 (MinTime, MaxTime, Speed を渡す)
     case EditorNodeType::ActionApproach:
         runtimeNode = std::make_shared<EnemyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
         break;
@@ -403,13 +434,27 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     case EditorNodeType::ActionAttack:
         runtimeNode = std::make_shared<EnemyAttackNode>();
         break;
+    case EditorNodeType::SelectorRandom:
+        runtimeNode = std::make_shared<RandomSelectorNode>();
+        break;
+    case EditorNodeType::DecoratorWeight:
+        runtimeNode = std::make_shared<WeightDecoratorNode>(eNode.Parameter);
+        break;
     }
 
     if (!runtimeNode)
         return nullptr;
     m_nodeInstanceMap[editorNodeId] = runtimeNode;
 
-    bool isLeaf = (eNode.Type == EditorNodeType::ActionRun || eNode.Type == EditorNodeType::ConditionPlayerClose || eNode.Type == EditorNodeType::ConditionHealthLow || eNode.Type == EditorNodeType::ActionApproach || eNode.Type == EditorNodeType::ActionAttack);
+    bool isLeaf = (eNode.Type == EditorNodeType::ActionRun ||
+                   eNode.Type == EditorNodeType::ConditionPlayerClose ||
+                   eNode.Type == EditorNodeType::ConditionHealthLow ||
+                   eNode.Type == EditorNodeType::ActionApproach ||
+                   eNode.Type == EditorNodeType::ActionDash ||
+                   eNode.Type == EditorNodeType::ActionStrafe ||
+                   eNode.Type == EditorNodeType::ActionRetreat ||
+                   eNode.Type == EditorNodeType::ActionAttack);
+
     if (!isLeaf) {
         int outputPinId = (int)eNode.OutputPinID.Get();
         std::vector<int> childIds = FindChildrenNodeIds(outputPinId);
@@ -466,7 +511,7 @@ void BehaviorTreeEditor::SaveTree() {
         n["y"] = pos.y;
         n["param"] = node.Parameter;
         n["param2"] = node.Parameter2;
-        n["param3"] = node.Parameter3;
+        n["param3"] = node.Parameter3; // ★追加: パラメータ3保存
         nodesJson.push_back(n);
     }
     handler.Save("nodes", nodesJson);
@@ -503,11 +548,12 @@ void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
         float y = n["y"].get<float>();
         float param = n.value("param", 0.0f);
         float param2 = n.value("param2", 0.0f);
-        float param3 = n.value("param3", 0.0f);
+        float param3 = n.value("param3", 0.0f); // ★追加: パラメータ3読込
 
         EditorNode node(id, title, type);
         node.Parameter = param;
         node.Parameter2 = param2;
+        node.Parameter3 = param3;
         m_Nodes.push_back(node);
         ed::SetNodePosition(node.ID, ImVec2(x, y));
         if (id > maxNodeId)

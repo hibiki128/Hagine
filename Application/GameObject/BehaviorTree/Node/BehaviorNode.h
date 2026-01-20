@@ -1,9 +1,9 @@
 #pragma once
 #include "myMath.h" // 環境に合わせて
 #include <memory>
+#include <random.h>
 #include <string>
 #include <vector>
-#include <random.h>
 
 class Enemy;
 class Player;
@@ -61,7 +61,7 @@ class CompositeNode : public BTNode {
 };
 
 // =========================================================
-// 時間制限付きアクションの基底クラス (便利なので作成)
+// 時間制限付きアクションの基底クラス
 // =========================================================
 class TimedActionNode : public ContextNode {
   public:
@@ -89,6 +89,32 @@ class TimedActionNode : public ContextNode {
     float m_Speed;
     float m_CurrentTimer = 0.0f;
     float m_TargetDuration = 0.0f;
+};
+
+class WeightDecoratorNode : public CompositeNode {
+  public:
+    WeightDecoratorNode(float weight) : m_Weight(weight) {}
+
+    // 実行時は単に子ノード(アクションなど)へパススルーするだけ
+    NodeStatus OnUpdate() override {
+        if (m_Children.empty())
+            return NodeStatus::Failure;
+        return m_Children[0]->Tick();
+    }
+
+    float GetWeight() const { return m_Weight; }
+
+  private:
+    float m_Weight = 1.0f;
+};
+
+class RandomSelectorNode : public CompositeNode {
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    int m_SelectedChildIndex = -1;
 };
 
 // ---------------------------------------------------------

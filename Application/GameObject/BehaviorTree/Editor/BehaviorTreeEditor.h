@@ -11,6 +11,8 @@
 enum class EditorNodeType {
     Sequence,
     Selector,
+    SelectorRandom,
+    DecoratorWeight,
     ActionRun,
     ConditionPlayerClose,
     ConditionHealthLow,

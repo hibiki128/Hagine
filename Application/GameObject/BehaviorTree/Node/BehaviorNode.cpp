@@ -164,3 +164,65 @@ NodeStatus IsHealthLowNode::OnUpdate() {
     // if (max > 0 && (current / max) <= m_ThresholdPercentage) return NodeStatus::Success;
     return NodeStatus::Failure;
 }
+
+void RandomSelectorNode::OnEnter() {
+    m_SelectedChildIndex = -1;
+    if (m_Children.empty())
+        return;
+
+    // 1. 全ての子ノードの重み合計を計算する
+    float totalWeight = 0.0f;
+    std::vector<float> weights;
+
+    for (const auto &child : m_Children) {
+        float w = 1.0f; // デフォルトの重み
+
+        // もし子が WeightDecoratorNode なら、その設定値を採用
+        // dynamic_pointer_cast で型を確認する
+        auto weightNode = std::dynamic_pointer_cast<WeightDecoratorNode>(child);
+        if (weightNode) {
+            w = weightNode->GetWeight();
+        }
+
+        // 重みが0未満にならないようにケア
+        if (w < 0.0f)
+            w = 0.0f;
+
+        weights.push_back(w);
+        totalWeight += w;
+    }
+
+    // 2. 乱数で選択する
+    // ランダムな値 (0 ～ totalWeight) を取得
+    // ※ myMath.h や random.h の仕様に合わせて調整してください。
+    //   ここでは Random::Range(min, max) がある前提で書きます。
+    float randomValue = Random::Range(0.0f, totalWeight);
+
+    // 3. どのノードに当たったか判定
+    float currentSum = 0.0f;
+    for (int i = 0; i < weights.size(); ++i) {
+        currentSum += weights[i];
+        if (randomValue <= currentSum) {
+            m_SelectedChildIndex = i;
+            break;
+        }
+    }
+
+    // 計算誤差などで決まらなかった場合は最後の子にする
+    if (m_SelectedChildIndex == -1 && !m_Children.empty()) {
+        m_SelectedChildIndex = (int)m_Children.size() - 1;
+    }
+}
+
+NodeStatus RandomSelectorNode::OnUpdate() {
+    // 選択された子ノードだけを実行する
+    if (m_SelectedChildIndex < 0 || m_SelectedChildIndex >= m_Children.size()) {
+        return NodeStatus::Failure;
+    }
+
+    NodeStatus result = m_Children[m_SelectedChildIndex]->Tick();
+
+    // 実行中ならRunningを返し、終了(Success/Failure)したらそのまま結果を返す
+    // Sequenceのように「次へ」とは行かず、今回はこれだけで終わり
+    return result;
+}
