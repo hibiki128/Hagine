@@ -10,7 +10,7 @@ void GameUI::Initialize() {
     sprites_[Controller] = SpriteManager::GetInstance()->GetSprite("controllerIcon");
     sprites_[BlackMask] = SpriteManager::GetInstance()->GetSprite("BlackMask");
     sprites_[AirController] = SpriteManager::GetInstance()->GetSprite("AirControllerIcon");
-    sprites_[SkillBottom] = SpriteManager::GetInstance()->GetSprite("skillButton");
+    sprites_[SkillBotton] = SpriteManager::GetInstance()->GetSprite("skillButton");
     // sprites_[AttackButton] = SpriteManager::GetInstance()->GetSprite("attackButton");
     // sprites_[BulletButton] = SpriteManager::GetInstance()->GetSprite("bulletButton");
 }
@@ -34,13 +34,13 @@ void GameUI::Update() {
         sprites_[BlackMask]->sprite->SetAlpha(0.975f);
         sprites_[Controller]->sprite->SetAlpha(1.0f);
         sprites_[AirController]->sprite->SetAlpha(1.0f);
-        sprites_[SkillBottom]->sprite->SetAlpha(1.0f);
+        sprites_[SkillBotton]->sprite->SetAlpha(1.0f);
         sprites_[MenuButton]->sprite->SetAlpha(0.0f);
     } else {
         sprites_[BlackMask]->sprite->SetAlpha(0.0f);
         sprites_[Controller]->sprite->SetAlpha(0.0f);
         sprites_[AirController]->sprite->SetAlpha(0.0f);
-        sprites_[SkillBottom]->sprite->SetAlpha(0.0f);
+        sprites_[SkillBotton]->sprite->SetAlpha(0.0f);
         sprites_[MenuButton]->sprite->SetAlpha(1.0f);
     }
 }
