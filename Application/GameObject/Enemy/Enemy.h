@@ -168,7 +168,7 @@ class Enemy : public BaseObject {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // 初期化定数
@@ -269,7 +269,7 @@ class Enemy : public BaseObject {
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
     std::unique_ptr<ParticleEmitter> hitEmitter_;
-    std::unique_ptr<Shake> chageShake_;
+    std::unique_ptr<Shake> chargeShake_;
 
     bool isDamageReact_ = false;       // リアクション中かどうか
     float damageReactTimer_ = 0.0f;    // 経過時間

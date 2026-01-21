@@ -43,7 +43,7 @@ void Enemy::Init(const std::string objectName) {
     shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(kShadowRotationDegrees), kRotationZero, kRotationZero));
     shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
-    chageShake_ = std::make_unique<Shake>();
+    chargeShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
     // ビヘイビアツリーの初期化
     InitializeBehaviorTree();
@@ -92,7 +92,7 @@ void Enemy::Update() {
         }
 
         UpdateShadowScale();
-        chageShake_->Update();
+        chargeShake_->Update();
 
         if (isDamageReact_) {
             damageReactTimer_ += Frame::DeltaTime();
@@ -269,7 +269,7 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
         hitEmitter_->UpdateOnce();
     }
     if (other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
-        chageShake_->StartShake();
+        chargeShake_->StartShake();
     }
 
     // ダメージリアクション開始
@@ -432,5 +432,5 @@ Vector3 Enemy::GetPositionBelow(float distance) const {
 }
 
 void Enemy::SetVp(ViewProjection *vp) {
-    chageShake_->Initialize(vp, "chagehit");
+    chargeShake_->Initialize(vp, "chargehit");
 }
