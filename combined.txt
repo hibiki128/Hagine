@@ -3880,7 +3880,7 @@ void Enemy::Init(const std::string objectName) {
     shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(kShadowRotationDegrees), kRotationZero, kRotationZero));
     shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
-    chageShake_ = std::make_unique<Shake>();
+    chargeShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
     // ビヘイビアツリーの初期化
     InitializeBehaviorTree();
@@ -3929,7 +3929,7 @@ void Enemy::Update() {
         }
 
         UpdateShadowScale();
-        chageShake_->Update();
+        chargeShake_->Update();
 
         if (isDamageReact_) {
             damageReactTimer_ += Frame::DeltaTime();
@@ -4106,7 +4106,7 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
         hitEmitter_->UpdateOnce();
     }
     if (other->GetTag() == "PlayerChargeBullet" || other->GetTag() == "Makan") {
-        chageShake_->StartShake();
+        chargeShake_->StartShake();
     }
 
     // ダメージリアクション開始
@@ -4269,7 +4269,7 @@ Vector3 Enemy::GetPositionBelow(float distance) const {
 }
 
 void Enemy::SetVp(ViewProjection *vp) {
-    chageShake_->Initialize(vp, "chagehit");
+    chargeShake_->Initialize(vp, "chargehit");
 }
 
 ============================================================
@@ -4445,7 +4445,7 @@ class Enemy : public BaseObject {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // 初期化定数
@@ -4546,7 +4546,7 @@ class Enemy : public BaseObject {
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
     std::unique_ptr<ParticleEmitter> hitEmitter_;
-    std::unique_ptr<Shake> chageShake_;
+    std::unique_ptr<Shake> chargeShake_;
 
     bool isDamageReact_ = false;       // リアクション中かどうか
     float damageReactTimer_ = 0.0f;    // 経過時間
@@ -11167,6 +11167,8 @@ void GameUI::Initialize() {
     sprites_[MenuButton] = SpriteManager::GetInstance()->GetSprite("menuButton");
     sprites_[Controller] = SpriteManager::GetInstance()->GetSprite("controllerIcon");
     sprites_[BlackMask] = SpriteManager::GetInstance()->GetSprite("BlackMask");
+    sprites_[AirController] = SpriteManager::GetInstance()->GetSprite("AirControllerIcon");
+    sprites_[SkillBotton] = SpriteManager::GetInstance()->GetSprite("skillButton");
     // sprites_[AttackButton] = SpriteManager::GetInstance()->GetSprite("attackButton");
     // sprites_[BulletButton] = SpriteManager::GetInstance()->GetSprite("bulletButton");
 }
@@ -11187,12 +11189,16 @@ void GameUI::Update() {
     }
 
     if (isPause_) {
-        sprites_[BlackMask]->sprite->SetAlpha(0.8f);
+        sprites_[BlackMask]->sprite->SetAlpha(0.975f);
         sprites_[Controller]->sprite->SetAlpha(1.0f);
+        sprites_[AirController]->sprite->SetAlpha(1.0f);
+        sprites_[SkillBotton]->sprite->SetAlpha(1.0f);
         sprites_[MenuButton]->sprite->SetAlpha(0.0f);
     } else {
         sprites_[BlackMask]->sprite->SetAlpha(0.0f);
         sprites_[Controller]->sprite->SetAlpha(0.0f);
+        sprites_[AirController]->sprite->SetAlpha(0.0f);
+        sprites_[SkillBotton]->sprite->SetAlpha(0.0f);
         sprites_[MenuButton]->sprite->SetAlpha(1.0f);
     }
 }
@@ -11217,7 +11223,9 @@ class GameUI {
 
     enum SpriteIndex {
         MenuButton,
+        SkillBotton,
         Controller,
+        AirController,
         AttackButton,
         BulletButton,
         BlackMask,
