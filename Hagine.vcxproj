@@ -243,8 +243,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <None Include=".editorconfig" />
     <None Include=".gitattributes" />
     <None Include=".gitignore" />
-    <None Include="imgui_editor.ini" />
-    <None Include="imgui_game.ini" />
     <None Include="README.md" />
     <None Include="resources\shaders\OffScreen\FullScreen.hlsli">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
