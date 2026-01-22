@@ -46,9 +46,6 @@ void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCo
     case ShaderMode::kPixelate:
         commandList->SetGraphicsRootConstantBufferView(1, pixelateResource->GetGPUVirtualAddress());
         break;
-    case ShaderMode::kTransition:
-        commandList->SetGraphicsRootConstantBufferView(1, transitionResource->GetGPUVirtualAddress());
-        break;
     }
 }
 
@@ -251,14 +248,6 @@ void PostEffectParameters::DrawParameterUI(ShaderMode mode) {
             ImGui::DragFloat("ブロックサイズ", &pixelateData->blockSize, 0.001f, 0.001f, 1.0f);
             ImGui::DragFloat("中心X", &pixelateData->centerX, 0.01f, 0.0f, 1.0f);
             ImGui::DragFloat("中心Y", &pixelateData->centerY,0.01f, 0.0f, 1.0f);
-        }
-        break;
-    case ShaderMode::kTransition:
-        if (transitionData) {
-            ImGui::SliderFloat("進行度", &transitionData->progress, 0.0f, 1.0f, "%.2f");
-            ImGui::DragFloat("切れ込みスピード", &transitionData->splitSpeed, 0.01f, 0.0f, 1.0f);
-            ImGui::DragFloat("スライドスピード", &transitionData->slideSpeed, 0.01f, 0.0f, 1.0f);
-            ImGui::DragFloat("切れ込み幅", &transitionData->splitWidth, 0.001f, 0.0f, 0.5f);
         }
         break;
     }
