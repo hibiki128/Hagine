@@ -13,8 +13,8 @@ namespace Hagine::Graphics::Animation {
 /// アニメーション補間の状態を管理する構造体
 /// </summary>
 struct AnimationBlendState {
-    Animation fromAnimation;        // 補間元のアニメーション
-    Animation toAnimation;          // 補間先のアニメーション
+    AnimationData fromAnimation;    // 補間元のアニメーション
+    AnimationData toAnimation;      // 補間先のアニメーション
     float blendFactor = 0.0f;       // 補間係数 (0.0 ~ 1.0)
     float blendDuration = 0.5f;     // 補間にかける時間
     float blendTimer = 0.0f;        // 補間の経過時間
@@ -53,7 +53,7 @@ class Animator {
     /// </summary>
     /// <param name="newAnimation">切り替え先のアニメーション</param>
     /// <param name="blendDuration">補間時間（秒）</param>
-    void BlendToAnimation(const Animation &newAnimation, float blendDuration = 0.5f);
+    void BlendToAnimation(const AnimationData &newAnimation, float blendDuration = 0.5f);
 
     /// <summary>
     /// アニメーション切り替え（ファイルパス指定）
@@ -73,7 +73,7 @@ class Animator {
     /// 現在のアニメーションデータを取得（補間済み）
     /// </summary>
     /// <returns>Animation: 補間済みアニメーションデータ</returns>
-    Animation GetCurrentAnimation() const;
+    AnimationData GetCurrentAnimation() const;
 
     /// <summary>
     /// 現在のファイル情報を更新
@@ -89,32 +89,32 @@ class Animator {
     std::map<std::string, NodeAnimation> GetBlendedNodeAnimations() const;
 
     /// <summary>
-    /// 値の計算(Vector3)
+    /// 値の計算(Math::Vector3)
     /// </summary>
     /// <param name="keyframes">キーフレーム配列</param>
     /// <param name="time">時間</param>
-    /// <returns>Vector3: 計算された値</returns>
-    static Vector3 CalculateValue(const std::vector<KeyframeVector3> &keyframes, float time);
+    /// <returns>Math::Vector3: 計算された値</returns>
+    static Math::Vector3 CalculateValue(const std::vector<KeyframeVector3> &keyframes, float time);
 
     /// <summary>
-    /// 値の計算(Quaternion)
+    /// 値の計算(Math::Quaternion)
     /// </summary>
     /// <param name="keyframes">キーフレーム配列</param>
     /// <param name="time">時間</param>
-    /// <returns>Quaternion: 計算された値</returns>
-    static Quaternion CalculateValue(const std::vector<KeyframeQuaternion> &keyframes, float time);
+    /// <returns>Math::Quaternion: 計算された値</returns>
+    static Math::Quaternion CalculateValue(const std::vector<KeyframeQuaternion> &keyframes, float time);
 
     /// <summary>
     /// Getter
     /// </summary>
-    Animation GetAnimation() const { return currentAnimation_; }
+    AnimationData GetAnimation() const { return currentAnimation_; }
     bool IsFinish() const { return isFinish_; }
     bool IsFinished() const { return isFinish_; }
     bool IsPlaying() const { return isAnimation_; }
     float GetAnimationTime() const { return animationTime; }
     std::string GetCurrentFilename() const { return filename_; }
     std::string GetCurrentDirectoryPath() const { return directorypath_; }
-    Matrix4x4 GetLocalMatrix() { return localMatrix; }
+    Math::Matrix4x4 GetLocalMatrix() { return localMatrix; }
 
     /// <summary>
     /// Setter
@@ -134,7 +134,7 @@ class Animator {
     /// <param name="directoryPath">ディレクトリパス</param>
     /// <param name="filename">ファイル名</param>
     /// <returns>Animation: 読み込んだアニメーションデータ</returns>
-    Animation LoadAnimationFile(const std::string &directoryPath, const std::string &filename);
+    AnimationData LoadAnimationFile(const std::string &directoryPath, const std::string &filename);
 
     /// <summary>
     /// 補間更新処理
@@ -149,29 +149,29 @@ class Animator {
     void UpdateSingle(bool loop);
 
     /// <summary>
-    /// 補間された値を計算（Vector3用）
+    /// 補間された値を計算（Math::Vector3用）
     /// </summary>
     /// <param name="fromKeyframes">補間元のキーフレーム</param>
     /// <param name="toKeyframes">補間先のキーフレーム</param>
     /// <param name="fromTime">補間元の時間</param>
     /// <param name="toTime">補間先の時間</param>
     /// <param name="blendFactor">補間係数</param>
-    /// <returns>Vector3: 補間された値</returns>
-    Vector3 CalculateBlendedValue(
+    /// <returns>Math::Vector3: 補間された値</returns>
+    Math::Vector3 CalculateBlendedValue(
         const std::vector<KeyframeVector3> &fromKeyframes,
         const std::vector<KeyframeVector3> &toKeyframes,
         float fromTime, float toTime, float blendFactor) const;
 
     /// <summary>
-    /// 補間された値を計算（Quaternion用）
+    /// 補間された値を計算（Math::Quaternion用）
     /// </summary>
     /// <param name="fromKeyframes">補間元のキーフレーム</param>
     /// <param name="toKeyframes">補間先のキーフレーム</param>
     /// <param name="fromTime">補間元の時間</param>
     /// <param name="toTime">補間先の時間</param>
     /// <param name="blendFactor">補間係数</param>
-    /// <returns>Quaternion: 補間された値</returns>
-    Quaternion CalculateBlendedValue(
+    /// <returns>Math::Quaternion: 補間された値</returns>
+    Math::Quaternion CalculateBlendedValue(
         const std::vector<KeyframeQuaternion> &fromKeyframes,
         const std::vector<KeyframeQuaternion> &toKeyframes,
         float fromTime, float toTime, float blendFactor) const;
@@ -184,14 +184,14 @@ class Animator {
     std::string filename_;           // 現在のファイル名
     std::string directorypath_;      // 現在のディレクトリパス
     float animationTime = 0.0f;      // アニメーション再生時間
-    Animation currentAnimation_;     // 現在のアニメーション
+    AnimationData currentAnimation_; // 現在のアニメーション
     AnimationBlendState blendState_; // 補間状態
-    Matrix4x4 localMatrix;           // ローカル行列
+    Math::Matrix4x4 localMatrix;           // ローカル行列
     bool isAnimation_ = true;        // アニメーション再生フラグ
     bool isFinish_ = false;          // アニメーション終了フラグ
     ModelData modelData_;            // モデルデータ
 
-    static std::unordered_map<std::string, Animation> animationCache; // アニメーションキャッシュ
+    static std::unordered_map<std::string, AnimationData> animationCache; // アニメーションキャッシュ
 };
 
 } // namespace Hagine

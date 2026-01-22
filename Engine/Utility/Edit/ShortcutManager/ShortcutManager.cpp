@@ -1,6 +1,8 @@
 #include "ShortcutManager.h"
 #include "Input.h"
 
+using namespace Hagine;
+
 ShortcutManager *ShortcutManager::instance = nullptr;
 
 void ShortcutManager::RegisterShortcut(const std::string &name, BYTE key, std::function<void()> callback) {

@@ -2,7 +2,7 @@
 #include "ParticleCSEditor.h"
 #include <ShowFolder/ShowFolder.h>
 #include <Camera/ViewProjection/ViewProjection.h>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
 ParticleCSEditor *ParticleCSEditor::instance = nullptr;
 
 ParticleCSEditor *ParticleCSEditor::GetInstance() {
@@ -623,4 +623,3 @@ std::vector<std::string> ParticleCSEditor::GetJsonFiles() {
 
     return jsonFiles;
 }
-} // namespace Hagine::Graphics

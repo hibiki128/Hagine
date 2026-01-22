@@ -2,6 +2,11 @@
 #include "myMath.h"
 #include <algorithm>
 
+using namespace Hagine::Collision;
+using namespace Hagine::Math;
+using namespace Hagine::Camera;
+
+
 void CollisionManager::Register(ColliderBase *collider) {
     if (!collider)
         return;
@@ -223,7 +228,7 @@ bool CollisionManager::TestCollision(ColliderBase *a, ColliderBase *b) {
     return false;
 }
 
-void CollisionManager::DebugDraw(const ViewProjection &viewProjection) {
+void CollisionManager::DebugDraw(const Camera::ViewProjection &viewProjection) {
     for (auto &[tag, colliders] : collidersByTag_) {
         for (auto *collider : colliders) {
             collider->DebugDraw(viewProjection);

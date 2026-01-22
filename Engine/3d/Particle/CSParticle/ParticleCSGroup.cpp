@@ -3,7 +3,10 @@
 #include <Graphics/Model/ModelManager.h>
 #include <Line/DrawLine3D.h>
 #include <d3dx12.h>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics; 
+using namespace Hagine::Core;
+using namespace Hagine::Math;
+
 void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
     srvManager_ = SrvManager::GetInstance();
@@ -1058,4 +1061,3 @@ void ParticleCSGroup::DrawImGui() {
     }
 #endif // USE_IMGUI
 }
-} // namespace Hagine::Graphics

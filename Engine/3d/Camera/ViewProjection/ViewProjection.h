@@ -8,15 +8,15 @@
 #include "type/Vector3.h"
 #include "wrl.h"
 
-namespace Hagine::Graphics::Camera {
+namespace Hagine::Camera {
 
 /// <summary>
 /// ビュープロジェクション定数バッファデータ
 /// </summary>
 struct ConstBufferDataViewProjection {
-    Matrix4x4 view;       // ビュー行列
-    Matrix4x4 projection; // 射影行列
-    Vector3 cameraPos;    // カメラ座標
+    Math::Matrix4x4 view;       // ビュー行列
+    Math::Matrix4x4 projection; // 射影行列
+    Math::Vector3 cameraPos;    // カメラ座標
 };
 
 /// <summary>
@@ -74,7 +74,7 @@ class ViewProjection {
     /// <param name="easeType">イージングタイプ</param>
     /// <param name="jsonName">目標値のJSON名</param>
     /// <param name="duration">イージング時間</param>
-    void EaseCameraMove(EasingType easeType, const std::string &jsonName, float duration = 2.0f);
+    void EaseCameraMove(Math::EasingType easeType, const std::string &jsonName, float duration = 2.0f);
 
     /// <summary>
     /// デバッグ情報表示
@@ -93,16 +93,16 @@ class ViewProjection {
     /// ===================================================
 
     bool isUseQuaternion_ = false;                                                  // 回転モード（trueならクォータニオン、falseならオイラー角）
-    Quaternion quateRotation_ = Quaternion::IdentityQuaternion();                   // クォータニオン回転
-    Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                                    // オイラー角回転（ラジアン）
-    Vector3 translation_ = {0.0f, 0.0f, -10.0f};                                    // カメラ座標
+    Math::Quaternion quateRotation_ = Math::Quaternion::IdentityQuaternion();             // クォータニオン回転
+    Math::Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                                    // オイラー角回転（ラジアン）
+    Math::Vector3 translation_ = {0.0f, 0.0f, -10.0f};                                    // カメラ座標
     float fovAngleY = 45.0f * std::numbers::pi_v<float> / 180.0f;                   // 垂直方向視野角
-    float aspectRatio = float(WinApp::kClientWidth) / float(WinApp::kClientHeight); // アスペクト比
+    float aspectRatio = float(Core::WinApp::kClientWidth) / float(Core::WinApp::kClientHeight); // アスペクト比
     float nearZ = 0.1f;                                                             // 深度限界（手前側）
     float farZ = 1000.0f;                                                           // 深度限界（奥側）
-    Matrix4x4 matView_{};                                                           // ビュー行列
-    Matrix4x4 matProjection_{};                                                     // 射影行列
-    Matrix4x4 matWorld_{};                                                          // ワールド行列
+    Math::Matrix4x4 matView_{};                                                     // ビュー行列
+    Math::Matrix4x4 matProjection_{};                                               // 射影行列
+    Math::Matrix4x4 matWorld_{};                                                    // ワールド行列
 
   private:
     /// ===================================================
@@ -130,23 +130,23 @@ class ViewProjection {
     /// private varians
     /// ===================================================
 
-    DirectXCommon *dxCommon_ = nullptr; // DirectX共通クラス
+    Core::DirectXCommon *dxCommon_ = nullptr; // DirectX共通クラス
 
     // イージング関連
     bool isEasing_ = false;                              // イージング中フラグ
     float easingTime_ = 0.0f;                            // イージング経過時間
     float easingDuration_ = 2.0f;                        // イージング時間
-    EasingType currentEasingType_ = EasingType::OutQuad; // イージングタイプ
+    Math::EasingType currentEasingType_ = Math::EasingType::OutQuad; // イージングタイプ
 
     // 開始時の値
-    Vector3 startTranslation_{};           // 開始座標
-    Vector3 startEulerRotation_{};         // 開始オイラー角
-    Quaternion startQuaternionRotation_{}; // 開始クォータニオン
+    Math::Vector3 startTranslation_{};     // 開始座標
+    Math::Vector3 startEulerRotation_{};   // 開始オイラー角
+    Math::Quaternion startQuaternionRotation_{}; // 開始クォータニオン
 
     // 目標値（JSONから読み込み）
-    Vector3 targetTranslation_{};           // 目標座標
-    Vector3 targetEulerRotation_{};         // 目標オイラー角
-    Quaternion targetQuaternionRotation_{}; // 目標クォータニオン
+    Math::Vector3 targetTranslation_{};     // 目標座標
+    Math::Vector3 targetEulerRotation_{};   // 目標オイラー角
+    Math::Quaternion targetQuaternionRotation_{}; // 目標クォータニオン
 
     // 定数バッファ
     Microsoft::WRL::ComPtr<ID3D12Resource> constBuffer_{}; // 定数バッファ

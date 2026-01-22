@@ -65,7 +65,7 @@ class Model {
     /// <param name="color">色配列</param>
     /// <param name="lighting">ライティング有効フラグ</param>
     /// <param name="reflect">反射有効フラグ</param>
-    void Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect);
+    void Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<Transform::ObjColor> &color, bool lighting, bool reflect);
 
     /// <summary>
     /// Getter
@@ -118,7 +118,7 @@ class Model {
     std::string filename_;      // ファイル名
     std::string directorypath_; // ディレクトリパス
     bool isGltf;                // GLTFフォーマットフラグ
-    Matrix4x4 localMatrix;      // ローカル行列
+    Math::Matrix4x4 localMatrix;      // ローカル行列
 
     // マルチメッシュ対応
     std::vector<std::unique_ptr<Mesh>> meshes_; // メッシュ配列

@@ -4,7 +4,7 @@
 #include <numbers>
 #include "Matrix4x4.h"
 namespace Hagine::Math {
-class Quaternion final {
+class Quaternion {
   public:
     float x, y, z, w;
 

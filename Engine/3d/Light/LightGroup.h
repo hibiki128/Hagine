@@ -158,8 +158,8 @@ class LightGroup {
     /// 平行光源データ
     /// </summary>
     struct DirectionLight {
-        Vector4 color;       // ライトの色
-        Vector3 direction;   // ライトの向き
+        Math::Vector4 color;       // ライトの色
+        Math::Vector3 direction;   // ライトの向き
         float intensity;     // 輝度
         int32_t active;      // 有効フラグ
         int32_t HalfLambert; // ハーフランバート使用フラグ
@@ -170,8 +170,8 @@ class LightGroup {
     /// ポイントライトデータ
     /// </summary>
     struct PointLight {
-        Vector4 color;       // ライトの色
-        Vector3 position;    // ライトの位置
+        Math::Vector4 color;       // ライトの色
+        Math::Vector3 position;    // ライトの位置
         float intensity;     // 輝度
         int32_t active;      // 有効フラグ
         float radius;        // 影響半径
@@ -194,10 +194,10 @@ class LightGroup {
     /// スポットライトデータ
     /// </summary>
     struct SpotLight {
-        Vector4 color;       // ライトの色
-        Vector3 position;    // ライトの位置
+        Math::Vector4 color;       // ライトの色
+        Math::Vector3 position;    // ライトの位置
         float intensity;     // 輝度
-        Vector3 direction;   // ライトの向き
+        Math::Vector3 direction;   // ライトの向き
         float distance;      // 照射距離
         float decay;         // 減衰率
         float cosAngle;      // コーン角度のコサイン値
@@ -220,7 +220,7 @@ class LightGroup {
     /// GPU用カメラデータ
     /// </summary>
     struct CameraForGPU {
-        Vector3 worldPosition; // カメラのワールド座標
+        Math::Vector3 worldPosition; // カメラのワールド座標
     };
 
   private:
@@ -230,7 +230,7 @@ class LightGroup {
 
     static LightGroup *instance; // シングルトンインスタンス
 
-    DirectXCommon *dxCommon_; // DirectX共通クラス
+    Core::DirectXCommon *dxCommon_; // DirectX共通クラス
 
     // 平行光源リソース
     Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource; // バッファリソース

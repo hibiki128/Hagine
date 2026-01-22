@@ -2,6 +2,9 @@
 #include "AbstractSceneFactory.h"
 #include "SceneTransition.h"
 #include "memory"
+
+namespace Hagine::Scene {
+
 class SceneManager {
   private:
     static SceneManager *instance;
@@ -95,3 +98,5 @@ class SceneManager {
     float ClaerTime_ = 0.0f;
     float HP_ = 0.0f;
 };
+
+} // namespace Hagine::Scene

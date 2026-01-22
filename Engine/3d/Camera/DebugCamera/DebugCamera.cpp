@@ -6,8 +6,9 @@
 #include "imgui.h"
 #endif // _DEBUG
 #include "algorithm"
-
-namespace Hagine::Graphics::Camera {
+using namespace Hagine::Math;
+using namespace Hagine::Core;
+using namespace Hagine::Camera;
 
 void DebugCamera::Initialize(ViewProjection *viewProjection) {
     viewProjection_ = viewProjection;
@@ -130,8 +131,8 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
 
         if (isUseQuaternion_) {
             // クォータニオンでの回転処理
-            Quaternion yawRotation = Quaternion::FromAxisAngle({0, 1, 0}, deltaX * mouseSensitivity);
-            Quaternion pitchRotation = Quaternion::FromAxisAngle({1, 0, 0}, deltaY * mouseSensitivity);
+            Math::Quaternion yawRotation = Math::Quaternion::FromAxisAngle({0, 1, 0}, deltaX * mouseSensitivity);
+            Math::Quaternion pitchRotation = Math::Quaternion::FromAxisAngle({1, 0, 0}, deltaY * mouseSensitivity);
 
             quateRotation_ = yawRotation * pitchRotation * quateRotation_;
             quateRotation_ = quateRotation_.Normalize();
@@ -148,7 +149,7 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
             cameraRotate.x = std::clamp(cameraRotate.x, -pi_2, pi_2);
 
             // 参考用にクォータニオンも更新
-            quateRotation_ = Quaternion::FromEulerAngles(eulerRotation_);
+            quateRotation_ = Math::Quaternion::FromEulerAngles(eulerRotation_);
         }
 
         clickPosition = currentMousePos;
@@ -223,7 +224,7 @@ void DebugCamera::imgui() {
             }
             if (ImGui::Button("回転リセット", ImVec2(-1, 0))) {
                 eulerRotation_ = {0.0f, 0.0f, 0.0f};
-                quateRotation_ = Quaternion::IdentityQuaternion();
+                quateRotation_ = Math::Quaternion::IdentityQuaternion();
             }
         }
 
@@ -337,4 +338,3 @@ void DebugCamera::imgui() {
     }
 #endif // _DEBUG
 }
-} // namespace Hagine

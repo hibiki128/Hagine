@@ -1,25 +1,27 @@
 #pragma once
 #include "Audio.h"
 #include "Camera/DebugCamera/DebugCamera.h"
+#include "Camera/ViewProjection/ViewProjection.h"
 #include "Input.h"
 #include "Light/LightGroup.h"
+#include "Object/Base/BaseObject.h"
+#include "Object/Base/BaseObjectManager.h"
 #include "Object/Object3dCommon.h"
+#include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleCommon.h"
 #include "Particle/ParticleEditor.h"
-#include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleEmitter.h"
+#include "Sprite.h"
 #include "SpriteCommon.h"
-#include "Camera/ViewProjection/ViewProjection.h"
+#include "SpriteManager.h"
 #include "Transform/WorldTransform.h"
 #include "line/DrawLine3D.h"
-#include"Object/Base/BaseObjectManager.h"
-#include"Sprite.h"
-#include"Object/Base/BaseObject.h"
-#include"SpriteManager.h"
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG
 class SceneManager;
+namespace Hagine::Scene {
+
 class BaseScene {
   public:
     virtual ~BaseScene() = default;
@@ -66,7 +68,7 @@ class BaseScene {
 
     virtual void SetSceneManager(SceneManager *sceneManager) { sceneManager_ = sceneManager; }
 
-    virtual ViewProjection *GetViewProjection() = 0;
+    virtual Graphics::Camera::ViewProjection *GetViewProjection() = 0;
 
   protected:
     // シーンマネージャ
@@ -75,3 +77,4 @@ class BaseScene {
     float ClearTime_ = 0.0f;
     float HP_ = 0.0f;
 };
+} // namespace Hagine::Scene

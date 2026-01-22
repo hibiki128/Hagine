@@ -92,7 +92,7 @@ float LerpShortAngle(float a, float b, float t);
 // 行列から回転成分をオイラー角に変換して取得
 Vector3 GetEulerAnglesFromMatrix(const Matrix4x4 &mat);
 
-Vector3 ScreenTransform(Vector3 worldPos, const Graphics::Camera::ViewProjection &viewProjection);
+Vector3 ScreenTransform(Vector3 worldPos, const Camera::ViewProjection &viewProjection);
 
 float radiansToDegrees(float radians);
 

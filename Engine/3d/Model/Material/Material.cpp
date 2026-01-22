@@ -3,9 +3,11 @@
 #include "fstream"
 #include <Graphics/Srv/SrvManager.h>
 #include <Graphics/Texture/TextureManager.h>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Core;
+using namespace Hagine::Math;
 void Material::Initialize() {
-    dxCommon_ = DirectXCommon::GetInstance();
+    dxCommon_ = Core::DirectXCommon::GetInstance();
     CreateMaterial();
 }
 
@@ -98,4 +100,3 @@ void Material::UpdateGPUData() {
         materialDataGPU_->environmentCoefficient = materialData_.environmentCoefficient;
     }
 }
-} // namespace Hagine::Graphics

@@ -1,5 +1,5 @@
 #include "ParticleCSGroupManager.h"
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
 ParticleCSGroupManager *ParticleCSGroupManager::instance = nullptr;
 
 ParticleCSGroupManager *ParticleCSGroupManager::GetInstance() {
@@ -89,4 +89,3 @@ void ParticleCSGroupManager::AddParticleCSGroup(std::unique_ptr<ParticleCSGroup>
     data->Save("blendMode", particleCSGroup->GetParticleGroupData().blendMode);
     particleGroups_.emplace_back(std::move(particleCSGroup));
 }
-} // namespace Hagine::Graphics

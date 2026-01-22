@@ -20,6 +20,8 @@ enum class BlendMode {
     kScreen,
 };
 
+namespace Hagine::Graphics {
+
 enum class ShaderMode {
     kNone,
     kGray,
@@ -70,7 +72,7 @@ class PipeLineManager {
     /// <summary>
     /// 初期化
     /// </summary>
-    void Initialize(DirectXCommon *dxCommon);
+    void Initialize(Core::DirectXCommon *dxCommon);
 
     /// <summary>
     /// パイプラインの取得
@@ -131,7 +133,6 @@ class PipeLineManager {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateSkyboxRootSignature();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateSkyboxGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
 
-
     // シェーダーモード別のルートシグネチャ作成
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateBaseRootSignature();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateGrayRootSignature();
@@ -147,7 +148,7 @@ class PipeLineManager {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateFocusLineRootSignature();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreatePixelateRootSignature();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateTransitionRootSignature();
-    
+
     // シェーダーモード別のパイプライン作成
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGrayGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
@@ -163,9 +164,9 @@ class PipeLineManager {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateFocusLineGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreatePixelateGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTransitionGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    
+
   private:
-    DirectXCommon *dxCommon_;
+    Core::DirectXCommon *dxCommon_;
 
     // パイプラインとルートシグネチャの格納用マップ
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_;
@@ -179,7 +180,8 @@ class PipeLineManager {
 
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateCommonRootSignature(bool hasCBV);
 
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateFullScreenPostEffectPipeline(const std::wstring& psPath,Microsoft::WRL::ComPtr<ID3D12RootSignature>rootSignature);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateFullScreenPostEffectPipeline(const std::wstring &psPath, Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
 
     D3D12_DEPTH_STENCIL_DESC SettingDepthStencilDesc(bool depth);
 };
+} // namespace Hagine::Graphics

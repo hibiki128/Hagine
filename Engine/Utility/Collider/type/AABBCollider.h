@@ -1,6 +1,8 @@
 #pragma once
 #include "../ColliderBase.h"
 
+namespace Hagine::Collision {
+
 class AABBCollider : public ColliderBase {
   public:
     AABBCollider() = default;
@@ -20,7 +22,7 @@ class AABBCollider : public ColliderBase {
 
     ColliderType GetType() const override { return ColliderType::AABB; }
     void UpdateWorldTransform() override;
-    void DebugDraw(const ViewProjection &viewProjection) override;
+    void DebugDraw(const Camera::ViewProjection &viewProjection) override;
 
     void SaveToJson() override;
     void LoadFromJson() override;
@@ -30,3 +32,4 @@ class AABBCollider : public ColliderBase {
     Vector3 offset_ = {0.0f, 0.0f, 0.0f};
     AABB cachedAABB_;
 };
+} // namespace Hagine::Collision

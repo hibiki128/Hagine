@@ -6,6 +6,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <type/Vector3.h>
+#include <type/Vector2.h>
+#include <type/Vector4.h>
 
 namespace Hagine::Graphics {
 
@@ -13,9 +16,9 @@ namespace Hagine::Graphics {
 /// インスタンス単位でのSRTデータ構造体
 /// </summary>
 struct InstanceSRT {
-    Vector3 scale = {1.0f, 1.0f, 1.0f};       // スケール
-    Vector3 rotation = {0.0f, 0.0f, 0.0f};    // 回転
-    Vector3 translation = {0.0f, 0.0f, 0.0f}; // 移動
+    Math::Vector3 scale = {1.0f, 1.0f, 1.0f};       // スケール
+    Math::Vector3 rotation = {0.0f, 0.0f, 0.0f};    // 回転
+    Math::Vector3 translation = {0.0f, 0.0f, 0.0f}; // 移動
     bool isActive = true;                     // 描画フラグ
 };
 
@@ -23,9 +26,9 @@ struct InstanceSRT {
 /// スプライト情報を管理する構造体
 /// </summary>
 struct SpriteTransform {
-    Vector2 position = {0.0f, 0.0f};
-    Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};
-    Vector2 anchorPoint = {0.0f, 0.0f};
+    Math::Vector2 position = {0.0f, 0.0f};
+    Math::Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};
+    Math::Vector2 anchorPoint = {0.0f, 0.0f};
     bool isFlipX = false;
     bool isFlipY = false;
     uint32_t instanceCount = 1;
@@ -44,8 +47,8 @@ struct SpriteTransform {
     /// <param name="flipX">左右反転</param>
     /// <param name="flipY">上下反転</param>
     /// <param name="count">インスタンス数</param>
-    SpriteTransform(Vector2 pos, Vector4 col = {1.0f, 1.0f, 1.0f, 1.0f},
-                    Vector2 anchor = {0.0f, 0.0f}, bool flipX = false, bool flipY = false, uint32_t count = 1)
+    SpriteTransform(Math::Vector2 pos, Math::Vector4 col = {1.0f, 1.0f, 1.0f, 1.0f},
+                    Math::Vector2 anchor = {0.0f, 0.0f}, bool flipX = false, bool flipY = false, uint32_t count = 1)
         : position(pos), color(col), anchorPoint(anchor), isFlipX(flipX), isFlipY(flipY), instanceCount(count) {}
 };
 
@@ -210,16 +213,16 @@ class SpriteManager {
     /// Setter
     /// </summary>
     void SetInstanceSRT(const std::string &name, uint32_t index, const InstanceSRT &srt);
-    void SetInstanceScale(const std::string &name, uint32_t index, const Vector3 &scale);
-    void SetInstanceRotation(const std::string &name, uint32_t index, const Vector3 &rotation);
-    void SetInstanceTranslation(const std::string &name, uint32_t index, const Vector3 &translation);
+    void SetInstanceScale(const std::string &name, uint32_t index, const Math::Vector3 &scale);
+    void SetInstanceRotation(const std::string &name, uint32_t index, const Math::Vector3 &rotation);
+    void SetInstanceTranslation(const std::string &name, uint32_t index, const Math::Vector3 &translation);
     void SetInstanceActive(const std::string &name, uint32_t index, bool isActive);
     InstanceSRT *GetInstanceSRT(const std::string &name, uint32_t index);
     void SetSpriteVisible(const std::string &name, bool visible);
     void SetSpriteBackMost(const std::string &name, bool isBackMost);
-    void SetSpritePosition(const std::string &name, const Vector2 &position);
-    void SetSpriteSize(const std::string &name, const Vector2 &size);
-    void SetSpriteColor(const std::string &name, const Vector4 &color);
+    void SetSpritePosition(const std::string &name, const Math::Vector2 &position);
+    void SetSpriteSize(const std::string &name, const Math::Vector2 &size);
+    void SetSpriteColor(const std::string &name, const Math::Vector4 &color);
     void SetTextureFilePath(const std::string &name, const std::string &textureFilePath);
     void SetUpdateFunction(const std::string &name, std::function<void(SpriteData &, float)> updateFunc);
 
@@ -251,4 +254,4 @@ class SpriteManager {
     /// </summary>
     void Clear();
 };
-} // namespace Hagine
+} // namespace Hagine Graphics

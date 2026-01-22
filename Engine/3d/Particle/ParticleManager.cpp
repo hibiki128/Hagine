@@ -4,7 +4,9 @@
 #include "Graphics/Texture/TextureManager.h"
 #include <fstream>
 #include <random>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Math;
+
 void ParticleManager::Initialize(SrvManager *srvManager) {
     particleCommon = ParticleCommon::GetInstance();
     srvManager_ = srvManager;
@@ -512,4 +514,3 @@ size_t ParticleManager::GetActiveParticleCount(const std::string &groupName) con
     const auto &particles = it->second->GetParticleGroupData().particles;
     return particles.size();
 }
-} // namespace Hagine::Graphics

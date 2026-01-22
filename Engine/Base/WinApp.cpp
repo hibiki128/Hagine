@@ -5,7 +5,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg
 #endif // USE_IMGUI
 
 #pragma comment(lib, "winmm.lib")
-namespace Hagine::Core {
+using namespace Hagine::Core;
 WinApp *WinApp::instance = nullptr;
 
 // ウィンドウプロシージャ
@@ -145,4 +145,3 @@ void WinApp::ClosedWindow() {
         PostMessage(hwnd, WM_CLOSE, 0, 0);
     }
 }
-} // namespace Hagine::Core

@@ -1,62 +1,63 @@
 #pragma once
 #include "map"
-#include "string"
 #include "memory"
+#include "string"
 #include <Graphics/Srv/SrvManager.h>
 #include <Model/Model.h>
+namespace Hagine::Graphics {
 
-class ModelManager
-{
-private:
-	static ModelManager* instance;
+class ModelManager {
+  private:
+    static ModelManager *instance;
 
-	ModelManager() = default;
-	~ModelManager() = default;
-	ModelManager(ModelManager&) = default;
-	ModelManager& operator=(ModelManager&) = default;
+    ModelManager() = default;
+    ~ModelManager() = default;
+    ModelManager(ModelManager &) = default;
+    ModelManager &operator=(ModelManager &) = default;
 
-public:
+  public:
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    /// <param name="dxCommon"></param>
+    void Initialize(SrvManager *srvManager);
 
-	/// <summary>
-	/// 初期化
-	/// </summary>
-	/// <param name="dxCommon"></param>
-	void Initialize(SrvManager* srvManager);
+    /// <summary>
+    /// 終了
+    /// </summary>
+    void Finalize();
 
-	/// <summary>
-	/// 終了
-	/// </summary>
-	void Finalize();
+    /// <summary>
+    /// シングルトンインスタンスの取得
+    /// </summary>
+    /// <returns></returns>
+    static ModelManager *GetInstance();
 
-	/// <summary>
-	/// シングルトンインスタンスの取得
-	/// </summary>
-	/// <returns></returns>
-	static ModelManager* GetInstance();
+    /// <summary>
+    /// モデルの検索
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <returns></returns>
+    Model *FindModel(const std::string &filePath);
 
-	/// <summary>
-	/// モデルの検索
-	/// </summary>
-	/// <param name="filePath"></param>
-	/// <returns></returns>
-	Model* FindModel(const std::string& filePath);
+    /// <summary>
+    /// モデルファイルの読み込み
+    /// </summary>
+    /// <param name="filePath"></param>
+    void LoadModel(const std::string &filePath);
 
-	/// <summary>
-	/// モデルファイルの読み込み
-	/// </summary>
-	/// <param name="filePath"></param>
-	void LoadModel(const std::string& filePath);
-
-	/// <summary>
+    /// <summary>
     /// プリミティブモデルの作成
-	/// </summary>
-	/// <param name="type"></param>
-        std::string CreatePrimitiveModel(PrimitiveType type, std::string texPath);
+    /// </summary>
+    /// <param name="type"></param>
+    std::string CreatePrimitiveModel(PrimitiveType type, std::string texPath);
 
-public:
-	std::unordered_map<std::string, std::unique_ptr<Model>> models;
-private:
-	ModelCommon* modelCommon = nullptr;
-	SrvManager* srvManager = nullptr;
+  public:
+    std::unordered_map<std::string, std::unique_ptr<Model>> models;
+
+  private:
+    ModelCommon *modelCommon = nullptr;
+    SrvManager *srvManager = nullptr;
 };
 
+} // namespace Hagine::Graphics

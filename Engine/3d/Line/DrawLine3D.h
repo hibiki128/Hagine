@@ -167,7 +167,7 @@ class DrawLine3D {
     std::unique_ptr<LineData> line_; // 線データ
     uint32_t indexLine_ = 0;         // 線のインデックス
 
-    DirectXCommon *dxCommon = nullptr;      // DirectX共通クラス
+    Core::DirectXCommon *dxCommon = nullptr;      // DirectX共通クラス
     PipeLineManager *psoManager_ = nullptr; // パイプラインマネージャー
 
     ComPtr<ID3D12Resource> cBufferResource_ = nullptr; // 定数バッファリソース

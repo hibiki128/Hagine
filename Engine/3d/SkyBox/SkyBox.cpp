@@ -4,7 +4,10 @@
 #include "Graphics/Srv/SrvManager.h"
 #include "Graphics/Texture/TextureManager.h"
 #include <myMath.h>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Core;
+using namespace Hagine::Math;
+
 SkyBox *SkyBox::instance = nullptr;
 
 SkyBox *SkyBox::GetInstance() {
@@ -23,7 +26,7 @@ void SkyBox::Finalize() {
 
 void SkyBox::Initialize(std::string filePath) {
     psoManager_ = PipeLineManager::GetInstance();
-    dxCommon_ = DirectXCommon::GetInstance();
+    dxCommon_ = Core::DirectXCommon::GetInstance();
     srvManager_ = SrvManager::GetInstance();
     CreateShape();
     CreateVertex();
@@ -172,4 +175,3 @@ void SkyBox::CreateCamera() {
     cameraData_->worldPosition = {0.0f, 0.0f, 0.0f};
     cameraData_->padding = 0.0f;
 }
-} // namespace Hagine::Graphics

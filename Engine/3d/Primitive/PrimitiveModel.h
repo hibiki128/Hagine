@@ -33,8 +33,8 @@ class PrimitiveModel {
     struct PrimitiveData {
         std::vector<VertexData> vertices;
         std::vector<uint32_t> indices;
-        Matrix4x4 uvMatrix;
-        Vector4 color;
+        Math::Matrix4x4 uvMatrix;
+        Math::Vector4 color;
     };
 
   public:

@@ -96,7 +96,7 @@ class ParticleEditor {
     // ImGuiエディターの表示
     void EditorWindow();
     // すべてのエミッターを描画
-    void DrawAll(const ViewProjection &vp_);
+    void DrawAll(const Camera::ViewProjection &vp_);
     // すべてのエミッターのデバッグ情報を表示
     void DebugAll();
     // ImGuiエディターの表示処理

@@ -6,7 +6,11 @@
 #include <Particle/ParticleCommon.h>
 #include <random>
 #include <regex>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Math;
+using namespace Hagine::Core;
+
+
 void ParticleCSEmitter::Initialize(const std::string &name) {
     particleCommon_ = ParticleCommon::GetInstance();
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
@@ -94,7 +98,7 @@ void ParticleCSEmitter::DrawEmitter() {
     if (!isVisible_)
         return;
     Vector3 translate = emitterMeshData_->translate;
-    Quaternion rotation = emitterMeshData_->rotation;
+    Math::Quaternion rotation = emitterMeshData_->rotation;
     Vector3 scale = emitterMeshData_->scale;
 
     Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
@@ -168,7 +172,7 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->frequency = 0.5f;
     emitterMeshData_->frequencyTime = 0.0f;
     emitterMeshData_->translate = Vector3(0.0f, 0.0f, 0.0f);
-    emitterMeshData_->rotation = Quaternion::IdentityQuaternion();
+    emitterMeshData_->rotation = Math::Quaternion::IdentityQuaternion();
     emitterMeshData_->scale = Vector3(1.0f, 1.0f, 1.0f);
     emitterMeshData_->triangleCount = 0;
     emitterMeshData_->emit = 0;
@@ -454,7 +458,7 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("frequency", emitterMeshData_->frequency);
     data->Save("frequencyTime", emitterMeshData_->frequencyTime);
     data->Save<Vector3>("translate", emitterMeshData_->translate);
-    data->Save<Quaternion>("rotation", emitterMeshData_->rotation);
+    data->Save<Math::Quaternion>("rotation", emitterMeshData_->rotation);
     data->Save<Vector3>("scale", emitterMeshData_->scale);
     data->Save("emitFromSurface", emitterMeshData_->emitFromSurface);
     data->Save("modelPath", modelPath_);
@@ -530,7 +534,7 @@ void ParticleCSEmitter::LoadSetting() {
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-    emitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    emitterMeshData_->rotation = data->Load<Math::Quaternion>("rotation", Math::Quaternion::IdentityQuaternion());
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
     emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
 
@@ -630,7 +634,7 @@ void ParticleCSEmitter::LoadCloneSetting() {
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-    emitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    emitterMeshData_->rotation = data->Load<Math::Quaternion>("rotation", Math::Quaternion::IdentityQuaternion());
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
     emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
 
@@ -747,19 +751,19 @@ void ParticleCSEmitter::DrawImGui() {
 
                 static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
                 if (ImGui::DragFloat3("##EmitterRotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°")) {
-                    Quaternion currentRotation = emitterMeshData_->rotation;
-                    Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
-                    Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
-                    Quaternion deltaQuatZ = Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
-                    Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
-                    Quaternion newRotation = currentRotation * deltaQuat;
+                    Math::Quaternion currentRotation = emitterMeshData_->rotation;
+                    Math::Quaternion deltaQuatX = Math::Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
+                    Math::Quaternion deltaQuatY = Math::Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
+                    Math::Quaternion deltaQuatZ = Math::Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
+                    Math::Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
+                    Math::Quaternion newRotation = currentRotation * deltaQuat;
                     emitterMeshData_->rotation = newRotation.Normalize();
                     deltaRotation = {0.0f, 0.0f, 0.0f};
                 }
 
                 ImGui::SameLine();
                 if (ImGui::Button("リセット##EmitterRotation")) {
-                    emitterMeshData_->rotation = Quaternion::IdentityQuaternion();
+                    emitterMeshData_->rotation = Math::Quaternion::IdentityQuaternion();
                     deltaRotation = {0.0f, 0.0f, 0.0f};
                 }
 
@@ -1125,4 +1129,3 @@ void ParticleCSEmitter::DrawImGui() {
     }
 #endif // USE_IMGUI
 }
-} // namespace Hagine::Graphics

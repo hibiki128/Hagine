@@ -1,5 +1,7 @@
 #include "ObjColor.h"
-namespace Hagine::Transform {
+using namespace Hagine::Transform;
+using namespace Hagine::Core;
+
 void ObjColor::Initialize() {
 
     dxCommon_ = DirectXCommon::GetInstance();
@@ -33,4 +35,3 @@ void ObjColor::Map() {
         throw std::runtime_error("Failed to map constant buffer.");
     }
 }
-} // namespace Hagine::Transform

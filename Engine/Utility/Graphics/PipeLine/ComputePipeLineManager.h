@@ -6,6 +6,8 @@
 #include "unordered_map"
 #include "wrl.h"
 
+namespace Hagine::Graphics {
+
 enum class ComputePipelineType {
     kSkinning,
     kInitParticle,
@@ -35,7 +37,7 @@ class ComputePipeLineManager {
     /// <summary>
     /// 初期化
     /// </summary>
-    void Initialize(DirectXCommon *dxCommon);
+    void Initialize(Core::DirectXCommon *dxCommon);
 
     /// <summary>
     /// パイプラインの取得
@@ -82,7 +84,7 @@ class ComputePipeLineManager {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateCountGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
 
   private:
-    DirectXCommon *dxCommon_;
+    Core::DirectXCommon *dxCommon_;
 
     // パイプラインとルートシグネチャの格納用マップ
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_;
@@ -92,3 +94,4 @@ class ComputePipeLineManager {
     std::string MakePipelineKey(ComputePipelineType type, BlendMode blendMode, ShaderMode shaderMode);
     std::string MakeRootSignatureKey(ComputePipelineType type, ShaderMode shaderMode);
 };
+} // namespace Hagine::Graphics

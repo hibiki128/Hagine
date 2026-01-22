@@ -1,5 +1,7 @@
 #include "ParticleGroupManager.h"
-namespace Hagine::Graphics {
+
+using namespace Hagine::Graphics;
+
 ParticleGroupManager *ParticleGroupManager::instance = nullptr;
 
 ParticleGroupManager *ParticleGroupManager::GetInstance() {
@@ -82,4 +84,3 @@ void ParticleGroupManager::CreatePrimitiveParticleGroup(const std::string &group
     particleGroup->CreatePrimitiveParticleGroup(groupName, type, texturePath);
     AddParticleGroup(std::move(particleGroup));
 }
-} // namespace Hagine::Graphics

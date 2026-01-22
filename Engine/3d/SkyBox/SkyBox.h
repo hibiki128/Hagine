@@ -45,22 +45,22 @@ class SkyBox {
     /// 背景ボックスの頂点データ
     /// </summary>
     struct SkyBoxVertexData3D {
-        Vector4 position;
+        Math::Vector4 position;
     };
 
     /// <summary>
     /// GPUに送る背景ボックスのデータ
     /// </summary>
     struct SkyBoxDataForGPU {
-        Matrix4x4 worldMatrix;
+        Math::Matrix4x4 worldMatrix;
     };
 
     /// <summary>
     /// GPUに送るカメラデータ
     /// </summary>
     struct CameraDataForGPU {
-        Matrix4x4 viewProjection;
-        Vector3 worldPosition;
+        Math::Matrix4x4 viewProjection;
+        Math::Vector3 worldPosition;
         // パディング（16バイト境界に合わせる）
         float padding;
     };

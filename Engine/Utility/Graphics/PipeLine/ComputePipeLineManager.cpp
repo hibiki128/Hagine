@@ -1,6 +1,8 @@
 #include "ComputePipeLineManager.h"
 #include <Debug/Log/Logger.h>
 
+using namespace Hagine::Graphics;
+
 ComputePipeLineManager *ComputePipeLineManager::instance = nullptr;
 
 ComputePipeLineManager *ComputePipeLineManager::GetInstance() {
@@ -15,7 +17,7 @@ void ComputePipeLineManager::Finalize() {
     instance = nullptr;
 }
 
-void ComputePipeLineManager::Initialize(DirectXCommon *dxCommon) {
+void ComputePipeLineManager::Initialize(Core::DirectXCommon * dxCommon) {
     dxCommon_ = dxCommon;
 
     CreateAllPipelines();

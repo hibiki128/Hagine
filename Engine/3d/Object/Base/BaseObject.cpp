@@ -4,12 +4,16 @@
 #include "ShowFolder/ShowFolder.h"
 #include"Collider/CollisionManager.h"
 
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Collision;
+using namespace Hagine::Math;
+using namespace Hagine::Transform;
+
 BaseObject::~BaseObject() {
     // すべてのコライダーを削除
     for (auto *collider : colliders_) {
         if (collider) {
-            CollisionManager::GetInstance()->Unregister(collider);
+            Collision::CollisionManager::GetInstance()->Unregister(collider);
             delete collider;
         }
     }
@@ -278,7 +282,7 @@ Vector3 BaseObject::GetWorldPosition() {
 }
 
 // ワールド行列からクォータニオンを取得
-Quaternion BaseObject::GetWorldRotation() {
+Hagine::Math::Quaternion BaseObject::GetWorldRotation() {
     return transform_->GetWorldRotation();
 }
 
@@ -294,7 +298,7 @@ void BaseObject::SaveToJson() {
     ObjectDatas_->Save<std::string>("modelName", modelPath_);
     ObjectDatas_->Save<std::string>("objectName", objectName_);
     ObjectDatas_->Save<Vector3>("translation", transform_->translation_);
-    ObjectDatas_->Save<Quaternion>("rotation", transform_->quateRotation_);
+    ObjectDatas_->Save<Math::Quaternion>("rotation", transform_->quateRotation_);
     ObjectDatas_->Save<Vector3>("scale", transform_->scale_);
     ObjectDatas_->Save<bool>("Lighting", isLighting_);
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
@@ -325,7 +329,7 @@ void BaseObject::SceneSaveToJson() {
     ObjectDatas_->Save<std::string>("modelName", modelPath_);
     ObjectDatas_->Save<std::string>("objectName", objectName_);
     ObjectDatas_->Save<Vector3>("translation", transform_->translation_);
-    ObjectDatas_->Save<Quaternion>("rotation", transform_->quateRotation_);
+    ObjectDatas_->Save<Math::Quaternion>("rotation", transform_->quateRotation_);
     ObjectDatas_->Save<Vector3>("scale", transform_->scale_);
     ObjectDatas_->Save<bool>("Lighting", isLighting_);
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
@@ -356,7 +360,7 @@ void BaseObject::LoadFromJson() {
 
     // 基本トランスフォームを読み込み
     transform_->translation_ = ObjectDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
-    transform_->quateRotation_ = ObjectDatas_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    transform_->quateRotation_ = ObjectDatas_->Load<Math::Quaternion>("rotation", Math::Quaternion::IdentityQuaternion());
     transform_->scale_ = ObjectDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
     isLighting_ = ObjectDatas_->Load<bool>("Lighting", true);
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::kCount);
@@ -407,7 +411,7 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
 
     // 基本トランスフォームを読み込み
     transform_->translation_ = ObjectDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
-    transform_->quateRotation_ = ObjectDatas_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    transform_->quateRotation_ = ObjectDatas_->Load<Math::Quaternion>("rotation", Math::Quaternion::IdentityQuaternion());
     transform_->scale_ = ObjectDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
     isLighting_ = ObjectDatas_->Load<bool>("Lighting", true);
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", type_);
@@ -503,7 +507,7 @@ void BaseObject::LoadColliders() {
     // 既存のコライダーをクリア
     for (auto *collider : colliders_) {
         if (collider) {
-            CollisionManager::GetInstance()->Unregister(collider);
+            Collision::CollisionManager::GetInstance()->Unregister(collider);
             delete collider;
         }
     }
@@ -574,7 +578,7 @@ void BaseObject::LoadColliders() {
 
         // リストに追加して登録
         colliders_.push_back(collider);
-        CollisionManager::GetInstance()->Register(collider);
+        Collision::CollisionManager::GetInstance()->Register(collider);
     }
 }
 
@@ -687,7 +691,7 @@ void BaseObject::DebugCollider() {
             // 削除ボタン
             ImGui::SameLine();
             if (ImGui::Button("削除", ImVec2(80, 0))) {
-                CollisionManager::GetInstance()->Unregister(collider);
+                Collision::CollisionManager::GetInstance()->Unregister(collider);
                 delete collider;
                 colliders_.erase(colliders_.begin() + i);
                 ImGui::TreePop();
@@ -803,7 +807,7 @@ SphereCollider *BaseObject::AddSphereCollider(const std::string &name) {
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
     colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
+    Collision::CollisionManager::GetInstance()->Register(collider);
 
     return collider;
 }
@@ -818,7 +822,7 @@ AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
     colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
+    Collision::CollisionManager::GetInstance()->Register(collider);
 
     return collider;
 }
@@ -833,7 +837,7 @@ OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
     colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
+    Collision::CollisionManager::GetInstance()->Register(collider);
 
     return collider;
 }
@@ -880,12 +884,12 @@ void BaseObject::DebugObject() {
         ImGui::PushItemWidth(200);
         static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
         if (ImGui::DragFloat3("##Rotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°")) {
-            Quaternion currentRotation = transform_->GetRotationQuaternion();
-            Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
-            Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
-            Quaternion deltaQuatZ = Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
-            Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
-            Quaternion newRotation = currentRotation * deltaQuat;
+            Math::Quaternion currentRotation = transform_->GetRotationQuaternion();
+            Math::Quaternion deltaQuatX = Math::Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
+            Math::Quaternion deltaQuatY = Math::Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
+            Math::Quaternion deltaQuatZ = Math::Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
+            Math::Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
+            Math::Quaternion newRotation = currentRotation * deltaQuat;
             transform_->SetRotationQuaternion(newRotation.Normalize());
             transform_->UpdateMatrix();
             deltaRotation = {0.0f, 0.0f, 0.0f};
@@ -893,7 +897,7 @@ void BaseObject::DebugObject() {
         ImGui::PopItemWidth();
         ImGui::SameLine();
         if (ImGui::Button("リセット##ResetRot")) {
-            transform_->SetRotationQuaternion(Quaternion::IdentityQuaternion());
+            transform_->SetRotationQuaternion(Math::Quaternion::IdentityQuaternion());
             transform_->UpdateMatrix();
             deltaRotation = {0.0f, 0.0f, 0.0f};
         }
@@ -933,7 +937,7 @@ void BaseObject::DebugObject() {
 
         // ワールド座標の取得
         Vector3 worldPos = GetWorldPosition();
-        Quaternion worldRot = GetWorldRotation();
+        Math::Quaternion worldRot = GetWorldRotation();
         Vector3 worldScale = GetWorldScale();
 
         // ワールド位置（読み取り専用）
@@ -1227,5 +1231,4 @@ std::vector<std::string> BaseObject::GetGltfFiles() {
         }
     }
     return gltfFiles;
-}
 }

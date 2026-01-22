@@ -19,16 +19,16 @@ namespace Hagine::Graphics {
 class Object3d {
   private: // メンバ変数
     struct Transform {
-        Vector3 scale;
-        Vector3 rotate;
-        Vector3 translate;
+        Math::Vector3 scale;
+        Math::Vector3 rotate;
+        Math::Vector3 translate;
     };
 
     // 座標変換行列データ
     struct TransformationMatrix {
-        Matrix4x4 WVP;
-        Matrix4x4 World;
-        Matrix4x4 WorldInverseTranspose;
+        Math::Matrix4x4 WVP;
+        Math::Matrix4x4 World;
+        Math::Matrix4x4 WorldInverseTranspose;
     };
 
     DirectXCommon *dxCommon_ = nullptr;
@@ -44,14 +44,14 @@ class Object3d {
     std::shared_ptr<Animation::ModelAnimation> currentModelAnimation_ = nullptr;
     std::map<std::string, std::shared_ptr<Animation::ModelAnimation>> modelAnimations_;
     std::vector<std::unique_ptr<Material>> materials_;
-    std::vector<ObjColor> color_;
+    std::vector<Hagine::Transform::ObjColor> color_;
     ModelCommon *modelCommon = nullptr;
     Light::LightGroup *lightGroup = nullptr;
 
     // 移動させる用各SRT
-    Vector3 position = {0.0f, 0.0f, 0.0f};
-    Vector3 rotation = {0.0f, 0.0f, 0.0f};
-    Vector3 size = {1.0f, 1.0f, 1.0f};
+    Math::Vector3 position = {0.0f, 0.0f, 0.0f};
+    Math::Vector3 rotation = {0.0f, 0.0f, 0.0f};
+    Math::Vector3 size = {1.0f, 1.0f, 1.0f};
     bool isPrimitive_ = false;
     bool isAnimationSwitchPending_ = false;
     std::string nextAnimationFileName_;
@@ -73,7 +73,7 @@ class Object3d {
     /// <summary>
     /// 更新
     /// </summary>
-    void Update(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection);
+    void Update(const Hagine::Transform::WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection);
 
     /// <summary>
     /// アニメーションの更新
@@ -98,17 +98,17 @@ class Object3d {
     /// <param name="anime"></param>
     void SetStopAnimation(bool anime) { currentModelAnimation_->SetIsAnimation(anime); }
 
-    void DrawWireframe(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection, bool isRainbow = false);
+    void DrawWireframe(const Hagine::Transform::WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection, bool isRainbow = false);
 
     /// <summary>
     /// 描画
     /// </summary>
-    void Draw(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection, bool reflect, bool Lighting = true, bool modelDraw = true);
+    void Draw(const Hagine::Transform::WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection, bool reflect, bool Lighting = true, bool modelDraw = true);
 
     /// <summary>
     /// スケルトン描画
     /// </summary>
-    void DrawSkeleton(const WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection);
+    void DrawSkeleton(const Hagine::Transform::WorldTransform &worldTransform, const Camera::ViewProjection &viewProjection);
 
     void PlayAnimation() { currentModelAnimation_->PlayAnimation(); }
 
@@ -116,9 +116,9 @@ class Object3d {
     /// getter
     /// </summary>
     /// <returns></returns>
-    const Vector3 &GetPosition() const { return position; }
-    const Vector3 &GetRotation() const { return rotation; }
-    const Vector3 &GetSize() const { return size; }
+    const Math::Vector3 &GetPosition() const { return position; }
+    const Math::Vector3 &GetRotation() const { return rotation; }
+    const Math::Vector3 &GetSize() const { return size; }
     size_t GetMaterialCount() const { return materials_.size(); }
     std::string GetModelFilePath() const { return modelFilePath_; }
     std::string GetTextureFilePath(uint32_t materialIndex) const {
@@ -141,19 +141,19 @@ class Object3d {
     Material *GetMaterial(uint32_t index) {
         return (index < materials_.size()) ? materials_[index].get() : nullptr;
     }
-    Vector4 GetColor(int index = 0) { return color_[index].GetColor(); }
+    Math::Vector4 GetColor(int index = 0) { return color_[index].GetColor(); }
 
     /// <summary>
     /// setter
     /// </summary>
     /// <param name="position"></param>
     void SetModel(Model *model) { this->model = model; }
-    void SetPosition(const Vector3 &position) { this->position = position; }
-    void SetRotation(const Vector3 &rotation) { this->rotation = rotation; }
-    void SetSize(const Vector3 &size) { this->size = size; }
+    void SetPosition(const Math::Vector3 &position) { this->position = position; }
+    void SetRotation(const Math::Vector3 &rotation) { this->rotation = rotation; }
+    void SetSize(const Math::Vector3 &size) { this->size = size; }
     void SetModel(const std::string &filePath);
     void SetBlendMode(BlendMode blendMode) { blendMode_ = blendMode; }
-    void SetColor(Vector4 color, int index = 0) { color_[index].SetColor(color); }
+    void SetColor(Math::Vector4 color, int index = 0) { color_[index].SetColor(color); }
 
     // マルチマテリアル用のsetter
     void SetTexture(const std::string &filePath, uint32_t materialIndex);
@@ -174,12 +174,12 @@ class Object3d {
 
     void CreateIndependentMaterials();
 
-    void DrawBoneArmature(const Vector3 &parentPos, const Vector3 &childPos, float scale);
+    void DrawBoneArmature(const Math::Vector3 &parentPos, const Math::Vector3 &childPos, float scale);
 
-    void DrawArmatureShape(const Vector3 &startPos, const Vector3 &endPos, float baseWidth, float tipWidth, const Vector4 &color);
+    void DrawArmatureShape(const Math::Vector3 &startPos, const Math::Vector3 &endPos, float baseWidth, float tipWidth, const Math::Vector4 &color);
 
-    Vector3 ExtractTranslation(const Matrix4x4 &matrix) {
-        return Vector3(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);
+    Math::Vector3 ExtractTranslation(const Math::Matrix4x4 &matrix) {
+        return Math::Vector3(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);
     }
 };
 } // namespace Hagine::Graphics

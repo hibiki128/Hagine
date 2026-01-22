@@ -6,9 +6,12 @@
 #include <myMath.h>
 #include <set>
 
-namespace Hagine::Graphics::Animation {
+using namespace Hagine::Graphics;
+using namespace Hagine::Graphics::Animation;
+using namespace Hagine::Math;
 
-std::unordered_map<std::string, Animation> Animator::animationCache;
+
+std::unordered_map<std::string, AnimationData> Animator::animationCache;
 
 void Animator::Initialize(const std::string &directorypath, const std::string &filename) {
     directorypath_ = directorypath;
@@ -98,7 +101,7 @@ void Animator::UpdateSingle(bool loop) {
         if (!modelData_.hasBones) {
             NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
             Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
-            Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime);
+            Math::Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime);
             Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime);
             localMatrix = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
         }
@@ -110,7 +113,7 @@ void Animator::UpdateSingle(bool loop) {
             if (!modelData_.hasBones) {
                 NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
                 Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
-                Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime);
+                Math::Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime);
                 Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime);
                 localMatrix = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
             }
@@ -124,7 +127,7 @@ void Animator::UpdateSingle(bool loop) {
     }
 }
 
-void Animator::BlendToAnimation(const Animation &newAnimation, float blendDuration) {
+void Animator::BlendToAnimation(const AnimationData &newAnimation, float blendDuration) {
     if (&newAnimation == &currentAnimation_) {
         return; // 同じアニメーションなので何もしない
     }
@@ -148,7 +151,7 @@ void Animator::BlendToAnimation(const std::string &directoryPath, const std::str
         return; // 同じファイルで補間中でない場合は何もしない
     }
 
-    Animation newAnimation = LoadAnimationFile(directoryPath, filename);
+    AnimationData newAnimation = LoadAnimationFile(directoryPath, filename);
 
     // 補間先のファイル情報を保存
     blendState_.toDirectoryPath = directoryPath;
@@ -176,13 +179,13 @@ void Animator::BlendToAnimation(const std::string &directoryPath, const std::str
     isFinish_ = false;
 }
 
-Animation Animator::GetCurrentAnimation() const {
+AnimationData Animator::GetCurrentAnimation() const {
     if (!blendState_.isBlending) {
         return currentAnimation_;
     }
 
     // 補間中の場合は動的に生成されたアニメーションを返す
-    Animation blendedAnimation;
+    AnimationData blendedAnimation;
     blendedAnimation.duration = blendState_.toAnimation.duration;
     blendedAnimation.nodeAnimations = GetBlendedNodeAnimations();
     return blendedAnimation;
@@ -235,7 +238,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
 
             // Rotation
             if (!fromNode.rotate.empty() && !toNode.rotate.empty()) {
-                Quaternion blendedRotate = CalculateBlendedValue(
+                Math::Quaternion blendedRotate = CalculateBlendedValue(
                     fromNode.rotate, toNode.rotate,
                     blendState_.fromAnimationTime, blendState_.toAnimationTime,
                     blendState_.blendFactor);
@@ -260,7 +263,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
             const NodeAnimation &fromNode = fromIt->second;
 
             Vector3 defaultTranslate = {0.0f, 0.0f, 0.0f};
-            Quaternion defaultRotate = {0.0f, 0.0f, 0.0f, 1.0f};
+            Math::Quaternion defaultRotate = {0.0f, 0.0f, 0.0f, 1.0f};
             Vector3 defaultScale = {1.0f, 1.0f, 1.0f};
 
             if (!fromNode.translate.empty()) {
@@ -272,8 +275,8 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
             }
 
             if (!fromNode.rotate.empty()) {
-                Quaternion fromRotate = CalculateValue(fromNode.rotate, blendState_.fromAnimationTime);
-                Quaternion blendedRotate = Quaternion::Slerp(fromRotate, defaultRotate, blendState_.blendFactor);
+                Math::Quaternion fromRotate = CalculateValue(fromNode.rotate, blendState_.fromAnimationTime);
+                Math::Quaternion blendedRotate = Math::Quaternion::Slerp(fromRotate, defaultRotate, blendState_.blendFactor);
 
                 KeyframeQuaternion keyframe = {blendedRotate, animationTime};
                 blendedNode.rotate.push_back(keyframe);
@@ -292,7 +295,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
             const NodeAnimation &toNode = toIt->second;
 
             Vector3 defaultTranslate = {0.0f, 0.0f, 0.0f};
-            Quaternion defaultRotate = {0.0f, 0.0f, 0.0f, 1.0f};
+            Math::Quaternion defaultRotate = {0.0f, 0.0f, 0.0f, 1.0f};
             Vector3 defaultScale = {1.0f, 1.0f, 1.0f};
 
             if (!toNode.translate.empty()) {
@@ -304,8 +307,8 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
             }
 
             if (!toNode.rotate.empty()) {
-                Quaternion toRotate = CalculateValue(toNode.rotate, blendState_.toAnimationTime);
-                Quaternion blendedRotate = Slerp(defaultRotate, toRotate, blendState_.blendFactor);
+                Math::Quaternion toRotate = CalculateValue(toNode.rotate, blendState_.toAnimationTime);
+                Math::Quaternion blendedRotate = Slerp(defaultRotate, toRotate, blendState_.blendFactor);
 
                 KeyframeQuaternion keyframe = {blendedRotate, animationTime};
                 blendedNode.rotate.push_back(keyframe);
@@ -326,9 +329,9 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
     return blendedAnimations;
 }
 
-Animation Animator::LoadAnimationFile(const std::string &directoryPath, const std::string &filename) {
+AnimationData Animator::LoadAnimationFile(const std::string &directoryPath, const std::string &filename) {
     std::string filePath = directoryPath + "/" + filename;
-    Animation animation;
+    AnimationData animation;
 
     // キャッシュチェック
     auto it = animationCache.find(filePath);
@@ -398,7 +401,7 @@ Vector3 Animator::CalculateValue(const std::vector<KeyframeVector3> &keyframes, 
     return (*keyframes.rbegin()).value;
 }
 
-Quaternion Animator::CalculateValue(const std::vector<KeyframeQuaternion> &keyframes, float time) {
+Hagine::Math::Quaternion Animator::CalculateValue(const std::vector<KeyframeQuaternion> &keyframes, float time) {
     assert(!keyframes.empty());
     if (keyframes.size() == 1 || time <= keyframes[0].time) {
         return keyframes[0].value;
@@ -424,14 +427,12 @@ Vector3 Animator::CalculateBlendedValue(
     return Lerp(fromValue, toValue, blendFactor);
 }
 
-Quaternion Animator::CalculateBlendedValue(
+Hagine::Math::Quaternion Animator::CalculateBlendedValue(
     const std::vector<KeyframeQuaternion> &fromKeyframes,
     const std::vector<KeyframeQuaternion> &toKeyframes,
     float fromTime, float toTime, float blendFactor) const {
 
-    Quaternion fromValue = CalculateValue(fromKeyframes, fromTime);
-    Quaternion toValue = CalculateValue(toKeyframes, toTime);
+    Math::Quaternion fromValue = CalculateValue(fromKeyframes, fromTime);
+    Math::Quaternion toValue = CalculateValue(toKeyframes, toTime);
     return Slerp(fromValue, toValue, blendFactor);
 }
-
-} // namespace Hagine

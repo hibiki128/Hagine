@@ -2,13 +2,15 @@
 #include "Animator.h"
 #include <myMath.h>
 
-namespace Hagine::Graphics::Animation {
+using namespace Hagine::Graphics;
+using namespace Hagine::Graphics::Animation;
+using namespace Hagine::Math;
 
 void Bone::Initialize(ModelData modelData) {
     skeleton_ = CreateSkeleton(modelData.rootNode);
 }
 
-void Bone::Update(const Animation &animation, float animationTime) {
+void Bone::Update(const AnimationData &animation, float animationTime) {
     ApplyAnimation(animation, animationTime);
     // すべてのJointを更新。親が若いので通常ループで処理可能
     for (Joint &joint : skeleton_.joints) {
@@ -92,7 +94,7 @@ Skeleton Bone::CreateSkeleton(const Node &rootNode) {
     return skeleton;
 }
 
-void Bone::ApplyAnimation(const Animation &animation, float animationTime) {
+void Bone::ApplyAnimation(const AnimationData &animation, float animationTime) {
     for (Joint &joint : skeleton_.joints) {
         if (auto it = animation.nodeAnimations.find(joint.name); it != animation.nodeAnimations.end()) {
             const NodeAnimation &rootNodeAnimation = (*it).second;
@@ -102,4 +104,3 @@ void Bone::ApplyAnimation(const Animation &animation, float animationTime) {
         }
     }
 }
-} // namespace Hagine

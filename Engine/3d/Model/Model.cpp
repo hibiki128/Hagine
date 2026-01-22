@@ -7,7 +7,9 @@
 #include "sstream"
 #include <SkyBox/SkyBox.h>
 
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Math;
+using namespace Hagine::Transform;
 
 std::unordered_set<std::string> Model::jointNames = {};
 
@@ -321,4 +323,3 @@ Node Model::ReadNode(aiNode *node) {
     }
     return result;
 }
-} // namespace Hagine

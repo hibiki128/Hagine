@@ -23,33 +23,33 @@ namespace Hagine::Graphics {
 /// クォータニオン変換データ
 /// </summary>
 struct QuaternionTransform {
-    Vector3 scale{};     // スケール
-    Quaternion rotate{}; // 回転
-    Vector3 translate{}; // 平行移動
+    Math::Vector3 scale{};     // スケール
+    Math::Quaternion rotate{}; // 回転
+    Math::Vector3 translate{}; // 平行移動
 };
 
 /// <summary>
 /// 頂点データ
 /// </summary>
 struct VertexData {
-    Vector4 position{}; // 座標
-    Vector2 texcoord{}; // UV座標
-    Vector3 normal{};   // 法線
+    Math::Vector4 position{}; // 座標
+    Math::Vector2 texcoord{}; // UV座標
+    Math::Vector3 normal{};   // 法線
 };
 
 /// <summary>
 /// マテリアルデータ（CPU側）
 /// </summary>
 struct MaterialData {
-    Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};  // 色
+    Math::Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};  // 色
     bool enableLighting = true;                // ライティング有効フラグ
-    Matrix4x4 uvTransform = MakeIdentity4x4(); // UV変換行列
+    Math::Matrix4x4 uvTransform = MakeIdentity4x4(); // UV変換行列
     float shininess = 20.0f;                   // 光沢度
     std::string textureFilePath{};             // テクスチャファイルパス
     uint32_t textureIndex = 0;                 // テクスチャインデックス
     float environmentCoefficient = 1.0f;       // 環境マップ係数
-    Vector2 uvPosition{};                      // UV座標
-    Vector2 uvSize = {1.0f, 1.0f};             // UVサイズ
+    Math::Vector2 uvPosition{};                      // UV座標
+    Math::Vector2 uvSize = {1.0f, 1.0f};             // UVサイズ
     float uvRotate = 0.0f;                     // UV回転
 };
 
@@ -57,10 +57,10 @@ struct MaterialData {
 /// マテリアルデータ（GPU側）
 /// </summary>
 struct MaterialDataGPU {
-    Vector4 color{};                // 色
+    Math::Vector4 color{};                // 色
     int32_t enableLighting{};       // ライティング有効フラグ
     float padding[3]{};             // パディング
-    Matrix4x4 uvTransform{};        // UV変換行列
+    Math::Matrix4x4 uvTransform{};        // UV変換行列
     float shininess{};              // 光沢度
     float environmentCoefficient{}; // 環境マップ係数
     float padding2[2]{};            // パディング
@@ -80,7 +80,7 @@ struct MeshData {
 /// </summary>
 struct Node {
     QuaternionTransform transform{}; // 変換
-    Matrix4x4 localMatrix{};         // ローカル行列
+    Math::Matrix4x4 localMatrix{};         // ローカル行列
     std::string name{};              // ノード名
     std::vector<Node> children{};    // 子ノード配列
 };
@@ -90,8 +90,8 @@ struct Node {
 /// </summary>
 struct Joint {
     QuaternionTransform transform{}; // 変換
-    Matrix4x4 localMatrix{};         // ローカル行列
-    Matrix4x4 skeletonSpaceMatrix{}; // スケルトン空間行列
+    Math::Matrix4x4 localMatrix{};         // ローカル行列
+    Math::Matrix4x4 skeletonSpaceMatrix{}; // スケルトン空間行列
     std::string name{};              // ジョイント名
     std::vector<int32_t> children{}; // 子ジョイントインデックス配列
     int32_t index{};                 // インデックス
@@ -120,7 +120,7 @@ struct VertexWeightData {
 /// ジョイントウェイトデータ
 /// </summary>
 struct JointWeightData {
-    Matrix4x4 inverseBindPoseMatrix{};             // 逆バインドポーズ行列
+    Math::Matrix4x4 inverseBindPoseMatrix{};             // 逆バインドポーズ行列
     std::vector<VertexWeightData> vertexWeights{}; // 頂点ウェイト配列
 };
 
@@ -150,8 +150,8 @@ struct VertexInfluence {
 /// GPU用ウェルデータ
 /// </summary>
 struct WellForGPU {
-    Matrix4x4 skeletonSpaceMatrix{};                 // スケルトン空間行列
-    Matrix4x4 skeletonSpaceInverseTransposeMatrix{}; // スケルトン空間逆転置行列
+    Math::Matrix4x4 skeletonSpaceMatrix{};                 // スケルトン空間行列
+    Math::Matrix4x4 skeletonSpaceInverseTransposeMatrix{}; // スケルトン空間逆転置行列
 };
 
 /// <summary>
@@ -165,7 +165,7 @@ struct SkinningInformationForGPU {
 /// スキンクラスターデータ
 /// </summary>
 struct SkinCluster {
-    std::vector<Matrix4x4> inverseBindPoseMatrices{}; // 逆バインドポーズ行列配列
+    std::vector<Math::Matrix4x4> inverseBindPoseMatrices{}; // 逆バインドポーズ行列配列
 
     // 影響度データ
     Microsoft::WRL::ComPtr<ID3D12Resource> influenceResource{};                               // リソース
@@ -193,10 +193,10 @@ struct SkinCluster {
 };
 
 /// <summary>
-/// Vector3キーフレーム
+/// Math::Vector3キーフレーム
 /// </summary>
 struct KeyframeVector3 {
-    Vector3 value{}; // 値
+    Math::Vector3 value{}; // 値
     float time{};    // 時間
 };
 
@@ -204,7 +204,7 @@ struct KeyframeVector3 {
 /// Quaternionキーフレーム
 /// </summary>
 struct KeyframeQuaternion {
-    Quaternion value{}; // 値
+    Math::Quaternion value{}; // 値
     float time{};       // 時間
 };
 
@@ -217,15 +217,12 @@ struct NodeAnimation {
     std::vector<KeyframeVector3> scale{};     // スケールキーフレーム
 };
 
-namespace Animation {
 /// <summary>
 /// アニメーションデータ
 /// </summary>
-struct Animation {
+struct AnimationData {
     float duration{};                                      // アニメーション時間
     std::map<std::string, NodeAnimation> nodeAnimations{}; // ノードアニメーションマップ
 };
-
-} // namespace Animation
 
 } // namespace Hagine::Graphics

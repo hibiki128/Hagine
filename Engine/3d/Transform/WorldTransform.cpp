@@ -1,5 +1,9 @@
 #include "WorldTransform.h"
-namespace Hagine::Transform {
+
+using namespace Hagine::Core;
+using namespace Hagine::Math;
+
+using namespace Hagine::Transform;
 WorldTransform::WorldTransform() {
 }
 
@@ -10,7 +14,7 @@ void WorldTransform::Initialize() {
     // スケール、回転、平行移動を初期化
     scale_ = {1.0f, 1.0f, 1.0f};
     eulerRotation_ = {0.0f, 0.0f, 0.0f};
-    quateRotation_ = Quaternion::IdentityQuaternion();
+    quateRotation_ = Math::Quaternion::IdentityQuaternion();
     translation_ = {0.0f, 0.0f, 0.0f};
     preRotate_ = {0.0f, 0.0f, 0.0f};
 
@@ -58,11 +62,11 @@ void WorldTransform::UpdateMatrix() {
 void WorldTransform::SetRotationEuler(const Vector3 &eulerAngles) {
     eulerRotation_ = eulerAngles;
     if (isUseQuaternion_) {
-        quateRotation_ = Quaternion::FromEulerAngles(eulerAngles);
+        quateRotation_ = Math::Quaternion::FromEulerAngles(eulerAngles);
     }
 }
 
-void WorldTransform::SetRotationQuaternion(const Quaternion &quaternion) {
+void WorldTransform::SetRotationQuaternion(const Math::Quaternion &quaternion) {
     quateRotation_ = quaternion.Normalize();
     if (!isUseQuaternion_) {
         eulerRotation_ = quateRotation_.ToEulerAngles();
@@ -73,23 +77,23 @@ Vector3 WorldTransform::GetRotationEuler() const {
     return isUseQuaternion_ ? quateRotation_.ToEulerAngles() : eulerRotation_;
 }
 
-Quaternion WorldTransform::GetRotationQuaternion() const {
+Hagine::Math::Quaternion WorldTransform::GetRotationQuaternion() const {
     return quateRotation_;
 }
 
 Vector3 WorldTransform::GetWorldRotationEuler() const {
-    Quaternion worldRotation = GetWorldRotationQuaternion();
+    Math::Quaternion worldRotation = GetWorldRotationQuaternion();
     return worldRotation.ToEulerAngles();
 }
 
-Quaternion WorldTransform::GetWorldRotationQuaternion() const {
+Hagine::Math::Quaternion WorldTransform::GetWorldRotationQuaternion() const {
     // 親がいない場合はローカル回転をそのまま返す
     if (!parent_) {
         return quateRotation_;
     }
 
     // 親のワールド回転を取得
-    Quaternion parentWorldRotation = parent_->GetWorldRotationQuaternion();
+    Math::Quaternion parentWorldRotation = parent_->GetWorldRotationQuaternion();
 
     // 親の回転 * ローカル回転 でワールド回転を計算
     return parentWorldRotation * quateRotation_;
@@ -113,10 +117,10 @@ void WorldTransform::UpdateQuaternion() {
 
 void WorldTransform::RotateQuaternion() {
     if (eulerRotation_.x == 0.0f && eulerRotation_.y == 0.0f && eulerRotation_.z == 0.0f) {
-        quateRotation_ = Quaternion::IdentityQuaternion();
+        quateRotation_ = Math::Quaternion::IdentityQuaternion();
     } else {
         // オイラー角からクォータニオンに変換
-        quateRotation_ = Quaternion::FromEulerAngles(eulerRotation_);
+        quateRotation_ = Math::Quaternion::FromEulerAngles(eulerRotation_);
     }
 }
 
@@ -130,7 +134,7 @@ Vector3 WorldTransform::GetWorldPosition() const {
 }
 
 // ワールド座標（回転）
-Quaternion WorldTransform::GetWorldRotation() const {
+Hagine::Math::Quaternion WorldTransform::GetWorldRotation() const {
     const Matrix4x4 &m = matWorld_;
 
     // スケールを除去した回転行列を作成
@@ -150,7 +154,7 @@ Quaternion WorldTransform::GetWorldRotation() const {
     }
 
     // 回転行列からクォータニオンを生成
-    return Quaternion::FromMatrix(rotationMatrix);
+    return Math::Quaternion::FromMatrix(rotationMatrix);
 }
 
 // ワールド座標（スケール）
@@ -165,4 +169,3 @@ Vector3 WorldTransform::GetWorldScale() const {
 
     return worldScale;
 }
-} // namespace Hagine::Transform

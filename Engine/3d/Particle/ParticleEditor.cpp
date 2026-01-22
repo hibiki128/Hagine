@@ -4,7 +4,8 @@
 #ifdef _DEBUG
 #include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+
 ParticleEditor *ParticleEditor::instance = nullptr;
 
 ParticleEditor *ParticleEditor::GetInstance() {
@@ -105,7 +106,7 @@ void ParticleEditor::UpdateFrameStats() {
     currentFrameNumber_++;
 }
 
-void ParticleEditor::DrawAll(const ViewProjection &vp_) {
+void ParticleEditor::DrawAll(const Camera::ViewProjection &vp_) {
     for (auto &[name, emitter] : emitters_) {
         if (emitter) {
             if (emitter->GetIsAuto()) {
@@ -542,4 +543,3 @@ std::vector<std::string> ParticleEditor::GetJsonFiles() {
 
     return jsonFiles;
 }
-} // namespace Hagine::Graphics

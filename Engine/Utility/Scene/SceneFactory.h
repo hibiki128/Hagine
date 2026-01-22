@@ -1,16 +1,15 @@
 #pragma once
-#include"AbstractSceneFactory.h"
+#include "AbstractSceneFactory.h"
 
-class SceneFactory :public AbstractSceneFactory
-{
-public:
+namespace Hagine::Scene {
 
-	/// <summary>
+class SceneFactory : public AbstractSceneFactory {
+  public:
+    /// <summary>
     /// シーン生成
     /// </summary>
     /// <param name="sceneName"></param>
     /// <returns></returns>
-    BaseScene* CreateScene(const std::string& sceneName) override;
-
+    BaseScene *CreateScene(const std::string &sceneName) override;
 };
-
+} // namespace Hagine::Scene

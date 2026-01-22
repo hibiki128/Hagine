@@ -8,7 +8,9 @@
 
 namespace fs = std::filesystem;
 
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Math;
+using namespace Hagine::Core;
 
 SpriteManager *SpriteManager::instance = nullptr;
 
@@ -133,21 +135,21 @@ void SpriteManager::SetInstanceSRT(const std::string &name, uint32_t index, cons
     }
 }
 
-void SpriteManager::SetInstanceScale(const std::string &name, uint32_t index, const Vector3 &scale) {
+void SpriteManager::SetInstanceScale(const std::string &name, uint32_t index, const Math::Vector3 &scale) {
     auto spriteData = GetSprite(name);
     if (spriteData && index < spriteData->instanceData.size()) {
         spriteData->instanceData[index].scale = scale;
     }
 }
 
-void SpriteManager::SetInstanceRotation(const std::string &name, uint32_t index, const Vector3 &rotation) {
+void SpriteManager::SetInstanceRotation(const std::string &name, uint32_t index, const Math::Vector3 &rotation) {
     auto spriteData = GetSprite(name);
     if (spriteData && index < spriteData->instanceData.size()) {
         spriteData->instanceData[index].rotation = rotation;
     }
 }
 
-void SpriteManager::SetInstanceTranslation(const std::string &name, uint32_t index, const Vector3 &translation) {
+void SpriteManager::SetInstanceTranslation(const std::string &name, uint32_t index, const Math::Vector3 &translation) {
     auto spriteData = GetSprite(name);
     if (spriteData && index < spriteData->instanceData.size()) {
         spriteData->instanceData[index].translation = translation;
@@ -183,21 +185,21 @@ void SpriteManager::SetSpriteBackMost(const std::string &name, bool isBackMost) 
     }
 }
 
-void SpriteManager::SetSpritePosition(const std::string &name, const Vector2 &position) {
+void SpriteManager::SetSpritePosition(const std::string &name, const Math::Vector2 &position) {
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->sprite->SetPosition(position);
     }
 }
 
-void SpriteManager::SetSpriteSize(const std::string &name, const Vector2 &size) {
+void SpriteManager::SetSpriteSize(const std::string &name, const Math::Vector2 &size) {
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->sprite->SetSize(size);
     }
 }
 
-void SpriteManager::SetSpriteColor(const std::string &name, const Vector4 &color) {
+void SpriteManager::SetSpriteColor(const std::string &name, const Math::Vector4 &color) {
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->sprite->SetColor({color.x, color.y, color.z});
@@ -226,7 +228,7 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData) {
     for (uint32_t i = 0; i < spriteData->instanceData.size(); ++i) {
         const auto &instanceSRT = spriteData->instanceData[i];
 
-        SpriteTransform transform;
+        Graphics::SpriteTransform transform;
         transform.scale = instanceSRT.scale;
         transform.rotate = instanceSRT.rotation;
         transform.translate = instanceSRT.translation;
@@ -239,9 +241,9 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData) {
             // または transform.translate.z = -1000.0f; // 画面外に配置
         }
 
-        Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
-        Matrix4x4 viewMatrix = MakeIdentity4x4();
-        Matrix4x4 projectionMatrix = MakeOrthographicMatrix(
+        Math::Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+        Math::Matrix4x4 viewMatrix = MakeIdentity4x4();
+        Math::Matrix4x4 projectionMatrix = MakeOrthographicMatrix(
             0.0f, 0.0f,
             float(WinApp::kClientWidth),
             float(WinApp::kClientHeight),
@@ -494,7 +496,7 @@ void SpriteManager::DrawSpriteManager() {
                 // 基本設定セクション
                 if (ImGui::TreeNode("基本設定")) {
                     // 位置設定
-                    Vector2 spritePos = managedSprite->sprite->GetPosition();
+                    Math::Vector2 spritePos = managedSprite->sprite->GetPosition();
                     ImGui::Text("位置:");
                     ImGui::SetNextItemWidth(150);
                     if (ImGui::DragFloat("##pos_x", &spritePos.x, 1.0f)) {
@@ -507,7 +509,7 @@ void SpriteManager::DrawSpriteManager() {
                     }
 
                     // サイズ設定
-                    Vector2 spriteSize = managedSprite->sprite->GetSize();
+                    Math::Vector2 spriteSize = managedSprite->sprite->GetSize();
                     ImGui::Text("サイズ:");
                     ImGui::SetNextItemWidth(150);
                     if (ImGui::DragFloat("##size_x", &spriteSize.x, 1.0f, 0.0f, 2000.0f)) {
@@ -520,7 +522,7 @@ void SpriteManager::DrawSpriteManager() {
                     }
 
                     // 色設定
-                    Vector4 spriteColor = managedSprite->sprite->GetColor();
+                    Math::Vector4 spriteColor = managedSprite->sprite->GetColor();
                     ImGui::Text("色:");
                     if (ImGui::ColorEdit4("##color", &spriteColor.x, ImGuiColorEditFlags_NoInputs)) {
                         managedSprite->sprite->SetColor({spriteColor.x, spriteColor.y, spriteColor.z});
@@ -549,8 +551,8 @@ void SpriteManager::DrawSpriteManager() {
 
                 // UV設定セクション
                 if (ImGui::TreeNode("UV設定")) {
-                    Vector2 uvPosition = managedSprite->sprite->GetUVPosition();
-                    Vector2 uvSize = managedSprite->sprite->GetUVSize();
+                    Math::Vector2 uvPosition = managedSprite->sprite->GetUVPosition();
+                    Math::Vector2 uvSize = managedSprite->sprite->GetUVSize();
                     float uvRotation = managedSprite->sprite->GetUVRotate();
 
                     bool uvChanged = false;
@@ -743,12 +745,12 @@ void SpriteManager::SaveAllSprites() {
         data->Save("name", spriteData->name);
         data->Save("texturePath", texturePath);
 
-        Vector2 pos = spriteData->sprite->GetPosition();
-        Vector2 size = spriteData->sprite->GetSize();
-        Vector4 color = spriteData->sprite->GetColor();
+        Math::Vector2 pos = spriteData->sprite->GetPosition();
+        Math::Vector2 size = spriteData->sprite->GetSize();
+        Math::Vector4 color = spriteData->sprite->GetColor();
         float rotation = spriteData->sprite->GetRotation();
-        Vector2 anchor = spriteData->sprite->GetAnchorPoint();
-        Matrix4x4 uvTransform = spriteData->sprite->GetUVTransform();
+        Math::Vector2 anchor = spriteData->sprite->GetAnchorPoint();
+        Math::Matrix4x4 uvTransform = spriteData->sprite->GetUVTransform();
 
         data->Save("position", pos);
         data->Save("size", size);
@@ -781,12 +783,12 @@ void SpriteManager::LoadAllSprites() {
         std::string spriteName = data->Load<std::string>("name", "");
         std::string texturePath = data->Load<std::string>("texturePath", "");
 
-        Vector2 position = data->Load<Vector2>("position", {0.0f, 0.0f});
-        Vector2 size = data->Load<Vector2>("size", {300.0f, 300.0f});
-        Vector4 color = data->Load<Vector4>("color", {1.0f, 1.0f, 1.0f, 1.0f});
+        Math::Vector2 position = data->Load<Math::Vector2>("position", {0.0f, 0.0f});
+        Math::Vector2 size = data->Load<Math::Vector2>("size", {300.0f, 300.0f});
+        Math::Vector4 color = data->Load<Math::Vector4>("color", {1.0f, 1.0f, 1.0f, 1.0f});
         float rotation = data->Load<float>("rotation", 0.0f);
-        Vector2 anchor = data->Load<Vector2>("anchor", {0.0f, 0.0f});
-        Matrix4x4 uvTransform = data->Load<Matrix4x4>("uvTransform", MakeIdentity4x4());
+        Math::Vector2 anchor = data->Load<Math::Vector2>("anchor", {0.0f, 0.0f});
+        Math::Matrix4x4 uvTransform = data->Load<Matrix4x4>("uvTransform", MakeIdentity4x4());
         int blendModeInt = data->Load<int>("blendMode", static_cast<int>(BlendMode::kNormal));
 
         SpriteTransform transform;
@@ -809,4 +811,3 @@ void SpriteManager::LoadAllSprites() {
     // 描画順をロード
     LoadDrawOrder();
 }
-} // namespace Hagine

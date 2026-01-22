@@ -6,7 +6,10 @@
 #include "myMath.h"
 #include <type/Vector2.h>
 
-namespace Hagine::Graphics::Camera {
+using namespace Hagine::Math;
+using namespace Hagine::Core;
+
+namespace Hagine::Camera {
 
 void ViewProjection::Initialize(std::string jsonFile) {
 
@@ -366,7 +369,7 @@ void ViewProjection::ShowDebugInfo() {
                 std::unique_ptr<DataHandler> tempData = std::make_unique<DataHandler>("Camera", "TempOrigin");
                 tempData->Save("translation", Vector3{0.0f, 0.0f, -10.0f});
                 tempData->Save("eulerRotation", Vector3{0.0f, 0.0f, 0.0f});
-                tempData->Save("quateRotation", Quaternion::IdentityQuaternion());
+                tempData->Save("quateRotation", Math::Quaternion::IdentityQuaternion());
 
                 EasingType easeType = static_cast<EasingType>(selectedEasingType);
                 EaseCameraMove(easeType, "TempOrigin", duration);
@@ -415,12 +418,11 @@ void ViewProjection::Load(std::string jsonFile) {
     matWorld_ = data->Load("matWorld", MakeIdentity4x4());
     translation_ = data->Load<Vector3>("translation", {0.0f, 0.0f, -10.0f});
     eulerRotation_ = data->Load<Vector3>("eulerRotation", {0.0f, 0.0f, 0.0f});
-    quateRotation_ = data->Load("quateRotation", Quaternion::IdentityQuaternion());
+    quateRotation_ = data->Load("quateRotation", Math::Quaternion::IdentityQuaternion());
     isUseQuaternion_ = data->Load("isUseQuaternion", true);
     fovAngleY = data->Load("fov", fovAngleY);
     nearZ = data->Load("nearZ", nearZ);
     farZ = data->Load("farZ", farZ);
     aspectRatio = data->Load("aspectRatio", aspectRatio);
 }
-
-} // namespace Hagine::Graphics::Camera
+} // namespace Hagine::Camera

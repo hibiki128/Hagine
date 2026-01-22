@@ -3,7 +3,9 @@
 #include "Graphics/Srv/SrvManager.h"
 #include "fstream"
 #include <Graphics/Texture/TextureManager.h>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Math;
+
 std::unordered_map<std::string, ModelData> ParticleGroup::modelCache;
 
 void ParticleGroup::Initialize() {
@@ -127,4 +129,3 @@ void ParticleGroup::CreateMaterial() {
     materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     materialData->uvTransform = MakeIdentity4x4();
 }
-} // namespace Hagine::Graphics

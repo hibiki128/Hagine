@@ -24,30 +24,30 @@ class Bone {
     /// </summary>
     /// <param name="animation">アニメーションデータ</param>
     /// <param name="animtaionTime">アニメーション時間</param>
-    void Update(const Animation &animation, float animtaionTime);
+    void Update(const AnimationData &animation, float animtaionTime);
 
     /// <summary>
     /// ジョイントのワールド座標を取得
     /// </summary>
     /// <param name="jointName">ジョイント名</param>
     /// <param name="worldMatrix">ワールド行列</param>
-    /// <returns>std::optional<Vector3>: ジョイントのワールド座標</returns>
-    std::optional<Vector3> GetJointWorldPosition(const std::string &jointName, const Matrix4x4 &worldMatrix) const;
+    /// <returns>std::optional<Math::Vector3>: ジョイントのワールド座標</returns>
+    std::optional<Math::Vector3> GetJointWorldPosition(const std::string &jointName, const Math::Matrix4x4 &worldMatrix) const;
 
     /// <summary>
     /// ジョイントのスケルトン空間行列を取得
     /// </summary>
     /// <param name="jointName">ジョイント名</param>
-    /// <returns>std::optional<Matrix4x4>: スケルトン空間行列</returns>
-    std::optional<Matrix4x4> GetJointSkeletonSpaceMatrix(const std::string &jointName) const;
+    /// <returns>std::optional<Math::Matrix4x4>: スケルトン空間行列</returns>
+    std::optional<Math::Matrix4x4> GetJointSkeletonSpaceMatrix(const std::string &jointName) const;
 
     /// <summary>
     /// ジョイントのワールド行列を取得
     /// </summary>
     /// <param name="jointName">ジョイント名</param>
     /// <param name="worldMatrix">ワールド行列</param>
-    /// <returns>std::optional<Matrix4x4>: ジョイントのワールド行列</returns>
-    std::optional<Matrix4x4> GetJointWorldMatrix(const std::string &jointName, const Matrix4x4 &worldMatrix) const;
+    /// <returns>std::optional<Math::Matrix4x4>: ジョイントのワールド行列</returns>
+    std::optional<Math::Matrix4x4> GetJointWorldMatrix(const std::string &jointName, const Math::Matrix4x4 &worldMatrix) const;
 
     /// <summary>
     /// Getter
@@ -85,7 +85,7 @@ class Bone {
     /// </summary>
     /// <param name="animation">アニメーションデータ</param>
     /// <param name="animationTime">アニメーション時間</param>
-    void ApplyAnimation(const Animation &animation, float animationTime);
+    void ApplyAnimation(const AnimationData &animation, float animationTime);
 
   private:
     /// ===================================================

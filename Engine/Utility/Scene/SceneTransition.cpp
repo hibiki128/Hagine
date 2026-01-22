@@ -6,6 +6,11 @@
 #include "myMath.h"
 #include <vector>
 
+using namespace Hagine::Scene;
+using namespace Hagine::Math;
+using namespace Hagine::Core;
+using namespace Hagine::Graphics;
+
 SceneTransition *SceneTransition::instance = nullptr;
 
 SceneTransition *SceneTransition::GetInstance() {
@@ -80,7 +85,7 @@ void SceneTransition::Update() {
 }
 
 void SceneTransition::Draw() {
-    SpriteCommon::GetInstance()->DrawCommonSetting();
+    Graphics::SpriteCommon::GetInstance()->DrawCommonSetting();
     // トランジションを使用しない場合は描画しない
     if (!useTransition) {
         return;

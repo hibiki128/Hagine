@@ -2,7 +2,8 @@
 #include "DirectXCommon.h"
 #include <myMath.h>
 
-namespace Hagine::Graphics::Line {
+using namespace Hagine::Graphics::Line;
+using namespace Hagine::Math;
 
 DrawLine3D *DrawLine3D::instance = nullptr;
 
@@ -42,7 +43,7 @@ std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, U
 }
 
 void DrawLine3D::Initialize() {
-    dxCommon = DirectXCommon::GetInstance();
+    dxCommon = Core::DirectXCommon::GetInstance();
     CreateMeshes();
     CreateResource();
     psoManager_ = PipeLineManager::GetInstance();
@@ -212,4 +213,3 @@ void DrawLine3D::DrawSphere(const Vector3 &position, const Vector4 &color, float
         }
     }
 }
-} // namespace Hagine::Graphics::Line

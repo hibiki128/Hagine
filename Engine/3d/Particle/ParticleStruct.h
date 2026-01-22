@@ -12,8 +12,8 @@
 #include <vector>
 namespace Hagine::Graphics {
 struct ParticleMaterial {
-    Vector4 color;
-    Matrix4x4 uvTransform;
+    Math::Vector4 color;
+    Math::Matrix4x4 uvTransform;
     float padding[3];
     std::string textureFilePath;
     uint32_t textureIndex = 0;
@@ -22,45 +22,45 @@ struct ParticleMaterial {
 /// ===== GPUParticle =====
 
 struct EmitterMesh {
-    Vector3 translate;
+    Math::Vector3 translate;
     uint32_t triangleCount;
-    Quaternion rotation;
+    Math::Quaternion rotation;
     uint32_t emitFromSurface;
-    Vector3 scale;
+    Math::Vector3 scale;
     float frequency;
     float frequencyTime;
     uint32_t emit;
     uint32_t edgeCount;
-    Vector3 anchorPoint;
+    Math::Vector3 anchorPoint;
     float padding;
 };
 
 struct CSParticle {
-    Vector3 translate;
-    Vector3 scale;
+    Math::Vector3 translate;
+    Math::Vector3 scale;
     float lifeTime;
-    Vector3 velocity;
+    Math::Vector3 velocity;
     float currentTime;
-    Vector4 color;
-    Vector3 initialScale;
+    Math::Vector4 color;
+    Math::Vector3 initialScale;
     float padding;
     uint32_t isTrailParticle;
     uint32_t parentIndex;
-    Vector3 lastTrailPosition;
+    Math::Vector3 lastTrailPosition;
     float trailSpawnDistance;
 };
 
 struct PerView {
-    Matrix4x4 viewProjection;
-    Matrix4x4 billboardMatrix;
+    Math::Matrix4x4 viewProjection;
+    Math::Matrix4x4 billboardMatrix;
 };
 
 struct TriangleInfo {
-    Vector3 v0;
+    Math::Vector3 v0;
     float padding0;
-    Vector3 v1;
+    Math::Vector3 v1;
     float padding1;
-    Vector3 v2;
+    Math::Vector3 v2;
     float padding2;
 };
 
@@ -76,14 +76,14 @@ struct EmitterData {
 };
 
 struct SurfacePoint {
-    Vector3 position;
+    Math::Vector3 position;
     float padding;
 };
 
 struct EdgeInfo {
-    Vector3 v0;
+    Math::Vector3 v0;
     float padding0;
-    Vector3 v1;
+    Math::Vector3 v1;
     float padding1;
 };
 
@@ -107,12 +107,12 @@ struct ParticleCSSettings {
     float lifeTimeMax = 3.0f;
     float scaleMin = 0.5f;
     float scaleMax = 1.5f;
-    Vector3 velocityMin = {-0.5f, -0.5f, -0.5f};
+    Math::Vector3 velocityMin = {-0.5f, -0.5f, -0.5f};
     float padding1{};
-    Vector3 velocityMax = {0.5f, 0.5f, 0.5f};
+    Math::Vector3 velocityMax = {0.5f, 0.5f, 0.5f};
     float padding2{};
-    Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f};
-    Vector4 endColor = {1.0f, 1.0f, 1.0f, 0.0f};
+    Math::Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    Math::Vector4 endColor = {1.0f, 1.0f, 1.0f, 0.0f};
     uint32_t enableLifetimeScale = 0;
     uint32_t enableRandomColor = 0;
     uint32_t enableSinScale = 0;
@@ -121,15 +121,15 @@ struct ParticleCSSettings {
     float sinScaleFrequency{};
     float sinScaleAmplitude{};
     uint32_t enableGravity = 0;
-    Vector3 gravity = {0.0f, -9.8f, 0.0f};
+    Math::Vector3 gravity = {0.0f, -9.8f, 0.0f};
     uint32_t enableTrail = 0;
     float trailSpawnDistance = 0.1f;
     uint32_t maxTrailPerParticle = 5;
     float trailLifeTimeScale = 0.5f;
     float paddingTrail{};
-    Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
+    Math::Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
     float padding3{};
-    Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
+    Math::Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
     float trailVelocityScale = 0.3f;
     uint32_t trailInheritVelocity = 1;
     float trailMinLifeTime = 0.3f;
@@ -138,18 +138,18 @@ struct ParticleCSSettings {
     float gatherStartRatio = 0.5f;
     float gatherStrength = 2.0f;
     float padding5{};
-    Vector3 gatherTarget = {0, 0, 0};
+    Math::Vector3 gatherTarget = {0, 0, 0};
     float padding6{};
-    Vector3 gatherTargetOffset = {0, 0, 0};
+    Math::Vector3 gatherTargetOffset = {0, 0, 0};
     uint32_t enableGatherForTrail = 0;
     uint32_t enableVortex = 0;
-    Vector3 vortexTarget = {0, 0, 0};
-    Vector3 vortexTargetOffset = {0, 0, 0};
+    Math::Vector3 vortexTarget = {0, 0, 0};
+    Math::Vector3 vortexTargetOffset = {0, 0, 0};
     float vortexStrength = 5.0f;
     uint32_t enableVortexForTrail = 0;
-    Vector3 vortexAxis = {0.0f, 1.0f, 0.0f};
+    Math::Vector3 vortexAxis = {0.0f, 1.0f, 0.0f};
     uint32_t enableAcceleration = 0;
-    Vector3 acceleration = {0.0f, 0.0f, 0.0f};
+    Math::Vector3 acceleration = {0.0f, 0.0f, 0.0f};
     uint32_t enableVelocityDamping = 0;
     float velocityDampingFactor = 0.0f;
     uint32_t enableLifetimeVelocityDamping = 0;
@@ -158,7 +158,7 @@ struct ParticleCSSettings {
     float radialVelocityStrength = 0.0f;
     float radialVelocityRandomness = 0.0f;
     float padding7{};
-    Vector3 radialVelocityCenter = {0.0f, 0.0f, 0.0f};
+    Math::Vector3 radialVelocityCenter = {0.0f, 0.0f, 0.0f};
     float padding8{};
 };
 
@@ -180,27 +180,27 @@ struct ParticleSetting {
     float scaleMin{};
     float scaleMax{};
     float trailVelocityScale{}; // 軌跡の速度スケール
-    Vector3 translate{};
-    Vector3 rotation{};
-    Vector3 scale{};
-    Vector3 velocityMin{};
-    Vector3 velocityMax{};
-    Vector3 particleStartScale{};
-    Vector3 particleEndScale{};
-    Vector3 startAcce{};
-    Vector3 endAcce{};
-    Vector3 startRote{};
-    Vector3 endRote{};
-    Vector3 rotateVelocityMin{};
-    Vector3 rotateVelocityMax{};
-    Vector3 allScaleMax{};
-    Vector3 allScaleMin{};
-    Vector3 rotateStartMax{};
-    Vector3 rotateStartMin{};
-    Vector3 trailScaleMultiplier{}; // 軌跡パーティクルのサイズ倍率
-    Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f};
-    Vector4 endColor = {1.0f, 1.0f, 1.0f, 1.0f};
-    Vector4 trailColorMultiplier{}; // 軌跡パーティクルの色倍率
+    Math::Vector3 translate{};
+    Math::Vector3 rotation{};
+    Math::Vector3 scale{};
+    Math::Vector3 velocityMin{};
+    Math::Vector3 velocityMax{};
+    Math::Vector3 particleStartScale{};
+    Math::Vector3 particleEndScale{};
+    Math::Vector3 startAcce{};
+    Math::Vector3 endAcce{};
+    Math::Vector3 startRote{};
+    Math::Vector3 endRote{};
+    Math::Vector3 rotateVelocityMin{};
+    Math::Vector3 rotateVelocityMax{};
+    Math::Vector3 allScaleMax{};
+    Math::Vector3 allScaleMin{};
+    Math::Vector3 rotateStartMax{};
+    Math::Vector3 rotateStartMin{};
+    Math::Vector3 trailScaleMultiplier{}; // 軌跡パーティクルのサイズ倍率
+    Math::Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    Math::Vector4 endColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    Math::Vector4 trailColorMultiplier{}; // 軌跡パーティクルの色倍率
     uint32_t count{};
     bool enableTrail{};          // 軌跡機能を有効にするか
     bool trailInheritVelocity{}; // 軌跡が親の速度を継承するか
@@ -235,32 +235,32 @@ struct ParticleStats {
 };
 
 struct ParticleForGPU {
-    Matrix4x4 WVP;
-    Matrix4x4 World;
-    Vector4 color;
+    Math::Matrix4x4 WVP;
+    Math::Matrix4x4 World;
+    Math::Vector4 color;
 };
 
 struct Particle {
-    WorldTransform transform{}; // 位置
-    Vector3 emitterPosition{};
-    Vector3 velocity{}; // 速度
-    Vector3 Acce{};
-    Vector3 startScale{};
-    Vector3 endScale{};
-    Vector3 startAcce{};
-    Vector3 endAcce{};
-    Vector3 startRote{};
-    Vector3 endRote{};
-    Vector3 rotateVelocity{};
-    Vector3 fixedDirection{};
-    Vector4 color{};     // 色
+    Transform::WorldTransform transform{}; // 位置
+    Math::Vector3 emitterPosition{};
+    Math::Vector3 velocity{}; // 速度
+    Math::Vector3 Acce{};
+    Math::Vector3 startScale{};
+    Math::Vector3 endScale{};
+    Math::Vector3 startAcce{};
+    Math::Vector3 endAcce{};
+    Math::Vector3 startRote{};
+    Math::Vector3 endRote{};
+    Math::Vector3 rotateVelocity{};
+    Math::Vector3 fixedDirection{};
+    Math::Vector4 color{};     // 色
     float lifeTime{};    // ライフタイム
     float currentTime{}; // 現在の時間
     float initialAlpha{};
     // std::weak_ptr<Particle> parent;                  // 親パーティクルへの弱参照
     // std::vector<std::shared_ptr<Particle>> children; // 子パーティクルのリスト
-    Vector3 relativePosition{}; // 親からの相対位置
-    Vector3 parentOffset{};     // 親に対するオフセット
+    Math::Vector3 relativePosition{}; // 親からの相対位置
+    Math::Vector3 parentOffset{};     // 親に対するオフセット
     bool isChild{};             // 子パーティクルかどうか
     bool createTrail{};         // 軌跡を作成するか
     float trailSpawnTimer{};    // 軌跡生成のタイマー

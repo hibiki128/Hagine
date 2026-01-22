@@ -1,6 +1,6 @@
 #pragma once
-#include "ParticleManager.h"
 #include "Camera/ViewProjection/ViewProjection.h"
+#include "ParticleManager.h"
 #include "Transform/WorldTransform.h"
 #include <string>
 #ifdef _DEBUG
@@ -25,7 +25,7 @@ class ParticleEmitter {
 
     void UpdateOnce();
 
-    void Draw(const ViewProjection &vp_);
+    void Draw(const Camera::ViewProjection &vp_);
 
     void DrawEmitter();
 
@@ -43,29 +43,29 @@ class ParticleEmitter {
     std::unique_ptr<ParticleEmitter> Clone() const;
 
     bool GetIsAuto() { return isAuto_; }
-    Matrix4x4 GetWorldMatrix() { return transform_.matWorld_; }
-    Vector3 GetPosition() { return transform_.translation_; }
+    Math::Matrix4x4 GetWorldMatrix() { return transform_.matWorld_; }
+    Math::Vector3 GetPosition() { return transform_.translation_; }
 
-    void SetPosition(const Vector3 &position) { transform_.translation_ = position; }
+    void SetPosition(const Math::Vector3 &position) { transform_.translation_ = position; }
     void SetPositionY(const std::string &groupName, float positionY) { particleSettings_[groupName].translate.y = positionY; }
-    void SetRotate(const std::string &groupName, const Vector3 &rotate) { particleSettings_[groupName].rotation = rotate; }
+    void SetRotate(const std::string &groupName, const Math::Vector3 &rotate) { particleSettings_[groupName].rotation = rotate; }
     void SetRotateY(const std::string &groupName, float rotateY) { particleSettings_[groupName].rotation.y = rotateY; }
-    void SetScale(const std::string &groupName, const Vector3 &scale) {
+    void SetScale(const std::string &groupName, const Math::Vector3 &scale) {
         particleSettings_[groupName].scale = scale;
     }
-    void SetStartScale(const std::string &groupName, const Vector3 &scale) {
+    void SetStartScale(const std::string &groupName, const Math::Vector3 &scale) {
         particleSettings_[groupName].particleStartScale = scale;
     }
-    void SetEndScale(const std::string &groupName, const Vector3 &scale) {
+    void SetEndScale(const std::string &groupName, const Math::Vector3 &scale) {
         particleSettings_[groupName].particleEndScale = scale;
     }
-    void SetWorldMatrix(const Matrix4x4 &worldMatrix) {
+    void SetWorldMatrix(const Math::Matrix4x4 &worldMatrix) {
         transform_.matWorld_ = worldMatrix;
     }
     void SetIsAuto(bool isAuto) { isAuto_ = isAuto; }
     void SetCount(const std::string &groupName, int count) { particleSettings_[groupName].count = count; }
-    void SetStartRotate(const std::string &groupName, const Vector3 &startRotate) { particleSettings_[groupName].startRote = startRotate; }
-    void SetEndRotate(const std::string &groupName, const Vector3 &endRotate) { particleSettings_[groupName].endRote = endRotate; }
+    void SetStartRotate(const std::string &groupName, const Math::Vector3 &startRotate) { particleSettings_[groupName].startRote = startRotate; }
+    void SetEndRotate(const std::string &groupName, const Math::Vector3 &endRotate) { particleSettings_[groupName].endRote = endRotate; }
     void SetActive(bool isActive) { isActive_ = isActive; }
     void SetFrequency(float frequency) { emitFrequency_ = frequency; }
     void SetName(const std::string &name) { name_ = name; }
@@ -73,16 +73,16 @@ class ParticleEmitter {
     void SetTrailInterval(const std::string &groupName, float interval);
     void SetMaxTrailParticles(const std::string &groupName, int maxTrails);
     void SetTrailLifeScale(const std::string &groupName, float scale);
-    void SetTrailScaleMultiplier(const std::string &groupName, const Vector3 &multiplier);
-    void SetTrailColorMultiplier(const std::string &groupName, const Vector4 &multiplier);
+    void SetTrailScaleMultiplier(const std::string &groupName, const Math::Vector3 &multiplier);
+    void SetTrailColorMultiplier(const std::string &groupName, const Math::Vector4 &multiplier);
     void SetTrailVelocityInheritance(const std::string &groupName, bool inherit, float scale = 0.3f);
-    void SetStartColor(const std::string &groupName, const Vector4 &color) {
+    void SetStartColor(const std::string &groupName, const Math::Vector4 &color) {
         particleSettings_[groupName].startColor = color;
     }
-    void SetEndColor(const std::string &groupName, const Vector4 &color) {
+    void SetEndColor(const std::string &groupName, const Math::Vector4 &color) {
         particleSettings_[groupName].endColor = color;
     }
-    void SetScaleAll(const Vector3 &scale) {
+    void SetScaleAll(const Math::Vector3 &scale) {
         for (auto &[groupName, setting] : particleSettings_) {
             if (setting.isSinMove) {
                 setting.particleStartScale = scale;
@@ -91,7 +91,7 @@ class ParticleEmitter {
             }
         }
     }
-    void SetStartAcce(const Vector3 &acce) {
+    void SetStartAcce(const Math::Vector3 &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.startAcce = acce;
         }
@@ -106,7 +106,7 @@ class ParticleEmitter {
             setting.startAcce.z = acce;
         }
     }
-    void SetEndAcce(const Vector3 &acce) {
+    void SetEndAcce(const Math::Vector3 &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.endAcce = acce;
         }
@@ -140,8 +140,8 @@ class ParticleEmitter {
     bool isActive_ = false;
     bool isAuto_ = false;
 
-    std::string name_;         // パーティクルの名前
-    WorldTransform transform_; // 位置や回転などのトランスフォーム
+    std::string name_;                    // パーティクルの名前
+    Transform::WorldTransform transform_; // 位置や回転などのトランスフォーム
 
     std::unordered_map<std::string, ParticleSetting> particleSettings_;
 

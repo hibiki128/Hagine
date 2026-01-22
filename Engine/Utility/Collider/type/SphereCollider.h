@@ -1,7 +1,7 @@
 #pragma once
 #include "../ColliderBase.h"
 
-
+namespace Hagine::Collision {
 class SphereCollider : public ColliderBase {
   public:
     SphereCollider() = default;
@@ -22,7 +22,7 @@ class SphereCollider : public ColliderBase {
 
     ColliderType GetType() const override { return ColliderType::Sphere; }
     void UpdateWorldTransform() override;
-    void DebugDraw(const ViewProjection &viewProjection) override;
+    void DebugDraw(const Camera::ViewProjection &viewProjection) override;
 
     void SaveToJson() override;
     void LoadFromJson() override;
@@ -32,3 +32,4 @@ class SphereCollider : public ColliderBase {
     Vector3 offset_ = {0.0f, 0.0f, 0.0f};
     Sphere cachedSphere_;
 };
+} // namespace Hagine::Collision

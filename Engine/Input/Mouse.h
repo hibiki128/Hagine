@@ -17,7 +17,7 @@ class Mouse {
     Microsoft::WRL::ComPtr<IDirectInputDevice8> devMouse_;
     DIMOUSESTATE2 mouse_;
     DIMOUSESTATE2 mousePre_;
-    Vector2 mousePosition_;
+    Math::Vector2 mousePosition_;
     HWND hWnd_;
 
   public:
@@ -55,7 +55,7 @@ class Mouse {
     /// マウスの位置を取得する（ウィンドウ座標系）
     /// </summary>
     /// <returns>マウスの位置</returns>
-    Vector2 GetMousePos();
+    Math::Vector2 GetMousePos();
 
     /// <summary>
     /// 3Dのマウス座標
@@ -63,6 +63,6 @@ class Mouse {
     /// <param name="viewprojection"></param>
     /// <param name="depthFactor"></param>
     /// <returns></returns>
-    Vector3 GetMousePos3D(const Graphics::Camera::ViewProjection &viewprojection, float depthFactor, float blockSpacing = 1.0f) const;
+    Math::Vector3 GetMousePos3D(const Camera::ViewProjection &viewprojection, float depthFactor, float blockSpacing = 1.0f) const;
 };
 } // namespace Hagine

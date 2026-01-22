@@ -1,7 +1,7 @@
 #include "Audio.h"
 #include <cassert>
 #include <fstream>
-namespace Hagine::Audio {
+using namespace Hagine::Audio;
 Audio *Audio::instance = nullptr;
 
 void Audio::Initialize(const std::string &directoryPath) {
@@ -228,5 +228,3 @@ void Audio::Finalize() {
     delete instance;
     instance = nullptr;
 }
-
-} // namespace Hagine::Audio

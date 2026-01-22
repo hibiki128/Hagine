@@ -2,7 +2,7 @@
 #include "Camera/ViewProjection/ViewProjection.h"
 #include "Transform/WorldTransform.h"
 
-namespace Hagine::Graphics::Camera {
+namespace Hagine::Camera {
 
 /// <summary>
 /// 基本追従カメラクラス
@@ -38,7 +38,7 @@ class BaseFollowCamera {
     /// <summary>
     /// Setter
     /// </summary>
-    void SetTarget(const WorldTransform *target) { target_ = target; }
+    void SetTarget(const Transform::WorldTransform *target) { target_ = target; }
 
   private:
     /// ===================================================
@@ -56,8 +56,8 @@ class BaseFollowCamera {
     /// ===================================================
 
     ViewProjection viewProjection_;          // ビュープロジェクション
-    WorldTransform worldTransform_;          // ワールド変換
-    const WorldTransform *target_ = nullptr; // 追従対象
+    Transform::WorldTransform worldTransform_; // ワールド変換
+    const Transform::WorldTransform *target_ = nullptr; // 追従対象
     float yaw_;                              // ヨー角
     float distanceFromTarget_;               // ターゲットからの距離
     float heightOffset_;                     // 高さオフセット

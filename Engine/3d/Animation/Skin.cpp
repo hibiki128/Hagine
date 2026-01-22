@@ -5,10 +5,13 @@
 #include <cassert>
 #include <myMath.h>
 
-namespace Hagine::Graphics::Animation {
+using namespace Hagine::Graphics;
+using namespace Hagine::Graphics::Animation;
+using namespace Hagine::Math;
+using namespace Hagine::Core;
 
 void Skin::Initialize(const Skeleton &skeleton, const ModelData &modelData) {
-    dxCommon_ = DirectXCommon::GetInstance();
+    dxCommon_ = Core::DirectXCommon::GetInstance();
     srvManager_ = SrvManager::GetInstance();
     skinCluster_ = CreateSkinCluster(skeleton, modelData);
 }
@@ -195,5 +198,3 @@ void Skin::CreateSkinningInformationResource(SkinCluster &skinCluster, const Ske
     skinCluster.skinningInformationResource->Map(0, nullptr, reinterpret_cast<void **>(&skinCluster.SkinningInfomationData));
     skinCluster.SkinningInfomationData->numVertices = static_cast<uint32_t>(totalVertexCount);
 }
-
-} // namespace Hagine

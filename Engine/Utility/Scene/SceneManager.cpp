@@ -2,6 +2,8 @@
 #include <SpriteManager.h>
 #include <cassert>
 
+using namespace Hagine::Scene;
+
 SceneManager *SceneManager::instance = nullptr;
 
 SceneManager *SceneManager::GetInstance() {
@@ -104,7 +106,7 @@ void SceneManager::SceneChange() {
             scene_->Finalize();
             delete scene_;
             BaseObjectManager::GetInstance()->RemoveAllObjects();
-            SpriteManager::GetInstance()->Clear();
+            Graphics::SpriteManager::GetInstance()->Clear();
 #ifndef _DEBUG
             ParticleCSGroupManager::GetInstance()->ClearIndependentGroups();
 #endif // _DEBUG

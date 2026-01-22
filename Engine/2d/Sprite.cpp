@@ -3,7 +3,10 @@
 #include "SpriteCommon.h"
 #include <Graphics/Texture/TextureManager.h>
 #include <myMath.h>
-namespace Hagine::Graphics {
+
+using namespace Hagine::Math;
+using namespace Hagine::Graphics;
+using namespace Hagine::Core;
 
 void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Vector4 color, Vector2 anchorpoint, bool isFlipX, bool isFlipY) {
     // 引数で受け取ってメンバ変数に記録する
@@ -202,5 +205,3 @@ void Sprite::AdjustTextureSize() {
     // 画像サイズをテクスチャサイズに合わせる
     size = textureSize;
 }
-
-} // namespace Hagine

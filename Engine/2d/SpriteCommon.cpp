@@ -1,5 +1,6 @@
 #include "SpriteCommon.h"
-namespace Hagine::Graphics {
+
+using namespace Hagine::Graphics;
 
 SpriteCommon *SpriteCommon::instance = nullptr;
 
@@ -17,7 +18,7 @@ void SpriteCommon::Finalize() {
 
 void SpriteCommon::Initialize() {
     // 引数で受け取ってメンバ変数に記録する
-    dxCommon_ = DirectXCommon::GetInstance();
+    dxCommon_ = Core::DirectXCommon::GetInstance();
     psoManager_ = PipeLineManager::GetInstance();
 }
 
@@ -28,5 +29,3 @@ void SpriteCommon::DrawCommonSetting() {
 void SpriteCommon::SetBlendMode(BlendMode blendMode) {
     psoManager_->DrawCommonSetting(PipelineType::kSprite, blendMode);
 }
-
-} // namespace Hagine

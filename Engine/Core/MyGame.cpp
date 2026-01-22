@@ -1,7 +1,13 @@
 #include "MyGame.h"
 #include "Scene/SceneFactory.h"
 #include <Frame.h>
-namespace Hagine::Core {
+using namespace Hagine::Core;
+using namespace Hagine::Graphics;
+using namespace Hagine::Scene;
+using namespace Hagine::Graphics::Line;
+using namespace Hagine::Collision;
+using namespace Hagine::Math;
+
 void MyGame::Initialize() {
     Framework::Initialize();
     Framework::LoadResource();
@@ -99,4 +105,3 @@ void MyGame::Draw() {
     // -----描画終了-----
     dxCommon_->PostDraw();
 }
-} // namespace Hagine::Core

@@ -2,7 +2,8 @@
 #include "Input.h"
 #include <cmath>
 
-namespace Hagine::Graphics::Camera {
+using namespace Hagine::Math;
+using namespace Hagine::Camera;
 
 void BaseFollowCamera::Init() {
     viewProjection_.farZ = 1100;
@@ -59,4 +60,3 @@ void BaseFollowCamera::Move() {
         yaw_ += 0.04f; // 右回転
     }
 }
-} // namespace Hagine

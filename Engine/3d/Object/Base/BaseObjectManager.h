@@ -1,6 +1,7 @@
 #pragma once
 #include "Object/Base/BaseObject.h"
 #include "unordered_map"
+#include <type/Vector3.h>
 
 namespace Hagine::Graphics {
 
@@ -29,7 +30,7 @@ class BaseObjectManager {
 
     void Update();
     void DrawHierarchyEditor();
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
+    void Draw(const Camera::ViewProjection &viewProjection, Math::Vector3 offSet = {0.0f, 0.0f, 0.0f});
 
     void UpdateImGui();
 

@@ -1,6 +1,11 @@
 #include "Framework.h"
 #include <Frame.h>
-namespace Hagine::Core {
+using namespace Hagine::Core;
+using namespace Hagine::Scene;
+using namespace Hagine::Collision;
+using namespace Hagine::Graphics;
+
+
 void Framework::Run() {
     // ゲームの初期化
     Initialize();
@@ -73,7 +78,7 @@ void Framework::Initialize() {
     ///--------------------------
 
     ///-----------PipeLineManager-----------
-    pipeLineManager_ = PipeLineManager::GetInstance();
+    pipeLineManager_ = Graphics::PipeLineManager::GetInstance();
     pipeLineManager_->Initialize(dxCommon_);
     ///-------------------------------------
 
@@ -119,16 +124,16 @@ void Framework::Initialize() {
     ///---------------------------
 
     ///-------CollisionManager--------
-    collisionManager_ = CollisionManager::GetInstance();
+    collisionManager_ = Collision::CollisionManager::GetInstance();
     ///----------------------------------
 
     ///-------SceneManager--------
-    sceneManager_ = SceneManager::GetInstance();
+    sceneManager_ = Scene::SceneManager::GetInstance();
     sceneManager_->Initialize();
     ///---------------------------
 
     ///-------OffScreen--------
-    offscreen_ = std::make_unique<OffScreen>();
+    offscreen_ = std::make_unique<Graphics::OffScreen>();
     offscreen_->Initialize();
     ///------------------------
 
@@ -362,4 +367,3 @@ void Framework::PlaySounds() {
 
 void Framework::Draw() {
 }
-} // namespace Hagine::Core

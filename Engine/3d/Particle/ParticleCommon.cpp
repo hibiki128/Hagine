@@ -1,5 +1,5 @@
 #include "ParticleCommon.h"
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
 ParticleCommon *ParticleCommon::instance = nullptr;
 
 ParticleCommon *ParticleCommon::GetInstance() {
@@ -44,4 +44,3 @@ void ParticleCommon::ComputeUpdateEmitterDrawCommonSetting() {
 void ParticleCommon::ComputeCountDrawCommonSetting() {
     computePsoManager_->DrawCommonSetting(ComputePipelineType::kCount);
 }
-} // namespace Hagine::Graphics

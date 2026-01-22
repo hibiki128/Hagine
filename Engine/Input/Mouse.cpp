@@ -2,7 +2,9 @@
 #include <cmath>
 #include"myMath.h"
 #include<assert.h>
-namespace Hagine {
+using namespace Hagine;
+using namespace Hagine::Math;
+
 void Mouse::Init(Microsoft::WRL::ComPtr<IDirectInput8> directInput, HWND hWnd) {
     hWnd_ = hWnd;
     // マウスデバイスの生成
@@ -44,7 +46,7 @@ MouseMove Mouse::GetMouseMove() {
     return move;
 }
 
-Vector3 Mouse::GetMousePos3D(const Graphics::Camera::ViewProjection &viewprojection, float depthFactor, float blockSize) const {
+Vector3 Mouse::GetMousePos3D(const Camera::ViewProjection &viewprojection, float depthFactor, float blockSize) const {
     // 2Dマウス座標を取得
     Vector2 mousePos = mousePosition_;
 
@@ -93,4 +95,3 @@ Vector2 Mouse::GetMousePos() {
 
     return mousePosition_;
 }
-} // namespace Hagine

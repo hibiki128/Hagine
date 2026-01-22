@@ -7,7 +7,11 @@
 #include <Particle/ParticleEditor.h>
 #include <set>
 #include <type/Quaternion.h>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Camera;
+using namespace Hagine::Math;
+using namespace Hagine::Transform;
+
 // コンストラクタ
 ParticleEmitter::ParticleEmitter() {}
 
@@ -44,7 +48,7 @@ void ParticleEmitter::UpdateOnce() {
     }
 }
 
-void ParticleEmitter::Draw(const ViewProjection &vp_) {
+void ParticleEmitter::Draw(const Camera::ViewProjection &vp_) {
     Manager_->SetEmitterCenter(transform_.translation_);
 
     transform_.UpdateMatrix();
@@ -168,7 +172,7 @@ void ParticleEmitter::SaveToJson() {
 
 void ParticleEmitter::LoadFromJson() {
     transform_.translation_ = datas_->Load<Vector3>("emitterTranslation", {0, 0, 0});
-    transform_.quateRotation_ = datas_->Load<Quaternion>("emitterRotation", Quaternion::IdentityQuaternion());
+    transform_.quateRotation_ = datas_->Load<Math::Quaternion>("emitterRotation", Math::Quaternion::IdentityQuaternion());
     transform_.scale_ = datas_->Load<Vector3>("emitterScale", {1, 1, 1});
     particleGroupNames_ = datas_->Load<std::vector<std::string>>("GroupNames", {});
     emitFrequency_ = datas_->Load<float>("emitFrequency", 0.1f);
@@ -1253,5 +1257,4 @@ void ParticleEmitter::ShowBlendModeCombo(BlendMode &currentMode) {
         currentMode = static_cast<BlendMode>(currentIndex);
     }
 #endif // USE_IMGUI
-}
 }

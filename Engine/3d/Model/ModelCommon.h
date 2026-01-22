@@ -32,7 +32,7 @@ class ModelCommon {
     /// <summary>
     /// Getter
     /// </summary>
-    DirectXCommon *GetDxCommon() const { return dxCommon_; }
+    Core::DirectXCommon *GetDxCommon() const { return dxCommon_; }
 
   private:
     /// ===================================================
@@ -50,7 +50,7 @@ class ModelCommon {
     /// ===================================================
 
     static ModelCommon *instance; // シングルトンインスタンス
-    DirectXCommon *dxCommon_;     // DirectX共通クラス
+    Core::DirectXCommon *dxCommon_;     // DirectX共通クラス
 };
 
 } // namespace Hagine::Graphics

@@ -6,6 +6,9 @@
 #include "type/SphereCollider.h"
 #include <unordered_map>
 #include <vector>
+#include <Camera/ViewProjection/ViewProjection.h>
+
+namespace Hagine::Collision {
 
 class CollisionManager {
   public:
@@ -21,7 +24,7 @@ class CollisionManager {
     void UpdateColliderTag(ColliderBase *collider, const std::string &oldTag, const std::string &newTag);
 
     void Update();
-    void DebugDraw(const ViewProjection &viewProjection);
+    void DebugDraw(const Camera::ViewProjection &viewProjection);
 
 #ifdef _DEBUG
     // ImGuiでタグマネージャーUI表示
@@ -43,18 +46,18 @@ class CollisionManager {
     bool TestCollision(ColliderBase *a, ColliderBase *b);
 
     // 各種衝突判定関数
-    bool IsCollision(const Sphere &s1, const Sphere &s2);
-    bool IsCollision(const AABB &aabb1, const AABB &aabb2);
-    bool IsCollision(const OBB &obb1, const OBB &obb2);
-    bool IsCollision(const AABB &aabb, const Sphere &sphere);
-    bool IsCollision(const OBB &obb, const Sphere &sphere);
-    bool IsCollision(const AABB &aabb, const OBB &obb);
+    bool IsCollision(const Math::Sphere &s1, const Math::Sphere &s2);
+    bool IsCollision(const Math::AABB &aabb1, const Math::AABB &aabb2);
+    bool IsCollision(const Math::OBB &obb1, const Math::OBB &obb2);
+    bool IsCollision(const Math::AABB &aabb, const Math::Sphere &sphere);
+    bool IsCollision(const Math::OBB &obb, const Math::Sphere &sphere);
+    bool IsCollision(const Math::AABB &aabb, const Math::OBB &obb);
 
     // ヘルパー関数
-    void ProjectOBB(const OBB &obb, const Vector3 &axis, float &min, float &max);
-    void ProjectAABB(const Vector3 &axis, const AABB &aabb, float &outMin, float &outMax);
-    bool TestAxis(const Vector3 &axis, const OBB &obb1, const OBB &obb2);
-    bool TestAxis(const Vector3 &axis, const AABB &aabb, const OBB &obb);
+    void ProjectOBB(const Math::OBB &obb, const Math::Vector3 &axis, float &min, float &max);
+    void ProjectAABB(const Math::Vector3 &axis, const Math::AABB &aabb, float &outMin, float &outMax);
+    bool TestAxis(const Math::Vector3 &axis, const Math::OBB &obb1, const Math::OBB &obb2);
+    bool TestAxis(const Math::Vector3 &axis, const Math::AABB &aabb, const Math::OBB &obb);
 
     // タグごとにコライダーをグループ化（文字列キー対応）
     std::unordered_map<std::string, std::vector<ColliderBase *>> collidersByTag_;
@@ -80,3 +83,4 @@ class CollisionManager {
 
     std::unordered_map<CollisionPair, bool, CollisionPairHash> collisionStates_;
 };
+} // namespace Hagine::Collision

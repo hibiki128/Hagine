@@ -32,9 +32,9 @@ class BaseObject {
     // モデル配列データ
     std::unique_ptr<Object3d> obj3d_{};
     // ベースのワールド変換データ
-    std::unique_ptr<WorldTransform> transform_{};
+    std::unique_ptr<Transform::WorldTransform> transform_{};
 
-    Quaternion q{};
+    Math::Quaternion q{};
     // ライティング
     bool isLighting_ = true;
     bool isLoop_ = true;
@@ -69,7 +69,7 @@ class BaseObject {
     // 初期化、更新、描画
     virtual void Init(const std::string className);
     virtual void Update();
-    virtual void Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
+    virtual void Draw(const Camera::ViewProjection &viewProjection, Math::Vector3 offSet = {0.0f, 0.0f, 0.0f});
     void UpdateWorldTransformHierarchy();
     void UpdateHierarchy();
 
@@ -78,12 +78,12 @@ class BaseObject {
 
     virtual void ImGui();
 
-    SphereCollider *AddSphereCollider(const std::string &name = "");
-    AABBCollider *AddAABBCollider(const std::string &name = "");
-    OBBCollider *AddOBBCollider(const std::string &name = "");
+    Collision::SphereCollider *AddSphereCollider(const std::string &name = "");
+    Collision::AABBCollider *AddAABBCollider(const std::string &name = "");
+    Collision::OBBCollider *AddOBBCollider(const std::string &name = "");
 
     // 中心座標取得
-    WorldTransform *GetWorldTransform() { return transform_.get(); }
+    Transform::WorldTransform *GetWorldTransform() { return transform_.get(); }
     Animation::ModelAnimation *GetModelAnimation() { return obj3d_->GetCurrentModelAnimation(); }
 
     /// =================================================
@@ -124,7 +124,7 @@ class BaseObject {
     /// ===================================================
     /// getter
     /// ===================================================
-    const WorldTransform &GetTransform() { return *transform_; }
+    const Transform::WorldTransform &GetTransform() { return *transform_; }
     std::string &GetName() { return objectName_; }
     std::string &GetModelPath() { return modelPath_; }
     std::string &GetTexturePath(int index = 0) { return texturePaths_[index]; }
@@ -132,25 +132,25 @@ class BaseObject {
     std::vector<std::string> GetChildrenNames() const;
     Object3d *GetObject3d() { return obj3d_.get(); }
     PrimitiveType GetPrimitiveType() { return type_; }
-    Vector3 &GetLocalPosition() { return transform_->translation_; }
-    Quaternion &GetLocalRotation() { return transform_->quateRotation_; }
-    Vector3 &GetLocalScale() { return transform_->scale_; }
-    Vector3 GetWorldPosition();
-    Quaternion GetWorldRotation();
-    Vector3 GetWorldScale();
-    Matrix4x4 GetWorldMatrix() { return transform_->matWorld_; }
+    Math::Vector3 &GetLocalPosition() { return transform_->translation_; }
+    Math::Quaternion &GetLocalRotation() { return transform_->quateRotation_; }
+    Math::Vector3 &GetLocalScale() { return transform_->scale_; }
+    Math::Vector3 GetWorldPosition();
+    Math::Quaternion GetWorldRotation();
+    Math::Vector3 GetWorldScale();
+    Math::Matrix4x4 GetWorldMatrix() { return transform_->matWorld_; }
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
     bool &GetLighting() { return isLighting_; }
     bool &GetLoop() { return isLoop_; }
     bool GetShouldSave() const { return shouldSave_; }
     bool IsPrimitive() const { return isPrimitive_; }
-    const Vector4 GetColor(int index = 0) { return obj3d_->GetColor(index); }
+    const Math::Vector4 GetColor(int index = 0) { return obj3d_->GetColor(index); }
     bool IsGizmoSelectable() const { return isGizmoSelectable_; }
     bool GetIsAlive() const { return isAlive_; }
     Material *GetMaterial(uint32_t index = 0) {
         obj3d_->GetMaterial(index);
     }
-    std::vector<ColliderBase *> &GetColliders() { return colliders_; }
+    std::vector<Collision::ColliderBase *> &GetColliders() { return colliders_; }
 
     /// ===================================================
     /// setter
@@ -169,9 +169,9 @@ class BaseObject {
     // void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }
     void SetReflect(bool reflect) { reflect_ = reflect; }
-    void SetColor(const Vector4 &color, int index = 0) { obj3d_->SetColor(color, index); }
+    void SetColor(const Math::Vector4 &color, int index = 0) { obj3d_->SetColor(color, index); }
     void SetAlpha(const float &alpha, int index = 0) {
-        Vector4 color;
+        Math::Vector4 color;
         color.x = obj3d_->GetColor().x;
         color.y = obj3d_->GetColor().y;
         color.z = obj3d_->GetColor().z;
@@ -198,6 +198,6 @@ class BaseObject {
     BlendMode blendMode_ = BlendMode::kNormal;
     std::string parentName_{};
 
-    std::vector<ColliderBase *> colliders_;
+    std::vector<Collision::ColliderBase *> colliders_;
 };
 } // namespace Hagine::Graphics

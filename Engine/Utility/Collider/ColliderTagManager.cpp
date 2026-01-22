@@ -2,6 +2,7 @@
 
 #ifdef _DEBUG
 #include <imgui.h>
+using namespace Hagine::Collision;
 
 void ColliderTagManager::ImGuiTagManager() {
     ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);

@@ -4,6 +4,10 @@
 #include <array>
 #include <numbers>
 
+using namespace Hagine::Collision;
+using namespace Hagine::Math;
+using namespace Hagine::Graphics::Line;
+
 void OBBCollider::UpdateWorldTransform() {
     cachedOBB_.rotationCenter = GetCenterPosition() + rotationOffset_;
 
@@ -19,7 +23,7 @@ void OBBCollider::UpdateWorldTransform() {
     UpdateOBBScaleCenter();
 }
 
-void OBBCollider::MakeOBBOrientations(const Quaternion &rotation) {
+void OBBCollider::MakeOBBOrientations(const Math::Quaternion &rotation) {
     Matrix4x4 rotateMatrix = QuaternionToMatrix4x4(rotation);
 
     cachedOBB_.orientations[0] = Vector3(rotateMatrix.m[0][0], rotateMatrix.m[0][1], rotateMatrix.m[0][2]);
@@ -35,7 +39,7 @@ void OBBCollider::UpdateOBBScaleCenter() {
         cachedOBB_.rotationCenter;
 }
 
-void OBBCollider::DebugDraw(const ViewProjection &viewProjection) {
+void OBBCollider::DebugDraw(const Camera::ViewProjection &viewProjection) {
     if (!isVisible_ || !isEnabled_) {
         return;
     }
@@ -71,7 +75,7 @@ void OBBCollider::DebugDraw(const ViewProjection &viewProjection) {
     DrawRotationCenter(viewProjection);
 }
 
-void OBBCollider::DrawRotationCenter(const ViewProjection &viewProjection) {
+void OBBCollider::DrawRotationCenter(const Camera::ViewProjection &viewProjection) {
     float radius = 0.1f;
     const uint32_t kSubdivision = 10;
     const float kLonEvery = 2.0f * std::numbers::pi_v<float> / kSubdivision;

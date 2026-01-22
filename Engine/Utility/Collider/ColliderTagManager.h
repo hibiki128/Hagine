@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 #include <unordered_set>
-
+namespace Hagine::Collision {
 class ColliderTagManager {
   public:
     static ColliderTagManager *GetInstance() {
@@ -66,3 +66,4 @@ class ColliderTagManager {
 
     std::unordered_set<std::string> availableTags_;
 };
+} // namespace Hagine::Collision

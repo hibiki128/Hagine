@@ -1,6 +1,9 @@
 #include "ColliderBase.h"
 #include"Collider/CollisionManager.h"
 
+
+using namespace Hagine::Collision;
+
 void ColliderBase::SetTag(const std::string &tag) {
     if (!ColliderTagManager::GetInstance()->HasTag(tag)) {
         return; // タグが存在しない場合は何もしない

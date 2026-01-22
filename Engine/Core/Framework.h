@@ -91,7 +91,7 @@ class Framework {
     AbstractSceneFactory *sceneFactory_ = nullptr;
     SceneTransition *sceneTransition_ = nullptr;
 
-    SceneManager *sceneManager_ = nullptr;
+    Scene::SceneManager *sceneManager_ = nullptr;
     SrvManager *srvManager_ = nullptr;
     TextureManager *textureManager_ = nullptr;
     ModelManager *modelManager_ = nullptr;
@@ -100,7 +100,7 @@ class Framework {
     Graphics::BaseObjectManager *baseObjectManager_ = nullptr;
     Graphics::ParticleGroupManager *particleGroupManager_ = nullptr;
     Graphics::ParticleCSGroupManager *particleCSGroupManager_ = nullptr;
-    PipeLineManager *pipeLineManager_ = nullptr;
+    Graphics::PipeLineManager *pipeLineManager_ = nullptr;
     MotionEditor *motionEditor_ = nullptr;
     ComputePipeLineManager *computePipeLineManager_ = nullptr;
     ShortcutManager *shortcutManager_ = nullptr;
@@ -119,9 +119,9 @@ class Framework {
 
     D3DResourceLeakChecker LeakChecker_;
 
-    CollisionManager *collisionManager_ = nullptr;
+    Collision::CollisionManager *collisionManager_ = nullptr;
 
-    std::unique_ptr<OffScreen> offscreen_;
+    std::unique_ptr<Graphics::OffScreen> offscreen_;
 
     bool endRequest_;
 };

@@ -5,7 +5,9 @@
 #include "Application/Utility/MotionEditor/MotionEditor.h"
 #include <Debug/Log/Logger.h>
 #include <ShowFolder/ShowFolder.h>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Math;
+
 BaseObjectManager *BaseObjectManager::instance = nullptr;
 
 BaseObjectManager *BaseObjectManager::GetInstance() {
@@ -54,7 +56,7 @@ void BaseObjectManager::Update() {
     }
 }
 
-void BaseObjectManager::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void BaseObjectManager::Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet) {
     for (auto &[name, obj] : baseObjects_) {
         obj->Draw(viewProjection, offSet);
     }
@@ -841,4 +843,3 @@ void BaseObjectManager::DrawHierarchyEditor() {
     ImGui::End();
 #endif // _DEBUG
 }
-} // namespace Hagine::Graphics

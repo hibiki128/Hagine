@@ -3,8 +3,9 @@
 #include <Line/DrawLine3D.h>
 #include <filesystem>
 #include <fstream>
-
-namespace Hagine::Graphics::Light {
+using namespace Hagine::Math;
+using namespace Hagine::Graphics::Light;
+using namespace Hagine::Core;
 
 LightGroup *LightGroup::instance = nullptr;
 
@@ -21,7 +22,7 @@ void LightGroup::Finalize() {
 }
 
 void LightGroup::Initialize() {
-    dxCommon_ = DirectXCommon::GetInstance();
+    dxCommon_ = Core::DirectXCommon::GetInstance();
     CreateCamera();
     CreatePointLights();
     CreateDirectionLight();
@@ -735,5 +736,3 @@ void LightGroup::DrawLightVisualization() {
         }
     }
 }
-
-} // namespace Hagine::Graphics::Light

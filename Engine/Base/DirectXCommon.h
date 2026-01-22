@@ -147,8 +147,8 @@ class DirectXCommon {
     IDxcUtils *GetDxcUtils() { return dxcUtils; }
     IDxcCompiler3 *GetDxcCompiler() { return dxcCompiler; }
 
-    Vector4 GetClearColor() const {
-        return Vector4(
+    Math::Vector4 GetClearColor() const {
+        return Math::Vector4(
             clearColorValue.Color[0], // R
             clearColorValue.Color[1], // G
             clearColorValue.Color[2], // B

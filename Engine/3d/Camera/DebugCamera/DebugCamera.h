@@ -3,8 +3,9 @@
 #include "type/Matrix4x4.h"
 #include "type/Vector2.h"
 #include "type/Vector3.h"
+#include"type/Quaternion.h"
 
-namespace Hagine::Graphics::Camera {
+namespace Hagine::Camera {
 
 /// <summary>
 /// デバッグカメラクラス
@@ -42,9 +43,9 @@ class DebugCamera {
     /// public varians
     /// ===================================================
 
-    Vector3 rotation_ = {0.0f, 0.0f, 0.0f};      // X,Y,Z軸回りのローカル回転角
-    Vector3 translation_ = {0.0f, 0.0f, -50.0f}; // ローカル座標
-    Matrix4x4 matRot_;                           // 回転行列
+    Math::Vector3 rotation_ = {0.0f, 0.0f, 0.0f}; // X,Y,Z軸回りのローカル回転角
+    Math::Vector3 translation_ = {0.0f, 0.0f, -50.0f}; // ローカル座標
+    Math::Matrix4x4 matRot_;                           // 回転行列
 
   private:
     /// ===================================================
@@ -57,7 +58,7 @@ class DebugCamera {
     /// <param name="cameraRotate">カメラ回転</param>
     /// <param name="cameraTranslate">カメラ座標</param>
     /// <param name="clickPosition">クリック位置</param>
-    void CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Vector2 &clickPosition);
+    void CameraMove(Math::Vector3 &cameraRotate, Math::Vector3 &cameraTranslate, Math::Vector2 &clickPosition);
 
   private:
     /// ===================================================
@@ -65,11 +66,11 @@ class DebugCamera {
     /// ===================================================
 
     ViewProjection *viewProjection_{};                            // ビュープロジェクション
-    Vector2 mouse{};                                              // マウス座標
-    Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                  // オイラー角回転
-    Quaternion quateRotation_ = Quaternion::IdentityQuaternion(); // クォータニオン回転
-    Matrix4x4 rotateXYZMatrix{};                                  // XYZ回転行列
-    Matrix4x4 matRotDelta{};                                      // 回転差分行列
+    Math::Vector2 mouse{};                                        // マウス座標
+    Math::Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};            // オイラー角回転
+    Math::Quaternion quateRotation_ = Math::Quaternion::IdentityQuaternion(); // クォータニオン回転
+    Math::Matrix4x4 rotateXYZMatrix{};                                  // XYZ回転行列
+    Math::Matrix4x4 matRotDelta{};                                      // 回転差分行列
     float mouseSensitivity = 0.003f;                              // マウス感度
     float moveZspeed = 0.005f;                                    // Z軸移動速度
     bool lockCamera_ = true;                                      // カメラロックフラグ

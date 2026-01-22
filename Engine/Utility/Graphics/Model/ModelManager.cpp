@@ -3,6 +3,8 @@
 #include <functional>
 #include <sstream>
 
+using namespace Hagine::Graphics;
+
 ModelManager *ModelManager::instance = nullptr;
 
 ModelManager *ModelManager::GetInstance() {

@@ -8,6 +8,9 @@
 #include <Particle/ParticleCommon.h>
 #include <set>
 #include <vector>
+#include"type/Vector3.h"
+#include"type/Vector4.h"
+#include "type/Quaternion.h"
 namespace Hagine::Graphics {
 class ParticleCSEmitter {
 
@@ -46,13 +49,13 @@ class ParticleCSEmitter {
         }
     }
 
-    void SetMinVelocity(Vector3 minVelocity) {
+    void SetMinVelocity(Math::Vector3 minVelocity) {
         for (auto &group : particleGroups_) {
             group->GetSettingsData()->velocityMin = minVelocity;
         }
     }
 
-    void SetMaxVelocity(Vector3 maxVelocity) {
+    void SetMaxVelocity(Math::Vector3 maxVelocity) {
         for (auto &group : particleGroups_) {
             group->GetSettingsData()->velocityMax = maxVelocity;
         }
@@ -60,64 +63,64 @@ class ParticleCSEmitter {
 
     std::unique_ptr<ParticleCSEmitter> Clone() const;
 
-    void SetTranslate(Vector3 transform) {
+    void SetTranslate(Math::Vector3 transform) {
         if (emitterMeshData_)
             emitterMeshData_->translate = transform;
     }
 
-    void SetStartColor(Vector4 color) {
+    void SetStartColor(Math::Vector4 color) {
         for (auto &group : particleGroups_) {
             group->GetSettingsData()->startColor = color;
         }
     }
 
-    void SetEndColor(Vector4 color) {
+    void SetEndColor(Math::Vector4 color) {
         for (auto &group : particleGroups_) {
             group->GetSettingsData()->endColor = color;
         }
     }
 
-    void SetRotation(Quaternion rotation) {
+    void SetRotation(Math::Quaternion rotation) {
         if (emitterMeshData_)
             emitterMeshData_->rotation = -rotation;
     }
 
-    void SetScale(Vector3 scale) {
+    void SetScale(Math::Vector3 scale) {
         if (emitterMeshData_)
             emitterMeshData_->scale = scale;
     }
 
-    void SetAnchorPoint(Vector3 anchor) {
+    void SetAnchorPoint(Math::Vector3 anchor) {
         if (emitterMeshData_)
             emitterMeshData_->anchorPoint = anchor;
     }
 
-    Vector3 GetAnchorPoint() const {
+    Math::Vector3 GetAnchorPoint() const {
         if (emitterMeshData_)
             return emitterMeshData_->anchorPoint;
-        return Vector3(0.5f, 0.5f, 0.5f);
+        return Math::Vector3(0.5f, 0.5f, 0.5f);
     }
 
-    Vector3 GetTranslate() const {
+    Math::Vector3 GetTranslate() const {
         if (emitterMeshData_)
             return emitterMeshData_->translate;
-        return Vector3(0.0f, 0.0f, 0.0f);
+        return Math::Vector3(0.0f, 0.0f, 0.0f);
     }
 
-    Quaternion GetRotation() const {
+    Math::Quaternion GetRotation() const {
         if (emitterMeshData_)
             return emitterMeshData_->rotation;
-        return Quaternion::IdentityQuaternion();
+        return Math::Quaternion::IdentityQuaternion();
     }
 
-    Vector3 GetScale() const {
+    Math::Vector3 GetScale() const {
         if (emitterMeshData_)
             return emitterMeshData_->scale;
-        return Vector3(1.0f, 1.0f, 1.0f);
+        return Math::Vector3(1.0f, 1.0f, 1.0f);
     }
 
-    Vector3 GetRadius() const {
-        return Vector3(1.0f, 1.0f, 1.0f);
+    Math::Vector3 GetRadius() const {
+        return Math::Vector3(1.0f, 1.0f, 1.0f);
     }
 
     static void ClearNameCounter() {

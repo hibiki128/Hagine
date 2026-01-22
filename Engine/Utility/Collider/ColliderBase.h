@@ -9,13 +9,15 @@
 #include <memory>
 #include <string>
 
+class CollisionManager;
+
+namespace Hagine::Collision {
+
 enum class ColliderType {
     Sphere,
     AABB,
     OBB
 };
-
-class CollisionManager;
 
 class ColliderBase {
   public:
@@ -26,7 +28,7 @@ class ColliderBase {
 
     // 純粋仮想関数
     virtual void UpdateWorldTransform() = 0;
-    virtual void DebugDraw(const ViewProjection &viewProjection) = 0;
+    virtual void DebugDraw(const Camera::ViewProjection &viewProjection) = 0;
     virtual ColliderType GetType() const = 0;
 
     // コールバック設定
@@ -84,8 +86,8 @@ class ColliderBase {
     void SetName(const std::string &name) { name_ = name; }
 
     // 色設定
-    void SetColor(const Vector4 &color) { color_ = color; }
-    const Vector4 &GetColor() const { return color_; }
+    void SetColor(const Math::Vector4 &color) { color_ = color; }
+    const Math::Vector4 &GetColor() const { return color_; }
     void SetHitColor() { color_ = {1.0f, 0.0f, 0.0f, 1.0f}; }
     void SetDefaultColor() { color_ = {1.0f, 1.0f, 1.0f, 1.0f}; }
 
@@ -98,20 +100,20 @@ class ColliderBase {
     virtual void SaveToJson();
     virtual void LoadFromJson();
 
-    std::function<Vector3()> getPositionFunc_;
-    std::function<Quaternion()> getRotationFunc_;
+    std::function<Math::Vector3()> getPositionFunc_;
+    std::function<Math::Quaternion()> getRotationFunc_;
 
-    Vector3 GetCenterPosition() const {
-        return getPositionFunc_ ? getPositionFunc_() : Vector3{0, 0, 0};
+    Math::Vector3 GetCenterPosition() const {
+        return getPositionFunc_ ? getPositionFunc_() : Math::Vector3{0, 0, 0};
     }
 
-    Quaternion GetCenterRotation() const {
-        return getRotationFunc_ ? getRotationFunc_() : Quaternion::IdentityQuaternion();
+    Math::Quaternion GetCenterRotation() const {
+        return getRotationFunc_ ? getRotationFunc_() : Math::Quaternion::IdentityQuaternion();
     }
 
     // セッター
-    void SetPositionGetter(std::function<Vector3()> func) { getPositionFunc_ = func; }
-    void SetRotationGetter(std::function<Quaternion()> func) { getRotationFunc_ = func; }
+    void SetPositionGetter(std::function<Math::Vector3()> func) { getPositionFunc_ = func; }
+    void SetRotationGetter(std::function<Math::Quaternion()> func) { getRotationFunc_ = func; }
     bool isRegistered_ = false; // 登録済みフラグ
 #ifdef _DEBUG
     // ImGuiでタグ設定UI表示
@@ -126,7 +128,7 @@ class ColliderBase {
     bool isVisible_ = true;
     bool isCollidingInCurrentFrame_ = false;
 
-    Vector4 color_ = {1.0f, 1.0f, 1.0f, 1.0f};
+    Math::Vector4 color_ = {1.0f, 1.0f, 1.0f, 1.0f};
 
     CollisionCallback onCollisionEnter_;
     CollisionCallback onCollision_;
@@ -134,3 +136,5 @@ class ColliderBase {
 
     std::unique_ptr<DataHandler> dataHandler_;
 };
+
+} // namespace Hagine::Collision

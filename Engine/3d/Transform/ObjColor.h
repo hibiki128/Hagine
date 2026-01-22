@@ -6,7 +6,7 @@
 namespace Hagine::Transform {
 // 定数バッファ用データ構造体
 struct ConstBufferDataObjColor {
-    Vector4 color_;
+    Math::Vector4 color_;
 };
 
 class ObjColor {
@@ -26,18 +26,18 @@ class ObjColor {
     /// </summary>
     void SetGraphicCommand(UINT rootParameterIndex) const;
 
-    const Vector4 GetColor() {
+    const Math::Vector4 GetColor() {
         return color_;
     }
 
-    void SetColor(Vector4 color) {
+    void SetColor(Math::Vector4 color) {
         color_ = color;
     }
 
   private:
     DirectXCommon *dxCommon_ = nullptr;
 
-    Vector4 color_ = {
+    Math::Vector4 color_ = {
         1.0f,
         1.0f,
         1.0f,

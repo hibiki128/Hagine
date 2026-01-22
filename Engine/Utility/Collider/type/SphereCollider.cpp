@@ -2,12 +2,17 @@
 #include "line/DrawLine3D.h"
 #include <numbers>
 
+using namespace Hagine::Collision;
+using namespace Hagine::Math;
+using namespace Hagine::Camera;
+using namespace Hagine::Graphics::Line;
+
 void SphereCollider::UpdateWorldTransform() {
     cachedSphere_.center = GetCenterPosition() + offset_;
     cachedSphere_.radius = radius_;
 }
 
-void SphereCollider::DebugDraw(const ViewProjection &viewProjection) {
+void SphereCollider::DebugDraw(const Camera::ViewProjection &viewProjection) {
     if (!isVisible_ || !isEnabled_) {
         return;
     }

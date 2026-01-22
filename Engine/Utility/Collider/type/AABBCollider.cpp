@@ -2,6 +2,10 @@
 #include "line/DrawLine3D.h"
 #include <array>
 
+using namespace Hagine::Collision;
+using namespace Hagine::Math;
+using namespace Hagine::Graphics::Line;
+
 void AABBCollider::UpdateWorldTransform() {
     Vector3 center = GetCenterPosition() + offset_;
     Vector3 halfSize = size_ * 0.5f;
@@ -9,7 +13,7 @@ void AABBCollider::UpdateWorldTransform() {
     cachedAABB_.max = center + halfSize;
 }
 
-void AABBCollider::DebugDraw(const ViewProjection &viewProjection) {
+void AABBCollider::DebugDraw(const Camera::ViewProjection &viewProjection) {
     if (!isVisible_ || !isEnabled_) {
         return;
     }

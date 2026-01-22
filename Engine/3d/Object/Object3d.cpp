@@ -11,12 +11,16 @@
 #include <line/DrawLine3D.h>
 #include <myMath.h>
 #include <type/Matrix4x4.h>
-namespace Hagine::Graphics {
+using namespace Hagine::Graphics;
+using namespace Hagine::Math;
+using namespace Hagine::Transform;
+using namespace Hagine::Core;
+
 void Object3d::Initialize() {
     objectCommon_ = std::make_unique<Object3dCommon>();
     objectCommon_->Initialize();
 
-    dxCommon_ = DirectXCommon::GetInstance();
+    dxCommon_ = Core::DirectXCommon::GetInstance();
 
     lightGroup = Light::LightGroup::GetInstance();
 
@@ -547,4 +551,3 @@ void Object3d::SetEnvironmentCoefficients(float value) {
         material->SetEnvironmentCoefficients(value);
     }
 }
-} // namespace Hagine::Graphics

@@ -27,7 +27,7 @@ class ParticleManager {
     std::vector<std::string> GetParticleGroupsName();
     void SetTrailEnabled(const std::string &groupName, bool enabled);
     void SetTrailSettings(const std::string &groupName, float interval, int maxTrails);
-    void SetEmitterCenter(Vector3 center) { emitterCenter_ = center; }
+    void SetEmitterCenter(Math::Vector3 center) { emitterCenter_ = center; }
 
     // 全てのパーティクルが消えたかチェック
     bool IsAllParticlesComplete() const;
@@ -47,7 +47,7 @@ class ParticleManager {
     std::vector<std::string> particleGroupNames_;
     std::random_device seedGenerator;
     std::mt19937 randomEngine;
-    Vector3 emitterCenter_{};
+    Math::Vector3 emitterCenter_{};
 
   public:
     std::list<Particle> Emit();

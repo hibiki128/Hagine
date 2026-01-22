@@ -28,7 +28,7 @@ class Sprite {
     /// <param name="anchorpoint">アンカーポイント</param>
     /// <param name="isFlipX">左右反転フラグ</param>
     /// <param name="isFlipY">上下反転フラグ</param>
-    void Initialize(const std::string &textureFilePath, Vector2 position, Vector4 color = {1, 1, 1, 1}, Vector2 anchorpoint = {0.0f, 0.0f}, bool isFlipX = false, bool isFlipY = false);
+    void Initialize(const std::string &textureFilePath, Math::Vector2 position, Math::Vector4 color = {1, 1, 1, 1}, Math::Vector2 anchorpoint = {0.0f, 0.0f}, bool isFlipX = false, bool isFlipY = false);
 
     /// <summary>
     /// 描画処理
@@ -39,36 +39,36 @@ class Sprite {
     /// <summary>
     /// Getter
     /// </summary>
-    const Vector2 &GetPosition() const { return position_; }
+    const Math::Vector2 &GetPosition() const { return position_; }
     float GetRotation() const { return rotation; }
-    const Vector2 &GetSize() const { return size; }
-    const Vector4 &GetColor() const { return materialData->color; }
-    const Vector2 &GetAnchorPoint() const { return anchorPoint_; }
+    const Math::Vector2 &GetSize() const { return size; }
+    const Math::Vector4 &GetColor() const { return materialData->color; }
+    const Math::Vector2 &GetAnchorPoint() const { return anchorPoint_; }
     const bool GetFlipX() const { return isFlipX_; }
     const bool GetFilpY() const { return isFlipY_; }
-    const Vector2 &GetTexLeftTop() const { return textureLeftTop; }
-    const Vector2 &GetTexSize() const { return textureSize; }
+    const Math::Vector2 &GetTexLeftTop() const { return textureLeftTop; }
+    const Math::Vector2 &GetTexSize() const { return textureSize; }
     uint32_t &GetInstanceCount() { return instanceCount; }
-    Matrix4x4 GetUVTransform() { return materialData->uvTransform; }
-    Vector2 GetUVPosition() { return uvPosition_; }
-    Vector2 GetUVSize() { return uvSize_; }
+    Math::Matrix4x4 GetUVTransform() { return materialData->uvTransform; }
+    Math::Vector2 GetUVPosition() { return uvPosition_; }
+    Math::Vector2 GetUVSize() { return uvSize_; }
     float GetUVRotate() { return uvRotate_; }
 
     /// <summary>
     /// Setter
     /// </summary>
-    void SetPosition(const Vector2 &position) { this->position_ = position; }
+    void SetPosition(const Math::Vector2 &position) { this->position_ = position; }
     void SetRotation(float rotation) { this->rotation = rotation; }
-    void SetSize(const Vector2 &size) { this->size = size; }
-    void SetColor(const Vector3 &color) { materialData->color.x = color.x, materialData->color.y = color.y, materialData->color.z = color.z; }
+    void SetSize(const Math::Vector2 &size) { this->size = size; }
+    void SetColor(const Math::Vector3 &color) { materialData->color.x = color.x, materialData->color.y = color.y, materialData->color.z = color.z; }
     void SetAlpha(const float &alpha) { materialData->color.w = alpha; }
     void SetTexturePath(std::string textureFilePath);
-    void SetAnchorPoint(const Vector2 &anchorPoint) { this->anchorPoint_ = anchorPoint; }
+    void SetAnchorPoint(const Math::Vector2 &anchorPoint) { this->anchorPoint_ = anchorPoint; }
     void SetFlipX(bool isFlipX) { isFlipX_ = isFlipX; }
     void SetFlipY(bool isFlipY) { isFlipY_ = isFlipY; }
-    void SetTexLeftTop(const Vector2 &textureLeftTop) { this->textureLeftTop = textureLeftTop; }
-    void SetTexSize(const Vector2 &textureSize) { this->textureSize = textureSize; }
-    void SetUVTransform(const Matrix4x4 &uvTransform) {
+    void SetTexLeftTop(const Math::Vector2 &textureLeftTop) { this->textureLeftTop = textureLeftTop; }
+    void SetTexSize(const Math::Vector2 &textureSize) { this->textureSize = textureSize; }
+    void SetUVTransform(const Math::Matrix4x4 &uvTransform) {
         materialData->uvTransform = uvTransform;
         uvSize_.x = sqrt(uvTransform.m[0][0] * uvTransform.m[0][0] + uvTransform.m[1][0] * uvTransform.m[1][0]);
         uvSize_.y = sqrt(uvTransform.m[0][1] * uvTransform.m[0][1] + uvTransform.m[1][1] * uvTransform.m[1][1]);
@@ -76,8 +76,8 @@ class Sprite {
         uvPosition_.x = uvTransform.m[3][0];
         uvPosition_.y = uvTransform.m[3][1];
     }
-    void SetUVPosition(const Vector2 &position) { uvPosition_ = position; }
-    void SetUVSize(const Vector2 &size) { uvSize_ = size; }
+    void SetUVPosition(const Math::Vector2 &position) { uvPosition_ = position; }
+    void SetUVSize(const Math::Vector2 &size) { uvSize_ = size; }
     void SetUVRotate(const float &rotate) { uvRotate_ = rotate; }
     void SetInstanceCount(uint32_t count);
     void SetInstanceTransform(uint32_t index, const SpriteTransformationMatrix &transform);
@@ -134,25 +134,25 @@ class Sprite {
     Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
     SpriteTransformationMatrix *transformationMatrixData = nullptr;
 
-    Vector2 position_ = {0.0f, 0.0f}; // 座標
+    Math::Vector2 position_ = {0.0f, 0.0f}; // 座標
     float rotation = 0.0f;            // 回転角度
-    Vector2 size = {640.0f, 360.0f};  // サイズ
+    Math::Vector2 size = {640.0f, 360.0f};  // サイズ
 
     std::string fullpath;
-    Vector2 anchorPoint_ = {0.0f, 0.0f}; // アンカーポイント
+    Math::Vector2 anchorPoint_ = {0.0f, 0.0f}; // アンカーポイント
 
     bool isFlipX_ = false;    // 左右反転フラグ
     bool isFlipY_ = false;    // 上下反転フラグ
     bool isbackmost_ = false; // 背面フラグ
 
-    Vector2 textureLeftTop = {0.0f, 0.0f};  // テクスチャ左上座標
-    Vector2 textureSize = {512.0f, 512.0f}; // テクスチャサイズ
+    Math::Vector2 textureLeftTop = {0.0f, 0.0f};  // テクスチャ左上座標
+    Math::Vector2 textureSize = {512.0f, 512.0f}; // テクスチャサイズ
 
     uint32_t instanceCount = 1; // インスタンス数
     uint32_t transformationMatrixSrvIndex = 0;
 
     float uvRotate_ = 0.0f;             // UV回転角度
-    Vector2 uvSize_ = {1.0f, 1.0f};     // UVサイズ
-    Vector2 uvPosition_ = {0.0f, 0.0f}; // UV座標
+    Math::Vector2 uvSize_ = {1.0f, 1.0f};     // UVサイズ
+    Math::Vector2 uvPosition_ = {0.0f, 0.0f}; // UV座標
 };
 } // namespace Hagine

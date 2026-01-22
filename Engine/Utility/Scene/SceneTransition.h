@@ -2,6 +2,9 @@
 #include "Sprite.h"
 #include "memory"
 #include "vector"
+
+namespace Hagine::Scene {
+
 class SceneTransition {
   private:
     static SceneTransition *instance;
@@ -104,10 +107,10 @@ class SceneTransition {
     // 経過時間カウンター
     float counter_ = 0.0f;
 
-    std::unique_ptr<Sprite> sprite_ = nullptr;
+    std::unique_ptr<Graphics::Sprite> sprite_ = nullptr;
 
     // インスタンシング用Sprite
-    std::unique_ptr<Sprite> transitionSprite_ = nullptr;
+    std::unique_ptr<Graphics::Sprite> transitionSprite_ = nullptr;
     int totalInstances_;
     int rows_;
     int cols_;
@@ -115,7 +118,7 @@ class SceneTransition {
     // 各インスタンスのサイズを保存する配列
     std::vector<std::vector<float>> instanceSizes_;
 
-    Vector2 spPos_ = {0.0f, 0.0f};
+    Math::Vector2 spPos_ = {0.0f, 0.0f};
 
     bool fadeInStart = false;
     bool fadeOutStart = false;
@@ -124,3 +127,4 @@ class SceneTransition {
     bool isEnd = false;
     bool useTransition = true; // デフォルトはトランジションを使用
 };
+} // namespace Hagine::Scene
