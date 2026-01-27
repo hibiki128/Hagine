@@ -57,7 +57,7 @@ void PlayerHand::OnCollisionEnter(ColliderBase *other) {
             if (newEnergy > maxEnergy) {
                 newEnergy = maxEnergy;
             }
-            player_->GetEnergy() = newEnergy; // 直接参照で代入
+            player_->GetEnergy() = newEnergy;
         }
     }
 }

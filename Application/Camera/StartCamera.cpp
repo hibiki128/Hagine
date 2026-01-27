@@ -9,10 +9,10 @@ void StartCamera::Init() {
     vp_.Initialize("");
     wt_.Initialize();
 
-    // 初期角度を設定(真東から開始)
+    // 初期角度を設定
     angle_ = degreesToRadians(kInitialAngleDegrees);
 
-    // 初期位置を計算(中心点の周りに配置)
+    // 初期位置を計算
     wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
     wt_.translation_.y = kInitialHeight;
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
@@ -129,7 +129,7 @@ void StartCamera::Update() {
         case 4: // 2回目完了後の待機
         {
             if (easingTimer_ >= waitDuration_) {
-                // 3回目のイージング開始(targetVpへ)
+                // 3回目のイージング開始
                 easingPhase_ = kPhaseEasing3;
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
@@ -139,7 +139,7 @@ void StartCamera::Update() {
             break;
         }
 
-        case 5: // 3回目のイージング(targetVpへ)
+        case 5: // 3回目のイージング
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
@@ -181,7 +181,7 @@ void StartCamera::Update() {
         return;
     }
 
-    // カメラ位置を計算(中心点の周りを回転)
+    // カメラ位置を計算
     wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
     wt_.translation_.y = kInitialHeight;
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);

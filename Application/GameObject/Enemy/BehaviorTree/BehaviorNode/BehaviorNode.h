@@ -46,7 +46,7 @@ class BehaviorNode {
     static void SetEditor(BehaviorTreeEditor *editor) { editor_ = editor; }
 
     // ===================================================
-    // 追加: ツリー構造を辿るための親ノードポインタ
+    // ツリー構造を辿るための親ノードポインタ
     // ===================================================
     void SetParent(BehaviorNode *parent) { parent_ = parent; } // 親ノード設定
     BehaviorNode *GetParent() const { return parent_; }        // 親ノード取得

@@ -5,6 +5,7 @@
 #include <Particle/ParticleEditor.h>
 
 void PlayerStateRush::Enter(Player &player) {
+    // ロックオン中の敵への突撃経路を計算
     Enemy *enemy = player.GetEnemy();
     if (enemy && player.GetIsLockOn()) {
         targetPosition_ = enemy->GetPositionBehind(distance_);
@@ -18,10 +19,12 @@ void PlayerStateRush::Enter(Player &player) {
         player.GetVelocity().y = kVelocityZero;
     }
 
+    // 振動開始
     if (player.GetGamePad()) {
         player.GetGamePad()->SetVibration(60000, 60000);
     }
 
+    // カメラシェイクとパーティクルの初期化
     shake_ = std::make_unique<Shake>();
     shake_->Initialize(&player.GetViewProjection(), "RushShake");
     shake_->StartShake();
@@ -46,10 +49,12 @@ void PlayerStateRush::Update(Player &player) {
 
     elapsedTime_ += player.GetDt();
 
+    // 振動停止
     if (elapsedTime_ >= 0.2f && player.GetGamePad()) {
         player.GetGamePad()->StopVibration();
     }
 
+    // 到達判定
     if (CheckReachedTarget(player)) {
         FinishRush(player);
         return;
@@ -77,6 +82,7 @@ void PlayerStateRush::DrawParticle(Player &player, const ViewProjection &viewPro
 }
 
 Quaternion PlayerStateRush::LookRotation(const Vector3 &forward, const Vector3 &up) {
+    // 指定方向を向く回転行列を構築
     Vector3 f = forward.Normalize();
     Vector3 u = up.Normalize();
     Vector3 r = u.Cross(f);
@@ -105,6 +111,7 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
 
     Vector3 midPoint = (startPos + targetPos) * kMidPointFactor;
 
+    // 敵の座標系を取得
     Vector3 enemyRight = enemy->GetRight();
     Vector3 enemyUp = enemy->GetUp();
     Vector3 enemyForward = enemy->GetForward();
@@ -119,8 +126,10 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
 
     Vector3 controlDirection = Vector3(kVectorZero, kVectorZero, kVectorZero);
 
+    // 横方向のオフセット（敵の左右に応じて調整）
     controlDirection += enemyRight * (rightDot > kVectorZero ? -sideOffset : sideOffset);
 
+    // 高さ方向のオフセット（上下の位置関係に応じて調整）
     if (upDot > kUpDotHighThreshold) {
         controlDirection += enemyUp * (arcHeight * kUpHeightLowMultiplier);
     } else if (upDot < kUpDotLowThreshold) {
@@ -129,16 +138,19 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
         controlDirection += enemyUp * arcHeight;
     }
 
+    // 前方向のオフセット
     Vector3 startToTarget = (targetPos - startPos).Normalize();
     Vector3 forwardComponent = enemyForward * (startToTarget.Dot(enemyForward));
     controlDirection += forwardComponent * (distance * kForwardOffsetFactor);
 
+    // ベジェ曲線の制御点を設定
     arcControlPoint_ = midPoint + controlDirection;
 
     arcLength_ = (startPos - arcControlPoint_).Length() + (arcControlPoint_ - targetPos).Length();
 }
 
 Vector3 PlayerStateRush::GetArcPosition(float progress) {
+    // 二次ベジェ曲線による位置計算
     float t = progress;
     float oneMinusT = kMaxProgress - t;
 
@@ -167,6 +179,7 @@ void PlayerStateRush::FinishRush(Player &player) {
 }
 
 void PlayerStateRush::UpdateMovement(Player &player) {
+    // 経路上の現在位置を計算
     float progress = (elapsedTime_ * rushSpeed_) / arcLength_;
     if (progress > kMaxProgress)
         progress = kMaxProgress;
@@ -179,6 +192,7 @@ void PlayerStateRush::UpdateMovement(Player &player) {
 Vector3 PlayerStateRush::CalculateMovementDirection(float progress, Player &player) {
     Vector3 arcPos = GetArcPosition(progress);
 
+    // 次フレームの位置から進行方向を算出
     float nextProgress = progress + kProgressIncrement;
     if (nextProgress > kMaxProgress)
         nextProgress = kMaxProgress;
@@ -186,6 +200,7 @@ Vector3 PlayerStateRush::CalculateMovementDirection(float progress, Player &play
 
     Vector3 direction = (nextPos - arcPos).Normalize();
 
+    // 終盤は目標位置への直線移動にブレンド
     if (progress > blendStartProgress_) {
         Vector3 currentPos = player.GetTransform().translation_;
         Vector3 directDirection = (targetPosition_ - currentPos).Normalize();

@@ -37,7 +37,7 @@ void PlayerStateMove::Update(Player &player) {
             isMoving = true;
         }
     } else {
-        // ゲームパッド入力 - 左スティック
+        // ゲームパッド入力
         float leftStickX = player.GetGamePad()->GetLeftStickX();
         float leftStickY = player.GetGamePad()->GetLeftStickY();
 

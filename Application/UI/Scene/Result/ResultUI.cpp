@@ -156,7 +156,7 @@ void ResultUI::Update() {
                 delayTimer_ = 0.0f;
             }
         }
-        // Result~ClearTimeまで(個別表示)
+        // Result~ClearTimeまで
         else if (currentEasingIndex_ <= kClearTime) {
             // 遅延タイマーを更新
             delayTimer_ += Frame::DeltaTime();
@@ -196,7 +196,7 @@ void ResultUI::Update() {
                 animTimer_ = 0.0f;
             }
         }
-        // HPテキスト表示(タイムのカウントアップ完了待ち)
+        // HPテキスト表示
         else if (currentEasingIndex_ == kSecOnes + 1 && numberAnimState_ == kWaitingForHP) {
             // 遅延タイマーを更新
             delayTimer_ += Frame::DeltaTime();

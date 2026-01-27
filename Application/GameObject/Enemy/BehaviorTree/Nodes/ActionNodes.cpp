@@ -285,7 +285,6 @@ bool GuardNode::CheckInterruptCondition(Enemy &enemy) {
 void GuardNode::Reset() {
     if (guardStarted_) {
         // ガード状態を解除
-        // enemy.SetGuarding(false); は Execute内で処理されるので不要
     }
     guardStarted_ = false;
     guardTimer_ = 0.0f;
@@ -326,9 +325,6 @@ NodeStatus GuardNode::Execute(Enemy &enemy, float deltaTime) {
 }
 
 bool DodgeBulletNode::CheckInterruptCondition(Enemy &enemy) {
-    // TODO: 弾の接近を検知する処理を実装
-    // 例: enemy.GetNearbyBullets() などでプレイヤーの弾をチェック
-    // 現在は常にfalseを返す
     return false;
 }
 
@@ -346,8 +342,6 @@ NodeStatus DodgeBulletNode::Execute(Enemy &enemy, float deltaTime) {
 #endif
 
     if (!dodgeStarted_) {
-        // TODO: 弾の方向から回避方向を計算
-        // 現在は仮実装として横方向に回避
         dodgeDirection_ = enemy.GetRight() * (Random::Range(0, 1) == 0 ? 1.0f : -1.0f);
         dodgeStarted_ = true;
         dodgeTimer_ = 0.0f;

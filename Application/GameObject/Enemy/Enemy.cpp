@@ -97,13 +97,12 @@ void Enemy::Update() {
         if (isDamageReact_) {
             damageReactTimer_ += Frame::DeltaTime();
 
-            // イージングされたX回転角(ラジアン)
+            // イージングされたX回転角
             float angleX = tiltEase_.Update(Frame::DeltaTime());
 
             // ワールド空間のX軸で回転を作成
             tiltRotation_ = Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
 
-            // 重要: tiltRotation_ × baseRotation_ の順序（ワールド空間での回転を先に適用）
             transform_->quateRotation_ = tiltRotation_ * baseRotation_;
 
             // 高速点滅
@@ -204,7 +203,7 @@ void Enemy::ExecuteBehaviorTree(float deltaTime) {
         return;
     }
 
-    // ツリーを実行(各ノード内でエディター通知される)
+    // ツリーを実行
     NodeStatus status = behaviorTreeRoot_->Execute(*this, deltaTime);
 
     (void)status;

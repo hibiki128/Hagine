@@ -345,7 +345,7 @@ void Player::OnCollision(ColliderBase *other) {
             // 今の向きを保存
             baseRotation_ = transform_->quateRotation_;
 
-            // X軸回転のみをイージング（後ろに倒れる）
+            // X軸回転のみをイージング
             float startAngle = kRotationZero;
             float endAngle = degreesToRadians(kPlayerDamageTiltDegrees);
             tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
@@ -371,8 +371,8 @@ void Player::DirectionUpdate() {
         }
     } else {
         // ゲームパッド入力 - 左スティック
-        float xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸(左がプラス)
-        float zInput = gamePad_->GetLeftStickY();  // 左スティックY軸(上がプラス)
+        float xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
+        float zInput = gamePad_->GetLeftStickY();  // 左スティックY軸
 
         // スティック入力から方向を判定
         if (xInput != 0.0f || zInput != 0.0f) {
@@ -539,7 +539,7 @@ void Player::RotateUpdate() {
                 transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
             }
         } else {
-            // ゲームパッド入力 - 右スティック
+            // ゲームパッド入力
             float rightStickX = gamePad_->GetRightStickX();
             float rightStickY = gamePad_->GetRightStickY();
 
@@ -567,7 +567,7 @@ void Player::ComboUpdate() {
                 punchCombo_.TryExecuteCombo();
             }
         } else {
-            // ゲームパッド入力（将来の実装用）
+            // ゲームパッド入力
             if (gamePad_->IsTrigger(XINPUT_GAMEPAD_X)) {
                 punchCombo_.TryExecuteCombo();
             }
@@ -586,7 +586,7 @@ void Player::Move() {
     float zInput = kInputZero;
 
     if (!gamePad_->IsConnected()) {
-        // --- キーボード入力 (既存のロジックを維持) ---
+        // --- キーボード入力 ---
         if (input_->PushKey(DIK_A))
             xInput += kInputValue;
         if (input_->PushKey(DIK_D))
@@ -666,7 +666,7 @@ void Player::Move() {
     // 入力方向を計算
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
 
-    // --- 特殊処理: ダッシュ開始時のみ方向を固定 ---
+    // --- ダッシュ開始時のみ方向を固定 ---
     if (dashStartedThisFrame_ && dashInputX_ == kInputZero && dashInputZ_ == kInputZero) {
         // ダッシュ開始時にスティック入力がない場合、敵の方を向く
         if (enemy_) {
@@ -823,7 +823,6 @@ Direction Player::CalculateDirectionFromRotation() {
     return Direction::Forward;
 }
 
-// GetDirectionName メソッドを更新
 const char *Player::GetDirectionName(Direction dir) {
     switch (dir) {
     case Direction::Forward:
@@ -963,13 +962,13 @@ void Player::Debug() {
 
 void Player::ChangeRush() {
     if (!gamePad_->IsConnected()) {
-        // キーボード入力 (既存のロジックを維持)
+        // キーボード入力
         if (input_->TriggerKey(DIK_LCONTROL)) {
             lControlInputCount_++;
             if (lControlInputCount_ == 1) {
                 lControlInputTime_ = 0.0f;
             } else if (lControlInputCount_ == 2 && GetIsLockOn() && GetEnemy()) {
-                // 急接近ステートに遷移 (エネルギー消費判定を追加)
+                // 急接近ステートに遷移
                 if (ConsumeEnergy(kRushEnergyCost)) {
                     ChangeState("Rush");
                 }
@@ -977,12 +976,11 @@ void Player::ChangeRush() {
             }
         }
     } else {
-        // ゲームパッド入力 - ダッシュ中のAボタン押下でRush
+        // ゲームパッド入力
 
         // ダッシュ中かつロックオン中の場合のみRush可能
         if (isDashing_ && GetIsLockOn() && GetEnemy()) {
             // ダッシュ開始から一定時間経過後のAボタントリガーでRush発動
-            // dashStartedThisFrame_がtrueの場合はスキップ(ダッシュ開始直後を除外)
             if (!dashStartedThisFrame_ &&
                 dashDuration_ > 0.1f && // ダッシュ開始から0.1秒以上経過
                 gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
@@ -1021,7 +1019,7 @@ void Player::ChangeEnergyCharge() {
                 ChangeState("EnergyCharge");
             }
         } else {
-            // ゲームパッド入力 - LTトリガー
+            // ゲームパッド入力
             static bool wasRTPressed = false;
             bool isRTPressed = gamePad_->GetLeftTrigger() > 0.25f;
 
@@ -1183,11 +1181,7 @@ void Player::SetVp(ViewProjection *vp) {
 }
 void Player::SetPause(bool flag) {
     isPause_ = flag;
-    // カメラにもポーズ状態を伝える（カメラの回転操作を無効化）
     if (FollowCamera_) {
-        // FollowCameraクラスにSetIsPause()メソッドがあると仮定
-        // もしメソッド名が異なる場合は適宜変更してください
-        // 例: FollowCamera_->SetPause(flag);
-        // 注: FollowCameraクラスにこのメソッドを追加する必要があります
+    
     }
 }

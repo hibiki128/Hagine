@@ -33,7 +33,7 @@ class GameUI {
     };
 
     enum MenuState {
-        MainMenu,    // メインメニュー（3つの選択肢）
+        MainMenu,    // メインメニュー
         Explanation, // 操作説明画面
     };
 
@@ -101,8 +101,8 @@ class GameUI {
     const float kScaleAnimationDuration = 0.2f;
 
     // 定数
-    const float kStartOffsetY = -50.0f; // 出現時のオフセット（上から）
-    const float kEndOffsetY = 100.0f;   // 消去時のオフセット（下へ）
+    const float kStartOffsetY = -50.0f; // 出現時のオフセット
+    const float kEndOffsetY = 100.0f;   // 消去時のオフセット
     const float kSelectedScale = 1.05f;  // 選択時の拡大率
     const Vector3 kNormalColor = {1.0f, 1.0f, 1.0f};
 

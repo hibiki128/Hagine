@@ -75,7 +75,7 @@ class InterruptableNode : public BehaviorNode {
 
   protected:
     bool canBeInterrupted_ = true;  // デフォルトで割り込み可能
-    bool useLinkedDistance_ = true; // 追加: デフォルトで距離ノード参照を有効
+    bool useLinkedDistance_ = true; // デフォルトで距離ノード参照を有効
 };
 
 /// <summary>

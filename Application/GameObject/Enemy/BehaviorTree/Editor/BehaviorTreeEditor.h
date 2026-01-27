@@ -118,7 +118,7 @@ class BehaviorTreeEditor {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     int nodeIdCounter_ = 0;

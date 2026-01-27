@@ -19,7 +19,7 @@ void GameUI::Initialize() {
     sprites_[ExplanationUIBar] = SpriteManager::GetInstance()->GetSprite("ExplanationUIBar");
     sprites_[MenuBackGround] = SpriteManager::GetInstance()->GetSprite("MenuBackGround");
 
-    // 【追加】新規スプライトの取得
+    // 新規スプライトの取得
     sprites_[AButton] = SpriteManager::GetInstance()->GetSprite("AButton");
     sprites_[decision] = SpriteManager::GetInstance()->GetSprite("decision");
     sprites_[BButton] = SpriteManager::GetInstance()->GetSprite("BButton");
@@ -39,7 +39,7 @@ void GameUI::Initialize() {
         sprites_[MenuButton]->sprite->SetAlpha(1.0f);
     }
 
-    // Explanation画面用（SkillButton, Controller, AirController, BButton, back）は非表示
+    // Explanation画面用
     std::array<SpriteIndex, 5> explanationSprites = {
         SkillButton, Controller, AirController, BButton, back};
 
@@ -53,7 +53,7 @@ void GameUI::Initialize() {
         }
     }
 
-    // メニューUI要素（AButton, decision含む）も初期状態では非表示
+    // メニューUI要素
     std::array<SpriteIndex, 9> menuElements = {
         backMenuText, BackMenuUIBar, backTitleText, BackTitleUIBar,
         explanationText, ExplanationUIBar, MenuBackGround, AButton, decision};
@@ -105,8 +105,7 @@ void GameUI::Update() {
     // ポーズ状態が変化したらアニメーション開始
     if (isPause_ != prevIsPause_) {
         if (isPause_) {
-            // ポーズメニューを開く：上から降りてくる
-            // 【修正】AButton, decisionを追加
+            // ポーズメニューを開く
             std::array<SpriteIndex, 9> menuElements = {
                 backMenuText, BackMenuUIBar, backTitleText, BackTitleUIBar,
                 explanationText, ExplanationUIBar, MenuBackGround, AButton, decision};
@@ -139,8 +138,7 @@ void GameUI::Update() {
             transitionState_ = TransitionState::None;
 
         } else {
-            // ポーズメニューを閉じる：下に降りていく
-            // 【修正】AButton, decisionを追加
+            // ポーズメニューを閉じる
             std::array<SpriteIndex, 9> menuElements = {
                 backMenuText, BackMenuUIBar, backTitleText, BackTitleUIBar,
                 explanationText, ExplanationUIBar, MenuBackGround, AButton, decision};
@@ -166,8 +164,7 @@ void GameUI::Update() {
                 animations_[MenuButton].alpha.Reset(0.0f, 1.0f, kAnimationDuration, EasingType::InCubic);
             }
 
-            // 操作説明系のスプライトを非表示に（強制的に閉じる場合用）
-            // 【修正】BButton, backを追加
+            // 操作説明系のスプライトを非表示
             std::array<SpriteIndex, 5> explanationSprites = {
                 Controller, AirController, SkillButton, BButton, back};
 
@@ -186,14 +183,13 @@ void GameUI::Update() {
         UpdateMenuSelection();
         UpdateMenuAnimation();
 
-        // 遷移待ち処理（スプライト被り防止）
+        // 遷移待ち処理
         if (transitionState_ == TransitionState::ToExplanation) {
             // メニュー背景が完全に消えたかチェック
             if (animations_[MenuBackGround].alpha.IsFinished() &&
                 sprites_[MenuBackGround]->sprite->GetColor().w <= 0.01f) {
 
                 // 消えたので、説明画面を表示開始
-                // 【修正】BButton, backを追加
                 std::array<SpriteIndex, 5> explanationSprites = {
                     Controller, AirController, SkillButton, BButton, back};
 
@@ -211,12 +207,11 @@ void GameUI::Update() {
                 transitionState_ = TransitionState::None;
             }
         } else if (transitionState_ == TransitionState::ToMain) {
-            // 説明画像が完全に消えたかチェック（代表としてControllerを見る）
+            // 説明画像が完全に消えたかチェック
             if (animations_[Controller].alpha.IsFinished() &&
                 sprites_[Controller]->sprite->GetColor().w <= 0.01f) {
 
                 // 消えたので、メインメニューを表示開始
-                // 【修正】AButton, decisionを追加
                 std::array<SpriteIndex, 8> mainMenuElements = {
                     backMenuText, BackMenuUIBar, backTitleText,
                     BackTitleUIBar, explanationText, ExplanationUIBar,
@@ -235,7 +230,7 @@ void GameUI::Update() {
         }
     }
 
-    // アニメーション更新（60FPSを想定して1/60秒）
+    // アニメーション更新
     float deltaTime = 1.0f / 60.0f;
 
     for (int i = 0; i < kMaxSprite; ++i) {
@@ -359,7 +354,6 @@ void GameUI::StartExplanationAnimation() {
     transitionState_ = TransitionState::ToExplanation;
 
     // メインメニュー要素をフェードアウト
-    // 【修正】AButton, decisionを追加
     std::array<SpriteIndex, 8> mainMenuElements = {
         backMenuText, BackMenuUIBar, backTitleText,
         BackTitleUIBar, explanationText, ExplanationUIBar,
@@ -383,7 +377,6 @@ void GameUI::EndExplanationAnimation() {
     transitionState_ = TransitionState::ToMain;
 
     // 操作説明スプライトをフェードアウト
-    // 【修正】BButton, backを追加
     std::array<SpriteIndex, 5> explanationSprites = {
         Controller, AirController, SkillButton, BButton, back};
 

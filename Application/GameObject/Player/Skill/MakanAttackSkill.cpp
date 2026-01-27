@@ -68,19 +68,19 @@ void MakanAttackSkill::Update() {
         // ローカルX軸(右方向)
         Vector3 localRight(
             1.0f - 2.0f * (q.y * q.y + q.z * q.z),
-            2.0f * (q.x * q.y - q.w * q.z),  // 符号を反転
-            2.0f * (q.x * q.z + q.w * q.y)); // 符号を反転
+            2.0f * (q.x * q.y - q.w * q.z),
+            2.0f * (q.x * q.z + q.w * q.y));
 
         // ローカルY軸(上方向)
         Vector3 localUp(
-            2.0f * (q.x * q.y + q.w * q.z), // 符号を反転
+            2.0f * (q.x * q.y + q.w * q.z), 
             1.0f - 2.0f * (q.x * q.x + q.z * q.z),
-            2.0f * (q.y * q.z - q.w * q.x)); // 符号を反転
+            2.0f * (q.y * q.z - q.w * q.x)); 
 
         // ローカルZ軸(前方向)
         Vector3 localForward(
-            2.0f * (q.x * q.z - q.w * q.y), // 符号を反転
-            2.0f * (q.y * q.z + q.w * q.x), // 符号を反転
+            2.0f * (q.x * q.z - q.w * q.y), 
+            2.0f * (q.y * q.z + q.w * q.x), 
             1.0f - 2.0f * (q.x * q.x + q.y * q.y));
 
         // 前進距離

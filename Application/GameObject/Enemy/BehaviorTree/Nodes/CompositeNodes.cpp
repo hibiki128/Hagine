@@ -71,7 +71,7 @@ int WeightedSelectorNode::SelectChildByWeight(float distance) {
     // 距離に応じて重みを調整
     std::vector<float> adjustedWeights = weights_;
 
-    // 例: 距離が近いほど後退の重みを上げる
+    // 距離が近いほど後退の重みを上げる
     if (distance < 5.0f && adjustedWeights.size() >= 3) {
         adjustedWeights[2] *= 2.0f;
     }
