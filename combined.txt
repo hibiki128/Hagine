@@ -1309,10 +1309,10 @@ void StartCamera::Init() {
     vp_.Initialize("");
     wt_.Initialize();
 
-    // 初期角度を設定(真東から開始)
+    // 初期角度を設定
     angle_ = degreesToRadians(kInitialAngleDegrees);
 
-    // 初期位置を計算(中心点の周りに配置)
+    // 初期位置を計算
     wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
     wt_.translation_.y = kInitialHeight;
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
@@ -1429,7 +1429,7 @@ void StartCamera::Update() {
         case 4: // 2回目完了後の待機
         {
             if (easingTimer_ >= waitDuration_) {
-                // 3回目のイージング開始(targetVpへ)
+                // 3回目のイージング開始
                 easingPhase_ = kPhaseEasing3;
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
@@ -1439,7 +1439,7 @@ void StartCamera::Update() {
             break;
         }
 
-        case 5: // 3回目のイージング(targetVpへ)
+        case 5: // 3回目のイージング
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
@@ -1481,7 +1481,7 @@ void StartCamera::Update() {
         return;
     }
 
-    // カメラ位置を計算(中心点の周りを回転)
+    // カメラ位置を計算
     wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
     wt_.translation_.y = kInitialHeight;
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
@@ -1604,7 +1604,7 @@ class StartCamera {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // カメラ設定
@@ -1723,7 +1723,7 @@ class BehaviorNode {
     static void SetEditor(BehaviorTreeEditor *editor) { editor_ = editor; }
 
     // ===================================================
-    // 追加: ツリー構造を辿るための親ノードポインタ
+    // ツリー構造を辿るための親ノードポインタ
     // ===================================================
     void SetParent(BehaviorNode *parent) { parent_ = parent; } // 親ノード設定
     BehaviorNode *GetParent() const { return parent_; }        // 親ノード取得
@@ -2708,7 +2708,7 @@ class BehaviorTreeEditor {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     int nodeIdCounter_ = 0;
@@ -3026,7 +3026,6 @@ bool GuardNode::CheckInterruptCondition(Enemy &enemy) {
 void GuardNode::Reset() {
     if (guardStarted_) {
         // ガード状態を解除
-        // enemy.SetGuarding(false); は Execute内で処理されるので不要
     }
     guardStarted_ = false;
     guardTimer_ = 0.0f;
@@ -3067,9 +3066,6 @@ NodeStatus GuardNode::Execute(Enemy &enemy, float deltaTime) {
 }
 
 bool DodgeBulletNode::CheckInterruptCondition(Enemy &enemy) {
-    // TODO: 弾の接近を検知する処理を実装
-    // 例: enemy.GetNearbyBullets() などでプレイヤーの弾をチェック
-    // 現在は常にfalseを返す
     return false;
 }
 
@@ -3087,8 +3083,6 @@ NodeStatus DodgeBulletNode::Execute(Enemy &enemy, float deltaTime) {
 #endif
 
     if (!dodgeStarted_) {
-        // TODO: 弾の方向から回避方向を計算
-        // 現在は仮実装として横方向に回避
         dodgeDirection_ = enemy.GetRight() * (Random::Range(0, 1) == 0 ? 1.0f : -1.0f);
         dodgeStarted_ = true;
         dodgeTimer_ = 0.0f;
@@ -3391,7 +3385,7 @@ int WeightedSelectorNode::SelectChildByWeight(float distance) {
     // 距離に応じて重みを調整
     std::vector<float> adjustedWeights = weights_;
 
-    // 例: 距離が近いほど後退の重みを上げる
+    // 距離が近いほど後退の重みを上げる
     if (distance < 5.0f && adjustedWeights.size() >= 3) {
         adjustedWeights[2] *= 2.0f;
     }
@@ -3796,7 +3790,7 @@ class InterruptableNode : public BehaviorNode {
 
   protected:
     bool canBeInterrupted_ = true;  // デフォルトで割り込み可能
-    bool useLinkedDistance_ = true; // 追加: デフォルトで距離ノード参照を有効
+    bool useLinkedDistance_ = true; // デフォルトで距離ノード参照を有効
 };
 
 /// <summary>
@@ -3934,13 +3928,12 @@ void Enemy::Update() {
         if (isDamageReact_) {
             damageReactTimer_ += Frame::DeltaTime();
 
-            // イージングされたX回転角(ラジアン)
+            // イージングされたX回転角
             float angleX = tiltEase_.Update(Frame::DeltaTime());
 
             // ワールド空間のX軸で回転を作成
             tiltRotation_ = Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
 
-            // 重要: tiltRotation_ × baseRotation_ の順序（ワールド空間での回転を先に適用）
             transform_->quateRotation_ = tiltRotation_ * baseRotation_;
 
             // 高速点滅
@@ -4041,7 +4034,7 @@ void Enemy::ExecuteBehaviorTree(float deltaTime) {
         return;
     }
 
-    // ツリーを実行(各ノード内でエディター通知される)
+    // ツリーを実行
     NodeStatus status = behaviorTreeRoot_->Execute(*this, deltaTime);
 
     (void)status;
@@ -5466,7 +5459,7 @@ void PlayerHand::OnCollisionEnter(ColliderBase *other) {
             if (newEnergy > maxEnergy) {
                 newEnergy = maxEnergy;
             }
-            player_->GetEnergy() = newEnergy; // 直接参照で代入
+            player_->GetEnergy() = newEnergy;
         }
     }
 }
@@ -5911,7 +5904,7 @@ void Player::OnCollision(ColliderBase *other) {
             // 今の向きを保存
             baseRotation_ = transform_->quateRotation_;
 
-            // X軸回転のみをイージング（後ろに倒れる）
+            // X軸回転のみをイージング
             float startAngle = kRotationZero;
             float endAngle = degreesToRadians(kPlayerDamageTiltDegrees);
             tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
@@ -5937,8 +5930,8 @@ void Player::DirectionUpdate() {
         }
     } else {
         // ゲームパッド入力 - 左スティック
-        float xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸(左がプラス)
-        float zInput = gamePad_->GetLeftStickY();  // 左スティックY軸(上がプラス)
+        float xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
+        float zInput = gamePad_->GetLeftStickY();  // 左スティックY軸
 
         // スティック入力から方向を判定
         if (xInput != 0.0f || zInput != 0.0f) {
@@ -6105,7 +6098,7 @@ void Player::RotateUpdate() {
                 transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
             }
         } else {
-            // ゲームパッド入力 - 右スティック
+            // ゲームパッド入力
             float rightStickX = gamePad_->GetRightStickX();
             float rightStickY = gamePad_->GetRightStickY();
 
@@ -6133,7 +6126,7 @@ void Player::ComboUpdate() {
                 punchCombo_.TryExecuteCombo();
             }
         } else {
-            // ゲームパッド入力（将来の実装用）
+            // ゲームパッド入力
             if (gamePad_->IsTrigger(XINPUT_GAMEPAD_X)) {
                 punchCombo_.TryExecuteCombo();
             }
@@ -6152,7 +6145,7 @@ void Player::Move() {
     float zInput = kInputZero;
 
     if (!gamePad_->IsConnected()) {
-        // --- キーボード入力 (既存のロジックを維持) ---
+        // --- キーボード入力 ---
         if (input_->PushKey(DIK_A))
             xInput += kInputValue;
         if (input_->PushKey(DIK_D))
@@ -6232,7 +6225,7 @@ void Player::Move() {
     // 入力方向を計算
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
 
-    // --- 特殊処理: ダッシュ開始時のみ方向を固定 ---
+    // --- ダッシュ開始時のみ方向を固定 ---
     if (dashStartedThisFrame_ && dashInputX_ == kInputZero && dashInputZ_ == kInputZero) {
         // ダッシュ開始時にスティック入力がない場合、敵の方を向く
         if (enemy_) {
@@ -6389,7 +6382,6 @@ Direction Player::CalculateDirectionFromRotation() {
     return Direction::Forward;
 }
 
-// GetDirectionName メソッドを更新
 const char *Player::GetDirectionName(Direction dir) {
     switch (dir) {
     case Direction::Forward:
@@ -6529,13 +6521,13 @@ void Player::Debug() {
 
 void Player::ChangeRush() {
     if (!gamePad_->IsConnected()) {
-        // キーボード入力 (既存のロジックを維持)
+        // キーボード入力
         if (input_->TriggerKey(DIK_LCONTROL)) {
             lControlInputCount_++;
             if (lControlInputCount_ == 1) {
                 lControlInputTime_ = 0.0f;
             } else if (lControlInputCount_ == 2 && GetIsLockOn() && GetEnemy()) {
-                // 急接近ステートに遷移 (エネルギー消費判定を追加)
+                // 急接近ステートに遷移
                 if (ConsumeEnergy(kRushEnergyCost)) {
                     ChangeState("Rush");
                 }
@@ -6543,12 +6535,11 @@ void Player::ChangeRush() {
             }
         }
     } else {
-        // ゲームパッド入力 - ダッシュ中のAボタン押下でRush
+        // ゲームパッド入力
 
         // ダッシュ中かつロックオン中の場合のみRush可能
         if (isDashing_ && GetIsLockOn() && GetEnemy()) {
             // ダッシュ開始から一定時間経過後のAボタントリガーでRush発動
-            // dashStartedThisFrame_がtrueの場合はスキップ(ダッシュ開始直後を除外)
             if (!dashStartedThisFrame_ &&
                 dashDuration_ > 0.1f && // ダッシュ開始から0.1秒以上経過
                 gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
@@ -6587,7 +6578,7 @@ void Player::ChangeEnergyCharge() {
                 ChangeState("EnergyCharge");
             }
         } else {
-            // ゲームパッド入力 - LTトリガー
+            // ゲームパッド入力
             static bool wasRTPressed = false;
             bool isRTPressed = gamePad_->GetLeftTrigger() > 0.25f;
 
@@ -6749,12 +6740,8 @@ void Player::SetVp(ViewProjection *vp) {
 }
 void Player::SetPause(bool flag) {
     isPause_ = flag;
-    // カメラにもポーズ状態を伝える（カメラの回転操作を無効化）
     if (FollowCamera_) {
-        // FollowCameraクラスにSetIsPause()メソッドがあると仮定
-        // もしメソッド名が異なる場合は適宜変更してください
-        // 例: FollowCamera_->SetPause(flag);
-        // 注: FollowCameraクラスにこのメソッドを追加する必要があります
+    
     }
 }
 
@@ -7290,19 +7277,19 @@ void MakanAttackSkill::Update() {
         // ローカルX軸(右方向)
         Vector3 localRight(
             1.0f - 2.0f * (q.y * q.y + q.z * q.z),
-            2.0f * (q.x * q.y - q.w * q.z),  // 符号を反転
-            2.0f * (q.x * q.z + q.w * q.y)); // 符号を反転
+            2.0f * (q.x * q.y - q.w * q.z),
+            2.0f * (q.x * q.z + q.w * q.y));
 
         // ローカルY軸(上方向)
         Vector3 localUp(
-            2.0f * (q.x * q.y + q.w * q.z), // 符号を反転
+            2.0f * (q.x * q.y + q.w * q.z), 
             1.0f - 2.0f * (q.x * q.x + q.z * q.z),
-            2.0f * (q.y * q.z - q.w * q.x)); // 符号を反転
+            2.0f * (q.y * q.z - q.w * q.x)); 
 
         // ローカルZ軸(前方向)
         Vector3 localForward(
-            2.0f * (q.x * q.z - q.w * q.y), // 符号を反転
-            2.0f * (q.y * q.z + q.w * q.x), // 符号を反転
+            2.0f * (q.x * q.z - q.w * q.y), 
+            2.0f * (q.y * q.z + q.w * q.x), 
             1.0f - 2.0f * (q.x * q.x + q.y * q.y));
 
         // 前進距離
@@ -7683,6 +7670,7 @@ File Path: Application/GameObject/Player/State/Action/PlayerStateRush.cpp
 #include <Particle/ParticleEditor.h>
 
 void PlayerStateRush::Enter(Player &player) {
+    // ロックオン中の敵への突撃経路を計算
     Enemy *enemy = player.GetEnemy();
     if (enemy && player.GetIsLockOn()) {
         targetPosition_ = enemy->GetPositionBehind(distance_);
@@ -7696,10 +7684,12 @@ void PlayerStateRush::Enter(Player &player) {
         player.GetVelocity().y = kVelocityZero;
     }
 
+    // 振動開始
     if (player.GetGamePad()) {
         player.GetGamePad()->SetVibration(60000, 60000);
     }
 
+    // カメラシェイクとパーティクルの初期化
     shake_ = std::make_unique<Shake>();
     shake_->Initialize(&player.GetViewProjection(), "RushShake");
     shake_->StartShake();
@@ -7724,10 +7714,12 @@ void PlayerStateRush::Update(Player &player) {
 
     elapsedTime_ += player.GetDt();
 
+    // 振動停止
     if (elapsedTime_ >= 0.2f && player.GetGamePad()) {
         player.GetGamePad()->StopVibration();
     }
 
+    // 到達判定
     if (CheckReachedTarget(player)) {
         FinishRush(player);
         return;
@@ -7755,6 +7747,7 @@ void PlayerStateRush::DrawParticle(Player &player, const ViewProjection &viewPro
 }
 
 Quaternion PlayerStateRush::LookRotation(const Vector3 &forward, const Vector3 &up) {
+    // 指定方向を向く回転行列を構築
     Vector3 f = forward.Normalize();
     Vector3 u = up.Normalize();
     Vector3 r = u.Cross(f);
@@ -7783,6 +7776,7 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
 
     Vector3 midPoint = (startPos + targetPos) * kMidPointFactor;
 
+    // 敵の座標系を取得
     Vector3 enemyRight = enemy->GetRight();
     Vector3 enemyUp = enemy->GetUp();
     Vector3 enemyForward = enemy->GetForward();
@@ -7797,8 +7791,10 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
 
     Vector3 controlDirection = Vector3(kVectorZero, kVectorZero, kVectorZero);
 
+    // 横方向のオフセット（敵の左右に応じて調整）
     controlDirection += enemyRight * (rightDot > kVectorZero ? -sideOffset : sideOffset);
 
+    // 高さ方向のオフセット（上下の位置関係に応じて調整）
     if (upDot > kUpDotHighThreshold) {
         controlDirection += enemyUp * (arcHeight * kUpHeightLowMultiplier);
     } else if (upDot < kUpDotLowThreshold) {
@@ -7807,16 +7803,19 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
         controlDirection += enemyUp * arcHeight;
     }
 
+    // 前方向のオフセット
     Vector3 startToTarget = (targetPos - startPos).Normalize();
     Vector3 forwardComponent = enemyForward * (startToTarget.Dot(enemyForward));
     controlDirection += forwardComponent * (distance * kForwardOffsetFactor);
 
+    // ベジェ曲線の制御点を設定
     arcControlPoint_ = midPoint + controlDirection;
 
     arcLength_ = (startPos - arcControlPoint_).Length() + (arcControlPoint_ - targetPos).Length();
 }
 
 Vector3 PlayerStateRush::GetArcPosition(float progress) {
+    // 二次ベジェ曲線による位置計算
     float t = progress;
     float oneMinusT = kMaxProgress - t;
 
@@ -7845,6 +7844,7 @@ void PlayerStateRush::FinishRush(Player &player) {
 }
 
 void PlayerStateRush::UpdateMovement(Player &player) {
+    // 経路上の現在位置を計算
     float progress = (elapsedTime_ * rushSpeed_) / arcLength_;
     if (progress > kMaxProgress)
         progress = kMaxProgress;
@@ -7857,6 +7857,7 @@ void PlayerStateRush::UpdateMovement(Player &player) {
 Vector3 PlayerStateRush::CalculateMovementDirection(float progress, Player &player) {
     Vector3 arcPos = GetArcPosition(progress);
 
+    // 次フレームの位置から進行方向を算出
     float nextProgress = progress + kProgressIncrement;
     if (nextProgress > kMaxProgress)
         nextProgress = kMaxProgress;
@@ -7864,6 +7865,7 @@ Vector3 PlayerStateRush::CalculateMovementDirection(float progress, Player &play
 
     Vector3 direction = (nextPos - arcPos).Normalize();
 
+    // 終盤は目標位置への直線移動にブレンド
     if (progress > blendStartProgress_) {
         Vector3 currentPos = player.GetTransform().translation_;
         Vector3 directDirection = (targetPosition_ - currentPos).Normalize();
@@ -8617,7 +8619,7 @@ void PlayerStateIdle::Update(Player &player) {
             isMoving = true;
         }
     } else {
-        // ゲームパッド入力 - 左スティック
+        // ゲームパッド入力
         float leftStickX = player.GetGamePad()->GetLeftStickX();
         float leftStickY = player.GetGamePad()->GetLeftStickY();
 
@@ -8804,7 +8806,7 @@ void PlayerStateMove::Update(Player &player) {
             isMoving = true;
         }
     } else {
-        // ゲームパッド入力 - 左スティック
+        // ゲームパッド入力
         float leftStickX = player.GetGamePad()->GetLeftStickX();
         float leftStickY = player.GetGamePad()->GetLeftStickY();
 
@@ -11190,7 +11192,7 @@ void GameUI::Initialize() {
     sprites_[ExplanationUIBar] = SpriteManager::GetInstance()->GetSprite("ExplanationUIBar");
     sprites_[MenuBackGround] = SpriteManager::GetInstance()->GetSprite("MenuBackGround");
 
-    // 【追加】新規スプライトの取得
+    // 新規スプライトの取得
     sprites_[AButton] = SpriteManager::GetInstance()->GetSprite("AButton");
     sprites_[decision] = SpriteManager::GetInstance()->GetSprite("decision");
     sprites_[BButton] = SpriteManager::GetInstance()->GetSprite("BButton");
@@ -11210,7 +11212,7 @@ void GameUI::Initialize() {
         sprites_[MenuButton]->sprite->SetAlpha(1.0f);
     }
 
-    // Explanation画面用（SkillButton, Controller, AirController, BButton, back）は非表示
+    // Explanation画面用
     std::array<SpriteIndex, 5> explanationSprites = {
         SkillButton, Controller, AirController, BButton, back};
 
@@ -11224,7 +11226,7 @@ void GameUI::Initialize() {
         }
     }
 
-    // メニューUI要素（AButton, decision含む）も初期状態では非表示
+    // メニューUI要素
     std::array<SpriteIndex, 9> menuElements = {
         backMenuText, BackMenuUIBar, backTitleText, BackTitleUIBar,
         explanationText, ExplanationUIBar, MenuBackGround, AButton, decision};
@@ -11276,8 +11278,7 @@ void GameUI::Update() {
     // ポーズ状態が変化したらアニメーション開始
     if (isPause_ != prevIsPause_) {
         if (isPause_) {
-            // ポーズメニューを開く：上から降りてくる
-            // 【修正】AButton, decisionを追加
+            // ポーズメニューを開く
             std::array<SpriteIndex, 9> menuElements = {
                 backMenuText, BackMenuUIBar, backTitleText, BackTitleUIBar,
                 explanationText, ExplanationUIBar, MenuBackGround, AButton, decision};
@@ -11310,8 +11311,7 @@ void GameUI::Update() {
             transitionState_ = TransitionState::None;
 
         } else {
-            // ポーズメニューを閉じる：下に降りていく
-            // 【修正】AButton, decisionを追加
+            // ポーズメニューを閉じる
             std::array<SpriteIndex, 9> menuElements = {
                 backMenuText, BackMenuUIBar, backTitleText, BackTitleUIBar,
                 explanationText, ExplanationUIBar, MenuBackGround, AButton, decision};
@@ -11337,8 +11337,7 @@ void GameUI::Update() {
                 animations_[MenuButton].alpha.Reset(0.0f, 1.0f, kAnimationDuration, EasingType::InCubic);
             }
 
-            // 操作説明系のスプライトを非表示に（強制的に閉じる場合用）
-            // 【修正】BButton, backを追加
+            // 操作説明系のスプライトを非表示
             std::array<SpriteIndex, 5> explanationSprites = {
                 Controller, AirController, SkillButton, BButton, back};
 
@@ -11357,14 +11356,13 @@ void GameUI::Update() {
         UpdateMenuSelection();
         UpdateMenuAnimation();
 
-        // 遷移待ち処理（スプライト被り防止）
+        // 遷移待ち処理
         if (transitionState_ == TransitionState::ToExplanation) {
             // メニュー背景が完全に消えたかチェック
             if (animations_[MenuBackGround].alpha.IsFinished() &&
                 sprites_[MenuBackGround]->sprite->GetColor().w <= 0.01f) {
 
                 // 消えたので、説明画面を表示開始
-                // 【修正】BButton, backを追加
                 std::array<SpriteIndex, 5> explanationSprites = {
                     Controller, AirController, SkillButton, BButton, back};
 
@@ -11382,12 +11380,11 @@ void GameUI::Update() {
                 transitionState_ = TransitionState::None;
             }
         } else if (transitionState_ == TransitionState::ToMain) {
-            // 説明画像が完全に消えたかチェック（代表としてControllerを見る）
+            // 説明画像が完全に消えたかチェック
             if (animations_[Controller].alpha.IsFinished() &&
                 sprites_[Controller]->sprite->GetColor().w <= 0.01f) {
 
                 // 消えたので、メインメニューを表示開始
-                // 【修正】AButton, decisionを追加
                 std::array<SpriteIndex, 8> mainMenuElements = {
                     backMenuText, BackMenuUIBar, backTitleText,
                     BackTitleUIBar, explanationText, ExplanationUIBar,
@@ -11406,7 +11403,7 @@ void GameUI::Update() {
         }
     }
 
-    // アニメーション更新（60FPSを想定して1/60秒）
+    // アニメーション更新
     float deltaTime = 1.0f / 60.0f;
 
     for (int i = 0; i < kMaxSprite; ++i) {
@@ -11530,7 +11527,6 @@ void GameUI::StartExplanationAnimation() {
     transitionState_ = TransitionState::ToExplanation;
 
     // メインメニュー要素をフェードアウト
-    // 【修正】AButton, decisionを追加
     std::array<SpriteIndex, 8> mainMenuElements = {
         backMenuText, BackMenuUIBar, backTitleText,
         BackTitleUIBar, explanationText, ExplanationUIBar,
@@ -11554,7 +11550,6 @@ void GameUI::EndExplanationAnimation() {
     transitionState_ = TransitionState::ToMain;
 
     // 操作説明スプライトをフェードアウト
-    // 【修正】BButton, backを追加
     std::array<SpriteIndex, 5> explanationSprites = {
         Controller, AirController, SkillButton, BButton, back};
 
@@ -11658,7 +11653,7 @@ class GameUI {
     };
 
     enum MenuState {
-        MainMenu,    // メインメニュー（3つの選択肢）
+        MainMenu,    // メインメニュー
         Explanation, // 操作説明画面
     };
 
@@ -11726,8 +11721,8 @@ class GameUI {
     const float kScaleAnimationDuration = 0.2f;
 
     // 定数
-    const float kStartOffsetY = -50.0f; // 出現時のオフセット（上から）
-    const float kEndOffsetY = 100.0f;   // 消去時のオフセット（下へ）
+    const float kStartOffsetY = -50.0f; // 出現時のオフセット
+    const float kEndOffsetY = 100.0f;   // 消去時のオフセット
     const float kSelectedScale = 1.05f;  // 選択時の拡大率
     const Vector3 kNormalColor = {1.0f, 1.0f, 1.0f};
 
@@ -11895,7 +11890,7 @@ void ResultUI::Update() {
                 delayTimer_ = 0.0f;
             }
         }
-        // Result~ClearTimeまで(個別表示)
+        // Result~ClearTimeまで
         else if (currentEasingIndex_ <= kClearTime) {
             // 遅延タイマーを更新
             delayTimer_ += Frame::DeltaTime();
@@ -11935,7 +11930,7 @@ void ResultUI::Update() {
                 animTimer_ = 0.0f;
             }
         }
-        // HPテキスト表示(タイムのカウントアップ完了待ち)
+        // HPテキスト表示
         else if (currentEasingIndex_ == kSecOnes + 1 && numberAnimState_ == kWaitingForHP) {
             // 遅延タイマーを更新
             delayTimer_ += Frame::DeltaTime();
