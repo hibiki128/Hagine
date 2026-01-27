@@ -156,6 +156,7 @@ class Player : public BaseObject {
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
     bool &GetIsLockOn() { return isLockOn_; }
+    bool GetIsPause() const { return isPause_; }
     ViewProjection &GetViewProjection();
     PlayerHand *GetRightHand() { return rightHand_ptr_; }
     PlayerHand *GetLeftHand() { return leftHand_ptr_; }
@@ -173,9 +174,7 @@ class Player : public BaseObject {
     void SetStart(bool flag) {
         started_ = flag;
     }
-    void SetPause(bool flag){
-        isPause_ = flag;
-    }
+    void SetPause(bool flag);
     void SetEnemy(Enemy *enemy) {
         enemy_ = enemy;
         leftHand_ptr_->SetEnemy(enemy);
@@ -256,7 +255,7 @@ class Player : public BaseObject {
     /// <returns>const char*: 方向の名前文字列</returns>
     const char *GetDirectionName(Direction dir);
 
-     void UpdateDashState();
+    void UpdateDashState();
 
   private:
     /// ===================================================
@@ -374,8 +373,8 @@ class Player : public BaseObject {
     bool isGrounded_ = true; // 接地フラグ
     bool isDashing_ = false; // ダッシュ中フラグ
     bool isSkillMenu_ = false;
-    float dashInputX_ = 0.0f;         // ダッシュ開始時のスティックX入力
-    float dashInputZ_ = 0.0f;         // ダッシュ開始時のスティックZ入力
+    float dashInputX_ = 0.0f;           // ダッシュ開始時のスティックX入力
+    float dashInputZ_ = 0.0f;           // ダッシュ開始時のスティックZ入力
     bool dashStartedThisFrame_ = false; // ダッシュ開始フラグ
     float dashDuration_ = 0.0f;         // ダッシュ継続時間
 

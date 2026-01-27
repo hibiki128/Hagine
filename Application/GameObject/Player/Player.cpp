@@ -204,20 +204,23 @@ void Player::Update() {
             velocity_.y = kMaxFallVelocity;
         }
 
-        if (!gamePad_->IsConnected()) {
-            // キーボード入力
-            if (input_->TriggerKey(DIK_L)) {
-                isLockOn_ = !isLockOn_;
-            }
-        } else {
-            // ゲームパッド入力（将来の実装用）
-            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
-                isLockOn_ = !isLockOn_;
-            }
-            if (gamePad_->GetLeftTrigger() > 0.25f) {
-                isSkillMenu_ = true;
+        // ポーズ中はロックオン操作を無効化
+        if (!isPause_) {
+            if (!gamePad_->IsConnected()) {
+                // キーボード入力
+                if (input_->TriggerKey(DIK_L)) {
+                    isLockOn_ = !isLockOn_;
+                }
             } else {
-                isSkillMenu_ = false;
+                // ゲームパッド入力（将来の実装用）
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
+                    isLockOn_ = !isLockOn_;
+                }
+                if (gamePad_->GetLeftTrigger() > 0.25f) {
+                    isSkillMenu_ = true;
+                } else {
+                    isSkillMenu_ = false;
+                }
             }
         }
 
@@ -1177,4 +1180,14 @@ void Player::SetCamera(FollowCamera *camera) {
 void Player::SetVp(ViewProjection *vp) {
     vp_ = vp;
     shake_->Initialize(vp_);
+}
+void Player::SetPause(bool flag) {
+    isPause_ = flag;
+    // カメラにもポーズ状態を伝える（カメラの回転操作を無効化）
+    if (FollowCamera_) {
+        // FollowCameraクラスにSetIsPause()メソッドがあると仮定
+        // もしメソッド名が異なる場合は適宜変更してください
+        // 例: FollowCamera_->SetPause(flag);
+        // 注: FollowCameraクラスにこのメソッドを追加する必要があります
+    }
 }

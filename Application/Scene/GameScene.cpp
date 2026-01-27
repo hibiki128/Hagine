@@ -114,19 +114,6 @@ void GameScene::Update() {
         enemy_ptr->SetDrawShadow(false);
     }
 
-    if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
-        GameOverTimer_ += Frame::DeltaTime();
-        player_ptr->SetIsDeathStaging(true);
-        if (GameOverTimer_ >= 2.0f && !isGameOver_) {
-            sceneManager_->NextSceneReservation("CLEAR");
-            isGameOver_ = true;
-        }
-    }
-
-    if (!enemy_ptr->GetIsAlive()) {
-        sceneManager_->NextSceneReservation("CLEAR");
-    }
-
     gameUI_->Update();
     player_ptr->SetPause(gameUI_->GetIsPause());
     enemy_ptr->SetPause(gameUI_->GetIsPause());
@@ -234,7 +221,21 @@ void GameScene::CameraUpdate() {
 }
 
 void GameScene::ChangeScene() {
-    /* if () {
-         sceneManager_->NextSceneReservation("GAME");
-     }*/
+      if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
+        GameOverTimer_ += Frame::DeltaTime();
+        player_ptr->SetIsDeathStaging(true);
+        if (GameOverTimer_ >= 2.0f && !isGameOver_) {
+            sceneManager_->NextSceneReservation("CLEAR");
+            isGameOver_ = true;
+        }
+    }
+
+    if (!enemy_ptr->GetIsAlive()) {
+        sceneManager_->NextSceneReservation("CLEAR");
+    }
+
+    if (gameUI_->GetIsBackTitle()) {
+        sceneManager_->NextSceneReservation("TITLE");
+    }
+
 }

@@ -1,10 +1,20 @@
 {
     "sprite_0": "BlackMask",
-    "sprite_1": "controllerIcon",
-    "sprite_2": "AirControllerIcon",
-    "sprite_3": "menuButton",
-    "sprite_4": "transition",
-    "sprite_5": "transition",
-    "sprite_6": "skillBotton",
-    "sprite_count": 7
+    "sprite_1": "MenuBackGround",
+    "sprite_10": "menuButton",
+    "sprite_11": "transition",
+    "sprite_12": "skillButton",
+    "sprite_13": "AButton",
+    "sprite_14": "decision",
+    "sprite_15": "BButton",
+    "sprite_16": "back",
+    "sprite_2": "BackMenuUIBar",
+    "sprite_3": "ExplanationUIBar",
+    "sprite_4": "BackTitleUIBar",
+    "sprite_5": "backMenuText",
+    "sprite_6": "explanationText",
+    "sprite_7": "backTitleText",
+    "sprite_8": "controllerIcon",
+    "sprite_9": "AirControllerIcon",
+    "sprite_count": 17
 }
