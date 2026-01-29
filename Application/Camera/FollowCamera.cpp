@@ -6,6 +6,10 @@
 #include <Engine/Frame/Frame.h>
 #include <cmath>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Camera;
+
 void FollowCamera::Init() {
     viewProjection_.farZ = kFarZ;
     viewProjection_.Initialize("");
@@ -101,11 +105,11 @@ void FollowCamera::Update() {
                     }
                     Vector3 up = (forward.Cross(right)).Normalize();
                     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
-                    Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
+                    Math::Quaternion targetRot = Math::Quaternion::FromMatrix(rotMatrix);
 
                     rushRotationTimer_ += deltaTime;
                     float rotT = std::min(rushRotationTimer_ / (kNormalizedValue / (dynamicFollowRate * kRotationSpeedMultiplier)), kMaxBlendValue);
-                    worldTransform_.quateRotation_ = Quaternion::Slerp(
+                    worldTransform_.quateRotation_ = Math::Quaternion::Slerp(
                         rushCameraRotation_, targetRot,
                         ApplyEasing(rushCameraEasingType_, kVectorZero, kEasingMaxValue, rotT, kEasingMaxValue));
                     rushCameraRotation_ = worldTransform_.quateRotation_;
@@ -239,12 +243,12 @@ void FollowCamera::Update() {
         }
         Vector3 up = (forward.Cross(right)).Normalize();
         Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
-        worldTransform_.quateRotation_ = Quaternion::FromMatrix(rotMatrix);
+        worldTransform_.quateRotation_ = Math::Quaternion::FromMatrix(rotMatrix);
     } else {
         cameraPos.x = targetPos.x + std::sin(yaw_) * cameraOffset_.z;
         cameraPos.z = targetPos.z + std::cos(yaw_) * cameraOffset_.z;
         cameraPos.y = targetPos.y + cameraOffset_.y;
-        worldTransform_.quateRotation_ = Quaternion::FromEulerAngles({kVectorZero, -yaw_, kVectorZero});
+        worldTransform_.quateRotation_ = Math::Quaternion::FromEulerAngles({kVectorZero, -yaw_, kVectorZero});
     }
 
     cameraPos += cameraRightDir * shoulderOffsetCurrent_.x;
@@ -258,7 +262,7 @@ void FollowCamera::Update() {
         float t = std::min(rushResumeTimer_ / (kNormalizedValue / rushResumeBlendSpeed_), kMaxBlendValue);
 
         worldTransform_.translation_ = ApplyEasing(rushResumeEasingType_, rushCameraPosition_, targetCameraPos, t, kEasingMaxValue);
-        worldTransform_.quateRotation_ = Quaternion::Slerp(
+        worldTransform_.quateRotation_ = Math::Quaternion::Slerp(
             rushCameraRotation_, targetCameraRot,
             ApplyEasing(rushResumeEasingType_, kVectorZero, kEasingMaxValue, t, kEasingMaxValue));
 

@@ -16,6 +16,8 @@ template bool Input::GetJoystickState<XINPUT_STATE>(int32_t stickNo, XINPUT_STAT
 template bool Input::GetJoystickStatePrevious<DIJOYSTATE2>(int32_t stickNo, DIJOYSTATE2 &out) const;
 template bool Input::GetJoystickStatePrevious<XINPUT_STATE>(int32_t stickNo, XINPUT_STATE &out) const;
 
+using namespace Hagine::Math;
+
 Input *Input::GetInstance() {
     static Input instance;
     return &instance;
@@ -183,7 +185,7 @@ MouseMove Input::GetMouseMove() {
     return mouse_->GetMouseMove();
 }
 
-Vector3 Input::GetMousePos3D(const Graphics::Camera::ViewProjection &viewprojection, float depthFactor, float blockSpacing) {
+Vector3 Input::GetMousePos3D(const Camera::ViewProjection &viewprojection, float depthFactor, float blockSpacing) {
     return mouse_->GetMousePos3D(viewprojection, depthFactor, blockSpacing);
 }
 
@@ -197,7 +199,7 @@ Vector2 Input::GetMousePos() {
 
 // レイ*****************************************************************
 
-void Input::UpdateRay(const Graphics::Camera::ViewProjection &viewprojection, const SceneViewport &viewport, float rayLength) {
+void Input::UpdateRay(const Camera::ViewProjection &viewprojection, const SceneViewport &viewport, float rayLength) {
     // ビューポート情報を更新
     currentViewport_ = viewport;
 
@@ -208,7 +210,7 @@ void Input::UpdateRay(const Graphics::Camera::ViewProjection &viewprojection, co
     currentRay_ = CreateRayFromMouse(mousePos, viewprojection, viewport, rayLength);
 }
 
-Ray Input::CreateRayFromMouse(const Vector2 &mousePos, const Graphics::Camera::ViewProjection &viewprojection,
+Ray Input::CreateRayFromMouse(const Vector2 &mousePos, const Camera::ViewProjection &viewprojection,
                               const SceneViewport &viewport, float rayLength) {
     Ray ray;
 
@@ -247,7 +249,7 @@ Ray Input::CreateRayFromMouse(const Vector2 &mousePos, const Graphics::Camera::V
     return ray;
 }
 
-bool Input::RayIntersectAABB(const Ray &ray, Graphics::BaseObject *targetObject, RayHitInfo &hitInfo, const AABB &aabb) {
+bool Input::RayIntersectAABB(const Ray &ray, Graphics::BaseObject *targetObject, RayHitInfo &hitInfo, const Math::AABB &aabb) {
     Vector3 localCorners[8] = {
         {-1.0f, -1.0f, -1.0f},
         {1.0f, -1.0f, -1.0f},
@@ -347,7 +349,7 @@ bool Input::RayIntersectAABB(const Ray &ray, Graphics::BaseObject *targetObject,
     return false;
 }
 
-bool Input::RayIntersectSphere(const Ray &ray, Graphics::BaseObject *targetObject, RayHitInfo &hitInfo, const Sphere &sphere) {
+bool Input::RayIntersectSphere(const Ray &ray, Graphics::BaseObject *targetObject, RayHitInfo &hitInfo, const Math::Sphere &sphere) {
     Matrix4x4 worldMatrix = targetObject->GetWorldTransform()->matWorld_;
     // スフィアの中心をワールド座標に変換
     Vector3 worldCenter = Transformation(sphere.center, worldMatrix);

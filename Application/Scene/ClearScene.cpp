@@ -2,9 +2,16 @@
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
+
+
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 void ClearScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
+    audio_ = Audio::Audio::GetInstance();
+    spCommon_ = Graphics::SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
@@ -13,7 +20,7 @@ void ClearScene::Initialize() {
     /// ロード
     /// ===================================================
     BaseObjectManager::GetInstance()->LoadAll("ClearScene");
-    LightGroup::GetInstance()->LoadLightData("ClearLight");
+    Graphics::Light::LightGroup::GetInstance()->LoadLightData("ClearLight");
 
     /// ===================================================
     /// インスタンス生成
@@ -22,7 +29,7 @@ void ClearScene::Initialize() {
     ground_ = std::make_unique<Ground>();
     resultStaging_ = std::make_unique<ResultStaging>();
     resultUI_ = std::make_unique<ResultUI>();
-    skyBox_ = SkyBox::GetInstance();
+    skyBox_ = Graphics::SkyBox::GetInstance();
 
     /// ===================================================
     /// 初期化

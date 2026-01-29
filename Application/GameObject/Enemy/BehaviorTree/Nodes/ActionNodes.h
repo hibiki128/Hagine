@@ -144,7 +144,7 @@ class RetreatNode : public InterruptableNode {
     float minRetreatDistance_ = 3.0f;
     float maxRetreatDistance_ = 7.0f;
     float currentRetreatDistance_ = 5.0f;
-    Vector3 retreatStartPos_{};
+    Hagine::Math::Vector3 retreatStartPos_{};
     bool distanceSet_ = false;
 };
 
@@ -196,6 +196,6 @@ class DodgeBulletNode : public InterruptableNode {
   private:
     float dodgeTimer_ = 0.0f;
     float dodgeDuration_ = 0.5f;
-    Vector3 dodgeDirection_{};
+    Hagine::Math::Vector3 dodgeDirection_{};
     bool dodgeStarted_ = false;
 };

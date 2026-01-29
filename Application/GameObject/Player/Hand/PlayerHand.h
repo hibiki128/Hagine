@@ -8,7 +8,7 @@ class Player;
 /// <summary>
 /// プレイヤーの手（攻撃判定）のゲームオブジェクトクラス
 /// </summary>
-class PlayerHand : public BaseObject {
+class PlayerHand : public Hagine::Graphics::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -29,14 +29,14 @@ class PlayerHand : public BaseObject {
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticle(const Camera::ViewProjection &viewProjection);
 
     /// <summary>
     /// 描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
 
     /// <summary>
     /// 敵参照を設定

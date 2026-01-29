@@ -2,6 +2,12 @@
 #include "Particle/CSParticle/ParticleCSEditor.h"
 #include <Frame.h>
 
+
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 DeathStaging::DeathStaging() {
     deathParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death");
     deathParticle_R_Arm = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death_arm");
@@ -66,7 +72,7 @@ void DeathStaging::Update() {
     }
 }
 
-void DeathStaging::Draw(const ViewProjection &vp) {
+void DeathStaging::Draw(const Camera::ViewProjection &vp) {
 
     deathParticle_->Draw(vp);
     deathParticle_R_Arm->Draw(vp);

@@ -1,7 +1,7 @@
 #pragma once
 #include "BaseScene.h"
 
-class SelectScene : public BaseScene {
+class SelectScene : public Hagine::Scene::BaseScene {
   public:
     /// ===================================================
     /// public method
@@ -51,7 +51,7 @@ class SelectScene : public BaseScene {
     /// ビュープロジェクションを取得
     /// </summary>
     /// <returns>ViewProjection*: ビュープロジェクションのポインタ</returns>
-    ViewProjection *GetViewProjection() override { return &vp_; }
+    Hagine::Camera::ViewProjection *GetViewProjection() override { return &vp_; }
 
   private:
     /// ===================================================
@@ -73,11 +73,11 @@ class SelectScene : public BaseScene {
     /// private variaus
     /// ====================================
 
-    Audio *audio_;
-    Input *input_;
-    SpriteCommon *spCommon_;
-    ParticleCommon *ptCommon_;
+    Hagine::Audio::Audio *audio_;
+    Hagine::Input *input_;
+    Hagine::Graphics::SpriteCommon *spCommon_;
+    Hagine::Graphics::ParticleCommon *ptCommon_;
 
-    ViewProjection vp_;
-    std::unique_ptr<DebugCamera> debugCamera_;
+    Hagine::Camera::ViewProjection vp_;
+    std::unique_ptr<Hagine::Camera::DebugCamera> debugCamera_;
 };

@@ -3,6 +3,12 @@
 #include <Input.h>
 #include <Particle/CSParticle/ParticleCSEditor.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void PlayerEnergyCharge::Enter(Player &player) {
     beforeChargeRate_ = player.GetChargeRate();
     beforeState_ = player.GetPreviewStateName();
@@ -36,7 +42,7 @@ void PlayerEnergyCharge::Exit(Player &player) {
     ParticleCSEmitter::ClearNameCounter("ChargeAura");
 }
 
-void PlayerEnergyCharge::DrawParticle(Player &player, const ViewProjection &viewProjection) {
+void PlayerEnergyCharge::DrawParticle(Player &player, const Camera::ViewProjection &viewProjection) {
 
     if (chargeAuraEmitter_) {
         chargeAuraEmitter_->Draw(viewProjection);

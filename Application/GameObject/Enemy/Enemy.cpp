@@ -12,6 +12,11 @@
 #include "BehaviorTree/Editor/BehaviorTreeEditor.h"
 #endif
 
+using namespace Hagine;
+using namespace Math;
+using namespace Collision;
+using namespace Graphics;
+
 Enemy::Enemy() {
 }
 
@@ -101,7 +106,7 @@ void Enemy::Update() {
             float angleX = tiltEase_.Update(Frame::DeltaTime());
 
             // ワールド空間のX軸で回転を作成
-            tiltRotation_ = Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
+            tiltRotation_ = Math::Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
 
             // 重要: tiltRotation_ × baseRotation_ の順序（ワールド空間での回転を先に適用）
             transform_->quateRotation_ = tiltRotation_ * baseRotation_;
@@ -218,7 +223,7 @@ void Enemy::DrawBehaviorTreeEditor() {
 #endif
 }
 
-void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void Enemy::Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet) {
     if (!isAlive_) {
         enemyCollider_->SetEnabled(false);
         return;
@@ -231,7 +236,7 @@ void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     shadow_->Draw(viewProjection, offSet);
 }
 
-void Enemy::DrawParticle(const ViewProjection &viewProjection) {
+void Enemy::DrawParticle(const Camera::ViewProjection &viewProjection) {
     hitEmitter_->Draw(viewProjection);
 }
 
@@ -343,11 +348,11 @@ void Enemy::RotateUpdate() {
 
     // 回転行列からクォータニオンを生成
     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
-    Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
+    Math::Quaternion targetRot = Math::Quaternion::FromMatrix(rotMatrix);
 
     // 回転速度（大きいほど素早く向く）
     float rotateSpeed = kRotationSpeed;
-    transform_->quateRotation_ = Quaternion::Slerp(
+    transform_->quateRotation_ = Math::Quaternion::Slerp(
         transform_->quateRotation_,
         targetRot,
         rotateSpeed * Frame::DeltaTime());
@@ -431,6 +436,6 @@ Vector3 Enemy::GetPositionBelow(float distance) const {
     return transform_->translation_ + GetDown() * distance;
 }
 
-void Enemy::SetVp(ViewProjection *vp) {
+void Enemy::SetVp(Camera::ViewProjection *vp) {
     chageShake_->Initialize(vp, "chagehit");
 }

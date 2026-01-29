@@ -4,6 +4,12 @@
 #include "application/GameObject/Player/Player.h"
 #include <cmath>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void PlayerStateAir::Enter(Player &player) {
     player.GetAcceleration().y = player.GetFallSpeed();
     elapsedTime_ = kInitialElapsedTime;

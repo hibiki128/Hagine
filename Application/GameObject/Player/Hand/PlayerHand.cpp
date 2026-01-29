@@ -2,6 +2,12 @@
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Particle/ParticleEditor.h"
 #include <Scene/SceneManager.h>
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void PlayerHand::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);
@@ -26,7 +32,7 @@ void PlayerHand::Update() {
     }
 }
 
-void PlayerHand::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void PlayerHand::Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet) {
     if (!isAlive_) {
     } else {
 
@@ -34,7 +40,7 @@ void PlayerHand::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     }
 }
 
-void PlayerHand::DrawParticle(const ViewProjection &viewProjection) {
+void PlayerHand::DrawParticle(const Camera::ViewProjection &viewProjection) {
     hitEmitter_->Draw(viewProjection);
 }
 

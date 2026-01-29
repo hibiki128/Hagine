@@ -2,6 +2,8 @@
 #include "../Editor/BehaviorTreeEditor.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 
+using namespace Hagine::Math;
+
 NodeStatus InterruptSelectorNode::Execute(Enemy &enemy, float deltaTime) {
 #ifdef _DEBUG
     if (editor_) {

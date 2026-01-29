@@ -21,7 +21,7 @@ class ResultStaging {
     /// <summary>
     /// 描画処理
     /// </summary>
-    void Draw(const ViewProjection &viewProjection);
+    void Draw(const Hagine::Camera::ViewProjection &viewProjection);
 
     /// <summary>
     /// ImGui描画
@@ -49,11 +49,11 @@ class ResultStaging {
     static constexpr float kLineColorB = 0.0f;             // ライン色(B)
     static constexpr float kLineColorA = 1.0f;             // ライン色(A)
 
-    BaseObject *RightHand_ = nullptr;
-    BaseObject *LeftHand_ = nullptr;
+    Hagine::Graphics::BaseObject *RightHand_ = nullptr;
+    Hagine::Graphics::BaseObject *LeftHand_ = nullptr;
 
-    std::vector<std::unique_ptr<ParticleCSEmitter>> fireWorks_explosions_;
-    std::vector<std::unique_ptr<ParticleCSEmitter>> fireWorks_trails_;
+    std::vector<std::unique_ptr<Hagine::Graphics::ParticleCSEmitter>> fireWorks_explosions_;
+    std::vector<std::unique_ptr<Hagine::Graphics::ParticleCSEmitter>> fireWorks_trails_;
 
     bool secondMove_ = false;
     bool motionStarted_ = false;
@@ -70,22 +70,22 @@ class ResultStaging {
         };
         Phase phase = Phase::Ready;
         float timer = 0.0f;
-        Vector3 startPosition;
-        Vector3 explodePosition;
+        Hagine::Math::Vector3 startPosition;
+        Hagine::Math::Vector3 explodePosition;
     };
 
     std::vector<FireWorkState> fireWorkStates_;
 
-    Vector3 fireWorkAreaCenter_ = {-135.0f, -25.0f, -200.0f};
-    Vector3 fireWorkAreaSize_ = {300.0f, 20.0f, 100.0f};
-    Quaternion fireWorkAreaRotation_ = Quaternion::IdentityQuaternion();
+    Hagine::Math::Vector3 fireWorkAreaCenter_ = {-135.0f, -25.0f, -200.0f};
+    Hagine::Math::Vector3 fireWorkAreaSize_ = {300.0f, 20.0f, 100.0f};
+    Hagine::Math::Quaternion fireWorkAreaRotation_ = Hagine::Math::Quaternion::IdentityQuaternion();
 
     float nextFireWorkTimer_ = 0.0f;
     float minFireWorkInterval_ = kMinFireWorkInterval;
     float maxFireWorkInterval_ = kMaxFireWorkInterval;
 
     // ヘルパー関数
-    Vector3 GetRandomPositionInArea();
+    Hagine::Math::Vector3 GetRandomPositionInArea();
     int FindAvailableFireWork();
     void DrawFireWorkArea();
 };

@@ -1,6 +1,11 @@
 #include "EnemyUI.h"
 #include "SpriteCommon.h"
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 void EnemyUI::Init(Enemy *enemy) {
     enemy_ = enemy;
     // HPバーの初期化
@@ -42,7 +47,7 @@ void EnemyUI::Update() {
 }
 
 void EnemyUI::Draw() {
-    SpriteCommon::GetInstance()->DrawCommonSetting();
+    Graphics::SpriteCommon::GetInstance()->DrawCommonSetting();
     if (enemy_) {
         // バーフレームの描画
         if (barFrame_) {

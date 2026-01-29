@@ -1,6 +1,10 @@
 #include "ResultUI.h"
 #include <Frame.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+
 void ResultUI::Initialize() {
     SpriteManager::GetInstance()->SetSaveFolder("Result");
     SpriteManager::GetInstance()->LoadAllSprites();

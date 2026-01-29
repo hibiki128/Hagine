@@ -8,6 +8,12 @@
 #include <algorithm>
 #include <cmath>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void ChargeShot::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);
@@ -137,7 +143,7 @@ void ChargeShot::Update() {
         if (player_) {
             Vector3 playerPos = player_->GetLocalPosition();
 
-            Quaternion rot = player_->GetLocalRotation();
+            Math::Quaternion rot = player_->GetLocalRotation();
 
             Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
 
@@ -201,13 +207,13 @@ float ChargeShot::GetDamage() const {
     return std::max(kMinDamage, damage);
 }
 
-void ChargeShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void ChargeShot::Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet) {
     if (!isAlive_)
         return;
     // スケールを反映
     transform_->scale_ = {scale_, scale_, scale_};
 }
-void ChargeShot::DrawParticle(const ViewProjection &viewProjection) {
+void ChargeShot::DrawParticle(const Camera::ViewProjection &viewProjection) {
     if (!isAlive_)
         return;
     chargeEmitter_->Draw(viewProjection);

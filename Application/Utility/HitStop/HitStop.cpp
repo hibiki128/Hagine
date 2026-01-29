@@ -3,6 +3,8 @@
 #include <chrono>
 #include <Frame.h>
 
+using namespace Hagine;
+
 void HitStop::Initialize() {
     LoadSettings();
 }

@@ -5,6 +5,13 @@
 #include "Particle/CSParticle/ParticleCSEditor.h"
 #include <Frame.h>
 #include <cmath>
+
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void MakanAttackSkill::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
@@ -63,7 +70,7 @@ void MakanAttackSkill::Update() {
 
         // プレイヤーのローカル座標系の基底ベクトルを直接計算
         // クォータニオンから回転行列を作成
-        Quaternion q = playerTransform_->quateRotation_;
+        Math::Quaternion q = playerTransform_->quateRotation_;
 
         // ローカルX軸(右方向)
         Vector3 localRight(
@@ -112,7 +119,7 @@ void MakanAttackSkill::Update() {
     }
 }
 
-void MakanAttackSkill::Activate(WorldTransform *playerTransform) {
+void MakanAttackSkill::Activate(Transform::WorldTransform * playerTransform) {
     if (isActive_)
         return;
 
@@ -134,10 +141,10 @@ void MakanAttackSkill::Deactivate() {
     makanAroundEffect_->SetAuto(false);
 }
 
-void MakanAttackSkill::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void MakanAttackSkill::Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet) {
 }
 
-void MakanAttackSkill::DrawParticle(const ViewProjection &viewProjection) {
+void MakanAttackSkill::DrawParticle(const Camera::ViewProjection & viewProjection) {
     if (makanMainEffect_) {
         makanMainEffect_->Draw(viewProjection);
     }
@@ -190,7 +197,7 @@ void MakanAttackSkill::DebugImGui() {
                         playerTransform_->quateRotation_.w);
 
             // ローカル座標系の基底ベクトル計算
-            Quaternion q = playerTransform_->quateRotation_;
+            Math::Quaternion q = playerTransform_->quateRotation_;
             Vector3 localRight(
                 1.0f - 2.0f * (q.y * q.y + q.z * q.z),
                 2.0f * (q.x * q.y + q.w * q.z),

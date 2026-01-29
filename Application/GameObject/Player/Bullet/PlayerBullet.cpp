@@ -7,6 +7,12 @@
 #include <Engine/Frame/Frame.h>
 #include <cmath>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void PlayerBullet::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     this->CreatePrimitiveModel(PrimitiveType::Sphere);
@@ -84,10 +90,10 @@ void PlayerBullet::Update() {
     // 位置更新
     transform_->translation_ += velocity_ * deltaTime;
 }
-void PlayerBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void PlayerBullet::Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet) {
 }
 
-void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
+void PlayerBullet::DrawParticle(const Camera::ViewProjection &viewProjection) {
     // 生きている場合のみ描画
     if (isAlive_) {
         emitter_->Draw(viewProjection);
@@ -127,7 +133,7 @@ void PlayerBullet::InitTransform(Player *player) {
     } else {
         isLockOnBullet_ = false;
 
-        Quaternion rot = player->GetLocalRotation();
+        Math::Quaternion rot = player->GetLocalRotation();
         Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
         Vector3 direction = rot * baseForward;
 

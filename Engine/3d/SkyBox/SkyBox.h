@@ -65,7 +65,7 @@ class SkyBox {
         float padding;
     };
 
-    DirectXCommon *dxCommon_ = nullptr;
+    Core::DirectXCommon *dxCommon_ = nullptr;
     SrvManager *srvManager_ = nullptr;
     PipeLineManager *psoManager_ = nullptr;
 

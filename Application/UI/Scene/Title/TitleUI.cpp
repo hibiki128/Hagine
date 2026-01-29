@@ -6,6 +6,11 @@
 #include <Object/Base/BaseObjectManager.h>
 #include <Particle/ParticleEditor.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 void TitleUI::Initialize() {
 
     chargeBullet_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
@@ -141,7 +146,7 @@ void TitleUI::Update() {
     }
 }
 
-void TitleUI::Draw(ViewProjection &vp_) {
+void TitleUI::Draw(Camera::ViewProjection &vp_) {
     chargeBullet_->Draw(vp_);
     chargeEffect_->Draw(vp_);
     playerAura_->Draw(vp_);

@@ -35,7 +35,7 @@ class ObjColor {
     }
 
   private:
-    DirectXCommon *dxCommon_ = nullptr;
+    Core::DirectXCommon *dxCommon_ = nullptr;
 
     Math::Vector4 color_ = {
         1.0f,

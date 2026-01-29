@@ -3,6 +3,8 @@
 #include <random>
 #include"../Editor/BehaviorTreeEditor.h"
 
+using namespace Hagine::Math;
+
 NodeStatus SequenceNode::Execute(Enemy &enemy, float deltaTime) {
     if (children_.empty()) {
         return NodeStatus::Failure;

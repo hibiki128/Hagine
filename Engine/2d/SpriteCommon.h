@@ -38,7 +38,7 @@ class SpriteCommon {
     /// ===================================================
 
     static SpriteCommon *instance;
-    DirectXCommon *dxCommon_;
+    Core::DirectXCommon *dxCommon_;
     PipeLineManager *psoManager_ = nullptr;
 
   public:
@@ -71,7 +71,7 @@ class SpriteCommon {
     /// DirectXCommonを取得
     /// </summary>
     /// <returns>DirectXCommon*: DirectXCommonのポインタ</returns>
-    DirectXCommon *GetDxCommon() const { return dxCommon_; }
+    Core::DirectXCommon *GetDxCommon() const { return dxCommon_; }
 
     /// <summary>
     /// ブレンドモードを設定

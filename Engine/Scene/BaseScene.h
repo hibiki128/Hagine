@@ -68,11 +68,11 @@ class BaseScene {
 
     virtual void SetSceneManager(SceneManager *sceneManager) { sceneManager_ = sceneManager; }
 
-    virtual Graphics::Camera::ViewProjection *GetViewProjection() = 0;
+    virtual Camera::ViewProjection *GetViewProjection() = 0;
 
   protected:
     // シーンマネージャ
-    SceneManager *sceneManager_ = nullptr;
+    Scene::SceneManager *sceneManager_ = nullptr;
 
     float ClearTime_ = 0.0f;
     float HP_ = 0.0f;

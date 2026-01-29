@@ -33,7 +33,7 @@ class FollowCamera {
     /// Getter
     /// </summary>
     float GetYaw() { return yaw_; }
-    ViewProjection &GetViewProjection() { return viewProjection_; }
+    Hagine::Camera::ViewProjection &GetViewProjection() { return viewProjection_; }
 
     /// <summary>
     /// Setter
@@ -101,21 +101,21 @@ class FollowCamera {
     float rushRotationArrivalThreshold_ = 0.01f; // Rush復帰時の完了判定回転差
 
     // ビュープロジェクション
-    ViewProjection viewProjection_;
+    Hagine::Camera::ViewProjection viewProjection_;
 
-    WorldTransform worldTransform_;
+    Hagine::Transform::WorldTransform worldTransform_;
 
     // 追従対象
     Player *target_ = nullptr;
 
-    Quaternion rushCameraRotation_; // Rush中に固定されていたカメラ回転
+    Hagine::Math::Quaternion rushCameraRotation_; // Rush中に固定されていたカメラ回転
 
-    Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f};        // ベースのカメラオフセット
-    Vector3 shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f};  // ターゲット肩オフセット
-    Vector3 shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f}; // 現在の補間値
-    Vector3 shoulderOffsetStart_ = {0.0f, 0.0f, 0.0f};   // リセット開始時の値
-    Vector3 rushCameraPosition_;                         // Rush中に固定されていたカメラ位置
-    Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f};
+    Hagine::Math::Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f}; // ベースのカメラオフセット
+    Hagine::Math::Vector3 shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f}; // ターゲット肩オフセット
+    Hagine::Math::Vector3 shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f}; // 現在の補間値
+    Hagine::Math::Vector3 shoulderOffsetStart_ = {0.0f, 0.0f, 0.0f};   // リセット開始時の値
+    Hagine::Math::Vector3 rushCameraPosition_;                         // Rush中に固定されていたカメラ位置
+    Hagine::Math::Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f};
 
     float yaw_{};
     float shoulderMaxOffset_ = 12.5f;        // 肩のズレ最大距離(左右)
@@ -149,8 +149,8 @@ class FollowCamera {
     float rushResumeTimer_ = 0.0f;        // Rush復帰補間用タイマー
 
     // イージングタイプ設定
-    EasingType shoulderEasingType_ = EasingType::OutQuad;       // 肩オフセットのイージング
-    EasingType shoulderResetEasingType_ = EasingType::OutCubic; // 肩オフセットリセットのイージング
-    EasingType rushCameraEasingType_ = EasingType::OutQuad;     // Rushカメラのイージング
-    EasingType rushResumeEasingType_ = EasingType::OutCubic;    // Rush復帰のイージング
+    Hagine::Math::EasingType shoulderEasingType_ = Hagine::Math::EasingType::OutQuad; // 肩オフセットのイージング
+    Hagine::Math::EasingType shoulderResetEasingType_ = Hagine::Math::EasingType::OutCubic; // 肩オフセットリセットのイージング
+    Hagine::Math::EasingType rushCameraEasingType_ = Hagine::Math::EasingType::OutQuad;     // Rushカメラのイージング
+    Hagine::Math::EasingType rushResumeEasingType_ = Hagine::Math::EasingType::OutCubic;    // Rush復帰のイージング
 };

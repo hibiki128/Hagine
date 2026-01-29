@@ -3,6 +3,8 @@
 #include <String/StringUtility.h>
 #include <filesystem>
 
+using namespace Hagine;
+
 TextureManager *TextureManager::instance = nullptr;
 
 // ImGuiで0番を使用するため、1番から使用
@@ -62,7 +64,7 @@ void TextureManager::LoadTexture(const std::string &filePath) {
 }
 
 void TextureManager::Initialize(SrvManager *srvManager) {
-    dxCommon_ = DirectXCommon::GetInstance();
+    dxCommon_ = Core::DirectXCommon::GetInstance();
     srvManager_ = srvManager;
     // SRVの数と同数
     textureDatas.reserve(SrvManager::kMaxSRVCount);

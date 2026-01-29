@@ -4,7 +4,7 @@
 /// <summary>
 /// 空のドームを表現するゲームオブジェクトクラス
 /// </summary>
-class SkyDome : public BaseObject {
+class SkyDome : public Hagine::Graphics::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -26,7 +26,7 @@ class SkyDome : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void Draw(const Hagine::Camera::ViewProjection &viewProjection, Hagine::Math::Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
 
   private:
 };

@@ -17,7 +17,7 @@ class SrvManager {
     SrvManager &operator=(SrvManager &) = delete;
 
   private:
-    DirectXCommon *dxCommon = nullptr;
+    Core::DirectXCommon *dxCommon = nullptr;
 
     // SRV用のでスクリプタサイズ
     uint32_t descriptorSize;

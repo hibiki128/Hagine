@@ -2,6 +2,8 @@
 #include "DirectXCommon.h"
 #include <cstdlib>
 
+using namespace Hagine;
+
 const uint32_t SrvManager::kMaxSRVCount = 49152;
 
 SrvManager *SrvManager::instance = nullptr;
@@ -19,7 +21,7 @@ void SrvManager::Finalize() {
 }
 
 void SrvManager::Initialize() {
-    this->dxCommon = DirectXCommon::GetInstance();
+    this->dxCommon = Core::DirectXCommon::GetInstance();
 
     // デスクリプタヒープの生成
     descriptorHeap = dxCommon->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxSRVCount, true);

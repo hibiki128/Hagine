@@ -26,7 +26,7 @@ class DeathCamera {
     /// </summary>
     /// <param name="currentVp">現在のViewProjection</param>
     /// <param name="targetPosition">プレイヤーの位置</param>
-    void StartEasing(const ViewProjection &currentVp, const Vector3 &targetPosition);
+    void StartEasing(const Hagine::Camera::ViewProjection &currentVp, const Hagine::Math::Vector3 &targetPosition);
 
     /// <summary>
     /// デバッグ関数
@@ -36,7 +36,7 @@ class DeathCamera {
     /// <summary>
     /// Getter
     /// </summary>
-    ViewProjection &GetViewProjection() { return vp_; }
+    Hagine::Camera::ViewProjection &GetViewProjection() { return vp_; }
     bool IsComplete() const { return isComplete_; }
     bool IsHalfway() const { return isHalfway_; }
 
@@ -63,8 +63,8 @@ class DeathCamera {
     static constexpr float kRightVectorY = 0.0f;
     static constexpr float kRightVectorZ = 0.0f;
 
-    ViewProjection vp_;
-    WorldTransform wt_;
+    Hagine::Camera::ViewProjection vp_;
+    Hagine::Transform::WorldTransform wt_;
 
     bool isEasing_ = false;
     bool isComplete_ = false;
@@ -72,11 +72,11 @@ class DeathCamera {
     float easingTimer_ = 0.0f;
     float easingDuration_ = 0.8f;
 
-    Vector3 easingStartPos_;
-    Quaternion easingStartRot_;
-    Vector3 easingTargetPos_;
-    Quaternion easingTargetRot_;
+    Hagine::Math::Vector3 easingStartPos_;
+    Hagine::Math::Quaternion easingStartRot_;
+    Hagine::Math::Vector3 easingTargetPos_;
+    Hagine::Math::Quaternion easingTargetRot_;
 
     // プレイヤーからのオフセット（正面やや斜め上）
-    Vector3 cameraOffset_ = {3.0f, 2.5f, 8.0f};
+    Hagine::Math::Vector3 cameraOffset_ = {3.0f, 2.5f, 8.0f};
 };

@@ -20,9 +20,9 @@ class DeathStaging {
     /// <summary>
     /// 初期化
     /// </summary>
-    void Initialize(Vector3 position, Vector4 color,
-                    Vector3 pos_R_Arm, Vector4 c_R_Arm,
-                    Vector3 pos_L_Arm, Vector4 c_L_Arm);
+    void Initialize(Hagine::Math::Vector3 position, Hagine::Math::Vector4 color,
+                    Hagine::Math::Vector3 pos_R_Arm, Hagine::Math::Vector4 c_R_Arm,
+                    Hagine::Math::Vector3 pos_L_Arm, Hagine::Math::Vector4 c_L_Arm);
 
     /// <summary>
     /// 更新
@@ -32,7 +32,7 @@ class DeathStaging {
     /// <summary>
     /// 描画
     /// </summary>
-    void Draw(const ViewProjection &vp);
+    void Draw(const Hagine::Camera::ViewProjection &vp);
 
     /// <summary>
     /// Getter
@@ -57,18 +57,18 @@ class DeathStaging {
     static constexpr float kMinVelocityY = -1.0f;      // Y方向最小速度
     static constexpr float kMinVelocityZ = -0.5f;      // Z方向最小速度
 
-    Vector3 position_{};
-    Vector3 position_R_Arm{};
-    Vector3 position_L_Arm{};
-    Vector4 color_{};
-    Vector4 color_R_Arm{};
-    Vector4 color_L_Arm{};
+    Hagine::Math::Vector3 position_{};
+    Hagine::Math::Vector3 position_R_Arm{};
+    Hagine::Math::Vector3 position_L_Arm{};
+    Hagine::Math::Vector4 color_{};
+    Hagine::Math::Vector4 color_R_Arm{};
+    Hagine::Math::Vector4 color_L_Arm{};
 
     float time_{};
 
     bool isStart_ = false;
 
-    std::unique_ptr<ParticleCSEmitter> deathParticle_ = nullptr;
-    std::unique_ptr<ParticleCSEmitter> deathParticle_R_Arm = nullptr;
-    std::unique_ptr<ParticleCSEmitter> deathParticle_L_Arm = nullptr;
+    std::unique_ptr<Hagine::Graphics::ParticleCSEmitter> deathParticle_ = nullptr;
+    std::unique_ptr<Hagine::Graphics::ParticleCSEmitter> deathParticle_R_Arm = nullptr;
+    std::unique_ptr<Hagine::Graphics::ParticleCSEmitter> deathParticle_L_Arm = nullptr;
 };

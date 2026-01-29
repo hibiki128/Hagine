@@ -1,4 +1,8 @@
 #include "SkyDome.h"
+using namespace Hagine;
+using namespace Camera;
+using namespace Graphics;
+using namespace Math;
 
 void SkyDome::Init(const std::string className) {
     BaseObject::Init(className);
@@ -11,6 +15,6 @@ void SkyDome::Update() {
     BaseObject::Update();
 }
 
-void SkyDome::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void SkyDome::Draw(const Camera::ViewProjection & viewProjection, Vector3 offSet) {
     BaseObject::Draw(viewProjection,offSet);
 }

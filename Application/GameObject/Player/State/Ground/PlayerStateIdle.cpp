@@ -4,6 +4,12 @@
 #include <Frame.h>
 #include <application/Utility/MotionEditor/MotionEditor.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void PlayerStateIdle::Enter(Player &player) {
 }
 

@@ -12,7 +12,7 @@
 #include "SkyBox/SkyBox.h"
 #include "BaseScene.h"
 
-class GameScene : public BaseScene {
+class GameScene : public Hagine::Scene::BaseScene {
   public:
     /// ===================================================
     /// public method
@@ -62,7 +62,7 @@ class GameScene : public BaseScene {
     /// ビュープロジェクションを取得
     /// </summary>
     /// <returns>ViewProjection*: ビュープロジェクションのポインタ</returns>
-    ViewProjection *GetViewProjection() override { return &vp_; }
+    Hagine::Camera::ViewProjection *GetViewProjection() override { return &vp_; }
 
   private:
     /// ===================================================
@@ -84,13 +84,13 @@ class GameScene : public BaseScene {
     /// private variaus
     /// ====================================
 
-    Audio *audio_;
-    Input *input_;
-    SpriteCommon *spCommon_;
-    ParticleCommon *ptCommon_;
+   Hagine::Audio::Audio *audio_;
+    Hagine::Input *input_;
+    Hagine::Graphics::SpriteCommon *spCommon_;
+    Hagine::Graphics::ParticleCommon *ptCommon_;
 
-    ViewProjection vp_;
-    std::unique_ptr<DebugCamera> debugCamera_;
+    Hagine::Camera::ViewProjection vp_;
+    std::unique_ptr<Hagine::Camera::DebugCamera> debugCamera_;
 
     // プレイヤー
     std::unique_ptr<Player> player_;
@@ -117,7 +117,7 @@ class GameScene : public BaseScene {
 
     std::unique_ptr<FadeOut> fadeOut_;
 
-    SkyBox *skyBox_ = nullptr;
+    Hagine::Graphics::SkyBox *skyBox_ = nullptr;
 
     Enemy *enemy_ptr = nullptr;
     Player *player_ptr = nullptr;

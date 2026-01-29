@@ -6,6 +6,12 @@
 #include "application/GameObject/Player/Player.h"
 #include <cmath>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void PlayerStateMove::Enter(Player &player) {
     float currentHorizontalSpeed = sqrt(player.GetVelocity().x * player.GetVelocity().x +
                                         player.GetVelocity().z * player.GetVelocity().z);

@@ -4,6 +4,9 @@
 #include <Frame.h>
 #include <random.h>
 
+using namespace Hagine;
+using namespace Math;
+
 // ========================================
 // ApproachNode
 // ========================================

@@ -19,7 +19,7 @@ class Enemy;
 /// プレイヤーのゲームオブジェクトクラス
 /// 状態管理、移動、攻撃、カメラ制御などを行う
 /// </summary>
-class Player : public BaseObject {
+class Player : public Hagine::Graphics::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -51,13 +51,13 @@ class Player : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
 
     /// <summary>
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticle(const Camera::ViewProjection &viewProjection);
 
     /// <summary>
     /// 状態を変更
@@ -152,7 +152,7 @@ class Player : public BaseObject {
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
     bool &GetIsLockOn() { return isLockOn_; }
-    ViewProjection &GetViewProjection();
+    Camera::ViewProjection &GetViewProjection();
     PlayerHand *GetRightHand() { return rightHand_ptr_; }
     PlayerHand *GetLeftHand() { return leftHand_ptr_; }
     Direction &GetDirection() { return dir_; }
@@ -165,7 +165,7 @@ class Player : public BaseObject {
     /// Setter
     /// </summary>
     void SetCamera(FollowCamera *camera);
-    void SetVp(ViewProjection *vp);
+    void SetVp(Camera::ViewProjection *vp);
     void SetStart(bool flag) {
         started_ = flag;
     }
@@ -379,7 +379,7 @@ class Player : public BaseObject {
     std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
 
-    ViewProjection *vp_;                          // カメラ
+    Camera::ViewProjection *vp_;                  // カメラ
     OBBCollider *playerCollider_ = nullptr;       // コライダー
     PlayerHand *leftHand_ptr_;                    // 左手
     PlayerHand *rightHand_ptr_;                   // 右手
@@ -390,8 +390,8 @@ class Player : public BaseObject {
     float damageReactTimer_ = 0.0f;    // 経過時間
     float damageReactDuration_ = 0.5f; // リアクション時間
     EasingData<float> tiltEase_;       // 回転角イージング
-    Quaternion baseRotation_;          // 通常時の向き
-    Quaternion tiltRotation_;          // のけぞり用の回転
+    Math::Quaternion baseRotation_;          // 通常時の向き
+    Math::Quaternion tiltRotation_;          // のけぞり用の回転
 
     std::string previousStateName = "";
 };

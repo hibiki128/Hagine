@@ -3,7 +3,12 @@
 #include <myMath.h>
 #include <random>
 
-void Shake::Initialize(ViewProjection *viewProjection, std::string jsonName) {
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
+void Shake::Initialize(Camera::ViewProjection *viewProjection, std::string jsonName) {
     viewProjection_ = viewProjection;
     if (!jsonName.empty()) {
         LoadSettings(jsonName);

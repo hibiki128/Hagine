@@ -78,7 +78,7 @@ class TextureManager {
     };
     std::unordered_map<std::string, TextureData> textureDatas; // テクスチャデータ
 
-    DirectXCommon *dxCommon_ = nullptr;
+    Hagine::Core::DirectXCommon *dxCommon_ = nullptr;
     SrvManager *srvManager_ = nullptr;
 
     bool isDDS_ = false;

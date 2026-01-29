@@ -76,20 +76,20 @@ class PlayerUI {
 
     Player *player_ = nullptr;
 
-    std::unique_ptr<Sprite> hpBar_;
-    std::unique_ptr<Sprite> playerIcon_;
-    std::unique_ptr<Sprite> energyBar_;
-    std::unique_ptr<Sprite> barFrame_;
-    std::unique_ptr<Sprite> energyBarFrame_;
+    std::unique_ptr<Hagine::Graphics::Sprite> hpBar_;
+    std::unique_ptr<Hagine::Graphics::Sprite> playerIcon_;
+    std::unique_ptr<Hagine::Graphics::Sprite> energyBar_;
+    std::unique_ptr<Hagine::Graphics::Sprite> barFrame_;
+    std::unique_ptr<Hagine::Graphics::Sprite> energyBarFrame_;
 
-    Vector2 hpBarPosition_ = {kHPBarPositionX, kHPBarPositionY};                            // HPバーの位置
-    Vector2 hpBarSize_ = {kHPBarSizeX, kHPBarSizeY};                                        // HPバーのサイズ
-    Vector2 playerIconPosition_ = {kPlayerIconPositionX, kPlayerIconPositionY};             // プレイヤーアイコンの位置
-    Vector2 iconSize_ = {kIconSizeX, kIconSizeY};                                           // プレイヤーアイコンのサイズ
-    Vector2 energyBarPosition_ = {kEnergyBarPositionX, kEnergyBarPositionY};                // エネルギーバーの位置
-    Vector2 energyBarSize_ = {kEnergyBarSizeX, kEnergyBarSizeY};                            // エネルギーバーのサイズ
-    Vector2 barFramePosition_ = {kBarFramePositionX, kBarFramePositionY};                   // バーフレームの位置
-    Vector2 barSize_ = {kBarSizeX, kBarSizeY};                                              // バーのサイズ
-    Vector2 energyBarFramePosition_ = {kEnergyBarFramePositionX, kEnergyBarFramePositionY}; // エネルギーバーフレームの位置
-    Vector2 energyBarFrameSize_ = {kEnergyBarFrameSizeX, kEnergyBarFrameSizeY};             // エネルギーバーフレームのサイズ
+    Hagine::Math::Vector2 hpBarPosition_ = {kHPBarPositionX, kHPBarPositionY};                            // HPバーの位置
+    Hagine::Math::Vector2 hpBarSize_ = {kHPBarSizeX, kHPBarSizeY};                                        // HPバーのサイズ
+    Hagine::Math::Vector2 playerIconPosition_ = {kPlayerIconPositionX, kPlayerIconPositionY};             // プレイヤーアイコンの位置
+    Hagine::Math::Vector2 iconSize_ = {kIconSizeX, kIconSizeY};                                           // プレイヤーアイコンのサイズ
+    Hagine::Math::Vector2 energyBarPosition_ = {kEnergyBarPositionX, kEnergyBarPositionY};                // エネルギーバーの位置
+    Hagine::Math::Vector2 energyBarSize_ = {kEnergyBarSizeX, kEnergyBarSizeY};                            // エネルギーバーのサイズ
+    Hagine::Math::Vector2 barFramePosition_ = {kBarFramePositionX, kBarFramePositionY};                   // バーフレームの位置
+    Hagine::Math::Vector2 barSize_ = {kBarSizeX, kBarSizeY};                                              // バーのサイズ
+    Hagine::Math::Vector2 energyBarFramePosition_ = {kEnergyBarFramePositionX, kEnergyBarFramePositionY}; // エネルギーバーフレームの位置
+    Hagine::Math::Vector2 energyBarFrameSize_ = {kEnergyBarFrameSizeX, kEnergyBarFrameSizeY};             // エネルギーバーフレームのサイズ
 };

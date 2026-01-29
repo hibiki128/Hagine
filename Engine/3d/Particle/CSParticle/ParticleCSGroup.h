@@ -133,7 +133,7 @@ class ParticleCSGroup {
     ID3D12GraphicsCommandList *commandList{};
 
     ParticleCommon *particleCommon_{};
-    DirectXCommon *dxCommon_{};
+    Core::DirectXCommon *dxCommon_{};
     SrvManager *srvManager_{};
     TextureManager *texManager_{};
     Model *model_{};

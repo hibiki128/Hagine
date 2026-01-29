@@ -2,12 +2,18 @@
 #include "Engine/Utility/Scene/SceneManager.h"
 #include "myMath.h"
 #include <Frame.h>
+
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 void TitleScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
+    audio_ = Audio::Audio::GetInstance();
+    spCommon_ = Graphics::SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
-    LightGroup::GetInstance()->LoadLightData("TitleScene");
+    Graphics::Light::LightGroup::GetInstance()->LoadLightData("TitleScene");
     vp_.eulerRotation_ = {
         degreesToRadians(26.3f),
         degreesToRadians(-122.7f),
@@ -16,7 +22,7 @@ void TitleScene::Initialize() {
     BaseObjectManager::GetInstance()->LoadAll("TitleScene");
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
-    skyBox_ = SkyBox::GetInstance();
+    skyBox_ = Graphics::SkyBox::GetInstance();
     skyBox_->Initialize("game/skybox.dds");
 
     titleUI_ = std::make_unique<TitleUI>();
@@ -89,7 +95,7 @@ void TitleScene::CameraUpdate() {
 
 void TitleScene::ChangeScene() {
     if (secondMove_ && !vp_.GetIsCameraMove()&&titleUI_->GetIsFinish()) {
-        SceneTransition::GetInstance()->SetUseTransition(false);
+        Scene::SceneTransition::GetInstance()->SetUseTransition(false);
         sceneManager_->NextSceneReservation("GAME");
     }
 #ifndef _DEBUG

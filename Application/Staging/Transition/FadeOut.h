@@ -25,7 +25,7 @@ class FadeOut {
     /// 描画処理
     /// </summary>
     /// <param name="vp">ビュープロジェクション</param>
-    void Draw(const ViewProjection &vp);
+    void Draw(const Hagine::Camera::ViewProjection &vp);
 
     /// <summary>
     /// 終了処理

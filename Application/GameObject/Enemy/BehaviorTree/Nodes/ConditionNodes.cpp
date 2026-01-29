@@ -2,6 +2,8 @@
 #include "Application/GameObject/Enemy/Enemy.h"
 #include"../Editor/BehaviorTreeEditor.h"
 
+using namespace Hagine::Math;
+
 DistanceCheckNode::DistanceCheckNode(float minDist, float maxDist)
     : minDistance_(minDist), maxDistance_(maxDist) {}
 

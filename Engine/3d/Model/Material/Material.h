@@ -83,7 +83,7 @@ class Material {
     /// private varians
     /// ===================================================
 
-    DirectXCommon *dxCommon_ = nullptr;                       // DirectX共通クラス
+    Core::DirectXCommon *dxCommon_ = nullptr;                       // DirectX共通クラス
     MaterialData materialData_;                               // CPU側マテリアルデータ
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_; // GPUバッファリソース
     MaterialDataGPU *materialDataGPU_ = nullptr;              // GPUバッファデータポインタ

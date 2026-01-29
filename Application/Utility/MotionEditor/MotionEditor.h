@@ -55,25 +55,25 @@ enum class MotionStatus {
 /// モーションデータ構造体
 /// </summary>
 struct Motion {
-    BaseObject *target = nullptr;
+    Hagine::Graphics::BaseObject *target = nullptr;
     std::string objectName;
     float totalTime = 1.0f;
     float currentTime = 0.0f;
     MotionStatus status = MotionStatus::Stopped;
 
-    Vector3 startPosOffset, endPosOffset;
-    Vector3 startRotOffset, endRotOffset;
-    Vector3 startScaleOffset = {0, 0, 0}, endScaleOffset = {0, 0, 0};
+    Hagine::Math::Vector3 startPosOffset, endPosOffset;
+    Hagine::Math::Vector3 startRotOffset, endRotOffset;
+    Hagine::Math::Vector3 startScaleOffset = {0, 0, 0}, endScaleOffset = {0, 0, 0};
 
-    Vector3 basePos, baseRot, baseScale;
+    Hagine::Math::Vector3 basePos, baseRot, baseScale;
 
-    Vector3 initialPos, initialRot, initialScale;
+    Hagine::Math::Vector3 initialPos, initialRot, initialScale;
     bool hasInitialTransform = false;
 
-    Quaternion actualStartRot, actualEndRot;
-    Vector3 actualStartScale, actualEndScale;
+    Hagine::Math::Quaternion actualStartRot, actualEndRot;
+    Hagine::Math::Vector3 actualStartScale, actualEndScale;
 
-    std::vector<Vector3> controlPoints;
+    std::vector<Hagine::Math::Vector3> controlPoints;
     bool useCatmullRom = false;
 
     MotionEasingType easingType = MotionEasingType::Linear;
@@ -84,7 +84,7 @@ struct Motion {
 
     bool returnToOriginal = false;
 
-    Vector3 comboStartPos, comboStartRot, comboStartScale;
+    Hagine::Math::Vector3 comboStartPos, comboStartRot, comboStartScale;
     bool hasComboStartTransform = false;
 };
 
@@ -122,8 +122,8 @@ class MotionEditor {
     /// </summary>
     /// <param name="localOffset">ローカルオフセット</param>
     /// <param name="worldMatrix">ワールドマトリックス</param>
-    /// <returns>Vector3: ワールド座標</returns>
-    Vector3 TransformLocalToWorld(const Vector3 &localOffset, const Matrix4x4 &worldMatrix);
+    /// <returns>Hagine::Math::Vector3: ワールド座標</returns>
+    Hagine::Math::Vector3 TransformLocalToWorld(const Hagine::Math::Vector3 &localOffset, const Matrix4x4 &worldMatrix);
 
     /// <summary>
     /// 終了した一時モーションをクリーンアップ
@@ -133,9 +133,9 @@ class MotionEditor {
     /// <summary>
     /// Getter
     /// </summary>
-    Matrix4x4 GetParentInverseWorldMatrix(BaseObject *object);
-    Vector3 GetLocalControlPointPosition(BaseObject *object, const Vector3 &worldPos);
-    Vector3 TransformLocalControlPointToWorld(BaseObject *object, const Vector3 &localPos);
+    Matrix4x4 GetParentInverseWorldMatrix(Hagine::Graphics::BaseObject *object);
+    Hagine::Math::Vector3 GetLocalControlPointPosition(Hagine::Graphics::BaseObject *object, const Hagine::Math::Vector3 &worldPos);
+    Hagine::Math::Vector3 TransformLocalControlPointToWorld(Hagine::Graphics::BaseObject *object, const Hagine::Math::Vector3 &localPos);
 
   public:
     /// ===================================================
@@ -157,7 +157,7 @@ class MotionEditor {
     /// オブジェクトを登録
     /// </summary>
     /// <param name="object">登録するオブジェクト</param>
-    void Register(BaseObject *object);
+    void Register(Hagine::Graphics::BaseObject *object);
 
     /// <summary>
     /// 更新処理
@@ -198,8 +198,8 @@ class MotionEditor {
     /// </summary>
     /// <param name="points">コントロールポイント</param>
     /// <param name="t">補間値（0.0～1.0）</param>
-    /// <returns>Vector3: 補間された座標</returns>
-    Vector3 CatmullRomInterpolation(const std::vector<Vector3> &points, float t);
+    /// <returns>Hagine::Math::Vector3: 補間された座標</returns>
+    Hagine::Math::Vector3 CatmullRomInterpolation(const std::vector<Hagine::Math::Vector3> &points, float t);
 
     /// <summary>
     /// モーションを再生
@@ -225,7 +225,7 @@ class MotionEditor {
     /// <param name="fileName">ファイル名</param>
     /// <param name="returnToOriginal">元の位置に戻すか</param>
     /// <returns>bool: 再生成功フラグ</returns>
-    bool PlayFromFile(BaseObject *target, const std::string &fileName, bool returnToOriginal = false);
+    bool PlayFromFile(Hagine::Graphics::BaseObject *target, const std::string &fileName, bool returnToOriginal = false);
 
     /// <summary>
     /// 初期位置をリセット
@@ -237,19 +237,19 @@ class MotionEditor {
     /// コンボの開始位置を設定
     /// </summary>
     /// <param name="target">対象オブジェクト</param>
-    void SetComboStartPosition(BaseObject *target);
+    void SetComboStartPosition(Hagine::Graphics::BaseObject *target);
 
     /// <summary>
     /// コンボ終了時に開始位置に戻す
     /// </summary>
     /// <param name="target">対象オブジェクト</param>
-    void ReturnToComboStart(BaseObject *target);
+    void ReturnToComboStart(Hagine::Graphics::BaseObject *target);
 
     /// <summary>
     /// 特定オブジェクトのコンボ開始位置をクリア
     /// </summary>
     /// <param name="target">対象オブジェクト</param>
-    void ClearComboStartPosition(BaseObject *target);
+    void ClearComboStartPosition(Hagine::Graphics::BaseObject *target);
 
     /// <summary>
     /// すべてのコンボ開始位置をクリア
@@ -261,27 +261,27 @@ class MotionEditor {
     /// </summary>
     /// <param name="target">対象オブジェクト</param>
     /// <returns>bool: 攻撃終了フラグ</returns>
-    bool IsAttackFinished(BaseObject *target);
+    bool IsAttackFinished(Hagine::Graphics::BaseObject *target);
 
     /// <summary>
     /// インターバル付きで攻撃が終了したかを判定
     /// </summary>
     /// <param name="target">対象オブジェクト</param>
     /// <returns>bool: 攻撃終了フラグ</returns>
-    bool IsAttackFinishedWithInterval(BaseObject *target);
+    bool IsAttackFinishedWithInterval(Hagine::Graphics::BaseObject *target);
 
     /// <summary>
     /// 攻撃終了後のインターバルを設定
     /// </summary>
     /// <param name="target">対象オブジェクト</param>
     /// <param name="interval">インターバル時間</param>
-    void SetAttackEndInterval(BaseObject *target, float interval = 0.3f);
+    void SetAttackEndInterval(Hagine::Graphics::BaseObject *target, float interval = 0.3f);
 
     /// <summary>
     /// 攻撃終了後のインターバルをクリア
     /// </summary>
     /// <param name="target">対象オブジェクト</param>
-    void ClearAttackEndInterval(BaseObject *target);
+    void ClearAttackEndInterval(Hagine::Graphics::BaseObject *target);
 
     /// <summary>
     /// 一時的なモーションが終了したかを判定
@@ -289,7 +289,7 @@ class MotionEditor {
     /// <param name="target">対象オブジェクト</param>
     /// <param name="fileName">ファイル名</param>
     /// <returns>bool: 終了フラグ</returns>
-    bool IsTemporaryMotionFinished(BaseObject *target, const std::string &fileName);
+    bool IsTemporaryMotionFinished(Hagine::Graphics::BaseObject *target, const std::string &fileName);
 
     /// <summary>
     /// Getter
@@ -297,7 +297,7 @@ class MotionEditor {
     MotionStatus GetMotionStatus(const std::string &objectName);
     bool IsPlaying(const std::string &objectName);
     bool IsFinished(const std::string &objectName);
-    std::string GetTemporaryMotionName(BaseObject *target, const std::string &fileName);
+    std::string GetTemporaryMotionName(Hagine::Graphics::BaseObject *target, const std::string &fileName);
 
 
   private:
@@ -307,11 +307,11 @@ class MotionEditor {
 
     static MotionEditor *instance;
 
-    std::unordered_map<BaseObject *, Vector3> comboStartPositions_; // コンボ開始位置
-    std::unordered_map<BaseObject *, Vector3> comboStartRotations_; // コンボ開始回転
-    std::unordered_map<BaseObject *, Vector3> comboStartScales_;    // コンボ開始スケール
+    std::unordered_map<Hagine::Graphics::BaseObject *, Hagine::Math::Vector3> comboStartPositions_; // コンボ開始位置
+    std::unordered_map<Hagine::Graphics::BaseObject *, Hagine::Math::Vector3> comboStartRotations_; // コンボ開始回転
+    std::unordered_map<Hagine::Graphics::BaseObject *, Hagine::Math::Vector3> comboStartScales_;    // コンボ開始スケール
     std::unordered_map<std::string, Motion> motions_;               // モーションマップ
-    std::unordered_map<BaseObject *, float> attackEndIntervals_;    // 攻撃終了インターバル
+    std::unordered_map<Hagine::Graphics::BaseObject *, float> attackEndIntervals_;    // 攻撃終了インターバル
 
     static const float ATTACK_END_INTERVAL; // 攻撃終了後のインターバル時間
 

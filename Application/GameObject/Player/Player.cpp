@@ -21,6 +21,12 @@
 #include <Particle/ParticleEditor.h>
 #include <cmath>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 Player::Player() {
 }
 
@@ -173,7 +179,7 @@ void Player::Update() {
 
             float angleX = tiltEase_.Update(dt_);
 
-            tiltRotation_ = Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
+            tiltRotation_ = Math::Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
 
             transform_->quateRotation_ = tiltRotation_ * baseRotation_;
 
@@ -238,7 +244,7 @@ void Player::Update() {
     }
 }
 
-void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void Player::Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet) {
     if (deathStaging_->GetIsStart()) {
         leftHand_ptr_->SetIsAlive(false);
         rightHand_ptr_->SetIsAlive(false);
@@ -255,7 +261,7 @@ void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     }
 }
 
-void Player::DrawParticle(const ViewProjection &viewProjection) {
+void Player::DrawParticle(const Camera::ViewProjection &viewProjection) {
 
     if (!isAlive_ && isDeathStaging_) {
         deathStaging_->Initialize(
@@ -400,10 +406,10 @@ void Player::RotateUpdate() {
 
             // 回転行列から目標クォータニオンを作成
             Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
-            Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
+            Math::Quaternion targetRot = Math::Quaternion::FromMatrix(rotMatrix);
 
             float rotateSpeed = kPlayerRotationSpeed;
-            transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
+            transform_->quateRotation_ = Math::Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
         }
     } else {
         Vector3 euler = transform_->quateRotation_.ToEulerAngles();
@@ -417,7 +423,7 @@ void Player::RotateUpdate() {
             rotationChanged = true;
         }
         if (rotationChanged) {
-            transform_->quateRotation_ = Quaternion::FromEulerAngles(euler);
+            transform_->quateRotation_ = Math::Quaternion::FromEulerAngles(euler);
         }
     }
 }
@@ -481,9 +487,9 @@ void Player::Move() {
     // --- 回転処理 ---
     if (!isLockOn_) {
         float targetYaw = std::atan2(-moveDir.x, moveDir.z);
-        Quaternion targetRot = Quaternion::FromEulerAngles({kRotationZero, targetYaw, kRotationZero});
+        Math::Quaternion targetRot = Math::Quaternion::FromEulerAngles({kRotationZero, targetYaw, kRotationZero});
         float rotateSpeed = kPlayerRotationSpeed;
-        transform_->quateRotation_ = Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
+        transform_->quateRotation_ = Math::Quaternion::Slerp(transform_->quateRotation_, targetRot, rotateSpeed * dt_);
     }
 
     // --- 移動処理 ---
@@ -891,7 +897,7 @@ Vector3 Player::GetPositionBelow(float distance) const {
     return transform_->translation_ + GetDown() * distance;
 }
 
-ViewProjection &Player::GetViewProjection() {
+Camera::ViewProjection &Player::GetViewProjection() {
     return *vp_;
 }
 
@@ -899,7 +905,7 @@ void Player::SetCamera(FollowCamera *camera) {
     FollowCamera_ = camera;
 }
 
-void Player::SetVp(ViewProjection *vp) {
+void Player::SetVp(Camera::ViewProjection *vp) {
     vp_ = vp;
     shake_->Initialize(vp_);
 }

@@ -31,7 +31,7 @@ class Object3d {
         Math::Matrix4x4 WorldInverseTranspose;
     };
 
-    DirectXCommon *dxCommon_ = nullptr;
+    Core::DirectXCommon *dxCommon_ = nullptr;
 
     // バッファリソース
     Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;

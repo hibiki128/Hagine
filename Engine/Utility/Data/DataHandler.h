@@ -9,9 +9,12 @@
 #include <memory>
 #include <type/Vector2.h>
 #include <type/Vector3.h>
+#include <Primitive/PrimitiveModel.h>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
+
+namespace Hagine {
 
 class DataHandler {
   private:
@@ -45,52 +48,52 @@ class DataHandler {
     void DeleteAllJsonsInFolder();
 };
 
-// JSON変換の定義 (Vector2)
-inline void to_json(json &j, const Vector2 &v) {
+// JSON変換の定義 (Math::Vector2)
+inline void to_json(json &j, const Math::Vector2 &v) {
     j = json{{"x", v.x}, {"y", v.y}};
 }
 
-inline void from_json(const json &j, Vector2 &v) {
+inline void from_json(const json &j, Math::Vector2 &v) {
     v.x = j.at("x").get<float>();
     v.y = j.at("y").get<float>();
 }
 
-// JSON変換の定義 (Vector3)
-inline void to_json(json &j, const Vector3 &v) {
+// JSON変換の定義 (Math::Vector3)
+inline void to_json(json &j, const Math::Vector3 &v) {
     j = json{{"x", v.x}, {"y", v.y}, {"z", v.z}};
 }
 
-inline void from_json(const json &j, Vector3 &v) {
+inline void from_json(const json &j, Math::Vector3 &v) {
     v.x = j.at("x").get<float>();
     v.y = j.at("y").get<float>();
     v.z = j.at("z").get<float>();
 }
 
-// JSON変換の定義 (Vector3)
-inline void to_json(json &j, const Vector4 &v) {
+// JSON変換の定義 (Math::Vector3)
+inline void to_json(json &j, const Math::Vector4 &v) {
     j = json{{"x", v.x}, {"y", v.y}, {"z", v.z}, {"w", v.w}};
 }
 
-inline void from_json(const json &j, Vector4 &v) {
+inline void from_json(const json &j, Math::Vector4 &v) {
     v.x = j.at("x").get<float>();
     v.y = j.at("y").get<float>();
     v.z = j.at("z").get<float>();
     v.w = j.at("w").get<float>();
 }
 
-inline void to_json(json &j, const Quaternion &q) {
+inline void to_json(json &j, const Math::Quaternion &q) {
     j = json{{"x", q.x}, {"y", q.y}, {"z", q.z}, {"w", q.w}};
 }
 
-inline void from_json(const json &j, Quaternion &q) {
+inline void from_json(const json &j, Math::Quaternion &q) {
     q.x = j.at("x").get<float>();
     q.y = j.at("y").get<float>();
     q.z = j.at("z").get<float>();
     q.w = j.at("w").get<float>();
 }
 
-// JSON変換の定義 (Matrix4x4)
-inline void to_json(json &j, const Matrix4x4 &matrix) {
+// JSON変換の定義 (Math::Matrix4x4)
+inline void to_json(json &j, const Math::Matrix4x4 &matrix) {
     j = json::array();
     for (int i = 0; i < 4; ++i) {
         json row = json::array();
@@ -101,7 +104,7 @@ inline void to_json(json &j, const Matrix4x4 &matrix) {
     }
 }
 
-inline void from_json(const json &j, Matrix4x4 &matrix) {
+inline void from_json(const json &j, Math::Matrix4x4 &matrix) {
     for (int i = 0; i < 4; ++i) {
         for (int k = 0; k < 4; ++k) {
             matrix.m[i][k] = j[i][k].get<float>();
@@ -110,12 +113,12 @@ inline void from_json(const json &j, Matrix4x4 &matrix) {
 }
 
 // JSON変換の定義 (PrimitiveType)
-inline void to_json(json &j, const PrimitiveType &type) {
+inline void to_json(json &j, const Graphics::PrimitiveType &type) {
     j = static_cast<int>(type);
 }
 
-inline void from_json(const json &j, PrimitiveType &type) {
-    type = static_cast<PrimitiveType>(j.get<int>());
+inline void from_json(const json &j, Graphics::PrimitiveType &type) {
+    type = static_cast<Graphics::PrimitiveType>(j.get<int>());
 }
 
 // Save (テンプレート関数はここに書く)
@@ -161,3 +164,5 @@ T DataHandler::Load(const std::string &key, const T &defaultValue) {
 
     return defaultValue; // 失敗した場合はデフォルト値
 }
+
+} // namespace Hagine

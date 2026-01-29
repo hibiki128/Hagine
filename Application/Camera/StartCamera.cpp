@@ -2,6 +2,10 @@
 #include "StartCamera.h"
 #include <Frame.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Camera;
+
 void StartCamera::Init() {
     vp_.farZ = kFarZ;
     vp_.Initialize("");

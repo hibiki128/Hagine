@@ -12,7 +12,7 @@ class BehaviorTreeEditor;
 /// 敵のゲームオブジェクトクラス
 /// ビヘイビアツリーに基づいて行動し、プレイヤーとの相互作用を管理する
 /// </summary>
-class Enemy : public BaseObject {
+class Enemy : public Hagine::Graphics::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -44,13 +44,13 @@ class Enemy : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
 
     /// <summary>
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticle(const Camera::ViewProjection &viewProjection);
 
     /// <summary>
     /// デバッグ処理
@@ -61,7 +61,7 @@ class Enemy : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter(ColliderBase *collider);
+    void OnCollisionEnter(Hagine::Collision::ColliderBase *collider);
 
     /// <summary>
     /// ビヘイビアツリーを初期化
@@ -116,7 +116,7 @@ class Enemy : public BaseObject {
     /// Setter
     /// </summary>
     void SetDamage(float damage) { damage_ = damage; }
-    void SetVp(ViewProjection *vp);
+    void SetVp(Camera::ViewProjection *vp);
     void SetTarget(Player *target) { target_ = target; }
     void SetGuarding(bool guarding) { isGuarding_ = guarding; }
     void SetStart(bool flag) { started_ = flag; }
@@ -266,15 +266,15 @@ class Enemy : public BaseObject {
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
-    std::unique_ptr<ParticleEmitter> hitEmitter_;
+    std::unique_ptr<Graphics::ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> chageShake_;
 
     bool isDamageReact_ = false;       // リアクション中かどうか
     float damageReactTimer_ = 0.0f;    // 経過時間
     float damageReactDuration_ = 0.5f; // 少し短めの時間
     EasingData<float> tiltEase_;       // 回転角イージング
-    Quaternion baseRotation_;          // 通常時の向き
-    Quaternion tiltRotation_;          // のけぞり用の回転
+    Math::Quaternion baseRotation_;          // 通常時の向き
+    Math::Quaternion tiltRotation_;    // のけぞり用の回転
 
     // ビヘイビアツリー関連
 #ifdef _DEBUG
@@ -282,5 +282,5 @@ class Enemy : public BaseObject {
 #endif
     std::unique_ptr<BehaviorNode> behaviorTreeRoot_;
 
-    OBBCollider *enemyCollider_ = nullptr;
+    Collision::OBBCollider *enemyCollider_ = nullptr;
 };

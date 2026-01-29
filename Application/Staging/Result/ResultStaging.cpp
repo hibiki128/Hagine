@@ -6,6 +6,13 @@
 #include <Object/Base/BaseObjectManager.h>
 #include <random>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Line;
+
+
 void ResultStaging::Initialize() {
 
     /// ===================================================
@@ -123,7 +130,7 @@ void ResultStaging::Update() {
     }
 }
 
-void ResultStaging::Draw(const ViewProjection &viewProjection) {
+void ResultStaging::Draw(const Camera::ViewProjection &viewProjection) {
 
     for (int i = 0; i < fireWorks_count_; i++) {
         fireWorks_explosions_[i]->Draw(viewProjection);
@@ -225,19 +232,19 @@ void ResultStaging::DrawImGui() {
 
             static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
             if (ImGui::DragFloat3("エリア回転##AreaRotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°")) {
-                Quaternion currentRotation = fireWorkAreaRotation_;
-                Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
-                Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
-                Quaternion deltaQuatZ = Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
-                Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
-                Quaternion newRotation = currentRotation * deltaQuat;
+                Math::Quaternion currentRotation = fireWorkAreaRotation_;
+                Math::Quaternion deltaQuatX = Math::Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
+                Math::Quaternion deltaQuatY = Math::Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
+                Math::Quaternion deltaQuatZ = Math::Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
+                Math::Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
+                Math::Quaternion newRotation = currentRotation * deltaQuat;
                 fireWorkAreaRotation_ = newRotation.Normalize();
                 deltaRotation = {0.0f, 0.0f, 0.0f};
             }
 
             ImGui::SameLine();
             if (ImGui::Button("リセット##AreaRotation")) {
-                fireWorkAreaRotation_ = Quaternion::IdentityQuaternion();
+                fireWorkAreaRotation_ = Math::Quaternion::IdentityQuaternion();
                 deltaRotation = {0.0f, 0.0f, 0.0f};
             }
         }

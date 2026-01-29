@@ -5,6 +5,11 @@
 #include "myMath.h"
 #include <Line/DrawLine3D.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Line;
+
 MotionEditor *MotionEditor::instance = nullptr;
 const float MotionEditor::ATTACK_END_INTERVAL = 0.1f;
 
@@ -358,7 +363,7 @@ void MotionEditor::Update(float deltaTime) {
         }
 
         float easedT = ApplyMotionEasing(motion.easingType, t, 1.0f);
-        Quaternion interpolatedRot = Slerp(motion.actualStartRot, motion.actualEndRot, easedT);
+        Math::Quaternion interpolatedRot = Slerp(motion.actualStartRot, motion.actualEndRot, easedT);
         motion.target->GetWorldTransform()->quateRotation_ = interpolatedRot;
         motion.target->GetLocalScale() = Lerp(motion.actualStartScale, motion.actualEndScale, easedT);
 
@@ -401,8 +406,8 @@ void MotionEditor::Play(const std::string &jsonName) {
     motion.baseScale = motion.target->GetLocalScale();
 
     // 実際の開始・終了値を計算（ローカルオフセット用）
-    motion.actualStartRot = Quaternion::FromEulerAngles(motion.baseRot + motion.startRotOffset);
-    motion.actualEndRot = Quaternion::FromEulerAngles(motion.baseRot + motion.endRotOffset);
+    motion.actualStartRot = Math::Quaternion::FromEulerAngles(motion.baseRot + motion.startRotOffset);
+    motion.actualEndRot = Math::Quaternion::FromEulerAngles(motion.baseRot + motion.endRotOffset);
     motion.actualStartScale = motion.baseScale + motion.startScaleOffset;
     motion.actualEndScale = motion.baseScale + motion.endScaleOffset;
 
@@ -454,8 +459,8 @@ bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName,
     motion.baseRot = target->GetLocalRotation().ToEulerAngles();
     motion.baseScale = target->GetLocalScale();
 
-    motion.actualStartRot = Quaternion::FromEulerAngles(motion.baseRot + motion.startRotOffset);
-    motion.actualEndRot = Quaternion::FromEulerAngles(motion.baseRot + motion.endRotOffset);
+    motion.actualStartRot = Math::Quaternion::FromEulerAngles(motion.baseRot + motion.startRotOffset);
+    motion.actualEndRot = Math::Quaternion::FromEulerAngles(motion.baseRot + motion.endRotOffset);
     motion.actualStartScale = motion.baseScale + motion.startScaleOffset;
     motion.actualEndScale = motion.baseScale + motion.endScaleOffset;
 
@@ -491,7 +496,7 @@ void MotionEditor::ReturnToComboStart(BaseObject *target) {
         scaleIt != comboStartScales_.end()) {
 
         target->GetLocalPosition() = posIt->second;
-        target->GetLocalRotation() = Quaternion::FromEulerAngles(rotIt->second);
+        target->GetLocalRotation() = Math::Quaternion::FromEulerAngles(rotIt->second);
         target->GetLocalScale() = scaleIt->second;
     }
 }
@@ -522,7 +527,7 @@ void MotionEditor::Stop(const std::string &objectName) {
         // 初期位置に戻すが固定はしない
         if (motion.hasInitialTransform && motion.target) {
             motion.target->GetLocalPosition() = motion.initialPos;
-            motion.target->GetLocalRotation() = Quaternion::FromEulerAngles(motion.initialRot);
+            motion.target->GetLocalRotation() = Math::Quaternion::FromEulerAngles(motion.initialRot);
             motion.target->GetLocalScale() = motion.initialScale;
         }
         if (motion.isTemporary) {
@@ -541,7 +546,7 @@ void MotionEditor::StopAll() {
 
         if (motion.hasInitialTransform && motion.target) {
             motion.target->GetLocalPosition() = motion.initialPos;
-            motion.target->GetLocalRotation() = Quaternion::FromEulerAngles(motion.initialRot);
+            motion.target->GetLocalRotation() = Math::Quaternion::FromEulerAngles(motion.initialRot);
             motion.target->GetLocalScale() = motion.initialScale;
         }
 
@@ -824,7 +829,7 @@ void MotionEditor::DrawImGui() {
             if (m.target) {
                 ImGui::SeparatorText("現在の基準Transform（読み取り専用）");
                 Vector3 currentPos = m.target->GetLocalPosition();
-                Quaternion currentRot = m.target->GetLocalRotation();
+                Math::Quaternion currentRot = m.target->GetLocalRotation();
                 Vector3 currentScale = m.target->GetLocalScale();
                 ImGui::Text("現在位置: %.2f, %.2f, %.2f", currentPos.x, currentPos.y, currentPos.z);
                 ImGui::Text("現在回転: %.2f, %.2f, %.2f", currentRot.x, currentRot.y, currentRot.z);

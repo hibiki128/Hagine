@@ -43,7 +43,7 @@ class PlayerStateRush : public PlayerBaseState {
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(Player &player, const ViewProjection &viewProjection) override;
+    void DrawParticle(Player &player, const Camera::ViewProjection &viewProjection) override;
 
   private:
     /// ===================================================
@@ -56,7 +56,7 @@ class PlayerStateRush : public PlayerBaseState {
     /// <param name="forward">前方向ベクトル</param>
     /// <param name="up">上方向ベクトル</param>
     /// <returns>Quaternion: 計算されたクォータニオン</returns>
-    Quaternion LookRotation(const Vector3 &forward, const Vector3 &up);
+    Math::Quaternion LookRotation(const Vector3 &forward, const Vector3 &up);
 
     /// <summary>
     /// 弧形の移動経路を計算
@@ -71,7 +71,7 @@ class PlayerStateRush : public PlayerBaseState {
     /// </summary>
     /// <param name="progress">進捗度合い（0.0～1.0）</param>
     /// <returns>Vector3: 弧上の位置座標</returns>
-    Vector3 GetArcPosition(float progress);
+    Math::Vector3 GetArcPosition(float progress);
 
     /// <summary>
     /// 終了入力をチェック
@@ -104,7 +104,7 @@ class PlayerStateRush : public PlayerBaseState {
     /// <param name="progress">進捗度合い</param>
     /// <param name="player">プレイヤー参照</param>
     /// <returns>Vector3: 計算された移動方向</returns>
-    Vector3 CalculateMovementDirection(float progress, Player &player);
+    Math::Vector3 CalculateMovementDirection(float progress, Player &player);
 
     /// <summary>
     /// 回転を更新

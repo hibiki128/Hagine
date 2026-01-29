@@ -83,14 +83,14 @@ class ResultUI {
     static constexpr int kZeroValue = 0;               // ゼロ値
 
     // スプライト配列
-    std::array<SpriteData *, kMaxSprite> sprites_;
+    std::array<Hagine::Graphics::SpriteData *, kMaxSprite> sprites_;
 
     // イージング用
-    std::array<EasingData<Vector2>, kMaxSprite> positionEasings_;
+    std::array<Hagine::Math::EasingData<Hagine::Math::Vector2>, kMaxSprite> positionEasings_;
 
     // イージング用位置設定
-    std::array<Vector2, kMaxSprite> startPositions_;
-    std::array<Vector2, kMaxSprite> endPositions_;
+    std::array<Hagine::Math::Vector2, kMaxSprite> startPositions_;
+    std::array<Hagine::Math::Vector2, kMaxSprite> endPositions_;
 
     bool isStartEasing_ = false;
     bool isAllAnimationFinished_ = false; // 全アニメーション完了フラグ

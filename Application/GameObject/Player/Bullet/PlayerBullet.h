@@ -7,7 +7,7 @@ class Enemy;
 /// <summary>
 /// プレイヤーが発射する弾のゲームオブジェクトクラス
 /// </summary>
-class PlayerBullet : public BaseObject {
+class PlayerBullet : public Hagine::Graphics::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -29,13 +29,13 @@ class PlayerBullet : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
 
     /// <summary>
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticle(const Camera::ViewProjection &viewProjection);
 
     /// <summary>
     /// プレイヤーの情報から弾のトランスフォームを初期化

@@ -4,6 +4,12 @@
 #include "application/GameObject/Player/Player.h"
 #include <Particle/ParticleEditor.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void PlayerStateRush::Enter(Player &player) {
     Enemy *enemy = player.GetEnemy();
     if (enemy && player.GetIsLockOn()) {
@@ -58,13 +64,13 @@ void PlayerStateRush::Exit(Player &player) {
     player.ResetControlCount();
 }
 
-void PlayerStateRush::DrawParticle(Player &player, const ViewProjection &viewProjection) {
+void PlayerStateRush::DrawParticle(Player &player, const Camera::ViewProjection &viewProjection) {
     if (rushEmitter_) {
         rushEmitter_->Draw(viewProjection);
     }
 }
 
-Quaternion PlayerStateRush::LookRotation(const Vector3 &forward, const Vector3 &up) {
+Math::Quaternion PlayerStateRush::LookRotation(const Vector3 &forward, const Vector3 &up) {
     Vector3 f = forward.Normalize();
     Vector3 u = up.Normalize();
     Vector3 r = u.Cross(f);
@@ -81,7 +87,7 @@ Quaternion PlayerStateRush::LookRotation(const Vector3 &forward, const Vector3 &
     rotationMatrix.m[kMatrixRow2][kMatrixCol1] = f.y;
     rotationMatrix.m[kMatrixRow2][kMatrixCol2] = f.z;
 
-    return Quaternion::FromMatrix(rotationMatrix);
+    return Math::Quaternion::FromMatrix(rotationMatrix);
 }
 
 void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &targetPos, Player &player) {
@@ -189,7 +195,7 @@ void PlayerStateRush::UpdateRotation(Player &player) {
         Vector3 forward = rushDirection_;
         Vector3 up = {kVectorZero, kUpVectorY, kVectorZero};
 
-        Quaternion targetRotation = LookRotation(forward, up);
+        Math::Quaternion targetRotation = LookRotation(forward, up);
         player.GetWorldRotation() = Slerp(
             player.GetTransform().quateRotation_,
             targetRotation,

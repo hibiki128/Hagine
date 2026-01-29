@@ -1,6 +1,11 @@
 #include "PlayerUI.h"
 #include "SpriteCommon.h"
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 void PlayerUI::Init(Player *player) {
     player_ = player;
     // HPバーの初期化
@@ -43,7 +48,7 @@ void PlayerUI::Update() {
 }
 
 void PlayerUI::Draw() {
-    SpriteCommon::GetInstance()->DrawCommonSetting();
+    Graphics::SpriteCommon::GetInstance()->DrawCommonSetting();
     if (player_) {
         // バーフレームの描画
         if (barFrame_) {

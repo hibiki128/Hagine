@@ -9,7 +9,7 @@
 /// チャージショットのゲームオブジェクトクラス
 /// プレイヤーがチャージして発射する特殊な弾
 /// </summary>
-class ChargeShot : public BaseObject {
+class ChargeShot : public Hagine::Graphics::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -31,13 +31,13 @@ class ChargeShot : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void Draw(const Camera::ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
 
     /// <summary>
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticle(const Camera::ViewProjection & viewProjection);
 
     /// <summary>
     /// ImGui表示

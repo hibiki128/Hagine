@@ -175,7 +175,7 @@ class ParticleCSEmitter {
     Microsoft::WRL::ComPtr<ID3D12Resource> emitterMeshResource_ = nullptr;
     EmitterMesh *emitterMeshData_ = nullptr;
 
-    DirectXCommon *dxCommon_ = nullptr;
+    Core::DirectXCommon *dxCommon_ = nullptr;
     ID3D12GraphicsCommandList *commandList = nullptr;
     ParticleCommon *particleCommon_ = nullptr;
     SrvManager *srvManager_ = nullptr;

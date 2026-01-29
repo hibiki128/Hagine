@@ -23,7 +23,7 @@ class Shake {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクションのポインタ</param>
     /// <param name="jsonName">設定ファイル名</param>
-    void Initialize(ViewProjection *viewProjection, std::string jsonName = {});
+    void Initialize(Hagine::Camera::ViewProjection *viewProjection, std::string jsonName = {});
 
     /// <summary>
     /// 更新処理
@@ -62,7 +62,7 @@ class Shake {
     /// private varians
     /// ===================================================
 
-    ViewProjection *viewProjection_ = nullptr;
+    Hagine::Camera::ViewProjection *viewProjection_ = nullptr;
 
     Vector2 shakeMin_ = {-0.5f, -0.5f}; // 揺れ最小値
     Vector2 shakeMax_ = {0.5f, 0.5f};   // 揺れ最大値

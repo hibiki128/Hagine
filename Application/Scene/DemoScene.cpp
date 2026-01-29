@@ -1,13 +1,19 @@
 #include "DemoScene.h"
 #include "SpriteManager.h"
 
+
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 void DemoScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
+    audio_ = Audio::Audio::GetInstance();
+    spCommon_ = Graphics::SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
     vp_.Initialize("DemoCamera");
-    LightGroup::GetInstance()->LoadLightData("DemoLight");
+    Graphics::Light::LightGroup::GetInstance()->LoadLightData("DemoLight");
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);

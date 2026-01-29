@@ -5,6 +5,12 @@
 #include "application/GameObject/Player/Player.h"
 #include <cmath>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+using namespace Collision;
+
 void PlayerStateFlyMove::Enter(Player &player) {
     player.GetAcceleration().y = kAccelerationZero;
     player.GetVelocity().y = kVelocityZero;

@@ -1,5 +1,9 @@
 #include "DataHandler.h"
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+
 DataHandler::DataHandler(const std::string &folder, const std::string &file) {
     folderPath = basePath + "/" + folder;
     fileName = file + ".json";
@@ -34,7 +38,7 @@ template void DataHandler::Save<std::string>(const std::string &, const std::str
 template void DataHandler::Save<Vector2>(const std::string &, const Vector2 &);
 template void DataHandler::Save<Vector3>(const std::string &, const Vector3 &);
 template void DataHandler::Save<Vector4>(const std::string &, const Vector4 &);
-template void DataHandler::Save<Quaternion>(const std::string &, const Quaternion &);
+template void DataHandler::Save<Math::Quaternion>(const std::string &, const Math::Quaternion &);
 template void DataHandler::Save<PrimitiveType>(const std::string &, const PrimitiveType &);
 template void DataHandler::Save<Matrix4x4>(const std::string &, const Matrix4x4 &);
 
@@ -46,6 +50,6 @@ template std::string DataHandler::Load<std::string>(const std::string &, const s
 template Vector2 DataHandler::Load<Vector2>(const std::string &, const Vector2 &);
 template Vector3 DataHandler::Load<Vector3>(const std::string &, const Vector3 &);
 template Vector4 DataHandler::Load<Vector4>(const std::string &, const Vector4 &);
-template Quaternion DataHandler::Load<Quaternion>(const std::string &, const Quaternion &);
+template Math::Quaternion DataHandler::Load<Math::Quaternion>(const std::string &, const Math::Quaternion &);
 template PrimitiveType DataHandler::Load<PrimitiveType>(const std::string &, const PrimitiveType &);
 template Matrix4x4 DataHandler::Load<Matrix4x4>(const std::string &, const Matrix4x4 &);

@@ -3,6 +3,7 @@
 #include <Particle/ParticleEmitter.h>
 #include <SpriteManager.h>
 #include <memory>
+#include <Camera/ViewProjection/ViewProjection.h>
 
 /// <summary>
 /// タイトル画面のUI管理クラス
@@ -28,7 +29,7 @@ class TitleUI {
     /// 描画処理
     /// </summary>
     /// <param name="vp_">ビュープロジェクション</param>
-    void Draw(ViewProjection &vp_);
+    void Draw(Hagine::Camera::ViewProjection &vp_);
 
     /// <summary>
     /// Getter
@@ -97,18 +98,18 @@ class TitleUI {
     bool isFinish_ = false;         // 完了フラグ
     bool cameraMove_ = false;       // カメラ移動フラグ
 
-    Vector2 titleLogoStartPos_ = {kTitleLogoStartPosX, kTitleLogoStartPosY};    // タイトルロゴ開始位置
-    Vector2 pressStartStartPos_ = {kPressStartStartPosX, kPressStartStartPosY}; // Press Start開始位置
-    Vector2 titleLogoEndPos_ = {};                                              // タイトルロゴ終了位置
-    Vector2 pressStartEndPos_ = {};                                             // Press Start終了位置
+    Hagine::Math::Vector2 titleLogoStartPos_ = {kTitleLogoStartPosX, kTitleLogoStartPosY};    // タイトルロゴ開始位置
+    Hagine::Math::Vector2 pressStartStartPos_ = {kPressStartStartPosX, kPressStartStartPosY}; // Press Start開始位置
+    Hagine::Math::Vector2 titleLogoEndPos_ = {};                                              // タイトルロゴ終了位置
+    Hagine::Math::Vector2 pressStartEndPos_ = {};                                             // Press Start終了位置
 
-    Vector3 targetPos_{};
+    Hagine::Math::Vector3 targetPos_{};
     const float kMaxTime_ = kMaxTime;
     float timer_ = 0.0f;
 
-    std::unique_ptr<ParticleEmitter> chargeBullet_ = nullptr;   // チャージ弾パーティクル
-    std::unique_ptr<ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
-    std::unique_ptr<ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
+    std::unique_ptr<Hagine::Graphics::ParticleEmitter> chargeBullet_ = nullptr;   // チャージ弾パーティクル
+    std::unique_ptr<Hagine::Graphics::ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
+    std::unique_ptr<Hagine::Graphics::ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
 
-    std::array<SpriteData *, kMaxSprite> sprites_;
+    std::array<Hagine::Graphics::SpriteData *, kMaxSprite> sprites_;
 };

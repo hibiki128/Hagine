@@ -4,12 +4,17 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 void GameScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
+    audio_ = Audio::Audio::GetInstance();
+    spCommon_ = Graphics::SpriteCommon::GetInstance();
     ptCommon_ = ParticleCommon::GetInstance();
     input_ = Input::GetInstance();
-    LightGroup::GetInstance()->LoadLightData("GameLight");
+    Graphics::Light::LightGroup::GetInstance()->LoadLightData("GameLight");
     vp_.Initialize();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
@@ -23,7 +28,7 @@ void GameScene::Initialize() {
     startCamera_ = std::make_unique<StartCamera>();
     deathCamera_ = std::make_unique<DeathCamera>();
     ground_ = std::make_unique<Ground>();
-    skyBox_ = SkyBox::GetInstance();
+    skyBox_ = Graphics::SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
     enemyUI_ = std::make_unique<EnemyUI>();
     behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();

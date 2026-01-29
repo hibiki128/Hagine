@@ -2,6 +2,10 @@
 #include "DeathCamera.h"
 #include <Frame.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Camera;
+
 void DeathCamera::Init() {
     vp_.farZ = kFarZ;
     vp_.Initialize("");
@@ -23,7 +27,7 @@ void DeathCamera::Update() {
     // 位置のイージング
     wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, kEasingMaxValue);
     // 回転のイージング（クォータニオン補間）
-    wt_.quateRotation_ = Quaternion::Slerp(easingStartRot_, easingTargetRot_, t);
+    wt_.quateRotation_ = Math::Quaternion::Slerp(easingStartRot_, easingTargetRot_, t);
     wt_.UpdateMatrix();
     // ViewProjectionを更新（クォータニオンモード）
     vp_.translation_ = wt_.translation_;
@@ -37,7 +41,7 @@ void DeathCamera::Update() {
     }
 }
 
-void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &targetPosition) {
+void DeathCamera::StartEasing(const Camera::ViewProjection & currentVp, const Vector3 &targetPosition) {
     isEasing_ = true;
     isComplete_ = false;
     isHalfway_ = false;
@@ -50,7 +54,7 @@ void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &ta
     if (currentVp.isUseQuaternion_) {
         easingStartRot_ = currentVp.quateRotation_;
     } else {
-        easingStartRot_ = Quaternion::FromEulerAngles(currentVp.eulerRotation_);
+        easingStartRot_ = Math::Quaternion::FromEulerAngles(currentVp.eulerRotation_);
     }
 
     // 目標位置を計算（プレイヤーの正面やや斜め上）
@@ -71,7 +75,7 @@ void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &ta
     Vector3 up = (forward.Cross(right)).Normalize();
 
     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
-    easingTargetRot_ = Quaternion::FromMatrix(rotMatrix);
+    easingTargetRot_ = Math::Quaternion::FromMatrix(rotMatrix);
 
     // WorldTransformの初期状態を設定
     wt_.translation_ = easingStartPos_;

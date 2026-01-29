@@ -3,6 +3,11 @@
 #include "SpriteManager.h"
 #include <Particle/CSParticle/ParticleCSEditor.h>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 void FadeOut::Initialize() {
     SpriteManager::GetInstance()->SetSaveFolder("Transition");
     SpriteManager::GetInstance()->LoadAllSprites();
@@ -10,9 +15,9 @@ void FadeOut::Initialize() {
     fadeOut_->SetAuto(true);
     timer_ = 0.0f;
     fadeOut_->SetTranslate({kPositionX, kPositionY, kPositionZ});
-    Quaternion rotation = Quaternion::FromEulerAngles({degreesToRadians(kRotationX), 0.0f, 0.0f});
+    Math::Quaternion rotation = Math::Quaternion::FromEulerAngles({degreesToRadians(kRotationX), 0.0f, 0.0f});
     fadeOut_->SetRotation(rotation);
-    SceneTransition::GetInstance()->SetUseTransition(true);
+    Scene::SceneTransition::GetInstance()->SetUseTransition(true);
 }
 
 void FadeOut::Update() {
@@ -20,7 +25,7 @@ void FadeOut::Update() {
     timer_ += kDeltaTime;
 }
 
-void FadeOut::Draw(const ViewProjection &vp) {
+void FadeOut::Draw(const Camera::ViewProjection &vp) {
     if (timer_ <= kSpriteDrawTime) {
         SpriteManager::GetInstance()->DrawAll();
     } else {

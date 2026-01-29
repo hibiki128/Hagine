@@ -6,7 +6,7 @@
 #include "SkyBox/SkyBox.h"
 #include"Application/UI/Scene/Title/TitleUI.h"
 
-class TitleScene : public BaseScene {
+class TitleScene : public Hagine::Scene::BaseScene {
   public:
     /// ===================================================
     /// public method
@@ -56,7 +56,7 @@ class TitleScene : public BaseScene {
     /// ビュープロジェクションを取得
     /// </summary>
     /// <returns>ViewProjection*: ビュープロジェクションのポインタ</returns>
-    ViewProjection *GetViewProjection() override { return &vp_; }
+    Hagine::Camera::ViewProjection *GetViewProjection() override { return &vp_; }
 
   private:
     /// ===================================================
@@ -78,20 +78,20 @@ class TitleScene : public BaseScene {
     /// private variaus
     /// ====================================
 
-    Audio *audio_;
-    Input *input_;
-    SpriteCommon *spCommon_;
-    ParticleCommon *ptCommon_;
+    Hagine::Audio::Audio *audio_;
+    Hagine::Input *input_;
+    Hagine::Graphics::SpriteCommon *spCommon_;
+    Hagine::Graphics::ParticleCommon *ptCommon_;
 
-    ViewProjection vp_;
-    std::unique_ptr<DebugCamera> debugCamera_;
+    Hagine::Camera::ViewProjection vp_;
+    std::unique_ptr<Hagine::Camera::DebugCamera> debugCamera_;
 
     float time_ = 0.0f;
     const float kMaxTime_ = 2.0f;
     bool firstMove_ = false;
     bool secondMove_ = false;
 
-    SkyBox *skyBox_ = nullptr;
+    Hagine::Graphics::SkyBox *skyBox_ = nullptr;
 
     std::unique_ptr<TitleUI> titleUI_ = nullptr;
 };

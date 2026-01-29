@@ -54,7 +54,7 @@ class Mesh {
     /// private varians
     /// ===================================================
 
-    DirectXCommon *dxCommon_; // DirectX共通クラス
+    Core::DirectXCommon *dxCommon_; // DirectX共通クラス
     MeshData meshData_;       // メッシュデータ
 
     // 頂点バッファ

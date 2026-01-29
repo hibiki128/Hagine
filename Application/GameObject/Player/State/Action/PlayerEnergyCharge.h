@@ -42,7 +42,7 @@ class PlayerEnergyCharge : public PlayerBaseState {
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(Player &player, const ViewProjection &viewProjection) override;
+    void DrawParticle(Player &player, const Camera::ViewProjection &viewProjection) override;
 
     float GetChageRate() { return chargeRate_; }
 

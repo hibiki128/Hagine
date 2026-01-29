@@ -8,6 +8,8 @@
 #include <Data/DataHandler.h>
 #ifdef _DEBUG
 
+using namespace Hagine;
+
 BehaviorTreeEditor::BehaviorTreeEditor() {
     ed::Config config;
     config.SettingsFile = "BehaviorTreeEditor.json";

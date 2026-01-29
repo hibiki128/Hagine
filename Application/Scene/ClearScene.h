@@ -10,7 +10,7 @@
 /// クリア画面のシーンクラス
 /// ゲームクリア時の処理と表示を管理する
 /// </summary>
-class ClearScene : public BaseScene {
+class ClearScene : public Hagine::Scene::BaseScene {
   public:
     /// ===================================================
     /// public method
@@ -60,7 +60,7 @@ class ClearScene : public BaseScene {
     /// ビュープロジェクションを取得
     /// </summary>
     /// <returns>ViewProjection*: ビュープロジェクションのポインタ</returns>
-    ViewProjection *GetViewProjection() override { return &vp_; }
+    Hagine::Camera::ViewProjection *GetViewProjection() override { return &vp_; }
 
   private:
     /// ===================================================
@@ -82,13 +82,13 @@ class ClearScene : public BaseScene {
     /// private varians
     /// ===================================================
 
-    Audio *audio_;
-    Input *input_;
-    SpriteCommon *spCommon_;
-    ParticleCommon *ptCommon_;
-    ViewProjection vp_;
+    Hagine::Audio::Audio *audio_;
+    Hagine::Input *input_;
+    Hagine::Graphics::SpriteCommon *spCommon_;
+    Hagine::Graphics::ParticleCommon *ptCommon_;
 
-    std::unique_ptr<DebugCamera> debugCamera_;
+    Hagine::Camera::ViewProjection vp_;
+    std::unique_ptr<Hagine::Camera::DebugCamera> debugCamera_;
 
     // 地面
     std::unique_ptr<Ground> ground_;

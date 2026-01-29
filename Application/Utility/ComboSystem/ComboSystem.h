@@ -1,7 +1,8 @@
 #pragma once
 #include <string>
 #include <vector>
-class BaseObject;
+#include"Engine/3d/Object/Base/BaseObject.h"
+
 class MotionEditor;
 
 /// <summary>
@@ -18,7 +19,7 @@ class ComboSystem {
     /// コンボデータ構造体
     /// </summary>
     struct ComboData {
-        BaseObject *target;     // 対象オブジェクト
+        Hagine::Graphics::BaseObject *target;     // 対象オブジェクト
         std::string attackData; // 攻撃データ
 
         /// <summary>
@@ -26,7 +27,7 @@ class ComboSystem {
         /// </summary>
         /// <param name="obj">対象オブジェクトのポインタ</param>
         /// <param name="attack">攻撃データ</param>
-        ComboData(BaseObject *obj, const std::string &attack)
+        ComboData(Hagine::Graphics::BaseObject *obj, const std::string &attack)
             : target(obj), attackData(attack) {}
     };
 
@@ -71,7 +72,7 @@ class ComboSystem {
     static const float FINAL_RETURN_DELAY;     // 最終復帰遅延
     static const float COMBO_TIMEOUT_DURATION; // コンボタイムアウト時間
 
-    std::vector<BaseObject *> comboStartObjects_; // コンボ開始オブジェクト
+    std::vector<Hagine::Graphics::BaseObject *> comboStartObjects_; // コンボ開始オブジェクト
 
   public:
     /// ===================================================
@@ -94,7 +95,7 @@ class ComboSystem {
     /// <param name="target">対象オブジェクトのポインタ</param>
     /// <param name="attackData">攻撃データ</param>
     /// <returns>ComboSystem&: チェーン用の参照</returns>
-    ComboSystem &Add(BaseObject *target, const std::string &attackData);
+    ComboSystem &Add(Hagine::Graphics::BaseObject *target, const std::string &attackData);
 
     /// <summary>
     /// コンボをクリア
@@ -119,7 +120,7 @@ class ComboSystem {
     /// Getter
     /// </summary>
     bool IsComboActive() const { return comboStarted_; }
-    bool IsObjectAttackCompleted(BaseObject *target) const;
+    bool IsObjectAttackCompleted(Hagine::Graphics::BaseObject *target) const;
     bool IsCurrentAttackCompleted() const;
     int GetCurrentComboIndex() const { return comboIndex_; }
     int GetComboLength() const { return static_cast<int>(comboData_.size()); }

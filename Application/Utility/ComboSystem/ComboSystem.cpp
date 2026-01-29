@@ -3,6 +3,11 @@
 #include "Object/Base/BaseObject.h"
 #include <algorithm>
 
+using namespace Hagine;
+using namespace Math;
+using namespace Graphics;
+using namespace Camera;
+
 // 設定値の定義
 const float ComboSystem::COMBO_INTERVAL = 0.15f;
 const float ComboSystem::INPUT_BUFFER_DURATION = 0.4f;
@@ -17,7 +22,7 @@ ComboSystem::~ComboSystem() {
     Clear();
 }
 
-ComboSystem &ComboSystem::Add(BaseObject *target, const std::string &attackData) {
+ComboSystem &ComboSystem::Add(Graphics::BaseObject *target, const std::string &attackData) {
     comboData_.emplace_back(target, attackData);
 
     // 新しいオブジェクトを初期位置保存リストに追加
@@ -77,7 +82,7 @@ void ComboSystem::Update(float deltaTime) {
 
     // 最後のコンボ後の戻り処理
     if (waitingForReturn_ && returnDelay_ <= 0.0f) {
-        for (BaseObject *obj : comboStartObjects_) {
+        for (Graphics::BaseObject *obj : comboStartObjects_) {
             if (obj != nullptr) {
                 MotionEditor::GetInstance()->ReturnToComboStart(obj);
             }
@@ -89,7 +94,7 @@ void ComboSystem::Update(float deltaTime) {
     if (comboStarted_ && !waitingForReturn_ && !attackExecuted) {
         comboTimeout_ += deltaTime;
         if (comboTimeout_ >= COMBO_TIMEOUT_DURATION) {
-            for (BaseObject *obj : comboStartObjects_) {
+            for (Graphics::BaseObject *obj : comboStartObjects_) {
                 if (obj != nullptr) {
                     MotionEditor::GetInstance()->ReturnToComboStart(obj);
                 }
@@ -106,12 +111,12 @@ void ComboSystem::ExecuteComboAttack() {
 
     // 現在の攻撃のターゲットを取得
     const ComboData &currentCombo = comboData_[comboIndex_];
-    BaseObject *currentTarget = currentCombo.target;
+    Graphics::BaseObject *currentTarget = currentCombo.target;
 
     // 同じオブジェクトの前回の攻撃があれば、攻撃が完全に終了してから初期位置に戻す
     if (comboIndex_ > 0) {
         for (int i = comboIndex_ - 1; i >= 0; i--) {
-            BaseObject *prevTarget = comboData_[i].target;
+            Graphics::BaseObject *prevTarget = comboData_[i].target;
             if (prevTarget && prevTarget == currentTarget) {
                 // 攻撃が完全に終了（インターバル込み）しているかチェック
                 if (MotionEditor::GetInstance()->IsAttackFinishedWithInterval(prevTarget)) {
@@ -169,14 +174,14 @@ void ComboSystem::ResetCombo() {
 }
 
 void ComboSystem::SaveComboStartPositions() {
-    for (BaseObject *obj : comboStartObjects_) {
+    for (Graphics::BaseObject *obj : comboStartObjects_) {
         if (obj != nullptr) {
             MotionEditor::GetInstance()->SetComboStartPosition(obj);
         }
     }
 }
 
-bool ComboSystem::IsObjectAttackCompleted(BaseObject *target) const {
+bool ComboSystem::IsObjectAttackCompleted(Graphics::BaseObject *target) const {
     if (!target)
         return true;
     return !MotionEditor::GetInstance()->IsAttackFinishedWithInterval(target);
