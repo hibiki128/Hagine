@@ -24,7 +24,7 @@ BehaviorTreeEditor::~BehaviorTreeEditor() {
     }
 }
 
-void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
+void BehaviorTreeEditor::DrawEditor(BehaviorBaseNode *root) {
     currentRoot_ = root;
     if (!root) {
         ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
@@ -91,7 +91,7 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
         ImGui::Spacing();
 
         for (int i = static_cast<int>(executionHistory_.size()) - 1; i >= 0; i--) {
-            BehaviorNode *historyNode = executionHistory_[i];
+            BehaviorBaseNode *historyNode = executionHistory_[i];
             bool isCurrent = (historyNode == executingNode_);
 
             if (isCurrent) {
@@ -110,7 +110,7 @@ void BehaviorTreeEditor::DrawEditor(BehaviorNode *root) {
     ImGui::End();
 }
 
-void BehaviorTreeEditor::BuildNodeEditorData(BehaviorNode *root) {
+void BehaviorTreeEditor::BuildNodeEditorData(BehaviorBaseNode *root) {
     if (!root)
         return;
 
@@ -126,8 +126,8 @@ void BehaviorTreeEditor::BuildNodeEditorData(BehaviorNode *root) {
     nextEditorNodeId_ = 1;
     nextEditorLinkId_ = 1;
 
-    std::function<void(BehaviorNode *, BehaviorNode *)> drawNodeRecursive =
-        [&](BehaviorNode *node, BehaviorNode *parent) {
+    std::function<void(BehaviorBaseNode *, BehaviorBaseNode *)> drawNodeRecursive =
+        [&](BehaviorBaseNode *node, BehaviorBaseNode *parent) {
             if (!node)
                 return;
 
@@ -270,19 +270,19 @@ void BehaviorTreeEditor::BuildNodeEditorData(BehaviorNode *root) {
     drawNodeRecursive(root, nullptr);
 }
 
-void BehaviorTreeEditor::InitializeNodePositions(BehaviorNode *root) {
+void BehaviorTreeEditor::InitializeNodePositions(BehaviorBaseNode *root) {
     if (!root)
         return;
 
     nodePositions_.clear();
 
     // ツリー全体のサイズを事前計算
-    std::unordered_map<BehaviorNode *, int> subtreeWidths;
-    std::function<int(BehaviorNode *)> calcWidth = [&](BehaviorNode *node) -> int {
+    std::unordered_map<BehaviorBaseNode *, int> subtreeWidths;
+    std::function<int(BehaviorBaseNode *)> calcWidth = [&](BehaviorBaseNode *node) -> int {
         if (!node)
             return 0;
 
-        std::vector<std::unique_ptr<BehaviorNode>> *children = nullptr;
+        std::vector<std::unique_ptr<BehaviorBaseNode>> *children = nullptr;
         if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
             children = &sequence->GetChildren();
         } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
@@ -312,8 +312,8 @@ void BehaviorTreeEditor::InitializeNodePositions(BehaviorNode *root) {
     const float horizontalSpacing = 80.0f;
     const float verticalSpacing = 120.0f;
 
-    std::function<void(BehaviorNode *, int, float)> layoutNodes =
-        [&](BehaviorNode *node, int depth, float centerX) {
+    std::function<void(BehaviorBaseNode *, int, float)> layoutNodes =
+        [&](BehaviorBaseNode *node, int depth, float centerX) {
             if (!node)
                 return;
 
@@ -322,7 +322,7 @@ void BehaviorTreeEditor::InitializeNodePositions(BehaviorNode *root) {
             nodePositions_[node] = ImVec2(centerX, y);
 
             // 子ノードの処理
-            std::vector<std::unique_ptr<BehaviorNode>> *children = nullptr;
+            std::vector<std::unique_ptr<BehaviorBaseNode>> *children = nullptr;
             if (auto *sequence = dynamic_cast<SequenceNode *>(node)) {
                 children = &sequence->GetChildren();
             } else if (auto *selector = dynamic_cast<SelectorNode *>(node)) {
@@ -360,7 +360,7 @@ void BehaviorTreeEditor::InitializeNodePositions(BehaviorNode *root) {
     layoutNodes(root, 0, rootX);
 }
 
-int BehaviorTreeEditor::GetOrCreateNodeId(BehaviorNode *node) {
+int BehaviorTreeEditor::GetOrCreateNodeId(BehaviorBaseNode *node) {
     auto it = nodeToEditorId_.find(node);
     if (it != nodeToEditorId_.end()) {
         return it->second;
@@ -438,7 +438,7 @@ void BehaviorTreeEditor::DrawToolbar(const std::string &treeName) {
     }
 }
 
-int BehaviorTreeEditor::CalculateTreeWidth(BehaviorNode *node) {
+int BehaviorTreeEditor::CalculateTreeWidth(BehaviorBaseNode *node) {
     if (!node)
         return 0;
 
@@ -467,7 +467,7 @@ int BehaviorTreeEditor::CalculateTreeWidth(BehaviorNode *node) {
     return 1;
 }
 
-void BehaviorTreeEditor::DrawNodeProperties(BehaviorNode *node) {
+void BehaviorTreeEditor::DrawNodeProperties(BehaviorBaseNode *node) {
     ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + ImGui::GetContentRegionAvail().x);
 
     ImGui::Text("ノードタイプ:");
@@ -603,7 +603,7 @@ void BehaviorTreeEditor::DrawNodeProperties(BehaviorNode *node) {
     ImGui::PopTextWrapPos();
 }
 
-void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode *root) {
+void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorBaseNode *root) {
     if (!root) {
         return;
     }
@@ -611,10 +611,10 @@ void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode 
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("BehaviorTree", treeName);
 
     // 全ノードを収集し、IDを割り当て
-    std::vector<BehaviorNode *> allNodes;
+    std::vector<BehaviorBaseNode *> allNodes;
     int currentId = 0;
 
-    std::function<void(BehaviorNode *)> collectNodes = [&](BehaviorNode *node) {
+    std::function<void(BehaviorBaseNode *)> collectNodes = [&](BehaviorBaseNode *node) {
         if (!node)
             return;
 
@@ -648,7 +648,7 @@ void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode 
     data->Save("nodeCount", static_cast<int>(allNodes.size()));
 
     for (size_t i = 0; i < allNodes.size(); i++) {
-        BehaviorNode *node = allNodes[i];
+        BehaviorBaseNode *node = allNodes[i];
         std::string prefix = "node_" + std::to_string(i) + "_";
 
         data->Save(prefix + "nodeId", node->nodeId);
@@ -706,7 +706,7 @@ void BehaviorTreeEditor::SaveSettings(const std::string &treeName, BehaviorNode 
     }
 }
 
-void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode *root) {
+void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorBaseNode *root) {
     if (!root)
         return;
 
@@ -720,11 +720,11 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
     }
 
     // ノードIDからノードへのマップを作成
-    std::unordered_map<int, BehaviorNode *> nodeMap;
-    std::vector<BehaviorNode *> allNodes;
+    std::unordered_map<int, BehaviorBaseNode *> nodeMap;
+    std::vector<BehaviorBaseNode *> allNodes;
     int currentId = 0;
 
-    std::function<void(BehaviorNode *)> buildNodeMap = [&](BehaviorNode *node) {
+    std::function<void(BehaviorBaseNode *)> buildNodeMap = [&](BehaviorBaseNode *node) {
         if (!node)
             return;
 
@@ -770,7 +770,7 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
 
         // インデックスiのノードに対応するデータを読み込む
         if (i < static_cast<int>(allNodes.size())) {
-            BehaviorNode *node = allNodes[i];
+            BehaviorBaseNode *node = allNodes[i];
 
             // ノード固有のパラメータを読み込み
             if (auto *approachNode = dynamic_cast<ApproachNode *>(node)) {
@@ -823,7 +823,7 @@ void BehaviorTreeEditor::LoadSettings(const std::string &treeName, BehaviorNode 
     }
 }
 
-void BehaviorTreeEditor::AddExecutionHistory(BehaviorNode *node) {
+void BehaviorTreeEditor::AddExecutionHistory(BehaviorBaseNode *node) {
     if (!node)
         return;
 

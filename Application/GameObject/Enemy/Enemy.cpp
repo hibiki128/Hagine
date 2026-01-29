@@ -1,6 +1,6 @@
 #define NOMINMAX
 #include "Enemy.h"
-#include "BehaviorTree/BehaviorNode/BehaviorNode.h"
+#include "BehaviorTree/Nodes/BehaviorBaseNode.h"
 #include "BehaviorTree/Nodes/ActionNodes.h"
 #include "BehaviorTree/Nodes/CompositeNodes.h"
 #include "BehaviorTree/Nodes/ConditionNodes.h"
@@ -125,7 +125,7 @@ void Enemy::Update() {
 void Enemy::InitializeBehaviorTree() {
 #ifdef _DEBUG
     behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
-    BehaviorNode::SetEditor(behaviorTreeEditor_.get());
+    BehaviorBaseNode::SetEditor(behaviorTreeEditor_.get());
 #endif
 
     //==================== 通常行動ツリー構築 ====================

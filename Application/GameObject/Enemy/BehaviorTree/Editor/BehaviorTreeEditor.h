@@ -1,5 +1,5 @@
 #pragma once
-#include "Application/GameObject/Enemy/BehaviorTree/BehaviorNode/BehaviorNode.h"
+#include "Application/GameObject/Enemy/BehaviorTree/Nodes/BehaviorBaseNode.h"
 #ifdef _DEBUG
 #include "imgui.h"
 #include "imgui_node_editor.h"
@@ -36,26 +36,26 @@ class BehaviorTreeEditor {
     /// エディターの描画
     /// </summary>
     /// <param name="root"> デバッグしたいツリーノードの登録 </param>
-    void DrawEditor(BehaviorNode *root);
+    void DrawEditor(BehaviorBaseNode *root);
 
     /// <summary>
     /// 各ノードの設定を保存
     /// </summary>
     /// <param name="treeName"> ツリーノードの名前 </param>
     /// <param name="root"> ルートノード </param>
-    void SaveSettings(const std::string &treeName, BehaviorNode *root);
+    void SaveSettings(const std::string &treeName, BehaviorBaseNode *root);
 
     /// <summary>
     /// 各ノードの設定を読み込み
     /// </summary>
     /// <param name="treeName"> ツリーノードの名前 </param>
-    void LoadSettings(const std::string &treeName, BehaviorNode *root);
+    void LoadSettings(const std::string &treeName, BehaviorBaseNode *root);
 
     /// <summary>
     /// 実行中のノードのセット
     /// </summary>
     /// <param name="node">設定する実行中のノードを指す BehaviorNode のポインタ</param>
-    void SetExecutingNode(BehaviorNode *node) { executingNode_ = node; }
+    void SetExecutingNode(BehaviorBaseNode *node) { executingNode_ = node; }
 
     /// <summary>
     /// 実行中のノードのクリア
@@ -66,7 +66,7 @@ class BehaviorTreeEditor {
     /// ノードの実行履歴を追加
     /// </summary>
     /// <param name="node">追加する BehaviorNode へのポインタ</param>
-    void AddExecutionHistory(BehaviorNode *node);
+    void AddExecutionHistory(BehaviorBaseNode *node);
 
     /// <summary>
     /// ノード実行履歴をクリア
@@ -82,33 +82,33 @@ class BehaviorTreeEditor {
     /// ツリー全体のノード位置を初期化
     /// </summary>
     /// <param name="root">ルートノード</param>
-    void InitializeNodePositions(BehaviorNode *root);
+    void InitializeNodePositions(BehaviorBaseNode *root);
 
     /// <summary>
     /// imgui-node-editor用のノードとリンクを構築して描画
     /// </summary>
     /// <param name="root">描画するツリーのルートノードへのポインタ</param>
-    void BuildNodeEditorData(BehaviorNode *root);
+    void BuildNodeEditorData(BehaviorBaseNode *root);
 
     /// <summary>
     /// BehaviorNodeに対応するエディタ用のノードIDを取得または作成
     /// </summary>
     /// <param name="node">IDを取得したい BehaviorNode へのポインタ</param>
     /// <returns>エディタ内で使用する一意のノードID</returns>
-    int GetOrCreateNodeId(BehaviorNode *node);
+    int GetOrCreateNodeId(BehaviorBaseNode *node);
 
     /// <summary>
     /// 指定したノードを根とするツリーの幅を計算
     /// </summary>
     /// <param name="node">幅を計算するツリーの根となる BehaviorNode へのポインタ</param>
     /// <returns>計算されたツリーの幅を表す整数（単位は実装依存）</returns>
-    int CalculateTreeWidth(BehaviorNode *node);
+    int CalculateTreeWidth(BehaviorBaseNode *node);
 
     /// <summary>
     /// BehaviorNode のプロパティを描画
     /// </summary>
     /// <param name="node">プロパティを描画する対象の BehaviorNode へのポインタ</param>
-    void DrawNodeProperties(BehaviorNode *node);
+    void DrawNodeProperties(BehaviorBaseNode *node);
 
     /// <summary>
     /// 指定したツリー名に対応するツールバーを描画
@@ -122,25 +122,25 @@ class BehaviorTreeEditor {
     /// ===================================================
 
     int nodeIdCounter_ = 0;
-    BehaviorNode *selectedNode_ = nullptr;
-    BehaviorNode *executingNode_ = nullptr;
-    BehaviorNode *currentRoot_ = nullptr;
-    std::vector<BehaviorNode *> executionHistory_;
+    BehaviorBaseNode *selectedNode_ = nullptr;
+    BehaviorBaseNode *executingNode_ = nullptr;
+    BehaviorBaseNode *currentRoot_ = nullptr;
+    std::vector<BehaviorBaseNode *> executionHistory_;
     const int MAX_HISTORY = 10;
 
     // ノードの重み付け情報
-    std::unordered_map<BehaviorNode *, float> nodeWeights_;
+    std::unordered_map<BehaviorBaseNode *, float> nodeWeights_;
 
     // セーブ/ロード用のツリー名
     char treeNameBuffer_[256] = "DefaultTree";
 
     ed::EditorContext *editorContext_ = nullptr;
-    std::unordered_map<BehaviorNode *, int> nodeToEditorId_;
-    std::unordered_map<int, BehaviorNode *> editorIdToNode_;
+    std::unordered_map<BehaviorBaseNode *, int> nodeToEditorId_;
+    std::unordered_map<int, BehaviorBaseNode *> editorIdToNode_;
     int nextEditorNodeId_ = 1;
     int nextEditorLinkId_ = 1;
 
-    std::unordered_map<BehaviorNode *, ImVec2> nodePositions_;
+    std::unordered_map<BehaviorBaseNode *, ImVec2> nodePositions_;
     bool needsInitialLayout_ = true;
     bool needsNavigateToContent_ = false;
 #endif // _DEBUG

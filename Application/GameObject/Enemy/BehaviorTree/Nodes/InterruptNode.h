@@ -1,6 +1,6 @@
 #pragma once
-#include "../BehaviorNode/BehaviorNode.h"
-#include "../Nodes/ConditionNodes.h" // ← DistanceCheckNode参照に必要
+#include "BehaviorBaseNode.h"
+#include "../Nodes/ConditionNodes.h"
 
 /// <summary>
 /// 割り込み優先度
@@ -16,7 +16,7 @@ enum class InterruptPriority {
 /// <summary>
 /// 割り込み可能なノードの基底クラス
 /// </summary>
-class InterruptableNode : public BehaviorNode {
+class InterruptableNode : public BehaviorBaseNode {
   public:
     virtual ~InterruptableNode() = default;
 
@@ -53,7 +53,7 @@ class InterruptableNode : public BehaviorNode {
     /// 上位に存在する DistanceCheckNode を探索して返す
     /// </summary>
     DistanceCheckNode *FindLinkedDistanceCheck() const {
-        BehaviorNode *current = GetParent();
+        BehaviorBaseNode *current = GetParent();
         while (current) {
             if (auto *distNode = dynamic_cast<DistanceCheckNode *>(current)) {
                 return distNode; // 距離チェックノードを見つけたら返す
@@ -82,17 +82,17 @@ class InterruptableNode : public BehaviorNode {
 /// 割り込み対応セレクターノード
 /// 優先度の高い割り込み条件をチェックして、必要に応じて実行中のノードを中断
 /// </summary>
-class InterruptSelectorNode : public BehaviorNode {
+class InterruptSelectorNode : public BehaviorBaseNode {
   public:
     NodeStatus Execute(Enemy &enemy, float deltaTime) override;
     const char *GetNodeName() const override { return "InterruptSelector"; }
 
-    void AddChild(std::unique_ptr<BehaviorNode> child) {
+    void AddChild(std::unique_ptr<BehaviorBaseNode> child) {
         child->SetParent(this); // 親ノードを設定（重要）
         children_.push_back(std::move(child));
     }
 
-    std::vector<std::unique_ptr<BehaviorNode>> &GetChildren() { return children_; }
+    std::vector<std::unique_ptr<BehaviorBaseNode>> &GetChildren() { return children_; }
 
     /// <summary>
     /// 現在実行中のノードをリセット
@@ -100,7 +100,7 @@ class InterruptSelectorNode : public BehaviorNode {
     void ResetCurrentChild();
 
   private:
-    std::vector<std::unique_ptr<BehaviorNode>> children_;
+    std::vector<std::unique_ptr<BehaviorBaseNode>> children_;
     int currentChildIndex_ = -1;
     InterruptPriority currentPriority_ = InterruptPriority::None;
 

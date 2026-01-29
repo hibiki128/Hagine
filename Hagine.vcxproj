@@ -108,7 +108,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\BehaviorNode\BehaviorNode.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\BehaviorBaseNode.cpp" />
     <ClCompile Include="Application\Camera\FollowCamera.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp" />
     <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp" />
@@ -308,7 +308,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Utility\Shake\Shake.h" />
     <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
     <ClInclude Include="Application\UI\Enemy\EnemyUI.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\BehaviorNode\BehaviorNode.h" />
+    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\BehaviorBaseNode.h" />
     <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.h" />
     <ClInclude Include="Application\Staging\Death\DeathStaging.h" />
     <ClInclude Include="Application\Camera\DeathCamera.h" />

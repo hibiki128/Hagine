@@ -19,7 +19,7 @@ enum class NodeStatus {
 /// <summary>
 /// ビヘイビアツリーのノード基底クラス
 /// </summary>
-class BehaviorNode {
+class BehaviorBaseNode {
   public:
     /// ===================================================
     /// public method
@@ -28,7 +28,7 @@ class BehaviorNode {
     /// <summary>
     /// デストラクタ
     /// </summary>
-    virtual ~BehaviorNode() = default;
+    virtual ~BehaviorBaseNode() = default;
 
     /// <summary>
     /// 派生クラスが実装する、Enemy に対する実行処理を表す純粋仮想関数
@@ -48,12 +48,12 @@ class BehaviorNode {
     // ===================================================
     // ツリー構造を辿るための親ノードポインタ
     // ===================================================
-    void SetParent(BehaviorNode *parent) { parent_ = parent; } // 親ノード設定
-    BehaviorNode *GetParent() const { return parent_; }        // 親ノード取得
+    void SetParent(BehaviorBaseNode *parent) { parent_ = parent; } // 親ノード設定
+    BehaviorBaseNode *GetParent() const { return parent_; }        // 親ノード取得
 
     int nodeId = 0;
 
   protected:
     static BehaviorTreeEditor *editor_;
-    BehaviorNode *parent_ = nullptr;
+    BehaviorBaseNode *parent_ = nullptr;
 };

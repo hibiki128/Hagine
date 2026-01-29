@@ -5,7 +5,7 @@
 #include <Application/GameObject/Player/Player.h>
 #include <application/GameObject/Player/PlayerData.h>
 
-class BehaviorNode;
+class BehaviorBaseNode;
 class BehaviorTreeEditor;
 
 /// <summary>
@@ -282,7 +282,7 @@ class Enemy : public BaseObject {
 #ifdef _DEBUG
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
 #endif
-    std::unique_ptr<BehaviorNode> behaviorTreeRoot_;
+    std::unique_ptr<BehaviorBaseNode> behaviorTreeRoot_;
 
     OBBCollider *enemyCollider_ = nullptr;
 };

@@ -1,5 +1,5 @@
 #pragma once
-#include "../BehaviorNode/BehaviorNode.h"
+#include "BehaviorBaseNode.h"
 #include "../Nodes/InterruptNode.h"
 #include <type/Vector3.h>
 
@@ -52,7 +52,7 @@ class ApproachNode : public InterruptableNode {
 /// <summary>
 /// 停止行動ノード
 /// </summary>
-class StopNode : public BehaviorNode {
+class StopNode : public BehaviorBaseNode {
   public:
     NodeStatus Execute(Enemy &enemy, float deltaTime) override;
     const char *GetNodeName() const override { return "Stop"; }
