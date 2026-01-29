@@ -51,12 +51,7 @@ void ClearScene::Finalize() {
 
 void ClearScene::Update() {
     gamePad_->Update();
-    currentCameraStartTimer_ += Frame::DeltaTime();
-    if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
-        vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
-        cameraStart_ = true;
-        resultStaging_->SetStartEasing(true);
-    }
+   
     // カメラ更新
     CameraUpdate();
 
@@ -113,6 +108,14 @@ void ClearScene::AddParticleSetting() {
 }
 
 void ClearScene::CameraUpdate() {
+
+     currentCameraStartTimer_ += Frame::DeltaTime();
+    if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
+        vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
+        cameraStart_ = true;
+        resultStaging_->SetStartEasing(true);
+    }
+
     if (debugCamera_->GetActive()) {
         debugCamera_->Update();
     } else {
