@@ -4,6 +4,7 @@
 #include "Particle/ParticleEmitter.h"
 #include <Application/GameObject/BehaviorTree/Node/BehaviorNode.h>
 #include <Application/GameObject/Player/Player.h>
+#include <Easing.h> // ★追加: イージング用
 #include <application/GameObject/Player/PlayerData.h>
 
 /// <summary>
@@ -121,8 +122,9 @@ class Enemy : public BaseObject {
 
     void MoveToTarget(const Vector3 &targetPos);
     void PerformAttack();
-    void MoveStrafe();  // 左右移動
-    void MoveRetreat(); // 後退
+    void MoveStrafe();   // 左右移動
+    void MoveRetreat();  // 後退
+    void StopMovement(); // ★追加: 移動を停止
 
   private:
     /// ===================================================
@@ -222,6 +224,10 @@ class Enemy : public BaseObject {
     static constexpr float kGroundLevel = 0.0f;
     static constexpr float kVelocityZero = 0.0f;
 
+    // ★追加: イージング関連定数
+    static constexpr float kVelocityEaseTime = 0.15f; // 速度変化のイージング時間
+    static constexpr float kStopEaseTime = 0.2f;      // 停止時のイージング時間
+
     // 影のスケール関連定数
     static constexpr float kShadowBaseScale = 1.5f;
     static constexpr float kShadowMinScale = 0.3f;
@@ -259,6 +265,10 @@ class Enemy : public BaseObject {
     float jumpSpeed_ = 0.0f;
     float maxSpeed_ = 0.0f;
     float accelRate_ = 0.0f;
+
+    // ★追加: イージング用の変数
+    Vector3 velocityTarget_{};         // 目標速度
+    EasingData<Vector3> velocityEase_; // 速度のイージング
 
     bool canJump_ = false;
     bool isLockOn_ = false;

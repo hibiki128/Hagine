@@ -113,6 +113,11 @@ void Enemy::Update() {
 
             // ツリーを実行
             rootNode_->Tick();
+
+            // ★追加: 速度のイージングを適用
+            if (velocityEase_.isActive) {
+                velocity_ = velocityEase_.Update(Frame::DeltaTime());
+            }
         } else {
             // ★追加: ツリーがない場合は速度をゼロに
             // (エディタで停止した後も動き続けるのを防ぐ)
@@ -127,7 +132,7 @@ void Enemy::Update() {
 }
 
 void Enemy::MoveToTarget(const Vector3 &targetPos) {
-    // ★修正: velocity_を使って移動するように変更
+    // ★修正: イージングを使ってスムーズに移動
     if (!target_)
         return;
 
@@ -135,8 +140,11 @@ void Enemy::MoveToTarget(const Vector3 &targetPos) {
     direction.y = 0; // 高さは合わせない場合
     direction = direction.Normalize();
 
-    // moveSpeed_を使ってvelocityを設定
-    velocity_ = direction * moveSpeed_;
+    // 目標速度を計算
+    velocityTarget_ = direction * moveSpeed_;
+
+    // ★イージングで速度を変化させる（短い時間で滑らかに）
+    velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
 void Enemy::MoveStrafe() {
@@ -145,7 +153,11 @@ void Enemy::MoveStrafe() {
 
     Vector3 right = GetRight();
 
-    velocity_ = right * (float)strafeDirection_ * moveSpeed_;
+    // 目標速度を計算
+    velocityTarget_ = right * (float)strafeDirection_ * moveSpeed_;
+
+    // ★イージングで速度を変化させる（短い時間で滑らかに）
+    velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
 void Enemy::MoveRetreat() {
@@ -157,12 +169,24 @@ void Enemy::MoveRetreat() {
     direction.y = 0;
     direction = direction.Normalize();
 
-    velocity_ = direction * moveSpeed_;
+    // 目標速度を計算
+    velocityTarget_ = direction * moveSpeed_;
+
+    // ★イージングで速度を変化させる（短い時間で滑らかに）
+    velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
 void Enemy::PerformAttack() {
     // 攻撃ログを出力したり、アニメーションを再生したりする
     Logger::Log("Attack\n");
+}
+
+// ★追加: 移動を滑らかに停止
+void Enemy::StopMovement() {
+    // 現在の速度からゼロへイージング
+    Vector3 zeroVel(0.0f, velocity_.y, 0.0f); // Y軸(重力)は維持
+    velocityTarget_ = zeroVel;
+    velocityEase_.Reset(velocity_, velocityTarget_, kStopEaseTime, EasingType::OutQuad);
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {

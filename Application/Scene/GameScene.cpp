@@ -72,7 +72,6 @@ void GameScene::Initialize() {
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
     BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
 
-
     behaviorTreeEditor_->SetDebugTargets(enemy_ptr, player_ptr);
 }
 
@@ -94,7 +93,6 @@ void GameScene::Update() {
 
     auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
     if (runtimeRoot) {
-        // エディタで作られた脳みそをEnemyに渡す
         enemy_ptr->SetBehaviorTree(runtimeRoot);
     }
 

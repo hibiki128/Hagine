@@ -37,15 +37,24 @@ NodeStatus SequenceNode::OnUpdate() {
         return NodeStatus::Failure;
     }
 
+    // ★修正: 実行していない子ノードのステータスをリセット
     // 毎回先頭(0番目)からチェックし直すことで、
     // 途中で条件(例:距離)がFalseになったら即座に中断するように変更
     for (int i = 0; i < m_Children.size(); ++i) {
         NodeStatus childStatus = m_Children[i]->Tick();
 
         if (childStatus == NodeStatus::Running) {
+            // ★追加: Running以降のノードはリセット
+            for (int j = i + 1; j < m_Children.size(); ++j) {
+                m_Children[j]->Reset();
+            }
             return NodeStatus::Running; // 実行中ならそこで待つ(次回も0番目からチェックされる)
         }
         if (childStatus == NodeStatus::Failure) {
+            // ★追加: 失敗した時点で以降のノードをリセット
+            for (int j = i + 1; j < m_Children.size(); ++j) {
+                m_Children[j]->Reset();
+            }
             return NodeStatus::Failure; // 条件不一致などで失敗したら、後続のアクションも中断
         }
     }
@@ -61,15 +70,25 @@ NodeStatus SelectorNode::OnUpdate() {
         return NodeStatus::Failure;
     }
 
+    // ★修正: 実行していない子ノードのステータスをリセット
     // Selectorも毎回先頭(0番目)から評価する (Reactive)
-    // これによりvectorのback()エラーを防ぐ
     for (int i = 0; i < m_Children.size(); ++i) {
         NodeStatus childStatus = m_Children[i]->Tick();
 
-        if (childStatus == NodeStatus::Running)
+        if (childStatus == NodeStatus::Running) {
+            // ★追加: 成功した子ノード以降はリセット
+            for (int j = i + 1; j < m_Children.size(); ++j) {
+                m_Children[j]->Reset();
+            }
             return NodeStatus::Running;
-        if (childStatus == NodeStatus::Success)
+        }
+        if (childStatus == NodeStatus::Success) {
+            // ★追加: 成功した子ノード以降はリセット
+            for (int j = i + 1; j < m_Children.size(); ++j) {
+                m_Children[j]->Reset();
+            }
             return NodeStatus::Success;
+        }
     }
     return NodeStatus::Failure;
 }
@@ -110,6 +129,14 @@ NodeStatus TimedActionNode::OnUpdate() {
         return NodeStatus::Success; // 指定時間動いたら完了
     }
     return NodeStatus::Running;
+}
+
+// ★追加: アクション終了時に速度をゼロにイージング
+void TimedActionNode::OnExit() {
+    if (m_Enemy) {
+        // 移動を滑らかに停止
+        m_Enemy->StopMovement();
+    }
 }
 
 // 通常接近 & 高速接近 (中身は同じMoveToTargetだが、速度設定が異なる)
@@ -287,4 +314,29 @@ void EnemyIdleNode::Reset() {
 void EnemyIdleNode::OnEnter() {
     BTNode::Reset();
     m_Timer = 0.0f;
+}
+
+NodeStatus RootNode::OnUpdate() {
+    // 子ノードがなければ失敗
+    if (m_Children.empty()) {
+        return NodeStatus::Failure;
+    }
+
+    // Rootは原則として「1つのメインとなる子ノード（Selectorなど）」を持つ
+    // 0番目の子を実行する
+    std::shared_ptr<BTNode> mainChild = m_Children[0];
+    NodeStatus result = mainChild->Tick();
+
+    // 子ノードの実行が終わった（成功 or 失敗）場合
+    if (result != NodeStatus::Running) {
+        if (m_IsLoop) {
+            // ★重要: 次のフレームで最初からやり直せるように、
+            // 実行が終わった子ノードを即座にリセット状態に戻しておく
+            mainChild->Reset();
+        }
+    }
+
+    // 今フレームの結果を返す
+    // (Enemy側には Success/Failure が伝わるが、内部では既にリセット済みなので次回は最初から動く)
+    return result;
 }
