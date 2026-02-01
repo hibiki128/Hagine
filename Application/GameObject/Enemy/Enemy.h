@@ -2,9 +2,9 @@
 #include "Application/Utility/Shake/Shake.h"
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
+#include <Application/GameObject/BehaviorTree/Node/BehaviorNode.h>
 #include <Application/GameObject/Player/Player.h>
 #include <application/GameObject/Player/PlayerData.h>
-#include <Application/GameObject/BehaviorTree/Node/BehaviorNode.h>
 
 /// <summary>
 /// 敵のゲームオブジェクトクラス
@@ -121,8 +121,8 @@ class Enemy : public BaseObject {
 
     void MoveToTarget(const Vector3 &targetPos);
     void PerformAttack();
-    void MoveStrafe();                           // 左右移動
-    void MoveRetreat();                          // 後退
+    void MoveStrafe();  // 左右移動
+    void MoveRetreat(); // 後退
 
   private:
     /// ===================================================

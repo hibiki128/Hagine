@@ -235,7 +235,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".claudiaideconfig" />
     <None Include=".editorconfig" />
     <None Include=".gitattributes" />
     <None Include=".gitignore" />

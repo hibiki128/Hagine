@@ -3,8 +3,8 @@
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
-#include <Frame.h>
 #include <Debug/Log/Logger.h>
+#include <Frame.h>
 
 Enemy::Enemy() {
 }
@@ -91,7 +91,7 @@ void Enemy::Update() {
             // ワールド空間のX軸で回転を作成
             tiltRotation_ = Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
 
-            // 重要: tiltRotation_ × baseRotation_ の順序（ワールド空間での回転を先に適用）
+            // 重要: tiltRotation_ × baseRotation_ の順序(ワールド空間での回転を先に適用)
             transform_->quateRotation_ = tiltRotation_ * baseRotation_;
 
             // 高速点滅
@@ -107,31 +107,36 @@ void Enemy::Update() {
             }
         }
 
-        
-    if (rootNode_) {
+        if (rootNode_) {
             // ターゲット情報などが変わっているかもしれないので更新しても良い
             rootNode_->SetContext(this, target_);
 
+            // ツリーを実行
             rootNode_->Tick();
+        } else {
+            // ★追加: ツリーがない場合は速度をゼロに
+            // (エディタで停止した後も動き続けるのを防ぐ)
+            velocity_.x = 0.0f;
+            velocity_.z = 0.0f;
         }
 
         BaseObject::Update();
     }
 
     CollisionGround();
-
 }
 
 void Enemy::MoveToTarget(const Vector3 &targetPos) {
-    // シンプルな追尾ロジックの例
+    // ★修正: velocity_を使って移動するように変更
+    if (!target_)
+        return;
+
     Vector3 direction = targetPos - transform_->translation_;
     direction.y = 0; // 高さは合わせない場合
     direction = direction.Normalize();
 
-    float speed = 0.1f;
-    transform_->translation_ += direction * speed;
-
-    // 向きを変えるなどの処理もここに記述
+    // moveSpeed_を使ってvelocityを設定
+    velocity_ = direction * moveSpeed_;
 }
 
 void Enemy::MoveStrafe() {
@@ -221,7 +226,7 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
     // 今の向きを保存
     baseRotation_ = transform_->quateRotation_;
 
-    // X軸回転のみをイージング（上向きに8度）
+    // X軸回転のみをイージング(上向きに8度)
     float startAngle = transform_->quateRotation_.x;
     float endAngle = degreesToRadians(kDamageTiltDegrees);
     tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
@@ -269,7 +274,7 @@ void Enemy::RotateUpdate() {
     toTarget = toTarget.Normalize();
 
     // プレイヤーと同様に基準ベクトルを作成
-    Vector3 forward = toTarget;                             // 敵の正面方向（ターゲット方向）
+    Vector3 forward = toTarget;                             // 敵の正面方向(ターゲット方向)
     Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ}; // 上方向
     Vector3 right;                                          // 右方向
 
@@ -287,7 +292,7 @@ void Enemy::RotateUpdate() {
     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
     Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
 
-    // 回転速度（大きいほど素早く向く）
+    // 回転速度(大きいほど素早く向く)
     float rotateSpeed = kRotationSpeed;
     transform_->quateRotation_ = Quaternion::Slerp(
         transform_->quateRotation_,
@@ -323,7 +328,7 @@ const char *Enemy::GetDirectionName(Direction dir) {
 }
 
 Vector3 Enemy::GetForward() const {
-    // クォータニオンから前方向ベクトルを計算（Z軸の負方向が前方向）
+    // クォータニオンから前方向ベクトルを計算(Z軸の負方向が前方向)
     return TransformNormal(Vector3(kForwardVectorX, kForwardVectorY, kForwardVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
@@ -332,7 +337,7 @@ Vector3 Enemy::GetBackward() const {
 }
 
 Vector3 Enemy::GetRight() const {
-    // クォータニオンから右方向ベクトルを計算（X軸の正方向が右方向）
+    // クォータニオンから右方向ベクトルを計算(X軸の正方向が右方向)
     return TransformNormal(Vector3(kRightVectorX, kRightVectorY, kRightVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
@@ -341,7 +346,7 @@ Vector3 Enemy::GetLeft() const {
 }
 
 Vector3 Enemy::GetUp() const {
-    // クォータニオンから上方向ベクトルを計算（Y軸の正方向が上方向）
+    // クォータニオンから上方向ベクトルを計算(Y軸の正方向が上方向)
     return TransformNormal(Vector3(kUpVectorX, kUpVectorY, kUpVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 

@@ -29,16 +29,21 @@ void CompositeNode::SetContext(Enemy *enemy, Player *player) {
 void CompositeNode::OnEnter() { m_CurrentChildIndex = 0; }
 
 // ---------------------------------------------------------
-// ★修正: SequenceNode (Reactive)
+// SequenceNode (Reactive)
 // ---------------------------------------------------------
 NodeStatus SequenceNode::OnUpdate() {
+    // 子ノードが空の場合は失敗
+    if (m_Children.empty()) {
+        return NodeStatus::Failure;
+    }
+
     // 毎回先頭(0番目)からチェックし直すことで、
     // 途中で条件(例:距離)がFalseになったら即座に中断するように変更
     for (int i = 0; i < m_Children.size(); ++i) {
         NodeStatus childStatus = m_Children[i]->Tick();
 
         if (childStatus == NodeStatus::Running) {
-            return NodeStatus::Running; // 実行中ならそこで待つ（次回も0番目からチェックされる）
+            return NodeStatus::Running; // 実行中ならそこで待つ(次回も0番目からチェックされる)
         }
         if (childStatus == NodeStatus::Failure) {
             return NodeStatus::Failure; // 条件不一致などで失敗したら、後続のアクションも中断
@@ -48,20 +53,23 @@ NodeStatus SequenceNode::OnUpdate() {
 }
 
 // ---------------------------------------------------------
-// SelectorNode
+// SelectorNode (Reactive)
 // ---------------------------------------------------------
 NodeStatus SelectorNode::OnUpdate() {
-    // Selectorも同様にReactiveにするか、状態を持つかは設計次第ですが、
-    // ここでは従来の「順番に試す」方式を維持します
-    while (m_CurrentChildIndex < m_Children.size()) {
-        NodeStatus childStatus = m_Children[m_CurrentChildIndex]->Tick();
+    // 子ノードが空の場合は失敗
+    if (m_Children.empty()) {
+        return NodeStatus::Failure;
+    }
+
+    // Selectorも毎回先頭(0番目)から評価する (Reactive)
+    // これによりvectorのback()エラーを防ぐ
+    for (int i = 0; i < m_Children.size(); ++i) {
+        NodeStatus childStatus = m_Children[i]->Tick();
 
         if (childStatus == NodeStatus::Running)
             return NodeStatus::Running;
         if (childStatus == NodeStatus::Success)
             return NodeStatus::Success;
-
-        m_CurrentChildIndex++;
     }
     return NodeStatus::Failure;
 }
@@ -85,7 +93,7 @@ void TimedActionNode::OnEnter() {
     // 速度をセット (Enemyポインタがあれば)
     if (m_Enemy) {
         m_Enemy->SetMoveSpeed(m_Speed);
-        SetupAction(); // 各派生クラスごとの初期化（方向決めなど）
+        SetupAction(); // 各派生クラスごとの初期化(方向決めなど)
     }
 }
 
@@ -141,7 +149,7 @@ NodeStatus EnemyAttackNode::OnUpdate() {
 }
 
 // ---------------------------------------------------------
-// ★修正: IsPlayerCloseNode (範囲チェック)
+// IsPlayerCloseNode (範囲チェック)
 // ---------------------------------------------------------
 NodeStatus IsPlayerCloseNode::OnUpdate() {
     if (!m_Enemy || !m_Player)
@@ -149,11 +157,50 @@ NodeStatus IsPlayerCloseNode::OnUpdate() {
 
     float dist = (m_Enemy->GetWorldPosition() - m_Player->GetWorldPosition()).Length();
 
-    // 最小距離 <= 現在距離 <= 最大距離 なら成功
-    if (dist >= m_MinDist && dist <= m_MaxDist) {
-        return NodeStatus::Success;
+    // ★ヒステリシス機能の実装
+    // 前回の結果に応じてマージンを設定
+    float effectiveMinDist = m_MinDist;
+    float effectiveMaxDist = m_MaxDist;
+
+    // 前回成功していた場合、マージンを大きく広げて判定を緩くする
+    if (m_LastResult == NodeStatus::Success) {
+        effectiveMinDist -= kHysteresisMargin * 2.0f; // より広いマージン
+        effectiveMaxDist += kHysteresisMargin * 2.0f;
     }
-    return NodeStatus::Failure;
+    // 前回失敗していた場合、マージンを狭めて判定を厳しくする
+    else if (m_LastResult == NodeStatus::Failure) {
+        effectiveMinDist += kHysteresisMargin;
+        effectiveMaxDist -= kHysteresisMargin;
+    }
+
+    // 最小・最大距離内にいるかチェック
+    bool isInRange = (dist >= effectiveMinDist && dist <= effectiveMaxDist);
+
+    NodeStatus newResult = isInRange ? NodeStatus::Success : NodeStatus::Failure;
+
+    // 結果が変わった場合
+    if (newResult != m_LastResult) {
+        // 成功から失敗に変わる場合、保持時間をチェック
+        if (m_LastResult == NodeStatus::Success && m_StableTimer < kSuccessHoldTime) {
+            // まだ保持時間が経過していないので、成功を維持
+            m_StableTimer += 1.0f / 60.0f;
+            return NodeStatus::Success;
+        }
+
+        // タイマーをリセットして新しい結果に更新
+        m_StableTimer = 0.0f;
+        m_LastResult = newResult;
+    } else {
+        // 同じ結果が続いている場合、タイマーを増やす
+        m_StableTimer += 1.0f / 60.0f;
+    }
+
+    // 最小安定時間が経過していない場合、前回の結果を返す
+    if (m_StableTimer < kMinStableTime && m_LastResult != NodeStatus::Idle) {
+        return m_LastResult;
+    }
+
+    return newResult;
 }
 
 NodeStatus IsHealthLowNode::OnUpdate() {
@@ -193,7 +240,7 @@ void RandomSelectorNode::OnEnter() {
     }
 
     // 2. 乱数で選択する
-    // ランダムな値 (0 ～ totalWeight) を取得
+    // ランダムな値 (0 ~ totalWeight) を取得
     // ※ myMath.h や random.h の仕様に合わせて調整してください。
     //   ここでは Random::Range(min, max) がある前提で書きます。
     float randomValue = Random::Range(0.0f, totalWeight);
@@ -215,6 +262,11 @@ void RandomSelectorNode::OnEnter() {
 }
 
 NodeStatus RandomSelectorNode::OnUpdate() {
+    // 子ノードが空の場合は失敗
+    if (m_Children.empty()) {
+        return NodeStatus::Failure;
+    }
+
     // 選択された子ノードだけを実行する
     if (m_SelectedChildIndex < 0 || m_SelectedChildIndex >= m_Children.size()) {
         return NodeStatus::Failure;
@@ -225,4 +277,14 @@ NodeStatus RandomSelectorNode::OnUpdate() {
     // 実行中ならRunningを返し、終了(Success/Failure)したらそのまま結果を返す
     // Sequenceのように「次へ」とは行かず、今回はこれだけで終わり
     return result;
+}
+
+void EnemyIdleNode::Reset() {
+    BTNode::Reset();
+    m_Timer = 0.0f;
+}
+
+void EnemyIdleNode::OnEnter() {
+    BTNode::Reset();
+    m_Timer = 0.0f;
 }

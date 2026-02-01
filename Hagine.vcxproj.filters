@@ -305,7 +305,6 @@
     <ResourceCompile Include="Hagine.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".claudiaideconfig" />
     <None Include=".editorconfig" />
     <None Include=".gitattributes" />
     <None Include=".gitignore" />

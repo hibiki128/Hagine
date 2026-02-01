@@ -157,11 +157,17 @@ class RunActionNode : public BTNode {
 // 具体的な条件ノード
 // =========================================================
 
-// ★変更: プレイヤーが「指定範囲内」にいるか？
+// ★変更: プレイヤーが「指定範囲内」にいるか?
 class IsPlayerCloseNode : public ContextNode {
   public:
     // コンストラクタで最小・最大を受け取る
     IsPlayerCloseNode(float min, float max) : m_MinDist(min), m_MaxDist(max) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_LastResult = NodeStatus::Idle;
+        m_StableTimer = 0.0f;
+    }
 
   protected:
     NodeStatus OnUpdate() override;
@@ -169,9 +175,16 @@ class IsPlayerCloseNode : public ContextNode {
   private:
     float m_MinDist;
     float m_MaxDist;
+
+    // ★追加: ヒステリシス用の変数
+    NodeStatus m_LastResult = NodeStatus::Idle;      // 前回の判定結果
+    float m_StableTimer = 0.0f;                      // 状態が安定している時間
+    static constexpr float kHysteresisMargin = 1.0f; // ヒステリシスのマージン(1.0m)
+    static constexpr float kMinStableTime = 0.3f;    // 最小安定時間(0.3秒)
+    static constexpr float kSuccessHoldTime = 0.5f;  // 成功状態の保持時間(0.5秒)
 };
 
-// HPが低いか？
+// HPが低いか?
 class IsHealthLowNode : public ContextNode {
   public:
     IsHealthLowNode(float percentage) : m_ThresholdPercentage(percentage) {}
@@ -236,4 +249,26 @@ class EnemyAttackNode : public ContextNode {
 
   private:
     float m_Timer = 0.0f;
+};
+
+// 待機アクション (何もしない)
+class EnemyIdleNode : public ContextNode {
+  public:
+    EnemyIdleNode(float duration = 1.0f) : m_Duration(duration), m_Timer(0.0f) {}
+
+    void Reset() override;
+
+    void OnEnter() override;
+
+  protected:
+    NodeStatus OnUpdate() override {
+        m_Timer += 1.0f / 60.0f;
+        if (m_Timer >= m_Duration)
+            return NodeStatus::Success;
+        return NodeStatus::Running;
+    }
+
+  private:
+    float m_Duration;
+    float m_Timer;
 };
