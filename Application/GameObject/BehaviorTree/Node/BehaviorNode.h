@@ -60,18 +60,6 @@ class CompositeNode : public BTNode {
     int m_CurrentChildIndex = 0;
 };
 
-class RootNode : public CompositeNode {
-  public:
-    // loop: trueなら完了時に自動リセットして繰り返し実行する
-    RootNode(bool loop = true) : m_IsLoop(loop) {}
-
-  protected:
-    NodeStatus OnUpdate() override;
-
-  private:
-    bool m_IsLoop;
-};
-
 // =========================================================
 // 時間制限付きアクションの基底クラス
 // =========================================================

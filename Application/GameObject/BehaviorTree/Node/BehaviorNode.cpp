@@ -315,28 +315,3 @@ void EnemyIdleNode::OnEnter() {
     BTNode::Reset();
     m_Timer = 0.0f;
 }
-
-NodeStatus RootNode::OnUpdate() {
-    // 子ノードがなければ失敗
-    if (m_Children.empty()) {
-        return NodeStatus::Failure;
-    }
-
-    // Rootは原則として「1つのメインとなる子ノード（Selectorなど）」を持つ
-    // 0番目の子を実行する
-    std::shared_ptr<BTNode> mainChild = m_Children[0];
-    NodeStatus result = mainChild->Tick();
-
-    // 子ノードの実行が終わった（成功 or 失敗）場合
-    if (result != NodeStatus::Running) {
-        if (m_IsLoop) {
-            // ★重要: 次のフレームで最初からやり直せるように、
-            // 実行が終わった子ノードを即座にリセット状態に戻しておく
-            mainChild->Reset();
-        }
-    }
-
-    // 今フレームの結果を返す
-    // (Enemy側には Success/Failure が伝わるが、内部では既にリセット済みなので次回は最初から動く)
-    return result;
-}
