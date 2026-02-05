@@ -682,7 +682,6 @@ void Player::Move() {
             moveDir = moveDir.Normalize();
         }
     } else if (moveDir.Length() > 0.001f) {
-        // 通常の移動方向正規化
         moveDir = moveDir.Normalize();
     }
 
