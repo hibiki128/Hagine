@@ -114,9 +114,17 @@ void Enemy::Update() {
             // ツリーを実行
             rootNode_->Tick();
 
-            // ★追加: 速度のイージングを適用
+            // ★修正: 速度のイージングを適用（Y軸は除外）
             if (velocityEase_.isActive) {
-                velocity_ = velocityEase_.Update(Frame::DeltaTime());
+                Vector3 easedVelocity = velocityEase_.Update(Frame::DeltaTime());
+                velocity_.x = easedVelocity.x;
+                velocity_.z = easedVelocity.z;
+                // velocity_.y はイージングで上書きしない（重力を優先）
+            }
+
+            // ★追加: 重力による速度更新（空中にいる場合のみ）
+            if (!isGrounded_) {
+                velocity_.y += acceleration_.y * Frame::DeltaTime();
             }
         } else {
             // ★追加: ツリーがない場合は速度をゼロに
@@ -187,6 +195,24 @@ void Enemy::StopMovement() {
     Vector3 zeroVel(0.0f, velocity_.y, 0.0f); // Y軸(重力)は維持
     velocityTarget_ = zeroVel;
     velocityEase_.Reset(velocity_, velocityTarget_, kStopEaseTime, EasingType::OutQuad);
+}
+
+// ★新規追加: 通常の移動処理（プレイヤーのMove()を参考）
+void Enemy::Move() {
+    if (!target_)
+        return;
+
+    // 横方向の移動は既存のMoveToTarget等で制御されているvelocityを使用
+    // ここでは特に処理なし（既にvelocityに値が設定されている前提）
+
+    // 位置を更新（BaseObject::Update()で自動的に行われる）
+}
+
+// ★新規追加: 方向更新処理（プレイヤーのDirectionUpdate()を参考）
+void Enemy::DirectionUpdate() {
+    // 既存のRotateUpdate()を使用
+    // 飛行中も地上と同じように方向更新を行う
+    // 特別な処理が必要なければ、既存のRotateUpdate()がUpdate()内で呼ばれているのでOK
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -327,18 +353,18 @@ void Enemy::RotateUpdate() {
 void Enemy::CollisionGround() {
     float nextY = GetLocalPosition().y + velocity_.y * Frame::DeltaTime();
 
-    GetLocalPosition().x += velocity_.x * Frame::DeltaTime();
-    GetLocalPosition().z += velocity_.z * Frame::DeltaTime();
+    transform_->translation_.x += velocity_.x * Frame::DeltaTime();
+    transform_->translation_.z += velocity_.z * Frame::DeltaTime();
 
     if (nextY <= kGroundLevel) {
-        GetLocalPosition().y = kGroundLevel;
+        transform_->translation_.y = kGroundLevel;
 
         if (!isGrounded_) {
             velocity_.y = kVelocityZero;
             isGrounded_ = true;
         }
     } else {
-        GetLocalPosition().y = nextY;
+        transform_->translation_.y = nextY;
         isGrounded_ = false;
     }
 }

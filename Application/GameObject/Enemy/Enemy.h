@@ -81,6 +81,7 @@ class Enemy : public BaseObject {
     Vector3 GetPositionAbove(float distance = 3.0f) const;
     Vector3 GetPositionBelow(float distance = 3.0f) const;
     Vector3 GetPosition() const { return transform_->translation_; }
+    Vector3 GetLocalPosition() const { return transform_->translation_; }
     float GetVelocityMagnitude() const;
     float &GetFallSpeed() { return fallSpeed_; }
     float &GetMoveSpeed() { return moveSpeed_; }
@@ -96,6 +97,10 @@ class Enemy : public BaseObject {
     Player *GetTarget() { return target_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
+
+    // ★新規追加: 飛行システム用のGetter
+    float GetVerticalVelocity() const { return velocity_.y; }
+    float GetVerticalAcceleration() const { return acceleration_.y; }
 
     /// <summary>
     /// Setter
@@ -117,14 +122,22 @@ class Enemy : public BaseObject {
             rootNode_->SetContext(this, target_);
         }
     }
+
+    // ★新規追加: 飛行システム用のSetter
+    void SetVerticalVelocity(float velocity) { velocity_.y = velocity; }
+    void SetVerticalAcceleration(float accel) { acceleration_.y = accel; }
+    void SetIsGrounded(bool grounded) { isGrounded_ = grounded; }
+
     // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
     Vector3 GetWorldPosition() const { return transform_->translation_; }
 
     void MoveToTarget(const Vector3 &targetPos);
     void PerformAttack();
-    void MoveStrafe();   // 左右移動
-    void MoveRetreat();  // 後退
-    void StopMovement(); // ★追加: 移動を停止
+    void MoveStrafe();      // 左右移動
+    void MoveRetreat();     // 後退
+    void StopMovement();    // ★追加: 移動を停止
+    void Move();            // ★新規追加: 通常の移動処理
+    void DirectionUpdate(); // ★新規追加: 方向更新処理
 
   private:
     /// ===================================================

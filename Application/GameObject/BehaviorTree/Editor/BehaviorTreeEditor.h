@@ -16,12 +16,20 @@ enum class EditorNodeType {
     ActionRun,
     ConditionPlayerClose,
     ConditionHealthLow,
+    ConditionIsGrounded, // ★新規追加: 地上判定
+    ConditionIsAirborne, // ★新規追加: 空中判定
     ActionApproach,
     ActionDash,
     ActionStrafe,
     ActionRetreat,
     ActionAttack,
-    ActionIdle
+    ActionIdle,
+    // ★新規追加: ジャンプ・飛行関連ノード
+    ActionJump,       // ジャンプ動作
+    ActionJumpToFly,  // ジャンプから飛行状態への遷移
+    ActionFlyAscend,  // 飛行中の上昇
+    ActionFlyDescend, // 飛行中の下降
+    ActionFlyToGround // 飛行から地上への遷移
 };
 
 // 重み付けノードの各出力の情報
@@ -53,7 +61,9 @@ struct EditorNode {
     // 条件ノードかどうかを判定
     bool IsConditionNode() const {
         return Type == EditorNodeType::ConditionPlayerClose ||
-               Type == EditorNodeType::ConditionHealthLow;
+               Type == EditorNodeType::ConditionHealthLow ||
+               Type == EditorNodeType::ConditionIsGrounded ||
+               Type == EditorNodeType::ConditionIsAirborne;
     }
 
     // アクションノードかどうかを判定
@@ -64,7 +74,13 @@ struct EditorNode {
                Type == EditorNodeType::ActionStrafe ||
                Type == EditorNodeType::ActionRetreat ||
                Type == EditorNodeType::ActionAttack ||
-               Type == EditorNodeType::ActionIdle;
+               Type == EditorNodeType::ActionIdle ||
+               // ★新規追加
+               Type == EditorNodeType::ActionJump ||
+               Type == EditorNodeType::ActionJumpToFly ||
+               Type == EditorNodeType::ActionFlyAscend ||
+               Type == EditorNodeType::ActionFlyDescend ||
+               Type == EditorNodeType::ActionFlyToGround;
     }
 
     // 重み付けノードかどうかを判定

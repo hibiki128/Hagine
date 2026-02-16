@@ -1,6 +1,4 @@
 #include "BehaviorTreeEditor.h"
-
-// ユーザー様の環境に合わせてパスを調整しています
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
 #include "Input.h"
@@ -126,6 +124,10 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "プレイヤーが指定距離範囲内にいるかチェック";
     case EditorNodeType::ConditionHealthLow:
         return "HPが指定割合以下かチェック";
+    case EditorNodeType::ConditionIsGrounded:
+        return "Check if enemy is on the ground";
+    case EditorNodeType::ConditionIsAirborne:
+        return "Check if enemy is in the air";
     case EditorNodeType::ActionApproach:
         return "ターゲットに向かって通常速度で接近する";
     case EditorNodeType::ActionDash:
@@ -138,8 +140,19 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "攻撃を実行する";
     case EditorNodeType::ActionIdle:
         return "その場で待機する(何もしない)";
+    // ★新規追加: ジャンプ・飛行関連ノード
+    case EditorNodeType::ActionJump:
+        return "Execute jump with configurable power";
+    case EditorNodeType::ActionJumpToFly:
+        return "Transition from jump to fly state";
+    case EditorNodeType::ActionFlyAscend:
+        return "Ascend while flying with configurable speed";
+    case EditorNodeType::ActionFlyDescend:
+        return "Descend while flying with configurable speed";
+    case EditorNodeType::ActionFlyToGround:
+        return "Land from fly state to ground";
     default:
-        return "説明なし";
+        return "No description";
     }
 }
 
@@ -424,11 +437,33 @@ void BehaviorTreeEditor::OnImGuiRender() {
             if (ImGui::DragFloat("##speed", &node.Parameter3, 0.01f, 0.0f, 2.0f, "%.2f"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionIdle) {
-            ImGui::Text("待機時間");
+            ImGui::Text("Wait Time");
             ImGui::SameLine();
             if (ImGui::DragFloat("##idleDuration", &node.Parameter, 0.1f, 0.1f, 10.0f, "%.1fs"))
                 paramChanged = true;
+        } else if (node.Type == EditorNodeType::ActionJump) {
+            // ★新規追加: ジャンプのパラメータ
+            ImGui::Text("Jump Power");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##jumpPower", &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
+                paramChanged = true;
+        } else if (node.Type == EditorNodeType::ActionFlyAscend ||
+                   node.Type == EditorNodeType::ActionFlyDescend) {
+            // ★修正: 飛行上昇・下降のパラメータに速度を追加
+            ImGui::Text("Min Time");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##minTime", &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
+                paramChanged = true;
+            ImGui::Text("Max Time");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##maxTime", &node.Parameter2, 0.1f, 0.0f, 10.0f, "%.1fs"))
+                paramChanged = true;
+            ImGui::Text("Speed");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##flySpeed", &node.Parameter3, 0.5f, 5.0f, 30.0f, "%.1f"))
+                paramChanged = true;
         }
+        // ジャンプ->飛行、飛行->着地はパラメータなし
 
         // パラメータが変更され、実行中なら再ビルド
         if (paramChanged && m_IsRunning) {
@@ -552,6 +587,20 @@ void BehaviorTreeEditor::OnImGuiRender() {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionHealthLow));
         }
 
+        if (ImGui::MenuItem("  Is Grounded")) {
+            CreateNode("Is Grounded", EditorNodeType::ConditionIsGrounded);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionIsGrounded));
+        }
+
+        if (ImGui::MenuItem("  Is Airborne")) {
+            CreateNode("Is Airborne", EditorNodeType::ConditionIsAirborne);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionIsAirborne));
+        }
+
         ImGui::Separator();
         ImGui::Text("アクション");
         if (ImGui::MenuItem("  接近")) {
@@ -594,6 +643,41 @@ void BehaviorTreeEditor::OnImGuiRender() {
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionIdle));
+        }
+
+        if (ImGui::MenuItem("  ジャンプ")) {
+            CreateNode("ジャンプ", EditorNodeType::ActionJump);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionJump));
+        }
+
+        if (ImGui::MenuItem("  ジャンプ->飛行")) {
+            CreateNode("ジャンプ→飛行", EditorNodeType::ActionJumpToFly);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionJumpToFly));
+        }
+
+        if (ImGui::MenuItem("  飛行上昇")) {
+            CreateNode("飛行上昇", EditorNodeType::ActionFlyAscend);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionFlyAscend));
+        }
+
+        if (ImGui::MenuItem("  飛行下降")) {
+            CreateNode("飛行下降", EditorNodeType::ActionFlyDescend);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionFlyDescend));
+        }
+
+        if (ImGui::MenuItem("  飛行->着地")) {
+            CreateNode("飛行→着地", EditorNodeType::ActionFlyToGround);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionFlyToGround));
         }
 
         if (ImGui::MenuItem("  実行")) {
@@ -707,6 +791,14 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         runtimeNode = std::make_shared<IsHealthLowNode>(eNode.Parameter);
         break;
 
+    case EditorNodeType::ConditionIsGrounded:
+        runtimeNode = std::make_shared<IsGroundedNode>();
+        break;
+
+    case EditorNodeType::ConditionIsAirborne:
+        runtimeNode = std::make_shared<IsAirborneNode>();
+        break;
+
     case EditorNodeType::ActionApproach:
         runtimeNode = std::make_shared<EnemyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
         break;
@@ -726,6 +818,22 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     case EditorNodeType::ActionIdle:
         runtimeNode = std::make_shared<EnemyIdleNode>(eNode.Parameter);
         break;
+    // ★新規追加: ジャンプ・飛行関連ノード
+    case EditorNodeType::ActionJump:
+        runtimeNode = std::make_shared<EnemyJumpNode>(eNode.Parameter); // ジャンプ力
+        break;
+    case EditorNodeType::ActionJumpToFly:
+        runtimeNode = std::make_shared<EnemyJumpToFlyNode>();
+        break;
+    case EditorNodeType::ActionFlyAscend:
+        runtimeNode = std::make_shared<EnemyFlyAscendNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3); // 最小時間、最大時間、速度
+        break;
+    case EditorNodeType::ActionFlyDescend:
+        runtimeNode = std::make_shared<EnemyFlyDescendNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3); // 最小時間、最大時間、速度
+        break;
+    case EditorNodeType::ActionFlyToGround:
+        runtimeNode = std::make_shared<EnemyFlyToGroundNode>();
+        break;
     case EditorNodeType::SelectorRandom:
         runtimeNode = std::make_shared<RandomSelectorNode>();
         break;
@@ -742,12 +850,20 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     bool isLeaf = (eNode.Type == EditorNodeType::ActionRun ||
                    eNode.Type == EditorNodeType::ConditionPlayerClose ||
                    eNode.Type == EditorNodeType::ConditionHealthLow ||
+                   eNode.Type == EditorNodeType::ConditionIsGrounded ||
+                   eNode.Type == EditorNodeType::ConditionIsAirborne ||
                    eNode.Type == EditorNodeType::ActionApproach ||
                    eNode.Type == EditorNodeType::ActionDash ||
                    eNode.Type == EditorNodeType::ActionStrafe ||
                    eNode.Type == EditorNodeType::ActionRetreat ||
                    eNode.Type == EditorNodeType::ActionAttack ||
-                   eNode.Type == EditorNodeType::ActionIdle);
+                   eNode.Type == EditorNodeType::ActionIdle ||
+                   // ★新規追加
+                   eNode.Type == EditorNodeType::ActionJump ||
+                   eNode.Type == EditorNodeType::ActionJumpToFly ||
+                   eNode.Type == EditorNodeType::ActionFlyAscend ||
+                   eNode.Type == EditorNodeType::ActionFlyDescend ||
+                   eNode.Type == EditorNodeType::ActionFlyToGround);
 
     if (!isLeaf) {
         if (eNode.IsWeightNode()) {

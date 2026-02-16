@@ -1,5 +1,5 @@
 #pragma once
-#include "myMath.h" // 環境に合わせて
+#include "myMath.h"
 #include <memory>
 #include <random.h>
 #include <string>
@@ -80,7 +80,7 @@ class TimedActionNode : public ContextNode {
 
     NodeStatus OnUpdate() override;
 
-    // ★追加: 終了時に速度をゼロにする
+    // 終了時に速度をゼロにする
     void OnExit() override;
 
     // 派生クラスで実装する
@@ -160,7 +160,7 @@ class RunActionNode : public BTNode {
 // 具体的な条件ノード
 // =========================================================
 
-// ★変更: プレイヤーが「指定範囲内」にいるか?
+// プレイヤーが「指定範囲内」にいるか?
 class IsPlayerCloseNode : public ContextNode {
   public:
     // コンストラクタで最小・最大を受け取る
@@ -179,7 +179,7 @@ class IsPlayerCloseNode : public ContextNode {
     float m_MinDist;
     float m_MaxDist;
 
-    // ★追加: ヒステリシス用の変数
+    // ヒステリシス用の変数
     NodeStatus m_LastResult = NodeStatus::Idle;      // 前回の判定結果
     float m_StableTimer = 0.0f;                      // 状態が安定している時間
     static constexpr float kHysteresisMargin = 1.0f; // ヒステリシスのマージン(1.0m)
@@ -199,8 +199,26 @@ class IsHealthLowNode : public ContextNode {
     float m_ThresholdPercentage;
 };
 
+// ★新規追加: 地上にいるかチェック
+class IsGroundedNode : public ContextNode {
+  public:
+    IsGroundedNode() {}
+
+  protected:
+    NodeStatus OnUpdate() override;
+};
+
+// ★新規追加: 空中にいるかチェック
+class IsAirborneNode : public ContextNode {
+  public:
+    IsAirborneNode() {}
+
+  protected:
+    NodeStatus OnUpdate() override;
+};
+
 // =========================================================
-// 具体的なアクションノード
+// 地上移動アクションノード
 // =========================================================
 
 // 通常接近
@@ -260,7 +278,6 @@ class EnemyIdleNode : public ContextNode {
     EnemyIdleNode(float duration = 1.0f) : m_Duration(duration), m_Timer(0.0f) {}
 
     void Reset() override;
-
     void OnEnter() override;
 
   protected:
@@ -274,4 +291,116 @@ class EnemyIdleNode : public ContextNode {
   private:
     float m_Duration;
     float m_Timer;
+};
+
+// =========================================================
+// ★新規追加: ジャンプ・飛行関連ノード
+// =========================================================
+
+// ジャンプノード (プレイヤーの PlayerStateJump に相当)
+class EnemyJumpNode : public ContextNode {
+  public:
+    EnemyJumpNode(float jumpPower = 15.0f) : m_JumpPower(jumpPower) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_JumpExecuted = false;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_JumpPower;           // ジャンプ力
+    bool m_JumpExecuted = false; // ジャンプが実行されたか
+};
+
+// ジャンプから飛行状態への遷移ノード
+// PlayerStateAir の飛行遷移ロジックを参考
+class EnemyJumpToFlyNode : public ContextNode {
+  public:
+    EnemyJumpToFlyNode() : m_ElapsedTime(0.0f) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_ElapsedTime = 0.0f;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_ElapsedTime;
+    static constexpr float kFlyTransitionTime = 1.0f; // 飛行遷移可能時間
+};
+
+// 飛行状態: 上昇動作 (PlayerStateFlyMove の上昇処理を参考)
+class EnemyFlyAscendNode : public ContextNode {
+  public:
+    EnemyFlyAscendNode(float minTime, float maxTime, float speed = 15.0f)
+        : m_MinTime(minTime), m_MaxTime(maxTime), m_Speed(speed) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_CurrentTimer = 0.0f;
+        m_TargetDuration = 0.0f;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+    void OnExit() override;
+
+  private:
+    float m_MinTime;
+    float m_MaxTime;
+    float m_Speed; // 上昇速度
+    float m_CurrentTimer;
+    float m_TargetDuration;
+    static constexpr float kFlyAcceleration = 30.0f; // 飛行加速度
+};
+
+// 飛行状態: 下降動作
+class EnemyFlyDescendNode : public ContextNode {
+  public:
+    EnemyFlyDescendNode(float minTime, float maxTime, float speed = 15.0f)
+        : m_MinTime(minTime), m_MaxTime(maxTime), m_Speed(speed) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_CurrentTimer = 0.0f;
+        m_TargetDuration = 0.0f;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+    void OnExit() override;
+
+  private:
+    float m_MinTime;
+    float m_MaxTime;
+    float m_Speed; // 下降速度
+    float m_CurrentTimer;
+    float m_TargetDuration;
+    static constexpr float kFlyAcceleration = 30.0f;
+};
+
+// 飛行から地上への遷移ノード (着地)
+class EnemyFlyToGroundNode : public ContextNode {
+  public:
+    EnemyFlyToGroundNode() {}
+
+    void Reset() override {
+        BTNode::Reset();
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    static constexpr float kGroundLevel = 0.0f; // 地面レベル
 };

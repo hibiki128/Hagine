@@ -1,8 +1,8 @@
+#define NOMINMAX
 #include "BehaviorNode.h"
-#include <iostream>
-
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
+#include <iostream>
 
 // ---------------------------------------------------------
 // BTNode / CompositeNode 基底
@@ -239,6 +239,28 @@ NodeStatus IsHealthLowNode::OnUpdate() {
     return NodeStatus::Failure;
 }
 
+// =========================================================
+// ★新規実装: 地上判定ノード
+// =========================================================
+NodeStatus IsGroundedNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    // 地面にいる場合は成功、空中にいる場合は失敗
+    return m_Enemy->GetIsGrounded() ? NodeStatus::Success : NodeStatus::Failure;
+}
+
+// =========================================================
+// ★新規実装: 空中判定ノード
+// =========================================================
+NodeStatus IsAirborneNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    // 空中にいる場合は成功、地面にいる場合は失敗
+    return !m_Enemy->GetIsGrounded() ? NodeStatus::Success : NodeStatus::Failure;
+}
+
 void RandomSelectorNode::OnEnter() {
     m_SelectedChildIndex = -1;
     if (m_Children.empty())
@@ -314,4 +336,202 @@ void EnemyIdleNode::Reset() {
 void EnemyIdleNode::OnEnter() {
     BTNode::Reset();
     m_Timer = 0.0f;
+}
+
+// =========================================================
+// ★新規実装: ジャンプノード
+// =========================================================
+void EnemyJumpNode::OnEnter() {
+    m_JumpExecuted = false;
+
+    if (!m_Enemy)
+        return;
+
+    // ★地面にいる場合のみジャンプ実行
+    if (m_Enemy->GetIsGrounded()) {
+        // プレイヤーの PlayerStateJump::Enter() を参考
+        // 設定されたジャンプ力を使用
+        m_Enemy->SetVerticalVelocity(m_JumpPower);
+        m_Enemy->SetIsGrounded(false);
+
+        // ★重要: 重力加速度を設定（これがないと落下しない）
+        m_Enemy->SetVerticalAcceleration(m_Enemy->GetFallSpeed());
+
+        m_JumpExecuted = true; // ジャンプ成功
+    }
+}
+
+NodeStatus EnemyJumpNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    // ジャンプが実行された場合は成功
+    if (m_JumpExecuted) {
+        return NodeStatus::Success;
+    }
+
+    // 空中にいてジャンプできなかった場合は失敗
+    return NodeStatus::Failure;
+}
+
+// =========================================================
+// ★新規実装: ジャンプから飛行状態への遷移ノード
+// =========================================================
+void EnemyJumpToFlyNode::OnEnter() {
+    m_ElapsedTime = 0.0f;
+
+    if (!m_Enemy)
+        return;
+
+    // ジャンプ中の落下加速度を設定 (PlayerStateAir::Enter を参考)
+    m_Enemy->SetVerticalAcceleration(m_Enemy->GetFallSpeed());
+}
+
+NodeStatus EnemyJumpToFlyNode::OnUpdate() {
+    if (!m_Enemy || !m_Player)
+        return NodeStatus::Failure;
+
+    // 横方向の移動を継続 (プレイヤーに向かって移動など)
+    m_Enemy->Move();
+
+    // 重力による落下速度の更新
+    float currentVelocityY = m_Enemy->GetVerticalVelocity();
+    float acceleration = m_Enemy->GetVerticalAcceleration();
+    m_Enemy->SetVerticalVelocity(currentVelocityY + acceleration * (1.0f / 60.0f));
+
+    // 方向更新
+    m_Enemy->DirectionUpdate();
+
+    m_ElapsedTime += 1.0f / 60.0f;
+
+    // 一定時間内であれば飛行状態に遷移可能
+    // この判定は外部の Sequence や Selector で制御することを想定
+    if (m_ElapsedTime >= kFlyTransitionTime) {
+        return NodeStatus::Success; // 時間経過したので成功
+    }
+
+    return NodeStatus::Running;
+}
+
+// =========================================================
+// ★新規実装: 飛行状態 - 上昇動作
+// =========================================================
+void EnemyFlyAscendNode::OnEnter() {
+    m_CurrentTimer = 0.0f;
+    m_TargetDuration = Random::Range(m_MinTime, m_MaxTime);
+
+    if (!m_Enemy)
+        return;
+
+    // 飛行開始時に加速度と速度をリセット
+    m_Enemy->SetVerticalAcceleration(0.0f);
+    m_Enemy->SetVerticalVelocity(0.0f);
+}
+
+NodeStatus EnemyFlyAscendNode::OnUpdate() {
+    if (!m_Enemy || !m_Player)
+        return NodeStatus::Failure;
+
+    // PlayerStateFlyMove の上昇処理を参考
+    float currentVelocityY = m_Enemy->GetVerticalVelocity();
+
+    // 設定された速度を目標として上昇加速
+    currentVelocityY = std::min(currentVelocityY + kFlyAcceleration * (1.0f / 60.0f), m_Speed);
+    m_Enemy->SetVerticalVelocity(currentVelocityY);
+
+    // 横方向の移動も継続 (プレイヤーに向かって移動など)
+    m_Enemy->Move();
+
+    // 方向更新
+    m_Enemy->DirectionUpdate();
+
+    // 時間経過チェック
+    m_CurrentTimer += 1.0f / 60.0f;
+    if (m_CurrentTimer >= m_TargetDuration) {
+        return NodeStatus::Success;
+    }
+
+    return NodeStatus::Running;
+}
+
+void EnemyFlyAscendNode::OnExit() {
+    if (!m_Enemy)
+        return;
+
+    // 上昇終了時に速度を減衰させる (急停止を避ける)
+    float currentVelocityY = m_Enemy->GetVerticalVelocity();
+    m_Enemy->SetVerticalVelocity(currentVelocityY * 0.7f);
+}
+
+// =========================================================
+// ★新規実装: 飛行状態 - 下降動作
+// =========================================================
+void EnemyFlyDescendNode::OnEnter() {
+    m_CurrentTimer = 0.0f;
+    m_TargetDuration = Random::Range(m_MinTime, m_MaxTime);
+
+    if (!m_Enemy)
+        return;
+
+    m_Enemy->SetVerticalAcceleration(0.0f);
+    m_Enemy->SetVerticalVelocity(0.0f);
+}
+
+NodeStatus EnemyFlyDescendNode::OnUpdate() {
+    if (!m_Enemy || !m_Player)
+        return NodeStatus::Failure;
+
+    // PlayerStateFlyMove の下降処理を参考
+    float currentVelocityY = m_Enemy->GetVerticalVelocity();
+
+    // 設定された速度を目標として下降加速（負の値）
+    currentVelocityY = std::max(currentVelocityY - kFlyAcceleration * (1.0f / 60.0f), -m_Speed);
+    m_Enemy->SetVerticalVelocity(currentVelocityY);
+
+    // 横方向の移動も継続
+    m_Enemy->Move();
+
+    // 方向更新
+    m_Enemy->DirectionUpdate();
+
+    // 時間経過チェック
+    m_CurrentTimer += 1.0f / 60.0f;
+    if (m_CurrentTimer >= m_TargetDuration) {
+        return NodeStatus::Success;
+    }
+
+    return NodeStatus::Running;
+}
+
+void EnemyFlyDescendNode::OnExit() {
+    if (!m_Enemy)
+        return;
+
+    // 下降終了時に速度を減衰させる
+    float currentVelocityY = m_Enemy->GetVerticalVelocity();
+    m_Enemy->SetVerticalVelocity(currentVelocityY * 0.7f);
+}
+
+// =========================================================
+// ★新規実装: 飛行から地上への遷移ノード (着地)
+// =========================================================
+void EnemyFlyToGroundNode::OnEnter() {
+    // 特に初期化処理は不要
+}
+
+NodeStatus EnemyFlyToGroundNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    // 地面レベル以下に到達したか確認
+    if (m_Enemy->GetLocalPosition().y <= kGroundLevel) {
+        // 着地処理
+        m_Enemy->SetIsGrounded(true);
+        m_Enemy->SetVerticalVelocity(0.0f);
+        m_Enemy->SetVerticalAcceleration(0.0f);
+
+        return NodeStatus::Success;
+    }
+
+    return NodeStatus::Running;
 }
