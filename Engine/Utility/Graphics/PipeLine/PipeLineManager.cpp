@@ -1889,3 +1889,4 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreatePixelateGraph
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Pixelate.PS.hlsl", rootSignature);
 }
+

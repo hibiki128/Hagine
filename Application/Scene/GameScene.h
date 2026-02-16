@@ -6,12 +6,13 @@
 #include "Application/GameObject/Player/Player.h"
 #include "Application/UI/Enemy/EnemyUI.h"
 #include "Application/UI/Player/PlayerUI.h"
-#include <Application/GameObject/Enemy/BehaviorTree/Editor/BehaviorTreeEditor.h>
 #include <Application/Staging/Transition/FadeOut.h>
 #include <Application/Camera/DeathCamera.h>
 #include "SkyBox/SkyBox.h"
 #include "BaseScene.h"
 #include <Application/UI/Scene/Game/GameUI.h>
+
+#include"Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.h"
 
 class GameScene : public BaseScene {
   public:
@@ -114,8 +115,6 @@ class GameScene : public BaseScene {
     std::unique_ptr<PlayerUI> playerUI_;
     std::unique_ptr<EnemyUI> enemyUI_;
 
-    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
-
     std::unique_ptr<FadeOut> fadeOut_;
     
     std::unique_ptr<GameUI> gameUI_;
@@ -130,4 +129,6 @@ class GameScene : public BaseScene {
     float GameOverTimer_ = 0.0f;
 
     float ClearTimer_ = 0.0f;
+
+    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
 };

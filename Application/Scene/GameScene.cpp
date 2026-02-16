@@ -26,9 +26,10 @@ void GameScene::Initialize() {
     skyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
     enemyUI_ = std::make_unique<EnemyUI>();
-    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
     fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
+
+    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
 
     /// ===================================================
     /// 初期化
@@ -70,6 +71,8 @@ void GameScene::Initialize() {
     /// ===================================================
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
     BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
+
+    behaviorTreeEditor_->SetDebugTargets(enemy_ptr, player_ptr);
 }
 
 void GameScene::Finalize() {
@@ -87,6 +90,11 @@ void GameScene::Update() {
 
     // シーン切り替え
     ChangeScene();
+
+    auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
+    if (runtimeRoot) {
+        enemy_ptr->SetBehaviorTree(runtimeRoot);
+    }
 
     //  skyDome_->Update();
     ground_->Update();
@@ -159,18 +167,16 @@ void GameScene::AddSceneSetting() {
 
 void GameScene::AddObjectSetting() {
 #ifdef USE_IMGUI
-    playerUI_->Debug();
+  /*  playerUI_->Debug();
     enemyUI_->Debug();
     player_ptr->Debug();
     enemy_ptr->Debug();
-    // ビヘイビアツリーエディターの表示
-    if (ImGui::CollapsingHeader("BehaviorTree")) {
-        enemy_ptr->DrawBehaviorTreeEditor();
-    }
 
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
-    }
+    }*/
+
+    behaviorTreeEditor_->OnImGuiRender();
 #endif // USE_IMGUI
 }
 

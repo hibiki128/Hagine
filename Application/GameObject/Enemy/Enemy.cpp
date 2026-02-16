@@ -1,16 +1,10 @@
 #define NOMINMAX
 #include "Enemy.h"
-#include "BehaviorTree/Nodes/BehaviorBaseNode.h"
-#include "BehaviorTree/Nodes/ActionNodes.h"
-#include "BehaviorTree/Nodes/CompositeNodes.h"
-#include "BehaviorTree/Nodes/ConditionNodes.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
+#include <Debug/Log/Logger.h>
 #include <Frame.h>
-#ifdef _DEBUG
-#include "BehaviorTree/Editor/BehaviorTreeEditor.h"
-#endif
 
 Enemy::Enemy() {
 }
@@ -45,8 +39,6 @@ void Enemy::Init(const std::string objectName) {
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
     chargeShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
-    // ビヘイビアツリーの初期化
-    InitializeBehaviorTree();
 }
 
 void Enemy::Update() {
@@ -82,10 +74,6 @@ void Enemy::Update() {
             SetColor(Vector4(kColorOpaque, kColorZero, kColorZero, kColorOpaque));
         }
 
-        if (isAlive_ && target_->GetAlive()) {
-            ExecuteBehaviorTree(Frame::DeltaTime());
-        }
-
         // ダメージリアクション中でない時のみ向きを更新
         if (!isDamageReact_) {
             RotateUpdate();
@@ -103,6 +91,7 @@ void Enemy::Update() {
             // ワールド空間のX軸で回転を作成
             tiltRotation_ = Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
 
+            // 重要: tiltRotation_ × baseRotation_ の順序(ワールド空間での回転を先に適用)
             transform_->quateRotation_ = tiltRotation_ * baseRotation_;
 
             // 高速点滅
@@ -117,104 +106,87 @@ void Enemy::Update() {
                 SetAlpha(kAlphaOpaque);
             }
         }
+
+        if (rootNode_) {
+            // ターゲット情報などが変わっているかもしれないので更新しても良い
+            rootNode_->SetContext(this, target_);
+
+            // ツリーを実行
+            rootNode_->Tick();
+
+            // ★追加: 速度のイージングを適用
+            if (velocityEase_.isActive) {
+                velocity_ = velocityEase_.Update(Frame::DeltaTime());
+            }
+        } else {
+            // ★追加: ツリーがない場合は速度をゼロに
+            // (エディタで停止した後も動き続けるのを防ぐ)
+            velocity_.x = 0.0f;
+            velocity_.z = 0.0f;
+        }
+
+        BaseObject::Update();
     }
 
     CollisionGround();
 }
 
-void Enemy::InitializeBehaviorTree() {
-#ifdef _DEBUG
-    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
-    BehaviorBaseNode::SetEditor(behaviorTreeEditor_.get());
-#endif
+void Enemy::MoveToTarget(const Vector3 &targetPos) {
+    // ★修正: イージングを使ってスムーズに移動
+    if (!target_)
+        return;
 
-    //==================== 通常行動ツリー構築 ====================
+    Vector3 direction = targetPos - transform_->translation_;
+    direction.y = 0; // 高さは合わせない場合
+    direction = direction.Normalize();
 
-    //--- 遠距離時の接近 ---
-    auto farDistCheck = std::make_unique<DistanceCheckNode>(kFarDistanceMin, kFarDistanceMax);
-    auto fastApproach = std::make_unique<ApproachNode>(MoveSpeedType::Fast);
-    auto farSequence = std::make_unique<SequenceNode>();
-    farSequence->AddChild(std::move(farDistCheck));
-    farSequence->AddChild(std::move(fastApproach));
+    // 目標速度を計算
+    velocityTarget_ = direction * moveSpeed_;
 
-    //--- 中距離時の接近 ---
-    auto midDistCheck = std::make_unique<DistanceCheckNode>(kMidDistanceMin, kMidDistanceMax);
-    auto slowApproach = std::make_unique<ApproachNode>(MoveSpeedType::Slow);
-    auto midSequence = std::make_unique<SequenceNode>();
-    midSequence->AddChild(std::move(midDistCheck));
-    midSequence->AddChild(std::move(slowApproach));
-
-    //--- 近距離時の行動 ---
-    auto closeDistCheck = std::make_unique<DistanceCheckNode>(kCloseDistanceMin, kCloseDistanceMax);
-    auto closeApproach = std::make_unique<CloseApproachNode>();
-    auto strafe = std::make_unique<StrafeNode>();
-    auto retreat = std::make_unique<RetreatNode>();
-    auto guard = std::make_unique<GuardNode>();
-
-    auto weightedSelector = std::make_unique<WeightedSelectorNode>();
-    weightedSelector->AddChild(std::move(closeApproach), kCloseApproachWeight);
-    weightedSelector->AddChild(std::move(strafe), kStrafeWeight);
-    weightedSelector->AddChild(std::move(retreat), kRetreatWeight);
-    weightedSelector->AddChild(std::move(guard), kGuardWeight);
-
-    auto closeSequence = std::make_unique<SequenceNode>();
-    closeSequence->AddChild(std::move(closeDistCheck));
-    closeSequence->AddChild(std::move(weightedSelector));
-
-    //--- 全距離まとめ ---
-    auto mainSelector = std::make_unique<SelectorNode>();
-    mainSelector->AddChild(std::move(closeSequence));
-    mainSelector->AddChild(std::move(midSequence));
-    mainSelector->AddChild(std::move(farSequence));
-
-    //--- 停止ノードを最後に ---
-    mainSelector->AddChild(std::make_unique<StopNode>());
-
-    //==================== 割り込み対応ルート構築 ====================
-
-    // InterruptSelectorNode が各子ノードの割り込み条件を監視
-    auto interruptRoot = std::make_unique<InterruptSelectorNode>();
-
-    // 通常行動全体をまとめて追加
-    interruptRoot->AddChild(std::move(mainSelector));
-
-    // ルートノード設定
-    behaviorTreeRoot_ = std::move(interruptRoot);
-
-#ifdef _DEBUG
-    behaviorTreeEditor_->LoadSettings("default", behaviorTreeRoot_.get());
-#endif // _DEBUG
+    // ★イージングで速度を変化させる（短い時間で滑らかに）
+    velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
-void Enemy::ExecuteBehaviorTree(float deltaTime) {
-    if (!behaviorTreeRoot_) {
+void Enemy::MoveStrafe() {
+    if (!target_)
         return;
-    }
 
-#ifdef _DEBUG
-    if (behaviorTreeEditor_) {
-        behaviorTreeEditor_->ClearExecutingNode();
-    }
-#endif
+    Vector3 right = GetRight();
 
-    if (isStop_ || isPause_) {
-        velocity_.x = kVelocityZero;
-        velocity_.z = kVelocityZero;
-        return;
-    }
+    // 目標速度を計算
+    velocityTarget_ = right * (float)strafeDirection_ * moveSpeed_;
 
-    // ツリーを実行
-    NodeStatus status = behaviorTreeRoot_->Execute(*this, deltaTime);
-
-    (void)status;
+    // ★イージングで速度を変化させる（短い時間で滑らかに）
+    velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
-void Enemy::DrawBehaviorTreeEditor() {
-#ifdef _DEBUG
-    if (behaviorTreeEditor_) {
-        behaviorTreeEditor_->DrawEditor(behaviorTreeRoot_.get());
-    }
-#endif
+void Enemy::MoveRetreat() {
+    if (!target_)
+        return;
+
+    // ターゲットと逆方向へ
+    Vector3 direction = transform_->translation_ - target_->GetWorldPosition();
+    direction.y = 0;
+    direction = direction.Normalize();
+
+    // 目標速度を計算
+    velocityTarget_ = direction * moveSpeed_;
+
+    // ★イージングで速度を変化させる（短い時間で滑らかに）
+    velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
+}
+
+void Enemy::PerformAttack() {
+    // 攻撃ログを出力したり、アニメーションを再生したりする
+    Logger::Log("Attack\n");
+}
+
+// ★追加: 移動を滑らかに停止
+void Enemy::StopMovement() {
+    // 現在の速度からゼロへイージング
+    Vector3 zeroVel(0.0f, velocity_.y, 0.0f); // Y軸(重力)は維持
+    velocityTarget_ = zeroVel;
+    velocityEase_.Reset(velocity_, velocityTarget_, kStopEaseTime, EasingType::OutQuad);
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -278,7 +250,7 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
     // 今の向きを保存
     baseRotation_ = transform_->quateRotation_;
 
-    // X軸回転のみをイージング（上向きに8度）
+    // X軸回転のみをイージング(上向きに8度)
     float startAngle = transform_->quateRotation_.x;
     float endAngle = degreesToRadians(kDamageTiltDegrees);
     tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
@@ -326,7 +298,7 @@ void Enemy::RotateUpdate() {
     toTarget = toTarget.Normalize();
 
     // プレイヤーと同様に基準ベクトルを作成
-    Vector3 forward = toTarget;                             // 敵の正面方向（ターゲット方向）
+    Vector3 forward = toTarget;                             // 敵の正面方向(ターゲット方向)
     Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ}; // 上方向
     Vector3 right;                                          // 右方向
 
@@ -344,7 +316,7 @@ void Enemy::RotateUpdate() {
     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
     Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
 
-    // 回転速度（大きいほど素早く向く）
+    // 回転速度(大きいほど素早く向く)
     float rotateSpeed = kRotationSpeed;
     transform_->quateRotation_ = Quaternion::Slerp(
         transform_->quateRotation_,
@@ -380,7 +352,7 @@ const char *Enemy::GetDirectionName(Direction dir) {
 }
 
 Vector3 Enemy::GetForward() const {
-    // クォータニオンから前方向ベクトルを計算（Z軸の負方向が前方向）
+    // クォータニオンから前方向ベクトルを計算(Z軸の負方向が前方向)
     return TransformNormal(Vector3(kForwardVectorX, kForwardVectorY, kForwardVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
@@ -389,7 +361,7 @@ Vector3 Enemy::GetBackward() const {
 }
 
 Vector3 Enemy::GetRight() const {
-    // クォータニオンから右方向ベクトルを計算（X軸の正方向が右方向）
+    // クォータニオンから右方向ベクトルを計算(X軸の正方向が右方向)
     return TransformNormal(Vector3(kRightVectorX, kRightVectorY, kRightVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
@@ -398,7 +370,7 @@ Vector3 Enemy::GetLeft() const {
 }
 
 Vector3 Enemy::GetUp() const {
-    // クォータニオンから上方向ベクトルを計算（Y軸の正方向が上方向）
+    // クォータニオンから上方向ベクトルを計算(Y軸の正方向が上方向)
     return TransformNormal(Vector3(kUpVectorX, kUpVectorY, kUpVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
@@ -431,5 +403,5 @@ Vector3 Enemy::GetPositionBelow(float distance) const {
 }
 
 void Enemy::SetVp(ViewProjection *vp) {
-    chargeShake_->Initialize(vp, "chargehit");
+    chargeShake_->Initialize(vp, "chagehit");
 }
