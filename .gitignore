@@ -23,6 +23,7 @@ Generated/
 /x64
 imgui_editor.ini
 imgui_game.ini
+*.ini
 *.pdb
 
 # Visual Studio 2015/2017 cache/options directory
@@ -326,3 +327,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/imgui_editor.ini
+/imgui_game.ini

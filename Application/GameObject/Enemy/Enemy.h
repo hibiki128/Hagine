@@ -2,11 +2,10 @@
 #include "Application/Utility/Shake/Shake.h"
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
+#include <Application/GameObject/BehaviorTree/Node/BehaviorNode.h>
 #include <Application/GameObject/Player/Player.h>
+#include <Easing.h> // ★追加: イージング用
 #include <application/GameObject/Player/PlayerData.h>
-
-class BehaviorBaseNode;
-class BehaviorTreeEditor;
 
 /// <summary>
 /// 敵のゲームオブジェクトクラス
@@ -64,25 +63,10 @@ class Enemy : public BaseObject {
     void OnCollisionEnter(ColliderBase *collider);
 
     /// <summary>
-    /// ビヘイビアツリーを初期化
-    /// </summary>
-    void InitializeBehaviorTree();
-
-    /// <summary>
-    /// ビヘイビアツリーを実行
-    /// </summary>
-    void ExecuteBehaviorTree(float deltaTime);
-
-    /// <summary>
-    /// ビヘイビアツリーエディターを描画
-    /// </summary>
-    void DrawBehaviorTreeEditor();
-
-    /// <summary>
     /// Getter
     /// </summary>
     Vector3 &GetAcceleration() { return acceleration_; }
-    Vector3 &GetVelocity() { return velocity_; }
+    Vector3 GetVelocity() { return velocity_; }
     Vector3 GetMovementDirection() const;
     Vector3 GetForward() const;
     Vector3 GetBackward() const;
@@ -96,6 +80,7 @@ class Enemy : public BaseObject {
     Vector3 GetPositionLeft(float distance = 3.0f) const;
     Vector3 GetPositionAbove(float distance = 3.0f) const;
     Vector3 GetPositionBelow(float distance = 3.0f) const;
+    Vector3 GetPosition() const { return transform_->translation_; }
     float GetVelocityMagnitude() const;
     float &GetFallSpeed() { return fallSpeed_; }
     float &GetMoveSpeed() { return moveSpeed_; }
@@ -107,10 +92,10 @@ class Enemy : public BaseObject {
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
+    bool IsGuarding() const { return isGuarding_; }
     Player *GetTarget() { return target_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
-    bool IsGuarding() const { return isGuarding_; }
 
     /// <summary>
     /// Setter
@@ -122,6 +107,24 @@ class Enemy : public BaseObject {
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
     void SetDrawShadow(bool flag) { drawShadow_ = flag; }
+    void SetVelocity(const Vector3 &vel) { velocity_ = vel; }
+    void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
+    void SetStrafeDirection(int dir) { strafeDirection_ = dir; }
+    void SetBehaviorTree(std::shared_ptr<BTNode> rootNode) {
+        rootNode_ = rootNode;
+        // ツリーに自分とターゲットを教える
+        if (rootNode_) {
+            rootNode_->SetContext(this, target_);
+        }
+    }
+    // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
+    Vector3 GetWorldPosition() const { return transform_->translation_; }
+
+    void MoveToTarget(const Vector3 &targetPos);
+    void PerformAttack();
+    void MoveStrafe();   // 左右移動
+    void MoveRetreat();  // 後退
+    void StopMovement(); // ★追加: 移動を停止
 
   private:
     /// ===================================================
@@ -221,6 +224,10 @@ class Enemy : public BaseObject {
     static constexpr float kGroundLevel = 0.0f;
     static constexpr float kVelocityZero = 0.0f;
 
+    // ★追加: イージング関連定数
+    static constexpr float kVelocityEaseTime = 0.15f; // 速度変化のイージング時間
+    static constexpr float kStopEaseTime = 0.2f;      // 停止時のイージング時間
+
     // 影のスケール関連定数
     static constexpr float kShadowBaseScale = 1.5f;
     static constexpr float kShadowMinScale = 0.3f;
@@ -247,16 +254,21 @@ class Enemy : public BaseObject {
     Vector3 acceleration_{};
     Player *target_ = nullptr;
 
+    int strafeDirection_ = 1;
+
     float HP_ = 100.0f;
     float maxHP_ = 100.0f;
     float damage_ = 0.0f;
-    bool isGuarding_ = false; // ガード状態
 
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;
     float jumpSpeed_ = 0.0f;
     float maxSpeed_ = 0.0f;
     float accelRate_ = 0.0f;
+
+    // ★追加: イージング用の変数
+    Vector3 velocityTarget_{};         // 目標速度
+    EasingData<Vector3> velocityEase_; // 速度のイージング
 
     bool canJump_ = false;
     bool isLockOn_ = false;
@@ -265,11 +277,13 @@ class Enemy : public BaseObject {
     bool started_ = false;
     bool isPause_ = false;
     bool drawShadow_ = true;
+    bool isGuarding_ = false; // ガード状態
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
     std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> chargeShake_;
+    std::shared_ptr<BTNode> rootNode_ = nullptr;
 
     bool isDamageReact_ = false;       // リアクション中かどうか
     float damageReactTimer_ = 0.0f;    // 経過時間
@@ -277,12 +291,6 @@ class Enemy : public BaseObject {
     EasingData<float> tiltEase_;       // 回転角イージング
     Quaternion baseRotation_;          // 通常時の向き
     Quaternion tiltRotation_;          // のけぞり用の回転
-
-    // ビヘイビアツリー関連
-#ifdef _DEBUG
-    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
-#endif
-    std::unique_ptr<BehaviorBaseNode> behaviorTreeRoot_;
 
     OBBCollider *enemyCollider_ = nullptr;
 };
