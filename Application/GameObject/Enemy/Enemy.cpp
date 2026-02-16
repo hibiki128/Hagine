@@ -39,6 +39,18 @@ void Enemy::Init(const std::string objectName) {
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
     chargeShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
+
+    // ★追加: 物理パラメータの初期化
+    fallSpeed_ = 30.0f; // 重力加速度（推奨: 20.0~50.0）
+    moveSpeed_ = 5.0f;  // 移動速度
+    jumpSpeed_ = 15.0f; // ジャンプ力
+    maxSpeed_ = 10.0f;  // 最大速度
+    accelRate_ = 1.0f;  // 加速率
+
+    // 初期状態は地上にいる
+    isGrounded_ = true;
+    velocity_ = Vector3(0.0f, 0.0f, 0.0f);
+    acceleration_ = Vector3(0.0f, 0.0f, 0.0f);
 }
 
 void Enemy::Update() {
@@ -122,21 +134,31 @@ void Enemy::Update() {
                 // velocity_.y はイージングで上書きしない（重力を優先）
             }
 
-            // ★追加: 重力による速度更新（空中にいる場合のみ）
+            // ★修正: 重力による速度更新
             if (!isGrounded_) {
+                // 空中にいる場合のみ重力を適用
                 velocity_.y += acceleration_.y * Frame::DeltaTime();
+            } else {
+                // 地上にいる場合は垂直加速度をゼロにする
+                // （ジャンプ等で再設定されるまで重力の影響を受けない）
+                acceleration_.y = 0.0f;
             }
         } else {
             // ★追加: ツリーがない場合は速度をゼロに
             // (エディタで停止した後も動き続けるのを防ぐ)
             velocity_.x = 0.0f;
             velocity_.z = 0.0f;
+            // 地上にいる場合は垂直速度と加速度もゼロに
+            if (isGrounded_) {
+                velocity_.y = 0.0f;
+                acceleration_.y = 0.0f;
+            }
         }
+
+        CollisionGround();
 
         BaseObject::Update();
     }
-
-    CollisionGround();
 }
 
 void Enemy::MoveToTarget(const Vector3 &targetPos) {
@@ -254,6 +276,65 @@ void Enemy::Debug() {
 
             ImGui::EndTabItem();
         }
+
+        // ★追加: ジャンプ・重力デバッグタブ
+        if (ImGui::BeginTabItem("ジャンプ/重力")) {
+            ImGui::Text("=== 状態 ===");
+            ImGui::Text("地上判定: %s", isGrounded_ ? "地上" : "空中");
+            ImGui::TextColored(
+                isGrounded_ ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(1.0f, 0.5f, 0.2f, 1.0f),
+                "%s", isGrounded_ ? "■ 地上" : "■ 空中");
+
+            ImGui::Separator();
+            ImGui::Text("=== 位置 ===");
+            ImGui::Text("Y座標: %.2f", transform_->translation_.y);
+
+            ImGui::Separator();
+            ImGui::Text("=== 速度 ===");
+            ImGui::Text("垂直速度 (velocity.y): %.2f", velocity_.y);
+            ImGui::TextColored(
+                velocity_.y > 0.0f ? ImVec4(0.2f, 0.5f, 1.0f, 1.0f) : velocity_.y < 0.0f ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f)
+                                                                                         : ImVec4(0.5f, 0.5f, 0.5f, 1.0f),
+                "%s",
+                velocity_.y > 0.0f ? "↑ 上昇中" : velocity_.y < 0.0f ? "↓ 落下中"
+                                                                     : "→ 静止");
+
+            ImGui::Separator();
+            ImGui::Text("=== 加速度 ===");
+            ImGui::Text("垂直加速度 (acceleration.y): %.2f", acceleration_.y);
+            if (acceleration_.y < 0.0f) {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.2f, 1.0f), "↓ 重力適用中");
+            } else if (acceleration_.y > 0.0f) {
+                ImGui::TextColored(ImVec4(0.2f, 0.5f, 1.0f, 1.0f), "↑ 上昇加速中");
+            } else {
+                ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "- 加速度なし");
+            }
+
+            ImGui::Separator();
+            ImGui::Text("=== パラメータ ===");
+            ImGui::DragFloat("重力加速度 (fallSpeed)", &fallSpeed_, 0.5f, 1.0f, 100.0f);
+            ImGui::DragFloat("ジャンプ力 (jumpSpeed)", &jumpSpeed_, 0.5f, 1.0f, 50.0f);
+            ImGui::DragFloat("移動速度 (moveSpeed)", &moveSpeed_, 0.1f, 0.0f, 20.0f);
+
+            ImGui::Separator();
+            if (ImGui::Button("手動ジャンプテスト")) {
+                if (isGrounded_) {
+                    velocity_.y = jumpSpeed_;
+                    isGrounded_ = false;
+                    acceleration_.y = -fallSpeed_;
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("リセット（地上に戻す）")) {
+                transform_->translation_.y = 0.0f;
+                velocity_.y = 0.0f;
+                acceleration_.y = 0.0f;
+                isGrounded_ = true;
+            }
+
+            ImGui::EndTabItem();
+        }
+
         ImGui::EndTabBar();
     }
 #endif // USE_IMGUI

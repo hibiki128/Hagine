@@ -57,6 +57,21 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
     } else if (type == EditorNodeType::ActionIdle) {
         Parameter = 1.0f; // デフォルト1秒待機
     }
+    // ★追加: ジャンプ・飛行関連ノードのデフォルト値
+    else if (type == EditorNodeType::ActionJump) {
+        Parameter = 15.0f; // Jump Power (ジャンプ力)
+    } else if (type == EditorNodeType::ActionJumpToFly) {
+        Parameter = 15.0f; // Jump Power (ジャンプ力)
+        Parameter2 = 0.5f; // Transition Time (飛行遷移時間)
+    } else if (type == EditorNodeType::ActionFlyAscend) {
+        Parameter = 1.0f;   // Min Time
+        Parameter2 = 3.0f;  // Max Time
+        Parameter3 = 15.0f; // Ascend Speed (上昇速度)
+    } else if (type == EditorNodeType::ActionFlyDescend) {
+        Parameter = 1.0f;   // Min Time
+        Parameter2 = 3.0f;  // Max Time
+        Parameter3 = 15.0f; // Descend Speed (下降速度)
+    }
 }
 
 EditorLink::EditorLink(int id, ed::PinId start, ed::PinId end)
@@ -142,15 +157,15 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "その場で待機する(何もしない)";
     // ★新規追加: ジャンプ・飛行関連ノード
     case EditorNodeType::ActionJump:
-        return "Execute jump with configurable power";
+        return "地上からジャンプする（指定した力で跳躍）";
     case EditorNodeType::ActionJumpToFly:
-        return "Transition from jump to fly state";
+        return "ジャンプから飛行状態へ遷移（指定時間後に浮遊開始）";
     case EditorNodeType::ActionFlyAscend:
-        return "Ascend while flying with configurable speed";
+        return "飛行中に上昇する（指定速度と時間）";
     case EditorNodeType::ActionFlyDescend:
-        return "Descend while flying with configurable speed";
+        return "飛行中に下降する（指定速度と時間）";
     case EditorNodeType::ActionFlyToGround:
-        return "Land from fly state to ground";
+        return "飛行状態から地上へ着地する";
     default:
         return "No description";
     }
@@ -437,33 +452,42 @@ void BehaviorTreeEditor::OnImGuiRender() {
             if (ImGui::DragFloat("##speed", &node.Parameter3, 0.01f, 0.0f, 2.0f, "%.2f"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionIdle) {
-            ImGui::Text("Wait Time");
+            ImGui::Text("待機時間");
             ImGui::SameLine();
             if (ImGui::DragFloat("##idleDuration", &node.Parameter, 0.1f, 0.1f, 10.0f, "%.1fs"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionJump) {
             // ★新規追加: ジャンプのパラメータ
-            ImGui::Text("Jump Power");
+            ImGui::Text("ジャンプ力");
             ImGui::SameLine();
             if (ImGui::DragFloat("##jumpPower", &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
+                paramChanged = true;
+        } else if (node.Type == EditorNodeType::ActionJumpToFly) {
+            // ★新規追加: ジャンプ→飛行のパラメータ
+            ImGui::Text("ジャンプ力");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##jumpToFlyPower", &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
+                paramChanged = true;
+            ImGui::Text("遷移時間");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##transitionTime", &node.Parameter2, 0.05f, 0.1f, 2.0f, "%.2fs"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionFlyAscend ||
                    node.Type == EditorNodeType::ActionFlyDescend) {
             // ★修正: 飛行上昇・下降のパラメータに速度を追加
-            ImGui::Text("Min Time");
+            ImGui::Text("最小時間");
             ImGui::SameLine();
             if (ImGui::DragFloat("##minTime", &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
                 paramChanged = true;
-            ImGui::Text("Max Time");
+            ImGui::Text("最大時間");
             ImGui::SameLine();
             if (ImGui::DragFloat("##maxTime", &node.Parameter2, 0.1f, 0.0f, 10.0f, "%.1fs"))
                 paramChanged = true;
-            ImGui::Text("Speed");
+            ImGui::Text("速度");
             ImGui::SameLine();
             if (ImGui::DragFloat("##flySpeed", &node.Parameter3, 0.5f, 5.0f, 30.0f, "%.1f"))
                 paramChanged = true;
         }
-        // ジャンプ->飛行、飛行->着地はパラメータなし
 
         // パラメータが変更され、実行中なら再ビルド
         if (paramChanged && m_IsRunning) {
@@ -544,28 +568,28 @@ void BehaviorTreeEditor::OnImGuiRender() {
     if (ImGui::BeginPopup("ノード作成")) {
         // ★修正: ツールチップを追加
         if (ImGui::MenuItem("シーケンス")) {
-            CreateNode("Sequence", EditorNodeType::Sequence);
+            CreateNode("シーケンス", EditorNodeType::Sequence);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::Sequence));
         }
 
         if (ImGui::MenuItem("セレクター")) {
-            CreateNode("Selector", EditorNodeType::Selector);
+            CreateNode("セレクター", EditorNodeType::Selector);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::Selector));
         }
 
         if (ImGui::MenuItem("ランダムセレクター")) {
-            CreateNode("Random Selector", EditorNodeType::SelectorRandom);
+            CreateNode("ランダムセレクター", EditorNodeType::SelectorRandom);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::SelectorRandom));
         }
 
         if (ImGui::MenuItem("重みデコレーター")) {
-            CreateNode("Weight", EditorNodeType::DecoratorWeight);
+            CreateNode("重みデコレーター", EditorNodeType::DecoratorWeight);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::DecoratorWeight));
@@ -587,15 +611,15 @@ void BehaviorTreeEditor::OnImGuiRender() {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionHealthLow));
         }
 
-        if (ImGui::MenuItem("  Is Grounded")) {
-            CreateNode("Is Grounded", EditorNodeType::ConditionIsGrounded);
+        if (ImGui::MenuItem("  地上チェック")) {
+            CreateNode("地上チェック", EditorNodeType::ConditionIsGrounded);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionIsGrounded));
         }
 
-        if (ImGui::MenuItem("  Is Airborne")) {
-            CreateNode("Is Airborne", EditorNodeType::ConditionIsAirborne);
+        if (ImGui::MenuItem("  空中チェック")) {
+            CreateNode("空中チェック", EditorNodeType::ConditionIsAirborne);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionIsAirborne));
@@ -653,7 +677,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
         }
 
         if (ImGui::MenuItem("  ジャンプ->飛行")) {
-            CreateNode("ジャンプ→飛行", EditorNodeType::ActionJumpToFly);
+            CreateNode("ジャンプ->飛行", EditorNodeType::ActionJumpToFly);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionJumpToFly));
@@ -674,14 +698,14 @@ void BehaviorTreeEditor::OnImGuiRender() {
         }
 
         if (ImGui::MenuItem("  飛行->着地")) {
-            CreateNode("飛行→着地", EditorNodeType::ActionFlyToGround);
+            CreateNode("飛行->着地", EditorNodeType::ActionFlyToGround);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionFlyToGround));
         }
 
         if (ImGui::MenuItem("  実行")) {
-            CreateNode("Run", EditorNodeType::ActionRun);
+            CreateNode("実行", EditorNodeType::ActionRun);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionRun));
@@ -727,15 +751,76 @@ void BehaviorTreeEditor::DeleteSelectedItems() {
         ed::NodeId nodeId;
         while (ed::QueryDeletedNode(&nodeId)) {
             if (ed::AcceptDeletedItem()) {
-                auto it = std::remove_if(m_Nodes.begin(), m_Nodes.end(), [nodeId](auto &n) { return n.ID == nodeId; });
+                // ★修正: 削除されるノードのIDを保存
+                int deletedNodeId = (int)nodeId.Get();
+
+                // ★追加: このノードに接続されている全てのリンクを削除
+                auto linkIt = m_Links.begin();
+                while (linkIt != m_Links.end()) {
+                    bool shouldDelete = false;
+
+                    // リンクの開始/終了ピンが削除されるノードのものか確認
+                    for (const auto &node : m_Nodes) {
+                        if ((int)node.ID.Get() == deletedNodeId) {
+                            // このノードの全てのピンをチェック
+                            if (linkIt->StartPinID == node.InputPinID ||
+                                linkIt->StartPinID == node.OutputPinID ||
+                                linkIt->StartPinID == node.SuccessPinID ||
+                                linkIt->StartPinID == node.FailurePinID ||
+                                linkIt->EndPinID == node.InputPinID ||
+                                linkIt->EndPinID == node.OutputPinID ||
+                                linkIt->EndPinID == node.SuccessPinID ||
+                                linkIt->EndPinID == node.FailurePinID) {
+                                shouldDelete = true;
+                                break;
+                            }
+
+                            // 重み付けノードの出力ピンもチェック
+                            for (const auto &output : node.WeightedOutputs) {
+                                if (linkIt->StartPinID == output.PinID ||
+                                    linkIt->EndPinID == output.PinID) {
+                                    shouldDelete = true;
+                                    break;
+                                }
+                            }
+                            if (shouldDelete)
+                                break;
+                        }
+                    }
+
+                    if (shouldDelete) {
+                        linkIt = m_Links.erase(linkIt);
+                    } else {
+                        ++linkIt;
+                    }
+                }
+
+                // ★追加: ランタイムノードマップからも削除
+                m_nodeInstanceMap.erase(deletedNodeId);
+
+                // ノードを削除
+                auto it = std::remove_if(m_Nodes.begin(), m_Nodes.end(),
+                                         [nodeId](const EditorNode &n) { return n.ID == nodeId; });
                 m_Nodes.erase(it, m_Nodes.end());
+
+                // ★追加: ツリーが実行中なら再ビルド
+                if (m_IsRunning) {
+                    BuildAndRunTree();
+                }
             }
         }
+
         ed::LinkId linkId;
         while (ed::QueryDeletedLink(&linkId)) {
             if (ed::AcceptDeletedItem()) {
-                auto it = std::remove_if(m_Links.begin(), m_Links.end(), [linkId](auto &l) { return l.ID == linkId; });
+                auto it = std::remove_if(m_Links.begin(), m_Links.end(),
+                                         [linkId](const EditorLink &l) { return l.ID == linkId; });
                 m_Links.erase(it, m_Links.end());
+
+                // ★追加: ツリーが実行中なら再ビルド
+                if (m_IsRunning) {
+                    BuildAndRunTree();
+                }
             }
         }
     }
@@ -823,7 +908,7 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         runtimeNode = std::make_shared<EnemyJumpNode>(eNode.Parameter); // ジャンプ力
         break;
     case EditorNodeType::ActionJumpToFly:
-        runtimeNode = std::make_shared<EnemyJumpToFlyNode>();
+        runtimeNode = std::make_shared<EnemyJumpToFlyNode>(eNode.Parameter, eNode.Parameter2); // ★修正: ジャンプ力、遷移時間
         break;
     case EditorNodeType::ActionFlyAscend:
         runtimeNode = std::make_shared<EnemyFlyAscendNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3); // 最小時間、最大時間、速度
@@ -908,6 +993,10 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
                     conditionCopy = std::make_shared<IsPlayerCloseNode>(eNode.Parameter, eNode.Parameter2);
                 } else if (eNode.Type == EditorNodeType::ConditionHealthLow) {
                     conditionCopy = std::make_shared<IsHealthLowNode>(eNode.Parameter);
+                } else if (eNode.Type == EditorNodeType::ConditionIsGrounded) {
+                    conditionCopy = std::make_shared<IsGroundedNode>();
+                } else if (eNode.Type == EditorNodeType::ConditionIsAirborne) {
+                    conditionCopy = std::make_shared<IsAirborneNode>();
                 }
 
                 if (conditionCopy) {

@@ -320,11 +320,14 @@ class EnemyJumpNode : public ContextNode {
 // PlayerStateAir の飛行遷移ロジックを参考
 class EnemyJumpToFlyNode : public ContextNode {
   public:
-    EnemyJumpToFlyNode() : m_ElapsedTime(0.0f) {}
+    // ★修正: ジャンプ力と飛行遷移時間をパラメータとして受け取る
+    EnemyJumpToFlyNode(float jumpPower = 15.0f, float transitionTime = 0.5f)
+        : m_JumpPower(jumpPower), m_FlyTransitionTime(transitionTime), m_ElapsedTime(0.0f), m_HasJumped(false) {}
 
     void Reset() override {
         BTNode::Reset();
         m_ElapsedTime = 0.0f;
+        m_HasJumped = false;
     }
 
   protected:
@@ -332,8 +335,10 @@ class EnemyJumpToFlyNode : public ContextNode {
     NodeStatus OnUpdate() override;
 
   private:
+    float m_JumpPower;         // ★追加: ジャンプ力
+    float m_FlyTransitionTime; // ★追加: 飛行遷移までの時間
     float m_ElapsedTime;
-    static constexpr float kFlyTransitionTime = 1.0f; // 飛行遷移可能時間
+    bool m_HasJumped; // ★追加: ジャンプ済みフラグ
 };
 
 // 飛行状態: 上昇動作 (PlayerStateFlyMove の上昇処理を参考)
