@@ -109,24 +109,6 @@
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp">
       <Filter>Application\GameObject\Enemy</Filter>
     </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\BehaviorBaseNode.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Editor</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClCompile>
     <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp">
       <Filter>Application\GameObject\Field\Ground</Filter>
     </ClCompile>
@@ -484,6 +466,12 @@
     <ClCompile Include="externals\imgui\ImGuizmo.cpp">
       <Filter>Externals\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.cpp">
+      <Filter>Application\GameObject\BehaviorTree\Node</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.cpp">
+      <Filter>Application\GameObject\BehaviorTree\Editor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -499,24 +487,6 @@
     </ClInclude>
     <ClInclude Include="Application\GameObject\Enemy\Enemy.h">
       <Filter>Application\GameObject\Enemy\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\BehaviorBaseNode.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Editor</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="Application\GameObject\Field\Ground\Ground.h">
       <Filter>Application\GameObject\Field\Ground</Filter>
@@ -905,12 +875,17 @@
     <ClInclude Include="externals\imgui\imstb_truetype.h">
       <Filter>Externals\imgui</Filter>
     </ClInclude>
+    <ClInclude Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.h">
+      <Filter>Application\GameObject\BehaviorTree\Node</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.h">
+      <Filter>Application\GameObject\BehaviorTree\Editor</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".claudiaideconfig" />
     <None Include=".editorconfig" />
     <None Include=".gitattributes" />
     <None Include=".gitignore" />
@@ -1246,6 +1221,15 @@
     </Filter>
     <Filter Include="Externals\imgui">
       <UniqueIdentifier>{71d8d931-e159-48e7-8c9a-f19c704253b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\GameObject\BehaviorTree">
+      <UniqueIdentifier>{8f576bdb-2f90-4af9-858d-9f18e65adc3e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\GameObject\BehaviorTree\Node">
+      <UniqueIdentifier>{da19d542-bd86-4622-b50f-afa76d8aeb11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\GameObject\BehaviorTree\Editor">
+      <UniqueIdentifier>{eca1faed-c300-4e02-9fce-7538afa4b337}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
