@@ -9,6 +9,13 @@
 └── └── ├── StartCamera.cpp
 └── └── └── StartCamera.h
 └── ├── GameObject/
+└── └── ├── BehaviorTree/
+└── └── └── ├── Editor/
+└── └── └── └── ├── BehaviorTreeEditor.cpp
+└── └── └── └── └── BehaviorTreeEditor.h
+└── └── └── └── Node/
+└── └── └──     ├── BehaviorNode.cpp
+└── └── └──     └── BehaviorNode.h
 └── └── ├── Enemy/
 └── └── └── ├── BehaviorTree/
 └── └── └── └── ├── Editor/
@@ -21,9 +28,7 @@
 └── └── └── └──     ├── BehaviorBaseNode.h
 └── └── └── └──     ├── CompositeNodes.cpp
 └── └── └── └──     ├── CompositeNodes.h
-└── └── └── └──     ├── ConditionNodes.cpp
 └── └── └── └──     ├── ConditionNodes.h
-└── └── └── └──     ├── InterruptNode.cpp
 └── └── └── └──     └── InterruptNode.h
 └── └── └── ├── Enemy.cpp
 └── └── └── └── Enemy.h
@@ -1662,6 +1667,1735 @@ class StartCamera {
 
     // スキップ関連
     bool isSkipping_ = false;
+};
+
+============================================================
+File Path: Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.cpp
+============================================================
+#include "BehaviorTreeEditor.h"
+
+// ユーザー様の環境に合わせてパスを調整しています
+#include "Application/GameObject/Enemy/Enemy.h"
+#include "Application/GameObject/Player/Player.h"
+#include "Input.h"
+#include <ShowFolder/ShowFolder.h>
+
+#include <algorithm>
+#include <filesystem>
+#include <imgui_internal.h>
+#include <iostream>
+
+namespace ed = ax::NodeEditor;
+using json = nlohmann::json;
+namespace fs = std::filesystem;
+
+// ---------------------------------------------------------
+// EditorNode
+// ---------------------------------------------------------
+EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
+    : ID(id), Title(title), Type(type) {
+    InputPinID = id * 10 + 1;
+    OutputPinID = id * 10 + 2;
+    SuccessPinID = id * 10 + 3; // 条件ノード用
+    FailurePinID = id * 10 + 4; // 条件ノード用
+
+    // デフォルト値設定
+    if (type == EditorNodeType::ConditionPlayerClose) {
+        Parameter = 0.0f;   // Min Dist
+        Parameter2 = 10.0f; // Max Dist
+    } else if (type == EditorNodeType::DecoratorWeight) {
+        // 重み付けノード: デフォルトで2つの出力を持つ
+        WeightedOutputs.resize(2);
+        WeightedOutputs[0].PinID = id * 10 + 5;
+        WeightedOutputs[0].Weight = 1.0f;
+        WeightedOutputs[1].PinID = id * 10 + 6;
+        WeightedOutputs[1].Weight = 1.0f;
+    } else if (type == EditorNodeType::ConditionHealthLow) {
+        Parameter = 0.3f;
+    }
+    // 移動系ノードのデフォルト値
+    else if (type == EditorNodeType::ActionApproach) {
+        Parameter = 1.0f;  // Min Time
+        Parameter2 = 3.0f; // Max Time
+        Parameter3 = 0.1f; // Speed (通常)
+    } else if (type == EditorNodeType::ActionDash) {
+        Parameter = 0.5f;  // Min Time
+        Parameter2 = 1.5f; // Max Time
+        Parameter3 = 0.3f; // Speed (高速)
+    } else if (type == EditorNodeType::ActionStrafe) {
+        Parameter = 1.0f;
+        Parameter2 = 2.0f;
+        Parameter3 = 0.08f;
+    } else if (type == EditorNodeType::ActionRetreat) {
+        Parameter = 1.0f;
+        Parameter2 = 2.0f;
+        Parameter3 = 0.15f;
+    } else if (type == EditorNodeType::ActionIdle) {
+        Parameter = 1.0f; // デフォルト1秒待機
+    }
+}
+
+EditorLink::EditorLink(int id, ed::PinId start, ed::PinId end)
+    : ID(id), StartPinID(start), EndPinID(end) {
+}
+
+// ---------------------------------------------------------
+// Editor
+// ---------------------------------------------------------
+BehaviorTreeEditor::BehaviorTreeEditor() {
+    ed::Config config;
+    config.SettingsFile = "BehaviorTreeLayout.json";
+    m_Context = ed::CreateEditor(&config);
+}
+
+BehaviorTreeEditor::~BehaviorTreeEditor() {
+    if (m_Context) {
+        ed::DestroyEditor(m_Context);
+    }
+}
+
+bool BehaviorTreeEditor::IsInputPin(ed::PinId pinId) { return (pinId.Get() % 10) == 1; }
+bool BehaviorTreeEditor::IsOutputPin(ed::PinId pinId) { return (pinId.Get() % 10) == 2; }
+bool BehaviorTreeEditor::IsSuccessPin(ed::PinId pinId) { return (pinId.Get() % 10) == 3; }
+bool BehaviorTreeEditor::IsFailurePin(ed::PinId pinId) { return (pinId.Get() % 10) == 4; }
+
+bool BehaviorTreeEditor::IsWeightedOutputPin(ed::PinId pinId, int &outNodeId, int &outOutputIndex) {
+    for (auto &node : m_Nodes) {
+        if (node.IsWeightNode()) {
+            for (int i = 0; i < node.WeightedOutputs.size(); ++i) {
+                if (node.WeightedOutputs[i].PinID == pinId) {
+                    outNodeId = (int)node.ID.Get();
+                    outOutputIndex = i;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+void BehaviorTreeEditor::ParsePathToFolderAndFile(const std::string &fullPath, std::string &outFolder, std::string &outFile) {
+    fs::path path(fullPath);
+    outFile = path.stem().string();
+    fs::path parent = path.parent_path();
+    if (parent.has_filename())
+        outFolder = parent.filename().string();
+    else
+        outFolder = "BehaviorTree";
+}
+
+const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
+    switch (type) {
+    case EditorNodeType::Sequence:
+        return "子ノードを順番に実行し、全て成功で成功を返す";
+    case EditorNodeType::Selector:
+        return "子ノードを順番に試し、1つでも成功したら成功を返す";
+    case EditorNodeType::SelectorRandom:
+        return "子ノードの中からランダムに1つを選択して実行する";
+    case EditorNodeType::DecoratorWeight:
+        return "複数の行動に重み付けしてランダム選択する";
+    case EditorNodeType::ActionRun:
+        return "一定時間実行する基本アクション";
+    case EditorNodeType::ConditionPlayerClose:
+        return "プレイヤーが指定距離範囲内にいるかチェック";
+    case EditorNodeType::ConditionHealthLow:
+        return "HPが指定割合以下かチェック";
+    case EditorNodeType::ActionApproach:
+        return "ターゲットに向かって通常速度で接近する";
+    case EditorNodeType::ActionDash:
+        return "ターゲットに向かって高速で接近する";
+    case EditorNodeType::ActionStrafe:
+        return "ターゲットの周囲を左右に移動する";
+    case EditorNodeType::ActionRetreat:
+        return "ターゲットから後退する";
+    case EditorNodeType::ActionAttack:
+        return "攻撃を実行する";
+    case EditorNodeType::ActionIdle:
+        return "その場で待機する(何もしない)";
+    default:
+        return "説明なし";
+    }
+}
+
+// ---------------------------------------------------------
+// OnImGuiRender
+// ---------------------------------------------------------
+void BehaviorTreeEditor::OnImGuiRender() {
+    // コンテキスト設定を一番最初に行う
+    ed::SetCurrentEditor(m_Context);
+
+    // --- 上部コントロール ---
+    ImGui::Text("ファイル名:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(150);
+    ImGui::InputText("##FileName", m_InputFileNameBuf, IM_ARRAYSIZE(m_InputFileNameBuf));
+    ImGui::SameLine();
+    ImGui::Text(".json");
+
+    ImGui::SameLine();
+    if (ImGui::Button("保存")) {
+        SaveTree();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("読込")) {
+        m_ShowLoadWindow = true;
+    }
+
+    ImGui::SameLine();
+    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::SameLine();
+
+    if (ImGui::Button("ビルド＆実行")) {
+        BuildAndRunTree();
+        m_IsRunning = true;
+        m_LastResultText = "実行中...";
+        m_LastResultColor = ImVec4(1, 1, 1, 1);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("停止")) {
+        m_IsRunning = false;
+
+        // ★修正: RuntimeRootをリセット前により慎重に処理
+        if (m_RuntimeRoot) {
+            try {
+                m_RuntimeRoot->Reset(); // ノードの状態をリセット
+            } catch (...) {
+                // リセット中に例外が発生した場合も安全に継続
+            }
+        }
+
+        // インスタンスマップとタイマーをクリア
+        m_nodeInstanceMap.clear();
+        m_statusTimers.clear();
+
+        // RuntimeRootをnullに設定
+        m_RuntimeRoot = nullptr;
+
+        // ★重要: 敵のBehaviorTreeもクリアして動きを完全に止める
+        if (m_DebugEnemy) {
+            m_DebugEnemy->SetBehaviorTree(nullptr); // ツリーをクリア
+            m_DebugEnemy->SetVelocity({0, 0, 0});
+            m_DebugEnemy->SetMoveSpeed(0.0f); // 移動速度もゼロに
+        }
+
+        m_LastResultText = "停止中";
+        m_LastResultColor = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+    }
+
+    ImGui::SameLine();
+    ImGui::TextColored(m_LastResultColor, "状態: %s", m_LastResultText.c_str());
+
+    // ★追加: ノードの色の凡例を表示(実行中と失敗のみ)
+    ImGui::SameLine();
+    ImGui::Dummy(ImVec2(20, 0));
+    ImGui::SameLine();
+    ImGui::TextColored(ImVec4(0.5f, 0.7f, 1.0f, 1.0f), "O");
+    ImGui::SameLine();
+    ImGui::Text("実行中");
+    ImGui::SameLine();
+    ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "X");
+    ImGui::SameLine();
+    ImGui::Text("失敗");
+
+    // --- ロードウィンドウ ---
+    if (m_ShowLoadWindow) {
+        ImGui::Begin("ビヘイビアツリーを読込", &m_ShowLoadWindow);
+        static std::string startPath = "BehaviorTree";
+        ShowJsonFile(m_SelectedFileName, startPath);
+
+        if (!m_SelectedFileName.empty()) {
+            if (ImGui::Button("選択したファイルを読込")) {
+                LoadTree(m_SelectedFileName);
+                m_ShowLoadWindow = false;
+            }
+        }
+        ImGui::End();
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+
+    // --- ステータス更新 (視覚化用) ---
+    if (m_IsRunning && m_RuntimeRoot) {
+        try {
+            // ★変更: エディタ側ではTickを呼ばない
+            // Enemy::Update()内でrootNode_->Tick()が呼ばれるため、
+            // ここでは状態の監視のみを行う
+
+            // ノードのステータスをタイマーに記録
+            for (auto const &[nodeId, runtimeNode] : m_nodeInstanceMap) {
+                if (runtimeNode && runtimeNode->GetStatus() != NodeStatus::Idle) {
+                    m_statusTimers[nodeId] = 0.5f;
+                }
+            }
+
+            // ルートノードの結果を表示用に取得
+            NodeStatus rootStatus = m_RuntimeRoot->GetStatus();
+            if (rootStatus == NodeStatus::Success) {
+                m_LastResultText = "[成功]";
+                m_LastResultColor = ImVec4(0, 1, 0, 1);
+            } else if (rootStatus == NodeStatus::Failure) {
+                m_LastResultText = "[失敗]";
+                m_LastResultColor = ImVec4(1, 0, 0, 1);
+            } else if (rootStatus == NodeStatus::Running) {
+                m_LastResultText = "実行中...";
+                m_LastResultColor = ImVec4(0.3f, 0.5f, 0.8f, 1.0f);
+            }
+        } catch (...) {
+            // エラーが発生した場合は実行を停止
+            m_IsRunning = false;
+            m_RuntimeRoot = nullptr;
+            m_nodeInstanceMap.clear();
+            m_statusTimers.clear();
+            if (m_DebugEnemy) {
+                m_DebugEnemy->SetBehaviorTree(nullptr);
+                m_DebugEnemy->SetVelocity({0, 0, 0});
+                m_DebugEnemy->SetMoveSpeed(0.0f);
+            }
+            m_LastResultText = "エラーで停止";
+            m_LastResultColor = ImVec4(1, 0.5f, 0, 1);
+        }
+    }
+
+    // タイマーの更新
+    float dt = ImGui::GetIO().DeltaTime;
+    for (auto it = m_statusTimers.begin(); it != m_statusTimers.end();) {
+        it->second -= dt;
+        if (it->second <= 0.0f)
+            it = m_statusTimers.erase(it);
+        else
+            ++it;
+    }
+
+    // --- ノードエディタ ---
+    ed::Begin("ビヘイビアツリーエディタ", ImVec2(0, 0));
+
+    for (auto &node : m_Nodes) {
+        // ★重要: IDスコープを開始 (同じラベル名の干渉を防ぐ)
+        ImGui::PushID((int)node.ID.Get());
+
+        int nodeId = (int)node.ID.Get();
+        NodeStatus status = NodeStatus::Idle;
+        bool showHighlight = false;
+
+        // ★修正: nullチェックを追加
+        if (m_IsRunning && m_nodeInstanceMap.count(nodeId) && m_nodeInstanceMap[nodeId]) {
+            status = m_nodeInstanceMap[nodeId]->GetStatus();
+        }
+        if (status != NodeStatus::Idle || m_statusTimers.count(nodeId)) {
+            showHighlight = true;
+            if (status == NodeStatus::Idle && m_nodeInstanceMap.count(nodeId) && m_nodeInstanceMap[nodeId]) {
+                status = m_nodeInstanceMap[nodeId]->GetStatus();
+            }
+        }
+
+        if (showHighlight) {
+            if (status == NodeStatus::Running) {
+                // ★実行中は薄い青色
+                ed::PushStyleColor(ed::StyleColor_NodeBg, ImVec4(0.3f, 0.5f, 0.8f, 1.0f));
+                ed::PushStyleColor(ed::StyleColor_NodeBorder, ImVec4(0.4f, 0.7f, 1.0f, 1.0f));
+            } else if (status == NodeStatus::Failure) {
+                // ★失敗は明るい赤色
+                ed::PushStyleColor(ed::StyleColor_NodeBg, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+                ed::PushStyleColor(ed::StyleColor_NodeBorder, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+            }
+            // 成功の色は設定しない(デフォルトのまま)
+        }
+
+        ed::BeginNode(node.ID);
+
+        // ★追加: ステータス表示をノードタイトルの横に表示
+        ImGui::BeginGroup();
+        ImGui::Text("%s", node.Title.c_str());
+
+        // 実行中のステータスを表示(実行中と失敗のみ)
+        if (showHighlight && m_IsRunning) {
+            ImGui::SameLine();
+            if (status == NodeStatus::Running) {
+                ImGui::TextColored(ImVec4(0.5f, 0.7f, 1.0f, 1.0f), "[実行中]");
+            } else if (status == NodeStatus::Failure) {
+                ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "[失敗]");
+            }
+            // 成功は表示しない
+        }
+        ImGui::EndGroup();
+
+        // 入力ピン
+        ed::BeginPin(node.InputPinID, ed::PinKind::Input);
+        ImGui::Text("-> 入力");
+        ed::EndPin();
+
+        // --- パラメータUI ---
+        ImGui::PushItemWidth(80);
+
+        bool paramChanged = false; // パラメータが変更されたかフラグ
+
+        if (node.Type == EditorNodeType::ConditionPlayerClose) {
+            ImGui::Text("最小距離");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##min", &node.Parameter, 0.1f, 0.0f, 100.0f, "%.1fm"))
+                paramChanged = true;
+            ImGui::Text("最大距離");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##max", &node.Parameter2, 0.1f, 0.0f, 100.0f, "%.1fm"))
+                paramChanged = true;
+        } else if (node.Type == EditorNodeType::ConditionHealthLow) {
+            ImGui::Text("HP比率");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##hp", &node.Parameter, 0.01f, 0.0f, 1.0f, "%.2f"))
+                paramChanged = true;
+        } else if (node.Type == EditorNodeType::DecoratorWeight) {
+            // ★修正: 重み付けノードは各出力の重みを表示・編集
+            ImGui::Text("出力数:");
+            ImGui::SameLine();
+            int outputCount = (int)node.WeightedOutputs.size();
+            if (ImGui::InputInt("##outputCount", &outputCount, 1, 1)) {
+                if (outputCount < 1)
+                    outputCount = 1;
+                if (outputCount > 10)
+                    outputCount = 10;
+
+                int oldSize = (int)node.WeightedOutputs.size();
+                node.WeightedOutputs.resize(outputCount);
+
+                // 新しく追加された出力のPinIDを設定
+                for (int i = oldSize; i < outputCount; ++i) {
+                    node.WeightedOutputs[i].PinID = m_NextPinId++;
+                    node.WeightedOutputs[i].Weight = 1.0f;
+                }
+                paramChanged = true;
+            }
+
+            // 各出力の重みを編集
+            float totalWeight = 0.0f;
+            for (auto &output : node.WeightedOutputs) {
+                totalWeight += output.Weight;
+            }
+
+            for (int i = 0; i < node.WeightedOutputs.size(); ++i) {
+                ImGui::PushID(i);
+                float percentage = (totalWeight > 0.0f) ? (node.WeightedOutputs[i].Weight / totalWeight * 100.0f) : 0.0f;
+                ImGui::Text("出力%d (%.1f%%)", i + 1, percentage);
+                ImGui::SameLine();
+                if (ImGui::DragFloat("##weight", &node.WeightedOutputs[i].Weight, 0.1f, 0.0f, 100.0f, "%.1f"))
+                    paramChanged = true;
+                ImGui::PopID();
+            }
+        } else if (node.Type == EditorNodeType::ActionApproach ||
+                   node.Type == EditorNodeType::ActionDash ||
+                   node.Type == EditorNodeType::ActionStrafe ||
+                   node.Type == EditorNodeType::ActionRetreat) {
+            ImGui::Text("最小時間");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##minTime", &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
+                paramChanged = true;
+            ImGui::Text("最大時間");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##maxTime", &node.Parameter2, 0.1f, 0.0f, 10.0f, "%.1fs"))
+                paramChanged = true;
+            ImGui::Text("速度");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##speed", &node.Parameter3, 0.01f, 0.0f, 2.0f, "%.2f"))
+                paramChanged = true;
+        } else if (node.Type == EditorNodeType::ActionIdle) {
+            ImGui::Text("待機時間");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##idleDuration", &node.Parameter, 0.1f, 0.1f, 10.0f, "%.1fs"))
+                paramChanged = true;
+        }
+
+        // パラメータが変更され、実行中なら再ビルド
+        if (paramChanged && m_IsRunning) {
+            BuildAndRunTree();
+        }
+
+        ImGui::PopItemWidth();
+
+        // 出力ピン(条件ノードは成功/失敗の2つ、重み付けノードは複数、アクションノードはなし、それ以外は1つ)
+        ImGui::Spacing();
+
+        if (node.IsConditionNode()) {
+            // 条件ノード: Success と Failure の2つの出力
+            ed::BeginPin(node.SuccessPinID, ed::PinKind::Output);
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "成功 ->");
+            ed::EndPin();
+
+            ImGui::SameLine();
+            ImGui::Dummy(ImVec2(20, 0)); // スペース
+            ImGui::SameLine();
+
+            ed::BeginPin(node.FailurePinID, ed::PinKind::Output);
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "失敗 ->");
+            ed::EndPin();
+        } else if (node.IsWeightNode()) {
+            // ★修正: 重み付けノードは複数の出力ピンを表示
+            float totalWeight = 0.0f;
+            for (auto &output : node.WeightedOutputs) {
+                totalWeight += output.Weight;
+            }
+
+            for (int i = 0; i < node.WeightedOutputs.size(); ++i) {
+                float percentage = (totalWeight > 0.0f) ? (node.WeightedOutputs[i].Weight / totalWeight * 100.0f) : 0.0f;
+                ed::BeginPin(node.WeightedOutputs[i].PinID, ed::PinKind::Output);
+                ImGui::Text("出力%d (%.1f%%) ->", i + 1, percentage);
+                ed::EndPin();
+
+                // 改行して次の出力ピンへ
+                if (i < node.WeightedOutputs.size() - 1) {
+                    ImGui::Spacing();
+                }
+            }
+        } else if (!node.IsActionNode()) {
+            // 通常ノード(コンポジットノード): 1つの出力
+            ed::BeginPin(node.OutputPinID, ed::PinKind::Output);
+            ImGui::Text("出力 ->");
+            ed::EndPin();
+        }
+        // アクションノードは出力ピンなし
+
+        ed::EndNode();
+
+        if (showHighlight) {
+            // ★修正: 実行中と失敗のみカラーをポップ
+            if (status == NodeStatus::Running || status == NodeStatus::Failure) {
+                ed::PopStyleColor(2);
+            }
+        }
+
+        ImGui::PopID();
+    }
+
+    // リンク描画
+    for (const auto &link : m_Links) {
+        ed::Link(link.ID, link.StartPinID, link.EndPinID);
+    }
+
+    HandleCreateAction();
+    DeleteSelectedItems();
+
+    // --- 右クリックメニュー (背景) ---
+    ed::Suspend();
+    if (ed::ShowBackgroundContextMenu()) {
+        ImGui::OpenPopup("ノード作成");
+        Vector2 mousePos = Input::GetInstance()->GetMousePos();
+        m_CreatePos = ed::ScreenToCanvas(ImVec2(mousePos.x, mousePos.y));
+    }
+    if (ImGui::BeginPopup("ノード作成")) {
+        // ★修正: ツールチップを追加
+        if (ImGui::MenuItem("シーケンス")) {
+            CreateNode("Sequence", EditorNodeType::Sequence);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::Sequence));
+        }
+
+        if (ImGui::MenuItem("セレクター")) {
+            CreateNode("Selector", EditorNodeType::Selector);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::Selector));
+        }
+
+        if (ImGui::MenuItem("ランダムセレクター")) {
+            CreateNode("Random Selector", EditorNodeType::SelectorRandom);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::SelectorRandom));
+        }
+
+        if (ImGui::MenuItem("重みデコレーター")) {
+            CreateNode("Weight", EditorNodeType::DecoratorWeight);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::DecoratorWeight));
+        }
+
+        ImGui::Separator();
+        ImGui::Text("条件");
+        if (ImGui::MenuItem("  距離チェック")) {
+            CreateNode("距離チェック", EditorNodeType::ConditionPlayerClose);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionPlayerClose));
+        }
+
+        if (ImGui::MenuItem("  HP低下チェック")) {
+            CreateNode("HP低下", EditorNodeType::ConditionHealthLow);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionHealthLow));
+        }
+
+        ImGui::Separator();
+        ImGui::Text("アクション");
+        if (ImGui::MenuItem("  接近")) {
+            CreateNode("接近", EditorNodeType::ActionApproach);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionApproach));
+        }
+
+        if (ImGui::MenuItem("  高速接近")) {
+            CreateNode("ダッシュ", EditorNodeType::ActionDash);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionDash));
+        }
+
+        if (ImGui::MenuItem("  左右移動")) {
+            CreateNode("左右移動", EditorNodeType::ActionStrafe);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionStrafe));
+        }
+
+        if (ImGui::MenuItem("  後退")) {
+            CreateNode("後退", EditorNodeType::ActionRetreat);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionRetreat));
+        }
+
+        if (ImGui::MenuItem("  攻撃")) {
+            CreateNode("攻撃", EditorNodeType::ActionAttack);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionAttack));
+        }
+
+        if (ImGui::MenuItem("  待機")) {
+            CreateNode("待機", EditorNodeType::ActionIdle);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionIdle));
+        }
+
+        if (ImGui::MenuItem("  実行")) {
+            CreateNode("Run", EditorNodeType::ActionRun);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionRun));
+        }
+
+        ImGui::EndPopup();
+    }
+    ed::Resume();
+    ed::End();
+    ed::SetCurrentEditor(nullptr);
+}
+
+void BehaviorTreeEditor::HandleCreateAction() {
+    if (ed::BeginCreate()) {
+        ed::PinId start, end;
+        if (ed::QueryNewLink(&start, &end)) {
+            // 入力ピンと出力ピンの正しい組み合わせかチェック
+            bool validLink = false;
+
+            int nodeId, outputIndex;
+
+            // 重み付けノードの出力ピンかチェック
+            bool isWeightedStart = IsWeightedOutputPin(start, nodeId, outputIndex);
+            bool isWeightedEnd = IsWeightedOutputPin(end, nodeId, outputIndex);
+
+            if ((IsOutputPin(start) || IsSuccessPin(start) || IsFailurePin(start) || isWeightedStart) && IsInputPin(end)) {
+                validLink = true;
+            } else if (IsInputPin(start) && (IsOutputPin(end) || IsSuccessPin(end) || IsFailurePin(end) || isWeightedEnd)) {
+                std::swap(start, end);
+                validLink = true;
+            }
+
+            if (validLink && ed::AcceptNewItem()) {
+                m_Links.emplace_back(m_NextLinkId++, start, end);
+            }
+        }
+    }
+    ed::EndCreate();
+}
+
+void BehaviorTreeEditor::DeleteSelectedItems() {
+    if (ed::BeginDelete()) {
+        ed::NodeId nodeId;
+        while (ed::QueryDeletedNode(&nodeId)) {
+            if (ed::AcceptDeletedItem()) {
+                auto it = std::remove_if(m_Nodes.begin(), m_Nodes.end(), [nodeId](auto &n) { return n.ID == nodeId; });
+                m_Nodes.erase(it, m_Nodes.end());
+            }
+        }
+        ed::LinkId linkId;
+        while (ed::QueryDeletedLink(&linkId)) {
+            if (ed::AcceptDeletedItem()) {
+                auto it = std::remove_if(m_Links.begin(), m_Links.end(), [linkId](auto &l) { return l.ID == linkId; });
+                m_Links.erase(it, m_Links.end());
+            }
+        }
+    }
+    ed::EndDelete();
+}
+
+void BehaviorTreeEditor::CreateNode(const std::string &title, EditorNodeType type) {
+    int id = m_NextNodeId++;
+    EditorNode node(id, title, type);
+    m_Nodes.push_back(node);
+    ed::SetNodePosition(node.ID, m_CreatePos);
+}
+
+void BehaviorTreeEditor::BuildAndRunTree() {
+    m_nodeInstanceMap.clear();
+    m_RuntimeRoot = nullptr;
+    int rootId = FindRootNodeId();
+    if (rootId == -1)
+        return;
+    m_RuntimeRoot = BuildNodeRecursive(rootId);
+    if (m_RuntimeRoot) {
+        m_RuntimeRoot->SetContext(m_DebugEnemy, m_DebugPlayer);
+
+        // ★重要: 敵にツリーをセット
+        if (m_DebugEnemy) {
+            m_DebugEnemy->SetBehaviorTree(m_RuntimeRoot);
+        }
+    }
+}
+
+std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId) {
+    auto it = std::find_if(m_Nodes.begin(), m_Nodes.end(), [editorNodeId](const EditorNode &n) { return (int)n.ID.Get() == editorNodeId; });
+    if (it == m_Nodes.end())
+        return nullptr;
+    const EditorNode &eNode = *it;
+
+    std::shared_ptr<BTNode> runtimeNode = nullptr;
+    switch (eNode.Type) {
+    case EditorNodeType::Sequence:
+        runtimeNode = std::make_shared<SequenceNode>();
+        break;
+    case EditorNodeType::Selector:
+        runtimeNode = std::make_shared<SelectorNode>();
+        break;
+    case EditorNodeType::ActionRun:
+        runtimeNode = std::make_shared<RunActionNode>();
+        break;
+
+    case EditorNodeType::ConditionPlayerClose:
+        runtimeNode = std::make_shared<IsPlayerCloseNode>(eNode.Parameter, eNode.Parameter2);
+        break;
+    case EditorNodeType::ConditionHealthLow:
+        runtimeNode = std::make_shared<IsHealthLowNode>(eNode.Parameter);
+        break;
+
+    case EditorNodeType::ActionApproach:
+        runtimeNode = std::make_shared<EnemyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionDash:
+        runtimeNode = std::make_shared<EnemyDashNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionStrafe:
+        runtimeNode = std::make_shared<EnemyStrafeNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionRetreat:
+        runtimeNode = std::make_shared<EnemyRetreatNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+
+    case EditorNodeType::ActionAttack:
+        runtimeNode = std::make_shared<EnemyAttackNode>();
+        break;
+    case EditorNodeType::ActionIdle:
+        runtimeNode = std::make_shared<EnemyIdleNode>(eNode.Parameter);
+        break;
+    case EditorNodeType::SelectorRandom:
+        runtimeNode = std::make_shared<RandomSelectorNode>();
+        break;
+    case EditorNodeType::DecoratorWeight:
+        // ★修正: 重み付けノードはRandomSelectorNodeとして構築
+        runtimeNode = std::make_shared<RandomSelectorNode>();
+        break;
+    }
+
+    if (!runtimeNode)
+        return nullptr;
+    m_nodeInstanceMap[editorNodeId] = runtimeNode;
+
+    bool isLeaf = (eNode.Type == EditorNodeType::ActionRun ||
+                   eNode.Type == EditorNodeType::ConditionPlayerClose ||
+                   eNode.Type == EditorNodeType::ConditionHealthLow ||
+                   eNode.Type == EditorNodeType::ActionApproach ||
+                   eNode.Type == EditorNodeType::ActionDash ||
+                   eNode.Type == EditorNodeType::ActionStrafe ||
+                   eNode.Type == EditorNodeType::ActionRetreat ||
+                   eNode.Type == EditorNodeType::ActionAttack ||
+                   eNode.Type == EditorNodeType::ActionIdle);
+
+    if (!isLeaf) {
+        if (eNode.IsWeightNode()) {
+            // ★修正: 重み付けノードの場合、各出力ピンから子ノードを取得して重み付きで追加
+            auto weightedChildren = FindWeightedChildrenNodeIds(eNode);
+            for (auto &[childId, weight] : weightedChildren) {
+                auto childNode = BuildNodeRecursive(childId);
+                if (childNode) {
+                    // WeightDecoratorNodeでラップして追加
+                    auto weightDecorator = std::make_shared<WeightDecoratorNode>(weight);
+                    weightDecorator->AddChild(childNode);
+                    runtimeNode->AddChild(weightDecorator);
+                }
+            }
+        } else {
+            int outputPinId = (int)eNode.OutputPinID.Get();
+            std::vector<int> childIds = FindChildrenNodeIds(outputPinId);
+            for (int childId : childIds) {
+                auto childNode = BuildNodeRecursive(childId);
+                if (childNode)
+                    runtimeNode->AddChild(childNode);
+            }
+        }
+    } else if (eNode.IsConditionNode()) {
+        // 条件ノードの場合、成功ピンと失敗ピンからの子ノードを確認
+        int successPinId = (int)eNode.SuccessPinID.Get();
+        int failurePinId = (int)eNode.FailurePinID.Get();
+        std::vector<int> successChildIds = FindChildrenNodeIds(successPinId);
+        std::vector<int> failureChildIds = FindChildrenNodeIds(failurePinId);
+
+        // ★修正: 成功時・失敗時のアクションがある場合の処理を改善
+        if (!successChildIds.empty() || !failureChildIds.empty()) {
+            // Selectorでラップ(どちらか一方が実行される)
+            auto selectorWrapper = std::make_shared<SelectorNode>();
+
+            // 成功ルート: Sequence(条件 -> 成功時アクション)
+            if (!successChildIds.empty()) {
+                auto successSequence = std::make_shared<SequenceNode>();
+                // 条件ノード自体のコピーを作成
+                std::shared_ptr<BTNode> conditionCopy = nullptr;
+                if (eNode.Type == EditorNodeType::ConditionPlayerClose) {
+                    conditionCopy = std::make_shared<IsPlayerCloseNode>(eNode.Parameter, eNode.Parameter2);
+                } else if (eNode.Type == EditorNodeType::ConditionHealthLow) {
+                    conditionCopy = std::make_shared<IsHealthLowNode>(eNode.Parameter);
+                }
+
+                if (conditionCopy) {
+                    successSequence->AddChild(conditionCopy); // 条件をチェック
+                    for (int childId : successChildIds) {
+                        auto childNode = BuildNodeRecursive(childId);
+                        if (childNode)
+                            successSequence->AddChild(childNode);
+                    }
+                    selectorWrapper->AddChild(successSequence);
+                }
+            }
+
+            // ★重要な変更: 失敗ルートは条件チェックなしで直接実行
+            // これにより、成功ルートが失敗したら即座に失敗ルートのアクションを実行
+            if (!failureChildIds.empty()) {
+                // 失敗時は条件チェックをスキップして直接アクションを実行
+                for (int childId : failureChildIds) {
+                    auto childNode = BuildNodeRecursive(childId);
+                    if (childNode)
+                        selectorWrapper->AddChild(childNode);
+                }
+            }
+
+            return selectorWrapper;
+        }
+    }
+
+    return runtimeNode;
+}
+
+std::vector<int> BehaviorTreeEditor::FindChildrenNodeIds(int outputPinId) {
+    std::vector<int> children;
+    for (const auto &link : m_Links) {
+        if ((int)link.StartPinID.Get() == outputPinId) {
+            int endPin = (int)link.EndPinID.Get();
+            children.push_back((endPin - 1) / 10);
+        }
+    }
+    return children;
+}
+
+std::vector<std::pair<int, float>> BehaviorTreeEditor::FindWeightedChildrenNodeIds(const EditorNode &node) {
+    std::vector<std::pair<int, float>> result;
+
+    for (int i = 0; i < node.WeightedOutputs.size(); ++i) {
+        int outputPinId = (int)node.WeightedOutputs[i].PinID.Get();
+        float weight = node.WeightedOutputs[i].Weight;
+
+        // このピンから出ているリンクを探す
+        for (const auto &link : m_Links) {
+            if ((int)link.StartPinID.Get() == outputPinId) {
+                int endPin = (int)link.EndPinID.Get();
+                int childNodeId = (endPin - 1) / 10;
+                result.push_back({childNodeId, weight});
+            }
+        }
+    }
+
+    return result;
+}
+
+int BehaviorTreeEditor::FindRootNodeId() {
+    for (const auto &node : m_Nodes) {
+        bool hasInput = false;
+        int inputPin = (int)node.InputPinID.Get();
+        for (const auto &link : m_Links) {
+            if ((int)link.EndPinID.Get() == inputPin) {
+                hasInput = true;
+                break;
+            }
+        }
+        if (!hasInput)
+            return (int)node.ID.Get();
+    }
+    return -1;
+}
+
+void BehaviorTreeEditor::SaveTree() {
+    std::string fileName = m_InputFileNameBuf;
+    if (fileName.empty())
+        fileName = "NewBehavior";
+    DataHandler handler("BehaviorTree", fileName);
+
+    json nodesJson = json::array();
+    for (const auto &node : m_Nodes) {
+        json n;
+        n["id"] = (int)node.ID.Get();
+        n["title"] = node.Title;
+        n["type"] = (int)node.Type;
+        ImVec2 pos = ed::GetNodePosition(node.ID);
+        n["x"] = pos.x;
+        n["y"] = pos.y;
+        n["param"] = node.Parameter;
+        n["param2"] = node.Parameter2;
+        n["param3"] = node.Parameter3;
+
+        // 重み付けノードの出力を保存
+        if (node.IsWeightNode()) {
+            json weightsJson = json::array();
+            for (const auto &output : node.WeightedOutputs) {
+                json w;
+                w["pinId"] = (int)output.PinID.Get();
+                w["weight"] = output.Weight;
+                weightsJson.push_back(w);
+            }
+            n["weightedOutputs"] = weightsJson;
+        }
+
+        nodesJson.push_back(n);
+    }
+    handler.Save("nodes", nodesJson);
+
+    json linksJson = json::array();
+    for (const auto &link : m_Links) {
+        json l;
+        l["id"] = (int)link.ID.Get();
+        l["start"] = (int)link.StartPinID.Get();
+        l["end"] = (int)link.EndPinID.Get();
+        linksJson.push_back(l);
+    }
+    handler.Save("links", linksJson);
+    std::cout << "BTを保存しました: " << fileName << ".json" << std::endl;
+}
+
+void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
+    std::string folderName, fileName;
+    ParsePathToFolderAndFile(filePath, folderName, fileName);
+    if (fileName.size() < sizeof(m_InputFileNameBuf))
+        strcpy_s(m_InputFileNameBuf, fileName.c_str());
+
+    DataHandler handler(folderName, fileName);
+    m_Nodes.clear();
+    m_Links.clear();
+
+    json nodesJson = handler.Load("nodes", json::array());
+    int maxNodeId = 0;
+    int maxPinId = 0;
+    for (const auto &n : nodesJson) {
+        int id = n["id"].get<int>();
+        std::string title = n["title"].get<std::string>();
+        EditorNodeType type = (EditorNodeType)n["type"].get<int>();
+        float x = n["x"].get<float>();
+        float y = n["y"].get<float>();
+        float param = n.value("param", 0.0f);
+        float param2 = n.value("param2", 0.0f);
+        float param3 = n.value("param3", 0.0f);
+
+        EditorNode node(id, title, type);
+        node.Parameter = param;
+        node.Parameter2 = param2;
+        node.Parameter3 = param3;
+
+        // 重み付けノードの出力を読み込み
+        if (node.IsWeightNode() && n.contains("weightedOutputs")) {
+            node.WeightedOutputs.clear();
+            for (const auto &w : n["weightedOutputs"]) {
+                WeightedOutput output;
+                output.PinID = w["pinId"].get<int>();
+                output.Weight = w["weight"].get<float>();
+                node.WeightedOutputs.push_back(output);
+
+                if ((int)output.PinID.Get() > maxPinId)
+                    maxPinId = (int)output.PinID.Get();
+            }
+        }
+
+        m_Nodes.push_back(node);
+        ed::SetNodePosition(node.ID, ImVec2(x, y));
+        if (id > maxNodeId)
+            maxNodeId = id;
+    }
+    m_NextNodeId = maxNodeId + 1;
+    m_NextPinId = maxPinId + 1;
+
+    json linksJson = handler.Load("links", json::array());
+    int maxLinkId = 0;
+    for (const auto &l : linksJson) {
+        int id = l["id"].get<int>();
+        int start = l["start"].get<int>();
+        int end = l["end"].get<int>();
+        m_Links.emplace_back(id, ed::PinId(start), ed::PinId(end));
+        if (id > maxLinkId)
+            maxLinkId = id;
+    }
+    m_NextLinkId = maxLinkId + 1;
+    std::cout << "BTを読込しました: " << fileName << std::endl;
+}
+
+============================================================
+File Path: Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.h
+============================================================
+#pragma once
+#include "Application/GameObject/BehaviorTree/Node/BehaviorNode.h"
+#include "Engine/Utility/Data/DataHandler.h"
+#include "imgui.h"
+#include "imgui_node_editor.h"
+#include <externals/nlohmann/json.hpp>
+#include <map>
+#include <string>
+#include <vector>
+
+enum class EditorNodeType {
+    Sequence,
+    Selector,
+    SelectorRandom,
+    DecoratorWeight,
+    ActionRun,
+    ConditionPlayerClose,
+    ConditionHealthLow,
+    ActionApproach,
+    ActionDash,
+    ActionStrafe,
+    ActionRetreat,
+    ActionAttack,
+    ActionIdle
+};
+
+// 重み付けノードの各出力の情報
+struct WeightedOutput {
+    ax::NodeEditor::PinId PinID;
+    float Weight = 1.0f;
+};
+
+struct EditorNode {
+    ax::NodeEditor::NodeId ID;
+    std::string Title;
+    EditorNodeType Type;
+    ImVec2 Position;
+    ax::NodeEditor::PinId InputPinID;
+    ax::NodeEditor::PinId OutputPinID;
+    ax::NodeEditor::PinId SuccessPinID; // 条件ノード用: 成功時の出力
+    ax::NodeEditor::PinId FailurePinID; // 条件ノード用: 失敗時の出力
+
+    // 重み付けノード用: 複数の出力ピンとそれぞれの重み
+    std::vector<WeightedOutput> WeightedOutputs;
+
+    // パラメータ
+    float Parameter = 0.0f;
+    float Parameter2 = 0.0f;
+    float Parameter3 = 0.0f;
+
+    EditorNode(int id, const std::string &title, EditorNodeType type);
+
+    // 条件ノードかどうかを判定
+    bool IsConditionNode() const {
+        return Type == EditorNodeType::ConditionPlayerClose ||
+               Type == EditorNodeType::ConditionHealthLow;
+    }
+
+    // アクションノードかどうかを判定
+    bool IsActionNode() const {
+        return Type == EditorNodeType::ActionRun ||
+               Type == EditorNodeType::ActionApproach ||
+               Type == EditorNodeType::ActionDash ||
+               Type == EditorNodeType::ActionStrafe ||
+               Type == EditorNodeType::ActionRetreat ||
+               Type == EditorNodeType::ActionAttack ||
+               Type == EditorNodeType::ActionIdle;
+    }
+
+    // 重み付けノードかどうかを判定
+    bool IsWeightNode() const {
+        return Type == EditorNodeType::DecoratorWeight;
+    }
+};
+
+struct EditorLink {
+    ax::NodeEditor::LinkId ID;
+    ax::NodeEditor::PinId StartPinID;
+    ax::NodeEditor::PinId EndPinID;
+    EditorLink(int id, ax::NodeEditor::PinId start, ax::NodeEditor::PinId end);
+};
+
+class BehaviorTreeEditor {
+  public:
+    BehaviorTreeEditor();
+    ~BehaviorTreeEditor();
+
+    void OnImGuiRender();
+    void SetDebugTargets(Enemy *enemy, Player *player) {
+        m_DebugEnemy = enemy;
+        m_DebugPlayer = player;
+    }
+    std::shared_ptr<BTNode> GetRuntimeRoot() { return m_RuntimeRoot; }
+
+  private:
+    void CreateNode(const std::string &title, EditorNodeType type);
+    void DeleteSelectedItems();
+    void HandleCreateAction();
+    void BuildAndRunTree();
+    std::shared_ptr<BTNode> BuildNodeRecursive(int editorNodeId);
+    std::vector<int> FindChildrenNodeIds(int outputPinId);
+    std::vector<std::pair<int, float>> FindWeightedChildrenNodeIds(const EditorNode &node);
+    int FindRootNodeId();
+    bool IsInputPin(ax::NodeEditor::PinId pinId);
+    bool IsOutputPin(ax::NodeEditor::PinId pinId);
+    bool IsSuccessPin(ax::NodeEditor::PinId pinId);
+    bool IsFailurePin(ax::NodeEditor::PinId pinId);
+    bool IsWeightedOutputPin(ax::NodeEditor::PinId pinId, int &outNodeId, int &outOutputIndex);
+    void SaveTree();
+    void LoadTree(const std::string &filePath);
+    void ParsePathToFolderAndFile(const std::string &fullPath, std::string &outFolder, std::string &outFile);
+    const char *GetNodeDescription(EditorNodeType type);
+
+    ax::NodeEditor::EditorContext *m_Context = nullptr;
+    std::vector<EditorNode> m_Nodes;
+    std::vector<EditorLink> m_Links;
+
+    int m_NextNodeId = 1;
+    int m_NextLinkId = 1;
+    int m_NextPinId = 10000; // 動的に作成されるピンのID管理用
+    ImVec2 m_CreatePos = ImVec2(0, 0);
+
+    bool m_IsRunning = false;
+    Enemy *m_DebugEnemy = nullptr;
+    Player *m_DebugPlayer = nullptr;
+
+    std::shared_ptr<BTNode> m_RuntimeRoot = nullptr;
+    std::map<int, std::shared_ptr<BTNode>> m_nodeInstanceMap;
+    std::map<int, float> m_statusTimers;
+    std::string m_LastResultText = "待機中";
+    ImVec4 m_LastResultColor = ImVec4(1, 1, 1, 1);
+
+    char m_InputFileNameBuf[128] = "NewBehavior";
+    std::string m_SelectedFileName = "";
+    bool m_ShowLoadWindow = false;
+};
+
+============================================================
+File Path: Application/GameObject/BehaviorTree/Node/BehaviorNode.cpp
+============================================================
+#include "BehaviorNode.h"
+#include <iostream>
+
+#include "Application/GameObject/Enemy/Enemy.h"
+#include "Application/GameObject/Player/Player.h"
+
+// ---------------------------------------------------------
+// BTNode / CompositeNode 基底
+// ---------------------------------------------------------
+NodeStatus BTNode::Tick() {
+    if (m_Status != NodeStatus::Running)
+        OnEnter();
+    m_Status = OnUpdate();
+    if (m_Status != NodeStatus::Running)
+        OnExit();
+    return m_Status;
+}
+void BTNode::AddChild(std::shared_ptr<BTNode> child) {}
+void BTNode::SetContext(Enemy *enemy, Player *player) {}
+void BTNode::OnEnter() {}
+void BTNode::OnExit() {}
+
+void CompositeNode::AddChild(std::shared_ptr<BTNode> child) { m_Children.push_back(child); }
+void CompositeNode::SetContext(Enemy *enemy, Player *player) {
+    BTNode::SetContext(enemy, player);
+    for (auto &child : m_Children)
+        child->SetContext(enemy, player);
+}
+void CompositeNode::OnEnter() { m_CurrentChildIndex = 0; }
+
+// ---------------------------------------------------------
+// SequenceNode (Reactive)
+// ---------------------------------------------------------
+NodeStatus SequenceNode::OnUpdate() {
+    // 子ノードが空の場合は失敗
+    if (m_Children.empty()) {
+        return NodeStatus::Failure;
+    }
+
+    // ★修正: 実行していない子ノードのステータスをリセット
+    // 毎回先頭(0番目)からチェックし直すことで、
+    // 途中で条件(例:距離)がFalseになったら即座に中断するように変更
+    for (int i = 0; i < m_Children.size(); ++i) {
+        NodeStatus childStatus = m_Children[i]->Tick();
+
+        if (childStatus == NodeStatus::Running) {
+            // ★追加: Running以降のノードはリセット
+            for (int j = i + 1; j < m_Children.size(); ++j) {
+                m_Children[j]->Reset();
+            }
+            return NodeStatus::Running; // 実行中ならそこで待つ(次回も0番目からチェックされる)
+        }
+        if (childStatus == NodeStatus::Failure) {
+            // ★追加: 失敗した時点で以降のノードをリセット
+            for (int j = i + 1; j < m_Children.size(); ++j) {
+                m_Children[j]->Reset();
+            }
+            return NodeStatus::Failure; // 条件不一致などで失敗したら、後続のアクションも中断
+        }
+    }
+    return NodeStatus::Success; // 全て成功
+}
+
+// ---------------------------------------------------------
+// SelectorNode (Reactive)
+// ---------------------------------------------------------
+NodeStatus SelectorNode::OnUpdate() {
+    // 子ノードが空の場合は失敗
+    if (m_Children.empty()) {
+        return NodeStatus::Failure;
+    }
+
+    // ★修正: 実行していない子ノードのステータスをリセット
+    // Selectorも毎回先頭(0番目)から評価する (Reactive)
+    for (int i = 0; i < m_Children.size(); ++i) {
+        NodeStatus childStatus = m_Children[i]->Tick();
+
+        if (childStatus == NodeStatus::Running) {
+            // ★追加: 成功した子ノード以降はリセット
+            for (int j = i + 1; j < m_Children.size(); ++j) {
+                m_Children[j]->Reset();
+            }
+            return NodeStatus::Running;
+        }
+        if (childStatus == NodeStatus::Success) {
+            // ★追加: 成功した子ノード以降はリセット
+            for (int j = i + 1; j < m_Children.size(); ++j) {
+                m_Children[j]->Reset();
+            }
+            return NodeStatus::Success;
+        }
+    }
+    return NodeStatus::Failure;
+}
+
+// ---------------------------------------------------------
+// Action (Run / Approach / Attack)
+// ---------------------------------------------------------
+RunActionNode::RunActionNode() : m_Counter(0), m_Duration(180) {}
+void RunActionNode::OnEnter() { m_Counter = 0; }
+NodeStatus RunActionNode::OnUpdate() {
+    m_Counter++;
+    if (m_Counter < m_Duration)
+        return NodeStatus::Running;
+    return NodeStatus::Success;
+}
+
+void TimedActionNode::OnEnter() {
+    m_CurrentTimer = 0.0f;
+    // ランダムな実行時間を決定
+    m_TargetDuration = Random::Range(m_MinTime, m_MaxTime);
+    // 速度をセット (Enemyポインタがあれば)
+    if (m_Enemy) {
+        m_Enemy->SetMoveSpeed(m_Speed);
+        SetupAction(); // 各派生クラスごとの初期化(方向決めなど)
+    }
+}
+
+NodeStatus TimedActionNode::OnUpdate() {
+    if (!m_Enemy || !m_Player)
+        return NodeStatus::Failure;
+
+    // 具体的な行動を実行
+    ExecuteAction();
+
+    // 時間経過チェック (60fps想定)
+    m_CurrentTimer += 1.0f / 60.0f;
+    if (m_CurrentTimer >= m_TargetDuration) {
+        return NodeStatus::Success; // 指定時間動いたら完了
+    }
+    return NodeStatus::Running;
+}
+
+// ★追加: アクション終了時に速度をゼロにイージング
+void TimedActionNode::OnExit() {
+    if (m_Enemy) {
+        // 移動を滑らかに停止
+        m_Enemy->StopMovement();
+    }
+}
+
+// 通常接近 & 高速接近 (中身は同じMoveToTargetだが、速度設定が異なる)
+void EnemyApproachNode::ExecuteAction() {
+    m_Enemy->MoveToTarget(m_Player->GetWorldPosition());
+}
+
+void EnemyDashNode::ExecuteAction() {
+    m_Enemy->MoveToTarget(m_Player->GetWorldPosition());
+}
+
+// 左右移動
+void EnemyStrafeNode::SetupAction() {
+    // 開始時に左右どちらに行くかランダムで決める
+    int dir = (Random::Range(0, 1) == 0) ? -1 : 1;
+    m_Enemy->SetStrafeDirection(dir);
+}
+
+void EnemyStrafeNode::ExecuteAction() {
+    m_Enemy->MoveStrafe();
+}
+
+// 後退
+void EnemyRetreatNode::ExecuteAction() {
+    m_Enemy->MoveRetreat();
+}
+
+// 攻撃 (既存)
+NodeStatus EnemyAttackNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+    m_Enemy->PerformAttack();
+    m_Timer += 1.0f / 60.0f;
+    if (m_Timer >= 1.0f)
+        return NodeStatus::Success;
+    return NodeStatus::Running;
+}
+
+// ---------------------------------------------------------
+// IsPlayerCloseNode (範囲チェック)
+// ---------------------------------------------------------
+NodeStatus IsPlayerCloseNode::OnUpdate() {
+    if (!m_Enemy || !m_Player)
+        return NodeStatus::Failure;
+
+    float dist = (m_Enemy->GetWorldPosition() - m_Player->GetWorldPosition()).Length();
+
+    // ★ヒステリシス機能の実装
+    // 前回の結果に応じてマージンを設定
+    float effectiveMinDist = m_MinDist;
+    float effectiveMaxDist = m_MaxDist;
+
+    // 前回成功していた場合、マージンを大きく広げて判定を緩くする
+    if (m_LastResult == NodeStatus::Success) {
+        effectiveMinDist -= kHysteresisMargin * 2.0f; // より広いマージン
+        effectiveMaxDist += kHysteresisMargin * 2.0f;
+    }
+    // 前回失敗していた場合、マージンを狭めて判定を厳しくする
+    else if (m_LastResult == NodeStatus::Failure) {
+        effectiveMinDist += kHysteresisMargin;
+        effectiveMaxDist -= kHysteresisMargin;
+    }
+
+    // 最小・最大距離内にいるかチェック
+    bool isInRange = (dist >= effectiveMinDist && dist <= effectiveMaxDist);
+
+    NodeStatus newResult = isInRange ? NodeStatus::Success : NodeStatus::Failure;
+
+    // 結果が変わった場合
+    if (newResult != m_LastResult) {
+        // 成功から失敗に変わる場合、保持時間をチェック
+        if (m_LastResult == NodeStatus::Success && m_StableTimer < kSuccessHoldTime) {
+            // まだ保持時間が経過していないので、成功を維持
+            m_StableTimer += 1.0f / 60.0f;
+            return NodeStatus::Success;
+        }
+
+        // タイマーをリセットして新しい結果に更新
+        m_StableTimer = 0.0f;
+        m_LastResult = newResult;
+    } else {
+        // 同じ結果が続いている場合、タイマーを増やす
+        m_StableTimer += 1.0f / 60.0f;
+    }
+
+    // 最小安定時間が経過していない場合、前回の結果を返す
+    if (m_StableTimer < kMinStableTime && m_LastResult != NodeStatus::Idle) {
+        return m_LastResult;
+    }
+
+    return newResult;
+}
+
+NodeStatus IsHealthLowNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+    // float max = m_Enemy->GetMaxHP();
+    // float current = m_Enemy->GetHP();
+    // if (max > 0 && (current / max) <= m_ThresholdPercentage) return NodeStatus::Success;
+    return NodeStatus::Failure;
+}
+
+void RandomSelectorNode::OnEnter() {
+    m_SelectedChildIndex = -1;
+    if (m_Children.empty())
+        return;
+
+    // 1. 全ての子ノードの重み合計を計算する
+    float totalWeight = 0.0f;
+    std::vector<float> weights;
+
+    for (const auto &child : m_Children) {
+        float w = 1.0f; // デフォルトの重み
+
+        // もし子が WeightDecoratorNode なら、その設定値を採用
+        // dynamic_pointer_cast で型を確認する
+        auto weightNode = std::dynamic_pointer_cast<WeightDecoratorNode>(child);
+        if (weightNode) {
+            w = weightNode->GetWeight();
+        }
+
+        // 重みが0未満にならないようにケア
+        if (w < 0.0f)
+            w = 0.0f;
+
+        weights.push_back(w);
+        totalWeight += w;
+    }
+
+    // 2. 乱数で選択する
+    // ランダムな値 (0 ~ totalWeight) を取得
+    // ※ myMath.h や random.h の仕様に合わせて調整してください。
+    //   ここでは Random::Range(min, max) がある前提で書きます。
+    float randomValue = Random::Range(0.0f, totalWeight);
+
+    // 3. どのノードに当たったか判定
+    float currentSum = 0.0f;
+    for (int i = 0; i < weights.size(); ++i) {
+        currentSum += weights[i];
+        if (randomValue <= currentSum) {
+            m_SelectedChildIndex = i;
+            break;
+        }
+    }
+
+    // 計算誤差などで決まらなかった場合は最後の子にする
+    if (m_SelectedChildIndex == -1 && !m_Children.empty()) {
+        m_SelectedChildIndex = (int)m_Children.size() - 1;
+    }
+}
+
+NodeStatus RandomSelectorNode::OnUpdate() {
+    // 子ノードが空の場合は失敗
+    if (m_Children.empty()) {
+        return NodeStatus::Failure;
+    }
+
+    // 選択された子ノードだけを実行する
+    if (m_SelectedChildIndex < 0 || m_SelectedChildIndex >= m_Children.size()) {
+        return NodeStatus::Failure;
+    }
+
+    NodeStatus result = m_Children[m_SelectedChildIndex]->Tick();
+
+    // 実行中ならRunningを返し、終了(Success/Failure)したらそのまま結果を返す
+    // Sequenceのように「次へ」とは行かず、今回はこれだけで終わり
+    return result;
+}
+
+void EnemyIdleNode::Reset() {
+    BTNode::Reset();
+    m_Timer = 0.0f;
+}
+
+void EnemyIdleNode::OnEnter() {
+    BTNode::Reset();
+    m_Timer = 0.0f;
+}
+
+
+============================================================
+File Path: Application/GameObject/BehaviorTree/Node/BehaviorNode.h
+============================================================
+#pragma once
+#include "myMath.h" // 環境に合わせて
+#include <memory>
+#include <random.h>
+#include <string>
+#include <vector>
+
+class Enemy;
+class Player;
+
+enum class NodeStatus {
+    Success,
+    Failure,
+    Running,
+    Idle
+};
+
+class BTNode {
+  public:
+    virtual ~BTNode() = default;
+    NodeStatus Tick();
+    virtual void AddChild(std::shared_ptr<BTNode> child);
+    NodeStatus GetStatus() const { return m_Status; }
+    virtual void Reset() { m_Status = NodeStatus::Idle; }
+    virtual void SetContext(Enemy *enemy, Player *player);
+
+  protected:
+    virtual void OnEnter();
+    virtual NodeStatus OnUpdate() = 0;
+    virtual void OnExit();
+
+    NodeStatus m_Status = NodeStatus::Idle;
+};
+
+class ContextNode : public BTNode {
+  protected:
+    Enemy *m_Enemy = nullptr;
+    Player *m_Player = nullptr;
+    void SetContext(Enemy *enemy, Player *player) override {
+        m_Enemy = enemy;
+        m_Player = player;
+    }
+};
+
+class CompositeNode : public BTNode {
+  public:
+    void AddChild(std::shared_ptr<BTNode> child) override;
+    void SetContext(Enemy *enemy, Player *player) override;
+    void Reset() override {
+        BTNode::Reset();
+        m_CurrentChildIndex = 0;
+        for (auto &child : m_Children) {
+            child->Reset();
+        }
+    }
+
+  protected:
+    void OnEnter() override;
+    std::vector<std::shared_ptr<BTNode>> m_Children;
+    int m_CurrentChildIndex = 0;
+};
+
+// =========================================================
+// 時間制限付きアクションの基底クラス
+// =========================================================
+class TimedActionNode : public ContextNode {
+  public:
+    // minTime:最小時間, maxTime:最大時間, speed:移動速度
+    TimedActionNode(float minTime, float maxTime, float speed)
+        : m_MinTime(minTime), m_MaxTime(maxTime), m_Speed(speed) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_CurrentTimer = 0.0f;
+        m_TargetDuration = 0.0f;
+    }
+
+  protected:
+    void OnEnter() override;
+
+    NodeStatus OnUpdate() override;
+
+    // ★追加: 終了時に速度をゼロにする
+    void OnExit() override;
+
+    // 派生クラスで実装する
+    virtual void ExecuteAction() = 0;
+    virtual void SetupAction() {} // 必要ならオーバーライド
+
+    float m_MinTime;
+    float m_MaxTime;
+    float m_Speed;
+    float m_CurrentTimer = 0.0f;
+    float m_TargetDuration = 0.0f;
+};
+
+class WeightDecoratorNode : public CompositeNode {
+  public:
+    WeightDecoratorNode(float weight) : m_Weight(weight) {}
+
+    // 実行時は単に子ノード(アクションなど)へパススルーするだけ
+    NodeStatus OnUpdate() override {
+        if (m_Children.empty())
+            return NodeStatus::Failure;
+        return m_Children[0]->Tick();
+    }
+
+    float GetWeight() const { return m_Weight; }
+
+  private:
+    float m_Weight = 1.0f;
+};
+
+class RandomSelectorNode : public CompositeNode {
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    int m_SelectedChildIndex = -1;
+};
+
+// ---------------------------------------------------------
+// SequenceNode
+// ---------------------------------------------------------
+class SequenceNode : public CompositeNode {
+  protected:
+    NodeStatus OnUpdate() override;
+};
+
+// ---------------------------------------------------------
+// SelectorNode
+// ---------------------------------------------------------
+class SelectorNode : public CompositeNode {
+  protected:
+    NodeStatus OnUpdate() override;
+};
+
+// ---------------------------------------------------------
+// RunActionNode
+// ---------------------------------------------------------
+class RunActionNode : public BTNode {
+  public:
+    RunActionNode();
+    void Reset() override {
+        BTNode::Reset();
+        m_Counter = 0;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    int m_Counter;
+    int m_Duration;
+};
+
+// =========================================================
+// 具体的な条件ノード
+// =========================================================
+
+// ★変更: プレイヤーが「指定範囲内」にいるか?
+class IsPlayerCloseNode : public ContextNode {
+  public:
+    // コンストラクタで最小・最大を受け取る
+    IsPlayerCloseNode(float min, float max) : m_MinDist(min), m_MaxDist(max) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_LastResult = NodeStatus::Idle;
+        m_StableTimer = 0.0f;
+    }
+
+  protected:
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_MinDist;
+    float m_MaxDist;
+
+    // ★追加: ヒステリシス用の変数
+    NodeStatus m_LastResult = NodeStatus::Idle;      // 前回の判定結果
+    float m_StableTimer = 0.0f;                      // 状態が安定している時間
+    static constexpr float kHysteresisMargin = 1.0f; // ヒステリシスのマージン(1.0m)
+    static constexpr float kMinStableTime = 0.3f;    // 最小安定時間(0.3秒)
+    static constexpr float kSuccessHoldTime = 0.5f;  // 成功状態の保持時間(0.5秒)
+};
+
+// HPが低いか?
+class IsHealthLowNode : public ContextNode {
+  public:
+    IsHealthLowNode(float percentage) : m_ThresholdPercentage(percentage) {}
+
+  protected:
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_ThresholdPercentage;
+};
+
+// =========================================================
+// 具体的なアクションノード
+// =========================================================
+
+// 通常接近
+class EnemyApproachNode : public TimedActionNode {
+  public:
+    using TimedActionNode::TimedActionNode; // コンストラクタ継承
+  protected:
+    void ExecuteAction() override;
+};
+
+// 高速接近 (ロジックは接近と同じだが、エディタでパラメータを変えて使い分ける)
+class EnemyDashNode : public TimedActionNode {
+  public:
+    using TimedActionNode::TimedActionNode;
+
+  protected:
+    void ExecuteAction() override; // 中身はApproachと同じでOK
+};
+
+// 左右移動 (Strafe)
+class EnemyStrafeNode : public TimedActionNode {
+  public:
+    using TimedActionNode::TimedActionNode;
+
+  protected:
+    void SetupAction() override; // ここで左右どちらに行くか決める
+    void ExecuteAction() override;
+};
+
+// 後退 (Retreat)
+class EnemyRetreatNode : public TimedActionNode {
+  public:
+    using TimedActionNode::TimedActionNode;
+
+  protected:
+    void ExecuteAction() override;
+};
+
+class EnemyAttackNode : public ContextNode {
+  public:
+    EnemyAttackNode() { m_Timer = 0.0f; }
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer = 0.0f;
+    }
+
+  protected:
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_Timer = 0.0f;
+};
+
+// 待機アクション (何もしない)
+class EnemyIdleNode : public ContextNode {
+  public:
+    EnemyIdleNode(float duration = 1.0f) : m_Duration(duration), m_Timer(0.0f) {}
+
+    void Reset() override;
+
+    void OnEnter() override;
+
+  protected:
+    NodeStatus OnUpdate() override {
+        m_Timer += 1.0f / 60.0f;
+        if (m_Timer >= m_Duration)
+            return NodeStatus::Success;
+        return NodeStatus::Running;
+    }
+
+  private:
+    float m_Duration;
+    float m_Timer;
 };
 
 ============================================================
@@ -3522,38 +5256,6 @@ class WeightedSelectorNode : public BehaviorBaseNode {
 };
 
 ============================================================
-File Path: Application/GameObject/Enemy/BehaviorTree/Nodes/ConditionNodes.cpp
-============================================================
-#include "ConditionNodes.h"
-#include "Application/GameObject/Enemy/Enemy.h"
-#include"../Editor/BehaviorTreeEditor.h"
-
-DistanceCheckNode::DistanceCheckNode(float minDist, float maxDist)
-    : minDistance_(minDist), maxDistance_(maxDist) {}
-
-NodeStatus DistanceCheckNode::Execute(Enemy &enemy, float deltaTime) {
-#ifdef _DEBUG
-    if (editor_) {
-        editor_->SetExecutingNode(this);
-        editor_->AddExecutionHistory(this);
-    }
-#endif
-
-    if (!enemy.GetTarget()) {
-        return NodeStatus::Failure;
-    }
-
-    Vector3 toTarget = enemy.GetTarget()->GetLocalPosition() - enemy.GetLocalPosition();
-    float distance = toTarget.Length();
-
-    if (distance >= minDistance_ && distance <= maxDistance_) {
-        return NodeStatus::Success;
-    }
-
-    return NodeStatus::Failure;
-}
-
-============================================================
 File Path: Application/GameObject/Enemy/BehaviorTree/Nodes/ConditionNodes.h
 ============================================================
 #pragma once
@@ -3579,135 +5281,6 @@ class DistanceCheckNode : public BehaviorBaseNode {
     float minDistance_;
     float maxDistance_;
 };
-
-============================================================
-File Path: Application/GameObject/Enemy/BehaviorTree/Nodes/InterruptNode.cpp
-============================================================
-#include "InterruptNode.h"
-#include "../Editor/BehaviorTreeEditor.h"
-#include "Application/GameObject/Enemy/Enemy.h"
-
-NodeStatus InterruptSelectorNode::Execute(Enemy &enemy, float deltaTime) {
-#ifdef _DEBUG
-    if (editor_) {
-        editor_->SetExecutingNode(this);
-        editor_->AddExecutionHistory(this);
-    }
-#endif
-
-    if (children_.empty()) {
-        return NodeStatus::Failure;
-    }
-
-    // 最も優先度の高い割り込み条件をチェック
-    int highestPriorityIndex = FindHighestPriorityInterrupt(enemy);
-
-    // 割り込みが発生した場合
-    if (highestPriorityIndex != -1 && highestPriorityIndex != currentChildIndex_) {
-        // 現在実行中のノードがある場合
-        if (currentChildIndex_ >= 0 && currentChildIndex_ < static_cast<int>(children_.size())) {
-            auto *currentNode = children_[currentChildIndex_].get();
-
-            // 割り込み可能かチェック
-            if (auto *interruptable = dynamic_cast<InterruptableNode *>(currentNode)) {
-                if (!interruptable->CanBeInterrupted()) {
-                    // 割り込み不可の場合は現在のノードを継続
-                    highestPriorityIndex = currentChildIndex_;
-                } else {
-                    // 割り込み可能な場合はリセット
-                    interruptable->Reset();
-                }
-            }
-        }
-
-        // 新しいノードに切り替え
-        currentChildIndex_ = highestPriorityIndex;
-
-        // 優先度を更新
-        if (auto *interruptable = dynamic_cast<InterruptableNode *>(children_[currentChildIndex_].get())) {
-            currentPriority_ = interruptable->GetInterruptPriority();
-        }
-    }
-
-    // 実行するノードがない場合
-    if (currentChildIndex_ < 0 || currentChildIndex_ >= static_cast<int>(children_.size())) {
-        // 最初の成功するノードを探す
-        for (size_t i = 0; i < children_.size(); i++) {
-            auto &child = children_[i];
-
-#ifdef _DEBUG
-            if (editor_) {
-                editor_->SetExecutingNode(child.get());
-                editor_->AddExecutionHistory(child.get());
-            }
-#endif
-
-            NodeStatus status = child->Execute(enemy, deltaTime);
-
-            if (status != NodeStatus::Failure) {
-                currentChildIndex_ = static_cast<int>(i);
-                return status;
-            }
-        }
-
-        currentChildIndex_ = -1;
-        return NodeStatus::Failure;
-    }
-
-    // 現在のノードを実行
-    auto &currentChild = children_[currentChildIndex_];
-
-#ifdef _DEBUG
-    if (editor_) {
-        editor_->SetExecutingNode(currentChild.get());
-        editor_->AddExecutionHistory(currentChild.get());
-    }
-#endif
-
-    NodeStatus status = currentChild->Execute(enemy, deltaTime);
-
-    // ノードが完了した場合
-    if (status == NodeStatus::Success || status == NodeStatus::Failure) {
-        currentChildIndex_ = -1;
-        currentPriority_ = InterruptPriority::None;
-    }
-
-    return status;
-}
-
-int InterruptSelectorNode::FindHighestPriorityInterrupt(Enemy &enemy) {
-    int highestIndex = -1;
-    InterruptPriority highestPriority = currentPriority_;
-
-    for (size_t i = 0; i < children_.size(); i++) {
-        auto *interruptable = dynamic_cast<InterruptableNode *>(children_[i].get());
-
-        if (interruptable) {
-            // 割り込み条件をチェック
-            if (interruptable->CheckInterruptCondition(enemy)) {
-                InterruptPriority priority = interruptable->GetInterruptPriority();
-
-                // より高い優先度の場合
-                if (priority > highestPriority) {
-                    highestPriority = priority;
-                    highestIndex = static_cast<int>(i);
-                }
-            }
-        }
-    }
-
-    return highestIndex;
-}
-
-void InterruptSelectorNode::ResetCurrentChild() {
-    if (currentChildIndex_ >= 0 && currentChildIndex_ < static_cast<int>(children_.size())) {
-        if (auto *interruptable = dynamic_cast<InterruptableNode *>(children_[currentChildIndex_].get())) {
-            interruptable->Reset();
-        }
-    }
-    currentChildIndex_ = -1;
-    currentPriority_ = InterruptPriority::None;
-}
 
 ============================================================
 File Path: Application/GameObject/Enemy/BehaviorTree/Nodes/InterruptNode.h
@@ -3830,17 +5403,11 @@ File Path: Application/GameObject/Enemy/Enemy.cpp
 ============================================================
 #define NOMINMAX
 #include "Enemy.h"
-#include "BehaviorTree/Nodes/BehaviorBaseNode.h"
-#include "BehaviorTree/Nodes/ActionNodes.h"
-#include "BehaviorTree/Nodes/CompositeNodes.h"
-#include "BehaviorTree/Nodes/ConditionNodes.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
+#include <Debug/Log/Logger.h>
 #include <Frame.h>
-#ifdef _DEBUG
-#include "BehaviorTree/Editor/BehaviorTreeEditor.h"
-#endif
 
 Enemy::Enemy() {
 }
@@ -3875,8 +5442,6 @@ void Enemy::Init(const std::string objectName) {
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
     chargeShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
-    // ビヘイビアツリーの初期化
-    InitializeBehaviorTree();
 }
 
 void Enemy::Update() {
@@ -3912,10 +5477,6 @@ void Enemy::Update() {
             SetColor(Vector4(kColorOpaque, kColorZero, kColorZero, kColorOpaque));
         }
 
-        if (isAlive_ && target_->GetAlive()) {
-            ExecuteBehaviorTree(Frame::DeltaTime());
-        }
-
         // ダメージリアクション中でない時のみ向きを更新
         if (!isDamageReact_) {
             RotateUpdate();
@@ -3933,6 +5494,7 @@ void Enemy::Update() {
             // ワールド空間のX軸で回転を作成
             tiltRotation_ = Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
 
+            // 重要: tiltRotation_ × baseRotation_ の順序(ワールド空間での回転を先に適用)
             transform_->quateRotation_ = tiltRotation_ * baseRotation_;
 
             // 高速点滅
@@ -3947,104 +5509,87 @@ void Enemy::Update() {
                 SetAlpha(kAlphaOpaque);
             }
         }
+
+        if (rootNode_) {
+            // ターゲット情報などが変わっているかもしれないので更新しても良い
+            rootNode_->SetContext(this, target_);
+
+            // ツリーを実行
+            rootNode_->Tick();
+
+            // ★追加: 速度のイージングを適用
+            if (velocityEase_.isActive) {
+                velocity_ = velocityEase_.Update(Frame::DeltaTime());
+            }
+        } else {
+            // ★追加: ツリーがない場合は速度をゼロに
+            // (エディタで停止した後も動き続けるのを防ぐ)
+            velocity_.x = 0.0f;
+            velocity_.z = 0.0f;
+        }
+
+        BaseObject::Update();
     }
 
     CollisionGround();
 }
 
-void Enemy::InitializeBehaviorTree() {
-#ifdef _DEBUG
-    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
-    BehaviorBaseNode::SetEditor(behaviorTreeEditor_.get());
-#endif
+void Enemy::MoveToTarget(const Vector3 &targetPos) {
+    // ★修正: イージングを使ってスムーズに移動
+    if (!target_)
+        return;
 
-    //==================== 通常行動ツリー構築 ====================
+    Vector3 direction = targetPos - transform_->translation_;
+    direction.y = 0; // 高さは合わせない場合
+    direction = direction.Normalize();
 
-    //--- 遠距離時の接近 ---
-    auto farDistCheck = std::make_unique<DistanceCheckNode>(kFarDistanceMin, kFarDistanceMax);
-    auto fastApproach = std::make_unique<ApproachNode>(MoveSpeedType::Fast);
-    auto farSequence = std::make_unique<SequenceNode>();
-    farSequence->AddChild(std::move(farDistCheck));
-    farSequence->AddChild(std::move(fastApproach));
+    // 目標速度を計算
+    velocityTarget_ = direction * moveSpeed_;
 
-    //--- 中距離時の接近 ---
-    auto midDistCheck = std::make_unique<DistanceCheckNode>(kMidDistanceMin, kMidDistanceMax);
-    auto slowApproach = std::make_unique<ApproachNode>(MoveSpeedType::Slow);
-    auto midSequence = std::make_unique<SequenceNode>();
-    midSequence->AddChild(std::move(midDistCheck));
-    midSequence->AddChild(std::move(slowApproach));
-
-    //--- 近距離時の行動 ---
-    auto closeDistCheck = std::make_unique<DistanceCheckNode>(kCloseDistanceMin, kCloseDistanceMax);
-    auto closeApproach = std::make_unique<CloseApproachNode>();
-    auto strafe = std::make_unique<StrafeNode>();
-    auto retreat = std::make_unique<RetreatNode>();
-    auto guard = std::make_unique<GuardNode>();
-
-    auto weightedSelector = std::make_unique<WeightedSelectorNode>();
-    weightedSelector->AddChild(std::move(closeApproach), kCloseApproachWeight);
-    weightedSelector->AddChild(std::move(strafe), kStrafeWeight);
-    weightedSelector->AddChild(std::move(retreat), kRetreatWeight);
-    weightedSelector->AddChild(std::move(guard), kGuardWeight);
-
-    auto closeSequence = std::make_unique<SequenceNode>();
-    closeSequence->AddChild(std::move(closeDistCheck));
-    closeSequence->AddChild(std::move(weightedSelector));
-
-    //--- 全距離まとめ ---
-    auto mainSelector = std::make_unique<SelectorNode>();
-    mainSelector->AddChild(std::move(closeSequence));
-    mainSelector->AddChild(std::move(midSequence));
-    mainSelector->AddChild(std::move(farSequence));
-
-    //--- 停止ノードを最後に ---
-    mainSelector->AddChild(std::make_unique<StopNode>());
-
-    //==================== 割り込み対応ルート構築 ====================
-
-    // InterruptSelectorNode が各子ノードの割り込み条件を監視
-    auto interruptRoot = std::make_unique<InterruptSelectorNode>();
-
-    // 通常行動全体をまとめて追加
-    interruptRoot->AddChild(std::move(mainSelector));
-
-    // ルートノード設定
-    behaviorTreeRoot_ = std::move(interruptRoot);
-
-#ifdef _DEBUG
-    behaviorTreeEditor_->LoadSettings("default", behaviorTreeRoot_.get());
-#endif // _DEBUG
+    // ★イージングで速度を変化させる（短い時間で滑らかに）
+    velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
-void Enemy::ExecuteBehaviorTree(float deltaTime) {
-    if (!behaviorTreeRoot_) {
+void Enemy::MoveStrafe() {
+    if (!target_)
         return;
-    }
 
-#ifdef _DEBUG
-    if (behaviorTreeEditor_) {
-        behaviorTreeEditor_->ClearExecutingNode();
-    }
-#endif
+    Vector3 right = GetRight();
 
-    if (isStop_ || isPause_) {
-        velocity_.x = kVelocityZero;
-        velocity_.z = kVelocityZero;
-        return;
-    }
+    // 目標速度を計算
+    velocityTarget_ = right * (float)strafeDirection_ * moveSpeed_;
 
-    // ツリーを実行
-    NodeStatus status = behaviorTreeRoot_->Execute(*this, deltaTime);
-
-    (void)status;
+    // ★イージングで速度を変化させる（短い時間で滑らかに）
+    velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
-void Enemy::DrawBehaviorTreeEditor() {
-#ifdef _DEBUG
-    if (behaviorTreeEditor_) {
-        behaviorTreeEditor_->DrawEditor(behaviorTreeRoot_.get());
-    }
-#endif
+void Enemy::MoveRetreat() {
+    if (!target_)
+        return;
+
+    // ターゲットと逆方向へ
+    Vector3 direction = transform_->translation_ - target_->GetWorldPosition();
+    direction.y = 0;
+    direction = direction.Normalize();
+
+    // 目標速度を計算
+    velocityTarget_ = direction * moveSpeed_;
+
+    // ★イージングで速度を変化させる（短い時間で滑らかに）
+    velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
+}
+
+void Enemy::PerformAttack() {
+    // 攻撃ログを出力したり、アニメーションを再生したりする
+    Logger::Log("Attack\n");
+}
+
+// ★追加: 移動を滑らかに停止
+void Enemy::StopMovement() {
+    // 現在の速度からゼロへイージング
+    Vector3 zeroVel(0.0f, velocity_.y, 0.0f); // Y軸(重力)は維持
+    velocityTarget_ = zeroVel;
+    velocityEase_.Reset(velocity_, velocityTarget_, kStopEaseTime, EasingType::OutQuad);
 }
 
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
@@ -4108,7 +5653,7 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
     // 今の向きを保存
     baseRotation_ = transform_->quateRotation_;
 
-    // X軸回転のみをイージング（上向きに8度）
+    // X軸回転のみをイージング(上向きに8度)
     float startAngle = transform_->quateRotation_.x;
     float endAngle = degreesToRadians(kDamageTiltDegrees);
     tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
@@ -4156,7 +5701,7 @@ void Enemy::RotateUpdate() {
     toTarget = toTarget.Normalize();
 
     // プレイヤーと同様に基準ベクトルを作成
-    Vector3 forward = toTarget;                             // 敵の正面方向（ターゲット方向）
+    Vector3 forward = toTarget;                             // 敵の正面方向(ターゲット方向)
     Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ}; // 上方向
     Vector3 right;                                          // 右方向
 
@@ -4174,7 +5719,7 @@ void Enemy::RotateUpdate() {
     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
     Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
 
-    // 回転速度（大きいほど素早く向く）
+    // 回転速度(大きいほど素早く向く)
     float rotateSpeed = kRotationSpeed;
     transform_->quateRotation_ = Quaternion::Slerp(
         transform_->quateRotation_,
@@ -4210,7 +5755,7 @@ const char *Enemy::GetDirectionName(Direction dir) {
 }
 
 Vector3 Enemy::GetForward() const {
-    // クォータニオンから前方向ベクトルを計算（Z軸の負方向が前方向）
+    // クォータニオンから前方向ベクトルを計算(Z軸の負方向が前方向)
     return TransformNormal(Vector3(kForwardVectorX, kForwardVectorY, kForwardVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
@@ -4219,7 +5764,7 @@ Vector3 Enemy::GetBackward() const {
 }
 
 Vector3 Enemy::GetRight() const {
-    // クォータニオンから右方向ベクトルを計算（X軸の正方向が右方向）
+    // クォータニオンから右方向ベクトルを計算(X軸の正方向が右方向)
     return TransformNormal(Vector3(kRightVectorX, kRightVectorY, kRightVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
@@ -4228,7 +5773,7 @@ Vector3 Enemy::GetLeft() const {
 }
 
 Vector3 Enemy::GetUp() const {
-    // クォータニオンから上方向ベクトルを計算（Y軸の正方向が上方向）
+    // クォータニオンから上方向ベクトルを計算(Y軸の正方向が上方向)
     return TransformNormal(Vector3(kUpVectorX, kUpVectorY, kUpVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
@@ -4261,7 +5806,7 @@ Vector3 Enemy::GetPositionBelow(float distance) const {
 }
 
 void Enemy::SetVp(ViewProjection *vp) {
-    chargeShake_->Initialize(vp, "chargehit");
+    chargeShake_->Initialize(vp, "chagehit");
 }
 
 ============================================================
@@ -4271,11 +5816,10 @@ File Path: Application/GameObject/Enemy/Enemy.h
 #include "Application/Utility/Shake/Shake.h"
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
+#include <Application/GameObject/BehaviorTree/Node/BehaviorNode.h>
 #include <Application/GameObject/Player/Player.h>
+#include <Easing.h> // ★追加: イージング用
 #include <application/GameObject/Player/PlayerData.h>
-
-class BehaviorBaseNode;
-class BehaviorTreeEditor;
 
 /// <summary>
 /// 敵のゲームオブジェクトクラス
@@ -4333,25 +5877,10 @@ class Enemy : public BaseObject {
     void OnCollisionEnter(ColliderBase *collider);
 
     /// <summary>
-    /// ビヘイビアツリーを初期化
-    /// </summary>
-    void InitializeBehaviorTree();
-
-    /// <summary>
-    /// ビヘイビアツリーを実行
-    /// </summary>
-    void ExecuteBehaviorTree(float deltaTime);
-
-    /// <summary>
-    /// ビヘイビアツリーエディターを描画
-    /// </summary>
-    void DrawBehaviorTreeEditor();
-
-    /// <summary>
     /// Getter
     /// </summary>
     Vector3 &GetAcceleration() { return acceleration_; }
-    Vector3 &GetVelocity() { return velocity_; }
+    Vector3 GetVelocity() { return velocity_; }
     Vector3 GetMovementDirection() const;
     Vector3 GetForward() const;
     Vector3 GetBackward() const;
@@ -4365,6 +5894,7 @@ class Enemy : public BaseObject {
     Vector3 GetPositionLeft(float distance = 3.0f) const;
     Vector3 GetPositionAbove(float distance = 3.0f) const;
     Vector3 GetPositionBelow(float distance = 3.0f) const;
+    Vector3 GetPosition() const { return transform_->translation_; }
     float GetVelocityMagnitude() const;
     float &GetFallSpeed() { return fallSpeed_; }
     float &GetMoveSpeed() { return moveSpeed_; }
@@ -4376,10 +5906,10 @@ class Enemy : public BaseObject {
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
+    bool IsGuarding() const { return isGuarding_; }
     Player *GetTarget() { return target_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
-    bool IsGuarding() const { return isGuarding_; }
 
     /// <summary>
     /// Setter
@@ -4391,6 +5921,24 @@ class Enemy : public BaseObject {
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
     void SetDrawShadow(bool flag) { drawShadow_ = flag; }
+    void SetVelocity(const Vector3 &vel) { velocity_ = vel; }
+    void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
+    void SetStrafeDirection(int dir) { strafeDirection_ = dir; }
+    void SetBehaviorTree(std::shared_ptr<BTNode> rootNode) {
+        rootNode_ = rootNode;
+        // ツリーに自分とターゲットを教える
+        if (rootNode_) {
+            rootNode_->SetContext(this, target_);
+        }
+    }
+    // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
+    Vector3 GetWorldPosition() const { return transform_->translation_; }
+
+    void MoveToTarget(const Vector3 &targetPos);
+    void PerformAttack();
+    void MoveStrafe();   // 左右移動
+    void MoveRetreat();  // 後退
+    void StopMovement(); // ★追加: 移動を停止
 
   private:
     /// ===================================================
@@ -4490,6 +6038,10 @@ class Enemy : public BaseObject {
     static constexpr float kGroundLevel = 0.0f;
     static constexpr float kVelocityZero = 0.0f;
 
+    // ★追加: イージング関連定数
+    static constexpr float kVelocityEaseTime = 0.15f; // 速度変化のイージング時間
+    static constexpr float kStopEaseTime = 0.2f;      // 停止時のイージング時間
+
     // 影のスケール関連定数
     static constexpr float kShadowBaseScale = 1.5f;
     static constexpr float kShadowMinScale = 0.3f;
@@ -4516,16 +6068,21 @@ class Enemy : public BaseObject {
     Vector3 acceleration_{};
     Player *target_ = nullptr;
 
+    int strafeDirection_ = 1;
+
     float HP_ = 100.0f;
     float maxHP_ = 100.0f;
     float damage_ = 0.0f;
-    bool isGuarding_ = false; // ガード状態
 
     float moveSpeed_ = 0.0f;
     float fallSpeed_ = 0.0f;
     float jumpSpeed_ = 0.0f;
     float maxSpeed_ = 0.0f;
     float accelRate_ = 0.0f;
+
+    // ★追加: イージング用の変数
+    Vector3 velocityTarget_{};         // 目標速度
+    EasingData<Vector3> velocityEase_; // 速度のイージング
 
     bool canJump_ = false;
     bool isLockOn_ = false;
@@ -4534,11 +6091,13 @@ class Enemy : public BaseObject {
     bool started_ = false;
     bool isPause_ = false;
     bool drawShadow_ = true;
+    bool isGuarding_ = false; // ガード状態
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
     std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> chargeShake_;
+    std::shared_ptr<BTNode> rootNode_ = nullptr;
 
     bool isDamageReact_ = false;       // リアクション中かどうか
     float damageReactTimer_ = 0.0f;    // 経過時間
@@ -4546,12 +6105,6 @@ class Enemy : public BaseObject {
     EasingData<float> tiltEase_;       // 回転角イージング
     Quaternion baseRotation_;          // 通常時の向き
     Quaternion tiltRotation_;          // のけぞり用の回転
-
-    // ビヘイビアツリー関連
-#ifdef _DEBUG
-    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
-#endif
-    std::unique_ptr<BehaviorBaseNode> behaviorTreeRoot_;
 
     OBBCollider *enemyCollider_ = nullptr;
 };
@@ -9358,9 +10911,10 @@ void GameScene::Initialize() {
     skyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
     enemyUI_ = std::make_unique<EnemyUI>();
-    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
     fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
+
+    behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
 
     /// ===================================================
     /// 初期化
@@ -9402,6 +10956,8 @@ void GameScene::Initialize() {
     /// ===================================================
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
     BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
+
+    behaviorTreeEditor_->SetDebugTargets(enemy_ptr, player_ptr);
 }
 
 void GameScene::Finalize() {
@@ -9419,6 +10975,11 @@ void GameScene::Update() {
 
     // シーン切り替え
     ChangeScene();
+
+    auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
+    if (runtimeRoot) {
+        enemy_ptr->SetBehaviorTree(runtimeRoot);
+    }
 
     //  skyDome_->Update();
     ground_->Update();
@@ -9491,18 +11052,16 @@ void GameScene::AddSceneSetting() {
 
 void GameScene::AddObjectSetting() {
 #ifdef USE_IMGUI
-    playerUI_->Debug();
+  /*  playerUI_->Debug();
     enemyUI_->Debug();
     player_ptr->Debug();
     enemy_ptr->Debug();
-    // ビヘイビアツリーエディターの表示
-    if (ImGui::CollapsingHeader("BehaviorTree")) {
-        enemy_ptr->DrawBehaviorTreeEditor();
-    }
 
     for (auto &bullet : player_ptr->GetBullets()) {
         bullet->ImGui();
-    }
+    }*/
+
+    behaviorTreeEditor_->OnImGuiRender();
 #endif // USE_IMGUI
 }
 
@@ -9583,12 +11142,13 @@ File Path: Application/Scene/GameScene.h
 #include "Application/GameObject/Player/Player.h"
 #include "Application/UI/Enemy/EnemyUI.h"
 #include "Application/UI/Player/PlayerUI.h"
-#include <Application/GameObject/Enemy/BehaviorTree/Editor/BehaviorTreeEditor.h>
 #include <Application/Staging/Transition/FadeOut.h>
 #include <Application/Camera/DeathCamera.h>
 #include "SkyBox/SkyBox.h"
 #include "BaseScene.h"
 #include <Application/UI/Scene/Game/GameUI.h>
+
+#include"Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.h"
 
 class GameScene : public BaseScene {
   public:
@@ -9691,8 +11251,6 @@ class GameScene : public BaseScene {
     std::unique_ptr<PlayerUI> playerUI_;
     std::unique_ptr<EnemyUI> enemyUI_;
 
-    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
-
     std::unique_ptr<FadeOut> fadeOut_;
     
     std::unique_ptr<GameUI> gameUI_;
@@ -9707,6 +11265,8 @@ class GameScene : public BaseScene {
     float GameOverTimer_ = 0.0f;
 
     float ClearTimer_ = 0.0f;
+
+    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
 };
 
 
@@ -47148,6 +48708,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreatePixelateGraph
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Pixelate.PS.hlsl", rootSignature);
 }
+
 
 
 ============================================================
@@ -234364,8 +235925,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\BehaviorBaseNode.cpp" />
     <ClCompile Include="Application\Camera\FollowCamera.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp" />
     <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp" />
@@ -234390,12 +235949,11 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Utility\Shake\Shake.cpp" />
     <ClCompile Include="application\Utility\ComboSystem\ComboSystem.cpp" />
     <ClCompile Include="Application\UI\Enemy\EnemyUI.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
     <ClCompile Include="Application\Staging\Death\DeathStaging.cpp" />
     <ClCompile Include="Application\Camera\DeathCamera.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.cpp" />
     <ClCompile Include="Application\GameObject\Player\Skill\MakanAttackSkill.cpp" />
+    <ClCompile Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.cpp" />
+    <ClCompile Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
     <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleStruct.cpp" />
@@ -234447,7 +236005,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\imgui_tables.cpp" />
     <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Application\Staging\Transition\FadeOut.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp" />
     <ClCompile Include="Engine\Input\GamePad.cpp" />
     <ClCompile Include="Application\UI\Scene\Game\GameUI.cpp" />
     <ClCompile Include="main.cpp" />
@@ -234496,7 +236053,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".claudiaideconfig" />
     <None Include=".editorconfig" />
     <None Include=".gitattributes" />
     <None Include=".gitignore" />
@@ -234539,7 +236095,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h" />
     <ClInclude Include="Application\Camera\FollowCamera.h" />
     <ClInclude Include="Application\GameObject\Enemy\Enemy.h" />
     <ClInclude Include="Application\GameObject\Field\Ground\Ground.h" />
@@ -234565,13 +236120,11 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Utility\Shake\Shake.h" />
     <ClInclude Include="application\Utility\ComboSystem\ComboSystem.h" />
     <ClInclude Include="Application\UI\Enemy\EnemyUI.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\BehaviorBaseNode.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.h" />
     <ClInclude Include="Application\Staging\Death\DeathStaging.h" />
     <ClInclude Include="Application\Camera\DeathCamera.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.h" />
     <ClInclude Include="Application\GameObject\Player\Skill\MakanAttackSkill.h" />
+    <ClInclude Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.h" />
+    <ClInclude Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.h" />
     <ClInclude Include="Engine\2d\SpriteStruct.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
@@ -234669,7 +236222,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSGroupManager.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSEditor.h" />
     <ClInclude Include="Application\Staging\Transition\FadeOut.h" />
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h" />
     <ClInclude Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.h" />
     <ClInclude Include="Engine\Input\GamePad.h" />
     <ClInclude Include="Application\UI\Scene\Game\GameUI.h" />
@@ -234987,24 +236539,6 @@ File Path: Hagine.vcxproj.filters
     </ClCompile>
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp">
       <Filter>Application\GameObject\Enemy</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\BehaviorBaseNode.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Editor</Filter>
-    </ClCompile>
-    <ClCompile Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.cpp">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
     </ClCompile>
     <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp">
       <Filter>Application\GameObject\Field\Ground</Filter>
@@ -235363,6 +236897,12 @@ File Path: Hagine.vcxproj.filters
     <ClCompile Include="externals\imgui\ImGuizmo.cpp">
       <Filter>Externals\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.cpp">
+      <Filter>Application\GameObject\BehaviorTree\Node</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.cpp">
+      <Filter>Application\GameObject\BehaviorTree\Editor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -235378,24 +236918,6 @@ File Path: Hagine.vcxproj.filters
     </ClInclude>
     <ClInclude Include="Application\GameObject\Enemy\Enemy.h">
       <Filter>Application\GameObject\Enemy\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ActionNodes.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\BehaviorBaseNode.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\CompositeNodes.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\ConditionNodes.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Editor\BehaviorTreeEditor.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Editor</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Enemy\BehaviorTree\Nodes\InterruptNode.h">
-      <Filter>Application\GameObject\Enemy\BehaviorTree\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="Application\GameObject\Field\Ground\Ground.h">
       <Filter>Application\GameObject\Field\Ground</Filter>
@@ -235784,12 +237306,17 @@ File Path: Hagine.vcxproj.filters
     <ClInclude Include="externals\imgui\imstb_truetype.h">
       <Filter>Externals\imgui</Filter>
     </ClInclude>
+    <ClInclude Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.h">
+      <Filter>Application\GameObject\BehaviorTree\Node</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.h">
+      <Filter>Application\GameObject\BehaviorTree\Editor</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".claudiaideconfig" />
     <None Include=".editorconfig" />
     <None Include=".gitattributes" />
     <None Include=".gitignore" />
@@ -236125,6 +237652,15 @@ File Path: Hagine.vcxproj.filters
     </Filter>
     <Filter Include="Externals\imgui">
       <UniqueIdentifier>{71d8d931-e159-48e7-8c9a-f19c704253b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\GameObject\BehaviorTree">
+      <UniqueIdentifier>{8f576bdb-2f90-4af9-858d-9f18e65adc3e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\GameObject\BehaviorTree\Node">
+      <UniqueIdentifier>{da19d542-bd86-4622-b50f-afa76d8aeb11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\GameObject\BehaviorTree\Editor">
+      <UniqueIdentifier>{eca1faed-c300-4e02-9fce-7538afa4b337}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
