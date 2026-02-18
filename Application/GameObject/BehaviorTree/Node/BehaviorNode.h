@@ -217,6 +217,18 @@ class IsAirborneNode : public ContextNode {
     NodeStatus OnUpdate() override;
 };
 
+// ★新規追加: プレイヤーのステートをチェック
+class IsPlayerStateNode : public ContextNode {
+  public:
+    IsPlayerStateNode(const std::string &stateName) : m_StateName(stateName) {}
+
+  protected:
+    NodeStatus OnUpdate() override;
+
+  private:
+    std::string m_StateName; // チェックするステート名
+};
+
 // =========================================================
 // 地上移動アクションノード
 // =========================================================
@@ -320,14 +332,11 @@ class EnemyJumpNode : public ContextNode {
 // PlayerStateAir の飛行遷移ロジックを参考
 class EnemyJumpToFlyNode : public ContextNode {
   public:
-    // ★修正: ジャンプ力と飛行遷移時間をパラメータとして受け取る
-    EnemyJumpToFlyNode(float jumpPower = 15.0f, float transitionTime = 0.5f)
-        : m_JumpPower(jumpPower), m_FlyTransitionTime(transitionTime), m_ElapsedTime(0.0f), m_HasJumped(false) {}
+    EnemyJumpToFlyNode() : m_ElapsedTime(0.0f) {}
 
     void Reset() override {
         BTNode::Reset();
         m_ElapsedTime = 0.0f;
-        m_HasJumped = false;
     }
 
   protected:
@@ -335,10 +344,8 @@ class EnemyJumpToFlyNode : public ContextNode {
     NodeStatus OnUpdate() override;
 
   private:
-    float m_JumpPower;         // ★追加: ジャンプ力
-    float m_FlyTransitionTime; // ★追加: 飛行遷移までの時間
     float m_ElapsedTime;
-    bool m_HasJumped; // ★追加: ジャンプ済みフラグ
+    static constexpr float kFlyTransitionTime = 1.0f; // 飛行遷移可能時間
 };
 
 // 飛行状態: 上昇動作 (PlayerStateFlyMove の上昇処理を参考)

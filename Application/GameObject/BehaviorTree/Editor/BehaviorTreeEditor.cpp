@@ -36,6 +36,9 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         WeightedOutputs[1].Weight = 1.0f;
     } else if (type == EditorNodeType::ConditionHealthLow) {
         Parameter = 0.3f;
+    } else if (type == EditorNodeType::ConditionPlayerState) {
+        // ★新規追加: プレイヤーステート判定ノードのデフォルト値
+        StateNameParameter = "Idle"; // デフォルトはIdleステート
     }
     // 移動系ノードのデフォルト値
     else if (type == EditorNodeType::ActionApproach) {
@@ -56,21 +59,6 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         Parameter3 = 0.15f;
     } else if (type == EditorNodeType::ActionIdle) {
         Parameter = 1.0f; // デフォルト1秒待機
-    }
-    // ★追加: ジャンプ・飛行関連ノードのデフォルト値
-    else if (type == EditorNodeType::ActionJump) {
-        Parameter = 15.0f; // Jump Power (ジャンプ力)
-    } else if (type == EditorNodeType::ActionJumpToFly) {
-        Parameter = 15.0f; // Jump Power (ジャンプ力)
-        Parameter2 = 0.5f; // Transition Time (飛行遷移時間)
-    } else if (type == EditorNodeType::ActionFlyAscend) {
-        Parameter = 1.0f;   // Min Time
-        Parameter2 = 3.0f;  // Max Time
-        Parameter3 = 15.0f; // Ascend Speed (上昇速度)
-    } else if (type == EditorNodeType::ActionFlyDescend) {
-        Parameter = 1.0f;   // Min Time
-        Parameter2 = 3.0f;  // Max Time
-        Parameter3 = 15.0f; // Descend Speed (下降速度)
     }
 }
 
@@ -140,9 +128,11 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
     case EditorNodeType::ConditionHealthLow:
         return "HPが指定割合以下かチェック";
     case EditorNodeType::ConditionIsGrounded:
-        return "Check if enemy is on the ground";
+        return "敵が地上にいるかチェック";
     case EditorNodeType::ConditionIsAirborne:
-        return "Check if enemy is in the air";
+        return "敵が空中にいるかチェック";
+    case EditorNodeType::ConditionPlayerState:
+        return "プレイヤーが指定されたステート（Idle/Move/Jump/Air/FlyIdle/FlyMove/Rush/EnergyCharge）かチェック";
     case EditorNodeType::ActionApproach:
         return "ターゲットに向かって通常速度で接近する";
     case EditorNodeType::ActionDash:
@@ -155,11 +145,11 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "攻撃を実行する";
     case EditorNodeType::ActionIdle:
         return "その場で待機する(何もしない)";
-    // ★新規追加: ジャンプ・飛行関連ノード
+    // ★ジャンプ・飛行関連ノード
     case EditorNodeType::ActionJump:
         return "地上からジャンプする（指定した力で跳躍）";
     case EditorNodeType::ActionJumpToFly:
-        return "ジャンプから飛行状態へ遷移（指定時間後に浮遊開始）";
+        return "地上からジャンプし、一定時間後に飛行状態へ遷移（ジャンプ+飛行遷移を一つで処理）";
     case EditorNodeType::ActionFlyAscend:
         return "飛行中に上昇する（指定速度と時間）";
     case EditorNodeType::ActionFlyDescend:
@@ -398,6 +388,13 @@ void BehaviorTreeEditor::OnImGuiRender() {
             ImGui::SameLine();
             if (ImGui::DragFloat("##hp", &node.Parameter, 0.01f, 0.0f, 1.0f, "%.2f"))
                 paramChanged = true;
+        } else if (node.Type == EditorNodeType::ConditionPlayerState) {
+            // ★プレイヤーステート選択（ノード内は表示のみ）
+            ImGui::Text("ステート");
+            ImGui::SameLine();
+
+            // 現在選択されているステートを表示
+            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", node.StateNameParameter.c_str());
         } else if (node.Type == EditorNodeType::DecoratorWeight) {
             // ★修正: 重み付けノードは各出力の重みを表示・編集
             ImGui::Text("出力数:");
@@ -457,13 +454,13 @@ void BehaviorTreeEditor::OnImGuiRender() {
             if (ImGui::DragFloat("##idleDuration", &node.Parameter, 0.1f, 0.1f, 10.0f, "%.1fs"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionJump) {
-            // ★新規追加: ジャンプのパラメータ
+            // ジャンプのパラメータ
             ImGui::Text("ジャンプ力");
             ImGui::SameLine();
             if (ImGui::DragFloat("##jumpPower", &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionJumpToFly) {
-            // ★新規追加: ジャンプ→飛行のパラメータ
+            // ジャンプ→飛行のパラメータ
             ImGui::Text("ジャンプ力");
             ImGui::SameLine();
             if (ImGui::DragFloat("##jumpToFlyPower", &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
@@ -474,7 +471,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionFlyAscend ||
                    node.Type == EditorNodeType::ActionFlyDescend) {
-            // ★修正: 飛行上昇・下降のパラメータに速度を追加
+            // 飛行上昇・下降のパラメータ
             ImGui::Text("最小時間");
             ImGui::SameLine();
             if (ImGui::DragFloat("##minTime", &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
@@ -568,28 +565,28 @@ void BehaviorTreeEditor::OnImGuiRender() {
     if (ImGui::BeginPopup("ノード作成")) {
         // ★修正: ツールチップを追加
         if (ImGui::MenuItem("シーケンス")) {
-            CreateNode("シーケンス", EditorNodeType::Sequence);
+            CreateNode("Sequence", EditorNodeType::Sequence);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::Sequence));
         }
 
         if (ImGui::MenuItem("セレクター")) {
-            CreateNode("セレクター", EditorNodeType::Selector);
+            CreateNode("Selector", EditorNodeType::Selector);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::Selector));
         }
 
         if (ImGui::MenuItem("ランダムセレクター")) {
-            CreateNode("ランダムセレクター", EditorNodeType::SelectorRandom);
+            CreateNode("Random Selector", EditorNodeType::SelectorRandom);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::SelectorRandom));
         }
 
         if (ImGui::MenuItem("重みデコレーター")) {
-            CreateNode("重みデコレーター", EditorNodeType::DecoratorWeight);
+            CreateNode("Weight", EditorNodeType::DecoratorWeight);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::DecoratorWeight));
@@ -611,18 +608,25 @@ void BehaviorTreeEditor::OnImGuiRender() {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionHealthLow));
         }
 
-        if (ImGui::MenuItem("  地上チェック")) {
-            CreateNode("地上チェック", EditorNodeType::ConditionIsGrounded);
+        if (ImGui::MenuItem("  地上判定")) {
+            CreateNode("地上判定", EditorNodeType::ConditionIsGrounded);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionIsGrounded));
         }
 
-        if (ImGui::MenuItem("  空中チェック")) {
-            CreateNode("空中チェック", EditorNodeType::ConditionIsAirborne);
+        if (ImGui::MenuItem("  空中判定")) {
+            CreateNode("空中判定", EditorNodeType::ConditionIsAirborne);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionIsAirborne));
+        }
+
+        if (ImGui::MenuItem("  プレイヤーステート判定")) {
+            CreateNode("プレイヤーステート", EditorNodeType::ConditionPlayerState);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionPlayerState));
         }
 
         ImGui::Separator();
@@ -677,7 +681,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
         }
 
         if (ImGui::MenuItem("  ジャンプ->飛行")) {
-            CreateNode("ジャンプ->飛行", EditorNodeType::ActionJumpToFly);
+            CreateNode("ジャンプ→飛行", EditorNodeType::ActionJumpToFly);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionJumpToFly));
@@ -698,14 +702,14 @@ void BehaviorTreeEditor::OnImGuiRender() {
         }
 
         if (ImGui::MenuItem("  飛行->着地")) {
-            CreateNode("飛行->着地", EditorNodeType::ActionFlyToGround);
+            CreateNode("飛行→着地", EditorNodeType::ActionFlyToGround);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionFlyToGround));
         }
 
         if (ImGui::MenuItem("  実行")) {
-            CreateNode("実行", EditorNodeType::ActionRun);
+            CreateNode("Run", EditorNodeType::ActionRun);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionRun));
@@ -714,6 +718,77 @@ void BehaviorTreeEditor::OnImGuiRender() {
         ImGui::EndPopup();
     }
     ed::Resume();
+
+    // ★プロパティウィンドウ（ノードエディタ内で、Suspend/Resume内で描画）
+    // 選択されたノードがある場合、その詳細設定を表示
+    ed::Suspend();
+    if (ed::GetSelectedObjectCount() > 0) {
+        std::vector<ed::NodeId> selectedNodes(ed::GetSelectedObjectCount());
+        ed::GetSelectedNodes(selectedNodes.data(), static_cast<int>(selectedNodes.size()));
+
+        if (!selectedNodes.empty()) {
+            int selectedNodeId = (int)selectedNodes[0].Get();
+
+            // 選択されたノードを検索
+            for (auto &node : m_Nodes) {
+                if ((int)node.ID.Get() == selectedNodeId) {
+                    // プロパティウィンドウを表示
+                    ImGui::Begin("ノードプロパティ", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+                    ImGui::Text("ノード: %s", node.Title.c_str());
+                    ImGui::Separator();
+
+                    // プレイヤーステート判定ノードの場合
+                    if (node.Type == EditorNodeType::ConditionPlayerState) {
+                        ImGui::Text("プレイヤーステート選択");
+
+                        // ステート一覧(日本語)
+                        const char *stateNames[] = {
+                            "待機 (Idle)",
+                            "移動 (Move)",
+                            "ジャンプ (Jump)",
+                            "空中 (Air)",
+                            "飛行待機 (FlyIdle)",
+                            "飛行移動 (FlyMove)",
+                            "突撃 (Rush)",
+                            "チャージ (EnergyCharge)"};
+                        // 内部で使用する実際のステート名
+                        const char *stateValues[] = {
+                            "Idle", "Move", "Jump", "Air",
+                            "FlyIdle", "FlyMove", "Rush", "EnergyCharge"};
+                        const int stateCount = 8;
+
+                        // 現在選択されているステートのインデックスを取得
+                        int currentIndex = 0;
+                        for (int i = 0; i < stateCount; i++) {
+                            if (node.StateNameParameter == stateValues[i]) {
+                                currentIndex = i;
+                                break;
+                            }
+                        }
+
+                        // コンボボックスで選択
+                        if (ImGui::Combo("ステート", &currentIndex, stateNames, stateCount)) {
+                            node.StateNameParameter = stateValues[currentIndex];
+
+                            // 実行中なら再ビルド
+                            if (m_IsRunning) {
+                                BuildAndRunTree();
+                            }
+                        }
+
+                        // 選択されたステートを表示(確認用)
+                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "選択中: %s", stateNames[currentIndex]);
+                    }
+
+                    ImGui::End();
+                    break;
+                }
+            }
+        }
+    }
+    ed::Resume();
+
     ed::End();
     ed::SetCurrentEditor(nullptr);
 }
@@ -884,6 +959,11 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         runtimeNode = std::make_shared<IsAirborneNode>();
         break;
 
+    case EditorNodeType::ConditionPlayerState:
+        // ★新規追加: プレイヤーステート判定ノード
+        runtimeNode = std::make_shared<IsPlayerStateNode>(eNode.StateNameParameter);
+        break;
+
     case EditorNodeType::ActionApproach:
         runtimeNode = std::make_shared<EnemyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
         break;
@@ -908,7 +988,7 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         runtimeNode = std::make_shared<EnemyJumpNode>(eNode.Parameter); // ジャンプ力
         break;
     case EditorNodeType::ActionJumpToFly:
-        runtimeNode = std::make_shared<EnemyJumpToFlyNode>(eNode.Parameter, eNode.Parameter2); // ★修正: ジャンプ力、遷移時間
+        runtimeNode = std::make_shared<EnemyJumpToFlyNode>();
         break;
     case EditorNodeType::ActionFlyAscend:
         runtimeNode = std::make_shared<EnemyFlyAscendNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3); // 最小時間、最大時間、速度
@@ -937,6 +1017,7 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
                    eNode.Type == EditorNodeType::ConditionHealthLow ||
                    eNode.Type == EditorNodeType::ConditionIsGrounded ||
                    eNode.Type == EditorNodeType::ConditionIsAirborne ||
+                   eNode.Type == EditorNodeType::ConditionPlayerState || // ★追加
                    eNode.Type == EditorNodeType::ActionApproach ||
                    eNode.Type == EditorNodeType::ActionDash ||
                    eNode.Type == EditorNodeType::ActionStrafe ||
@@ -997,6 +1078,9 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
                     conditionCopy = std::make_shared<IsGroundedNode>();
                 } else if (eNode.Type == EditorNodeType::ConditionIsAirborne) {
                     conditionCopy = std::make_shared<IsAirborneNode>();
+                } else if (eNode.Type == EditorNodeType::ConditionPlayerState) {
+                    // ★新規追加: プレイヤーステート判定ノード
+                    conditionCopy = std::make_shared<IsPlayerStateNode>(eNode.StateNameParameter);
                 }
 
                 if (conditionCopy) {
@@ -1094,6 +1178,11 @@ void BehaviorTreeEditor::SaveTree() {
         n["param2"] = node.Parameter2;
         n["param3"] = node.Parameter3;
 
+        // ★新規追加: プレイヤーステート判定ノードのステート名を保存
+        if (node.Type == EditorNodeType::ConditionPlayerState) {
+            n["stateName"] = node.StateNameParameter;
+        }
+
         // 重み付けノードの出力を保存
         if (node.IsWeightNode()) {
             json weightsJson = json::array();
@@ -1149,6 +1238,11 @@ void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
         node.Parameter = param;
         node.Parameter2 = param2;
         node.Parameter3 = param3;
+
+        // ★新規追加: プレイヤーステート判定ノードのステート名を読み込み
+        if (type == EditorNodeType::ConditionPlayerState && n.contains("stateName")) {
+            node.StateNameParameter = n["stateName"].get<std::string>();
+        }
 
         // 重み付けノードの出力を読み込み
         if (node.IsWeightNode() && n.contains("weightedOutputs")) {

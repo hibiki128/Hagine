@@ -14,6 +14,7 @@
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
 #include"Collider/CollisionManager.h"
+#include <implot.h>
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -25,6 +26,7 @@ void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) 
     LoadFlag();
     // ImGuiのコンテキストを生成
     ImGui::CreateContext();
+    ImPlot::CreateContext();
 
     // Docking機能を有効化
     ImGuiIO &io = ImGui::GetIO();
@@ -197,6 +199,7 @@ void ImGuiManager::Finalize() {
 #ifdef USE_IMGUI
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 #endif // USE_IMGUI
 
@@ -881,24 +884,116 @@ void ImGuiManager::DisplayFPS() {
 #ifdef _DEBUG
     if (ImGui::CollapsingHeader("FPS")) {
 
-        ImGuiIO &io = ImGui::GetIO();
-        // FPSを取得
-        float fps = Frame::GetFPS();
-        float deltaTime = Frame::DeltaTime() * 1000.0f; // ミリ秒単位に変換
+        // 履歴サイズ（フレーム数）
+        static const int kHistSize = 256;
 
-        // FPSを色付きで表示
-        ImVec4 color;
-        if (fps >= 59.0f) {
-            color = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // 60FPS付近なら緑色
-        } else if (fps >= 30.0f) {
-            color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // 30-59FPSなら黄色
-        } else {
-            color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 30FPS未満なら赤色
+        // 循環バッファ
+        static float fpsHistory[kHistSize] = {};
+        static float frameTimeHistory[kHistSize] = {};
+        static int offset = 0;
+        static float fpsMax = 70.0f; // Y軸上限（適宜調整）
+
+        // 今フレームの値を記録
+        float fps = Frame::GetFPS();
+        float frameTime = Frame::DeltaTime() * 1000.0f; // ms
+
+        fpsHistory[offset] = fps;
+        frameTimeHistory[offset] = frameTime;
+        offset = (offset + 1) % kHistSize;
+
+        // 色判定（数値表示用）
+        ImVec4 color =
+            fps >= 59.0f ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : fps >= 30.0f ? ImVec4(1.0f, 1.0f, 0.0f, 1.0f)
+                                                                         : ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
+
+        // 数値をコンパクトに横並び表示
+        ImGui::TextColored(color, "FPS: %.1f", fps);
+        ImGui::SameLine(100);
+        ImGui::TextColored(color, "Frame: %.2f ms", frameTime);
+
+        // -----------------------------------------------
+        // FPS 折れ線グラフ
+        // -----------------------------------------------
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.85f, 1.0f, 1.0f));
+        ImGui::TextUnformatted("FPS 履歴");
+        ImGui::PopStyleColor();
+
+        ImPlot::PushStyleColor(ImPlotCol_FrameBg, ImVec4(0.08f, 0.08f, 0.12f, 1.0f));
+        ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(0.05f, 0.05f, 0.09f, 1.0f));
+        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.3f, 0.8f, 1.0f, 1.0f));
+
+        if (ImPlot::BeginPlot("##FPSPlot", ImVec2(-1, 90),
+                              ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoInputs |
+                                  ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText)) {
+            ImPlot::SetupAxes(nullptr, "FPS",
+                              ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoGridLines,
+                              ImPlotAxisFlags_None);
+            ImPlot::SetupAxisLimits(ImAxis_X1, 0, kHistSize, ImPlotCond_Always);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, 0, fpsMax, ImPlotCond_Always);
+
+            // 60fps / 30fps の基準線
+            ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.0f, 1.0f, 0.0f, 0.4f));
+            double y60 = 60.0;
+            ImPlot::PlotInfLines("##60", &y60, 1, ImPlotInfLinesFlags_Horizontal);
+            ImPlot::PopStyleColor();
+
+            ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(1.0f, 1.0f, 0.0f, 0.4f));
+            double y30 = 30.0;
+            ImPlot::PlotInfLines("##30", &y30, 1, ImPlotInfLinesFlags_Horizontal);
+            ImPlot::PopStyleColor();
+
+            // FPS折れ線
+            ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.3f, 0.8f, 1.0f, 1.0f));
+            ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 1.5f);
+            ImPlot::PlotLine("FPS", fpsHistory, kHistSize, 1.0, 0.0,
+                             ImPlotLineFlags_None, offset);
+            ImPlot::PopStyleVar();
+            ImPlot::PopStyleColor();
+
+            ImPlot::EndPlot();
         }
 
-        ImGui::TextColored(color, "FPS: %.1f", fps);
-        ImGui::TextColored(color, "Frame: %.2f ms", deltaTime);
-        // ImGui::TreePop();
+        ImPlot::PopStyleColor(3);
+
+        // -----------------------------------------------
+        // フレームタイム 折れ線グラフ
+        // -----------------------------------------------
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.85f, 1.0f, 1.0f));
+        ImGui::TextUnformatted("フレームタイム 履歴 (ms)");
+        ImGui::PopStyleColor();
+
+        ImPlot::PushStyleColor(ImPlotCol_FrameBg, ImVec4(0.08f, 0.08f, 0.12f, 1.0f));
+        ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(0.05f, 0.05f, 0.09f, 1.0f));
+
+        if (ImPlot::BeginPlot("##FrameTimePlot", ImVec2(-1, 70),
+                              ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoInputs |
+                                  ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText)) {
+            ImPlot::SetupAxes(nullptr, "ms",
+                              ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoGridLines,
+                              ImPlotAxisFlags_None);
+            ImPlot::SetupAxisLimits(ImAxis_X1, 0, kHistSize, ImPlotCond_Always);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 50.0, ImPlotCond_Always);
+
+            // 16.6ms（60fps相当）の基準線
+            ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.0f, 1.0f, 0.0f, 0.4f));
+            double y16 = 16.6;
+            ImPlot::PlotInfLines("##16ms", &y16, 1, ImPlotInfLinesFlags_Horizontal);
+            ImPlot::PopStyleColor();
+
+            // フレームタイム折れ線（遅いほど赤寄り）
+            ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(1.0f, 0.6f, 0.2f, 1.0f));
+            ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 1.5f);
+            ImPlot::PlotLine("ms", frameTimeHistory, kHistSize, 1.0, 0.0,
+                             ImPlotLineFlags_None, offset);
+            ImPlot::PopStyleVar();
+            ImPlot::PopStyleColor();
+
+            ImPlot::EndPlot();
+        }
+
+        ImPlot::PopStyleColor(2);
     }
 #endif // _DEBUG
 }

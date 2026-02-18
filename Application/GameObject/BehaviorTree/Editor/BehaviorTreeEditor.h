@@ -16,8 +16,9 @@ enum class EditorNodeType {
     ActionRun,
     ConditionPlayerClose,
     ConditionHealthLow,
-    ConditionIsGrounded, // ★新規追加: 地上判定
-    ConditionIsAirborne, // ★新規追加: 空中判定
+    ConditionIsGrounded,  // ★新規追加: 地上判定
+    ConditionIsAirborne,  // ★新規追加: 空中判定
+    ConditionPlayerState, // ★新規追加: プレイヤーステート判定
     ActionApproach,
     ActionDash,
     ActionStrafe,
@@ -56,6 +57,9 @@ struct EditorNode {
     float Parameter2 = 0.0f;
     float Parameter3 = 0.0f;
 
+    // ★新規追加: プレイヤーステート判定用のパラメータ
+    std::string StateNameParameter = "Idle"; // デフォルトはIdle
+
     EditorNode(int id, const std::string &title, EditorNodeType type);
 
     // 条件ノードかどうかを判定
@@ -63,7 +67,8 @@ struct EditorNode {
         return Type == EditorNodeType::ConditionPlayerClose ||
                Type == EditorNodeType::ConditionHealthLow ||
                Type == EditorNodeType::ConditionIsGrounded ||
-               Type == EditorNodeType::ConditionIsAirborne;
+               Type == EditorNodeType::ConditionIsAirborne ||
+               Type == EditorNodeType::ConditionPlayerState; // ★追加
     }
 
     // アクションノードかどうかを判定

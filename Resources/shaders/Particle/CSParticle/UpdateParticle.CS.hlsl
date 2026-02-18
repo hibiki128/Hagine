@@ -1,5 +1,6 @@
 #include "../Particle.hlsli"
 #include "../../Random/Random.hlsli"
+#include "CurlNoise.hlsli"
 
 ConstantBuffer<PerFrame> gPerFrame : register(b0);
 ConstantBuffer<ParticleCSSettings> gSettings : register(b1);
@@ -110,7 +111,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         if (gParticles[particleIndex].color.a <= 0.0f)
             return;
         
-           // 1. 加速度処理(重力の前に追加)
+        // 1. 加速度処理
         if (gSettings.enableAcceleration)
         {
             gParticles[particleIndex].velocity += gSettings.acceleration * gPerFrame.deltaTime;
@@ -122,10 +123,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
             gParticles[particleIndex].velocity += gSettings.gravity * gPerFrame.deltaTime;
         }
         
-        // 3. 速度減衰処理(ギャザーの前に追加)
+        // 3. 速度減衰処理
         if (gSettings.enableVelocityDamping)
         {
-            // 減衰係数を適用 (0.0で完全停止、1.0で減衰なし)
             gParticles[particleIndex].velocity *= pow(gSettings.velocityDampingFactor, gPerFrame.deltaTime * 60.0f);
         }
         
@@ -136,17 +136,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
             
             if (lifeRatio >= gSettings.lifetimeVelocityDampingStart)
             {
-                // 減衰開始点からの進行度を計算
                 float dampingProgress = (lifeRatio - gSettings.lifetimeVelocityDampingStart) /
                                        (1.0f - gSettings.lifetimeVelocityDampingStart);
-                
-                // 二乗カーブで滑らかに0に近づける
                 float dampingMultiplier = 1.0f - (dampingProgress * dampingProgress);
                 gParticles[particleIndex].velocity *= dampingMultiplier;
             }
         }
         
-        // 2. ギャザー処理
+        // 5. ギャザー処理
         if (gSettings.enableGather)
         {
             bool isTrail = (gParticles[particleIndex].isTrailParticle != 0);
@@ -176,45 +173,77 @@ void main(uint3 DTid : SV_DispatchThreadID)
             }
         }
 
-        // 3. 渦巻き（Vortex）処理
+        // 6. 渦巻き（Vortex）処理
         if (gSettings.enableVortex)
         {
-            // トレイル判定
             bool isTrail = (gParticles[particleIndex].isTrailParticle != 0);
             
-            // 「トレイルではない」 または 「トレイルかつ渦巻き有効」 の場合のみ実行
             if (!isTrail || gSettings.enableVortexForTrail)
             {
                 float3 center = gSettings.vortexTarget;
                 float3 toParticle = gParticles[particleIndex].translate - center;
                 float dist = length(toParticle);
                 
-                // 中心に近すぎる場合は計算しない
                 if (dist > 0.05f)
                 {
-                    // 軸の長さが0だとバグるのでnormalize対策をしておく
                     float3 axis = gSettings.vortexAxis;
                     if (length(axis) < 0.001f)
-                        axis = float3(0, 1, 0); // 安全策
+                        axis = float3(0, 1, 0);
                     else
                         axis = normalize(axis);
 
-                    // 外積で接線方向を計算
                     float3 tangent = cross(normalize(toParticle), axis);
-
-                    // 接線方向に力を加える
                     gParticles[particleIndex].velocity += tangent * gSettings.vortexStrength * gPerFrame.deltaTime;
                 }
             }
         }
         
-        // 4. 移動更新
+        // 7. Curl Noise による速度場
+        // ポイント：velocity を「完全に置き換える」ことで
+        // パーティクルが常にフィールドに沿って動く流体的な挙動になる。
+        // 加算方式では加速し続けてバラバラに飛散してしまう。
+        if (gSettings.enableCurlNoise)
+        {
+            bool isTrail = (gParticles[particleIndex].isTrailParticle != 0);
+            if (!isTrail)
+            {
+                float3 pos = gParticles[particleIndex].translate;
+                
+                // Curl Noise 速度場を計算して velocity を置き換え
+                float3 curlVel = ComputeCurlNoise(
+                    pos,
+                    gSettings.curlNoiseScale,
+                    gPerFrame.time * gSettings.curlNoiseTimeScale,
+                    (int) gSettings.curlNoiseOctaves
+                ) * gSettings.curlNoiseStrength;
+                
+                // 引き戻し力（Attract）
+                // パーティクルをエミッター付近に留まらせながら流れさせる。
+                // curlNoiseAttractStrength = 0 で無効（純粋なCurlのみ）。
+                if (gSettings.curlNoiseAttractStrength > 0.0f)
+                {
+                    float3 toCenter = gSettings.curlNoiseAttractCenter - pos;
+                    float dist = length(toCenter);
+                    if (dist > 0.001f)
+                    {
+                        // 距離に比例した引き戻し力（遠いほど強く引く）
+                        float3 attractVel = normalize(toCenter) * dist * gSettings.curlNoiseAttractStrength;
+                        curlVel += attractVel;
+                    }
+                }
+                
+                // velocity を完全置き換え
+                gParticles[particleIndex].velocity = curlVel;
+            }
+        }
+        
+        // 8. 移動更新
         float3 previousPosition = gParticles[particleIndex].translate;
         gParticles[particleIndex].translate += gParticles[particleIndex].velocity * gPerFrame.deltaTime;
         gParticles[particleIndex].currentTime += gPerFrame.deltaTime;
         float3 currentPosition = gParticles[particleIndex].translate;
         
-        // 5. 各種パラメータ更新
+        // 9. 各種パラメータ更新
         float lifeRatio = gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime;
         float alpha = 1.0f - lifeRatio;
         
@@ -250,7 +279,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         
         gParticles[particleIndex].color.a = saturate(alpha);
         
-        // 6. トレイル生成
+        // 10. トレイル生成
         if (gSettings.enableTrail &&
             gParticles[particleIndex].isTrailParticle == 0 &&
             gParticles[particleIndex].color.a > 0.05f)
