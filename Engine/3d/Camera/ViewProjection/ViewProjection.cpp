@@ -1,9 +1,11 @@
 #define NOMINMAX
 #include "ViewProjection.h"
 #include "Data/DataHandler.h"
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "Frame.h"
 #include "cmath"
 #include "myMath.h"
+#include <implot.h>
 #include <type/Vector2.h>
 
 void ViewProjection::Initialize(std::string jsonFile) {
@@ -113,275 +115,387 @@ void ViewProjection::EaseCameraMove(EasingType easeType, const std::string &json
 
 void ViewProjection::ShowDebugInfo() {
 #ifdef USE_IMGUI
-    if (ImGui::Begin("カメラ設定 デバッグ")) {
+    ImGui::SetNextWindowSize(ImVec2(320, 0), ImGuiCond_FirstUseEver);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 4.0f);
 
-        // 基本情報セクション
-        if (ImGui::CollapsingHeader("基本設定", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Separator();
+    if (ImGui::Begin("カメラ設定##vpwin")) {
+        // ====================================================
+        // [1] Position / Rotation
+        // ====================================================
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderBlue);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.25f, 0.60f, 1.0f, 0.35f});
+        bool basicOpen = ImGui::CollapsingHeader("位置 / 回転##vpb",
+                                                 ImGuiTreeNodeFlags_DefaultOpen);
+        ImGui::PopStyleColor(2);
 
-            // 回転モード
-            ImGui::Text("回転モード: %s", isUseQuaternion_ ? "クォータニオン" : "オイラー角");
-            ImGui::Checkbox("クォータニオンを使用", &isUseQuaternion_);
+        if (basicOpen) {
+            ImGui::Indent(6.0f);
 
+            // Quaternion switch
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentCyan);
+            ImGui::Checkbox("クォータニオン使用##vpquatchk", &isUseQuaternion_);
+            ImGui::PopStyleColor();
             ImGui::Spacing();
 
-            // 位置調整
-            ImGui::Text("カメラ位置");
-            ImGui::DragFloat3("##translation", &translation_.x, 0.1f, -1000.0f, 1000.0f, "%.2f");
-
+            // Position
+            SectionHeader("[ カメラ位置 ]", DebugTheme::kAccentBlue);
+            LabeledDrag3("移動 (X / Y / Z)", "##vptrans",
+                         &translation_.x, 0.1f, -1000.f, 1000.f, "%.2f",
+                         DebugTheme::kBgBlue);
             ImGui::Spacing();
 
-            // 回転調整
+            // Rotation
+            SectionHeader("[ 回転 ]", DebugTheme::kAccentCyan);
             if (isUseQuaternion_) {
-                ImGui::Text("クォータニオン回転");
-                ImGui::DragFloat4("##quaternion", &quateRotation_.x, 0.01f, -1.0f, 1.0f, "%.3f");
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("クォータニオン (X / Y / Z / W)");
+                ImGui::PopStyleColor();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+                ImGui::DragFloat4("##vpquat", &quateRotation_.x, 0.01f, -1.f, 1.f, "%.3f");
+                ImGui::PopStyleColor();
 
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "オイラー角 (参考): %.1f°, %.1f°, %.1f°",
-                                   eulerRotation_.x * 180.0f / std::numbers::pi_v<float>,
-                                   eulerRotation_.y * 180.0f / std::numbers::pi_v<float>,
-                                   eulerRotation_.z * 180.0f / std::numbers::pi_v<float>);
+                float d = 180.f / std::numbers::pi_v<float>;
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::Text("  Euler (ref)  X:%.1f  Y:%.1f  Z:%.1f (deg)",
+                            eulerRotation_.x * d, eulerRotation_.y * d, eulerRotation_.z * d);
+                ImGui::PopStyleColor();
             } else {
-                ImGui::Text("オイラー角回転 (度)");
-                Vector3 eulerDegrees = {
-                    eulerRotation_.x * 180.0f / std::numbers::pi_v<float>,
-                    eulerRotation_.y * 180.0f / std::numbers::pi_v<float>,
-                    eulerRotation_.z * 180.0f / std::numbers::pi_v<float>};
-                if (ImGui::DragFloat3("##euler", &eulerDegrees.x, 1.0f, -360.0f, 360.0f, "%.1f°")) {
-                    eulerRotation_ = {
-                        eulerDegrees.x * std::numbers::pi_v<float> / 180.0f,
-                        eulerDegrees.y * std::numbers::pi_v<float> / 180.0f,
-                        eulerDegrees.z * std::numbers::pi_v<float> / 180.0f};
-                }
-
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "クォータニオン (参考): %.3f, %.3f, %.3f, %.3f",
-                                   quateRotation_.x, quateRotation_.y, quateRotation_.z, quateRotation_.w);
-            }
-        }
-
-        // カメラパラメータセクション
-        if (ImGui::CollapsingHeader("カメラパラメータ")) {
-            ImGui::Separator();
-
-            float fovDegrees = fovAngleY * 180.0f / std::numbers::pi_v<float>;
-            ImGui::Text("視野角");
-            if (ImGui::SliderFloat("##fov", &fovDegrees, 10.0f, 170.0f, "%.1f°")) {
-                fovAngleY = fovDegrees * std::numbers::pi_v<float> / 180.0f;
-            }
-
-            ImGui::Text("アスペクト比");
-            ImGui::SliderFloat("##aspect", &aspectRatio, 0.1f, 5.0f, "%.3f");
-
-            ImGui::Text("描画範囲");
-            ImGui::DragFloat("Near##near", &nearZ, 0.01f, 0.001f, 10.0f, "%.3f");
-            ImGui::DragFloat("Far##far", &farZ, 1.0f, 1.0f, 10000.0f, "%.1f");
-        }
-
-        // マトリックス表示セクション
-        if (ImGui::CollapsingHeader("マトリックス情報")) {
-            ImGui::Separator();
-
-            // カラーテーマ
-            ImVec4 headerColor = ImVec4(0.2f, 0.6f, 0.9f, 1.0f);
-            ImVec4 matrixColor = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
-
-            if (ImGui::TreeNode("ワールドマトリックス")) {
-                ImGui::PushStyleColor(ImGuiCol_Text, matrixColor);
-                for (int i = 0; i < 4; i++) {
-                    ImGui::Text("[%d] %8.3f %8.3f %8.3f %8.3f", i,
-                                matWorld_.m[i][0], matWorld_.m[i][1],
-                                matWorld_.m[i][2], matWorld_.m[i][3]);
-                }
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("オイラー角 (度)  X / Y / Z");
                 ImGui::PopStyleColor();
-                ImGui::TreePop();
-            }
-
-            if (ImGui::TreeNode("ビューマトリックス")) {
-                ImGui::PushStyleColor(ImGuiCol_Text, matrixColor);
-                for (int i = 0; i < 4; i++) {
-                    ImGui::Text("[%d] %8.3f %8.3f %8.3f %8.3f", i,
-                                matView_.m[i][0], matView_.m[i][1],
-                                matView_.m[i][2], matView_.m[i][3]);
-                }
+                float r2d = 180.f / std::numbers::pi_v<float>;
+                float d2r = std::numbers::pi_v<float> / 180.f;
+                Vector3 deg = {eulerRotation_.x * r2d,
+                               eulerRotation_.y * r2d,
+                               eulerRotation_.z * r2d};
+                ImGui::SetNextItemWidth(-1);
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+                if (ImGui::DragFloat3("##vpeuler", &deg.x, 1.f, -360.f, 360.f, "%.1f"))
+                    eulerRotation_ = {deg.x * d2r, deg.y * d2r, deg.z * d2r};
                 ImGui::PopStyleColor();
-                ImGui::TreePop();
-            }
 
-            if (ImGui::TreeNode("プロジェクションマトリックス")) {
-                ImGui::PushStyleColor(ImGuiCol_Text, matrixColor);
-                for (int i = 0; i < 4; i++) {
-                    ImGui::Text("[%d] %8.3f %8.3f %8.3f %8.3f", i,
-                                matProjection_.m[i][0], matProjection_.m[i][1],
-                                matProjection_.m[i][2], matProjection_.m[i][3]);
-                }
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::Text("  Quat (ref)  %.3f  %.3f  %.3f  %.3f",
+                            quateRotation_.x, quateRotation_.y,
+                            quateRotation_.z, quateRotation_.w);
                 ImGui::PopStyleColor();
-                ImGui::TreePop();
             }
+
+            ImGui::Unindent(6.0f);
+            ImGui::Spacing();
         }
 
-        // 計算された情報
-        if (ImGui::CollapsingHeader("計算情報", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Separator();
+        // ====================================================
+        // [2] Camera Parameters (FOV / Near / Far)
+        // ====================================================
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderOrange);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.65f, 0.15f, 0.35f});
+        bool paramOpen = ImGui::CollapsingHeader("カメラパラメータ##vpp");
+        ImGui::PopStyleColor(2);
 
-            Vector3 cameraWorldPos = {matWorld_.m[3][0], matWorld_.m[3][1], matWorld_.m[3][2]};
-            ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.4f, 1.0f), "ワールド座標でのカメラ位置");
-            ImGui::Text("   X: %.3f  Y: %.3f  Z: %.3f",
-                        cameraWorldPos.x, cameraWorldPos.y, cameraWorldPos.z);
+        if (paramOpen) {
+            ImGui::Indent(6.0f);
+            SectionHeader("[ 投影 ]", DebugTheme::kAccentOrange);
 
-            float distanceFromOrigin = sqrt(cameraWorldPos.x * cameraWorldPos.x +
-                                            cameraWorldPos.y * cameraWorldPos.y +
-                                            cameraWorldPos.z * cameraWorldPos.z);
-            ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.3f, 1.0f), "原点からの距離: %.3f", distanceFromOrigin);
-        }
-    }
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgOrange);
+            ImGui::PushStyleColor(ImGuiCol_SliderGrab, DebugTheme::kAccentOrange);
+            ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, DebugTheme::kAccentOrange);
 
-    // 計算された情報セクションの後に追加
-    if (ImGui::CollapsingHeader("データ保存・読み込み")) {
-        ImGui::Separator();
+            // FOV -- ラベル上、スライダー全幅
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("視野角 (FOV)  [度]");
+            ImGui::PopStyleColor();
+            float fovDeg = fovAngleY * 180.f / std::numbers::pi_v<float>;
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::SliderFloat("##vpfov", &fovDeg, 10.f, 170.f, "%.1f"))
+                fovAngleY = fovDeg * std::numbers::pi_v<float> / 180.f;
 
-        static char saveFileName[256] = "MyCamera";
-        ImGui::InputText("ファイル名", saveFileName, sizeof(saveFileName));
+            ImGui::Spacing();
 
-        if (ImGui::Button("保存")) {
-            Save(std::string(saveFileName));
-        }
+            // Aspect Ratio -- ラベル上、スライダー全幅
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("アスペクト比 (横 / 縦)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::SliderFloat("##vpasp", &aspectRatio, 0.1f, 5.f, "%.3f");
 
-        ImGui::SameLine();
+            ImGui::PopStyleColor(3);
 
-        if (ImGui::Button("読み込み")) {
-            // Load関数も必要なら追加
-            Load(std::string(saveFileName));
-        }
-    }
+            ImGui::Spacing();
+            SectionHeader("[ クリップ距離 ]", DebugTheme::kAccentOrange);
 
-    if (ImGui::CollapsingHeader("カメライージング")) {
-        ImGui::Separator();
+            if (ImGui::BeginTable("NearFar", 2,
+                                  ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoPadOuterX)) {
+                ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 48.0f);
+                ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
-        // イージングの状態表示
-        if (isEasing_) {
-            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.3f, 1.0f), "イージング中...");
-            ImGui::ProgressBar(easingTime_ / easingDuration_, ImVec2(0.0f, 0.0f));
-            ImGui::Text("経過時間: %.2f / %.2f 秒", easingTime_, easingDuration_);
-        } else {
-            ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.4f, 1.0f), "待機中");
-        }
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted("ニア");
+                ImGui::PopStyleColor();
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgOrange);
+                ImGui::DragFloat("##vpnear", &nearZ, 0.01f, 0.001f, 10.f, "%.3f");
+                ImGui::PopStyleColor();
 
-        ImGui::Spacing();
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted("ファー");
+                ImGui::PopStyleColor();
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgOrange);
+                ImGui::DragFloat("##vpfar", &farZ, 1.f, 1.f, 10000.f, "%.1f");
+                ImGui::PopStyleColor();
 
-        // イージングタイプ選択
-        static int selectedEasingType = 0;
-        const char *easingTypeNames[] = {
-            "Linear",
-            "InSine", "OutSine", "InOutSine",
-            "InQuad", "OutQuad", "InOutQuad",
-            "InCubic", "OutCubic", "InOutCubic",
-            "InQuart", "OutQuart", "InOutQuart",
-            "InQuint", "OutQuint", "InOutQuint",
-            "InCirc", "OutCirc", "InOutCirc",
-            "InExpo", "OutExpo", "InOutExpo",
-            "InBack", "OutBack", "InOutBack",
-            "InElastic", "OutElastic", "InOutElastic",
-            "InBounce", "OutBounce", "InOutBounce"};
-
-        ImGui::Text("イージングタイプ");
-        ImGui::Combo("##easingType", &selectedEasingType, easingTypeNames,
-                     sizeof(easingTypeNames) / sizeof(easingTypeNames[0]));
-
-        // 継続時間設定
-        static float duration = 2.0f;
-        ImGui::Text("継続時間 (秒)");
-        ImGui::SliderFloat("##duration", &duration, 0.1f, 10.0f, "%.1f秒");
-
-        // JSONファイル名入力
-        static char jsonFileName[256] = "CameraTarget";
-        ImGui::Text("目標値JSONファイル名");
-        ImGui::InputText("##targetJson", jsonFileName, sizeof(jsonFileName));
-
-        ImGui::Spacing();
-
-        // イージング実行ボタン
-        if (ImGui::Button("イージング開始", ImVec2(150, 30))) {
-            if (!isEasing_ && strlen(jsonFileName) > 0) {
-                EasingType easeType = static_cast<EasingType>(selectedEasingType);
-                EaseCameraMove(easeType, std::string(jsonFileName), duration);
+                ImGui::EndTable();
             }
+
+            ImGui::Unindent(6.0f);
+            ImGui::Spacing();
         }
 
-        ImGui::SameLine();
+        // ====================================================
+        // [3] Calculated Info
+        // ====================================================
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderGreen);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.85f, 0.50f, 0.35f});
+        bool calcOpen = ImGui::CollapsingHeader("計算情報##vpcalc",
+                                                ImGuiTreeNodeFlags_DefaultOpen);
+        ImGui::PopStyleColor(2);
 
-        // 緊急停止ボタン
-        if (ImGui::Button("停止", ImVec2(80, 30))) {
+        if (calcOpen) {
+            ImGui::Indent(6.0f);
+            Vector3 wp = {matWorld_.m[3][0], matWorld_.m[3][1], matWorld_.m[3][2]};
+            float dist = sqrtf(wp.x * wp.x + wp.y * wp.y + wp.z * wp.z);
+
+            ReadOnlyRow("カメラ座標", "%.2f  %.2f  %.2f", wp.x, wp.y, wp.z);
+            ReadOnlyRow("原点からの距離", "%.3f", dist);
+
+            // 距離をカラープログレスバーで可視化
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
+                                  dist < 100.f ? DebugTheme::kAccentGreen : dist < 500.f ? DebugTheme::kAccentOrange
+                                                                                         : DebugTheme::kAccentRed);
+            ImGui::ProgressBar(std::min(dist / 1000.f, 1.f), ImVec2(-1, 4), "");
+            ImGui::PopStyleColor();
+
+            ImGui::Unindent(6.0f);
+            ImGui::Spacing();
+        }
+
+        // ====================================================
+        // [4] Matrix Info (collapsible)
+        // ====================================================
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgPurple);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.7f, 0.3f, 1.0f, 0.20f});
+        bool matOpen = ImGui::CollapsingHeader("行列情報##vpmat");
+        ImGui::PopStyleColor(2);
+
+        if (matOpen) {
+            ImGui::Indent(6.0f);
+            auto ShowMat = [](const char *lbl, const Matrix4x4 &m) {
+                ImGui::PushStyleColor(ImGuiCol_Header, {0.15f, 0.15f, 0.18f, 1.0f});
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.20f, 0.25f, 1.0f});
+                if (ImGui::TreeNodeEx(lbl, ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextReadOnly);
+                    for (int i = 0; i < 4; ++i)
+                        ImGui::Text("[%d] %7.3f %7.3f %7.3f %7.3f",
+                                    i, m.m[i][0], m.m[i][1], m.m[i][2], m.m[i][3]);
+                    ImGui::PopStyleColor();
+                    ImGui::TreePop();
+                }
+                ImGui::PopStyleColor(2);
+            };
+            ShowMat("ワールド行列##wm", matWorld_);
+            ShowMat("ビュー行列##vm", matView_);
+            ShowMat("プロジェクション行列##pm", matProjection_);
+            ImGui::Unindent(6.0f);
+            ImGui::Spacing();
+        }
+
+        // ====================================================
+        // [5] Save / Load
+        // ====================================================
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgOrange);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.60f, 0.10f, 0.20f});
+        bool ioOpen = ImGui::CollapsingHeader("保存 / 読み込み##vpio");
+        ImGui::PopStyleColor(2);
+
+        if (ioOpen) {
+            ImGui::Indent(6.0f);
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("JSONファイル名 (拡張子なし)");
+            ImGui::PopStyleColor();
+            static char fname[256] = "MyCamera";
+            ImGui::SetNextItemWidth(-1);
+            ImGui::InputText("##vpfname", fname, sizeof(fname));
+            ImGui::Spacing();
+
+            ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.45f, 0.20f, 0.8f});
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.25f, 0.55f, 0.25f, 0.9f});
+            if (ImGui::Button("現在のカメラを保存##vpsv", ImVec2(-1, 0)))
+                Save(fname);
+            ImGui::Spacing();
+            if (ImGui::Button("ファイルから読み込み##vpld", ImVec2(-1, 0)))
+                Load(fname);
+            ImGui::PopStyleColor(2);
+            ImGui::Unindent(6.0f);
+            ImGui::Spacing();
+        }
+
+        // ====================================================
+        // [6] Camera Easing
+        // ====================================================
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderYellow);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.88f, 0.15f, 0.35f});
+        bool easeOpen = ImGui::CollapsingHeader("カメライージング##vpease");
+        ImGui::PopStyleColor(2);
+
+        if (easeOpen) {
+            ImGui::Indent(6.0f);
+
+            // 状態バッジ
+            ImGui::AlignTextToFramePadding();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("状態:");
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            StatusBadge(isEasing_ ? "イージング中" : "待機",
+                        isEasing_ ? DebugTheme::kAccentYellow : DebugTheme::kAccentGreen);
+
             if (isEasing_) {
+                ImGui::PushStyleColor(ImGuiCol_PlotHistogram, DebugTheme::kAccentYellow);
+                ImGui::ProgressBar(easingTime_ / easingDuration_, ImVec2(-1, 6), "");
+                ImGui::PopStyleColor();
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::Text("  %.2f / %.2f sec", easingTime_, easingDuration_);
+                ImGui::PopStyleColor();
+            }
+
+            ImGui::Spacing();
+
+            // Easing type
+            static int easeType = 0;
+            static const char *easeNames[] = {
+                "Linear",
+                "InSine", "OutSine", "InOutSine",
+                "InQuad", "OutQuad", "InOutQuad",
+                "InCubic", "OutCubic", "InOutCubic",
+                "InQuart", "OutQuart", "InOutQuart",
+                "InQuint", "OutQuint", "InOutQuint",
+                "InCirc", "OutCirc", "InOutCirc",
+                "InExpo", "OutExpo", "InOutExpo",
+                "InBack", "OutBack", "InOutBack",
+                "InElastic", "OutElastic", "InOutElastic",
+                "InBounce", "OutBounce", "InOutBounce"};
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("イージング種別");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::Combo("##vpeasetype", &easeType, easeNames, IM_ARRAYSIZE(easeNames));
+
+            ImGui::Spacing();
+
+            // Duration -- ラベル上、スライダー全幅
+            static float dur = 2.0f;
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("所要時間 [秒]");
+            ImGui::PopStyleColor();
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgYellow);
+            ImGui::PushStyleColor(ImGuiCol_SliderGrab, DebugTheme::kAccentYellow);
+            ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, DebugTheme::kAccentYellow);
+            ImGui::SetNextItemWidth(-1);
+            ImGui::SliderFloat("##vpeasedur", &dur, 0.1f, 10.f, "%.1f sec");
+            ImGui::PopStyleColor(3);
+
+            ImGui::Spacing();
+
+            // Target JSON
+            static char jname[256] = "CameraTarget";
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("目標JSONファイル名 (拡張子なし)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::InputText("##vpjname", jname, sizeof(jname));
+
+            ImGui::Spacing();
+
+            // Start / Stop buttons
+            bool canStart = !isEasing_ && strlen(jname) > 0;
+            ImGui::PushStyleColor(ImGuiCol_Button,
+                                  canStart ? ImVec4{0.50f, 0.40f, 0.10f, 0.85f}
+                                           : ImVec4{0.25f, 0.25f, 0.28f, 0.6f});
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                                  canStart ? ImVec4{0.65f, 0.55f, 0.15f, 0.90f}
+                                           : ImVec4{0.25f, 0.25f, 0.28f, 0.6f});
+            if (ImGui::Button("イージング開始##vpstart", ImVec2(-1, 0)) && canStart)
+                EaseCameraMove(static_cast<EasingType>(easeType), jname, dur);
+            ImGui::PopStyleColor(2);
+
+            ImGui::PushStyleColor(ImGuiCol_Button, {0.50f, 0.15f, 0.15f, 0.85f});
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.70f, 0.20f, 0.20f, 0.90f});
+            if (ImGui::Button("イージング停止##vpstop", ImVec2(-1, 0)) && isEasing_) {
                 isEasing_ = false;
-                easingTime_ = 0.0f;
+                easingTime_ = 0.f;
             }
-        }
+            ImGui::PopStyleColor(2);
 
-        ImGui::Spacing();
-
-        // 現在値と目標値の表示（イージング中のみ）
-        if (isEasing_) {
-            if (ImGui::TreeNode("イージング詳細情報")) {
-                ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "開始値");
-                ImGui::Text("位置: %.2f, %.2f, %.2f",
-                            startTranslation_.x, startTranslation_.y, startTranslation_.z);
-                ImGui::Text("回転: %.2f, %.2f, %.2f",
-                            startEulerRotation_.x, startEulerRotation_.y, startEulerRotation_.z);
-
+            // 実行中の詳細
+            if (isEasing_) {
                 ImGui::Spacing();
-
-                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "目標値");
-                ImGui::Text("位置: %.2f, %.2f, %.2f",
-                            targetTranslation_.x, targetTranslation_.y, targetTranslation_.z);
-                ImGui::Text("回転: %.2f, %.2f, %.2f",
-                            targetEulerRotation_.x, targetEulerRotation_.y, targetEulerRotation_.z);
-
-                ImGui::Spacing();
-
-                ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.4f, 1.0f), "現在値");
-                ImGui::Text("位置: %.2f, %.2f, %.2f",
-                            translation_.x, translation_.y, translation_.z);
-                ImGui::Text("回転: %.2f, %.2f, %.2f",
-                            eulerRotation_.x, eulerRotation_.y, eulerRotation_.z);
-
-                ImGui::TreePop();
+                ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgYellow);
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.85f, 0.10f, 0.20f});
+                if (ImGui::CollapsingHeader("イージング詳細##vpdet")) {
+                    ImGui::Indent(6.0f);
+                    auto R3 = [](const char *lbl, ImVec4 col, float x, float y, float z) {
+                        ImGui::PushStyleColor(ImGuiCol_Text, col);
+                        ImGui::Text("%-8s", lbl);
+                        ImGui::PopStyleColor();
+                        ImGui::SameLine(72.f);
+                        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextReadOnly);
+                        ImGui::Text("%.2f  %.2f  %.2f", x, y, z);
+                        ImGui::PopStyleColor();
+                    };
+                    R3("開始", DebugTheme::kAccentCyan,
+                       startTranslation_.x, startTranslation_.y, startTranslation_.z);
+                    R3("目標", DebugTheme::kAccentRed,
+                       targetTranslation_.x, targetTranslation_.y, targetTranslation_.z);
+                    R3("現在", DebugTheme::kAccentYellow,
+                       translation_.x, translation_.y, translation_.z);
+                    ImGui::Unindent(6.0f);
+                }
+                ImGui::PopStyleColor(2);
             }
-        }
 
-        ImGui::Spacing();
-
-        // クイック設定ボタン群
-        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "クイック設定");
-
-        if (ImGui::Button("現在位置を保存", ImVec2(120, 25))) {
-            Save("CurrentCamera");
-        }
-
-        ImGui::SameLine();
-
-        if (ImGui::Button("原点に戻る", ImVec2(80, 25))) {
-            if (!isEasing_) {
-                // 一時的にJSONファイルに原点位置を保存
-                std::unique_ptr<DataHandler> tempData = std::make_unique<DataHandler>("Camera", "TempOrigin");
-                tempData->Save("translation", Vector3{0.0f, 0.0f, -10.0f});
-                tempData->Save("eulerRotation", Vector3{0.0f, 0.0f, 0.0f});
-                tempData->Save("quateRotation", Quaternion::IdentityQuaternion());
-
-                EasingType easeType = static_cast<EasingType>(selectedEasingType);
-                EaseCameraMove(easeType, "TempOrigin", duration);
+            ImGui::Spacing();
+            SectionHeader("[ クイック操作 ]", DebugTheme::kTextDim);
+            if (ImGui::SmallButton("現在位置を保存##vpqsave"))
+                Save("CurrentCamera");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("原点に戻す##vpqorig") && !isEasing_) {
+                auto tmp = std::make_unique<DataHandler>("Camera", "TempOrigin");
+                tmp->Save("translation", Vector3{0.f, 0.f, -10.f});
+                tmp->Save("eulerRotation", Vector3{0.f, 0.f, 0.f});
+                tmp->Save("quateRotation", Quaternion::IdentityQuaternion());
+                EaseCameraMove(static_cast<EasingType>(easeType), "TempOrigin", dur);
             }
-        }
 
-        // 使い方の説明
-        if (ImGui::TreeNode("使い方")) {
-            ImGui::TextWrapped("1. 目標位置をJSONファイルに保存しておく");
-            ImGui::TextWrapped("2. イージングタイプと継続時間を選択");
-            ImGui::TextWrapped("3. JSONファイル名を入力して「イージング開始」をクリック");
-            ImGui::TextWrapped("4. 必要に応じて「停止」ボタンで中断可能");
-            ImGui::TreePop();
+            ImGui::Unindent(6.0f);
         }
     }
 
     ImGui::End();
+    ImGui::PopStyleVar(5);
 #endif // USE_IMGUI
 }
 

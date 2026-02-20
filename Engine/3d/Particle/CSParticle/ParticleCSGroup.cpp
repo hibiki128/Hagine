@@ -483,10 +483,6 @@ void ParticleCSGroup::DrawImGui() {
     if (!settingsData_)
         return;
 
-    // -------------------------------------------------------
-    // ヘルパー：色付きセクションヘッダ（CollapsingHeader）
-    // 開いた状態をデフォルトにしたい場合は ImGuiTreeNodeFlags_DefaultOpen を渡す
-    // -------------------------------------------------------
     auto PushSectionColor = [](ImVec4 col) {
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(col.x * 0.7f, col.y * 0.7f, col.z * 0.7f, 0.75f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(col.x * 0.85f, col.y * 0.85f, col.z * 0.85f, 0.9f));
@@ -494,7 +490,6 @@ void ParticleCSGroup::DrawImGui() {
     };
     auto PopSectionColor = []() { ImGui::PopStyleColor(3); };
 
-    // 行ラベル幅を統一
     ImGui::PushItemWidth(-120.0f);
 
     // =======================================================
@@ -512,8 +507,8 @@ void ParticleCSGroup::DrawImGui() {
             int dynMax = CalculateOptimalEmitCount();
             int absMax = static_cast<int>(settingsData_->maxParticleCount);
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.15f, 0.15f, 0.5f));
-            if (ImGui::DragInt("出現数", &emitCount, 1, 0, absMax))
-                settingsData_->emitCount = static_cast<uint32_t>(std::clamp(emitCount, 0, absMax));
+            if (ImGui::DragInt("出現数", &emitCount, 1, 0, 100000))
+                settingsData_->emitCount = static_cast<uint32_t>(emitCount);
             ImGui::PopStyleColor();
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("推奨上限: %d  /  絶対上限: %d", dynMax, absMax);
@@ -530,11 +525,10 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.15f, 0.15f, 0.5f));
             float hw = (ImGui::GetContentRegionAvail().x - 130.0f) * 0.5f - 4.0f;
             ImGui::SetNextItemWidth(hw);
-            ImGui::DragFloat("##lifeMin", &settingsData_->lifeTimeMin, 0.1f, 0.1f, settingsData_->lifeTimeMax, "Min %.1fs");
+            ImGui::DragFloat("##lifeMin", &settingsData_->lifeTimeMin, 0.1f, 0.0f, 9999.0f, "Min %.4fs");
             ImGui::SameLine(0, 4);
             ImGui::SetNextItemWidth(hw);
-            if (ImGui::DragFloat("##lifeMax", &settingsData_->lifeTimeMax, 0.1f, settingsData_->lifeTimeMin, 30.0f, "Max %.1fs"))
-                settingsData_->lifeTimeMax = std::max(settingsData_->lifeTimeMax, settingsData_->lifeTimeMin);
+            ImGui::DragFloat("##lifeMax", &settingsData_->lifeTimeMax, 0.1f, 0.0f, 9999.0f, "Max %.4fs");
             ImGui::SameLine();
             ImGui::TextUnformatted("寿命(s)");
             ImGui::PopStyleColor();
@@ -545,11 +539,10 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.3f, 0.1f, 0.5f));
             float hw = (ImGui::GetContentRegionAvail().x - 130.0f) * 0.5f - 4.0f;
             ImGui::SetNextItemWidth(hw);
-            ImGui::DragFloat("##scMin", &settingsData_->scaleMin, 0.01f, 0.0f, settingsData_->scaleMax, "Min %.2f");
+            ImGui::DragFloat("##scMin", &settingsData_->scaleMin, 0.01f, 0.0f, 9999.0f, "Min %.4f");
             ImGui::SameLine(0, 4);
             ImGui::SetNextItemWidth(hw);
-            if (ImGui::DragFloat("##scMax", &settingsData_->scaleMax, 0.01f, settingsData_->scaleMin, 100.0f, "Max %.2f"))
-                settingsData_->scaleMax = std::max(settingsData_->scaleMax, settingsData_->scaleMin);
+            ImGui::DragFloat("##scMax", &settingsData_->scaleMax, 0.01f, 0.0f, 9999.0f, "Max %.4f");
             ImGui::SameLine();
             ImGui::TextUnformatted("サイズ");
             ImGui::PopStyleColor();
@@ -567,10 +560,9 @@ void ParticleCSGroup::DrawImGui() {
     if (openAppearance) {
         ImGui::Indent();
 
-        // 初期速度
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.2f, 0.4f, 0.5f));
-        ImGui::DragFloat3("速度 Min", &settingsData_->velocityMin.x, 0.01f);
-        ImGui::DragFloat3("速度 Max", &settingsData_->velocityMax.x, 0.01f);
+        ImGui::DragFloat3("速度 Min", &settingsData_->velocityMin.x, 0.01f, -9999.0f, 9999.0f, "%.4f");
+        ImGui::DragFloat3("速度 Max", &settingsData_->velocityMax.x, 0.01f, -9999.0f, 9999.0f, "%.4f");
         ImGui::PopStyleColor();
 
         ImGui::Spacing();
@@ -602,7 +594,7 @@ void ParticleCSGroup::DrawImGui() {
     }
 
     // =======================================================
-    // 3. 動作設定（黄緑系）— 基本動作フラグ
+    // 3. 動作設定（黄緑系）
     // =======================================================
     PushSectionColor(ImVec4(0.5f, 0.75f, 0.2f, 1.0f));
     bool openMotion = ImGui::CollapsingHeader("  動作設定");
@@ -628,8 +620,8 @@ void ParticleCSGroup::DrawImGui() {
             if (v) {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
-                ImGui::DragFloat("周波数##sf", &settingsData_->sinScaleFrequency, 0.1f);
-                ImGui::DragFloat("振幅##sa", &settingsData_->sinScaleAmplitude, 0.01f);
+                ImGui::DragFloat("周波数##sf", &settingsData_->sinScaleFrequency, 0.1f, 0.0f, 999.0f, "%.4f");
+                ImGui::DragFloat("振幅##sa", &settingsData_->sinScaleAmplitude, 0.01f, 0.0f, 999.0f, "%.4f");
                 ImGui::PopStyleColor();
                 ImGui::Unindent();
             }
@@ -643,7 +635,7 @@ void ParticleCSGroup::DrawImGui() {
             if (v) {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
-                ImGui::DragFloat3("重力ベクトル", &settingsData_->gravity.x, 0.1f);
+                ImGui::DragFloat3("重力ベクトル", &settingsData_->gravity.x, 0.1f, -9999.0f, 9999.0f, "%.4f");
                 ImGui::PopStyleColor();
                 ImGui::Unindent();
             }
@@ -659,7 +651,7 @@ void ParticleCSGroup::DrawImGui() {
             if (v) {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
-                ImGui::DragFloat3("加速度ベクトル", &settingsData_->acceleration.x, 0.1f);
+                ImGui::DragFloat3("加速度ベクトル", &settingsData_->acceleration.x, 0.1f, -9999.0f, 9999.0f, "%.4f");
                 ImGui::PopStyleColor();
                 ImGui::Unindent();
             }
@@ -675,7 +667,7 @@ void ParticleCSGroup::DrawImGui() {
             if (v) {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
-                ImGui::DragFloat("減衰係数##vd", &settingsData_->velocityDampingFactor, 0.001f, 0.8f, 0.999f, "%.3f");
+                ImGui::DragFloat("減衰係数##vd", &settingsData_->velocityDampingFactor, 0.001f, 0.0f, 1.0f, "%.4f");
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("推奨: 0.95-0.99");
                 ImGui::PopStyleColor();
@@ -693,7 +685,7 @@ void ParticleCSGroup::DrawImGui() {
             if (v) {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
-                ImGui::DragFloat("開始タイミング##ld", &settingsData_->lifetimeVelocityDampingStart, 0.01f, 0.0f, 1.0f, "%.2f");
+                ImGui::DragFloat("開始タイミング##ld", &settingsData_->lifetimeVelocityDampingStart, 0.01f, 0.0f, 1.0f, "%.4f");
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("0.0=最初から / 1.0=最後のみ\n推奨: 0.5-0.8");
                 ImGui::PopStyleColor();
@@ -723,11 +715,11 @@ void ParticleCSGroup::DrawImGui() {
 
         if (v) {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.25f, 0.05f, 0.5f));
-            ImGui::DragFloat("放射強度##rs", &settingsData_->radialVelocityStrength, 0.1f, 0.1f, 20.0f);
-            ImGui::DragFloat("ランダム性##rr", &settingsData_->radialVelocityRandomness, 0.01f, 0.0f, 1.0f, "%.2f");
+            ImGui::DragFloat("放射強度##rs", &settingsData_->radialVelocityStrength, 0.1f, 0.0f, 999.0f, "%.4f");
+            ImGui::DragFloat("ランダム性##rr", &settingsData_->radialVelocityRandomness, 0.01f, 0.0f, 1.0f, "%.4f");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("0=完全放射状 / 1=完全ランダム\n推奨: 0.1-0.3");
-            ImGui::DragFloat3("放射中心##rc", &settingsData_->radialVelocityCenter.x, 0.1f);
+            ImGui::DragFloat3("放射中心##rc", &settingsData_->radialVelocityCenter.x, 0.1f, -9999.0f, 9999.0f, "%.4f");
             ImGui::PopStyleColor();
 
             ImGui::Spacing();
@@ -774,11 +766,11 @@ void ParticleCSGroup::DrawImGui() {
 
         if (v) {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.1f, 0.4f, 0.5f));
-            ImGui::DragFloat("開始タイミング##gs", &settingsData_->gatherStartRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+            ImGui::DragFloat("開始タイミング##gs", &settingsData_->gatherStartRatio, 0.01f, 0.0f, 1.0f, "%.4f");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("寿命の何%%から引き寄せを開始するか");
-            ImGui::DragFloat("ギャザー強度##gstr", &settingsData_->gatherStrength, 0.1f, 0.0f, 20.0f);
-            ImGui::DragFloat3("目標座標##gt", &settingsData_->gatherTargetOffset.x, 0.1f);
+            ImGui::DragFloat("ギャザー強度##gstr", &settingsData_->gatherStrength, 0.1f, 0.0f, 999.0f, "%.4f");
+            ImGui::DragFloat3("目標座標##gt", &settingsData_->gatherTargetOffset.x, 0.1f, -9999.0f, 9999.0f, "%.4f");
             ImGui::PopStyleColor();
             bool gft = settingsData_->enableGatherForTrail != 0;
             if (ImGui::Checkbox("トレイルにも適用##gft", &gft))
@@ -805,13 +797,12 @@ void ParticleCSGroup::DrawImGui() {
 
         if (v) {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.05f, 0.3f, 0.4f, 0.5f));
-            ImGui::DragFloat("回転強度##vstr", &settingsData_->vortexStrength, 0.1f);
+            ImGui::DragFloat("回転強度##vstr", &settingsData_->vortexStrength, 0.1f, -999.0f, 999.0f, "%.4f");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("+ で正回転 / - で逆回転");
-            ImGui::DragFloat3("目標座標##vt", &settingsData_->vortexTargetOffset.x, 0.1f);
+            ImGui::DragFloat3("目標座標##vt", &settingsData_->vortexTargetOffset.x, 0.1f, -9999.0f, 9999.0f, "%.4f");
             ImGui::PopStyleColor();
 
-            // 軸プリセット
             ImGui::Text("回転軸:");
             ImGui::SameLine();
             if (ImGui::SmallButton("X##vx"))
@@ -823,7 +814,7 @@ void ParticleCSGroup::DrawImGui() {
             if (ImGui::SmallButton("Z##vz"))
                 settingsData_->vortexAxis = {0, 0, 1};
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.05f, 0.3f, 0.4f, 0.5f));
-            ImGui::DragFloat3("軸ベクトル##vax", &settingsData_->vortexAxis.x, 0.05f, -1.0f, 1.0f);
+            ImGui::DragFloat3("軸ベクトル##vax", &settingsData_->vortexAxis.x, 0.05f, -1.0f, 1.0f, "%.4f");
             ImGui::PopStyleColor();
 
             bool vft = settingsData_->enableVortexForTrail != 0;
@@ -848,44 +839,128 @@ void ParticleCSGroup::DrawImGui() {
         bool v = settingsData_->enableCurlNoise != 0;
         if (ImGui::Checkbox("カールノイズを有効化", &v))
             settingsData_->enableCurlNoise = v ? 1 : 0;
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("発散ゼロの速度場で流体的な動きを実現\nvelocity を完全置き換えするため\n他の速度系エフェクトと排他的に使うと綺麗です");
 
         if (v) {
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.05f, 0.35f, 0.3f, 0.5f));
+            // --------------------------------------------------
+            // ブレンドモード（新規追加）
+            // --------------------------------------------------
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 1.0f));
+            ImGui::TextUnformatted("速度合成モード");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
 
-            ImGui::DragFloat("スケール##cns", &settingsData_->curlNoiseScale, 0.01f, 0.01f, 5.0f, "%.3f");
+            {
+                int blendMode = static_cast<int>(settingsData_->curlNoiseBlendMode);
+
+                // ラジオボタン：置き換え
+                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 1.0f, 0.9f, 1.0f));
+                if (ImGui::RadioButton("置き換え##cnbm0", blendMode == 0))
+                    settingsData_->curlNoiseBlendMode = 0;
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("velocity を完全に置き換える（従来動作）\n流体的な挙動。Gather/Vortex の影響は受けない。");
+
+                ImGui::SameLine();
+
+                // ラジオボタン：加算
+                if (ImGui::RadioButton("加算##cnbm1", blendMode == 1))
+                    settingsData_->curlNoiseBlendMode = 1;
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("既存の velocity に加算する\nGather / Vortex 等と組み合わせて使える。\n加速しすぎる場合は強度を下げるか速度減衰を併用。");
+                ImGui::PopStyleColor();
+
+                // 加算モード時の注意表示
+                if (blendMode == 1) {
+                    ImGui::Indent();
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.85f, 0.3f, 1.0f));
+                    ImGui::TextUnformatted("! 速度減衰との併用を推奨");
+                    ImGui::PopStyleColor();
+                    ImGui::Unindent();
+                }
+            }
+
+            ImGui::Spacing();
+
+            // --------------------------------------------------
+            // ノイズパラメータ
+            // --------------------------------------------------
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 1.0f));
+            ImGui::TextUnformatted("ノイズパラメータ");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.05f, 0.35f, 0.3f, 0.5f));
+            ImGui::DragFloat("スケール##cns", &settingsData_->curlNoiseScale, 0.01f, 0.0f, 999.0f, "%.4f");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("小 → 大きくゆったりした渦\n大 → 細かい乱流");
-            ImGui::DragFloat("強度##cnstr", &settingsData_->curlNoiseStrength, 0.1f, 0.0f, 20.0f, "%.2f");
-            ImGui::DragFloat("時間変化##cntm", &settingsData_->curlNoiseTimeScale, 0.01f, 0.0f, 2.0f, "%.3f");
+            ImGui::DragFloat("強度##cnstr", &settingsData_->curlNoiseStrength, 0.1f, 0.0f, 999.0f, "%.4f");
+            ImGui::DragFloat("時間変化##cntm", &settingsData_->curlNoiseTimeScale, 0.01f, 0.0f, 99.0f, "%.4f");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("0.0 = 固定フロー / 大 = 激しく変化");
-
             ImGui::PopStyleColor();
 
             int oct = static_cast<int>(settingsData_->curlNoiseOctaves);
-            if (ImGui::SliderInt("オクターブ##cno", &oct, 1, 4))
+            if (ImGui::DragInt("オクターブ##cno", &oct, 1, 1, 16))
                 settingsData_->curlNoiseOctaves = static_cast<uint32_t>(oct);
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("1=軽量なめらか / 4=複雑（負荷増）");
 
-            // 引き戻し
+            // --------------------------------------------------
+            // 分散オフセット（新規追加）
+            // --------------------------------------------------
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 1.0f));
+            ImGui::TextUnformatted("分散オフセット");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.05f, 0.35f, 0.3f, 0.5f));
+            ImGui::DragFloat("分散強度##cnprs", &settingsData_->curlNoisePosRandomStrength, 0.05f, 0.0f, 10.0f, "%.4f");
+            ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(
+                    "エミッタが小さく全員が同じ位置から生まれるとき、\n"
+                    "全パーティクルが同一方向に動くのを防ぐ。\n"
+                    "各パーティクル固有のオフセットをサンプリング座標に加算し\n"
+                    "異なるノイズフィールドを参照させる。\n\n"
+                    "0.0 = オフセットなし（従来動作）\n"
+                    "推奨: 0.5〜2.0  一点から広がる演出に");
+
+            // 分散強度が有効なとき視覚的な補足を表示
+            if (settingsData_->curlNoisePosRandomStrength > 0.0f) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 0.8f));
+                ImGui::Text("  現在: %.4f  (各パーティクルが固有の方向に発散)", settingsData_->curlNoisePosRandomStrength);
+                ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
+
+            // --------------------------------------------------
+            // 引き戻し設定
+            // --------------------------------------------------
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 1.0f));
             ImGui::TextUnformatted("引き戻し設定");
             ImGui::PopStyleColor();
             ImGui::Separator();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.05f, 0.35f, 0.3f, 0.5f));
-            ImGui::DragFloat("引き戻し強度##cna", &settingsData_->curlNoiseAttractStrength, 0.01f, 0.0f, 5.0f, "%.3f");
+            ImGui::DragFloat("引き戻し強度##cna", &settingsData_->curlNoiseAttractStrength, 0.01f, 0.0f, 999.0f, "%.4f");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("0 = 無効\n大きいほどエミッター付近に密集して流れる");
-            ImGui::DragFloat3("引き戻し中心##cnac", &settingsData_->curlNoiseAttractCenter.x, 0.1f);
+            ImGui::DragFloat3("引き戻しオフセット##cnac", &settingsData_->curlNoiseAttractCenter.x, 0.1f, -9999.0f, 9999.0f, "%.4f");
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("通常はエミッターと同じ座標に設定\nコードから毎フレーム SetCurlNoiseAttractCenter() で更新推奨");
+                ImGui::SetTooltip(
+                    "エミッター座標を基準としたオフセット。\n"
+                    "(0, 0, 0) でエミッターの中心に引き戻す。\n"
+                    "C++側で毎フレーム\n"
+                    "  settingsData_->curlNoiseAttractCenter =\n"
+                    "      emitterPos + offset;\n"
+                    "として渡すこと。");
             ImGui::PopStyleColor();
 
+            // --------------------------------------------------
             // プリセット
+            // --------------------------------------------------
             ImGui::Spacing();
             ImGui::TextDisabled("プリセット:");
             ImGui::SameLine();
@@ -895,6 +970,8 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->curlNoiseTimeScale = 0.15f;
                 settingsData_->curlNoiseOctaves = 2;
                 settingsData_->curlNoiseAttractStrength = 0.3f;
+                settingsData_->curlNoiseBlendMode = 0;
+                settingsData_->curlNoisePosRandomStrength = 0.0f;
             }
             ImGui::SameLine();
             if (ImGui::SmallButton("炎・乱流")) {
@@ -903,6 +980,8 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->curlNoiseTimeScale = 0.6f;
                 settingsData_->curlNoiseOctaves = 3;
                 settingsData_->curlNoiseAttractStrength = 0.8f;
+                settingsData_->curlNoiseBlendMode = 0;
+                settingsData_->curlNoisePosRandomStrength = 0.0f;
             }
             ImGui::SameLine();
             if (ImGui::SmallButton("水流")) {
@@ -911,7 +990,22 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->curlNoiseTimeScale = 0.25f;
                 settingsData_->curlNoiseOctaves = 2;
                 settingsData_->curlNoiseAttractStrength = 0.5f;
+                settingsData_->curlNoiseBlendMode = 0;
+                settingsData_->curlNoisePosRandomStrength = 0.0f;
             }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("一点放射")) {
+                // 小さいエミッタから四方八方に広がる演出向けプリセット
+                settingsData_->curlNoiseScale = 0.6f;
+                settingsData_->curlNoiseStrength = 2.0f;
+                settingsData_->curlNoiseTimeScale = 0.2f;
+                settingsData_->curlNoiseOctaves = 2;
+                settingsData_->curlNoiseAttractStrength = 0.0f;
+                settingsData_->curlNoiseBlendMode = 0;
+                settingsData_->curlNoisePosRandomStrength = 1.5f;
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("小さいエミッタから四方八方に広がる演出向け\n分散強度: 1.5 を設定します");
         }
 
         ImGui::PopStyleColor();
@@ -935,32 +1029,29 @@ void ParticleCSGroup::DrawImGui() {
         if (v) {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.3f, 0.15f, 0.5f));
 
-            // 基本
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.7f, 1.0f));
             ImGui::TextUnformatted("基本設定");
             ImGui::PopStyleColor();
             ImGui::Separator();
-            ImGui::DragFloat("生成間隔距離##tsd", &settingsData_->trailSpawnDistance, 0.01f, 0.01f, 1.0f, "%.2f");
+            ImGui::DragFloat("生成間隔距離##tsd", &settingsData_->trailSpawnDistance, 0.01f, 0.0f, 999.0f, "%.4f");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("この距離ごとにトレイルを生成\n小さいほど滑らか（推奨: 0.05-0.15）");
             int maxT = static_cast<int>(settingsData_->maxTrailPerParticle);
-            if (ImGui::DragInt("最大数/親##tmax", &maxT, 1, 1, 20))
+            if (ImGui::DragInt("最大数/親##tmax", &maxT, 1, 1, 1000))
                 settingsData_->maxTrailPerParticle = static_cast<uint32_t>(maxT);
 
-            // 特性
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.7f, 1.0f));
             ImGui::TextUnformatted("トレイル特性");
             ImGui::PopStyleColor();
             ImGui::Separator();
-            ImGui::DragFloat("寿命倍率##tlt", &settingsData_->trailLifeTimeScale, 0.05f, 0.3f, 3.0f);
+            ImGui::DragFloat("寿命倍率##tlt", &settingsData_->trailLifeTimeScale, 0.05f, 0.0f, 999.0f, "%.4f");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("親の残り寿命に対する倍率（推奨: 0.8-1.5）");
-            ImGui::DragFloat("最小寿命(s)##tmn", &settingsData_->trailMinLifeTime, 0.05f, 0.1f, 2.0f);
-            ImGui::DragFloat3("スケール倍率##tsc", &settingsData_->trailScaleMultiplier.x, 0.01f, 0.1f, 2.0f);
+            ImGui::DragFloat("最小寿命(s)##tmn", &settingsData_->trailMinLifeTime, 0.05f, 0.0f, 999.0f, "%.4f");
+            ImGui::DragFloat3("スケール倍率##tsc", &settingsData_->trailScaleMultiplier.x, 0.01f, 0.0f, 999.0f, "%.4f");
             ImGui::ColorEdit4("色倍率##tco", &settingsData_->trailColorMultiplier.x);
 
-            // 速度
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.7f, 1.0f));
             ImGui::TextUnformatted("速度設定");
@@ -974,7 +1065,7 @@ void ParticleCSGroup::DrawImGui() {
             if (inh) {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.3f, 0.15f, 0.5f));
-                ImGui::DragFloat("速度倍率##tvs", &settingsData_->trailVelocityScale, 0.01f, 0.0f, 2.0f);
+                ImGui::DragFloat("速度倍率##tvs", &settingsData_->trailVelocityScale, 0.01f, 0.0f, 99.0f, "%.4f");
                 ImGui::PopStyleColor();
                 ImGui::Unindent();
             }
@@ -984,17 +1075,14 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::Unindent();
     }
 
-  // =======================================================
+    // =======================================================
     // 9. Debug Info（常時表示）
     // =======================================================
-
-    // 循環バッファ定数
     static const int kHistorySize = 256;
 
     ImGui::Spacing();
     ImGui::Separator();
     {
-        // --- パーティクル数を読み取り ---
         int32_t headVal = 0, tailVal = 0;
         int32_t *p = nullptr;
         D3D12_RANGE r = {0, sizeof(int32_t)};
@@ -1009,7 +1097,6 @@ void ParticleCSGroup::DrawImGui() {
         int32_t used = settingsData_->maxParticleCount - (tailVal - headVal);
         float rate = (float)used / (float)settingsData_->maxParticleCount;
 
-        // --- 循環バッファへ記録 ---
         static float particleHistory[kHistorySize] = {};
         static float particleRateHistory[kHistorySize] = {};
         static int histOffset = 0;
@@ -1017,18 +1104,17 @@ void ParticleCSGroup::DrawImGui() {
         particleRateHistory[histOffset] = rate * 100.0f;
         histOffset = (histOffset + 1) % kHistorySize;
 
-        // --- ProgressBar（従来の使用率バー） ---
         char overlay[64];
         sprintf_s(overlay, "%d / %d  (%.1f%%)", used, (int)settingsData_->maxParticleCount, rate * 100.0f);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1, 1, 1, 1));
         ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
-                              rate >= 0.9f ? ImVec4(1.0f, 0.3f, 0.3f, 1) : rate >= 0.7f ? ImVec4(1.0f, 0.9f, 0.2f, 1)
-                                                                                        : ImVec4(0.4f, 1.0f, 0.4f, 1));
+                              rate >= 0.9f   ? ImVec4(1.0f, 0.3f, 0.3f, 1)
+                              : rate >= 0.7f ? ImVec4(1.0f, 0.9f, 0.2f, 1)
+                                             : ImVec4(0.4f, 1.0f, 0.4f, 1));
         ImGui::ProgressBar(rate, ImVec2(-1, 0), overlay);
         ImGui::PopStyleColor(3);
 
-        // --- パーティクル数グラフ ---
         ImGui::Spacing();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.85f, 1.0f, 1.0f));
         ImGui::TextUnformatted("パーティクル数 (履歴)");
@@ -1056,7 +1142,6 @@ void ParticleCSGroup::DrawImGui() {
 
     ImGui::PopItemWidth();
 
-    // デバッグ球描画
     if (settingsData_->enableGather)
         DrawLine3D::GetInstance()->DrawSphere(settingsData_->gatherTarget, {1.0f, 0.0f, 1.0f, 1.0f}, 0.1f, 8);
     if (settingsData_->enableVortex)

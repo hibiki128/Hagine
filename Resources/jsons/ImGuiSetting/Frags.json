@@ -7,10 +7,10 @@
     "showHierarchyView": false,
     "showLightView": false,
     "showMotionEditorView": false,
-    "showObjectView": true,
-    "showOfScreenView": false,
+    "showObjectView": false,
+    "showOfScreenView": true,
     "showParticleView": true,
-    "showSceneView": false,
+    "showSceneView": true,
     "showShortcutWindow": false,
     "showSpriteManagerView": false
 }

@@ -307,6 +307,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\GameObject\Player\Skill\MakanAttackSkill.h" />
     <ClInclude Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.h" />
     <ClInclude Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.h" />
+    <ClInclude Include="Engine\Utility\Debug\ImGui\Debugui_improved.h" />
     <ClInclude Include="Engine\2d\SpriteStruct.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
     <ClInclude Include="Engine\3d\Object\Base\BaseObject.h" />
@@ -416,6 +417,12 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Resources\shaders\OffScreen\Bloom.PS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="Resources\shaders\OffScreen\Pixelate.PS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>

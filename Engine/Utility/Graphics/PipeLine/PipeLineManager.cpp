@@ -1085,6 +1085,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRenderRootSig
         return CreateFocusLineRootSignature();
     case ShaderMode::kPixelate:
         return CreatePixelateRootSignature();
+    case ShaderMode::kBloom:
+        return CreateBloomRootSignature();
     default:
         return CreateBaseRootSignature();
     }
@@ -1121,6 +1123,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRenderGraphic
         return CreateFocusLineGraphicsPipeLine(rootSignature);
     case ShaderMode::kPixelate:
         return CreatePixelateGraphicsPipeLine(rootSignature);
+    case ShaderMode::kBloom:
+        return CreateBloomGraphicsPipeLine(rootSignature);
     default:
         return CreateNoneGraphicsPipeLine(rootSignature);
     }
@@ -1825,6 +1829,10 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreatePixelateRootS
     return CreateCommonRootSignature(true);
 }
 
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateBloomRootSignature() {
+    return CreateCommonRootSignature(true);
+}
+
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/CopyImage.PS.hlsl", rootSignature);
@@ -1888,5 +1896,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFocusLineGrap
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreatePixelateGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Pixelate.PS.hlsl", rootSignature);
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBloomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    SettingDepthStencilDesc(false);
+    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Bloom.PS.hlsl", rootSignature);
 }
 

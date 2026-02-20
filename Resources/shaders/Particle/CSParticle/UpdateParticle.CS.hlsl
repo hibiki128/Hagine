@@ -199,9 +199,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
         }
         
         // 7. Curl Noise による速度場
-        // ポイント：velocity を「完全に置き換える」ことで
-        // パーティクルが常にフィールドに沿って動く流体的な挙動になる。
-        // 加算方式では加速し続けてバラバラに飛散してしまう。
         if (gSettings.enableCurlNoise)
         {
             bool isTrail = (gParticles[particleIndex].isTrailParticle != 0);
@@ -209,7 +206,29 @@ void main(uint3 DTid : SV_DispatchThreadID)
             {
                 float3 pos = gParticles[particleIndex].translate;
                 
-                // Curl Noise 速度場を計算して velocity を置き換え
+                // --------------------------------------------------
+                // [問題2対策] パーティクル固有のランダムオフセットを
+                // CurlNoise サンプリング座標に加算する。
+                // エミッタが小さく全員がほぼ同じ位置から生まれる場合でも、
+                // 各パーティクルが異なるノイズフィールドをサンプリングするため
+                // バラバラの方向に動くようになる。
+                // curlNoisePosRandomStrength = 0 のとき従来と同じ動作。
+                // --------------------------------------------------
+                if (gSettings.curlNoisePosRandomStrength > 0.0f)
+                {
+                    // particleIndex を元にした決定論的オフセット
+                    // 毎フレーム変わらず、パーティクルごとに固有な値になる
+                    float fi = float(particleIndex);
+                    float3 idOffset = float3(
+                        frac(sin(fi * 127.1f) * 43758.5f),
+                        frac(sin(fi * 311.7f) * 43758.5f),
+                        frac(sin(fi * 74.7f) * 43758.5f)
+                    ) * 2.0f - 1.0f; // [-1, 1] に正規化
+                    
+                    pos += idOffset * gSettings.curlNoisePosRandomStrength;
+                }
+                
+                // Curl Noise 速度場を計算
                 float3 curlVel = ComputeCurlNoise(
                     pos,
                     gSettings.curlNoiseScale,
@@ -218,22 +237,44 @@ void main(uint3 DTid : SV_DispatchThreadID)
                 ) * gSettings.curlNoiseStrength;
                 
                 // 引き戻し力（Attract）
-                // パーティクルをエミッター付近に留まらせながら流れさせる。
-                // curlNoiseAttractStrength = 0 で無効（純粋なCurlのみ）。
+                // curlNoiseAttractCenter はエミッター座標 + オフセットを
+                // C++側で毎フレーム合算して渡す。
+                // これによりエミッターが動いても自動追従する。
                 if (gSettings.curlNoiseAttractStrength > 0.0f)
                 {
-                    float3 toCenter = gSettings.curlNoiseAttractCenter - pos;
+                    float3 attractTarget = gSettings.curlNoiseAttractCenter;
+                    float3 toCenter = attractTarget - gParticles[particleIndex].translate;
                     float dist = length(toCenter);
                     if (dist > 0.001f)
                     {
-                        // 距離に比例した引き戻し力（遠いほど強く引く）
                         float3 attractVel = normalize(toCenter) * dist * gSettings.curlNoiseAttractStrength;
                         curlVel += attractVel;
                     }
                 }
                 
-                // velocity を完全置き換え
-                gParticles[particleIndex].velocity = curlVel;
+                // --------------------------------------------------
+                // [問題1対策] curlNoiseBlendMode によって挙動を切り替え
+                //
+                //   0 (Replace) : velocity を完全置き換え（従来通り）
+                //                 流体的挙動。Gather/Vortex は無効化される。
+                //
+                //   1 (Add)     : velocity に加算
+                //                 Gather/Vortex 等の速度を保持したまま
+                //                 Curl Noise の流れが上乗せされる。
+                //                 ※加算なので加速しすぎる場合は
+                //                   velocityDamping か curlNoiseStrength を
+                //                   小さめに設定することを推奨。
+                // --------------------------------------------------
+                if (gSettings.curlNoiseBlendMode == 0)
+                {
+                    // 完全置き換え（従来動作）
+                    gParticles[particleIndex].velocity = curlVel;
+                }
+                else
+                {
+                    // 加算（Gather/Vortex等と共存）
+                    gParticles[particleIndex].velocity += curlVel * gPerFrame.deltaTime;
+                }
             }
         }
         

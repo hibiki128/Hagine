@@ -28,7 +28,7 @@ class PostEffectParameters {
     void CreateRandom();
     void CreateFocusLine();
     void CreatePixelate();
-    void CreateTransition();
+    void CreateBloom();
 
   private:
 
@@ -100,11 +100,10 @@ class PostEffectParameters {
         float centerY;
     };
     
-    struct Transition {
-        float progress;   // 遷移の進行度
-        float splitSpeed; // 切れ込みが入るスピード
-        float slideSpeed; // 上下にはけるスピード
-        float splitWidth; // 切れ込みの幅
+    struct Bloom {
+        float bloomThreshold;
+        float bloomIntensity;
+        Vector2 texelSize;
     };
 
     // バッファリソース（既存のまま）
@@ -140,8 +139,8 @@ class PostEffectParameters {
     Microsoft::WRL::ComPtr<ID3D12Resource> pixelateResource;
     Pixelate *pixelateData = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> transitionResource;
-    Transition *transitionData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> bloomResource;
+    Bloom *bloomData = nullptr;
 
     std::string texPath_ = "debug/noise0.png";
 };

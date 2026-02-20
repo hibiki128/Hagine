@@ -1,5 +1,3 @@
-// Particle.hlsli
-
 struct VertexShaderOutput
 {
     float4 position : SV_POSITION;
@@ -131,10 +129,10 @@ struct ParticleCSSettings
     float curlNoiseTimeScale;
     uint curlNoiseOctaves;
     float curlNoiseAttractStrength;
-    float padding9;
-    float padding10;
+    uint curlNoiseBlendMode;
+    float curlNoisePosRandomStrength;
     float3 curlNoiseAttractCenter;
-    float padding11;
+    float padding9;
 };
 
 struct EdgeInfo
