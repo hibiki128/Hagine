@@ -4,8 +4,10 @@
 #include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "Scene/SceneManager.h"
 #include "ShowFolder/ShowFolder.h"
+#ifdef _DEBUG
 #include <imgui_internal.h>
 #include <implot.h>
+#endif // DEBUG
 
 BaseObject::~BaseObject() {
     // すべてのコライダーを削除

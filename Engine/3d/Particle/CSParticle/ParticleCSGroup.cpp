@@ -4,7 +4,9 @@
 #include <Graphics/Model/ModelManager.h>
 #include <Line/DrawLine3D.h>
 #include <d3dx12.h>
+#ifdef _DEBUG
 #include <implot.h>
+#endif // DEBUG
 
 void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();

@@ -6,9 +6,11 @@
 
 #include <algorithm>
 #include <filesystem>
-#include <imgui_internal.h>
 #include <iostream>
+#ifdef _DEBUG
 
+
+#include <imgui_internal.h>
 namespace ed = ax::NodeEditor;
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -1279,3 +1281,5 @@ void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
     m_NextLinkId = maxLinkId + 1;
     std::cout << "BTを読込しました: " << fileName << std::endl;
 }
+
+#endif // _DEBUG

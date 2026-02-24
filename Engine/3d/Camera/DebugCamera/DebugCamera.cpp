@@ -4,10 +4,10 @@
 #include "Mymath.h"
 #ifdef _DEBUG
 #include "imgui.h"
+#include <implot.h>
 #endif // _DEBUG
 #include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "algorithm"
-#include <implot.h>
 
 void DebugCamera::Initialize(ViewProjection *viewProjection) {
     viewProjection_ = viewProjection;

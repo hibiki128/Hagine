@@ -1,6 +1,7 @@
 #pragma once
 #include "Application/GameObject/BehaviorTree/Node/BehaviorNode.h"
 #include "Engine/Utility/Data/DataHandler.h"
+#ifdef _DEBUG
 #include "imgui.h"
 #include "imgui_node_editor.h"
 #include <externals/nlohmann/json.hpp>
@@ -155,3 +156,5 @@ class BehaviorTreeEditor {
     std::string m_SelectedFileName = "";
     bool m_ShowLoadWindow = false;
 };
+
+#endif // _DEBUG

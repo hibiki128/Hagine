@@ -28,8 +28,9 @@ void GameScene::Initialize() {
     enemyUI_ = std::make_unique<EnemyUI>();
     fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
-
+#ifdef _DEBUG
     behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
+#endif // _DEBUG
 
     /// ===================================================
     /// 初期化
@@ -71,8 +72,9 @@ void GameScene::Initialize() {
     /// ===================================================
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
     BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
-
+#ifdef _DEBUG
     behaviorTreeEditor_->SetDebugTargets(enemy_ptr, player_ptr);
+#endif // _DEBUG
 }
 
 void GameScene::Finalize() {
@@ -90,11 +92,13 @@ void GameScene::Update() {
 
     // シーン切り替え
     ChangeScene();
+#ifdef _DEBUG
 
     auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
     if (runtimeRoot) {
         enemy_ptr->SetBehaviorTree(runtimeRoot);
     }
+#endif // _DEBUG
 
     //  skyDome_->Update();
     ground_->Update();
@@ -167,14 +171,14 @@ void GameScene::AddSceneSetting() {
 
 void GameScene::AddObjectSetting() {
 #ifdef USE_IMGUI
-  /*  playerUI_->Debug();
-    enemyUI_->Debug();
-    player_ptr->Debug();
-    enemy_ptr->Debug();
+    /*  playerUI_->Debug();
+      enemyUI_->Debug();
+      player_ptr->Debug();
+      enemy_ptr->Debug();
 
-    for (auto &bullet : player_ptr->GetBullets()) {
-        bullet->ImGui();
-    }*/
+      for (auto &bullet : player_ptr->GetBullets()) {
+          bullet->ImGui();
+      }*/
 
     behaviorTreeEditor_->OnImGuiRender();
 #endif // USE_IMGUI
@@ -227,7 +231,7 @@ void GameScene::CameraUpdate() {
 }
 
 void GameScene::ChangeScene() {
-      if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
+    if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
         GameOverTimer_ += Frame::DeltaTime();
         player_ptr->SetIsDeathStaging(true);
         if (GameOverTimer_ >= 2.0f && !isGameOver_) {
@@ -243,5 +247,4 @@ void GameScene::ChangeScene() {
     if (gameUI_->GetIsBackTitle()) {
         sceneManager_->NextSceneReservation("TITLE");
     }
-
 }

@@ -4,6 +4,8 @@
 //  ImGui 1.92.4 + ImGuizmo + ImPlot
 //  * ASCII only  -- no environment-dependent characters
 // ============================================================
+#ifdef _DEBUG
+
 
 namespace DebugTheme {
 constexpr ImVec4 kAccentBlue = {0.20f, 0.55f, 1.00f, 1.0f};
@@ -135,3 +137,4 @@ static bool LabeledSlider(const char *label, const char *id,
     ImGui::PopStyleColor(2);
     return changed;
 }
+#endif // _DEBUG

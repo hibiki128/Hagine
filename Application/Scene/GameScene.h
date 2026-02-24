@@ -1,18 +1,18 @@
 #pragma once
 #include "Application/Camera/FollowCamera.h"
-#include"Application/Camera/StartCamera.h"
+#include "Application/Camera/StartCamera.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Field/Ground/Ground.h"
 #include "Application/GameObject/Player/Player.h"
 #include "Application/UI/Enemy/EnemyUI.h"
 #include "Application/UI/Player/PlayerUI.h"
-#include <Application/Staging/Transition/FadeOut.h>
-#include <Application/Camera/DeathCamera.h>
-#include "SkyBox/SkyBox.h"
 #include "BaseScene.h"
+#include "SkyBox/SkyBox.h"
+#include <Application/Camera/DeathCamera.h>
+#include <Application/Staging/Transition/FadeOut.h>
 #include <Application/UI/Scene/Game/GameUI.h>
 
-#include"Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.h"
+#include "Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.h"
 
 class GameScene : public BaseScene {
   public:
@@ -116,7 +116,7 @@ class GameScene : public BaseScene {
     std::unique_ptr<EnemyUI> enemyUI_;
 
     std::unique_ptr<FadeOut> fadeOut_;
-    
+
     std::unique_ptr<GameUI> gameUI_;
 
     SkyBox *skyBox_ = nullptr;
@@ -129,6 +129,7 @@ class GameScene : public BaseScene {
     float GameOverTimer_ = 0.0f;
 
     float ClearTimer_ = 0.0f;
-
+#ifdef _DEBUG
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
+#endif // _DEBUG
 };

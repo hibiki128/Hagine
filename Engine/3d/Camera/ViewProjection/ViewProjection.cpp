@@ -5,7 +5,9 @@
 #include "Frame.h"
 #include "cmath"
 #include "myMath.h"
+#ifdef _DEBUG
 #include <implot.h>
+#endif // DEBUG
 #include <type/Vector2.h>
 
 void ViewProjection::Initialize(std::string jsonFile) {
