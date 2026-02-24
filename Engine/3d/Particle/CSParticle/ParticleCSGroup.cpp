@@ -401,6 +401,16 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->radialVelocityStrength = 1.0f;
     settingsData_->radialVelocityRandomness = 0.2f;
     settingsData_->radialVelocityCenter = {0.0f, 0.0f, 0.0f};
+
+    settingsData_->enableCurlNoise = 0;
+    settingsData_->curlNoiseScale = 1.0f;
+    settingsData_->curlNoiseStrength = 1.2f;
+    settingsData_->curlNoiseTimeScale = 0.2f;
+    settingsData_->curlNoiseOctaves = 0;
+    settingsData_->curlNoiseAttractStrength = 0.0f;
+    settingsData_->curlNoiseBlendMode = 0;
+    settingsData_->curlNoisePosRandomStrength = 0.0f;
+    settingsData_->curlNoiseAttractCenter = {0.0f, 0.0f, 0.0f};
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
