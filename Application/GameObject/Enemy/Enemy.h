@@ -101,6 +101,7 @@ class Enemy : public BaseObject {
     // ★新規追加: 飛行システム用のGetter
     float GetVerticalVelocity() const { return velocity_.y; }
     float GetVerticalAcceleration() const { return acceleration_.y; }
+    bool GetIsFlying() const { return isFlying_; }
 
     /// <summary>
     /// Setter
@@ -127,6 +128,7 @@ class Enemy : public BaseObject {
     void SetVerticalVelocity(float velocity) { velocity_.y = velocity; }
     void SetVerticalAcceleration(float accel) { acceleration_.y = accel; }
     void SetIsGrounded(bool grounded) { isGrounded_ = grounded; }
+    void SetIsFlying(bool flying) { isFlying_ = flying; }
 
     // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
     Vector3 GetWorldPosition() const { return transform_->translation_; }
@@ -286,6 +288,7 @@ class Enemy : public BaseObject {
     bool canJump_ = false;
     bool isLockOn_ = false;
     bool isGrounded_ = true;
+    bool isFlying_ = false; // ★追加: 飛行中フラグ（重力を無効化）
     bool isStop_ = false;
     bool started_ = false;
     bool isPause_ = false;

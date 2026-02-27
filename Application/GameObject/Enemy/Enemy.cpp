@@ -116,9 +116,9 @@ void Enemy::Update() {
                 // velocity_.y は重力を優先するため上書きしない
             }
 
-            if (!isGrounded_) {
+            if (!isGrounded_ && !isFlying_) {
                 velocity_.y += acceleration_.y * Frame::DeltaTime();
-            } else {
+            } else if (isGrounded_) {
                 acceleration_.y = 0.0f;
             }
         } else {
@@ -366,6 +366,12 @@ void Enemy::CollisionGround() {
 
     transform_->translation_.x += velocity_.x * Frame::DeltaTime();
     transform_->translation_.z += velocity_.z * Frame::DeltaTime();
+
+    // 飛行中は着地判定をスキップ（FlyToGroundノードが重力を復活させるまで）
+    if (isFlying_) {
+        transform_->translation_.y = nextY;
+        return;
+    }
 
     if (nextY <= kGroundLevel) {
         transform_->translation_.y = kGroundLevel;

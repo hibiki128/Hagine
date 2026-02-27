@@ -97,7 +97,7 @@
             "param": 0.0,
             "param2": 0.0,
             "param3": 0.0,
-            "title": "Sequence",
+            "title": "シーケンス",
             "type": 0,
             "x": 28577.0,
             "y": -38403.0
@@ -107,7 +107,7 @@
             "param": 0.0,
             "param2": 0.0,
             "param3": 0.0,
-            "title": "Weight",
+            "title": "重みデコレーター",
             "type": 3,
             "weightedOutputs": [
                 {
@@ -167,7 +167,7 @@
             "param": 0.0,
             "param2": 0.0,
             "param3": 0.0,
-            "title": "Weight",
+            "title": "重みデコレーター",
             "type": 3,
             "weightedOutputs": [
                 {
@@ -211,7 +211,7 @@
             "param": 0.0,
             "param2": 0.0,
             "param3": 0.0,
-            "title": "Weight",
+            "title": "重みデコレーター",
             "type": 3,
             "weightedOutputs": [
                 {
@@ -279,7 +279,7 @@
             "param": 0.0,
             "param2": 0.0,
             "param3": 0.0,
-            "title": "Sequence",
+            "title": "シーケンス",
             "type": 0,
             "x": 29073.0,
             "y": -38461.0
@@ -289,7 +289,7 @@
             "param": 0.0,
             "param2": 0.0,
             "param3": 0.0,
-            "title": "Selector",
+            "title": "セレクター",
             "type": 1,
             "x": 28513.0,
             "y": -38547.0
@@ -299,7 +299,7 @@
             "param": 0.0,
             "param2": 0.0,
             "param3": 0.0,
-            "title": "Sequence",
+            "title": "シーケンス",
             "type": 0,
             "x": 28113.0,
             "y": -38419.0

@@ -395,8 +395,8 @@ NodeStatus EnemyJumpNode::OnUpdate() {
 }
 
 // =========================================================
-// ★修正: ジャンプから飛行状態への遷移ノード
-// ジャンプ実行→空中待機→飛行遷移を一つのノードで処理
+// ジャンプから飛行状態への遷移ノード
+// ジャンプ→自前の減速で最高到達点→そのまま飛行停止
 // =========================================================
 void EnemyJumpToFlyNode::OnEnter() {
     m_ElapsedTime = 0.0f;
@@ -404,49 +404,52 @@ void EnemyJumpToFlyNode::OnEnter() {
     if (!m_Enemy)
         return;
 
-    // ★修正: 地面にいる場合はジャンプを実行
-    if (m_Enemy->GetIsGrounded()) {
-        // ジャンプ力を設定（EnemyJumpNodeと同様）
-        float jumpPower = 15.0f; // デフォルトのジャンプ力
-        m_Enemy->SetVerticalVelocity(jumpPower);
-        m_Enemy->SetIsGrounded(false);
+    // ジャンプ速度を設定
+    m_Enemy->SetVerticalVelocity(m_JumpPower);
+    m_Enemy->SetIsGrounded(false);
 
-        // 重力加速度を負の値に設定（下向きの加速度で落下させる）
-        float fallSpeed = m_Enemy->GetFallSpeed();
-        m_Enemy->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
-    }
-    // 既に空中にいる場合は、落下加速度を設定
-    else {
-        float fallSpeed = m_Enemy->GetFallSpeed();
-        m_Enemy->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
-    }
+    // 即座に飛行フラグON → Enemy::Update()の重力加算を無効化
+    // 代わりにOnUpdate()内で自前で減速させる
+    m_Enemy->SetIsFlying(true);
+    m_Enemy->SetVerticalAcceleration(0.0f);
 }
 
 NodeStatus EnemyJumpToFlyNode::OnUpdate() {
     if (!m_Enemy || !m_Player)
         return NodeStatus::Failure;
 
-    // 横方向の移動を継続 (プレイヤーに向かって移動など)
     m_Enemy->Move();
-
-    // ★重力による速度更新はEnemy::Update()内で自動的に処理される
-    // ここでは重複して処理しない
-
-    // 方向更新
     m_Enemy->DirectionUpdate();
 
-    m_ElapsedTime += 1.0f / 60.0f;
+    float velY = m_Enemy->GetVerticalVelocity();
 
-    // 一定時間経過したら飛行状態に遷移可能
+    if (velY > 0.0f) {
+        // 上昇中：重力相当の値で自前減速（Enemy::Updateの重力はisFlying_でブロック済み）
+        float fallSpeed = m_Enemy->GetFallSpeed();
+        float newVelY = velY - fallSpeed * (1.0f / 60.0f);
+        if (newVelY < 0.0f)
+            newVelY = 0.0f; // 0より下には行かせない
+        m_Enemy->SetVerticalVelocity(newVelY);
+        return NodeStatus::Running;
+    }
+
+    // velocity.y == 0 = 最高到達点に到達 → 完全停止して飛行待機
+    m_Enemy->SetVerticalVelocity(0.0f);
+
+    m_ElapsedTime += 1.0f / 60.0f;
     if (m_ElapsedTime >= kFlyTransitionTime) {
-        return NodeStatus::Success; // 時間経過したので成功
+        return NodeStatus::Success;
     }
 
     return NodeStatus::Running;
 }
 
+void EnemyJumpToFlyNode::OnExit() {
+    // 飛行状態は維持したまま次のノードへ
+}
+
 // =========================================================
-// ★新規実装: 飛行状態 - 上昇動作
+// 飛行状態 - 上昇動作
 // =========================================================
 void EnemyFlyAscendNode::OnEnter() {
     m_CurrentTimer = 0.0f;
@@ -455,31 +458,23 @@ void EnemyFlyAscendNode::OnEnter() {
     if (!m_Enemy)
         return;
 
-    // ★修正: 飛行開始時に速度は維持しつつ、加速度を上昇方向に設定
-    // 重力に抗って上昇するため、正の加速度を設定
-    m_Enemy->SetVerticalAcceleration(kFlyAcceleration);
+    // 飛行フラグを確実にON（重力無効）
+    m_Enemy->SetIsFlying(true);
+    m_Enemy->SetVerticalAcceleration(0.0f);
+    // 上昇速度を直接設定
+    m_Enemy->SetVerticalVelocity(m_Speed);
 }
 
 NodeStatus EnemyFlyAscendNode::OnUpdate() {
     if (!m_Enemy || !m_Player)
         return NodeStatus::Failure;
 
-    // ★Enemy::Update()で加速度が自動適用されるため、
-    // ここでは速度の上限制御のみ行う
-    float currentVelocityY = m_Enemy->GetVerticalVelocity();
+    // 飛行中は加速度ではなく速度を直接維持（重力無効なので加速不要）
+    m_Enemy->SetVerticalVelocity(m_Speed);
 
-    // 上昇速度が目標を超えないようにクランプ
-    if (currentVelocityY > m_Speed) {
-        m_Enemy->SetVerticalVelocity(m_Speed);
-    }
-
-    // 横方向の移動も継続 (プレイヤーに向かって移動など)
     m_Enemy->Move();
-
-    // 方向更新
     m_Enemy->DirectionUpdate();
 
-    // 時間経過チェック
     m_CurrentTimer += 1.0f / 60.0f;
     if (m_CurrentTimer >= m_TargetDuration) {
         return NodeStatus::Success;
@@ -491,15 +486,13 @@ NodeStatus EnemyFlyAscendNode::OnUpdate() {
 void EnemyFlyAscendNode::OnExit() {
     if (!m_Enemy)
         return;
-
-    // ★修正: 上昇終了時に重力を再度適用
-    // 速度は維持するが、加速度を重力に戻す
-    float fallSpeed = m_Enemy->GetFallSpeed();
-    m_Enemy->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
+    // 上昇終了：速度を0にして空中停止（飛行フラグは維持）
+    m_Enemy->SetVerticalVelocity(0.0f);
+    m_Enemy->SetVerticalAcceleration(0.0f);
 }
 
 // =========================================================
-// ★新規実装: 飛行状態 - 下降動作
+// 飛行状態 - 下降動作
 // =========================================================
 void EnemyFlyDescendNode::OnEnter() {
     m_CurrentTimer = 0.0f;
@@ -508,31 +501,22 @@ void EnemyFlyDescendNode::OnEnter() {
     if (!m_Enemy)
         return;
 
-    // ★修正: 下降開始時に下向きの加速度を設定
-    // 重力よりも強い下向きの加速を設定して急降下
-    m_Enemy->SetVerticalAcceleration(-kFlyAcceleration);
+    // 飛行フラグを維持（重力無効のまま下降速度を直接設定）
+    m_Enemy->SetIsFlying(true);
+    m_Enemy->SetVerticalAcceleration(0.0f);
+    m_Enemy->SetVerticalVelocity(-m_Speed);
 }
 
 NodeStatus EnemyFlyDescendNode::OnUpdate() {
     if (!m_Enemy || !m_Player)
         return NodeStatus::Failure;
 
-    // ★Enemy::Update()で加速度が自動適用されるため、
-    // ここでは速度の下限制御のみ行う
-    float currentVelocityY = m_Enemy->GetVerticalVelocity();
+    // 飛行中は速度を直接維持
+    m_Enemy->SetVerticalVelocity(-m_Speed);
 
-    // 下降速度が目標を超えないようにクランプ（負の値）
-    if (currentVelocityY < -m_Speed) {
-        m_Enemy->SetVerticalVelocity(-m_Speed);
-    }
-
-    // 横方向の移動も継続
     m_Enemy->Move();
-
-    // 方向更新
     m_Enemy->DirectionUpdate();
 
-    // 時間経過チェック
     m_CurrentTimer += 1.0f / 60.0f;
     if (m_CurrentTimer >= m_TargetDuration) {
         return NodeStatus::Success;
@@ -544,39 +528,34 @@ NodeStatus EnemyFlyDescendNode::OnUpdate() {
 void EnemyFlyDescendNode::OnExit() {
     if (!m_Enemy)
         return;
-
-    // ★修正: 下降終了時に通常の重力に戻す
-    float fallSpeed = m_Enemy->GetFallSpeed();
-    m_Enemy->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
+    // 下降終了：速度を0にして空中停止（飛行フラグは維持）
+    m_Enemy->SetVerticalVelocity(0.0f);
+    m_Enemy->SetVerticalAcceleration(0.0f);
 }
 
 // =========================================================
-// ★新規実装: 飛行から地上への遷移ノード (着地)
+// 飛行から地上への遷移ノード (着地)
 // =========================================================
 void EnemyFlyToGroundNode::OnEnter() {
-    // 特に初期化処理は不要
+    if (!m_Enemy)
+        return;
+
+    // 飛行フラグをOFF → 重力が復活する
+    m_Enemy->SetIsFlying(false);
+    float fallSpeed = m_Enemy->GetFallSpeed();
+    m_Enemy->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
 }
 
 NodeStatus EnemyFlyToGroundNode::OnUpdate() {
     if (!m_Enemy)
         return NodeStatus::Failure;
 
-    // 地面レベル以下に到達したか確認
-    if (m_Enemy->GetLocalPosition().y <= kGroundLevel) {
-        // 着地処理
-        m_Enemy->SetIsGrounded(true);
+    // Enemy::Update()の重力処理で自然落下する
+    // 地面に着いたら（CollisionGroundで isGrounded_=true になる）
+    if (m_Enemy->GetIsGrounded()) {
         m_Enemy->SetVerticalVelocity(0.0f);
-        // ★修正: 地面に着いたら加速度もゼロに（重力を停止）
         m_Enemy->SetVerticalAcceleration(0.0f);
-
         return NodeStatus::Success;
-    }
-
-    // ★追加: 地面に向かって自然に落下するように重力を適用
-    // 既にEnemy::Update()で処理されているが、念のため確認
-    if (!m_Enemy->GetIsGrounded()) {
-        float fallSpeed = m_Enemy->GetFallSpeed();
-        m_Enemy->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
     }
 
     return NodeStatus::Running;

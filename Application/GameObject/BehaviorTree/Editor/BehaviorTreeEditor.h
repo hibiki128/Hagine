@@ -8,27 +8,29 @@
 // ノードタイプ定義 (Debug / Release 共通)
 // ============================================================
 enum class EditorNodeType {
-    Sequence,
-    Selector,
-    SelectorRandom,
-    DecoratorWeight,
-    ActionRun,
-    ConditionPlayerClose,
-    ConditionHealthLow,
-    ConditionIsGrounded,
-    ConditionIsAirborne,
-    ConditionPlayerState,
-    ActionApproach,
-    ActionDash,
-    ActionStrafe,
-    ActionRetreat,
-    ActionAttack,
-    ActionIdle,
-    ActionJump,
-    ActionJumpToFly,
-    ActionFlyAscend,
-    ActionFlyDescend,
-    ActionFlyToGround
+    // ===== 既存ノード (Before と同じ順序・int値を保持) =====
+    Sequence,             // 0
+    Selector,             // 1
+    SelectorRandom,       // 2
+    DecoratorWeight,      // 3
+    ActionRun,            // 4
+    ConditionPlayerClose, // 5
+    ConditionHealthLow,   // 6
+    ActionApproach,       // 7
+    ActionDash,           // 8
+    ActionStrafe,         // 9
+    ActionRetreat,        // 10
+    ActionAttack,         // 11
+    ActionIdle,           // 12
+    // ===== 新規追加ノード (末尾に追加してint値のずれを防ぐ) =====
+    ActionJump,          // 13
+    ActionJumpToFly,     // 14
+    ActionFlyAscend,     // 15
+    ActionFlyDescend,    // 16
+    ActionFlyToGround,   // 17
+    ConditionIsGrounded, // 18
+    ConditionIsAirborne, // 19
+    ConditionPlayerState // 20
 };
 
 // ============================================================

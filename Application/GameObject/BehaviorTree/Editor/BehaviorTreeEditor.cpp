@@ -135,7 +135,7 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
         runtimeNode = std::make_shared<EnemyJumpNode>(nd.param);
         break;
     case EditorNodeType::ActionJumpToFly:
-        runtimeNode = std::make_shared<EnemyJumpToFlyNode>();
+        runtimeNode = std::make_shared<EnemyJumpToFlyNode>(nd.param);
         break;
     case EditorNodeType::ActionFlyAscend:
         runtimeNode = std::make_shared<EnemyFlyAscendNode>(nd.param, nd.param2, nd.param3);
@@ -362,6 +362,17 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         Parameter3 = 0.15f;
     } else if (type == EditorNodeType::ActionIdle) {
         Parameter = 1.0f;
+    } else if (type == EditorNodeType::ActionJump ||
+               type == EditorNodeType::ActionJumpToFly) {
+        Parameter = 15.0f; // ジャンプ力
+    } else if (type == EditorNodeType::ActionFlyAscend) {
+        Parameter = 1.0f;   // 最小時間
+        Parameter2 = 3.0f;  // 最大時間
+        Parameter3 = 15.0f; // 上昇速度
+    } else if (type == EditorNodeType::ActionFlyDescend) {
+        Parameter = 1.0f;   // 最小時間
+        Parameter2 = 3.0f;  // 最大時間
+        Parameter3 = 15.0f; // 下降速度
     }
 }
 
@@ -534,7 +545,7 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         runtimeNode = std::make_shared<EnemyJumpNode>(eNode.Parameter);
         break;
     case EditorNodeType::ActionJumpToFly:
-        runtimeNode = std::make_shared<EnemyJumpToFlyNode>();
+        runtimeNode = std::make_shared<EnemyJumpToFlyNode>(eNode.Parameter);
         break;
     case EditorNodeType::ActionFlyAscend:
         runtimeNode = std::make_shared<EnemyFlyAscendNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
@@ -946,35 +957,65 @@ void BehaviorTreeEditor::OnImGuiRender() {
         ImGui::EndGroup();
 
         ed::BeginPin(node.InputPinID, ed::PinKind::Input);
+        ImGui::PushID((int)node.InputPinID.Get());
         ImGui::Text("-> 入力");
+        ImGui::PopID();
         ed::EndPin();
 
         ImGui::PushItemWidth(80);
         bool paramChanged = false;
+        // ノードIDを含む一意なウィジェットIDバッファ
+        char wid1[32], wid2[32], wid3[32];
+        snprintf(wid1, sizeof(wid1), "##p1_%d", nodeId);
+        snprintf(wid2, sizeof(wid2), "##p2_%d", nodeId);
+        snprintf(wid3, sizeof(wid3), "##p3_%d", nodeId);
 
         if (node.Type == EditorNodeType::ConditionPlayerClose) {
             ImGui::Text("最小距離");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##min", &node.Parameter, 0.1f, 0.0f, 100.0f, "%.1fm"))
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.1f, 0.0f, 100.0f, "%.1fm"))
                 paramChanged = true;
             ImGui::Text("最大距離");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##max", &node.Parameter2, 0.1f, 0.0f, 100.0f, "%.1fm"))
+            if (ImGui::DragFloat(wid2, &node.Parameter2, 0.1f, 0.0f, 100.0f, "%.1fm"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ConditionHealthLow) {
             ImGui::Text("HP比率");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##hp", &node.Parameter, 0.01f, 0.0f, 1.0f, "%.2f"))
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.01f, 0.0f, 1.0f, "%.2f"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ConditionPlayerState) {
-            ImGui::Text("ステート");
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", node.StateNameParameter.c_str());
+            // ノードエディタ内ではComboが動作しないため、ボタンで切り替える方式
+            static const char *kPlayerStates[] = {
+                "Idle", "Move", "Jump", "Air",
+                "FlyIdle", "FlyMove", "Rush", "EnergyCharge"};
+            static constexpr int kPlayerStateCount = 8;
+            ImGui::Text("ステート: %s", node.StateNameParameter.c_str());
+            // 4つずつ2行に並べてボタン表示
+            for (int si = 0; si < kPlayerStateCount; ++si) {
+                char btnId[32];
+                snprintf(btnId, sizeof(btnId), "##sb_%d_%d", nodeId, si);
+                bool isSelected = (node.StateNameParameter == kPlayerStates[si]);
+                if (isSelected) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
+                }
+                if (ImGui::SmallButton((std::string(kPlayerStates[si]) + btnId).c_str())) {
+                    node.StateNameParameter = kPlayerStates[si];
+                    paramChanged = true;
+                }
+                if (isSelected) {
+                    ImGui::PopStyleColor(2);
+                }
+                // 4つごとに改行、それ以外は横に並べる
+                if (si % 4 != 3)
+                    ImGui::SameLine();
+            }
         } else if (node.Type == EditorNodeType::DecoratorWeight) {
             ImGui::Text("出力数:");
             ImGui::SameLine();
             int outputCount = (int)node.WeightedOutputs.size();
-            if (ImGui::InputInt("##outputCount", &outputCount, 1, 1)) {
+            if (ImGui::InputInt(wid1, &outputCount, 1, 1)) {
                 outputCount = std::max(1, std::min(10, outputCount));
                 int oldSize = (int)node.WeightedOutputs.size();
                 node.WeightedOutputs.resize(outputCount);
@@ -992,7 +1033,9 @@ void BehaviorTreeEditor::OnImGuiRender() {
                 float pct = (totalWeight > 0.0f) ? node.WeightedOutputs[i].Weight / totalWeight * 100.0f : 0.0f;
                 ImGui::Text("出力%d (%.1f%%)", i + 1, pct);
                 ImGui::SameLine();
-                if (ImGui::DragFloat("##weight", &node.WeightedOutputs[i].Weight, 0.1f, 0.0f, 100.0f, "%.1f"))
+                char wwid[32];
+                snprintf(wwid, sizeof(wwid), "##w_%d_%d", nodeId, i);
+                if (ImGui::DragFloat(wwid, &node.WeightedOutputs[i].Weight, 0.1f, 0.0f, 100.0f, "%.1f"))
                     paramChanged = true;
                 ImGui::PopID();
             }
@@ -1002,48 +1045,40 @@ void BehaviorTreeEditor::OnImGuiRender() {
                    node.Type == EditorNodeType::ActionRetreat) {
             ImGui::Text("最小時間");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##minTime", &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
                 paramChanged = true;
             ImGui::Text("最大時間");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##maxTime", &node.Parameter2, 0.1f, 0.0f, 10.0f, "%.1fs"))
+            if (ImGui::DragFloat(wid2, &node.Parameter2, 0.1f, 0.0f, 10.0f, "%.1fs"))
                 paramChanged = true;
             ImGui::Text("速度");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##speed", &node.Parameter3, 0.01f, 0.0f, 2.0f, "%.2f"))
+            if (ImGui::DragFloat(wid3, &node.Parameter3, 0.01f, 0.0f, 2.0f, "%.2f"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionIdle) {
             ImGui::Text("待機時間");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##idleDuration", &node.Parameter, 0.1f, 0.1f, 10.0f, "%.1fs"))
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.1f, 0.1f, 10.0f, "%.1fs"))
                 paramChanged = true;
-        } else if (node.Type == EditorNodeType::ActionJump) {
+        } else if (node.Type == EditorNodeType::ActionJump ||
+                   node.Type == EditorNodeType::ActionJumpToFly) {
             ImGui::Text("ジャンプ力");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##jumpPower", &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
-                paramChanged = true;
-        } else if (node.Type == EditorNodeType::ActionJumpToFly) {
-            ImGui::Text("ジャンプ力");
-            ImGui::SameLine();
-            if (ImGui::DragFloat("##jumpToFlyPower", &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
-                paramChanged = true;
-            ImGui::Text("遷移時間");
-            ImGui::SameLine();
-            if (ImGui::DragFloat("##transitionTime", &node.Parameter2, 0.05f, 0.1f, 2.0f, "%.2fs"))
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionFlyAscend ||
                    node.Type == EditorNodeType::ActionFlyDescend) {
             ImGui::Text("最小時間");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##minTime", &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
                 paramChanged = true;
             ImGui::Text("最大時間");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##maxTime", &node.Parameter2, 0.1f, 0.0f, 10.0f, "%.1fs"))
+            if (ImGui::DragFloat(wid2, &node.Parameter2, 0.1f, 0.0f, 10.0f, "%.1fs"))
                 paramChanged = true;
             ImGui::Text("速度");
             ImGui::SameLine();
-            if (ImGui::DragFloat("##flySpeed", &node.Parameter3, 0.5f, 5.0f, 30.0f, "%.1f"))
+            if (ImGui::DragFloat(wid3, &node.Parameter3, 0.5f, 5.0f, 30.0f, "%.1f"))
                 paramChanged = true;
         }
 
@@ -1056,10 +1091,14 @@ void BehaviorTreeEditor::OnImGuiRender() {
         // 出力ピン
         if (node.IsConditionNode()) {
             ed::BeginPin(node.SuccessPinID, ed::PinKind::Output);
+            ImGui::PushID((int)node.SuccessPinID.Get());
             ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "成功 ->");
+            ImGui::PopID();
             ed::EndPin();
             ed::BeginPin(node.FailurePinID, ed::PinKind::Output);
+            ImGui::PushID((int)node.FailurePinID.Get());
             ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "失敗 ->");
+            ImGui::PopID();
             ed::EndPin();
         } else if (node.IsWeightNode()) {
             float totalW = 0.0f;
@@ -1068,18 +1107,24 @@ void BehaviorTreeEditor::OnImGuiRender() {
             for (int i = 0; i < (int)node.WeightedOutputs.size(); ++i) {
                 float pct = (totalW > 0.0f) ? node.WeightedOutputs[i].Weight / totalW * 100.0f : 0.0f;
                 ed::BeginPin(node.WeightedOutputs[i].PinID, ed::PinKind::Output);
+                ImGui::PushID((int)node.WeightedOutputs[i].PinID.Get());
                 ImGui::Text("出力%d(%.0f%%) ->", i + 1, pct);
+                ImGui::PopID();
                 ed::EndPin();
             }
         } else if (!node.IsActionNode()) {
             ed::BeginPin(node.OutputPinID, ed::PinKind::Output);
+            ImGui::PushID((int)node.OutputPinID.Get());
             ImGui::Text("出力 ->");
+            ImGui::PopID();
             ed::EndPin();
         }
 
         ed::EndNode();
         if (showHighlight) {
-            ed::PopStyleColor(2);
+            if (status == NodeStatus::Running || status == NodeStatus::Failure) {
+                ed::PopStyleColor(2);
+            }
         }
         ImGui::PopID();
     }
@@ -1093,7 +1138,8 @@ void BehaviorTreeEditor::OnImGuiRender() {
     ed::Suspend();
     if (ed::ShowBackgroundContextMenu()) {
         ImGui::OpenPopup("Create New Node");
-        m_CreatePos = ImGui::GetMousePos();
+        Vector2 mousePos = Input::GetInstance()->GetMousePos();
+        m_CreatePos = ed::ScreenToCanvas(ImVec2(mousePos.x, mousePos.y));
     }
 
     if (ImGui::BeginPopup("Create New Node")) {
@@ -1110,36 +1156,36 @@ void BehaviorTreeEditor::OnImGuiRender() {
         };
 
         ImGui::Text("[コンポジット]");
-        addBtn("Sequence", EditorNodeType::Sequence);
-        addBtn("Selector", EditorNodeType::Selector);
-        addBtn("RandomSelector", EditorNodeType::SelectorRandom);
-        addBtn("WeightDecorator", EditorNodeType::DecoratorWeight);
+        addBtn("シーケンス", EditorNodeType::Sequence);
+        addBtn("セレクター", EditorNodeType::Selector);
+        addBtn("ランダムセレクター", EditorNodeType::SelectorRandom);
+        addBtn("重みデコレーター", EditorNodeType::DecoratorWeight);
         ImGui::Separator();
 
         ImGui::Text("[条件]");
-        addBtn("PlayerClose", EditorNodeType::ConditionPlayerClose);
-        addBtn("HealthLow", EditorNodeType::ConditionHealthLow);
-        addBtn("IsGrounded", EditorNodeType::ConditionIsGrounded);
-        addBtn("IsAirborne", EditorNodeType::ConditionIsAirborne);
-        addBtn("IsPlayerState", EditorNodeType::ConditionPlayerState);
+        addBtn("距離チェック", EditorNodeType::ConditionPlayerClose);
+        addBtn("HP低下チェック", EditorNodeType::ConditionHealthLow);
+        addBtn("地上チェック", EditorNodeType::ConditionIsGrounded);
+        addBtn("空中チェック", EditorNodeType::ConditionIsAirborne);
+        addBtn("ステートチェック", EditorNodeType::ConditionPlayerState);
         ImGui::Separator();
 
         ImGui::Text("[アクション]");
-        addBtn("RunAction", EditorNodeType::ActionRun);
-        addBtn("Approach", EditorNodeType::ActionApproach);
-        addBtn("Dash", EditorNodeType::ActionDash);
-        addBtn("Strafe", EditorNodeType::ActionStrafe);
-        addBtn("Retreat", EditorNodeType::ActionRetreat);
-        addBtn("Attack", EditorNodeType::ActionAttack);
-        addBtn("Idle", EditorNodeType::ActionIdle);
+        addBtn("基本アクション", EditorNodeType::ActionRun);
+        addBtn("接近", EditorNodeType::ActionApproach);
+        addBtn("ダッシュ", EditorNodeType::ActionDash);
+        addBtn("左右移動", EditorNodeType::ActionStrafe);
+        addBtn("後退", EditorNodeType::ActionRetreat);
+        addBtn("攻撃", EditorNodeType::ActionAttack);
+        addBtn("待機", EditorNodeType::ActionIdle);
         ImGui::Separator();
 
         ImGui::Text("[ジャンプ・飛行]");
-        addBtn("Jump", EditorNodeType::ActionJump);
-        addBtn("JumpToFly", EditorNodeType::ActionJumpToFly);
-        addBtn("FlyAscend", EditorNodeType::ActionFlyAscend);
-        addBtn("FlyDescend", EditorNodeType::ActionFlyDescend);
-        addBtn("FlyToGround", EditorNodeType::ActionFlyToGround);
+        addBtn("ジャンプ", EditorNodeType::ActionJump);
+        addBtn("飛行遷移", EditorNodeType::ActionJumpToFly);
+        addBtn("上昇", EditorNodeType::ActionFlyAscend);
+        addBtn("下降", EditorNodeType::ActionFlyDescend);
+        addBtn("着地", EditorNodeType::ActionFlyToGround);
 
         ImGui::EndPopup();
     }
@@ -1149,6 +1195,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
     DeleteSelectedItems();
 
     ed::End();
+    ed::SetCurrentEditor(nullptr);
 }
 
 void BehaviorTreeEditor::CreateNode(const std::string &title, EditorNodeType type) {
