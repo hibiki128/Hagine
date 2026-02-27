@@ -4,6 +4,11 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
 
+// Release でロードするデフォルトのビヘイビアツリーファイル
+// (resources/jsons/BehaviorTree/EnemyBehavior.json を使用する場合)
+static constexpr const char *kBTFolder = "BehaviorTree";
+static constexpr const char *kBTFileName = "EnemyBehavior"; // 拡張子なし
+
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();
     spCommon_ = SpriteCommon::GetInstance();
@@ -28,9 +33,10 @@ void GameScene::Initialize() {
     enemyUI_ = std::make_unique<EnemyUI>();
     fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
+
 #ifdef _DEBUG
     behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
-#endif // _DEBUG
+#endif
 
     /// ===================================================
     /// 初期化
@@ -72,9 +78,18 @@ void GameScene::Initialize() {
     /// ===================================================
     BaseObjectManager::GetInstance()->AddObject(std::move(player_));
     BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
+
 #ifdef _DEBUG
     behaviorTreeEditor_->SetDebugTargets(enemy_ptr, player_ptr);
-#endif // _DEBUG
+#else
+    // ===============================================================
+    // Release: JSONからビヘイビアツリーを自動ロードして敵にセット
+    // ===============================================================
+    m_BehaviorTreeRoot = BehaviorTreeLoader::LoadAndBuild(kBTFolder, kBTFileName);
+    if (m_BehaviorTreeRoot) {
+        enemy_ptr->SetBehaviorTree(m_BehaviorTreeRoot);
+    }
+#endif
 }
 
 void GameScene::Finalize() {
@@ -92,20 +107,22 @@ void GameScene::Update() {
 
     // シーン切り替え
     ChangeScene();
+
 #ifdef _DEBUG
-
-    auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
-    if (runtimeRoot) {
-        enemy_ptr->SetBehaviorTree(runtimeRoot);
+    // Debug: エディタのビルド＆実行ボタンで生成されたランタイムツリーを毎フレーム取得してセット
+    {
+        auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
+        if (runtimeRoot) {
+            enemy_ptr->SetBehaviorTree(runtimeRoot);
+        }
     }
-#endif // _DEBUG
+#endif
+    // Release: Initialize()でセット済みのツリーをそのまま使用
+    // enemy_ptr->SetBehaviorTree() は Initialize() で1回だけ呼ぶ
 
-    //  skyDome_->Update();
     ground_->Update();
-
     playerUI_->Update();
     enemyUI_->Update();
-
     fadeOut_->Update();
 
 #ifdef _DEBUG
@@ -119,7 +136,7 @@ void GameScene::Update() {
             ClearTimer_ += Frame::DeltaTime();
         }
     }
-#endif // _DEBUG
+#endif
 
     if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
         enemy_ptr->SetIsModelDraw(false);
@@ -132,33 +149,25 @@ void GameScene::Update() {
 }
 
 void GameScene::Draw() {
-    /// -------描画処理開始-------
-
     playerUI_->Draw();
     enemyUI_->Draw();
 
     BaseObjectManager::GetInstance()->Draw(vp_);
 
     skyBox_->Draw(vp_);
-
     ground_->Draw(vp_);
 
     player_ptr->DrawParticle(vp_);
     enemy_ptr->DrawParticle(vp_);
 
     fadeOut_->Draw(vp_);
-
     gameUI_->Draw();
 
     SpriteManager::GetInstance()->DrawAll();
-
-    /// -------描画処理終了-------
 }
 
 void GameScene::DrawForOffScreen() {
-    /// -------描画処理開始-------
-
-    /// -------描画処理終了-------
+    // 必要に応じてオフスクリーン描画
 }
 
 void GameScene::AddSceneSetting() {
@@ -171,21 +180,11 @@ void GameScene::AddSceneSetting() {
 
 void GameScene::AddObjectSetting() {
 #ifdef USE_IMGUI
-    /*  playerUI_->Debug();
-      enemyUI_->Debug();
-      player_ptr->Debug();
-      enemy_ptr->Debug();
-
-      for (auto &bullet : player_ptr->GetBullets()) {
-          bullet->ImGui();
-      }*/
-
     behaviorTreeEditor_->OnImGuiRender();
-#endif // USE_IMGUI
+#endif
 }
 
 void GameScene::AddParticleSetting() {
-
     fadeOut_->ImGui();
 }
 
@@ -206,14 +205,13 @@ void GameScene::CameraUpdate() {
                 vp_.matView_ = startCamera_->GetViewProjection().matView_;
                 vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
             } else {
-#endif // !_DEBUG
-
+#endif
                 vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
                 vp_.matView_ = followCamera_->GetViewProjection().matView_;
                 vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
 #ifndef _DEBUG
             }
-#endif // !_DEBUG
+#endif
         }
     } else {
         if (!deathCamera_->IsComplete() && !deathCameraStarted_) {
@@ -222,7 +220,6 @@ void GameScene::CameraUpdate() {
                 player_ptr->GetWorldPosition());
             deathCameraStarted_ = true;
         }
-
         deathCamera_->Update();
         vp_.matWorld_ = deathCamera_->GetViewProjection().matWorld_;
         vp_.matView_ = deathCamera_->GetViewProjection().matView_;

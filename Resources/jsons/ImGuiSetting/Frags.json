@@ -2,7 +2,7 @@
     "IsShowMainUI": true,
     "ShowGrid": false,
     "isEditorMode": true,
-    "showFPSView": false,
+    "showFPSView": true,
     "showGizmoView": false,
     "showHierarchyView": false,
     "showLightView": false,

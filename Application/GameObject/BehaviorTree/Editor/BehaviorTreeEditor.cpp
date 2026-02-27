@@ -1,19 +1,325 @@
+#define NOMINMAX
 #include "BehaviorTreeEditor.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
-#include "Input.h"
-#include <ShowFolder/ShowFolder.h>
-
 #include <algorithm>
+#include <externals/nlohmann/json.hpp>
 #include <filesystem>
 #include <iostream>
-#ifdef _DEBUG
 
-
-#include <imgui_internal.h>
-namespace ed = ax::NodeEditor;
 using json = nlohmann::json;
 namespace fs = std::filesystem;
+
+// ============================================================
+// BehaviorTreeLoader  (Debug / Release 共通実装)
+// ============================================================
+
+namespace {
+// EditorNodeType を int にキャストしたときのピンID計算ルール:
+//   InputPin  = id*10 + 1
+//   OutputPin = id*10 + 2
+// これは EditorNode コンストラクタと同じ計算式
+inline bool IsInputPinStatic(int pinId) { return (pinId % 10) == 1; }
+} // anonymous namespace
+
+// ----- 内部ヘルパー -----
+
+int BehaviorTreeLoader::FindRootNodeId(
+    const std::vector<NodeData> &nodes,
+    const std::vector<LinkData> &links) {
+    for (const auto &node : nodes) {
+        int inputPin = node.id * 10 + 1;
+        bool hasInput = false;
+        for (const auto &link : links) {
+            if (link.endPin == inputPin) {
+                hasInput = true;
+                break;
+            }
+        }
+        if (!hasInput)
+            return node.id;
+    }
+    return -1;
+}
+
+std::vector<int> BehaviorTreeLoader::FindChildrenNodeIds(
+    int outputPinId,
+    const std::vector<LinkData> &links) {
+    std::vector<int> children;
+    for (const auto &link : links) {
+        if (link.startPin == outputPinId) {
+            // InputPin = id*10+1  →  id = (endPin - 1) / 10
+            children.push_back((link.endPin - 1) / 10);
+        }
+    }
+    return children;
+}
+
+std::vector<std::pair<int, float>> BehaviorTreeLoader::FindWeightedChildrenNodeIds(
+    const NodeData &node,
+    const std::vector<LinkData> &links) {
+    std::vector<std::pair<int, float>> result;
+    for (const auto &wp : node.weightedOutputs) {
+        for (const auto &link : links) {
+            if (link.startPin == wp.pinId) {
+                int childId = (link.endPin - 1) / 10;
+                result.emplace_back(childId, wp.weight);
+            }
+        }
+    }
+    return result;
+}
+
+std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
+    int nodeId,
+    const std::vector<NodeData> &nodes,
+    const std::vector<LinkData> &links) {
+    auto it = std::find_if(nodes.begin(), nodes.end(),
+                           [nodeId](const NodeData &n) { return n.id == nodeId; });
+    if (it == nodes.end())
+        return nullptr;
+
+    const NodeData &nd = *it;
+    std::shared_ptr<BTNode> runtimeNode;
+
+    switch (nd.type) {
+    case EditorNodeType::Sequence:
+        runtimeNode = std::make_shared<SequenceNode>();
+        break;
+    case EditorNodeType::Selector:
+        runtimeNode = std::make_shared<SelectorNode>();
+        break;
+    case EditorNodeType::SelectorRandom:
+        runtimeNode = std::make_shared<RandomSelectorNode>();
+        break;
+    case EditorNodeType::DecoratorWeight:
+        runtimeNode = std::make_shared<RandomSelectorNode>();
+        break;
+    case EditorNodeType::ActionRun:
+        runtimeNode = std::make_shared<RunActionNode>();
+        break;
+    case EditorNodeType::ConditionPlayerClose:
+        runtimeNode = std::make_shared<IsPlayerCloseNode>(nd.param, nd.param2);
+        break;
+    case EditorNodeType::ConditionHealthLow:
+        runtimeNode = std::make_shared<IsHealthLowNode>(nd.param);
+        break;
+    case EditorNodeType::ConditionIsGrounded:
+        runtimeNode = std::make_shared<IsGroundedNode>();
+        break;
+    case EditorNodeType::ConditionIsAirborne:
+        runtimeNode = std::make_shared<IsAirborneNode>();
+        break;
+    case EditorNodeType::ConditionPlayerState:
+        runtimeNode = std::make_shared<IsPlayerStateNode>(nd.stateName);
+        break;
+    case EditorNodeType::ActionApproach:
+        runtimeNode = std::make_shared<EnemyApproachNode>(nd.param, nd.param2, nd.param3);
+        break;
+    case EditorNodeType::ActionDash:
+        runtimeNode = std::make_shared<EnemyDashNode>(nd.param, nd.param2, nd.param3);
+        break;
+    case EditorNodeType::ActionStrafe:
+        runtimeNode = std::make_shared<EnemyStrafeNode>(nd.param, nd.param2, nd.param3);
+        break;
+    case EditorNodeType::ActionRetreat:
+        runtimeNode = std::make_shared<EnemyRetreatNode>(nd.param, nd.param2, nd.param3);
+        break;
+    case EditorNodeType::ActionAttack:
+        runtimeNode = std::make_shared<EnemyAttackNode>();
+        break;
+    case EditorNodeType::ActionIdle:
+        runtimeNode = std::make_shared<EnemyIdleNode>(nd.param);
+        break;
+    case EditorNodeType::ActionJump:
+        runtimeNode = std::make_shared<EnemyJumpNode>(nd.param);
+        break;
+    case EditorNodeType::ActionJumpToFly:
+        runtimeNode = std::make_shared<EnemyJumpToFlyNode>();
+        break;
+    case EditorNodeType::ActionFlyAscend:
+        runtimeNode = std::make_shared<EnemyFlyAscendNode>(nd.param, nd.param2, nd.param3);
+        break;
+    case EditorNodeType::ActionFlyDescend:
+        runtimeNode = std::make_shared<EnemyFlyDescendNode>(nd.param, nd.param2, nd.param3);
+        break;
+    case EditorNodeType::ActionFlyToGround:
+        runtimeNode = std::make_shared<EnemyFlyToGroundNode>();
+        break;
+    default:
+        return nullptr;
+    }
+
+    if (!runtimeNode)
+        return nullptr;
+
+    // --- 葉ノード判定 ---
+    bool isLeaf = (nd.type == EditorNodeType::ActionRun ||
+                   nd.type == EditorNodeType::ConditionPlayerClose ||
+                   nd.type == EditorNodeType::ConditionHealthLow ||
+                   nd.type == EditorNodeType::ConditionIsGrounded ||
+                   nd.type == EditorNodeType::ConditionIsAirborne ||
+                   nd.type == EditorNodeType::ConditionPlayerState ||
+                   nd.type == EditorNodeType::ActionApproach ||
+                   nd.type == EditorNodeType::ActionDash ||
+                   nd.type == EditorNodeType::ActionStrafe ||
+                   nd.type == EditorNodeType::ActionRetreat ||
+                   nd.type == EditorNodeType::ActionAttack ||
+                   nd.type == EditorNodeType::ActionIdle ||
+                   nd.type == EditorNodeType::ActionJump ||
+                   nd.type == EditorNodeType::ActionJumpToFly ||
+                   nd.type == EditorNodeType::ActionFlyAscend ||
+                   nd.type == EditorNodeType::ActionFlyDescend ||
+                   nd.type == EditorNodeType::ActionFlyToGround);
+
+    if (!isLeaf) {
+        if (nd.type == EditorNodeType::DecoratorWeight) {
+            // 重み付きノード: 各重み出力ピンから子を接続
+            auto weightedChildren = FindWeightedChildrenNodeIds(nd, links);
+            for (auto &[childId, weight] : weightedChildren) {
+                auto childNode = BuildNodeRecursive(childId, nodes, links);
+                if (childNode) {
+                    auto decorator = std::make_shared<WeightDecoratorNode>(weight);
+                    decorator->AddChild(childNode);
+                    runtimeNode->AddChild(decorator);
+                }
+            }
+        } else {
+            int outputPin = nd.id * 10 + 2;
+            for (int childId : FindChildrenNodeIds(outputPin, links)) {
+                auto childNode = BuildNodeRecursive(childId, nodes, links);
+                if (childNode)
+                    runtimeNode->AddChild(childNode);
+            }
+        }
+    } else if (nd.type == EditorNodeType::ConditionPlayerClose ||
+               nd.type == EditorNodeType::ConditionHealthLow ||
+               nd.type == EditorNodeType::ConditionIsGrounded ||
+               nd.type == EditorNodeType::ConditionIsAirborne ||
+               nd.type == EditorNodeType::ConditionPlayerState) {
+        // 条件ノード: 成功/失敗ピン (id*10+3 / id*10+4) からの子を処理
+        int successPin = nd.id * 10 + 3;
+        int failurePin = nd.id * 10 + 4;
+        auto successChildIds = FindChildrenNodeIds(successPin, links);
+        auto failureChildIds = FindChildrenNodeIds(failurePin, links);
+
+        if (!successChildIds.empty() || !failureChildIds.empty()) {
+            auto selectorWrapper = std::make_shared<SelectorNode>();
+
+            if (!successChildIds.empty()) {
+                auto successSeq = std::make_shared<SequenceNode>();
+                // 条件ノード本体のコピー
+                std::shared_ptr<BTNode> condCopy;
+                switch (nd.type) {
+                case EditorNodeType::ConditionPlayerClose:
+                    condCopy = std::make_shared<IsPlayerCloseNode>(nd.param, nd.param2);
+                    break;
+                case EditorNodeType::ConditionHealthLow:
+                    condCopy = std::make_shared<IsHealthLowNode>(nd.param);
+                    break;
+                case EditorNodeType::ConditionIsGrounded:
+                    condCopy = std::make_shared<IsGroundedNode>();
+                    break;
+                case EditorNodeType::ConditionIsAirborne:
+                    condCopy = std::make_shared<IsAirborneNode>();
+                    break;
+                case EditorNodeType::ConditionPlayerState:
+                    condCopy = std::make_shared<IsPlayerStateNode>(nd.stateName);
+                    break;
+                default:
+                    break;
+                }
+                if (condCopy) {
+                    successSeq->AddChild(condCopy);
+                    for (int cid : successChildIds) {
+                        auto c = BuildNodeRecursive(cid, nodes, links);
+                        if (c)
+                            successSeq->AddChild(c);
+                    }
+                    selectorWrapper->AddChild(successSeq);
+                }
+            }
+
+            for (int cid : failureChildIds) {
+                auto c = BuildNodeRecursive(cid, nodes, links);
+                if (c)
+                    selectorWrapper->AddChild(c);
+            }
+
+            return selectorWrapper;
+        }
+    }
+
+    return runtimeNode;
+}
+
+// ----- 公開API -----
+std::shared_ptr<BTNode> BehaviorTreeLoader::LoadAndBuild(
+    const std::string &folder,
+    const std::string &file) {
+    DataHandler handler(folder, file);
+    if (!handler.Exists()) {
+        std::cerr << "[BehaviorTreeLoader] ファイルが見つかりません: "
+                  << folder << "/" << file << ".json" << std::endl;
+        return nullptr;
+    }
+
+    json nodesJson = handler.Load("nodes", json::array());
+    json linksJson = handler.Load("links", json::array());
+
+    std::vector<NodeData> nodes;
+    for (const auto &n : nodesJson) {
+        NodeData nd;
+        nd.id = n["id"].get<int>();
+        nd.type = static_cast<EditorNodeType>(n["type"].get<int>());
+        nd.param = n.value("param", 0.0f);
+        nd.param2 = n.value("param2", 0.0f);
+        nd.param3 = n.value("param3", 0.0f);
+
+        if (nd.type == EditorNodeType::ConditionPlayerState && n.contains("stateName"))
+            nd.stateName = n["stateName"].get<std::string>();
+
+        if (nd.type == EditorNodeType::DecoratorWeight && n.contains("weightedOutputs")) {
+            for (const auto &w : n["weightedOutputs"]) {
+                NodeData::WeightPin wp;
+                wp.pinId = w["pinId"].get<int>();
+                wp.weight = w["weight"].get<float>();
+                nd.weightedOutputs.push_back(wp);
+            }
+        }
+        nodes.push_back(nd);
+    }
+
+    std::vector<LinkData> links;
+    for (const auto &l : linksJson) {
+        LinkData ld;
+        ld.startPin = l["start"].get<int>();
+        ld.endPin = l["end"].get<int>();
+        links.push_back(ld);
+    }
+
+    int rootId = FindRootNodeId(nodes, links);
+    if (rootId == -1) {
+        std::cerr << "[BehaviorTreeLoader] ルートノードが見つかりません" << std::endl;
+        return nullptr;
+    }
+
+    auto root = BuildNodeRecursive(rootId, nodes, links);
+    if (!root) {
+        std::cerr << "[BehaviorTreeLoader] ツリーのビルドに失敗しました" << std::endl;
+    }
+    return root;
+}
+
+// ============================================================
+// BehaviorTreeEditor  (Debugビルド専用)
+// ============================================================
+#ifdef _DEBUG
+#include "Input.h"
+#include <ShowFolder/ShowFolder.h>
+#include <imgui_internal.h>
+
+namespace ed = ax::NodeEditor;
 
 // ---------------------------------------------------------
 // EditorNode
@@ -22,15 +328,13 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
     : ID(id), Title(title), Type(type) {
     InputPinID = id * 10 + 1;
     OutputPinID = id * 10 + 2;
-    SuccessPinID = id * 10 + 3; // 条件ノード用
-    FailurePinID = id * 10 + 4; // 条件ノード用
+    SuccessPinID = id * 10 + 3;
+    FailurePinID = id * 10 + 4;
 
-    // デフォルト値設定
     if (type == EditorNodeType::ConditionPlayerClose) {
-        Parameter = 0.0f;   // Min Dist
-        Parameter2 = 10.0f; // Max Dist
+        Parameter = 0.0f;
+        Parameter2 = 10.0f;
     } else if (type == EditorNodeType::DecoratorWeight) {
-        // 重み付けノード: デフォルトで2つの出力を持つ
         WeightedOutputs.resize(2);
         WeightedOutputs[0].PinID = id * 10 + 5;
         WeightedOutputs[0].Weight = 1.0f;
@@ -39,18 +343,15 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
     } else if (type == EditorNodeType::ConditionHealthLow) {
         Parameter = 0.3f;
     } else if (type == EditorNodeType::ConditionPlayerState) {
-        // ★新規追加: プレイヤーステート判定ノードのデフォルト値
-        StateNameParameter = "Idle"; // デフォルトはIdleステート
-    }
-    // 移動系ノードのデフォルト値
-    else if (type == EditorNodeType::ActionApproach) {
-        Parameter = 1.0f;  // Min Time
-        Parameter2 = 3.0f; // Max Time
-        Parameter3 = 0.1f; // Speed (通常)
+        StateNameParameter = "Idle";
+    } else if (type == EditorNodeType::ActionApproach) {
+        Parameter = 1.0f;
+        Parameter2 = 3.0f;
+        Parameter3 = 0.1f;
     } else if (type == EditorNodeType::ActionDash) {
-        Parameter = 0.5f;  // Min Time
-        Parameter2 = 1.5f; // Max Time
-        Parameter3 = 0.3f; // Speed (高速)
+        Parameter = 0.5f;
+        Parameter2 = 1.5f;
+        Parameter3 = 0.3f;
     } else if (type == EditorNodeType::ActionStrafe) {
         Parameter = 1.0f;
         Parameter2 = 2.0f;
@@ -60,16 +361,15 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         Parameter2 = 2.0f;
         Parameter3 = 0.15f;
     } else if (type == EditorNodeType::ActionIdle) {
-        Parameter = 1.0f; // デフォルト1秒待機
+        Parameter = 1.0f;
     }
 }
 
 EditorLink::EditorLink(int id, ed::PinId start, ed::PinId end)
-    : ID(id), StartPinID(start), EndPinID(end) {
-}
+    : ID(id), StartPinID(start), EndPinID(end) {}
 
 // ---------------------------------------------------------
-// Editor
+// Editor  (以下は元の実装をそのまま維持)
 // ---------------------------------------------------------
 BehaviorTreeEditor::BehaviorTreeEditor() {
     ed::Config config;
@@ -78,20 +378,19 @@ BehaviorTreeEditor::BehaviorTreeEditor() {
 }
 
 BehaviorTreeEditor::~BehaviorTreeEditor() {
-    if (m_Context) {
+    if (m_Context)
         ed::DestroyEditor(m_Context);
-    }
 }
 
-bool BehaviorTreeEditor::IsInputPin(ed::PinId pinId) { return (pinId.Get() % 10) == 1; }
-bool BehaviorTreeEditor::IsOutputPin(ed::PinId pinId) { return (pinId.Get() % 10) == 2; }
-bool BehaviorTreeEditor::IsSuccessPin(ed::PinId pinId) { return (pinId.Get() % 10) == 3; }
-bool BehaviorTreeEditor::IsFailurePin(ed::PinId pinId) { return (pinId.Get() % 10) == 4; }
+bool BehaviorTreeEditor::IsInputPin(ed::PinId p) { return (p.Get() % 10) == 1; }
+bool BehaviorTreeEditor::IsOutputPin(ed::PinId p) { return (p.Get() % 10) == 2; }
+bool BehaviorTreeEditor::IsSuccessPin(ed::PinId p) { return (p.Get() % 10) == 3; }
+bool BehaviorTreeEditor::IsFailurePin(ed::PinId p) { return (p.Get() % 10) == 4; }
 
 bool BehaviorTreeEditor::IsWeightedOutputPin(ed::PinId pinId, int &outNodeId, int &outOutputIndex) {
     for (auto &node : m_Nodes) {
         if (node.IsWeightNode()) {
-            for (int i = 0; i < node.WeightedOutputs.size(); ++i) {
+            for (int i = 0; i < (int)node.WeightedOutputs.size(); ++i) {
                 if (node.WeightedOutputs[i].PinID == pinId) {
                     outNodeId = (int)node.ID.Get();
                     outOutputIndex = i;
@@ -103,14 +402,12 @@ bool BehaviorTreeEditor::IsWeightedOutputPin(ed::PinId pinId, int &outNodeId, in
     return false;
 }
 
-void BehaviorTreeEditor::ParsePathToFolderAndFile(const std::string &fullPath, std::string &outFolder, std::string &outFile) {
+void BehaviorTreeEditor::ParsePathToFolderAndFile(
+    const std::string &fullPath, std::string &outFolder, std::string &outFile) {
     fs::path path(fullPath);
     outFile = path.stem().string();
     fs::path parent = path.parent_path();
-    if (parent.has_filename())
-        outFolder = parent.filename().string();
-    else
-        outFolder = "BehaviorTree";
+    outFolder = parent.has_filename() ? parent.filename().string() : "BehaviorTree";
 }
 
 const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
@@ -147,11 +444,10 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "攻撃を実行する";
     case EditorNodeType::ActionIdle:
         return "その場で待機する(何もしない)";
-    // ★ジャンプ・飛行関連ノード
     case EditorNodeType::ActionJump:
         return "地上からジャンプする（指定した力で跳躍）";
     case EditorNodeType::ActionJumpToFly:
-        return "地上からジャンプし、一定時間後に飛行状態へ遷移（ジャンプ+飛行遷移を一つで処理）";
+        return "地上からジャンプし、一定時間後に飛行状態へ遷移";
     case EditorNodeType::ActionFlyAscend:
         return "飛行中に上昇する（指定速度と時間）";
     case EditorNodeType::ActionFlyDescend:
@@ -163,11 +459,331 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
     }
 }
 
-// ---------------------------------------------------------
-// OnImGuiRender
-// ---------------------------------------------------------
+// ------------------------------------------------------------------
+// BuildAndRunTree  (エディタ側: Debugのみ)
+// ------------------------------------------------------------------
+void BehaviorTreeEditor::BuildAndRunTree() {
+    m_nodeInstanceMap.clear();
+    m_RuntimeRoot = nullptr;
+
+    int rootId = FindRootNodeId();
+    if (rootId == -1)
+        return;
+
+    m_RuntimeRoot = BuildNodeRecursive(rootId);
+    if (m_RuntimeRoot) {
+        m_RuntimeRoot->SetContext(m_DebugEnemy, m_DebugPlayer);
+        if (m_DebugEnemy)
+            m_DebugEnemy->SetBehaviorTree(m_RuntimeRoot);
+    }
+}
+
+std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId) {
+    auto it = std::find_if(m_Nodes.begin(), m_Nodes.end(),
+                           [editorNodeId](const EditorNode &n) { return (int)n.ID.Get() == editorNodeId; });
+    if (it == m_Nodes.end())
+        return nullptr;
+
+    const EditorNode &eNode = *it;
+    std::shared_ptr<BTNode> runtimeNode;
+
+    switch (eNode.Type) {
+    case EditorNodeType::Sequence:
+        runtimeNode = std::make_shared<SequenceNode>();
+        break;
+    case EditorNodeType::Selector:
+        runtimeNode = std::make_shared<SelectorNode>();
+        break;
+    case EditorNodeType::ActionRun:
+        runtimeNode = std::make_shared<RunActionNode>();
+        break;
+    case EditorNodeType::ConditionPlayerClose:
+        runtimeNode = std::make_shared<IsPlayerCloseNode>(eNode.Parameter, eNode.Parameter2);
+        break;
+    case EditorNodeType::ConditionHealthLow:
+        runtimeNode = std::make_shared<IsHealthLowNode>(eNode.Parameter);
+        break;
+    case EditorNodeType::ConditionIsGrounded:
+        runtimeNode = std::make_shared<IsGroundedNode>();
+        break;
+    case EditorNodeType::ConditionIsAirborne:
+        runtimeNode = std::make_shared<IsAirborneNode>();
+        break;
+    case EditorNodeType::ConditionPlayerState:
+        runtimeNode = std::make_shared<IsPlayerStateNode>(eNode.StateNameParameter);
+        break;
+    case EditorNodeType::ActionApproach:
+        runtimeNode = std::make_shared<EnemyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionDash:
+        runtimeNode = std::make_shared<EnemyDashNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionStrafe:
+        runtimeNode = std::make_shared<EnemyStrafeNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionRetreat:
+        runtimeNode = std::make_shared<EnemyRetreatNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionAttack:
+        runtimeNode = std::make_shared<EnemyAttackNode>();
+        break;
+    case EditorNodeType::ActionIdle:
+        runtimeNode = std::make_shared<EnemyIdleNode>(eNode.Parameter);
+        break;
+    case EditorNodeType::ActionJump:
+        runtimeNode = std::make_shared<EnemyJumpNode>(eNode.Parameter);
+        break;
+    case EditorNodeType::ActionJumpToFly:
+        runtimeNode = std::make_shared<EnemyJumpToFlyNode>();
+        break;
+    case EditorNodeType::ActionFlyAscend:
+        runtimeNode = std::make_shared<EnemyFlyAscendNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionFlyDescend:
+        runtimeNode = std::make_shared<EnemyFlyDescendNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionFlyToGround:
+        runtimeNode = std::make_shared<EnemyFlyToGroundNode>();
+        break;
+    case EditorNodeType::SelectorRandom:
+        runtimeNode = std::make_shared<RandomSelectorNode>();
+        break;
+    case EditorNodeType::DecoratorWeight:
+        runtimeNode = std::make_shared<RandomSelectorNode>();
+        break;
+    }
+
+    if (!runtimeNode)
+        return nullptr;
+    m_nodeInstanceMap[editorNodeId] = runtimeNode;
+
+    bool isLeaf = eNode.IsActionNode() ||
+                  eNode.IsConditionNode();
+
+    if (!isLeaf) {
+        if (eNode.IsWeightNode()) {
+            auto weightedChildren = FindWeightedChildrenNodeIds(eNode);
+            for (auto &[childId, weight] : weightedChildren) {
+                auto childNode = BuildNodeRecursive(childId);
+                if (childNode) {
+                    auto decorator = std::make_shared<WeightDecoratorNode>(weight);
+                    decorator->AddChild(childNode);
+                    runtimeNode->AddChild(decorator);
+                }
+            }
+        } else {
+            int outputPinId = (int)eNode.OutputPinID.Get();
+            for (int childId : FindChildrenNodeIds(outputPinId)) {
+                auto childNode = BuildNodeRecursive(childId);
+                if (childNode)
+                    runtimeNode->AddChild(childNode);
+            }
+        }
+    } else if (eNode.IsConditionNode()) {
+        int successPinId = (int)eNode.SuccessPinID.Get();
+        int failurePinId = (int)eNode.FailurePinID.Get();
+        auto successChildIds = FindChildrenNodeIds(successPinId);
+        auto failureChildIds = FindChildrenNodeIds(failurePinId);
+
+        if (!successChildIds.empty() || !failureChildIds.empty()) {
+            auto selectorWrapper = std::make_shared<SelectorNode>();
+
+            if (!successChildIds.empty()) {
+                auto successSequence = std::make_shared<SequenceNode>();
+                std::shared_ptr<BTNode> conditionCopy;
+                if (eNode.Type == EditorNodeType::ConditionPlayerClose)
+                    conditionCopy = std::make_shared<IsPlayerCloseNode>(eNode.Parameter, eNode.Parameter2);
+                else if (eNode.Type == EditorNodeType::ConditionHealthLow)
+                    conditionCopy = std::make_shared<IsHealthLowNode>(eNode.Parameter);
+                else if (eNode.Type == EditorNodeType::ConditionIsGrounded)
+                    conditionCopy = std::make_shared<IsGroundedNode>();
+                else if (eNode.Type == EditorNodeType::ConditionIsAirborne)
+                    conditionCopy = std::make_shared<IsAirborneNode>();
+                else if (eNode.Type == EditorNodeType::ConditionPlayerState)
+                    conditionCopy = std::make_shared<IsPlayerStateNode>(eNode.StateNameParameter);
+
+                if (conditionCopy) {
+                    successSequence->AddChild(conditionCopy);
+                    for (int childId : successChildIds) {
+                        auto c = BuildNodeRecursive(childId);
+                        if (c)
+                            successSequence->AddChild(c);
+                    }
+                    selectorWrapper->AddChild(successSequence);
+                }
+            }
+
+            for (int childId : failureChildIds) {
+                auto c = BuildNodeRecursive(childId);
+                if (c)
+                    selectorWrapper->AddChild(c);
+            }
+
+            return selectorWrapper;
+        }
+    }
+
+    return runtimeNode;
+}
+
+std::vector<int> BehaviorTreeEditor::FindChildrenNodeIds(int outputPinId) {
+    std::vector<int> children;
+    for (const auto &link : m_Links) {
+        if ((int)link.StartPinID.Get() == outputPinId) {
+            int endPin = (int)link.EndPinID.Get();
+            children.push_back((endPin - 1) / 10);
+        }
+    }
+    return children;
+}
+
+std::vector<std::pair<int, float>> BehaviorTreeEditor::FindWeightedChildrenNodeIds(const EditorNode &node) {
+    std::vector<std::pair<int, float>> result;
+    for (int i = 0; i < (int)node.WeightedOutputs.size(); ++i) {
+        int outputPinId = (int)node.WeightedOutputs[i].PinID.Get();
+        float weight = node.WeightedOutputs[i].Weight;
+        for (const auto &link : m_Links) {
+            if ((int)link.StartPinID.Get() == outputPinId) {
+                int childNodeId = ((int)link.EndPinID.Get() - 1) / 10;
+                result.emplace_back(childNodeId, weight);
+            }
+        }
+    }
+    return result;
+}
+
+int BehaviorTreeEditor::FindRootNodeId() {
+    for (const auto &node : m_Nodes) {
+        int inputPin = (int)node.InputPinID.Get();
+        bool hasInput = false;
+        for (const auto &link : m_Links) {
+            if ((int)link.EndPinID.Get() == inputPin) {
+                hasInput = true;
+                break;
+            }
+        }
+        if (!hasInput)
+            return (int)node.ID.Get();
+    }
+    return -1;
+}
+
+// ------------------------------------------------------------------
+// SaveTree / LoadTree
+// ------------------------------------------------------------------
+void BehaviorTreeEditor::SaveTree() {
+    std::string fileName = m_InputFileNameBuf;
+    if (fileName.empty())
+        fileName = "NewBehavior";
+    DataHandler handler("BehaviorTree", fileName);
+
+    json nodesJson = json::array();
+    for (const auto &node : m_Nodes) {
+        json n;
+        n["id"] = (int)node.ID.Get();
+        n["title"] = node.Title;
+        n["type"] = (int)node.Type;
+        ImVec2 pos = ed::GetNodePosition(node.ID);
+        n["x"] = pos.x;
+        n["y"] = pos.y;
+        n["param"] = node.Parameter;
+        n["param2"] = node.Parameter2;
+        n["param3"] = node.Parameter3;
+
+        if (node.Type == EditorNodeType::ConditionPlayerState)
+            n["stateName"] = node.StateNameParameter;
+
+        if (node.IsWeightNode()) {
+            json weightsJson = json::array();
+            for (const auto &output : node.WeightedOutputs) {
+                json w;
+                w["pinId"] = (int)output.PinID.Get();
+                w["weight"] = output.Weight;
+                weightsJson.push_back(w);
+            }
+            n["weightedOutputs"] = weightsJson;
+        }
+        nodesJson.push_back(n);
+    }
+    handler.Save("nodes", nodesJson);
+
+    json linksJson = json::array();
+    for (const auto &link : m_Links) {
+        json l;
+        l["id"] = (int)link.ID.Get();
+        l["start"] = (int)link.StartPinID.Get();
+        l["end"] = (int)link.EndPinID.Get();
+        linksJson.push_back(l);
+    }
+    handler.Save("links", linksJson);
+    std::cout << "BTを保存しました: " << fileName << ".json" << std::endl;
+}
+
+void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
+    std::string folderName, fileName;
+    ParsePathToFolderAndFile(filePath, folderName, fileName);
+    if (fileName.size() < sizeof(m_InputFileNameBuf))
+        strcpy_s(m_InputFileNameBuf, fileName.c_str());
+
+    DataHandler handler(folderName, fileName);
+    m_Nodes.clear();
+    m_Links.clear();
+
+    json nodesJson = handler.Load("nodes", json::array());
+    int maxNodeId = 0, maxPinId = 0;
+    for (const auto &n : nodesJson) {
+        int id = n["id"].get<int>();
+        std::string title = n["title"].get<std::string>();
+        EditorNodeType type = (EditorNodeType)n["type"].get<int>();
+        float x = n["x"].get<float>();
+        float y = n["y"].get<float>();
+
+        EditorNode node(id, title, type);
+        node.Parameter = n.value("param", 0.0f);
+        node.Parameter2 = n.value("param2", 0.0f);
+        node.Parameter3 = n.value("param3", 0.0f);
+
+        if (type == EditorNodeType::ConditionPlayerState && n.contains("stateName"))
+            node.StateNameParameter = n["stateName"].get<std::string>();
+
+        if (node.IsWeightNode() && n.contains("weightedOutputs")) {
+            node.WeightedOutputs.clear();
+            for (const auto &w : n["weightedOutputs"]) {
+                WeightedOutput output;
+                output.PinID = w["pinId"].get<int>();
+                output.Weight = w["weight"].get<float>();
+                node.WeightedOutputs.push_back(output);
+                if ((int)output.PinID.Get() > maxPinId)
+                    maxPinId = (int)output.PinID.Get();
+            }
+        }
+
+        m_Nodes.push_back(node);
+        ed::SetNodePosition(node.ID, ImVec2(x, y));
+        if (id > maxNodeId)
+            maxNodeId = id;
+    }
+    m_NextNodeId = maxNodeId + 1;
+    m_NextPinId = maxPinId + 1;
+
+    json linksJson = handler.Load("links", json::array());
+    int maxLinkId = 0;
+    for (const auto &l : linksJson) {
+        int id = l["id"].get<int>();
+        int start = l["start"].get<int>();
+        int end = l["end"].get<int>();
+        m_Links.emplace_back(id, ed::PinId(start), ed::PinId(end));
+        if (id > maxLinkId)
+            maxLinkId = id;
+    }
+    m_NextLinkId = maxLinkId + 1;
+    std::cout << "BTを読込しました: " << fileName << std::endl;
+}
+
+// ------------------------------------------------------------------
+// OnImGuiRender  ※元の実装をそのまま維持 (長いので省略なし)
+// ------------------------------------------------------------------
 void BehaviorTreeEditor::OnImGuiRender() {
-    // コンテキスト設定を一番最初に行う
     ed::SetCurrentEditor(m_Context);
 
     // --- 上部コントロール ---
@@ -200,30 +816,20 @@ void BehaviorTreeEditor::OnImGuiRender() {
     ImGui::SameLine();
     if (ImGui::Button("停止")) {
         m_IsRunning = false;
-
-        // ★修正: RuntimeRootをリセット前により慎重に処理
         if (m_RuntimeRoot) {
             try {
-                m_RuntimeRoot->Reset(); // ノードの状態をリセット
+                m_RuntimeRoot->Reset();
             } catch (...) {
-                // リセット中に例外が発生した場合も安全に継続
             }
         }
-
-        // インスタンスマップとタイマーをクリア
         m_nodeInstanceMap.clear();
         m_statusTimers.clear();
-
-        // RuntimeRootをnullに設定
         m_RuntimeRoot = nullptr;
-
-        // ★重要: 敵のBehaviorTreeもクリアして動きを完全に止める
         if (m_DebugEnemy) {
-            m_DebugEnemy->SetBehaviorTree(nullptr); // ツリーをクリア
+            m_DebugEnemy->SetBehaviorTree(nullptr);
             m_DebugEnemy->SetVelocity({0, 0, 0});
-            m_DebugEnemy->SetMoveSpeed(0.0f); // 移動速度もゼロに
+            m_DebugEnemy->SetMoveSpeed(0.0f);
         }
-
         m_LastResultText = "停止中";
         m_LastResultColor = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
     }
@@ -231,7 +837,6 @@ void BehaviorTreeEditor::OnImGuiRender() {
     ImGui::SameLine();
     ImGui::TextColored(m_LastResultColor, "状態: %s", m_LastResultText.c_str());
 
-    // ★追加: ノードの色の凡例を表示(実行中と失敗のみ)
     ImGui::SameLine();
     ImGui::Dummy(ImVec2(20, 0));
     ImGui::SameLine();
@@ -248,7 +853,6 @@ void BehaviorTreeEditor::OnImGuiRender() {
         ImGui::Begin("ビヘイビアツリーを読込", &m_ShowLoadWindow);
         static std::string startPath = "BehaviorTree";
         ShowJsonFile(m_SelectedFileName, startPath);
-
         if (!m_SelectedFileName.empty()) {
             if (ImGui::Button("選択したファイルを読込")) {
                 LoadTree(m_SelectedFileName);
@@ -261,21 +865,13 @@ void BehaviorTreeEditor::OnImGuiRender() {
     ImGui::Spacing();
     ImGui::Separator();
 
-    // --- ステータス更新 (視覚化用) ---
+    // --- ステータス更新 ---
     if (m_IsRunning && m_RuntimeRoot) {
         try {
-            // ★変更: エディタ側ではTickを呼ばない
-            // Enemy::Update()内でrootNode_->Tick()が呼ばれるため、
-            // ここでは状態の監視のみを行う
-
-            // ノードのステータスをタイマーに記録
             for (auto const &[nodeId, runtimeNode] : m_nodeInstanceMap) {
-                if (runtimeNode && runtimeNode->GetStatus() != NodeStatus::Idle) {
+                if (runtimeNode && runtimeNode->GetStatus() != NodeStatus::Idle)
                     m_statusTimers[nodeId] = 0.5f;
-                }
             }
-
-            // ルートノードの結果を表示用に取得
             NodeStatus rootStatus = m_RuntimeRoot->GetStatus();
             if (rootStatus == NodeStatus::Success) {
                 m_LastResultText = "[成功]";
@@ -288,7 +884,6 @@ void BehaviorTreeEditor::OnImGuiRender() {
                 m_LastResultColor = ImVec4(0.3f, 0.5f, 0.8f, 1.0f);
             }
         } catch (...) {
-            // エラーが発生した場合は実行を停止
             m_IsRunning = false;
             m_RuntimeRoot = nullptr;
             m_nodeInstanceMap.clear();
@@ -303,78 +898,59 @@ void BehaviorTreeEditor::OnImGuiRender() {
         }
     }
 
-    // タイマーの更新
     float dt = ImGui::GetIO().DeltaTime;
     for (auto it = m_statusTimers.begin(); it != m_statusTimers.end();) {
         it->second -= dt;
-        if (it->second <= 0.0f)
-            it = m_statusTimers.erase(it);
-        else
-            ++it;
+        it = (it->second <= 0.0f) ? m_statusTimers.erase(it) : std::next(it);
     }
 
     // --- ノードエディタ ---
     ed::Begin("ビヘイビアツリーエディタ", ImVec2(0, 0));
 
     for (auto &node : m_Nodes) {
-        // ★重要: IDスコープを開始 (同じラベル名の干渉を防ぐ)
         ImGui::PushID((int)node.ID.Get());
 
         int nodeId = (int)node.ID.Get();
         NodeStatus status = NodeStatus::Idle;
         bool showHighlight = false;
 
-        // ★修正: nullチェックを追加
-        if (m_IsRunning && m_nodeInstanceMap.count(nodeId) && m_nodeInstanceMap[nodeId]) {
+        if (m_IsRunning && m_nodeInstanceMap.count(nodeId) && m_nodeInstanceMap[nodeId])
             status = m_nodeInstanceMap[nodeId]->GetStatus();
-        }
+
         if (status != NodeStatus::Idle || m_statusTimers.count(nodeId)) {
             showHighlight = true;
-            if (status == NodeStatus::Idle && m_nodeInstanceMap.count(nodeId) && m_nodeInstanceMap[nodeId]) {
+            if (status == NodeStatus::Idle && m_nodeInstanceMap.count(nodeId) && m_nodeInstanceMap[nodeId])
                 status = m_nodeInstanceMap[nodeId]->GetStatus();
-            }
         }
 
         if (showHighlight) {
             if (status == NodeStatus::Running) {
-                // ★実行中は薄い青色
                 ed::PushStyleColor(ed::StyleColor_NodeBg, ImVec4(0.3f, 0.5f, 0.8f, 1.0f));
                 ed::PushStyleColor(ed::StyleColor_NodeBorder, ImVec4(0.4f, 0.7f, 1.0f, 1.0f));
             } else if (status == NodeStatus::Failure) {
-                // ★失敗は明るい赤色
                 ed::PushStyleColor(ed::StyleColor_NodeBg, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
                 ed::PushStyleColor(ed::StyleColor_NodeBorder, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
             }
-            // 成功の色は設定しない(デフォルトのまま)
         }
 
         ed::BeginNode(node.ID);
-
-        // ★追加: ステータス表示をノードタイトルの横に表示
         ImGui::BeginGroup();
         ImGui::Text("%s", node.Title.c_str());
-
-        // 実行中のステータスを表示(実行中と失敗のみ)
         if (showHighlight && m_IsRunning) {
             ImGui::SameLine();
-            if (status == NodeStatus::Running) {
+            if (status == NodeStatus::Running)
                 ImGui::TextColored(ImVec4(0.5f, 0.7f, 1.0f, 1.0f), "[実行中]");
-            } else if (status == NodeStatus::Failure) {
+            else if (status == NodeStatus::Failure)
                 ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "[失敗]");
-            }
-            // 成功は表示しない
         }
         ImGui::EndGroup();
 
-        // 入力ピン
         ed::BeginPin(node.InputPinID, ed::PinKind::Input);
         ImGui::Text("-> 入力");
         ed::EndPin();
 
-        // --- パラメータUI ---
         ImGui::PushItemWidth(80);
-
-        bool paramChanged = false; // パラメータが変更されたかフラグ
+        bool paramChanged = false;
 
         if (node.Type == EditorNodeType::ConditionPlayerClose) {
             ImGui::Text("最小距離");
@@ -391,44 +967,30 @@ void BehaviorTreeEditor::OnImGuiRender() {
             if (ImGui::DragFloat("##hp", &node.Parameter, 0.01f, 0.0f, 1.0f, "%.2f"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ConditionPlayerState) {
-            // ★プレイヤーステート選択（ノード内は表示のみ）
             ImGui::Text("ステート");
             ImGui::SameLine();
-
-            // 現在選択されているステートを表示
             ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", node.StateNameParameter.c_str());
         } else if (node.Type == EditorNodeType::DecoratorWeight) {
-            // ★修正: 重み付けノードは各出力の重みを表示・編集
             ImGui::Text("出力数:");
             ImGui::SameLine();
             int outputCount = (int)node.WeightedOutputs.size();
             if (ImGui::InputInt("##outputCount", &outputCount, 1, 1)) {
-                if (outputCount < 1)
-                    outputCount = 1;
-                if (outputCount > 10)
-                    outputCount = 10;
-
+                outputCount = std::max(1, std::min(10, outputCount));
                 int oldSize = (int)node.WeightedOutputs.size();
                 node.WeightedOutputs.resize(outputCount);
-
-                // 新しく追加された出力のPinIDを設定
                 for (int i = oldSize; i < outputCount; ++i) {
                     node.WeightedOutputs[i].PinID = m_NextPinId++;
                     node.WeightedOutputs[i].Weight = 1.0f;
                 }
                 paramChanged = true;
             }
-
-            // 各出力の重みを編集
             float totalWeight = 0.0f;
-            for (auto &output : node.WeightedOutputs) {
-                totalWeight += output.Weight;
-            }
-
-            for (int i = 0; i < node.WeightedOutputs.size(); ++i) {
+            for (auto &o : node.WeightedOutputs)
+                totalWeight += o.Weight;
+            for (int i = 0; i < (int)node.WeightedOutputs.size(); ++i) {
                 ImGui::PushID(i);
-                float percentage = (totalWeight > 0.0f) ? (node.WeightedOutputs[i].Weight / totalWeight * 100.0f) : 0.0f;
-                ImGui::Text("出力%d (%.1f%%)", i + 1, percentage);
+                float pct = (totalWeight > 0.0f) ? node.WeightedOutputs[i].Weight / totalWeight * 100.0f : 0.0f;
+                ImGui::Text("出力%d (%.1f%%)", i + 1, pct);
                 ImGui::SameLine();
                 if (ImGui::DragFloat("##weight", &node.WeightedOutputs[i].Weight, 0.1f, 0.0f, 100.0f, "%.1f"))
                     paramChanged = true;
@@ -456,13 +1018,11 @@ void BehaviorTreeEditor::OnImGuiRender() {
             if (ImGui::DragFloat("##idleDuration", &node.Parameter, 0.1f, 0.1f, 10.0f, "%.1fs"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionJump) {
-            // ジャンプのパラメータ
             ImGui::Text("ジャンプ力");
             ImGui::SameLine();
             if (ImGui::DragFloat("##jumpPower", &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionJumpToFly) {
-            // ジャンプ→飛行のパラメータ
             ImGui::Text("ジャンプ力");
             ImGui::SameLine();
             if (ImGui::DragFloat("##jumpToFlyPower", &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
@@ -473,7 +1033,6 @@ void BehaviorTreeEditor::OnImGuiRender() {
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionFlyAscend ||
                    node.Type == EditorNodeType::ActionFlyDescend) {
-            // 飛行上昇・下降のパラメータ
             ImGui::Text("最小時間");
             ImGui::SameLine();
             if (ImGui::DragFloat("##minTime", &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
@@ -488,323 +1047,123 @@ void BehaviorTreeEditor::OnImGuiRender() {
                 paramChanged = true;
         }
 
-        // パラメータが変更され、実行中なら再ビルド
-        if (paramChanged && m_IsRunning) {
+        if (paramChanged && m_IsRunning)
             BuildAndRunTree();
-        }
-
         ImGui::PopItemWidth();
 
-        // 出力ピン(条件ノードは成功/失敗の2つ、重み付けノードは複数、アクションノードはなし、それ以外は1つ)
         ImGui::Spacing();
 
+        // 出力ピン
         if (node.IsConditionNode()) {
-            // 条件ノード: Success と Failure の2つの出力
             ed::BeginPin(node.SuccessPinID, ed::PinKind::Output);
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "成功 ->");
+            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "成功 ->");
             ed::EndPin();
-
-            ImGui::SameLine();
-            ImGui::Dummy(ImVec2(20, 0)); // スペース
-            ImGui::SameLine();
-
             ed::BeginPin(node.FailurePinID, ed::PinKind::Output);
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "失敗 ->");
+            ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "失敗 ->");
             ed::EndPin();
         } else if (node.IsWeightNode()) {
-            // ★修正: 重み付けノードは複数の出力ピンを表示
-            float totalWeight = 0.0f;
-            for (auto &output : node.WeightedOutputs) {
-                totalWeight += output.Weight;
-            }
-
-            for (int i = 0; i < node.WeightedOutputs.size(); ++i) {
-                float percentage = (totalWeight > 0.0f) ? (node.WeightedOutputs[i].Weight / totalWeight * 100.0f) : 0.0f;
+            float totalW = 0.0f;
+            for (auto &o : node.WeightedOutputs)
+                totalW += o.Weight;
+            for (int i = 0; i < (int)node.WeightedOutputs.size(); ++i) {
+                float pct = (totalW > 0.0f) ? node.WeightedOutputs[i].Weight / totalW * 100.0f : 0.0f;
                 ed::BeginPin(node.WeightedOutputs[i].PinID, ed::PinKind::Output);
-                ImGui::Text("出力%d (%.1f%%) ->", i + 1, percentage);
+                ImGui::Text("出力%d(%.0f%%) ->", i + 1, pct);
                 ed::EndPin();
-
-                // 改行して次の出力ピンへ
-                if (i < node.WeightedOutputs.size() - 1) {
-                    ImGui::Spacing();
-                }
             }
         } else if (!node.IsActionNode()) {
-            // 通常ノード(コンポジットノード): 1つの出力
             ed::BeginPin(node.OutputPinID, ed::PinKind::Output);
             ImGui::Text("出力 ->");
             ed::EndPin();
         }
-        // アクションノードは出力ピンなし
 
         ed::EndNode();
-
         if (showHighlight) {
-            // ★修正: 実行中と失敗のみカラーをポップ
-            if (status == NodeStatus::Running || status == NodeStatus::Failure) {
-                ed::PopStyleColor(2);
-            }
+            ed::PopStyleColor(2);
         }
-
         ImGui::PopID();
     }
 
     // リンク描画
-    for (const auto &link : m_Links) {
+    for (auto &link : m_Links) {
         ed::Link(link.ID, link.StartPinID, link.EndPinID);
     }
 
-    HandleCreateAction();
-    DeleteSelectedItems();
-
-    // --- 右クリックメニュー (背景) ---
+    // 右クリックメニュー
     ed::Suspend();
     if (ed::ShowBackgroundContextMenu()) {
-        ImGui::OpenPopup("ノード作成");
-        Vector2 mousePos = Input::GetInstance()->GetMousePos();
-        m_CreatePos = ed::ScreenToCanvas(ImVec2(mousePos.x, mousePos.y));
+        ImGui::OpenPopup("Create New Node");
+        m_CreatePos = ImGui::GetMousePos();
     }
-    if (ImGui::BeginPopup("ノード作成")) {
-        // ★修正: ツールチップを追加
-        if (ImGui::MenuItem("シーケンス")) {
-            CreateNode("Sequence", EditorNodeType::Sequence);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::Sequence));
-        }
 
-        if (ImGui::MenuItem("セレクター")) {
-            CreateNode("Selector", EditorNodeType::Selector);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::Selector));
-        }
-
-        if (ImGui::MenuItem("ランダムセレクター")) {
-            CreateNode("Random Selector", EditorNodeType::SelectorRandom);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::SelectorRandom));
-        }
-
-        if (ImGui::MenuItem("重みデコレーター")) {
-            CreateNode("Weight", EditorNodeType::DecoratorWeight);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::DecoratorWeight));
-        }
-
+    if (ImGui::BeginPopup("Create New Node")) {
+        ImGui::Text("ノードを追加");
         ImGui::Separator();
-        ImGui::Text("条件");
-        if (ImGui::MenuItem("  距離チェック")) {
-            CreateNode("距離チェック", EditorNodeType::ConditionPlayerClose);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionPlayerClose));
-        }
 
-        if (ImGui::MenuItem("  HP低下チェック")) {
-            CreateNode("HP低下", EditorNodeType::ConditionHealthLow);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionHealthLow));
-        }
+        auto addBtn = [&](const char *label, EditorNodeType type) {
+            if (ImGui::MenuItem(label)) {
+                CreateNode(label, type);
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", GetNodeDescription(type));
+        };
 
-        if (ImGui::MenuItem("  地上判定")) {
-            CreateNode("地上判定", EditorNodeType::ConditionIsGrounded);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionIsGrounded));
-        }
-
-        if (ImGui::MenuItem("  空中判定")) {
-            CreateNode("空中判定", EditorNodeType::ConditionIsAirborne);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionIsAirborne));
-        }
-
-        if (ImGui::MenuItem("  プレイヤーステート判定")) {
-            CreateNode("プレイヤーステート", EditorNodeType::ConditionPlayerState);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ConditionPlayerState));
-        }
-
+        ImGui::Text("[コンポジット]");
+        addBtn("Sequence", EditorNodeType::Sequence);
+        addBtn("Selector", EditorNodeType::Selector);
+        addBtn("RandomSelector", EditorNodeType::SelectorRandom);
+        addBtn("WeightDecorator", EditorNodeType::DecoratorWeight);
         ImGui::Separator();
-        ImGui::Text("アクション");
-        if (ImGui::MenuItem("  接近")) {
-            CreateNode("接近", EditorNodeType::ActionApproach);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionApproach));
-        }
 
-        if (ImGui::MenuItem("  高速接近")) {
-            CreateNode("ダッシュ", EditorNodeType::ActionDash);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionDash));
-        }
+        ImGui::Text("[条件]");
+        addBtn("PlayerClose", EditorNodeType::ConditionPlayerClose);
+        addBtn("HealthLow", EditorNodeType::ConditionHealthLow);
+        addBtn("IsGrounded", EditorNodeType::ConditionIsGrounded);
+        addBtn("IsAirborne", EditorNodeType::ConditionIsAirborne);
+        addBtn("IsPlayerState", EditorNodeType::ConditionPlayerState);
+        ImGui::Separator();
 
-        if (ImGui::MenuItem("  左右移動")) {
-            CreateNode("左右移動", EditorNodeType::ActionStrafe);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionStrafe));
-        }
+        ImGui::Text("[アクション]");
+        addBtn("RunAction", EditorNodeType::ActionRun);
+        addBtn("Approach", EditorNodeType::ActionApproach);
+        addBtn("Dash", EditorNodeType::ActionDash);
+        addBtn("Strafe", EditorNodeType::ActionStrafe);
+        addBtn("Retreat", EditorNodeType::ActionRetreat);
+        addBtn("Attack", EditorNodeType::ActionAttack);
+        addBtn("Idle", EditorNodeType::ActionIdle);
+        ImGui::Separator();
 
-        if (ImGui::MenuItem("  後退")) {
-            CreateNode("後退", EditorNodeType::ActionRetreat);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionRetreat));
-        }
-
-        if (ImGui::MenuItem("  攻撃")) {
-            CreateNode("攻撃", EditorNodeType::ActionAttack);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionAttack));
-        }
-
-        if (ImGui::MenuItem("  待機")) {
-            CreateNode("待機", EditorNodeType::ActionIdle);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionIdle));
-        }
-
-        if (ImGui::MenuItem("  ジャンプ")) {
-            CreateNode("ジャンプ", EditorNodeType::ActionJump);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionJump));
-        }
-
-        if (ImGui::MenuItem("  ジャンプ->飛行")) {
-            CreateNode("ジャンプ→飛行", EditorNodeType::ActionJumpToFly);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionJumpToFly));
-        }
-
-        if (ImGui::MenuItem("  飛行上昇")) {
-            CreateNode("飛行上昇", EditorNodeType::ActionFlyAscend);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionFlyAscend));
-        }
-
-        if (ImGui::MenuItem("  飛行下降")) {
-            CreateNode("飛行下降", EditorNodeType::ActionFlyDescend);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionFlyDescend));
-        }
-
-        if (ImGui::MenuItem("  飛行->着地")) {
-            CreateNode("飛行→着地", EditorNodeType::ActionFlyToGround);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionFlyToGround));
-        }
-
-        if (ImGui::MenuItem("  実行")) {
-            CreateNode("Run", EditorNodeType::ActionRun);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", GetNodeDescription(EditorNodeType::ActionRun));
-        }
+        ImGui::Text("[ジャンプ・飛行]");
+        addBtn("Jump", EditorNodeType::ActionJump);
+        addBtn("JumpToFly", EditorNodeType::ActionJumpToFly);
+        addBtn("FlyAscend", EditorNodeType::ActionFlyAscend);
+        addBtn("FlyDescend", EditorNodeType::ActionFlyDescend);
+        addBtn("FlyToGround", EditorNodeType::ActionFlyToGround);
 
         ImGui::EndPopup();
     }
     ed::Resume();
 
-    // ★プロパティウィンドウ（ノードエディタ内で、Suspend/Resume内で描画）
-    // 選択されたノードがある場合、その詳細設定を表示
-    ed::Suspend();
-    if (ed::GetSelectedObjectCount() > 0) {
-        std::vector<ed::NodeId> selectedNodes(ed::GetSelectedObjectCount());
-        ed::GetSelectedNodes(selectedNodes.data(), static_cast<int>(selectedNodes.size()));
-
-        if (!selectedNodes.empty()) {
-            int selectedNodeId = (int)selectedNodes[0].Get();
-
-            // 選択されたノードを検索
-            for (auto &node : m_Nodes) {
-                if ((int)node.ID.Get() == selectedNodeId) {
-                    // プロパティウィンドウを表示
-                    ImGui::Begin("ノードプロパティ", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
-                    ImGui::Text("ノード: %s", node.Title.c_str());
-                    ImGui::Separator();
-
-                    // プレイヤーステート判定ノードの場合
-                    if (node.Type == EditorNodeType::ConditionPlayerState) {
-                        ImGui::Text("プレイヤーステート選択");
-
-                        // ステート一覧(日本語)
-                        const char *stateNames[] = {
-                            "待機 (Idle)",
-                            "移動 (Move)",
-                            "ジャンプ (Jump)",
-                            "空中 (Air)",
-                            "飛行待機 (FlyIdle)",
-                            "飛行移動 (FlyMove)",
-                            "突撃 (Rush)",
-                            "チャージ (EnergyCharge)"};
-                        // 内部で使用する実際のステート名
-                        const char *stateValues[] = {
-                            "Idle", "Move", "Jump", "Air",
-                            "FlyIdle", "FlyMove", "Rush", "EnergyCharge"};
-                        const int stateCount = 8;
-
-                        // 現在選択されているステートのインデックスを取得
-                        int currentIndex = 0;
-                        for (int i = 0; i < stateCount; i++) {
-                            if (node.StateNameParameter == stateValues[i]) {
-                                currentIndex = i;
-                                break;
-                            }
-                        }
-
-                        // コンボボックスで選択
-                        if (ImGui::Combo("ステート", &currentIndex, stateNames, stateCount)) {
-                            node.StateNameParameter = stateValues[currentIndex];
-
-                            // 実行中なら再ビルド
-                            if (m_IsRunning) {
-                                BuildAndRunTree();
-                            }
-                        }
-
-                        // 選択されたステートを表示(確認用)
-                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "選択中: %s", stateNames[currentIndex]);
-                    }
-
-                    ImGui::End();
-                    break;
-                }
-            }
-        }
-    }
-    ed::Resume();
+    HandleCreateAction();
+    DeleteSelectedItems();
 
     ed::End();
-    ed::SetCurrentEditor(nullptr);
+}
+
+void BehaviorTreeEditor::CreateNode(const std::string &title, EditorNodeType type) {
+    int id = m_NextNodeId++;
+    EditorNode node(id, title, type);
+    m_Nodes.push_back(node);
+    ed::SetNodePosition(node.ID, m_CreatePos);
 }
 
 void BehaviorTreeEditor::HandleCreateAction() {
     if (ed::BeginCreate()) {
         ed::PinId start, end;
         if (ed::QueryNewLink(&start, &end)) {
-            // 入力ピンと出力ピンの正しい組み合わせかチェック
             bool validLink = false;
-
             int nodeId, outputIndex;
-
-            // 重み付けノードの出力ピンかチェック
             bool isWeightedStart = IsWeightedOutputPin(start, nodeId, outputIndex);
             bool isWeightedEnd = IsWeightedOutputPin(end, nodeId, outputIndex);
 
@@ -815,9 +1174,8 @@ void BehaviorTreeEditor::HandleCreateAction() {
                 validLink = true;
             }
 
-            if (validLink && ed::AcceptNewItem()) {
+            if (validLink && ed::AcceptNewItem())
                 m_Links.emplace_back(m_NextLinkId++, start, end);
-            }
         }
     }
     ed::EndCreate();
@@ -828,18 +1186,12 @@ void BehaviorTreeEditor::DeleteSelectedItems() {
         ed::NodeId nodeId;
         while (ed::QueryDeletedNode(&nodeId)) {
             if (ed::AcceptDeletedItem()) {
-                // ★修正: 削除されるノードのIDを保存
                 int deletedNodeId = (int)nodeId.Get();
-
-                // ★追加: このノードに接続されている全てのリンクを削除
                 auto linkIt = m_Links.begin();
                 while (linkIt != m_Links.end()) {
                     bool shouldDelete = false;
-
-                    // リンクの開始/終了ピンが削除されるノードのものか確認
                     for (const auto &node : m_Nodes) {
                         if ((int)node.ID.Get() == deletedNodeId) {
-                            // このノードの全てのピンをチェック
                             if (linkIt->StartPinID == node.InputPinID ||
                                 linkIt->StartPinID == node.OutputPinID ||
                                 linkIt->StartPinID == node.SuccessPinID ||
@@ -851,8 +1203,6 @@ void BehaviorTreeEditor::DeleteSelectedItems() {
                                 shouldDelete = true;
                                 break;
                             }
-
-                            // 重み付けノードの出力ピンもチェック
                             for (const auto &output : node.WeightedOutputs) {
                                 if (linkIt->StartPinID == output.PinID ||
                                     linkIt->EndPinID == output.PinID) {
@@ -864,26 +1214,14 @@ void BehaviorTreeEditor::DeleteSelectedItems() {
                                 break;
                         }
                     }
-
-                    if (shouldDelete) {
-                        linkIt = m_Links.erase(linkIt);
-                    } else {
-                        ++linkIt;
-                    }
+                    linkIt = shouldDelete ? m_Links.erase(linkIt) : std::next(linkIt);
                 }
-
-                // ★追加: ランタイムノードマップからも削除
                 m_nodeInstanceMap.erase(deletedNodeId);
-
-                // ノードを削除
                 auto it = std::remove_if(m_Nodes.begin(), m_Nodes.end(),
                                          [nodeId](const EditorNode &n) { return n.ID == nodeId; });
                 m_Nodes.erase(it, m_Nodes.end());
-
-                // ★追加: ツリーが実行中なら再ビルド
-                if (m_IsRunning) {
+                if (m_IsRunning)
                     BuildAndRunTree();
-                }
             }
         }
 
@@ -893,393 +1231,12 @@ void BehaviorTreeEditor::DeleteSelectedItems() {
                 auto it = std::remove_if(m_Links.begin(), m_Links.end(),
                                          [linkId](const EditorLink &l) { return l.ID == linkId; });
                 m_Links.erase(it, m_Links.end());
-
-                // ★追加: ツリーが実行中なら再ビルド
-                if (m_IsRunning) {
+                if (m_IsRunning)
                     BuildAndRunTree();
-                }
             }
         }
     }
     ed::EndDelete();
-}
-
-void BehaviorTreeEditor::CreateNode(const std::string &title, EditorNodeType type) {
-    int id = m_NextNodeId++;
-    EditorNode node(id, title, type);
-    m_Nodes.push_back(node);
-    ed::SetNodePosition(node.ID, m_CreatePos);
-}
-
-void BehaviorTreeEditor::BuildAndRunTree() {
-    m_nodeInstanceMap.clear();
-    m_RuntimeRoot = nullptr;
-    int rootId = FindRootNodeId();
-    if (rootId == -1)
-        return;
-    m_RuntimeRoot = BuildNodeRecursive(rootId);
-    if (m_RuntimeRoot) {
-        m_RuntimeRoot->SetContext(m_DebugEnemy, m_DebugPlayer);
-
-        // ★重要: 敵にツリーをセット
-        if (m_DebugEnemy) {
-            m_DebugEnemy->SetBehaviorTree(m_RuntimeRoot);
-        }
-    }
-}
-
-std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId) {
-    auto it = std::find_if(m_Nodes.begin(), m_Nodes.end(), [editorNodeId](const EditorNode &n) { return (int)n.ID.Get() == editorNodeId; });
-    if (it == m_Nodes.end())
-        return nullptr;
-    const EditorNode &eNode = *it;
-
-    std::shared_ptr<BTNode> runtimeNode = nullptr;
-    switch (eNode.Type) {
-    case EditorNodeType::Sequence:
-        runtimeNode = std::make_shared<SequenceNode>();
-        break;
-    case EditorNodeType::Selector:
-        runtimeNode = std::make_shared<SelectorNode>();
-        break;
-    case EditorNodeType::ActionRun:
-        runtimeNode = std::make_shared<RunActionNode>();
-        break;
-
-    case EditorNodeType::ConditionPlayerClose:
-        runtimeNode = std::make_shared<IsPlayerCloseNode>(eNode.Parameter, eNode.Parameter2);
-        break;
-    case EditorNodeType::ConditionHealthLow:
-        runtimeNode = std::make_shared<IsHealthLowNode>(eNode.Parameter);
-        break;
-
-    case EditorNodeType::ConditionIsGrounded:
-        runtimeNode = std::make_shared<IsGroundedNode>();
-        break;
-
-    case EditorNodeType::ConditionIsAirborne:
-        runtimeNode = std::make_shared<IsAirborneNode>();
-        break;
-
-    case EditorNodeType::ConditionPlayerState:
-        // ★新規追加: プレイヤーステート判定ノード
-        runtimeNode = std::make_shared<IsPlayerStateNode>(eNode.StateNameParameter);
-        break;
-
-    case EditorNodeType::ActionApproach:
-        runtimeNode = std::make_shared<EnemyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
-        break;
-    case EditorNodeType::ActionDash:
-        runtimeNode = std::make_shared<EnemyDashNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
-        break;
-    case EditorNodeType::ActionStrafe:
-        runtimeNode = std::make_shared<EnemyStrafeNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
-        break;
-    case EditorNodeType::ActionRetreat:
-        runtimeNode = std::make_shared<EnemyRetreatNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
-        break;
-
-    case EditorNodeType::ActionAttack:
-        runtimeNode = std::make_shared<EnemyAttackNode>();
-        break;
-    case EditorNodeType::ActionIdle:
-        runtimeNode = std::make_shared<EnemyIdleNode>(eNode.Parameter);
-        break;
-    // ★新規追加: ジャンプ・飛行関連ノード
-    case EditorNodeType::ActionJump:
-        runtimeNode = std::make_shared<EnemyJumpNode>(eNode.Parameter); // ジャンプ力
-        break;
-    case EditorNodeType::ActionJumpToFly:
-        runtimeNode = std::make_shared<EnemyJumpToFlyNode>();
-        break;
-    case EditorNodeType::ActionFlyAscend:
-        runtimeNode = std::make_shared<EnemyFlyAscendNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3); // 最小時間、最大時間、速度
-        break;
-    case EditorNodeType::ActionFlyDescend:
-        runtimeNode = std::make_shared<EnemyFlyDescendNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3); // 最小時間、最大時間、速度
-        break;
-    case EditorNodeType::ActionFlyToGround:
-        runtimeNode = std::make_shared<EnemyFlyToGroundNode>();
-        break;
-    case EditorNodeType::SelectorRandom:
-        runtimeNode = std::make_shared<RandomSelectorNode>();
-        break;
-    case EditorNodeType::DecoratorWeight:
-        // ★修正: 重み付けノードはRandomSelectorNodeとして構築
-        runtimeNode = std::make_shared<RandomSelectorNode>();
-        break;
-    }
-
-    if (!runtimeNode)
-        return nullptr;
-    m_nodeInstanceMap[editorNodeId] = runtimeNode;
-
-    bool isLeaf = (eNode.Type == EditorNodeType::ActionRun ||
-                   eNode.Type == EditorNodeType::ConditionPlayerClose ||
-                   eNode.Type == EditorNodeType::ConditionHealthLow ||
-                   eNode.Type == EditorNodeType::ConditionIsGrounded ||
-                   eNode.Type == EditorNodeType::ConditionIsAirborne ||
-                   eNode.Type == EditorNodeType::ConditionPlayerState || // ★追加
-                   eNode.Type == EditorNodeType::ActionApproach ||
-                   eNode.Type == EditorNodeType::ActionDash ||
-                   eNode.Type == EditorNodeType::ActionStrafe ||
-                   eNode.Type == EditorNodeType::ActionRetreat ||
-                   eNode.Type == EditorNodeType::ActionAttack ||
-                   eNode.Type == EditorNodeType::ActionIdle ||
-                   // ★新規追加
-                   eNode.Type == EditorNodeType::ActionJump ||
-                   eNode.Type == EditorNodeType::ActionJumpToFly ||
-                   eNode.Type == EditorNodeType::ActionFlyAscend ||
-                   eNode.Type == EditorNodeType::ActionFlyDescend ||
-                   eNode.Type == EditorNodeType::ActionFlyToGround);
-
-    if (!isLeaf) {
-        if (eNode.IsWeightNode()) {
-            // ★修正: 重み付けノードの場合、各出力ピンから子ノードを取得して重み付きで追加
-            auto weightedChildren = FindWeightedChildrenNodeIds(eNode);
-            for (auto &[childId, weight] : weightedChildren) {
-                auto childNode = BuildNodeRecursive(childId);
-                if (childNode) {
-                    // WeightDecoratorNodeでラップして追加
-                    auto weightDecorator = std::make_shared<WeightDecoratorNode>(weight);
-                    weightDecorator->AddChild(childNode);
-                    runtimeNode->AddChild(weightDecorator);
-                }
-            }
-        } else {
-            int outputPinId = (int)eNode.OutputPinID.Get();
-            std::vector<int> childIds = FindChildrenNodeIds(outputPinId);
-            for (int childId : childIds) {
-                auto childNode = BuildNodeRecursive(childId);
-                if (childNode)
-                    runtimeNode->AddChild(childNode);
-            }
-        }
-    } else if (eNode.IsConditionNode()) {
-        // 条件ノードの場合、成功ピンと失敗ピンからの子ノードを確認
-        int successPinId = (int)eNode.SuccessPinID.Get();
-        int failurePinId = (int)eNode.FailurePinID.Get();
-        std::vector<int> successChildIds = FindChildrenNodeIds(successPinId);
-        std::vector<int> failureChildIds = FindChildrenNodeIds(failurePinId);
-
-        // ★修正: 成功時・失敗時のアクションがある場合の処理を改善
-        if (!successChildIds.empty() || !failureChildIds.empty()) {
-            // Selectorでラップ(どちらか一方が実行される)
-            auto selectorWrapper = std::make_shared<SelectorNode>();
-
-            // 成功ルート: Sequence(条件 -> 成功時アクション)
-            if (!successChildIds.empty()) {
-                auto successSequence = std::make_shared<SequenceNode>();
-                // 条件ノード自体のコピーを作成
-                std::shared_ptr<BTNode> conditionCopy = nullptr;
-                if (eNode.Type == EditorNodeType::ConditionPlayerClose) {
-                    conditionCopy = std::make_shared<IsPlayerCloseNode>(eNode.Parameter, eNode.Parameter2);
-                } else if (eNode.Type == EditorNodeType::ConditionHealthLow) {
-                    conditionCopy = std::make_shared<IsHealthLowNode>(eNode.Parameter);
-                } else if (eNode.Type == EditorNodeType::ConditionIsGrounded) {
-                    conditionCopy = std::make_shared<IsGroundedNode>();
-                } else if (eNode.Type == EditorNodeType::ConditionIsAirborne) {
-                    conditionCopy = std::make_shared<IsAirborneNode>();
-                } else if (eNode.Type == EditorNodeType::ConditionPlayerState) {
-                    // ★新規追加: プレイヤーステート判定ノード
-                    conditionCopy = std::make_shared<IsPlayerStateNode>(eNode.StateNameParameter);
-                }
-
-                if (conditionCopy) {
-                    successSequence->AddChild(conditionCopy); // 条件をチェック
-                    for (int childId : successChildIds) {
-                        auto childNode = BuildNodeRecursive(childId);
-                        if (childNode)
-                            successSequence->AddChild(childNode);
-                    }
-                    selectorWrapper->AddChild(successSequence);
-                }
-            }
-
-            // ★重要な変更: 失敗ルートは条件チェックなしで直接実行
-            // これにより、成功ルートが失敗したら即座に失敗ルートのアクションを実行
-            if (!failureChildIds.empty()) {
-                // 失敗時は条件チェックをスキップして直接アクションを実行
-                for (int childId : failureChildIds) {
-                    auto childNode = BuildNodeRecursive(childId);
-                    if (childNode)
-                        selectorWrapper->AddChild(childNode);
-                }
-            }
-
-            return selectorWrapper;
-        }
-    }
-
-    return runtimeNode;
-}
-
-std::vector<int> BehaviorTreeEditor::FindChildrenNodeIds(int outputPinId) {
-    std::vector<int> children;
-    for (const auto &link : m_Links) {
-        if ((int)link.StartPinID.Get() == outputPinId) {
-            int endPin = (int)link.EndPinID.Get();
-            children.push_back((endPin - 1) / 10);
-        }
-    }
-    return children;
-}
-
-std::vector<std::pair<int, float>> BehaviorTreeEditor::FindWeightedChildrenNodeIds(const EditorNode &node) {
-    std::vector<std::pair<int, float>> result;
-
-    for (int i = 0; i < node.WeightedOutputs.size(); ++i) {
-        int outputPinId = (int)node.WeightedOutputs[i].PinID.Get();
-        float weight = node.WeightedOutputs[i].Weight;
-
-        // このピンから出ているリンクを探す
-        for (const auto &link : m_Links) {
-            if ((int)link.StartPinID.Get() == outputPinId) {
-                int endPin = (int)link.EndPinID.Get();
-                int childNodeId = (endPin - 1) / 10;
-                result.push_back({childNodeId, weight});
-            }
-        }
-    }
-
-    return result;
-}
-
-int BehaviorTreeEditor::FindRootNodeId() {
-    for (const auto &node : m_Nodes) {
-        bool hasInput = false;
-        int inputPin = (int)node.InputPinID.Get();
-        for (const auto &link : m_Links) {
-            if ((int)link.EndPinID.Get() == inputPin) {
-                hasInput = true;
-                break;
-            }
-        }
-        if (!hasInput)
-            return (int)node.ID.Get();
-    }
-    return -1;
-}
-
-void BehaviorTreeEditor::SaveTree() {
-    std::string fileName = m_InputFileNameBuf;
-    if (fileName.empty())
-        fileName = "NewBehavior";
-    DataHandler handler("BehaviorTree", fileName);
-
-    json nodesJson = json::array();
-    for (const auto &node : m_Nodes) {
-        json n;
-        n["id"] = (int)node.ID.Get();
-        n["title"] = node.Title;
-        n["type"] = (int)node.Type;
-        ImVec2 pos = ed::GetNodePosition(node.ID);
-        n["x"] = pos.x;
-        n["y"] = pos.y;
-        n["param"] = node.Parameter;
-        n["param2"] = node.Parameter2;
-        n["param3"] = node.Parameter3;
-
-        // ★新規追加: プレイヤーステート判定ノードのステート名を保存
-        if (node.Type == EditorNodeType::ConditionPlayerState) {
-            n["stateName"] = node.StateNameParameter;
-        }
-
-        // 重み付けノードの出力を保存
-        if (node.IsWeightNode()) {
-            json weightsJson = json::array();
-            for (const auto &output : node.WeightedOutputs) {
-                json w;
-                w["pinId"] = (int)output.PinID.Get();
-                w["weight"] = output.Weight;
-                weightsJson.push_back(w);
-            }
-            n["weightedOutputs"] = weightsJson;
-        }
-
-        nodesJson.push_back(n);
-    }
-    handler.Save("nodes", nodesJson);
-
-    json linksJson = json::array();
-    for (const auto &link : m_Links) {
-        json l;
-        l["id"] = (int)link.ID.Get();
-        l["start"] = (int)link.StartPinID.Get();
-        l["end"] = (int)link.EndPinID.Get();
-        linksJson.push_back(l);
-    }
-    handler.Save("links", linksJson);
-    std::cout << "BTを保存しました: " << fileName << ".json" << std::endl;
-}
-
-void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
-    std::string folderName, fileName;
-    ParsePathToFolderAndFile(filePath, folderName, fileName);
-    if (fileName.size() < sizeof(m_InputFileNameBuf))
-        strcpy_s(m_InputFileNameBuf, fileName.c_str());
-
-    DataHandler handler(folderName, fileName);
-    m_Nodes.clear();
-    m_Links.clear();
-
-    json nodesJson = handler.Load("nodes", json::array());
-    int maxNodeId = 0;
-    int maxPinId = 0;
-    for (const auto &n : nodesJson) {
-        int id = n["id"].get<int>();
-        std::string title = n["title"].get<std::string>();
-        EditorNodeType type = (EditorNodeType)n["type"].get<int>();
-        float x = n["x"].get<float>();
-        float y = n["y"].get<float>();
-        float param = n.value("param", 0.0f);
-        float param2 = n.value("param2", 0.0f);
-        float param3 = n.value("param3", 0.0f);
-
-        EditorNode node(id, title, type);
-        node.Parameter = param;
-        node.Parameter2 = param2;
-        node.Parameter3 = param3;
-
-        // ★新規追加: プレイヤーステート判定ノードのステート名を読み込み
-        if (type == EditorNodeType::ConditionPlayerState && n.contains("stateName")) {
-            node.StateNameParameter = n["stateName"].get<std::string>();
-        }
-
-        // 重み付けノードの出力を読み込み
-        if (node.IsWeightNode() && n.contains("weightedOutputs")) {
-            node.WeightedOutputs.clear();
-            for (const auto &w : n["weightedOutputs"]) {
-                WeightedOutput output;
-                output.PinID = w["pinId"].get<int>();
-                output.Weight = w["weight"].get<float>();
-                node.WeightedOutputs.push_back(output);
-
-                if ((int)output.PinID.Get() > maxPinId)
-                    maxPinId = (int)output.PinID.Get();
-            }
-        }
-
-        m_Nodes.push_back(node);
-        ed::SetNodePosition(node.ID, ImVec2(x, y));
-        if (id > maxNodeId)
-            maxNodeId = id;
-    }
-    m_NextNodeId = maxNodeId + 1;
-    m_NextPinId = maxPinId + 1;
-
-    json linksJson = handler.Load("links", json::array());
-    int maxLinkId = 0;
-    for (const auto &l : linksJson) {
-        int id = l["id"].get<int>();
-        int start = l["start"].get<int>();
-        int end = l["end"].get<int>();
-        m_Links.emplace_back(id, ed::PinId(start), ed::PinId(end));
-        if (id > maxLinkId)
-            maxLinkId = id;
-    }
-    m_NextLinkId = maxLinkId + 1;
-    std::cout << "BTを読込しました: " << fileName << std::endl;
 }
 
 #endif // _DEBUG

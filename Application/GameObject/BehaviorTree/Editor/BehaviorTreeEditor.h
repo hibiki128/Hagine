@@ -1,14 +1,12 @@
 #pragma once
 #include "Application/GameObject/BehaviorTree/Node/BehaviorNode.h"
 #include "Engine/Utility/Data/DataHandler.h"
-#ifdef _DEBUG
-#include "imgui.h"
-#include "imgui_node_editor.h"
-#include <externals/nlohmann/json.hpp>
-#include <map>
+#include <memory>
 #include <string>
-#include <vector>
 
+// ============================================================
+// ノードタイプ定義 (Debug / Release 共通)
+// ============================================================
 enum class EditorNodeType {
     Sequence,
     Selector,
@@ -17,22 +15,88 @@ enum class EditorNodeType {
     ActionRun,
     ConditionPlayerClose,
     ConditionHealthLow,
-    ConditionIsGrounded,  // ★新規追加: 地上判定
-    ConditionIsAirborne,  // ★新規追加: 空中判定
-    ConditionPlayerState, // ★新規追加: プレイヤーステート判定
+    ConditionIsGrounded,
+    ConditionIsAirborne,
+    ConditionPlayerState,
     ActionApproach,
     ActionDash,
     ActionStrafe,
     ActionRetreat,
     ActionAttack,
     ActionIdle,
-    // ★新規追加: ジャンプ・飛行関連ノード
-    ActionJump,       // ジャンプ動作
-    ActionJumpToFly,  // ジャンプから飛行状態への遷移
-    ActionFlyAscend,  // 飛行中の上昇
-    ActionFlyDescend, // 飛行中の下降
-    ActionFlyToGround // 飛行から地上への遷移
+    ActionJump,
+    ActionJumpToFly,
+    ActionFlyAscend,
+    ActionFlyDescend,
+    ActionFlyToGround
 };
+
+// ============================================================
+// BehaviorTreeLoader
+// Debug / Release 共通で使えるJSON→ランタイムツリー変換クラス
+// ============================================================
+class BehaviorTreeLoader {
+  public:
+    /// <summary>
+    /// 指定JSONファイルからランタイムBTを構築して返す
+    /// </summary>
+    /// <param name="folder">リソースフォルダ名 (例: "BehaviorTree")</param>
+    /// <param name="file">ファイル名 (.json なし, 例: "EnemyBehavior")</param>
+    /// <returns>ルートノード (失敗時は nullptr)</returns>
+    static std::shared_ptr<BTNode> LoadAndBuild(const std::string &folder, const std::string &file);
+
+  private:
+    // --- JSONから復元したノード情報 (内部用) ---
+    struct NodeData {
+        int id = 0;
+        EditorNodeType type = EditorNodeType::ActionIdle;
+        float param = 0.0f;
+        float param2 = 0.0f;
+        float param3 = 0.0f;
+        std::string stateName = "Idle";
+        // 重み付けノード用
+        struct WeightPin {
+            int pinId = 0;
+            float weight = 1.0f;
+        };
+        std::vector<WeightPin> weightedOutputs;
+    };
+
+    struct LinkData {
+        int startPin = 0;
+        int endPin = 0;
+    };
+
+    static std::shared_ptr<BTNode> BuildNodeRecursive(
+        int nodeId,
+        const std::vector<NodeData> &nodes,
+        const std::vector<LinkData> &links);
+
+    static std::vector<int> FindChildrenNodeIds(
+        int outputPinId,
+        const std::vector<LinkData> &links);
+
+    static std::vector<std::pair<int, float>> FindWeightedChildrenNodeIds(
+        const NodeData &node,
+        const std::vector<LinkData> &links);
+
+    static int FindRootNodeId(
+        const std::vector<NodeData> &nodes,
+        const std::vector<LinkData> &links);
+};
+
+// ============================================================
+// エディタ (Debugビルド専用)
+// ============================================================
+#ifdef _DEBUG
+#include "imgui.h"
+#include "imgui_node_editor.h"
+#include <externals/nlohmann/json.hpp>
+#include <map>
+#include <vector>
+
+class Enemy;
+class Player;
 
 // 重み付けノードの各出力の情報
 struct WeightedOutput {
@@ -47,32 +111,27 @@ struct EditorNode {
     ImVec2 Position;
     ax::NodeEditor::PinId InputPinID;
     ax::NodeEditor::PinId OutputPinID;
-    ax::NodeEditor::PinId SuccessPinID; // 条件ノード用: 成功時の出力
-    ax::NodeEditor::PinId FailurePinID; // 条件ノード用: 失敗時の出力
+    ax::NodeEditor::PinId SuccessPinID;
+    ax::NodeEditor::PinId FailurePinID;
 
-    // 重み付けノード用: 複数の出力ピンとそれぞれの重み
     std::vector<WeightedOutput> WeightedOutputs;
 
-    // パラメータ
     float Parameter = 0.0f;
     float Parameter2 = 0.0f;
     float Parameter3 = 0.0f;
 
-    // ★新規追加: プレイヤーステート判定用のパラメータ
-    std::string StateNameParameter = "Idle"; // デフォルトはIdle
+    std::string StateNameParameter = "Idle";
 
     EditorNode(int id, const std::string &title, EditorNodeType type);
 
-    // 条件ノードかどうかを判定
     bool IsConditionNode() const {
         return Type == EditorNodeType::ConditionPlayerClose ||
                Type == EditorNodeType::ConditionHealthLow ||
                Type == EditorNodeType::ConditionIsGrounded ||
                Type == EditorNodeType::ConditionIsAirborne ||
-               Type == EditorNodeType::ConditionPlayerState; // ★追加
+               Type == EditorNodeType::ConditionPlayerState;
     }
 
-    // アクションノードかどうかを判定
     bool IsActionNode() const {
         return Type == EditorNodeType::ActionRun ||
                Type == EditorNodeType::ActionApproach ||
@@ -81,7 +140,6 @@ struct EditorNode {
                Type == EditorNodeType::ActionRetreat ||
                Type == EditorNodeType::ActionAttack ||
                Type == EditorNodeType::ActionIdle ||
-               // ★新規追加
                Type == EditorNodeType::ActionJump ||
                Type == EditorNodeType::ActionJumpToFly ||
                Type == EditorNodeType::ActionFlyAscend ||
@@ -89,7 +147,6 @@ struct EditorNode {
                Type == EditorNodeType::ActionFlyToGround;
     }
 
-    // 重み付けノードかどうかを判定
     bool IsWeightNode() const {
         return Type == EditorNodeType::DecoratorWeight;
     }
@@ -108,10 +165,12 @@ class BehaviorTreeEditor {
     ~BehaviorTreeEditor();
 
     void OnImGuiRender();
+
     void SetDebugTargets(Enemy *enemy, Player *player) {
         m_DebugEnemy = enemy;
         m_DebugPlayer = player;
     }
+
     std::shared_ptr<BTNode> GetRuntimeRoot() { return m_RuntimeRoot; }
 
   private:
@@ -139,7 +198,7 @@ class BehaviorTreeEditor {
 
     int m_NextNodeId = 1;
     int m_NextLinkId = 1;
-    int m_NextPinId = 10000; // 動的に作成されるピンのID管理用
+    int m_NextPinId = 10000;
     ImVec2 m_CreatePos = ImVec2(0, 0);
 
     bool m_IsRunning = false;
