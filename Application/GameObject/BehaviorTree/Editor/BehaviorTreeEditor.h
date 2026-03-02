@@ -23,14 +23,23 @@ enum class EditorNodeType {
     ActionAttack,         // 11
     ActionIdle,           // 12
     // ===== 新規追加ノード (末尾に追加してint値のずれを防ぐ) =====
-    ActionJump,          // 13
-    ActionJumpToFly,     // 14
-    ActionFlyAscend,     // 15
-    ActionFlyDescend,    // 16
-    ActionFlyToGround,   // 17
-    ConditionIsGrounded, // 18
-    ConditionIsAirborne, // 19
-    ConditionPlayerState // 20
+    ActionJump,           // 13
+    ActionJumpToFly,      // 14
+    ActionFlyAscend,      // 15
+    ActionFlyDescend,     // 16
+    ActionFlyToGround,    // 17
+    ConditionIsGrounded,  // 18
+    ConditionIsAirborne,  // 19
+    ConditionPlayerState, // 20
+    // ===== 射撃・ロックオン =====
+    ActionShoot,       // 21
+    ActionLockOn,      // 22
+    ConditionIsLockOn, // 23
+    // ===== 近接コンボ =====
+    ActionComboStep, // 24  コンボ1段
+    ActionComboFull, // 25  コンボ全段
+    // ===== 連射 =====
+    ActionBurstShoot // 26  N連発
 };
 
 // ============================================================
@@ -55,6 +64,8 @@ class BehaviorTreeLoader {
         float param = 0.0f;
         float param2 = 0.0f;
         float param3 = 0.0f;
+        float param4 = 0.0f; // 拡散角度など追加パラメータ用
+        float param5 = 0.0f; // homingMode(0=拡散, 1=ホーミング)など
         std::string stateName = "Idle";
         // 重み付けノード用
         struct WeightPin {
@@ -121,6 +132,8 @@ struct EditorNode {
     float Parameter = 0.0f;
     float Parameter2 = 0.0f;
     float Parameter3 = 0.0f;
+    float Parameter4 = 0.0f; // 拡散角度など
+    float Parameter5 = 0.0f; // homingMode(0=拡散, 1=ホーミング)など
 
     std::string StateNameParameter = "Idle";
 
@@ -131,7 +144,8 @@ struct EditorNode {
                Type == EditorNodeType::ConditionHealthLow ||
                Type == EditorNodeType::ConditionIsGrounded ||
                Type == EditorNodeType::ConditionIsAirborne ||
-               Type == EditorNodeType::ConditionPlayerState;
+               Type == EditorNodeType::ConditionPlayerState ||
+               Type == EditorNodeType::ConditionIsLockOn;
     }
 
     bool IsActionNode() const {
@@ -146,7 +160,12 @@ struct EditorNode {
                Type == EditorNodeType::ActionJumpToFly ||
                Type == EditorNodeType::ActionFlyAscend ||
                Type == EditorNodeType::ActionFlyDescend ||
-               Type == EditorNodeType::ActionFlyToGround;
+               Type == EditorNodeType::ActionFlyToGround ||
+               Type == EditorNodeType::ActionShoot ||
+               Type == EditorNodeType::ActionLockOn ||
+               Type == EditorNodeType::ActionComboStep ||
+               Type == EditorNodeType::ActionComboFull ||
+               Type == EditorNodeType::ActionBurstShoot;
     }
 
     bool IsWeightNode() const {

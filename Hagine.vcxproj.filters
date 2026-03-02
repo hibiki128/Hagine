@@ -473,6 +473,8 @@
     <ClCompile Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.cpp">
       <Filter>Application\GameObject\BehaviorTree\Editor</Filter>
     </ClCompile>
+    <ClCompile Include="Application\GameObject\Enemy\Bullet\EnemyBullet.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\Hand\EnemyHand.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -885,6 +887,8 @@
     <ClInclude Include="Engine\Utility\Debug\ImGui\Debugui_improved.h">
       <Filter>Engine\Utility\Debug\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="Application\GameObject\Enemy\Bullet\EnemyBullet.h" />
+    <ClInclude Include="Application\GameObject\Enemy\Hand\EnemyHand.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

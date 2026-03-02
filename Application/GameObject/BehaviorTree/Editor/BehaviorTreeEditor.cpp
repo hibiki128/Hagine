@@ -113,6 +113,38 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
     case EditorNodeType::ConditionPlayerState:
         runtimeNode = std::make_shared<IsPlayerStateNode>(nd.stateName);
         break;
+    case EditorNodeType::ActionShoot:
+        runtimeNode = std::make_shared<EnemyShootNode>(nd.param);
+        break;
+    case EditorNodeType::ActionLockOn:
+        runtimeNode = std::make_shared<EnemyLockOnNode>(nd.param >= 1.0f);
+        break;
+    case EditorNodeType::ConditionIsLockOn:
+        runtimeNode = std::make_shared<IsEnemyLockOnNode>();
+        break;
+    case EditorNodeType::ActionComboStep:
+        // param: 1段のモーション待機時間(秒), param2: コンボ間隔オーバーライド(秒)
+        runtimeNode = std::make_shared<EnemyComboStepNode>(
+            nd.param > 0.0f ? nd.param : 0.5f,
+            nd.param2);
+        break;
+    case EditorNodeType::ActionComboFull:
+        // param: 1段あたりの時間(秒), param2: 最大段数(0=全段), param3: コンボ間隔オーバーライド(秒)
+        runtimeNode = std::make_shared<EnemyComboFullNode>(
+            nd.param > 0.0f ? nd.param : 0.5f,
+            static_cast<int>(nd.param2),
+            nd.param3);
+        break;
+    case EditorNodeType::ActionBurstShoot:
+        // param: 発射間隔(秒), param2: 弾数, param3: クールダウン(秒)
+        // param4: 拡散角度(度, 0=直進), param5: ホーミング(0=拡散弾, 1=追従弾)
+        runtimeNode = std::make_shared<EnemyBurstShootNode>(
+            nd.param > 0.0f ? nd.param : 0.2f,
+            nd.param2 > 0.0f ? static_cast<int>(nd.param2) : 3,
+            nd.param3 > 0.0f ? nd.param3 : 0.5f,
+            nd.param4,
+            nd.param5 >= 1.0f);
+        break;
     case EditorNodeType::ActionApproach:
         runtimeNode = std::make_shared<EnemyApproachNode>(nd.param, nd.param2, nd.param3);
         break;
@@ -160,6 +192,7 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                    nd.type == EditorNodeType::ConditionIsGrounded ||
                    nd.type == EditorNodeType::ConditionIsAirborne ||
                    nd.type == EditorNodeType::ConditionPlayerState ||
+                   nd.type == EditorNodeType::ConditionIsLockOn ||
                    nd.type == EditorNodeType::ActionApproach ||
                    nd.type == EditorNodeType::ActionDash ||
                    nd.type == EditorNodeType::ActionStrafe ||
@@ -170,7 +203,12 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                    nd.type == EditorNodeType::ActionJumpToFly ||
                    nd.type == EditorNodeType::ActionFlyAscend ||
                    nd.type == EditorNodeType::ActionFlyDescend ||
-                   nd.type == EditorNodeType::ActionFlyToGround);
+                   nd.type == EditorNodeType::ActionFlyToGround ||
+                   nd.type == EditorNodeType::ActionShoot ||
+                   nd.type == EditorNodeType::ActionLockOn ||
+                   nd.type == EditorNodeType::ActionComboStep ||
+                   nd.type == EditorNodeType::ActionComboFull ||
+                   nd.type == EditorNodeType::ActionBurstShoot);
 
     if (!isLeaf) {
         if (nd.type == EditorNodeType::DecoratorWeight) {
@@ -226,6 +264,9 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                 case EditorNodeType::ConditionPlayerState:
                     condCopy = std::make_shared<IsPlayerStateNode>(nd.stateName);
                     break;
+                case EditorNodeType::ConditionIsLockOn:
+                    condCopy = std::make_shared<IsEnemyLockOnNode>();
+                    break;
                 default:
                     break;
                 }
@@ -275,6 +316,8 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::LoadAndBuild(
         nd.param = n.value("param", 0.0f);
         nd.param2 = n.value("param2", 0.0f);
         nd.param3 = n.value("param3", 0.0f);
+        nd.param4 = n.value("param4", 0.0f);
+        nd.param5 = n.value("param5", 0.0f);
 
         if (nd.type == EditorNodeType::ConditionPlayerState && n.contains("stateName"))
             nd.stateName = n["stateName"].get<std::string>();
@@ -373,6 +416,23 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         Parameter = 1.0f;   // 最小時間
         Parameter2 = 3.0f;  // 最大時間
         Parameter3 = 15.0f; // 下降速度
+    } else if (type == EditorNodeType::ActionShoot) {
+        Parameter = 1.0f; // クールダウン秒数
+    } else if (type == EditorNodeType::ActionLockOn) {
+        Parameter = 1.0f; // 1.0=ON, 0.0=OFF
+    } else if (type == EditorNodeType::ActionComboStep) {
+        Parameter = 0.5f;  // 1段のモーション待機時間(秒)
+        Parameter2 = 0.0f; // コンボ間隔オーバーライド(0=デフォルト0.15s)
+    } else if (type == EditorNodeType::ActionComboFull) {
+        Parameter = 0.5f;  // 1段あたりの時間(秒)
+        Parameter2 = 0.0f; // 最大段数(0=全段)
+        Parameter3 = 0.0f; // コンボ間隔オーバーライド(0=デフォルト0.15s)
+    } else if (type == EditorNodeType::ActionBurstShoot) {
+        Parameter = 0.2f;  // 発射間隔(秒)
+        Parameter2 = 3.0f; // 弾数
+        Parameter3 = 0.5f; // クールダウン(秒)
+        Parameter4 = 0.0f; // 拡散角度(度, 0=直進)
+        Parameter5 = 0.0f; // 0=拡散弾, 1=ホーミング弾
     }
 }
 
@@ -465,6 +525,18 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "飛行中に下降する（指定速度と時間）";
     case EditorNodeType::ActionFlyToGround:
         return "飛行状態から地上へ着地する";
+    case EditorNodeType::ActionShoot:
+        return "弾を1発発射し、指定秒数(param)クールダウンする";
+    case EditorNodeType::ActionLockOn:
+        return "ロックオン状態を切り替える (param: 1=ON, 0=OFF)";
+    case EditorNodeType::ConditionIsLockOn:
+        return "ロックオン中かどうかをチェックする";
+    case EditorNodeType::ActionComboStep:
+        return "コンボを1段だけ実行する (param: モーション待機秒, param2: コンボ間隔秒(0=デフォルト))";
+    case EditorNodeType::ActionComboFull:
+        return "コンボを全段実行する (param: 1段の時間秒, param2: 最大段数(0=全段), param3: コンボ間隔秒(0=デフォルト))";
+    case EditorNodeType::ActionBurstShoot:
+        return "弾をN連発する (param: 発射間隔秒, param2: 弾数, param3: クールダウン秒, param4: 拡散角度度, param5: 0=拡散弾/1=ホーミング弾)";
     default:
         return "No description";
     }
@@ -523,6 +595,15 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     case EditorNodeType::ConditionPlayerState:
         runtimeNode = std::make_shared<IsPlayerStateNode>(eNode.StateNameParameter);
         break;
+    case EditorNodeType::ActionShoot:
+        runtimeNode = std::make_shared<EnemyShootNode>(eNode.Parameter);
+        break;
+    case EditorNodeType::ActionLockOn:
+        runtimeNode = std::make_shared<EnemyLockOnNode>(eNode.Parameter >= 1.0f);
+        break;
+    case EditorNodeType::ConditionIsLockOn:
+        runtimeNode = std::make_shared<IsEnemyLockOnNode>();
+        break;
     case EditorNodeType::ActionApproach:
         runtimeNode = std::make_shared<EnemyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
         break;
@@ -555,6 +636,25 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         break;
     case EditorNodeType::ActionFlyToGround:
         runtimeNode = std::make_shared<EnemyFlyToGroundNode>();
+        break;
+    case EditorNodeType::ActionComboStep:
+        runtimeNode = std::make_shared<EnemyComboStepNode>(
+            eNode.Parameter > 0.0f ? eNode.Parameter : 0.5f,
+            eNode.Parameter2);
+        break;
+    case EditorNodeType::ActionComboFull:
+        runtimeNode = std::make_shared<EnemyComboFullNode>(
+            eNode.Parameter > 0.0f ? eNode.Parameter : 0.5f,
+            static_cast<int>(eNode.Parameter2),
+            eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionBurstShoot:
+        runtimeNode = std::make_shared<EnemyBurstShootNode>(
+            eNode.Parameter > 0.0f ? eNode.Parameter : 0.2f,
+            eNode.Parameter2 > 0.0f ? static_cast<int>(eNode.Parameter2) : 3,
+            eNode.Parameter3 > 0.0f ? eNode.Parameter3 : 0.5f,
+            eNode.Parameter4,
+            eNode.Parameter5 >= 1.0f);
         break;
     case EditorNodeType::SelectorRandom:
         runtimeNode = std::make_shared<RandomSelectorNode>();
@@ -612,6 +712,8 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
                     conditionCopy = std::make_shared<IsAirborneNode>();
                 else if (eNode.Type == EditorNodeType::ConditionPlayerState)
                     conditionCopy = std::make_shared<IsPlayerStateNode>(eNode.StateNameParameter);
+                else if (eNode.Type == EditorNodeType::ConditionIsLockOn)
+                    conditionCopy = std::make_shared<IsEnemyLockOnNode>();
 
                 if (conditionCopy) {
                     successSequence->AddChild(conditionCopy);
@@ -700,6 +802,8 @@ void BehaviorTreeEditor::SaveTree() {
         n["param"] = node.Parameter;
         n["param2"] = node.Parameter2;
         n["param3"] = node.Parameter3;
+        n["param4"] = node.Parameter4;
+        n["param5"] = node.Parameter5;
 
         if (node.Type == EditorNodeType::ConditionPlayerState)
             n["stateName"] = node.StateNameParameter;
@@ -753,6 +857,8 @@ void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
         node.Parameter = n.value("param", 0.0f);
         node.Parameter2 = n.value("param2", 0.0f);
         node.Parameter3 = n.value("param3", 0.0f);
+        node.Parameter4 = n.value("param4", 0.0f);
+        node.Parameter5 = n.value("param5", 0.0f);
 
         if (type == EditorNodeType::ConditionPlayerState && n.contains("stateName"))
             node.StateNameParameter = n["stateName"].get<std::string>();
@@ -1080,6 +1186,60 @@ void BehaviorTreeEditor::OnImGuiRender() {
             ImGui::SameLine();
             if (ImGui::DragFloat(wid3, &node.Parameter3, 0.5f, 5.0f, 30.0f, "%.1f"))
                 paramChanged = true;
+        } else if (node.Type == EditorNodeType::ActionComboStep) {
+            ImGui::Text("モーション待機(秒)");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.05f, 0.1f, 5.0f, "%.2fs"))
+                paramChanged = true;
+            ImGui::Text("コンボ間隔(0=デフォルト)");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid2, &node.Parameter2, 0.01f, 0.0f, 2.0f, "%.2fs"))
+                paramChanged = true;
+        } else if (node.Type == EditorNodeType::ActionComboFull) {
+            ImGui::Text("1段の時間(秒)");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.05f, 0.1f, 5.0f, "%.2fs"))
+                paramChanged = true;
+            ImGui::Text("最大段数(0=全段)");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid2, &node.Parameter2, 1.0f, 0.0f, 8.0f, "%.0f段"))
+                paramChanged = true;
+            ImGui::Text("コンボ間隔(0=デフォルト)");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid3, &node.Parameter3, 0.01f, 0.0f, 2.0f, "%.2fs"))
+                paramChanged = true;
+        } else if (node.Type == EditorNodeType::ActionBurstShoot) {
+            // ウィジェット用IDを追加で確保
+            char wid4[64], wid5[64];
+            snprintf(wid4, sizeof(wid4), "##param4_%d", (int)node.ID.Get());
+            snprintf(wid5, sizeof(wid5), "##param5_%d", (int)node.ID.Get());
+
+            ImGui::Text("発射間隔(秒)");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.01f, 0.01f, 5.0f, "%.2fs"))
+                paramChanged = true;
+            ImGui::Text("弾数");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid2, &node.Parameter2, 1.0f, 1.0f, 30.0f, "%.0f発"))
+                paramChanged = true;
+            ImGui::Text("クールダウン(秒)");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid3, &node.Parameter3, 0.05f, 0.0f, 10.0f, "%.2fs"))
+                paramChanged = true;
+            ImGui::Text("拡散角度(度)");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid4, &node.Parameter4, 1.0f, 0.0f, 180.0f, "%.0f度"))
+                paramChanged = true;
+            // ホーミングチェックボックス
+            bool isHoming = (node.Parameter5 >= 1.0f);
+            if (ImGui::Checkbox("ホーミング弾", &isHoming)) {
+                node.Parameter5 = isHoming ? 1.0f : 0.0f;
+                paramChanged = true;
+            }
+            if (!isHoming) {
+                ImGui::SameLine();
+                ImGui::TextDisabled("(拡散弾モード)");
+            }
         }
 
         if (paramChanged && m_IsRunning)
@@ -1168,6 +1328,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
         addBtn("地上チェック", EditorNodeType::ConditionIsGrounded);
         addBtn("空中チェック", EditorNodeType::ConditionIsAirborne);
         addBtn("ステートチェック", EditorNodeType::ConditionPlayerState);
+        addBtn("ロックオンチェック", EditorNodeType::ConditionIsLockOn);
         ImGui::Separator();
 
         ImGui::Text("[アクション]");
@@ -1178,6 +1339,17 @@ void BehaviorTreeEditor::OnImGuiRender() {
         addBtn("後退", EditorNodeType::ActionRetreat);
         addBtn("攻撃", EditorNodeType::ActionAttack);
         addBtn("待機", EditorNodeType::ActionIdle);
+        ImGui::Separator();
+
+        ImGui::Text("[近接コンボ]");
+        addBtn("コンボ1段", EditorNodeType::ActionComboStep);
+        addBtn("コンボ全段", EditorNodeType::ActionComboFull);
+        ImGui::Separator();
+
+        ImGui::Text("[射撃]");
+        addBtn("弾発射(単発)", EditorNodeType::ActionShoot);
+        addBtn("弾発射(連射)", EditorNodeType::ActionBurstShoot);
+        addBtn("ロックオン切替", EditorNodeType::ActionLockOn);
         ImGui::Separator();
 
         ImGui::Text("[ジャンプ・飛行]");

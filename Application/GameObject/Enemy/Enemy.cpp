@@ -3,8 +3,10 @@
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
+#include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Debug/Log/Logger.h>
 #include <Frame.h>
+#include <Object/Base/BaseObjectManager.h>
 
 Enemy::Enemy() {}
 Enemy::~Enemy() {}
@@ -37,12 +39,46 @@ void Enemy::Init(const std::string objectName) {
     chargeShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
 
+    // 手の生成
+    leftHand_ = std::make_unique<EnemyHand>();
+    leftHand_->Init("enemy_leftHand");
+    leftHand_->SetEnemy(this);
+
+    rightHand_ = std::make_unique<EnemyHand>();
+    rightHand_->Init("enemy_rightHand");
+    rightHand_->SetEnemy(this);
+
     // 物理パラメータの初期化
     fallSpeed_ = 30.0f;
     moveSpeed_ = 5.0f;
     jumpSpeed_ = 15.0f;
     maxSpeed_ = 10.0f;
     accelRate_ = 1.0f;
+
+    this->AddChild(leftHand_.get());
+    this->AddChild(rightHand_.get());
+
+    MotionEditor::GetInstance()->Register(leftHand_.get());
+    MotionEditor::GetInstance()->Register(rightHand_.get());
+
+    rightHand_ptr_ = rightHand_.get();
+    leftHand_ptr_ = leftHand_.get();
+
+    BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
+    BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
+
+    if (!comboInitialized_) {
+        punchCombo_.Add(GetRightHand(), "Jab") // 1段目:右手ジャブ
+            .Add(GetLeftHand(), "Hook")        // 2段目:左手フック
+            .Add(GetRightHand(), "Cross")      // 3段目:右手クロス
+            .Add(GetLeftHand(), "Uppercut")    // 4段目:左手アッパーカット
+            .Add(GetRightHand(), "Overhand")   // 5段目:右手オーバーハンド
+            .Add(GetLeftHand(), "Swing")       // 6段目:左手スイング
+            .Add(GetRightHand(), "Elbow")      // 7段目:右手肘打ち
+            .Add(GetLeftHand(), "Slam");       // 8段目:左手スラム
+
+        comboInitialized_ = true;
+    }
 
     isGrounded_ = true;
     velocity_ = Vector3(0.0f, 0.0f, 0.0f);
@@ -55,13 +91,8 @@ void Enemy::Update() {
     shadow_->Update();
 
     if (started_) {
-        if (damage_ > kNoDamage) {
-            float actualDamage = static_cast<float>(damage_);
-            if (isGuarding_)
-                actualDamage *= kGuardDamageMultiplier;
-            HP_ -= actualDamage;
-            damage_ = kNoDamage;
-        }
+        DamageUpdate();
+        RecoverEnergy();
 
         if (HP_ <= kMinHP) {
             isAlive_ = false;
@@ -84,6 +115,7 @@ void Enemy::Update() {
             RotateUpdate();
         }
 
+        ConboUpdate();
         UpdateShadowScale();
         chargeShake_->Update();
 
@@ -132,6 +164,17 @@ void Enemy::Update() {
 
         CollisionGround();
         BaseObject::Update();
+
+        // 弾の更新と生存チェック
+        for (auto it = bullets_.begin(); it != bullets_.end();) {
+            (*it)->Update();
+            (*it)->UpdateWorldTransformHierarchy();
+            if (!(*it)->IsAlive()) {
+                it = bullets_.erase(it);
+            } else {
+                ++it;
+            }
+        }
     }
 }
 
@@ -203,6 +246,13 @@ void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {
     hitEmitter_->Draw(viewProjection);
+
+    leftHand_ptr_->DrawParticle(viewProjection);
+    rightHand_ptr_->DrawParticle(viewProjection);
+
+    for (auto &bullet : bullets_) {
+        bullet->DrawParticle(viewProjection);
+    }
 }
 
 void Enemy::Debug() {
@@ -210,6 +260,7 @@ void Enemy::Debug() {
     if (ImGui::BeginTabBar("EnemyTabs")) {
         if (ImGui::BeginTabItem("基本情報")) {
             ImGui::Text("HP: %.1f / %.1f", HP_, maxHP_);
+            ImGui::Text("Energy: %.1f / %.1f", energy_, maxEnergy_);
             ImGui::Text("位置: (%.2f, %.2f, %.2f)",
                         transform_->translation_.x,
                         transform_->translation_.y,
@@ -306,14 +357,20 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
         other->GetTag() == "Makan") {
         chargeShake_->StartShake();
     }
+}
 
-    isDamageReact_ = true;
-    damageReactTimer_ = kTimerReset;
-    baseRotation_ = transform_->quateRotation_;
+void Enemy::ConboUpdate() {
+    punchCombo_.Update(Frame::DeltaTime());
 
-    float startAngle = transform_->quateRotation_.x;
-    float endAngle = degreesToRadians(kDamageTiltDegrees);
-    tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
+    if (isComboAttack_) {
+        punchCombo_.TryExecuteCombo();
+        isComboAttack_ = false;
+    }
+
+    if (punchCombo_.IsComboActive()) {
+        GetRightHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetRightHand()));
+        GetLeftHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
+    }
 }
 
 Vector3 Enemy::GetMovementDirection() const { return Vector3(); }
@@ -333,6 +390,11 @@ void Enemy::UpdateShadowScale() {
 }
 
 void Enemy::RotateUpdate() {
+    // ロックオン中でない場合は回転しない
+    if (!isLockOn_) {
+        return;
+    }
+
     if (!target_)
         return;
 
@@ -385,6 +447,32 @@ void Enemy::CollisionGround() {
     }
 }
 
+void Enemy::DamageUpdate() {
+    if (damage_ <= kNoDamage) {
+        return;
+    }
+
+    float actualDamage = damage_;
+    if (isGuarding_) {
+        actualDamage *= kGuardDamageMultiplier;
+    }
+    HP_ -= actualDamage;
+    damage_ = kNoDamage;
+
+    // ダメージリアクションを開始
+    StartDamageReact();
+}
+
+void Enemy::StartDamageReact() {
+    isDamageReact_ = true;
+    damageReactTimer_ = kTimerReset;
+    baseRotation_ = transform_->quateRotation_;
+
+    float startAngle = kRotationZero;
+    float endAngle = degreesToRadians(kDamageTiltDegrees);
+    tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
+}
+
 Direction Enemy::CalculateDirectionFromRotation() { return Direction(); }
 const char *Enemy::GetDirectionName(Direction dir) { return nullptr; }
 
@@ -421,4 +509,89 @@ Vector3 Enemy::GetPositionBelow(float distance) const { return transform_->trans
 
 void Enemy::SetVp(ViewProjection *vp) {
     chargeShake_->Initialize(vp, "chargehit");
+}
+
+bool Enemy::ConsumeEnergy(float amount) {
+    if (energy_ >= amount) {
+        energy_ -= amount;
+        timeSinceLastShot_ = kTimerReset;
+        return true;
+    }
+    return false;
+}
+
+void Enemy::RecoverEnergy() {
+    // 最後の射撃から一定時間経過していれば回復
+    timeSinceLastShot_ += Frame::DeltaTime();
+    if (timeSinceLastShot_ >= energyRecoveryDelay_) {
+        energy_ += energyRecoveryRate_ * Frame::DeltaTime();
+        if (energy_ > maxEnergy_) {
+            energy_ = maxEnergy_;
+        }
+    }
+}
+
+void Enemy::Shot() {
+    if (!target_) {
+        return;
+    }
+
+    // エネルギーが不足している場合は発射しない
+    if (!ConsumeEnergy(kNormalShotEnergyCost)) {
+        return;
+    }
+
+    std::string bulletName = "EnemyBullet_" + std::to_string(bullets_.size());
+    auto bullet = std::make_unique<EnemyBullet>();
+    bullet->Init(bulletName);
+    bullet->InitTransform(this);
+    bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
+    bullet->SetColliderRadius(kBulletColliderRadius);
+    bullets_.push_back(std::move(bullet));
+}
+
+void Enemy::ShotWithDirection(const Vector3 &direction, bool forceHoming) {
+    if (!target_) {
+        return;
+    }
+
+    if (!ConsumeEnergy(kNormalShotEnergyCost)) {
+        return;
+    }
+
+    std::string bulletName = "EnemyBullet_" + std::to_string(bullets_.size());
+    auto bullet = std::make_unique<EnemyBullet>();
+    bullet->Init(bulletName);
+
+    // InitTransform はコライダー・初期座標・オフセットのセットアップに使う
+    // ロックオンは常にOFFで呼び出し（ホーミング挙動を InitTransform に依存させない）
+    bool prevLockOn = isLockOn_;
+    isLockOn_ = false;
+    bullet->InitTransform(this);
+    isLockOn_ = prevLockOn;
+
+    bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
+    bullet->SetColliderRadius(kBulletColliderRadius);
+
+    if (forceHoming) {
+        // ホーミング：プレイヤーへの初期方向 + Update内での追従を有効化
+        bullet->SetIsLockOnBullet(true);
+        if (target_) {
+            Vector3 toTarget = target_->GetLocalPosition() - GetLocalPosition();
+            float len = toTarget.Length();
+            if (len > kMinRotationDistance) {
+                toTarget = toTarget / len;
+            } else {
+                toTarget = GetForward();
+            }
+            bullet->SetVelocity(toTarget * bullet->GetCurrentSpeed());
+        }
+    } else {
+        // 拡散弾 or 直進弾：渡された direction をそのまま使い、ホーミングは無効
+        bullet->SetIsLockOnBullet(false);
+        float speed = bullet->GetCurrentSpeed();
+        bullet->SetVelocity(direction * speed);
+    }
+
+    bullets_.push_back(std::move(bullet));
 }

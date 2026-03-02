@@ -179,8 +179,15 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
+
+    player_ptr->Debug();
+    enemy_ptr->Debug();
+    enemyUI_->Debug();
+
 #ifdef USE_IMGUI
+    ImGui::Begin("BehaviorTreeEditor");
     behaviorTreeEditor_->OnImGuiRender();
+    ImGui::End();
 #endif
 }
 

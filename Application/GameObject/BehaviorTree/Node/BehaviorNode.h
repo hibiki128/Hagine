@@ -418,3 +418,172 @@ class EnemyFlyToGroundNode : public ContextNode {
   private:
     static constexpr float kGroundLevel = 0.0f; // 地面レベル
 };
+
+// =========================================================
+// 射撃・ロックオン関連ノード
+// =========================================================
+
+/// <summary>
+/// 弾を発射するアクションノード
+/// param: 発射後の待機時間(クールダウン秒数)
+/// </summary>
+class EnemyShootNode : public ContextNode {
+  public:
+    EnemyShootNode(float cooldown = 1.0f) : m_Cooldown(cooldown) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer = 0.0f;
+        m_HasShot = false;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_Cooldown;       // 発射後の待機時間(秒)
+    float m_Timer = 0.0f;   // 経過時間
+    bool m_HasShot = false; // 発射済みフラグ
+};
+
+/// <summary>
+/// ロックオン状態を切り替えるアクションノード
+/// param: 1.0 = ON, 0.0 = OFF
+/// </summary>
+class EnemyLockOnNode : public ContextNode {
+  public:
+    EnemyLockOnNode(bool lockOn = true) : m_LockOn(lockOn) {}
+
+    void Reset() override { BTNode::Reset(); }
+
+  protected:
+    NodeStatus OnUpdate() override;
+
+  private:
+    bool m_LockOn; // trueでロックオンON、falseでOFF
+};
+
+/// <summary>
+/// ロックオン中かどうかをチェックする条件ノード
+/// </summary>
+class IsEnemyLockOnNode : public ContextNode {
+  public:
+    IsEnemyLockOnNode() {}
+
+  protected:
+    NodeStatus OnUpdate() override;
+};
+
+// =========================================================
+// 近接攻撃コンボノード
+// =========================================================
+
+/// <summary>
+/// コンボを1段階だけ実行するアクションノード
+/// param : 1段階のモーション待機時間(秒)
+/// param2: コンボ間隔オーバーライド(秒)。0=ComboSystemデフォルト(0.15s)
+/// </summary>
+class EnemyComboStepNode : public ContextNode {
+  public:
+    EnemyComboStepNode(float stepDuration = 0.5f, float comboInterval = 0.0f)
+        : m_StepDuration(stepDuration), m_ComboInterval(comboInterval) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer = 0.0f;
+        m_HasStep = false;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_StepDuration;  // 1段階の実行時間(秒)
+    float m_ComboInterval; // コンボ間隔オーバーライド(0=デフォルト)
+    float m_Timer = 0.0f;
+    bool m_HasStep = false;
+};
+
+/// <summary>
+/// コンボを最後まで全段実行するアクションノード
+/// param  : 1段あたりのモーション待機時間(秒)
+/// param2 : 最大コンボ段数 (0 = 全段)
+/// param3 : コンボ間隔オーバーライド(秒)。0=ComboSystemデフォルト(0.15s)
+/// </summary>
+class EnemyComboFullNode : public ContextNode {
+  public:
+    EnemyComboFullNode(float stepDuration = 0.5f, int maxSteps = 0, float comboInterval = 0.0f)
+        : m_StepDuration(stepDuration), m_MaxSteps(maxSteps), m_ComboInterval(comboInterval) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer = 0.0f;
+        m_StepCount = 0;
+        m_WaitingStep = false;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_StepDuration;  // 1段あたりの実行時間(秒)
+    int m_MaxSteps;        // 最大段数 (0 = ComboSystemが終わるまで)
+    float m_ComboInterval; // コンボ間隔オーバーライド(0=デフォルト)
+    float m_Timer = 0.0f;
+    int m_StepCount = 0;
+    bool m_WaitingStep = false;
+};
+
+// =========================================================
+// 連射ノード
+// =========================================================
+
+/// <summary>
+/// 指定弾数を連発するアクションノード（拡散・ホーミング切替対応）
+///
+/// param  : 発射間隔(秒)
+/// param2 : 発射弾数
+/// param3 : 全弾発射後のクールダウン(秒)
+/// spreadAngle    : 拡散角度(度)。0=直進、30=±15度に広がる
+/// homingMode     : true=ロックオン追従弾、false=拡散弾（向いている方向ベース）
+/// </summary>
+class EnemyBurstShootNode : public ContextNode {
+  public:
+    EnemyBurstShootNode(
+        float interval = 0.2f,
+        int count = 3,
+        float cooldown = 0.5f,
+        float spreadAngle = 0.0f,
+        bool homingMode = false)
+        : m_Interval(interval), m_BurstCount(count), m_Cooldown(cooldown), m_SpreadAngle(spreadAngle), m_HomingMode(homingMode) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer = 0.0f;
+        m_ShotsFired = 0;
+        m_Phase = Phase::Shooting;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    enum class Phase { Shooting,
+                       Cooldown };
+
+    void FireOneBullet(); // 1発分の発射処理（拡散込み）
+
+    float m_Interval;    // 発射間隔(秒)
+    int m_BurstCount;    // 連発弾数
+    float m_Cooldown;    // 全弾後クールダウン(秒)
+    float m_SpreadAngle; // 拡散角度の半角(度)。合計拡散幅 = SpreadAngle
+    bool m_HomingMode;   // true=ロックオン追従, false=拡散固定弾
+
+    float m_Timer = 0.0f;
+    int m_ShotsFired = 0;
+    Phase m_Phase = Phase::Shooting;
+};

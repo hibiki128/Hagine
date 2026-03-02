@@ -560,3 +560,206 @@ NodeStatus EnemyFlyToGroundNode::OnUpdate() {
 
     return NodeStatus::Running;
 }
+
+// =========================================================
+// EnemyShootNode: 弾発射アクション
+// =========================================================
+void EnemyShootNode::OnEnter() {
+    m_Timer = 0.0f;
+    m_HasShot = false;
+}
+
+NodeStatus EnemyShootNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    // 発射はまだの場合、即座に1発撃つ
+    if (!m_HasShot) {
+        m_Enemy->Shot();
+        m_HasShot = true;
+    }
+
+    // クールダウン待機
+    m_Timer += 1.0f / 60.0f;
+    if (m_Timer >= m_Cooldown) {
+        return NodeStatus::Success;
+    }
+
+    return NodeStatus::Running;
+}
+
+// =========================================================
+// EnemyLockOnNode: ロックオン切り替えアクション
+// =========================================================
+NodeStatus EnemyLockOnNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    m_Enemy->SetIsLockOn(m_LockOn);
+    return NodeStatus::Success; // 即座に完了
+}
+
+// =========================================================
+// IsEnemyLockOnNode: ロックオン中か条件チェック
+// =========================================================
+NodeStatus IsEnemyLockOnNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    return m_Enemy->GetIsLockOn() ? NodeStatus::Success : NodeStatus::Failure;
+}
+
+// =========================================================
+// =========================================================
+// EnemyComboStepNode: コンボ1段階実行
+// =========================================================
+void EnemyComboStepNode::OnEnter() {
+    m_Timer = 0.0f;
+    m_HasStep = false;
+}
+
+NodeStatus EnemyComboStepNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    if (!m_HasStep) {
+        m_Enemy->SetComboAttack(true);
+        m_HasStep = true;
+    }
+
+    // コンボ間隔オーバーライドがあればそちら、なければモーション待機時間
+    float waitTime = (m_ComboInterval > 0.0f) ? m_ComboInterval : m_StepDuration;
+    m_Timer += 1.0f / 60.0f;
+    if (m_Timer >= waitTime)
+        return NodeStatus::Success;
+
+    return NodeStatus::Running;
+}
+
+// =========================================================
+// EnemyComboFullNode: コンボ全段実行
+// =========================================================
+void EnemyComboFullNode::OnEnter() {
+    m_Timer = 0.0f;
+    m_StepCount = 0;
+    m_WaitingStep = false;
+}
+
+NodeStatus EnemyComboFullNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    // 最大段数の上限 (0=コンボ全段数)
+    int comboLength = m_Enemy->GetPunchComboLength();
+    int limit = (m_MaxSteps > 0) ? m_MaxSteps : comboLength;
+
+    if (m_StepCount >= limit)
+        return NodeStatus::Success;
+
+    m_Timer += 1.0f / 60.0f;
+
+    if (!m_WaitingStep) {
+        m_Enemy->SetComboAttack(true);
+        m_StepCount++;
+        m_WaitingStep = true;
+        m_Timer = 0.0f;
+    }
+
+    float waitTime = (m_ComboInterval > 0.0f) ? m_ComboInterval : m_StepDuration;
+    if (m_Timer >= waitTime) {
+        m_WaitingStep = false;
+        // IsComboActive()でコンボがリセットされていたら終了
+        if (!m_Enemy->IsPunchComboActive())
+            return NodeStatus::Success;
+    }
+
+    return NodeStatus::Running;
+}
+
+// =========================================================
+// EnemyBurstShootNode: 連射（拡散・ホーミング対応）
+// =========================================================
+
+void EnemyBurstShootNode::FireOneBullet() {
+    if (!m_Enemy)
+        return;
+
+    if (m_HomingMode) {
+        // ホーミング：既存Shot()（ロックオン自動判定）をそのまま使う
+        m_Enemy->Shot();
+        return;
+    }
+
+    // 拡散なし → 敵の正面方向に直進
+    if (m_SpreadAngle <= 0.0f) {
+        m_Enemy->ShotWithDirection(m_Enemy->GetForward(), false);
+        return;
+    }
+
+    // ±SpreadAngle/2 の範囲でYaw(水平)・Pitch(垂直)をランダムに振る
+    float halfAngle = m_SpreadAngle * 0.5f;
+    float yawDeg = Random::Range(-halfAngle, halfAngle);
+    float pitchDeg = Random::Range(-halfAngle * 0.3f, halfAngle * 0.3f); // 垂直は少し抑える
+
+    float yawRad = yawDeg * (3.14159265f / 180.0f);
+    float pitchRad = pitchDeg * (3.14159265f / 180.0f);
+
+    Vector3 forward = m_Enemy->GetForward();
+    Vector3 up = m_Enemy->GetUp();
+    Vector3 right = m_Enemy->GetRight();
+
+    // Yaw → Pitch の順に回転してバラけた方向を計算
+    Vector3 yawed = forward * std::cos(yawRad) + right * std::sin(yawRad);
+    Vector3 dir = yawed * std::cos(pitchRad) + up * std::sin(pitchRad);
+
+    float len = dir.Length();
+    if (len > 0.001f)
+        dir = dir / len;
+
+    m_Enemy->ShotWithDirection(dir, false);
+}
+
+void EnemyBurstShootNode::OnEnter() {
+    m_Timer = 0.0f;
+    m_ShotsFired = 0;
+    m_Phase = Phase::Shooting;
+
+    // 最初の1発を即座に発射
+    if (m_Enemy && m_BurstCount > 0) {
+        FireOneBullet();
+        m_ShotsFired = 1;
+
+        if (m_ShotsFired >= m_BurstCount) {
+            m_Phase = Phase::Cooldown;
+        }
+    }
+}
+
+NodeStatus EnemyBurstShootNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    m_Timer += 1.0f / 60.0f;
+
+    if (m_Phase == Phase::Shooting) {
+        if (m_Timer >= m_Interval) {
+            m_Timer = 0.0f;
+
+            if (m_ShotsFired < m_BurstCount) {
+                FireOneBullet();
+                m_ShotsFired++;
+            }
+
+            if (m_ShotsFired >= m_BurstCount) {
+                m_Phase = Phase::Cooldown;
+            }
+        }
+        return NodeStatus::Running;
+    }
+
+    // クールダウン待機
+    if (m_Timer >= m_Cooldown)
+        return NodeStatus::Success;
+
+    return NodeStatus::Running;
+}

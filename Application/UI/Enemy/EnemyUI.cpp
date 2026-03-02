@@ -11,7 +11,7 @@ void EnemyUI::Init(Enemy *enemy) {
     barFrame_->Initialize("debug/white1x1.png", barFramePosition_, {kFrameColorR, kFrameColorG, kFrameColorB, kFrameColorA});
     // エネルギーバーの描画
     energyBar_ = std::make_unique<Sprite>();
-    energyBar_->Initialize("debug/white1x1.png", energyBarPosition_, {kEnergyBarColorR, kEnergyBarColorG, kEnergyBarColorB, kEnergyBarColorA});
+    energyBar_->Initialize("debug/white1x1.png", energyBarPosition_, {kEnergyBarColorR, kEnergyBarColorG, kEnergyBarColorB, kEnergyBarColorA}, {kAnchorX, kAnchorY});
     // エネルギーバーフレームの初期化
     energyBarFrame_ = std::make_unique<Sprite>();
     energyBarFrame_->Initialize("debug/white1x1.png", energyBarFramePosition_, {kFrameColorR, kFrameColorG, kFrameColorB, kFrameColorA});
@@ -24,16 +24,17 @@ void EnemyUI::Update() {
     if (enemy_) {
         // HP割合を計算
         float hpRatio = static_cast<float>(enemy_->GetHP()) / static_cast<float>(enemy_->GetMaxHP());
-
+        float energyRatio = static_cast<float>(enemy_->GetEnergy()) / static_cast<float>(enemy_->GetMaxEnergy());
         // HPバーのサイズを割合に応じて調整
         Vector2 currentHPBarSize = {hpBarSize_.x * hpRatio, hpBarSize_.y};
+        Vector2 currentEnergyBarSize = {energyBarSize_.x * energyRatio, energyBarSize_.y};
 
         hpBar_->SetPosition(hpBarPosition_);
         hpBar_->SetSize(currentHPBarSize);
         barFrame_->SetPosition(barFramePosition_);
         barFrame_->SetSize(barSize_);
         energyBar_->SetPosition(energyBarPosition_);
-        energyBar_->SetSize(energyBarSize_);
+        energyBar_->SetSize(currentEnergyBarSize);
         energyBarFrame_->SetPosition(energyBarFramePosition_);
         energyBarFrame_->SetSize(energyBarFrameSize_);
         enemyIcon_->SetPosition(enemyIconPosition_);

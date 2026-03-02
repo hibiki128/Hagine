@@ -341,6 +341,7 @@ void Framework::LoadResource() {
     particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");
     particleEditor_->AddParticleEmitter("bulletEmitter");
+    particleEditor_->AddParticleEmitter("enemyBulletEmitter");
     particleEditor_->AddParticleEmitter("chageBullet");
     particleEditor_->AddParticleEmitter("RushEmitter");
     particleEditor_->AddParticleEmitter("punchEmitter");

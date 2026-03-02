@@ -47,7 +47,7 @@ class EnemyUI {
     static constexpr float kEnemyIconPositionY = -30.0f;       // アイコン位置Y
     static constexpr float kIconSizeX = 384.0f;                // アイコン幅
     static constexpr float kIconSizeY = 216.0f;                // アイコン高さ
-    static constexpr float kEnergyBarPositionX = 1260.0f;      // エネルギーバー位置X
+    static constexpr float kEnergyBarPositionX = 1560.0f;     // エネルギーバー位置X
     static constexpr float kEnergyBarPositionY = 93.0f;        // エネルギーバー位置Y
     static constexpr float kEnergyBarSizeX = 300.0f;           // エネルギーバー幅
     static constexpr float kEnergyBarSizeY = 20.0f;            // エネルギーバー高さ

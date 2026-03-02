@@ -1,0 +1,50 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 2,
+    "blendMode": 1,
+    "childrenNames": [],
+    "colliderCount": 1,
+    "collider_0_collisionMask": [
+        "Player"
+    ],
+    "collider_0_isEnabled": true,
+    "collider_0_isVisible": true,
+    "collider_0_name": "enemy_Hand",
+    "collider_0_offset": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "collider_0_radius": 1.0,
+    "collider_0_tag": "EnemyHand",
+    "collider_0_type": 0,
+    "color_0": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 0.6274510025978088,
+        "z": 0.27450981736183167
+    },
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "",
+    "objectName": "enemy_rightHand",
+    "parentName": "enemy",
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "skeletonDraw": false,
+    "textureName_0": "debug/white1x1.png",
+    "translation": {
+        "x": -2.5,
+        "y": 0.0,
+        "z": 0.0
+    }
+}
