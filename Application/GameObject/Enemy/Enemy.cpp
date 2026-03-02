@@ -234,6 +234,8 @@ void Enemy::DirectionUpdate() {
 void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (!isAlive_) {
         enemyCollider_->SetEnabled(false);
+        leftHand_ptr_->SetIsAlive(false);
+        rightHand_ptr_->SetIsAlive(false);
         return;
     }
     BaseObject::Draw(viewProjection, offSet);
@@ -543,6 +545,10 @@ void Enemy::SetVp(ViewProjection *vp) {
     chargeShake_->Initialize(vp, "chargehit");
 }
 
+void Enemy::SetEnergy(float energy) {
+    energy_ = std::clamp(energy, 0.0f, maxEnergy_);
+}
+
 bool Enemy::ConsumeEnergy(float amount) {
     if (energy_ >= amount) {
         energy_ -= amount;
@@ -622,7 +628,7 @@ void Enemy::ShotWithDirection(const Vector3 &direction, bool forceHoming) {
         // 拡散弾 or 直進弾：渡された direction をそのまま使い、ホーミングは無効
         bullet->SetIsLockOnBullet(false);
         float speed = bullet->GetCurrentSpeed();
-        bullet->SetVelocity(direction * speed);
+        bullet->SetVelocity(-direction * speed);
     }
 
     bullets_.push_back(std::move(bullet));

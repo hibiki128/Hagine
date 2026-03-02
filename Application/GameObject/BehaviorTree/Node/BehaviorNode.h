@@ -121,9 +121,18 @@ class RandomSelectorNode : public CompositeNode {
 };
 
 // ---------------------------------------------------------
-// SequenceNode
+// SequenceNode  (Reactive)
 // ---------------------------------------------------------
 class SequenceNode : public CompositeNode {
+  protected:
+    NodeStatus OnUpdate() override;
+};
+
+// ---------------------------------------------------------
+// SequenceOnceNode  (Non-Reactive)
+// Running中のアクションは条件変化で中断されない
+// ---------------------------------------------------------
+class SequenceOnceNode : public CompositeNode {
   protected:
     NodeStatus OnUpdate() override;
 };
@@ -197,6 +206,18 @@ class IsHealthLowNode : public ContextNode {
 
   private:
     float m_ThresholdPercentage;
+};
+
+// エネルギーが低いか?
+class IsEnergyLowNode : public ContextNode {
+  public:
+    IsEnergyLowNode(float percentage) : m_ThresholdPercentage(percentage) {}
+
+  protected:
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_ThresholdPercentage; // エネルギー比率の閾値(0.0〜1.0)
 };
 
 // ★新規追加: 地上にいるかチェック
@@ -402,6 +423,35 @@ class EnemyFlyDescendNode : public ContextNode {
     static constexpr float kFlyAcceleration = 30.0f;
 };
 
+// =========================================================
+// 飛行状態: 水平接近動作
+// 飛行中のまま水平方向にプレイヤーへ近づく
+// =========================================================
+class EnemyFlyApproachNode : public ContextNode {
+  public:
+    // minTime: 最小実行秒, maxTime: 最大実行秒, speed: 水平移動速度
+    EnemyFlyApproachNode(float minTime, float maxTime, float speed = 10.0f)
+        : m_MinTime(minTime), m_MaxTime(maxTime), m_Speed(speed) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_CurrentTimer = 0.0f;
+        m_TargetDuration = 0.0f;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+    void OnExit() override;
+
+  private:
+    float m_MinTime;
+    float m_MaxTime;
+    float m_Speed;
+    float m_CurrentTimer = 0.0f;
+    float m_TargetDuration = 0.0f;
+};
+
 // 飛行から地上への遷移ノード (着地)
 class EnemyFlyToGroundNode : public ContextNode {
   public:
@@ -586,4 +636,35 @@ class EnemyBurstShootNode : public ContextNode {
     float m_Timer = 0.0f;
     int m_ShotsFired = 0;
     Phase m_Phase = Phase::Shooting;
+};
+
+// =========================================================
+// エネルギーチャージノード
+// =========================================================
+
+/// <summary>
+/// エネルギーが最大値に達するまでチャージするアクションノード
+/// param : チャージ速度倍率(1.0=通常速度, 2.0=2倍速)
+/// param2: 目標エネルギー比率(0.0〜1.0, 0=最大まで)
+/// </summary>
+class EnemyEnergyChargeNode : public ContextNode {
+  public:
+    EnemyEnergyChargeNode(float chargeRateMultiplier = 1.0f, float targetRatio = 1.0f)
+        : m_ChargeRateMultiplier(chargeRateMultiplier), m_TargetRatio(targetRatio) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer = 0.0f;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+    void OnExit() override;
+
+  private:
+    float m_ChargeRateMultiplier; // チャージ速度の倍率
+    float m_TargetRatio;          // 目標エネルギー比率(1.0=最大値まで)
+    float m_Timer = 0.0f;         // 経過時間
+    float m_OriginalRecoveryRate = 0.0f; // 元の回復レートを保存用
 };

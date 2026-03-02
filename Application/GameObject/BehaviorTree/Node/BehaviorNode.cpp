@@ -3,6 +3,7 @@
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
 #include <iostream>
+#include"Frame.h"
 
 // ---------------------------------------------------------
 // BTNode / CompositeNode 基底
@@ -59,6 +60,30 @@ NodeStatus SequenceNode::OnUpdate() {
         }
     }
     return NodeStatus::Success; // 全て成功
+}
+
+// ---------------------------------------------------------
+// SequenceOnceNode (Non-Reactive)
+// m_CurrentChildIndexから再開するため、一度Runningになったアクションは
+// 前の条件ノードを再評価せず最後まで実行される。
+// ---------------------------------------------------------
+NodeStatus SequenceOnceNode::OnUpdate() {
+    if (m_Children.empty())
+        return NodeStatus::Failure;
+
+    while (m_CurrentChildIndex < (int)m_Children.size()) {
+        NodeStatus status = m_Children[m_CurrentChildIndex]->Tick();
+
+        if (status == NodeStatus::Running)
+            return NodeStatus::Running; // 同じ子で止まり、次回もここから再開
+
+        if (status == NodeStatus::Failure)
+            return NodeStatus::Failure; // 失敗したら即終了
+
+        // Success → 次の子へ進む
+        m_CurrentChildIndex++;
+    }
+    return NodeStatus::Success;
 }
 
 // ---------------------------------------------------------
@@ -236,6 +261,19 @@ NodeStatus IsHealthLowNode::OnUpdate() {
     // float max = m_Enemy->GetMaxHP();
     // float current = m_Enemy->GetHP();
     // if (max > 0 && (current / max) <= m_ThresholdPercentage) return NodeStatus::Success;
+    return NodeStatus::Failure;
+}
+
+// =========================================================
+// エネルギー低下判定ノード
+// =========================================================
+NodeStatus IsEnergyLowNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+    float maxEnergy = m_Enemy->GetMaxEnergy();
+    float current = m_Enemy->GetEnergy();
+    if (maxEnergy > 0.0f && (current / maxEnergy) <= m_ThresholdPercentage)
+        return NodeStatus::Success;
     return NodeStatus::Failure;
 }
 
@@ -508,20 +546,36 @@ void EnemyFlyDescendNode::OnEnter() {
 }
 
 NodeStatus EnemyFlyDescendNode::OnUpdate() {
-    if (!m_Enemy || !m_Player)
+    if (!m_Enemy)
         return NodeStatus::Failure;
 
-    // 飛行中は速度を直接維持
-    m_Enemy->SetVerticalVelocity(-m_Speed);
+    // 現在の座標を取得
+    Vector3 pos = m_Enemy->GetLocalPosition();
+    float dt = Frame::DeltaTime();
 
-    m_Enemy->Move();
-    m_Enemy->DirectionUpdate();
+    // 下降処理（例: 秒間 10.0f の速度で下降）
+    const float kDescendSpeed = 10.0f;
+    pos.y -= kDescendSpeed * dt;
 
-    m_CurrentTimer += 1.0f / 60.0f;
-    if (m_CurrentTimer >= m_TargetDuration) {
+    // --- 地面判定 (y <= 0) ---
+    if (pos.y <= 0.0f) {
+        // 1. 座標を 0 に固定
+        pos.y = 0.0f;
+        m_Enemy->SetLocalPosition(pos);
+
+        // 2. 地上状態に切り替え
+        m_Enemy->SetIsFlying(false);  // 飛行終了
+        m_Enemy->SetIsGrounded(true); // 接地
+
+        // 3. 速度をゼロにする（慣性で埋まらないように）
+        m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+
+        // 着地成功としてノードを終了
         return NodeStatus::Success;
     }
 
+    // まだ空中なら座標を更新して Running を継続
+    m_Enemy->SetLocalPosition(pos);
     return NodeStatus::Running;
 }
 
@@ -531,6 +585,46 @@ void EnemyFlyDescendNode::OnExit() {
     // 下降終了：速度を0にして空中停止（飛行フラグは維持）
     m_Enemy->SetVerticalVelocity(0.0f);
     m_Enemy->SetVerticalAcceleration(0.0f);
+}
+
+// =========================================================
+// 飛行状態 - 水平接近動作
+// =========================================================
+void EnemyFlyApproachNode::OnEnter() {
+    m_CurrentTimer = 0.0f;
+    m_TargetDuration = Random::Range(m_MinTime, m_MaxTime);
+
+    if (!m_Enemy)
+        return;
+
+    // 飛行フラグを確実にON（重力無効）
+    m_Enemy->SetIsFlying(true);
+    m_Enemy->SetVerticalAcceleration(0.0f);
+    // 垂直速度は0にして水平のみ移動
+    m_Enemy->SetVerticalVelocity(0.0f);
+    m_Enemy->GetMoveSpeed() = m_Speed;
+}
+
+NodeStatus EnemyFlyApproachNode::OnUpdate() {
+    if (!m_Enemy || !m_Player)
+        return NodeStatus::Failure;
+
+    // 水平方向のみプレイヤーへ向かって移動
+    m_Enemy->MoveToTarget(m_Player->GetWorldPosition());
+    m_Enemy->DirectionUpdate();
+
+    m_CurrentTimer += 1.0f / 60.0f;
+    if (m_CurrentTimer >= m_TargetDuration)
+        return NodeStatus::Success;
+
+    return NodeStatus::Running;
+}
+
+void EnemyFlyApproachNode::OnExit() {
+    if (!m_Enemy)
+        return;
+    // 水平速度を止める（垂直速度は維持：飛行フラグONのまま）
+    m_Enemy->StopMovement();
 }
 
 // =========================================================
@@ -762,4 +856,56 @@ NodeStatus EnemyBurstShootNode::OnUpdate() {
         return NodeStatus::Success;
 
     return NodeStatus::Running;
+}
+// =========================================================
+// エネルギーチャージノード
+// =========================================================
+
+void EnemyEnergyChargeNode::OnEnter() {
+    if (!m_Enemy)
+        return;
+
+    // 1. 現在の移動速度をゼロにする（プレイヤーと同じ挙動）
+    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+
+    // 2. 元の自動回復レートを保存し、チャージ用の高いレートを設定する
+    // PlayerEnergyChargeの kChargeRate = 15.0f を基準にする
+    m_OriginalRecoveryRate = m_Enemy->GetEnergyRecoveryRate();
+
+    // チャージ中の回復レートを設定（例: 秒間15ポイント回復 × 倍率）
+    float chargeRate = 15.0f * m_ChargeRateMultiplier;
+    m_Enemy->SetEnergyRecoveryRate(chargeRate);
+}
+
+NodeStatus EnemyEnergyChargeNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    float maxEnergy = m_Enemy->GetMaxEnergy();
+    float currentEnergy = m_Enemy->GetEnergy();
+    float targetEnergy = (m_TargetRatio > 0.0f) ? maxEnergy * m_TargetRatio : maxEnergy;
+
+    // 目標エネルギーに達したら成功
+    if (currentEnergy >= targetEnergy) {
+        return NodeStatus::Success;
+    }
+
+    // チャージ中も移動を制限し続ける
+    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+
+    // エネルギーの加算処理
+    // (Enemy::UpdateでRecoveryRateを使った加算が行われていない場合は、ここで直接加算します)
+    float dt = Frame::DeltaTime();
+    float newEnergy = currentEnergy + (m_Enemy->GetEnergyRecoveryRate() * dt);
+    m_Enemy->SetEnergy(std::min(newEnergy, maxEnergy));
+
+    return NodeStatus::Running;
+}
+
+void EnemyEnergyChargeNode::OnExit() {
+    if (!m_Enemy)
+        return;
+
+    // 終了時に元の回復レート（自動回復分）に戻す
+    m_Enemy->SetEnergyRecoveryRate(m_OriginalRecoveryRate);
 }

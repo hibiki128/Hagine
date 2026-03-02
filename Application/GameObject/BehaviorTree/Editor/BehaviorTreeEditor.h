@@ -39,7 +39,14 @@ enum class EditorNodeType {
     ActionComboStep, // 24  コンボ1段
     ActionComboFull, // 25  コンボ全段
     // ===== 連射 =====
-    ActionBurstShoot // 26  N連発
+    ActionBurstShoot, // 26  N連発
+    // ===== Non-Reactive シーケンス =====
+    SequenceOnce, // 27  アクションを最後まで実行するシーケンス
+    // ===== エネルギー =====
+    ConditionEnergyLow, // 28  エネルギーが低いかチェック
+    ActionEnergyCharge, // 29  エネルギーチャージ
+    // ===== 飛行中水平移動 =====
+    ActionFlyApproach // 30  飛行中にプレイヤーへ水平接近
 };
 
 // ============================================================
@@ -142,6 +149,7 @@ struct EditorNode {
     bool IsConditionNode() const {
         return Type == EditorNodeType::ConditionPlayerClose ||
                Type == EditorNodeType::ConditionHealthLow ||
+               Type == EditorNodeType::ConditionEnergyLow ||
                Type == EditorNodeType::ConditionIsGrounded ||
                Type == EditorNodeType::ConditionIsAirborne ||
                Type == EditorNodeType::ConditionPlayerState ||
@@ -165,7 +173,9 @@ struct EditorNode {
                Type == EditorNodeType::ActionLockOn ||
                Type == EditorNodeType::ActionComboStep ||
                Type == EditorNodeType::ActionComboFull ||
-               Type == EditorNodeType::ActionBurstShoot;
+               Type == EditorNodeType::ActionBurstShoot ||
+               Type == EditorNodeType::ActionEnergyCharge ||
+               Type == EditorNodeType::ActionFlyApproach;
     }
 
     bool IsWeightNode() const {

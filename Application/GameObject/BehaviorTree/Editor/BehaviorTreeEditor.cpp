@@ -86,6 +86,9 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
     case EditorNodeType::Sequence:
         runtimeNode = std::make_shared<SequenceNode>();
         break;
+    case EditorNodeType::SequenceOnce:
+        runtimeNode = std::make_shared<SequenceOnceNode>();
+        break;
     case EditorNodeType::Selector:
         runtimeNode = std::make_shared<SelectorNode>();
         break;
@@ -103,6 +106,9 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
         break;
     case EditorNodeType::ConditionHealthLow:
         runtimeNode = std::make_shared<IsHealthLowNode>(nd.param);
+        break;
+    case EditorNodeType::ConditionEnergyLow:
+        runtimeNode = std::make_shared<IsEnergyLowNode>(nd.param);
         break;
     case EditorNodeType::ConditionIsGrounded:
         runtimeNode = std::make_shared<IsGroundedNode>();
@@ -145,6 +151,12 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
             nd.param4,
             nd.param5 >= 1.0f);
         break;
+    case EditorNodeType::ActionEnergyCharge:
+        // param: チャージ速度倍率(1.0=通常), param2: 目標エネルギー比率(1.0=最大まで)
+        runtimeNode = std::make_shared<EnemyEnergyChargeNode>(
+            nd.param > 0.0f ? nd.param : 1.0f,
+            nd.param2 > 0.0f ? nd.param2 : 1.0f);
+        break;
     case EditorNodeType::ActionApproach:
         runtimeNode = std::make_shared<EnemyApproachNode>(nd.param, nd.param2, nd.param3);
         break;
@@ -178,6 +190,9 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
     case EditorNodeType::ActionFlyToGround:
         runtimeNode = std::make_shared<EnemyFlyToGroundNode>();
         break;
+    case EditorNodeType::ActionFlyApproach:
+        runtimeNode = std::make_shared<EnemyFlyApproachNode>(nd.param, nd.param2, nd.param3);
+        break;
     default:
         return nullptr;
     }
@@ -204,11 +219,14 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                    nd.type == EditorNodeType::ActionFlyAscend ||
                    nd.type == EditorNodeType::ActionFlyDescend ||
                    nd.type == EditorNodeType::ActionFlyToGround ||
+                   nd.type == EditorNodeType::ActionFlyApproach ||
                    nd.type == EditorNodeType::ActionShoot ||
                    nd.type == EditorNodeType::ActionLockOn ||
                    nd.type == EditorNodeType::ActionComboStep ||
                    nd.type == EditorNodeType::ActionComboFull ||
-                   nd.type == EditorNodeType::ActionBurstShoot);
+                   nd.type == EditorNodeType::ActionBurstShoot ||
+                   nd.type == EditorNodeType::ConditionEnergyLow ||
+                   nd.type == EditorNodeType::ActionEnergyCharge);
 
     if (!isLeaf) {
         if (nd.type == EditorNodeType::DecoratorWeight) {
@@ -232,6 +250,7 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
         }
     } else if (nd.type == EditorNodeType::ConditionPlayerClose ||
                nd.type == EditorNodeType::ConditionHealthLow ||
+               nd.type == EditorNodeType::ConditionEnergyLow ||
                nd.type == EditorNodeType::ConditionIsGrounded ||
                nd.type == EditorNodeType::ConditionIsAirborne ||
                nd.type == EditorNodeType::ConditionPlayerState) {
@@ -266,6 +285,9 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                     break;
                 case EditorNodeType::ConditionIsLockOn:
                     condCopy = std::make_shared<IsEnemyLockOnNode>();
+                    break;
+                case EditorNodeType::ConditionEnergyLow:
+                    condCopy = std::make_shared<IsEnergyLowNode>(nd.param);
                     break;
                 default:
                     break;
@@ -385,6 +407,11 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         WeightedOutputs[1].Weight = 1.0f;
     } else if (type == EditorNodeType::ConditionHealthLow) {
         Parameter = 0.3f;
+    } else if (type == EditorNodeType::ConditionEnergyLow) {
+        Parameter = 0.3f;
+    } else if (type == EditorNodeType::ActionEnergyCharge) {
+        Parameter = 1.0f;  // チャージ速度倍率
+        Parameter2 = 1.0f; // 目標エネルギー比率
     } else if (type == EditorNodeType::ConditionPlayerState) {
         StateNameParameter = "Idle";
     } else if (type == EditorNodeType::ActionApproach) {
@@ -416,6 +443,10 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         Parameter = 1.0f;   // 最小時間
         Parameter2 = 3.0f;  // 最大時間
         Parameter3 = 15.0f; // 下降速度
+    } else if (type == EditorNodeType::ActionFlyApproach) {
+        Parameter = 1.0f;   // 最小時間
+        Parameter2 = 3.0f;  // 最大時間
+        Parameter3 = 10.0f; // 水平移動速度
     } else if (type == EditorNodeType::ActionShoot) {
         Parameter = 1.0f; // クールダウン秒数
     } else if (type == EditorNodeType::ActionLockOn) {
@@ -485,6 +516,8 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
     switch (type) {
     case EditorNodeType::Sequence:
         return "子ノードを順番に実行し、全て成功で成功を返す";
+    case EditorNodeType::SequenceOnce:
+        return "Non-Reactive Sequence: Action runs to completion, ignores condition changes";
     case EditorNodeType::Selector:
         return "子ノードを順番に試し、1つでも成功したら成功を返す";
     case EditorNodeType::SelectorRandom:
@@ -497,6 +530,8 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "プレイヤーが指定距離範囲内にいるかチェック";
     case EditorNodeType::ConditionHealthLow:
         return "HPが指定割合以下かチェック";
+    case EditorNodeType::ConditionEnergyLow:
+        return "エネルギーが指定割合以下かチェック (param: 閾値比率 0.0〜1.0)";
     case EditorNodeType::ConditionIsGrounded:
         return "敵が地上にいるかチェック";
     case EditorNodeType::ConditionIsAirborne:
@@ -525,6 +560,8 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "飛行中に下降する（指定速度と時間）";
     case EditorNodeType::ActionFlyToGround:
         return "飛行状態から地上へ着地する";
+    case EditorNodeType::ActionFlyApproach:
+        return "飛行中に水平方向へプレイヤーへ接近する (param: 最小秒, param2: 最大秒, param3: 速度)";
     case EditorNodeType::ActionShoot:
         return "弾を1発発射し、指定秒数(param)クールダウンする";
     case EditorNodeType::ActionLockOn:
@@ -537,8 +574,10 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "コンボを全段実行する (param: 1段の時間秒, param2: 最大段数(0=全段), param3: コンボ間隔秒(0=デフォルト))";
     case EditorNodeType::ActionBurstShoot:
         return "弾をN連発する (param: 発射間隔秒, param2: 弾数, param3: クールダウン秒, param4: 拡散角度度, param5: 0=拡散弾/1=ホーミング弾)";
+    case EditorNodeType::ActionEnergyCharge:
+        return "エネルギーをチャージする (param: 速度倍率, param2: 目標比率 0.0〜1.0)";
     default:
-        return "No description";
+        return "説明なし";
     }
 }
 
@@ -573,6 +612,9 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     switch (eNode.Type) {
     case EditorNodeType::Sequence:
         runtimeNode = std::make_shared<SequenceNode>();
+        break;
+    case EditorNodeType::SequenceOnce:
+        runtimeNode = std::make_shared<SequenceOnceNode>();
         break;
     case EditorNodeType::Selector:
         runtimeNode = std::make_shared<SelectorNode>();
@@ -637,7 +679,9 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     case EditorNodeType::ActionFlyToGround:
         runtimeNode = std::make_shared<EnemyFlyToGroundNode>();
         break;
-    case EditorNodeType::ActionComboStep:
+    case EditorNodeType::ActionFlyApproach:
+        runtimeNode = std::make_shared<EnemyFlyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
+        break;
         runtimeNode = std::make_shared<EnemyComboStepNode>(
             eNode.Parameter > 0.0f ? eNode.Parameter : 0.5f,
             eNode.Parameter2);
@@ -655,6 +699,14 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
             eNode.Parameter3 > 0.0f ? eNode.Parameter3 : 0.5f,
             eNode.Parameter4,
             eNode.Parameter5 >= 1.0f);
+        break;
+    case EditorNodeType::ConditionEnergyLow:
+        runtimeNode = std::make_shared<IsEnergyLowNode>(eNode.Parameter);
+        break;
+    case EditorNodeType::ActionEnergyCharge:
+        runtimeNode = std::make_shared<EnemyEnergyChargeNode>(
+            eNode.Parameter > 0.0f ? eNode.Parameter : 1.0f,
+            eNode.Parameter2 > 0.0f ? eNode.Parameter2 : 1.0f);
         break;
     case EditorNodeType::SelectorRandom:
         runtimeNode = std::make_shared<RandomSelectorNode>();
@@ -714,6 +766,8 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
                     conditionCopy = std::make_shared<IsPlayerStateNode>(eNode.StateNameParameter);
                 else if (eNode.Type == EditorNodeType::ConditionIsLockOn)
                     conditionCopy = std::make_shared<IsEnemyLockOnNode>();
+                else if (eNode.Type == EditorNodeType::ConditionEnergyLow)
+                    conditionCopy = std::make_shared<IsEnergyLowNode>(eNode.Parameter);
 
                 if (conditionCopy) {
                     successSequence->AddChild(conditionCopy);
@@ -1090,6 +1144,11 @@ void BehaviorTreeEditor::OnImGuiRender() {
             ImGui::SameLine();
             if (ImGui::DragFloat(wid1, &node.Parameter, 0.01f, 0.0f, 1.0f, "%.2f"))
                 paramChanged = true;
+        } else if (node.Type == EditorNodeType::ConditionEnergyLow) {
+            ImGui::Text("エネルギー比率");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.01f, 0.0f, 1.0f, "%.2f"))
+                paramChanged = true;
         } else if (node.Type == EditorNodeType::ConditionPlayerState) {
             // ノードエディタ内ではComboが動作しないため、ボタンで切り替える方式
             static const char *kPlayerStates[] = {
@@ -1173,7 +1232,8 @@ void BehaviorTreeEditor::OnImGuiRender() {
             if (ImGui::DragFloat(wid1, &node.Parameter, 0.5f, 5.0f, 30.0f, "%.1f"))
                 paramChanged = true;
         } else if (node.Type == EditorNodeType::ActionFlyAscend ||
-                   node.Type == EditorNodeType::ActionFlyDescend) {
+                   node.Type == EditorNodeType::ActionFlyDescend ||
+                   node.Type == EditorNodeType::ActionFlyApproach) {
             ImGui::Text("最小時間");
             ImGui::SameLine();
             if (ImGui::DragFloat(wid1, &node.Parameter, 0.1f, 0.0f, 10.0f, "%.1fs"))
@@ -1240,6 +1300,15 @@ void BehaviorTreeEditor::OnImGuiRender() {
                 ImGui::SameLine();
                 ImGui::TextDisabled("(拡散弾モード)");
             }
+        } else if (node.Type == EditorNodeType::ActionEnergyCharge) {
+            ImGui::Text("速度倍率");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid1, &node.Parameter, 0.1f, 0.1f, 10.0f, "%.1f倍"))
+                paramChanged = true;
+            ImGui::Text("目標比率(1.0=最大まで)");
+            ImGui::SameLine();
+            if (ImGui::DragFloat(wid2, &node.Parameter2, 0.01f, 0.0f, 1.0f, "%.2f"))
+                paramChanged = true;
         }
 
         if (paramChanged && m_IsRunning)
@@ -1317,6 +1386,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
 
         ImGui::Text("[コンポジット]");
         addBtn("シーケンス", EditorNodeType::Sequence);
+        addBtn("シーケンス(完遂優先)", EditorNodeType::SequenceOnce);
         addBtn("セレクター", EditorNodeType::Selector);
         addBtn("ランダムセレクター", EditorNodeType::SelectorRandom);
         addBtn("重みデコレーター", EditorNodeType::DecoratorWeight);
@@ -1325,6 +1395,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
         ImGui::Text("[条件]");
         addBtn("距離チェック", EditorNodeType::ConditionPlayerClose);
         addBtn("HP低下チェック", EditorNodeType::ConditionHealthLow);
+        addBtn("エネルギー低下チェック", EditorNodeType::ConditionEnergyLow);
         addBtn("地上チェック", EditorNodeType::ConditionIsGrounded);
         addBtn("空中チェック", EditorNodeType::ConditionIsAirborne);
         addBtn("ステートチェック", EditorNodeType::ConditionPlayerState);
@@ -1357,7 +1428,12 @@ void BehaviorTreeEditor::OnImGuiRender() {
         addBtn("飛行遷移", EditorNodeType::ActionJumpToFly);
         addBtn("上昇", EditorNodeType::ActionFlyAscend);
         addBtn("下降", EditorNodeType::ActionFlyDescend);
+        addBtn("空中接近", EditorNodeType::ActionFlyApproach);
         addBtn("着地", EditorNodeType::ActionFlyToGround);
+        ImGui::Separator();
+
+        ImGui::Text("[エネルギー]");
+        addBtn("エネルギーチャージ", EditorNodeType::ActionEnergyCharge);
 
         ImGui::EndPopup();
     }

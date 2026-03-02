@@ -29,12 +29,14 @@ void EnemyHand::Update() {
 void EnemyHand::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     if (!isAlive_) {
     } else {
-
         BaseObject::Draw(viewProjection, offSet);
     }
 }
 
 void EnemyHand::DrawParticle(const ViewProjection &viewProjection) {
+    if (!hitEmitter_) {
+        return;
+    }
     hitEmitter_->Draw(viewProjection);
 }
 

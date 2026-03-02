@@ -1,7 +1,7 @@
+#include "EnemyBullet.h"
 #include "Collider/CollisionManager.h"
 #include "Debug/Log/Logger.h"
 #include "Particle/ParticleEditor.h"
-#include "EnemyBullet.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
 #include <Engine/Frame/Frame.h>
@@ -36,6 +36,12 @@ void EnemyBullet::Update() {
     currentLifeTime_ += deltaTime;
 
     if (currentLifeTime_ >= lifeTime_) {
+        isAlive_ = false;
+        return;
+    }
+
+    // 地面に埋まったら消える
+    if (transform_->translation_.y <= 0.5f) {
         isAlive_ = false;
         return;
     }

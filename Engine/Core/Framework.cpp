@@ -356,6 +356,7 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("fireWork_explosion");
     particleCSEditor_->AddParticleEmitter("fireWork_Trail");
     particleCSEditor_->AddParticleEmitter("ChargeAura");
+    particleCSEditor_->AddParticleEmitter("enemyChargeAura");
 }
 
 void Framework::PlaySounds() {

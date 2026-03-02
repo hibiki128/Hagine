@@ -142,12 +142,15 @@ class Enemy : public BaseObject {
         }
     }
     void SetComboAttack(bool flag) { isComboAttack_ = flag; }
-
+    void SetEnergy(float energy);
     void SetVerticalVelocity(float velocity) { velocity_.y = velocity; }
     void SetVerticalAcceleration(float accel) { acceleration_.y = accel; }
     void SetIsGrounded(bool grounded) { isGrounded_ = grounded; }
     void SetIsFlying(bool flying) { isFlying_ = flying; }
     void SetEnergyRecoveryRate(float rate) { energyRecoveryRate_ = rate; }
+    void SetLocalPosition(const Vector3 &pos) { transform_->translation_ = pos; }
+
+    float GetEnergyRecoveryRate() const { return energyRecoveryRate_; }
 
     // コンボ状態Getter（BTノードから参照）
     int GetPunchComboLength() const { return punchCombo_.GetComboLength(); }
