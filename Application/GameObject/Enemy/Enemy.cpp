@@ -259,8 +259,50 @@ void Enemy::Debug() {
 #ifdef USE_IMGUI
     if (ImGui::BeginTabBar("EnemyTabs")) {
         if (ImGui::BeginTabItem("基本情報")) {
-            ImGui::Text("HP: %.1f / %.1f", HP_, maxHP_);
-            ImGui::Text("Energy: %.1f / %.1f", energy_, maxEnergy_);
+
+            // ── HP ──────────────────────────────────────
+            ImGui::Text("HP");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(120.0f);
+            if (ImGui::DragFloat("##HP", &HP_, 1.0f, 0.0f, maxHP_, "%.1f"))
+                HP_ = std::clamp(HP_, kMinHP, maxHP_);
+            ImGui::SameLine();
+            ImGui::Text("/");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100.0f);
+            if (ImGui::DragFloat("最大HP##maxHP", &maxHP_, 1.0f, 1.0f, 9999.0f, "%.1f"))
+                HP_ = std::clamp(HP_, kMinHP, maxHP_);
+            ImGui::SameLine();
+            if (ImGui::SmallButton("全回復##hp")) {
+                HP_ = maxHP_;
+            }
+
+            // ── Energy ──────────────────────────────────
+            ImGui::Text("Energy");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(120.0f);
+            if (ImGui::DragFloat("##Energy", &energy_, 1.0f, 0.0f, maxEnergy_, "%.1f"))
+                energy_ = std::clamp(energy_, 0.0f, maxEnergy_);
+            ImGui::SameLine();
+            ImGui::Text("/");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100.0f);
+            if (ImGui::DragFloat("最大Energy##maxEnergy", &maxEnergy_, 1.0f, 1.0f, 9999.0f, "%.1f"))
+                energy_ = std::clamp(energy_, 0.0f, maxEnergy_);
+            ImGui::SameLine();
+            if (ImGui::SmallButton("全回復##energy")) {
+                energy_ = maxEnergy_;
+            }
+
+            // ── 全回復ボタン ─────────────────────────────
+            ImGui::Spacing();
+            if (ImGui::Button("HP・Energy 全回復")) {
+                HP_ = maxHP_;
+                energy_ = maxEnergy_;
+            }
+
+            // ── その他 ──────────────────────────────────
+            ImGui::Separator();
             ImGui::Text("位置: (%.2f, %.2f, %.2f)",
                         transform_->translation_.x,
                         transform_->translation_.y,
@@ -268,16 +310,13 @@ void Enemy::Debug() {
             ImGui::Text("速度: (%.2f, %.2f, %.2f)",
                         velocity_.x, velocity_.y, velocity_.z);
             ImGui::Text("地上判定: %s", isGrounded_ ? "地上" : "空中");
-
             ImGui::Separator();
             ImGui::Checkbox("ストップ", &isStop_);
-
             ImGui::Separator();
             ImGui::Text("ガード状態: %s", isGuarding_ ? "ON" : "OFF");
             if (isGuarding_) {
                 ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "ダメージ85%%軽減中");
             }
-
             ImGui::EndTabItem();
         }
 
@@ -286,11 +325,9 @@ void Enemy::Debug() {
             ImGui::TextColored(
                 isGrounded_ ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(1.0f, 0.5f, 0.2f, 1.0f),
                 "%s", isGrounded_ ? "■ 地上" : "■ 空中");
-
             ImGui::Separator();
             ImGui::Text("=== 位置 ===");
             ImGui::Text("Y座標: %.2f", transform_->translation_.y);
-
             ImGui::Separator();
             ImGui::Text("=== 速度 ===");
             ImGui::Text("垂直速度 (velocity.y): %.2f", velocity_.y);
@@ -304,7 +341,6 @@ void Enemy::Debug() {
                 velocity_.y > 0.0f   ? "↑ 上昇中"
                 : velocity_.y < 0.0f ? "↓ 落下中"
                                      : "→ 静止");
-
             ImGui::Separator();
             ImGui::Text("=== 加速度 ===");
             ImGui::Text("垂直加速度 (acceleration.y): %.2f", acceleration_.y);
@@ -315,13 +351,11 @@ void Enemy::Debug() {
             } else {
                 ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "- 加速度なし");
             }
-
             ImGui::Separator();
             ImGui::Text("=== パラメータ ===");
             ImGui::DragFloat("重力加速度 (fallSpeed)", &fallSpeed_, 0.5f, 1.0f, 100.0f);
             ImGui::DragFloat("ジャンプ力 (jumpSpeed)", &jumpSpeed_, 0.5f, 1.0f, 50.0f);
             ImGui::DragFloat("移動速度 (moveSpeed)", &moveSpeed_, 0.1f, 0.0f, 20.0f);
-
             ImGui::Separator();
             if (ImGui::Button("手動ジャンプテスト")) {
                 if (isGrounded_) {
@@ -337,10 +371,8 @@ void Enemy::Debug() {
                 acceleration_.y = 0.0f;
                 isGrounded_ = true;
             }
-
             ImGui::EndTabItem();
         }
-
         ImGui::EndTabBar();
     }
 #endif // USE_IMGUI
