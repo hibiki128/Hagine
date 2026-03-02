@@ -4,10 +4,8 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
 
-// Release でロードするデフォルトのビヘイビアツリーファイル
-// (resources/jsons/BehaviorTree/EnemyBehavior.json を使用する場合)
 static constexpr const char *kBTFolder = "BehaviorTree";
-static constexpr const char *kBTFileName = "testTree"; // 拡張子なし
+static constexpr const char *kBTFileName = "EnemyBehavior"; // 拡張子なし
 
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();

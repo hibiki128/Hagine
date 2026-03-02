@@ -11,9 +11,6 @@
 #include <Application/Camera/DeathCamera.h>
 #include <Application/Staging/Transition/FadeOut.h>
 #include <Application/UI/Scene/Game/GameUI.h>
-
-// BehaviorTreeEditor は常にインクルード
-// (Release では BehaviorTreeLoader のみ使用、Debug では Editor も使用)
 #include "Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.h"
 
 class GameScene : public BaseScene {
