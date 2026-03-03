@@ -6,6 +6,7 @@
 #include "type/SphereCollider.h"
 #include <unordered_map>
 #include <vector>
+#include <Camera/ViewProjection/ViewProjection.h>
 
 class CollisionManager {
   public:
@@ -22,6 +23,8 @@ class CollisionManager {
 
     void Update();
     void DebugDraw(const ViewProjection &viewProjection);
+
+    bool CalculateDepenetration(OBBCollider *a, OBBCollider *b, Vector3 &outMTV);
 
 #ifdef _DEBUG
     // ImGuiでタグマネージャーUI表示

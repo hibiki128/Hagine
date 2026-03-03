@@ -19,6 +19,7 @@
 #include <Particle/CSParticle/ParticleCSEditor.h>
 #include <Particle/ParticleEditor.h>
 #include <cmath>
+#include"Collider/CollisionManager.h"
 
 Player::Player() {
 }
@@ -33,7 +34,7 @@ void Player::Init(const std::string objectName) {
     playerCollider_->SetTag("Player");
     playerCollider_->AddCollisionMask("Enemy");
 
-    playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+    playerCollider_->SetOnCollision([this](ColliderBase *other) {
         this->OnCollision(other);
     });
 
@@ -313,9 +314,26 @@ void Player::ChangeState(const std::string &stateName) {
     }
 }
 
-void Player::OnCollision(ColliderBase *other) {
+void Player::OnCollision(ColliderBase* other) {
     if (other->GetTag() == "Enemy") {
-        SetDamage(kEnemyCollisionDamage);
+        //SetDamage(kEnemyCollisionDamage);
+
+        // ===== めり込み排斥 =====
+        // 相手コライダーもOBBであることを確認
+        if (other->GetType() == ColliderType::OBB) {
+            auto* enemyOBB = static_cast<OBBCollider*>(other);
+            Vector3 mtv;
+            // playerCollider_（自分）を enemyOBB から押し出す方向のMTVを取得
+            if (CollisionManager::GetInstance()->CalculateDepenetration(playerCollider_, enemyOBB, mtv)) {
+                // MTVはAをBから押し出す方向 → プレイヤーをそのまま移動
+                transform_->translation_ -= mtv;
+                // 排斥方向への速度成分を除去（壁ずりを防ぐ）
+                float dot = velocity_.Dot(mtv.Normalize());
+                if (dot < 0.0f) {
+                    velocity_ -= mtv.Normalize() * dot;
+                }
+            }
+        }
     }
 }
 

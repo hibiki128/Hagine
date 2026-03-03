@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "Enemy.h"
+#include "Collider/CollisionManager.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
@@ -25,7 +26,9 @@ void Enemy::Init(const std::string objectName) {
     enemyCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         this->OnCollisionEnter(other);
     });
-
+    enemyCollider_->SetOnCollision([this](ColliderBase *other) {
+        this->OnCollision(other);
+    });
     BaseObject::SetTexture("debug/white1x1.png", kTextureIndex);
     BaseObject::SetColor(Vector4(kColorRed, kColorZero, kColorZero, kColorOpaque));
     shadow_ = std::make_unique<BaseObject>();
@@ -390,6 +393,32 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
     if (other->GetTag() == "PlayerChargeBullet" ||
         other->GetTag() == "Makan") {
         chargeShake_->StartShake();
+    }
+}
+
+void Enemy::OnCollision(ColliderBase *other) {
+    if (other->GetTag() != "Player") {
+        return;
+    }
+    if (other->GetType() != ColliderType::OBB) {
+        return;
+    }
+
+    auto *playerOBB = static_cast<OBBCollider *>(other);
+    Vector3 mtv;
+
+    // enemyCollider_（自分）を playerOBB（相手）から押し出すMTVを取得
+    // CalculateDepenetration は「第1引数を第2引数から離す」方向のMTVを返す
+    if (CollisionManager::GetInstance()->CalculateDepenetration(enemyCollider_, playerOBB, mtv)) {
+        // 敵を押し出す（mtvの方向がenemyからplayerへ向いているので、逆方向へ移動）
+        transform_->translation_ -= mtv;
+
+        // 排斥方向への速度成分を打ち消す（壁ずりのような引っかかりを防ぐ）
+        Vector3 mtvDir = mtv.Normalize();
+        float dot = velocity_.Dot(mtvDir);
+        if (dot < 0.0f) {
+            velocity_ -= mtvDir * dot;
+        }
     }
 }
 

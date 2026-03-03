@@ -5,7 +5,7 @@
 #include <Frame.h>
 
 static constexpr const char *kBTFolder = "BehaviorTree";
-static constexpr const char *kBTFileName = "EnemyBehavior"; // 拡張子なし
+static constexpr const char *kBTFileName = "EnemyBehavior";
 
 void GameScene::Initialize() {
     audio_ = Audio::GetInstance();

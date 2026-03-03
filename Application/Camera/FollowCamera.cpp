@@ -284,16 +284,6 @@ void FollowCamera::Update() {
         worldTransform_.translation_ = cameraPos;
     }
 
-    // 地面の高さ
-    static constexpr float kGroundY = 0.0f;
-    // カメラを地面から浮かせる最小高さ
-    static constexpr float kMinCameraHeight = 0.5f;
-
-    // カメラが地面より下に行かないように制限
-    if (worldTransform_.translation_.y < kGroundY + kMinCameraHeight) {
-        worldTransform_.translation_.y = kGroundY + kMinCameraHeight;
-    }
-
     worldTransform_.UpdateMatrix();
 
     viewProjection_.translation_ = worldTransform_.translation_;

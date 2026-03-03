@@ -67,6 +67,12 @@ class Enemy : public BaseObject {
     void OnCollisionEnter(ColliderBase *collider);
 
     /// <summary>
+    /// 当たってるときの処理
+    /// </summary>
+    /// <param name="collider"></param>
+    void OnCollision(ColliderBase *collider);
+
+    /// <summary>
     /// コンボ更新処理
     /// </summary>
     void ConboUpdate();
