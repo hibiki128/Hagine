@@ -38,6 +38,10 @@ void Player::Init(const std::string objectName) {
         this->OnCollision(other);
     });
 
+      playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollisionEnter(other);
+    });
+
     states_["Idle"] = std::make_unique<PlayerStateIdle>();
     states_["Move"] = std::make_unique<PlayerStateMove>();
     states_["Jump"] = std::make_unique<PlayerStateJump>();
@@ -105,6 +109,7 @@ void Player::Init(const std::string objectName) {
     shake_ = std::make_unique<Shake>();
 
     auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
+    hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
 
     deathStaging_ = std::make_unique<DeathStaging>();
 
@@ -282,6 +287,7 @@ void Player::DrawParticle(const ViewProjection &viewProjection) {
 
     chargeShot_->DrawParticle(viewProjection);
     auraEmitter_->Draw(viewProjection);
+    hitEmitter_->Draw(viewProjection);
 
     for (auto &bullet : bullets_) {
         bullet->DrawParticle(viewProjection);
@@ -334,6 +340,13 @@ void Player::OnCollision(ColliderBase* other) {
                 }
             }
         }
+    }
+}
+
+void Player::OnCollisionEnter(ColliderBase* other) {
+    if (other->GetTag() == "EnemyBullet") {
+        hitEmitter_->SetPosition(transform_->translation_);
+        hitEmitter_->UpdateOnce();
     }
 }
 

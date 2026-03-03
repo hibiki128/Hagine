@@ -74,6 +74,12 @@ class Player : public BaseObject {
     void OnCollision(ColliderBase *other);
 
     /// <summary>
+    /// 当たった瞬間
+    /// </summary>
+    /// <param name="other"></param>
+    void OnCollisionEnter(ColliderBase *other);
+
+    /// <summary>
     /// 方向情報を更新
     /// </summary>
     void DirectionUpdate();
@@ -418,6 +424,7 @@ class Player : public BaseObject {
     std::unique_ptr<PlayerHand> rightHand_;          // 右手
     std::unique_ptr<Shake> shake_;                   // シェイク
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
+    std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
     std::unique_ptr<GamePad> gamePad_;

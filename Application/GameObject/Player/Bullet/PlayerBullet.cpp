@@ -40,6 +40,12 @@ void PlayerBullet::Update() {
         return;
     }
 
+    // 地面に埋まったら消える
+    if (transform_->translation_.y <= 0.5f) {
+        isAlive_ = false;
+        return;
+    }
+
     if (isLockOnBullet_ && targetEnemy_) {
         Vector3 bulletPos = GetLocalPosition();
         Vector3 enemyPos = targetEnemy_->GetLocalPosition();
