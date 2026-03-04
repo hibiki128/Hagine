@@ -231,6 +231,63 @@ void CollisionManager::DebugDraw(const ViewProjection &viewProjection) {
     }
 }
 
+bool CollisionManager::CalculateDepenetration(OBBCollider *colliderA, OBBCollider *colliderB, Vector3 &outMTV) {
+    const OBB &obbA = colliderA->GetOBB();
+    const OBB &obbB = colliderB->GetOBB();
+
+    // SAT の 15軸（面法線6本 + 辺の外積9本）
+    Vector3 axes[15] = {
+        obbA.orientations[0],
+        obbA.orientations[1],
+        obbA.orientations[2],
+        obbB.orientations[0],
+        obbB.orientations[1],
+        obbB.orientations[2],
+        obbA.orientations[0].Cross(obbB.orientations[0]),
+        obbA.orientations[0].Cross(obbB.orientations[1]),
+        obbA.orientations[0].Cross(obbB.orientations[2]),
+        obbA.orientations[1].Cross(obbB.orientations[0]),
+        obbA.orientations[1].Cross(obbB.orientations[1]),
+        obbA.orientations[1].Cross(obbB.orientations[2]),
+        obbA.orientations[2].Cross(obbB.orientations[0]),
+        obbA.orientations[2].Cross(obbB.orientations[1]),
+        obbA.orientations[2].Cross(obbB.orientations[2]),
+    };
+
+    // A→B の方向ベクトル（MTV軸の向きを揃えるために使用）
+    Vector3 d = obbB.scaleCenterRotated - obbA.scaleCenterRotated;
+
+    float minPenetration = FLT_MAX;
+    Vector3 mtvAxis = {};
+
+    for (const Vector3 &axis : axes) {
+        if (axis.Length() < 0.0001f) {
+            continue; // 零ベクトル（平行辺のクロス積）はスキップ
+        }
+        Vector3 normalizedAxis = axis.Normalize();
+
+        float minA, maxA, minB, maxB;
+        ProjectOBB(obbA, normalizedAxis, minA, maxA);
+        ProjectOBB(obbB, normalizedAxis, minB, maxB);
+
+        // 貫通深度 = オーバーラップ量
+        float penetration = (std::min)(maxA, maxB) - (std::max)(minA, minB);
+        if (penetration < 0.0f) {
+            return false; // 分離軸が見つかった → 衝突していない
+        }
+
+        if (penetration < minPenetration) {
+            minPenetration = penetration;
+            // MTV軸を「AをBから離す方向」に揃える
+            mtvAxis = (d.Dot(normalizedAxis) < 0.0f) ? -normalizedAxis : normalizedAxis;
+        }
+    }
+
+    // MTV = 最小貫通軸 × 貫通深度
+    outMTV = mtvAxis * minPenetration;
+    return true;
+}
+
 bool CollisionManager::IsCollision(const Sphere &s1, const Sphere &s2) {
     Vector3 diff = s2.center - s1.center;
     float distanceSquared = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;

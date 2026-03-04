@@ -1,5 +1,3 @@
-// Particle.hlsli
-
 struct VertexShaderOutput
 {
     float4 position : SV_POSITION;
@@ -113,18 +111,28 @@ struct ParticleCSSettings
     float vortexStrength;
     uint enableVortexForTrail;
     float3 vortexAxis;
-    uint enableAcceleration; 
+    uint enableAcceleration;
     float3 acceleration;
-    uint enableVelocityDamping; 
-    float velocityDampingFactor; 
+    uint enableVelocityDamping;
+    float velocityDampingFactor;
     uint enableLifetimeVelocityDamping;
-    float lifetimeVelocityDampingStart; 
+    float lifetimeVelocityDampingStart;
     uint enableRadialVelocity;
     float radialVelocityStrength;
     float radialVelocityRandomness;
     float padding7;
     float3 radialVelocityCenter;
     float padding8;
+    uint enableCurlNoise;
+    float curlNoiseScale;
+    float curlNoiseStrength;
+    float curlNoiseTimeScale;
+    uint curlNoiseOctaves;
+    float curlNoiseAttractStrength;
+    uint curlNoiseBlendMode;
+    float curlNoisePosRandomStrength;
+    float3 curlNoiseAttractCenter;
+    float padding9;
 };
 
 struct EdgeInfo

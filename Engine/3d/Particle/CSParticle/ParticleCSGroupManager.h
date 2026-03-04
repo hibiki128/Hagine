@@ -85,6 +85,25 @@ class ParticleCSGroupManager {
         independentGroups_.clear();
     }
 
+    // 名前を指定してパーティクルグループを削除する
+    // particleGroups_ と independentGroups_ の両方から探して削除する
+    void RemoveParticleCSGroup(const std::string &groupName) {
+        // particleGroups_ から削除
+        particleGroups_.erase(
+            std::remove_if(particleGroups_.begin(), particleGroups_.end(),
+                           [&groupName](const std::unique_ptr<ParticleCSGroup> &group) {
+                               return group->GetGroupName() == groupName;
+                           }),
+            particleGroups_.end());
+        // independentGroups_ からも削除（エミッターにアタッチされたコピー）
+        independentGroups_.erase(
+            std::remove_if(independentGroups_.begin(), independentGroups_.end(),
+                           [&groupName](const std::unique_ptr<ParticleCSGroup> &group) {
+                               return group->GetGroupName() == groupName;
+                           }),
+            independentGroups_.end());
+    }
+
     void RemoveUnusedIndependentGroups(const std::unordered_set<std::string> &usedGroupNames) {
         independentGroups_.erase(
             std::remove_if(independentGroups_.begin(), independentGroups_.end(),

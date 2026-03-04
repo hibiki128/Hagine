@@ -35,6 +35,9 @@ void PlayerHand::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 }
 
 void PlayerHand::DrawParticle(const ViewProjection &viewProjection) {
+    if (!hitEmitter_) {
+        return;
+    }
     hitEmitter_->Draw(viewProjection);
 }
 

@@ -1,11 +1,15 @@
 #pragma once
 #include "Application/Utility/Shake/Shake.h"
+#include "Bullet/EnemyBullet.h"
+#include "Hand/EnemyHand.h"
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
 #include <Application/GameObject/BehaviorTree/Node/BehaviorNode.h>
 #include <Application/GameObject/Player/Player.h>
-#include <Easing.h> // ★追加: イージング用
+#include <Easing.h>
 #include <application/GameObject/Player/PlayerData.h>
+#include <application/Utility/ComboSystem/ComboSystem.h>
+#include <memory>
 
 /// <summary>
 /// 敵のゲームオブジェクトクラス
@@ -63,6 +67,17 @@ class Enemy : public BaseObject {
     void OnCollisionEnter(ColliderBase *collider);
 
     /// <summary>
+    /// 当たってるときの処理
+    /// </summary>
+    /// <param name="collider"></param>
+    void OnCollision(ColliderBase *collider);
+
+    /// <summary>
+    /// コンボ更新処理
+    /// </summary>
+    void ConboUpdate();
+
+    /// <summary>
     /// Getter
     /// </summary>
     Vector3 &GetAcceleration() { return acceleration_; }
@@ -81,6 +96,7 @@ class Enemy : public BaseObject {
     Vector3 GetPositionAbove(float distance = 3.0f) const;
     Vector3 GetPositionBelow(float distance = 3.0f) const;
     Vector3 GetPosition() const { return transform_->translation_; }
+    Vector3 GetLocalPosition() const { return transform_->translation_; }
     float GetVelocityMagnitude() const;
     float &GetFallSpeed() { return fallSpeed_; }
     float &GetMoveSpeed() { return moveSpeed_; }
@@ -89,21 +105,35 @@ class Enemy : public BaseObject {
     float &GetAccelRate() { return accelRate_; }
     float GetHP() const { return HP_; }
     float GetMaxHP() const { return maxHP_; }
+    float &GetEnergy() { return energy_; }
+    float GetMaxEnergy() const { return maxEnergy_; }
     bool &GetCanJump() { return canJump_; }
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
     bool IsGuarding() const { return isGuarding_; }
+    bool GetIsLockOn() const { return isLockOn_; }
     Player *GetTarget() { return target_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
+    EnemyHand *GetRightHand() { return rightHand_ptr_; }
+    EnemyHand *GetLeftHand() { return leftHand_ptr_; }
+
+    float GetVerticalVelocity() const { return velocity_.y; }
+    float GetVerticalAcceleration() const { return acceleration_.y; }
+    bool GetIsFlying() const { return isFlying_; }
 
     /// <summary>
     /// Setter
     /// </summary>
     void SetDamage(float damage) { damage_ = damage; }
     void SetVp(ViewProjection *vp);
-    void SetTarget(Player *target) { target_ = target; }
+    void SetTarget(Player *target) {
+        target_ = target;
+        leftHand_ptr_->SetPlayer(target);
+        rightHand_ptr_->SetPlayer(target);
+    }
     void SetGuarding(bool guarding) { isGuarding_ = guarding; }
+    void SetIsLockOn(bool lockOn) { isLockOn_ = lockOn; }
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
     void SetDrawShadow(bool flag) { drawShadow_ = flag; }
@@ -117,14 +147,36 @@ class Enemy : public BaseObject {
             rootNode_->SetContext(this, target_);
         }
     }
+    void SetComboAttack(bool flag) { isComboAttack_ = flag; }
+    void SetEnergy(float energy);
+    void SetVerticalVelocity(float velocity) { velocity_.y = velocity; }
+    void SetVerticalAcceleration(float accel) { acceleration_.y = accel; }
+    void SetIsGrounded(bool grounded) { isGrounded_ = grounded; }
+    void SetIsFlying(bool flying) { isFlying_ = flying; }
+    void SetEnergyRecoveryRate(float rate) { energyRecoveryRate_ = rate; }
+    void SetLocalPosition(const Vector3 &pos) { transform_->translation_ = pos; }
+
+    float GetEnergyRecoveryRate() const { return energyRecoveryRate_; }
+
+    // コンボ状態Getter（BTノードから参照）
+    int GetPunchComboLength() const { return punchCombo_.GetComboLength(); }
+    bool IsPunchComboActive() const { return punchCombo_.IsComboActive(); }
+
+    bool ConsumeEnergy(float amount); // エネルギー消費処理
+    void RecoverEnergy();             // エネルギー回復処理
+
     // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
     Vector3 GetWorldPosition() const { return transform_->translation_; }
 
     void MoveToTarget(const Vector3 &targetPos);
     void PerformAttack();
-    void MoveStrafe();   // 左右移動
-    void MoveRetreat();  // 後退
-    void StopMovement(); // ★追加: 移動を停止
+    void MoveStrafe();                                                          // 左右移動
+    void MoveRetreat();                                                         // 後退
+    void StopMovement();                                                        // 移動を停止
+    void Move();                                                                // 通常の移動処理
+    void DirectionUpdate();                                                     // 方向更新処理
+    void Shot();                                                                // 弾発射処理（ロックオン自動判定）
+    void ShotWithDirection(const Vector3 &direction, bool forceHoming = false); // 方向指定発射
 
   private:
     /// ===================================================
@@ -155,6 +207,16 @@ class Enemy : public BaseObject {
     /// 地面との衝突判定処理
     /// </summary>
     void CollisionGround();
+
+    /// <summary>
+    /// ダメージを受ける処理
+    /// </summary>
+    void DamageUpdate();
+
+    /// <summary>
+    /// ダメージリアクションの開始処理（DamageUpdate内から呼ばれる）
+    /// </summary>
+    void StartDamageReact();
 
     /// <summary>
     /// 回転からDirection値を計算
@@ -224,7 +286,7 @@ class Enemy : public BaseObject {
     static constexpr float kGroundLevel = 0.0f;
     static constexpr float kVelocityZero = 0.0f;
 
-    // ★追加: イージング関連定数
+    // イージング関連定数
     static constexpr float kVelocityEaseTime = 0.15f; // 速度変化のイージング時間
     static constexpr float kStopEaseTime = 0.2f;      // 停止時のイージング時間
 
@@ -246,6 +308,11 @@ class Enemy : public BaseObject {
     static constexpr float kStrafeWeight = 1.5f;
     static constexpr float kRetreatWeight = 1.0f;
     static constexpr float kGuardWeight = 1.2f;
+
+    // 弾丸関連定数
+    static constexpr float kBulletScale = 0.5f;
+    static constexpr float kBulletColliderRadius = 0.5f;
+    static constexpr float kNormalShotEnergyCost = 5.0f;
 
     Direction dir_;
     MoveDirection moveDir_;
@@ -273,24 +340,42 @@ class Enemy : public BaseObject {
     bool canJump_ = false;
     bool isLockOn_ = false;
     bool isGrounded_ = true;
+    bool isFlying_ = false; // 飛行中フラグ（重力を無効化）
     bool isStop_ = false;
     bool started_ = false;
     bool isPause_ = false;
     bool drawShadow_ = true;
     bool isGuarding_ = false; // ガード状態
+    bool isComboAttack_ = false;
 
     std::unique_ptr<DataHandler> data_;
     std::unique_ptr<BaseObject> shadow_;
     std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> chargeShake_;
     std::shared_ptr<BTNode> rootNode_ = nullptr;
+    std::unique_ptr<EnemyHand> leftHand_;  // 左手
+    std::unique_ptr<EnemyHand> rightHand_; // 右手
 
     bool isDamageReact_ = false;       // リアクション中かどうか
     float damageReactTimer_ = 0.0f;    // 経過時間
     float damageReactDuration_ = 0.5f; // 少し短めの時間
-    EasingData<float> tiltEase_;       // 回転角イージング
-    Quaternion baseRotation_;          // 通常時の向き
-    Quaternion tiltRotation_;          // のけぞり用の回転
+    float energy_ = 100.0f;            // 現在のエネルギー
+    float maxEnergy_ = 100.0f;         // 最大エネルギー
+    float energyRecoveryRate_ = 0.01f; // エネルギー回復速度(秒速)
+    float energyRecoveryDelay_ = 1.0f; // 回復開始までの遅延時間
+    float timeSinceLastShot_ = 0.0f;   // 最後に撃ってからの経過時間
+
+    ComboSystem punchCombo_;
+    bool comboInitialized_ = false; // コンボ初期化済みフラグ
+
+    EasingData<float> tiltEase_; // 回転角イージング
+    Quaternion baseRotation_;    // 通常時の向き
+    Quaternion tiltRotation_;    // のけぞり用の回転
 
     OBBCollider *enemyCollider_ = nullptr;
+
+    EnemyHand *leftHand_ptr_;  // 左手
+    EnemyHand *rightHand_ptr_; // 右手
+
+    std::vector<std::unique_ptr<EnemyBullet>> bullets_;
 };

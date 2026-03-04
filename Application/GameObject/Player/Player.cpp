@@ -19,6 +19,7 @@
 #include <Particle/CSParticle/ParticleCSEditor.h>
 #include <Particle/ParticleEditor.h>
 #include <cmath>
+#include"Collider/CollisionManager.h"
 
 Player::Player() {
 }
@@ -33,8 +34,12 @@ void Player::Init(const std::string objectName) {
     playerCollider_->SetTag("Player");
     playerCollider_->AddCollisionMask("Enemy");
 
-    playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+    playerCollider_->SetOnCollision([this](ColliderBase *other) {
         this->OnCollision(other);
+    });
+
+      playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollisionEnter(other);
     });
 
     states_["Idle"] = std::make_unique<PlayerStateIdle>();
@@ -104,6 +109,7 @@ void Player::Init(const std::string objectName) {
     shake_ = std::make_unique<Shake>();
 
     auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
+    hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
 
     deathStaging_ = std::make_unique<DeathStaging>();
 
@@ -131,12 +137,10 @@ void Player::Update() {
         shadow_->Update();
 
         if (isInvincible_) {
-            invincibleTime_ += dt_;
-            if (invincibleTime_ >= invincibleDuration_) {
-                isInvincible_ = false;
-                invincibleTime_ = kTimerReset;
-            }
+            InvincibleUpdate();
         }
+
+        DamageUpdate();
 
         if (started_ && !isPause_) {
             RecoverEnergy();
@@ -158,20 +162,6 @@ void Player::Update() {
             }
 
             Shot();
-
-            // 弾の更新と生存チェック
-            for (auto it = bullets_.begin(); it != bullets_.end();) {
-                (*it)->Update();
-                (*it)->SetSpeed(B_speed_);
-                (*it)->SetAcce(B_acce_);
-                (*it)->UpdateWorldTransformHierarchy();
-
-                if (!(*it)->IsAlive()) {
-                    it = bullets_.erase(it);
-                } else {
-                    ++it;
-                }
-            }
 
             SkillShot();
         }
@@ -297,6 +287,7 @@ void Player::DrawParticle(const ViewProjection &viewProjection) {
 
     chargeShot_->DrawParticle(viewProjection);
     auraEmitter_->Draw(viewProjection);
+    hitEmitter_->Draw(viewProjection);
 
     for (auto &bullet : bullets_) {
         bullet->DrawParticle(viewProjection);
@@ -329,27 +320,33 @@ void Player::ChangeState(const std::string &stateName) {
     }
 }
 
-void Player::OnCollision(ColliderBase *other) {
+void Player::OnCollision(ColliderBase* other) {
     if (other->GetTag() == "Enemy") {
-        // 無敵状態でなければダメージを受ける
-        if (!isInvincible_) {
-            HP_ -= kEnemyCollisionDamage;
-            // ダメージを受けたら無敵状態にする
-            isInvincible_ = true;
-            invincibleTime_ = kTimerReset;
+        //SetDamage(kEnemyCollisionDamage);
 
-            // ダメージリアクション開始
-            isDamageReact_ = true;
-            damageReactTimer_ = kTimerReset;
-
-            // 今の向きを保存
-            baseRotation_ = transform_->quateRotation_;
-
-            // X軸回転のみをイージング
-            float startAngle = kRotationZero;
-            float endAngle = degreesToRadians(kPlayerDamageTiltDegrees);
-            tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
+        // ===== めり込み排斥 =====
+        // 相手コライダーもOBBであることを確認
+        if (other->GetType() == ColliderType::OBB) {
+            auto* enemyOBB = static_cast<OBBCollider*>(other);
+            Vector3 mtv;
+            // playerCollider_（自分）を enemyOBB から押し出す方向のMTVを取得
+            if (CollisionManager::GetInstance()->CalculateDepenetration(playerCollider_, enemyOBB, mtv)) {
+                // MTVはAをBから押し出す方向 → プレイヤーをそのまま移動
+                transform_->translation_ -= mtv;
+                // 排斥方向への速度成分を除去（壁ずりを防ぐ）
+                float dot = velocity_.Dot(mtv.Normalize());
+                if (dot < 0.0f) {
+                    velocity_ -= mtv.Normalize() * dot;
+                }
+            }
         }
+    }
+}
+
+void Player::OnCollisionEnter(ColliderBase* other) {
+    if (other->GetTag() == "EnemyBullet") {
+        hitEmitter_->SetPosition(transform_->translation_);
+        hitEmitter_->UpdateOnce();
     }
 }
 
@@ -459,6 +456,20 @@ void Player::Shot() {
             if (!gamePad_->IsPress(XINPUT_GAMEPAD_Y)) {
                 yButtonHoldTime_ = 0.0f;
             }
+        }
+    }
+
+    // 弾の更新と生存チェック
+    for (auto it = bullets_.begin(); it != bullets_.end();) {
+        (*it)->Update();
+        (*it)->SetSpeed(B_speed_);
+        (*it)->SetAcce(B_acce_);
+        (*it)->UpdateWorldTransformHierarchy();
+
+        if (!(*it)->IsAlive()) {
+            it = bullets_.erase(it);
+        } else {
+            ++it;
         }
     }
 }
@@ -753,6 +764,44 @@ void Player::RecoverEnergy() {
         if (energy_ > maxEnergy_) {
             energy_ = maxEnergy_;
         }
+    }
+}
+
+void Player::DamageUpdate() {
+    if (damage_ <= kNoDamage) {
+        return;
+    }
+
+    // 無敵中はダメージを無視
+    if (isInvincible_) {
+        damage_ = kNoDamage;
+        return;
+    }
+
+    // HP 減算
+    HP_ -= damage_;
+    damage_ = kNoDamage;
+
+    // 無敵時間の開始
+    isInvincible_ = true;
+    invincibleTime_ = kTimerReset;
+
+    // ダメージリアクションの開始
+    isDamageReact_ = true;
+    damageReactTimer_ = kTimerReset;
+
+    // 現在の向きを保存してのけぞりイージングをセット
+    baseRotation_ = transform_->quateRotation_;
+    float startAngle = kRotationZero;
+    float endAngle = degreesToRadians(kPlayerDamageTiltDegrees);
+    tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
+}
+
+void Player::InvincibleUpdate() {
+    invincibleTime_ += dt_;
+    if (invincibleTime_ >= invincibleDuration_) {
+        isInvincible_ = false;
+        invincibleTime_ = kTimerReset;
     }
 }
 
@@ -1181,6 +1230,5 @@ void Player::SetVp(ViewProjection *vp) {
 void Player::SetPause(bool flag) {
     isPause_ = flag;
     if (FollowCamera_) {
-    
     }
 }

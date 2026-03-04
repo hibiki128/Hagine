@@ -83,6 +83,8 @@ class ParticleCSEditor {
     void DebugAll();
     // ImGuiエディターの表示処理
     void ShowImGuiEditor();
+    // プリセットエディターの表示処理（エミッター + グループをセットで生成）
+    void ShowPresetEditor();
     // データのロード
     void Load();
 };

@@ -160,6 +160,16 @@ struct ParticleCSSettings {
     float padding7{};
     Vector3 radialVelocityCenter = {0.0f, 0.0f, 0.0f};
     float padding8{};
+    uint32_t enableCurlNoise;
+    float curlNoiseScale;
+    float curlNoiseStrength;
+    float curlNoiseTimeScale;
+    uint32_t curlNoiseOctaves;
+    float curlNoiseAttractStrength;
+    uint32_t curlNoiseBlendMode;
+    float curlNoisePosRandomStrength;
+    Vector3 curlNoiseAttractCenter;
+    float padding9{};
 };
 
 /// =======================

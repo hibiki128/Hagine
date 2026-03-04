@@ -341,6 +341,7 @@ void Framework::LoadResource() {
     particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");
     particleEditor_->AddParticleEmitter("bulletEmitter");
+    particleEditor_->AddParticleEmitter("enemyBulletEmitter");
     particleEditor_->AddParticleEmitter("chageBullet");
     particleEditor_->AddParticleEmitter("RushEmitter");
     particleEditor_->AddParticleEmitter("punchEmitter");
@@ -355,6 +356,7 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("fireWork_explosion");
     particleCSEditor_->AddParticleEmitter("fireWork_Trail");
     particleCSEditor_->AddParticleEmitter("ChargeAura");
+    particleCSEditor_->AddParticleEmitter("enemyChargeAura");
 }
 
 void Framework::PlaySounds() {

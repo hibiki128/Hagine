@@ -46,6 +46,9 @@ void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCo
     case ShaderMode::kPixelate:
         commandList->SetGraphicsRootConstantBufferView(1, pixelateResource->GetGPUVirtualAddress());
         break;
+    case ShaderMode::kBloom:
+        commandList->SetGraphicsRootConstantBufferView(1, bloomResource->GetGPUVirtualAddress());
+        break;
     }
 }
 
@@ -114,6 +117,18 @@ void PostEffectParameters::SaveParameters(DataHandler *dataHandler) const {
         dataHandler->Save<float>("focusLine_maxDistance", focusLineData->maxDistance);
         dataHandler->Save<Vector4>("focusLine_lineColor", focusLineData->lineColor);
     }
+
+    if (pixelateData) {
+        dataHandler->Save<float>("pixelate_blockSize", pixelateData->blockSize);
+        dataHandler->Save<float>("pixelate_centerX", pixelateData->centerX);
+        dataHandler->Save<float>("pixelate_centerY", pixelateData->centerY);
+    }
+
+    if (bloomData) {
+        dataHandler->Save<float>("bloom_threshold", bloomData->bloomThreshold);
+        dataHandler->Save<float>("bloom_intensity", bloomData->bloomIntensity);
+    }
+
 }
 
 void PostEffectParameters::LoadParameters(DataHandler *dataHandler) {
@@ -171,6 +186,17 @@ void PostEffectParameters::LoadParameters(DataHandler *dataHandler) {
         focusLineData->centerRadius = dataHandler->Load<float>("focusLine_centerRadius", 0.5f);
         focusLineData->maxDistance = dataHandler->Load<float>("focusLine_maxDistance", 1.0f);
         focusLineData->lineColor = dataHandler->Load<Vector4>("focusLine_lineColor", {1.0f, 1.0f, 1.0f, 1.0f});
+    }
+
+    if (pixelateData) {
+        pixelateData->blockSize = dataHandler->Load<float>("pixelate_blockSize", 0.1f);
+        pixelateData->centerX = dataHandler->Load<float>("pixelate_centerX", 0.5f);
+        pixelateData->centerY = dataHandler->Load<float>("pixelate_centerY", 0.5f);
+    }
+
+    if (bloomData) {
+        bloomData->bloomThreshold = dataHandler->Load<float>("bloom_threshold", 1.0f);
+        bloomData->bloomIntensity = dataHandler->Load<float>("bloom_intensity", 1.2f);
     }
 }
 
@@ -250,6 +276,12 @@ void PostEffectParameters::DrawParameterUI(ShaderMode mode) {
             ImGui::DragFloat("中心Y", &pixelateData->centerY,0.01f, 0.0f, 1.0f);
         }
         break;
+    case ShaderMode::kBloom:
+        if (bloomData) {
+            ImGui::DragFloat("しきい値", &bloomData->bloomThreshold, 0.01f);
+            ImGui::DragFloat("ブルーム強度", &bloomData->bloomIntensity, 0.01f);
+        }
+        break;
     }
 #endif // _DEBUG
 }
@@ -265,7 +297,7 @@ void PostEffectParameters::CreateAllBuffers() {
     CreateRandom();
     CreateFocusLine();
     CreatePixelate();
-    CreateTransition();
+    CreateBloom();
 }
 
 void PostEffectParameters::CreateSmooth() {
@@ -345,11 +377,11 @@ void PostEffectParameters::CreatePixelate() {
     pixelateData->centerY = 0.5f;
 }
 
-void PostEffectParameters::CreateTransition() {
-    transitionResource = dxCommon_->CreateBufferResource(sizeof(Transition));
-    transitionResource->Map(0, nullptr, reinterpret_cast<void **>(&transitionData));
-    transitionData->progress = 0.0f;  
-    transitionData->splitSpeed = 0.1f;
-    transitionData->slideSpeed = 0.1f;
-    transitionData->splitWidth = 0.01f;
+void PostEffectParameters::CreateBloom() {
+    bloomResource = dxCommon_->CreateBufferResource(sizeof(Bloom));
+    bloomResource->Map(0, nullptr, reinterpret_cast<void **>(&bloomData));
+    bloomData->bloomThreshold = 1.0f;
+    bloomData->bloomIntensity = 1.2f;
+    bloomData->texelSize.x = 1.0f / WinApp::kClientWidth;
+    bloomData->texelSize.y = 1.0f / WinApp::kClientHeight;
 }

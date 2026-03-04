@@ -1,9 +1,13 @@
 #define NOMINMAX
 #include "BaseObject.h"
+#include "Collider/CollisionManager.h"
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "Scene/SceneManager.h"
 #include "ShowFolder/ShowFolder.h"
-#include"Collider/CollisionManager.h"
-
+#ifdef _DEBUG
+#include <imgui_internal.h>
+#include <implot.h>
+#endif // DEBUG
 
 BaseObject::~BaseObject() {
     // すべてのコライダーを削除
@@ -593,197 +597,246 @@ void BaseObject::AnimaLoadFromJson() {
 void BaseObject::DebugCollider() {
 #ifdef _DEBUG
     if (colliders_.empty()) {
-        ImGui::Text("コライダーなし");
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("  コライダーなし");
+        ImGui::PopStyleColor();
         return;
     }
 
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+
     for (size_t i = 0; i < colliders_.size(); ++i) {
-        auto *collider = colliders_[i];
-        if (!collider)
+        auto *col = colliders_[i];
+        if (!col)
             continue;
 
-        ImGui::PushID(static_cast<int>(i));
+        ImGui::PushID((int)i);
 
-        if (ImGui::TreeNode(collider->GetName().c_str())) {
-            // 有効/無効
-            bool enabled = collider->IsEnabled();
-            if (ImGui::Checkbox("有効", &enabled)) {
-                collider->SetEnabled(enabled);
-            }
+        // ヘッダー色：衝突中は赤寄り、非衝突は通常
+        bool colliding = col->IsCollidingInCurrentFrame();
+        ImVec4 hdrColor = colliding
+                              ? ImVec4{0.75f, 0.25f, 0.25f, 0.40f}
+                              : ImVec4{0.25f, 0.40f, 0.65f, 0.35f};
+        ImVec4 hdrHov = colliding
+                            ? ImVec4{0.85f, 0.35f, 0.35f, 0.50f}
+                            : ImVec4{0.35f, 0.50f, 0.75f, 0.45f};
 
-            // 可視性
-            bool visible = collider->IsVisible();
-            if (ImGui::Checkbox("表示", &visible)) {
-                collider->SetVisible(visible);
-            }
+        ImGui::PushStyleColor(ImGuiCol_Header, hdrColor);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hdrHov);
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, hdrHov);
 
-            ImGui::Spacing();
+        bool open = ImGui::CollapsingHeader(col->GetName().c_str());
+        ImGui::PopStyleColor(3);
 
-            // 衝突状態の表示（新規追加）
-            bool isColliding = collider->IsCollidingInCurrentFrame();
-            ImGui::PushStyleColor(ImGuiCol_Text, isColliding ? ImVec4(1.0f, 0.3f, 0.3f, 1.0f) : ImVec4(0.3f, 1.0f, 0.3f, 1.0f));
-            ImGui::Text("衝突状態: %s", isColliding ? "衝突中" : "非衝突");
-            ImGui::PopStyleColor();
-
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-
-            // タグ設定UI
-            collider->ImGuiTagSettings();
-
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-
-            // 型に応じた詳細設定
-            if (auto *sphere = dynamic_cast<SphereCollider *>(collider)) {
-                ImGui::Text("【球体コライダー】");
-                float radius = sphere->GetRadius();
-                if (ImGui::DragFloat("半径", &radius, 0.1f, 0.1f, 100.0f)) {
-                    sphere->SetRadius(radius);
-                }
-
-                Vector3 offset = sphere->GetOffset();
-                if (ImGui::DragFloat3("オフセット", &offset.x, 0.1f)) {
-                    sphere->SetOffset(offset);
-                }
-            } else if (auto *aabb = dynamic_cast<AABBCollider *>(collider)) {
-                ImGui::Text("【AABBコライダー】");
-                Vector3 size = aabb->GetSize();
-                if (ImGui::DragFloat3("サイズ", &size.x, 0.1f, 0.1f, 100.0f)) {
-                    aabb->SetSize(size);
-                }
-
-                Vector3 offset = aabb->GetOffset();
-                if (ImGui::DragFloat3("オフセット", &offset.x, 0.1f)) {
-                    aabb->SetOffset(offset);
-                }
-            } else if (auto *obb = dynamic_cast<OBBCollider *>(collider)) {
-                ImGui::Text("【OBBコライダー】");
-                Vector3 size = obb->GetSize();
-                if (ImGui::DragFloat3("サイズ", &size.x, 0.1f, 0.1f, 100.0f)) {
-                    obb->SetSize(size);
-                }
-
-                Vector3 rotOffset = obb->GetRotationOffset();
-                if (ImGui::DragFloat3("回転オフセット", &rotOffset.x, 0.1f)) {
-                    obb->SetRotationOffset(rotOffset);
-                }
-
-                Vector3 scaleOffset = obb->GetPositionOffset();
-                if (ImGui::DragFloat3("スケールオフセット", &scaleOffset.x, 0.1f)) {
-                    obb->SetPositionOffSet(scaleOffset);
-                }
-            }
-
-            ImGui::Spacing();
-
-            // セーブボタン
-            if (ImGui::Button("保存", ImVec2(80, 0))) {
-                collider->SaveToJson();
-            }
-
-            // 削除ボタン
-            ImGui::SameLine();
-            if (ImGui::Button("削除", ImVec2(80, 0))) {
-                CollisionManager::GetInstance()->Unregister(collider);
-                delete collider;
-                colliders_.erase(colliders_.begin() + i);
-                ImGui::TreePop();
-                ImGui::PopID();
-                break;
-            }
-
-            ImGui::TreePop();
+        if (!open) {
+            ImGui::PopID();
+            continue;
         }
 
+        ImGui::Indent(8.0f);
+
+        // ---- 状態バッジ行 ----
+        {
+            bool ena = col->IsEnabled();
+            bool vis = col->IsVisible();
+
+            ImGui::PushStyleColor(ImGuiCol_CheckMark,
+                                  ena ? DebugTheme::kAccentGreen : DebugTheme::kAccentRed);
+            if (ImGui::Checkbox("有効##cena", &ena))
+                col->SetEnabled(ena);
+            ImGui::PopStyleColor();
+            ImGui::SameLine(120.f);
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentBlue);
+            if (ImGui::Checkbox("表示##cvis", &vis))
+                col->SetVisible(vis);
+            ImGui::PopStyleColor();
+
+            ImGui::SameLine(240.f);
+            StatusBadge(colliding ? "衝突中" : "待機",
+                        colliding ? DebugTheme::kAccentRed : DebugTheme::kAccentGreen);
+        }
+
+        ImGui::Spacing();
+
+        // ---- タグ設定 ----
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgBlue);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.55f, 1.0f, 0.20f));
+        if (ImGui::TreeNodeEx("タグ設定##ctag", ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            col->ImGuiTagSettings();
+            ImGui::TreePop();
+        }
+        ImGui::PopStyleColor(2);
+
+        ImGui::Spacing();
+
+        // ---- コライダー形状パラメータ ----
+        SectionHeader("[ 形状パラメータ ]", DebugTheme::kAccentCyan);
+
+        if (auto *sphere = dynamic_cast<SphereCollider *>(col)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentCyan);
+            ImGui::TextUnformatted("種別: 球体");
+            ImGui::PopStyleColor();
+
+            float r = sphere->GetRadius();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("半径");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgBlue);
+            if (ImGui::DragFloat("##srad", &r, 0.1f, 0.1f, 100.f, "%.2f"))
+                sphere->SetRadius(r);
+            ImGui::PopStyleColor();
+
+            Vector3 off = sphere->GetOffset();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("オフセット (X / Y / Z)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgBlue);
+            if (ImGui::DragFloat3("##soff", &off.x, 0.1f, -1000.f, 1000.f, "%.2f"))
+                sphere->SetOffset(off);
+            ImGui::PopStyleColor();
+        } else if (auto *aabb = dynamic_cast<AABBCollider *>(col)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentGreen);
+            ImGui::TextUnformatted("種別: AABB");
+            ImGui::PopStyleColor();
+
+            Vector3 sz = aabb->GetSize();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("サイズ (X / Y / Z)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgGreen);
+            if (ImGui::DragFloat3("##asz", &sz.x, 0.1f, 0.1f, 100.f, "%.2f"))
+                aabb->SetSize(sz);
+            ImGui::PopStyleColor();
+
+            Vector3 off = aabb->GetOffset();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("オフセット (X / Y / Z)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgGreen);
+            if (ImGui::DragFloat3("##aoff", &off.x, 0.1f, -1000.f, 1000.f, "%.2f"))
+                aabb->SetOffset(off);
+            ImGui::PopStyleColor();
+        } else if (auto *obb = dynamic_cast<OBBCollider *>(col)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentPurple);
+            ImGui::TextUnformatted("種別: OBB");
+            ImGui::PopStyleColor();
+
+            Vector3 sz = obb->GetSize();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("サイズ (X / Y / Z)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgPurple);
+            if (ImGui::DragFloat3("##osz", &sz.x, 0.1f, 0.1f, 100.f, "%.2f"))
+                obb->SetSize(sz);
+            ImGui::PopStyleColor();
+
+            Vector3 rotOff = obb->GetRotationOffset();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("回転オフセット (X / Y / Z)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgPurple);
+            if (ImGui::DragFloat3("##oroff", &rotOff.x, 0.1f, -1000.f, 1000.f, "%.2f"))
+                obb->SetRotationOffset(rotOff);
+            ImGui::PopStyleColor();
+
+            Vector3 posOff = obb->GetPositionOffset();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("位置オフセット (X / Y / Z)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgPurple);
+            if (ImGui::DragFloat3("##opoff", &posOff.x, 0.1f, -1000.f, 1000.f, "%.2f"))
+                obb->SetPositionOffSet(posOff);
+            ImGui::PopStyleColor();
+        }
+
+        ImGui::Spacing();
+
+        // ---- 保存 / 削除ボタン ----
+        float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+
+        ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.45f, 0.20f, 0.8f});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.25f, 0.55f, 0.25f, 0.9f});
+        if (ImGui::Button("保存##colsv", ImVec2(bw, 0)))
+            col->SaveToJson();
+        ImGui::PopStyleColor(2);
+
+        ImGui::SameLine();
+
+        ImGui::PushStyleColor(ImGuiCol_Button, {0.55f, 0.15f, 0.15f, 0.8f});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.75f, 0.20f, 0.20f, 0.9f});
+        if (ImGui::Button("削除##coldel", ImVec2(bw, 0))) {
+            CollisionManager::GetInstance()->Unregister(col);
+            delete col;
+            colliders_.erase(colliders_.begin() + i);
+            ImGui::Unindent(8.0f);
+            ImGui::PopID();
+            break;
+        }
+        ImGui::PopStyleColor(2);
+
+        ImGui::Unindent(8.0f);
+        ImGui::Spacing();
         ImGui::PopID();
     }
+
+    ImGui::PopStyleVar(2);
 #endif
 }
 
+// ============================================================
+//  BaseObject::ImGui  (メインタブ)
+// ============================================================
 void BaseObject::ImGui() {
 #ifdef _DEBUG
     if (ImGui::BeginTabBar(objectName_.c_str())) {
         if (ImGui::BeginTabItem(objectName_.c_str())) {
+            // トランスフォーム・マテリアル等
             DebugObject();
-
-            if (ImGui::CollapsingHeader("コライダー設定", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Indent(10);
-                ImGui::Spacing();
-                ImGui::Separator();
-                ImGui::Spacing();
-
-                // コライダー追加ボタン
-                if (ImGui::Button("コライダー追加")) {
-                    ImGui::OpenPopup("AddColliderPopup");
-                }
-
-                if (ImGui::BeginPopup("AddColliderPopup")) {
-                    if (ImGui::MenuItem("球体コライダー")) {
-                        auto *collider = AddSphereCollider();
-                        collider->SetTag("Environment");
-                        collider->AddCollisionMask("Player");
-                        collider->SetRadius(1.0f);
-                    }
-
-                    if (ImGui::MenuItem("AABBコライダー")) {
-                        auto *collider = AddAABBCollider();
-                        collider->SetTag("Environment");
-                        collider->AddCollisionMask("Player");
-                        collider->SetSize({2.0f, 2.0f, 2.0f});
-                    }
-
-                    if (ImGui::MenuItem("OBBコライダー")) {
-                        auto *collider = AddOBBCollider();
-                        collider->SetTag("Environment");
-                        collider->AddCollisionMask("Player");
-                        collider->SetSize({2.0f, 2.0f, 2.0f});
-                    }
-
-                    ImGui::EndPopup();
-                }
-
-                ImGui::Spacing();
-                ImGui::Separator();
-                ImGui::Spacing();
-
-                // コライダーのデバッグ情報を表示
-                DebugCollider();
-
-                ImGui::Unindent(10);
-            }
 
             ImGui::Spacing();
 
-            // モデル描画チェックボックス
-            bool modelDrawChanged = ImGui::Checkbox("モデル描画", &isModelDraw_);
-            if (modelDrawChanged && isModelDraw_) {
-                isWireframe_ = false;
-            }
+            // ---- 描画モード ----
+            SectionHeader("[ 描画モード ]", DebugTheme::kAccentBlue);
 
-            // ワイヤーフレームチェックボックス
-            bool wireframeChanged = ImGui::Checkbox("ワイヤーフレーム", &isWireframe_);
-            if (wireframeChanged && isWireframe_) {
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentBlue);
+            if (ImGui::Checkbox("モデル描画##mdraw", &isModelDraw_) && isModelDraw_)
+                isWireframe_ = false;
+            ImGui::SameLine(160.f);
+            if (ImGui::Checkbox("ワイヤーフレーム##wf", &isWireframe_) && isWireframe_)
                 isModelDraw_ = false;
-            }
+            ImGui::PopStyleColor();
+
             if (isWireframe_) {
-                ImGui::Checkbox("???", &isRainbow_);
+                ImGui::SameLine(280.f);
+                ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentYellow);
+                ImGui::Checkbox("レインボー##rb", &isRainbow_);
+                ImGui::PopStyleColor();
             } else {
                 isRainbow_ = false;
             }
 
-            // セーブボタン
-            if (ImGui::Button("セーブ")) {
+            ImGui::Spacing();
+
+            // ---- セーブボタン ----
+            ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.45f, 0.20f, 0.80f});
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.25f, 0.55f, 0.25f, 0.90f});
+            if (ImGui::Button("全て保存##objsave", ImVec2(-1, 0))) {
                 SaveToJson();
                 AnimaSaveToJson();
-                for (auto &collider : colliders_) {
-                    collider->SaveToJson();
-                }
-                std::string message = std::format("ObjectData saved.");
-                MessageBoxA(nullptr, message.c_str(), "Object", 0);
+                for (auto &c : colliders_)
+                    c->SaveToJson();
+                std::string msg = std::format("ObjectData saved: {}", objectName_);
+                MessageBoxA(nullptr, msg.c_str(), "Save", 0);
             }
+            ImGui::PopStyleColor(2);
 
             ImGui::EndTabItem();
         }
@@ -840,323 +893,425 @@ OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
 
 void BaseObject::DebugObject() {
 #ifdef _DEBUG
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 4.0f);
 
-    // 全体のスタイル設定
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 4));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 4));
+    ImGui::BeginChild("DebugObjectRoot", ImVec2(0, 0), false);
 
-    // === トランスフォーム設定 ===
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.6f, 0.8f, 0.3f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.7f, 0.9f, 0.4f));
+    // ====================================================
+    // [1] Transform
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderBlue);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.25f, 0.60f, 1.0f, 0.35f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.30f, 0.65f, 1.0f, 0.45f});
+    bool tfOpen = ImGui::CollapsingHeader("トランスフォーム##hdr", ImGuiTreeNodeFlags_DefaultOpen);
+    ImGui::PopStyleColor(3);
 
-    if (ImGui::CollapsingHeader("トランスフォーム", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Indent(10);
+    if (tfOpen) {
+        ImGui::Indent(6.0f);
 
-        // === ローカル座標 ===
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-        ImGui::Text("ローカル座標:");
-        ImGui::PopStyleColor();
-        ImGui::Separator();
+        // ---- Local ----
+        SectionHeader("[ ローカル ]", DebugTheme::kAccentBlue);
 
-        // 位置設定
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("位置:");
-        ImGui::SameLine(80);
-        ImGui::PushItemWidth(200);
-        ImGui::DragFloat3("##Position", &transform_->translation_.x, 0.1f, -1000.0f, 1000.0f, "%.2f");
-        ImGui::PopItemWidth();
+        // Table: Label | DragFloat3 | ResetBtn
+        if (ImGui::BeginTable("LocalTF", 3,
+                              ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoPadOuterX)) {
+            ImGui::TableSetupColumn("Lbl", ImGuiTableColumnFlags_WidthFixed, 62.0f);
+            ImGui::TableSetupColumn("Drg", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Btn", ImGuiTableColumnFlags_WidthFixed, 30.0f);
 
-        ImGui::SameLine();
-        if (ImGui::Button("リセット##ResetPos")) {
-            transform_->translation_ = {0.0f, 0.0f, 0.0f};
+            // -- Position --
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentBlue);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted("位置");
+            ImGui::PopStyleColor();
+            ImGui::TableNextColumn();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgBlue);
+            ImGui::DragFloat3("##lpos", &transform_->translation_.x,
+                              0.1f, -1000.f, 1000.f, "%.2f");
+            ImGui::PopStyleColor();
+            ImGui::TableNextColumn();
+            if (SmallResetButton("[R]##rpos"))
+                transform_->translation_ = {};
+
+            // -- Rotation (delta) --
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentCyan);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted("回転(差分)");
+            ImGui::PopStyleColor();
+            ImGui::TableNextColumn();
+            static Vector3 deltaRot{};
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+            if (ImGui::DragFloat3("##lrot", &deltaRot.x, 0.1f, -10.f, 10.f, "%.1fdeg")) {
+                float r = std::numbers::pi_v<float> / 180.f;
+                Quaternion cur = transform_->GetRotationQuaternion();
+                Quaternion dx = Quaternion::FromAxisAngle({1, 0, 0}, deltaRot.x * r);
+                Quaternion dy = Quaternion::FromAxisAngle({0, 1, 0}, deltaRot.y * r);
+                Quaternion dz = Quaternion::FromAxisAngle({0, 0, 1}, deltaRot.z * r);
+                transform_->SetRotationQuaternion((cur * (dy * dx * dz)).Normalize());
+                transform_->UpdateMatrix();
+                deltaRot = {};
+            }
+            ImGui::PopStyleColor();
+            ImGui::TableNextColumn();
+            if (SmallResetButton("[R]##rrot")) {
+                transform_->SetRotationQuaternion(Quaternion::IdentityQuaternion());
+                transform_->UpdateMatrix();
+                deltaRot = {};
+            }
+
+            // -- Scale --
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentGreen);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted("スケール");
+            ImGui::PopStyleColor();
+            ImGui::TableNextColumn();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgGreen);
+            ImGui::DragFloat3("##lscl", &transform_->scale_.x,
+                              0.01f, 0.01f, 10.f, "%.2f");
+            ImGui::PopStyleColor();
+            ImGui::TableNextColumn();
+            if (SmallResetButton("[R]##rscl"))
+                transform_->scale_ = {1, 1, 1};
+
+            ImGui::EndTable();
         }
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("位置をリセット");
 
-        // 回転設定
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("回転:");
-        ImGui::SameLine(80);
-        ImGui::PushItemWidth(200);
-        static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
-        if (ImGui::DragFloat3("##Rotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°")) {
-            Quaternion currentRotation = transform_->GetRotationQuaternion();
-            Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
-            Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
-            Quaternion deltaQuatZ = Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
-            Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
-            Quaternion newRotation = currentRotation * deltaQuat;
-            transform_->SetRotationQuaternion(newRotation.Normalize());
-            transform_->UpdateMatrix();
-            deltaRotation = {0.0f, 0.0f, 0.0f};
+        // 現在のオイラー角（参考）
+        {
+            Vector3 e = transform_->GetRotationEuler();
+            float d = 180.f / std::numbers::pi_v<float>;
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::Text(" Current Rot  X:%.1f  Y:%.1f  Z:%.1f (deg)",
+                        e.x * d, e.y * d, e.z * d);
+            ImGui::PopStyleColor();
         }
-        ImGui::PopItemWidth();
-        ImGui::SameLine();
-        if (ImGui::Button("リセット##ResetRot")) {
-            transform_->SetRotationQuaternion(Quaternion::IdentityQuaternion());
-            transform_->UpdateMatrix();
-            deltaRotation = {0.0f, 0.0f, 0.0f};
-        }
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("回転をリセット");
-
-        // 現在の回転を表示（参考用）
-        ImGui::Text("現在の回転:");
-        Vector3 currentEuler = transform_->GetRotationEuler();
-        ImGui::Text("X: %.1f°, Y: %.1f°, Z: %.1f°",
-                    currentEuler.x * 180.0f / std::numbers::pi_v<float>,
-                    currentEuler.y * 180.0f / std::numbers::pi_v<float>,
-                    currentEuler.z * 180.0f / std::numbers::pi_v<float>);
-
-        // スケール設定
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("大きさ:");
-        ImGui::SameLine(80);
-        ImGui::PushItemWidth(200);
-        ImGui::DragFloat3("##Scale", &transform_->scale_.x, 0.01f, 0.01f, 10.0f, "%.2f");
-        ImGui::PopItemWidth();
-
-        ImGui::SameLine();
-        if (ImGui::Button("リセット##ResetScale")) {
-            transform_->scale_ = {1.0f, 1.0f, 1.0f};
-        }
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("大きさをリセット");
 
         ImGui::Spacing();
 
-        // === ワールド座標 ===
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 1.0f, 0.8f, 1.0f));
-        ImGui::Text("ワールド座標:");
-        ImGui::PopStyleColor();
-        ImGui::Separator();
+        // ---- World (read-only) ----
+        SectionHeader("[ ワールド (読み取り専用) ]", DebugTheme::kAccentGreen);
 
-        // ワールド座標の取得
-        Vector3 worldPos = GetWorldPosition();
-        Quaternion worldRot = GetWorldRotation();
-        Vector3 worldScale = GetWorldScale();
+        Vector3 wPos = GetWorldPosition();
+        Quaternion wRot = GetWorldRotation();
+        Vector3 wScale = GetWorldScale();
+        float toDeg = 180.f / std::numbers::pi_v<float>;
 
-        // ワールド位置（読み取り専用）
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("位置:");
-        ImGui::SameLine(80);
-        ImGui::PushItemWidth(200);
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.15f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
-        float worldPosArray[3] = {worldPos.x, worldPos.y, worldPos.z};
-        ImGui::InputFloat3("##WorldPosition", worldPosArray, "%.2f", ImGuiInputTextFlags_ReadOnly);
+        // ReadOnlyRow を使って ## が画面に出ないようにする
+        // InputFloat3 の ID は ## 始まりで非表示
+        auto WorldVec3Row = [](const char *rowLabel,
+                               const char *dragId,
+                               float x, float y, float z) {
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("  %-10s", rowLabel);
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            float v[3] = {x, y, z};
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.12f, 0.12f, 0.14f, 0.8f});
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextReadOnly);
+            ImGui::InputFloat3(dragId, v, "%.2f", ImGuiInputTextFlags_ReadOnly);
+            ImGui::PopStyleColor(2);
+        };
+
+        WorldVec3Row("位置", "##wpos", wPos.x, wPos.y, wPos.z);
+        WorldVec3Row("Rotation", "##wrot",
+                     wRot.x * toDeg, wRot.y * toDeg, wRot.z * toDeg);
+        WorldVec3Row("スケール", "##wscl", wScale.x, wScale.y, wScale.z);
+
+        ImGui::Spacing();
+
+        // ---- ImPlot: Scale history ----
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgGreen);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.85f, 0.50f, 0.20f});
+        bool plotOpen = ImGui::CollapsingHeader("スケール履歴 (グラフ)##scgr");
         ImGui::PopStyleColor(2);
-        ImGui::PopItemWidth();
 
-        // ワールド回転（読み取り専用、度数で表示）
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("回転:");
-        ImGui::SameLine(80);
-        ImGui::PushItemWidth(200);
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.15f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
+        if (plotOpen) {
+            constexpr int kN = 120;
+            static float hx[kN]{}, hy[kN]{}, hz[kN]{};
+            static int head = 0, cnt = 0;
+            hx[head] = transform_->scale_.x;
+            hy[head] = transform_->scale_.y;
+            hz[head] = transform_->scale_.z;
+            head = (head + 1) % kN;
+            if (cnt < kN)
+                ++cnt;
 
-        // クォータニオンからワールド回転を取得
-        float worldRotDegrees[3] = {
-            radiansToDegrees(worldRot.x),
-            radiansToDegrees(worldRot.y),
-            radiansToDegrees(worldRot.z)};
+            static float dx[kN], dy[kN], dz[kN];
+            int s = (head - cnt + kN) % kN;
+            for (int i = 0; i < cnt; ++i) {
+                int id = (s + i) % kN;
+                dx[i] = hx[id];
+                dy[i] = hy[id];
+                dz[i] = hz[id];
+            }
 
-        ImGui::InputFloat3("##WorldRotation", worldRotDegrees, "%.1f°", ImGuiInputTextFlags_ReadOnly);
-        ImGui::PopStyleColor(2);
-        ImGui::PopItemWidth();
+            ImPlot::PushStyleColor(ImPlotCol_PlotBg, {0.08f, 0.08f, 0.10f, 1.0f});
+            if (ImPlot::BeginPlot("##scplot", ImVec2(-1, 75),
+                                  ImPlotFlags_NoTitle | ImPlotFlags_NoLegend |
+                                      ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) {
+                ImPlot::SetupAxes(nullptr, nullptr,
+                                  ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_AutoFit);
+                ImPlot::SetupAxisLimits(ImAxis_X1, 0, kN, ImGuiCond_Always);
+                ImPlot::PushStyleColor(ImPlotCol_Line, DebugTheme::kAccentRed);
+                ImPlot::PlotLine("X", dx, cnt);
+                ImPlot::PopStyleColor();
+                ImPlot::PushStyleColor(ImPlotCol_Line, DebugTheme::kAccentGreen);
+                ImPlot::PlotLine("Y", dy, cnt);
+                ImPlot::PopStyleColor();
+                ImPlot::PushStyleColor(ImPlotCol_Line, DebugTheme::kAccentBlue);
+                ImPlot::PlotLine("Z", dz, cnt);
+                ImPlot::PopStyleColor();
+                ImPlot::EndPlot();
+            }
+            ImPlot::PopStyleColor();
+            // 凡例
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentRed);
+            ImGui::TextUnformatted(" X");
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentGreen);
+            ImGui::TextUnformatted(" Y");
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentBlue);
+            ImGui::TextUnformatted(" Z");
+            ImGui::PopStyleColor();
+        }
 
-        // ワールドスケール（読み取り専用）
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("大きさ:");
-        ImGui::SameLine(80);
-        ImGui::PushItemWidth(200);
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.15f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
-        float worldScaleArray[3] = {worldScale.x, worldScale.y, worldScale.z};
-        ImGui::InputFloat3("##WorldScale", worldScaleArray, "%.2f", ImGuiInputTextFlags_ReadOnly);
-        ImGui::PopStyleColor(2);
-        ImGui::PopItemWidth();
-
-        ImGui::Unindent(10);
+        ImGui::Unindent(6.0f);
         ImGui::Spacing();
     }
 
-    // === マテリアル設定 ===
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8f, 0.4f, 0.2f, 0.3f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.9f, 0.5f, 0.3f, 0.4f));
+    // ====================================================
+    // [2] Material
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderOrange);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.65f, 0.15f, 0.35f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {1.0f, 0.70f, 0.20f, 0.45f});
+    bool matOpen = ImGui::CollapsingHeader("マテリアル##hdr");
+    ImGui::PopStyleColor(3);
 
-    if (ImGui::CollapsingHeader("マテリアル設定")) {
-        ImGui::Indent(10);
-        // ライティング設定
-        ImGui::Text("ライティング:");
-        ImGui::SameLine(120);
+    if (matOpen) {
+        ImGui::Indent(6.0f);
+        SectionHeader("[ ライティング ]", DebugTheme::kAccentOrange);
 
-        if (isLighting_) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 1.0f, 0.7f, 1.0f));
-            ImGui::Text("有効");
-            ImGui::PopStyleColor();
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.7f, 0.7f, 1.0f));
-            ImGui::Text("無効");
-            ImGui::PopStyleColor();
-        }
-
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("状態:");
         ImGui::SameLine();
-        if (ImGui::Button(isLighting_ ? "無効化" : "有効化")) {
+        StatusBadge(isLighting_ ? "オン" : "オフ",
+                    isLighting_ ? DebugTheme::kAccentGreen : DebugTheme::kAccentRed);
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              isLighting_ ? ImVec4{0.6f, 0.2f, 0.2f, 0.7f} : ImVec4{0.2f, 0.5f, 0.2f, 0.7f});
+        if (ImGui::SmallButton(isLighting_ ? "無効にする##lt" : "有効にする##lt"))
             isLighting_ = !isLighting_;
-        }
+        ImGui::PopStyleColor();
 
-        ImGui::Unindent(10);
+        ImGui::Unindent(6.0f);
         ImGui::Spacing();
     }
 
-    // === モデル設定 ===
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.6f, 0.2f, 0.8f, 0.3f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.7f, 0.3f, 0.9f, 0.4f));
+    // ====================================================
+    // [3] Model
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderPurple);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.75f, 0.35f, 1.0f, 0.35f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.80f, 0.40f, 1.0f, 0.45f});
+    bool modelOpen = ImGui::CollapsingHeader("モデル##hdr");
+    ImGui::PopStyleColor(3);
 
-    if (ImGui::CollapsingHeader("モデル設定")) {
-        ImGui::Indent(10);
+    if (modelOpen) {
+        ImGui::Indent(6.0f);
+        static int selMat = 0;
+        size_t matCount = obj3d_->GetMaterialCount();
+        if (obj3d_->GetHaveAnimation() && matCount > 1)
+            --matCount;
 
-        static int selectedMaterialIndex = 0;
-        size_t materialCount = obj3d_->GetMaterialCount();
+        SectionHeader("[ マテリアルスロット ]", DebugTheme::kAccentPurple);
 
-        if (obj3d_->GetHaveAnimation() && materialCount > 1) {
-            --materialCount;
-        }
-
-        // マテリアル選択
-        if (materialCount > 1) {
-            ImGui::Text("マテリアル:");
-            ImGui::SameLine(120);
-
-            std::vector<std::string> comboItems;
-            for (int i = 0; i < static_cast<int>(materialCount); ++i) {
-                comboItems.push_back("Material " + std::to_string(i + 1));
-            }
-
-            std::vector<const char *> comboItemsCStr;
-            for (const auto &item : comboItems) {
-                comboItemsCStr.push_back(item.c_str());
-            }
-
-            ImGui::PushItemWidth(150);
-            if (ImGui::Combo("##MaterialIndex", &selectedMaterialIndex, comboItemsCStr.data(), static_cast<int>(comboItemsCStr.size()))) {
-                // 選択変更時の処理
-            }
-            ImGui::PopItemWidth();
-
-            selectedMaterialIndex = std::clamp(selectedMaterialIndex, 0, static_cast<int>(materialCount) - 1);
+        if (matCount > 1) {
+            std::vector<std::string> items;
+            std::vector<const char *> cstrs;
+            for (int i = 0; i < (int)matCount; ++i)
+                items.push_back("Slot " + std::to_string(i + 1));
+            for (auto &s : items)
+                cstrs.push_back(s.c_str());
+            ImGui::SetNextItemWidth(-1);
+            ImGui::Combo("##matslot", &selMat, cstrs.data(), (int)cstrs.size());
+            selMat = std::clamp(selMat, 0, (int)matCount - 1);
         } else {
-            selectedMaterialIndex = 0;
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-            ImGui::Text("マテリアル: Single Material");
+            selMat = 0;
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("  シングルマテリアル");
             ImGui::PopStyleColor();
         }
 
         ImGui::Spacing();
 
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.3f, 0.7f, 0.3f));
-        if (ImGui::TreeNode("マテリアル色設定")) {
-            Vector4 currentColor = GetColor(selectedMaterialIndex);
-            float color[4] = {currentColor.x, currentColor.y, currentColor.z, currentColor.w};
-
-            if (ImGui::ColorEdit4("色", color)) {
-                SetColor(Vector4(color[0], color[1], color[2], color[3]), selectedMaterialIndex);
-            }
-
-            ImGui::Spacing();
-            if (ImGui::Button("リセット", ImVec2(80, 0))) {
-                SetColor(Vector4(1.0f, 1.0f, 1.0f, 1.0f), selectedMaterialIndex);
-            }
-
+        // Color
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgPurple);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.7f, 0.3f, 1.0f, 0.20f});
+        if (ImGui::TreeNodeEx("カラー##mc", ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            Vector4 cur = GetColor(selMat);
+            float c[4] = {cur.x, cur.y, cur.z, cur.w};
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::ColorEdit4("##colpicker", c))
+                SetColor({c[0], c[1], c[2], c[3]}, selMat);
+            if (ImGui::SmallButton("カラーリセット##cr"))
+                SetColor({1, 1, 1, 1}, selMat);
             ImGui::TreePop();
         }
-        ImGui::PopStyleColor();
 
-        ImGui::Spacing();
-
-        // テクスチャ設定
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.7f, 0.3f, 0.3f));
-        if (ImGui::TreeNode("テクスチャ設定")) {
+        // Texture
+        if (ImGui::TreeNodeEx("テクスチャ##tx", ImGuiTreeNodeFlags_SpanAvailWidth)) {
             ShowTextureFile(texturePath_);
             ImGui::Spacing();
-
-            if (ImGui::Button("適用", ImVec2(80, 0))) {
-                SetTexture(texturePath_, selectedMaterialIndex);
-                texturePaths_[selectedMaterialIndex] = texturePath_;
+            if (ImGui::SmallButton("適用##ta")) {
+                SetTexture(texturePath_, selMat);
+                texturePaths_[selMat] = texturePath_;
             }
-
             ImGui::SameLine();
-            if (ImGui::Button("クリア", ImVec2(80, 0))) {
+            if (ImGui::SmallButton("クリア##tc"))
                 texturePath_.clear();
-            }
-
             ImGui::TreePop();
         }
-        ImGui::PopStyleColor();
 
-        // ブレンドモード設定
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.7f, 0.3f, 0.7f, 0.3f));
-        if (ImGui::TreeNode("ブレンドモード")) {
+        // Blend mode
+        if (ImGui::TreeNodeEx("ブレンドモード##bm", ImGuiTreeNodeFlags_SpanAvailWidth)) {
             ShowBlendModeCombo(blendMode_);
             ImGui::TreePop();
         }
-        ImGui::PopStyleColor();
+        ImGui::PopStyleColor(2);
 
-        ImGui::Unindent(10);
+        ImGui::Unindent(6.0f);
         ImGui::Spacing();
     }
 
-    // === アニメーション設定 ===
+    // ====================================================
+    // [4] Animation
+    // ====================================================
     if (obj3d_->GetHaveAnimation()) {
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8f, 0.6f, 0.2f, 0.3f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.9f, 0.7f, 0.3f, 0.4f));
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderYellow);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.88f, 0.15f, 0.35f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {1.0f, 0.90f, 0.20f, 0.45f});
+        bool animOpen = ImGui::CollapsingHeader("アニメーション##hdr");
+        ImGui::PopStyleColor(3);
 
-        if (ImGui::CollapsingHeader("アニメーション設定")) {
-            ImGui::Indent(10);
+        if (animOpen) {
+            ImGui::Indent(6.0f);
+            SectionHeader("[ 制御 ]", DebugTheme::kAccentYellow);
 
-            // 制御オプション
-            ImGui::Text("ループ:");
-            ImGui::SameLine(80);
-            ImGui::Checkbox("##Loop", &isLoop_);
-
-            ImGui::Text("スケルトン:");
-            ImGui::SameLine(100); // 幅を80から100に拡張
-            ImGui::Checkbox("##Skeleton", &skeletonDraw_);
-
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentYellow);
+            ImGui::Checkbox("ループ##lp", &isLoop_);
+            ImGui::SameLine(130.0f);
+            ImGui::Checkbox("スケルトン表示##sk", &skeletonDraw_);
+            ImGui::PopStyleColor();
             ImGui::Spacing();
 
-            // 制御ボタン
-            if (ImGui::Button("再生", ImVec2(80, 0))) {
+            ImGui::PushStyleColor(ImGuiCol_Button, {0.25f, 0.55f, 0.20f, 0.8f});
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.30f, 0.70f, 0.25f, 0.9f});
+            if (ImGui::Button("再生##aplay", ImVec2(-1, 0)))
                 obj3d_->PlayAnimation();
-            }
+            ImGui::PopStyleColor(2);
 
             ImGui::Spacing();
-
-            // アニメーションセット選択
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.6f, 0.8f, 0.2f, 0.3f));
-            if (ImGui::TreeNode("アニメーションセット")) {
+            ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgYellow);
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.85f, 0.10f, 0.20f});
+            if (ImGui::TreeNodeEx("アニメーション設定##as", ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ShowFileSelector();
                 ImGui::TreePop();
             }
-            ImGui::PopStyleColor();
-
-            ImGui::Unindent(10);
+            ImGui::PopStyleColor(2);
+            ImGui::Unindent(6.0f);
         }
+    }
 
+    // ====================================================
+    // [5] Gizmo
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgRed);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.30f, 0.30f, 0.20f});
+    bool gizOpen = ImGui::CollapsingHeader("ギズモ##hdr");
+    ImGui::PopStyleColor(2);
+
+    if (gizOpen) {
+        ImGui::Indent(6.0f);
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentRed);
+        ImGui::Checkbox("ギズモ選択可##gsel", &isGizmoSelectable_);
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("オフ: マウスクリック/ギズモ操作の対象外");
+        ImGui::Unindent(6.0f);
+    }
+
+    // ====================================================
+    // [6] Collider
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.15f, 0.50f, 0.65f, 0.40f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.25f, 0.60f, 0.75f, 0.45f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.30f, 0.65f, 0.80f, 0.55f));
+    bool colOpen = ImGui::CollapsingHeader("コライダー##hdr");
+    ImGui::PopStyleColor(3);
+
+    if (colOpen) {
+        ImGui::Indent(6.0f);
+
+        // コライダー追加ボタン
+        ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.40f, 0.60f, 0.80f});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.30f, 0.50f, 0.70f, 0.90f});
+        if (ImGui::Button("+ コライダー追加##addcol"))
+            ImGui::OpenPopup("AddColliderPopup##acp");
         ImGui::PopStyleColor(2);
-    }
 
-    ImGui::PopStyleColor(6);
-    ImGui::PopStyleVar(2);
-
-    if (ImGui::CollapsingHeader("ギズモ設定")) {
-        ImGui::Checkbox("ギズモで選択可能", &isGizmoSelectable_);
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("オフにするとマウスクリックやギズモ操作の対象外になります");
+        if (ImGui::BeginPopup("AddColliderPopup##acp")) {
+            auto makeDefault = [](auto *c) {
+                c->SetTag("Environment");
+                c->AddCollisionMask("Player");
+            };
+            if (ImGui::MenuItem("Sphere")) {
+                auto *c = AddSphereCollider();
+                makeDefault(c);
+                c->SetRadius(1.0f);
+            }
+            if (ImGui::MenuItem("AABB")) {
+                auto *c = AddAABBCollider();
+                makeDefault(c);
+                c->SetSize({2.0f, 2.0f, 2.0f});
+            }
+            if (ImGui::MenuItem("OBB")) {
+                auto *c = AddOBBCollider();
+                makeDefault(c);
+                c->SetSize({2.0f, 2.0f, 2.0f});
+            }
+            ImGui::EndPopup();
         }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        DebugCollider();
+
+        ImGui::Unindent(6.0f);
+        ImGui::Spacing();
     }
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar(4);
 #endif // _DEBUG
 }
 
@@ -1176,16 +1331,16 @@ void BaseObject::ShowFileSelector() {
     ImGui::Separator();
 
     // Comboボックスでファイル選択
-    if (ImGui::Combo("GLTF Files", &selectedIndex, fileNames.data(), static_cast<int>(fileNames.size()))) {
+    if (ImGui::Combo("GLTFファイル##combo", &selectedIndex, fileNames.data(), static_cast<int>(fileNames.size()))) {
         // ファイル選択時の動作（選択されたファイル名を表示）
         if (selectedIndex >= 0) {
-            ImGui::Text("Selected File:");
+            ImGui::Text("選択ファイル:");
             ImGui::TextWrapped("%s", gltfFiles[selectedIndex].c_str());
         }
     }
 
     // ボタンでアニメーションをセット
-    if (selectedIndex >= 0 && ImGui::Button("Set Animation")) {
+    if (selectedIndex >= 0 && ImGui::Button("アニメーション設定##btn")) {
         obj3d_->SetAnimation(gltfFiles[selectedIndex]); // 選択されたファイルをSetAnimationに渡す
     }
 #endif // _DEBUG

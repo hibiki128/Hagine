@@ -8,7 +8,9 @@ void Ground::Init(const std::string className) {
     transform_->translation_.y = -1.0f;
     transform_->scale_ = {1000.0f, 1000.0f, 1000.0f};
 
-    transform_->quateRotation_ = Quaternion::FromEulerAngles(Vector3(degreesToRadians(90.0f), 0.0f, 0.0f));
+    transform_->quateRotation_ = Quaternion::FromEulerAngles(Vector3(degreesToRadians(-90.0f), 0.0f, 0.0f));
+
+    isLighting_ = false;
 }
 
 void Ground::Update() {

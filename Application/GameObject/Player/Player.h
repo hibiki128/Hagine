@@ -74,6 +74,12 @@ class Player : public BaseObject {
     void OnCollision(ColliderBase *other);
 
     /// <summary>
+    /// 当たった瞬間
+    /// </summary>
+    /// <param name="other"></param>
+    void OnCollisionEnter(ColliderBase *other);
+
+    /// <summary>
     /// 方向情報を更新
     /// </summary>
     void DirectionUpdate();
@@ -190,6 +196,12 @@ class Player : public BaseObject {
         dashInputZ_ = z;
     }
 
+    /// <summary>
+    /// 外部からダメージ量をセット（次のDamageUpdateで処理される）
+    /// </summary>
+    /// <param name="damage">与えるダメージ量</param>
+    void SetDamage(float damage) { damage_ = damage; }
+
   private:
     /// ===================================================
     /// private method
@@ -255,6 +267,16 @@ class Player : public BaseObject {
     /// <returns>const char*: 方向の名前文字列</returns>
     const char *GetDirectionName(Direction dir);
 
+    /// <summary>
+    /// ダメージを受ける処理
+    /// </summary>
+    void DamageUpdate();
+
+    /// <summary>
+    /// 無敵時間の更新処理
+    /// </summary>
+    void InvincibleUpdate();
+
     void UpdateDashState();
 
   private:
@@ -273,6 +295,7 @@ class Player : public BaseObject {
     static constexpr float kEnemyCollisionDamage = 7.5f;
     static constexpr float kTimerReset = 0.0f;
     static constexpr float kPlayerDamageTiltDegrees = 20.0f;
+    static constexpr float kNoDamage = 0.0f;
 
     // 点滅関連定数
     static constexpr float kPlayerBlinkInterval = 0.05f;
@@ -385,6 +408,7 @@ class Player : public BaseObject {
     bool isInvincible_ = false;        // 無敵状態フラグ
     float invincibleTime_ = 0.0f;      // 無敵時間の経過時間
     float invincibleDuration_ = 0.25f; // 無敵時間の長さ(秒)
+    float damage_ = 0.0f;
 
     ComboSystem punchCombo_;
     bool comboInitialized_ = false; // コンボ初期化済みフラグ
@@ -400,6 +424,7 @@ class Player : public BaseObject {
     std::unique_ptr<PlayerHand> rightHand_;          // 右手
     std::unique_ptr<Shake> shake_;                   // シェイク
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
+    std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
     std::unique_ptr<GamePad> gamePad_;

@@ -32,6 +32,8 @@ class ParticleCSEmitter {
     }
     void SetActive(bool isActive) { isActive_ = isActive; }
     void SetAuto(bool isAuto) { isAuto_ = isAuto; }
+    // エミッターのワイヤーフレーム描画の表示・非表示を切り替える
+    void SetVisible(bool isVisible) { isVisible_ = isVisible; }
 
     std::string GetName() const { return name_; }
     void SetEnableGravity(bool enable) {

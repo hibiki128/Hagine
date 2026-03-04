@@ -49,6 +49,8 @@ class ColliderTagManager {
         AddTag("PlayerBullet");
         AddTag("PlayerChargeBullet");
         AddTag("PlayerHand");
+        AddTag("EnemyBullet");
+        AddTag("EnemyHand");
     }
 
 #ifdef _DEBUG

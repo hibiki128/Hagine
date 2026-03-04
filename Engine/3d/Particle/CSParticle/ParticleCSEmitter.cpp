@@ -519,6 +519,16 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "radialVelocityStrength", group->GetSettingsData()->radialVelocityStrength);
         data->Save(prefix + "radialVelocityRandomness", group->GetSettingsData()->radialVelocityRandomness);
         data->Save(prefix + "radialVelocityCenter", group->GetSettingsData()->radialVelocityCenter);
+
+        data->Save(prefix + "enableCurlNoise", group->GetSettingsData()->enableCurlNoise);
+        data->Save(prefix + "curlNoiseScale", group->GetSettingsData()->curlNoiseScale);
+        data->Save(prefix + "curlNoiseStrength", group->GetSettingsData()->curlNoiseStrength);
+        data->Save(prefix + "curlNoiseTimeScale", group->GetSettingsData()->curlNoiseTimeScale);
+        data->Save(prefix + "curlNoiseOctaves", group->GetSettingsData()->curlNoiseOctaves);
+        data->Save(prefix + "curlNoiseAttractStrength", group->GetSettingsData()->curlNoiseAttractStrength);
+        data->Save(prefix + "curlNoiseBlendMode", group->GetSettingsData()->curlNoiseBlendMode);
+        data->Save(prefix + "curlNoisePosRandomStrength", group->GetSettingsData()->curlNoisePosRandomStrength);
+        data->Save(prefix + "curlNoiseAttractCenter", group->GetSettingsData()->curlNoiseAttractCenter);
     }
 }
 
@@ -608,6 +618,16 @@ void ParticleCSEmitter::LoadSetting() {
         settings.radialVelocityStrength = data->Load(prefix + "radialVelocityStrength", 0.0f);
         settings.radialVelocityRandomness = data->Load(prefix + "radialVelocityRandomness", 0.0f);
         settings.radialVelocityCenter = data->Load<Vector3>(prefix + "radialVelocityCenter", {0.0f, 0.0f, 0.0f});
+        
+        settings.enableCurlNoise = data->Load<uint32_t>(prefix + "enableCurlNoise", 0);
+        settings.curlNoiseScale = data->Load(prefix + "curlNoiseScale", 1.0f);
+        settings.curlNoiseStrength = data->Load(prefix + "curlNoiseStrength", 1.0f);
+        settings.curlNoiseTimeScale = data->Load(prefix + "curlNoiseTimeScale", 1.0f);
+        settings.curlNoiseOctaves = data->Load<uint32_t>(prefix + "curlNoiseOctaves", 1);
+        settings.curlNoiseAttractStrength = data->Load(prefix + "curlNoiseAttractStrength", 0.0f);
+        settings.curlNoiseBlendMode = data->Load<uint32_t>(prefix + "curlNoiseBlendMode", 0);
+        settings.curlNoisePosRandomStrength = data->Load(prefix + "curlNoisePosRandomStrength", 0.0f);
+        settings.curlNoiseAttractCenter = data->Load<Vector3>(prefix + "curlNoiseAttractCenter", {0.0f, 0.0f, 0.0f});
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -709,6 +729,16 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.radialVelocityStrength = data->Load(prefix + "radialVelocityStrength", 0.0f);
         settings.radialVelocityRandomness = data->Load(prefix + "radialVelocityRandomness", 0.0f);
         settings.radialVelocityCenter = data->Load<Vector3>(prefix + "radialVelocityCenter", {0.0f, 0.0f, 0.0f});
+
+        settings.enableCurlNoise = data->Load<uint32_t>(prefix + "enableCurlNoise", 0);
+        settings.curlNoiseScale = data->Load(prefix + "curlNoiseScale", 1.0f);
+        settings.curlNoiseStrength = data->Load(prefix + "curlNoiseStrength", 1.0f);
+        settings.curlNoiseTimeScale = data->Load(prefix + "curlNoiseTimeScale", 1.0f);
+        settings.curlNoiseOctaves = data->Load<uint32_t>(prefix + "curlNoiseOctaves", 1);
+        settings.curlNoiseAttractStrength = data->Load(prefix + "curlNoiseAttractStrength", 0.0f);
+        settings.curlNoiseBlendMode = data->Load<uint32_t>(prefix + "curlNoiseBlendMode", 0);
+        settings.curlNoisePosRandomStrength = data->Load(prefix + "curlNoisePosRandomStrength", 0.0f);
+        settings.curlNoiseAttractCenter = data->Load<Vector3>(prefix + "curlNoiseAttractCenter", {0.0f, 0.0f, 0.0f});
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));

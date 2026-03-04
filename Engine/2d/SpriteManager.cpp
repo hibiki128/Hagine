@@ -1,4 +1,6 @@
+#define NOMINMAX
 #include "SpriteManager.h"
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "SpriteCommon.h"
 #include "WinApp.h"
 #include "myMath.h"
@@ -256,404 +258,503 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData) {
 
 void SpriteManager::DrawSpriteCreationModal() {
 #ifdef _DEBUG
-    // メニューから呼び出された場合のモーダル表示
     if (showSpriteCreationModal_) {
-        ImGui::OpenPopup("スプライト生成");
+        ImGui::OpenPopup("スプライト生成##modal");
         showSpriteCreationModal_ = false;
     }
 
-    // スプライト生成モーダルウィンドウ
-    if (ImGui::BeginPopupModal("スプライト生成", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("新しいスプライトを作成します");
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 4));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
 
-        static char spriteNameBuffer[128] = "";
-        static SpriteTransform transform;
-        static bool initialized = false;
-
-        // 初回時の初期化
-        if (!initialized) {
-            transform = SpriteTransform(); // デフォルト値で初期化
-            initialized = true;
+    // 幅を抑える（幅 340px に固定）
+    ImGui::SetNextWindowSize(ImVec2(1080, 0), ImGuiCond_Always);
+    if (ImGui::BeginPopupModal("スプライト生成##modal", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize |
+                                   ImGuiWindowFlags_NoResize)) {
+        static char nameBuf[128] = "";
+        static SpriteTransform tf;
+        static bool inited = false;
+        if (!inited) {
+            tf = SpriteTransform();
+            inited = true;
         }
 
-        // スプライト名入力欄
-        ImGui::InputText("スプライト名", spriteNameBuffer, IM_ARRAYSIZE(spriteNameBuffer));
+        // ---- Name ----
+        SectionHeader("[ 名前 ]", DebugTheme::kAccentBlue);
+        ImGui::SetNextItemWidth(-1);
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgBlue);
+        ImGui::InputText("##spname", nameBuf, IM_ARRAYSIZE(nameBuf));
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
 
-        ImGui::Separator();
-
-        // テクスチャファイル選択セクション
-        ImGui::Text("テクスチャファイル選択:");
-        ImGui::BeginChild("TextureFileSelector", ImVec2(600, 300), true);
+        // ---- Texture ----
+        SectionHeader("[ テクスチャ ]", DebugTheme::kAccentOrange);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, {0.10f, 0.10f, 0.12f, 1.0f});
+        ImGui::BeginChild("TexSel##modal", ImVec2(-1, 360), true);
         ShowTextureFile(texturePath_);
         ImGui::EndChild();
+        ImGui::PopStyleColor();
 
-        ImGui::Separator();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::Text("選択中: %s",
+                    texturePath_.empty() ? "(未選択)" : texturePath_.c_str());
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
 
-        // スプライト設定セクション
-        ImGui::Text("スプライト設定:");
+        // ---- Settings ----
+        SectionHeader("[ 設定 ]", DebugTheme::kAccentGreen);
 
-        // 位置設定
-        ImGui::DragFloat2("位置", &transform.position.x, 1.0f);
+        // 位置（ラベルを上に出し DragFloat2 は全幅）
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("位置 (X / Y)");
+        ImGui::PopStyleColor();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgGreen);
+        ImGui::DragFloat2("##sppos", &tf.position.x, 1.0f);
+        ImGui::PopStyleColor();
 
-        // 色設定
-        ImGui::ColorEdit4("色", &transform.color.x);
+        // 色
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("カラー (R / G / B / A)");
+        ImGui::PopStyleColor();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::ColorEdit4("##spcol", &tf.color.x);
 
-        // アンカーポイント設定
-        ImGui::DragFloat2("アンカーポイント", &transform.anchorPoint.x, 0.0f, 1.0f);
+        // アンカー
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("アンカーポイント (0.0 - 1.0)");
+        ImGui::PopStyleColor();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::SliderFloat2("##spanc", &tf.anchorPoint.x, 0.0f, 1.0f, "%.2f");
 
-        // フリップ設定
-        ImGui::Checkbox("左右反転", &transform.isFlipX);
+        // フリップ
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("反転");
+        ImGui::PopStyleColor();
+        ImGui::Checkbox("水平##spfx", &tf.isFlipX);
         ImGui::SameLine();
-        ImGui::Checkbox("上下反転", &transform.isFlipY);
+        ImGui::Checkbox("垂直##spfy", &tf.isFlipY);
 
-        // インスタンス数設定
-        ImGui::InputScalar("インスタンス数", ImGuiDataType_U32, &transform.instanceCount, nullptr, nullptr, nullptr, ImGuiInputTextFlags_CharsDecimal);
-        if (transform.instanceCount < 1)
-            transform.instanceCount = 1;
-        if (transform.instanceCount > 1000)
-            transform.instanceCount = 1000; // 最大値制限
+        // インスタンス数
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("インスタンス数 (1 - 1000)");
+        ImGui::PopStyleColor();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::InputScalar("##spinst", ImGuiDataType_U32, &tf.instanceCount,
+                           nullptr, nullptr, nullptr,
+                           ImGuiInputTextFlags_CharsDecimal);
+        tf.instanceCount = std::clamp(tf.instanceCount, 1u, 1000u);
 
+        ImGui::Spacing();
         ImGui::Separator();
 
-        // 選択状況の表示
-        ImGui::Text("選択されたテクスチャ: %s", texturePath_.empty() ? "未選択" : texturePath_.c_str());
-
-        ImGui::Separator();
-
-        // 生成ボタンとキャンセルボタン
-        bool canCreate = strlen(spriteNameBuffer) > 0 && !texturePath_.empty();
-
-        // 既に同じ名前のスプライトが存在するかチェック
-        bool nameExists = (GetSprite(spriteNameBuffer) != nullptr);
-        if (nameExists) {
-            canCreate = false;
-        }
+        // ---- Validation messages ----
+        bool nameOk = strlen(nameBuf) > 0;
+        bool texOk = !texturePath_.empty();
+        bool nameUniq = (GetSprite(nameBuf) == nullptr);
+        bool canCreate = nameOk && texOk && nameUniq;
 
         if (!canCreate) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentRed);
+            if (!nameOk)
+                ImGui::TextUnformatted("  * スプライト名を入力してください");
+            if (!texOk)
+                ImGui::TextUnformatted("  * テクスチャファイルを選択してください");
+            if (!nameUniq)
+                ImGui::TextUnformatted("  * 同名のスプライトが既に存在します");
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
         }
 
-        if (ImGui::Button("生成", ImVec2(120, 0))) {
-            if (canCreate) {
-                RegisterSprite(spriteNameBuffer, texturePath_, transform);
-
-                // 入力欄とパスをリセット
-                memset(spriteNameBuffer, 0, sizeof(spriteNameBuffer));
-                texturePath_ = "";
-                transform = SpriteTransform(); // デフォルト値にリセット
-                initialized = false;
-                ImGui::CloseCurrentPopup();
-            }
-        }
-
-        if (!canCreate) {
-            ImGui::PopStyleColor(3);
-        }
-
-        ImGui::SameLine();
-        if (ImGui::Button("キャンセル", ImVec2(120, 0))) {
-            // 入力欄とパスをリセット
-            memset(spriteNameBuffer, 0, sizeof(spriteNameBuffer));
+        // ---- Buttons ----
+        auto ResetModal = [&]() {
+            memset(nameBuf, 0, sizeof(nameBuf));
             texturePath_ = "";
-            transform = SpriteTransform(); // デフォルト値にリセット
-            initialized = false;
+            tf = SpriteTransform();
+            inited = false;
+        };
+
+        float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              canCreate ? ImVec4{0.20f, 0.50f, 0.20f, 0.85f}
+                                        : ImVec4{0.25f, 0.25f, 0.28f, 0.60f});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                              canCreate ? ImVec4{0.25f, 0.60f, 0.25f, 0.90f}
+                                        : ImVec4{0.25f, 0.25f, 0.28f, 0.60f});
+        if (ImGui::Button("生成##spcreate", ImVec2(bw, 0)) && canCreate) {
+            RegisterSprite(nameBuf, texturePath_, tf);
+            ResetModal();
             ImGui::CloseCurrentPopup();
         }
+        ImGui::PopStyleColor(2);
+        ImGui::SameLine();
 
-        // 生成できない場合の理由を表示
-        if (!canCreate) {
-            ImGui::Separator();
-            ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "生成するには:");
-            if (strlen(spriteNameBuffer) == 0) {
-                ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "・スプライト名を入力してください");
-            }
-            if (texturePath_.empty()) {
-                ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "・テクスチャファイルを選択してください");
-            }
-            if (nameExists) {
-                ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "・同じ名前のスプライトが既に存在します");
-            }
+        ImGui::PushStyleColor(ImGuiCol_Button, {0.45f, 0.20f, 0.20f, 0.85f});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.60f, 0.25f, 0.25f, 0.90f});
+        if (ImGui::Button("キャンセル##spcancel", ImVec2(bw, 0))) {
+            ResetModal();
+            ImGui::CloseCurrentPopup();
         }
+        ImGui::PopStyleColor(2);
 
         ImGui::EndPopup();
     }
+
+    ImGui::PopStyleVar(3);
 #endif // _DEBUG
 }
 
-// スプライト管理ウィンドウの描画
 void SpriteManager::DrawSpriteManager() {
 #ifdef _DEBUG
-    // 新規作成ボタン
-    if (ImGui::Button("新しいスプライトを作成", ImVec2(200, 30))) {
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+
+    // ---- 新規作成ボタン ----
+    ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.50f, 0.20f, 0.85f});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.25f, 0.60f, 0.25f, 0.90f});
+    if (ImGui::Button("+ スプライト新規作成##spmain", ImVec2(-1, 0)))
         ShowSpriteCreationModal();
-    }
+    ImGui::PopStyleColor(2);
 
-    ImGui::Separator();
-
-    // 登録されているスプライトのリスト
-    ImGui::Text("登録済みスプライト (%zu個):", sprites_.size());
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+    ImGui::Text("登録スプライト数: %zu", sprites_.size());
+    ImGui::PopStyleColor();
+    ImGui::Spacing();
 
     if (sprites_.empty()) {
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "スプライトが登録されていません");
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("  スプライトが登録されていません。");
+        ImGui::PopStyleColor();
     } else {
-        // 描画順変更セクション
-        ImGui::Text("描画順 (上が手前、下が奥):");
+        // ====================================================
+        // リストテーブル（描画順・表示切替・削除）
+        // ====================================================
+        SectionHeader("[ 描画順 (上が手前) ]", DebugTheme::kAccentBlue);
 
-        // スプライトリストをより見やすく表示
-        if (ImGui::BeginTable("SpriteTable", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("順序", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-            ImGui::TableSetupColumn("名前", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-            ImGui::TableSetupColumn("表示", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-            ImGui::TableSetupColumn("数", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        float tableH = std::min((float)sprites_.size() * 26.f + 36.f, 160.f);
+
+        if (ImGui::BeginTable("SprList", 6,
+                              ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                                  ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable,
+                              ImVec2(-1, tableH))) {
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn("No.", ImGuiTableColumnFlags_WidthFixed, 22.f);
+            ImGui::TableSetupColumn("名前", ImGuiTableColumnFlags_WidthFixed, 80.f);
+            ImGui::TableSetupColumn("表示", ImGuiTableColumnFlags_WidthFixed, 34.f);
+            ImGui::TableSetupColumn("数", ImGuiTableColumnFlags_WidthFixed, 28.f);
             ImGui::TableSetupColumn("テクスチャ", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("操作", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+            ImGui::TableSetupColumn("削除", ImGuiTableColumnFlags_WidthFixed, 34.f);
             ImGui::TableHeadersRow();
 
-            // 削除予定のスプライト名を記録
-            std::vector<std::string> spritesToDelete;
-
+            std::vector<std::string> toDelete;
             for (size_t i = 0; i < sprites_.size(); ++i) {
-                auto &managedSprite = sprites_[i];
+                auto &sp = sprites_[i];
                 ImGui::TableNextRow();
+                ImGui::PushID((int)i);
 
-                // 順序表示と移動ボタン
+                // 順序 & 矢印
                 ImGui::TableNextColumn();
-                ImGui::Text("%zu", i + 1);
-
-                // 上に移動ボタン
-                if (i > 0) {
-                    ImGui::SameLine();
-                    if (ImGui::ArrowButton(("##up_" + managedSprite->name).c_str(), ImGuiDir_Up)) {
-                        std::swap(sprites_[i], sprites_[i - 1]);
-                    }
-                }
-
-                // 下に移動ボタン
-                if (i < sprites_.size() - 1) {
-                    ImGui::SameLine();
-                    if (ImGui::ArrowButton(("##down_" + managedSprite->name).c_str(), ImGuiDir_Down)) {
-                        std::swap(sprites_[i], sprites_[i + 1]);
-                    }
-                }
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
+                if (i > 0 && ImGui::ArrowButton("U", ImGuiDir_Up))
+                    std::swap(sprites_[i], sprites_[i - 1]);
+                if (i < sprites_.size() - 1 && ImGui::ArrowButton("D", ImGuiDir_Down))
+                    std::swap(sprites_[i], sprites_[i + 1]);
+                ImGui::PopStyleVar();
 
                 // 名前
                 ImGui::TableNextColumn();
-                ImGui::Text("%s", managedSprite->name.c_str());
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(sp->name.c_str());
 
-                // 表示/非表示切り替え
+                // 表示チェック
                 ImGui::TableNextColumn();
-                bool visible = managedSprite->isVisible;
-                if (ImGui::Checkbox(("##visible_" + managedSprite->name).c_str(), &visible)) {
-                    managedSprite->isVisible = visible;
-                }
+                ImGui::PushStyleColor(ImGuiCol_CheckMark,
+                                      sp->isVisible ? DebugTheme::kAccentGreen : DebugTheme::kTextDim);
+                ImGui::Checkbox("##vis", &sp->isVisible);
+                ImGui::PopStyleColor();
 
                 // インスタンス数
                 ImGui::TableNextColumn();
-                ImGui::Text("%zu", managedSprite->instanceData.size());
-
-                // テクスチャパス（短縮表示）
-                ImGui::TableNextColumn();
-                std::string shortPath = managedSprite->textureFilePath;
-                if (shortPath.length() > 30) {
-                    shortPath = "..." + shortPath.substr(shortPath.length() - 27);
-                }
-                ImGui::Text("%s", shortPath.c_str());
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("%s", managedSprite->textureFilePath.c_str());
-                }
-
-                // 操作ボタン
-                ImGui::TableNextColumn();
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-                if (ImGui::Button(("削除##delete_" + managedSprite->name).c_str(), ImVec2(60, 0))) {
-                    spritesToDelete.push_back(managedSprite->name);
-                }
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::Text("%zu", sp->instanceData.size());
                 ImGui::PopStyleColor();
-            }
 
-            // 削除処理
-            for (const std::string &nameToDelete : spritesToDelete) {
-                UnregisterSprite(nameToDelete);
-            }
+                // テクスチャ
+                ImGui::TableNextColumn();
+                std::string p = sp->textureFilePath;
+                if (p.size() > 20)
+                    p = ".." + p.substr(p.size() - 18);
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted(p.c_str());
+                ImGui::PopStyleColor();
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("%s", sp->textureFilePath.c_str());
 
+                // 削除
+                ImGui::TableNextColumn();
+                ImGui::PushStyleColor(ImGuiCol_Button, {0.65f, 0.20f, 0.20f, 0.75f});
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.85f, 0.25f, 0.25f, 0.90f});
+                if (ImGui::SmallButton("削除##del"))
+                    toDelete.push_back(sp->name);
+                ImGui::PopStyleColor(2);
+
+                ImGui::PopID();
+            }
+            for (auto &n : toDelete)
+                UnregisterSprite(n);
             ImGui::EndTable();
         }
 
-        ImGui::Separator();
-        ImGui::Text("詳細設定:");
+        ImGui::Spacing();
 
-        // 各スプライトの詳細設定を縦レイアウトで表示
-        for (auto &managedSprite : sprites_) {
-            if (ImGui::CollapsingHeader(managedSprite->name.c_str())) {
-                ImGui::PushID(managedSprite->name.c_str());
+        // ====================================================
+        // 各スプライト詳細
+        // ====================================================
+        SectionHeader("[ スプライト詳細 ]", DebugTheme::kAccentPurple);
 
-                // 基本設定セクション
-                if (ImGui::TreeNode("基本設定")) {
-                    // 位置設定
-                    Vector2 spritePos = managedSprite->sprite->GetPosition();
-                    ImGui::Text("位置:");
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::DragFloat("##pos_x", &spritePos.x, 1.0f)) {
-                        managedSprite->sprite->SetPosition(spritePos);
-                    }
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::DragFloat("##pos_y", &spritePos.y, 1.0f)) {
-                        managedSprite->sprite->SetPosition(spritePos);
-                    }
+        for (auto &sp : sprites_) {
+            ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgPurple);
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.7f, 0.3f, 1.0f, 0.20f});
+            bool open = ImGui::CollapsingHeader(sp->name.c_str());
+            ImGui::PopStyleColor(2);
+            if (!open)
+                continue;
 
-                    // サイズ設定
-                    Vector2 spriteSize = managedSprite->sprite->GetSize();
-                    ImGui::Text("サイズ:");
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::DragFloat("##size_x", &spriteSize.x, 1.0f, 0.0f, 2000.0f)) {
-                        managedSprite->sprite->SetSize(spriteSize);
-                    }
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::DragFloat("##size_y", &spriteSize.y, 1.0f, 0.0f, 2000.0f)) {
-                        managedSprite->sprite->SetSize(spriteSize);
-                    }
+            ImGui::PushID(sp->name.c_str());
+            ImGui::Indent(6.0f);
 
-                    // 色設定
-                    Vector4 spriteColor = managedSprite->sprite->GetColor();
-                    ImGui::Text("色:");
-                    if (ImGui::ColorEdit4("##color", &spriteColor.x, ImGuiColorEditFlags_NoInputs)) {
-                        managedSprite->sprite->SetColor({spriteColor.x, spriteColor.y, spriteColor.z});
-                        managedSprite->sprite->SetAlpha(spriteColor.w);
-                    }
+            // ---- Basic ----
+            ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgBlue);
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.55f, 1.0f, 0.20f});
+            if (ImGui::TreeNodeEx("基本設定##bs", ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                // Position -- ラベル上 + DragFloat2 全幅
+                {
+                    Vector2 pos = sp->sprite->GetPosition();
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("位置 (X / Y)");
+                    ImGui::PopStyleColor();
+                    float v[2] = {pos.x, pos.y};
+                    ImGui::SetNextItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgBlue);
+                    if (ImGui::DragFloat2("##bspos", v, 1.f))
+                        sp->sprite->SetPosition({v[0], v[1]});
+                    ImGui::PopStyleColor();
+                }
+                ImGui::Spacing();
 
-                    // 回転設定
-                    float rotation = managedSprite->sprite->GetRotation();
-                    ImGui::Text("回転:");
-                    ImGui::SetNextItemWidth(200);
-                    if (ImGui::SliderAngle("##rotation", &rotation)) {
-                        managedSprite->sprite->SetRotation(rotation);
-                    }
+                // Size
+                {
+                    Vector2 sz = sp->sprite->GetSize();
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("サイズ (W / H)");
+                    ImGui::PopStyleColor();
+                    float v[2] = {sz.x, sz.y};
+                    ImGui::SetNextItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgBlue);
+                    if (ImGui::DragFloat2("##bssz", v, 1.f, 0.f, 2000.f))
+                        sp->sprite->SetSize({v[0], v[1]});
+                    ImGui::PopStyleColor();
+                }
+                ImGui::Spacing();
 
-                    ImGui::Text("ブレンドモード:");
-                    const char *blendModeNames[] = {
+                // Color
+                {
+                    Vector4 c = sp->sprite->GetColor();
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("カラー (R / G / B / A)");
+                    ImGui::PopStyleColor();
+                    ImGui::SetNextItemWidth(-1);
+                    if (ImGui::ColorEdit4("##bscol", &c.x, ImGuiColorEditFlags_NoInputs)) {
+                        sp->sprite->SetColor({c.x, c.y, c.z});
+                        sp->sprite->SetAlpha(c.w);
+                    }
+                }
+                ImGui::Spacing();
+
+                // Rotation
+                {
+                    float rot = sp->sprite->GetRotation();
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("回転 [rad] (スライダーでドラッグ)");
+                    ImGui::PopStyleColor();
+                    ImGui::SetNextItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrab, DebugTheme::kAccentBlue);
+                    if (ImGui::SliderAngle("##bsrot", &rot))
+                        sp->sprite->SetRotation(rot);
+                    ImGui::PopStyleColor();
+                }
+                ImGui::Spacing();
+
+                // Blend mode
+                {
+                    static const char *bmNames[] = {
                         "なし", "通常", "加算", "減算", "乗算", "スクリーン"};
-                    int currentBlendMode = static_cast<int>(managedSprite->blendMode);
-                    ImGui::SetNextItemWidth(200);
-                    if (ImGui::Combo("##blendmode", &currentBlendMode, blendModeNames, IM_ARRAYSIZE(blendModeNames))) {
-                        managedSprite->blendMode = static_cast<BlendMode>(currentBlendMode);
-                    }
-
-                    ImGui::TreePop();
+                    int bm = static_cast<int>(sp->blendMode);
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("ブレンドモード");
+                    ImGui::PopStyleColor();
+                    ImGui::SetNextItemWidth(-1);
+                    if (ImGui::Combo("##bsbm", &bm, bmNames, IM_ARRAYSIZE(bmNames)))
+                        sp->blendMode = static_cast<BlendMode>(bm);
                 }
 
-                // UV設定セクション
-                if (ImGui::TreeNode("UV設定")) {
-                    Vector2 uvPosition = managedSprite->sprite->GetUVPosition();
-                    Vector2 uvSize = managedSprite->sprite->GetUVSize();
-                    float uvRotation = managedSprite->sprite->GetUVRotate();
-
-                    bool uvChanged = false;
-
-                    // UVスケール
-                    ImGui::Text("UVスケール:");
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::DragFloat("##uv_scale_x", &uvSize.x, 0.01f, 0.1f, 10.0f)) {
-                        uvChanged = true;
-                    }
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::DragFloat("##uv_scale_y", &uvSize.y, 0.01f, 0.1f, 10.0f)) {
-                        uvChanged = true;
-                    }
-
-                    // UV回転
-                    ImGui::Text("UV回転:");
-                    ImGui::SetNextItemWidth(200);
-                    if (ImGui::SliderAngle("##uv_rotation", &uvRotation)) {
-                        uvChanged = true;
-                    }
-
-                    // UV位置
-                    ImGui::Text("UV位置:");
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::DragFloat("##uv_pos_x", &uvPosition.x, 0.01f, -2.0f, 2.0f)) {
-                        uvChanged = true;
-                    }
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::DragFloat("##uv_pos_y", &uvPosition.y, 0.01f, -2.0f, 2.0f)) {
-                        uvChanged = true;
-                    }
-
-                    if (uvChanged) {
-                        managedSprite->sprite->SetUVPosition(uvPosition);
-                        managedSprite->sprite->SetUVSize(uvSize);
-                        managedSprite->sprite->SetUVRotate(uvRotation);
-                    }
-
-                    // UVリセットボタン
-                    if (ImGui::Button("UVリセット", ImVec2(100, 0))) {
-                        managedSprite->sprite->SetUVPosition({0.0f, 0.0f});
-                        managedSprite->sprite->SetUVSize({1.0f, 1.0f});
-                        managedSprite->sprite->SetUVRotate(0.0f);
-                    }
-
-                    ImGui::TreePop();
-                }
-
-                ImGui::PopID();
-                ImGui::Separator();
+                ImGui::TreePop();
             }
+            ImGui::PopStyleColor(2);
+
+            // ---- UV ----
+            ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgOrange);
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.60f, 0.10f, 0.20f});
+            if (ImGui::TreeNodeEx("UV設定##uv", ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                Vector2 uvPos = sp->sprite->GetUVPosition();
+                Vector2 uvSz = sp->sprite->GetUVSize();
+                float uvRot = sp->sprite->GetUVRotate();
+                bool changed = false;
+
+                // UV Scale
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("UVスケール (X / Y)");
+                ImGui::PopStyleColor();
+                float uvszV[2] = {uvSz.x, uvSz.y};
+                ImGui::SetNextItemWidth(-1);
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgOrange);
+                if (ImGui::DragFloat2("##uvsc", uvszV, 0.01f, 0.1f, 10.f)) {
+                    uvSz = {uvszV[0], uvszV[1]};
+                    changed = true;
+                }
+                ImGui::PopStyleColor();
+
+                // UV Rotation
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("UV回転 [rad]");
+                ImGui::PopStyleColor();
+                ImGui::SetNextItemWidth(-1);
+                if (ImGui::SliderAngle("##uvrt", &uvRot))
+                    changed = true;
+
+                // UV Position
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("UVオフセット (X / Y)");
+                ImGui::PopStyleColor();
+                float uvposV[2] = {uvPos.x, uvPos.y};
+                ImGui::SetNextItemWidth(-1);
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgOrange);
+                if (ImGui::DragFloat2("##uvpos", uvposV, 0.01f, -2.f, 2.f)) {
+                    uvPos = {uvposV[0], uvposV[1]};
+                    changed = true;
+                }
+                ImGui::PopStyleColor();
+
+                if (changed) {
+                    sp->sprite->SetUVPosition(uvPos);
+                    sp->sprite->SetUVSize(uvSz);
+                    sp->sprite->SetUVRotate(uvRot);
+                }
+
+                ImGui::Spacing();
+                if (ImGui::SmallButton("UVリセット##uvrs")) {
+                    sp->sprite->SetUVPosition({0, 0});
+                    sp->sprite->SetUVSize({1, 1});
+                    sp->sprite->SetUVRotate(0);
+                }
+                ImGui::TreePop();
+            }
+            ImGui::PopStyleColor(2);
+
+            ImGui::Unindent(6.0f);
+            ImGui::Separator();
+            ImGui::PopID();
         }
     }
 
-    // 保存・ロード関連のUIを整理
-    ImGui::Separator();
-    ImGui::Text("ファイル操作");
-    ImGui::Separator();
+    ImGui::Spacing();
 
-    static char folderBuffer[128] = "";
-    ImGui::Text("保存フォルダ:");
-    ImGui::SetNextItemWidth(200);
-    ImGui::InputText("##folder", folderBuffer, sizeof(folderBuffer));
-    saveFolder_ = folderBuffer;
+    // ====================================================
+    // ファイル操作
+    // ====================================================
+    SectionHeader("[ ファイル操作 ]", DebugTheme::kAccentOrange);
+
+    // 説明テキスト
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+    ImGui::TextWrapped("スプライトは resources/jsons/Sprites/<フォルダ名> にJSONとして保存されます。");
+    ImGui::PopStyleColor();
+    ImGui::Spacing();
+
+    // フォルダ名入力
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+    ImGui::TextUnformatted("保存/読み込みフォルダ名");
+    ImGui::PopStyleColor();
+    static char folderBuf[128] = "";
+    ImGui::SetNextItemWidth(-1);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgOrange);
+    ImGui::InputText("##spfolder", folderBuf, sizeof(folderBuf));
+    ImGui::PopStyleColor();
+    saveFolder_ = folderBuf;
 
     ImGui::Spacing();
 
-    // ボタンを縦に配置
-    if (ImGui::Button("全スプライトをセーブ", ImVec2(200, 30))) {
+    ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.45f, 0.20f, 0.80f});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.25f, 0.55f, 0.25f, 0.90f});
+    // Save -- すべてのスプライトを JSON に書き出す
+    if (ImGui::Button("全スプライトを保存##spsvall", ImVec2(-1, 0)))
         SaveAllSprites();
-    }
-
-    if (ImGui::Button("全スプライトをロード", ImVec2(200, 30))) {
+    ImGui::Spacing();
+    // Load -- フォルダ内の JSON を読み込み現在のリストに追加する
+    if (ImGui::Button("全スプライトを読み込み##spldall", ImVec2(-1, 0))) {
         Clear();
         LoadAllSprites();
     }
+    ImGui::PopStyleColor(2);
 
     ImGui::Spacing();
 
-    // 危険な操作は色を変える
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-    if (ImGui::Button("全スプライト削除", ImVec2(200, 30))) {
-        ImGui::OpenPopup("全削除確認");
-    }
-    ImGui::PopStyleColor();
+    // 全削除
+    ImGui::PushStyleColor(ImGuiCol_Button, {0.55f, 0.15f, 0.15f, 0.80f});
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.75f, 0.20f, 0.20f, 0.90f});
+    if (ImGui::Button("全スプライトを削除##spdelall", ImVec2(-1, 0)))
+        ImGui::OpenPopup("全削除の確認##spdelconfirm");
+    ImGui::PopStyleColor(2);
 
-    // 全削除確認ダイアログ
-    if (ImGui::BeginPopupModal("全削除確認", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("全てのスプライトを削除しますか？");
-        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "この操作は取り消せません。");
+    // 確認モーダル
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12, 12));
+    if (ImGui::BeginPopupModal("全削除の確認##spdelconfirm", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentRed);
+        ImGui::TextUnformatted("全スプライトを削除しますか？");
+        ImGui::TextUnformatted("この操作は元に戻せません。");
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
         ImGui::Separator();
+        ImGui::Spacing();
 
-        if (ImGui::Button("削除する", ImVec2(120, 0))) {
+        float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+
+        ImGui::PushStyleColor(ImGuiCol_Button, {0.60f, 0.15f, 0.15f, 0.85f});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.80f, 0.20f, 0.20f, 0.90f});
+        if (ImGui::Button("削除##spdelok", ImVec2(bw, 0))) {
             Clear();
             ImGui::CloseCurrentPopup();
         }
+        ImGui::PopStyleColor(2);
         ImGui::SameLine();
-        if (ImGui::Button("キャンセル", ImVec2(120, 0))) {
+        if (ImGui::Button("キャンセル##spdelcancel", ImVec2(bw, 0)))
             ImGui::CloseCurrentPopup();
-        }
+
         ImGui::EndPopup();
     }
+    ImGui::PopStyleVar();
+
+    ImGui::PopStyleVar(3);
 #endif // _DEBUG
 }
 

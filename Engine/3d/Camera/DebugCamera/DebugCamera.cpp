@@ -4,7 +4,9 @@
 #include "Mymath.h"
 #ifdef _DEBUG
 #include "imgui.h"
+#include <implot.h>
 #endif // _DEBUG
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "algorithm"
 
 void DebugCamera::Initialize(ViewProjection *viewProjection) {
@@ -157,181 +159,270 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
 
 void DebugCamera::imgui() {
 #ifdef _DEBUG
-    // カメラ有効化チェックボックス（メインコントロール）
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.8f, 0.3f));
-    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
-    ImGui::Checkbox("カメラ使用", &isActive_);
-    ImGui::PopStyleColor(2);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+
+    // ---- Active toggle (always visible) ----
+    {
+        ImGui::PushStyleColor(ImGuiCol_CheckMark,
+                              isActive_ ? DebugTheme::kAccentGreen : DebugTheme::kAccentRed);
+        ImGui::Checkbox("デバッグカメラ使用##dbc", &isActive_);
+        ImGui::PopStyleColor();
+        ImGui::SameLine(0, 8);
+        StatusBadge(isActive_ ? "使用中" : "未使用",
+                    isActive_ ? DebugTheme::kAccentGreen : DebugTheme::kTextDim);
+    }
 
     if (!isActive_) {
-        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
-        ImGui::TextDisabled("カメラは無効です");
-        ImGui::PopStyleVar();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("  カメラは無効です。");
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar(3);
+        return; // ここで終了 → 以降の重複セクションは表示されない
     }
 
-    // カメラがアクティブな場合のみ設定を表示
-    if (isActive_) {
-        ImGui::Separator();
+    ImGui::Separator();
+    ImGui::BeginChild("CamBody", ImVec2(0, 0), false);
 
-        // === 位置・回転設定 ===
-        if (ImGui::CollapsingHeader("位置・回転設定", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.8f, 0.3f, 0.3f, 0.2f));
-            ImGui::DragFloat3("位置", &translation_.x, 0.01f, -1000.0f, 1000.0f, "%.2f");
+    // ====================================================
+    // [1] Position / Rotation
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderBlue);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.25f, 0.60f, 1.0f, 0.35f});
+    bool posOpen = ImGui::CollapsingHeader("位置 / 回転##campr",
+                                           ImGuiTreeNodeFlags_DefaultOpen);
+    ImGui::PopStyleColor(2);
+
+    if (posOpen) {
+        ImGui::Indent(6.0f);
+
+        // ---- Position ----
+        SectionHeader("[ 位置 ]", DebugTheme::kAccentBlue);
+
+        // ラベルを上に、スライダーは全幅
+        LabeledDrag3("移動 (X / Y / Z)", "##camtrans",
+                     &translation_.x, 0.01f, -1000.f, 1000.f, "%.2f",
+                     DebugTheme::kBgBlue);
+
+        // 位置履歴グラフ
+        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgBlue);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.55f, 1.0f, 0.20f});
+        if (ImGui::CollapsingHeader("位置履歴 (グラフ)##camhist")) {
+            constexpr int kN = 100;
+            static float hx[kN]{}, hy[kN]{}, hz[kN]{};
+            static int head = 0, cnt = 0;
+            hx[head] = translation_.x;
+            hy[head] = translation_.y;
+            hz[head] = translation_.z;
+            head = (head + 1) % kN;
+            if (cnt < kN)
+                ++cnt;
+
+            static float dx[kN], dy[kN], dz[kN];
+            int s = (head - cnt + kN) % kN;
+            for (int i = 0; i < cnt; ++i) {
+                int id = (s + i) % kN;
+                dx[i] = hx[id];
+                dy[i] = hy[id];
+                dz[i] = hz[id];
+            }
+
+            ImPlot::PushStyleColor(ImPlotCol_PlotBg, {0.08f, 0.08f, 0.10f, 1.0f});
+            if (ImPlot::BeginPlot("##camposhist", ImVec2(-1, 65),
+                                  ImPlotFlags_NoTitle | ImPlotFlags_NoLegend |
+                                      ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) {
+                ImPlot::SetupAxes(nullptr, nullptr,
+                                  ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_AutoFit);
+                ImPlot::SetupAxisLimits(ImAxis_X1, 0, kN, ImGuiCond_Always);
+                ImPlot::PushStyleColor(ImPlotCol_Line, DebugTheme::kAccentRed);
+                ImPlot::PlotLine("X", dx, cnt);
+                ImPlot::PopStyleColor();
+                ImPlot::PushStyleColor(ImPlotCol_Line, DebugTheme::kAccentGreen);
+                ImPlot::PlotLine("Y", dy, cnt);
+                ImPlot::PopStyleColor();
+                ImPlot::PushStyleColor(ImPlotCol_Line, DebugTheme::kAccentBlue);
+                ImPlot::PlotLine("Z", dz, cnt);
+                ImPlot::PopStyleColor();
+                ImPlot::EndPlot();
+            }
+            ImPlot::PopStyleColor();
+        }
+        ImGui::PopStyleColor(2);
+
+        ImGui::Spacing();
+
+        // ---- Rotation ----
+        SectionHeader("[ 回転 ]", DebugTheme::kAccentCyan);
+
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentCyan);
+        ImGui::Checkbox("クォータニオン使用##camquatchk", &isUseQuaternion_);
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
+
+        if (isUseQuaternion_) {
+            // ラベルを上に置いてから全幅 DragFloat4
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("クォータニオン (X / Y / Z / W)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+            ImGui::DragFloat4("##camquat", &quateRotation_.x, 0.01f, -1.f, 1.f, "%.3f");
             ImGui::PopStyleColor();
 
-            // 回転モード切り替え
-            ImGui::Text("回転モード: %s", isUseQuaternion_ ? "クォータニオン" : "オイラー角");
-            ImGui::Checkbox("クォータニオンを使用", &isUseQuaternion_);
-
-            ImGui::Spacing();
-
-            // 回転調整
-            if (isUseQuaternion_) {
-                ImGui::Text("クォータニオン回転");
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.8f, 0.3f, 0.2f));
-                ImGui::DragFloat4("##quaternion", &quateRotation_.x, 0.01f, -1.0f, 1.0f, "%.3f");
-                ImGui::PopStyleColor();
-
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "オイラー角 (参考): %.1f°, %.1f°, %.1f°",
-                                   eulerRotation_.x * 180.0f / std::numbers::pi_v<float>,
-                                   eulerRotation_.y * 180.0f / std::numbers::pi_v<float>,
-                                   eulerRotation_.z * 180.0f / std::numbers::pi_v<float>);
-            } else {
-                ImGui::Text("オイラー角回転 (度)");
-                Vector3 eulerDegrees = {
-                    eulerRotation_.x * 180.0f / std::numbers::pi_v<float>,
-                    eulerRotation_.y * 180.0f / std::numbers::pi_v<float>,
-                    eulerRotation_.z * 180.0f / std::numbers::pi_v<float>};
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.8f, 0.3f, 0.2f));
-                if (ImGui::DragFloat3("##euler", &eulerDegrees.x, 1.0f, -360.0f, 360.0f, "%.1f°")) {
-                    eulerRotation_ = {
-                        eulerDegrees.x * std::numbers::pi_v<float> / 180.0f,
-                        eulerDegrees.y * std::numbers::pi_v<float> / 180.0f,
-                        eulerDegrees.z * std::numbers::pi_v<float> / 180.0f};
-                }
-                ImGui::PopStyleColor();
-
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "クォータニオン (参考): %.3f, %.3f, %.3f, %.3f",
-                                   quateRotation_.x, quateRotation_.y, quateRotation_.z, quateRotation_.w);
-            }
-
-            // リセットボタン
-            if (ImGui::Button("位置リセット", ImVec2(-1, 0))) {
-                translation_ = {0.0f, 0.0f, -50.0f};
-            }
-            if (ImGui::Button("回転リセット", ImVec2(-1, 0))) {
-                eulerRotation_ = {0.0f, 0.0f, 0.0f};
-                quateRotation_ = Quaternion::IdentityQuaternion();
-            }
-        }
-
-        // === 移動設定 ===
-        if (ImGui::CollapsingHeader("移動設定", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.8f, 0.6f, 0.2f, 0.2f));
-            ImGui::DragFloat("カメラスピード", &moveZspeed, 0.001f, 0.001f, 1.0f, "%.3f");
-            ImGui::DragFloat("感度", &mouseSensitivity, 0.001f, 0.001f, 0.1f, "%.3f");
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            float d = 180.f / std::numbers::pi_v<float>;
+            ImGui::Text("  Euler (ref)  X:%.1f  Y:%.1f  Z:%.1f (deg)",
+                        eulerRotation_.x * d, eulerRotation_.y * d, eulerRotation_.z * d);
+            ImGui::PopStyleColor();
+        } else {
+            // ラベルを上に置いてから全幅 DragFloat3
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("オイラー角 (度)  X / Y / Z");
+            ImGui::PopStyleColor();
+            float r2d = 180.f / std::numbers::pi_v<float>;
+            float d2r = std::numbers::pi_v<float> / 180.f;
+            Vector3 deg = {eulerRotation_.x * r2d,
+                           eulerRotation_.y * r2d,
+                           eulerRotation_.z * r2d};
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+            if (ImGui::DragFloat3("##cameuler", &deg.x, 1.f, -360.f, 360.f, "%.1f"))
+                eulerRotation_ = {deg.x * d2r, deg.y * d2r, deg.z * d2r};
             ImGui::PopStyleColor();
 
-            if (ImGui::Button("スピードリセット", ImVec2(-1, 0))) {
-                mouseSensitivity = 0.003f;
-                moveZspeed = 0.005f;
-            }
-        }
-
-        // === 制御設定 ===
-        if (ImGui::CollapsingHeader("制御設定", ImGuiTreeNodeFlags_DefaultOpen)) {
-            // カメラロック
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.8f, 0.2f, 0.8f, 0.3f));
-            ImGui::Checkbox("カメラ固定", &lockCamera_);
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::Text("  Quat (ref)  %.3f  %.3f  %.3f  %.3f",
+                        quateRotation_.x, quateRotation_.y,
+                        quateRotation_.z, quateRotation_.w);
             ImGui::PopStyleColor();
-
-            ImGui::Separator();
-            ImGui::Text("入力方法:");
-            ImGui::Indent();
-
-            // 排他制御付きラジオボタン
-            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.9f, 1.0f));
-            if (ImGui::RadioButton("キーボード制御", useKey_ && !useMouse_)) {
-                useKey_ = true;
-                useMouse_ = false;
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("マウス制御", useMouse_ && !useKey_)) {
-                useMouse_ = true;
-                useKey_ = false;
-            }
-            ImGui::PopStyleColor();
-
-            // 両方オフの場合の警告
-            if (!useKey_ && !useMouse_) {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.2f, 1.0f));
-                ImGui::TextWrapped("警告: 入力方法が選択されていません");
-                ImGui::PopStyleColor();
-            }
-
-            ImGui::Unindent();
         }
 
-        // === ステータス情報 ===
-        if (ImGui::CollapsingHeader("ステータス情報")) {
-            ImGui::BeginTable("StatusTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg);
-            ImGui::TableSetupColumn("項目", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-            ImGui::TableSetupColumn("値", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableHeadersRow();
-
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("カメラ状態");
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%s", isActive_ ? "有効" : "無効");
-
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("位置");
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("(%.2f, %.2f, %.2f)", translation_.x, translation_.y, translation_.z);
-
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("入力方法");
-            ImGui::TableSetColumnIndex(1);
-            if (useKey_)
-                ImGui::Text("キーボード");
-            else if (useMouse_)
-                ImGui::Text("マウス");
-            else
-                ImGui::Text("なし");
-
-            ImGui::EndTable();
+        ImGui::Spacing();
+        if (ImGui::SmallButton("位置リセット##cprst"))
+            translation_ = {0.f, 0.f, -50.f};
+        ImGui::SameLine();
+        if (ImGui::SmallButton("回転リセット##crrst")) {
+            eulerRotation_ = {};
+            quateRotation_ = Quaternion::IdentityQuaternion();
         }
 
-        // === 操作説明 ===
-        if (ImGui::CollapsingHeader("操作説明")) {
-            if (useMouse_) {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.9f, 1.0f));
-                ImGui::Text("マウス制御:");
-                ImGui::PopStyleColor();
-                ImGui::Indent();
-                ImGui::BulletText("マウスホイール: Z位置を移動");
-                ImGui::BulletText("ホイールドラッグ: XY位置を移動");
-                ImGui::BulletText("右クリックドラッグ: カメラ回転");
-                ImGui::Unindent();
-            } else if (useKey_) {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
-                ImGui::Text("キーボード制御:");
-                ImGui::PopStyleColor();
-                ImGui::Indent();
-                ImGui::BulletText("WASD: XZ位置を移動");
-                ImGui::BulletText("Space,Shift: XZ位置を移動");
-                ImGui::BulletText("Ctrl + WASD: 高速移動");
-                ImGui::BulletText("右クリックドラッグ: カメラ回転");
-                ImGui::Unindent();
-            } else {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.2f, 1.0f));
-                ImGui::Text("入力方法が選択されていません");
-                ImGui::PopStyleColor();
-            }
-        }
+        ImGui::Unindent(6.0f);
+        ImGui::Spacing();
     }
+
+    // ====================================================
+    // [2] Move Speed
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderOrange);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.65f, 0.15f, 0.35f});
+    bool moveOpen = ImGui::CollapsingHeader("移動速度##cammv",
+                                            ImGuiTreeNodeFlags_DefaultOpen);
+    ImGui::PopStyleColor(2);
+
+    if (moveOpen) {
+        ImGui::Indent(6.0f);
+
+        // ラベルを上に → スライダーが全幅を使えて見切れない
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgOrange);
+        ImGui::PushStyleColor(ImGuiCol_SliderGrab, DebugTheme::kAccentOrange);
+        ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, DebugTheme::kAccentOrange);
+
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("カメラ移動速度 (Z軸)");
+        ImGui::PopStyleColor();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::SliderFloat("##camspd", &moveZspeed, 0.001f, 1.0f, "%.3f");
+
+        ImGui::Spacing();
+
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("マウス感度 (回転ドラッグ)");
+        ImGui::PopStyleColor();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::SliderFloat("##camsen", &mouseSensitivity, 0.001f, 0.1f, "%.3f");
+
+        ImGui::PopStyleColor(3);
+
+        if (ImGui::SmallButton("速度リセット##csrst")) {
+            mouseSensitivity = 0.003f;
+            moveZspeed = 0.005f;
+        }
+        ImGui::Unindent(6.0f);
+        ImGui::Spacing();
+    }
+
+    // ====================================================
+    // [3] Input / Control
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderPurple);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.75f, 0.35f, 1.0f, 0.35f});
+    bool ctrlOpen = ImGui::CollapsingHeader("入力 / 操作##camctl",
+                                            ImGuiTreeNodeFlags_DefaultOpen);
+    ImGui::PopStyleColor(2);
+
+    if (ctrlOpen) {
+        ImGui::Indent(6.0f);
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentPurple);
+        ImGui::Checkbox("カメラロック (入力無効)##camlk", &lockCamera_);
+        ImGui::PopStyleColor();
+
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("入力モード:");
+        ImGui::PopStyleColor();
+
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentCyan);
+        if (ImGui::RadioButton("キーボード##rk", useKey_ && !useMouse_)) {
+            useKey_ = true;
+            useMouse_ = false;
+        }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("マウス##rm", useMouse_ && !useKey_)) {
+            useMouse_ = true;
+            useKey_ = false;
+        }
+        ImGui::PopStyleColor();
+
+        if (!useKey_ && !useMouse_) {
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentOrange);
+            ImGui::TextUnformatted("  [!] 入力モード未選択");
+            ImGui::PopStyleColor();
+        }
+
+        // 操作説明（1行）
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        if (useMouse_)
+            ImGui::TextUnformatted("  ホイール:Z移動  |  中ドラッグ:XY移動  |  右ドラッグ:回転");
+        else if (useKey_)
+            ImGui::TextUnformatted("  WASD:移動  |  Space/Shift:上下  |  右ドラッグ:回転");
+        ImGui::PopStyleColor();
+
+        ImGui::Unindent(6.0f);
+        ImGui::Spacing();
+    }
+
+    // ====================================================
+    // [4] Status (compact read-only table)
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgGreen);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.85f, 0.50f, 0.20f});
+    bool stOpen = ImGui::CollapsingHeader("ステータス##camst");
+    ImGui::PopStyleColor(2);
+
+    if (stOpen) {
+        ImGui::Indent(6.0f);
+        ReadOnlyRow("状態", "%s", isActive_ ? "使用中" : "未使用");
+        ReadOnlyRow("座標", "%.2f  %.2f  %.2f",
+                    translation_.x, translation_.y, translation_.z);
+        ReadOnlyRow("入力", "%s",
+                    useKey_ ? "キーボード" : useMouse_ ? "Mouse"
+                                                       : "なし");
+        ImGui::Unindent(6.0f);
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar(3);
 #endif // _DEBUG
 }
