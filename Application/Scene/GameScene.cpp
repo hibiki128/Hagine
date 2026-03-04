@@ -59,6 +59,7 @@ void GameScene::Initialize() {
     player_->SetVp(&vp_);
     enemy_->SetVp(&vp_);
     enemy_->SetTarget(player_.get());
+    ground_->GetLighting() = false;
 
     /// ===================================================
     /// ポインタ共有

@@ -93,7 +93,7 @@ void Enemy::Update() {
         transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
     shadow_->Update();
 
-    if (started_) {
+    if (started_ && !isPause_) {
         DamageUpdate();
         RecoverEnergy();
 

@@ -43,6 +43,8 @@ void ClearScene::Initialize() {
     /// ===================================================
     resultUI_->SetClearTime(sceneManager_->GetClearTime());
     resultUI_->SetHP(sceneManager_->GetHP());
+
+    ground_->GetLighting() = true;
 }
 
 void ClearScene::Finalize() {
