@@ -149,8 +149,8 @@ class FollowCamera {
     float rushResumeTimer_ = 0.0f;        // Rush復帰補間用タイマー
 
     // イージングタイプ設定
-    EasingType shoulderEasingType_ = EasingType::OutQuad;       // 肩オフセットのイージング
+    EasingType shoulderEasingType_ = EasingType::InQuad;       // 肩オフセットのイージング
     EasingType shoulderResetEasingType_ = EasingType::OutCubic; // 肩オフセットリセットのイージング
-    EasingType rushCameraEasingType_ = EasingType::OutQuad;     // Rushカメラのイージング
+    EasingType rushCameraEasingType_ = EasingType::InQuad;     // Rushカメラのイージング
     EasingType rushResumeEasingType_ = EasingType::OutCubic;    // Rush復帰のイージング
 };
