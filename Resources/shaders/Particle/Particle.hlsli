@@ -135,6 +135,26 @@ struct ParticleCSSettings
     float padding9;
 };
 
+struct ParticleField
+{
+    float3 position; // フィールド中心
+    float radius; // 影響半径
+    float3 direction; // Wind方向 / Vortex回転軸
+    float strength; // 力の強さ
+    uint fieldType; // 0=Wind 1=Attract 2=Repel 3=Vortex
+    float falloff; // 減衰指数 (1=線形 2=二乗)
+    float padding0;
+    float padding1;
+};
+
+struct FieldCountCB
+{
+    uint fieldCount;
+    float pad0;
+    float pad1;
+    float pad2;
+};
+
 struct EdgeInfo
 {
     float3 v0;

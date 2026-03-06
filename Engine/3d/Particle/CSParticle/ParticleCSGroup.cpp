@@ -161,8 +161,9 @@ void ParticleCSGroup::InitParticle() {
     dxCommon_->TransitionSRVBarrier();
 }
 
-void ParticleCSGroup::UpdateParticleCSDisPatch() {
-    // UpdateParticle.CSの処理
+void ParticleCSGroup::UpdateParticleCSDisPatch(
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
+    Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource) {
     particleCommon_->ComputeUpdateEmitterDrawCommonSetting();
     commandList->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
     commandList->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
@@ -170,6 +171,9 @@ void ParticleCSGroup::UpdateParticleCSDisPatch() {
     commandList->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
     commandList->SetComputeRootConstantBufferView(4, perFrameResource_->GetGPUVirtualAddress());
     commandList->SetComputeRootConstantBufferView(5, settingsResource_->GetGPUVirtualAddress());
+    commandList->SetComputeRootDescriptorTable(6, fieldsSrvHandle.second);
+    commandList->SetComputeRootConstantBufferView(7, fieldCountResource->GetGPUVirtualAddress());
+
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
     commandList->Dispatch(disPatchCount, 1, 1);
 }

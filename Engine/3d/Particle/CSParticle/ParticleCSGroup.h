@@ -23,7 +23,9 @@ class ParticleCSGroup {
     void Update(const ViewProjection &vp);
     void DrawImGui();
     int CalculateOptimalEmitCount() const;
-    void UpdateParticleCSDisPatch();
+    void UpdateParticleCSDisPatch(
+        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
+        Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource);
     ParticleCSGroupData GetParticleGroupData() { return particleGroupData_; }
 
     /// ===================================

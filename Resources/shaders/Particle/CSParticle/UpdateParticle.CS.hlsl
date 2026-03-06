@@ -4,10 +4,76 @@
 
 ConstantBuffer<PerFrame> gPerFrame : register(b0);
 ConstantBuffer<ParticleCSSettings> gSettings : register(b1);
+ConstantBuffer<FieldCountCB> gFieldCB : register(b2);
 RWStructuredBuffer<Particle> gParticles : register(u0);
 RWStructuredBuffer<int> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint> gFreeList : register(u2);
 RWStructuredBuffer<int> gFreeListTailIndex : register(u3);
+StructuredBuffer<ParticleField> gFields : register(t0);
+
+// =============================================
+// フィールド適用関数 (追加)
+// =============================================
+float3 ApplyFields(float3 velocity, float3 particlePos, float deltaTime)
+{
+    for (uint fi = 0; fi < gFieldCB.fieldCount; fi++)
+    {
+        ParticleField f = gFields[fi];
+
+        float3 toParticle = particlePos - f.position;
+        float dist = length(toParticle);
+
+        // 影響範囲外はスキップ
+        if (dist >= f.radius)
+            continue;
+
+        // 減衰係数 (端=0, 中心=1)
+        float t = 1.0f - saturate(dist / f.radius);
+        float influence = (f.falloff == 1.0f) ? t : t * t;
+
+        if (f.fieldType == 0) // Wind: 一定方向に押す
+        {
+            float3 dir = f.direction;
+            float len = length(dir);
+            if (len > 0.0001f)
+                dir = dir / len;
+            velocity += dir * f.strength * influence * deltaTime;
+        }
+        else if (f.fieldType == 1) // Attract: 中心に引き寄せる
+        {
+            if (dist > 0.001f)
+            {
+                float3 dir = -toParticle / dist;
+                velocity += dir * f.strength * influence * deltaTime;
+            }
+        }
+        else if (f.fieldType == 2) // Repel: 中心から押し出す
+        {
+            if (dist > 0.001f)
+            {
+                float3 dir = toParticle / dist;
+                velocity += dir * f.strength * influence * deltaTime;
+            }
+        }
+        else if (f.fieldType == 3) // Vortex: 渦巻き
+        {
+            if (dist > 0.001f)
+            {
+                float3 axis = f.direction;
+                float axisLen = length(axis);
+                if (axisLen < 0.0001f)
+                    axis = float3(0, 1, 0);
+                else
+                    axis = axis / axisLen;
+
+                float3 tangent = cross(normalize(toParticle), axis);
+                velocity += tangent * f.strength * influence * deltaTime;
+            }
+        }
+    }
+
+    return velocity;
+}
 
 void SpawnTrailParticles(int particleIndex, float3 currentPosition)
 {
@@ -276,6 +342,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
                     gParticles[particleIndex].velocity += curlVel * gPerFrame.deltaTime;
                 }
             }
+        }
+
+        // =============================================
+        // 7.5. フィールド処理 (追加)
+        // gFieldCB.fieldCount が 0 のとき（フィールドなし or
+        // Emitter側で receiveFields_=false のとき）はスキップされる
+        // =============================================
+        if (gFieldCB.fieldCount > 0)
+        {
+            gParticles[particleIndex].velocity = ApplyFields(
+                gParticles[particleIndex].velocity,
+                gParticles[particleIndex].translate,
+                gPerFrame.deltaTime);
         }
         
         // 8. 移動更新

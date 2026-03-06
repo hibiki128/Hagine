@@ -1,6 +1,6 @@
 #pragma once
-#include "ParticleManager.h"
 #include "Camera/ViewProjection/ViewProjection.h"
+#include "ParticleManager.h"
 #include "Transform/WorldTransform.h"
 #include <string>
 #ifdef _DEBUG
@@ -91,7 +91,7 @@ class ParticleEmitter {
             }
         }
     }
-    void SetStartAcce(const Vector3& acce) {
+    void SetStartAcce(const Vector3 &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.startAcce = acce;
         }
@@ -106,7 +106,7 @@ class ParticleEmitter {
             setting.startAcce.z = acce;
         }
     }
-    void SetEndAcce(const Vector3& acce) {
+    void SetEndAcce(const Vector3 &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.endAcce = acce;
         }
@@ -122,8 +122,13 @@ class ParticleEmitter {
     }
 
   private:
-    // パーティクルを発生させるEmit関数
+    // パーティクルを発生させるEmit関数（外部用・設定同期込み）
     void Emit();
+    // transform を全グループの ParticleSetting に反映する（dirty判定用）
+    void SyncSettingsToTransform();
+    // 設定同期なしで発射するだけの内部用関数
+    void EmitInternal();
+
     void SaveToJson();
     void LoadFromJson();
     void LoadParticleGroup();
@@ -133,8 +138,8 @@ class ParticleEmitter {
 
   private:
     using json = nlohmann::json;
-    float elapsedTime_;   // 経過時間
-    float emitFrequency_; // パーティクルの発生頻度
+    float elapsedTime_ = 0.0f;   // 経過時間
+    float emitFrequency_ = 0.1f; // パーティクルの発生頻度
 
     bool isVisible_ = false;
     bool isActive_ = false;
@@ -148,4 +153,9 @@ class ParticleEmitter {
     std::unique_ptr<ParticleManager> Manager_;
     std::unique_ptr<DataHandler> datas_;
     std::vector<std::string> particleGroupNames_;
+
+    // ★ dirty判定用：前フレームの transform を保持する
+    Vector3 lastTranslation_ = {};
+    Quaternion lastRotation_ = Quaternion::IdentityQuaternion();
+    Vector3 lastScale_ = {1.0f, 1.0f, 1.0f};
 };

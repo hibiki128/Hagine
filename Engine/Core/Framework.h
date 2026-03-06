@@ -30,6 +30,7 @@
 #include "line/DrawLine3D.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include"Scene/SceneTransition.h"
+#include"Particle/CSParticle/ParticleCSFieldManager.h"
 
 class Framework {
   public: // メンバ関数
@@ -114,6 +115,7 @@ class Framework {
 
     ParticleEditor *particleEditor_ = nullptr;
     ParticleCSEditor *particleCSEditor_ = nullptr;
+    ParticleCSFieldManager *particleCSFieldManager_ = nullptr;
 
     PrimitiveModel *primitiveModel_ = nullptr;
 

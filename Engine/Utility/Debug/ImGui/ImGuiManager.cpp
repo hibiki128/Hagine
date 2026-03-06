@@ -15,6 +15,7 @@
 #include <imgui_impl_dx12.h>
 #include"Collider/CollisionManager.h"
 #include <implot.h>
+#include <Particle/CSParticle/ParticleCSFieldManager.h>
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -599,6 +600,8 @@ void ImGuiManager::ShowParticleSettingWindow() {
     ImGui::Begin("パーティクル設定", &showParticleView_, flags);
 
     currentScene_->AddParticleSetting();
+
+    ParticleCSFieldManager::GetInstance()->DrawImGui();
 
     ImGui::End();
 }

@@ -1,8 +1,8 @@
 #pragma once
+#include "Matrix4x4.h"
 #include "Vector3.h"
 #include <cmath>
 #include <numbers>
-#include "Matrix4x4.h"
 
 class Quaternion final {
   public:
@@ -36,6 +36,10 @@ class Quaternion final {
 
     // 単項マイナス演算子（符号反転）
     Quaternion operator-() const;
+
+    // 等価・非等価演算子
+    bool operator==(const Quaternion &other) const;
+    bool operator!=(const Quaternion &other) const;
 
     // 2つのベクトルの間の回転を計算
     void SetFromTo(const Vector3 &from, const Vector3 &to);
@@ -87,7 +91,7 @@ class Quaternion final {
     // ジンバルロックを回避するための改良されたメソッド
     static Quaternion FromEulerAnglesSafe(const Vector3 &eulerAngles);
     Vector3 ToEulerAnglesSafe() const;
-    
+
     // 軸回転を個別に適用するメソッド
     static Quaternion FromAxisRotations(const Vector3 &axisRotations);
 

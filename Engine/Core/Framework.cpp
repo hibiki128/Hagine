@@ -167,6 +167,11 @@ void Framework::Initialize() {
     particleCSGroupManager_->Initialize();
     ///---------------------------------
 
+    ///------ParticleCSFieldManager------
+    particleCSFieldManager_ = ParticleCSFieldManager::GetInstance();
+    particleCSFieldManager_->Initialize();
+    ///---------------------------------
+
     ///--------ShortcutManager------------
     shortcutManager_ = ShortcutManager::GetInstance();
     shortcutManager_->Initialize(input_);
@@ -316,6 +321,10 @@ void Framework::Update() {
 
     /// deltaTimeの更新
     Frame::Update();
+
+    particleCSFieldManager_->Update();
+
+    particleCSFieldManager_->DrawFieldGizmos();
 
     sceneManager_->Update();
 

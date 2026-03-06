@@ -476,6 +476,7 @@
     <ClCompile Include="Application\GameObject\Enemy\Bullet\EnemyBullet.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Hand\EnemyHand.cpp" />
     <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -891,6 +892,7 @@
     <ClInclude Include="Application\GameObject\Enemy\Bullet\EnemyBullet.h" />
     <ClInclude Include="Application\GameObject\Enemy\Hand\EnemyHand.h" />
     <ClInclude Include="Scene.h" />
+    <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

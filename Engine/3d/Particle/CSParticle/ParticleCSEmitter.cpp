@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "ParticleCSEmitter.h"
+#include "ParticleCSFieldManager.h"
 #include "ParticleCSGroupManager.h"
 #include <Frame.h>
 #include <Line/DrawLine3D.h>
@@ -40,7 +41,12 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
         group->Update(vp);
         dxCommon_->TransitionUAVBarrier(group->GetOutputParticleResource().Get());
         EmitterDisPatch();
-        group->UpdateParticleCSDisPatch();
+        auto *fieldMgr = ParticleCSFieldManager::GetInstance();
+        group->UpdateParticleCSDisPatch(
+            fieldMgr->GetFieldsSrvHandle(),
+            receiveFields_ ? fieldMgr->GetFieldCountResource()
+                           : fieldMgr->GetZeroFieldCountResource()
+        );
         group->CountAliveParticles();
         dxCommon_->TransitionSRVBarrier();
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
@@ -618,7 +624,7 @@ void ParticleCSEmitter::LoadSetting() {
         settings.radialVelocityStrength = data->Load(prefix + "radialVelocityStrength", 0.0f);
         settings.radialVelocityRandomness = data->Load(prefix + "radialVelocityRandomness", 0.0f);
         settings.radialVelocityCenter = data->Load<Vector3>(prefix + "radialVelocityCenter", {0.0f, 0.0f, 0.0f});
-        
+
         settings.enableCurlNoise = data->Load<uint32_t>(prefix + "enableCurlNoise", 0);
         settings.curlNoiseScale = data->Load(prefix + "curlNoiseScale", 1.0f);
         settings.curlNoiseStrength = data->Load(prefix + "curlNoiseStrength", 1.0f);
@@ -872,6 +878,18 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PopStyleColor();
             } else {
                 ImGui::PopStyleColor(3);
+            }
+
+            ImGui::Separator();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.9f, 1.0f, 1.0f));
+            ImGui::TextUnformatted("フィールド影響設定");
+            ImGui::PopStyleColor();
+            bool rf = receiveFields_;
+            if (ImGui::Checkbox("フィールドの影響を受ける", &rf)) {
+                receiveFields_ = rf;
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("オフにするとParticleFieldManagerのフィールドが\nこのエミッターに作用しなくなります");
             }
 
             ImGui::Spacing();
