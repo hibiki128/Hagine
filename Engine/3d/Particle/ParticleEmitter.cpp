@@ -29,38 +29,13 @@ void ParticleEmitter::Initialize(std::string name) {
 }
 
 void ParticleEmitter::Update() {
-    if (!isAuto_)
-        return;
-
+    // 経過時間を進める
     elapsedTime_ += Frame::DeltaTime();
 
-    // transform が前フレームから変化したときだけ設定を更新する
-    bool transformChanged =
-        !(transform_.translation_ == lastTranslation_) ||
-        !(transform_.quateRotation_ == lastRotation_) ||
-        !(transform_.scale_ == lastScale_);
-
-    if (transformChanged) {
-        SyncSettingsToTransform();
-        lastTranslation_ = transform_.translation_;
-        lastRotation_ = transform_.quateRotation_;
-        lastScale_ = transform_.scale_;
-    }
-
-    // 1フレームあたりの最大 Emit 回数を制限する
-    // （フレーム落ち時に while が暴走するのを防ぐ）
-    constexpr int kMaxEmitPerFrame = 3;
-    int emitCount = 0;
-
-    while (elapsedTime_ >= emitFrequency_ && emitCount < kMaxEmitPerFrame) {
-        EmitInternal();
-        elapsedTime_ -= emitFrequency_;
-        ++emitCount;
-    }
-
-    // 上限を超えた余剰時間は切り捨てて蓄積させない
-    if (elapsedTime_ >= emitFrequency_) {
-        elapsedTime_ = std::fmod(elapsedTime_, emitFrequency_);
+    // 発生頻度に基づいてパーティクルを発生させる
+    while (elapsedTime_ >= emitFrequency_) {
+        Emit();                         // パーティクルを発生させる
+        elapsedTime_ -= emitFrequency_; // 過剰に進んだ時間を考慮
     }
 }
 

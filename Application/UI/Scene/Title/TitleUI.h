@@ -1,9 +1,9 @@
 #pragma once
 #include "Particle/CSParticle/ParticleCSEmitter.h"
+#include <GamePad.h>
 #include <Particle/ParticleEmitter.h>
 #include <SpriteManager.h>
 #include <memory>
-#include <GamePad.h>
 
 /// <summary>
 /// タイトル画面のUI管理クラス
@@ -35,6 +35,14 @@ class TitleUI {
     /// Getter
     /// </summary>
     bool GetIsFinish() const { return isFinish_; }
+
+#ifdef _DEBUG
+    /// <summary>
+    /// ImGuiデバッグ表示
+    /// chargeScale_の推移・isMaxChargeScale_・各種タイマーを確認できる
+    /// </summary>
+    void DrawImGui();
+#endif
 
   private:
     /// ===================================================

@@ -47,25 +47,55 @@ class ParticleEmitter {
     Vector3 GetPosition() { return transform_.translation_; }
 
     void SetPosition(const Vector3 &position) { transform_.translation_ = position; }
-    void SetPositionY(const std::string &groupName, float positionY) { particleSettings_[groupName].translate.y = positionY; }
-    void SetRotate(const std::string &groupName, const Vector3 &rotate) { particleSettings_[groupName].rotation = rotate; }
-    void SetRotateY(const std::string &groupName, float rotateY) { particleSettings_[groupName].rotation.y = rotateY; }
+
+    void SetPositionY(const std::string &groupName, float positionY) {
+        particleSettings_[groupName].translate.y = positionY;
+        FlushSetting(groupName); // Manager に即時反映
+    }
+    void SetRotate(const std::string &groupName, const Vector3 &rotate) {
+        particleSettings_[groupName].rotation = rotate;
+        FlushSetting(groupName);
+    }
+    void SetRotateY(const std::string &groupName, float rotateY) {
+        particleSettings_[groupName].rotation.y = rotateY;
+        FlushSetting(groupName);
+    }
     void SetScale(const std::string &groupName, const Vector3 &scale) {
         particleSettings_[groupName].scale = scale;
+        FlushSetting(groupName);
     }
+
+    // -------------------------------------------------------
+    // 【修正】SetStartScale / SetEndScale
+    //   particleSettings_ への書き込みと同時に Manager_ にも
+    //   即時反映する。
+    //   transform の dirty 判定とは独立して動作する。
+    // -------------------------------------------------------
     void SetStartScale(const std::string &groupName, const Vector3 &scale) {
         particleSettings_[groupName].particleStartScale = scale;
+        FlushSetting(groupName);
     }
     void SetEndScale(const std::string &groupName, const Vector3 &scale) {
         particleSettings_[groupName].particleEndScale = scale;
+        FlushSetting(groupName);
     }
+
     void SetWorldMatrix(const Matrix4x4 &worldMatrix) {
         transform_.matWorld_ = worldMatrix;
     }
     void SetIsAuto(bool isAuto) { isAuto_ = isAuto; }
-    void SetCount(const std::string &groupName, int count) { particleSettings_[groupName].count = count; }
-    void SetStartRotate(const std::string &groupName, const Vector3 &startRotate) { particleSettings_[groupName].startRote = startRotate; }
-    void SetEndRotate(const std::string &groupName, const Vector3 &endRotate) { particleSettings_[groupName].endRote = endRotate; }
+    void SetCount(const std::string &groupName, int count) {
+        particleSettings_[groupName].count = count;
+        FlushSetting(groupName);
+    }
+    void SetStartRotate(const std::string &groupName, const Vector3 &startRotate) {
+        particleSettings_[groupName].startRote = startRotate;
+        FlushSetting(groupName);
+    }
+    void SetEndRotate(const std::string &groupName, const Vector3 &endRotate) {
+        particleSettings_[groupName].endRote = endRotate;
+        FlushSetting(groupName);
+    }
     void SetActive(bool isActive) { isActive_ = isActive; }
     void SetFrequency(float frequency) { emitFrequency_ = frequency; }
     void SetName(const std::string &name) { name_ = name; }
@@ -78,10 +108,17 @@ class ParticleEmitter {
     void SetTrailVelocityInheritance(const std::string &groupName, bool inherit, float scale = 0.3f);
     void SetStartColor(const std::string &groupName, const Vector4 &color) {
         particleSettings_[groupName].startColor = color;
+        FlushSetting(groupName);
     }
     void SetEndColor(const std::string &groupName, const Vector4 &color) {
         particleSettings_[groupName].endColor = color;
+        FlushSetting(groupName);
     }
+
+    // -------------------------------------------------------
+    // 【修正】SetScaleAll / SetStartAcce 系
+    //   全グループへの一括書き込みも Manager_ に即時反映する
+    // -------------------------------------------------------
     void SetScaleAll(const Vector3 &scale) {
         for (auto &[groupName, setting] : particleSettings_) {
             if (setting.isSinMove) {
@@ -89,26 +126,31 @@ class ParticleEmitter {
             } else {
                 setting.scale = scale;
             }
+            FlushSetting(groupName);
         }
     }
     void SetStartAcce(const Vector3 &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.startAcce = acce;
+            FlushSetting(groupName);
         }
     }
     void SetStartAcceX(const float &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.startAcce.x = acce;
+            FlushSetting(groupName);
         }
     }
     void SetStartAcceZ(const float &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.startAcce.z = acce;
+            FlushSetting(groupName);
         }
     }
     void SetEndAcce(const Vector3 &acce) {
         for (auto &[groupName, setting] : particleSettings_) {
             setting.endAcce = acce;
+            FlushSetting(groupName);
         }
     }
 
@@ -128,6 +170,19 @@ class ParticleEmitter {
     void SyncSettingsToTransform();
     // 設定同期なしで発射するだけの内部用関数
     void EmitInternal();
+
+    void FlushSetting(const std::string &groupName) {
+        if (!Manager_)
+            return;
+        auto it = particleSettings_.find(groupName);
+        if (it == particleSettings_.end())
+            return;
+        // transform 系は常に現在の transform_ を優先して上書き
+        it->second.translate = transform_.translation_;
+        it->second.rotation = transform_.quateRotation_.ToEulerAngles();
+        it->second.scale = transform_.scale_;
+        Manager_->SetParticleSetting(groupName, it->second);
+    }
 
     void SaveToJson();
     void LoadFromJson();

@@ -89,6 +89,7 @@ void TitleScene::AddSceneSetting() {
 }
 
 void TitleScene::AddObjectSetting() {
+    titleUI_->DrawImGui();
 }
 
 void TitleScene::AddParticleSetting() {
