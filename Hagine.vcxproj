@@ -313,6 +313,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.h" />
     <ClInclude Include="Application\GameObject\Enemy\Bullet\EnemyBullet.h" />
     <ClInclude Include="Application\GameObject\Enemy\Hand\EnemyHand.h" />
+    <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldSettingOverride.h" />
     <ClInclude Include="Engine\Utility\Debug\ImGui\Debugui_improved.h" />
     <ClInclude Include="Engine\2d\SpriteStruct.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />

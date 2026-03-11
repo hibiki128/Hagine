@@ -456,17 +456,19 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateEmitte
 }
 
 // =============================================
-// UpdateEmitter  ★ フィールド用スロットを追加
+// =============================================
+// UpdateEmitter
 //
 // スロット対応表:
-//   [0] u0  : gParticles        (UAV)
-//   [1] u1  : gFreeListIndex    (UAV)
-//   [2] u2  : gFreeList         (UAV)
-//   [3] u3  : gFreeListTailIndex(UAV)
-//   [4] b0  : gPerFrame         (CBV)
-//   [5] b1  : gSettings         (CBV)
-//   [6] t0  : gFields           (SRV) ★追加
-//   [7] b2  : gFieldCB          (CBV) ★追加
+//   [0] u0  : gParticles              (UAV)
+//   [1] u1  : gFreeListIndex          (UAV)
+//   [2] u2  : gFreeList               (UAV)
+//   [3] u3  : gFreeListTailIndex      (UAV)
+//   [4] b0  : gPerFrame               (CBV)
+//   [5] b1  : gSettings               (CBV)
+//   [6] t0  : gFields                 (SRV)
+//   [7] b2  : gFieldCB                (CBV)
+//   [8] t1  : gFieldsOverride         (SRV) ★追加
 // =============================================
 Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdateEmitterRootSignature() {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
@@ -500,15 +502,22 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdate
     uavRange3[0].BaseShaderRegister = 3;
     uavRange3[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    // ★ t0 : gFields (StructuredBuffer<ParticleField>)
+    // t0 : gFields (StructuredBuffer<ParticleField>)
     D3D12_DESCRIPTOR_RANGE srvRangeFields[1] = {};
     srvRangeFields[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     srvRangeFields[0].NumDescriptors = 1;
     srvRangeFields[0].BaseShaderRegister = 0; // register(t0)
     srvRangeFields[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    // スロット数を 6 → 8 に拡張
-    D3D12_ROOT_PARAMETER rootParameters[8] = {};
+    // ★ t1 : gFieldsOverride (StructuredBuffer<ParticleFieldSettingsOverrideData>)
+    D3D12_DESCRIPTOR_RANGE srvRangeOverride[1] = {};
+    srvRangeOverride[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRangeOverride[0].NumDescriptors = 1;
+    srvRangeOverride[0].BaseShaderRegister = 1; // register(t1)
+    srvRangeOverride[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // スロット数を 8 → 9 に拡張
+    D3D12_ROOT_PARAMETER rootParameters[9] = {};
 
     // [0] u0: gParticles
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -546,17 +555,23 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdate
     rootParameters[5].Descriptor.ShaderRegister = 1;
     rootParameters[5].Descriptor.RegisterSpace = 0;
 
-    // [6] t0: gFields ★追加
+    // [6] t0: gFields
     rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[6].DescriptorTable.pDescriptorRanges = srvRangeFields;
     rootParameters[6].DescriptorTable.NumDescriptorRanges = _countof(srvRangeFields);
     rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-    // [7] b2: gFieldCB ★追加
+    // [7] b2: gFieldCB
     rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[7].Descriptor.ShaderRegister = 2;
     rootParameters[7].Descriptor.RegisterSpace = 0;
+
+    // [8] t1: gFieldsOverride ★追加
+    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[8].DescriptorTable.pDescriptorRanges = srvRangeOverride;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(srvRangeOverride);
+    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
     descriptionRootSignature.NumParameters = _countof(rootParameters);

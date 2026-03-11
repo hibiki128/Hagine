@@ -1,11 +1,13 @@
 #pragma once
-#include"Data/DataHandler.h"
-#include"Line/DrawLine3D.h"
+#include "Data/DataHandler.h"
+#include "Line/DrawLine3D.h"
 #include <DirectXCommon.h>
 #include <Graphics/Srv/SrvManager.h>
+#include"ParticleCSFieldSettingOverride.h"
 #include <Particle/ParticleCommon.h>
 #include <string>
 #include <type/Vector3.h>
+#include <type/Vector4.h>
 #include <vector>
 #include <wrl.h>
 
@@ -29,8 +31,21 @@ struct ParticleFieldData {
     float strength = 1.0f;         // 力の強さ
     uint32_t fieldType = 0;        // ParticleFieldType
     float falloff = 1.0f;          // 減衰指数（1=線形, 2=二乗）
-    float padding0 = 0.0f;
-    float padding1 = 0.0f;
+
+    // --- 寿命ドレイン ---
+    float lifeTimeDrain = 0.0f;   // 毎秒削る寿命量（秒/秒）
+    uint32_t enableLifeDrain = 0; // 0=無効 1=有効
+
+    // --- トレイル強制生成 ---
+    uint32_t enableForceTrail = 0;           // 0=無効 1=有効
+    float trailSpawnDistanceOverride = 0.0f; // >0 のときトレイル生成間隔を上書き
+
+    // --- カラー乗算 ---
+    uint32_t enableColorMultiply = 0;                   // 0=無効 1=有効
+    Vector4 colorMultiplier = {1.0f, 1.0f, 1.0f, 1.0f}; // 乗算色（白=変化なし）
+
+    // --- 一度きり設定上書き ---
+    uint32_t enableSettingsOverride = 0; // 0=無効 1=有効
 };
 
 /// =============================================
@@ -40,6 +55,7 @@ struct ParticleField {
     std::string name = "NewField";
     bool enabled = true;
     ParticleFieldData data = {};
+    ParticleFieldSettingsOverride override_ = {}; // 一度きり設定上書きデータ
 };
 
 /// =============================================
@@ -83,16 +99,16 @@ class ParticleCSFieldManager {
     uint32_t GetFieldsSrvIndex() const { return fieldsSrvIndex_; }
 
     // --- ImGui ---
+    /// フィールド管理ウィンドウを表示する。ギズモ描画もここから行われる。
     void DrawImGui();
-
-    // --- ギズモ描画 ---
-    /// 各フィールドの影響範囲・種類・強さを DrawLine3D でワイヤーフレーム表示する
-    /// Draw() の前、毎フレーム呼ぶ
-    void DrawFieldGizmos();
 
     static constexpr uint32_t kMaxFields = 8;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> GetZeroFieldCountResource() const { return zeroFieldCountResource_; }
+
+    /// 設定上書きバッファの SRV ハンドル (UpdateParticle_CS の t1 にバインド)
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetOverrideSrvHandle() const { return overrideSrvHandle_; }
+    uint32_t GetOverrideSrvIndex() const { return overrideSrvIndex_; }
 
   private:
     ParticleCSFieldManager() = default;
@@ -104,38 +120,47 @@ class ParticleCSFieldManager {
     void UploadToGPU();
 
     // --- セーブ/ロード内部処理 ---
-    /// DataHandler を使ってフィールドデータをjsonへ書き出す
     void SaveFieldData(DataHandler &data, const ParticleField &field);
-    /// DataHandler を使ってjsonからフィールドデータを読み込む
     void LoadFieldData(DataHandler &data, ParticleField &field);
+    void SaveOverrideData(DataHandler &data, const ParticleFieldSettingsOverride &ov);
+    void LoadOverrideData(DataHandler &data, ParticleFieldSettingsOverride &ov);
 
     // --- ギズモ描画内部処理 ---
-    /// 影響範囲球のワイヤーフレームを描画する
+    void DrawFieldGizmos();
     void DrawFieldSphere(const ParticleField &field, const Vector4 &color);
-    /// Wind フィールドの方向矢印を描画する
     void DrawWindArrows(const ParticleField &field, const Vector4 &color);
-    /// Attract / Repel フィールドの放射線を描画する
     void DrawRadialLines(const ParticleField &field, const Vector4 &color, bool inward);
-    /// Vortex フィールドの渦巻き円弧を描画する
     void DrawVortexArcs(const ParticleField &field, const Vector4 &color);
+
+    // --- ImGui 内部 ---
+    void DrawOverrideImGui(ParticleFieldSettingsOverride &ov, int fieldIndex);
 
     static ParticleCSFieldManager *instance_;
 
     std::vector<ParticleField> fields_;
 
-    // GPU側バッファ
+    // GPU側バッファ (fields)
     Microsoft::WRL::ComPtr<ID3D12Resource> fieldsResource_;
     ParticleFieldData *fieldsMappedData_ = nullptr;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource_;
     uint32_t *fieldCountMappedData_ = nullptr;
 
-    // private に追加
     Microsoft::WRL::ComPtr<ID3D12Resource> zeroFieldCountResource_;
 
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle_{};
     uint32_t fieldsSrvIndex_ = 0;
 
+    // GPU側バッファ (settings override) — gFieldsOverride: t1
+    // C++ の ParticleFieldSettingsOverride を GPU用レイアウトに変換して転送する
+    Microsoft::WRL::ComPtr<ID3D12Resource> overrideResource_;
+    void *overrideMappedData_ = nullptr; // byte単位で扱うためvoid*
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle_{};
+    uint32_t overrideSrvIndex_ = 0;
+
     DirectXCommon *dxCommon_ = nullptr;
     SrvManager *srvManager_ = nullptr;
+
+    // --- デバッグ表示状態 ---
+    bool showGizmos_ = false;
 };

@@ -163,7 +163,8 @@ void ParticleCSGroup::InitParticle() {
 
 void ParticleCSGroup::UpdateParticleCSDisPatch(
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
-    Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource) {
+    Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle) {
     particleCommon_->ComputeUpdateEmitterDrawCommonSetting();
     commandList->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
     commandList->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
@@ -173,6 +174,7 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     commandList->SetComputeRootConstantBufferView(5, settingsResource_->GetGPUVirtualAddress());
     commandList->SetComputeRootDescriptorTable(6, fieldsSrvHandle.second);
     commandList->SetComputeRootConstantBufferView(7, fieldCountResource->GetGPUVirtualAddress());
+    commandList->SetComputeRootDescriptorTable(8, overrideSrvHandle.second);
 
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
     commandList->Dispatch(disPatchCount, 1, 1);
@@ -190,7 +192,7 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     perViewData_->billboardMatrix.m[3][3] = 1.0f;
     perViewData_->billboardMatrix = Inverse(perViewData_->billboardMatrix);
 
-    CopyDebugDataToReadback();
+   // CopyDebugDataToReadback();
 }
 
 void ParticleCSGroup::CreateOutputParticleResource() {

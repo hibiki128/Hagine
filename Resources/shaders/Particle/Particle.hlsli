@@ -19,6 +19,7 @@ struct Particle
     uint parentIndex;
     float3 lastTrailPosition;
     float trailSpawnDistance;
+    uint2 settingsOverrideFlags;
 };
 
 Particle CreateEmptyParticle()
@@ -34,7 +35,24 @@ Particle CreateEmptyParticle()
     p.padding = 0.0f;
     p.isTrailParticle = 0;
     p.parentIndex = 0xFFFFFFFF;
+    p.settingsOverrideFlags = uint2(0, 0);
     return p;
+}
+
+bool HasOverrideBit(uint2 flags, uint bitIndex)
+{
+    if (bitIndex < 32u)
+        return (flags.x & (1u << bitIndex)) != 0u;
+    else
+        return (flags.y & (1u << (bitIndex - 32u))) != 0u;
+}
+
+void SetOverrideBit(inout uint2 flags, uint bitIndex)
+{
+    if (bitIndex < 32u)
+        flags.x |= (1u << bitIndex);
+    else
+        flags.y |= (1u << (bitIndex - 32u));
 }
 
 struct PerView
@@ -137,14 +155,145 @@ struct ParticleCSSettings
 
 struct ParticleField
 {
-    float3 position; // フィールド中心
-    float radius; // 影響半径
-    float3 direction; // Wind方向 / Vortex回転軸
-    float strength; // 力の強さ
-    uint fieldType; // 0=Wind 1=Attract 2=Repel 3=Vortex
-    float falloff; // 減衰指数 (1=線形 2=二乗)
-    float padding0;
+    float3 position;
+    float radius;
+    float3 direction;
+    float strength;
+    uint fieldType; 
+    float falloff; 
+    
+    float lifeTimeDrain;
+    uint enableLifeDrain; 
+    
+    uint enableForceTrail;
+    float trailSpawnDistanceOverride;
+    
+    uint enableColorMultiply; 
+    float4 colorMultiplier; 
+    
+    uint enableSettingsOverride;
+};
+
+static const uint OB_LifeTimeMin = 0u;
+static const uint OB_LifeTimeMax = 1u;
+static const uint OB_ScaleMin = 2u;
+static const uint OB_ScaleMax = 3u;
+static const uint OB_VelocityMin = 4u;
+static const uint OB_VelocityMax = 5u;
+static const uint OB_StartColor = 6u;
+static const uint OB_EndColor = 7u;
+static const uint OB_EnableLifetimeScale = 8u;
+static const uint OB_EnableRandomColor = 9u;
+static const uint OB_EnableSinScale = 10u;
+static const uint OB_SinScaleFrequency = 11u;
+static const uint OB_SinScaleAmplitude = 12u;
+static const uint OB_EnableGravity = 13u;
+static const uint OB_Gravity = 14u;
+static const uint OB_EnableTrail = 15u;
+static const uint OB_TrailSpawnDistance = 16u;
+static const uint OB_MaxTrailPerParticle = 17u;
+static const uint OB_TrailLifeTimeScale = 18u;
+static const uint OB_TrailScaleMultiplier = 19u;
+static const uint OB_TrailColorMultiplier = 20u;
+static const uint OB_TrailVelocityScale = 21u;
+static const uint OB_TrailInheritVelocity = 22u;
+static const uint OB_TrailMinLifeTime = 23u;
+static const uint OB_EnableGather = 24u;
+static const uint OB_GatherStartRatio = 25u;
+static const uint OB_GatherStrength = 26u;
+static const uint OB_GatherTarget = 27u;
+static const uint OB_EnableVortex = 28u;
+static const uint OB_VortexStrength = 29u;
+static const uint OB_VortexAxis = 30u;
+static const uint OB_EnableAcceleration = 31u;
+static const uint OB_Acceleration = 32u;
+static const uint OB_EnableVelocityDamping = 33u;
+static const uint OB_VelocityDampingFactor = 34u;
+static const uint OB_EnableLifetimeVelDamping = 35u;
+static const uint OB_LifetimeVelDampingStart = 36u;
+static const uint OB_EnableCurlNoise = 37u;
+static const uint OB_CurlNoiseScale = 38u;
+static const uint OB_CurlNoiseStrength = 39u;
+static const uint OB_CurlNoiseTimeScale = 40u;
+static const uint OB_CurlNoiseOctaves = 41u;
+static const uint OB_CurlNoiseAttractStrength = 42u;
+static const uint OB_CurlNoiseBlendMode = 43u;
+static const uint OB_CurlNoisePosRandom = 44u;
+
+struct ParticleFieldSettingsOverrideData
+{
+   
+    uint2 overrideMask;
+    float2 maskPadding;
+
+    float lifeTimeMin;
+    float lifeTimeMax;
+    float scaleMin;
+    float scaleMax;
+
+    float3 velocityMin;
     float padding1;
+    float3 velocityMax;
+    float padding2;
+
+    float4 startColor;
+    float4 endColor;
+
+    uint enableLifetimeScale;
+    uint enableRandomColor;
+    uint enableSinScale;
+    float sinScaleFrequency;
+    float sinScaleAmplitude;
+
+    uint enableGravity;
+    float2 padding3;
+    float3 gravity;
+    float padding4;
+
+    uint enableTrail;
+    float trailSpawnDistance;
+    uint maxTrailPerParticle;
+    float trailLifeTimeScale;
+
+    float3 trailScaleMultiplier;
+    float padding5;
+    float4 trailColorMultiplier;
+    float trailVelocityScale;
+    uint trailInheritVelocity;
+    float trailMinLifeTime;
+    float padding6;
+
+    uint enableGather;
+    float gatherStartRatio;
+    float gatherStrength;
+    float padding7;
+    float3 gatherTarget;
+    float padding8;
+
+    uint enableVortex;
+    float vortexStrength;
+    float2 padding9;
+    float3 vortexAxis;
+    float padding10;
+
+    uint enableAcceleration;
+    float3 padding11;
+    float3 acceleration;
+    float padding12;
+
+    uint enableVelocityDamping;
+    float velocityDampingFactor;
+    uint enableLifetimeVelDamping;
+    float lifetimeVelDampingStart;
+
+    uint enableCurlNoise;
+    float curlNoiseScale;
+    float curlNoiseStrength;
+    float curlNoiseTimeScale;
+    uint curlNoiseOctaves;
+    float curlNoiseAttractStrength;
+    uint curlNoiseBlendMode;
+    float curlNoisePosRandom;
 };
 
 struct FieldCountCB

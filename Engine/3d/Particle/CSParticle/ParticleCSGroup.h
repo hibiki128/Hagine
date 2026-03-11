@@ -25,7 +25,8 @@ class ParticleCSGroup {
     int CalculateOptimalEmitCount() const;
     void UpdateParticleCSDisPatch(
         std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
-        Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource);
+        Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
+        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle);
     ParticleCSGroupData GetParticleGroupData() { return particleGroupData_; }
 
     /// ===================================

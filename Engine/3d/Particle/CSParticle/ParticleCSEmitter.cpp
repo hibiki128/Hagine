@@ -45,9 +45,10 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
         group->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),
             receiveFields_ ? fieldMgr->GetFieldCountResource()
-                           : fieldMgr->GetZeroFieldCountResource()
+                           : fieldMgr->GetZeroFieldCountResource(),
+            fieldMgr->GetOverrideSrvHandle()
         );
-        group->CountAliveParticles();
+       // group->CountAliveParticles();
         dxCommon_->TransitionSRVBarrier();
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
         const auto &meshes = group->GetModelData().meshes;
@@ -213,6 +214,11 @@ void ParticleCSEmitter::EmitterDisPatch() {
         // エッジ情報を設定
         if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
             commandList->SetComputeRootDescriptorTable(9, edgeInfoSrvHandle_.second);
+        }
+
+        if (emitterMeshData_->emit == 0 || settings->emitCount == 0) {
+            groupIndex++;
+            continue;
         }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;

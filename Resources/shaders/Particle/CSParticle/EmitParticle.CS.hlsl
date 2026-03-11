@@ -194,4 +194,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     gParticles[particleIndex].isTrailParticle = 0;
     gParticles[particleIndex].parentIndex = 0xFFFFFFFF;
     gParticles[particleIndex].trailSpawnDistance = gSettings.trailSpawnDistance;
+    // フリーリストから再利用されたパーティクルに古いフラグが残ると
+    // 「一度きり上書き」が永遠にスキップされるためリセットする
+    gParticles[particleIndex].settingsOverrideFlags = uint2(0u, 0u);
 }

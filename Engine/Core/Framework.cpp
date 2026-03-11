@@ -324,8 +324,6 @@ void Framework::Update() {
 
     particleCSFieldManager_->Update();
 
-    particleCSFieldManager_->DrawFieldGizmos();
-
     sceneManager_->Update();
 
     baseObjectManager_->Update();

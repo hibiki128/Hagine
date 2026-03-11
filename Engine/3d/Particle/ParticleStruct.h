@@ -48,6 +48,11 @@ struct CSParticle {
     uint32_t parentIndex;
     Vector3 lastTrailPosition;
     float trailSpawnDistance;
+    // フィールドによる「一度きり設定上書き」完了フラグ (ビットマスク)
+    // HLSL側の Particle::settingsOverrideFlags (uint2) と対応。
+    // lo=bit0-31, hi=bit32-63
+    uint32_t settingsOverrideFlagsLo = 0;
+    uint32_t settingsOverrideFlagsHi = 0;
 };
 
 struct PerView {
@@ -267,8 +272,6 @@ struct Particle {
     float lifeTime{};    // ライフタイム
     float currentTime{}; // 現在の時間
     float initialAlpha{};
-    // std::weak_ptr<Particle> parent;                  // 親パーティクルへの弱参照
-    // std::vector<std::shared_ptr<Particle>> children; // 子パーティクルのリスト
     Vector3 relativePosition{}; // 親からの相対位置
     Vector3 parentOffset{};     // 親に対するオフセット
     bool isChild{};             // 子パーティクルかどうか
