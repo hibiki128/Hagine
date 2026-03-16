@@ -431,6 +431,7 @@ class Player : public BaseObject {
 
     ViewProjection *vp_;                          // カメラ
     OBBCollider *playerCollider_ = nullptr;       // コライダー
+    AABBCollider *playerWallCollider_ = nullptr;
     PlayerHand *leftHand_ptr_;                    // 左手
     PlayerHand *rightHand_ptr_;                   // 右手
     PlayerBaseState *currentState_ = nullptr;     // 現在の状態

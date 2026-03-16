@@ -477,6 +477,8 @@
     <ClCompile Include="Application\GameObject\Enemy\Hand\EnemyHand.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\CylinderCollider.cpp" />
+    <ClCompile Include="Application\GameObject\Field\AroundField\AroundField.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -894,6 +896,8 @@
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldSettingOverride.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\CylinderCollider.h" />
+    <ClInclude Include="Application\GameObject\Field\AroundField\AroundField.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

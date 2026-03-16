@@ -5,6 +5,7 @@
 #include "State/Fly/PlayerStateFlyIdle.h"
 
 #include "Bullet/ChargeShot/ChargeShot.h"
+#include "Collider/CollisionManager.h"
 #include "Object/Base/BaseObjectManager.h"
 #include "State/Action/PlayerEnergyCharge.h"
 #include "State/Action/PlayerStateRush.h"
@@ -19,7 +20,6 @@
 #include <Particle/CSParticle/ParticleCSEditor.h>
 #include <Particle/ParticleEditor.h>
 #include <cmath>
-#include"Collider/CollisionManager.h"
 
 Player::Player() {
 }
@@ -33,13 +33,23 @@ void Player::Init(const std::string objectName) {
     playerCollider_ = AddOBBCollider("player_Collider");
     playerCollider_->SetTag("Player");
     playerCollider_->AddCollisionMask("Enemy");
+    playerCollider_->AddCollisionMask("CylinderField");
+
+    playerWallCollider_ = AddAABBCollider("player_WallCollider");
+    playerWallCollider_->SetTag("PlayerWall");
+    playerWallCollider_->AddCollisionMask("EnemyWall");
+    playerWallCollider_->SetSize({2.0f, 1000.0f, 2.0f});
+
+    playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollisionEnter(other);
+    });
 
     playerCollider_->SetOnCollision([this](ColliderBase *other) {
         this->OnCollision(other);
     });
 
-      playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
-        this->OnCollisionEnter(other);
+    playerWallCollider_->SetOnCollision([this](ColliderBase *other) {
+        this->OnCollision(other);
     });
 
     states_["Idle"] = std::make_unique<PlayerStateIdle>();
@@ -320,30 +330,45 @@ void Player::ChangeState(const std::string &stateName) {
     }
 }
 
-void Player::OnCollision(ColliderBase* other) {
-    if (other->GetTag() == "Enemy") {
-        //SetDamage(kEnemyCollisionDamage);
-
-        // ===== めり込み排斥 =====
-        // 相手コライダーもOBBであることを確認
-        if (other->GetType() == ColliderType::OBB) {
-            auto* enemyOBB = static_cast<OBBCollider*>(other);
-            Vector3 mtv;
-            // playerCollider_（自分）を enemyOBB から押し出す方向のMTVを取得
-            if (CollisionManager::GetInstance()->CalculateDepenetration(playerCollider_, enemyOBB, mtv)) {
-                // MTVはAをBから押し出す方向 → プレイヤーをそのまま移動
-                transform_->translation_ -= mtv;
-                // 排斥方向への速度成分を除去（壁ずりを防ぐ）
-                float dot = velocity_.Dot(mtv.Normalize());
-                if (dot < 0.0f) {
-                    velocity_ -= mtv.Normalize() * dot;
-                }
+void Player::OnCollision(ColliderBase *other) {
+    // フィールド円柱との押し戻し
+    if (other->GetTag() == "CylinderField") {
+        if (other->GetType() != ColliderType::Cylinder) {
+            return;
+        }
+        auto *cyl = static_cast<CylinderCollider *>(other);
+        Vector3 mtv;
+        if (CollisionManager::GetInstance()->CalculateDepenetrationOBBCylinder(playerCollider_, cyl, mtv)) {
+            transform_->translation_ += mtv;
+            Vector3 mtvDir = mtv.Normalize();
+            float dot = velocity_.Dot(mtvDir);
+            if (dot < 0.0f) {
+                velocity_ -= mtvDir * dot;
             }
+        }
+        return;
+    }
+
+    // PlayerWall との押し戻し（AABB）
+    if (other->GetType() != ColliderType::AABB) {
+        return;
+    }
+    auto *otherAABB = static_cast<AABBCollider *>(other);
+    Vector3 mtv;
+    if (CollisionManager::GetInstance()->CalculateDepenetration(playerWallCollider_, otherAABB, mtv)) {
+        if (mtv.Length() < 0.0001f) {
+            return;
+        }
+        transform_->translation_ += mtv;
+        Vector3 mtvDir = mtv.Normalize();
+        float dot = velocity_.Dot(mtvDir);
+        if (dot < 0.0f) {
+            velocity_ -= mtvDir * dot;
         }
     }
 }
 
-void Player::OnCollisionEnter(ColliderBase* other) {
+void Player::OnCollisionEnter(ColliderBase *other) {
     if (other->GetTag() == "EnemyBullet") {
         hitEmitter_->SetPosition(transform_->translation_);
         hitEmitter_->UpdateOnce();

@@ -22,13 +22,25 @@ void Enemy::Init(const std::string objectName) {
     enemyCollider_->AddCollisionMask("PlayerHand");
     enemyCollider_->AddCollisionMask("PlayerChargeBullet");
     enemyCollider_->AddCollisionMask("makan");
+    enemyCollider_->AddCollisionMask("CylinderField");
+
+    enemyWallCollider_ = AddAABBCollider("enemy_WallCollider");
+    enemyWallCollider_->SetTag("EnemyWall");
+    enemyWallCollider_->AddCollisionMask("PlayerWall");
+    enemyWallCollider_->SetSize({2.0f, 1000.0f, 2.0f});
 
     enemyCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         this->OnCollisionEnter(other);
     });
+
     enemyCollider_->SetOnCollision([this](ColliderBase *other) {
         this->OnCollision(other);
     });
+
+    enemyWallCollider_->SetOnCollision([this](ColliderBase *other) {
+        this->OnCollision(other);
+    });
+
     BaseObject::SetTexture("debug/white1x1.png", kTextureIndex);
     BaseObject::SetColor(Vector4(kColorRed, kColorZero, kColorZero, kColorOpaque));
     shadow_ = std::make_unique<BaseObject>();
@@ -397,23 +409,35 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
 }
 
 void Enemy::OnCollision(ColliderBase *other) {
-    if (other->GetTag() != "Player") {
-        return;
-    }
-    if (other->GetType() != ColliderType::OBB) {
+    // フィールド円柱との押し戻し
+    if (other->GetTag() == "CylinderField") {
+        if (other->GetType() != ColliderType::Cylinder) {
+            return;
+        }
+        auto *cyl = static_cast<CylinderCollider *>(other);
+        Vector3 mtv;
+        if (CollisionManager::GetInstance()->CalculateDepenetrationOBBCylinder(enemyCollider_, cyl, mtv)) {
+            transform_->translation_ += mtv;
+            Vector3 mtvDir = mtv.Normalize();
+            float dot = velocity_.Dot(mtvDir);
+            if (dot < 0.0f) {
+                velocity_ -= mtvDir * dot;
+            }
+        }
         return;
     }
 
-    auto *playerOBB = static_cast<OBBCollider *>(other);
+    // EnemyWall との押し戻し（AABB）
+    if (other->GetType() != ColliderType::AABB) {
+        return;
+    }
+    auto *otherAABB = static_cast<AABBCollider *>(other);
     Vector3 mtv;
-
-    // enemyCollider_（自分）を playerOBB（相手）から押し出すMTVを取得
-    // CalculateDepenetration は「第1引数を第2引数から離す」方向のMTVを返す
-    if (CollisionManager::GetInstance()->CalculateDepenetration(enemyCollider_, playerOBB, mtv)) {
-        // 敵を押し出す（mtvの方向がenemyからplayerへ向いているので、逆方向へ移動）
-        transform_->translation_ -= mtv;
-
-        // 排斥方向への速度成分を打ち消す（壁ずりのような引っかかりを防ぐ）
+    if (CollisionManager::GetInstance()->CalculateDepenetration(enemyWallCollider_, otherAABB, mtv)) {
+        if (mtv.Length() < 0.0001f) {
+            return;
+        }
+        transform_->translation_ += mtv;
         Vector3 mtvDir = mtv.Normalize();
         float dot = velocity_.Dot(mtvDir);
         if (dot < 0.0f) {

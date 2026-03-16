@@ -31,6 +31,7 @@ void GameScene::Initialize() {
     enemyUI_ = std::make_unique<EnemyUI>();
     fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
+    aroundField_ = std::make_unique<AroundField>();
 
 #ifdef _DEBUG
     behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
@@ -43,6 +44,7 @@ void GameScene::Initialize() {
     player_->Init("player");
     enemy_->Init("enemy");
     ground_->Init("Ground");
+    aroundField_->Init("Around_Field");
     followCamera_->Init();
     startCamera_->Init();
     deathCamera_->Init();
@@ -120,6 +122,7 @@ void GameScene::Update() {
     // enemy_ptr->SetBehaviorTree() は Initialize() で1回だけ呼ぶ
 
     ground_->Update();
+    aroundField_->Update();
     playerUI_->Update();
     enemyUI_->Update();
     fadeOut_->Update();
@@ -155,6 +158,7 @@ void GameScene::Draw() {
 
     skyBox_->Draw(vp_);
     ground_->Draw(vp_);
+    aroundField_->Draw(vp_);
 
     player_ptr->DrawParticle(vp_);
     enemy_ptr->DrawParticle(vp_);

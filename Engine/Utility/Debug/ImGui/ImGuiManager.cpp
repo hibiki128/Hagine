@@ -707,8 +707,11 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
+    ImGui::Begin("タグマネージャー", &showColliderTagManagerView_, flags);
+
     CollisionManager::GetInstance()->ImGuiTagManager();
 
+    ImGui::End();
 }
 
 void ImGuiManager::FixAspectRatio() {
