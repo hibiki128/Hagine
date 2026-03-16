@@ -475,7 +475,7 @@ EditorLink::EditorLink(int id, ed::PinId start, ed::PinId end)
 // ---------------------------------------------------------
 BehaviorTreeEditor::BehaviorTreeEditor() {
     ed::Config config;
-    config.SettingsFile = "BehaviorTreeLayout.json";
+    config.SettingsFile = nullptr;
     m_Context = ed::CreateEditor(&config);
 }
 
@@ -842,6 +842,12 @@ void BehaviorTreeEditor::SaveTree() {
     std::string fileName = m_InputFileNameBuf;
     if (fileName.empty())
         fileName = "NewBehavior";
+
+    // 既存ファイルを一旦削除して肥大化を防ぐ
+    fs::path filePath = fs::path("BehaviorTree") / (fileName + ".json");
+    if (fs::exists(filePath)) {
+        fs::remove(filePath);
+    }
     DataHandler handler("BehaviorTree", fileName);
 
     json nodesJson = json::array();
