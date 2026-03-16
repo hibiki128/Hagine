@@ -1,7 +1,7 @@
 {
     "emitFromSurface": 1,
     "frequency": 0.0010000000474974513,
-    "frequencyTime": 96.32384490966797,
+    "frequencyTime": 188.7051239013672,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -20,7 +20,7 @@
     "group_0_curlNoiseScale": 1.0,
     "group_0_curlNoiseStrength": 1.2000000476837158,
     "group_0_curlNoiseTimeScale": 0.20000000298023224,
-    "group_0_emitCount": 100000,
+    "group_0_emitCount": 500000,
     "group_0_enableAcceleration": 0,
     "group_0_enableCurlNoise": 0,
     "group_0_enableGather": 0,
@@ -37,9 +37,9 @@
     "group_0_enableVortexForTrail": 0,
     "group_0_endColor": {
         "w": 0.0,
-        "x": 0.47866809368133545,
-        "y": 1.0,
-        "z": 0.40143370628356934
+        "x": 0.16487455368041992,
+        "y": 0.16487455368041992,
+        "z": 0.16487455368041992
     },
     "group_0_gatherStartRatio": 0.5,
     "group_0_gatherStrength": 2.0,
@@ -85,10 +85,10 @@
     "group_0_sinScaleAmplitude": 0.30000001192092896,
     "group_0_sinScaleFrequency": 5.0,
     "group_0_startColor": {
-        "w": 1.0,
-        "x": 0.007168471813201904,
-        "y": 0.007168471813201904,
-        "z": 1.0
+        "w": 0.09019608050584793,
+        "x": 0.0,
+        "y": 0.03607350215315819,
+        "z": 0.8387097120285034
     },
     "group_0_trailColorMultiplier": {
         "w": 0.699999988079071,
@@ -124,7 +124,7 @@
         "z": 0.0
     },
     "isAuto": true,
-    "isVisible": false,
+    "isVisible": true,
     "modelPath": "",
     "particleGroupCount": 1,
     "primitiveType": 9,
