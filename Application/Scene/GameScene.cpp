@@ -162,6 +162,7 @@ void GameScene::Draw() {
 
     player_ptr->DrawParticle(vp_);
     enemy_ptr->DrawParticle(vp_);
+    aroundField_->DrawParticle(vp_);
 
     fadeOut_->Draw(vp_);
     gameUI_->Draw();
@@ -196,6 +197,7 @@ void GameScene::AddObjectSetting() {
 
 void GameScene::AddParticleSetting() {
     fadeOut_->ImGui();
+    aroundField_->Debug();
 }
 
 void GameScene::CameraUpdate() {

@@ -96,6 +96,7 @@ class ParticleCSEmitter {
 
     void SetReceiveFields(bool receive) { receiveFields_ = receive; }
     bool GetReceiveFields() const { return receiveFields_; }
+    bool GetAcitve() const { return isActive_; }
 
     Vector3 GetAnchorPoint() const {
         if (emitterMeshData_)

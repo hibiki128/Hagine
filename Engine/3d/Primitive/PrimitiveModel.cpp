@@ -14,6 +14,7 @@ void PrimitiveModel::Initialize() {
     CreateTriangle();
     CreateCone();
     CreatePyramid();
+    CreateClosedCylinder();
 }
 
 PrimitiveModel *PrimitiveModel::GetInstance() {
@@ -542,4 +543,132 @@ void PrimitiveModel::CreatePyramid() {
 
     // PrimitiveTypeを追加する必要があります
     primitiveDataMap_.insert(std::make_pair(PrimitiveType::Pyramid, primitiveData));
+}
+
+void PrimitiveModel::CreateClosedCylinder() {
+    // ClosedCylinder（上下に蓋あり円柱）の頂点データ
+    PrimitiveData primitiveData{};
+
+    const uint32_t kRingDivide = 32;
+    const float kRadius = 1.0f;
+    const float kHeight = 2.0f;
+    const float halfHeight = kHeight / 2.0f;
+    const float radianPerDivide = 2.0f * std::numbers::pi_v<float> / float(kRingDivide);
+
+    // -------------------------------------------------------
+    // 側面（CreateCylinder と同じ構造）
+    // 頂点レイアウト: [i*2+0]=下リング, [i*2+1]=上リング
+    // -------------------------------------------------------
+    for (uint32_t i = 0; i <= kRingDivide; ++i) {
+        float angle = i * radianPerDivide;
+        float sinTheta = std::sinf(angle);
+        float cosTheta = std::cosf(angle);
+        float u = float(i) / float(kRingDivide);
+
+        // 下リングの頂点
+        VertexData bottomVertex{};
+        bottomVertex.position = {kRadius * cosTheta, -halfHeight, kRadius * sinTheta, 1.0f};
+        bottomVertex.normal = {cosTheta, 0.0f, sinTheta};
+        bottomVertex.texcoord = {u, 1.0f};
+        primitiveData.vertices.push_back(bottomVertex);
+
+        // 上リングの頂点
+        VertexData topVertex{};
+        topVertex.position = {kRadius * cosTheta, halfHeight, kRadius * sinTheta, 1.0f};
+        topVertex.normal = {cosTheta, 0.0f, sinTheta};
+        topVertex.texcoord = {u, 0.0f};
+        primitiveData.vertices.push_back(topVertex);
+    }
+
+    // 側面インデックス
+    for (uint32_t i = 0; i < kRingDivide; ++i) {
+        uint32_t bottomLeft = i * 2;
+        uint32_t topLeft = bottomLeft + 1;
+        uint32_t bottomRight = bottomLeft + 2;
+        uint32_t topRight = bottomLeft + 3;
+
+        // 三角形1
+        primitiveData.indices.push_back(bottomLeft);
+        primitiveData.indices.push_back(bottomRight);
+        primitiveData.indices.push_back(topLeft);
+
+        // 三角形2
+        primitiveData.indices.push_back(topLeft);
+        primitiveData.indices.push_back(bottomRight);
+        primitiveData.indices.push_back(topRight);
+    }
+
+    // -------------------------------------------------------
+    // 上蓋（法線: +Y、UV はディスク状に展開）
+    // 中心頂点 1 個 + リング頂点 kRingDivide+1 個
+    // -------------------------------------------------------
+    uint32_t topCapCenterIndex = static_cast<uint32_t>(primitiveData.vertices.size());
+    {
+        VertexData center{};
+        center.position = {0.0f, halfHeight, 0.0f, 1.0f};
+        center.normal = {0.0f, 1.0f, 0.0f};
+        center.texcoord = {0.5f, 0.5f};
+        primitiveData.vertices.push_back(center);
+
+        for (uint32_t i = 0; i <= kRingDivide; ++i) {
+            float angle = i * radianPerDivide;
+            float sinTheta = std::sinf(angle);
+            float cosTheta = std::cosf(angle);
+
+            VertexData v{};
+            v.position = {kRadius * cosTheta, halfHeight, kRadius * sinTheta, 1.0f};
+            v.normal = {0.0f, 1.0f, 0.0f};
+            v.texcoord = {cosTheta * 0.5f + 0.5f, sinTheta * 0.5f + 0.5f};
+            primitiveData.vertices.push_back(v);
+        }
+    }
+
+    // 上蓋インデックス（時計回り＝表が上向き）
+    for (uint32_t i = 0; i < kRingDivide; ++i) {
+        uint32_t current = topCapCenterIndex + 1 + i;
+        uint32_t next = topCapCenterIndex + 1 + i + 1;
+
+        primitiveData.indices.push_back(topCapCenterIndex);
+        primitiveData.indices.push_back(next);
+        primitiveData.indices.push_back(current);
+    }
+
+    // -------------------------------------------------------
+    // 下蓋（法線: -Y）
+    // -------------------------------------------------------
+    uint32_t bottomCapCenterIndex = static_cast<uint32_t>(primitiveData.vertices.size());
+    {
+        VertexData center{};
+        center.position = {0.0f, -halfHeight, 0.0f, 1.0f};
+        center.normal = {0.0f, -1.0f, 0.0f};
+        center.texcoord = {0.5f, 0.5f};
+        primitiveData.vertices.push_back(center);
+
+        for (uint32_t i = 0; i <= kRingDivide; ++i) {
+            float angle = i * radianPerDivide;
+            float sinTheta = std::sinf(angle);
+            float cosTheta = std::cosf(angle);
+
+            VertexData v{};
+            v.position = {kRadius * cosTheta, -halfHeight, kRadius * sinTheta, 1.0f};
+            v.normal = {0.0f, -1.0f, 0.0f};
+            v.texcoord = {cosTheta * 0.5f + 0.5f, sinTheta * 0.5f + 0.5f};
+            primitiveData.vertices.push_back(v);
+        }
+    }
+
+    // 下蓋インデックス（反時計回り＝表が下向き）
+    for (uint32_t i = 0; i < kRingDivide; ++i) {
+        uint32_t current = bottomCapCenterIndex + 1 + i;
+        uint32_t next = bottomCapCenterIndex + 1 + i + 1;
+
+        primitiveData.indices.push_back(bottomCapCenterIndex);
+        primitiveData.indices.push_back(current);
+        primitiveData.indices.push_back(next);
+    }
+
+    primitiveData.color = {1.0f, 1.0f, 1.0f, 1.0f};
+    primitiveData.uvMatrix = MakeIdentity4x4();
+
+    primitiveDataMap_.insert(std::make_pair(PrimitiveType::ClosedCylinder, primitiveData));
 }

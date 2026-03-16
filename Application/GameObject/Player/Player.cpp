@@ -127,6 +127,8 @@ void Player::Init(const std::string objectName) {
 
     gamePad_ = std::make_unique<GamePad>();
     gamePad_->Init(0);
+
+    generatedField_ = ParticleCSFieldManager::GetInstance()->CreateField("PlayerGeneratedField", "GeneratedField");
 }
 
 void Player::Update() {
@@ -140,7 +142,7 @@ void Player::Update() {
     if (!isAlive_) {
 
     } else {
-
+        generatedField_->data.position = GetWorldPosition();
         gamePad_->Update();
 
         shadow_->GetLocalPosition() = {transform_->translation_.x, kShadowYPosition, transform_->translation_.z};

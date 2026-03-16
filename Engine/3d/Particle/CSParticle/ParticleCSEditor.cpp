@@ -336,7 +336,7 @@ void ParticleCSEditor::ShowImGuiEditor() {
                 // プリミティブエミッター選択時
                 else if (selectedEmitterType == 1) {
                     if (ColoredCollapsingHeader("プリミティブタイプ選択", 4)) {
-                        const char *primitiveType[] = {"未選択", "プレーン", "球", "キューブ", "シリンダー", "リング", "三角形", "円錐", "四角錐"};
+                        const char *primitiveType[] = {"未選択", "プレーン", "球", "キューブ", "シリンダー", "リング", "三角形", "円錐", "四角錐", "円柱"};
                         int currentPrimitiveType = static_cast<int>(localEmitterType_);
                         if (ImGui::Combo("タイプ選択", &currentPrimitiveType, primitiveType, IM_ARRAYSIZE(primitiveType))) {
                             localEmitterType_ = static_cast<PrimitiveType>(currentPrimitiveType);

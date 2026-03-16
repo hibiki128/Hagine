@@ -192,7 +192,7 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     perViewData_->billboardMatrix.m[3][3] = 1.0f;
     perViewData_->billboardMatrix = Inverse(perViewData_->billboardMatrix);
 
-   // CopyDebugDataToReadback();
+    CopyDebugDataToReadback();
 }
 
 void ParticleCSGroup::CreateOutputParticleResource() {
@@ -1092,10 +1092,6 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::PopStyleColor(); // CheckMark
         ImGui::Unindent();
     }
-
-    // =======================================================
-    // 9. 全体プリセット（ParticleCSEditorのプリセットタブに移動）
-    // =======================================================
 
     // =======================================================
     // 10. Debug Info（常時表示）

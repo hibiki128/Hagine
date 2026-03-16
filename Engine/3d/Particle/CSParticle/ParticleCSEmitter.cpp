@@ -48,7 +48,7 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
                            : fieldMgr->GetZeroFieldCountResource(),
             fieldMgr->GetOverrideSrvHandle()
         );
-       // group->CountAliveParticles();
+        group->CountAliveParticles();
         dxCommon_->TransitionSRVBarrier();
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
         const auto &meshes = group->GetModelData().meshes;

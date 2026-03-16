@@ -12,6 +12,7 @@
 #include <Input.h>
 #include <Particle/CSParticle/ParticleCSEmitter.h>
 #include <application/Utility/ComboSystem/ComboSystem.h>
+#include <Particle/CSParticle/ParticleCSFieldManager.h>
 
 class ChargeShot;
 class FollowCamera;
@@ -436,6 +437,7 @@ class Player : public BaseObject {
     PlayerHand *rightHand_ptr_;                   // 右手
     PlayerBaseState *currentState_ = nullptr;     // 現在の状態
     MakanAttackSkill *makanAttack_ptr_ = nullptr; // 必殺技
+    ParticleField *generatedField_ = nullptr;     // 生成するフィールド
 
     bool isDamageReact_ = false;       // リアクション中かどうか
     float damageReactTimer_ = 0.0f;    // 経過時間
