@@ -34,6 +34,7 @@ void ClearScene::Initialize() {
     vp_.Initialize("P_StartCamera");
     resultStaging_->Initialize();
     resultUI_->Initialize();
+    ground_->GetLighting() = true;
 
     skyBox_->Initialize("game/skybox_night.dds");
     gamePad_->Init(0);

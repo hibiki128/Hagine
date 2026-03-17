@@ -128,7 +128,7 @@ void Player::Init(const std::string objectName) {
     gamePad_ = std::make_unique<GamePad>();
     gamePad_->Init(0);
 
-    generatedField_ = ParticleCSFieldManager::GetInstance()->CreateField("PlayerGeneratedField", "GeneratedField");
+    generatedField_ = ParticleCSFieldManager::GetInstance()->GetField(0); // 0番目のフィールドを使用
 }
 
 void Player::Update() {

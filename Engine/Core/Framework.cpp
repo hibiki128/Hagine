@@ -365,6 +365,9 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("ChargeAura");
     particleCSEditor_->AddParticleEmitter("enemyChargeAura");
     particleCSEditor_->AddParticleEmitter("AroundField");
+
+    particleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
+
 }
 
 void Framework::PlaySounds() {
