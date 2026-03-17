@@ -20,6 +20,12 @@ struct Particle
     float3 lastTrailPosition;
     float trailSpawnDistance;
     uint2 settingsOverrideFlags;
+    // 回転 (Z軸回転をラジアンで保持、ビルボード平面上での2D回転)
+    float rotation;
+    float angularVelocity;
+    // 終了スケール (enableEndScale=1 のとき lifeRatio で initialScale→endScale を lerp)
+    float3 endScale;
+    float paddingScale;
 };
 
 Particle CreateEmptyParticle()
@@ -36,6 +42,10 @@ Particle CreateEmptyParticle()
     p.isTrailParticle = 0;
     p.parentIndex = 0xFFFFFFFF;
     p.settingsOverrideFlags = uint2(0, 0);
+    p.rotation = 0.0f;
+    p.angularVelocity = 0.0f;
+    p.endScale = float3(0, 0, 0);
+    p.paddingScale = 0.0f;
     return p;
 }
 
@@ -151,6 +161,18 @@ struct ParticleCSSettings
     float curlNoisePosRandomStrength;
     float3 curlNoiseAttractCenter;
     float padding9;
+    // ---- 終了スケール ----
+    uint enableEndScale; // 1=有効: lifeRatio で initialScale→endScale を lerp
+    float3 endScaleValue; // 終了時のスケール値 (XYZ 個別指定)
+    // ---- 回転 ----
+    uint enableRandomRotation; // 1=発生時にランダムな初期角度を設定
+    float rotationMin; // 初期角度の最小値 (ラジアン)
+    float rotationMax; // 初期角度の最大値 (ラジアン)
+    uint enableRandomAngularVelocity; // 1=発生時にランダムな角速度を設定
+    float angularVelocityMin; // 角速度の最小値 (ラジアン/秒)
+    float angularVelocityMax; // 角速度の最大値 (ラジアン/秒)
+    float padding10;
+    float padding11;
 };
 
 struct ParticleField
@@ -159,17 +181,17 @@ struct ParticleField
     float radius;
     float3 direction;
     float strength;
-    uint fieldType; 
-    float falloff; 
+    uint fieldType;
+    float falloff;
     
     float lifeTimeDrain;
-    uint enableLifeDrain; 
+    uint enableLifeDrain;
     
     uint enableForceTrail;
     float trailSpawnDistanceOverride;
     
-    uint enableColorMultiply; 
-    float4 colorMultiplier; 
+    uint enableColorMultiply;
+    float4 colorMultiplier;
     
     uint enableSettingsOverride;
 };

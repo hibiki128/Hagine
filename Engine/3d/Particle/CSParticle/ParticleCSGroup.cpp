@@ -419,6 +419,18 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->curlNoiseBlendMode = 0;
     settingsData_->curlNoisePosRandomStrength = 0.0f;
     settingsData_->curlNoiseAttractCenter = {0.0f, 0.0f, 0.0f};
+
+    // ---- 終了スケール デフォルト ----
+    settingsData_->enableEndScale = 0;
+    settingsData_->endScaleValue = {0.0f, 0.0f, 0.0f};
+
+    // ---- 回転 デフォルト ----
+    settingsData_->enableRandomRotation = 0;
+    settingsData_->rotationMin = 0.0f;
+    settingsData_->rotationMax = 6.2831853f; // 2π
+    settingsData_->enableRandomAngularVelocity = 0;
+    settingsData_->angularVelocityMin = -3.14159f;
+    settingsData_->angularVelocityMax = 3.14159f;
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -707,6 +719,147 @@ void ParticleCSGroup::DrawImGui() {
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("0.0=最初から / 1.0=最後のみ\n推奨: 0.5-0.8");
                 ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
+        }
+
+        ImGui::PopStyleColor(); // CheckMark
+        ImGui::Unindent();
+    }
+
+    // =======================================================
+    // 3.5. 終了スケール（青緑系）
+    // =======================================================
+    PushSectionColor(ImVec4(0.2f, 0.7f, 0.65f, 1.0f));
+    bool openEndScale = ImGui::CollapsingHeader("  終了スケール");
+    PopSectionColor();
+    if (openEndScale) {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.4f, 1.0f, 0.9f, 1.0f));
+
+        bool v = settingsData_->enableEndScale != 0;
+        if (ImGui::Checkbox("終了スケールを有効化##es", &v))
+            settingsData_->enableEndScale = v ? 1 : 0;
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("有効にすると、初期スケール→終了スケールへ\n寿命に応じてlerpします。\n「寿命で縮小」より優先されます。");
+
+        if (v) {
+            ImGui::Indent();
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.3f, 0.3f, 0.5f));
+            ImGui::DragFloat3("終了スケール##esv", &settingsData_->endScaleValue.x, 0.01f, 0.0f, 9999.0f, "%.4f");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("寿命終了時のスケール(XYZ)\n0,0,0 で消える / 初期値と同じなら変化なし");
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("プリセット:");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("消える##esPreset1")) {
+                settingsData_->endScaleValue = {0.0f, 0.0f, 0.0f};
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("大きくなる##esPreset2")) {
+                settingsData_->endScaleValue = {
+                    settingsData_->scaleMax * 2.0f,
+                    settingsData_->scaleMax * 2.0f,
+                    settingsData_->scaleMax * 2.0f};
+            }
+            ImGui::Unindent();
+        }
+
+        ImGui::PopStyleColor(); // CheckMark
+        ImGui::Unindent();
+    }
+
+    // =======================================================
+    // 3.6. 回転（マゼンタ系）
+    // =======================================================
+    PushSectionColor(ImVec4(0.75f, 0.3f, 0.75f, 1.0f));
+    bool openRotation = ImGui::CollapsingHeader("  回転");
+    PopSectionColor();
+    if (openRotation) {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.5f, 1.0f, 1.0f));
+
+        // ---- ランダム初期角度 ----
+        {
+            bool v = settingsData_->enableRandomRotation != 0;
+            if (ImGui::Checkbox("ランダム初期角度##rr", &v))
+                settingsData_->enableRandomRotation = v ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("発生時にランダムな角度で出現します (ラジアン)");
+            if (v) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.15f, 0.35f, 0.5f));
+
+                // ラジアン→度数法で表示しつつ内部はラジアンで保持
+                float rotMinDeg = settingsData_->rotationMin * (180.0f / 3.14159265f);
+                float rotMaxDeg = settingsData_->rotationMax * (180.0f / 3.14159265f);
+
+                if (ImGui::DragFloat("角度 Min(°)##rrMin", &rotMinDeg, 1.0f, -360.0f, 360.0f, "%.1f°"))
+                    settingsData_->rotationMin = rotMinDeg * (3.14159265f / 180.0f);
+                if (ImGui::DragFloat("角度 Max(°)##rrMax", &rotMaxDeg, 1.0f, -360.0f, 360.0f, "%.1f°"))
+                    settingsData_->rotationMax = rotMaxDeg * (3.14159265f / 180.0f);
+
+                ImGui::PopStyleColor();
+
+                ImGui::Spacing();
+                ImGui::TextDisabled("プリセット:");
+                ImGui::SameLine();
+                if (ImGui::SmallButton("全方向##rrPreset1")) {
+                    settingsData_->rotationMin = 0.0f;
+                    settingsData_->rotationMax = 6.2831853f;
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("上半分##rrPreset2")) {
+                    settingsData_->rotationMin = 0.0f;
+                    settingsData_->rotationMax = 3.14159265f;
+                }
+                ImGui::Unindent();
+            }
+        }
+
+        ImGui::Spacing();
+
+        // ---- ランダム角速度 ----
+        {
+            bool v = settingsData_->enableRandomAngularVelocity != 0;
+            if (ImGui::Checkbox("ランダム角速度##rav", &v))
+                settingsData_->enableRandomAngularVelocity = v ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("発生時にランダムな回転速度を設定します\n正=時計回り / 負=反時計回り (ラジアン/秒)");
+            if (v) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.15f, 0.35f, 0.5f));
+
+                // ラジアン/秒 → 度数/秒 で表示
+                float avMinDeg = settingsData_->angularVelocityMin * (180.0f / 3.14159265f);
+                float avMaxDeg = settingsData_->angularVelocityMax * (180.0f / 3.14159265f);
+
+                if (ImGui::DragFloat("角速度 Min(°/s)##ravMin", &avMinDeg, 1.0f, -3600.0f, 3600.0f, "%.1f°/s"))
+                    settingsData_->angularVelocityMin = avMinDeg * (3.14159265f / 180.0f);
+                if (ImGui::DragFloat("角速度 Max(°/s)##ravMax", &avMaxDeg, 1.0f, -3600.0f, 3600.0f, "%.1f°/s"))
+                    settingsData_->angularVelocityMax = avMaxDeg * (3.14159265f / 180.0f);
+
+                ImGui::PopStyleColor();
+
+                ImGui::Spacing();
+                ImGui::TextDisabled("プリセット:");
+                ImGui::SameLine();
+                if (ImGui::SmallButton("ゆっくり##ravPreset1")) {
+                    settingsData_->angularVelocityMin = -1.0f;
+                    settingsData_->angularVelocityMax = 1.0f;
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("速い##ravPreset2")) {
+                    settingsData_->angularVelocityMin = -6.2831853f;
+                    settingsData_->angularVelocityMax = 6.2831853f;
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("一方向##ravPreset3")) {
+                    settingsData_->angularVelocityMin = 1.5707963f;
+                    settingsData_->angularVelocityMax = 3.14159265f;
+                }
                 ImGui::Unindent();
             }
         }

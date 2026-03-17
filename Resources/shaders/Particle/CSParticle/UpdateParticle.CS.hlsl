@@ -599,11 +599,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
             float sinWave = sin(p.currentTime * gSettings.sinScaleFrequency) * 0.5f + 0.5f;
             sinMul = 1.0f + (sinWave * 2.0f - 1.0f) * gSettings.sinScaleAmplitude;
         }
-        if (gSettings.enableLifetimeScale || gSettings.enableSinScale)
+        if (gSettings.enableEndScale)
+        {
+            // initialScale→endScaleValue を lifeRatio で補間（既存の lifetimeMul/sinMul とは独立）
+            p.scale = lerp(p.initialScale, p.endScale, lifeRatio) * sinMul;
+        }
+        else if (gSettings.enableLifetimeScale || gSettings.enableSinScale)
         {
             p.scale = p.initialScale * lifetimeMul * sinMul;
         }
     }
+    
+        // 回転更新
+    p.rotation += p.angularVelocity * gPerFrame.deltaTime;
         
     p.color.a = saturate(alpha);
         

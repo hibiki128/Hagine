@@ -46,8 +46,7 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
             fieldMgr->GetFieldsSrvHandle(),
             receiveFields_ ? fieldMgr->GetFieldCountResource()
                            : fieldMgr->GetZeroFieldCountResource(),
-            fieldMgr->GetOverrideSrvHandle()
-        );
+            fieldMgr->GetOverrideSrvHandle());
         group->CountAliveParticles();
         dxCommon_->TransitionSRVBarrier();
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
@@ -541,6 +540,18 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "curlNoiseBlendMode", group->GetSettingsData()->curlNoiseBlendMode);
         data->Save(prefix + "curlNoisePosRandomStrength", group->GetSettingsData()->curlNoisePosRandomStrength);
         data->Save(prefix + "curlNoiseAttractCenter", group->GetSettingsData()->curlNoiseAttractCenter);
+
+        // ★ 終了スケール設定の保存
+        data->Save(prefix + "enableEndScale", group->GetSettingsData()->enableEndScale);
+        data->Save(prefix + "endScaleValue", group->GetSettingsData()->endScaleValue);
+
+        // ★ 回転設定の保存
+        data->Save(prefix + "enableRandomRotation", group->GetSettingsData()->enableRandomRotation);
+        data->Save(prefix + "rotationMin", group->GetSettingsData()->rotationMin);
+        data->Save(prefix + "rotationMax", group->GetSettingsData()->rotationMax);
+        data->Save(prefix + "enableRandomAngularVelocity", group->GetSettingsData()->enableRandomAngularVelocity);
+        data->Save(prefix + "angularVelocityMin", group->GetSettingsData()->angularVelocityMin);
+        data->Save(prefix + "angularVelocityMax", group->GetSettingsData()->angularVelocityMax);
     }
 }
 
@@ -640,6 +651,18 @@ void ParticleCSEmitter::LoadSetting() {
         settings.curlNoiseBlendMode = data->Load<uint32_t>(prefix + "curlNoiseBlendMode", 0);
         settings.curlNoisePosRandomStrength = data->Load(prefix + "curlNoisePosRandomStrength", 0.0f);
         settings.curlNoiseAttractCenter = data->Load<Vector3>(prefix + "curlNoiseAttractCenter", {0.0f, 0.0f, 0.0f});
+
+        // ★ 終了スケール設定のロード
+        settings.enableEndScale = data->Load<uint32_t>(prefix + "enableEndScale", 0);
+        settings.endScaleValue = data->Load<Vector3>(prefix + "endScaleValue", {0.0f, 0.0f, 0.0f});
+
+        // ★ 回転設定のロード
+        settings.enableRandomRotation = data->Load<uint32_t>(prefix + "enableRandomRotation", 0);
+        settings.rotationMin = data->Load(prefix + "rotationMin", 0.0f);
+        settings.rotationMax = data->Load(prefix + "rotationMax", 6.2831853f);
+        settings.enableRandomAngularVelocity = data->Load<uint32_t>(prefix + "enableRandomAngularVelocity", 0);
+        settings.angularVelocityMin = data->Load(prefix + "angularVelocityMin", -3.14159f);
+        settings.angularVelocityMax = data->Load(prefix + "angularVelocityMax", 3.14159f);
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -751,6 +774,18 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.curlNoiseBlendMode = data->Load<uint32_t>(prefix + "curlNoiseBlendMode", 0);
         settings.curlNoisePosRandomStrength = data->Load(prefix + "curlNoisePosRandomStrength", 0.0f);
         settings.curlNoiseAttractCenter = data->Load<Vector3>(prefix + "curlNoiseAttractCenter", {0.0f, 0.0f, 0.0f});
+
+        // ★ 終了スケール設定のロード
+        settings.enableEndScale = data->Load<uint32_t>(prefix + "enableEndScale", 0);
+        settings.endScaleValue = data->Load<Vector3>(prefix + "endScaleValue", {0.0f, 0.0f, 0.0f});
+
+        // ★ 回転設定のロード
+        settings.enableRandomRotation = data->Load<uint32_t>(prefix + "enableRandomRotation", 0);
+        settings.rotationMin = data->Load(prefix + "rotationMin", 0.0f);
+        settings.rotationMax = data->Load(prefix + "rotationMax", 6.2831853f);
+        settings.enableRandomAngularVelocity = data->Load<uint32_t>(prefix + "enableRandomAngularVelocity", 0);
+        settings.angularVelocityMin = data->Load(prefix + "angularVelocityMin", -3.14159f);
+        settings.angularVelocityMax = data->Load(prefix + "angularVelocityMax", 3.14159f);
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));

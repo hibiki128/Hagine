@@ -1,7 +1,7 @@
 {
     "emitFromSurface": 1,
     "frequency": 0.0010000000474974513,
-    "frequencyTime": 188.7051239013672,
+    "frequencyTime": 197.84242248535156,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -124,7 +124,7 @@
         "z": 0.0
     },
     "isAuto": true,
-    "isVisible": true,
+    "isVisible": false,
     "modelPath": "",
     "particleGroupCount": 1,
     "primitiveType": 9,

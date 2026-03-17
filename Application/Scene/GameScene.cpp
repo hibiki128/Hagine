@@ -96,6 +96,7 @@ void GameScene::Initialize() {
 void GameScene::Finalize() {
     BaseScene::Finalize();
     fadeOut_->Finalize();
+    aroundField_->Finalize();
     sceneManager_->SetClearTime(ClearTimer_);
     if (player_ptr->GetIsAlive()) {
         sceneManager_->SetHP(player_ptr->GetHP());

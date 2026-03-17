@@ -197,4 +197,27 @@ void main(uint3 DTid : SV_DispatchThreadID)
     // フリーリストから再利用されたパーティクルに古いフラグが残ると
     // 「一度きり上書き」が永遠にスキップされるためリセットする
     gParticles[particleIndex].settingsOverrideFlags = uint2(0u, 0u);
+    
+    // ---- 終了スケール ----
+    gParticles[particleIndex].endScale = gSettings.endScaleValue;
+    
+    // ---- 初期回転 ----
+    if (gSettings.enableRandomRotation)
+    {
+        gParticles[particleIndex].rotation = lerp(gSettings.rotationMin, gSettings.rotationMax, generator.Generate1d());
+    }
+    else
+    {
+        gParticles[particleIndex].rotation = 0.0f;
+    }
+    
+    // ---- 角速度 ----
+    if (gSettings.enableRandomAngularVelocity)
+    {
+        gParticles[particleIndex].angularVelocity = lerp(gSettings.angularVelocityMin, gSettings.angularVelocityMax, generator.Generate1d());
+    }
+    else
+    {
+        gParticles[particleIndex].angularVelocity = 0.0f;
+    }
 }

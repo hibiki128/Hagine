@@ -33,3 +33,7 @@ void AroundField::DrawParticle(const ViewProjection &viewProjection) {
 void AroundField::Debug() {
     fieldParticle_->DrawImGui();
 }
+
+void AroundField::Finalize() {
+    ParticleCSEmitter::ClearNameCounter("AroundField");
+}

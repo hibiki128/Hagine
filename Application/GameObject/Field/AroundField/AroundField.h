@@ -14,6 +14,8 @@ class AroundField : public BaseObject {
 
     void Debug();
 
+    void Finalize();
+
   private:
     CylinderCollider *AroundField_ = nullptr;
     std::unique_ptr<ParticleCSEmitter> fieldParticle_ = nullptr;
