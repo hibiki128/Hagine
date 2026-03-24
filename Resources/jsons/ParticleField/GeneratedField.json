@@ -10,12 +10,16 @@
         "y": 0.0,
         "z": 0.0
     },
+    "emitSpawnCount": 500000,
+    "emitSpawnLifeTimeMax": 0.25,
+    "emitSpawnLifeTimeMin": 0.25,
     "enableColorMultiply": 0,
+    "enableEmitSpawn": 1,
     "enableForceTrail": 0,
     "enableLifeDrain": 0,
-    "enableSettingsOverride": 1,
+    "enableSettingsOverride": 0,
     "enabled": true,
-    "falloff": 1.0,
+    "falloff": 1.100000023841858,
     "fieldType": 0,
     "lifeTimeDrain": 0.0,
     "name": "GeneratedField",
@@ -110,11 +114,11 @@
     },
     "ov_vortexStrength": 5.0,
     "position": {
-        "x": -397.5,
-        "y": 410.8999938964844,
-        "z": 0.0
+        "x": 40.5,
+        "y": 0.0,
+        "z": 144.60000610351563
     },
-    "radius": 3.0,
-    "strength": 0.0,
+    "radius": 3.5,
+    "strength": 69.55000305175781,
     "trailSpawnDistanceOverride": 0.0
 }

@@ -1,9 +1,9 @@
 #pragma once
 #include "Data/DataHandler.h"
 #include "Line/DrawLine3D.h"
+#include "ParticleCSFieldSettingOverride.h"
 #include <DirectXCommon.h>
 #include <Graphics/Srv/SrvManager.h>
-#include"ParticleCSFieldSettingOverride.h"
 #include <Particle/ParticleCommon.h>
 #include <string>
 #include <type/Vector3.h>
@@ -46,6 +46,12 @@ struct ParticleFieldData {
 
     // --- 一度きり設定上書き ---
     uint32_t enableSettingsOverride = 0; // 0=無効 1=有効
+
+    // --- Emit時スポーン判定 ---
+    uint32_t enableEmitSpawn = 0;       // 1=このフィールド範囲内にのみEmit
+    float emitSpawnLifeTimeMin = 0.25f; // enableEmitSpawn=1 時の寿命Min
+    float emitSpawnLifeTimeMax = 0.25f; // enableEmitSpawn=1 時の寿命Max
+    uint32_t emitSpawnCount = 0;        // enableEmitSpawn=1 時の発生数（0=エミッター依存）
 };
 
 /// =============================================

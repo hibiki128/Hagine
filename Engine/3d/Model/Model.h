@@ -126,6 +126,4 @@ class Model {
     Animator *animator_; // アニメーター
     Skin *skin_;         // スキン
     Bone *bone_;         // ボーン
-
-    static std::unordered_set<std::string> jointNames; // ジョイント名セット
 };

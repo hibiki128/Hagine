@@ -364,7 +364,13 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitte
     srvRange2[0].BaseShaderRegister = 2; // t2
     srvRange2[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[10] = {};
+    D3D12_DESCRIPTOR_RANGE srvRange3[1] = {};
+    srvRange3[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRange3[0].NumDescriptors = 1;
+    srvRange3[0].BaseShaderRegister = 3; // t2
+    srvRange3[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[12] = {};
 
     // [0] u0
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -401,21 +407,31 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitte
     rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[6].Descriptor.ShaderRegister = 2;
     rootParameters[6].Descriptor.RegisterSpace = 0;
-    // [7] t0 (TriangleInfo)
-    rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameters[7].DescriptorTable.pDescriptorRanges = srvRange0;
-    rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(srvRange0);
+    // [7] b3
+    rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    // [8] t1 (TriangleCDF)
+    rootParameters[7].Descriptor.ShaderRegister = 3;
+    rootParameters[7].Descriptor.RegisterSpace = 0;
+    // [8] t0 (TriangleInfo)
     rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameters[8].DescriptorTable.pDescriptorRanges = srvRange1;
-    rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(srvRange1);
+    rootParameters[8].DescriptorTable.pDescriptorRanges = srvRange0;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(srvRange0);
     rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    // [9] t2 (EdgeInfo)
+    // [9] t1 (TriangleCDF)
     rootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameters[9].DescriptorTable.pDescriptorRanges = srvRange2;
-    rootParameters[9].DescriptorTable.NumDescriptorRanges = _countof(srvRange2);
+    rootParameters[9].DescriptorTable.pDescriptorRanges = srvRange1;
+    rootParameters[9].DescriptorTable.NumDescriptorRanges = _countof(srvRange1);
     rootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    // [10] t2 (EdgeInfo)
+    rootParameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[10].DescriptorTable.pDescriptorRanges = srvRange2;
+    rootParameters[10].DescriptorTable.NumDescriptorRanges = _countof(srvRange2);
+    rootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    // [11] t3 (ParticleField)
+    rootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[11].DescriptorTable.pDescriptorRanges = srvRange3;
+    rootParameters[11].DescriptorTable.NumDescriptorRanges = _countof(srvRange3);
+    rootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
     descriptionRootSignature.NumParameters = _countof(rootParameters);

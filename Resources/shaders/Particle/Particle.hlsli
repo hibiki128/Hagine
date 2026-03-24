@@ -194,6 +194,13 @@ struct ParticleField
     float4 colorMultiplier;
     
     uint enableSettingsOverride;
+
+    // --- Emit時スポーン判定 ---
+    // 1 のとき、このフィールドの範囲内にEmit座標があるパーティクルのみ発生させる
+    uint enableEmitSpawn;
+    float emitSpawnLifeTimeMin; // enableEmitSpawn=1 時に使う寿命Min
+    float emitSpawnLifeTimeMax; // enableEmitSpawn=1 時に使う寿命Max
+    uint emitSpawnCount; // enableEmitSpawn=1 時の毎秒発生数（0=エミッター依存）
 };
 
 static const uint OB_LifeTimeMin = 0u;

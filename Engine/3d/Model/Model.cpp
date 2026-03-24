@@ -7,8 +7,6 @@
 #include "sstream"
 #include <SkyBox/SkyBox.h>
 
-std::unordered_set<std::string> Model::jointNames = {};
-
 void Model::Initialize(ModelCommon *modelCommon) {
     modelCommon_ = modelCommon;
     srvManager_ = SrvManager::GetInstance();
@@ -212,13 +210,15 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
             aiBone *bone = mesh->mBones[boneIndex];
             std::string jointName = bone->mName.C_Str();
 
-            // ジョイント名の重複確認（グローバルで管理）
-            if (jointNames.find(jointName) == jointNames.end()) {
-                jointNames.insert(jointName);
+            // キーを "メッシュインデックス:ジョイント名" にしてメッシュごとに独立管理
+            std::string skinKey = std::to_string(meshIndex) + ":" + jointName;
 
-                JointWeightData &jointWeightData = modelData.skinClusterData[jointName];
+            // キーが既に存在するか確認してから挿入
+            bool isNewEntry = (modelData.skinClusterData.find(skinKey) == modelData.skinClusterData.end());
+            JointWeightData &jointWeightData = modelData.skinClusterData[skinKey];
 
-                // バインドポーズ行列の逆行列の計算
+            // 新規エントリの場合のみ inverseBindPoseMatrix を計算
+            if (isNewEntry) {
                 aiMatrix4x4 bindPoseMatrixAssimp = bone->mOffsetMatrix.Inverse();
                 aiVector3D scale, translate;
                 aiQuaternion rotate;
@@ -233,12 +233,10 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
             }
 
             // ウェイト情報の格納
-            JointWeightData &jointWeightData = modelData.skinClusterData[jointName];
             for (uint32_t weightIndex = 0; weightIndex < bone->mNumWeights; ++weightIndex) {
-                uint32_t globalVertexIndex = bone->mWeights[weightIndex].mVertexId;
-
+                uint32_t localVertexIndex = bone->mWeights[weightIndex].mVertexId;
                 jointWeightData.vertexWeights.push_back({bone->mWeights[weightIndex].mWeight,
-                                                         globalVertexIndex,
+                                                         localVertexIndex,
                                                          meshIndex});
             }
         }
@@ -246,9 +244,6 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
         // メッシュに関連するマテリアルインデックスを保存
         currentMesh.materialIndex = mesh->mMaterialIndex;
     }
-
-    // jointNamesクリア
-    jointNames.clear();
 
     // マテリアル配列のサイズを事前に確保
     modelData.materials.resize(scene->mNumMaterials);
