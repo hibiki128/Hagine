@@ -470,6 +470,7 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("emitFromSurface", emitterMeshData_->emitFromSurface);
     data->Save("modelPath", modelPath_);
     data->Save("primitiveType", static_cast<int>(primitiveType_));
+    data->Save("receiveFields", receiveFields_);
 
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
 
@@ -566,6 +567,7 @@ void ParticleCSEmitter::LoadSetting() {
     emitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
     emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
+    receiveFields_ = data->Load("receiveFields", false);
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
@@ -688,6 +690,7 @@ void ParticleCSEmitter::LoadCloneSetting() {
     emitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
     emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
+    receiveFields_ = data->Load("receiveFields", false);
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));

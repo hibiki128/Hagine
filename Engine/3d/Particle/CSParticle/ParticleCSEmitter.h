@@ -219,5 +219,5 @@ class ParticleCSEmitter {
     bool isActive_ = false;
     bool isVisible_ = true;
     bool emitOnce_ = false;
-    bool receiveFields_ = true;
+    bool receiveFields_ = false;
 };
