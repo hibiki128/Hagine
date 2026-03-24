@@ -11,8 +11,8 @@
 #include <Application/Utility/Shake/Shake.h>
 #include <Input.h>
 #include <Particle/CSParticle/ParticleCSEmitter.h>
-#include <application/Utility/ComboSystem/ComboSystem.h>
 #include <Particle/CSParticle/ParticleCSFieldManager.h>
+#include <application/Utility/ComboSystem/ComboSystem.h>
 
 class ChargeShot;
 class FollowCamera;
@@ -371,7 +371,7 @@ class Player : public BaseObject {
     float maxSpeed_ = 0.0f;  // 最大速度
     float accelRate_ = 0.0f; // 加速度レート
     float dt_;               // デルタタイム
-    float HP_ = 100.0f;
+    float HP_ = 1.0f;
     float maxHP_ = 100.0f;
     float energy_ = 100.0f;                      // 現在のエネルギー
     float maxEnergy_ = 100.0f;                   // 最大エネルギー
@@ -426,12 +426,12 @@ class Player : public BaseObject {
     std::unique_ptr<Shake> shake_;                   // シェイク
     std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<ParticleEmitter> hitEmitter_;
-    std::unique_ptr<DeathStaging> deathStaging_;     // 死亡演出
-    std::unique_ptr<MakanAttackSkill> makanAttack_;  // 必殺技
+    std::unique_ptr<DeathStaging> deathStaging_;    // 死亡演出
+    std::unique_ptr<MakanAttackSkill> makanAttack_; // 必殺技
     std::unique_ptr<GamePad> gamePad_;
 
-    ViewProjection *vp_;                          // カメラ
-    OBBCollider *playerCollider_ = nullptr;       // コライダー
+    ViewProjection *vp_;                    // カメラ
+    OBBCollider *playerCollider_ = nullptr; // コライダー
     AABBCollider *playerWallCollider_ = nullptr;
     PlayerHand *leftHand_ptr_;                    // 左手
     PlayerHand *rightHand_ptr_;                   // 右手
@@ -445,6 +445,12 @@ class Player : public BaseObject {
     EasingData<float> tiltEase_;       // 回転角イージング
     Quaternion baseRotation_;          // 通常時の向き
     Quaternion tiltRotation_;          // のけぞり用の回転
+
+    // 死亡時の回転リセット
+    static constexpr float kDeathRotationResetDuration = 0.5f; // 回転リセット時間
+    bool isDeathRotationReset_ = false;                        // 死亡時の回転リセット中フラグ
+    float deathRotationResetTimer_ = 0.0f;                     // 回転リセット経過時間
+    Quaternion deathRotationStart_;                            // リセット開始時の回転
 
     std::string previousStateName = "";
 

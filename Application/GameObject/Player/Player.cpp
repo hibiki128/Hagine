@@ -38,7 +38,7 @@ void Player::Init(const std::string objectName) {
     playerWallCollider_ = AddAABBCollider("player_WallCollider");
     playerWallCollider_->SetTag("PlayerWall");
     playerWallCollider_->AddCollisionMask("EnemyWall");
-    playerWallCollider_->SetSize({2.0f, 1000.0f, 2.0f});
+    playerWallCollider_->SetSize({2.5f, 1000.0f, 2.5f});
 
     playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         this->OnCollisionEnter(other);
@@ -140,7 +140,21 @@ void Player::Update() {
     }
 
     if (!isAlive_) {
+        // 死亡時：ダメージリアクションの回転をイージングでリセット
+        if (isDeathRotationReset_) {
+            deathRotationResetTimer_ += dt_;
+            float t = deathRotationResetTimer_ / kDeathRotationResetDuration;
+            if (t >= 1.0f) {
+                t = 1.0f;
+                isDeathRotationReset_ = false;
+            }
+            // EaseOutQuad: t を二次イージングで補間
+            float easedT = 1.0f - (1.0f - t) * (1.0f - t);
 
+            // Y軸回転（baseRotation_）のみ維持し、X軸傾き（tiltRotation_）を除去した目標回転へ
+            Quaternion targetRotation = baseRotation_;
+            transform_->quateRotation_ = Quaternion::Slerp(deathRotationStart_, targetRotation, easedT);
+        }
     } else {
         generatedField_->data.position = GetWorldPosition();
         gamePad_->Update();
@@ -258,6 +272,16 @@ void Player::Update() {
 
         UpdateShadowScale();
         if (HP_ <= kMinHP) {
+            if (isAlive_) {
+                // 死亡した瞬間：回転リセットのイージングを開始
+                isDeathRotationReset_ = true;
+                deathRotationResetTimer_ = 0.0f;
+                deathRotationStart_ = transform_->quateRotation_;
+
+                // ダメージリアクション中なら即座に終了させる
+                isDamageReact_ = false;
+                SetAlpha(kAlphaOpaque);
+            }
             isAlive_ = false;
         }
 
