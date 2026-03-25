@@ -301,6 +301,14 @@ void ParticleCSFieldManager::SaveFieldData(DataHandler &data, const ParticleFiel
     if (field.data.enableSettingsOverride) {
         SaveOverrideData(data, field.override_);
     }
+
+    // Emit時スポーン判定
+    data.Save("enableEmitSpawn", field.data.enableEmitSpawn);
+    if (field.data.enableEmitSpawn) {
+        data.Save("emitSpawnLifeTimeMin", field.data.emitSpawnLifeTimeMin);
+        data.Save("emitSpawnLifeTimeMax", field.data.emitSpawnLifeTimeMax);
+        data.Save("emitSpawnCount", field.data.emitSpawnCount);
+    }
 }
 
 void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &field) {
@@ -332,6 +340,14 @@ void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &fie
     field.data.enableSettingsOverride = data.Load("enableSettingsOverride", field.data.enableSettingsOverride);
     if (field.data.enableSettingsOverride) {
         LoadOverrideData(data, field.override_);
+    }
+
+    // Emit時スポーン判定
+    field.data.enableEmitSpawn = data.Load("enableEmitSpawn", field.data.enableEmitSpawn);
+    if (field.data.enableEmitSpawn) {
+        field.data.emitSpawnLifeTimeMin = data.Load("emitSpawnLifeTimeMin", field.data.emitSpawnLifeTimeMin);
+        field.data.emitSpawnLifeTimeMax = data.Load("emitSpawnLifeTimeMax", field.data.emitSpawnLifeTimeMax);
+        field.data.emitSpawnCount = data.Load("emitSpawnCount", field.data.emitSpawnCount);
     }
 }
 
@@ -735,6 +751,49 @@ void ParticleCSFieldManager::DrawImGui() {
             }
             if (settingsOvEnabled) {
                 DrawOverrideImGui(f.override_, i);
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            // --- Emit時スポーン判定 ---
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 1.0f, 0.6f, 1.0f));
+            ImGui::TextUnformatted("Emit スポーン判定");
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::TextDisabled("(?)");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(
+                    "有効にすると、このフィールドの範囲内に座標がある\n"
+                    "パーティクルのみEmitされます。\n"
+                    "エミッター全体ではなく触れた部分だけに生成したい場合に使います。\n"
+                    "大きさ・間隔はエミッター側の設定に従います。");
+
+            bool emitSpawn = (f.data.enableEmitSpawn != 0);
+            if (ImGui::Checkbox(("有効##es" + std::to_string(i)).c_str(), &emitSpawn)) {
+                f.data.enableEmitSpawn = emitSpawn ? 1u : 0u;
+            }
+            if (emitSpawn) {
+                ImGui::Indent();
+                ImGui::PushItemWidth(180.0f);
+
+                int spawnCount = (int)f.data.emitSpawnCount;
+                if (ImGui::DragInt(("発生数/秒##esCount" + std::to_string(i)).c_str(), &spawnCount, 100, 0, 500000)) {
+                    f.data.emitSpawnCount = (uint32_t)std::max(0, spawnCount);
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("0 の場合はエミッター側の emitCount をそのまま使います。");
+
+                ImGui::DragFloat(("寿命 Min##esLTMin" + std::to_string(i)).c_str(),
+                                 &f.data.emitSpawnLifeTimeMin, 0.01f, 0.0f, 60.0f, "%.2f s");
+                ImGui::DragFloat(("寿命 Max##esLTMax" + std::to_string(i)).c_str(),
+                                 &f.data.emitSpawnLifeTimeMax, 0.01f, 0.0f, 60.0f, "%.2f s");
+                // Min > Max にならないよう補正
+                if (f.data.emitSpawnLifeTimeMin > f.data.emitSpawnLifeTimeMax)
+                    f.data.emitSpawnLifeTimeMin = f.data.emitSpawnLifeTimeMax;
+
+                ImGui::PopItemWidth();
+                ImGui::Unindent();
             }
 
             ImGui::PopItemWidth();

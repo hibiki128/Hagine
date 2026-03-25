@@ -206,13 +206,55 @@ void ParticleCSEmitter::EmitterDisPatch() {
 
         // 三角形情報を設定
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
-            commandList->SetComputeRootDescriptorTable(7, triangleInfoSrvHandle_.second);
-            commandList->SetComputeRootDescriptorTable(8, triangleCDFSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(8, triangleInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(9, triangleCDFSrvHandle_.second);
         }
 
         // エッジ情報を設定
         if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
-            commandList->SetComputeRootDescriptorTable(9, edgeInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(10, edgeInfoSrvHandle_.second);
+        }
+
+        // フィールド判定用SRV/CBVを設定
+        // ルートシグネチャのスロット対応:
+        //   [7]  b3 = FieldCountCB (gFieldCB)
+        //   [11] t3 = ParticleField (gFields)
+        {
+            auto *fieldManager = ParticleCSFieldManager::GetInstance();
+            commandList->SetComputeRootDescriptorTable(11, fieldManager->GetFieldsSrvHandle().second);
+
+            bool hasEmitSpawnField = false;
+            if (receiveFields_) {
+                for (const auto &field : fieldManager->GetFields()) {
+                    if (field.enabled && field.data.enableEmitSpawn) {
+                        hasEmitSpawnField = true;
+                        break;
+                    }
+                }
+            }
+
+            auto fieldCountResource = hasEmitSpawnField
+                                          ? fieldManager->GetFieldCountResource()
+                                          : fieldManager->GetZeroFieldCountResource();
+            commandList->SetComputeRootConstantBufferView(7, fieldCountResource->GetGPUVirtualAddress());
+
+            // emitSpawnCount > 0 のフィールドがあれば emitCount を上書き
+            // emitSpawnLifeTimeMax > 0 のフィールドがあれば lifeTimeMin/Max も上書き
+            // (lifeTime=0 のままだとUpdateシェーダーでゼロ除算が発生するため)
+            if (hasEmitSpawnField) {
+                for (const auto &field : fieldManager->GetFields()) {
+                    if (!field.enabled || !field.data.enableEmitSpawn)
+                        continue;
+                    if (field.data.emitSpawnCount > 0) {
+                        settings->emitCount = field.data.emitSpawnCount;
+                    }
+                    if (field.data.emitSpawnLifeTimeMax > 0.0f) {
+                        settings->lifeTimeMin = field.data.emitSpawnLifeTimeMin;
+                        settings->lifeTimeMax = field.data.emitSpawnLifeTimeMax;
+                    }
+                    break;
+                }
+            }
         }
 
         if (emitterMeshData_->emit == 0 || settings->emitCount == 0) {

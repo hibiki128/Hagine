@@ -27,7 +27,7 @@ void Enemy::Init(const std::string objectName) {
     enemyWallCollider_ = AddAABBCollider("enemy_WallCollider");
     enemyWallCollider_->SetTag("EnemyWall");
     enemyWallCollider_->AddCollisionMask("PlayerWall");
-    enemyWallCollider_->SetSize({2.0f, 1000.0f, 2.0f});
+    enemyWallCollider_->SetSize({2.5f, 1000.0f, 2.5f});
 
     enemyCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         this->OnCollisionEnter(other);
@@ -105,7 +105,7 @@ void Enemy::Update() {
         transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
     shadow_->Update();
 
-    if (started_ && !isPause_&&target_->GetIsAlive()) {
+    if (started_ && !isPause_ && target_->GetIsAlive()) {
         DamageUpdate();
         RecoverEnergy();
 
