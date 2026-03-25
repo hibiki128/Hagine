@@ -97,6 +97,17 @@ class ParticleCSEmitter {
     void SetReceiveFields(bool receive) { receiveFields_ = receive; }
     bool GetReceiveFields() const { return receiveFields_; }
 
+    // フィールドが触れた時だけEmitするモード
+    // true  = enableEmitSpawnフィールドの接触面積からemitCountを動的計算してDispatch
+    // false = 通常の自動Emit（フィールドは物理影響のみ）
+    void SetEmitOnlyOnFieldContact(bool enable) { emitOnlyOnFieldContact_ = enable; }
+    bool GetEmitOnlyOnFieldContact() const { return emitOnlyOnFieldContact_; }
+
+    // フィールド接触時Emitモードで使う「単位面積あたりの発生数」
+    // emitCount = emitDensityPerUnitArea_ * フィールド接触面積 として計算される
+    void SetEmitDensityPerUnitArea(float density) { emitDensityPerUnitArea_ = density; }
+    float GetEmitDensityPerUnitArea() const { return emitDensityPerUnitArea_; }
+
     // フィールドグループID（このIDと一致するフィールドのみ影響を受ける）
     // -1 = 全フィールドから影響を受ける（デフォルト）
     void SetFieldGroupId(int32_t id) { fieldGroupId_ = id; }
@@ -169,6 +180,9 @@ class ParticleCSEmitter {
     void CreateModelTriangles();
     void CreateModelEdges();
 
+    // フィールド接触時Emitモード用：フィールドとエミッターの接触面積からemitCountを計算
+    uint32_t CalcEmitCountFromFieldContact(ParticleCSSettings *settings);
+
   private:
     /// ==============================================
     /// private variables
@@ -225,5 +239,7 @@ class ParticleCSEmitter {
     bool isVisible_ = true;
     bool emitOnce_ = false;
     bool receiveFields_ = true;
-    int32_t fieldGroupId_ = -1; // -1=全フィールド対象, 0以上=同じIDのフィールドのみ対象
+    int32_t fieldGroupId_ = -1;            // -1=全フィールド対象, 0以上=同じIDのフィールドのみ対象
+    bool emitOnlyOnFieldContact_ = false;  // true=フィールド接触時のみEmit
+    float emitDensityPerUnitArea_ = 10.0f; // 接触面積あたりの発生密度
 };

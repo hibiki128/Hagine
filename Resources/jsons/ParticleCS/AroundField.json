@@ -1,8 +1,9 @@
 {
     "emitFromSurface": 1,
+    "emitOnlyOnFieldContact": true,
     "fieldGroupId": 0,
     "frequency": 0.0010000000474974513,
-    "frequencyTime": 199.11007690429688,
+    "frequencyTime": 211.7158966064453,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -136,7 +137,7 @@
         "y": 0.0,
         "z": 0.0
     },
-    "isAuto": false,
+    "isAuto": true,
     "isVisible": false,
     "modelPath": "",
     "particleGroupCount": 1,
