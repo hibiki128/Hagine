@@ -309,6 +309,9 @@ void ParticleCSFieldManager::SaveFieldData(DataHandler &data, const ParticleFiel
         data.Save("emitSpawnLifeTimeMax", field.data.emitSpawnLifeTimeMax);
         data.Save("emitSpawnCount", field.data.emitSpawnCount);
     }
+
+    // グループID
+    data.Save("groupId", field.data.groupId);
 }
 
 void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &field) {
@@ -349,6 +352,9 @@ void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &fie
         field.data.emitSpawnLifeTimeMax = data.Load("emitSpawnLifeTimeMax", field.data.emitSpawnLifeTimeMax);
         field.data.emitSpawnCount = data.Load("emitSpawnCount", field.data.emitSpawnCount);
     }
+
+    // グループID
+    field.data.groupId = data.Load("groupId", field.data.groupId);
 }
 
 void ParticleCSFieldManager::SaveOverrideData(DataHandler &data, const ParticleFieldSettingsOverride &ov) {
@@ -794,6 +800,33 @@ void ParticleCSFieldManager::DrawImGui() {
 
                 ImGui::PopItemWidth();
                 ImGui::Unindent();
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            // --- グループID ---
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.85f, 0.4f, 1.0f));
+            ImGui::TextUnformatted("グループID");
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::TextDisabled("(?)");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(
+                    "-1 = 全エミッターに影響する（デフォルト）\n"
+                    "0以上 = 同じIDを持つエミッターにのみ影響する\n"
+                    "エミッター側は SetFieldGroupId() で設定します。");
+            ImGui::PushItemWidth(120.0f);
+            int gid = f.data.groupId;
+            if (ImGui::DragInt(("##groupId" + std::to_string(i)).c_str(), &gid, 1, -1, 255)) {
+                f.data.groupId = std::max(-1, gid);
+            }
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            if (f.data.groupId == -1) {
+                ImGui::TextDisabled("(全エミッター対象)");
+            } else {
+                ImGui::Text("(ID: %d のエミッターのみ)", f.data.groupId);
             }
 
             ImGui::PopItemWidth();

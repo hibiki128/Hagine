@@ -52,6 +52,12 @@ struct ParticleFieldData {
     float emitSpawnLifeTimeMin = 0.25f; // enableEmitSpawn=1 時の寿命Min
     float emitSpawnLifeTimeMax = 0.25f; // enableEmitSpawn=1 時の寿命Max
     uint32_t emitSpawnCount = 0;        // enableEmitSpawn=1 時の発生数（0=エミッター依存）
+
+    // --- グループID ---
+    // エミッター側の fieldGroupId と一致するフィールドのみ影響を与える。
+    // -1 = 全エミッターに影響する（デフォルト）
+    int32_t groupId = -1;
+    float groupIdPadding[3] = {0.f, 0.f, 0.f}; // 16バイトアライメント
 };
 
 /// =============================================

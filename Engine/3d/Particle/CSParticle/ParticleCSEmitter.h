@@ -96,6 +96,11 @@ class ParticleCSEmitter {
 
     void SetReceiveFields(bool receive) { receiveFields_ = receive; }
     bool GetReceiveFields() const { return receiveFields_; }
+
+    // フィールドグループID（このIDと一致するフィールドのみ影響を受ける）
+    // -1 = 全フィールドから影響を受ける（デフォルト）
+    void SetFieldGroupId(int32_t id) { fieldGroupId_ = id; }
+    int32_t GetFieldGroupId() const { return fieldGroupId_; }
     bool GetAcitve() const { return isActive_; }
 
     Vector3 GetAnchorPoint() const {
@@ -219,5 +224,6 @@ class ParticleCSEmitter {
     bool isActive_ = false;
     bool isVisible_ = true;
     bool emitOnce_ = false;
-    bool receiveFields_ = false;
+    bool receiveFields_ = true;
+    int32_t fieldGroupId_ = -1; // -1=全フィールド対象, 0以上=同じIDのフィールドのみ対象
 };

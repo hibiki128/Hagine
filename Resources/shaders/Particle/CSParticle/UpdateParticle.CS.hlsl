@@ -40,6 +40,16 @@ FieldEffectResult ApplyFields(float3 velocity, float3 particlePos, float deltaTi
     {
         ParticleField f = gFields[fi];
 
+        // groupIdフィルタリング
+        // フィールドのgroupId==-1 → 全エミッターに影響
+        // エミッターのemitterFieldGroupId==-1 → 全フィールドから影響受ける
+        // それ以外は両者が一致するときのみ処理する
+        bool groupMatch = (f.groupId == -1) ||
+                          (gPerFrame.emitterFieldGroupId == -1) ||
+                          (f.groupId == gPerFrame.emitterFieldGroupId);
+        if (!groupMatch)
+            continue;
+
         float3 toParticle = particlePos - f.position;
         float distSq = dot(toParticle, toParticle);
         float radiusSq = f.radius * f.radius;

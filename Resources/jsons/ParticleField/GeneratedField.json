@@ -21,6 +21,7 @@
     "enabled": true,
     "falloff": 1.100000023841858,
     "fieldType": 0,
+    "groupId": 0,
     "lifeTimeDrain": 0.0,
     "name": "GeneratedField",
     "ov_acceleration": {
@@ -114,11 +115,11 @@
     },
     "ov_vortexStrength": 5.0,
     "position": {
-        "x": 40.5,
-        "y": 0.0,
-        "z": 144.60000610351563
+        "x": -74.3412857055664,
+        "y": 15.055122375488281,
+        "z": -122.40501403808594
     },
-    "radius": 3.5,
+    "radius": 7.0,
     "strength": 69.55000305175781,
     "trailSpawnDistanceOverride": 0.0
 }

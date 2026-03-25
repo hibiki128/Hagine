@@ -189,6 +189,7 @@ void ParticleCSEmitter::EmitterDisPatch() {
     uint32_t groupIndex = 0;
     for (auto &group : particleGroups_) {
         group->GetPerFrameData()->groupId = groupIndex;
+        group->GetPerFrameData()->emitterFieldGroupId = fieldGroupId_;
 
         ParticleCSSettings *settings = group->GetSettingsData();
 
@@ -512,7 +513,10 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("emitFromSurface", emitterMeshData_->emitFromSurface);
     data->Save("modelPath", modelPath_);
     data->Save("primitiveType", static_cast<int>(primitiveType_));
+
+    // フィールド影響設定
     data->Save("receiveFields", receiveFields_);
+    data->Save("fieldGroupId", fieldGroupId_);
 
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
 
@@ -609,10 +613,12 @@ void ParticleCSEmitter::LoadSetting() {
     emitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
     emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
-    receiveFields_ = data->Load("receiveFields", false);
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
+    // フィールド影響設定
+    receiveFields_ = data->Load("receiveFields", false);
+    fieldGroupId_ = data->Load("fieldGroupId", -1);
 
     if (!modelPath_.empty()) {
         LoadModel(modelPath_);
@@ -732,10 +738,12 @@ void ParticleCSEmitter::LoadCloneSetting() {
     emitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
     emitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
     emitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
-    receiveFields_ = data->Load("receiveFields", false);
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
+    // フィールド影響設定
+    receiveFields_ = data->Load("receiveFields", false);
+    fieldGroupId_ = data->Load("fieldGroupId", -1);
 
     if (!modelPath_.empty()) {
         LoadModel(modelPath_);
@@ -976,6 +984,28 @@ void ParticleCSEmitter::DrawImGui() {
             }
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("オフにするとParticleFieldManagerのフィールドが\nこのエミッターに作用しなくなります");
+            }
+
+            if (receiveFields_) {
+                ImGui::Indent();
+                ImGui::PushItemWidth(120.0f);
+                int fgid = fieldGroupId_;
+                if (ImGui::DragInt("フィールドグループID##fgid", &fgid, 1, -1, 255)) {
+                    fieldGroupId_ = std::max(-1, fgid);
+                }
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                ImGui::TextDisabled("(?)");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip(
+                        "-1 = 全フィールドから影響を受ける（デフォルト）\n"
+                        "0以上 = 同じIDのフィールドのみから影響を受ける");
+                if (fieldGroupId_ == -1) {
+                    ImGui::TextDisabled("  全フィールド対象");
+                } else {
+                    ImGui::Text("  ID: %d のフィールドのみ対象", fieldGroupId_);
+                }
+                ImGui::Unindent();
             }
 
             ImGui::Spacing();

@@ -1,5 +1,6 @@
 {
     "emitFromSurface": 1,
+    "fieldGroupId": 0,
     "frequency": 0.0010000000474974513,
     "frequencyTime": 199.11007690429688,
     "group_0_acceleration": {

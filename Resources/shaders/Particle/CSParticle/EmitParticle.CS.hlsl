@@ -30,9 +30,8 @@ float3 ApplyScale(float3 vertex, float3 scale)
     return vertex * scale;
 }
 
-// enableEmitSpawn=1 のフィールドが存在する場合、pos がそのいずれかの範囲内にあるか判定。
-// enableEmitSpawn=1 のフィールドが1つも存在しない場合は true を返す（制限なし）。
-// hitFieldIndex: 最初にヒットしたフィールドのインデックス（-1=ヒットなし）
+// enableEmitSpawn=1 かつ emitterFieldGroupId と groupId が一致するフィールドのみ判定。
+// 該当フィールドが1つも存在しない場合は true を返す（制限なし）。
 bool ShouldEmitAtPosition(float3 pos, out int hitFieldIndex)
 {
     hitFieldIndex = -1;
@@ -41,6 +40,16 @@ bool ShouldEmitAtPosition(float3 pos, out int hitFieldIndex)
     for (uint i = 0; i < gFieldCB.fieldCount; i++)
     {
         if (gFields[i].enableEmitSpawn == 0)
+            continue;
+
+        // groupIdフィルタリング
+        // フィールドのgroupId==-1 → 全エミッターに影響
+        // エミッターのemitterFieldGroupId==-1 → 全フィールドから影響受ける
+        // それ以外は両者が一致するときのみ
+        bool groupMatch = (gFields[i].groupId == -1) ||
+                          (gPerFrame.emitterFieldGroupId == -1) ||
+                          (gFields[i].groupId == gPerFrame.emitterFieldGroupId);
+        if (!groupMatch)
             continue;
 
         hasEmitSpawnField = true;

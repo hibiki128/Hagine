@@ -79,7 +79,7 @@ struct PerFrame {
     float time;
     float deltaTime;
     uint32_t groupId;
-    float padding;
+    int32_t emitterFieldGroupId; // -1=全フィールド対象, 0以上=同IDのフィールドのみ対象
 };
 
 struct EmitterData {
