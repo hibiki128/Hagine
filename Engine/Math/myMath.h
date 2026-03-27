@@ -8,8 +8,8 @@
 #include <type/Vector3.h>
 
 struct Sphere {
-    Vector3 center; // !< 中心点
-    float radius;   // !< 半径
+    Vector3 center = {0.0f, 0.0f, 0.0f}; // !< 中心点
+    float radius = 0.0f;                 // !< 半径
 };
 struct AABB {
     Vector3 min; //!< 最小点
@@ -119,6 +119,6 @@ Quaternion MatrixToQuaternion(const Matrix4x4 &matrix);
 Vector3 RotateVector(const Vector3 &vec, const Quaternion &quat);
 
 Vector3 ExtractScale(const Matrix4x4 &matrix);
-    //// デバッグ用
+//// デバッグ用
 // void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 // void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);

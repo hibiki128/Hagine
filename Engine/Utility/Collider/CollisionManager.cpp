@@ -1,4 +1,4 @@
-#include"Collider/CollisionManager.h"
+#include "Collider/CollisionManager.h"
 #include "myMath.h"
 #include <algorithm>
 
@@ -220,13 +220,27 @@ bool CollisionManager::TestCollision(ColliderBase *a, ColliderBase *b) {
         return IsCollision(aabb->GetAABB(), obb->GetOBB());
     }
 
+    // OBB - Cylinder
+    if (typeA == ColliderType::OBB && typeB == ColliderType::Cylinder) {
+        auto *obb = static_cast<OBBCollider *>(a);
+        auto *cyl = static_cast<CylinderCollider *>(b);
+        return IsCollisionOBBCylinder(obb, cyl);
+    }
+    if (typeA == ColliderType::Cylinder && typeB == ColliderType::OBB) {
+        auto *cyl = static_cast<CylinderCollider *>(a);
+        auto *obb = static_cast<OBBCollider *>(b);
+        return IsCollisionOBBCylinder(obb, cyl);
+    }
+
     return false;
 }
 
 void CollisionManager::DebugDraw(const ViewProjection &viewProjection) {
-    for (auto &[tag, colliders] : collidersByTag_) {
-        for (auto *collider : colliders) {
-            collider->DebugDraw(viewProjection);
+    if (isVisible_) {
+        for (auto &[tag, colliders] : collidersByTag_) {
+            for (auto *collider : colliders) {
+                collider->DebugDraw(viewProjection);
+            }
         }
     }
 }
@@ -285,6 +299,137 @@ bool CollisionManager::CalculateDepenetration(OBBCollider *colliderA, OBBCollide
 
     // MTV = 最小貫通軸 × 貫通深度
     outMTV = mtvAxis * minPenetration;
+    return true;
+}
+
+bool CollisionManager::CalculateDepenetration(AABBCollider *colliderA, AABBCollider *colliderB, Vector3 &outMTV) {
+    const AABB &a = colliderA->GetAABB();
+    const AABB &b = colliderB->GetAABB();
+
+    // 各軸のオーバーラップ量
+    float overlapX = std::min(a.max.x, b.max.x) - std::max(a.min.x, b.min.x);
+    float overlapZ = std::min(a.max.z, b.max.z) - std::max(a.min.z, b.min.z);
+    float overlapY = std::min(a.max.y, b.max.y) - std::max(a.min.y, b.min.y);
+
+    // いずれかの軸でオーバーラップがなければ衝突なし
+    if (overlapX <= 0.0f || overlapY <= 0.0f || overlapZ <= 0.0f) {
+        return false;
+    }
+
+    // AとBの中心間ベクトル（「AがBに対してどちら側にいるか」を判定）
+    Vector3 centerA = (a.min + a.max) * 0.5f;
+    Vector3 centerB = (b.min + b.max) * 0.5f;
+    Vector3 d = centerA - centerB; // B→Aの方向
+
+    // Y軸は絶対に選ばないよう大きな値にしておく
+    // XとZのうち浅い方向に押し返す
+    if (overlapX <= overlapZ) {
+        // X方向に押し返す。dのX成分の符号でAをどちらに押すか決める
+        float sign = (d.x >= 0.0f) ? 1.0f : -1.0f;
+        outMTV = {sign * overlapX, 0.0f, 0.0f};
+    } else {
+        // Z方向に押し返す
+        float sign = (d.z >= 0.0f) ? 1.0f : -1.0f;
+        outMTV = {0.0f, 0.0f, sign * overlapZ};
+    }
+
+    return true;
+}
+
+bool CollisionManager::IsCollisionOBBCylinder(OBBCollider *obbCol, CylinderCollider *cylinder) {
+    Vector3 obbCenter = obbCol->GetOBB().scaleCenterRotated;
+    Vector3 cylCenter = cylinder->GetCenterPosition();
+
+    float dx = obbCenter.x - cylCenter.x;
+    float dz = obbCenter.z - cylCenter.z;
+    float distXZ = std::sqrt(dx * dx + dz * dz);
+
+    const OBB &obb = obbCol->GetOBB();
+    float obbRadiusXZ = std::sqrt(obb.size.x * obb.size.x + obb.size.z * obb.size.z);
+    float cylRadius = cylinder->GetRadius();
+    float halfH = cylinder->GetHeight() * 0.5f;
+
+    float obbTop = obbCenter.y + obb.size.y;
+    float obbBot = obbCenter.y - obb.size.y;
+
+    if (cylinder->IsInward()) {
+        // 側面・天井・床のいずれかを超えたら衝突
+        bool sideOut = (distXZ + obbRadiusXZ) > cylRadius;
+        bool ceilOut = obbTop > (cylCenter.y + halfH);
+        bool floorOut = obbBot < (cylCenter.y - halfH);
+        return sideOut || ceilOut || floorOut;
+    }
+
+    return (distXZ - obbRadiusXZ) < cylRadius;
+}
+
+bool CollisionManager::CalculateDepenetrationOBBCylinder(OBBCollider *obbCol, CylinderCollider *cylinder, Vector3 &outMTV) {
+    Vector3 obbCenter = obbCol->GetOBB().scaleCenterRotated;
+    Vector3 cylCenter = cylinder->GetCenterPosition();
+
+    float dx = obbCenter.x - cylCenter.x;
+    float dz = obbCenter.z - cylCenter.z;
+    float distXZ = std::sqrt(dx * dx + dz * dz);
+
+    const OBB &obb = obbCol->GetOBB();
+    float obbRadiusXZ = std::sqrt(obb.size.x * obb.size.x + obb.size.z * obb.size.z);
+    float cylRadius = cylinder->GetRadius();
+    float halfH = cylinder->GetHeight() * 0.5f;
+
+    if (cylinder->IsInward()) {
+        outMTV = {0.0f, 0.0f, 0.0f};
+        bool hit = false;
+
+        // ===== 側面 =====
+        float penetrationXZ = (distXZ + obbRadiusXZ) - cylRadius;
+        if (penetrationXZ > 0.0f) {
+            if (distXZ < 0.0001f) {
+                outMTV.x += 0.0f;
+                outMTV.z += -penetrationXZ;
+            } else {
+                float nx = dx / distXZ;
+                float nz = dz / distXZ;
+                outMTV.x += -nx * penetrationXZ;
+                outMTV.z += -nz * penetrationXZ;
+            }
+            hit = true;
+        }
+
+        // ===== 天井 =====
+        float obbTop = obbCenter.y + obb.size.y;
+        float ceilPenetration = obbTop - (cylCenter.y + halfH);
+        if (ceilPenetration > 0.0f) {
+            outMTV.y += -ceilPenetration; // 下に押し戻す
+            hit = true;
+        }
+
+        // ===== 床 =====
+        float obbBot = obbCenter.y - obb.size.y;
+        float floorPenetration = (cylCenter.y - halfH) - obbBot;
+        if (floorPenetration > 0.0f) {
+            outMTV.y += floorPenetration; // 上に押し戻す
+            hit = true;
+        }
+
+        if (!hit) {
+            return false;
+        }
+
+    } else {
+        // 障害物（外側に押し出す）側面のみ
+        float penetration = cylRadius - (distXZ - obbRadiusXZ);
+        if (penetration <= 0.0f) {
+            return false;
+        }
+        if (distXZ < 0.0001f) {
+            outMTV = {0.0f, 0.0f, penetration};
+        } else {
+            float nx = dx / distXZ;
+            float nz = dz / distXZ;
+            outMTV = {nx * penetration, 0.0f, nz * penetration};
+        }
+    }
+
     return true;
 }
 

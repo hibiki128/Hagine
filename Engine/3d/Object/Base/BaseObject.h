@@ -4,6 +4,7 @@
 #include "Collider/type/AABBCollider.h"
 #include "Collider/type/OBBCollider.h"
 #include "Collider/type/SphereCollider.h"
+#include "Collider/type/CylinderCollider.h"
 #include "Data/DataHandler.h"
 #include "Object/Object3d.h"
 #include "Transform/ObjColor.h"
@@ -80,6 +81,7 @@ class BaseObject {
     SphereCollider *AddSphereCollider(const std::string &name = "");
     AABBCollider *AddAABBCollider(const std::string &name = "");
     OBBCollider *AddOBBCollider(const std::string &name = "");
+    CylinderCollider *AddCylinderCollider(const std::string &name = "");
 
     // 中心座標取得
     WorldTransform *GetWorldTransform() { return transform_.get(); }

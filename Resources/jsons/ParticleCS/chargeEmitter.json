@@ -1,22 +1,66 @@
 {
     "emitFromSurface": 0,
+    "emitOnlyOnFieldContact": false,
+    "fieldContactEmitCount": 1000,
+    "fieldGroupId": -1,
     "frequency": 0.10000000149011612,
-    "frequencyTime": 0.07244822382926941,
+    "frequencyTime": 0.0247983168810606,
+    "group_0_acceleration": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_angularVelocityMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_angularVelocityMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
     "group_0_blendMode": 2,
+    "group_0_curlNoiseAttractCenter": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_curlNoiseAttractStrength": 0.0,
+    "group_0_curlNoiseBlendMode": 0,
+    "group_0_curlNoiseOctaves": 1,
+    "group_0_curlNoisePosRandomStrength": 0.0,
+    "group_0_curlNoiseScale": 1.0,
+    "group_0_curlNoiseStrength": 1.0,
+    "group_0_curlNoiseTimeScale": 1.0,
     "group_0_emitCount": 4,
+    "group_0_enableAcceleration": 0,
+    "group_0_enableCurlNoise": 0,
+    "group_0_enableEndScale": 0,
     "group_0_enableGather": 1,
     "group_0_enableGatherForTrail": 0,
     "group_0_enableGravity": 0,
     "group_0_enableLifetimeScale": 1,
+    "group_0_enableLifetimeVelocityDamping": 0,
+    "group_0_enableRadialVelocity": 0,
+    "group_0_enableRandomAngularVelocity": 0,
     "group_0_enableRandomColor": 0,
+    "group_0_enableRandomRotation": 0,
     "group_0_enableSinScale": 0,
     "group_0_enableTrail": 1,
+    "group_0_enableVelocityDamping": 0,
     "group_0_enableVortex": 0,
     "group_0_enableVortexForTrail": 0,
+    "group_0_enablebilboard": 0,
     "group_0_endColor": {
-        "w": 1.0,
+        "w": 0.0,
         "x": 0.5372549295425415,
         "y": 1.0,
+        "z": 0.0
+    },
+    "group_0_endScaleValue": {
+        "x": 0.0,
+        "y": 0.0,
         "z": 0.0
     },
     "group_0_gatherStartRatio": -1.0,
@@ -36,6 +80,7 @@
         "y": -9.800000190734863,
         "z": 0.0
     },
+    "group_0_lifetimeVelocityDampingStart": 0.0,
     "group_0_maxLifetime": 1.5,
     "group_0_maxScale": 1.0,
     "group_0_maxTrailPerParticle": 20,
@@ -52,6 +97,23 @@
         "z": 0.0
     },
     "group_0_name": "charge",
+    "group_0_radialVelocityCenter": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_radialVelocityRandomness": 0.0,
+    "group_0_radialVelocityStrength": 0.0,
+    "group_0_rotationMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_rotationMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
     "group_0_sinScaleAmplitude": 0.30000001192092896,
     "group_0_sinScaleFrequency": 5.0,
     "group_0_startColor": {
@@ -76,6 +138,7 @@
     },
     "group_0_trailSpawnDistance": 0.009999999776482582,
     "group_0_trailVelocityScale": 0.30000001192092896,
+    "group_0_velocityDampingFactor": 0.0,
     "group_0_vortexAxis": {
         "x": 0.0,
         "y": 0.0,
@@ -92,11 +155,12 @@
         "y": 0.0,
         "z": 0.0
     },
-    "isAuto": true,
+    "isAuto": false,
     "isVisible": false,
     "modelPath": "",
     "particleGroupCount": 1,
     "primitiveType": 3,
+    "receiveFields": false,
     "rotation": {
         "w": 1.0,
         "x": 0.0,

@@ -5,6 +5,7 @@
 #include "State/Fly/PlayerStateFlyIdle.h"
 
 #include "Bullet/ChargeShot/ChargeShot.h"
+#include "Collider/CollisionManager.h"
 #include "Object/Base/BaseObjectManager.h"
 #include "State/Action/PlayerEnergyCharge.h"
 #include "State/Action/PlayerStateRush.h"
@@ -19,7 +20,6 @@
 #include <Particle/CSParticle/ParticleCSEditor.h>
 #include <Particle/ParticleEditor.h>
 #include <cmath>
-#include"Collider/CollisionManager.h"
 
 Player::Player() {
 }
@@ -33,13 +33,23 @@ void Player::Init(const std::string objectName) {
     playerCollider_ = AddOBBCollider("player_Collider");
     playerCollider_->SetTag("Player");
     playerCollider_->AddCollisionMask("Enemy");
+    playerCollider_->AddCollisionMask("CylinderField");
+
+    playerWallCollider_ = AddAABBCollider("player_WallCollider");
+    playerWallCollider_->SetTag("PlayerWall");
+    playerWallCollider_->AddCollisionMask("EnemyWall");
+    playerWallCollider_->SetSize({2.5f, 1000.0f, 2.5f});
+
+    playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        this->OnCollisionEnter(other);
+    });
 
     playerCollider_->SetOnCollision([this](ColliderBase *other) {
         this->OnCollision(other);
     });
 
-      playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
-        this->OnCollisionEnter(other);
+    playerWallCollider_->SetOnCollision([this](ColliderBase *other) {
+        this->OnCollision(other);
     });
 
     states_["Idle"] = std::make_unique<PlayerStateIdle>();
@@ -117,6 +127,8 @@ void Player::Init(const std::string objectName) {
 
     gamePad_ = std::make_unique<GamePad>();
     gamePad_->Init(0);
+
+    generatedField_ = ParticleCSFieldManager::GetInstance()->GetField(0); // 0番目のフィールドを使用
 }
 
 void Player::Update() {
@@ -128,9 +140,23 @@ void Player::Update() {
     }
 
     if (!isAlive_) {
+        // 死亡時：ダメージリアクションの回転をイージングでリセット
+        if (isDeathRotationReset_) {
+            deathRotationResetTimer_ += dt_;
+            float t = deathRotationResetTimer_ / kDeathRotationResetDuration;
+            if (t >= 1.0f) {
+                t = 1.0f;
+                isDeathRotationReset_ = false;
+            }
+            // EaseOutQuad: t を二次イージングで補間
+            float easedT = 1.0f - (1.0f - t) * (1.0f - t);
 
+            // Y軸回転（baseRotation_）のみ維持し、X軸傾き（tiltRotation_）を除去した目標回転へ
+            Quaternion targetRotation = baseRotation_;
+            transform_->quateRotation_ = Quaternion::Slerp(deathRotationStart_, targetRotation, easedT);
+        }
     } else {
-
+        generatedField_->data.position = GetWorldPosition();
         gamePad_->Update();
 
         shadow_->GetLocalPosition() = {transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
@@ -246,6 +272,16 @@ void Player::Update() {
 
         UpdateShadowScale();
         if (HP_ <= kMinHP) {
+            if (isAlive_) {
+                // 死亡した瞬間：回転リセットのイージングを開始
+                isDeathRotationReset_ = true;
+                deathRotationResetTimer_ = 0.0f;
+                deathRotationStart_ = transform_->quateRotation_;
+
+                // ダメージリアクション中なら即座に終了させる
+                isDamageReact_ = false;
+                SetAlpha(kAlphaOpaque);
+            }
             isAlive_ = false;
         }
 
@@ -320,30 +356,45 @@ void Player::ChangeState(const std::string &stateName) {
     }
 }
 
-void Player::OnCollision(ColliderBase* other) {
-    if (other->GetTag() == "Enemy") {
-        //SetDamage(kEnemyCollisionDamage);
-
-        // ===== めり込み排斥 =====
-        // 相手コライダーもOBBであることを確認
-        if (other->GetType() == ColliderType::OBB) {
-            auto* enemyOBB = static_cast<OBBCollider*>(other);
-            Vector3 mtv;
-            // playerCollider_（自分）を enemyOBB から押し出す方向のMTVを取得
-            if (CollisionManager::GetInstance()->CalculateDepenetration(playerCollider_, enemyOBB, mtv)) {
-                // MTVはAをBから押し出す方向 → プレイヤーをそのまま移動
-                transform_->translation_ -= mtv;
-                // 排斥方向への速度成分を除去（壁ずりを防ぐ）
-                float dot = velocity_.Dot(mtv.Normalize());
-                if (dot < 0.0f) {
-                    velocity_ -= mtv.Normalize() * dot;
-                }
+void Player::OnCollision(ColliderBase *other) {
+    // フィールド円柱との押し戻し
+    if (other->GetTag() == "CylinderField") {
+        if (other->GetType() != ColliderType::Cylinder) {
+            return;
+        }
+        auto *cyl = static_cast<CylinderCollider *>(other);
+        Vector3 mtv;
+        if (CollisionManager::GetInstance()->CalculateDepenetrationOBBCylinder(playerCollider_, cyl, mtv)) {
+            transform_->translation_ += mtv;
+            Vector3 mtvDir = mtv.Normalize();
+            float dot = velocity_.Dot(mtvDir);
+            if (dot < 0.0f) {
+                velocity_ -= mtvDir * dot;
             }
+        }
+        return;
+    }
+
+    // PlayerWall との押し戻し（AABB）
+    if (other->GetType() != ColliderType::AABB) {
+        return;
+    }
+    auto *otherAABB = static_cast<AABBCollider *>(other);
+    Vector3 mtv;
+    if (CollisionManager::GetInstance()->CalculateDepenetration(playerWallCollider_, otherAABB, mtv)) {
+        if (mtv.Length() < 0.0001f) {
+            return;
+        }
+        transform_->translation_ += mtv;
+        Vector3 mtvDir = mtv.Normalize();
+        float dot = velocity_.Dot(mtvDir);
+        if (dot < 0.0f) {
+            velocity_ -= mtvDir * dot;
         }
     }
 }
 
-void Player::OnCollisionEnter(ColliderBase* other) {
+void Player::OnCollisionEnter(ColliderBase *other) {
     if (other->GetTag() == "EnemyBullet") {
         hitEmitter_->SetPosition(transform_->translation_);
         hitEmitter_->UpdateOnce();

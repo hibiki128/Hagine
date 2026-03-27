@@ -2,11 +2,12 @@
 #define NOMINMAX
 #include "ColliderBase.h"
 #include "type/AABBCollider.h"
+#include "type/CylinderCollider.h"
 #include "type/OBBCollider.h"
 #include "type/SphereCollider.h"
+#include <Camera/ViewProjection/ViewProjection.h>
 #include <unordered_map>
 #include <vector>
-#include <Camera/ViewProjection/ViewProjection.h>
 
 class CollisionManager {
   public:
@@ -25,11 +26,15 @@ class CollisionManager {
     void DebugDraw(const ViewProjection &viewProjection);
 
     bool CalculateDepenetration(OBBCollider *a, OBBCollider *b, Vector3 &outMTV);
+    bool CalculateDepenetration(AABBCollider *a, AABBCollider *b, Vector3 &outMTV);
+    bool IsCollisionOBBCylinder(OBBCollider *obb, CylinderCollider *cylinder);
+    bool CalculateDepenetrationOBBCylinder(OBBCollider *obb, CylinderCollider *cylinder, Vector3 &outMTV);
 
 #ifdef _DEBUG
     // ImGuiでタグマネージャーUI表示
     void ImGuiTagManager() {
         ColliderTagManager::GetInstance()->ImGuiTagManager();
+        ImGui::Checkbox("コライダーを表示", &isVisible_);
     }
 #endif
 
@@ -82,4 +87,6 @@ class CollisionManager {
     };
 
     std::unordered_map<CollisionPair, bool, CollisionPairHash> collisionStates_;
+
+    bool isVisible_ = false;
 };

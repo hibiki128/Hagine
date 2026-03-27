@@ -12,7 +12,8 @@
 enum class ColliderType {
     Sphere,
     AABB,
-    OBB
+    OBB,
+    Cylinder
 };
 
 class CollisionManager;

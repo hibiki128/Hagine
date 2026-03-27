@@ -373,6 +373,7 @@ class Enemy : public BaseObject {
     Quaternion tiltRotation_;    // のけぞり用の回転
 
     OBBCollider *enemyCollider_ = nullptr;
+    AABBCollider *enemyWallCollider_ = nullptr;
 
     EnemyHand *leftHand_ptr_;  // 左手
     EnemyHand *rightHand_ptr_; // 右手

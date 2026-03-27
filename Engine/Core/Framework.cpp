@@ -167,6 +167,11 @@ void Framework::Initialize() {
     particleCSGroupManager_->Initialize();
     ///---------------------------------
 
+    ///------ParticleCSFieldManager------
+    particleCSFieldManager_ = ParticleCSFieldManager::GetInstance();
+    particleCSFieldManager_->Initialize();
+    ///---------------------------------
+
     ///--------ShortcutManager------------
     shortcutManager_ = ShortcutManager::GetInstance();
     shortcutManager_->Initialize(input_);
@@ -317,6 +322,8 @@ void Framework::Update() {
     /// deltaTimeの更新
     Frame::Update();
 
+    particleCSFieldManager_->Update();
+
     sceneManager_->Update();
 
     baseObjectManager_->Update();
@@ -357,6 +364,10 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("fireWork_Trail");
     particleCSEditor_->AddParticleEmitter("ChargeAura");
     particleCSEditor_->AddParticleEmitter("enemyChargeAura");
+    particleCSEditor_->AddParticleEmitter("AroundField");
+
+    particleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
+
 }
 
 void Framework::PlaySounds() {

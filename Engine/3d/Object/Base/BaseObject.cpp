@@ -891,6 +891,17 @@ OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
     return collider;
 }
 
+CylinderCollider* BaseObject::AddCylinderCollider(const std::string &name) {
+    auto *collider = new CylinderCollider();
+    std::string colliderName = name.empty() ? objectName_ + "_CylinderCollider" : name;
+    collider->SetName(colliderName);
+    collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+    collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+    colliders_.push_back(collider);
+    CollisionManager::GetInstance()->Register(collider);
+    return collider;
+}
+
 void BaseObject::DebugObject() {
 #ifdef _DEBUG
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));

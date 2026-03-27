@@ -31,6 +31,7 @@ void GameScene::Initialize() {
     enemyUI_ = std::make_unique<EnemyUI>();
     fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
+    aroundField_ = std::make_unique<AroundField>();
 
 #ifdef _DEBUG
     behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
@@ -43,6 +44,7 @@ void GameScene::Initialize() {
     player_->Init("player");
     enemy_->Init("enemy");
     ground_->Init("Ground");
+    aroundField_->Init("Around_Field");
     followCamera_->Init();
     startCamera_->Init();
     deathCamera_->Init();
@@ -59,6 +61,7 @@ void GameScene::Initialize() {
     player_->SetVp(&vp_);
     enemy_->SetVp(&vp_);
     enemy_->SetTarget(player_.get());
+    ground_->GetLighting() = false;
 
     /// ===================================================
     /// ポインタ共有
@@ -93,6 +96,7 @@ void GameScene::Initialize() {
 void GameScene::Finalize() {
     BaseScene::Finalize();
     fadeOut_->Finalize();
+    aroundField_->Finalize();
     sceneManager_->SetClearTime(ClearTimer_);
     if (player_ptr->GetIsAlive()) {
         sceneManager_->SetHP(player_ptr->GetHP());
@@ -119,6 +123,7 @@ void GameScene::Update() {
     // enemy_ptr->SetBehaviorTree() は Initialize() で1回だけ呼ぶ
 
     ground_->Update();
+    aroundField_->Update();
     playerUI_->Update();
     enemyUI_->Update();
     fadeOut_->Update();
@@ -154,9 +159,11 @@ void GameScene::Draw() {
 
     skyBox_->Draw(vp_);
     ground_->Draw(vp_);
+    aroundField_->Draw(vp_);
 
     player_ptr->DrawParticle(vp_);
     enemy_ptr->DrawParticle(vp_);
+    aroundField_->DrawParticle(vp_);
 
     fadeOut_->Draw(vp_);
     gameUI_->Draw();
@@ -191,6 +198,7 @@ void GameScene::AddObjectSetting() {
 
 void GameScene::AddParticleSetting() {
     fadeOut_->ImGui();
+    aroundField_->Debug();
 }
 
 void GameScene::CameraUpdate() {

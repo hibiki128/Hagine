@@ -51,6 +51,9 @@ class ColliderTagManager {
         AddTag("PlayerHand");
         AddTag("EnemyBullet");
         AddTag("EnemyHand");
+        AddTag("PlayerWall");
+        AddTag("EnemyWall");
+        AddTag("CylinderField");
     }
 
 #ifdef _DEBUG

@@ -1,0 +1,125 @@
+{
+    "colorMultiplier": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.06451630592346191,
+        "z": 1.0
+    },
+    "direction": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitSpawnCount": 1,
+    "emitSpawnLifeTimeMax": 0.75,
+    "emitSpawnLifeTimeMin": 0.5,
+    "enableColorMultiply": 0,
+    "enableEmitSpawn": 1,
+    "enableForceTrail": 0,
+    "enableLifeDrain": 0,
+    "enableSettingsOverride": 0,
+    "enabled": true,
+    "falloff": 0.10000000149011612,
+    "fieldType": 0,
+    "groupId": 0,
+    "lifeTimeDrain": 0.0,
+    "name": "GeneratedField",
+    "ov_acceleration": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "ov_curlNoiseAttractStrength": 0.0,
+    "ov_curlNoiseBlendMode": 0,
+    "ov_curlNoiseOctaves": 3,
+    "ov_curlNoisePosRandom": 0.0,
+    "ov_curlNoiseScale": 1.0,
+    "ov_curlNoiseStrength": 1.0,
+    "ov_curlNoiseTimeScale": 1.0,
+    "ov_enableAcceleration": 0,
+    "ov_enableCurlNoise": 0,
+    "ov_enableGather": 0,
+    "ov_enableGravity": 0,
+    "ov_enableLifetimeScale": 0,
+    "ov_enableLifetimeVelDamping": 0,
+    "ov_enableRandomColor": 0,
+    "ov_enableSinScale": 0,
+    "ov_enableTrail": 0,
+    "ov_enableVelocityDamping": 0,
+    "ov_enableVortex": 0,
+    "ov_endColor": {
+        "w": 0.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "ov_gatherStartRatio": 0.5,
+    "ov_gatherStrength": 2.0,
+    "ov_gatherTarget": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "ov_gravity": {
+        "x": 0.0,
+        "y": -9.800000190734863,
+        "z": 0.0
+    },
+    "ov_lifeTimeMax": 0.25,
+    "ov_lifeTimeMin": 0.25,
+    "ov_lifetimeVelDampingStart": 0.5,
+    "ov_maskHi": 0,
+    "ov_maskLo": 3,
+    "ov_maxTrailPerParticle": 5,
+    "ov_scaleMax": 1.5,
+    "ov_scaleMin": 0.5,
+    "ov_sinScaleAmplitude": 0.5,
+    "ov_sinScaleFrequency": 1.0,
+    "ov_startColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "ov_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "ov_trailInheritVelocity": 1,
+    "ov_trailLifeTimeScale": 0.5,
+    "ov_trailMinLifeTime": 0.30000001192092896,
+    "ov_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "ov_trailSpawnDistance": 0.10000000149011612,
+    "ov_trailVelocityScale": 0.30000001192092896,
+    "ov_velocityDampingFactor": 0.949999988079071,
+    "ov_velocityMax": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+    },
+    "ov_velocityMin": {
+        "x": -0.5,
+        "y": -0.5,
+        "z": -0.5
+    },
+    "ov_vortexAxis": {
+        "x": 0.0,
+        "y": 1.0,
+        "z": 0.0
+    },
+    "ov_vortexStrength": 5.0,
+    "position": {
+        "x": 124.59710693359375,
+        "y": 10.707682609558105,
+        "z": -2.8162660598754883
+    },
+    "radius": 7.0,
+    "strength": 20.200000762939453,
+    "trailSpawnDistanceOverride": 0.0
+}

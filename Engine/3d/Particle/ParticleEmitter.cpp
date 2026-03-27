@@ -7,6 +7,7 @@
 #include <Particle/ParticleEditor.h>
 #include <set>
 #include <type/Quaternion.h>
+
 // コンストラクタ
 ParticleEmitter::ParticleEmitter() {}
 
@@ -21,9 +22,12 @@ void ParticleEmitter::Initialize(std::string name) {
         LoadParticleGroup();
         datas_ = std::make_unique<DataHandler>("Particle", name);
     }
+    SyncSettingsToTransform();
+    lastTranslation_ = transform_.translation_;
+    lastRotation_ = transform_.quateRotation_;
+    lastScale_ = transform_.scale_;
 }
 
-// Update関数
 void ParticleEmitter::Update() {
     // 経過時間を進める
     elapsedTime_ += Frame::DeltaTime();
@@ -36,11 +40,8 @@ void ParticleEmitter::Update() {
 }
 
 void ParticleEmitter::UpdateOnce() {
-    isActive_ = false;
-    if (!isActive_) {
-        Emit(); // パーティクルを発生させる
-        isActive_ = true;
-    }
+    SyncSettingsToTransform();
+    EmitInternal();
 }
 
 void ParticleEmitter::Draw(const ViewProjection &vp_) {
@@ -84,18 +85,38 @@ void ParticleEmitter::DrawEmitter() {
     }
 }
 
-// Emit関数
-void ParticleEmitter::Emit() {
+// -------------------------------------------------------
+// SyncSettingsToTransform
+//   transform の値を全グループの ParticleSetting に反映する
+//   dirty判定で変化があったときだけ呼ぶ
+// -------------------------------------------------------
+void ParticleEmitter::SyncSettingsToTransform() {
+    if (!Manager_)
+        return;
+    for (auto &[groupName, setting] : particleSettings_) {
+        setting.translate = transform_.translation_;
+        setting.rotation = transform_.quateRotation_.ToEulerAngles();
+        setting.scale = transform_.scale_;
+        Manager_->SetParticleSetting(groupName, setting);
+    }
+}
+
+// -------------------------------------------------------
+// EmitInternal
+//   設定同期なしでパーティクルを発射するだけの内部用関数
+// -------------------------------------------------------
+void ParticleEmitter::EmitInternal() {
     if (Manager_) {
-        for (auto &[groupName, setting] : particleSettings_) {
-            // ここでtransform_の値をParticleSettingに反映
-            setting.translate = transform_.translation_;
-            setting.rotation = transform_.quateRotation_.ToEulerAngles();
-            setting.scale = transform_.scale_;
-            Manager_->SetParticleSetting(groupName, setting);
-        }
         Manager_->Emit();
     }
+}
+
+// -------------------------------------------------------
+// Emit（外部から明示的に呼ぶ用。設定更新込み）
+// -------------------------------------------------------
+void ParticleEmitter::Emit() {
+    SyncSettingsToTransform();
+    EmitInternal();
 }
 
 void ParticleEmitter::SaveToJson() {
@@ -300,10 +321,8 @@ void ParticleEmitter::DebugParticleData() {
     if (!Manager_)
         return;
 
-    // カスタムスタイル設定
     ImGuiStyle &style = ImGui::GetStyle();
 
-    // メインウィンドウの背景色
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.13f, 0.14f, 0.15f, 1.00f));
 
     std::vector<std::string> groupNames = Manager_->GetParticleGroupsName();
@@ -312,7 +331,6 @@ void ParticleEmitter::DebugParticleData() {
     }
 
     if (!groupNames.empty()) {
-        // グループ選択部分
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.4f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.9f));
@@ -332,7 +350,6 @@ void ParticleEmitter::DebugParticleData() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        // エミッターデータセクション
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.2f, 0.2f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.5f, 0.3f, 0.3f, 0.9f));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.6f, 0.4f, 0.4f, 1.0f));
@@ -340,7 +357,6 @@ void ParticleEmitter::DebugParticleData() {
         if (ImGui::CollapsingHeader("エミッターデータ")) {
             ImGui::PopStyleColor(3);
 
-            // トランスフォームデータ
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.6f, 1.0f));
             ImGui::Text("Transformデータ:");
             ImGui::PopStyleColor();
@@ -348,7 +364,6 @@ void ParticleEmitter::DebugParticleData() {
             ImGui::Separator();
             ImGui::Columns(2, "TransformColumns", false);
 
-            // 位置
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 1.0f, 0.6f, 1.0f));
             ImGui::Text("位置");
             ImGui::PopStyleColor();
@@ -358,7 +373,6 @@ void ParticleEmitter::DebugParticleData() {
             ImGui::PopStyleColor();
             ImGui::NextColumn();
 
-            // 回転
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.8f, 1.0f, 1.0f));
             ImGui::Text("回転");
             ImGui::PopStyleColor();
@@ -377,7 +391,6 @@ void ParticleEmitter::DebugParticleData() {
             ImGui::PopStyleColor();
             ImGui::NextColumn();
 
-            // 大きさ
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.6f, 1.0f));
             ImGui::Text("大きさ");
             ImGui::PopStyleColor();
@@ -389,7 +402,6 @@ void ParticleEmitter::DebugParticleData() {
             ImGui::Columns(1);
             ImGui::Separator();
 
-            // 可視性フラグ
             ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
             ImGui::Checkbox("表示", &isVisible_);
             ImGui::PopStyleColor();
@@ -399,7 +411,6 @@ void ParticleEmitter::DebugParticleData() {
 
         ImGui::Spacing();
 
-        // パーティクルデータセクション
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.2f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.5f, 0.3f, 0.9f));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.6f, 0.4f, 1.0f));
@@ -418,7 +429,6 @@ void ParticleEmitter::DebugParticleData() {
                 ImGui::DragFloat("最小値", &setting.lifeTimeMin, 0.01f, 0.0f);
                 ImGui::PopStyleColor();
 
-                // 正しい順序でクランプする
                 setting.lifeTimeMax = std::clamp(setting.lifeTimeMax, setting.lifeTimeMin, 10.0f);
                 setting.lifeTimeMin = std::clamp(setting.lifeTimeMin, 0.0f, setting.lifeTimeMax);
 
@@ -429,7 +439,6 @@ void ParticleEmitter::DebugParticleData() {
 
             ImGui::Separator();
 
-            // 位置設定
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 1.0f, 0.8f, 1.0f));
             if (ImGui::TreeNode("位置")) {
                 ImGui::PopStyleColor();
@@ -457,7 +466,6 @@ void ParticleEmitter::DebugParticleData() {
 
             ImGui::Separator();
 
-            // 速度と加速度
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 1.0f, 1.0f));
             if (ImGui::TreeNode("速度、加速度")) {
                 ImGui::PopStyleColor();
@@ -495,7 +503,6 @@ void ParticleEmitter::DebugParticleData() {
 
             ImGui::Separator();
 
-            // サイズ
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.6f, 1.0f));
             if (ImGui::TreeNode("大きさ")) {
                 ImGui::PopStyleColor();
@@ -544,7 +551,6 @@ void ParticleEmitter::DebugParticleData() {
 
             ImGui::Separator();
 
-            // 回転
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 1.0f, 1.0f, 1.0f));
             if (ImGui::TreeNode("回転")) {
                 ImGui::PopStyleColor();
@@ -620,7 +626,6 @@ void ParticleEmitter::DebugParticleData() {
 
             ImGui::Separator();
 
-            // トレイル設定
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 1.0f, 1.0f));
             if (ImGui::TreeNode("トレイル設定")) {
                 ImGui::PopStyleColor();
@@ -672,7 +677,6 @@ void ParticleEmitter::DebugParticleData() {
 
             ImGui::Separator();
 
-            // 色彩
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.8f, 1.0f));
             if (ImGui::TreeNode("色彩")) {
                 ImGui::PopStyleColor();
@@ -687,7 +691,6 @@ void ParticleEmitter::DebugParticleData() {
                     ImGui::PopStyleColor();
                 }
 
-                // 透明度設定
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 1.0f, 1.0f));
                 if (ImGui::TreeNode("透明度")) {
                     ImGui::PopStyleColor();
@@ -712,7 +715,6 @@ void ParticleEmitter::DebugParticleData() {
 
         ImGui::Spacing();
 
-        // エミット設定セクション
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.2f, 0.4f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.5f, 0.9f));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.4f, 0.6f, 1.0f));
@@ -731,7 +733,6 @@ void ParticleEmitter::DebugParticleData() {
 
         ImGui::Spacing();
 
-        // その他の設定セクション
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.3f, 0.3f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.4f, 0.4f, 0.9f));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
@@ -741,12 +742,10 @@ void ParticleEmitter::DebugParticleData() {
 
             ImGui::Spacing();
 
-            // チェックボックス用のスタイル設定
             ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
             ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.4f, 0.4f, 0.4f, 0.7f));
 
-            // レンダリング設定
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.7f, 1.0f));
             ImGui::Text("レンダリング設定:");
             ImGui::PopStyleColor();
@@ -782,10 +781,9 @@ void ParticleEmitter::DebugParticleData() {
                 ImGui::TreePop();
             }
             ImGui::Unindent();
-            ImGui::PopStyleColor(3); // CheckMark, FrameBg, FrameBgHovered
+            ImGui::PopStyleColor(3);
             ImGui::Spacing();
 
-            // ブレンドモード選択ツリー
             if (ImGui::TreeNode("ブレンドモード")) {
                 ShowBlendModeCombo(setting.blendMode);
                 ImGui::TreePop();
@@ -797,12 +795,11 @@ void ParticleEmitter::DebugParticleData() {
 
         ImGui::Spacing();
     } else {
-        // グループがない場合の表示
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.6f, 0.6f, 1.0f));
         ImGui::Text("グループがありません。");
         ImGui::PopStyleColor();
     }
-    // グループ管理セクション
+
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.3f, 0.5f, 0.8f));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.4f, 0.6f, 0.9f));
     ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.5f, 0.7f, 1.0f));
@@ -812,25 +809,20 @@ void ParticleEmitter::DebugParticleData() {
 
         ImGui::Spacing();
 
-        // エミッターにアタッチされているグループ名をセットとして扱う（高速検索のため）
         std::set<std::string> emitterGroupNames(
             particleGroupNames_.begin(),
             particleGroupNames_.end());
 
-        // 全パーティクルグループを取得
         std::vector<ParticleGroup *> allGroups = ParticleGroupManager::GetInstance()->GetParticleGroups();
 
-        // 選択状態を保持するインデックス
         static std::vector<int> leftSelected;
         static std::vector<int> rightSelected;
 
-        // グループ分類用のリスト
         std::vector<std::string> availableNames;
         std::vector<const char *> availableItems;
         std::vector<std::string> attachedNames;
         std::vector<const char *> attachedItems;
 
-        // グループを分類する処理
         for (const auto &group : allGroups) {
             const std::string &name = group->GetGroupName();
             if (emitterGroupNames.contains(name)) {
@@ -840,7 +832,6 @@ void ParticleEmitter::DebugParticleData() {
             }
         }
 
-        // c_str() 変換は最後に行う
         availableItems.clear();
         attachedItems.clear();
         for (auto &name : availableNames) {
@@ -850,17 +841,14 @@ void ParticleEmitter::DebugParticleData() {
             attachedItems.push_back(name.c_str());
         }
 
-        // 範囲外インデックスを除外
         while (!leftSelected.empty() && leftSelected.back() >= availableNames.size())
             leftSelected.pop_back();
         while (!rightSelected.empty() && rightSelected.back() >= attachedNames.size())
             rightSelected.pop_back();
 
-        // UI横幅の取得
         float width = ImGui::GetContentRegionAvail().x;
         float halfWidth = width * 0.45f;
 
-        // ヘッダーテキストのスタイル
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.9f, 1.0f, 1.0f));
         ImGui::Text("利用可能なグループ");
         ImGui::SameLine(width - halfWidth - 50);
@@ -869,11 +857,9 @@ void ParticleEmitter::DebugParticleData() {
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 4));
 
-        // 左リスト用のスタイル設定
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.1f, 0.15f, 0.2f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.4f, 0.5f, 0.8f));
 
-        // 左リスト（未アタッチグループ）
         ImGui::BeginChild("available_groups", ImVec2(halfWidth, 200), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
 
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.6f, 0.6f));
@@ -897,7 +883,6 @@ void ParticleEmitter::DebugParticleData() {
                     else
                         leftSelected.push_back(i);
 
-                    // ダブルクリックで追加
                     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
                         ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(availableNames[i]);
                         if (group) {
@@ -910,21 +895,18 @@ void ParticleEmitter::DebugParticleData() {
             }
         }
 
-        ImGui::PopStyleColor(3); // Header colors
+        ImGui::PopStyleColor(3);
         ImGui::EndChild();
 
         ImGui::SameLine();
 
-        // 中央のボタン群
         ImGui::BeginGroup();
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 12));
 
-        // ボタンのスタイル設定
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
 
-        // 追加ボタン
         ImGui::PushID("move_right");
         bool canMoveRight = !leftSelected.empty();
         if (!canMoveRight) {
@@ -950,7 +932,6 @@ void ParticleEmitter::DebugParticleData() {
         }
         ImGui::PopID();
 
-        // 削除ボタン
         ImGui::PushID("move_left");
         bool canMoveLeft = !rightSelected.empty();
         if (!canMoveLeft) {
@@ -973,13 +954,12 @@ void ParticleEmitter::DebugParticleData() {
         }
         ImGui::PopID();
 
-        ImGui::PopStyleColor(3); // Button colors
-        ImGui::PopStyleVar();    // ボタン間の余白復元
+        ImGui::PopStyleColor(3);
+        ImGui::PopStyleVar();
         ImGui::EndGroup();
 
         ImGui::SameLine();
 
-        // 右リスト（アタッチ済みグループ）
         ImGui::BeginChild("attached_groups", ImVec2(halfWidth, 200), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
 
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.6f, 0.4f, 0.2f, 0.6f));
@@ -1003,7 +983,6 @@ void ParticleEmitter::DebugParticleData() {
                     else
                         rightSelected.push_back(i);
 
-                    // ダブルクリックで削除
                     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
                         RemoveParticleGroup(attachedNames[i]);
                         particleGroupNames_ = Manager_->GetParticleGroupsName();
@@ -1013,16 +992,15 @@ void ParticleEmitter::DebugParticleData() {
             }
         }
 
-        ImGui::PopStyleColor(3); // Header colors
+        ImGui::PopStyleColor(3);
         ImGui::EndChild();
 
-        ImGui::PopStyleColor(2); // ChildBg, Border
-        ImGui::PopStyleVar();    // ItemSpacing 戻す
+        ImGui::PopStyleColor(2);
+        ImGui::PopStyleVar();
 
         ImGui::Spacing();
         ImGui::Separator();
 
-        // 操作説明
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
         ImGui::Text("操作: Ctrlキー + クリックで複数選択, ダブルクリックで追加/削除");
         ImGui::PopStyleColor();
@@ -1035,7 +1013,6 @@ void ParticleEmitter::DebugParticleData() {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // ファイル操作セクション
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.3f, 0.2f, 0.8f));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.5f, 0.4f, 0.3f, 0.9f));
     ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.6f, 0.5f, 0.4f, 1.0f));
@@ -1045,7 +1022,6 @@ void ParticleEmitter::DebugParticleData() {
 
         ImGui::Spacing();
 
-        // セーブボタン
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.6f, 0.9f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.7f, 1.0f, 1.0f));
@@ -1069,7 +1045,6 @@ void ParticleEmitter::DebugParticleData() {
 
     ImGui::Spacing();
 
-    // 制御セクション
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.5f, 0.2f, 0.3f, 0.8f));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.6f, 0.3f, 0.4f, 0.9f));
     ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.7f, 0.4f, 0.5f, 1.0f));
@@ -1079,7 +1054,6 @@ void ParticleEmitter::DebugParticleData() {
 
         ImGui::Spacing();
 
-        // 自動生成チェックボックス
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.2f, 0.1f, 0.5f));
         ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.4f, 0.3f, 0.2f, 0.7f));
@@ -1095,7 +1069,6 @@ void ParticleEmitter::DebugParticleData() {
         ImGui::Spacing();
         ImGui::SameLine();
 
-        // 手動生成ボタン
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.3f, 0.1f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.4f, 0.2f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.5f, 0.3f, 1.0f));
@@ -1115,12 +1088,10 @@ void ParticleEmitter::DebugParticleData() {
         ImGui::PopStyleColor(3);
     }
 
-    // メインウィンドウの背景色をポップ
     ImGui::PopStyleColor();
 #endif // USE_IMGUI
 }
 
-// ImGuiで値を動かす関数
 void ParticleEmitter::Debug() {
 #ifdef _DEBUG
     if (!name_.empty() && Manager_) {
@@ -1133,20 +1104,18 @@ void ParticleEmitter::Debug() {
 bool ParticleEmitter::IsAllParticlesComplete() {
     return Manager_->IsAllParticlesComplete();
 }
+
 void ParticleEmitter::AddParticleGroup(ParticleGroup *particleGroup) {
     if (!particleGroup)
         return;
 
-    // パーティクルグループ名を取得
     const std::string &groupName = particleGroup->GetGroupName();
 
-    // 独立したコピーを作成
     ParticleGroup *independentGroup = ParticleGroupManager::GetInstance()->GetIndependentParticleGroup(groupName);
     if (!independentGroup) {
         return;
     }
 
-    // 設定が存在しない場合はデフォルト値で初期化
     auto it = particleSettings_.find(groupName);
     if (it == particleSettings_.end()) {
         particleSettings_[groupName] = DefaultSetting();
@@ -1166,12 +1135,13 @@ std::unique_ptr<ParticleEmitter> ParticleEmitter::Clone() const {
     newEmitter->transform_ = this->transform_;
     newEmitter->particleSettings_ = this->particleSettings_;
     newEmitter->particleGroupNames_ = this->particleGroupNames_;
+    newEmitter->lastTranslation_ = this->lastTranslation_;
+    newEmitter->lastRotation_ = this->lastRotation_;
+    newEmitter->lastScale_ = this->lastScale_;
 
-    // ParticleManager は個別に生成して初期化
     newEmitter->Manager_ = std::make_unique<ParticleManager>();
     newEmitter->Manager_->Initialize(SrvManager::GetInstance());
 
-    // 同じグループを再アタッチ（共有参照でOK）
     for (const auto &groupName : particleGroupNames_) {
         ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(groupName);
         if (group) {
@@ -1233,22 +1203,17 @@ void ParticleEmitter::SetTrailVelocityInheritance(const std::string &groupName, 
 
 void ParticleEmitter::ShowBlendModeCombo(BlendMode &currentMode) {
 #ifdef USE_IMGUI
-    // コンボボックスに表示する項目（日本語）
     static const char *blendModeItems[] = {
-        "なし",      // kNone
-        "通常",      // kNormal
-        "加算",      // kAdd
-        "減算",      // kSubtract
-        "乗算",      // kMultiply
-        "スクリーン" // kScreen
-    };
+        "なし",
+        "通常",
+        "加算",
+        "減算",
+        "乗算",
+        "スクリーン"};
 
-    // 現在の選択状態（enumをintにキャスト）
     int currentIndex = static_cast<int>(currentMode);
 
-    // コンボボックス表示
     if (ImGui::Combo("ブレンドモード", &currentIndex, blendModeItems, IM_ARRAYSIZE(blendModeItems))) {
-        // ユーザーが選択を変更したときに反映
         currentMode = static_cast<BlendMode>(currentIndex);
     }
 #endif // USE_IMGUI

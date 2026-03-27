@@ -48,11 +48,26 @@ struct CSParticle {
     uint32_t parentIndex;
     Vector3 lastTrailPosition;
     float trailSpawnDistance;
+    // フィールドによる「一度きり設定上書き」完了フラグ (ビットマスク)
+    // HLSL側の Particle::settingsOverrideFlags (uint2) と対応。
+    // lo=bit0-31, hi=bit32-63
+    uint32_t settingsOverrideFlagsLo = 0;
+    uint32_t settingsOverrideFlagsHi = 0;
+    // 回転 (XYZ軸回転、ラジアン)
+    Vector3 rotation = {0.0f, 0.0f, 0.0f};
+    float paddingRot = 0.0f;
+    Vector3 angularVelocity = {0.0f, 0.0f, 0.0f};
+    float paddingAngVel = 0.0f;
+    // 終了スケール
+    Vector3 endScale = {0.0f, 0.0f, 0.0f};
+    float paddingScale = 0.0f;
 };
 
 struct PerView {
     Matrix4x4 viewProjection;
     Matrix4x4 billboardMatrix;
+    uint32_t enableBillboard = 1; // 1=ビルボードON(デフォルト), 0=OFF
+    float padding[3];
 };
 
 struct TriangleInfo {
@@ -68,7 +83,7 @@ struct PerFrame {
     float time;
     float deltaTime;
     uint32_t groupId;
-    float padding;
+    int32_t emitterFieldGroupId; // -1=全フィールド対象, 0以上=同IDのフィールドのみ対象
 };
 
 struct EmitterData {
@@ -170,6 +185,18 @@ struct ParticleCSSettings {
     float curlNoisePosRandomStrength;
     Vector3 curlNoiseAttractCenter;
     float padding9{};
+    // ---- 終了スケール ----
+    uint32_t enableEndScale = 0;                // 1=有効: lifeRatio で initialScale→endScale を lerp
+    Vector3 endScaleValue = {0.0f, 0.0f, 0.0f}; // 終了時スケール値
+    // ---- 回転 ----
+    uint32_t enableRandomRotation = 0;        // 1=発生時にランダム初期角度
+    Vector3 rotationMin = {0.0f, 0.0f, 0.0f}; // 初期角度 最小 (ラジアン, XYZ)
+    Vector3 rotationMax = {0.0f, 0.0f, 0.0f}; // 初期角度 最大 (ラジアン, XYZ)
+    float paddingRotMax{};
+    uint32_t enableRandomAngularVelocity = 0;        // 1=発生時にランダム角速度
+    Vector3 angularVelocityMin = {0.0f, 0.0f, 0.0f}; // 角速度 最小 (ラジアン/秒, XYZ)
+    float paddingAngVelMin{};
+    Vector3 angularVelocityMax = {0.0f, 0.0f, 0.0f}; // 角速度 最大 (ラジアン/秒, XYZ)
 };
 
 /// =======================
@@ -267,8 +294,6 @@ struct Particle {
     float lifeTime{};    // ライフタイム
     float currentTime{}; // 現在の時間
     float initialAlpha{};
-    // std::weak_ptr<Particle> parent;                  // 親パーティクルへの弱参照
-    // std::vector<std::shared_ptr<Particle>> children; // 子パーティクルのリスト
     Vector3 relativePosition{}; // 親からの相対位置
     Vector3 parentOffset{};     // 親に対するオフセット
     bool isChild{};             // 子パーティクルかどうか

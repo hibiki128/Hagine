@@ -161,8 +161,10 @@ void ParticleCSGroup::InitParticle() {
     dxCommon_->TransitionSRVBarrier();
 }
 
-void ParticleCSGroup::UpdateParticleCSDisPatch() {
-    // UpdateParticle.CSの処理
+void ParticleCSGroup::UpdateParticleCSDisPatch(
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
+    Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle) {
     particleCommon_->ComputeUpdateEmitterDrawCommonSetting();
     commandList->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
     commandList->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
@@ -170,6 +172,10 @@ void ParticleCSGroup::UpdateParticleCSDisPatch() {
     commandList->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
     commandList->SetComputeRootConstantBufferView(4, perFrameResource_->GetGPUVirtualAddress());
     commandList->SetComputeRootConstantBufferView(5, settingsResource_->GetGPUVirtualAddress());
+    commandList->SetComputeRootDescriptorTable(6, fieldsSrvHandle.second);
+    commandList->SetComputeRootConstantBufferView(7, fieldCountResource->GetGPUVirtualAddress());
+    commandList->SetComputeRootDescriptorTable(8, overrideSrvHandle.second);
+
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
     commandList->Dispatch(disPatchCount, 1, 1);
 }
@@ -179,12 +185,16 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     perFrameData_->deltaTime = Frame::DeltaTime();
 
     perViewData_->viewProjection = vp.matView_ * vp.matProjection_;
-    perViewData_->billboardMatrix = vp.matView_;
-    perViewData_->billboardMatrix.m[3][0] = 0.0f;
-    perViewData_->billboardMatrix.m[3][1] = 0.0f;
-    perViewData_->billboardMatrix.m[3][2] = 0.0f;
-    perViewData_->billboardMatrix.m[3][3] = 1.0f;
-    perViewData_->billboardMatrix = Inverse(perViewData_->billboardMatrix);
+    if (perViewData_->enableBillboard) {
+        perViewData_->billboardMatrix = vp.matView_;
+        perViewData_->billboardMatrix.m[3][0] = 0.0f;
+        perViewData_->billboardMatrix.m[3][1] = 0.0f;
+        perViewData_->billboardMatrix.m[3][2] = 0.0f;
+        perViewData_->billboardMatrix.m[3][3] = 1.0f;
+        perViewData_->billboardMatrix = Inverse(perViewData_->billboardMatrix);
+    } else {
+        perViewData_->billboardMatrix = MakeIdentity4x4();
+    }
 
     CopyDebugDataToReadback();
 }
@@ -413,6 +423,18 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->curlNoiseBlendMode = 0;
     settingsData_->curlNoisePosRandomStrength = 0.0f;
     settingsData_->curlNoiseAttractCenter = {0.0f, 0.0f, 0.0f};
+
+    // ---- 終了スケール デフォルト ----
+    settingsData_->enableEndScale = 0;
+    settingsData_->endScaleValue = {0.0f, 0.0f, 0.0f};
+
+    // ---- 回転 デフォルト ----
+    settingsData_->enableRandomRotation = 0;
+    settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
+    settingsData_->rotationMax = {0.0f, 0.0f, 0.0f};
+    settingsData_->enableRandomAngularVelocity = 0;
+    settingsData_->angularVelocityMin = {0.0f, 0.0f, 0.0f};
+    settingsData_->angularVelocityMax = {0.0f, 0.0f, 0.0f};
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -589,6 +611,17 @@ void ParticleCSGroup::DrawImGui() {
             if (!rnd) {
                 ImGui::ColorEdit4("開始色", &settingsData_->startColor.x);
                 ImGui::ColorEdit4("終了色", &settingsData_->endColor.x);
+            } else {
+                // ランダムカラー時はRGBがランダムのため色編集は非表示にするが、
+                // アルファ（透明度）は startColor.a / endColor.a で補間されるので個別に編集できるようにする
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.2f, 0.4f, 0.5f));
+                ImGui::DragFloat("開始アルファ##rndAlphaStart", &settingsData_->startColor.w, 0.01f, 0.0f, 1.0f, "%.4f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("発生時の透明度 (0=完全透明, 1=完全不透明)");
+                ImGui::DragFloat("終了アルファ##rndAlphaEnd", &settingsData_->endColor.w, 0.01f, 0.0f, 1.0f, "%.4f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("消滅時の透明度 (0=完全透明, 1=完全不透明)");
+                ImGui::PopStyleColor();
             }
         }
 
@@ -614,6 +647,15 @@ void ParticleCSGroup::DrawImGui() {
     if (openMotion) {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.9f, 0.4f, 1.0f));
+
+        // ビルボード
+        {
+            bool v = perViewData_->enableBillboard != 0;
+            if (ImGui::Checkbox("ビルボード", &v))
+                perViewData_->enableBillboard = v ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("ONでパーティクルが常にカメラ正面を向きます\nOFFにするとワールド空間に固定されます");
+        }
 
         // 寿命で縮小
         {
@@ -701,6 +743,161 @@ void ParticleCSGroup::DrawImGui() {
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("0.0=最初から / 1.0=最後のみ\n推奨: 0.5-0.8");
                 ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
+        }
+
+        ImGui::PopStyleColor(); // CheckMark
+        ImGui::Unindent();
+    }
+
+    // =======================================================
+    // 3.5. 終了スケール（青緑系）
+    // =======================================================
+    PushSectionColor(ImVec4(0.2f, 0.7f, 0.65f, 1.0f));
+    bool openEndScale = ImGui::CollapsingHeader("  終了スケール");
+    PopSectionColor();
+    if (openEndScale) {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.4f, 1.0f, 0.9f, 1.0f));
+
+        bool v = settingsData_->enableEndScale != 0;
+        if (ImGui::Checkbox("終了スケールを有効化##es", &v))
+            settingsData_->enableEndScale = v ? 1 : 0;
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("有効にすると、初期スケール→終了スケールへ\n寿命に応じてlerpします。\n「寿命で縮小」より優先されます。");
+
+        if (v) {
+            ImGui::Indent();
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.3f, 0.3f, 0.5f));
+            ImGui::DragFloat3("終了スケール##esv", &settingsData_->endScaleValue.x, 0.01f, 0.0f, 9999.0f, "%.4f");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("寿命終了時のスケール(XYZ)\n0,0,0 で消える / 初期値と同じなら変化なし");
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("プリセット:");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("消える##esPreset1")) {
+                settingsData_->endScaleValue = {0.0f, 0.0f, 0.0f};
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("大きくなる##esPreset2")) {
+                settingsData_->endScaleValue = {
+                    settingsData_->scaleMax * 2.0f,
+                    settingsData_->scaleMax * 2.0f,
+                    settingsData_->scaleMax * 2.0f};
+            }
+            ImGui::Unindent();
+        }
+
+        ImGui::PopStyleColor(); // CheckMark
+        ImGui::Unindent();
+    }
+
+    // =======================================================
+    // 3.6. 回転（マゼンタ系）
+    // =======================================================
+    PushSectionColor(ImVec4(0.75f, 0.3f, 0.75f, 1.0f));
+    bool openRotation = ImGui::CollapsingHeader("  回転");
+    PopSectionColor();
+    if (openRotation) {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.5f, 1.0f, 1.0f));
+
+        // ---- ランダム初期角度 ----
+        {
+            bool v = settingsData_->enableRandomRotation != 0;
+            if (ImGui::Checkbox("ランダム初期角度##rr", &v))
+                settingsData_->enableRandomRotation = v ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("発生時にランダムな角度で出現します (XYZ, ラジアン)");
+            if (v) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.15f, 0.35f, 0.5f));
+
+                auto toDeg3 = [](Vector3 r) -> Vector3 { return {r.x * (180.0f / 3.14159265f), r.y * (180.0f / 3.14159265f), r.z * (180.0f / 3.14159265f)}; };
+                auto toRad3 = [](Vector3 d) -> Vector3 { return {d.x * (3.14159265f / 180.0f), d.y * (3.14159265f / 180.0f), d.z * (3.14159265f / 180.0f)}; };
+
+                Vector3 rotMinDeg = toDeg3(settingsData_->rotationMin);
+                Vector3 rotMaxDeg = toDeg3(settingsData_->rotationMax);
+
+                if (ImGui::DragFloat3("角度 Min(°)##rrMin", &rotMinDeg.x, 1.0f, -360.0f, 360.0f, "%.1f°"))
+                    settingsData_->rotationMin = toRad3(rotMinDeg);
+                if (ImGui::DragFloat3("角度 Max(°)##rrMax", &rotMaxDeg.x, 1.0f, -360.0f, 360.0f, "%.1f°"))
+                    settingsData_->rotationMax = toRad3(rotMaxDeg);
+
+                ImGui::PopStyleColor();
+
+                ImGui::Spacing();
+                ImGui::TextDisabled("プリセット:");
+                ImGui::SameLine();
+                if (ImGui::SmallButton("全方向##rrPreset1")) {
+                    settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
+                    settingsData_->rotationMax = {6.2831853f, 6.2831853f, 6.2831853f};
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Z軸のみ##rrPreset2")) {
+                    settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
+                    settingsData_->rotationMax = {0.0f, 0.0f, 6.2831853f};
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("リセット##rrPreset3")) {
+                    settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
+                    settingsData_->rotationMax = {0.0f, 0.0f, 0.0f};
+                }
+                ImGui::Unindent();
+            }
+        }
+
+        ImGui::Spacing();
+
+        // ---- ランダム角速度 ----
+        {
+            bool v = settingsData_->enableRandomAngularVelocity != 0;
+            if (ImGui::Checkbox("ランダム角速度##rav", &v))
+                settingsData_->enableRandomAngularVelocity = v ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("発生時にランダムな回転速度を設定します (XYZ, ラジアン/秒)");
+            if (v) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.15f, 0.35f, 0.5f));
+
+                auto toDeg3 = [](Vector3 r) -> Vector3 { return {r.x * (180.0f / 3.14159265f), r.y * (180.0f / 3.14159265f), r.z * (180.0f / 3.14159265f)}; };
+                auto toRad3 = [](Vector3 d) -> Vector3 { return {d.x * (3.14159265f / 180.0f), d.y * (3.14159265f / 180.0f), d.z * (3.14159265f / 180.0f)}; };
+
+                Vector3 avMinDeg = toDeg3(settingsData_->angularVelocityMin);
+                Vector3 avMaxDeg = toDeg3(settingsData_->angularVelocityMax);
+
+                if (ImGui::DragFloat3("角速度 Min(°/s)##ravMin", &avMinDeg.x, 1.0f, -3600.0f, 3600.0f, "%.1f°/s"))
+                    settingsData_->angularVelocityMin = toRad3(avMinDeg);
+                if (ImGui::DragFloat3("角速度 Max(°/s)##ravMax", &avMaxDeg.x, 1.0f, -3600.0f, 3600.0f, "%.1f°/s"))
+                    settingsData_->angularVelocityMax = toRad3(avMaxDeg);
+
+                ImGui::PopStyleColor();
+
+                ImGui::Spacing();
+                ImGui::TextDisabled("プリセット:");
+                ImGui::SameLine();
+                if (ImGui::SmallButton("ゆっくり##ravPreset1")) {
+                    settingsData_->angularVelocityMin = {-1.0f, -1.0f, -1.0f};
+                    settingsData_->angularVelocityMax = {1.0f, 1.0f, 1.0f};
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("速い##ravPreset2")) {
+                    settingsData_->angularVelocityMin = {-6.2831853f, -6.2831853f, -6.2831853f};
+                    settingsData_->angularVelocityMax = {6.2831853f, 6.2831853f, 6.2831853f};
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Z軸のみ##ravPreset3")) {
+                    settingsData_->angularVelocityMin = {0.0f, 0.0f, -3.14159265f};
+                    settingsData_->angularVelocityMax = {0.0f, 0.0f, 3.14159265f};
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("リセット##ravPreset4")) {
+                    settingsData_->angularVelocityMin = {0.0f, 0.0f, 0.0f};
+                    settingsData_->angularVelocityMax = {0.0f, 0.0f, 0.0f};
+                }
                 ImGui::Unindent();
             }
         }
@@ -1086,10 +1283,6 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::PopStyleColor(); // CheckMark
         ImGui::Unindent();
     }
-
-    // =======================================================
-    // 9. 全体プリセット（ParticleCSEditorのプリセットタブに移動）
-    // =======================================================
 
     // =======================================================
     // 10. Debug Info（常時表示）

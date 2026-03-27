@@ -23,7 +23,10 @@ class ParticleCSGroup {
     void Update(const ViewProjection &vp);
     void DrawImGui();
     int CalculateOptimalEmitCount() const;
-    void UpdateParticleCSDisPatch();
+    void UpdateParticleCSDisPatch(
+        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
+        Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
+        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle);
     ParticleCSGroupData GetParticleGroupData() { return particleGroupData_; }
 
     /// ===================================
@@ -51,6 +54,7 @@ class ParticleCSGroup {
     PrimitiveType GetPrimitiveType() { return type_; }
     std::string GetModelPath() { return modelFilePath_; }
     uint32_t GetAliveParticleCount();
+    PerView *GetPerView() { return perViewData_; }
 
     /// ===================================
     /// Setter
@@ -59,6 +63,8 @@ class ParticleCSGroup {
     void SetFrequency(float frequency) { frequency_ = frequency; }
     void SetSettingData(const ParticleCSSettings &settings) { *settingsData_ = settings; }
     void SetBlendMode(BlendMode blendMode) { particleGroupData_.blendMode = blendMode; }
+    void SetPerView(PerView *perViewData) { perViewData_ = perViewData; }
+    void SetBillboard(bool flag) { perViewData_->enableBillboard = flag; }
 
     // カウント処理を実行
     void CountAliveParticles();

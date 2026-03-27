@@ -245,6 +245,10 @@ class BehaviorTreeEditor {
     char m_InputFileNameBuf[128] = "NewBehavior";
     std::string m_SelectedFileName = "";
     bool m_ShowLoadWindow = false;
+    
+    bool m_LayoutDirty_ = false;                     // レイアウト変更フラグ
+    float m_SaveCooldown_ = 0.0f;                    // 保存クールダウン
+    static constexpr float kSaveCooldownTime = 2.0f; // 2秒操作がなければ保存
 };
 
 #endif // _DEBUG

@@ -25,6 +25,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
         gParticles[particleIndex].parentIndex = 0xFFFFFFFF;
         gParticles[particleIndex].lastTrailPosition = float3(0, 0, 0);
         gParticles[particleIndex].trailSpawnDistance = 0.1f;
+        gParticles[particleIndex].rotation = float3(0, 0, 0);
+        gParticles[particleIndex].paddingRot = 0.0f;
+        gParticles[particleIndex].angularVelocity = float3(0, 0, 0);
+        gParticles[particleIndex].paddingAngVel = 0.0f;
+        gParticles[particleIndex].endScale = float3(0, 0, 0);
+        gParticles[particleIndex].paddingScale = 0.0f;
         
         gFreeList[particleIndex] = particleIndex;
         

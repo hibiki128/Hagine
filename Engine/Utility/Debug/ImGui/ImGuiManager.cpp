@@ -15,6 +15,7 @@
 #include <imgui_impl_dx12.h>
 #include"Collider/CollisionManager.h"
 #include <implot.h>
+#include <Particle/CSParticle/ParticleCSFieldManager.h>
 
 ImGuiManager *ImGuiManager::instance = nullptr;
 
@@ -600,6 +601,8 @@ void ImGuiManager::ShowParticleSettingWindow() {
 
     currentScene_->AddParticleSetting();
 
+    ParticleCSFieldManager::GetInstance()->DrawImGui();
+
     ImGui::End();
 }
 
@@ -704,8 +707,11 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
+    ImGui::Begin("タグマネージャー", &showColliderTagManagerView_, flags);
+
     CollisionManager::GetInstance()->ImGuiTagManager();
 
+    ImGui::End();
 }
 
 void ImGuiManager::FixAspectRatio() {

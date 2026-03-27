@@ -5,6 +5,9 @@
 #include <Input.h>
 #include <Object/Base/BaseObjectManager.h>
 #include <Particle/ParticleEditor.h>
+#ifdef _DEBUG
+#include "imgui.h"
+#endif
 
 void TitleUI::Initialize() {
 
@@ -83,17 +86,26 @@ void TitleUI::Update() {
     }
 
     if (time_ >= kMaxTime_) {
-        // スケール拡大処理
+        // -------------------------------------------------------
+        // 【修正①】Frame::DeltaTime()をkDeltaTimeに統一する
+        // Frame::DeltaTime()が初期フレーム等で大きな値を返すと
+        // 1フレームでmaxChargeScaleを超えてisMaxChargeScale_が
+        // 即trueになってしまうバグを修正
+        // -------------------------------------------------------
         if (!isMaxChargeScale_) {
-            chargeScale_ += chargeScaleSpeed_ * Frame::DeltaTime() / kParticleScaleSpeedDivisor;
+            chargeScale_ += chargeScaleSpeed_ * kDeltaTime / kParticleScaleSpeedDivisor;
             if (chargeScale_ >= maxChargeScale_) {
                 chargeScale_ = maxChargeScale_;
                 isMaxChargeScale_ = true;
             }
         }
-        // パーティクルのスケール設定
-        if (!isMaxChargeScale_) {
-            // chageAroundのエンドスケール
+
+        // -------------------------------------------------------
+        // 【修正②】スケール設定をisMaxChargeScale_の外に出す
+        // 最大スケール到達フレームも含め、chargeScale_の現在値を
+        // 必ず毎フレームパーティクルに反映する
+        // -------------------------------------------------------
+        {
             float aroundEndScale = (kParticleScaleBase + chargeScale_) * kParticleScaleMultiplier;
             float aroundStartScale = aroundEndScale - kParticleScaleOffset;
             float bulletScale = aroundEndScale + kBulletScaleOffset;
@@ -101,14 +113,17 @@ void TitleUI::Update() {
             chargeBullet_->SetEndScale("chageAround", {aroundEndScale, aroundEndScale, aroundEndScale});
             chargeBullet_->SetStartScale("chageBullet", {bulletScale, bulletScale, bulletScale});
         }
+
         chargeBullet_->Update();
     }
+
     if (time_ >= kMaxTime_ - kChargeEffectStartTime) {
         if (!secondMove_) {
             chargeEffect_->Update();
             playerAura_->Update();
         }
     }
+
     if (!gamePad_->IsConnected()) {
         if (time_ >= kMinStartInputTime && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_ && !cameraMove_) {
             secondMove_ = true;
@@ -158,3 +173,48 @@ void TitleUI::Draw(ViewProjection &vp_) {
     playerAura_->Draw(vp_);
     cameraMove_ = vp_.GetIsCameraMove();
 }
+
+#ifdef _DEBUG
+void TitleUI::DrawImGui() {
+    ImGui::Begin("TitleUI Debug");
+
+    ImGui::SeparatorText("Timer");
+    ImGui::Text("time_           : %.3f / %.3f (kMaxTime)", time_, kMaxTime_);
+    ImGui::Text("timer_          : %.3f / %.3f (kFinishDelayTime)", timer_, kFinishDelayTime);
+    ImGui::Text("bulletEaseTimer_: %.3f / %.3f (kBulletEaseDuration)", bulletEaseTimer_, kBulletEaseDuration);
+
+    ImGui::SeparatorText("ChargeScale");
+    // chargeScale_ のプログレスバー表示
+    float progress = (maxChargeScale_ > 0.0f) ? (chargeScale_ / maxChargeScale_) : 0.0f;
+    char overlay[64];
+    snprintf(overlay, sizeof(overlay), "%.3f / %.3f", chargeScale_, maxChargeScale_);
+    ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f), overlay);
+    ImGui::Text("isMaxChargeScale_: %s", isMaxChargeScale_ ? "TRUE" : "false");
+
+    ImGui::SeparatorText("Particle Scale (computed)");
+    float aroundEndScale = (kParticleScaleBase + chargeScale_) * kParticleScaleMultiplier;
+    float aroundStartScale = aroundEndScale - kParticleScaleOffset;
+    float bulletScale = aroundEndScale + kBulletScaleOffset;
+    ImGui::Text("chargeAround StartScale : %.3f", aroundStartScale);
+    ImGui::Text("chargeAround EndScale   : %.3f", aroundEndScale);
+    ImGui::Text("chargeBullet StartScale : %.3f", bulletScale);
+
+    ImGui::SeparatorText("Sprite");
+    ImGui::Text("isSpriteVisible_  : %s", isSpriteVisible_ ? "true" : "false");
+    ImGui::Text("spriteEaseTimer_  : %.3f", spriteEaseTimer_);
+    ImGui::Text("isSpriteExiting_  : %s", isSpriteExiting_ ? "true" : "false");
+    ImGui::Text("spriteExitTimer_  : %.3f", spriteExitTimer_);
+
+    ImGui::SeparatorText("State");
+    ImGui::Text("secondMove_  : %s", secondMove_ ? "true" : "false");
+    ImGui::Text("cameraMove_  : %s", cameraMove_ ? "true" : "false");
+    ImGui::Text("isFinish_    : %s", isFinish_ ? "true" : "false");
+
+    Vector3 pos = chargeBullet_->GetPosition();
+    ImGui::SeparatorText("chargeBullet Position");
+    ImGui::Text("pos : (%.3f, %.3f, %.3f)", pos.x, pos.y, pos.z);
+    ImGui::Text("target : (%.3f, %.3f, %.3f)", targetPos_.x, targetPos_.y, targetPos_.z);
+
+    ImGui::End();
+}
+#endif

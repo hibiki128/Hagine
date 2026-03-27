@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "ParticleCSEmitter.h"
+#include "ParticleCSFieldManager.h"
 #include "ParticleCSGroupManager.h"
 #include <Frame.h>
 #include <Line/DrawLine3D.h>
@@ -40,7 +41,12 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
         group->Update(vp);
         dxCommon_->TransitionUAVBarrier(group->GetOutputParticleResource().Get());
         EmitterDisPatch();
-        group->UpdateParticleCSDisPatch();
+        auto *fieldMgr = ParticleCSFieldManager::GetInstance();
+        group->UpdateParticleCSDisPatch(
+            fieldMgr->GetFieldsSrvHandle(),
+            receiveFields_ ? fieldMgr->GetFieldCountResource()
+                           : fieldMgr->GetZeroFieldCountResource(),
+            fieldMgr->GetOverrideSrvHandle());
         group->CountAliveParticles();
         dxCommon_->TransitionSRVBarrier();
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
@@ -183,6 +189,7 @@ void ParticleCSEmitter::EmitterDisPatch() {
     uint32_t groupIndex = 0;
     for (auto &group : particleGroups_) {
         group->GetPerFrameData()->groupId = groupIndex;
+        group->GetPerFrameData()->emitterFieldGroupId = fieldGroupId_;
 
         ParticleCSSettings *settings = group->GetSettingsData();
 
@@ -200,13 +207,97 @@ void ParticleCSEmitter::EmitterDisPatch() {
 
         // 三角形情報を設定
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
-            commandList->SetComputeRootDescriptorTable(7, triangleInfoSrvHandle_.second);
-            commandList->SetComputeRootDescriptorTable(8, triangleCDFSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(8, triangleInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(9, triangleCDFSrvHandle_.second);
         }
 
         // エッジ情報を設定
         if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
-            commandList->SetComputeRootDescriptorTable(9, edgeInfoSrvHandle_.second);
+            commandList->SetComputeRootDescriptorTable(10, edgeInfoSrvHandle_.second);
+        }
+
+        // フィールド判定用SRV/CBVを設定
+        // ルートシグネチャのスロット対応:
+        //   [7]  b3 = FieldCountCB (gFieldCB)
+        //   [11] t3 = ParticleField (gFields)
+        {
+            auto *fieldManager = ParticleCSFieldManager::GetInstance();
+            commandList->SetComputeRootDescriptorTable(11, fieldManager->GetFieldsSrvHandle().second);
+
+            if (emitOnlyOnFieldContact_ && receiveFields_) {
+                // ===== フィールド接触Emitモード =====
+                // enableEmitSpawnフィールドが存在するか確認
+                bool hasEmitSpawnField = false;
+                for (const auto &field : fieldManager->GetFields()) {
+                    if (!field.enabled || !field.data.enableEmitSpawn)
+                        continue;
+                    bool groupMatch = (field.data.groupId == -1) ||
+                                      (fieldGroupId_ == -1) ||
+                                      (field.data.groupId == fieldGroupId_);
+                    if (groupMatch) {
+                        hasEmitSpawnField = true;
+                        break;
+                    }
+                }
+
+                if (!hasEmitSpawnField) {
+                    // フィールドがない → Dispatch不要
+                    commandList->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
+                    groupIndex++;
+                    continue;
+                }
+
+                // フィールドが存在する → シェーダー側でフィールド球内→表面投影でEmit位置を決定する
+                // emitCount を fieldContactEmitCount_ で上書きして Dispatch
+                // シェーダーの CalcFieldContactEmitPosition が全スレッドをフィールド接触点にEmitするため
+                // 少ない数でも密にパーティクルが出る
+                uint32_t savedEmitCount = settings->emitCount;
+                float savedLifeMin = settings->lifeTimeMin;
+                float savedLifeMax = settings->lifeTimeMax;
+
+                settings->emitCount = fieldContactEmitCount_;
+
+                // フィールドの lifeTime 設定で上書き（0のままだとUpdateシェーダーでゼロ除算）
+                for (const auto &field : fieldManager->GetFields()) {
+                    if (!field.enabled || !field.data.enableEmitSpawn)
+                        continue;
+                    bool groupMatch = (field.data.groupId == -1) ||
+                                      (fieldGroupId_ == -1) ||
+                                      (field.data.groupId == fieldGroupId_);
+                    if (!groupMatch)
+                        continue;
+                    if (field.data.emitSpawnLifeTimeMax > 0.0f) {
+                        settings->lifeTimeMin = field.data.emitSpawnLifeTimeMin;
+                        settings->lifeTimeMax = field.data.emitSpawnLifeTimeMax;
+                    }
+                    break;
+                }
+
+                // フィールドカウントをシェーダーに渡す（CalcFieldContactEmitPosition で使用）
+                commandList->SetComputeRootConstantBufferView(7, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
+
+                int dispatchCount = (settings->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
+                commandList->Dispatch(dispatchCount, 1, 1);
+
+                // 設定を元に戻す
+                settings->emitCount = savedEmitCount;
+                settings->lifeTimeMin = savedLifeMin;
+                settings->lifeTimeMax = savedLifeMax;
+
+                groupIndex++;
+                continue;
+
+            } else {
+                // ===== 通常モード =====
+                // フィールドカウントをゼロにして、シェーダー側の ShouldEmitAtPosition が
+                // 常に true を返すようにする（全表面からランダムEmit）
+                commandList->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
+            }
+        }
+
+        if (emitterMeshData_->emit == 0 || settings->emitCount == 0) {
+            groupIndex++;
+            continue;
         }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
@@ -460,6 +551,12 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("modelPath", modelPath_);
     data->Save("primitiveType", static_cast<int>(primitiveType_));
 
+    // フィールド影響設定
+    data->Save("receiveFields", receiveFields_);
+    data->Save("fieldGroupId", fieldGroupId_);
+    data->Save("emitOnlyOnFieldContact", emitOnlyOnFieldContact_);
+    data->Save("fieldContactEmitCount", static_cast<int>(fieldContactEmitCount_));
+
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
 
     for (int i = 0; i < particleGroups_.size(); i++) {
@@ -529,6 +626,20 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "curlNoiseBlendMode", group->GetSettingsData()->curlNoiseBlendMode);
         data->Save(prefix + "curlNoisePosRandomStrength", group->GetSettingsData()->curlNoisePosRandomStrength);
         data->Save(prefix + "curlNoiseAttractCenter", group->GetSettingsData()->curlNoiseAttractCenter);
+
+        // ★ 終了スケール設定の保存
+        data->Save(prefix + "enableEndScale", group->GetSettingsData()->enableEndScale);
+        data->Save(prefix + "endScaleValue", group->GetSettingsData()->endScaleValue);
+
+        // ★ 回転設定の保存
+        data->Save(prefix + "enableRandomRotation", group->GetSettingsData()->enableRandomRotation);
+        data->Save<Vector3>(prefix + "rotationMin", group->GetSettingsData()->rotationMin);
+        data->Save<Vector3>(prefix + "rotationMax", group->GetSettingsData()->rotationMax);
+        data->Save(prefix + "enableRandomAngularVelocity", group->GetSettingsData()->enableRandomAngularVelocity);
+        data->Save<Vector3>(prefix + "angularVelocityMin", group->GetSettingsData()->angularVelocityMin);
+        data->Save<Vector3>(prefix + "angularVelocityMax", group->GetSettingsData()->angularVelocityMax);
+
+        data->Save(prefix + "enablebilboard", group->GetPerView()->enableBillboard);
     }
 }
 
@@ -546,6 +657,11 @@ void ParticleCSEmitter::LoadSetting() {
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
+    // フィールド影響設定
+    receiveFields_ = data->Load("receiveFields", false);
+    fieldGroupId_ = data->Load("fieldGroupId", -1);
+    emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
+    fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
 
     if (!modelPath_.empty()) {
         LoadModel(modelPath_);
@@ -618,7 +734,7 @@ void ParticleCSEmitter::LoadSetting() {
         settings.radialVelocityStrength = data->Load(prefix + "radialVelocityStrength", 0.0f);
         settings.radialVelocityRandomness = data->Load(prefix + "radialVelocityRandomness", 0.0f);
         settings.radialVelocityCenter = data->Load<Vector3>(prefix + "radialVelocityCenter", {0.0f, 0.0f, 0.0f});
-        
+
         settings.enableCurlNoise = data->Load<uint32_t>(prefix + "enableCurlNoise", 0);
         settings.curlNoiseScale = data->Load(prefix + "curlNoiseScale", 1.0f);
         settings.curlNoiseStrength = data->Load(prefix + "curlNoiseStrength", 1.0f);
@@ -628,6 +744,20 @@ void ParticleCSEmitter::LoadSetting() {
         settings.curlNoiseBlendMode = data->Load<uint32_t>(prefix + "curlNoiseBlendMode", 0);
         settings.curlNoisePosRandomStrength = data->Load(prefix + "curlNoisePosRandomStrength", 0.0f);
         settings.curlNoiseAttractCenter = data->Load<Vector3>(prefix + "curlNoiseAttractCenter", {0.0f, 0.0f, 0.0f});
+
+        // ★ 終了スケール設定のロード
+        settings.enableEndScale = data->Load<uint32_t>(prefix + "enableEndScale", 0);
+        settings.endScaleValue = data->Load<Vector3>(prefix + "endScaleValue", {0.0f, 0.0f, 0.0f});
+
+        // ★ 回転設定のロード
+        settings.enableRandomRotation = data->Load<uint32_t>(prefix + "enableRandomRotation", 0);
+        settings.rotationMin = data->Load<Vector3>(prefix + "rotationMin", {0.0f, 0.0f, 0.0f});
+        settings.rotationMax = data->Load<Vector3>(prefix + "rotationMax", {0.0f, 0.0f, 0.0f});
+        settings.enableRandomAngularVelocity = data->Load<uint32_t>(prefix + "enableRandomAngularVelocity", 0);
+        settings.angularVelocityMin = data->Load<Vector3>(prefix + "angularVelocityMin", {0.0f, 0.0f, 0.0f});
+        settings.angularVelocityMax = data->Load<Vector3>(prefix + "angularVelocityMax", {0.0f, 0.0f, 0.0f});
+
+        group->SetBillboard(data->Load(prefix + "enableBillboard", true));
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -656,6 +786,11 @@ void ParticleCSEmitter::LoadCloneSetting() {
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
+    // フィールド影響設定
+    receiveFields_ = data->Load("receiveFields", false);
+    fieldGroupId_ = data->Load("fieldGroupId", -1);
+    emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
+    fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
 
     if (!modelPath_.empty()) {
         LoadModel(modelPath_);
@@ -739,6 +874,20 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.curlNoiseBlendMode = data->Load<uint32_t>(prefix + "curlNoiseBlendMode", 0);
         settings.curlNoisePosRandomStrength = data->Load(prefix + "curlNoisePosRandomStrength", 0.0f);
         settings.curlNoiseAttractCenter = data->Load<Vector3>(prefix + "curlNoiseAttractCenter", {0.0f, 0.0f, 0.0f});
+
+        // ★ 終了スケール設定のロード
+        settings.enableEndScale = data->Load<uint32_t>(prefix + "enableEndScale", 0);
+        settings.endScaleValue = data->Load<Vector3>(prefix + "endScaleValue", {0.0f, 0.0f, 0.0f});
+
+        // ★ 回転設定のロード
+        settings.enableRandomRotation = data->Load<uint32_t>(prefix + "enableRandomRotation", 0);
+        settings.rotationMin = data->Load<Vector3>(prefix + "rotationMin", {0.0f, 0.0f, 0.0f});
+        settings.rotationMax = data->Load<Vector3>(prefix + "rotationMax", {0.0f, 0.0f, 0.0f});
+        settings.enableRandomAngularVelocity = data->Load<uint32_t>(prefix + "enableRandomAngularVelocity", 0);
+        settings.angularVelocityMin = data->Load<Vector3>(prefix + "angularVelocityMin", {0.0f, 0.0f, 0.0f});
+        settings.angularVelocityMax = data->Load<Vector3>(prefix + "angularVelocityMax", {0.0f, 0.0f, 0.0f});
+
+        group->SetBillboard(data->Load(prefix + "enableBillboard", true));
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -872,6 +1021,74 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PopStyleColor();
             } else {
                 ImGui::PopStyleColor(3);
+            }
+
+            ImGui::Separator();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.9f, 1.0f, 1.0f));
+            ImGui::TextUnformatted("フィールド影響設定");
+            ImGui::PopStyleColor();
+            bool rf = receiveFields_;
+            if (ImGui::Checkbox("フィールドの影響を受ける", &rf)) {
+                receiveFields_ = rf;
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("オフにするとParticleFieldManagerのフィールドが\nこのエミッターに作用しなくなります");
+            }
+
+            if (receiveFields_) {
+                ImGui::Indent();
+                ImGui::PushItemWidth(120.0f);
+                int fgid = fieldGroupId_;
+                if (ImGui::DragInt("フィールドグループID##fgid", &fgid, 1, -1, 255)) {
+                    fieldGroupId_ = std::max(-1, fgid);
+                }
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                ImGui::TextDisabled("(?)");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip(
+                        "-1 = 全フィールドから影響を受ける（デフォルト）\n"
+                        "0以上 = 同じIDのフィールドのみから影響を受ける");
+                if (fieldGroupId_ == -1) {
+                    ImGui::TextDisabled("  全フィールド対象");
+                } else {
+                    ImGui::Text("  ID: %d のフィールドのみ対象", fieldGroupId_);
+                }
+
+                ImGui::Spacing();
+                bool eofc = emitOnlyOnFieldContact_;
+                if (ImGui::Checkbox("フィールド接触時のみEmit##EmitOnFieldContact", &eofc)) {
+                    emitOnlyOnFieldContact_ = eofc;
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(
+                        "ON : シェーダー側でフィールド球内のランダム点を生成し\n"
+                        "     エミッター表面に投影してEmit位置を決定します\n"
+                        "     全スレッドがフィールド接触部分にEmitするため\n"
+                        "     500000のような大量発生数は不要になります\n"
+                        "     (推奨: 500〜3000程度)\n"
+                        "OFF: 通常通りエミッター全体からランダムEmitします");
+                }
+
+                if (emitOnlyOnFieldContact_) {
+                    ImGui::Indent();
+                    ImGui::PushItemWidth(180.0f);
+                    int emitCnt = static_cast<int>(fieldContactEmitCount_);
+                    if (ImGui::DragInt("接触Emit発生数/フレーム##FieldContactEmit", &emitCnt, 10, 1, 50000)) {
+                        fieldContactEmitCount_ = static_cast<uint32_t>(std::max(1, emitCnt));
+                    }
+                    ImGui::PopItemWidth();
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip(
+                            "フィールド接触Emitモード時の1フレームあたり発生数\n"
+                            "全スレッドがフィールド接触点にEmitするため\n"
+                            "500〜3000程度で十分密になります\n"
+                            "フィールドを動かすほどEmit位置も動的に追従します");
+                    }
+                    ImGui::Unindent();
+                }
+
+                ImGui::Unindent();
             }
 
             ImGui::Spacing();

@@ -90,15 +90,28 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
         vertexOffset += mesh.vertices.size();
     }
 
-    // ModelDataのSkinCluster情報を解析してInfluenceの中身を埋める
+       // ModelDataのSkinCluster情報を解析してInfluenceの中身を埋める
     for (const auto &jointWeight : modelData.skinClusterData) {
-        auto it = skeleton.jointMap.find(jointWeight.first);
+        // キーから "meshIndex:jointName" を分解する
+        const std::string &key = jointWeight.first;
+        size_t colonPos = key.find(':');
+        if (colonPos == std::string::npos)
+            continue;
+
+        size_t keyMeshIndex = std::stoul(key.substr(0, colonPos));
+        std::string jointName = key.substr(colonPos + 1);
+
+        // スケルトンのjointMapはジョイント名で検索
+        auto it = skeleton.jointMap.find(jointName);
         if (it == skeleton.jointMap.end()) {
             continue;
         }
+
+        // inverseBindPoseMatrix を対応するジョイントインデックスに設定
+        // （同名ジョイントが複数メッシュに存在する場合、最後に設定された値を使う）
         skinCluster.inverseBindPoseMatrices[(*it).second] = jointWeight.second.inverseBindPoseMatrix;
+
         for (const auto &vertexWeight : jointWeight.second.vertexWeights) {
-            // vertexWeight.meshIndex, vertexWeight.vertexIndex を想定
             size_t meshIndex = vertexWeight.meshIndex;
             size_t localVertexIndex = vertexWeight.vertexIndex;
             if (meshIndex >= meshVertexOffsets.size())
@@ -116,6 +129,7 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
             }
         }
     }
+ 
 
     meshVertexOffsets_.clear();
     size_t offset = 0;

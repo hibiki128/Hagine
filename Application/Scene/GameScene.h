@@ -1,7 +1,9 @@
 #pragma once
 #include "Application/Camera/FollowCamera.h"
 #include "Application/Camera/StartCamera.h"
+#include "Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.h"
 #include "Application/GameObject/Enemy/Enemy.h"
+#include "Application/GameObject/Field/AroundField/AroundField.h"
 #include "Application/GameObject/Field/Ground/Ground.h"
 #include "Application/GameObject/Player/Player.h"
 #include "Application/UI/Enemy/EnemyUI.h"
@@ -11,7 +13,6 @@
 #include <Application/Camera/DeathCamera.h>
 #include <Application/Staging/Transition/FadeOut.h>
 #include <Application/UI/Scene/Game/GameUI.h>
-#include "Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.h"
 
 class GameScene : public BaseScene {
   public:
@@ -45,6 +46,7 @@ class GameScene : public BaseScene {
 
     std::unique_ptr<Player> player_;
     std::unique_ptr<Enemy> enemy_;
+    std::unique_ptr<AroundField> aroundField_;
     std::unique_ptr<FollowCamera> followCamera_;
     std::unique_ptr<StartCamera> startCamera_;
     std::unique_ptr<DeathCamera> deathCamera_;

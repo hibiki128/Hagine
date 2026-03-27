@@ -138,6 +138,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Bullet\EnemyBullet.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Hand\EnemyHand.cpp" />
+    <ClCompile Include="Application\GameObject\Field\AroundField\AroundField.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\CylinderCollider.cpp" />
     <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleStruct.cpp" />
@@ -235,6 +237,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\UI\Scene\Result\ResultUI.cpp" />
     <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.cpp" />
+    <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.cpp" />
     <ClCompile Include="Scene.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -312,6 +315,9 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.h" />
     <ClInclude Include="Application\GameObject\Enemy\Bullet\EnemyBullet.h" />
     <ClInclude Include="Application\GameObject\Enemy\Hand\EnemyHand.h" />
+    <ClInclude Include="Application\GameObject\Field\AroundField\AroundField.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\CylinderCollider.h" />
+    <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldSettingOverride.h" />
     <ClInclude Include="Engine\Utility\Debug\ImGui\Debugui_improved.h" />
     <ClInclude Include="Engine\2d\SpriteStruct.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />
@@ -413,6 +419,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.h" />
     <ClInclude Include="Engine\Input\GamePad.h" />
     <ClInclude Include="Application\UI\Scene\Game\GameUI.h" />
+    <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />

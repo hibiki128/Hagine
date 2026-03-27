@@ -273,6 +273,18 @@ Quaternion Quaternion::operator-() const {
     return Quaternion(-x, -y, -z, -w);
 }
 
+bool Quaternion::operator==(const Quaternion &other) const {
+    constexpr float kEpsilon = 1e-6f;
+    return std::abs(x - other.x) < kEpsilon &&
+           std::abs(y - other.y) < kEpsilon &&
+           std::abs(z - other.z) < kEpsilon &&
+           std::abs(w - other.w) < kEpsilon;
+}
+
+bool Quaternion::operator!=(const Quaternion &other) const {
+    return !(*this == other);
+}
+
 Quaternion Quaternion::IdentityQuaternion() {
     return Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 }
