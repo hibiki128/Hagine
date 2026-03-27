@@ -11,8 +11,8 @@
         "z": 0.0
     },
     "emitSpawnCount": 1,
-    "emitSpawnLifeTimeMax": 1.5,
-    "emitSpawnLifeTimeMin": 1.0,
+    "emitSpawnLifeTimeMax": 0.75,
+    "emitSpawnLifeTimeMin": 0.5,
     "enableColorMultiply": 0,
     "enableEmitSpawn": 1,
     "enableForceTrail": 0,
@@ -115,9 +115,9 @@
     },
     "ov_vortexStrength": 5.0,
     "position": {
-        "x": -148.10000610351563,
-        "y": 0.0,
-        "z": 0.0
+        "x": 124.59710693359375,
+        "y": 10.707682609558105,
+        "z": -2.8162660598754883
     },
     "radius": 7.0,
     "strength": 20.200000762939453,
