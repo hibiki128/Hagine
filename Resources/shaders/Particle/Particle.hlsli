@@ -20,9 +20,11 @@ struct Particle
     float3 lastTrailPosition;
     float trailSpawnDistance;
     uint2 settingsOverrideFlags;
-    // 回転 (Z軸回転をラジアンで保持、ビルボード平面上での2D回転)
-    float rotation;
-    float angularVelocity;
+    // 回転 (XYZ軸回転をラジアンで保持)
+    float3 rotation;
+    float paddingRot;
+    float3 angularVelocity;
+    float paddingAngVel;
     // 終了スケール (enableEndScale=1 のとき lifeRatio で initialScale→endScale を lerp)
     float3 endScale;
     float paddingScale;
@@ -42,8 +44,10 @@ Particle CreateEmptyParticle()
     p.isTrailParticle = 0;
     p.parentIndex = 0xFFFFFFFF;
     p.settingsOverrideFlags = uint2(0, 0);
-    p.rotation = 0.0f;
-    p.angularVelocity = 0.0f;
+    p.rotation = float3(0, 0, 0);
+    p.paddingRot = 0.0f;
+    p.angularVelocity = float3(0, 0, 0);
+    p.paddingAngVel = 0.0f;
     p.endScale = float3(0, 0, 0);
     p.paddingScale = 0.0f;
     return p;
@@ -169,13 +173,13 @@ struct ParticleCSSettings
     float3 endScaleValue; // 終了時のスケール値 (XYZ 個別指定)
     // ---- 回転 ----
     uint enableRandomRotation; // 1=発生時にランダムな初期角度を設定
-    float rotationMin; // 初期角度の最小値 (ラジアン)
-    float rotationMax; // 初期角度の最大値 (ラジアン)
+    float3 rotationMin; // 初期角度の最小値 (ラジアン, XYZ)
+    float3 rotationMax; // 初期角度の最大値 (ラジアン, XYZ)
+    float paddingRotMax;
     uint enableRandomAngularVelocity; // 1=発生時にランダムな角速度を設定
-    float angularVelocityMin; // 角速度の最小値 (ラジアン/秒)
-    float angularVelocityMax; // 角速度の最大値 (ラジアン/秒)
-    float padding10;
-    float padding11;
+    float3 angularVelocityMin; // 角速度の最小値 (ラジアン/秒, XYZ)
+    float paddingAngVelMin;
+    float3 angularVelocityMax; // 角速度の最大値 (ラジアン/秒, XYZ)
 };
 
 struct ParticleField

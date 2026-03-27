@@ -54,6 +54,7 @@ class ParticleCSGroup {
     PrimitiveType GetPrimitiveType() { return type_; }
     std::string GetModelPath() { return modelFilePath_; }
     uint32_t GetAliveParticleCount();
+    PerView *GetPerView() { return perViewData_; }
 
     /// ===================================
     /// Setter
@@ -62,6 +63,8 @@ class ParticleCSGroup {
     void SetFrequency(float frequency) { frequency_ = frequency; }
     void SetSettingData(const ParticleCSSettings &settings) { *settingsData_ = settings; }
     void SetBlendMode(BlendMode blendMode) { particleGroupData_.blendMode = blendMode; }
+    void SetPerView(PerView *perViewData) { perViewData_ = perViewData; }
+    void SetBillboard(bool flag) { perViewData_->enableBillboard = flag; }
 
     // カウント処理を実行
     void CountAliveParticles();

@@ -357,7 +357,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
     // =============================================
     Particle p = gParticles[particleIndex];
 
-    if (p.color.a <= 0.0f)
+    // lifeTime <= 0 のスロットは未使用（Init時の初期値）なのでスキップする。
+    // color.a による判定から変更: startColor.a=0（完全透明スタート）を
+    // 設定した場合でも正常に更新が走るようにするため。
+    if (p.lifeTime <= 0.0f)
         return;
         
         // 1. 加速度処理
@@ -590,14 +593,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
         
         // 9. 各種パラメータ更新
     float lifeRatio = p.currentTime / p.lifeTime;
-    float alpha = 1.0f - lifeRatio;
         
     if (!gSettings.enableRandomColor)
     {
-        p.color = lerp(gSettings.startColor, gSettings.endColor, lifeRatio);
+        // startColor / endColor の RGBA をそのまま lifeRatio で補間する。
+        // アルファも含めて lerp するため、startColor.a が発生時の透明度、
+        // endColor.a が終了時の透明度として機能する。
+        // saturate でアルファが必ず [0,1] に収まるよう保証する。
+        float4 lerpedColor = lerp(gSettings.startColor, gSettings.endColor, lifeRatio);
+        p.color = float4(lerpedColor.rgb, saturate(lerpedColor.a));
     }
-        // color.a は下で一括上書きするため、ここでは rgb 更新のみで済む
-        // （enableRandomColor=true の場合も color.a は下の1行で設定される）
+    else
+    {
+        // ランダムカラーモード: RGB はランダム（Emit時に設定済み）。
+        // アルファのみ startColor.a→endColor.a で補間する。
+        p.color.a = saturate(lerp(gSettings.startColor.a, gSettings.endColor.a, lifeRatio));
+    }
         
         // スケール更新: 3つのifを排除して1回の乗算にまとめる
         // enableLifetimeScale=0 かつ enableSinScale=0 なら両方1.0fになるので無変化
@@ -623,8 +634,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
         // 回転更新
     p.rotation += p.angularVelocity * gPerFrame.deltaTime;
         
-    p.color.a = saturate(alpha);
-        
         // --- フィールドによるカラー乗算 (色更新の後に適用) ---
     if (fieldColorMultiplier.r != 1.0f ||
             fieldColorMultiplier.g != 1.0f ||
@@ -633,7 +642,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     {
         float savedAlpha = p.color.a;
         p.color *= fieldColorMultiplier;
-            // アルファは寿命由来の値を保持（色乗算で透明にならないよう）
+            // アルファは startColor.a→endColor.a 補間由来の値を保持しつつフィールド乗算を適用する
         p.color.a = savedAlpha * fieldColorMultiplier.a;
     }
         
@@ -673,10 +682,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
     }
         
         // 死亡判定
-    if (p.color.a <= 0.0f)
+        // color.a による判定から変更: startColor.a=0（完全透明スタート）を
+        // 設定した場合でも即死しないよう、寿命切れ（currentTime >= lifeTime）で判定する。
+    if (p.currentTime >= p.lifeTime)
     {
         p.scale = float3(0.0f, 0.0f, 0.0f);
         p.lastTrailPosition = float3(0.0f, 0.0f, 0.0f);
+        // フリーリストに戻す前に lifeTime を 0 にリセットし、
+        // 早期リターン条件（lifeTime <= 0）で未使用スロットと判別できるようにする
+        p.lifeTime = 0.0f;
             
         int oldTail;
         InterlockedAdd(gFreeListTailIndex[0], 1, oldTail);

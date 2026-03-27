@@ -224,26 +224,40 @@ void ParticleCSEmitter::EmitterDisPatch() {
             auto *fieldManager = ParticleCSFieldManager::GetInstance();
             commandList->SetComputeRootDescriptorTable(11, fieldManager->GetFieldsSrvHandle().second);
 
-            if (emitOnlyOnFieldContact_) {
-                // ===== フィールド接触時のみEmitモード =====
-                // CPU側でフィールドとエミッター表面の接触面積を計算し、
-                // emitCount を動的に絞ってから Dispatch する。
-                // これにより不要なスレッドとアトミック競合が大幅に削減される。
+            if (emitOnlyOnFieldContact_ && receiveFields_) {
+                // ===== フィールド接触Emitモード =====
+                // enableEmitSpawnフィールドが存在するか確認
+                bool hasEmitSpawnField = false;
+                for (const auto &field : fieldManager->GetFields()) {
+                    if (!field.enabled || !field.data.enableEmitSpawn)
+                        continue;
+                    bool groupMatch = (field.data.groupId == -1) ||
+                                      (fieldGroupId_ == -1) ||
+                                      (field.data.groupId == fieldGroupId_);
+                    if (groupMatch) {
+                        hasEmitSpawnField = true;
+                        break;
+                    }
+                }
 
-                uint32_t dynamicEmitCount = CalcEmitCountFromFieldContact(settings);
-
-                if (dynamicEmitCount == 0) {
-                    // 接触なし → Dispatch 不要。fieldCount だけゼロに設定して終了
+                if (!hasEmitSpawnField) {
+                    // フィールドがない → Dispatch不要
                     commandList->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
                     groupIndex++;
                     continue;
                 }
 
-                // emitCount を接触面積ベースの値に上書き
+                // フィールドが存在する → シェーダー側でフィールド球内→表面投影でEmit位置を決定する
+                // emitCount を fieldContactEmitCount_ で上書きして Dispatch
+                // シェーダーの CalcFieldContactEmitPosition が全スレッドをフィールド接触点にEmitするため
+                // 少ない数でも密にパーティクルが出る
                 uint32_t savedEmitCount = settings->emitCount;
-                settings->emitCount = dynamicEmitCount;
+                float savedLifeMin = settings->lifeTimeMin;
+                float savedLifeMax = settings->lifeTimeMax;
 
-                // フィールドの lifeTime 設定で上書き（ゼロ除算防止）
+                settings->emitCount = fieldContactEmitCount_;
+
+                // フィールドの lifeTime 設定で上書き（0のままだとUpdateシェーダーでゼロ除算）
                 for (const auto &field : fieldManager->GetFields()) {
                     if (!field.enabled || !field.data.enableEmitSpawn)
                         continue;
@@ -259,22 +273,24 @@ void ParticleCSEmitter::EmitterDisPatch() {
                     break;
                 }
 
-                // GPU側でも ShouldEmitAtPosition チェックを行うためフィールドカウントを渡す
+                // フィールドカウントをシェーダーに渡す（CalcFieldContactEmitPosition で使用）
                 commandList->SetComputeRootConstantBufferView(7, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
 
                 int dispatchCount = (settings->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
                 commandList->Dispatch(dispatchCount, 1, 1);
 
-                // emitCount を元に戻す（次フレームの通常Emit用）
+                // 設定を元に戻す
                 settings->emitCount = savedEmitCount;
+                settings->lifeTimeMin = savedLifeMin;
+                settings->lifeTimeMax = savedLifeMax;
 
                 groupIndex++;
                 continue;
 
             } else {
                 // ===== 通常モード =====
-                // enableEmitSpawn フィールドは無視してフィールドカウントをゼロにする。
-                // フィールドは UpdateParticle_CS での物理影響（引力・風など）のみ与える。
+                // フィールドカウントをゼロにして、シェーダー側の ShouldEmitAtPosition が
+                // 常に true を返すようにする（全表面からランダムEmit）
                 commandList->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
             }
         }
@@ -289,132 +305,6 @@ void ParticleCSEmitter::EmitterDisPatch() {
 
         groupIndex++;
     }
-}
-
-uint32_t ParticleCSEmitter::CalcEmitCountFromFieldContact(ParticleCSSettings *settings) {
-    // enableEmitSpawn かつ groupId が一致するフィールドを収集
-    auto *fieldManager = ParticleCSFieldManager::GetInstance();
-    const auto &fields = fieldManager->GetFields();
-
-    struct ActiveField {
-        Vector3 position;
-        float radius;
-    };
-    std::vector<ActiveField> activeFields;
-
-    for (const auto &field : fields) {
-        if (!field.enabled || !field.data.enableEmitSpawn)
-            continue;
-        bool groupMatch = (field.data.groupId == -1) ||
-                          (fieldGroupId_ == -1) ||
-                          (field.data.groupId == fieldGroupId_);
-        if (!groupMatch)
-            continue;
-        activeFields.push_back({field.data.position, field.data.radius});
-    }
-
-    if (activeFields.empty())
-        return 0;
-
-    // エミッター表面の三角形リストが存在する場合はモンテカルロで接触面積を推定する。
-    // 三角形リストがない（点エミッター）場合は中心がフィールド内かどうかだけ判定。
-
-    if (triangleInfoList_.empty()) {
-        // 点エミッター：中心がフィールド球内なら密度 × 1 を返す
-        Vector3 center = emitterMeshData_->translate;
-        for (const auto &af : activeFields) {
-            Vector3 diff = center - af.position;
-            if (diff.x * diff.x + diff.y * diff.y + diff.z * diff.z < af.radius * af.radius) {
-                return static_cast<uint32_t>(emitDensityPerUnitArea_);
-            }
-        }
-        return 0;
-    }
-
-    // --- モンテカルロで接触面積を推定 ---
-    // エミッター表面の全三角形から一定数サンプルを取り、フィールド球内に入る
-    // 割合 × 総表面積 × emitDensityPerUnitArea_ を emitCount とする。
-
-    constexpr int kSamples = 256; // サンプル数（精度と速度のバランス）
-
-    // 各三角形の面積と累積CDFを使って面積加重サンプリング
-    const Matrix4x4 transformMatrix = MakeAffineMatrix(
-        emitterMeshData_->scale,
-        emitterMeshData_->rotation,
-        emitterMeshData_->translate);
-
-    // 総表面積（ワールド座標）を計算
-    float totalArea = 0.0f;
-    std::vector<float> triAreas(triangleInfoList_.size());
-    for (size_t i = 0; i < triangleInfoList_.size(); ++i) {
-        const auto &tri = triangleInfoList_[i];
-        Vector3 v0w = Transformation(tri.v0, transformMatrix);
-        Vector3 v1w = Transformation(tri.v1, transformMatrix);
-        Vector3 v2w = Transformation(tri.v2, transformMatrix);
-        Vector3 e1 = v1w - v0w;
-        Vector3 e2 = v2w - v0w;
-        float area = e1.Cross(e2).Length() * 0.5f;
-        triAreas[i] = area;
-        totalArea += area;
-    }
-
-    if (totalArea < 1e-6f)
-        return 0;
-
-    // 面積加重CDF（毎フレーム再計算は重いので三角形数が多い場合は間引く）
-    // 三角形が少なければ全サンプル、多ければ CDF を使う
-    int hitCount = 0;
-
-    // 簡易LCGランダム（毎フレーム同じシードでOK、分布の一様性だけ確保）
-    uint32_t rng = 12345u + static_cast<uint32_t>(triangleInfoList_.size() * 7u);
-    auto lcgNext = [&]() -> float {
-        rng = rng * 1664525u + 1013904223u;
-        return static_cast<float>(rng >> 8) / static_cast<float>(1u << 24);
-    };
-
-    for (int s = 0; s < kSamples; ++s) {
-        // 面積加重でランダムな三角形を選択
-        float r = lcgNext() * totalArea;
-        float accum = 0.0f;
-        size_t triIdx = 0;
-        for (size_t i = 0; i < triAreas.size(); ++i) {
-            accum += triAreas[i];
-            if (r <= accum) {
-                triIdx = i;
-                break;
-            }
-        }
-
-        // 三角形上のランダム点（ワールド座標）
-        const auto &tri = triangleInfoList_[triIdx];
-        Vector3 v0w = Transformation(tri.v0, transformMatrix);
-        Vector3 v1w = Transformation(tri.v1, transformMatrix);
-        Vector3 v2w = Transformation(tri.v2, transformMatrix);
-
-        float u = lcgNext();
-        float v = lcgNext();
-        if (u + v > 1.0f) {
-            u = 1.0f - u;
-            v = 1.0f - v;
-        }
-        Vector3 samplePos = v0w + (v1w - v0w) * u + (v2w - v0w) * v;
-
-        // いずれかのフィールド球内に入るか判定
-        for (const auto &af : activeFields) {
-            Vector3 diff = samplePos - af.position;
-            if (diff.x * diff.x + diff.y * diff.y + diff.z * diff.z < af.radius * af.radius) {
-                ++hitCount;
-                break;
-            }
-        }
-    }
-
-    float contactRatio = static_cast<float>(hitCount) / static_cast<float>(kSamples);
-    float contactArea = totalArea * contactRatio;
-
-    // 接触面積 × 密度 = emitCount
-    uint32_t emitCount = static_cast<uint32_t>(contactArea * emitDensityPerUnitArea_);
-    return emitCount;
 }
 
 std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const {
@@ -665,7 +555,7 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("receiveFields", receiveFields_);
     data->Save("fieldGroupId", fieldGroupId_);
     data->Save("emitOnlyOnFieldContact", emitOnlyOnFieldContact_);
-    data->Save("emitDensityPerUnitArea", emitDensityPerUnitArea_);
+    data->Save("fieldContactEmitCount", static_cast<int>(fieldContactEmitCount_));
 
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
 
@@ -743,11 +633,13 @@ void ParticleCSEmitter::SaveSetting() {
 
         // ★ 回転設定の保存
         data->Save(prefix + "enableRandomRotation", group->GetSettingsData()->enableRandomRotation);
-        data->Save(prefix + "rotationMin", group->GetSettingsData()->rotationMin);
-        data->Save(prefix + "rotationMax", group->GetSettingsData()->rotationMax);
+        data->Save<Vector3>(prefix + "rotationMin", group->GetSettingsData()->rotationMin);
+        data->Save<Vector3>(prefix + "rotationMax", group->GetSettingsData()->rotationMax);
         data->Save(prefix + "enableRandomAngularVelocity", group->GetSettingsData()->enableRandomAngularVelocity);
-        data->Save(prefix + "angularVelocityMin", group->GetSettingsData()->angularVelocityMin);
-        data->Save(prefix + "angularVelocityMax", group->GetSettingsData()->angularVelocityMax);
+        data->Save<Vector3>(prefix + "angularVelocityMin", group->GetSettingsData()->angularVelocityMin);
+        data->Save<Vector3>(prefix + "angularVelocityMax", group->GetSettingsData()->angularVelocityMax);
+
+        data->Save(prefix + "enablebilboard", group->GetPerView()->enableBillboard);
     }
 }
 
@@ -769,7 +661,7 @@ void ParticleCSEmitter::LoadSetting() {
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
     emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
-    emitDensityPerUnitArea_ = data->Load("emitDensityPerUnitArea", 10.0f);
+    fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
 
     if (!modelPath_.empty()) {
         LoadModel(modelPath_);
@@ -859,11 +751,13 @@ void ParticleCSEmitter::LoadSetting() {
 
         // ★ 回転設定のロード
         settings.enableRandomRotation = data->Load<uint32_t>(prefix + "enableRandomRotation", 0);
-        settings.rotationMin = data->Load(prefix + "rotationMin", 0.0f);
-        settings.rotationMax = data->Load(prefix + "rotationMax", 6.2831853f);
+        settings.rotationMin = data->Load<Vector3>(prefix + "rotationMin", {0.0f, 0.0f, 0.0f});
+        settings.rotationMax = data->Load<Vector3>(prefix + "rotationMax", {0.0f, 0.0f, 0.0f});
         settings.enableRandomAngularVelocity = data->Load<uint32_t>(prefix + "enableRandomAngularVelocity", 0);
-        settings.angularVelocityMin = data->Load(prefix + "angularVelocityMin", -3.14159f);
-        settings.angularVelocityMax = data->Load(prefix + "angularVelocityMax", 3.14159f);
+        settings.angularVelocityMin = data->Load<Vector3>(prefix + "angularVelocityMin", {0.0f, 0.0f, 0.0f});
+        settings.angularVelocityMax = data->Load<Vector3>(prefix + "angularVelocityMax", {0.0f, 0.0f, 0.0f});
+
+        group->SetBillboard(data->Load(prefix + "enableBillboard", true));
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -896,7 +790,7 @@ void ParticleCSEmitter::LoadCloneSetting() {
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
     emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
-    emitDensityPerUnitArea_ = data->Load("emitDensityPerUnitArea", 10.0f);
+    fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
 
     if (!modelPath_.empty()) {
         LoadModel(modelPath_);
@@ -987,11 +881,13 @@ void ParticleCSEmitter::LoadCloneSetting() {
 
         // ★ 回転設定のロード
         settings.enableRandomRotation = data->Load<uint32_t>(prefix + "enableRandomRotation", 0);
-        settings.rotationMin = data->Load(prefix + "rotationMin", 0.0f);
-        settings.rotationMax = data->Load(prefix + "rotationMax", 6.2831853f);
+        settings.rotationMin = data->Load<Vector3>(prefix + "rotationMin", {0.0f, 0.0f, 0.0f});
+        settings.rotationMax = data->Load<Vector3>(prefix + "rotationMax", {0.0f, 0.0f, 0.0f});
         settings.enableRandomAngularVelocity = data->Load<uint32_t>(prefix + "enableRandomAngularVelocity", 0);
-        settings.angularVelocityMin = data->Load(prefix + "angularVelocityMin", -3.14159f);
-        settings.angularVelocityMax = data->Load(prefix + "angularVelocityMax", 3.14159f);
+        settings.angularVelocityMin = data->Load<Vector3>(prefix + "angularVelocityMin", {0.0f, 0.0f, 0.0f});
+        settings.angularVelocityMax = data->Load<Vector3>(prefix + "angularVelocityMax", {0.0f, 0.0f, 0.0f});
+
+        group->SetBillboard(data->Load(prefix + "enableBillboard", true));
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -1159,7 +1055,6 @@ void ParticleCSEmitter::DrawImGui() {
                     ImGui::Text("  ID: %d のフィールドのみ対象", fieldGroupId_);
                 }
 
-                // フィールド接触時のみEmitフラグ
                 ImGui::Spacing();
                 bool eofc = emitOnlyOnFieldContact_;
                 if (ImGui::Checkbox("フィールド接触時のみEmit##EmitOnFieldContact", &eofc)) {
@@ -1167,23 +1062,28 @@ void ParticleCSEmitter::DrawImGui() {
                 }
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip(
-                        "ON : フィールドが触れている面積からemitCountを動的計算し\n"
-                        "     接触部分にのみパーティクルを発生させます\n"
-                        "     (大量発生数を設定する必要がなくなります)\n"
-                        "OFF: 通常通り自動Emitし、フィールドは物理影響のみ与えます");
+                        "ON : シェーダー側でフィールド球内のランダム点を生成し\n"
+                        "     エミッター表面に投影してEmit位置を決定します\n"
+                        "     全スレッドがフィールド接触部分にEmitするため\n"
+                        "     500000のような大量発生数は不要になります\n"
+                        "     (推奨: 500〜3000程度)\n"
+                        "OFF: 通常通りエミッター全体からランダムEmitします");
                 }
 
                 if (emitOnlyOnFieldContact_) {
                     ImGui::Indent();
-                    ImGui::PushItemWidth(160.0f);
-                    ImGui::DragFloat("接触面積あたりの発生密度##EmitDensity",
-                                     &emitDensityPerUnitArea_, 0.1f, 0.1f, 10000.0f, "%.1f");
+                    ImGui::PushItemWidth(180.0f);
+                    int emitCnt = static_cast<int>(fieldContactEmitCount_);
+                    if (ImGui::DragInt("接触Emit発生数/フレーム##FieldContactEmit", &emitCnt, 10, 1, 50000)) {
+                        fieldContactEmitCount_ = static_cast<uint32_t>(std::max(1, emitCnt));
+                    }
                     ImGui::PopItemWidth();
                     if (ImGui::IsItemHovered()) {
                         ImGui::SetTooltip(
-                            "フィールドが触れているエミッター表面1単位面積あたりの発生数\n"
-                            "値を上げるほど接触部分に密にパーティクルが出ます\n"
-                            "emitCount = 接触面積 × この値  で自動計算されます");
+                            "フィールド接触Emitモード時の1フレームあたり発生数\n"
+                            "全スレッドがフィールド接触点にEmitするため\n"
+                            "500〜3000程度で十分密になります\n"
+                            "フィールドを動かすほどEmit位置も動的に追従します");
                     }
                     ImGui::Unindent();
                 }

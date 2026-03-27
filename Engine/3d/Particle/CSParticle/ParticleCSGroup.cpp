@@ -185,12 +185,16 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     perFrameData_->deltaTime = Frame::DeltaTime();
 
     perViewData_->viewProjection = vp.matView_ * vp.matProjection_;
-    perViewData_->billboardMatrix = vp.matView_;
-    perViewData_->billboardMatrix.m[3][0] = 0.0f;
-    perViewData_->billboardMatrix.m[3][1] = 0.0f;
-    perViewData_->billboardMatrix.m[3][2] = 0.0f;
-    perViewData_->billboardMatrix.m[3][3] = 1.0f;
-    perViewData_->billboardMatrix = Inverse(perViewData_->billboardMatrix);
+    if (perViewData_->enableBillboard) {
+        perViewData_->billboardMatrix = vp.matView_;
+        perViewData_->billboardMatrix.m[3][0] = 0.0f;
+        perViewData_->billboardMatrix.m[3][1] = 0.0f;
+        perViewData_->billboardMatrix.m[3][2] = 0.0f;
+        perViewData_->billboardMatrix.m[3][3] = 1.0f;
+        perViewData_->billboardMatrix = Inverse(perViewData_->billboardMatrix);
+    } else {
+        perViewData_->billboardMatrix = MakeIdentity4x4();
+    }
 
     CopyDebugDataToReadback();
 }
@@ -426,11 +430,11 @@ void ParticleCSGroup::CreateSettingsResource() {
 
     // ---- 回転 デフォルト ----
     settingsData_->enableRandomRotation = 0;
-    settingsData_->rotationMin = 0.0f;
-    settingsData_->rotationMax = 6.2831853f; // 2π
+    settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
+    settingsData_->rotationMax = {0.0f, 0.0f, 0.0f};
     settingsData_->enableRandomAngularVelocity = 0;
-    settingsData_->angularVelocityMin = -3.14159f;
-    settingsData_->angularVelocityMax = 3.14159f;
+    settingsData_->angularVelocityMin = {0.0f, 0.0f, 0.0f};
+    settingsData_->angularVelocityMax = {0.0f, 0.0f, 0.0f};
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {
@@ -607,6 +611,17 @@ void ParticleCSGroup::DrawImGui() {
             if (!rnd) {
                 ImGui::ColorEdit4("開始色", &settingsData_->startColor.x);
                 ImGui::ColorEdit4("終了色", &settingsData_->endColor.x);
+            } else {
+                // ランダムカラー時はRGBがランダムのため色編集は非表示にするが、
+                // アルファ（透明度）は startColor.a / endColor.a で補間されるので個別に編集できるようにする
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.2f, 0.4f, 0.5f));
+                ImGui::DragFloat("開始アルファ##rndAlphaStart", &settingsData_->startColor.w, 0.01f, 0.0f, 1.0f, "%.4f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("発生時の透明度 (0=完全透明, 1=完全不透明)");
+                ImGui::DragFloat("終了アルファ##rndAlphaEnd", &settingsData_->endColor.w, 0.01f, 0.0f, 1.0f, "%.4f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("消滅時の透明度 (0=完全透明, 1=完全不透明)");
+                ImGui::PopStyleColor();
             }
         }
 
@@ -632,6 +647,15 @@ void ParticleCSGroup::DrawImGui() {
     if (openMotion) {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.9f, 0.4f, 1.0f));
+
+        // ビルボード
+        {
+            bool v = perViewData_->enableBillboard != 0;
+            if (ImGui::Checkbox("ビルボード", &v))
+                perViewData_->enableBillboard = v ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("ONでパーティクルが常にカメラ正面を向きます\nOFFにするとワールド空間に固定されます");
+        }
 
         // 寿命で縮小
         {
@@ -787,19 +811,21 @@ void ParticleCSGroup::DrawImGui() {
             if (ImGui::Checkbox("ランダム初期角度##rr", &v))
                 settingsData_->enableRandomRotation = v ? 1 : 0;
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("発生時にランダムな角度で出現します (ラジアン)");
+                ImGui::SetTooltip("発生時にランダムな角度で出現します (XYZ, ラジアン)");
             if (v) {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.15f, 0.35f, 0.5f));
 
-                // ラジアン→度数法で表示しつつ内部はラジアンで保持
-                float rotMinDeg = settingsData_->rotationMin * (180.0f / 3.14159265f);
-                float rotMaxDeg = settingsData_->rotationMax * (180.0f / 3.14159265f);
+                auto toDeg3 = [](Vector3 r) -> Vector3 { return {r.x * (180.0f / 3.14159265f), r.y * (180.0f / 3.14159265f), r.z * (180.0f / 3.14159265f)}; };
+                auto toRad3 = [](Vector3 d) -> Vector3 { return {d.x * (3.14159265f / 180.0f), d.y * (3.14159265f / 180.0f), d.z * (3.14159265f / 180.0f)}; };
 
-                if (ImGui::DragFloat("角度 Min(°)##rrMin", &rotMinDeg, 1.0f, -360.0f, 360.0f, "%.1f°"))
-                    settingsData_->rotationMin = rotMinDeg * (3.14159265f / 180.0f);
-                if (ImGui::DragFloat("角度 Max(°)##rrMax", &rotMaxDeg, 1.0f, -360.0f, 360.0f, "%.1f°"))
-                    settingsData_->rotationMax = rotMaxDeg * (3.14159265f / 180.0f);
+                Vector3 rotMinDeg = toDeg3(settingsData_->rotationMin);
+                Vector3 rotMaxDeg = toDeg3(settingsData_->rotationMax);
+
+                if (ImGui::DragFloat3("角度 Min(°)##rrMin", &rotMinDeg.x, 1.0f, -360.0f, 360.0f, "%.1f°"))
+                    settingsData_->rotationMin = toRad3(rotMinDeg);
+                if (ImGui::DragFloat3("角度 Max(°)##rrMax", &rotMaxDeg.x, 1.0f, -360.0f, 360.0f, "%.1f°"))
+                    settingsData_->rotationMax = toRad3(rotMaxDeg);
 
                 ImGui::PopStyleColor();
 
@@ -807,13 +833,18 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::TextDisabled("プリセット:");
                 ImGui::SameLine();
                 if (ImGui::SmallButton("全方向##rrPreset1")) {
-                    settingsData_->rotationMin = 0.0f;
-                    settingsData_->rotationMax = 6.2831853f;
+                    settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
+                    settingsData_->rotationMax = {6.2831853f, 6.2831853f, 6.2831853f};
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("上半分##rrPreset2")) {
-                    settingsData_->rotationMin = 0.0f;
-                    settingsData_->rotationMax = 3.14159265f;
+                if (ImGui::SmallButton("Z軸のみ##rrPreset2")) {
+                    settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
+                    settingsData_->rotationMax = {0.0f, 0.0f, 6.2831853f};
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("リセット##rrPreset3")) {
+                    settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
+                    settingsData_->rotationMax = {0.0f, 0.0f, 0.0f};
                 }
                 ImGui::Unindent();
             }
@@ -827,19 +858,21 @@ void ParticleCSGroup::DrawImGui() {
             if (ImGui::Checkbox("ランダム角速度##rav", &v))
                 settingsData_->enableRandomAngularVelocity = v ? 1 : 0;
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("発生時にランダムな回転速度を設定します\n正=時計回り / 負=反時計回り (ラジアン/秒)");
+                ImGui::SetTooltip("発生時にランダムな回転速度を設定します (XYZ, ラジアン/秒)");
             if (v) {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.15f, 0.35f, 0.5f));
 
-                // ラジアン/秒 → 度数/秒 で表示
-                float avMinDeg = settingsData_->angularVelocityMin * (180.0f / 3.14159265f);
-                float avMaxDeg = settingsData_->angularVelocityMax * (180.0f / 3.14159265f);
+                auto toDeg3 = [](Vector3 r) -> Vector3 { return {r.x * (180.0f / 3.14159265f), r.y * (180.0f / 3.14159265f), r.z * (180.0f / 3.14159265f)}; };
+                auto toRad3 = [](Vector3 d) -> Vector3 { return {d.x * (3.14159265f / 180.0f), d.y * (3.14159265f / 180.0f), d.z * (3.14159265f / 180.0f)}; };
 
-                if (ImGui::DragFloat("角速度 Min(°/s)##ravMin", &avMinDeg, 1.0f, -3600.0f, 3600.0f, "%.1f°/s"))
-                    settingsData_->angularVelocityMin = avMinDeg * (3.14159265f / 180.0f);
-                if (ImGui::DragFloat("角速度 Max(°/s)##ravMax", &avMaxDeg, 1.0f, -3600.0f, 3600.0f, "%.1f°/s"))
-                    settingsData_->angularVelocityMax = avMaxDeg * (3.14159265f / 180.0f);
+                Vector3 avMinDeg = toDeg3(settingsData_->angularVelocityMin);
+                Vector3 avMaxDeg = toDeg3(settingsData_->angularVelocityMax);
+
+                if (ImGui::DragFloat3("角速度 Min(°/s)##ravMin", &avMinDeg.x, 1.0f, -3600.0f, 3600.0f, "%.1f°/s"))
+                    settingsData_->angularVelocityMin = toRad3(avMinDeg);
+                if (ImGui::DragFloat3("角速度 Max(°/s)##ravMax", &avMaxDeg.x, 1.0f, -3600.0f, 3600.0f, "%.1f°/s"))
+                    settingsData_->angularVelocityMax = toRad3(avMaxDeg);
 
                 ImGui::PopStyleColor();
 
@@ -847,18 +880,23 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::TextDisabled("プリセット:");
                 ImGui::SameLine();
                 if (ImGui::SmallButton("ゆっくり##ravPreset1")) {
-                    settingsData_->angularVelocityMin = -1.0f;
-                    settingsData_->angularVelocityMax = 1.0f;
+                    settingsData_->angularVelocityMin = {-1.0f, -1.0f, -1.0f};
+                    settingsData_->angularVelocityMax = {1.0f, 1.0f, 1.0f};
                 }
                 ImGui::SameLine();
                 if (ImGui::SmallButton("速い##ravPreset2")) {
-                    settingsData_->angularVelocityMin = -6.2831853f;
-                    settingsData_->angularVelocityMax = 6.2831853f;
+                    settingsData_->angularVelocityMin = {-6.2831853f, -6.2831853f, -6.2831853f};
+                    settingsData_->angularVelocityMax = {6.2831853f, 6.2831853f, 6.2831853f};
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("一方向##ravPreset3")) {
-                    settingsData_->angularVelocityMin = 1.5707963f;
-                    settingsData_->angularVelocityMax = 3.14159265f;
+                if (ImGui::SmallButton("Z軸のみ##ravPreset3")) {
+                    settingsData_->angularVelocityMin = {0.0f, 0.0f, -3.14159265f};
+                    settingsData_->angularVelocityMax = {0.0f, 0.0f, 3.14159265f};
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("リセット##ravPreset4")) {
+                    settingsData_->angularVelocityMin = {0.0f, 0.0f, 0.0f};
+                    settingsData_->angularVelocityMax = {0.0f, 0.0f, 0.0f};
                 }
                 ImGui::Unindent();
             }

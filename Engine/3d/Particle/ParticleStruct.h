@@ -53,9 +53,11 @@ struct CSParticle {
     // lo=bit0-31, hi=bit32-63
     uint32_t settingsOverrideFlagsLo = 0;
     uint32_t settingsOverrideFlagsHi = 0;
-    // 回転 (Z軸回転、ラジアン)
-    float rotation = 0.0f;
-    float angularVelocity = 0.0f;
+    // 回転 (XYZ軸回転、ラジアン)
+    Vector3 rotation = {0.0f, 0.0f, 0.0f};
+    float paddingRot = 0.0f;
+    Vector3 angularVelocity = {0.0f, 0.0f, 0.0f};
+    float paddingAngVel = 0.0f;
     // 終了スケール
     Vector3 endScale = {0.0f, 0.0f, 0.0f};
     float paddingScale = 0.0f;
@@ -64,6 +66,8 @@ struct CSParticle {
 struct PerView {
     Matrix4x4 viewProjection;
     Matrix4x4 billboardMatrix;
+    uint32_t enableBillboard = 1; // 1=ビルボードON(デフォルト), 0=OFF
+    float padding[3];
 };
 
 struct TriangleInfo {
@@ -186,13 +190,13 @@ struct ParticleCSSettings {
     Vector3 endScaleValue = {0.0f, 0.0f, 0.0f}; // 終了時スケール値
     // ---- 回転 ----
     uint32_t enableRandomRotation = 0;        // 1=発生時にランダム初期角度
-    float rotationMin = 0.0f;                 // 初期角度 最小 (ラジアン)
-    float rotationMax = 6.2831853f;           // 初期角度 最大 (2π)
-    uint32_t enableRandomAngularVelocity = 0; // 1=発生時にランダム角速度
-    float angularVelocityMin = -3.14159f;     // 角速度 最小 (ラジアン/秒)
-    float angularVelocityMax = 3.14159f;      // 角速度 最大 (ラジアン/秒)
-    float padding10{};
-    float padding11{};
+    Vector3 rotationMin = {0.0f, 0.0f, 0.0f}; // 初期角度 最小 (ラジアン, XYZ)
+    Vector3 rotationMax = {0.0f, 0.0f, 0.0f}; // 初期角度 最大 (ラジアン, XYZ)
+    float paddingRotMax{};
+    uint32_t enableRandomAngularVelocity = 0;        // 1=発生時にランダム角速度
+    Vector3 angularVelocityMin = {0.0f, 0.0f, 0.0f}; // 角速度 最小 (ラジアン/秒, XYZ)
+    float paddingAngVelMin{};
+    Vector3 angularVelocityMax = {0.0f, 0.0f, 0.0f}; // 角速度 最大 (ラジアン/秒, XYZ)
 };
 
 /// =======================

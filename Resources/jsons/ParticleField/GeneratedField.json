@@ -1,8 +1,8 @@
 {
     "colorMultiplier": {
         "w": 1.0,
-        "x": 1.0,
-        "y": 1.0,
+        "x": 0.0,
+        "y": 0.06451630592346191,
         "z": 1.0
     },
     "direction": {
@@ -10,16 +10,16 @@
         "y": 0.0,
         "z": 0.0
     },
-    "emitSpawnCount": 500000,
-    "emitSpawnLifeTimeMax": 0.25,
-    "emitSpawnLifeTimeMin": 0.25,
+    "emitSpawnCount": 1,
+    "emitSpawnLifeTimeMax": 1.5,
+    "emitSpawnLifeTimeMin": 1.0,
     "enableColorMultiply": 0,
     "enableEmitSpawn": 1,
     "enableForceTrail": 0,
     "enableLifeDrain": 0,
     "enableSettingsOverride": 0,
     "enabled": true,
-    "falloff": 1.100000023841858,
+    "falloff": 0.10000000149011612,
     "fieldType": 0,
     "groupId": 0,
     "lifeTimeDrain": 0.0,
@@ -115,11 +115,11 @@
     },
     "ov_vortexStrength": 5.0,
     "position": {
-        "x": -74.3412857055664,
-        "y": 15.055122375488281,
-        "z": -122.40501403808594
+        "x": -148.10000610351563,
+        "y": 0.0,
+        "z": 0.0
     },
     "radius": 7.0,
-    "strength": 69.55000305175781,
+    "strength": 20.200000762939453,
     "trailSpawnDistanceOverride": 0.0
 }

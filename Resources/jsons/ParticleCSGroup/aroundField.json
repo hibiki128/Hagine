@@ -1,0 +1,8 @@
+{
+    "blendMode": 2,
+    "groupName": "aroundField",
+    "maxParticleCount": 10000,
+    "modelfilePath": "",
+    "primitiveType": 3,
+    "textureName": "debug/white1x1.png"
+}
