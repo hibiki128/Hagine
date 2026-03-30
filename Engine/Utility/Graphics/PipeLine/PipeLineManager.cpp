@@ -2,18 +2,8 @@
 #include "ComputePipeLineManager.h"
 #include <Debug/Log/Logger.h>
 #include <d3dx12.h>
-PipeLineManager *PipeLineManager::instance = nullptr;
-
-PipeLineManager *PipeLineManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new PipeLineManager;
-    }
-    return instance;
-}
 
 void PipeLineManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void PipeLineManager::Initialize(DirectXCommon *dxCommon) {

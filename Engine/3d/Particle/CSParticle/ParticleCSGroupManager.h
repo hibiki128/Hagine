@@ -7,7 +7,6 @@ class ParticleCSGroupManager {
     /// ===================================================
     /// private methods
     /// ===================================================
-    static ParticleCSGroupManager *instance;
     ParticleCSGroupManager() = default;
     ~ParticleCSGroupManager() = default;
     ParticleCSGroupManager(ParticleCSGroupManager &) = delete;
@@ -17,7 +16,10 @@ class ParticleCSGroupManager {
     /// ===================================================
     /// public methods
     /// ===================================================
-    static ParticleCSGroupManager *GetInstance();
+    static ParticleCSGroupManager *GetInstance() {
+        static ParticleCSGroupManager instance;
+        return &instance;
+    }
 
     void Initialize();
 

@@ -8,7 +8,6 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg
 // WindowsAPI
 class WinApp {
   private:
-    static WinApp *instance;
     WinApp() = default;
     ~WinApp() = default;
     WinApp(const WinApp &) = delete;
@@ -22,7 +21,10 @@ class WinApp {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static WinApp *GetInstance();
+      static WinApp* GetInstance() {
+        static WinApp instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 初期化

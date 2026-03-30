@@ -6,18 +6,7 @@
 #include <Debug/Log/Logger.h>
 #include <ShowFolder/ShowFolder.h>
 
-BaseObjectManager *BaseObjectManager::instance = nullptr;
-
-BaseObjectManager *BaseObjectManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new BaseObjectManager();
-    }
-    return instance;
-}
-
 void BaseObjectManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void BaseObjectManager::RemoveAllObjects() {

@@ -58,7 +58,10 @@ class DrawLine3D {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns>DrawLine3D*: インスタンスのポインタ</returns>
-    static DrawLine3D *GetInstance();
+    static DrawLine3D* GetInstance() {
+        static DrawLine3D instance;
+        return &instance;
+    }
 
     /// <summary>
     /// 初期化
@@ -159,8 +162,6 @@ class DrawLine3D {
     /// ===================================================
     /// private varians
     /// ===================================================
-
-    static DrawLine3D *instance; // シングルトンインスタンス
 
     std::unique_ptr<LineData> line_; // 線データ
     uint32_t indexLine_ = 0;         // 線のインデックス

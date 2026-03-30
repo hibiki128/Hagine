@@ -22,8 +22,6 @@ class PrimitiveModel {
     /// private method
     /// ====================================================
 
-    static PrimitiveModel *instance;
-
     PrimitiveModel() = default;
     ~PrimitiveModel() = default;
     PrimitiveModel(PrimitiveModel &) = delete;
@@ -43,7 +41,10 @@ class PrimitiveModel {
 
     void Initialize();
 
-    static PrimitiveModel *GetInstance();
+    static PrimitiveModel* GetInstance() {
+        static PrimitiveModel instance;
+        return &instance;
+    }
 
     void Finalize();
 

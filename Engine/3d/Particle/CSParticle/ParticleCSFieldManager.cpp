@@ -160,18 +160,7 @@ static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_Fiel
     dst.curlNoisePosRandom = src.curlNoisePosRandom;
 }
 
-ParticleCSFieldManager *ParticleCSFieldManager::instance_ = nullptr;
-
-ParticleCSFieldManager *ParticleCSFieldManager::GetInstance() {
-    if (!instance_) {
-        instance_ = new ParticleCSFieldManager();
-    }
-    return instance_;
-}
-
 void ParticleCSFieldManager::Finalize() {
-    delete instance_;
-    instance_ = nullptr;
 }
 
 void ParticleCSFieldManager::Initialize() {

@@ -15,7 +15,10 @@ class ModelCommon {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns>ModelCommon*: インスタンスのポインタ</returns>
-    static ModelCommon *GetInstance();
+      static ModelCommon* GetInstance() {
+        static ModelCommon instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 初期化
@@ -47,6 +50,5 @@ class ModelCommon {
     /// private varians
     /// ===================================================
 
-    static ModelCommon *instance; // シングルトンインスタンス
     DirectXCommon *dxCommon_;     // DirectX共通クラス
 };

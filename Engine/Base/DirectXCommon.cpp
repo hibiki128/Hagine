@@ -18,18 +18,7 @@ using namespace StringUtility;
 
 using namespace Microsoft::WRL;
 
-DirectXCommon *DirectXCommon::instance = nullptr;
-
-DirectXCommon *DirectXCommon::GetInstance() {
-    if (instance == nullptr) {
-        instance = new DirectXCommon();
-    }
-    return instance;
-}
-
 void DirectXCommon::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void DirectXCommon::Initialize(WinApp *winApp) {

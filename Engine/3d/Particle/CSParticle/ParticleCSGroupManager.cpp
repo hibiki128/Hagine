@@ -1,14 +1,5 @@
 #include "ParticleCSGroupManager.h"
 
-ParticleCSGroupManager *ParticleCSGroupManager::instance = nullptr;
-
-ParticleCSGroupManager *ParticleCSGroupManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ParticleCSGroupManager();
-    }
-    return instance;
-}
-
 void ParticleCSGroupManager::Initialize() {
     const std::string directoryPath = "resources/jsons/ParticleCSGroup/";
 
@@ -60,8 +51,6 @@ void ParticleCSGroupManager::Initialize() {
 }
 
 void ParticleCSGroupManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void ParticleCSGroupManager::CreateParticleCSGroup(const std::string &groupName, const std::string &fileName, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {

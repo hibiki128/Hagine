@@ -3,15 +3,6 @@
 #include <functional>
 #include <sstream>
 
-ModelManager *ModelManager::instance = nullptr;
-
-ModelManager *ModelManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ModelManager;
-    }
-    return instance;
-}
-
 void ModelManager::LoadModel(const std::string &filePath) {
 
     // .gltfファイルの場合、内容に基づくハッシュを生成しない（毎回新しいモデルを作成）
@@ -91,6 +82,4 @@ void ModelManager::Initialize(SrvManager *srvManager) {
 }
 
 void ModelManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }

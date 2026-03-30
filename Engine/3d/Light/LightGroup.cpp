@@ -4,18 +4,8 @@
 #include <filesystem>
 #include <fstream>
 
-LightGroup *LightGroup::instance = nullptr;
-
-LightGroup *LightGroup::GetInstance() {
-    if (instance == nullptr) {
-        instance = new LightGroup();
-    }
-    return instance;
-}
-
 void LightGroup::Finalize() {
-    delete instance;
-    instance = nullptr;
+
 }
 
 void LightGroup::Initialize() {

@@ -4,6 +4,7 @@
 #include <BaseScene.h>
 #include "Object/Base/BaseObjectManager.h"
 #include"SpriteManager.h"
+#include <Audio.h>
 
 class ImGuizmoManager;
 class OffScreen;
@@ -12,8 +13,6 @@ class ImGuiManager {
     /// ====================================
     /// public method
     /// ====================================
-
-    static ImGuiManager *instance;
 
     ImGuiManager() = default;
     ~ImGuiManager() = default;
@@ -38,7 +37,10 @@ class ImGuiManager {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static ImGuiManager *GetInstance();
+    static ImGuiManager* GetInstance() {
+        static ImGuiManager instance;
+        return &instance;
+    }
 
     /// <summary>
     /// 終了
@@ -150,6 +152,8 @@ class ImGuiManager {
 
     void ShowColliderTagManagerWindow();
 
+    void ShowAudioManagerWindow();
+
     void FixAspectRatio();
 
     void BackupDockLayout();
@@ -213,6 +217,7 @@ class ImGuiManager {
     bool showMotionEditorView_ = true;
     bool showSpriteManagerView_ = true;
     bool showColliderTagManagerView_ = false;
+    bool showAudioManagerView_ = false;
 
     // グリッド設定用メンバ変数
     bool showGrid_ = false;
@@ -223,6 +228,7 @@ class ImGuiManager {
 
     BaseObjectManager *baseObjectManager_ = nullptr;
     SpriteManager *spriteManager_ = nullptr;
+    Audio *audio_ = nullptr;
 
     std::string editorIniFilePath_ = "imgui_editor.ini";
     std::string gameIniFilePath_ = "imgui_game.ini";

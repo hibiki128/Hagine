@@ -77,7 +77,10 @@ struct ParticleField {
 /// =============================================
 class ParticleCSFieldManager {
   public:
-    static ParticleCSFieldManager *GetInstance();
+      static ParticleCSFieldManager* GetInstance() {
+        static ParticleCSFieldManager instance;
+          return &instance;
+    }
     static void Finalize();
 
     void Initialize();
@@ -146,8 +149,6 @@ class ParticleCSFieldManager {
 
     // --- ImGui 内部 ---
     void DrawOverrideImGui(ParticleFieldSettingsOverride &ov, int fieldIndex);
-
-    static ParticleCSFieldManager *instance_;
 
     std::vector<ParticleField> fields_;
 

@@ -2,9 +2,9 @@
 #include "Camera/ViewProjection/ViewProjection.h"
 #include "Collider/ColliderBase.h"
 #include "Collider/type/AABBCollider.h"
+#include "Collider/type/CylinderCollider.h"
 #include "Collider/type/OBBCollider.h"
 #include "Collider/type/SphereCollider.h"
-#include "Collider/type/CylinderCollider.h"
 #include "Data/DataHandler.h"
 #include "Object/Object3d.h"
 #include "Transform/ObjColor.h"
@@ -151,7 +151,7 @@ class BaseObject {
     Material *GetMaterial(uint32_t index = 0) {
         obj3d_->GetMaterial(index);
     }
-    std::vector<ColliderBase *> &GetColliders() { return colliders_; }
+    std::vector<std::unique_ptr<ColliderBase>> &GetColliders() { return colliders_; }
 
     /// ===================================================
     /// setter
@@ -199,5 +199,5 @@ class BaseObject {
     BlendMode blendMode_ = BlendMode::kNormal;
     std::string parentName_{};
 
-    std::vector<ColliderBase *> colliders_;
+    std::vector<std::unique_ptr<ColliderBase>> colliders_;
 };

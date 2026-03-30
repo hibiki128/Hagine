@@ -10,14 +10,14 @@ void MyGame::Initialize() {
     // -----ゲーム固有の処理-----
 
     // 最初のシーンの生成
-    sceneFactory_ = new SceneFactory();
+    sceneFactory_ = std::make_unique<SceneFactory>();
     // シーンマネージャに最初のシーンをセット
-    sceneManager_->SetSceneFactory(sceneFactory_);
+    sceneManager_->SetSceneFactory(std::move(sceneFactory_));
 #ifdef _DEBUG
     sceneManager_->NextSceneReservation("GAME");
 #else
     sceneManager_->NextSceneReservation("TITLE");
-#endif // _DEBUG 
+#endif // _DEBUG
     // -----------------------
 }
 

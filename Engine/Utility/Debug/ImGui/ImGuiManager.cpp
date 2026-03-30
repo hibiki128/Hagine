@@ -1,5 +1,6 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
+#include "Collider/CollisionManager.h"
 #include "Engine/OffScreen/OffScreen.h"
 #include "ImGuizmo.h"
 #include "ImGuizmoManager.h"
@@ -11,19 +12,17 @@
 #include <Data/DataHandler.h>
 #include <Engine/Frame/Frame.h>
 #include <Line/DrawLine3D.h>
+#include <Particle/CSParticle/ParticleCSFieldManager.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include"Collider/CollisionManager.h"
 #include <implot.h>
-#include <Particle/CSParticle/ParticleCSFieldManager.h>
-
-ImGuiManager *ImGuiManager::instance = nullptr;
 
 void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) {
 
     dxCommon_ = DirectXCommon::GetInstance();
     baseObjectManager_ = BaseObjectManager::GetInstance();
     spriteManager_ = SpriteManager::GetInstance();
+    audio_ = Audio::GetInstance();
     LoadFlag();
     // ImGuiのコンテキストを生成
     ImGui::CreateContext();
@@ -187,13 +186,6 @@ void ImGuiManager::CreateDescriptorHeap() {
         srvHeap_->GetGPUDescriptorHandleForHeapStart());
 }
 
-ImGuiManager *ImGuiManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ImGuiManager;
-    }
-    return instance;
-}
-
 void ImGuiManager::Finalize() {
     SaveCurrentLayout();
 // 後始末
@@ -208,9 +200,6 @@ void ImGuiManager::Finalize() {
     srvHeap_.Reset();
 
     SaveFlag();
-
-    delete instance;
-    instance = nullptr;
 }
 
 void ImGuiManager::Begin() {
@@ -304,6 +293,7 @@ void ImGuiManager::ShowMainMenu() {
                 ImGui::MenuItem(ICON_FA_CODE_BRANCH " モーションエディタービュー", nullptr, &showMotionEditorView_);
                 ImGui::MenuItem(ICON_FA_SQUARE " スプライトマネージャビュー", nullptr, &showSpriteManagerView_);
                 ImGui::MenuItem(ICON_FA_SHAPES " コライダービュー", nullptr, &showColliderTagManagerView_);
+                ImGui::MenuItem(ICON_FA_BULLHORN " オーディオ", nullptr, &showAudioManagerView_);
                 ImGui::EndMenu();
             }
 
@@ -714,6 +704,19 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
     ImGui::End();
 }
 
+void ImGuiManager::ShowAudioManagerWindow() {
+    if (!showAudioManagerView_)
+        return;
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    ImGui::Begin("オーディオ", &showAudioManagerView_, flags);
+
+    audio_->Debug();
+
+    ImGui::End();
+}
+
 void ImGuiManager::FixAspectRatio() {
 
     // 横幅ベースで16:9に合わせた高さ
@@ -849,6 +852,8 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowSpriteManagerWindow();
     // コライダータグマネージャウィンドウを描画
     ShowColliderTagManagerWindow();
+    // オーディオマネージャウィンドウを描画
+    ShowAudioManagerWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();

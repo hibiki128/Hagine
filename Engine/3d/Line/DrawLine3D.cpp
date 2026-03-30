@@ -2,14 +2,6 @@
 #include "DirectXCommon.h"
 #include <myMath.h>
 
-DrawLine3D *DrawLine3D::instance = nullptr;
-
-DrawLine3D *DrawLine3D::GetInstance() {
-    if (instance == nullptr) {
-        instance = new DrawLine3D();
-    }
-    return instance;
-}
 
 std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, UINT indexCount) {
 
@@ -47,8 +39,6 @@ void DrawLine3D::Initialize() {
 }
 
 void DrawLine3D::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void DrawLine3D::SetPoints(const Vector3 &p1, const Vector3 &p2, const Vector4 &color) {

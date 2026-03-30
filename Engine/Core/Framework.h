@@ -3,7 +3,7 @@
 #ifdef _DEBUG
 #endif // _DEBUG
 #include "Audio.h"
-#include"Collider/CollisionManager.h"
+#include "Collider/CollisionManager.h"
 #include "Debug/ImGui/ImGuiManager.h"
 #include "Debug/ImGui/ImGuizmoManager.h"
 #include "Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"
@@ -18,19 +18,19 @@
 #include "Model/ModelCommon.h"
 #include "Object/Base/BaseObjectManager.h"
 #include "Particle/CSParticle/ParticleCSEditor.h"
+#include "Particle/CSParticle/ParticleCSFieldManager.h"
 #include "Particle/CSParticle/ParticleCSGroupManager.h"
 #include "Particle/ParticleCommon.h"
 #include "Particle/ParticleEditor.h"
 #include "Particle/ParticleGroupManager.h"
 #include "Scene/AbstractSceneFactory.h"
 #include "Scene/SceneManager.h"
+#include "Scene/SceneTransition.h"
 #include "SkyBox/SkyBox.h"
 #include "SpriteCommon.h"
 #include "SpriteManager.h"
 #include "line/DrawLine3D.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
-#include"Scene/SceneTransition.h"
-#include"Particle/CSParticle/ParticleCSFieldManager.h"
 
 class Framework {
   public: // メンバ関数
@@ -89,7 +89,7 @@ class Framework {
     SkyBox *skyBox_ = nullptr;
 
     // シーンファクトリー
-    AbstractSceneFactory *sceneFactory_ = nullptr;
+    std::unique_ptr<AbstractSceneFactory> sceneFactory_ = nullptr;
     SceneTransition *sceneTransition_ = nullptr;
 
     SceneManager *sceneManager_ = nullptr;

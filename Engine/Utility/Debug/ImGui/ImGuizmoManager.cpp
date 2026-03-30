@@ -6,20 +6,9 @@
 #include <Object/Base/BaseObjectManager.h>
 #include <Transform/WorldTransform.h>
 
-ImGuizmoManager *ImGuizmoManager::instance = nullptr;
-
-ImGuizmoManager *ImGuizmoManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ImGuizmoManager();
-    }
-    return instance;
-}
-
 void ImGuizmoManager::Finalize() {
     transformMap.clear();
     selectedNames.clear();
-    delete instance;
-    instance = nullptr;
 }
 
 void ImGuizmoManager::BeginFrame() {

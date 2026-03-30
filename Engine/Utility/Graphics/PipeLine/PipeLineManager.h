@@ -55,15 +55,16 @@ class PipeLineManager {
     /// public method
     /// ====================================
 
-    static PipeLineManager *instance;
-
     PipeLineManager() = default;
     ~PipeLineManager() = default;
     PipeLineManager(PipeLineManager &) = delete;
     PipeLineManager &operator=(PipeLineManager &) = delete;
 
   public:
-    static PipeLineManager *GetInstance();
+      static PipeLineManager* GetInstance() {
+        static PipeLineManager instance;
+          return &instance;
+    }
 
     void Finalize();
 

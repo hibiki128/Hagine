@@ -8,8 +8,6 @@
 #include <Graphics/Srv/SrvManager.h>
 class TextureManager {
   private:
-    static TextureManager *instance;
-
     TextureManager() = default;
     ~TextureManager() = default;
     TextureManager(TextureManager &) = delete;
@@ -25,7 +23,10 @@ class TextureManager {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static TextureManager *GetInstance();
+    static TextureManager* GetInstance() {
+        static TextureManager instance;
+        return &instance;
+    }
 
     /// <summary>
     /// 終了

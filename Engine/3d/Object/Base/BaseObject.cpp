@@ -10,11 +10,10 @@
 #endif // DEBUG
 
 BaseObject::~BaseObject() {
-    // すべてのコライダーを削除
-    for (auto *collider : colliders_) {
+    // すべてのコライダーの登録を解除（解放は unique_ptr が自動で行う）
+    for (auto &collider : colliders_) {
         if (collider) {
-            CollisionManager::GetInstance()->Unregister(collider);
-            delete collider;
+            CollisionManager::GetInstance()->Unregister(collider.get());
         }
     }
     colliders_.clear();
@@ -466,7 +465,7 @@ void BaseObject::SaveColliders() {
 
     // 各コライダーの情報を保存
     for (size_t i = 0; i < colliders_.size(); ++i) {
-        auto *collider = colliders_[i];
+        auto *collider = colliders_[i].get();
         if (!collider)
             continue;
 
@@ -504,11 +503,10 @@ void BaseObject::LoadColliders() {
         return;
     }
 
-    // 既存のコライダーをクリア
-    for (auto *collider : colliders_) {
+    // 既存のコライダーをクリア（登録解除後、unique_ptr が自動解放）
+    for (auto &collider : colliders_) {
         if (collider) {
-            CollisionManager::GetInstance()->Unregister(collider);
-            delete collider;
+            CollisionManager::GetInstance()->Unregister(collider.get());
         }
     }
     colliders_.clear();
@@ -525,29 +523,33 @@ void BaseObject::LoadColliders() {
             ObjectDatas_->Load<int>(prefix + "type", 0));
 
         ColliderBase *collider = nullptr;
+        std::unique_ptr<ColliderBase> colliderOwner;
 
         // 型に応じてコライダーを作成
         switch (type) {
         case ColliderType::Sphere: {
-            auto *sphere = new SphereCollider();
+            auto sphere = std::make_unique<SphereCollider>();
             sphere->SetRadius(ObjectDatas_->Load<float>(prefix + "radius", 1.0f));
             sphere->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
-            collider = sphere;
+            collider = sphere.get();
+            colliderOwner = std::move(sphere);
             break;
         }
         case ColliderType::AABB: {
-            auto *aabb = new AABBCollider();
+            auto aabb = std::make_unique<AABBCollider>();
             aabb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
             aabb->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
-            collider = aabb;
+            collider = aabb.get();
+            colliderOwner = std::move(aabb);
             break;
         }
         case ColliderType::OBB: {
-            auto *obb = new OBBCollider();
+            auto obb = std::make_unique<OBBCollider>();
             obb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
             obb->SetRotationOffset(ObjectDatas_->Load<Vector3>(prefix + "rotationOffset", {0.0f, 0.0f, 0.0f}));
             obb->SetPositionOffSet(ObjectDatas_->Load<Vector3>(prefix + "scaleOffset", {0.0f, 0.0f, 0.0f}));
-            collider = obb;
+            collider = obb.get();
+            colliderOwner = std::move(obb);
             break;
         }
         default:
@@ -577,7 +579,7 @@ void BaseObject::LoadColliders() {
         collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
         // リストに追加して登録
-        colliders_.push_back(collider);
+        colliders_.push_back(std::move(colliderOwner));
         CollisionManager::GetInstance()->Register(collider);
     }
 }
@@ -607,7 +609,7 @@ void BaseObject::DebugCollider() {
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
 
     for (size_t i = 0; i < colliders_.size(); ++i) {
-        auto *col = colliders_[i];
+        auto *col = colliders_[i].get();
         if (!col)
             continue;
 
@@ -846,23 +848,23 @@ void BaseObject::ImGui() {
 }
 
 SphereCollider *BaseObject::AddSphereCollider(const std::string &name) {
-    auto *collider = new SphereCollider();
+    auto collider = std::make_unique<SphereCollider>();
 
     std::string colliderName = name.empty() ? objectName_ + "_SphereCollider" : name;
     collider->SetName(colliderName);
 
-    // 位置と回転の取得関数を設定
     collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
-    colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
+    SphereCollider *raw = collider.get();
+    colliders_.push_back(std::move(collider));
+    CollisionManager::GetInstance()->Register(raw);
 
-    return collider;
+    return raw;
 }
 
 AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
-    auto *collider = new AABBCollider();
+    auto collider = std::make_unique<AABBCollider>();
 
     std::string colliderName = name.empty() ? objectName_ + "_AABBCollider" : name;
     collider->SetName(colliderName);
@@ -870,14 +872,15 @@ AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
     collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
-    colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
+    AABBCollider *raw = collider.get();
+    colliders_.push_back(std::move(collider));
+    CollisionManager::GetInstance()->Register(raw);
 
-    return collider;
+    return raw;
 }
 
 OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
-    auto *collider = new OBBCollider();
+    auto collider = std::make_unique<OBBCollider>();
 
     std::string colliderName = name.empty() ? objectName_ + "_OBBCollider" : name;
     collider->SetName(colliderName);
@@ -885,21 +888,27 @@ OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
     collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
-    colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
+    OBBCollider *raw = collider.get();
+    colliders_.push_back(std::move(collider));
+    CollisionManager::GetInstance()->Register(raw);
 
-    return collider;
+    return raw;
 }
 
-CylinderCollider* BaseObject::AddCylinderCollider(const std::string &name) {
-    auto *collider = new CylinderCollider();
+CylinderCollider *BaseObject::AddCylinderCollider(const std::string &name) {
+    auto collider = std::make_unique<CylinderCollider>();
+
     std::string colliderName = name.empty() ? objectName_ + "_CylinderCollider" : name;
     collider->SetName(colliderName);
+
     collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
-    colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
-    return collider;
+
+    CylinderCollider *raw = collider.get();
+    colliders_.push_back(std::move(collider));
+    CollisionManager::GetInstance()->Register(raw);
+
+    return raw;
 }
 
 void BaseObject::DebugObject() {

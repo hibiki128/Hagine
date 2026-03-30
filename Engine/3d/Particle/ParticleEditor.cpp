@@ -5,18 +5,7 @@
 #include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG
 
-ParticleEditor *ParticleEditor::instance = nullptr;
-
-ParticleEditor *ParticleEditor::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ParticleEditor();
-    }
-    return instance;
-}
-
 void ParticleEditor::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void ParticleEditor::Initialize() {

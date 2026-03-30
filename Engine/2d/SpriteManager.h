@@ -130,7 +130,6 @@ class SpriteManager {
     /// private varians
     /// ===================================================
 
-    static SpriteManager *instance;
     std::vector<std::unique_ptr<SpriteData>> sprites_;
 
     bool showSpriteCreationModal_ = false;
@@ -146,7 +145,10 @@ class SpriteManager {
     /// シングルトンインスタンスを取得
     /// </summary>
     /// <returns>SpriteManager*: インスタンスのポインタ</returns>
-    static SpriteManager *GetInstance();
+      static SpriteManager* GetInstance() {
+        static SpriteManager instance;
+        return &instance;
+    }
 
     /// <summary>
     /// スプライトを登録

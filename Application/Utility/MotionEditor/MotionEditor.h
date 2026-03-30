@@ -146,7 +146,10 @@ class MotionEditor {
     /// シングルトンインスタンスを取得
     /// </summary>
     /// <returns>MotionEditor*: インスタンスのポインタ</returns>
-    static MotionEditor *GetInstance();
+      static MotionEditor* GetInstance() {
+          static MotionEditor instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了処理
@@ -304,8 +307,6 @@ class MotionEditor {
     /// ===================================================
     /// private varians
     /// ===================================================
-
-    static MotionEditor *instance;
 
     std::unordered_map<BaseObject *, Vector3> comboStartPositions_; // コンボ開始位置
     std::unordered_map<BaseObject *, Vector3> comboStartRotations_; // コンボ開始回転

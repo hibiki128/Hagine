@@ -1,18 +1,8 @@
 #include "ComputePipeLineManager.h"
 #include <Debug/Log/Logger.h>
 
-ComputePipeLineManager *ComputePipeLineManager::instance = nullptr;
-
-ComputePipeLineManager *ComputePipeLineManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ComputePipeLineManager;
-    }
-    return instance;
-}
-
 void ComputePipeLineManager::Finalize() {
-    delete instance;
-    instance = nullptr;
+  
 }
 
 void ComputePipeLineManager::Initialize(DirectXCommon *dxCommon) {

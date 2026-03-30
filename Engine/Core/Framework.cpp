@@ -245,7 +245,6 @@ void Framework::Finalize() {
     particleCommon_->Finalize();
     modelCommon_->Finalize();
     dxCommon_->Finalize();
-    delete sceneFactory_;
 }
 
 void Framework::RegisterShortcutKey() {
@@ -367,7 +366,6 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("AroundField");
 
     particleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
-
 }
 
 void Framework::PlaySounds() {

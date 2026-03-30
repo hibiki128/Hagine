@@ -6,7 +6,6 @@ class BaseObjectManager {
     /// ===================================================
     /// private method
     /// ===================================================
-    static BaseObjectManager *instance;
     BaseObjectManager() = default;
     ~BaseObjectManager() = default;
     BaseObjectManager(BaseObjectManager &) = delete;
@@ -16,7 +15,10 @@ class BaseObjectManager {
     /// ===================================================
     /// public method
     /// ===================================================
-    static BaseObjectManager *GetInstance();
+      static BaseObjectManager* GetInstance() {
+        static BaseObjectManager instance;
+        return &instance;
+    }
 
     void Finalize();
 

@@ -371,7 +371,7 @@ class Player : public BaseObject {
     float maxSpeed_ = 0.0f;  // 最大速度
     float accelRate_ = 0.0f; // 加速度レート
     float dt_;               // デルタタイム
-    float HP_ = 1.0f;
+    float HP_ = 100.0f;
     float maxHP_ = 100.0f;
     float energy_ = 100.0f;                      // 現在のエネルギー
     float maxEnergy_ = 100.0f;                   // 最大エネルギー

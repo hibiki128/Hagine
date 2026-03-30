@@ -1,18 +1,8 @@
 #include "CsvLoad.h"
 #include <cassert>
 
-CsvLoad *CsvLoad::instance = nullptr;
-
-CsvLoad *CsvLoad::GetInstance() {
-    if (instance == nullptr) {
-        instance = new CsvLoad();
-    }
-    return instance;
-}
-
 void CsvLoad::Finalize() {
-    delete instance;
-    instance = nullptr;
+   
 }
 
 // CSVファイルを読み込み、キャッシュに存在すればそれを返す
