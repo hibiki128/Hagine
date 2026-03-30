@@ -573,16 +573,23 @@
 └── └── ├── animation/
 └── └── └── ├── Player/
 └── └── └── debug/
-└── └── shaders/
-└──     ├── Line/
-└──     ├── Object/
-└──     ├── OffScreen/
-└──     ├── Particle/
-└──     └── ├── CSParticle/
-└──     ├── Random/
-└──     ├── Skinning/
-└──     ├── Skybox/
-└──     └── Sprite/
+└── ├── shaders/
+└── └── ├── Line/
+└── └── ├── Object/
+└── └── ├── OffScreen/
+└── └── ├── Particle/
+└── └── └── ├── CSParticle/
+└── └── ├── Random/
+└── └── ├── Skinning/
+└── └── ├── Skybox/
+└── └── └── Sprite/
+└── └── sounds/
+└──     ├── action/
+└──     ├── clear/
+└──     ├── game/
+└──     ├── player/
+└──     ├── select/
+└──     └── title/
 ├── main.cpp
 └── resource.h
 ================================================================================
@@ -5126,7 +5133,7 @@ void EnemyBullet::Update() {
     }
 
     // 地面に埋まったら消える
-    if (transform_->translation_.y <= 0.5f) {
+    if (transform_->translation_.y <= -0.5f) {
         isAlive_ = false;
         return;
     }
@@ -7292,7 +7299,7 @@ void PlayerBullet::Update() {
     }
 
     // 地面に埋まったら消える
-    if (transform_->translation_.y <= 0.5f) {
+    if (transform_->translation_.y <= -0.5f) {
         isAlive_ = false;
         return;
     }
@@ -9365,7 +9372,7 @@ class Player : public BaseObject {
     float maxSpeed_ = 0.0f;  // 最大速度
     float accelRate_ = 0.0f; // 加速度レート
     float dt_;               // デルタタイム
-    float HP_ = 1.0f;
+    float HP_ = 100.0f;
     float maxHP_ = 100.0f;
     float energy_ = 100.0f;                      // 現在のエネルギー
     float maxEnergy_ = 100.0f;                   // 最大エネルギー
@@ -15334,7 +15341,6 @@ File Path: Application/Utility/MotionEditor/MotionEditor.cpp
 #include "myMath.h"
 #include <Line/DrawLine3D.h>
 
-MotionEditor *MotionEditor::instance = nullptr;
 const float MotionEditor::ATTACK_END_INTERVAL = 0.1f;
 
 float ApplyMotionEasing(MotionEasingType type, float t, float total) {
@@ -15402,17 +15408,7 @@ float ApplyMotionEasing(MotionEasingType type, float t, float total) {
     }
 }
 
-
-MotionEditor *MotionEditor::GetInstance() {
-    if (instance == nullptr) {
-        instance = new MotionEditor;
-    }
-    return instance;
-}
-
 void MotionEditor::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void MotionEditor::Register(BaseObject *object) {
@@ -15423,7 +15419,7 @@ void MotionEditor::Register(BaseObject *object) {
 
     // 既に登録済みかチェック
     if (motions_.find(name) != motions_.end()) {
-        return; 
+        return;
     }
 
     // 新しくモーションを登録
@@ -15506,8 +15502,8 @@ Vector3 MotionEditor::CatmullRomInterpolation(const std::vector<Vector3> &points
         }
     }
 
-    int numSegments = static_cast<int>(points.size() - 1); 
-    float segmentT = t * (numSegments - 2); 
+    int numSegments = static_cast<int>(points.size() - 1);
+    float segmentT = t * (numSegments - 2);
     int segment = (int)segmentT;
     float localT = segmentT - segment;
 
@@ -15623,7 +15619,7 @@ void MotionEditor::Update(float deltaTime) {
             if (it->first) {
                 // 全てのコライダーを無効化
                 auto &colliders = it->first->GetColliders();
-                for (auto *collider : colliders) {
+                for (auto &collider : colliders) {
                     if (collider) {
                         collider->SetEnabled(false);
                     }
@@ -15694,7 +15690,7 @@ void MotionEditor::Update(float deltaTime) {
         // コライダーの有効/無効を時間で制御
         bool enable = motion.currentTime >= motion.colliderOnTime && motion.currentTime <= motion.colliderOffTime;
         auto &colliders = motion.target->GetColliders();
-        for (auto *collider : colliders) {
+        for (auto &collider : colliders) {
             if (collider) {
                 collider->SetEnabled(enable);
             }
@@ -15715,7 +15711,7 @@ void MotionEditor::Play(const std::string &jsonName) {
 
     Motion &motion = it->second;
     if (!motion.target) {
-        return; 
+        return;
     }
 
     if (!motion.hasInitialTransform) {
@@ -15795,7 +15791,6 @@ bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName,
     return true;
 }
 
-
 void MotionEditor::SetComboStartPosition(BaseObject *target) {
     if (!target)
         return;
@@ -15839,7 +15834,6 @@ void MotionEditor::ClearAllComboStartPositions() {
     comboStartRotations_.clear();
     comboStartScales_.clear();
 }
-
 
 void MotionEditor::Stop(const std::string &objectName) {
     auto it = motions_.find(objectName);
@@ -15892,7 +15886,7 @@ bool MotionEditor::IsAttackFinished(BaseObject *target) {
         }
     }
 
-    return true; 
+    return true;
 }
 
 // 攻撃が終了してインターバルも過ぎたかどうかをチェック
@@ -15939,7 +15933,7 @@ bool MotionEditor::IsTemporaryMotionFinished(BaseObject *target, const std::stri
         return it->second.status == MotionStatus::Finished;
     }
 
-    return true; 
+    return true;
 }
 
 void MotionEditor::DrawControlPoints() {
@@ -15968,7 +15962,7 @@ void MotionEditor::DrawControlPoints() {
 
         Vector4 controlPointColor;
         if (i == 0) {
-            controlPointColor = {0.0f, 1.0f, 0.0f, 1.0f}; 
+            controlPointColor = {0.0f, 1.0f, 0.0f, 1.0f};
         } else if (i == motion.controlPoints.size() - 1) {
             controlPointColor = {0.0f, 0.0f, 1.0f, 1.0f};
         } else {
@@ -16000,7 +15994,7 @@ void MotionEditor::DrawCatmullRomCurve() {
         return;
 
     DrawLine3D *drawLine = DrawLine3D::GetInstance();
-    const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f}; 
+    const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f};
     const int curveResolution = 100;
 
     Vector3 basePos;
@@ -16036,17 +16030,17 @@ void MotionEditor::DrawCatmullRomCurve() {
     }
 
     Vector3 worldBasePos = TransformLocalControlPointToWorld(motion.target, basePos);
-    const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f}; 
+    const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f};
     drawLine->DrawSphere(worldBasePos, basePosColor, 0.2f, 32);
 
     if (motion.status == MotionStatus::Playing) {
         Vector3 currentLocalPos = motion.target->GetLocalPosition();
         Vector3 currentWorldPos = TransformLocalControlPointToWorld(motion.target, currentLocalPos);
-        const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f}; 
+        const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f};
         drawLine->DrawSphere(currentWorldPos, currentPosColor, 0.15f, 32);
 
         // 基準位置と現在位置を線で結ぶ
-        const Vector4 connectionColor = {0.5f, 0.5f, 0.5f, 1.0f}; 
+        const Vector4 connectionColor = {0.5f, 0.5f, 0.5f, 1.0f};
         drawLine->SetPoints(worldBasePos, currentWorldPos, connectionColor);
     }
 }
@@ -16238,7 +16232,6 @@ Motion MotionEditor::Load(const std::string &fileName) {
     return m;
 }
 
-
 ============================================================
 File Path: Application/Utility/MotionEditor/MotionEditor.h
 ============================================================
@@ -16390,7 +16383,10 @@ class MotionEditor {
     /// シングルトンインスタンスを取得
     /// </summary>
     /// <returns>MotionEditor*: インスタンスのポインタ</returns>
-    static MotionEditor *GetInstance();
+      static MotionEditor* GetInstance() {
+          static MotionEditor instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了処理
@@ -16548,8 +16544,6 @@ class MotionEditor {
     /// ===================================================
     /// private varians
     /// ===================================================
-
-    static MotionEditor *instance;
 
     std::unordered_map<BaseObject *, Vector3> comboStartPositions_; // コンボ開始位置
     std::unordered_map<BaseObject *, Vector3> comboStartRotations_; // コンボ開始回転
@@ -17119,18 +17113,7 @@ File Path: Engine/2d/SpriteCommon.cpp
 ============================================================
 #include "SpriteCommon.h"
 
-SpriteCommon *SpriteCommon::instance = nullptr;
-
-SpriteCommon *SpriteCommon::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SpriteCommon();
-    }
-    return instance;
-}
-
 void SpriteCommon::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void SpriteCommon::Initialize() {
@@ -17190,7 +17173,6 @@ class SpriteCommon {
     /// private varians
     /// ===================================================
 
-    static SpriteCommon *instance;
     DirectXCommon *dxCommon_;
     PipeLineManager *psoManager_ = nullptr;
 
@@ -17203,7 +17185,10 @@ class SpriteCommon {
     /// シングルトンインスタンスを取得
     /// </summary>
     /// <returns>SpriteCommon*: インスタンスのポインタ</returns>
-    static SpriteCommon *GetInstance();
+      static SpriteCommon* GetInstance() {
+          static SpriteCommon instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了処理
@@ -17248,18 +17233,7 @@ File Path: Engine/2d/SpriteManager.cpp
 
 namespace fs = std::filesystem;
 
-SpriteManager *SpriteManager::instance = nullptr;
-
-SpriteManager *SpriteManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SpriteManager();
-    }
-    return instance;
-}
-
 void SpriteManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void SpriteManager::RegisterSprite(const std::string &name, const std::string &textureFilePath, const SpriteTransform &transform) {
@@ -18282,7 +18256,6 @@ class SpriteManager {
     /// private varians
     /// ===================================================
 
-    static SpriteManager *instance;
     std::vector<std::unique_ptr<SpriteData>> sprites_;
 
     bool showSpriteCreationModal_ = false;
@@ -18298,7 +18271,10 @@ class SpriteManager {
     /// シングルトンインスタンスを取得
     /// </summary>
     /// <returns>SpriteManager*: インスタンスのポインタ</returns>
-    static SpriteManager *GetInstance();
+      static SpriteManager* GetInstance() {
+        static SpriteManager instance;
+        return &instance;
+    }
 
     /// <summary>
     /// スプライトを登録
@@ -21084,18 +21060,8 @@ File Path: Engine/3d/Light/LightGroup.cpp
 #include <filesystem>
 #include <fstream>
 
-LightGroup *LightGroup::instance = nullptr;
-
-LightGroup *LightGroup::GetInstance() {
-    if (instance == nullptr) {
-        instance = new LightGroup();
-    }
-    return instance;
-}
-
 void LightGroup::Finalize() {
-    delete instance;
-    instance = nullptr;
+
 }
 
 void LightGroup::Initialize() {
@@ -21857,7 +21823,10 @@ class LightGroup {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns>LightGroup*: インスタンスのポインタ</returns>
-    static LightGroup *GetInstance();
+      static LightGroup* GetInstance() {
+        static LightGroup instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了処理
@@ -22090,14 +22059,6 @@ File Path: Engine/3d/Line/DrawLine3D.cpp
 #include "DirectXCommon.h"
 #include <myMath.h>
 
-DrawLine3D *DrawLine3D::instance = nullptr;
-
-DrawLine3D *DrawLine3D::GetInstance() {
-    if (instance == nullptr) {
-        instance = new DrawLine3D();
-    }
-    return instance;
-}
 
 std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, UINT indexCount) {
 
@@ -22135,8 +22096,6 @@ void DrawLine3D::Initialize() {
 }
 
 void DrawLine3D::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void DrawLine3D::SetPoints(const Vector3 &p1, const Vector3 &p2, const Vector4 &color) {
@@ -22362,7 +22321,10 @@ class DrawLine3D {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns>DrawLine3D*: インスタンスのポインタ</returns>
-    static DrawLine3D *GetInstance();
+    static DrawLine3D* GetInstance() {
+        static DrawLine3D instance;
+        return &instance;
+    }
 
     /// <summary>
     /// 初期化
@@ -22463,8 +22425,6 @@ class DrawLine3D {
     /// ===================================================
     /// private varians
     /// ===================================================
-
-    static DrawLine3D *instance; // シングルトンインスタンス
 
     std::unique_ptr<LineData> line_; // 線データ
     uint32_t indexLine_ = 0;         // 線のインデックス
@@ -23247,18 +23207,7 @@ File Path: Engine/3d/Model/ModelCommon.cpp
 ============================================================
 #include "ModelCommon.h"
 
-ModelCommon* ModelCommon::instance = nullptr;
-
-ModelCommon* ModelCommon::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ModelCommon();
-	}
-    return instance;
-}
-
 void ModelCommon::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void ModelCommon::Initialize()
@@ -23288,7 +23237,10 @@ class ModelCommon {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns>ModelCommon*: インスタンスのポインタ</returns>
-    static ModelCommon *GetInstance();
+      static ModelCommon* GetInstance() {
+        static ModelCommon instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 初期化
@@ -23320,7 +23272,6 @@ class ModelCommon {
     /// private varians
     /// ===================================================
 
-    static ModelCommon *instance; // シングルトンインスタンス
     DirectXCommon *dxCommon_;     // DirectX共通クラス
 };
 
@@ -23567,11 +23518,10 @@ File Path: Engine/3d/Object/Base/BaseObject.cpp
 #endif // DEBUG
 
 BaseObject::~BaseObject() {
-    // すべてのコライダーを削除
-    for (auto *collider : colliders_) {
+    // すべてのコライダーの登録を解除（解放は unique_ptr が自動で行う）
+    for (auto &collider : colliders_) {
         if (collider) {
-            CollisionManager::GetInstance()->Unregister(collider);
-            delete collider;
+            CollisionManager::GetInstance()->Unregister(collider.get());
         }
     }
     colliders_.clear();
@@ -24023,7 +23973,7 @@ void BaseObject::SaveColliders() {
 
     // 各コライダーの情報を保存
     for (size_t i = 0; i < colliders_.size(); ++i) {
-        auto *collider = colliders_[i];
+        auto *collider = colliders_[i].get();
         if (!collider)
             continue;
 
@@ -24061,11 +24011,10 @@ void BaseObject::LoadColliders() {
         return;
     }
 
-    // 既存のコライダーをクリア
-    for (auto *collider : colliders_) {
+    // 既存のコライダーをクリア（登録解除後、unique_ptr が自動解放）
+    for (auto &collider : colliders_) {
         if (collider) {
-            CollisionManager::GetInstance()->Unregister(collider);
-            delete collider;
+            CollisionManager::GetInstance()->Unregister(collider.get());
         }
     }
     colliders_.clear();
@@ -24082,29 +24031,33 @@ void BaseObject::LoadColliders() {
             ObjectDatas_->Load<int>(prefix + "type", 0));
 
         ColliderBase *collider = nullptr;
+        std::unique_ptr<ColliderBase> colliderOwner;
 
         // 型に応じてコライダーを作成
         switch (type) {
         case ColliderType::Sphere: {
-            auto *sphere = new SphereCollider();
+            auto sphere = std::make_unique<SphereCollider>();
             sphere->SetRadius(ObjectDatas_->Load<float>(prefix + "radius", 1.0f));
             sphere->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
-            collider = sphere;
+            collider = sphere.get();
+            colliderOwner = std::move(sphere);
             break;
         }
         case ColliderType::AABB: {
-            auto *aabb = new AABBCollider();
+            auto aabb = std::make_unique<AABBCollider>();
             aabb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
             aabb->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
-            collider = aabb;
+            collider = aabb.get();
+            colliderOwner = std::move(aabb);
             break;
         }
         case ColliderType::OBB: {
-            auto *obb = new OBBCollider();
+            auto obb = std::make_unique<OBBCollider>();
             obb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
             obb->SetRotationOffset(ObjectDatas_->Load<Vector3>(prefix + "rotationOffset", {0.0f, 0.0f, 0.0f}));
             obb->SetPositionOffSet(ObjectDatas_->Load<Vector3>(prefix + "scaleOffset", {0.0f, 0.0f, 0.0f}));
-            collider = obb;
+            collider = obb.get();
+            colliderOwner = std::move(obb);
             break;
         }
         default:
@@ -24134,7 +24087,7 @@ void BaseObject::LoadColliders() {
         collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
         // リストに追加して登録
-        colliders_.push_back(collider);
+        colliders_.push_back(std::move(colliderOwner));
         CollisionManager::GetInstance()->Register(collider);
     }
 }
@@ -24164,7 +24117,7 @@ void BaseObject::DebugCollider() {
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
 
     for (size_t i = 0; i < colliders_.size(); ++i) {
-        auto *col = colliders_[i];
+        auto *col = colliders_[i].get();
         if (!col)
             continue;
 
@@ -24403,23 +24356,23 @@ void BaseObject::ImGui() {
 }
 
 SphereCollider *BaseObject::AddSphereCollider(const std::string &name) {
-    auto *collider = new SphereCollider();
+    auto collider = std::make_unique<SphereCollider>();
 
     std::string colliderName = name.empty() ? objectName_ + "_SphereCollider" : name;
     collider->SetName(colliderName);
 
-    // 位置と回転の取得関数を設定
     collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
-    colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
+    SphereCollider *raw = collider.get();
+    colliders_.push_back(std::move(collider));
+    CollisionManager::GetInstance()->Register(raw);
 
-    return collider;
+    return raw;
 }
 
 AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
-    auto *collider = new AABBCollider();
+    auto collider = std::make_unique<AABBCollider>();
 
     std::string colliderName = name.empty() ? objectName_ + "_AABBCollider" : name;
     collider->SetName(colliderName);
@@ -24427,14 +24380,15 @@ AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
     collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
-    colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
+    AABBCollider *raw = collider.get();
+    colliders_.push_back(std::move(collider));
+    CollisionManager::GetInstance()->Register(raw);
 
-    return collider;
+    return raw;
 }
 
 OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
-    auto *collider = new OBBCollider();
+    auto collider = std::make_unique<OBBCollider>();
 
     std::string colliderName = name.empty() ? objectName_ + "_OBBCollider" : name;
     collider->SetName(colliderName);
@@ -24442,21 +24396,27 @@ OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
     collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
 
-    colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
+    OBBCollider *raw = collider.get();
+    colliders_.push_back(std::move(collider));
+    CollisionManager::GetInstance()->Register(raw);
 
-    return collider;
+    return raw;
 }
 
-CylinderCollider* BaseObject::AddCylinderCollider(const std::string &name) {
-    auto *collider = new CylinderCollider();
+CylinderCollider *BaseObject::AddCylinderCollider(const std::string &name) {
+    auto collider = std::make_unique<CylinderCollider>();
+
     std::string colliderName = name.empty() ? objectName_ + "_CylinderCollider" : name;
     collider->SetName(colliderName);
+
     collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
     collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
-    colliders_.push_back(collider);
-    CollisionManager::GetInstance()->Register(collider);
-    return collider;
+
+    CylinderCollider *raw = collider.get();
+    colliders_.push_back(std::move(collider));
+    CollisionManager::GetInstance()->Register(raw);
+
+    return raw;
 }
 
 void BaseObject::DebugObject() {
@@ -24959,9 +24919,9 @@ File Path: Engine/3d/Object/Base/BaseObject.h
 #include "Camera/ViewProjection/ViewProjection.h"
 #include "Collider/ColliderBase.h"
 #include "Collider/type/AABBCollider.h"
+#include "Collider/type/CylinderCollider.h"
 #include "Collider/type/OBBCollider.h"
 #include "Collider/type/SphereCollider.h"
-#include "Collider/type/CylinderCollider.h"
 #include "Data/DataHandler.h"
 #include "Object/Object3d.h"
 #include "Transform/ObjColor.h"
@@ -25108,7 +25068,7 @@ class BaseObject {
     Material *GetMaterial(uint32_t index = 0) {
         obj3d_->GetMaterial(index);
     }
-    std::vector<ColliderBase *> &GetColliders() { return colliders_; }
+    std::vector<std::unique_ptr<ColliderBase>> &GetColliders() { return colliders_; }
 
     /// ===================================================
     /// setter
@@ -25156,9 +25116,8 @@ class BaseObject {
     BlendMode blendMode_ = BlendMode::kNormal;
     std::string parentName_{};
 
-    std::vector<ColliderBase *> colliders_;
+    std::vector<std::unique_ptr<ColliderBase>> colliders_;
 };
-
 
 ============================================================
 File Path: Engine/3d/Object/Base/BaseObjectManager.cpp
@@ -25171,18 +25130,7 @@ File Path: Engine/3d/Object/Base/BaseObjectManager.cpp
 #include <Debug/Log/Logger.h>
 #include <ShowFolder/ShowFolder.h>
 
-BaseObjectManager *BaseObjectManager::instance = nullptr;
-
-BaseObjectManager *BaseObjectManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new BaseObjectManager();
-    }
-    return instance;
-}
-
 void BaseObjectManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void BaseObjectManager::RemoveAllObjects() {
@@ -26019,7 +25967,6 @@ class BaseObjectManager {
     /// ===================================================
     /// private method
     /// ===================================================
-    static BaseObjectManager *instance;
     BaseObjectManager() = default;
     ~BaseObjectManager() = default;
     BaseObjectManager(BaseObjectManager &) = delete;
@@ -26029,7 +25976,10 @@ class BaseObjectManager {
     /// ===================================================
     /// public method
     /// ===================================================
-    static BaseObjectManager *GetInstance();
+      static BaseObjectManager* GetInstance() {
+        static BaseObjectManager instance;
+        return &instance;
+    }
 
     void Finalize();
 
@@ -26911,18 +26861,7 @@ File Path: Engine/3d/Particle/CSParticle/ParticleCSEditor.cpp
 #include <ShowFolder/ShowFolder.h>
 #include <Camera/ViewProjection/ViewProjection.h>
 
-ParticleCSEditor *ParticleCSEditor::instance = nullptr;
-
-ParticleCSEditor *ParticleCSEditor::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ParticleCSEditor();
-    }
-    return instance;
-}
-
 void ParticleCSEditor::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void ParticleCSEditor::Initialize() {
@@ -27549,8 +27488,6 @@ class ParticleCSEditor {
     /// private methods
     /// ===================================
 
-    // シングルトンインスタンス
-    static ParticleCSEditor *instance;
     // プライベートコンストラクタ
     ParticleCSEditor() = default;
     // コピー禁止
@@ -27599,7 +27536,10 @@ class ParticleCSEditor {
 
   public:
     // インスタンスの取得
-    static ParticleCSEditor *GetInstance();
+      static ParticleCSEditor* GetInstance() {
+          static ParticleCSEditor instance;
+          return &instance;
+    }
     // 終了処理
     static void Finalize();
     // 初期化
@@ -29420,18 +29360,7 @@ static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_Fiel
     dst.curlNoisePosRandom = src.curlNoisePosRandom;
 }
 
-ParticleCSFieldManager *ParticleCSFieldManager::instance_ = nullptr;
-
-ParticleCSFieldManager *ParticleCSFieldManager::GetInstance() {
-    if (!instance_) {
-        instance_ = new ParticleCSFieldManager();
-    }
-    return instance_;
-}
-
 void ParticleCSFieldManager::Finalize() {
-    delete instance_;
-    instance_ = nullptr;
 }
 
 void ParticleCSFieldManager::Initialize() {
@@ -30639,7 +30568,10 @@ struct ParticleField {
 /// =============================================
 class ParticleCSFieldManager {
   public:
-    static ParticleCSFieldManager *GetInstance();
+      static ParticleCSFieldManager* GetInstance() {
+        static ParticleCSFieldManager instance;
+          return &instance;
+    }
     static void Finalize();
 
     void Initialize();
@@ -30708,8 +30640,6 @@ class ParticleCSFieldManager {
 
     // --- ImGui 内部 ---
     void DrawOverrideImGui(ParticleFieldSettingsOverride &ov, int fieldIndex);
-
-    static ParticleCSFieldManager *instance_;
 
     std::vector<ParticleField> fields_;
 
@@ -32400,15 +32330,6 @@ File Path: Engine/3d/Particle/CSParticle/ParticleCSGroupManager.cpp
 ============================================================
 #include "ParticleCSGroupManager.h"
 
-ParticleCSGroupManager *ParticleCSGroupManager::instance = nullptr;
-
-ParticleCSGroupManager *ParticleCSGroupManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ParticleCSGroupManager();
-    }
-    return instance;
-}
-
 void ParticleCSGroupManager::Initialize() {
     const std::string directoryPath = "resources/jsons/ParticleCSGroup/";
 
@@ -32460,8 +32381,6 @@ void ParticleCSGroupManager::Initialize() {
 }
 
 void ParticleCSGroupManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void ParticleCSGroupManager::CreateParticleCSGroup(const std::string &groupName, const std::string &fileName, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {
@@ -32503,7 +32422,6 @@ class ParticleCSGroupManager {
     /// ===================================================
     /// private methods
     /// ===================================================
-    static ParticleCSGroupManager *instance;
     ParticleCSGroupManager() = default;
     ~ParticleCSGroupManager() = default;
     ParticleCSGroupManager(ParticleCSGroupManager &) = delete;
@@ -32513,7 +32431,10 @@ class ParticleCSGroupManager {
     /// ===================================================
     /// public methods
     /// ===================================================
-    static ParticleCSGroupManager *GetInstance();
+    static ParticleCSGroupManager *GetInstance() {
+        static ParticleCSGroupManager instance;
+        return &instance;
+    }
 
     void Initialize();
 
@@ -32624,18 +32545,7 @@ File Path: Engine/3d/Particle/ParticleCommon.cpp
 ============================================================
 #include "ParticleCommon.h"
 
-ParticleCommon *ParticleCommon::instance = nullptr;
-
-ParticleCommon *ParticleCommon::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ParticleCommon();
-    }
-    return instance;
-}
-
 void ParticleCommon::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void ParticleCommon::Initialize(DirectXCommon *dxCommon) {
@@ -32679,8 +32589,6 @@ File Path: Engine/3d/Particle/ParticleCommon.h
 #include <Graphics/PipeLine/ComputePipeLineManager.h>
 class ParticleCommon {
   private:
-    static ParticleCommon *instance;
-
     ParticleCommon() = default;
     ~ParticleCommon() = default;
     ParticleCommon(ParticleCommon &) = delete;
@@ -32691,7 +32599,10 @@ class ParticleCommon {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static ParticleCommon *GetInstance();
+      static ParticleCommon* GetInstance() {
+        static ParticleCommon instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了
@@ -32741,18 +32652,7 @@ File Path: Engine/3d/Particle/ParticleEditor.cpp
 #include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG
 
-ParticleEditor *ParticleEditor::instance = nullptr;
-
-ParticleEditor *ParticleEditor::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ParticleEditor();
-    }
-    return instance;
-}
-
 void ParticleEditor::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void ParticleEditor::Initialize() {
@@ -33299,8 +33199,6 @@ File Path: Engine/3d/Particle/ParticleEditor.h
 
 class ParticleEditor {
   private:
-    // シングルトンインスタンス
-    static ParticleEditor *instance;
     // プライベートコンストラクタ
     ParticleEditor() = default;
     // コピー禁止
@@ -33354,7 +33252,10 @@ class ParticleEditor {
 
   public:
     // インスタンスの取得
-    static ParticleEditor *GetInstance();
+    static ParticleEditor *GetInstance() {
+        static ParticleEditor instance;
+        return &instance;
+    }
     // 終了処理
     static void Finalize();
     // 初期化
@@ -35049,15 +34950,6 @@ File Path: Engine/3d/Particle/ParticleGroupManager.cpp
 ============================================================
 #include "ParticleGroupManager.h"
 
-ParticleGroupManager *ParticleGroupManager::instance = nullptr;
-
-ParticleGroupManager *ParticleGroupManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ParticleGroupManager();
-    }
-    return instance;
-}
-
 void ParticleGroupManager::Initialize() {
     const std::string directoryPath = "resources/jsons/ParticleGroup/";
 
@@ -35106,8 +34998,6 @@ void ParticleGroupManager::Initialize() {
 
 
 void ParticleGroupManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 void ParticleGroupManager::AddParticleGroup(std::unique_ptr<ParticleGroup> particleGroup) {
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleGroup", particleGroup->GetGroupName());
@@ -35148,7 +35038,6 @@ class ParticleGroupManager {
     /// ===================================================
     /// private method
     /// ===================================================
-    static ParticleGroupManager *instance;
     ParticleGroupManager() = default;
     ~ParticleGroupManager() = default;
     ParticleGroupManager(ParticleGroupManager &) = delete;
@@ -35158,7 +35047,10 @@ class ParticleGroupManager {
     /// ===================================================
     /// public method
     /// ===================================================
-    static ParticleGroupManager *GetInstance();
+      static ParticleGroupManager* GetInstance() {
+          static ParticleGroupManager instance;
+          return &instance;
+    }
 
     void Initialize();
 
@@ -36186,8 +36078,6 @@ File Path: Engine/3d/Primitive/PrimitiveModel.cpp
 #include <myMath.h>
 using namespace DirectX;
 
-PrimitiveModel *PrimitiveModel::instance = nullptr;
-
 void PrimitiveModel::Initialize() {
     CreateSphere();
     CreatePlane();
@@ -36200,16 +36090,7 @@ void PrimitiveModel::Initialize() {
     CreateClosedCylinder();
 }
 
-PrimitiveModel *PrimitiveModel::GetInstance() {
-    if (instance == nullptr) {
-        instance = new PrimitiveModel();
-    }
-    return instance;
-}
-
 void PrimitiveModel::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void PrimitiveModel::CreateSphere() {
@@ -36883,8 +36764,6 @@ class PrimitiveModel {
     /// private method
     /// ====================================================
 
-    static PrimitiveModel *instance;
-
     PrimitiveModel() = default;
     ~PrimitiveModel() = default;
     PrimitiveModel(PrimitiveModel &) = delete;
@@ -36904,7 +36783,10 @@ class PrimitiveModel {
 
     void Initialize();
 
-    static PrimitiveModel *GetInstance();
+    static PrimitiveModel* GetInstance() {
+        static PrimitiveModel instance;
+        return &instance;
+    }
 
     void Finalize();
 
@@ -36945,20 +36827,7 @@ File Path: Engine/3d/SkyBox/SkyBox.cpp
 #include "Graphics/Texture/TextureManager.h"
 #include <myMath.h>
 
-SkyBox *SkyBox::instance = nullptr;
-
-SkyBox *SkyBox::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SkyBox();
-    }
-    return instance;
-}
-
 void SkyBox::Finalize() {
-    if (instance) {
-        delete instance;
-        instance = nullptr;
-    }
 }
 
 void SkyBox::Initialize(std::string filePath) {
@@ -37133,8 +37002,6 @@ class SkyBox {
     /// ===========================================
     /// private methods
     /// ===========================================
-    static SkyBox *instance;
-
     SkyBox() = default;
     ~SkyBox() = default;
     SkyBox(SkyBox &) = delete;
@@ -37154,7 +37021,10 @@ class SkyBox {
 
     void Initialize(std::string filePath);
     void Draw(const ViewProjection &viewProjection);
-    static SkyBox *GetInstance();
+    static SkyBox* GetInstance() {
+        static SkyBox instance;
+        return &instance;
+    }
     void Finalize();
     uint32_t GetTextureIndex() const { return textureIndex_; }
 
@@ -37631,406 +37501,617 @@ File Path: Engine/Audio/Audio.cpp
 #include <cassert>
 #include <fstream>
 
-Audio* Audio::instance = nullptr;
+#ifdef _DEBUG
+#include "imgui.h"
+#endif // _DEBUG
 
-void Audio::Initialize(const std::string& directoryPath)
-{
-	HRESULT hr;
+void Audio::Initialize(const std::string &directoryPath) {
+    HRESULT hr;
 
-	directoryPath_ = directoryPath;
+    directoryPath_ = directoryPath;
 
-	hr = XAudio2Create(&xAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
-	hr = xAudio2->CreateMasteringVoice(&masterVoice);
-
+    hr = XAudio2Create(&xAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
+    hr = xAudio2->CreateMasteringVoice(&masterVoice);
 }
 
-Audio* Audio::GetInstance()
-{
-	if (instance == nullptr) {
-		instance = new Audio;
-	}
-	return instance;
+uint32_t Audio::LoadWave(const std::string &filename) {
+
+    if (loadedFiles.find(filename) != loadedFiles.end()) {
+        for (size_t i = 0; i < kMaxSoundData; ++i) {
+            if (soundDatas_[i].name_ == filename) {
+                return static_cast<uint32_t>(i);
+            }
+        }
+    }
+
+    std::string fullPath = directoryPath_ + "/" + filename;
+
+    std::ifstream file;
+    file.open(fullPath, std::ios_base::binary);
+    assert(file.is_open());
+
+    RiffHeader riff;
+    file.read((char *)&riff, sizeof(riff));
+
+    if (strncmp(riff.chunk.id, "RIFF", 4) != 0) {
+        assert(0);
+    }
+    if (strncmp(riff.type, "WAVE", 4) != 0) {
+        assert(0);
+    }
+
+    ChunkHeader chunkHeader;
+    FormatChunk format = {};
+
+    while (file.read((char *)&chunkHeader, sizeof(chunkHeader))) {
+        if (strncmp(chunkHeader.id, "fmt ", 4) == 0) {
+            assert(chunkHeader.size <= sizeof(format.fmt));
+            format.chunk = chunkHeader;
+            file.read((char *)&format.fmt, chunkHeader.size);
+            break;
+        } else {
+            file.seekg(chunkHeader.size, std::ios_base::cur);
+        }
+    }
+
+    if (strncmp(format.chunk.id, "fmt ", 4) != 0) {
+        assert(0);
+    }
+
+    ChunkHeader data;
+    while (file.read((char *)&data, sizeof(data))) {
+        if (strncmp(data.id, "data", 4) == 0) {
+            break;
+        } else {
+            file.seekg(data.size, std::ios_base::cur);
+        }
+    }
+
+    if (strncmp(data.id, "data", 4) != 0) {
+        assert(0);
+    }
+
+    std::vector<uint8_t> buffer(data.size);
+    file.read(reinterpret_cast<char *>(buffer.data()), data.size);
+    file.close();
+
+    SoundData &soundData = soundDatas_[soundDataIndex];
+    soundData.wfex = format.fmt;
+    soundData.buffer = std::move(buffer);
+    soundData.name_ = filename;
+
+    loadedFiles.insert(filename);
+
+    uint32_t currentIndex = static_cast<uint32_t>(soundDataIndex);
+    soundDataIndex = (soundDataIndex + 1) % kMaxSoundData;
+
+    return currentIndex;
 }
 
-uint32_t Audio::LoadWave(const std::string& filename) {
-
-	// ファイルがすでに読み込まれているかチェック
-	if (loadedFiles.find(filename) != loadedFiles.end()) {
-		// 既に読み込まれている場合はインデックスを返す
-		for (size_t i = 0; i < kMaxSoundData; ++i) {
-			if (soundDatas_[i].name_ == filename) {
-				return static_cast<uint32_t>(i);
-			}
-		}
-	}
-
-	// ディレクトリパスとファイル名を組み合わせたフルパスを作成
-	std::string fullPath = directoryPath_ + "/" + filename;
-
-	// ファイル入力ストリームのインスタンス
-	std::ifstream file;
-	// .wavファイルをバイナリモードで開く
-	file.open(fullPath, std::ios_base::binary);
-	assert(file.is_open());
-
-	// RIFFヘッダーの読み込み
-	RiffHeader riff;
-	file.read((char*)&riff, sizeof(riff));
-
-	// ファイルがRIFFかチェック
-	if (strncmp(riff.chunk.id, "RIFF", 4) != 0) {
-		assert(0);
-	}
-	// タイプがWAVEかチェック
-	if (strncmp(riff.type, "WAVE", 4) != 0) {
-		assert(0);
-	}
-
-	// チャンクのループを開始
-	ChunkHeader chunkHeader;
-	FormatChunk format = {};
-
-	while (file.read((char*)&chunkHeader, sizeof(chunkHeader))) {
-		// チャンクIDが "fmt" か確認
-		if (strncmp(chunkHeader.id, "fmt ", 4) == 0) {
-			// Formatチャンクのサイズを確認、データを読み込む
-			assert(chunkHeader.size <= sizeof(format.fmt));
-
-			format.chunk = chunkHeader; // チャンクヘッダーをコピー
-			file.read((char*)&format.fmt, chunkHeader.size); // fmtのデータを読み込み
-
-			break;
-		}
-		else {
-			// 次のチャンクに移動
-			file.seekg(chunkHeader.size, std::ios_base::cur);
-		}
-	}
-
-	// "fmt"チャンクが見つからなかった場合のエラーとしてだす
-	if (strncmp(format.chunk.id, "fmt ", 4) != 0) {
-		assert(0);
-	}
-
-	// Dataチャンクの読み込み
-	// Dataチャンクの読み込みとスキップ処理
-	ChunkHeader data;
-	while (file.read((char*)&data, sizeof(data))) {
-		if (strncmp(data.id, "data", 4) == 0) {
-			break; // "data" チャンクを見つけたらループを抜ける
-		}
-		else {
-			// 現在のチャンクが "data" でない場合、そのサイズ分シーク
-			file.seekg(data.size, std::ios_base::cur);
-		}
-	}
-
-	if (strncmp(data.id, "data", 4) != 0) {
-		assert(0);
-	}
-
-	// Dataチャンクのデータ部（波形データの読み込み）
-	std::vector<uint8_t> buffer(data.size);
-	file.read(reinterpret_cast<char*>(buffer.data()), data.size);
-
-	// waveファイルを閉じる
-	file.close();
-
-	// 次のインデックスにデータを格納
-	SoundData& soundData = soundDatas_[soundDataIndex];
-	soundData.wfex = format.fmt;
-	soundData.buffer = std::move(buffer);  // std::vector のムーブ
-	soundData.name_ = filename;  // ファイル名を name_ にセット
-
-	loadedFiles.insert(filename); // 読み込んだファイル名をセットに追加
-
-	// 現在のインデックスを返す
-	uint32_t currentIndex = static_cast<uint32_t>(soundDataIndex);
-
-	// インデックスを更新
-	soundDataIndex = (soundDataIndex + 1) % kMaxSoundData;
-
-	return currentIndex;
-}
-
-
-
-void Audio::Unload(uint32_t soundIndex)
-{
-
-	SoundData& soundData = soundDatas_[soundIndex];
-
-	// メモリ解放は不要。vectorは自動的にメモリを管理する
-	soundData.buffer.clear();  // バッファを空にする
-	soundData.wfex = {};
-	soundData.name_.clear();  // 名前もクリア
+void Audio::Unload(uint32_t soundIndex) {
+    SoundData &soundData = soundDatas_[soundIndex];
+    soundData.buffer.clear();
+    soundData.wfex = {};
+    soundData.name_.clear();
 }
 
 void Audio::PlayWave(uint32_t soundIndex, float volume, bool loop) {
-	HRESULT result;
+    HRESULT result;
 
-	const SoundData& soundData = soundDatas_[soundIndex];
+    const SoundData &soundData = soundDatas_[soundIndex];
 
-	Voice* voice = new Voice(); // Voiceインスタンスを作成
-	voice->handle = soundIndex; // 音声ハンドルを設定
-	voice->volume = volume;     // 指定された音量を設定
+    Voice *voice = new Voice();
+    voice->handle = soundIndex;
+    voice->volume = volume;
 
-	// XAudio2のコールバックインスタンスを作成
-	VoiceCallback* voiceCallback = new VoiceCallback();
+    VoiceCallback *voiceCallback = new VoiceCallback();
 
-	// ソースボイスを作成
-	result = xAudio2->CreateSourceVoice(&voice->sourceVoice, &soundData.wfex, 0, XAUDIO2_DEFAULT_FREQ_RATIO, voiceCallback);
-	assert(SUCCEEDED(result));
+    result = xAudio2->CreateSourceVoice(&voice->sourceVoice, &soundData.wfex, 0, XAUDIO2_DEFAULT_FREQ_RATIO, voiceCallback);
+    assert(SUCCEEDED(result));
 
-	// バッファを設定
-	XAUDIO2_BUFFER buf{};
-	buf.pAudioData = soundData.buffer.data();  // vectorから直接バッファを取得
-	buf.AudioBytes = static_cast<uint32_t>(soundData.buffer.size());
-	buf.Flags = XAUDIO2_END_OF_STREAM;
-	buf.pContext = voice;  // コールバック用のコンテキストとしてVoiceインスタンスを渡す
+    XAUDIO2_BUFFER buf{};
+    buf.pAudioData = soundData.buffer.data();
+    buf.AudioBytes = static_cast<uint32_t>(soundData.buffer.size());
+    buf.Flags = XAUDIO2_END_OF_STREAM;
+    buf.pContext = voice;
+    buf.LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
 
-	// ループ再生の設定
-	if (loop) {
-		buf.LoopCount = XAUDIO2_LOOP_INFINITE;  // 無限ループで再生
-	}
-	else {
-		buf.LoopCount = 0;  // ループしない
-	}
+    result = voice->sourceVoice->SubmitSourceBuffer(&buf);
+    assert(SUCCEEDED(result));
 
-	// ソースボイスにバッファを送信
-	result = voice->sourceVoice->SubmitSourceBuffer(&buf);
-	assert(SUCCEEDED(result));
+    result = voice->sourceVoice->Start();
+    assert(SUCCEEDED(result));
 
-	// ソースボイスを開始
-	result = voice->sourceVoice->Start();
-	assert(SUCCEEDED(result));
+    voice->sourceVoice->SetVolume(voice->volume);
 
-	// 音量を設定
-	voice->sourceVoice->SetVolume(voice->volume);
-
-	// 再生中のボイスをセットに追加
-	voices_.insert(voice);
+    voices_.insert(voice);
 }
 
-void Audio::StopWave(uint32_t soundIndex)
-{
-
-	// 再生中の音声を探す
-	for (auto it = voices_.begin(); it != voices_.end(); ) {
-		if ((*it)->handle == soundIndex) {
-			// 音声を停止
-			if ((*it)->sourceVoice != nullptr) {
-				(*it)->sourceVoice->Stop(0); // 音声を停止
-				(*it)->sourceVoice->DestroyVoice(); // ソースボイスを解放
-			}
-			delete* it; // Voiceオブジェクトを解放
-			it = voices_.erase(it); // セットから削除
-		}
-		else {
-			++it; // 次の要素へ
-		}
-	}
+void Audio::StopWave(uint32_t soundIndex) {
+    for (auto it = voices_.begin(); it != voices_.end();) {
+        if ((*it)->handle == soundIndex) {
+            if ((*it)->sourceVoice != nullptr) {
+                (*it)->sourceVoice->Stop(0);
+                (*it)->sourceVoice->DestroyVoice();
+            }
+            delete *it;
+            it = voices_.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
-void Audio::SetVolume(uint32_t soundIndex, float volume)
-{
-	// 再生中の音声を探す
-	for (auto& voice : voices_) {
-		if (voice->handle == soundIndex) {
-			// 音量を設定
-			voice->volume = volume; // ボリュームを更新
-			voice->sourceVoice->SetVolume(volume); // XAudio2のボリュームを設定
-			break;
-		}
-	}
+void Audio::SetVolume(uint32_t soundIndex, float volume) {
+    for (auto &voice : voices_) {
+        if (voice->handle == soundIndex) {
+            voice->volume = volume;
+            voice->sourceVoice->SetVolume(volume);
+            break;
+        }
+    }
 }
 
-void Audio::Finalize()
-{
-	// マスターボイスを解放
-	if (masterVoice) {
-		masterVoice->DestroyVoice();
-		masterVoice = nullptr;
-	}
+void Audio::Finalize() {
+    if (masterVoice) {
+        masterVoice->DestroyVoice();
+        masterVoice = nullptr;
+    }
 
-	// 再生中の音声の解放
-	for (auto voice : voices_) {
-		if (voice->sourceVoice) {
-			// 音声の破棄を試みる
-			voice->sourceVoice->DestroyVoice();
+    for (auto voice : voices_) {
+        if (voice->sourceVoice) {
+            voice->sourceVoice->DestroyVoice();
+        }
+        delete voice;
+    }
 
-		}
-		delete voice; // Voiceオブジェクトを解放
-	}
-	// XAudio2を解放
-	if (xAudio2) {
-		xAudio2.Reset();
-	}
+    if (xAudio2) {
+        xAudio2.Reset();
+    }
 
-	voices_.clear(); // セットをクリア
-	delete instance;
-	instance = nullptr;
-
+    voices_.clear();
 }
 
+//==============================================================================
+// デバッグ補助関数
+//==============================================================================
 
+void Audio::DebugScanWavFiles() {
+    debugWavFileList_.clear();
+
+    // ソリューション直下の Resources\sounds\ を走査
+    // 実行ファイルがソリューション直下に置かれている前提
+    std::filesystem::path dir("Resources/sounds");
+
+    if (!std::filesystem::exists(dir)) {
+        return;
+    }
+
+    for (auto &entry : std::filesystem::recursive_directory_iterator(dir)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+        if (entry.path().extension() != ".wav") {
+            continue;
+        }
+
+        // directoryPath_ からの相対パスをファイル名として登録
+        auto rel = std::filesystem::relative(entry.path(), dir);
+        debugWavFileList_.push_back(rel.string());
+    }
+}
+
+float Audio::DebugGetDurationSec(uint32_t index) const {
+    const SoundData &sd = soundDatas_[index];
+    if (sd.wfex.nAvgBytesPerSec == 0) {
+        return 0.0f;
+    }
+    return static_cast<float>(sd.buffer.size()) /
+           static_cast<float>(sd.wfex.nAvgBytesPerSec);
+}
+
+float Audio::DebugGetPositionSec(uint32_t index) const {
+    for (auto *voice : voices_) {
+        if (voice->handle != index) {
+            continue;
+        }
+        if (!voice->sourceVoice) {
+            continue;
+        }
+
+        XAUDIO2_VOICE_STATE state{};
+        voice->sourceVoice->GetState(&state);
+
+        const SoundData &sd = soundDatas_[index];
+        if (sd.wfex.nAvgBytesPerSec == 0) {
+            return 0.0f;
+        }
+
+        // SamplesPlayed をバイト換算して秒に変換
+        uint64_t bytes = state.SamplesPlayed *
+                         sd.wfex.nBlockAlign;
+        return static_cast<float>(bytes) /
+               static_cast<float>(sd.wfex.nAvgBytesPerSec);
+    }
+    return 0.0f;
+}
+
+bool Audio::DebugIsPlaying(uint32_t index) const {
+    for (auto *voice : voices_) {
+        if (voice->handle == index) {
+            return true;
+        }
+    }
+    return false;
+}
+
+uint32_t Audio::DebugResolveIndex(const std::string &filename) const {
+    auto it = debugLoadedMap_.find(filename);
+    if (it != debugLoadedMap_.end()) {
+        return it->second;
+    }
+    return UINT32_MAX;
+}
+
+//==============================================================================
+// Debug() 本体
+//==============================================================================
+
+void Audio::Debug() {
+#ifdef _DEBUG
+    //------------------------------------------------------------------
+    // マスター音量
+    //------------------------------------------------------------------
+    ImGui::SeparatorText( "マスター");
+    if (ImGui::SliderFloat( "マスター音量", &debugMasterVolume_, 0.0f, 1.0f)) {
+        if (masterVoice) {
+            masterVoice->SetVolume(debugMasterVolume_);
+        }
+    }
+
+    //------------------------------------------------------------------
+    // ファイルスキャン
+    //------------------------------------------------------------------
+    ImGui::SeparatorText( "ファイルブラウザ  [ Resources\\sounds\\ ]");
+
+    if (ImGui::Button( "WAVファイルをスキャン")) {
+        DebugScanWavFiles();
+        debugSelectedFile_ = -1;
+    }
+
+    ImGui::SameLine();
+    ImGui::TextDisabled( "(%zuファイル検出)", debugWavFileList_.size());
+
+    // ファイルリスト
+    ImGui::BeginChild("##filelist", ImVec2(0, 160), true);
+    for (int i = 0; i < static_cast<int>(debugWavFileList_.size()); ++i) {
+        const bool selected = (debugSelectedFile_ == i);
+        if (ImGui::Selectable(debugWavFileList_[i].c_str(), selected)) {
+            debugSelectedFile_ = i;
+        }
+    }
+    ImGui::EndChild();
+
+    //------------------------------------------------------------------
+    // 選択ファイルの操作
+    //------------------------------------------------------------------
+    ImGui::SeparatorText( "再生コントロール");
+
+    const bool hasSelection = (debugSelectedFile_ >= 0 &&
+                               debugSelectedFile_ < static_cast<int>(debugWavFileList_.size()));
+
+    if (!hasSelection) {
+        ImGui::TextDisabled( "-- 上のリストからファイルを選択してください --");
+    } else {
+        const std::string &selectedName = debugWavFileList_[debugSelectedFile_];
+        ImGui::Text( "ファイル : %s", selectedName.c_str());
+
+        uint32_t idx = DebugResolveIndex(selectedName);
+        const bool loaded = (idx != UINT32_MAX);
+        const bool playing = loaded && DebugIsPlaying(idx);
+
+        // ロード状態バッジ
+        if (loaded) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f),  "[ロード済み  idx=%u]", idx);
+        } else {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f),  "[未ロード]");
+        }
+
+        // 再生パラメータ
+        ImGui::SliderFloat( "音量", &debugVolume_, 0.0f, 1.0f);
+        ImGui::Checkbox( "ループ", &debugLoop_);
+
+        ImGui::Spacing();
+
+        //-- Load ボタン
+        if (!loaded) {
+            if (ImGui::Button( "ロード")) {
+                // Resources\sounds\ を directoryPath_ として LoadWave へ渡す
+                // directoryPath_ が既に "Resources/sounds" 相当に設定されている想定
+                // ただしデバッグ用に固定パスからロード
+                std::string savedDir = directoryPath_;
+                directoryPath_ = "Resources/sounds";
+                uint32_t newIdx = LoadWave(selectedName);
+                directoryPath_ = savedDir;
+                debugLoadedMap_[selectedName] = newIdx;
+            }
+        } else {
+            //-- Play ボタン
+            ImGui::BeginDisabled(playing);
+            if (ImGui::Button( "再生")) {
+                PlayWave(idx, debugVolume_, debugLoop_);
+            }
+            ImGui::EndDisabled();
+
+            ImGui::SameLine();
+
+            //-- Stop ボタン
+            ImGui::BeginDisabled(!playing);
+            if (ImGui::Button( "停止")) {
+                StopWave(idx);
+            }
+            ImGui::EndDisabled();
+
+            ImGui::SameLine();
+
+            //-- 再生中のみ音量を即時反映
+            if (playing) {
+                if (ImGui::Button( "音量を適用")) {
+                    SetVolume(idx, debugVolume_);
+                }
+            }
+
+            ImGui::SameLine();
+
+            //-- Unload ボタン
+            ImGui::BeginDisabled(playing);
+            if (ImGui::Button( "アンロード")) {
+                StopWave(idx);
+                Unload(idx);
+                debugLoadedMap_.erase(selectedName);
+                loadedFiles.erase(selectedName);
+            }
+            ImGui::EndDisabled();
+
+            //-- 再生時間バー
+            if (loaded) {
+                float duration = DebugGetDurationSec(idx);
+                float position = playing ? DebugGetPositionSec(idx) : 0.0f;
+
+                // ループ時は position が duration を超えることがあるのでクランプ
+                if (duration > 0.0f) {
+                    position = (position > duration) ? std::fmod(position, duration) : position;
+                }
+
+                ImGui::Spacing();
+
+                // プログレスバー
+                float fraction = (duration > 0.0f) ? (position / duration) : 0.0f;
+                char overlay[64];
+                snprintf(overlay, sizeof(overlay), "%.2f s / %.2f s", position, duration);
+                ImGui::ProgressBar(fraction, ImVec2(-1.0f, 0.0f), overlay);
+
+                // 詳細情報
+                if (duration > 0.0f) {
+                    const SoundData &sd = soundDatas_[idx];
+                    ImGui::TextDisabled(
+                         "チャンネル:%u  サンプルレート:%u Hz  ビット数:%u  平均:%u B/s",
+                        sd.wfex.nChannels,
+                        sd.wfex.nSamplesPerSec,
+                        sd.wfex.wBitsPerSample,
+                        sd.wfex.nAvgBytesPerSec);
+                }
+            }
+        }
+    }
+
+    //------------------------------------------------------------------
+    // 全ロード済みファイル一覧
+    //------------------------------------------------------------------
+    ImGui::SeparatorText( "ロード済みファイル一覧");
+    ImGui::BeginChild("##loadedlist", ImVec2(0, 120), true);
+    for (auto &[name, soundIdx] : debugLoadedMap_) {
+        bool isPlaying = DebugIsPlaying(soundIdx);
+        float dur = DebugGetDurationSec(soundIdx);
+        float pos = isPlaying ? DebugGetPositionSec(soundIdx) : 0.0f;
+
+        if (isPlaying) {
+            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f),  "[再生中]");
+        } else {
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f),  "[停止中]");
+        }
+        ImGui::SameLine();
+        ImGui::Text("idx=%-4u  %.2f/%.2fs  %s", soundIdx, pos, dur, name.c_str());
+    }
+    ImGui::EndChild();
+
+    //------------------------------------------------------------------
+    // 全停止ボタン
+    //------------------------------------------------------------------
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
+    if (ImGui::Button( "すべて停止", ImVec2(-1.0f, 0.0f))) {
+        for (auto &[name, soundIdx] : debugLoadedMap_) {
+            StopWave(soundIdx);
+        }
+    }
+    ImGui::PopStyleColor(2);
+#endif // _DEBUG
+}
 
 ============================================================
 File Path: Engine/Audio/Audio.h
 ============================================================
 #pragma once
+#include "array"
 #include "cstdint"
 #include "string"
 #include "vector"
+#include "wrl.h"
 #include "xaudio2.h"
-#include"wrl.h"
-#include"array"
+#include <filesystem>
+#include <map>
 #include <set>
 
-class Audio
-{
+class Audio {
 
-	class VoiceCallback : public IXAudio2VoiceCallback {
-	public:
-		// 未使用のコールバックメソッドは空実装
-		void STDMETHODCALLTYPE OnStreamEnd() override {}
-		void STDMETHODCALLTYPE OnVoiceProcessingPassEnd() override {}
-		void STDMETHODCALLTYPE OnVoiceProcessingPassStart(UINT32) override {}
-		void STDMETHODCALLTYPE OnBufferStart(void*) override {}
-		void STDMETHODCALLTYPE OnLoopEnd(void*) override {}
-		void STDMETHODCALLTYPE OnVoiceError(void*, HRESULT) override {}
+    class VoiceCallback : public IXAudio2VoiceCallback {
+      public:
+        void STDMETHODCALLTYPE OnStreamEnd() override {}
+        void STDMETHODCALLTYPE OnVoiceProcessingPassEnd() override {}
+        void STDMETHODCALLTYPE OnVoiceProcessingPassStart(UINT32) override {}
+        void STDMETHODCALLTYPE OnBufferStart(void *) override {}
+        void STDMETHODCALLTYPE OnLoopEnd(void *) override {}
+        void STDMETHODCALLTYPE OnVoiceError(void *, HRESULT) override {}
 
-		// バッファが終了したときに呼ばれるコールバック
-		void STDMETHODCALLTYPE OnBufferEnd(void* pBufferContext) override {
-			if (pBufferContext) {
-				Voice* voice = reinterpret_cast<Voice*>(pBufferContext);
-				if (voice) {
-					// Audioシステムから該当の音声を停止
-					Audio::GetInstance()->StopWave(voice->handle);
-				}
-			}
-		}
-	};
+        void STDMETHODCALLTYPE OnBufferEnd(void *pBufferContext) override {
+            if (pBufferContext) {
+                Voice *voice = reinterpret_cast<Voice *>(pBufferContext);
+                if (voice) {
+                    Audio::GetInstance()->StopWave(voice->handle);
+                }
+            }
+        }
+    };
 
-private:
-	static const int kMaxSoundData = 2108;
+  private:
+    static const int kMaxSoundData = 2108;
 
-	static Audio* instance;
+    Audio() = default;
+    ~Audio() = default;
+    Audio(Audio &) = default;
+    Audio &operator=(Audio &) = default;
 
-	Audio() = default;
-	~Audio() = default;
-	Audio(Audio&) = default;
-	Audio& operator=(Audio&) = default;
-private:
+  private:
+    struct ChunkHeader {
+        char id[4];
+        int32_t size;
+    };
 
-	// チャンクヘッダー
-	struct ChunkHeader
-	{
-		char id[4]; // チャンク等のID
-		int32_t size; // チャンクサイズ
-	};
+    struct RiffHeader {
+        ChunkHeader chunk;
+        char type[4];
+    };
 
-	// RIFFヘッダチャンク
-	struct RiffHeader
-	{
-		ChunkHeader chunk; // "RIFF"
-		char type[4]; // "WAVE"
-	};
+    struct FormatChunk {
+        ChunkHeader chunk;
+        WAVEFORMATEX fmt;
+    };
 
-	// FMTチャンク
-	struct FormatChunk
-	{
-		ChunkHeader chunk; // "fmt"
-		WAVEFORMATEX fmt; // 波形フォーマット
-	};
+    struct SoundData {
+        WAVEFORMATEX wfex;
+        std::vector<uint8_t> buffer;
+        std::string name_;
+    };
 
-	// 音声データ
-	struct SoundData {
-		// 波形フォーマット
-		WAVEFORMATEX wfex;
-		// バッファ
-		std::vector<uint8_t> buffer;
-		// 名前
-		std::string name_;
-	};
+    struct Voice {
+        uint32_t handle = 0u;
+        IXAudio2SourceVoice *sourceVoice = nullptr;
+        float volume = 1.0f;
+    };
 
-	// 再生データ
-	struct Voice {
-		uint32_t handle = 0u; // 音声ハンドル
-		IXAudio2SourceVoice* sourceVoice = nullptr; // ソースボイス
-		float volume = 1.0f; // 音量 (0.0 ～ 1.0)
-	};
+  public:
+    /// <summary>
+    /// シングルトンインスタンスの取得
+    /// </summary>
+    static Audio *GetInstance() {
+        static Audio instance;
+        return &instance;
+    }
 
-public:
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    void Initialize(const std::string &directoryPath = "resources/sounds");
 
-	/// <summary>
-	/// 初期化
-	/// </summary>
-	/// <param name="directoryPath"></param>
-	void Initialize(const std::string& directoryPath = "resources/sounds");
+    /// <summary>
+    /// 音声読み込み
+    /// </summary>
+    uint32_t LoadWave(const std::string &filename);
 
-	/// <summary>
-	/// シングルトンインスタンスの取得
-	/// </summary>
-	/// <returns></returns>
-	static Audio* GetInstance();
+    /// <summary>
+    /// 音声データ解放
+    /// </summary>
+    void Unload(uint32_t soundIndex);
 
-	/// <summary>
-	/// 音声読み込み
-	/// </summary>
-	/// <param name="filename"></param>
-	/// <returns></returns>
-	uint32_t LoadWave(const std::string& filename);
+    /// <summary>
+    /// 音声再生
+    /// </summary>
+    void PlayWave(uint32_t soundIndex, float volume, bool loop = false);
 
-	/// <summary>
-	/// 音声データ解放
-	/// </summary>
-	/// <param name="soundData"></param>
-	void Unload(uint32_t soundIndex);
+    /// <summary>
+    /// 音声停止
+    /// </summary>
+    void StopWave(uint32_t soundIndex);
 
-	/// <summary>
-	/// 音声再生
-	/// </summary>
-	/// <param name="xAudio2"></param>
-	/// <param name="soundData"></param>
-	void PlayWave(uint32_t soundIndex, float volume, bool loop = false);
+    /// <summary>
+    /// 音量設定
+    /// </summary>
+    void SetVolume(uint32_t soundIndex, float volume);
 
-	/// <summary>
-	/// 音声停止
-	/// </summary>
-	/// <param name="soundIndex"></param>
-	void StopWave(uint32_t soundIndex);
+    /// <summary>
+    /// 終了
+    /// </summary>
+    void Finalize();
 
-	/// <summary>
-	/// 音量設定
-	/// </summary>
-	/// <param name="soundIndex"></param>
-	/// <param name="volume"></param>
-	void SetVolume(uint32_t soundIndex, float volume);
+    /// <summary>
+    /// ImGui デバッグウィンドウ描画
+    /// _DEBUG ビルド時に毎フレーム呼び出してください
+    /// </summary>
+    void Debug();
 
-	/// <summary>
-	/// 終了
-	/// </summary>
-	void Finalize();
+  private:
+    //------------------------------------------------------------------
+    // デバッグ補助関数（private）
+    //------------------------------------------------------------------
 
-private:
+    /// Resources\sounds\ を再帰スキャンして .wav ファイル一覧を更新する
+    void DebugScanWavFiles();
 
-	Microsoft::WRL::ComPtr<IXAudio2>xAudio2;
-	IXAudio2MasteringVoice* masterVoice;
-	std::string directoryPath_;
-	std::array<SoundData, kMaxSoundData> soundDatas_;
-	size_t soundDataIndex = 0;  // 次に保存する音声データのインデックス
-	std::set<Voice*> voices_; // 再生中の音声データを管理するセット
-	std::set<std::string> loadedFiles; // 読み込まれたファイルのセット
-	// フォーマット情報を読み込む
-	uint16_t audioFormat;
-	uint16_t numChannels;
-	uint32_t sampleRate;
-	uint32_t byteRate;
-	uint16_t blockAlign;
-	uint16_t bitsPerSample;
+    /// 指定インデックスの音声総時間（秒）を返す
+    float DebugGetDurationSec(uint32_t index) const;
+
+    /// 指定インデックスの現在再生位置（秒）を返す（再生中でなければ 0）
+    float DebugGetPositionSec(uint32_t index) const;
+
+    /// 指定インデックスが再生中かどうかを返す
+    bool DebugIsPlaying(uint32_t index) const;
+
+    /// ロード済みファイル名 → soundIndex を解決する（未ロードなら UINT32_MAX）
+    uint32_t DebugResolveIndex(const std::string &filename) const;
+
+  private:
+    //------------------------------------------------------------------
+    // 通常メンバ
+    //------------------------------------------------------------------
+    Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
+    IXAudio2MasteringVoice *masterVoice = nullptr;
+    std::string directoryPath_;
+    std::array<SoundData, kMaxSoundData> soundDatas_;
+    size_t soundDataIndex = 0;
+    std::set<Voice *> voices_;
+    std::set<std::string> loadedFiles;
+
+    uint16_t audioFormat = 0;
+    uint16_t numChannels = 0;
+    uint32_t sampleRate = 0;
+    uint32_t byteRate = 0;
+    uint16_t blockAlign = 0;
+    uint16_t bitsPerSample = 0;
+
+    //------------------------------------------------------------------
+    // デバッグ専用メンバ
+    //------------------------------------------------------------------
+    std::vector<std::string> debugWavFileList_;      // スキャン済み .wav 一覧
+    int debugSelectedFile_ = -1;                     // リスト選択インデックス
+    float debugVolume_ = 1.0f;                       // 再生ボリューム
+    bool debugLoop_ = false;                         // ループフラグ
+    float debugMasterVolume_ = 1.0f;                 // マスター音量
+    std::map<std::string, uint32_t> debugLoadedMap_; // ファイル名 → soundIndex
 };
-
 
 ============================================================
 File Path: Engine/Base/DirectXCommon.cpp
@@ -38055,18 +38136,7 @@ using namespace StringUtility;
 
 using namespace Microsoft::WRL;
 
-DirectXCommon *DirectXCommon::instance = nullptr;
-
-DirectXCommon *DirectXCommon::GetInstance() {
-    if (instance == nullptr) {
-        instance = new DirectXCommon();
-    }
-    return instance;
-}
-
 void DirectXCommon::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void DirectXCommon::Initialize(WinApp *winApp) {
@@ -38797,8 +38867,6 @@ File Path: Engine/Base/DirectXCommon.h
 // DirectX基盤
 class DirectXCommon {
   private:
-    static DirectXCommon *instance;
-
     DirectXCommon() = default;
     ~DirectXCommon() = default;
     DirectXCommon(DirectXCommon &) = delete;
@@ -38809,7 +38877,10 @@ class DirectXCommon {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static DirectXCommon *GetInstance();
+    static DirectXCommon *GetInstance() {
+        static DirectXCommon instance; // プログラム終了時に自動でデストラクタが呼ばれる
+        return &instance;
+    }
 
     /// <summary>
     /// 終了
@@ -39126,8 +39197,6 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg
 
 #pragma comment(lib, "winmm.lib")
 
-WinApp *WinApp::instance = nullptr;
-
 // ウィンドウプロシージャ
 LRESULT CALLBACK WinApp::WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 #ifdef _DEBUG
@@ -39146,13 +39215,6 @@ LRESULT CALLBACK WinApp::WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
     }
     // 標準のメッセージ処理を行う
     return DefWindowProc(hwnd, msg, wparam, lparam);
-}
-
-WinApp *WinApp::GetInstance() {
-    if (instance == nullptr) {
-        instance = new WinApp();
-    }
-    return instance;
 }
 
 void WinApp::Initialize() {
@@ -39203,8 +39265,6 @@ void WinApp::Update() {
 void WinApp::Finalize() {
     CoUninitialize();
     CloseWindow(hwnd);
-    delete instance;
-    instance = nullptr;
 }
 
 bool WinApp::ProcessMessage() {
@@ -39280,7 +39340,6 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg
 // WindowsAPI
 class WinApp {
   private:
-    static WinApp *instance;
     WinApp() = default;
     ~WinApp() = default;
     WinApp(const WinApp &) = delete;
@@ -39294,7 +39353,10 @@ class WinApp {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static WinApp *GetInstance();
+      static WinApp* GetInstance() {
+        static WinApp instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 初期化
@@ -39595,7 +39657,6 @@ void Framework::Finalize() {
     particleCommon_->Finalize();
     modelCommon_->Finalize();
     dxCommon_->Finalize();
-    delete sceneFactory_;
 }
 
 void Framework::RegisterShortcutKey() {
@@ -39717,7 +39778,6 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("AroundField");
 
     particleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
-
 }
 
 void Framework::PlaySounds() {
@@ -39725,7 +39785,6 @@ void Framework::PlaySounds() {
 
 void Framework::Draw() {
 }
-
 
 ============================================================
 File Path: Engine/Core/Framework.h
@@ -39735,7 +39794,7 @@ File Path: Engine/Core/Framework.h
 #ifdef _DEBUG
 #endif // _DEBUG
 #include "Audio.h"
-#include"Collider/CollisionManager.h"
+#include "Collider/CollisionManager.h"
 #include "Debug/ImGui/ImGuiManager.h"
 #include "Debug/ImGui/ImGuizmoManager.h"
 #include "Debug/ResourceLeakChecker/D3DResourceLeakChecker.h"
@@ -39750,19 +39809,19 @@ File Path: Engine/Core/Framework.h
 #include "Model/ModelCommon.h"
 #include "Object/Base/BaseObjectManager.h"
 #include "Particle/CSParticle/ParticleCSEditor.h"
+#include "Particle/CSParticle/ParticleCSFieldManager.h"
 #include "Particle/CSParticle/ParticleCSGroupManager.h"
 #include "Particle/ParticleCommon.h"
 #include "Particle/ParticleEditor.h"
 #include "Particle/ParticleGroupManager.h"
 #include "Scene/AbstractSceneFactory.h"
 #include "Scene/SceneManager.h"
+#include "Scene/SceneTransition.h"
 #include "SkyBox/SkyBox.h"
 #include "SpriteCommon.h"
 #include "SpriteManager.h"
 #include "line/DrawLine3D.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
-#include"Scene/SceneTransition.h"
-#include"Particle/CSParticle/ParticleCSFieldManager.h"
 
 class Framework {
   public: // メンバ関数
@@ -39821,7 +39880,7 @@ class Framework {
     SkyBox *skyBox_ = nullptr;
 
     // シーンファクトリー
-    AbstractSceneFactory *sceneFactory_ = nullptr;
+    std::unique_ptr<AbstractSceneFactory> sceneFactory_ = nullptr;
     SceneTransition *sceneTransition_ = nullptr;
 
     SceneManager *sceneManager_ = nullptr;
@@ -39860,7 +39919,6 @@ class Framework {
     bool endRequest_;
 };
 
-
 ============================================================
 File Path: Engine/Core/MyGame.cpp
 ============================================================
@@ -39876,14 +39934,14 @@ void MyGame::Initialize() {
     // -----ゲーム固有の処理-----
 
     // 最初のシーンの生成
-    sceneFactory_ = new SceneFactory();
+    sceneFactory_ = std::make_unique<SceneFactory>();
     // シーンマネージャに最初のシーンをセット
-    sceneManager_->SetSceneFactory(sceneFactory_);
+    sceneManager_->SetSceneFactory(std::move(sceneFactory_));
 #ifdef _DEBUG
     sceneManager_->NextSceneReservation("GAME");
 #else
     sceneManager_->NextSceneReservation("TITLE");
-#endif // _DEBUG 
+#endif // _DEBUG
     // -----------------------
 }
 
@@ -47145,6 +47203,7 @@ File Path: Engine/Utility/Debug/ImGui/ImGuiManager.cpp
 ============================================================
 #include "ImGuiManager.h"
 #ifdef _DEBUG
+#include "Collider/CollisionManager.h"
 #include "Engine/OffScreen/OffScreen.h"
 #include "ImGuizmo.h"
 #include "ImGuizmoManager.h"
@@ -47156,19 +47215,17 @@ File Path: Engine/Utility/Debug/ImGui/ImGuiManager.cpp
 #include <Data/DataHandler.h>
 #include <Engine/Frame/Frame.h>
 #include <Line/DrawLine3D.h>
+#include <Particle/CSParticle/ParticleCSFieldManager.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
-#include"Collider/CollisionManager.h"
 #include <implot.h>
-#include <Particle/CSParticle/ParticleCSFieldManager.h>
-
-ImGuiManager *ImGuiManager::instance = nullptr;
 
 void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) {
 
     dxCommon_ = DirectXCommon::GetInstance();
     baseObjectManager_ = BaseObjectManager::GetInstance();
     spriteManager_ = SpriteManager::GetInstance();
+    audio_ = Audio::GetInstance();
     LoadFlag();
     // ImGuiのコンテキストを生成
     ImGui::CreateContext();
@@ -47332,13 +47389,6 @@ void ImGuiManager::CreateDescriptorHeap() {
         srvHeap_->GetGPUDescriptorHandleForHeapStart());
 }
 
-ImGuiManager *ImGuiManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ImGuiManager;
-    }
-    return instance;
-}
-
 void ImGuiManager::Finalize() {
     SaveCurrentLayout();
 // 後始末
@@ -47353,9 +47403,6 @@ void ImGuiManager::Finalize() {
     srvHeap_.Reset();
 
     SaveFlag();
-
-    delete instance;
-    instance = nullptr;
 }
 
 void ImGuiManager::Begin() {
@@ -47449,6 +47496,7 @@ void ImGuiManager::ShowMainMenu() {
                 ImGui::MenuItem(ICON_FA_CODE_BRANCH " モーションエディタービュー", nullptr, &showMotionEditorView_);
                 ImGui::MenuItem(ICON_FA_SQUARE " スプライトマネージャビュー", nullptr, &showSpriteManagerView_);
                 ImGui::MenuItem(ICON_FA_SHAPES " コライダービュー", nullptr, &showColliderTagManagerView_);
+                ImGui::MenuItem(ICON_FA_BULLHORN " オーディオ", nullptr, &showAudioManagerView_);
                 ImGui::EndMenu();
             }
 
@@ -47859,6 +47907,19 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
     ImGui::End();
 }
 
+void ImGuiManager::ShowAudioManagerWindow() {
+    if (!showAudioManagerView_)
+        return;
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+
+    ImGui::Begin("オーディオ", &showAudioManagerView_, flags);
+
+    audio_->Debug();
+
+    ImGui::End();
+}
+
 void ImGuiManager::FixAspectRatio() {
 
     // 横幅ベースで16:9に合わせた高さ
@@ -47994,6 +48055,8 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowSpriteManagerWindow();
     // コライダータグマネージャウィンドウを描画
     ShowColliderTagManagerWindow();
+    // オーディオマネージャウィンドウを描画
+    ShowAudioManagerWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();
@@ -48426,6 +48489,7 @@ File Path: Engine/Utility/Debug/ImGui/ImGuiManager.h
 #include <BaseScene.h>
 #include "Object/Base/BaseObjectManager.h"
 #include"SpriteManager.h"
+#include <Audio.h>
 
 class ImGuizmoManager;
 class OffScreen;
@@ -48434,8 +48498,6 @@ class ImGuiManager {
     /// ====================================
     /// public method
     /// ====================================
-
-    static ImGuiManager *instance;
 
     ImGuiManager() = default;
     ~ImGuiManager() = default;
@@ -48460,7 +48522,10 @@ class ImGuiManager {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static ImGuiManager *GetInstance();
+    static ImGuiManager* GetInstance() {
+        static ImGuiManager instance;
+        return &instance;
+    }
 
     /// <summary>
     /// 終了
@@ -48572,6 +48637,8 @@ class ImGuiManager {
 
     void ShowColliderTagManagerWindow();
 
+    void ShowAudioManagerWindow();
+
     void FixAspectRatio();
 
     void BackupDockLayout();
@@ -48635,6 +48702,7 @@ class ImGuiManager {
     bool showMotionEditorView_ = true;
     bool showSpriteManagerView_ = true;
     bool showColliderTagManagerView_ = false;
+    bool showAudioManagerView_ = false;
 
     // グリッド設定用メンバ変数
     bool showGrid_ = false;
@@ -48645,6 +48713,7 @@ class ImGuiManager {
 
     BaseObjectManager *baseObjectManager_ = nullptr;
     SpriteManager *spriteManager_ = nullptr;
+    Audio *audio_ = nullptr;
 
     std::string editorIniFilePath_ = "imgui_editor.ini";
     std::string gameIniFilePath_ = "imgui_game.ini";
@@ -48661,20 +48730,9 @@ File Path: Engine/Utility/Debug/ImGui/ImGuizmoManager.cpp
 #include <Object/Base/BaseObjectManager.h>
 #include <Transform/WorldTransform.h>
 
-ImGuizmoManager *ImGuizmoManager::instance = nullptr;
-
-ImGuizmoManager *ImGuizmoManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ImGuizmoManager();
-    }
-    return instance;
-}
-
 void ImGuizmoManager::Finalize() {
     transformMap.clear();
     selectedNames.clear();
-    delete instance;
-    instance = nullptr;
 }
 
 void ImGuizmoManager::BeginFrame() {
@@ -49573,8 +49631,6 @@ File Path: Engine/Utility/Debug/ImGui/ImGuizmoManager.h
 
 class ImGuizmoManager {
   private:
-    static ImGuizmoManager *instance;
-
     ImGuizmoManager() = default;
     ~ImGuizmoManager() = default;
     ImGuizmoManager(const ImGuizmoManager &) = delete;
@@ -49608,7 +49664,10 @@ class ImGuizmoManager {
 
   public:
     /// <summary>シングルトンインスタンスの取得</summary>
-    static ImGuizmoManager *GetInstance();
+      static ImGuizmoManager* GetInstance() {
+        static ImGuizmoManager instance;
+          return &instance;
+    }
 
     /// <summary>終了処理</summary>
     void Finalize();
@@ -50096,8 +50155,6 @@ File Path: Engine/Utility/Edit/ShortcutManager/ShortcutManager.cpp
 #include "ShortcutManager.h"
 #include "Input.h"
 
-ShortcutManager *ShortcutManager::instance = nullptr;
-
 void ShortcutManager::RegisterShortcut(const std::string &name, BYTE key, std::function<void()> callback) {
     shortcuts_[name] = Shortcut{std::vector<BYTE>{key}, callback};
 }
@@ -50136,44 +50193,35 @@ void ShortcutManager::Update() {
     }
 }
 
-
-ShortcutManager *ShortcutManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ShortcutManager();
-    }
-    return instance;
-}
-
 void ShortcutManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 ============================================================
 File Path: Engine/Utility/Edit/ShortcutManager/ShortcutManager.h
 ============================================================
 #pragma once
+#include "Windows.h"
 #include <functional>
 #include <string>
 #include <unordered_map>
-#include"Windows.h"
 class Input;
 class ShortcutManager {
   private:
-    static ShortcutManager *instance;
-
     ShortcutManager() = default;
     ~ShortcutManager() = default;
     ShortcutManager(ShortcutManager &) = delete;
     ShortcutManager &operator=(ShortcutManager &) = delete;
 
   public:
-    static ShortcutManager *GetInstance();
+    static ShortcutManager *GetInstance() {
+        static ShortcutManager instance;
+        return &instance;
+    }
 
     void RegisterShortcut(const std::string &name, BYTE key, std::function<void()> callback);
     void RegisterShortcut(const std::string &name, const std::vector<BYTE> &keys, std::function<void()> callback);
 
-    void Initialize(Input* input);
+    void Initialize(Input *input);
 
     // 毎フレーム更新処理（Inputからトリガーを取得してコマンド実行）
     void Update();
@@ -50183,14 +50231,13 @@ class ShortcutManager {
   private:
     // ショートカット情報の構造体（拡張性を持たせる）
     struct Shortcut {
-        std::vector<BYTE> keys;          
+        std::vector<BYTE> keys;
         std::function<void()> callback;
     };
 
     std::unordered_map<std::string, Shortcut> shortcuts_;
 
     Input *input_ = nullptr;
-
 };
 
 ============================================================
@@ -50200,15 +50247,6 @@ File Path: Engine/Utility/Graphics/Model/ModelManager.cpp
 #include <fstream>
 #include <functional>
 #include <sstream>
-
-ModelManager *ModelManager::instance = nullptr;
-
-ModelManager *ModelManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ModelManager;
-    }
-    return instance;
-}
 
 void ModelManager::LoadModel(const std::string &filePath) {
 
@@ -50289,8 +50327,6 @@ void ModelManager::Initialize(SrvManager *srvManager) {
 }
 
 void ModelManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 
@@ -50299,66 +50335,65 @@ File Path: Engine/Utility/Graphics/Model/ModelManager.h
 ============================================================
 #pragma once
 #include "map"
-#include "string"
 #include "memory"
+#include "string"
 #include <Graphics/Srv/SrvManager.h>
 #include <Model/Model.h>
 
-class ModelManager
-{
-private:
-	static ModelManager* instance;
+class ModelManager {
+  private:
+    ModelManager() = default;
+    ~ModelManager() = default;
+    ModelManager(ModelManager &) = default;
+    ModelManager &operator=(ModelManager &) = default;
 
-	ModelManager() = default;
-	~ModelManager() = default;
-	ModelManager(ModelManager&) = default;
-	ModelManager& operator=(ModelManager&) = default;
+  public:
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    /// <param name="dxCommon"></param>
+    void Initialize(SrvManager *srvManager);
 
-public:
+    /// <summary>
+    /// 終了
+    /// </summary>
+    void Finalize();
 
-	/// <summary>
-	/// 初期化
-	/// </summary>
-	/// <param name="dxCommon"></param>
-	void Initialize(SrvManager* srvManager);
+    /// <summary>
+    /// シングルトンインスタンスの取得
+    /// </summary>
+    /// <returns></returns>
+    static ModelManager *GetInstance() {
+        static ModelManager instance;
+        return &instance;
+    }
 
-	/// <summary>
-	/// 終了
-	/// </summary>
-	void Finalize();
+    /// <summary>
+    /// モデルの検索
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <returns></returns>
+    Model *FindModel(const std::string &filePath);
 
-	/// <summary>
-	/// シングルトンインスタンスの取得
-	/// </summary>
-	/// <returns></returns>
-	static ModelManager* GetInstance();
+    /// <summary>
+    /// モデルファイルの読み込み
+    /// </summary>
+    /// <param name="filePath"></param>
+    void LoadModel(const std::string &filePath);
 
-	/// <summary>
-	/// モデルの検索
-	/// </summary>
-	/// <param name="filePath"></param>
-	/// <returns></returns>
-	Model* FindModel(const std::string& filePath);
-
-	/// <summary>
-	/// モデルファイルの読み込み
-	/// </summary>
-	/// <param name="filePath"></param>
-	void LoadModel(const std::string& filePath);
-
-	/// <summary>
+    /// <summary>
     /// プリミティブモデルの作成
-	/// </summary>
-	/// <param name="type"></param>
-        std::string CreatePrimitiveModel(PrimitiveType type, std::string texPath);
+    /// </summary>
+    /// <param name="type"></param>
+    std::string CreatePrimitiveModel(PrimitiveType type, std::string texPath);
 
-public:
-	std::unordered_map<std::string, std::unique_ptr<Model>> models;
-private:
-	ModelCommon* modelCommon = nullptr;
-	SrvManager* srvManager = nullptr;
+  public:
+    std::unordered_map<std::string, std::unique_ptr<Model>> models;
+
+  private:
+    ModelCommon *modelCommon = nullptr;
+    SrvManager *srvManager = nullptr;
 };
-
 
 
 ============================================================
@@ -50367,18 +50402,8 @@ File Path: Engine/Utility/Graphics/PipeLine/ComputePipeLineManager.cpp
 #include "ComputePipeLineManager.h"
 #include <Debug/Log/Logger.h>
 
-ComputePipeLineManager *ComputePipeLineManager::instance = nullptr;
-
-ComputePipeLineManager *ComputePipeLineManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ComputePipeLineManager;
-    }
-    return instance;
-}
-
 void ComputePipeLineManager::Finalize() {
-    delete instance;
-    instance = nullptr;
+  
 }
 
 void ComputePipeLineManager::Initialize(DirectXCommon *dxCommon) {
@@ -51092,15 +51117,17 @@ class ComputePipeLineManager {
     /// public method
     /// ====================================
 
-    static ComputePipeLineManager *instance;
-
     ComputePipeLineManager() = default;
     ~ComputePipeLineManager() = default;
     ComputePipeLineManager(ComputePipeLineManager &) = delete;
     ComputePipeLineManager &operator=(ComputePipeLineManager &) = delete;
 
   public:
-    static ComputePipeLineManager *GetInstance();
+    static ComputePipeLineManager *GetInstance() {
+        static ComputePipeLineManager instance;
+        return &instance;
+    }
+
 
     void Finalize();
 
@@ -51173,18 +51200,8 @@ File Path: Engine/Utility/Graphics/PipeLine/PipeLineManager.cpp
 #include "ComputePipeLineManager.h"
 #include <Debug/Log/Logger.h>
 #include <d3dx12.h>
-PipeLineManager *PipeLineManager::instance = nullptr;
-
-PipeLineManager *PipeLineManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new PipeLineManager;
-    }
-    return instance;
-}
 
 void PipeLineManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void PipeLineManager::Initialize(DirectXCommon *dxCommon) {
@@ -53136,15 +53153,16 @@ class PipeLineManager {
     /// public method
     /// ====================================
 
-    static PipeLineManager *instance;
-
     PipeLineManager() = default;
     ~PipeLineManager() = default;
     PipeLineManager(PipeLineManager &) = delete;
     PipeLineManager &operator=(PipeLineManager &) = delete;
 
   public:
-    static PipeLineManager *GetInstance();
+      static PipeLineManager* GetInstance() {
+        static PipeLineManager instance;
+          return &instance;
+    }
 
     void Finalize();
 
@@ -53274,18 +53292,7 @@ File Path: Engine/Utility/Graphics/Srv/SrvManager.cpp
 
 const uint32_t SrvManager::kMaxSRVCount = 49152;
 
-SrvManager *SrvManager::instance = nullptr;
-
-SrvManager *SrvManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SrvManager();
-    }
-    return instance;
-}
-
 void SrvManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void SrvManager::Initialize() {
@@ -53442,7 +53449,6 @@ class DirectXCommon;
 
 class SrvManager {
   private:
-    static SrvManager *instance;
 
     SrvManager() = default;
     ~SrvManager() = default;
@@ -53469,7 +53475,10 @@ class SrvManager {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static SrvManager *GetInstance();
+    static SrvManager* GetInstance() {
+        static SrvManager instance;
+        return &instance;
+    }
 
     /// <summary>
     /// 終了
@@ -53573,8 +53582,6 @@ File Path: Engine/Utility/Graphics/Texture/TextureManager.cpp
 #include <String/StringUtility.h>
 #include <filesystem>
 
-TextureManager *TextureManager::instance = nullptr;
-
 // ImGuiで0番を使用するため、1番から使用
 uint32_t TextureManager::kSRVIndexTop = 1;
 
@@ -53638,22 +53645,11 @@ void TextureManager::Initialize(SrvManager *srvManager) {
     textureDatas.reserve(SrvManager::kMaxSRVCount);
 }
 
-TextureManager *TextureManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new TextureManager;
-    }
-    return instance;
-}
-
 void TextureManager::Finalize() {
     // 全テクスチャのSRVインデックスを解放
     for (auto &pair : textureDatas) {
         srvManager_->Free(pair.second.srvIndex - kSRVIndexTop);
     }
-
-    // インスタンスの削除
-    delete instance;
-    instance = nullptr;
 }
 
 uint32_t TextureManager::GetTextureIndexByFilePath(const std::string &filePath) {
@@ -53742,8 +53738,6 @@ File Path: Engine/Utility/Graphics/Texture/TextureManager.h
 #include <Graphics/Srv/SrvManager.h>
 class TextureManager {
   private:
-    static TextureManager *instance;
-
     TextureManager() = default;
     ~TextureManager() = default;
     TextureManager(TextureManager &) = delete;
@@ -53759,7 +53753,10 @@ class TextureManager {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static TextureManager *GetInstance();
+    static TextureManager* GetInstance() {
+        static TextureManager instance;
+        return &instance;
+    }
 
     /// <summary>
     /// 終了
@@ -53828,18 +53825,8 @@ File Path: Engine/Utility/LoadFile/Csv/CsvLoad.cpp
 #include "CsvLoad.h"
 #include <cassert>
 
-CsvLoad *CsvLoad::instance = nullptr;
-
-CsvLoad *CsvLoad::GetInstance() {
-    if (instance == nullptr) {
-        instance = new CsvLoad();
-    }
-    return instance;
-}
-
 void CsvLoad::Finalize() {
-    delete instance;
-    instance = nullptr;
+   
 }
 
 // CSVファイルを読み込み、キャッシュに存在すればそれを返す
@@ -53904,8 +53891,6 @@ File Path: Engine/Utility/LoadFile/Csv/CsvLoad.h
 
 class CsvLoad {
   private:
-    static CsvLoad *instance;
-
     CsvLoad() = default;
     ~CsvLoad() = default;
     CsvLoad(CsvLoad &) = delete;
@@ -53916,7 +53901,10 @@ class CsvLoad {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static CsvLoad *GetInstance();
+      static CsvLoad* GetInstance() {
+        static CsvLoad instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了
@@ -54137,9 +54125,9 @@ class SceneManager {
     /// <summary>
     /// シングルトンインスタンスの取得
     /// </summary>
-    static SceneManager &GetInstance() {
+    static SceneManager *GetInstance() {
         static SceneManager instance;
-        return instance;
+        return &instance;
     }
 
     /// <summary>
@@ -54177,7 +54165,7 @@ class SceneManager {
     bool GetTransitionEnd() const { return transitionEnd; }
 
   public: // setter / getter
-    void SetSceneFactory(AbstractSceneFactory *sceneFactory) { sceneFactory_ = sceneFactory; }
+    void SetSceneFactory(std::unique_ptr<AbstractSceneFactory> sceneFactory) { sceneFactory_ = std::move(sceneFactory); }
 
     /// <summary>
     /// 次シーン予約
@@ -54203,8 +54191,8 @@ class SceneManager {
     std::unique_ptr<BaseScene> scene_;
     // 次のシーン
     std::unique_ptr<BaseScene> nextScene_;
-    // シーンファクトリー（所有権なし）
-    AbstractSceneFactory *sceneFactory_ = nullptr;
+    // シーンファクトリー
+    std::unique_ptr<AbstractSceneFactory> sceneFactory_ = nullptr;
     SceneTransition *transition_ = nullptr;
 
     std::string currentSceneName_;
@@ -54227,18 +54215,7 @@ File Path: Engine/Utility/Scene/SceneTransition.cpp
 #include "myMath.h"
 #include <vector>
 
-SceneTransition *SceneTransition::instance = nullptr;
-
-SceneTransition *SceneTransition::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SceneTransition;
-    }
-    return instance;
-}
-
 void SceneTransition::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void SceneTransition::Initialize() {
@@ -54504,7 +54481,6 @@ File Path: Engine/Utility/Scene/SceneTransition.h
 #include "vector"
 class SceneTransition {
   private:
-    static SceneTransition *instance;
 
     SceneTransition() = default;
     ~SceneTransition() = default;
@@ -54516,7 +54492,10 @@ class SceneTransition {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static SceneTransition *GetInstance();
+      static SceneTransition* GetInstance() {
+        static SceneTransition instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了
