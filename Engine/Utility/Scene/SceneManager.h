@@ -1,22 +1,24 @@
 #pragma once
 #include "AbstractSceneFactory.h"
 #include "SceneTransition.h"
-#include "memory"
+#include <memory>
+#include <string>
+
 class SceneManager {
   private:
-    static SceneManager *instance;
-
     SceneManager() = default;
-    ~SceneManager() = default;
+    ~SceneManager();
     SceneManager(SceneManager &) = delete;
     SceneManager &operator=(SceneManager &) = delete;
 
-  public: // メンバ関数
+  public:
     /// <summary>
     /// シングルトンインスタンスの取得
     /// </summary>
-    /// <returns></returns>
-    static SceneManager *GetInstance();
+    static SceneManager &GetInstance() {
+        static SceneManager instance;
+        return instance;
+    }
 
     /// <summary>
     /// 初期化
@@ -39,7 +41,7 @@ class SceneManager {
     void Draw();
 
     /// <summary>
-    /// 描画
+    /// オフスクリーン描画
     /// </summary>
     void DrawForOffScreen();
 
@@ -50,19 +52,14 @@ class SceneManager {
     /// </summary>
     void DrawTransition();
 
-    bool GetTransitionEnd() { return transitionEnd; }
+    bool GetTransitionEnd() const { return transitionEnd; }
 
-  public: // setter
-    /// <summary>
-    /// シーンファクトリーのセット
-    /// </summary>
-    /// <param name="sceneFactory"></param>
+  public: // setter / getter
     void SetSceneFactory(AbstractSceneFactory *sceneFactory) { sceneFactory_ = sceneFactory; }
 
     /// <summary>
     /// 次シーン予約
     /// </summary>
-    /// <param name="nextScene"></param>
     void NextSceneReservation(const std::string &sceneName);
 
     /// <summary>
@@ -70,20 +67,21 @@ class SceneManager {
     /// </summary>
     void SceneChange();
 
-    float GetClearTime() const { return ClaerTime_; }
-    float GetHP() const { return HP_; }
+    float GetClearTime() const { return clearTime_; }
+    float GetHP() const { return hp_; }
 
-    BaseScene *GetBaseScene() { return scene_; }
+    BaseScene *GetBaseScene() const { return scene_.get(); }
     std::string GetCurrentSceneName() const { return currentSceneName_; }
-    void SetClearTime(float time) { ClaerTime_ = time; }
-    void SetHP(float hp) { HP_ = hp; }
+
+    void SetClearTime(float time) { clearTime_ = time; }
+    void SetHP(float hp) { hp_ = hp; }
 
   private:
-    // 今のシーン(実行中のシーン)
-    BaseScene *scene_ = nullptr;
+    // 今のシーン（実行中のシーン）
+    std::unique_ptr<BaseScene> scene_;
     // 次のシーン
-    BaseScene *nextScene_ = nullptr;
-    // シーンファクトリー
+    std::unique_ptr<BaseScene> nextScene_;
+    // シーンファクトリー（所有権なし）
     AbstractSceneFactory *sceneFactory_ = nullptr;
     SceneTransition *transition_ = nullptr;
 
@@ -92,6 +90,6 @@ class SceneManager {
     bool transitionEnd = false;
     bool firstChange = false;
 
-    float ClaerTime_ = 0.0f;
-    float HP_ = 0.0f;
+    float clearTime_ = 0.0f;
+    float hp_ = 0.0f;
 };

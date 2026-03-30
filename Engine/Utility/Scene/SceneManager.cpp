@@ -2,13 +2,10 @@
 #include <SpriteManager.h>
 #include <cassert>
 
-SceneManager *SceneManager::instance = nullptr;
-
-SceneManager *SceneManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SceneManager;
+SceneManager::~SceneManager() {
+    if (scene_) {
+        scene_->Finalize();
     }
-    return instance;
 }
 
 void SceneManager::Initialize() {
@@ -19,15 +16,10 @@ void SceneManager::Initialize() {
 void SceneManager::Finalize() {
     if (scene_) {
         firstChange = false;
-        scene_->Finalize();
     }
-    delete scene_;
-    delete instance;
-    instance = nullptr;
 }
 
 void SceneManager::Update() {
-
     // 次のシーンの予約があるなら
     if (nextScene_) {
         if (!firstChange) {
@@ -36,14 +28,15 @@ void SceneManager::Update() {
         }
         SceneChange();
     }
+
     if (!transition_->IsEnd()) {
         transitionEnd = false;
         transition_->Update();
     } else {
         transitionEnd = true;
     }
+
     if (scene_) {
-        // 実行中シーンを更新する
         scene_->Update();
     }
 }
@@ -63,7 +56,7 @@ void SceneManager::DrawForOffScreen() {
 void SceneManager::SceneSelection(const std::string &sceneName) {
 #ifdef _DEBUG
     if (!transition_->IsEnd() && transition_->FadeInStart()) {
-        return; // すでに遷移中なので、次の遷移予約はしない
+        return;
     }
     transition_->Reset();
     nextScene_ = sceneFactory_->CreateScene(sceneName);
@@ -73,14 +66,13 @@ void SceneManager::SceneSelection(const std::string &sceneName) {
 
 void SceneManager::DrawTransition() {
     if (!transition_->IsEnd()) {
-        transition_->Draw(); // トランジションの描画
+        transition_->Draw();
     }
 }
 
 void SceneManager::NextSceneReservation(const std::string &sceneName) {
-    // トランジション中なら処理をスキップ
     if (!transition_->IsEnd() && transition_->FadeInStart()) {
-        return; // すでに遷移中なので、次の遷移予約はしない
+        return; // すでに遷移中なので次の予約はしない
     }
     transition_->Reset();
     assert(sceneFactory_);
@@ -88,8 +80,9 @@ void SceneManager::NextSceneReservation(const std::string &sceneName) {
 
     currentSceneName_ = sceneName;
 
-    // 次シーンを生成
+    // 次シーンを生成（unique_ptr で受け取る）
     nextScene_ = sceneFactory_->CreateScene(sceneName);
+
     if (!firstChange) {
         transition_->SetFadeOutStart(true);
     } else {
@@ -102,21 +95,19 @@ void SceneManager::SceneChange() {
         // 旧シーンの終了
         if (scene_) {
             scene_->Finalize();
-            delete scene_;
+            // delete 不要、reset() で解放
+            scene_.reset();
             BaseObjectManager::GetInstance()->RemoveAllObjects();
             SpriteManager::GetInstance()->Clear();
 #ifndef _DEBUG
             ParticleCSGroupManager::GetInstance()->ClearIndependentGroups();
 #endif // _DEBUG
         }
-        // シーンの切り替え
-        scene_ = nextScene_;
-        nextScene_ = nullptr;
 
-        // シーンマネージャをセット
+        // 所有権を移譲（nextScene_ は自動的に nullptr になる）
+        scene_ = std::move(nextScene_);
+
         scene_->SetSceneManager(this);
-
-        // 次のシーンを初期化する
         scene_->Initialize();
         transition_->SetFadeOutStart(true);
     }
