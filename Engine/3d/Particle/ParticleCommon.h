@@ -4,8 +4,6 @@
 #include <Graphics/PipeLine/ComputePipeLineManager.h>
 class ParticleCommon {
   private:
-    static ParticleCommon *instance;
-
     ParticleCommon() = default;
     ~ParticleCommon() = default;
     ParticleCommon(ParticleCommon &) = delete;
@@ -16,7 +14,10 @@ class ParticleCommon {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static ParticleCommon *GetInstance();
+      static ParticleCommon* GetInstance() {
+        static ParticleCommon instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了

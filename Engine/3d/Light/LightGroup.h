@@ -36,7 +36,10 @@ class LightGroup {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns>LightGroup*: インスタンスのポインタ</returns>
-    static LightGroup *GetInstance();
+      static LightGroup* GetInstance() {
+        static LightGroup instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了処理

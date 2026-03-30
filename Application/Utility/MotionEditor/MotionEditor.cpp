@@ -5,7 +5,6 @@
 #include "myMath.h"
 #include <Line/DrawLine3D.h>
 
-MotionEditor *MotionEditor::instance = nullptr;
 const float MotionEditor::ATTACK_END_INTERVAL = 0.1f;
 
 float ApplyMotionEasing(MotionEasingType type, float t, float total) {
@@ -73,17 +72,7 @@ float ApplyMotionEasing(MotionEasingType type, float t, float total) {
     }
 }
 
-
-MotionEditor *MotionEditor::GetInstance() {
-    if (instance == nullptr) {
-        instance = new MotionEditor;
-    }
-    return instance;
-}
-
 void MotionEditor::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void MotionEditor::Register(BaseObject *object) {
@@ -94,7 +83,7 @@ void MotionEditor::Register(BaseObject *object) {
 
     // 既に登録済みかチェック
     if (motions_.find(name) != motions_.end()) {
-        return; 
+        return;
     }
 
     // 新しくモーションを登録
@@ -177,8 +166,8 @@ Vector3 MotionEditor::CatmullRomInterpolation(const std::vector<Vector3> &points
         }
     }
 
-    int numSegments = static_cast<int>(points.size() - 1); 
-    float segmentT = t * (numSegments - 2); 
+    int numSegments = static_cast<int>(points.size() - 1);
+    float segmentT = t * (numSegments - 2);
     int segment = (int)segmentT;
     float localT = segmentT - segment;
 
@@ -294,7 +283,7 @@ void MotionEditor::Update(float deltaTime) {
             if (it->first) {
                 // 全てのコライダーを無効化
                 auto &colliders = it->first->GetColliders();
-                for (auto *collider : colliders) {
+                for (auto &collider : colliders) {
                     if (collider) {
                         collider->SetEnabled(false);
                     }
@@ -365,7 +354,7 @@ void MotionEditor::Update(float deltaTime) {
         // コライダーの有効/無効を時間で制御
         bool enable = motion.currentTime >= motion.colliderOnTime && motion.currentTime <= motion.colliderOffTime;
         auto &colliders = motion.target->GetColliders();
-        for (auto *collider : colliders) {
+        for (auto &collider : colliders) {
             if (collider) {
                 collider->SetEnabled(enable);
             }
@@ -386,7 +375,7 @@ void MotionEditor::Play(const std::string &jsonName) {
 
     Motion &motion = it->second;
     if (!motion.target) {
-        return; 
+        return;
     }
 
     if (!motion.hasInitialTransform) {
@@ -466,7 +455,6 @@ bool MotionEditor::PlayFromFile(BaseObject *target, const std::string &fileName,
     return true;
 }
 
-
 void MotionEditor::SetComboStartPosition(BaseObject *target) {
     if (!target)
         return;
@@ -510,7 +498,6 @@ void MotionEditor::ClearAllComboStartPositions() {
     comboStartRotations_.clear();
     comboStartScales_.clear();
 }
-
 
 void MotionEditor::Stop(const std::string &objectName) {
     auto it = motions_.find(objectName);
@@ -563,7 +550,7 @@ bool MotionEditor::IsAttackFinished(BaseObject *target) {
         }
     }
 
-    return true; 
+    return true;
 }
 
 // 攻撃が終了してインターバルも過ぎたかどうかをチェック
@@ -610,7 +597,7 @@ bool MotionEditor::IsTemporaryMotionFinished(BaseObject *target, const std::stri
         return it->second.status == MotionStatus::Finished;
     }
 
-    return true; 
+    return true;
 }
 
 void MotionEditor::DrawControlPoints() {
@@ -639,7 +626,7 @@ void MotionEditor::DrawControlPoints() {
 
         Vector4 controlPointColor;
         if (i == 0) {
-            controlPointColor = {0.0f, 1.0f, 0.0f, 1.0f}; 
+            controlPointColor = {0.0f, 1.0f, 0.0f, 1.0f};
         } else if (i == motion.controlPoints.size() - 1) {
             controlPointColor = {0.0f, 0.0f, 1.0f, 1.0f};
         } else {
@@ -671,7 +658,7 @@ void MotionEditor::DrawCatmullRomCurve() {
         return;
 
     DrawLine3D *drawLine = DrawLine3D::GetInstance();
-    const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f}; 
+    const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f};
     const int curveResolution = 100;
 
     Vector3 basePos;
@@ -707,17 +694,17 @@ void MotionEditor::DrawCatmullRomCurve() {
     }
 
     Vector3 worldBasePos = TransformLocalControlPointToWorld(motion.target, basePos);
-    const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f}; 
+    const Vector4 basePosColor = {1.0f, 1.0f, 1.0f, 1.0f};
     drawLine->DrawSphere(worldBasePos, basePosColor, 0.2f, 32);
 
     if (motion.status == MotionStatus::Playing) {
         Vector3 currentLocalPos = motion.target->GetLocalPosition();
         Vector3 currentWorldPos = TransformLocalControlPointToWorld(motion.target, currentLocalPos);
-        const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f}; 
+        const Vector4 currentPosColor = {1.0f, 1.0f, 0.0f, 1.0f};
         drawLine->DrawSphere(currentWorldPos, currentPosColor, 0.15f, 32);
 
         // 基準位置と現在位置を線で結ぶ
-        const Vector4 connectionColor = {0.5f, 0.5f, 0.5f, 1.0f}; 
+        const Vector4 connectionColor = {0.5f, 0.5f, 0.5f, 1.0f};
         drawLine->SetPoints(worldBasePos, currentWorldPos, connectionColor);
     }
 }

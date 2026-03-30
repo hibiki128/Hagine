@@ -6,18 +6,7 @@
 #include "myMath.h"
 #include <vector>
 
-SceneTransition *SceneTransition::instance = nullptr;
-
-SceneTransition *SceneTransition::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SceneTransition;
-    }
-    return instance;
-}
-
 void SceneTransition::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void SceneTransition::Initialize() {

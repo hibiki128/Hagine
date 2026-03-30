@@ -1,17 +1,6 @@
 #include "SpriteCommon.h"
 
-SpriteCommon *SpriteCommon::instance = nullptr;
-
-SpriteCommon *SpriteCommon::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SpriteCommon();
-    }
-    return instance;
-}
-
 void SpriteCommon::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void SpriteCommon::Initialize() {

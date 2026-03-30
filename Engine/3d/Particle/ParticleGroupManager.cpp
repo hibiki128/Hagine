@@ -1,14 +1,5 @@
 #include "ParticleGroupManager.h"
 
-ParticleGroupManager *ParticleGroupManager::instance = nullptr;
-
-ParticleGroupManager *ParticleGroupManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ParticleGroupManager();
-    }
-    return instance;
-}
-
 void ParticleGroupManager::Initialize() {
     const std::string directoryPath = "resources/jsons/ParticleGroup/";
 
@@ -57,8 +48,6 @@ void ParticleGroupManager::Initialize() {
 
 
 void ParticleGroupManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 void ParticleGroupManager::AddParticleGroup(std::unique_ptr<ParticleGroup> particleGroup) {
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleGroup", particleGroup->GetGroupName());

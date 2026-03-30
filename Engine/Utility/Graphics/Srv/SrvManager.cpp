@@ -4,18 +4,7 @@
 
 const uint32_t SrvManager::kMaxSRVCount = 49152;
 
-SrvManager *SrvManager::instance = nullptr;
-
-SrvManager *SrvManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SrvManager();
-    }
-    return instance;
-}
-
 void SrvManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void SrvManager::Initialize() {

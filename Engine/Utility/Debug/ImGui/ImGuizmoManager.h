@@ -13,8 +13,6 @@
 
 class ImGuizmoManager {
   private:
-    static ImGuizmoManager *instance;
-
     ImGuizmoManager() = default;
     ~ImGuizmoManager() = default;
     ImGuizmoManager(const ImGuizmoManager &) = delete;
@@ -48,7 +46,10 @@ class ImGuizmoManager {
 
   public:
     /// <summary>シングルトンインスタンスの取得</summary>
-    static ImGuizmoManager *GetInstance();
+      static ImGuizmoManager* GetInstance() {
+        static ImGuizmoManager instance;
+          return &instance;
+    }
 
     /// <summary>終了処理</summary>
     void Finalize();

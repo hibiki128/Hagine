@@ -9,7 +9,6 @@ class DirectXCommon;
 
 class SrvManager {
   private:
-    static SrvManager *instance;
 
     SrvManager() = default;
     ~SrvManager() = default;
@@ -36,7 +35,10 @@ class SrvManager {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static SrvManager *GetInstance();
+    static SrvManager* GetInstance() {
+        static SrvManager instance;
+        return &instance;
+    }
 
     /// <summary>
     /// 終了

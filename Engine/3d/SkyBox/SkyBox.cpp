@@ -5,20 +5,7 @@
 #include "Graphics/Texture/TextureManager.h"
 #include <myMath.h>
 
-SkyBox *SkyBox::instance = nullptr;
-
-SkyBox *SkyBox::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SkyBox();
-    }
-    return instance;
-}
-
 void SkyBox::Finalize() {
-    if (instance) {
-        delete instance;
-        instance = nullptr;
-    }
 }
 
 void SkyBox::Initialize(std::string filePath) {

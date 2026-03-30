@@ -15,9 +15,9 @@ class SceneManager {
     /// <summary>
     /// シングルトンインスタンスの取得
     /// </summary>
-    static SceneManager &GetInstance() {
+    static SceneManager *GetInstance() {
         static SceneManager instance;
-        return instance;
+        return &instance;
     }
 
     /// <summary>

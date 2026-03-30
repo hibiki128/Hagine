@@ -20,15 +20,17 @@ class ComputePipeLineManager {
     /// public method
     /// ====================================
 
-    static ComputePipeLineManager *instance;
-
     ComputePipeLineManager() = default;
     ~ComputePipeLineManager() = default;
     ComputePipeLineManager(ComputePipeLineManager &) = delete;
     ComputePipeLineManager &operator=(ComputePipeLineManager &) = delete;
 
   public:
-    static ComputePipeLineManager *GetInstance();
+    static ComputePipeLineManager *GetInstance() {
+        static ComputePipeLineManager instance;
+        return &instance;
+    }
+
 
     void Finalize();
 

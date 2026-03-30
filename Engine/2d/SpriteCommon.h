@@ -37,7 +37,6 @@ class SpriteCommon {
     /// private varians
     /// ===================================================
 
-    static SpriteCommon *instance;
     DirectXCommon *dxCommon_;
     PipeLineManager *psoManager_ = nullptr;
 
@@ -50,7 +49,10 @@ class SpriteCommon {
     /// シングルトンインスタンスを取得
     /// </summary>
     /// <returns>SpriteCommon*: インスタンスのポインタ</returns>
-    static SpriteCommon *GetInstance();
+      static SpriteCommon* GetInstance() {
+          static SpriteCommon instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了処理

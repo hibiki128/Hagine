@@ -14,8 +14,6 @@ class SkyBox {
     /// ===========================================
     /// private methods
     /// ===========================================
-    static SkyBox *instance;
-
     SkyBox() = default;
     ~SkyBox() = default;
     SkyBox(SkyBox &) = delete;
@@ -35,7 +33,10 @@ class SkyBox {
 
     void Initialize(std::string filePath);
     void Draw(const ViewProjection &viewProjection);
-    static SkyBox *GetInstance();
+    static SkyBox* GetInstance() {
+        static SkyBox instance;
+        return &instance;
+    }
     void Finalize();
     uint32_t GetTextureIndex() const { return textureIndex_; }
 

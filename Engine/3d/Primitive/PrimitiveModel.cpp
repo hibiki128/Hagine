@@ -3,8 +3,6 @@
 #include <myMath.h>
 using namespace DirectX;
 
-PrimitiveModel *PrimitiveModel::instance = nullptr;
-
 void PrimitiveModel::Initialize() {
     CreateSphere();
     CreatePlane();
@@ -17,16 +15,7 @@ void PrimitiveModel::Initialize() {
     CreateClosedCylinder();
 }
 
-PrimitiveModel *PrimitiveModel::GetInstance() {
-    if (instance == nullptr) {
-        instance = new PrimitiveModel();
-    }
-    return instance;
-}
-
 void PrimitiveModel::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void PrimitiveModel::CreateSphere() {

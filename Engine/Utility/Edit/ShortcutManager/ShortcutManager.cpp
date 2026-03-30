@@ -1,8 +1,6 @@
 #include "ShortcutManager.h"
 #include "Input.h"
 
-ShortcutManager *ShortcutManager::instance = nullptr;
-
 void ShortcutManager::RegisterShortcut(const std::string &name, BYTE key, std::function<void()> callback) {
     shortcuts_[name] = Shortcut{std::vector<BYTE>{key}, callback};
 }
@@ -41,15 +39,5 @@ void ShortcutManager::Update() {
     }
 }
 
-
-ShortcutManager *ShortcutManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ShortcutManager();
-    }
-    return instance;
-}
-
 void ShortcutManager::Finalize() {
-    delete instance;
-    instance = nullptr;
 }

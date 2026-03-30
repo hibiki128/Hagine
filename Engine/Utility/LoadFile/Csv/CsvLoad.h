@@ -9,8 +9,6 @@
 
 class CsvLoad {
   private:
-    static CsvLoad *instance;
-
     CsvLoad() = default;
     ~CsvLoad() = default;
     CsvLoad(CsvLoad &) = delete;
@@ -21,7 +19,10 @@ class CsvLoad {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static CsvLoad *GetInstance();
+      static CsvLoad* GetInstance() {
+        static CsvLoad instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了

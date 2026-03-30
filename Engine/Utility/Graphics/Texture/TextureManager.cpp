@@ -3,8 +3,6 @@
 #include <String/StringUtility.h>
 #include <filesystem>
 
-TextureManager *TextureManager::instance = nullptr;
-
 // ImGuiで0番を使用するため、1番から使用
 uint32_t TextureManager::kSRVIndexTop = 1;
 
@@ -68,22 +66,11 @@ void TextureManager::Initialize(SrvManager *srvManager) {
     textureDatas.reserve(SrvManager::kMaxSRVCount);
 }
 
-TextureManager *TextureManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new TextureManager;
-    }
-    return instance;
-}
-
 void TextureManager::Finalize() {
     // 全テクスチャのSRVインデックスを解放
     for (auto &pair : textureDatas) {
         srvManager_->Free(pair.second.srvIndex - kSRVIndexTop);
     }
-
-    // インスタンスの削除
-    delete instance;
-    instance = nullptr;
 }
 
 uint32_t TextureManager::GetTextureIndexByFilePath(const std::string &filePath) {

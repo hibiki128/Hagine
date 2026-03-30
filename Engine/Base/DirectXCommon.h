@@ -12,8 +12,6 @@
 // DirectX基盤
 class DirectXCommon {
   private:
-    static DirectXCommon *instance;
-
     DirectXCommon() = default;
     ~DirectXCommon() = default;
     DirectXCommon(DirectXCommon &) = delete;
@@ -24,7 +22,10 @@ class DirectXCommon {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static DirectXCommon *GetInstance();
+    static DirectXCommon *GetInstance() {
+        static DirectXCommon instance; // プログラム終了時に自動でデストラクタが呼ばれる
+        return &instance;
+    }
 
     /// <summary>
     /// 終了

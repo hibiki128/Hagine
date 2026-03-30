@@ -9,7 +9,6 @@ class ParticleGroupManager {
     /// ===================================================
     /// private method
     /// ===================================================
-    static ParticleGroupManager *instance;
     ParticleGroupManager() = default;
     ~ParticleGroupManager() = default;
     ParticleGroupManager(ParticleGroupManager &) = delete;
@@ -19,7 +18,10 @@ class ParticleGroupManager {
     /// ===================================================
     /// public method
     /// ===================================================
-    static ParticleGroupManager *GetInstance();
+      static ParticleGroupManager* GetInstance() {
+          static ParticleGroupManager instance;
+          return &instance;
+    }
 
     void Initialize();
 

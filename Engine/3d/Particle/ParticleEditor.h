@@ -14,8 +14,6 @@
 
 class ParticleEditor {
   private:
-    // シングルトンインスタンス
-    static ParticleEditor *instance;
     // プライベートコンストラクタ
     ParticleEditor() = default;
     // コピー禁止
@@ -69,7 +67,10 @@ class ParticleEditor {
 
   public:
     // インスタンスの取得
-    static ParticleEditor *GetInstance();
+    static ParticleEditor *GetInstance() {
+        static ParticleEditor instance;
+        return &instance;
+    }
     // 終了処理
     static void Finalize();
     // 初期化

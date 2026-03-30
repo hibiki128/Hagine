@@ -4,7 +4,6 @@
 #include "vector"
 class SceneTransition {
   private:
-    static SceneTransition *instance;
 
     SceneTransition() = default;
     ~SceneTransition() = default;
@@ -16,7 +15,10 @@ class SceneTransition {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static SceneTransition *GetInstance();
+      static SceneTransition* GetInstance() {
+        static SceneTransition instance;
+          return &instance;
+    }
 
     /// <summary>
     /// 終了

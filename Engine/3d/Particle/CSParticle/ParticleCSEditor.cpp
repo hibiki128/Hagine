@@ -3,18 +3,7 @@
 #include <ShowFolder/ShowFolder.h>
 #include <Camera/ViewProjection/ViewProjection.h>
 
-ParticleCSEditor *ParticleCSEditor::instance = nullptr;
-
-ParticleCSEditor *ParticleCSEditor::GetInstance() {
-    if (instance == nullptr) {
-        instance = new ParticleCSEditor();
-    }
-    return instance;
-}
-
 void ParticleCSEditor::Finalize() {
-    delete instance;
-    instance = nullptr;
 }
 
 void ParticleCSEditor::Initialize() {

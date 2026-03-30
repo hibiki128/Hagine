@@ -10,8 +10,6 @@ class ParticleCSEditor {
     /// private methods
     /// ===================================
 
-    // シングルトンインスタンス
-    static ParticleCSEditor *instance;
     // プライベートコンストラクタ
     ParticleCSEditor() = default;
     // コピー禁止
@@ -60,7 +58,10 @@ class ParticleCSEditor {
 
   public:
     // インスタンスの取得
-    static ParticleCSEditor *GetInstance();
+      static ParticleCSEditor* GetInstance() {
+          static ParticleCSEditor instance;
+          return &instance;
+    }
     // 終了処理
     static void Finalize();
     // 初期化

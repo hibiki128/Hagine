@@ -41,7 +41,7 @@ void PlayerBullet::Update() {
     }
 
     // 地面に埋まったら消える
-    if (transform_->translation_.y <= 0.5f) {
+    if (transform_->translation_.y <= -0.5f) {
         isAlive_ = false;
         return;
     }
