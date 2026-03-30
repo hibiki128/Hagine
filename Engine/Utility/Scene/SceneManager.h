@@ -55,7 +55,7 @@ class SceneManager {
     bool GetTransitionEnd() const { return transitionEnd; }
 
   public: // setter / getter
-    void SetSceneFactory(AbstractSceneFactory *sceneFactory) { sceneFactory_ = sceneFactory; }
+    void SetSceneFactory(std::unique_ptr<AbstractSceneFactory> sceneFactory) { sceneFactory_ = std::move(sceneFactory); }
 
     /// <summary>
     /// 次シーン予約
@@ -81,8 +81,8 @@ class SceneManager {
     std::unique_ptr<BaseScene> scene_;
     // 次のシーン
     std::unique_ptr<BaseScene> nextScene_;
-    // シーンファクトリー（所有権なし）
-    AbstractSceneFactory *sceneFactory_ = nullptr;
+    // シーンファクトリー
+    std::unique_ptr<AbstractSceneFactory> sceneFactory_ = nullptr;
     SceneTransition *transition_ = nullptr;
 
     std::string currentSceneName_;

@@ -263,8 +263,8 @@ void Audio::Debug() {
     //------------------------------------------------------------------
     // マスター音量
     //------------------------------------------------------------------
-    ImGui::SeparatorText("Master");
-    if (ImGui::SliderFloat("Master Volume", &debugMasterVolume_, 0.0f, 1.0f)) {
+    ImGui::SeparatorText( "マスター");
+    if (ImGui::SliderFloat( "マスター音量", &debugMasterVolume_, 0.0f, 1.0f)) {
         if (masterVoice) {
             masterVoice->SetVolume(debugMasterVolume_);
         }
@@ -273,15 +273,15 @@ void Audio::Debug() {
     //------------------------------------------------------------------
     // ファイルスキャン
     //------------------------------------------------------------------
-    ImGui::SeparatorText("File Browser  [ Resources\\sounds\\ ]");
+    ImGui::SeparatorText( "ファイルブラウザ  [ Resources\\sounds\\ ]");
 
-    if (ImGui::Button("Scan .wav Files")) {
+    if (ImGui::Button( "WAVファイルをスキャン")) {
         DebugScanWavFiles();
         debugSelectedFile_ = -1;
     }
 
     ImGui::SameLine();
-    ImGui::TextDisabled("(%zu files found)", debugWavFileList_.size());
+    ImGui::TextDisabled( "(%zuファイル検出)", debugWavFileList_.size());
 
     // ファイルリスト
     ImGui::BeginChild("##filelist", ImVec2(0, 160), true);
@@ -296,16 +296,16 @@ void Audio::Debug() {
     //------------------------------------------------------------------
     // 選択ファイルの操作
     //------------------------------------------------------------------
-    ImGui::SeparatorText("Playback Control");
+    ImGui::SeparatorText( "再生コントロール");
 
     const bool hasSelection = (debugSelectedFile_ >= 0 &&
                                debugSelectedFile_ < static_cast<int>(debugWavFileList_.size()));
 
     if (!hasSelection) {
-        ImGui::TextDisabled("-- Select a file above --");
+        ImGui::TextDisabled( "-- 上のリストからファイルを選択してください --");
     } else {
         const std::string &selectedName = debugWavFileList_[debugSelectedFile_];
-        ImGui::Text("File : %s", selectedName.c_str());
+        ImGui::Text( "ファイル : %s", selectedName.c_str());
 
         uint32_t idx = DebugResolveIndex(selectedName);
         const bool loaded = (idx != UINT32_MAX);
@@ -314,21 +314,21 @@ void Audio::Debug() {
         // ロード状態バッジ
         if (loaded) {
             ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "[Loaded  idx=%u]", idx);
+            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f),  "[ロード済み  idx=%u]", idx);
         } else {
             ImGui::SameLine();
-            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "[Not Loaded]");
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f),  "[未ロード]");
         }
 
         // 再生パラメータ
-        ImGui::SliderFloat("Volume", &debugVolume_, 0.0f, 1.0f);
-        ImGui::Checkbox("Loop", &debugLoop_);
+        ImGui::SliderFloat( "音量", &debugVolume_, 0.0f, 1.0f);
+        ImGui::Checkbox( "ループ", &debugLoop_);
 
         ImGui::Spacing();
 
         //-- Load ボタン
         if (!loaded) {
-            if (ImGui::Button("Load")) {
+            if (ImGui::Button( "ロード")) {
                 // Resources\sounds\ を directoryPath_ として LoadWave へ渡す
                 // directoryPath_ が既に "Resources/sounds" 相当に設定されている想定
                 // ただしデバッグ用に固定パスからロード
@@ -341,7 +341,7 @@ void Audio::Debug() {
         } else {
             //-- Play ボタン
             ImGui::BeginDisabled(playing);
-            if (ImGui::Button("Play")) {
+            if (ImGui::Button( "再生")) {
                 PlayWave(idx, debugVolume_, debugLoop_);
             }
             ImGui::EndDisabled();
@@ -350,7 +350,7 @@ void Audio::Debug() {
 
             //-- Stop ボタン
             ImGui::BeginDisabled(!playing);
-            if (ImGui::Button("Stop")) {
+            if (ImGui::Button( "停止")) {
                 StopWave(idx);
             }
             ImGui::EndDisabled();
@@ -359,7 +359,7 @@ void Audio::Debug() {
 
             //-- 再生中のみ音量を即時反映
             if (playing) {
-                if (ImGui::Button("Apply Volume")) {
+                if (ImGui::Button( "音量を適用")) {
                     SetVolume(idx, debugVolume_);
                 }
             }
@@ -368,7 +368,7 @@ void Audio::Debug() {
 
             //-- Unload ボタン
             ImGui::BeginDisabled(playing);
-            if (ImGui::Button("Unload")) {
+            if (ImGui::Button( "アンロード")) {
                 StopWave(idx);
                 Unload(idx);
                 debugLoadedMap_.erase(selectedName);
@@ -398,7 +398,7 @@ void Audio::Debug() {
                 if (duration > 0.0f) {
                     const SoundData &sd = soundDatas_[idx];
                     ImGui::TextDisabled(
-                        "Ch:%u  Rate:%u Hz  Bits:%u  Avg:%u B/s",
+                         "チャンネル:%u  サンプルレート:%u Hz  ビット数:%u  平均:%u B/s",
                         sd.wfex.nChannels,
                         sd.wfex.nSamplesPerSec,
                         sd.wfex.wBitsPerSample,
@@ -411,7 +411,7 @@ void Audio::Debug() {
     //------------------------------------------------------------------
     // 全ロード済みファイル一覧
     //------------------------------------------------------------------
-    ImGui::SeparatorText("Loaded Files");
+    ImGui::SeparatorText( "ロード済みファイル一覧");
     ImGui::BeginChild("##loadedlist", ImVec2(0, 120), true);
     for (auto &[name, soundIdx] : debugLoadedMap_) {
         bool isPlaying = DebugIsPlaying(soundIdx);
@@ -419,9 +419,9 @@ void Audio::Debug() {
         float pos = isPlaying ? DebugGetPositionSec(soundIdx) : 0.0f;
 
         if (isPlaying) {
-            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "[PLAY]");
+            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f),  "[再生中]");
         } else {
-            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "[STOP]");
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f),  "[停止中]");
         }
         ImGui::SameLine();
         ImGui::Text("idx=%-4u  %.2f/%.2fs  %s", soundIdx, pos, dur, name.c_str());
@@ -434,7 +434,7 @@ void Audio::Debug() {
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
-    if (ImGui::Button("Stop All", ImVec2(-1.0f, 0.0f))) {
+    if (ImGui::Button( "すべて停止", ImVec2(-1.0f, 0.0f))) {
         for (auto &[name, soundIdx] : debugLoadedMap_) {
             StopWave(soundIdx);
         }
