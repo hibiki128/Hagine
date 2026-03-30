@@ -583,8 +583,6 @@
 └──     ├── Skinning/
 └──     ├── Skybox/
 └──     └── Sprite/
-├── Scene.cpp
-├── Scene.h
 ├── main.cpp
 └── resource.h
 ================================================================================
@@ -53945,80 +53943,61 @@ class CsvLoad {
 File Path: Engine/Utility/Scene/AbstractSceneFactory.h
 ============================================================
 #pragma once
-#include"BaseScene.h"
-#include"string"
+#include "BaseScene.h"
+#include <memory>
+#include <string>
 
-class AbstractSceneFactory 
-{
-public:
-	
-	/// <summary>
-	/// 仮想デストラクタ
-	/// </summary>
-	virtual ~AbstractSceneFactory() = default;
+class AbstractSceneFactory {
+  public:
+    virtual ~AbstractSceneFactory() = default;
 
-	/// <summary>
-	/// シーン生成
-	/// </summary>
-	/// <param name="sceneName"></param>
-	/// <returns></returns>
-	virtual BaseScene* CreateScene(const std::string& sceneName) = 0;
+    /// <summary>
+    /// シーン生成
+    /// </summary>
+    /// <param name="sceneName"></param>
+    /// <returns></returns>
+    virtual std::unique_ptr<BaseScene> CreateScene(const std::string &sceneName) = 0;
 };
 
 ============================================================
 File Path: Engine/Utility/Scene/SceneFactory.cpp
 ============================================================
 #include "SceneFactory.h"
-#include"Application/Scene/TitleScene.h"
-#include"Application/Scene/GameScene.h"
-#include"Application/Scene/SelectScene.h"
-#include"Application/Scene/ClearScene.h"
-#include"Application/Scene/DemoScene.h"
+#include "Application/Scene/ClearScene.h"
+#include "Application/Scene/DemoScene.h"
+#include "Application/Scene/GameScene.h"
+#include "Application/Scene/SelectScene.h"
+#include "Application/Scene/TitleScene.h"
 
-BaseScene* SceneFactory::CreateScene(const std::string& sceneName)
-{
-   // 次のシーンを生成
-	BaseScene* newScene = nullptr;
-
-	if (sceneName == "TITLE") {
-		newScene = new TitleScene();
-	}
-	else if (sceneName == "SELECT") {
-		newScene = new SelectScene();
-	}
-	else if (sceneName == "GAME") {
-		newScene = new GameScene();
-	}
-	else if (sceneName == "CLEAR") {
-		newScene = new ClearScene();
-	}
-	else if (sceneName == "DEMO") {
-		newScene = new DemoScene();
-	}
-	return newScene;
+std::unique_ptr<BaseScene> SceneFactory::CreateScene(const std::string &sceneName) {
+    if (sceneName == "TITLE")
+        return std::make_unique<TitleScene>();
+    if (sceneName == "SELECT")
+        return std::make_unique<SelectScene>();
+    if (sceneName == "GAME")
+        return std::make_unique<GameScene>();
+    if (sceneName == "CLEAR")
+        return std::make_unique<ClearScene>();
+    if (sceneName == "DEMO")
+        return std::make_unique<DemoScene>();
+    return nullptr;
 }
-
 
 ============================================================
 File Path: Engine/Utility/Scene/SceneFactory.h
 ============================================================
 #pragma once
-#include"AbstractSceneFactory.h"
+#include "AbstractSceneFactory.h"
 
-class SceneFactory :public AbstractSceneFactory
-{
-public:
-
-	/// <summary>
+class SceneFactory : public AbstractSceneFactory {
+  public:
+    /// <summary>
     /// シーン生成
     /// </summary>
     /// <param name="sceneName"></param>
     /// <returns></returns>
-    BaseScene* CreateScene(const std::string& sceneName) override;
-
+    std::unique_ptr<BaseScene> CreateScene(const std::string &sceneName) override;
 };
-
-
 
 ============================================================
 File Path: Engine/Utility/Scene/SceneManager.cpp
@@ -54027,13 +54006,10 @@ File Path: Engine/Utility/Scene/SceneManager.cpp
 #include <SpriteManager.h>
 #include <cassert>
 
-SceneManager *SceneManager::instance = nullptr;
-
-SceneManager *SceneManager::GetInstance() {
-    if (instance == nullptr) {
-        instance = new SceneManager;
+SceneManager::~SceneManager() {
+    if (scene_) {
+        scene_->Finalize();
     }
-    return instance;
 }
 
 void SceneManager::Initialize() {
@@ -54044,15 +54020,10 @@ void SceneManager::Initialize() {
 void SceneManager::Finalize() {
     if (scene_) {
         firstChange = false;
-        scene_->Finalize();
     }
-    delete scene_;
-    delete instance;
-    instance = nullptr;
 }
 
 void SceneManager::Update() {
-
     // 次のシーンの予約があるなら
     if (nextScene_) {
         if (!firstChange) {
@@ -54061,14 +54032,15 @@ void SceneManager::Update() {
         }
         SceneChange();
     }
+
     if (!transition_->IsEnd()) {
         transitionEnd = false;
         transition_->Update();
     } else {
         transitionEnd = true;
     }
+
     if (scene_) {
-        // 実行中シーンを更新する
         scene_->Update();
     }
 }
@@ -54088,7 +54060,7 @@ void SceneManager::DrawForOffScreen() {
 void SceneManager::SceneSelection(const std::string &sceneName) {
 #ifdef _DEBUG
     if (!transition_->IsEnd() && transition_->FadeInStart()) {
-        return; // すでに遷移中なので、次の遷移予約はしない
+        return;
     }
     transition_->Reset();
     nextScene_ = sceneFactory_->CreateScene(sceneName);
@@ -54098,14 +54070,13 @@ void SceneManager::SceneSelection(const std::string &sceneName) {
 
 void SceneManager::DrawTransition() {
     if (!transition_->IsEnd()) {
-        transition_->Draw(); // トランジションの描画
+        transition_->Draw();
     }
 }
 
 void SceneManager::NextSceneReservation(const std::string &sceneName) {
-    // トランジション中なら処理をスキップ
     if (!transition_->IsEnd() && transition_->FadeInStart()) {
-        return; // すでに遷移中なので、次の遷移予約はしない
+        return; // すでに遷移中なので次の予約はしない
     }
     transition_->Reset();
     assert(sceneFactory_);
@@ -54113,8 +54084,9 @@ void SceneManager::NextSceneReservation(const std::string &sceneName) {
 
     currentSceneName_ = sceneName;
 
-    // 次シーンを生成
+    // 次シーンを生成（unique_ptr で受け取る）
     nextScene_ = sceneFactory_->CreateScene(sceneName);
+
     if (!firstChange) {
         transition_->SetFadeOutStart(true);
     } else {
@@ -54127,26 +54099,23 @@ void SceneManager::SceneChange() {
         // 旧シーンの終了
         if (scene_) {
             scene_->Finalize();
-            delete scene_;
+            // delete 不要、reset() で解放
+            scene_.reset();
             BaseObjectManager::GetInstance()->RemoveAllObjects();
             SpriteManager::GetInstance()->Clear();
 #ifndef _DEBUG
             ParticleCSGroupManager::GetInstance()->ClearIndependentGroups();
 #endif // _DEBUG
         }
-        // シーンの切り替え
-        scene_ = nextScene_;
-        nextScene_ = nullptr;
 
-        // シーンマネージャをセット
+        // 所有権を移譲（nextScene_ は自動的に nullptr になる）
+        scene_ = std::move(nextScene_);
+
         scene_->SetSceneManager(this);
-
-        // 次のシーンを初期化する
         scene_->Initialize();
         transition_->SetFadeOutStart(true);
     }
 }
-
 
 ============================================================
 File Path: Engine/Utility/Scene/SceneManager.h
@@ -54154,22 +54123,24 @@ File Path: Engine/Utility/Scene/SceneManager.h
 #pragma once
 #include "AbstractSceneFactory.h"
 #include "SceneTransition.h"
-#include "memory"
+#include <memory>
+#include <string>
+
 class SceneManager {
   private:
-    static SceneManager *instance;
-
     SceneManager() = default;
-    ~SceneManager() = default;
+    ~SceneManager();
     SceneManager(SceneManager &) = delete;
     SceneManager &operator=(SceneManager &) = delete;
 
-  public: // メンバ関数
+  public:
     /// <summary>
     /// シングルトンインスタンスの取得
     /// </summary>
-    /// <returns></returns>
-    static SceneManager *GetInstance();
+    static SceneManager &GetInstance() {
+        static SceneManager instance;
+        return instance;
+    }
 
     /// <summary>
     /// 初期化
@@ -54192,7 +54163,7 @@ class SceneManager {
     void Draw();
 
     /// <summary>
-    /// 描画
+    /// オフスクリーン描画
     /// </summary>
     void DrawForOffScreen();
 
@@ -54203,19 +54174,14 @@ class SceneManager {
     /// </summary>
     void DrawTransition();
 
-    bool GetTransitionEnd() { return transitionEnd; }
+    bool GetTransitionEnd() const { return transitionEnd; }
 
-  public: // setter
-    /// <summary>
-    /// シーンファクトリーのセット
-    /// </summary>
-    /// <param name="sceneFactory"></param>
+  public: // setter / getter
     void SetSceneFactory(AbstractSceneFactory *sceneFactory) { sceneFactory_ = sceneFactory; }
 
     /// <summary>
     /// 次シーン予約
     /// </summary>
-    /// <param name="nextScene"></param>
     void NextSceneReservation(const std::string &sceneName);
 
     /// <summary>
@@ -54223,20 +54189,21 @@ class SceneManager {
     /// </summary>
     void SceneChange();
 
-    float GetClearTime() const { return ClaerTime_; }
-    float GetHP() const { return HP_; }
+    float GetClearTime() const { return clearTime_; }
+    float GetHP() const { return hp_; }
 
-    BaseScene *GetBaseScene() { return scene_; }
+    BaseScene *GetBaseScene() const { return scene_.get(); }
     std::string GetCurrentSceneName() const { return currentSceneName_; }
-    void SetClearTime(float time) { ClaerTime_ = time; }
-    void SetHP(float hp) { HP_ = hp; }
+
+    void SetClearTime(float time) { clearTime_ = time; }
+    void SetHP(float hp) { hp_ = hp; }
 
   private:
-    // 今のシーン(実行中のシーン)
-    BaseScene *scene_ = nullptr;
+    // 今のシーン（実行中のシーン）
+    std::unique_ptr<BaseScene> scene_;
     // 次のシーン
-    BaseScene *nextScene_ = nullptr;
-    // シーンファクトリー
+    std::unique_ptr<BaseScene> nextScene_;
+    // シーンファクトリー（所有権なし）
     AbstractSceneFactory *sceneFactory_ = nullptr;
     SceneTransition *transition_ = nullptr;
 
@@ -54245,10 +54212,9 @@ class SceneManager {
     bool transitionEnd = false;
     bool firstChange = false;
 
-    float ClaerTime_ = 0.0f;
-    float HP_ = 0.0f;
+    float clearTime_ = 0.0f;
+    float hp_ = 0.0f;
 };
-
 
 ============================================================
 File Path: Engine/Utility/Scene/SceneTransition.cpp
@@ -252035,7 +252001,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.cpp" />
-    <ClCompile Include="Scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -252224,7 +252189,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Camera\StartCamera.h" />
     <ClInclude Include="Application\UI\Scene\Result\ResultUI.h" />
     <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
-    <ClInclude Include="Scene.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\OffScreen\Bloom.PS.hlsl">
@@ -252905,7 +252869,6 @@ File Path: Hagine.vcxproj.filters
     </ClCompile>
     <ClCompile Include="Application\GameObject\Enemy\Bullet\EnemyBullet.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Hand\EnemyHand.cpp" />
-    <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.cpp" />
     <ClCompile Include="Engine\Utility\Collider\type\CylinderCollider.cpp" />
     <ClCompile Include="Application\GameObject\Field\AroundField\AroundField.cpp" />
@@ -253323,7 +253286,6 @@ File Path: Hagine.vcxproj.filters
     </ClInclude>
     <ClInclude Include="Application\GameObject\Enemy\Bullet\EnemyBullet.h" />
     <ClInclude Include="Application\GameObject\Enemy\Hand\EnemyHand.h" />
-    <ClInclude Include="Scene.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldSettingOverride.h" />
     <ClInclude Include="Engine\Utility\Collider\type\CylinderCollider.h" />
@@ -253685,20 +253647,6 @@ File Path: Hagine.vcxproj.filters
     </Text>
   </ItemGroup>
 </Project>
-
-============================================================
-File Path: Scene.cpp
-============================================================
-#include "Scene.h"
-
-
-============================================================
-File Path: Scene.h
-============================================================
-#pragma once
-class Scene {
-};
-
 
 ============================================================
 File Path: main.cpp
