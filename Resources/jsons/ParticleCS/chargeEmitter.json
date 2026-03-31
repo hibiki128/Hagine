@@ -4,7 +4,7 @@
     "fieldContactEmitCount": 1000,
     "fieldGroupId": -1,
     "frequency": 0.10000000149011612,
-    "frequencyTime": 0.0247983168810606,
+    "frequencyTime": 0.008745327591896057,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -51,7 +51,7 @@
     "group_0_enableVelocityDamping": 0,
     "group_0_enableVortex": 0,
     "group_0_enableVortexForTrail": 0,
-    "group_0_enablebilboard": 0,
+    "group_0_enablebilboard": 1,
     "group_0_endColor": {
         "w": 0.0,
         "x": 0.5372549295425415,
@@ -155,7 +155,7 @@
         "y": 0.0,
         "z": 0.0
     },
-    "isAuto": false,
+    "isAuto": true,
     "isVisible": false,
     "modelPath": "",
     "particleGroupCount": 1,

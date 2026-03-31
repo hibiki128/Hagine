@@ -1,8 +1,21 @@
 {
     "emitFromSurface": 1,
+    "emitOnlyOnFieldContact": false,
+    "fieldContactEmitCount": 1000,
+    "fieldGroupId": -1,
     "frequency": 0.03999999910593033,
-    "frequencyTime": 0.02524791657924652,
+    "frequencyTime": 0.03434399142861366,
     "group_0_acceleration": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_angularVelocityMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_angularVelocityMin": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -23,23 +36,32 @@
     "group_0_emitCount": 2,
     "group_0_enableAcceleration": 0,
     "group_0_enableCurlNoise": 1,
+    "group_0_enableEndScale": 0,
     "group_0_enableGather": 1,
     "group_0_enableGatherForTrail": 0,
     "group_0_enableGravity": 0,
     "group_0_enableLifetimeScale": 1,
     "group_0_enableLifetimeVelocityDamping": 1,
     "group_0_enableRadialVelocity": 0,
+    "group_0_enableRandomAngularVelocity": 0,
     "group_0_enableRandomColor": 0,
+    "group_0_enableRandomRotation": 0,
     "group_0_enableSinScale": 1,
     "group_0_enableTrail": 1,
     "group_0_enableVelocityDamping": 0,
     "group_0_enableVortex": 1,
     "group_0_enableVortexForTrail": 0,
+    "group_0_enablebilboard": 1,
     "group_0_endColor": {
         "w": 0.0,
         "x": 1.0,
         "y": 1.0,
         "z": 1.0
+    },
+    "group_0_endScaleValue": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
     },
     "group_0_gatherStartRatio": 0.0,
     "group_0_gatherStrength": 4.900000095367432,
@@ -82,6 +104,16 @@
     },
     "group_0_radialVelocityRandomness": 0.0,
     "group_0_radialVelocityStrength": 0.0,
+    "group_0_rotationMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "group_0_rotationMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
     "group_0_sinScaleAmplitude": 0.09000000357627869,
     "group_0_sinScaleFrequency": 13.100000381469727,
     "group_0_startColor": {
@@ -128,6 +160,7 @@
     "modelPath": "",
     "particleGroupCount": 1,
     "primitiveType": 3,
+    "receiveFields": false,
     "rotation": {
         "w": 1.0,
         "x": 0.0,
