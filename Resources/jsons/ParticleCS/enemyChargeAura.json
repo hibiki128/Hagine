@@ -51,7 +51,7 @@
     "group_0_enableVelocityDamping": 0,
     "group_0_enableVortex": 0,
     "group_0_enableVortexForTrail": 0,
-    "group_0_enablebilboard": 0,
+    "group_0_enablebilboard": 1,
     "group_0_endColor": {
         "w": 0.0,
         "x": 0.0,

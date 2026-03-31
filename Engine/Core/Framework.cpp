@@ -342,7 +342,7 @@ void Framework::Update() {
 
 void Framework::LoadResource() {
 
-    textureManager_->LoadAllTextures();
+    //textureManager_->LoadAllTextures();
 
     particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");

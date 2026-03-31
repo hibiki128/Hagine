@@ -1,6 +1,7 @@
 #pragma once
 #include "array"
 #include "cstdint"
+#include "memory"
 #include "string"
 #include "vector"
 #include "wrl.h"
@@ -23,8 +24,8 @@ class Audio {
         void STDMETHODCALLTYPE OnBufferEnd(void *pBufferContext) override {
             if (pBufferContext) {
                 Voice *voice = reinterpret_cast<Voice *>(pBufferContext);
-                if (voice) {
-                    Audio::GetInstance()->StopWave(voice->handle);
+                if (voice && voice->sourceVoice) {
+                    voice->sourceVoice = nullptr;
                 }
             }
         }
@@ -64,6 +65,7 @@ class Audio {
         uint32_t handle = 0u;
         IXAudio2SourceVoice *sourceVoice = nullptr;
         float volume = 1.0f;
+        std::unique_ptr<VoiceCallback> callback;
     };
 
   public:
@@ -111,6 +113,11 @@ class Audio {
     void Finalize();
 
     /// <summary>
+    /// 再生終了済みボイスを解放（毎フレーム呼び出し推奨）
+    /// </summary>
+    void CleanupFinishedVoices();
+
+    /// <summary>
     /// ImGui デバッグウィンドウ描画
     /// _DEBUG ビルド時に毎フレーム呼び出してください
     /// </summary>
@@ -145,7 +152,7 @@ class Audio {
     std::string directoryPath_;
     std::array<SoundData, kMaxSoundData> soundDatas_;
     size_t soundDataIndex = 0;
-    std::set<Voice *> voices_;
+    std::set<std::unique_ptr<Voice>> voices_;
     std::set<std::string> loadedFiles;
 
     uint16_t audioFormat = 0;
