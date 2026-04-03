@@ -11,15 +11,32 @@ using json = nlohmann::json;
 namespace fs = std::filesystem;
 
 // ============================================================
+// [修正] ピンID衝突防止オフセット
+//
+// imgui-node-editor は NodeId と PinId が同一の ID 名前空間を共有する。
+// 旧来の計算式 "id * 10 + N" では、例えばノード1の OutputPinID=12 が
+// ノード12の ID と一致してしまい、"conflicting ID" エラーや
+// 「ノードを掴むと別ノードから接続線が伸びる」不具合が発生する。
+//
+// 修正: 全ピン ID に kPinOffset(100000) を加算する。
+//   InputPinID   = id * 10 + 1 + kPinOffset
+//   OutputPinID  = id * 10 + 2 + kPinOffset
+//   SuccessPinID = id * 10 + 3 + kPinOffset
+//   FailurePinID = id * 10 + 4 + kPinOffset
+//
+// ノード ID は通常数百〜数千なので、ピン ID (100011〜) と衝突しない。
+// ※ この修正により既存 JSON との互換性が失われるため、
+//   エディタで JSON を開き直して再保存してください。
+// ============================================================
+static constexpr int kPinOffset = 100000;
+
+// ============================================================
 // BehaviorTreeLoader  (Debug / Release 共通実装)
 // ============================================================
 
 namespace {
-// EditorNodeType を int にキャストしたときのピンID計算ルール:
-//   InputPin  = id*10 + 1
-//   OutputPin = id*10 + 2
-// これは EditorNode コンストラクタと同じ計算式
-inline bool IsInputPinStatic(int pinId) { return (pinId % 10) == 1; }
+// ピンIDからInputPinかどうかを判定 (kPinOffset適用済み)
+inline bool IsInputPinStatic(int pinId) { return ((pinId - kPinOffset) % 10) == 1; }
 } // anonymous namespace
 
 // ----- 内部ヘルパー -----
@@ -28,7 +45,8 @@ int BehaviorTreeLoader::FindRootNodeId(
     const std::vector<NodeData> &nodes,
     const std::vector<LinkData> &links) {
     for (const auto &node : nodes) {
-        int inputPin = node.id * 10 + 1;
+        // [修正] InputPin = id * 10 + 1 + kPinOffset
+        int inputPin = node.id * 10 + 1 + kPinOffset;
         bool hasInput = false;
         for (const auto &link : links) {
             if (link.endPin == inputPin) {
@@ -48,8 +66,8 @@ std::vector<int> BehaviorTreeLoader::FindChildrenNodeIds(
     std::vector<int> children;
     for (const auto &link : links) {
         if (link.startPin == outputPinId) {
-            // InputPin = id*10+1  →  id = (endPin - 1) / 10
-            children.push_back((link.endPin - 1) / 10);
+            // [修正] InputPin = id * 10 + 1 + kPinOffset  →  id = (endPin - kPinOffset - 1) / 10
+            children.push_back((link.endPin - kPinOffset - 1) / 10);
         }
     }
     return children;
@@ -62,7 +80,8 @@ std::vector<std::pair<int, float>> BehaviorTreeLoader::FindWeightedChildrenNodeI
     for (const auto &wp : node.weightedOutputs) {
         for (const auto &link : links) {
             if (link.startPin == wp.pinId) {
-                int childId = (link.endPin - 1) / 10;
+                // [修正] InputPin = id * 10 + 1 + kPinOffset  →  id = (endPin - kPinOffset - 1) / 10
+                int childId = (link.endPin - kPinOffset - 1) / 10;
                 result.emplace_back(childId, wp.weight);
             }
         }
@@ -241,7 +260,8 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                 }
             }
         } else {
-            int outputPin = nd.id * 10 + 2;
+            // [修正] OutputPin = id * 10 + 2 + kPinOffset
+            int outputPin = nd.id * 10 + 2 + kPinOffset;
             for (int childId : FindChildrenNodeIds(outputPin, links)) {
                 auto childNode = BuildNodeRecursive(childId, nodes, links);
                 if (childNode)
@@ -254,9 +274,10 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                nd.type == EditorNodeType::ConditionIsGrounded ||
                nd.type == EditorNodeType::ConditionIsAirborne ||
                nd.type == EditorNodeType::ConditionPlayerState) {
-        // 条件ノード: 成功/失敗ピン (id*10+3 / id*10+4) からの子を処理
-        int successPin = nd.id * 10 + 3;
-        int failurePin = nd.id * 10 + 4;
+        // 条件ノード: 成功/失敗ピン から子を処理
+        // [修正] SuccessPin = id * 10 + 3 + kPinOffset, FailurePin = id * 10 + 4 + kPinOffset
+        int successPin = nd.id * 10 + 3 + kPinOffset;
+        int failurePin = nd.id * 10 + 4 + kPinOffset;
         auto successChildIds = FindChildrenNodeIds(successPin, links);
         auto failureChildIds = FindChildrenNodeIds(failurePin, links);
 
@@ -391,19 +412,21 @@ namespace ed = ax::NodeEditor;
 // ---------------------------------------------------------
 EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
     : ID(id), Title(title), Type(type) {
-    InputPinID = id * 10 + 1;
-    OutputPinID = id * 10 + 2;
-    SuccessPinID = id * 10 + 3;
-    FailurePinID = id * 10 + 4;
+    // [修正] kPinOffset を加算してノードIDとの衝突を防ぐ
+    InputPinID = id * 10 + 1 + kPinOffset;
+    OutputPinID = id * 10 + 2 + kPinOffset;
+    SuccessPinID = id * 10 + 3 + kPinOffset;
+    FailurePinID = id * 10 + 4 + kPinOffset;
 
     if (type == EditorNodeType::ConditionPlayerClose) {
         Parameter = 0.0f;
         Parameter2 = 10.0f;
     } else if (type == EditorNodeType::DecoratorWeight) {
         WeightedOutputs.resize(2);
-        WeightedOutputs[0].PinID = id * 10 + 5;
+        // [修正] WeightedOutputs の初期ピンIDも kPinOffset を適用
+        WeightedOutputs[0].PinID = id * 10 + 5 + kPinOffset;
         WeightedOutputs[0].Weight = 1.0f;
-        WeightedOutputs[1].PinID = id * 10 + 6;
+        WeightedOutputs[1].PinID = id * 10 + 6 + kPinOffset;
         WeightedOutputs[1].Weight = 1.0f;
     } else if (type == EditorNodeType::ConditionHealthLow) {
         Parameter = 0.3f;
@@ -484,10 +507,11 @@ BehaviorTreeEditor::~BehaviorTreeEditor() {
         ed::DestroyEditor(m_Context);
 }
 
-bool BehaviorTreeEditor::IsInputPin(ed::PinId p) { return (p.Get() % 10) == 1; }
-bool BehaviorTreeEditor::IsOutputPin(ed::PinId p) { return (p.Get() % 10) == 2; }
-bool BehaviorTreeEditor::IsSuccessPin(ed::PinId p) { return (p.Get() % 10) == 3; }
-bool BehaviorTreeEditor::IsFailurePin(ed::PinId p) { return (p.Get() % 10) == 4; }
+// [修正] 各IsXxxPin 関数に kPinOffset を適用
+bool BehaviorTreeEditor::IsInputPin(ed::PinId p) { return ((int)p.Get() - kPinOffset) % 10 == 1; }
+bool BehaviorTreeEditor::IsOutputPin(ed::PinId p) { return ((int)p.Get() - kPinOffset) % 10 == 2; }
+bool BehaviorTreeEditor::IsSuccessPin(ed::PinId p) { return ((int)p.Get() - kPinOffset) % 10 == 3; }
+bool BehaviorTreeEditor::IsFailurePin(ed::PinId p) { return ((int)p.Get() - kPinOffset) % 10 == 4; }
 
 bool BehaviorTreeEditor::IsWeightedOutputPin(ed::PinId pinId, int &outNodeId, int &outOutputIndex) {
     for (auto &node : m_Nodes) {
@@ -682,6 +706,7 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     case EditorNodeType::ActionFlyApproach:
         runtimeNode = std::make_shared<EnemyFlyApproachNode>(eNode.Parameter, eNode.Parameter2, eNode.Parameter3);
         break;
+    case EditorNodeType::ActionComboStep:
         runtimeNode = std::make_shared<EnemyComboStepNode>(
             eNode.Parameter > 0.0f ? eNode.Parameter : 0.5f,
             eNode.Parameter2);
@@ -798,7 +823,8 @@ std::vector<int> BehaviorTreeEditor::FindChildrenNodeIds(int outputPinId) {
     for (const auto &link : m_Links) {
         if ((int)link.StartPinID.Get() == outputPinId) {
             int endPin = (int)link.EndPinID.Get();
-            children.push_back((endPin - 1) / 10);
+            // [修正] InputPin = id * 10 + 1 + kPinOffset  →  id = (endPin - kPinOffset - 1) / 10
+            children.push_back((endPin - kPinOffset - 1) / 10);
         }
     }
     return children;
@@ -811,7 +837,8 @@ std::vector<std::pair<int, float>> BehaviorTreeEditor::FindWeightedChildrenNodeI
         float weight = node.WeightedOutputs[i].Weight;
         for (const auto &link : m_Links) {
             if ((int)link.StartPinID.Get() == outputPinId) {
-                int childNodeId = ((int)link.EndPinID.Get() - 1) / 10;
+                // [修正] id = (endPin - kPinOffset - 1) / 10
+                int childNodeId = ((int)link.EndPinID.Get() - kPinOffset - 1) / 10;
                 result.emplace_back(childNodeId, weight);
             }
         }
@@ -941,7 +968,8 @@ void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
             maxNodeId = id;
     }
     m_NextNodeId = maxNodeId + 1;
-    m_NextPinId = maxPinId + 1;
+    // [修正] maxPinId が 0 の場合は安全な初期値を使う
+    m_NextPinId = (maxPinId > 0) ? maxPinId + 1 : 200000;
 
     json linksJson = handler.Load("links", json::array());
     int maxLinkId = 0;
