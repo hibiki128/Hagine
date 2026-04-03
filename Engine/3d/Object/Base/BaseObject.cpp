@@ -10,12 +10,6 @@
 #endif // DEBUG
 
 BaseObject::~BaseObject() {
-    // すべてのコライダーの登録を解除（解放は unique_ptr が自動で行う）
-    for (auto &collider : colliders_) {
-        if (collider) {
-            CollisionManager::GetInstance()->Unregister(collider.get());
-        }
-    }
     colliders_.clear();
 }
 

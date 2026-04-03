@@ -56,6 +56,12 @@ class Enemy : public BaseObject {
     void DrawParticle(const ViewProjection &viewProjection);
 
     /// <summary>
+    /// 視錐台のデバッグ描画（DrawLine3Dで視錐台形状を可視化）
+    /// DrawLine3D::Draw()より前に呼ぶこと
+    /// </summary>
+    void DrawFrustum();
+
+    /// <summary>
     /// デバッグ処理
     /// </summary>
     void Debug();
@@ -167,6 +173,17 @@ class Enemy : public BaseObject {
 
     // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
     Vector3 GetWorldPosition() const { return transform_->translation_; }
+
+    /// <summary>
+    /// 視錐台ロックオン更新処理
+    /// Update内から呼ぶ。前方視錐台内にプレイヤーが入ったら自動ロックオン
+    /// </summary>
+    void UpdateFrustumLockOn();
+
+    /// <summary>
+    /// ロックオンを解除する
+    /// </summary>
+    void ReleaseLockOn() { isLockOn_ = false; }
 
     void MoveToTarget(const Vector3 &targetPos);
     void PerformAttack();
@@ -379,4 +396,16 @@ class Enemy : public BaseObject {
     EnemyHand *rightHand_ptr_; // 右手
 
     std::vector<std::unique_ptr<EnemyBullet>> bullets_;
+
+    // ===================================================
+    // 視錐台ロックオン関連
+    // ===================================================
+    static constexpr float kDefaultFrustumRange = 150.0f;
+    static constexpr float kDefaultFrustumHalfFovH = 40.0f * (3.14159265f / 180.0f);
+    static constexpr float kDefaultFrustumHalfFovV = 30.0f * (3.14159265f / 180.0f);
+
+    float frustumLockOnRange_ = kDefaultFrustumRange;
+    float frustumLockOnHalfFovH_ = kDefaultFrustumHalfFovH;
+    float frustumLockOnHalfFovV_ = kDefaultFrustumHalfFovV;
+    bool drawFrustumDebug_ = false; // 視錐台デバッグ描画フラグ
 };

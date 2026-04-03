@@ -6,6 +6,7 @@
 
 #include "Bullet/ChargeShot/ChargeShot.h"
 #include "Collider/CollisionManager.h"
+#include "Engine/3d/Line/DrawLine3D.h"
 #include "Object/Base/BaseObjectManager.h"
 #include "State/Action/PlayerEnergyCharge.h"
 #include "State/Action/PlayerStateRush.h"
@@ -133,6 +134,9 @@ void Player::Init(const std::string objectName) {
 
 void Player::Update() {
 
+    if (activeDebugCamrera_)
+        return;
+
     dt_ = Frame::DeltaTime();
 
     if (makanAttack_ptr_->IsActive()) {
@@ -220,25 +224,7 @@ void Player::Update() {
             velocity_.y = kMaxFallVelocity;
         }
 
-        // ポーズ中はロックオン操作を無効化
-        if (!isPause_) {
-            if (!gamePad_->IsConnected()) {
-                // キーボード入力
-                if (input_->TriggerKey(DIK_L)) {
-                    isLockOn_ = !isLockOn_;
-                }
-            } else {
-                // ゲームパッド入力（将来の実装用）
-                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
-                    isLockOn_ = !isLockOn_;
-                }
-                if (gamePad_->GetLeftTrigger() > 0.25f) {
-                    isSkillMenu_ = true;
-                } else {
-                    isSkillMenu_ = false;
-                }
-            }
-        }
+        // ※ 視錐台ロックオン判定は FollowCamera::Update() 内で行う
 
         if (isDashing_) {
             targetFov_ = kDashingFov;
@@ -1023,7 +1009,6 @@ void Player::Debug() {
             ImGui::DragFloat("弾の加速度", &B_acce_, 0.1f);
 
             if (ImGui::Button("セーブ")) {
-
                 Save();
             }
 
@@ -1047,6 +1032,7 @@ void Player::Debug() {
 
             ImGui::EndTabItem();
         }
+
         ImGui::EndTabBar();
     }
 
@@ -1173,6 +1159,10 @@ Vector3 Player::GetMovementDirection() const {
     return dir;
 }
 
+void Player::ReleaseLockOn() {
+    isLockOn_ = false;
+}
+
 float Player::GetVelocityMagnitude() const {
     return std::sqrt(velocity_.x * velocity_.x + velocity_.y * velocity_.y + velocity_.z * velocity_.z);
 }
@@ -1217,12 +1207,12 @@ void Player::Load() {
 }
 
 Vector3 Player::GetForward() const {
-    // クォータニオンから前方向ベクトルを計算（Z軸の負方向が前方向）
-    return TransformNormal(Vector3(kForwardVectorX, kForwardVectorY, kForwardVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
+    return -GetBackward();
 }
 
 Vector3 Player::GetBackward() const {
-    return -GetForward();
+    // クォータニオンから前方向ベクトルを計算（Z軸の負方向が前方向）
+    return TransformNormal(Vector3(kForwardVectorX, kForwardVectorY, kForwardVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 
 Vector3 Player::GetRight() const {

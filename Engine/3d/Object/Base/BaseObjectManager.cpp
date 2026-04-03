@@ -7,6 +7,7 @@
 #include <ShowFolder/ShowFolder.h>
 
 void BaseObjectManager::Finalize() {
+
 }
 
 void BaseObjectManager::RemoveAllObjects() {

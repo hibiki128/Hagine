@@ -125,6 +125,12 @@ class Player : public BaseObject {
     void RecoverEnergy();             // エネルギー回復処理
 
     /// <summary>
+    /// ロックオンを解除する
+    /// 解除タイミングは呼び出し側が管理する
+    /// </summary>
+    void ReleaseLockOn();
+
+    /// <summary>
     /// Getter
     /// </summary>
     GamePad *GetGamePad() { return gamePad_.get(); }
@@ -173,6 +179,8 @@ class Player : public BaseObject {
     std::string GetPreviewStateName() const { return previousStateName; }
     std::vector<std::unique_ptr<PlayerBullet>> &GetBullets() { return bullets_; }
 
+    void SetIsLockOn(bool flag) { isLockOn_ = flag; }
+
     /// <summary>
     /// Setter
     /// </summary>
@@ -202,6 +210,7 @@ class Player : public BaseObject {
     /// </summary>
     /// <param name="damage">与えるダメージ量</param>
     void SetDamage(float damage) { damage_ = damage; }
+    void SetActiveDebugCamera(bool flag) { activeDebugCamrera_ = flag; }
 
   private:
     /// ===================================================
@@ -455,4 +464,6 @@ class Player : public BaseObject {
     std::string previousStateName = "";
 
     Input *input_ = nullptr;
+
+    bool activeDebugCamrera_ = false; // デバッグカメラがアクティブかどうか
 };

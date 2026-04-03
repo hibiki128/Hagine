@@ -3,9 +3,7 @@
 #include <cassert>
 
 SceneManager::~SceneManager() {
-    if (scene_) {
-        scene_->Finalize();
-    }
+    
 }
 
 void SceneManager::Initialize() {
@@ -15,6 +13,7 @@ void SceneManager::Initialize() {
 
 void SceneManager::Finalize() {
     if (scene_) {
+        scene_->Finalize();
         firstChange = false;
     }
 }

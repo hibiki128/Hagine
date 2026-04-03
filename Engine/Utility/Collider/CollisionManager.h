@@ -89,4 +89,5 @@ class CollisionManager {
     std::unordered_map<CollisionPair, bool, CollisionPairHash> collisionStates_;
 
     bool isVisible_ = false;
+    bool isFinalized_ = false;
 };

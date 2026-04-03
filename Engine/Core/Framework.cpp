@@ -190,48 +190,24 @@ void Framework::Initialize() {
 }
 
 void Framework::Finalize() {
-    baseObjectManager_->Finalize();
+    collisionManager_->Clear();
     sceneManager_->Finalize();
     sceneTransition_->Finalize();
-
-    // WindowsAPIの終了処理
     winApp_->Finalize();
-
-    ///-------PipeLineManager-------
     pipeLineManager_->Finalize();
-    ///-----------------------------
-
-    ///-------ComputePipeLineManager-------
     computePipeLineManager_->Finalize();
-    ///-----------------------------
-
-    ///-------TextureManager-------
     textureManager_->Finalize();
-    ///-----------------------------
-
-    ///-------ModelCommon-------
     modelManager_->Finalize();
-    ///---------------------------
-
-    ///-------PrimitiveModel-------
     primitiveModel_->Finalize();
-    ///-----------------------------
-
-    ///-------ParticleGroupManager-------
     particleGroupManager_->Finalize();
-    ///---------------------------------
-
-    ///-------ParticleCSGroupManager-------
     particleCSGroupManager_->Finalize();
-    ///---------------------------------
 
 #ifdef _DEBUG
     imGuiManager_->Finalize();
     imGuizmoManager_->Finalize();
-#endif // _DEBUG
+#endif
     shortcutManager_->Finalize();
     spriteManager_->Finalize();
-
     line3d_->Finalize();
     skyBox_->Finalize();
     srvManager_->Finalize();
@@ -244,7 +220,9 @@ void Framework::Finalize() {
     spriteCommon_->Finalize();
     particleCommon_->Finalize();
     modelCommon_->Finalize();
-    dxCommon_->Finalize();
+
+    baseObjectManager_->Finalize();
+    dxCommon_->Finalize();         
 }
 
 void Framework::RegisterShortcutKey() {

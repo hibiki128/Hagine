@@ -1123,9 +1123,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
         ImGui::EndGroup();
 
         ed::BeginPin(node.InputPinID, ed::PinKind::Input);
-        ImGui::PushID((int)node.InputPinID.Get());
         ImGui::Text("-> 入力");
-        ImGui::PopID();
         ed::EndPin();
 
         ImGui::PushItemWidth(80);
@@ -1298,7 +1296,9 @@ void BehaviorTreeEditor::OnImGuiRender() {
                 paramChanged = true;
             // ホーミングチェックボックス
             bool isHoming = (node.Parameter5 >= 1.0f);
-            if (ImGui::Checkbox("ホーミング弾", &isHoming)) {
+            char wid6[64];
+            snprintf(wid6, sizeof(wid6), "ホーミング弾##homing_%d", (int)node.ID.Get());
+            if (ImGui::Checkbox(wid6, &isHoming)) {
                 node.Parameter5 = isHoming ? 1.0f : 0.0f;
                 paramChanged = true;
             }
@@ -1326,14 +1326,10 @@ void BehaviorTreeEditor::OnImGuiRender() {
         // 出力ピン
         if (node.IsConditionNode()) {
             ed::BeginPin(node.SuccessPinID, ed::PinKind::Output);
-            ImGui::PushID((int)node.SuccessPinID.Get());
             ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "成功 ->");
-            ImGui::PopID();
             ed::EndPin();
             ed::BeginPin(node.FailurePinID, ed::PinKind::Output);
-            ImGui::PushID((int)node.FailurePinID.Get());
             ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "失敗 ->");
-            ImGui::PopID();
             ed::EndPin();
         } else if (node.IsWeightNode()) {
             float totalW = 0.0f;
@@ -1342,16 +1338,12 @@ void BehaviorTreeEditor::OnImGuiRender() {
             for (int i = 0; i < (int)node.WeightedOutputs.size(); ++i) {
                 float pct = (totalW > 0.0f) ? node.WeightedOutputs[i].Weight / totalW * 100.0f : 0.0f;
                 ed::BeginPin(node.WeightedOutputs[i].PinID, ed::PinKind::Output);
-                ImGui::PushID((int)node.WeightedOutputs[i].PinID.Get());
                 ImGui::Text("出力%d(%.0f%%) ->", i + 1, pct);
-                ImGui::PopID();
                 ed::EndPin();
             }
         } else if (!node.IsActionNode()) {
             ed::BeginPin(node.OutputPinID, ed::PinKind::Output);
-            ImGui::PushID((int)node.OutputPinID.Get());
             ImGui::Text("出力 ->");
-            ImGui::PopID();
             ed::EndPin();
         }
 

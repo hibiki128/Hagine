@@ -6,6 +6,7 @@
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Debug/Log/Logger.h>
+#include <Engine/3d/Line/DrawLine3D.h>
 #include <Frame.h>
 #include <Object/Base/BaseObjectManager.h>
 
@@ -98,6 +99,8 @@ void Enemy::Init(const std::string objectName) {
     isGrounded_ = true;
     velocity_ = Vector3(0.0f, 0.0f, 0.0f);
     acceleration_ = Vector3(0.0f, 0.0f, 0.0f);
+
+    transform_->SetRotationEuler({0.0f, degreesToRadians(180.0f), 0.0f});
 }
 
 void Enemy::Update() {
@@ -179,6 +182,9 @@ void Enemy::Update() {
 
         CollisionGround();
         BaseObject::Update();
+
+        // 視錐台ロックオン判定（ワールド行列確定後に実行）
+        UpdateFrustumLockOn();
 
         // 弾の更新と生存チェック
         for (auto it = bullets_.begin(); it != bullets_.end();) {
@@ -327,6 +333,36 @@ void Enemy::Debug() {
             ImGui::Text("速度: (%.2f, %.2f, %.2f)",
                         velocity_.x, velocity_.y, velocity_.z);
             ImGui::Text("地上判定: %s", isGrounded_ ? "地上" : "空中");
+            ImGui::Separator();
+
+            // ── 視錐台ロックオン ──────────────────────────
+            ImGui::Text("【視錐台ロックオン】");
+            if (isLockOn_) {
+                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.0f, 1.0f), "ロックオン: ON");
+                if (ImGui::SmallButton("解除##frustum")) {
+                    ReleaseLockOn();
+                }
+            } else {
+                ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "ロックオン: OFF");
+            }
+            ImGui::Checkbox("視錐台デバッグ描画", &drawFrustumDebug_);
+            if (target_) {
+                float dist = (target_->GetLocalPosition() - transform_->translation_).Length();
+                ImGui::Text("プレイヤーまでの距離: %.2f / %.1f", dist, frustumLockOnRange_);
+            }
+            const float kToDeg = 180.0f / 3.14159265f;
+            const float kToRad = 3.14159265f / 180.0f;
+            ImGui::DragFloat("有効距離##frustum", &frustumLockOnRange_, 0.5f, 1.0f, 300.0f, "%.1f");
+            float halfFovHDeg = frustumLockOnHalfFovH_ * kToDeg;
+            float halfFovVDeg = frustumLockOnHalfFovV_ * kToDeg;
+            if (ImGui::DragFloat("水平半角 (度)##frustum", &halfFovHDeg, 0.5f, 1.0f, 89.0f, "%.1f")) {
+                frustumLockOnHalfFovH_ = halfFovHDeg * kToRad;
+            }
+            if (ImGui::DragFloat("垂直半角 (度)##frustum", &halfFovVDeg, 0.5f, 1.0f, 89.0f, "%.1f")) {
+                frustumLockOnHalfFovV_ = halfFovVDeg * kToRad;
+            }
+            ImGui::Text("  水平全角: %.1f°  垂直全角: %.1f°", halfFovHDeg * 2.0f, halfFovVDeg * 2.0f);
+
             ImGui::Separator();
             ImGui::Checkbox("ストップ", &isStop_);
             ImGui::Separator();
@@ -685,4 +721,110 @@ void Enemy::ShotWithDirection(const Vector3 &direction, bool forceHoming) {
     }
 
     bullets_.push_back(std::move(bullet));
+}
+
+// ============================================================
+// 視錐台ロックオン（敵前方視錐台でプレイヤーを検知）
+// FollowCameraのUpdateFrustumLockOnと同じ設計：
+//   一度ロックオンしたら視錐台判定は行わない。解除はReleaseLockOn()で明示的に行う。
+// ============================================================
+void Enemy::UpdateFrustumLockOn() {
+    if (!target_) {
+        return;
+    }
+
+    // 既にロックオン済みなら再判定しない（カメラと同じ設計）
+    if (isLockOn_) {
+        return;
+    }
+
+    // 敵のワールド行列からローカル軸を取得
+    Matrix4x4 rotMat = QuaternionToMatrix4x4(transform_->quateRotation_);
+    const Vector3 origin = transform_->translation_;
+    const Vector3 forward = {rotMat.m[2][0], rotMat.m[2][1], rotMat.m[2][2]};
+    const Vector3 right = {rotMat.m[0][0], rotMat.m[0][1], rotMat.m[0][2]};
+    const Vector3 up = {rotMat.m[1][0], rotMat.m[1][1], rotMat.m[1][2]};
+
+    Vector3 toTarget = target_->GetLocalPosition() - origin;
+
+    // 距離チェック
+    float distance = toTarget.Length();
+    if (distance < kMinRotationDistance || distance > frustumLockOnRange_) {
+        return;
+    }
+
+    // 前方成分チェック（背後は除外）
+    float dotF = toTarget.Dot(forward);
+    if (dotF <= kVelocityZero) {
+        return;
+    }
+
+    // 水平角チェック
+    float tanH = toTarget.Dot(right) / dotF;
+    if (std::abs(tanH) > std::tan(frustumLockOnHalfFovH_)) {
+        return;
+    }
+
+    // 垂直角チェック
+    float tanV = toTarget.Dot(up) / dotF;
+    if (std::abs(tanV) > std::tan(frustumLockOnHalfFovV_)) {
+        return;
+    }
+
+    // 全条件通過→ロックオン
+    isLockOn_ = true;
+}
+
+void Enemy::DrawFrustum() {
+#ifdef USE_IMGUI
+    if (!drawFrustumDebug_) {
+        return;
+    }
+
+    DrawLine3D *drawLine3D = DrawLine3D::GetInstance();
+    if (!drawLine3D) {
+        return;
+    }
+
+    // 敵のローカル軸をクォータニオンから取得
+    Matrix4x4 rotMat = QuaternionToMatrix4x4(transform_->quateRotation_);
+    const Vector3 origin = transform_->translation_;
+    const Vector3 forward = {rotMat.m[2][0], rotMat.m[2][1], rotMat.m[2][2]};
+    const Vector3 right = {rotMat.m[0][0], rotMat.m[0][1], rotMat.m[0][2]};
+    const Vector3 up = {rotMat.m[1][0], rotMat.m[1][1], rotMat.m[1][2]};
+
+    // ロックオン中はオレンジ、未ロックオンは白
+    const Vector4 color = isLockOn_ ? Vector4{1.0f, 0.5f, 0.0f, 1.0f}
+                                    : Vector4{1.0f, 1.0f, 1.0f, 0.8f};
+    const Vector4 axisColor = isLockOn_ ? Vector4{1.0f, 0.5f, 0.0f, 0.5f}
+                                        : Vector4{1.0f, 1.0f, 1.0f, 0.4f};
+
+    // Near面・Far面のコーナーを計算するラムダ（FollowCameraと同じ）
+    static constexpr float kFrustumDebugNear = 1.0f;
+    auto CalcCorners = [&](float depth, std::array<Vector3, 4> &corners) {
+        float halfH = depth * std::tan(frustumLockOnHalfFovH_);
+        float halfV = depth * std::tan(frustumLockOnHalfFovV_);
+        Vector3 center = origin + forward * depth;
+        corners[0] = center - right * halfH + up * halfV; // 左上
+        corners[1] = center + right * halfH + up * halfV; // 右上
+        corners[2] = center + right * halfH - up * halfV; // 右下
+        corners[3] = center - right * halfH - up * halfV; // 左下
+    };
+
+    std::array<Vector3, 4> nearCorners, farCorners;
+    CalcCorners(kFrustumDebugNear, nearCorners);
+    CalcCorners(frustumLockOnRange_, farCorners);
+
+    // Near面・Far面の四辺
+    for (int i = 0; i < 4; ++i) {
+        drawLine3D->SetPoints(nearCorners[i], nearCorners[(i + 1) % 4], color);
+        drawLine3D->SetPoints(farCorners[i], farCorners[(i + 1) % 4], color);
+    }
+    // Near-Far をつなぐ四本の稜線
+    for (int i = 0; i < 4; ++i) {
+        drawLine3D->SetPoints(nearCorners[i], farCorners[i], color);
+    }
+    // 前方軸線
+    drawLine3D->SetPoints(origin, origin + forward * frustumLockOnRange_, axisColor);
+#endif
 }

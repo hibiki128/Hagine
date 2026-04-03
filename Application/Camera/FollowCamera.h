@@ -8,6 +8,7 @@
 /// </summary>
 
 class Player;
+class DrawLine3D;
 class FollowCamera {
   public:
     /// ===================================================
@@ -30,10 +31,32 @@ class FollowCamera {
     void imgui();
 
     /// <summary>
+    /// 視錐台の描画
+    /// </summary>
+    void DrawFrustum();
+
+    /// <summary>
+    /// 視錐台ロックオンの更新処理
+    /// Update内から呼ぶ。視錐台内に敵が入ったら自動ロックオン
+    /// </summary>
+    void UpdateFrustumLockOn();
+
+    /// <summary>
+    /// 視錐台のデバッグ描画（DrawLine3Dで視錐台形状を可視化）
+    /// DrawLine3D::Draw()より前に呼ぶこと
+    /// </summary>
+    /// <param name="drawLine3D">DrawLine3Dのインスタンス</param>
+    void DrawLockOnFrustum(DrawLine3D *drawLine3D) const;
+
+    /// <summary>
     /// Getter
     /// </summary>
     float GetYaw() { return yaw_; }
     ViewProjection &GetViewProjection() { return viewProjection_; }
+    float GetLockOnRange() const { return lockOnRange_; }
+    float GetLockOnHalfFovH() const { return lockOnHalfFovH_; }
+    float GetLockOnHalfFovV() const { return lockOnHalfFovV_; }
+    bool GetDrawLockOnFrustumDebug() const { return drawLockOnFrustumDebug_; }
 
     /// <summary>
     /// Setter
@@ -42,6 +65,10 @@ class FollowCamera {
     void SetCameraFov(float fov) {
         viewProjection_.fovAngleY = fov * std::numbers::pi_v<float> / 180.0f;
     }
+    void SetLockOnRange(float range) { lockOnRange_ = range; }
+    void SetLockOnHalfFovH(float rad) { lockOnHalfFovH_ = rad; }
+    void SetLockOnHalfFovV(float rad) { lockOnHalfFovV_ = rad; }
+    void SetDrawLockOnFrustumDebug(bool flag) { drawLockOnFrustumDebug_ = flag; }
 
   private:
     /// ===================================================
@@ -52,6 +79,13 @@ class FollowCamera {
     /// カメラの動きの関数
     /// </summary>
     void Move();
+
+    /// <summary>
+    /// 指定した点がカメラの視錐台内にあるか判定
+    /// </summary>
+    /// <param name="point">判定するワールド座標</param>
+    /// <returns>true: 視錐台内, false: 視錐台外</returns>
+    bool IsPointInLockOnFrustum(const Vector3 &point) const;
 
   private:
     /// ===================================================
@@ -149,8 +183,27 @@ class FollowCamera {
     float rushResumeTimer_ = 0.0f;        // Rush復帰補間用タイマー
 
     // イージングタイプ設定
-    EasingType shoulderEasingType_ = EasingType::InQuad;       // 肩オフセットのイージング
+    EasingType shoulderEasingType_ = EasingType::InQuad;        // 肩オフセットのイージング
     EasingType shoulderResetEasingType_ = EasingType::OutCubic; // 肩オフセットリセットのイージング
-    EasingType rushCameraEasingType_ = EasingType::InQuad;     // Rushカメラのイージング
+    EasingType rushCameraEasingType_ = EasingType::InQuad;      // Rushカメラのイージング
     EasingType rushResumeEasingType_ = EasingType::OutCubic;    // Rush復帰のイージング
+
+    // ===================================================
+    // 視錐台ロックオン関連
+    // ===================================================
+
+    // デフォルト値定数
+    static constexpr float kDefaultLockOnRange = 150.0f;
+    static constexpr float kDefaultLockOnHalfFovH = 36.5f * (3.14159265f / 180.0f); // 水平半角 30°
+    static constexpr float kDefaultLockOnHalfFovV = 23.0f * (3.14159265f / 180.0f); // 垂直半角 25°
+    static constexpr float kFrustumDebugNear = 1.0f;                                // デバッグ描画ニア面距離
+
+    /// ロックオン有効距離（奥行き）
+    float lockOnRange_ = kDefaultLockOnRange;
+    /// ロックオン水平半角（ラジアン）
+    float lockOnHalfFovH_ = kDefaultLockOnHalfFovH;
+    /// ロックオン垂直半角（ラジアン）
+    float lockOnHalfFovV_ = kDefaultLockOnHalfFovV;
+    /// デバッグ描画フラグ
+    bool drawLockOnFrustumDebug_ = false;
 };
