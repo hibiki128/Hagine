@@ -545,6 +545,9 @@ void ImGuiManager::ShowMainMenu() {
             if (ImGui::MenuItem(ICON_FA_FILM " デモシーン", "Ctrl+5")) { // film アイコン
                 SceneManager::GetInstance()->NextSceneReservation("DEMO");
             }
+            if (ImGui::MenuItem(ICON_FA_PRAY " チュートリアルシーン", "Ctrl+6")) {
+                SceneManager::GetInstance()->NextSceneReservation("TUTORIAL");
+            }
 
             ImGui::EndMenu();
         }

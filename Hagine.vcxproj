@@ -238,6 +238,10 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Staging\Result\ResultStaging.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.cpp" />
+    <ClCompile Include="Application\GameObject\Player\Collider\PlayerAttackCollider.cpp" />
+    <ClCompile Include="Application\Scene\TutorialScene.cpp" />
+    <ClCompile Include="Application\System\Tutorial\TutorialSystem.cpp" />
+    <ClCompile Include="Application\UI\Tutorial\TutorialUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -419,6 +423,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Input\GamePad.h" />
     <ClInclude Include="Application\UI\Scene\Game\GameUI.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
+    <ClInclude Include="Application\GameObject\Player\Collider\PlayerAttackCollider.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
@@ -426,6 +431,9 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Camera\StartCamera.h" />
     <ClInclude Include="Application\UI\Scene\Result\ResultUI.h" />
     <ClInclude Include="Application\Staging\Result\ResultStaging.h" />
+    <ClInclude Include="Application\Scene\TutorialScene.h" />
+    <ClInclude Include="Application\System\Tutorial\TutorialSystem.h" />
+    <ClInclude Include="Application\UI\Tutorial\TutorialUI.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\OffScreen\Bloom.PS.hlsl">

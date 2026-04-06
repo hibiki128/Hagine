@@ -274,6 +274,10 @@ void Framework::RegisterShortcutKey() {
     shortcutManager_->RegisterShortcut("DemoScene", {DIK_LCONTROL, DIK_5}, [this]() {
         sceneManager_->SceneSelection("DEMO");
     });
+    // チュートリアル
+    shortcutManager_->RegisterShortcut("TutorialScene", {DIK_LCONTROL, DIK_6}, [this]() {
+        sceneManager_->SceneSelection("TUTORIAL");
+    });
     // ゲームデバッグ画面切り替え
     shortcutManager_->RegisterShortcut("SwichMode", DIK_F5, [this]() {
         imGuiManager_->GetIsShowMainUI() = !imGuiManager_->GetIsShowMainUI();

@@ -79,11 +79,9 @@ void Player::Init(const std::string objectName) {
     // 手の生成
     leftHand_ = std::make_unique<PlayerHand>();
     leftHand_->Init("leftHand");
-    leftHand_->SetPlayer(this);
 
     rightHand_ = std::make_unique<PlayerHand>();
     rightHand_->Init("rightHand");
-    rightHand_->SetPlayer(this);
 
     makanAttack_ = std::make_unique<MakanAttackSkill>();
     makanAttack_->Init("makanAttack");
@@ -104,18 +102,18 @@ void Player::Init(const std::string objectName) {
 
     Load();
 
-    if (!comboInitialized_) {
-        punchCombo_.Add(GetRightHand(), "Jab") // 1段目:右手ジャブ
-            .Add(GetLeftHand(), "Hook")        // 2段目:左手フック
-            .Add(GetRightHand(), "Cross")      // 3段目:右手クロス
-            .Add(GetLeftHand(), "Uppercut")    // 4段目:左手アッパーカット
-            .Add(GetRightHand(), "Overhand")   // 5段目:右手オーバーハンド
-            .Add(GetLeftHand(), "Swing")       // 6段目:左手スイング
-            .Add(GetRightHand(), "Elbow")      // 7段目:右手肘打ち
-            .Add(GetLeftHand(), "Slam");       // 8段目:左手スラム
+    punchCombo_.SetName("PunchCombo"); // DataHandlerのファイル名に使われる
+    punchCombo_
+        .Add(GetRightHand(), "Jab", 10.0f, 3.0f, 0.25f, 0.08f)
+        .Add(GetLeftHand(), "Hook", 12.0f, 4.0f, 0.25f, 0.08f)
+        .Add(GetRightHand(), "Cross", 12.0f, 4.0f, 0.25f, 0.08f)
+        .Add(GetLeftHand(), "Uppercut", 15.0f, 6.0f, 0.30f, 0.10f)
+        .Add(GetRightHand(), "Overhand", 15.0f, 6.0f, 0.30f, 0.10f)
+        .Add(GetLeftHand(), "Swing", 18.0f, 7.0f, 0.30f, 0.10f)
+        .Add(GetRightHand(), "Elbow", 20.0f, 8.0f, 0.25f, 0.06f)
+        .Add(GetLeftHand(), "Slam", 25.0f, 12.0f, 0.35f, 0.12f);
 
-        comboInitialized_ = true;
-    }
+    punchCombo_.LoadAttackParams(); // JSONがあれば値を上書き読み込み
 
     shake_ = std::make_unique<Shake>();
 
@@ -130,6 +128,17 @@ void Player::Init(const std::string objectName) {
     gamePad_->Init(0);
 
     generatedField_ = ParticleCSFieldManager::GetInstance()->GetField(0); // 0番目のフィールドを使用
+
+    attackCollider_ = std::make_unique<PlayerAttackCollider>();
+    attackCollider_->Init(this);
+
+    // コンボが攻撃を発火したとき attackCollider_ を有効化するコールバックを登録
+    punchCombo_.SetOnAttackFired(
+        [this](float damage, float knockback, float duration, float delay) {
+            if (attackCollider_) {
+                attackCollider_->Activate(damage, knockback, duration, delay);
+            }
+        });
 }
 
 void Player::Update() {
@@ -175,6 +184,9 @@ void Player::Update() {
         if (started_ && !isPause_) {
             RecoverEnergy();
             ComboUpdate();
+            if (attackCollider_) {
+                attackCollider_->Update(dt_);
+            }
 
             UpdateDashState();
 
@@ -315,8 +327,9 @@ void Player::DrawParticle(const ViewProjection &viewProjection) {
         bullet->DrawParticle(viewProjection);
     }
 
-    leftHand_ptr_->DrawParticle(viewProjection);
-    rightHand_ptr_->DrawParticle(viewProjection);
+    if (attackCollider_) {
+        attackCollider_->DrawParticle(viewProjection);
+    }
 
     if (makanAttack_ptr_) {
         makanAttack_ptr_->DrawParticle(viewProjection);
@@ -620,11 +633,6 @@ void Player::ComboUpdate() {
                 punchCombo_.TryExecuteCombo();
             }
         }
-
-        if (punchCombo_.IsComboActive()) {
-            GetRightHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetRightHand()));
-            GetLeftHand()->SetColliderEnabled(punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
-        }
     }
 }
 
@@ -789,7 +797,9 @@ void Player::RecoverEnergy() {
         canRecover = true;
     }
     // それ以外は、最後の射撃から一定時間経過していれば回復
-    else {
+    // ただし EnergyCharge チュートリアルステップ中は自動回復を停止する
+    // （プレイヤーに手動チャージを体験させるため）
+    else if (tutorialStep_ != TutorialStep::EnergyCharge) {
         timeSinceLastShot_ += dt_;
         if (timeSinceLastShot_ >= energyRecoveryDelay_) {
             canRecover = true;
@@ -803,6 +813,22 @@ void Player::RecoverEnergy() {
             energy_ = maxEnergy_;
         }
     }
+}
+
+// ============================================================
+//  SetTutorialStep
+//  TutorialScene::Update() から毎フレーム呼ばれる。
+//  EnergyCharge ステップに切り替わった瞬間だけエネルギーを 0 にリセットする。
+// ============================================================
+void Player::SetTutorialStep(TutorialStep step) {
+    // EnergyCharge ステップに切り替わった瞬間だけリセット処理を行う
+    if (step == TutorialStep::EnergyCharge &&
+        tutorialStep_ != TutorialStep::EnergyCharge) {
+        energy_ = 0.0f;
+        timeSinceLastShot_ = 0.0f; // 回復遅延タイマーもリセット
+    }
+
+    tutorialStep_ = step;
 }
 
 void Player::DamageUpdate() {
@@ -819,6 +845,17 @@ void Player::DamageUpdate() {
     // HP 減算
     HP_ -= damage_;
     damage_ = kNoDamage;
+
+    if (hasKnockback_) {
+        velocity_.x += knockbackVelocity_.x;
+        velocity_.y += knockbackVelocity_.y;
+        velocity_.z += knockbackVelocity_.z;
+        if (isGrounded_ && knockbackVelocity_.y > 0.0f) {
+            isGrounded_ = false;
+        }
+        hasKnockback_ = false;
+        knockbackVelocity_ = {0.0f, 0.0f, 0.0f};
+    }
 
     // 無敵時間の開始
     isInvincible_ = true;
@@ -1042,6 +1079,10 @@ void Player::Debug() {
     }
 
     makanAttack_ptr_->DebugImGui();
+
+    if (ImGui::CollapsingHeader("コンボパラメータ")) {
+        punchCombo_.DrawImGui();
+    }
 
 #endif // USE_IMGUI
 }
@@ -1273,4 +1314,25 @@ void Player::SetPause(bool flag) {
     isPause_ = flag;
     if (FollowCamera_) {
     }
+}
+
+void Player::SetKnockback(const Vector3 &direction, float power) {
+    if (power <= 0.0f)
+        return;
+
+    Vector3 dir = direction;
+    float len = std::sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+    if (len < 0.001f)
+        return;
+    dir.x /= len;
+    dir.y /= len;
+    dir.z /= len;
+
+    // 水平方向 + 少し上方に浮かせる
+    knockbackVelocity_ = {
+        dir.x * power,
+        power * 0.25f,
+        dir.z * power,
+    };
+    hasKnockback_ = true;
 }

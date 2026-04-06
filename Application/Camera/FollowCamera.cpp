@@ -374,6 +374,9 @@ void FollowCamera::imgui() {
     }
 
     ImGui::Checkbox("視錐台デバッグ描画", &drawLockOnFrustumDebug_);
+    if (ImGui::Button("ロックオン解除")) {
+        target_->ReleaseLockOn();
+    }
 
     // パラメータ調整（度数表示）
     const float kToDeg = 180.0f / 3.14159265f;

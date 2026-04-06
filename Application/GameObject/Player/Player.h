@@ -1,6 +1,8 @@
 #pragma once
 #include "Application/Staging/Death/DeathStaging.h"
+#include "Application/System/Tutorial/TutorialSystem.h"
 #include "Bullet/PlayerBullet.h"
+#include "Collider/PlayerAttackCollider.h"
 #include "Data/DataHandler.h"
 #include "GamePad.h"
 #include "Hand/PlayerHand.h"
@@ -178,6 +180,7 @@ class Player : public BaseObject {
     std::string GetCurrentStateName() const;
     std::string GetPreviewStateName() const { return previousStateName; }
     std::vector<std::unique_ptr<PlayerBullet>> &GetBullets() { return bullets_; }
+    PlayerAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
 
     void SetIsLockOn(bool flag) { isLockOn_ = flag; }
 
@@ -192,8 +195,9 @@ class Player : public BaseObject {
     void SetPause(bool flag);
     void SetEnemy(Enemy *enemy) {
         enemy_ = enemy;
-        leftHand_ptr_->SetEnemy(enemy);
-        rightHand_ptr_->SetEnemy(enemy);
+        if (attackCollider_) {
+            attackCollider_->SetEnemy(enemy);
+        }
     }
     void SetIsDeathStaging(bool flag) {
         isDeathStaging_ = flag;
@@ -211,6 +215,21 @@ class Player : public BaseObject {
     /// <param name="damage">与えるダメージ量</param>
     void SetDamage(float damage) { damage_ = damage; }
     void SetActiveDebugCamera(bool flag) { activeDebugCamrera_ = flag; }
+
+    /// <summary>
+    /// チュートリアルの現在ステップを受け取る
+    /// TutorialScene::Update() から毎フレーム呼ぶ
+    /// EnergyCharge ステップへの切替時はエネルギーを 0 にリセットする
+    /// </summary>
+    void SetTutorialStep(TutorialStep step);
+
+    /// <summary>
+    /// 外部からノックバックを与える
+    /// EnemyHand::OnCollisionEnter から呼ばれる
+    /// </summary>
+    /// <param name="direction">ノックバック方向（正規化済みでなくてもよい）</param>
+    /// <param name="power">ノックバック強度</param>
+    void SetKnockback(const Vector3 &direction, float power);
 
   private:
     /// ===================================================
@@ -438,6 +457,7 @@ class Player : public BaseObject {
     std::unique_ptr<DeathStaging> deathStaging_;    // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_; // 必殺技
     std::unique_ptr<GamePad> gamePad_;
+    std::unique_ptr<PlayerAttackCollider> attackCollider_; // 前方攻撃判定
 
     ViewProjection *vp_;                    // カメラ
     OBBCollider *playerCollider_ = nullptr; // コライダー
@@ -465,5 +485,10 @@ class Player : public BaseObject {
 
     Input *input_ = nullptr;
 
-    bool activeDebugCamrera_ = false; // デバッグカメラがアクティブかどうか
+    bool activeDebugCamrera_ = false;                // デバッグカメラがアクティブかどうか
+    Vector3 knockbackVelocity_ = {0.0f, 0.0f, 0.0f}; // 適用待ちノックバック
+    bool hasKnockback_ = false;
+
+    // ─── チュートリアル連携 ───
+    TutorialStep tutorialStep_ = TutorialStep::Move; ///< シーンから渡された現在のチュートリアルステップ
 };
