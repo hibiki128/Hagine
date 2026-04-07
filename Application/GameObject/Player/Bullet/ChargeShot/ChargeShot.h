@@ -122,6 +122,8 @@ class ChargeShot : public BaseObject {
     /// <returns>bool: チャージ状態フラグ</returns>
     bool GetIsCharge() const { return isCharge; }
 
+    void SetIsSkillMenu(bool isSkillMenu) { isSkillMenu_ = isSkillMenu; }
+
   private:
     /// ===================================================
     /// private varians
@@ -170,4 +172,6 @@ class ChargeShot : public BaseObject {
 
     SphereCollider *bulletCollider_ = nullptr;
     float chargeStartTimer_ = 0.0f;
+
+    bool isSkillMenu_ = false;
 };

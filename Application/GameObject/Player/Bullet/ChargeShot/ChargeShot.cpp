@@ -72,7 +72,7 @@ void ChargeShot::Update() {
         chargeRelease = player_->GetGamePad()->IsRelease(XINPUT_GAMEPAD_Y);
     }
 
-    if (!isAlive_) {
+    if (!isAlive_ && !isSkillMenu_) {
         // チャージ開始判定：ボタンが押され続けている時間を計測
         if (chargeHold) {
             chargeStartTimer_ += Frame::DeltaTime();

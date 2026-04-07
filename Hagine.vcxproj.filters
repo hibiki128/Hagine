@@ -482,6 +482,7 @@
     <ClCompile Include="Application\Scene\TutorialScene.cpp" />
     <ClCompile Include="Application\System\Tutorial\TutorialSystem.cpp" />
     <ClCompile Include="Application\UI\Tutorial\TutorialUI.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\Collider\EnemyAttackCollider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -904,6 +905,7 @@
     <ClInclude Include="Application\Scene\TutorialScene.h" />
     <ClInclude Include="Application\System\Tutorial\TutorialSystem.h" />
     <ClInclude Include="Application\UI\Tutorial\TutorialUI.h" />
+    <ClInclude Include="Application\GameObject\Enemy\Collider\EnemyAttackCollider.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

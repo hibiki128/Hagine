@@ -12,8 +12,6 @@ void CollisionManager::Register(ColliderBase *collider) {
 }
 
 void CollisionManager::Unregister(ColliderBase *collider) {
-    if (isFinalized_)
-        return;
     if (!collider)
         return;
 
@@ -60,7 +58,6 @@ void CollisionManager::UpdateColliderTag(ColliderBase *collider, const std::stri
 }
 
 void CollisionManager::Clear() {
-    isFinalized_ = true;
     collidersByTag_.clear();
     collisionStates_.clear();
 }

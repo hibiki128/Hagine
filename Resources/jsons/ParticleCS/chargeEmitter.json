@@ -4,7 +4,7 @@
     "fieldContactEmitCount": 1000,
     "fieldGroupId": -1,
     "frequency": 0.10000000149011612,
-    "frequencyTime": 0.008745327591896057,
+    "frequencyTime": 0.04258386045694351,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -33,8 +33,9 @@
     "group_0_curlNoiseScale": 1.0,
     "group_0_curlNoiseStrength": 1.0,
     "group_0_curlNoiseTimeScale": 1.0,
-    "group_0_emitCount": 4,
+    "group_0_emitCount": 2,
     "group_0_enableAcceleration": 0,
+    "group_0_enableBillboard": 1,
     "group_0_enableCurlNoise": 0,
     "group_0_enableEndScale": 0,
     "group_0_enableGather": 1,
@@ -64,9 +65,9 @@
         "z": 0.0
     },
     "group_0_gatherStartRatio": -1.0,
-    "group_0_gatherStrength": 12.0,
+    "group_0_gatherStrength": 24.5,
     "group_0_gatherTarget": {
-        "x": 11.800000190734863,
+        "x": 1.2000000476837158,
         "y": 0.0,
         "z": 56.900001525878906
     },
@@ -83,7 +84,7 @@
     "group_0_lifetimeVelocityDampingStart": 0.0,
     "group_0_maxLifetime": 1.5,
     "group_0_maxScale": 1.0,
-    "group_0_maxTrailPerParticle": 20,
+    "group_0_maxTrailPerParticle": 150,
     "group_0_maxVelocity": {
         "x": 0.0,
         "y": 0.0,
@@ -146,7 +147,7 @@
     },
     "group_0_vortexStrength": 0.0,
     "group_0_vortexTarget": {
-        "x": 11.800000190734863,
+        "x": 1.2000000476837158,
         "y": 0.0,
         "z": 56.900001525878906
     },
@@ -173,7 +174,7 @@
         "z": 10.0
     },
     "translate": {
-        "x": 11.800000190734863,
+        "x": 1.2000000476837158,
         "y": 0.0,
         "z": 56.900001525878906
     }

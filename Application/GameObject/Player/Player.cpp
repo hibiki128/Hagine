@@ -39,7 +39,7 @@ void Player::Init(const std::string objectName) {
     playerWallCollider_ = AddAABBCollider("player_WallCollider");
     playerWallCollider_->SetTag("PlayerWall");
     playerWallCollider_->AddCollisionMask("EnemyWall");
-    playerWallCollider_->SetSize({2.5f, 1000.0f, 2.5f});
+    playerWallCollider_->SetSize({2.75f, 1000.0f, 2.5f});
 
     playerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         this->OnCollisionEnter(other);
@@ -199,7 +199,8 @@ void Player::Update() {
                 RotateUpdate();
             }
 
-            if (chargeShot_ && !isSkillMenu_) {
+            if (chargeShot_) {
+                chargeShot_->SetIsSkillMenu(isSkillMenu_);
                 chargeShot_->Update();
             }
 
@@ -235,8 +236,6 @@ void Player::Update() {
         if (velocity_.y < kMaxFallVelocity) {
             velocity_.y = kMaxFallVelocity;
         }
-
-        // ※ 視錐台ロックオン判定は FollowCamera::Update() 内で行う
 
         if (isDashing_) {
             targetFov_ = kDashingFov;
@@ -288,6 +287,12 @@ void Player::Update() {
 
     if (isPause_) {
         velocity_ = {0.0f, 0.0f, 0.0f};
+    } else {
+        if (gamePad_->GetLeftTrigger() > 0.25f) {
+            isSkillMenu_ = true;
+        } else {
+            isSkillMenu_ = false;
+        }
     }
 }
 

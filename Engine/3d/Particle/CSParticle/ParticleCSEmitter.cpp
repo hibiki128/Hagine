@@ -144,6 +144,7 @@ void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group) {
     }
     independentGroup->SetSettingData(*group->GetSettingsData());
     independentGroup->SetBlendMode(group->GetParticleGroupData().blendMode);
+    independentGroup->SetBillboard(group->GetPerView()->enableBillboard);
     particleGroups_.push_back(independentGroup);
     particleGroupNames_.insert(name);
 }
@@ -639,7 +640,7 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save<Vector3>(prefix + "angularVelocityMin", group->GetSettingsData()->angularVelocityMin);
         data->Save<Vector3>(prefix + "angularVelocityMax", group->GetSettingsData()->angularVelocityMax);
 
-        data->Save(prefix + "enablebilboard", group->GetPerView()->enableBillboard);
+        data->Save(prefix + "enableBillboard", group->GetPerView()->enableBillboard);
     }
 }
 

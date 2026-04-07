@@ -1,5 +1,6 @@
 #pragma once
 #include "Application/Utility/Shake/Shake.h"
+#include "Collider/EnemyAttackCollider.h"
 #include "Bullet/EnemyBullet.h"
 #include "Hand/EnemyHand.h"
 #include "Object/Base/BaseObject.h"
@@ -77,6 +78,11 @@ class Enemy : public BaseObject {
     MoveDirection &GetMoveDirection() { return moveDir_; }
     EnemyHand *GetRightHand() { return rightHand_ptr_; }
     EnemyHand *GetLeftHand() { return leftHand_ptr_; }
+
+    /// <summary>
+    /// 前方攻撃判定コライダーを返す
+    /// </summary>
+    EnemyAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
     float GetVerticalVelocity() const { return velocity_.y; }
     float GetVerticalAcceleration() const { return acceleration_.y; }
     bool GetIsFlying() const { return isFlying_; }
@@ -117,8 +123,10 @@ class Enemy : public BaseObject {
     void SetVp(ViewProjection *vp);
     void SetTarget(Player *target) {
         target_ = target;
-        leftHand_ptr_->SetPlayer(target);
-        rightHand_ptr_->SetPlayer(target);
+        // 前方攻撃判定コライダーにもプレイヤーを設定する
+        if (attackCollider_) {
+            attackCollider_->SetPlayer(target);
+        }
     }
     void SetGuarding(bool guarding) { isGuarding_ = guarding; }
     void SetIsLockOn(bool lockOn) { isLockOn_ = lockOn; }
@@ -284,6 +292,7 @@ class Enemy : public BaseObject {
     // -----------------------------------------------
     float currentAttackDamage_ = 10.0f;   // 現在の攻撃のダメージ量
     float currentAttackKnockback_ = 3.0f; // 現在の攻撃のノックバック強度
+    float currentAttackDuration_ = 0.25f; // 現在の攻撃のコライダー有効時間
 
     bool canJump_ = false;
     bool isLockOn_ = false;
@@ -315,6 +324,13 @@ class Enemy : public BaseObject {
 
     ComboSystem punchCombo_;
     bool comboInitialized_ = false;
+
+    // -----------------------------------------------
+    // 前方攻撃判定コライダー
+    // EnemyHandのコライダーの代わりに敵前方に判定を展開する
+    // PlayerAttackColliderと対称の設計
+    // -----------------------------------------------
+    std::unique_ptr<EnemyAttackCollider> attackCollider_;
 
     EasingData<float> tiltEase_;
     Quaternion baseRotation_;

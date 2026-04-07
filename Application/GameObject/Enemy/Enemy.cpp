@@ -29,7 +29,7 @@ void Enemy::Init(const std::string objectName) {
     enemyWallCollider_ = AddAABBCollider("enemy_WallCollider");
     enemyWallCollider_->SetTag("EnemyWall");
     enemyWallCollider_->AddCollisionMask("PlayerWall");
-    enemyWallCollider_->SetSize({2.5f, 1000.0f, 2.5f});
+    enemyWallCollider_->SetSize({2.75f, 1000.0f, 2.5f});
 
     enemyCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         this->OnCollisionEnter(other);
@@ -61,13 +61,9 @@ void Enemy::Init(const std::string objectName) {
     // -----------------------------------------------
     leftHand_ = std::make_unique<EnemyHand>();
     leftHand_->Init("enemy_leftHand");
-    leftHand_->SetEnemy(this);
 
     rightHand_ = std::make_unique<EnemyHand>();
     rightHand_->Init("enemy_rightHand");
-    rightHand_->SetEnemy(this);
-
-    fallSpeed_ = 30.0f;
     moveSpeed_ = 5.0f;
     jumpSpeed_ = 15.0f;
     maxSpeed_ = 10.0f;
@@ -84,6 +80,14 @@ void Enemy::Init(const std::string objectName) {
 
     BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
     BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
+
+    // -----------------------------------------------
+    // 前方攻撃判定コライダーの生成
+    // EnemyHandのコライダーは無効化し、こちらで近接攻撃の判定を一元管理する
+    // PlayerAttackColliderと対称の設計
+    // -----------------------------------------------
+    attackCollider_ = std::make_unique<EnemyAttackCollider>();
+    attackCollider_->Init(this);
 
     // -----------------------------------------------
     // コンボ登録
@@ -112,10 +116,18 @@ void Enemy::Init(const std::string objectName) {
         // EnemyHandのOnCollisionEnterがGetCurrentAttackDamage()で参照する
         // -----------------------------------------------
         punchCombo_.SetOnAttackFired(
-            [this](float damage, float knockback, float /*duration*/, float /*delay*/) {
+            [this](float damage, float knockback, float duration, float /*delay*/) {
                 currentAttackDamage_ = damage;
                 currentAttackKnockback_ = knockback;
-                // コライダーはConboUpdateのSetColliderEnabledで管理するためここでは操作しない
+                currentAttackDuration_ = duration;
+                // -----------------------------------------------
+                // 前方攻撃判定コライダーをここで直接 Activate する
+                // タイミングはコンボシステムが管理し、
+                // ConboUpdate の IsObjectAttackCompleted に依存しない
+                // -----------------------------------------------
+                if (attackCollider_) {
+                    attackCollider_->Activate(damage, knockback, duration);
+                }
             });
 
         comboInitialized_ = true;
@@ -281,8 +293,12 @@ void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {
     hitEmitter_->Draw(viewProjection);
-    leftHand_ptr_->DrawParticle(viewProjection);
-    rightHand_ptr_->DrawParticle(viewProjection);
+    // -----------------------------------------------
+    // 前方攻撃判定コライダーのヒットエフェクト描画
+    // -----------------------------------------------
+    if (attackCollider_) {
+        attackCollider_->DrawParticle(viewProjection);
+    }
     for (auto &bullet : bullets_) {
         bullet->DrawParticle(viewProjection);
     }
@@ -485,8 +501,8 @@ void Enemy::OnCollision(ColliderBase *other) {
 
 // -----------------------------------------------
 // ConboUpdate
-// コンボシステムの更新と手のコライダー有効/無効の管理
-// SetOnAttackFiredコールバックでdamageとknockbackが更新される
+// コンボシステムの更新と前方攻撃判定コライダーの有効時間管理
+// コライダーの Activate は SetOnAttackFired コールバックが行う
 // -----------------------------------------------
 void Enemy::ConboUpdate() {
     punchCombo_.Update(Frame::DeltaTime());
@@ -496,23 +512,19 @@ void Enemy::ConboUpdate() {
         isComboAttack_ = false;
     }
 
-    if (punchCombo_.IsComboActive()) {
-        // MotionEditorの攻撃終了判定でコライダーON/OFFを管理
-        GetRightHand()->SetColliderEnabled(
-            punchCombo_.IsObjectAttackCompleted(GetRightHand()));
-        GetLeftHand()->SetColliderEnabled(
-            punchCombo_.IsObjectAttackCompleted(GetLeftHand()));
+    // -----------------------------------------------
+    // 前方攻撃判定コライダーの毎フレーム更新
+    // 遅延・有効時間タイマーを進める
+    // -----------------------------------------------
+    if (attackCollider_) {
+        attackCollider_->Update(Frame::DeltaTime());
+    }
 
-        // 現在アクティブな手にダメージ・ノックバック量を反映
-        // （コールバックで currentAttackDamage_/Knockback_ が更新済み）
-        GetRightHand()->SetDamageAmount(currentAttackDamage_);
-        GetRightHand()->SetKnockbackPower(currentAttackKnockback_);
-        GetLeftHand()->SetDamageAmount(currentAttackDamage_);
-        GetLeftHand()->SetKnockbackPower(currentAttackKnockback_);
-    } else {
-        // コンボが非アクティブなら両手コライダーを無効化
-        GetRightHand()->SetColliderEnabled(false);
-        GetLeftHand()->SetColliderEnabled(false);
+    // コンボが非アクティブになったらコライダーも強制無効化
+    if (!punchCombo_.IsComboActive()) {
+        if (attackCollider_) {
+            attackCollider_->Deactivate();
+        }
     }
 }
 

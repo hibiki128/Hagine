@@ -24,6 +24,8 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     CreateFreeListResource();
     CreateAliveCountResource();
 
+    perViewData_->enableBillboard = 1;
+
     isInitialized_ = true;
 }
 
@@ -435,6 +437,7 @@ void ParticleCSGroup::CreateSettingsResource() {
     settingsData_->enableRandomAngularVelocity = 0;
     settingsData_->angularVelocityMin = {0.0f, 0.0f, 0.0f};
     settingsData_->angularVelocityMax = {0.0f, 0.0f, 0.0f};
+
 }
 
 void ParticleCSGroup::CreateAliveCountResource() {

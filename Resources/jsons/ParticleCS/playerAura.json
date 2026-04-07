@@ -4,7 +4,7 @@
     "fieldContactEmitCount": 1000,
     "fieldGroupId": -1,
     "frequency": 0.03999999910593033,
-    "frequencyTime": 0.03434399142861366,
+    "frequencyTime": 0.0011377260088920593,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -155,7 +155,7 @@
         "y": 0.0,
         "z": 0.0
     },
-    "isAuto": true,
+    "isAuto": false,
     "isVisible": false,
     "modelPath": "",
     "particleGroupCount": 1,
