@@ -3,7 +3,9 @@
 #include <Input.h>
 #include <algorithm>
 #include <cassert>
+#ifdef _DEBUG
 #include <implot.h>
+#endif // _DEBUG
 
 // ============================================================
 //  ステップ設定テーブル
