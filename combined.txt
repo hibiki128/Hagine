@@ -20,6 +20,9 @@
 └── └── └── ├── Bullet/
 └── └── └── └── ├── EnemyBullet.cpp
 └── └── └── └── └── EnemyBullet.h
+└── └── └── ├── Collider/
+└── └── └── └── ├── EnemyAttackCollider.cpp
+└── └── └── └── └── EnemyAttackCollider.h
 └── └── └── ├── Enemy.cpp
 └── └── └── ├── Enemy.h
 └── └── └── └── Hand/
@@ -42,6 +45,9 @@
 └── └──     └── └── └── ChargeShot.h
 └── └──     └── ├── PlayerBullet.cpp
 └── └──     └── └── PlayerBullet.h
+└── └──     ├── Collider/
+└── └──     └── ├── PlayerAttackCollider.cpp
+└── └──     └── └── PlayerAttackCollider.h
 └── └──     ├── Hand/
 └── └──     └── ├── PlayerHand.cpp
 └── └──     └── └── PlayerHand.h
@@ -84,7 +90,9 @@
 └── └── ├── SelectScene.cpp
 └── └── ├── SelectScene.h
 └── └── ├── TitleScene.cpp
-└── └── └── TitleScene.h
+└── └── ├── TitleScene.h
+└── └── ├── TutorialScene.cpp
+└── └── └── TutorialScene.h
 └── ├── Staging/
 └── └── ├── Death/
 └── └── └── ├── DeathStaging.cpp
@@ -95,6 +103,10 @@
 └── └── └── Transition/
 └── └──     ├── FadeOut.cpp
 └── └──     └── FadeOut.h
+└── ├── System/
+└── └── └── Tutorial/
+└── └──     ├── TutorialSystem.cpp
+└── └──     └── TutorialSystem.h
 └── ├── UI/
 └── └── ├── Enemy/
 └── └── └── ├── EnemyUI.cpp
@@ -102,16 +114,19 @@
 └── └── ├── Player/
 └── └── └── ├── PlayerUI.cpp
 └── └── └── └── PlayerUI.h
-└── └── └── Scene/
-└── └──     ├── Game/
-└── └──     └── ├── GameUI.cpp
-└── └──     └── └── GameUI.h
-└── └──     ├── Result/
-└── └──     └── ├── ResultUI.cpp
-└── └──     └── └── ResultUI.h
-└── └──     └── Title/
-└── └──         ├── TitleUI.cpp
-└── └──         └── TitleUI.h
+└── └── ├── Scene/
+└── └── └── ├── Game/
+└── └── └── └── ├── GameUI.cpp
+└── └── └── └── └── GameUI.h
+└── └── └── ├── Result/
+└── └── └── └── ├── ResultUI.cpp
+└── └── └── └── └── ResultUI.h
+└── └── └── └── Title/
+└── └── └──     ├── TitleUI.cpp
+└── └── └──     └── TitleUI.h
+└── └── └── Tutorial/
+└── └──     ├── TutorialUI.cpp
+└── └──     └── TutorialUI.h
 └── └── Utility/
 └──     ├── ComboSystem/
 └──     └── ├── ComboSystem.cpp
@@ -536,6 +551,7 @@
 └── ├── images/
 └── └── ├── Particle/
 └── └── ├── UI/
+└── └── └── ├── Tutorial/
 └── └── ├── debug/
 └── └── └── game/
 └── ├── jsons/
@@ -544,6 +560,7 @@
 └── └── ├── BehaviorTree/
 └── └── ├── Camera/
 └── └── ├── Collider/
+└── └── ├── ComboSystem/
 └── └── ├── EntityData/
 └── └── ├── ImGuiSetting/
 └── └── ├── LevelData/
@@ -5392,6 +5409,313 @@ class EnemyBullet : public BaseObject {
 };
 
 ============================================================
+File Path: Application/GameObject/Enemy/Collider/EnemyAttackCollider.cpp
+============================================================
+#include "EnemyAttackCollider.h"
+#include "Application/GameObject/Enemy/Enemy.h"
+#include "Application/GameObject/Player/Player.h"
+#include "Collider/CollisionManager.h"
+#include "Particle/ParticleEditor.h"
+#include "Scene/SceneManager.h"
+
+void EnemyAttackCollider::Init(Enemy *enemy, Player *player) {
+    enemy_ = enemy;
+    player_ = player;
+
+    // -----------------------------------------------
+    // OBBコライダーを生成・設定
+    // OBBを選んだ理由：敵の向きに追従して回転できるため
+    // 前方に正確に判定を出せる（PlayerAttackColliderと対称）
+    // -----------------------------------------------
+    collider_ = enemy_->AddOBBCollider("EnemyAttackFront");
+    collider_->SetTag("EnemyHand"); // 既存の衝突タグを流用
+    collider_->AddCollisionMask("Player");
+    collider_->SetSize({2.0f, 1.5f, 2.0f}); // 横2・縦1.5・奥行2：やや広めで当てやすく
+    collider_->SetEnabled(false);           // 初期は無効
+
+    // -----------------------------------------------
+    // 前方オフセット設定
+    // 敵の前方方向（Z-）へ判定を押し出す
+    // -----------------------------------------------
+    collider_->SetPositionOffSet({0.0f, 0.0f, forwardOffset_});
+
+    // 衝突コールバック
+    collider_->SetOnCollision([this](ColliderBase *other) {
+        this->OnCollision(other);
+    });
+
+    // CollisionManagerに登録（デストラクタで自動解除される）
+    CollisionManager::GetInstance()->Register(collider_);
+
+    // ヒットエフェクト・カメラシェイク初期化
+    hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("punchEmitter");
+    shake_ = std::make_unique<Shake>();
+    shake_->Initialize(
+        SceneManager::GetInstance()->GetBaseScene()->GetViewProjection(), "punchHit");
+}
+
+void EnemyAttackCollider::Update(float deltaTime) {
+    if (!shake_) {
+        return;
+    }
+    shake_->Update();
+
+    // -----------------------------------------------
+    // 遅延処理：delay > 0 の場合、一定時間後にコライダーを有効化
+    // -----------------------------------------------
+    if (isPending_) {
+        delayTimer_ -= deltaTime;
+        if (delayTimer_ <= 0.0f) {
+            isPending_ = false;
+            isActive_ = true;
+            hasHitThisActivation_ = false;
+            activeTimer_ = 0.0f;
+            collider_->SetEnabled(true);
+        }
+        return;
+    }
+
+    // -----------------------------------------------
+    // 有効時間の管理：activeDuration_を超えたら自動無効化
+    // -----------------------------------------------
+    if (isActive_) {
+        activeTimer_ += deltaTime;
+        if (activeTimer_ >= activeDuration_) {
+            Deactivate();
+        }
+    }
+}
+
+void EnemyAttackCollider::DrawParticle(const ViewProjection &viewProjection) {
+    if (hitEmitter_) {
+        hitEmitter_->Draw(viewProjection);
+    }
+}
+
+void EnemyAttackCollider::Activate(float damage, float knockbackPower,
+                                   float activeDuration, float activateDelay) {
+    // 前の判定を確実にリセットしてから開始
+    Deactivate();
+
+    currentDamage_ = damage;
+    currentKnockback_ = knockbackPower;
+    activeDuration_ = activeDuration;
+    hasHitThisActivation_ = false;
+
+    if (activateDelay > 0.0f) {
+        // 遅延あり：ペンディング状態で待機
+        isPending_ = true;
+        delayTimer_ = activateDelay;
+        collider_->SetEnabled(false);
+    } else {
+        // 遅延なし：即座に有効化
+        isPending_ = false;
+        isActive_ = true;
+        activeTimer_ = 0.0f;
+        collider_->SetEnabled(true);
+    }
+}
+
+void EnemyAttackCollider::Deactivate() {
+    isActive_ = false;
+    isPending_ = false;
+    activeTimer_ = 0.0f;
+    delayTimer_ = 0.0f;
+    if (collider_) {
+        collider_->SetEnabled(false);
+    }
+}
+
+void EnemyAttackCollider::OnCollision(ColliderBase *other) {
+    // アクティブでない場合・すでにこのアクティブ中にヒット済みの場合は無視
+    if (!isActive_ || hasHitThisActivation_) {
+        return;
+    }
+    if (!enemy_ || !player_) {
+        return;
+    }
+    if (other->GetTag() != "Player") {
+        return;
+    }
+
+    // 1アクティブ中1ヒットのみ（連続ヒット防止）
+    hasHitThisActivation_ = true;
+
+    // -----------------------------------------------
+    // ダメージ適用
+    // -----------------------------------------------
+    player_->SetDamage(currentDamage_);
+
+    // -----------------------------------------------
+    // ノックバック適用
+    // ※ Player側に SetKnockback(Vector3 dir, float power) の実装が必要
+    // -----------------------------------------------
+    Vector3 knockbackDir = enemy_->GetForward();
+    player_->SetKnockback(knockbackDir, currentKnockback_);
+
+    // -----------------------------------------------
+    // ヒットエフェクト
+    // -----------------------------------------------
+    if (hitEmitter_) {
+        Vector3 forward = enemy_->GetForward();
+        Vector3 enemyPos = enemy_->GetWorldPosition();
+        Vector3 hitPos = {
+            enemyPos.x + forward.x * forwardOffset_,
+            enemyPos.y + heightOffset_,
+            enemyPos.z + forward.z * forwardOffset_,
+        };
+        hitEmitter_->SetPosition(hitPos);
+        hitEmitter_->UpdateOnce();
+    }
+
+    // -----------------------------------------------
+    // カメラシェイク
+    // -----------------------------------------------
+    if (shake_) {
+        shake_->StartShake();
+    }
+
+    // -----------------------------------------------
+    // 敵エネルギー回復（EnemyHandのOnCollisionEnterと同様）
+    // -----------------------------------------------
+    float newEnergy = enemy_->GetEnergy() + enemy_->GetEnergyRecoveryRate();
+    if (newEnergy > enemy_->GetMaxEnergy()) {
+        newEnergy = enemy_->GetMaxEnergy();
+    }
+    enemy_->GetEnergy() = newEnergy;
+}
+
+============================================================
+File Path: Application/GameObject/Enemy/Collider/EnemyAttackCollider.h
+============================================================
+#pragma once
+#include "Application/Utility/Shake/Shake.h"
+#include "Collider/type/OBBCollider.h"
+#include "Particle/ParticleEmitter.h"
+
+class Enemy;
+class Player;
+class ColliderBase;
+
+/// <summary>
+/// 敵前方に展開する攻撃判定コライダー
+/// PlayerAttackCollider と対称の設計で、手のモーション（見た目）とは完全に独立して機能する
+/// 攻撃ごとにダメージ・ノックバック・有効時間・遅延を個別設定できる
+/// </summary>
+class EnemyAttackCollider {
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    /// <param name="enemy">敵参照</param>
+    /// <param name="player">プレイヤー参照（後でSetPlayerでも設定可）</param>
+    void Init(Enemy *enemy, Player *player = nullptr);
+
+    /// <summary>
+    /// 更新処理（毎フレーム呼び出し必須）
+    /// </summary>
+    /// <param name="deltaTime">フレームの経過時間</param>
+    void Update(float deltaTime);
+
+    /// <summary>
+    /// パーティクル描画
+    /// </summary>
+    /// <param name="viewProjection">ビュープロジェクション</param>
+    void DrawParticle(const ViewProjection &viewProjection);
+
+    /// <summary>
+    /// 攻撃コライダーを有効化する
+    /// コンボシステムの攻撃発火コールバックから呼ぶ
+    /// </summary>
+    /// <param name="damage">この攻撃で与えるダメージ量</param>
+    /// <param name="knockbackPower">ノックバックの強さ</param>
+    /// <param name="activeDuration">コライダーが有効な時間（秒）</param>
+    /// <param name="activateDelay">攻撃開始からコライダーが有効になるまでの遅延（秒）</param>
+    void Activate(float damage, float knockbackPower, float activeDuration, float activateDelay = 0.0f);
+
+    /// <summary>
+    /// 攻撃コライダーを強制無効化する
+    /// コンボリセット時などに呼ぶ
+    /// </summary>
+    void Deactivate();
+
+    /// <summary>
+    /// プレイヤー参照を設定
+    /// </summary>
+    void SetPlayer(Player *player) { player_ = player; }
+
+    /// <summary>
+    /// 敵前方へのオフセット距離を設定
+    /// </summary>
+    void SetForwardOffset(float offset) { forwardOffset_ = offset; }
+
+    /// <summary>
+    /// 高さオフセットを設定（敵中心からの相対Y）
+    /// </summary>
+    void SetHeightOffset(float offset) { heightOffset_ = offset; }
+
+    /// <summary>
+    /// コライダーのサイズを設定
+    /// </summary>
+    void SetColliderSize(const Vector3 &size) {
+        if (collider_) {
+            collider_->SetSize(size);
+        }
+    }
+
+    /// <summary>
+    /// 現在コライダーが有効かどうか
+    /// </summary>
+    bool IsActive() const { return isActive_; }
+
+  private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// 衝突時のコールバック
+    /// </summary>
+    void OnCollision(ColliderBase *other);
+
+    /// ===================================================
+    /// private variants
+    /// ===================================================
+
+    Enemy *enemy_ = nullptr;
+    Player *player_ = nullptr;
+
+    // OBBコライダー本体（BaseObjectを介さず直接管理）
+    OBBCollider *collider_ = nullptr;
+
+    // 現在の攻撃パラメータ
+    float currentDamage_ = 0.0f;
+    float currentKnockback_ = 0.0f;
+
+    // タイマー管理
+    float activeTimer_ = 0.0f;    // 有効経過時間
+    float activeDuration_ = 0.3f; // 有効時間（秒）
+    float delayTimer_ = 0.0f;     // 遅延カウントダウン
+    float activateDelay_ = 0.0f;  // 有効化遅延（秒）
+
+    // 状態フラグ
+    bool isActive_ = false;             // コライダーが判定中かどうか
+    bool isPending_ = false;            // 遅延待機中かどうか
+    bool hasHitThisActivation_ = false; // 1アクティブにつき1ヒットのみ許可
+
+    // 位置パラメータ
+    float forwardOffset_ = 2.25f; // 敵前方へのオフセット距離
+    float heightOffset_ = 0.5f;   // 高さオフセット（敵中心からのY）
+
+    std::unique_ptr<ParticleEmitter> hitEmitter_;
+    std::unique_ptr<Shake> shake_;
+};
+
+============================================================
 File Path: Application/GameObject/Enemy/Enemy.cpp
 ============================================================
 #define NOMINMAX
@@ -7545,6 +7869,300 @@ class PlayerBullet : public BaseObject {
     std::unique_ptr<ParticleEmitter> emitter_;
 
     SphereCollider *collider_ = nullptr;
+};
+
+============================================================
+File Path: Application/GameObject/Player/Collider/PlayerAttackCollider.cpp
+============================================================
+#include "PlayerAttackCollider.h"
+#include "Application/GameObject/Enemy/Enemy.h"
+#include "Application/GameObject/Player/Player.h"
+#include "Collider/CollisionManager.h"
+#include "Particle/ParticleEditor.h"
+#include "Scene/SceneManager.h"
+
+void PlayerAttackCollider::Init(Player *player, Enemy *enemy) {
+    player_ = player;
+    enemy_ = enemy;
+
+    // -----------------------------------------------
+    // OBBコライダーを生成・設定
+    // OBBを選んだ理由：プレイヤーの向きに追従して回転できるため
+    // 空中戦でも前方に正確に判定を出せる
+    // -----------------------------------------------
+    collider_ = player_->AddOBBCollider("PlayerAttackFront");
+    collider_->SetTag("PlayerHand"); // 既存の衝突タグを流用
+    collider_->AddCollisionMask("Enemy");
+    collider_->SetSize({2.0f, 1.5f, 2.0f}); // 横2・縦1.5・奥行2：やや広めで当てやすく
+    collider_->SetEnabled(false);           // 初期は無効
+
+    collider_->SetPositionOffSet({0.0f, 0.0f, 2.25f});
+
+    // 衝突開始コールバック
+    collider_->SetOnCollision([this](ColliderBase *other) {
+        this->OnCollision(other);
+    });
+
+    // CollisionManagerに登録（デストラクタで自動解除される）
+    CollisionManager::GetInstance()->Register(collider_);
+
+    // ヒットエフェクト・カメラシェイク初期化
+    hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("punchEmitter");
+    shake_ = std::make_unique<Shake>();
+    shake_->Initialize(
+        SceneManager::GetInstance()->GetBaseScene()->GetViewProjection(), "punchHit");
+}
+
+void PlayerAttackCollider::Update(float deltaTime) {
+    if (!shake_) {
+        return;
+    }
+    shake_->Update();
+
+    // -----------------------------------------------
+    // 遅延処理：delay > 0 の場合、一定時間後にコライダーを有効化
+    // -----------------------------------------------
+    if (isPending_) {
+        delayTimer_ -= deltaTime;
+        if (delayTimer_ <= 0.0f) {
+            isPending_ = false;
+            isActive_ = true;
+            hasHitThisActivation_ = false;
+            activeTimer_ = 0.0f;
+            collider_->SetEnabled(true);
+        }
+        return;
+    }
+
+    // -----------------------------------------------
+    // 有効時間の管理：activeDuration_を超えたら自動無効化
+    // -----------------------------------------------
+    if (isActive_) {
+        activeTimer_ += deltaTime;
+        if (activeTimer_ >= activeDuration_) {
+            Deactivate();
+        }
+    }
+}
+
+void PlayerAttackCollider::DrawParticle(const ViewProjection &viewProjection) {
+    if (hitEmitter_) {
+        hitEmitter_->Draw(viewProjection);
+    }
+}
+
+void PlayerAttackCollider::Activate(float damage, float knockbackPower,
+                                    float activeDuration, float activateDelay) {
+    // 前の判定を確実にリセットしてから開始
+    Deactivate();
+
+    currentDamage_ = damage;
+    currentKnockback_ = knockbackPower;
+    activeDuration_ = activeDuration;
+    hasHitThisActivation_ = false;
+
+    if (activateDelay > 0.0f) {
+        // 遅延あり：ペンディング状態で待機
+        isPending_ = true;
+        delayTimer_ = activateDelay;
+        collider_->SetEnabled(false);
+    } else {
+        // 遅延なし：即座に有効化
+        isPending_ = false;
+        isActive_ = true;
+        activeTimer_ = 0.0f;
+        collider_->SetEnabled(true);
+    }
+}
+
+void PlayerAttackCollider::Deactivate() {
+    isActive_ = false;
+    isPending_ = false;
+    activeTimer_ = 0.0f;
+    delayTimer_ = 0.0f;
+    if (collider_) {
+        collider_->SetEnabled(false);
+    }
+}
+
+void PlayerAttackCollider::OnCollision(ColliderBase *other) {
+    // アクティブでない場合・すでにこのアクティブ中にヒット済みの場合は無視
+    if (!isActive_ || hasHitThisActivation_) {
+        return;
+    }
+    if (!enemy_ || !player_) {
+        return;
+    }
+    if (other->GetTag() != "Enemy") {
+        return;
+    }
+
+    // 1アクティブ中1ヒットのみ（連続ヒット防止）
+    hasHitThisActivation_ = true;
+
+    // -----------------------------------------------
+    // ダメージ適用
+    // -----------------------------------------------
+    enemy_->SetDamage(currentDamage_);
+
+    // -----------------------------------------------
+    // ノックバック適用
+    // ※ Enemy側に SetKnockback(Vector3 dir, float power) の実装が必要
+    // -----------------------------------------------
+    Vector3 knockbackDir = player_->GetForward();
+    enemy_->SetKnockback(knockbackDir, currentKnockback_);
+
+    // -----------------------------------------------
+    // ヒットエフェクト
+    // -----------------------------------------------
+    if (hitEmitter_) {
+        Vector3 forward = player_->GetForward();
+        Vector3 playerPos = player_->GetWorldPosition();
+        Vector3 hitPos = {
+            playerPos.x + forward.x * forwardOffset_,
+            playerPos.y + heightOffset_,
+            playerPos.z + forward.z * forwardOffset_,
+        };
+        hitEmitter_->SetPosition(hitPos);
+        hitEmitter_->UpdateOnce();
+    }
+
+    // -----------------------------------------------
+    // カメラシェイク
+    // -----------------------------------------------
+    if (shake_) {
+        shake_->StartShake();
+    }
+}
+
+============================================================
+File Path: Application/GameObject/Player/Collider/PlayerAttackCollider.h
+============================================================
+#pragma once
+#include "Application/Utility/Shake/Shake.h"
+#include "Collider/type/OBBCollider.h"
+#include "Particle/ParticleEmitter.h"
+
+class Player;
+class Enemy;
+class ColliderBase;
+
+/// <summary>
+/// プレイヤー前方に展開する攻撃判定コライダー
+/// 手のモーション（見た目）とは完全に独立して機能する
+/// 攻撃ごとにダメージ・ノックバック・有効時間・遅延を個別設定できる
+/// </summary>
+class PlayerAttackCollider {
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    /// <param name="player">プレイヤー参照</param>
+    /// <param name="enemy">敵参照（後でSetEnemyでも設定可）</param>
+    void Init(Player *player, Enemy *enemy = nullptr);
+
+    /// <summary>
+    /// 更新処理（毎フレーム呼び出し必須）
+    /// </summary>
+    /// <param name="deltaTime">フレームの経過時間</param>
+    void Update(float deltaTime);
+
+    /// <summary>
+    /// パーティクル描画
+    /// </summary>
+    /// <param name="viewProjection">ビュープロジェクション</param>
+    void DrawParticle(const ViewProjection &viewProjection);
+
+    /// <summary>
+    /// 攻撃コライダーを有効化する
+    /// コンボシステムの攻撃発火コールバックから呼ぶ
+    /// </summary>
+    /// <param name="damage">この攻撃で与えるダメージ量</param>
+    /// <param name="knockbackPower">ノックバックの強さ</param>
+    /// <param name="activeDuration">コライダーが有効な時間（秒）</param>
+    /// <param name="activateDelay">攻撃開始からコライダーが有効になるまでの遅延（秒）</param>
+    void Activate(float damage, float knockbackPower, float activeDuration, float activateDelay = 0.0f);
+
+    /// <summary>
+    /// 攻撃コライダーを強制無効化する
+    /// コンボリセット時などに呼ぶ
+    /// </summary>
+    void Deactivate();
+
+    /// <summary>
+    /// 敵参照を設定
+    /// </summary>
+    void SetEnemy(Enemy *enemy) { enemy_ = enemy; }
+
+    /// <summary>
+    /// プレイヤー前方へのオフセット距離を設定
+    /// </summary>
+    void SetForwardOffset(float offset) { forwardOffset_ = offset; }
+
+    /// <summary>
+    /// 高さオフセットを設定（プレイヤー中心からの相対Y）
+    /// </summary>
+    void SetHeightOffset(float offset) { heightOffset_ = offset; }
+
+    /// <summary>
+    /// コライダーのサイズを設定
+    /// </summary>
+    void SetColliderSize(const Vector3 &size) {
+        if (collider_) {
+            collider_->SetSize(size);
+        }
+    }
+
+    /// <summary>
+    /// 現在コライダーが有効かどうか
+    /// </summary>
+    bool IsActive() const { return isActive_; }
+
+  private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// 衝突開始時のコールバック
+    /// </summary>
+    void OnCollision(ColliderBase *other);
+
+    /// ===================================================
+    /// private varians
+    /// ===================================================
+
+    Player *player_ = nullptr;
+    Enemy *enemy_ = nullptr;
+
+    // OBBコライダー本体（BaseObjectを介さず直接管理）
+    OBBCollider* collider_;
+
+    // 現在の攻撃パラメータ
+    float currentDamage_ = 0.0f;
+    float currentKnockback_ = 0.0f;
+
+    // タイマー管理
+    float activeTimer_ = 0.0f;    // 有効経過時間
+    float activeDuration_ = 0.3f; // 有効時間（秒）
+    float delayTimer_ = 0.0f;     // 遅延カウントダウン
+    float activateDelay_ = 0.0f;  // 有効化遅延（秒）
+
+    // 状態フラグ
+    bool isActive_ = false;             // コライダーが判定中かどうか
+    bool isPending_ = false;            // 遅延待機中かどうか
+    bool hasHitThisActivation_ = false; // 1アクティブにつき1ヒットのみ許可
+
+    // 位置パラメータ
+    float forwardOffset_ = 2.25f; // プレイヤー前方へのオフセット距離
+    float heightOffset_ = 0.5f;  // 高さオフセット（プレイヤー中心からのY）
+
+    std::unique_ptr<ParticleEmitter> hitEmitter_;
+    std::unique_ptr<Shake> shake_;
 };
 
 ============================================================
@@ -12341,6 +12959,296 @@ class TitleScene : public BaseScene {
 
 
 ============================================================
+File Path: Application/Scene/TutorialScene.cpp
+============================================================
+#include "TutorialScene.h"
+#include "Engine/Utility/Scene/SceneManager.h"
+#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include <Frame.h>
+
+void TutorialScene::Initialize() {
+    /// ===================================================
+    /// インスタンス生成
+    /// ===================================================
+    debugCamera_ = std::make_unique<DebugCamera>();
+    player_ = std::make_unique<Player>();
+    enemy_ = std::make_unique<Enemy>();
+    followCamera_ = std::make_unique<FollowCamera>();
+    ground_ = std::make_unique<Ground>();
+    skyBox_ = SkyBox::GetInstance();
+    playerUI_ = std::make_unique<PlayerUI>();
+    enemyUI_ = std::make_unique<EnemyUI>();
+    fadeOut_ = std::make_unique<FadeOut>();
+    gameUI_ = std::make_unique<GameUI>();
+    aroundField_ = std::make_unique<AroundField>();
+    tutorialSystem_ = std::make_unique<TutorialSystem>();
+    tutorialUI_ = std::make_unique<TutorialUI>();
+
+    /// ===================================================
+    /// 初期化
+    /// ===================================================
+    debugCamera_->Initialize(&vp_);
+    player_->Init("player");
+    enemy_->Init("enemy");
+    ground_->Init("Ground");
+    aroundField_->Init("Around_Field");
+    followCamera_->Init();
+    skyBox_->Initialize("game/skybox.dds");
+    fadeOut_->Initialize();
+    gameUI_->Initialize();
+
+    /// ===================================================
+    /// セット
+    /// ===================================================
+    followCamera_->SetPlayer(player_.get());
+    player_->SetCamera(followCamera_.get());
+    player_->SetEnemy(enemy_.get());
+    player_->SetVp(&vp_);
+    enemy_->SetVp(&vp_);
+    enemy_->SetTarget(player_.get());
+    ground_->GetLighting() = false;
+
+    /// ===================================================
+    /// ポインタ共有
+    /// ===================================================
+    enemy_ptr = enemy_.get();
+    player_ptr = player_.get();
+    MotionEditor::GetInstance()->Register(player_ptr);
+    MotionEditor::GetInstance()->Register(enemy_ptr);
+
+    playerUI_->Init(player_ptr);
+    enemyUI_->Init(enemy_ptr);
+
+    /// ===================================================
+    /// オブジェクトマネージャに追加
+    /// ===================================================
+    BaseObjectManager::GetInstance()->AddObject(std::move(player_));
+    BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
+
+    /// ===================================================
+    /// チュートリアル開始時はエネミーを非表示にする
+    ///   ※ TutorialSystem が必要なタイミングで
+    ///      ShouldSpawnEnemy() フラグを立てて出現を通知する
+    /// ===================================================
+    enemy_ptr->GetAlive() = false; // BaseObject::GetAlive() で非表示
+
+    /// ===================================================
+    /// チュートリアルシステム初期化
+    /// ===================================================
+    tutorialSystem_->Initialize(player_ptr);
+    tutorialUI_->Initialize(tutorialSystem_.get());
+}
+
+// ============================================================
+void TutorialScene::Finalize() {
+    tutorialUI_->Finalize();
+    tutorialSystem_->Finalize();
+
+    fadeOut_->Finalize();
+    aroundField_->Finalize();
+    if (player_ptr->GetIsAlive()) {
+        sceneManager_->SetHP(player_ptr->GetHP());
+    }
+    BaseScene::Finalize();
+}
+
+// ============================================================
+void TutorialScene::Update() {
+    // カメラ更新
+    CameraUpdate();
+
+    // シーン切り替え
+    ChangeScene();
+
+    ground_->Update();
+    aroundField_->Update();
+    playerUI_->Update();
+    enemyUI_->Update();
+    fadeOut_->Update();
+    player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
+    player_ptr->SetStart(true);
+
+    gameUI_->Update();
+    player_ptr->SetPause(gameUI_->GetIsPause());
+    enemy_ptr->SetPause(gameUI_->GetIsPause());
+
+    // ─── チュートリアル更新 ───
+    if (!gameUI_->GetIsPause()) {
+        float dt = Frame::DeltaTime();
+        tutorialSystem_->Update(dt);
+        tutorialUI_->Update(dt);
+
+        // 現在のチュートリアルステップをプレイヤーに伝える
+        // EnergyCharge ステップ切替時のエネルギーリセット・自動回復抑制はPlayer側で管理する
+        player_ptr->SetTutorialStep(tutorialSystem_->GetCurrentStep());
+
+        // エネミーのスポーン/デスポーンリクエスト処理
+        HandleEnemySpawnRequest();
+    }
+}
+
+// ============================================================
+void TutorialScene::Draw() {
+    playerUI_->Draw();
+    enemyUI_->Draw();
+
+    BaseObjectManager::GetInstance()->Draw(vp_);
+
+    skyBox_->Draw(vp_);
+    ground_->Draw(vp_);
+    aroundField_->Draw(vp_);
+
+    player_ptr->DrawParticle(vp_);
+    enemy_ptr->DrawParticle(vp_);
+    aroundField_->DrawParticle(vp_);
+
+    fadeOut_->Draw(vp_);
+    gameUI_->Draw();
+
+    // チュートリアル UI 描画
+    // SpriteManager::DrawAll の前に呼ぶことでスプライト描画に含まれる
+    tutorialUI_->Draw();
+
+    followCamera_->DrawFrustum();
+    enemy_ptr->DrawFrustum();
+
+    SpriteManager::GetInstance()->DrawAll();
+}
+
+// ============================================================
+void TutorialScene::DrawForOffScreen() {
+}
+
+// ============================================================
+void TutorialScene::AddSceneSetting() {
+    debugCamera_->imgui();
+    followCamera_->imgui();
+    vp_.ShowDebugInfo();
+    MotionEditor::GetInstance()->DrawImGui();
+    tutorialSystem_->DrawImGui();
+}
+
+// ============================================================
+void TutorialScene::AddObjectSetting() {
+    player_ptr->Debug();
+    enemy_ptr->Debug();
+    enemyUI_->Debug();
+}
+
+// ============================================================
+void TutorialScene::AddParticleSetting() {
+}
+
+// ============================================================
+void TutorialScene::CameraUpdate() {
+    if (player_ptr->GetIsAlive()) {
+        if (debugCamera_->GetActive()) {
+            debugCamera_->Update();
+        } else {
+            followCamera_->Update();
+            vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
+            vp_.matView_ = followCamera_->GetViewProjection().matView_;
+            vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
+        }
+    }
+}
+
+// ============================================================
+void TutorialScene::ChangeScene() {
+}
+
+// ============================================================
+//  HandleEnemySpawnRequest
+//  TutorialSystem からのリクエストを受けてエネミーを表示/非表示にする
+// ============================================================
+void TutorialScene::HandleEnemySpawnRequest() {
+    if (tutorialSystem_->ShouldSpawnEnemy()) {
+        // エネミーを出現させる
+        // ※ enemy_ptr に対してご使用の非表示API（SetVisible等）に合わせて差し替えてください
+        enemy_ptr->GetAlive() = true;
+        tutorialSystem_->ConsumeSpawnRequest();
+    }
+
+    if (tutorialSystem_->ShouldDespawnEnemy()) {
+        // エネミーを非表示にする
+        enemy_ptr->GetAlive() = false;
+        tutorialSystem_->ConsumeDespawnRequest();
+    }
+}
+
+============================================================
+File Path: Application/Scene/TutorialScene.h
+============================================================
+#pragma once
+#include "Application/GameObject/Player/Player.h"
+
+#include "Application/UI/Player/PlayerUI.h"
+
+#include "Application/Camera/FollowCamera.h"
+#include "Application/GameObject/Enemy/Enemy.h"
+#include "Application/GameObject/Field/AroundField/AroundField.h"
+#include "Application/GameObject/Field/Ground/Ground.h"
+#include "Application/UI/Enemy/EnemyUI.h"
+#include "BaseScene.h"
+#include "SkyBox/SkyBox.h"
+#include <Application/Staging/Transition/FadeOut.h>
+#include <Application/UI/Scene/Game/GameUI.h>
+#include <Application/UI/Tutorial/TutorialUI.h>
+#include"Application/System/Tutorial/TutorialSystem.h"
+
+class TutorialScene : public BaseScene {
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    void Initialize() override;
+    void Finalize() override;
+    void Update() override;
+    void Draw() override;
+    void DrawForOffScreen() override;
+    void AddSceneSetting() override;
+    void AddObjectSetting() override;
+    void AddParticleSetting() override;
+
+    ViewProjection *GetViewProjection() override { return &vp_; }
+
+  private:
+    void CameraUpdate();
+    void ChangeScene();
+
+    /// チュートリアルシステムからのエネミー出現/消滅リクエストを処理する
+    void HandleEnemySpawnRequest();
+
+  private:
+    Audio *audio_ = nullptr;
+    Input *input_ = nullptr;
+    SpriteCommon *spCommon_ = nullptr;
+    ParticleCommon *ptCommon_ = nullptr;
+
+    ViewProjection vp_;
+    std::unique_ptr<DebugCamera> debugCamera_;
+
+    std::unique_ptr<Player> player_;
+    std::unique_ptr<Enemy> enemy_;
+    std::unique_ptr<AroundField> aroundField_;
+    std::unique_ptr<FollowCamera> followCamera_;
+    std::unique_ptr<Ground> ground_;
+    std::unique_ptr<PlayerUI> playerUI_;
+    std::unique_ptr<EnemyUI> enemyUI_;
+    std::unique_ptr<FadeOut> fadeOut_;
+    std::unique_ptr<GameUI> gameUI_;
+
+    // ─── チュートリアル管理 ───
+    std::unique_ptr<TutorialSystem> tutorialSystem_;
+    std::unique_ptr<TutorialUI> tutorialUI_;
+
+    SkyBox *skyBox_ = nullptr;
+    Enemy *enemy_ptr = nullptr;
+    Player *player_ptr = nullptr;
+};
+
+============================================================
 File Path: Application/Staging/Death/DeathStaging.cpp
 ============================================================
 #include "DeathStaging.h"
@@ -13010,6 +13918,802 @@ class FadeOut {
     std::unique_ptr<ParticleCSEmitter> fadeOut_ = nullptr;
     float timer_ = 0.0f; // 経過時間
     bool isFinish_ = false;
+};
+
+============================================================
+File Path: Application/System/Tutorial/TutorialSystem.cpp
+============================================================
+#include "TutorialSystem.h"
+#include "Application/GameObject/Player/Player.h"
+#include <Input.h>
+#include <algorithm>
+#include <cassert>
+#ifdef _DEBUG
+#include <implot.h>
+#endif // _DEBUG
+
+// ============================================================
+//  ステップ設定テーブル
+//  TutorialStep の順序と 1:1 対応させること
+// ============================================================
+const TutorialStepConfig TutorialSystem::kConfigs[static_cast<int>(TutorialStep::StepCount)] = {
+    //  instructionText                                                  subText                                             reqTime  reqCount  needsEnemy
+    {"[WASD / 左スティック] で移動しよう", nullptr, 3.0f, 0, false},                                      // Move
+    {"[SPACE / Aボタン] でジャンプしよう", nullptr, 0.0f, 1, false},                                      // Jump
+    {"ジャンプ後に [SPACE / RBボタン] でホバリング！", nullptr, 0.0f, 1, false},                          // FlyTransition
+    {"[SPACE保持 / RT] で上昇しよう", nullptr, 2.0f, 0, false},                                           // Ascend
+    {"[LSHIFT保持 / LT] で下降しよう", "着地してしまったら、もう一度空中状態になろう！", 2.0f, 0, false}, // Descend
+    {"[WASD / 左スティック] で空中を移動しよう", nullptr, 3.0f, 0, false},                                // AirMove
+    {nullptr /* DashSubPhase に応じて GetInstructionText() で切替 */, nullptr, 0.0f, 1, false},           // Dash
+    {"[チャージ中に 移動入力 / Aボタン+スティック] でダミーへ急接近！", nullptr, 0.0f, 1, true},          // Rush
+    {"[LSHIFT×2 / LT長押し] で空中状態を解除して着地しよう", nullptr, 0.0f, 1, false},                    // Landing
+    {"[K / Bボタン] でダミーを近接攻撃！（3回）", nullptr, 0.0f, 3, true},                                // MeleeAttack
+    {"[J / Yボタン] で通常射撃！（3回）", nullptr, 0.0f, 3, true},                                        // RangedAttack
+    {"[J長押し → 離す / Y長押し → 離す] でチャージ攻撃！", nullptr, 0.0f, 1, true},                       // ChargeAttack
+    {"[C保持 / LT保持] でエネルギーをチャージしよう！（3秒）", nullptr, 3.0f, 0, false},                  // EnergyCharge
+    {"エネルギーが溜まったら [G / Yボタン] で必殺技！", nullptr, 0.0f, 1, false},                         // SpecialAttack
+    {"チュートリアル完了！", nullptr, 0.0f, 0, false},                                                    // Complete
+};
+
+// ============================================================
+void TutorialSystem::Initialize(Player *player) {
+    assert(player && "TutorialSystem: player が nullptr です");
+    player_ = player;
+    input_ = Input::GetInstance();
+    currentStep_ = TutorialStep::Move;
+    prevStateName_ = player_->GetCurrentStateName();
+
+    ResetStepState();
+}
+
+// ============================================================
+void TutorialSystem::Update(float dt) {
+    stepJustChanged_ = false;
+
+    if (currentStep_ == TutorialStep::Complete) {
+        return;
+    }
+
+    UpdateCurrentStep(dt);
+
+    // フレーム末に状態を保存（次フレームの「前フレーム情報」として使う）
+    prevStateName_ = player_->GetCurrentStateName();
+    wasGroundedLastFrame_ = player_->GetIsGrounded();
+}
+
+// ============================================================
+void TutorialSystem::Finalize() {
+    player_ = nullptr;
+    input_ = nullptr;
+}
+
+// ============================================================
+//  GetInstructionText
+//  ダッシュのサブフェーズだけ動的に切り替える
+// ============================================================
+const char *TutorialSystem::GetInstructionText() const {
+    if (currentStep_ == TutorialStep::Dash) {
+        switch (dashSubPhase_) {
+        case DashSubPhase::WaitForCharge:
+            return "[C / LT] を長押しして「チャージ状態」になろう";
+        case DashSubPhase::WaitForDash:
+            return "チャージ中に [WASD / Aボタン+スティック] でダッシュ！";
+        }
+    }
+    return kConfigs[static_cast<int>(currentStep_)].instructionText;
+}
+
+// ============================================================
+const char *TutorialSystem::GetSubText() const {
+    // 着地補正メッセージを最優先で返す
+    if (showReturnToAirMessage_) {
+        return kConfigs[static_cast<int>(TutorialStep::Descend)].subText;
+    }
+    return kConfigs[static_cast<int>(currentStep_)].subText;
+}
+
+// ============================================================
+//  AdvanceStep  次のステップへ進む
+// ============================================================
+void TutorialSystem::AdvanceStep() {
+    const bool currNeedsEnemy = kConfigs[static_cast<int>(currentStep_)].needsEnemy;
+    const int nextIdx = static_cast<int>(currentStep_) + 1;
+
+    if (nextIdx < static_cast<int>(TutorialStep::StepCount)) {
+        const bool nextNeedsEnemy = kConfigs[nextIdx].needsEnemy;
+
+        // 境界をまたぐときだけリクエストを発行する
+        if (!currNeedsEnemy && nextNeedsEnemy) {
+            RequestSpawnEnemy();
+        } else if (currNeedsEnemy && !nextNeedsEnemy) {
+            RequestDespawnEnemy();
+        }
+
+        currentStep_ = static_cast<TutorialStep>(nextIdx);
+    } else {
+        currentStep_ = TutorialStep::Complete;
+    }
+
+    ResetStepState();
+    stepJustChanged_ = true;
+}
+
+// ============================================================
+void TutorialSystem::ResetStepState() {
+    timer_ = 0.0f;
+    count_ = 0;
+    progress_ = 0.0f;
+    showReturnToAirMessage_ = false;
+    dashSubPhase_ = DashSubPhase::WaitForCharge;
+    chargeHoldTimer_ = 0.0f;
+    chargeInputActive_ = false;
+}
+
+// ============================================================
+void TutorialSystem::RequestSpawnEnemy() { spawnEnemyRequested_ = true; }
+void TutorialSystem::RequestDespawnEnemy() { despawnEnemyRequested_ = true; }
+
+// ============================================================
+//  UpdateCurrentStep  各ステップの進行チェックと進捗更新
+// ============================================================
+void TutorialSystem::UpdateCurrentStep(float dt) {
+    bool conditionMet = false;
+
+    switch (currentStep_) {
+    case TutorialStep::Move: // ステップ1: 地上移動
+        conditionMet = CheckMove();
+        break;
+    case TutorialStep::Jump: // ステップ2: ジャンプ
+        conditionMet = CheckJump();
+        break;
+    case TutorialStep::FlyTransition: // ステップ3: 空中 → ホバリング移行
+        conditionMet = CheckFlyTransition();
+        break;
+    case TutorialStep::Ascend: // ステップ4: 上昇
+        conditionMet = CheckAscend();
+        break;
+    case TutorialStep::Descend: // ステップ5: 下降
+        conditionMet = CheckDescend();
+        break;
+    case TutorialStep::AirMove: // ステップ6: 空中移動
+        conditionMet = CheckAirMove();
+        break;
+    case TutorialStep::Dash: // ステップ7: ダッシュ
+        conditionMet = CheckDash();
+        break;
+    case TutorialStep::Rush: // ステップ8: 急接近
+        conditionMet = CheckRush();
+        break;
+    case TutorialStep::Landing: // ステップ9: 着地
+        conditionMet = CheckLanding();
+        break;
+    case TutorialStep::MeleeAttack: // ステップ10: 近接攻撃
+        conditionMet = CheckMeleeAttack();
+        break;
+    case TutorialStep::RangedAttack: // ステップ11: 遠距離攻撃
+        conditionMet = CheckRangedAttack();
+        break;
+    case TutorialStep::ChargeAttack: // ステップ12: チャージ攻撃
+        conditionMet = CheckChargeAttack(dt);
+        break;
+    case TutorialStep::EnergyCharge: // ステップ13: エネルギーチャージ
+        conditionMet = CheckEnergyCharge();
+        break;
+    case TutorialStep::SpecialAttack: // ステップ14: 必殺技
+        conditionMet = CheckSpecialAttack();
+        break;
+    default:
+        return;
+    }
+
+    const TutorialStepConfig &cfg = kConfigs[static_cast<int>(currentStep_)];
+
+    if (cfg.requiredTime > 0.0f) {
+        // ── 時間方式: 条件を満たしている間だけ timer を蓄積 ──
+        if (conditionMet) {
+            timer_ += dt;
+        }
+        progress_ = std::min(timer_ / cfg.requiredTime, 1.0f);
+        if (timer_ >= cfg.requiredTime) {
+            AdvanceStep();
+        }
+    } else {
+        // ── 回数方式: 達成した瞬間（トリガー）に count++ ──
+        if (conditionMet) {
+            count_++;
+        }
+        progress_ = std::min(static_cast<float>(count_) / static_cast<float>(cfg.requiredCount), 1.0f);
+        if (count_ >= cfg.requiredCount) {
+            AdvanceStep();
+        }
+    }
+}
+
+// ============================================================
+//  ステップ個別チェック
+// ============================================================
+
+bool TutorialSystem::CheckMove() {
+    // 地上での移動入力を 3 秒間継続
+    const std::string &state = player_->GetCurrentStateName();
+    bool isOnGround = (state == "Idle" || state == "Move");
+    return isOnGround && IsMoveInput();
+}
+
+bool TutorialSystem::CheckJump() {
+    // 地上でジャンプトリガー（1回）
+    const std::string &state = player_->GetCurrentStateName();
+    bool isOnGround = (state == "Idle" || state == "Move");
+    return isOnGround && IsJumpTrigger();
+}
+
+bool TutorialSystem::CheckFlyTransition() {
+    // "FlyIdle" 状態に初めて入った瞬間を検出
+    // 前フレームと比較して遷移した瞬間のみ true
+    const std::string &current = player_->GetCurrentStateName();
+    return (current == "FlyIdle" && prevStateName_ != "FlyIdle");
+}
+
+bool TutorialSystem::CheckAscend() {
+    // 飛行中かつ上昇入力を 2 秒間継続
+    const std::string &state = player_->GetCurrentStateName();
+    bool inFly = (state == "FlyIdle" || state == "FlyMove");
+    return inFly && IsAscendInput();
+}
+
+bool TutorialSystem::CheckDescend() {
+    const std::string &state = player_->GetCurrentStateName();
+    bool inFly = (state == "FlyIdle" || state == "FlyMove");
+    bool isGrounded = player_->GetIsGrounded();
+
+    // ── 着地補正ロジック ──
+    // 飛行状態から着地した瞬間を検出
+    if (!inFly && isGrounded && !wasGroundedLastFrame_) {
+        showReturnToAirMessage_ = true;
+    }
+
+    if (showReturnToAirMessage_) {
+        // FlyIdle/FlyMove に戻るまで待機、timer は進めない
+        if (inFly) {
+            showReturnToAirMessage_ = false;
+        }
+        return false;
+    }
+
+    // 正常判定: 飛行中かつ下降入力
+    return inFly && IsDescendInput();
+}
+
+bool TutorialSystem::CheckAirMove() {
+    // 飛行中の移動入力を 3 秒間継続
+    const std::string &state = player_->GetCurrentStateName();
+    bool inFly = (state == "FlyIdle" || state == "FlyMove");
+    return inFly && IsMoveInput();
+}
+
+bool TutorialSystem::CheckDash() {
+    // ── 2 段階サブフェーズ ──
+    // 【補正理由】ダッシュはチャージ状態中の派生アクションだが、
+    // チャージ操作を教えるのはステップ13。ここでは Dash ステップ内で
+    // チャージ→移動 の流れを簡易的に体験させる。
+    const std::string &state = player_->GetCurrentStateName();
+
+    switch (dashSubPhase_) {
+    case DashSubPhase::WaitForCharge:
+        // EnergyCharge 状態に入ったらフェーズ 2 へ
+        if (state == "EnergyCharge") {
+            dashSubPhase_ = DashSubPhase::WaitForDash;
+        }
+        return false; // まだカウントしない
+
+    case DashSubPhase::WaitForDash:
+        // チャージ中に移動入力 → ダッシュ開始と判断
+        if (state == "EnergyCharge" && IsMoveInput()) {
+            return true; // count++
+        }
+        // チャージが解除されたらフェーズ 1 に戻す
+        if (state != "EnergyCharge") {
+            dashSubPhase_ = DashSubPhase::WaitForCharge;
+        }
+        return false;
+    }
+    return false;
+}
+
+bool TutorialSystem::CheckRush() {
+    // "Rush" 状態への遷移を検出（前フレームとの比較）
+    const std::string &current = player_->GetCurrentStateName();
+    return (current == "Rush" && prevStateName_ != "Rush");
+}
+
+bool TutorialSystem::CheckLanding() {
+    // 空中状態解除の遷移フロー: FlyState → "Air" → 着地（Idle/Move）
+    // LSHIFT×2 / LT長押し で FlyMove が "Air" ステートへ切り替わり、
+    // その後 Air ステートが着地を検出して Idle/Move に遷移する。
+    // よって「前フレームが Air かつ、今フレームで着地した瞬間」を正解条件とする。
+    bool wasInAir = (prevStateName_ == "Air");
+    bool justLanded = (player_->GetIsGrounded() && !wasGroundedLastFrame_);
+    return wasInAir && justLanded;
+}
+
+bool TutorialSystem::CheckMeleeAttack() {
+    // 近接攻撃トリガー（3 回）
+    return IsMeleeInput();
+}
+
+bool TutorialSystem::CheckRangedAttack() {
+    // 通常射撃トリガー（3 回）
+    return IsRangedTrigger();
+}
+
+bool TutorialSystem::CheckChargeAttack(float dt) {
+    // J / Y ボタンの「長押し → 離す」を検出する
+    // kYButtonChargeThreshold(0.15f) 以上押し続けてから離した場合のみカウント
+    GamePad *pad = player_->GetGamePad();
+
+    bool isHolding = false;
+    bool isReleased = false;
+
+    if (!pad->IsConnected()) {
+        isHolding = input_->PushKey(DIK_J);
+        isReleased = input_->ReleaseMomentKey(DIK_J);
+    } else {
+        isHolding = pad->IsPress(XINPUT_GAMEPAD_Y);
+        isReleased = pad->IsRelease(XINPUT_GAMEPAD_Y);
+    }
+
+    // 押し込み中: タイマー蓄積
+    if (isHolding) {
+        chargeHoldTimer_ += dt;
+        chargeInputActive_ = true;
+    }
+
+    // 離した瞬間: チャージショットが成立していたか判定
+    if (isReleased && chargeInputActive_) {
+        bool isChargeShot = (chargeHoldTimer_ >= player_->GetChargeThreshold());
+        chargeHoldTimer_ = 0.0f;
+        chargeInputActive_ = false;
+        return isChargeShot; // 長押し成立 → count++
+    }
+
+    // 入力なし: タイマーをリセット
+    if (!isHolding && !isReleased) {
+        chargeHoldTimer_ = 0.0f;
+        chargeInputActive_ = false;
+    }
+
+    return false;
+}
+
+bool TutorialSystem::CheckEnergyCharge() {
+    // EnergyCharge 状態中に timer を 3 秒蓄積
+    return (player_->GetCurrentStateName() == "EnergyCharge");
+}
+
+bool TutorialSystem::CheckSpecialAttack() {
+    // チャージ状態 + エネルギー 65 以上 + 必殺技入力
+    bool isCharging = (player_->GetCurrentStateName() == "EnergyCharge");
+    bool hasEnergy = (player_->GetEnergy() >= 65.0f);
+    return isCharging && hasEnergy && IsSpecialTrigger();
+}
+
+// ============================================================
+//  入力判定ヘルパー
+// ============================================================
+
+bool TutorialSystem::IsMoveInput() const {
+    GamePad *pad = player_->GetGamePad();
+    if (!pad->IsConnected()) {
+        return input_->PushKey(DIK_W) || input_->PushKey(DIK_A) ||
+               input_->PushKey(DIK_S) || input_->PushKey(DIK_D);
+    }
+    return (pad->GetLeftStickX() != 0.0f || pad->GetLeftStickY() != 0.0f);
+}
+
+bool TutorialSystem::IsJumpTrigger() const {
+    GamePad *pad = player_->GetGamePad();
+    if (!pad->IsConnected()) {
+        return input_->TriggerKey(DIK_SPACE);
+    }
+    return pad->IsTrigger(XINPUT_GAMEPAD_A);
+}
+
+bool TutorialSystem::IsAirTransTrigger() const {
+    GamePad *pad = player_->GetGamePad();
+    if (!pad->IsConnected()) {
+        return input_->TriggerKey(DIK_SPACE);
+    }
+    return pad->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER);
+}
+
+bool TutorialSystem::IsAscendInput() const {
+    GamePad *pad = player_->GetGamePad();
+    if (!pad->IsConnected()) {
+        return input_->PushKey(DIK_SPACE);
+    }
+    return (pad->GetRightTrigger() > 0.25f);
+}
+
+bool TutorialSystem::IsDescendInput() const {
+    GamePad *pad = player_->GetGamePad();
+    if (!pad->IsConnected()) {
+        return input_->PushKey(DIK_LSHIFT);
+    }
+    // LT は EnergyCharge 状態以外で下降として扱う（疑似コード仕様）
+    bool notCharging = (player_->GetCurrentStateName() != "EnergyCharge");
+    return notCharging && (pad->GetLeftTrigger() > 0.25f);
+}
+
+bool TutorialSystem::IsEnergyChargeInput() const {
+    GamePad *pad = player_->GetGamePad();
+    if (!pad->IsConnected()) {
+        return input_->PushKey(DIK_C);
+    }
+    return (pad->GetLeftTrigger() > 0.25f);
+}
+
+bool TutorialSystem::IsMeleeInput() const {
+    GamePad *pad = player_->GetGamePad();
+    if (!pad->IsConnected()) {
+        return input_->TriggerKey(DIK_H);
+    }
+    return pad->IsTrigger(XINPUT_GAMEPAD_B);
+}
+
+bool TutorialSystem::IsRangedTrigger() const {
+    // キーボード: J トリガー
+    // パッド    : Y ボタンを離した瞬間
+    //   ※ Player::Shot() の短押し判定と合わせるため IsRelease を使用
+    GamePad *pad = player_->GetGamePad();
+    if (!pad->IsConnected()) {
+        return input_->TriggerKey(DIK_J);
+    }
+    return pad->IsRelease(XINPUT_GAMEPAD_Y);
+}
+
+bool TutorialSystem::IsSpecialTrigger() const {
+    // キーボード: G トリガー
+    // パッド    : Y ボタントリガー（チャージ中）
+    //   ※ パッドの必殺技は isSkillMenu_ 連動だが、
+    //      チュートリアルでは EnergyCharge 状態中の Y 入力で代用する
+    GamePad *pad = player_->GetGamePad();
+    if (!pad->IsConnected()) {
+        return input_->TriggerKey(DIK_G);
+    }
+    return pad->IsTrigger(XINPUT_GAMEPAD_Y);
+}
+
+// ============================================================
+//  DrawImGui  チュートリアル進行状況のデバッグウィンドウ
+// ============================================================
+void TutorialSystem::DrawImGui() {
+#ifdef _DEBUG
+    // ステップ番号→日本語名のテーブル（TutorialStep の順序と 1:1 対応）
+    static const char *kStepNames[static_cast<int>(TutorialStep::StepCount)] = {
+        "01. 地上移動",           // Move
+        "02. ジャンプ",           // Jump
+        "03. ホバリング移行",     // FlyTransition
+        "04. 上昇",               // Ascend
+        "05. 下降",               // Descend
+        "06. 空中移動",           // AirMove
+        "07. ダッシュ",           // Dash
+        "08. 急接近",             // Rush
+        "09. 着地",               // Landing
+        "10. 近接攻撃",           // MeleeAttack
+        "11. 遠距離攻撃",         // RangedAttack
+        "12. チャージ攻撃",       // ChargeAttack
+        "13. エネルギーチャージ", // EnergyCharge
+        "14. 必殺技",             // SpecialAttack
+        "--- 完了 ---",           // Complete
+    };
+
+    // ── 進捗履歴（implot 用スクロールバッファ）──────────────
+    // UpdateCurrentStep() で progress_ が変わるたびにここへ追記される
+    // 最大 kHistorySize フレーム分保持し、折れ線グラフで表示する
+    static constexpr int kHistorySize = 300;
+    static float sProgressHistory[kHistorySize] = {};
+    static int sHistoryOffset = 0;
+
+    // 毎フレーム現在の進捗を記録
+    sProgressHistory[sHistoryOffset] = progress_;
+    sHistoryOffset = (sHistoryOffset + 1) % kHistorySize;
+
+    // ────────────────────────────────────────────────────────
+    ImGui::SetNextWindowSize(ImVec2(420.0f, 0.0f), ImGuiCond_Once);
+    ImGui::Begin("チュートリアル デバッグ");
+
+    // ── 現在のステップ ──────────────────────────────────────
+    const int stepIdx = static_cast<int>(currentStep_);
+    const bool isComplete = (currentStep_ == TutorialStep::Complete);
+    const char *stepName = (stepIdx < static_cast<int>(TutorialStep::StepCount))
+                               ? kStepNames[stepIdx]
+                               : "不明";
+
+    ImGui::SeparatorText("現在のステップ");
+    if (isComplete) {
+        ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "チュートリアル完了！");
+    } else {
+        ImGui::Text("ステップ番号 : %d / %d",
+                    stepIdx + 1,
+                    static_cast<int>(TutorialStep::StepCount) - 1); // Complete を除く
+        ImGui::Text("ステップ名   : %s", stepName);
+    }
+
+    // ── 操作指示テキスト ─────────────────────────────────────
+    ImGui::SeparatorText("操作指示");
+    if (!isComplete) {
+        const char *instruction = GetInstructionText();
+        if (instruction) {
+            ImGui::TextWrapped("%s", instruction);
+        }
+        const char *sub = GetSubText();
+        if (sub) {
+            ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.1f, 1.0f), "補足: %s", sub);
+        }
+    }
+
+    // ── 進捗（ImGui ProgressBar + implot 折れ線グラフ）───────
+    if (!isComplete) {
+        ImGui::SeparatorText("進捗");
+
+        const TutorialStepConfig &cfg = kConfigs[stepIdx];
+
+        // ImGui 標準の進行度バー
+        char barLabel[32];
+        if (cfg.requiredTime > 0.0f) {
+            snprintf(barLabel, sizeof(barLabel), "%.2f / %.2f 秒", timer_, cfg.requiredTime);
+            ImGui::ProgressBar(progress_, ImVec2(-1.0f, 0.0f), barLabel);
+        } else {
+            snprintf(barLabel, sizeof(barLabel), "%d / %d 回", count_, cfg.requiredCount);
+            ImGui::ProgressBar(progress_, ImVec2(-1.0f, 0.0f), barLabel);
+        }
+
+        // ダッシュ: サブフェーズ
+        if (currentStep_ == TutorialStep::Dash) {
+            const char *phase = (dashSubPhase_ == DashSubPhase::WaitForCharge)
+                                    ? "フェーズ1: チャージ待ち"
+                                    : "フェーズ2: ダッシュ待ち";
+            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "サブフェーズ: %s", phase);
+        }
+
+        // ChargeAttack: 長押しタイマー
+        if (currentStep_ == TutorialStep::ChargeAttack) {
+            ImGui::Text("チャージ保持時間 : %.2f 秒", chargeHoldTimer_);
+        }
+
+        // implot: 直近 kHistorySize フレームの進捗推移グラフ
+        if (ImPlot::BeginPlot("##進捗グラフ", ImVec2(-1.0f, 80.0f),
+                              ImPlotFlags_NoTitle | ImPlotFlags_NoLegend |
+                                  ImPlotFlags_NoMouseText | ImPlotFlags_NoMenus)) {
+            ImPlot::SetupAxes(nullptr, nullptr,
+                              ImPlotAxisFlags_NoDecorations,
+                              ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_Lock);
+            ImPlot::SetupAxesLimits(0, kHistorySize, 0.0, 1.0, ImGuiCond_Always);
+
+            // スクロールバッファをオフセット付きで折れ線描画
+            ImPlot::PlotLine("progress",
+                             sProgressHistory,
+                             kHistorySize,
+                             1.0, // xscale
+                             0.0, // xstart
+                             ImPlotLineFlags_None,
+                             sHistoryOffset); // offset で循環バッファの先頭を指定
+            ImPlot::EndPlot();
+        }
+    }
+
+    // ── 内部フラグ ───────────────────────────────────────────
+    ImGui::SeparatorText("内部フラグ");
+
+    auto Flag = [](const char *label, bool value) {
+        ImGui::TextColored(
+            value ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.5f, 0.5f, 0.5f, 1.0f),
+            "%s : %s", label, value ? "ON" : "OFF");
+    };
+    Flag("ステップ切替直後      ", stepJustChanged_);
+    Flag("エネミー出現リクエスト", spawnEnemyRequested_);
+    Flag("エネミー消滅リクエスト", despawnEnemyRequested_);
+    Flag("「空中へ戻れ」表示中  ", showReturnToAirMessage_);
+
+    // ── ステップ固有設定 ─────────────────────────────────────
+    if (!isComplete) {
+        const TutorialStepConfig &cfg = kConfigs[stepIdx];
+        ImGui::SeparatorText("ステップ設定");
+        ImGui::Text("エネミー必要 : %s", cfg.needsEnemy ? "はい" : "いいえ");
+    }
+
+    // ── ステップ一覧（折りたたみ）────────────────────────────
+    if (ImGui::CollapsingHeader("ステップ一覧")) {
+        for (int i = 0; i < static_cast<int>(TutorialStep::StepCount); ++i) {
+            const bool isCurrent = (i == stepIdx);
+            const bool isDone = (i < stepIdx);
+            ImVec4 color = isDone      ? ImVec4(0.4f, 0.4f, 0.4f, 1.0f)  // 完了済み: グレー
+                           : isCurrent ? ImVec4(0.2f, 1.0f, 0.5f, 1.0f)  // 現在: 緑
+                                       : ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // 未到達: 白
+            ImGui::TextColored(color, "%s%s",
+                               isCurrent ? "▶ " : "  ",
+                               kStepNames[i]);
+        }
+    }
+
+    ImGui::End();
+#endif // _DEBUG
+}
+
+============================================================
+File Path: Application/System/Tutorial/TutorialSystem.h
+============================================================
+#pragma once
+#include <string>
+
+class Player;
+class Input;
+
+// ============================================================
+//  チュートリアルのステップ定義
+// ============================================================
+enum class TutorialStep : int {
+    Move = 0,      ///< 01. 地上移動
+    Jump,          ///< 02. ジャンプ
+    FlyTransition, ///< 03. 空中 → ホバリング移行
+    Ascend,        ///< 04. 上昇（飛行中）
+    Descend,       ///< 05. 下降（飛行中）※着地補正あり
+    AirMove,       ///< 06. 空中移動
+    Dash,          ///< 07. ダッシュ ※チャージ→移動の2段階補正あり
+    Rush,          ///< 08. 急接近（エネミー必要）
+    Landing,       ///< 09. 空中状態解除・着地
+    MeleeAttack,   ///< 10. 近接攻撃（エネミー必要）
+    RangedAttack,  ///< 11. 遠距離攻撃（エネミー必要）
+    ChargeAttack,  ///< 12. チャージ攻撃（エネミー必要）
+    EnergyCharge,  ///< 13. エネルギーチャージ
+    SpecialAttack, ///< 14. 必殺技
+    Complete,      ///< 完了
+    StepCount      ///< 配列サイズ用（値として使用しない）
+};
+
+// ============================================================
+//  ダッシュステップ専用のサブフェーズ
+// ============================================================
+/// ダッシュはチャージ状態を前提とするため、チュートリアル内で2段階に分けて教える
+enum class DashSubPhase {
+    WaitForCharge, ///< Phase 1: まず C / LT を押してチャージ状態を作らせる
+    WaitForDash,   ///< Phase 2: チャージ中に移動入力でダッシュ
+};
+
+// ============================================================
+//  ステップごとの設定データ
+// ============================================================
+struct TutorialStepConfig {
+    const char *instructionText; ///< 操作指示テキスト（UI表示用 / Dash は GetInstructionText() で上書き）
+    const char *subText;         ///< 補足テキスト（nullptr = 非表示）
+    float requiredTime;          ///< 操作の必要保持秒数（0 なら回数方式）
+    int requiredCount;           ///< 操作の必要回数（0 なら時間方式）
+    bool needsEnemy;             ///< このステップでエネミーが必要か
+};
+
+// ============================================================
+//  TutorialSystem
+//  チュートリアルの進行ロジック・入力判定を担当する
+//  UI 表示は TutorialUI クラスに委譲する
+// ============================================================
+class TutorialSystem {
+  public:
+    /// 初期化（TutorialScene::Initialize 内で呼ぶ）
+    void Initialize(Player *player);
+
+    /// 毎フレーム更新（TutorialScene::Update 内で呼ぶ）
+    void Update(float dt);
+
+    /// 終了処理
+    void Finalize();
+
+    // ─────────────── Getter ───────────────
+
+    TutorialStep GetCurrentStep() const { return currentStep_; }
+
+    /// 現ステップの進捗 0.0 〜 1.0（進行度バーに使う）
+    float GetProgress() const { return progress_; }
+
+    /// チュートリアル全体が完了したか
+    bool IsComplete() const { return currentStep_ == TutorialStep::Complete; }
+
+    /// 操作指示テキストを返す（ダッシュのサブフェーズに応じて切り替わる）
+    const char *GetInstructionText() const;
+
+    /// 補足テキストを返す（着地補正中の「空中に戻ろう」など。nullptr = 非表示）
+    const char *GetSubText() const;
+
+    /// ─── エネミー出現/消滅リクエスト ───
+    /// TutorialScene::Update 内でフラグを確認し、エネミーを表示/非表示にする
+
+    bool ShouldSpawnEnemy() const { return spawnEnemyRequested_; }
+    bool ShouldDespawnEnemy() const { return despawnEnemyRequested_; }
+
+    /// TutorialScene 側で出現処理を済ませたら呼ぶ
+    void ConsumeSpawnRequest() { spawnEnemyRequested_ = false; }
+    /// TutorialScene 側で消滅処理を済ませたら呼ぶ
+    void ConsumeDespawnRequest() { despawnEnemyRequested_ = false; }
+
+    /// ステップが切り替わった直後のフレームのみ true（UIアニメーション起動などに使う）
+    bool IsStepJustChanged() const { return stepJustChanged_; }
+
+    /// 「着地してしまったので空中に戻れ」補正メッセージを表示すべき状態か
+    bool IsShowingReturnToAirMessage() const { return showReturnToAirMessage_; }
+
+    /// ImGui デバッグウィンドウを表示する（TutorialScene::AddSceneSetting などから呼ぶ）
+    void DrawImGui();
+
+  private:
+    // ─────────────── 進行制御 ───────────────
+
+    void AdvanceStep();               ///< 次のステップへ進む
+    void ResetStepState();            ///< ステップ切替時の内部変数初期化
+    void UpdateCurrentStep(float dt); ///< 現ステップの進行チェック＆進捗更新
+
+    void RequestSpawnEnemy();   ///< エネミー出現リクエストを発行
+    void RequestDespawnEnemy(); ///< エネミー消滅リクエストを発行
+
+    // ─────────────── ステップ個別チェック ───────────────
+    // 戻り値: 今フレームに「進行条件を満たしているか」
+    //   時間方式  → 条件中ずっと true を返す（蓄積する）
+    //   回数方式  → 達成した瞬間のみ true を返す（1回インクリメント）
+
+    bool CheckMove();
+    bool CheckJump();
+    bool CheckFlyTransition();
+    bool CheckAscend();
+    bool CheckDescend();
+    bool CheckAirMove();
+    bool CheckDash();
+    bool CheckRush();
+    bool CheckLanding();
+    bool CheckMeleeAttack();
+    bool CheckRangedAttack();
+    bool CheckChargeAttack(float dt); ///< J/Y 長押し→離す の計測を内包
+    bool CheckEnergyCharge();
+    bool CheckSpecialAttack();
+
+    // ─────────────── 入力判定ヘルパー ───────────────
+
+    bool IsMoveInput() const;         ///< WASD / 左スティック傾き
+    bool IsJumpTrigger() const;       ///< SPACE(トリガー) / Aボタン
+    bool IsAirTransTrigger() const;   ///< SPACE(トリガー) / RBボタン（空中）
+    bool IsAscendInput() const;       ///< SPACE保持 / RT
+    bool IsDescendInput() const;      ///< LSHIFT保持 / LT（非チャージ時）
+    bool IsEnergyChargeInput() const; ///< C保持 / LT保持
+    bool IsMeleeInput() const;        ///< K(トリガー) / Bボタン
+    bool IsRangedTrigger() const;     ///< J(トリガー) / Yボタン離し
+    bool IsSpecialTrigger() const;    ///< G(トリガー) / Yボタン（チャージ中）
+
+  private:
+    Player *player_ = nullptr;
+    Input *input_ = nullptr;
+
+    TutorialStep currentStep_ = TutorialStep::Move;
+    float progress_ = 0.0f; ///< 現ステップの進捗 0.0〜1.0
+    float timer_ = 0.0f;    ///< 時間方式の蓄積秒数
+    int count_ = 0;         ///< 回数方式の蓄積回数
+
+    bool stepJustChanged_ = false;
+    bool spawnEnemyRequested_ = false;
+    bool despawnEnemyRequested_ = false;
+
+    // ── Descend ステップ専用 ──
+    bool showReturnToAirMessage_ = false; ///< 「空中に戻れ」補正メッセージ表示中
+    bool wasGroundedLastFrame_ = false;
+
+    // ── Dash ステップ専用 ──
+    DashSubPhase dashSubPhase_ = DashSubPhase::WaitForCharge;
+
+    // ── ChargeAttack ステップ専用 ──
+    float chargeHoldTimer_ = 0.0f;   ///< J/Y を押し続けている時間
+    bool chargeInputActive_ = false; ///< 現在チャージ入力中か
+
+    // ── フレームをまたぐ状態保持 ──
+    std::string prevStateName_; ///< 1フレーム前のプレイヤーステート名
+
+    /// ステップ設定テーブル（TutorialStep::StepCount 分）
+    static const TutorialStepConfig kConfigs[static_cast<int>(TutorialStep::StepCount)];
 };
 
 ============================================================
@@ -14862,6 +16566,247 @@ class TitleUI {
     std::unique_ptr<GamePad> gamePad_ = nullptr;
 
     std::array<SpriteData *, kMaxSprite> sprites_;
+};
+
+============================================================
+File Path: Application/UI/Tutorial/TutorialUI.cpp
+============================================================
+#include "TutorialUI.h"
+#include <algorithm>
+#include"../../System/Tutorial/TutorialSystem.h"
+
+// ============================================================
+void TutorialUI::Initialize(TutorialSystem *system) {
+    system_ = system;
+    displayedProgress_ = 0.0f;
+    subMessageVisible_ = false;
+    subMessageTimer_ = 0.0f;
+
+    // ──────────────────────────────────────────
+    // TODO: スプライトの生成・初期位置設定
+    // ──────────────────────────────────────────
+    // 例（Sprite API が決まったら差し替えてください）:
+    //
+    // instructionBgSprite_ = new Sprite();
+    // instructionBgSprite_->Initialize("tutorial/instruction_bg.png");
+    // instructionBgSprite_->SetPosition({50.0f, 600.0f});
+    //
+    // progressBarBgSprite_ = new Sprite();
+    // progressBarBgSprite_->Initialize("tutorial/bar_bg.png");
+    // progressBarBgSprite_->SetPosition({50.0f, 660.0f});
+    //
+    // progressBarFillSprite_ = new Sprite();
+    // progressBarFillSprite_->Initialize("tutorial/bar_fill.png");
+    // progressBarFillSprite_->SetPosition({50.0f, 660.0f});
+    //
+    // subMessageSprite_ = new Sprite();
+    // subMessageSprite_->Initialize("tutorial/sub_message.png");
+    // subMessageSprite_->SetPosition({400.0f, 550.0f});
+}
+
+// ============================================================
+void TutorialUI::Update(float dt) {
+    if (!system_) {
+        return;
+    }
+
+    UpdateProgressBar(dt);
+    UpdateInstructionDisplay();
+    UpdateSubMessage();
+}
+
+// ============================================================
+void TutorialUI::Draw() {
+    if (!system_) {
+        return;
+    }
+
+    // ──────────────────────────────────────────
+    // TODO: スプライトの描画
+    // ──────────────────────────────────────────
+    // 例（Sprite API が決まったら差し替えてください）:
+    //
+    // instructionBgSprite_->Draw();
+    // buttonIconSprite_->Draw();
+    // progressBarBgSprite_->Draw();
+    // progressBarFillSprite_->Draw();
+    //
+    // if (subMessageVisible_) {
+    //     subMessageSprite_->Draw();
+    // }
+}
+
+// ============================================================
+void TutorialUI::Finalize() {
+    // ──────────────────────────────────────────
+    // TODO: スプライトの破棄
+    // ──────────────────────────────────────────
+    system_ = nullptr;
+}
+
+// ============================================================
+//  UpdateProgressBar  進行度バーをスムーズに補間して更新
+// ============================================================
+void TutorialUI::UpdateProgressBar(float dt) {
+    float targetProgress = system_->GetProgress();
+
+    // Lerp で滑らかに追従させる
+    displayedProgress_ += (targetProgress - displayedProgress_) * progressLerpSpeed_ * dt;
+    displayedProgress_ = std::clamp(displayedProgress_, 0.0f, 1.0f);
+
+    // ──────────────────────────────────────────
+    // TODO: バー塗り部分の幅に反映する
+    // ──────────────────────────────────────────
+    // 例:
+    // constexpr float kBarMaxWidth = 400.0f;
+    // constexpr float kBarHeight   = 20.0f;
+    // progressBarFillSprite_->SetSize({kBarMaxWidth * displayedProgress_, kBarHeight});
+}
+
+// ============================================================
+//  UpdateInstructionDisplay  ステップ切替時にテキスト・アイコンを更新
+// ============================================================
+void TutorialUI::UpdateInstructionDisplay() {
+    if (!system_->IsStepJustChanged()) {
+        return;
+    }
+
+    // ステップが切り替わった瞬間のみ更新する
+    const char *text = system_->GetInstructionText();
+    TutorialStep step = system_->GetCurrentStep();
+
+    // ──────────────────────────────────────────
+    // TODO: テキストおよびアイコン画像の更新
+    // ──────────────────────────────────────────
+    // 例:
+    // instructionTextSprite_->SetText(text);
+    //
+    // ステップごとにアイコンを切り替える例:
+    // const char* iconPath = GetIconPathForStep(step);
+    // buttonIconSprite_->SetTexture(iconPath);
+    //
+    // ステップ達成エフェクトのリセット（任意）:
+    // stepClearEffectTimer_ = 0.3f;
+    (void)text;
+    (void)step;
+}
+
+// ============================================================
+//  UpdateSubMessage  補足メッセージの表示/非表示を制御
+// ============================================================
+void TutorialUI::UpdateSubMessage() {
+    bool shouldShow = system_->IsShowingReturnToAirMessage();
+
+    if (shouldShow != subMessageVisible_) {
+        subMessageVisible_ = shouldShow;
+
+        // ──────────────────────────────────────────
+        // TODO: 補足メッセージスプライトの表示/非表示切替
+        // ──────────────────────────────────────────
+        // 例:
+        // subMessageSprite_->SetVisible(subMessageVisible_);
+        // if (subMessageVisible_) {
+        //     const char* subText = system_->GetSubText();
+        //     subMessageSprite_->SetText(subText);
+        // }
+    }
+
+    // Dash のサブフェーズ切替時も指示テキストを即時更新する
+    // （IsStepJustChanged は立たないため、ここで毎フレーム確認）
+    if (system_->GetCurrentStep() == TutorialStep::Dash) {
+        const char *dashText = system_->GetInstructionText();
+        // ──────────────────────────────────────────
+        // TODO: ダッシュ指示テキストの更新
+        // ──────────────────────────────────────────
+        // instructionTextSprite_->SetText(dashText);
+        (void)dashText;
+    }
+}
+
+============================================================
+File Path: Application/UI/Tutorial/TutorialUI.h
+============================================================
+#pragma once
+
+class TutorialSystem;
+
+// ============================================================
+//  TutorialUI
+//  チュートリアルの操作ガイド・進行度バーなどの
+//  UI 表示を専門に管理するクラス。
+//
+//  【スプライト系APIについて】
+//  Sprite / SpriteManager の API が確定次第、
+//  下記の「TODO: Sprite 差し替え」コメント部分を実装してください。
+//  現状は構造とロジックのみを提供します。
+// ============================================================
+class TutorialUI {
+  public:
+    /// 初期化（TutorialScene::Initialize 内で呼ぶ）
+    void Initialize(TutorialSystem *system);
+
+    /// 毎フレーム更新（TutorialScene::Update 内で呼ぶ）
+    void Update(float dt);
+
+    /// 描画（TutorialScene::Draw 内で SpriteManager::DrawAll の前に呼ぶ）
+    void Draw();
+
+    /// 終了処理
+    void Finalize();
+
+  private:
+    // ─────────────────────────────────────────
+    //  内部更新ロジック
+    // ─────────────────────────────────────────
+
+    /// テキスト・アイコンスプライトを現在のステップ内容に更新する
+    void UpdateInstructionDisplay();
+
+    /// 進行度バーの表示値を滑らかに補間して更新する
+    void UpdateProgressBar(float dt);
+
+    /// 補足メッセージ（着地補正など）の表示を制御する
+    void UpdateSubMessage();
+
+    // ─────────────────────────────────────────
+    //  参照
+    // ─────────────────────────────────────────
+
+    TutorialSystem *system_ = nullptr;
+
+    // ─────────────────────────────────────────
+    //  内部変数
+    // ─────────────────────────────────────────
+
+    float displayedProgress_ = 0.0f; ///< バー表示用スムーズ補間値（実進捗に追従）
+    float progressLerpSpeed_ = 5.0f; ///< 補間速度
+
+    bool subMessageVisible_ = false; ///< 補足メッセージ表示中か
+    float subMessageTimer_ = 0.0f;   ///< 補足メッセージの表示継続タイマー
+
+    // ─────────────────────────────────────────
+    //  TODO: Sprite 差し替え（Sprite API 確定後に実装）
+    // ─────────────────────────────────────────
+    //
+    //  以下のメンバを Sprite* または std::unique_ptr<Sprite> で宣言し、
+    //  Initialize() で生成・位置設定、Draw() で描画してください。
+    //
+    //  ■ 操作指示ウィンドウ
+    //    Sprite* instructionBgSprite_    ── 指示テキストの背景パネル
+    //    Sprite* buttonIconSprite_       ── キー/ボタンのアイコン画像
+    //                                       ステップ切替時に差し替える
+    //
+    //  ■ 進行度バー
+    //    Sprite* progressBarBgSprite_    ── バー背景（固定）
+    //    Sprite* progressBarFillSprite_  ── バー塗り部分（幅を displayedProgress_ で制御）
+    //                                       例: fillSprite->SetSize({maxWidth * progress_, barHeight});
+    //
+    //  ■ 補足メッセージ
+    //    Sprite* subMessageSprite_       ── 着地補正時の「空中に戻ろう」テキスト
+    //
+    //  ■ ステップ完了エフェクト（任意）
+    //    Sprite* stepClearEffectSprite_  ── ステップ達成時のフラッシュ演出
+    //    float   stepClearEffectTimer_   ── エフェクト継続タイマー
 };
 
 ============================================================
