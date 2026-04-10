@@ -7,6 +7,7 @@ void TutorialScene::Initialize() {
     /// ===================================================
     /// インスタンス生成
     /// ===================================================
+    BaseScene::Initialize();
     debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();

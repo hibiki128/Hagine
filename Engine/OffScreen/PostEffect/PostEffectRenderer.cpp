@@ -1,170 +1,147 @@
 #include "PostEffectRenderer.h"
 
-void PostEffectRenderer::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager, PipeLineManager *psoManager) {
-    dxCommon_ = dxCommon;
+void PostEffectRenderer::Initialize(DirectXCommon *dxCommon,
+                                     SrvManager *srvManager,
+                                     PipeLineManager *psoManager) {
+    dxCommon_   = dxCommon;
     srvManager_ = srvManager;
     psoManager_ = psoManager;
-    // レンダーバッファの初期化
+
     renderBuffer_.Initialize(dxCommon_, srvManager_);
-    // DSVハンドルの取得
-    dsvHandle_ = dxCommon_->GetDSVCPUDescriptorHandle(0);
+    dsvHandle_            = dxCommon_->GetDSVCPUDescriptorHandle(0);
     finalResultRtvHandle_ = renderBuffer_.GetFinalResultRtvHandle();
 }
 
-void PostEffectRenderer::Draw(const PostEffectChain &effectChain, PostEffectParameters &parameters) {
+void PostEffectRenderer::Draw(PostEffectChain &effectChain, float deltaTime) {
+    const std::vector<int> enabledIndices = effectChain.GetEnabledSlotIndices();
 
-    if (effectChain.IsEmpty()) {
+    if (enabledIndices.empty()) {
         DrawToFinalResult();
         CopyFinalResultToBackBuffer();
         return;
     }
 
-    bool isFirstInput = true;
-    int currentPingPongBuffer = 0;
-    int outputBuffer = 0;
-
-    std::vector<int> enabledEffects;
-    enabledEffects = effectChain.GetEnabledEffectIndices();
-
-    if (enabledEffects.empty()) {
-        // 有効なエフェクトがない場合
-        DrawToFinalResult();
-        CopyFinalResultToBackBuffer();
-        return;
+    // 時間パラメータの更新（時間依存エフェクト向け）
+    for (int idx : enabledIndices) {
+        IPostEffectParams *params = effectChain.GetParams(idx);
+        if (params) { params->UpdateTime(deltaTime); }
     }
 
-    // 有効なエフェクトチェーンを順番に適用
-    for (size_t i = 0; i < enabledEffects.size(); ++i) {
-        int effectIndex = enabledEffects[i];
-        bool isLastEffect = (i == enabledEffects.size() - 1);
+    // ピンポンバッファで順番にエフェクトを適用
+    bool isFirstInput       = true;
+    int currentPingPong     = 0;
+    int outputPingPong      = 0;
 
-        if (isLastEffect) {
-            // 最後のエフェクトは最終結果テクスチャに描画
-            DrawSingleEffect(effectChain.GetEffects()[i].shaderMode, isFirstInput, currentPingPongBuffer, -2, parameters); // -2は最終結果を示す特別な値
-        } else {
-            // 中間エフェクトはピンポンバッファに描画
-            DrawSingleEffect(effectChain.GetEffects()[i].shaderMode, isFirstInput, currentPingPongBuffer, outputBuffer,parameters);
-            currentPingPongBuffer = outputBuffer;
-            outputBuffer = 1 - outputBuffer;
-            isFirstInput = false;
+    for (size_t i = 0; i < enabledIndices.size(); ++i) {
+        const int slotIdx    = enabledIndices[i];
+        const bool isLast    = (i == enabledIndices.size() - 1);
+        const EffectSlot &slot = effectChain.GetSlots()[slotIdx];
+
+        // 最後のエフェクトは最終結果テクスチャへ、それ以外はピンポンへ
+        const int outputTarget = isLast ? -2 : outputPingPong;
+
+        DrawSingleEffect(slot, isFirstInput, currentPingPong, outputTarget);
+
+        if (!isLast) {
+            currentPingPong = outputPingPong;
+            outputPingPong  = 1 - outputPingPong;
+            isFirstInput    = false;
         }
     }
 
-    // 最終結果をバックバッファにコピー
     CopyFinalResultToBackBuffer();
 }
 
 void PostEffectRenderer::DrawToFinalResult() {
-    // 最終結果テクスチャに直接描画（エフェクトなし）
-    dxCommon_->GetCommandList()->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
+    auto *cmdList = dxCommon_->GetCommandList().Get();
 
-    // バリア遷移
     dxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
-                                 D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                                  D3D12_RESOURCE_STATE_GENERIC_READ,
+                                  D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-    // レンダーターゲットをクリア
-    D3D12_CLEAR_VALUE clearValue = dxCommon_->GetClearColorValue();
-    const float clearColor[4] = {
-        clearValue.Color[0],
-        clearValue.Color[1],
-        clearValue.Color[2],
-        clearValue.Color[3]};
+    cmdList->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
 
-    dxCommon_->GetCommandList()->ClearRenderTargetView(renderBuffer_.GetFinalResultRtvHandle(), clearColor, 0, nullptr);
+    D3D12_CLEAR_VALUE cv = dxCommon_->GetClearColorValue();
+    const float clearColor[4] = {cv.Color[0], cv.Color[1], cv.Color[2], cv.Color[3]};
+    cmdList->ClearRenderTargetView(finalResultRtvHandle_, clearColor, 0, nullptr);
 
-    // パイプライン設定
     psoManager_->DrawCommonSetting(PipelineType::kRender, BlendMode::kNormal, ShaderMode::kNone);
+    cmdList->SetGraphicsRootDescriptorTable(0, dxCommon_->GetOffScreenGPUHandle());
+    cmdList->DrawInstanced(3, 1, 0, 0);
 
-    // 入力テクスチャを設定
-    dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(0, dxCommon_->GetOffScreenGPUHandle());
-
-    // 描画
-    dxCommon_->GetCommandList()->DrawInstanced(3, 1, 0, 0);
-
-    // バリア遷移
     dxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
-                                 D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
+                                  D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                  D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
 void PostEffectRenderer::CopyFinalResultToBackBuffer() {
-    // バックバッファに最終結果をコピー
+    auto *cmdList = dxCommon_->GetCommandList().Get();
+
     UINT backBufferIndex = dxCommon_->GetSwapChain()->GetCurrentBackBufferIndex();
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = dxCommon_->GetRTVCPUDescriptorHandle(backBufferIndex);
-    dxCommon_->GetCommandList()->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle_);
 
-    // パイプライン設定
+    cmdList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle_);
     psoManager_->DrawCommonSetting(PipelineType::kRender, BlendMode::kNormal, ShaderMode::kNone);
-
-    // 最終結果テクスチャを入力として設定
-    dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetFinalResultSrvHandleGPU());
-
-    // 描画
-    dxCommon_->GetCommandList()->DrawInstanced(3, 1, 0, 0);
+    cmdList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetFinalResultSrvHandleGPU());
+    cmdList->DrawInstanced(3, 1, 0, 0);
 }
 
-void PostEffectRenderer::DrawSingleEffect(ShaderMode mode, bool isFirstInput, int inputPingPongIndex, int outputRtvIndex,
-                          PostEffectParameters &parameters) {
-    // DirectXCommonからクリアカラーを取得
-    D3D12_CLEAR_VALUE clearValue = dxCommon_->GetClearColorValue();
-    const float clearColor[4] = {
-        clearValue.Color[0],
-        clearValue.Color[1],
-        clearValue.Color[2],
-        clearValue.Color[3]};
+void PostEffectRenderer::DrawSingleEffect(const EffectSlot &slot,
+                                           bool isFirstInput,
+                                           int inputPingPong,
+                                           int outputRtvIndex) {
+    assert(slot.occupied && slot.params);
+    auto *cmdList = dxCommon_->GetCommandList().Get();
 
-   // 出力先を設定
+    D3D12_CLEAR_VALUE cv = dxCommon_->GetClearColorValue();
+    const float clearColor[4] = {cv.Color[0], cv.Color[1], cv.Color[2], cv.Color[3]};
+
+    // --- 出力先の設定 ---
     if (outputRtvIndex == -2) {
-        // 最終結果テクスチャに描画
-        dxCommon_->GetCommandList()->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
+        // 最終結果テクスチャ
         dxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
-                                     D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
-        dxCommon_->GetCommandList()->ClearRenderTargetView(renderBuffer_.GetFinalResultRtvHandle(), clearColor, 0, nullptr);
-    } else if (outputRtvIndex != -1) {
-        // ピンポンバッファに描画
-        D3D12_CPU_DESCRIPTOR_HANDLE pingPongRtvHandle = renderBuffer_.GetPingPongRtvHandle(outputRtvIndex);
-        dxCommon_->GetCommandList()->OMSetRenderTargets(1, &pingPongRtvHandle, false, &dsvHandle_);
-        dxCommon_->BarrierTransition(renderBuffer_.GetPingPongResource(outputRtvIndex).Get(),
-                                     D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-        D3D12_CPU_DESCRIPTOR_HANDLE pingPongRtvHandleForClear = renderBuffer_.GetPingPongRtvHandle(outputRtvIndex);
-        dxCommon_->GetCommandList()->ClearRenderTargetView(pingPongRtvHandleForClear, clearColor, 0, nullptr);
+                                      D3D12_RESOURCE_STATE_GENERIC_READ,
+                                      D3D12_RESOURCE_STATE_RENDER_TARGET);
+        cmdList->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
+        cmdList->ClearRenderTargetView(finalResultRtvHandle_, clearColor, 0, nullptr);
     } else {
-        // バックバッファに描画（この分岐は使われなくなる）
-        UINT backBufferIndex = dxCommon_->GetSwapChain()->GetCurrentBackBufferIndex();
-        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = dxCommon_->GetRTVCPUDescriptorHandle(backBufferIndex);
-        dxCommon_->GetCommandList()->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle_);
+        // ピンポンバッファ
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = renderBuffer_.GetPingPongRtvHandle(outputRtvIndex);
+        dxCommon_->BarrierTransition(renderBuffer_.GetPingPongResource(outputRtvIndex).Get(),
+                                      D3D12_RESOURCE_STATE_GENERIC_READ,
+                                      D3D12_RESOURCE_STATE_RENDER_TARGET);
+        cmdList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle_);
+        cmdList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
     }
 
-    // パイプライン設定とシェーダーパラメータ設定（既存のコードと同じ）
+    // --- パイプライン & シェーダーパラメータ設定 ---
+    ShaderMode mode = slot.params->GetMode();
     psoManager_->DrawCommonSetting(PipelineType::kRender, BlendMode::kNormal, mode);
+    slot.params->Apply(cmdList, srvManager_, dxCommon_);
 
-    parameters.SetShaderParameters(mode, dxCommon_->GetCommandList().Get(), srvManager_, dxCommon_);
-
-    // 入力テクスチャを設定
+    // --- 入力テクスチャの設定 ---
     if (isFirstInput) {
-        // 最初の入力はオフスクリーンバッファ
-        dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(0, dxCommon_->GetOffScreenGPUHandle());
+        cmdList->SetGraphicsRootDescriptorTable(0, dxCommon_->GetOffScreenGPUHandle());
     } else {
-        // 2回目以降はピンポンバッファ
-        if (inputPingPongIndex >= 0 && inputPingPongIndex < renderBuffer_.GetPingPongBufferCount()) {
-            dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetPingPongSrvHandleGPU(inputPingPongIndex));
+        if (inputPingPong >= 0 && inputPingPong < renderBuffer_.GetPingPongBufferCount()) {
+            cmdList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetPingPongSrvHandleGPU(inputPingPong));
         } else {
-            // エラーハンドリング - フォールバックとしてオフスクリーンバッファを使用
-            dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(0, dxCommon_->GetOffScreenGPUHandle());
+            // フォールバック
+            cmdList->SetGraphicsRootDescriptorTable(0, dxCommon_->GetOffScreenGPUHandle());
         }
     }
 
-    // 描画
-    dxCommon_->GetCommandList()->DrawInstanced(3, 1, 0, 0);
+    // --- 描画 ---
+    cmdList->DrawInstanced(3, 1, 0, 0);
 
-    // バリア遷移
+    // --- バリア遷移（読み取り可能状態へ戻す）---
     if (outputRtvIndex == -2) {
-        // 最終結果テクスチャの場合
         dxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
-                                     D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
-    } else if (outputRtvIndex != -1) {
-        // ピンポンバッファの場合
+                                      D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                      D3D12_RESOURCE_STATE_GENERIC_READ);
+    } else {
         dxCommon_->BarrierTransition(renderBuffer_.GetPingPongResource(outputRtvIndex).Get(),
-                                     D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
+                                      D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                      D3D12_RESOURCE_STATE_GENERIC_READ);
     }
 }

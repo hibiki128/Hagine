@@ -1,59 +1,199 @@
 #include "PostEffectChain.h"
+#include <algorithm>
 
+// -------------------------------------------------------
+//  追加・削除
+// -------------------------------------------------------
 
-// エフェクト管理メソッド
-void PostEffectChain::AddEffect(ShaderMode mode) {
-    PostEffectSettings settings;
-    settings.shaderMode = mode;
-    settings.enabled = true;
-    effects_.push_back(settings);
+int PostEffectChain::AddEffect(ShaderMode mode,
+                               const std::string &name,
+                               DirectXCommon *dxCommon,
+                               int slotIndex) {
+    // スロット番号の決定
+    if (slotIndex == -1) {
+        slotIndex = FindFirstFreeSlot();
+    }
+
+    if (!IsValidIndex(slotIndex)) {
+        // 空きなし or 無効なインデックス
+        return -1;
+    }
+
+    if (slots_[slotIndex].occupied) {
+        // 指定スロットが既に使用中
+        return -1;
+    }
+
+    // スロットを占有してパラメータを生成
+    auto &slot = slots_[slotIndex];
+    slot.occupied = true;
+    slot.enabled = true;
+    slot.name = name.empty() ? ("Effect_" + std::to_string(slotIndex)) : name;
+    slot.params = PostEffectParamsFactory::Create(mode, dxCommon);
+
+    return slotIndex;
 }
 
-void PostEffectChain::RemoveEffect(int index) {
-    if (index >= 0 && index < effects_.size()) {
-        effects_.erase(effects_.begin() + index);
+bool PostEffectChain::RemoveEffect(int slotIndex) {
+    if (!IsValidIndex(slotIndex) || !slots_[slotIndex].occupied) {
+        return false;
+    }
+
+    auto &slot = slots_[slotIndex];
+    slot.occupied = false;
+    slot.enabled = false;
+    slot.name.clear();
+    slot.params.reset(); // パラメータのGPUリソースを解放
+
+    return true;
+}
+
+void PostEffectChain::Clear(DirectXCommon * /*dxCommon*/) {
+    for (auto &slot : slots_) {
+        slot.occupied = false;
+        slot.enabled = false;
+        slot.name.clear();
+        slot.params.reset();
     }
 }
 
-void PostEffectChain::SetEffectEnabled(int index, bool enabled) {
-    if (index >= 0 && index < effects_.size()) {
-        effects_[index].enabled = enabled;
+// -------------------------------------------------------
+//  スロット操作
+// -------------------------------------------------------
+
+bool PostEffectChain::SetEnabled(int slotIndex, bool enabled) {
+    if (!IsValidIndex(slotIndex) || !slots_[slotIndex].occupied) {
+        return false;
     }
+    slots_[slotIndex].enabled = enabled;
+    return true;
 }
 
-void PostEffectChain::MoveEffectUp(int index) {
-    if (index > 0 && index < effects_.size()) {
-        std::swap(effects_[index], effects_[index - 1]);
+bool PostEffectChain::SetName(int slotIndex, const std::string &name) {
+    if (!IsValidIndex(slotIndex) || !slots_[slotIndex].occupied) {
+        return false;
     }
+    slots_[slotIndex].name = name;
+    return true;
 }
 
-void PostEffectChain::MoveEffectDown(int index) {
-    if (index >= 0 && index < effects_.size() - 1) {
-        std::swap(effects_[index], effects_[index + 1]);
+bool PostEffectChain::SwapSlots(int slotA, int slotB) {
+    if (!IsValidIndex(slotA) || !IsValidIndex(slotB)) {
+        return false;
     }
+    std::swap(slots_[slotA], slots_[slotB]);
+    return true;
 }
 
-void PostEffectChain::Clear() {
-    effects_.clear();
+bool PostEffectChain::MoveUp(int slotIndex) {
+    if (slotIndex <= 0 || !IsValidIndex(slotIndex)) {
+        return false;
+    }
+    return SwapSlots(slotIndex, slotIndex - 1);
 }
 
-std::vector<int> PostEffectChain::GetEnabledEffectIndices() const {
-    std::vector<int> enabledEffects;
+bool PostEffectChain::MoveDown(int slotIndex) {
+    if (slotIndex >= kMaxSlots - 1 || !IsValidIndex(slotIndex)) {
+        return false;
+    }
+    return SwapSlots(slotIndex, slotIndex + 1);
+}
 
-    for (size_t i = 0; i < effects_.size(); ++i) {
-        if (effects_[i].enabled) {
-            enabledEffects.push_back(static_cast<int>(i));
+// -------------------------------------------------------
+//  参照・クエリ
+// -------------------------------------------------------
+
+bool PostEffectChain::IsOccupied(int slotIndex) const {
+    return IsValidIndex(slotIndex) && slots_[slotIndex].occupied;
+}
+
+IPostEffectParams *PostEffectChain::GetParams(int slotIndex) {
+    if (!IsValidIndex(slotIndex) || !slots_[slotIndex].occupied) {
+        return nullptr;
+    }
+    return slots_[slotIndex].params.get();
+}
+
+std::vector<int> PostEffectChain::GetEnabledSlotIndices() const {
+    std::vector<int> result;
+    for (int i = 0; i < kMaxSlots; ++i) {
+        if (slots_[i].occupied && slots_[i].enabled) {
+            result.push_back(i);
         }
     }
-
-    return enabledEffects;
+    return result;
 }
 
 bool PostEffectChain::HasEnabledEffects() const {
-    for (const auto &effect : effects_) {
-        if (effect.enabled) {
+    for (const auto &slot : slots_) {
+        if (slot.occupied && slot.enabled) {
             return true;
         }
     }
     return false;
+}
+
+bool PostEffectChain::IsEmpty() const {
+    for (const auto &slot : slots_) {
+        if (slot.occupied) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int PostEffectChain::GetFreeSlotCount() const {
+    int count = 0;
+    for (const auto &slot : slots_) {
+        if (!slot.occupied) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+int PostEffectChain::RemoveEffectByName(const std::string &name) {
+    const int slot = FindSlotByName(name);
+    if (slot == -1) {
+        return -1;
+    }
+    RemoveEffect(slot);
+    return slot;
+}
+
+int PostEffectChain::RemoveAllEffectsByName(const std::string &name) {
+    int count = 0;
+    for (int i = 0; i < kMaxSlots; ++i) {
+        if (slots_[i].occupied && slots_[i].name == name) {
+            RemoveEffect(i);
+            ++count;
+        }
+    }
+    return count;
+}
+
+int PostEffectChain::FindSlotByName(const std::string &name) const {
+    for (int i = 0; i < kMaxSlots; ++i) {
+        if (slots_[i].occupied && slots_[i].name == name) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+bool PostEffectChain::SetEnabledByName(const std::string &name, bool enabled) {
+    const int slot = FindSlotByName(name);
+    if (slot == -1) {
+        return false;
+    }
+    return SetEnabled(slot, enabled);
+}
+
+int PostEffectChain::FindFirstFreeSlot() const {
+    for (int i = 0; i < kMaxSlots; ++i) {
+        if (!slots_[i].occupied) {
+            return i;
+        }
+    }
+    return -1;
 }

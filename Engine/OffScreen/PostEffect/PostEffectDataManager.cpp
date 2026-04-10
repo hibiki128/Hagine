@@ -4,50 +4,51 @@ void PostEffectDataManager::Initialize() {
     dataHandler_ = std::make_unique<DataHandler>("OffScreen", "OffScreenData");
 }
 
-void PostEffectDataManager::SaveData(const PostEffectChain &chain, const PostEffectParameters &params) {
-    // エフェクトチェーンの保存
-    const auto &effects = chain.GetEffects();
-    int effectCount = static_cast<int>(effects.size());
-    dataHandler_->Save<int>("effectCount", effectCount);
+void PostEffectDataManager::SaveData(const PostEffectChain &chain) const {
+    const auto &slots = chain.GetSlots();
 
-    // 各エフェクトの情報を保存
-    for (int i = 0; i < effectCount; ++i) {
-        std::string shaderModeKey = "effect" + std::to_string(i) + "_shaderMode";
-        std::string enabledKey = "effect" + std::to_string(i) + "_enabled";
+    for (int i = 0; i < PostEffectChain::kMaxSlots; ++i) {
+        const std::string prefix = "slot" + std::to_string(i) + "_";
+        const auto &slot         = slots[i];
 
-        dataHandler_->Save<int>(shaderModeKey, static_cast<int>(effects[i].shaderMode));
-        dataHandler_->Save<bool>(enabledKey, effects[i].enabled);
+        dataHandler_->Save<bool>(prefix + "occupied", slot.occupied);
+
+        if (!slot.occupied) { continue; }
+
+        dataHandler_->Save<bool>  (prefix + "enabled",    slot.enabled);
+        dataHandler_->Save<std::string>(prefix + "name",  slot.name);
+        dataHandler_->Save<int>   (prefix + "shaderMode", static_cast<int>(slot.params->GetMode()));
+
+        // エフェクト固有パラメータをプレフィックス付きで保存
+        slot.params->Save(dataHandler_.get(), prefix + "param_");
     }
-
-    // エフェクトパラメータの保存
-    params.SaveParameters(dataHandler_.get());
 }
 
-void PostEffectDataManager::LoadData(PostEffectChain &chain, PostEffectParameters &params) {
-    // エフェクトチェーンの読み込み
-    int effectCount = dataHandler_->Load<int>("effectCount", 0);
-
-    // エフェクトチェーンをクリア
+void PostEffectDataManager::LoadData(PostEffectChain &chain, DirectXCommon *dxCommon) {
     chain.Clear();
 
-    // 各エフェクトを読み込み
-    for (int i = 0; i < effectCount; ++i) {
-        std::string shaderModeKey = "effect" + std::to_string(i) + "_shaderMode";
-        std::string enabledKey = "effect" + std::to_string(i) + "_enabled";
+    for (int i = 0; i < PostEffectChain::kMaxSlots; ++i) {
+        const std::string prefix = "slot" + std::to_string(i) + "_";
 
-        ShaderMode shaderMode = static_cast<ShaderMode>(dataHandler_->Load<int>(shaderModeKey, 0));
-        bool enabled = dataHandler_->Load<bool>(enabledKey, false);
+        const bool occupied = dataHandler_->Load<bool>(prefix + "occupied", false);
+        if (!occupied) { continue; }
 
-        // エフェクトを追加
-        chain.AddEffect(shaderMode);
+        const bool enabled       = dataHandler_->Load<bool>(prefix + "enabled", true);
+        const std::string name   = dataHandler_->Load<std::string>(prefix + "name", "");
+        const ShaderMode mode    = static_cast<ShaderMode>(
+            dataHandler_->Load<int>(prefix + "shaderMode", 0));
 
-        // 有効/無効状態を設定（最後に追加されたエフェクトのインデックスを使用）
-        const auto &effects = chain.GetEffects();
-        if (!effects.empty()) {
-            chain.SetEffectEnabled(static_cast<int>(effects.size() - 1), enabled);
+        // 指定スロットに追加
+        const int resultSlot = chain.AddEffect(mode, name, dxCommon, i);
+
+        if (resultSlot == -1) { continue; }
+
+        chain.SetEnabled(resultSlot, enabled);
+
+        // エフェクト固有パラメータのロード
+        IPostEffectParams *params = chain.GetParams(resultSlot);
+        if (params) {
+            params->Load(dataHandler_.get(), prefix + "param_");
         }
     }
-
-    // エフェクトパラメータの読み込み
-    params.LoadParameters(dataHandler_.get());
 }

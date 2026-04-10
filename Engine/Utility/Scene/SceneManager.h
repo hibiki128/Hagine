@@ -76,7 +76,10 @@ class SceneManager {
     void SetClearTime(float time) { clearTime_ = time; }
     void SetHP(float hp) { hp_ = hp; }
 
+    void SetOffScreen(OffScreen *offscreen) { offscreen_ = offscreen; }
+
   private:
+    OffScreen *offscreen_ = nullptr;
     // 今のシーン（実行中のシーン）
     std::unique_ptr<BaseScene> scene_;
     // 次のシーン

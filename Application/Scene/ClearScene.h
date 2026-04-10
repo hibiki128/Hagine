@@ -57,12 +57,6 @@ class ClearScene : public BaseScene {
     /// </summary>
     void AddParticleSetting() override;
 
-    /// <summary>
-    /// ビュープロジェクションを取得
-    /// </summary>
-    /// <returns>ViewProjection*: ビュープロジェクションのポインタ</returns>
-    ViewProjection *GetViewProjection() override { return &vp_; }
-
   private:
     /// ===================================================
     /// private method
@@ -82,15 +76,6 @@ class ClearScene : public BaseScene {
     /// ===================================================
     /// private varians
     /// ===================================================
-
-    Audio *audio_;
-    Input *input_;
-    SpriteCommon *spCommon_;
-    ParticleCommon *ptCommon_;
-    ViewProjection vp_;
-
-    std::unique_ptr<DebugCamera> debugCamera_;
-
     // 地面
     std::unique_ptr<Ground> ground_;
 

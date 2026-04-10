@@ -47,12 +47,6 @@ class DemoScene : public BaseScene {
     /// </summary>
     void AddParticleSetting() override;
 
-    /// <summary>
-    /// ビュープロジェクションを取得
-    /// </summary>
-    /// <returns>ViewProjection*: ビュープロジェクションのポインタ</returns>
-    ViewProjection *GetViewProjection() override { return &vp_; }
-
   private:
     /// ===================================================
     /// private method
@@ -68,19 +62,8 @@ class DemoScene : public BaseScene {
     /// </summary>
     void ChangeScene();
 
-
   private:
     /// ====================================
     /// private variaus
     /// ====================================
-
-    Audio *audio_;
-    Input *input_;
-    SpriteCommon *spCommon_;
-    ParticleCommon *ptCommon_;
-    ParticleEditor *ptEditor_;
-    ParticleCSEditor *ptCSEditor_;
-
-    ViewProjection vp_;
-    std::unique_ptr<DebugCamera> debugCamera_;
 };

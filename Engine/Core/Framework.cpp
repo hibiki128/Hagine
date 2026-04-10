@@ -130,6 +130,7 @@ void Framework::Initialize() {
     ///-------OffScreen--------
     offscreen_ = std::make_unique<OffScreen>();
     offscreen_->Initialize();
+    sceneManager_->SetOffScreen(offscreen_.get());
     ///------------------------
 
     ///-------DrawLine3D-------
@@ -222,7 +223,7 @@ void Framework::Finalize() {
     modelCommon_->Finalize();
 
     baseObjectManager_->Finalize();
-    dxCommon_->Finalize();         
+    dxCommon_->Finalize();
 }
 
 void Framework::RegisterShortcutKey() {
@@ -324,7 +325,7 @@ void Framework::Update() {
 
 void Framework::LoadResource() {
 
-    //textureManager_->LoadAllTextures();
+    // textureManager_->LoadAllTextures();
 
     particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");

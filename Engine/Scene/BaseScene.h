@@ -1,24 +1,25 @@
 #pragma once
 #include "Audio.h"
 #include "Camera/DebugCamera/DebugCamera.h"
+#include "Camera/ViewProjection/ViewProjection.h"
 #include "Input.h"
 #include "Light/LightGroup.h"
+#include "Object/Base/BaseObject.h"
+#include "Object/Base/BaseObjectManager.h"
 #include "Object/Object3dCommon.h"
+#include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleCommon.h"
 #include "Particle/ParticleEditor.h"
-#include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleEmitter.h"
+#include "Sprite.h"
 #include "SpriteCommon.h"
-#include "Camera/ViewProjection/ViewProjection.h"
+#include "SpriteManager.h"
 #include "Transform/WorldTransform.h"
 #include "line/DrawLine3D.h"
-#include"Object/Base/BaseObjectManager.h"
-#include"Sprite.h"
-#include"Object/Base/BaseObject.h"
-#include"SpriteManager.h"
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG
+#include <OffScreen.h>
 class SceneManager;
 class BaseScene {
   public:
@@ -66,10 +67,24 @@ class BaseScene {
 
     virtual void SetSceneManager(SceneManager *sceneManager) { sceneManager_ = sceneManager; }
 
-    virtual ViewProjection *GetViewProjection() = 0;
+    void SetOffScreen(OffScreen *offscreen) { offScreen_ = offscreen; }
+
+    void DrawParticleEditorUI();
+
+    ViewProjection *GetViewProjection() { return &vp_; }
 
   protected:
     // シーンマネージャ
+    Audio *audio_ = nullptr;
+    Input *input_ = nullptr;
+    LightGroup *lightGroup_ = nullptr;
+    ParticleEditor *ptEditor_ = nullptr;
+    ParticleCSEditor *ptCSEditor_ = nullptr;
+    OffScreen *offScreen_ = nullptr;
+
+    ViewProjection vp_;
+    std::unique_ptr<DebugCamera> debugCamera_;
+
     SceneManager *sceneManager_ = nullptr;
 
     float ClearTime_ = 0.0f;

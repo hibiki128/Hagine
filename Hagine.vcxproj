@@ -140,6 +140,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\GameObject\Enemy\Hand\EnemyHand.cpp" />
     <ClCompile Include="Application\GameObject\Field\AroundField\AroundField.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Collider\EnemyAttackCollider.cpp" />
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParamsImpl.cpp" />
     <ClCompile Include="Engine\Utility\Collider\type\CylinderCollider.cpp" />
     <ClCompile Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\Object\Base\BaseObject.cpp" />

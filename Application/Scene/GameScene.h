@@ -29,21 +29,11 @@ class GameScene : public BaseScene {
     void AddObjectSetting() override;
     void AddParticleSetting() override;
 
-    ViewProjection *GetViewProjection() override { return &vp_; }
-
   private:
     void CameraUpdate();
     void ChangeScene();
 
   private:
-    Audio *audio_;
-    Input *input_;
-    SpriteCommon *spCommon_;
-    ParticleCommon *ptCommon_;
-
-    ViewProjection vp_;
-    std::unique_ptr<DebugCamera> debugCamera_;
-
     std::unique_ptr<Player> player_;
     std::unique_ptr<Enemy> enemy_;
     std::unique_ptr<AroundField> aroundField_;

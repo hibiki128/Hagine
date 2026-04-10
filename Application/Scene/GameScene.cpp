@@ -8,11 +8,8 @@ static constexpr const char *kBTFolder = "BehaviorTree";
 static constexpr const char *kBTFileName = "EnemyBehavior";
 
 void GameScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
-    ptCommon_ = ParticleCommon::GetInstance();
-    input_ = Input::GetInstance();
-    LightGroup::GetInstance()->LoadLightData("GameLight");
+    BaseScene::Initialize();
+    lightGroup_->LoadLightData("GameLight");
     vp_.Initialize();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 

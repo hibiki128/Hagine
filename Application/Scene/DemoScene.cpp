@@ -2,18 +2,12 @@
 #include "SpriteManager.h"
 
 void DemoScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
-    ptCommon_ = ParticleCommon::GetInstance();
-    input_ = Input::GetInstance();
+    BaseScene::Initialize();
     vp_.Initialize("DemoCamera");
-    LightGroup::GetInstance()->LoadLightData("DemoLight");
+    lightGroup_->LoadLightData("DemoLight");
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
-
-    ptEditor_ = ParticleEditor::GetInstance();
-    ptCSEditor_ = ParticleCSEditor::GetInstance();
 }
 
 void DemoScene::Finalize() {
@@ -37,19 +31,11 @@ void DemoScene::Draw() {
     ptEditor_->DrawAll(vp_);
     ptCSEditor_->DrawAll(vp_);
 
-    /// ----------------------------------
-
     /// -------描画処理終了-------
 }
 
 void DemoScene::DrawForOffScreen() {
     /// -------描画処理開始-------
-
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
-    //-----Spriteの描画開始-----
-
-    //------------------------
 
     /// -------描画処理終了-------
 }
@@ -63,19 +49,7 @@ void DemoScene::AddObjectSetting() {
 }
 
 void DemoScene::AddParticleSetting() {
-#ifdef USE_IMGUI
-    // CPUとGPUパーティクルをタブで分ける
-    ImGui::Begin("CPUパーティクル");
-    ptEditor_->ShowImGuiEditor();
-    ptEditor_->DebugAll();
-    ImGui::End();
-
-    ImGui::Begin("GPUパーティクル");
-    ptCSEditor_->ShowImGuiEditor();
-    ptCSEditor_->DebugAll();
-    ImGui::End();
-
-#endif // USE_IMGUI
+    DrawParticleEditorUI();
 }
 
 void DemoScene::CameraUpdate() {

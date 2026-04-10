@@ -483,6 +483,7 @@
     <ClCompile Include="Application\System\Tutorial\TutorialSystem.cpp" />
     <ClCompile Include="Application\UI\Tutorial\TutorialUI.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Collider\EnemyAttackCollider.cpp" />
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParamsImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
