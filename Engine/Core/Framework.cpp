@@ -39,6 +39,10 @@ void Framework::Initialize() {
     srvManager_->Initialize();
     ///--------------------------
 
+    ///-------CollisionManager--------
+    collisionManager_ = CollisionManager::GetInstance();
+    ///----------------------------------
+
     ///--------BaseObjectManager--------
     baseObjectManager_ = BaseObjectManager::GetInstance();
     ///---------------------------------
@@ -117,10 +121,6 @@ void Framework::Initialize() {
     audio_ = Audio::GetInstance();
     audio_->Initialize();
     ///---------------------------
-
-    ///-------CollisionManager--------
-    collisionManager_ = CollisionManager::GetInstance();
-    ///----------------------------------
 
     ///-------SceneManager--------
     sceneManager_ = SceneManager::GetInstance();
@@ -215,7 +215,6 @@ void Framework::Finalize() {
     audio_->Finalize();
     lightGroup_->Finalize();
     motionEditor_->Finalize();
-    LightGroup::GetInstance()->Finalize();
     particleEditor_->Finalize();
     particleCSEditor_->Finalize();
     spriteCommon_->Finalize();

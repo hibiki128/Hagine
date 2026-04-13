@@ -19,6 +19,51 @@ using namespace StringUtility;
 using namespace Microsoft::WRL;
 
 void DirectXCommon::Finalize() {
+    // フェンスイベントハンドルを閉じる
+    CloseHandle(fenceEvent);
+
+    // DXCコンパイラ関連の生ポインタを解放
+    // ComPtrではなく生ポインタで保持しているため手動でReleaseが必要
+    if (includeHandler) {
+        includeHandler->Release();
+        includeHandler = nullptr;
+    }
+    if (dxcCompiler) {
+        dxcCompiler->Release();
+        dxcCompiler = nullptr;
+    }
+    if (dxcUtils) {
+        dxcUtils->Release();
+        dxcUtils = nullptr;
+    }
+
+    // オフスクリーン・深度リソースの解放
+    offScreenResource.Reset();
+    depthStencilResource.Reset();
+
+    // デスクリプタヒープの解放
+    rtvDescriptorHeap.Reset();
+    dsvDescriptorHeap.Reset();
+
+    // バックバッファの解放
+    backBuffers.clear();
+
+    // コマンド関連の解放
+    commandList.Reset();
+    commandAllocator.Reset();
+    commandQueue.Reset();
+
+    // フェンスの解放
+    fence.Reset();
+
+    // スワップチェーンの解放
+    swapChain.Reset();
+
+    // DXGIファクトリの解放
+    dxgiFactory.Reset();
+
+    // デバイスは全リソース解放後に最後に解放する
+    device.Reset();
 }
 
 void DirectXCommon::Initialize(WinApp *winApp) {

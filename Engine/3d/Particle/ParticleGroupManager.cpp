@@ -48,6 +48,8 @@ void ParticleGroupManager::Initialize() {
 
 
 void ParticleGroupManager::Finalize() {
+    particleGroups_.clear();
+    independentGroups_.clear();
 }
 void ParticleGroupManager::AddParticleGroup(std::unique_ptr<ParticleGroup> particleGroup) {
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleGroup", particleGroup->GetGroupName());

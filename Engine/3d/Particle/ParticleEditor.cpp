@@ -6,6 +6,9 @@
 #endif // _DEBUG
 
 void ParticleEditor::Finalize() {
+    emitters_.clear();
+    currentFrameStats_.clear();
+    displayStats_.clear();
 }
 
 void ParticleEditor::Initialize() {
@@ -24,7 +27,7 @@ void ParticleEditor::SetupColors() {
     headerColors_[3] = ImVec4(0.7f, 0.3f, 0.7f, 0.8f); // 紫系
     headerColors_[4] = ImVec4(0.7f, 0.7f, 0.2f, 0.8f); // 黄色系
     headerColors_[5] = ImVec4(0.5f, 0.5f, 0.5f, 0.8f); // グレー系
-#endif // USE_IMGUI
+#endif                                                 // USE_IMGUI
 }
 
 void ParticleEditor::AddParticleEmitter(const std::string &name, const std::string &fileName, const std::string &texturePath) {

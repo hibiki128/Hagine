@@ -1,6 +1,8 @@
 #include "SpriteCommon.h"
 
 void SpriteCommon::Finalize() {
+    dxCommon_ = nullptr;
+    psoManager_ = nullptr;
 }
 
 void SpriteCommon::Initialize() {

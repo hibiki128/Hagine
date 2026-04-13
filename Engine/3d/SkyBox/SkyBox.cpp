@@ -6,6 +6,10 @@
 #include <myMath.h>
 
 void SkyBox::Finalize() {
+    vertexResource_.Reset();
+    indexResource_.Reset();
+    skyBoxResource_.Reset();
+    cameraResource_.Reset();
 }
 
 void SkyBox::Initialize(std::string filePath) {
@@ -48,7 +52,6 @@ void SkyBox::Update(const ViewProjection &viewProjection) {
     cameraData_->viewProjection = viewProjectionMatrix;
     cameraData_->worldPosition = cameraPosition;
 }
-
 
 void SkyBox::Draw(const ViewProjection &viewProjection) {
     Update(viewProjection);

@@ -63,7 +63,7 @@ class ParticleCSEditor {
           return &instance;
     }
     // 終了処理
-    static void Finalize();
+    void Finalize();
     // 初期化
     void Initialize();
     // パーティクルエミッター追加（名前指定）

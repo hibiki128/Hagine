@@ -1,6 +1,9 @@
 #include "ParticleCommon.h"
 
 void ParticleCommon::Finalize() {
+    dxCommon_ = nullptr;
+    psoManager_ = nullptr;
+    computePsoManager_ = nullptr;
 }
 
 void ParticleCommon::Initialize(DirectXCommon *dxCommon) {

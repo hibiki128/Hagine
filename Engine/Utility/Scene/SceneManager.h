@@ -26,6 +26,11 @@ class SceneManager {
     void Initialize();
 
     /// <summary>
+    /// シーン終了
+    /// </summary>
+    void SceneFinalize();
+
+    /// <summary>
     /// 終了
     /// </summary>
     void Finalize();

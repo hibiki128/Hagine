@@ -4,6 +4,8 @@
 #include <d3dx12.h>
 
 void PipeLineManager::Finalize() {
+    pipelines_.clear();
+    rootSignatures_.clear();
 }
 
 void PipeLineManager::Initialize(DirectXCommon *dxCommon) {

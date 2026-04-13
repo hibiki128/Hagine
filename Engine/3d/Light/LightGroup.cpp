@@ -5,7 +5,13 @@
 #include <fstream>
 
 void LightGroup::Finalize() {
-
+    directionalLightResource.Reset();
+    pointLightsResource.Reset();
+    spotLightsResource.Reset();
+    cameraForGPUResource.Reset();
+    pointLights_.clear();
+    spotLights_.clear();
+    DLightData_.reset();
 }
 
 void LightGroup::Initialize() {

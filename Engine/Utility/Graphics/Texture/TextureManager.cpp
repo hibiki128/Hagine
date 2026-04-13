@@ -71,6 +71,7 @@ void TextureManager::Finalize() {
     for (auto &pair : textureDatas) {
         srvManager_->Free(pair.second.srvIndex - kSRVIndexTop);
     }
+    textureDatas.clear();
 }
 
 uint32_t TextureManager::GetTextureIndexByFilePath(const std::string &filePath) {

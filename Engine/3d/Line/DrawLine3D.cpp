@@ -39,6 +39,12 @@ void DrawLine3D::Initialize() {
 }
 
 void DrawLine3D::Finalize() {
+    cBufferResource_.Reset();
+    if (line_) {
+        line_->vertBuffer.Reset();
+        line_->indexBuffer.Reset();
+        line_.reset();
+    }
 }
 
 void DrawLine3D::SetPoints(const Vector3 &p1, const Vector3 &p2, const Vector4 &color) {

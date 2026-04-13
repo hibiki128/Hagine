@@ -16,6 +16,7 @@ void PrimitiveModel::Initialize() {
 }
 
 void PrimitiveModel::Finalize() {
+    primitiveDataMap_.clear();
 }
 
 void PrimitiveModel::CreateSphere() {

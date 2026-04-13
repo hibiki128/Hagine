@@ -11,6 +11,7 @@
 namespace fs = std::filesystem;
 
 void SpriteManager::Finalize() {
+    sprites_.clear();
 }
 
 void SpriteManager::RegisterSprite(const std::string &name, const std::string &textureFilePath, const SpriteTransform &transform) {

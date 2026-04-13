@@ -11,11 +11,20 @@ void SceneManager::Initialize() {
     transition_->Initialize();
 }
 
-void SceneManager::Finalize() {
+void SceneManager::SceneFinalize() {
     if (scene_) {
         scene_->Finalize();
         firstChange = false;
     }
+}
+
+void SceneManager::Finalize() {
+    // 次シーンが残っていれば先に解放
+    nextScene_.reset();
+    // 現在のシーンを解放
+    scene_.reset();
+    // シーンファクトリーを解放
+    sceneFactory_.reset();
 }
 
 void SceneManager::Update() {

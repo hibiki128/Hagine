@@ -40,4 +40,5 @@ void ShortcutManager::Update() {
 }
 
 void ShortcutManager::Finalize() {
+    shortcuts_.clear();
 }
