@@ -116,6 +116,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
     <ClCompile Include="Application\GameObject\Player\Player.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Air\PlayerStateAir.cpp" />
+    <ClCompile Include="Application\GameObject\Player\State\Base\PlayerBaseState.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Fly\PlayerStateFlyIdle.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Fly\PlayerStateFlyMove.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Ground\PlayerStateIdle.cpp" />
@@ -244,6 +245,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Scene\TutorialScene.cpp" />
     <ClCompile Include="Application\System\Tutorial\TutorialSystem.cpp" />
     <ClCompile Include="Application\UI\Tutorial\TutorialUI.cpp" />
+    <ClCompile Include="Application\GameObject\Player\State\Action\PlayerStateGuard.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -322,6 +324,9 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\GameObject\Enemy\Hand\EnemyHand.h" />
     <ClInclude Include="Application\GameObject\Field\AroundField\AroundField.h" />
     <ClInclude Include="Application\GameObject\Enemy\Collider\EnemyAttackCollider.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\IPostEffectParams.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParamsFactory.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParamsImpl.h" />
     <ClInclude Include="Engine\Utility\Collider\type\CylinderCollider.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldSettingOverride.h" />
     <ClInclude Include="Engine\Utility\Debug\ImGui\Debugui_improved.h" />
@@ -427,6 +432,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\UI\Scene\Game\GameUI.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
     <ClInclude Include="Application\GameObject\Player\Collider\PlayerAttackCollider.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Action\PlayerStateGuard.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
