@@ -10,56 +10,47 @@ void ParticleGroupManager::Initialize() {
 
     for (const auto &entry : fs::directory_iterator(directoryPath)) {
         if (entry.is_regular_file() && entry.path().extension() == ".json") {
-            std::ifstream file(entry.path());
-            if (file.is_open()) {
-                json jsonData;
-                file >> jsonData;
+            // ファイル名（拡張子なし）をグループ名として使用してDataHandlerを生成
+            std::string groupName = entry.path().stem().string();
+            DataHandler data("ParticleGroup", groupName);
 
-                // グループ名がなければスキップ
-                if (!jsonData.contains("groupName") || !jsonData["groupName"].is_string()) {
-                    continue;
-                }
+            // グループ名キーが存在しない場合はスキップ
+            if (!data.Exists()) {
+                continue;
+            }
 
-                std::string groupName = jsonData["groupName"];
+            std::string loadedGroupName = data.Load<std::string>("groupName", "");
+            if (loadedGroupName.empty()) {
+                continue;
+            }
 
-                // テクスチャは存在チェックだけする
-                std::string texturePath = jsonData.value("textrueName", "");
+            std::string texturePath = data.Load<std::string>("textrueName", "");
+            std::string modelPath = data.Load<std::string>("modelfilePath", "");
+            PrimitiveType type = data.Load<PrimitiveType>("primitiveType", PrimitiveType::None);
 
-                // モデルパスが空でないなら CreateParticleGroup を使う
-                std::string modelPath = jsonData.value("modelfilePath", "");
-
-                if (!modelPath.empty()) {
-                    CreateParticleGroup(groupName, modelPath, texturePath);
-                } else if (jsonData.contains("primitiveType")) {
-                    int primitiveValue = jsonData["primitiveType"].get<int>();
-
-                    // enum が有効範囲（0以上）であることをチェック
-                    if (primitiveValue >= 0) {
-                        PrimitiveType type = static_cast<PrimitiveType>(primitiveValue);
-                        CreatePrimitiveParticleGroup(groupName, type, texturePath);
-                    }
-                }
-
-                file.close();
+            if (!modelPath.empty()) {
+                CreateParticleGroup(loadedGroupName, modelPath, texturePath);
+            } else if (type != PrimitiveType::None) {
+                CreatePrimitiveParticleGroup(loadedGroupName, type, texturePath);
             }
         }
     }
 }
 
-
 void ParticleGroupManager::Finalize() {
     particleGroups_.clear();
     independentGroups_.clear();
 }
+
 void ParticleGroupManager::AddParticleGroup(std::unique_ptr<ParticleGroup> particleGroup) {
-    std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleGroup", particleGroup->GetGroupName());
-    data->Save("groupName", particleGroup->GetGroupName());
+    DataHandler data("ParticleGroup", particleGroup->GetGroupName());
+    data.Save("groupName", particleGroup->GetGroupName());
     // materialがvectorになったため、最初のmaterialのtextureFilePathを保存
-    const auto& materials = particleGroup->GetParticleGroupData().materials;
+    const auto &materials = particleGroup->GetParticleGroupData().materials;
     std::string textureFilePath = (!materials.empty()) ? materials[0].textureFilePath : "";
-    data->Save("textrueName", textureFilePath);
-    data->Save("modelfilePath", particleGroup->GetModelPath());
-    data->Save("primitiveType", particleGroup->GetPrimitiveType());
+    data.Save("textrueName", textureFilePath);
+    data.Save("modelfilePath", particleGroup->GetModelPath());
+    data.Save("primitiveType", particleGroup->GetPrimitiveType());
     particleGroups_.emplace_back(std::move(particleGroup));
 }
 

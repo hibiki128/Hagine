@@ -140,7 +140,6 @@ void Framework::Initialize() {
 
     ///-------SkyBox-------
     skyBox_ = SkyBox::GetInstance();
-    skyBox_->Initialize("debug/rostock_laage_airport_4k.dds");
     ///--------------------
 
     ///--------LightGroup------------
@@ -324,7 +323,7 @@ void Framework::Update() {
 
 void Framework::LoadResource() {
 
-    // textureManager_->LoadAllTextures();
+    textureManager_->LoadAllTextures();
 
     particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");

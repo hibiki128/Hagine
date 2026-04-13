@@ -16,32 +16,51 @@ namespace fs = std::filesystem;
 class DataHandler {
   private:
     std::string basePath = "resources/jsons"; // 固定の基準パス
-    std::string folderPath = "";              // インスタンスごとのフォルダ
+    std::string folderPath = "";              // インスタンスごとのフォルダパス
     std::string fileName = "data.json";       // インスタンスごとのファイル名
+    json cachedJson;                          // メモリ上にキャッシュしたJSONデータ
+    bool isDirty = false;                     // Saveによる変更がある場合にファイル書き出しが必要かを示すフラグ
+
+    // ファイルからJSONを読み込んでキャッシュに格納する
+    void LoadFromFile() {
+        std::string filePath = folderPath + "/" + fileName;
+        std::ifstream inFile(filePath);
+        if (inFile.is_open()) {
+            inFile >> cachedJson;
+            inFile.close();
+        }
+    }
+
+    // キャッシュ内容をファイルに書き出す
+    void FlushToFile() {
+        if (!isDirty)
+            return;
+        std::string filePath = folderPath + "/" + fileName;
+        std::ofstream outFile(filePath);
+        outFile << cachedJson.dump(4);
+        outFile.close();
+        isDirty = false;
+    }
 
   public:
     // コンストラクタ
     DataHandler(const std::string &folder, const std::string &file);
 
-    // JSONデータを保存
+    // デストラクタで未書き出しの変更をファイルに反映
+    ~DataHandler() { FlushToFile(); }
+
+    // キャッシュに書き込み、ダーティフラグを立てる
     template <typename T>
     void Save(const std::string &key, const T &value);
 
-    // JSONデータをロード
+    // キャッシュから直接読み込む
     template <typename T>
     T Load(const std::string &key, const T &defaultValue);
 
-    /// <summary>
-    /// jsonファイル探索関数
-    /// あるときtrue
-    /// ないときfalse
-    /// </summary>
-    /// <returns></returns>
+    // JSONファイルの存在確認（あるときtrue、ないときfalse）
     bool Exists() const;
 
-    /// <summary>
-    /// 対象フォルダ内のすべての json ファイルを削除（ファイルごと消す）
-    /// </summary>
+    // 対象フォルダ内のすべてのJSONファイルを削除
     void DeleteAllJsonsInFolder();
 };
 
@@ -66,7 +85,7 @@ inline void from_json(const json &j, Vector3 &v) {
     v.z = j.at("z").get<float>();
 }
 
-// JSON変換の定義 (Vector3)
+// JSON変換の定義 (Vector4)
 inline void to_json(json &j, const Vector4 &v) {
     j = json{{"x", v.x}, {"y", v.y}, {"z", v.z}, {"w", v.w}};
 }
@@ -78,6 +97,7 @@ inline void from_json(const json &j, Vector4 &v) {
     v.w = j.at("w").get<float>();
 }
 
+// JSON変換の定義 (Quaternion)
 inline void to_json(json &j, const Quaternion &q) {
     j = json{{"x", q.x}, {"y", q.y}, {"z", q.z}, {"w", q.w}};
 }
@@ -118,46 +138,31 @@ inline void from_json(const json &j, PrimitiveType &type) {
     type = static_cast<PrimitiveType>(j.get<int>());
 }
 
-// Save (テンプレート関数はここに書く)
-template <typename T>
-void DataHandler::Save(const std::string &key, const T &value) {
-    std::string filePath = folderPath + "/" + fileName;
-    json j;
-
-    std::ifstream inFile(filePath);
-    if (inFile.is_open()) {
-        inFile >> j;
-        inFile.close();
-    }
-
-    j[key] = value; // 変数名をキーにして保存
-
-    std::ofstream outFile(filePath);
-    outFile << j.dump(4); // インデント付きで保存
-    outFile.close();
+// JSON変換の定義 (BlendMode)
+inline void to_json(json &j, const BlendMode &mode) {
+    j = static_cast<int>(mode);
 }
 
-// Load (テンプレート関数はここに書く)
+inline void from_json(const json &j, BlendMode &mode) {
+    mode = static_cast<BlendMode>(j.get<int>());
+}
+
+// キャッシュに書き込み、ダーティフラグを立てる
+template <typename T>
+void DataHandler::Save(const std::string &key, const T &value) {
+    cachedJson[key] = value;
+    isDirty = true;
+}
+
+// キャッシュから直接読み込む（ファイルアクセスなし）
 template <typename T>
 T DataHandler::Load(const std::string &key, const T &defaultValue) {
-    std::string filePath = folderPath + "/" + fileName;
-    json j;
-
-    std::ifstream inFile(filePath);
-    if (inFile.is_open()) {
-        inFile >> j;
-        inFile.close();
-    } else {
-        return defaultValue; // ファイルがない場合
-    }
-
-    if (j.contains(key)) {
+    if (cachedJson.contains(key)) {
         try {
-            return j[key].get<T>(); // from_json が自動適用
+            return cachedJson[key].get<T>();
         } catch (const json::exception &e) {
             std::cerr << "JSON Load Error: " << e.what() << " (Key: " << key << ")" << std::endl;
         }
     }
-
-    return defaultValue; // 失敗した場合はデフォルト値
+    return defaultValue;
 }
