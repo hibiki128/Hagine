@@ -1,7 +1,7 @@
 #include "TutorialScene.h"
-#include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
+#include "Engine/Utility/Scene/SceneManager.h"
 
 void TutorialScene::Initialize() {
     /// ===================================================
@@ -60,8 +60,8 @@ void TutorialScene::Initialize() {
     /// ===================================================
     /// オブジェクトマネージャに追加
     /// ===================================================
-    BaseObjectManager::GetInstance()->AddObject(std::move(player_));
-    BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
+    objectManager_->AddObject(std::move(player_));
+    objectManager_->AddObject(std::move(enemy_));
 
     /// ===================================================
     /// チュートリアル開始時はエネミーを非表示にする
@@ -130,7 +130,7 @@ void TutorialScene::Draw() {
     playerUI_->Draw();
     enemyUI_->Draw();
 
-    BaseObjectManager::GetInstance()->Draw(vp_);
+    objectManager_->Draw(vp_);
 
     skyBox_->Draw(vp_);
     ground_->Draw(vp_);
@@ -150,7 +150,7 @@ void TutorialScene::Draw() {
     followCamera_->DrawFrustum();
     enemy_ptr->DrawFrustum();
 
-    SpriteManager::GetInstance()->DrawAll();
+    spriteManager_->DrawAll();
 }
 
 // ============================================================

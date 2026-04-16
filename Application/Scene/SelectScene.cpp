@@ -1,5 +1,5 @@
 #include "SelectScene.h"
-
+#include "Engine/Utility/Scene/SceneManager.h"
 void SelectScene::Initialize() {
     BaseScene::Initialize();
     vp_.Initialize();

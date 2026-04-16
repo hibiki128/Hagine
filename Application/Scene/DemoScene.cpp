@@ -1,5 +1,5 @@
 #include "DemoScene.h"
-#include "SpriteManager.h"
+#include "Engine/Utility/Scene/SceneManager.h"
 
 void DemoScene::Initialize() {
     BaseScene::Initialize();
