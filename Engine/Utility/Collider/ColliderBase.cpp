@@ -1,6 +1,10 @@
 #include "ColliderBase.h"
 #include"Collider/CollisionManager.h"
 
+ColliderBase::~ColliderBase() {
+    CollisionManager::GetInstance()->Unregister(this);
+}
+
 void ColliderBase::SetTag(const std::string &tag) {
     if (!ColliderTagManager::GetInstance()->HasTag(tag)) {
         return; // タグが存在しない場合は何もしない
