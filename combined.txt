@@ -12109,7 +12109,7 @@ void ClearScene::Finalize() {
 
 void ClearScene::Update() {
     gamePad_->Update();
-   
+
     // カメラ更新
     CameraUpdate();
 
@@ -12141,7 +12141,7 @@ void ClearScene::Draw() {
 
     resultStaging_->Draw(vp_);
 
-   spriteManager_->DrawAll();
+    spriteManager_->DrawAll();
 
     /// -------描画処理終了-------
 }
@@ -12167,7 +12167,7 @@ void ClearScene::AddParticleSetting() {
 
 void ClearScene::CameraUpdate() {
 
-     currentCameraStartTimer_ += Frame::DeltaTime();
+    currentCameraStartTimer_ += Frame::DeltaTime();
     if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
         vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
         cameraStart_ = true;
@@ -12302,7 +12302,7 @@ class ClearScene : public BaseScene {
 File Path: Application/Scene/DemoScene.cpp
 ============================================================
 #include "DemoScene.h"
-#include "SpriteManager.h"
+#include "Engine/Utility/Scene/SceneManager.h"
 
 void DemoScene::Initialize() {
     BaseScene::Initialize();
@@ -12777,7 +12777,7 @@ class GameScene : public BaseScene {
 File Path: Application/Scene/SelectScene.cpp
 ============================================================
 #include "SelectScene.h"
-
+#include "Engine/Utility/Scene/SceneManager.h"
 void SelectScene::Initialize() {
     BaseScene::Initialize();
     vp_.Initialize();
@@ -13105,9 +13105,9 @@ class TitleScene : public BaseScene {
 File Path: Application/Scene/TutorialScene.cpp
 ============================================================
 #include "TutorialScene.h"
-#include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
+#include "Engine/Utility/Scene/SceneManager.h"
 
 void TutorialScene::Initialize() {
     /// ===================================================
@@ -13166,8 +13166,8 @@ void TutorialScene::Initialize() {
     /// ===================================================
     /// オブジェクトマネージャに追加
     /// ===================================================
-    BaseObjectManager::GetInstance()->AddObject(std::move(player_));
-    BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
+    objectManager_->AddObject(std::move(player_));
+    objectManager_->AddObject(std::move(enemy_));
 
     /// ===================================================
     /// チュートリアル開始時はエネミーを非表示にする
@@ -13236,7 +13236,7 @@ void TutorialScene::Draw() {
     playerUI_->Draw();
     enemyUI_->Draw();
 
-    BaseObjectManager::GetInstance()->Draw(vp_);
+    objectManager_->Draw(vp_);
 
     skyBox_->Draw(vp_);
     ground_->Draw(vp_);
@@ -13256,7 +13256,7 @@ void TutorialScene::Draw() {
     followCamera_->DrawFrustum();
     enemy_ptr->DrawFrustum();
 
-    SpriteManager::GetInstance()->DrawAll();
+    spriteManager_->DrawAll();
 }
 
 // ============================================================
@@ -34905,6 +34905,9 @@ File Path: Engine/3d/Particle/ParticleEditor.cpp
 #endif // _DEBUG
 
 void ParticleEditor::Finalize() {
+    emitters_.clear();
+    currentFrameStats_.clear();
+    displayStats_.clear();
 }
 
 void ParticleEditor::Initialize() {
@@ -34923,7 +34926,7 @@ void ParticleEditor::SetupColors() {
     headerColors_[3] = ImVec4(0.7f, 0.3f, 0.7f, 0.8f); // 紫系
     headerColors_[4] = ImVec4(0.7f, 0.7f, 0.2f, 0.8f); // 黄色系
     headerColors_[5] = ImVec4(0.5f, 0.5f, 0.5f, 0.8f); // グレー系
-#endif // USE_IMGUI
+#endif                                                 // USE_IMGUI
 }
 
 void ParticleEditor::AddParticleEmitter(const std::string &name, const std::string &fileName, const std::string &texturePath) {
@@ -48607,6 +48610,10 @@ File Path: Engine/Utility/Collider/ColliderBase.cpp
 #include "ColliderBase.h"
 #include"Collider/CollisionManager.h"
 
+ColliderBase::~ColliderBase() {
+    CollisionManager::GetInstance()->Unregister(this);
+}
+
 void ColliderBase::SetTag(const std::string &tag) {
     if (!ColliderTagManager::GetInstance()->HasTag(tag)) {
         return; // タグが存在しない場合は何もしない
@@ -48732,7 +48739,7 @@ class ColliderBase {
     using CollisionCallback = std::function<void(ColliderBase *)>;
 
     ColliderBase() = default;
-    virtual ~ColliderBase() = default;
+    virtual ~ColliderBase();
 
     // 純粋仮想関数
     virtual void UpdateWorldTransform() = 0;
@@ -50200,6 +50207,7 @@ DataHandler::DataHandler(const std::string &folder, const std::string &file) {
     folderPath = basePath + "/" + folder;
     fileName = file + ".json";
     fs::create_directories(folderPath); // フォルダを作成
+    LoadFromFile();                     // コンストラクタで一度だけファイルを読み込む
 }
 
 bool DataHandler::Exists() const {
@@ -50233,6 +50241,7 @@ template void DataHandler::Save<Vector4>(const std::string &, const Vector4 &);
 template void DataHandler::Save<Quaternion>(const std::string &, const Quaternion &);
 template void DataHandler::Save<PrimitiveType>(const std::string &, const PrimitiveType &);
 template void DataHandler::Save<Matrix4x4>(const std::string &, const Matrix4x4 &);
+template void DataHandler::Save<BlendMode>(const std::string &, const BlendMode &);
 
 template int DataHandler::Load<int>(const std::string &, const int &);
 template int32_t DataHandler::Load<int32_t>(const std::string &, const int32_t &);
@@ -50245,6 +50254,7 @@ template Vector4 DataHandler::Load<Vector4>(const std::string &, const Vector4 &
 template Quaternion DataHandler::Load<Quaternion>(const std::string &, const Quaternion &);
 template PrimitiveType DataHandler::Load<PrimitiveType>(const std::string &, const PrimitiveType &);
 template Matrix4x4 DataHandler::Load<Matrix4x4>(const std::string &, const Matrix4x4 &);
+template BlendMode DataHandler::Load<BlendMode>(const std::string &, const BlendMode &);
 
 ============================================================
 File Path: Engine/Utility/Data/DataHandler.h
@@ -50267,32 +50277,51 @@ namespace fs = std::filesystem;
 class DataHandler {
   private:
     std::string basePath = "resources/jsons"; // 固定の基準パス
-    std::string folderPath = "";              // インスタンスごとのフォルダ
+    std::string folderPath = "";              // インスタンスごとのフォルダパス
     std::string fileName = "data.json";       // インスタンスごとのファイル名
+    json cachedJson;                          // メモリ上にキャッシュしたJSONデータ
+    bool isDirty = false;                     // Saveによる変更がある場合にファイル書き出しが必要かを示すフラグ
+
+    // ファイルからJSONを読み込んでキャッシュに格納する
+    void LoadFromFile() {
+        std::string filePath = folderPath + "/" + fileName;
+        std::ifstream inFile(filePath);
+        if (inFile.is_open()) {
+            inFile >> cachedJson;
+            inFile.close();
+        }
+    }
+
+    // キャッシュ内容をファイルに書き出す
+    void FlushToFile() {
+        if (!isDirty)
+            return;
+        std::string filePath = folderPath + "/" + fileName;
+        std::ofstream outFile(filePath);
+        outFile << cachedJson.dump(4);
+        outFile.close();
+        isDirty = false;
+    }
 
   public:
     // コンストラクタ
     DataHandler(const std::string &folder, const std::string &file);
 
-    // JSONデータを保存
+    // デストラクタで未書き出しの変更をファイルに反映
+    ~DataHandler() { FlushToFile(); }
+
+    // キャッシュに書き込み、ダーティフラグを立てる
     template <typename T>
     void Save(const std::string &key, const T &value);
 
-    // JSONデータをロード
+    // キャッシュから直接読み込む
     template <typename T>
     T Load(const std::string &key, const T &defaultValue);
 
-    /// <summary>
-    /// jsonファイル探索関数
-    /// あるときtrue
-    /// ないときfalse
-    /// </summary>
-    /// <returns></returns>
+    // JSONファイルの存在確認（あるときtrue、ないときfalse）
     bool Exists() const;
 
-    /// <summary>
-    /// 対象フォルダ内のすべての json ファイルを削除（ファイルごと消す）
-    /// </summary>
+    // 対象フォルダ内のすべてのJSONファイルを削除
     void DeleteAllJsonsInFolder();
 };
 
@@ -50317,7 +50346,7 @@ inline void from_json(const json &j, Vector3 &v) {
     v.z = j.at("z").get<float>();
 }
 
-// JSON変換の定義 (Vector3)
+// JSON変換の定義 (Vector4)
 inline void to_json(json &j, const Vector4 &v) {
     j = json{{"x", v.x}, {"y", v.y}, {"z", v.z}, {"w", v.w}};
 }
@@ -50329,6 +50358,7 @@ inline void from_json(const json &j, Vector4 &v) {
     v.w = j.at("w").get<float>();
 }
 
+// JSON変換の定義 (Quaternion)
 inline void to_json(json &j, const Quaternion &q) {
     j = json{{"x", q.x}, {"y", q.y}, {"z", q.z}, {"w", q.w}};
 }
@@ -50369,50 +50399,34 @@ inline void from_json(const json &j, PrimitiveType &type) {
     type = static_cast<PrimitiveType>(j.get<int>());
 }
 
-// Save (テンプレート関数はここに書く)
-template <typename T>
-void DataHandler::Save(const std::string &key, const T &value) {
-    std::string filePath = folderPath + "/" + fileName;
-    json j;
-
-    std::ifstream inFile(filePath);
-    if (inFile.is_open()) {
-        inFile >> j;
-        inFile.close();
-    }
-
-    j[key] = value; // 変数名をキーにして保存
-
-    std::ofstream outFile(filePath);
-    outFile << j.dump(4); // インデント付きで保存
-    outFile.close();
+// JSON変換の定義 (BlendMode)
+inline void to_json(json &j, const BlendMode &mode) {
+    j = static_cast<int>(mode);
 }
 
-// Load (テンプレート関数はここに書く)
+inline void from_json(const json &j, BlendMode &mode) {
+    mode = static_cast<BlendMode>(j.get<int>());
+}
+
+// キャッシュに書き込み、ダーティフラグを立てる
+template <typename T>
+void DataHandler::Save(const std::string &key, const T &value) {
+    cachedJson[key] = value;
+    isDirty = true;
+}
+
+// キャッシュから直接読み込む（ファイルアクセスなし）
 template <typename T>
 T DataHandler::Load(const std::string &key, const T &defaultValue) {
-    std::string filePath = folderPath + "/" + fileName;
-    json j;
-
-    std::ifstream inFile(filePath);
-    if (inFile.is_open()) {
-        inFile >> j;
-        inFile.close();
-    } else {
-        return defaultValue; // ファイルがない場合
-    }
-
-    if (j.contains(key)) {
+    if (cachedJson.contains(key)) {
         try {
-            return j[key].get<T>(); // from_json が自動適用
+            return cachedJson[key].get<T>();
         } catch (const json::exception &e) {
             std::cerr << "JSON Load Error: " << e.what() << " (Key: " << key << ")" << std::endl;
         }
     }
-
-    return defaultValue; // 失敗した場合はデフォルト値
+    return defaultValue;
 }
-
 
 ============================================================
 File Path: Engine/Utility/Debug/ImGui/Debugui_improved.h
@@ -50845,74 +50859,84 @@ void ImGuiManager::ShowMainMenu() {
         if (ImGui::BeginMenu(ICON_FA_EYE " 表示")) {
             // ウィンドウ表示設定
             if (ImGui::BeginMenu(ICON_FA_WINDOW_MAXIMIZE " ウィンドウ")) {
-                ImGui::MenuItem(ICON_FA_BOOK_OPEN " シーンビュー", nullptr, &showSceneView_);
-                ImGui::MenuItem(ICON_FA_CUBE " オブジェクトビュー", nullptr, &showObjectView_);
-                ImGui::MenuItem(ICON_FA_STAR " パーティクルビュー", nullptr, &showParticleView_);
-                ImGui::MenuItem(ICON_FA_DATABASE " FPSビュー", nullptr, &showFPSView_);
-                ImGui::MenuItem(ICON_FA_STAR_OF_DAVID " オフスクリーンビュー", nullptr, &showOfScreenView_);
-                ImGui::MenuItem(ICON_FA_LIGHTBULB " ライトビュー", nullptr, &showLightView_);
-                ImGui::MenuItem(ICON_FA_ARROWS_ALT " ギズモビュー", nullptr, &showGizmoView_);
-                ImGui::MenuItem(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャビュー", nullptr, &showHierarchyView_);
-                ImGui::MenuItem(ICON_FA_CODE_BRANCH " モーションエディタービュー", nullptr, &showMotionEditorView_);
-                ImGui::MenuItem(ICON_FA_SQUARE " スプライトマネージャビュー", nullptr, &showSpriteManagerView_);
-                ImGui::MenuItem(ICON_FA_SHAPES " コライダービュー", nullptr, &showColliderTagManagerView_);
-                ImGui::MenuItem(ICON_FA_BULLHORN " オーディオ", nullptr, &showAudioManagerView_);
+                if (ImGui::Selectable(ICON_FA_BOOK_OPEN " シーンビュー", showSceneView_, ImGuiSelectableFlags_DontClosePopups))
+                    showSceneView_ = !showSceneView_;
+                if (ImGui::Selectable(ICON_FA_CUBE " オブジェクトビュー", showObjectView_, ImGuiSelectableFlags_DontClosePopups))
+                    showObjectView_ = !showObjectView_;
+                if (ImGui::Selectable(ICON_FA_STAR " パーティクルビュー", showParticleView_, ImGuiSelectableFlags_DontClosePopups))
+                    showParticleView_ = !showParticleView_;
+                if (ImGui::Selectable(ICON_FA_DATABASE " FPSビュー", showFPSView_, ImGuiSelectableFlags_DontClosePopups))
+                    showFPSView_ = !showFPSView_;
+                if (ImGui::Selectable(ICON_FA_STAR_OF_DAVID " オフスクリーンビュー", showOfScreenView_, ImGuiSelectableFlags_DontClosePopups))
+                    showOfScreenView_ = !showOfScreenView_;
+                if (ImGui::Selectable(ICON_FA_LIGHTBULB " ライトビュー", showLightView_, ImGuiSelectableFlags_DontClosePopups))
+                    showLightView_ = !showLightView_;
+                if (ImGui::Selectable(ICON_FA_ARROWS_ALT " ギズモビュー", showGizmoView_, ImGuiSelectableFlags_DontClosePopups))
+                    showGizmoView_ = !showGizmoView_;
+                if (ImGui::Selectable(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャビュー", showHierarchyView_, ImGuiSelectableFlags_DontClosePopups))
+                    showHierarchyView_ = !showHierarchyView_;
+                if (ImGui::Selectable(ICON_FA_CODE_BRANCH " モーションエディタービュー", showMotionEditorView_, ImGuiSelectableFlags_DontClosePopups))
+                    showMotionEditorView_ = !showMotionEditorView_;
+                if (ImGui::Selectable(ICON_FA_SQUARE " スプライトマネージャビュー", showSpriteManagerView_, ImGuiSelectableFlags_DontClosePopups))
+                    showSpriteManagerView_ = !showSpriteManagerView_;
+                if (ImGui::Selectable(ICON_FA_SHAPES " コライダービュー", showColliderTagManagerView_, ImGuiSelectableFlags_DontClosePopups))
+                    showColliderTagManagerView_ = !showColliderTagManagerView_;
+                if (ImGui::Selectable(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_, ImGuiSelectableFlags_DontClosePopups))
+                    showAudioManagerView_ = !showAudioManagerView_;
                 ImGui::EndMenu();
             }
 
-            // グリッド設定
-            ImGui::MenuItem(ICON_FA_BORDER_ALL " グリッド表示", nullptr, &showGrid_);
+            if (ImGui::BeginMenu(ICON_FA_BORDER_ALL " グリッド設定")) {
+                // グリッド表示のON/OFFチェックボックス
+                ImGui::MenuItem(ICON_FA_BORDER_ALL " グリッド表示", nullptr, &showGrid_);
 
-            if (showGrid_) {
-                // グリッド設定項目（インデント付き）
-                ImGui::Indent();
+                if (showGrid_) {
+                    ImGui::Separator();
 
-                // Y座標設定
-                ImGui::PushItemWidth(120.0f);
-                if (ImGui::DragFloat(ICON_FA_ARROWS_ALT_V " Y座標", &gridY_, 0.1f, -100.0f, 100.0f, "%.1f")) {
-                    // リアルタイム更新
-                }
+                    // Y座標設定
+                    ImGui::PushItemWidth(120.0f);
+                    if (ImGui::DragFloat(ICON_FA_ARROWS_ALT_V " Y座標", &gridY_, 0.1f, -100.0f, 100.0f, "%.1f")) {
+                    }
 
-                // 分割数設定
-                if (ImGui::DragInt(ICON_FA_TH " 分割数", &gridDivision_, 1, 1, 100)) {
-                    // リアルタイム更新
-                }
+                    // 分割数設定
+                    if (ImGui::DragInt(ICON_FA_TH " 分割数", &gridDivision_, 1, 1, 100)) {
+                    }
 
-                // サイズ設定
-                if (ImGui::DragFloat(ICON_FA_EXPAND_ARROWS_ALT " サイズ", &gridSize_, 0.1f, 0.1f, 500.0f, "%.1f")) {
-                    // リアルタイム更新
-                }
-                ImGui::PopItemWidth();
+                    // サイズ設定
+                    if (ImGui::DragFloat(ICON_FA_EXPAND_ARROWS_ALT " サイズ", &gridSize_, 0.1f, 0.1f, 500.0f, "%.1f")) {
+                    }
+                    ImGui::PopItemWidth();
 
-                // 色設定
-                ImGui::ColorEdit4(ICON_FA_PALETTE " グリッド色", &gridColor_.x, ImGuiColorEditFlags_NoInputs);
+                    // 色設定
+                    ImGui::ColorEdit4(ICON_FA_PALETTE " グリッド色", &gridColor_.x, ImGuiColorEditFlags_NoInputs);
 
-                // プリセット（サブメニュー）
-                if (ImGui::BeginMenu(ICON_FA_SWATCHBOOK " プリセット")) {
-                    if (ImGui::MenuItem("デフォルト (グレー)")) {
+                    // プリセット（サブメニュー）
+                    if (ImGui::BeginMenu(ICON_FA_SWATCHBOOK " プリセット")) {
+                        if (ImGui::MenuItem("デフォルト (グレー)")) {
+                            gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
+                        }
+                        if (ImGui::MenuItem("白")) {
+                            gridColor_ = {1.0f, 1.0f, 1.0f, 1.0f};
+                        }
+                        if (ImGui::MenuItem("青")) {
+                            gridColor_ = {0.3f, 0.5f, 1.0f, 1.0f};
+                        }
+                        if (ImGui::MenuItem("緑")) {
+                            gridColor_ = {0.3f, 1.0f, 0.5f, 1.0f};
+                        }
+                        ImGui::EndMenu();
+                    }
+
+                    // リセットボタン
+                    if (ImGui::Button(ICON_FA_UNDO " リセット")) {
+                        gridY_ = 0.0f;
+                        gridDivision_ = 10;
+                        gridSize_ = 1.0f;
                         gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
                     }
-                    if (ImGui::MenuItem("白")) {
-                        gridColor_ = {1.0f, 1.0f, 1.0f, 1.0f};
-                    }
-                    if (ImGui::MenuItem("青")) {
-                        gridColor_ = {0.3f, 0.5f, 1.0f, 1.0f};
-                    }
-                    if (ImGui::MenuItem("緑")) {
-                        gridColor_ = {0.3f, 1.0f, 0.5f, 1.0f};
-                    }
-                    ImGui::EndMenu();
                 }
 
-                // リセットボタン
-                if (ImGui::Button(ICON_FA_UNDO " リセット")) {
-                    gridY_ = 0.0f;
-                    gridDivision_ = 10;
-                    gridSize_ = 1.0f;
-                    gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
-                }
-
-                ImGui::Unindent();
+                ImGui::EndMenu();
             }
             ImGui::Separator();
 
@@ -51108,6 +51132,9 @@ void ImGuiManager::ShowMainMenu() {
             if (ImGui::MenuItem(ICON_FA_FILM " デモシーン", "Ctrl+5")) { // film アイコン
                 SceneManager::GetInstance()->NextSceneReservation("DEMO");
             }
+            if (ImGui::MenuItem(ICON_FA_BOOK_OPEN " チュートリアルシーン", "Ctrl+6")) {
+                SceneManager::GetInstance()->NextSceneReservation("TUTORIAL");
+            }
 
             ImGui::EndMenu();
         }
@@ -51121,7 +51148,8 @@ void ImGuiManager::ShowSceneSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     // パフォーマンス改善: 軽量化フラグを追加
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("シーン設定", &showSceneView_, flags);
 
@@ -51134,7 +51162,8 @@ void ImGuiManager::ShowObjectSettingWindow() {
     if (!showObjectView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("オブジェクト設定", &showObjectView_, flags);
 
@@ -51148,7 +51177,8 @@ void ImGuiManager::ShowParticleSettingWindow() {
     if (!showParticleView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("パーティクル設定", &showParticleView_, flags);
 
@@ -51163,7 +51193,8 @@ void ImGuiManager::ShowStatisticsWindow() {
     if (!showFPSView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("統計", &showFPSView_, flags);
 
@@ -51180,7 +51211,8 @@ void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *offscreen) {
     if (!showOfScreenView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("オフスクリーン設定", &showOfScreenView_, flags);
 
@@ -51193,7 +51225,8 @@ void ImGuiManager::ShowLightSettingWindow() {
     if (!showLightView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("ライト設定", &showLightView_, flags);
 
@@ -51206,7 +51239,8 @@ void ImGuiManager::ShowGizmoWindow() {
     if (!showGizmoView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("トランスフォームマネージャ", &showGizmoView_, flags);
 
@@ -51219,7 +51253,8 @@ void ImGuiManager::ShowHierarchyWindow() {
     if (!showHierarchyView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("オブジェクトマネージャ", &showHierarchyView_, flags);
 
@@ -51232,7 +51267,8 @@ void ImGuiManager::ShowMotionEditorWindow() {
     if (!showMotionEditorView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("モーションエディター", &showMotionEditorView_, flags);
 
@@ -51245,7 +51281,8 @@ void ImGuiManager::ShowSpriteManagerWindow() {
     if (!showSpriteManagerView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("スプライトマネージャ", &showSpriteManagerView_, flags);
 
@@ -51258,7 +51295,8 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
     if (!showColliderTagManagerView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("タグマネージャー", &showColliderTagManagerView_, flags);
 
@@ -51271,7 +51309,8 @@ void ImGuiManager::ShowAudioManagerWindow() {
     if (!showAudioManagerView_)
         return;
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("オーディオ", &showAudioManagerView_, flags);
 
@@ -51819,6 +51858,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showShortcutWindow", showShortcutWindow);
     data->Save("showSpriteManagerView", showSpriteManagerView_);
     data->Save("isEditorMode", isEditorMode_);
+    data->Save("gridColor", gridColor_);
 }
 
 void ImGuiManager::LoadFlag() {
@@ -51837,6 +51877,7 @@ void ImGuiManager::LoadFlag() {
     showShortcutWindow = data->Load("showShortcutWindow", false);
     showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
     isEditorMode_ = data->Load("isEditorMode", true);
+    gridColor_ = data->Load("gridColor", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 }
 
 
@@ -51845,11 +51886,11 @@ File Path: Engine/Utility/Debug/ImGui/ImGuiManager.h
 ============================================================
 #pragma once
 #include "DirectXCommon.h"
-#include "WinApp.h"
-#include <BaseScene.h>
 #include "Object/Base/BaseObjectManager.h"
-#include"SpriteManager.h"
+#include "SpriteManager.h"
+#include "WinApp.h"
 #include <Audio.h>
+#include <BaseScene.h>
 
 class ImGuizmoManager;
 class OffScreen;
@@ -51882,7 +51923,7 @@ class ImGuiManager {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static ImGuiManager* GetInstance() {
+    static ImGuiManager *GetInstance() {
         static ImGuiManager instance;
         return &instance;
     }
@@ -51986,7 +52027,7 @@ class ImGuiManager {
     void ShowOffScreenSettingWindow(OffScreen *offscreen);
 
     void ShowLightSettingWindow();
-    
+
     void ShowGizmoWindow();
 
     void ShowHierarchyWindow();
@@ -52067,8 +52108,8 @@ class ImGuiManager {
     // グリッド設定用メンバ変数
     bool showGrid_ = false;
     float gridY_ = 0.0f;
-    int gridDivision_ = 10;
-    float gridSize_ = 1.0f;
+    int gridDivision_ = 100;
+    float gridSize_ = 500.0f;
     Vector4 gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f}; // グレー
 
     BaseObjectManager *baseObjectManager_ = nullptr;
@@ -52093,6 +52134,8 @@ File Path: Engine/Utility/Debug/ImGui/ImGuizmoManager.cpp
 void ImGuizmoManager::Finalize() {
     transformMap.clear();
     selectedNames.clear();
+    copiedObjects.clear();
+    copiedObject = nullptr;
 }
 
 void ImGuizmoManager::BeginFrame() {
@@ -57326,6 +57369,7 @@ File Path: Engine/Utility/Scene/SceneFactory.cpp
 #include "Application/Scene/GameScene.h"
 #include "Application/Scene/SelectScene.h"
 #include "Application/Scene/TitleScene.h"
+#include "Application/Scene/TutorialScene.h"
 
 std::unique_ptr<BaseScene> SceneFactory::CreateScene(const std::string &sceneName) {
     if (sceneName == "TITLE")
@@ -57338,6 +57382,8 @@ std::unique_ptr<BaseScene> SceneFactory::CreateScene(const std::string &sceneNam
         return std::make_unique<ClearScene>();
     if (sceneName == "DEMO")
         return std::make_unique<DemoScene>();
+    if (sceneName == "TUTORIAL")
+        return std::make_unique<TutorialScene>();
     return nullptr;
 }
 
@@ -57365,9 +57411,7 @@ File Path: Engine/Utility/Scene/SceneManager.cpp
 #include <cassert>
 
 SceneManager::~SceneManager() {
-    if (scene_) {
-        scene_->Finalize();
-    }
+    
 }
 
 void SceneManager::Initialize() {
@@ -57375,10 +57419,20 @@ void SceneManager::Initialize() {
     transition_->Initialize();
 }
 
-void SceneManager::Finalize() {
+void SceneManager::SceneFinalize() {
     if (scene_) {
+        scene_->Finalize();
         firstChange = false;
     }
+}
+
+void SceneManager::Finalize() {
+    // 次シーンが残っていれば先に解放
+    nextScene_.reset();
+    // 現在のシーンを解放
+    scene_.reset();
+    // シーンファクトリーを解放
+    sceneFactory_.reset();
 }
 
 void SceneManager::Update() {
@@ -57444,7 +57498,7 @@ void SceneManager::NextSceneReservation(const std::string &sceneName) {
 
     // 次シーンを生成（unique_ptr で受け取る）
     nextScene_ = sceneFactory_->CreateScene(sceneName);
-
+    nextScene_->SetOffScreen(offscreen_);
     if (!firstChange) {
         transition_->SetFadeOutStart(true);
     } else {
