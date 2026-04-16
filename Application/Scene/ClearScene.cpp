@@ -3,17 +3,14 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
 void ClearScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
-    ptCommon_ = ParticleCommon::GetInstance();
-    input_ = Input::GetInstance();
+    BaseScene::Initialize();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
     /// ===================================================
     /// ロード
     /// ===================================================
     BaseObjectManager::GetInstance()->LoadAll("ClearScene");
-    LightGroup::GetInstance()->LoadLightData("ClearLight");
+    lightGroup_->LoadLightData("ClearLight");
 
     /// ===================================================
     /// インスタンス生成

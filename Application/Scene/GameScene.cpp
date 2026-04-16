@@ -8,11 +8,8 @@ static constexpr const char *kBTFolder = "BehaviorTree";
 static constexpr const char *kBTFileName = "EnemyBehavior";
 
 void GameScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
-    ptCommon_ = ParticleCommon::GetInstance();
-    input_ = Input::GetInstance();
-    LightGroup::GetInstance()->LoadLightData("GameLight");
+    BaseScene::Initialize();
+    lightGroup_->LoadLightData("GameLight");
     vp_.Initialize();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
@@ -94,13 +91,13 @@ void GameScene::Initialize() {
 }
 
 void GameScene::Finalize() {
-    BaseScene::Finalize();
     fadeOut_->Finalize();
     aroundField_->Finalize();
     sceneManager_->SetClearTime(ClearTimer_);
     if (player_ptr->GetIsAlive()) {
         sceneManager_->SetHP(player_ptr->GetHP());
     }
+    BaseScene::Finalize();
 }
 
 void GameScene::Update() {
@@ -127,6 +124,7 @@ void GameScene::Update() {
     playerUI_->Update();
     enemyUI_->Update();
     fadeOut_->Update();
+    player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
 
 #ifdef _DEBUG
     player_ptr->SetStart(true);
@@ -167,6 +165,9 @@ void GameScene::Draw() {
 
     fadeOut_->Draw(vp_);
     gameUI_->Draw();
+
+    followCamera_->DrawFrustum();
+    enemy_ptr->DrawFrustum();
 
     SpriteManager::GetInstance()->DrawAll();
 }

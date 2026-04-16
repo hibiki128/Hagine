@@ -4,6 +4,7 @@
 #include <Camera/ViewProjection/ViewProjection.h>
 
 void ParticleCSEditor::Finalize() {
+    emitters_.clear();
 }
 
 void ParticleCSEditor::Initialize() {

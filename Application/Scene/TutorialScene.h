@@ -30,8 +30,6 @@ class TutorialScene : public BaseScene {
     void AddObjectSetting() override;
     void AddParticleSetting() override;
 
-    ViewProjection *GetViewProjection() override { return &vp_; }
-
   private:
     void CameraUpdate();
     void ChangeScene();
@@ -40,14 +38,6 @@ class TutorialScene : public BaseScene {
     void HandleEnemySpawnRequest();
 
   private:
-    Audio *audio_ = nullptr;
-    Input *input_ = nullptr;
-    SpriteCommon *spCommon_ = nullptr;
-    ParticleCommon *ptCommon_ = nullptr;
-
-    ViewProjection vp_;
-    std::unique_ptr<DebugCamera> debugCamera_;
-
     std::unique_ptr<Player> player_;
     std::unique_ptr<Enemy> enemy_;
     std::unique_ptr<AroundField> aroundField_;

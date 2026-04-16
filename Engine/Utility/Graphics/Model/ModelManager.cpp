@@ -82,4 +82,5 @@ void ModelManager::Initialize(SrvManager *srvManager) {
 }
 
 void ModelManager::Finalize() {
+    models.clear();
 }

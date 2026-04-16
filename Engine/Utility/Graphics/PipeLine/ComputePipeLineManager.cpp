@@ -2,7 +2,8 @@
 #include <Debug/Log/Logger.h>
 
 void ComputePipeLineManager::Finalize() {
-  
+    pipelines_.clear();
+    rootSignatures_.clear();
 }
 
 void ComputePipeLineManager::Initialize(DirectXCommon *dxCommon) {

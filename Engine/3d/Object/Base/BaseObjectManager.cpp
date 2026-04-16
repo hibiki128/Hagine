@@ -7,6 +7,9 @@
 #include <ShowFolder/ShowFolder.h>
 
 void BaseObjectManager::Finalize() {
+    // 保持中の全オブジェクトを解放し、CollisionManager が有効な間に
+    // 各コライダーの Unregister を完了させる
+    RemoveAllObjects();
 }
 
 void BaseObjectManager::RemoveAllObjects() {

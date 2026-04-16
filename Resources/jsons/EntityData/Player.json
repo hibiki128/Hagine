@@ -7,6 +7,9 @@
     "fallSpeed": -40.0,
     "invincibleDuration": 0.20000000298023224,
     "jumpSpeed": 20.0,
+    "lockOnHalfFovH": 0.8028514385223389,
+    "lockOnHalfFovV": 0.5235987901687622,
+    "lockOnRange": 100.0,
     "maxEnergy": 100.0,
     "maxSpeed": 20.0,
     "moveSpeed": 0.0

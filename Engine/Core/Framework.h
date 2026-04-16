@@ -79,8 +79,8 @@ class Framework {
     /// <returns></returns>
     virtual bool IsEndRequest() { return endRequest_; }
 
-  private:
   protected:
+    D3DResourceLeakChecker LeakChecker_;
     Input *input_ = nullptr;
     Audio *audio_ = nullptr;
     DirectXCommon *dxCommon_ = nullptr;
@@ -118,8 +118,6 @@ class Framework {
     ParticleCSFieldManager *particleCSFieldManager_ = nullptr;
 
     PrimitiveModel *primitiveModel_ = nullptr;
-
-    D3DResourceLeakChecker LeakChecker_;
 
     CollisionManager *collisionManager_ = nullptr;
 

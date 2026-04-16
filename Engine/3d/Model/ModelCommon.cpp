@@ -1,6 +1,7 @@
 #include "ModelCommon.h"
 
 void ModelCommon::Finalize() {
+    dxCommon_ = nullptr;
 }
 
 void ModelCommon::Initialize()

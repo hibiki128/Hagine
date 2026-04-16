@@ -1,10 +1,7 @@
 #include "SelectScene.h"
 
 void SelectScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
-    ptCommon_ = ParticleCommon::GetInstance();
-    input_ = Input::GetInstance();
+    BaseScene::Initialize();
     vp_.Initialize();
     vp_.translation_ = {12.0f, -4.0f, -30.0f};
 
@@ -27,23 +24,11 @@ void SelectScene::Update() {
 void SelectScene::Draw() {
     /// -------描画処理開始-------
 
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
-    //-----Spriteの描画開始-----
-
-    //------------------------
-
     /// -------描画処理終了-------
 }
 
 void SelectScene::DrawForOffScreen() {
     /// -------描画処理開始-------
-
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
-    //-----Spriteの描画開始-----
-
-    //------------------------
 
     /// -------描画処理終了-------
 }

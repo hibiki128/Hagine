@@ -53,12 +53,6 @@ class TitleScene : public BaseScene {
     /// </summary>
     void AddParticleSetting() override;
 
-    /// <summary>
-    /// ビュープロジェクションを取得
-    /// </summary>
-    /// <returns>ViewProjection*: ビュープロジェクションのポインタ</returns>
-    ViewProjection *GetViewProjection() override { return &vp_; }
-
   private:
     /// ===================================================
     /// private method
@@ -78,14 +72,6 @@ class TitleScene : public BaseScene {
     /// ====================================
     /// private variaus
     /// ====================================
-
-    Audio *audio_;
-    Input *input_;
-    SpriteCommon *spCommon_;
-    ParticleCommon *ptCommon_;
-
-    ViewProjection vp_;
-    std::unique_ptr<DebugCamera> debugCamera_;
 
     float time_ = 0.0f;
     const float kMaxTime_ = 2.0f;

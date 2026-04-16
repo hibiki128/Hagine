@@ -1,7 +1,7 @@
 {
     "blendMode": 2,
     "groupName": "charge",
-    "maxParticleCount": 35000,
+    "maxParticleCount": 60000,
     "modelfilePath": "",
     "primitiveType": 1,
     "textureName": "debug/circle2.png"

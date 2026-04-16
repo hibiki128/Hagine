@@ -1,6 +1,8 @@
 #pragma once
 #include "Application/Staging/Death/DeathStaging.h"
+#include "Application/System/Tutorial/TutorialSystem.h"
 #include "Bullet/PlayerBullet.h"
+#include "Collider/PlayerAttackCollider.h"
 #include "Data/DataHandler.h"
 #include "GamePad.h"
 #include "Hand/PlayerHand.h"
@@ -71,13 +73,13 @@ class Player : public BaseObject {
     /// <summary>
     /// 当たってる間
     /// </summary>
-    /// <param name="other"></param>
+    /// <param name="other">衝突したコライダー</param>
     void OnCollision(ColliderBase *other);
 
     /// <summary>
     /// 当たった瞬間
     /// </summary>
-    /// <param name="other"></param>
+    /// <param name="other">衝突したコライダー</param>
     void OnCollisionEnter(ColliderBase *other);
 
     /// <summary>
@@ -91,12 +93,8 @@ class Player : public BaseObject {
     void Debug();
 
     /// <summary>
-    /// 突撃状態に変更
-    /// </summary>
-    void ChangeRush();
-
-    /// <summary>
     /// チャージ状態に変更
+    /// Idle / Move / FlyIdle / FlyMove の各ステートの Update() 末尾から呼ぶ
     /// </summary>
     void ChangeEnergyCharge();
 
@@ -110,23 +108,22 @@ class Player : public BaseObject {
 
     /// <summary>
     /// 移動処理
+    /// カメラ方向・入力・加速度に基づいて velocity を更新する
     /// </summary>
     void Move();
-
-    /// <summary>
-    /// コントロール入力カウントをリセット
-    /// </summary>
-    void ResetControlCount() {
-        lControlInputTime_ = 0.0f;
-        lControlInputCount_ = 0;
-    }
 
     bool ConsumeEnergy(float amount); // エネルギー消費処理
     void RecoverEnergy();             // エネルギー回復処理
 
     /// <summary>
-    /// Getter
+    /// ロックオンを解除する
+    /// 解除タイミングは呼び出し側が管理する
     /// </summary>
+    void ReleaseLockOn();
+
+    /// ===================================================
+    /// Getter
+    /// ===================================================
     GamePad *GetGamePad() { return gamePad_.get(); }
     FollowCamera *GetCamera() { return FollowCamera_; }
     Enemy *GetEnemy() { return enemy_; }
@@ -164,6 +161,9 @@ class Player : public BaseObject {
     bool &GetIsGrounded() { return isGrounded_; }
     bool &GetIsLockOn() { return isLockOn_; }
     bool GetIsPause() const { return isPause_; }
+    bool GetIsDashing() const { return isDashing_; }
+    float GetDashDuration() const { return dashDuration_; }
+    bool GetDashStartedThisFrame() const { return dashStartedThisFrame_; }
     ViewProjection &GetViewProjection();
     PlayerHand *GetRightHand() { return rightHand_ptr_; }
     PlayerHand *GetLeftHand() { return leftHand_ptr_; }
@@ -172,10 +172,22 @@ class Player : public BaseObject {
     std::string GetCurrentStateName() const;
     std::string GetPreviewStateName() const { return previousStateName; }
     std::vector<std::unique_ptr<PlayerBullet>> &GetBullets() { return bullets_; }
+    PlayerAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
+
+    void SetIsLockOn(bool flag) { isLockOn_ = flag; }
 
     /// <summary>
-    /// Setter
+    /// ダッシュ状態をリセットする
+    /// Rush 遷移後など、ステート側からダッシュを解除する際に使う
     /// </summary>
+    void ClearDashState() {
+        isDashing_    = false;
+        dashDuration_ = 0.0f;
+    }
+
+    /// ===================================================
+    /// Setter
+    /// ===================================================
     void SetCamera(FollowCamera *camera);
     void SetVp(ViewProjection *vp);
     void SetStart(bool flag) {
@@ -184,8 +196,9 @@ class Player : public BaseObject {
     void SetPause(bool flag);
     void SetEnemy(Enemy *enemy) {
         enemy_ = enemy;
-        leftHand_ptr_->SetEnemy(enemy);
-        rightHand_ptr_->SetEnemy(enemy);
+        if (attackCollider_) {
+            attackCollider_->SetEnemy(enemy);
+        }
     }
     void SetIsDeathStaging(bool flag) {
         isDeathStaging_ = flag;
@@ -202,6 +215,22 @@ class Player : public BaseObject {
     /// </summary>
     /// <param name="damage">与えるダメージ量</param>
     void SetDamage(float damage) { damage_ = damage; }
+    void SetActiveDebugCamera(bool flag) { activeDebugCamrera_ = flag; }
+
+    /// <summary>
+    /// チュートリアルの現在ステップを受け取る
+    /// TutorialScene::Update() から毎フレーム呼ぶ
+    /// EnergyCharge ステップへの切替時はエネルギーを 0 にリセットする
+    /// </summary>
+    void SetTutorialStep(TutorialStep step);
+
+    /// <summary>
+    /// 外部からノックバックを与える
+    /// EnemyHand::OnCollisionEnter から呼ばれる
+    /// </summary>
+    /// <param name="direction">ノックバック方向（正規化済みでなくてもよい）</param>
+    /// <param name="power">ノックバック強度</param>
+    void SetKnockback(const Vector3 &direction, float power);
 
   private:
     /// ===================================================
@@ -239,7 +268,7 @@ class Player : public BaseObject {
     void UpdateShadowScale();
 
     /// <summary>
-    /// 回転を更新
+    /// 回転を更新（ロックオン追従 / スティック手動回転）
     /// </summary>
     void RotateUpdate();
 
@@ -278,6 +307,9 @@ class Player : public BaseObject {
     /// </summary>
     void InvincibleUpdate();
 
+    /// <summary>
+    /// ダッシュ継続時間と開始フラグを更新する
+    /// </summary>
     void UpdateDashState();
 
   private:
@@ -344,9 +376,6 @@ class Player : public BaseObject {
     static constexpr float kNormalShotEnergyCost = 5.0f;
     static constexpr float kSkillShotEnergyCost = 65.0f;
 
-    // 移動コスト定数
-    static constexpr float kRushEnergyCost = 30.0f;
-
     // FOV関連定数
     static constexpr float kNormalFov = 45.0f;
     static constexpr float kDashingFov = 55.0f;
@@ -368,47 +397,47 @@ class Player : public BaseObject {
     float moveSpeed_ = 0.0f; // 移動速度
     float fallSpeed_ = 0.0f; // 落下速度
     float jumpSpeed_ = 0.0f; // ジャンプ速度
-    float maxSpeed_ = 0.0f;  // 最大速度
+    float maxSpeed_  = 0.0f; // 最大速度
     float accelRate_ = 0.0f; // 加速度レート
     float dt_;               // デルタタイム
-    float HP_ = 100.0f;
-    float maxHP_ = 100.0f;
-    float energy_ = 100.0f;                      // 現在のエネルギー
-    float maxEnergy_ = 100.0f;                   // 最大エネルギー
-    float energyRecoveryRate_ = 0.01f;           // エネルギー回復速度(秒速)
-    float energyRecoveryDelay_ = 1.0f;           // 回復開始までの遅延時間
-    float timeSinceLastShot_ = 0.0f;             // 最後に撃ってからの経過時間
-    float yButtonHoldTime_ = 0.0f;               // Yボタン押下時間
+    float HP_       = 100.0f;
+    float maxHP_    = 100.0f;
+    float energy_   = 100.0f;             // 現在のエネルギー
+    float maxEnergy_ = 100.0f;            // 最大エネルギー
+    float energyRecoveryRate_ = 0.01f;    // エネルギー回復速度(秒速)
+    float energyRecoveryDelay_ = 1.0f;    // 回復開始までの遅延時間
+    float timeSinceLastShot_ = 0.0f;      // 最後に撃ってからの経過時間
+    float yButtonHoldTime_ = 0.0f;        // Yボタン押下時間
     const float kYButtonChargeThreshold = 0.15f; // チャージ判定閾値(秒)
 
-    float lControlInputTime_ = 0.0f;     // L操作入力の保持時間
-    int lControlInputCount_ = 0;         // L操作入力の回数
-    const float INPUT_RESET_TIME = 0.3f; // 入力リセット時間
-
     float currentFov_ = 45.0f;  // 現在のFOV
-    float targetFov_ = 45.0f;   // 目標FOV
+    float targetFov_  = 45.0f;  // 目標FOV
     float fovLerpSpeed_ = 5.0f; // FOV補間速度
 
-    float B_acce_ = 0.0f;  // ブーストの加速度
+    float B_acce_  = 0.0f; // ブーストの加速度
     float B_speed_ = 0.0f; // ブーストの速度
 
-    bool canJump_ = false;   // ジャンプ可能フラグ
-    bool isLockOn_ = false;  // ロックオンフラグ
-    bool isGrounded_ = true; // 接地フラグ
-    bool isDashing_ = false; // ダッシュ中フラグ
+    bool canJump_    = false; // ジャンプ可能フラグ
+    bool isLockOn_   = false; // ロックオンフラグ
+    bool isGrounded_ = true;  // 接地フラグ
+    bool isDashing_  = false; // ダッシュ中フラグ
     bool isSkillMenu_ = false;
+
     float dashInputX_ = 0.0f;           // ダッシュ開始時のスティックX入力
     float dashInputZ_ = 0.0f;           // ダッシュ開始時のスティックZ入力
-    bool dashStartedThisFrame_ = false; // ダッシュ開始フラグ
+    bool  dashStartedThisFrame_ = false; // ダッシュ開始フラグ
     float dashDuration_ = 0.0f;         // ダッシュ継続時間
+    bool  wasDashing_   = false;        // 前フレームのダッシュ状態（static ローカルを昇格）
 
-    bool started_ = false;        // ゲーム開始フラグ
-    bool isPause_ = false;        // ポーズ中フラグ
+    bool  wasRTPressed_ = false; // 前フレームのRT押下状態（static ローカルを昇格）
+
+    bool started_       = false; // ゲーム開始フラグ
+    bool isPause_       = false; // ポーズ中フラグ
     bool isDeathStaging_ = false; // 死亡演出中フラグ
 
-    bool isInvincible_ = false;        // 無敵状態フラグ
-    float invincibleTime_ = 0.0f;      // 無敵時間の経過時間
-    float invincibleDuration_ = 0.25f; // 無敵時間の長さ(秒)
+    bool  isInvincible_        = false; // 無敵状態フラグ
+    float invincibleTime_      = 0.0f;  // 無敵時間の経過時間
+    float invincibleDuration_  = 0.25f; // 無敵時間の長さ(秒)
     float damage_ = 0.0f;
 
     ComboSystem punchCombo_;
@@ -418,41 +447,49 @@ class Player : public BaseObject {
 
     std::vector<std::unique_ptr<PlayerBullet>> bullets_; // 発射した弾
 
-    std::unique_ptr<DataHandler> data_;              // データ管理
-    std::unique_ptr<BaseObject> shadow_;             // 影
-    std::unique_ptr<ChargeShot> chargeShot_;         // チャージショット
-    std::unique_ptr<PlayerHand> leftHand_;           // 左手
-    std::unique_ptr<PlayerHand> rightHand_;          // 右手
-    std::unique_ptr<Shake> shake_;                   // シェイク
-    std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
-    std::unique_ptr<ParticleEmitter> hitEmitter_;
-    std::unique_ptr<DeathStaging> deathStaging_;    // 死亡演出
-    std::unique_ptr<MakanAttackSkill> makanAttack_; // 必殺技
-    std::unique_ptr<GamePad> gamePad_;
+    std::unique_ptr<DataHandler>         data_;         // データ管理
+    std::unique_ptr<BaseObject>          shadow_;       // 影
+    std::unique_ptr<ChargeShot>          chargeShot_;   // チャージショット
+    std::unique_ptr<PlayerHand>          leftHand_;     // 左手
+    std::unique_ptr<PlayerHand>          rightHand_;    // 右手
+    std::unique_ptr<Shake>               shake_;        // シェイク
+    std::unique_ptr<ParticleCSEmitter>   auraEmitter_;  // オーラパーティクル
+    std::unique_ptr<ParticleEmitter>     hitEmitter_;
+    std::unique_ptr<DeathStaging>        deathStaging_; // 死亡演出
+    std::unique_ptr<MakanAttackSkill>    makanAttack_;  // 必殺技
+    std::unique_ptr<GamePad>             gamePad_;
+    std::unique_ptr<PlayerAttackCollider> attackCollider_; // 前方攻撃判定
 
     ViewProjection *vp_;                    // カメラ
-    OBBCollider *playerCollider_ = nullptr; // コライダー
+    OBBCollider  *playerCollider_ = nullptr; // コライダー
     AABBCollider *playerWallCollider_ = nullptr;
-    PlayerHand *leftHand_ptr_;                    // 左手
-    PlayerHand *rightHand_ptr_;                   // 右手
-    PlayerBaseState *currentState_ = nullptr;     // 現在の状態
-    MakanAttackSkill *makanAttack_ptr_ = nullptr; // 必殺技
-    ParticleField *generatedField_ = nullptr;     // 生成するフィールド
+    PlayerHand          *leftHand_ptr_;                    // 左手
+    PlayerHand          *rightHand_ptr_;                   // 右手
+    PlayerBaseState     *currentState_ = nullptr;          // 現在の状態
+    MakanAttackSkill    *makanAttack_ptr_ = nullptr;       // 必殺技
+    ParticleField       *generatedField_ = nullptr;        // 生成するフィールド
 
-    bool isDamageReact_ = false;       // リアクション中かどうか
-    float damageReactTimer_ = 0.0f;    // 経過時間
-    float damageReactDuration_ = 0.5f; // リアクション時間
-    EasingData<float> tiltEase_;       // 回転角イージング
-    Quaternion baseRotation_;          // 通常時の向き
-    Quaternion tiltRotation_;          // のけぞり用の回転
+    bool  isDamageReact_       = false; // リアクション中かどうか
+    float damageReactTimer_    = 0.0f;  // 経過時間
+    float damageReactDuration_ = 0.5f;  // リアクション時間
+    EasingData<float> tiltEase_;        // 回転角イージング
+    Quaternion baseRotation_;           // 通常時の向き
+    Quaternion tiltRotation_;           // のけぞり用の回転
 
     // 死亡時の回転リセット
     static constexpr float kDeathRotationResetDuration = 0.5f; // 回転リセット時間
-    bool isDeathRotationReset_ = false;                        // 死亡時の回転リセット中フラグ
-    float deathRotationResetTimer_ = 0.0f;                     // 回転リセット経過時間
-    Quaternion deathRotationStart_;                            // リセット開始時の回転
+    bool       isDeathRotationReset_    = false; // 死亡時の回転リセット中フラグ
+    float      deathRotationResetTimer_ = 0.0f;  // 回転リセット経過時間
+    Quaternion deathRotationStart_;              // リセット開始時の回転
 
     std::string previousStateName = "";
 
     Input *input_ = nullptr;
+
+    bool    activeDebugCamrera_ = false;                 // デバッグカメラがアクティブかどうか
+    Vector3 knockbackVelocity_  = {0.0f, 0.0f, 0.0f};  // 適用待ちノックバック
+    bool    hasKnockback_       = false;
+
+    // ─── チュートリアル連携 ───
+    TutorialStep tutorialStep_ = TutorialStep::Move; ///< シーンから渡された現在のチュートリアルステップ
 };

@@ -5,6 +5,10 @@
 const uint32_t SrvManager::kMaxSRVCount = 49152;
 
 void SrvManager::Finalize() {
+    descriptorHeap.Reset();
+    while (!freeIndices.empty()) {
+        freeIndices.pop();
+    }
 }
 
 void SrvManager::Initialize() {

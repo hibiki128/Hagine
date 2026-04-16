@@ -39,6 +39,10 @@ void Framework::Initialize() {
     srvManager_->Initialize();
     ///--------------------------
 
+    ///-------CollisionManager--------
+    collisionManager_ = CollisionManager::GetInstance();
+    ///----------------------------------
+
     ///--------BaseObjectManager--------
     baseObjectManager_ = BaseObjectManager::GetInstance();
     ///---------------------------------
@@ -118,10 +122,6 @@ void Framework::Initialize() {
     audio_->Initialize();
     ///---------------------------
 
-    ///-------CollisionManager--------
-    collisionManager_ = CollisionManager::GetInstance();
-    ///----------------------------------
-
     ///-------SceneManager--------
     sceneManager_ = SceneManager::GetInstance();
     sceneManager_->Initialize();
@@ -130,6 +130,7 @@ void Framework::Initialize() {
     ///-------OffScreen--------
     offscreen_ = std::make_unique<OffScreen>();
     offscreen_->Initialize();
+    sceneManager_->SetOffScreen(offscreen_.get());
     ///------------------------
 
     ///-------DrawLine3D-------
@@ -139,7 +140,6 @@ void Framework::Initialize() {
 
     ///-------SkyBox-------
     skyBox_ = SkyBox::GetInstance();
-    skyBox_->Initialize("debug/rostock_laage_airport_4k.dds");
     ///--------------------
 
     ///--------LightGroup------------
@@ -190,60 +190,37 @@ void Framework::Initialize() {
 }
 
 void Framework::Finalize() {
-    baseObjectManager_->Finalize();
+    collisionManager_->Clear();
     sceneManager_->Finalize();
     sceneTransition_->Finalize();
-
-    // WindowsAPIの終了処理
     winApp_->Finalize();
-
-    ///-------PipeLineManager-------
     pipeLineManager_->Finalize();
-    ///-----------------------------
-
-    ///-------ComputePipeLineManager-------
     computePipeLineManager_->Finalize();
-    ///-----------------------------
-
-    ///-------TextureManager-------
     textureManager_->Finalize();
-    ///-----------------------------
-
-    ///-------ModelCommon-------
     modelManager_->Finalize();
-    ///---------------------------
-
-    ///-------PrimitiveModel-------
     primitiveModel_->Finalize();
-    ///-----------------------------
-
-    ///-------ParticleGroupManager-------
     particleGroupManager_->Finalize();
-    ///---------------------------------
-
-    ///-------ParticleCSGroupManager-------
     particleCSGroupManager_->Finalize();
-    ///---------------------------------
 
 #ifdef _DEBUG
     imGuiManager_->Finalize();
     imGuizmoManager_->Finalize();
-#endif // _DEBUG
+#endif
     shortcutManager_->Finalize();
     spriteManager_->Finalize();
-
     line3d_->Finalize();
     skyBox_->Finalize();
     srvManager_->Finalize();
     audio_->Finalize();
     lightGroup_->Finalize();
     motionEditor_->Finalize();
-    LightGroup::GetInstance()->Finalize();
     particleEditor_->Finalize();
     particleCSEditor_->Finalize();
     spriteCommon_->Finalize();
     particleCommon_->Finalize();
     modelCommon_->Finalize();
+
+    baseObjectManager_->Finalize();
     dxCommon_->Finalize();
 }
 
@@ -296,6 +273,10 @@ void Framework::RegisterShortcutKey() {
     shortcutManager_->RegisterShortcut("DemoScene", {DIK_LCONTROL, DIK_5}, [this]() {
         sceneManager_->SceneSelection("DEMO");
     });
+    // チュートリアル
+    shortcutManager_->RegisterShortcut("TutorialScene", {DIK_LCONTROL, DIK_6}, [this]() {
+        sceneManager_->SceneSelection("TUTORIAL");
+    });
     // ゲームデバッグ画面切り替え
     shortcutManager_->RegisterShortcut("SwichMode", DIK_F5, [this]() {
         imGuiManager_->GetIsShowMainUI() = !imGuiManager_->GetIsShowMainUI();
@@ -342,7 +323,7 @@ void Framework::Update() {
 
 void Framework::LoadResource() {
 
-    //textureManager_->LoadAllTextures();
+    textureManager_->LoadAllTextures();
 
     particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");

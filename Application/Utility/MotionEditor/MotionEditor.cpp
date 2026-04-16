@@ -73,6 +73,11 @@ float ApplyMotionEasing(MotionEasingType type, float t, float total) {
 }
 
 void MotionEditor::Finalize() {
+    motions_.clear();
+    comboStartPositions_.clear();
+    comboStartRotations_.clear();
+    comboStartScales_.clear();
+    attackEndIntervals_.clear();
 }
 
 void MotionEditor::Register(BaseObject *object) {

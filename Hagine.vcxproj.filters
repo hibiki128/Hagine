@@ -478,6 +478,14 @@
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.cpp" />
     <ClCompile Include="Engine\Utility\Collider\type\CylinderCollider.cpp" />
     <ClCompile Include="Application\GameObject\Field\AroundField\AroundField.cpp" />
+    <ClCompile Include="Application\GameObject\Player\Collider\PlayerAttackCollider.cpp" />
+    <ClCompile Include="Application\Scene\TutorialScene.cpp" />
+    <ClCompile Include="Application\System\Tutorial\TutorialSystem.cpp" />
+    <ClCompile Include="Application\UI\Tutorial\TutorialUI.cpp" />
+    <ClCompile Include="Application\GameObject\Enemy\Collider\EnemyAttackCollider.cpp" />
+    <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParamsImpl.cpp" />
+    <ClCompile Include="Application\GameObject\Player\State\Action\PlayerStateGuard.cpp" />
+    <ClCompile Include="Application\GameObject\Player\State\Base\PlayerBaseState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -896,6 +904,15 @@
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldSettingOverride.h" />
     <ClInclude Include="Engine\Utility\Collider\type\CylinderCollider.h" />
     <ClInclude Include="Application\GameObject\Field\AroundField\AroundField.h" />
+    <ClInclude Include="Application\GameObject\Player\Collider\PlayerAttackCollider.h" />
+    <ClInclude Include="Application\Scene\TutorialScene.h" />
+    <ClInclude Include="Application\System\Tutorial\TutorialSystem.h" />
+    <ClInclude Include="Application\UI\Tutorial\TutorialUI.h" />
+    <ClInclude Include="Application\GameObject\Enemy\Collider\EnemyAttackCollider.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\IPostEffectParams.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParamsFactory.h" />
+    <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParamsImpl.h" />
+    <ClInclude Include="Application\GameObject\Player\State\Action\PlayerStateGuard.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

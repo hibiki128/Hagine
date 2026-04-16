@@ -1,23 +1,24 @@
 #define NOMINMAX
 #include "PlayerStateFlyMove.h"
-#include "Engine/Frame/Frame.h"
 #include "Input.h"
 #include "application/GameObject/Player/Player.h"
 #include <cmath>
 
 void PlayerStateFlyMove::Enter(Player &player) {
     player.GetAcceleration().y = kAccelerationZero;
-    player.GetVelocity().y = kVelocityZero;
-    fallInputTime_ = kInitialTime;
-    fallInputCount_ = kInitialCount;
-    isBoosting_ = false;
-    spaceHeldTime_ = kInitialTime;
+    player.GetVelocity().y     = kVelocityZero;
+    fallInputTime_             = kInitialTime;
+    fallInputCount_            = kInitialCount;
+
+    // Rush から復帰した際などに入力カウンターをリセット
+    lControlInputTime_  = 0.0f;
+    lControlInputCount_ = 0;
 }
 
 void PlayerStateFlyMove::Update(Player &player) {
     player.Move();
     AirMove(player);
-    ChangeState(player);
+    ChangeStateLogic(player);
     fallInputTime_ += player.GetDt();
     player.DirectionUpdate();
 }
@@ -26,37 +27,24 @@ void PlayerStateFlyMove::Exit(Player &player) {
 }
 
 void PlayerStateFlyMove::AirMove(Player &player) {
-    bool ascendInput = false;
-    bool descendInput = false;
-    bool descendTrigger = false;
+    float &vy = player.GetVelocity().y;
 
-    if (!player.GetGamePad()->IsConnected()) {
-        // キーボード入力
-        ascendInput = Input::GetInstance()->PushKey(DIK_SPACE);
-        descendInput = Input::GetInstance()->PushKey(DIK_LSHIFT);
-        descendTrigger = Input::GetInstance()->TriggerKey(DIK_LSHIFT);
-    } else {
-        // ゲームパッド入力
-        ascendInput = player.GetGamePad()->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER); // RB → 上昇
-        descendInput = player.GetGamePad()->GetRightTrigger() > 0.25f;             // RT → 下降
-        descendTrigger = player.GetGamePad()->IsRightTriggerTriggered(0.25f);      // RT トリガー判定
-    }
-
-    if (ascendInput) {
-        float &vy = player.GetVelocity().y;
+    if (IsAscendInput(player)) {
+        // 上昇入力中：Y速度を加速して上限でクランプ
         vy = std::min(vy + kFlyAcceleration * player.GetDt(), kFlyMaxSpeed);
-    } else if (descendInput) {
-        float &vy = player.GetVelocity().y;
+    } else if (IsDescendInput(player)) {
+        // 下降入力中：Y速度を逆方向に加速して下限でクランプ
         vy = std::max(vy - kFlyAcceleration * player.GetDt(), -kFlyMaxSpeed);
     } else {
-        float &vy = player.GetVelocity().y;
+        // 入力なし：減衰させてゼロに収束させる
         vy *= kVelocityDampingFactor;
         if (std::abs(vy) < kVelocityStopThreshold) {
             vy = kVelocityZero;
         }
     }
 
-    if (descendTrigger) {
+    // 下降入力のトリガーをカウント（短時間に 2 回で落下モードへ）
+    if (IsDescendTriggered(player)) {
         if (fallInputTime_ < kFallThresholdTime) {
             fallInputCount_++;
         } else {
@@ -66,56 +54,72 @@ void PlayerStateFlyMove::AirMove(Player &player) {
     }
 }
 
-void PlayerStateFlyMove::ChangeState(Player &player) {
-    player.ChangeRush();
+void PlayerStateFlyMove::ChangeStateLogic(Player &player) {
+    TryChangeToRush(player);
 
     if (player.GetCurrentStateName() == "Rush") {
         return;
     }
 
+    // 下降入力が閾値回数に達したら物理落下状態（Air）へ遷移
     if (fallInputCount_ >= kFallInputThreshold) {
         player.ChangeState("Air");
         fallInputCount_ = kInitialCount;
         return;
     }
 
-    if (player.GetWorldTransform()) {
-        if (player.GetLocalPosition().y <= kGroundLevel) {
-            player.ChangeState("Idle");
-            return;
-        }
+    // 地面に着地したら地上 Idle へ遷移
+    if (player.GetWorldTransform() && player.GetLocalPosition().y <= kGroundLevel) {
+        player.ChangeState("Idle");
+        return;
     }
 
-    bool hasInput = false;
-
-    if (!player.GetGamePad()->IsConnected()) {
-        // キーボード入力
-        if (Input::GetInstance()->TriggerKey(DIK_LSHIFT) ||
-            Input::GetInstance()->PushKey(DIK_LSHIFT) ||
-            Input::GetInstance()->PushKey(DIK_SPACE) ||
-            Input::GetInstance()->PushKey(DIK_D) ||
-            Input::GetInstance()->PushKey(DIK_A) ||
-            Input::GetInstance()->PushKey(DIK_W) ||
-            Input::GetInstance()->PushKey(DIK_S)) {
-            hasInput = true;
-        }
-    } else {
-        // ゲームパッド入力
-        float leftStickX = player.GetGamePad()->GetLeftStickX();
-        float leftStickY = player.GetGamePad()->GetLeftStickY();
-
-        if (player.GetGamePad()->IsRightTriggerTriggered(0.25f) ||         // RT トリガー
-            player.GetGamePad()->GetRightTrigger() > 0.25f ||              // RT 押下
-            player.GetGamePad()->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER) || // RB 押下
-            leftStickX != 0.0f || leftStickY != 0.0f) {
-            hasInput = true;
-        }
-    }
-
-    if (!hasInput &&
-        fallInputTime_ > kFallThresholdTime &&
-        fallInputCount_ < kFallInputThreshold) {
+    // 一定時間入力がなければ飛行 Idle へ遷移
+    if (!HasFlyAnyInput(player) && fallInputTime_ > kFallThresholdTime) {
         player.ChangeState("FlyIdle");
         return;
+    }
+
+    player.ChangeEnergyCharge();
+}
+
+void PlayerStateFlyMove::TryChangeToRush(Player &player) {
+    if (!player.GetGamePad()->IsConnected()) {
+        // キーボード入力: LCtrl を 2 回押しで Rush に遷移
+        if (Input::GetInstance()->TriggerKey(DIK_LCONTROL)) {
+            lControlInputCount_++;
+            if (lControlInputCount_ == 1) {
+                lControlInputTime_ = 0.0f;
+            } else if (lControlInputCount_ >= 2 && player.GetIsLockOn() && player.GetEnemy()) {
+                if (player.ConsumeEnergy(kRushEnergyCost)) {
+                    player.ChangeState("Rush");
+                }
+                lControlInputCount_ = 0;
+                return;
+            }
+        }
+
+        // 一定時間内に 2 回入力されなければリセット
+        if (lControlInputCount_ > 0) {
+            lControlInputTime_ += player.GetDt();
+            if (lControlInputTime_ >= kInputResetTime) {
+                lControlInputCount_ = 0;
+                lControlInputTime_  = 0.0f;
+            }
+        }
+    } else {
+        // ゲームパッド入力: ダッシュ中かつロックオン中の A ボタントリガーで Rush に遷移
+        if (player.GetIsDashing() && player.GetIsLockOn() && player.GetEnemy()) {
+            if (!player.GetDashStartedThisFrame() &&
+                player.GetDashDuration() > kDashRushMinDuration &&
+                player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_A)) {
+
+                if (player.ConsumeEnergy(kRushEnergyCost)) {
+                    player.ChangeState("Rush");
+                    player.ClearDashState();
+                }
+                return;
+            }
+        }
     }
 }

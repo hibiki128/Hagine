@@ -867,6 +867,7 @@ void EnemyEnergyChargeNode::OnEnter() {
 
     // 1. 現在の移動速度をゼロにする（プレイヤーと同じ挙動）
     m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+    m_Enemy->StopMovement();
 
     // 2. 元の自動回復レートを保存し、チャージ用の高いレートを設定する
     // PlayerEnergyChargeの kChargeRate = 15.0f を基準にする
@@ -903,9 +904,8 @@ NodeStatus EnemyEnergyChargeNode::OnUpdate() {
 }
 
 void EnemyEnergyChargeNode::OnExit() {
-    if (!m_Enemy)
-        return;
-
-    // 終了時に元の回復レート（自動回復分）に戻す
-    m_Enemy->SetEnergyRecoveryRate(m_OriginalRecoveryRate);
+    if (m_Enemy) {
+        // 保存しておいた元の回復レートに戻す
+        m_Enemy->SetEnergyRecoveryRate(m_OriginalRecoveryRate);
+    }
 }

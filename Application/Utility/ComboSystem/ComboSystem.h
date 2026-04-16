@@ -1,12 +1,17 @@
 #pragma once
+#include "Data/DataHandler.h"
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
+
 class BaseObject;
 class MotionEditor;
 
 /// <summary>
 /// コンボシステムを管理するクラス
-/// 連続攻撃のシーケンスと時間管理を制御
+/// 連続攻撃のシーケンスと時間管理を制御する
+/// 攻撃ごとにダメージ・ノックバック・コライダータイミングを設定可能
 /// </summary>
 class ComboSystem {
   private:
@@ -15,19 +20,24 @@ class ComboSystem {
     /// ===================================================
 
     /// <summary>
-    /// コンボデータ構造体
+    /// コンボ1段分のデータ
     /// </summary>
     struct ComboData {
-        BaseObject *target;     // 対象オブジェクト
-        std::string attackData; // 攻撃データ
+        BaseObject *target;     // モーションを再生するオブジェクト（見た目用）
+        std::string attackData; // 攻撃モーションのファイル名（Jsonキーとしても使用）
 
-        /// <summary>
-        /// コンストラクタ
-        /// </summary>
-        /// <param name="obj">対象オブジェクトのポインタ</param>
-        /// <param name="attack">攻撃データ</param>
-        ComboData(BaseObject *obj, const std::string &attack)
-            : target(obj), attackData(attack) {}
+        // --- 攻撃パラメータ（ImGuiで調整・セーブ可能）---
+        float damage = 10.0f;                 // ダメージ量
+        float knockbackPower = 3.0f;          // ノックバックの強さ
+        float colliderActiveDuration = 0.25f; // 判定が有効な時間（秒）
+        float colliderActivateDelay = 0.08f;  // 攻撃開始からコライダーが有効になる遅延（秒）
+
+        ComboData(BaseObject *obj, const std::string &attack,
+                  float dmg, float knockback,
+                  float duration, float delay)
+            : target(obj), attackData(attack),
+              damage(dmg), knockbackPower(knockback),
+              colliderActiveDuration(duration), colliderActivateDelay(delay) {}
     };
 
   private:
@@ -35,85 +45,101 @@ class ComboSystem {
     /// private method
     /// ===================================================
 
-    /// <summary>
-    /// コンボ攻撃を実行
-    /// </summary>
     void ExecuteComboAttack();
-
-    /// <summary>
-    /// コンボをリセット
-    /// </summary>
     void ResetCombo();
-
-    /// <summary>
-    /// コンボ開始時のオブジェクト位置を保存
-    /// </summary>
     void SaveComboStartPositions();
 
-  private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
+
+    std::string name_ = "DefaultCombo"; // DataHandlerのファイル名に使用
 
     std::vector<ComboData> comboData_;
+    std::vector<BaseObject *> comboStartObjects_;
 
-    int comboIndex_;        // 現在のコンボインデックス
-    float comboCooldown_;   // コンボクールダウン
-    bool comboStarted_;     // コンボ開始フラグ
-    bool waitingForReturn_; // 復帰待機フラグ
-    float returnDelay_;     // 復帰遅延
-    float comboTimeout_;    // コンボタイムアウト
-    bool inputBuffered_;    // 入力バッファフラグ
-    float inputBufferTime_; // 入力バッファ時間
+    int comboIndex_ = 0;
+    float comboCooldown_ = 0.0f;
+    bool comboStarted_ = false;
+    bool waitingForReturn_ = false;
+    float returnDelay_ = 0.0f;
+    float comboTimeout_ = 0.0f;
+    bool inputBuffered_ = false;
+    float inputBufferTime_ = 0.0f;
 
-    static const float COMBO_INTERVAL;         // コンボ間隔
-    static const float INPUT_BUFFER_DURATION;  // 入力バッファ時間
-    static const float FINAL_RETURN_DELAY;     // 最終復帰遅延
-    static const float COMBO_TIMEOUT_DURATION; // コンボタイムアウト時間
+    static const float COMBO_INTERVAL;
+    static const float INPUT_BUFFER_DURATION;
+    static const float FINAL_RETURN_DELAY;
+    static const float COMBO_TIMEOUT_DURATION;
 
-    std::vector<BaseObject *> comboStartObjects_; // コンボ開始オブジェクト
+    // 攻撃発火コールバック
+    // 引数: damage, knockbackPower, colliderActiveDuration, colliderActivateDelay
+    using AttackFiredCallback = std::function<void(float, float, float, float)>;
+    AttackFiredCallback onAttackFired_;
+
+    // セーブ/ロード用
+    std::unique_ptr<DataHandler> dataHandler_;
 
   public:
     /// ===================================================
     /// public method
     /// ===================================================
 
-    /// <summary>
-    /// コンストラクタ
-    /// </summary>
     ComboSystem();
-
-    /// <summary>
-    /// デストラクタ
-    /// </summary>
     ~ComboSystem();
 
     /// <summary>
-    /// チェーン形式でコンボを追加
+    /// このコンボシステムの識別名を設定（DataHandlerのファイル名になる）
+    /// Add()より前に呼ぶこと
     /// </summary>
-    /// <param name="target">対象オブジェクトのポインタ</param>
-    /// <param name="attackData">攻撃データ</param>
-    /// <returns>ComboSystem&: チェーン用の参照</returns>
-    ComboSystem &Add(BaseObject *target, const std::string &attackData);
+    void SetName(const std::string &name) { name_ = name; }
 
     /// <summary>
-    /// コンボをクリア
+    /// チェーン形式でコンボを追加する
+    /// </summary>
+    /// <param name="target">モーションを再生するオブジェクト（見た目用）</param>
+    /// <param name="attackData">モーションファイル名</param>
+    /// <param name="damage">ダメージ量（デフォルト10.0）</param>
+    /// <param name="knockbackPower">ノックバック強さ（デフォルト3.0）</param>
+    /// <param name="colliderActiveDuration">コライダー有効時間（デフォルト0.25秒）</param>
+    /// <param name="colliderActivateDelay">コライダー有効化遅延（デフォルト0.08秒）</param>
+    ComboSystem &Add(BaseObject *target, const std::string &attackData,
+                     float damage = 10.0f, float knockbackPower = 3.0f,
+                     float colliderActiveDuration = 0.25f, float colliderActivateDelay = 0.08f);
+
+    /// <summary>
+    /// コンボをすべてクリア
     /// </summary>
     void Clear();
 
     /// <summary>
-    /// コンボを実行
-    /// 入力時に呼び出される
+    /// 攻撃入力時に呼ぶ。実行可能ならコンボを進める
     /// </summary>
-    /// <returns>bool: 実行可能かどうか</returns>
+    /// <returns>true: 攻撃を実行した / false: クールダウン中などで実行できなかった</returns>
     bool TryExecuteCombo();
 
     /// <summary>
-    /// 時間管理用の更新
-    /// 毎フレーム呼び出し
+    /// 毎フレーム呼ぶ更新処理
     /// </summary>
-    /// <param name="deltaTime">フレームの経過時間</param>
     void Update(float deltaTime);
+
+    /// <summary>
+    /// 攻撃発火時のコールバックを設定する
+    /// PlayerAttackCollider::Activate(...) を呼び出すのに使う
+    /// callback(damage, knockbackPower, colliderActiveDuration, colliderActivateDelay)
+    /// </summary>
+    void SetOnAttackFired(AttackFiredCallback callback) { onAttackFired_ = callback; }
+
+    /// <summary>
+    /// 攻撃パラメータをJSONに保存
+    /// </summary>
+    void SaveAttackParams();
+
+    /// <summary>
+    /// 攻撃パラメータをJSONから読み込む
+    /// Add() でコンボを登録した後に呼ぶこと
+    /// </summary>
+    void LoadAttackParams();
 
     /// <summary>
     /// Getter
@@ -123,4 +149,12 @@ class ComboSystem {
     bool IsCurrentAttackCompleted() const;
     int GetCurrentComboIndex() const { return comboIndex_; }
     int GetComboLength() const { return static_cast<int>(comboData_.size()); }
+
+#ifdef _DEBUG
+    /// <summary>
+    /// ImGuiによる攻撃パラメータ調整UI
+    /// 各攻撃のダメージ・ノックバック・コライダータイミングを調整してセーブできる
+    /// </summary>
+    void DrawImGui();
+#endif
 };

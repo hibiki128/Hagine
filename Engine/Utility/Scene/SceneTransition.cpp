@@ -7,6 +7,9 @@
 #include <vector>
 
 void SceneTransition::Finalize() {
+    transitionSprite_.reset();
+    instanceSizes_.clear();
+    sprite_.reset();
 }
 
 void SceneTransition::Initialize() {

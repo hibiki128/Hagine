@@ -1,5 +1,6 @@
 #pragma once
 #include "Application/Utility/Shake/Shake.h"
+#include "Collider/EnemyAttackCollider.h"
 #include "Bullet/EnemyBullet.h"
 #include "Hand/EnemyHand.h"
 #include "Object/Base/BaseObject.h"
@@ -21,65 +22,25 @@ class Enemy : public BaseObject {
     /// public method
     /// ===================================================
 
-    /// <summary>
-    /// コンストラクタ
-    /// </summary>
     Enemy();
-
-    /// <summary>
-    /// デストラクタ
-    /// </summary>
     ~Enemy() override;
 
-    /// <summary>
-    /// 初期化
-    /// </summary>
-    /// <param name="objectName">オブジェクト名</param>
     void Init(const std::string objectName) override;
-
-    /// <summary>
-    /// 更新処理
-    /// </summary>
     void Update() override;
-
-    /// <summary>
-    /// 描画処理
-    /// </summary>
-    /// <param name="viewProjection">ビュープロジェクション</param>
-    /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
-
-    /// <summary>
-    /// パーティクルの描画処理
-    /// </summary>
-    /// <param name="viewProjection">ビュープロジェクション</param>
+    void Draw(const ViewProjection &viewProjection,
+              Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
     void DrawParticle(const ViewProjection &viewProjection);
-
-    /// <summary>
-    /// デバッグ処理
-    /// </summary>
+    void DrawFrustum();
     void Debug();
 
-    /// <summary>
-    /// 衝突判定時の処理
-    /// </summary>
-    /// <param name="other">衝突したコライダー</param>
     void OnCollisionEnter(ColliderBase *collider);
-
-    /// <summary>
-    /// 当たってるときの処理
-    /// </summary>
-    /// <param name="collider"></param>
     void OnCollision(ColliderBase *collider);
-
-    /// <summary>
-    /// コンボ更新処理
-    /// </summary>
     void ConboUpdate();
 
-    /// <summary>
+    /// ===================================================
     /// Getter
-    /// </summary>
+    /// ===================================================
+
     Vector3 &GetAcceleration() { return acceleration_; }
     Vector3 GetVelocity() { return velocity_; }
     Vector3 GetMovementDirection() const;
@@ -118,19 +79,54 @@ class Enemy : public BaseObject {
     EnemyHand *GetRightHand() { return rightHand_ptr_; }
     EnemyHand *GetLeftHand() { return leftHand_ptr_; }
 
+    /// <summary>
+    /// 前方攻撃判定コライダーを返す
+    /// </summary>
+    EnemyAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
     float GetVerticalVelocity() const { return velocity_.y; }
     float GetVerticalAcceleration() const { return acceleration_.y; }
     bool GetIsFlying() const { return isFlying_; }
 
+    // コンボ状態Getter（BTノードから参照）
+    int GetPunchComboLength() const { return punchCombo_.GetComboLength(); }
+    bool IsPunchComboActive() const { return punchCombo_.IsComboActive(); }
+
     /// <summary>
-    /// Setter
+    /// 現在の攻撃のダメージ量を返す（EnemyHandから参照）
     /// </summary>
+    float GetCurrentAttackDamage() const { return currentAttackDamage_; }
+
+    /// <summary>
+    /// 現在の攻撃のノックバック強度を返す（EnemyHandから参照）
+    /// </summary>
+    float GetCurrentAttackKnockback() const { return currentAttackKnockback_; }
+
+    float GetEnergyRecoveryRate() const { return energyRecoveryRate_; }
+
+    // ConditionNode用
+    Vector3 GetWorldPosition() const { return transform_->translation_; }
+
+    /// ===================================================
+    /// Setter
+    /// ===================================================
+
     void SetDamage(float damage) { damage_ = damage; }
+
+    /// <summary>
+    /// ノックバックを設定する
+    /// PlayerAttackCollider::OnCollisionEnterから呼ばれる
+    /// </summary>
+    /// <param name="direction">ノックバック方向（正規化済みでなくてもよい）</param>
+    /// <param name="power">ノックバック強度</param>
+    void SetKnockback(const Vector3 &direction, float power);
+
     void SetVp(ViewProjection *vp);
     void SetTarget(Player *target) {
         target_ = target;
-        leftHand_ptr_->SetPlayer(target);
-        rightHand_ptr_->SetPlayer(target);
+        // 前方攻撃判定コライダーにもプレイヤーを設定する
+        if (attackCollider_) {
+            attackCollider_->SetPlayer(target);
+        }
     }
     void SetGuarding(bool guarding) { isGuarding_ = guarding; }
     void SetIsLockOn(bool lockOn) { isLockOn_ = lockOn; }
@@ -142,7 +138,6 @@ class Enemy : public BaseObject {
     void SetStrafeDirection(int dir) { strafeDirection_ = dir; }
     void SetBehaviorTree(std::shared_ptr<BTNode> rootNode) {
         rootNode_ = rootNode;
-        // ツリーに自分とターゲットを教える
         if (rootNode_) {
             rootNode_->SetContext(this, target_);
         }
@@ -156,82 +151,37 @@ class Enemy : public BaseObject {
     void SetEnergyRecoveryRate(float rate) { energyRecoveryRate_ = rate; }
     void SetLocalPosition(const Vector3 &pos) { transform_->translation_ = pos; }
 
-    float GetEnergyRecoveryRate() const { return energyRecoveryRate_; }
+    bool ConsumeEnergy(float amount);
+    void RecoverEnergy();
 
-    // コンボ状態Getter（BTノードから参照）
-    int GetPunchComboLength() const { return punchCombo_.GetComboLength(); }
-    bool IsPunchComboActive() const { return punchCombo_.IsComboActive(); }
-
-    bool ConsumeEnergy(float amount); // エネルギー消費処理
-    void RecoverEnergy();             // エネルギー回復処理
-
-    // ConditionNode用に位置取得が必要（BaseObjectにあればOK）
-    Vector3 GetWorldPosition() const { return transform_->translation_; }
+    void UpdateFrustumLockOn();
+    void ReleaseLockOn() { isLockOn_ = false; }
 
     void MoveToTarget(const Vector3 &targetPos);
     void PerformAttack();
-    void MoveStrafe();                                                          // 左右移動
-    void MoveRetreat();                                                         // 後退
-    void StopMovement();                                                        // 移動を停止
-    void Move();                                                                // 通常の移動処理
-    void DirectionUpdate();                                                     // 方向更新処理
-    void Shot();                                                                // 弾発射処理（ロックオン自動判定）
-    void ShotWithDirection(const Vector3 &direction, bool forceHoming = false); // 方向指定発射
+    void MoveStrafe();
+    void MoveRetreat();
+    void StopMovement();
+    void Move();
+    void DirectionUpdate();
+    void Shot();
+    void ShotWithDirection(const Vector3 &direction, bool forceHoming = false);
 
   private:
     /// ===================================================
     /// private method
     /// ===================================================
 
-    /// <summary>
-    /// 設定を保存
-    /// </summary>
     void Save();
-
-    /// <summary>
-    /// 設定を読み込み
-    /// </summary>
     void Load();
-
-    /// <summary>
-    /// 影のスケールを更新
-    /// </summary>
     void UpdateShadowScale();
-
-    /// <summary>
-    /// 回転を更新
-    /// </summary>
     void RotateUpdate();
-
-    /// <summary>
-    /// 地面との衝突判定処理
-    /// </summary>
     void CollisionGround();
-
-    /// <summary>
-    /// ダメージを受ける処理
-    /// </summary>
     void DamageUpdate();
-
-    /// <summary>
-    /// ダメージリアクションの開始処理（DamageUpdate内から呼ばれる）
-    /// </summary>
     void StartDamageReact();
-
-    /// <summary>
-    /// 回転からDirection値を計算
-    /// </summary>
-    /// <returns>計算されたDirection</returns>
     Direction CalculateDirectionFromRotation();
-
-    /// <summary>
-    /// Direction値を文字列で取得
-    /// </summary>
-    /// <param name="dir">方向の値</param>
-    /// <returns>方向の名前文字列</returns>
     const char *GetDirectionName(Direction dir);
 
-  private:
     /// ===================================================
     /// private variants
     /// ===================================================
@@ -287,8 +237,8 @@ class Enemy : public BaseObject {
     static constexpr float kVelocityZero = 0.0f;
 
     // イージング関連定数
-    static constexpr float kVelocityEaseTime = 0.15f; // 速度変化のイージング時間
-    static constexpr float kStopEaseTime = 0.2f;      // 停止時のイージング時間
+    static constexpr float kVelocityEaseTime = 0.15f;
+    static constexpr float kStopEaseTime = 0.2f;
 
     // 影のスケール関連定数
     static constexpr float kShadowBaseScale = 1.5f;
@@ -302,12 +252,6 @@ class Enemy : public BaseObject {
     static constexpr float kMidDistanceMax = 10.0f;
     static constexpr float kCloseDistanceMin = 0.0f;
     static constexpr float kCloseDistanceMax = 5.0f;
-
-    // ビヘイビアツリー重み定数
-    static constexpr float kCloseApproachWeight = 1.0f;
-    static constexpr float kStrafeWeight = 1.5f;
-    static constexpr float kRetreatWeight = 1.0f;
-    static constexpr float kGuardWeight = 1.2f;
 
     // 弾丸関連定数
     static constexpr float kBulletScale = 0.5f;
@@ -333,19 +277,32 @@ class Enemy : public BaseObject {
     float maxSpeed_ = 0.0f;
     float accelRate_ = 0.0f;
 
-    // ★追加: イージング用の変数
-    Vector3 velocityTarget_{};         // 目標速度
-    EasingData<Vector3> velocityEase_; // 速度のイージング
+    Vector3 velocityTarget_{};
+    EasingData<Vector3> velocityEase_;
+
+    // -----------------------------------------------
+    // ノックバック関連
+    // -----------------------------------------------
+    bool hasKnockback_ = false;            // DamageUpdateで処理するペンディングフラグ
+    Vector3 pendingKnockback_ = {0, 0, 0}; // 適用待ちのノックバック速度
+
+    // -----------------------------------------------
+    // コンボ攻撃パラメータ（ComboSystemのコールバックで更新される）
+    // EnemyHandがヒット時に参照する
+    // -----------------------------------------------
+    float currentAttackDamage_ = 10.0f;   // 現在の攻撃のダメージ量
+    float currentAttackKnockback_ = 3.0f; // 現在の攻撃のノックバック強度
+    float currentAttackDuration_ = 0.25f; // 現在の攻撃のコライダー有効時間
 
     bool canJump_ = false;
     bool isLockOn_ = false;
     bool isGrounded_ = true;
-    bool isFlying_ = false; // 飛行中フラグ（重力を無効化）
+    bool isFlying_ = false;
     bool isStop_ = false;
     bool started_ = false;
     bool isPause_ = false;
     bool drawShadow_ = true;
-    bool isGuarding_ = false; // ガード状態
+    bool isGuarding_ = false;
     bool isComboAttack_ = false;
 
     std::unique_ptr<DataHandler> data_;
@@ -353,30 +310,49 @@ class Enemy : public BaseObject {
     std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> chargeShake_;
     std::shared_ptr<BTNode> rootNode_ = nullptr;
-    std::unique_ptr<EnemyHand> leftHand_;  // 左手
-    std::unique_ptr<EnemyHand> rightHand_; // 右手
+    std::unique_ptr<EnemyHand> leftHand_;
+    std::unique_ptr<EnemyHand> rightHand_;
 
-    bool isDamageReact_ = false;       // リアクション中かどうか
-    float damageReactTimer_ = 0.0f;    // 経過時間
-    float damageReactDuration_ = 0.5f; // 少し短めの時間
-    float energy_ = 100.0f;            // 現在のエネルギー
-    float maxEnergy_ = 100.0f;         // 最大エネルギー
-    float energyRecoveryRate_ = 0.01f; // エネルギー回復速度(秒速)
-    float energyRecoveryDelay_ = 1.0f; // 回復開始までの遅延時間
-    float timeSinceLastShot_ = 0.0f;   // 最後に撃ってからの経過時間
+    bool isDamageReact_ = false;
+    float damageReactTimer_ = 0.0f;
+    float damageReactDuration_ = 0.5f;
+    float energy_ = 100.0f;
+    float maxEnergy_ = 100.0f;
+    float energyRecoveryRate_ = 0.01f;
+    float energyRecoveryDelay_ = 1.0f;
+    float timeSinceLastShot_ = 0.0f;
 
     ComboSystem punchCombo_;
-    bool comboInitialized_ = false; // コンボ初期化済みフラグ
+    bool comboInitialized_ = false;
 
-    EasingData<float> tiltEase_; // 回転角イージング
-    Quaternion baseRotation_;    // 通常時の向き
-    Quaternion tiltRotation_;    // のけぞり用の回転
+    // -----------------------------------------------
+    // 前方攻撃判定コライダー
+    // EnemyHandのコライダーの代わりに敵前方に判定を展開する
+    // PlayerAttackColliderと対称の設計
+    // -----------------------------------------------
+    std::unique_ptr<EnemyAttackCollider> attackCollider_;
+
+    EasingData<float> tiltEase_;
+    Quaternion baseRotation_;
+    Quaternion tiltRotation_;
 
     OBBCollider *enemyCollider_ = nullptr;
     AABBCollider *enemyWallCollider_ = nullptr;
 
-    EnemyHand *leftHand_ptr_;  // 左手
-    EnemyHand *rightHand_ptr_; // 右手
+    EnemyHand *leftHand_ptr_;
+    EnemyHand *rightHand_ptr_;
 
     std::vector<std::unique_ptr<EnemyBullet>> bullets_;
+
+    // ===================================================
+    // 視錐台ロックオン関連
+    // ===================================================
+    static constexpr float kDefaultFrustumRange = 150.0f;
+    static constexpr float kDefaultFrustumHalfFovH = 40.0f * (3.14159265f / 180.0f);
+    static constexpr float kDefaultFrustumHalfFovV = 30.0f * (3.14159265f / 180.0f);
+
+    float frustumLockOnRange_ = kDefaultFrustumRange;
+    float frustumLockOnHalfFovH_ = kDefaultFrustumHalfFovH;
+    float frustumLockOnHalfFovV_ = kDefaultFrustumHalfFovV;
+    bool drawFrustumDebug_ = false;
 };

@@ -3,11 +3,8 @@
 #include "myMath.h"
 #include <Frame.h>
 void TitleScene::Initialize() {
-    audio_ = Audio::GetInstance();
-    spCommon_ = SpriteCommon::GetInstance();
-    ptCommon_ = ParticleCommon::GetInstance();
-    input_ = Input::GetInstance();
-    LightGroup::GetInstance()->LoadLightData("TitleScene");
+    BaseScene::Initialize();
+    lightGroup_->LoadLightData("TitleScene");
     vp_.eulerRotation_ = {
         degreesToRadians(26.3f),
         degreesToRadians(-122.7f),
@@ -55,6 +52,7 @@ void TitleScene::Update() {
             secondMove_ = true;
         }
     }
+   
     titleUI_->Update();
 }
 
@@ -74,12 +72,6 @@ void TitleScene::Draw() {
 void TitleScene::DrawForOffScreen() {
     /// -------描画処理開始-------
 
-    /// Spriteの描画準備
-    spCommon_->DrawCommonSetting();
-    //-----Spriteの描画開始-----
-
-    //------------------------
-
     /// -------描画処理終了-------
 }
 
@@ -92,6 +84,7 @@ void TitleScene::AddObjectSetting() {
 }
 
 void TitleScene::AddParticleSetting() {
+    DrawParticleEditorUI();
 }
 
 void TitleScene::CameraUpdate() {

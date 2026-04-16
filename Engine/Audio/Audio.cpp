@@ -219,7 +219,7 @@ float Audio::DebugGetDurationSec(uint32_t index) const {
 }
 
 float Audio::DebugGetPositionSec(uint32_t index) const {
-    for (auto *voice : voices_) {
+    for (auto &voice : voices_) {
         if (voice->handle != index) {
             continue;
         }
@@ -245,7 +245,7 @@ float Audio::DebugGetPositionSec(uint32_t index) const {
 }
 
 bool Audio::DebugIsPlaying(uint32_t index) const {
-    for (auto *voice : voices_) {
+    for (auto &voice : voices_) {
         if (voice->handle == index) {
             return true;
         }
