@@ -282,74 +282,84 @@ void ImGuiManager::ShowMainMenu() {
         if (ImGui::BeginMenu(ICON_FA_EYE " 表示")) {
             // ウィンドウ表示設定
             if (ImGui::BeginMenu(ICON_FA_WINDOW_MAXIMIZE " ウィンドウ")) {
-                ImGui::MenuItem(ICON_FA_BOOK_OPEN " シーンビュー", nullptr, &showSceneView_);
-                ImGui::MenuItem(ICON_FA_CUBE " オブジェクトビュー", nullptr, &showObjectView_);
-                ImGui::MenuItem(ICON_FA_STAR " パーティクルビュー", nullptr, &showParticleView_);
-                ImGui::MenuItem(ICON_FA_DATABASE " FPSビュー", nullptr, &showFPSView_);
-                ImGui::MenuItem(ICON_FA_STAR_OF_DAVID " オフスクリーンビュー", nullptr, &showOfScreenView_);
-                ImGui::MenuItem(ICON_FA_LIGHTBULB " ライトビュー", nullptr, &showLightView_);
-                ImGui::MenuItem(ICON_FA_ARROWS_ALT " ギズモビュー", nullptr, &showGizmoView_);
-                ImGui::MenuItem(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャビュー", nullptr, &showHierarchyView_);
-                ImGui::MenuItem(ICON_FA_CODE_BRANCH " モーションエディタービュー", nullptr, &showMotionEditorView_);
-                ImGui::MenuItem(ICON_FA_SQUARE " スプライトマネージャビュー", nullptr, &showSpriteManagerView_);
-                ImGui::MenuItem(ICON_FA_SHAPES " コライダービュー", nullptr, &showColliderTagManagerView_);
-                ImGui::MenuItem(ICON_FA_BULLHORN " オーディオ", nullptr, &showAudioManagerView_);
+                if (ImGui::Selectable(ICON_FA_BOOK_OPEN " シーンビュー", showSceneView_, ImGuiSelectableFlags_DontClosePopups))
+                    showSceneView_ = !showSceneView_;
+                if (ImGui::Selectable(ICON_FA_CUBE " オブジェクトビュー", showObjectView_, ImGuiSelectableFlags_DontClosePopups))
+                    showObjectView_ = !showObjectView_;
+                if (ImGui::Selectable(ICON_FA_STAR " パーティクルビュー", showParticleView_, ImGuiSelectableFlags_DontClosePopups))
+                    showParticleView_ = !showParticleView_;
+                if (ImGui::Selectable(ICON_FA_DATABASE " FPSビュー", showFPSView_, ImGuiSelectableFlags_DontClosePopups))
+                    showFPSView_ = !showFPSView_;
+                if (ImGui::Selectable(ICON_FA_STAR_OF_DAVID " オフスクリーンビュー", showOfScreenView_, ImGuiSelectableFlags_DontClosePopups))
+                    showOfScreenView_ = !showOfScreenView_;
+                if (ImGui::Selectable(ICON_FA_LIGHTBULB " ライトビュー", showLightView_, ImGuiSelectableFlags_DontClosePopups))
+                    showLightView_ = !showLightView_;
+                if (ImGui::Selectable(ICON_FA_ARROWS_ALT " ギズモビュー", showGizmoView_, ImGuiSelectableFlags_DontClosePopups))
+                    showGizmoView_ = !showGizmoView_;
+                if (ImGui::Selectable(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャビュー", showHierarchyView_, ImGuiSelectableFlags_DontClosePopups))
+                    showHierarchyView_ = !showHierarchyView_;
+                if (ImGui::Selectable(ICON_FA_CODE_BRANCH " モーションエディタービュー", showMotionEditorView_, ImGuiSelectableFlags_DontClosePopups))
+                    showMotionEditorView_ = !showMotionEditorView_;
+                if (ImGui::Selectable(ICON_FA_SQUARE " スプライトマネージャビュー", showSpriteManagerView_, ImGuiSelectableFlags_DontClosePopups))
+                    showSpriteManagerView_ = !showSpriteManagerView_;
+                if (ImGui::Selectable(ICON_FA_SHAPES " コライダービュー", showColliderTagManagerView_, ImGuiSelectableFlags_DontClosePopups))
+                    showColliderTagManagerView_ = !showColliderTagManagerView_;
+                if (ImGui::Selectable(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_, ImGuiSelectableFlags_DontClosePopups))
+                    showAudioManagerView_ = !showAudioManagerView_;
                 ImGui::EndMenu();
             }
 
-            // グリッド設定
-            ImGui::MenuItem(ICON_FA_BORDER_ALL " グリッド表示", nullptr, &showGrid_);
+            if (ImGui::BeginMenu(ICON_FA_BORDER_ALL " グリッド設定")) {
+                // グリッド表示のON/OFFチェックボックス
+                ImGui::MenuItem(ICON_FA_BORDER_ALL " グリッド表示", nullptr, &showGrid_);
 
-            if (showGrid_) {
-                // グリッド設定項目（インデント付き）
-                ImGui::Indent();
+                if (showGrid_) {
+                    ImGui::Separator();
 
-                // Y座標設定
-                ImGui::PushItemWidth(120.0f);
-                if (ImGui::DragFloat(ICON_FA_ARROWS_ALT_V " Y座標", &gridY_, 0.1f, -100.0f, 100.0f, "%.1f")) {
-                    // リアルタイム更新
-                }
+                    // Y座標設定
+                    ImGui::PushItemWidth(120.0f);
+                    if (ImGui::DragFloat(ICON_FA_ARROWS_ALT_V " Y座標", &gridY_, 0.1f, -100.0f, 100.0f, "%.1f")) {
+                    }
 
-                // 分割数設定
-                if (ImGui::DragInt(ICON_FA_TH " 分割数", &gridDivision_, 1, 1, 100)) {
-                    // リアルタイム更新
-                }
+                    // 分割数設定
+                    if (ImGui::DragInt(ICON_FA_TH " 分割数", &gridDivision_, 1, 1, 100)) {
+                    }
 
-                // サイズ設定
-                if (ImGui::DragFloat(ICON_FA_EXPAND_ARROWS_ALT " サイズ", &gridSize_, 0.1f, 0.1f, 500.0f, "%.1f")) {
-                    // リアルタイム更新
-                }
-                ImGui::PopItemWidth();
+                    // サイズ設定
+                    if (ImGui::DragFloat(ICON_FA_EXPAND_ARROWS_ALT " サイズ", &gridSize_, 0.1f, 0.1f, 500.0f, "%.1f")) {
+                    }
+                    ImGui::PopItemWidth();
 
-                // 色設定
-                ImGui::ColorEdit4(ICON_FA_PALETTE " グリッド色", &gridColor_.x, ImGuiColorEditFlags_NoInputs);
+                    // 色設定
+                    ImGui::ColorEdit4(ICON_FA_PALETTE " グリッド色", &gridColor_.x, ImGuiColorEditFlags_NoInputs);
 
-                // プリセット（サブメニュー）
-                if (ImGui::BeginMenu(ICON_FA_SWATCHBOOK " プリセット")) {
-                    if (ImGui::MenuItem("デフォルト (グレー)")) {
+                    // プリセット（サブメニュー）
+                    if (ImGui::BeginMenu(ICON_FA_SWATCHBOOK " プリセット")) {
+                        if (ImGui::MenuItem("デフォルト (グレー)")) {
+                            gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
+                        }
+                        if (ImGui::MenuItem("白")) {
+                            gridColor_ = {1.0f, 1.0f, 1.0f, 1.0f};
+                        }
+                        if (ImGui::MenuItem("青")) {
+                            gridColor_ = {0.3f, 0.5f, 1.0f, 1.0f};
+                        }
+                        if (ImGui::MenuItem("緑")) {
+                            gridColor_ = {0.3f, 1.0f, 0.5f, 1.0f};
+                        }
+                        ImGui::EndMenu();
+                    }
+
+                    // リセットボタン
+                    if (ImGui::Button(ICON_FA_UNDO " リセット")) {
+                        gridY_ = 0.0f;
+                        gridDivision_ = 10;
+                        gridSize_ = 1.0f;
                         gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
                     }
-                    if (ImGui::MenuItem("白")) {
-                        gridColor_ = {1.0f, 1.0f, 1.0f, 1.0f};
-                    }
-                    if (ImGui::MenuItem("青")) {
-                        gridColor_ = {0.3f, 0.5f, 1.0f, 1.0f};
-                    }
-                    if (ImGui::MenuItem("緑")) {
-                        gridColor_ = {0.3f, 1.0f, 0.5f, 1.0f};
-                    }
-                    ImGui::EndMenu();
                 }
 
-                // リセットボタン
-                if (ImGui::Button(ICON_FA_UNDO " リセット")) {
-                    gridY_ = 0.0f;
-                    gridDivision_ = 10;
-                    gridSize_ = 1.0f;
-                    gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
-                }
-
-                ImGui::Unindent();
+                ImGui::EndMenu();
             }
             ImGui::Separator();
 
@@ -561,7 +571,8 @@ void ImGuiManager::ShowSceneSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     // パフォーマンス改善: 軽量化フラグを追加
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("シーン設定", &showSceneView_, flags);
 
@@ -574,7 +585,8 @@ void ImGuiManager::ShowObjectSettingWindow() {
     if (!showObjectView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("オブジェクト設定", &showObjectView_, flags);
 
@@ -588,7 +600,8 @@ void ImGuiManager::ShowParticleSettingWindow() {
     if (!showParticleView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("パーティクル設定", &showParticleView_, flags);
 
@@ -603,7 +616,8 @@ void ImGuiManager::ShowStatisticsWindow() {
     if (!showFPSView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("統計", &showFPSView_, flags);
 
@@ -620,7 +634,8 @@ void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *offscreen) {
     if (!showOfScreenView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("オフスクリーン設定", &showOfScreenView_, flags);
 
@@ -633,7 +648,8 @@ void ImGuiManager::ShowLightSettingWindow() {
     if (!showLightView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("ライト設定", &showLightView_, flags);
 
@@ -646,7 +662,8 @@ void ImGuiManager::ShowGizmoWindow() {
     if (!showGizmoView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("トランスフォームマネージャ", &showGizmoView_, flags);
 
@@ -659,7 +676,8 @@ void ImGuiManager::ShowHierarchyWindow() {
     if (!showHierarchyView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("オブジェクトマネージャ", &showHierarchyView_, flags);
 
@@ -672,7 +690,8 @@ void ImGuiManager::ShowMotionEditorWindow() {
     if (!showMotionEditorView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("モーションエディター", &showMotionEditorView_, flags);
 
@@ -685,7 +704,8 @@ void ImGuiManager::ShowSpriteManagerWindow() {
     if (!showSpriteManagerView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("スプライトマネージャ", &showSpriteManagerView_, flags);
 
@@ -698,7 +718,8 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
     if (!showColliderTagManagerView_)
         return; // 表示しない場合は早期リターン
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("タグマネージャー", &showColliderTagManagerView_, flags);
 
@@ -711,7 +732,8 @@ void ImGuiManager::ShowAudioManagerWindow() {
     if (!showAudioManagerView_)
         return;
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ;
 
     ImGui::Begin("オーディオ", &showAudioManagerView_, flags);
 
@@ -1259,6 +1281,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showShortcutWindow", showShortcutWindow);
     data->Save("showSpriteManagerView", showSpriteManagerView_);
     data->Save("isEditorMode", isEditorMode_);
+    data->Save("gridColor", gridColor_);
 }
 
 void ImGuiManager::LoadFlag() {
@@ -1277,4 +1300,5 @@ void ImGuiManager::LoadFlag() {
     showShortcutWindow = data->Load("showShortcutWindow", false);
     showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
     isEditorMode_ = data->Load("isEditorMode", true);
+    gridColor_ = data->Load("gridColor", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 }

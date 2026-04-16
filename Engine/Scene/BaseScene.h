@@ -19,8 +19,12 @@
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG
+#include "Object/Base/BaseObjectManager.h"
+#include "SpriteManager.h"
 #include <OffScreen.h>
+
 class SceneManager;
+
 class BaseScene {
   public:
     virtual ~BaseScene() = default;
@@ -71,6 +75,8 @@ class BaseScene {
 
     void DrawParticleEditorUI();
 
+    void DrawAllObjects();
+
     ViewProjection *GetViewProjection() { return &vp_; }
 
   protected:
@@ -86,6 +92,8 @@ class BaseScene {
     std::unique_ptr<DebugCamera> debugCamera_;
 
     SceneManager *sceneManager_ = nullptr;
+    SpriteManager *spriteManager_ = nullptr;
+    BaseObjectManager *objectManager_ = nullptr;
 
     float ClearTime_ = 0.0f;
     float HP_ = 0.0f;

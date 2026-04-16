@@ -6,6 +6,8 @@ void BaseScene::Initialize() {
     lightGroup_ = LightGroup::GetInstance();
     ptEditor_ = ParticleEditor::GetInstance();
     ptCSEditor_ = ParticleCSEditor::GetInstance();
+    spriteManager_ = SpriteManager::GetInstance();
+    objectManager_ = BaseObjectManager::GetInstance();
 }
 
 void BaseScene::Finalize() {
@@ -43,4 +45,12 @@ void BaseScene::DrawParticleEditorUI() {
     ImGui::End();
 
 #endif // USE_IMGUI
+}
+
+void BaseScene::DrawAllObjects() {
+    spriteManager_->DrawAll();
+    objectManager_->Draw(vp_);
+
+    ptEditor_->DrawAll(vp_);
+    ptCSEditor_->DrawAll(vp_);
 }

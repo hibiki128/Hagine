@@ -9,7 +9,7 @@ void ClearScene::Initialize() {
     /// ===================================================
     /// ロード
     /// ===================================================
-    BaseObjectManager::GetInstance()->LoadAll("ClearScene");
+    objectManager_->LoadAll("ClearScene");
     lightGroup_->LoadLightData("ClearLight");
 
     /// ===================================================
@@ -51,7 +51,7 @@ void ClearScene::Finalize() {
 
 void ClearScene::Update() {
     gamePad_->Update();
-   
+
     // カメラ更新
     CameraUpdate();
 
@@ -73,7 +73,7 @@ void ClearScene::Update() {
 void ClearScene::Draw() {
     /// -------描画処理開始-------
 
-    BaseObjectManager::GetInstance()->Draw(vp_);
+    objectManager_->Draw(vp_);
 
     skyBox_->Draw(vp_);
 
@@ -83,7 +83,7 @@ void ClearScene::Draw() {
 
     resultStaging_->Draw(vp_);
 
-    SpriteManager::GetInstance()->DrawAll();
+    spriteManager_->DrawAll();
 
     /// -------描画処理終了-------
 }
@@ -109,7 +109,7 @@ void ClearScene::AddParticleSetting() {
 
 void ClearScene::CameraUpdate() {
 
-     currentCameraStartTimer_ += Frame::DeltaTime();
+    currentCameraStartTimer_ += Frame::DeltaTime();
     if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
         vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
         cameraStart_ = true;
