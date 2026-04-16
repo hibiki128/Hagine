@@ -74,8 +74,8 @@ void GameScene::Initialize() {
     /// ===================================================
     /// オブジェクトマネージャに追加
     /// ===================================================
-    BaseObjectManager::GetInstance()->AddObject(std::move(player_));
-    BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
+    objectManager_->AddObject(std::move(player_));
+    objectManager_->AddObject(std::move(enemy_));
 
 #ifdef _DEBUG
     behaviorTreeEditor_->SetDebugTargets(enemy_ptr, player_ptr);
@@ -153,7 +153,7 @@ void GameScene::Draw() {
     playerUI_->Draw();
     enemyUI_->Draw();
 
-    BaseObjectManager::GetInstance()->Draw(vp_);
+    objectManager_->Draw(vp_);
 
     skyBox_->Draw(vp_);
     ground_->Draw(vp_);
@@ -169,7 +169,7 @@ void GameScene::Draw() {
     followCamera_->DrawFrustum();
     enemy_ptr->DrawFrustum();
 
-    SpriteManager::GetInstance()->DrawAll();
+    spriteManager_->DrawAll();
 }
 
 void GameScene::DrawForOffScreen() {

@@ -9,7 +9,7 @@ void ClearScene::Initialize() {
     /// ===================================================
     /// ロード
     /// ===================================================
-    BaseObjectManager::GetInstance()->LoadAll("ClearScene");
+    objectManager_->LoadAll("ClearScene");
     lightGroup_->LoadLightData("ClearLight");
 
     /// ===================================================
@@ -73,7 +73,7 @@ void ClearScene::Update() {
 void ClearScene::Draw() {
     /// -------描画処理開始-------
 
-    BaseObjectManager::GetInstance()->Draw(vp_);
+    objectManager_->Draw(vp_);
 
     skyBox_->Draw(vp_);
 
@@ -83,7 +83,7 @@ void ClearScene::Draw() {
 
     resultStaging_->Draw(vp_);
 
-    SpriteManager::GetInstance()->DrawAll();
+   spriteManager_->DrawAll();
 
     /// -------描画処理終了-------
 }

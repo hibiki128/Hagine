@@ -25,11 +25,7 @@ void DemoScene::Update() {
 void DemoScene::Draw() {
     /// -------描画処理開始-------
 
-    SpriteManager::GetInstance()->DrawAll();
-    BaseObjectManager::GetInstance()->Draw(vp_);
-
-    ptEditor_->DrawAll(vp_);
-    ptCSEditor_->DrawAll(vp_);
+    DrawAllObjects();
 
     /// -------描画処理終了-------
 }

@@ -10,7 +10,7 @@ void TitleScene::Initialize() {
         degreesToRadians(-122.7f),
         degreesToRadians(0.0f)};
     vp_.Initialize("CurrentCamera");
-    BaseObjectManager::GetInstance()->LoadAll("TitleScene");
+    objectManager_->LoadAll("TitleScene");
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
     skyBox_ = SkyBox::GetInstance();
@@ -52,7 +52,7 @@ void TitleScene::Update() {
             secondMove_ = true;
         }
     }
-   
+
     titleUI_->Update();
 }
 
@@ -60,9 +60,9 @@ void TitleScene::Draw() {
     /// -------描画処理開始-------
     skyBox_->Draw(vp_);
 
-    BaseObjectManager::GetInstance()->Draw(vp_);
+    objectManager_->Draw(vp_);
 
-    SpriteManager::GetInstance()->DrawAll();
+    spriteManager_->DrawAll();
 
     titleUI_->Draw(vp_);
 
