@@ -12067,7 +12067,7 @@ void ClearScene::Initialize() {
     /// ===================================================
     /// ロード
     /// ===================================================
-    BaseObjectManager::GetInstance()->LoadAll("ClearScene");
+    objectManager_->LoadAll("ClearScene");
     lightGroup_->LoadLightData("ClearLight");
 
     /// ===================================================
@@ -12131,7 +12131,7 @@ void ClearScene::Update() {
 void ClearScene::Draw() {
     /// -------描画処理開始-------
 
-    BaseObjectManager::GetInstance()->Draw(vp_);
+    objectManager_->Draw(vp_);
 
     skyBox_->Draw(vp_);
 
@@ -12141,7 +12141,7 @@ void ClearScene::Draw() {
 
     resultStaging_->Draw(vp_);
 
-    SpriteManager::GetInstance()->DrawAll();
+   spriteManager_->DrawAll();
 
     /// -------描画処理終了-------
 }
@@ -12328,11 +12328,7 @@ void DemoScene::Update() {
 void DemoScene::Draw() {
     /// -------描画処理開始-------
 
-    SpriteManager::GetInstance()->DrawAll();
-    BaseObjectManager::GetInstance()->Draw(vp_);
-
-    ptEditor_->DrawAll(vp_);
-    ptCSEditor_->DrawAll(vp_);
+    DrawAllObjects();
 
     /// -------描画処理終了-------
 }
@@ -12520,8 +12516,8 @@ void GameScene::Initialize() {
     /// ===================================================
     /// オブジェクトマネージャに追加
     /// ===================================================
-    BaseObjectManager::GetInstance()->AddObject(std::move(player_));
-    BaseObjectManager::GetInstance()->AddObject(std::move(enemy_));
+    objectManager_->AddObject(std::move(player_));
+    objectManager_->AddObject(std::move(enemy_));
 
 #ifdef _DEBUG
     behaviorTreeEditor_->SetDebugTargets(enemy_ptr, player_ptr);
@@ -12599,7 +12595,7 @@ void GameScene::Draw() {
     playerUI_->Draw();
     enemyUI_->Draw();
 
-    BaseObjectManager::GetInstance()->Draw(vp_);
+    objectManager_->Draw(vp_);
 
     skyBox_->Draw(vp_);
     ground_->Draw(vp_);
@@ -12615,7 +12611,7 @@ void GameScene::Draw() {
     followCamera_->DrawFrustum();
     enemy_ptr->DrawFrustum();
 
-    SpriteManager::GetInstance()->DrawAll();
+    spriteManager_->DrawAll();
 }
 
 void GameScene::DrawForOffScreen() {
@@ -12925,7 +12921,7 @@ void TitleScene::Initialize() {
         degreesToRadians(-122.7f),
         degreesToRadians(0.0f)};
     vp_.Initialize("CurrentCamera");
-    BaseObjectManager::GetInstance()->LoadAll("TitleScene");
+    objectManager_->LoadAll("TitleScene");
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
     skyBox_ = SkyBox::GetInstance();
@@ -12967,7 +12963,7 @@ void TitleScene::Update() {
             secondMove_ = true;
         }
     }
-   
+
     titleUI_->Update();
 }
 
@@ -12975,9 +12971,9 @@ void TitleScene::Draw() {
     /// -------描画処理開始-------
     skyBox_->Draw(vp_);
 
-    BaseObjectManager::GetInstance()->Draw(vp_);
+    objectManager_->Draw(vp_);
 
-    SpriteManager::GetInstance()->DrawAll();
+    spriteManager_->DrawAll();
 
     titleUI_->Draw(vp_);
 
@@ -48450,6 +48446,8 @@ void BaseScene::Initialize() {
     lightGroup_ = LightGroup::GetInstance();
     ptEditor_ = ParticleEditor::GetInstance();
     ptCSEditor_ = ParticleCSEditor::GetInstance();
+    spriteManager_ = SpriteManager::GetInstance();
+    objectManager_ = BaseObjectManager::GetInstance();
 }
 
 void BaseScene::Finalize() {
@@ -48489,6 +48487,14 @@ void BaseScene::DrawParticleEditorUI() {
 #endif // USE_IMGUI
 }
 
+void BaseScene::DrawAllObjects() {
+    spriteManager_->DrawAll();
+    objectManager_->Draw(vp_);
+
+    ptEditor_->DrawAll(vp_);
+    ptCSEditor_->DrawAll(vp_);
+}
+
 
 ============================================================
 File Path: Engine/Scene/BaseScene.h
@@ -48496,25 +48502,30 @@ File Path: Engine/Scene/BaseScene.h
 #pragma once
 #include "Audio.h"
 #include "Camera/DebugCamera/DebugCamera.h"
+#include "Camera/ViewProjection/ViewProjection.h"
 #include "Input.h"
 #include "Light/LightGroup.h"
+#include "Object/Base/BaseObject.h"
+#include "Object/Base/BaseObjectManager.h"
 #include "Object/Object3dCommon.h"
+#include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleCommon.h"
 #include "Particle/ParticleEditor.h"
-#include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleEmitter.h"
+#include "Sprite.h"
 #include "SpriteCommon.h"
-#include "Camera/ViewProjection/ViewProjection.h"
+#include "SpriteManager.h"
 #include "Transform/WorldTransform.h"
 #include "line/DrawLine3D.h"
-#include"Object/Base/BaseObjectManager.h"
-#include"Sprite.h"
-#include"Object/Base/BaseObject.h"
-#include"SpriteManager.h"
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG
+#include "Object/Base/BaseObjectManager.h"
+#include "SpriteManager.h"
+#include <OffScreen.h>
+
 class SceneManager;
+
 class BaseScene {
   public:
     virtual ~BaseScene() = default;
@@ -48561,11 +48572,29 @@ class BaseScene {
 
     virtual void SetSceneManager(SceneManager *sceneManager) { sceneManager_ = sceneManager; }
 
-    virtual ViewProjection *GetViewProjection() = 0;
+    void SetOffScreen(OffScreen *offscreen) { offScreen_ = offscreen; }
+
+    void DrawParticleEditorUI();
+
+    void DrawAllObjects();
+
+    ViewProjection *GetViewProjection() { return &vp_; }
 
   protected:
     // シーンマネージャ
+    Audio *audio_ = nullptr;
+    Input *input_ = nullptr;
+    LightGroup *lightGroup_ = nullptr;
+    ParticleEditor *ptEditor_ = nullptr;
+    ParticleCSEditor *ptCSEditor_ = nullptr;
+    OffScreen *offScreen_ = nullptr;
+
+    ViewProjection vp_;
+    std::unique_ptr<DebugCamera> debugCamera_;
+
     SceneManager *sceneManager_ = nullptr;
+    SpriteManager *spriteManager_ = nullptr;
+    BaseObjectManager *objectManager_ = nullptr;
 
     float ClearTime_ = 0.0f;
     float HP_ = 0.0f;
@@ -57452,9 +57481,11 @@ File Path: Engine/Utility/Scene/SceneManager.h
 #pragma once
 #include "AbstractSceneFactory.h"
 #include "SceneTransition.h"
+#include <OffScreen.h>
 #include <memory>
 #include <string>
 
+class BaseScene;
 class SceneManager {
   private:
     SceneManager() = default;
@@ -57475,6 +57506,11 @@ class SceneManager {
     /// 初期化
     /// </summary>
     void Initialize();
+
+    /// <summary>
+    /// シーン終了
+    /// </summary>
+    void SceneFinalize();
 
     /// <summary>
     /// 終了
@@ -57527,7 +57563,10 @@ class SceneManager {
     void SetClearTime(float time) { clearTime_ = time; }
     void SetHP(float hp) { hp_ = hp; }
 
+    void SetOffScreen(OffScreen *offscreen) { offscreen_ = offscreen; }
+
   private:
+    OffScreen *offscreen_ = nullptr;
     // 今のシーン（実行中のシーン）
     std::unique_ptr<BaseScene> scene_;
     // 次のシーン
