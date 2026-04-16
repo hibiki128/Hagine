@@ -3,7 +3,9 @@
 #include <cassert>
 
 SceneManager::~SceneManager() {
-    
+    if (scene_) {
+        scene_->Finalize();
+    }
 }
 
 void SceneManager::Initialize() {
@@ -11,20 +13,10 @@ void SceneManager::Initialize() {
     transition_->Initialize();
 }
 
-void SceneManager::SceneFinalize() {
+void SceneManager::Finalize() {
     if (scene_) {
-        scene_->Finalize();
         firstChange = false;
     }
-}
-
-void SceneManager::Finalize() {
-    // 次シーンが残っていれば先に解放
-    nextScene_.reset();
-    // 現在のシーンを解放
-    scene_.reset();
-    // シーンファクトリーを解放
-    sceneFactory_.reset();
 }
 
 void SceneManager::Update() {
@@ -90,7 +82,7 @@ void SceneManager::NextSceneReservation(const std::string &sceneName) {
 
     // 次シーンを生成（unique_ptr で受け取る）
     nextScene_ = sceneFactory_->CreateScene(sceneName);
-    nextScene_->SetOffScreen(offscreen_);
+
     if (!firstChange) {
         transition_->SetFadeOutStart(true);
     } else {

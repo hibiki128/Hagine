@@ -23,7 +23,7 @@ class ColliderBase {
     using CollisionCallback = std::function<void(ColliderBase *)>;
 
     ColliderBase() = default;
-    virtual ~ColliderBase();
+    virtual ~ColliderBase() = default;
 
     // 純粋仮想関数
     virtual void UpdateWorldTransform() = 0;

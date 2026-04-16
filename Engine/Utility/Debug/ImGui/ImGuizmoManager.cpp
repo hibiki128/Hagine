@@ -9,8 +9,6 @@
 void ImGuizmoManager::Finalize() {
     transformMap.clear();
     selectedNames.clear();
-    copiedObjects.clear();
-    copiedObject = nullptr;
 }
 
 void ImGuizmoManager::BeginFrame() {

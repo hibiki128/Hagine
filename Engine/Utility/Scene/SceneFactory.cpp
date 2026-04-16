@@ -4,7 +4,6 @@
 #include "Application/Scene/GameScene.h"
 #include "Application/Scene/SelectScene.h"
 #include "Application/Scene/TitleScene.h"
-#include "Application/Scene/TutorialScene.h"
 
 std::unique_ptr<BaseScene> SceneFactory::CreateScene(const std::string &sceneName) {
     if (sceneName == "TITLE")
@@ -17,7 +16,5 @@ std::unique_ptr<BaseScene> SceneFactory::CreateScene(const std::string &sceneNam
         return std::make_unique<ClearScene>();
     if (sceneName == "DEMO")
         return std::make_unique<DemoScene>();
-    if (sceneName == "TUTORIAL")
-        return std::make_unique<TutorialScene>();
     return nullptr;
 }

@@ -4,7 +4,6 @@ DataHandler::DataHandler(const std::string &folder, const std::string &file) {
     folderPath = basePath + "/" + folder;
     fileName = file + ".json";
     fs::create_directories(folderPath); // フォルダを作成
-    LoadFromFile();                     // コンストラクタで一度だけファイルを読み込む
 }
 
 bool DataHandler::Exists() const {
@@ -38,7 +37,6 @@ template void DataHandler::Save<Vector4>(const std::string &, const Vector4 &);
 template void DataHandler::Save<Quaternion>(const std::string &, const Quaternion &);
 template void DataHandler::Save<PrimitiveType>(const std::string &, const PrimitiveType &);
 template void DataHandler::Save<Matrix4x4>(const std::string &, const Matrix4x4 &);
-template void DataHandler::Save<BlendMode>(const std::string &, const BlendMode &);
 
 template int DataHandler::Load<int>(const std::string &, const int &);
 template int32_t DataHandler::Load<int32_t>(const std::string &, const int32_t &);
@@ -51,4 +49,3 @@ template Vector4 DataHandler::Load<Vector4>(const std::string &, const Vector4 &
 template Quaternion DataHandler::Load<Quaternion>(const std::string &, const Quaternion &);
 template PrimitiveType DataHandler::Load<PrimitiveType>(const std::string &, const PrimitiveType &);
 template Matrix4x4 DataHandler::Load<Matrix4x4>(const std::string &, const Matrix4x4 &);
-template BlendMode DataHandler::Load<BlendMode>(const std::string &, const BlendMode &);

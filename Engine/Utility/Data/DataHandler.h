@@ -16,51 +16,32 @@ namespace fs = std::filesystem;
 class DataHandler {
   private:
     std::string basePath = "resources/jsons"; // 固定の基準パス
-    std::string folderPath = "";              // インスタンスごとのフォルダパス
+    std::string folderPath = "";              // インスタンスごとのフォルダ
     std::string fileName = "data.json";       // インスタンスごとのファイル名
-    json cachedJson;                          // メモリ上にキャッシュしたJSONデータ
-    bool isDirty = false;                     // Saveによる変更がある場合にファイル書き出しが必要かを示すフラグ
-
-    // ファイルからJSONを読み込んでキャッシュに格納する
-    void LoadFromFile() {
-        std::string filePath = folderPath + "/" + fileName;
-        std::ifstream inFile(filePath);
-        if (inFile.is_open()) {
-            inFile >> cachedJson;
-            inFile.close();
-        }
-    }
-
-    // キャッシュ内容をファイルに書き出す
-    void FlushToFile() {
-        if (!isDirty)
-            return;
-        std::string filePath = folderPath + "/" + fileName;
-        std::ofstream outFile(filePath);
-        outFile << cachedJson.dump(4);
-        outFile.close();
-        isDirty = false;
-    }
 
   public:
     // コンストラクタ
     DataHandler(const std::string &folder, const std::string &file);
 
-    // デストラクタで未書き出しの変更をファイルに反映
-    ~DataHandler() { FlushToFile(); }
-
-    // キャッシュに書き込み、ダーティフラグを立てる
+    // JSONデータを保存
     template <typename T>
     void Save(const std::string &key, const T &value);
 
-    // キャッシュから直接読み込む
+    // JSONデータをロード
     template <typename T>
     T Load(const std::string &key, const T &defaultValue);
 
-    // JSONファイルの存在確認（あるときtrue、ないときfalse）
+    /// <summary>
+    /// jsonファイル探索関数
+    /// あるときtrue
+    /// ないときfalse
+    /// </summary>
+    /// <returns></returns>
     bool Exists() const;
 
-    // 対象フォルダ内のすべてのJSONファイルを削除
+    /// <summary>
+    /// 対象フォルダ内のすべての json ファイルを削除（ファイルごと消す）
+    /// </summary>
     void DeleteAllJsonsInFolder();
 };
 
@@ -85,7 +66,7 @@ inline void from_json(const json &j, Vector3 &v) {
     v.z = j.at("z").get<float>();
 }
 
-// JSON変換の定義 (Vector4)
+// JSON変換の定義 (Vector3)
 inline void to_json(json &j, const Vector4 &v) {
     j = json{{"x", v.x}, {"y", v.y}, {"z", v.z}, {"w", v.w}};
 }
@@ -97,7 +78,6 @@ inline void from_json(const json &j, Vector4 &v) {
     v.w = j.at("w").get<float>();
 }
 
-// JSON変換の定義 (Quaternion)
 inline void to_json(json &j, const Quaternion &q) {
     j = json{{"x", q.x}, {"y", q.y}, {"z", q.z}, {"w", q.w}};
 }
@@ -138,31 +118,46 @@ inline void from_json(const json &j, PrimitiveType &type) {
     type = static_cast<PrimitiveType>(j.get<int>());
 }
 
-// JSON変換の定義 (BlendMode)
-inline void to_json(json &j, const BlendMode &mode) {
-    j = static_cast<int>(mode);
-}
-
-inline void from_json(const json &j, BlendMode &mode) {
-    mode = static_cast<BlendMode>(j.get<int>());
-}
-
-// キャッシュに書き込み、ダーティフラグを立てる
+// Save (テンプレート関数はここに書く)
 template <typename T>
 void DataHandler::Save(const std::string &key, const T &value) {
-    cachedJson[key] = value;
-    isDirty = true;
+    std::string filePath = folderPath + "/" + fileName;
+    json j;
+
+    std::ifstream inFile(filePath);
+    if (inFile.is_open()) {
+        inFile >> j;
+        inFile.close();
+    }
+
+    j[key] = value; // 変数名をキーにして保存
+
+    std::ofstream outFile(filePath);
+    outFile << j.dump(4); // インデント付きで保存
+    outFile.close();
 }
 
-// キャッシュから直接読み込む（ファイルアクセスなし）
+// Load (テンプレート関数はここに書く)
 template <typename T>
 T DataHandler::Load(const std::string &key, const T &defaultValue) {
-    if (cachedJson.contains(key)) {
+    std::string filePath = folderPath + "/" + fileName;
+    json j;
+
+    std::ifstream inFile(filePath);
+    if (inFile.is_open()) {
+        inFile >> j;
+        inFile.close();
+    } else {
+        return defaultValue; // ファイルがない場合
+    }
+
+    if (j.contains(key)) {
         try {
-            return cachedJson[key].get<T>();
+            return j[key].get<T>(); // from_json が自動適用
         } catch (const json::exception &e) {
             std::cerr << "JSON Load Error: " << e.what() << " (Key: " << key << ")" << std::endl;
         }
     }
-    return defaultValue;
+
+    return defaultValue; // 失敗した場合はデフォルト値
 }
