@@ -31,7 +31,7 @@
 #include "SpriteManager.h"
 #include "line/DrawLine3D.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
-
+#include"Engine/Utility/LoadFile/Csv/CsvLoad.h"
 class Framework {
   public: // メンバ関数
     virtual ~Framework() = default;
@@ -120,6 +120,8 @@ class Framework {
     PrimitiveModel *primitiveModel_ = nullptr;
 
     CollisionManager *collisionManager_ = nullptr;
+
+    CsvLoad* csvLoad_ = nullptr;
 
     std::unique_ptr<OffScreen> offscreen_;
 

@@ -185,6 +185,10 @@ void Framework::Initialize() {
     sceneTransition_ = SceneTransition::GetInstance();
     ///-----------------------------
 
+    ///-------csvLoad-------
+    csvLoad_ = CsvLoad::GetInstance();
+    ///---------------------
+
     /// 時間の初期化
     Frame::Init();
 }
@@ -201,6 +205,7 @@ void Framework::Finalize() {
     primitiveModel_->Finalize();
     particleGroupManager_->Finalize();
     particleCSGroupManager_->Finalize();
+    csvLoad_->Finalize();
 
 #ifdef _DEBUG
     imGuiManager_->Finalize();
