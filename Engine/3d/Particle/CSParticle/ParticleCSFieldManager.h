@@ -81,7 +81,7 @@ class ParticleCSFieldManager {
         static ParticleCSFieldManager instance;
           return &instance;
     }
-    static void Finalize();
+    void Finalize();
 
     void Initialize();
     /// 毎フレーム呼ぶ：有効フィールドをGPUバッファへ転送
@@ -127,7 +127,7 @@ class ParticleCSFieldManager {
 
   private:
     ParticleCSFieldManager() = default;
-    ~ParticleCSFieldManager() = default;
+    ~ParticleCSFieldManager();
     ParticleCSFieldManager(const ParticleCSFieldManager &) = delete;
     ParticleCSFieldManager &operator=(const ParticleCSFieldManager &) = delete;
 

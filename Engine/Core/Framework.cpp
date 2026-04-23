@@ -220,6 +220,7 @@ void Framework::Finalize() {
     lightGroup_->Finalize();
     motionEditor_->Finalize();
     particleEditor_->Finalize();
+    particleCSFieldManager_->Finalize();
     particleCSEditor_->Finalize();
     spriteCommon_->Finalize();
     particleCommon_->Finalize();
