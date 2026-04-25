@@ -31617,12 +31617,35 @@ static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_Fiel
 }
 
 void ParticleCSFieldManager::Finalize() {
+    if (fieldsResource_) {
+        fieldsResource_->Unmap(0, nullptr);
+        fieldsMappedData_ = nullptr;
+    }
+    if (fieldCountResource_) {
+        fieldCountResource_->Unmap(0, nullptr);
+        fieldCountMappedData_ = nullptr;
+    }
+    if (overrideResource_) {
+        overrideResource_->Unmap(0, nullptr);
+        overrideMappedData_ = nullptr;
+    }
+
+    // ComPtr は Reset() で明示的に解放（デストラクタでも自動解放される）
+    fieldsResource_.Reset();
+    fieldCountResource_.Reset();
+    zeroFieldCountResource_.Reset();
+    overrideResource_.Reset();
+
+    fields_.clear();
 }
 
 void ParticleCSFieldManager::Initialize() {
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
     srvManager_ = SrvManager::GetInstance();
     CreateGPUResources();
+}
+
+ParticleCSFieldManager::~ParticleCSFieldManager() {
 }
 
 void ParticleCSFieldManager::CreateGPUResources() {
@@ -32828,7 +32851,7 @@ class ParticleCSFieldManager {
         static ParticleCSFieldManager instance;
           return &instance;
     }
-    static void Finalize();
+    void Finalize();
 
     void Initialize();
     /// 毎フレーム呼ぶ：有効フィールドをGPUバッファへ転送
@@ -32874,7 +32897,7 @@ class ParticleCSFieldManager {
 
   private:
     ParticleCSFieldManager() = default;
-    ~ParticleCSFieldManager() = default;
+    ~ParticleCSFieldManager();
     ParticleCSFieldManager(const ParticleCSFieldManager &) = delete;
     ParticleCSFieldManager &operator=(const ParticleCSFieldManager &) = delete;
 
@@ -41554,7 +41577,7 @@ void WinApp::Initialize() {
     // ウィンドウの生成
     hwnd = CreateWindow(
         wc.lpszClassName,     // 利用するクラス名
-        L"LE3B_24_ハギワラ_ヒビキ_スパーキングファイト",            // タイトルバーの文字
+        L"LE4B_20_ハギワラ_ヒビキ_スパーキングファイト",            // タイトルバーの文字
         WS_OVERLAPPEDWINDOW,  // よく見るウィンドウスタイル
         CW_USEDEFAULT,        // 表示X座標
         CW_USEDEFAULT,        // 表示Y座標
@@ -41907,6 +41930,10 @@ void Framework::Initialize() {
     sceneTransition_ = SceneTransition::GetInstance();
     ///-----------------------------
 
+    ///-------csvLoad-------
+    csvLoad_ = CsvLoad::GetInstance();
+    ///---------------------
+
     /// 時間の初期化
     Frame::Init();
 }
@@ -41923,6 +41950,7 @@ void Framework::Finalize() {
     primitiveModel_->Finalize();
     particleGroupManager_->Finalize();
     particleCSGroupManager_->Finalize();
+    csvLoad_->Finalize();
 
 #ifdef _DEBUG
     imGuiManager_->Finalize();
@@ -41937,6 +41965,7 @@ void Framework::Finalize() {
     lightGroup_->Finalize();
     motionEditor_->Finalize();
     particleEditor_->Finalize();
+    particleCSFieldManager_->Finalize();
     particleCSEditor_->Finalize();
     spriteCommon_->Finalize();
     particleCommon_->Finalize();
@@ -42113,7 +42142,7 @@ File Path: Engine/Core/Framework.h
 #include "SpriteManager.h"
 #include "line/DrawLine3D.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
-
+#include"Engine/Utility/LoadFile/Csv/CsvLoad.h"
 class Framework {
   public: // メンバ関数
     virtual ~Framework() = default;
@@ -42202,6 +42231,8 @@ class Framework {
     PrimitiveModel *primitiveModel_ = nullptr;
 
     CollisionManager *collisionManager_ = nullptr;
+
+    CsvLoad* csvLoad_ = nullptr;
 
     std::unique_ptr<OffScreen> offscreen_;
 
