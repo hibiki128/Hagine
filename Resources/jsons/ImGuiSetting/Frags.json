@@ -1,6 +1,12 @@
 {
     "IsShowMainUI": true,
     "ShowGrid": false,
+    "gridColor": {
+        "w": 1.0,
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+    },
     "isEditorMode": true,
     "showFPSView": false,
     "showGizmoView": false,

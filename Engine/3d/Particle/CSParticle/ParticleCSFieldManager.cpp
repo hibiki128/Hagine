@@ -161,12 +161,35 @@ static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_Fiel
 }
 
 void ParticleCSFieldManager::Finalize() {
+    if (fieldsResource_) {
+        fieldsResource_->Unmap(0, nullptr);
+        fieldsMappedData_ = nullptr;
+    }
+    if (fieldCountResource_) {
+        fieldCountResource_->Unmap(0, nullptr);
+        fieldCountMappedData_ = nullptr;
+    }
+    if (overrideResource_) {
+        overrideResource_->Unmap(0, nullptr);
+        overrideMappedData_ = nullptr;
+    }
+
+    // ComPtr は Reset() で明示的に解放（デストラクタでも自動解放される）
+    fieldsResource_.Reset();
+    fieldCountResource_.Reset();
+    zeroFieldCountResource_.Reset();
+    overrideResource_.Reset();
+
+    fields_.clear();
 }
 
 void ParticleCSFieldManager::Initialize() {
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
     srvManager_ = SrvManager::GetInstance();
     CreateGPUResources();
+}
+
+ParticleCSFieldManager::~ParticleCSFieldManager() {
 }
 
 void ParticleCSFieldManager::CreateGPUResources() {
