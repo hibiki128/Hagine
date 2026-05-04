@@ -486,6 +486,7 @@
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParamsImpl.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerStateGuard.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Base\PlayerBaseState.cpp" />
+    <ClCompile Include="Engine\2d\Text\TextRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -913,6 +914,8 @@
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParamsFactory.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParamsImpl.h" />
     <ClInclude Include="Application\GameObject\Player\State\Action\PlayerStateGuard.h" />
+    <ClInclude Include="Externals\std_truetype\stb_truetype.h" />
+    <ClInclude Include="Engine\2d\Text\TextRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

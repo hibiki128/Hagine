@@ -65,7 +65,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(ProjectDir)Engine\2d;$(ProjectDir)Engine\3d;$(ProjectDir)Engine\Audio;$(ProjectDir)Engine\Base;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Frame;$(ProjectDir)Engine\Input;$(ProjectDir)Engine\Math;$(ProjectDir)Engine\OffScreen;$(ProjectDir)Engine\Scene;$(ProjectDir)Engine\Utility;$(ProjectDir)externals\assimp\include;$(ProjectDir)myEngine\utility\imgui;$(ProjectDir)externals\imgui;$(ProjectDir)externals\DirectXTex;$(ProjectDir)myEngine\Audio;$(ProjectDir)scene\MyGame;$(ProjectDir)scene\MyGame;$(ProjectDir)scene</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(ProjectDir)Engine\2d;$(ProjectDir)Engine\3d;$(ProjectDir)Engine\Audio;$(ProjectDir)Engine\Base;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Frame;$(ProjectDir)Engine\Input;$(ProjectDir)Engine\Math;$(ProjectDir)Engine\OffScreen;$(ProjectDir)Engine\Scene;$(ProjectDir)Engine\Utility;$(ProjectDir)externals\std_truetype;$(ProjectDir)externals\assimp\include;$(ProjectDir)myEngine\utility\imgui;$(ProjectDir)externals\imgui;$(ProjectDir)externals\DirectXTex;$(ProjectDir)myEngine\Audio;$(ProjectDir)scene\MyGame;$(ProjectDir)scene\MyGame;$(ProjectDir)scene</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -91,7 +91,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 /IGNORE:4049 /IGNORE:4099 </AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(ProjectDir)Engine\2d;$(ProjectDir)Engine\3d;$(ProjectDir)Engine\Audio;$(ProjectDir)Engine\Base;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Frame;$(ProjectDir)Engine\Input;$(ProjectDir)Engine\Math;$(ProjectDir)Engine\OffScreen;$(ProjectDir)Engine\Scene;$(ProjectDir)Engine\Utility;$(ProjectDir)externals\assimp\include;$(ProjectDir)externals\DirectXTex;$(ProjectDir)myEngine\Audio;$(ProjectDir)scene\MyGame;$(ProjectDir)scene\MyGame;$(ProjectDir)scene</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(ProjectDir)Engine\2d;$(ProjectDir)Engine\3d;$(ProjectDir)Engine\Audio;$(ProjectDir)Engine\Base;$(ProjectDir)Engine\Core;$(ProjectDir)Engine\Frame;$(ProjectDir)Engine\Input;$(ProjectDir)Engine\Math;$(ProjectDir)Engine\OffScreen;$(ProjectDir)Engine\Scene;$(ProjectDir)Engine\Utility;$(ProjectDir)externals\std_truetype;$(ProjectDir)externals\assimp\include;$(ProjectDir)externals\DirectXTex;$(ProjectDir)myEngine\Audio;$(ProjectDir)scene\MyGame;$(ProjectDir)scene\MyGame;$(ProjectDir)scene</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -246,6 +246,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\System\Tutorial\TutorialSystem.cpp" />
     <ClCompile Include="Application\UI\Tutorial\TutorialUI.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerStateGuard.cpp" />
+    <ClCompile Include="Engine\2d\Text\TextRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -433,6 +434,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
     <ClInclude Include="Application\GameObject\Player\Collider\PlayerAttackCollider.h" />
     <ClInclude Include="Application\GameObject\Player\State\Action\PlayerStateGuard.h" />
+    <ClInclude Include="Externals\std_truetype\stb_truetype.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
@@ -443,6 +445,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Scene\TutorialScene.h" />
     <ClInclude Include="Application\System\Tutorial\TutorialSystem.h" />
     <ClInclude Include="Application\UI\Tutorial\TutorialUI.h" />
+    <ClInclude Include="Engine\2d\Text\TextRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\OffScreen\Bloom.PS.hlsl">

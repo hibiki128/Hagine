@@ -1,5 +1,6 @@
 #include "DemoScene.h"
 #include "Engine/Utility/Scene/SceneManager.h"
+#include"../../Engine/2d/Text/TextRenderer.h"
 
 void DemoScene::Initialize() {
     BaseScene::Initialize();
@@ -39,6 +40,7 @@ void DemoScene::DrawForOffScreen() {
 void DemoScene::AddSceneSetting() {
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
+    TextRenderer::GetInstance()->UpdateImGui();
 }
 
 void DemoScene::AddObjectSetting() {
