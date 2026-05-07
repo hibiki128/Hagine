@@ -1,11 +1,14 @@
 #define NOMINMAX
 #include "TextRenderer.h"
-#include"../SpriteManager.h"
+#include "../SpriteManager.h"
 #include <Graphics/Texture/TextureManager.h>
 #include <String/StringUtility.h>
 #include <externals/DirectXTex/DirectXTex.h>
 #include <externals/std_truetype/stb_truetype.h>
+#ifdef _DEBUG
 #include <imgui.h>
+#endif // _DEBUG
+#include <String/StringUtility.h>
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -13,7 +16,6 @@
 #include <filesystem>
 #include <vector>
 #include <wincodec.h>
-#include <String/StringUtility.h>
 
 const std::string TextRenderer::kSaveFolderRelative = "Text";
 const std::string TextRenderer::kSaveFolder = "resources/images/Text";
@@ -44,6 +46,7 @@ void TextRenderer::CreateTextSprite(
 }
 
 void TextRenderer::UpdateImGui() {
+#ifdef _DEBUG
     if (!ImGui::Begin("テキストレンダラー (TextRenderer)")) {
         ImGui::End();
         return;
@@ -98,6 +101,7 @@ void TextRenderer::UpdateImGui() {
     }
 
     ImGui::End();
+#endif // _DEBUG
 }
 
 // --------------------------------------------------------------------------
