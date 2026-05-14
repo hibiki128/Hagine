@@ -29,7 +29,7 @@ void ParticleEmitter::Initialize(std::string name) {
     lastScale_ = transform_.scale_;
 #ifdef _DEBUG
     // WorldTransformのアドレスを渡す
-    ImGuizmoManager::GetInstance()->AddTarget(name_, &transform_);
+    ImGuizmoManager::GetInstance()->AddTarget(name_, &transform_, isGizmoSelectable_);
 #endif
 }
 
@@ -133,6 +133,7 @@ void ParticleEmitter::SaveToJson() {
     datas_->Save("isVisible", isVisible_);
     datas_->Save("isActive", isActive_);
     datas_->Save("isAuto", isAuto_);
+    datas_->Save("isGizmoSelectable", isGizmoSelectable_);
     for (const auto &[groupName, setting] : particleSettings_) {
         datas_->Save(groupName + "_translate", setting.translate);
         datas_->Save(groupName + "_rotation", setting.rotation);
@@ -200,6 +201,7 @@ void ParticleEmitter::LoadFromJson() {
     isVisible_ = datas_->Load<bool>("isVisible", true);
     isActive_ = datas_->Load<bool>("isActive", false);
     isAuto_ = datas_->Load<bool>("isAuto", false);
+    isGizmoSelectable_ = datas_->Load<bool>("isGizmoSelectable", true);
 
     for (const auto &groupName : particleGroupNames_) {
         ParticleSetting setting;
@@ -410,9 +412,8 @@ void ParticleEmitter::DebugParticleData() {
             ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
             ImGui::Checkbox("表示", &isVisible_);
 #ifdef _DEBUG
-            bool isSelectable = ImGuizmoManager::GetInstance()->GetSelectable(name_);
-            if (ImGui::Checkbox("ギズモ選択", &isSelectable)) {
-                ImGuizmoManager::GetInstance()->SetSelectable(name_, isSelectable);
+            if (ImGui::Checkbox("ギズモ選択", &isGizmoSelectable_)) {
+                ImGuizmoManager::GetInstance()->SetSelectable(name_, isGizmoSelectable_);
             }
 #endif
             ImGui::PopStyleColor();
@@ -1143,6 +1144,7 @@ std::unique_ptr<ParticleEmitter> ParticleEmitter::Clone() const {
     newEmitter->SetActive(this->isActive_);
     newEmitter->isAuto_ = this->isAuto_;
     newEmitter->isVisible_ = this->isVisible_;
+    newEmitter->isGizmoSelectable_ = this->isGizmoSelectable_;
     newEmitter->transform_ = this->transform_;
     newEmitter->particleSettings_ = this->particleSettings_;
     newEmitter->particleGroupNames_ = this->particleGroupNames_;

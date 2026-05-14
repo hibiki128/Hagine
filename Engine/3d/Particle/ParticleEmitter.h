@@ -45,9 +45,12 @@ class ParticleEmitter {
     bool GetIsAuto() { return isAuto_; }
     Matrix4x4 GetWorldMatrix() { return transform_.matWorld_; }
     Vector3 GetPosition() { return transform_.translation_; }
-
     void SetPosition(const Vector3 &position) { transform_.translation_ = position; }
 
+    bool IsGizmoSelectable() const { return isGizmoSelectable_; }
+    void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; }
+
+  public:
     void SetPositionY(const std::string &groupName, float positionY) {
         particleSettings_[groupName].translate.y = positionY;
         FlushSetting(groupName); // Manager に即時反映
@@ -199,6 +202,7 @@ class ParticleEmitter {
     bool isVisible_ = false;
     bool isActive_ = false;
     bool isAuto_ = false;
+    bool isGizmoSelectable_ = true;
 
     std::string name_;         // パーティクルの名前
     WorldTransform transform_; // 位置や回転などのトランスフォーム

@@ -225,8 +225,7 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData) {
 
         // 非アクティブなインスタンスは画面外に配置するか、スケールを0にする
         if (!instanceSRT.isActive) {
-            transform.scale = {0.0f, 0.0f, 1.0f}; // スケールを0にして非表示
-            // または transform.translate.z = -1000.0f; // 画面外に配置
+            transform.scale = {0.0f, 0.0f, 1.0f};
         }
 
         Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
@@ -241,7 +240,6 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData) {
         transformMatrix.WVP = worldMatrix * viewMatrix * projectionMatrix;
         transformMatrix.World = worldMatrix;
 
-        // 元のインデックスをそのまま使用
         spriteData->sprite->SetInstanceTransform(i, transformMatrix);
     }
 }
@@ -257,7 +255,6 @@ void SpriteManager::DrawSpriteCreationModal() {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 4));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
 
-    // 幅を抑える（幅 340px に固定）
     ImGui::SetNextWindowSize(ImVec2(1080, 0), ImGuiCond_Always);
     if (ImGui::BeginPopupModal("スプライト生成##modal", nullptr,
                                ImGuiWindowFlags_AlwaysAutoResize |
@@ -295,7 +292,7 @@ void SpriteManager::DrawSpriteCreationModal() {
         // ---- Settings ----
         SectionHeader("[ 設定 ]", DebugTheme::kAccentGreen);
 
-        // 位置（ラベルを上に出し DragFloat2 は全幅）
+        // 位置
         ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::TextUnformatted("位置 (X / Y)");
         ImGui::PopStyleColor();
@@ -343,7 +340,7 @@ void SpriteManager::DrawSpriteCreationModal() {
         ImGui::Spacing();
         ImGui::Separator();
 
-        // ---- Validation messages ----
+        // ---- バリデーション ----
         bool nameOk = strlen(nameBuf) > 0;
         bool texOk = !texturePath_.empty();
         bool nameUniq = (GetSprite(nameBuf) == nullptr);
@@ -361,7 +358,7 @@ void SpriteManager::DrawSpriteCreationModal() {
             ImGui::Spacing();
         }
 
-        // ---- Buttons ----
+        // ---- ボタン ----
         auto ResetModal = [&]() {
             memset(nameBuf, 0, sizeof(nameBuf));
             texturePath_ = "";
@@ -525,7 +522,7 @@ void SpriteManager::DrawSpriteManager() {
             ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgBlue);
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.55f, 1.0f, 0.20f});
             if (ImGui::TreeNodeEx("基本設定##bs", ImGuiTreeNodeFlags_SpanAvailWidth)) {
-                // Position -- ラベル上 + DragFloat2 全幅
+                // Position
                 {
                     Vector2 pos = sp->sprite->GetPosition();
                     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
@@ -540,17 +537,52 @@ void SpriteManager::DrawSpriteManager() {
                 }
                 ImGui::Spacing();
 
-                // Size
+                // Size - 比率維持 / XY独立 モード切り替え
                 {
                     Vector2 sz = sp->sprite->GetSize();
+
+                    // ラベルとモード切り替えボタンを横並びに配置
                     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
-                    ImGui::TextUnformatted("サイズ (W / H)");
+                    ImGui::TextUnformatted("サイズ");
                     ImGui::PopStyleColor();
-                    float v[2] = {sz.x, sz.y};
+                    ImGui::SameLine();
+
+                    // アスペクト比ロック状態に応じてボタン色を切り替える
+                    const bool locked = sp->lockAspectRatio;
+                    if (locked) {
+                        ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kAccentBlue);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.35f, 0.65f, 1.0f, 0.9f});
+                    } else {
+                        ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgBlue);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.2f, 0.4f, 0.6f, 0.5f});
+                    }
+                    if (ImGui::SmallButton(locked ? "[比率維持]##lar" : "[XY独立]##lar"))
+                        sp->lockAspectRatio = !sp->lockAspectRatio;
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip(locked ? "クリックでXY独立モードへ切り替え" : "クリックで比率維持モードへ切り替え");
+                    ImGui::PopStyleColor(2);
+
                     ImGui::SetNextItemWidth(-1);
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgBlue);
-                    if (ImGui::DragFloat2("##bssz", v, 1.f, 0.f, 2000.f))
-                        sp->sprite->SetSize({v[0], v[1]});
+
+                    if (sp->lockAspectRatio) {
+                        // 比率維持モード: X幅を基準にアスペクト比を保ちながらスケール変更
+                        const float aspect = (sz.x > 0.0f) ? sz.y / sz.x : 1.0f;
+                        float scaleW = sz.x;
+                        if (ImGui::DragFloat("##bssz_w", &scaleW, 1.0f, 1.0f, 2000.0f, "W: %.1f")) {
+                            scaleW = std::max(1.0f, scaleW);
+                            sp->sprite->SetSize({scaleW, scaleW * aspect});
+                        }
+                        // 現在の高さとアスペクト比を補足表示
+                        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                        ImGui::Text("H: %.1f  (比率 1 : %.3f)", sz.y, aspect);
+                        ImGui::PopStyleColor();
+                    } else {
+                        // XY独立モード: W・H を個別に変更
+                        float v[2] = {sz.x, sz.y};
+                        if (ImGui::DragFloat2("##bssz", v, 1.f, 0.f, 2000.f))
+                            sp->sprite->SetSize({v[0], v[1]});
+                    }
                     ImGui::PopStyleColor();
                 }
                 ImGui::Spacing();
@@ -695,11 +727,9 @@ void SpriteManager::DrawSpriteManager() {
 
     ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.45f, 0.20f, 0.80f});
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.25f, 0.55f, 0.25f, 0.90f});
-    // Save -- すべてのスプライトを JSON に書き出す
     if (ImGui::Button("全スプライトを保存##spsvall", ImVec2(-1, 0)))
         SaveAllSprites();
     ImGui::Spacing();
-    // Load -- フォルダ内の JSON を読み込み現在のリストに追加する
     if (ImGui::Button("全スプライトを読み込み##spldall", ImVec2(-1, 0))) {
         Clear();
         LoadAllSprites();
@@ -766,7 +796,6 @@ void SpriteManager::LoadDrawOrder() {
     // DrawOrder.jsonファイルが存在するかチェック
     std::string drawOrderPath = "resources/jsons/Sprites/" + saveFolder_ + "/DrawOrder.json";
     if (!fs::exists(drawOrderPath)) {
-        // ファイルが存在しない場合は何もしない（現在の順序を維持）
         return;
     }
 
@@ -787,7 +816,6 @@ void SpriteManager::LoadDrawOrder() {
     // ロードした順序に基づいてスプライトを並び替え
     std::vector<std::unique_ptr<SpriteData>> reorderedSprites;
 
-    // まず、保存された順序通りに追加
     for (const std::string &name : loadedOrder) {
         auto it = std::find_if(sprites_.begin(), sprites_.end(),
                                [&name](const std::unique_ptr<SpriteData> &sprite) {
@@ -799,7 +827,7 @@ void SpriteManager::LoadDrawOrder() {
         }
     }
 
-    // 残りのスプライト（新規追加されたもの）を末尾に追加
+    // 順序リストに含まれなかった残りのスプライトを末尾に追加
     for (auto &sprite : sprites_) {
         if (sprite) {
             reorderedSprites.push_back(std::move(sprite));
@@ -811,10 +839,8 @@ void SpriteManager::LoadDrawOrder() {
 
 void SpriteManager::SaveAllSprites() {
     SaveDrawOrder();
-    // 保存先フォルダのパスを組み立て
-    std::string folderPath = "resources/jsons/Sprites/" + saveFolder_;
 
-    // フォルダが存在しない場合は作る
+    std::string folderPath = "resources/jsons/Sprites/" + saveFolder_;
     if (!fs::exists(folderPath)) {
         fs::create_directories(folderPath);
     }
@@ -823,14 +849,10 @@ void SpriteManager::SaveAllSprites() {
         if (!spriteData || !spriteData->sprite)
             continue;
 
-        std::string texturePath = spriteData->textureFilePath;
-        std::string textureFilename = fs::path(texturePath).stem().string();
-        std::string fileName = textureFilename;
-
         std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("Sprites/" + saveFolder_, spriteData->name);
 
         data->Save("name", spriteData->name);
-        data->Save("texturePath", texturePath);
+        data->Save("texturePath", spriteData->textureFilePath);
 
         Vector2 pos = spriteData->sprite->GetPosition();
         Vector2 size = spriteData->sprite->GetSize();
@@ -846,6 +868,9 @@ void SpriteManager::SaveAllSprites() {
         data->Save("anchor", anchor);
         data->Save("uvTransform", uvTransform);
         data->Save("blendMode", static_cast<int>(spriteData->blendMode));
+
+        // アスペクト比ロック状態を保存
+        data->Save("lockAspectRatio", static_cast<int>(spriteData->lockAspectRatio));
     }
 }
 
@@ -856,7 +881,6 @@ void SpriteManager::LoadAllSprites() {
         return;
     }
 
-    // 既存の読み込み処理...（そのまま）
     std::vector<std::string> jsonNames;
     for (const auto &entry : fs::directory_iterator(folderPath)) {
         if (entry.path().extension() == ".json" && entry.path().stem().string() != "DrawOrder") {
@@ -878,6 +902,9 @@ void SpriteManager::LoadAllSprites() {
         Matrix4x4 uvTransform = data->Load<Matrix4x4>("uvTransform", MakeIdentity4x4());
         int blendModeInt = data->Load<int>("blendMode", static_cast<int>(BlendMode::kNormal));
 
+        // アスペクト比ロック状態を復元（旧データには存在しないためデフォルトfalse）
+        bool lockAspectRatio = static_cast<bool>(data->Load<int>("lockAspectRatio", 0));
+
         SpriteTransform transform;
         transform.position = position;
         transform.color = color;
@@ -892,9 +919,9 @@ void SpriteManager::LoadAllSprites() {
             sprite->sprite->SetRotation(rotation);
             sprite->sprite->SetUVTransform(uvTransform);
             sprite->blendMode = static_cast<BlendMode>(blendModeInt);
+            sprite->lockAspectRatio = lockAspectRatio;
         }
     }
 
-    // 描画順をロード
     LoadDrawOrder();
 }

@@ -59,6 +59,7 @@ struct SpriteData {
     bool isVisible = true;                                   // 表示フラグ
     bool isBackMost = false;                                 // 背面フラグ
     BlendMode blendMode = BlendMode::kNormal;
+    bool lockAspectRatio = false; // サイズ編集時のアスペクト比維持フラグ
 
     /// <summary>
     /// コンストラクタ
@@ -145,7 +146,7 @@ class SpriteManager {
     /// シングルトンインスタンスを取得
     /// </summary>
     /// <returns>SpriteManager*: インスタンスのポインタ</returns>
-      static SpriteManager* GetInstance() {
+    static SpriteManager *GetInstance() {
         static SpriteManager instance;
         return &instance;
     }

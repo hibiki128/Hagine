@@ -41,6 +41,9 @@ class ParticleCSEmitter {
     // エミッターのワイヤーフレーム描画の表示・非表示を切り替える
     void SetVisible(bool isVisible) { isVisible_ = isVisible; }
 
+    bool IsGizmoSelectable() const { return isGizmoSelectable_; }
+    void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; }
+
     std::string GetName() const { return name_; }
     void SetEnableGravity(bool enable) {
         for (auto &group : particleGroups_) {
@@ -243,6 +246,7 @@ class ParticleCSEmitter {
     bool isAuto_ = false;
     bool isActive_ = false;
     bool isVisible_ = true;
+    bool isGizmoSelectable_ = true;
     bool emitOnce_ = false;
     bool receiveFields_ = true;
     int32_t fieldGroupId_ = -1;             // -1=全フィールド対象, 0以上=同じIDのフィールドのみ対象

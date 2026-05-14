@@ -157,11 +157,12 @@ void ImGuizmoManager::SetViewProjection(ViewProjection *vp) {
 // ---- AddTarget オーバーロード群 ----------------------------------------
 
 // BaseObject を登録する
-void ImGuizmoManager::AddTarget(const std::string &name, BaseObject *object) {
+void ImGuizmoManager::AddTarget(const std::string &name, BaseObject *object, bool selectable) {
     GizmoTarget target;
     target.type = GizmoTarget::Type::BaseObject;
     target.name = name;
     target.baseObject = object;
+    target.selectable = selectable;
     transformMap[name] = target;
 
     UpdateFilteredNames();
@@ -173,11 +174,13 @@ void ImGuizmoManager::AddTarget(const std::string &name, BaseObject *object) {
 
 // WorldTransform のみを持つオブジェクトを登録する
 void ImGuizmoManager::AddTarget(const std::string &name, WorldTransform *worldTransform,
+                                bool selectable,
                                 std::function<void()> imguiCallback) {
     GizmoTarget target;
     target.type = GizmoTarget::Type::WorldTransform;
     target.name = name;
     target.worldTransform = worldTransform;
+    target.selectable = selectable;
     target.imguiCallback = imguiCallback;
     transformMap[name] = target;
 
@@ -193,6 +196,7 @@ void ImGuizmoManager::AddTarget(const std::string &name,
                                 Vector3 *translate,
                                 Vector3 *rotate,
                                 Vector3 *scale,
+                                bool selectable,
                                 std::function<void()> imguiCallback) {
     GizmoTarget target;
     target.type = GizmoTarget::Type::FreeTransform;
@@ -200,6 +204,7 @@ void ImGuizmoManager::AddTarget(const std::string &name,
     target.translate = translate;
     target.rotate = rotate;
     target.scale = scale;
+    target.selectable = selectable;
     target.imguiCallback = imguiCallback;
     transformMap[name] = target;
 

@@ -329,9 +329,8 @@ void Framework::Update() {
 
 void Framework::LoadResource() {
 
-    //textureManager_->LoadAllTextures();
-    textureManager_->LoadFontTexture("PixelMplus12-Regular.ttf", 64);
-    textureManager_->LoadFontTexture("fa-solid-900.ttf", 48);
+    textureManager_->LoadAllTextures();
+
     textureManager_->LoadFontTexture("NotoSansJP-Medium.ttf", 100);
 
     particleEditor_->AddParticleEmitter("fire");

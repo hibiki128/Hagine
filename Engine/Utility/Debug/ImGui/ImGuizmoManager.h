@@ -100,11 +100,12 @@ class ImGuizmoManager {
     // ---- AddTarget オーバーロード群 ----
 
     /// BaseObject を登録する（既存の使い方）
-    void AddTarget(const std::string &name, BaseObject *object);
+    void AddTarget(const std::string &name, BaseObject *object, bool selectable = true);
 
     /// WorldTransform のみを持つオブジェクトを登録する
     /// imguiCallback を渡すと ImGui 表示をカスタマイズできる
     void AddTarget(const std::string &name, WorldTransform *worldTransform,
+                   bool selectable = true,
                    std::function<void()> imguiCallback = nullptr);
 
     /// Vector3 ポインタを直接指定して登録する（Sprite・ParticleEmitter など）
@@ -114,6 +115,7 @@ class ImGuizmoManager {
                    Vector3 *translate,
                    Vector3 *rotate = nullptr,
                    Vector3 *scale = nullptr,
+                   bool selectable = true,
                    std::function<void()> imguiCallback = nullptr);
 
     void imgui();
@@ -135,9 +137,14 @@ class ImGuizmoManager {
     void UpdateFilteredNames();
 
     // ギズモの選択状態をセット
+    // selectable が false になった場合は、現在の選択状態からも除外する
     void SetSelectable(const std::string &name, bool selectable) {
-        if (transformMap.find(name) != transformMap.end()) {
-            transformMap[name].selectable = selectable;
+        auto it = transformMap.find(name);
+        if (it != transformMap.end()) {
+            it->second.selectable = selectable;
+            if (!selectable) {
+                selectedNames.erase(name);
+            }
         }
     }
 

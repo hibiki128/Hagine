@@ -29,14 +29,17 @@ void TextRenderer::CreateTextSprite(
     const std::string &text,
     const std::string &fontKey,
     Vector2 position,
-    Vector4 color) {
+    Vector4 color,
+    bool outlineEnabled,
+    float outlineThickness,
+    Vector4 outlineColor) {
     // 同名スプライトが存在する場合は再生成のために先に削除する
     if (SpriteManager::GetInstance()->GetSprite(spriteName) != nullptr) {
         SpriteManager::GetInstance()->UnregisterSprite(spriteName);
     }
 
     // テキストをPNGとして保存し、TextureManagerへロードして相対パスを受け取る
-    const std::string relPath = RenderTextToFile(spriteName, text, fontKey);
+    const std::string relPath = RenderTextToFile(spriteName, text, fontKey, outlineEnabled, outlineThickness, outlineColor);
 
     // SpriteManagerにスプライトとして登録する
     SpriteTransform transform;
@@ -81,6 +84,23 @@ void TextRenderer::UpdateImGui() {
     ImGui::DragFloat2("座標", imguiPosition_, 1.0f);
     ImGui::ColorEdit4("文字色", imguiColor_);
 
+    // ---- アウトライン設定 ----
+    ImGui::SeparatorText("アウトライン設定");
+
+    ImGui::Checkbox("アウトラインを有効にする", &imguiOutlineEnabled_);
+
+    if (imguiOutlineEnabled_) {
+        // 有効時のみ太さと色を編集可能にする
+        ImGui::DragFloat("太さ (px)", &imguiOutlineThickness_, 0.5f, 0.5f, 20.0f, "%.1f");
+        ImGui::ColorEdit4("アウトライン色", imguiOutlineColor_);
+    } else {
+        // 無効時はグレーアウト表示
+        ImGui::BeginDisabled();
+        ImGui::DragFloat("太さ (px)", &imguiOutlineThickness_, 0.5f, 0.5f, 20.0f, "%.1f");
+        ImGui::ColorEdit4("アウトライン色", imguiOutlineColor_);
+        ImGui::EndDisabled();
+    }
+
     const bool canCreate = (imguiSpriteName_[0] != '\0') &&
                            (imguiText_[0] != '\0') &&
                            !fontKeys.empty();
@@ -94,7 +114,10 @@ void TextRenderer::UpdateImGui() {
             std::string(imguiText_),
             fontKeys[imguiFontIndex_],
             {imguiPosition_[0], imguiPosition_[1]},
-            {imguiColor_[0], imguiColor_[1], imguiColor_[2], imguiColor_[3]});
+            {imguiColor_[0], imguiColor_[1], imguiColor_[2], imguiColor_[3]},
+            imguiOutlineEnabled_,
+            imguiOutlineThickness_,
+            {imguiOutlineColor_[0], imguiOutlineColor_[1], imguiOutlineColor_[2], imguiOutlineColor_[3]});
     }
     if (!canCreate) {
         ImGui::EndDisabled();
@@ -111,10 +134,13 @@ void TextRenderer::UpdateImGui() {
 std::string TextRenderer::RenderTextToFile(
     const std::string &spriteName,
     const std::string &text,
-    const std::string &fontKey) {
+    const std::string &fontKey,
+    bool outlineEnabled,
+    float outlineThickness,
+    Vector4 outlineColor) {
     const TextureManager::FontData *fontData = TextureManager::GetInstance()->GetFontData(fontKey);
     assert(fontData != nullptr);
-    assert(fontData->ttfBuffer != nullptr); // TTF生データが保持されているか確認
+    assert(fontData->ttfBuffer != nullptr);
 
     // stb_truetypeの初期化
     stbtt_fontinfo fontInfo;
@@ -140,13 +166,13 @@ std::string TextRenderer::RenderTextToFile(
             uint32_t low = static_cast<uint32_t>(wText[i + 1]);
             if (low >= 0xDC00 && low <= 0xDFFF) {
                 cp = 0x10000 + ((cp - 0xD800) << 10) + (low - 0xDC00);
-                ++i; // 2文字分（サロゲートペア）進める
+                ++i;
             }
         }
         codepoints.push_back(cp);
     }
 
-    // テクスチャサイズの計算（全体の横幅を割り出す）
+    // テクスチャの全体横幅を計算する
     float totalWidth = 0.0f;
     for (size_t i = 0; i < codepoints.size(); ++i) {
         int advanceWidth, leftSideBearing;
@@ -158,13 +184,16 @@ std::string TextRenderer::RenderTextToFile(
         }
     }
 
-    const int texWidth = std::max(1, static_cast<int>(std::ceil(totalWidth)));
-    const int texHeight = std::max(1, maxAscent + maxDescent + 2); // 上下マージン
+    // アウトライン有効時はその太さ分のパディングを上下左右に付加してクリッピングを防ぐ
+    const int outlinePad = outlineEnabled ? static_cast<int>(std::ceil(outlineThickness)) : 0;
+
+    const int texWidth = std::max(1, static_cast<int>(std::ceil(totalWidth)) + outlinePad * 2);
+    const int texHeight = std::max(1, maxAscent + maxDescent + 2 + outlinePad * 2);
 
     std::vector<uint8_t> pixels(static_cast<size_t>(texWidth * texHeight * 4), 0);
 
     // 各文字をビットマップ化してピクセルバッファに書き込む
-    float cursorX = 0.0f;
+    float cursorX = static_cast<float>(outlinePad);
     for (size_t i = 0; i < codepoints.size(); ++i) {
         uint32_t cp = codepoints[i];
 
@@ -177,8 +206,9 @@ std::string TextRenderer::RenderTextToFile(
         int glyphW = x1 - x0;
         int glyphH = y1 - y0;
 
+        // パディングを考慮したグリフの描画先座標を計算する
         int dstX = static_cast<int>(std::round(cursorX)) + x0;
-        int dstY = maxAscent + y0;
+        int dstY = maxAscent + y0 + outlinePad;
 
         if (glyphW > 0 && glyphH > 0) {
             std::vector<uint8_t> glyphBitmap(glyphW * glyphH);
@@ -209,7 +239,77 @@ std::string TextRenderer::RenderTextToFile(
         }
     }
 
-    // --- これ以降の DirectXTex による保存処理は既存のまま変更なし ---
+    // アウトライン処理:
+    // グリフが描画済みのピクセルバッファに対して膨張処理（ダイレーション）を行い、
+    // グリフの外周に指定した太さ・色のアウトラインを合成する
+    if (outlineEnabled && outlineThickness > 0.0f) {
+        const int radius = static_cast<int>(std::ceil(outlineThickness));
+
+        // アウトラインピクセルを格納するバッファ（alpha のみ判定に使用）
+        std::vector<uint8_t> outlineMask(static_cast<size_t>(texWidth * texHeight), 0);
+
+        // グリフが存在しないピクセルに対して近傍探索を行い、
+        // 半径 outlineThickness 以内にグリフピクセルがあればアウトライン候補とする
+        for (int y = 0; y < texHeight; ++y) {
+            for (int x = 0; x < texWidth; ++x) {
+                const int selfIdx = (y * texWidth + x) * 4;
+
+                // グリフが描画済みの箇所はアウトライン不要
+                if (pixels[selfIdx + 3] > 0)
+                    continue;
+
+                // 近傍ピクセルをサーチして半径内にグリフが存在するか確認
+                bool hasNeighbor = false;
+                for (int dy = -radius; dy <= radius && !hasNeighbor; ++dy) {
+                    for (int dx = -radius; dx <= radius && !hasNeighbor; ++dx) {
+                        // 円形マスクにするため距離チェック
+                        const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+                        if (dist > outlineThickness)
+                            continue;
+
+                        const int nx = x + dx;
+                        const int ny = y + dy;
+                        if (nx < 0 || nx >= texWidth || ny < 0 || ny >= texHeight)
+                            continue;
+
+                        const int nIdx = (ny * texWidth + nx) * 4;
+                        if (pixels[nIdx + 3] > 0)
+                            hasNeighbor = true;
+                    }
+                }
+
+                if (hasNeighbor) {
+                    outlineMask[y * texWidth + x] = 255;
+                }
+            }
+        }
+
+        // アウトライン色をベースピクセルバッファに書き込む
+        // グリフが存在しないピクセルにのみ上書きすることで、文字の上にはみ出さないようにする
+        const uint8_t outR = static_cast<uint8_t>(std::clamp(outlineColor.x, 0.0f, 1.0f) * 255.0f);
+        const uint8_t outG = static_cast<uint8_t>(std::clamp(outlineColor.y, 0.0f, 1.0f) * 255.0f);
+        const uint8_t outB = static_cast<uint8_t>(std::clamp(outlineColor.z, 0.0f, 1.0f) * 255.0f);
+        const uint8_t outA = static_cast<uint8_t>(std::clamp(outlineColor.w, 0.0f, 1.0f) * 255.0f);
+
+        for (int y = 0; y < texHeight; ++y) {
+            for (int x = 0; x < texWidth; ++x) {
+                if (outlineMask[y * texWidth + x] == 0)
+                    continue;
+
+                const int idx = (y * texWidth + x) * 4;
+                // グリフピクセルは上書きしない
+                if (pixels[idx + 3] > 0)
+                    continue;
+
+                pixels[idx + 0] = outR;
+                pixels[idx + 1] = outG;
+                pixels[idx + 2] = outB;
+                pixels[idx + 3] = outA;
+            }
+        }
+    }
+
+    // DirectXTex による PNG 保存処理
     EnsureOutputDirectory();
 
     DirectX::ScratchImage scratchImage;

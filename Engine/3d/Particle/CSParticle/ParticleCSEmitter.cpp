@@ -23,7 +23,8 @@ void ParticleCSEmitter::Initialize(const std::string &name) {
             name_,
             &emitterMeshData_->translate,
             nullptr, // 必要に応じて回転のVector3を追加
-            &emitterMeshData_->scale);
+            &emitterMeshData_->scale,
+            isGizmoSelectable_);
     }
 #endif
 }
@@ -333,6 +334,17 @@ std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const {
 
     newEmitter->Initialize(baseName);
     newEmitter->SetName(newName);
+#ifdef _DEBUG
+    ImGuizmoManager::GetInstance()->RemoveTarget(baseName);
+    if (newEmitter->emitterMeshData_) {
+        ImGuizmoManager::GetInstance()->AddTarget(
+            newName,
+            &newEmitter->emitterMeshData_->translate,
+            nullptr,
+            &newEmitter->emitterMeshData_->scale,
+            newEmitter->isGizmoSelectable_);
+    }
+#endif
     newEmitter->LoadCloneSetting();
     newEmitter->SetActive(this->isActive_);
     newEmitter->isAuto_ = this->isAuto_;
@@ -342,7 +354,6 @@ std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const {
 
     return newEmitter;
 }
-
 void ParticleCSEmitter::CreateModelTriangles() {
     if (modelData_.meshes.empty())
         return;
@@ -553,6 +564,7 @@ void ParticleCSEmitter::SaveSetting() {
 
     data->Save("isAuto", isAuto_);
     data->Save("isVisible", isVisible_);
+    data->Save("isGizmoSelectable", isGizmoSelectable_);
     data->Save("frequency", emitterMeshData_->frequency);
     data->Save("frequencyTime", emitterMeshData_->frequencyTime);
     data->Save<Vector3>("translate", emitterMeshData_->translate);
@@ -659,6 +671,7 @@ void ParticleCSEmitter::LoadSetting() {
 
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
+    isGizmoSelectable_ = data->Load("isGizmoSelectable", true);
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
@@ -788,6 +801,7 @@ void ParticleCSEmitter::LoadCloneSetting() {
 
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
+    isGizmoSelectable_ = data->Load("isGizmoSelectable", true);
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
@@ -1028,9 +1042,8 @@ void ParticleCSEmitter::DrawImGui() {
                 if (ImGui::Button("一回発生##EmitOnce")) {
                     EmitOnce();
                 }
-                bool isSelectable = ImGuizmoManager::GetInstance()->GetSelectable(name_);
-                if (ImGui::Checkbox("ギズモ選択", &isSelectable)) {
-                    ImGuizmoManager::GetInstance()->SetSelectable(name_, isSelectable);
+                if (ImGui::Checkbox("ギズモ選択", &isGizmoSelectable_)) {
+                    ImGuizmoManager::GetInstance()->SetSelectable(name_, isGizmoSelectable_);
                 }
                 ImGui::Checkbox("エミッター表示##Visible", &isVisible_);
                 ImGui::PopStyleColor();
