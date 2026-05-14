@@ -3,13 +3,14 @@
 #include <variant>
 // std
 #include <array>
+#include <initializer_list>
 #include <memory>
 #include <vector>
 #include <wrl.h>
 
 #include "type/Vector2.h"
 
-#define DIRECTNPUT_VERSION 0x0800 // バージョン指定
+#define DIRECTNPUT_VERSION 0x0800
 #include <XInput.h>
 #include <dinput.h>
 // input
@@ -30,7 +31,7 @@ struct RayHitInfo {
     Vector3 hitPoint;       // ヒット点
     Vector3 hitNormal;      // ヒット面の法線
     float distance;         // レイの開始点からヒット点までの距離
-    std::string objectName; // ヒットしたオブジェクトのID
+    std::string objectName; // ヒットしたオブジェクト名
 };
 
 // ImGuiシーン描画領域情報
@@ -77,173 +78,148 @@ class Input {
     void Update();
 
     /// <summary>
-    /// 押し込んでいるか
+    /// 押し込んでいるか（単体キー）
     /// </summary>
-    /// <param name="キー番号"></param>
-    /// <returns></returns>
     bool PushKey(BYTE keyNumber) const;
 
     /// <summary>
-    /// トリガーしているか
+    /// 全キーを押し込んでいるか（複数キー同時押し）
     /// </summary>
-    /// <param name="キー番号"></param>
-    /// <returns></returns>
+    bool PushKey(std::initializer_list<BYTE> keys) const;
+
+    /// <summary>
+    /// トリガーしているか（単体キー）
+    /// </summary>
     bool TriggerKey(BYTE keyNumber) const;
 
     /// <summary>
-    /// 　離しているか
+    /// 全キーが揃った瞬間か（複数キー同時押し）
+    /// 前フレームで揃っておらず、今フレームで全て押されたときにtrueになる
     /// </summary>
-    /// <param name="キー番号"></param>
-    /// <returns></returns>
+    bool TriggerKey(std::initializer_list<BYTE> keys) const;
+
+    /// <summary>
+    /// 離しているか（単体キー）
+    /// </summary>
     bool ReleaseKey(BYTE keyNumber) const;
 
     /// <summary>
-    /// 　離した瞬間か
+    /// いずれかのキーが離されているか（複数キー同時押し）
     /// </summary>
-    /// <param name="キー番号"></param>
-    /// <returns></returns>
+    bool ReleaseKey(std::initializer_list<BYTE> keys) const;
+
+    /// <summary>
+    /// 離した瞬間か（単体キー）
+    /// </summary>
     bool ReleaseMomentKey(BYTE keyNumber) const;
+
+    /// <summary>
+    /// 全キーが揃った状態から、いずれかを離した瞬間か（複数キー同時押し）
+    /// </summary>
+    bool ReleaseMomentKey(std::initializer_list<BYTE> keys) const;
 
     /// <summary>
     /// 現在のジョイスティック状態を取得する
     /// </summary>
-    /// <param name="stickNo">ジョイスティック番号</param>
-    /// <param name="out">現在のジョイスティック状態</param>
-    /// <returns>正しく取得できたか</returns>
     template <typename T>
     bool GetJoystickState(int32_t stickNo, T &out) const;
 
     /// <summary>
     /// 前回のジョイスティック状態を取得する
     /// </summary>
-    /// <param name="stickNo">ジョイスティック番号</param>
-    /// <param name="out">前回のジョイスティック状態</param>
-    /// <returns>正しく取得できたか</returns>
     template <typename T>
     bool GetJoystickStatePrevious(int32_t stickNo, T &out) const;
 
     /// <summary>
     /// デッドゾーンを設定する
     /// </summary>
-    /// <param name="stickNo">ジョイスティック番号</param>
-    /// <param name="deadZoneL">デッドゾーン左スティック 0~32768</param>
-    /// <param name="deadZoneR">デッドゾーン右スティック 0~32768</param>
-    /// <returns>正しく取得できたか</returns>
     void SetJoystickDeadZone(int32_t stickNo, int32_t deadZoneL, int32_t deadZoneR);
 
     /// <summary>
     /// 接続されているジョイスティック数を取得する
     /// </summary>
-    /// <returns>接続されているジョイスティック数</returns>
     size_t GetNumberOfJoysticks() const;
-
-    ///// <summary>
-    ///// 全マウス情報取得
-    ///// </summary>
-    ///// <returns>マウス情報</returns>
-    // const DIMOUSESTATE2& GetAllMouse() const;
 
     /// <summary>
     /// マウスの押下をチェック
     /// </summary>
-    /// <param name="buttonNumber">マウスボタン番号(0:左,1:右,2:中,3~7:拡張マウスボタン)</param>
-    /// <returns>押されているか</returns>
     static bool IsPressMouse(int32_t mouseNumber);
 
     /// <summary>
     /// マウスのトリガーをチェック。押した瞬間だけtrueになる
     /// </summary>
-    /// <param name="buttonNumber">マウスボタン番号(0:左,1:右,2:中,3~7:拡張マウスボタン)</param>
-    /// <returns>トリガーか</returns>
     static bool IsTriggerMouse(int32_t buttonNumber);
 
     /// <summary>
     /// マウス移動量を取得
     /// </summary>
-    /// <returns>マウス移動量</returns>
     static MouseMove GetMouseMove();
 
     /// <summary>
     /// ホイールスクロール量を取得する
     /// </summary>
-    /// <returns>ホイールスクロール量。奥側に回したら+。Windowsの設定で逆にしてたら逆</returns>
     static int32_t GetWheel();
 
     /// <summary>
     /// マウスの位置を取得する（ウィンドウ座標系）
     /// </summary>
-    /// <returns>マウスの位置</returns>
     static Vector2 GetMousePos();
 
     /// <summary>
     /// 3Dのマウス座標
     /// </summary>
-    /// <param name="viewprojection"></param>
-    /// <param name="depthFactor"></param>
-    /// <returns></returns>
     static Vector3 GetMousePos3D(const ViewProjection &viewprojection, float depthFactor, float blockSpacing = 1.0f);
 
     /// <summary>
     /// レイを更新する（毎フレーム呼び出す）
     /// </summary>
-    /// <param name="viewprojection">カメラのビュープロジェクション</param>
-    /// <param name="viewport">ImGuiシーンの描画領域情報</param>
-    /// <param name="rayLength">レイの最大長</param>
     void UpdateRay(const ViewProjection &viewprojection, const SceneViewport &viewport, float rayLength = 1000.0f);
 
     /// <summary>
     /// 現在のレイを取得する
     /// </summary>
-    /// <returns>現在のレイ</returns>
     const Ray &GetCurrentRay() const { return currentRay_; }
 
     /// <summary>
-    /// レイとAABBの衝突判定
+    /// レイとAABBの衝突判定（BaseObject版）
     /// </summary>
-    /// <param name="ray">レイ</param>
-    /// <param name="aabb">バウンディングボックス</param>
-    /// <param name="worldMatrix">オブジェクトのワールドマトリックス</param>
-    /// <param name="hitInfo">ヒット情報（出力）</param>
-    /// <returns>衝突したかどうか</returns>
     static bool RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,
                                  const AABB &aabb = {Vector3(-1.0f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f)});
 
     /// <summary>
-    /// レイとスフィアの衝突判定
+    /// レイとAABBの衝突判定（ワールド行列直接指定版）
+    /// BaseObjectを持たない対象（Sprite・ParticleEmitterなど）に使用する
     /// </summary>
-    /// <param name="ray">レイ</param>
-    /// <param name="sphere">球</param>
-    /// <param name="worldMatrix">オブジェクトのワールドマトリックス</param>
-    /// <param name="hitInfo">ヒット情報（出力）</param>
-    /// <returns>衝突したかどうか</returns>
+    static bool RayIntersectAABBByMatrix(const Ray &ray, const Matrix4x4 &worldMatrix, RayHitInfo &hitInfo,
+                                         const AABB &aabb = {Vector3(-1.0f, -1.0f, -1.0f), Vector3(1.0f, 1.0f, 1.0f)});
+
+    /// <summary>
+    /// レイとスフィアの衝突判定（BaseObject版）
+    /// </summary>
     static bool RayIntersectSphere(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,
                                    const Sphere &sphere = {Vector3(0.0f, 0.0f, 0.0f), 1.0f});
 
     /// <summary>
+    /// レイとスフィアの衝突判定（ワールド行列直接指定版）
+    /// BaseObjectを持たない対象（Sprite・ParticleEmitterなど）に使用する
+    /// </summary>
+    static bool RayIntersectSphereByMatrix(const Ray &ray, const Matrix4x4 &worldMatrix, RayHitInfo &hitInfo,
+                                           const Sphere &sphere = {Vector3(0.0f, 0.0f, 0.0f), 1.0f});
+
+    /// <summary>
     /// マウス位置からシーン内でのレイを生成する
     /// </summary>
-    /// <param name="mousePos">マウス位置（ウィンドウ座標系）</param>
-    /// <param name="viewprojection">カメラのビュープロジェクション</param>
-    /// <param name="viewport">シーンの描画領域</param>
-    /// <param name="rayLength">レイの長さ</param>
-    /// <returns>生成されたレイ</returns>
     static Ray CreateRayFromMouse(const Vector2 &mousePos, const ViewProjection &viewprojection,
                                   const SceneViewport &viewport, float rayLength = 1000.0f);
 
     /// <summary>
-    /// 複数のマトリックスに対してAABBレイキャストを行う
+    /// 複数のBaseObjectに対してAABBレイキャストを行い、最も近いヒット情報を返す
     /// </summary>
-    /// <param name="ray">レイ</param>
-    /// <param name="worldMatrices">ワールドマトリックスのリスト</param>
-    /// <returns>最も近いヒット情報</returns>
     static RayHitInfo RaycastMultipleAABB(const Ray &ray, const std::vector<BaseObject *> baseObjects);
 
     /// <summary>
-    /// 複数のマトリックスに対してスフィアレイキャストを行う
+    /// 複数のBaseObjectに対してスフィアレイキャストを行い、最も近いヒット情報を返す
     /// </summary>
-    /// <param name="ray">レイ</param>
-    /// <param name="worldMatrices">ワールドマトリックスのリスト</param>
-    /// <returns>最も近いヒット情報</returns>
     static RayHitInfo RaycastMultipleSphere(const Ray &ray, const std::vector<BaseObject *> baseObjects);
 
     const BYTE *GetKeyState() const { return key_.data(); }

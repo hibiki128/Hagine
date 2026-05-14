@@ -7,6 +7,7 @@
 #include <Particle/ParticleCommon.h>
 #include <random>
 #include <regex>
+#include"../Utility/Debug/ImGui/ImGuizmoManager.h"
 
 void ParticleCSEmitter::Initialize(const std::string &name) {
     particleCommon_ = ParticleCommon::GetInstance();
@@ -16,6 +17,15 @@ void ParticleCSEmitter::Initialize(const std::string &name) {
     name_ = name;
     CreateEmitterMeshResource();
     LoadSetting();
+#ifdef _DEBUG
+    if (emitterMeshData_) {
+        ImGuizmoManager::GetInstance()->AddTarget(
+            name_,
+            &emitterMeshData_->translate,
+            nullptr, // 必要に応じて回転のVector3を追加
+            &emitterMeshData_->scale);
+    }
+#endif
 }
 
 void ParticleCSEmitter::Initialize(const std::string &name, const std::string &modelPath) {
@@ -1017,6 +1027,10 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::SameLine();
                 if (ImGui::Button("一回発生##EmitOnce")) {
                     EmitOnce();
+                }
+                bool isSelectable = ImGuizmoManager::GetInstance()->GetSelectable(name_);
+                if (ImGui::Checkbox("ギズモ選択", &isSelectable)) {
+                    ImGuizmoManager::GetInstance()->SetSelectable(name_, isSelectable);
                 }
                 ImGui::Checkbox("エミッター表示##Visible", &isVisible_);
                 ImGui::PopStyleColor();

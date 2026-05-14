@@ -30,6 +30,13 @@ void BaseObjectManager::RemoveAllObjects() {
 #endif
 }
 
+void BaseObjectManager::RemoveObjectByName(const std::string &name) {
+    auto it = baseObjects_.find(name);
+    if (it != baseObjects_.end()) {
+        baseObjects_.erase(it);
+    }
+}
+
 void BaseObjectManager::AddObject(std::unique_ptr<BaseObject> baseObject) {
     const std::string &name = baseObject->GetName();
 #ifdef _DEBUG

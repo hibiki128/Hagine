@@ -24,6 +24,8 @@ class BaseObjectManager {
 
     void RemoveAllObjects();
 
+    void RemoveObjectByName(const std::string &name);
+
     void AddObject(std::unique_ptr<BaseObject> baseObject);
 
     void Update();

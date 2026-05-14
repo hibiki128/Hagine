@@ -1144,9 +1144,9 @@ void ImGuiManager::ShowHelpWindow() {
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::Text("  フルスクリーン切り替え");
+                ImGui::Text("  デバッグカメラ切り替え");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("F11");
+                ImGui::Text("F3");
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
@@ -1159,6 +1159,12 @@ void ImGuiManager::ShowHelpWindow() {
                 ImGui::Text("  デバッグUI切り替え");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("F5");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  フルスクリーン切り替え");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("F11");
 
                 // シーン操作
                 ImGui::TableNextRow();
@@ -1280,6 +1286,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showMotionEditorView", showMotionEditorView_);
     data->Save("showShortcutWindow", showShortcutWindow);
     data->Save("showSpriteManagerView", showSpriteManagerView_);
+    data->Save("showKeyOperationDebugView", showKeyOperationDebugView_);
     data->Save("isEditorMode", isEditorMode_);
     data->Save("gridColor", gridColor_);
 }
@@ -1299,6 +1306,7 @@ void ImGuiManager::LoadFlag() {
     showMotionEditorView_ = data->Load("showMotionEditorView", false);
     showShortcutWindow = data->Load("showShortcutWindow", false);
     showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
+    showKeyOperationDebugView_ = data->Load("showKeyOperationDebugView", true);
     isEditorMode_ = data->Load("isEditorMode", true);
     gridColor_ = data->Load("gridColor", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 }

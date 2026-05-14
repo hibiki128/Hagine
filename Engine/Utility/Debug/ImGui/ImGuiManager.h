@@ -1,10 +1,10 @@
 #pragma once
 #include "DirectXCommon.h"
-#include "Object/Base/BaseObjectManager.h"
-#include "SpriteManager.h"
 #include "WinApp.h"
-#include <Audio.h>
 #include <BaseScene.h>
+#include "Object/Base/BaseObjectManager.h"
+#include"SpriteManager.h"
+#include <Audio.h>
 
 class ImGuizmoManager;
 class OffScreen;
@@ -37,7 +37,7 @@ class ImGuiManager {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static ImGuiManager *GetInstance() {
+    static ImGuiManager* GetInstance() {
         static ImGuiManager instance;
         return &instance;
     }
@@ -141,7 +141,7 @@ class ImGuiManager {
     void ShowOffScreenSettingWindow(OffScreen *offscreen);
 
     void ShowLightSettingWindow();
-
+    
     void ShowGizmoWindow();
 
     void ShowHierarchyWindow();
@@ -218,12 +218,13 @@ class ImGuiManager {
     bool showSpriteManagerView_ = true;
     bool showColliderTagManagerView_ = false;
     bool showAudioManagerView_ = false;
+    bool showKeyOperationDebugView_ = true;
 
     // グリッド設定用メンバ変数
-    bool showGrid_ = false;
+    bool showGrid_ = true;
     float gridY_ = 0.0f;
-    int gridDivision_ = 100;
-    float gridSize_ = 500.0f;
+    int gridDivision_ = 1000;
+    float gridSize_ = 5000.0f;
     Vector4 gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f}; // グレー
 
     BaseObjectManager *baseObjectManager_ = nullptr;

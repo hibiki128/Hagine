@@ -6,6 +6,7 @@
 #include "Collider/type/OBBCollider.h"
 #include "Collider/type/SphereCollider.h"
 #include "Data/DataHandler.h"
+#include"Easing.h"
 #include "Object/Object3d.h"
 #include "Transform/ObjColor.h"
 #include "Transform/WorldTransform.h"
@@ -200,4 +201,30 @@ class BaseObject {
     std::string parentName_{};
 
     std::vector<std::unique_ptr<ColliderBase>> colliders_;
+
+    // スケールにイージングを適用してモーションを確認するためのデバッグ用状態
+    struct ScaleEaseState {
+        // EasingType enumの範囲（0〜30）＋Amplitude拡張（31〜33）をまとめて管理するインデックス
+        // 31 = InElasticAmplitude, 32 = OutElasticAmplitude, 33 = InOutElasticAmplitude
+        int selectedMode = 32; // デフォルト: OutElasticAmplitude
+        float totalTime = 1.0f;
+        float currentTime = 0.0f;
+        bool isActive = false;
+
+        // 通常イージング（start → end 補間）用スケール値
+        Vector3 startScale = {1.0f, 1.0f, 1.0f};
+        Vector3 endScale = {2.0f, 2.0f, 2.0f};
+
+        // ElasticAmplitude系（ぷよぷよ）用パラメータ
+        Vector3 amplitude = {0.5f, 0.5f, 0.5f};
+        float period = 0.3f;
+
+        // スタートボタン押下時のスケールを記録（Amplitude系の基準点）
+        Vector3 baseScale = {1.0f, 1.0f, 1.0f};
+    };
+
+    ScaleEaseState scaleEase_{};
+
+    // スケールイージングテストのImGuiウィジェットを描画し再生状態を更新する
+    void DrawScaleEaseImGui();
 };

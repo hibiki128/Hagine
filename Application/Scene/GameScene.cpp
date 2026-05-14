@@ -150,6 +150,7 @@ void GameScene::Update() {
 }
 
 void GameScene::Draw() {
+
     playerUI_->Draw();
     enemyUI_->Draw();
 
@@ -170,6 +171,7 @@ void GameScene::Draw() {
     enemy_ptr->DrawFrustum();
 
     spriteManager_->DrawAll();
+    // DrawAllObjects();
 }
 
 void GameScene::DrawForOffScreen() {
@@ -200,6 +202,7 @@ void GameScene::AddObjectSetting() {
 void GameScene::AddParticleSetting() {
     fadeOut_->ImGui();
     aroundField_->Debug();
+   // DrawParticleEditorUI();
 }
 
 void GameScene::CameraUpdate() {

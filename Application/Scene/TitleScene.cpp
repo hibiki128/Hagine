@@ -60,9 +60,7 @@ void TitleScene::Draw() {
     /// -------描画処理開始-------
     skyBox_->Draw(vp_);
 
-    objectManager_->Draw(vp_);
-
-    spriteManager_->DrawAll();
+    DrawAllObjects();
 
     titleUI_->Draw(vp_);
 

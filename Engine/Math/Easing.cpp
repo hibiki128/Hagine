@@ -108,6 +108,59 @@ float EaseInOutElasticAmplitude(float t, float totaltime, float amplitude, float
 	}
 }
 
+// 各軸のamplitudeに対してEaseInElasticを適用
+Vector3 EaseInElasticAmplitude(float t, const float &totaltime, const Vector3 &amplitude, const float &period) {
+    if (t <= 0.0f) {
+        return Vector3(0.0f, 0.0f, 0.0f);
+    }
+    if (t >= totaltime) {
+        return Vector3(0.0f, 0.0f, 0.0f);
+    }
+
+    float s = period / (2.0f * std::numbers::pi_v<float>)*std::asinf(1.0f);
+    t /= totaltime;
+
+    // スカラー部分を計算してamplitudeに乗算
+    float scale = -std::powf(2.0f, 10.0f * (t - 1.0f)) * std::sinf((t - 1.0f - s) * (2.0f * std::numbers::pi_v<float>) / period);
+    return amplitude * scale;
+}
+
+// 各軸のamplitudeに対してEaseOutElasticを適用
+Vector3 EaseOutElasticAmplitude(float t, float totaltime, const Vector3 &amplitude, float period) {
+    if (t <= 0.0f) {
+        return Vector3(0.0f, 0.0f, 0.0f);
+    }
+    if (t >= totaltime) {
+        return Vector3(0.0f, 0.0f, 0.0f);
+    }
+
+    float s = period / (2.0f * std::numbers::pi_v<float>)*std::asin(1.0f);
+    t /= totaltime;
+
+    float scale = std::pow(2.0f, -10.0f * t) * std::sin((t - s) * (2.0f * std::numbers::pi_v<float>) / period);
+    return amplitude * scale;
+}
+
+// 各軸のamplitudeに対してEaseInOutElasticを適用
+Vector3 EaseInOutElasticAmplitude(float t, float totaltime, const Vector3 &amplitude, float period) {
+    if (t <= 0.0f) {
+        return Vector3(0.0f, 0.0f, 0.0f);
+    }
+    if (t >= totaltime) {
+        return Vector3(0.0f, 0.0f, 0.0f);
+    }
+
+    float backPoint = 0.5f;
+    t /= totaltime;
+
+    // 前半はEaseOut、後半はEaseInに委譲
+    if (t < backPoint) {
+        return EaseOutElasticAmplitude(t, totaltime, amplitude, period);
+    } else {
+        return EaseInElasticAmplitude(t - backPoint, totaltime - backPoint, amplitude, period);
+    }
+}
+
 template <typename T>
 T ApplyEasing(EasingType type, const T &start, const T &end, float x, float totalX) {
     switch (type) {

@@ -58,6 +58,8 @@ class OffScreen {
     /// @brief エフェクトを下に移動する（描画順変更）
     bool MoveEffectDown(int slotIndex);
 
+    void LoadData(const std::string& fileName);
+
     /// @brief 指定スロットのパラメータを型付きで取得する
     /// @tparam T  具体的なパラメータ型（例: VignetteParams）
     /// @return パラメータへのポインタ。型不一致またはスロット未使用時はnullptr
@@ -79,4 +81,8 @@ class OffScreen {
 
     DirectXCommon *dxCommon_ = nullptr;
     Matrix4x4 projectionMatrix_;
+
+    // セーブ/ロード結果メッセージとその表示タイマー
+    std::string saveMessage_;
+    int saveMessageTimer_ = 0;
 };

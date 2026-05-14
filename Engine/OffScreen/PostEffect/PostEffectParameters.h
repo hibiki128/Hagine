@@ -29,6 +29,7 @@ class PostEffectParameters {
     void CreateFocusLine();
     void CreatePixelate();
     void CreateBloom();
+    void CreateRetro();
 
   private:
 
@@ -106,6 +107,17 @@ class PostEffectParameters {
         Vector2 texelSize;
     };
 
+    struct Retro {
+        float pixelSize;
+        float colorLevels;
+        float scanlineIntensity;
+        float scanlineCount;
+        float vignetteStrength;
+        float chromaticOffset;
+        float time;
+        float resolutionX;
+    };
+
     // バッファリソース（既存のまま）
     Microsoft::WRL::ComPtr<ID3D12Resource> vignetteResource;
     VignetteParameter *vignetteData = nullptr;
@@ -141,6 +153,9 @@ class PostEffectParameters {
 
     Microsoft::WRL::ComPtr<ID3D12Resource> bloomResource;
     Bloom *bloomData = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> retroResource;
+    Retro *retroData = nullptr;
 
     std::string texPath_ = "debug/noise0.png";
 };

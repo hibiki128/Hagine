@@ -1,7 +1,8 @@
 #define NOMINMAX
 #include "ParticleCSEditor.h"
-#include <ShowFolder/ShowFolder.h>
 #include <Camera/ViewProjection/ViewProjection.h>
+#include <ShowFolder/ShowFolder.h>
+#include"../Utility/Debug/ImGui/ImGuizmoManager.h"
 
 void ParticleCSEditor::Finalize() {
     emitters_.clear();
@@ -23,7 +24,7 @@ void ParticleCSEditor::SetupColors() {
     headerColors_[3] = ImVec4(0.7f, 0.3f, 0.7f, 0.8f); // 紫系
     headerColors_[4] = ImVec4(0.7f, 0.7f, 0.2f, 0.8f); // 黄色系
     headerColors_[5] = ImVec4(0.5f, 0.5f, 0.5f, 0.8f); // グレー系
-#endif // USE_IMGUI
+#endif                                                 // USE_IMGUI
 }
 
 void ParticleCSEditor::AddParticleEmitter(const std::string &name) {
@@ -55,6 +56,95 @@ void ParticleCSEditor::DrawAll(const ViewProjection &vp_) {
 }
 
 void ParticleCSEditor::Load() {
+}
+
+// 指定名のエミッターをmapから削除し、選択状態をリセットする
+void ParticleCSEditor::RemoveParticleEmitter(const std::string &name) {
+    auto it = emitters_.find(name);
+    if (it == emitters_.end()) {
+        return;
+    }
+    emitters_.erase(it);
+
+    // 削除したエミッターが選択中だった場合はリセット
+    if (selectedEmitterName_ == name) {
+        selectedEmitterName_.clear();
+        selectedEmitterIndex_ = 0;
+    }
+}
+
+// エミッターとパーティクルグループの一覧表示・削除UIを描画する
+void ParticleCSEditor::ShowDeleteSection() {
+#ifdef USE_IMGUI
+    // エミッター一覧と削除ボタン
+    if (ColoredCollapsingHeader("エミッター一覧・削除", 0)) {
+        if (emitters_.empty()) {
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "エミッターがありません");
+        } else {
+            // ループ中の削除を避けるため、削除対象を先に確定してから消す
+            std::string toDelete;
+            for (const auto &[name, emitter] : emitters_) {
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "%s", name.c_str());
+                ImGui::SameLine();
+
+                // ボタンIDをエミッター名で一意にする
+                std::string btnLabel = "削除##Emitter_" + name;
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
+                if (ImGui::SmallButton(btnLabel.c_str())) {
+                    toDelete = name;
+                }
+                ImGui::PopStyleColor(3);
+            }
+            if (!toDelete.empty()) {
+                RemoveParticleEmitter(toDelete);
+                ImGuizmoManager::GetInstance()->RemoveTarget(toDelete);
+                
+            }
+        }
+    }
+
+    ImGui::Spacing();
+
+    // パーティクルグループ一覧と削除ボタン
+    if (ColoredCollapsingHeader("グループ一覧・削除", 1)) {
+        auto groups = particleGroupManager_->GetParticleGroups();
+        if (groups.empty()) {
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "グループがありません");
+        } else {
+            // ループ中の削除を避けるため、削除対象を先に確定してから消す
+            std::string toDelete;
+            for (const auto &group : groups) {
+                if (!group) {
+                    continue;
+                }
+                const std::string &groupName = group->GetGroupName();
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "%s", groupName.c_str());
+                ImGui::SameLine();
+
+                // ボタンIDをグループ名で一意にする
+                std::string btnLabel = "削除##Group_" + groupName;
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
+                if (ImGui::SmallButton(btnLabel.c_str())) {
+                    toDelete = groupName;
+                }
+                ImGui::PopStyleColor(3);
+            }
+            if (!toDelete.empty()) {
+                particleGroupManager_->RemoveParticleCSGroup(toDelete);
+                std::unique_ptr<DataHandler> groupData = std::make_unique<DataHandler>("ParticleCSGroup", toDelete);
+                groupData->DeleteJson(toDelete);
+            }
+        }
+    }
+#endif // USE_IMGUI
 }
 
 void ParticleCSEditor::AddParticleGroup(const std::string &name, const std::string &fileName, uint32_t maxParticleCount, const std::string &texturePath) {
@@ -129,7 +219,6 @@ void ParticleCSEditor::ShowGPUParticleStatistics() {
 #endif // USE_IMGUI
 }
 
-
 void ParticleCSEditor::DebugAll() {
 #ifdef USE_IMGUI
     if (ImGui::BeginTabBar("GPUパーティクル")) {
@@ -179,7 +268,6 @@ void ParticleCSEditor::DebugAll() {
 #endif // USE_IMGUI
 }
 
-
 void ParticleCSEditor::EditorWindow() {
 #ifdef USE_IMGUI
     ImGui::Begin("CSパーティクルエディター");
@@ -221,7 +309,6 @@ void ParticleCSEditor::ShowImGuiEditor() {
 #ifdef USE_IMGUI
     if (ImGui::BeginTabBar("GPUパーティクル")) {
         if (ImGui::BeginTabItem("パーティクル作成")) {
-
             // エミッター追加のCollapsingHeader
             if (ColoredCollapsingHeader("エミッター追加", 0)) {
                 // 名前の入力
@@ -244,7 +331,8 @@ void ParticleCSEditor::ShowImGuiEditor() {
 
                 // モデルエミッター選択時
                 if (selectedEmitterType == 0) {
-                    if (ColoredCollapsingHeader("モデル選択", 2)) {
+                    // エミッター用モデル選択セクション
+                    if (ColoredCollapsingHeader("モデル選択##EmitterModel", 2)) {
                         // モデルファイル選択 (既存のコードと同じ)
                         static std::filesystem::path baseDirObj = "resources/models/";
                         static std::filesystem::path currentDirObj = "resources/models";
@@ -290,7 +378,7 @@ void ParticleCSEditor::ShowImGuiEditor() {
                         // `.obj` ファイル選択
                         if (!objFiles.empty()) {
                             ImGui::Text("モデルファイル:");
-                            if (ImGui::BeginCombo("ファイル選択", selectedFileObj.empty() ? "なし" : selectedFileObj.c_str())) {
+                            if (ImGui::BeginCombo("ファイル選択##EmitterModel", selectedFileObj.empty() ? "なし" : selectedFileObj.c_str())) {
                                 for (const auto &file : objFiles) {
                                     bool isSelected = (file == selectedFileObj);
                                     if (ImGui::Selectable(file.c_str(), isSelected)) {
@@ -325,10 +413,11 @@ void ParticleCSEditor::ShowImGuiEditor() {
                 }
                 // プリミティブエミッター選択時
                 else if (selectedEmitterType == 1) {
-                    if (ColoredCollapsingHeader("プリミティブタイプ選択", 4)) {
+                    // エミッター用プリミティブタイプ選択セクション
+                    if (ColoredCollapsingHeader("プリミティブタイプ選択##EmitterPrimitive", 4)) {
                         const char *primitiveType[] = {"未選択", "プレーン", "球", "キューブ", "シリンダー", "リング", "三角形", "円錐", "四角錐", "円柱"};
                         int currentPrimitiveType = static_cast<int>(localEmitterType_);
-                        if (ImGui::Combo("タイプ選択", &currentPrimitiveType, primitiveType, IM_ARRAYSIZE(primitiveType))) {
+                        if (ImGui::Combo("タイプ選択##EmitterPrimitive", &currentPrimitiveType, primitiveType, IM_ARRAYSIZE(primitiveType))) {
                             localEmitterType_ = static_cast<PrimitiveType>(currentPrimitiveType);
                         }
                     }
@@ -365,8 +454,8 @@ void ParticleCSEditor::ShowImGuiEditor() {
 
                 // モデルパーティクル選択時
                 if (selectedType == 0) {
-                    // モデル選択セクション (青色)
-                    if (ColoredCollapsingHeader("モデル選択", 2)) {
+                    // グループ用モデル選択セクション (青色)
+                    if (ColoredCollapsingHeader("モデル選択##GroupModel", 2)) {
                         // モデルファイル選択
                         static std::filesystem::path baseDirObj = "resources/models/";
                         static std::filesystem::path currentDirObj = "resources/models";
@@ -412,7 +501,7 @@ void ParticleCSEditor::ShowImGuiEditor() {
                         // `.obj` ファイル選択
                         if (!objFiles.empty()) {
                             ImGui::Text("モデルファイル:");
-                            if (ImGui::BeginCombo("ファイル選択", selectedFileObj.empty() ? "なし" : selectedFileObj.c_str())) {
+                            if (ImGui::BeginCombo("ファイル選択##GroupModel", selectedFileObj.empty() ? "なし" : selectedFileObj.c_str())) {
                                 for (const auto &file : objFiles) {
                                     bool isSelected = (file == selectedFileObj);
                                     if (ImGui::Selectable(file.c_str(), isSelected)) {
@@ -437,8 +526,8 @@ void ParticleCSEditor::ShowImGuiEditor() {
                         }
                     }
 
-                    // テクスチャ選択セクション (緑色)
-                    if (ColoredCollapsingHeader("テクスチャ選択", 3)) {
+                    // グループ用テクスチャ選択セクション (緑色)
+                    if (ColoredCollapsingHeader("テクスチャ選択##GroupModel", 3)) {
 #ifdef _DEBUG
                         ShowTextureFile(localTexturePath_);
 #endif // _DEBUG
@@ -466,18 +555,18 @@ void ParticleCSEditor::ShowImGuiEditor() {
                 }
                 // プリミティブモデル選択時
                 else if (selectedType == 1) {
-                    // プリミティブタイプ選択セクション (紫色)
-                    if (ColoredCollapsingHeader("プリミティブタイプ選択", 4)) {
+                    // グループ用プリミティブタイプ選択セクション (紫色)
+                    if (ColoredCollapsingHeader("プリミティブタイプ選択##GroupPrimitive", 4)) {
                         const char *primitiveType[] = {"未選択", "プレーン", "球", "キューブ", "シリンダー", "リング", "三角形", "円錐", "四角錐"};
                         int currentPrimitiveType = static_cast<int>(localType_);
                         // 初期値が未選択（None = -1）の場合に対応するため +1 して選択肢に表示
-                        if (ImGui::Combo("タイプ選択", &currentPrimitiveType, primitiveType, IM_ARRAYSIZE(primitiveType))) {
+                        if (ImGui::Combo("タイプ選択##GroupPrimitive", &currentPrimitiveType, primitiveType, IM_ARRAYSIZE(primitiveType))) {
                             localType_ = static_cast<PrimitiveType>(currentPrimitiveType);
                         }
                     }
 
-                    // テクスチャ選択セクション (オレンジ色)
-                    if (ColoredCollapsingHeader("テクスチャ選択", 5)) {
+                    // グループ用テクスチャ選択セクション (オレンジ色)
+                    if (ColoredCollapsingHeader("テクスチャ選択##GroupPrimitive", 5)) {
 #ifdef _DEBUG
                         ShowTextureFile(localTexturePath_);
 #endif // _DEBUG
@@ -536,6 +625,13 @@ void ParticleCSEditor::ShowImGuiEditor() {
 
             ImGui::EndTabItem();
         }
+
+        // エミッター・グループの一覧表示と削除管理タブ
+        if (ImGui::BeginTabItem("削除管理")) {
+            ShowDeleteSection();
+            ImGui::EndTabItem();
+        }
+
         ImGui::EndTabBar();
     }
 #endif // USE_IMGUI

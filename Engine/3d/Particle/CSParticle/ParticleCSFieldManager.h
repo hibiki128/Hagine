@@ -2,6 +2,7 @@
 #include "Data/DataHandler.h"
 #include "Line/DrawLine3D.h"
 #include "ParticleCSFieldSettingOverride.h"
+#include "../ParticleStruct.h"
 #include <DirectXCommon.h>
 #include <Graphics/Srv/SrvManager.h>
 #include <Particle/ParticleCommon.h>
@@ -22,64 +23,15 @@ enum class ParticleFieldType : uint32_t {
 };
 
 /// =============================================
-/// GPUに送るフィールドデータ (16バイトアライメント)
-/// =============================================
-struct ParticleFieldData {
-    Vector3 position = {0, 0, 0};  // フィールドの中心座標
-    float radius = 5.0f;           // 影響範囲（球）
-    Vector3 direction = {1, 0, 0}; // Wind/Vortex軸方向
-    float strength = 1.0f;         // 力の強さ
-    uint32_t fieldType = 0;        // ParticleFieldType
-    float falloff = 1.0f;          // 減衰指数（1=線形, 2=二乗）
-
-    // --- 寿命ドレイン ---
-    float lifeTimeDrain = 0.0f;   // 毎秒削る寿命量（秒/秒）
-    uint32_t enableLifeDrain = 0; // 0=無効 1=有効
-
-    // --- トレイル強制生成 ---
-    uint32_t enableForceTrail = 0;           // 0=無効 1=有効
-    float trailSpawnDistanceOverride = 0.0f; // >0 のときトレイル生成間隔を上書き
-
-    // --- カラー乗算 ---
-    uint32_t enableColorMultiply = 0;                   // 0=無効 1=有効
-    Vector4 colorMultiplier = {1.0f, 1.0f, 1.0f, 1.0f}; // 乗算色（白=変化なし）
-
-    // --- 一度きり設定上書き ---
-    uint32_t enableSettingsOverride = 0; // 0=無効 1=有効
-
-    // --- Emit時スポーン判定 ---
-    uint32_t enableEmitSpawn = 0;       // 1=このフィールド範囲内にのみEmit
-    float emitSpawnLifeTimeMin = 0.25f; // enableEmitSpawn=1 時の寿命Min
-    float emitSpawnLifeTimeMax = 0.25f; // enableEmitSpawn=1 時の寿命Max
-    uint32_t emitSpawnCount = 0;        // enableEmitSpawn=1 時の発生数（0=エミッター依存）
-
-    // --- グループID ---
-    // エミッター側の fieldGroupId と一致するフィールドのみ影響を与える。
-    // -1 = 全エミッターに影響する（デフォルト）
-    int32_t groupId = -1;
-    float groupIdPadding[3] = {0.f, 0.f, 0.f}; // 16バイトアライメント
-};
-
-/// =============================================
-/// エディタ用フィールド（名前付き）
-/// =============================================
-struct ParticleField {
-    std::string name = "NewField";
-    bool enabled = true;
-    ParticleFieldData data = {};
-    ParticleFieldSettingsOverride override_ = {}; // 一度きり設定上書きデータ
-};
-
-/// =============================================
 /// ParticleFieldManager
 ///   シングルトン。全フィールドを管理し、
 ///   GPUバッファを毎フレーム更新する。
 /// =============================================
 class ParticleCSFieldManager {
   public:
-      static ParticleCSFieldManager* GetInstance() {
+    static ParticleCSFieldManager *GetInstance() {
         static ParticleCSFieldManager instance;
-          return &instance;
+        return &instance;
     }
     void Finalize();
 
@@ -127,7 +79,7 @@ class ParticleCSFieldManager {
 
   private:
     ParticleCSFieldManager() = default;
-    ~ParticleCSFieldManager();
+    ~ParticleCSFieldManager() = default;
     ParticleCSFieldManager(const ParticleCSFieldManager &) = delete;
     ParticleCSFieldManager &operator=(const ParticleCSFieldManager &) = delete;
 

@@ -19,9 +19,9 @@
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG
-#include "Object/Base/BaseObjectManager.h"
-#include "SpriteManager.h"
 #include <OffScreen.h>
+#include"SpriteManager.h"
+#include"Object/Base/BaseObjectManager.h"
 
 class SceneManager;
 
@@ -65,6 +65,11 @@ class BaseScene {
     virtual void AddParticleSetting();
 
     /// <summary>
+    /// キー操作デバッグに追加
+    /// </summary>
+    virtual void AddKeyOperationDebug();
+
+    /// <summary>
     /// 描画
     /// </summary>
     virtual void DrawForOffScreen();
@@ -92,7 +97,7 @@ class BaseScene {
     std::unique_ptr<DebugCamera> debugCamera_;
 
     SceneManager *sceneManager_ = nullptr;
-    SpriteManager *spriteManager_ = nullptr;
+    SpriteManager* spriteManager_= nullptr;
     BaseObjectManager *objectManager_ = nullptr;
 
     float ClearTime_ = 0.0f;

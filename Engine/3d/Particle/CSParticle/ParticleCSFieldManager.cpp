@@ -160,7 +160,9 @@ static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_Fiel
     dst.curlNoisePosRandom = src.curlNoisePosRandom;
 }
 
+
 void ParticleCSFieldManager::Finalize() {
+    // マップ中のリソースはアンマップしてから解放する
     if (fieldsResource_) {
         fieldsResource_->Unmap(0, nullptr);
         fieldsMappedData_ = nullptr;
@@ -183,13 +185,11 @@ void ParticleCSFieldManager::Finalize() {
     fields_.clear();
 }
 
+
 void ParticleCSFieldManager::Initialize() {
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
     srvManager_ = SrvManager::GetInstance();
     CreateGPUResources();
-}
-
-ParticleCSFieldManager::~ParticleCSFieldManager() {
 }
 
 void ParticleCSFieldManager::CreateGPUResources() {
@@ -529,7 +529,9 @@ void ParticleCSFieldManager::DrawImGui() {
     ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(0.15f, 0.3f, 0.5f, 1.0f));
     ImGui::SetNextWindowSize(ImVec2(420, 600), ImGuiCond_FirstUseEver);
 
-    if (!ImGui::Begin("パーティクルフィールド管理")) {
+    bool show = true;
+
+    if (!ImGui::Begin("パーティクルフィールド管理", &show, ImGuiWindowFlags_NoFocusOnAppearing)) {
         ImGui::PopStyleColor();
         ImGui::End();
         return;

@@ -1079,6 +1079,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRenderRootSig
         return CreatePixelateRootSignature();
     case ShaderMode::kBloom:
         return CreateBloomRootSignature();
+    case ShaderMode::kRetro:
+        return CreateRetroRootSignature();
     default:
         return CreateBaseRootSignature();
     }
@@ -1117,6 +1119,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRenderGraphic
         return CreatePixelateGraphicsPipeLine(rootSignature);
     case ShaderMode::kBloom:
         return CreateBloomGraphicsPipeLine(rootSignature);
+    case ShaderMode::kRetro:
+        return CreateRetroGraphicsPipeLine(rootSignature);
     default:
         return CreateNoneGraphicsPipeLine(rootSignature);
     }
@@ -1640,7 +1644,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGaussRootSign
 }
 
 Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateOutLineRootSignature() {
-    return CreateBaseRootSignature();
+    return CreateCommonRootSignature(true);
 }
 
 Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDepthRootSignature() {
@@ -1825,6 +1829,10 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateBloomRootSign
     return CreateCommonRootSignature(true);
 }
 
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRetroRootSignature() {
+    return CreateCommonRootSignature(true);
+}
+
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/CopyImage.PS.hlsl", rootSignature);
@@ -1893,5 +1901,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreatePixelateGraph
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBloomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Bloom.PS.hlsl", rootSignature);
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRetroGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    SettingDepthStencilDesc(false);
+    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Retro.PS.hlsl", rootSignature);
 }
 

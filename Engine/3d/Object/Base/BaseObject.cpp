@@ -1324,9 +1324,206 @@ void BaseObject::DebugObject() {
         ImGui::Spacing();
     }
 
+    // ====================================================
+    // [7] Scale Easing Test
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, {0.15f, 0.50f, 0.35f, 0.40f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.65f, 0.45f, 0.45f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.25f, 0.70f, 0.50f, 0.55f});
+    bool seOpen = ImGui::CollapsingHeader("スケールイージングテスト##hdr");
+    ImGui::PopStyleColor(3);
+
+    if (seOpen) {
+        ImGui::Indent(6.0f);
+        SectionHeader("[ イージングタイプ ]", DebugTheme::kAccentGreen);
+        DrawScaleEaseImGui();
+        ImGui::Unindent(6.0f);
+        ImGui::Spacing();
+    }
+
     ImGui::EndChild();
     ImGui::PopStyleVar(4);
 #endif // _DEBUG
+}
+
+void BaseObject::DrawScaleEaseImGui() {
+#ifdef _DEBUG
+    // EasingType enum（0〜30）＋ Vector3 Amplitude 拡張（31〜33）の表示名
+    // 31 = InElasticAmplitude, 32 = OutElasticAmplitude, 33 = InOutElasticAmplitude
+    static const char *kModeNames[] = {
+        "Linear",
+        "InSine",
+        "OutSine",
+        "InOutSine",
+        "InQuad",
+        "OutQuad",
+        "InOutQuad",
+        "InCubic",
+        "OutCubic",
+        "InOutCubic",
+        "InQuart",
+        "OutQuart",
+        "InOutQuart",
+        "InQuint",
+        "OutQuint",
+        "InOutQuint",
+        "InCirc",
+        "OutCirc",
+        "InOutCirc",
+        "InExpo",
+        "OutExpo",
+        "InOutExpo",
+        "InBack",
+        "OutBack",
+        "InOutBack",
+        "InElastic",
+        "OutElastic",
+        "InOutElastic",
+        "InBounce",
+        "OutBounce",
+        "InOutBounce",
+        // Vector3 振幅による加算オフセット系（EasingType 外の拡張）
+        "InElastic  [Amplitude]",
+        "OutElastic [Amplitude]",
+        "InOutElastic [Amplitude]",
+    };
+    constexpr int kModeCount = IM_ARRAYSIZE(kModeNames);
+
+    // Amplitude 拡張モード（selectedMode >= 31）かどうかを判定する
+    auto IsAmplitudeMode = [](int mode) { return mode >= 31; };
+
+    // ----- イージングタイプ選択 -----
+    ImGui::SetNextItemWidth(-1);
+    ImGui::Combo("##setype", &scaleEase_.selectedMode, kModeNames, kModeCount);
+
+    ImGui::Spacing();
+
+    // ----- 所要時間：ラベルを別行に表示して幅いっぱいにドラッグフィールドを配置 -----
+    ImGui::TextUnformatted("所要時間");
+    ImGui::SetNextItemWidth(-1);
+    ImGui::DragFloat("##seT", &scaleEase_.totalTime, 0.05f, 0.05f, 10.0f, "%.2f s");
+
+    ImGui::Spacing();
+
+    if (IsAmplitudeMode(scaleEase_.selectedMode)) {
+        // ----- Elastic Amplitude モード：軸ごとに独立した振幅でスケールを加算する -----
+        SectionHeader("[ Elastic Amplitude ]", DebugTheme::kAccentGreen);
+
+        // ラベルを別行に出すことで SetNextItemWidth(-1) でも名称が確認できる
+        ImGui::TextUnformatted("振幅 (X / Y / Z)");
+        ImGui::SetNextItemWidth(-1);
+        ImGui::DragFloat3("##seAmp", &scaleEase_.amplitude.x,
+                          0.01f, -5.0f, 5.0f, "%.2f");
+
+        ImGui::TextUnformatted("周期");
+        ImGui::SetNextItemWidth(-1);
+        ImGui::DragFloat("##sePer", &scaleEase_.period,
+                         0.01f, 0.01f, 2.0f, "%.2f");
+
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted(" スタート時の現在スケールを基準に振幅を加算");
+        ImGui::PopStyleColor();
+    } else {
+        // ----- 通常イージングモード（start -> end 補間） -----
+        SectionHeader("[ スタート / エンド スケール ]", DebugTheme::kAccentBlue);
+
+        // ラベルをウィジェット上行に表示し、ボタン分の幅を残して配置
+        ImGui::TextUnformatted("スタートスケール");
+        ImGui::SetNextItemWidth(-80.0f);
+        ImGui::DragFloat3("##seSS", &scaleEase_.startScale.x,
+                          0.01f, 0.01f, 20.0f, "%.2f");
+        ImGui::SameLine();
+        // 現在のスケール値をスタート値としてキャプチャする
+        if (ImGui::SmallButton("現在##cpSS")) {
+            scaleEase_.startScale = transform_->scale_;
+        }
+
+        ImGui::TextUnformatted("エンドスケール");
+        ImGui::SetNextItemWidth(-80.0f);
+        ImGui::DragFloat3("##seES", &scaleEase_.endScale.x,
+                          0.01f, 0.01f, 20.0f, "%.2f");
+        ImGui::SameLine();
+        // 現在のスケール値をエンド値としてキャプチャする
+        if (ImGui::SmallButton("現在##cpES")) {
+            scaleEase_.endScale = transform_->scale_;
+        }
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ----- 再生中：プログレスバーとスケール更新 -----
+    if (scaleEase_.isActive) {
+        float progress = scaleEase_.currentTime / scaleEase_.totalTime;
+        ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f));
+        ImGui::Spacing();
+
+        // DeltaTime でフレーム経過時間を加算して再生を進める
+        float dt = ImGui::GetIO().DeltaTime;
+        scaleEase_.currentTime += dt;
+
+        if (scaleEase_.currentTime >= scaleEase_.totalTime) {
+            // 再生完了：停止してスケールを終端値に確定する
+            scaleEase_.currentTime = scaleEase_.totalTime;
+            scaleEase_.isActive = false;
+            if (IsAmplitudeMode(scaleEase_.selectedMode)) {
+                transform_->scale_ = scaleEase_.baseScale;
+            } else {
+                transform_->scale_ = scaleEase_.endScale;
+            }
+        } else {
+            // 再生中のスケール更新
+            if (IsAmplitudeMode(scaleEase_.selectedMode)) {
+                // Vector3 振幅をオフセットとしてベーススケールに加算する
+                Vector3 offset;
+                if (scaleEase_.selectedMode == 31) {
+                    offset = EaseInElasticAmplitude(
+                        scaleEase_.currentTime, scaleEase_.totalTime,
+                        scaleEase_.amplitude, scaleEase_.period);
+                } else if (scaleEase_.selectedMode == 32) {
+                    offset = EaseOutElasticAmplitude(
+                        scaleEase_.currentTime, scaleEase_.totalTime,
+                        scaleEase_.amplitude, scaleEase_.period);
+                } else {
+                    offset = EaseInOutElasticAmplitude(
+                        scaleEase_.currentTime, scaleEase_.totalTime,
+                        scaleEase_.amplitude, scaleEase_.period);
+                }
+                transform_->scale_ = scaleEase_.baseScale + offset;
+            } else {
+                // EasingType 範囲（0〜30）は start -> end 補間
+                transform_->scale_ = ApplyEasing(
+                    static_cast<EasingType>(scaleEase_.selectedMode),
+                    scaleEase_.startScale, scaleEase_.endScale,
+                    scaleEase_.currentTime, scaleEase_.totalTime);
+            }
+        }
+    }
+
+    // ----- スタート / ストップボタン -----
+    if (!scaleEase_.isActive) {
+        ImGui::PushStyleColor(ImGuiCol_Button, {0.15f, 0.55f, 0.25f, 0.9f});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.20f, 0.70f, 0.30f, 1.0f});
+        if (ImGui::Button("スタート##sePlay", ImVec2(-1.0f, 0.0f))) {
+            scaleEase_.currentTime = 0.0f;
+            scaleEase_.isActive = true;
+            // スタート時点のスケールをベースとして記録する
+            scaleEase_.baseScale = transform_->scale_;
+        }
+        ImGui::PopStyleColor(2);
+    } else {
+        ImGui::PushStyleColor(ImGuiCol_Button, {0.55f, 0.15f, 0.15f, 0.9f});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.70f, 0.20f, 0.20f, 1.0f});
+        if (ImGui::Button("ストップ##seStop", ImVec2(-1.0f, 0.0f))) {
+            scaleEase_.isActive = false;
+            // ストップ時はスケールをスタート時点の値に戻す
+            transform_->scale_ = scaleEase_.baseScale;
+        }
+        ImGui::PopStyleColor(2);
+    }
+#endif
 }
 
 void BaseObject::ShowFileSelector() {
@@ -1345,17 +1542,16 @@ void BaseObject::ShowFileSelector() {
     ImGui::Separator();
 
     // Comboボックスでファイル選択
-    if (ImGui::Combo("GLTFファイル##combo", &selectedIndex, fileNames.data(), static_cast<int>(fileNames.size()))) {
-        // ファイル選択時の動作（選択されたファイル名を表示）
-        if (selectedIndex >= 0) {
-            ImGui::Text("選択ファイル:");
-            ImGui::TextWrapped("%s", gltfFiles[selectedIndex].c_str());
-        }
-    }
+    ImGui::Combo("GLTFファイル##combo", &selectedIndex, fileNames.data(), static_cast<int>(fileNames.size()));
 
-    // ボタンでアニメーションをセット
-    if (selectedIndex >= 0 && ImGui::Button("アニメーション設定##btn")) {
-        obj3d_->SetAnimation(gltfFiles[selectedIndex]); // 選択されたファイルをSetAnimationに渡す
+    // 選択中のファイル名を常時表示し、ボタンで適用する
+    if (selectedIndex >= 0) {
+        ImGui::Text("選択ファイル:");
+        ImGui::TextWrapped("%s", gltfFiles[selectedIndex].c_str());
+
+        if (ImGui::Button("アニメーション設定##btn")) {
+            obj3d_->SetAnimation(gltfFiles[selectedIndex]); // 選択されたファイルをSetAnimationに渡す
+        }
     }
 #endif // _DEBUG
 }

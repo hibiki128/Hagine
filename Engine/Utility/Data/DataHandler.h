@@ -60,6 +60,8 @@ class DataHandler {
     // JSONファイルの存在確認（あるときtrue、ないときfalse）
     bool Exists() const;
 
+    void DeleteJson(const std::string &jsonName);
+
     // 対象フォルダ内のすべてのJSONファイルを削除
     void DeleteAllJsonsInFolder();
 };

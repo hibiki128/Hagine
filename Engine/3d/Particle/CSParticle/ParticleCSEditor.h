@@ -52,15 +52,18 @@ class ParticleCSEditor {
 
     void ShowFileSelector();
 
+    // エミッター・グループの一覧表示と削除UIを表示
+    void ShowDeleteSection();
+
     std::vector<std::string> GetJsonFiles();
     std::string localEmitterModelPath_;
     PrimitiveType localEmitterType_ = PrimitiveType::None;
 
   public:
     // インスタンスの取得
-      static ParticleCSEditor* GetInstance() {
-          static ParticleCSEditor instance;
-          return &instance;
+    static ParticleCSEditor *GetInstance() {
+        static ParticleCSEditor instance;
+        return &instance;
     }
     // 終了処理
     void Finalize();
@@ -84,8 +87,8 @@ class ParticleCSEditor {
     void DebugAll();
     // ImGuiエディターの表示処理
     void ShowImGuiEditor();
-    // プリセットエディターの表示処理（エミッター + グループをセットで生成）
-    void ShowPresetEditor();
     // データのロード
     void Load();
+    // エミッターを名前指定で削除
+    void RemoveParticleEmitter(const std::string &name);
 };

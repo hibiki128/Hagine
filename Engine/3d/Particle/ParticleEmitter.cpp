@@ -3,6 +3,7 @@
 #include "Frame.h"
 #include "line/DrawLine3D.h"
 
+#include "../Utility/Debug/ImGui/ImGuizmoManager.h"
 #include "ParticleGroupManager.h"
 #include <Particle/ParticleEditor.h>
 #include <set>
@@ -26,6 +27,10 @@ void ParticleEmitter::Initialize(std::string name) {
     lastTranslation_ = transform_.translation_;
     lastRotation_ = transform_.quateRotation_;
     lastScale_ = transform_.scale_;
+#ifdef _DEBUG
+    // WorldTransformのアドレスを渡す
+    ImGuizmoManager::GetInstance()->AddTarget(name_, &transform_);
+#endif
 }
 
 void ParticleEmitter::Update() {
@@ -404,6 +409,12 @@ void ParticleEmitter::DebugParticleData() {
 
             ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
             ImGui::Checkbox("表示", &isVisible_);
+#ifdef _DEBUG
+            bool isSelectable = ImGuizmoManager::GetInstance()->GetSelectable(name_);
+            if (ImGui::Checkbox("ギズモ選択", &isSelectable)) {
+                ImGuizmoManager::GetInstance()->SetSelectable(name_, isSelectable);
+            }
+#endif
             ImGui::PopStyleColor();
         } else {
             ImGui::PopStyleColor(3);

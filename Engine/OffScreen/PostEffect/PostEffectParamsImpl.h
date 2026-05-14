@@ -60,10 +60,11 @@ class VignetteParams : public IPostEffectParams {
 
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderFloat("強度", &data_->strength, 0.0f, 3.0f);
-        ImGui::SliderFloat("半径", &data_->radius, 0.0f, 1.0f);
-        ImGui::SliderFloat("指数", &data_->exponent, 0.1f, 5.0f);
-        ImGui::SliderFloat2("中心", &data_->center.x, 0.0f, 1.0f);
+        // ビネットの各パラメータ調整（強度・形状・位置）
+        ImGui::DragFloat("強度", &data_->strength, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("半径", &data_->radius, 0.01f, 0.0f, 2.0f);
+        ImGui::DragFloat("指数", &data_->exponent, 0.1f, 0.1f, 10.0f);
+        ImGui::DragFloat2("中心", &data_->center.x, 0.01f, 0.0f, 1.0f);
 #endif
     }
 
@@ -110,7 +111,8 @@ class SmoothParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderInt("カーネルサイズ", &data_->kernelSize, 1, 15);
+        // カーネルサイズは奇数のみ有効なのでステップを2に設定
+        ImGui::DragInt("カーネルサイズ", &data_->kernelSize, 2, 3, 15);
 #endif
     }
     void Save(DataHandler *h, const std::string &p) const override { h->Save<int>(p + "kernelSize", data_->kernelSize); }
@@ -144,8 +146,9 @@ class GaussianParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderInt("カーネルサイズ", &data_->kernelSize, 1, 15);
-        ImGui::SliderFloat("シグマ", &data_->sigma, 0.1f, 10.0f);
+        // カーネルサイズは奇数のみ有効なのでステップを2に設定
+        ImGui::DragInt("カーネルサイズ", &data_->kernelSize, 2, 3, 15);
+        ImGui::DragFloat("シグマ", &data_->sigma, 0.01f, 0.1f, 10.0f);
 #endif
     }
     void Save(DataHandler *h, const std::string &p) const override {
@@ -185,7 +188,7 @@ class OutlineEdgeParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderFloat("エッジ強度", &data_->edgeStrength, 0.0f, 5.0f);
+        ImGui::DragFloat("エッジ強度", &data_->edgeStrength, 0.01f, 0.0f, 5.0f);
 #endif
     }
     void Save(DataHandler *h, const std::string &p) const override { h->Save<float>(p + "edgeStrength", data_->edgeStrength); }
@@ -223,7 +226,8 @@ class OutlineDepthParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderInt("カーネルサイズ", &data_->kernelSize, 1, 9);
+        // カーネルサイズは奇数のみ有効なのでステップを2に設定
+        ImGui::DragInt("カーネルサイズ", &data_->kernelSize, 2, 3, 9);
 #endif
     }
     void Save(DataHandler *h, const std::string &p) const override { h->Save<int>(p + "kernelSize", data_->kernelSize); }
@@ -258,8 +262,9 @@ class RadialBlurParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderFloat2("中心", &data_->center.x, 0.0f, 1.0f);
-        ImGui::SliderFloat("ブラー幅", &data_->blurWidth, 0.0f, 0.1f);
+        // 中心座標はUV空間（0-1）、ブラー幅は視覚的に有効な範囲に制限
+        ImGui::DragFloat2("中心", &data_->center.x, 0.01f, 0.0f, 1.0f);
+        ImGui::DragFloat("ブラー幅", &data_->blurWidth, 0.001f, 0.0f, 0.2f);
 #endif
     }
     void Save(DataHandler *h, const std::string &p) const override {
@@ -304,9 +309,9 @@ class CinematicParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderFloat("コントラスト", &data_->contrast, 0.0f, 3.0f);
-        ImGui::SliderFloat("彩度", &data_->saturation, 0.0f, 3.0f);
-        ImGui::SliderFloat("明度", &data_->brightness, 0.0f, 3.0f);
+        ImGui::DragFloat("コントラスト", &data_->contrast, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("彩度", &data_->saturation, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("明度", &data_->brightness, 0.01f, 0.0f, 3.0f);
 #endif
     }
     void Save(DataHandler *h, const std::string &p) const override {
@@ -353,8 +358,8 @@ class DissolveParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderFloat("閾値", &data_->threshold, 0.0f, 1.0f);
-        ImGui::SliderFloat("エッジ幅", &data_->edgeWidth, 0.0f, 0.5f);
+        ImGui::DragFloat("閾値", &data_->threshold, 0.01f, 0.0f, 1.0f);
+        ImGui::DragFloat("エッジ幅", &data_->edgeWidth, 0.001f, 0.0f, 0.5f);
         ImGui::ColorEdit3("エッジカラー", &data_->edgeColor.x);
         bool inv = data_->invert != 0;
         if (ImGui::Checkbox("反転", &inv)) {
@@ -449,12 +454,14 @@ class FocusLineParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderFloat("線の数", &data_->lines, 10.0f, 500.0f);
-        ImGui::SliderFloat("線幅", &data_->width, 0.001f, 0.1f);
-        ImGui::SliderFloat("速度", &data_->speed, 0.0f, 5.0f);
-        ImGui::SliderFloat("強度", &data_->intensity, 0.0f, 2.0f);
-        ImGui::SliderFloat("中心半径", &data_->centerRadius, 0.0f, 0.5f);
-        ImGui::SliderFloat("最大距離", &data_->maxDistance, 0.0f, 1.0f);
+        // 線の本数・形状パラメータ
+        ImGui::DragFloat("線の数", &data_->lines, 1.0f, 10.0f, 500.0f);
+        ImGui::DragFloat("線幅", &data_->width, 0.001f, 0.001f, 0.1f);
+        ImGui::DragFloat("速度", &data_->speed, 0.1f, 0.0f, 10.0f);
+        ImGui::DragFloat("強度", &data_->intensity, 0.01f, 0.0f, 5.0f);
+        // 集中線の発生エリア設定
+        ImGui::DragFloat("中心半径", &data_->centerRadius, 0.01f, 0.0f, 1.0f);
+        ImGui::DragFloat("最大距離", &data_->maxDistance, 0.01f, 0.0f, 2.0f);
         ImGui::ColorEdit4("線の色", &data_->lineColor.x);
 #endif
     }
@@ -505,9 +512,10 @@ class PixelateParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderFloat("ブロックサイズ", &data_->blockSize, 1.0f, 64.0f);
-        ImGui::SliderFloat("中心X", &data_->centerX, 0.0f, 1.0f);
-        ImGui::SliderFloat("中心Y", &data_->centerY, 0.0f, 1.0f);
+        // ブロックサイズはピクセル単位、中心座標はUV空間（0-1）
+        ImGui::DragFloat("ブロックサイズ", &data_->blockSize, 0.001f, 0.001f, 1.0f);
+        ImGui::DragFloat("中心X", &data_->centerX, 0.01f, 0.0f, 1.0f);
+        ImGui::DragFloat("中心Y", &data_->centerY, 0.01f, 0.0f, 1.0f);
 #endif
     }
     void Save(DataHandler *h, const std::string &p) const override {
@@ -519,6 +527,69 @@ class PixelateParams : public IPostEffectParams {
         data_->blockSize = h->Load<float>(p + "blockSize", 8.0f);
         data_->centerX = h->Load<float>(p + "centerX", 0.5f);
         data_->centerY = h->Load<float>(p + "centerY", 0.5f);
+    }
+
+    Data *GetData() { return data_; }
+    const Data *GetData() const { return data_; }
+
+  private:
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
+    Data *data_ = nullptr;
+};
+
+// ============================================================
+//  Retro (古いゲーム風: ピクセル化+減色+スキャンライン+色収差+CRTビネット)
+// ============================================================
+class RetroParams : public IPostEffectParams {
+  public:
+    struct Data {
+        float pixelSize = 4.0f;
+        float colorLevels = 8.0f;
+        float scanlineIntensity = 0.4f;
+        float scanlineCount = 400.0f;
+        float vignetteStrength = 0.6f;
+        float chromaticOffset = 0.003f;
+        float time = 0.0f;
+        float resolutionX = 1280.0f;
+    };
+
+    void Initialize(DirectXCommon *dxCommon) override {
+        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &data_);
+        *data_ = Data{};
+    }
+    ShaderMode GetMode() const override { return ShaderMode::kRetro; }
+    void UpdateTime(float dt) override { data_->time += dt; }
+    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override {
+        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+    }
+    void DrawUI() override {
+#ifdef _DEBUG
+        ImGui::SliderFloat("ピクセルサイズ", &data_->pixelSize, 1.0f, 32.0f);
+        ImGui::SliderFloat("減色レベル", &data_->colorLevels, 2.0f, 32.0f);
+        ImGui::SliderFloat("スキャンライン強度", &data_->scanlineIntensity, 0.0f, 1.0f);
+        ImGui::SliderFloat("スキャンライン本数", &data_->scanlineCount, 50.0f, 800.0f);
+        ImGui::SliderFloat("CRTビネット", &data_->vignetteStrength, 0.0f, 2.0f);
+        ImGui::SliderFloat("色収差", &data_->chromaticOffset, 0.0f, 0.02f, "%.4f");
+        ImGui::SliderFloat("解像度X", &data_->resolutionX, 320.0f, 3840.0f);
+#endif
+    }
+    void Save(DataHandler *h, const std::string &p) const override {
+        h->Save<float>(p + "pixelSize", data_->pixelSize);
+        h->Save<float>(p + "colorLevels", data_->colorLevels);
+        h->Save<float>(p + "scanlineIntensity", data_->scanlineIntensity);
+        h->Save<float>(p + "scanlineCount", data_->scanlineCount);
+        h->Save<float>(p + "vignetteStrength", data_->vignetteStrength);
+        h->Save<float>(p + "chromaticOffset", data_->chromaticOffset);
+        h->Save<float>(p + "resolutionX", data_->resolutionX);
+    }
+    void Load(DataHandler *h, const std::string &p) override {
+        data_->pixelSize = h->Load<float>(p + "pixelSize", 4.0f);
+        data_->colorLevels = h->Load<float>(p + "colorLevels", 8.0f);
+        data_->scanlineIntensity = h->Load<float>(p + "scanlineIntensity", 0.4f);
+        data_->scanlineCount = h->Load<float>(p + "scanlineCount", 400.0f);
+        data_->vignetteStrength = h->Load<float>(p + "vignetteStrength", 0.6f);
+        data_->chromaticOffset = h->Load<float>(p + "chromaticOffset", 0.003f);
+        data_->resolutionX = h->Load<float>(p + "resolutionX", 1280.0f);
     }
 
     Data *GetData() { return data_; }
@@ -550,8 +621,9 @@ class BloomParams : public IPostEffectParams {
     }
     void DrawUI() override {
 #ifdef _DEBUG
-        ImGui::SliderFloat("閾値", &data_->threshold, 0.0f, 1.0f);
-        ImGui::SliderFloat("強度", &data_->intensity, 0.0f, 5.0f);
+        // 閾値は輝度の下限カット（0-1）、強度はブルーム量
+        ImGui::DragFloat("閾値", &data_->threshold, 0.01f, 0.0f, 1.0f);
+        ImGui::DragFloat("強度", &data_->intensity, 0.01f, 0.0f, 5.0f);
 #endif
     }
     void Save(DataHandler *h, const std::string &p) const override {

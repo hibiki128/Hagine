@@ -3,7 +3,6 @@
 #include <Line/DrawLine3D.h>
 #include <assert.h>
 
-
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "xinput.lib")
@@ -33,7 +32,7 @@ void Input::Init(HINSTANCE hInstance, HWND hWnd) {
     assert(SUCCEEDED(result));
 
     // 入力データ形式のセット
-    result = keyboard_->SetDataFormat(&c_dfDIKeyboard); // 標準形式
+    result = keyboard_->SetDataFormat(&c_dfDIKeyboard);
     assert(SUCCEEDED(result));
 
     // 排他制御レベルのセット
@@ -63,16 +62,10 @@ void Input::Init(HINSTANCE hInstance, HWND hWnd) {
 
 void Input::Update() {
     keyPre_ = key_;
-    // キーボードの情報の取得開始
     keyboard_->Acquire();
-    // 全キーの入力状態を取得する
     keyboard_->GetDeviceState(sizeof(key_), key_.data());
 
-    mouse_->Update(); // マウス更新
-
-    // マウスの位置を更新
-    /*mousePosition_.x += static_cast<float>(mouse_.lX);
-    mousePosition_.y += static_cast<float>(mouse_.lY);*/
+    mouse_->Update();
 
     for (auto &joystick : joysticks_) {
         if (joystick.type_ == PadType::XInput) {
@@ -89,20 +82,76 @@ void Input::Update() {
 }
 
 // キーボード*************************************************************
+
 bool Input::PushKey(BYTE keyNumber) const {
     return (key_[keyNumber] & 0x80);
+}
+
+// 全キーが現在押されているかを判定する
+bool Input::PushKey(std::initializer_list<BYTE> keys) const {
+    for (BYTE key : keys) {
+        if (!(key_[key] & 0x80)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool Input::TriggerKey(BYTE keyNumber) const {
     return (key_[keyNumber] & 0x80) && !(keyPre_[keyNumber] & 0x80);
 }
 
+// 全キーが今フレームで揃い、前フレームでは少なくとも1つが押されていなかった瞬間を検出する
+// キーを1つずつ押す際のフレームズレを吸収するため、「全て揃った最初のフレーム」で発火する
+bool Input::TriggerKey(std::initializer_list<BYTE> keys) const {
+    // 今フレームで全キーが押されているか
+    for (BYTE key : keys) {
+        if (!(key_[key] & 0x80)) {
+            return false;
+        }
+    }
+    // 前フレームで少なくとも1つが押されていなければトリガーとみなす
+    for (BYTE key : keys) {
+        if (!(keyPre_[key] & 0x80)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool Input::ReleaseKey(BYTE keyNumber) const {
     return !(key_[keyNumber] & 0x80);
 }
 
+// いずれかのキーが押されていない状態をリリースとみなす
+bool Input::ReleaseKey(std::initializer_list<BYTE> keys) const {
+    for (BYTE key : keys) {
+        if (!(key_[key] & 0x80)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool Input::ReleaseMomentKey(BYTE keyNumber) const {
     return !(key_[keyNumber] & 0x80) && (keyPre_[keyNumber] & 0x80);
+}
+
+// 前フレームで全キーが揃っており、今フレームでいずれかが離された瞬間を検出する
+bool Input::ReleaseMomentKey(std::initializer_list<BYTE> keys) const {
+    // 前フレームで全キーが押されていたか
+    for (BYTE key : keys) {
+        if (!(keyPre_[key] & 0x80)) {
+            return false;
+        }
+    }
+    // 今フレームで少なくとも1つが離されているか
+    for (BYTE key : keys) {
+        if (!(key_[key] & 0x80)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // ゲームパッド*******************************************************************
@@ -156,11 +205,9 @@ bool Input::GetJoystickStatePrevious(int32_t stickNo, T &out) const {
 }
 
 void Input::SetJoystickDeadZone(int32_t stickNo, int32_t deadZoneL, int32_t deadZoneR) {
-
     if (stickNo < 0 || stickNo >= static_cast<int32_t>(joysticks_.size())) {
         return;
     }
-
     joysticks_[stickNo].deadZoneL_ = deadZoneL;
     joysticks_[stickNo].deadZoneR_ = deadZoneR;
 }
@@ -198,13 +245,8 @@ Vector2 Input::GetMousePos() {
 // レイ*****************************************************************
 
 void Input::UpdateRay(const ViewProjection &viewprojection, const SceneViewport &viewport, float rayLength) {
-    // ビューポート情報を更新
     currentViewport_ = viewport;
-
-    // マウス位置を取得
     Vector2 mousePos = GetMousePos();
-
-    // マウス位置からレイを生成
     currentRay_ = CreateRayFromMouse(mousePos, viewprojection, viewport, rayLength);
 }
 
@@ -212,7 +254,6 @@ Ray Input::CreateRayFromMouse(const Vector2 &mousePos, const ViewProjection &vie
                               const SceneViewport &viewport, float rayLength) {
     Ray ray;
 
-    // マウス座標がシーン内にあるかチェック
     float relativeX = mousePos.x - viewport.position.x;
     float relativeY = mousePos.y - viewport.position.y;
 
@@ -228,18 +269,14 @@ Ray Input::CreateRayFromMouse(const Vector2 &mousePos, const ViewProjection &vie
     float ndcX = (2.0f * relativeX / viewport.size.x) - 1.0f;
     float ndcY = 1.0f - (2.0f * relativeY / viewport.size.y);
 
-    // 近平面と遠平面の点を計算
-    Vector3 nearPoint = {ndcX, ndcY, 0.0f}; // 近平面
-    Vector3 farPoint = {ndcX, ndcY, 1.0f};  // 遠平面
+    Vector3 nearPoint = {ndcX, ndcY, 0.0f};
+    Vector3 farPoint = {ndcX, ndcY, 1.0f};
 
-    // 逆変換行列を計算
+    // クリップ空間からワールド空間へ逆変換
     Matrix4x4 invViewProj = Inverse((viewprojection.matView_ * viewprojection.matProjection_));
-
-    // クリップ空間からワールド空間へ変換
     Vector3 worldNear = Transformation(nearPoint, invViewProj);
     Vector3 worldFar = Transformation(farPoint, invViewProj);
 
-    // レイを設定
     ray.origin = worldNear;
     ray.direction = (worldFar - worldNear).Normalize();
     ray.length = rayLength;
@@ -247,33 +284,33 @@ Ray Input::CreateRayFromMouse(const Vector2 &mousePos, const ViewProjection &vie
     return ray;
 }
 
-bool Input::RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,const AABB &aabb) {
+// ---- AABB 衝突判定（行列直接指定版）------------------------------------
+// スラブ法により、ワールド行列から構築したAABBとレイの交差を判定する
+bool Input::RayIntersectAABBByMatrix(const Ray &ray, const Matrix4x4 &worldMatrix, RayHitInfo &hitInfo, const AABB &aabb) {
+    // ローカル空間のAABB 8頂点をワールド空間に変換
     Vector3 localCorners[8] = {
-        {-1.0f, -1.0f, -1.0f},
-        {1.0f, -1.0f, -1.0f},
-        {-1.0f, 1.0f, -1.0f},
-        {1.0f, 1.0f, -1.0f},
-        {-1.0f, -1.0f, 1.0f},
-        {1.0f, -1.0f, 1.0f},
-        {-1.0f, 1.0f, 1.0f},
-        {1.0f, 1.0f, 1.0f},
+        {aabb.min.x, aabb.min.y, aabb.min.z},
+        {aabb.max.x, aabb.min.y, aabb.min.z},
+        {aabb.min.x, aabb.max.y, aabb.min.z},
+        {aabb.max.x, aabb.max.y, aabb.min.z},
+        {aabb.min.x, aabb.min.y, aabb.max.z},
+        {aabb.max.x, aabb.min.y, aabb.max.z},
+        {aabb.min.x, aabb.max.y, aabb.max.z},
+        {aabb.max.x, aabb.max.y, aabb.max.z},
     };
 
-    // それらをワールド空間に変換
     Vector3 worldCorners[8];
-    Matrix4x4 worldMatrix = targetObject->GetWorldTransform()->matWorld_;
     for (int i = 0; i < 8; ++i) {
         worldCorners[i] = Transformation(localCorners[i], worldMatrix);
     }
 
-    // ワールド空間でのmin/maxを求める
+    // ワールド空間での AABB min/max を算出
     Vector3 boxMin = worldCorners[0];
     Vector3 boxMax = worldCorners[0];
     for (int i = 1; i < 8; ++i) {
         boxMin.x = std::min(boxMin.x, worldCorners[i].x);
         boxMin.y = std::min(boxMin.y, worldCorners[i].y);
         boxMin.z = std::min(boxMin.z, worldCorners[i].z);
-
         boxMax.x = std::max(boxMax.x, worldCorners[i].x);
         boxMax.y = std::max(boxMax.y, worldCorners[i].y);
         boxMax.z = std::max(boxMax.z, worldCorners[i].z);
@@ -290,7 +327,6 @@ bool Input::RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInf
         float boxMaxVal = (&boxMax.x)[i];
 
         if (std::abs(rayDir) < 1e-6f) {
-            // レイがこの軸に平行
             if (rayOrig < boxMinVal || rayOrig > boxMaxVal) {
                 hitInfo.hit = false;
                 return false;
@@ -298,13 +334,10 @@ bool Input::RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInf
         } else {
             float t1 = (boxMinVal - rayOrig) / rayDir;
             float t2 = (boxMaxVal - rayOrig) / rayDir;
-
             if (t1 > t2)
                 std::swap(t1, t2);
-
             tMin = std::max(tMin, t1);
             tMax = std::min(tMax, t2);
-
             if (tMin > tMax) {
                 hitInfo.hit = false;
                 return false;
@@ -312,21 +345,19 @@ bool Input::RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInf
         }
     }
 
-    if (tMin < 0.0f) {
+    if (tMin < 0.0f)
         tMin = 0.0f;
-    }
 
     if (tMin >= 0 && tMin <= ray.length) {
         hitInfo.hit = true;
         hitInfo.distance = tMin;
-        hitInfo.hitPoint = (ray.origin + (ray.direction * tMin));
+        hitInfo.hitPoint = ray.origin + (ray.direction * tMin);
 
-        // 法線を計算（簡易版）
+        // 最も近い面の法線を選択
         Vector3 center = (boxMin + boxMax) * 0.5f;
         Vector3 toHit = hitInfo.hitPoint - center;
         Vector3 extent = (boxMax - boxMin) * 0.5f;
 
-        // 最も近い面の法線を選択
         float maxComponent = 0;
         int maxIndex = 0;
         for (int i = 0; i < 3; ++i) {
@@ -336,10 +367,8 @@ bool Input::RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInf
                 maxIndex = i;
             }
         }
-
         hitInfo.hitNormal = {0, 0, 0};
         (&hitInfo.hitNormal.x)[maxIndex] = ((&toHit.x)[maxIndex] > 0) ? 1.0f : -1.0f;
-        hitInfo.objectName = targetObject->GetName();
         return true;
     }
 
@@ -347,57 +376,72 @@ bool Input::RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInf
     return false;
 }
 
-bool Input::RayIntersectSphere(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo,const Sphere &sphere) {
+// ---- AABB 衝突判定（BaseObject版）------------------------------------
+// ワールド行列を BaseObject から取得し、行列版に委譲する
+bool Input::RayIntersectAABB(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo, const AABB &aabb) {
     Matrix4x4 worldMatrix = targetObject->GetWorldTransform()->matWorld_;
-    // スフィアの中心をワールド座標に変換
+    bool result = RayIntersectAABBByMatrix(ray, worldMatrix, hitInfo, aabb);
+    if (result) {
+        hitInfo.objectName = targetObject->GetName();
+    }
+    return result;
+}
+
+// ---- スフィア衝突判定（行列直接指定版）---------------------------------
+// ワールド行列からスケール付き球の交差判定を行う
+bool Input::RayIntersectSphereByMatrix(const Ray &ray, const Matrix4x4 &worldMatrix, RayHitInfo &hitInfo, const Sphere &sphere) {
     Vector3 worldCenter = Transformation(sphere.center, worldMatrix);
 
-    // スケールを考慮した半径を計算（簡易版：uniform scaleを仮定）
+    // スケールを考慮した半径（非一様スケールには最大軸を使用）
     Vector3 scale = {
         sqrt(worldMatrix.m[0][0] * worldMatrix.m[0][0] + worldMatrix.m[1][0] * worldMatrix.m[1][0] + worldMatrix.m[2][0] * worldMatrix.m[2][0]),
         sqrt(worldMatrix.m[0][1] * worldMatrix.m[0][1] + worldMatrix.m[1][1] * worldMatrix.m[1][1] + worldMatrix.m[2][1] * worldMatrix.m[2][1]),
         sqrt(worldMatrix.m[0][2] * worldMatrix.m[0][2] + worldMatrix.m[1][2] * worldMatrix.m[1][2] + worldMatrix.m[2][2] * worldMatrix.m[2][2])};
     float worldRadius = sphere.radius * std::max({scale.x, scale.y, scale.z});
 
-    // レイの原点から球の中心へのベクトル
-    Vector3 oc = (ray.origin - worldCenter);
+    Vector3 oc = ray.origin - worldCenter;
 
-    // 二次方程式の係数
     float a = ray.direction.Dot(ray.direction);
     float b = 2.0f * oc.Dot(ray.direction);
     float c = oc.Dot(oc) - worldRadius * worldRadius;
 
-    // 判別式
     float discriminant = b * b - 4 * a * c;
-
     if (discriminant < 0) {
         hitInfo.hit = false;
         return false;
     }
 
-    // 交点を計算
     float sqrtD = sqrt(discriminant);
     float t1 = (-b - sqrtD) / (2.0f * a);
     float t2 = (-b + sqrtD) / (2.0f * a);
 
     float t = -1;
-    if (t1 >= 0 && t1 <= ray.length) {
+    if (t1 >= 0 && t1 <= ray.length)
         t = t1;
-    } else if (t2 >= 0 && t2 <= ray.length) {
+    else if (t2 >= 0 && t2 <= ray.length)
         t = t2;
-    }
 
     if (t >= 0) {
         hitInfo.hit = true;
         hitInfo.distance = t;
-        hitInfo.hitPoint = (ray.origin + (ray.direction * t));
+        hitInfo.hitPoint = ray.origin + (ray.direction * t);
         hitInfo.hitNormal = (hitInfo.hitPoint - worldCenter).Normalize();
-        hitInfo.objectName = targetObject->GetName();
         return true;
     }
 
     hitInfo.hit = false;
     return false;
+}
+
+// ---- スフィア衝突判定（BaseObject版）----------------------------------
+// ワールド行列を BaseObject から取得し、行列版に委譲する
+bool Input::RayIntersectSphere(const Ray &ray, BaseObject *targetObject, RayHitInfo &hitInfo, const Sphere &sphere) {
+    Matrix4x4 worldMatrix = targetObject->GetWorldTransform()->matWorld_;
+    bool result = RayIntersectSphereByMatrix(ray, worldMatrix, hitInfo, sphere);
+    if (result) {
+        hitInfo.objectName = targetObject->GetName();
+    }
+    return result;
 }
 
 RayHitInfo Input::RaycastMultipleAABB(const Ray &ray, const std::vector<BaseObject *> baseObjects) {
@@ -407,7 +451,6 @@ RayHitInfo Input::RaycastMultipleAABB(const Ray &ray, const std::vector<BaseObje
 
     for (const auto &targetObject : baseObjects) {
         RayHitInfo currentHit;
-
         if (RayIntersectAABB(ray, targetObject, currentHit)) {
             if (currentHit.distance < closestHit.distance) {
                 closestHit = currentHit;
@@ -426,7 +469,6 @@ RayHitInfo Input::RaycastMultipleSphere(const Ray &ray, const std::vector<BaseOb
 
     for (const auto &targetObject : baseObjects) {
         RayHitInfo currentHit;
-
         if (RayIntersectSphere(ray, targetObject, currentHit)) {
             if (currentHit.distance < closestHit.distance) {
                 closestHit = currentHit;

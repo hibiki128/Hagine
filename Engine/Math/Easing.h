@@ -82,6 +82,12 @@ float EaseOutElasticAmplitude(float t, float totaltime, float amplitude, float p
 
 float EaseInOutElasticAmplitude(float t, float totaltime, float amplitude, float period);
 
+Vector3 EaseInElasticAmplitude(float t, const float &totaltime, const Vector3 &amplitude, const float &period);
+
+Vector3 EaseOutElasticAmplitude(float t, float totaltime, const Vector3 &amplitude, float period);
+
+Vector3 EaseInOutElasticAmplitude(float t, float totaltime, const Vector3 &amplitude, float period);
+
 template <typename T> T ApplyEasing(EasingType type, const T &start, const T &end, float x, float totalX);
 
 template<typename T> T EaseAmplitudeScale(const T& initScale, const float& easeT, const float& totalTime, const float& amplitude, const float& period);

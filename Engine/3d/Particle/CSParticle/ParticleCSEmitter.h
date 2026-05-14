@@ -25,6 +25,12 @@ class ParticleCSEmitter {
     void RemoveParticleGroup(const std::string &groupName);
     void EmitOnce();
 
+    EmitterMesh GetEmitterMesh() const {
+        if (emitterMeshData_)
+            return *emitterMeshData_;
+        return EmitterMesh{};
+    }
+
     void SetName(const std::string &name) { name_ = name; }
     void SetFrequency(float frequency) {
         if (emitterMeshData_)

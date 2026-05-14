@@ -8,14 +8,13 @@
 
 void OffScreen::Initialize() {
     dxCommon_ = DirectXCommon::GetInstance();
-    SrvManager *srvManager     = SrvManager::GetInstance();
+    SrvManager *srvManager = SrvManager::GetInstance();
     PipeLineManager *psoManager = PipeLineManager::GetInstance();
 
     renderer_.Initialize(dxCommon_, srvManager, psoManager);
-    dataManager_.Initialize();
 
-    // 保存データを読み込み（スロットへの復元）
-    dataManager_.LoadData(effectChain_, dxCommon_);
+    // エフェクトチェーンとDirectXCommonのポインタを渡して初期化
+    dataManager_.Initialize(&effectChain_, dxCommon_);
 }
 
 void OffScreen::Draw() {
@@ -28,8 +27,11 @@ void OffScreen::SetProjection(Matrix4x4 projectionMatrix) {
     // 深度ベースアウトライン等、射影逆行列が必要なエフェクトに反映
     const auto &slots = effectChain_.GetSlots();
     for (int i = 0; i < PostEffectChain::kMaxSlots; ++i) {
-        if (!slots[i].occupied) { continue; }
-        if (auto *p = effectChain_.GetParams<OutlineDepthParams>(i)) {            p->SetProjectionInverse(projectionMatrix);
+        if (!slots[i].occupied) {
+            continue;
+        }
+        if (auto *p = effectChain_.GetParams<OutlineDepthParams>(i)) {
+            p->SetProjectionInverse(projectionMatrix);
         }
     }
 }
@@ -82,6 +84,10 @@ bool OffScreen::MoveEffectDown(int slotIndex) {
     return effectChain_.MoveDown(slotIndex);
 }
 
+void OffScreen::LoadData(const std::string &fileName) {
+    dataManager_.LoadData(fileName);
+}
+
 // -------------------------------------------------------
 //  ImGui
 // -------------------------------------------------------
@@ -95,7 +101,71 @@ void OffScreen::Setting() {
     const char *shaderModeItems[] = {
         "なし", "グレイ", "ビネット", "スムース", "ガウス",
         "アウトライン(エッジ検出)", "アウトライン(深度ベース)",
-        "ブラー", "シネマティック", "ディゾルブ", "ランダム", "集中線", "ピクセル化", "ブルーム"};
+        "ブラー", "シネマティック", "ディゾルブ", "ランダム", "集中線", "ピクセル化", "ブルーム", "レトロ"};
+
+    // --- クイック切替：チェックでON/OFF（未追加なら自動追加）---
+    if (ImGui::CollapsingHeader("クイック切替", ImGuiTreeNodeFlags_DefaultOpen)) {
+        const auto &quickSlots = effectChain_.GetSlots();
+        for (int m = 1; m < static_cast<int>(ShaderMode::kCount); ++m) {
+            ShaderMode mode = static_cast<ShaderMode>(m);
+
+            // このモードを持つスロットを探す
+            int foundSlot = -1;
+            for (int i = 0; i < PostEffectChain::kMaxSlots; ++i) {
+                if (quickSlots[i].occupied && quickSlots[i].params &&
+                    quickSlots[i].params->GetMode() == mode) {
+                    foundSlot = i;
+                    break;
+                }
+            }
+
+            bool active = (foundSlot >= 0) && quickSlots[foundSlot].enabled;
+            ImGui::PushID(1000 + m);
+            if (ImGui::Checkbox(shaderModeItems[m], &active)) {
+                if (active) {
+                    if (foundSlot < 0) {
+                        std::string defaultName = std::string("quick_") + shaderModeItems[m];
+                        AddEffect(mode, defaultName, -1);
+                    } else {
+                        effectChain_.SetEnabled(foundSlot, true);
+                    }
+                } else {
+                    if (foundSlot >= 0) {
+                        effectChain_.SetEnabled(foundSlot, false);
+                    }
+                }
+            }
+
+            // 有効時はパラメータも展開
+            if (active && foundSlot >= 0) {
+                ImGui::SameLine();
+                if (ImGui::SmallButton("削除")) {
+                    effectChain_.RemoveEffect(foundSlot);
+                } else {
+                    ImGui::Indent();
+                    quickSlots[foundSlot].params->DrawUI();
+                    ImGui::Unindent();
+                }
+            }
+            ImGui::PopID();
+        }
+
+        if (ImGui::Button("全部OFF")) {
+            const auto &s = effectChain_.GetSlots();
+            for (int i = 0; i < PostEffectChain::kMaxSlots; ++i) {
+                if (s[i].occupied)
+                    effectChain_.SetEnabled(i, false);
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("全部削除")) {
+            for (int i = PostEffectChain::kMaxSlots - 1; i >= 0; --i) {
+                effectChain_.RemoveEffect(i);
+            }
+        }
+    }
+
+    ImGui::Separator();
 
     static int selectedMode = 0;
     static char effectName[64] = "";
@@ -132,7 +202,7 @@ void OffScreen::Setting() {
         }
 
         const auto &slot = slots[i];
-        ShaderMode mode  = slot.params->GetMode();
+        ShaderMode mode = slot.params->GetMode();
 
         ImGui::Text("[%d] %s (%s)", i, slot.name.c_str(), shaderModeItems[static_cast<int>(mode)]);
 
@@ -143,9 +213,13 @@ void OffScreen::Setting() {
         }
 
         ImGui::SameLine();
-        if (ImGui::Button("↑") && i > 0) { effectChain_.MoveUp(i); }
+        if (ImGui::Button("上") && i > 0) {
+            effectChain_.MoveUp(i);
+        }
         ImGui::SameLine();
-        if (ImGui::Button("↓") && i < PostEffectChain::kMaxSlots - 1) { effectChain_.MoveDown(i); }
+        if (ImGui::Button("下") && i < PostEffectChain::kMaxSlots - 1) {
+            effectChain_.MoveDown(i);
+        }
         ImGui::SameLine();
         if (ImGui::Button("削除")) {
             effectChain_.RemoveEffect(i);
@@ -164,11 +238,40 @@ void OffScreen::Setting() {
         ImGui::Separator();
     }
 
-    // --- セーブ ---
-    if (ImGui::Button("セーブ")) {
-        dataManager_.SaveData(effectChain_);
-        std::string msg = std::format("OffScreen saved.");
-        MessageBoxA(nullptr, msg.c_str(), "OffScreen", 0);
+    ImGui::Separator();
+
+    // --- セーブ/ロード ---
+    static char saveFileName[256] = "OffScreenData";
+    ImGui::SetNextItemWidth(200);
+    ImGui::InputText("ファイル名", saveFileName, sizeof(saveFileName));
+
+    ImGui::SameLine();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f));
+    if (ImGui::Button("セーブ", ImVec2(80, 25))) {
+        dataManager_.SaveData(std::string(saveFileName));
+        saveMessage_ = std::format("「{}」にセーブしました！", saveFileName);
+        saveMessageTimer_ = 180;
+    }
+    ImGui::PopStyleColor();
+
+    ImGui::SameLine();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.8f, 0.2f, 1.0f));
+    if (ImGui::Button("ロード", ImVec2(80, 25))) {
+        dataManager_.LoadData(std::string(saveFileName));
+        saveMessage_ = std::format("「{}」からロードしました！", saveFileName);
+        saveMessageTimer_ = 180;
+    }
+    ImGui::PopStyleColor();
+
+    // セーブ/ロード結果メッセージを一定時間表示
+    if (saveMessageTimer_ > 0) {
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+        ImGui::Text("%s", saveMessage_.c_str());
+        ImGui::PopStyleColor();
+        saveMessageTimer_--;
     }
 #endif
 }

@@ -7,6 +7,14 @@ DataHandler::DataHandler(const std::string &folder, const std::string &file) {
     LoadFromFile();                     // コンストラクタで一度だけファイルを読み込む
 }
 
+void DataHandler::DeleteJson(const std::string &jsonName) {
+    std::string filePath = folderPath + "/" + jsonName + ".json";
+
+    if (fs::exists(filePath)) {
+        fs::remove(filePath);
+    }
+}
+
 bool DataHandler::Exists() const {
     std::string filePath = folderPath + "/" + fileName;
     return fs::exists(filePath);

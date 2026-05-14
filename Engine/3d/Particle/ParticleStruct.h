@@ -199,6 +199,116 @@ struct ParticleCSSettings {
     Vector3 angularVelocityMax = {0.0f, 0.0f, 0.0f}; // 角速度 最大 (ラジアン/秒, XYZ)
 };
 
+/// =====================================================================
+/// フィールドがパーティクルに適用する「一度きりの設定上書き」データ
+/// overrideMask のビットが立っている項目だけ上書きされる。
+/// パーティクル側の settingsOverrideFlags に同じビットが既に立っていたら
+/// 上書きをスキップし、一度きり保証を実現する。
+/// =====================================================================
+struct ParticleFieldSettingsOverride {
+    /// 上書きするかどうかのビットマスク（0=上書きしない）
+    /// ParticleSettingsOverrideBits の組み合わせ
+    uint64_t overrideMask = 0;
+
+    // ---------- 上書き値 ----------
+    // overrideMask の対応ビットが立っているときのみ使用される
+
+    float lifeTimeMin = 1.0f;
+    float lifeTimeMax = 3.0f;
+    float scaleMin = 0.5f;
+    float scaleMax = 1.5f;
+    Vector3 velocityMin = {-0.5f, -0.5f, -0.5f};
+    Vector3 velocityMax = {0.5f, 0.5f, 0.5f};
+    Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    Vector4 endColor = {1.0f, 1.0f, 1.0f, 0.0f};
+    uint32_t enableLifetimeScale = 0;
+    uint32_t enableRandomColor = 0;
+    uint32_t enableSinScale = 0;
+    float sinScaleFrequency = 1.0f;
+    float sinScaleAmplitude = 0.5f;
+    uint32_t enableGravity = 0;
+    Vector3 gravity = {0.0f, -9.8f, 0.0f};
+    uint32_t enableTrail = 0;
+    float trailSpawnDistance = 0.1f;
+    uint32_t maxTrailPerParticle = 5;
+    float trailLifeTimeScale = 0.5f;
+    Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
+    Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
+    float trailVelocityScale = 0.3f;
+    uint32_t trailInheritVelocity = 1;
+    float trailMinLifeTime = 0.3f;
+    uint32_t enableGather = 0;
+    float gatherStartRatio = 0.5f;
+    float gatherStrength = 2.0f;
+    Vector3 gatherTarget = {0.0f, 0.0f, 0.0f};
+    uint32_t enableVortex = 0;
+    float vortexStrength = 5.0f;
+    Vector3 vortexAxis = {0.0f, 1.0f, 0.0f};
+    uint32_t enableAcceleration = 0;
+    Vector3 acceleration = {0.0f, 0.0f, 0.0f};
+    uint32_t enableVelocityDamping = 0;
+    float velocityDampingFactor = 0.95f;
+    uint32_t enableLifetimeVelDamping = 0;
+    float lifetimeVelDampingStart = 0.5f;
+    uint32_t enableCurlNoise = 0;
+    float curlNoiseScale = 1.0f;
+    float curlNoiseStrength = 1.0f;
+    float curlNoiseTimeScale = 1.0f;
+    uint32_t curlNoiseOctaves = 3;
+    float curlNoiseAttractStrength = 0.0f;
+    uint32_t curlNoiseBlendMode = 0;
+    float curlNoisePosRandom = 0.0f;
+};
+
+/// =============================================
+/// GPUに送るフィールドデータ (16バイトアライメント)
+/// =============================================
+struct ParticleFieldData {
+    Vector3 position = {0, 0, 0};  // フィールドの中心座標
+    float radius = 5.0f;           // 影響範囲（球）
+    Vector3 direction = {1, 0, 0}; // Wind/Vortex軸方向
+    float strength = 1.0f;         // 力の強さ
+    uint32_t fieldType = 0;        // ParticleFieldType
+    float falloff = 1.0f;          // 減衰指数（1=線形, 2=二乗）
+
+    // --- 寿命ドレイン ---
+    float lifeTimeDrain = 0.0f;   // 毎秒削る寿命量（秒/秒）
+    uint32_t enableLifeDrain = 0; // 0=無効 1=有効
+
+    // --- トレイル強制生成 ---
+    uint32_t enableForceTrail = 0;           // 0=無効 1=有効
+    float trailSpawnDistanceOverride = 0.0f; // >0 のときトレイル生成間隔を上書き
+
+    // --- カラー乗算 ---
+    uint32_t enableColorMultiply = 0;                   // 0=無効 1=有効
+    Vector4 colorMultiplier = {1.0f, 1.0f, 1.0f, 1.0f}; // 乗算色（白=変化なし）
+
+    // --- 一度きり設定上書き ---
+    uint32_t enableSettingsOverride = 0; // 0=無効 1=有効
+
+    // --- Emit時スポーン判定 ---
+    uint32_t enableEmitSpawn = 0;       // 1=このフィールド範囲内にのみEmit
+    float emitSpawnLifeTimeMin = 0.25f; // enableEmitSpawn=1 時の寿命Min
+    float emitSpawnLifeTimeMax = 0.25f; // enableEmitSpawn=1 時の寿命Max
+    uint32_t emitSpawnCount = 0;        // enableEmitSpawn=1 時の発生数（0=エミッター依存）
+
+    // --- グループID ---
+    // エミッター側の fieldGroupId と一致するフィールドのみ影響を与える。
+    // -1 = 全エミッターに影響する（デフォルト）
+    int32_t groupId = -1;
+    float groupIdPadding[3] = {0.f, 0.f, 0.f}; // 16バイトアライメント
+};
+
+/// =============================================
+/// エディタ用フィールド（名前付き）
+/// =============================================
+struct ParticleField {
+    std::string name = "NewField";
+    bool enabled = true;
+    ParticleFieldData data = {};
+    ParticleFieldSettingsOverride override_ = {}; // 一度きり設定上書きデータ
+};
+
 /// =======================
 
 /// ====== CPUParticle ======

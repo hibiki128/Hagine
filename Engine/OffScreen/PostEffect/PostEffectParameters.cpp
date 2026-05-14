@@ -49,6 +49,9 @@ void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCo
     case ShaderMode::kBloom:
         commandList->SetGraphicsRootConstantBufferView(1, bloomResource->GetGPUVirtualAddress());
         break;
+    case ShaderMode::kRetro:
+        commandList->SetGraphicsRootConstantBufferView(1, retroResource->GetGPUVirtualAddress());
+        break;
     }
 }
 
@@ -58,6 +61,9 @@ void PostEffectParameters::UpdateTimeParameters(float deltaTime) {
     }
     if (focusLineData) {
         focusLineData->time += deltaTime;
+    }
+    if (retroData) {
+        retroData->time += deltaTime;
     }
 }
 
@@ -129,6 +135,15 @@ void PostEffectParameters::SaveParameters(DataHandler *dataHandler) const {
         dataHandler->Save<float>("bloom_intensity", bloomData->bloomIntensity);
     }
 
+    if (retroData) {
+        dataHandler->Save<float>("retro_pixelSize", retroData->pixelSize);
+        dataHandler->Save<float>("retro_colorLevels", retroData->colorLevels);
+        dataHandler->Save<float>("retro_scanlineIntensity", retroData->scanlineIntensity);
+        dataHandler->Save<float>("retro_scanlineCount", retroData->scanlineCount);
+        dataHandler->Save<float>("retro_vignetteStrength", retroData->vignetteStrength);
+        dataHandler->Save<float>("retro_chromaticOffset", retroData->chromaticOffset);
+    }
+
 }
 
 void PostEffectParameters::LoadParameters(DataHandler *dataHandler) {
@@ -197,6 +212,15 @@ void PostEffectParameters::LoadParameters(DataHandler *dataHandler) {
     if (bloomData) {
         bloomData->bloomThreshold = dataHandler->Load<float>("bloom_threshold", 1.0f);
         bloomData->bloomIntensity = dataHandler->Load<float>("bloom_intensity", 1.2f);
+    }
+
+    if (retroData) {
+        retroData->pixelSize = dataHandler->Load<float>("retro_pixelSize", 4.0f);
+        retroData->colorLevels = dataHandler->Load<float>("retro_colorLevels", 8.0f);
+        retroData->scanlineIntensity = dataHandler->Load<float>("retro_scanlineIntensity", 0.4f);
+        retroData->scanlineCount = dataHandler->Load<float>("retro_scanlineCount", 400.0f);
+        retroData->vignetteStrength = dataHandler->Load<float>("retro_vignetteStrength", 0.6f);
+        retroData->chromaticOffset = dataHandler->Load<float>("retro_chromaticOffset", 0.003f);
     }
 }
 
@@ -282,6 +306,17 @@ void PostEffectParameters::DrawParameterUI(ShaderMode mode) {
             ImGui::DragFloat("ブルーム強度", &bloomData->bloomIntensity, 0.01f);
         }
         break;
+    case ShaderMode::kRetro:
+        if (retroData) {
+            ImGui::DragFloat("ピクセルサイズ", &retroData->pixelSize, 0.1f, 1.0f, 32.0f);
+            ImGui::DragFloat("減色レベル", &retroData->colorLevels, 0.1f, 2.0f, 32.0f);
+            ImGui::DragFloat("スキャンライン強度", &retroData->scanlineIntensity, 0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat("スキャンライン本数", &retroData->scanlineCount, 1.0f, 50.0f, 800.0f);
+            ImGui::DragFloat("CRTビネット", &retroData->vignetteStrength, 0.01f, 0.0f, 2.0f);
+            ImGui::DragFloat("色収差", &retroData->chromaticOffset, 0.0001f, 0.0f, 0.02f);
+            ImGui::DragFloat("解像度X", &retroData->resolutionX, 1.0f, 320.0f, 3840.0f);
+        }
+        break;
     }
 #endif // _DEBUG
 }
@@ -298,6 +333,7 @@ void PostEffectParameters::CreateAllBuffers() {
     CreateFocusLine();
     CreatePixelate();
     CreateBloom();
+    CreateRetro();
 }
 
 void PostEffectParameters::CreateSmooth() {
@@ -384,4 +420,17 @@ void PostEffectParameters::CreateBloom() {
     bloomData->bloomIntensity = 1.2f;
     bloomData->texelSize.x = 1.0f / WinApp::kClientWidth;
     bloomData->texelSize.y = 1.0f / WinApp::kClientHeight;
+}
+
+void PostEffectParameters::CreateRetro() {
+    retroResource = dxCommon_->CreateBufferResource(sizeof(Retro));
+    retroResource->Map(0, nullptr, reinterpret_cast<void **>(&retroData));
+    retroData->pixelSize = 4.0f;
+    retroData->colorLevels = 8.0f;
+    retroData->scanlineIntensity = 0.4f;
+    retroData->scanlineCount = 400.0f;
+    retroData->vignetteStrength = 0.6f;
+    retroData->chromaticOffset = 0.003f;
+    retroData->time = 0.0f;
+    retroData->resolutionX = static_cast<float>(WinApp::kClientWidth);
 }
