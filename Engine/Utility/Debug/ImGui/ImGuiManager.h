@@ -154,6 +154,8 @@ class ImGuiManager {
 
     void ShowAudioManagerWindow();
 
+    void ShowKeyOperationDebugWindow();
+
     void FixAspectRatio();
 
     void BackupDockLayout();

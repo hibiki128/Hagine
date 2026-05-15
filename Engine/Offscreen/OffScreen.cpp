@@ -4,6 +4,7 @@
 #include <format>
 #ifdef _DEBUG
 #include "imgui.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #endif
 
 void OffScreen::Initialize() {
@@ -101,7 +102,7 @@ void OffScreen::Setting() {
     const char *shaderModeItems[] = {
         "なし", "グレイ", "ビネット", "スムース", "ガウス",
         "アウトライン(エッジ検出)", "アウトライン(深度ベース)",
-        "ブラー", "シネマティック", "ディゾルブ", "ランダム", "集中線", "ピクセル化", "ブルーム", "レトロ"};
+        "ブラー", "シネマティック", "ディゾルブ", "ランダム", "集中線", "ピクセル化", "ブルーム", "レトロ", "衝撃波"};
 
     // --- クイック切替：チェックでON/OFF（未追加なら自動追加）---
     if (ImGui::CollapsingHeader("クイック切替", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -250,8 +251,8 @@ void OffScreen::Setting() {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f));
     if (ImGui::Button("セーブ", ImVec2(80, 25))) {
         dataManager_.SaveData(std::string(saveFileName));
-        saveMessage_ = std::format("「{}」にセーブしました！", saveFileName);
-        saveMessageTimer_ = 180;
+        std::string msg = std::format("OffScreenData saved to: 「{}」", saveFileName);
+        ImGuiNotification::Post(msg);
     }
     ImGui::PopStyleColor();
 
@@ -260,18 +261,9 @@ void OffScreen::Setting() {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.8f, 0.2f, 1.0f));
     if (ImGui::Button("ロード", ImVec2(80, 25))) {
         dataManager_.LoadData(std::string(saveFileName));
-        saveMessage_ = std::format("「{}」からロードしました！", saveFileName);
-        saveMessageTimer_ = 180;
+        std::string msg = std::format("OffScreenData loaded from: 「{}」", saveFileName);
+        ImGuiNotification::Post(msg, {0.2f, 0.2f, 0.8f, 1.0f});
     }
     ImGui::PopStyleColor();
-
-    // セーブ/ロード結果メッセージを一定時間表示
-    if (saveMessageTimer_ > 0) {
-        ImGui::Spacing();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
-        ImGui::Text("%s", saveMessage_.c_str());
-        ImGui::PopStyleColor();
-        saveMessageTimer_--;
-    }
 #endif
 }

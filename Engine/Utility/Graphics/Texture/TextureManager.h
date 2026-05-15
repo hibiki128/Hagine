@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../../Externals/std_truetype/stb_truetype.h"
+#include <externals/imgui/imstb_truetype.h>
 #include "DirectXCommon.h"
 #include "d3d12.h"
 #include "externals/DirectXTex/DirectXTex.h"

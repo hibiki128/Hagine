@@ -5,6 +5,7 @@
 #include "WinApp.h"
 #include "myMath.h"
 #include <Data/DataHandler.h>
+#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
 #include <filesystem>
 
@@ -32,6 +33,7 @@ void SpriteManager::RegisterSprite(const std::string &name, const std::string &t
 
     sprites_.push_back(std::move(spriteData));
     UpdateSpriteInstances(sprites_.back().get());
+    ImGuiNotification::Post("スプライトを登録しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void SpriteManager::UnregisterSprite(const std::string &name) {
@@ -41,6 +43,7 @@ void SpriteManager::UnregisterSprite(const std::string &name) {
                            });
 
     if (it != sprites_.end()) {
+        ImGuiNotification::Post("スプライトを削除しました: " + name, {0.9f, 0.7f, 0.2f, 1.0f});
         sprites_.erase(it);
     }
 }
@@ -872,6 +875,7 @@ void SpriteManager::SaveAllSprites() {
         // アスペクト比ロック状態を保存
         data->Save("lockAspectRatio", static_cast<int>(spriteData->lockAspectRatio));
     }
+    ImGuiNotification::Post("スプライトデータを保存しました: " + saveFolder_, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void SpriteManager::LoadAllSprites() {
@@ -924,4 +928,5 @@ void SpriteManager::LoadAllSprites() {
     }
 
     LoadDrawOrder();
+    ImGuiNotification::Post("スプライトデータを読み込みました: " + saveFolder_, {0.2f, 0.8f, 0.8f, 1.0f});
 }

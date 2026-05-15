@@ -2,6 +2,7 @@
 #include "BaseObject.h"
 #include "Collider/CollisionManager.h"
 #include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Scene/SceneManager.h"
 #include "ShowFolder/ShowFolder.h"
 #ifdef _DEBUG
@@ -313,6 +314,7 @@ void BaseObject::SaveToJson() {
 
     // コライダー情報を保存
     SaveColliders();
+    ObjectDatas_->Flush();
 }
 
 void BaseObject::SceneSaveToJson() {
@@ -345,6 +347,7 @@ void BaseObject::SceneSaveToJson() {
 
     // コライダー情報を保存
     SaveColliders();
+    ObjectDatas_->Flush();
 }
 
 void BaseObject::LoadFromJson() {
@@ -829,8 +832,9 @@ void BaseObject::ImGui() {
                 AnimaSaveToJson();
                 for (auto &c : colliders_)
                     c->SaveToJson();
-                std::string msg = std::format("ObjectData saved: {}", objectName_);
-                MessageBoxA(nullptr, msg.c_str(), "Save", 0);
+                
+                std::string msg = std::format("対象のオブジェクトをセーブしました！: {}", objectName_);
+                ImGuiNotification::Post(msg);
             }
             ImGui::PopStyleColor(2);
 

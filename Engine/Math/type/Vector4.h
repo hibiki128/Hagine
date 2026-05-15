@@ -1,7 +1,9 @@
 #pragma once
 
-#include"cmath"
-
+#include "cmath"
+#ifdef _DEBUG
+#include "imgui.h"
+#endif // _DEBUG
 /// <summary>
 /// 4次元ベクトル
 /// </summary>
@@ -129,4 +131,7 @@ struct Vector4 final {
     float Dot(const Vector4 &other) const {
         return x * other.x + y * other.y + z * other.z + w * other.w;
     }
+#ifdef _DEBUG
+    operator ImVec4() const { return ImVec4(x, y, z, w); }
+#endif // _DEBUG
 };

@@ -8,6 +8,7 @@
 #include <random>
 #include <regex>
 #include"../Utility/Debug/ImGui/ImGuizmoManager.h"
+#include"../Utility/Debug/ImGui/ImGuiNotification.h"
 
 void ParticleCSEmitter::Initialize(const std::string &name) {
     particleCommon_ = ParticleCommon::GetInstance();
@@ -1378,7 +1379,9 @@ void ParticleCSEmitter::DrawImGui() {
 
                 if (ImGui::Button("GPU設定を保存##GPUSaveButton", ImVec2(120, 35))) {
                     SaveSetting();
-                    MessageBoxA(NULL, "Success Save!", "ParticleCSEmitter", MB_OK | MB_ICONINFORMATION);
+                    std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
+                    data->Flush();
+                    ImGuiNotification::Post("Success Save!", {0.2f, 0.8f, 0.2f, 1.0f});
                 }
                 ImGui::PopStyleColor(3);
 

@@ -4,6 +4,7 @@
 #include <type/Vector2.h>
 #include <type/Vector3.h>
 #include <type/Vector4.h>
+#include <Graphics/Texture/TextureManager.h>
 #ifdef _DEBUG
 #include "imgui.h"
 #endif
@@ -641,4 +642,93 @@ class BloomParams : public IPostEffectParams {
   private:
     Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
     Data *data_ = nullptr;
+};
+
+// ============================================================
+//  Shockwave (領域消去・キー破壊などのインパクト演出用衝撃波)
+// ============================================================
+class ShockwaveParams : public IPostEffectParams {
+  public:
+    struct Data {
+        Vector2 center = {0.5f, 0.5f};
+        float time = 0.0f;
+        float duration = 0.55f;
+        float amplitude = 3.0f;   // フラッシュ加算強度
+        float frequency = 18.0f;  // 放射光線の本数
+        float waveSpeed = 1.6f;   // 光線の伸び速度（UV/秒）
+        float active = 0.0f;
+    };
+
+    void Initialize(DirectXCommon *dxCommon) override {
+        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &data_);
+        *data_ = Data{};
+        // フレアテクスチャ読み込み（既ロードなら内部でスキップ）
+        TextureManager::GetInstance()->LoadTexture(kFlareTexPath_);
+    }
+    ShaderMode GetMode() const override { return ShaderMode::kShockwave; }
+    void UpdateTime(float dt) override {
+        if (data_ && data_->active >= 0.5f) {
+            data_->time += dt;
+            if (data_->time > data_->duration) {
+                data_->active = 0.0f;
+                data_->time = 0.0f;
+            }
+        }
+    }
+    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override {
+        // 専用RootSig: [0]=srcRT(Renderer側で設定済), [1]=flareTex, [2]=cbuffer
+        // GetSrvHandleGPU は内部 prepend しないのでフルパスで渡す
+        const std::string fullPath = std::string("resources/images/") + kFlareTexPath_;
+        auto flareGpu = TextureManager::GetInstance()->GetSrvHandleGPU(fullPath);
+        cmd->SetGraphicsRootDescriptorTable(1, flareGpu);
+        cmd->SetGraphicsRootConstantBufferView(2, resource_->GetGPUVirtualAddress());
+    }
+    void DrawUI() override {
+#ifdef _DEBUG
+        ImGui::SliderFloat2("中心(UV)", &data_->center.x, 0.0f, 1.0f);
+        ImGui::SliderFloat("持続時間", &data_->duration, 0.1f, 2.0f);
+        ImGui::SliderFloat("フラッシュ強度", &data_->amplitude, 0.0f, 8.0f, "%.2f");
+        ImGui::SliderFloat("光線本数", &data_->frequency, 1.0f, 32.0f, "%.0f");
+        ImGui::SliderFloat("光線伸び速度", &data_->waveSpeed, 0.1f, 3.0f);
+        ImGui::Text("経過: %.2f / %.2f", data_->time, data_->duration);
+        if (ImGui::Button("発動テスト")) {
+            data_->time = 0.0f;
+            data_->active = 1.0f;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("停止")) {
+            data_->active = 0.0f;
+            data_->time = 0.0f;
+        }
+#endif
+    }
+    void Save(DataHandler *h, const std::string &p) const override {
+        h->Save<float>(p + "duration", data_->duration);
+        h->Save<float>(p + "amplitude", data_->amplitude);
+        h->Save<float>(p + "frequency", data_->frequency);
+        h->Save<float>(p + "waveSpeed", data_->waveSpeed);
+        h->Save<Vector2>(p + "center", data_->center);
+    }
+    void Load(DataHandler *h, const std::string &p) override {
+        data_->duration = h->Load<float>(p + "duration", 0.55f);
+        data_->amplitude = h->Load<float>(p + "amplitude", 3.0f);
+        data_->frequency = h->Load<float>(p + "frequency", 18.0f);
+        data_->waveSpeed = h->Load<float>(p + "waveSpeed", 1.6f);
+        data_->center = h->Load<Vector2>(p + "center", Vector2(0.5f, 0.5f));
+    }
+
+    void Trigger(const Vector2 &uvCenter) {
+        if (!data_) return;
+        data_->center = uvCenter;
+        data_->time = 0.0f;
+        data_->active = 1.0f;
+    }
+
+    Data *GetData() { return data_; }
+    const Data *GetData() const { return data_; }
+
+  private:
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
+    Data *data_ = nullptr;
+    static constexpr const char *kFlareTexPath_ = "Particle/tetrio/flare.png";
 };

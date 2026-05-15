@@ -1,4 +1,5 @@
 #include "BaseObjectManager.h"
+#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #ifdef _DEBUG
 #include "Debug/ImGui/ImGuizmoManager.h"
 #endif // _DEBUG
@@ -33,6 +34,7 @@ void BaseObjectManager::RemoveAllObjects() {
 void BaseObjectManager::RemoveObjectByName(const std::string &name) {
     auto it = baseObjects_.find(name);
     if (it != baseObjects_.end()) {
+        ImGuiNotification::Post("オブジェクトを削除しました: " + name, {0.9f, 0.7f, 0.2f, 1.0f});
         baseObjects_.erase(it);
     }
 }
@@ -44,6 +46,7 @@ void BaseObjectManager::AddObject(std::unique_ptr<BaseObject> baseObject) {
 #endif // _DEBUG
     MotionEditor::GetInstance()->Register(baseObject.get());
     baseObjects_.emplace(name, std::move(baseObject));
+    ImGuiNotification::Post("オブジェクトを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void BaseObjectManager::Update() {
@@ -76,6 +79,7 @@ void BaseObjectManager::SaveAll() {
             obj->SaveParentChildRelationship();
         }
     }
+    ImGuiNotification::Post("全オブジェクトを保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void BaseObjectManager::LoadAll(std::string sceneName) {
@@ -130,6 +134,7 @@ void BaseObjectManager::LoadAll(std::string sceneName) {
 
     // 全オブジェクト読み込み後に親子関係を復元
     LoadAllParentChildRelationships();
+    ImGuiNotification::Post("シーンを読み込みました: " + sceneName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 void BaseObjectManager::CreateObject(std::string objectName, std::string modelPath, std::string texturePath) {
@@ -140,6 +145,7 @@ void BaseObjectManager::CreateObject(std::string objectName, std::string modelPa
         newObject->SetTexture(texturePath, i);
     }
     this->AddObject(std::move(newObject));
+    ImGuiNotification::Post("オブジェクトを作成しました: " + objectName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 BaseObject *BaseObjectManager::GetObjectByName(const std::string &name) {

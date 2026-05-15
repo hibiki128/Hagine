@@ -2,6 +2,7 @@
 #ifdef _DEBUG
 #include "Collider/CollisionManager.h"
 #include "Engine/OffScreen/OffScreen.h"
+#include "ImGuiNotification.h"
 #include "ImGuizmo.h"
 #include "ImGuizmoManager.h"
 #include "Object/Base/BaseObject.h"
@@ -210,6 +211,7 @@ void ImGuiManager::Begin() {
 }
 
 void ImGuiManager::End() {
+    ImGuiNotification::Draw();
     // 描画前準備
     ImGui::Render();
 }
@@ -306,6 +308,8 @@ void ImGuiManager::ShowMainMenu() {
                     showColliderTagManagerView_ = !showColliderTagManagerView_;
                 if (ImGui::Selectable(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_, ImGuiSelectableFlags_DontClosePopups))
                     showAudioManagerView_ = !showAudioManagerView_;
+                if (ImGui::Selectable(ICON_FA_KEYBOARD " キー操作デバッグ", showKeyOperationDebugView_, ImGuiSelectableFlags_DontClosePopups))
+                    showKeyOperationDebugView_ = !showKeyOperationDebugView_;
                 ImGui::EndMenu();
             }
 
@@ -496,6 +500,7 @@ void ImGuiManager::ShowMainMenu() {
                 if (ImGui::MenuItem(ICON_FA_TRASH_ALT " オブジェクト全削除")) {
                     baseObjectManager_->RemoveAllObjects();
                     imGuizmoManager_->DeleteTarget();
+                    ImGuiNotification::Post("全オブジェクトを削除しました", {0.9f, 0.7f, 0.2f, 1.0f});
                 }
 
                 ImGui::EndMenu();
@@ -542,21 +547,27 @@ void ImGuiManager::ShowMainMenu() {
 
             if (ImGui::MenuItem(ICON_FA_HOME " タイトルシーン", "Ctrl+1")) { // home アイコン
                 SceneManager::GetInstance()->NextSceneReservation("TITLE");
+                ImGuiNotification::Post("タイトルシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
             }
             if (ImGui::MenuItem(ICON_FA_BARS " セレクトシーン", "Ctrl+2")) { // bars アイコン（メニュー選択感）
                 SceneManager::GetInstance()->NextSceneReservation("SELECT");
+                ImGuiNotification::Post("セレクトシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
             }
             if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームシーン", "Ctrl+3")) { // gamepad アイコン
                 SceneManager::GetInstance()->NextSceneReservation("GAME");
+                ImGuiNotification::Post("ゲームシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
             }
             if (ImGui::MenuItem(ICON_FA_TROPHY " クリアシーン", "Ctrl+4")) { // trophy アイコン
                 SceneManager::GetInstance()->NextSceneReservation("CLEAR");
+                ImGuiNotification::Post("クリアシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
             }
             if (ImGui::MenuItem(ICON_FA_FILM " デモシーン", "Ctrl+5")) { // film アイコン
                 SceneManager::GetInstance()->NextSceneReservation("DEMO");
+                ImGuiNotification::Post("デモシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
             }
             if (ImGui::MenuItem(ICON_FA_BOOK_OPEN " チュートリアルシーン", "Ctrl+6")) {
                 SceneManager::GetInstance()->NextSceneReservation("TUTORIAL");
+                ImGuiNotification::Post("チュートリアルシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
             }
 
             ImGui::EndMenu();
@@ -626,6 +637,25 @@ void ImGuiManager::ShowStatisticsWindow() {
     ParticleEditor::GetInstance()->SceneParticleCount();
 
     ParticleCSEditor::GetInstance()->ShowGPUParticleStatistics();
+
+    ImGui::Separator();
+    if (ImGui::CollapsingHeader("ログ履歴", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::Button("履歴をクリア")) {
+            ImGuiNotification::ClearHistory();
+        }
+        ImGui::BeginChild("LogScrollRegion", ImVec2(0, 200), true, ImGuiWindowFlags_HorizontalScrollbar);
+        const auto &history = ImGuiNotification::GetHistory();
+        for (const auto &n : history) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(n.color.x, n.color.y, n.color.z, n.color.w));
+            ImGui::TextUnformatted(n.message.c_str());
+            ImGui::PopStyleColor();
+        }
+        // 新しいログがあれば自動スクロール
+        if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+            ImGui::SetScrollHereY(1.0f);
+        }
+        ImGui::EndChild();
+    }
 
     ImGui::End();
 }
@@ -738,6 +768,21 @@ void ImGuiManager::ShowAudioManagerWindow() {
     ImGui::Begin("オーディオ", &showAudioManagerView_, flags);
 
     audio_->Debug();
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowKeyOperationDebugWindow() {
+    if (!showKeyOperationDebugView_)
+        return;
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+
+    ImGui::Begin("キー操作デバッグ", &showKeyOperationDebugView_, flags);
+
+    if (currentScene_) {
+        currentScene_->AddKeyOperationDebug();
+    }
 
     ImGui::End();
 }
@@ -879,6 +924,8 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowColliderTagManagerWindow();
     // オーディオマネージャウィンドウを描画
     ShowAudioManagerWindow();
+    // キー操作デバッグウィンドウを描画
+    ShowKeyOperationDebugWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();
@@ -1061,6 +1108,9 @@ void ImGuiManager::SwitchToEditorMode() {
         SaveCurrentLayout(); // 現在のゲームモードレイアウトを保存
         isEditorMode_ = true;
         LoadLayoutForCurrentMode(); // エディターモードのレイアウトをロード
+#ifdef _DEBUG
+        ImGuiNotification::Post("エディターモードに切り替えました", {0.4f, 0.8f, 1.0f, 1.0f});
+#endif // _DEBUG
     }
 }
 
@@ -1070,6 +1120,9 @@ void ImGuiManager::SwitchToGameMode() {
         SaveCurrentLayout(); // 現在のエディターモードレイアウトを保存
         isEditorMode_ = false;
         LoadLayoutForCurrentMode(); // ゲームモードのレイアウトをロード
+#ifdef _DEBUG
+        ImGuiNotification::Post("ゲームモードに切り替えました", {0.4f, 0.8f, 1.0f, 1.0f});
+#endif // _DEBUG
     }
 }
 
@@ -1088,6 +1141,7 @@ void ImGuiManager::SaveCurrentLayout() {
         fwrite(iniData, sizeof(char), size, f);
         fclose(f);
     }
+    ImGuiNotification::Post("レイアウトを保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
 #endif // USE_IMGUI
 }
 
@@ -1289,6 +1343,9 @@ void ImGuiManager::SaveFlag() {
     data->Save("showKeyOperationDebugView", showKeyOperationDebugView_);
     data->Save("isEditorMode", isEditorMode_);
     data->Save("gridColor", gridColor_);
+#ifdef _DEBUG
+    ImGuiNotification::Post("UI設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
+#endif // _DEBUG
 }
 
 void ImGuiManager::LoadFlag() {

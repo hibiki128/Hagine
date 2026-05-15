@@ -1081,6 +1081,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRenderRootSig
         return CreateBloomRootSignature();
     case ShaderMode::kRetro:
         return CreateRetroRootSignature();
+    case ShaderMode::kShockwave:
+        return CreateShockwaveRootSignature();
     default:
         return CreateBaseRootSignature();
     }
@@ -1121,6 +1123,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRenderGraphic
         return CreateBloomGraphicsPipeLine(rootSignature);
     case ShaderMode::kRetro:
         return CreateRetroGraphicsPipeLine(rootSignature);
+    case ShaderMode::kShockwave:
+        return CreateShockwaveGraphicsPipeLine(rootSignature);
     default:
         return CreateNoneGraphicsPipeLine(rootSignature);
     }
@@ -1833,6 +1837,57 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRetroRootSign
     return CreateCommonRootSignature(true);
 }
 
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShockwaveRootSignature() {
+    // 専用RootSig: t0(srcRT), t1(flareTex), b0(cbuffer)
+    D3D12_DESCRIPTOR_RANGE rangeSrc{};
+    rangeSrc.BaseShaderRegister = 0;
+    rangeSrc.NumDescriptors = 1;
+    rangeSrc.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    rangeSrc.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE rangeFlare{};
+    rangeFlare.BaseShaderRegister = 1;
+    rangeFlare.NumDescriptors = 1;
+    rangeFlare.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    rangeFlare.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER params[3]{};
+    params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[0].DescriptorTable.pDescriptorRanges = &rangeSrc;
+    params[0].DescriptorTable.NumDescriptorRanges = 1;
+
+    params[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[1].DescriptorTable.pDescriptorRanges = &rangeFlare;
+    params[1].DescriptorTable.NumDescriptorRanges = 1;
+
+    params[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    params[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[2].Descriptor.ShaderRegister = 0;
+
+    D3D12_ROOT_SIGNATURE_DESC desc{};
+    desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    desc.NumParameters = 3;
+    desc.pParameters = params;
+
+    auto sampler = CreateCommonSamplerDesc();
+    desc.NumStaticSamplers = 1;
+    desc.pStaticSamplers = &sampler;
+
+    Microsoft::WRL::ComPtr<ID3DBlob> sigBlob, errBlob;
+    HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errBlob);
+    if (FAILED(hr)) {
+        Logger::Log(reinterpret_cast<char *>(errBlob->GetBufferPointer()));
+        assert(false);
+    }
+
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSig;
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSig));
+    assert(SUCCEEDED(hr));
+    return rootSig;
+}
+
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/CopyImage.PS.hlsl", rootSignature);
@@ -1906,5 +1961,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBloomGraphics
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRetroGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Retro.PS.hlsl", rootSignature);
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShockwaveGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    SettingDepthStencilDesc(false);
+    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Shockwave.PS.hlsl", rootSignature);
 }
 

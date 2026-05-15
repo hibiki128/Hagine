@@ -3,6 +3,7 @@
 #include "Frame.h"
 #include "line/DrawLine3D.h"
 
+#include "../Utility/Debug/ImGui/ImGuiNotification.h"
 #include "../Utility/Debug/ImGui/ImGuizmoManager.h"
 #include "ParticleGroupManager.h"
 #include <Particle/ParticleEditor.h>
@@ -27,6 +28,7 @@ void ParticleEmitter::Initialize(std::string name) {
     lastTranslation_ = transform_.translation_;
     lastRotation_ = transform_.quateRotation_;
     lastScale_ = transform_.scale_;
+    ImGuiNotification::Post("パーティクルエミッターを初期化しました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
 #ifdef _DEBUG
     // WorldTransformのアドレスを渡す
     ImGuizmoManager::GetInstance()->AddTarget(name_, &transform_, isGizmoSelectable_);
@@ -190,6 +192,7 @@ void ParticleEmitter::SaveToJson() {
         datas_->Save(groupName + "_blendMode", setting.blendMode);
         Manager_->SetParticleSetting(groupName, setting);
     }
+    ImGuiNotification::Post("パーティクルデータを保存しました: " + name_, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void ParticleEmitter::LoadFromJson() {
@@ -265,6 +268,9 @@ void ParticleEmitter::LoadFromJson() {
 void ParticleEmitter::LoadParticleGroup() {
     for (auto &particleGroupname : particleGroupNames_) {
         AddParticleGroup(ParticleGroupManager::GetInstance()->GetParticleGroup(particleGroupname));
+    }
+    if (!particleGroupNames_.empty()) {
+        ImGuiNotification::Post("パーティクルグループを読み込みました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
     }
 }
 
@@ -1040,8 +1046,9 @@ void ParticleEmitter::DebugParticleData() {
 
         if (ImGui::Button("設定を保存", ImVec2(120, 35))) {
             SaveToJson();
+            datas_->Flush();
             std::string message = std::format("ParticleData saved.");
-            MessageBoxA(nullptr, message.c_str(), "Particle", 0);
+            ImGuiNotification::Post(message);
         }
         ImGui::PopStyleColor(3);
 

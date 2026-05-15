@@ -31,23 +31,27 @@ class DataHandler {
         }
     }
 
-    // キャッシュ内容をファイルに書き出す
-    void FlushToFile() {
-        if (!isDirty)
-            return;
-        std::string filePath = folderPath + "/" + fileName;
-        std::ofstream outFile(filePath);
-        outFile << cachedJson.dump(4);
-        outFile.close();
-        isDirty = false;
-    }
 
   public:
+    // キャッシュ内容をファイルに書き出す
+    bool Flush() {
+        if (!isDirty)
+            return true;
+        std::string filePath = folderPath + "/" + fileName;
+        std::ofstream outFile(filePath);
+        if (outFile.is_open()) {
+            outFile << cachedJson.dump(4);
+            outFile.close();
+            isDirty = false;
+            return true;
+        }
+        return false;
+    }
     // コンストラクタ
     DataHandler(const std::string &folder, const std::string &file);
 
     // デストラクタで未書き出しの変更をファイルに反映
-    ~DataHandler() { FlushToFile(); }
+    ~DataHandler() { Flush(); }
 
     // キャッシュに書き込み、ダーティフラグを立てる
     template <typename T>

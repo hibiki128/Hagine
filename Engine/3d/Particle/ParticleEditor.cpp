@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "ParticleEditor.h"
 #include "Debug/ImGui/ImGuiManager.h"
+#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #ifdef _DEBUG
 #include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG
@@ -38,6 +39,7 @@ void ParticleEditor::AddParticleEmitter(const std::string &name, const std::stri
     emitter->Initialize(name);
     // マップに追加
     emitters_[name] = std::move(emitter);
+    ImGuiNotification::Post("パーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void ParticleEditor::Load() {
@@ -51,6 +53,7 @@ void ParticleEditor::AddParticleEmitter(const std::string &name) {
     emitter->Initialize(name);
     // マップに追加
     emitters_[name] = std::move(emitter);
+    ImGuiNotification::Post("パーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void ParticleEditor::AddParticleGroup(const std::string &name, const std::string &fileName, const std::string &texturePath) {
@@ -63,6 +66,7 @@ void ParticleEditor::AddParticleGroup(const std::string &name, const std::string
 
     // マップに追加
     particleGroupManager_->AddParticleGroup(std::move(group));
+    ImGuiNotification::Post("パーティクルグループを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void ParticleEditor::AddPrimitiveParticleGroup(const std::string &name, const std::string &texturePath, PrimitiveType type) {
@@ -75,6 +79,7 @@ void ParticleEditor::AddPrimitiveParticleGroup(const std::string &name, const st
 
     // マップに追加
     particleGroupManager_->AddParticleGroup(std::move(group));
+    ImGuiNotification::Post("プリミティブパーティクルグループを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void ParticleEditor::SetExternalParticleCount(const std::string &baseName, size_t count) {

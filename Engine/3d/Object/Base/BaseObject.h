@@ -162,6 +162,7 @@ class BaseObject {
             return; // ファイルパスが空なら何もしない
         }
         obj3d_->SetTexture(filePath, index);
+        texturePaths_[index] = filePath;
     }
     void SetModel(std::unique_ptr<Object3d> obj) {
         obj3d_ = std::move(obj);

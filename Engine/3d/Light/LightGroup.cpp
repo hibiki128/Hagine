@@ -1,5 +1,6 @@
 #include "LightGroup.h"
 #include "DirectXCommon.h"
+#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <Line/DrawLine3D.h>
 #include <filesystem>
 #include <fstream>
@@ -67,11 +68,13 @@ void LightGroup::AddPointLight() {
     newLight.BlinnPhong = true;
 
     pointLights_.push_back(newLight);
+    ImGuiNotification::Post("ポイントライトを追加しました", {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void LightGroup::RemovePointLight(int index) {
     if (index >= 0 && index < static_cast<int>(pointLights_.size())) {
         pointLights_.erase(pointLights_.begin() + index);
+        ImGuiNotification::Post("ポイントライトを削除しました", {0.9f, 0.7f, 0.2f, 1.0f});
     }
 }
 
@@ -93,11 +96,13 @@ void LightGroup::AddSpotLight() {
     newLight.BlinnPhong = true;
 
     spotLights_.push_back(newLight);
+    ImGuiNotification::Post("スポットライトを追加しました", {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void LightGroup::RemoveSpotLight(int index) {
     if (index >= 0 && index < static_cast<int>(spotLights_.size())) {
         spotLights_.erase(spotLights_.begin() + index);
+        ImGuiNotification::Post("スポットライトを削除しました", {0.9f, 0.7f, 0.2f, 1.0f});
     }
 }
 
@@ -176,7 +181,6 @@ void LightGroup::CreateCamera() {
     cameraForGPUResource->Map(0, nullptr, reinterpret_cast<void **>(&cameraForGPUData));
     cameraForGPUData->worldPosition = {0.0f, 0.0f, -50.0f};
 }
-
 
 void LightGroup::imgui() {
 #ifdef USE_IMGUI
@@ -275,7 +279,6 @@ void LightGroup::imgui() {
                 ImGui::EndChild();
 
                 ImGui::Spacing();
-
             }
             ImGui::EndTabItem();
         }
@@ -519,8 +522,8 @@ void LightGroup::imgui() {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f));
     if (ImGui::Button("セーブ", ImVec2(80, 25))) {
         SaveLightData(std::string(saveFileName));
-        saveMessage_ = std::format("「{}」にセーブしました！", saveFileName);
-        saveMessageTimer_ = 180; // 3秒間表示（60FPSの場合）
+        std::string msg = std::format("LightData saved to: 「{}」", saveFileName);
+        ImGuiNotification::Post(msg);
     }
     ImGui::PopStyleColor();
 
@@ -530,19 +533,10 @@ void LightGroup::imgui() {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.8f, 0.2f, 1.0f));
     if (ImGui::Button("ロード", ImVec2(80, 25))) {
         LoadLightData(std::string(saveFileName));
-        saveMessage_ = std::format("「{}」からロードしました！", saveFileName);
-        saveMessageTimer_ = 180;
+        std::string msg = std::format("LightData loaded from: 「{}」", saveFileName);
+        ImGuiNotification::Post(msg, {0.2f, 0.2f, 0.8f, 1.0f});
     }
     ImGui::PopStyleColor();
-
-    // セーブ・ロードメッセージ表示
-    if (saveMessageTimer_ > 0) {
-        ImGui::Spacing();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
-        ImGui::Text("%s", saveMessage_.c_str());
-        ImGui::PopStyleColor();
-        saveMessageTimer_--;
-    }
 
     // スタイルを元に戻す
     style.ChildRounding = originalRounding;
@@ -590,6 +584,8 @@ void LightGroup::SaveLightData(const std::string &fileName) {
         dataHandler->Save<float>(prefix + "cosAngle", spotLights_[i].cosAngle);
         dataHandler->Save<float>(prefix + "decay", spotLights_[i].decay);
     }
+    dataHandler->Flush();
+    ImGuiNotification::Post("ライトデータを保存しました: " + fileName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void LightGroup::LoadLightData(const std::string &fileName) {
@@ -638,6 +634,7 @@ void LightGroup::LoadLightData(const std::string &fileName) {
         light.decay = dataHandler->Load<float>(prefix + "decay", 1.0f);
         spotLights_.push_back(light);
     }
+    ImGuiNotification::Post("ライトデータを読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 void LightGroup::DrawLightVisualization() {

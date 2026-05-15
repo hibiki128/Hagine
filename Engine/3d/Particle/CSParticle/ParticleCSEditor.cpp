@@ -1,8 +1,9 @@
 #define NOMINMAX
 #include "ParticleCSEditor.h"
+#include "../Utility/Debug/ImGui/ImGuizmoManager.h"
 #include <Camera/ViewProjection/ViewProjection.h>
+#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
-#include"../Utility/Debug/ImGui/ImGuizmoManager.h"
 
 void ParticleCSEditor::Finalize() {
     emitters_.clear();
@@ -32,6 +33,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name) {
     auto emitter = std::make_unique<ParticleCSEmitter>();
     emitter->Initialize(name);
     emitters_[name] = std::move(emitter);
+    ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void ParticleCSEditor::AddParticleEmitter(const std::string &name, const std::string &modelPath) {
@@ -39,6 +41,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, const std::st
     auto emitter = std::make_unique<ParticleCSEmitter>();
     emitter->Initialize(name, modelPath);
     emitters_[name] = std::move(emitter);
+    ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void ParticleCSEditor::AddParticleEmitter(const std::string &name, PrimitiveType primitiveType) {
@@ -46,6 +49,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, PrimitiveType
     auto emitter = std::make_unique<ParticleCSEmitter>();
     emitter->Initialize(name, primitiveType);
     emitters_[name] = std::move(emitter);
+    ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void ParticleCSEditor::DrawAll(const ViewProjection &vp_) {
@@ -64,6 +68,7 @@ void ParticleCSEditor::RemoveParticleEmitter(const std::string &name) {
     if (it == emitters_.end()) {
         return;
     }
+    ImGuiNotification::Post("GPUパーティクルエミッターを削除しました: " + name, {0.9f, 0.7f, 0.2f, 1.0f});
     emitters_.erase(it);
 
     // 削除したエミッターが選択中だった場合はリセット
@@ -102,7 +107,6 @@ void ParticleCSEditor::ShowDeleteSection() {
             if (!toDelete.empty()) {
                 RemoveParticleEmitter(toDelete);
                 ImGuizmoManager::GetInstance()->RemoveTarget(toDelete);
-                
             }
         }
     }
@@ -148,6 +152,7 @@ void ParticleCSEditor::ShowDeleteSection() {
 }
 
 void ParticleCSEditor::AddParticleGroup(const std::string &name, const std::string &fileName, uint32_t maxParticleCount, const std::string &texturePath) {
+    ImGuiNotification::Post("パーティクルグループを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
     // 新しい ParticleGroup を作成
     auto group = std::make_unique<ParticleCSGroup>();
     // パーティクルグループを作成
@@ -158,6 +163,7 @@ void ParticleCSEditor::AddParticleGroup(const std::string &name, const std::stri
 }
 
 void ParticleCSEditor::AddPrimitiveParticleGroup(const std::string &name, PrimitiveType type, uint32_t maxParticleCount, const std::string &texturePath) {
+    ImGuiNotification::Post("プリミティブパーティクルグループを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
     // 新しい ParticleGroup を作成
     auto group = std::make_unique<ParticleCSGroup>();
     // プリミティブパーティクルグループを作成

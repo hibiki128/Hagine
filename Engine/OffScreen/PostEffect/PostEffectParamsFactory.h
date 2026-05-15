@@ -26,6 +26,7 @@ class PostEffectParamsFactory {
         case ShaderMode::kPixelate:     params = std::make_unique<PixelateParams>();     break;
         case ShaderMode::kBloom:        params = std::make_unique<BloomParams>();        break;
         case ShaderMode::kRetro:        params = std::make_unique<RetroParams>();        break;
+        case ShaderMode::kShockwave:    params = std::make_unique<ShockwaveParams>();    break;
         default:
             assert(false && "未対応のShaderModeです。PostEffectParamsFactory::Createにcaseを追加してください。");
             params = std::make_unique<NoneParams>();
