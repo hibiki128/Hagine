@@ -136,7 +136,9 @@ void BaseObjectManager::CreateObject(std::string objectName, std::string modelPa
     std::unique_ptr<BaseObject> newObject = std::make_unique<BaseObject>();
     newObject->Init(objectName);
     newObject->CreateModel(modelPath);
-    newObject->SetTexture(texturePath, 0);
+    for (int i = 0; i < newObject->GetObject3d()->GetMaterialCount(); i++) {
+        newObject->SetTexture(texturePath, i);
+    }
     this->AddObject(std::move(newObject));
 }
 

@@ -16,7 +16,7 @@ void Model::CreateModel(const std::string &directorypath, const std::string &fil
     // 引数で受け取ってメンバ変数に記録する
     directorypath_ = directorypath;
     filename_ = filename;
-
+   
     // モデル読み込み
     modelData_ = LoadModelFile(directorypath_, filename_);
 
