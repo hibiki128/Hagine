@@ -16,7 +16,7 @@ void TutorialScene::Initialize() {
     skyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
     enemyUI_ = std::make_unique<EnemyUI>();
-    fadeOut_ = std::make_unique<FadeOut>();
+    //fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
     aroundField_ = std::make_unique<AroundField>();
     tutorialSystem_ = std::make_unique<TutorialSystem>();
@@ -32,7 +32,7 @@ void TutorialScene::Initialize() {
     aroundField_->Init("Around_Field");
     followCamera_->Init();
     skyBox_->Initialize("game/skybox.dds");
-    fadeOut_->Initialize();
+   // fadeOut_->Initialize();
     gameUI_->Initialize();
 
     /// ===================================================
@@ -82,7 +82,7 @@ void TutorialScene::Finalize() {
     tutorialUI_->Finalize();
     tutorialSystem_->Finalize();
 
-    fadeOut_->Finalize();
+  //  fadeOut_->Finalize();
     aroundField_->Finalize();
     if (player_ptr->GetIsAlive()) {
         sceneManager_->SetHP(player_ptr->GetHP());
@@ -102,7 +102,7 @@ void TutorialScene::Update() {
     aroundField_->Update();
     playerUI_->Update();
     enemyUI_->Update();
-    fadeOut_->Update();
+    //fadeOut_->Update();
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
     player_ptr->SetStart(true);
 
@@ -140,11 +140,9 @@ void TutorialScene::Draw() {
     enemy_ptr->DrawParticle(vp_);
     aroundField_->DrawParticle(vp_);
 
-    fadeOut_->Draw(vp_);
+    //fadeOut_->Draw(vp_);
     gameUI_->Draw();
 
-    // チュートリアル UI 描画
-    // SpriteManager::DrawAll の前に呼ぶことでスプライト描画に含まれる
     tutorialUI_->Draw();
 
     followCamera_->DrawFrustum();

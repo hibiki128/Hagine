@@ -1,0 +1,51 @@
+{
+    "anchor": {
+        "x": 0.5,
+        "y": 0.5
+    },
+    "blendMode": 1,
+    "color": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "lockAspectRatio": 0,
+    "name": "Tutorial_step3_second",
+    "position": {
+        "x": 1225.0,
+        "y": 195.0
+    },
+    "rotation": 0.0,
+    "size": {
+        "x": 494.0,
+        "y": 130.18353271484375
+    },
+    "texturePath": "Text/Tutorial_step3_second.png",
+    "uvTransform": [
+        [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ]
+    ]
+}

@@ -28,13 +28,6 @@ void BaseScene::AddObjectSetting() {
 void BaseScene::AddParticleSetting() {
 }
 
-void BaseScene::AddKeyOperationDebug() {
-#ifdef _DEBUG
-    ImGui::TextDisabled("このシーンにはキー操作デバッグが登録されていません。");
-    ImGui::TextDisabled("GameScene に切り替えると W/A/S/D/R の入力状態と耐久値を確認できます。");
-#endif // _DEBUG
-}
-
 void BaseScene::DrawForOffScreen() {
 }
 

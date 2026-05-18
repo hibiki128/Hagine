@@ -1,0 +1,51 @@
+{
+    "anchor": {
+        "x": 0.5,
+        "y": 0.5
+    },
+    "blendMode": 1,
+    "color": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "lockAspectRatio": 0,
+    "name": "LStick_step1",
+    "position": {
+        "x": 680.0,
+        "y": 205.0
+    },
+    "rotation": 0.0,
+    "size": {
+        "x": 256.0,
+        "y": 256.0
+    },
+    "texturePath": "Tutorial/Lstick.png",
+    "uvTransform": [
+        [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ]
+    ]
+}

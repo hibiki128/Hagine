@@ -1,0 +1,51 @@
+{
+    "anchor": {
+        "x": 0.5,
+        "y": 0.5
+    },
+    "blendMode": 1,
+    "color": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "lockAspectRatio": 1,
+    "name": "LTtrigger_step13",
+    "position": {
+        "x": 760.0,
+        "y": 195.0
+    },
+    "rotation": 0.0,
+    "size": {
+        "x": 200.0,
+        "y": 200.0
+    },
+    "texturePath": "Tutorial/LTtrigger.png",
+    "uvTransform": [
+        [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ]
+    ]
+}

@@ -154,8 +154,6 @@ class ImGuiManager {
 
     void ShowAudioManagerWindow();
 
-    void ShowKeyOperationDebugWindow();
-
     void FixAspectRatio();
 
     void BackupDockLayout();
@@ -220,7 +218,6 @@ class ImGuiManager {
     bool showSpriteManagerView_ = true;
     bool showColliderTagManagerView_ = false;
     bool showAudioManagerView_ = false;
-    bool showKeyOperationDebugView_ = true;
 
     // グリッド設定用メンバ変数
     bool showGrid_ = true;

@@ -65,11 +65,6 @@ class BaseScene {
     virtual void AddParticleSetting();
 
     /// <summary>
-    /// キー操作デバッグに追加
-    /// </summary>
-    virtual void AddKeyOperationDebug();
-
-    /// <summary>
     /// 描画
     /// </summary>
     virtual void DrawForOffScreen();

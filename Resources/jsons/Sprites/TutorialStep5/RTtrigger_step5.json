@@ -1,0 +1,51 @@
+{
+    "anchor": {
+        "x": 0.5,
+        "y": 0.5
+    },
+    "blendMode": 1,
+    "color": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "lockAspectRatio": 0,
+    "name": "RTtrigger_step5",
+    "position": {
+        "x": 680.0,
+        "y": 205.0
+    },
+    "rotation": 0.0,
+    "size": {
+        "x": 225.0,
+        "y": 225.0
+    },
+    "texturePath": "Tutorial/RTtrigger.png",
+    "uvTransform": [
+        [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ]
+    ]
+}

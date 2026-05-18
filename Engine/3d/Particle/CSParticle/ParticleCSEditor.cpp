@@ -637,9 +637,9 @@ void ParticleCSEditor::ShowImGuiEditor() {
             ShowDeleteSection();
             ImGui::EndTabItem();
         }
-
         ImGui::EndTabBar();
     }
+
 #endif // USE_IMGUI
 }
 

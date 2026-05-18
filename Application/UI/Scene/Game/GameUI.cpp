@@ -5,6 +5,7 @@ void GameUI::Initialize() {
     gamePad_ = std::make_unique<GamePad>();
     gamePad_->Init(0);
     SpriteManager::GetInstance()->SetSaveFolder("GameScene");
+    SpriteManager::GetInstance()->LoadAllSprites();
     sprites_[MenuButton] = SpriteManager::GetInstance()->GetSprite("menuButton");
     sprites_[Controller] = SpriteManager::GetInstance()->GetSprite("controllerIcon");
     sprites_[BlackMask] = SpriteManager::GetInstance()->GetSprite("BlackMask");

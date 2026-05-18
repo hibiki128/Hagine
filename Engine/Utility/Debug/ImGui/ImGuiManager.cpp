@@ -1,6 +1,7 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
 #include "Collider/CollisionManager.h"
+#include "Engine/2d/Text/TextRenderer.h"
 #include "Engine/OffScreen/OffScreen.h"
 #include "ImGuiNotification.h"
 #include "ImGuizmo.h"
@@ -308,8 +309,6 @@ void ImGuiManager::ShowMainMenu() {
                     showColliderTagManagerView_ = !showColliderTagManagerView_;
                 if (ImGui::Selectable(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_, ImGuiSelectableFlags_DontClosePopups))
                     showAudioManagerView_ = !showAudioManagerView_;
-                if (ImGui::Selectable(ICON_FA_KEYBOARD " キー操作デバッグ", showKeyOperationDebugView_, ImGuiSelectableFlags_DontClosePopups))
-                    showKeyOperationDebugView_ = !showKeyOperationDebugView_;
                 ImGui::EndMenu();
             }
 
@@ -583,7 +582,7 @@ void ImGuiManager::ShowSceneSettingWindow() {
 
     // パフォーマンス改善: 軽量化フラグを追加
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
+    
 
     ImGui::Begin("シーン設定", &showSceneView_, flags);
 
@@ -597,7 +596,7 @@ void ImGuiManager::ShowObjectSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
+    
 
     ImGui::Begin("オブジェクト設定", &showObjectView_, flags);
 
@@ -612,7 +611,7 @@ void ImGuiManager::ShowParticleSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
+    
 
     ImGui::Begin("パーティクル設定", &showParticleView_, flags);
 
@@ -628,7 +627,7 @@ void ImGuiManager::ShowStatisticsWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
+    
 
     ImGui::Begin("統計", &showFPSView_, flags);
 
@@ -665,7 +664,6 @@ void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *offscreen) {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
 
     ImGui::Begin("オフスクリーン設定", &showOfScreenView_, flags);
 
@@ -679,7 +677,6 @@ void ImGuiManager::ShowLightSettingWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
 
     ImGui::Begin("ライト設定", &showLightView_, flags);
 
@@ -693,7 +690,6 @@ void ImGuiManager::ShowGizmoWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
 
     ImGui::Begin("トランスフォームマネージャ", &showGizmoView_, flags);
 
@@ -707,7 +703,6 @@ void ImGuiManager::ShowHierarchyWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
 
     ImGui::Begin("オブジェクトマネージャ", &showHierarchyView_, flags);
 
@@ -721,7 +716,6 @@ void ImGuiManager::ShowMotionEditorWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
 
     ImGui::Begin("モーションエディター", &showMotionEditorView_, flags);
 
@@ -735,13 +729,14 @@ void ImGuiManager::ShowSpriteManagerWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
 
     ImGui::Begin("スプライトマネージャ", &showSpriteManagerView_, flags);
 
     spriteManager_->DrawSpriteManager();
 
     ImGui::End();
+
+    TextRenderer::GetInstance()->UpdateImGui();
 }
 
 void ImGuiManager::ShowColliderTagManagerWindow() {
@@ -749,7 +744,6 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
 
     ImGui::Begin("タグマネージャー", &showColliderTagManagerView_, flags);
 
@@ -763,26 +757,10 @@ void ImGuiManager::ShowAudioManagerWindow() {
         return;
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    ;
 
     ImGui::Begin("オーディオ", &showAudioManagerView_, flags);
 
     audio_->Debug();
-
-    ImGui::End();
-}
-
-void ImGuiManager::ShowKeyOperationDebugWindow() {
-    if (!showKeyOperationDebugView_)
-        return;
-
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-
-    ImGui::Begin("キー操作デバッグ", &showKeyOperationDebugView_, flags);
-
-    if (currentScene_) {
-        currentScene_->AddKeyOperationDebug();
-    }
 
     ImGui::End();
 }
@@ -924,8 +902,6 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowColliderTagManagerWindow();
     // オーディオマネージャウィンドウを描画
     ShowAudioManagerWindow();
-    // キー操作デバッグウィンドウを描画
-    ShowKeyOperationDebugWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();
@@ -1340,7 +1316,6 @@ void ImGuiManager::SaveFlag() {
     data->Save("showMotionEditorView", showMotionEditorView_);
     data->Save("showShortcutWindow", showShortcutWindow);
     data->Save("showSpriteManagerView", showSpriteManagerView_);
-    data->Save("showKeyOperationDebugView", showKeyOperationDebugView_);
     data->Save("isEditorMode", isEditorMode_);
     data->Save("gridColor", gridColor_);
 #ifdef _DEBUG
@@ -1363,7 +1338,6 @@ void ImGuiManager::LoadFlag() {
     showMotionEditorView_ = data->Load("showMotionEditorView", false);
     showShortcutWindow = data->Load("showShortcutWindow", false);
     showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
-    showKeyOperationDebugView_ = data->Load("showKeyOperationDebugView", true);
     isEditorMode_ = data->Load("isEditorMode", true);
     gridColor_ = data->Load("gridColor", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 }

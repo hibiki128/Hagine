@@ -487,6 +487,7 @@
     <ClCompile Include="Application\GameObject\Player\State\Action\PlayerStateGuard.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Base\PlayerBaseState.cpp" />
     <ClCompile Include="Engine\2d\Text\TextRenderer.cpp" />
+    <ClCompile Include="Engine\Utility\Debug\ImGui\ImGuiNotification.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -916,6 +917,7 @@
     <ClInclude Include="Application\GameObject\Player\State\Action\PlayerStateGuard.h" />
     <ClInclude Include="Externals\std_truetype\stb_truetype.h" />
     <ClInclude Include="Engine\2d\Text\TextRenderer.h" />
+    <ClInclude Include="Engine\Utility\Debug\ImGui\ImGuiNotification.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

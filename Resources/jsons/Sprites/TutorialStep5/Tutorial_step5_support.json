@@ -1,0 +1,51 @@
+{
+    "anchor": {
+        "x": 0.0,
+        "y": 0.0
+    },
+    "blendMode": 1,
+    "color": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "lockAspectRatio": 1,
+    "name": "Tutorial_step5_support",
+    "position": {
+        "x": 576.0,
+        "y": 310.0
+    },
+    "rotation": 0.0,
+    "size": {
+        "x": 700.0,
+        "y": 48.912330627441406
+    },
+    "texturePath": "Text/Tutorial_step5_support.png",
+    "uvTransform": [
+        [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ]
+    ]
+}

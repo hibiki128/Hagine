@@ -1,0 +1,51 @@
+{
+    "anchor": {
+        "x": 0.5,
+        "y": 0.5
+    },
+    "blendMode": 1,
+    "color": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "lockAspectRatio": 1,
+    "name": "Abutton_step8",
+    "position": {
+        "x": 875.0,
+        "y": 195.0
+    },
+    "rotation": 0.0,
+    "size": {
+        "x": 178.0,
+        "y": 178.0
+    },
+    "texturePath": "Tutorial/Abutton.png",
+    "uvTransform": [
+        [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ]
+    ]
+}

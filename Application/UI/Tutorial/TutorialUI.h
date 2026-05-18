@@ -1,16 +1,13 @@
 #pragma once
 
 class TutorialSystem;
+enum class TutorialStep : int;
 
 // ============================================================
 //  TutorialUI
 //  チュートリアルの操作ガイド・進行度バーなどの
 //  UI 表示を専門に管理するクラス。
-//
-//  【スプライト系APIについて】
-//  Sprite / SpriteManager の API が確定次第、
-//  下記の「TODO: Sprite 差し替え」コメント部分を実装してください。
-//  現状は構造とロジックのみを提供します。
+//  スプライトの読み込み・切り替えは SpriteManager を通じて行う。
 // ============================================================
 class TutorialUI {
   public:
@@ -41,6 +38,18 @@ class TutorialUI {
     void UpdateSubMessage();
 
     // ─────────────────────────────────────────
+    //  スプライト管理
+    // ─────────────────────────────────────────
+
+    /// ステップに対応するフォルダ名を返す
+    /// Complete ステップは "TutorialFinish"、それ以外は "TutorialStep1" 〜 "TutorialStep14"
+    /// StepCount など無効なステップの場合は nullptr を返す
+    const char *GetFolderNameForStep(TutorialStep step) const;
+
+    /// 指定ステップのスプライトを SpriteManager 経由でロードする
+    void LoadStepSprites(TutorialStep step);
+
+    // ─────────────────────────────────────────
     //  参照
     // ─────────────────────────────────────────
 
@@ -55,28 +64,4 @@ class TutorialUI {
 
     bool subMessageVisible_ = false; ///< 補足メッセージ表示中か
     float subMessageTimer_ = 0.0f;   ///< 補足メッセージの表示継続タイマー
-
-    // ─────────────────────────────────────────
-    //  TODO: Sprite 差し替え（Sprite API 確定後に実装）
-    // ─────────────────────────────────────────
-    //
-    //  以下のメンバを Sprite* または std::unique_ptr<Sprite> で宣言し、
-    //  Initialize() で生成・位置設定、Draw() で描画してください。
-    //
-    //  ■ 操作指示ウィンドウ
-    //    Sprite* instructionBgSprite_    ── 指示テキストの背景パネル
-    //    Sprite* buttonIconSprite_       ── キー/ボタンのアイコン画像
-    //                                       ステップ切替時に差し替える
-    //
-    //  ■ 進行度バー
-    //    Sprite* progressBarBgSprite_    ── バー背景（固定）
-    //    Sprite* progressBarFillSprite_  ── バー塗り部分（幅を displayedProgress_ で制御）
-    //                                       例: fillSprite->SetSize({maxWidth * progress_, barHeight});
-    //
-    //  ■ 補足メッセージ
-    //    Sprite* subMessageSprite_       ── 着地補正時の「空中に戻ろう」テキスト
-    //
-    //  ■ ステップ完了エフェクト（任意）
-    //    Sprite* stepClearEffectSprite_  ── ステップ達成時のフラッシュ演出
-    //    float   stepClearEffectTimer_   ── エフェクト継続タイマー
 };
