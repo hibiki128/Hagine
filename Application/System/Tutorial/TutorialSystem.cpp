@@ -19,9 +19,9 @@ const TutorialStepConfig TutorialSystem::kConfigs[static_cast<int>(TutorialStep:
     {"[SPACE保持 / RBボタン保持] で上昇しよう", nullptr, 2.0f, 0, false},                                 // Ascend
     {"[LSHIFT保持 / RT] で下降しよう", "着地してしまったら、もう一度空中状態になろう！", 2.0f, 0, false}, // Descend
     {"[WASD / 左スティック] で空中を移動しよう", nullptr, 3.0f, 0, false},                                // AirMove
-    {nullptr /* DashSubPhase に応じて GetInstructionText() で切替 */, nullptr, 0.0f, 1, false},           // Dash
+    {"[C / LT] を長押ししながら [WASD / スティック] でダッシュ！", nullptr, 0.0f, 1, false},              // Dash
     {"ダッシュ中に [Ctrl×2 / Aボタン] でダミーへ急接近！", nullptr, 0.0f, 1, true},                       // Rush
-    {"[LSHIFT×2 / LT長押し] で空中状態を解除して着地しよう", nullptr, 0.0f, 1, false},                    // Landing
+    {"[LSHIFT×2 / RT] で空中状態を解除して着地しよう", nullptr, 0.0f, 1, false},                          // Landing
     {"[H / Xボタン] でダミーを近接攻撃！（3回）", nullptr, 0.0f, 3, true},                                // MeleeAttack
     {"[J / Yボタン] で通常射撃！（3回）", nullptr, 0.0f, 3, true},                                        // RangedAttack
     {"[J長押し → 離す / Y長押し → 離す] でチャージ攻撃！", nullptr, 0.0f, 1, true},                       // ChargeAttack
@@ -64,17 +64,8 @@ void TutorialSystem::Finalize() {
 
 // ============================================================
 //  GetInstructionText
-//  ダッシュのサブフェーズだけ動的に切り替える
 // ============================================================
 const char *TutorialSystem::GetInstructionText() const {
-    if (currentStep_ == TutorialStep::Dash) {
-        switch (dashSubPhase_) {
-        case DashSubPhase::WaitForCharge:
-            return "[C / LT] を長押しして「チャージ状態」になろう";
-        case DashSubPhase::WaitForDash:
-            return "チャージ中に [WASD / スティック] でダッシュ！";
-        }
-    }
     return kConfigs[static_cast<int>(currentStep_)].instructionText;
 }
 
@@ -119,7 +110,6 @@ void TutorialSystem::ResetStepState() {
     count_ = 0;
     progress_ = 0.0f;
     showReturnToAirMessage_ = false;
-    dashSubPhase_ = DashSubPhase::WaitForCharge;
     chargeHoldTimer_ = 0.0f;
     chargeInputActive_ = false;
 }
@@ -262,31 +252,8 @@ bool TutorialSystem::CheckAirMove() {
 }
 
 bool TutorialSystem::CheckDash() {
-    // ── 2 段階サブフェーズ ──
-    // ダッシュはチャージ状態の派生アクションのため、
-    // チャージ → ダッシュ の流れをステップ内で順に教える
-    const std::string &state = player_->GetCurrentStateName();
-
-    switch (dashSubPhase_) {
-    case DashSubPhase::WaitForCharge:
-        // EnergyCharge ステートに入ったらフェーズ 2 へ
-        if (state == "EnergyCharge") {
-            dashSubPhase_ = DashSubPhase::WaitForDash;
-        }
-        return false; // まだカウントしない
-
-    case DashSubPhase::WaitForDash:
-        // ダッシュが開始したフレームを検出してカウント
-        if (player_->GetDashStartedThisFrame()) {
-            return true;
-        }
-        // チャージが解除されたらフェーズ 1 に戻す
-        if (state != "EnergyCharge") {
-            dashSubPhase_ = DashSubPhase::WaitForCharge;
-        }
-        return false;
-    }
-    return false;
+    // ダッシュが開始したフレームを検出してカウント
+    return player_->GetDashStartedThisFrame();
 }
 
 bool TutorialSystem::CheckRush() {
@@ -297,7 +264,7 @@ bool TutorialSystem::CheckRush() {
 
 bool TutorialSystem::CheckLanding() {
     // 空中状態解除の遷移フロー: FlyState → "Air" → 着地（Idle/Move）
-    // LSHIFT×2 / LT長押し で FlyMove が "Air" ステートへ切り替わり、
+    // LSHIFT×2 / RT で FlyMove が "Air" ステートへ切り替わり、
     // その後 Air ステートが着地を検出して Idle/Move に遷移する。
     // 「前フレームが Air かつ、今フレームで着地した瞬間」を正解条件とする。
     bool wasInAir = (prevStateName_ == "Air");
@@ -360,10 +327,7 @@ bool TutorialSystem::CheckEnergyCharge() {
 }
 
 bool TutorialSystem::CheckSpecialAttack() {
-    // EnergyCharge ステートにいる（LT長押し中）、エネルギー 65 以上、必殺技入力
-    bool isCharging = (player_->GetCurrentStateName() == "EnergyCharge");
-    bool hasEnergy = (player_->GetEnergy() >= 65.0f);
-    return isCharging && hasEnergy && IsSpecialTrigger();
+    return player_->GetIsSkillActive();
 }
 
 // ============================================================
@@ -443,15 +407,6 @@ bool TutorialSystem::IsRangedTrigger() const {
     return pad->IsRelease(XINPUT_GAMEPAD_Y);
 }
 
-bool TutorialSystem::IsSpecialTrigger() const {
-    // G トリガー / Yボタン トリガー（EnergyCharge ステート中 = LT長押し中）
-    GamePad *pad = player_->GetGamePad();
-    if (!pad->IsConnected()) {
-        return input_->TriggerKey(DIK_G);
-    }
-    return pad->IsTrigger(XINPUT_GAMEPAD_Y);
-}
-
 // ============================================================
 //  DrawImGui  チュートリアル進行状況のデバッグウィンドウ
 // ============================================================
@@ -529,13 +484,6 @@ void TutorialSystem::DrawImGui() {
         } else {
             snprintf(barLabel, sizeof(barLabel), "%d / %d 回", count_, cfg.requiredCount);
             ImGui::ProgressBar(progress_, ImVec2(-1.0f, 0.0f), barLabel);
-        }
-
-        if (currentStep_ == TutorialStep::Dash) {
-            const char *phase = (dashSubPhase_ == DashSubPhase::WaitForCharge)
-                                    ? "フェーズ1: チャージ待ち"
-                                    : "フェーズ2: ダッシュ待ち";
-            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "サブフェーズ: %s", phase);
         }
 
         if (currentStep_ == TutorialStep::ChargeAttack) {

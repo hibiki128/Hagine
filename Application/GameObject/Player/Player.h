@@ -173,6 +173,7 @@ class Player : public BaseObject {
     std::string GetPreviewStateName() const { return previousStateName; }
     std::vector<std::unique_ptr<PlayerBullet>> &GetBullets() { return bullets_; }
     PlayerAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
+    bool GetIsSkillActive() const { return makanAttack_ptr_->IsActive(); }
 
     void SetIsLockOn(bool flag) { isLockOn_ = flag; }
 

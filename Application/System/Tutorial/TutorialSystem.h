@@ -14,7 +14,7 @@ enum class TutorialStep : int {
     Ascend,        ///< 04. 上昇（飛行中）
     Descend,       ///< 05. 下降（飛行中）※着地補正あり
     AirMove,       ///< 06. 空中移動
-    Dash,          ///< 07. ダッシュ ※チャージ→移動の2段階補正あり
+    Dash,          ///< 07. ダッシュ
     Rush,          ///< 08. 急接近（エネミー必要）
     Landing,       ///< 09. 空中状態解除・着地
     MeleeAttack,   ///< 10. 近接攻撃（エネミー必要）
@@ -24,15 +24,6 @@ enum class TutorialStep : int {
     SpecialAttack, ///< 14. 必殺技
     Complete,      ///< 完了
     StepCount      ///< 配列サイズ用（値として使用しない）
-};
-
-// ============================================================
-//  ダッシュステップ専用のサブフェーズ
-// ============================================================
-/// ダッシュはチャージ状態を前提とするため、チュートリアル内で2段階に分けて教える
-enum class DashSubPhase {
-    WaitForCharge, ///< Phase 1: まず C / LT を押してチャージ状態を作らせる
-    WaitForDash,   ///< Phase 2: チャージ中に移動入力でダッシュ
 };
 
 // ============================================================
@@ -138,7 +129,6 @@ class TutorialSystem {
     bool IsEnergyChargeInput() const; ///< C保持 / LT保持
     bool IsMeleeInput() const;        ///< K(トリガー) / Bボタン
     bool IsRangedTrigger() const;     ///< J(トリガー) / Yボタン離し
-    bool IsSpecialTrigger() const;    ///< G(トリガー) / Yボタン（チャージ中）
 
   private:
     Player *player_ = nullptr;
@@ -156,9 +146,6 @@ class TutorialSystem {
     // ── Descend ステップ専用 ──
     bool showReturnToAirMessage_ = false; ///< 「空中に戻れ」補正メッセージ表示中
     bool wasGroundedLastFrame_ = false;
-
-    // ── Dash ステップ専用 ──
-    DashSubPhase dashSubPhase_ = DashSubPhase::WaitForCharge;
 
     // ── ChargeAttack ステップ専用 ──
     float chargeHoldTimer_ = 0.0f;   ///< J/Y を押し続けている時間
