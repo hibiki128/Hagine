@@ -16,11 +16,12 @@ void TutorialScene::Initialize() {
     skyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
     enemyUI_ = std::make_unique<EnemyUI>();
-    //fadeOut_ = std::make_unique<FadeOut>();
+    fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
     aroundField_ = std::make_unique<AroundField>();
     tutorialSystem_ = std::make_unique<TutorialSystem>();
     tutorialUI_ = std::make_unique<TutorialUI>();
+    gamePad_ = std::make_unique<GamePad>();
 
     /// ===================================================
     /// 初期化
@@ -32,7 +33,7 @@ void TutorialScene::Initialize() {
     aroundField_->Init("Around_Field");
     followCamera_->Init();
     skyBox_->Initialize("game/skybox.dds");
-   // fadeOut_->Initialize();
+    gamePad_->Init(0);
     gameUI_->Initialize();
 
     /// ===================================================
@@ -45,6 +46,7 @@ void TutorialScene::Initialize() {
     enemy_->SetVp(&vp_);
     enemy_->SetTarget(player_.get());
     ground_->GetLighting() = false;
+    gameUI_->SetIsTutorial(true);
 
     /// ===================================================
     /// ポインタ共有
@@ -75,6 +77,7 @@ void TutorialScene::Initialize() {
     /// ===================================================
     tutorialSystem_->Initialize(player_ptr);
     tutorialUI_->Initialize(tutorialSystem_.get());
+    fadeOut_->Initialize();
 }
 
 // ============================================================
@@ -82,7 +85,7 @@ void TutorialScene::Finalize() {
     tutorialUI_->Finalize();
     tutorialSystem_->Finalize();
 
-  //  fadeOut_->Finalize();
+    fadeOut_->Finalize();
     aroundField_->Finalize();
     if (player_ptr->GetIsAlive()) {
         sceneManager_->SetHP(player_ptr->GetHP());
@@ -100,35 +103,40 @@ void TutorialScene::Update() {
 
     ground_->Update();
     aroundField_->Update();
-    playerUI_->Update();
-    enemyUI_->Update();
-    //fadeOut_->Update();
+    fadeOut_->Update();
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
-    player_ptr->SetStart(true);
+    gamePad_->Update();
 
     gameUI_->Update();
-    player_ptr->SetPause(gameUI_->GetIsPause());
-    enemy_ptr->SetPause(gameUI_->GetIsPause());
 
-    // ─── チュートリアル更新 ───
+    // ─── シーン開始遅延 ───
+    // kStartDelay_ 秒が経過するまでプレイヤー・UIの更新を行わない
+    if (!sceneStarted_) {
+        startDelayTimer_ += Frame::DeltaTime();
+        if (startDelayTimer_ >= kStartDelay_) {
+            sceneStarted_ = true;
+        }
+        return;
+    }
+
+    // ─── 遅延経過後の更新 ───
+    player_ptr->SetStart(sceneStarted_);
+    playerUI_->Update();
+    enemyUI_->Update();
+
     if (!gameUI_->GetIsPause()) {
         float dt = Frame::DeltaTime();
         tutorialSystem_->Update(dt);
         tutorialUI_->Update(dt);
 
-        // 現在のチュートリアルステップをプレイヤーに伝える
-        // EnergyCharge ステップ切替時のエネルギーリセット・自動回復抑制はPlayer側で管理する
         player_ptr->SetTutorialStep(tutorialSystem_->GetCurrentStep());
-
-        // エネミーのスポーン/デスポーンリクエスト処理
         HandleEnemySpawnRequest();
     }
 }
 
 // ============================================================
 void TutorialScene::Draw() {
-    playerUI_->Draw();
-    enemyUI_->Draw();
+    // 遅延が終わるまで PlayerUI / EnemyUI / TutorialUI は描画しない
 
     objectManager_->Draw(vp_);
 
@@ -140,17 +148,19 @@ void TutorialScene::Draw() {
     enemy_ptr->DrawParticle(vp_);
     aroundField_->DrawParticle(vp_);
 
-    //fadeOut_->Draw(vp_);
+    fadeOut_->Draw(vp_);
     gameUI_->Draw();
-
-    tutorialUI_->Draw();
 
     followCamera_->DrawFrustum();
     enemy_ptr->DrawFrustum();
 
     spriteManager_->DrawAll();
+    if (sceneStarted_) {
+        playerUI_->Draw();
+        enemyUI_->Draw();
+        tutorialUI_->Draw();
+    }
 }
-
 // ============================================================
 void TutorialScene::DrawForOffScreen() {
 }
@@ -169,10 +179,12 @@ void TutorialScene::AddObjectSetting() {
     player_ptr->Debug();
     enemy_ptr->Debug();
     enemyUI_->Debug();
+    tutorialUI_->DrawImGui();
 }
 
 // ============================================================
 void TutorialScene::AddParticleSetting() {
+    fadeOut_->ImGui();
 }
 
 // ============================================================
@@ -191,6 +203,19 @@ void TutorialScene::CameraUpdate() {
 
 // ============================================================
 void TutorialScene::ChangeScene() {
+
+    if (tutorialUI_->IsFinished()) {
+        sceneManager_->NextSceneReservation("GAME");
+    }
+    if (gamePad_->IsConnected()) {
+        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START)) {
+            sceneManager_->NextSceneReservation("GAME");
+        }
+    } else {
+        if (input_->TriggerKey(DIK_RETURN)) {
+            sceneManager_->NextSceneReservation("GAME");
+        }
+    }
 }
 
 // ============================================================

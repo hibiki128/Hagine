@@ -43,7 +43,7 @@ class GameScene : public BaseScene {
     std::unique_ptr<Ground> ground_;
     std::unique_ptr<PlayerUI> playerUI_;
     std::unique_ptr<EnemyUI> enemyUI_;
-    std::unique_ptr<FadeOut> fadeOut_;
+   // std::unique_ptr<FadeOut> fadeOut_;
     std::unique_ptr<GameUI> gameUI_;
 
     SkyBox *skyBox_ = nullptr;

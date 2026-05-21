@@ -26,7 +26,7 @@ void GameScene::Initialize() {
     skyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
     enemyUI_ = std::make_unique<EnemyUI>();
-    fadeOut_ = std::make_unique<FadeOut>();
+    //fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
     aroundField_ = std::make_unique<AroundField>();
 
@@ -46,7 +46,7 @@ void GameScene::Initialize() {
     startCamera_->Init();
     deathCamera_->Init();
     skyBox_->Initialize("game/skybox.dds");
-    fadeOut_->Initialize();
+   // fadeOut_->Initialize();
     gameUI_->Initialize();
 
     /// ===================================================
@@ -91,7 +91,7 @@ void GameScene::Initialize() {
 }
 
 void GameScene::Finalize() {
-    fadeOut_->Finalize();
+   // fadeOut_->Finalize();
     aroundField_->Finalize();
     sceneManager_->SetClearTime(ClearTimer_);
     if (player_ptr->GetIsAlive()) {
@@ -123,7 +123,7 @@ void GameScene::Update() {
     aroundField_->Update();
     playerUI_->Update();
     enemyUI_->Update();
-    fadeOut_->Update();
+    //fadeOut_->Update();
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
 
 #ifdef _DEBUG
@@ -164,7 +164,7 @@ void GameScene::Draw() {
     enemy_ptr->DrawParticle(vp_);
     aroundField_->DrawParticle(vp_);
 
-    fadeOut_->Draw(vp_);
+    //fadeOut_->Draw(vp_);
     gameUI_->Draw();
 
     followCamera_->DrawFrustum();
@@ -200,7 +200,7 @@ void GameScene::AddObjectSetting() {
 }
 
 void GameScene::AddParticleSetting() {
-    fadeOut_->ImGui();
+   // fadeOut_->ImGui();
     aroundField_->Debug();
    // DrawParticleEditorUI();
 }
@@ -213,9 +213,9 @@ void GameScene::CameraUpdate() {
             followCamera_->Update();
 #ifndef _DEBUG
             if (!startCamera_->IsComplete()) {
-                if (fadeOut_->IsFinish()) {
+              //  if (fadeOut_->IsFinish()) {
                     startCamera_->Move();
-                }
+             //   }
                 startCamera_->SetTargetVp(followCamera_->GetViewProjection());
                 startCamera_->Update();
                 vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;

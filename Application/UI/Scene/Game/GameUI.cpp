@@ -88,16 +88,18 @@ void GameUI::Update() {
     }
 
     // ポーズボタン入力検出
-    if (!isBackTitle_) {
-        if (!gamePad_->IsConnected()) {
-            // キーボード入力
-            if (Input::GetInstance()->TriggerKey(DIK_RETURN)) {
-                isPause_ = !isPause_;
-            }
-        } else {
-            // ゲームパッド入力
-            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START)) {
-                isPause_ = !isPause_;
+    if (!isTutorial_) {
+        if (!isBackTitle_) {
+            if (!gamePad_->IsConnected()) {
+                // キーボード入力
+                if (Input::GetInstance()->TriggerKey(DIK_RETURN)) {
+                    isPause_ = !isPause_;
+                }
+            } else {
+                // ゲームパッド入力
+                if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START)) {
+                    isPause_ = !isPause_;
+                }
             }
         }
     }
@@ -187,6 +189,7 @@ void GameUI::Update() {
         if (transitionState_ == TransitionState::ToExplanation) {
             // メニュー背景が完全に消えたかチェック
             if (animations_[MenuBackGround].alpha.IsFinished() &&
+                sprites_[MenuBackGround] && sprites_[MenuBackGround]->sprite &&
                 sprites_[MenuBackGround]->sprite->GetColor().w <= 0.01f) {
 
                 // 消えたので、説明画面を表示開始
@@ -209,6 +212,7 @@ void GameUI::Update() {
         } else if (transitionState_ == TransitionState::ToMain) {
             // 説明画像が完全に消えたかチェック
             if (animations_[Controller].alpha.IsFinished() &&
+                sprites_[Controller] && sprites_[Controller]->sprite &&
                 sprites_[Controller]->sprite->GetColor().w <= 0.01f) {
 
                 // 消えたので、メインメニューを表示開始

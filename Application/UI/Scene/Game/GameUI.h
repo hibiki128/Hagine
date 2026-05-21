@@ -49,6 +49,8 @@ class GameUI {
     // タイトルに戻るフラグのGetter
     bool GetIsBackTitle() const { return isBackTitle_; }
 
+    void SetIsTutorial(bool isTutorial) { isTutorial_ = isTutorial; }
+
   private:
     // メニュー選択の処理
     void UpdateMenuSelection();
@@ -67,6 +69,7 @@ class GameUI {
 
     // タイトルへ戻る選択状態
     bool isBackTitle_ = false;
+    bool isTutorial_ = false;
 
     // メニュー状態
     MenuState menuState_ = MainMenu;

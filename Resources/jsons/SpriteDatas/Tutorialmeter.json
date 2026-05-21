@@ -1,0 +1,21 @@
+{
+    "bar_height": 24.0,
+    "bar_max_width": 800.0,
+    "bar_position": {
+        "x": 490.0,
+        "y": 385.0
+    },
+    "border_thickness": 1.0,
+    "fade_in_duration": 0.550000011920929,
+    "fade_out_duration": 0.44999998807907104,
+    "ok_position": {
+        "x": 1290.0,
+        "y": 265.0
+    },
+    "ok_rotation": 0.5350000262260437,
+    "ok_size": {
+        "x": 145.0,
+        "y": 112.0
+    },
+    "progress_lerp_speed": 10.0
+}

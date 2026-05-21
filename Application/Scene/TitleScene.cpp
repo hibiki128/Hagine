@@ -60,7 +60,10 @@ void TitleScene::Draw() {
     /// -------描画処理開始-------
     skyBox_->Draw(vp_);
 
-    DrawAllObjects();
+    //DrawAllObjects();
+
+    spriteManager_->DrawAll();
+    objectManager_->Draw(vp_);
 
     titleUI_->Draw(vp_);
 
@@ -92,7 +95,7 @@ void TitleScene::CameraUpdate() {
 void TitleScene::ChangeScene() {
     if (secondMove_ && !vp_.GetIsCameraMove() && titleUI_->GetIsFinish()) {
         SceneTransition::GetInstance()->SetUseTransition(false);
-        sceneManager_->NextSceneReservation("GAME");
+        sceneManager_->NextSceneReservation("TUTORIAL");
     }
 #ifndef _DEBUG
 #endif // !_DEBUG

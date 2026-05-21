@@ -206,6 +206,7 @@ class SpriteManager {
     /// </summary>
     SpriteData *GetSprite(const std::string &name);
     std::string GetTextureFilePath(const std::string &name);
+    std::vector<SpriteData *>GetAllSprites();
 
     /// <summary>
     /// Setter

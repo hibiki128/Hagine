@@ -90,6 +90,15 @@ std::string SpriteManager::GetTextureFilePath(const std::string &name) {
     return spriteData ? spriteData->textureFilePath : "";
 }
 
+std::vector<SpriteData *> SpriteManager::GetAllSprites() {
+    std::vector<SpriteData *> result;
+    result.reserve(sprites_.size());
+    for (auto &s : sprites_) {
+        result.push_back(s.get());
+    }
+    return result;
+}
+
 void SpriteManager::SetTextureFilePath(const std::string &name, const std::string &textureFilePath) {
     auto spriteData = GetSprite(name);
     if (spriteData) {

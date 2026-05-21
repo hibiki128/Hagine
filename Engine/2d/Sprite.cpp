@@ -120,6 +120,8 @@ void Sprite::Update(bool isBackMost) {
 }
 
 void Sprite::Draw(bool isBackMost) {
+    spriteCommon_->DrawCommonSetting();
+
     Update(isBackMost);
 
     spriteCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);

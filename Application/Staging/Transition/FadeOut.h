@@ -53,10 +53,10 @@ class FadeOut {
     static constexpr float kParticleStopTime = 0.6f;  // パーティクル停止時間(秒)
     static constexpr float kFinishTime = 2.0f;        // フェードアウト完了時間(秒)
     static constexpr float kDeltaTime = 1.0f / 60.0f; // デルタタイム(秒)
-    static constexpr float kPositionX = 0.0f;         // パーティクル位置X
-    static constexpr float kPositionY = 40.6f;        // パーティクル位置Y
-    static constexpr float kPositionZ = -79.1f;       // パーティクル位置Z
-    static constexpr float kRotationX = -30.0f;       // パーティクル回転X(度)
+    static constexpr float kPositionX = 12.5f;         // パーティクル位置X
+    static constexpr float kPositionY = 5.0f;          // パーティクル位置Y
+    static constexpr float kPositionZ = -65.1f;         // パーティクル位置Z
+    static constexpr float kRotationX = 0.0f;       // パーティクル回転X(度)
 
     std::unique_ptr<ParticleCSEmitter> fadeOut_ = nullptr;
     float timer_ = 0.0f; // 経過時間

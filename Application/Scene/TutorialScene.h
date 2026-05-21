@@ -7,13 +7,13 @@
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Field/AroundField/AroundField.h"
 #include "Application/GameObject/Field/Ground/Ground.h"
+#include "Application/System/Tutorial/TutorialSystem.h"
 #include "Application/UI/Enemy/EnemyUI.h"
 #include "BaseScene.h"
 #include "SkyBox/SkyBox.h"
 #include <Application/Staging/Transition/FadeOut.h>
 #include <Application/UI/Scene/Game/GameUI.h>
 #include <Application/UI/Tutorial/TutorialUI.h>
-#include"Application/System/Tutorial/TutorialSystem.h"
 
 class TutorialScene : public BaseScene {
   public:
@@ -45,8 +45,9 @@ class TutorialScene : public BaseScene {
     std::unique_ptr<Ground> ground_;
     std::unique_ptr<PlayerUI> playerUI_;
     std::unique_ptr<EnemyUI> enemyUI_;
-    //std::unique_ptr<FadeOut> fadeOut_;
+    std::unique_ptr<FadeOut> fadeOut_;
     std::unique_ptr<GameUI> gameUI_;
+    std::unique_ptr<GamePad> gamePad_;
 
     // ─── チュートリアル管理 ───
     std::unique_ptr<TutorialSystem> tutorialSystem_;
@@ -55,4 +56,8 @@ class TutorialScene : public BaseScene {
     SkyBox *skyBox_ = nullptr;
     Enemy *enemy_ptr = nullptr;
     Player *player_ptr = nullptr;
+
+    float startDelayTimer_ = 0.0f;              ///< シーン開始からの経過時間
+    bool sceneStarted_ = false;                 ///< 遅延が終了し、更新・描画を開始するフラグ
+    static constexpr float kStartDelay_ = 2.0f; ///< 開始までの待機秒数
 };
