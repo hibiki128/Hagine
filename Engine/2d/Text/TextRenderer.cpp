@@ -20,10 +20,6 @@
 const std::string TextRenderer::kSaveFolderRelative = "Text";
 const std::string TextRenderer::kSaveFolder = "resources/images/Text";
 
-// --------------------------------------------------------------------------
-// 公開メソッド
-// --------------------------------------------------------------------------
-
 void TextRenderer::CreateTextSprite(
     const std::string &spriteName,
     const std::string &text,
@@ -127,10 +123,6 @@ void TextRenderer::UpdateImGui() {
 #endif // _DEBUG
 }
 
-// --------------------------------------------------------------------------
-// 非公開メソッド
-// --------------------------------------------------------------------------
-
 std::string TextRenderer::RenderTextToFile(
     const std::string &spriteName,
     const std::string &text,
@@ -138,6 +130,7 @@ std::string TextRenderer::RenderTextToFile(
     bool outlineEnabled,
     float outlineThickness,
     Vector4 outlineColor) {
+    // フォントデータとバッファの存在を確認
     const TextureManager::FontData *fontData = TextureManager::GetInstance()->GetFontData(fontKey);
     assert(fontData != nullptr);
     assert(fontData->ttfBuffer != nullptr);
@@ -154,14 +147,11 @@ std::string TextRenderer::RenderTextToFile(
     int maxAscent = static_cast<int>(std::round(ascent * scale));
     int maxDescent = static_cast<int>(std::round(-descent * scale));
 
-    // StringUtilityを使ってUTF-8(std::string)からUTF-16(std::wstring)へ変換
+    // UTF-8からUTF-16へ変換し、コードポイント配列に展開
     std::wstring wText = StringUtility::ConvertString(text);
-
-    // std::wstring からコードポイントの配列を抽出（サロゲートペア対応）
     std::vector<uint32_t> codepoints;
     for (size_t i = 0; i < wText.length(); ++i) {
         uint32_t cp = static_cast<uint32_t>(wText[i]);
-        // 絵文字や一部の難しい漢字など（サロゲートペア）の処理
         if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < wText.length()) {
             uint32_t low = static_cast<uint32_t>(wText[i + 1]);
             if (low >= 0xDC00 && low <= 0xDFFF) {
@@ -172,7 +162,7 @@ std::string TextRenderer::RenderTextToFile(
         codepoints.push_back(cp);
     }
 
-    // テクスチャの全体横幅を計算する
+    // 全体の横幅を計算
     float totalWidth = 0.0f;
     for (size_t i = 0; i < codepoints.size(); ++i) {
         int advanceWidth, leftSideBearing;
@@ -184,15 +174,14 @@ std::string TextRenderer::RenderTextToFile(
         }
     }
 
-    // アウトライン有効時はその太さ分のパディングを上下左右に付加してクリッピングを防ぐ
+    // パディングを考慮してテクスチャサイズを決定
     const int outlinePad = outlineEnabled ? static_cast<int>(std::ceil(outlineThickness)) : 0;
-
     const int texWidth = std::max(1, static_cast<int>(std::ceil(totalWidth)) + outlinePad * 2);
     const int texHeight = std::max(1, maxAscent + maxDescent + 2 + outlinePad * 2);
 
     std::vector<uint8_t> pixels(static_cast<size_t>(texWidth * texHeight * 4), 0);
 
-    // 各文字をビットマップ化してピクセルバッファに書き込む
+    // グリフをビットマップ化し、ピクセルバッファに書き込む
     float cursorX = static_cast<float>(outlinePad);
     for (size_t i = 0; i < codepoints.size(); ++i) {
         uint32_t cp = codepoints[i];
@@ -206,7 +195,6 @@ std::string TextRenderer::RenderTextToFile(
         int glyphW = x1 - x0;
         int glyphH = y1 - y0;
 
-        // パディングを考慮したグリフの描画先座標を計算する
         int dstX = static_cast<int>(std::round(cursorX)) + x0;
         int dstY = maxAscent + y0 + outlinePad;
 
@@ -239,30 +227,20 @@ std::string TextRenderer::RenderTextToFile(
         }
     }
 
-    // アウトライン処理:
-    // グリフが描画済みのピクセルバッファに対して膨張処理（ダイレーション）を行い、
-    // グリフの外周に指定した太さ・色のアウトラインを合成する
+    // アウトラインが必要な場合は膨張処理（ダイレーション）を行い合成する
     if (outlineEnabled && outlineThickness > 0.0f) {
         const int radius = static_cast<int>(std::ceil(outlineThickness));
-
-        // アウトラインピクセルを格納するバッファ（alpha のみ判定に使用）
         std::vector<uint8_t> outlineMask(static_cast<size_t>(texWidth * texHeight), 0);
 
-        // グリフが存在しないピクセルに対して近傍探索を行い、
-        // 半径 outlineThickness 以内にグリフピクセルがあればアウトライン候補とする
         for (int y = 0; y < texHeight; ++y) {
             for (int x = 0; x < texWidth; ++x) {
                 const int selfIdx = (y * texWidth + x) * 4;
-
-                // グリフが描画済みの箇所はアウトライン不要
                 if (pixels[selfIdx + 3] > 0)
                     continue;
 
-                // 近傍ピクセルをサーチして半径内にグリフが存在するか確認
                 bool hasNeighbor = false;
                 for (int dy = -radius; dy <= radius && !hasNeighbor; ++dy) {
                     for (int dx = -radius; dx <= radius && !hasNeighbor; ++dx) {
-                        // 円形マスクにするため距離チェック
                         const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
                         if (dist > outlineThickness)
                             continue;
@@ -284,8 +262,6 @@ std::string TextRenderer::RenderTextToFile(
             }
         }
 
-        // アウトライン色をベースピクセルバッファに書き込む
-        // グリフが存在しないピクセルにのみ上書きすることで、文字の上にはみ出さないようにする
         const uint8_t outR = static_cast<uint8_t>(std::clamp(outlineColor.x, 0.0f, 1.0f) * 255.0f);
         const uint8_t outG = static_cast<uint8_t>(std::clamp(outlineColor.y, 0.0f, 1.0f) * 255.0f);
         const uint8_t outB = static_cast<uint8_t>(std::clamp(outlineColor.z, 0.0f, 1.0f) * 255.0f);
@@ -297,7 +273,6 @@ std::string TextRenderer::RenderTextToFile(
                     continue;
 
                 const int idx = (y * texWidth + x) * 4;
-                // グリフピクセルは上書きしない
                 if (pixels[idx + 3] > 0)
                     continue;
 
@@ -309,7 +284,7 @@ std::string TextRenderer::RenderTextToFile(
         }
     }
 
-    // DirectXTex による PNG 保存処理
+    // DirectXTexを使用してPNGファイルを生成し保存する
     EnsureOutputDirectory();
 
     DirectX::ScratchImage scratchImage;
@@ -343,6 +318,7 @@ std::string TextRenderer::RenderTextToFile(
 }
 
 void TextRenderer::EnsureOutputDirectory() {
+    // 保存先のディレクトリが存在しない場合に作成する
     const std::filesystem::path dir(kSaveFolder);
     if (!std::filesystem::exists(dir)) {
         std::filesystem::create_directories(dir);

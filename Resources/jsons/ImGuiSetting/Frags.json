@@ -14,10 +14,10 @@
     "showKeyOperationDebugView": false,
     "showLightView": false,
     "showMotionEditorView": false,
-    "showObjectView": true,
+    "showObjectView": false,
     "showOfScreenView": false,
     "showParticleView": true,
     "showSceneView": false,
     "showShortcutWindow": false,
-    "showSpriteManagerView": false
+    "showSpriteManagerView": true
 }

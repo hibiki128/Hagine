@@ -5,7 +5,7 @@
 #include <myMath.h>
 
 void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Vector4 color, Vector2 anchorpoint, bool isFlipX, bool isFlipY) {
-    // 引数で受け取ってメンバ変数に記録する
+    // 必要なマネージャクラスのインスタンスを取得し、テクスチャを読み込む
     spriteCommon_ = SpriteCommon::GetInstance();
     srvManager_ = TextureManager::GetInstance()->GetSrvManager();
 
@@ -13,18 +13,18 @@ void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Ve
 
     TextureManager::GetInstance()->LoadTexture(fullpath);
 
+    // 頂点、マテリアル、変換行列の各リソースを作成する
     CreateVartexData();
-
     CreateMaterial();
-
     CreateTransformationMatrix();
     SetInstanceCount(1);
 
+    // インスタンス数が1以下の場合は初期の変換行列を算出する
     if (instanceCount <= 1) {
         Transform transform{
-            {size.x, size.y, 1.0f},          // scale
-            {0.0f, 0.0f, rotation},          // rotation
-            {position_.x, position_.y, 0.0f} // translation
+            {size.x, size.y, 1.0f},
+            {0.0f, 0.0f, rotation},
+            {position_.x, position_.y, 0.0f}
         };
 
         Matrix4x4 world = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
@@ -36,6 +36,7 @@ void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Ve
         transformationMatrixData[0].WVP = wvp;
     }
 
+    // 引数の値をメンバ変数に保持する
     position_ = position;
     materialData->color = color;
     anchorPoint_ = anchorpoint;
@@ -46,25 +47,27 @@ void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Ve
 }
 
 void Sprite::SetInstanceCount(uint32_t count) {
-    // バッファサイズを超えないようにチェック
-    const uint32_t maxInstances = 1000; // CreateTransformationMatrixと同じ値
+    // インスタンス数が制限を超えないようクランプする
+    const uint32_t maxInstances = 1000;
     instanceCount = std::min(count, maxInstances);
 }
 
 void Sprite::SetInstanceTransform(uint32_t index, const TransformationMatrix &transform) {
-    const uint32_t maxInstances = 1000; // 最大インスタンス数
+    // 指定したインデックスが有効範囲内か確認してから行列をコピーする
+    const uint32_t maxInstances = 1000;
     if (index < instanceCount && index < maxInstances && transformationMatrixData != nullptr) {
         transformationMatrixData[index] = transform;
     }
 }
 
 void Sprite::Update(bool isBackMost) {
-    // 頂点座標の計算
+    // スプライトのアンカーポイントに基づいた頂点座標の範囲を計算する
     float left = 0.0f - anchorPoint_.x;
     float right = 1.0f - anchorPoint_.x;
     float top = 0.0f - anchorPoint_.y;
     float bottom = 1.0f - anchorPoint_.y;
 
+    // 反転設定に応じて座標を入れ替える
     if (isFlipX_) {
         std::swap(left, right);
     }
@@ -72,20 +75,21 @@ void Sprite::Update(bool isBackMost) {
         std::swap(top, bottom);
     }
 
+    // テクスチャの正規化UV座標を計算する
     const DirectX::TexMetadata &metadata = TextureManager::GetInstance()->GetMetaData(fullpath);
     float tex_left = textureLeftTop.x / metadata.width;
     float tex_right = (textureLeftTop.x + textureSize.x) / metadata.width;
     float tex_top = textureLeftTop.y / metadata.height;
     float tex_bottom = (textureLeftTop.y + textureSize.y) / metadata.height;
 
-    // 頂点データの設定
+    // 頂点バッファをマップして座標とUVデータを書き込む
     vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData));
     vertexData[0] = {{left, bottom, 0.0f, 1.0f}, {tex_left, tex_bottom}};
     vertexData[1] = {{left, top, 0.0f, 1.0f}, {tex_left, tex_top}};
     vertexData[2] = {{right, bottom, 0.0f, 1.0f}, {tex_right, tex_bottom}};
     vertexData[3] = {{right, top, 0.0f, 1.0f}, {tex_right, tex_top}};
 
-    // インデックスの設定
+    // インデックスバッファをマップして順序データを書き込む
     indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
     indexData[0] = 0;
     indexData[1] = 1;
@@ -94,7 +98,7 @@ void Sprite::Update(bool isBackMost) {
     indexData[4] = 3;
     indexData[5] = 2;
 
-    // 単体描画のときだけTransform更新
+    // インスタンス数が単体の場合、座標変換行列を再計算して更新する
     if (instanceCount <= 1) {
         Transform transform;
         transform.scale = {size.x, size.y, 1.0f};
@@ -113,6 +117,7 @@ void Sprite::Update(bool isBackMost) {
         transformationMatrixData[0].World = world;
     }
 
+    // UV変換用の行列を作成してマテリアルデータに適用する
     Vector3 pos = {uvPosition_.x, uvPosition_.y, 0.0f};
     Vector3 scale = {uvSize_.x, uvSize_.y, 1.0f};
     Vector3 rotate = {0.0f, 0.0f, uvRotate_};
@@ -120,6 +125,7 @@ void Sprite::Update(bool isBackMost) {
 }
 
 void Sprite::Draw(bool isBackMost) {
+    // 描画共通設定を適用し、頂点・インデックス・マテリアル・テクスチャ情報をコマンドリストにセットする
     spriteCommon_->DrawCommonSetting();
 
     Update(isBackMost);
@@ -131,75 +137,68 @@ void Sprite::Draw(bool isBackMost) {
     srvManager_->SetGraphicsRootDescriptorTable(1, transformationMatrixSrvIndex);
     srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(fullpath));
 
+    // インデックス描画を実行する
     spriteCommon_->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(6, instanceCount, 0, 0, 0);
 }
 
 void Sprite::SetTexturePath(std::string textureFilePath) {
+    // パスを更新し、新しいテクスチャを読み込む
     fullpath = textureFilePath;
     TextureManager::GetInstance()->LoadTexture(textureFilePath);
     TextureManager::GetInstance()->GetTextureIndexByFilePath(fullpath);
 }
 
 void Sprite::CreateVartexData() {
-    // Sprite用の頂点リソースを作る
+    // 頂点バッファ用のリソースを作成し、頂点バッファビューを設定する
     vertexResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(SpriteVertexData) * 6);
-    // リソースの先頭のアドレスから使う
     vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-    // 使用するリソースのサイズは頂点6つ分のサイズ
     vertexBufferView.SizeInBytes = sizeof(SpriteVertexData) * 6;
-    // 1頂点あたりのサイズ
     vertexBufferView.StrideInBytes = sizeof(SpriteVertexData);
 
-    // 頂点データの設定
+    // 頂点バッファをマップする
     vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData));
 
-    // Index用のリソースを作る（sprite用）
+    // インデックスバッファ用のリソースを作成し、インデックスバッファビューを設定する
     indexResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * 6);
-    // リソースの先頭アドレスから使う
     indexBufferView.BufferLocation = indexResource->GetGPUVirtualAddress();
-    // 使用するリソースのサイズはインデックス6つ分のサイズ
     indexBufferView.SizeInBytes = sizeof(uint32_t) * 6;
-    // インデックスはuint32_tとする
     indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 
-    // インデックスリソースにデータを書き込む（sprite用）
+    // インデックスバッファをマップする
     indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
 }
 
 void Sprite::CreateMaterial() {
-    // Sprite用のマテリアルリソースをつくる
+    // マテリアル用リソースを作成しマップ、デフォルトのカラーと単位行列で初期化する
     materialResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(SpriteMaterial));
-    // 書き込むためのアドレスを取得
     materialResource->Map(0, nullptr, reinterpret_cast<void **>(&materialData));
-    // 色の設定
     materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-    // Lightingの設定
     materialData->uvTransform = MakeIdentity4x4();
 }
 
 void Sprite::CreateTransformationMatrix() {
-    // 最大インスタンス数を想定してバッファを作成
-    uint32_t maxInstances = 1000; // または必要な最大数
+    // 最大インスタンス数を考慮した変換行列用のリソースを作成しマップする
+    uint32_t maxInstances = 1000;
     transformationMatrixResource = spriteCommon_->GetDxCommon()->CreateBufferResource(sizeof(TransformationMatrix) * maxInstances);
     transformationMatrixResource->Map(0, nullptr, reinterpret_cast<void **>(&transformationMatrixData));
 
-    // 初期化
+    // 全てのインスタンスの行列を単位行列で初期化する
     for (uint32_t i = 0; i < maxInstances; ++i) {
         transformationMatrixData[i].WVP = MakeIdentity4x4();
         transformationMatrixData[i].World = MakeIdentity4x4();
     }
 
+    // SRVマネージャからスロットを確保し、ストラクチャードバッファ用のSRVを作成する
     srvManager_ = TextureManager::GetInstance()->GetSrvManager();
     transformationMatrixSrvIndex = srvManager_->Allocate() + 1;
     srvManager_->CreateSRVforStructuredBuffer(transformationMatrixSrvIndex, transformationMatrixResource.Get(), maxInstances, sizeof(TransformationMatrix));
 }
 
 void Sprite::AdjustTextureSize() {
-    // テクスチャメタデータを取得
+    // テクスチャのメタデータから画像サイズを取得し、スプライトのサイズをそれに合わせる
     const DirectX::TexMetadata &metadata = TextureManager::GetInstance()->GetMetaData(fullpath);
 
     textureSize.x = static_cast<float>(metadata.width);
     textureSize.y = static_cast<float>(metadata.height);
-    // 画像サイズをテクスチャサイズに合わせる
     size = textureSize;
 }

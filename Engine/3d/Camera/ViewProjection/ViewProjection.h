@@ -9,23 +9,23 @@
 #include "wrl.h"
 
 /// <summary>
-/// ビュープロジェクション定数バッファデータ
+/// ビュープロジェクション用定数バッファ
 /// </summary>
 struct ConstBufferDataViewProjection {
     Matrix4x4 view;       // ビュー行列
     Matrix4x4 projection; // 射影行列
-    Vector3 cameraPos;    // カメラ座標
+    Vector3 cameraPos;    // カメラのワールド座標
 };
 
 /// <summary>
 /// ビュープロジェクションクラス
-/// カメラのビュー行列と射影行列を管理し、イージング機能を提供する
+/// カメラの行列計算、イージング処理、各種投影設定を一元管理する
 /// </summary>
 class ViewProjection {
-  public:
-    /// ===================================================
-    /// public method
-    /// ===================================================
+public:
+    // ===================================================
+    // 公開メソッド
+    // ===================================================
 
     ViewProjection() = default;
     ~ViewProjection() = default;
@@ -33,45 +33,45 @@ class ViewProjection {
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="jsonFile">設定ファイル名</param>
+    /// <param name="jsonFile">初期設定用JSONファイルパス(省略可)</param>
     void Initialize(std::string jsonFile = "");
 
     /// <summary>
-    /// 定数バッファ生成
+    /// 定数バッファの生成
     /// </summary>
     void CreateConstBuffer();
 
     /// <summary>
-    /// マッピング
+    /// 定数バッファのメモリマッピング
     /// </summary>
     void Map();
 
     /// <summary>
-    /// 行列を更新
+    /// 行列の再計算
     /// </summary>
     void UpdateMatrix();
 
     /// <summary>
-    /// 行列を転送
+    /// 定数バッファへのデータ転送
     /// </summary>
     void TransferMatrix();
 
     /// <summary>
-    /// ビュー行列を更新
+    /// ビュー行列の更新
     /// </summary>
     void UpdateViewMatrix();
 
     /// <summary>
-    /// 射影行列を更新
+    /// 射影行列の更新
     /// </summary>
     void UpdateProjectionMatrix();
 
     /// <summary>
-    /// カメラをイージング移動
+    /// カメラのイージング移動
     /// </summary>
-    /// <param name="easeType">イージングタイプ</param>
-    /// <param name="jsonName">目標値のJSON名</param>
-    /// <param name="duration">イージング時間</param>
+    /// <param name="easeType">イージングのアルゴリズム</param>
+    /// <param name="jsonName">目標値設定が記述されたJSON名</param>
+    /// <param name="duration">移動にかける時間</param>
     void EaseCameraMove(EasingType easeType, const std::string &jsonName, float duration = 2.0f);
 
     /// <summary>
@@ -80,75 +80,79 @@ class ViewProjection {
     void ShowDebugInfo();
 
     /// <summary>
-    /// Getter
+    /// 定数バッファを取得
     /// </summary>
     const Microsoft::WRL::ComPtr<ID3D12Resource> &GetConstBuffer() const { return constBuffer_; }
+    
+    /// <summary>
+    /// 移動処理中か判定
+    /// </summary>
     bool GetIsCameraMove() { return isEasing_; }
 
-  public:
-    /// ===================================================
-    /// public varians
-    /// ===================================================
+public:
+    // ===================================================
+    // 公開メンバ変数
+    // ===================================================
 
-    bool isUseQuaternion_ = false;                                                  // 回転モード（trueならクォータニオン、falseならオイラー角）
-    Quaternion quateRotation_ = Quaternion::IdentityQuaternion();                   // クォータニオン回転
-    Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                                    // オイラー角回転（ラジアン）
+    bool isUseQuaternion_ = false;                                                  // 回転モード(true:クォータニオン, false:オイラー角)
+    Quaternion quateRotation_ = Quaternion::IdentityQuaternion();                   // クォータニオンによる回転
+    Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                                    // オイラー角による回転(ラジアン)
     Vector3 translation_ = {0.0f, 0.0f, -10.0f};                                    // カメラ座標
-    float fovAngleY = 45.0f * std::numbers::pi_v<float> / 180.0f;                   // 垂直方向視野角
+    float fovAngleY = 45.0f * std::numbers::pi_v<float> / 180.0f;                   // 垂直方向視野角(ラジアン)
     float aspectRatio = float(WinApp::kClientWidth) / float(WinApp::kClientHeight); // アスペクト比
-    float nearZ = 0.1f;                                                             // 深度限界（手前側）
-    float farZ = 1000.0f;                                                           // 深度限界（奥側）
+    float nearZ = 0.1f;                                                             // 近距離クリッピング面
+    float farZ = 1000.0f;                                                           // 遠距離クリッピング面
     Matrix4x4 matView_{};                                                           // ビュー行列
     Matrix4x4 matProjection_{};                                                     // 射影行列
     Matrix4x4 matWorld_{};                                                          // ワールド行列
 
-  private:
-    /// ===================================================
-    /// private method
-    /// ===================================================
+private:
+    // ===================================================
+    // 非公開メソッド
+    // ===================================================
 
     /// <summary>
-    /// 設定を保存
+    /// 設定の保存
     /// </summary>
-    /// <param name="jsonFile">保存先ファイル名</param>
+    /// <param name="jsonFile">保存先パス</param>
     void Save(std::string jsonFile);
 
     /// <summary>
-    /// 設定を読み込み
+    /// 設定の読み込み
     /// </summary>
-    /// <param name="jsonFile">読み込み元ファイル名</param>
+    /// <param name="jsonFile">読み込み元パス</param>
     void Load(std::string jsonFile);
 
-    // コピー禁止
+    // コピー不可
     ViewProjection(const ViewProjection &) = delete;
     ViewProjection &operator=(const ViewProjection &) = delete;
 
-  private:
-    /// ===================================================
-    /// private varians
-    /// ===================================================
+private:
+    // ===================================================
+    // メンバ変数
+    // ===================================================
 
-    DirectXCommon *dxCommon_ = nullptr; // DirectX共通クラス
+    DirectXCommon *dxCommon_ = nullptr; // DirectX基盤へのポインタ
 
-    // イージング関連
-    bool isEasing_ = false;                              // イージング中フラグ
-    float easingTime_ = 0.0f;                            // イージング経過時間
-    float easingDuration_ = 2.0f;                        // イージング時間
-    EasingType currentEasingType_ = EasingType::OutQuad; // イージングタイプ
+    // イージング状態管理
+    bool isEasing_ = false;                              // 実行中フラグ
+    float easingTime_ = 0.0f;                            // 経過時間
+    float easingDuration_ = 2.0f;                        // 全体時間
+    EasingType currentEasingType_ = EasingType::OutQuad; // アルゴリズム種別
 
-    // 開始時の値
-    Vector3 startTranslation_{};           // 開始座標
-    Vector3 startEulerRotation_{};         // 開始オイラー角
-    Quaternion startQuaternionRotation_{}; // 開始クォータニオン
+    // イージング始点
+    Vector3 startTranslation_{};           
+    Vector3 startEulerRotation_{};         
+    Quaternion startQuaternionRotation_{}; 
 
-    // 目標値（JSONから読み込み）
-    Vector3 targetTranslation_{};         // 目標座標
-    Vector3 targetEulerRotation_{};       // 目標オイラー角
-    Quaternion targetQuaternionRotation_{}; // 目標クォータニオン
+    // イージング目標点
+    Vector3 targetTranslation_{};         
+    Vector3 targetEulerRotation_{};       
+    Quaternion targetQuaternionRotation_{}; 
 
-    // 定数バッファ
-    Microsoft::WRL::ComPtr<ID3D12Resource> constBuffer_{}; // 定数バッファ
-    ConstBufferDataViewProjection *constMap = nullptr;   // マッピング済みアドレス
+    // 定数バッファ関連
+    Microsoft::WRL::ComPtr<ID3D12Resource> constBuffer_{}; 
+    ConstBufferDataViewProjection *constMap = nullptr;   
 };
 
 static_assert(!std::is_copy_assignable_v<ViewProjection>);

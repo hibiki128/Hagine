@@ -10,13 +10,11 @@
 /// 生成したPNGはresources/images/Text/配下に保存される。
 /// </summary>
 class TextRenderer {
-  private:
-    TextRenderer() = default;
-    ~TextRenderer() = default;
-    TextRenderer(const TextRenderer &) = delete;
-    TextRenderer &operator=(const TextRenderer &) = delete;
-
   public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
     /// <summary>
     /// シングルトンインスタンスの取得
     /// </summary>
@@ -24,10 +22,6 @@ class TextRenderer {
         static TextRenderer instance;
         return &instance;
     }
-
-    // テキストテクスチャの保存先（resources/images/ 以下の相対パスと実パス）
-    static const std::string kSaveFolderRelative; // "Text"
-    static const std::string kSaveFolder;         // "resources/images/Text"
 
     /// <summary>
     /// テキストをテクスチャとして生成し、SpriteManagerにスプライトとして登録する。
@@ -57,12 +51,24 @@ class TextRenderer {
     /// </summary>
     void UpdateImGui();
 
+    /// ===================================================
+    /// constants
+    /// ===================================================
+    static const std::string kSaveFolderRelative; // "Text"
+    static const std::string kSaveFolder;         // "resources/images/Text"
+
   private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+    TextRenderer() = default;
+    ~TextRenderer() = default;
+    TextRenderer(const TextRenderer &) = delete;
+    TextRenderer &operator=(const TextRenderer &) = delete;
+
     /// <summary>
     /// フォントアトラスから各グリフをサンプリングしてRGBAテクスチャを生成し、
     /// PNGファイルとして保存してTextureManagerにロードする。
-    /// アウトライン設定が有効な場合はグリフの外周にアウトラインを描画する。
-    /// 戻り値はTextureManager::LoadTexture用の相対パス（"Text/xxx.png"）。
     /// </summary>
     std::string RenderTextToFile(
         const std::string &spriteName,
@@ -77,15 +83,20 @@ class TextRenderer {
     /// </summary>
     void EnsureOutputDirectory();
 
-    // ImGui入力バッファ（スプライト名・テキスト・フォント・座標・色）
-    char imguiSpriteName_[128] = {};
-    char imguiText_[256] = {};
-    int imguiFontIndex_ = 0;
-    float imguiPosition_[2] = {0.0f, 0.0f};
-    float imguiColor_[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+  private:
+    /// ===================================================
+    /// private variables
+    /// ===================================================
 
-    // ImGui入力バッファ（アウトライン設定）
-    bool imguiOutlineEnabled_ = false;
-    float imguiOutlineThickness_ = 2.0f;
-    float imguiOutlineColor_[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    // ImGui入力バッファ
+    char imguiSpriteName_[128] = {};       // スプライト名
+    char imguiText_[256] = {};             // テキスト
+    int imguiFontIndex_ = 0;               // フォントインデックス
+    float imguiPosition_[2] = {0.0f, 0.0f}; // 位置
+    float imguiColor_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // 色
+
+    // ImGuiアウトライン入力バッファ
+    bool imguiOutlineEnabled_ = false;          // アウトライン有効フラグ
+    float imguiOutlineThickness_ = 2.0f;        // アウトラインの太さ
+    float imguiOutlineColor_[4] = {0.0f, 0.0f, 0.0f, 1.0f}; // アウトライン色
 };

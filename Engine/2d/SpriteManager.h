@@ -21,12 +21,12 @@ struct InstanceSRT {
 /// スプライト情報を管理する構造体
 /// </summary>
 struct SpriteTransform {
-    Vector2 position = {0.0f, 0.0f};
-    Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};
-    Vector2 anchorPoint = {0.0f, 0.0f};
-    bool isFlipX = false;
-    bool isFlipY = false;
-    uint32_t instanceCount = 1;
+    Vector2 position = {0.0f, 0.0f};           // 位置
+    Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};  // 色
+    Vector2 anchorPoint = {0.0f, 0.0f};        // アンカーポイント
+    bool isFlipX = false;                      // 左右反転フラグ
+    bool isFlipY = false;                      // 上下反転フラグ
+    uint32_t instanceCount = 1;                // インスタンス数
 
     /// <summary>
     /// デフォルトコンストラクタ
@@ -36,12 +36,6 @@ struct SpriteTransform {
     /// <summary>
     /// パラメータ付きコンストラクタ
     /// </summary>
-    /// <param name="pos">位置</param>
-    /// <param name="col">色</param>
-    /// <param name="anchor">アンカーポイント</param>
-    /// <param name="flipX">左右反転</param>
-    /// <param name="flipY">上下反転</param>
-    /// <param name="count">インスタンス数</param>
     SpriteTransform(Vector2 pos, Vector4 col = {1.0f, 1.0f, 1.0f, 1.0f},
                     Vector2 anchor = {0.0f, 0.0f}, bool flipX = false, bool flipY = false, uint32_t count = 1)
         : position(pos), color(col), anchorPoint(anchor), isFlipX(flipX), isFlipY(flipY), instanceCount(count) {}
@@ -51,22 +45,19 @@ struct SpriteTransform {
 /// スプライトデータを管理する構造体
 /// </summary>
 struct SpriteData {
-    std::unique_ptr<Sprite> sprite;
+    std::unique_ptr<Sprite> sprite;                          // スプライト本体
     std::string name;                                        // スプライト名
     std::string textureFilePath;                             // テクスチャファイルパス
     std::vector<InstanceSRT> instanceData;                   // インスタンスデータ
     std::function<void(SpriteData &, float)> updateFunction; // カスタム更新関数
     bool isVisible = true;                                   // 表示フラグ
     bool isBackMost = false;                                 // 背面フラグ
-    BlendMode blendMode = BlendMode::kNormal;
-    bool lockAspectRatio = false; // サイズ編集時のアスペクト比維持フラグ
+    BlendMode blendMode = BlendMode::kNormal;                // ブレンドモード
+    bool lockAspectRatio = false;                            // アスペクト比維持フラグ
 
     /// <summary>
     /// コンストラクタ
     /// </summary>
-    /// <param name="spriteName">スプライト名</param>
-    /// <param name="texturePath">テクスチャファイルパス</param>
-    /// <param name="instanceCount">インスタンス数</param>
     SpriteData(const std::string &spriteName, const std::string &texturePath, uint32_t instanceCount = 1)
         : name(spriteName), textureFilePath(texturePath), instanceData(instanceCount) {}
 };
@@ -76,67 +67,6 @@ struct SpriteData {
 /// 複数のスプライトの登録、更新、描画を一元管理
 /// </summary>
 class SpriteManager {
-  private:
-    /// ===================================================
-    /// private method
-    /// ===================================================
-
-    /// <summary>
-    /// プライベートコンストラクタ
-    /// </summary>
-    SpriteManager() = default;
-
-    /// <summary>
-    /// コピーコンストラクタ削除
-    /// </summary>
-    SpriteManager(const SpriteManager &) = delete;
-
-    /// <summary>
-    /// 代入演算子削除
-    /// </summary>
-    SpriteManager &operator=(const SpriteManager &) = delete;
-
-    /// <summary>
-    /// 描画順序を保存
-    /// </summary>
-    void SaveDrawOrder();
-
-    /// <summary>
-    /// 描画順序を読み込み
-    /// </summary>
-    void LoadDrawOrder();
-
-    /// <summary>
-    /// 名前でスプライトを検索
-    /// </summary>
-    /// <param name="name">検索するスプライト名</param>
-    /// <returns>SpriteData*: スプライトデータのポインタ</returns>
-    SpriteData *FindSpriteByName(const std::string &name);
-
-    /// <summary>
-    /// スプライトのインデックスを検索
-    /// </summary>
-    /// <param name="name">検索するスプライト名</param>
-    /// <returns>int: スプライトのインデックス</returns>
-    int FindSpriteIndex(const std::string &name);
-
-    /// <summary>
-    /// スプライトインスタンスを更新
-    /// </summary>
-    /// <param name="spriteData">更新するスプライトデータ</param>
-    void UpdateSpriteInstances(SpriteData *spriteData);
-
-  private:
-    /// ===================================================
-    /// private varians
-    /// ===================================================
-
-    std::vector<std::unique_ptr<SpriteData>> sprites_;
-
-    bool showSpriteCreationModal_ = false;
-    std::string texturePath_ = "";
-    std::string saveFolder_ = "Sprite";
-
   public:
     /// ===================================================
     /// public method
@@ -145,7 +75,6 @@ class SpriteManager {
     /// <summary>
     /// シングルトンインスタンスを取得
     /// </summary>
-    /// <returns>SpriteManager*: インスタンスのポインタ</returns>
     static SpriteManager *GetInstance() {
         static SpriteManager instance;
         return &instance;
@@ -154,15 +83,11 @@ class SpriteManager {
     /// <summary>
     /// スプライトを登録
     /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="textureFilePath">テクスチャファイルパス</param>
-    /// <param name="transform">スプライト情報</param>
     void RegisterSprite(const std::string &name, const std::string &textureFilePath, const SpriteTransform &transform = SpriteTransform());
 
     /// <summary>
     /// スプライトを削除
     /// </summary>
-    /// <param name="name">削除するスプライト名</param>
     void UnregisterSprite(const std::string &name);
 
     /// <summary>
@@ -173,7 +98,6 @@ class SpriteManager {
     /// <summary>
     /// すべてのスプライトを更新
     /// </summary>
-    /// <param name="deltaTime">フレームの経過時間</param>
     void UpdateAll(float deltaTime);
 
     /// <summary>
@@ -201,16 +125,16 @@ class SpriteManager {
     /// </summary>
     void Finalize();
 
-    /// <summary>
+    /// ===================================================
     /// Getter
-    /// </summary>
+    /// ===================================================
     SpriteData *GetSprite(const std::string &name);
     std::string GetTextureFilePath(const std::string &name);
     std::vector<SpriteData *>GetAllSprites();
 
-    /// <summary>
+    /// ===================================================
     /// Setter
-    /// </summary>
+    /// ===================================================
     void SetInstanceSRT(const std::string &name, uint32_t index, const InstanceSRT &srt);
     void SetInstanceScale(const std::string &name, uint32_t index, const Vector3 &scale);
     void SetInstanceRotation(const std::string &name, uint32_t index, const Vector3 &rotation);
@@ -224,32 +148,36 @@ class SpriteManager {
     void SetSpriteColor(const std::string &name, const Vector4 &color);
     void SetTextureFilePath(const std::string &name, const std::string &textureFilePath);
     void SetUpdateFunction(const std::string &name, std::function<void(SpriteData &, float)> updateFunc);
-
-    /// <summary>
-    /// 保存フォルダを設定
-    /// </summary>
-    /// <param name="folderName">設定するフォルダ名</param>
     void SetSaveFolder(const std::string &folderName);
-
-    /// <summary>
-    /// スプライトのブレンドモードを設定
-    /// </summary>
-    /// <param name="name">スプライト名</param>
-    /// <param name="blendMode">ブレンドモード</param>
     void SetSpriteBlendMode(const std::string &name, BlendMode blendMode);
 
     /// <summary>
-    /// すべてのスプライトを保存
+    /// 保存・読み込み関連
     /// </summary>
     void SaveAllSprites();
-
-    /// <summary>
-    /// すべてのスプライトを読み込み
-    /// </summary>
     void LoadAllSprites();
-
-    /// <summary>
-    /// すべてのスプライトをクリア
-    /// </summary>
     void Clear();
+
+  private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+    SpriteManager() = default;
+    ~SpriteManager() = default;
+    SpriteManager(const SpriteManager &) = delete;
+    SpriteManager &operator=(const SpriteManager &) = delete;
+    void SaveDrawOrder();
+    void LoadDrawOrder();
+    SpriteData *FindSpriteByName(const std::string &name);
+    int FindSpriteIndex(const std::string &name);
+    void UpdateSpriteInstances(SpriteData *spriteData);
+
+  private:
+    /// ===================================================
+    /// private variables
+    /// ===================================================
+    std::vector<std::unique_ptr<SpriteData>> sprites_; // スプライトリスト
+    bool showSpriteCreationModal_ = false;              // 作成モーダル表示フラグ
+    std::string texturePath_ = "";                     // テクスチャパス
+    std::string saveFolder_ = "Sprite";                // 保存先フォルダ
 };

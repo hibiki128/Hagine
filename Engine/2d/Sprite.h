@@ -34,9 +34,9 @@ class Sprite {
     /// <param name="isBackMost">背面フラグ</param>
     void Draw(bool isBackMost = false);
 
-    /// <summary>
+    /// ===================================================
     /// Getter
-    /// </summary>
+    /// ===================================================
     const Vector2 &GetPosition() const { return position_; }
     float GetRotation() const { return rotation; }
     const Vector2 &GetSize() const { return size; }
@@ -52,9 +52,9 @@ class Sprite {
     Vector2 GetUVSize() { return uvSize_; }
     float GetUVRotate() { return uvRotate_; }
 
-    /// <summary>
+    /// ===================================================
     /// Setter
-    /// </summary>
+    /// ===================================================
     void SetPosition(const Vector2 &position) { this->position_ = position; }
     void SetRotation(float rotation) { this->rotation = rotation; }
     void SetSize(const Vector2 &size) { this->size = size; }
@@ -113,43 +113,43 @@ class Sprite {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
-    SpriteCommon *spriteCommon_ = nullptr;
-    SrvManager *srvManager_ = nullptr;
+    SpriteCommon *spriteCommon_ = nullptr;        // スプライト共通処理
+    SrvManager *srvManager_ = nullptr;            // SRV管理
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource = nullptr;
-    SpriteVertexData *vertexData = nullptr;
-    uint32_t *indexData = nullptr;
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
-    D3D12_INDEX_BUFFER_VIEW indexBufferView{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr; // 頂点リソース
+    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource = nullptr;  // インデックスリソース
+    SpriteVertexData *vertexData = nullptr;                         // 頂点データ
+    uint32_t *indexData = nullptr;                                   // インデックスデータ
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};                     // 頂点バッファビュー
+    D3D12_INDEX_BUFFER_VIEW indexBufferView{};                       // インデックスバッファビュー
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr;
-    SpriteMaterial *materialData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr; // マテリアルリソース
+    SpriteMaterial *materialData = nullptr;                           // マテリアルデータ
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
-    TransformationMatrix *transformationMatrixData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource; // 変換行列リソース
+    TransformationMatrix *transformationMatrixData = nullptr;            // 変換行列データ
 
-    Vector2 position_ = {0.0f, 0.0f}; // 座標
-    float rotation = 0.0f;            // 回転角度
-    Vector2 size = {640.0f, 360.0f};  // サイズ
+    Vector2 position_ = {0.0f, 0.0f};           // 座標
+    float rotation = 0.0f;                      // 回転角度
+    Vector2 size = {640.0f, 360.0f};            // サイズ
 
-    std::string fullpath;
-    Vector2 anchorPoint_ = {0.0f, 0.0f}; // アンカーポイント
+    std::string fullpath;                       // ファイルパス
+    Vector2 anchorPoint_ = {0.0f, 0.0f};        // アンカーポイント
 
-    bool isFlipX_ = false;    // 左右反転フラグ
-    bool isFlipY_ = false;    // 上下反転フラグ
-    bool isbackmost_ = false; // 背面フラグ
+    bool isFlipX_ = false;                      // 左右反転フラグ
+    bool isFlipY_ = false;                      // 上下反転フラグ
+    bool isbackmost_ = false;                   // 背面フラグ
 
-    Vector2 textureLeftTop = {0.0f, 0.0f};  // テクスチャ左上座標
-    Vector2 textureSize = {512.0f, 512.0f}; // テクスチャサイズ
+    Vector2 textureLeftTop = {0.0f, 0.0f};      // テクスチャ左上座標
+    Vector2 textureSize = {512.0f, 512.0f};     // テクスチャサイズ
 
-    uint32_t instanceCount = 1; // インスタンス数
-    uint32_t transformationMatrixSrvIndex = 0;
+    uint32_t instanceCount = 1;                 // インスタンス数
+    uint32_t transformationMatrixSrvIndex = 0;  // 変換行列SRVインデックス
 
-    float uvRotate_ = 0.0f;             // UV回転角度
-    Vector2 uvSize_ = {1.0f, 1.0f};     // UVサイズ
-    Vector2 uvPosition_ = {0.0f, 0.0f}; // UV座標
+    float uvRotate_ = 0.0f;                     // UV回転角度
+    Vector2 uvSize_ = {1.0f, 1.0f};             // UVサイズ
+    Vector2 uvPosition_ = {0.0f, 0.0f};         // UV座標
 };

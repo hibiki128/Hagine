@@ -106,7 +106,7 @@ class PlayerBullet : public BaseObject {
     static constexpr float kDefaultAcceleration = 10.0f;  // デフォルトの加速度
     static constexpr float kDefaultLifeTime = 5.0f;       // デフォルトの生存時間(秒)
     static constexpr float kMinDistanceThreshold = 0.1f;  // 距離判定の最小閾値
-    static constexpr float kHomingStrength = 10.0f;        // ホーミング強度
+    static constexpr float kHomingStrength = 20.0f;        // ホーミング強度
     static constexpr float kMinSpeedThreshold = 0.1f;     // 速度判定の最小閾値
     static constexpr float kMaxSpeed = 200.0f;            // 最大速度
     static constexpr float kForwardOffsetDistance = 2.0f; // 前方オフセット距離

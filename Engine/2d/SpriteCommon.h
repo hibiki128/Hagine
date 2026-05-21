@@ -3,61 +3,21 @@
 #include <Graphics/PipeLine/PipeLineManager.h>
 
 /// <summary>
-/// スプライト描画に必要な共通処理を管理するシングルトンクラス
-/// DirectX、パイプライン、ブレンドモードなどを制御
+/// スプライト描画の共通処理を管理するシングルトンクラス
 /// </summary>
 class SpriteCommon {
-  private:
-    /// ===================================================
-    /// private method
-    /// ===================================================
-
-    /// <summary>
-    /// プライベートコンストラクタ
-    /// </summary>
-    SpriteCommon() = default;
-
-    /// <summary>
-    /// プライベートデストラクタ
-    /// </summary>
-    ~SpriteCommon() = default;
-
-    /// <summary>
-    /// コピーコンストラクタ削除
-    /// </summary>
-    SpriteCommon(SpriteCommon &) = delete;
-
-    /// <summary>
-    /// 代入演算子削除
-    /// </summary>
-    SpriteCommon &operator=(SpriteCommon &) = delete;
-
-  private:
-    /// ===================================================
-    /// private varians
-    /// ===================================================
-
-    DirectXCommon *dxCommon_;
-    PipeLineManager *psoManager_ = nullptr;
-
   public:
     /// ===================================================
     /// public method
     /// ===================================================
 
     /// <summary>
-    /// シングルトンインスタンスを取得
+    /// シングルトンインスタンスの取得
     /// </summary>
-    /// <returns>SpriteCommon*: インスタンスのポインタ</returns>
-      static SpriteCommon* GetInstance() {
-          static SpriteCommon instance;
-          return &instance;
+    static SpriteCommon* GetInstance() {
+        static SpriteCommon instance;
+        return &instance;
     }
-
-    /// <summary>
-    /// 終了処理
-    /// </summary>
-    void Finalize();
 
     /// <summary>
     /// 初期化
@@ -65,19 +25,40 @@ class SpriteCommon {
     void Initialize();
 
     /// <summary>
-    /// 共通描画設定を適用
+    /// 終了処理
+    /// </summary>
+    void Finalize();
+
+    /// <summary>
+    /// 共通描画設定の適用
     /// </summary>
     void DrawCommonSetting();
 
     /// <summary>
-    /// DirectXCommonを取得
+    /// DirectXCommonの取得
     /// </summary>
-    /// <returns>DirectXCommon*: DirectXCommonのポインタ</returns>
-    DirectXCommon *GetDxCommon() const { return dxCommon_; }
+    DirectXCommon* GetDxCommon() const { return dxCommon_; }
 
     /// <summary>
-    /// ブレンドモードを設定
+    /// ブレンドモードの設定
     /// </summary>
-    /// <param name="blendMode">設定するブレンドモード</param>
     void SetBlendMode(BlendMode blendMode);
+
+  private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    SpriteCommon() = default;
+    ~SpriteCommon() = default;
+    SpriteCommon(SpriteCommon&) = delete;
+    SpriteCommon& operator=(SpriteCommon&) = delete;
+
+  private:
+    /// ===================================================
+    /// private variables
+    /// ===================================================
+
+    DirectXCommon* dxCommon_ = nullptr;        // DirectX共通処理
+    PipeLineManager* psoManager_ = nullptr;    // パイプライン管理
 };

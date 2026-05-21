@@ -12,7 +12,7 @@
 #define MAX_SPOT_LIGHTS 5
 
 /// <summary>
-/// ライトタイプ列挙型
+/// ライトタイプ種別
 /// </summary>
 enum class LightType {
     Directional, // 平行光源
@@ -24,21 +24,20 @@ class DirectXCommon;
 
 /// <summary>
 /// ライトグループクラス
-/// 平行光源、ポイントライト、スポットライトを統合管理する
+/// シーン内の各種光源（平行・点・スポット）を一括管理し、GPUへ定数データとして転送する
 /// </summary>
 class LightGroup {
-  public:
-    /// ===================================================
-    /// public method
-    /// ===================================================
+public:
+    // ===================================================
+    // 公開メソッド
+    // ===================================================
 
     /// <summary>
-    /// シングルトンインスタンスの取得
+    /// シングルトンインスタンスを取得
     /// </summary>
-    /// <returns>LightGroup*: インスタンスのポインタ</returns>
-      static LightGroup* GetInstance() {
+    static LightGroup *GetInstance() {
         static LightGroup instance;
-          return &instance;
+        return &instance;
     }
 
     /// <summary>
@@ -54,40 +53,40 @@ class LightGroup {
     /// <summary>
     /// 更新処理
     /// </summary>
-    /// <param name="viewProjection">ビュープロジェクション</param>
+    /// <param name="viewProjection">カメラのビュープロジェクション</param>
     void Update(const ViewProjection &viewProjection);
 
     /// <summary>
-    /// 描画処理
+    /// 描画設定（ルートシグネチャへのバインドなど）
     /// </summary>
     void Draw();
 
     /// <summary>
-    /// ImGui表示
+    /// ImGuiによるデバッグ表示
     /// </summary>
     void imgui();
 
     /// <summary>
-    /// ライトデータを保存
+    /// ライトデータをJSONへ保存
     /// </summary>
-    /// <param name="fileName">保存先ファイル名</param>
+    /// <param name="fileName">ファイル名</param>
     void SaveLightData(const std::string &fileName);
 
     /// <summary>
-    /// ライトデータを読み込み
+    /// ライトデータをJSONから読み込み
     /// </summary>
-    /// <param name="fileName">読み込み元ファイル名</param>
+    /// <param name="fileName">ファイル名</param>
     void LoadLightData(const std::string &fileName);
 
     /// <summary>
-    /// Setter
+    /// 光源可視化フラグを設定
     /// </summary>
     void SetShowLightVisualization(bool show) { showLightVisualization_ = show; }
 
-  private:
-    /// ===================================================
-    /// private method
-    /// ===================================================
+private:
+    // ===================================================
+    // 非公開メソッド
+    // ===================================================
 
     LightGroup() = default;
     ~LightGroup() = default;
@@ -95,22 +94,22 @@ class LightGroup {
     LightGroup &operator=(LightGroup &) = delete;
 
     /// <summary>
-    /// 平行光源データ作成
+    /// 平行光源用バッファの生成
     /// </summary>
     void CreateDirectionLight();
 
     /// <summary>
-    /// ポイントライト配列データ作成
+    /// ポイントライト用バッファの生成
     /// </summary>
     void CreatePointLights();
 
     /// <summary>
-    /// スポットライト配列データ作成
+    /// スポットライト用バッファの生成
     /// </summary>
     void CreateSpotLights();
 
     /// <summary>
-    /// カメラデータ作成
+    /// カメラ情報用バッファの生成
     /// </summary>
     void CreateCamera();
 
@@ -122,7 +121,7 @@ class LightGroup {
     /// <summary>
     /// ポイントライトを削除
     /// </summary>
-    /// <param name="index">削除するインデックス</param>
+    /// <param name="index">対象インデックス</param>
     void RemovePointLight(int index);
 
     /// <summary>
@@ -133,62 +132,62 @@ class LightGroup {
     /// <summary>
     /// スポットライトを削除
     /// </summary>
-    /// <param name="index">削除するインデックス</param>
+    /// <param name="index">対象インデックス</param>
     void RemoveSpotLight(int index);
 
     /// <summary>
-    /// ポイントライトバッファを更新
+    /// ポイントライトバッファの同期
     /// </summary>
     void UpdatePointLightBuffer();
 
     /// <summary>
-    /// スポットライトバッファを更新
+    /// スポットライトバッファの同期
     /// </summary>
     void UpdateSpotLightBuffer();
 
     /// <summary>
-    /// 光源の可視化描画
+    /// デバッグ用の光源位置描画
     /// </summary>
     void DrawLightVisualization();
 
-  private:
-    /// ===================================================
-    /// private struct
-    /// ===================================================
+private:
+    // ===================================================
+    // 構造体定義
+    // ===================================================
 
     /// <summary>
     /// 平行光源データ
     /// </summary>
     struct DirectionLight {
-        Vector4 color;       // ライトの色
-        Vector3 direction;   // ライトの向き
+        Vector4 color;       // 色 (RGBA)
+        Vector3 direction;   // 方向
         float intensity;     // 輝度
         int32_t active;      // 有効フラグ
-        int32_t HalfLambert; // ハーフランバート使用フラグ
-        int32_t BlinnPhong;  // Blinn-Phong使用フラグ
+        int32_t HalfLambert; // ハーフランバート適用
+        int32_t BlinnPhong;  // Blinn-Phong適用
     };
 
     /// <summary>
     /// ポイントライトデータ
     /// </summary>
     struct PointLight {
-        Vector4 color;       // ライトの色
-        Vector3 position;    // ライトの位置
+        Vector4 color;       // 色 (RGBA)
+        Vector3 position;    // 位置
         float intensity;     // 輝度
         int32_t active;      // 有効フラグ
         float radius;        // 影響半径
         float decay;         // 減衰率
-        int32_t HalfLambert; // ハーフランバート使用フラグ
-        int32_t BlinnPhong;  // Blinn-Phong使用フラグ
+        int32_t HalfLambert; // ハーフランバート適用
+        int32_t BlinnPhong;  // Blinn-Phong適用
         float padding[3];
     };
 
     /// <summary>
-    /// ポイントライト配列
+    /// ポイントライト群
     /// </summary>
     struct PointLights {
-        alignas(16) PointLight lights[MAX_POINT_LIGHTS]; // ポイントライト配列
-        int32_t count;                                   // 有効なライト数
+        alignas(16) PointLight lights[MAX_POINT_LIGHTS]; 
+        int32_t count;                                   // 有効数
         float padding[3];
     };
 
@@ -196,71 +195,64 @@ class LightGroup {
     /// スポットライトデータ
     /// </summary>
     struct SpotLight {
-        Vector4 color;       // ライトの色
-        Vector3 position;    // ライトの位置
+        Vector4 color;       // 色 (RGBA)
+        Vector3 position;    // 位置
         float intensity;     // 輝度
-        Vector3 direction;   // ライトの向き
+        Vector3 direction;   // 方向
         float distance;      // 照射距離
         float decay;         // 減衰率
-        float cosAngle;      // コーン角度のコサイン値
+        float cosAngle;      // コーン角度の余弦
         int32_t active;      // 有効フラグ
-        int32_t HalfLambert; // ハーフランバート使用フラグ
-        int32_t BlinnPhong;  // Blinn-Phong使用フラグ
+        int32_t HalfLambert; // ハーフランバート適用
+        int32_t BlinnPhong;  // Blinn-Phong適用
         float padding[3];
     };
 
     /// <summary>
-    /// スポットライト配列
+    /// スポットライト群
     /// </summary>
     struct SpotLights {
-        SpotLight lights[MAX_SPOT_LIGHTS]; // スポットライト配列
-        int32_t count;                     // 有効なライト数
+        SpotLight lights[MAX_SPOT_LIGHTS]; 
+        int32_t count;                     // 有効数
         float padding[3];
     };
 
     /// <summary>
-    /// GPU用カメラデータ
+    /// GPU転送用カメラデータ
     /// </summary>
     struct CameraForGPU {
-        Vector3 worldPosition; // カメラのワールド座標
+        Vector3 worldPosition; // ワールド座標
     };
 
-  private:
-    /// ===================================================
-    /// private varians
-    /// ===================================================
+private:
+    // ===================================================
+    // メンバ変数
+    // ===================================================
 
-    static LightGroup *instance; // シングルトンインスタンス
+    DirectXCommon *dxCommon_ = nullptr; // DirectX基盤へのポインタ
 
-    DirectXCommon *dxCommon_; // DirectX共通クラス
+    // リソース管理
+    Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource; // 平行光源バッファ
+    DirectionLight *directionalLightData = nullptr;                  
 
-    // 平行光源リソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource; // バッファリソース
-    DirectionLight *directionalLightData = nullptr;                  // データポインタ
+    Microsoft::WRL::ComPtr<ID3D12Resource> pointLightsResource;      // ポイントライトバッファ
+    PointLights *pointLightsData = nullptr;                     
 
-    // ポイントライトリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> pointLightsResource; // バッファリソース
-    PointLights *pointLightsData = nullptr;                     // データポインタ
+    Microsoft::WRL::ComPtr<ID3D12Resource> spotLightsResource;       // スポットライトバッファ
+    SpotLights *spotLightsData = nullptr;                      
 
-    // スポットライトリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> spotLightsResource; // バッファリソース
-    SpotLights *spotLightsData = nullptr;                      // データポインタ
+    Microsoft::WRL::ComPtr<ID3D12Resource> cameraForGPUResource;     // カメラデータバッファ
+    CameraForGPU *cameraForGPUData = nullptr;                    
 
-    // カメラリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> cameraForGPUResource; // バッファリソース
-    CameraForGPU *cameraForGPUData = nullptr;                    // データポインタ
+    // ライトリスト管理
+    std::vector<PointLight> pointLights_; 
+    std::vector<SpotLight> spotLights_;   
 
-    // CPU側のライトデータ管理
-    std::vector<PointLight> pointLights_; // ポイントライト配列
-    std::vector<SpotLight> spotLights_;   // スポットライト配列
+    // UI状態
+    std::string saveMessage_;  
+    int saveMessageTimer_ = 0; 
+    bool isDirectionalLight = true;       // 平行光源の全体有効フラグ
+    bool showLightVisualization_ = false; 
 
-    // UI表示用
-    std::string saveMessage_;  // 保存メッセージ
-    int saveMessageTimer_ = 0; // メッセージ表示タイマー
-
-    // フラグ
-    bool isDirectionalLight = true;       // 平行光源有効フラグ
-    bool showLightVisualization_ = false; // 光源可視化フラグ
-
-    std::unique_ptr<DataHandler> DLightData_ = nullptr; // データハンドラー
+    std::unique_ptr<DataHandler> DLightData_ = nullptr; // JSONハンドラー
 };

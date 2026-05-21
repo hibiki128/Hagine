@@ -7,11 +7,11 @@
 #include "myMath.h"
 #ifdef _DEBUG
 #include <implot.h>
-#endif // DEBUG
+#endif
 #include <type/Vector2.h>
 
 void ViewProjection::Initialize(std::string jsonFile) {
-
+    // 各種行列を単位行列で初期化
     matView_ = MakeIdentity4x4();
     matProjection_ = MakeIdentity4x4();
     matWorld_ = MakeIdentity4x4();
@@ -22,6 +22,7 @@ void ViewProjection::Initialize(std::string jsonFile) {
     Map();
     UpdateMatrix();
 
+    // 設定ファイルがある場合は読み込む
     Load(jsonFile);
 }
 
@@ -31,38 +32,41 @@ void ViewProjection::CreateConstBuffer() {
 }
 
 void ViewProjection::Map() {
+    // 定数バッファをCPUからアクセス可能なメモリにマッピング
     HRESULT hr = constBuffer_->Map(0, nullptr, reinterpret_cast<void **>(&constMap));
     if (FAILED(hr)) {
-        // エラーハンドリング
+        // 必要に応じてエラー処理を記述
     }
 }
 
 void ViewProjection::UpdateMatrix() {
-    // イージング処理
+    // イージング処理がアクティブな場合
     if (isEasing_) {
         easingTime_ += Frame::DeltaTime();
 
         if (easingTime_ >= easingDuration_) {
-            // イージング完了
+            // イージング終了時に値を目標値で確定させる
             easingTime_ = easingDuration_;
             translation_ = targetTranslation_;
             eulerRotation_ = targetEulerRotation_;
             quateRotation_ = targetQuaternionRotation_;
             isEasing_ = false;
         } else {
-            // イージング中の補間
+            // 経過時間に基づき、イージング関数を適用して現在値を補間
             translation_ = ApplyEasing(currentEasingType_, startTranslation_, targetTranslation_, easingTime_, easingDuration_);
             eulerRotation_ = ApplyEasing(currentEasingType_, startEulerRotation_, targetEulerRotation_, easingTime_, easingDuration_);
             quateRotation_ = ApplyEasing(currentEasingType_, startQuaternionRotation_, targetQuaternionRotation_, easingTime_, easingDuration_);
         }
     }
 
+    // ビュー・投影行列の更新および定数バッファへの転送
     UpdateViewMatrix();
     UpdateProjectionMatrix();
     TransferMatrix();
 }
 
 void ViewProjection::TransferMatrix() {
+    // マッピングされたメモリへ現在値を書き込み、GPUへ送信
     if (constMap) {
         constMap->view = matView_;
         constMap->projection = matProjection_;
@@ -73,31 +77,32 @@ void ViewProjection::TransferMatrix() {
 void ViewProjection::UpdateViewMatrix() {
     Matrix4x4 worldMatrix;
 
+    // クォータニオンまたはオイラー角の選択に基づいてアフィン行列を生成
     if (isUseQuaternion_) {
-        // クォータニオンから回転行列を作成
         worldMatrix = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, quateRotation_, translation_);
     } else {
-        // オイラー角から回転行列を作成
         worldMatrix = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, eulerRotation_, translation_);
     }
 
-    // matWorld_を更新
+    // ワールド行列を更新
     matWorld_ = worldMatrix;
 
-    // ビュー行列はワールド行列の逆行列
+    // ビュー行列はカメラのワールド変換の逆行列
     matView_ = Inverse(worldMatrix);
 }
 
 void ViewProjection::UpdateProjectionMatrix() {
+    // 透視投影行列の作成
     matProjection_ = MakePerspectiveFovMatrix(fovAngleY, aspectRatio, nearZ, farZ);
 }
 
 void ViewProjection::EaseCameraMove(EasingType easeType, const std::string &jsonName, float duration) {
     if (isEasing_) {
-        return; // 既にイージング中なら早期リターン
+        return; // 既にイージング移動中であれば処理をスキップ
     }
 
-    // 現在の値を開始値として保存
+    // 現在のカメラ状態を開始値として保存
+    // (目標値は後続のLoad()処理で設定されることを想定)
     startTranslation_ = translation_;
     startEulerRotation_ = eulerRotation_;
     startQuaternionRotation_ = quateRotation_;

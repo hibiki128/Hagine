@@ -125,7 +125,7 @@ class Skin {
     uint32_t skinClusterInputVertexSrvIndex_ = 0;  // 入力頂点SRVインデックス
     size_t totalVertexCount = 0;                   // 総頂点数
     size_t vertexOffset = 0;                       // 頂点オフセット
-    DirectXCommon *dxCommon_;                      // DirectX共通クラス
-    SrvManager *srvManager_;                       // SRVマネージャー
+    DirectXCommon *dxCommon_ = nullptr;            // DirectX共通クラス
+    SrvManager *srvManager_ = nullptr;             // SRVマネージャー
     std::vector<size_t> meshVertexOffsets_;        // メッシュごとの頂点オフセット
 };

@@ -114,9 +114,9 @@ class Animator {
     std::string GetCurrentDirectoryPath() const { return directorypath_; }
     Matrix4x4 GetLocalMatrix() { return localMatrix; }
 
-    /// <summary>
+    /// ===================================================
     /// Setter
-    /// </summary>
+    /// ===================================================
     void SetIsAnimation(bool isAnimation) { isAnimation_ = isAnimation; }
     void SetAnimationTime(float time) { animationTime = time; }
     void SetModelData(ModelData modelData) { modelData_ = modelData; }

@@ -142,6 +142,7 @@
     <ClInclude Include="ImGuizmo.h" />
     <ClInclude Include="imgui_bezier_math.h" />
     <ClInclude Include="imgui_canvas.h" />
+    <ClInclude Include="imgui_curve.hpp" />
     <ClInclude Include="imgui_extra_math.h" />
     <ClInclude Include="imgui_impl_dx12.h" />
     <ClInclude Include="imgui_impl_win32.h" />

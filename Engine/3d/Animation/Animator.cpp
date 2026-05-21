@@ -9,12 +9,14 @@
 std::unordered_map<std::string, Animation> Animator::animationCache;
 
 void Animator::Initialize(const std::string &directorypath, const std::string &filename) {
+    // ディレクトリパスとファイル名を保存
     directorypath_ = directorypath;
     filename_ = filename;
 
+    // 指定されたパスからアニメーションデータを読み込む
     currentAnimation_ = LoadAnimationFile(directorypath_, filename_);
 
-    // 初期状態では補間なしで開始
+    // 初期状態は補間なし、アニメーション時間は0から開始
     blendState_.isBlending = false;
     animationTime = 0.0f;
 }

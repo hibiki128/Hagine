@@ -5,7 +5,7 @@
 #ifdef _DEBUG
 #include "imgui.h"
 #include <implot.h>
-#endif // _DEBUG
+#endif 
 #include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "algorithm"
 
@@ -24,45 +24,49 @@ void DebugCamera::Initialize(ViewProjection *viewProjection) {
 }
 
 void DebugCamera::Update() {
+    // アクティブ時のみデバッグ操作を適用
     if (isActive_) {
+        // カメラ操作がロックされていない場合のみ移動計算
         if (!lockCamera_) {
-            CameraMove(eulerRotation_, translation_, mouse); // rotation_をeulerRotation_に変更
+            CameraMove(eulerRotation_, translation_, mouse);
         }
 
         Matrix4x4 cameraMatrix;
 
+        // 回転の定義形式に応じて行列を生成
         if (isUseQuaternion_) {
-            // クォータニオン使用時
             cameraMatrix = MakeAffineMatrix(
                 {1.0f, 1.0f, 1.0f},
                 quateRotation_,
                 translation_);
         } else {
-            // オイラー角使用時
             cameraMatrix = MakeAffineMatrix(
                 {1.0f, 1.0f, 1.0f},
                 eulerRotation_,
                 translation_);
         }
 
-        // ビュー・プロジェクション行列の設定
+        // ビュープロジェクションの状態を更新
         viewProjection_->matWorld_ = cameraMatrix;
         viewProjection_->matView_ = Inverse(cameraMatrix);
         viewProjection_->translation_ = translation_;
         viewProjection_->eulerRotation_ = eulerRotation_;
         viewProjection_->quateRotation_ = quateRotation_;
         viewProjection_->isUseQuaternion_ = isUseQuaternion_;
+        
+        // 投影行列の再計算
         viewProjection_->matProjection_ = MakePerspectiveFovMatrix(
             45.0f * std::numbers::pi_v<float> / 180.0f,
             float(WinApp::kClientWidth) / float(WinApp::kClientHeight),
             0.1f, 1000.0f);
     } else {
+        // 非アクティブ時は通常更新
         viewProjection_->UpdateMatrix();
     }
 }
 
 void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Vector2 &clickPosition) {
-    // 各方向ベクトル（現在の回転に基づいて計算）
+    // 現在の回転状態から各軸の向きを算出
     Matrix4x4 matRot;
     if (isUseQuaternion_) {
         matRot = QuaternionToMatrix4x4(quateRotation_);
@@ -70,17 +74,18 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
         matRot = MakeRotateXMatrix(eulerRotation_.x) * MakeRotateYMatrix(eulerRotation_.y);
     }
 
+    // カメラのローカル軸(前後左右上下)の算出
     Vector3 forward = TransformNormal({0.0f, 0.0f, -2.0f}, matRot);
     Vector3 right = TransformNormal({2.0f, 0.0f, 0.0f}, matRot);
     Vector3 up = {0.0f, 2.0f, 0.0f};
 
-    // ---------- キーボードによるカメラ移動 ----------
+    // キーボード操作による移動処理
     if (useKey_) {
-        // ダッシュ倍率判定
+        // コントロールキーで加速
         bool isDashing = Input::GetInstance()->PushKey(DIK_LCONTROL);
         float speed = moveZspeed * 10.0f * (isDashing ? 5.0f : 1.0f);
 
-        // 移動ベクトル初期化
+        // 各キー入力に基づく移動ベクトルの計算
         Vector3 move = {0, 0, 0};
         if (Input::GetInstance()->PushKey(DIK_W))
             move -= forward;
@@ -95,7 +100,7 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
         if (Input::GetInstance()->PushKey(DIK_LSHIFT))
             move -= up;
 
-        // 反映
+        // 算出された移動量を位置に加算
         translation_ += move * speed;
     }
 

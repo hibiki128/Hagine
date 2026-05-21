@@ -12,10 +12,12 @@
 namespace fs = std::filesystem;
 
 void SpriteManager::Finalize() {
+    // 保持している全てのスプライトデータを解放する
     sprites_.clear();
 }
 
 void SpriteManager::RegisterSprite(const std::string &name, const std::string &textureFilePath, const SpriteTransform &transform) {
+    // 新しいスプライトデータを作成し、必要なコンポーネントを初期化してリストに登録する
     auto spriteData = std::make_unique<SpriteData>(name, textureFilePath, transform.instanceCount);
 
     spriteData->sprite = std::make_unique<Sprite>();
@@ -26,9 +28,12 @@ void SpriteManager::RegisterSprite(const std::string &name, const std::string &t
     spriteData->sprite->SetUVSize({1.0f, 1.0f});
     spriteData->sprite->SetUVRotate(0.0f);
 
-    // インスタンスデータの初期化
+    // インスタンスデータを基に初期変換データを設定する
     for (uint32_t i = 0; i < transform.instanceCount; ++i) {
         spriteData->instanceData[i].translation = {transform.position.x, transform.position.y, 0.0f};
+        spriteData->instanceData[i].scale = {1.0f, 1.0f, 1.0f};
+        spriteData->instanceData[i].rotation = {0.0f, 0.0f, 0.0f};
+        spriteData->instanceData[i].isActive = true;
     }
 
     sprites_.push_back(std::move(spriteData));
@@ -37,6 +42,7 @@ void SpriteManager::RegisterSprite(const std::string &name, const std::string &t
 }
 
 void SpriteManager::UnregisterSprite(const std::string &name) {
+    // 指定された名前のスプライトをリストから検索して削除する
     auto it = std::find_if(sprites_.begin(), sprites_.end(),
                            [&name](const std::unique_ptr<SpriteData> &sprite) {
                                return sprite->name == name;
@@ -49,9 +55,9 @@ void SpriteManager::UnregisterSprite(const std::string &name) {
 }
 
 void SpriteManager::DrawAll() {
+    // 全てのスプライトに対してブレンドモードを適用し、描画を実行する
     for (auto &spriteData : sprites_) {
         if (spriteData->isVisible) {
-            // ブレンドモードを設定してから描画
             SpriteCommon::GetInstance()->SetBlendMode(spriteData->blendMode);
             spriteData->sprite->Draw(spriteData->isBackMost);
         }
@@ -59,6 +65,7 @@ void SpriteManager::DrawAll() {
 }
 
 void SpriteManager::SetSpriteBlendMode(const std::string &name, BlendMode blendMode) {
+    // スプライトのブレンドモードを更新する
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->blendMode = blendMode;
@@ -66,14 +73,12 @@ void SpriteManager::SetSpriteBlendMode(const std::string &name, BlendMode blendM
 }
 
 void SpriteManager::UpdateAll(float deltaTime) {
+    // 各スプライトのカスタム更新関数を実行し、変換行列を更新する
     for (auto &spriteData : sprites_) {
         if (spriteData->isVisible) {
-            // カスタム更新関数が設定されていれば実行
             if (spriteData->updateFunction) {
                 spriteData->updateFunction(*spriteData, deltaTime);
             }
-
-            // インスタンスデータを基にTransformationMatrixを更新
             UpdateSpriteInstances(spriteData.get());
         }
     }
@@ -86,11 +91,13 @@ void SpriteManager::UpdateImGui() {
 }
 
 std::string SpriteManager::GetTextureFilePath(const std::string &name) {
+    // スプライトの名前からテクスチャファイルパスを取得する
     auto spriteData = GetSprite(name);
     return spriteData ? spriteData->textureFilePath : "";
 }
 
 std::vector<SpriteData *> SpriteManager::GetAllSprites() {
+    // 全てのスプライトデータのリストを取得する
     std::vector<SpriteData *> result;
     result.reserve(sprites_.size());
     for (auto &s : sprites_) {
@@ -100,6 +107,7 @@ std::vector<SpriteData *> SpriteManager::GetAllSprites() {
 }
 
 void SpriteManager::SetTextureFilePath(const std::string &name, const std::string &textureFilePath) {
+    // スプライトのテクスチャパスを更新する
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->textureFilePath = textureFilePath;
@@ -108,10 +116,12 @@ void SpriteManager::SetTextureFilePath(const std::string &name, const std::strin
 }
 
 SpriteData *SpriteManager::GetSprite(const std::string &name) {
+    // 名前による検索を実行する
     return FindSpriteByName(name);
 }
 
 SpriteData *SpriteManager::FindSpriteByName(const std::string &name) {
+    // 名前一致するスプライトデータを検索しポインタを返す
     auto it = std::find_if(sprites_.begin(), sprites_.end(),
                            [&name](const std::unique_ptr<SpriteData> &sprite) {
                                return sprite->name == name;
@@ -120,6 +130,7 @@ SpriteData *SpriteManager::FindSpriteByName(const std::string &name) {
 }
 
 int SpriteManager::FindSpriteIndex(const std::string &name) {
+    // インデックスによる検索を実行する
     for (size_t i = 0; i < sprites_.size(); ++i) {
         if (sprites_[i]->name == name) {
             return static_cast<int>(i);
@@ -129,6 +140,7 @@ int SpriteManager::FindSpriteIndex(const std::string &name) {
 }
 
 void SpriteManager::SetInstanceSRT(const std::string &name, uint32_t index, const InstanceSRT &srt) {
+    // インスタンスのSRTデータを更新する
     auto spriteData = GetSprite(name);
     if (spriteData && index < spriteData->instanceData.size()) {
         spriteData->instanceData[index] = srt;
@@ -136,6 +148,7 @@ void SpriteManager::SetInstanceSRT(const std::string &name, uint32_t index, cons
 }
 
 void SpriteManager::SetInstanceScale(const std::string &name, uint32_t index, const Vector3 &scale) {
+    // 特定のインスタンスのスケールを設定する
     auto spriteData = GetSprite(name);
     if (spriteData && index < spriteData->instanceData.size()) {
         spriteData->instanceData[index].scale = scale;
@@ -143,6 +156,7 @@ void SpriteManager::SetInstanceScale(const std::string &name, uint32_t index, co
 }
 
 void SpriteManager::SetInstanceRotation(const std::string &name, uint32_t index, const Vector3 &rotation) {
+    // 特定のインスタンスの回転を設定する
     auto spriteData = GetSprite(name);
     if (spriteData && index < spriteData->instanceData.size()) {
         spriteData->instanceData[index].rotation = rotation;
@@ -150,6 +164,7 @@ void SpriteManager::SetInstanceRotation(const std::string &name, uint32_t index,
 }
 
 void SpriteManager::SetInstanceTranslation(const std::string &name, uint32_t index, const Vector3 &translation) {
+    // 特定のインスタンスの移動を設定する
     auto spriteData = GetSprite(name);
     if (spriteData && index < spriteData->instanceData.size()) {
         spriteData->instanceData[index].translation = translation;
@@ -157,6 +172,7 @@ void SpriteManager::SetInstanceTranslation(const std::string &name, uint32_t ind
 }
 
 void SpriteManager::SetInstanceActive(const std::string &name, uint32_t index, bool isActive) {
+    // 特定のインスタンスの有効/無効を設定する
     auto spriteData = GetSprite(name);
     if (spriteData && index < spriteData->instanceData.size()) {
         spriteData->instanceData[index].isActive = isActive;
@@ -164,6 +180,7 @@ void SpriteManager::SetInstanceActive(const std::string &name, uint32_t index, b
 }
 
 InstanceSRT *SpriteManager::GetInstanceSRT(const std::string &name, uint32_t index) {
+    // 特定のインスタンスのSRTデータを取得する
     auto spriteData = GetSprite(name);
     if (spriteData && index < spriteData->instanceData.size()) {
         return &spriteData->instanceData[index];
@@ -172,6 +189,7 @@ InstanceSRT *SpriteManager::GetInstanceSRT(const std::string &name, uint32_t ind
 }
 
 void SpriteManager::SetSpriteVisible(const std::string &name, bool visible) {
+    // スプライトの表示可否を設定する
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->isVisible = visible;
@@ -179,6 +197,7 @@ void SpriteManager::SetSpriteVisible(const std::string &name, bool visible) {
 }
 
 void SpriteManager::SetSpriteBackMost(const std::string &name, bool isBackMost) {
+    // スプライトの背面配置フラグを設定する
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->isBackMost = isBackMost;
@@ -186,6 +205,7 @@ void SpriteManager::SetSpriteBackMost(const std::string &name, bool isBackMost) 
 }
 
 void SpriteManager::SetSpritePosition(const std::string &name, const Vector2 &position) {
+    // スプライトの基準位置を設定する
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->sprite->SetPosition(position);
@@ -193,6 +213,7 @@ void SpriteManager::SetSpritePosition(const std::string &name, const Vector2 &po
 }
 
 void SpriteManager::SetSpriteSize(const std::string &name, const Vector2 &size) {
+    // スプライトのサイズを設定する
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->sprite->SetSize(size);
@@ -200,6 +221,7 @@ void SpriteManager::SetSpriteSize(const std::string &name, const Vector2 &size) 
 }
 
 void SpriteManager::SetSpriteColor(const std::string &name, const Vector4 &color) {
+    // スプライトの色を設定する
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->sprite->SetColor({color.x, color.y, color.z});
@@ -208,6 +230,7 @@ void SpriteManager::SetSpriteColor(const std::string &name, const Vector4 &color
 }
 
 void SpriteManager::SetUpdateFunction(const std::string &name, std::function<void(SpriteData &, float)> updateFunc) {
+    // カスタム更新関数を登録する
     auto spriteData = GetSprite(name);
     if (spriteData) {
         spriteData->updateFunction = updateFunc;
@@ -215,27 +238,37 @@ void SpriteManager::SetUpdateFunction(const std::string &name, std::function<voi
 }
 
 void SpriteManager::Clear() {
+    // リスト内の全てのスプライトを削除する
     sprites_.clear();
 }
 
 void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData) {
+    // 各インスタンスごとのワールド行列を作成し、スプライト側の変換行列リソースに適用する
     if (!spriteData || !spriteData->sprite)
         return;
 
-    // 全インスタンス数を設定（非アクティブも含む）
     spriteData->sprite->SetInstanceCount(static_cast<uint32_t>(spriteData->instanceData.size()));
+
+    // スプライト本体のサイズと回転を取得してインスタンス行列に反映する
+    Vector2 spriteSize = spriteData->sprite->GetSize();
+    float spriteRotation = spriteData->sprite->GetRotation();
 
     for (uint32_t i = 0; i < spriteData->instanceData.size(); ++i) {
         const auto &instanceSRT = spriteData->instanceData[i];
 
         Transform transform;
-        transform.scale = instanceSRT.scale;
-        transform.rotate = instanceSRT.rotation;
-        transform.translate = instanceSRT.translation;
+        // インスタンスのスケールにスプライトサイズを掛け合わせる
+        transform.scale.x = instanceSRT.scale.x * spriteSize.x;
+        transform.scale.y = instanceSRT.scale.y * spriteSize.y;
         transform.scale.z = 1.0f;
-        transform.translate.z = 0.0f;
+        // Z回転にスプライト本体の回転を加算する
+        transform.rotate.x = instanceSRT.rotation.x;
+        transform.rotate.y = instanceSRT.rotation.y;
+        transform.rotate.z = instanceSRT.rotation.z + spriteRotation;
+        transform.translate = instanceSRT.translation;
+        // isBackMost が有効な場合は奥に配置する
+        transform.translate.z = spriteData->isBackMost ? 10000.0f : 0.0f;
 
-        // 非アクティブなインスタンスは画面外に配置するか、スケールを0にする
         if (!instanceSRT.isActive) {
             transform.scale = {0.0f, 0.0f, 1.0f};
         }
@@ -519,6 +552,9 @@ void SpriteManager::DrawSpriteManager() {
         // ====================================================
         SectionHeader("[ スプライト詳細 ]", DebugTheme::kAccentPurple);
 
+        // 選択中インスタンスのインデックスをスプライト名をキーに保持する
+        static std::unordered_map<std::string, int> selectedInstanceMap;
+
         for (auto &sp : sprites_) {
             ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgPurple);
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.7f, 0.3f, 1.0f, 0.20f});
@@ -530,36 +566,19 @@ void SpriteManager::DrawSpriteManager() {
             ImGui::PushID(sp->name.c_str());
             ImGui::Indent(6.0f);
 
-            // ---- Basic ----
+            // ---- Basic (共通設定) ----
             ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgBlue);
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.55f, 1.0f, 0.20f});
-            if (ImGui::TreeNodeEx("基本設定##bs", ImGuiTreeNodeFlags_SpanAvailWidth)) {
-                // Position
-                {
-                    Vector2 pos = sp->sprite->GetPosition();
-                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
-                    ImGui::TextUnformatted("位置 (X / Y)");
-                    ImGui::PopStyleColor();
-                    float v[2] = {pos.x, pos.y};
-                    ImGui::SetNextItemWidth(-1);
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgBlue);
-                    if (ImGui::DragFloat2("##bspos", v, 1.f))
-                        sp->sprite->SetPosition({v[0], v[1]});
-                    ImGui::PopStyleColor();
-                }
-                ImGui::Spacing();
-
+            if (ImGui::TreeNodeEx("共通設定##bs", ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 // Size - 比率維持 / XY独立 モード切り替え
                 {
                     Vector2 sz = sp->sprite->GetSize();
 
-                    // ラベルとモード切り替えボタンを横並びに配置
                     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
-                    ImGui::TextUnformatted("サイズ");
+                    ImGui::TextUnformatted("サイズ (全インスタンス共通)");
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
 
-                    // アスペクト比ロック状態に応じてボタン色を切り替える
                     const bool locked = sp->lockAspectRatio;
                     if (locked) {
                         ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kAccentBlue);
@@ -576,21 +595,17 @@ void SpriteManager::DrawSpriteManager() {
 
                     ImGui::SetNextItemWidth(-1);
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgBlue);
-
                     if (sp->lockAspectRatio) {
-                        // 比率維持モード: X幅を基準にアスペクト比を保ちながらスケール変更
                         const float aspect = (sz.x > 0.0f) ? sz.y / sz.x : 1.0f;
                         float scaleW = sz.x;
                         if (ImGui::DragFloat("##bssz_w", &scaleW, 1.0f, 1.0f, 2000.0f, "W: %.1f")) {
                             scaleW = std::max(1.0f, scaleW);
                             sp->sprite->SetSize({scaleW, scaleW * aspect});
                         }
-                        // 現在の高さとアスペクト比を補足表示
                         ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
                         ImGui::Text("H: %.1f  (比率 1 : %.3f)", sz.y, aspect);
                         ImGui::PopStyleColor();
                     } else {
-                        // XY独立モード: W・H を個別に変更
                         float v[2] = {sz.x, sz.y};
                         if (ImGui::DragFloat2("##bssz", v, 1.f, 0.f, 2000.f))
                             sp->sprite->SetSize({v[0], v[1]});
@@ -613,11 +628,11 @@ void SpriteManager::DrawSpriteManager() {
                 }
                 ImGui::Spacing();
 
-                // Rotation
+                // Rotation (共通ベース)
                 {
                     float rot = sp->sprite->GetRotation();
                     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
-                    ImGui::TextUnformatted("回転 [rad] (スライダーでドラッグ)");
+                    ImGui::TextUnformatted("基準回転 [rad] (全インスタンスに加算)");
                     ImGui::PopStyleColor();
                     ImGui::SetNextItemWidth(-1);
                     ImGui::PushStyleColor(ImGuiCol_SliderGrab, DebugTheme::kAccentBlue);
@@ -639,6 +654,12 @@ void SpriteManager::DrawSpriteManager() {
                     if (ImGui::Combo("##bsbm", &bm, bmNames, IM_ARRAYSIZE(bmNames)))
                         sp->blendMode = static_cast<BlendMode>(bm);
                 }
+                ImGui::Spacing();
+
+                // BackMost / Visible
+                ImGui::Checkbox("最背面##bkm", &sp->isBackMost);
+                ImGui::SameLine();
+                ImGui::Checkbox("表示##vis2", &sp->isVisible);
 
                 ImGui::TreePop();
             }
@@ -653,7 +674,6 @@ void SpriteManager::DrawSpriteManager() {
                 float uvRot = sp->sprite->GetUVRotate();
                 bool changed = false;
 
-                // UV Scale
                 ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
                 ImGui::TextUnformatted("UVスケール (X / Y)");
                 ImGui::PopStyleColor();
@@ -666,7 +686,6 @@ void SpriteManager::DrawSpriteManager() {
                 }
                 ImGui::PopStyleColor();
 
-                // UV Rotation
                 ImGui::Spacing();
                 ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
                 ImGui::TextUnformatted("UV回転 [rad]");
@@ -675,7 +694,6 @@ void SpriteManager::DrawSpriteManager() {
                 if (ImGui::SliderAngle("##uvrt", &uvRot))
                     changed = true;
 
-                // UV Position
                 ImGui::Spacing();
                 ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
                 ImGui::TextUnformatted("UVオフセット (X / Y)");
@@ -704,6 +722,118 @@ void SpriteManager::DrawSpriteManager() {
                 ImGui::TreePop();
             }
             ImGui::PopStyleColor(2);
+
+            // ---- インスタンス編集 ----
+            uint32_t instCount = static_cast<uint32_t>(sp->instanceData.size());
+            if (instCount > 0) {
+                ImGui::PushStyleColor(ImGuiCol_Header, {0.15f, 0.35f, 0.30f, 1.0f});
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.55f, 0.45f, 0.30f});
+                bool instOpen = ImGui::TreeNodeEx("インスタンス編集##inst", ImGuiTreeNodeFlags_SpanAvailWidth);
+                ImGui::PopStyleColor(2);
+
+                if (instOpen) {
+                    // インスタンス選択 Combo
+                    int &selIdx = selectedInstanceMap[sp->name];
+                    selIdx = std::clamp(selIdx, 0, (int)instCount - 1);
+
+                    // Comboラベル生成
+                    std::string comboLabel = "インスタンス " + std::to_string(selIdx) +
+                                             (sp->instanceData[selIdx].isActive ? "" : " [非表示]");
+
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("編集するインスタンス");
+                    ImGui::PopStyleColor();
+                    ImGui::SetNextItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.12f, 0.28f, 0.24f, 1.0f});
+                    if (ImGui::BeginCombo("##instsel", comboLabel.c_str())) {
+                        for (uint32_t idx = 0; idx < instCount; ++idx) {
+                            bool selected = (selIdx == (int)idx);
+                            std::string label = "インスタンス " + std::to_string(idx) +
+                                                (sp->instanceData[idx].isActive ? "" : " [非表示]");
+                            if (ImGui::Selectable(label.c_str(), selected))
+                                selIdx = (int)idx;
+                            if (selected)
+                                ImGui::SetItemDefaultFocus();
+                        }
+                        ImGui::EndCombo();
+                    }
+                    ImGui::PopStyleColor();
+                    ImGui::Spacing();
+
+                    // 選択インスタンスの編集
+                    InstanceSRT &inst = sp->instanceData[selIdx];
+
+                    // 位置
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("位置 (X / Y)");
+                    ImGui::PopStyleColor();
+                    float pos[2] = {inst.translation.x, inst.translation.y};
+                    ImGui::SetNextItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.25f, 0.22f, 1.0f});
+                    if (ImGui::DragFloat2("##ipos", pos, 1.0f)) {
+                        inst.translation.x = pos[0];
+                        inst.translation.y = pos[1];
+                    }
+                    ImGui::PopStyleColor();
+                    ImGui::Spacing();
+
+                    // スケール
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("スケール (X / Y)");
+                    ImGui::PopStyleColor();
+                    float sc[2] = {inst.scale.x, inst.scale.y};
+                    ImGui::SetNextItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.25f, 0.22f, 1.0f});
+                    if (ImGui::DragFloat2("##isc", sc, 0.01f, 0.0f, 10.0f)) {
+                        inst.scale.x = sc[0];
+                        inst.scale.y = sc[1];
+                    }
+                    ImGui::PopStyleColor();
+                    ImGui::Spacing();
+
+                    // 個別回転
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("個別回転 [rad]");
+                    ImGui::PopStyleColor();
+                    ImGui::SetNextItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrab, {0.20f, 0.70f, 0.55f, 1.0f});
+                    ImGui::SliderAngle("##irot", &inst.rotation.z);
+                    ImGui::PopStyleColor();
+                    ImGui::Spacing();
+
+                    // 表示フラグ
+                    ImGui::Checkbox("このインスタンスを表示##iact", &inst.isActive);
+
+                    // 全インスタンスに位置をコピー/リセットのユーティリティ
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::Spacing();
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("一括操作");
+                    ImGui::PopStyleColor();
+
+                    float bwInst = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2) / 3.0f;
+                    ImGui::PushStyleColor(ImGuiCol_Button, {0.18f, 0.40f, 0.55f, 0.85f});
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.25f, 0.55f, 0.75f, 0.90f});
+                    if (ImGui::Button("全インスタンスを表示##iactall", ImVec2(bwInst, 0))) {
+                        for (auto &inst2 : sp->instanceData)
+                            inst2.isActive = true;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("全インスタンスを非表示##ideactall", ImVec2(bwInst, 0))) {
+                        for (auto &inst2 : sp->instanceData)
+                            inst2.isActive = false;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("スケールリセット##iscrs", ImVec2(bwInst, 0))) {
+                        for (auto &inst2 : sp->instanceData)
+                            inst2.scale = {1.0f, 1.0f, 1.0f};
+                    }
+                    ImGui::PopStyleColor(2);
+
+                    ImGui::TreePop();
+                }
+            }
 
             ImGui::Unindent(6.0f);
             ImGui::Separator();
@@ -883,6 +1013,20 @@ void SpriteManager::SaveAllSprites() {
 
         // アスペクト比ロック状態を保存
         data->Save("lockAspectRatio", static_cast<int>(spriteData->lockAspectRatio));
+
+        // インスタンスデータを保存する
+        int instCount = static_cast<int>(spriteData->instanceData.size());
+        data->Save("instanceCount", instCount);
+        for (int idx = 0; idx < instCount; ++idx) {
+            const auto &inst = spriteData->instanceData[idx];
+            std::string prefix = "inst_" + std::to_string(idx) + "_";
+            data->Save(prefix + "tx", inst.translation.x);
+            data->Save(prefix + "ty", inst.translation.y);
+            data->Save(prefix + "sx", inst.scale.x);
+            data->Save(prefix + "sy", inst.scale.y);
+            data->Save(prefix + "rz", inst.rotation.z);
+            data->Save(prefix + "active", static_cast<int>(inst.isActive));
+        }
     }
     ImGuiNotification::Post("スプライトデータを保存しました: " + saveFolder_, {0.2f, 0.8f, 0.2f, 1.0f});
 }
@@ -918,11 +1062,14 @@ void SpriteManager::LoadAllSprites() {
         // アスペクト比ロック状態を復元（旧データには存在しないためデフォルトfalse）
         bool lockAspectRatio = static_cast<bool>(data->Load<int>("lockAspectRatio", 0));
 
+        // インスタンスデータを復元する（旧データは1インスタンスとして扱う）
+        int savedInstCount = data->Load<int>("instanceCount", 1);
+
         SpriteTransform transform;
         transform.position = position;
         transform.color = color;
         transform.anchorPoint = anchor;
-        transform.instanceCount = 1;
+        transform.instanceCount = static_cast<uint32_t>(savedInstCount);
 
         RegisterSprite(spriteName, texturePath, transform);
 
@@ -933,6 +1080,17 @@ void SpriteManager::LoadAllSprites() {
             sprite->sprite->SetUVTransform(uvTransform);
             sprite->blendMode = static_cast<BlendMode>(blendModeInt);
             sprite->lockAspectRatio = lockAspectRatio;
+
+            // 保存されたインスタンスデータを反映する
+            for (int idx = 0; idx < savedInstCount && idx < (int)sprite->instanceData.size(); ++idx) {
+                std::string prefix = "inst_" + std::to_string(idx) + "_";
+                sprite->instanceData[idx].translation.x = data->Load<float>(prefix + "tx", position.x);
+                sprite->instanceData[idx].translation.y = data->Load<float>(prefix + "ty", position.y);
+                sprite->instanceData[idx].scale.x = data->Load<float>(prefix + "sx", 1.0f);
+                sprite->instanceData[idx].scale.y = data->Load<float>(prefix + "sy", 1.0f);
+                sprite->instanceData[idx].rotation.z = data->Load<float>(prefix + "rz", 0.0f);
+                sprite->instanceData[idx].isActive = static_cast<bool>(data->Load<int>(prefix + "active", 1));
+            }
         }
     }
 
