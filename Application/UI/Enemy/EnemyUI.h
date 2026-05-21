@@ -35,7 +35,7 @@ class EnemyUI {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // 定数定義
@@ -76,13 +76,13 @@ class EnemyUI {
     static constexpr float kAnchorX = 1.0f;         // アンカーX
     static constexpr float kAnchorY = 0.0f;         // アンカーY
 
-    Enemy *enemy_ = nullptr;
+    Enemy *enemy_ = nullptr; // 敵へのポインタ
 
-    std::unique_ptr<Sprite> hpBar_;
-    std::unique_ptr<Sprite> enemyIcon_;
-    std::unique_ptr<Sprite> energyBar_;
-    std::unique_ptr<Sprite> barFrame_;
-    std::unique_ptr<Sprite> energyBarFrame_;
+    std::unique_ptr<Sprite> hpBar_;           // HPバー
+    std::unique_ptr<Sprite> enemyIcon_;       // アイコン
+    std::unique_ptr<Sprite> energyBar_;       // エネルギーバー
+    std::unique_ptr<Sprite> barFrame_;        // HPバーフレーム
+    std::unique_ptr<Sprite> energyBarFrame_;  // エネルギーバーフレーム
 
     Vector2 hpBarPosition_ = {kHPBarPositionX, kHPBarPositionY};                            // HPバーの位置
     Vector2 hpBarSize_ = {kHPBarSizeX, kHPBarSizeY};                                        // HPバーのサイズ

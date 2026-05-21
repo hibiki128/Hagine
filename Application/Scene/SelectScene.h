@@ -1,6 +1,10 @@
 #pragma once
 #include "BaseScene.h"
 
+/// <summary>
+/// セレクトシーンのクラス
+/// ステージ選択や設定などを行うシーンを管理する
+/// </summary>
 class SelectScene : public BaseScene {
   public:
     /// ===================================================
@@ -63,7 +67,7 @@ class SelectScene : public BaseScene {
     void ChangeScene();
 
   private:
-    /// ====================================
-    /// private variaus
-    /// ====================================
+    /// ===================================================
+    /// private variables
+    /// ===================================================
 };

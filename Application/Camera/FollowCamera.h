@@ -58,6 +58,10 @@ class FollowCamera {
     float GetLockOnHalfFovV() const { return lockOnHalfFovV_; }
     bool GetDrawLockOnFrustumDebug() const { return drawLockOnFrustumDebug_; }
 
+    /// ===================================================
+    /// Setter
+    /// ===================================================
+
     /// <summary>
     /// Setter
     /// </summary>
@@ -89,7 +93,7 @@ class FollowCamera {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // カメラ設定
@@ -135,12 +139,12 @@ class FollowCamera {
     float rushRotationArrivalThreshold_ = 0.01f; // Rush復帰時の完了判定回転差
 
     // ビュープロジェクション
-    ViewProjection viewProjection_;
+    ViewProjection viewProjection_; // ビュープロジェクション
 
-    WorldTransform worldTransform_;
+    WorldTransform worldTransform_; // ワールドトランスフォーム
 
     // 追従対象
-    Player *target_ = nullptr;
+    Player *target_ = nullptr; // 追従対象のプレイヤー
 
     Quaternion rushCameraRotation_; // Rush中に固定されていたカメラ回転
 
@@ -149,16 +153,16 @@ class FollowCamera {
     Vector3 shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f}; // 現在の補間値
     Vector3 shoulderOffsetStart_ = {0.0f, 0.0f, 0.0f};   // リセット開始時の値
     Vector3 rushCameraPosition_;                         // Rush中に固定されていたカメラ位置
-    Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f};
+    Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f};    // Rush中のカメラオフセット
 
-    float yaw_{};
+    float yaw_{};                            // ヨー角
     float shoulderMaxOffset_ = 12.5f;        // 肩のズレ最大距離(左右)
     float shoulderLerpSpeed_ = 10.0f;        // 補間速度(大きいほど速く追従)
     float rushCameraResumeDistance_ = 50.0f; // この距離以下になったらカメラ追従を再開
     float rushResumeBlendSpeed_ = 8.0f;      // Rush復帰時の補間速度(通常より高速)
     float rushCameraFollowRate_ = 0.3f;      // Rush中の追従率(0.0-1.0)
     bool isResumeFromRush_ = false;          // Rush状態からの復帰中かどうか
-    bool isRushCameraActive_ = false;
+    bool isRushCameraActive_ = false;        // Rushカメラがアクティブかどうか
 
     // ロックオン状態管理
     bool wasLockedOn_ = false; // 前フレームのロックオン状態
@@ -199,11 +203,11 @@ class FollowCamera {
     static constexpr float kFrustumDebugNear = 1.0f;                                // デバッグ描画ニア面距離
 
     /// ロックオン有効距離（奥行き）
-    float lockOnRange_ = kDefaultLockOnRange;
+    float lockOnRange_ = kDefaultLockOnRange; // ロックオン有効距離
     /// ロックオン水平半角（ラジアン）
-    float lockOnHalfFovH_ = kDefaultLockOnHalfFovH;
+    float lockOnHalfFovH_ = kDefaultLockOnHalfFovH; // ロックオン水平半角
     /// ロックオン垂直半角（ラジアン）
-    float lockOnHalfFovV_ = kDefaultLockOnHalfFovV;
+    float lockOnHalfFovV_ = kDefaultLockOnHalfFovV; // ロックオン垂直半角
     /// デバッグ描画フラグ
-    bool drawLockOnFrustumDebug_ = false;
+    bool drawLockOnFrustumDebug_ = false; // デバッグ描画フラグ
 };

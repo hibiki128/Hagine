@@ -30,17 +30,25 @@ void TitleScene::Finalize() {
 }
 
 void TitleScene::Update() {
+    // ゲームパッドの更新
     gamePad_->Update();
-    // カメラ更新
+
+    // カメラの更新
     CameraUpdate();
 
-    // シーン切り替え
+    // シーン切り替えの更新
     ChangeScene();
+
+    // 経過時間の更新
     time_ += Frame::DeltaTime();
+
+    // 一定時間経過後にカメラを移動
     if (time_ >= kMaxTime_ && !firstMove_) {
         vp_.EaseCameraMove(EasingType::InCubic, "TitleMovedCamera", 1.0f);
         firstMove_ = true;
     }
+
+    // 入力によるシーン進行（カメラ移動）
     if (!gamePad_->IsConnected()) {
         if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
             vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
@@ -53,30 +61,40 @@ void TitleScene::Update() {
         }
     }
 
+    // UIの更新
     titleUI_->Update();
 }
 
 void TitleScene::Draw() {
-    /// -------描画処理開始-------
+    /// ===================================================
+    /// 描画処理開始
+    /// ===================================================
+
+    // スカイボックスの描画
     skyBox_->Draw(vp_);
 
-    //DrawAllObjects();
-
+    // 2Dスプライトの描画
     spriteManager_->DrawAll();
+
+    // 3Dオブジェクトの描画
     objectManager_->Draw(vp_);
 
+    // タイトルUIの描画
     titleUI_->Draw(vp_);
 
-    /// -------描画処理終了-------
+    /// ===================================================
+    /// 描画処理終了
+    /// ===================================================
 }
 
 void TitleScene::DrawForOffScreen() {
-    /// -------描画処理開始-------
-
-    /// -------描画処理終了-------
+    /// ===================================================
+    /// オフスクリーン描画処理
+    /// ===================================================
 }
 
 void TitleScene::AddSceneSetting() {
+    // デバッグ表示
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
 }
@@ -85,18 +103,19 @@ void TitleScene::AddObjectSetting() {
 }
 
 void TitleScene::AddParticleSetting() {
+    // パーティクルエディタの表示
     DrawParticleEditorUI();
 }
 
 void TitleScene::CameraUpdate() {
+    // デバッグカメラの更新
     debugCamera_->Update();
 }
 
 void TitleScene::ChangeScene() {
+    // 演出終了後にチュートリアルシーンへ遷移
     if (secondMove_ && !vp_.GetIsCameraMove() && titleUI_->GetIsFinish()) {
         SceneTransition::GetInstance()->SetUseTransition(false);
         sceneManager_->NextSceneReservation("TUTORIAL");
     }
-#ifndef _DEBUG
-#endif // !_DEBUG
 }

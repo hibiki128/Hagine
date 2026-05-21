@@ -74,22 +74,16 @@ class ClearScene : public BaseScene {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
-    // 地面
-    std::unique_ptr<Ground> ground_;
 
-    // リザルト演出
-    std::unique_ptr<ResultStaging> resultStaging_;
+    std::unique_ptr<Ground> ground_;        // 地面
+    std::unique_ptr<ResultStaging> resultStaging_; // リザルト演出
+    std::unique_ptr<ResultUI> resultUI_;    // リザルトUI
+    std::unique_ptr<GamePad> gamePad_ = nullptr; // ゲームパッド
+    SkyBox *skyBox_ = nullptr;              // スカイボックス
 
-    // リザルトUI
-    std::unique_ptr<ResultUI> resultUI_;
-
-    std::unique_ptr<GamePad> gamePad_ = nullptr;
-
-    SkyBox *skyBox_ = nullptr;
-
-    const float cameraStartTimer_ = 3.0f;
-    float currentCameraStartTimer_ = 0.0f;
-    bool cameraStart_ = false;
+    const float cameraStartTimer_ = 3.0f;   // カメラ開始タイマー
+    float currentCameraStartTimer_ = 0.0f;  // 現在のカメラ開始タイマー
+    bool cameraStart_ = false;              // カメラ開始フラグ
 };

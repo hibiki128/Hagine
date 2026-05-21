@@ -4,110 +4,181 @@
 #include <SpriteManager.h>
 #include <array>
 
+/// <summary>
+/// ゲーム中のUI(ポーズメニューなど)を管理するクラス
+/// </summary>
 class GameUI {
   public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// 初期化
+    /// </summary>
     void Initialize();
 
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update();
 
+    /// <summary>
+    /// 描画処理
+    /// </summary>
     void Draw();
 
+    /// <summary>
+    /// スプライトのインデックス
+    /// </summary>
     enum SpriteIndex {
-        MenuButton,
-        SkillButton,
-        Controller,
-        AirController,
-        BlackMask,
-        backMenuText,
-        BackMenuUIBar,
-        backTitleText,
-        BackTitleUIBar,
-        explanationText,
-        ExplanationUIBar,
-        MenuBackGround,
-        back,
-        BButton,
-        decision,
-        AButton,
-        kMaxSprite,
+        MenuButton,       // メニューボタン
+        SkillButton,      // スキルボタン
+        Controller,       // コントローラー(地上)
+        AirController,    // コントローラー(空中)
+        BlackMask,        // 暗転用マスク
+        backMenuText,     // メニューに戻るテキスト
+        BackMenuUIBar,    // メニューに戻るバー
+        backTitleText,    // タイトルに戻るテキスト
+        BackTitleUIBar,   // タイトルに戻るバー
+        explanationText,  // 操作説明テキスト
+        ExplanationUIBar, // 操作説明バー
+        MenuBackGround,   // メニュー背景
+        back,             // 戻るテキスト
+        BButton,          // Bボタン
+        decision,         // 決定テキスト
+        AButton,          // Aボタン
+        kMaxSprite,       // 最大数
     };
 
+    /// <summary>
+    /// メニューの状態
+    /// </summary>
     enum MenuState {
         MainMenu,    // メインメニュー
         Explanation, // 操作説明画面
     };
 
-    // 画面遷移の待機状態
+    /// <summary>
+    /// 画面遷移の待機状態
+    /// </summary>
     enum class TransitionState {
-        None,
-        ToExplanation, // メインメニューが消えるのを待って説明を表示
-        ToMain,        // 説明が消えるのを待ってメインメニューを表示
+        None,          // なし
+        ToExplanation, // 操作説明へ
+        ToMain,        // メインメニューへ
     };
 
+    /// <summary>
+    /// ポーズ中かどうかを取得
+    /// </summary>
+    /// <returns>ポーズ中ならtrue</returns>
     bool GetIsPause() const { return isPause_; }
 
-    // タイトルに戻るフラグのGetter
+    /// <summary>
+    /// タイトルに戻るかどうかを取得
+    /// </summary>
+    /// <returns>タイトルに戻るならtrue</returns>
     bool GetIsBackTitle() const { return isBackTitle_; }
 
+    /// <summary>
+    /// チュートリアル中かどうかを設定
+    /// </summary>
+    /// <param name="isTutorial">チュートリアル中ならtrue</param>
     void SetIsTutorial(bool isTutorial) { isTutorial_ = isTutorial; }
 
   private:
-    // メニュー選択の処理
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// メニュー選択の更新
+    /// </summary>
     void UpdateMenuSelection();
+
+    /// <summary>
+    /// メニューアニメーションの更新
+    /// </summary>
     void UpdateMenuAnimation();
+
+    /// <summary>
+    /// 操作説明アニメーションの開始
+    /// </summary>
     void StartExplanationAnimation();
+
+    /// <summary>
+    /// 操作説明アニメーションの終了
+    /// </summary>
     void EndExplanationAnimation();
 
-    // 入力検出
+    /// <summary>
+    /// 上入力が押されたか
+    /// </summary>
+    /// <returns>押されたらtrue</returns>
     bool IsUpPressed();
+
+    /// <summary>
+    /// 下入力が押されたか
+    /// </summary>
+    /// <returns>押されたらtrue</returns>
     bool IsDownPressed();
+
+    /// <summary>
+    /// 決定ボタンが押されたか
+    /// </summary>
+    /// <returns>押されたらtrue</returns>
     bool IsDecidePressed();
+
+    /// <summary>
+    /// 戻るボタンが押されたか
+    /// </summary>
+    /// <returns>押されたらtrue</returns>
     bool IsBackPressed();
 
-    bool isPause_ = false;
-    bool prevIsPause_ = false;
+    /// ===================================================
+    /// private variables
+    /// ===================================================
 
-    // タイトルへ戻る選択状態
-    bool isBackTitle_ = false;
-    bool isTutorial_ = false;
+    bool isPause_ = false;     // ポーズフラグ
+    bool prevIsPause_ = false; // 前フレームのポーズフラグ
 
-    // メニュー状態
-    MenuState menuState_ = MainMenu;
-    TransitionState transitionState_ = TransitionState::None;
+    bool isBackTitle_ = false; // タイトルに戻るフラグ
+    bool isTutorial_ = false;  // チュートリアルフラグ
 
-    int currentMenuItem_ = 0;
-    int maxMenuItem_ = 3;
+    MenuState menuState_ = MainMenu;                    // メニュー状態
+    TransitionState transitionState_ = TransitionState::None; // 遷移状態
 
-    // 入力の連続防止用
-    float inputCooldown_ = 0.0f;
-    const float kInputCooldownTime = 0.15f;
+    int currentMenuItem_ = 0; // 現在の選択項目
+    int maxMenuItem_ = 3;     // 最大項目数
 
-    std::unique_ptr<GamePad> gamePad_ = nullptr;
-    std::array<SpriteData *, kMaxSprite> sprites_;
+    float inputCooldown_ = 0.0f;           // 入力クールダウン
+    const float kInputCooldownTime = 0.15f; // 入力クールダウン時間
 
-    // アニメーション用のイージングデータ
+    std::unique_ptr<GamePad> gamePad_ = nullptr;            // ゲームパッド
+    std::array<SpriteData *, kMaxSprite> sprites_; // スプライト配列
+
+    /// <summary>
+    /// UI要素のアニメーション構造体
+    /// </summary>
     struct UIElementAnimation {
-        EasingData<Vector2> position;
-        EasingData<float> alpha;
-        EasingData<Vector2> scale;
+        EasingData<Vector2> position; // 位置
+        EasingData<float> alpha;      // 透明度
+        EasingData<Vector2> scale;     // スケール
     };
 
-    std::array<UIElementAnimation, kMaxSprite> animations_;
+    std::array<UIElementAnimation, kMaxSprite> animations_; // アニメーション配列
 
-    // 目標位置とスケールを保存
-    std::array<Vector2, kMaxSprite> targetPositions_;
-    std::array<Vector2, kMaxSprite> defaultSizes_;
+    std::array<Vector2, kMaxSprite> targetPositions_; // 目標位置
+    std::array<Vector2, kMaxSprite> defaultSizes_;    // デフォルトサイズ
 
-    // アニメーション設定
-    const float kAnimationDuration = 0.5f; // 0.5秒
-    const float kFadeOutDuration = 0.2f;   // 消えるときは少し早く
-    const float kScaleAnimationDuration = 0.2f;
+    const float kAnimationDuration = 0.5f;      // アニメーション時間
+    const float kFadeOutDuration = 0.2f;        // フェードアウト時間
+    const float kScaleAnimationDuration = 0.2f; // スケールアニメーション時間
 
-    // 定数
     const float kStartOffsetY = -50.0f; // 出現時のオフセット
     const float kEndOffsetY = 100.0f;   // 消去時のオフセット
     const float kSelectedScale = 1.05f;  // 選択時の拡大率
-    const Vector3 kNormalColor = {1.0f, 1.0f, 1.0f};
+    const Vector3 kNormalColor = {1.0f, 1.0f, 1.0f}; // 通常時の色
 
-    const Vector3 kSelectedColor = {1.0f, 1.0f, 0.5f};
+    const Vector3 kSelectedColor = {1.0f, 1.0f, 0.5f}; // 選択時の色
 };

@@ -49,12 +49,15 @@ enum class EditorNodeType {
     ActionFlyApproach // 30  飛行中にプレイヤーへ水平接近
 };
 
-// ============================================================
-// BehaviorTreeLoader
-// Debug / Release 共通で使えるJSON→ランタイムツリー変換クラス
-// ============================================================
+/// <summary>
+/// ビヘイビアツリーをJSONから読み込み構築するクラス
+/// </summary>
 class BehaviorTreeLoader {
   public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
     /// <summary>
     /// 指定JSONファイルからランタイムBTを構築して返す
     /// </summary>
@@ -124,17 +127,20 @@ struct WeightedOutput {
     float Weight = 1.0f;
 };
 
+/// <summary>
+/// エディタ上のノード情報
+/// </summary>
 struct EditorNode {
-    ax::NodeEditor::NodeId ID;
-    std::string Title;
-    EditorNodeType Type;
-    ImVec2 Position;
-    ax::NodeEditor::PinId InputPinID;
-    ax::NodeEditor::PinId OutputPinID;
-    ax::NodeEditor::PinId SuccessPinID;
-    ax::NodeEditor::PinId FailurePinID;
+    ax::NodeEditor::NodeId ID;      // ノードID
+    std::string Title;               // タイトル
+    EditorNodeType Type;             // タイプ
+    ImVec2 Position;                 // 表示位置
+    ax::NodeEditor::PinId InputPinID;   // 入力ピンID
+    ax::NodeEditor::PinId OutputPinID;  // 出力ピンID
+    ax::NodeEditor::PinId SuccessPinID; // 成功ピンID
+    ax::NodeEditor::PinId FailurePinID; // 失敗ピンID
 
-    std::vector<WeightedOutput> WeightedOutputs;
+    std::vector<WeightedOutput> WeightedOutputs; // 重み付き出力リスト
 
     float Parameter = 0.0f;
     float Parameter2 = 0.0f;
@@ -144,8 +150,14 @@ struct EditorNode {
 
     std::string StateNameParameter = "Idle";
 
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
     EditorNode(int id, const std::string &title, EditorNodeType type);
 
+    /// <summary>
+    /// 条件ノードか判定
+    /// </summary>
     bool IsConditionNode() const {
         return Type == EditorNodeType::ConditionPlayerClose ||
                Type == EditorNodeType::ConditionHealthLow ||
@@ -156,6 +168,9 @@ struct EditorNode {
                Type == EditorNodeType::ConditionIsLockOn;
     }
 
+    /// <summary>
+    /// アクションノードか判定
+    /// </summary>
     bool IsActionNode() const {
         return Type == EditorNodeType::ActionRun ||
                Type == EditorNodeType::ActionApproach ||
@@ -178,83 +193,187 @@ struct EditorNode {
                Type == EditorNodeType::ActionFlyApproach;
     }
 
+    /// <summary>
+    /// 重み付けノードか判定
+    /// </summary>
     bool IsWeightNode() const {
         return Type == EditorNodeType::DecoratorWeight;
     }
 };
 
+/// <summary>
+/// エディタ上の接続（リンク）情報
+/// </summary>
 struct EditorLink {
-    ax::NodeEditor::LinkId ID;
-    ax::NodeEditor::PinId StartPinID;
-    ax::NodeEditor::PinId EndPinID;
+    ax::NodeEditor::LinkId ID;      // リンクID
+    ax::NodeEditor::PinId StartPinID; // 開始ピンID
+    ax::NodeEditor::PinId EndPinID;   // 終了ピンID
+
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
     EditorLink(int id, ax::NodeEditor::PinId start, ax::NodeEditor::PinId end);
 };
 
+/// <summary>
+/// ビヘイビアツリーエディタクラス
+/// </summary>
 class BehaviorTreeEditor {
   public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
     BehaviorTreeEditor();
+
+    /// <summary>
+    /// デストラクタ
+    /// </summary>
     ~BehaviorTreeEditor();
 
+    /// <summary>
+    /// ImGui描画処理
+    /// </summary>
     void OnImGuiRender();
 
+    /// <summary>
+    /// デバッグ対象を設定
+    /// </summary>
+    /// <param name="enemy">敵オブジェクト</param>
+    /// <param name="player">プレイヤーオブジェクト</param>
     void SetDebugTargets(Enemy *enemy, Player *player) {
         m_DebugEnemy = enemy;
         m_DebugPlayer = player;
     }
 
+    /// <summary>
+    /// ランタイムのルートノードを取得
+    /// </summary>
     std::shared_ptr<BTNode> GetRuntimeRoot() { return m_RuntimeRoot; }
 
   private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// 新規ノード作成
+    /// </summary>
     void CreateNode(const std::string &title, EditorNodeType type);
+
+    /// <summary>
+    /// 選択中のアイテムを削除
+    /// </summary>
     void DeleteSelectedItems();
+
+    /// <summary>
+    /// 接続作成のハンドル
+    /// </summary>
     void HandleCreateAction();
+
+    /// <summary>
+    /// ツリーを構築して実行
+    /// </summary>
     void BuildAndRunTree();
+
+    /// <summary>
+    /// エディタノードからランタイムノードを再帰的にビルド
+    /// </summary>
     std::shared_ptr<BTNode> BuildNodeRecursive(int editorNodeId);
+
+    /// <summary>
+    /// 指定出力ピンの子ノードIDリストを取得
+    /// </summary>
     std::vector<int> FindChildrenNodeIds(int outputPinId);
+
+    /// <summary>
+    /// 重み付き子ノードIDリストを取得
+    /// </summary>
     std::vector<std::pair<int, float>> FindWeightedChildrenNodeIds(const EditorNode &node);
+
+    /// <summary>
+    /// ルートノードのIDを特定
+    /// </summary>
     int FindRootNodeId();
+
+    /// <summary>
+    /// 入力ピンか判定
+    /// </summary>
     bool IsInputPin(ax::NodeEditor::PinId pinId);
+
+    /// <summary>
+    /// 出力ピンか判定
+    /// </summary>
     bool IsOutputPin(ax::NodeEditor::PinId pinId);
+
+    /// <summary>
+    /// 成功出力ピンか判定
+    /// </summary>
     bool IsSuccessPin(ax::NodeEditor::PinId pinId);
+
+    /// <summary>
+    /// 失敗出力ピンか判定
+    /// </summary>
     bool IsFailurePin(ax::NodeEditor::PinId pinId);
+
+    /// <summary>
+    /// 重み付き出力ピンか判定
+    /// </summary>
     bool IsWeightedOutputPin(ax::NodeEditor::PinId pinId, int &outNodeId, int &outOutputIndex);
+
+    /// <summary>
+    /// ツリーを保存
+    /// </summary>
     void SaveTree();
+
+    /// <summary>
+    /// ツリーを読み込み
+    /// </summary>
     void LoadTree(const std::string &filePath);
+
+    /// <summary>
+    /// パスをフォルダとファイル名に分割
+    /// </summary>
     void ParsePathToFolderAndFile(const std::string &fullPath, std::string &outFolder, std::string &outFile);
+
+    /// <summary>
+    /// ノードの説明文を取得
+    /// </summary>
     const char *GetNodeDescription(EditorNodeType type);
 
-    ax::NodeEditor::EditorContext *m_Context = nullptr;
-    std::vector<EditorNode> m_Nodes;
-    std::vector<EditorLink> m_Links;
+    /// ===================================================
+    /// private variants
+    /// ===================================================
 
-    int m_NextNodeId = 1;
-    int m_NextLinkId = 1;
-    // -------------------------------------------------------
-    // [修正] ピンIDをノードIDと衝突しない値域から開始する
-    //   ピンIDは kPinOffset(100000) + id*10 + N で生成されるため、
-    //   追加ピン(WeightedOutput 拡張分)も 200000 以降から割り当てれば
-    //   衝突しない。
-    // -------------------------------------------------------
-    int m_NextPinId = 200000;
-    ImVec2 m_CreatePos = ImVec2(0, 0);
+    ax::NodeEditor::EditorContext *m_Context = nullptr; // エディタコンテキスト
+    std::vector<EditorNode> m_Nodes;                    // ノードリスト
+    std::vector<EditorLink> m_Links;                    // リンク（接続）リスト
 
-    bool m_IsRunning = false;
-    Enemy *m_DebugEnemy = nullptr;
-    Player *m_DebugPlayer = nullptr;
+    int m_NextNodeId = 1;      // 次回割り当てノードID
+    int m_NextLinkId = 1;      // 次回割り当てリンクID
+    int m_NextPinId = 200000;  // 次回割り当てピンID
+    ImVec2 m_CreatePos = ImVec2(0, 0); // ノード作成位置
 
-    std::shared_ptr<BTNode> m_RuntimeRoot = nullptr;
-    std::map<int, std::shared_ptr<BTNode>> m_nodeInstanceMap;
-    std::map<int, float> m_statusTimers;
-    std::string m_LastResultText = "待機中";
-    ImVec4 m_LastResultColor = ImVec4(1, 1, 1, 1);
+    bool m_IsRunning = false;          // 実行中フラグ
+    Enemy *m_DebugEnemy = nullptr;    // デバッグ対象敵
+    Player *m_DebugPlayer = nullptr;  // デバッグ対象プレイヤー
 
-    char m_InputFileNameBuf[128] = "NewBehavior";
-    std::string m_SelectedFileName = "";
-    bool m_ShowLoadWindow = false;
+    std::shared_ptr<BTNode> m_RuntimeRoot = nullptr; // ランタイムツリーのルート
+    std::map<int, std::shared_ptr<BTNode>> m_nodeInstanceMap; // ノードIDとインスタンスのマップ
+    std::map<int, float> m_statusTimers;                       // ステータス表示用タイマー
+    std::string m_LastResultText = "待機中";                   // 最終実行結果テキスト
+    ImVec4 m_LastResultColor = ImVec4(1, 1, 1, 1);             // 最終実行結果表示色
 
-    bool m_LayoutDirty_ = false;                     // レイアウト変更フラグ
-    float m_SaveCooldown_ = 0.0f;                    // 保存クールダウン
-    static constexpr float kSaveCooldownTime = 2.0f; // 2秒操作がなければ保存
+    char m_InputFileNameBuf[128] = "NewBehavior"; // ファイル名入力バッファ
+    std::string m_SelectedFileName = "";           // 選択されたファイル名
+    bool m_ShowLoadWindow = false;                 // 読込窓表示フラグ
+
+    bool m_LayoutDirty_ = false;       // レイアウト変更フラグ
+    float m_SaveCooldown_ = 0.0f;     // 保存クールダウン
+    static constexpr float kSaveCooldownTime = 2.0f; // 自動保存までの待機時間
 };
 
 #endif // _DEBUG

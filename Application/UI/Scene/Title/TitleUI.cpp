@@ -86,12 +86,7 @@ void TitleUI::Update() {
     }
 
     if (time_ >= kMaxTime_) {
-        // -------------------------------------------------------
-        // 【修正①】Frame::DeltaTime()をkDeltaTimeに統一する
-        // Frame::DeltaTime()が初期フレーム等で大きな値を返すと
-        // 1フレームでmaxChargeScaleを超えてisMaxChargeScale_が
-        // 即trueになってしまうバグを修正
-        // -------------------------------------------------------
+        // チャージスケールの更新
         if (!isMaxChargeScale_) {
             chargeScale_ += chargeScaleSpeed_ * kDeltaTime / kParticleScaleSpeedDivisor;
             if (chargeScale_ >= maxChargeScale_) {
@@ -100,11 +95,7 @@ void TitleUI::Update() {
             }
         }
 
-        // -------------------------------------------------------
-        // 【修正②】スケール設定をisMaxChargeScale_の外に出す
-        // 最大スケール到達フレームも含め、chargeScale_の現在値を
-        // 必ず毎フレームパーティクルに反映する
-        // -------------------------------------------------------
+        // パーティクルのスケール設定
         {
             float aroundEndScale = (kParticleScaleBase + chargeScale_) * kParticleScaleMultiplier;
             float aroundStartScale = aroundEndScale - kParticleScaleOffset;

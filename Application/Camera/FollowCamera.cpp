@@ -8,10 +8,13 @@
 #include <cmath>
 
 void FollowCamera::Init() {
+    // ViewProjectionの初期設定
     viewProjection_.farZ = kFarZ;
     viewProjection_.Initialize("");
     worldTransform_.Initialize();
     yaw_ = kInitialYaw;
+
+    // 肩オフセットの初期化
     shoulderOffsetTarget_ = {kVectorZero, kVectorZero, kVectorZero};
     shoulderOffsetCurrent_ = {kVectorZero, kVectorZero, kVectorZero};
     wasLockedOn_ = false;
@@ -26,9 +29,11 @@ void FollowCamera::Init() {
 }
 
 void FollowCamera::Update() {
+    // ターゲットがいなければ更新しない
     if (!target_)
         return;
 
+    // カメラの移動処理
     Move();
 
     Vector3 targetPos = target_->GetLocalPosition();
@@ -37,24 +42,24 @@ void FollowCamera::Update() {
 
     Player *player = dynamic_cast<Player *>(target_);
 
-    // ロックオン状態の変化を検出
+    // ロックオン状態の取得
     bool isCurrentlyLockedOn = player && player->GetIsLockOn() && player->GetEnemy();
 
-    // ロックオンが外れた瞬間を検出
+    // ロックオンが外れた瞬間に肩オフセットのリセットを開始
     if (wasLockedOn_ && !isCurrentlyLockedOn) {
-        // 肩オフセットのリセットを開始
         isResettingShoulderOffset_ = true;
         shoulderResetTimer_ = kTimerReset;
         shoulderOffsetStart_ = shoulderOffsetCurrent_;
         shoulderOffsetTarget_ = {kVectorZero, kVectorZero, kVectorZero};
     } else if (!wasLockedOn_ && isCurrentlyLockedOn) {
+        // ロックオン開始時は肩オフセットを設定
         shoulderOffsetTarget_.x = shoulderMaxOffset_;
     }
 
-    // 現在のロックオン状態を保存
+    // ロックオン状態を保存
     wasLockedOn_ = isCurrentlyLockedOn;
 
-    // Rush状態専用処理
+    // Rush状態専用のカメラ制御
     if (player) {
         std::string currentStateName = player->GetCurrentStateName();
         if (currentStateName == "Rush") {
@@ -64,6 +69,7 @@ void FollowCamera::Update() {
                 Vector3 enemyTargetPos = player->GetEnemy()->GetPositionBehind(rushEnemyBehindOffset_);
                 float distanceToTarget = (enemyTargetPos - currentPos).Length();
 
+                // 一定距離以上離れている場合は特殊な追従を行う
                 if (distanceToTarget > rushCameraResumeDistance_) {
                     if (!isRushCameraActive_) {
                         isRushCameraActive_ = true;
@@ -73,6 +79,7 @@ void FollowCamera::Update() {
 
                     Vector3 targetCameraPos = currentPos + rushCameraOffset_;
 
+                    // 距離に応じて追従速度を調整
                     Vector3 playerToCameraDir = worldTransform_.translation_ - currentPos;
                     float playerCameraDistance = playerToCameraDir.Length();
                     float dynamicFollowRate = rushCameraFollowRate_;
@@ -85,10 +92,13 @@ void FollowCamera::Update() {
                     float deltaTime = Frame::DeltaTime();
                     rushBlendTimer_ += deltaTime;
                     float t = std::min(rushBlendTimer_ / (kNormalizedValue / dynamicFollowRate), kMaxBlendValue);
+                    
+                    // 位置の補間
                     Vector3 blendedPos = ApplyEasing(rushCameraEasingType_, rushCameraPosition_, targetCameraPos, t, kEasingMaxValue);
                     worldTransform_.translation_ = blendedPos;
                     rushCameraPosition_ = blendedPos;
 
+                    // 敵とプレイヤーの間を向くように回転を計算
                     Vector3 toEnemy = (player->GetEnemy()->GetLocalPosition() - worldTransform_.translation_).Normalize();
                     Vector3 toPlayer = (currentPos - worldTransform_.translation_).Normalize();
                     Vector3 blendedDir = ApplyEasing(rushCameraEasingType_, toEnemy, toPlayer, kRushDirectionBlendRatio, kEasingMaxValue).Normalize();
@@ -98,7 +108,6 @@ void FollowCamera::Update() {
 
                     Vector3 right;
                     if (std::abs(forward.Dot(worldUp)) > kParallelThreshold) {
-                        // 【修正】固定ベクトルではなくyaw_から計算し、急なカクつきを防ぐ
                         right = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
                     } else {
                         right = (worldUp.Cross(forward)).Normalize();
@@ -107,6 +116,7 @@ void FollowCamera::Update() {
                     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
                     Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
 
+                    // 回転の補間
                     rushRotationTimer_ += deltaTime;
                     float rotT = std::min(rushRotationTimer_ / (kNormalizedValue / (dynamicFollowRate * kRotationSpeedMultiplier)), kMaxBlendValue);
                     worldTransform_.quateRotation_ = Quaternion::Slerp(
@@ -116,12 +126,14 @@ void FollowCamera::Update() {
 
                     worldTransform_.UpdateMatrix();
 
+                    // ViewProjectionの更新
                     viewProjection_.translation_ = worldTransform_.translation_;
                     viewProjection_.isUseQuaternion_ = true;
                     viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
                     viewProjection_.UpdateMatrix();
                     return;
                 } else {
+                    // 通常追従への復帰準備
                     if (!isResumeFromRush_) {
                         isResumeFromRush_ = true;
                         rushResumeTimer_ = kTimerReset;
@@ -132,6 +144,7 @@ void FollowCamera::Update() {
                 }
             }
         } else {
+            // Rush状態でなければフラグリセット
             if (isResumeFromRush_)
                 isResumeFromRush_ = false;
             isRushCameraActive_ = false;
@@ -140,7 +153,7 @@ void FollowCamera::Update() {
         }
     }
 
-    // 肩オフセット計算
+    // ロックオン時の肩オフセット計算
     bool hasInput = false;
     if (isCurrentlyLockedOn) {
         Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
@@ -149,7 +162,7 @@ void FollowCamera::Update() {
         Vector3 toEnemyDirXZ = {toEnemyDir.x, kVectorZero, toEnemyDir.z};
         float lengthXZ = toEnemyDirXZ.Length();
 
-        // ▼ 【修正】長さがある時だけyaw_を更新し、真上・真下での atan2(0,0) を防ぐ
+        // 敵の方向からyaw角を更新
         if (lengthXZ > kEpsilon) {
             toEnemyDirXZ = toEnemyDirXZ.Normalize();
             yaw_ = std::atan2(toEnemyDirXZ.x, toEnemyDirXZ.z);
@@ -158,26 +171,21 @@ void FollowCamera::Update() {
         Vector3 cameraRightDir = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
         float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
 
+        // 入力チェック
         if (!player->GetGamePad()->IsConnected()) {
-            // キーボード入力
             hasInput = Input::GetInstance()->PushKey(DIK_W) ||
                        Input::GetInstance()->PushKey(DIK_A) ||
                        Input::GetInstance()->PushKey(DIK_S) ||
                        Input::GetInstance()->PushKey(DIK_D);
         } else {
-            // ゲームパッド入力 - 左スティック
             float leftStickX = player->GetGamePad()->GetLeftStickX();
             float leftStickY = player->GetGamePad()->GetLeftStickY();
-
-            // スティックの入力があるかチェック
             hasInput = (leftStickX != 0.0f || leftStickY != 0.0f);
         }
 
-        // 入力がある場合のみターゲットを更新
+        // 横移動入力がある場合、カメラを左右にずらす
         if (hasInput && std::abs(lateralVelocity) > kVelocityThreshold) {
-            // ▼ 【修正】移動速度の割合ではなく、移動方向の符号（1 か -1）だけを取得
             float sign = lateralVelocity > 0.0f ? 1.0f : -1.0f;
-            // 常に肩の最大オフセットまでずらす（左移動なら右カメラ、右移動なら左カメラ）
             float newTarget = -sign * shoulderMaxOffset_;
 
             if (std::abs(newTarget - shoulderOffsetTarget_.x) > kShoulderTargetThreshold) {
@@ -201,15 +209,14 @@ void FollowCamera::Update() {
         float heightDiff = lockOnHeightOffsetTarget_ - lockOnHeightOffsetCurrent_;
         lockOnHeightOffsetCurrent_ += heightDiff * lockOnHeightLerpSpeed_ * deltaTime;
 
-        // 微小な差は切り捨て
         if (std::abs(heightDiff) < kHeightDiffThreshold) {
             lockOnHeightOffsetCurrent_ = lockOnHeightOffsetTarget_;
         }
     }
 
-    // 肩オフセットの補間処理
+    // 肩オフセットの補間実行
     if (isResettingShoulderOffset_) {
-        // リセット中はイージングを使用
+        // リセットイージング
         shoulderResetTimer_ += Frame::DeltaTime();
         float t = std::min(shoulderResetTimer_ / shoulderResetDuration_, kMaxBlendValue);
         shoulderOffsetCurrent_ = ApplyEasing(shoulderResetEasingType_, shoulderOffsetStart_, shoulderOffsetTarget_, t, kEasingMaxValue);
@@ -218,7 +225,7 @@ void FollowCamera::Update() {
             isResettingShoulderOffset_ = false;
         }
     } else {
-        // 常にスムーズに追従(イージングなしの単純な補間)
+        // 通常の追従補間
         float deltaTime = Frame::DeltaTime();
         float lerpSpeed = shoulderLerpSpeed_ * deltaTime;
 
@@ -226,16 +233,14 @@ void FollowCamera::Update() {
         if (std::abs(diff) < kShoulderDiffThreshold) {
             shoulderOffsetCurrent_.x = shoulderOffsetTarget_.x;
         } else {
-            // OutQuadイージングを使用した追従
             float t = std::min(lerpSpeed, kMaxBlendValue);
             shoulderOffsetCurrent_.x += diff * ApplyEasing(shoulderEasingType_, kVectorZero, kEasingMaxValue, t, kEasingMaxValue);
         }
     }
 
-    // ============================================
-    // カメラ位置・回転計算
-    // ============================================
+    // カメラの最終的な位置と回転を計算
     if (isCurrentlyLockedOn) {
+        // ロックオン時：敵の方向を向く
         Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
         Vector3 toEnemyDir = enemyPos - targetPos;
         float length = toEnemyDir.Length();
@@ -243,32 +248,29 @@ void FollowCamera::Update() {
             toEnemyDir = toEnemyDir.Normalize();
 
         Vector3 forward = toEnemyDir;
-
-        // ▼ 【修正】worldUpとの外積を使わず、常にyaw_を基準にした水平な右方向を使う
-        // これにより、真上や真下を通過しても画面が変に傾いたり反転したりしなくなります
         Vector3 right = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
         Vector3 up = (forward.Cross(right)).Normalize();
 
         Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
         worldTransform_.quateRotation_ = Quaternion::FromMatrix(rotMatrix);
 
-        // ローカル座標の up と right ベクトルを使ってオフセットを適用
+        // オフセットを適用
         cameraPos = targetPos - forward * std::abs(cameraOffset_.z);
         cameraPos += up * lockOnHeightOffsetCurrent_;
         cameraPos += right * shoulderOffsetCurrent_.x;
 
     } else {
+        // 非ロックオン時：手動回転に基づいた位置
         cameraPos.x = targetPos.x + std::sin(yaw_) * cameraOffset_.z;
         cameraPos.z = targetPos.z + std::cos(yaw_) * cameraOffset_.z;
         cameraPos.y = targetPos.y + cameraOffset_.y;
         worldTransform_.quateRotation_ = Quaternion::FromEulerAngles({kVectorZero, -yaw_, kVectorZero});
 
-        // 【修正】非ロックオン時もここで右方向へオフセットを加算
         Vector3 right = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
         cameraPos += right * shoulderOffsetCurrent_.x;
     }
 
-    // Rush復帰補間
+    // Rushからの復帰補間
     if (isResumeFromRush_) {
         Vector3 targetCameraPos = cameraPos;
         Quaternion targetCameraRot = worldTransform_.quateRotation_;
@@ -295,12 +297,13 @@ void FollowCamera::Update() {
 
     worldTransform_.UpdateMatrix();
 
+    // 最終的な行列とViewProjectionの更新
     viewProjection_.translation_ = worldTransform_.translation_;
     viewProjection_.isUseQuaternion_ = true;
     viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
     viewProjection_.UpdateMatrix();
 
-    // 視錐台ロックオン判定（カメラ行列確定後に実行）
+    // 視錐台ロックオン判定
     UpdateFrustumLockOn();
 }
 

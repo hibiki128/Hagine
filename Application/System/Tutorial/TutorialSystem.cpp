@@ -124,6 +124,7 @@ void TutorialSystem::RequestDespawnEnemy() { despawnEnemyRequested_ = true; }
 void TutorialSystem::UpdateCurrentStep(float dt) {
     bool conditionMet = false;
 
+    // 各ステップの達成条件をチェック
     switch (currentStep_) {
     case TutorialStep::Move:
         conditionMet = CheckMove();
@@ -180,6 +181,7 @@ void TutorialSystem::UpdateCurrentStep(float dt) {
         }
         progress_ = std::min(timer_ / cfg.requiredTime, 1.0f);
         if (timer_ >= cfg.requiredTime) {
+            // 必要時間に達したら次のステップへ
             AdvanceStep();
         }
     } else {
@@ -189,6 +191,7 @@ void TutorialSystem::UpdateCurrentStep(float dt) {
         }
         progress_ = std::min(static_cast<float>(count_) / static_cast<float>(cfg.requiredCount), 1.0f);
         if (count_ >= cfg.requiredCount) {
+            // 必要回数に達したら次のステップへ
             AdvanceStep();
         }
     }

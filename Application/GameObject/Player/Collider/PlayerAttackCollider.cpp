@@ -151,6 +151,17 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other) {
         hitEmitter_->UpdateOnce();
     }
 
+    // エネルギー回復処理を追加
+    if (player_) {
+        float currentEnergy = player_->GetEnergy();
+        float maxEnergy = player_->GetMaxEnergy();
+        float newEnergy = currentEnergy + energyRecoveryAmount_;
+        if (newEnergy > maxEnergy) {
+            newEnergy = maxEnergy;
+        }
+        player_->GetEnergy() = newEnergy;
+    }
+
     // -----------------------------------------------
     // カメラシェイク
     // -----------------------------------------------

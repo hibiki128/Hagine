@@ -1,6 +1,10 @@
 #pragma once
 #include "Particle/CSParticle/ParticleCSEmitter.h"
 #include <Object/Base/BaseObject.h>
+
+/// <summary>
+/// リザルト演出用クラス
+/// </summary>
 class ResultStaging {
 
   public:
@@ -35,6 +39,32 @@ class ResultStaging {
     void SetStartEasing(bool started) { startEasing_ = started; }
 
   private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// エリア内のランダムな座標を取得
+    /// </summary>
+    /// <returns>Vector3: ランダム座標</returns>
+    Vector3 GetRandomPositionInArea();
+
+    /// <summary>
+    /// 使用可能な花火のインデックスを検索
+    /// </summary>
+    /// <returns>int: インデックス（なければ-1）</returns>
+    int FindAvailableFireWork();
+
+    /// <summary>
+    /// 花火の発生エリアをデバッグ描画
+    /// </summary>
+    void DrawFireWorkArea();
+
+  private:
+    /// ===================================================
+    /// private variants
+    /// ===================================================
+
     // 定数定義
     static constexpr int kFireWorksCount = 10;             // 花火の数
     static constexpr float kFireWorkRisingTime = 2.5f;     // 花火上昇時間(秒)
@@ -49,18 +79,18 @@ class ResultStaging {
     static constexpr float kLineColorB = 0.0f;             // ライン色(B)
     static constexpr float kLineColorA = 1.0f;             // ライン色(A)
 
-    BaseObject *RightHand_ = nullptr;
-    BaseObject *LeftHand_ = nullptr;
+    BaseObject *RightHand_ = nullptr; // 右手
+    BaseObject *LeftHand_ = nullptr;  // 左手
 
-    std::vector<std::unique_ptr<ParticleCSEmitter>> fireWorks_explosions_;
-    std::vector<std::unique_ptr<ParticleCSEmitter>> fireWorks_trails_;
+    std::vector<std::unique_ptr<ParticleCSEmitter>> fireWorks_explosions_; // 花火の爆発パーティクル
+    std::vector<std::unique_ptr<ParticleCSEmitter>> fireWorks_trails_;     // 花火の軌跡パーティクル
 
-    bool secondMove_ = false;
-    bool motionStarted_ = false;
-    bool fireWorkStarted_ = false;
-    bool startEasing_ = false;
+    bool secondMove_ = false;      // 2つ目の動きフラグ
+    bool motionStarted_ = false;   // モーション開始フラグ
+    bool fireWorkStarted_ = false; // 花火開始フラグ
+    bool startEasing_ = false;     // イージング開始フラグ
 
-    int fireWorks_count_ = kFireWorksCount;
+    int fireWorks_count_ = kFireWorksCount; // 花火の総数
 
     struct FireWorkState {
         enum class Phase {
@@ -68,24 +98,19 @@ class ResultStaging {
             Rising,    // 上昇中
             Exploding, // 爆発中
         };
-        Phase phase = Phase::Ready;
-        float timer = 0.0f;
-        Vector3 startPosition;
-        Vector3 explodePosition;
+        Phase phase = Phase::Ready;     // 現在のフェーズ
+        float timer = 0.0f;             // タイマー
+        Vector3 startPosition;          // 開始位置
+        Vector3 explodePosition;        // 爆発位置
     };
 
-    std::vector<FireWorkState> fireWorkStates_;
+    std::vector<FireWorkState> fireWorkStates_; // 花火の状態リスト
 
-    Vector3 fireWorkAreaCenter_ = {-135.0f, -25.0f, -200.0f};
-    Vector3 fireWorkAreaSize_ = {300.0f, 20.0f, 100.0f};
-    Quaternion fireWorkAreaRotation_ = Quaternion::IdentityQuaternion();
+    Vector3 fireWorkAreaCenter_ = {-135.0f, -25.0f, -200.0f}; // 花火発生エリアの中心
+    Vector3 fireWorkAreaSize_ = {300.0f, 20.0f, 100.0f};      // 花火発生エリアのサイズ
+    Quaternion fireWorkAreaRotation_ = Quaternion::IdentityQuaternion(); // 花火発生エリアの回転
 
-    float nextFireWorkTimer_ = 0.0f;
-    float minFireWorkInterval_ = kMinFireWorkInterval;
-    float maxFireWorkInterval_ = kMaxFireWorkInterval;
-
-    // ヘルパー関数
-    Vector3 GetRandomPositionInArea();
-    int FindAvailableFireWork();
-    void DrawFireWorkArea();
+    float nextFireWorkTimer_ = 0.0f;             // 次の花火までのタイマー
+    float minFireWorkInterval_ = kMinFireWorkInterval; // 最小発射間隔
+    float maxFireWorkInterval_ = kMaxFireWorkInterval; // 最大発射間隔
 };

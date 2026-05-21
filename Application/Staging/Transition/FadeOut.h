@@ -44,7 +44,7 @@ class FadeOut {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // 定数定義
@@ -58,7 +58,7 @@ class FadeOut {
     static constexpr float kPositionZ = -65.1f;         // パーティクル位置Z
     static constexpr float kRotationX = 0.0f;       // パーティクル回転X(度)
 
-    std::unique_ptr<ParticleCSEmitter> fadeOut_ = nullptr;
-    float timer_ = 0.0f; // 経過時間
-    bool isFinish_ = false;
+    std::unique_ptr<ParticleCSEmitter> fadeOut_ = nullptr; // フェードアウトパーティクル
+    float timer_ = 0.0f;    // 経過時間
+    bool isFinish_ = false; // 終了フラグ
 };

@@ -9,29 +9,23 @@ void EnemyAttackCollider::Init(Enemy *enemy, Player *player) {
     enemy_ = enemy;
     player_ = player;
 
-    // -----------------------------------------------
     // OBBコライダーを生成・設定
-    // OBBを選んだ理由：敵の向きに追従して回転できるため
-    // 前方に正確に判定を出せる（PlayerAttackColliderと対称）
-    // -----------------------------------------------
+    // 敵の向きに追従して回転できるようOBBを使用
     collider_ = enemy_->AddOBBCollider("EnemyAttackFront");
-    collider_->SetTag("EnemyHand"); // 既存の衝突タグを流用
+    collider_->SetTag("EnemyHand"); 
     collider_->AddCollisionMask("Player");
-    collider_->SetSize({2.0f, 1.5f, 2.0f}); // 横2・縦1.5・奥行2：やや広めで当てやすく
-    collider_->SetEnabled(false);           // 初期は無効
+    collider_->SetSize({2.0f, 1.5f, 2.0f}); // 当てやすいようやや広めに設定
+    collider_->SetEnabled(false);           // 初期状態は無効
 
-    // -----------------------------------------------
     // 前方オフセット設定
-    // 敵の前方方向（Z-）へ判定を押し出す
-    // -----------------------------------------------
     collider_->SetPositionOffSet({0.0f, 0.0f, forwardOffset_});
 
-    // 衝突コールバック
+    // 衝突コールバックの設定
     collider_->SetOnCollision([this](ColliderBase *other) {
         this->OnCollision(other);
     });
 
-    // CollisionManagerに登録（デストラクタで自動解除される）
+    // CollisionManagerに登録
     CollisionManager::GetInstance()->Register(collider_);
 
     // ヒットエフェクト・カメラシェイク初期化
@@ -47,9 +41,7 @@ void EnemyAttackCollider::Update(float deltaTime) {
     }
     shake_->Update();
 
-    // -----------------------------------------------
-    // 遅延処理：delay > 0 の場合、一定時間後にコライダーを有効化
-    // -----------------------------------------------
+    // 遅延処理：activateDelay_ 待機後に有効化
     if (isPending_) {
         delayTimer_ -= deltaTime;
         if (delayTimer_ <= 0.0f) {
@@ -62,9 +54,7 @@ void EnemyAttackCollider::Update(float deltaTime) {
         return;
     }
 
-    // -----------------------------------------------
-    // 有効時間の管理：activeDuration_を超えたら自動無効化
-    // -----------------------------------------------
+    // 有効時間の管理：activeDuration_ 経過後に自動無効化
     if (isActive_) {
         activeTimer_ += deltaTime;
         if (activeTimer_ >= activeDuration_) {
@@ -81,7 +71,7 @@ void EnemyAttackCollider::DrawParticle(const ViewProjection &viewProjection) {
 
 void EnemyAttackCollider::Activate(float damage, float knockbackPower,
                                    float activeDuration, float activateDelay) {
-    // 前の判定を確実にリセットしてから開始
+    // 既存の判定をリセット
     Deactivate();
 
     currentDamage_ = damage;
@@ -90,12 +80,12 @@ void EnemyAttackCollider::Activate(float damage, float knockbackPower,
     hasHitThisActivation_ = false;
 
     if (activateDelay > 0.0f) {
-        // 遅延あり：ペンディング状態で待機
+        // 遅延がある場合は待機状態へ
         isPending_ = true;
         delayTimer_ = activateDelay;
         collider_->SetEnabled(false);
     } else {
-        // 遅延なし：即座に有効化
+        // 遅延がない場合は即座に有効化
         isPending_ = false;
         isActive_ = true;
         activeTimer_ = 0.0f;
@@ -114,7 +104,7 @@ void EnemyAttackCollider::Deactivate() {
 }
 
 void EnemyAttackCollider::OnCollision(ColliderBase *other) {
-    // アクティブでない場合・すでにこのアクティブ中にヒット済みの場合は無視
+    // 非アクティブ時や、既にこの回でヒット済みの場合は無視
     if (!isActive_ || hasHitThisActivation_) {
         return;
     }
@@ -125,24 +115,17 @@ void EnemyAttackCollider::OnCollision(ColliderBase *other) {
         return;
     }
 
-    // 1アクティブ中1ヒットのみ（連続ヒット防止）
+    // 連続ヒット防止
     hasHitThisActivation_ = true;
 
-    // -----------------------------------------------
     // ダメージ適用
-    // -----------------------------------------------
     player_->SetDamage(currentDamage_);
 
-    // -----------------------------------------------
     // ノックバック適用
-    // ※ Player側に SetKnockback(Vector3 dir, float power) の実装が必要
-    // -----------------------------------------------
     Vector3 knockbackDir = enemy_->GetForward();
     player_->SetKnockback(knockbackDir, currentKnockback_);
 
-    // -----------------------------------------------
-    // ヒットエフェクト
-    // -----------------------------------------------
+    // ヒットエフェクトの発生
     if (hitEmitter_) {
         Vector3 forward = enemy_->GetForward();
         Vector3 enemyPos = enemy_->GetWorldPosition();
@@ -155,19 +138,19 @@ void EnemyAttackCollider::OnCollision(ColliderBase *other) {
         hitEmitter_->UpdateOnce();
     }
 
-    // -----------------------------------------------
-    // カメラシェイク
-    // -----------------------------------------------
+    // カメラシェイクの開始
     if (shake_) {
         shake_->StartShake();
     }
 
-    // -----------------------------------------------
-    // 敵エネルギー回復（EnemyHandのOnCollisionEnterと同様）
-    // -----------------------------------------------
-    float newEnergy = enemy_->GetEnergy() + enemy_->GetEnergyRecoveryRate();
-    if (newEnergy > enemy_->GetMaxEnergy()) {
-        newEnergy = enemy_->GetMaxEnergy();
+  // エネルギー回復処理を追加
+    if (enemy_) {
+        float currentEnergy = enemy_->GetEnergy();
+        float maxEnergy = enemy_->GetMaxEnergy();
+        float newEnergy = currentEnergy + energyRecoveryAmount_;
+        if (newEnergy > maxEnergy) {
+            newEnergy = maxEnergy;
+        }
+        enemy_->GetEnergy() = newEnergy;
     }
-    enemy_->GetEnergy() = newEnergy;
 }

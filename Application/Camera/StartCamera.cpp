@@ -5,6 +5,7 @@
 #include <Input.h>
 
 void StartCamera::Init() {
+    // ViewProjectionの初期設定
     vp_.farZ = kFarZ;
     vp_.Initialize("");
     wt_.Initialize();
@@ -28,15 +29,16 @@ void StartCamera::Init() {
 }
 
 bool StartCamera::CheckSkipInput() {
+    // 入力がなければ終了
     if (!input_ || !gamePad_) {
         return false;
     }
 
     if (!gamePad_->IsConnected()) {
-        // キーボード操作
+        // キーボード操作：スペースキーでスキップ
         return input_->TriggerKey(DIK_SPACE);
     } else {
-        // コントローラー操作
+        // コントローラー操作：Aボタンでスキップ
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
     }
 }
@@ -52,6 +54,7 @@ void StartCamera::Update() {
         isSkipping_ = true;
     }
 
+    // イージング演出の更新
     if (isEasing_) {
         // スキップ中はタイマーを加速
         float deltaTime = Frame::DeltaTime();
@@ -60,15 +63,14 @@ void StartCamera::Update() {
         }
         easingTimer_ += deltaTime;
 
+        // 各フェーズに応じたイージング処理
         switch (easingPhase_) {
         case 1: // 1回目のイージング
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
-            // 位置のイージング
+            // 位置と回転のイージング
             wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, kEasingMaxValue);
-
-            // 回転のイージング
             wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot_, t, kEasingMaxValue);
 
             wt_.UpdateMatrix();
@@ -78,11 +80,11 @@ void StartCamera::Update() {
             vp_.eulerRotation_ = wt_.eulerRotation_;
             vp_.UpdateMatrix();
 
-            // 1回目のイージング完了チェック
+            // 完了チェック
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait1;
                 easingTimer_ = kTimerReset;
-                isSkipping_ = false; // 次のフェーズでスキップをリセット
+                isSkipping_ = false;
             }
             break;
         }
@@ -90,12 +92,11 @@ void StartCamera::Update() {
         case 2: // 1回目完了後の待機
         {
             if (easingTimer_ >= waitDuration_) {
-                // 2回目のイージング開始
                 easingPhase_ = kPhaseEasing2;
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
                 easingStartRot_ = wt_.eulerRotation_;
-                isSkipping_ = false; // 次のフェーズでスキップをリセット
+                isSkipping_ = false;
             }
             break;
         }
@@ -104,24 +105,19 @@ void StartCamera::Update() {
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
-            // 位置のイージング
             wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos2_, t, kEasingMaxValue);
-
-            // 回転のイージング
             wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot2_, t, kEasingMaxValue);
 
             wt_.UpdateMatrix();
 
-            // ViewProjectionを更新
             vp_.translation_ = wt_.translation_;
             vp_.eulerRotation_ = wt_.eulerRotation_;
             vp_.UpdateMatrix();
 
-            // 2回目のイージング完了チェック
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait2;
                 easingTimer_ = kTimerReset;
-                isSkipping_ = false; // 次のフェーズでスキップをリセット
+                isSkipping_ = false;
             }
             break;
         }
@@ -129,38 +125,32 @@ void StartCamera::Update() {
         case 4: // 2回目完了後の待機
         {
             if (easingTimer_ >= waitDuration_) {
-                // 3回目のイージング開始
                 easingPhase_ = kPhaseEasing3;
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
                 easingStartRot_ = wt_.eulerRotation_;
-                isSkipping_ = false; // 次のフェーズでスキップをリセット
+                isSkipping_ = false;
             }
             break;
         }
 
-        case 5: // 3回目のイージング
+        case 5: // 3回目のイージング（最終目標へ）
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
-            // 位置のイージング
             wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, targetVp_.translation_, t, kEasingMaxValue);
-
-            // 回転のイージング
             wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, targetVp_.eulerRotation_, t, kEasingMaxValue);
 
             wt_.UpdateMatrix();
 
-            // ViewProjectionを更新
             vp_.translation_ = wt_.translation_;
             vp_.eulerRotation_ = wt_.eulerRotation_;
             vp_.UpdateMatrix();
 
-            // 3回目のイージング完了チェック
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait3;
                 easingTimer_ = kTimerReset;
-                isSkipping_ = false; // 次のフェーズでスキップをリセット
+                isSkipping_ = false;
             }
             break;
         }
@@ -168,7 +158,6 @@ void StartCamera::Update() {
         case 6: // 3回目完了後の待機
         {
             if (easingTimer_ >= finalWaitDuration_) {
-                // 完了
                 easingPhase_ = kPhaseComplete;
                 isEasing_ = false;
                 isComplete_ = true;
@@ -181,46 +170,42 @@ void StartCamera::Update() {
         return;
     }
 
-    // カメラ位置を計算
+    // 通常の回転移動（イージング開始前）
     wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
     wt_.translation_.y = kInitialHeight;
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
 
-    // カメラから中心点への方向ベクトルを計算
+    // 中心点を向くように回転を計算
     Vector3 toCenter = (centerPos_ - wt_.translation_).Normalize();
-
-    // Y軸回転を計算
     float yaw = std::atan2(toCenter.x, toCenter.z);
-
-    // ピッチを計算
     float horizontalDistance = std::sqrt(toCenter.x * toCenter.x + toCenter.z * toCenter.z);
     float pitch = std::atan2(-toCenter.y, horizontalDistance);
 
     wt_.eulerRotation_ = {pitch, yaw, kZeroRotation};
-
     wt_.UpdateMatrix();
 
-    // ViewProjectionを更新
+    // ViewProjectionの更新
     vp_.translation_ = wt_.translation_;
     vp_.eulerRotation_ = wt_.eulerRotation_;
     vp_.UpdateMatrix();
 }
 
 void StartCamera::Move() {
-    // スキップ中は角度を加速
+    // 角度を更新
     float deltaTime = Frame::DeltaTime();
     if (isSkipping_) {
         deltaTime *= kSkipSpeedMultiplier;
     }
     angle_ += speed_ * deltaTime;
 
+    // 一定角度を超えたらイージングフェーズへ移行
     if (angle_ > kHalfPi && !isEasing_) {
         isEasing_ = true;
         easingPhase_ = kPhaseEasing1;
         easingTimer_ = kTimerReset;
         easingStartPos_ = wt_.translation_;
         easingStartRot_ = wt_.eulerRotation_;
-        isSkipping_ = false; // イージング開始時にスキップをリセット
+        isSkipping_ = false;
     }
 }
 

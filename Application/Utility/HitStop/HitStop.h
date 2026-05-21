@@ -57,7 +57,7 @@ class HitStop {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     float stopDuration_ = 0.1f; // 停止時間（秒）

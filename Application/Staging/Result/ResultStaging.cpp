@@ -37,8 +37,10 @@ void ResultStaging::Initialize() {
 
 void ResultStaging::Update() {
 
+    // イージング開始時のモーション制御
     if (startEasing_) {
         if (!secondMove_ && !motionStarted_) {
+            // 最初のパンチモーション
             MotionEditor::GetInstance()->PlayFromFile(LeftHand_, "LeftPunch");
             MotionEditor::GetInstance()->PlayFromFile(RightHand_, "RightBack");
             motionStarted_ = true;
@@ -46,19 +48,23 @@ void ResultStaging::Update() {
         if (!secondMove_ &&
             MotionEditor::GetInstance()->IsAttackFinished(LeftHand_) &&
             MotionEditor::GetInstance()->IsAttackFinished(RightHand_)) {
+            // 2つ目のパンチモーション
             secondMove_ = true;
             MotionEditor::GetInstance()->PlayFromFile(LeftHand_, "LeftBack");
             MotionEditor::GetInstance()->PlayFromFile(RightHand_, "RightPunch");
         }
     }
 
+    // デバッグ用エリア描画
     DrawFireWorkArea();
 
+    // 全パーティクルの更新
     for (int i = 0; i < fireWorks_count_; i++) {
         fireWorks_explosions_[i]->Update();
         fireWorks_trails_[i]->Update();
     }
 
+    // 花火の打ち上げ制御
     if (fireWorkStarted_) {
         float deltaTime = Frame::DeltaTime();
 
@@ -87,15 +93,16 @@ void ResultStaging::Update() {
         }
 
         // 各花火の状態更新
-        for (int i = 0; i < fireWorkStates_.size(); ++i) {
+        for (int i = 0; i < (int)fireWorkStates_.size(); ++i) {
             FireWorkState &state = fireWorkStates_[i];
 
             switch (state.phase) {
             case FireWorkState::Phase::Rising:
+                // 上昇中
                 state.timer += deltaTime;
 
-                // 3秒経過したら爆発
                 if (state.timer >= kFireWorkRisingTime) {
+                    // 爆発フェーズへ
                     state.phase = FireWorkState::Phase::Exploding;
                     state.timer = 0.0f;
 
@@ -106,10 +113,11 @@ void ResultStaging::Update() {
                 break;
 
             case FireWorkState::Phase::Exploding:
+                // 爆発中
                 state.timer += deltaTime;
 
-                // 1秒経過したら待機状態に戻す
                 if (state.timer >= kFireWorkExplodingTime) {
+                    // 待機状態に戻す
                     state.phase = FireWorkState::Phase::Ready;
                     state.timer = 0.0f;
                 }

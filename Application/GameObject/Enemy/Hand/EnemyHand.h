@@ -4,8 +4,7 @@
 #include "Particle/ParticleEmitter.h"
 
 /// <summary>
-/// 敵の手（攻撃判定）のゲームオブジェクトクラス
-/// 攻撃ごとにダメージ量・ノックバックを外部から設定可能
+/// 敵の手（見た目）のゲームオブジェクトクラス
 /// </summary>
 class EnemyHand : public BaseObject {
   public:
@@ -16,6 +15,7 @@ class EnemyHand : public BaseObject {
     /// <summary>
     /// 初期化
     /// </summary>
+    /// <param name="objectName">オブジェクト名</param>
     void Init(const std::string objectName) override;
 
     /// <summary>
@@ -26,6 +26,8 @@ class EnemyHand : public BaseObject {
     /// <summary>
     /// 描画処理
     /// </summary>
+    /// <param name="viewProjection">ビュープロジェクション</param>
+    /// <param name="offSet">描画オフセット</param>
     void Draw(const ViewProjection &viewProjection,
               Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
 };

@@ -42,7 +42,7 @@ class DeathCamera {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // カメラ設定
@@ -63,20 +63,20 @@ class DeathCamera {
     static constexpr float kRightVectorY = 0.0f;
     static constexpr float kRightVectorZ = 0.0f;
 
-    ViewProjection vp_;
-    WorldTransform wt_;
+    ViewProjection vp_;    // ビュープロジェクション
+    WorldTransform wt_;    // ワールドトランスフォーム
 
-    bool isEasing_ = false;
-    bool isComplete_ = false;
-    bool isHalfway_ = false;
-    float easingTimer_ = 0.0f;
-    float easingDuration_ = 0.8f;
+    bool isEasing_ = false;       // イージング中フラグ
+    bool isComplete_ = false;     // 完了フラグ
+    bool isHalfway_ = false;      // 中間地点到達フラグ
+    float easingTimer_ = 0.0f;    // イージングタイマー
+    float easingDuration_ = 0.8f; // イージング時間
 
-    Vector3 easingStartPos_;
-    Quaternion easingStartRot_;
-    Vector3 easingTargetPos_;
-    Quaternion easingTargetRot_;
+    Vector3 easingStartPos_;      // イージング開始位置
+    Quaternion easingStartRot_;   // イージング開始回転
+    Vector3 easingTargetPos_;     // イージング目標位置
+    Quaternion easingTargetRot_;  // イージング目標回転
 
     // プレイヤーからのオフセット（正面やや斜め上）
-    Vector3 cameraOffset_ = {3.0f, 2.5f, 8.0f};
+    Vector3 cameraOffset_ = {3.0f, 2.5f, 8.0f}; // カメラオフセット
 };

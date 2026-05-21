@@ -258,91 +258,91 @@ class Enemy : public BaseObject {
     static constexpr float kBulletColliderRadius = 0.5f;
     static constexpr float kNormalShotEnergyCost = 5.0f;
 
-    Direction dir_;
-    MoveDirection moveDir_;
+    Direction dir_;          // 現在の方向
+    MoveDirection moveDir_;  // 移動方向
 
-    Vector3 velocity_{};
-    Vector3 acceleration_{};
-    Player *target_ = nullptr;
+    Vector3 velocity_{};      // 速度
+    Vector3 acceleration_{};  // 加速度
+    Player *target_ = nullptr; // ターゲットプレイヤー
 
-    int strafeDirection_ = 1;
+    int strafeDirection_ = 1; // 横移動方向
 
-    float HP_ = 100.0f;
-    float maxHP_ = 100.0f;
-    float damage_ = 0.0f;
+    float HP_ = 100.0f;    // HP
+    float maxHP_ = 100.0f; // 最大HP
+    float damage_ = 0.0f;  // 受けるダメージ量
 
-    float moveSpeed_ = 0.0f;
-    float fallSpeed_ = 0.0f;
-    float jumpSpeed_ = 0.0f;
-    float maxSpeed_ = 0.0f;
-    float accelRate_ = 0.0f;
+    float moveSpeed_ = 0.0f; // 移動速度
+    float fallSpeed_ = 0.0f; // 落下速度
+    float jumpSpeed_ = 0.0f; // ジャンプ速度
+    float maxSpeed_ = 0.0f;  // 最大速度
+    float accelRate_ = 0.0f; // 加速レート
 
-    Vector3 velocityTarget_{};
-    EasingData<Vector3> velocityEase_;
+    Vector3 velocityTarget_{};        // 目標速度
+    EasingData<Vector3> velocityEase_; // 速度補間用イージング
 
     // -----------------------------------------------
     // ノックバック関連
     // -----------------------------------------------
-    bool hasKnockback_ = false;            // DamageUpdateで処理するペンディングフラグ
-    Vector3 pendingKnockback_ = {0, 0, 0}; // 適用待ちのノックバック速度
+    bool hasKnockback_ = false;            // ノックバック中フラグ
+    Vector3 pendingKnockback_ = {0, 0, 0}; // ノックバック速度
 
     // -----------------------------------------------
     // コンボ攻撃パラメータ（ComboSystemのコールバックで更新される）
     // EnemyHandがヒット時に参照する
     // -----------------------------------------------
-    float currentAttackDamage_ = 10.0f;   // 現在の攻撃のダメージ量
-    float currentAttackKnockback_ = 3.0f; // 現在の攻撃のノックバック強度
-    float currentAttackDuration_ = 0.25f; // 現在の攻撃のコライダー有効時間
+    float currentAttackDamage_ = 10.0f;   // 現在の攻撃ダメージ量
+    float currentAttackKnockback_ = 3.0f; // 現在の攻撃ノックバック強度
+    float currentAttackDuration_ = 0.25f; // 現在の攻撃有効時間
 
-    bool canJump_ = false;
-    bool isLockOn_ = false;
-    bool isGrounded_ = true;
-    bool isFlying_ = false;
-    bool isStop_ = false;
-    bool started_ = false;
-    bool isPause_ = false;
-    bool drawShadow_ = true;
-    bool isGuarding_ = false;
-    bool isComboAttack_ = false;
+    bool canJump_ = false;       // ジャンプ可能フラグ
+    bool isLockOn_ = false;      // ロックオンフラグ
+    bool isGrounded_ = true;     // 接地フラグ
+    bool isFlying_ = false;      // 飛行中フラグ
+    bool isStop_ = false;        // 停止中フラグ
+    bool started_ = false;       // 開始フラグ
+    bool isPause_ = false;       // ポーズフラグ
+    bool drawShadow_ = true;     // 影描画フラグ
+    bool isGuarding_ = false;    // ガード中フラグ
+    bool isComboAttack_ = false; // コンボ攻撃中フラグ
 
-    std::unique_ptr<DataHandler> data_;
-    std::unique_ptr<BaseObject> shadow_;
-    std::unique_ptr<ParticleEmitter> hitEmitter_;
-    std::unique_ptr<Shake> chargeShake_;
-    std::shared_ptr<BTNode> rootNode_ = nullptr;
-    std::unique_ptr<EnemyHand> leftHand_;
-    std::unique_ptr<EnemyHand> rightHand_;
+    std::unique_ptr<DataHandler> data_;      // データハンドラ
+    std::unique_ptr<BaseObject> shadow_;     // 影オブジェクト
+    std::unique_ptr<ParticleEmitter> hitEmitter_; // ヒットエミッター
+    std::unique_ptr<Shake> chargeShake_;     // シェイク
+    std::shared_ptr<BTNode> rootNode_ = nullptr; // ビヘイビアツリーのルートノード
+    std::unique_ptr<EnemyHand> leftHand_;    // 左手
+    std::unique_ptr<EnemyHand> rightHand_;   // 右手
 
-    bool isDamageReact_ = false;
-    float damageReactTimer_ = 0.0f;
-    float damageReactDuration_ = 0.5f;
-    float energy_ = 100.0f;
-    float maxEnergy_ = 100.0f;
-    float energyRecoveryRate_ = 0.01f;
-    float energyRecoveryDelay_ = 1.0f;
-    float timeSinceLastShot_ = 0.0f;
+    bool isDamageReact_ = false;       // ダメージ反応中フラグ
+    float damageReactTimer_ = 0.0f;    // ダメージ反応タイマー
+    float damageReactDuration_ = 0.5f; // ダメージ反応時間
+    float energy_ = 100.0f;            // エネルギー
+    float maxEnergy_ = 100.0f;         // 最大エネルギー
+    float energyRecoveryRate_ = 0.01f; // エネルギー回復速度
+    float energyRecoveryDelay_ = 1.0f; // エネルギー回復遅延
+    float timeSinceLastShot_ = 0.0f;   // 最終射撃からの経過時間
 
-    ComboSystem punchCombo_;
-    bool comboInitialized_ = false;
+    ComboSystem punchCombo_;       // パンチコンボシステム
+    bool comboInitialized_ = false; // コンボ初期化済みフラグ
 
     // -----------------------------------------------
     // 前方攻撃判定コライダー
     // EnemyHandのコライダーの代わりに敵前方に判定を展開する
     // PlayerAttackColliderと対称の設計
     // -----------------------------------------------
-    std::unique_ptr<EnemyAttackCollider> attackCollider_;
+    std::unique_ptr<EnemyAttackCollider> attackCollider_; // 攻撃コライダー
 
-    EasingData<float> tiltEase_;
-    Quaternion baseRotation_;
-    Quaternion tiltRotation_;
+    EasingData<float> tiltEase_; // のけぞり回転イージング
+    Quaternion baseRotation_;    // 基本回転
+    Quaternion tiltRotation_;    // のけぞり回転
 
-    OBBCollider *enemyCollider_ = nullptr;
-    AABBCollider *enemyWallCollider_ = nullptr;
+    OBBCollider *enemyCollider_ = nullptr;   // 敵コライダー
+    AABBCollider *enemyWallCollider_ = nullptr; // 壁用コライダー
 
-    EnemyHand *leftHand_ptr_;
-    EnemyHand *rightHand_ptr_;
+    EnemyHand *leftHand_ptr_;  // 左手ポインタ
+    EnemyHand *rightHand_ptr_; // 右手ポインタ
 
-    std::vector<std::unique_ptr<EnemyBullet>> bullets_;
+    std::vector<std::unique_ptr<EnemyBullet>> bullets_; // 敵の弾
 
     // ===================================================
     // 視錐台ロックオン関連
@@ -351,8 +351,8 @@ class Enemy : public BaseObject {
     static constexpr float kDefaultFrustumHalfFovH = 40.0f * (3.14159265f / 180.0f);
     static constexpr float kDefaultFrustumHalfFovV = 30.0f * (3.14159265f / 180.0f);
 
-    float frustumLockOnRange_ = kDefaultFrustumRange;
-    float frustumLockOnHalfFovH_ = kDefaultFrustumHalfFovH;
-    float frustumLockOnHalfFovV_ = kDefaultFrustumHalfFovV;
-    bool drawFrustumDebug_ = false;
+    float frustumLockOnRange_ = kDefaultFrustumRange;   // 視錐台範囲
+    float frustumLockOnHalfFovH_ = kDefaultFrustumHalfFovH; // 視錐台水平半角
+    float frustumLockOnHalfFovV_ = kDefaultFrustumHalfFovV; // 視錐台垂直半角
+    bool drawFrustumDebug_ = false; // 視錐台デバッグ表示フラグ
 };

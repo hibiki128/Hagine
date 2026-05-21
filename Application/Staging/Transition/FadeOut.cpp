@@ -22,17 +22,25 @@ void FadeOut::Update() {
 
 void FadeOut::Draw(const ViewProjection &vp) {
     if (SpriteManager::GetInstance()->GetSprite("transition")) {
+        // 一定時間内はスプライトを表示
         if (timer_ <= kSpriteDrawTime) {
             SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(1.0f);
         } else {
+            // 時間経過後はスプライトを非表示にし、パーティクルの重力を有効化
             SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(0.0f);
             fadeOut_->SetEnableGravity(true);
         }
     }
+
+    // パーティクルの自動発生を停止
     if (timer_ >= kParticleStopTime) {
         fadeOut_->SetAuto(false);
     }
+
+    // パーティクルの描画
     fadeOut_->Draw(vp);
+
+    // フェードアウト完了判定
     if (timer_ >= kFinishTime) {
         isFinish_ = true;
     }

@@ -50,35 +50,34 @@ class ComboSystem {
     void SaveComboStartPositions();
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::string name_ = "DefaultCombo"; // DataHandlerのファイル名に使用
 
-    std::vector<ComboData> comboData_;
-    std::vector<BaseObject *> comboStartObjects_;
+    std::vector<ComboData> comboData_;              // コンボデータ配列
+    std::vector<BaseObject *> comboStartObjects_;   // コンボ開始オブジェクト配列
 
-    int comboIndex_ = 0;
-    float comboCooldown_ = 0.0f;
-    bool comboStarted_ = false;
-    bool waitingForReturn_ = false;
-    float returnDelay_ = 0.0f;
-    float comboTimeout_ = 0.0f;
-    bool inputBuffered_ = false;
-    float inputBufferTime_ = 0.0f;
+    int comboIndex_ = 0;             // 現在のコンボインデックス
+    float comboCooldown_ = 0.0f;     // コンボクールダウン
+    bool comboStarted_ = false;      // コンボ開始フラグ
+    bool waitingForReturn_ = false;  // 戻り待ちフラグ
+    float returnDelay_ = 0.0f;       // 戻り遅延
+    float comboTimeout_ = 0.0f;      // コンボタイムアウトタイマー
+    bool inputBuffered_ = false;     // 入力バッファフラグ
+    float inputBufferTime_ = 0.0f;   // 入力バッファタイマー
 
-    static const float COMBO_INTERVAL;
-    static const float INPUT_BUFFER_DURATION;
-    static const float FINAL_RETURN_DELAY;
-    static const float COMBO_TIMEOUT_DURATION;
+    static const float COMBO_INTERVAL;          // コンボ間隔
+    static const float INPUT_BUFFER_DURATION;   // 入力バッファ有効時間
+    static const float FINAL_RETURN_DELAY;      // 最終攻撃後の戻り遅延
+    static const float COMBO_TIMEOUT_DURATION;  // コンボタイムアウト時間
 
     // 攻撃発火コールバック
     // 引数: damage, knockbackPower, colliderActiveDuration, colliderActivateDelay
     using AttackFiredCallback = std::function<void(float, float, float, float)>;
-    AttackFiredCallback onAttackFired_;
+    AttackFiredCallback onAttackFired_; // 攻撃発火時のコールバック
 
-    // セーブ/ロード用
-    std::unique_ptr<DataHandler> dataHandler_;
+    std::unique_ptr<DataHandler> dataHandler_; // データハンドラ
 
   public:
     /// ===================================================

@@ -39,11 +39,14 @@ class DeathStaging {
     /// </summary>
     bool GetIsStart() const { return isStart_; }
 
+    /// <summary>
+    /// ImGui描画
+    /// </summary>
     void imgui();
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     // 定数定義
@@ -57,18 +60,18 @@ class DeathStaging {
     static constexpr float kMinVelocityY = -1.0f;      // Y方向最小速度
     static constexpr float kMinVelocityZ = -0.5f;      // Z方向最小速度
 
-    Vector3 position_{};
-    Vector3 position_R_Arm{};
-    Vector3 position_L_Arm{};
-    Vector4 color_{};
-    Vector4 color_R_Arm{};
-    Vector4 color_L_Arm{};
+    Vector3 position_{};       // 座標
+    Vector3 position_R_Arm{};  // 右腕座標
+    Vector3 position_L_Arm{};  // 左腕座標
+    Vector4 color_{};          // 色
+    Vector4 color_R_Arm{};     // 右腕の色
+    Vector4 color_L_Arm{};     // 左腕の色
 
-    float time_{};
+    float time_{};             // 経過時間
 
-    bool isStart_ = false;
+    bool isStart_ = false;      // 開始フラグ
 
-    std::unique_ptr<ParticleCSEmitter> deathParticle_ = nullptr;
-    std::unique_ptr<ParticleCSEmitter> deathParticle_R_Arm = nullptr;
-    std::unique_ptr<ParticleCSEmitter> deathParticle_L_Arm = nullptr;
+    std::unique_ptr<ParticleCSEmitter> deathParticle_ = nullptr;       // 死亡パーティクル
+    std::unique_ptr<ParticleCSEmitter> deathParticle_R_Arm = nullptr;  // 右腕死亡パーティクル
+    std::unique_ptr<ParticleCSEmitter> deathParticle_L_Arm = nullptr;  // 左腕死亡パーティクル
 };

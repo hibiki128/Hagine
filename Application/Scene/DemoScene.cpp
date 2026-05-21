@@ -15,29 +15,34 @@ void DemoScene::Finalize() {
 }
 
 void DemoScene::Update() {
-    // カメラ更新
+    // カメラの更新
     CameraUpdate();
 
-    // シーン切り替え
+    // シーン切り替えの更新
     ChangeScene();
-
 }
 
 void DemoScene::Draw() {
-    /// -------描画処理開始-------
+    /// ===================================================
+    /// 描画処理開始
+    /// ===================================================
 
+    // すべてのオブジェクトを描画
     DrawAllObjects();
 
-    /// -------描画処理終了-------
+    /// ===================================================
+    /// 描画処理終了
+    /// ===================================================
 }
 
 void DemoScene::DrawForOffScreen() {
-    /// -------描画処理開始-------
-
-    /// -------描画処理終了-------
+    /// ===================================================
+    /// オフスクリーン描画処理
+    /// ===================================================
 }
 
 void DemoScene::AddSceneSetting() {
+    // デバッグ表示
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
 }
@@ -46,10 +51,12 @@ void DemoScene::AddObjectSetting() {
 }
 
 void DemoScene::AddParticleSetting() {
+    // パーティクルエディタの表示
     DrawParticleEditorUI();
 }
 
 void DemoScene::CameraUpdate() {
+    // デバッグカメラまたは通常カメラの更新
     if (debugCamera_->GetActive()) {
         debugCamera_->Update();
     } else {

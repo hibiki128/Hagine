@@ -50,11 +50,13 @@ void ClearScene::Finalize() {
 }
 
 void ClearScene::Update() {
+    // ゲームパッドの更新
     gamePad_->Update();
 
-    // カメラ更新
+    // カメラの更新
     CameraUpdate();
 
+    // カメラ演出終了後の処理
     if (!vp_.GetIsCameraMove() && cameraStart_) {
         resultUI_->SetIsStartEasing(true);
         resultStaging_->SetfireWorkStarted(true);
@@ -63,41 +65,56 @@ void ClearScene::Update() {
     // シーン切り替え
     ChangeScene();
 
+    // 地面の更新
     ground_->Update();
 
+    // リザルト演出の更新
     resultStaging_->Update();
 
+    // リザルトUIの更新
     resultUI_->Update();
 }
 
 void ClearScene::Draw() {
-    /// -------描画処理開始-------
+    /// ===================================================
+    /// 描画処理開始
+    /// ===================================================
 
+    // 3Dオブジェクトの描画
     objectManager_->Draw(vp_);
 
+    // スカイボックスの描画
     skyBox_->Draw(vp_);
 
+    // 地面の描画
     ground_->Draw(vp_);
 
+    // UIの描画
     resultUI_->Draw();
 
+    // 演出の描画
     resultStaging_->Draw(vp_);
 
+    // スプライトの描画
     spriteManager_->DrawAll();
 
-    /// -------描画処理終了-------
+    /// ===================================================
+    /// 描画処理終了
+    /// ===================================================
 }
 
 void ClearScene::DrawForOffScreen() {
-    /// -------描画処理開始-------
-
-    /// -------描画処理終了-------
+    /// ===================================================
+    /// オフスクリーン描画処理
+    /// ===================================================
 }
 
 void ClearScene::AddSceneSetting() {
+    // デバッグ表示
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
 
+    // 演出のデバッグ
     resultStaging_->DrawImGui();
 }
 
@@ -108,14 +125,16 @@ void ClearScene::AddParticleSetting() {
 }
 
 void ClearScene::CameraUpdate() {
-
+    // カメラ開始タイマーの更新
     currentCameraStartTimer_ += Frame::DeltaTime();
     if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
+        // カメラのイージング開始
         vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
         cameraStart_ = true;
         resultStaging_->SetStartEasing(true);
     }
 
+    // デバッグカメラまたは通常カメラの更新
     if (debugCamera_->GetActive()) {
         debugCamera_->Update();
     } else {
@@ -125,18 +144,14 @@ void ClearScene::CameraUpdate() {
 
 void ClearScene::ChangeScene() {
     if (!gamePad_->IsConnected()) {
-        // リザルト演出が完全に終了しているかチェック
+        // キーボード入力によるシーン切り替え
         if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
-            // シーンを変更
             sceneManager_->NextSceneReservation("TITLE");
         }
     } else {
-        // リザルト演出が完全に終了しているかチェック
+        // ゲームパッド入力によるシーン切り替え
         if (resultUI_->IsAllAnimationFinished() && gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
-            // シーンを変更
             sceneManager_->NextSceneReservation("TITLE");
         }
     }
-#ifndef _DEBUG
-#endif // !_DEBUG
 }

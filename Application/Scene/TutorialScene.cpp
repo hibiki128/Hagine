@@ -95,18 +95,20 @@ void TutorialScene::Finalize() {
 
 // ============================================================
 void TutorialScene::Update() {
-    // カメラ更新
+    // カメラの更新
     CameraUpdate();
 
-    // シーン切り替え
+    // シーン切り替えの更新
     ChangeScene();
 
+    // 環境オブジェクトの更新
     ground_->Update();
     aroundField_->Update();
     fadeOut_->Update();
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
-    gamePad_->Update();
 
+    // 入力の更新
+    gamePad_->Update();
     gameUI_->Update();
 
     // ─── シーン開始遅延 ───
@@ -124,49 +126,69 @@ void TutorialScene::Update() {
     playerUI_->Update();
     enemyUI_->Update();
 
+    // ポーズ中でなければチュートリアル進行
     if (!gameUI_->GetIsPause()) {
         float dt = Frame::DeltaTime();
         tutorialSystem_->Update(dt);
         tutorialUI_->Update(dt);
 
+        // プレイヤーに現在のステップを通知
         player_ptr->SetTutorialStep(tutorialSystem_->GetCurrentStep());
+
+        // 敵の出現/消滅リクエストを処理
         HandleEnemySpawnRequest();
     }
 }
 
-// ============================================================
 void TutorialScene::Draw() {
-    // 遅延が終わるまで PlayerUI / EnemyUI / TutorialUI は描画しない
+    /// ===================================================
+    /// 描画処理開始
+    /// ===================================================
 
+    // 3Dオブジェクトの描画
     objectManager_->Draw(vp_);
 
+    // 環境オブジェクトの描画
     skyBox_->Draw(vp_);
     ground_->Draw(vp_);
     aroundField_->Draw(vp_);
 
+    // パーティクルの描画
     player_ptr->DrawParticle(vp_);
     enemy_ptr->DrawParticle(vp_);
     aroundField_->DrawParticle(vp_);
 
+    // フェード・UIの描画
     fadeOut_->Draw(vp_);
     gameUI_->Draw();
 
+    // デバッグ用視錐台の描画
     followCamera_->DrawFrustum();
     enemy_ptr->DrawFrustum();
 
+    // 2Dスプライトの描画
     spriteManager_->DrawAll();
+
+    // 遅延終了後にUIを表示
     if (sceneStarted_) {
         playerUI_->Draw();
         enemyUI_->Draw();
         tutorialUI_->Draw();
     }
-}
-// ============================================================
-void TutorialScene::DrawForOffScreen() {
+
+    /// ===================================================
+    /// 描画処理終了
+    /// ===================================================
 }
 
-// ============================================================
+void TutorialScene::DrawForOffScreen() {
+    /// ===================================================
+    /// オフスクリーン描画処理
+    /// ===================================================
+}
+
 void TutorialScene::AddSceneSetting() {
+    // デバッグ表示
     debugCamera_->imgui();
     followCamera_->imgui();
     vp_.ShowDebugInfo();
@@ -174,22 +196,22 @@ void TutorialScene::AddSceneSetting() {
     tutorialSystem_->DrawImGui();
 }
 
-// ============================================================
 void TutorialScene::AddObjectSetting() {
+    // オブジェクトのデバッグ表示
     player_ptr->Debug();
     enemy_ptr->Debug();
     enemyUI_->Debug();
     tutorialUI_->DrawImGui();
 }
 
-// ============================================================
 void TutorialScene::AddParticleSetting() {
+    // フェードのデバッグ表示
     fadeOut_->ImGui();
 }
 
-// ============================================================
 void TutorialScene::CameraUpdate() {
     if (player_ptr->GetIsAlive()) {
+        // 通常時のカメラ更新
         if (debugCamera_->GetActive()) {
             debugCamera_->Update();
         } else {
@@ -201,12 +223,13 @@ void TutorialScene::CameraUpdate() {
     }
 }
 
-// ============================================================
 void TutorialScene::ChangeScene() {
-
+    // チュートリアル終了時にゲームシーンへ
     if (tutorialUI_->IsFinished()) {
         sceneManager_->NextSceneReservation("GAME");
     }
+
+    // スキップ操作（STARTボタンまたはENTERキー）
     if (gamePad_->IsConnected()) {
         if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START)) {
             sceneManager_->NextSceneReservation("GAME");
@@ -218,20 +241,15 @@ void TutorialScene::ChangeScene() {
     }
 }
 
-// ============================================================
-//  HandleEnemySpawnRequest
-//  TutorialSystem からのリクエストを受けてエネミーを表示/非表示にする
-// ============================================================
 void TutorialScene::HandleEnemySpawnRequest() {
+    // 出現リクエスト
     if (tutorialSystem_->ShouldSpawnEnemy()) {
-        // エネミーを出現させる
-        // ※ enemy_ptr に対してご使用の非表示API（SetVisible等）に合わせて差し替えてください
         enemy_ptr->GetAlive() = true;
         tutorialSystem_->ConsumeSpawnRequest();
     }
 
+    // 消滅リクエスト
     if (tutorialSystem_->ShouldDespawnEnemy()) {
-        // エネミーを非表示にする
         enemy_ptr->GetAlive() = false;
         tutorialSystem_->ConsumeDespawnRequest();
     }

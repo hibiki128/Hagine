@@ -7,186 +7,170 @@ class TutorialSystem;
 class DataHandler;
 enum class TutorialStep : int;
 
-// ============================================================
-//  TutorialUI
-//  チュートリアルの操作ガイド・進行度バーなどの
-//  UI 表示を専門に管理するクラス。
-//
-//  ◆ ステップ切替時の演出フロー
-//    1. FadingOut      : SpriteManager 管理スプライト全体を徐々に透明化
-//                        → 進捗バーを 1.0 方向へ補間（完了を視覚的に表示）
-//                        → OK! スプライトをフェードイン
-//    2. (瞬間)         : 新ステップのスプライトをロード（alpha=0 でスタート）
-//                        → 進捗バーを 0.0 にリセット
-//    3. FadingIn       : 新ステップのスプライトを徐々に不透明化
-//                        → OK! スプライトをフェードアウト
-//                        （Complete ステップでは OK! を永続表示）
-//    4. CompleteFadeOut: Complete ステップの FadingIn 完了後、
-//                        バー・枠・OK! 含む全 UI を一括フェードアウト
-//    5. CompleteDone   : フェードアウト完了後に postCompleteDelay_ 秒待機し、
-//                        isFinished_ フラグを立てる
-//
-//  ◆ 直接保持スプライト（SpriteManager 管理外）
-//    barSprite_  : 進捗バー本体（黄色）
-//    frameSprite_: 進捗バーの黒枠
-//    okSprite_   : 完了時の "OK!" テキスト（黄色・アウトライン付き）
-// ============================================================
+/// <summary>
+/// チュートリアルの操作ガイド・進行度バーなどのUI表示を管理するクラス
+/// </summary>
 class TutorialUI {
   public:
-    // ──────────────────────────────────────────────────────────
-    //  公開インタフェース
-    // ──────────────────────────────────────────────────────────
+    /// ===================================================
+    /// public method
+    /// ===================================================
 
-    /// 初期化（TutorialScene::Initialize 内で呼ぶ）
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    /// <param name="system">チュートリアルシステムへのポインタ</param>
+    /// <param name="okFontKey">OK!表示に使用するフォントキー</param>
     void Initialize(TutorialSystem *system, const std::string &okFontKey = "");
 
-    /// 毎フレーム更新（TutorialScene::Update 内で呼ぶ）
+    /// <summary>
+    /// 更新処理
+    /// </summary>
+    /// <param name="dt">デルタタイム</param>
     void Update(float dt);
 
-    /// 描画（TutorialScene::Draw 内で呼ぶ）
-    /// 枠 → バー → OK! の順で描画する
+    /// <summary>
+    /// 描画処理
+    /// </summary>
     void Draw();
 
+    /// <summary>
     /// 終了処理
+    /// </summary>
     void Finalize();
 
-    /// ImGui デバッグ/設定ウィンドウを表示する
+    /// <summary>
+    /// ImGuiデバッグ表示
+    /// </summary>
     void DrawImGui();
 
-    // ──────────────────────────────────────────────────────────
-    //  Getter
-    // ──────────────────────────────────────────────────────────
-
-    /// チュートリアル完了後、postCompleteDelay_ 秒が経過したら true を返す。
-    /// このフラグが立ったらシーン遷移などを行う。
+    /// <summary>
+    /// 完了したかを取得
+    /// </summary>
+    /// <returns>完了していたらtrue</returns>
     bool IsFinished() const { return isFinished_; }
 
   private:
-    // ──────────────────────────────────────────────────────────
-    //  トランジション状態
-    // ──────────────────────────────────────────────────────────
+    /// ===================================================
+    /// private enum
+    /// ===================================================
 
+    /// <summary>
+    /// トランジション状態
+    /// </summary>
     enum class UITransitionState {
-        Idle,            ///< 通常表示（ステップ切替待機）
-        FadingOut,       ///< 旧ステップ UI をフェードアウト中
-        FadingIn,        ///< 新ステップ UI をフェードイン中
-        CompleteFadeOut, ///< 完了後、バー・枠・OK! を一括フェードアウト中
-        CompleteDone,    ///< フェードアウト完了、完了後タイマー計測中
+        Idle,            // 通常表示
+        FadingOut,       // 旧ステップUIをフェードアウト中
+        FadingIn,        // 新ステップUIをフェードイン中
+        CompleteFadeOut, // 完了後の一括フェードアウト中
+        CompleteDone,    // フェードアウト完了、待機中
     };
 
-    // ──────────────────────────────────────────────────────────
-    //  内部更新ロジック
-    // ──────────────────────────────────────────────────────────
+    /// ===================================================
+    /// private method
+    /// ===================================================
 
-    /// フェードイン/アウトの状態機械を毎フレーム進める
+    /// <summary>
+    /// トランジションの更新
+    /// </summary>
+    /// <param name="dt">デルタタイム</param>
     void UpdateTransition(float dt);
 
-    /// 進捗バーの表示値を補間する（トランジション状態に応じてターゲットを切替）
+    /// <summary>
+    /// 進捗バーの更新
+    /// </summary>
+    /// <param name="dt">デルタタイム</param>
     void UpdateProgressBar(float dt);
 
-    /// 補足メッセージ（着地補正など）の表示を制御する
+    /// <summary>
+    /// 補足メッセージの更新
+    /// </summary>
     void UpdateSubMessage();
 
-    /// barSprite_ / frameSprite_ のサイズ・位置を現在の進捗に合わせて更新する
+    /// <summary>
+    /// メータースプライトの更新
+    /// </summary>
     void UpdateMeterSprites();
 
-    // ──────────────────────────────────────────────────────────
-    //  スプライト管理
-    // ──────────────────────────────────────────────────────────
-
-    /// ステップ番号 → 保存フォルダ名 変換（nullptr = 無効ステップ）
+    /// <summary>
+    /// ステップに応じたフォルダ名を取得
+    /// </summary>
+    /// <param name="step">チュートリアルステップ</param>
+    /// <returns>フォルダ名</returns>
     const char *GetFolderNameForStep(TutorialStep step) const;
 
-    /// 指定ステップのスプライトを SpriteManager 経由でロードする
+    /// <summary>
+    /// 指定ステップのスプライトをロード
+    /// </summary>
+    /// <param name="step">ロードするステップ</param>
     void LoadStepSprites(TutorialStep step);
 
-    /// SpriteManager に登録されている全スプライトのアルファ値を一括設定する
+    /// <summary>
+    /// 管理下にある全スプライトにアルファ値を適用
+    /// </summary>
+    /// <param name="alpha">適用するアルファ値</param>
     void ApplyAlphaToAllManagedSprites(float alpha);
 
-    // ──────────────────────────────────────────────────────────
-    //  OK! スプライト管理
-    // ──────────────────────────────────────────────────────────
-
-    /// TextRenderer で "OK!" テクスチャを生成し、okSprite_ を初期化する。
+    /// <summary>
+    /// OK!スプライトの初期化
+    /// </summary>
+    /// <param name="fontKey">使用するフォントキー</param>
     void InitializeOKSprite(const std::string &fontKey);
 
-    // ──────────────────────────────────────────────────────────
-    //  DataHandler 操作
-    // ──────────────────────────────────────────────────────────
-
+    /// <summary>
+    /// メーター設定のロード
+    /// </summary>
     void LoadMeterSettings();
+
+    /// <summary>
+    /// メーター設定の保存
+    /// </summary>
     void SaveMeterSettings();
 
-    // ──────────────────────────────────────────────────────────
-    //  参照
-    // ──────────────────────────────────────────────────────────
+    /// ===================================================
+    /// private variables
+    /// ===================================================
 
-    TutorialSystem *system_ = nullptr;
+    TutorialSystem *system_ = nullptr; // チュートリアルシステム
 
-    // ──────────────────────────────────────────────────────────
-    //  トランジション変数
-    // ──────────────────────────────────────────────────────────
+    UITransitionState transitionState_ = UITransitionState::Idle; // 遷移状態
+    float fadeTimer_ = 0.0f;        // フェード用タイマー
+    float fadeOutDuration_ = 0.35f; // フェードアウト時間
+    float fadeInDuration_ = 0.45f;  // フェードイン時間
 
-    UITransitionState transitionState_ = UITransitionState::Idle;
-    float fadeTimer_ = 0.0f;        ///< フェードアウト/イン共用タイマー
-    float fadeOutDuration_ = 0.35f; ///< フェードアウトにかける秒数
-    float fadeInDuration_ = 0.45f;  ///< フェードインにかける秒数
+    float completeFadeOutDuration_ = 1.0f; // 完了時フェードアウト時間
+    float postCompleteTimer_ = 0.0f;       // 完了後タイマー
+    float postCompleteDelay_ = 1.0f;       // 完了後の待機時間
+    bool isFinished_ = false;              // 完了フラグ
 
-    // ──────────────────────────────────────────────────────────
-    //  完了フェードアウト・完了フラグ
-    // ──────────────────────────────────────────────────────────
+    float displayedProgress_ = 0.0f; // 表示用進捗率
+    float progressLerpSpeed_ = 6.0f; // 進捗率の補間速度
 
-    float completeFadeOutDuration_ = 1.0f; ///< 完了後の全UI フェードアウト秒数
-    float postCompleteTimer_ = 0.0f;       ///< フェードアウト完了後の経過秒数
-    float postCompleteDelay_ = 1.0f;       ///< フラグが立つまでの待機秒数
-    bool isFinished_ = false;              ///< 完了フラグ（postCompleteDelay_ 秒後に true）
+    bool subMessageVisible_ = false; // 補足メッセージ表示フラグ
+    float subMessageTimer_ = 0.0f;   // 補足メッセージタイマー
 
-    // ──────────────────────────────────────────────────────────
-    //  進捗バー
-    // ──────────────────────────────────────────────────────────
+    Sprite barSprite_;        // 進捗バー
+    Sprite frameSprite_;      // バーの枠
+    Sprite SkipButtonSprite_; // スキップボタン
 
-    float displayedProgress_ = 0.0f; ///< 表示値（実進捗を Lerp で追従）
-    float progressLerpSpeed_ = 6.0f; ///< 補間速度
+    float barAlpha_ = 1.0f;   // バーのアルファ値
+    float frameAlpha_ = 1.0f; // 枠のアルファ値
 
-    // ──────────────────────────────────────────────────────────
-    //  補足メッセージ
-    // ──────────────────────────────────────────────────────────
+    Sprite okSprite_;            // OK!スプライト
+    bool okSpriteReady_ = false; // OK!準備完了フラグ
+    float okAlpha_ = 0.0f;       // OK!のアルファ値
 
-    bool subMessageVisible_ = false;
-    float subMessageTimer_ = 0.0f;
+    Vector2 okPosition_ = {640.0f, 400.0f}; // OK!の位置
+    float okRotation_ = 0.0f;              // OK!の回転
+    Vector2 okSize_ = {200.0f, 80.0f};      // OK!のサイズ
 
-    // ──────────────────────────────────────────────────────────
-    //  直接保持スプライト（SpriteManager 管理外）
-    // ──────────────────────────────────────────────────────────
+    Vector2 barPosition_ = {100.0f, 880.0f}; // バーの位置
+    float barHeight_ = 24.0f;               // バーの高さ
+    float barMaxWidth_ = 500.0f;            // バーの最大幅
+    float borderThickness_ = 3.0f;          // 枠の太さ
 
-    Sprite barSprite_;        ///< 進捗を表す黄色バー本体
-    Sprite frameSprite_;      ///< バーを囲む黒枠
-    Sprite SkipButtonSprite_; ///< スキップ操作を示すボタンアイコン
+    Vector2 skipButtonPosition_ = {1600.0f, 946.0f}; // スキップボタンの位置
+    Vector2 skipButtonSize_ = {320.0f, 64.0f};       // スキップボタンのサイズ
 
-    float barAlpha_ = 1.0f;   ///< バースプライトの現在アルファ（CompleteFadeOut で減衰）
-    float frameAlpha_ = 1.0f; ///< 枠スプライトの現在アルファ（CompleteFadeOut で減衰）
-
-    // ── OK! スプライト ──
-    Sprite okSprite_;            ///< "OK!" テキストスプライト
-    bool okSpriteReady_ = false; ///< InitializeOKSprite() が成功したか
-    float okAlpha_ = 0.0f;       ///< 現在の表示アルファ（0=透明 / 1=不透明）
-
-    // OK! スプライト設定（ImGui で調整・DataHandler でセーブ/ロード）
-    Vector2 okPosition_ = {640.0f, 400.0f};
-    float okRotation_ = 0.0f;
-    Vector2 okSize_ = {200.0f, 80.0f};
-
-    // ──────────────────────────────────────────────────────────
-    //  メーター設定（DataHandler でセーブ/ロード）
-    // ──────────────────────────────────────────────────────────
-
-    Vector2 barPosition_ = {100.0f, 880.0f};
-    float barHeight_ = 24.0f;
-    float barMaxWidth_ = 500.0f;
-    float borderThickness_ = 3.0f;
-
-    Vector2 skipButtonPosition_ = {1600.0f, 946.0f};
-    Vector2 skipButtonSize_ = {320.0f, 64.0f};
-
-    std::unique_ptr<DataHandler> dataHandler_;
+    std::unique_ptr<DataHandler> dataHandler_; // データハンドラ
 };

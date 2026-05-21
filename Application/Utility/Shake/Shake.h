@@ -62,7 +62,7 @@ class Shake {
     /// private varians
     /// ===================================================
 
-    ViewProjection *viewProjection_ = nullptr;
+    ViewProjection *viewProjection_ = nullptr; // ビュープロジェクション
 
     Vector2 shakeMin_ = {-0.5f, -0.5f}; // 揺れ最小値
     Vector2 shakeMax_ = {0.5f, 0.5f};   // 揺れ最大値
@@ -71,8 +71,8 @@ class Shake {
 
     int shakeInterval_ = 2;  // 揺らす間隔（フレーム）
     int shakeDuration_ = 30; // 揺れの持続時間（フレーム）
-    int currentFrame_ = 0;   // 現在のフレーム数
+    int currentFrame_ = 0;   // 現在の経過フレーム数
     bool isShaking_ = false; // 揺れ中フラグ
 
-    std::unique_ptr<DataHandler> dataHandler_;
+    std::unique_ptr<DataHandler> dataHandler_; // データハンドラ
 };

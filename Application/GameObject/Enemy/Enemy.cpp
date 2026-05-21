@@ -141,19 +141,23 @@ void Enemy::Init(const std::string objectName) {
 }
 
 void Enemy::Update() {
+    // 影の位置を更新
     shadow_->GetLocalPosition() = {
         transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
     shadow_->Update();
 
+    // 開始フラグが立っており、ポーズ中でなく、ターゲットが生きている場合に更新
     if (started_ && !isPause_ && target_->GetIsAlive()) {
         DamageUpdate();
         RecoverEnergy();
 
+        // 死亡判定
         if (HP_ <= kMinHP) {
             isAlive_ = false;
             HP_ = kMinHP;
         }
 
+        // ガード中のエフェクト（点滅）
         if (isGuarding_) {
             const float blinkInterval = kBlinkInterval;
             int blinkCount = static_cast<int>(Frame::Time() / blinkInterval);
@@ -166,6 +170,7 @@ void Enemy::Update() {
             SetColor(Vector4(kColorOpaque, kColorZero, kColorZero, kColorOpaque));
         }
 
+        // ダメージリアクション中でなければ回転を更新
         if (!isDamageReact_) {
             RotateUpdate();
         }
@@ -174,6 +179,7 @@ void Enemy::Update() {
         UpdateShadowScale();
         chargeShake_->Update();
 
+        // ダメージリアクション処理（のけぞり回転と点滅）
         if (isDamageReact_) {
             damageReactTimer_ += Frame::DeltaTime();
             float angleX = tiltEase_.Update(Frame::DeltaTime());
@@ -192,22 +198,26 @@ void Enemy::Update() {
             }
         }
 
+        // ビヘイビアツリーの更新
         if (rootNode_) {
             rootNode_->SetContext(this, target_);
             rootNode_->Tick();
 
+            // 速度イージングの更新
             if (velocityEase_.isActive) {
                 Vector3 easedVelocity = velocityEase_.Update(Frame::DeltaTime());
                 velocity_.x = easedVelocity.x;
                 velocity_.z = easedVelocity.z;
             }
 
+            // 重力処理
             if (!isGrounded_ && !isFlying_) {
                 velocity_.y += acceleration_.y * Frame::DeltaTime();
             } else if (isGrounded_) {
                 acceleration_.y = 0.0f;
             }
         } else {
+            // ルートノードがなければ停止
             velocity_.x = 0.0f;
             velocity_.z = 0.0f;
             if (isGrounded_) {
@@ -216,10 +226,12 @@ void Enemy::Update() {
             }
         }
 
+        // 接地判定と位置更新
         CollisionGround();
         BaseObject::Update();
         UpdateFrustumLockOn();
 
+        // 弾の更新
         for (auto it = bullets_.begin(); it != bullets_.end();) {
             (*it)->Update();
             (*it)->UpdateWorldTransformHierarchy();
@@ -235,9 +247,11 @@ void Enemy::Update() {
 void Enemy::MoveToTarget(const Vector3 &targetPos) {
     if (!target_)
         return;
+    // ターゲットへの方向を計算
     Vector3 direction = targetPos - transform_->translation_;
     direction.y = 0;
     direction = direction.Normalize();
+    // 目標速度を設定し、イージングを開始
     velocityTarget_ = direction * moveSpeed_;
     velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
@@ -245,6 +259,7 @@ void Enemy::MoveToTarget(const Vector3 &targetPos) {
 void Enemy::MoveStrafe() {
     if (!target_)
         return;
+    // 横移動方向へ速度を設定
     Vector3 right = GetRight();
     velocityTarget_ = right * (float)strafeDirection_ * moveSpeed_;
     velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
@@ -253,6 +268,7 @@ void Enemy::MoveStrafe() {
 void Enemy::MoveRetreat() {
     if (!target_)
         return;
+    // ターゲットから離れる方向へ速度を設定
     Vector3 direction = transform_->translation_ - target_->GetWorldPosition();
     direction.y = 0;
     direction = direction.Normalize();
@@ -265,6 +281,7 @@ void Enemy::PerformAttack() {
 }
 
 void Enemy::StopMovement() {
+    // 停止目標速度を設定
     Vector3 zeroVel(0.0f, velocity_.y, 0.0f);
     velocityTarget_ = zeroVel;
     velocityEase_.Reset(velocity_, velocityTarget_, kStopEaseTime, EasingType::OutQuad);

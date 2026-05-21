@@ -14,6 +14,10 @@
 #include <Application/Staging/Transition/FadeOut.h>
 #include <Application/UI/Scene/Game/GameUI.h>
 
+/// <summary>
+/// ゲーム本編のシーンクラス
+/// プレイヤー、敵、カメラ、UIなどのゲームメインループを管理する
+/// </summary>
 class GameScene : public BaseScene {
   public:
     /// ===================================================
@@ -30,38 +34,42 @@ class GameScene : public BaseScene {
     void AddParticleSetting() override;
 
   private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
     void CameraUpdate();
     void ChangeScene();
 
   private:
-    std::unique_ptr<Player> player_;
-    std::unique_ptr<Enemy> enemy_;
-    std::unique_ptr<AroundField> aroundField_;
-    std::unique_ptr<FollowCamera> followCamera_;
-    std::unique_ptr<StartCamera> startCamera_;
-    std::unique_ptr<DeathCamera> deathCamera_;
-    std::unique_ptr<Ground> ground_;
-    std::unique_ptr<PlayerUI> playerUI_;
-    std::unique_ptr<EnemyUI> enemyUI_;
-   // std::unique_ptr<FadeOut> fadeOut_;
-    std::unique_ptr<GameUI> gameUI_;
+    /// ===================================================
+    /// private variables
+    /// ===================================================
 
-    SkyBox *skyBox_ = nullptr;
+    std::unique_ptr<Player> player_;        // プレイヤー
+    std::unique_ptr<Enemy> enemy_;          // 敵
+    std::unique_ptr<AroundField> aroundField_; // 周囲のフィールド
+    std::unique_ptr<FollowCamera> followCamera_; // フォローカメラ
+    std::unique_ptr<StartCamera> startCamera_; // 開始時カメラ
+    std::unique_ptr<DeathCamera> deathCamera_; // 死亡時カメラ
+    std::unique_ptr<Ground> ground_;        // 地面
+    std::unique_ptr<PlayerUI> playerUI_;    // プレイヤーUI
+    std::unique_ptr<EnemyUI> enemyUI_;      // 敵UI
+    std::unique_ptr<GameUI> gameUI_;        // ゲームUI
 
-    Enemy *enemy_ptr = nullptr;
-    Player *player_ptr = nullptr;
+    SkyBox *skyBox_ = nullptr;              // スカイボックス
 
-    bool isGameOver_ = false;
-    bool deathCameraStarted_ = false;
-    float GameOverTimer_ = 0.0f;
-    float ClearTimer_ = 0.0f;
+    Enemy *enemy_ptr = nullptr;             // 敵のポインタ（共有用）
+    Player *player_ptr = nullptr;           // プレイヤーのポインタ（共有用）
+
+    bool isGameOver_ = false;               // ゲームオーバーフラグ
+    bool deathCameraStarted_ = false;       // 死亡時カメラ開始フラグ
+    float GameOverTimer_ = 0.0f;            // ゲームオーバータイマー
+    float ClearTimer_ = 0.0f;               // クリアタイマー
 
     // ---------- BehaviorTree ----------
-    // Release: BehaviorTreeLoader で起動時にJSONからロード
-    // Debug  : BehaviorTreeEditor でリアルタイム編集 + ロード
 #ifdef _DEBUG
-    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_;
+    std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_; // ビヘイビアツリーエディタ
 #endif
-    // Release用: 起動時に一度だけセット済みのツリーを保持
-    std::shared_ptr<BTNode> m_BehaviorTreeRoot;
+    std::shared_ptr<BTNode> m_BehaviorTreeRoot; // ビヘイビアツリールート
 };

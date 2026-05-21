@@ -23,9 +23,13 @@ void DeathStaging::Initialize(
 
 void DeathStaging::Update() {
     time_ += Frame::DeltaTime();
+
+    // パーティクルの更新
     deathParticle_->Update();
     deathParticle_L_Arm->Update();
     deathParticle_R_Arm->Update();
+
+    // 一定時間内はパーティクルの発生位置と色を更新
     if (time_ <= kParticleActiveTime) {
         deathParticle_->SetTranslate(position_);
         deathParticle_->SetStartColor(color_);
@@ -42,10 +46,13 @@ void DeathStaging::Update() {
         deathParticle_L_Arm->SetEndColor({color_L_Arm.x, color_L_Arm.y, color_L_Arm.z, kAlphaZero});
         deathParticle_L_Arm->SetAuto(true);
     } else {
+        // 時間経過後はパーティクルの自動発生を停止
         deathParticle_->SetAuto(false);
         deathParticle_R_Arm->SetAuto(false);
         deathParticle_L_Arm->SetAuto(false);
     }
+
+    // 重力の影響を開始
     if (time_ >= kGravityStartTime) {
         deathParticle_->SetEnableGravity(true);
         deathParticle_->SetEnableLifeTimeScale(true);

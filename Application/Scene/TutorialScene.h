@@ -15,6 +15,10 @@
 #include <Application/UI/Scene/Game/GameUI.h>
 #include <Application/UI/Tutorial/TutorialUI.h>
 
+/// <summary>
+/// チュートリアルシーンのクラス
+/// 基本操作のレクチャーを行うシーンを管理する
+/// </summary>
 class TutorialScene : public BaseScene {
   public:
     /// ===================================================
@@ -31,33 +35,43 @@ class TutorialScene : public BaseScene {
     void AddParticleSetting() override;
 
   private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
     void CameraUpdate();
     void ChangeScene();
 
+    /// <summary>
     /// チュートリアルシステムからのエネミー出現/消滅リクエストを処理する
+    /// </summary>
     void HandleEnemySpawnRequest();
 
   private:
-    std::unique_ptr<Player> player_;
-    std::unique_ptr<Enemy> enemy_;
-    std::unique_ptr<AroundField> aroundField_;
-    std::unique_ptr<FollowCamera> followCamera_;
-    std::unique_ptr<Ground> ground_;
-    std::unique_ptr<PlayerUI> playerUI_;
-    std::unique_ptr<EnemyUI> enemyUI_;
-    std::unique_ptr<FadeOut> fadeOut_;
-    std::unique_ptr<GameUI> gameUI_;
-    std::unique_ptr<GamePad> gamePad_;
+    /// ===================================================
+    /// private variables
+    /// ===================================================
+
+    std::unique_ptr<Player> player_;        // プレイヤー
+    std::unique_ptr<Enemy> enemy_;          // 敵
+    std::unique_ptr<AroundField> aroundField_; // 周囲のフィールド
+    std::unique_ptr<FollowCamera> followCamera_; // フォローカメラ
+    std::unique_ptr<Ground> ground_;        // 地面
+    std::unique_ptr<PlayerUI> playerUI_;    // プレイヤーUI
+    std::unique_ptr<EnemyUI> enemyUI_;      // 敵UI
+    std::unique_ptr<FadeOut> fadeOut_;      // フェードアウト
+    std::unique_ptr<GameUI> gameUI_;        // ゲームUI
+    std::unique_ptr<GamePad> gamePad_;      // ゲームパッド
 
     // ─── チュートリアル管理 ───
-    std::unique_ptr<TutorialSystem> tutorialSystem_;
-    std::unique_ptr<TutorialUI> tutorialUI_;
+    std::unique_ptr<TutorialSystem> tutorialSystem_; // チュートリアルシステム
+    std::unique_ptr<TutorialUI> tutorialUI_;         // チュートリアルUI
 
-    SkyBox *skyBox_ = nullptr;
-    Enemy *enemy_ptr = nullptr;
-    Player *player_ptr = nullptr;
+    SkyBox *skyBox_ = nullptr;              // スカイボックス
+    Enemy *enemy_ptr = nullptr;             // 敵のポインタ
+    Player *player_ptr = nullptr;           // プレイヤーのポインタ
 
-    float startDelayTimer_ = 0.0f;              ///< シーン開始からの経過時間
-    bool sceneStarted_ = false;                 ///< 遅延が終了し、更新・描画を開始するフラグ
-    static constexpr float kStartDelay_ = 2.0f; ///< 開始までの待機秒数
+    float startDelayTimer_ = 0.0f;          // シーン開始からの経過時間
+    bool sceneStarted_ = false;             // 遅延終了フラグ
+    static constexpr float kStartDelay_ = 2.0f; // 開始までの待機秒数
 };

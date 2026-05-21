@@ -92,51 +92,6 @@ struct Motion {
 /// モーション管理とエディタのシングルトンクラス
 /// </summary>
 class MotionEditor {
-  private:
-    /// ===================================================
-    /// private method
-    /// ===================================================
-
-    /// <summary>
-    /// プライベートコンストラクタ
-    /// </summary>
-    MotionEditor() = default;
-
-    /// <summary>
-    /// プライベートデストラクタ
-    /// </summary>
-    ~MotionEditor() = default;
-
-    /// <summary>
-    /// コピーコンストラクタ削除
-    /// </summary>
-    MotionEditor(MotionEditor &) = delete;
-
-    /// <summary>
-    /// 代入演算子削除
-    /// </summary>
-    MotionEditor &operator=(MotionEditor &) = delete;
-
-    /// <summary>
-    /// ローカル座標をワールド座標に変換
-    /// </summary>
-    /// <param name="localOffset">ローカルオフセット</param>
-    /// <param name="worldMatrix">ワールドマトリックス</param>
-    /// <returns>Vector3: ワールド座標</returns>
-    Vector3 TransformLocalToWorld(const Vector3 &localOffset, const Matrix4x4 &worldMatrix);
-
-    /// <summary>
-    /// 終了した一時モーションをクリーンアップ
-    /// </summary>
-    void CleanupFinishedTemporaryMotions();
-
-    /// <summary>
-    /// Getter
-    /// </summary>
-    Matrix4x4 GetParentInverseWorldMatrix(BaseObject *object);
-    Vector3 GetLocalControlPointPosition(BaseObject *object, const Vector3 &worldPos);
-    Vector3 TransformLocalControlPointToWorld(BaseObject *object, const Vector3 &localPos);
-
   public:
     /// ===================================================
     /// public method
@@ -146,9 +101,9 @@ class MotionEditor {
     /// シングルトンインスタンスを取得
     /// </summary>
     /// <returns>MotionEditor*: インスタンスのポインタ</returns>
-      static MotionEditor* GetInstance() {
-          static MotionEditor instance;
-          return &instance;
+    static MotionEditor *GetInstance() {
+        static MotionEditor instance;
+        return &instance;
     }
 
     /// <summary>
@@ -295,13 +250,74 @@ class MotionEditor {
     bool IsTemporaryMotionFinished(BaseObject *target, const std::string &fileName);
 
     /// <summary>
-    /// Getter
+    /// 再生状態を取得
     /// </summary>
+    /// <param name="objectName">オブジェクト名</param>
+    /// <returns>MotionStatus: 再生状態</returns>
     MotionStatus GetMotionStatus(const std::string &objectName);
+
+    /// <summary>
+    /// 再生中かを判定
+    /// </summary>
+    /// <param name="objectName">オブジェクト名</param>
+    /// <returns>bool: 再生中か</returns>
     bool IsPlaying(const std::string &objectName);
+
+    /// <summary>
+    /// 再生終了したかを判定
+    /// </summary>
+    /// <param name="objectName">オブジェクト名</param>
+    /// <returns>bool: 再生終了か</returns>
     bool IsFinished(const std::string &objectName);
+
+    /// <summary>
+    /// 一時的なモーション名を取得
+    /// </summary>
+    /// <param name="target">対象オブジェクト</param>
+    /// <param name="fileName">ファイル名</param>
+    /// <returns>std::string: モーション名</returns>
     std::string GetTemporaryMotionName(BaseObject *target, const std::string &fileName);
 
+  private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// ローカル座標をワールド座標に変換
+    /// </summary>
+    /// <param name="localOffset">ローカルオフセット</param>
+    /// <param name="worldMatrix">ワールドマトリックス</param>
+    /// <returns>Vector3: ワールド座標</returns>
+    Vector3 TransformLocalToWorld(const Vector3 &localOffset, const Matrix4x4 &worldMatrix);
+
+    /// <summary>
+    /// 終了した一時モーションをクリーンアップ
+    /// </summary>
+    void CleanupFinishedTemporaryMotions();
+
+    /// <summary>
+    /// 親のワールド行列の逆行列を取得
+    /// </summary>
+    /// <param name="object">対象オブジェクト</param>
+    /// <returns>Matrix4x4: 逆行列</returns>
+    Matrix4x4 GetParentInverseWorldMatrix(BaseObject *object);
+
+    /// <summary>
+    /// ローカルコントロールポイントの位置を取得
+    /// </summary>
+    /// <param name="object">対象オブジェクト</param>
+    /// <param name="worldPos">ワールド座標</param>
+    /// <returns>Vector3: ローカル座標</returns>
+    Vector3 GetLocalControlPointPosition(BaseObject *object, const Vector3 &worldPos);
+
+    /// <summary>
+    /// ローカルコントロールポイントをワールド座標に変換
+    /// </summary>
+    /// <param name="object">対象オブジェクト</param>
+    /// <param name="localPos">ローカル座標</param>
+    /// <returns>Vector3: ワールド座標</returns>
+    Vector3 TransformLocalControlPointToWorld(BaseObject *object, const Vector3 &localPos);
 
   private:
     /// ===================================================
@@ -316,7 +332,7 @@ class MotionEditor {
 
     static const float ATTACK_END_INTERVAL; // 攻撃終了後のインターバル時間
 
-    std::string selectedName_;
-    std::string jsonName_;
-    int selectedControlPoint_ = -1;
+    std::string selectedName_;              // 選択中モーション名
+    std::string jsonName_;                  // JSONファイル名
+    int selectedControlPoint_ = -1;         // 選択中のコントロールポイント番号
 };

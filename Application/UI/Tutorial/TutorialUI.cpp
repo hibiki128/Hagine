@@ -16,7 +16,7 @@
 void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey) {
     system_ = system;
 
-    // ── 内部状態の初期化 ──
+    // 内部状態の初期化
     displayedProgress_ = 0.0f;
     subMessageVisible_ = false;
     subMessageTimer_ = 0.0f;
@@ -28,18 +28,16 @@ void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey
     postCompleteTimer_ = 0.0f;
     isFinished_ = false;
 
-    // ── DataHandler の生成と設定ロード ──
+    // 設定ロード
     dataHandler_ = std::make_unique<DataHandler>("SpriteDatas", "Tutorialmeter");
     LoadMeterSettings();
 
-    // ── 進捗メータースプライトの初期化 ──
-    // barSprite_: 黄色、進捗量に応じて横幅が変化する
+    // 進捗メータースプライトの初期化
     barSprite_.Initialize(
         "debug/white1x1.png",
         barPosition_,
         {1.0f, 1.0f, 0.0f, 1.0f});
 
-    // frameSprite_: 黒枠、バーより borderThickness_ 分だけ外側に張り出す
     frameSprite_.Initialize(
         "debug/white1x1.png",
         {barPosition_.x - borderThickness_, barPosition_.y - borderThickness_},
@@ -55,16 +53,13 @@ void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey
 
     UpdateMeterSprites();
 
-    // ── 初期ステップのスプライトをロード ──
+    // 初期ステップのスプライトをロード
     LoadStepSprites(system_->GetCurrentStep());
 
-    // ── OK! スプライトの生成 ──
+    // OK! スプライトの生成
     InitializeOKSprite(okFontKey);
 }
 
-// ============================================================
-//  InitializeOKSprite
-// ============================================================
 void TutorialUI::InitializeOKSprite(const std::string &fontKey) {
     std::string resolvedKey = fontKey;
     if (resolvedKey.empty()) {
@@ -78,6 +73,7 @@ void TutorialUI::InitializeOKSprite(const std::string &fontKey) {
         return;
     }
 
+    // "OK!" テクスチャを生成
     TextRenderer::GetInstance()->CreateTextSprite(
         "Tutorial_OK",
         "OK!",
@@ -99,9 +95,6 @@ void TutorialUI::InitializeOKSprite(const std::string &fontKey) {
     okSpriteReady_ = true;
 }
 
-// ============================================================
-//  Update
-// ============================================================
 void TutorialUI::Update(float dt) {
     if (!system_) {
         return;
@@ -113,21 +106,9 @@ void TutorialUI::Update(float dt) {
     UpdateMeterSprites();
 }
 
-// ============================================================
-//  UpdateTransition
-//
-//  Idle
-//    └─ IsStepJustChanged() ──→ FadingOut
-//         └─ タイマー満了 ──→ [スプライト差替] → FadingIn
-//              ├─ Complete 以外: タイマー満了 ──→ Idle
-//              └─ Complete    : タイマー満了 ──→ CompleteFadeOut
-//                   └─ タイマー満了 ──→ CompleteDone
-//                        └─ postCompleteDelay_ 経過 ──→ isFinished_ = true
-// ============================================================
 void TutorialUI::UpdateTransition(float dt) {
     switch (transitionState_) {
 
-    // ── Idle ──────────────────────────────────────────────────
     case UITransitionState::Idle:
         if (system_->IsStepJustChanged()) {
             transitionState_ = UITransitionState::FadingOut;
@@ -135,7 +116,6 @@ void TutorialUI::UpdateTransition(float dt) {
         }
         break;
 
-    // ── FadingOut: 旧スプライトを透明化しながら OK! を表示 ─────
     case UITransitionState::FadingOut: {
         fadeTimer_ += dt;
         const float t = std::clamp(fadeTimer_ / fadeOutDuration_, 0.0f, 1.0f);
@@ -154,7 +134,6 @@ void TutorialUI::UpdateTransition(float dt) {
         break;
     }
 
-    // ── FadingIn: 新スプライトを不透明化しながら OK! を隠す ─────
     case UITransitionState::FadingIn: {
         fadeTimer_ += dt;
         const float t = std::clamp(fadeTimer_ / fadeInDuration_, 0.0f, 1.0f);
@@ -172,11 +151,9 @@ void TutorialUI::UpdateTransition(float dt) {
             ApplyAlphaToAllManagedSprites(1.0f);
 
             if (system_->GetCurrentStep() != TutorialStep::Complete) {
-                // 通常ステップ: OK! を完全に隠して Idle へ戻る
                 okAlpha_ = 0.0f;
                 transitionState_ = UITransitionState::Idle;
             } else {
-                // Complete ステップ: バー・枠・OK! の一括フェードアウトへ移行
                 okAlpha_ = 1.0f;
                 barAlpha_ = 1.0f;
                 frameAlpha_ = 1.0f;
@@ -187,20 +164,17 @@ void TutorialUI::UpdateTransition(float dt) {
         break;
     }
 
-    // ── CompleteFadeOut: バー・枠・OK! を一括フェードアウト ─────
     case UITransitionState::CompleteFadeOut: {
         fadeTimer_ += dt;
         const float t = std::clamp(fadeTimer_ / completeFadeOutDuration_, 0.0f, 1.0f);
         const float alpha = 1.0f - t;
 
-        // SpriteManager 管理スプライト（TutorialFinish 画像など）もフェードアウト
         ApplyAlphaToAllManagedSprites(alpha);
         okAlpha_ = alpha;
         barAlpha_ = alpha;
         frameAlpha_ = alpha;
 
         if (fadeTimer_ >= completeFadeOutDuration_) {
-            // 完全に透明化して CompleteDone へ移行
             ApplyAlphaToAllManagedSprites(0.0f);
             okAlpha_ = 0.0f;
             barAlpha_ = 0.0f;
@@ -213,7 +187,6 @@ void TutorialUI::UpdateTransition(float dt) {
         break;
     }
 
-    // ── CompleteDone: 完了後タイマーを計測してフラグを立てる ─────
     case UITransitionState::CompleteDone:
         if (!isFinished_) {
             postCompleteTimer_ += dt;
@@ -225,9 +198,6 @@ void TutorialUI::UpdateTransition(float dt) {
     }
 }
 
-// ============================================================
-//  UpdateProgressBar
-// ============================================================
 void TutorialUI::UpdateProgressBar(float dt) {
     float target = 0.0f;
 
@@ -243,7 +213,6 @@ void TutorialUI::UpdateProgressBar(float dt) {
         break;
     case UITransitionState::CompleteFadeOut:
     case UITransitionState::CompleteDone:
-        // 完了後はバーを更新しない
         target = displayedProgress_;
         break;
     }
@@ -252,9 +221,6 @@ void TutorialUI::UpdateProgressBar(float dt) {
     displayedProgress_ = std::clamp(displayedProgress_, 0.0f, 1.0f);
 }
 
-// ============================================================
-//  UpdateSubMessage
-// ============================================================
 void TutorialUI::UpdateSubMessage() {
     const bool shouldShow = system_->IsShowingReturnToAirMessage();
     if (shouldShow != subMessageVisible_) {
@@ -262,9 +228,6 @@ void TutorialUI::UpdateSubMessage() {
     }
 }
 
-// ============================================================
-//  UpdateMeterSprites
-// ============================================================
 void TutorialUI::UpdateMeterSprites() {
     const float barWidth = std::max(1.0f, barMaxWidth_ * displayedProgress_);
     barSprite_.SetPosition(barPosition_);
@@ -276,9 +239,6 @@ void TutorialUI::UpdateMeterSprites() {
                           barHeight_ + borderThickness_ * 2.0f});
 }
 
-// ============================================================
-//  ApplyAlphaToAllManagedSprites
-// ============================================================
 void TutorialUI::ApplyAlphaToAllManagedSprites(float alpha) {
     for (SpriteData *sd : SpriteManager::GetInstance()->GetAllSprites()) {
         if (sd && sd->sprite) {
@@ -287,11 +247,8 @@ void TutorialUI::ApplyAlphaToAllManagedSprites(float alpha) {
     }
 }
 
-// ============================================================
-//  Draw
-// ============================================================
 void TutorialUI::Draw() {
-    // 枠 → バー の順で描画し、各アルファを適用する
+    // 枠 -> バー の順で描画
     frameSprite_.SetAlpha(frameAlpha_);
     frameSprite_.Draw();
 
@@ -301,7 +258,7 @@ void TutorialUI::Draw() {
     SkipButtonSprite_.SetAlpha(1.0f);
     SkipButtonSprite_.Draw();
 
-    // OK! スプライト: 有意なアルファがある場合のみ描画する
+    // OK! スプライトの描画
     if (okSpriteReady_ && okAlpha_ > 0.001f) {
         okSprite_.SetAlpha(okAlpha_);
         okSprite_.SetPosition(okPosition_);
@@ -311,9 +268,6 @@ void TutorialUI::Draw() {
     }
 }
 
-// ============================================================
-//  Finalize
-// ============================================================
 void TutorialUI::Finalize() {
     dataHandler_.reset();
     system_ = nullptr;

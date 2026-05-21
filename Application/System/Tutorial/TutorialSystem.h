@@ -44,66 +44,132 @@ struct TutorialStepConfig {
 // ============================================================
 class TutorialSystem {
   public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
     /// 初期化（TutorialScene::Initialize 内で呼ぶ）
+    /// </summary>
+    /// <param name="player">プレイヤーへのポインタ</param>
     void Initialize(Player *player);
 
+    /// <summary>
     /// 毎フレーム更新（TutorialScene::Update 内で呼ぶ）
+    /// </summary>
+    /// <param name="dt">デルタタイム</param>
     void Update(float dt);
 
+    /// <summary>
     /// 終了処理
+    /// </summary>
     void Finalize();
 
-    // ─────────────── Getter ───────────────
+    /// ===================================================
+    /// Getter
+    /// ===================================================
 
+    /// <summary>
+    /// 現在のステップを取得
+    /// </summary>
+    /// <returns>TutorialStep: 現在のステップ</returns>
     TutorialStep GetCurrentStep() const { return currentStep_; }
 
+    /// <summary>
     /// 現ステップの進捗 0.0 〜 1.0（進行度バーに使う）
+    /// </summary>
+    /// <returns>float: 進捗</returns>
     float GetProgress() const { return progress_; }
 
+    /// <summary>
     /// チュートリアル全体が完了したか
+    /// </summary>
+    /// <returns>bool: 完了フラグ</returns>
     bool IsComplete() const { return currentStep_ == TutorialStep::Complete; }
 
-    /// 操作指示テキストを返す（ダッシュのサブフェーズに応じて切り替わる）
+    /// <summary>
+    /// 操作指示テキストを返す
+    /// </summary>
+    /// <returns>const char*: 操作指示テキスト</returns>
     const char *GetInstructionText() const;
 
-    /// 補足テキストを返す（着地補正中の「空中に戻ろう」など。nullptr = 非表示）
+    /// <summary>
+    /// 補足テキストを返す
+    /// </summary>
+    /// <returns>const char*: 補足テキスト</returns>
     const char *GetSubText() const;
 
-    /// ─── エネミー出現/消滅リクエスト ───
-    /// TutorialScene::Update 内でフラグを確認し、エネミーを表示/非表示にする
-
+    /// <summary>
+    /// エネミー出現リクエストがあるか
+    /// </summary>
+    /// <returns>bool: リクエストフラグ</returns>
     bool ShouldSpawnEnemy() const { return spawnEnemyRequested_; }
+
+    /// <summary>
+    /// エネミー消滅リクエストがあるか
+    /// </summary>
+    /// <returns>bool: リクエストフラグ</returns>
     bool ShouldDespawnEnemy() const { return despawnEnemyRequested_; }
 
-    /// TutorialScene 側で出現処理を済ませたら呼ぶ
+    /// <summary>
+    /// 出現リクエストを消費する
+    /// </summary>
     void ConsumeSpawnRequest() { spawnEnemyRequested_ = false; }
-    /// TutorialScene 側で消滅処理を済ませたら呼ぶ
+
+    /// <summary>
+    /// 消滅リクエストを消費する
+    /// </summary>
     void ConsumeDespawnRequest() { despawnEnemyRequested_ = false; }
 
-    /// ステップが切り替わった直後のフレームのみ true（UIアニメーション起動などに使う）
+    /// <summary>
+    /// ステップが切り替わった直後か
+    /// </summary>
+    /// <returns>bool: 切り替わりフラグ</returns>
     bool IsStepJustChanged() const { return stepJustChanged_; }
 
-    /// 「着地してしまったので空中に戻れ」補正メッセージを表示すべき状態か
+    /// <summary>
+    /// 「空中に戻れ」メッセージを表示すべきか
+    /// </summary>
+    /// <returns>bool: 表示フラグ</returns>
     bool IsShowingReturnToAirMessage() const { return showReturnToAirMessage_; }
 
-    /// ImGui デバッグウィンドウを表示する（TutorialScene::AddSceneSetting などから呼ぶ）
+    /// <summary>
+    /// デバッグ描画
+    /// </summary>
     void DrawImGui();
 
   private:
-    // ─────────────── 進行制御 ───────────────
+    /// ===================================================
+    /// private method
+    /// ===================================================
 
-    void AdvanceStep();               ///< 次のステップへ進む
-    void ResetStepState();            ///< ステップ切替時の内部変数初期化
-    void UpdateCurrentStep(float dt); ///< 現ステップの進行チェック＆進捗更新
+    /// <summary>
+    /// 次のステップへ進む
+    /// </summary>
+    void AdvanceStep();
 
-    void RequestSpawnEnemy();   ///< エネミー出現リクエストを発行
-    void RequestDespawnEnemy(); ///< エネミー消滅リクエストを発行
+    /// <summary>
+    /// ステップ切替時の内部変数初期化
+    /// </summary>
+    void ResetStepState();
 
-    // ─────────────── ステップ個別チェック ───────────────
-    // 戻り値: 今フレームに「進行条件を満たしているか」
-    //   時間方式  → 条件中ずっと true を返す（蓄積する）
-    //   回数方式  → 達成した瞬間のみ true を返す（1回インクリメント）
+    /// <summary>
+    /// 現ステップの進行チェック＆進捗更新
+    /// </summary>
+    /// <param name="dt">デルタタイム</param>
+    void UpdateCurrentStep(float dt);
 
+    /// <summary>
+    /// エネミー出現リクエストを発行
+    /// </summary>
+    void RequestSpawnEnemy();
+
+    /// <summary>
+    /// エネミー消滅リクエストを発行
+    /// </summary>
+    void RequestDespawnEnemy();
+
+    // ステップ個別チェック
     bool CheckMove();
     bool CheckJump();
     bool CheckFlyTransition();
@@ -115,45 +181,48 @@ class TutorialSystem {
     bool CheckLanding();
     bool CheckMeleeAttack();
     bool CheckRangedAttack();
-    bool CheckChargeAttack(float dt); ///< J/Y 長押し→離す の計測を内包
+    bool CheckChargeAttack(float dt);
     bool CheckEnergyCharge();
     bool CheckSpecialAttack();
 
-    // ─────────────── 入力判定ヘルパー ───────────────
-
-    bool IsMoveInput() const;         ///< WASD / 左スティック傾き
-    bool IsJumpTrigger() const;       ///< SPACE(トリガー) / Aボタン
-    bool IsAirTransTrigger() const;   ///< SPACE(トリガー) / RBボタン（空中）
-    bool IsAscendInput() const;       ///< SPACE保持 / RT
-    bool IsDescendInput() const;      ///< LSHIFT保持 / LT（非チャージ時）
-    bool IsEnergyChargeInput() const; ///< C保持 / LT保持
-    bool IsMeleeInput() const;        ///< K(トリガー) / Bボタン
-    bool IsRangedTrigger() const;     ///< J(トリガー) / Yボタン離し
+    // 入力判定ヘルパー
+    bool IsMoveInput() const;
+    bool IsJumpTrigger() const;
+    bool IsAirTransTrigger() const;
+    bool IsAscendInput() const;
+    bool IsDescendInput() const;
+    bool IsEnergyChargeInput() const;
+    bool IsMeleeInput() const;
+    bool IsRangedTrigger() const;
 
   private:
-    Player *player_ = nullptr;
-    Input *input_ = nullptr;
+    /// ===================================================
+    /// private variants
+    /// ===================================================
 
-    TutorialStep currentStep_ = TutorialStep::Move;
-    float progress_ = 0.0f; ///< 現ステップの進捗 0.0〜1.0
-    float timer_ = 0.0f;    ///< 時間方式の蓄積秒数
-    int count_ = 0;         ///< 回数方式の蓄積回数
+    Player *player_ = nullptr; // プレイヤー
+    Input *input_ = nullptr;   // 入力マネージャ
 
-    bool stepJustChanged_ = false;
-    bool spawnEnemyRequested_ = false;
-    bool despawnEnemyRequested_ = false;
+    TutorialStep currentStep_ = TutorialStep::Move; // 現在のステップ
+    float progress_ = 0.0f; // 現ステップの進捗 0.0〜1.0
+    float timer_ = 0.0f;    // 時間方式の蓄積秒数
+    int count_ = 0;         // 回数方式の蓄積回数
+
+    bool stepJustChanged_ = false;       // ステップ切り替わりフラグ
+    bool spawnEnemyRequested_ = false;   // エネミー出現リクエスト
+    bool despawnEnemyRequested_ = false; // エネミー消滅リクエスト
 
     // ── Descend ステップ専用 ──
-    bool showReturnToAirMessage_ = false; ///< 「空中に戻れ」補正メッセージ表示中
-    bool wasGroundedLastFrame_ = false;
+    bool showReturnToAirMessage_ = false; // 「空中に戻れ」補正メッセージ表示中
+    bool wasGroundedLastFrame_ = false;   // 前フレームの接地フラグ
 
     // ── ChargeAttack ステップ専用 ──
-    float chargeHoldTimer_ = 0.0f;   ///< J/Y を押し続けている時間
-    bool chargeInputActive_ = false; ///< 現在チャージ入力中か
+    float chargeHoldTimer_ = 0.0f;   // J/Y を押し続けている時間
+    bool chargeInputActive_ = false; // 現在チャージ入力中か
 
     // ── フレームをまたぐ状態保持 ──
-    std::string prevStateName_; ///< 1フレーム前のプレイヤーステート名
+    std::string prevStateName_; // 1フレーム前のプレイヤーステート名
 
-    /// ステップ設定テーブル（TutorialStep::StepCount 分）
+    /// ステップ設定テーブル
     static const TutorialStepConfig kConfigs[static_cast<int>(TutorialStep::StepCount)];
 };

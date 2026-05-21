@@ -100,7 +100,7 @@ class PlayerAttackCollider {
     Enemy *enemy_ = nullptr;
 
     // OBBコライダー本体（BaseObjectを介さず直接管理）
-    OBBCollider* collider_;
+    OBBCollider *collider_;
 
     // 現在の攻撃パラメータ
     float currentDamage_ = 0.0f;
@@ -119,7 +119,9 @@ class PlayerAttackCollider {
 
     // 位置パラメータ
     float forwardOffset_ = 2.25f; // プレイヤー前方へのオフセット距離
-    float heightOffset_ = 0.5f;  // 高さオフセット（プレイヤー中心からのY）
+    float heightOffset_ = 0.5f;   // 高さオフセット（プレイヤー中心からのY）
+
+    float energyRecoveryAmount_ = 5.0f;
 
     std::unique_ptr<ParticleEmitter> hitEmitter_;
     std::unique_ptr<Shake> shake_;

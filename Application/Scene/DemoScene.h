@@ -1,6 +1,10 @@
 #pragma once
 #include "BaseScene.h"
 
+/// <summary>
+/// デモシーンのクラス
+/// 演出やテスト用のシーンを管理する
+/// </summary>
 class DemoScene : public BaseScene {
   public:
     /// ===================================================
@@ -63,7 +67,7 @@ class DemoScene : public BaseScene {
     void ChangeScene();
 
   private:
-    /// ====================================
-    /// private variaus
-    /// ====================================
+    /// ===================================================
+    /// private variables
+    /// ===================================================
 };

@@ -7,6 +7,10 @@
 class Input;
 class GamePad;
 
+/// <summary>
+/// リザルト画面のUI管理クラス
+/// クリアタイム、残り体力、ランクなどの表示を制御
+/// </summary>
 class ResultUI {
   public:
     /// ===================================================
@@ -34,25 +38,38 @@ class ResultUI {
     void UpdateNumberSprites();
 
     /// <summary>
-    /// 全てのアニメーションが終了したか
+    /// 全てのアニメーションが終了したかを取得
     /// </summary>
+    /// <returns>終了していたらtrue</returns>
     bool IsAllAnimationFinished() const { return isAllAnimationFinished_; }
 
     /// <summary>
-    /// Setter
+    /// イージング開始フラグの設定
     /// </summary>
+    /// <param name="isStart">開始するならtrue</param>
     void SetIsStartEasing(bool isStart) { isStartEasing_ = isStart; }
+
+    /// <summary>
+    /// HPの設定
+    /// </summary>
+    /// <param name="hp">設定するHP</param>
     void SetHP(float hp) { HP_ = hp; }
+
+    /// <summary>
+    /// クリアタイムの設定
+    /// </summary>
+    /// <param name="time">設定するクリアタイム</param>
     void SetClearTime(float time) { ClearTime_ = time; }
 
-    private:
+  private:
     /// ===================================================
     /// private method
     /// ===================================================
 
     /// <summary>
-    /// スキップ入力チェック
+    /// スキップ入力のチェック
     /// </summary>
+    /// <returns>入力があったらtrue</returns>
     bool CheckSkipInput();
 
     /// <summary>
@@ -70,7 +87,6 @@ class ResultUI {
     /// </summary>
     void SkipRankDisplay();
 
-  private:
     /// ===================================================
     /// private enum
     /// ===================================================
@@ -107,7 +123,21 @@ class ResultUI {
         kAllSkipped // 全てスキップ済み
     };
 
-  private:
+    /// <summary>
+    /// 数字カウントアップの状態
+    /// </summary>
+    enum NumberAnimState {
+        kWaiting,       // 待機中
+        kAnimatingTime, // タイムアニメーション中
+        kWaitingForHP,  // HP表示待ち
+        kAnimatingHP,   // HPアニメーション中
+        kFinished       // 完了
+    };
+
+    /// ===================================================
+    /// private variables
+    /// ===================================================
+
     // 定数定義
     static constexpr float kDelayTime = 0.25f;         // スプライト間の遅延時間(秒)
     static constexpr float kAnimDuration = 0.5f;       // カウントアップアニメーション時間(秒)
@@ -123,45 +153,31 @@ class ResultUI {
     static constexpr float kNormalizeValue = 1.0f;     // 正規化値
     static constexpr int kZeroValue = 0;               // ゼロ値
 
-    // スプライト配列
-    std::array<SpriteData *, kMaxSprite> sprites_;
+    std::array<SpriteData *, kMaxSprite> sprites_; // スプライト配列
 
-    // イージング用
-    std::array<EasingData<Vector2>, kMaxSprite> positionEasings_;
+    std::array<EasingData<Vector2>, kMaxSprite> positionEasings_; // 位置イージング
 
-    // イージング用位置設定
-    std::array<Vector2, kMaxSprite> startPositions_;
-    std::array<Vector2, kMaxSprite> endPositions_;
+    std::array<Vector2, kMaxSprite> startPositions_; // 開始位置
+    std::array<Vector2, kMaxSprite> endPositions_;   // 終了位置
 
-    bool isStartEasing_ = false;
+    bool isStartEasing_ = false;          // イージング開始フラグ
     bool isAllAnimationFinished_ = false; // 全アニメーション完了フラグ
 
-    int currentEasingIndex_ = 0; // 現在イージング中のスプライトインデックス
-    float delayTimer_ = 0.0f;    // 次のスプライトまでの遅延タイマー
+    int currentEasingIndex_ = 0; // 現在イージング中のインデックス
+    float delayTimer_ = 0.0f;    // 遅延タイマー
 
-    // 数字のカウントアップ用
-    enum NumberAnimState {
-        kWaiting,       // 待機中
-        kAnimatingTime, // タイムアニメーション中
-        kWaitingForHP,  // HP表示待ち
-        kAnimatingHP,   // HPアニメーション中
-        kFinished       // 完了
-    };
-
-    NumberAnimState numberAnimState_ = kWaiting;
-    float animTimer_ = 0.0f;
+    NumberAnimState numberAnimState_ = kWaiting; // カウントアップ状態
+    float animTimer_ = 0.0f;                    // アニメーションタイマー
 
     float displayedTime_ = 0.0f; // 表示中のタイム
     float displayedHP_ = 0.0f;   // 表示中のHP
 
-    float HP_ = kDefaultHP;               // 残り体力(記録値)
-    float ClearTime_ = kDefaultClearTime; // クリアタイム(記録値)
-    std::string Rank_ = "A";
+    float HP_ = kDefaultHP;               // 残り体力
+    float ClearTime_ = kDefaultClearTime; // クリアタイム
+    std::string Rank_ = "A";              // ランク
 
-    // 入力関連
-    Input *input_ = nullptr;
-    std::unique_ptr<GamePad> gamePad_ = nullptr;
+    Input *input_ = nullptr;                    // 入力
+    std::unique_ptr<GamePad> gamePad_ = nullptr; // ゲームパッド
 
-    // スキップ管理
-    SkipPhase skipPhase_ = kNoSkip;
+    SkipPhase skipPhase_ = kNoSkip; // スキップ段階
 };

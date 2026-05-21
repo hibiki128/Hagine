@@ -7,6 +7,7 @@ void ResultUI::Initialize() {
     SpriteManager::GetInstance()->SetSaveFolder("Result");
     SpriteManager::GetInstance()->LoadAllSprites();
 
+    // スプライトの取得
     sprites_[kBackground] = SpriteManager::GetInstance()->GetSprite("ResultBackGround");
     sprites_[kResult] = SpriteManager::GetInstance()->GetSprite("Result");
     sprites_[kClearTime] = SpriteManager::GetInstance()->GetSprite("ClearTime");
@@ -22,10 +23,12 @@ void ResultUI::Initialize() {
     sprites_[kPercent] = SpriteManager::GetInstance()->GetSprite("percent");
     sprites_[kRank] = SpriteManager::GetInstance()->GetSprite("Rank");
 
+    // 終了位置(本来の位置)を保存
     for (int i = 0; i < kMaxSprite; ++i) {
         endPositions_[i] = sprites_[i]->sprite->GetPosition();
     }
 
+    // 各スプライトの開始位置(画面外)を設定
     sprites_[kBackground]->sprite->SetPosition({-1760.0f, 0.0f});
     sprites_[kResult]->sprite->SetPosition({-640.0f, 65.0f});
     sprites_[kClearTime]->sprite->SetPosition({-650.0f, 350.0f});
@@ -41,6 +44,7 @@ void ResultUI::Initialize() {
     sprites_[kPercent]->sprite->SetPosition({-410.0f, 610.0f});
     sprites_[kRank]->sprite->SetPosition({-710.0f, 800.0f});
 
+    // イージングデータの初期化
     for (int i = 0; i < kMaxSprite; ++i) {
         startPositions_[i] = sprites_[i]->sprite->GetPosition();
         positionEasings_[i] = EasingData<Vector2>(startPositions_[i], endPositions_[i], kEasingDuration, EasingType::InOutQuint);
@@ -73,10 +77,10 @@ bool ResultUI::CheckSkipInput() {
     }
 
     if (!gamePad_->IsConnected()) {
-        // キーボード操作
+        // キーボード操作(スペースキー)
         return input_->TriggerKey(DIK_SPACE);
     } else {
-        // コントローラー操作
+        // コントローラー操作(Aボタン)
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
     }
 }
@@ -92,7 +96,7 @@ void ResultUI::SkipTimeAnimation() {
 }
 
 void ResultUI::SkipHPAnimation() {
-    // HPのイージングを即座に完了
+    // HP関連のイージングを即座に完了
     positionEasings_[kHP].isActive = true;
     sprites_[kHP]->sprite->SetPosition(endPositions_[kHP]);
     positionEasings_[kHP].time = kEasingDuration;
@@ -150,18 +154,16 @@ void ResultUI::Update() {
             positionEasings_[kBackground].isActive = true;
             sprites_[kBackground]->sprite->SetPosition(positionEasings_[kBackground].Update(Frame::DeltaTime()));
 
-            // 背景のイージングが終了したら次へ
             if (positionEasings_[kBackground].IsFinished()) {
                 currentEasingIndex_++;
                 delayTimer_ = 0.0f;
             }
         }
-        // Result~ClearTimeまで
+        // Result～ClearTimeまで
         else if (currentEasingIndex_ <= kClearTime) {
-            // 遅延タイマーを更新
             delayTimer_ += Frame::DeltaTime();
 
-            // 遅延時間が経過したら次のスプライトを開始
+            // 遅延時間が経過したら次のスプライトのイージングを開始
             if (delayTimer_ >= kDelayTime) {
                 positionEasings_[currentEasingIndex_].isActive = true;
                 delayTimer_ = 0.0f;
@@ -169,19 +171,17 @@ void ResultUI::Update() {
 
                 // ClearTimeが出たら時間の数字を全て同時に表示開始
                 if (currentEasingIndex_ > kClearTime) {
-                    // 時間の数字を全て同時にイージング開始
                     for (int i = kMinTens; i <= kSecOnes; ++i) {
                         positionEasings_[i].isActive = true;
                     }
-                    currentEasingIndex_ = kSecOnes + 1; // 次はHPへ
-                    numberAnimState_ = kWaiting;        // まだ待機状態
+                    currentEasingIndex_ = kSecOnes + 1;
+                    numberAnimState_ = kWaiting;
                     delayTimer_ = 0.0f;
                 }
             }
         }
         // 時間の数字のイージング完了待ち
         else if (currentEasingIndex_ == kSecOnes + 1 && numberAnimState_ == kWaiting) {
-            // 時間の数字のイージングが全て完了したかチェック
             bool allFinished = true;
             for (int i = kMinTens; i <= kSecOnes; ++i) {
                 if (!positionEasings_[i].IsFinished()) {
@@ -198,24 +198,21 @@ void ResultUI::Update() {
         }
         // HPテキスト表示
         else if (currentEasingIndex_ == kSecOnes + 1 && numberAnimState_ == kWaitingForHP) {
-            // 遅延タイマーを更新
             delayTimer_ += Frame::DeltaTime();
 
             // 遅延時間が経過したらHPテキストと数字を同時に表示
             if (delayTimer_ >= kDelayTime) {
                 positionEasings_[kHP].isActive = true;
-                // HPの数字を全て同時にイージング開始
                 for (int i = kHPHund; i <= kPercent; ++i) {
                     positionEasings_[i].isActive = true;
                 }
-                currentEasingIndex_ = kPercent + 1; // 次はRankへ
-                numberAnimState_ = kWaiting;        // イージング完了待ち
+                currentEasingIndex_ = kPercent + 1;
+                numberAnimState_ = kWaiting;
                 delayTimer_ = 0.0f;
             }
         }
         // HPの数字のイージング完了待ち
         else if (currentEasingIndex_ == kPercent + 1 && numberAnimState_ == kWaiting) {
-            // HPの数字のイージングが全て完了したかチェック
             bool allFinished = positionEasings_[kHP].IsFinished();
             for (int i = kHPHund; i <= kPercent; ++i) {
                 if (!positionEasings_[i].IsFinished()) {
@@ -230,14 +227,11 @@ void ResultUI::Update() {
                 animTimer_ = 0.0f;
             }
         }
-        // ランク(HPアニメーション後)
+        // ランクの表示
         else if (currentEasingIndex_ < kMaxSprite) {
-            // HPのアニメーションが終わるまで待機
             if (numberAnimState_ == kFinished) {
-                // 遅延タイマーを更新
                 delayTimer_ += Frame::DeltaTime();
 
-                // 遅延時間が経過したらランクを表示
                 if (delayTimer_ >= kDelayTime) {
                     positionEasings_[currentEasingIndex_].isActive = true;
                     delayTimer_ = 0.0f;
@@ -246,7 +240,7 @@ void ResultUI::Update() {
             }
         }
 
-        // アクティブな全てのイージングを更新
+        // アクティブなイージングの更新
         for (int i = 0; i < kMaxSprite; ++i) {
             if (positionEasings_[i].isActive || !positionEasings_[i].IsFinished()) {
                 sprites_[i]->sprite->SetPosition(positionEasings_[i].Update(Frame::DeltaTime()));
@@ -254,7 +248,7 @@ void ResultUI::Update() {
         }
     }
 
-    // 数字のカウントアップアニメーション
+    // 数字のカウントアップアニメーションの更新
     if (numberAnimState_ == kAnimatingTime) {
         animTimer_ += Frame::DeltaTime();
         float t = animTimer_ / kAnimDuration;
@@ -283,6 +277,7 @@ void ResultUI::Update() {
 
     UpdateNumberSprites();
 
+    // 全てのアニメーションが終了したか判定
     if (currentEasingIndex_ >= kMaxSprite && numberAnimState_ == kFinished) {
         bool allFinished = true;
         for (int i = 0; i < kMaxSprite; ++i) {

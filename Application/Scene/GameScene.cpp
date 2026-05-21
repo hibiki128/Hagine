@@ -101,14 +101,14 @@ void GameScene::Finalize() {
 }
 
 void GameScene::Update() {
-    // カメラ更新
+    // カメラの更新
     CameraUpdate();
 
-    // シーン切り替え
+    // シーン切り替えの更新
     ChangeScene();
 
 #ifdef _DEBUG
-    // Debug: エディタのビルド＆実行ボタンで生成されたランタイムツリーを毎フレーム取得してセット
+    // デバッグ用：ビヘイビアツリーの更新
     {
         auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
         if (runtimeRoot) {
@@ -116,20 +116,20 @@ void GameScene::Update() {
         }
     }
 #endif
-    // Release: Initialize()でセット済みのツリーをそのまま使用
-    // enemy_ptr->SetBehaviorTree() は Initialize() で1回だけ呼ぶ
 
+    // 各オブジェクト・UIの更新
     ground_->Update();
     aroundField_->Update();
     playerUI_->Update();
     enemyUI_->Update();
-    //fadeOut_->Update();
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
 
 #ifdef _DEBUG
+    // デバッグ時は即座に開始
     player_ptr->SetStart(true);
     enemy_ptr->SetStart(true);
 #else
+    // 開始時カメラ演出終了後に開始
     if (startCamera_->IsComplete()) {
         player_ptr->SetStart(true);
         enemy_ptr->SetStart(true);
@@ -139,46 +139,63 @@ void GameScene::Update() {
     }
 #endif
 
+    // 死亡時の演出：一定時間経過で敵を非表示に
     if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
         enemy_ptr->SetIsModelDraw(false);
         enemy_ptr->SetDrawShadow(false);
     }
 
+    // UIの更新
     gameUI_->Update();
     player_ptr->SetPause(gameUI_->GetIsPause());
     enemy_ptr->SetPause(gameUI_->GetIsPause());
 }
 
 void GameScene::Draw() {
+    /// ===================================================
+    /// 描画処理開始
+    /// ===================================================
 
+    // UIの描画
     playerUI_->Draw();
     enemyUI_->Draw();
 
+    // 3Dオブジェクトの描画
     objectManager_->Draw(vp_);
 
+    // 環境オブジェクトの描画
     skyBox_->Draw(vp_);
     ground_->Draw(vp_);
     aroundField_->Draw(vp_);
 
+    // パーティクルの描画
     player_ptr->DrawParticle(vp_);
     enemy_ptr->DrawParticle(vp_);
     aroundField_->DrawParticle(vp_);
 
-    //fadeOut_->Draw(vp_);
+    // ゲームUIの描画
     gameUI_->Draw();
 
+    // デバッグ用視錐台の描画
     followCamera_->DrawFrustum();
     enemy_ptr->DrawFrustum();
 
+    // 2Dスプライトの描画
     spriteManager_->DrawAll();
-    // DrawAllObjects();
+
+    /// ===================================================
+    /// 描画処理終了
+    /// ===================================================
 }
 
 void GameScene::DrawForOffScreen() {
-    // 必要に応じてオフスクリーン描画
+    /// ===================================================
+    /// オフスクリーン描画処理
+    /// ===================================================
 }
 
 void GameScene::AddSceneSetting() {
+    // 各種デバッグ表示
     debugCamera_->imgui();
     followCamera_->imgui();
     startCamera_->imgui();
@@ -187,12 +204,13 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
-
+    // オブジェクトのデバッグ表示
     player_ptr->Debug();
     enemy_ptr->Debug();
     enemyUI_->Debug();
 
 #ifdef USE_IMGUI
+    // ビヘイビアツリーエディタの表示
     ImGui::Begin("BehaviorTreeEditor");
     behaviorTreeEditor_->OnImGuiRender();
     ImGui::End();
@@ -200,22 +218,21 @@ void GameScene::AddObjectSetting() {
 }
 
 void GameScene::AddParticleSetting() {
-   // fadeOut_->ImGui();
+    // フィールドのデバッグ
     aroundField_->Debug();
-   // DrawParticleEditorUI();
 }
 
 void GameScene::CameraUpdate() {
     if (player_ptr->GetIsAlive()) {
+        // プレイヤー生存時
         if (debugCamera_->GetActive()) {
             debugCamera_->Update();
         } else {
             followCamera_->Update();
 #ifndef _DEBUG
+            // 開始時カメラの演出
             if (!startCamera_->IsComplete()) {
-              //  if (fadeOut_->IsFinish()) {
-                    startCamera_->Move();
-             //   }
+                startCamera_->Move();
                 startCamera_->SetTargetVp(followCamera_->GetViewProjection());
                 startCamera_->Update();
                 vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
@@ -223,6 +240,7 @@ void GameScene::CameraUpdate() {
                 vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
             } else {
 #endif
+                // 通常時のカメラ
                 vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
                 vp_.matView_ = followCamera_->GetViewProjection().matView_;
                 vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
@@ -231,6 +249,7 @@ void GameScene::CameraUpdate() {
 #endif
         }
     } else {
+        // プレイヤー死亡時：死亡時カメラの開始・更新
         if (!deathCamera_->IsComplete() && !deathCameraStarted_) {
             deathCamera_->StartEasing(
                 followCamera_->GetViewProjection(),
@@ -245,6 +264,7 @@ void GameScene::CameraUpdate() {
 }
 
 void GameScene::ChangeScene() {
+    // 死亡時：演出終了後にクリア（リザルト）画面へ遷移
     if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
         GameOverTimer_ += Frame::DeltaTime();
         player_ptr->SetIsDeathStaging(true);
@@ -254,10 +274,12 @@ void GameScene::ChangeScene() {
         }
     }
 
+    // 敵死亡時：クリア画面へ遷移
     if (!enemy_ptr->GetIsAlive()) {
         sceneManager_->NextSceneReservation("CLEAR");
     }
 
+    // タイトルへ戻る
     if (gameUI_->GetIsBackTitle()) {
         sceneManager_->NextSceneReservation("TITLE");
     }

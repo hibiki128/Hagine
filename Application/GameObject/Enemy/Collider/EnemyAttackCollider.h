@@ -82,7 +82,6 @@ class EnemyAttackCollider {
     /// </summary>
     bool IsActive() const { return isActive_; }
 
-  private:
     /// ===================================================
     /// private method
     /// ===================================================
@@ -90,21 +89,22 @@ class EnemyAttackCollider {
     /// <summary>
     /// 衝突時のコールバック
     /// </summary>
+    /// <param name="other">衝突したコライダー</param>
     void OnCollision(ColliderBase *other);
 
     /// ===================================================
     /// private variants
     /// ===================================================
 
-    Enemy *enemy_ = nullptr;
-    Player *player_ = nullptr;
+    Enemy *enemy_ = nullptr;   // 敵参照
+    Player *player_ = nullptr; // プレイヤー参照
 
-    // OBBコライダー本体（BaseObjectを介さず直接管理）
-    OBBCollider *collider_ = nullptr;
+    // OBBコライダー本体
+    OBBCollider *collider_ = nullptr; // コライダー
 
     // 現在の攻撃パラメータ
-    float currentDamage_ = 0.0f;
-    float currentKnockback_ = 0.0f;
+    float currentDamage_ = 0.0f;    // 現在のダメージ
+    float currentKnockback_ = 0.0f; // 現在のノックバック
 
     // タイマー管理
     float activeTimer_ = 0.0f;    // 有効経過時間
@@ -119,8 +119,10 @@ class EnemyAttackCollider {
 
     // 位置パラメータ
     float forwardOffset_ = 2.25f; // 敵前方へのオフセット距離
-    float heightOffset_ = 0.5f;   // 高さオフセット（敵中心からのY）
+    float heightOffset_ = 0.5f;   // 高さオフセット
 
-    std::unique_ptr<ParticleEmitter> hitEmitter_;
-    std::unique_ptr<Shake> shake_;
+    float energyRecoveryAmount_ = 5.0f;
+
+    std::unique_ptr<ParticleEmitter> hitEmitter_; // ヒットパーティクル
+    std::unique_ptr<Shake> shake_;                // シェイク
 };

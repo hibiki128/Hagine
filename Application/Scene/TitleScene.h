@@ -7,6 +7,10 @@
 #include"Application/UI/Scene/Title/TitleUI.h"
 #include <GamePad.h>
 
+/// <summary>
+/// タイトルシーンのクラス
+/// ゲーム起動後のタイトル画面を管理する
+/// </summary>
 class TitleScene : public BaseScene {
   public:
     /// ===================================================
@@ -69,17 +73,17 @@ class TitleScene : public BaseScene {
     void ChangeScene();
 
   private:
-    /// ====================================
-    /// private variaus
-    /// ====================================
+    /// ===================================================
+    /// private variables
+    /// ===================================================
 
-    float time_ = 0.0f;
-    const float kMaxTime_ = 2.0f;
-    bool firstMove_ = false;
-    bool secondMove_ = false;
+    float time_ = 0.0f;                     // 経過時間
+    const float kMaxTime_ = 2.0f;           // カメラ移動開始までの時間
+    bool firstMove_ = false;                // 最初のカメラ移動フラグ
+    bool secondMove_ = false;               // 二番目のカメラ移動フラグ
 
-    SkyBox *skyBox_ = nullptr;
+    SkyBox *skyBox_ = nullptr;              // スカイボックス
 
-    std::unique_ptr<TitleUI> titleUI_ = nullptr;
-    std::unique_ptr<GamePad> gamePad_ = nullptr;
+    std::unique_ptr<TitleUI> titleUI_ = nullptr; // タイトルUI
+    std::unique_ptr<GamePad> gamePad_ = nullptr; // ゲームパッド
 };

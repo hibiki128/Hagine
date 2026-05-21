@@ -6,6 +6,8 @@ void GameUI::Initialize() {
     gamePad_->Init(0);
     SpriteManager::GetInstance()->SetSaveFolder("GameScene");
     SpriteManager::GetInstance()->LoadAllSprites();
+
+    // スプライトの取得
     sprites_[MenuButton] = SpriteManager::GetInstance()->GetSprite("menuButton");
     sprites_[Controller] = SpriteManager::GetInstance()->GetSprite("controllerIcon");
     sprites_[BlackMask] = SpriteManager::GetInstance()->GetSprite("BlackMask");
@@ -18,8 +20,6 @@ void GameUI::Initialize() {
     sprites_[explanationText] = SpriteManager::GetInstance()->GetSprite("explanationText");
     sprites_[ExplanationUIBar] = SpriteManager::GetInstance()->GetSprite("ExplanationUIBar");
     sprites_[MenuBackGround] = SpriteManager::GetInstance()->GetSprite("MenuBackGround");
-
-    // 新規スプライトの取得
     sprites_[AButton] = SpriteManager::GetInstance()->GetSprite("AButton");
     sprites_[decision] = SpriteManager::GetInstance()->GetSprite("decision");
     sprites_[BButton] = SpriteManager::GetInstance()->GetSprite("BButton");
@@ -34,26 +34,24 @@ void GameUI::Initialize() {
     }
 
     // 初期状態の設定
-    // MenuButtonは表示
     if (sprites_[MenuButton] && sprites_[MenuButton]->sprite) {
         sprites_[MenuButton]->sprite->SetAlpha(1.0f);
     }
 
-    // Explanation画面用
+    // 操作説明画面用スプライトの初期化
     std::array<SpriteIndex, 5> explanationSprites = {
         SkillButton, Controller, AirController, BButton, back};
 
     for (auto index : explanationSprites) {
         if (sprites_[index] && sprites_[index]->sprite) {
             sprites_[index]->sprite->SetAlpha(0.0f);
-            // 初期位置もオフセットしておく
             Vector2 startPos = targetPositions_[index];
             startPos.y += kStartOffsetY;
             sprites_[index]->sprite->SetPosition(startPos);
         }
     }
 
-    // メニューUI要素
+    // メニューUI要素の初期化
     std::array<SpriteIndex, 9> menuElements = {
         backMenuText, BackMenuUIBar, backTitleText, BackTitleUIBar,
         explanationText, ExplanationUIBar, MenuBackGround, AButton, decision};
@@ -67,7 +65,7 @@ void GameUI::Initialize() {
         }
     }
 
-    // BlackMaskも初期状態では非表示
+    // 暗転マスクの初期化
     if (sprites_[BlackMask] && sprites_[BlackMask]->sprite) {
         sprites_[BlackMask]->sprite->SetAlpha(0.0f);
     }
@@ -107,7 +105,7 @@ void GameUI::Update() {
     // ポーズ状態が変化したらアニメーション開始
     if (isPause_ != prevIsPause_) {
         if (isPause_) {
-            // ポーズメニューを開く
+            // ポーズメニューを開くアニメーション
             std::array<SpriteIndex, 9> menuElements = {
                 backMenuText, BackMenuUIBar, backTitleText, BackTitleUIBar,
                 explanationText, ExplanationUIBar, MenuBackGround, AButton, decision};
@@ -123,24 +121,24 @@ void GameUI::Update() {
                 }
             }
 
-            // BlackMaskもフェードイン
+            // 暗転マスクのフェードイン
             if (sprites_[BlackMask] && sprites_[BlackMask]->sprite) {
                 animations_[BlackMask].alpha.Reset(0.0f, 0.975f, kAnimationDuration, EasingType::OutCubic);
             }
 
-            // MenuButtonをフェードアウト
+            // メニューボタンのフェードアウト
             if (sprites_[MenuButton] && sprites_[MenuButton]->sprite) {
                 animations_[MenuButton].alpha.Reset(1.0f, 0.0f, kAnimationDuration, EasingType::OutCubic);
             }
 
-            // メニュー状態をリセット
+            // 状態のリセット
             menuState_ = MainMenu;
             currentMenuItem_ = 0;
             isBackTitle_ = false;
             transitionState_ = TransitionState::None;
 
         } else {
-            // ポーズメニューを閉じる
+            // ポーズメニューを閉じるアニメーション
             std::array<SpriteIndex, 9> menuElements = {
                 backMenuText, BackMenuUIBar, backTitleText, BackTitleUIBar,
                 explanationText, ExplanationUIBar, MenuBackGround, AButton, decision};
@@ -156,17 +154,17 @@ void GameUI::Update() {
                 }
             }
 
-            // BlackMaskもフェードアウト
+            // 暗転マスクのフェードアウト
             if (sprites_[BlackMask] && sprites_[BlackMask]->sprite) {
                 animations_[BlackMask].alpha.Reset(0.975f, 0.0f, kAnimationDuration, EasingType::InCubic);
             }
 
-            // MenuButtonをフェードイン
+            // メニューボタンのフェードイン
             if (sprites_[MenuButton] && sprites_[MenuButton]->sprite) {
                 animations_[MenuButton].alpha.Reset(0.0f, 1.0f, kAnimationDuration, EasingType::InCubic);
             }
 
-            // 操作説明系のスプライトを非表示
+            // 操作説明スプライトを非表示
             std::array<SpriteIndex, 5> explanationSprites = {
                 Controller, AirController, SkillButton, BButton, back};
 
@@ -187,12 +185,11 @@ void GameUI::Update() {
 
         // 遷移待ち処理
         if (transitionState_ == TransitionState::ToExplanation) {
-            // メニュー背景が完全に消えたかチェック
+            // メニュー背景が完全に消えたら説明を表示
             if (animations_[MenuBackGround].alpha.IsFinished() &&
                 sprites_[MenuBackGround] && sprites_[MenuBackGround]->sprite &&
                 sprites_[MenuBackGround]->sprite->GetColor().w <= 0.01f) {
 
-                // 消えたので、説明画面を表示開始
                 std::array<SpriteIndex, 5> explanationSprites = {
                     Controller, AirController, SkillButton, BButton, back};
 
@@ -210,12 +207,11 @@ void GameUI::Update() {
                 transitionState_ = TransitionState::None;
             }
         } else if (transitionState_ == TransitionState::ToMain) {
-            // 説明画像が完全に消えたかチェック
+            // 説明画像が完全に消えたらメインメニューを表示
             if (animations_[Controller].alpha.IsFinished() &&
                 sprites_[Controller] && sprites_[Controller]->sprite &&
                 sprites_[Controller]->sprite->GetColor().w <= 0.01f) {
 
-                // 消えたので、メインメニューを表示開始
                 std::array<SpriteIndex, 8> mainMenuElements = {
                     backMenuText, BackMenuUIBar, backTitleText,
                     BackTitleUIBar, explanationText, ExplanationUIBar,
@@ -239,19 +235,19 @@ void GameUI::Update() {
 
     for (int i = 0; i < kMaxSprite; ++i) {
         if (sprites_[i] && sprites_[i]->sprite) {
-            // 位置アニメーション
+            // 位置
             if (!animations_[i].position.IsFinished()) {
                 Vector2 newPos = animations_[i].position.Update(deltaTime);
                 sprites_[i]->sprite->SetPosition(newPos);
             }
 
-            // 透明度アニメーション
+            // 透明度
             if (!animations_[i].alpha.IsFinished()) {
                 float newAlpha = animations_[i].alpha.Update(deltaTime);
                 sprites_[i]->sprite->SetAlpha(newAlpha);
             }
 
-            // スケールアニメーション
+            // スケール
             if (!animations_[i].scale.IsFinished()) {
                 Vector2 newScale = animations_[i].scale.Update(deltaTime);
                 sprites_[i]->sprite->SetSize(newScale);

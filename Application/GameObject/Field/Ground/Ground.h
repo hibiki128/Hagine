@@ -29,5 +29,9 @@ class Ground : public BaseObject {
     /// <param name="offSet">描画オフセット</param>
     void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
 
+    /// <summary>
+    /// ライティングの有効フラグを設定
+    /// </summary>
+    /// <param name="isLighting">有効にするか</param>
     void SetLighting(bool isLighting) { isLighting_ = isLighting; }
 };

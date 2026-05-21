@@ -32,14 +32,14 @@ class TitleUI {
     void Draw(ViewProjection &vp_);
 
     /// <summary>
-    /// Getter
+    /// 完了したかを取得
     /// </summary>
+    /// <returns>完了していたらtrue</returns>
     bool GetIsFinish() const { return isFinish_; }
 
 #ifdef _DEBUG
     /// <summary>
     /// ImGuiデバッグ表示
-    /// chargeScale_の推移・isMaxChargeScale_・各種タイマーを確認できる
     /// </summary>
     void DrawImGui();
 #endif
@@ -60,7 +60,7 @@ class TitleUI {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     // 定数定義
@@ -111,14 +111,14 @@ class TitleUI {
     Vector2 titleLogoEndPos_ = {};                                              // タイトルロゴ終了位置
     Vector2 pressStartEndPos_ = {};                                             // Press Start終了位置
 
-    Vector3 targetPos_{};
-    const float kMaxTime_ = kMaxTime;
-    float timer_ = 0.0f;
+    Vector3 targetPos_{}; // ターゲット位置
+    const float kMaxTime_ = kMaxTime; // 最大時間
+    float timer_ = 0.0f; // 汎用タイマー
 
     std::unique_ptr<ParticleEmitter> chargeBullet_ = nullptr;   // チャージ弾パーティクル
     std::unique_ptr<ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
     std::unique_ptr<ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
-    std::unique_ptr<GamePad> gamePad_ = nullptr;
+    std::unique_ptr<GamePad> gamePad_ = nullptr;              // ゲームパッド
 
-    std::array<SpriteData *, kMaxSprite> sprites_;
+    std::array<SpriteData *, kMaxSprite> sprites_; // スプライト配列
 };
