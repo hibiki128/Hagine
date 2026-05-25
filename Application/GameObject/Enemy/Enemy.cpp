@@ -294,18 +294,18 @@ void Enemy::Move() {
 
 void Enemy::DirectionUpdate() {}
 
-void Enemy::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void Enemy::Draw(const ViewProjection &viewProjection) {
     if (!isAlive_) {
         enemyCollider_->SetEnabled(false);
         leftHand_ptr_->SetIsAlive(false);
         rightHand_ptr_->SetIsAlive(false);
         return;
     }
-    BaseObject::Draw(viewProjection, offSet);
+    BaseObject::Draw(viewProjection);
     if (transform_->translation_.y < kGroundLevel)
         return;
     shadow_->SetIsModelDraw(drawShadow_);
-    shadow_->Draw(viewProjection, offSet);
+    shadow_->Draw(viewProjection);
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {

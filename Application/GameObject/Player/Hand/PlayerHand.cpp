@@ -12,8 +12,8 @@ void PlayerHand::Update() {
     }
 }
 
-void PlayerHand::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void PlayerHand::Draw(const ViewProjection &viewProjection) {
     if (isAlive_) {
-        BaseObject::Draw(viewProjection, offSet);
+        BaseObject::Draw(viewProjection);
     }
 }

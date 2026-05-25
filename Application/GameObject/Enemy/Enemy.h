@@ -27,8 +27,7 @@ class Enemy : public BaseObject {
 
     void Init(const std::string objectName) override;
     void Update() override;
-    void Draw(const ViewProjection &viewProjection,
-              Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void Draw(const ViewProjection &viewProjection) override;
     void DrawParticle(const ViewProjection &viewProjection);
     void DrawFrustum();
     void Debug();

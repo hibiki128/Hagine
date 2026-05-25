@@ -56,9 +56,9 @@ void BaseObjectManager::Update() {
     }
 }
 
-void BaseObjectManager::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void BaseObjectManager::Draw(const ViewProjection &viewProjection) {
     for (auto &[name, obj] : baseObjects_) {
-        obj->Draw(viewProjection, offSet);
+        obj->Draw(viewProjection);
     }
 }
 

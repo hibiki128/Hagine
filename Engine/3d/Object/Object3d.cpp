@@ -26,6 +26,9 @@ void Object3d::Initialize() {
 void Object3d::CreateModel(const std::string &filePath) {
     modelFilePath_ = filePath;
 
+    // ベースモデルはデフォルトループ ON で登録
+    animationLoopFlags_[modelFilePath_] = true;
+
     ModelManager::GetInstance()->LoadModel(modelFilePath_);
 
     // モデルを検索してセットする
@@ -148,9 +151,21 @@ void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &
     }
 }
 
-void Object3d::AnimationUpdate(bool roop) {
+void Object3d::AnimationUpdate() {
     if (currentModelAnimation_) {
-        currentModelAnimation_->Update(roop);
+        // 基本的には modelFilePath_ に紐づくループフラグを使用するが、
+        // 切り替え待機中（補間中）は、切り替え先（targetLoop_）の設定を優先する
+        bool loop = true;
+        if (isAnimationSwitchPending_) {
+            loop = targetLoop_;
+        } else {
+            auto it = animationLoopFlags_.find(modelFilePath_);
+            if (it != animationLoopFlags_.end()) {
+                loop = it->second;
+            }
+        }
+
+        currentModelAnimation_->Update(loop);
 
         // 補間完了後の切り替え処理
         if (isAnimationSwitchPending_) {
@@ -200,6 +215,10 @@ void Object3d::SetAnimationImmediate(const std::string &fileName) {
     model->SetSkin(currentModelAnimation_->GetSkin());
 
     modelFilePath_ = fileName;
+
+    // 即時切り替え時は待機フラグを折る
+    isAnimationSwitchPending_ = false;
+    nextAnimationFileName_.clear();
 }
 
 void Object3d::SetAnimation(const std::string &animationFileName) {
@@ -225,15 +244,21 @@ void Object3d::SetAnimation(const std::string &animationFileName) {
         return;
     }
 
+    // 新しいアニメーションのループ設定を予約しておく
+    targetLoop_ = GetAnimationLoop(animationFileName);
+
     // 新しいアニメーションへの補間開始
-    animator->BlendToAnimation("resources/models/", animationFileName, 0.5f); // 0.5秒で補間
+    animator->BlendToAnimation("resources/models/", animationFileName, blendDuration_);
 
     // 切り替え待機状態にする
     isAnimationSwitchPending_ = true;
     nextAnimationFileName_ = animationFileName;
 }
 
-void Object3d::AddAnimation(const std::string &fileName) {
+void Object3d::AddAnimation(const std::string &fileName, bool loop) {
+    // ループフラグを登録（既存エントリも上書き更新）
+    animationLoopFlags_[fileName] = loop;
+
     if (modelAnimations_.count(fileName) > 0) {
         return;
     }
@@ -243,8 +268,43 @@ void Object3d::AddAnimation(const std::string &fileName) {
     animation->SetModelData(model->GetModelData());
     animation->Initialize("resources/models/", fileName);
     animation->GetAnimator()->SetAnimationTime(0.0f);
+    animation->SetSpeed(animationSpeed_);
 
     modelAnimations_.emplace(fileName, std::move(animation));
+}
+
+void Object3d::SetAnimationSpeed(float speed) {
+    animationSpeed_ = speed;
+    if (currentModelAnimation_) {
+        currentModelAnimation_->SetSpeed(animationSpeed_);
+    }
+    // 全てのアニメーションに適用する場合
+    for (auto &animation : modelAnimations_) {
+        animation.second->SetSpeed(animationSpeed_);
+    }
+}
+
+void Object3d::SetAnimationBlendDuration(float duration) {
+    blendDuration_ = duration;
+    if (currentModelAnimation_) {
+        currentModelAnimation_->SetBlendDuration(blendDuration_);
+    }
+    // 全てのアニメーションに適用する場合
+    for (auto &animation : modelAnimations_) {
+        animation.second->SetBlendDuration(blendDuration_);
+    }
+}
+
+void Object3d::SetAnimationLoop(const std::string &fileName, bool loop) {
+    animationLoopFlags_[fileName] = loop;
+}
+
+bool Object3d::GetAnimationLoop(const std::string &fileName) {
+    auto it = animationLoopFlags_.find(fileName);
+    if (it != animationLoopFlags_.end()) {
+        return it->second;
+    }
+    return true; // デフォルトはループあり
 }
 
 void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool isRainbow) {

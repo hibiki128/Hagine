@@ -25,6 +25,5 @@ class PlayerHand : public BaseObject {
     /// <summary>
     /// 描画処理
     /// </summary>
-    void Draw(const ViewProjection &viewProjection,
-              Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void Draw(const ViewProjection &viewProjection) override;
 };

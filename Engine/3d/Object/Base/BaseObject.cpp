@@ -28,17 +28,18 @@ void BaseObject::Init(const std::string objectName) {
 
 void BaseObject::Update() {
     if (obj3d_->GetHaveAnimation()) {
-        obj3d_->AnimationUpdate(isLoop_);
+        // ループフラグはアニメーションごとに Object3d が内部管理する
+        obj3d_->AnimationUpdate();
     }
     SetBlendMode(blendMode_);
 }
 
-void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void BaseObject::Draw(const ViewProjection &viewProjection) {
     // オフセットを適用する場合は、一時的にローカル位置を変更
     Vector3 originalPosition = transform_->translation_;
 
-    if (offSet.x != 0.0f || offSet.y != 0.0f || offSet.z != 0.0f) {
-        transform_->translation_ = originalPosition + offSet;
+    if (offSet_.x != 0.0f || offSet_.y != 0.0f || offSet_.z != 0.0f) {
+        transform_->translation_ = originalPosition + offSet_;
         // オフセット適用時は行列を更新
         transform_->UpdateMatrix();
     }
@@ -55,7 +56,7 @@ void BaseObject::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
     }
 
     // オフセットを適用した場合は元の位置に戻す
-    if (offSet.x != 0.0f || offSet.y != 0.0f || offSet.z != 0.0f) {
+    if (offSet_.x != 0.0f || offSet_.y != 0.0f || offSet_.z != 0.0f) {
         transform_->translation_ = originalPosition;
         // 元の位置に戻した後も行列を更新
         transform_->UpdateMatrix();
@@ -582,15 +583,15 @@ void BaseObject::LoadColliders() {
 }
 
 void BaseObject::AnimaSaveToJson() {
-    if (!AnimaDatas_) {
+   /* if (!AnimaDatas_) {
         return;
     }
-    AnimaDatas_->Save<bool>("Loop", isLoop_);
+    AnimaDatas_->Save<bool>("Loop");*/
 }
 
 void BaseObject::AnimaLoadFromJson() {
-    AnimaDatas_ = std::make_unique<DataHandler>("Animation", objectName_);
-    isLoop_ = AnimaDatas_->Load<bool>("Loop", false);
+   /* AnimaDatas_ = std::make_unique<DataHandler>("Animation", objectName_);
+    isLoop_ = AnimaDatas_->Load<bool>("Loop", false);*/
 }
 
 void BaseObject::DebugCollider() {
@@ -1234,10 +1235,42 @@ void BaseObject::DebugObject() {
             SectionHeader("[ 制御 ]", DebugTheme::kAccentYellow);
 
             ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentYellow);
-            ImGui::Checkbox("ループ##lp", &isLoop_);
+            // 現在のアニメーションのループ設定を取得・変更
+            std::string currentModelPath = obj3d_->GetModelFilePath();
+            bool loop = obj3d_->GetAnimationLoop(currentModelPath);
+            if (ImGui::Checkbox("ループ##lp", &loop)) {
+                obj3d_->SetAnimationLoop(currentModelPath, loop);
+            }
+
             ImGui::SameLine(130.0f);
             ImGui::Checkbox("スケルトン表示##sk", &skeletonDraw_);
             ImGui::PopStyleColor();
+            ImGui::Spacing();
+
+            // アニメーション速度設定
+            float speed = obj3d_->GetAnimationSpeed();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentYellow);
+            ImGui::TextUnformatted("再生速度");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgYellow);
+            if (ImGui::DragFloat("##aspeed", &speed, 0.01f, 0.0f, 10.0f, "%.2f")) {
+                obj3d_->SetAnimationSpeed(speed);
+            }
+            ImGui::PopStyleColor();
+
+            // ブレンド時間設定
+            float blendDuration = obj3d_->GetAnimationBlendDuration();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentCyan);
+            ImGui::TextUnformatted("ブレンド時間 (秒)");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+            if (ImGui::DragFloat("##ablend", &blendDuration, 0.01f, 0.0f, 5.0f, "%.2f")) {
+                obj3d_->SetAnimationBlendDuration(blendDuration);
+            }
+            ImGui::PopStyleColor();
+
             ImGui::Spacing();
 
             ImGui::PushStyleColor(ImGuiCol_Button, {0.25f, 0.55f, 0.20f, 0.8f});

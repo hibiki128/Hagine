@@ -18,7 +18,7 @@ void Ground::Update() {
     BaseObject::Update();
 }
 
-void Ground::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void Ground::Draw(const ViewProjection &viewProjection) {
     // 基底クラスの描画処理
     BaseObject::Draw(viewProjection);
 }

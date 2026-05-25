@@ -54,10 +54,18 @@ class Object3d {
     bool isPrimitive_ = false;
     bool isAnimationSwitchPending_ = false;
     std::string nextAnimationFileName_;
+    bool targetLoop_ = true;
+
+    // アニメーションファイルパスごとのループフラグ
+    // AddAnimation() で登録し、AnimationUpdate() が modelFilePath_ をキーに参照する
+    std::map<std::string, bool> animationLoopFlags_;
 
     std::string modelFilePath_;
     std::unique_ptr<Object3dCommon> objectCommon_;
     BlendMode blendMode_ = BlendMode::kNone;
+
+    float animationSpeed_ = 1.0f;
+    float blendDuration_ = 0.5f;
 
   public: // メンバ関数
     void Initialize();
@@ -75,9 +83,9 @@ class Object3d {
     void Update(const WorldTransform &worldTransform, const ViewProjection &viewProjection);
 
     /// <summary>
-    /// アニメーションの更新
+    /// アニメーションの更新（ループ設定はアニメーションごとに自動解決）
     /// </summary>
-    void AnimationUpdate(bool roop);
+    void AnimationUpdate();
 
     /// <summary>
     /// 補間状態を取得
@@ -159,13 +167,32 @@ class Object3d {
 
     void SetEnvironmentCoefficients(float value);
 
-  private: // メンバ関数
+    /// <summary>
+    /// アニメーション速度設定
+    /// </summary>
+    void SetAnimationSpeed(float speed);
+    float GetAnimationSpeed() const { return animationSpeed_; }
+
+    /// <summary>
+    /// アニメーション補間時間設定
+    /// </summary>
+    void SetAnimationBlendDuration(float duration);
+    float GetAnimationBlendDuration() const { return blendDuration_; }
+
+    /// <summary>
+    /// アニメーションのループ設定
+    /// </summary>
+    void SetAnimationLoop(const std::string &fileName, bool loop);
+    bool GetAnimationLoop(const std::string &fileName);
+
     /// <summary>
     /// アニメーション追加
     /// </summary>
-    /// <param name="fileName"></param>
-    void AddAnimation(const std::string &fileName);
+    /// <param name="fileName">アニメーションファイルパス</param>
+    /// <param name="loop">ループ再生するか（デフォルト true）</param>
+    void AddAnimation(const std::string &fileName, bool loop = true);
 
+  private: // メンバ関数
     /// <summary>
     /// 座標変換行列データ作成
     /// </summary>

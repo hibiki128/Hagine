@@ -55,7 +55,7 @@ void Animator::UpdateBlend(bool loop) {
         isFinish_ = false;
 
         // 補間完了直後に 1フレーム分進める
-        animationTime += Frame::DeltaTime();
+        animationTime += Frame::DeltaTime() * speed_;
         if (loop) {
             // ループ再生時は時間を正規化
             animationTime = std::fmod(animationTime, currentAnimation_.duration);
@@ -75,20 +75,20 @@ void Animator::UpdateBlend(bool loop) {
     // 補間中の再生時間更新
     if (loop) {
         // ループ再生の場合
-        blendState_.fromAnimationTime += Frame::DeltaTime();
+        blendState_.fromAnimationTime += Frame::DeltaTime() * speed_;
         blendState_.fromAnimationTime = std::fmod(blendState_.fromAnimationTime, blendState_.fromAnimation.duration);
 
-        blendState_.toAnimationTime += Frame::DeltaTime();
+        blendState_.toAnimationTime += Frame::DeltaTime() * speed_;
         blendState_.toAnimationTime = std::fmod(blendState_.toAnimationTime, blendState_.toAnimation.duration);
     } else {
         // ループしない場合
         if (blendState_.fromAnimationTime < blendState_.fromAnimation.duration) {
-            blendState_.fromAnimationTime += Frame::DeltaTime();
+            blendState_.fromAnimationTime += Frame::DeltaTime() * speed_;
             blendState_.fromAnimationTime = std::min(blendState_.fromAnimationTime, blendState_.fromAnimation.duration);
         }
 
         if (blendState_.toAnimationTime < blendState_.toAnimation.duration) {
-            blendState_.toAnimationTime += Frame::DeltaTime();
+            blendState_.toAnimationTime += Frame::DeltaTime() * speed_;
             blendState_.toAnimationTime = std::min(blendState_.toAnimationTime, blendState_.toAnimation.duration);
         }
     }
@@ -99,7 +99,10 @@ void Animator::UpdateBlend(bool loop) {
 void Animator::UpdateSingle(bool loop) {
     if (loop) {
         // ループアニメーションの場合
-        animationTime += Frame::DeltaTime();
+        isAnimation_ = true; // ループ時は常に再生状態を維持
+        isFinish_ = false;
+
+        animationTime += Frame::DeltaTime() * speed_;
         // 時間を正規化してループさせる
         animationTime = std::fmod(animationTime, currentAnimation_.duration);
 
@@ -115,7 +118,7 @@ void Animator::UpdateSingle(bool loop) {
         // ループしない場合、アニメーションが終了するまで進行
         if (animationTime < currentAnimation_.duration) {
             isFinish_ = false;
-            animationTime += Frame::DeltaTime();
+            animationTime += Frame::DeltaTime() * speed_;
 
             // ボーンを持たないモデルの場合のルートノード適用
             if (!modelData_.hasBones) {

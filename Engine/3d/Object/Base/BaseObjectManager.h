@@ -30,7 +30,7 @@ class BaseObjectManager {
 
     void Update();
     void DrawHierarchyEditor();
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
+    void Draw(const ViewProjection &viewProjection);
 
     void UpdateImGui();
 

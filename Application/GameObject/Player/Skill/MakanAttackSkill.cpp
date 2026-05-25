@@ -134,7 +134,7 @@ void MakanAttackSkill::Deactivate() {
     makanAroundEffect_->SetAuto(false);
 }
 
-void MakanAttackSkill::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void MakanAttackSkill::Draw(const ViewProjection &viewProjection) {
 }
 
 void MakanAttackSkill::DrawParticle(const ViewProjection &viewProjection) {

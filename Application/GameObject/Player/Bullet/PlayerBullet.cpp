@@ -90,7 +90,7 @@ void PlayerBullet::Update() {
     // 位置更新
     transform_->translation_ += velocity_ * deltaTime;
 }
-void PlayerBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void PlayerBullet::Draw(const ViewProjection &viewProjection) {
 }
 
 void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {

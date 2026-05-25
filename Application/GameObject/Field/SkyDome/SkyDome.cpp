@@ -11,6 +11,6 @@ void SkyDome::Update() {
     BaseObject::Update();
 }
 
-void SkyDome::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
-    BaseObject::Draw(viewProjection,offSet);
+void SkyDome::Draw(const ViewProjection &viewProjection) {
+    BaseObject::Draw(viewProjection);
 }

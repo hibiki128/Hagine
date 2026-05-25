@@ -38,7 +38,8 @@ class BaseObject {
     Quaternion q{};
     // ライティング
     bool isLighting_ = true;
-    bool isLoop_ = true;
+    // isLoop_ は後方互換のために残しているが、ループ制御は
+    // AddAnimation(path, loop) で登録したアニメーションごとのフラグが優先される
     bool skeletonDraw_ = false;
     bool isModelDraw_ = true;
     bool isWireframe_ = false;
@@ -70,7 +71,7 @@ class BaseObject {
     // 初期化、更新、描画
     virtual void Init(const std::string className);
     virtual void Update();
-    virtual void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f});
+    virtual void Draw(const ViewProjection &viewProjection);
     void UpdateWorldTransformHierarchy();
     void UpdateHierarchy();
 
@@ -143,7 +144,6 @@ class BaseObject {
     Matrix4x4 GetWorldMatrix() { return transform_->matWorld_; }
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
     bool &GetLighting() { return isLighting_; }
-    bool &GetLoop() { return isLoop_; }
     bool GetShouldSave() const { return shouldSave_; }
     bool IsPrimitive() const { return isPrimitive_; }
     const Vector4 GetColor(int index = 0) { return obj3d_->GetColor(index); }
@@ -169,7 +169,6 @@ class BaseObject {
     }
     void SetModel(const std::string &filePath) { obj3d_->SetModel(filePath); }
     void SetAnima(const std::string &filePath) { obj3d_->SetAnimation(filePath); }
-    // void AddAnimation(std::string filePath) { obj3d_->AddAnimation(filePath); }
     void SetBlendMode(BlendMode blendMode) { obj3d_->SetBlendMode(blendMode); }
     void SetReflect(bool reflect) { reflect_ = reflect; }
     void SetColor(const Vector4 &color, int index = 0) { obj3d_->SetColor(color, index); }
@@ -187,6 +186,16 @@ class BaseObject {
     void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; }
     void SetIsAlive(bool flag) { isAlive_ = flag; }
     void SetIsModelDraw(bool isModelDraw) { isModelDraw_ = isModelDraw; }
+    void SetOffset(const Vector3 &offset) { offSet_ = offset; }
+    void SetAnimationSpeed(float speed) { obj3d_->SetAnimationSpeed(speed); }
+    void SetAnimationBlendDuration(float duration) { obj3d_->SetAnimationBlendDuration(duration); }
+  
+    /// <summary>
+    /// アニメーションを追加登録する
+    /// </summary>
+    /// <param name="filePath">アニメーションファイルパス</param>
+    /// <param name="loop">ループ再生するか（デフォルト true）。攻撃系は false を渡すこと</param>
+    void AddAnimation(const std::string &filePath, bool loop = true) { obj3d_->AddAnimation(filePath, loop); }
 
   private:
     void DebugObject();
@@ -221,6 +230,8 @@ class BaseObject {
         // スタートボタン押下時のスケールを記録（Amplitude系の基準点）
         Vector3 baseScale = {1.0f, 1.0f, 1.0f};
     };
+
+    Vector3 offSet_ = {0.0f, 0.0f, 0.0f};
 
     ScaleEaseState scaleEase_{};
 

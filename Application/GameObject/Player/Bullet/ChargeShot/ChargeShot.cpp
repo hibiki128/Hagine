@@ -221,7 +221,7 @@ float ChargeShot::GetDamage() const {
     return std::max(kMinDamage, damage);
 }
 
-void ChargeShot::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void ChargeShot::Draw(const ViewProjection &viewProjection) {
     if (!isAlive_)
         return;
     // スケールを反映

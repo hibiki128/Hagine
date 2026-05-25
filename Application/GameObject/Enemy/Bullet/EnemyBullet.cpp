@@ -97,7 +97,7 @@ void EnemyBullet::Update() {
     // 最終的な座標更新
     transform_->translation_ += velocity_ * deltaTime;
 }
-void EnemyBullet::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void EnemyBullet::Draw(const ViewProjection &viewProjection) {
     // モデルの直接描画は行わない（必要に応じて実装）
 }
 

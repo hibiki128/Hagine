@@ -46,6 +46,8 @@ class ModelAnimation {
     /// </summary>
     void SetModelData(ModelData modelData) { modelData_ = modelData; }
     void SetIsAnimation(bool anime) { animator_->SetIsAnimation(anime); }
+    void SetSpeed(float speed) { animator_->SetSpeed(speed); }
+    void SetBlendDuration(float duration) { animator_->SetBlendDuration(duration); }
 
   private:
     /// ===================================================

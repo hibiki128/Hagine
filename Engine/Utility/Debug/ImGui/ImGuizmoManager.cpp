@@ -738,7 +738,6 @@ void ImGuizmoManager::PasteObjects() {
         newObject->GetLocalScale() = copiedObj->GetLocalScale();
         newObject->GetLocalPosition().x += 1.0f;
         newObject->GetLighting() = copiedObj->GetLighting();
-        newObject->GetLoop() = copiedObj->GetLoop();
         newObject->SetColor(copiedObj->GetColor());
 
         std::string uniqueName = GenerateUniqueName(copiedObj->GetName());

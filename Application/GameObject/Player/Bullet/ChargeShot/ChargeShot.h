@@ -31,7 +31,7 @@ class ChargeShot : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection, Vector3 offSet = {0.0f, 0.0f, 0.0f}) override;
+    void Draw(const ViewProjection &viewProjection) override;
 
     /// <summary>
     /// パーティクルの描画処理

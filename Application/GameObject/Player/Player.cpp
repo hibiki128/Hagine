@@ -22,7 +22,6 @@
 #include <Particle/ParticleEditor.h>
 #include <cmath>
 
-
 Player::Player() {
 }
 
@@ -31,7 +30,31 @@ Player::~Player() {
 
 void Player::Init(const std::string objectName) {
     BaseObject::Init(objectName);
-    BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
+    // BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
+    BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
+    // ────────────────────────────────────────────────
+    // ループあり：待機・移動など継続する動作
+    // ────────────────────────────────────────────────
+    BaseObject::AddAnimation("animation/Player/Idle_Ground.gltf", true); // 浮遊待機
+    BaseObject::AddAnimation("animation/Player/Idle_Flying.gltf", true); // 浮遊待機
+    BaseObject::AddAnimation("animation/Run.gltf", true);                // 地上移動
+    // ────────────────────────────────────────────────
+    // ループなし：攻撃・ジャンプなど一回きりの動作
+    // ────────────────────────────────────────────────
+    BaseObject::AddAnimation("animation/Player/Punch_1.gltf", false); // Jab
+    BaseObject::AddAnimation("animation/Player/Punch_2.gltf", false); // Hook
+    BaseObject::AddAnimation("animation/Player/Punch_3.gltf", false); // Cross
+    BaseObject::AddAnimation("animation/Player/Punch_4.gltf", false); // Uppercut
+    BaseObject::AddAnimation("animation/Player/Kick_1.gltf", false);  // Overhand
+    BaseObject::AddAnimation("animation/Player/Kick_2.gltf", false);  // Swing
+    BaseObject::AddAnimation("animation/Player/Kick_3.gltf", false);  // Elbow
+    BaseObject::AddAnimation("animation/Jump.gltf", false);           // ジャンプ
+
+    BaseObject::SetOffset({0.0f, -0.5f, 0.0f}); // 描画オフセット（地面に足がつくように）
+    BaseObject::GetLocalScale() = {3.0f, 3.0f, 3.0f};
+    BaseObject::SetAnimationSpeed(1.5f);
+    BaseObject::SetAnimationBlendDuration(0.75f);
+
     playerCollider_ = AddOBBCollider("player_Collider");
     playerCollider_->SetTag("Player");
     playerCollider_->AddCollisionMask("Enemy");
@@ -54,13 +77,13 @@ void Player::Init(const std::string objectName) {
         this->OnCollision(other);
     });
 
-    states_["Idle"]         = std::make_unique<PlayerStateIdle>();
-    states_["Move"]         = std::make_unique<PlayerStateMove>();
-    states_["Jump"]         = std::make_unique<PlayerStateJump>();
-    states_["Air"]          = std::make_unique<PlayerStateAir>();
-    states_["FlyIdle"]      = std::make_unique<PlayerStateFlyIdle>();
-    states_["FlyMove"]      = std::make_unique<PlayerStateFlyMove>();
-    states_["Rush"]         = std::make_unique<PlayerStateRush>();
+    states_["Idle"] = std::make_unique<PlayerStateIdle>();
+    states_["Move"] = std::make_unique<PlayerStateMove>();
+    states_["Jump"] = std::make_unique<PlayerStateJump>();
+    states_["Air"] = std::make_unique<PlayerStateAir>();
+    states_["FlyIdle"] = std::make_unique<PlayerStateFlyIdle>();
+    states_["FlyMove"] = std::make_unique<PlayerStateFlyMove>();
+    states_["Rush"] = std::make_unique<PlayerStateRush>();
     states_["EnergyCharge"] = std::make_unique<PlayerEnergyCharge>();
     currentState_ = states_["Idle"].get();
     isGrounded_ = true; // 初期状態は地面にいる
@@ -93,9 +116,9 @@ void Player::Init(const std::string objectName) {
     MotionEditor::GetInstance()->Register(leftHand_.get());
     MotionEditor::GetInstance()->Register(rightHand_.get());
 
-    rightHand_ptr_    = rightHand_.get();
-    leftHand_ptr_     = leftHand_.get();
-    makanAttack_ptr_  = makanAttack_.get();
+    rightHand_ptr_ = rightHand_.get();
+    leftHand_ptr_ = leftHand_.get();
+    makanAttack_ptr_ = makanAttack_.get();
 
     BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
     BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
@@ -105,21 +128,35 @@ void Player::Init(const std::string objectName) {
 
     punchCombo_.SetName("PunchCombo"); // DataHandlerのファイル名に使われる
     punchCombo_
-        .Add(GetRightHand(), "Jab",      10.0f,  3.0f, 0.25f, 0.08f)
-        .Add(GetLeftHand(),  "Hook",     12.0f,  4.0f, 0.25f, 0.08f)
-        .Add(GetRightHand(), "Cross",    12.0f,  4.0f, 0.25f, 0.08f)
-        .Add(GetLeftHand(),  "Uppercut", 15.0f,  6.0f, 0.30f, 0.10f)
-        .Add(GetRightHand(), "Overhand", 15.0f,  6.0f, 0.30f, 0.10f)
-        .Add(GetLeftHand(),  "Swing",    18.0f,  7.0f, 0.30f, 0.10f)
-        .Add(GetRightHand(), "Elbow",    20.0f,  8.0f, 0.25f, 0.06f)
-        .Add(GetLeftHand(),  "Slam",     25.0f, 12.0f, 0.35f, 0.12f);
+        .Add(GetRightHand(), "Jab", 10.0f, 3.0f, 0.25f, 0.08f)
+        .Add(GetLeftHand(), "Hook", 12.0f, 4.0f, 0.25f, 0.08f)
+        .Add(GetRightHand(), "Cross", 12.0f, 4.0f, 0.25f, 0.08f)
+        .Add(GetLeftHand(), "Uppercut", 15.0f, 6.0f, 0.30f, 0.10f)
+        .Add(GetRightHand(), "Overhand", 15.0f, 6.0f, 0.30f, 0.10f)
+        .Add(GetLeftHand(), "Swing", 18.0f, 7.0f, 0.30f, 0.10f)
+        .Add(GetRightHand(), "Elbow", 20.0f, 8.0f, 0.25f, 0.06f)
+        .Add(GetLeftHand(), "Slam", 25.0f, 12.0f, 0.35f, 0.12f);
 
     punchCombo_.LoadAttackParams(); // JSONがあれば値を上書き読み込み
+
+    // コンボ段ごとのプレイヤー本体アニメーション（適宜差し替え可）
+    // Punch_1〜4 → パンチ系、Kick_1〜3 → キック系で割り振り
+    // 対応するアニメーションがない段は空文字（何も再生しない）
+    comboAnimations_ = {
+        "animation/Player/Punch_1.gltf", // 1段目: Jab
+        "animation/Player/Punch_2.gltf", // 2段目: Hook
+        "animation/Player/Punch_3.gltf", // 3段目: Cross
+        "animation/Player/Punch_4.gltf", // 4段目: Uppercut
+        "animation/Player/Kick_1.gltf",  // 5段目: Overhand
+        "animation/Player/Kick_2.gltf",  // 6段目: Swing
+        "animation/Player/Punch_3.gltf",  // 7段目: Elbow
+        "animation/Player/Kick_3.gltf",  // 8段目: Slam
+    };
 
     shake_ = std::make_unique<Shake>();
 
     auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
-    hitEmitter_  = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
+    hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
 
     deathStaging_ = std::make_unique<DeathStaging>();
 
@@ -194,6 +231,8 @@ void Player::Update() {
             if (currentState_) {
                 currentState_->Update(*this);
             }
+
+            UpdateAnimation(); // ステート・コンボに応じてアニメーションを切り替え
 
             // RotateUpdate はロックオン追従と手動スティック回転を行う
             // Rush ステートは自前で UpdateRotation() を持つため除外する
@@ -294,18 +333,18 @@ void Player::Update() {
     }
 }
 
-void Player::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void Player::Draw(const ViewProjection &viewProjection) {
     if (deathStaging_->GetIsStart()) {
         leftHand_ptr_->SetIsAlive(false);
         rightHand_ptr_->SetIsAlive(false);
         return;
     }
-    BaseObject::Draw(viewProjection, offSet);
-    shadow_->Draw(viewProjection, offSet);
+    BaseObject::Draw(viewProjection);
+    shadow_->Draw(viewProjection);
     for (auto &bullet : bullets_) {
-        bullet->Draw(viewProjection, offSet);
+        bullet->Draw(viewProjection);
     }
-    chargeShot_->Draw(viewProjection, offSet);
+    chargeShot_->Draw(viewProjection);
     if (transform_->translation_.y < kGroundLevel) {
         return;
     }
@@ -418,13 +457,13 @@ void Player::DirectionUpdate() {
     } else {
         // ゲームパッド入力 - 左スティック
         float xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
-        float zInput =  gamePad_->GetLeftStickY(); // 左スティックY軸
+        float zInput = gamePad_->GetLeftStickY();  // 左スティックY軸
 
         // スティック入力から方向を判定
         if (xInput != 0.0f || zInput != 0.0f) {
             float angle = std::atan2(xInput, zInput);
 
-            const float PI      = std::numbers::pi_v<float>;
+            const float PI = std::numbers::pi_v<float>;
             const float segment = PI / 4.0f; // 45度
 
             if (angle >= -segment && angle < segment) {
@@ -555,8 +594,8 @@ void Player::RotateUpdate() {
             toEnemy = toEnemy.Normalize();
 
             // プレイヤーの正面方向(+Z方向)を敵の方向に向ける
-            Vector3 forward  = toEnemy;
-            Vector3 worldUp  = {kUpVectorX, kUpVectorY, kUpVectorZ};
+            Vector3 forward = toEnemy;
+            Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ};
 
             // forwardとworldUpが平行になる場合の対処
             Vector3 right;
@@ -629,15 +668,19 @@ void Player::Move() {
 
     if (!gamePad_->IsConnected()) {
         // キーボード入力
-        if (input_->PushKey(DIK_A)) xInput += kInputValue;
-        if (input_->PushKey(DIK_D)) xInput -= kInputValue;
-        if (input_->PushKey(DIK_W)) zInput += kInputValue;
-        if (input_->PushKey(DIK_S)) zInput -= kInputValue;
+        if (input_->PushKey(DIK_A))
+            xInput += kInputValue;
+        if (input_->PushKey(DIK_D))
+            xInput -= kInputValue;
+        if (input_->PushKey(DIK_W))
+            zInput += kInputValue;
+        if (input_->PushKey(DIK_S))
+            zInput -= kInputValue;
         isDashing_ = input_->PushKey(DIK_LCONTROL);
     } else {
         // ゲームパッド入力
         xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
-        zInput =  gamePad_->GetLeftStickY(); // 左スティックY軸
+        zInput = gamePad_->GetLeftStickY();  // 左スティックY軸
 
         bool isLTHeld = gamePad_->GetLeftTrigger() > 0.25f;
 
@@ -646,7 +689,7 @@ void Player::Move() {
             if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
                 dashInputX_ = xInput;
                 dashInputZ_ = zInput;
-                isDashing_  = true;
+                isDashing_ = true;
                 dashStartedThisFrame_ = true;
                 dashDuration_ = 0.0f;
             }
@@ -658,10 +701,10 @@ void Player::Move() {
             }
         } else {
             // LTを離したらダッシュ解除
-            isDashing_            = false;
-            dashInputX_           = kInputZero;
-            dashInputZ_           = kInputZero;
-            dashDuration_         = 0.0f;
+            isDashing_ = false;
+            dashInputX_ = kInputZero;
+            dashInputZ_ = kInputZero;
+            dashDuration_ = 0.0f;
             dashStartedThisFrame_ = false;
         }
     }
@@ -670,8 +713,10 @@ void Player::Move() {
     if (xInput == kInputZero && zInput == kInputZero && !isDashing_) {
         velocity_.x *= kDecelerationFactor;
         velocity_.z *= kDecelerationFactor;
-        if (std::abs(velocity_.x) < kVelocityStopThreshold) velocity_.x = kVelocityZero;
-        if (std::abs(velocity_.z) < kVelocityStopThreshold) velocity_.z = kVelocityZero;
+        if (std::abs(velocity_.x) < kVelocityStopThreshold)
+            velocity_.x = kVelocityZero;
+        if (std::abs(velocity_.z) < kVelocityStopThreshold)
+            velocity_.z = kVelocityZero;
         return;
     }
 
@@ -682,7 +727,7 @@ void Player::Move() {
 
     float yaw = camera->GetYaw();
     Vector3 cameraForward = {std::sin(yaw), kYComponentZero, std::cos(yaw)};
-    Vector3 cameraRight   = {-std::cos(yaw), kYComponentZero, std::sin(yaw)};
+    Vector3 cameraRight = {-std::cos(yaw), kYComponentZero, std::sin(yaw)};
 
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
 
@@ -697,7 +742,7 @@ void Player::Move() {
         } else {
             moveDir = GetForward();
             moveDir.y = 0;
-            moveDir   = moveDir.Normalize();
+            moveDir = moveDir.Normalize();
         }
     } else if (moveDir.Length() > 0.001f) {
         moveDir = moveDir.Normalize();
@@ -730,7 +775,7 @@ void Player::UpdateShadowScale() {
     if (transform_->translation_.y < kGroundLevel) {
         return;
     }
-    float height    = transform_->translation_.y;
+    float height = transform_->translation_.y;
     float baseScale = kShadowBaseScale;
     float scaleFactor = std::max(kShadowMinScale, baseScale - height * kShadowScaleFactor);
     shadow_->GetLocalScale() = {scaleFactor, scaleFactor, scaleFactor};
@@ -790,7 +835,7 @@ void Player::DamageUpdate() {
         return;
     }
 
-    HP_    -= damage_;
+    HP_ -= damage_;
     damage_ = kNoDamage;
 
     if (hasKnockback_) {
@@ -800,29 +845,29 @@ void Player::DamageUpdate() {
         if (isGrounded_ && knockbackVelocity_.y > 0.0f) {
             isGrounded_ = false;
         }
-        hasKnockback_      = false;
+        hasKnockback_ = false;
         knockbackVelocity_ = {0.0f, 0.0f, 0.0f};
     }
 
     // 無敵時間の開始
-    isInvincible_  = true;
+    isInvincible_ = true;
     invincibleTime_ = kTimerReset;
 
     // ダメージリアクションの開始
-    isDamageReact_    = true;
+    isDamageReact_ = true;
     damageReactTimer_ = kTimerReset;
 
     // 現在の向きを保存してのけぞりイージングをセット
     baseRotation_ = transform_->quateRotation_;
     float startAngle = kRotationZero;
-    float endAngle   = degreesToRadians(kPlayerDamageTiltDegrees);
+    float endAngle = degreesToRadians(kPlayerDamageTiltDegrees);
     tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
 }
 
 void Player::InvincibleUpdate() {
     invincibleTime_ += dt_;
     if (invincibleTime_ >= invincibleDuration_) {
-        isInvincible_  = false;
+        isInvincible_ = false;
         invincibleTime_ = kTimerReset;
     }
 }
@@ -838,15 +883,15 @@ void Player::CollisionGround() {
         // Rush状態の場合は地面から押し戻す（地面に埋まらないよう浮かせる）
         if (currentState_ == states_["Rush"].get()) {
             GetLocalPosition().y = kRushGroundOffset;
-            velocity_.y          = kVelocityZero;
+            velocity_.y = kVelocityZero;
             return;
         }
 
         // 地面に接地（Rush 以外）
         GetLocalPosition().y = kGroundLevel;
         if (!isGrounded_) {
-            velocity_.y  = kVelocityZero;
-            isGrounded_  = true;
+            velocity_.y = kVelocityZero;
+            isGrounded_ = true;
             // 空中からの着地で水平速度に応じて状態遷移
             if (currentState_ == states_["Air"].get()) {
                 float horizontalSpeed = sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
@@ -859,13 +904,13 @@ void Player::CollisionGround() {
         }
     } else {
         GetLocalPosition().y = nextY;
-        isGrounded_          = false;
+        isGrounded_ = false;
     }
 }
 
 Direction Player::CalculateDirectionFromRotation() {
     // クォータニオンからオイラー角（Yaw）を取得し、8方向に分類
-    float yaw   = transform_->quateRotation_.ToEulerAngles().y;
+    float yaw = transform_->quateRotation_.ToEulerAngles().y;
     float angle = NormalizeAngle(yaw);
 
     if (angle >= 7.0f * std::numbers::pi_v<float> / 4.0f || angle < std::numbers::pi_v<float> / 4.0f) {
@@ -890,22 +935,33 @@ Direction Player::CalculateDirectionFromRotation() {
 
 const char *Player::GetDirectionName(Direction dir) {
     switch (dir) {
-    case Direction::Forward:       return "前";
-    case Direction::ForwardRight:  return "右前";
-    case Direction::Right:         return "右";
-    case Direction::BackwardRight: return "右後ろ";
-    case Direction::Behind:        return "後ろ";
-    case Direction::BackwardLeft:  return "左後ろ";
-    case Direction::Left:          return "左";
-    case Direction::ForwardLeft:   return "左前";
-    default:                       return "不明";
+    case Direction::Forward:
+        return "前";
+    case Direction::ForwardRight:
+        return "右前";
+    case Direction::Right:
+        return "右";
+    case Direction::BackwardRight:
+        return "右後ろ";
+    case Direction::Behind:
+        return "後ろ";
+    case Direction::BackwardLeft:
+        return "左後ろ";
+    case Direction::Left:
+        return "左";
+    case Direction::ForwardLeft:
+        return "左前";
+    default:
+        return "不明";
     }
 }
 
 float Player::NormalizeAngle(float angle) {
     const float TWO_PI = 2.0f * std::numbers::pi_v<float>;
-    while (angle < 0.0f)     angle += TWO_PI;
-    while (angle >= TWO_PI)  angle -= TWO_PI;
+    while (angle < 0.0f)
+        angle += TWO_PI;
+    while (angle >= TWO_PI)
+        angle -= TWO_PI;
     return angle;
 }
 
@@ -913,8 +969,10 @@ float Player::CalculateShortestRotation(float from, float to) {
     float diff = to - from;
     const float PI = std::numbers::pi_v<float>;
 
-    while (diff >  PI) diff -= 2.0f * PI;
-    while (diff < -PI) diff += 2.0f * PI;
+    while (diff > PI)
+        diff -= 2.0f * PI;
+    while (diff < -PI)
+        diff += 2.0f * PI;
 
     return diff;
 }
@@ -1004,6 +1062,48 @@ void Player::Debug() {
         punchCombo_.DrawImGui();
     }
 
+    // ─── コンボアニメーション割り当て ───
+    if (ImGui::CollapsingHeader("コンボアニメーション割り当て")) {
+        static const char *kComboLabels[] = {
+            "1段目: Jab",
+            "2段目: Hook",
+            "3段目: Cross",
+            "4段目: Uppercut",
+            "5段目: Overhand",
+            "6段目: Swing",
+            "7段目: Elbow",
+            "8段目: Slam",
+        };
+
+        ImGui::TextDisabled("空白のままにすると、その段はアニメーションを変更しません");
+        ImGui::Spacing();
+
+        for (int i = 0; i < static_cast<int>(comboAnimations_.size()); ++i) {
+            ImGui::PushID(i);
+
+            // 現在実行中の段をハイライト
+            bool isCurrentStage = punchCombo_.IsComboActive() &&
+                                  ((punchCombo_.GetCurrentComboIndex() == 0
+                                        ? punchCombo_.GetComboLength() - 1
+                                        : punchCombo_.GetCurrentComboIndex() - 1) == i);
+            if (isCurrentStage) {
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), ">>> %s", kComboLabels[i]);
+            } else {
+                ImGui::Text("%s", kComboLabels[i]);
+            }
+
+            char buf[256] = {};
+            snprintf(buf, sizeof(buf), "%s", comboAnimations_[i].c_str());
+            ImGui::SetNextItemWidth(380.0f);
+            if (ImGui::InputText("##animPath", buf, sizeof(buf))) {
+                comboAnimations_[i] = buf;
+            }
+
+            ImGui::PopID();
+            ImGui::Spacing();
+        }
+    }
+
 #endif // USE_IMGUI
 }
 
@@ -1055,9 +1155,74 @@ void Player::UpdateDashState() {
     wasDashing_ = isDashing_;
 }
 
+void Player::UpdateAnimation() {
+    // ──────────────────────────────────────────
+    // コンボ攻撃中：段数に対応したアニメーションを再生
+    // ──────────────────────────────────────────
+    if (punchCombo_.IsComboActive()) {
+        // GetCurrentComboIndex() は「次に実行する」インデックスを返す。
+        // ExecuteComboAttack() が呼ばれるとインクリメントされるため、
+        // 現在再生中の段 = nextIdx - 1（0 のときは最終段 Slam の後待機中）
+        int nextIdx = punchCombo_.GetCurrentComboIndex();
+        int comboLen = punchCombo_.GetComboLength();
+        int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
+
+        if (animIdx >= 0 && animIdx < static_cast<int>(comboAnimations_.size())) {
+            const std::string &path = comboAnimations_[animIdx];
+            if (!path.empty()) {
+                SetAnima(path);
+            }
+            // else: 該当段のアニメーションが未設定（空文字）なので何もしない
+            // SetAnima(""); ← パスなし段はここでコメントアウト
+        }
+        return; // 攻撃中は以降のステート判定をスキップ
+    }
+
+    // ──────────────────────────────────────────
+    // 通常ステート：ステート名に応じてアニメーションを切り替え
+    // ──────────────────────────────────────────
+    const std::string stateName = GetCurrentStateName();
+
+    if (stateName == "Idle") {
+        // 地上待機
+        SetAnima("animation/Player/Idle_Ground.gltf");
+
+    } else if (stateName == "Move") {
+        // 地上移動
+        SetAnima("animation/Run.gltf");
+
+    } else if (stateName == "Jump") {
+        // ジャンプ直後（上昇）
+        SetAnima("animation/Jump.gltf");
+
+    } else if (stateName == "Air") {
+        // 空中（下降・滞空）― 専用モーションがないためジャンプで代用
+        SetAnima("animation/Jump.gltf");
+        // SetAnima("animation/Player/Air.gltf"); // 専用モーションがあれば差し替え
+
+    } else if (stateName == "FlyIdle") {
+        // 浮遊待機
+        SetAnima("animation/Player/Idle_Flying.gltf");
+
+    } else if (stateName == "FlyMove") {
+        // 浮遊移動 ― 専用モーションがないため Idle_Flying で代用
+        SetAnima("animation/Player/Idle_Flying.gltf");
+        // SetAnima("animation/Player/Fly_Move.gltf"); // 専用モーションがあれば差し替え
+
+    } else if (stateName == "Rush") {
+        // ダッシュ突進 ― 専用モーションがないため Run で代用
+        SetAnima("animation/Run.gltf");
+        // SetAnima("animation/Player/Rush.gltf"); // 専用モーションがあれば差し替え
+
+    } else if (stateName == "EnergyCharge") {
+        // エネルギーチャージ ― 専用モーションなし（現状は何もしない）
+        // SetAnima("animation/Player/EnergyCharge.gltf"); // 専用モーションがあれば差し替え
+    }
+}
+
 Vector3 Player::GetMovementDirection() const {
     Vector3 dir = velocity_;
-    float len   = GetVelocityMagnitude();
+    float len = GetVelocityMagnitude();
 
     if (len > 0.001f) {
         dir.x /= len;
@@ -1088,32 +1253,32 @@ std::string Player::GetCurrentStateName() const {
 }
 
 void Player::Save() {
-    data_->Save("fallSpeed",            fallSpeed_);
-    data_->Save("moveSpeed",            moveSpeed_);
-    data_->Save("jumpSpeed",            jumpSpeed_);
-    data_->Save("maxSpeed",             maxSpeed_);
-    data_->Save("accelRate",            accelRate_);
-    data_->Save("bulletSpeed",          B_speed_);
-    data_->Save("bulletAcce",           B_acce_);
-    data_->Save("maxEnergy",            maxEnergy_);
-    data_->Save("energyRecoveryRate",   energyRecoveryRate_);
-    data_->Save("energyRecoveryDelay",  energyRecoveryDelay_);
-    data_->Save("invincibleDuration",   invincibleDuration_);
+    data_->Save("fallSpeed", fallSpeed_);
+    data_->Save("moveSpeed", moveSpeed_);
+    data_->Save("jumpSpeed", jumpSpeed_);
+    data_->Save("maxSpeed", maxSpeed_);
+    data_->Save("accelRate", accelRate_);
+    data_->Save("bulletSpeed", B_speed_);
+    data_->Save("bulletAcce", B_acce_);
+    data_->Save("maxEnergy", maxEnergy_);
+    data_->Save("energyRecoveryRate", energyRecoveryRate_);
+    data_->Save("energyRecoveryDelay", energyRecoveryDelay_);
+    data_->Save("invincibleDuration", invincibleDuration_);
 }
 
 void Player::Load() {
-    fallSpeed_           = data_->Load<float>("fallSpeed",           -9.8f);
-    moveSpeed_           = data_->Load<float>("moveSpeed",           0.0f);
-    jumpSpeed_           = data_->Load<float>("jumpSpeed",           10.0f);
-    maxSpeed_            = data_->Load<float>("maxSpeed",            10.0f);
-    accelRate_           = data_->Load<float>("accelRate",           15.0f);
-    B_speed_             = data_->Load<float>("bulletSpeed",         60.0f);
-    B_acce_              = data_->Load<float>("bulletAcce",          5.0f);
-    maxEnergy_           = data_->Load<float>("maxEnergy",           100.0f);
-    energyRecoveryRate_  = data_->Load<float>("energyRecoveryRate",  0.01f);
+    fallSpeed_ = data_->Load<float>("fallSpeed", -9.8f);
+    moveSpeed_ = data_->Load<float>("moveSpeed", 0.0f);
+    jumpSpeed_ = data_->Load<float>("jumpSpeed", 10.0f);
+    maxSpeed_ = data_->Load<float>("maxSpeed", 10.0f);
+    accelRate_ = data_->Load<float>("accelRate", 15.0f);
+    B_speed_ = data_->Load<float>("bulletSpeed", 60.0f);
+    B_acce_ = data_->Load<float>("bulletAcce", 5.0f);
+    maxEnergy_ = data_->Load<float>("maxEnergy", 100.0f);
+    energyRecoveryRate_ = data_->Load<float>("energyRecoveryRate", 0.01f);
     energyRecoveryDelay_ = data_->Load<float>("energyRecoveryDelay", 1.0f);
-    energy_              = maxEnergy_; // 初期化時は最大値
-    invincibleDuration_  = data_->Load<float>("invincibleDuration",  0.25f);
+    energy_ = maxEnergy_; // 初期化時は最大値
+    invincibleDuration_ = data_->Load<float>("invincibleDuration", 0.25f);
 }
 
 Vector3 Player::GetForward() const { return -GetBackward(); }
@@ -1138,11 +1303,11 @@ Vector3 Player::GetUp() const {
 Vector3 Player::GetDown() const { return -GetUp(); }
 
 Vector3 Player::GetPositionBehind(float distance) const { return transform_->translation_ + GetBackward() * distance; }
-Vector3 Player::GetPositionFront(float distance) const  { return transform_->translation_ + GetForward()  * distance; }
-Vector3 Player::GetPositionRight(float distance) const  { return transform_->translation_ + GetRight()    * distance; }
-Vector3 Player::GetPositionLeft(float distance) const   { return transform_->translation_ + GetLeft()     * distance; }
-Vector3 Player::GetPositionAbove(float distance) const  { return transform_->translation_ + GetUp()       * distance; }
-Vector3 Player::GetPositionBelow(float distance) const  { return transform_->translation_ + GetDown()     * distance; }
+Vector3 Player::GetPositionFront(float distance) const { return transform_->translation_ + GetForward() * distance; }
+Vector3 Player::GetPositionRight(float distance) const { return transform_->translation_ + GetRight() * distance; }
+Vector3 Player::GetPositionLeft(float distance) const { return transform_->translation_ + GetLeft() * distance; }
+Vector3 Player::GetPositionAbove(float distance) const { return transform_->translation_ + GetUp() * distance; }
+Vector3 Player::GetPositionBelow(float distance) const { return transform_->translation_ + GetDown() * distance; }
 
 ViewProjection &Player::GetViewProjection() { return *vp_; }
 
@@ -1158,11 +1323,13 @@ void Player::SetPause(bool flag) {
 }
 
 void Player::SetKnockback(const Vector3 &direction, float power) {
-    if (power <= 0.0f) return;
+    if (power <= 0.0f)
+        return;
 
     Vector3 dir = direction;
     float len = std::sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
-    if (len < 0.001f) return;
+    if (len < 0.001f)
+        return;
 
     dir.x /= len;
     dir.y /= len;

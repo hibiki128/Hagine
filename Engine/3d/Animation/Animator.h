@@ -113,6 +113,8 @@ class Animator {
     std::string GetCurrentFilename() const { return filename_; }
     std::string GetCurrentDirectoryPath() const { return directorypath_; }
     Matrix4x4 GetLocalMatrix() { return localMatrix; }
+    float GetSpeed() const { return speed_; }
+    float GetBlendDuration() const { return blendDuration_; }
 
     /// ===================================================
     /// Setter
@@ -120,6 +122,8 @@ class Animator {
     void SetIsAnimation(bool isAnimation) { isAnimation_ = isAnimation; }
     void SetAnimationTime(float time) { animationTime = time; }
     void SetModelData(ModelData modelData) { modelData_ = modelData; }
+    void SetSpeed(float speed) { speed_ = speed; }
+    void SetBlendDuration(float duration) { blendDuration_ = duration; }
 
   private:
     /// ===================================================
@@ -188,6 +192,8 @@ class Animator {
     bool isAnimation_ = true;        // アニメーション再生フラグ
     bool isFinish_ = false;          // アニメーション終了フラグ
     ModelData modelData_;            // モデルデータ
+    float speed_ = 1.0f;             // アニメーション速度
+    float blendDuration_ = 0.5f;     // アニメーション補間時間
 
     static std::unordered_map<std::string, Animation> animationCache; // アニメーションキャッシュ
 };

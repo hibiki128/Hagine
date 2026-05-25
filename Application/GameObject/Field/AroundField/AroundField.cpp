@@ -25,7 +25,7 @@ void AroundField::Update() {
     fieldParticle_->Update();
 }
 
-void AroundField::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void AroundField::Draw(const ViewProjection &viewProjection) {
     // モデルとしての描画は行わない（パーティクルで表現するため）
 }
 

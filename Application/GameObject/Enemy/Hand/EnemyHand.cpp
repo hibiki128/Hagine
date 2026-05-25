@@ -13,9 +13,9 @@ void EnemyHand::Update() {
     }
 }
 
-void EnemyHand::Draw(const ViewProjection &viewProjection, Vector3 offSet) {
+void EnemyHand::Draw(const ViewProjection &viewProjection) {
     // 生存中のみ描画
     if (isAlive_) {
-        BaseObject::Draw(viewProjection, offSet);
+        BaseObject::Draw(viewProjection);
     }
 }
