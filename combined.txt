@@ -652,9 +652,10 @@ File Path: Application/Camera/DeathCamera.cpp
 #include <Frame.h>
 
 void DeathCamera::Init() {
-    // ViewProjectionの初期化
+    // ViewProjectionの初期設定
     vp_.farZ = kFarZ;
     vp_.Initialize("");
+    
     // WorldTransformの初期化
     wt_.Initialize();
 }
@@ -669,24 +670,25 @@ void DeathCamera::Update() {
     easingTimer_ += Frame::DeltaTime();
     float t = std::min(easingTimer_ / easingDuration_, kEasingEndThreshold);
 
-    // 半分到達チェック（一度だけフラグを立てる）
+    // 中間地点到達判定（一度だけフラグを立てる）
     if (!isHalfway_ && easingTimer_ >= easingDuration_ * kHalfwayRatio) {
         isHalfway_ = true;
     }
 
+    // トランスフォームの補間
     // 位置のイージング
     wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, kEasingMaxValue);
-    // 回転のイージング（クォータニオン補間）
+    // 回転のイージング（クォータニオンによる補間）
     wt_.quateRotation_ = Quaternion::Slerp(easingStartRot_, easingTargetRot_, t);
     wt_.UpdateMatrix();
 
-    // ViewProjectionを更新（クォータニオンモード）
+    // ビュープロジェクションへの反映
     vp_.translation_ = wt_.translation_;
     vp_.isUseQuaternion_ = true;
     vp_.quateRotation_ = wt_.quateRotation_;
     vp_.UpdateMatrix();
 
-    // イージング完了チェック
+    // イージング完了判定
     if (t >= kEasingMaxValue) {
         isEasing_ = false;
         isComplete_ = true;
@@ -694,13 +696,13 @@ void DeathCamera::Update() {
 }
 
 void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &targetPosition) {
-    // フラグリセットとタイマー初期化
+    // 各種フラグのリセットとタイマーの初期化
     isEasing_ = true;
     isComplete_ = false;
     isHalfway_ = false;
     easingTimer_ = kTimerReset;
 
-    // 現在のカメラ状態を保存
+    // 現在のカメラ状態を保存（開始地点の設定）
     easingStartPos_ = currentVp.translation_;
 
     // クォータニオンが使用されているか確認して開始回転をセット
@@ -710,30 +712,31 @@ void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &ta
         easingStartRot_ = Quaternion::FromEulerAngles(currentVp.eulerRotation_);
     }
 
-    // 目標位置を計算（プレイヤーの正面やや斜め上）
+    // 目標位置の計算（プレイヤーの正面やや斜め上を向く位置）
     easingTargetPos_ = targetPosition + cameraOffset_;
 
-    // 目標回転を計算（プレイヤーを見る方向）
+    // 目標回転の計算（目標物を注視する回転）
     Vector3 toTarget = (targetPosition - easingTargetPos_).Normalize();
 
     Vector3 forward = toTarget;
     Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ};
 
-    // 前方ベクトルと上方向ベクトルから右方向ベクトルを計算
+    // 前方ベクトルと上方向ベクトルから右方向ベクトルを算出
     Vector3 right;
     if (std::abs(forward.Dot(worldUp)) > kParallelThreshold) {
         right = {kRightVectorX, kRightVectorY, kRightVectorZ};
     } else {
         right = (worldUp.Cross(forward)).Normalize();
     }
-    // 正確な上方向ベクトルを再計算
+    
+    // 直交する正確な上方向ベクトルを再算出
     Vector3 up = (forward.Cross(right)).Normalize();
 
-    // 回転行列から目標クォータニオンを作成
+    // 回転行列を作成し、目標のクォータニオンを生成
     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
     easingTargetRot_ = Quaternion::FromMatrix(rotMatrix);
 
-    // WorldTransformの初期状態を設定
+    // 初期状態をトランスフォームに適用
     wt_.translation_ = easingStartPos_;
     wt_.quateRotation_ = easingStartRot_;
     wt_.UpdateMatrix();
@@ -749,6 +752,7 @@ void DeathCamera::imgui() {
     ImGui::End();
 #endif // USE_IMGUI
 }
+
 
 ============================================================
 File Path: Application/Camera/DeathCamera.h
@@ -772,27 +776,42 @@ class DeathCamera {
     void Init();
 
     /// <summary>
-    /// 更新
+    /// 更新処理
     /// </summary>
     void Update();
 
     /// <summary>
-    /// イージング開始
+    /// イージング演出の開始
     /// </summary>
     /// <param name="currentVp">現在のViewProjection</param>
     /// <param name="targetPosition">プレイヤーの位置</param>
     void StartEasing(const ViewProjection &currentVp, const Vector3 &targetPosition);
 
     /// <summary>
-    /// デバッグ関数
+    /// デバッグ用のImGui表示
     /// </summary>
     void imgui();
 
-    /// <summary>
+    /// ===================================================
     /// Getter
+    /// ===================================================
+
+    /// <summary>
+    /// ビュープロジェクションを取得
     /// </summary>
+    /// <returns>ViewProjection&: ビュープロジェクション参照</returns>
     ViewProjection &GetViewProjection() { return vp_; }
+
+    /// <summary>
+    /// イージング完了フラグを取得
+    /// </summary>
+    /// <returns>bool: 完了していればtrue</returns>
     bool IsComplete() const { return isComplete_; }
+
+    /// <summary>
+    /// イージング中間地点フラグを取得
+    /// </summary>
+    /// <returns>bool: 中間地点に到達していればtrue</returns>
     bool IsHalfway() const { return isHalfway_; }
 
   private:
@@ -801,40 +820,41 @@ class DeathCamera {
     /// ===================================================
 
     // カメラ設定
-    static constexpr float kFarZ = 1100.0f;
+    static constexpr float kFarZ = 1100.0f; // 描画距離の遠面
 
     // イージング設定
-    static constexpr float kHalfwayRatio = 0.5f;
-    static constexpr float kEasingEndThreshold = 1.0f;
-    static constexpr float kEasingMaxValue = 1.0f;
-    static constexpr float kTimerReset = 0.0f;
+    static constexpr float kHalfwayRatio = 0.5f;        // 中間地点の割合
+    static constexpr float kEasingEndThreshold = 1.0f;  // イージング終了しきい値
+    static constexpr float kEasingMaxValue = 1.0f;      // イージングの最大値
+    static constexpr float kTimerReset = 0.0f;          // タイマーリセット値
 
     // ベクトル設定
-    static constexpr float kParallelThreshold = 0.999f;
-    static constexpr float kUpVectorX = 0.0f;
-    static constexpr float kUpVectorY = 1.0f;
-    static constexpr float kUpVectorZ = 0.0f;
-    static constexpr float kRightVectorX = 1.0f;
-    static constexpr float kRightVectorY = 0.0f;
-    static constexpr float kRightVectorZ = 0.0f;
+    static constexpr float kParallelThreshold = 0.999f; // 平行判定のしきい値
+    static constexpr float kUpVectorX = 0.0f;           // 上方向ベクトルのX成分
+    static constexpr float kUpVectorY = 1.0f;           // 上方向ベクトルのY成分
+    static constexpr float kUpVectorZ = 0.0f;           // 上方向ベクトルのZ成分
+    static constexpr float kRightVectorX = 1.0f;        // 右方向ベクトルのX成分
+    static constexpr float kRightVectorY = 0.0f;        // 右方向ベクトルのY成分
+    static constexpr float kRightVectorZ = 0.0f;        // 右方向ベクトルのZ成分
 
-    ViewProjection vp_;    // ビュープロジェクション
-    WorldTransform wt_;    // ワールドトランスフォーム
+    ViewProjection vp_;    ///< ビュープロジェクション
+    WorldTransform wt_;    ///< ワールドトランスフォーム
 
-    bool isEasing_ = false;       // イージング中フラグ
-    bool isComplete_ = false;     // 完了フラグ
-    bool isHalfway_ = false;      // 中間地点到達フラグ
-    float easingTimer_ = 0.0f;    // イージングタイマー
-    float easingDuration_ = 0.8f; // イージング時間
+    bool isEasing_ = false;       ///< イージング中フラグ
+    bool isComplete_ = false;     ///< 完了フラグ
+    bool isHalfway_ = false;      ///< 中間地点到達フラグ
+    float easingTimer_ = 0.0f;    ///< イージングタイマー
+    float easingDuration_ = 0.8f; ///< イージング時間
 
-    Vector3 easingStartPos_;      // イージング開始位置
-    Quaternion easingStartRot_;   // イージング開始回転
-    Vector3 easingTargetPos_;     // イージング目標位置
-    Quaternion easingTargetRot_;  // イージング目標回転
+    Vector3 easingStartPos_;      ///< イージング開始位置
+    Quaternion easingStartRot_;   ///< イージング開始回転
+    Vector3 easingTargetPos_;     ///< イージング目標位置
+    Quaternion easingTargetRot_;  ///< イージング目標回転
 
     // プレイヤーからのオフセット（正面やや斜め上）
-    Vector3 cameraOffset_ = {3.0f, 2.5f, 8.0f}; // カメラオフセット
+    Vector3 cameraOffset_ = {3.0f, 2.5f, 8.0f}; ///< カメラオフセット
 };
+
 
 ============================================================
 File Path: Application/Camera/FollowCamera.cpp
@@ -870,11 +890,11 @@ void FollowCamera::Init() {
 }
 
 void FollowCamera::Update() {
-    // ターゲットがいなければ更新しない
+    // ターゲットが存在しない場合は処理を行わない
     if (!target_)
         return;
 
-    // カメラの移動処理
+    // カメラの入力移動処理
     Move();
 
     Vector3 targetPos = target_->GetLocalPosition();
@@ -883,24 +903,24 @@ void FollowCamera::Update() {
 
     Player *player = dynamic_cast<Player *>(target_);
 
-    // ロックオン状態の取得
+    // ロックオン状態の取得と更新
     bool isCurrentlyLockedOn = player && player->GetIsLockOn() && player->GetEnemy();
 
-    // ロックオンが外れた瞬間に肩オフセットのリセットを開始
+    // ロックオン解除時のリセット処理
     if (wasLockedOn_ && !isCurrentlyLockedOn) {
         isResettingShoulderOffset_ = true;
         shoulderResetTimer_ = kTimerReset;
         shoulderOffsetStart_ = shoulderOffsetCurrent_;
         shoulderOffsetTarget_ = {kVectorZero, kVectorZero, kVectorZero};
     } else if (!wasLockedOn_ && isCurrentlyLockedOn) {
-        // ロックオン開始時は肩オフセットを設定
+        // ロックオン開始時のオフセット設定
         shoulderOffsetTarget_.x = shoulderMaxOffset_;
     }
 
-    // ロックオン状態を保存
+    // 前フレームの状態を保存
     wasLockedOn_ = isCurrentlyLockedOn;
 
-    // Rush状態専用のカメラ制御
+    // Rush状態に応じた特殊なカメラ制御
     if (player) {
         std::string currentStateName = player->GetCurrentStateName();
         if (currentStateName == "Rush") {
@@ -910,7 +930,7 @@ void FollowCamera::Update() {
                 Vector3 enemyTargetPos = player->GetEnemy()->GetPositionBehind(rushEnemyBehindOffset_);
                 float distanceToTarget = (enemyTargetPos - currentPos).Length();
 
-                // 一定距離以上離れている場合は特殊な追従を行う
+                // ターゲットから離れている場合の追従
                 if (distanceToTarget > rushCameraResumeDistance_) {
                     if (!isRushCameraActive_) {
                         isRushCameraActive_ = true;
@@ -920,7 +940,7 @@ void FollowCamera::Update() {
 
                     Vector3 targetCameraPos = currentPos + rushCameraOffset_;
 
-                    // 距離に応じて追従速度を調整
+                    // 距離に基づいた追従速度の動的変更
                     Vector3 playerToCameraDir = worldTransform_.translation_ - currentPos;
                     float playerCameraDistance = playerToCameraDir.Length();
                     float dynamicFollowRate = rushCameraFollowRate_;
@@ -934,12 +954,12 @@ void FollowCamera::Update() {
                     rushBlendTimer_ += deltaTime;
                     float t = std::min(rushBlendTimer_ / (kNormalizedValue / dynamicFollowRate), kMaxBlendValue);
                     
-                    // 位置の補間
+                    // 位置の補間実行
                     Vector3 blendedPos = ApplyEasing(rushCameraEasingType_, rushCameraPosition_, targetCameraPos, t, kEasingMaxValue);
                     worldTransform_.translation_ = blendedPos;
                     rushCameraPosition_ = blendedPos;
 
-                    // 敵とプレイヤーの間を向くように回転を計算
+                    // 敵とプレイヤーの中間を注視する回転の計算
                     Vector3 toEnemy = (player->GetEnemy()->GetLocalPosition() - worldTransform_.translation_).Normalize();
                     Vector3 toPlayer = (currentPos - worldTransform_.translation_).Normalize();
                     Vector3 blendedDir = ApplyEasing(rushCameraEasingType_, toEnemy, toPlayer, kRushDirectionBlendRatio, kEasingMaxValue).Normalize();
@@ -957,7 +977,7 @@ void FollowCamera::Update() {
                     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
                     Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
 
-                    // 回転の補間
+                    // 回転の補間実行
                     rushRotationTimer_ += deltaTime;
                     float rotT = std::min(rushRotationTimer_ / (kNormalizedValue / (dynamicFollowRate * kRotationSpeedMultiplier)), kMaxBlendValue);
                     worldTransform_.quateRotation_ = Quaternion::Slerp(
@@ -967,14 +987,14 @@ void FollowCamera::Update() {
 
                     worldTransform_.UpdateMatrix();
 
-                    // ViewProjectionの更新
+                    // ビュープロジェクションへの反映
                     viewProjection_.translation_ = worldTransform_.translation_;
                     viewProjection_.isUseQuaternion_ = true;
                     viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
                     viewProjection_.UpdateMatrix();
                     return;
                 } else {
-                    // 通常追従への復帰準備
+                    // 通常時への復帰開始
                     if (!isResumeFromRush_) {
                         isResumeFromRush_ = true;
                         rushResumeTimer_ = kTimerReset;
@@ -985,7 +1005,7 @@ void FollowCamera::Update() {
                 }
             }
         } else {
-            // Rush状態でなければフラグリセット
+            // Rush状態でなければリセット
             if (isResumeFromRush_)
                 isResumeFromRush_ = false;
             isRushCameraActive_ = false;
@@ -994,7 +1014,7 @@ void FollowCamera::Update() {
         }
     }
 
-    // ロックオン時の肩オフセット計算
+    // 肩オフセットの計算（ロックオン時のみ）
     bool hasInput = false;
     if (isCurrentlyLockedOn) {
         Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
@@ -1003,7 +1023,7 @@ void FollowCamera::Update() {
         Vector3 toEnemyDirXZ = {toEnemyDir.x, kVectorZero, toEnemyDir.z};
         float lengthXZ = toEnemyDirXZ.Length();
 
-        // 敵の方向からyaw角を更新
+        // 敵の方向に基づいてヨー角を更新
         if (lengthXZ > kEpsilon) {
             toEnemyDirXZ = toEnemyDirXZ.Normalize();
             yaw_ = std::atan2(toEnemyDirXZ.x, toEnemyDirXZ.z);
@@ -1012,7 +1032,7 @@ void FollowCamera::Update() {
         Vector3 cameraRightDir = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
         float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
 
-        // 入力チェック
+        // 入力の確認
         if (!player->GetGamePad()->IsConnected()) {
             hasInput = Input::GetInstance()->PushKey(DIK_W) ||
                        Input::GetInstance()->PushKey(DIK_A) ||
@@ -1024,7 +1044,7 @@ void FollowCamera::Update() {
             hasInput = (leftStickX != 0.0f || leftStickY != 0.0f);
         }
 
-        // 横移動入力がある場合、カメラを左右にずらす
+        // 入力方向に応じた肩オフセットの切り替え
         if (hasInput && std::abs(lateralVelocity) > kVelocityThreshold) {
             float sign = lateralVelocity > 0.0f ? 1.0f : -1.0f;
             float newTarget = -sign * shoulderMaxOffset_;
@@ -1038,14 +1058,14 @@ void FollowCamera::Update() {
             isResettingShoulderOffset_ = false;
         }
 
-        // ロックオン時の高さオフセット更新
+        // 接地状態に応じた高さオフセットの目標値設定
         if (player->GetIsGrounded()) {
             lockOnHeightOffsetTarget_ = lockOnGroundedHeight_;
         } else {
             lockOnHeightOffsetTarget_ = lockOnAirborneHeight_;
         }
 
-        // 高さオフセットの補間
+        // 高さの補間実行
         float deltaTime = Frame::DeltaTime();
         float heightDiff = lockOnHeightOffsetTarget_ - lockOnHeightOffsetCurrent_;
         lockOnHeightOffsetCurrent_ += heightDiff * lockOnHeightLerpSpeed_ * deltaTime;
@@ -1057,7 +1077,7 @@ void FollowCamera::Update() {
 
     // 肩オフセットの補間実行
     if (isResettingShoulderOffset_) {
-        // リセットイージング
+        // 解除時の戻り演出
         shoulderResetTimer_ += Frame::DeltaTime();
         float t = std::min(shoulderResetTimer_ / shoulderResetDuration_, kMaxBlendValue);
         shoulderOffsetCurrent_ = ApplyEasing(shoulderResetEasingType_, shoulderOffsetStart_, shoulderOffsetTarget_, t, kEasingMaxValue);
@@ -1066,7 +1086,7 @@ void FollowCamera::Update() {
             isResettingShoulderOffset_ = false;
         }
     } else {
-        // 通常の追従補間
+        // 通常の追従演出
         float deltaTime = Frame::DeltaTime();
         float lerpSpeed = shoulderLerpSpeed_ * deltaTime;
 
@@ -1079,9 +1099,9 @@ void FollowCamera::Update() {
         }
     }
 
-    // カメラの最終的な位置と回転を計算
+    // 最終的な位置と回転の確定
     if (isCurrentlyLockedOn) {
-        // ロックオン時：敵の方向を向く
+        // ロックオン時：敵の方向を基準にした計算
         Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
         Vector3 toEnemyDir = enemyPos - targetPos;
         float length = toEnemyDir.Length();
@@ -1095,13 +1115,13 @@ void FollowCamera::Update() {
         Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
         worldTransform_.quateRotation_ = Quaternion::FromMatrix(rotMatrix);
 
-        // オフセットを適用
+        // 各種オフセットの反映
         cameraPos = targetPos - forward * std::abs(cameraOffset_.z);
         cameraPos += up * lockOnHeightOffsetCurrent_;
         cameraPos += right * shoulderOffsetCurrent_.x;
 
     } else {
-        // 非ロックオン時：手動回転に基づいた位置
+        // 非ロックオン時：手動ヨー角を基準にした計算
         cameraPos.x = targetPos.x + std::sin(yaw_) * cameraOffset_.z;
         cameraPos.z = targetPos.z + std::cos(yaw_) * cameraOffset_.z;
         cameraPos.y = targetPos.y + cameraOffset_.y;
@@ -1111,7 +1131,7 @@ void FollowCamera::Update() {
         cameraPos += right * shoulderOffsetCurrent_.x;
     }
 
-    // Rushからの復帰補間
+    // Rush演出からの復帰補間実行
     if (isResumeFromRush_) {
         Vector3 targetCameraPos = cameraPos;
         Quaternion targetCameraRot = worldTransform_.quateRotation_;
@@ -1138,13 +1158,13 @@ void FollowCamera::Update() {
 
     worldTransform_.UpdateMatrix();
 
-    // 最終的な行列とViewProjectionの更新
+    // 行列情報の反映と更新
     viewProjection_.translation_ = worldTransform_.translation_;
     viewProjection_.isUseQuaternion_ = true;
     viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
     viewProjection_.UpdateMatrix();
 
-    // 視錐台ロックオン判定
+    // 視錐台ロックオン判定の更新
     UpdateFrustumLockOn();
 }
 
@@ -1156,7 +1176,7 @@ void FollowCamera::imgui() {
     ImGui::DragFloat3("offsetCurrent", &shoulderOffsetCurrent_.x, 0.1f);
     ImGui::DragFloat3("offsetTarget", &shoulderOffsetTarget_.x, 0.1f);
 
-    // 高さオフセット設定UI
+    // 高さオフセット関連のUI
     ImGui::Separator();
     ImGui::Text("Lock-On Height Offset");
     ImGui::DragFloat("Current Height Offset", &lockOnHeightOffsetCurrent_, 0.1f, 0.0f, 10.0f);
@@ -1165,7 +1185,7 @@ void FollowCamera::imgui() {
     ImGui::DragFloat("Airborne Height", &lockOnAirborneHeight_, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat("Height Lerp Speed", &lockOnHeightLerpSpeed_, 0.1f, 0.1f, 20.0f);
 
-    // イージングタイプの選択UI
+    // イージング設定のUI
     ImGui::Separator();
     ImGui::Text("Easing Types");
 
@@ -1201,13 +1221,10 @@ void FollowCamera::imgui() {
 
     ImGui::DragFloat("Shoulder Reset Duration", &shoulderResetDuration_, 0.01f, 0.1f, 2.0f);
 
-    // ===================================================
-    // 視錐台ロックオン
-    // ===================================================
+    // 視錐台ロックオンのUI
     ImGui::Separator();
     ImGui::Text("【視錐台ロックオン】");
 
-    // ロックオン状態表示
     Player *player = dynamic_cast<Player *>(target_);
     if (player) {
         if (player->GetIsLockOn()) {
@@ -1222,7 +1239,7 @@ void FollowCamera::imgui() {
         target_->ReleaseLockOn();
     }
 
-    // パラメータ調整（度数表示）
+    // 各種ロックオンパラメータの調整
     const float kToDeg = 180.0f / 3.14159265f;
     const float kToRad = 3.14159265f / 180.0f;
     ImGui::DragFloat("有効距離", &lockOnRange_, 0.5f, 1.0f, 100.0f, "%.1f");
@@ -1236,7 +1253,7 @@ void FollowCamera::imgui() {
     }
     ImGui::Text("  水平全角: %.1f°  垂直全角: %.1f°", halfFovHDeg * 2.0f, halfFovVDeg * 2.0f);
 
-    // 敵との距離確認
+    // 敵との距離情報の表示
     if (player && player->GetEnemy()) {
         ImGui::Separator();
         const float dist = (player->GetEnemy()->GetPosition() - worldTransform_.translation_).Length();
@@ -1248,7 +1265,7 @@ void FollowCamera::imgui() {
 }
 
 void FollowCamera::DrawFrustum() {
-    // 視錐台デバッグ描画
+    // デバッグ描画が有効な場合に視錐台を描画
     if (drawLockOnFrustumDebug_) {
         DrawLockOnFrustum(DrawLine3D::GetInstance());
     }
@@ -1257,12 +1274,15 @@ void FollowCamera::DrawFrustum() {
 void FollowCamera::Move() {
     Player *player = dynamic_cast<Player *>(target_);
     GamePad *gamePad = player->GetGamePad();
+    
+    // ロックオン中は手動回転を受け付けない
     if (player && player->GetIsLockOn()) {
         return;
     }
+
     if (!gamePad->IsConnected()) {
         Input *input = Input::GetInstance();
-        // キーボード
+        // キーボードによる手動回転
         if (input->PushKey(DIK_LEFT)) {
             yaw_ -= manualYawSpeed_;
         }
@@ -1270,7 +1290,7 @@ void FollowCamera::Move() {
             yaw_ += manualYawSpeed_;
         }
     } else {
-        // ゲームパッド - 右スティック
+        // ゲームパッドによる手動回転
         if (player) {
             const float stickSensitivity = 0.05f;
             yaw_ += gamePad->GetRightStickX() * stickSensitivity;
@@ -1278,41 +1298,35 @@ void FollowCamera::Move() {
     }
 }
 
-// ============================================================
-// 視錐台ロックオン（カメラ基準）
-// ============================================================
-
 bool FollowCamera::IsPointInLockOnFrustum(const Vector3 &point) const {
-    // カメラ位置を原点に
     const Vector3 origin = worldTransform_.translation_;
     Vector3 toTarget = point - origin;
 
-    // 距離チェック
+    // 距離による判定
     float distance = toTarget.Length();
     if (distance < kEpsilon || distance > lockOnRange_) {
         return false;
     }
 
-    // カメラのローカル軸をクォータニオンから取得
-    // worldTransform_ はワールド行列のため、Z列がそのままカメラの前方向になる
+    // カメラのローカル座標系を取得
     Matrix4x4 rotMat = QuaternionToMatrix4x4(worldTransform_.quateRotation_);
     const Vector3 forward = {rotMat.m[2][0], rotMat.m[2][1], rotMat.m[2][2]};
     const Vector3 right = {rotMat.m[0][0], rotMat.m[0][1], rotMat.m[0][2]};
     const Vector3 up = {rotMat.m[1][0], rotMat.m[1][1], rotMat.m[1][2]};
 
-    // 前方成分（負 = カメラの背後）
+    // 前方判定（カメラの背面にあれば除外）
     float dotF = toTarget.Dot(forward);
     if (dotF <= kVectorZero) {
         return false;
     }
 
-    // 水平角判定
+    // 水平角による判定
     float tanH = toTarget.Dot(right) / dotF;
     if (std::abs(tanH) > std::tan(lockOnHalfFovH_)) {
         return false;
     }
 
-    // 垂直角判定
+    // 垂直角による判定
     float tanV = toTarget.Dot(up) / dotF;
     if (std::abs(tanV) > std::tan(lockOnHalfFovV_)) {
         return false;
@@ -1332,12 +1346,12 @@ void FollowCamera::UpdateFrustumLockOn() {
         return;
     }
 
-    // 既にロックオン済みなら再判定しない
+    // 既にロックオンしている場合はスキップ
     if (player->GetIsLockOn()) {
         return;
     }
 
-    // 敵の位置が視錐台内に入っているか判定
+    // 敵が視錐台内に入った瞬間にロックオンを開始
     if (IsPointInLockOnFrustum(enemy->GetPosition())) {
         player->SetIsLockOn(true);
     }
@@ -1353,19 +1367,19 @@ void FollowCamera::DrawLockOnFrustum(DrawLine3D *drawLine3D) const {
 
     const Vector3 origin = worldTransform_.translation_;
 
-    // カメラローカル軸
-    // worldTransform_ はワールド行列のため、Z列がそのままカメラの前方向になる
+    // カメラのローカル軸情報を取得
     Matrix4x4 rotMat = QuaternionToMatrix4x4(worldTransform_.quateRotation_);
     const Vector3 forward = {rotMat.m[2][0], rotMat.m[2][1], rotMat.m[2][2]};
     const Vector3 right = {rotMat.m[0][0], rotMat.m[0][1], rotMat.m[0][2]};
     const Vector3 up = {rotMat.m[1][0], rotMat.m[1][1], rotMat.m[1][2]};
 
+    // ロックオン状態に応じた描画色
     const Vector4 color = isLockedOn ? Vector4{1.0f, 0.0f, 0.0f, 1.0f}
                                      : Vector4{1.0f, 1.0f, 1.0f, 0.8f};
     const Vector4 axisColor = isLockedOn ? Vector4{1.0f, 0.0f, 0.0f, 0.5f}
                                          : Vector4{1.0f, 1.0f, 1.0f, 0.4f};
 
-    // Near / Far 面コーナー計算
+    // 角の座標を計算するラムダ式
     auto CalcCorners = [&](float depth, std::array<Vector3, 4> &corners) {
         float halfH = depth * std::tan(lockOnHalfFovH_);
         float halfV = depth * std::tan(lockOnHalfFovV_);
@@ -1380,6 +1394,7 @@ void FollowCamera::DrawLockOnFrustum(DrawLine3D *drawLine3D) const {
     CalcCorners(kFrustumDebugNear, nearCorners);
     CalcCorners(lockOnRange_, farCorners);
 
+    // 面の輪郭を描画
     for (int i = 0; i < 4; ++i) {
         drawLine3D->SetPoints(nearCorners[i], nearCorners[(i + 1) % 4], color);
     }
@@ -1390,8 +1405,10 @@ void FollowCamera::DrawLockOnFrustum(DrawLine3D *drawLine3D) const {
         drawLine3D->SetPoints(nearCorners[i], farCorners[i], color);
     }
 
+    // 中心軸の描画
     drawLine3D->SetPoints(origin, origin + forward * lockOnRange_, axisColor);
 }
+
 
 ============================================================
 File Path: Application/Camera/FollowCamera.h
@@ -1401,12 +1418,12 @@ File Path: Application/Camera/FollowCamera.h
 #include "Easing.h"
 #include "Transform/WorldTransform.h"
 
+class Player;
+class DrawLine3D;
+
 /// <summary>
 /// ターゲットを追従するカメラクラス
 /// </summary>
-
-class Player;
-class DrawLine3D;
 class FollowCamera {
   public:
     /// ===================================================
@@ -1419,12 +1436,12 @@ class FollowCamera {
     void Init();
 
     /// <summary>
-    /// 更新
+    /// 更新処理
     /// </summary>
     void Update();
 
     /// <summary>
-    /// デバッグ関数
+    /// デバッグ用のImGui表示
     /// </summary>
     void imgui();
 
@@ -1435,25 +1452,54 @@ class FollowCamera {
 
     /// <summary>
     /// 視錐台ロックオンの更新処理
-    /// Update内から呼ぶ。視錐台内に敵が入ったら自動ロックオン
+    /// 視錐台内に敵が入った際、自動的にロックオンを試みる
     /// </summary>
     void UpdateFrustumLockOn();
 
     /// <summary>
-    /// 視錐台のデバッグ描画（DrawLine3Dで視錐台形状を可視化）
-    /// DrawLine3D::Draw()より前に呼ぶこと
+    /// 視錐台のデバッグ描画
     /// </summary>
-    /// <param name="drawLine3D">DrawLine3Dのインスタンス</param>
+    /// <param name="drawLine3D">ライン描画クラスのポインタ</param>
     void DrawLockOnFrustum(DrawLine3D *drawLine3D) const;
 
-    /// <summary>
+    /// ===================================================
     /// Getter
+    /// ===================================================
+
+    /// <summary>
+    /// ヨー角を取得
     /// </summary>
+    /// <returns>float: ヨー角</returns>
     float GetYaw() { return yaw_; }
+
+    /// <summary>
+    /// ビュープロジェクションを取得
+    /// </summary>
+    /// <returns>ViewProjection&: ビュープロジェクション参照</returns>
     ViewProjection &GetViewProjection() { return viewProjection_; }
+
+    /// <summary>
+    /// ロックオン有効距離を取得
+    /// </summary>
+    /// <returns>float: ロックオン距離</returns>
     float GetLockOnRange() const { return lockOnRange_; }
+
+    /// <summary>
+    /// ロックオン水平半角を取得
+    /// </summary>
+    /// <returns>float: 水平半角（ラジアン）</returns>
     float GetLockOnHalfFovH() const { return lockOnHalfFovH_; }
+
+    /// <summary>
+    /// ロックオン垂直半角を取得
+    /// </summary>
+    /// <returns>float: 垂直半角（ラジアン）</returns>
     float GetLockOnHalfFovV() const { return lockOnHalfFovV_; }
+
+    /// <summary>
+    /// 視錐台デバッグ描画フラグを取得
+    /// </summary>
+    /// <returns>bool: 描画フラグ</returns>
     bool GetDrawLockOnFrustumDebug() const { return drawLockOnFrustumDebug_; }
 
     /// ===================================================
@@ -1461,15 +1507,41 @@ class FollowCamera {
     /// ===================================================
 
     /// <summary>
-    /// Setter
+    /// 追従対象を設定
     /// </summary>
+    /// <param name="target">ターゲットプレイヤーのポインタ</param>
     void SetPlayer(Player *target) { target_ = target; }
+
+    /// <summary>
+    /// カメラの視野角を設定
+    /// </summary>
+    /// <param name="fov">視野角（度数）</param>
     void SetCameraFov(float fov) {
         viewProjection_.fovAngleY = fov * std::numbers::pi_v<float> / 180.0f;
     }
+
+    /// <summary>
+    /// ロックオン有効距離を設定
+    /// </summary>
+    /// <param name="range">有効距離</param>
     void SetLockOnRange(float range) { lockOnRange_ = range; }
+
+    /// <summary>
+    /// ロックオン水平半角を設定
+    /// </summary>
+    /// <param name="rad">水平半角（ラジアン）</param>
     void SetLockOnHalfFovH(float rad) { lockOnHalfFovH_ = rad; }
+
+    /// <summary>
+    /// ロックオン垂直半角を設定
+    /// </summary>
+    /// <param name="rad">垂直半角（ラジアン）</param>
     void SetLockOnHalfFovV(float rad) { lockOnHalfFovV_ = rad; }
+
+    /// <summary>
+    /// 視錐台デバッグ描画フラグを設定
+    /// </summary>
+    /// <param name="flag">描画フラグ</param>
     void SetDrawLockOnFrustumDebug(bool flag) { drawLockOnFrustumDebug_ = flag; }
 
   private:
@@ -1478,15 +1550,15 @@ class FollowCamera {
     /// ===================================================
 
     /// <summary>
-    /// カメラの動きの関数
+    /// カメラの移動計算
     /// </summary>
     void Move();
 
     /// <summary>
-    /// 指定した点がカメラの視錐台内にあるか判定
+    /// 指定した点がロックオン視錐台内にあるか判定
     /// </summary>
-    /// <param name="point">判定するワールド座標</param>
-    /// <returns>true: 視錐台内, false: 視錐台外</returns>
+    /// <param name="point">判定する座標</param>
+    /// <returns>bool: 範囲内であればtrue</returns>
     bool IsPointInLockOnFrustum(const Vector3 &point) const;
 
   private:
@@ -1495,120 +1567,105 @@ class FollowCamera {
     /// ===================================================
 
     // カメラ設定
-    static constexpr float kFarZ = 1100.0f;
+    static constexpr float kFarZ = 1100.0f; // 描画距離の遠面
 
     // 閾値定数
-    static constexpr float kEpsilon = 0.001f;
-    static constexpr float kRotationEpsilon = 0.01f;
-    static constexpr float kParallelThreshold = 0.999f;
-    static constexpr float kVelocityThreshold = 0.1f;
-    static constexpr float kShoulderTargetThreshold = 0.1f;
-    static constexpr float kShoulderDiffThreshold = 0.01f;
-    static constexpr float kHeightDiffThreshold = 0.01f;
+    static constexpr float kEpsilon = 0.001f;               // 微小値
+    static constexpr float kRotationEpsilon = 0.01f;        // 回転誤差許容値
+    static constexpr float kParallelThreshold = 0.999f;     // 平行判定しきい値
+    static constexpr float kVelocityThreshold = 0.1f;       // 速度判定しきい値
+    static constexpr float kShoulderTargetThreshold = 0.1f; // 肩オフセット目標到達しきい値
+    static constexpr float kShoulderDiffThreshold = 0.01f;  // 肩オフセット誤差許容値
+    static constexpr float kHeightDiffThreshold = 0.01f;    // 高さ誤差許容値
 
     // ベクトル定数
-    static constexpr float kVectorZero = 0.0f;
-    static constexpr float kUpVectorY = 1.0f;
-    static constexpr float kRightVectorX = 1.0f;
+    static constexpr float kVectorZero = 0.0f; // ゼロ値
+    static constexpr float kUpVectorY = 1.0f;   // Y軸上方向
+    static constexpr float kRightVectorX = 1.0f; // X軸右方向
 
     // 初期値
-    static constexpr float kInitialYaw = 0.0f;
-    static constexpr float kTimerReset = 0.0f;
+    static constexpr float kInitialYaw = 0.0f; // 初期ヨー角
+    static constexpr float kTimerReset = 0.0f; // タイマーリセット値
 
     // 正規化・クランプ値
-    static constexpr float kNormalizedValue = 1.0f;
-    static constexpr float kMaxBlendValue = 1.0f;
-    static constexpr float kMaxFollowRate = 1.0f;
-    static constexpr float kMinClamp = -1.0f;
-    static constexpr float kMaxClamp = 1.0f;
-    static constexpr float kEasingMaxValue = 1.0f;
+    static constexpr float kNormalizedValue = 1.0f; // 正規化基準値
+    static constexpr float kMaxBlendValue = 1.0f;   // 最大ブレンド値
+    static constexpr float kMaxFollowRate = 1.0f;   // 最大追従率
+    static constexpr float kMinClamp = -1.0f;       // 最小クランプ値
+    static constexpr float kMaxClamp = 1.0f;        // 最大クランプ値
+    static constexpr float kEasingMaxValue = 1.0f;  // イージング最大値
 
     // Rush関連の倍率
-    static constexpr float kHighDistSpeedMultiplier = 3.0f;
-    static constexpr float kMidDistSpeedMultiplier = 2.0f;
-    static constexpr float kRotationSpeedMultiplier = 0.5f;
-    static constexpr float kRushDirectionBlendRatio = 0.3f;
+    static constexpr float kHighDistSpeedMultiplier = 3.0f;  // 高速追従倍率
+    static constexpr float kMidDistSpeedMultiplier = 2.0f;   // 中速追従倍率
+    static constexpr float kRotationSpeedMultiplier = 0.5f;  // 回転速度倍率
+    static constexpr float kRushDirectionBlendRatio = 0.3f; // Rush方向ブレンド率
 
-    float manualYawSpeed_ = 0.04f;               // 手動回転速度
-    float rushEnemyBehindOffset_ = 3.0f;         // 敵の背後にとる距離
-    float rushHighDistThreshold_ = 35.0f;        // Rushカメラが高速追従する距離(遠)
-    float rushMidDistThreshold_ = 25.0f;         // Rushカメラが中速追従する距離(中)
-    float rushPosArrivalThreshold_ = 0.5f;       // Rush復帰時の完了判定距離
-    float rushRotationArrivalThreshold_ = 0.01f; // Rush復帰時の完了判定回転差
+    float manualYawSpeed_ = 0.04f;               ///< 手動回転速度
+    float rushEnemyBehindOffset_ = 3.0f;         ///< 敵の背後にとる距離
+    float rushHighDistThreshold_ = 35.0f;        ///< 高速追従に切り替わる距離
+    float rushMidDistThreshold_ = 25.0f;         ///< 中速追従に切り替わる距離
+    float rushPosArrivalThreshold_ = 0.5f;       ///< 到着判定しきい値（位置）
+    float rushRotationArrivalThreshold_ = 0.01f; ///< 到着判定しきい値（回転）
 
-    // ビュープロジェクション
-    ViewProjection viewProjection_; // ビュープロジェクション
+    ViewProjection viewProjection_; ///< ビュープロジェクション
+    WorldTransform worldTransform_; ///< ワールドトランスフォーム
 
-    WorldTransform worldTransform_; // ワールドトランスフォーム
+    Player *target_ = nullptr; ///< 追従対象のプレイヤー
 
-    // 追従対象
-    Player *target_ = nullptr; // 追従対象のプレイヤー
+    Quaternion rushCameraRotation_; ///< Rush中の固定回転
 
-    Quaternion rushCameraRotation_; // Rush中に固定されていたカメラ回転
+    Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f};        ///< ベースのカメラオフセット
+    Vector3 shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f};  ///< 肩オフセット目標値
+    Vector3 shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f}; ///< 現在の肩オフセット
+    Vector3 shoulderOffsetStart_ = {0.0f, 0.0f, 0.0f};   ///< 補間開始時の肩オフセット
+    Vector3 rushCameraPosition_;                         ///< Rush中の固定位置
+    Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f};    ///< Rush中のカメラオフセット
 
-    Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f};        // ベースのカメラオフセット
-    Vector3 shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f};  // ターゲット肩オフセット
-    Vector3 shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f}; // 現在の補間値
-    Vector3 shoulderOffsetStart_ = {0.0f, 0.0f, 0.0f};   // リセット開始時の値
-    Vector3 rushCameraPosition_;                         // Rush中に固定されていたカメラ位置
-    Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f};    // Rush中のカメラオフセット
+    float yaw_{};                            ///< 現在のヨー角
+    float shoulderMaxOffset_ = 12.5f;        ///< 肩の最大ズレ幅
+    float shoulderLerpSpeed_ = 10.0f;        ///< 肩オフセットの補間速度
+    float rushCameraResumeDistance_ = 50.0f; ///< 追従再開距離
+    float rushResumeBlendSpeed_ = 8.0f;      ///< Rush復帰時のブレンド速度
+    float rushCameraFollowRate_ = 0.3f;      ///< Rush中の追従率
+    bool isResumeFromRush_ = false;          ///< Rush復帰中フラグ
+    bool isRushCameraActive_ = false;        ///< Rushカメラ有効フラグ
 
-    float yaw_{};                            // ヨー角
-    float shoulderMaxOffset_ = 12.5f;        // 肩のズレ最大距離(左右)
-    float shoulderLerpSpeed_ = 10.0f;        // 補間速度(大きいほど速く追従)
-    float rushCameraResumeDistance_ = 50.0f; // この距離以下になったらカメラ追従を再開
-    float rushResumeBlendSpeed_ = 8.0f;      // Rush復帰時の補間速度(通常より高速)
-    float rushCameraFollowRate_ = 0.3f;      // Rush中の追従率(0.0-1.0)
-    bool isResumeFromRush_ = false;          // Rush状態からの復帰中かどうか
-    bool isRushCameraActive_ = false;        // Rushカメラがアクティブかどうか
+    bool wasLockedOn_ = false; ///< 前フレームのロックオン状態
 
-    // ロックオン状態管理
-    bool wasLockedOn_ = false; // 前フレームのロックオン状態
+    bool isResettingShoulderOffset_ = false; ///< 肩オフセットリセット中フラグ
+    float shoulderResetTimer_ = 0.0f;        ///< 肩リセット用タイマー
+    float shoulderResetDuration_ = 0.5f;     ///< 肩リセット時間
 
-    // 肩オフセットリセット用
-    bool isResettingShoulderOffset_ = false; // 肩オフセットリセット中かどうか
-    float shoulderResetTimer_ = 0.0f;        // リセット用タイマー
-    float shoulderResetDuration_ = 0.5f;     // リセットにかける時間(秒)
+    float lockOnHeightOffsetCurrent_ = 5.0f; ///< 現在の高さオフセット
+    float lockOnHeightOffsetTarget_ = 5.0f;  ///< 目標の高さオフセット
+    float lockOnGroundedHeight_ = 5.0f;      ///< 接地時の高さオフセット
+    float lockOnAirborneHeight_ = 0.0f;      ///< 空中時の高さオフセット
+    float lockOnHeightLerpSpeed_ = 5.0f;     ///< 高さオフセット補間速度
 
-    // ロックオン時の高さオフセット用
-    float lockOnHeightOffsetCurrent_ = 5.0f; // 現在の高さオフセット
-    float lockOnHeightOffsetTarget_ = 5.0f;  // 目標の高さオフセット
-    float lockOnGroundedHeight_ = 5.0f;      // 地上時の高さオフセット
-    float lockOnAirborneHeight_ = 0.0f;      // 空中時の高さオフセット
-    float lockOnHeightLerpSpeed_ = 5.0f;     // 高さオフセットの補間速度
+    float shoulderLerpTimer_ = 0.0f;      ///< 肩補間用タイマー
+    float shoulderLerpStartValue_ = 0.0f; ///< 肩補間開始値
+    float rushBlendTimer_ = 0.0f;         ///< Rushブレンド用タイマー
+    float rushRotationTimer_ = 0.0f;      ///< Rush回転補間用タイマー
+    float rushResumeTimer_ = 0.0f;        ///< Rush復帰補間用タイマー
 
-    // イージングタイマー
-    float shoulderLerpTimer_ = 0.0f;      // 肩オフセット補間用タイマー
-    float shoulderLerpStartValue_ = 0.0f; // 肩オフセット補間開始時の値
-    float rushBlendTimer_ = 0.0f;         // Rush中の位置補間用タイマー
-    float rushRotationTimer_ = 0.0f;      // Rush中の回転補間用タイマー
-    float rushResumeTimer_ = 0.0f;        // Rush復帰補間用タイマー
+    EasingType shoulderEasingType_ = EasingType::InQuad;        ///< 肩補間のイージングタイプ
+    EasingType shoulderResetEasingType_ = EasingType::OutCubic; ///< 肩リセットのイージングタイプ
+    EasingType rushCameraEasingType_ = EasingType::InQuad;      ///< Rushカメラのイージングタイプ
+    EasingType rushResumeEasingType_ = EasingType::OutCubic;    ///< Rush復帰のイージングタイプ
 
-    // イージングタイプ設定
-    EasingType shoulderEasingType_ = EasingType::InQuad;        // 肩オフセットのイージング
-    EasingType shoulderResetEasingType_ = EasingType::OutCubic; // 肩オフセットリセットのイージング
-    EasingType rushCameraEasingType_ = EasingType::InQuad;      // Rushカメラのイージング
-    EasingType rushResumeEasingType_ = EasingType::OutCubic;    // Rush復帰のイージング
-
-    // ===================================================
     // 視錐台ロックオン関連
-    // ===================================================
+    static constexpr float kDefaultLockOnRange = 150.0f;                            ///< デフォルトのロックオン射程
+    static constexpr float kDefaultLockOnHalfFovH = 36.5f * (3.14159265f / 180.0f); ///< 水平視野角の半分
+    static constexpr float kDefaultLockOnHalfFovV = 23.0f * (3.14159265f / 180.0f); ///< 垂直視野角の半分
+    static constexpr float kFrustumDebugNear = 1.0f;                                 ///< デバッグ描画の近面距離
 
-    // デフォルト値定数
-    static constexpr float kDefaultLockOnRange = 150.0f;
-    static constexpr float kDefaultLockOnHalfFovH = 36.5f * (3.14159265f / 180.0f); // 水平半角 30°
-    static constexpr float kDefaultLockOnHalfFovV = 23.0f * (3.14159265f / 180.0f); // 垂直半角 25°
-    static constexpr float kFrustumDebugNear = 1.0f;                                // デバッグ描画ニア面距離
-
-    /// ロックオン有効距離（奥行き）
-    float lockOnRange_ = kDefaultLockOnRange; // ロックオン有効距離
-    /// ロックオン水平半角（ラジアン）
-    float lockOnHalfFovH_ = kDefaultLockOnHalfFovH; // ロックオン水平半角
-    /// ロックオン垂直半角（ラジアン）
-    float lockOnHalfFovV_ = kDefaultLockOnHalfFovV; // ロックオン垂直半角
-    /// デバッグ描画フラグ
-    bool drawLockOnFrustumDebug_ = false; // デバッグ描画フラグ
+    float lockOnRange_ = kDefaultLockOnRange;       ///< ロックオン有効距離
+    float lockOnHalfFovH_ = kDefaultLockOnHalfFovH; ///< ロックオン水平半角
+    float lockOnHalfFovV_ = kDefaultLockOnHalfFovV; ///< ロックオン垂直半角
+    bool drawLockOnFrustumDebug_ = false;           ///< 視錐台デバッグ描画フラグ
 };
+
 
 ============================================================
 File Path: Application/Camera/StartCamera.cpp
@@ -1625,17 +1682,15 @@ void StartCamera::Init() {
     vp_.Initialize("");
     wt_.Initialize();
 
-    // 初期角度を設定
+    // 初期角度の設定と初期座標の算出
     angle_ = degreesToRadians(kInitialAngleDegrees);
-
-    // 初期位置を計算
     wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
     wt_.translation_.y = kInitialHeight;
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
 
     wt_.UpdateMatrix();
 
-    // 入力の初期化
+    // 入力システムの初期化
     gamePad_ = std::make_unique<GamePad>();
     gamePad_->Init(0);
     input_ = Input::GetInstance();
@@ -1644,58 +1699,56 @@ void StartCamera::Init() {
 }
 
 bool StartCamera::CheckSkipInput() {
-    // 入力がなければ終了
+    // 入力インスタンスの存在確認
     if (!input_ || !gamePad_) {
         return false;
     }
 
     if (!gamePad_->IsConnected()) {
-        // キーボード操作：スペースキーでスキップ
+        // キーボード：スペースキーでスキップ
         return input_->TriggerKey(DIK_SPACE);
     } else {
-        // コントローラー操作：Aボタンでスキップ
+        // ゲームパッド：Aボタンでスキップ
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
     }
 }
 
 void StartCamera::Update() {
-    // ゲームパッドの更新
+    // ゲームパッド情報の更新
     if (gamePad_) {
         gamePad_->Update();
     }
 
-    // スキップ入力チェック
+    // スキップ入力の監視（未完了時のみ）
     if (CheckSkipInput() && !isComplete_) {
         isSkipping_ = true;
     }
 
-    // イージング演出の更新
+    // イージング演出の更新処理
     if (isEasing_) {
-        // スキップ中はタイマーを加速
+        // スキップ中は演出速度を加速させる
         float deltaTime = Frame::DeltaTime();
         if (isSkipping_) {
             deltaTime *= kSkipSpeedMultiplier;
         }
         easingTimer_ += deltaTime;
 
-        // 各フェーズに応じたイージング処理
+        // フェーズに応じたイージング処理の分岐
         switch (easingPhase_) {
-        case 1: // 1回目のイージング
+        case 1: // 第1フェーズ：位置と回転のイージング
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
-            // 位置と回転のイージング
             wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, kEasingMaxValue);
             wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot_, t, kEasingMaxValue);
 
             wt_.UpdateMatrix();
 
-            // ViewProjectionを更新
+            // ビュープロジェクションへの反映
             vp_.translation_ = wt_.translation_;
             vp_.eulerRotation_ = wt_.eulerRotation_;
             vp_.UpdateMatrix();
 
-            // 完了チェック
             if (t >= kMaxBlendValue) {
                 easingPhase_ = kPhaseWait1;
                 easingTimer_ = kTimerReset;
@@ -1704,7 +1757,7 @@ void StartCamera::Update() {
             break;
         }
 
-        case 2: // 1回目完了後の待機
+        case 2: // 第2フェーズ：待機
         {
             if (easingTimer_ >= waitDuration_) {
                 easingPhase_ = kPhaseEasing2;
@@ -1716,7 +1769,7 @@ void StartCamera::Update() {
             break;
         }
 
-        case 3: // 2回目のイージング
+        case 3: // 第3フェーズ：第2目標へのイージング
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
@@ -1737,7 +1790,7 @@ void StartCamera::Update() {
             break;
         }
 
-        case 4: // 2回目完了後の待機
+        case 4: // 第4フェーズ：待機
         {
             if (easingTimer_ >= waitDuration_) {
                 easingPhase_ = kPhaseEasing3;
@@ -1749,7 +1802,7 @@ void StartCamera::Update() {
             break;
         }
 
-        case 5: // 3回目のイージング（最終目標へ）
+        case 5: // 第5フェーズ：最終目標（現在のカメラ位置）へのイージング
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
 
@@ -1770,7 +1823,7 @@ void StartCamera::Update() {
             break;
         }
 
-        case 6: // 3回目完了後の待機
+        case 6: // 第6フェーズ：最終待機
         {
             if (easingTimer_ >= finalWaitDuration_) {
                 easingPhase_ = kPhaseComplete;
@@ -1785,12 +1838,12 @@ void StartCamera::Update() {
         return;
     }
 
-    // 通常の回転移動（イージング開始前）
+    // 通常時の回転移動処理
     wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
     wt_.translation_.y = kInitialHeight;
     wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
 
-    // 中心点を向くように回転を計算
+    // 常に中心点（ターゲット）を注視するように回転を算出
     Vector3 toCenter = (centerPos_ - wt_.translation_).Normalize();
     float yaw = std::atan2(toCenter.x, toCenter.z);
     float horizontalDistance = std::sqrt(toCenter.x * toCenter.x + toCenter.z * toCenter.z);
@@ -1799,21 +1852,21 @@ void StartCamera::Update() {
     wt_.eulerRotation_ = {pitch, yaw, kZeroRotation};
     wt_.UpdateMatrix();
 
-    // ViewProjectionの更新
+    // トランスフォーム情報の反映
     vp_.translation_ = wt_.translation_;
     vp_.eulerRotation_ = wt_.eulerRotation_;
     vp_.UpdateMatrix();
 }
 
 void StartCamera::Move() {
-    // 角度を更新
+    // 時間経過による角度の更新
     float deltaTime = Frame::DeltaTime();
     if (isSkipping_) {
         deltaTime *= kSkipSpeedMultiplier;
     }
     angle_ += speed_ * deltaTime;
 
-    // 一定角度を超えたらイージングフェーズへ移行
+    // 特定の角度に達した際、イージング演出フェーズへ移行
     if (angle_ > kHalfPi && !isEasing_) {
         isEasing_ = true;
         easingPhase_ = kPhaseEasing1;
@@ -1834,6 +1887,7 @@ void StartCamera::imgui() {
     ImGui::End();
 #endif // USE_IMGUI
 }
+
 
 ============================================================
 File Path: Application/Camera/StartCamera.h
@@ -1861,29 +1915,44 @@ class StartCamera {
     void Init();
 
     /// <summary>
-    /// 更新
+    /// 更新処理
     /// </summary>
     void Update();
 
     /// <summary>
-    /// デバッグ関数
+    /// デバッグ用のImGui表示
     /// </summary>
     void imgui();
 
     /// <summary>
-    /// カメラの動きの関数
+    /// カメラの入力移動処理
     /// </summary>
     void Move();
 
-    /// <summary>
+    /// ===================================================
     /// Getter
-    /// </summary>
-    ViewProjection &GetViewProjection() { return vp_; }
-    bool IsComplete() const { return isComplete_; }
+    /// ===================================================
 
     /// <summary>
-    /// Setter
+    /// ビュープロジェクションを取得
     /// </summary>
+    /// <returns>ViewProjection&: ビュープロジェクション参照</returns>
+    ViewProjection &GetViewProjection() { return vp_; }
+
+    /// <summary>
+    /// 演出完了フラグを取得
+    /// </summary>
+    /// <returns>bool: 完了していればtrue</returns>
+    bool IsComplete() const { return isComplete_; }
+
+    /// ===================================================
+    /// Setter
+    /// ===================================================
+
+    /// <summary>
+    /// 目標となるビュープロジェクションを設定
+    /// </summary>
+    /// <param name="vp">コピー元のビュープロジェクション</param>
     void SetTargetVp(ViewProjection &vp) {
         targetVp_.matWorld_ = vp.matWorld_;
         targetVp_.matView_ = vp.matView_;
@@ -1898,8 +1967,9 @@ class StartCamera {
     /// ===================================================
 
     /// <summary>
-    /// スキップ入力チェック
+    /// スキップ入力の確認
     /// </summary>
+    /// <returns>bool: 入力があればtrue</returns>
     bool CheckSkipInput();
 
   private:
@@ -1908,60 +1978,58 @@ class StartCamera {
     /// ===================================================
 
     // カメラ設定
-    static constexpr float kFarZ = 1100.0f;
-    static constexpr float kInitialHeight = 42.0f;
-    static constexpr float kInitialAngleDegrees = -90.0f;
+    static constexpr float kFarZ = 1100.0f;               ///< 遠面距離
+    static constexpr float kInitialHeight = 42.0f;        ///< 初期高さ
+    static constexpr float kInitialAngleDegrees = -90.0f; ///< 初期角度
 
     // 数値定数
-    static constexpr float kTimerReset = 0.0f;
-    static constexpr float kMaxBlendValue = 1.0f;
-    static constexpr float kEasingMaxValue = 1.0f;
-    static constexpr float kZeroRotation = 0.0f;
-    static constexpr float kHalfPi = 0.5f * std::numbers::pi_v<float>;
+    static constexpr float kTimerReset = 0.0f;                        ///< タイマーリセット値
+    static constexpr float kMaxBlendValue = 1.0f;                     ///< 最大ブレンド値
+    static constexpr float kEasingMaxValue = 1.0f;                    ///< イージング最大値
+    static constexpr float kZeroRotation = 0.0f;                      ///< 回転ゼロ値
+    static constexpr float kHalfPi = 0.5f * std::numbers::pi_v<float>; ///< PI/2
 
     // フェーズ定数
-    static constexpr int kPhaseEasing1 = 1;
-    static constexpr int kPhaseWait1 = 2;
-    static constexpr int kPhaseEasing2 = 3;
-    static constexpr int kPhaseWait2 = 4;
-    static constexpr int kPhaseEasing3 = 5;
-    static constexpr int kPhaseWait3 = 6;
-    static constexpr int kPhaseComplete = 7;
+    static constexpr int kPhaseEasing1 = 1;  ///< フェーズ1: イージング1
+    static constexpr int kPhaseWait1 = 2;    ///< フェーズ2: 待機1
+    static constexpr int kPhaseEasing2 = 3;  ///< フェーズ3: イージング2
+    static constexpr int kPhaseWait2 = 4;    ///< フェーズ4: 待機2
+    static constexpr int kPhaseEasing3 = 5;  ///< フェーズ5: イージング3
+    static constexpr int kPhaseWait3 = 6;    ///< フェーズ6: 待機3
+    static constexpr int kPhaseComplete = 7; ///< フェーズ7: 完了
 
     // スキップ時のスピード倍率
-    static constexpr float kSkipSpeedMultiplier = 5.0f;
+    static constexpr float kSkipSpeedMultiplier = 5.0f; ///< スキップ倍率
 
-    // ビュープロジェクション
-    ViewProjection vp_;       // ビュープロジェクション
-    ViewProjection targetVp_; // 目標のビュープロジェクション
-    WorldTransform wt_;       // ワールドトランスフォーム
+    ViewProjection vp_;       ///< ビュープロジェクション
+    ViewProjection targetVp_; ///< 目標ビュープロジェクション
+    WorldTransform wt_;       ///< ワールドトランスフォーム
 
-    float speed_ = 1.5f;   // 回転速度
-    float angle_ = 0.0f;   // 現在の角度
-    float radius_ = 60.0f; // 回転半径
-    Vector3 centerPos_ = {0.0f, 0.0f, -21.0f}; // 中心座標
+    float speed_ = 1.5f;   ///< 回転速度
+    float angle_ = 0.0f;   ///< 現在の角度
+    float radius_ = 60.0f; ///< 回転半径
+    Vector3 centerPos_ = {0.0f, 0.0f, -21.0f}; ///< 中心座標
 
-    bool isEasing_ = false;           // イージング中フラグ
-    bool isComplete_ = false;         // 完了フラグ
-    float easingTimer_ = 0.0f;        // イージングタイマー
-    float easingDuration_ = 2.0f;     // イージング時間
-    float finalWaitDuration_ = 1.0f;  // 最終待機時間
-    Vector3 easingStartPos_;          // イージング開始位置
-    Vector3 easingStartRot_;          // イージング開始回転
-    Vector3 easingTargetPos_ = {-6.0f, 1.8f, -7.40f}; // イージング目標位置1
-    Vector3 easingTargetRot_ = {degreesToRadians(8.6f), degreesToRadians(40.0f), degreesToRadians(0.0f)}; // イージング目標回転1
-    int easingPhase_ = 0;             // イージングフェーズ
-    float waitDuration_ = 1.0f;       // 待機時間
-    Vector3 easingTargetPos2_ = {5.0f, 1.8f, -33.0f}; // イージング目標位置2
-    Vector3 easingTargetRot2_ = {degreesToRadians(9.6f), degreesToRadians(-149.0f), degreesToRadians(0.0f)}; // イージング目標回転2
+    bool isEasing_ = false;           ///< イージング中フラグ
+    bool isComplete_ = false;         ///< 完了フラグ
+    float easingTimer_ = 0.0f;        ///< イージングタイマー
+    float easingDuration_ = 2.0f;     ///< イージング時間
+    float finalWaitDuration_ = 1.0f;  ///< 最終待機時間
+    Vector3 easingStartPos_;          ///< イージング開始位置
+    Vector3 easingStartRot_;          ///< イージング開始回転
+    Vector3 easingTargetPos_ = {-6.0f, 1.8f, -7.40f}; ///< 目標位置1
+    Vector3 easingTargetRot_ = {degreesToRadians(8.6f), degreesToRadians(40.0f), degreesToRadians(0.0f)}; ///< 目標回転1
+    int easingPhase_ = 0;             ///< 現在のイージングフェーズ
+    float waitDuration_ = 1.0f;       ///< フェーズ間の待機時間
+    Vector3 easingTargetPos2_ = {5.0f, 1.8f, -33.0f}; ///< 目標位置2
+    Vector3 easingTargetRot2_ = {degreesToRadians(9.6f), degreesToRadians(-149.0f), degreesToRadians(0.0f)}; ///< 目標回転2
 
-    // 入力関連
-    Input *input_ = nullptr; // 入力
-    std::unique_ptr<GamePad> gamePad_ = nullptr; // ゲームパッド
+    Input *input_ = nullptr; ///< 入力クラスのポインタ
+    std::unique_ptr<GamePad> gamePad_ = nullptr; ///< ゲームパッドのインスタンス
 
-    // スキップ関連
-    bool isSkipping_ = false; // スキップ中フラグ
+    bool isSkipping_ = false; ///< スキップ実行中フラグ
 };
+
 
 ============================================================
 File Path: Application/GameObject/BehaviorTree/Editor/BehaviorTreeEditor.cpp
@@ -12712,7 +12780,11 @@ File Path: Application/Scene/ClearScene.cpp
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
+
 void ClearScene::Initialize() {
+    /// ===================================================
+    /// 初期化
+    /// ===================================================
     BaseScene::Initialize();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
@@ -12756,10 +12828,17 @@ void ClearScene::Initialize() {
 }
 
 void ClearScene::Finalize() {
+    /// ===================================================
+    /// 終了処理
+    /// ===================================================
     BaseScene::Finalize();
 }
 
 void ClearScene::Update() {
+    /// ===================================================
+    /// 更新処理
+    /// ===================================================
+
     // ゲームパッドの更新
     gamePad_->Update();
 
@@ -12787,7 +12866,7 @@ void ClearScene::Update() {
 
 void ClearScene::Draw() {
     /// ===================================================
-    /// 描画処理開始
+    /// 描画処理
     /// ===================================================
 
     // 3Dオブジェクトの描画
@@ -12807,10 +12886,6 @@ void ClearScene::Draw() {
 
     // スプライトの描画
     spriteManager_->DrawAll();
-
-    /// ===================================================
-    /// 描画処理終了
-    /// ===================================================
 }
 
 void ClearScene::DrawForOffScreen() {
@@ -12820,7 +12895,9 @@ void ClearScene::DrawForOffScreen() {
 }
 
 void ClearScene::AddSceneSetting() {
-    // デバッグ表示
+    /// ===================================================
+    /// シーン設定（デバッグ）
+    /// ===================================================
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
 
@@ -12829,13 +12906,21 @@ void ClearScene::AddSceneSetting() {
 }
 
 void ClearScene::AddObjectSetting() {
+    /// ===================================================
+    /// オブジェクト設定（デバッグ）
+    /// ===================================================
 }
 
 void ClearScene::AddParticleSetting() {
+    /// ===================================================
+    /// パーティクル設定（デバッグ）
+    /// ===================================================
 }
 
 void ClearScene::CameraUpdate() {
-    // カメラ開始タイマーの更新
+    /// ===================================================
+    /// カメラ更新
+    /// ===================================================
     currentCameraStartTimer_ += Frame::DeltaTime();
     if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
         // カメラのイージング開始
@@ -12853,18 +12938,20 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
+    /// ===================================================
+    /// シーン切り替え
+    /// ===================================================
     if (!gamePad_->IsConnected()) {
-        // キーボード入力によるシーン切り替え
         if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
             sceneManager_->NextSceneReservation("TITLE");
         }
     } else {
-        // ゲームパッド入力によるシーン切り替え
         if (resultUI_->IsAllAnimationFinished() && gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
             sceneManager_->NextSceneReservation("TITLE");
         }
     }
 }
+
 
 ============================================================
 File Path: Application/Scene/ClearScene.h
@@ -12945,7 +13032,7 @@ class ClearScene : public BaseScene {
 
   private:
     /// ===================================================
-    /// private variables
+    /// private variants
     /// ===================================================
 
     std::unique_ptr<Ground> ground_;        // 地面
@@ -12959,6 +13046,7 @@ class ClearScene : public BaseScene {
     bool cameraStart_ = false;              // カメラ開始フラグ
 };
 
+
 ============================================================
 File Path: Application/Scene/DemoScene.cpp
 ============================================================
@@ -12966,6 +13054,9 @@ File Path: Application/Scene/DemoScene.cpp
 #include "Engine/Utility/Scene/SceneManager.h"
 
 void DemoScene::Initialize() {
+    /// ===================================================
+    /// 初期化
+    /// ===================================================
     BaseScene::Initialize();
     vp_.Initialize("DemoCamera");
     lightGroup_->LoadLightData("DemoLight");
@@ -12975,10 +13066,17 @@ void DemoScene::Initialize() {
 }
 
 void DemoScene::Finalize() {
+    /// ===================================================
+    /// 終了処理
+    /// ===================================================
     BaseScene::Finalize();
 }
 
 void DemoScene::Update() {
+    /// ===================================================
+    /// 更新処理
+    /// ===================================================
+
     // カメラの更新
     CameraUpdate();
 
@@ -12988,15 +13086,11 @@ void DemoScene::Update() {
 
 void DemoScene::Draw() {
     /// ===================================================
-    /// 描画処理開始
+    /// 描画処理
     /// ===================================================
 
     // すべてのオブジェクトを描画
     DrawAllObjects();
-
-    /// ===================================================
-    /// 描画処理終了
-    /// ===================================================
 }
 
 void DemoScene::DrawForOffScreen() {
@@ -13006,21 +13100,30 @@ void DemoScene::DrawForOffScreen() {
 }
 
 void DemoScene::AddSceneSetting() {
-    // デバッグ表示
+    /// ===================================================
+    /// シーン設定（デバッグ）
+    /// ===================================================
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
 }
 
 void DemoScene::AddObjectSetting() {
+    /// ===================================================
+    /// オブジェクト設定（デバッグ）
+    /// ===================================================
 }
 
 void DemoScene::AddParticleSetting() {
-    // パーティクルエディタの表示
+    /// ===================================================
+    /// パーティクル設定（デバッグ）
+    /// ===================================================
     DrawParticleEditorUI();
 }
 
 void DemoScene::CameraUpdate() {
-    // デバッグカメラまたは通常カメラの更新
+    /// ===================================================
+    /// カメラ更新
+    /// ===================================================
     if (debugCamera_->GetActive()) {
         debugCamera_->Update();
     } else {
@@ -13029,6 +13132,9 @@ void DemoScene::CameraUpdate() {
 }
 
 void DemoScene::ChangeScene() {
+    /// ===================================================
+    /// シーン切り替え
+    /// ===================================================
 }
 
 
@@ -13105,7 +13211,7 @@ class DemoScene : public BaseScene {
 
   private:
     /// ===================================================
-    /// private variables
+    /// private variants
     /// ===================================================
 };
 
@@ -13123,6 +13229,9 @@ static constexpr const char *kBTFolder = "BehaviorTree";
 static constexpr const char *kBTFileName = "EnemyBehavior";
 
 void GameScene::Initialize() {
+    /// ===================================================
+    /// 初期化
+    /// ===================================================
     BaseScene::Initialize();
     lightGroup_->LoadLightData("GameLight");
     vp_.Initialize();
@@ -13141,7 +13250,6 @@ void GameScene::Initialize() {
     skyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
     enemyUI_ = std::make_unique<EnemyUI>();
-    //fadeOut_ = std::make_unique<FadeOut>();
     gameUI_ = std::make_unique<GameUI>();
     aroundField_ = std::make_unique<AroundField>();
 
@@ -13161,7 +13269,6 @@ void GameScene::Initialize() {
     startCamera_->Init();
     deathCamera_->Init();
     skyBox_->Initialize("game/skybox.dds");
-   // fadeOut_->Initialize();
     gameUI_->Initialize();
 
     /// ===================================================
@@ -13195,9 +13302,9 @@ void GameScene::Initialize() {
 #ifdef _DEBUG
     behaviorTreeEditor_->SetDebugTargets(enemy_ptr, player_ptr);
 #else
-    // ===============================================================
-    // Release: JSONからビヘイビアツリーを自動ロードして敵にセット
-    // ===============================================================
+    /// ===================================================
+    /// BehaviorTreeのロード
+    /// ===================================================
     m_BehaviorTreeRoot = BehaviorTreeLoader::LoadAndBuild(kBTFolder, kBTFileName);
     if (m_BehaviorTreeRoot) {
         enemy_ptr->SetBehaviorTree(m_BehaviorTreeRoot);
@@ -13206,7 +13313,9 @@ void GameScene::Initialize() {
 }
 
 void GameScene::Finalize() {
-   // fadeOut_->Finalize();
+    /// ===================================================
+    /// 終了処理
+    /// ===================================================
     aroundField_->Finalize();
     sceneManager_->SetClearTime(ClearTimer_);
     if (player_ptr->GetIsAlive()) {
@@ -13216,6 +13325,10 @@ void GameScene::Finalize() {
 }
 
 void GameScene::Update() {
+    /// ===================================================
+    /// 更新処理
+    /// ===================================================
+
     // カメラの更新
     CameraUpdate();
 
@@ -13223,7 +13336,7 @@ void GameScene::Update() {
     ChangeScene();
 
 #ifdef _DEBUG
-    // デバッグ用：ビヘイビアツリーの更新
+    // ビヘイビアツリーの更新
     {
         auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
         if (runtimeRoot) {
@@ -13232,7 +13345,7 @@ void GameScene::Update() {
     }
 #endif
 
-    // 各オブジェクト・UIの更新
+    // 環境オブジェクトの更新
     ground_->Update();
     aroundField_->Update();
     playerUI_->Update();
@@ -13240,11 +13353,10 @@ void GameScene::Update() {
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
 
 #ifdef _DEBUG
-    // デバッグ時は即座に開始
     player_ptr->SetStart(true);
     enemy_ptr->SetStart(true);
 #else
-    // 開始時カメラ演出終了後に開始
+    // 開始演出待ち
     if (startCamera_->IsComplete()) {
         player_ptr->SetStart(true);
         enemy_ptr->SetStart(true);
@@ -13254,7 +13366,7 @@ void GameScene::Update() {
     }
 #endif
 
-    // 死亡時の演出：一定時間経過で敵を非表示に
+    // 死亡演出中のモデル非表示
     if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
         enemy_ptr->SetIsModelDraw(false);
         enemy_ptr->SetDrawShadow(false);
@@ -13268,7 +13380,7 @@ void GameScene::Update() {
 
 void GameScene::Draw() {
     /// ===================================================
-    /// 描画処理開始
+    /// 描画処理
     /// ===================================================
 
     // UIの描画
@@ -13297,10 +13409,6 @@ void GameScene::Draw() {
 
     // 2Dスプライトの描画
     spriteManager_->DrawAll();
-
-    /// ===================================================
-    /// 描画処理終了
-    /// ===================================================
 }
 
 void GameScene::DrawForOffScreen() {
@@ -13310,7 +13418,9 @@ void GameScene::DrawForOffScreen() {
 }
 
 void GameScene::AddSceneSetting() {
-    // 各種デバッグ表示
+    /// ===================================================
+    /// シーン設定（デバッグ）
+    /// ===================================================
     debugCamera_->imgui();
     followCamera_->imgui();
     startCamera_->imgui();
@@ -13319,13 +13429,14 @@ void GameScene::AddSceneSetting() {
 }
 
 void GameScene::AddObjectSetting() {
-    // オブジェクトのデバッグ表示
+    /// ===================================================
+    /// オブジェクト設定（デバッグ）
+    /// ===================================================
     player_ptr->Debug();
     enemy_ptr->Debug();
     enemyUI_->Debug();
 
 #ifdef USE_IMGUI
-    // ビヘイビアツリーエディタの表示
     ImGui::Begin("BehaviorTreeEditor");
     behaviorTreeEditor_->OnImGuiRender();
     ImGui::End();
@@ -13333,19 +13444,22 @@ void GameScene::AddObjectSetting() {
 }
 
 void GameScene::AddParticleSetting() {
-    // フィールドのデバッグ
+    /// ===================================================
+    /// パーティクル設定（デバッグ）
+    /// ===================================================
     aroundField_->Debug();
 }
 
 void GameScene::CameraUpdate() {
+    /// ===================================================
+    /// カメラ更新
+    /// ===================================================
     if (player_ptr->GetIsAlive()) {
-        // プレイヤー生存時
         if (debugCamera_->GetActive()) {
             debugCamera_->Update();
         } else {
             followCamera_->Update();
 #ifndef _DEBUG
-            // 開始時カメラの演出
             if (!startCamera_->IsComplete()) {
                 startCamera_->Move();
                 startCamera_->SetTargetVp(followCamera_->GetViewProjection());
@@ -13355,7 +13469,6 @@ void GameScene::CameraUpdate() {
                 vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
             } else {
 #endif
-                // 通常時のカメラ
                 vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
                 vp_.matView_ = followCamera_->GetViewProjection().matView_;
                 vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
@@ -13364,7 +13477,6 @@ void GameScene::CameraUpdate() {
 #endif
         }
     } else {
-        // プレイヤー死亡時：死亡時カメラの開始・更新
         if (!deathCamera_->IsComplete() && !deathCameraStarted_) {
             deathCamera_->StartEasing(
                 followCamera_->GetViewProjection(),
@@ -13379,7 +13491,9 @@ void GameScene::CameraUpdate() {
 }
 
 void GameScene::ChangeScene() {
-    // 死亡時：演出終了後にクリア（リザルト）画面へ遷移
+    /// ===================================================
+    /// シーン切り替え
+    /// ===================================================
     if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
         GameOverTimer_ += Frame::DeltaTime();
         player_ptr->SetIsDeathStaging(true);
@@ -13389,16 +13503,15 @@ void GameScene::ChangeScene() {
         }
     }
 
-    // 敵死亡時：クリア画面へ遷移
     if (!enemy_ptr->GetIsAlive()) {
         sceneManager_->NextSceneReservation("CLEAR");
     }
 
-    // タイトルへ戻る
     if (gameUI_->GetIsBackTitle()) {
         sceneManager_->NextSceneReservation("TITLE");
     }
 }
+
 
 ============================================================
 File Path: Application/Scene/GameScene.h
@@ -13429,13 +13542,44 @@ class GameScene : public BaseScene {
     /// public method
     /// ===================================================
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
     void Initialize() override;
+
+    /// <summary>
+    /// 終了処理
+    /// </summary>
     void Finalize() override;
+
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update() override;
+
+    /// <summary>
+    /// 描画処理
+    /// </summary>
     void Draw() override;
+
+    /// <summary>
+    /// オフスクリーン描画処理
+    /// </summary>
     void DrawForOffScreen() override;
+
+    /// <summary>
+    /// シーン設定を追加
+    /// </summary>
     void AddSceneSetting() override;
+
+    /// <summary>
+    /// オブジェクト設定を追加
+    /// </summary>
     void AddObjectSetting() override;
+
+    /// <summary>
+    /// パーティクル設定を追加
+    /// </summary>
     void AddParticleSetting() override;
 
   private:
@@ -13443,12 +13587,19 @@ class GameScene : public BaseScene {
     /// private method
     /// ===================================================
 
+    /// <summary>
+    /// カメラを更新
+    /// </summary>
     void CameraUpdate();
+
+    /// <summary>
+    /// シーン遷移を実行
+    /// </summary>
     void ChangeScene();
 
   private:
     /// ===================================================
-    /// private variables
+    /// private variants
     /// ===================================================
 
     std::unique_ptr<Player> player_;        // プレイヤー
@@ -13479,12 +13630,17 @@ class GameScene : public BaseScene {
     std::shared_ptr<BTNode> m_BehaviorTreeRoot; // ビヘイビアツリールート
 };
 
+
 ============================================================
 File Path: Application/Scene/SelectScene.cpp
 ============================================================
 #include "SelectScene.h"
 #include "Engine/Utility/Scene/SceneManager.h"
+
 void SelectScene::Initialize() {
+    /// ===================================================
+    /// 初期化
+    /// ===================================================
     BaseScene::Initialize();
     vp_.Initialize();
     vp_.translation_ = {12.0f, -4.0f, -30.0f};
@@ -13494,10 +13650,17 @@ void SelectScene::Initialize() {
 }
 
 void SelectScene::Finalize() {
+    /// ===================================================
+    /// 終了処理
+    /// ===================================================
     BaseScene::Finalize();
 }
 
 void SelectScene::Update() {
+    /// ===================================================
+    /// 更新処理
+    /// ===================================================
+
     // カメラの更新
     CameraUpdate();
 
@@ -13507,11 +13670,7 @@ void SelectScene::Update() {
 
 void SelectScene::Draw() {
     /// ===================================================
-    /// 描画処理開始
-    /// ===================================================
-
-    /// ===================================================
-    /// 描画処理終了
+    /// 描画処理
     /// ===================================================
 }
 
@@ -13522,18 +13681,28 @@ void SelectScene::DrawForOffScreen() {
 }
 
 void SelectScene::AddSceneSetting() {
-    // デバッグ表示
+    /// ===================================================
+    /// シーン設定（デバッグ）
+    /// ===================================================
     debugCamera_->imgui();
 }
 
 void SelectScene::AddObjectSetting() {
+    /// ===================================================
+    /// オブジェクト設定（デバッグ）
+    /// ===================================================
 }
 
 void SelectScene::AddParticleSetting() {
+    /// ===================================================
+    /// パーティクル設定（デバッグ）
+    /// ===================================================
 }
 
 void SelectScene::CameraUpdate() {
-    // デバッグカメラまたは通常カメラの更新
+    /// ===================================================
+    /// カメラ更新
+    /// ===================================================
     if (debugCamera_->GetActive()) {
         debugCamera_->Update();
     } else {
@@ -13542,7 +13711,11 @@ void SelectScene::CameraUpdate() {
 }
 
 void SelectScene::ChangeScene() {
+    /// ===================================================
+    /// シーン切り替え
+    /// ===================================================
 }
+
 
 ============================================================
 File Path: Application/Scene/SelectScene.h
@@ -13617,7 +13790,7 @@ class SelectScene : public BaseScene {
 
   private:
     /// ===================================================
-    /// private variables
+    /// private variants
     /// ===================================================
 };
 
@@ -13629,7 +13802,11 @@ File Path: Application/Scene/TitleScene.cpp
 #include "Engine/Utility/Scene/SceneManager.h"
 #include "myMath.h"
 #include <Frame.h>
+
 void TitleScene::Initialize() {
+    /// ===================================================
+    /// 初期化
+    /// ===================================================
     BaseScene::Initialize();
     lightGroup_->LoadLightData("TitleScene");
     vp_.eulerRotation_ = {
@@ -13653,10 +13830,17 @@ void TitleScene::Initialize() {
 }
 
 void TitleScene::Finalize() {
+    /// ===================================================
+    /// 終了処理
+    /// ===================================================
     BaseScene::Finalize();
 }
 
 void TitleScene::Update() {
+    /// ===================================================
+    /// 更新処理
+    /// ===================================================
+
     // ゲームパッドの更新
     gamePad_->Update();
 
@@ -13675,7 +13859,7 @@ void TitleScene::Update() {
         firstMove_ = true;
     }
 
-    // 入力によるシーン進行（カメラ移動）
+    // 入力によるシーン進行
     if (!gamePad_->IsConnected()) {
         if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
             vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
@@ -13694,7 +13878,7 @@ void TitleScene::Update() {
 
 void TitleScene::Draw() {
     /// ===================================================
-    /// 描画処理開始
+    /// 描画処理
     /// ===================================================
 
     // スカイボックスの描画
@@ -13708,10 +13892,6 @@ void TitleScene::Draw() {
 
     // タイトルUIの描画
     titleUI_->Draw(vp_);
-
-    /// ===================================================
-    /// 描画処理終了
-    /// ===================================================
 }
 
 void TitleScene::DrawForOffScreen() {
@@ -13721,31 +13901,43 @@ void TitleScene::DrawForOffScreen() {
 }
 
 void TitleScene::AddSceneSetting() {
-    // デバッグ表示
+    /// ===================================================
+    /// シーン設定（デバッグ）
+    /// ===================================================
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
 }
 
 void TitleScene::AddObjectSetting() {
+    /// ===================================================
+    /// オブジェクト設定（デバッグ）
+    /// ===================================================
 }
 
 void TitleScene::AddParticleSetting() {
-    // パーティクルエディタの表示
+    /// ===================================================
+    /// パーティクル設定（デバッグ）
+    /// ===================================================
     DrawParticleEditorUI();
 }
 
 void TitleScene::CameraUpdate() {
-    // デバッグカメラの更新
+    /// ===================================================
+    /// カメラ更新
+    /// ===================================================
     debugCamera_->Update();
 }
 
 void TitleScene::ChangeScene() {
-    // 演出終了後にチュートリアルシーンへ遷移
+    /// ===================================================
+    /// シーン切り替え
+    /// ===================================================
     if (secondMove_ && !vp_.GetIsCameraMove() && titleUI_->GetIsFinish()) {
         SceneTransition::GetInstance()->SetUseTransition(false);
         sceneManager_->NextSceneReservation("TUTORIAL");
     }
 }
+
 
 ============================================================
 File Path: Application/Scene/TitleScene.h
@@ -13826,7 +14018,7 @@ class TitleScene : public BaseScene {
 
   private:
     /// ===================================================
-    /// private variables
+    /// private variants
     /// ===================================================
 
     float time_ = 0.0f;                     // 経過時間
@@ -13912,11 +14104,9 @@ void TutorialScene::Initialize() {
     objectManager_->AddObject(std::move(enemy_));
 
     /// ===================================================
-    /// チュートリアル開始時はエネミーを非表示にする
-    ///   ※ TutorialSystem が必要なタイミングで
-    ///      ShouldSpawnEnemy() フラグを立てて出現を通知する
+    /// エネミーを非表示にする
     /// ===================================================
-    enemy_ptr->GetAlive() = false; // BaseObject::GetAlive() で非表示
+    enemy_ptr->GetAlive() = false;
 
     /// ===================================================
     /// チュートリアルシステム初期化
@@ -13926,8 +14116,10 @@ void TutorialScene::Initialize() {
     fadeOut_->Initialize();
 }
 
-// ============================================================
 void TutorialScene::Finalize() {
+    /// ===================================================
+    /// 終了処理
+    /// ===================================================
     tutorialUI_->Finalize();
     tutorialSystem_->Finalize();
 
@@ -13939,8 +14131,11 @@ void TutorialScene::Finalize() {
     BaseScene::Finalize();
 }
 
-// ============================================================
 void TutorialScene::Update() {
+    /// ===================================================
+    /// 更新処理
+    /// ===================================================
+
     // カメラの更新
     CameraUpdate();
 
@@ -13957,8 +14152,7 @@ void TutorialScene::Update() {
     gamePad_->Update();
     gameUI_->Update();
 
-    // ─── シーン開始遅延 ───
-    // kStartDelay_ 秒が経過するまでプレイヤー・UIの更新を行わない
+    // シーン開始遅延
     if (!sceneStarted_) {
         startDelayTimer_ += Frame::DeltaTime();
         if (startDelayTimer_ >= kStartDelay_) {
@@ -13967,7 +14161,7 @@ void TutorialScene::Update() {
         return;
     }
 
-    // ─── 遅延経過後の更新 ───
+    // 遅延経過後の更新
     player_ptr->SetStart(sceneStarted_);
     playerUI_->Update();
     enemyUI_->Update();
@@ -13988,7 +14182,7 @@ void TutorialScene::Update() {
 
 void TutorialScene::Draw() {
     /// ===================================================
-    /// 描画処理開始
+    /// 描画処理
     /// ===================================================
 
     // 3Dオブジェクトの描画
@@ -14021,10 +14215,6 @@ void TutorialScene::Draw() {
         enemyUI_->Draw();
         tutorialUI_->Draw();
     }
-
-    /// ===================================================
-    /// 描画処理終了
-    /// ===================================================
 }
 
 void TutorialScene::DrawForOffScreen() {
@@ -14034,7 +14224,9 @@ void TutorialScene::DrawForOffScreen() {
 }
 
 void TutorialScene::AddSceneSetting() {
-    // デバッグ表示
+    /// ===================================================
+    /// シーン設定（デバッグ）
+    /// ===================================================
     debugCamera_->imgui();
     followCamera_->imgui();
     vp_.ShowDebugInfo();
@@ -14043,7 +14235,9 @@ void TutorialScene::AddSceneSetting() {
 }
 
 void TutorialScene::AddObjectSetting() {
-    // オブジェクトのデバッグ表示
+    /// ===================================================
+    /// オブジェクト設定（デバッグ）
+    /// ===================================================
     player_ptr->Debug();
     enemy_ptr->Debug();
     enemyUI_->Debug();
@@ -14051,13 +14245,17 @@ void TutorialScene::AddObjectSetting() {
 }
 
 void TutorialScene::AddParticleSetting() {
-    // フェードのデバッグ表示
+    /// ===================================================
+    /// パーティクル設定（デバッグ）
+    /// ===================================================
     fadeOut_->ImGui();
 }
 
 void TutorialScene::CameraUpdate() {
+    /// ===================================================
+    /// カメラ更新
+    /// ===================================================
     if (player_ptr->GetIsAlive()) {
-        // 通常時のカメラ更新
         if (debugCamera_->GetActive()) {
             debugCamera_->Update();
         } else {
@@ -14070,12 +14268,14 @@ void TutorialScene::CameraUpdate() {
 }
 
 void TutorialScene::ChangeScene() {
-    // チュートリアル終了時にゲームシーンへ
+    /// ===================================================
+    /// シーン切り替え
+    /// ===================================================
     if (tutorialUI_->IsFinished()) {
         sceneManager_->NextSceneReservation("GAME");
     }
 
-    // スキップ操作（STARTボタンまたはENTERキー）
+    // スキップ操作
     if (gamePad_->IsConnected()) {
         if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START)) {
             sceneManager_->NextSceneReservation("GAME");
@@ -14088,18 +14288,20 @@ void TutorialScene::ChangeScene() {
 }
 
 void TutorialScene::HandleEnemySpawnRequest() {
-    // 出現リクエスト
+    /// ===================================================
+    /// エネミー出現管理
+    /// ===================================================
     if (tutorialSystem_->ShouldSpawnEnemy()) {
         enemy_ptr->GetAlive() = true;
         tutorialSystem_->ConsumeSpawnRequest();
     }
 
-    // 消滅リクエスト
     if (tutorialSystem_->ShouldDespawnEnemy()) {
         enemy_ptr->GetAlive() = false;
         tutorialSystem_->ConsumeDespawnRequest();
     }
 }
+
 
 ============================================================
 File Path: Application/Scene/TutorialScene.h
@@ -14131,13 +14333,44 @@ class TutorialScene : public BaseScene {
     /// public method
     /// ===================================================
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
     void Initialize() override;
+
+    /// <summary>
+    /// 終了処理
+    /// </summary>
     void Finalize() override;
+
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update() override;
+
+    /// <summary>
+    /// 描画処理
+    /// </summary>
     void Draw() override;
+
+    /// <summary>
+    /// オフスクリーン描画処理
+    /// </summary>
     void DrawForOffScreen() override;
+
+    /// <summary>
+    /// シーン設定の追加（デバッグ用）
+    /// </summary>
     void AddSceneSetting() override;
+
+    /// <summary>
+    /// オブジェクト設定の追加（デバッグ用）
+    /// </summary>
     void AddObjectSetting() override;
+
+    /// <summary>
+    /// パーティクル設定の追加（デバッグ用）
+    /// </summary>
     void AddParticleSetting() override;
 
   private:
@@ -14145,7 +14378,14 @@ class TutorialScene : public BaseScene {
     /// private method
     /// ===================================================
 
+    /// <summary>
+    /// カメラの更新処理
+    /// </summary>
     void CameraUpdate();
+
+    /// <summary>
+    /// シーン切り替え処理
+    /// </summary>
     void ChangeScene();
 
     /// <summary>
@@ -14181,6 +14421,7 @@ class TutorialScene : public BaseScene {
     bool sceneStarted_ = false;             // 遅延終了フラグ
     static constexpr float kStartDelay_ = 2.0f; // 開始までの待機秒数
 };
+
 
 ============================================================
 File Path: Application/Staging/Death/DeathStaging.cpp
@@ -14789,19 +15030,28 @@ File Path: Application/Staging/Transition/FadeOut.cpp
 #include <Particle/CSParticle/ParticleCSEditor.h>
 
 void FadeOut::Initialize() {
+    // スプライトマネージャーの設定と読み込み
     SpriteManager::GetInstance()->SetSaveFolder("Transition");
     SpriteManager::GetInstance()->LoadAllSprites();
+
+    // パーティクルエミッターの生成と初期設定
     fadeOut_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("FadeOut");
     fadeOut_->SetAuto(true);
     timer_ = 0.0f;
     fadeOut_->SetTranslate({kPositionX, kPositionY, kPositionZ});
+
+    // 回転の設定
     Quaternion rotation = Quaternion::FromEulerAngles({degreesToRadians(kRotationX), 0.0f, 0.0f});
     fadeOut_->SetRotation(rotation);
+
+    // シーントランジションの使用を有効化
     SceneTransition::GetInstance()->SetUseTransition(true);
 }
 
 void FadeOut::Update() {
+    // パーティクルの更新
     fadeOut_->Update();
+    // 経過時間を加算
     timer_ += kDeltaTime;
 }
 
@@ -14832,10 +15082,12 @@ void FadeOut::Draw(const ViewProjection &vp) {
 }
 
 void FadeOut::Finalize() {
+    // エミッター名のカウンターをクリア
     ParticleCSEmitter::ClearNameCounter("FadeOut");
 }
 
 void FadeOut::ImGui() {
+    // デバッグ用のImGui描画
     fadeOut_->DrawImGui();
 }
 
@@ -22827,29 +23079,32 @@ void Animator::UpdateBlend(bool loop) {
     blendState_.blendTimer += Frame::DeltaTime();
     blendState_.blendFactor = blendState_.blendTimer / blendState_.blendDuration;
 
+    // 補間が完了した場合
     if (blendState_.blendFactor >= 1.0f) {
         blendState_.blendFactor = 1.0f;
         blendState_.isBlending = false;
 
-        // 補間完了時の処理
+        // 補間先のアニメーションを現在のメインアニメーションに設定
         currentAnimation_ = blendState_.toAnimation;
         animationTime = blendState_.toAnimationTime;
 
-        // ファイル情報を更新
+        // ファイル情報を現在のものに更新
         directorypath_ = blendState_.toDirectoryPath;
         filename_ = blendState_.toFilename;
 
-        // アニメーション状態をリセット
+        // アニメーションの再生状態をリセット
         isAnimation_ = true;
         isFinish_ = false;
 
         // 補間完了直後に 1フレーム分進める
         animationTime += Frame::DeltaTime();
         if (loop) {
+            // ループ再生時は時間を正規化
             animationTime = std::fmod(animationTime, currentAnimation_.duration);
         } else {
+            // ループしない場合は時間をクランプ
             animationTime = std::min(animationTime, currentAnimation_.duration);
-            // ループしない場合、終了チェック
+            // 終了判定
             if (animationTime >= currentAnimation_.duration) {
                 isFinish_ = true;
                 isAnimation_ = false;
@@ -22859,14 +23114,16 @@ void Animator::UpdateBlend(bool loop) {
         return;
     }
 
-    // 補間中の処理
+    // 補間中の再生時間更新
     if (loop) {
+        // ループ再生の場合
         blendState_.fromAnimationTime += Frame::DeltaTime();
         blendState_.fromAnimationTime = std::fmod(blendState_.fromAnimationTime, blendState_.fromAnimation.duration);
 
         blendState_.toAnimationTime += Frame::DeltaTime();
         blendState_.toAnimationTime = std::fmod(blendState_.toAnimationTime, blendState_.toAnimation.duration);
     } else {
+        // ループしない場合
         if (blendState_.fromAnimationTime < blendState_.fromAnimation.duration) {
             blendState_.fromAnimationTime += Frame::DeltaTime();
             blendState_.fromAnimationTime = std::min(blendState_.fromAnimationTime, blendState_.fromAnimation.duration);
@@ -22878,13 +23135,17 @@ void Animator::UpdateBlend(bool loop) {
         }
     }
 
+    // 現在の表示用アニメーション時間を更新
     animationTime = blendState_.toAnimationTime;
 }
 void Animator::UpdateSingle(bool loop) {
     if (loop) {
-        // ループアニメーションの場合、アニメーション時間を進めて、超えたら最初に戻る
+        // ループアニメーションの場合
         animationTime += Frame::DeltaTime();
+        // 時間を正規化してループさせる
         animationTime = std::fmod(animationTime, currentAnimation_.duration);
+
+        // ボーンを持たないモデルの場合、ルートノードのアニメーションを適用
         if (!modelData_.hasBones) {
             NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
             Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
@@ -22897,6 +23158,8 @@ void Animator::UpdateSingle(bool loop) {
         if (animationTime < currentAnimation_.duration) {
             isFinish_ = false;
             animationTime += Frame::DeltaTime();
+
+            // ボーンを持たないモデルの場合のルートノード適用
             if (!modelData_.hasBones) {
                 NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
                 Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
@@ -22904,7 +23167,8 @@ void Animator::UpdateSingle(bool loop) {
                 Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime);
                 localMatrix = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
             }
-            // 時間がdurationを超えたら停止
+
+            // 再生時間が総時間（duration）を超えたら停止
             if (animationTime >= currentAnimation_.duration) {
                 animationTime = currentAnimation_.duration;
                 isAnimation_ = false;
@@ -23406,7 +23670,7 @@ class Animator {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     std::string filename_;           // 現在のファイル名
@@ -23440,16 +23704,19 @@ void Bone::Update(const Animation& animation, float animationTime)
 	// 指定された時間のアニメーションデータをボーンのトランスフォームに適用
 	ApplyAnimation(animation, animationTime);
 	
-	// すべてのJointを更新。親ジョイントのインデックスが必ず子より小さいため、
-	// 配列の順序通りに更新処理を行うことで正しい階層行列が計算できる
+	// すべてのJointを更新。
+	// 親ジョイントのインデックスが必ず子より小さいため、
+	// 配列の順序通りに更新処理を行うことで、依存関係を壊さず正しい階層行列が計算できる
 	for (Joint& joint : skeleton_.joints) {
+        // SRTからローカル変換行列を作成
         joint.localMatrix = MakeBoneMatrix(joint.transform.scale, joint.transform.rotate, joint.transform.translate);
-		if (joint.parent) { 
-			// 親ジョイントが存在する場合は親のスケルトン空間行列を掛ける
+		
+        if (joint.parent) { 
+			// 親ジョイントが存在する場合：ローカル行列 * 親のスケルトン空間行列
 			joint.skeletonSpaceMatrix = joint.localMatrix * skeleton_.joints[*joint.parent].skeletonSpaceMatrix;
 		}
 		else { 
-			// ルートジョイントはローカル行列がそのままスケルトン空間行列となる
+			// ルートジョイント（親なし）の場合：ローカル行列がそのままスケルトン空間行列となる
 			joint.skeletonSpaceMatrix = joint.localMatrix;
 		}
 	}
@@ -23637,7 +23904,7 @@ class Bone {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     Skeleton skeleton_; // スケルトンデータ
@@ -23670,11 +23937,14 @@ void ModelAnimation::Initialize(const std::string &directorypath, const std::str
 void ModelAnimation::Update(bool roop) {
     // アニメーションデータがある場合は、現在のアニメーション時間を更新
     if (modelData_.hasAnimations) {
+        // ループ設定に基づいてアニメーションの時間を進める
         animator_->Update(roop);
     }
     // ボーン情報がある場合は、ボーン階層とスキン（頂点ウェイト）を最新状態に更新
     if (modelData_.hasBones) {
+        // 現在のアニメーションデータと再生時間をボーンに適用し、階層行列を再計算
         bone_->Update(animator_->GetCurrentAnimation(), animator_->GetAnimationTime());
+        // 計算されたボーン行列を元に、シェーダーに送るパレット行列を更新
         skin_->Update(bone_->GetSkeleton());
     }
 }
@@ -23740,7 +24010,7 @@ class ModelAnimation {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     std::unique_ptr<Animator> animator_; // アニメーター
