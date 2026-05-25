@@ -68,6 +68,6 @@ class DemoScene : public BaseScene {
 
   private:
     /// ===================================================
-    /// private variables
+    /// private variants
     /// ===================================================
 };

@@ -4,19 +4,28 @@
 #include <Particle/CSParticle/ParticleCSEditor.h>
 
 void FadeOut::Initialize() {
+    // スプライトマネージャーの設定と読み込み
     SpriteManager::GetInstance()->SetSaveFolder("Transition");
     SpriteManager::GetInstance()->LoadAllSprites();
+
+    // パーティクルエミッターの生成と初期設定
     fadeOut_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("FadeOut");
     fadeOut_->SetAuto(true);
     timer_ = 0.0f;
     fadeOut_->SetTranslate({kPositionX, kPositionY, kPositionZ});
+
+    // 回転の設定
     Quaternion rotation = Quaternion::FromEulerAngles({degreesToRadians(kRotationX), 0.0f, 0.0f});
     fadeOut_->SetRotation(rotation);
+
+    // シーントランジションの使用を有効化
     SceneTransition::GetInstance()->SetUseTransition(true);
 }
 
 void FadeOut::Update() {
+    // パーティクルの更新
     fadeOut_->Update();
+    // 経過時間を加算
     timer_ += kDeltaTime;
 }
 
@@ -47,9 +56,11 @@ void FadeOut::Draw(const ViewProjection &vp) {
 }
 
 void FadeOut::Finalize() {
+    // エミッター名のカウンターをクリア
     ParticleCSEmitter::ClearNameCounter("FadeOut");
 }
 
 void FadeOut::ImGui() {
+    // デバッグ用のImGui描画
     fadeOut_->DrawImGui();
 }

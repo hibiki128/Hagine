@@ -21,29 +21,44 @@ class StartCamera {
     void Init();
 
     /// <summary>
-    /// 更新
+    /// 更新処理
     /// </summary>
     void Update();
 
     /// <summary>
-    /// デバッグ関数
+    /// デバッグ用のImGui表示
     /// </summary>
     void imgui();
 
     /// <summary>
-    /// カメラの動きの関数
+    /// カメラの入力移動処理
     /// </summary>
     void Move();
 
-    /// <summary>
+    /// ===================================================
     /// Getter
-    /// </summary>
-    ViewProjection &GetViewProjection() { return vp_; }
-    bool IsComplete() const { return isComplete_; }
+    /// ===================================================
 
     /// <summary>
-    /// Setter
+    /// ビュープロジェクションを取得
     /// </summary>
+    /// <returns>ViewProjection&: ビュープロジェクション参照</returns>
+    ViewProjection &GetViewProjection() { return vp_; }
+
+    /// <summary>
+    /// 演出完了フラグを取得
+    /// </summary>
+    /// <returns>bool: 完了していればtrue</returns>
+    bool IsComplete() const { return isComplete_; }
+
+    /// ===================================================
+    /// Setter
+    /// ===================================================
+
+    /// <summary>
+    /// 目標となるビュープロジェクションを設定
+    /// </summary>
+    /// <param name="vp">コピー元のビュープロジェクション</param>
     void SetTargetVp(ViewProjection &vp) {
         targetVp_.matWorld_ = vp.matWorld_;
         targetVp_.matView_ = vp.matView_;
@@ -58,8 +73,9 @@ class StartCamera {
     /// ===================================================
 
     /// <summary>
-    /// スキップ入力チェック
+    /// スキップ入力の確認
     /// </summary>
+    /// <returns>bool: 入力があればtrue</returns>
     bool CheckSkipInput();
 
   private:
@@ -68,57 +84,54 @@ class StartCamera {
     /// ===================================================
 
     // カメラ設定
-    static constexpr float kFarZ = 1100.0f;
-    static constexpr float kInitialHeight = 42.0f;
-    static constexpr float kInitialAngleDegrees = -90.0f;
+    static constexpr float kFarZ = 1100.0f;               ///< 遠面距離
+    static constexpr float kInitialHeight = 42.0f;        ///< 初期高さ
+    static constexpr float kInitialAngleDegrees = -90.0f; ///< 初期角度
 
     // 数値定数
-    static constexpr float kTimerReset = 0.0f;
-    static constexpr float kMaxBlendValue = 1.0f;
-    static constexpr float kEasingMaxValue = 1.0f;
-    static constexpr float kZeroRotation = 0.0f;
-    static constexpr float kHalfPi = 0.5f * std::numbers::pi_v<float>;
+    static constexpr float kTimerReset = 0.0f;                        ///< タイマーリセット値
+    static constexpr float kMaxBlendValue = 1.0f;                     ///< 最大ブレンド値
+    static constexpr float kEasingMaxValue = 1.0f;                    ///< イージング最大値
+    static constexpr float kZeroRotation = 0.0f;                      ///< 回転ゼロ値
+    static constexpr float kHalfPi = 0.5f * std::numbers::pi_v<float>; ///< PI/2
 
     // フェーズ定数
-    static constexpr int kPhaseEasing1 = 1;
-    static constexpr int kPhaseWait1 = 2;
-    static constexpr int kPhaseEasing2 = 3;
-    static constexpr int kPhaseWait2 = 4;
-    static constexpr int kPhaseEasing3 = 5;
-    static constexpr int kPhaseWait3 = 6;
-    static constexpr int kPhaseComplete = 7;
+    static constexpr int kPhaseEasing1 = 1;  ///< フェーズ1: イージング1
+    static constexpr int kPhaseWait1 = 2;    ///< フェーズ2: 待機1
+    static constexpr int kPhaseEasing2 = 3;  ///< フェーズ3: イージング2
+    static constexpr int kPhaseWait2 = 4;    ///< フェーズ4: 待機2
+    static constexpr int kPhaseEasing3 = 5;  ///< フェーズ5: イージング3
+    static constexpr int kPhaseWait3 = 6;    ///< フェーズ6: 待機3
+    static constexpr int kPhaseComplete = 7; ///< フェーズ7: 完了
 
     // スキップ時のスピード倍率
-    static constexpr float kSkipSpeedMultiplier = 5.0f;
+    static constexpr float kSkipSpeedMultiplier = 5.0f; ///< スキップ倍率
 
-    // ビュープロジェクション
-    ViewProjection vp_;       // ビュープロジェクション
-    ViewProjection targetVp_; // 目標のビュープロジェクション
-    WorldTransform wt_;       // ワールドトランスフォーム
+    ViewProjection vp_;       ///< ビュープロジェクション
+    ViewProjection targetVp_; ///< 目標ビュープロジェクション
+    WorldTransform wt_;       ///< ワールドトランスフォーム
 
-    float speed_ = 1.5f;   // 回転速度
-    float angle_ = 0.0f;   // 現在の角度
-    float radius_ = 60.0f; // 回転半径
-    Vector3 centerPos_ = {0.0f, 0.0f, -21.0f}; // 中心座標
+    float speed_ = 1.5f;   ///< 回転速度
+    float angle_ = 0.0f;   ///< 現在の角度
+    float radius_ = 60.0f; ///< 回転半径
+    Vector3 centerPos_ = {0.0f, 0.0f, -21.0f}; ///< 中心座標
 
-    bool isEasing_ = false;           // イージング中フラグ
-    bool isComplete_ = false;         // 完了フラグ
-    float easingTimer_ = 0.0f;        // イージングタイマー
-    float easingDuration_ = 2.0f;     // イージング時間
-    float finalWaitDuration_ = 1.0f;  // 最終待機時間
-    Vector3 easingStartPos_;          // イージング開始位置
-    Vector3 easingStartRot_;          // イージング開始回転
-    Vector3 easingTargetPos_ = {-6.0f, 1.8f, -7.40f}; // イージング目標位置1
-    Vector3 easingTargetRot_ = {degreesToRadians(8.6f), degreesToRadians(40.0f), degreesToRadians(0.0f)}; // イージング目標回転1
-    int easingPhase_ = 0;             // イージングフェーズ
-    float waitDuration_ = 1.0f;       // 待機時間
-    Vector3 easingTargetPos2_ = {5.0f, 1.8f, -33.0f}; // イージング目標位置2
-    Vector3 easingTargetRot2_ = {degreesToRadians(9.6f), degreesToRadians(-149.0f), degreesToRadians(0.0f)}; // イージング目標回転2
+    bool isEasing_ = false;           ///< イージング中フラグ
+    bool isComplete_ = false;         ///< 完了フラグ
+    float easingTimer_ = 0.0f;        ///< イージングタイマー
+    float easingDuration_ = 2.0f;     ///< イージング時間
+    float finalWaitDuration_ = 1.0f;  ///< 最終待機時間
+    Vector3 easingStartPos_;          ///< イージング開始位置
+    Vector3 easingStartRot_;          ///< イージング開始回転
+    Vector3 easingTargetPos_ = {-6.0f, 1.8f, -7.40f}; ///< 目標位置1
+    Vector3 easingTargetRot_ = {degreesToRadians(8.6f), degreesToRadians(40.0f), degreesToRadians(0.0f)}; ///< 目標回転1
+    int easingPhase_ = 0;             ///< 現在のイージングフェーズ
+    float waitDuration_ = 1.0f;       ///< フェーズ間の待機時間
+    Vector3 easingTargetPos2_ = {5.0f, 1.8f, -33.0f}; ///< 目標位置2
+    Vector3 easingTargetRot2_ = {degreesToRadians(9.6f), degreesToRadians(-149.0f), degreesToRadians(0.0f)}; ///< 目標回転2
 
-    // 入力関連
-    Input *input_ = nullptr; // 入力
-    std::unique_ptr<GamePad> gamePad_ = nullptr; // ゲームパッド
+    Input *input_ = nullptr; ///< 入力クラスのポインタ
+    std::unique_ptr<GamePad> gamePad_ = nullptr; ///< ゲームパッドのインスタンス
 
-    // スキップ関連
-    bool isSkipping_ = false; // スキップ中フラグ
+    bool isSkipping_ = false; ///< スキップ実行中フラグ
 };

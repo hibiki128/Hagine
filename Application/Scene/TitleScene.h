@@ -74,7 +74,7 @@ class TitleScene : public BaseScene {
 
   private:
     /// ===================================================
-    /// private variables
+    /// private variants
     /// ===================================================
 
     float time_ = 0.0f;                     // 経過時間

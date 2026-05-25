@@ -176,7 +176,7 @@ class Animator {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     std::string filename_;           // 現在のファイル名

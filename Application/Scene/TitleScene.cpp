@@ -2,7 +2,11 @@
 #include "Engine/Utility/Scene/SceneManager.h"
 #include "myMath.h"
 #include <Frame.h>
+
 void TitleScene::Initialize() {
+    /// ===================================================
+    /// 初期化
+    /// ===================================================
     BaseScene::Initialize();
     lightGroup_->LoadLightData("TitleScene");
     vp_.eulerRotation_ = {
@@ -26,10 +30,17 @@ void TitleScene::Initialize() {
 }
 
 void TitleScene::Finalize() {
+    /// ===================================================
+    /// 終了処理
+    /// ===================================================
     BaseScene::Finalize();
 }
 
 void TitleScene::Update() {
+    /// ===================================================
+    /// 更新処理
+    /// ===================================================
+
     // ゲームパッドの更新
     gamePad_->Update();
 
@@ -48,7 +59,7 @@ void TitleScene::Update() {
         firstMove_ = true;
     }
 
-    // 入力によるシーン進行（カメラ移動）
+    // 入力によるシーン進行
     if (!gamePad_->IsConnected()) {
         if (time_ >= 3.0f && input_->TriggerKey(DIK_SPACE) && !secondMove_ && !vp_.GetIsCameraMove()) {
             vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
@@ -67,7 +78,7 @@ void TitleScene::Update() {
 
 void TitleScene::Draw() {
     /// ===================================================
-    /// 描画処理開始
+    /// 描画処理
     /// ===================================================
 
     // スカイボックスの描画
@@ -81,10 +92,6 @@ void TitleScene::Draw() {
 
     // タイトルUIの描画
     titleUI_->Draw(vp_);
-
-    /// ===================================================
-    /// 描画処理終了
-    /// ===================================================
 }
 
 void TitleScene::DrawForOffScreen() {
@@ -94,26 +101,37 @@ void TitleScene::DrawForOffScreen() {
 }
 
 void TitleScene::AddSceneSetting() {
-    // デバッグ表示
+    /// ===================================================
+    /// シーン設定（デバッグ）
+    /// ===================================================
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
 }
 
 void TitleScene::AddObjectSetting() {
+    /// ===================================================
+    /// オブジェクト設定（デバッグ）
+    /// ===================================================
 }
 
 void TitleScene::AddParticleSetting() {
-    // パーティクルエディタの表示
+    /// ===================================================
+    /// パーティクル設定（デバッグ）
+    /// ===================================================
     DrawParticleEditorUI();
 }
 
 void TitleScene::CameraUpdate() {
-    // デバッグカメラの更新
+    /// ===================================================
+    /// カメラ更新
+    /// ===================================================
     debugCamera_->Update();
 }
 
 void TitleScene::ChangeScene() {
-    // 演出終了後にチュートリアルシーンへ遷移
+    /// ===================================================
+    /// シーン切り替え
+    /// ===================================================
     if (secondMove_ && !vp_.GetIsCameraMove() && titleUI_->GetIsFinish()) {
         SceneTransition::GetInstance()->SetUseTransition(false);
         sceneManager_->NextSceneReservation("TUTORIAL");

@@ -13,16 +13,19 @@ void Bone::Update(const Animation& animation, float animationTime)
 	// 指定された時間のアニメーションデータをボーンのトランスフォームに適用
 	ApplyAnimation(animation, animationTime);
 	
-	// すべてのJointを更新。親ジョイントのインデックスが必ず子より小さいため、
-	// 配列の順序通りに更新処理を行うことで正しい階層行列が計算できる
+	// すべてのJointを更新。
+	// 親ジョイントのインデックスが必ず子より小さいため、
+	// 配列の順序通りに更新処理を行うことで、依存関係を壊さず正しい階層行列が計算できる
 	for (Joint& joint : skeleton_.joints) {
+        // SRTからローカル変換行列を作成
         joint.localMatrix = MakeBoneMatrix(joint.transform.scale, joint.transform.rotate, joint.transform.translate);
-		if (joint.parent) { 
-			// 親ジョイントが存在する場合は親のスケルトン空間行列を掛ける
+		
+        if (joint.parent) { 
+			// 親ジョイントが存在する場合：ローカル行列 * 親のスケルトン空間行列
 			joint.skeletonSpaceMatrix = joint.localMatrix * skeleton_.joints[*joint.parent].skeletonSpaceMatrix;
 		}
 		else { 
-			// ルートジョイントはローカル行列がそのままスケルトン空間行列となる
+			// ルートジョイント（親なし）の場合：ローカル行列がそのままスケルトン空間行列となる
 			joint.skeletonSpaceMatrix = joint.localMatrix;
 		}
 	}

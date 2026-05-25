@@ -2,7 +2,11 @@
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
+
 void ClearScene::Initialize() {
+    /// ===================================================
+    /// 初期化
+    /// ===================================================
     BaseScene::Initialize();
     vp_.translation_ = {0.0f, 0.0f, -30.0f};
 
@@ -46,10 +50,17 @@ void ClearScene::Initialize() {
 }
 
 void ClearScene::Finalize() {
+    /// ===================================================
+    /// 終了処理
+    /// ===================================================
     BaseScene::Finalize();
 }
 
 void ClearScene::Update() {
+    /// ===================================================
+    /// 更新処理
+    /// ===================================================
+
     // ゲームパッドの更新
     gamePad_->Update();
 
@@ -77,7 +88,7 @@ void ClearScene::Update() {
 
 void ClearScene::Draw() {
     /// ===================================================
-    /// 描画処理開始
+    /// 描画処理
     /// ===================================================
 
     // 3Dオブジェクトの描画
@@ -97,10 +108,6 @@ void ClearScene::Draw() {
 
     // スプライトの描画
     spriteManager_->DrawAll();
-
-    /// ===================================================
-    /// 描画処理終了
-    /// ===================================================
 }
 
 void ClearScene::DrawForOffScreen() {
@@ -110,7 +117,9 @@ void ClearScene::DrawForOffScreen() {
 }
 
 void ClearScene::AddSceneSetting() {
-    // デバッグ表示
+    /// ===================================================
+    /// シーン設定（デバッグ）
+    /// ===================================================
     debugCamera_->imgui();
     vp_.ShowDebugInfo();
 
@@ -119,13 +128,21 @@ void ClearScene::AddSceneSetting() {
 }
 
 void ClearScene::AddObjectSetting() {
+    /// ===================================================
+    /// オブジェクト設定（デバッグ）
+    /// ===================================================
 }
 
 void ClearScene::AddParticleSetting() {
+    /// ===================================================
+    /// パーティクル設定（デバッグ）
+    /// ===================================================
 }
 
 void ClearScene::CameraUpdate() {
-    // カメラ開始タイマーの更新
+    /// ===================================================
+    /// カメラ更新
+    /// ===================================================
     currentCameraStartTimer_ += Frame::DeltaTime();
     if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
         // カメラのイージング開始
@@ -143,13 +160,14 @@ void ClearScene::CameraUpdate() {
 }
 
 void ClearScene::ChangeScene() {
+    /// ===================================================
+    /// シーン切り替え
+    /// ===================================================
     if (!gamePad_->IsConnected()) {
-        // キーボード入力によるシーン切り替え
         if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
             sceneManager_->NextSceneReservation("TITLE");
         }
     } else {
-        // ゲームパッド入力によるシーン切り替え
         if (resultUI_->IsAllAnimationFinished() && gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
             sceneManager_->NextSceneReservation("TITLE");
         }

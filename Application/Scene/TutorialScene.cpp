@@ -66,11 +66,9 @@ void TutorialScene::Initialize() {
     objectManager_->AddObject(std::move(enemy_));
 
     /// ===================================================
-    /// チュートリアル開始時はエネミーを非表示にする
-    ///   ※ TutorialSystem が必要なタイミングで
-    ///      ShouldSpawnEnemy() フラグを立てて出現を通知する
+    /// エネミーを非表示にする
     /// ===================================================
-    enemy_ptr->GetAlive() = false; // BaseObject::GetAlive() で非表示
+    enemy_ptr->GetAlive() = false;
 
     /// ===================================================
     /// チュートリアルシステム初期化
@@ -80,8 +78,10 @@ void TutorialScene::Initialize() {
     fadeOut_->Initialize();
 }
 
-// ============================================================
 void TutorialScene::Finalize() {
+    /// ===================================================
+    /// 終了処理
+    /// ===================================================
     tutorialUI_->Finalize();
     tutorialSystem_->Finalize();
 
@@ -93,8 +93,11 @@ void TutorialScene::Finalize() {
     BaseScene::Finalize();
 }
 
-// ============================================================
 void TutorialScene::Update() {
+    /// ===================================================
+    /// 更新処理
+    /// ===================================================
+
     // カメラの更新
     CameraUpdate();
 
@@ -111,8 +114,7 @@ void TutorialScene::Update() {
     gamePad_->Update();
     gameUI_->Update();
 
-    // ─── シーン開始遅延 ───
-    // kStartDelay_ 秒が経過するまでプレイヤー・UIの更新を行わない
+    // シーン開始遅延
     if (!sceneStarted_) {
         startDelayTimer_ += Frame::DeltaTime();
         if (startDelayTimer_ >= kStartDelay_) {
@@ -121,7 +123,7 @@ void TutorialScene::Update() {
         return;
     }
 
-    // ─── 遅延経過後の更新 ───
+    // 遅延経過後の更新
     player_ptr->SetStart(sceneStarted_);
     playerUI_->Update();
     enemyUI_->Update();
@@ -142,7 +144,7 @@ void TutorialScene::Update() {
 
 void TutorialScene::Draw() {
     /// ===================================================
-    /// 描画処理開始
+    /// 描画処理
     /// ===================================================
 
     // 3Dオブジェクトの描画
@@ -175,10 +177,6 @@ void TutorialScene::Draw() {
         enemyUI_->Draw();
         tutorialUI_->Draw();
     }
-
-    /// ===================================================
-    /// 描画処理終了
-    /// ===================================================
 }
 
 void TutorialScene::DrawForOffScreen() {
@@ -188,7 +186,9 @@ void TutorialScene::DrawForOffScreen() {
 }
 
 void TutorialScene::AddSceneSetting() {
-    // デバッグ表示
+    /// ===================================================
+    /// シーン設定（デバッグ）
+    /// ===================================================
     debugCamera_->imgui();
     followCamera_->imgui();
     vp_.ShowDebugInfo();
@@ -197,7 +197,9 @@ void TutorialScene::AddSceneSetting() {
 }
 
 void TutorialScene::AddObjectSetting() {
-    // オブジェクトのデバッグ表示
+    /// ===================================================
+    /// オブジェクト設定（デバッグ）
+    /// ===================================================
     player_ptr->Debug();
     enemy_ptr->Debug();
     enemyUI_->Debug();
@@ -205,13 +207,17 @@ void TutorialScene::AddObjectSetting() {
 }
 
 void TutorialScene::AddParticleSetting() {
-    // フェードのデバッグ表示
+    /// ===================================================
+    /// パーティクル設定（デバッグ）
+    /// ===================================================
     fadeOut_->ImGui();
 }
 
 void TutorialScene::CameraUpdate() {
+    /// ===================================================
+    /// カメラ更新
+    /// ===================================================
     if (player_ptr->GetIsAlive()) {
-        // 通常時のカメラ更新
         if (debugCamera_->GetActive()) {
             debugCamera_->Update();
         } else {
@@ -224,12 +230,14 @@ void TutorialScene::CameraUpdate() {
 }
 
 void TutorialScene::ChangeScene() {
-    // チュートリアル終了時にゲームシーンへ
+    /// ===================================================
+    /// シーン切り替え
+    /// ===================================================
     if (tutorialUI_->IsFinished()) {
         sceneManager_->NextSceneReservation("GAME");
     }
 
-    // スキップ操作（STARTボタンまたはENTERキー）
+    // スキップ操作
     if (gamePad_->IsConnected()) {
         if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START)) {
             sceneManager_->NextSceneReservation("GAME");
@@ -242,13 +250,14 @@ void TutorialScene::ChangeScene() {
 }
 
 void TutorialScene::HandleEnemySpawnRequest() {
-    // 出現リクエスト
+    /// ===================================================
+    /// エネミー出現管理
+    /// ===================================================
     if (tutorialSystem_->ShouldSpawnEnemy()) {
         enemy_ptr->GetAlive() = true;
         tutorialSystem_->ConsumeSpawnRequest();
     }
 
-    // 消滅リクエスト
     if (tutorialSystem_->ShouldDespawnEnemy()) {
         enemy_ptr->GetAlive() = false;
         tutorialSystem_->ConsumeDespawnRequest();

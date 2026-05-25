@@ -68,6 +68,6 @@ class SelectScene : public BaseScene {
 
   private:
     /// ===================================================
-    /// private variables
+    /// private variants
     /// ===================================================
 };

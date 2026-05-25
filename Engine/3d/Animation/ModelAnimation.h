@@ -49,7 +49,7 @@ class ModelAnimation {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variants
     /// ===================================================
 
     std::unique_ptr<Animator> animator_; // アニメーター

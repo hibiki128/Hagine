@@ -74,7 +74,7 @@ class ClearScene : public BaseScene {
 
   private:
     /// ===================================================
-    /// private variables
+    /// private variants
     /// ===================================================
 
     std::unique_ptr<Ground> ground_;        // 地面

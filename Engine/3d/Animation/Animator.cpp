@@ -37,29 +37,32 @@ void Animator::UpdateBlend(bool loop) {
     blendState_.blendTimer += Frame::DeltaTime();
     blendState_.blendFactor = blendState_.blendTimer / blendState_.blendDuration;
 
+    // 補間が完了した場合
     if (blendState_.blendFactor >= 1.0f) {
         blendState_.blendFactor = 1.0f;
         blendState_.isBlending = false;
 
-        // 補間完了時の処理
+        // 補間先のアニメーションを現在のメインアニメーションに設定
         currentAnimation_ = blendState_.toAnimation;
         animationTime = blendState_.toAnimationTime;
 
-        // ファイル情報を更新
+        // ファイル情報を現在のものに更新
         directorypath_ = blendState_.toDirectoryPath;
         filename_ = blendState_.toFilename;
 
-        // アニメーション状態をリセット
+        // アニメーションの再生状態をリセット
         isAnimation_ = true;
         isFinish_ = false;
 
         // 補間完了直後に 1フレーム分進める
         animationTime += Frame::DeltaTime();
         if (loop) {
+            // ループ再生時は時間を正規化
             animationTime = std::fmod(animationTime, currentAnimation_.duration);
         } else {
+            // ループしない場合は時間をクランプ
             animationTime = std::min(animationTime, currentAnimation_.duration);
-            // ループしない場合、終了チェック
+            // 終了判定
             if (animationTime >= currentAnimation_.duration) {
                 isFinish_ = true;
                 isAnimation_ = false;
@@ -69,14 +72,16 @@ void Animator::UpdateBlend(bool loop) {
         return;
     }
 
-    // 補間中の処理
+    // 補間中の再生時間更新
     if (loop) {
+        // ループ再生の場合
         blendState_.fromAnimationTime += Frame::DeltaTime();
         blendState_.fromAnimationTime = std::fmod(blendState_.fromAnimationTime, blendState_.fromAnimation.duration);
 
         blendState_.toAnimationTime += Frame::DeltaTime();
         blendState_.toAnimationTime = std::fmod(blendState_.toAnimationTime, blendState_.toAnimation.duration);
     } else {
+        // ループしない場合
         if (blendState_.fromAnimationTime < blendState_.fromAnimation.duration) {
             blendState_.fromAnimationTime += Frame::DeltaTime();
             blendState_.fromAnimationTime = std::min(blendState_.fromAnimationTime, blendState_.fromAnimation.duration);
@@ -88,13 +93,17 @@ void Animator::UpdateBlend(bool loop) {
         }
     }
 
+    // 現在の表示用アニメーション時間を更新
     animationTime = blendState_.toAnimationTime;
 }
 void Animator::UpdateSingle(bool loop) {
     if (loop) {
-        // ループアニメーションの場合、アニメーション時間を進めて、超えたら最初に戻る
+        // ループアニメーションの場合
         animationTime += Frame::DeltaTime();
+        // 時間を正規化してループさせる
         animationTime = std::fmod(animationTime, currentAnimation_.duration);
+
+        // ボーンを持たないモデルの場合、ルートノードのアニメーションを適用
         if (!modelData_.hasBones) {
             NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
             Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
@@ -107,6 +116,8 @@ void Animator::UpdateSingle(bool loop) {
         if (animationTime < currentAnimation_.duration) {
             isFinish_ = false;
             animationTime += Frame::DeltaTime();
+
+            // ボーンを持たないモデルの場合のルートノード適用
             if (!modelData_.hasBones) {
                 NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
                 Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
@@ -114,7 +125,8 @@ void Animator::UpdateSingle(bool loop) {
                 Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime);
                 localMatrix = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
             }
-            // 時間がdurationを超えたら停止
+
+            // 再生時間が総時間（duration）を超えたら停止
             if (animationTime >= currentAnimation_.duration) {
                 animationTime = currentAnimation_.duration;
                 isAnimation_ = false;

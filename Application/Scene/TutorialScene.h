@@ -25,13 +25,44 @@ class TutorialScene : public BaseScene {
     /// public method
     /// ===================================================
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
     void Initialize() override;
+
+    /// <summary>
+    /// 終了処理
+    /// </summary>
     void Finalize() override;
+
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update() override;
+
+    /// <summary>
+    /// 描画処理
+    /// </summary>
     void Draw() override;
+
+    /// <summary>
+    /// オフスクリーン描画処理
+    /// </summary>
     void DrawForOffScreen() override;
+
+    /// <summary>
+    /// シーン設定の追加（デバッグ用）
+    /// </summary>
     void AddSceneSetting() override;
+
+    /// <summary>
+    /// オブジェクト設定の追加（デバッグ用）
+    /// </summary>
     void AddObjectSetting() override;
+
+    /// <summary>
+    /// パーティクル設定の追加（デバッグ用）
+    /// </summary>
     void AddParticleSetting() override;
 
   private:
@@ -39,7 +70,14 @@ class TutorialScene : public BaseScene {
     /// private method
     /// ===================================================
 
+    /// <summary>
+    /// カメラの更新処理
+    /// </summary>
     void CameraUpdate();
+
+    /// <summary>
+    /// シーン切り替え処理
+    /// </summary>
     void ChangeScene();
 
     /// <summary>
