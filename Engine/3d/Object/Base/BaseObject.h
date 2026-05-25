@@ -6,7 +6,7 @@
 #include "Collider/type/OBBCollider.h"
 #include "Collider/type/SphereCollider.h"
 #include "Data/DataHandler.h"
-#include"Easing.h"
+#include "Easing.h"
 #include "Object/Object3d.h"
 #include "Transform/ObjColor.h"
 #include "Transform/WorldTransform.h"
@@ -193,8 +193,6 @@ class BaseObject {
     void ShowFileSelector();
     // ブレンドモードの選択UI
     void ShowBlendModeCombo(BlendMode &currentMode);
-
-    std::vector<std::string> GetGltfFiles();
 
     bool shouldSave_ = true;
     bool isGizmoSelectable_ = true;

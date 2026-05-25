@@ -832,7 +832,7 @@ void BaseObject::ImGui() {
                 AnimaSaveToJson();
                 for (auto &c : colliders_)
                     c->SaveToJson();
-                
+
                 std::string msg = std::format("対象のオブジェクトをセーブしました！: {}", objectName_);
                 ImGuiNotification::Post(msg);
             }
@@ -1532,30 +1532,21 @@ void BaseObject::DrawScaleEaseImGui() {
 
 void BaseObject::ShowFileSelector() {
 #ifdef _DEBUG
+    // ShowFolder の GLTF ブラウザで選択パスを保持する
+    // 選択確定後に「適用」ボタンで SetAnimation を呼び出す
+    static std::string selectedGltfPath;
 
-    static int selectedIndex = -1;                              // 選択中のインデックス（-1は未選択）
-    static std::vector<std::string> gltfFiles = GetGltfFiles(); // GLTFファイルのリスト
+    ShowGltfFile(selectedGltfPath);
 
-    // ファイルリストをCスタイル文字列の配列に変換
-    std::vector<const char *> fileNames;
-    for (const auto &filePath : gltfFiles) {
-        fileNames.push_back(filePath.c_str());
-    }
+    ImGui::Spacing();
 
-    ImGui::Text("GLTFファイル選択");
-    ImGui::Separator();
-
-    // Comboボックスでファイル選択
-    ImGui::Combo("GLTFファイル##combo", &selectedIndex, fileNames.data(), static_cast<int>(fileNames.size()));
-
-    // 選択中のファイル名を常時表示し、ボタンで適用する
-    if (selectedIndex >= 0) {
-        ImGui::Text("選択ファイル:");
-        ImGui::TextWrapped("%s", gltfFiles[selectedIndex].c_str());
-
-        if (ImGui::Button("アニメーション設定##btn")) {
-            obj3d_->SetAnimation(gltfFiles[selectedIndex]); // 選択されたファイルをSetAnimationに渡す
+    if (!selectedGltfPath.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Button, {0.25f, 0.45f, 0.70f, 0.80f});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.35f, 0.55f, 0.85f, 0.90f});
+        if (ImGui::Button("アニメーション適用##applyAnima", ImVec2(-1.0f, 0.0f))) {
+            obj3d_->SetAnimation(selectedGltfPath);
         }
+        ImGui::PopStyleColor(2);
     }
 #endif // _DEBUG
 }
@@ -1582,18 +1573,4 @@ void BaseObject::ShowBlendModeCombo(BlendMode &currentMode) {
         currentMode = static_cast<BlendMode>(currentIndex);
     }
 #endif // _DEBUG
-}
-
-std::vector<std::string> BaseObject::GetGltfFiles() {
-    std::vector<std::string> gltfFiles;
-    std::filesystem::path baseDir = "resources/models/animation"; // ベースディレクトリ
-    for (const auto &entry : std::filesystem::directory_iterator(baseDir)) {
-        if (entry.path().extension() == ".gltf") {
-            // フルパスではなく相対パスを取得し、区切り文字をスラッシュに変更
-            std::string relativePath = std::filesystem::relative(entry.path(), baseDir.parent_path()).string();
-            std::replace(relativePath.begin(), relativePath.end(), '\\', '/'); // バックスラッシュをスラッシュに置換
-            gltfFiles.push_back(relativePath);
-        }
-    }
-    return gltfFiles;
 }

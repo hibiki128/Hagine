@@ -1,6 +1,6 @@
 #pragma once
-#include <string>
 #include <d3d12.h>
+#include <string>
 #include <unordered_map>
 
 struct TextureCache {
@@ -13,5 +13,6 @@ struct TextureCache {
 void ShowTextureFile(std::string &selectedTexturePath);
 void ShowModelFile(std::string &selectedModelPath);
 void ShowJsonFile(std::string &selectedJsonPath, std::string &startPath);
+void ShowGltfFile(std::string &selectedGltfPath);
 
 static std::unordered_map<std::string, TextureCache> textureCache;
