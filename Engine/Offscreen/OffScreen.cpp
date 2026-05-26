@@ -22,6 +22,24 @@ void OffScreen::Draw() {
     renderer_.Draw(effectChain_, Frame::DeltaTime());
 }
 
+void OffScreen::DrawWithoutCopy() {
+    renderer_.DrawWithoutCopy(effectChain_, Frame::DeltaTime());
+}
+
+void OffScreen::BeginCompositePass() {
+    renderer_.BeginCompositePass();
+}
+
+void OffScreen::EndCompositePass() {
+    renderer_.EndCompositePass();
+}
+
+void OffScreen::BlitToOffScreen(uint32_t prevFinalResultSrvIndex) {
+    D3D12_GPU_DESCRIPTOR_HANDLE srvGpu =
+        SrvManager::GetInstance()->GetGPUDescriptorHandle(prevFinalResultSrvIndex);
+    renderer_.BlitToOffScreen(srvGpu);
+}
+
 void OffScreen::SetProjection(Matrix4x4 projectionMatrix) {
     projectionMatrix_ = projectionMatrix;
 

@@ -27,6 +27,18 @@ void TitleScene::Initialize() {
 
     gamePad_ = std::make_unique<GamePad>();
     gamePad_->Init(0);
+
+    /// ===================================================
+    /// DrawSystem 登録
+    /// ===================================================
+    drawSystem_->Register("TitleScene_3D", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
+        skyBox_->Draw(vp);
+        objectManager_->Draw(vp);
+    });
+    drawSystem_->Register("TitleScene_UI", DrawLayer::kPostEffect, [this](const ViewProjection &) {
+        titleUI_->Draw(vp_);
+        spriteManager_->DrawAll();
+    });
 }
 
 void TitleScene::Finalize() {
@@ -77,21 +89,7 @@ void TitleScene::Update() {
 }
 
 void TitleScene::Draw() {
-    /// ===================================================
-    /// 描画処理
-    /// ===================================================
-
-    // スカイボックスの描画
-    skyBox_->Draw(vp_);
-
-    // 2Dスプライトの描画
-    spriteManager_->DrawAll();
-
-    // 3Dオブジェクトの描画
-    objectManager_->Draw(vp_);
-
-    // タイトルUIの描画
-    titleUI_->Draw(vp_);
+    // 描画は DrawSystem が管理
 }
 
 void TitleScene::DrawForOffScreen() {

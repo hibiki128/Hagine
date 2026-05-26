@@ -47,6 +47,20 @@ void ClearScene::Initialize() {
     resultUI_->SetHP(sceneManager_->GetHP());
 
     ground_->GetLighting() = true;
+
+    /// ===================================================
+    /// DrawSystem 登録
+    /// ===================================================
+    drawSystem_->Register("ClearScene_3D", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
+        objectManager_->Draw(vp);
+        skyBox_->Draw(vp);
+        ground_->Draw(vp);
+        resultStaging_->Draw(vp);
+    });
+    drawSystem_->Register("ClearScene_UI", DrawLayer::kPostEffect, [this](const ViewProjection &) {
+        resultUI_->Draw();
+        spriteManager_->DrawAll();
+    });
 }
 
 void ClearScene::Finalize() {
@@ -87,27 +101,7 @@ void ClearScene::Update() {
 }
 
 void ClearScene::Draw() {
-    /// ===================================================
-    /// 描画処理
-    /// ===================================================
-
-    // 3Dオブジェクトの描画
-    objectManager_->Draw(vp_);
-
-    // スカイボックスの描画
-    skyBox_->Draw(vp_);
-
-    // 地面の描画
-    ground_->Draw(vp_);
-
-    // UIの描画
-    resultUI_->Draw();
-
-    // 演出の描画
-    resultStaging_->Draw(vp_);
-
-    // スプライトの描画
-    spriteManager_->DrawAll();
+    // 描画は DrawSystem が管理
 }
 
 void ClearScene::DrawForOffScreen() {

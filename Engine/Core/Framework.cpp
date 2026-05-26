@@ -133,6 +133,12 @@ void Framework::Initialize() {
     sceneManager_->SetOffScreen(offscreen_.get());
     ///------------------------
 
+    ///-------DrawSystem-------
+    drawSystem_ = DrawSystem::GetInstance();
+    drawSystem_->Initialize(dxCommon_, srvManager_, offscreen_.get(), sceneManager_, collisionManager_);
+    sceneManager_->SetDrawSystem(drawSystem_);
+    ///------------------------
+
     ///-------DrawLine3D-------
     line3d_ = DrawLine3D::GetInstance();
     line3d_->Initialize();

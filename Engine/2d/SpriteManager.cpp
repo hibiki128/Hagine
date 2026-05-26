@@ -55,12 +55,33 @@ void SpriteManager::UnregisterSprite(const std::string &name) {
 }
 
 void SpriteManager::DrawAll() {
-    // 全てのスプライトに対してブレンドモードを適用し、描画を実行する
+    // 所有スプライトの描画
     for (auto &spriteData : sprites_) {
         if (spriteData->isVisible) {
             SpriteCommon::GetInstance()->SetBlendMode(spriteData->blendMode);
             spriteData->sprite->Draw(spriteData->isBackMost);
         }
+    }
+    // 外部登録スプライトの描画
+    for (auto* sprite : externalSprites_) {
+        if (sprite) {
+            sprite->Draw();
+        }
+    }
+}
+
+void SpriteManager::RegisterExternal(Sprite* sprite) {
+    if (!sprite) return;
+    auto it = std::find(externalSprites_.begin(), externalSprites_.end(), sprite);
+    if (it == externalSprites_.end()) {
+        externalSprites_.push_back(sprite);
+    }
+}
+
+void SpriteManager::UnregisterExternal(Sprite* sprite) {
+    auto it = std::find(externalSprites_.begin(), externalSprites_.end(), sprite);
+    if (it != externalSprites_.end()) {
+        externalSprites_.erase(it);
     }
 }
 
@@ -238,8 +259,8 @@ void SpriteManager::SetUpdateFunction(const std::string &name, std::function<voi
 }
 
 void SpriteManager::Clear() {
-    // リスト内の全てのスプライトを削除する
     sprites_.clear();
+    externalSprites_.clear();
 }
 
 void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData) {

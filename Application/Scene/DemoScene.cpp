@@ -11,6 +11,16 @@ void DemoScene::Initialize() {
 
     debugCamera_ = std::make_unique<DebugCamera>();
     debugCamera_->Initialize(&vp_);
+
+    /// ===================================================
+    /// DrawSystem 登録
+    /// ===================================================
+    drawSystem_->Register("DemoScene_All", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
+        spriteManager_->DrawAll();
+        objectManager_->Draw(vp);
+        ptEditor_->DrawAll(vp);
+        ptCSEditor_->DrawAll(vp);
+    });
 }
 
 void DemoScene::Finalize() {
@@ -33,12 +43,7 @@ void DemoScene::Update() {
 }
 
 void DemoScene::Draw() {
-    /// ===================================================
-    /// 描画処理
-    /// ===================================================
-
-    // すべてのオブジェクトを描画
-    DrawAllObjects();
+    // 描画は DrawSystem が管理
 }
 
 void DemoScene::DrawForOffScreen() {

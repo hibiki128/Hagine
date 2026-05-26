@@ -11,6 +11,9 @@ void BaseScene::Initialize() {
 }
 
 void BaseScene::Finalize() {
+    if (drawSystem_) {
+        drawSystem_->Clear();
+    }
 }
 
 void BaseScene::Update() {

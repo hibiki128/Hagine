@@ -52,6 +52,57 @@ void PostEffectRenderer::Draw(PostEffectChain &effectChain, float deltaTime) {
     CopyFinalResultToBackBuffer();
 }
 
+void PostEffectRenderer::DrawWithoutCopy(PostEffectChain &effectChain, float deltaTime) {
+    const std::vector<int> enabledIndices = effectChain.GetEnabledSlotIndices();
+    if (enabledIndices.empty()) {
+        DrawToFinalResult();
+        return;
+    }
+    for (int idx : enabledIndices) {
+        if (IPostEffectParams *p = effectChain.GetParams(idx)) { p->UpdateTime(deltaTime); }
+    }
+    bool isFirstInput = true;
+    int currentPingPong = 0;
+    int outputPingPong = 0;
+    for (size_t i = 0; i < enabledIndices.size(); ++i) {
+        const int slotIdx = enabledIndices[i];
+        const bool isLast = (i == enabledIndices.size() - 1);
+        const EffectSlot &slot = effectChain.GetSlots()[slotIdx];
+        DrawSingleEffect(slot, isFirstInput, currentPingPong, isLast ? -2 : outputPingPong);
+        if (!isLast) {
+            currentPingPong = outputPingPong;
+            outputPingPong = 1 - outputPingPong;
+            isFirstInput = false;
+        }
+    }
+    // CopyFinalResultToBackBuffer は呼ばない
+}
+
+void PostEffectRenderer::BeginCompositePass() {
+    auto *cmdList = dxCommon_->GetCommandList().Get();
+    dxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
+                                  D3D12_RESOURCE_STATE_GENERIC_READ,
+                                  D3D12_RESOURCE_STATE_RENDER_TARGET);
+    cmdList->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
+}
+
+void PostEffectRenderer::EndCompositePass() {
+    dxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
+                                  D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                  D3D12_RESOURCE_STATE_GENERIC_READ);
+}
+
+void PostEffectRenderer::BlitToOffScreen(D3D12_GPU_DESCRIPTOR_HANDLE srcSrv) {
+    auto *cmdList = dxCommon_->GetCommandList().Get();
+    // PreRenderTexture() によりオフスクリーンは既に RENDER_TARGET 状態
+    D3D12_CPU_DESCRIPTOR_HANDLE offScreenRtv = dxCommon_->GetRTVCPUDescriptorHandle(2);
+    cmdList->OMSetRenderTargets(1, &offScreenRtv, false, &dsvHandle_);
+    psoManager_->DrawCommonSetting(PipelineType::kRender, BlendMode::kNormal, ShaderMode::kNone);
+    cmdList->SetGraphicsRootDescriptorTable(0, srcSrv);
+    cmdList->DrawInstanced(3, 1, 0, 0);
+    // オフスクリーンは RENDER_TARGET のまま（以降の3D描画のため）
+}
+
 void PostEffectRenderer::DrawToFinalResult() {
     auto *cmdList = dxCommon_->GetCommandList().Get();
 

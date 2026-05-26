@@ -153,6 +153,16 @@ void DirectXCommon::TransitionDepthBarrier() {
     BarrierTransition(depthStencilResource.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 }
 
+void DirectXCommon::PreDrawForEffects() {
+    // マルチステージ用: バックバッファは既に遷移済みなので深度とオフスクリーンのみ遷移
+    BarrierTransition(depthStencilResource.Get(),
+                      D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    BarrierTransition(offScreenResource.Get(),
+                      D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
+    commandList->RSSetViewports(1, &viewport);
+    commandList->RSSetScissorRects(1, &scissorRect);
+}
+
 void DirectXCommon::PostDraw() {
     HRESULT hr;
 

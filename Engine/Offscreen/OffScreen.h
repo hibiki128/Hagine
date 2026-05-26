@@ -19,6 +19,11 @@ class OffScreen {
   public:
     void Initialize();
     void Draw();
+    void DrawWithoutCopy();         // エフェクト適用のみ（マルチステージ・フルフレーム合成用）
+    void BeginCompositePass();      // finalResultへUI合成開始
+    void EndCompositePass();        // UI合成終了
+    void BlitToOffScreen(uint32_t prevFinalResultSrvIndex); // 前ステージ結果をオフスクリーンへ
+
     void Setting(); // ImGui
 
     void SetProjection(Matrix4x4 projectionMatrix);

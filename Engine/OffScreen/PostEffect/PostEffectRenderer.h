@@ -10,9 +10,19 @@ class PostEffectRenderer {
     void Initialize(DirectXCommon *dxCommon, SrvManager *srvManager, PipeLineManager *psoManager);
 
     /// @brief エフェクトチェーンを適用して描画する
-    /// @param effectChain スロットベースのエフェクトチェーン
-    /// @param deltaTime   時間更新用（timeパラメータを持つエフェクト向け）
     void Draw(PostEffectChain &effectChain, float deltaTime);
+
+    /// @brief エフェクト適用のみ（バックバッファへのコピーなし）
+    void DrawWithoutCopy(PostEffectChain &effectChain, float deltaTime);
+
+    /// @brief finalResultへのUI合成パス開始（GENERIC_READ→RENDER_TARGET）
+    void BeginCompositePass();
+
+    /// @brief UI合成パス終了（RENDER_TARGET→GENERIC_READ）
+    void EndCompositePass();
+
+    /// @brief 前ステージの最終結果をオフスクリーンテクスチャに描画（マルチステージ用）
+    void BlitToOffScreen(D3D12_GPU_DESCRIPTOR_HANDLE srcSrv);
 
     uint32_t GetFinalResultSrvIndex() const { return renderBuffer_.GetFinalResultSrvIndex(); }
     void CopyFinalResultToBackBuffer();

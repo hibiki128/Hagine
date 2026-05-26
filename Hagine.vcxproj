@@ -220,6 +220,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Core\MyGame.cpp" />
     <ClCompile Include="Engine\Utility\Scene\SceneTransition.cpp" />
     <ClCompile Include="Engine\OffScreen\OffScreen.cpp" />
+    <ClCompile Include="Engine\Render\DrawSystem.cpp" />
     <ClCompile Include="Engine\3d\Animation\Skin.cpp" />
     <ClCompile Include="Engine\Utility\ShowFolder\ShowFolder.cpp" />
     <ClCompile Include="Engine\3d\SkyBox\SkyBox.cpp" />
@@ -414,6 +415,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Core\MyGame.h" />
     <ClInclude Include="Engine\Utility\Scene\SceneTransition.h" />
     <ClInclude Include="Engine\OffScreen\OffScreen.h" />
+    <ClInclude Include="Engine\Render\DrawSystem.h" />
     <ClInclude Include="Engine\3d\Animation\Skin.h" />
     <ClInclude Include="Engine\Utility\ShowFolder\ShowFolder.h" />
     <ClInclude Include="Engine\3d\SkyBox\SkyBox.h" />

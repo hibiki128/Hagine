@@ -51,6 +51,7 @@ void MyGame::Update() {
         imGuiManager_->ShowSceneWindow(offscreen_.get(), sceneManager_->GetCurrentSceneName());
     }
     imGuiManager_->ShowMainUI(offscreen_.get());
+    drawSystem_->UpdateImGui();
     imGuiManager_->End();
 #endif // _DEBUG
 #ifndef _DEBUG
@@ -63,39 +64,11 @@ void MyGame::Update() {
 }
 
 void MyGame::Draw() {
-    dxCommon_->PreRenderTexture();
-    srvManager_->SetDescriptorHeap();
-    // -----描画開始-----
-
-    // -----シーンごとの処理------
-
-    sceneManager_->Draw();
-#ifdef _DEBUG
-    //-----線描画-----
-    DrawLine3D::GetInstance()->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
-    //---------------
-
-    collisionManager_->DebugDraw(*sceneManager_->GetBaseScene()->GetViewProjection());
-
-#endif // _DEBUG
-
-    dxCommon_->PreDraw();
-
-    offscreen_->SetProjection(sceneManager_->GetBaseScene()->GetViewProjection()->matProjection_);
-
-    offscreen_->Draw();
-    dxCommon_->TransitionDepthBarrier();
-    sceneManager_->DrawTransition();
-    sceneManager_->DrawForOffScreen();
-
-    // フレーム統計を更新（ImGui描画前）
-    ParticleEditor::GetInstance()->UpdateFrameStats();
+    drawSystem_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
 
 #ifdef _DEBUG
     imGuiManager_->Draw();
 #endif // _DEBUG
-       // ------------------------
 
-    // -----描画終了-----
     dxCommon_->PostDraw();
 }

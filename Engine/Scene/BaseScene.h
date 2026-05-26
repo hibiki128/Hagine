@@ -22,6 +22,7 @@
 #include <OffScreen.h>
 #include"SpriteManager.h"
 #include"Object/Base/BaseObjectManager.h"
+#include "Engine/Render/DrawSystem.h"
 
 class SceneManager;
 
@@ -72,6 +73,7 @@ class BaseScene {
     virtual void SetSceneManager(SceneManager *sceneManager) { sceneManager_ = sceneManager; }
 
     void SetOffScreen(OffScreen *offscreen) { offScreen_ = offscreen; }
+    void SetDrawSystem(DrawSystem *drawSystem) { drawSystem_ = drawSystem; }
 
     void DrawParticleEditorUI();
 
@@ -94,6 +96,7 @@ class BaseScene {
     SceneManager *sceneManager_ = nullptr;
     SpriteManager* spriteManager_= nullptr;
     BaseObjectManager *objectManager_ = nullptr;
+    DrawSystem *drawSystem_ = nullptr;
 
     float ClearTime_ = 0.0f;
     float HP_ = 0.0f;

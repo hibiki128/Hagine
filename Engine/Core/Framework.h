@@ -32,6 +32,7 @@
 #include "line/DrawLine3D.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include"Engine/Utility/LoadFile/Csv/CsvLoad.h"
+#include "Engine/Render/DrawSystem.h"
 class Framework {
   public: // メンバ関数
     virtual ~Framework() = default;
@@ -124,6 +125,8 @@ class Framework {
     CsvLoad* csvLoad_ = nullptr;
 
     std::unique_ptr<OffScreen> offscreen_;
+
+    DrawSystem *drawSystem_ = nullptr;
 
     bool endRequest_;
 };

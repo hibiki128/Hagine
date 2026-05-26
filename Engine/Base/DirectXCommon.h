@@ -63,6 +63,11 @@ class DirectXCommon {
     void TransitionDepthBarrier();
 
     /// <summary>
+    /// マルチステージ用描画前処理（バックバッファ遷移なし）
+    /// </summary>
+    void PreDrawForEffects();
+
+    /// <summary>
     /// 描画後処理
     /// </summary>
     void PostDraw();

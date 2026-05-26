@@ -8,56 +8,64 @@
 #include <ShowFolder/ShowFolder.h>
 
 void BaseObjectManager::Finalize() {
-    // 保持中の全オブジェクトを解放し、CollisionManager が有効な間に
-    // 各コライダーの Unregister を完了させる
     RemoveAllObjects();
 }
 
 void BaseObjectManager::RemoveAllObjects() {
     // 親子関係をすべてクリア
-    for (auto &pair : baseObjects_) {
-        BaseObject *obj = pair.second.get();
+    for (auto &[name, obj] : objects_) {
         if (obj) {
             obj->SetParent(nullptr);
         }
     }
 
-    // すべてのオブジェクトを削除
-    baseObjects_.clear();
+    objects_.clear();
+    ownedObjects_.clear();
 
-// ImGuizmoManagerもクリア
 #ifdef _DEBUG
     ImGuizmoManager::GetInstance()->DeleteTarget();
 #endif
 }
 
 void BaseObjectManager::RemoveObjectByName(const std::string &name) {
-    auto it = baseObjects_.find(name);
-    if (it != baseObjects_.end()) {
+    auto it = objects_.find(name);
+    if (it != objects_.end()) {
         ImGuiNotification::Post("オブジェクトを削除しました: " + name, {0.9f, 0.7f, 0.2f, 1.0f});
-        baseObjects_.erase(it);
+        objects_.erase(it);
+        ownedObjects_.erase(name);
     }
 }
 
-void BaseObjectManager::AddObject(std::unique_ptr<BaseObject> baseObject) {
-    const std::string &name = baseObject->GetName();
+void BaseObjectManager::RegisterExternal(BaseObject* obj) {
+    const std::string &name = obj->GetName();
 #ifdef _DEBUG
-    ImGuizmoManager::GetInstance()->AddTarget(baseObject->GetName(), baseObject.get());
-#endif // _DEBUG
-    MotionEditor::GetInstance()->Register(baseObject.get());
-    baseObjects_.emplace(name, std::move(baseObject));
+    ImGuizmoManager::GetInstance()->AddTarget(name, obj);
+#endif
+    MotionEditor::GetInstance()->Register(obj);
+    objects_.emplace(name, obj);
     ImGuiNotification::Post("オブジェクトを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
+void BaseObjectManager::UnregisterExternal(BaseObject* obj) {
+    objects_.erase(obj->GetName());
+}
+
+void BaseObjectManager::AddObject(std::unique_ptr<BaseObject> baseObject) {
+    auto* ptr = baseObject.get();
+    const std::string &name = baseObject->GetName();
+    ownedObjects_.emplace(name, std::move(baseObject));
+    RegisterExternal(ptr);
+}
+
 void BaseObjectManager::Update() {
-    for (auto &[name, obj] : baseObjects_) {
+    for (auto &[name, obj] : objects_) {
         obj->UpdateHierarchy();
         obj->UpdateWorldTransformHierarchy();
     }
 }
 
 void BaseObjectManager::Draw(const ViewProjection &viewProjection) {
-    for (auto &[name, obj] : baseObjects_) {
+    for (auto &[name, obj] : objects_) {
         obj->Draw(viewProjection);
     }
 }
@@ -72,7 +80,7 @@ void BaseObjectManager::UpdateImGui() {
 }
 
 void BaseObjectManager::SaveAll() {
-    for (auto &[name, obj] : baseObjects_) {
+    for (auto &[name, obj] : objects_) {
         if (obj->GetShouldSave()) { // セーブ対象フラグをチェック
             obj->SetFolderPath("SceneData/" + sceneName_ + "/ObjectDatas");
             obj->SceneSaveToJson();
@@ -149,9 +157,9 @@ void BaseObjectManager::CreateObject(std::string objectName, std::string modelPa
 }
 
 BaseObject *BaseObjectManager::GetObjectByName(const std::string &name) {
-    auto it = baseObjects_.find(name);
-    if (it != baseObjects_.end()) {
-        return it->second.get();
+    auto it = objects_.find(name);
+    if (it != objects_.end()) {
+        return it->second;
     }
     return nullptr;
 }
@@ -226,9 +234,9 @@ void BaseObjectManager::ShowParentChildHierarchy() {
         // 階層構造を表示
         ImGui::BeginChild("HierarchyView", ImVec2(0, 300), true);
 
-        for (auto &[name, obj] : baseObjects_) {
+        for (auto &[name, obj] : objects_) {
             if (!obj->GetParent()) { // ルートオブジェクトのみ表示
-                ShowObjectHierarchy(obj.get(), 0);
+                ShowObjectHierarchy(obj, 0);
             }
         }
 
@@ -294,14 +302,14 @@ void BaseObjectManager::RemoveParentChild(const std::string &childName) {
 
 std::vector<std::string> BaseObjectManager::GetObjectNames() const {
     std::vector<std::string> names;
-    for (const auto &[name, obj] : baseObjects_) {
+    for (const auto &[name, obj] : objects_) {
         names.push_back(name);
     }
     return names;
 }
 
 void BaseObjectManager::SaveAllParentChildRelationships() {
-    for (auto &[name, obj] : baseObjects_) {
+    for (auto &[name, obj] : objects_) {
         obj->SaveParentChildRelationship();
     }
 }
@@ -311,7 +319,7 @@ void BaseObjectManager::LoadAllParentChildRelationships() {
     std::unordered_map<std::string, std::string> parentRelations;
     std::unordered_map<std::string, std::vector<std::string>> childRelations;
 
-    for (auto &[name, obj] : baseObjects_) {
+    for (auto &[name, obj] : objects_) {
         if (!obj->ObjectDatas_)
             continue;
 
@@ -338,24 +346,25 @@ void BaseObjectManager::LoadAllParentChildRelationships() {
 }
 
 void BaseObjectManager::RemoveObject(const std::string &name) {
-    auto it = baseObjects_.find(name);
-    if (it != baseObjects_.end()) {
-        BaseObject *targetObject = it->second.get();
+    auto it = objects_.find(name);
+    if (it != objects_.end()) {
+        BaseObject *targetObject = it->second;
 
         if (targetObject) {
             // 子供の親解除
-            for (auto &pair : baseObjects_) {
-                BaseObject *obj = pair.second.get();
+            for (auto &pair : objects_) {
+                BaseObject *obj = pair.second;
                 if (obj && obj->GetParent() == targetObject) {
-                    obj->DetachParent(); // ← SetParent(nullptr)ではなくこれ
+                    obj->DetachParent();
                 }
             }
 
             // 親からの解除
-            targetObject->DetachParent(); // ← これで親のchildren_からも消える
+            targetObject->DetachParent();
         }
 
-        baseObjects_.erase(it);
+        objects_.erase(it);
+        ownedObjects_.erase(name);
     }
 }
 
@@ -368,7 +377,7 @@ void BaseObjectManager::ShowSaveTargetManager() {
         std::vector<std::string> nonSaveTargets;
 
         // オブジェクトを分類
-        for (const auto &[name, obj] : baseObjects_) {
+        for (const auto &[name, obj] : objects_) {
             if (obj->GetShouldSave()) {
                 saveTargets.push_back(name);
             } else {
@@ -822,18 +831,18 @@ void BaseObjectManager::RestoreParentChildRelationshipForObject(BaseObject *obje
     // 親の復元
     std::string parentName = object->GetParentName();
     if (!parentName.empty()) {
-        auto it = baseObjects_.find(parentName);
-        if (it != baseObjects_.end()) {
-            object->SetParent(it->second.get());
+        auto it = objects_.find(parentName);
+        if (it != objects_.end()) {
+            object->SetParent(it->second);
         }
     }
 
     // 子の復元
     std::vector<std::string> childrenNames = object->GetChildrenNames();
     for (const std::string &childName : childrenNames) {
-        auto it = baseObjects_.find(childName);
-        if (it != baseObjects_.end()) {
-            object->AddChild(it->second.get());
+        auto it = objects_.find(childName);
+        if (it != objects_.end()) {
+            object->AddChild(it->second);
         }
     }
 }

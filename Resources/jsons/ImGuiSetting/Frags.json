@@ -9,15 +9,15 @@
     },
     "isEditorMode": true,
     "showFPSView": false,
-    "showGizmoView": true,
+    "showGizmoView": false,
     "showHierarchyView": false,
     "showKeyOperationDebugView": false,
     "showLightView": false,
     "showMotionEditorView": false,
     "showObjectView": false,
-    "showOfScreenView": false,
-    "showParticleView": true,
-    "showSceneView": true,
+    "showOfScreenView": true,
+    "showParticleView": false,
+    "showSceneView": false,
     "showShortcutWindow": false,
-    "showSpriteManagerView": true
+    "showSpriteManagerView": false
 }

@@ -19,6 +19,7 @@ mono_crash.*
 # Build results
 Generated/
 /externals/DirectXTex/Bin/
+/externals/imgui/imgui/x64/
 /externals/imgui/x64/
 /x64
 imgui_editor.ini
@@ -329,3 +330,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /imgui_editor.ini
 /imgui_game.ini
+/CLAUDE.md

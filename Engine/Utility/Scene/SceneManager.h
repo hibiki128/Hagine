@@ -2,6 +2,7 @@
 #include "AbstractSceneFactory.h"
 #include "SceneTransition.h"
 #include <OffScreen.h>
+#include <Engine/Render/DrawSystem.h>
 #include <memory>
 #include <string>
 
@@ -84,9 +85,11 @@ class SceneManager {
     void SetHP(float hp) { hp_ = hp; }
 
     void SetOffScreen(OffScreen *offscreen) { offscreen_ = offscreen; }
+    void SetDrawSystem(DrawSystem *drawSystem) { drawSystem_ = drawSystem; }
 
   private:
     OffScreen *offscreen_ = nullptr;
+    DrawSystem *drawSystem_ = nullptr;
     // 今のシーン（実行中のシーン）
     std::unique_ptr<BaseScene> scene_;
     // 次のシーン

@@ -96,6 +96,16 @@ class SpriteManager {
     void DrawAll();
 
     /// <summary>
+    /// 外部所有スプライトを描画リストに追加（非所有登録）
+    /// </summary>
+    void RegisterExternal(Sprite* sprite);
+
+    /// <summary>
+    /// 外部所有スプライトを描画リストから削除
+    /// </summary>
+    void UnregisterExternal(Sprite* sprite);
+
+    /// <summary>
     /// すべてのスプライトを更新
     /// </summary>
     void UpdateAll(float deltaTime);
@@ -177,6 +187,7 @@ class SpriteManager {
     /// private variables
     /// ===================================================
     std::vector<std::unique_ptr<SpriteData>> sprites_; // スプライトリスト
+    std::vector<Sprite*> externalSprites_;             // 外部所有スプライトリスト（非所有）
     bool showSpriteCreationModal_ = false;              // 作成モーダル表示フラグ
     std::string texturePath_ = "";                     // テクスチャパス
     std::string saveFolder_ = "Sprite";                // 保存先フォルダ

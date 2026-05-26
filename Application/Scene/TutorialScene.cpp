@@ -53,17 +53,15 @@ void TutorialScene::Initialize() {
     /// ===================================================
     enemy_ptr = enemy_.get();
     player_ptr = player_.get();
-    MotionEditor::GetInstance()->Register(player_ptr);
-    MotionEditor::GetInstance()->Register(enemy_ptr);
 
     playerUI_->Init(player_ptr);
     enemyUI_->Init(enemy_ptr);
 
     /// ===================================================
-    /// オブジェクトマネージャに追加
+    /// オブジェクトマネージャに登録（非所有）
     /// ===================================================
-    objectManager_->AddObject(std::move(player_));
-    objectManager_->AddObject(std::move(enemy_));
+    objectManager_->RegisterExternal(player_.get());
+    objectManager_->RegisterExternal(enemy_.get());
 
     /// ===================================================
     /// エネミーを非表示にする
@@ -76,6 +74,31 @@ void TutorialScene::Initialize() {
     tutorialSystem_->Initialize(player_ptr);
     tutorialUI_->Initialize(tutorialSystem_.get());
     fadeOut_->Initialize();
+
+    /// ===================================================
+    /// DrawSystem 登録
+    /// ===================================================
+    drawSystem_->Register("TutorialScene_3D", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
+        objectManager_->Draw(vp);
+        skyBox_->Draw(vp);
+        ground_->Draw(vp);
+        aroundField_->Draw(vp);
+        player_ptr->DrawParticle(vp);
+        enemy_ptr->DrawParticle(vp);
+        aroundField_->DrawParticle(vp);
+        followCamera_->DrawFrustum();
+        enemy_ptr->DrawFrustum();
+    });
+    drawSystem_->Register("TutorialScene_UI", DrawLayer::kPostEffect, [this](const ViewProjection &) {
+        fadeOut_->Draw(vp_);
+        gameUI_->Draw();
+        spriteManager_->DrawAll();
+        if (sceneStarted_) {
+            playerUI_->Draw();
+            enemyUI_->Draw();
+            tutorialUI_->Draw();
+        }
+    });
 }
 
 void TutorialScene::Finalize() {
@@ -143,40 +166,7 @@ void TutorialScene::Update() {
 }
 
 void TutorialScene::Draw() {
-    /// ===================================================
-    /// 描画処理
-    /// ===================================================
-
-    // 3Dオブジェクトの描画
-    objectManager_->Draw(vp_);
-
-    // 環境オブジェクトの描画
-    skyBox_->Draw(vp_);
-    ground_->Draw(vp_);
-    aroundField_->Draw(vp_);
-
-    // パーティクルの描画
-    player_ptr->DrawParticle(vp_);
-    enemy_ptr->DrawParticle(vp_);
-    aroundField_->DrawParticle(vp_);
-
-    // フェード・UIの描画
-    fadeOut_->Draw(vp_);
-    gameUI_->Draw();
-
-    // デバッグ用視錐台の描画
-    followCamera_->DrawFrustum();
-    enemy_ptr->DrawFrustum();
-
-    // 2Dスプライトの描画
-    spriteManager_->DrawAll();
-
-    // 遅延終了後にUIを表示
-    if (sceneStarted_) {
-        playerUI_->Draw();
-        enemyUI_->Draw();
-        tutorialUI_->Draw();
-    }
+    // 描画は DrawSystem が管理
 }
 
 void TutorialScene::DrawForOffScreen() {

@@ -26,7 +26,12 @@ class BaseObjectManager {
 
     void RemoveObjectByName(const std::string &name);
 
+    // 所有権を渡して追加（LoadAll/CreateObject 用）
     void AddObject(std::unique_ptr<BaseObject> baseObject);
+
+    // 非所有登録（シーンが unique_ptr を保持したまま登録する）
+    void RegisterExternal(BaseObject* obj);
+    void UnregisterExternal(BaseObject* obj);
 
     void Update();
     void DrawHierarchyEditor();
@@ -75,7 +80,11 @@ class BaseObjectManager {
     void CreateObject(std::string objectName, std::string modelPath, std::string texturePath = "");
 
   private:
-    std::unordered_map<std::string, std::unique_ptr<BaseObject>> baseObjects_;
+    // LoadAll/CreateObject が所有するオブジェクト
+    std::unordered_map<std::string, std::unique_ptr<BaseObject>> ownedObjects_;
+    // Draw/Update/GetObjectByName で使う統合ビュー（所有・外部両方）
+    std::unordered_map<std::string, BaseObject*> objects_;
+
     std::string sceneName_ = "TitleScene";
     std::string objectName_;
     std::string modelPath_;
