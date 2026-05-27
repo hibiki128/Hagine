@@ -1310,3 +1310,107 @@ class EnemyEnergyChargeNode : public ContextNode {
     float m_Timer = 0.0f;         // 経過時間
     float m_OriginalRecoveryRate = 0.0f; // 元の回復レート保存用
 };
+
+/// <summary>
+/// プレイヤーHPが閾値以下かチェックする条件ノード
+/// </summary>
+class IsPlayerHPLowNode : public ContextNode {
+  public:
+    IsPlayerHPLowNode(float threshold) : m_Threshold(threshold) {}
+
+  protected:
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_Threshold;
+};
+
+/// <summary>
+/// 自身のエネルギーが閾値以上かチェックする条件ノード
+/// </summary>
+class IsEnergyHighNode : public ContextNode {
+  public:
+    IsEnergyHighNode(float threshold) : m_Threshold(threshold) {}
+
+  protected:
+    NodeStatus OnUpdate() override;
+
+  private:
+    float m_Threshold;
+};
+
+/// <summary>
+/// 溜め攻撃ノード: 一定時間溜めた後、一斉にホーミング弾を発射する
+/// param  : chargeDuration （溜め時間・秒）
+/// param2 : burstCount     （発射弾数）
+/// param3 : energyCost     （消費エネルギー）
+/// </summary>
+class EnemyChargeAttackNode : public ContextNode {
+  public:
+    EnemyChargeAttackNode(float chargeDuration, int burstCount, float /*energyCost*/)
+        : m_ChargeDuration(chargeDuration), m_BurstCount(burstCount) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer     = 0.0f;
+        m_ShotsFired = 0;
+        m_Phase     = Phase::Charge;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+
+  private:
+    enum class Phase { Charge, Shoot, Cooldown };
+
+    float m_ChargeDuration;
+    int   m_BurstCount;
+    float m_Timer     = 0.0f;
+    int   m_ShotsFired = 0;
+    Phase m_Phase     = Phase::Charge;
+
+    static constexpr float kShootInterval = 0.07f;
+    static constexpr float kCooldown      = 0.4f;
+};
+
+/// <summary>
+/// 必殺技ノード: エネルギーを消費してフルコンボ＋大量ホーミング射撃を行う
+/// param  : energyCost   （消費エネルギー）
+/// param2 : shotCount    （発射弾数）
+/// param3 : stepDuration （コンボ1段の時間・秒）
+/// </summary>
+class EnemyUltimateNode : public ContextNode {
+  public:
+    EnemyUltimateNode(float /*energyCost*/, int shotCount, float stepDuration)
+        : m_ShotCount(shotCount), m_StepDuration(stepDuration) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer      = 0.0f;
+        m_StepCount  = 0;
+        m_ShotsFired = 0;
+        m_WaitingStep = false;
+        m_Phase      = Phase::Combo;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+    void OnExit() override;
+
+  private:
+    enum class Phase { Combo, Shoot, Cooldown };
+
+    int   m_ShotCount;
+    float m_StepDuration;
+    float m_Timer      = 0.0f;
+    int   m_StepCount  = 0;
+    int   m_ShotsFired = 0;
+    bool  m_WaitingStep = false;
+    Phase m_Phase      = Phase::Combo;
+
+    static constexpr int   kMaxComboSteps  = 8;
+    static constexpr float kShootInterval  = 0.08f;
+    static constexpr float kCooldown       = 0.6f;
+};

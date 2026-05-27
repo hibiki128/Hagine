@@ -859,3 +859,159 @@ void EnemyEnergyChargeNode::OnExit() {
         m_Enemy->SetEnergyRecoveryRate(m_OriginalRecoveryRate);
     }
 }
+
+// ---------------------------------------------------------
+// IsPlayerHPLowNode
+// ---------------------------------------------------------
+NodeStatus IsPlayerHPLowNode::OnUpdate() {
+    if (!m_Player)
+        return NodeStatus::Failure;
+
+    float maxHP = m_Player->GetMaxHP();
+    if (maxHP <= 0.0f)
+        return NodeStatus::Failure;
+
+    return (m_Player->GetHP() / maxHP) <= m_Threshold ? NodeStatus::Success : NodeStatus::Failure;
+}
+
+// ---------------------------------------------------------
+// IsEnergyHighNode
+// ---------------------------------------------------------
+NodeStatus IsEnergyHighNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    float maxEnergy = m_Enemy->GetMaxEnergy();
+    if (maxEnergy <= 0.0f)
+        return NodeStatus::Failure;
+
+    return (m_Enemy->GetEnergy() / maxEnergy) >= m_Threshold ? NodeStatus::Success : NodeStatus::Failure;
+}
+
+// ---------------------------------------------------------
+// EnemyChargeAttackNode
+// ---------------------------------------------------------
+void EnemyChargeAttackNode::OnEnter() {
+    m_Timer      = 0.0f;
+    m_ShotsFired = 0;
+    m_Phase      = Phase::Charge;
+
+    if (!m_Enemy)
+        return;
+
+    // 溜め中は停止する（弾発射時にShot()内でエネルギーを消費）
+    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+    m_Enemy->StopMovement();
+}
+
+NodeStatus EnemyChargeAttackNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    m_Timer += 1.0f / 60.0f;
+
+    if (m_Phase == Phase::Charge) {
+        m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+        if (m_Timer >= m_ChargeDuration) {
+            // 溜め完了 → 即1発目を発射してShootフェーズへ
+            m_Enemy->Shot();
+            m_ShotsFired = 1;
+            m_Timer      = 0.0f;
+            m_Phase      = (m_ShotsFired >= m_BurstCount) ? Phase::Cooldown : Phase::Shoot;
+        }
+        return NodeStatus::Running;
+    }
+
+    if (m_Phase == Phase::Shoot) {
+        if (m_Timer >= kShootInterval) {
+            m_Timer = 0.0f;
+            m_Enemy->Shot();
+            ++m_ShotsFired;
+            if (m_ShotsFired >= m_BurstCount) {
+                m_Phase = Phase::Cooldown;
+                m_Timer = 0.0f;
+            }
+        }
+        return NodeStatus::Running;
+    }
+
+    // Phase::Cooldown
+    if (m_Timer >= kCooldown)
+        return NodeStatus::Success;
+
+    return NodeStatus::Running;
+}
+
+// ---------------------------------------------------------
+// EnemyUltimateNode
+// ---------------------------------------------------------
+void EnemyUltimateNode::OnEnter() {
+    m_Timer       = 0.0f;
+    m_StepCount   = 0;
+    m_ShotsFired  = 0;
+    m_WaitingStep = false;
+    m_Phase       = Phase::Combo;
+
+    if (!m_Enemy)
+        return;
+
+    // 停止してコンボ開始（弾発射時にShot()内でエネルギーを消費）
+    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+    m_Enemy->StopMovement();
+}
+
+NodeStatus EnemyUltimateNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    m_Timer += 1.0f / 60.0f;
+
+    if (m_Phase == Phase::Combo) {
+        if (m_StepCount >= kMaxComboSteps) {
+            // コンボ完了 → 即1発目発射してShootフェーズへ
+            m_Enemy->Shot();
+            m_ShotsFired = 1;
+            m_Timer      = 0.0f;
+            m_Phase      = (m_ShotsFired >= m_ShotCount) ? Phase::Cooldown : Phase::Shoot;
+            return NodeStatus::Running;
+        }
+
+        if (!m_WaitingStep) {
+            m_Enemy->SetComboAttack(true);
+            ++m_StepCount;
+            m_WaitingStep = true;
+            m_Timer       = 0.0f;
+        }
+
+        if (m_Timer >= m_StepDuration) {
+            m_WaitingStep = false;
+            if (!m_Enemy->IsPunchComboActive())
+                m_StepCount = kMaxComboSteps; // 強制終了
+        }
+        return NodeStatus::Running;
+    }
+
+    if (m_Phase == Phase::Shoot) {
+        if (m_Timer >= kShootInterval) {
+            m_Timer = 0.0f;
+            m_Enemy->Shot();
+            ++m_ShotsFired;
+            if (m_ShotsFired >= m_ShotCount) {
+                m_Phase = Phase::Cooldown;
+                m_Timer = 0.0f;
+            }
+        }
+        return NodeStatus::Running;
+    }
+
+    // Phase::Cooldown
+    if (m_Timer >= kCooldown)
+        return NodeStatus::Success;
+
+    return NodeStatus::Running;
+}
+
+void EnemyUltimateNode::OnExit() {
+    if (m_Enemy)
+        m_Enemy->StopMovement();
+}

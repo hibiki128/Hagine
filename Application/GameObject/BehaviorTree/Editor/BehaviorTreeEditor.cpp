@@ -154,6 +154,24 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
             nd.param > 0.0f ? nd.param : 1.0f,
             nd.param2 > 0.0f ? nd.param2 : 1.0f);
         break;
+    case EditorNodeType::ActionChargeAttack:
+        runtimeNode = std::make_shared<EnemyChargeAttackNode>(
+            nd.param > 0.0f ? nd.param : 1.5f,
+            nd.param2 > 0.0f ? static_cast<int>(nd.param2) : 8,
+            nd.param3 > 0.0f ? nd.param3 : 50.0f);
+        break;
+    case EditorNodeType::ActionUltimate:
+        runtimeNode = std::make_shared<EnemyUltimateNode>(
+            nd.param > 0.0f ? nd.param : 70.0f,
+            nd.param2 > 0.0f ? static_cast<int>(nd.param2) : 8,
+            nd.param3 > 0.0f ? nd.param3 : 0.4f);
+        break;
+    case EditorNodeType::ConditionPlayerHPLow:
+        runtimeNode = std::make_shared<IsPlayerHPLowNode>(nd.param);
+        break;
+    case EditorNodeType::ConditionEnergyHigh:
+        runtimeNode = std::make_shared<IsEnergyHighNode>(nd.param);
+        break;
     case EditorNodeType::ActionApproach:
         runtimeNode = std::make_shared<EnemyApproachNode>(nd.param, nd.param2, nd.param3);
         break;
@@ -222,7 +240,11 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                    nd.type == EditorNodeType::ActionComboFull ||
                    nd.type == EditorNodeType::ActionBurstShoot ||
                    nd.type == EditorNodeType::ConditionEnergyLow ||
-                   nd.type == EditorNodeType::ActionEnergyCharge);
+                   nd.type == EditorNodeType::ActionEnergyCharge ||
+                   nd.type == EditorNodeType::ActionChargeAttack ||
+                   nd.type == EditorNodeType::ActionUltimate ||
+                   nd.type == EditorNodeType::ConditionPlayerHPLow ||
+                   nd.type == EditorNodeType::ConditionEnergyHigh);
 
     if (!isLeaf) {
         if (nd.type == EditorNodeType::DecoratorWeight) {
@@ -248,7 +270,9 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                nd.type == EditorNodeType::ConditionEnergyLow ||
                nd.type == EditorNodeType::ConditionIsGrounded ||
                nd.type == EditorNodeType::ConditionIsAirborne ||
-               nd.type == EditorNodeType::ConditionPlayerState) {
+               nd.type == EditorNodeType::ConditionPlayerState ||
+               nd.type == EditorNodeType::ConditionPlayerHPLow ||
+               nd.type == EditorNodeType::ConditionEnergyHigh) {
         int successPin = nd.id * 10 + 3 + kPinOffset;
         int failurePin = nd.id * 10 + 4 + kPinOffset;
         auto successChildIds = FindChildrenNodeIds(successPin, links);
@@ -281,6 +305,12 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                     break;
                 case EditorNodeType::ConditionEnergyLow:
                     condCopy = std::make_shared<IsEnergyLowNode>(nd.param);
+                    break;
+                case EditorNodeType::ConditionPlayerHPLow:
+                    condCopy = std::make_shared<IsPlayerHPLowNode>(nd.param);
+                    break;
+                case EditorNodeType::ConditionEnergyHigh:
+                    condCopy = std::make_shared<IsEnergyHighNode>(nd.param);
                     break;
                 default:
                     break;
@@ -450,6 +480,18 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         Parameter3 = 0.5f;
         Parameter4 = 0.0f;
         Parameter5 = 0.0f;
+    } else if (type == EditorNodeType::ActionChargeAttack) {
+        Parameter = 1.5f;  // 溜め時間(秒)
+        Parameter2 = 8.0f; // 発射弾数
+        Parameter3 = 0.0f; // (未使用)
+    } else if (type == EditorNodeType::ActionUltimate) {
+        Parameter = 0.0f;  // (未使用)
+        Parameter2 = 8.0f; // 発射弾数
+        Parameter3 = 0.35f; // コンボ1段時間(秒)
+    } else if (type == EditorNodeType::ConditionPlayerHPLow) {
+        Parameter = 0.5f;  // HP閾値比率
+    } else if (type == EditorNodeType::ConditionEnergyHigh) {
+        Parameter = 0.7f;  // エネルギー閾値比率
     }
 }
 
@@ -559,6 +601,14 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "弾をN連発する";
     case EditorNodeType::ActionEnergyCharge:
         return "エネルギーをチャージする";
+    case EditorNodeType::ActionChargeAttack:
+        return "溜め攻撃: param=溜め時間(秒) param2=発射弾数";
+    case EditorNodeType::ActionUltimate:
+        return "必殺技: フルコンボ+一斉射撃 param2=発射弾数 param3=コンボ1段時間(秒)";
+    case EditorNodeType::ConditionPlayerHPLow:
+        return "プレイヤーHPが閾値以下かチェック (param: 比率 0.0〜1.0)";
+    case EditorNodeType::ConditionEnergyHigh:
+        return "自身のエネルギーが閾値以上かチェック (param: 比率 0.0〜1.0)";
     default:
         return "説明なし";
     }
@@ -674,6 +724,24 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     case EditorNodeType::ActionEnergyCharge:
         runtimeNode = std::make_shared<EnemyEnergyChargeNode>(eNode.Parameter > 0.0f ? eNode.Parameter : 1.0f, eNode.Parameter2 > 0.0f ? eNode.Parameter2 : 1.0f);
         break;
+    case EditorNodeType::ActionChargeAttack:
+        runtimeNode = std::make_shared<EnemyChargeAttackNode>(
+            eNode.Parameter > 0.0f ? eNode.Parameter : 1.5f,
+            eNode.Parameter2 > 0.0f ? static_cast<int>(eNode.Parameter2) : 8,
+            eNode.Parameter3 > 0.0f ? eNode.Parameter3 : 50.0f);
+        break;
+    case EditorNodeType::ActionUltimate:
+        runtimeNode = std::make_shared<EnemyUltimateNode>(
+            eNode.Parameter > 0.0f ? eNode.Parameter : 70.0f,
+            eNode.Parameter2 > 0.0f ? static_cast<int>(eNode.Parameter2) : 8,
+            eNode.Parameter3 > 0.0f ? eNode.Parameter3 : 0.4f);
+        break;
+    case EditorNodeType::ConditionPlayerHPLow:
+        runtimeNode = std::make_shared<IsPlayerHPLowNode>(eNode.Parameter);
+        break;
+    case EditorNodeType::ConditionEnergyHigh:
+        runtimeNode = std::make_shared<IsEnergyHighNode>(eNode.Parameter);
+        break;
     case EditorNodeType::SelectorRandom:
         runtimeNode = std::make_shared<RandomSelectorNode>();
         break;
@@ -730,6 +798,10 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
                     conditionCopy = std::make_shared<IsEnemyLockOnNode>();
                 else if (eNode.Type == EditorNodeType::ConditionEnergyLow)
                     conditionCopy = std::make_shared<IsEnergyLowNode>(eNode.Parameter);
+                else if (eNode.Type == EditorNodeType::ConditionPlayerHPLow)
+                    conditionCopy = std::make_shared<IsPlayerHPLowNode>(eNode.Parameter);
+                else if (eNode.Type == EditorNodeType::ConditionEnergyHigh)
+                    conditionCopy = std::make_shared<IsEnergyHighNode>(eNode.Parameter);
                 if (conditionCopy) {
                     successSequence->AddChild(conditionCopy);
                     for (int childId : successChildIds) {
@@ -1301,9 +1373,11 @@ void BehaviorTreeEditor::OnImGuiRender() {
             addBtn("距離チェック", EditorNodeType::ConditionPlayerClose);
             addBtn("HP低下チェック", EditorNodeType::ConditionHealthLow);
             addBtn("エネルギー低下チェック", EditorNodeType::ConditionEnergyLow);
+            addBtn("エネルギー高チェック", EditorNodeType::ConditionEnergyHigh);
             addBtn("地上チェック", EditorNodeType::ConditionIsGrounded);
             addBtn("空中チェック", EditorNodeType::ConditionIsAirborne);
             addBtn("プレイヤーステート", EditorNodeType::ConditionPlayerState);
+            addBtn("プレイヤーHP低下チェック", EditorNodeType::ConditionPlayerHPLow);
             addBtn("ロックオン中チェック", EditorNodeType::ConditionIsLockOn);
             ImGui::EndMenu();
         }
@@ -1332,6 +1406,8 @@ void BehaviorTreeEditor::OnImGuiRender() {
             addBtn("連射", EditorNodeType::ActionBurstShoot);
             addBtn("コンボ(1段)", EditorNodeType::ActionComboStep);
             addBtn("コンボ(全段)", EditorNodeType::ActionComboFull);
+            addBtn("溜め攻撃", EditorNodeType::ActionChargeAttack);
+            addBtn("必殺技", EditorNodeType::ActionUltimate);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("その他")) {

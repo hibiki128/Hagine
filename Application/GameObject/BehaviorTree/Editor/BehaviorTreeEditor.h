@@ -46,7 +46,13 @@ enum class EditorNodeType {
     ConditionEnergyLow, // 28  エネルギーが低いかチェック
     ActionEnergyCharge, // 29  エネルギーチャージ
     // ===== 飛行中水平移動 =====
-    ActionFlyApproach // 30  飛行中にプレイヤーへ水平接近
+    ActionFlyApproach,    // 30  飛行中にプレイヤーへ水平接近
+    // ===== チャージ攻撃・必殺技 =====
+    ActionChargeAttack,   // 31  溜め→一斉射撃
+    ActionUltimate,       // 32  フルコンボ＋大量射撃（エネルギー消費）
+    // ===== 追加条件ノード =====
+    ConditionPlayerHPLow, // 33  プレイヤーHPが閾値以下か
+    ConditionEnergyHigh   // 34  自身のエネルギーが閾値以上か
 };
 
 /// <summary>
@@ -165,7 +171,9 @@ struct EditorNode {
                Type == EditorNodeType::ConditionIsGrounded ||
                Type == EditorNodeType::ConditionIsAirborne ||
                Type == EditorNodeType::ConditionPlayerState ||
-               Type == EditorNodeType::ConditionIsLockOn;
+               Type == EditorNodeType::ConditionIsLockOn ||
+               Type == EditorNodeType::ConditionPlayerHPLow ||
+               Type == EditorNodeType::ConditionEnergyHigh;
     }
 
     /// <summary>
@@ -190,7 +198,9 @@ struct EditorNode {
                Type == EditorNodeType::ActionComboFull ||
                Type == EditorNodeType::ActionBurstShoot ||
                Type == EditorNodeType::ActionEnergyCharge ||
-               Type == EditorNodeType::ActionFlyApproach;
+               Type == EditorNodeType::ActionFlyApproach ||
+               Type == EditorNodeType::ActionChargeAttack ||
+               Type == EditorNodeType::ActionUltimate;
     }
 
     /// <summary>

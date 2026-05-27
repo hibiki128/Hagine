@@ -1,5 +1,5 @@
 {
-    "IsShowMainUI": false,
+    "IsShowMainUI": true,
     "ShowGrid": false,
     "gridColor": {
         "w": 1.0,
@@ -7,14 +7,14 @@
         "y": 0.5,
         "z": 0.5
     },
-    "isEditorMode": false,
+    "isEditorMode": true,
     "showFPSView": false,
     "showGizmoView": false,
     "showHierarchyView": false,
     "showKeyOperationDebugView": false,
     "showLightView": false,
     "showMotionEditorView": false,
-    "showObjectView": false,
+    "showObjectView": true,
     "showOfScreenView": false,
     "showParticleView": false,
     "showSceneView": false,
