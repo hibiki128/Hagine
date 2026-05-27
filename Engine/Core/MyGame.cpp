@@ -1,6 +1,7 @@
 #include "MyGame.h"
 #include "Scene/SceneFactory.h"
 #include <Frame.h>
+#include <Shadow/ShadowMap.h>
 
 void MyGame::Initialize() {
     Framework::Initialize();
@@ -14,7 +15,7 @@ void MyGame::Initialize() {
     // シーンマネージャに最初のシーンをセット
     sceneManager_->SetSceneFactory(std::move(sceneFactory_));
 #ifdef _DEBUG
-    sceneManager_->NextSceneReservation("TITLE");
+    sceneManager_->NextSceneReservation("TUTORIAL");
 #else
     sceneManager_->NextSceneReservation("TITLE");
 #endif // _DEBUG
@@ -52,6 +53,7 @@ void MyGame::Update() {
     }
     imGuiManager_->ShowMainUI(offscreen_.get());
     drawSystem_->UpdateImGui();
+    ShadowMap::GetInstance()->UpdateImGui();
     imGuiManager_->End();
 #endif // _DEBUG
 #ifndef _DEBUG

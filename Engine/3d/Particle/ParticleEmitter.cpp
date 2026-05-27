@@ -2,6 +2,7 @@
 #include "ParticleEmitter.h"
 #include "Frame.h"
 #include "line/DrawLine3D.h"
+#include <Shadow/ShadowMap.h>
 
 #include "../Utility/Debug/ImGui/ImGuiNotification.h"
 #include "../Utility/Debug/ImGui/ImGuizmoManager.h"
@@ -52,6 +53,7 @@ void ParticleEmitter::UpdateOnce() {
 }
 
 void ParticleEmitter::Draw(const ViewProjection &vp_) {
+    if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
     Manager_->SetEmitterCenter(transform_.translation_);
 
     transform_.UpdateMatrix();

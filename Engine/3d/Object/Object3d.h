@@ -28,6 +28,7 @@ class Object3d {
         Matrix4x4 WVP;
         Matrix4x4 World;
         Matrix4x4 WorldInverseTranspose;
+        Matrix4x4 LightWVP;
     };
 
     DirectXCommon *dxCommon_ = nullptr;
@@ -106,6 +107,11 @@ class Object3d {
     void SetStopAnimation(bool anime) { currentModelAnimation_->SetIsAnimation(anime); }
 
     void DrawWireframe(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool isRainbow = false);
+
+    /// <summary>
+    /// シャドウマップパスへの描画（深度のみ）
+    /// </summary>
+    void DrawShadow(const WorldTransform &worldTransform);
 
     /// <summary>
     /// 描画

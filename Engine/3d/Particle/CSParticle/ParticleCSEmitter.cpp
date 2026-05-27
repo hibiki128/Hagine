@@ -4,6 +4,7 @@
 #include "ParticleCSGroupManager.h"
 #include <Frame.h>
 #include <Line/DrawLine3D.h>
+#include <Shadow/ShadowMap.h>
 #include <Particle/ParticleCommon.h>
 #include <random>
 #include <regex>
@@ -47,12 +48,23 @@ void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primit
 }
 
 void ParticleCSEmitter::Draw(const ViewProjection &vp) {
+    if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
     DrawEmitter();
 
     for (auto &group : particleGroups_) {
         group->Update(vp);
         dxCommon_->TransitionUAVBarrier(group->GetOutputParticleResource().Get());
         EmitterDisPatch();
+        // UAV flush: EmitterDisPatch writes gParticles[].lastTrailPosition; UpdateDisPatch
+        // reads those values the same frame. Without this barrier the GPU may start
+        // UpdateDisPatch before Emit's UAV stores are globally visible, causing trail
+        // children to read stale (often zero) positions.
+        {
+            D3D12_RESOURCE_BARRIER uavBarrier{};
+            uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+            uavBarrier.UAV.pResource = group->GetOutputParticleResource().Get();
+            commandList->ResourceBarrier(1, &uavBarrier);
+        }
         auto *fieldMgr = ParticleCSFieldManager::GetInstance();
         group->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),

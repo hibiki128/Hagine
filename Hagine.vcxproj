@@ -163,6 +163,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Utility\Data\DataHandler.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleEditor.cpp" />
     <ClCompile Include="Engine\3d\Primitive\PrimitiveModel.cpp" />
+    <ClCompile Include="Engine\3d\Shadow\ShadowMap.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleGroup.cpp" />
     <ClCompile Include="Engine\3d\Particle\ParticleGroupManager.cpp" />
     <ClCompile Include="Engine\Utility\Debug\ImGui\ImGuizmoManager.cpp" />

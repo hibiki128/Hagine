@@ -67,6 +67,11 @@ class Model {
     void Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect);
 
     /// <summary>
+    /// シャドウパス描画（深度のみ書き込む）
+    /// </summary>
+    void DrawShadow();
+
+    /// <summary>
     /// Getter
     /// </summary>
     ModelData GetModelData() { return modelData_; }
@@ -126,4 +131,6 @@ class Model {
     Animator *animator_; // アニメーター
     Skin *skin_;         // スキン
     Bone *bone_;         // ボーン
+
+    bool skinOutputInVertexState_ = false; // skin出力バッファの現在の状態追跡
 };

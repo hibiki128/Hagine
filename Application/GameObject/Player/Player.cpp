@@ -89,12 +89,12 @@ void Player::Init(const std::string objectName) {
     isGrounded_ = true; // 初期状態は地面にいる
 
     data_ = std::make_unique<DataHandler>("EntityData", "Player");
-    shadow_ = std::make_unique<BaseObject>();
+   /* shadow_ = std::make_unique<BaseObject>();
     shadow_->Init("shadow");
     shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
     shadow_->SetTexture("game/shadow.png");
     shadow_->GetWorldTransform()->SetRotationEuler(Vector3(degreesToRadians(kShadowRotationDegrees), kRotationZero, kRotationZero));
-    shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};
+    shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};*/
 
     chargeShot_ = std::make_unique<ChargeShot>();
     chargeShot_->SetPlayer(this);
@@ -210,8 +210,8 @@ void Player::Update() {
         generatedField_->data.position = GetWorldPosition();
         gamePad_->Update();
 
-        shadow_->GetLocalPosition() = {transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
-        shadow_->Update();
+        //shadow_->GetLocalPosition() = {transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
+        //shadow_->Update();
 
         if (isInvincible_) {
             InvincibleUpdate();
@@ -306,7 +306,7 @@ void Player::Update() {
             }
         }
 
-        UpdateShadowScale();
+        //UpdateShadowScale();
         if (HP_ <= kMinHP) {
             if (isAlive_) {
                 // 死亡した瞬間：回転リセットのイージングを開始
@@ -340,7 +340,7 @@ void Player::Draw(const ViewProjection &viewProjection) {
         return;
     }
     BaseObject::Draw(viewProjection);
-    shadow_->Draw(viewProjection);
+    //shadow_->Draw(viewProjection);
     for (auto &bullet : bullets_) {
         bullet->Draw(viewProjection);
     }
@@ -772,13 +772,13 @@ void Player::Move() {
 }
 
 void Player::UpdateShadowScale() {
-    if (transform_->translation_.y < kGroundLevel) {
+  /*  if (transform_->translation_.y < kGroundLevel) {
         return;
     }
     float height = transform_->translation_.y;
     float baseScale = kShadowBaseScale;
     float scaleFactor = std::max(kShadowMinScale, baseScale - height * kShadowScaleFactor);
-    shadow_->GetLocalScale() = {scaleFactor, scaleFactor, scaleFactor};
+    shadow_->GetLocalScale() = {scaleFactor, scaleFactor, scaleFactor};*/
 }
 
 bool Player::ConsumeEnergy(float amount) {

@@ -49,6 +49,7 @@ enum class PipelineType {
     kLine3d,
     kSkybox,
     kGPUParticle,
+    kShadowMap,
 };
 
 class PipeLineManager {
@@ -133,6 +134,11 @@ class PipeLineManager {
     void CreateSkyboxPipelines();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateSkyboxRootSignature();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateSkyboxGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
+
+    // シャドウマップ関連
+    void CreateShadowMapPipelines();
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateShadowMapRootSignature();
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateShadowMapGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
 
 
     // シェーダーモード別のルートシグネチャ作成

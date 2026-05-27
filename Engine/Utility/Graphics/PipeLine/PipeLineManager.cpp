@@ -203,6 +203,7 @@ void PipeLineManager::CreateAllPipelines() {
     CreateLine3dPipelines();
     CreateSkyboxPipelines();
     CreateGPUParticlePipelines();
+    CreateShadowMapPipelines();
 }
 
 // 標準パイプラインの作成
@@ -276,8 +277,16 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
     skyBoxDescriptorRange[0].RegisterSpace = 0;
     skyBoxDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
+    // シャドウマップ用DescriptorRange (t2)
+    D3D12_DESCRIPTOR_RANGE shadowDescriptorRange[1] = {};
+    shadowDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    shadowDescriptorRange[0].NumDescriptors = 1;
+    shadowDescriptorRange[0].BaseShaderRegister = 2; // t2
+    shadowDescriptorRange[0].RegisterSpace = 0;
+    shadowDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     // RootParameter作成。複数設定できるので配列。
-    D3D12_ROOT_PARAMETER rootParameters[8] = {};
+    D3D12_ROOT_PARAMETER rootParameters[10] = {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;                   // CBVを使う
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;                // VertexShaderで使う
     rootParameters[0].Descriptor.ShaderRegister = 0;                                   // レジスタ番号0とバインド
@@ -300,15 +309,25 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
     rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;                   // CBVを使う
     rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;                // PixelShaderで使う
     rootParameters[6].Descriptor.ShaderRegister = 4;                                   // レジスタ番号1とバインド
-    descriptionRootSignature.pParameters = rootParameters;                             // ルートパラメータ配列へのポインタ
-    descriptionRootSignature.NumParameters = _countof(rootParameters);                 // 配列の長さ
     rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[7].DescriptorTable.pDescriptorRanges = skyBoxDescriptorRange;
     rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(skyBoxDescriptorRange);
+    // シャドウマップ SRV (t2) - param 8
+    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[8].DescriptorTable.pDescriptorRanges = shadowDescriptorRange;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(shadowDescriptorRange);
+    // ShadowData CBV (b5) - param 9
+    rootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[9].Descriptor.ShaderRegister = 5;
 
-    // Smplerの設定
-    D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+
+    // Samplerの設定（通常 + シャドウ比較サンプラー）
+    D3D12_STATIC_SAMPLER_DESC staticSamplers[2] = {};
     staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;   // バイリニアフィルタ
     staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // 0～1の範囲外をリピート
     staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -317,6 +336,16 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
     staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;                       // ありったけのMipmapを使う
     staticSamplers[0].ShaderRegister = 0;                               // レジスタ番号0を使う
     staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; // PixelShaderで使う
+    // シャドウ比較サンプラー (s1)
+    staticSamplers[1].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+    staticSamplers[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    staticSamplers[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    staticSamplers[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    staticSamplers[1].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+    staticSamplers[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    staticSamplers[1].MaxLOD = D3D12_FLOAT32_MAX;
+    staticSamplers[1].ShaderRegister = 1; // s1
+    staticSamplers[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     descriptionRootSignature.pStaticSamplers = staticSamplers;
     descriptionRootSignature.NumStaticSamplers = _countof(staticSamplers);
 
@@ -1214,11 +1243,32 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     rootParameters[8].DescriptorTable.pDescriptorRanges = descriptorRangeForInstancing;
     rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeForInstancing);
 
-    descriptionRootSignature.pParameters = rootParameters;
-    descriptionRootSignature.NumParameters = _countof(rootParameters);
+    // シャドウマップ用 DescriptorRange (t2 PIXEL)
+    D3D12_DESCRIPTOR_RANGE skinShadowDescriptorRange[1] = {};
+    skinShadowDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    skinShadowDescriptorRange[0].NumDescriptors = 1;
+    skinShadowDescriptorRange[0].BaseShaderRegister = 2; // t2
+    skinShadowDescriptorRange[0].RegisterSpace = 0;
+    skinShadowDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    // Samplerの設定
-    D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+    // 元のrootParameters配列を11要素に変更
+    D3D12_ROOT_PARAMETER rootParameters11[11] = {};
+    for (int _i = 0; _i < 9; ++_i) rootParameters11[_i] = rootParameters[_i];
+    // rootParameters[9]: シャドウマップ SRV (t2) - PIXEL
+    rootParameters11[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters11[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters11[9].DescriptorTable.pDescriptorRanges = skinShadowDescriptorRange;
+    rootParameters11[9].DescriptorTable.NumDescriptorRanges = _countof(skinShadowDescriptorRange);
+    // rootParameters[10]: ShadowData CBV (b5) - PIXEL
+    rootParameters11[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters11[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters11[10].Descriptor.ShaderRegister = 5;
+
+    descriptionRootSignature.pParameters = rootParameters11;
+    descriptionRootSignature.NumParameters = _countof(rootParameters11);
+
+    // Samplerの設定（通常 + シャドウ比較）
+    D3D12_STATIC_SAMPLER_DESC staticSamplers[2] = {};
     staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
     staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -1227,6 +1277,15 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
     staticSamplers[0].ShaderRegister = 0;
     staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    staticSamplers[1].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+    staticSamplers[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    staticSamplers[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    staticSamplers[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    staticSamplers[1].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+    staticSamplers[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    staticSamplers[1].MaxLOD = D3D12_FLOAT32_MAX;
+    staticSamplers[1].ShaderRegister = 1; // s1
+    staticSamplers[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     descriptionRootSignature.pStaticSamplers = staticSamplers;
     descriptionRootSignature.NumStaticSamplers = _countof(staticSamplers);
 
@@ -1887,6 +1946,97 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShockwaveRoot
     assert(SUCCEEDED(hr));
     return rootSig;
 }
+
+// ========== シャドウマップパイプライン ==========
+
+void PipeLineManager::CreateShadowMapPipelines() {
+    auto rootSignature = CreateShadowMapRootSignature();
+    rootSignatures_[MakeRootSignatureKey(PipelineType::kShadowMap, ShaderMode::kNone)] = rootSignature;
+
+    auto pipeline = CreateShadowMapGraphicsPipeLine(rootSignature);
+    pipelines_[MakePipelineKey(PipelineType::kShadowMap, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
+}
+
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShadowMapRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+
+    D3D12_ROOT_PARAMETER rootParameters[1] = {};
+    rootParameters[0].ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[0].ShaderVisibility           = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[0].Descriptor.ShaderRegister  = 0; // b0
+
+    D3D12_ROOT_SIGNATURE_DESC desc{};
+    desc.Flags          = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    desc.NumParameters  = _countof(rootParameters);
+    desc.pParameters    = rootParameters;
+
+    ID3DBlob *sigBlob = nullptr, *errBlob = nullptr;
+    HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errBlob);
+    if (FAILED(hr)) {
+        Logger::Log(reinterpret_cast<char *>(errBlob->GetBufferPointer()));
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShadowMapGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState;
+
+    D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
+    inputElementDescs[0].SemanticName         = "POSITION";
+    inputElementDescs[0].SemanticIndex        = 0;
+    inputElementDescs[0].Format               = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    inputElementDescs[0].AlignedByteOffset    = D3D12_APPEND_ALIGNED_ELEMENT;
+    inputElementDescs[1].SemanticName         = "TEXCOORD";
+    inputElementDescs[1].SemanticIndex        = 0;
+    inputElementDescs[1].Format               = DXGI_FORMAT_R32G32_FLOAT;
+    inputElementDescs[1].AlignedByteOffset    = D3D12_APPEND_ALIGNED_ELEMENT;
+    inputElementDescs[2].SemanticName         = "NORMAL";
+    inputElementDescs[2].SemanticIndex        = 0;
+    inputElementDescs[2].Format               = DXGI_FORMAT_R32G32B32_FLOAT;
+    inputElementDescs[2].AlignedByteOffset    = D3D12_APPEND_ALIGNED_ELEMENT;
+    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
+    inputLayoutDesc.pInputElementDescs = inputElementDescs;
+    inputLayoutDesc.NumElements        = _countof(inputElementDescs);
+
+    IDxcBlob *vs = dxCommon_->CompileShader(L"./Resources/shaders/Shadow/ShadowMap.VS.hlsl", L"vs_6_0");
+    assert(vs != nullptr);
+
+    D3D12_RASTERIZER_DESC rasterizerDesc{};
+    rasterizerDesc.FillMode              = D3D12_FILL_MODE_SOLID;
+    rasterizerDesc.CullMode              = D3D12_CULL_MODE_BACK;
+    rasterizerDesc.DepthClipEnable       = TRUE;
+    rasterizerDesc.DepthBias             = 100;
+    rasterizerDesc.DepthBiasClamp        = 0.0f;
+    rasterizerDesc.SlopeScaledDepthBias  = 1.0f;
+
+    D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
+    depthStencilDesc.DepthEnable    = TRUE;
+    depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    depthStencilDesc.DepthFunc      = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
+    desc.pRootSignature        = rootSignature.Get();
+    desc.InputLayout           = inputLayoutDesc;
+    desc.VS                    = {vs->GetBufferPointer(), vs->GetBufferSize()};
+    desc.BlendState            = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    desc.BlendState.RenderTarget[0].RenderTargetWriteMask = 0; // カラー書き込みなし
+    desc.RasterizerState       = rasterizerDesc;
+    desc.DepthStencilState     = depthStencilDesc;
+    desc.DSVFormat             = DXGI_FORMAT_D32_FLOAT;
+    desc.NumRenderTargets      = 0; // RTVなし（深度のみ）
+    desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    desc.SampleDesc.Count      = 1;
+    desc.SampleMask            = D3D12_DEFAULT_SAMPLE_MASK;
+
+    HRESULT hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineState));
+    assert(SUCCEEDED(hr));
+    return pipelineState;
+}
+
+// ========== ポストエフェクト ==========
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);

@@ -3,6 +3,7 @@
 #include "Graphics/PipeLine/PipeLineManager.h"
 #include "Graphics/Srv/SrvManager.h"
 #include "Graphics/Texture/TextureManager.h"
+#include <Shadow/ShadowMap.h>
 #include <myMath.h>
 
 void SkyBox::Finalize() {
@@ -54,6 +55,7 @@ void SkyBox::Update(const ViewProjection &viewProjection) {
 }
 
 void SkyBox::Draw(const ViewProjection &viewProjection) {
+    if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
     Update(viewProjection);
     ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
     psoManager_->DrawCommonSetting(PipelineType::kSkybox);

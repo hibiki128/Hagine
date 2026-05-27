@@ -83,6 +83,14 @@ public:
     /// </summary>
     void SetShowLightVisualization(bool show) { showLightVisualization_ = show; }
 
+    Vector3 GetDirectionalLightDirection() const {
+        if (directionalLightData) return directionalLightData->direction;
+        return {0.f, -1.f, 0.f};
+    }
+    bool IsDirectionalLightActive() const {
+        return directionalLightData && directionalLightData->active != 0;
+    }
+
 private:
     // ===================================================
     // 非公開メソッド

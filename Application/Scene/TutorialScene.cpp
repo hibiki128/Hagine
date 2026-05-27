@@ -2,6 +2,7 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
 #include "Engine/Utility/Scene/SceneManager.h"
+#include <Shadow/ShadowMap.h>
 
 void TutorialScene::Initialize() {
     /// ===================================================
@@ -132,6 +133,10 @@ void TutorialScene::Update() {
     aroundField_->Update();
     fadeOut_->Update();
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
+
+    // シャドウマップをプレイヤーに追従
+    Vector3 p = player_ptr->GetWorldPosition();
+    ShadowMap::GetInstance()->SetLightTarget({p.x, 0.0f, p.z});
 
     // 入力の更新
     gamePad_->Update();

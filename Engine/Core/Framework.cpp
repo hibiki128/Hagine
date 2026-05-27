@@ -1,5 +1,6 @@
 #include "Framework.h"
 #include <Frame.h>
+#include <Shadow/ShadowMap.h>
 
 void Framework::Run() {
     // ゲームの初期化
@@ -195,6 +196,10 @@ void Framework::Initialize() {
     csvLoad_ = CsvLoad::GetInstance();
     ///---------------------
 
+    ///-------ShadowMap-------
+    ShadowMap::GetInstance()->Initialize();
+    ///------------------------
+
     /// 時間の初期化
     Frame::Init();
 }
@@ -221,6 +226,7 @@ void Framework::Finalize() {
     spriteManager_->Finalize();
     line3d_->Finalize();
     skyBox_->Finalize();
+    ShadowMap::GetInstance()->Finalize();
     srvManager_->Finalize();
     audio_->Finalize();
     lightGroup_->Finalize();

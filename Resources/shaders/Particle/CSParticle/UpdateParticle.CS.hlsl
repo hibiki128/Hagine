@@ -270,11 +270,17 @@ void SpawnTrailParticles(int particleIndex, float3 currentPosition)
     if (totalDistance < targetDistance)
         return;
 
-    int trailsToSpawn = int(totalDistance / targetDistance);
-    trailsToSpawn = min(trailsToSpawn, gSettings.maxTrailPerParticle);
-    
+    int desiredTrails = int(totalDistance / targetDistance);
+    int trailsToSpawn = min(desiredTrails, gSettings.maxTrailPerParticle);
+
     if (trailsToSpawn <= 0)
         return;
+
+    // 低FPS(大きいdeltaTime)で1フレームの移動量が maxTrailPerParticle*targetDistance を
+    // 超えると、固定間隔では子が移動量に追いつけず親の後方へ取り残され散らばって見える。
+    // キャップに達した場合は移動区間全体へ均等配置し、追従の遅れを防ぐ。
+    bool capped = (desiredTrails > gSettings.maxTrailPerParticle);
+    float spacing = capped ? (totalDistance / float(trailsToSpawn)) : targetDistance;
 
     float3 direction = normalize(moveVector);
     int requiredCount = trailsToSpawn;
@@ -307,7 +313,7 @@ void SpawnTrailParticles(int particleIndex, float3 currentPosition)
         if (trailIndex < 0 || trailIndex >= gSettings.maxParticleCount)
             continue;
 
-        float spawnDistance = targetDistance * (float(i) + 1.0f);
+        float spawnDistance = spacing * (float(i) + 1.0f);
         float3 spawnPosition = lastPos + direction * spawnDistance;
 
         RandomGenerator generator;
@@ -338,7 +344,9 @@ void SpawnTrailParticles(int particleIndex, float3 currentPosition)
         gParticles[trailIndex].trailSpawnDistance = gSettings.trailSpawnDistance;
     }
 
-    float consumedDistance = float(requiredCount) * targetDistance;
+    // capped のときは移動区間を全消費して lastTrailPosition を currentPosition まで進め、
+    // 追従の遅れを次フレームへ持ち越さないようにする。
+    float consumedDistance = capped ? totalDistance : (float(requiredCount) * targetDistance);
     gParticles[particleIndex].lastTrailPosition = lastPos + direction * consumedDistance;
 }
 

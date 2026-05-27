@@ -5,6 +5,7 @@
 #include "fstream"
 #include "myMath.h"
 #include "sstream"
+#include <Shadow/ShadowMap.h>
 #include <SkyBox/SkyBox.h>
 
 void Model::Initialize(ModelCommon *modelCommon) {
@@ -50,27 +51,31 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath)
 
 void Model::Update() {
     if (isGltf && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
-        // 1. 入力頂点データ更新
         skin_->UpdateInputVertices(modelData_);
 
-        // 2. コンピュートシェーダ実行のためのバリア
         ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
 
-        // UAV -> SRV バリア (前回の結果があれば)
         D3D12_RESOURCE_BARRIER barrier = {};
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-        barrier.UAV.pResource = skin_->GetOutputVertexResource();
-        commandList->ResourceBarrier(1, &barrier);
+        barrier.Transition.pResource   = skin_->GetOutputVertexResource();
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
-        // 3. スキニング実行
+        if (skinOutputInVertexState_) {
+            // VERTEX → UAV（2フレーム目以降: 前フレームでVERTEX状態になっているので遷移）
+            barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.StateBefore  = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+            barrier.Transition.StateAfter   = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+            commandList->ResourceBarrier(1, &barrier);
+        }
+
         skin_->ExecuteSkinning(commandList);
 
-        // 4. UAV -> VBV バリア
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource = skin_->GetOutputVertexResource();
+        // UAV → VERTEX
+        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
         commandList->ResourceBarrier(1, &barrier);
+
+        skinOutputInVertexState_ = true;
     }
 }
 
@@ -107,6 +112,17 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
         }
 
         commandList->SetGraphicsRootDescriptorTable(7, srvManager_->GetGPUDescriptorHandle(SkyBox::GetInstance()->GetTextureIndex()));
+
+        // シャドウマップをバインド
+        {
+            ShadowMap *shadowMap = ShadowMap::GetInstance();
+            bool isSkinned = isGltf && animator_ && modelData_.hasAnimations && modelData_.hasBones;
+            uint32_t shadowSrvSlot    = isSkinned ? 9 : 8;
+            uint32_t shadowDataSlot   = isSkinned ? 10 : 9;
+            srvManager_->SetGraphicsRootDescriptorTable(shadowSrvSlot, shadowMap->GetShadowSrvIndex());
+            commandList->SetGraphicsRootConstantBufferView(shadowDataSlot, shadowMap->GetShadowDataGpuAddress());
+        }
+
         if (reflect) {
             // 環境係数を有効化
             currentMaterial->SetEnvironmentCoefficients(1.0f);
@@ -118,6 +134,31 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
         currentMaterial->Draw(color[materialIndex].GetColor(), lighting);
 
         // 描画コール
+        commandList->DrawIndexedInstanced(
+            UINT(modelData_.meshes[meshIndex].indices.size()), 1, 0, vertexOffset, 0);
+    }
+}
+
+void Model::DrawShadow() {
+    ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
+
+    for (size_t meshIndex = 0; meshIndex < meshes_.size(); ++meshIndex) {
+        Mesh *currentMesh = meshes_[meshIndex].get();
+
+        D3D12_INDEX_BUFFER_VIEW indexBufferView = currentMesh->GetIndexBufferView();
+        commandList->IASetIndexBuffer(&indexBufferView);
+
+        INT vertexOffset = 0;
+        if (isGltf && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
+            D3D12_VERTEX_BUFFER_VIEW vbv = skin_->GetOutputVertexBufferView();
+            commandList->IASetVertexBuffers(0, 1, &vbv);
+            vertexOffset = static_cast<INT>(skin_->GetMeshVertexOffset(meshIndex));
+            skinOutputInVertexState_ = true;
+        } else {
+            D3D12_VERTEX_BUFFER_VIEW vbv = currentMesh->GetVertexBufferView();
+            commandList->IASetVertexBuffers(0, 1, &vbv);
+        }
+
         commandList->DrawIndexedInstanced(
             UINT(modelData_.meshes[meshIndex].indices.size()), 1, 0, vertexOffset, 0);
     }

@@ -44,13 +44,13 @@ void Enemy::Init(const std::string objectName) {
     BaseObject::SetTexture("debug/white1x1.png", kTextureIndex);
     BaseObject::SetColor(Vector4(kColorRed, kColorZero, kColorZero, kColorOpaque));
 
-    shadow_ = std::make_unique<BaseObject>();
+   /* shadow_ = std::make_unique<BaseObject>();
     shadow_->Init("shadow");
     shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
     shadow_->SetTexture("game/shadow.png");
     shadow_->GetWorldTransform()->SetRotationEuler(
         Vector3(degreesToRadians(kShadowRotationDegrees), kRotationZero, kRotationZero));
-    shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};
+    shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};*/
 
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
     chargeShake_ = std::make_unique<Shake>();
@@ -142,9 +142,9 @@ void Enemy::Init(const std::string objectName) {
 
 void Enemy::Update() {
     // 影の位置を更新
-    shadow_->GetLocalPosition() = {
+   /* shadow_->GetLocalPosition() = {
         transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
-    shadow_->Update();
+    shadow_->Update();*/
 
     // 開始フラグが立っており、ポーズ中でなく、ターゲットが生きている場合に更新
     if (started_ && !isPause_ && target_->GetIsAlive()) {
@@ -304,8 +304,8 @@ void Enemy::Draw(const ViewProjection &viewProjection) {
     BaseObject::Draw(viewProjection);
     if (transform_->translation_.y < kGroundLevel)
         return;
-    shadow_->SetIsModelDraw(drawShadow_);
-    shadow_->Draw(viewProjection);
+   /* shadow_->SetIsModelDraw(drawShadow_);
+    shadow_->Draw(viewProjection);*/
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {
@@ -551,11 +551,11 @@ void Enemy::Save() {}
 void Enemy::Load() {}
 
 void Enemy::UpdateShadowScale() {
-    if (transform_->translation_.y < kGroundLevel)
+   /* if (transform_->translation_.y < kGroundLevel)
         return;
     float height = transform_->translation_.y;
     float scale = std::max(kShadowMinScale, kShadowBaseScale - height * kShadowScaleFactor);
-    shadow_->GetLocalScale() = {scale, scale, scale};
+    shadow_->GetLocalScale() = {scale, scale, scale};*/
 }
 
 void Enemy::RotateUpdate() {

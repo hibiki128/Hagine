@@ -5,6 +5,7 @@ struct TransformationMatrix
     float4x4 WVP;
     float4x4 World;
     float4x4 WorldInverseTranspose;
+    float4x4 LightWVP;
 };
 
 struct VertexShaderInput
@@ -21,10 +22,11 @@ VertexShaderOutput main(VertexShaderInput input)
 {
     VertexShaderOutput output;
 
-    output.position = mul(input.position, gTransformationMatrix.WVP);
+    output.position      = mul(input.position, gTransformationMatrix.WVP);
     output.worldPosition = mul(input.position, gTransformationMatrix.World).xyz;
-    output.texcoord = input.texcoord;
-    output.normal = normalize(mul(input.normal, (float3x3) gTransformationMatrix.WorldInverseTranspose));
+    output.texcoord      = input.texcoord;
+    output.normal        = normalize(mul(input.normal, (float3x3) gTransformationMatrix.WorldInverseTranspose));
+    output.shadowCoord   = mul(input.position, gTransformationMatrix.LightWVP);
 
     return output;
 }

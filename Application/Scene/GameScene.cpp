@@ -3,6 +3,7 @@
 #include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
+#include <Shadow/ShadowMap.h>
 
 static constexpr const char *kBTFolder = "BehaviorTree";
 static constexpr const char *kBTFileName = "EnemyBehavior";
@@ -148,6 +149,10 @@ void GameScene::Update() {
     aroundField_->Update();
     playerUI_->Update();
     enemyUI_->Update();
+
+    // シャドウマップをプレイヤーに追従
+    Vector3 p = player_ptr->GetWorldPosition();
+    ShadowMap::GetInstance()->SetLightTarget({p.x, 0.0f, p.z});
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
 
 #ifdef _DEBUG

@@ -8,6 +8,7 @@
 #include "Transform/WorldTransform.h"
 #include "cassert"
 #include <Frame.h>
+#include <Shadow/ShadowMap.h>
 #include <line/DrawLine3D.h>
 #include <myMath.h>
 #include <type/Matrix4x4.h>
@@ -100,15 +101,19 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
         transformationMatrixData->WVP = worldViewProjectionMatrix;
         transformationMatrixData->World = worldMatrix;
         transformationMatrixData->WorldInverseTranspose = Transpose(worldInverseMatrix);
+        transformationMatrixData->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
     } else {
         if (model->GetModelData().hasBones) {
             transformationMatrixData->WVP = worldViewProjectionMatrix;
             transformationMatrixData->World = worldMatrix;
             transformationMatrixData->WorldInverseTranspose = Transpose(worldInverseMatrix);
+            transformationMatrixData->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
         } else {
-            transformationMatrixData->WVP = model->GetAnimator()->GetLocalMatrix() * worldViewProjectionMatrix;
-            transformationMatrixData->World = model->GetAnimator()->GetLocalMatrix() * worldMatrix;
+            Matrix4x4 localMat = model->GetAnimator()->GetLocalMatrix();
+            transformationMatrixData->WVP = localMat * worldViewProjectionMatrix;
+            transformationMatrixData->World = localMat * worldMatrix;
             transformationMatrixData->WorldInverseTranspose = MakeIdentity4x4();
+            transformationMatrixData->LightWVP = localMat * worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
         }
     }
 
@@ -125,6 +130,10 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
 }
 
 void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool reflect, bool lighting, bool modelDraw) {
+    if (ShadowMap::GetInstance()->IsShadowPassActive()) {
+        DrawShadow(worldTransform);
+        return;
+    }
     objectCommon_->SetBlendMode(blendMode_);
     Update(worldTransform, viewProjection);
 
@@ -564,6 +573,31 @@ void Object3d::SetModel(const std::string &filePath) {
     }
 }
 
+void Object3d::DrawShadow(const WorldTransform &worldTransform) {
+    if (!model) return;
+
+    Matrix4x4 localMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quateRotation_, worldTransform.translation_);
+    Matrix4x4 worldMatrix = localMatrix;
+    if (worldTransform.parent_) {
+        worldMatrix = localMatrix * worldTransform.parent_->matWorld_;
+    }
+
+    if (!model->GetModelData().hasAnimations) {
+        transformationMatrixData->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+    } else if (model->GetModelData().hasBones) {
+        transformationMatrixData->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+    } else {
+        transformationMatrixData->LightWVP = model->GetAnimator()->GetLocalMatrix() * worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+    }
+
+    PipeLineManager::GetInstance()->DrawCommonSetting(PipelineType::kShadowMap);
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(0, transformationMatrixResource->GetGPUVirtualAddress());
+
+    if (model) {
+        model->DrawShadow();
+    }
+}
+
 void Object3d::CreateTransformationMatrix() {
 
     transformationMatrixResource = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
@@ -573,6 +607,7 @@ void Object3d::CreateTransformationMatrix() {
     transformationMatrixData->WVP = MakeIdentity4x4();
     transformationMatrixData->World = MakeIdentity4x4();
     transformationMatrixData->WorldInverseTranspose = MakeIdentity4x4();
+    transformationMatrixData->LightWVP = MakeIdentity4x4();
 }
 
 void Object3d::CreateIndependentMaterials() {

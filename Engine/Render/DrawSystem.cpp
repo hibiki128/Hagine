@@ -5,6 +5,7 @@
 #include "Graphics/Srv/SrvManager.h"
 #include "Particle/ParticleEditor.h"
 #include "Scene/SceneManager.h"
+#include <Shadow/ShadowMap.h>
 #include <algorithm>
 #ifdef _DEBUG
 #include "imgui.h"
@@ -84,6 +85,22 @@ OffScreen *DrawSystem::GetStageOffScreen(int stageIndex) {
 // -------------------------------------------------------
 
 void DrawSystem::Draw(const ViewProjection &vp) {
+    // ─── シャドウプレパス ───
+    ShadowMap *shadowMap = ShadowMap::GetInstance();
+    shadowMap->Update(); // 有効フラグをGPUバッファに反映（無効時もenabledを0にするため毎フレーム呼ぶ）
+    if (shadowMap->IsEnabled()) {
+        shadowMap->BeginShadowPass();
+        srvManager_->SetDescriptorHeap();
+        shadowMap->SetShadowPassActive(true);
+        for (auto &entry : entries_) {
+            if (entry.enabled && entry.stageIndex == 0) {
+                entry.draw(vp);
+            }
+        }
+        shadowMap->SetShadowPassActive(false);
+        shadowMap->EndShadowPass();
+    }
+
     // 登録済みステージ（kUILayer を除く）を昇順で処理
     std::vector<int> sortedStages;
     for (auto &[idx, _] : stageOffScreens_) {
