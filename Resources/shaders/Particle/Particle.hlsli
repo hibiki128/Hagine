@@ -73,6 +73,10 @@ struct PerView
 {
     float4x4 viewProjection;
     float4x4 billboardMatrix;
+    uint enableBillboard;
+    uint enableVelocityStretch;
+    float velocityStretchFactor;
+    float padPerView;
 };
 
 struct EmitterMesh
@@ -180,6 +184,22 @@ struct ParticleCSSettings
     float3 angularVelocityMin; // 角速度の最小値 (ラジアン/秒, XYZ)
     float paddingAngVelMin;
     float3 angularVelocityMax; // 角速度の最大値 (ラジアン/秒, XYZ)
+    // ---- 中間カラー (3-stop gradient) ----
+    uint enableMidColor;
+    float midColorRatio;
+    float padMidColor0;
+    float padMidColor1;
+    float4 midColor;
+    // ---- タービュランス ----
+    uint enableTurbulence;
+    float turbulenceStrength;
+    float turbulenceFrequency;
+    float turbulencePad;
+    // ---- 発生形状 ----
+    uint emitShape;          // 0=Box, 1=Sphere Surface, 2=Cone
+    float emitSphereRadius;
+    float emitConeAngle;
+    float emitShapePad;
 };
 
 struct ParticleField

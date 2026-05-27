@@ -306,7 +306,40 @@ void main(uint3 DTid : SV_DispatchThreadID)
         }
         else
         {
-            emitPosition = gEmitterMesh.translate;
+            // ---- プリミティブ発生形状 ----
+            if (gSettings.emitShape == 1)
+            {
+                // Sphere Surface: 球面上に一様分布
+                float3 rnd = float3(
+                    generator.Generate1d() * 2.0f - 1.0f,
+                    generator.Generate1d() * 2.0f - 1.0f,
+                    generator.Generate1d() * 2.0f - 1.0f
+                );
+                float len = length(rnd);
+                float3 dir = (len > 0.001f) ? rnd / len : float3(0.0f, 1.0f, 0.0f);
+                float r = (gSettings.emitSphereRadius > 0.001f)
+                              ? gSettings.emitSphereRadius
+                              : max(max(gEmitterMesh.scale.x, gEmitterMesh.scale.y), gEmitterMesh.scale.z);
+                emitPosition = gEmitterMesh.translate + mul(rotMatrix, dir * r);
+            }
+            else if (gSettings.emitShape == 2)
+            {
+                // Cone: Y軸上向きコーン面（半開角 emitConeAngle）
+                float theta = generator.Generate1d() * 6.28318530f;
+                float cosMax = cos(gSettings.emitConeAngle);
+                float cosAngle = lerp(cosMax, 1.0f, generator.Generate1d());
+                float sinAngle = sqrt(max(0.0f, 1.0f - cosAngle * cosAngle));
+                float3 dir = float3(sinAngle * cos(theta), cosAngle, sinAngle * sin(theta));
+                float r = (gSettings.emitSphereRadius > 0.001f)
+                              ? gSettings.emitSphereRadius
+                              : max(max(gEmitterMesh.scale.x, gEmitterMesh.scale.y), gEmitterMesh.scale.z);
+                emitPosition = gEmitterMesh.translate + mul(rotMatrix, dir * r);
+            }
+            else
+            {
+                // Box (default): 点エミッター
+                emitPosition = gEmitterMesh.translate;
+            }
         }
     }
 

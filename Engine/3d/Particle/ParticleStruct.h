@@ -66,8 +66,10 @@ struct CSParticle {
 struct PerView {
     Matrix4x4 viewProjection;
     Matrix4x4 billboardMatrix;
-    uint32_t enableBillboard = 1; // 1=ビルボードON(デフォルト), 0=OFF
-    float padding[3];
+    uint32_t enableBillboard = 1;       // 1=ビルボードON(デフォルト), 0=OFF
+    uint32_t enableVelocityStretch = 0; // 1=速度方向に引き伸ばす
+    float velocityStretchFactor = 0.1f; // 引き伸ばし係数(速さ×係数 = 伸び率)
+    float padding1 = 0.0f;
 };
 
 struct TriangleInfo {
@@ -197,6 +199,23 @@ struct ParticleCSSettings {
     Vector3 angularVelocityMin = {0.0f, 0.0f, 0.0f}; // 角速度 最小 (ラジアン/秒, XYZ)
     float paddingAngVelMin{};
     Vector3 angularVelocityMax = {0.0f, 0.0f, 0.0f}; // 角速度 最大 (ラジアン/秒, XYZ)
+    // ---- 中間カラー (3-stop gradient) ----
+    // HLSL packing: enableMidColor(4)+midColorRatio(4)+padMidColor(8) = 16bytes, then float4 midColor = 16bytes
+    uint32_t enableMidColor = 0;           // 1=有効: start→mid→end の3段階補間
+    float midColorRatio = 0.5f;            // midColor に達するlife比率 [0,1]
+    float padMidColor0 = 0.0f;
+    float padMidColor1 = 0.0f;
+    Vector4 midColor = {1.0f, 1.0f, 1.0f, 1.0f}; // 中間色
+    // ---- タービュランス ----
+    uint32_t enableTurbulence = 0;         // 1=有効: per-particleランダム振動力
+    float turbulenceStrength = 1.0f;       // 振動力の大きさ
+    float turbulenceFrequency = 2.0f;      // 振動周波数 (Hz)
+    float turbulencePad = 0.0f;
+    // ---- 発生形状 ----
+    uint32_t emitShape = 0;                // 0=Box, 1=Sphere Surface, 2=Cone
+    float emitSphereRadius = 1.0f;         // Sphere/Cone 半径
+    float emitConeAngle = 0.5236f;         // Cone 半開角 (ラジアン, デフォルト30°)
+    float emitShapePad = 0.0f;
 };
 
 /// =====================================================================

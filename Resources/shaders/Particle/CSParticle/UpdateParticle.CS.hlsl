@@ -458,7 +458,23 @@ void main(uint3 DTid : SV_DispatchThreadID)
         }
     }
         
-        // 7. Curl Noise による速度場
+        // 7. タービュランス（per-particle ランダム振動力）
+    if (gSettings.enableTurbulence)
+    {
+        float fi = float(particleIndex);
+        float px = frac(sin(fi * 127.1f) * 43758.5f) * 6.28318f;
+        float py = frac(sin(fi * 311.7f) * 43758.5f) * 6.28318f;
+        float pz = frac(sin(fi * 74.7f) * 43758.5f) * 6.28318f;
+        float t = gPerFrame.time * gSettings.turbulenceFrequency;
+        float3 turbForce = float3(
+            sin(t + px),
+            cos(t + py),
+            sin(t + pz + 1.0471f) // 位相60°ずらして3軸をデコリレート
+        ) * gSettings.turbulenceStrength;
+        p.velocity += turbForce * gPerFrame.deltaTime;
+    }
+
+        // 8. Curl Noise による速度場
     if (gSettings.enableCurlNoise)
     {
         bool isTrail = (p.isTrailParticle != 0);
@@ -594,21 +610,37 @@ void main(uint3 DTid : SV_DispatchThreadID)
         }
     }
         
-        // 8. 移動更新
+        // 9. 移動更新
     p.translate += p.velocity * gPerFrame.deltaTime;
     p.currentTime += gPerFrame.deltaTime;
     float3 currentPosition = p.translate;
-        
-        // 9. 各種パラメータ更新
+
+        // 10. 各種パラメータ更新
     float lifeRatio = p.currentTime / p.lifeTime;
         
     if (!gSettings.enableRandomColor)
     {
-        // startColor / endColor の RGBA をそのまま lifeRatio で補間する。
-        // アルファも含めて lerp するため、startColor.a が発生時の透明度、
-        // endColor.a が終了時の透明度として機能する。
-        // saturate でアルファが必ず [0,1] に収まるよう保証する。
-        float4 lerpedColor = lerp(gSettings.startColor, gSettings.endColor, lifeRatio);
+        float4 lerpedColor;
+        if (gSettings.enableMidColor)
+        {
+            // 3-stop gradient: start → mid → end
+            float r = saturate(gSettings.midColorRatio);
+            if (lifeRatio < r)
+            {
+                float t = (r > 0.001f) ? (lifeRatio / r) : 0.0f;
+                lerpedColor = lerp(gSettings.startColor, gSettings.midColor, t);
+            }
+            else
+            {
+                float span = 1.0f - r;
+                float t = (span > 0.001f) ? ((lifeRatio - r) / span) : 1.0f;
+                lerpedColor = lerp(gSettings.midColor, gSettings.endColor, t);
+            }
+        }
+        else
+        {
+            lerpedColor = lerp(gSettings.startColor, gSettings.endColor, lifeRatio);
+        }
         p.color = float4(lerpedColor.rgb, saturate(lerpedColor.a));
     }
     else
@@ -654,7 +686,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
         p.color.a = savedAlpha * fieldColorMultiplier.a;
     }
         
-        // 10. トレイル生成
+        // 11. トレイル生成
         //   通常トレイル（設定ON） または フィールド強制トレイル のどちらかが有効ならば生成する。
         //   フィールド強制トレイルは isTrailParticle==0 のパーティクルにのみ適用する。
     bool doTrail = (gSettings.enableTrail != 0) || (fieldForceTrail != 0);

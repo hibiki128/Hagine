@@ -676,6 +676,25 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save<Vector3>(prefix + "angularVelocityMax", group->GetSettingsData()->angularVelocityMax);
 
         data->Save(prefix + "enableBillboard", group->GetPerView()->enableBillboard);
+
+        // ★ 速度ストレッチ設定の保存
+        data->Save(prefix + "enableVelocityStretch", group->GetPerView()->enableVelocityStretch);
+        data->Save(prefix + "velocityStretchFactor", group->GetPerView()->velocityStretchFactor);
+
+        // ★ 中間カラー設定の保存
+        data->Save(prefix + "enableMidColor", group->GetSettingsData()->enableMidColor);
+        data->Save(prefix + "midColorRatio", group->GetSettingsData()->midColorRatio);
+        data->Save(prefix + "midColor", group->GetSettingsData()->midColor);
+
+        // ★ タービュランス設定の保存
+        data->Save(prefix + "enableTurbulence", group->GetSettingsData()->enableTurbulence);
+        data->Save(prefix + "turbulenceStrength", group->GetSettingsData()->turbulenceStrength);
+        data->Save(prefix + "turbulenceFrequency", group->GetSettingsData()->turbulenceFrequency);
+
+        // ★ 発生形状設定の保存
+        data->Save(prefix + "emitShape", group->GetSettingsData()->emitShape);
+        data->Save(prefix + "emitSphereRadius", group->GetSettingsData()->emitSphereRadius);
+        data->Save(prefix + "emitConeAngle", group->GetSettingsData()->emitConeAngle);
     }
 }
 
@@ -795,6 +814,25 @@ void ParticleCSEmitter::LoadSetting() {
         settings.angularVelocityMax = data->Load<Vector3>(prefix + "angularVelocityMax", {0.0f, 0.0f, 0.0f});
 
         group->SetBillboard(data->Load(prefix + "enableBillboard", true));
+
+        // ★ 速度ストレッチ設定のロード
+        group->GetPerView()->enableVelocityStretch = data->Load<uint32_t>(prefix + "enableVelocityStretch", 0);
+        group->GetPerView()->velocityStretchFactor  = data->Load(prefix + "velocityStretchFactor", 0.1f);
+
+        // ★ 中間カラー設定のロード
+        settings.enableMidColor  = data->Load<uint32_t>(prefix + "enableMidColor", 0);
+        settings.midColorRatio   = data->Load(prefix + "midColorRatio", 0.5f);
+        settings.midColor        = data->Load(prefix + "midColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+        // ★ タービュランス設定のロード
+        settings.enableTurbulence    = data->Load<uint32_t>(prefix + "enableTurbulence", 0);
+        settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
+        settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
+
+        // ★ 発生形状設定のロード
+        settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);
+        settings.emitSphereRadius = data->Load(prefix + "emitSphereRadius", 1.0f);
+        settings.emitConeAngle    = data->Load(prefix + "emitConeAngle", 0.5236f);
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
@@ -926,6 +964,25 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.angularVelocityMax = data->Load<Vector3>(prefix + "angularVelocityMax", {0.0f, 0.0f, 0.0f});
 
         group->SetBillboard(data->Load(prefix + "enableBillboard", true));
+
+        // ★ 速度ストレッチ設定のロード
+        group->GetPerView()->enableVelocityStretch = data->Load<uint32_t>(prefix + "enableVelocityStretch", 0);
+        group->GetPerView()->velocityStretchFactor  = data->Load(prefix + "velocityStretchFactor", 0.1f);
+
+        // ★ 中間カラー設定のロード
+        settings.enableMidColor  = data->Load<uint32_t>(prefix + "enableMidColor", 0);
+        settings.midColorRatio   = data->Load(prefix + "midColorRatio", 0.5f);
+        settings.midColor        = data->Load(prefix + "midColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+        // ★ タービュランス設定のロード
+        settings.enableTurbulence    = data->Load<uint32_t>(prefix + "enableTurbulence", 0);
+        settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
+        settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
+
+        // ★ 発生形状設定のロード
+        settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);
+        settings.emitSphereRadius = data->Load(prefix + "emitSphereRadius", 1.0f);
+        settings.emitConeAngle    = data->Load(prefix + "emitConeAngle", 0.5236f);
 
         group->SetSettingData(settings);
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));

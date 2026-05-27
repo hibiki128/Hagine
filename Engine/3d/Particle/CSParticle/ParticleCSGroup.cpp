@@ -613,6 +613,45 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::PopStyleColor();
             if (!rnd) {
                 ImGui::ColorEdit4("開始色", &settingsData_->startColor.x);
+                // 中間色
+                {
+                    bool mc = settingsData_->enableMidColor != 0;
+                    if (ImGui::Checkbox("中間色を有効化##mc", &mc))
+                        settingsData_->enableMidColor = mc ? 1 : 0;
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("開始→中間→終了の3段階カラーグラデーション");
+                    if (mc) {
+                        ImGui::Indent();
+                        ImGui::ColorEdit4("中間色##mcc", &settingsData_->midColor.x);
+                        ImGui::DragFloat("中間タイミング##mcr", &settingsData_->midColorRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+                        if (ImGui::IsItemHovered())
+                            ImGui::SetTooltip("中間色に達するlife比率\n0=開始直後 / 0.5=寿命半分 / 1=終了直前");
+                        ImGui::Spacing();
+                        ImGui::TextDisabled("プリセット:");
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("炎##mcPre1")) {
+                            settingsData_->startColor  = {1.0f, 0.3f, 0.0f, 1.0f};
+                            settingsData_->midColor    = {1.0f, 1.0f, 0.3f, 1.0f};
+                            settingsData_->endColor    = {0.2f, 0.2f, 0.2f, 0.0f};
+                            settingsData_->midColorRatio = 0.35f;
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("魔法陣##mcPre2")) {
+                            settingsData_->startColor  = {0.2f, 0.5f, 1.0f, 0.0f};
+                            settingsData_->midColor    = {1.0f, 1.0f, 1.0f, 1.0f};
+                            settingsData_->endColor    = {0.5f, 0.2f, 1.0f, 0.0f};
+                            settingsData_->midColorRatio = 0.5f;
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("雷##mcPre3")) {
+                            settingsData_->startColor  = {1.0f, 1.0f, 1.0f, 1.0f};
+                            settingsData_->midColor    = {0.7f, 0.9f, 1.0f, 0.8f};
+                            settingsData_->endColor    = {0.2f, 0.4f, 0.8f, 0.0f};
+                            settingsData_->midColorRatio = 0.4f;
+                        }
+                        ImGui::Unindent();
+                    }
+                }
                 ImGui::ColorEdit4("終了色", &settingsData_->endColor.x);
             } else {
                 // ランダムカラー時はRGBがランダムのため色編集は非表示にするが、
@@ -750,7 +789,88 @@ void ParticleCSGroup::DrawImGui() {
             }
         }
 
+        ImGui::Spacing();
+
+        // 速度ストレッチ
+        {
+            bool v = perViewData_->enableVelocityStretch != 0;
+            if (ImGui::Checkbox("速度ストレッチ##vs", &v))
+                perViewData_->enableVelocityStretch = v ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("パーティクルを速度方向に引き伸ばします\n火花・彗星の尾・銃弾の軌跡などに");
+            if (v) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
+                ImGui::DragFloat("ストレッチ係数##vsf", &perViewData_->velocityStretchFactor, 0.01f, 0.0f, 10.0f, "%.4f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("速さ × 係数 = 伸び率\n推奨: 0.05〜0.5");
+                ImGui::PopStyleColor();
+                ImGui::Spacing();
+                ImGui::TextDisabled("プリセット:");
+                ImGui::SameLine();
+                if (ImGui::SmallButton("火花##vsPre1")) {
+                    perViewData_->enableVelocityStretch = 1;
+                    perViewData_->velocityStretchFactor = 0.15f;
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("銃弾##vsPre2")) {
+                    perViewData_->enableVelocityStretch = 1;
+                    perViewData_->velocityStretchFactor = 0.5f;
+                }
+                ImGui::Unindent();
+            }
+        }
+
         ImGui::PopStyleColor(); // CheckMark
+        ImGui::Unindent();
+    }
+
+    // =======================================================
+    // 3.4. タービュランス（橙系）
+    // =======================================================
+    PushSectionColor(ImVec4(0.9f, 0.55f, 0.1f, 1.0f));
+    bool openTurb = ImGui::CollapsingHeader("  タービュランス（振動力）");
+    PopSectionColor();
+    if (openTurb) {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.75f, 0.3f, 1.0f));
+
+        bool v = settingsData_->enableTurbulence != 0;
+        if (ImGui::Checkbox("タービュランスを有効化##tb", &v))
+            settingsData_->enableTurbulence = v ? 1 : 0;
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("パーティクルごとにランダムな振動力を加えます\n炎・霧・魔法の揺らぎに最適");
+
+        if (v) {
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.25f, 0.05f, 0.5f));
+            ImGui::DragFloat("振動強度##tbs", &settingsData_->turbulenceStrength, 0.05f, 0.0f, 50.0f, "%.4f");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("大きいほど激しく揺れます\n推奨: 0.5〜5.0");
+            ImGui::DragFloat("振動周波数##tbf", &settingsData_->turbulenceFrequency, 0.1f, 0.0f, 30.0f, "%.4f");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("周波数 (Hz) — 大きいほど細かく素早く振動\n推奨: 1〜8");
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("プリセット:");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("ゆらめき##tbPre1")) {
+                settingsData_->turbulenceStrength  = 0.8f;
+                settingsData_->turbulenceFrequency = 2.0f;
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("嵐##tbPre2")) {
+                settingsData_->turbulenceStrength  = 4.0f;
+                settingsData_->turbulenceFrequency = 6.0f;
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("細かい揺れ##tbPre3")) {
+                settingsData_->turbulenceStrength  = 1.5f;
+                settingsData_->turbulenceFrequency = 10.0f;
+            }
+        }
+
+        ImGui::PopStyleColor();
         ImGui::Unindent();
     }
 
@@ -955,6 +1075,59 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->gravity = {0, -9.8f, 0};
                 settingsData_->enableLifetimeVelocityDamping = 1;
                 settingsData_->lifetimeVelocityDampingStart = 0.7f;
+            }
+        }
+
+        ImGui::PopStyleColor();
+        ImGui::Unindent();
+    }
+
+    // =======================================================
+    // 4.5. 発生形状（ピンク系）
+    // =======================================================
+    PushSectionColor(ImVec4(0.85f, 0.35f, 0.6f, 1.0f));
+    bool openEmitShape = ImGui::CollapsingHeader("  発生形状");
+    PopSectionColor();
+    if (openEmitShape) {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.6f, 0.8f, 1.0f));
+
+        const char *shapeNames[] = {"Box（直方体）", "Sphere Surface（球面）", "Cone（コーン）"};
+        int shape = static_cast<int>(settingsData_->emitShape);
+        if (ImGui::Combo("形状##es", &shape, shapeNames, IM_ARRAYSIZE(shapeNames)))
+            settingsData_->emitShape = static_cast<uint32_t>(shape);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("メッシュ／エッジエミッターには適用されません");
+
+        if (settingsData_->emitShape == 1 || settingsData_->emitShape == 2) {
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.15f, 0.25f, 0.5f));
+            ImGui::DragFloat("半径##esr", &settingsData_->emitSphereRadius, 0.05f, 0.0f, 999.0f, "%.4f");
+            if (settingsData_->emitShape == 2) {
+                float angleDeg = settingsData_->emitConeAngle * (180.0f / 3.14159265f);
+                if (ImGui::DragFloat("半開角(°)##eca", &angleDeg, 1.0f, 1.0f, 180.0f, "%.1f°"))
+                    settingsData_->emitConeAngle = angleDeg * (3.14159265f / 180.0f);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("コーンの広がり角度（片側）\n30°=細め / 90°=半球");
+            }
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("プリセット:");
+            ImGui::SameLine();
+            if (settingsData_->emitShape == 1) {
+                if (ImGui::SmallButton("小球##espre1")) settingsData_->emitSphereRadius = 0.5f;
+                ImGui::SameLine();
+                if (ImGui::SmallButton("爆発球##espre2")) settingsData_->emitSphereRadius = 2.0f;
+            } else {
+                if (ImGui::SmallButton("細コーン##ecpre1")) {
+                    settingsData_->emitSphereRadius = 3.0f;
+                    settingsData_->emitConeAngle    = 0.2618f; // 15°
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("広コーン##ecpre2")) {
+                    settingsData_->emitSphereRadius = 2.0f;
+                    settingsData_->emitConeAngle    = 0.7854f; // 45°
+                }
             }
         }
 
