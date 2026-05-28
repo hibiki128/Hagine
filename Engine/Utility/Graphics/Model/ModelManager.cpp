@@ -1,4 +1,5 @@
 #include "ModelManager.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <fstream>
 #include <functional>
 #include <sstream>
@@ -19,6 +20,7 @@ void ModelManager::LoadModel(const std::string &filePath) {
 
         // モデルをmapコンテナに格納する
         models.insert(std::make_pair(uniqueKey, std::move(model)));
+        ImGuiNotification::Post("モデルを読み込みました: " + filePath, {0.2f, 0.8f, 0.8f, 1.0f});
         return;
     }
 
@@ -32,6 +34,7 @@ void ModelManager::LoadModel(const std::string &filePath) {
     model->CreateModel("resources/models/", filePath);
     model->SetSrv(srvManager);
     models.insert(std::make_pair(filePath, std::move(model)));
+    ImGuiNotification::Post("モデルを読み込みました: " + filePath, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string texPath) {
@@ -44,6 +47,7 @@ std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string t
     std::string uniqueKey = "PrimitiveModel_" + std::to_string(modelIndex++);
     // モデルをmapコンテナに格納する
     models.insert(std::make_pair(uniqueKey, std::move(model)));
+    ImGuiNotification::Post("プリミティブモデルを作成しました: " + uniqueKey, {0.4f, 0.8f, 1.0f, 1.0f});
     return uniqueKey;
 }
 

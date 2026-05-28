@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "Enemy.h"
 #include "Collider/CollisionManager.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
@@ -604,8 +605,12 @@ void Enemy::ConboUpdate() {
 
 Vector3 Enemy::GetMovementDirection() const { return Vector3(); }
 float Enemy::GetVelocityMagnitude() const { return kVelocityZero; }
-void Enemy::Save() {}
-void Enemy::Load() {}
+void Enemy::Save() {
+    ImGuiNotification::Post("エネミー設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
+}
+void Enemy::Load() {
+    ImGuiNotification::Post("エネミー設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
+}
 
 void Enemy::UpdateShadowScale() {
     /* if (transform_->translation_.y < kGroundLevel)
@@ -1016,14 +1021,17 @@ void Enemy::UpdateBeam() {
     float dt = Frame::DeltaTime();
     beamActiveTime_ += dt;
 
+    // ビーム発射中は transform_->quateRotation_ を発射時の固定向きで上書きする。
+    // OBBコライダーは transform_->quateRotation_ から向きを取るため、
+    // ここで上書きしないと RotateUpdate() によりコライダーがプレイヤーを追従し続ける。
+    transform_->quateRotation_ = beamLockedRotation_;
+
     // ビーム長を前方に伸ばす
     beamLength_ += kBeamExtendSpeed * dt;
     if (beamLength_ > kBeamMaxLength)
         beamLength_ = kBeamMaxLength;
 
     Vector3 selfPos = GetWorldPosition();
-    // beamLockedRotation_ はビーム発射時に ActivateBeam() で固定済み。
-    // ビーム持続中はこの向きを使い続けることで向き追従（ホーミング）を防ぐ。
     Quaternion selfRot = beamLockedRotation_;
 
     // メインビームエミッタの設定（MakanAttackSkill と同じアプローチ）

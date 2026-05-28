@@ -1,4 +1,5 @@
 #include "Shake.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <filesystem>
 #include <myMath.h>
 #include <random>
@@ -56,6 +57,7 @@ void Shake::LoadSettings(std::string jsonName) {
     rotationShakeMax_ = dataHandler_->Load<float>("rotationShakeMax", 0);
     shakeInterval_ = dataHandler_->Load<int>("shakeInterval", 0);
     shakeDuration_ = dataHandler_->Load<int>("shakeDuration", 0);
+    ImGuiNotification::Post("シェイク設定を読み込みました: " + jsonName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 void Shake::SaveSettings(std::string jsonName) {
@@ -68,6 +70,7 @@ void Shake::SaveSettings(std::string jsonName) {
     dataHandler_->Save("rotationShakeMax", rotationShakeMax_);
     dataHandler_->Save("shakeInterval", shakeInterval_);
     dataHandler_->Save("shakeDuration", shakeDuration_);
+    ImGuiNotification::Post("シェイク設定を保存しました: " + jsonName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void Shake::imgui() {
@@ -87,10 +90,8 @@ void Shake::imgui() {
             std::string saveName = saveNameBuffer;
             if (!saveName.empty()) {
                 SaveSettings(saveName);
-                std::string message = std::format("Shake saved as: {}", saveName);
-                MessageBoxA(nullptr, message.c_str(), "Effect", 0);
             } else {
-                MessageBoxA(nullptr, "セーブ名を入力してください", "Error", 0);
+                ImGuiNotification::Post("セーブ名を入力してください", {1.0f, 0.2f, 0.2f, 1.0f});
             }
         }
 

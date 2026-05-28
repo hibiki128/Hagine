@@ -1,5 +1,6 @@
 #include "ComboSystem.h"
 #include "Application/Utility/MotionEditor/MotionEditor.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Object/Base/BaseObject.h"
 #include <algorithm>
 
@@ -63,6 +64,7 @@ void ComboSystem::SaveAttackParams() {
         dataHandler_->Save(key + "_duration", cd.colliderActiveDuration);
         dataHandler_->Save(key + "_delay", cd.colliderActivateDelay);
     }
+    ImGuiNotification::Post("コンボパラメータを保存しました: " + name_, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void ComboSystem::LoadAttackParams() {
@@ -80,6 +82,7 @@ void ComboSystem::LoadAttackParams() {
         cd.colliderActiveDuration = dataHandler_->Load<float>(key + "_duration", cd.colliderActiveDuration);
         cd.colliderActivateDelay = dataHandler_->Load<float>(key + "_delay", cd.colliderActivateDelay);
     }
+    ImGuiNotification::Post("コンボパラメータを読み込みました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 bool ComboSystem::TryExecuteCombo() {

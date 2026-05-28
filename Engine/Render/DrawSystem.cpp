@@ -2,6 +2,7 @@
 #include "DirectXCommon.h"
 #include "Collider/CollisionManager.h"
 #include "Data/DataHandler.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Graphics/Srv/SrvManager.h"
 #include "Particle/ParticleEditor.h"
 #include "Scene/SceneManager.h"
@@ -238,6 +239,7 @@ void DrawSystem::SaveConfig(const std::string &fileName) {
         data->Save(prefix + "stage", e.stageIndex);
         data->Save(prefix + "enabled", static_cast<int>(e.enabled));
     }
+    ImGuiNotification::Post("描画設定を保存しました: " + fileName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void DrawSystem::LoadConfig(const std::string &fileName) {
@@ -257,4 +259,5 @@ void DrawSystem::LoadConfig(const std::string &fileName) {
             }
         }
     }
+    ImGuiNotification::Post("描画設定を読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
 }

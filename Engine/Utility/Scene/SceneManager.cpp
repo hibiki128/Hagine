@@ -1,4 +1,5 @@
 #include "SceneManager.h"
+#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <SpriteManager.h>
 #include <cassert>
 
@@ -119,5 +120,6 @@ void SceneManager::SceneChange() {
         scene_->SetSceneManager(this);
         scene_->Initialize();
         transition_->SetFadeOutStart(true);
+        ImGuiNotification::Post("シーンを切り替えました: " + currentSceneName_, {0.4f, 0.8f, 1.0f, 1.0f});
     }
 }

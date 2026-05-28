@@ -1,4 +1,5 @@
 #include "HitStop.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "filesystem"
 #include <chrono>
 #include <Frame.h>
@@ -38,6 +39,7 @@ void HitStop::LoadSettings() {
     file.close();
 
     stopDuration_ = json["stopDuration"];
+    ImGuiNotification::Post("ヒットストップ設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 void HitStop::SaveSettings() {
@@ -51,6 +53,7 @@ void HitStop::SaveSettings() {
     std::ofstream file("resources/jsons/HitStop/hitstop.json");
     file << json.dump(4);
     file.close();
+    ImGuiNotification::Post("ヒットストップ設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void HitStop::imgui() {

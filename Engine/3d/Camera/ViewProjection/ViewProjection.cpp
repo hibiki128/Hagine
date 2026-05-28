@@ -2,6 +2,7 @@
 #include "ViewProjection.h"
 #include "Data/DataHandler.h"
 #include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Frame.h"
 #include "cmath"
 #include "myMath.h"
@@ -522,6 +523,7 @@ void ViewProjection::Save(std::string jsonFile) {
     data->Save("farZ", farZ);
     data->Save("aspectRatio", aspectRatio);
     data->Save("quateRotation", quateRotation_);
+    ImGuiNotification::Post("カメラ設定を保存しました: " + jsonFile, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void ViewProjection::Load(std::string jsonFile) {
@@ -540,4 +542,5 @@ void ViewProjection::Load(std::string jsonFile) {
     nearZ = data->Load("nearZ", nearZ);
     farZ = data->Load("farZ", farZ);
     aspectRatio = data->Load("aspectRatio", aspectRatio);
+    ImGuiNotification::Post("カメラ設定を読み込みました: " + jsonFile, {0.2f, 0.8f, 0.8f, 1.0f});
 }

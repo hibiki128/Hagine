@@ -269,8 +269,8 @@ void OffScreen::Setting() {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f));
     if (ImGui::Button("セーブ", ImVec2(80, 25))) {
         dataManager_.SaveData(std::string(saveFileName));
-        std::string msg = std::format("OffScreenData saved to: 「{}」", saveFileName);
-        ImGuiNotification::Post(msg);
+        std::string msg = std::format("オフスクリーン設定を保存しました: {}", saveFileName);
+        ImGuiNotification::Post(msg, {0.2f, 0.8f, 0.2f, 1.0f});
     }
     ImGui::PopStyleColor();
 
@@ -279,8 +279,8 @@ void OffScreen::Setting() {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.8f, 0.2f, 1.0f));
     if (ImGui::Button("ロード", ImVec2(80, 25))) {
         dataManager_.LoadData(std::string(saveFileName));
-        std::string msg = std::format("OffScreenData loaded from: 「{}」", saveFileName);
-        ImGuiNotification::Post(msg, {0.2f, 0.2f, 0.8f, 1.0f});
+        std::string msg = std::format("オフスクリーン設定を読み込みました: {}", saveFileName);
+        ImGuiNotification::Post(msg, {0.2f, 0.8f, 0.8f, 1.0f});
     }
     ImGui::PopStyleColor();
 #endif

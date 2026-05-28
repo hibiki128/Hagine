@@ -1,4 +1,5 @@
 #include "Audio.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <cassert>
 #include <fstream>
 
@@ -86,14 +87,17 @@ uint32_t Audio::LoadWave(const std::string &filename) {
     uint32_t currentIndex = static_cast<uint32_t>(soundDataIndex);
     soundDataIndex = (soundDataIndex + 1) % kMaxSoundData;
 
+    ImGuiNotification::Post("音声ファイルを読み込みました: " + filename, {0.2f, 0.8f, 0.8f, 1.0f});
     return currentIndex;
 }
 
 void Audio::Unload(uint32_t soundIndex) {
     SoundData &soundData = soundDatas_[soundIndex];
+    std::string filename = soundData.name_;
     soundData.buffer.clear();
     soundData.wfex = {};
     soundData.name_.clear();
+    ImGuiNotification::Post("音声ファイルをアンロードしました: " + filename, {0.9f, 0.7f, 0.2f, 1.0f});
 }
 
 void Audio::PlayWave(uint32_t soundIndex, float volume, bool loop) {

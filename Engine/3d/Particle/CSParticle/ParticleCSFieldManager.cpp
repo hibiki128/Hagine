@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "ParticleCSFieldManager.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <cassert>
 #include <cmath>
 
@@ -475,6 +476,7 @@ void ParticleCSFieldManager::SaveField(const ParticleField &field) {
     // フォルダ: resources/jsons/ParticleField/  ファイル名: field.name.json
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleField", field.name);
     SaveFieldData(*data, field);
+    ImGuiNotification::Post("パーティクルフィールドを保存しました: " + field.name, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 ParticleField ParticleCSFieldManager::LoadField(const std::string &fileName, const ParticleField &defaultField) {
@@ -484,6 +486,7 @@ ParticleField ParticleCSFieldManager::LoadField(const std::string &fileName, con
     }
     ParticleField field = defaultField;
     LoadFieldData(*data, field);
+    ImGuiNotification::Post("パーティクルフィールドを読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
     return field;
 }
 
@@ -518,6 +521,7 @@ ParticleField *ParticleCSFieldManager::CreateField(const std::string &name, cons
     }
 
     fields_.push_back(newField);
+    ImGuiNotification::Post("パーティクルフィールドを作成しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
     return &fields_.back();
 }
 

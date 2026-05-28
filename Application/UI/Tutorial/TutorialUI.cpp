@@ -4,6 +4,7 @@
 #include "Data/DataHandler.h"
 #include "Engine/2d/SpriteManager.h"
 #include "Engine/2d/Text/TextRenderer.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <Graphics/Texture/TextureManager.h>
 #include <algorithm>
 #ifdef _DEBUG
@@ -416,6 +417,7 @@ void TutorialUI::LoadMeterSettings() {
     progressLerpSpeed_ = dataHandler_->Load("progress_lerp_speed", progressLerpSpeed_);
     completeFadeOutDuration_ = dataHandler_->Load("complete_fade_out_duration", completeFadeOutDuration_);
     postCompleteDelay_ = dataHandler_->Load("post_complete_delay", postCompleteDelay_);
+    ImGuiNotification::Post("チュートリアルUI設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 // ============================================================
@@ -439,4 +441,5 @@ void TutorialUI::SaveMeterSettings() {
     dataHandler_->Save("complete_fade_out_duration", completeFadeOutDuration_);
     dataHandler_->Save("post_complete_delay", postCompleteDelay_);
     dataHandler_->Flush();
+    ImGuiNotification::Post("チュートリアルUI設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
 }

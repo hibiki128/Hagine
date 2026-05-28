@@ -1,4 +1,5 @@
 #include "LevelData.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <iostream>
 
 void LevelData::LoadFromJson(const std::string &fileName) {
@@ -32,6 +33,7 @@ void LevelData::LoadFromJson(const std::string &fileName) {
             objectsData_.push_back(objectData);
         }
     }
+    ImGuiNotification::Post("レベルデータを読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 void LevelData::CreateObjects() {
@@ -63,6 +65,7 @@ void LevelData::CreateObjects() {
             }
         }
     }
+    ImGuiNotification::Post("レベルオブジェクトを生成しました", {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void LevelData::Clear() {

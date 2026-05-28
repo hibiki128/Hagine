@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "Player.h"
 #include "Engine/Frame/Frame.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "State/Air/PlayerStateAir.h"
 #include "State/Fly/PlayerStateFlyIdle.h"
 
@@ -1311,6 +1312,7 @@ void Player::Save() {
     data_->Save("invincibleDuration", invincibleDuration_);
     data_->Save("guardDamageMultiplier", guardDamageMultiplier_);
     data_->Save("guardEnergyCost", guardEnergyCost_);
+    ImGuiNotification::Post("プレイヤー設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void Player::Load() {
@@ -1328,6 +1330,7 @@ void Player::Load() {
     invincibleDuration_ = data_->Load<float>("invincibleDuration", 0.25f);
     guardDamageMultiplier_ = data_->Load<float>("guardDamageMultiplier", 0.20f);
     guardEnergyCost_ = data_->Load<float>("guardEnergyCost", 10.0f);
+    ImGuiNotification::Post("プレイヤー設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 Vector3 Player::GetForward() const { return -GetBackward(); }

@@ -2,6 +2,7 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "TextureManager.h"
 #include "DirectXCommon.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <String/StringUtility.h>
 #include <filesystem>
 #include <fstream>
@@ -61,6 +62,7 @@ void TextureManager::LoadTexture(const std::string &filePath) {
     textureData.srvHandleGPU = srvManager_->GetGPUDescriptorHandle(textureData.srvIndex);
 
     srvManager_->CreateSRVforTexture2D(textureData.srvIndex, textureData.resource.Get(), textureData.metadata, UINT(textureData.metadata.mipLevels));
+    ImGuiNotification::Post("テクスチャを読み込みました: " + filePath, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 void TextureManager::LoadFontTexture(const std::string &fontFilePath, float fontSize, int atlasWidth, int atlasHeight) {
@@ -152,6 +154,7 @@ void TextureManager::LoadFontTexture(const std::string &fontFilePath, float font
     srvManager_->CreateSRVforTexture2D(fontData.srvIndex, fontData.resource.Get(), metadata, 1);
 
     fontDatas_[fontKey] = std::move(fontData);
+    ImGuiNotification::Post("フォントテクスチャを読み込みました: " + fontFilePath, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 void TextureManager::Initialize(SrvManager *srvManager) {

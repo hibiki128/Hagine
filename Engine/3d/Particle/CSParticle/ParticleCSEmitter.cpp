@@ -171,6 +171,7 @@ void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group) {
     independentGroup->SetBillboard(group->GetPerView()->enableBillboard);
     particleGroups_.push_back(independentGroup);
     particleGroupNames_.insert(name);
+    ImGuiNotification::Post("パーティクルグループを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void ParticleCSEmitter::RemoveParticleGroup(const std::string &groupName) {
@@ -182,6 +183,7 @@ void ParticleCSEmitter::RemoveParticleGroup(const std::string &groupName) {
         particleGroups_.erase(it, particleGroups_.end());
     }
     particleGroupNames_.erase(groupName);
+    ImGuiNotification::Post("パーティクルグループを削除しました: " + groupName, {0.9f, 0.7f, 0.2f, 1.0f});
 }
 
 void ParticleCSEmitter::EmitterUpdate() {
@@ -696,6 +698,7 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "emitSphereRadius", group->GetSettingsData()->emitSphereRadius);
         data->Save(prefix + "emitConeAngle", group->GetSettingsData()->emitConeAngle);
     }
+    ImGuiNotification::Post("パーティクル設定を保存しました: " + name_, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void ParticleCSEmitter::LoadSetting() {
@@ -839,6 +842,7 @@ void ParticleCSEmitter::LoadSetting() {
 
         AddParticleGroup(group);
     }
+    ImGuiNotification::Post("パーティクル設定を読み込みました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 void ParticleCSEmitter::LoadCloneSetting() {
@@ -989,6 +993,7 @@ void ParticleCSEmitter::LoadCloneSetting() {
 
         AddParticleGroup(group);
     }
+    ImGuiNotification::Post("パーティクル設定を読み込みました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 void ParticleCSEmitter::DrawImGui() {
@@ -1464,7 +1469,7 @@ void ParticleCSEmitter::DrawImGui() {
                     SaveSetting();
                     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
                     data->Flush();
-                    ImGuiNotification::Post("Success Save!", {0.2f, 0.8f, 0.2f, 1.0f});
+                    ImGuiNotification::Post("パーティクル設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
                 }
                 ImGui::PopStyleColor(3);
 

@@ -2,6 +2,7 @@
 #include "BehaviorTreeEditor.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <algorithm>
 #include <externals/nlohmann/json.hpp>
 #include <filesystem>
@@ -945,6 +946,7 @@ void BehaviorTreeEditor::SaveTree() {
         linksJson.push_back(l);
     }
     handler.Save("links", linksJson);
+    ImGuiNotification::Post("ビヘイビアツリーを保存しました: " + fileName);
 }
 
 void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
@@ -1000,6 +1002,7 @@ void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
             maxLinkId = id;
     }
     m_NextLinkId = maxLinkId + 1;
+    ImGuiNotification::Post("ビヘイビアツリーを読み込みました: " + fileName);
 }
 
 void BehaviorTreeEditor::OnImGuiRender() {
@@ -1580,14 +1583,17 @@ void BehaviorTreeEditor::CreateNode(const std::string &title, EditorNodeType typ
     EditorNode node(id, title, type);
     m_Nodes.push_back(node);
     ed::SetNodePosition(node.ID, m_CreatePos);
+    ImGuiNotification::Post("ノードを作成しました: " + title);
 }
 
 void BehaviorTreeEditor::HandleCreateAction() {
     if (ed::BeginCreate()) {
         ed::PinId start, end;
         if (ed::QueryNewLink(&start, &end)) {
-            if (ed::AcceptNewItem())
+            if (ed::AcceptNewItem()) {
                 m_Links.emplace_back(m_NextLinkId++, start, end);
+                ImGuiNotification::Post("リンクを作成しました");
+            }
         }
     }
     ed::EndCreate();
@@ -1599,7 +1605,12 @@ void BehaviorTreeEditor::DeleteSelectedItems() {
         while (ed::QueryDeletedNode(&nodeId)) {
             if (ed::AcceptDeletedItem()) {
                 int id = (int)nodeId.Get();
-                m_Nodes.erase(std::remove_if(m_Nodes.begin(), m_Nodes.end(), [id](const EditorNode &n) { return (int)n.ID.Get() == id; }), m_Nodes.end());
+                auto it = std::find_if(m_Nodes.begin(), m_Nodes.end(), [id](const EditorNode &n) { return (int)n.ID.Get() == id; });
+                if (it != m_Nodes.end()) {
+                    std::string title = it->Title;
+                    m_Nodes.erase(it);
+                    ImGuiNotification::Post("ノードを削除しました: " + title);
+                }
             }
         }
         ed::LinkId linkId;
@@ -1607,6 +1618,7 @@ void BehaviorTreeEditor::DeleteSelectedItems() {
             if (ed::AcceptDeletedItem()) {
                 int id = (int)linkId.Get();
                 m_Links.erase(std::remove_if(m_Links.begin(), m_Links.end(), [id](const EditorLink &l) { return (int)l.ID.Get() == id; }), m_Links.end());
+                ImGuiNotification::Post("リンクを削除しました");
             }
         }
     }

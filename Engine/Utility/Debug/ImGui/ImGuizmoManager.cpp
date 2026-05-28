@@ -1,6 +1,7 @@
 #define NOMINMAX
 #ifdef _DEBUG
 #include "ImGuizmoManager.h"
+#include "ImGuiNotification.h"
 #include "Input.h"
 #include <Line/DrawLine3D.h>
 #include <Object/Base/BaseObjectManager.h>
@@ -754,6 +755,7 @@ void ImGuizmoManager::PasteObjects() {
     }
 
     copiedObjects.clear();
+    ImGuiNotification::Post("オブジェクトを貼り付けました", {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 // 選択中の全エントリを削除する
@@ -762,6 +764,7 @@ void ImGuizmoManager::DeleteSelectedObjects() {
     if (selectedNames.empty())
         return;
 
+    size_t count = selectedNames.size();
     for (const std::string &name : selectedNames) {
         auto it = transformMap.find(name);
         if (it != transformMap.end() && it->second.type == GizmoTarget::Type::BaseObject) {
@@ -776,6 +779,7 @@ void ImGuizmoManager::DeleteSelectedObjects() {
     if (!transformMap.empty()) {
         selectedNames.insert(transformMap.begin()->first);
     }
+    ImGuiNotification::Post("選択オブジェクトを削除しました: " + std::to_string(count) + "個", {0.9f, 0.7f, 0.2f, 1.0f});
 }
 
 // ---- DrawSelectedObjectHighlight / DrawSelectionMarker ----------------

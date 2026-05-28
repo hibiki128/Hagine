@@ -1,4 +1,5 @@
 #include "MotionEditor.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #ifdef _DEBUG
 #include "imgui.h"
 #endif // _DEBUG
@@ -96,6 +97,7 @@ void MotionEditor::Register(BaseObject *object) {
     motions_[name] = Motion();
     motions_[name].target = object;
     motions_[name].objectName = name;
+    ImGuiNotification::Post("モーションエディタに登録しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 void MotionEditor::CleanupFinishedTemporaryMotions() {
@@ -687,6 +689,7 @@ void MotionEditor::Save(const std::string &fileName) {
     for (int i = 0; i < (int)m.controlPoints.size(); ++i) {
         data.Save("controlPoint" + std::to_string(i), m.controlPoints[i]);
     }
+    ImGuiNotification::Post("モーションデータを保存しました: " + fileName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 Motion MotionEditor::Load(const std::string &fileName) {
@@ -710,5 +713,6 @@ Motion MotionEditor::Load(const std::string &fileName) {
         Vector3 point = data.Load<Vector3>("controlPoint" + std::to_string(i), {0, 0, 0});
         m.controlPoints.push_back(point);
     }
+    ImGuiNotification::Post("モーションデータを読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
     return m;
 }

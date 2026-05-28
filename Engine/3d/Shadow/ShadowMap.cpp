@@ -1,6 +1,7 @@
 #include "ShadowMap.h"
 #include "Data/DataHandler.h"
 #include "DirectXCommon.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Graphics/Srv/SrvManager.h"
 #include "Light/LightGroup.h"
 #include <cmath>
@@ -251,6 +252,7 @@ void ShadowMap::SaveConfig(const std::string &fileName) {
     data->Save("orthoHeight", orthoHeight_);
     data->Save("nearZ", nearZ_);
     data->Save("farZ", farZ_);
+    ImGuiNotification::Post("シャドウ設定を保存しました: " + fileName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void ShadowMap::LoadConfig(const std::string &fileName) {
@@ -271,4 +273,5 @@ void ShadowMap::LoadConfig(const std::string &fileName) {
     nearZ_         = data->Load<float>("nearZ", 0.1f);
     farZ_          = data->Load<float>("farZ", 200.f);
     Update();
+    ImGuiNotification::Post("シャドウ設定を読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
 }

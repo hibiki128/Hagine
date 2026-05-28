@@ -1,4 +1,5 @@
 #include "Framework.h"
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
 
@@ -367,6 +368,8 @@ void Framework::LoadResource() {
     particleCSEditor_->AddParticleEmitter("AroundField");
    
     particleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
+
+    ImGuiNotification::Post("全ての基本リソースを読み込みました", {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
 void Framework::PlaySounds() {

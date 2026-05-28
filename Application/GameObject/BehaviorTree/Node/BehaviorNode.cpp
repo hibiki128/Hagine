@@ -2,8 +2,8 @@
 #include "BehaviorNode.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
+#include "Frame.h"
 #include <iostream>
-#include"Frame.h"
 
 // ---------------------------------------------------------
 // BTNode / CompositeNode 基底
@@ -347,7 +347,8 @@ void RandomSelectorNode::OnEnter() {
         if (weightNode) {
             w = weightNode->GetWeight();
         }
-        if (w < 0.0f) w = 0.0f;
+        if (w < 0.0f)
+            w = 0.0f;
 
         weights.push_back(w);
         totalWeight += w;
@@ -893,9 +894,9 @@ NodeStatus IsEnergyHighNode::OnUpdate() {
 // プレイヤーの ChargeShot 相当: 溜め演出 → 強化ホーミング弾を1発放つ
 // ---------------------------------------------------------
 void EnemyChargeAttackNode::OnEnter() {
-    m_Timer      = 0.0f;
+    m_Timer = 0.0f;
     m_ShotsFired = 0;
-    m_Phase      = Phase::Charge;
+    m_Phase = Phase::Charge;
 
     if (!m_Enemy)
         return;
@@ -942,11 +943,11 @@ void EnemyChargeAttackNode::OnExit() {
 // EnemyUltimateNode
 // 重スキル: フルコンボ → ホーミング連射（必殺技より格下の強攻撃として運用）
 void EnemyUltimateNode::OnEnter() {
-    m_Timer       = 0.0f;
-    m_StepCount   = 0;
-    m_ShotsFired  = 0;
+    m_Timer = 0.0f;
+    m_StepCount = 0;
+    m_ShotsFired = 0;
     m_WaitingStep = false;
-    m_Phase       = Phase::Combo;
+    m_Phase = Phase::Combo;
 
     if (!m_Enemy)
         return;
@@ -966,8 +967,8 @@ NodeStatus EnemyUltimateNode::OnUpdate() {
             // コンボ完了 → 連射フェーズへ
             m_Enemy->Shot();
             m_ShotsFired = 1;
-            m_Timer      = 0.0f;
-            m_Phase      = (m_ShotsFired >= m_ShotCount) ? Phase::Cooldown : Phase::Shoot;
+            m_Timer = 0.0f;
+            m_Phase = (m_ShotsFired >= m_ShotCount) ? Phase::Cooldown : Phase::Shoot;
             return NodeStatus::Running;
         }
 
@@ -975,7 +976,7 @@ NodeStatus EnemyUltimateNode::OnUpdate() {
             m_Enemy->SetComboAttack(true);
             ++m_StepCount;
             m_WaitingStep = true;
-            m_Timer       = 0.0f;
+            m_Timer = 0.0f;
         }
 
         if (m_Timer >= m_StepDuration) {
@@ -1037,6 +1038,10 @@ NodeStatus EnemyBeamUltimateNode::OnUpdate() {
         m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
         if (m_Timer >= m_WindupDuration) {
             // 溜め完了 → ビーム発射
+            // ロックオンを解除して RotateUpdate による向き追従を止める。
+            // ActivateBeam() の中で発射時の quateRotation_ が beamLockedRotation_ に
+            // スナップショットされるため、この後は向きが完全に固定される。
+            m_Enemy->SetIsLockOn(false);
             m_Enemy->StopChargeAura();
             m_Enemy->ActivateBeam();
             m_Timer = 0.0f;
