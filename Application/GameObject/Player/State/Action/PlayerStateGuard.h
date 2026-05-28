@@ -31,4 +31,7 @@ class PlayerStateGuard : public PlayerBaseState {
     /// <param name="player">プレイヤー参照</param>
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(Player &player, const ViewProjection &viewProjection) override;
+
+  private:
+    bool enteredFromFly_ = false; // 飛行状態からガードに入ったか
 };

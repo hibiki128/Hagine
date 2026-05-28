@@ -337,8 +337,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
             }
             else
             {
-                // Box (default): 点エミッター
-                emitPosition = gEmitterMesh.translate;
+                // Box: スケールを半辺として使用したランダムボックス内点
+                float3 r01 = float3(generator.Generate1d(), generator.Generate1d(), generator.Generate1d());
+                emitPosition = gEmitterMesh.translate + mul(rotMatrix, (r01 * 2.0f - 1.0f) * gEmitterMesh.scale);
             }
         }
     }

@@ -167,6 +167,6 @@ void EnemyBullet::OnCollisionEnter(ColliderBase *other) {
     // プレイヤーに当たった時の処理
     if (other->GetTag() == "Player" && isAlive_ && target_ && target_->GetAlive()) {
         isHit_ = true;
-        target_->SetDamage(kBulletDamage);
+        target_->SetDamage(damage_);
     }
 }

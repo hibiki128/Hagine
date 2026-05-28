@@ -1097,7 +1097,14 @@ void ParticleCSGroup::DrawImGui() {
         if (ImGui::Combo("形状##es", &shape, shapeNames, IM_ARRAYSIZE(shapeNames)))
             settingsData_->emitShape = static_cast<uint32_t>(shape);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("メッシュ／エッジエミッターには適用されません");
+            ImGui::SetTooltip(
+                "モデル/プリミティブ付きエミッターには適用されません（モデルなしのみ有効）\n"
+                "Box: エミッターのScaleが発生ボックスの半辺になります\n"
+                "Sphere/Cone: 下の半径パラメータで範囲を指定");
+
+        if (settingsData_->emitShape == 0) {
+            ImGui::TextDisabled("  ← エミッターのScale（変換設定）で発生範囲を調整");
+        }
 
         if (settingsData_->emitShape == 1 || settingsData_->emitShape == 2) {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.15f, 0.25f, 0.5f));

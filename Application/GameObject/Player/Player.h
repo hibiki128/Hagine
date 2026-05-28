@@ -175,7 +175,14 @@ class Player : public BaseObject {
     PlayerAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
     bool GetIsSkillActive() const { return makanAttack_ptr_->IsActive(); }
 
+    /// <summary>ガード中かどうか（敵BTの被弾リスク判定などから参照）</summary>
+    bool IsGuarding() const { return isGuarding_; }
+
+    /// <summary>パンチコンボが進行中か（敵BTの脅威判定から参照）</summary>
+    bool IsComboActive() const { return punchCombo_.IsComboActive(); }
+
     void SetIsLockOn(bool flag) { isLockOn_ = flag; }
+    void SetGuarding(bool flag) { isGuarding_ = flag; }
 
     /// <summary>
     /// ダッシュ状態をリセットする
@@ -314,6 +321,12 @@ class Player : public BaseObject {
     void UpdateDashState();
 
     /// <summary>
+    /// ガード入力を判定して Guard ステートへ遷移する
+    /// 地上(Idle/Move)・飛行(FlyIdle/FlyMove)から押しっぱ式で発動
+    /// </summary>
+    void UpdateGuardInput();
+
+    /// <summary>
     /// アニメーションの更新
     /// </summary>
     void UpdateAnimation();
@@ -335,6 +348,7 @@ class Player : public BaseObject {
     static constexpr float kTimerReset = 0.0f;
     static constexpr float kPlayerDamageTiltDegrees = 20.0f;
     static constexpr float kNoDamage = 0.0f;
+    // kGuardDamageMultiplier は定数から変数へ移動済み (guardDamageMultiplier_)
 
     // 点滅関連定数
     static constexpr float kPlayerBlinkInterval = 0.05f;
@@ -427,6 +441,9 @@ class Player : public BaseObject {
     bool isLockOn_ = false;  // ロックオンフラグ
     bool isGrounded_ = true; // 接地フラグ
     bool isDashing_ = false; // ダッシュ中フラグ
+    bool isGuarding_ = false; // ガード中フラグ
+    float guardDamageMultiplier_ = 0.20f; // ガード中の被ダメージ倍率（軽減率80%）ImGuiで調整可
+    float guardEnergyCost_ = 10.0f;       // ガード中に被弾した際のエネルギー消費量
     bool isSkillMenu_ = false;
 
     float dashInputX_ = 0.0f;           // ダッシュ開始時のスティックX入力

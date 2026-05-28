@@ -13,6 +13,15 @@ void DemoScene::Initialize() {
     debugCamera_->Initialize(&vp_);
 
     /// ===================================================
+    /// GPU パーティクルエフェクト登録
+    /// ===================================================
+    //ptCSEditor_->AddParticleEmitter("flamePillar");   // 炎の柱
+    //ptCSEditor_->AddParticleEmitter("magicArray");    // 魔法陣
+    //ptCSEditor_->AddParticleEmitter("burstFlash");    // 爆裂閃光（一回発生ボタンで起爆）
+    //ptCSEditor_->AddParticleEmitter("lightningBolt"); // 電光柱
+    //ptCSEditor_->AddParticleEmitter("soulVortex");    // 魂の渦
+
+    /// ===================================================
     /// DrawSystem 登録
     /// ===================================================
     drawSystem_->Register("DemoScene_All", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {

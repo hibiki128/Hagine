@@ -9,6 +9,7 @@
 #include "Engine/3d/Line/DrawLine3D.h"
 #include "Object/Base/BaseObjectManager.h"
 #include "State/Action/PlayerEnergyCharge.h"
+#include "State/Action/PlayerStateGuard.h"
 #include "State/Action/PlayerStateRush.h"
 #include "State/Fly/PlayerStateFlyMove.h"
 #include "State/Ground/PlayerStateIdle.h"
@@ -30,30 +31,30 @@ Player::~Player() {
 
 void Player::Init(const std::string objectName) {
     BaseObject::Init(objectName);
-    // BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
-    BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
+     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
+    ///BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
     // ────────────────────────────────────────────────
     // ループあり：待機・移動など継続する動作
     // ────────────────────────────────────────────────
-    BaseObject::AddAnimation("animation/Player/Idle_Ground.gltf", true); // 浮遊待機
-    BaseObject::AddAnimation("animation/Player/Idle_Flying.gltf", true); // 浮遊待機
-    BaseObject::AddAnimation("animation/Run.gltf", true);                // 地上移動
+    ///BaseObject::AddAnimation("animation/Player/Idle_Ground.gltf", true); // 浮遊待機
+    ///BaseObject::AddAnimation("animation/Player/Idle_Flying.gltf", true); // 浮遊待機
+    ///BaseObject::AddAnimation("animation/Run.gltf", true);                // 地上移動
     // ────────────────────────────────────────────────
     // ループなし：攻撃・ジャンプなど一回きりの動作
     // ────────────────────────────────────────────────
-    BaseObject::AddAnimation("animation/Player/Punch_1.gltf", false); // Jab
-    BaseObject::AddAnimation("animation/Player/Punch_2.gltf", false); // Hook
-    BaseObject::AddAnimation("animation/Player/Punch_3.gltf", false); // Cross
-    BaseObject::AddAnimation("animation/Player/Punch_4.gltf", false); // Uppercut
-    BaseObject::AddAnimation("animation/Player/Kick_1.gltf", false);  // Overhand
-    BaseObject::AddAnimation("animation/Player/Kick_2.gltf", false);  // Swing
-    BaseObject::AddAnimation("animation/Player/Kick_3.gltf", false);  // Elbow
-    BaseObject::AddAnimation("animation/Jump.gltf", false);           // ジャンプ
+    ///BaseObject::AddAnimation("animation/Player/Punch_1.gltf", false); // Jab
+    ///BaseObject::AddAnimation("animation/Player/Punch_2.gltf", false); // Hook
+    ///BaseObject::AddAnimation("animation/Player/Punch_3.gltf", false); // Cross
+    ///BaseObject::AddAnimation("animation/Player/Punch_4.gltf", false); // Uppercut
+    ///BaseObject::AddAnimation("animation/Player/Kick_1.gltf", false);  // Overhand
+    ///BaseObject::AddAnimation("animation/Player/Kick_2.gltf", false);  // Swing
+    ///BaseObject::AddAnimation("animation/Player/Kick_3.gltf", false);  // Elbow
+    ///BaseObject::AddAnimation("animation/Jump.gltf", false);           // ジャンプ
 
-    BaseObject::SetOffset({0.0f, -0.5f, 0.0f}); // 描画オフセット（地面に足がつくように）
-    BaseObject::GetLocalScale() = {3.0f, 3.0f, 3.0f};
-    BaseObject::SetAnimationSpeed(1.5f);
-    BaseObject::SetAnimationBlendDuration(0.75f);
+    ///BaseObject::SetOffset({0.0f, -0.5f, 0.0f}); // 描画オフセット（地面に足がつくように）
+   /// BaseObject::GetLocalScale() = {3.0f, 3.0f, 3.0f};
+   /// BaseObject::SetAnimationSpeed(1.5f);
+   /// BaseObject::SetAnimationBlendDuration(0.75f);
 
     playerCollider_ = AddOBBCollider("player_Collider");
     playerCollider_->SetTag("Player");
@@ -85,6 +86,7 @@ void Player::Init(const std::string objectName) {
     states_["FlyMove"] = std::make_unique<PlayerStateFlyMove>();
     states_["Rush"] = std::make_unique<PlayerStateRush>();
     states_["EnergyCharge"] = std::make_unique<PlayerEnergyCharge>();
+    states_["Guard"] = std::make_unique<PlayerStateGuard>();
     currentState_ = states_["Idle"].get();
     isGrounded_ = true; // 初期状態は地面にいる
 
@@ -228,11 +230,13 @@ void Player::Update() {
 
             UpdateDashState();
 
+            UpdateGuardInput();
+
             if (currentState_) {
                 currentState_->Update(*this);
             }
 
-            UpdateAnimation(); // ステート・コンボに応じてアニメーションを切り替え
+           // UpdateAnimation(); // ステート・コンボに応じてアニメーションを切り替え
 
             // RotateUpdate はロックオン追従と手動スティック回転を行う
             // Rush ステートは自前で UpdateRotation() を持つため除外する
@@ -835,13 +839,19 @@ void Player::DamageUpdate() {
         return;
     }
 
-    HP_ -= damage_;
+    // ガード中はダメージ・ノックバックを軽減し、エネルギーを消費する
+    float guardMult = isGuarding_ ? guardDamageMultiplier_ : 1.0f;
+    if (isGuarding_) {
+        ConsumeEnergy(guardEnergyCost_);
+    }
+
+    HP_ -= damage_ * guardMult;
     damage_ = kNoDamage;
 
     if (hasKnockback_) {
-        velocity_.x += knockbackVelocity_.x;
-        velocity_.y += knockbackVelocity_.y;
-        velocity_.z += knockbackVelocity_.z;
+        velocity_.x += knockbackVelocity_.x * guardMult;
+        velocity_.y += knockbackVelocity_.y * guardMult;
+        velocity_.z += knockbackVelocity_.z * guardMult;
         if (isGrounded_ && knockbackVelocity_.y > 0.0f) {
             isGrounded_ = false;
         }
@@ -1023,6 +1033,14 @@ void Player::Debug() {
             ImGui::DragFloat("弾の速度", &B_speed_, 0.1f);
             ImGui::DragFloat("弾の加速度", &B_acce_, 0.1f);
 
+            ImGui::Separator();
+            ImGui::Text("ガード設定");
+            ImGui::Text("  現在状態: %s", isGuarding_ ? "ガード中" : "解除中");
+            // 0.0=完全無敵, 1.0=ガード意味なし。軽減率 = (1 - multiplier)*100 %
+            ImGui::DragFloat("ガード被ダメ倍率 (0=無敵, 1=無効)", &guardDamageMultiplier_, 0.01f, 0.0f, 1.0f);
+            ImGui::Text("  -> 軽減率 %.0f%%", (1.0f - guardDamageMultiplier_) * 100.0f);
+            ImGui::DragFloat("ガード時エネルギー消費", &guardEnergyCost_, 0.5f, 0.0f, 100.0f);
+
             if (ImGui::Button("セーブ")) {
                 Save();
             }
@@ -1155,6 +1173,33 @@ void Player::UpdateDashState() {
     wasDashing_ = isDashing_;
 }
 
+void Player::UpdateGuardInput() {
+    // すでにガード中なら遷移判定は Guard ステート側に任せる
+    if (currentState_ == states_["Guard"].get()) {
+        return;
+    }
+
+    // スキル発動中・スキルメニュー中はガード不可
+    if (isSkillMenu_ || (makanAttack_ptr_ && makanAttack_ptr_->IsActive())) {
+        return;
+    }
+
+    // 地上(Idle/Move)・飛行(FlyIdle/FlyMove)からのみガードへ入れる
+    bool canGuard =
+        currentState_ == states_["Idle"].get() ||
+        currentState_ == states_["Move"].get() ||
+        currentState_ == states_["FlyIdle"].get() ||
+        currentState_ == states_["FlyMove"].get();
+    if (!canGuard) {
+        return;
+    }
+
+    bool guardHeld = gamePad_->IsPress(XINPUT_GAMEPAD_B) || input_->PushKey(DIK_RSHIFT);
+    if (guardHeld) {
+        ChangeState("Guard");
+    }
+}
+
 void Player::UpdateAnimation() {
     // ──────────────────────────────────────────
     // コンボ攻撃中：段数に対応したアニメーションを再生
@@ -1264,6 +1309,8 @@ void Player::Save() {
     data_->Save("energyRecoveryRate", energyRecoveryRate_);
     data_->Save("energyRecoveryDelay", energyRecoveryDelay_);
     data_->Save("invincibleDuration", invincibleDuration_);
+    data_->Save("guardDamageMultiplier", guardDamageMultiplier_);
+    data_->Save("guardEnergyCost", guardEnergyCost_);
 }
 
 void Player::Load() {
@@ -1279,6 +1326,8 @@ void Player::Load() {
     energyRecoveryDelay_ = data_->Load<float>("energyRecoveryDelay", 1.0f);
     energy_ = maxEnergy_; // 初期化時は最大値
     invincibleDuration_ = data_->Load<float>("invincibleDuration", 0.25f);
+    guardDamageMultiplier_ = data_->Load<float>("guardDamageMultiplier", 0.20f);
+    guardEnergyCost_ = data_->Load<float>("guardEnergyCost", 10.0f);
 }
 
 Vector3 Player::GetForward() const { return -GetBackward(); }

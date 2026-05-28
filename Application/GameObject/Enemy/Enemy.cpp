@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "Enemy.h"
 #include "Collider/CollisionManager.h"
+#include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
@@ -9,6 +10,8 @@
 #include <Engine/3d/Line/DrawLine3D.h>
 #include <Frame.h>
 #include <Object/Base/BaseObjectManager.h>
+#include <cmath>
+#include <numbers>
 
 Enemy::Enemy() {}
 Enemy::~Enemy() {}
@@ -44,17 +47,39 @@ void Enemy::Init(const std::string objectName) {
     BaseObject::SetTexture("debug/white1x1.png", kTextureIndex);
     BaseObject::SetColor(Vector4(kColorRed, kColorZero, kColorZero, kColorOpaque));
 
-   /* shadow_ = std::make_unique<BaseObject>();
-    shadow_->Init("shadow");
-    shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
-    shadow_->SetTexture("game/shadow.png");
-    shadow_->GetWorldTransform()->SetRotationEuler(
-        Vector3(degreesToRadians(kShadowRotationDegrees), kRotationZero, kRotationZero));
-    shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};*/
+    /* shadow_ = std::make_unique<BaseObject>();
+     shadow_->Init("shadow");
+     shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
+     shadow_->SetTexture("game/shadow.png");
+     shadow_->GetWorldTransform()->SetRotationEuler(
+         Vector3(degreesToRadians(kShadowRotationDegrees), kRotationZero, kRotationZero));
+     shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};*/
 
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
     chargeShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
+
+    // チャージ攻撃演出（enemyChargeAura: 既存の気弾チャージオーラ）
+    chargeAura_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("enemyChargeAura");
+    // チャージ発射閃光
+    burstFlash_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("burstFlash");
+    // ビームメイン演出（プレイヤーの MakanAttackSkill と同じテンプレートを流用）
+    beamMainEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("makan_main");
+    // ビームらせん演出
+    beamAroundEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("makan_around");
+
+    // ビーム判定コライダー（初期は無効化）
+    beamCollider_ = AddOBBCollider("enemy_BeamCollider");
+    beamCollider_->SetTag("EnemyBeam");
+    beamCollider_->AddCollisionMask("Player");
+    beamCollider_->SetEnabled(false);
+    beamCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+        // ビームアクティブ中かつ未ダメージ処理のとき一度だけダメージを与える
+        if (other->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && target_) {
+            target_->SetDamage(kBeamDamage);
+            beamDamageDealt_ = true;
+        }
+    });
 
     // -----------------------------------------------
     // 手の生成（ビジュアルと攻撃判定を担う）
@@ -142,9 +167,9 @@ void Enemy::Init(const std::string objectName) {
 
 void Enemy::Update() {
     // 影の位置を更新
-   /* shadow_->GetLocalPosition() = {
-        transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
-    shadow_->Update();*/
+    /* shadow_->GetLocalPosition() = {
+         transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
+     shadow_->Update();*/
 
     // 開始フラグが立っており、ポーズ中でなく、ターゲットが生きている場合に更新
     if (started_ && !isPause_ && target_->GetIsAlive()) {
@@ -178,6 +203,29 @@ void Enemy::Update() {
         ConboUpdate();
         UpdateShadowScale();
         chargeShake_->Update();
+
+        // 大技演出エミッタの追従＆更新
+        {
+            Vector3 selfPos = GetWorldPosition();
+            Quaternion selfRot = GetLocalRotation();
+            if (chargeAura_) {
+                chargeAura_->SetTranslate(selfPos);
+                chargeAura_->SetRotation(-selfRot);
+                chargeAura_->Update();
+            }
+            if (burstFlash_) {
+                burstFlash_->Update();
+            }
+            if (beamMainEffect_) {
+                beamMainEffect_->Update();
+            }
+            if (beamAroundEffect_) {
+                beamAroundEffect_->Update();
+            }
+        }
+
+        // ビーム必殺技のフレーム更新
+        UpdateBeam();
 
         // ダメージリアクション処理（のけぞり回転と点滅）
         if (isDamageReact_) {
@@ -304,12 +352,21 @@ void Enemy::Draw(const ViewProjection &viewProjection) {
     BaseObject::Draw(viewProjection);
     if (transform_->translation_.y < kGroundLevel)
         return;
-   /* shadow_->SetIsModelDraw(drawShadow_);
-    shadow_->Draw(viewProjection);*/
+    /* shadow_->SetIsModelDraw(drawShadow_);
+     shadow_->Draw(viewProjection);*/
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {
     hitEmitter_->Draw(viewProjection);
+    // 大技演出
+    if (chargeAura_)
+        chargeAura_->Draw(viewProjection);
+    if (burstFlash_)
+        burstFlash_->Draw(viewProjection);
+    if (beamMainEffect_)
+        beamMainEffect_->Draw(viewProjection);
+    if (beamAroundEffect_)
+        beamAroundEffect_->Draw(viewProjection);
     // -----------------------------------------------
     // 前方攻撃判定コライダーのヒットエフェクト描画
     // -----------------------------------------------
@@ -551,11 +608,11 @@ void Enemy::Save() {}
 void Enemy::Load() {}
 
 void Enemy::UpdateShadowScale() {
-   /* if (transform_->translation_.y < kGroundLevel)
-        return;
-    float height = transform_->translation_.y;
-    float scale = std::max(kShadowMinScale, kShadowBaseScale - height * kShadowScaleFactor);
-    shadow_->GetLocalScale() = {scale, scale, scale};*/
+    /* if (transform_->translation_.y < kGroundLevel)
+         return;
+     float height = transform_->translation_.y;
+     float scale = std::max(kShadowMinScale, kShadowBaseScale - height * kShadowScaleFactor);
+     shadow_->GetLocalScale() = {scale, scale, scale};*/
 }
 
 void Enemy::RotateUpdate() {
@@ -855,6 +912,181 @@ void Enemy::ShotWithDirection(const Vector3 &direction, bool forceHoming) {
     }
 
     bullets_.push_back(std::move(bullet));
+}
+
+// ---------------------------------------------------------
+// チャージ攻撃・必殺技（プレイヤー演出の使いまわし）
+// ---------------------------------------------------------
+void Enemy::StartChargeAura() {
+    if (chargeAura_) {
+        chargeAura_->SetTranslate(GetWorldPosition());
+        chargeAura_->SetAuto(true);
+    }
+    if (chargeShake_) {
+        chargeShake_->StartShake();
+    }
+}
+
+void Enemy::StopChargeAura() {
+    if (chargeAura_)
+        chargeAura_->SetAuto(false);
+}
+
+void Enemy::FireChargeBlast() {
+    StopChargeAura();
+
+    // 発射閃光
+    if (burstFlash_) {
+        burstFlash_->SetTranslate(GetPositionFront(2.0f));
+        burstFlash_->EmitOnce();
+    }
+
+    if (!target_)
+        return;
+
+    // エネルギーが足りなければ通常弾にフォールバック
+    if (!ConsumeEnergy(kChargeAttackEnergyCost)) {
+        Shot();
+        return;
+    }
+
+    // 強化ホーミング弾を1発撃つ
+    std::string bulletName = "EnemyChargeBullet_" + std::to_string(bullets_.size());
+    auto bullet = std::make_unique<EnemyBullet>();
+    bullet->Init(bulletName);
+    bullet->InitTransform(this);
+    bullet->GetLocalScale() = {kChargeBlastScale, kChargeBlastScale, kChargeBlastScale};
+    bullet->SetColliderRadius(kBulletColliderRadius * kChargeBlastScale);
+    bullet->SetIsLockOnBullet(true);
+    bullet->SetSpeed(kChargeBlastSpeed);
+    bullet->SetDamage(kChargeBlastDamage);
+
+    Vector3 toTarget = target_->GetLocalPosition() - GetLocalPosition();
+    float len = toTarget.Length();
+    toTarget = (len > kMinRotationDistance) ? toTarget / len : GetForward();
+    bullet->SetVelocity(toTarget * kChargeBlastSpeed);
+
+    bullets_.push_back(std::move(bullet));
+}
+
+// ---------------------------------------------------------
+// ビーム必殺技 (MakanAttackSkill 相当)
+// OBBコライダーを前方に伸ばし、lightningBolt パーティクルでビームを表現
+// ---------------------------------------------------------
+void Enemy::ActivateBeam() {
+    if (beamActive_)
+        return;
+
+    ConsumeEnergy(kUltimateEnergyCost);
+    beamActive_ = true;
+    beamDamageDealt_ = false;
+    beamLength_ = 0.0f;
+    beamActiveTime_ = 0.0f;
+    beamSpiralTime_ = 0.0f;
+    // 発射時点の向きを固定する。ビーム持続中はこの向きを使い続けることで
+    // ターゲット追従（ホーミング）を防ぐ。
+    beamLockedRotation_ = transform_->quateRotation_;
+
+    if (beamMainEffect_)
+        beamMainEffect_->SetAuto(true);
+    if (beamAroundEffect_)
+        beamAroundEffect_->SetAuto(true);
+    if (chargeShake_)
+        chargeShake_->StartShake();
+}
+
+void Enemy::DeactivateBeam() {
+    beamActive_ = false;
+    beamLength_ = 0.0f;
+    beamActiveTime_ = 0.0f;
+    beamSpiralTime_ = 0.0f;
+
+    if (beamMainEffect_)
+        beamMainEffect_->SetAuto(false);
+    if (beamAroundEffect_)
+        beamAroundEffect_->SetAuto(false); // 新規発生を止める（既存パーティクルは自然消滅）
+    if (beamCollider_)
+        beamCollider_->SetEnabled(false); // 判定を即無効化（ダメージは止める）
+}
+
+void Enemy::UpdateBeam() {
+    if (!beamActive_)
+        return;
+
+    float dt = Frame::DeltaTime();
+    beamActiveTime_ += dt;
+
+    // ビーム長を前方に伸ばす
+    beamLength_ += kBeamExtendSpeed * dt;
+    if (beamLength_ > kBeamMaxLength)
+        beamLength_ = kBeamMaxLength;
+
+    Vector3 selfPos = GetWorldPosition();
+    // beamLockedRotation_ はビーム発射時に ActivateBeam() で固定済み。
+    // ビーム持続中はこの向きを使い続けることで向き追従（ホーミング）を防ぐ。
+    Quaternion selfRot = beamLockedRotation_;
+
+    // メインビームエミッタの設定（MakanAttackSkill と同じアプローチ）
+    // SetScale の Z 成分でビームの長さを制御し、SetAnchorPoint でビームの起点を調整する
+    if (beamMainEffect_) {
+        beamMainEffect_->SetAuto(true);
+        beamMainEffect_->SetScale(Vector3(0.0f, 0.0f, beamLength_));
+        beamMainEffect_->SetAnchorPoint(Vector3(0.5f, 0.5f, 0.75f));
+        beamMainEffect_->SetTranslate(selfPos);
+        beamMainEffect_->SetRotation(selfRot);
+    }
+
+    // らせん状エミッタの設定（MakanAttackSkill と同じアプローチ）
+    if (beamAroundEffect_) {
+        beamAroundEffect_->SetAuto(true);
+        beamSpiralTime_ += dt;
+
+        // クォータニオンからローカル座標系の基底ベクトルを計算する
+        // RotateUpdate が +Z をプレイヤー方向に向けるため、
+        // localForward（+Z 基底）はそのままプレイヤー方向を向く
+        Quaternion q = selfRot;
+        Vector3 localRight(
+            1.0f - 2.0f * (q.y * q.y + q.z * q.z),
+            2.0f * (q.x * q.y - q.w * q.z),
+            2.0f * (q.x * q.z + q.w * q.y));
+        Vector3 localUp(
+            2.0f * (q.x * q.y + q.w * q.z),
+            1.0f - 2.0f * (q.x * q.x + q.z * q.z),
+            2.0f * (q.y * q.z - q.w * q.x));
+        Vector3 localForward(
+            2.0f * (q.x * q.z - q.w * q.y),
+            2.0f * (q.y * q.z + q.w * q.x),
+            1.0f - 2.0f * (q.x * q.x + q.y * q.y));
+
+        // らせんパーティクルの前進距離
+        float forwardDistance = (beamSpiralTime_ * beamSpiralForwardSpeed_) * 2.0f;
+        if (forwardDistance > beamLength_ * 2.0f)
+            forwardDistance = beamLength_ * 2.0f;
+
+        // ビーム長に対する進捗に応じて巻き角度を決定する
+        float t = forwardDistance / kBeamMaxLength;
+        float angle = t * beamSpiralRevolution_ * (2.0f * std::numbers::pi_v<float>);
+
+        // らせんオフセット（ローカル座標系で計算）
+        Vector3 spiralOffset = localRight * (std::cos(angle) * beamSpiralRadius_) +
+                               localUp * (std::sin(angle) * beamSpiralRadius_);
+
+        Vector3 emitterPos = selfPos + localForward * forwardDistance + spiralOffset;
+        beamAroundEffect_->SetTranslate(emitterPos);
+        beamAroundEffect_->SetScale(Vector3(0.3f, 0.3f, 0.3f));
+    }
+
+    // OBBコライダーをビーム形状に更新する
+    if (beamCollider_) {
+        beamCollider_->SetEnabled(true);
+        beamCollider_->SetSize(Vector3(kBeamWidth, kBeamWidth, beamLength_));
+        beamCollider_->SetAnchorPoint(Vector3(0.5f, 0.5f, 1.0f));
+    }
+
+    // 持続時間が過ぎたら自動停止
+    if (beamActiveTime_ >= kBeamDuration) {
+        DeactivateBeam();
+    }
 }
 
 Vector3 Enemy::GetForward() const {

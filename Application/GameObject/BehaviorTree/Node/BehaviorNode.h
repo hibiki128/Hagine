@@ -1360,6 +1360,7 @@ class EnemyChargeAttackNode : public ContextNode {
   protected:
     void OnEnter() override;
     NodeStatus OnUpdate() override;
+    void OnExit() override;
 
   private:
     enum class Phase { Charge, Shoot, Cooldown };
@@ -1413,4 +1414,67 @@ class EnemyUltimateNode : public ContextNode {
     static constexpr int   kMaxComboSteps  = 8;
     static constexpr float kShootInterval  = 0.08f;
     static constexpr float kCooldown       = 0.6f;
+};
+
+/// <summary>
+/// ビーム必殺技ノード: MakanAttackSkill 相当のビームを放つ
+/// param  : 溜め時間（秒）
+/// ビーム持続時間は Enemy 側の kBeamDuration に従う
+/// </summary>
+class EnemyBeamUltimateNode : public ContextNode {
+  public:
+    EnemyBeamUltimateNode(float windupDuration = 1.5f)
+        : m_WindupDuration(windupDuration) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer = 0.0f;
+        m_Phase = Phase::Windup;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+    void OnExit() override;
+
+  private:
+    enum class Phase { Windup, Beam, Cooldown };
+
+    float m_WindupDuration;
+    float m_Timer = 0.0f;
+    Phase m_Phase = Phase::Windup;
+
+    static constexpr float kCooldown = 1.2f; // ビーム後の硬直
+};
+
+/// <summary>
+/// ガードノード: 一定時間ガード状態に入り被ダメージを軽減する
+/// param : ガード継続時間（秒）
+/// </summary>
+class EnemyGuardNode : public ContextNode {
+  public:
+    EnemyGuardNode(float duration = 0.8f) : m_Duration(duration) {}
+
+    void Reset() override {
+        BTNode::Reset();
+        m_Timer = 0.0f;
+    }
+
+  protected:
+    void OnEnter() override;
+    NodeStatus OnUpdate() override;
+    void OnExit() override;
+
+  private:
+    float m_Duration;     // ガード継続時間(秒)
+    float m_Timer = 0.0f; // 経過時間
+};
+
+/// <summary>
+/// プレイヤーが攻撃的（脅威）かを判定する条件ノード
+/// Rush中・スキル発動中・パンチコンボ中のいずれかで Success
+/// </summary>
+class IsPlayerAttackingNode : public ContextNode {
+  protected:
+    NodeStatus OnUpdate() override;
 };

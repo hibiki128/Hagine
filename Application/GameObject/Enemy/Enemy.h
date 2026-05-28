@@ -1,7 +1,7 @@
 #pragma once
 #include "Application/Utility/Shake/Shake.h"
-#include "Collider/EnemyAttackCollider.h"
 #include "Bullet/EnemyBullet.h"
+#include "Collider/EnemyAttackCollider.h"
 #include "Hand/EnemyHand.h"
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
@@ -166,6 +166,29 @@ class Enemy : public BaseObject {
     void Shot();
     void ShotWithDirection(const Vector3 &direction, bool forceHoming = false);
 
+    /// ===================================================
+    /// 大技（チャージ攻撃・必殺技）演出＆処理
+    /// BTノード(EnemyChargeAttackNode / EnemyUltimateNode)から駆動する
+    /// プレイヤーの ChargeShot / MakanAttackSkill 相当の演出を流用する
+    /// ===================================================
+
+    /// <summary>チャージ溜めオーラ演出を開始する</summary>
+    void StartChargeAura();
+    /// <summary>チャージ溜めオーラ演出を停止する</summary>
+    void StopChargeAura();
+    /// <summary>チャージ発射: 閃光演出＋強化ホーミング弾を1発撃つ</summary>
+    void FireChargeBlast();
+
+    // ===================================================
+    // ビーム必殺技（MakanAttackSkill 相当）
+    // ===================================================
+    /// <summary>ビーム必殺技を起動する。溜め完了後にBTノードから呼ぶ</summary>
+    void ActivateBeam();
+    /// <summary>ビーム必殺技を強制停止する（BT中断時など）</summary>
+    void DeactivateBeam();
+    /// <summary>ビームが現在アクティブかどうか</summary>
+    bool IsBeamActive() const { return beamActive_; }
+
   private:
     /// ===================================================
     /// private method
@@ -174,6 +197,7 @@ class Enemy : public BaseObject {
     void Save();
     void Load();
     void UpdateShadowScale();
+    void UpdateBeam(); // ビーム必殺技の毎フレーム更新
     void RotateUpdate();
     void CollisionGround();
     void DamageUpdate();
@@ -257,11 +281,23 @@ class Enemy : public BaseObject {
     static constexpr float kBulletColliderRadius = 0.5f;
     static constexpr float kNormalShotEnergyCost = 5.0f;
 
-    Direction dir_;          // 現在の方向
-    MoveDirection moveDir_;  // 移動方向
+    // 大技関連定数
+    static constexpr float kChargeAttackEnergyCost = 30.0f; // チャージ攻撃の消費エネルギー
+    static constexpr float kChargeBlastScale = 1.6f;        // チャージ弾のスケール
+    static constexpr float kChargeBlastDamage = 15.0f;      // チャージ弾のダメージ
+    static constexpr float kChargeBlastSpeed = 60.0f;       // チャージ弾の速度
+    static constexpr float kUltimateEnergyCost = 60.0f;     // ビーム必殺技の消費エネルギー
+    static constexpr float kBeamDamage = 40.0f;             // ビーム必殺技のダメージ
+    static constexpr float kBeamMaxLength = 55.0f;          // ビームの最大長さ
+    static constexpr float kBeamExtendSpeed = 110.0f;       // ビームが伸びる速度
+    static constexpr float kBeamWidth = 2.5f;               // ビーム幅
+    static constexpr float kBeamDuration = 2.0f;            // ビーム持続時間(秒)
 
-    Vector3 velocity_{};      // 速度
-    Vector3 acceleration_{};  // 加速度
+    Direction dir_;         // 現在の方向
+    MoveDirection moveDir_; // 移動方向
+
+    Vector3 velocity_{};       // 速度
+    Vector3 acceleration_{};   // 加速度
     Player *target_ = nullptr; // ターゲットプレイヤー
 
     int strafeDirection_ = 1; // 横移動方向
@@ -276,7 +312,7 @@ class Enemy : public BaseObject {
     float maxSpeed_ = 0.0f;  // 最大速度
     float accelRate_ = 0.0f; // 加速レート
 
-    Vector3 velocityTarget_{};        // 目標速度
+    Vector3 velocityTarget_{};         // 目標速度
     EasingData<Vector3> velocityEase_; // 速度補間用イージング
 
     // -----------------------------------------------
@@ -304,13 +340,31 @@ class Enemy : public BaseObject {
     bool isGuarding_ = false;    // ガード中フラグ
     bool isComboAttack_ = false; // コンボ攻撃中フラグ
 
-    std::unique_ptr<DataHandler> data_;      // データハンドラ
-    std::unique_ptr<BaseObject> shadow_;     // 影オブジェクト
+    std::unique_ptr<DataHandler> data_;           // データハンドラ
+    std::unique_ptr<BaseObject> shadow_;          // 影オブジェクト
     std::unique_ptr<ParticleEmitter> hitEmitter_; // ヒットエミッター
-    std::unique_ptr<Shake> chargeShake_;     // シェイク
+    std::unique_ptr<Shake> chargeShake_;          // シェイク
+
+    // 大技演出用CSパーティクル
+    std::unique_ptr<ParticleCSEmitter> chargeAura_;       // チャージ溜めオーラ (enemyChargeAura)
+    std::unique_ptr<ParticleCSEmitter> burstFlash_;       // チャージ発射閃光 (burstFlash)
+    std::unique_ptr<ParticleCSEmitter> beamMainEffect_;   // ビームメイン演出 (makan_main)
+    std::unique_ptr<ParticleCSEmitter> beamAroundEffect_; // ビームらせん演出 (makan_around)
+
+    // ビーム必殺技状態
+    OBBCollider *beamCollider_ = nullptr;        // ビーム判定コライダー（動的にOBBを更新）
+    bool beamActive_ = false;                    // ビームアクティブフラグ
+    bool beamDamageDealt_ = false;               // ビームダメージ適用済みフラグ
+    float beamLength_ = 0.0f;                    // 現在のビーム長
+    float beamActiveTime_ = 0.0f;                // ビームアクティブ経過時間
+    float beamSpiralTime_ = 0.0f;                // らせんアニメーション経過時間
+    Quaternion beamLockedRotation_{};            // ビーム発射時に固定した向き（発射後ホーミング防止）
+    float beamSpiralRadius_ = 2.0f;              // らせんの半径
+    float beamSpiralRevolution_ = 3.0f;          // 最大長に達した時の巻き数
+    float beamSpiralForwardSpeed_ = 30.0f;       // らせんパーティクルの前進速度
     std::shared_ptr<BTNode> rootNode_ = nullptr; // ビヘイビアツリーのルートノード
-    std::unique_ptr<EnemyHand> leftHand_;    // 左手
-    std::unique_ptr<EnemyHand> rightHand_;   // 右手
+    std::unique_ptr<EnemyHand> leftHand_;        // 左手
+    std::unique_ptr<EnemyHand> rightHand_;       // 右手
 
     bool isDamageReact_ = false;       // ダメージ反応中フラグ
     float damageReactTimer_ = 0.0f;    // ダメージ反応タイマー
@@ -321,7 +375,7 @@ class Enemy : public BaseObject {
     float energyRecoveryDelay_ = 1.0f; // エネルギー回復遅延
     float timeSinceLastShot_ = 0.0f;   // 最終射撃からの経過時間
 
-    ComboSystem punchCombo_;       // パンチコンボシステム
+    ComboSystem punchCombo_;        // パンチコンボシステム
     bool comboInitialized_ = false; // コンボ初期化済みフラグ
 
     // -----------------------------------------------
@@ -335,7 +389,7 @@ class Enemy : public BaseObject {
     Quaternion baseRotation_;    // 基本回転
     Quaternion tiltRotation_;    // のけぞり回転
 
-    OBBCollider *enemyCollider_ = nullptr;   // 敵コライダー
+    OBBCollider *enemyCollider_ = nullptr;      // 敵コライダー
     AABBCollider *enemyWallCollider_ = nullptr; // 壁用コライダー
 
     EnemyHand *leftHand_ptr_;  // 左手ポインタ
@@ -350,8 +404,8 @@ class Enemy : public BaseObject {
     static constexpr float kDefaultFrustumHalfFovH = 40.0f * (3.14159265f / 180.0f);
     static constexpr float kDefaultFrustumHalfFovV = 30.0f * (3.14159265f / 180.0f);
 
-    float frustumLockOnRange_ = kDefaultFrustumRange;   // 視錐台範囲
+    float frustumLockOnRange_ = kDefaultFrustumRange;       // 視錐台範囲
     float frustumLockOnHalfFovH_ = kDefaultFrustumHalfFovH; // 視錐台水平半角
     float frustumLockOnHalfFovV_ = kDefaultFrustumHalfFovV; // 視錐台垂直半角
-    bool drawFrustumDebug_ = false; // 視錐台デバッグ表示フラグ
+    bool drawFrustumDebug_ = false;                         // 視錐台デバッグ表示フラグ
 };

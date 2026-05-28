@@ -46,13 +46,18 @@ enum class EditorNodeType {
     ConditionEnergyLow, // 28  エネルギーが低いかチェック
     ActionEnergyCharge, // 29  エネルギーチャージ
     // ===== 飛行中水平移動 =====
-    ActionFlyApproach,    // 30  飛行中にプレイヤーへ水平接近
+    ActionFlyApproach, // 30  飛行中にプレイヤーへ水平接近
     // ===== チャージ攻撃・必殺技 =====
-    ActionChargeAttack,   // 31  溜め→一斉射撃
-    ActionUltimate,       // 32  フルコンボ＋大量射撃（エネルギー消費）
+    ActionChargeAttack, // 31  溜め→一斉射撃
+    ActionUltimate,     // 32  フルコンボ＋大量射撃（エネルギー消費）
     // ===== 追加条件ノード =====
     ConditionPlayerHPLow, // 33  プレイヤーHPが閾値以下か
-    ConditionEnergyHigh   // 34  自身のエネルギーが閾値以上か
+    ConditionEnergyHigh,  // 34  自身のエネルギーが閾値以上か
+    // ===== ガード =====
+    ActionGuard,              // 35  一定時間ガードして被ダメージを軽減
+    ConditionPlayerAttacking, // 36  プレイヤーが攻撃的(脅威)かチェック
+    // ===== ビーム必殺技 =====
+    ActionBeamUltimate // 37  溜め→ビーム必殺技 (MakanAttackSkill相当)
 };
 
 /// <summary>
@@ -137,10 +142,10 @@ struct WeightedOutput {
 /// エディタ上のノード情報
 /// </summary>
 struct EditorNode {
-    ax::NodeEditor::NodeId ID;      // ノードID
-    std::string Title;               // タイトル
-    EditorNodeType Type;             // タイプ
-    ImVec2 Position;                 // 表示位置
+    ax::NodeEditor::NodeId ID;          // ノードID
+    std::string Title;                  // タイトル
+    EditorNodeType Type;                // タイプ
+    ImVec2 Position;                    // 表示位置
     ax::NodeEditor::PinId InputPinID;   // 入力ピンID
     ax::NodeEditor::PinId OutputPinID;  // 出力ピンID
     ax::NodeEditor::PinId SuccessPinID; // 成功ピンID
@@ -173,7 +178,8 @@ struct EditorNode {
                Type == EditorNodeType::ConditionPlayerState ||
                Type == EditorNodeType::ConditionIsLockOn ||
                Type == EditorNodeType::ConditionPlayerHPLow ||
-               Type == EditorNodeType::ConditionEnergyHigh;
+               Type == EditorNodeType::ConditionEnergyHigh ||
+               Type == EditorNodeType::ConditionPlayerAttacking;
     }
 
     /// <summary>
@@ -200,7 +206,9 @@ struct EditorNode {
                Type == EditorNodeType::ActionEnergyCharge ||
                Type == EditorNodeType::ActionFlyApproach ||
                Type == EditorNodeType::ActionChargeAttack ||
-               Type == EditorNodeType::ActionUltimate;
+               Type == EditorNodeType::ActionUltimate ||
+               Type == EditorNodeType::ActionGuard ||
+               Type == EditorNodeType::ActionBeamUltimate;
     }
 
     /// <summary>
@@ -215,7 +223,7 @@ struct EditorNode {
 /// エディタ上の接続（リンク）情報
 /// </summary>
 struct EditorLink {
-    ax::NodeEditor::LinkId ID;      // リンクID
+    ax::NodeEditor::LinkId ID;        // リンクID
     ax::NodeEditor::PinId StartPinID; // 開始ピンID
     ax::NodeEditor::PinId EndPinID;   // 終了ピンID
 
@@ -362,28 +370,33 @@ class BehaviorTreeEditor {
     std::vector<EditorNode> m_Nodes;                    // ノードリスト
     std::vector<EditorLink> m_Links;                    // リンク（接続）リスト
 
-    int m_NextNodeId = 1;      // 次回割り当てノードID
-    int m_NextLinkId = 1;      // 次回割り当てリンクID
-    int m_NextPinId = 200000;  // 次回割り当てピンID
+    int m_NextNodeId = 1;              // 次回割り当てノードID
+    int m_NextLinkId = 1;              // 次回割り当てリンクID
+    int m_NextPinId = 200000;          // 次回割り当てピンID
     ImVec2 m_CreatePos = ImVec2(0, 0); // ノード作成位置
 
-    bool m_IsRunning = false;          // 実行中フラグ
-    Enemy *m_DebugEnemy = nullptr;    // デバッグ対象敵
-    Player *m_DebugPlayer = nullptr;  // デバッグ対象プレイヤー
+    bool m_IsRunning = false;        // 実行中フラグ
+    Enemy *m_DebugEnemy = nullptr;   // デバッグ対象敵
+    Player *m_DebugPlayer = nullptr; // デバッグ対象プレイヤー
 
-    std::shared_ptr<BTNode> m_RuntimeRoot = nullptr; // ランタイムツリーのルート
+    std::shared_ptr<BTNode> m_RuntimeRoot = nullptr;          // ランタイムツリーのルート
     std::map<int, std::shared_ptr<BTNode>> m_nodeInstanceMap; // ノードIDとインスタンスのマップ
-    std::map<int, float> m_statusTimers;                       // ステータス表示用タイマー
-    std::string m_LastResultText = "待機中";                   // 最終実行結果テキスト
-    ImVec4 m_LastResultColor = ImVec4(1, 1, 1, 1);             // 最終実行結果表示色
+    std::map<int, float> m_statusTimers;                      // ステータス表示用タイマー
+    std::string m_LastResultText = "待機中";                  // 最終実行結果テキスト
+    ImVec4 m_LastResultColor = ImVec4(1, 1, 1, 1);            // 最終実行結果表示色
 
     char m_InputFileNameBuf[128] = "NewBehavior"; // ファイル名入力バッファ
-    std::string m_SelectedFileName = "";           // 選択されたファイル名
-    bool m_ShowLoadWindow = false;                 // 読込窓表示フラグ
+    std::string m_SelectedFileName = "";          // 選択されたファイル名
+    bool m_ShowLoadWindow = false;                // 読込窓表示フラグ
 
-    bool m_LayoutDirty_ = false;       // レイアウト変更フラグ
-    float m_SaveCooldown_ = 0.0f;     // 保存クールダウン
+    bool m_LayoutDirty_ = false;                     // レイアウト変更フラグ
+    float m_SaveCooldown_ = 0.0f;                    // 保存クールダウン
     static constexpr float kSaveCooldownTime = 2.0f; // 自動保存までの待機時間
+
+    // ── ノード単体デバッグ実行 ──────────────────────────
+    int m_SingleTestNodeId = -1;                        // 単体テスト対象のエディタノードID (-1=未選択)
+    std::shared_ptr<BTNode> m_SingleTestNode = nullptr; // 単体テスト用ランタイムノード
+    bool m_IsSingleTesting = false;                     // 単体テスト実行中フラグ
 };
 
 #endif // _DEBUG

@@ -14,9 +14,9 @@
     "showKeyOperationDebugView": false,
     "showLightView": false,
     "showMotionEditorView": false,
-    "showObjectView": false,
+    "showObjectView": true,
     "showOfScreenView": false,
-    "showParticleView": true,
+    "showParticleView": false,
     "showSceneView": false,
     "showShortcutWindow": false,
     "showSpriteManagerView": false

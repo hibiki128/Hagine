@@ -172,6 +172,15 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
     case EditorNodeType::ConditionEnergyHigh:
         runtimeNode = std::make_shared<IsEnergyHighNode>(nd.param);
         break;
+    case EditorNodeType::ActionGuard:
+        runtimeNode = std::make_shared<EnemyGuardNode>(nd.param > 0.0f ? nd.param : 0.8f);
+        break;
+    case EditorNodeType::ConditionPlayerAttacking:
+        runtimeNode = std::make_shared<IsPlayerAttackingNode>();
+        break;
+    case EditorNodeType::ActionBeamUltimate:
+        runtimeNode = std::make_shared<EnemyBeamUltimateNode>(nd.param > 0.0f ? nd.param : 1.5f);
+        break;
     case EditorNodeType::ActionApproach:
         runtimeNode = std::make_shared<EnemyApproachNode>(nd.param, nd.param2, nd.param3);
         break;
@@ -244,7 +253,10 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                    nd.type == EditorNodeType::ActionChargeAttack ||
                    nd.type == EditorNodeType::ActionUltimate ||
                    nd.type == EditorNodeType::ConditionPlayerHPLow ||
-                   nd.type == EditorNodeType::ConditionEnergyHigh);
+                   nd.type == EditorNodeType::ConditionEnergyHigh ||
+                   nd.type == EditorNodeType::ActionGuard ||
+                   nd.type == EditorNodeType::ConditionPlayerAttacking ||
+                   nd.type == EditorNodeType::ActionBeamUltimate);
 
     if (!isLeaf) {
         if (nd.type == EditorNodeType::DecoratorWeight) {
@@ -272,7 +284,8 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                nd.type == EditorNodeType::ConditionIsAirborne ||
                nd.type == EditorNodeType::ConditionPlayerState ||
                nd.type == EditorNodeType::ConditionPlayerHPLow ||
-               nd.type == EditorNodeType::ConditionEnergyHigh) {
+               nd.type == EditorNodeType::ConditionEnergyHigh ||
+               nd.type == EditorNodeType::ConditionPlayerAttacking) {
         int successPin = nd.id * 10 + 3 + kPinOffset;
         int failurePin = nd.id * 10 + 4 + kPinOffset;
         auto successChildIds = FindChildrenNodeIds(successPin, links);
@@ -311,6 +324,9 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                     break;
                 case EditorNodeType::ConditionEnergyHigh:
                     condCopy = std::make_shared<IsEnergyHighNode>(nd.param);
+                    break;
+                case EditorNodeType::ConditionPlayerAttacking:
+                    condCopy = std::make_shared<IsPlayerAttackingNode>();
                     break;
                 default:
                     break;
@@ -485,13 +501,17 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         Parameter2 = 8.0f; // 発射弾数
         Parameter3 = 0.0f; // (未使用)
     } else if (type == EditorNodeType::ActionUltimate) {
-        Parameter = 0.0f;  // (未使用)
-        Parameter2 = 8.0f; // 発射弾数
+        Parameter = 0.0f;   // (未使用)
+        Parameter2 = 8.0f;  // 発射弾数
         Parameter3 = 0.35f; // コンボ1段時間(秒)
     } else if (type == EditorNodeType::ConditionPlayerHPLow) {
-        Parameter = 0.5f;  // HP閾値比率
+        Parameter = 0.5f; // HP閾値比率
     } else if (type == EditorNodeType::ConditionEnergyHigh) {
-        Parameter = 0.7f;  // エネルギー閾値比率
+        Parameter = 0.7f; // エネルギー閾値比率
+    } else if (type == EditorNodeType::ActionGuard) {
+        Parameter = 0.8f; // ガード継続時間(秒)
+    } else if (type == EditorNodeType::ActionBeamUltimate) {
+        Parameter = 1.5f; // 溜め時間(秒)
     }
 }
 
@@ -609,6 +629,12 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "プレイヤーHPが閾値以下かチェック (param: 比率 0.0〜1.0)";
     case EditorNodeType::ConditionEnergyHigh:
         return "自身のエネルギーが閾値以上かチェック (param: 比率 0.0〜1.0)";
+    case EditorNodeType::ActionGuard:
+        return "一定時間ガードして被ダメージを軽減する (param: 継続時間 秒)";
+    case EditorNodeType::ConditionPlayerAttacking:
+        return "プレイヤーが攻撃的(Rush/スキル/コンボ中)かチェックする";
+    case EditorNodeType::ActionBeamUltimate:
+        return "ビーム必殺技: 溜め後にlightningBoltビームを発射 param=溜め時間(秒)";
     default:
         return "説明なし";
     }
@@ -742,6 +768,15 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
     case EditorNodeType::ConditionEnergyHigh:
         runtimeNode = std::make_shared<IsEnergyHighNode>(eNode.Parameter);
         break;
+    case EditorNodeType::ActionGuard:
+        runtimeNode = std::make_shared<EnemyGuardNode>(eNode.Parameter > 0.0f ? eNode.Parameter : 0.8f);
+        break;
+    case EditorNodeType::ConditionPlayerAttacking:
+        runtimeNode = std::make_shared<IsPlayerAttackingNode>();
+        break;
+    case EditorNodeType::ActionBeamUltimate:
+        runtimeNode = std::make_shared<EnemyBeamUltimateNode>(eNode.Parameter > 0.0f ? eNode.Parameter : 1.5f);
+        break;
     case EditorNodeType::SelectorRandom:
         runtimeNode = std::make_shared<RandomSelectorNode>();
         break;
@@ -802,6 +837,8 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
                     conditionCopy = std::make_shared<IsPlayerHPLowNode>(eNode.Parameter);
                 else if (eNode.Type == EditorNodeType::ConditionEnergyHigh)
                     conditionCopy = std::make_shared<IsEnergyHighNode>(eNode.Parameter);
+                else if (eNode.Type == EditorNodeType::ConditionPlayerAttacking)
+                    conditionCopy = std::make_shared<IsPlayerAttackingNode>();
                 if (conditionCopy) {
                     successSequence->AddChild(conditionCopy);
                     for (int childId : successChildIds) {
@@ -1031,6 +1068,90 @@ void BehaviorTreeEditor::OnImGuiRender() {
     if (ImGui::Button(" ■ 停止 ")) {
         m_IsRunning = false;
         m_RuntimeRoot = nullptr;
+        m_IsSingleTesting = false;
+        m_SingleTestNode = nullptr;
+        m_SingleTestNodeId = -1;
+    }
+
+    // ── 単体ノードテスト ──────────────────────────────
+    ImGui::SameLine();
+    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::SameLine();
+    {
+        // 選択中ノードIDを取得
+        std::vector<ed::NodeId> selectedNodes;
+        selectedNodes.resize(ed::GetSelectedObjectCount());
+        int selCount = ed::GetSelectedNodes(selectedNodes.data(), (int)selectedNodes.size());
+        int selNodeId = (selCount > 0) ? (int)selectedNodes[0].Get() : -1;
+
+        // 選択ノード名を表示
+        const char *selName = "---";
+        for (const auto &n : m_Nodes) {
+            if ((int)n.ID.Get() == selNodeId) {
+                selName = n.Title.c_str();
+                break;
+            }
+        }
+        ImGui::TextDisabled("選択: %s", selName);
+        ImGui::SameLine();
+
+        if (m_IsSingleTesting) {
+            // テスト実行中 → 停止ボタン
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.45f, 0.18f, 0.18f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.60f, 0.22f, 0.22f, 1.0f));
+            if (ImGui::Button(" ■ 単体テスト停止 ")) {
+                m_IsSingleTesting = false;
+                m_SingleTestNode = nullptr;
+                m_SingleTestNodeId = -1;
+            }
+            ImGui::PopStyleColor(2);
+        } else {
+            bool canTest = (selNodeId != -1) && (m_DebugEnemy != nullptr);
+            if (!canTest)
+                ImGui::BeginDisabled();
+            if (ImGui::Button(" ▷ 単体テスト ")) {
+                // 選択ノードだけをビルドして単体実行
+                m_IsSingleTesting = false;
+                m_SingleTestNode = nullptr;
+                m_SingleTestNodeId = selNodeId;
+                auto singleNode = BuildNodeRecursive(selNodeId);
+                if (singleNode) {
+                    singleNode->SetContext(m_DebugEnemy, m_DebugPlayer);
+                    singleNode->Reset();
+                    m_SingleTestNode = singleNode;
+                    m_IsSingleTesting = true;
+                    // 全体ツリー実行は停止
+                    m_IsRunning = false;
+                    m_RuntimeRoot = nullptr;
+                }
+            }
+            if (!canTest)
+                ImGui::EndDisabled();
+        }
+
+        // 単体テスト実行中は毎フレームTickしてステータスを表示
+        if (m_IsSingleTesting && m_SingleTestNode) {
+            NodeStatus s = m_SingleTestNode->Tick();
+            ImGui::SameLine();
+            if (s == NodeStatus::Running)
+                ImGui::TextColored(ImVec4(1.0f, 0.88f, 0.15f, 1.0f), "[実行中]");
+            else if (s == NodeStatus::Success) {
+                ImGui::TextColored(ImVec4(0.25f, 1.0f, 0.35f, 1.0f), "[成功]");
+                // 成功/失敗で自動停止
+                m_IsSingleTesting = false;
+            } else if (s == NodeStatus::Failure) {
+                ImGui::TextColored(ImVec4(1.0f, 0.28f, 0.28f, 1.0f), "[失敗]");
+                m_IsSingleTesting = false;
+            }
+
+            // 単体テスト中もステータスタイマーを更新してノードの色に反映
+            if (m_SingleTestNodeId != -1) {
+                if (s == NodeStatus::Success)
+                    m_statusTimers[m_SingleTestNodeId] = 1.2f;
+                else if (s == NodeStatus::Failure)
+                    m_statusTimers[m_SingleTestNodeId] = -1.2f;
+            }
+        }
     }
 
     // 実行中ノード名をインラインに表示
@@ -1249,23 +1370,49 @@ void BehaviorTreeEditor::OnImGuiRender() {
         } else if (node.Type == EditorNodeType::ActionBurstShoot) {
             ImGui::TextDisabled("x%.0f  %.2fs", node.Parameter2, node.Parameter);
         } else if (node.Type == EditorNodeType::ConditionPlayerState) {
-            ImGui::TextDisabled("[%s]", node.StateNameParameter.c_str());
+            // ステート選択ドロップダウン（ノード内インライン編集）
+            static const char *kPlayerStates[] = {
+                "Idle", "Move", "Jump", "Air",
+                "FlyIdle", "FlyMove", "Rush", "Guard",
+                "EnergyCharge", "Attack", "Dead"};
+            static constexpr int kPlayerStateCount = 11;
+            // 現在のStateNameParameterに一致するインデックスを探す
+            int currentIdx = 0;
+            for (int si = 0; si < kPlayerStateCount; ++si) {
+                if (node.StateNameParameter == kPlayerStates[si]) {
+                    currentIdx = si;
+                    break;
+                }
+            }
+            // ノードIDをユニークIDに使ってウィジェットを識別する
+            ImGui::SetNextItemWidth(110.0f);
+            std::string comboId = "##state_" + std::to_string((int)node.ID.Get());
+            if (ImGui::BeginCombo(comboId.c_str(), kPlayerStates[currentIdx])) {
+                for (int si = 0; si < kPlayerStateCount; ++si) {
+                    bool selected = (si == currentIdx);
+                    if (ImGui::Selectable(kPlayerStates[si], selected))
+                        node.StateNameParameter = kPlayerStates[si];
+                    if (selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
         } else if (node.IsActionNode() && node.Parameter != 0.0f) {
             ImGui::TextDisabled("%.1f / %.1f", node.Parameter, node.Parameter2);
         }
 
         // ── 入力ピン ────────────────────────────────────────
         ed::BeginPin(node.InputPinID, ed::PinKind::Input);
-        ImGui::Text("->");
+        ImGui::TextColored(ImVec4(0.65f, 0.85f, 1.0f, 0.85f), "-> IN");
         ed::EndPin();
 
         // ── 出力ピン ────────────────────────────────────────
         if (node.IsConditionNode()) {
             ed::BeginPin(node.SuccessPinID, ed::PinKind::Output);
-            ImGui::TextColored(ImVec4(0.28f, 1.0f, 0.40f, 1.0f), "[OK] ->");
+            ImGui::TextColored(ImVec4(0.28f, 1.0f, 0.40f, 1.0f), "OK ->");
             ed::EndPin();
             ed::BeginPin(node.FailurePinID, ed::PinKind::Output);
-            ImGui::TextColored(ImVec4(1.0f, 0.30f, 0.30f, 1.0f), "[NG] ->");
+            ImGui::TextColored(ImVec4(1.0f, 0.30f, 0.30f, 1.0f), "NG ->");
             ed::EndPin();
         } else if (node.IsWeightNode()) {
             for (auto &wo : node.WeightedOutputs) {
@@ -1275,7 +1422,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
             }
         } else if (!node.IsActionNode()) {
             ed::BeginPin(node.OutputPinID, ed::PinKind::Output);
-            ImGui::Text("->");
+            ImGui::TextColored(ImVec4(0.90f, 0.90f, 0.90f, 0.85f), "OUT ->");
             ed::EndPin();
         }
 
@@ -1379,6 +1526,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
             addBtn("プレイヤーステート", EditorNodeType::ConditionPlayerState);
             addBtn("プレイヤーHP低下チェック", EditorNodeType::ConditionPlayerHPLow);
             addBtn("ロックオン中チェック", EditorNodeType::ConditionIsLockOn);
+            addBtn("プレイヤー攻撃中チェック", EditorNodeType::ConditionPlayerAttacking);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("移動アクション")) {
@@ -1407,7 +1555,9 @@ void BehaviorTreeEditor::OnImGuiRender() {
             addBtn("コンボ(1段)", EditorNodeType::ActionComboStep);
             addBtn("コンボ(全段)", EditorNodeType::ActionComboFull);
             addBtn("溜め攻撃", EditorNodeType::ActionChargeAttack);
-            addBtn("必殺技", EditorNodeType::ActionUltimate);
+            addBtn("重スキル(コンボ+連射)", EditorNodeType::ActionUltimate);
+            addBtn("ビーム必殺技", EditorNodeType::ActionBeamUltimate);
+            addBtn("ガード", EditorNodeType::ActionGuard);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("その他")) {

@@ -112,6 +112,12 @@ class EnemyBullet : public BaseObject {
     /// <param name="homing">ホーミングするかどうか</param>
     void SetIsLockOnBullet(bool homing) { isLockOnBullet_ = homing; }
 
+    /// <summary>
+    /// 弾のダメージ量を設定する（チャージ弾など強化弾用）
+    /// </summary>
+    /// <param name="damage">ダメージ量</param>
+    void SetDamage(float damage) { damage_ = damage; }
+
   private:
     /// ===================================================
     /// private variants
@@ -139,6 +145,7 @@ class EnemyBullet : public BaseObject {
     bool  isHit_           = false;            // 衝突判定フラグ
 
     bool    isLockOnBullet_ = false;   // ロックオン弾かどうか
+    float   damage_         = static_cast<float>(kBulletDamage); // 弾のダメージ量
     Player *target_         = nullptr; // ターゲットのプレイヤー
     std::unique_ptr<ParticleEmitter> emitter_; // エミッター
 

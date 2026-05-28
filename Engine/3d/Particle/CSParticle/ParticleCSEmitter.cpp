@@ -1109,8 +1109,22 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
                 ImGui::Checkbox("自動更新##Auto", &isAuto_);
                 ImGui::SameLine();
-                if (ImGui::Button("一回発生##EmitOnce")) {
-                    EmitOnce();
+                {
+                    bool noGroups = particleGroups_.empty();
+                    bool disabled = isAuto_ || noGroups;
+                    uint32_t cnt = noGroups ? 0u : particleGroups_[0]->GetSettingsData()->emitCount;
+                    std::string btnLabel = "一回発生 (x" + std::to_string(cnt) + ")##EmitOnce";
+                    if (disabled) ImGui::BeginDisabled();
+                    if (ImGui::Button(btnLabel.c_str())) {
+                        EmitOnce();
+                        ImGuiNotification::Post("パーティクルを " + std::to_string(cnt) + " 個発生しました", {0.3f, 1.0f, 0.5f, 1.0f});
+                    }
+                    if (disabled) ImGui::EndDisabled();
+                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                        if (isAuto_)      ImGui::SetTooltip("自動更新がONのため使用できません\n（自動更新をOFFにしてください）");
+                        else if (noGroups) ImGui::SetTooltip("パーティクルグループが未設定です\n（グループを追加してください）");
+                        else if (cnt == 0) ImGui::SetTooltip("発生数が0のため効果がありません\n（発生数設定を確認してください）");
+                    }
                 }
                 if (ImGui::Checkbox("ギズモ選択", &isGizmoSelectable_)) {
                     ImGuizmoManager::GetInstance()->SetSelectable(name_, isGizmoSelectable_);

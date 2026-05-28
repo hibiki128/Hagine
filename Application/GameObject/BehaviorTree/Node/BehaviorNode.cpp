@@ -890,6 +890,7 @@ NodeStatus IsEnergyHighNode::OnUpdate() {
 
 // ---------------------------------------------------------
 // EnemyChargeAttackNode
+// プレイヤーの ChargeShot 相当: 溜め演出 → 強化ホーミング弾を1発放つ
 // ---------------------------------------------------------
 void EnemyChargeAttackNode::OnEnter() {
     m_Timer      = 0.0f;
@@ -899,9 +900,10 @@ void EnemyChargeAttackNode::OnEnter() {
     if (!m_Enemy)
         return;
 
-    // 溜め中は停止する（弾発射時にShot()内でエネルギーを消費）
+    // 溜め中は停止し、チャージ演出（魔法陣＋魂の渦）を開始
     m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
     m_Enemy->StopMovement();
+    m_Enemy->StartChargeAura();
 }
 
 NodeStatus EnemyChargeAttackNode::OnUpdate() {
@@ -913,38 +915,32 @@ NodeStatus EnemyChargeAttackNode::OnUpdate() {
     if (m_Phase == Phase::Charge) {
         m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
         if (m_Timer >= m_ChargeDuration) {
-            // 溜め完了 → 即1発目を発射してShootフェーズへ
-            m_Enemy->Shot();
-            m_ShotsFired = 1;
-            m_Timer      = 0.0f;
-            m_Phase      = (m_ShotsFired >= m_BurstCount) ? Phase::Cooldown : Phase::Shoot;
-        }
-        return NodeStatus::Running;
-    }
-
-    if (m_Phase == Phase::Shoot) {
-        if (m_Timer >= kShootInterval) {
+            // 溜め完了 → 閃光＋強化ホーミング弾を放つ
+            m_Enemy->FireChargeBlast();
             m_Timer = 0.0f;
-            m_Enemy->Shot();
-            ++m_ShotsFired;
-            if (m_ShotsFired >= m_BurstCount) {
-                m_Phase = Phase::Cooldown;
-                m_Timer = 0.0f;
-            }
+            m_Phase = Phase::Cooldown;
         }
         return NodeStatus::Running;
     }
 
-    // Phase::Cooldown
+    // Phase::Cooldown（発射後の硬直）
     if (m_Timer >= kCooldown)
         return NodeStatus::Success;
 
     return NodeStatus::Running;
 }
 
+void EnemyChargeAttackNode::OnExit() {
+    // 中断された場合でも溜め演出を確実に止める
+    if (m_Enemy)
+        m_Enemy->StopChargeAura();
+}
+
 // ---------------------------------------------------------
 // EnemyUltimateNode
 // ---------------------------------------------------------
+// EnemyUltimateNode
+// 重スキル: フルコンボ → ホーミング連射（必殺技より格下の強攻撃として運用）
 void EnemyUltimateNode::OnEnter() {
     m_Timer       = 0.0f;
     m_StepCount   = 0;
@@ -955,7 +951,6 @@ void EnemyUltimateNode::OnEnter() {
     if (!m_Enemy)
         return;
 
-    // 停止してコンボ開始（弾発射時にShot()内でエネルギーを消費）
     m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
     m_Enemy->StopMovement();
 }
@@ -968,7 +963,7 @@ NodeStatus EnemyUltimateNode::OnUpdate() {
 
     if (m_Phase == Phase::Combo) {
         if (m_StepCount >= kMaxComboSteps) {
-            // コンボ完了 → 即1発目発射してShootフェーズへ
+            // コンボ完了 → 連射フェーズへ
             m_Enemy->Shot();
             m_ShotsFired = 1;
             m_Timer      = 0.0f;
@@ -986,7 +981,7 @@ NodeStatus EnemyUltimateNode::OnUpdate() {
         if (m_Timer >= m_StepDuration) {
             m_WaitingStep = false;
             if (!m_Enemy->IsPunchComboActive())
-                m_StepCount = kMaxComboSteps; // 強制終了
+                m_StepCount = kMaxComboSteps;
         }
         return NodeStatus::Running;
     }
@@ -1004,14 +999,118 @@ NodeStatus EnemyUltimateNode::OnUpdate() {
         return NodeStatus::Running;
     }
 
-    // Phase::Cooldown
     if (m_Timer >= kCooldown)
         return NodeStatus::Success;
-
     return NodeStatus::Running;
 }
 
 void EnemyUltimateNode::OnExit() {
     if (m_Enemy)
         m_Enemy->StopMovement();
+}
+
+// ---------------------------------------------------------
+// EnemyBeamUltimateNode
+// MakanAttackSkill 相当のビーム必殺技
+// 溜め(ロックオン+オーラ) → ビーム発射 → 硬直
+// ---------------------------------------------------------
+void EnemyBeamUltimateNode::OnEnter() {
+    m_Timer = 0.0f;
+    m_Phase = Phase::Windup;
+
+    if (!m_Enemy)
+        return;
+
+    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+    m_Enemy->StopMovement();
+    m_Enemy->SetIsLockOn(true);
+    m_Enemy->StartChargeAura(); // 溜め中はチャージオーラを発光
+}
+
+NodeStatus EnemyBeamUltimateNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    m_Timer += 1.0f / 60.0f;
+
+    if (m_Phase == Phase::Windup) {
+        m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+        if (m_Timer >= m_WindupDuration) {
+            // 溜め完了 → ビーム発射
+            m_Enemy->StopChargeAura();
+            m_Enemy->ActivateBeam();
+            m_Timer = 0.0f;
+            m_Phase = Phase::Beam;
+        }
+        return NodeStatus::Running;
+    }
+
+    if (m_Phase == Phase::Beam) {
+        m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+        // ビームが自然終了するまで待つ
+        if (!m_Enemy->IsBeamActive()) {
+            m_Timer = 0.0f;
+            m_Phase = Phase::Cooldown;
+        }
+        return NodeStatus::Running;
+    }
+
+    // Phase::Cooldown
+    if (m_Timer >= kCooldown)
+        return NodeStatus::Success;
+    return NodeStatus::Running;
+}
+
+void EnemyBeamUltimateNode::OnExit() {
+    if (m_Enemy) {
+        m_Enemy->StopChargeAura();
+        m_Enemy->DeactivateBeam();
+        m_Enemy->StopMovement();
+    }
+}
+
+// ---------------------------------------------------------
+// EnemyGuardNode
+// 一定時間ガード状態に入り、被ダメージを軽減する
+// ---------------------------------------------------------
+void EnemyGuardNode::OnEnter() {
+    m_Timer = 0.0f;
+    if (!m_Enemy)
+        return;
+    m_Enemy->SetGuarding(true);
+    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+    m_Enemy->StopMovement();
+}
+
+NodeStatus EnemyGuardNode::OnUpdate() {
+    if (!m_Enemy)
+        return NodeStatus::Failure;
+
+    m_Timer += 1.0f / 60.0f;
+    m_Enemy->SetVelocity({0.0f, m_Enemy->GetVelocity().y, 0.0f});
+
+    if (m_Timer >= m_Duration)
+        return NodeStatus::Success;
+    return NodeStatus::Running;
+}
+
+void EnemyGuardNode::OnExit() {
+    if (m_Enemy)
+        m_Enemy->SetGuarding(false);
+}
+
+// ---------------------------------------------------------
+// IsPlayerAttackingNode
+// プレイヤーが脅威（Rush中・スキル発動中・コンボ中）かを判定する
+// ---------------------------------------------------------
+NodeStatus IsPlayerAttackingNode::OnUpdate() {
+    if (!m_Player)
+        return NodeStatus::Failure;
+
+    bool threatening =
+        m_Player->GetCurrentStateName() == "Rush" ||
+        m_Player->GetIsSkillActive() ||
+        m_Player->IsComboActive();
+
+    return threatening ? NodeStatus::Success : NodeStatus::Failure;
 }
