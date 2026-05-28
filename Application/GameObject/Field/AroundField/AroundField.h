@@ -35,6 +35,7 @@ class AroundField : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticleCompute(const ViewProjection &viewProjection);
 
     /// <summary>
     /// デバッグ処理

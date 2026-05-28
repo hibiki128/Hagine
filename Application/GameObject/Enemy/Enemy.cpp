@@ -357,17 +357,20 @@ void Enemy::Draw(const ViewProjection &viewProjection) {
      shadow_->Draw(viewProjection);*/
 }
 
+void Enemy::DrawParticleCompute(const ViewProjection &viewProjection) {
+    if (chargeAura_)      chargeAura_->DrawCompute(viewProjection);
+    if (burstFlash_)      burstFlash_->DrawCompute(viewProjection);
+    if (beamMainEffect_)  beamMainEffect_->DrawCompute(viewProjection);
+    if (beamAroundEffect_) beamAroundEffect_->DrawCompute(viewProjection);
+}
+
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {
-    hitEmitter_->Draw(viewProjection);
-    // 大技演出
-    if (chargeAura_)
-        chargeAura_->Draw(viewProjection);
-    if (burstFlash_)
-        burstFlash_->Draw(viewProjection);
-    if (beamMainEffect_)
-        beamMainEffect_->Draw(viewProjection);
-    if (beamAroundEffect_)
-        beamAroundEffect_->Draw(viewProjection);
+    hitEmitter_->Draw(viewProjection); // CPU emitter
+    // 大技演出（Graphics フェーズ）
+    if (chargeAura_)      chargeAura_->DrawGraphics(viewProjection);
+    if (burstFlash_)      burstFlash_->DrawGraphics(viewProjection);
+    if (beamMainEffect_)  beamMainEffect_->DrawGraphics(viewProjection);
+    if (beamAroundEffect_) beamAroundEffect_->DrawGraphics(viewProjection);
     // -----------------------------------------------
     // 前方攻撃判定コライダーのヒットエフェクト描画
     // -----------------------------------------------

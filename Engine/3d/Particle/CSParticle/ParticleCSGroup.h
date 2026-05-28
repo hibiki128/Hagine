@@ -26,7 +26,8 @@ class ParticleCSGroup {
     void UpdateParticleCSDisPatch(
         std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
         Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
-        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle);
+        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
+        ID3D12GraphicsCommandList *cmdList = nullptr);
     ParticleCSGroupData GetParticleGroupData() { return particleGroupData_; }
 
     /// ===================================
@@ -137,6 +138,7 @@ class ParticleCSGroup {
     uint32_t cachedAliveCount_ = 0;
 
     ID3D12GraphicsCommandList *commandList{};
+    ID3D12GraphicsCommandList *computeCommandList_{};
 
     ParticleCommon *particleCommon_{};
     DirectXCommon *dxCommon_{};

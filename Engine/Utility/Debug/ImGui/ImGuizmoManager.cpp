@@ -3,6 +3,7 @@
 #include "ImGuizmoManager.h"
 #include "ImGuiNotification.h"
 #include "Input.h"
+#include "Sprite.h"
 #include <Line/DrawLine3D.h>
 #include <Object/Base/BaseObjectManager.h>
 #include <Transform/WorldTransform.h>
@@ -35,6 +36,16 @@ Matrix4x4 GizmoTarget::GetWorldMatrix() const {
             return MakeAffineMatrix(s, r, *translate);
         }
         break;
+
+    case Type::Sprite2D:
+        if (position2D) {
+            Matrix4x4 m = MakeIdentity4x4();
+            m.m[3][0] = position2D->x;
+            m.m[3][1] = position2D->y;
+            m.m[3][2] = 0.0f;
+            return m;
+        }
+        break;
     }
     return MakeIdentity4x4();
 }
@@ -53,6 +64,10 @@ Vector3 GizmoTarget::GetWorldPosition() const {
     case Type::FreeTransform:
         if (translate)
             return *translate;
+        break;
+    case Type::Sprite2D:
+        if (position2D)
+            return {position2D->x, position2D->y, 0.0f};
         break;
     }
     return {0.0f, 0.0f, 0.0f};
@@ -82,7 +97,19 @@ void GizmoTarget::ApplyTranslationDelta(const Vector3 &delta) {
 
     case Type::FreeTransform:
         if (translate) {
-            *translate = *translate + delta;
+            translate->x += delta.x;
+            translate->y += delta.y;
+            if (!isScreenSpace) {
+                translate->z += delta.z;
+            }
+        }
+        break;
+
+    case Type::Sprite2D:
+        if (position2D) {
+            position2D->x += delta.x;
+            position2D->y += delta.y;
+            // Z は無視（スクリーン空間 XY のみ）
         }
         break;
     }
@@ -122,7 +149,6 @@ void GizmoTarget::ShowImGui() {
         } else {
             if (translate) {
                 if (isScreenSpace) {
-                    // スプライトはピクセル座標のため XY のみ編集
                     ImGui::DragFloat2("Position (px)", &translate->x, 1.0f);
                 } else {
                     ImGui::DragFloat3("Translation", &translate->x, 0.1f);
@@ -132,6 +158,14 @@ void GizmoTarget::ShowImGui() {
                 ImGui::DragFloat3("Rotation (rad)", &rotate->x, 0.01f);
             if (scale)
                 ImGui::DragFloat3("Scale", &scale->x, 0.01f);
+        }
+        break;
+
+    case Type::Sprite2D:
+        if (imguiCallback) {
+            imguiCallback();
+        } else if (position2D) {
+            ImGui::DragFloat2("Position (px)", &position2D->x, 1.0f);
         }
         break;
     }
@@ -207,6 +241,24 @@ void ImGuizmoManager::AddTarget(const std::string &name,
     target.scale = scale;
     target.selectable = selectable;
     target.imguiCallback = imguiCallback;
+    transformMap[name] = target;
+
+    UpdateFilteredNames();
+
+    if (selectedNames.empty()) {
+        selectedNames.insert(name);
+    }
+}
+
+// Sprite を登録する（スクリーン空間 XY のみ操作）
+void ImGuizmoManager::AddTarget(const std::string &name, Sprite *sprite, bool selectable) {
+    GizmoTarget target;
+    target.type = GizmoTarget::Type::Sprite2D;
+    target.name = name;
+    target.position2D = &sprite->GetPositionRef();
+    target.selectable = selectable;
+    target.isScreenSpace = true;
+    target.screenHitRadius = 50.0f;
     transformMap[name] = target;
 
     UpdateFilteredNames();
@@ -362,6 +414,22 @@ void ImGuizmoManager::imgui() {
         ImGui::PopStyleColor(3);
     }
 
+    // 重複オブジェクト候補（Tab でサイクル）
+    if (overlapCandidates_.size() > 1) {
+        ImGui::Separator();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.9f, 0.4f, 1.0f));
+        ImGui::Text("重複候補: %zu個 (Tab でサイクル選択)", overlapCandidates_.size());
+        ImGui::PopStyleColor();
+        for (int i = 0; i < static_cast<int>(overlapCandidates_.size()); ++i) {
+            bool isCurrent = (i == overlapCycleIndex_);
+            if (isCurrent)
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 1.0f, 0.4f, 1.0f));
+            ImGui::Text("  [%d] %s", i, overlapCandidates_[i].first.c_str());
+            if (isCurrent)
+                ImGui::PopStyleColor();
+        }
+    }
+
     ImGui::Separator();
     if (isDrawDebug_)
         DrawDebugRaycast();
@@ -378,6 +446,11 @@ void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSiz
 
     if (!ImGuizmo::IsUsing()) {
         HandleMouseSelection(scenePosition, sceneSize);
+
+        // Tab キーで重複オブジェクトをサイクル選択
+        if (Input::GetInstance()->TriggerKey(DIK_TAB) && overlapCandidates_.size() > 1) {
+            CycleOverlapSelection();
+        }
     }
 
     DrawSelectedObjectHighlight();
@@ -427,25 +500,35 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     std::string pickedName;
     bool foundHit = false;
 
-    // マウス位置をシーンウィンドウ相対座標に変換し、さらにスプライト座標系にスケール
-    // シーンウィンドウ(sceneSize)は実際の解像度(kClientWidth/Height)と異なるサイズで表示されている
+    // マウス位置をシーンウィンドウ相対座標に変換し、スプライト座標系にスケール
     Vector2 mouseScreenPos = Input::GetMousePos();
     float relX = mouseScreenPos.x - scenePosition.x;
     float relY = mouseScreenPos.y - scenePosition.y;
     float spriteSpaceX = (relX / sceneSize.x) * static_cast<float>(WinApp::kClientWidth);
     float spriteSpaceY = (relY / sceneSize.y) * static_cast<float>(WinApp::kClientHeight);
 
-    // ---- パス1: スクリーン空間（Sprite）ターゲットを優先して2Dヒットテスト ----
+    // ---- パス1: スクリーン空間ターゲット優先 2D ヒットテスト ----
     float minDist2D = std::numeric_limits<float>::max();
     for (const auto &pair : transformMap) {
         const GizmoTarget &target = pair.second;
-        if (!target.selectable || !target.isScreenSpace || !target.translate)
+        if (!target.selectable || !target.isScreenSpace)
             continue;
         if (isMultiSelecting && selectedNames.find(pair.first) != selectedNames.end())
             continue;
 
-        float dx = spriteSpaceX - target.translate->x;
-        float dy = spriteSpaceY - target.translate->y;
+        float posX = 0.0f, posY = 0.0f;
+        if (target.type == GizmoTarget::Type::Sprite2D) {
+            if (!target.position2D) continue;
+            posX = target.position2D->x;
+            posY = target.position2D->y;
+        } else {
+            if (!target.translate) continue;
+            posX = target.translate->x;
+            posY = target.translate->y;
+        }
+
+        float dx = spriteSpaceX - posX;
+        float dy = spriteSpaceY - posY;
         float dist = std::sqrt(dx * dx + dy * dy);
 
         if (dist <= target.screenHitRadius && dist < minDist2D) {
@@ -455,10 +538,22 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
         }
     }
 
-    // ---- パス2: 2Dヒットがなければ3DレイキャストでBaseObject/WorldTransformを判定 ----
-    if (!foundHit) {
+    if (foundHit) {
+        // 2D ヒット時は重複候補をリセット
+        overlapCandidates_.clear();
+        overlapCycleIndex_ = 0;
+    } else {
+        // ---- パス2: 3D レイキャスト（全ヒット候補収集）----
+        // スクリーン上でクリック位置に中心が近いオブジェクトを優先するため
+        // スクリーン距離でソートし、大きなオブジェクト内の小さいオブジェクトを選択しやすくする
         Ray currentRay = Input::GetInstance()->GetCurrentRay();
-        float minDist3D = std::numeric_limits<float>::max();
+
+        struct HitCandidate {
+            std::string name;
+            float rayDist;    // レイ上の距離（カメラからの奥行き）
+            float screenDist; // マウスクリックから中心のスクリーン距離
+        };
+        std::vector<HitCandidate> candidates;
 
         AABB defaultAABB;
         defaultAABB.min = {-1.3f, -1.3f, -1.3f};
@@ -485,11 +580,38 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
                 hit = Input::RayIntersectSphereByMatrix(currentRay, worldMatrix, currentHit, defaultSphere);
             }
 
-            if (hit && currentHit.distance < minDist3D) {
-                minDist3D = currentHit.distance;
-                pickedName = pair.first;
-                foundHit = true;
+            if (hit) {
+                // オブジェクト中心のスクリーン投影位置を求め、クリック位置との距離を計算
+                float screenDist = std::numeric_limits<float>::max();
+                Vector3 screenCenter;
+                if (WorldToScreen(target.GetWorldPosition(), screenCenter, scenePosition, sceneSize)) {
+                    float sdx = mousePos.x - screenCenter.x;
+                    float sdy = mousePos.y - screenCenter.y;
+                    screenDist = std::sqrt(sdx * sdx + sdy * sdy);
+                }
+                candidates.push_back({pair.first, currentHit.distance, screenDist});
             }
+        }
+
+        // スクリーン距離を主キー、レイ距離を副キーでソート
+        // → 大スケール emitter に囲まれていても、画面上でクリックに近い小オブジェクトが優先される
+        std::sort(candidates.begin(), candidates.end(), [](const HitCandidate &a, const HitCandidate &b) {
+            constexpr float kScreenDistThreshold = 20.0f;
+            if (std::abs(a.screenDist - b.screenDist) > kScreenDistThreshold)
+                return a.screenDist < b.screenDist;
+            return a.rayDist < b.rayDist;
+        });
+
+        // 重複候補を保存（Tab キーでサイクル可能）
+        overlapCandidates_.clear();
+        for (const auto &c : candidates) {
+            overlapCandidates_.push_back({c.name, c.rayDist});
+        }
+        overlapCycleIndex_ = 0;
+
+        if (!candidates.empty()) {
+            pickedName = candidates[0].name;
+            foundHit = true;
         }
     }
 
@@ -510,6 +632,8 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     } else {
         if (!isCtrlPressed) {
             selectedNames.clear();
+            overlapCandidates_.clear();
+            overlapCycleIndex_ = 0;
             isMultiSelecting = false;
         }
     }
@@ -517,6 +641,15 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     if (!isCtrlPressed && isMultiSelecting) {
         isMultiSelecting = false;
     }
+}
+
+// Tab キーで重複候補をサイクルして次のオブジェクトを選択する
+void ImGuizmoManager::CycleOverlapSelection() {
+    if (overlapCandidates_.size() <= 1)
+        return;
+    overlapCycleIndex_ = (overlapCycleIndex_ + 1) % static_cast<int>(overlapCandidates_.size());
+    selectedNames.clear();
+    selectedNames.insert(overlapCandidates_[overlapCycleIndex_].first);
 }
 
 // ---- DisplayGizmo -----------------------------------------------------
@@ -586,7 +719,13 @@ void ImGuizmoManager::DisplayGizmo(const ImVec2 &scenePosition, const ImVec2 &sc
         }
     }
 
-    if (ImGuizmo::Manipulate(viewArray, projArray, currentOperation, currentMode, matrixArray)) {
+    // スクリーン空間（Sprite 等）は XY 移動のみ許可
+    ImGuizmo::OPERATION effectiveOp = currentOperation;
+    if (anyScreenSpace) {
+        effectiveOp = ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y;
+    }
+
+    if (ImGuizmo::Manipulate(viewArray, projArray, effectiveOp, currentMode, matrixArray)) {
         Matrix4x4 newMatrix;
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)

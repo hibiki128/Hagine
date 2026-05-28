@@ -51,8 +51,11 @@ class ComputePipeLineManager {
 
     /// <summary>
     /// 描画に必要な共通設定を行う
+    /// cmdList が nullptr の場合は Direct Queue のコマンドリストを使用する
     /// </summary>
-    void DrawCommonSetting(ComputePipelineType type, BlendMode blendMode = BlendMode::kNormal, ShaderMode shaderMode = ShaderMode::kNone);
+    void DrawCommonSetting(ComputePipelineType type, BlendMode blendMode = BlendMode::kNormal,
+                           ShaderMode shaderMode = ShaderMode::kNone,
+                           ID3D12GraphicsCommandList *cmdList = nullptr);
 
   private:
     // 内部パイプライン作成メソッド

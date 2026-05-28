@@ -38,6 +38,7 @@ class Sprite {
     /// Getter
     /// ===================================================
     const Vector2 &GetPosition() const { return position_; }
+    Vector2 &GetPositionRef() { return position_; }
     float GetRotation() const { return rotation; }
     const Vector2 &GetSize() const { return size; }
     const Vector4 &GetColor() const { return materialData->color; }

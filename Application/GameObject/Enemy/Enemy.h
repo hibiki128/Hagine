@@ -29,6 +29,7 @@ class Enemy : public BaseObject {
     void Update() override;
     void Draw(const ViewProjection &viewProjection) override;
     void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticleCompute(const ViewProjection &viewProjection);
     void DrawFrustum();
     void Debug();
 

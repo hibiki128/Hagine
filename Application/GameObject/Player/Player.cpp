@@ -355,6 +355,11 @@ void Player::Draw(const ViewProjection &viewProjection) {
     }
 }
 
+void Player::DrawParticleCompute(const ViewProjection &viewProjection) {
+    auraEmitter_->DrawCompute(viewProjection);
+    chargeShot_->DrawParticleCompute(viewProjection);
+}
+
 void Player::DrawParticle(const ViewProjection &viewProjection) {
 
     if (!isAlive_ && isDeathStaging_) {
@@ -367,8 +372,8 @@ void Player::DrawParticle(const ViewProjection &viewProjection) {
     }
 
     chargeShot_->DrawParticle(viewProjection);
-    auraEmitter_->Draw(viewProjection);
-    hitEmitter_->Draw(viewProjection);
+    auraEmitter_->DrawGraphics(viewProjection);
+    hitEmitter_->Draw(viewProjection); // CPU emitter
 
     for (auto &bullet : bullets_) {
         bullet->DrawParticle(viewProjection);

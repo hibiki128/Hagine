@@ -34,11 +34,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::GetRootSigna
     return rootSignatures_[key];
 }
 
-void ComputePipeLineManager::DrawCommonSetting(ComputePipelineType type, BlendMode blendMode, ShaderMode shaderMode) {
+void ComputePipeLineManager::DrawCommonSetting(ComputePipelineType type, BlendMode blendMode, ShaderMode shaderMode, ID3D12GraphicsCommandList *cmdList) {
     auto pipeline = GetPipeline(type, blendMode, shaderMode);
     auto rootSignature = GetRootSignature(type, shaderMode);
 
-    ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
+    ID3D12GraphicsCommandList *commandList = cmdList ? cmdList : dxCommon_->GetCommandList().Get();
     commandList->SetPipelineState(pipeline.Get());
     commandList->SetComputeRootSignature(rootSignature.Get());
 }

@@ -2,6 +2,7 @@
 #include "ParticleCSGroup.h"
 #include <Frame.h>
 #include <Graphics/Model/ModelManager.h>
+#include <Graphics/PipeLine/ComputePipeLineManager.h>
 #include <Line/DrawLine3D.h>
 #include <d3dx12.h>
 #ifdef _DEBUG
@@ -14,6 +15,7 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     particleCommon_ = ParticleCommon::GetInstance();
     texManager_ = TextureManager::GetInstance();
     commandList = dxCommon_->GetCommandList().Get();
+    computeCommandList_ = dxCommon_->GetComputeCommandList().Get();
     CreateSettingsResource();
     settingsData_->maxParticleCount = maxParticleCount;
     CreateOutputParticleResource();
@@ -166,20 +168,25 @@ void ParticleCSGroup::InitParticle() {
 void ParticleCSGroup::UpdateParticleCSDisPatch(
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
     Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle) {
-    particleCommon_->ComputeUpdateEmitterDrawCommonSetting();
-    commandList->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
-    commandList->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
-    commandList->SetComputeRootDescriptorTable(2, freeListSrvHandle_.second);
-    commandList->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
-    commandList->SetComputeRootConstantBufferView(4, perFrameResource_->GetGPUVirtualAddress());
-    commandList->SetComputeRootConstantBufferView(5, settingsResource_->GetGPUVirtualAddress());
-    commandList->SetComputeRootDescriptorTable(6, fieldsSrvHandle.second);
-    commandList->SetComputeRootConstantBufferView(7, fieldCountResource->GetGPUVirtualAddress());
-    commandList->SetComputeRootDescriptorTable(8, overrideSrvHandle.second);
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
+    ID3D12GraphicsCommandList *cmdList) {
+    // cmdList が渡された場合はそちら（非同期 Compute Queue）を使う
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    auto *computePSOMgr = ComputePipeLineManager::GetInstance();
+    computePSOMgr->DrawCommonSetting(ComputePipelineType::kUpdateEmitter,
+                                     BlendMode::kNormal, ShaderMode::kNone, cl);
+    cl->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
+    cl->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
+    cl->SetComputeRootDescriptorTable(2, freeListSrvHandle_.second);
+    cl->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
+    cl->SetComputeRootConstantBufferView(4, perFrameResource_->GetGPUVirtualAddress());
+    cl->SetComputeRootConstantBufferView(5, settingsResource_->GetGPUVirtualAddress());
+    cl->SetComputeRootDescriptorTable(6, fieldsSrvHandle.second);
+    cl->SetComputeRootConstantBufferView(7, fieldCountResource->GetGPUVirtualAddress());
+    cl->SetComputeRootDescriptorTable(8, overrideSrvHandle.second);
 
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
-    commandList->Dispatch(disPatchCount, 1, 1);
+    cl->Dispatch(disPatchCount, 1, 1);
 }
 
 void ParticleCSGroup::Update(const ViewProjection &vp) {

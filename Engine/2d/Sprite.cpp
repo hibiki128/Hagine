@@ -166,6 +166,7 @@ void Sprite::CreateVartexData() {
 
     // インデックスバッファをマップする
     indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
+
 }
 
 void Sprite::CreateMaterial() {

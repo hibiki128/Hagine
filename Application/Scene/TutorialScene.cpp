@@ -79,12 +79,18 @@ void TutorialScene::Initialize() {
     /// ===================================================
     /// DrawSystem 登録
     /// ===================================================
+    // GPU パーティクル Compute フェーズ
+    drawSystem_->Register("TutorialScene_Particle_Compute", DrawSystem::kGPUParticleCompute, [this](const ViewProjection &vp) {
+        player_ptr->DrawParticleCompute(vp);
+        enemy_ptr->DrawParticleCompute(vp);
+        aroundField_->DrawParticleCompute(vp);
+    });
     drawSystem_->Register("TutorialScene_3D", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
         objectManager_->Draw(vp);
         skyBox_->Draw(vp);
         ground_->Draw(vp);
         aroundField_->Draw(vp);
-        player_ptr->DrawParticle(vp);
+        player_ptr->DrawParticle(vp);   // Graphics フェーズのみ実行される
         enemy_ptr->DrawParticle(vp);
         aroundField_->DrawParticle(vp);
         followCamera_->DrawFrustum();

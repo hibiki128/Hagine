@@ -24,11 +24,15 @@ void DemoScene::Initialize() {
     /// ===================================================
     /// DrawSystem 登録
     /// ===================================================
+    // GPU パーティクル Compute フェーズ：全エミッターをバッチ実行（Shadow/Opaque と並走）
+    drawSystem_->Register("DemoScene_Compute", DrawSystem::kGPUParticleCompute, [this](const ViewProjection &vp) {
+        ptCSEditor_->DrawAllCompute(vp);
+    });
     drawSystem_->Register("DemoScene_All", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
         spriteManager_->DrawAll();
         objectManager_->Draw(vp);
         ptEditor_->DrawAll(vp);
-        ptCSEditor_->DrawAll(vp);
+        ptCSEditor_->DrawAllGraphics(vp); // Compute 済みなので Graphics のみ
     });
 }
 

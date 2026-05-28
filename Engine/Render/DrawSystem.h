@@ -36,7 +36,10 @@ struct DrawEntry {
 ///   stage0 → PostEffect0 → stage1(+bg) → PostEffect1 → ... → UI → SceneTransition
 class DrawSystem {
   public:
-    static constexpr int kUILayer = -1;
+    static constexpr int kUILayer            = -1;
+    // GPU パーティクル Compute フェーズ専用ステージ
+    // 3D ステージより先に実行され、全エミッターのコンピュートを一括実行して Direct Queue に Wait を挿入する
+    static constexpr int kGPUParticleCompute = -2;
 
     static DrawSystem *GetInstance() {
         static DrawSystem instance;

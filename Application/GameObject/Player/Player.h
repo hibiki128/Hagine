@@ -63,6 +63,7 @@ class Player : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticleCompute(const ViewProjection &viewProjection);
 
     /// <summary>
     /// 状態を変更

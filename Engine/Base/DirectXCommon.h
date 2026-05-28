@@ -175,6 +175,18 @@ class DirectXCommon {
     D3D12_CLEAR_VALUE GetClearColorValue() const { return clearColorValue; }
     IDXGISwapChain4 *GetSwapChain() { return swapChain.Get(); }
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetRTVDescriptorHeap() { return rtvDescriptorHeap; }
+
+    // ---- 非同期コンピュートキュー API ----
+    /// コンピュートコマンドリストを取得
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetComputeCommandList() { return computeCommandList_; }
+    /// コンピュートコマンドをGPUに送信し完了フェンスを発行する
+    void ExecuteComputeCommands();
+    /// Direct Queue が Compute Queue の完了を GPU 側で待機する（CPU はブロックしない）
+    void WaitForComputeOnDirectQueue();
+    /// フレーム先頭でコンピュートリストにデスクリプタヒープを設定する
+    void BeginComputeFrame();
+    /// シャットダウン時：コンピュートキューの全作業を CPU 側で完了させる
+    void FlushComputeQueue();
 #pragma endregion
 
   private: // メンバ関数
@@ -217,6 +229,11 @@ class DirectXCommon {
     /// フェンス生成
     /// </summary>
     void CreateFence();
+
+    /// <summary>
+    /// 非同期コンピュートキューの初期化
+    /// </summary>
+    void ComputeQueueInitialize();
 
     /// <summary>
     /// ビューポート矩形の初期化
@@ -279,12 +296,21 @@ class DirectXCommon {
     Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory;
     // コマンドキュー
     Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue;
-    // コマンドアロケータ
-    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
+    // フレームごとのコマンドアロケータ（ダブルバッファ）
+    static constexpr UINT kFrameCount = 2;
+    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[kFrameCount];
     // コマンドリスト
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
     // フェンス
     Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+
+    // ---- 非同期コンピュートキュー ----
+    Microsoft::WRL::ComPtr<ID3D12CommandQueue>        computeCommandQueue_;
+    Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    computeCommandAllocators_[kFrameCount];
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> computeCommandList_;
+    Microsoft::WRL::ComPtr<ID3D12Fence>               computeFence_;
+    UINT64 computeFenceCounter_ = 0;
+    bool   computeListIsOpen_  = true; // Compute コマンドリストが記録中か
     // スワップチェーン
     Microsoft::WRL::ComPtr<IDXGISwapChain4> swapChain;
     std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> backBuffers;
@@ -310,7 +336,9 @@ class DirectXCommon {
     // スワップチェーン
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
 
-    UINT64 fenceValue = 0;
+    UINT64 fenceCounter_ = 0;            // 単調増加カウンタ
+    UINT64 fenceValues[kFrameCount] = {}; // フレームごとの最終 Signal 値
+    UINT   frameIndex_ = 0;              // 現在の描画フレームスロット（0 or 1）
     HANDLE fenceEvent;
     // ビューポート
     D3D12_VIEWPORT viewport{};

@@ -227,11 +227,15 @@ void ChargeShot::Draw(const ViewProjection &viewProjection) {
     // スケールを反映
     transform_->scale_ = {scale_, scale_, scale_};
 }
+void ChargeShot::DrawParticleCompute(const ViewProjection &viewProjection) {
+    chargeEmitter_->DrawCompute(viewProjection);
+}
+
 void ChargeShot::DrawParticle(const ViewProjection &viewProjection) {
-    chargeEmitter_->Draw(viewProjection);
+    chargeEmitter_->DrawGraphics(viewProjection);
     if (!isAlive_)
         return;
-    bulletEmitter_->Draw(viewProjection);
+    bulletEmitter_->Draw(viewProjection); // CPU emitter
 }
 
 void ChargeShot::imgui() {

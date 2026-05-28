@@ -29,9 +29,12 @@ void AroundField::Draw(const ViewProjection &viewProjection) {
     // モデルとしての描画は行わない（パーティクルで表現するため）
 }
 
+void AroundField::DrawParticleCompute(const ViewProjection &viewProjection) {
+    fieldParticle_->DrawCompute(viewProjection);
+}
+
 void AroundField::DrawParticle(const ViewProjection &viewProjection) {
-    // フィールドパーティクルの描画
-    fieldParticle_->Draw(viewProjection);
+    fieldParticle_->DrawGraphics(viewProjection);
 }
 
 void AroundField::Debug() {

@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <vector>
 
+class Sprite;
+
 // -----------------------------------------------------------------------
 // ギズモ操作対象を型に依存せず統一的に扱うためのラッパー構造体
 // BaseObject・WorldTransform・Vector3直接参照の3種類に対応する
@@ -21,7 +23,8 @@ struct GizmoTarget {
     enum class Type {
         BaseObject,     // BaseObject* を持つオブジェクト
         WorldTransform, // WorldTransform* のみを持つオブジェクト
-        FreeTransform,  // Vector3* の直接参照（Sprite や ParticleEmitter など）
+        FreeTransform,  // Vector3* の直接参照（ParticleEmitter など）
+        Sprite2D,       // Sprite の Vector2* 位置（ピクセル座標・XY のみ）
     };
 
     Type type = Type::BaseObject;
@@ -40,6 +43,9 @@ struct GizmoTarget {
     Vector3 *translate = nullptr; // 平行移動
     Vector3 *rotate = nullptr;    // 回転（オイラー角、ラジアン）
     Vector3 *scale = nullptr;     // スケール
+
+    // Type::Sprite2D 用（Sprite::position_ への直接ポインタ）
+    Vector2 *position2D = nullptr;
 
     // ImGui 詳細表示コールバック（nullptr の場合はデフォルト表示）
     std::function<void()> imguiCallback;
@@ -87,6 +93,10 @@ class ImGuizmoManager {
     char searchBuffer_[256] = "";
     std::vector<std::string> filteredNames_;
 
+    // Tab キーによる重複オブジェクトのサイクル選択用
+    std::vector<std::pair<std::string, float>> overlapCandidates_; // (name, rayDistance)
+    int overlapCycleIndex_ = 0;
+
   public:
     static ImGuizmoManager *GetInstance() {
         static ImGuizmoManager instance;
@@ -108,7 +118,7 @@ class ImGuizmoManager {
                    bool selectable = true,
                    std::function<void()> imguiCallback = nullptr);
 
-    /// Vector3 ポインタを直接指定して登録する（Sprite・ParticleEmitter など）
+    /// Vector3 ポインタを直接指定して登録する（ParticleEmitter など）
     /// translate は必須、rotate・scale は nullptr 可（ない場合は非表示）
     /// imguiCallback を渡すと ImGui 表示をカスタマイズできる
     void AddTarget(const std::string &name,
@@ -117,6 +127,9 @@ class ImGuizmoManager {
                    Vector3 *scale = nullptr,
                    bool selectable = true,
                    std::function<void()> imguiCallback = nullptr);
+
+    /// Sprite を登録する（XY 移動のみ、スクリーン空間ピクセル座標）
+    void AddTarget(const std::string &name, Sprite *sprite, bool selectable = true);
 
     void imgui();
     void Update(const ImVec2 &scenePosition, const ImVec2 &sceneSize);
@@ -173,6 +186,7 @@ class ImGuizmoManager {
   private:
     void ShowSelectedObjectImGui();
     void HandleMouseSelection(const ImVec2 &scenePosition, const ImVec2 &sceneSize);
+    void CycleOverlapSelection();
     // GizmoTarget を受け取ってギズモを表示・操作する
     void DisplayGizmo();
     void DecomposeMatrix(const Matrix4x4 &matrix, Vector3 &position, Quaternion &rotation, Vector3 &scale);

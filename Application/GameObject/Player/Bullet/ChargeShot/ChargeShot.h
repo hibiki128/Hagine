@@ -38,6 +38,7 @@ class ChargeShot : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticleCompute(const ViewProjection &viewProjection);
 
     /// <summary>
     /// ImGui表示

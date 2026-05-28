@@ -2,6 +2,7 @@
 #include "ParticleCSEmitter.h"
 #include "ParticleCSFieldManager.h"
 #include "ParticleCSGroupManager.h"
+#include <Graphics/PipeLine/ComputePipeLineManager.h>
 #include <Frame.h>
 #include <Line/DrawLine3D.h>
 #include <Shadow/ShadowMap.h>
@@ -47,32 +48,42 @@ void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primit
     CreateModelEdges();
 }
 
-void ParticleCSEmitter::Draw(const ViewProjection &vp) {
+void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
     if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
-    DrawEmitter();
+    if (particleGroups_.empty()) return;
+
+    auto *computeCmdList = dxCommon_->GetComputeCommandList().Get();
+    dxCommon_->BeginComputeFrame();
 
     for (auto &group : particleGroups_) {
         group->Update(vp);
-        dxCommon_->TransitionUAVBarrier(group->GetOutputParticleResource().Get());
-        EmitterDisPatch();
-        // UAV flush: EmitterDisPatch writes gParticles[].lastTrailPosition; UpdateDisPatch
-        // reads those values the same frame. Without this barrier the GPU may start
-        // UpdateDisPatch before Emit's UAV stores are globally visible, causing trail
-        // children to read stale (often zero) positions.
-        {
-            D3D12_RESOURCE_BARRIER uavBarrier{};
-            uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-            uavBarrier.UAV.pResource = group->GetOutputParticleResource().Get();
-            commandList->ResourceBarrier(1, &uavBarrier);
-        }
+        EmitterDisPatch(computeCmdList);
+
+        D3D12_RESOURCE_BARRIER uavBarrier{};
+        uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        uavBarrier.UAV.pResource = group->GetOutputParticleResource().Get();
+        computeCmdList->ResourceBarrier(1, &uavBarrier);
+
         auto *fieldMgr = ParticleCSFieldManager::GetInstance();
         group->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),
             receiveFields_ ? fieldMgr->GetFieldCountResource()
                            : fieldMgr->GetZeroFieldCountResource(),
-            fieldMgr->GetOverrideSrvHandle());
+            fieldMgr->GetOverrideSrvHandle(),
+            computeCmdList);
+    }
+    // Execute は DrawSystem（または呼び出し元）が一括で行う
+}
+
+void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
+    if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
+    if (particleGroups_.empty()) return;
+
+    DrawEmitter();
+
+    for (auto &group : particleGroups_) {
         group->CountAliveParticles();
-        dxCommon_->TransitionSRVBarrier();
+
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
         const auto &meshes = group->GetModelData().meshes;
         for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
@@ -87,6 +98,14 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
             commandList->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), group->GetSettingsData()->maxParticleCount, 0, 0, 0);
         }
     }
+}
+
+void ParticleCSEmitter::Draw(const ViewProjection &vp) {
+    // 後方互換: 単体で呼ばれる場合は Compute→Execute→Wait→Graphics を自前で完結させる
+    DrawCompute(vp);
+    dxCommon_->ExecuteComputeCommands();
+    dxCommon_->WaitForComputeOnDirectQueue();
+    DrawGraphics(vp);
 }
 
 void ParticleCSEmitter::LoadModel(const std::string &modelPath) {
@@ -210,8 +229,11 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->anchorPoint = Vector3(0.5f, 0.5f, 0.5f);
 }
 
-void ParticleCSEmitter::EmitterDisPatch() {
-    particleCommon_->ComputeEmitterDrawCommonSetting();
+void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
+    // cmdList が渡された場合はそちら（Compute Queue）を使う
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    ComputePipeLineManager::GetInstance()->DrawCommonSetting(
+        ComputePipelineType::kEmitter, BlendMode::kNormal, ShaderMode::kNone, cl);
 
     uint32_t groupIndex = 0;
     for (auto &group : particleGroups_) {
@@ -223,37 +245,29 @@ void ParticleCSEmitter::EmitterDisPatch() {
         settings->gatherTarget = emitterMeshData_->translate + settings->gatherTargetOffset;
         settings->vortexTarget = emitterMeshData_->translate + settings->vortexTargetOffset;
 
-        commandList->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
-        commandList->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
-        commandList->SetComputeRootDescriptorTable(2, group->GetFreeListSrvHandle().second);
-        commandList->SetComputeRootDescriptorTable(3, group->GetFreeListTrailIndexSrvHandle().second);
+        cl->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
+        cl->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
+        cl->SetComputeRootDescriptorTable(2, group->GetFreeListSrvHandle().second);
+        cl->SetComputeRootDescriptorTable(3, group->GetFreeListTrailIndexSrvHandle().second);
 
-        commandList->SetComputeRootConstantBufferView(4, emitterMeshResource_->GetGPUVirtualAddress());
-        commandList->SetComputeRootConstantBufferView(5, group->GetPerFrameResource()->GetGPUVirtualAddress());
-        commandList->SetComputeRootConstantBufferView(6, group->GetSettingsResource()->GetGPUVirtualAddress());
+        cl->SetComputeRootConstantBufferView(4, emitterMeshResource_->GetGPUVirtualAddress());
+        cl->SetComputeRootConstantBufferView(5, group->GetPerFrameResource()->GetGPUVirtualAddress());
+        cl->SetComputeRootConstantBufferView(6, group->GetSettingsResource()->GetGPUVirtualAddress());
 
-        // 三角形情報を設定
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
-            commandList->SetComputeRootDescriptorTable(8, triangleInfoSrvHandle_.second);
-            commandList->SetComputeRootDescriptorTable(9, triangleCDFSrvHandle_.second);
+            cl->SetComputeRootDescriptorTable(8, triangleInfoSrvHandle_.second);
+            cl->SetComputeRootDescriptorTable(9, triangleCDFSrvHandle_.second);
         }
 
-        // エッジ情報を設定
         if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
-            commandList->SetComputeRootDescriptorTable(10, edgeInfoSrvHandle_.second);
+            cl->SetComputeRootDescriptorTable(10, edgeInfoSrvHandle_.second);
         }
 
-        // フィールド判定用SRV/CBVを設定
-        // ルートシグネチャのスロット対応:
-        //   [7]  b3 = FieldCountCB (gFieldCB)
-        //   [11] t3 = ParticleField (gFields)
         {
             auto *fieldManager = ParticleCSFieldManager::GetInstance();
-            commandList->SetComputeRootDescriptorTable(11, fieldManager->GetFieldsSrvHandle().second);
+            cl->SetComputeRootDescriptorTable(11, fieldManager->GetFieldsSrvHandle().second);
 
             if (emitOnlyOnFieldContact_ && receiveFields_) {
-                // ===== フィールド接触Emitモード =====
-                // enableEmitSpawnフィールドが存在するか確認
                 bool hasEmitSpawnField = false;
                 for (const auto &field : fieldManager->GetFields()) {
                     if (!field.enabled || !field.data.enableEmitSpawn)
@@ -268,23 +282,17 @@ void ParticleCSEmitter::EmitterDisPatch() {
                 }
 
                 if (!hasEmitSpawnField) {
-                    // フィールドがない → Dispatch不要
-                    commandList->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
+                    cl->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
                     groupIndex++;
                     continue;
                 }
 
-                // フィールドが存在する → シェーダー側でフィールド球内→表面投影でEmit位置を決定する
-                // emitCount を fieldContactEmitCount_ で上書きして Dispatch
-                // シェーダーの CalcFieldContactEmitPosition が全スレッドをフィールド接触点にEmitするため
-                // 少ない数でも密にパーティクルが出る
                 uint32_t savedEmitCount = settings->emitCount;
                 float savedLifeMin = settings->lifeTimeMin;
                 float savedLifeMax = settings->lifeTimeMax;
 
                 settings->emitCount = fieldContactEmitCount_;
 
-                // フィールドの lifeTime 設定で上書き（0のままだとUpdateシェーダーでゼロ除算）
                 for (const auto &field : fieldManager->GetFields()) {
                     if (!field.enabled || !field.data.enableEmitSpawn)
                         continue;
@@ -300,13 +308,11 @@ void ParticleCSEmitter::EmitterDisPatch() {
                     break;
                 }
 
-                // フィールドカウントをシェーダーに渡す（CalcFieldContactEmitPosition で使用）
-                commandList->SetComputeRootConstantBufferView(7, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
+                cl->SetComputeRootConstantBufferView(7, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
 
                 int dispatchCount = (settings->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
-                commandList->Dispatch(dispatchCount, 1, 1);
+                cl->Dispatch(dispatchCount, 1, 1);
 
-                // 設定を元に戻す
                 settings->emitCount = savedEmitCount;
                 settings->lifeTimeMin = savedLifeMin;
                 settings->lifeTimeMax = savedLifeMax;
@@ -315,10 +321,7 @@ void ParticleCSEmitter::EmitterDisPatch() {
                 continue;
 
             } else {
-                // ===== 通常モード =====
-                // フィールドカウントをゼロにして、シェーダー側の ShouldEmitAtPosition が
-                // 常に true を返すようにする（全表面からランダムEmit）
-                commandList->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
+                cl->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
             }
         }
 
@@ -328,7 +331,7 @@ void ParticleCSEmitter::EmitterDisPatch() {
         }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
-        commandList->Dispatch(dispatchCount, 1, 1);
+        cl->Dispatch(dispatchCount, 1, 1);
 
         groupIndex++;
     }

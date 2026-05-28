@@ -81,8 +81,12 @@ class ParticleCSEditor {
     void ShowGPUParticleStatistics();
     // ImGuiエディターの表示
     void EditorWindow();
-    // すべてのエミッターを描画
+    // すべてのエミッターを描画（後方互換：Compute→Execute→Wait→Graphics を内部完結）
     void DrawAll(const ViewProjection &vp_);
+    // Compute フェーズのみ（DrawSystem::kGPUParticleCompute ステージから呼ぶ）
+    void DrawAllCompute(const ViewProjection &vp_);
+    // Graphics フェーズのみ（Compute 実行済み後に呼ぶ）
+    void DrawAllGraphics(const ViewProjection &vp_);
     // すべてのエミッターのデバッグ情報を表示
     void DebugAll();
     // ImGuiエディターの表示処理

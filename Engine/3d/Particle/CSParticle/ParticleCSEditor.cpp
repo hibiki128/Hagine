@@ -52,7 +52,21 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, PrimitiveType
     ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
+void ParticleCSEditor::DrawAllCompute(const ViewProjection &vp_) {
+    for (auto &[name, emitter] : emitters_) {
+        emitter->Update();
+        emitter->DrawCompute(vp_);
+    }
+}
+
+void ParticleCSEditor::DrawAllGraphics(const ViewProjection &vp_) {
+    for (auto &[name, emitter] : emitters_) {
+        emitter->DrawGraphics(vp_);
+    }
+}
+
 void ParticleCSEditor::DrawAll(const ViewProjection &vp_) {
+    // 後方互換: バッチなしで呼ばれた場合は内部で 2 フェーズを完結させる
     for (auto &[name, emitter] : emitters_) {
         emitter->Update();
         emitter->Draw(vp_);

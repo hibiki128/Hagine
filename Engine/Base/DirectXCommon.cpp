@@ -48,9 +48,18 @@ void DirectXCommon::Finalize() {
     // バックバッファの解放
     backBuffers.clear();
 
+    // コンピュートキューの完了を待ってから解放
+    FlushComputeQueue();
+    computeCommandList_.Reset();
+    for (auto &a : computeCommandAllocators_) a.Reset();
+    computeFence_.Reset();
+    computeCommandQueue_.Reset();
+
     // コマンド関連の解放
     commandList.Reset();
-    commandAllocator.Reset();
+    for (auto &allocator : commandAllocators) {
+        allocator.Reset();
+    }
     commandQueue.Reset();
 
     // フェンスの解放
@@ -99,6 +108,8 @@ void DirectXCommon::Initialize(WinApp *winApp) {
     ScissorRectInitialize();
     // DXCコンパイラの生成
     CreateDXCompiler();
+    // 非同期コンピュートキューの初期化
+    ComputeQueueInitialize();
 }
 
 void DirectXCommon::CreateOffscreenSRV() {
@@ -168,39 +179,55 @@ void DirectXCommon::PostDraw() {
 
     UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
-    // 画面に各処理はすべて終わり、画面に映すので、状態を遷移
-    // バリアを貼る
-    BarrierTransition(backBuffers[backBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-    // コマンドリストの内容を確定させる。すべてのコマンドを包んでからCloseすること
+    // バックバッファを PRESENT 状態に遷移
+    BarrierTransition(backBuffers[backBufferIndex].Get(),
+                      D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+    // コマンドリストを確定してGPUに送信
     hr = commandList->Close();
     assert(SUCCEEDED(hr));
-    // GPUにコマンドリストの実行を行わせる
     Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[] = {commandList};
     commandQueue->ExecuteCommandLists(1, commandLists->GetAddressOf());
-    // GPUとOSに画面の交換を行うように通知する
+
+    // 画面を表示（VSync 待ち）
     swapChain->Present(1, 0);
 
-    // Fenceの値を更新
-    fenceValue++;
-    // GPUがここまで辿り着いたときに、Fenceの値を指定した値に代入するようにSignalを送る
-    commandQueue->Signal(fence.Get(), fenceValue);
-    // Fenceの値が指定したSignal値に辿り着いているか確認する
-    // GetCompletedValueの初期値はFence作成時に渡した初期値
-    if (fence->GetCompletedValue() < fenceValue) {
-        // 指定したSignalに辿り着いていないので、たどり着くまで
-        fence->SetEventOnCompletion(fenceValue, fenceEvent);
-        // イベント待つ
+    // ---- ダブルバッファフェンス管理 ----
+    // 現フレームスロットに完了シグナルを送る
+    fenceCounter_++;
+    fenceValues[frameIndex_] = fenceCounter_;
+    commandQueue->Signal(fence.Get(), fenceValues[frameIndex_]);
+
+    // FPS固定（VSync後の余剰時間を調整）
+    UpdateFixFPS();
+
+    // 次フレームスロットに切り替える
+    frameIndex_ = (frameIndex_ + 1) % kFrameCount;
+
+    // 次スロットの前回使用分が GPU で完了するまで待つ
+    // （同じアロケータを 2 フレーム後に安全に再利用するため）
+    if (fence->GetCompletedValue() < fenceValues[frameIndex_]) {
+        fence->SetEventOnCompletion(fenceValues[frameIndex_], fenceEvent);
         WaitForSingleObject(fenceEvent, INFINITE);
     }
 
-    // FPS固定
-    UpdateFixFPS();
+    // 次フレームのコマンドアロケータ・リストをリセット
+    hr = commandAllocators[frameIndex_]->Reset();
+    assert(SUCCEEDED(hr));
+    hr = commandList->Reset(commandAllocators[frameIndex_].Get(), nullptr);
+    assert(SUCCEEDED(hr));
 
-    // 次のフレーム用のコマンドリストを準備
-    hr = commandAllocator->Reset();
+    // Compute 側も同スロットをリセット（Direct の完了が Compute 完了を含意するため安全）
+    // このフレームでパーティクルが1つも描画されなかった場合はリストが Open のままなので先に Close する
+    if (computeListIsOpen_) {
+        computeCommandList_->Close();
+        computeListIsOpen_ = false;
+    }
+    hr = computeCommandAllocators_[frameIndex_]->Reset();
     assert(SUCCEEDED(hr));
-    hr = commandList->Reset(commandAllocator.Get(), nullptr);
+    hr = computeCommandList_->Reset(computeCommandAllocators_[frameIndex_].Get(), nullptr);
     assert(SUCCEEDED(hr));
+    computeListIsOpen_ = true;
 }
 
 void DirectXCommon::TransitionUAVBarrier(ID3D12Resource *pResource) {
@@ -313,14 +340,15 @@ void DirectXCommon::CommandInitialize() {
     assert(SUCCEEDED(hr));
     ///============================================
 
-    ///============コマンドロケータを生成する===========
-    hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
-    // コマンドアロケータの生成が上手くいかなかったので起動できない
-    assert(SUCCEEDED(hr));
-    ///=============================================
+    ///============コマンドアロケータをフレーム数分生成する===========
+    for (UINT i = 0; i < kFrameCount; ++i) {
+        hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocators[i]));
+        assert(SUCCEEDED(hr));
+    }
+    ///=============================================================
 
     ///============コマンドリストを生成する=============
-    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList));
+    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[0].Get(), nullptr, IID_PPV_ARGS(&commandList));
     // コマンドリストを生成する
     assert(SUCCEEDED(hr));
     ///=============================================
@@ -434,13 +462,100 @@ void DirectXCommon::DepthStencilViewInitialize() {
 
 void DirectXCommon::CreateFence() {
     HRESULT hr;
-    ///============初期値θでFenceを作る================
-    hr = device->CreateFence(fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+    ///============初期値0でFenceを作る================
+    hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
     assert(SUCCEEDED(hr));
-    // FenceのSignalを持つためのイベントを作成する
+    // fenceValues と fenceCounter_ を 0 で初期化
+    fenceCounter_ = 0;
+    for (auto &v : fenceValues) v = 0;
+    // FenceのSignalを待つためのイベントを作成する
     fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     assert(fenceEvent != nullptr);
     ///==================================================
+}
+
+void DirectXCommon::ComputeQueueInitialize() {
+    HRESULT hr;
+
+    // コンピュートキュー作成
+    D3D12_COMMAND_QUEUE_DESC queueDesc{};
+    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&computeCommandQueue_));
+    assert(SUCCEEDED(hr));
+
+    // フレーム数分のコンピュートアロケータ作成
+    for (UINT i = 0; i < kFrameCount; ++i) {
+        hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE,
+                                            IID_PPV_ARGS(&computeCommandAllocators_[i]));
+        assert(SUCCEEDED(hr));
+    }
+
+    // コンピュートコマンドリスト作成（初期スロット0）
+    // CreateCommandList は記録状態で返るのでそのまま使える
+    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE,
+                                   computeCommandAllocators_[0].Get(), nullptr,
+                                   IID_PPV_ARGS(&computeCommandList_));
+    assert(SUCCEEDED(hr));
+    computeListIsOpen_ = true;
+
+    // コンピュート用フェンス
+    hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&computeFence_));
+    assert(SUCCEEDED(hr));
+    computeFenceCounter_ = 0;
+}
+
+void DirectXCommon::BeginComputeFrame() {
+    // 同フレーム内で前のエミッターが既に Close+Execute 済みの場合
+    // → CPU 側で完了を待ち、アロケータをリセットして再オープンする
+    if (!computeListIsOpen_) {
+        if (computeFence_->GetCompletedValue() < computeFenceCounter_) {
+            HANDLE ev = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+            computeFence_->SetEventOnCompletion(computeFenceCounter_, ev);
+            WaitForSingleObject(ev, INFINITE);
+            CloseHandle(ev);
+        }
+        HRESULT hr = computeCommandAllocators_[frameIndex_]->Reset();
+        assert(SUCCEEDED(hr));
+        hr = computeCommandList_->Reset(computeCommandAllocators_[frameIndex_].Get(), nullptr);
+        assert(SUCCEEDED(hr));
+        computeListIsOpen_ = true;
+    }
+
+    // デスクリプタヒープをコンピュートコマンドリストに設定
+    ID3D12DescriptorHeap *heaps[] = {SrvManager::GetInstance()->GetDescriptorHeap()};
+    computeCommandList_->SetDescriptorHeaps(_countof(heaps), heaps);
+}
+
+void DirectXCommon::ExecuteComputeCommands() {
+    // 記録されていない（リストが既に閉じている）場合は何もしない
+    if (!computeListIsOpen_) return;
+
+    HRESULT hr = computeCommandList_->Close();
+    assert(SUCCEEDED(hr));
+    computeListIsOpen_ = false;
+
+    ID3D12CommandList *lists[] = {computeCommandList_.Get()};
+    computeCommandQueue_->ExecuteCommandLists(1, lists);
+
+    // 完了シグナルを発行
+    computeFenceCounter_++;
+    computeCommandQueue_->Signal(computeFence_.Get(), computeFenceCounter_);
+}
+
+void DirectXCommon::WaitForComputeOnDirectQueue() {
+    // GPU 側で Direct Queue が Compute Queue の完了を待つ（CPU はブロックしない）
+    commandQueue->Wait(computeFence_.Get(), computeFenceCounter_);
+}
+
+void DirectXCommon::FlushComputeQueue() {
+    if (computeFenceCounter_ == 0 || !computeFence_)
+        return;
+    if (computeFence_->GetCompletedValue() < computeFenceCounter_) {
+        HANDLE ev = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        computeFence_->SetEventOnCompletion(computeFenceCounter_, ev);
+        WaitForSingleObject(ev, INFINITE);
+        CloseHandle(ev);
+    }
 }
 
 void DirectXCommon::ViewPortRectInitialize() {

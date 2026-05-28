@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "SpriteManager.h"
 #include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
+#include "Engine/Utility/Debug/ImGui/ImGuizmoManager.h"
 #include "SpriteCommon.h"
 #include "WinApp.h"
 #include "myMath.h"
@@ -38,6 +39,12 @@ void SpriteManager::RegisterSprite(const std::string &name, const std::string &t
 
     sprites_.push_back(std::move(spriteData));
     UpdateSpriteInstances(sprites_.back().get());
+#ifdef _DEBUG
+    // instanceData[0].translation の xy をギズモで直接編集できるよう登録
+    ImGuizmoManager::GetInstance()->AddTarget(
+        name, &sprites_.back()->instanceData[0].translation, nullptr, nullptr, true);
+    ImGuizmoManager::GetInstance()->SetScreenSpace(name, true, 50.0f);
+#endif
     ImGuiNotification::Post("スプライトを登録しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -49,6 +56,9 @@ void SpriteManager::UnregisterSprite(const std::string &name) {
                            });
 
     if (it != sprites_.end()) {
+#ifdef _DEBUG
+        ImGuizmoManager::GetInstance()->RemoveTarget(name);
+#endif
         ImGuiNotification::Post("スプライトを削除しました: " + name, {0.9f, 0.7f, 0.2f, 1.0f});
         sprites_.erase(it);
     }
@@ -259,6 +269,11 @@ void SpriteManager::SetUpdateFunction(const std::string &name, std::function<voi
 }
 
 void SpriteManager::Clear() {
+#ifdef _DEBUG
+    for (auto &sp : sprites_) {
+        if (sp) ImGuizmoManager::GetInstance()->RemoveTarget(sp->name);
+    }
+#endif
     sprites_.clear();
     externalSprites_.clear();
 }

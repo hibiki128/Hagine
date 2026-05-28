@@ -180,7 +180,14 @@ class ParticleCSEmitter {
 
     void CreateEmitterMeshResource();
     void EmitterUpdate();
-    void EmitterDisPatch();
+    void EmitterDisPatch(ID3D12GraphicsCommandList *cmdList = nullptr);
+
+  public:
+    // ---- バッチ非同期コンピュート用 2フェーズ API ----
+    /// Compute フェーズ: Emit/Update を Compute Queue に記録するだけ（Execute しない）
+    void DrawCompute(const ViewProjection &vp);
+    /// Graphics フェーズ: Count + DrawIndexed を Direct Queue で実行（Compute 済み前提）
+    void DrawGraphics(const ViewProjection &vp);
     void DrawEmitter();
 
     void SaveSetting();

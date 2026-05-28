@@ -86,6 +86,21 @@ OffScreen *DrawSystem::GetStageOffScreen(int stageIndex) {
 // -------------------------------------------------------
 
 void DrawSystem::Draw(const ViewProjection &vp) {
+    // ─── GPU パーティクル Compute フェーズ（全エミッターを一括実行して Direct Queue に Wait 挿入）───
+    {
+        bool anyWork = false;
+        for (auto &entry : entries_) {
+            if (entry.enabled && entry.stageIndex == kGPUParticleCompute) {
+                entry.draw(vp);
+                anyWork = true;
+            }
+        }
+        if (anyWork) {
+            dxCommon_->ExecuteComputeCommands();
+            dxCommon_->WaitForComputeOnDirectQueue();
+        }
+    }
+
     // ─── シャドウプレパス ───
     ShadowMap *shadowMap = ShadowMap::GetInstance();
     shadowMap->Update(); // 有効フラグをGPUバッファに反映（無効時もenabledを0にするため毎フレーム呼ぶ）
