@@ -50,11 +50,6 @@ class TutorialUI {
     /// <returns>完了していたらtrue</returns>
     bool IsFinished() const { return isFinished_; }
 
-    /// <summary>
-    /// フェードイン用アルファ値を一括適用（0.0=透明, 1.0=通常）
-    /// </summary>
-    void SetFadeAlpha(float alpha);
-
   private:
     /// ===================================================
     /// private enum
@@ -139,9 +134,9 @@ class TutorialUI {
     TutorialSystem *system_ = nullptr; // チュートリアルシステム
 
     UITransitionState transitionState_ = UITransitionState::Idle; // 遷移状態
-    float fadeTimer_ = 0.0f;        // フェード用タイマー
-    float fadeOutDuration_ = 0.35f; // フェードアウト時間
-    float fadeInDuration_ = 0.45f;  // フェードイン時間
+    float fadeTimer_ = 0.0f;                                      // フェード用タイマー
+    float fadeOutDuration_ = 0.35f;                               // フェードアウト時間
+    float fadeInDuration_ = 0.45f;                                // フェードイン時間
 
     float completeFadeOutDuration_ = 1.0f; // 完了時フェードアウト時間
     float postCompleteTimer_ = 0.0f;       // 完了後タイマー
@@ -160,20 +155,19 @@ class TutorialUI {
 
     float barAlpha_ = 1.0f;   // バーのアルファ値
     float frameAlpha_ = 1.0f; // 枠のアルファ値
-    float skipAlpha_ = 1.0f;  // スキップボタンのアルファ値
 
     Sprite okSprite_;            // OK!スプライト
     bool okSpriteReady_ = false; // OK!準備完了フラグ
     float okAlpha_ = 0.0f;       // OK!のアルファ値
 
     Vector2 okPosition_ = {640.0f, 400.0f}; // OK!の位置
-    float okRotation_ = 0.0f;              // OK!の回転
+    float okRotation_ = 0.0f;               // OK!の回転
     Vector2 okSize_ = {200.0f, 80.0f};      // OK!のサイズ
 
     Vector2 barPosition_ = {100.0f, 880.0f}; // バーの位置
-    float barHeight_ = 24.0f;               // バーの高さ
-    float barMaxWidth_ = 500.0f;            // バーの最大幅
-    float borderThickness_ = 3.0f;          // 枠の太さ
+    float barHeight_ = 24.0f;                // バーの高さ
+    float barMaxWidth_ = 500.0f;             // バーの最大幅
+    float borderThickness_ = 3.0f;           // 枠の太さ
 
     Vector2 skipButtonPosition_ = {1600.0f, 946.0f}; // スキップボタンの位置
     Vector2 skipButtonSize_ = {320.0f, 64.0f};       // スキップボタンのサイズ

@@ -114,6 +114,11 @@ void SceneManager::SceneChange() {
 #endif // _DEBUG
         }
 
+        // 旧シーンの描画エントリをすべて削除（ダングリングラムダ呼び出し防止）
+        if (drawSystem_) {
+            drawSystem_->Clear();
+        }
+
         // 所有権を移譲（nextScene_ は自動的に nullptr になる）
         scene_ = std::move(nextScene_);
 

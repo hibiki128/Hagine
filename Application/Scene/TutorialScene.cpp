@@ -1,7 +1,7 @@
 #include "TutorialScene.h"
+#include "Engine/Utility/Scene/SceneManager.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
-#include "Engine/Utility/Scene/SceneManager.h"
 #include <Shadow/ShadowMap.h>
 
 void TutorialScene::Initialize() {
@@ -9,6 +9,7 @@ void TutorialScene::Initialize() {
     /// インスタンス生成
     /// ===================================================
     BaseScene::Initialize();
+    lightGroup_->LoadLightData("GameLight");
     debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
@@ -76,11 +77,6 @@ void TutorialScene::Initialize() {
     tutorialUI_->Initialize(tutorialSystem_.get());
     fadeOut_->Initialize();
 
-    // 遷移完了まで全UIを透明にしておく
-    playerUI_->SetFadeAlpha(0.0f);
-    enemyUI_->SetFadeAlpha(0.0f);
-    tutorialUI_->SetFadeAlpha(0.0f);
-
     /// ===================================================
     /// DrawSystem 登録
     /// ===================================================
@@ -95,7 +91,7 @@ void TutorialScene::Initialize() {
         skyBox_->Draw(vp);
         ground_->Draw(vp);
         aroundField_->Draw(vp);
-        player_ptr->DrawParticle(vp);   // Graphics フェーズのみ実行される
+        player_ptr->DrawParticle(vp); // Graphics フェーズのみ実行される
         enemy_ptr->DrawParticle(vp);
         aroundField_->DrawParticle(vp);
         followCamera_->DrawFrustum();
@@ -104,8 +100,8 @@ void TutorialScene::Initialize() {
     drawSystem_->Register("TutorialScene_UI", DrawLayer::kPostEffect, [this](const ViewProjection &) {
         fadeOut_->Draw(vp_);
         gameUI_->Draw();
+        spriteManager_->DrawAll();
         if (sceneStarted_) {
-            spriteManager_->DrawAll();
             playerUI_->Draw();
             enemyUI_->Draw();
             tutorialUI_->Draw();
@@ -178,15 +174,6 @@ void TutorialScene::Update() {
 
         // 敵の出現/消滅リクエストを処理
         HandleEnemySpawnRequest();
-    }
-
-    // UIフェードイン（sceneStarted_になった瞬間から kUIFadeDuration_ 秒かけて透明→不透明）
-    if (uiFadeAlpha_ < 1.0f) {
-        uiFadeAlpha_ += Frame::DeltaTime() / kUIFadeDuration_;
-        if (uiFadeAlpha_ > 1.0f) uiFadeAlpha_ = 1.0f;
-        playerUI_->SetFadeAlpha(uiFadeAlpha_);
-        enemyUI_->SetFadeAlpha(uiFadeAlpha_);
-        tutorialUI_->SetFadeAlpha(uiFadeAlpha_);
     }
 }
 

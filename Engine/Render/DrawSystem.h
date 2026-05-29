@@ -14,8 +14,8 @@ class CollisionManager;
 
 // 後方互換用列挙体
 enum class DrawLayer {
-    kPreEffect = 0,  // stage 0 相当
-    kPostEffect = 1, // UI レイヤー相当
+    kPreEffect = 0, 
+    kPostEffect = 1,
 };
 
 struct DrawEntry {

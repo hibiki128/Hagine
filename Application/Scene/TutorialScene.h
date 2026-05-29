@@ -90,29 +90,26 @@ class TutorialScene : public BaseScene {
     /// private variables
     /// ===================================================
 
-    std::unique_ptr<Player> player_;        // プレイヤー
-    std::unique_ptr<Enemy> enemy_;          // 敵
-    std::unique_ptr<AroundField> aroundField_; // 周囲のフィールド
+    std::unique_ptr<Player> player_;             // プレイヤー
+    std::unique_ptr<Enemy> enemy_;               // 敵
+    std::unique_ptr<AroundField> aroundField_;   // 周囲のフィールド
     std::unique_ptr<FollowCamera> followCamera_; // フォローカメラ
-    std::unique_ptr<Ground> ground_;        // 地面
-    std::unique_ptr<PlayerUI> playerUI_;    // プレイヤーUI
-    std::unique_ptr<EnemyUI> enemyUI_;      // 敵UI
-    std::unique_ptr<FadeOut> fadeOut_;      // フェードアウト
-    std::unique_ptr<GameUI> gameUI_;        // ゲームUI
-    std::unique_ptr<GamePad> gamePad_;      // ゲームパッド
+    std::unique_ptr<Ground> ground_;             // 地面
+    std::unique_ptr<PlayerUI> playerUI_;         // プレイヤーUI
+    std::unique_ptr<EnemyUI> enemyUI_;           // 敵UI
+    std::unique_ptr<FadeOut> fadeOut_;           // フェードアウト
+    std::unique_ptr<GameUI> gameUI_;             // ゲームUI
+    std::unique_ptr<GamePad> gamePad_;           // ゲームパッド
 
     // ─── チュートリアル管理 ───
     std::unique_ptr<TutorialSystem> tutorialSystem_; // チュートリアルシステム
     std::unique_ptr<TutorialUI> tutorialUI_;         // チュートリアルUI
 
-    SkyBox *skyBox_ = nullptr;              // スカイボックス
-    Enemy *enemy_ptr = nullptr;             // 敵のポインタ
-    Player *player_ptr = nullptr;           // プレイヤーのポインタ
+    SkyBox *skyBox_ = nullptr;    // スカイボックス
+    Enemy *enemy_ptr = nullptr;   // 敵のポインタ
+    Player *player_ptr = nullptr; // プレイヤーのポインタ
 
-    float startDelayTimer_ = 0.0f;          // シーン開始からの経過時間
-    bool sceneStarted_ = false;             // 遅延終了フラグ
+    float startDelayTimer_ = 0.0f;              // シーン開始からの経過時間
+    bool sceneStarted_ = false;                 // 遅延終了フラグ
     static constexpr float kStartDelay_ = 2.0f; // 開始までの待機秒数
-
-    float uiFadeAlpha_ = 0.0f;             // UIフェードイン進行度 (0=透明, 1=通常)
-    static constexpr float kUIFadeDuration_ = 0.5f; // UIフェードイン時間(秒)
 };
