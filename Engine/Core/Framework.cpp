@@ -199,6 +199,7 @@ void Framework::Initialize() {
 
     ///-------ShadowMap-------
     ShadowMap::GetInstance()->Initialize();
+    ShadowMap::GetInstance()->LoadConfig();
     ///------------------------
 
     /// 時間の初期化

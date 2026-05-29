@@ -1,16 +1,17 @@
 {
-    "bias": 0.0010999999940395355,
+    "bias": 0.0020000000949949026,
     "enabled": 1,
     "farZ": 1000.0,
     "lightDirX": 0.0,
     "lightDirY": -1.0,
-    "lightDirZ": 0.5,
+    "lightDirZ": 0.0,
     "lightDistance": 300.0,
-    "lightTargetX": 0.0,
+    "lightTargetX": 58.841758728027344,
     "lightTargetY": 0.0,
-    "lightTargetZ": 0.0,
+    "lightTargetZ": -7.731362819671631,
     "nearZ": 0.009999999776482582,
-    "orthoHeight": 100.0,
+    "orthoHeight": 150.0,
     "orthoWidth": 100.0,
-    "strength": 0.800000011920929
+    "strength": 0.800000011920929,
+    "syncWithDirectionalLight": 1
 }
