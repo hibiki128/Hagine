@@ -9,11 +9,34 @@
         "z": 1.0
     },
     "directional_direction": {
-        "x": 0.9999999403953552,
-        "y": 0.0002756588510237634,
-        "z": -0.0003074780397582799
+        "x": 0.6681638956069946,
+        "y": 1.7810336430557072e-05,
+        "z": -0.7440141439437866
     },
-    "directional_intensity": 0.5400000214576721,
+    "directional_intensity": 0.3400000035762787,
     "pointLight_count": 0,
-    "spotLight_count": 0
+    "spotLight_00_BlinnPhong": 0,
+    "spotLight_00_HalfLambert": 1,
+    "spotLight_00_active": true,
+    "spotLight_00_color": {
+        "w": 1.0,
+        "x": 0.8313254714012146,
+        "y": 0.8765957355499268,
+        "z": 0.4140515923500061
+    },
+    "spotLight_00_cosAngle": 0.8600000143051147,
+    "spotLight_00_decay": 0.8999999761581421,
+    "spotLight_00_direction": {
+        "x": 0.0,
+        "y": -1.0,
+        "z": 0.0
+    },
+    "spotLight_00_distance": 19.700000762939453,
+    "spotLight_00_intensity": 4.5,
+    "spotLight_00_position": {
+        "x": 0.9599999785423279,
+        "y": 11.0,
+        "z": 0.0
+    },
+    "spotLight_count": 1
 }

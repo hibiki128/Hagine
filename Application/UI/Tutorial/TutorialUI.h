@@ -50,6 +50,11 @@ class TutorialUI {
     /// <returns>完了していたらtrue</returns>
     bool IsFinished() const { return isFinished_; }
 
+    /// <summary>
+    /// フェードイン用アルファ値を一括適用（0.0=透明, 1.0=通常）
+    /// </summary>
+    void SetFadeAlpha(float alpha);
+
   private:
     /// ===================================================
     /// private enum
@@ -155,6 +160,7 @@ class TutorialUI {
 
     float barAlpha_ = 1.0f;   // バーのアルファ値
     float frameAlpha_ = 1.0f; // 枠のアルファ値
+    float skipAlpha_ = 1.0f;  // スキップボタンのアルファ値
 
     Sprite okSprite_;            // OK!スプライト
     bool okSpriteReady_ = false; // OK!準備完了フラグ

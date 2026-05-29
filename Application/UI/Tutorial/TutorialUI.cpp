@@ -248,6 +248,13 @@ void TutorialUI::ApplyAlphaToAllManagedSprites(float alpha) {
     }
 }
 
+void TutorialUI::SetFadeAlpha(float alpha) {
+    barAlpha_ = alpha;
+    frameAlpha_ = alpha;
+    skipAlpha_ = alpha;
+    ApplyAlphaToAllManagedSprites(alpha);
+}
+
 void TutorialUI::Draw() {
     // 枠 -> バー の順で描画
     frameSprite_.SetAlpha(frameAlpha_);
@@ -256,7 +263,7 @@ void TutorialUI::Draw() {
     barSprite_.SetAlpha(barAlpha_);
     barSprite_.Draw();
 
-    SkipButtonSprite_.SetAlpha(1.0f);
+    SkipButtonSprite_.SetAlpha(skipAlpha_);
     SkipButtonSprite_.Draw();
 
     // OK! スプライトの描画

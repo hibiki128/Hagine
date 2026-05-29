@@ -68,6 +68,14 @@ void EnemyUI::Draw() {
     }
 }
 
+void EnemyUI::SetFadeAlpha(float alpha) {
+    if (hpBar_) hpBar_->SetAlpha(kHPBarColorA * alpha);
+    if (barFrame_) barFrame_->SetAlpha(kFrameColorA * alpha);
+    if (energyBar_) energyBar_->SetAlpha(kEnergyBarColorA * alpha);
+    if (energyBarFrame_) energyBarFrame_->SetAlpha(kFrameColorA * alpha);
+    if (enemyIcon_) enemyIcon_->SetAlpha(alpha);
+}
+
 void EnemyUI::Debug() {
 #ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("エネミーUI")) {

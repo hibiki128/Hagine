@@ -106,7 +106,7 @@ class ResultStaging {
 
     std::vector<FireWorkState> fireWorkStates_; // 花火の状態リスト
 
-    Vector3 fireWorkAreaCenter_ = {-135.0f, -25.0f, -200.0f}; // 花火発生エリアの中心
+    Vector3 fireWorkAreaCenter_ = {-52.0f, -25.0f, -200.0f}; // 花火発生エリアの中心
     Vector3 fireWorkAreaSize_ = {300.0f, 20.0f, 100.0f};      // 花火発生エリアのサイズ
     Quaternion fireWorkAreaRotation_ = Quaternion::IdentityQuaternion(); // 花火発生エリアの回転
 

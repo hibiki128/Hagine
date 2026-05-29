@@ -112,4 +112,7 @@ class TutorialScene : public BaseScene {
     float startDelayTimer_ = 0.0f;          // シーン開始からの経過時間
     bool sceneStarted_ = false;             // 遅延終了フラグ
     static constexpr float kStartDelay_ = 2.0f; // 開始までの待機秒数
+
+    float uiFadeAlpha_ = 0.0f;             // UIフェードイン進行度 (0=透明, 1=通常)
+    static constexpr float kUIFadeDuration_ = 0.5f; // UIフェードイン時間(秒)
 };

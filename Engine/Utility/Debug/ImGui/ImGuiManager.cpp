@@ -1102,6 +1102,53 @@ void ImGuiManager::SwitchToGameMode() {
     }
 }
 
+// ゲームモードini用: [Docking]セクション全体と各[Window]のDockId行を除去する
+// F5でアンドックしたウィンドウのノードIDが次回起動時に存在せず
+// imgui.cpp の "node != 0" アサーションを引き起こすのを防ぐ
+#ifdef USE_IMGUI
+static std::string StripDockDataFromIni(const char* src, size_t srcSize) {
+    std::string result;
+    result.reserve(srcSize);
+    size_t pos = 0;
+    bool skipSection = false;
+
+    while (pos < srcSize) {
+        size_t lineEnd = pos;
+        while (lineEnd < srcSize && src[lineEnd] != '\n') ++lineEnd;
+        // line は src[pos..lineEnd) ('\n' を含まない)
+        const char* linePtr = src + pos;
+        size_t lineLen = lineEnd - pos;
+        pos = lineEnd + 1; // 次の行へ
+
+        // セクションヘッダ判定
+        if (lineLen > 0 && linePtr[0] == '[') {
+            // [Docking] セクションはスキップフラグを立てる
+            bool isDocking = (lineLen >= 9 &&
+                              linePtr[1] == 'D' && linePtr[2] == 'o' &&
+                              linePtr[3] == 'c' && linePtr[4] == 'k' &&
+                              linePtr[5] == 'i' && linePtr[6] == 'n' &&
+                              linePtr[7] == 'g' && linePtr[8] == ']');
+            skipSection = isDocking;
+            if (isDocking) continue;
+        }
+
+        if (skipSection) continue;
+
+        // DockId= 行はスキップ（ウィンドウの古いノード参照を除去）
+        if (lineLen >= 7 &&
+            linePtr[0] == 'D' && linePtr[1] == 'o' && linePtr[2] == 'c' &&
+            linePtr[3] == 'k' && linePtr[4] == 'I' && linePtr[5] == 'd' &&
+            linePtr[6] == '=') {
+            continue;
+        }
+
+        result.append(linePtr, lineLen);
+        result += '\n';
+    }
+    return result;
+}
+#endif // USE_IMGUI
+
 void ImGuiManager::SaveCurrentLayout() {
 #ifdef USE_IMGUI
     // 現在のモードに応じたファイルにレイアウトを保存
@@ -1114,7 +1161,13 @@ void ImGuiManager::SaveCurrentLayout() {
     // ファイルに書き込み
     FILE *f = nullptr;
     if (fopen_s(&f, iniFilePath, "wt") == 0 && f) {
-        fwrite(iniData, sizeof(char), size, f);
+        if (!isEditorMode_) {
+            // ゲームモード: ドックノード参照を除去して保存
+            std::string stripped = StripDockDataFromIni(iniData, size);
+            fwrite(stripped.c_str(), sizeof(char), stripped.size(), f);
+        } else {
+            fwrite(iniData, sizeof(char), size, f);
+        }
         fclose(f);
     }
     ImGuiNotification::Post("レイアウトを保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
@@ -1140,8 +1193,13 @@ void ImGuiManager::LoadLayoutForCurrentMode() {
             size_t read_size = fread(buf, 1, size, f);
             buf[read_size] = 0;
 
-            // 読み込んだデータをImGuiに適用
-            ImGui::LoadIniSettingsFromMemory(buf, read_size);
+            if (!isEditorMode_) {
+                // ゲームモード: 古いドックノード参照を除去してからロード
+                std::string stripped = StripDockDataFromIni(buf, read_size);
+                ImGui::LoadIniSettingsFromMemory(stripped.c_str(), stripped.size());
+            } else {
+                ImGui::LoadIniSettingsFromMemory(buf, read_size);
+            }
 
             delete[] buf;
         }
