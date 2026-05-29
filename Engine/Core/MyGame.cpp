@@ -17,7 +17,7 @@ void MyGame::Initialize() {
 #ifdef _DEBUG
     sceneManager_->NextSceneReservation("TITLE");
 #else
-    sceneManager_->NextSceneReservation("TITLE");
+    sceneManager_->NextSceneReservation("CLEAR");
 #endif // _DEBUG
     // -----------------------
 }

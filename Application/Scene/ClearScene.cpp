@@ -55,7 +55,7 @@ void ClearScene::Initialize() {
         objectManager_->Draw(vp);
         skyBox_->Draw(vp);
         ground_->Draw(vp);
-        //resultStaging_->Draw(vp);
+        resultStaging_->Draw(vp);
     });
     drawSystem_->Register("ClearScene_UI", DrawLayer::kPostEffect, [this](const ViewProjection &) {
         resultUI_->Draw();

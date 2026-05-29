@@ -8,7 +8,7 @@
         "z": 0.5
     },
     "isEditorMode": true,
-    "showFPSView": false,
+    "showFPSView": true,
     "showGizmoView": true,
     "showHierarchyView": false,
     "showKeyOperationDebugView": false,
