@@ -69,6 +69,10 @@ class ParticleCSFieldManager {
     /// フィールド管理ウィンドウを表示する。ギズモ描画もここから行われる。
     void DrawImGui();
 
+    // 同時に有効化できるフィールドの上限。
+    // fields バッファ（ParticleFieldData × kMaxFields）と override バッファ（× kMaxFields）の
+    // 両方のサイズ、AddField の上限、シェーダ ApplyFields の fieldCount クランプ上限を兼ねる。
+    // 変更時は GPU バッファ容量が増えるだけで挙動互換（シェーダは fieldCount までしか走査しない）。
     static constexpr uint32_t kMaxFields = 8;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> GetZeroFieldCountResource() const { return zeroFieldCountResource_; }

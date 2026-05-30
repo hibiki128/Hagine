@@ -383,10 +383,13 @@ void DirectXCommon::CreateVariousDesctiptorHeap() {
     ///=======================================
 
     ///==========ディスクリプタヒープの生成=============
-    // RTV用のヒープでディスクリプタの数は2。RTVはShader内で触るものではないが、ShaderVisibleはfalse
-    rtvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 6, false);
-    // DSV用のヒープでディスクリプタの数は1。DSVはShader内で触るものではないので、ShaderVisibleはfalse
-    dsvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
+    // RTV用のヒープ。RTVはShader内で触るものではないが、ShaderVisibleはfalse
+    //   slot 0,1: バックバッファ / 2: オフスクリーン / 3,4: ピンポン / 5: 最終結果
+    //   slot 6  : GPUパーティクル プレビュー窓用 RT (Phase 8) ← 拡張で確保
+    rtvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 8, false);
+    // DSV用のヒープ。DSVはShader内で触るものではないので、ShaderVisibleはfalse
+    //   slot 0: メイン深度 / slot 1: プレビュー窓用 深度 (Phase 8) ← 拡張で確保
+    dsvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 2, false);
     ///=================================================
 }
 
@@ -630,6 +633,10 @@ void DirectXCommon::UpdateFixFPS() {
 }
 
 #pragma region 必要な関数
+Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateAdditionalDepthResource(int32_t width, int32_t height) {
+    return CreateDepthStencilTextureResource(device, width, height);
+}
+
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height) {
     // 生成するResourceの設定
     D3D12_RESOURCE_DESC resourceDesc{};

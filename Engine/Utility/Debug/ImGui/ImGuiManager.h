@@ -136,6 +136,9 @@ class ImGuiManager {
 
     void ShowParticleSettingWindow();
 
+    // GPUパーティクルのプレビュー窓（表示メニューでON/OFF）
+    void ShowParticlePreviewWindow();
+
     void ShowStatisticsWindow();
 
     void ShowOffScreenSettingWindow(OffScreen *offscreen);
@@ -207,6 +210,7 @@ class ImGuiManager {
     bool showSceneView_ = true;
     bool showObjectView_ = true;
     bool showParticleView_ = true;
+    bool showParticlePreviewView_ = false; // GPUパーティクル プレビュー窓
     bool showFPSView_ = true;
     bool showOfScreenView_ = true;
     bool showLightView_ = true;

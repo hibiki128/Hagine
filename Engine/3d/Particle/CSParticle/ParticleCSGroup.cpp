@@ -25,6 +25,7 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     CreateFreeListTrailIndexResource();
     CreateFreeListResource();
     CreateAliveCountResource();
+    CreateAliveListResources();
 
     perViewData_->enableBillboard = 1;
 
@@ -184,9 +185,63 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     cl->SetComputeRootDescriptorTable(6, fieldsSrvHandle.second);
     cl->SetComputeRootConstantBufferView(7, fieldCountResource->GetGPUVirtualAddress());
     cl->SetComputeRootDescriptorTable(8, overrideSrvHandle.second);
+    // 生存コンパクション (Phase 1)
+    cl->SetComputeRootDescriptorTable(9, aliveListUavHandle_.second);
+    cl->SetComputeRootDescriptorTable(10, aliveCounterUavHandle_.second);
 
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
     cl->Dispatch(disPatchCount, 1, 1);
+}
+
+void ParticleCSGroup::ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdList) {
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    ComputePipeLineManager::GetInstance()->DrawCommonSetting(
+        ComputePipelineType::kResetArgs, BlendMode::kNormal, ShaderMode::kNone, cl);
+    cl->SetComputeRootDescriptorTable(0, aliveCounterUavHandle_.second);
+    cl->Dispatch(1, 1, 1);
+
+    // リセット完了を Update の InterlockedAdd より前に保証する
+    D3D12_RESOURCE_BARRIER uavBarrier{};
+    uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    uavBarrier.UAV.pResource = aliveCounterResource_.Get();
+    cl->ResourceBarrier(1, &uavBarrier);
+}
+
+void ParticleCSGroup::RecordAliveCountReadback(ID3D12GraphicsCommandList *computeCmdList) {
+    // Update が compute queue で書いた直後（バッファが UAV 状態）にコピーする。
+    // この時点でカウンタは UnorderedAccess へ昇格済みなので状態遷移は整合する。
+    ID3D12GraphicsCommandList *cl = computeCmdList ? computeCmdList : commandList;
+
+    // Update の append 完了を保証
+    D3D12_RESOURCE_BARRIER uavBarrier{};
+    uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    uavBarrier.UAV.pResource = aliveCounterResource_.Get();
+    cl->ResourceBarrier(1, &uavBarrier);
+
+    auto toCopy = CD3DX12_RESOURCE_BARRIER::Transition(
+        aliveCounterResource_.Get(),
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        D3D12_RESOURCE_STATE_COPY_SOURCE);
+    cl->ResourceBarrier(1, &toCopy);
+
+    cl->CopyResource(aliveCounterReadbackResource_.Get(), aliveCounterResource_.Get());
+
+    auto toUAV = CD3DX12_RESOURCE_BARRIER::Transition(
+        aliveCounterResource_.Get(),
+        D3D12_RESOURCE_STATE_COPY_SOURCE,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    cl->ResourceBarrier(1, &toUAV);
+}
+
+void ParticleCSGroup::FetchAliveDrawCount() {
+    // 直近フレームにコピー済みの値を読み取る（1〜2フレーム遅延・許容）
+    uint32_t *mappedData = nullptr;
+    D3D12_RANGE readRange{0, sizeof(uint32_t)};
+    HRESULT hr = aliveCounterReadbackResource_->Map(0, &readRange, reinterpret_cast<void **>(&mappedData));
+    if (SUCCEEDED(hr) && mappedData) {
+        aliveDrawCount_ = *mappedData;
+        aliveCounterReadbackResource_->Unmap(0, nullptr);
+    }
 }
 
 void ParticleCSGroup::Update(const ViewProjection &vp) {
@@ -478,6 +533,44 @@ void ParticleCSGroup::CreateAliveCountResource() {
         IID_PPV_ARGS(&aliveCountReadbackResource_));
 }
 
+void ParticleCSGroup::CreateAliveListResources() {
+    const uint32_t maxCount = settingsData_->maxParticleCount;
+
+    // --- aliveList: 生存 slot index バッファ (UAV: compute u4 / SRV: VS t2) ---
+    aliveListResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t) * maxCount, true);
+
+    aliveListUavIndex_ = srvManager_->Allocate() + 1;
+    aliveListUavHandle_.first = srvManager_->GetCPUDescriptorHandle(aliveListUavIndex_);
+    aliveListUavHandle_.second = srvManager_->GetGPUDescriptorHandle(aliveListUavIndex_);
+    srvManager_->CreateUAVStructuredBuffer(aliveListUavIndex_, aliveListResource_.Get(), maxCount, sizeof(uint32_t));
+
+    aliveListSrvForVSIndex_ = srvManager_->Allocate() + 1;
+    srvManager_->CreateSRVforStructuredBuffer(aliveListSrvForVSIndex_, aliveListResource_.Get(), maxCount, sizeof(uint32_t));
+
+    // --- aliveCounter: 生存数アトミックカウンタ (UAV: compute u5 / SRV: VS t3) ---
+    aliveCounterResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t), true);
+
+    aliveCounterUavIndex_ = srvManager_->Allocate() + 1;
+    aliveCounterUavHandle_.first = srvManager_->GetCPUDescriptorHandle(aliveCounterUavIndex_);
+    aliveCounterUavHandle_.second = srvManager_->GetGPUDescriptorHandle(aliveCounterUavIndex_);
+    srvManager_->CreateUAVStructuredBuffer(aliveCounterUavIndex_, aliveCounterResource_.Get(), 1, sizeof(uint32_t));
+
+    aliveCounterSrvForVSIndex_ = srvManager_->Allocate() + 1;
+    srvManager_->CreateSRVforStructuredBuffer(aliveCounterSrvForVSIndex_, aliveCounterResource_.Get(), 1, sizeof(uint32_t));
+
+    // CPU 読み取り用 Readback バッファ
+    D3D12_HEAP_PROPERTIES readbackHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
+    D3D12_RESOURCE_DESC readbackDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint32_t));
+    dxCommon_->GetDevice()->CreateCommittedResource(
+        &readbackHeapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &readbackDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&aliveCounterReadbackResource_));
+    aliveCounterReadbackResource_->SetName(L"AliveCounter_Readback");
+}
+
 void ParticleCSGroup::CountAliveParticles() {
     // CountParticle.CSを実行
     particleCommon_->ComputeCountDrawCommonSetting();
@@ -509,16 +602,9 @@ void ParticleCSGroup::CountAliveParticles() {
 }
 
 uint32_t ParticleCSGroup::GetAliveParticleCount() {
-    // Readbackバッファから読み取り
-    uint32_t *mappedData = nullptr;
-    D3D12_RANGE readRange{0, sizeof(uint32_t)};
-
-    HRESULT hr = aliveCountReadbackResource_->Map(0, &readRange, reinterpret_cast<void **>(&mappedData));
-    if (SUCCEEDED(hr) && mappedData) {
-        cachedAliveCount_ = *mappedData;
-        aliveCountReadbackResource_->Unmap(0, nullptr);
-    }
-
+    // Phase 2: 旧 CountParticle 全Nディスパッチを廃止し、生存コンパクションの
+    // aliveCounter 読み戻し値(FetchAliveDrawCount で更新)をそのまま統計に流用する。
+    cachedAliveCount_ = aliveDrawCount_;
     return cachedAliveCount_;
 }
 

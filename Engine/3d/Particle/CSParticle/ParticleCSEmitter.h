@@ -15,6 +15,10 @@ class ParticleCSEmitter {
     /// ==============================================
     /// public methods
     /// ==============================================
+    ParticleCSEmitter() = default;
+    // 破棄時に保有する独立グループを再利用プールへ返却する（バッファ累積を防ぐ）
+    ~ParticleCSEmitter();
+
     void Initialize(const std::string &name);
     void Initialize(const std::string &name, const std::string &modelPath);
     void Initialize(const std::string &name, PrimitiveType primitiveType);
@@ -38,6 +42,7 @@ class ParticleCSEmitter {
     }
     void SetActive(bool isActive) { isActive_ = isActive; }
     void SetAuto(bool isAuto) { isAuto_ = isAuto; }
+    bool GetAuto() const { return isAuto_; }
     // エミッターのワイヤーフレーム描画の表示・非表示を切り替える
     void SetVisible(bool isVisible) { isVisible_ = isVisible; }
 
@@ -188,6 +193,9 @@ class ParticleCSEmitter {
     void DrawCompute(const ViewProjection &vp);
     /// Graphics フェーズ: Count + DrawIndexed を Direct Queue で実行（Compute 済み前提）
     void DrawGraphics(const ViewProjection &vp);
+    // プレビュー隔離描画: 外部 per-view CB（プレビューVP）で Graphics のみ描画する。
+    // RT/DSV/Viewport/DescriptorHeap は呼び出し側で設定済みであること。ワイヤー(DrawEmitter)は描かない。
+    void DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress);
     void DrawEmitter();
 
     void SaveSetting();

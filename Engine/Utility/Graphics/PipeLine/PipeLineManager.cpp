@@ -530,8 +530,22 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGPUParticleRo
     descriptorRangeForInstancing[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;                              // SRVを使う
     descriptorRangeForInstancing[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // Offsetを自動計算
 
+    // ★ t2: 生存コンパクションの aliveList (VertexShaderで使用)
+    D3D12_DESCRIPTOR_RANGE descriptorRangeAliveList[1] = {};
+    descriptorRangeAliveList[0].BaseShaderRegister = 2; // register(t2)
+    descriptorRangeAliveList[0].NumDescriptors = 1;
+    descriptorRangeAliveList[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRangeAliveList[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // ★ t3: 生存数カウンタ (VertexShaderで使用、instanceId カリング用)
+    D3D12_DESCRIPTOR_RANGE descriptorRangeAliveCount[1] = {};
+    descriptorRangeAliveCount[0].BaseShaderRegister = 3; // register(t3)
+    descriptorRangeAliveCount[0].NumDescriptors = 1;
+    descriptorRangeAliveCount[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRangeAliveCount[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     // RootParameter作成。複数設定できるので配列。
-    D3D12_ROOT_PARAMETER rootParameters[4] = {}; // 4つに増やす
+    D3D12_ROOT_PARAMETER rootParameters[6] = {}; // b0,t0,t1(tex),b1,t2,t3
 
     // b0: PerView用のConstantBufferView (VertexShaderで使用)
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -554,6 +568,18 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGPUParticleRo
     rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[3].Descriptor.ShaderRegister = 1; // register(b1)
+
+    // ★ t2: 生存コンパクションの aliveList (VertexShaderで使用)
+    rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[4].DescriptorTable.pDescriptorRanges = descriptorRangeAliveList;
+    rootParameters[4].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeAliveList);
+
+    // ★ t3: 生存数カウンタ (VertexShaderで使用)
+    rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[5].DescriptorTable.pDescriptorRanges = descriptorRangeAliveCount;
+    rootParameters[5].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeAliveCount);
 
     descriptionRootSignature.pParameters = rootParameters;
     descriptionRootSignature.NumParameters = _countof(rootParameters);

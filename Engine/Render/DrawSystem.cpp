@@ -9,6 +9,9 @@
 #include <Shadow/ShadowMap.h>
 #include <algorithm>
 #ifdef _DEBUG
+#include "Particle/CSParticle/ParticleCSEditor.h"
+#endif
+#ifdef _DEBUG
 #include "imgui.h"
 #include "line/DrawLine3D.h"
 #endif
@@ -88,18 +91,26 @@ OffScreen *DrawSystem::GetStageOffScreen(int stageIndex) {
 void DrawSystem::Draw(const ViewProjection &vp) {
     // ─── GPU パーティクル Compute フェーズ（全エミッターを一括実行して Direct Queue に Wait 挿入）───
     {
-        bool anyWork = false;
         for (auto &entry : entries_) {
             if (entry.enabled && entry.stageIndex == kGPUParticleCompute) {
                 entry.draw(vp);
-                anyWork = true;
             }
         }
-        if (anyWork) {
-            dxCommon_->ExecuteComputeCommands();
-            dxCommon_->WaitForComputeOnDirectQueue();
-        }
+        // GPUパーティクルエディタのエミッターをシーン非依存で常時シミュレートする。
+        // （プレビュー窓・各シーンでの確認のため。各シーンでの Register に依存しない全体駆動）
+        ParticleCSEditor::GetInstance()->DrawAllCompute(vp);
+
+        // 記録が無ければ ExecuteComputeCommands は自己ガードで no-op、Wait も signaled 済み値への待ちで無害。
+        dxCommon_->ExecuteComputeCommands();
+        dxCommon_->WaitForComputeOnDirectQueue();
     }
+
+#ifdef _DEBUG
+    // ─── GPUパーティクル プレビュー窓を描画（Compute 完了後・ステージ束ね前）───
+    // Compute 済みの生存バッファを VS 読み取り可能な状態のままプレビューVPで再描画する。
+    // 後段のステージループ(PreRenderTexture)がオフスクリーンRTと全画面ビューポートを束ね直すため復元不要。
+    ParticleCSEditor::GetInstance()->RenderPreview();
+#endif
 
     // ─── シャドウプレパス ───
     ShadowMap *shadowMap = ShadowMap::GetInstance();
@@ -143,6 +154,12 @@ void DrawSystem::Draw(const ViewProjection &vp) {
             if (entry.enabled && entry.stageIndex == stageIdx) {
                 entry.draw(vp);
             }
+        }
+
+        // GPUパーティクルエディタのエミッターをシーン非依存で常時描画する（stage0 のシーン offscreen へ）。
+        // Compute は上のフェーズで実行済み。各シーンでの Register に依存しない全体駆動。
+        if (stageIdx == 0) {
+            ParticleCSEditor::GetInstance()->DrawAllGraphics(vp);
         }
 
 #ifdef _DEBUG

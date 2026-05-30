@@ -8,12 +8,28 @@ struct VertexShaderInput
 };
 
 StructuredBuffer<Particle> gParticles : register(t0);
+// 生存コンパクション: instanceId -> 生存パーティクルの実 slot index
+StructuredBuffer<uint> gAliveList : register(t2);
+// 生存コンパクション: 当該フレームの生存数（これを超える instanceId は破棄）
+StructuredBuffer<uint> gAliveCount : register(t3);
 ConstantBuffer<PerView> gPerView : register(b0);
 
 VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID)
 {
     VertexShaderOutput output;
-    Particle particle = gParticles[instanceId];
+
+    // instanceCount は生存数の概算(CPU側の1〜2F遅延値+マージン)で発行されるため、
+    // 実際の生存数を超える instanceId はここで確実に破棄する。
+    if (instanceId >= gAliveCount[0])
+    {
+        output.position = float4(0.0f, 0.0f, 0.0f, 0.0f); // クリップされる縮退頂点
+        output.texcoord = float2(0.0f, 0.0f);
+        output.color = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        return output;
+    }
+
+    uint particleSlot = gAliveList[instanceId];
+    Particle particle = gParticles[particleSlot];
 
     // --- XYZ 3軸回転行列 (Rz * Ry * Rx の順で合成) ---
     float sx, cx, sy, cy, sz, cz;

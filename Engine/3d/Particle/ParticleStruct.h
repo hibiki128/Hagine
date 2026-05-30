@@ -5,6 +5,7 @@
 #include "type/Vector4.h"
 #include <Model/ModelStructs.h>
 #include <Transform/WorldTransform.h>
+#include <cstddef> // offsetof
 #include <cstdint>
 #include <d3d12.h>
 #include <list>
@@ -280,43 +281,70 @@ struct ParticleFieldSettingsOverride {
 };
 
 /// =============================================
-/// GPUに送るフィールドデータ (16バイトアライメント)
+/// GPUに送るフィールドデータ（StructuredBuffer 要素 / 16バイト境界）
+///
+/// 【重要】このレイアウトは HLSL 側 `struct ParticleField`
+///   （Resources/shaders/Particle/Particle.hlsli）と**バイト単位で一致**させること。
+///   メンバの追加/削除/並べ替えは両方を同時に直し、下の static_assert を更新する。
+///
+/// 【責務（1構造体に混載。Phase 6 で論理グループとして整理）】
+///   1. Force        : position / radius / direction / strength / fieldType / falloff
+///                     （ApplyFields の速度系エフェクト。Wind/Attract/Repel/Vortex）
+///   2. LifeDrain    : lifeTimeDrain / enableLifeDrain（範囲内で寿命を削る）
+///   3. ForceTrail   : enableForceTrail / trailSpawnDistanceOverride（フィールドでトレイル強制）
+///   4. ColorMultiply: enableColorMultiply / colorMultiplier（範囲内で色を乗算）
+///   5. SettingsOverride : enableSettingsOverride（一度きりの設定上書きの有効化。
+///                         実データは gFieldsOverride[t1]/ParticleFieldSettingsOverride 側）
+///   6. EmitSpawn    : enableEmitSpawn / emitSpawnLifeTimeMin/Max / emitSpawnCount
+///                     （Emit 時、このフィールド範囲内にのみ発生させる）
+///   7. GroupFilter  : groupId（どのエミッターに影響するか）
+///
+/// 【グループフィルタ仕様（GPUの ApplyFields と一致）】
+///   - field.groupId == -1                      → 全エミッターに影響
+///   - emitter.fieldGroupId == -1               → そのエミッターは全フィールドの影響を受ける
+///   - 上記以外は field.groupId == emitter.fieldGroupId のときのみ影響
 /// =============================================
 struct ParticleFieldData {
+    // --- 1. Force（速度系エフェクト） ---
     Vector3 position = {0, 0, 0};  // フィールドの中心座標
     float radius = 5.0f;           // 影響範囲（球）
-    Vector3 direction = {1, 0, 0}; // Wind/Vortex軸方向
+    Vector3 direction = {1, 0, 0}; // Wind/Vortex軸方向（C++側で正規化して転送）
     float strength = 1.0f;         // 力の強さ
-    uint32_t fieldType = 0;        // ParticleFieldType
+    uint32_t fieldType = 0;        // ParticleFieldType (0:Wind 1:Attract 2:Repel 3:Vortex)
     float falloff = 1.0f;          // 減衰指数（1=線形, 2=二乗）
 
-    // --- 寿命ドレイン ---
+    // --- 2. LifeDrain（寿命ドレイン） ---
     float lifeTimeDrain = 0.0f;   // 毎秒削る寿命量（秒/秒）
     uint32_t enableLifeDrain = 0; // 0=無効 1=有効
 
-    // --- トレイル強制生成 ---
+    // --- 3. ForceTrail（トレイル強制生成） ---
     uint32_t enableForceTrail = 0;           // 0=無効 1=有効
     float trailSpawnDistanceOverride = 0.0f; // >0 のときトレイル生成間隔を上書き
 
-    // --- カラー乗算 ---
+    // --- 4. ColorMultiply（カラー乗算） ---
     uint32_t enableColorMultiply = 0;                   // 0=無効 1=有効
     Vector4 colorMultiplier = {1.0f, 1.0f, 1.0f, 1.0f}; // 乗算色（白=変化なし）
 
-    // --- 一度きり設定上書き ---
-    uint32_t enableSettingsOverride = 0; // 0=無効 1=有効
+    // --- 5. SettingsOverride（一度きり設定上書きの有効化フラグ） ---
+    uint32_t enableSettingsOverride = 0; // 0=無効 1=有効（実データは gFieldsOverride 側）
 
-    // --- Emit時スポーン判定 ---
+    // --- 6. EmitSpawn（Emit時スポーン判定） ---
     uint32_t enableEmitSpawn = 0;       // 1=このフィールド範囲内にのみEmit
     float emitSpawnLifeTimeMin = 0.25f; // enableEmitSpawn=1 時の寿命Min
     float emitSpawnLifeTimeMax = 0.25f; // enableEmitSpawn=1 時の寿命Max
     uint32_t emitSpawnCount = 0;        // enableEmitSpawn=1 時の発生数（0=エミッター依存）
 
-    // --- グループID ---
-    // エミッター側の fieldGroupId と一致するフィールドのみ影響を与える。
-    // -1 = 全エミッターに影響する（デフォルト）
-    int32_t groupId = -1;
-    float groupIdPadding[3] = {0.f, 0.f, 0.f}; // 16バイトアライメント
+    // --- 7. GroupFilter（グループID） ---
+    int32_t groupId = -1;                      // -1=全エミッター対象 / 0以上=同IDのエミッターのみ
+    float groupIdPadding[3] = {0.f, 0.f, 0.f}; // 16バイト境界揃え
 };
+
+// GPUレイアウト契約の固定（HLSL `struct ParticleField` と一致させること）。
+// 値が変わった＝レイアウトが動いた合図。HLSL 側も合わせて更新する。
+static_assert(sizeof(ParticleFieldData) == 112, "ParticleFieldData のサイズが変化。HLSL struct ParticleField と一致させること");
+static_assert(offsetof(ParticleFieldData, colorMultiplier) == 60, "colorMultiplier のオフセットずれ。HLSL と要整合");
+static_assert(offsetof(ParticleFieldData, enableSettingsOverride) == 76, "enableSettingsOverride のオフセットずれ。HLSL と要整合");
+static_assert(offsetof(ParticleFieldData, groupId) == 96, "groupId のオフセットずれ。HLSL と要整合");
 
 /// =============================================
 /// エディタ用フィールド（名前付き）

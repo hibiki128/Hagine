@@ -4,6 +4,9 @@
 #include <Camera/ViewProjection/ViewProjection.h>
 #include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
+#include <algorithm>
+#include <myMath.h>
+#include <vector>
 
 void ParticleCSEditor::Finalize() {
     emitters_.clear();
@@ -13,6 +16,360 @@ void ParticleCSEditor::Initialize() {
     particleGroupManager_ = ParticleCSGroupManager::GetInstance();
     // カラーテーマの初期設定
     SetupColors();
+    // プレビュー窓用オフスクリーンを生成（シングルトンなので初回のみ）
+    InitializePreview();
+}
+
+// =============================================
+// プレビュー窓 (Phase 8a: 専用RT生成 + 暗くクリア + ImGui表示)
+// =============================================
+void ParticleCSEditor::InitializePreview() {
+    if (previewInitialized_) {
+        return;
+    }
+    DirectXCommon *dxCommon = ParticleCommon::GetInstance()->GetDxCommon();
+    SrvManager *srvManager = SrvManager::GetInstance();
+
+    // 暗い背景色（Effekseer 風）でクリアされる色RTを生成
+    D3D12_CLEAR_VALUE clearValue{};
+    clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    clearValue.Color[0] = 0.02f;
+    clearValue.Color[1] = 0.02f;
+    clearValue.Color[2] = 0.03f;
+    clearValue.Color[3] = 1.0f;
+
+    previewColorResource_ = dxCommon->CreateRenderTextureResource(
+        kPreviewMaxWidth_, kPreviewMaxHeight_, clearValue.Format, clearValue);
+    previewColorState_ = D3D12_RESOURCE_STATE_GENERIC_READ; // CreateRenderTextureResource の初期状態
+
+    // ImGui 表示用 SRV
+    previewColorSrvIndex_ = srvManager->Allocate() + 1;
+    srvManager->CreateSRVforRenderTexture(previewColorSrvIndex_, previewColorResource_.Get());
+
+    // RTV（拡張した RTV ヒープの slot 6 を使用）
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvStart = dxCommon->GetRTVDescriptorHeap()->GetCPUDescriptorHandleForHeapStart();
+    UINT rtvSize = dxCommon->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    previewRtvHandle_.ptr = rtvStart.ptr + (6 * rtvSize);
+
+    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+    rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+    dxCommon->GetDevice()->CreateRenderTargetView(previewColorResource_.Get(), &rtvDesc, previewRtvHandle_);
+
+    // 専用深度バッファ＋DSV（拡張した DSV ヒープの slot1）。kLine3d/パーティクル PSO は D24_UNORM_S8_UINT を要求する。
+    previewDepthResource_ = dxCommon->CreateAdditionalDepthResource(kPreviewMaxWidth_, kPreviewMaxHeight_);
+    previewDsvHandle_ = dxCommon->GetDSVCPUDescriptorHandle(1);
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+    dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    dxCommon->GetDevice()->CreateDepthStencilView(previewDepthResource_.Get(), &dsvDesc, previewDsvHandle_);
+
+    // 白グリッドの頂点バッファと、カメラ viewProject 用の定数バッファを構築。
+    BuildPreviewGrid();
+    previewLineCB_ = dxCommon->CreateBufferResource(sizeof(Matrix4x4));
+    previewLineCB_->Map(0, nullptr, reinterpret_cast<void **>(&previewLineCBData_));
+    *previewLineCBData_ = MakeIdentity4x4();
+
+    // 選択エミッタ隔離描画用の per-view CB。共有グループの per-view を汚さないため専用に持つ。
+    previewPerViewCB_ = dxCommon->CreateBufferResource(sizeof(PerView));
+    previewPerViewCB_->Map(0, nullptr, reinterpret_cast<void **>(&previewPerViewData_));
+    previewPerViewData_->viewProjection = MakeIdentity4x4();
+    previewPerViewData_->billboardMatrix = MakeIdentity4x4();
+    previewPerViewData_->enableBillboard = 1;
+    previewPerViewData_->enableVelocityStretch = 0;
+    previewPerViewData_->velocityStretchFactor = 0.1f;
+
+    previewInitialized_ = true;
+}
+
+// グリッド線VBを最大容量で確保し永続マップする。内容は RebuildPreviewGridContents で書き込む。
+void ParticleCSEditor::BuildPreviewGrid() {
+    DirectXCommon *dxCommon = ParticleCommon::GetInstance()->GetDxCommon();
+
+    // 分割数の上限ぶん（XZ各 (div+1) 本 × 2頂点）を確保。
+    const UINT maxVerts = static_cast<UINT>((kPreviewGridMaxDivision_ + 1) * 4);
+    const UINT vbSize = static_cast<UINT>(sizeof(PreviewLineVertex) * maxVerts);
+    previewGridVB_ = dxCommon->CreateBufferResource(vbSize);
+    previewGridVB_->Map(0, nullptr, reinterpret_cast<void **>(&previewGridMapped_));
+
+    previewGridVBView_.BufferLocation = previewGridVB_->GetGPUVirtualAddress();
+    previewGridVBView_.StrideInBytes = sizeof(PreviewLineVertex);
+    previewGridVBView_.SizeInBytes = vbSize;
+
+    RebuildPreviewGridContents();
+}
+
+// 現在のグリッド設定をマップ済みVBへ書き込み、描画頂点数を更新する。
+void ParticleCSEditor::RebuildPreviewGridContents() {
+    if (!previewGridMapped_) {
+        return;
+    }
+    int division = previewGridDivision_;
+    division = (std::max)(2, (std::min)(kPreviewGridMaxDivision_, division));
+    const float halfSize = (std::max)(0.1f, previewGridHalfSize_);
+    const float interval = (halfSize * 2.0f) / division;
+    const Vector4 gridColor = previewGridColor_;
+    const Vector4 axisColorX = {0.8f, 0.25f, 0.25f, 1.0f};
+    const Vector4 axisColorZ = {0.25f, 0.4f, 0.85f, 1.0f};
+
+    uint32_t v = 0;
+    for (int i = 0; i <= division; ++i) {
+        float offset = -halfSize + i * interval;
+        // X方向の線（Zが offset 固定）。中央線は軸色。
+        const Vector4 &cX = (i == division / 2) ? axisColorX : gridColor;
+        previewGridMapped_[v++] = {{-halfSize, 0.0f, offset}, cX};
+        previewGridMapped_[v++] = {{halfSize, 0.0f, offset}, cX};
+        // Z方向の線（Xが offset 固定）。中央線は軸色。
+        const Vector4 &cZ = (i == division / 2) ? axisColorZ : gridColor;
+        previewGridMapped_[v++] = {{offset, 0.0f, -halfSize}, cZ};
+        previewGridMapped_[v++] = {{offset, 0.0f, halfSize}, cZ};
+    }
+    previewGridVertexCount_ = v;
+}
+
+// オービットカメラパラメータから view 行列と view*projection 行列を計算する。
+void ParticleCSEditor::ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &outViewProj) const {
+    // 球面座標からカメラ位置を求める。
+    float cp = std::cos(previewCamPitch_);
+    Vector3 eye = {
+        previewCamTarget_.x + previewCamDistance_ * cp * std::sin(previewCamYaw_),
+        previewCamTarget_.y + previewCamDistance_ * std::sin(previewCamPitch_),
+        previewCamTarget_.z + previewCamDistance_ * cp * std::cos(previewCamYaw_),
+    };
+
+    // LookAt（左手系）。forward = target - eye。
+    Vector3 forward = (previewCamTarget_ - eye).Normalize();
+    Vector3 worldUp = {0.0f, 1.0f, 0.0f};
+    Vector3 right = worldUp.Cross(forward).Normalize();
+    Vector3 up = forward.Cross(right);
+
+    Matrix4x4 cameraWorld = MakeRotateMatrix(right, up, forward);
+    cameraWorld.m[3][0] = eye.x;
+    cameraWorld.m[3][1] = eye.y;
+    cameraWorld.m[3][2] = eye.z;
+    cameraWorld.m[3][3] = 1.0f;
+
+    outView = Inverse(cameraWorld);
+    float fovY = 45.0f * 3.14159265358979323846f / 180.0f;
+    // アスペクトは今フレームの実描画サイズ（ImGuiウィンドウ依存）に合わせる
+    uint32_t h = (previewRenderHeight_ > 0) ? previewRenderHeight_ : 1;
+    float aspect = static_cast<float>(previewRenderWidth_) / static_cast<float>(h);
+    Matrix4x4 proj = MakePerspectiveFovMatrix(fovY, aspect, 0.1f, 1000.0f);
+    outViewProj = outView * proj;
+}
+
+void ParticleCSEditor::RenderPreview() {
+    if (!previewInitialized_) {
+        return;
+    }
+    DirectXCommon *dxCommon = ParticleCommon::GetInstance()->GetDxCommon();
+    ID3D12GraphicsCommandList *cl = dxCommon->GetCommandList().Get();
+
+    // 色RT を RENDER_TARGET へ遷移
+    D3D12_RESOURCE_BARRIER toRT{};
+    toRT.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    toRT.Transition.pResource = previewColorResource_.Get();
+    toRT.Transition.StateBefore = previewColorState_;
+    toRT.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    toRT.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    cl->ResourceBarrier(1, &toRT);
+    previewColorState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+    // グリッド設定が変わっていたらマップ済みVBの内容を更新（GPUへは次の描画で反映）
+    if (previewGridDirty_) {
+        RebuildPreviewGridContents();
+        previewGridDirty_ = false;
+    }
+
+    // プレビューRT＋専用深度を束ねて背景色でクリア
+    cl->OMSetRenderTargets(1, &previewRtvHandle_, false, &previewDsvHandle_);
+    cl->ClearRenderTargetView(previewRtvHandle_, previewBgColor_, 0, nullptr);
+    cl->ClearDepthStencilView(previewDsvHandle_, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+    // 実描画サイズ（ImGuiウィンドウ依存）でビューポート/シザーを設定。RTの左上部分のみに描く。
+    // 後続ステージは PreRenderTexture で全画面へ復元される。
+    D3D12_VIEWPORT viewport{};
+    viewport.Width = static_cast<float>(previewRenderWidth_);
+    viewport.Height = static_cast<float>(previewRenderHeight_);
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    cl->RSSetViewports(1, &viewport);
+    D3D12_RECT scissor{};
+    scissor.right = static_cast<LONG>(previewRenderWidth_);
+    scissor.bottom = static_cast<LONG>(previewRenderHeight_);
+    cl->RSSetScissorRects(1, &scissor);
+
+    // プレビューカメラ行列を計算（グリッド用 viewProject と、パーティクル用 per-view を構築）
+    Matrix4x4 view{}, viewProj{};
+    ComputePreviewMatrices(view, viewProj);
+
+    // 白グリッドを描画（共有 DrawLine3D の頂点バッファとは衝突しない専用VB＋kLine3d PSO）
+    if (previewShowGrid_ && previewGridVertexCount_ > 0) {
+        *previewLineCBData_ = viewProj;
+        PipeLineManager::GetInstance()->DrawCommonSetting(PipelineType::kLine3d);
+        cl->IASetVertexBuffers(0, 1, &previewGridVBView_);
+        cl->SetGraphicsRootConstantBufferView(0, previewLineCB_->GetGPUVirtualAddress());
+        cl->DrawInstanced(previewGridVertexCount_, 1, 0, 0);
+    }
+
+    // 選択中エミッタのパーティクルを隔離描画（Compute 済みバッファをプレビューVPで再描画）
+    if (!selectedEmitterName_.empty()) {
+        auto it = emitters_.find(selectedEmitterName_);
+        if (it != emitters_.end() && it->second) {
+            // 専用 per-view CB をプレビューVP＋ビルボードで更新（共有グループの per-view は汚さない）
+            previewPerViewData_->viewProjection = viewProj;
+            Matrix4x4 billboard = view;
+            billboard.m[3][0] = 0.0f;
+            billboard.m[3][1] = 0.0f;
+            billboard.m[3][2] = 0.0f;
+            billboard.m[3][3] = 1.0f;
+            previewPerViewData_->billboardMatrix = Inverse(billboard);
+            previewPerViewData_->enableBillboard = 1;
+            previewPerViewData_->enableVelocityStretch = 0;
+
+            // パーティクル PSO は SRV ディスクリプタテーブルを使うのでヒープを束ねる
+            SrvManager::GetInstance()->SetDescriptorHeap();
+            // RT/DSV/Viewport は上で束ね済み（ヒープ設定で解除されないが念のため再設定）
+            cl->OMSetRenderTargets(1, &previewRtvHandle_, false, &previewDsvHandle_);
+            cl->RSSetViewports(1, &viewport);
+            cl->RSSetScissorRects(1, &scissor);
+            it->second->DrawGraphicsForPreview(previewPerViewCB_->GetGPUVirtualAddress());
+        }
+    }
+
+    // ImGui サンプリング用に PIXEL_SHADER_RESOURCE へ戻す
+    D3D12_RESOURCE_BARRIER toSRV{};
+    toSRV.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    toSRV.Transition.pResource = previewColorResource_.Get();
+    toSRV.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    toSRV.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    toSRV.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    cl->ResourceBarrier(1, &toSRV);
+    previewColorState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+}
+
+void ParticleCSEditor::ShowPreviewWindow(bool *pOpen) {
+#ifdef USE_IMGUI
+    if (!previewInitialized_) {
+        return;
+    }
+    // 初回サイズ（以降ユーザーが自由にリサイズ）
+    ImGui::SetNextWindowSize(ImVec2(1000.0f, 600.0f), ImGuiCond_FirstUseEver);
+    // pOpen を渡すとウィンドウのXボタンが表示メニューのフラグと連動する
+    if (!ImGui::Begin("CSパーティクル プレビュー", pOpen)) {
+        ImGui::End();
+        return;
+    }
+
+    // 右側エディタパネルの幅。左のビューポートは残り全幅を使う。
+    const float kRightPanelWidth = 400.0f;
+    const float spacing = ImGui::GetStyle().ItemSpacing.x;
+    ImVec2 avail = ImGui::GetContentRegionAvail();
+    float leftWidth = avail.x - kRightPanelWidth - spacing;
+    if (leftWidth < 240.0f) {
+        leftWidth = 240.0f; // ウィンドウが狭くてもビューポートの最低幅を確保
+    }
+
+    // ============ 左: プレビュービューポート（ImGuiウィンドウに追従して可変） ============
+    ImGui::BeginChild("##previewViewport", ImVec2(leftWidth, 0.0f), true);
+    {
+        // 再生 / 一時停止 / 単発（選択中エミッタの自動発生を制御）
+        if (selectedEmitterName_.empty()) {
+            ImGui::TextDisabled("エミッタ未選択（グリッドのみ表示）");
+        } else {
+            auto it = emitters_.find(selectedEmitterName_);
+            if (it != emitters_.end() && it->second) {
+                ParticleCSEmitter *emitter = it->second.get();
+                if (emitter->GetAuto()) {
+                    if (ImGui::Button("一時停止##preview"))
+                        emitter->SetAuto(false);
+                } else {
+                    if (ImGui::Button("再生##preview"))
+                        emitter->SetAuto(true);
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("単発##preview"))
+                    emitter->EmitOnce();
+                ImGui::SameLine();
+                ImGui::Text("選択中: %s", selectedEmitterName_.c_str());
+            }
+        }
+
+        // 画像サイズ = 残りのコンテンツ領域。これを実描画サイズとして記録し、RT の左上部分を UV 表示する。
+        ImVec2 region = ImGui::GetContentRegionAvail();
+        uint32_t w = static_cast<uint32_t>((std::max)(16.0f, region.x));
+        uint32_t h = static_cast<uint32_t>((std::max)(16.0f, region.y));
+        w = (std::min)(w, kPreviewMaxWidth_);
+        h = (std::min)(h, kPreviewMaxHeight_);
+        previewRenderWidth_ = w;
+        previewRenderHeight_ = h;
+
+        ImTextureID texId = static_cast<ImTextureID>(
+            SrvManager::GetInstance()->GetGPUDescriptorHandle(previewColorSrvIndex_).ptr);
+        ImVec2 uv1(static_cast<float>(w) / static_cast<float>(kPreviewMaxWidth_),
+                   static_cast<float>(h) / static_cast<float>(kPreviewMaxHeight_));
+        ImGui::Image(texId, ImVec2(static_cast<float>(w), static_cast<float>(h)), ImVec2(0.0f, 0.0f), uv1);
+
+        // 画像上でのオービットカメラ操作（左ドラッグ=回転 / ホイール=ズーム）
+        if (ImGui::IsItemHovered()) {
+            ImGuiIO &io = ImGui::GetIO();
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                previewCamYaw_ -= io.MouseDelta.x * 0.01f;
+                previewCamPitch_ += io.MouseDelta.y * 0.01f;
+                const float pitchLimit = 1.55f; // ≒89°でジンバル反転を防ぐ
+                previewCamPitch_ = (std::max)(-pitchLimit, (std::min)(pitchLimit, previewCamPitch_));
+            }
+            if (io.MouseWheel != 0.0f) {
+                previewCamDistance_ -= io.MouseWheel;
+                previewCamDistance_ = (std::max)(1.0f, (std::min)(100.0f, previewCamDistance_));
+            }
+        }
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    // ============ 右: エディタパネル（作成・選択・動き設定・カメラ・表示設定すべて） ============
+    ImGui::BeginChild("##previewEditor", ImVec2(0.0f, 0.0f), true);
+    {
+        // ---- カメラ操作 ----
+        if (ImGui::CollapsingHeader("カメラ##preview", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::DragFloat("距離##preview", &previewCamDistance_, 0.1f, 1.0f, 100.0f);
+            ImGui::DragFloat3("注視点##preview", &previewCamTarget_.x, 0.1f);
+            if (ImGui::Button("カメラリセット##preview")) {
+                previewCamYaw_ = 0.6f;
+                previewCamPitch_ = 0.45f;
+                previewCamDistance_ = 16.0f;
+                previewCamTarget_ = {0.0f, 0.0f, 0.0f};
+            }
+        }
+
+        // ---- 表示設定（背景色・グリッド）----
+        if (ImGui::CollapsingHeader("表示設定##preview")) {
+            ImGui::ColorEdit3("背景色##preview", previewBgColor_);
+            ImGui::Checkbox("グリッド表示##preview", &previewShowGrid_);
+            if (ImGui::DragInt("分割数##preview", &previewGridDivision_, 1.0f, 2, kPreviewGridMaxDivision_)) {
+                previewGridDivision_ = (std::max)(2, (std::min)(kPreviewGridMaxDivision_, previewGridDivision_));
+                previewGridDirty_ = true;
+            }
+            if (ImGui::DragFloat("グリッド半径##preview", &previewGridHalfSize_, 0.1f, 0.1f, 1000.0f)) {
+                previewGridDirty_ = true;
+            }
+            if (ImGui::ColorEdit3("グリッド色##preview", &previewGridColor_.x)) {
+                previewGridDirty_ = true;
+            }
+        }
+
+        ImGui::Separator();
+
+        // ---- エミッタ/グループ作成・選択・動き設定（エディタ本体）----
+        ShowImGuiEditor(); // 「パーティクル作成」タブ
+        DebugAll();        // 「GPUエミッター設定」タブ（選択コンボ＋選択エミッタの詳細設定）
+    }
+    ImGui::EndChild();
+
+    ImGui::End();
+#endif // USE_IMGUI
 }
 
 // カラーテーマの設定メソッドを追加
@@ -327,6 +684,9 @@ bool ParticleCSEditor::ColoredCollapsingHeader(const char *label, int colorIndex
 
 void ParticleCSEditor::ShowImGuiEditor() {
 #ifdef USE_IMGUI
+    // プレビュー窓の表示は ImGuiManager の「表示 > ウィンドウ > パーティクルプレビュー」で管理する
+    // （ここでは描画しない）
+
     if (ImGui::BeginTabBar("GPUパーティクル")) {
         if (ImGui::BeginTabItem("パーティクル作成")) {
             // エミッター追加のCollapsingHeader

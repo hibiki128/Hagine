@@ -42,6 +42,7 @@ void ParticleCSGroupManager::Initialize() {
 void ParticleCSGroupManager::Finalize() {
     particleGroups_.clear();
     independentGroups_.clear();
+    groupPool_.clear();
 }
 
 void ParticleCSGroupManager::CreateParticleCSGroup(const std::string &groupName, const std::string &fileName, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {

@@ -35,6 +35,19 @@ class ParticleCSGroup {
     /// ===================================
 
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetOutputParticleSrvHandle() const { return outputParticleSrvHandle_; }
+    // 生存コンパクション用ハンドル/インデックス
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveListUavHandle() const { return aliveListUavHandle_; }
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveCounterUavHandle() const { return aliveCounterUavHandle_; }
+    uint32_t GetAliveListSrvForVSIndex() const { return aliveListSrvForVSIndex_; }
+    uint32_t GetAliveCounterSrvForVSIndex() const { return aliveCounterSrvForVSIndex_; }
+    // 直近フレームに読み戻した生存数(描画 instanceCount のヒント)
+    uint32_t GetAliveDrawCount() const { return aliveDrawCount_; }
+    // 生存コンパクションカウンタを 0 にリセットする 1スレッドパス
+    void ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdList);
+    // 生存数を readback バッファへコピーする（compute キュー上で記録すること）
+    void RecordAliveCountReadback(ID3D12GraphicsCommandList *computeCmdList);
+    // readback 済みの生存数を CPU へ取り込む（aliveDrawCount_ を更新）
+    void FetchAliveDrawCount();
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListIndexSrvHandle() const { return freeListIndexSrvHandle_; }
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListTrailIndexSrvHandle() const { return freeListTrailIndexSrvHandle_; }
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListSrvHandle() const { return freeListSrvHandle_; }
@@ -70,6 +83,10 @@ class ParticleCSGroup {
     // カウント処理を実行
     void CountAliveParticles();
 
+    // プール再利用時に GPU 上のパーティクル状態とフリーリストを初期化し直す。
+    // （新規生成時の InitParticle と同等。バッファ/SRV は再確保しない）
+    void ResetForReuse() { InitParticle(); }
+
   private:
     /// ===================================
     /// private methods
@@ -88,6 +105,7 @@ class ParticleCSGroup {
     void CreateFreeListResource();
     void CreateSettingsResource();
     void CreateAliveCountResource();
+    void CreateAliveListResources();
 
   private:
     /// ===================================
@@ -130,6 +148,20 @@ class ParticleCSGroup {
 
     Microsoft::WRL::ComPtr<ID3D12Resource> settingsResource_{};
     ParticleCSSettings *settingsData_ = nullptr;
+
+    // ===== 生存コンパクション (Phase 1) =====
+    // 生存パーティクルの slot index を詰めるバッファ (UAV: compute u4 / SRV: VS t2)
+    Microsoft::WRL::ComPtr<ID3D12Resource> aliveListResource_{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveListUavHandle_{};
+    uint32_t aliveListUavIndex_ = 0;
+    uint32_t aliveListSrvForVSIndex_ = 0;
+    // 生存数アトミックカウンタ (UAV: compute u5 / SRV: VS t3)
+    Microsoft::WRL::ComPtr<ID3D12Resource> aliveCounterResource_{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveCounterUavHandle_{};
+    uint32_t aliveCounterUavIndex_ = 0;
+    uint32_t aliveCounterSrvForVSIndex_ = 0;
+    Microsoft::WRL::ComPtr<ID3D12Resource> aliveCounterReadbackResource_{};
+    uint32_t aliveDrawCount_ = 0;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> aliveCountResource_{};
     Microsoft::WRL::ComPtr<ID3D12Resource> aliveCountReadbackResource_{};

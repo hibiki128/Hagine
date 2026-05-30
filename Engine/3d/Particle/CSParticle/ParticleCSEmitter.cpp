@@ -12,6 +12,20 @@
 #include"../Utility/Debug/ImGui/ImGuizmoManager.h"
 #include"../Utility/Debug/ImGui/ImGuiNotification.h"
 
+ParticleCSEmitter::~ParticleCSEmitter() {
+    // 保有していた独立グループを破棄せず再利用プールへ返却する。
+    // これにより弾・ヒット等の高頻度スポーンでもバッファが累積しない。
+    // 注意: group は Finalize 順序によっては既に破棄済みの場合がある。
+    // ReleaseIndependentGroup はポインタ比較のみで deref しないため安全。
+    for (ParticleCSGroup *group : particleGroups_) {
+        if (group) {
+            ParticleCSGroupManager::GetInstance()->ReleaseIndependentGroup(group);
+        }
+    }
+    particleGroups_.clear();
+    particleGroupNames_.clear();
+}
+
 void ParticleCSEmitter::Initialize(const std::string &name) {
     particleCommon_ = ParticleCommon::GetInstance();
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
@@ -64,6 +78,9 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
         uavBarrier.UAV.pResource = group->GetOutputParticleResource().Get();
         computeCmdList->ResourceBarrier(1, &uavBarrier);
 
+        // 生存コンパクションカウンタを 0 にリセット（Update の append より前）
+        group->ResetAliveCounterDispatch(computeCmdList);
+
         auto *fieldMgr = ParticleCSFieldManager::GetInstance();
         group->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),
@@ -71,6 +88,9 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
                            : fieldMgr->GetZeroFieldCountResource(),
             fieldMgr->GetOverrideSrvHandle(),
             computeCmdList);
+
+        // 生存数を readback バッファへコピー（compute キュー上で記録）
+        group->RecordAliveCountReadback(computeCmdList);
     }
     // Execute は DrawSystem（または呼び出し元）が一括で行う
 }
@@ -82,7 +102,21 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
     DrawEmitter();
 
     for (auto &group : particleGroups_) {
-        group->CountAliveParticles();
+        // Phase 2: 旧 CountParticle 全Nディスパッチは廃止（生存数は aliveCounter に統合）
+
+        // 生存数を読み戻し、描画 instanceCount を決定する。
+        // VS 側で instanceId >= 実生存数 を確実にカリングするため、
+        // ここでは生存数概算＋マージンで instance を発行する。
+        group->FetchAliveDrawCount();
+        const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
+        uint32_t drawCount = group->GetAliveDrawCount();
+        drawCount = drawCount + (drawCount / 4) + 256; // 急増分のマージン
+        if (drawCount > maxCount) {
+            drawCount = maxCount;
+        }
+        if (drawCount == 0) {
+            continue; // 生存ゼロなら描画スキップ
+        }
 
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
         const auto &meshes = group->GetModelData().meshes;
@@ -95,7 +129,10 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
             srvManager_->SetGraphicsRootDescriptorTable(1, group->GetOutputParticleSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
             commandList->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
-            commandList->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), group->GetSettingsData()->maxParticleCount, 0, 0, 0);
+            // 生存コンパクション SRV (t2: aliveList, t3: aliveCount)
+            srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
+            srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
+            commandList->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
 }
@@ -106,6 +143,42 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
     dxCommon_->ExecuteComputeCommands();
     dxCommon_->WaitForComputeOnDirectQueue();
     DrawGraphics(vp);
+}
+
+void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress) {
+    if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
+    if (particleGroups_.empty()) return;
+
+    // ワイヤーフレーム(DrawEmitter)はプレビューでは描かない。
+    for (auto &group : particleGroups_) {
+        group->FetchAliveDrawCount();
+        const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
+        uint32_t drawCount = group->GetAliveDrawCount();
+        drawCount = drawCount + (drawCount / 4) + 256; // 急増分のマージン
+        if (drawCount > maxCount) {
+            drawCount = maxCount;
+        }
+        if (drawCount == 0) {
+            continue;
+        }
+
+        particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
+        const auto &meshes = group->GetModelData().meshes;
+        for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
+            D3D12_INDEX_BUFFER_VIEW indexBufferView = group->GetIndexBufferView();
+            D3D12_VERTEX_BUFFER_VIEW vertexBufferView = group->GetVertexBufferView();
+            commandList->IASetIndexBuffer(&indexBufferView);
+            commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+            // root param 0 のみプレビュー専用 per-view CB に差し替える（共有グループの VP は不変）
+            commandList->SetGraphicsRootConstantBufferView(0, perViewGpuAddress);
+            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetOutputParticleSrvForVSIndex());
+            srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
+            commandList->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
+            srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
+            srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
+            commandList->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
+        }
+    }
 }
 
 void ParticleCSEmitter::LoadModel(const std::string &modelPath) {

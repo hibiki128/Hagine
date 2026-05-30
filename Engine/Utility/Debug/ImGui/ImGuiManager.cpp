@@ -291,6 +291,8 @@ void ImGuiManager::ShowMainMenu() {
                     showObjectView_ = !showObjectView_;
                 if (ImGui::Selectable(ICON_FA_STAR " パーティクルビュー", showParticleView_, ImGuiSelectableFlags_DontClosePopups))
                     showParticleView_ = !showParticleView_;
+                if (ImGui::Selectable(ICON_FA_IMAGE " パーティクルプレビュー", showParticlePreviewView_, ImGuiSelectableFlags_DontClosePopups))
+                    showParticlePreviewView_ = !showParticlePreviewView_;
                 if (ImGui::Selectable(ICON_FA_DATABASE " FPSビュー", showFPSView_, ImGuiSelectableFlags_DontClosePopups))
                     showFPSView_ = !showFPSView_;
                 if (ImGui::Selectable(ICON_FA_STAR_OF_DAVID " オフスクリーンビュー", showOfScreenView_, ImGuiSelectableFlags_DontClosePopups))
@@ -622,6 +624,13 @@ void ImGuiManager::ShowParticleSettingWindow() {
     ImGui::End();
 }
 
+void ImGuiManager::ShowParticlePreviewWindow() {
+    // 表示メニューの「パーティクルプレビュー」でON/OFF。ウィンドウのXボタンとフラグを同期させる。
+    if (!showParticlePreviewView_)
+        return;
+    ParticleCSEditor::GetInstance()->ShowPreviewWindow(&showParticlePreviewView_);
+}
+
 void ImGuiManager::ShowStatisticsWindow() {
     if (!showFPSView_)
         return; // 表示しない場合は早期リターン
@@ -884,6 +893,8 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowObjectSettingWindow();
     // プロジェクトウィンドウを描画
     ShowParticleSettingWindow();
+    // GPUパーティクル プレビュー窓を描画
+    ShowParticlePreviewWindow();
     // FPSを描画
     ShowStatisticsWindow();
     // オフスクリーンウィンドウを描画
@@ -1366,6 +1377,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showSceneView", showSceneView_);
     data->Save("showObjectView", showObjectView_);
     data->Save("showParticleView", showParticleView_);
+    data->Save("showParticlePreviewView", showParticlePreviewView_);
     data->Save("showFPSView", showFPSView_);
     data->Save("showOfScreenView", showOfScreenView_);
     data->Save("showLightView", showLightView_);
@@ -1388,6 +1400,7 @@ void ImGuiManager::LoadFlag() {
     showSceneView_ = data->Load("showSceneView", true);
     showObjectView_ = data->Load("showObjectView", true);
     showParticleView_ = data->Load("showParticleView", false);
+    showParticlePreviewView_ = data->Load("showParticlePreviewView", false);
     showFPSView_ = data->Load("showFPSView", true);
     showOfScreenView_ = data->Load("showOfScreenView", false);
     showLightView_ = data->Load("showLightView", false);

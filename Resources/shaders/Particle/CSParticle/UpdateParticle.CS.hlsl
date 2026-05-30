@@ -9,6 +9,10 @@ RWStructuredBuffer<Particle> gParticles : register(u0);
 RWStructuredBuffer<int> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint> gFreeList : register(u2);
 RWStructuredBuffer<int> gFreeListTailIndex : register(u3);
+// 生存コンパクション用: 生存パーティクルの slot index を詰めて書き出す
+RWStructuredBuffer<uint> gAliveList : register(u4);
+// 生存コンパクション用: append 位置を返すアトミックカウンタ (各フレーム先頭で 0 にリセット)
+RWStructuredBuffer<uint> gAliveCounter : register(u5);
 StructuredBuffer<ParticleField> gFields : register(t0);
 StructuredBuffer<ParticleFieldSettingsOverrideData> gFieldsOverride : register(t1);
 
@@ -151,7 +155,9 @@ FieldEffectResult ApplyFields(float3 velocity, float3 particlePos, float deltaTi
 //   引数 particleIndex : 対象パーティクルの配列インデックス
 //   引数 fi            : gFieldsOverride の添字（gFields と同一）
 // =============================================
-void ApplySettingsOverride(int particleIndex, uint fi)
+// 対象パーティクルはローカル変数 p で読み書きする（global往復を排除）。
+// 全て自スロットへの操作なので安全かつメモリ往復が無くなる。
+void ApplySettingsOverride(inout Particle p, uint fi)
 {
     ParticleFieldSettingsOverrideData ov = gFieldsOverride[fi];
     // overrideMask が 0 なら何もしない（高速パス）
@@ -160,7 +166,7 @@ void ApplySettingsOverride(int particleIndex, uint fi)
 
     // まだ上書きされていないビットだけ処理する
     // = overrideMask & ~settingsOverrideFlags
-    uint2 pFlags = gParticles[particleIndex].settingsOverrideFlags;
+    uint2 pFlags = p.settingsOverrideFlags;
     uint2 pending;
     pending.x = ov.overrideMask.x & ~pFlags.x;
     pending.y = ov.overrideMask.y & ~pFlags.y;
@@ -171,7 +177,7 @@ void ApplySettingsOverride(int particleIndex, uint fi)
     // --- 各項目を pending ビットで個別チェック ---
     // bit0-31 (pending.x)
     if (pending.x & (1u << OB_LifeTimeMin))
-        gParticles[particleIndex].lifeTime = ov.lifeTimeMin; // lifeTime を直接上書き
+        p.lifeTime = ov.lifeTimeMin; // lifeTime を直接上書き
 
     if (pending.x & (1u << OB_LifeTimeMax))
     {
@@ -179,35 +185,35 @@ void ApplySettingsOverride(int particleIndex, uint fi)
         // currentTime もリセットして新しい寿命で動かしたい場合は 0 にする
         // ここでは lifeTime を lifeTimeMax で上書きするだけにして
         // currentTime はリセットしない（残り寿命が縮まる使い方を自然に実現）
-        gParticles[particleIndex].lifeTime = ov.lifeTimeMax;
+        p.lifeTime = ov.lifeTimeMax;
     }
 
     if (pending.x & (1u << OB_ScaleMin))
     {
         // 現在のスケールを scaleMin 値で再設定
         float3 newScale = float3(ov.scaleMin, ov.scaleMin, ov.scaleMin);
-        gParticles[particleIndex].initialScale = newScale;
-        gParticles[particleIndex].scale = newScale;
+        p.initialScale = newScale;
+        p.scale = newScale;
     }
 
     if (pending.x & (1u << OB_ScaleMax))
     {
         float3 newScale = float3(ov.scaleMax, ov.scaleMax, ov.scaleMax);
-        gParticles[particleIndex].initialScale = newScale;
-        gParticles[particleIndex].scale = newScale;
+        p.initialScale = newScale;
+        p.scale = newScale;
     }
 
     if (pending.x & (1u << OB_VelocityMin))
-        gParticles[particleIndex].velocity = max(gParticles[particleIndex].velocity, ov.velocityMin);
+        p.velocity = max(p.velocity, ov.velocityMin);
 
     if (pending.x & (1u << OB_VelocityMax))
-        gParticles[particleIndex].velocity = min(gParticles[particleIndex].velocity, ov.velocityMax);
+        p.velocity = min(p.velocity, ov.velocityMax);
 
     if (pending.x & (1u << OB_StartColor))
-        gParticles[particleIndex].color = ov.startColor;
+        p.color = ov.startColor;
 
     if (pending.x & (1u << OB_EndColor))
-        gParticles[particleIndex].color = ov.endColor;
+        p.color = ov.endColor;
 
     // Note: enableXxx 系のフラグはパーティクル自体には持たせず
     //       gSettings (ConstantBuffer) 側の話なので、パーティクル単体での
@@ -216,17 +222,17 @@ void ApplySettingsOverride(int particleIndex, uint fi)
 
     if (pending.x & (1u << OB_TrailSpawnDistance))
     {
-        gParticles[particleIndex].trailSpawnDistance = ov.trailSpawnDistance;
+        p.trailSpawnDistance = ov.trailSpawnDistance;
     }
 
     if (pending.x & (1u << OB_GatherTarget))
     {
         // gatherTarget はグループ設定なので、パーティクル側では
         // 速度を直接 gatherTarget 方向に向け替えることで擬似実現する
-        float3 toTarget = ov.gatherTarget - gParticles[particleIndex].translate;
+        float3 toTarget = ov.gatherTarget - p.translate;
         float dist = length(toTarget);
         if (dist > 0.01f)
-            gParticles[particleIndex].velocity = normalize(toTarget) * length(gParticles[particleIndex].velocity);
+            p.velocity = normalize(toTarget) * length(p.velocity);
     }
 
     // bit32-63 (pending.y) — 加速度・ダンピング・CurlNoise はグループ全体設定なので
@@ -235,32 +241,34 @@ void ApplySettingsOverride(int particleIndex, uint fi)
     if (pending.y & (1u << (OB_Acceleration - 32u)))
     {
         // 加速度を現在 velocity に即時加算（一回だけ）
-        gParticles[particleIndex].velocity += ov.acceleration;
+        p.velocity += ov.acceleration;
     }
 
     if (pending.y & (1u << (OB_VelocityDampingFactor - 32u)))
     {
         // 一回だけ速度にダンピングを適用
-        gParticles[particleIndex].velocity *= ov.velocityDampingFactor;
+        p.velocity *= ov.velocityDampingFactor;
     }
 
     // --- 書き換えたビットを記録 ---
-    gParticles[particleIndex].settingsOverrideFlags.x |= pending.x;
-    gParticles[particleIndex].settingsOverrideFlags.y |= pending.y;
+    p.settingsOverrideFlags.x |= pending.x;
+    p.settingsOverrideFlags.y |= pending.y;
 }
 
-void SpawnTrailParticles(int particleIndex, float3 currentPosition)
+// 親パーティクルはローカル変数 p で読み書きする（global往復を排除）。
+// 子トレイルスロットへの書き込みのみ gParticles[trailIndex] を直接触る（互いに素なので安全）。
+void SpawnTrailParticles(inout Particle p, int particleIndex, float3 currentPosition)
 {
-    float parentLifeTime = gParticles[particleIndex].lifeTime;
-    float parentCurrentTime = gParticles[particleIndex].currentTime;
+    float parentLifeTime = p.lifeTime;
+    float parentCurrentTime = p.currentTime;
     float parentRemainingLife = max(0.0f, parentLifeTime - parentCurrentTime);
 
     if (parentRemainingLife < gSettings.trailMinLifeTime * 0.2f)
         return;
 
-    float3 lastPos = gParticles[particleIndex].lastTrailPosition;
-    float targetDistance = gParticles[particleIndex].trailSpawnDistance;
-    
+    float3 lastPos = p.lastTrailPosition;
+    float targetDistance = p.trailSpawnDistance;
+
     if (targetDistance <= 0.001f)
         return;
 
@@ -297,9 +305,9 @@ void SpawnTrailParticles(int particleIndex, float3 currentPosition)
         return;
     }
 
-    float3 parentCurrentScale = gParticles[particleIndex].scale;
-    float3 parentVelocity = gParticles[particleIndex].velocity;
-    float4 parentColor = gParticles[particleIndex].color;
+    float3 parentCurrentScale = p.scale;
+    float3 parentVelocity = p.velocity;
+    float4 parentColor = p.color;
 
     float desiredTrailLife = parentRemainingLife * gSettings.trailLifeTimeScale;
     float trailLifeTime = max(desiredTrailLife, gSettings.trailMinLifeTime);
@@ -347,7 +355,7 @@ void SpawnTrailParticles(int particleIndex, float3 currentPosition)
     // capped のときは移動区間を全消費して lastTrailPosition を currentPosition まで進め、
     // 追従の遅れを次フレームへ持ち越さないようにする。
     float consumedDistance = capped ? totalDistance : (float(requiredCount) * targetDistance);
-    gParticles[particleIndex].lastTrailPosition = lastPos + direction * consumedDistance;
+    p.lastTrailPosition = lastPos + direction * consumedDistance;
 }
 
 [numthreads(1024, 1, 1)]
@@ -602,11 +610,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
             if (dot(toP, toP) >= gFields[fi].radius * gFields[fi].radius)
                 continue; // 範囲外
 
-                // ApplySettingsOverride はグローバルバッファを直接書き換えるため
-                // 呼び出し前に書き戻し、呼び出し後に再ロードする
-            gParticles[particleIndex] = p;
-            ApplySettingsOverride(particleIndex, fi);
-            p = gParticles[particleIndex];
+                // ローカル p で完結（往復書き戻し不要）
+            ApplySettingsOverride(p, fi);
         }
     }
         
@@ -707,12 +712,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
                     (gSettings.trailSpawnDistance > 0.0f) ? gSettings.trailSpawnDistance : 0.3f;
         }
 
-            // SpawnTrailParticles はグローバルバッファを直接読み書きするため
-            // 呼び出し前にローカルの変更を書き戻す
-        gParticles[particleIndex] = p;
-        SpawnTrailParticles(particleIndex, currentPosition);
-            // SpawnTrailParticles が lastTrailPosition を更新するので再ロード
-        p.lastTrailPosition = gParticles[particleIndex].lastTrailPosition;
+            // 親はローカル p で完結（往復書き戻し不要）。子スロットのみ内部で直接書き込む。
+        SpawnTrailParticles(p, particleIndex, currentPosition);
 
             // 元の距離設定を戻す（通常トレイルが有効なときは書き換えない）
         if (fieldForceTrail != 0 && gSettings.enableTrail == 0)
@@ -738,6 +739,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
         int slot = oldTail % gSettings.maxParticleCount;
         gFreeList[slot] = particleIndex;
     }
-    
+
     gParticles[particleIndex] = p;
+
+    // =============================================
+    // 生存コンパクション
+    //   このフレームの更新後も生存しているパーティクルだけを
+    //   aliveList の先頭から詰めて書き出す。
+    //   描画側は aliveCounter 個だけ instance を発行すればよく、
+    //   死亡スロットへの無駄な VS 起動（オーバードロー要因）を排除する。
+    //   ※ このフレームに新規生成されたトレイル子は、自身のスレッドが
+    //     既に早期 return しているため次フレームから描画対象になる（1F遅延・許容）。
+    // =============================================
+    if (IsAliveParticle(p))
+    {
+        uint dstIndex;
+        InterlockedAdd(gAliveCounter[0], 1, dstIndex);
+        gAliveList[dstIndex] = (uint) particleIndex;
+    }
 }

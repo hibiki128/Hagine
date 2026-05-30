@@ -95,4 +95,70 @@ class ParticleCSEditor {
     void Load();
     // エミッターを名前指定で削除
     void RemoveParticleEmitter(const std::string &name);
+
+    // ===== プレビュー窓 (Phase 8) =====
+    // 専用オフスクリーンRTを生成する（初回のみ）。Initialize から呼ぶ。
+    void InitializePreview();
+    // プレビューRTへ描画する。DrawSystem::Draw 冒頭(direct リスト記録中・ステージ束ね前)で呼ぶこと。
+    void RenderPreview();
+    // ImGui にプレビュー画像を表示する（ImGui構築フェーズで呼ぶ）。pOpen はウィンドウのXボタンと連動する表示フラグ。
+    void ShowPreviewWindow(bool *pOpen = nullptr);
+
+  private:
+    /// ===== プレビュー窓 内部状態 =====
+    // RT/深度はクライアント解像度ぶんを最大確保し、実描画は ImGui ウィンドウのサイズに合わせて
+    // ビューポート＋UV部分表示で可変にする（リソース再確保による frame-latency ハザードを回避）。
+    static constexpr uint32_t kPreviewMaxWidth_ = 1760;  // = WinApp::kClientWidth
+    static constexpr uint32_t kPreviewMaxHeight_ = 990;  // = WinApp::kClientHeight
+    uint32_t previewRenderWidth_ = 512;                  // 今フレームの実描画幅（ImGuiウィンドウ依存）
+    uint32_t previewRenderHeight_ = 512;                 // 今フレームの実描画高
+    Microsoft::WRL::ComPtr<ID3D12Resource> previewColorResource_;
+    uint32_t previewColorSrvIndex_ = 0;
+    D3D12_CPU_DESCRIPTOR_HANDLE previewRtvHandle_{};
+    D3D12_RESOURCE_STATES previewColorState_ = D3D12_RESOURCE_STATE_GENERIC_READ;
+    bool previewInitialized_ = false;
+
+    // 専用深度バッファ（DSV スロット1）。サンプリングしないので常時 DEPTH_WRITE。
+    Microsoft::WRL::ComPtr<ID3D12Resource> previewDepthResource_;
+    D3D12_CPU_DESCRIPTOR_HANDLE previewDsvHandle_{};
+
+    // 白グリッド線（共有 DrawLine3D とは独立した専用VB）。kLine3d PSO を流用して描画する。
+    struct PreviewLineVertex {
+        Vector3 pos;
+        Vector4 color;
+    };
+    static constexpr int kPreviewGridMaxDivision_ = 100; // VB容量の上限（(div+1)*4 頂点）
+    Microsoft::WRL::ComPtr<ID3D12Resource> previewGridVB_;
+    D3D12_VERTEX_BUFFER_VIEW previewGridVBView_{};
+    uint32_t previewGridVertexCount_ = 0;
+    PreviewLineVertex *previewGridMapped_ = nullptr; // 永続マップ（設定変更時に内容だけ書き換える）
+
+    // プレビュー表示設定（背景色・グリッド）
+    float previewBgColor_[4] = {0.02f, 0.02f, 0.03f, 1.0f};
+    bool previewShowGrid_ = true;
+    int previewGridDivision_ = 20;
+    float previewGridHalfSize_ = 10.0f;
+    Vector4 previewGridColor_ = {0.35f, 0.35f, 0.4f, 1.0f};
+    bool previewGridDirty_ = false; // グリッド設定が変わったら true（RenderPreview で再構築）
+
+    // プレビューカメラの viewProject を渡す CB（kLine3d ルートパラメータ0）。
+    Microsoft::WRL::ComPtr<ID3D12Resource> previewLineCB_;
+    Matrix4x4 *previewLineCBData_ = nullptr;
+
+    // 選択エミッタをプレビューRTへ隔離描画するための専用 per-view CB（共有グループの VP を汚さない）。
+    Microsoft::WRL::ComPtr<ID3D12Resource> previewPerViewCB_;
+    PerView *previewPerViewData_ = nullptr;
+
+    // オービットカメラ（8c でマウス操作を追加予定）。
+    float previewCamYaw_ = 0.6f;
+    float previewCamPitch_ = 0.45f;
+    float previewCamDistance_ = 16.0f;
+    Vector3 previewCamTarget_ = {0.0f, 0.0f, 0.0f};
+
+    // グリッド頂点バッファを最大容量で確保し永続マップする（初回のみ）。
+    void BuildPreviewGrid();
+    // 現在のグリッド設定（分割数/サイズ/色）をマップ済みVBへ書き込み、頂点数を更新する。
+    void RebuildPreviewGridContents();
+    // 現在のカメラパラメータから view 行列と view*projection 行列を計算する。
+    void ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &outViewProj) const;
 };

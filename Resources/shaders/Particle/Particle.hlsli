@@ -53,6 +53,17 @@ Particle CreateEmptyParticle()
     return p;
 }
 
+// =============================================
+// 生存判定の正準述語
+//   Update 側で死亡したパーティクルは lifeTime を 0 にリセットするため、
+//   未使用スロット・死亡スロットは共に lifeTime <= 0 となる。
+//   生存コンパクション(aliveList)と描画カリングはこの述語に一本化する。
+// =============================================
+bool IsAliveParticle(Particle p)
+{
+    return p.lifeTime > 0.0f;
+}
+
 bool HasOverrideBit(uint2 flags, uint bitIndex)
 {
     if (bitIndex < 32u)
@@ -202,8 +213,12 @@ struct ParticleCSSettings
     float emitShapePad;
 };
 
+// 【重要】このレイアウトは C++ 側 `struct ParticleFieldData`
+//   （Engine/3d/Particle/ParticleStruct.h）と**バイト単位で一致**させること（合計112バイト）。
+//   C++ 側には sizeof/offsetof の static_assert があり、ずれるとビルドで検出される。
 struct ParticleField
 {
+    // 1. Force（速度系）
     float3 position;
     float radius;
     float3 direction;

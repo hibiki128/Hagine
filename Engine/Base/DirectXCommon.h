@@ -89,6 +89,9 @@ class DirectXCommon {
 
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(uint32_t width, uint32_t height, DXGI_FORMAT format, D3D12_CLEAR_VALUE color);
 
+    // メイン深度以外の追加深度ステンシルリソースを生成する（プレビュー窓など）。DEPTH_WRITE 状態で返る。
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateAdditionalDepthResource(int32_t width, int32_t height);
+
     [[nodiscard]]
     Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage &mipImages);
 
