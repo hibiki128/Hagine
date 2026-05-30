@@ -34,9 +34,9 @@ void TitleScene::Initialize() {
     drawSystem_->Register("TitleScene_3D", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
         skyBox_->Draw(vp);
         objectManager_->Draw(vp);
+        titleUI_->Draw(vp_);
     });
     drawSystem_->Register("TitleScene_UI", DrawLayer::kPostEffect, [this](const ViewProjection &) {
-        titleUI_->Draw(vp_);
         spriteManager_->DrawAll();
     });
 }
