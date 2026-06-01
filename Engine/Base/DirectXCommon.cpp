@@ -637,6 +637,23 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateAdditionalDepthResou
     return CreateDepthStencilTextureResource(device, width, height);
 }
 
+ID3D12CommandSignature *DirectXCommon::GetDispatchIndirectCommandSignature() {
+    // Phase 3 基盤: 初回呼び出し時に遅延生成する（未使用なら一切作られない）。
+    if (!dispatchIndirectCommandSignature_) {
+        D3D12_INDIRECT_ARGUMENT_DESC arg{};
+        arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+
+        D3D12_COMMAND_SIGNATURE_DESC desc{};
+        desc.ByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS); // 12 バイト (uint x3)
+        desc.NumArgumentDescs = 1;
+        desc.pArgumentDescs = &arg;
+        // DISPATCH のみでルート引数を差し替えないため pRootSignature は nullptr で良い。
+        HRESULT hr = device->CreateCommandSignature(&desc, nullptr, IID_PPV_ARGS(&dispatchIndirectCommandSignature_));
+        assert(SUCCEEDED(hr));
+    }
+    return dispatchIndirectCommandSignature_.Get();
+}
+
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height) {
     // 生成するResourceの設定
     D3D12_RESOURCE_DESC resourceDesc{};

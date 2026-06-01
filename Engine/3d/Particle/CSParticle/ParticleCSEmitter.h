@@ -185,7 +185,11 @@ class ParticleCSEmitter {
 
     void CreateEmitterMeshResource();
     void EmitterUpdate();
-    void EmitterDisPatch(ID3D12GraphicsCommandList *cmdList = nullptr);
+    // indirectGroup を渡すと kEmitterIndirect PSO を使い、そのグループのみ emit して
+    // 発生スロットを出力(Out) aliveList(B) にも append する（Phase 3）。
+    // nullptr の場合は従来パス（全グループ・kEmitter PSO）で挙動不変。
+    void EmitterDisPatch(ID3D12GraphicsCommandList *cmdList = nullptr,
+                         ParticleCSGroup *indirectGroup = nullptr);
 
   public:
     // ---- バッチ非同期コンピュート用 2フェーズ API ----
@@ -197,6 +201,15 @@ class ParticleCSEmitter {
     // RT/DSV/Viewport/DescriptorHeap は呼び出し側で設定済みであること。ワイヤー(DrawEmitter)は描かない。
     void DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress);
     void DrawEmitter();
+
+    // プレビュー窓用: エミッタのワイヤーフレーム線分を取得する（DrawEmitter と同一形状）。
+    // 共有 DrawLine3D を使わず呼び出し側（プレビュー）が専用VPで描けるよう、線分列を返す。
+    struct WireSegment {
+        Vector3 a;
+        Vector3 b;
+        Vector4 color;
+    };
+    std::vector<WireSegment> GetWireframeSegments() const;
 
     void SaveSetting();
     void LoadSetting();

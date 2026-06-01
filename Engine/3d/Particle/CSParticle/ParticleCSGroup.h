@@ -38,8 +38,19 @@ class ParticleCSGroup {
     // 生存コンパクション用ハンドル/インデックス
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveListUavHandle() const { return aliveListUavHandle_; }
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveCounterUavHandle() const { return aliveCounterUavHandle_; }
-    uint32_t GetAliveListSrvForVSIndex() const { return aliveListSrvForVSIndex_; }
-    uint32_t GetAliveCounterSrvForVSIndex() const { return aliveCounterSrvForVSIndex_; }
+    // 描画(VS)が読む生存リスト/カウンタの SRV インデックス。
+    // indirect モード有効時は「このフレームの出力(Out)」側を返す（ping-pong）。
+    // 既定(OFF)では従来どおり単一バッファを返すため挙動不変。
+    uint32_t GetAliveListSrvForVSIndex() const {
+        return (useIndirectSim_ && indirectResourcesCreated_)
+                   ? (writeToB_ ? aliveListBSrvForVSIndex_ : aliveListSrvForVSIndex_)
+                   : aliveListSrvForVSIndex_;
+    }
+    uint32_t GetAliveCounterSrvForVSIndex() const {
+        return (useIndirectSim_ && indirectResourcesCreated_)
+                   ? (writeToB_ ? aliveCounterBSrvForVSIndex_ : aliveCounterSrvForVSIndex_)
+                   : aliveCounterSrvForVSIndex_;
+    }
     // 直近フレームに読み戻した生存数(描画 instanceCount のヒント)
     uint32_t GetAliveDrawCount() const { return aliveDrawCount_; }
     // 生存コンパクションカウンタを 0 にリセットする 1スレッドパス
@@ -87,6 +98,49 @@ class ParticleCSGroup {
     // （新規生成時の InitParticle と同等。バッファ/SRV は再確保しない）
     void ResetForReuse() { InitParticle(); }
 
+    // ===================================
+    // Phase 3: ping-pong + DispatchIndirect（既定 OFF）
+    //   sim を「生存数ぶんだけ」DispatchIndirect で起動する。
+    //   旧パス（全 N ディスパッチ）は非改変のまま温存し、フラグで切替える。
+    // ===================================
+    // maxParticleCount がこの値以上のグループは、生成時に自動で indirect 更新を有効化する。
+    //   理由: 更新の全 N ディスパッチは毎フレーム maxParticleCount ぶんスレッドを起動し、
+    //   各スレッドが Particle(約150B) をロードして死スロットを弾く。max が大きいと生存数に
+    //   関係なく帯域を食い潰す（例: 1000万 → 毎フレーム約1.5GB読み）。indirect は生存数ぶん
+    //   しか起動しないためこれを解消する。
+    //   小容量グループは全 N が十分軽く、indirect のオーバーヘッド（間接参照＋追加ディスパッチ/
+    //   バリア）だけが乗るため OFF のままにする。ImGui トグルでいつでも手動上書き可。
+    static constexpr uint32_t kIndirectSimAutoThreshold = 262144; // 256K スロット
+    void SetUseIndirectSim(bool enable);
+    bool GetUseIndirectSim() const { return useIndirectSim_; }
+    bool IsIndirectSimReady() const { return useIndirectSim_ && indirectResourcesCreated_; }
+
+    // B 系 aliveList/counter と dispatchArgs、および専用 PSO を遅延生成する。
+    // 既に生成済みなら no-op。SetUseIndirectSim(true) 内で呼ばれる。
+    void EnsureIndirectSimResources();
+
+    // フレーム先頭で In/Out を入れ替える（描画は Out を読むため、compute 開始時に呼ぶ）。
+    void SwapIndirectAliveLists() { writeToB_ = !writeToB_; }
+
+    // 出力(Out)カウンタを 0 にリセット（emit / update の append より前に呼ぶ）。
+    void ResetIndirectOutCounterDispatch(ID3D12GraphicsCommandList *cmdList);
+    // 入力(In)生存数から間接ディスパッチ引数を生成し UAV->INDIRECT_ARGUMENT へ遷移する。
+    void BuildDispatchArgsDispatch(ID3D12GraphicsCommandList *cmdList);
+    // UpdateParticleIndirect を ExecuteIndirect で実行（In を処理し Out へ append）。
+    void UpdateParticleIndirectDispatch(
+        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
+        Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
+        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
+        ID3D12GraphicsCommandList *cmdList);
+
+    // emit が append する出力(Out) aliveList/counter の UAV ハンドル（u4/u5 に束ねる）。
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetIndirectOutAliveListUavHandle() const {
+        return writeToB_ ? aliveListBUavHandle_ : aliveListUavHandle_;
+    }
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetIndirectOutAliveCounterUavHandle() const {
+        return writeToB_ ? aliveCounterBUavHandle_ : aliveCounterUavHandle_;
+    }
+
   private:
     /// ===================================
     /// private methods
@@ -106,6 +160,8 @@ class ParticleCSGroup {
     void CreateSettingsResource();
     void CreateAliveCountResource();
     void CreateAliveListResources();
+    // Phase 3: B 系 aliveList/counter ＋ dispatchArgs を生成
+    void CreateIndirectSimResources();
 
   private:
     /// ===================================
@@ -162,6 +218,32 @@ class ParticleCSGroup {
     uint32_t aliveCounterSrvForVSIndex_ = 0;
     Microsoft::WRL::ComPtr<ID3D12Resource> aliveCounterReadbackResource_{};
     uint32_t aliveDrawCount_ = 0;
+
+    // ===== Phase 3: ping-pong + DispatchIndirect（既定OFF・遅延生成） =====
+    bool useIndirectSim_ = false;          // indirect sim を使うか（OFF=従来パス）
+    bool indirectResourcesCreated_ = false; // B/dispatchArgs/PSO を生成済みか
+    bool writeToB_ = true;                  // このフレームの出力(Out)が B 側か（毎フレームトグル）
+    bool indirectBootstrap_ = false;        // 初回のみ入力(In)カウンタも 0 にして空リスト扱いにする
+
+    // aliveList B（A=既存 aliveListResource_ と ping-pong する相方）
+    Microsoft::WRL::ComPtr<ID3D12Resource> aliveListBResource_{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveListBUavHandle_{};
+    uint32_t aliveListBUavIndex_ = 0;
+    uint32_t aliveListBSrvForVSIndex_ = 0;
+    // aliveCounter B
+    Microsoft::WRL::ComPtr<ID3D12Resource> aliveCounterBResource_{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveCounterBUavHandle_{};
+    uint32_t aliveCounterBUavIndex_ = 0;
+    uint32_t aliveCounterBSrvForVSIndex_ = 0;
+    // 間接ディスパッチ引数（D3D12_DISPATCH_ARGUMENTS = uint x3）
+    Microsoft::WRL::ComPtr<ID3D12Resource> dispatchArgsResource_{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> dispatchArgsUavHandle_{};
+    uint32_t dispatchArgsUavIndex_ = 0;
+    D3D12_RESOURCE_STATES dispatchArgsState_ = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    // Phase 5: グループ単位トレイル予算カウンタ（u8・毎フレーム 0 リセット）
+    Microsoft::WRL::ComPtr<ID3D12Resource> trailBudgetResource_{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> trailBudgetUavHandle_{};
+    uint32_t trailBudgetUavIndex_ = 0;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> aliveCountResource_{};
     Microsoft::WRL::ComPtr<ID3D12Resource> aliveCountReadbackResource_{};

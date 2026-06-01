@@ -127,18 +127,27 @@ class ParticleCSEditor {
         Vector3 pos;
         Vector4 color;
     };
-    static constexpr int kPreviewGridMaxDivision_ = 100; // VB容量の上限（(div+1)*4 頂点）
+    static constexpr int kPreviewGridMaxDivision_ = 600; // VB容量の上限（(div+1)*4 頂点）。ほぼ無限グリッド用に拡大。
     Microsoft::WRL::ComPtr<ID3D12Resource> previewGridVB_;
     D3D12_VERTEX_BUFFER_VIEW previewGridVBView_{};
     uint32_t previewGridVertexCount_ = 0;
     PreviewLineVertex *previewGridMapped_ = nullptr; // 永続マップ（設定変更時に内容だけ書き換える）
 
+    // 選択エミッタのワイヤーフレーム線（共有 DrawLine3D を使わずプレビュー専用VBで描画）。
+    static constexpr uint32_t kPreviewWireMaxVerts_ = 24000; // 上限（超過分は切り捨て）
+    Microsoft::WRL::ComPtr<ID3D12Resource> previewWireVB_;
+    D3D12_VERTEX_BUFFER_VIEW previewWireVBView_{};
+    uint32_t previewWireVertexCount_ = 0;
+    PreviewLineVertex *previewWireMapped_ = nullptr;
+
     // プレビュー表示設定（背景色・グリッド）
     float previewBgColor_[4] = {0.02f, 0.02f, 0.03f, 1.0f};
     bool previewShowGrid_ = true;
-    int previewGridDivision_ = 20;
-    float previewGridHalfSize_ = 10.0f;
-    Vector4 previewGridColor_ = {0.35f, 0.35f, 0.4f, 1.0f};
+    bool previewShowEmitterWire_ = true; // 選択エミッタのワイヤーフレームをプレビューに描く
+    int previewGridDivision_ = 300;      // 線の本数（半径方向。半径 = 分割数 × 間隔 / 2）
+    float previewGridHalfSize_ = 150.0f; // グリッド半径（カメラ注視点を中心に追従し無限風に見せる）
+    // 既定はやや暗いグレー（線PSOは不透明描画なので暗背景に対して半透明風に見える）。
+    Vector4 previewGridColor_ = {0.28f, 0.28f, 0.32f, 1.0f};
     bool previewGridDirty_ = false; // グリッド設定が変わったら true（RenderPreview で再構築）
 
     // プレビューカメラの viewProject を渡す CB（kLine3d ルートパラメータ0）。
@@ -159,6 +168,8 @@ class ParticleCSEditor {
     void BuildPreviewGrid();
     // 現在のグリッド設定（分割数/サイズ/色）をマップ済みVBへ書き込み、頂点数を更新する。
     void RebuildPreviewGridContents();
+    // ワイヤーフレーム用VBを最大容量で確保し永続マップする（初回のみ）。
+    void BuildPreviewWireBuffer();
     // 現在のカメラパラメータから view 行列と view*projection 行列を計算する。
     void ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &outViewProj) const;
 };

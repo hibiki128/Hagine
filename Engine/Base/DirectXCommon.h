@@ -92,6 +92,11 @@ class DirectXCommon {
     // メイン深度以外の追加深度ステンシルリソースを生成する（プレビュー窓など）。DEPTH_WRITE 状態で返る。
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateAdditionalDepthResource(int32_t width, int32_t height);
 
+    // ExecuteIndirect(DispatchIndirect) 用のコマンドシグネチャ（Phase 3 の sim 生存数ディスパッチ基盤）。
+    // 引数は D3D12_DISPATCH_ARGUMENTS（ThreadGroupCountX/Y/Z の3×uint）のみ。ルート引数の差し替えは無し。
+    // 生成は GetDispatchIndirectCommandSignature() の初回呼び出しで遅延生成（未使用なら一切作られない）。
+    ID3D12CommandSignature *GetDispatchIndirectCommandSignature();
+
     [[nodiscard]]
     Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage &mipImages);
 
@@ -323,6 +328,9 @@ class DirectXCommon {
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> depthStencilResource;
+
+    // Phase 3 基盤: DispatchIndirect 用コマンドシグネチャ（遅延生成）
+    Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature_;
 
   private:
     uint32_t descriptorSizeRTV;

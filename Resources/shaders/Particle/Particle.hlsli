@@ -87,7 +87,7 @@ struct PerView
     uint enableBillboard;
     uint enableVelocityStretch;
     float velocityStretchFactor;
-    float padPerView;
+    uint enableRotation; // 1=回転あり / 0=回転なし（VSで回転行列計算をスキップ）
 };
 
 struct EmitterMesh
@@ -211,6 +211,12 @@ struct ParticleCSSettings
     float emitSphereRadius;
     float emitConeAngle;
     float emitShapePad;
+    // ---- Phase 5: グループ単位トレイル予算（indirect パスのみ参照）----
+    // C++ struct ParticleCSSettings と末尾の並び・型を一致させること。
+    uint enableTrailBudget;
+    uint maxTrailBudgetPerGroup;
+    float trailBudgetPad0;
+    float trailBudgetPad1;
 };
 
 // 【重要】このレイアウトは C++ 側 `struct ParticleFieldData`

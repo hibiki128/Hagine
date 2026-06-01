@@ -788,3 +788,484 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateCountG
     assert(SUCCEEDED(hr));
     return graphicsPipelineState;
 }
+
+// =============================================
+// =============================================
+// Phase 3: ping-pong + DispatchIndirect（遅延生成）
+//
+//   既定の CreateAllPipelines には含めず、EnsureIndirectSimPipelines で
+//   indirect モード有効化時にのみ生成する。これにより新シェーダの DXC
+//   コンパイルが OFF 時の起動に一切影響しない（= ゲーム挙動不変）。
+// =============================================
+void ComputePipeLineManager::EnsureIndirectSimPipelines() {
+    if (indirectSimPipelinesCreated_) {
+        return;
+    }
+    CreateBuildDispatchArgsPipelines();
+    CreateEmitterIndirectPipelines();
+    CreateUpdateEmitterIndirectPipelines();
+    indirectSimPipelinesCreated_ = true;
+}
+
+void ComputePipeLineManager::CreateBuildDispatchArgsPipelines() {
+    auto rootSignature = CreateBuildDispatchArgsRootSignature();
+    rootSignatures_[MakeRootSignatureKey(ComputePipelineType::kBuildDispatchArgs, ShaderMode::kNone)] = rootSignature;
+
+    auto pipeline = CreateBuildDispatchArgsPipeLine(rootSignature);
+    pipelines_[MakePipelineKey(ComputePipelineType::kBuildDispatchArgs, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
+}
+
+void ComputePipeLineManager::CreateEmitterIndirectPipelines() {
+    auto rootSignature = CreateEmitterIndirectRootSignature();
+    rootSignatures_[MakeRootSignatureKey(ComputePipelineType::kEmitterIndirect, ShaderMode::kNone)] = rootSignature;
+
+    auto pipeline = CreateEmitterIndirectPipeLine(rootSignature);
+    pipelines_[MakePipelineKey(ComputePipelineType::kEmitterIndirect, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
+}
+
+void ComputePipeLineManager::CreateUpdateEmitterIndirectPipelines() {
+    auto rootSignature = CreateUpdateEmitterIndirectRootSignature();
+    rootSignatures_[MakeRootSignatureKey(ComputePipelineType::kUpdateEmitterIndirect, ShaderMode::kNone)] = rootSignature;
+
+    auto pipeline = CreateUpdateEmitterIndirectPipeLine(rootSignature);
+    pipelines_[MakePipelineKey(ComputePipelineType::kUpdateEmitterIndirect, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
+}
+
+// ---------------------------------------------
+// BuildDispatchArgs
+//   [0] u0 : gAliveCounterIn (UAV)
+//   [1] u1 : gDispatchArgs   (UAV)
+// ---------------------------------------------
+Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateBuildDispatchArgsRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    D3D12_DESCRIPTOR_RANGE uavRange0[1] = {};
+    uavRange0[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange0[0].NumDescriptors = 1;
+    uavRange0[0].BaseShaderRegister = 0;
+    uavRange0[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange1[1] = {};
+    uavRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange1[0].NumDescriptors = 1;
+    uavRange1[0].BaseShaderRegister = 1;
+    uavRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[2] = {};
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].DescriptorTable.pDescriptorRanges = uavRange0;
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = _countof(uavRange0);
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = uavRange1;
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(uavRange1);
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumStaticSamplers = 0;
+    descriptionRootSignature.pStaticSamplers = nullptr;
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
+                                                     signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateBuildDispatchArgsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
+
+    IDxcBlob *computerShaderBlob = nullptr;
+    computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/BuildDispatchArgs.CS.hlsl", L"cs_6_0");
+    assert(computerShaderBlob != nullptr);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+    computePipelineStateDesc.CS = {
+        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
+        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+    };
+    computePipelineStateDesc.pRootSignature = rootSignature.Get();
+    HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+    assert(SUCCEEDED(hr));
+    return graphicsPipelineState;
+}
+
+// ---------------------------------------------
+// EmitterIndirect（Emitter のルートシグネチャ + u4/u5 を追加）
+//   [0] u0  : gParticles
+//   [1] u1  : gFreeListIndex
+//   [2] u2  : gFreeList
+//   [3] u3  : gFreeListTailIndex
+//   [4] b0  : gEmitterMesh
+//   [5] b1  : gPerFrame
+//   [6] b2  : gSettings
+//   [7] b3  : gFieldCB
+//   [8] t0  : gTriangles
+//   [9] t1  : gTriangleCDF
+//   [10] t2 : gEdges
+//   [11] t3 : gFields
+//   [12] u4 : gAliveList     ★出力 B
+//   [13] u5 : gAliveCounter  ★出力 B
+// ---------------------------------------------
+Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitterIndirectRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    D3D12_DESCRIPTOR_RANGE uavRange0[1] = {};
+    uavRange0[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange0[0].NumDescriptors = 1;
+    uavRange0[0].BaseShaderRegister = 0;
+    uavRange0[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange1[1] = {};
+    uavRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange1[0].NumDescriptors = 1;
+    uavRange1[0].BaseShaderRegister = 1;
+    uavRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange2[1] = {};
+    uavRange2[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange2[0].NumDescriptors = 1;
+    uavRange2[0].BaseShaderRegister = 2;
+    uavRange2[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange3[1] = {};
+    uavRange3[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange3[0].NumDescriptors = 1;
+    uavRange3[0].BaseShaderRegister = 3;
+    uavRange3[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE srvRange0[1] = {};
+    srvRange0[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRange0[0].NumDescriptors = 1;
+    srvRange0[0].BaseShaderRegister = 0;
+    srvRange0[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE srvRange1[1] = {};
+    srvRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRange1[0].NumDescriptors = 1;
+    srvRange1[0].BaseShaderRegister = 1;
+    srvRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE srvRange2[1] = {};
+    srvRange2[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRange2[0].NumDescriptors = 1;
+    srvRange2[0].BaseShaderRegister = 2;
+    srvRange2[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE srvRange3[1] = {};
+    srvRange3[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRange3[0].NumDescriptors = 1;
+    srvRange3[0].BaseShaderRegister = 3;
+    srvRange3[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // ★ u4 / u5（出力 B）
+    D3D12_DESCRIPTOR_RANGE uavRange4[1] = {};
+    uavRange4[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange4[0].NumDescriptors = 1;
+    uavRange4[0].BaseShaderRegister = 4;
+    uavRange4[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange5[1] = {};
+    uavRange5[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange5[0].NumDescriptors = 1;
+    uavRange5[0].BaseShaderRegister = 5;
+    uavRange5[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[14] = {};
+
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].DescriptorTable.pDescriptorRanges = uavRange0;
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = _countof(uavRange0);
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = uavRange1;
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(uavRange1);
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = uavRange2;
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(uavRange2);
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[3].DescriptorTable.pDescriptorRanges = uavRange3;
+    rootParameters[3].DescriptorTable.NumDescriptorRanges = _countof(uavRange3);
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[4].Descriptor.ShaderRegister = 0;
+    rootParameters[4].Descriptor.RegisterSpace = 0;
+    rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[5].Descriptor.ShaderRegister = 1;
+    rootParameters[5].Descriptor.RegisterSpace = 0;
+    rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[6].Descriptor.ShaderRegister = 2;
+    rootParameters[6].Descriptor.RegisterSpace = 0;
+    rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[7].Descriptor.ShaderRegister = 3;
+    rootParameters[7].Descriptor.RegisterSpace = 0;
+    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[8].DescriptorTable.pDescriptorRanges = srvRange0;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(srvRange0);
+    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[9].DescriptorTable.pDescriptorRanges = srvRange1;
+    rootParameters[9].DescriptorTable.NumDescriptorRanges = _countof(srvRange1);
+    rootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[10].DescriptorTable.pDescriptorRanges = srvRange2;
+    rootParameters[10].DescriptorTable.NumDescriptorRanges = _countof(srvRange2);
+    rootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[11].DescriptorTable.pDescriptorRanges = srvRange3;
+    rootParameters[11].DescriptorTable.NumDescriptorRanges = _countof(srvRange3);
+    rootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    // ★ [12] u4 / [13] u5（出力 B）
+    rootParameters[12].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[12].DescriptorTable.pDescriptorRanges = uavRange4;
+    rootParameters[12].DescriptorTable.NumDescriptorRanges = _countof(uavRange4);
+    rootParameters[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[13].DescriptorTable.pDescriptorRanges = uavRange5;
+    rootParameters[13].DescriptorTable.NumDescriptorRanges = _countof(uavRange5);
+    rootParameters[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumStaticSamplers = 0;
+    descriptionRootSignature.pStaticSamplers = nullptr;
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
+                                                     signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateEmitterIndirectPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
+
+    IDxcBlob *computerShaderBlob = nullptr;
+    computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/EmitParticleIndirect.CS.hlsl", L"cs_6_0");
+    assert(computerShaderBlob != nullptr);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+    computePipelineStateDesc.CS = {
+        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
+        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+    };
+    computePipelineStateDesc.pRootSignature = rootSignature.Get();
+    HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+    assert(SUCCEEDED(hr));
+    return graphicsPipelineState;
+}
+
+// ---------------------------------------------
+// UpdateEmitterIndirect（UpdateEmitter のルートシグネチャ + t2/t3 を追加）
+//   [0] u0  : gParticles
+//   [1] u1  : gFreeListIndex
+//   [2] u2  : gFreeList
+//   [3] u3  : gFreeListTailIndex
+//   [4] b0  : gPerFrame
+//   [5] b1  : gSettings
+//   [6] t0  : gFields
+//   [7] b2  : gFieldCB
+//   [8] t1  : gFieldsOverride
+//   [9] u4  : gAliveList       ★出力 B
+//   [10] u5 : gAliveCounter    ★出力 B
+//   [11] u6 : gAliveListIn     ★入力 A（UAVのまま読む）
+//   [12] u7 : gAliveCounterIn  ★入力 A（UAVのまま読む）
+//   [13] u8 : gTrailBudget     ★Phase 5: グループ単位トレイル予算カウンタ
+// ---------------------------------------------
+Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdateEmitterIndirectRootSignature() {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    HRESULT hr;
+
+    D3D12_DESCRIPTOR_RANGE uavRange0[1] = {};
+    uavRange0[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange0[0].NumDescriptors = 1;
+    uavRange0[0].BaseShaderRegister = 0;
+    uavRange0[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange1[1] = {};
+    uavRange1[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange1[0].NumDescriptors = 1;
+    uavRange1[0].BaseShaderRegister = 1;
+    uavRange1[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange2[1] = {};
+    uavRange2[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange2[0].NumDescriptors = 1;
+    uavRange2[0].BaseShaderRegister = 2;
+    uavRange2[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange3[1] = {};
+    uavRange3[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange3[0].NumDescriptors = 1;
+    uavRange3[0].BaseShaderRegister = 3;
+    uavRange3[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE srvRangeFields[1] = {};
+    srvRangeFields[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRangeFields[0].NumDescriptors = 1;
+    srvRangeFields[0].BaseShaderRegister = 0;
+    srvRangeFields[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE srvRangeOverride[1] = {};
+    srvRangeOverride[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    srvRangeOverride[0].NumDescriptors = 1;
+    srvRangeOverride[0].BaseShaderRegister = 1;
+    srvRangeOverride[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange4[1] = {};
+    uavRange4[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange4[0].NumDescriptors = 1;
+    uavRange4[0].BaseShaderRegister = 4;
+    uavRange4[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE uavRange5[1] = {};
+    uavRange5[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange5[0].NumDescriptors = 1;
+    uavRange5[0].BaseShaderRegister = 5;
+    uavRange5[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // ★ u6 : gAliveListIn / u7 : gAliveCounterIn（入力 A）
+    //   A/B は UAV 状態のまま読むため、入力も UAV テーブルで束ねる（状態遷移不要）。
+    D3D12_DESCRIPTOR_RANGE srvRangeAliveIn[1] = {};
+    srvRangeAliveIn[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    srvRangeAliveIn[0].NumDescriptors = 1;
+    srvRangeAliveIn[0].BaseShaderRegister = 6;
+    srvRangeAliveIn[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE srvRangeAliveCountIn[1] = {};
+    srvRangeAliveCountIn[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    srvRangeAliveCountIn[0].NumDescriptors = 1;
+    srvRangeAliveCountIn[0].BaseShaderRegister = 7;
+    srvRangeAliveCountIn[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // ★ u8 : gTrailBudget（Phase 5 グループ単位トレイル予算カウンタ）
+    D3D12_DESCRIPTOR_RANGE uavRange8[1] = {};
+    uavRange8[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange8[0].NumDescriptors = 1;
+    uavRange8[0].BaseShaderRegister = 8;
+    uavRange8[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[14] = {};
+
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].DescriptorTable.pDescriptorRanges = uavRange0;
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = _countof(uavRange0);
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = uavRange1;
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(uavRange1);
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = uavRange2;
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(uavRange2);
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[3].DescriptorTable.pDescriptorRanges = uavRange3;
+    rootParameters[3].DescriptorTable.NumDescriptorRanges = _countof(uavRange3);
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[4].Descriptor.ShaderRegister = 0;
+    rootParameters[4].Descriptor.RegisterSpace = 0;
+    rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[5].Descriptor.ShaderRegister = 1;
+    rootParameters[5].Descriptor.RegisterSpace = 0;
+    rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[6].DescriptorTable.pDescriptorRanges = srvRangeFields;
+    rootParameters[6].DescriptorTable.NumDescriptorRanges = _countof(srvRangeFields);
+    rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[7].Descriptor.ShaderRegister = 2;
+    rootParameters[7].Descriptor.RegisterSpace = 0;
+    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[8].DescriptorTable.pDescriptorRanges = srvRangeOverride;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(srvRangeOverride);
+    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[9].DescriptorTable.pDescriptorRanges = uavRange4;
+    rootParameters[9].DescriptorTable.NumDescriptorRanges = _countof(uavRange4);
+    rootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[10].DescriptorTable.pDescriptorRanges = uavRange5;
+    rootParameters[10].DescriptorTable.NumDescriptorRanges = _countof(uavRange5);
+    rootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    // ★ [11] u6 / [12] u7（入力 A・UAVのまま読む）
+    rootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[11].DescriptorTable.pDescriptorRanges = srvRangeAliveIn;
+    rootParameters[11].DescriptorTable.NumDescriptorRanges = _countof(srvRangeAliveIn);
+    rootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[12].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[12].DescriptorTable.pDescriptorRanges = srvRangeAliveCountIn;
+    rootParameters[12].DescriptorTable.NumDescriptorRanges = _countof(srvRangeAliveCountIn);
+    rootParameters[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    // ★ [13] u8（トレイル予算カウンタ）
+    rootParameters[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[13].DescriptorTable.pDescriptorRanges = uavRange8;
+    rootParameters[13].DescriptorTable.NumDescriptorRanges = _countof(uavRange8);
+    rootParameters[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
+    descriptionRootSignature.NumParameters = _countof(rootParameters);
+    descriptionRootSignature.pParameters = rootParameters;
+    descriptionRootSignature.NumStaticSamplers = 0;
+    descriptionRootSignature.pStaticSamplers = nullptr;
+    descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    ID3DBlob *signatureBlob = nullptr;
+    ID3DBlob *errorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        assert(false);
+    }
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
+                                                     signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
+    return rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateUpdateEmitterIndirectPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
+
+    IDxcBlob *computerShaderBlob = nullptr;
+    computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/UpdateParticleIndirect.CS.hlsl", L"cs_6_0");
+    assert(computerShaderBlob != nullptr);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+    computePipelineStateDesc.CS = {
+        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
+        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+    };
+    computePipelineStateDesc.pRootSignature = rootSignature.Get();
+    HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+    assert(SUCCEEDED(hr));
+    return graphicsPipelineState;
+}

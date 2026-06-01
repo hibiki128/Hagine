@@ -70,7 +70,10 @@ struct PerView {
     uint32_t enableBillboard = 1;       // 1=ビルボードON(デフォルト), 0=OFF
     uint32_t enableVelocityStretch = 0; // 1=速度方向に引き伸ばす
     float velocityStretchFactor = 0.1f; // 引き伸ばし係数(速さ×係数 = 伸び率)
-    float padding1 = 0.0f;
+    // 1=回転あり（VSで回転行列を計算）/ 0=回転なし（VSの sincos×3＋行列積をスキップ）。
+    // グループが回転を使わない（enableRandomRotation/enableRandomAngularVelocity が両方OFF）なら
+    // 全パーティクルの rotation が常に 0 なので、VS の回転計算を丸ごと省ける。
+    uint32_t enableRotation = 0;
 };
 
 struct TriangleInfo {
@@ -217,6 +220,14 @@ struct ParticleCSSettings {
     float emitSphereRadius = 1.0f;         // Sphere/Cone 半径
     float emitConeAngle = 0.5236f;         // Cone 半開角 (ラジアン, デフォルト30°)
     float emitShapePad = 0.0f;
+    // ---- Phase 5: グループ単位トレイル予算（indirect パスのみ参照）----
+    // enableTrailBudget=1 のとき、1フレームにグループ全体で生成できるトレイル本数を
+    // maxTrailBudgetPerGroup で上限する。0 のとき無制限（従来挙動）。
+    // HLSL struct ParticleCSSettings と末尾の並び・型を一致させること。
+    uint32_t enableTrailBudget = 0;
+    uint32_t maxTrailBudgetPerGroup = 20000;
+    float trailBudgetPad0 = 0.0f;
+    float trailBudgetPad1 = 0.0f;
 };
 
 /// =====================================================================

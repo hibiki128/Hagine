@@ -71,6 +71,34 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
 
     for (auto &group : particleGroups_) {
         group->Update(vp);
+
+        auto *fieldMgr = ParticleCSFieldManager::GetInstance();
+        auto fieldCountRes = receiveFields_ ? fieldMgr->GetFieldCountResource()
+                                            : fieldMgr->GetZeroFieldCountResource();
+
+        if (group->IsIndirectSimReady()) {
+            // ===== Phase 3: ping-pong + DispatchIndirect 経路 =====
+            // 1. In/Out を入れ替える（描画は Out を読む）
+            group->SwapIndirectAliveLists();
+            // 2. 出力(Out)カウンタを 0 に（emit / update の append より前）
+            group->ResetIndirectOutCounterDispatch(computeCmdList);
+            // 3. emit: 発生スロットを Out に append（このグループのみ・kEmitterIndirect）
+            EmitterDisPatch(computeCmdList, group);
+            // 4. 入力(In)生存数から間接ディスパッチ引数を生成（UAV->INDIRECT_ARGUMENT）
+            //    ※emit→update の UAV バリアは UpdateParticleIndirectDispatch 冒頭で張る
+            group->BuildDispatchArgsDispatch(computeCmdList);
+            // 5. update: In を処理し生存/トレイルを Out に append（生存数ぶんだけ起動）
+            group->UpdateParticleIndirectDispatch(
+                fieldMgr->GetFieldsSrvHandle(),
+                fieldCountRes,
+                fieldMgr->GetOverrideSrvHandle(),
+                computeCmdList);
+            // 6. 描画 instanceCount 用に Out カウンタを readback
+            group->RecordAliveCountReadback(computeCmdList);
+            continue;
+        }
+
+        // ===== 既存パス（全 N ディスパッチ・挙動不変）=====
         EmitterDisPatch(computeCmdList);
 
         D3D12_RESOURCE_BARRIER uavBarrier{};
@@ -81,11 +109,9 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
         // 生存コンパクションカウンタを 0 にリセット（Update の append より前）
         group->ResetAliveCounterDispatch(computeCmdList);
 
-        auto *fieldMgr = ParticleCSFieldManager::GetInstance();
         group->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),
-            receiveFields_ ? fieldMgr->GetFieldCountResource()
-                           : fieldMgr->GetZeroFieldCountResource(),
+            fieldCountRes,
             fieldMgr->GetOverrideSrvHandle(),
             computeCmdList);
 
@@ -250,6 +276,55 @@ void ParticleCSEmitter::DrawEmitter() {
     }
 }
 
+std::vector<ParticleCSEmitter::WireSegment> ParticleCSEmitter::GetWireframeSegments() const {
+    std::vector<WireSegment> segs;
+    if (!emitterMeshData_) {
+        return segs;
+    }
+    Vector3 translate = emitterMeshData_->translate;
+    Quaternion rotation = emitterMeshData_->rotation;
+    Vector3 scale = emitterMeshData_->scale;
+    Matrix4x4 transformMatrix = MakeAffineMatrix(scale, rotation, translate);
+
+    if (emitterMeshData_->emitFromSurface == 2 && !edgeInfoList_.empty()) {
+        const Vector4 color = {1.0f, 0.5f, 0.0f, 1.0f}; // 橙: エッジ
+        for (const auto &edge : edgeInfoList_) {
+            segs.push_back({Transformation(edge.v0, transformMatrix),
+                            Transformation(edge.v1, transformMatrix), color});
+        }
+    } else if (!triangleInfoList_.empty()) {
+        const Vector4 color = {0.0f, 1.0f, 0.0f, 1.0f}; // 緑: 三角形
+        for (const auto &tri : triangleInfoList_) {
+            Vector3 v0 = Transformation(tri.v0, transformMatrix);
+            Vector3 v1 = Transformation(tri.v1, transformMatrix);
+            Vector3 v2 = Transformation(tri.v2, transformMatrix);
+            segs.push_back({v0, v1, color});
+            segs.push_back({v1, v2, color});
+            segs.push_back({v2, v0, color});
+        }
+    } else {
+        // メッシュ無し: 半径を示す球ワイヤー（XY/XZ/YZ の3円）
+        const Vector3 center = emitterMeshData_->translate;
+        const Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f}; // 黄: 球
+        const float r = std::max(std::max(scale.x, scale.y), scale.z);
+        const int N = 24;
+        const float twoPi = 6.28318530718f;
+        for (int i = 0; i < N; ++i) {
+            float a0 = twoPi * static_cast<float>(i) / N;
+            float a1 = twoPi * static_cast<float>(i + 1) / N;
+            float c0 = std::cos(a0), s0 = std::sin(a0);
+            float c1 = std::cos(a1), s1 = std::sin(a1);
+            segs.push_back({{center.x + c0 * r, center.y + s0 * r, center.z},
+                            {center.x + c1 * r, center.y + s1 * r, center.z}, color}); // XY
+            segs.push_back({{center.x + c0 * r, center.y, center.z + s0 * r},
+                            {center.x + c1 * r, center.y, center.z + s1 * r}, color}); // XZ
+            segs.push_back({{center.x, center.y + c0 * r, center.z + s0 * r},
+                            {center.x, center.y + c1 * r, center.z + s1 * r}, color}); // YZ
+        }
+    }
+    return segs;
+}
+
 void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group) {
     if (!group)
         return;
@@ -302,14 +377,21 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->anchorPoint = Vector3(0.5f, 0.5f, 0.5f);
 }
 
-void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
+void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList, ParticleCSGroup *indirectGroup) {
     // cmdList が渡された場合はそちら（Compute Queue）を使う
     ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    // indirectGroup 指定時は kEmitterIndirect（u4/u5 へ Out append）を使う。
     ComputePipeLineManager::GetInstance()->DrawCommonSetting(
-        ComputePipelineType::kEmitter, BlendMode::kNormal, ShaderMode::kNone, cl);
+        indirectGroup ? ComputePipelineType::kEmitterIndirect : ComputePipelineType::kEmitter,
+        BlendMode::kNormal, ShaderMode::kNone, cl);
 
     uint32_t groupIndex = 0;
     for (auto &group : particleGroups_) {
+        // indirect 指定時は対象グループのみ処理（groupId は維持する）
+        if (indirectGroup && group != indirectGroup) {
+            groupIndex++;
+            continue;
+        }
         group->GetPerFrameData()->groupId = groupIndex;
         group->GetPerFrameData()->emitterFieldGroupId = fieldGroupId_;
 
@@ -326,6 +408,12 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
         cl->SetComputeRootConstantBufferView(4, emitterMeshResource_->GetGPUVirtualAddress());
         cl->SetComputeRootConstantBufferView(5, group->GetPerFrameResource()->GetGPUVirtualAddress());
         cl->SetComputeRootConstantBufferView(6, group->GetSettingsResource()->GetGPUVirtualAddress());
+
+        // ★ Phase 3: 出力(Out) aliveList/counter を u4/u5 に束ねる（発生スロットを append）。
+        if (indirectGroup) {
+            cl->SetComputeRootDescriptorTable(12, group->GetIndirectOutAliveListUavHandle().second);
+            cl->SetComputeRootDescriptorTable(13, group->GetIndirectOutAliveCounterUavHandle().second);
+        }
 
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
             cl->SetComputeRootDescriptorTable(8, triangleInfoSrvHandle_.second);
@@ -706,6 +794,8 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "trailVelocityScale", group->GetSettingsData()->trailVelocityScale);
         data->Save(prefix + "trailInheritVelocity", group->GetSettingsData()->trailInheritVelocity);
         data->Save(prefix + "trailMinLifeTime", group->GetSettingsData()->trailMinLifeTime);
+        data->Save(prefix + "enableTrailBudget", group->GetSettingsData()->enableTrailBudget);
+        data->Save(prefix + "maxTrailBudgetPerGroup", group->GetSettingsData()->maxTrailBudgetPerGroup);
 
         data->Save(prefix + "enableGather", group->GetSettingsData()->enableGather);
         data->Save(prefix + "gatherStartRatio", group->GetSettingsData()->gatherStartRatio);
@@ -845,6 +935,8 @@ void ParticleCSEmitter::LoadSetting() {
         settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
         settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
         settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
+        settings.enableTrailBudget = data->Load<uint32_t>(prefix + "enableTrailBudget", 0);
+        settings.maxTrailBudgetPerGroup = data->Load<uint32_t>(prefix + "maxTrailBudgetPerGroup", 20000);
 
         settings.enableGather = data->Load(prefix + "enableGather", 0);
         settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
@@ -996,6 +1088,8 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
         settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
         settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
+        settings.enableTrailBudget = data->Load<uint32_t>(prefix + "enableTrailBudget", 0);
+        settings.maxTrailBudgetPerGroup = data->Load<uint32_t>(prefix + "maxTrailBudgetPerGroup", 20000);
 
         settings.enableGather = data->Load(prefix + "enableGather", 0);
         settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);

@@ -66,6 +66,7 @@ void ParticleCSEditor::InitializePreview() {
 
     // 白グリッドの頂点バッファと、カメラ viewProject 用の定数バッファを構築。
     BuildPreviewGrid();
+    BuildPreviewWireBuffer();
     previewLineCB_ = dxCommon->CreateBufferResource(sizeof(Matrix4x4));
     previewLineCB_->Map(0, nullptr, reinterpret_cast<void **>(&previewLineCBData_));
     *previewLineCBData_ = MakeIdentity4x4();
@@ -78,6 +79,7 @@ void ParticleCSEditor::InitializePreview() {
     previewPerViewData_->enableBillboard = 1;
     previewPerViewData_->enableVelocityStretch = 0;
     previewPerViewData_->velocityStretchFactor = 0.1f;
+    previewPerViewData_->enableRotation = 1; // プレビューは常に回転を計算（正確さ優先・コストは僅少）
 
     previewInitialized_ = true;
 }
@@ -99,7 +101,22 @@ void ParticleCSEditor::BuildPreviewGrid() {
     RebuildPreviewGridContents();
 }
 
+// ワイヤーフレーム用VBを最大容量で確保し永続マップする。内容は RenderPreview で毎フレーム書き込む。
+void ParticleCSEditor::BuildPreviewWireBuffer() {
+    DirectXCommon *dxCommon = ParticleCommon::GetInstance()->GetDxCommon();
+    const UINT vbSize = static_cast<UINT>(sizeof(PreviewLineVertex) * kPreviewWireMaxVerts_);
+    previewWireVB_ = dxCommon->CreateBufferResource(vbSize);
+    previewWireVB_->Map(0, nullptr, reinterpret_cast<void **>(&previewWireMapped_));
+
+    previewWireVBView_.BufferLocation = previewWireVB_->GetGPUVirtualAddress();
+    previewWireVBView_.StrideInBytes = sizeof(PreviewLineVertex);
+    previewWireVBView_.SizeInBytes = vbSize;
+    previewWireVertexCount_ = 0;
+}
+
 // 現在のグリッド設定をマップ済みVBへ書き込み、描画頂点数を更新する。
+// カメラ注視点を中心に追従し、線間隔にスナップすることで「ほぼ無限」のグリッドに見せる。
+// 毎フレーム呼ばれる（DrawLine3D と同じ毎フレーム書き換えパターン）。
 void ParticleCSEditor::RebuildPreviewGridContents() {
     if (!previewGridMapped_) {
         return;
@@ -112,17 +129,24 @@ void ParticleCSEditor::RebuildPreviewGridContents() {
     const Vector4 axisColorX = {0.8f, 0.25f, 0.25f, 1.0f};
     const Vector4 axisColorZ = {0.25f, 0.4f, 0.85f, 1.0f};
 
+    // 注視点に追従。線間隔にスナップしてカメラを動かしても線がちらつかないようにする。
+    const float centerX = std::round(previewCamTarget_.x / interval) * interval;
+    const float centerZ = std::round(previewCamTarget_.z / interval) * interval;
+    const float axisEps = interval * 0.5f;
+
     uint32_t v = 0;
     for (int i = 0; i <= division; ++i) {
         float offset = -halfSize + i * interval;
-        // X方向の線（Zが offset 固定）。中央線は軸色。
-        const Vector4 &cX = (i == division / 2) ? axisColorX : gridColor;
-        previewGridMapped_[v++] = {{-halfSize, 0.0f, offset}, cX};
-        previewGridMapped_[v++] = {{halfSize, 0.0f, offset}, cX};
-        // Z方向の線（Xが offset 固定）。中央線は軸色。
-        const Vector4 &cZ = (i == division / 2) ? axisColorZ : gridColor;
-        previewGridMapped_[v++] = {{offset, 0.0f, -halfSize}, cZ};
-        previewGridMapped_[v++] = {{offset, 0.0f, halfSize}, cZ};
+        float worldZ = centerZ + offset;
+        float worldX = centerX + offset;
+        // X方向の線（Z=worldZ 固定）。ワールド原点(z=0)を通る線を軸色に。
+        const Vector4 &cX = (std::fabs(worldZ) < axisEps) ? axisColorX : gridColor;
+        previewGridMapped_[v++] = {{centerX - halfSize, 0.0f, worldZ}, cX};
+        previewGridMapped_[v++] = {{centerX + halfSize, 0.0f, worldZ}, cX};
+        // Z方向の線（X=worldX 固定）。ワールド原点(x=0)を通る線を軸色に。
+        const Vector4 &cZ = (std::fabs(worldX) < axisEps) ? axisColorZ : gridColor;
+        previewGridMapped_[v++] = {{worldX, 0.0f, centerZ - halfSize}, cZ};
+        previewGridMapped_[v++] = {{worldX, 0.0f, centerZ + halfSize}, cZ};
     }
     previewGridVertexCount_ = v;
 }
@@ -175,11 +199,9 @@ void ParticleCSEditor::RenderPreview() {
     cl->ResourceBarrier(1, &toRT);
     previewColorState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
-    // グリッド設定が変わっていたらマップ済みVBの内容を更新（GPUへは次の描画で反映）
-    if (previewGridDirty_) {
-        RebuildPreviewGridContents();
-        previewGridDirty_ = false;
-    }
+    // グリッドはカメラ注視点に追従させるため毎フレーム再構築する（内容のみ書き換え）。
+    RebuildPreviewGridContents();
+    previewGridDirty_ = false;
 
     // プレビューRT＋専用深度を束ねて背景色でクリア
     cl->OMSetRenderTargets(1, &previewRtvHandle_, false, &previewDsvHandle_);
@@ -210,6 +232,31 @@ void ParticleCSEditor::RenderPreview() {
         cl->IASetVertexBuffers(0, 1, &previewGridVBView_);
         cl->SetGraphicsRootConstantBufferView(0, previewLineCB_->GetGPUVirtualAddress());
         cl->DrawInstanced(previewGridVertexCount_, 1, 0, 0);
+    }
+
+    // 選択中エミッタのワイヤーフレームをプレビューVPで描画（共有 DrawLine3D は使わず専用VB＋kLine3d PSO）。
+    // DrawEmitter は共有 DrawLine3D に積みシーン側VPで描かれてしまうため、ここで隔離描画する。
+    if (previewShowEmitterWire_ && !selectedEmitterName_.empty() && previewWireMapped_) {
+        auto itWire = emitters_.find(selectedEmitterName_);
+        if (itWire != emitters_.end() && itWire->second) {
+            auto segs = itWire->second->GetWireframeSegments();
+            uint32_t v = 0;
+            for (const auto &s : segs) {
+                if (v + 2 > kPreviewWireMaxVerts_) {
+                    break; // 上限超過分は切り捨て（プレビューのオーバーレイなので許容）
+                }
+                previewWireMapped_[v++] = {s.a, s.color};
+                previewWireMapped_[v++] = {s.b, s.color};
+            }
+            previewWireVertexCount_ = v;
+            if (v > 0) {
+                *previewLineCBData_ = viewProj;
+                PipeLineManager::GetInstance()->DrawCommonSetting(PipelineType::kLine3d);
+                cl->IASetVertexBuffers(0, 1, &previewWireVBView_);
+                cl->SetGraphicsRootConstantBufferView(0, previewLineCB_->GetGPUVirtualAddress());
+                cl->DrawInstanced(v, 1, 0, 0);
+            }
+        }
     }
 
     // 選択中エミッタのパーティクルを隔離描画（Compute 済みバッファをプレビューVPで再描画）
@@ -310,14 +357,33 @@ void ParticleCSEditor::ShowPreviewWindow(bool *pOpen) {
                    static_cast<float>(h) / static_cast<float>(kPreviewMaxHeight_));
         ImGui::Image(texId, ImVec2(static_cast<float>(w), static_cast<float>(h)), ImVec2(0.0f, 0.0f), uv1);
 
-        // 画像上でのオービットカメラ操作（左ドラッグ=回転 / ホイール=ズーム）
+        // 画像上でのオービットカメラ操作（左ドラッグ=回転 / ホイールクリックドラッグ=注視点パン / ホイール=ズーム）
         if (ImGui::IsItemHovered()) {
             ImGuiIO &io = ImGui::GetIO();
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                previewCamYaw_ -= io.MouseDelta.x * 0.01f;
+                previewCamYaw_ += io.MouseDelta.x * 0.01f; // 左右回転（方向を反転）
                 previewCamPitch_ += io.MouseDelta.y * 0.01f;
                 const float pitchLimit = 1.55f; // ≒89°でジンバル反転を防ぐ
                 previewCamPitch_ = (std::max)(-pitchLimit, (std::min)(pitchLimit, previewCamPitch_));
+            }
+            // ホイールクリック（中ボタン）ドラッグ = 注視点を画面平面に沿ってパン
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
+                // 現在のカメラパラメータから right / up ベクトルを求める（ComputePreviewMatrices と同一）
+                float cp = std::cos(previewCamPitch_);
+                Vector3 eye = {
+                    previewCamTarget_.x + previewCamDistance_ * cp * std::sin(previewCamYaw_),
+                    previewCamTarget_.y + previewCamDistance_ * std::sin(previewCamPitch_),
+                    previewCamTarget_.z + previewCamDistance_ * cp * std::cos(previewCamYaw_),
+                };
+                Vector3 forward = (previewCamTarget_ - eye).Normalize();
+                Vector3 worldUp = {0.0f, 1.0f, 0.0f};
+                Vector3 right = worldUp.Cross(forward).Normalize();
+                Vector3 up = forward.Cross(right);
+                // 距離に比例したパン速度（遠いほど大きく動く＝直感的）。
+                float panScale = previewCamDistance_ * 0.0015f;
+                previewCamTarget_ = previewCamTarget_
+                                    - right * (io.MouseDelta.x * panScale)
+                                    + up * (io.MouseDelta.y * panScale);
             }
             if (io.MouseWheel != 0.0f) {
                 previewCamDistance_ -= io.MouseWheel;
@@ -344,20 +410,26 @@ void ParticleCSEditor::ShowPreviewWindow(bool *pOpen) {
             }
         }
 
-        // ---- 表示設定（背景色・グリッド）----
-        if (ImGui::CollapsingHeader("表示設定##preview")) {
+        // ---- 表示設定（背景色・グリッド・エミッタ枠）----
+        if (ImGui::CollapsingHeader("表示設定##preview", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::ColorEdit3("背景色##preview", previewBgColor_);
+            ImGui::Checkbox("エミッタ枠を表示##preview", &previewShowEmitterWire_);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("選択中エミッタの発生形状（球/メッシュ/エッジ）の枠線をプレビューに表示します。");
+
+            ImGui::Separator();
             ImGui::Checkbox("グリッド表示##preview", &previewShowGrid_);
-            if (ImGui::DragInt("分割数##preview", &previewGridDivision_, 1.0f, 2, kPreviewGridMaxDivision_)) {
-                previewGridDivision_ = (std::max)(2, (std::min)(kPreviewGridMaxDivision_, previewGridDivision_));
-                previewGridDirty_ = true;
-            }
-            if (ImGui::DragFloat("グリッド半径##preview", &previewGridHalfSize_, 0.1f, 0.1f, 1000.0f)) {
-                previewGridDirty_ = true;
-            }
-            if (ImGui::ColorEdit3("グリッド色##preview", &previewGridColor_.x)) {
-                previewGridDirty_ = true;
-            }
+            // グリッドは毎フレーム再構築するため dirty フラグは不要だが互換のため残す。
+            ImGui::DragInt("分割数##preview", &previewGridDivision_, 1.0f, 2, kPreviewGridMaxDivision_);
+            previewGridDivision_ = (std::max)(2, (std::min)(kPreviewGridMaxDivision_, previewGridDivision_));
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("グリッド線の本数。半径 ÷ 本数 が線間隔になります（最大 %d）。", kPreviewGridMaxDivision_);
+            ImGui::DragFloat("グリッド半径##preview", &previewGridHalfSize_, 0.5f, 0.1f, 2000.0f);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("カメラ注視点を中心とした描画半径。大きくするほど遠くまで伸びます。");
+            ImGui::ColorEdit3("グリッド色##preview", &previewGridColor_.x);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("線PSOは不透明描画です。暗い背景に対し暗いグレーにすると半透明風に見えます。");
         }
 
         ImGui::Separator();

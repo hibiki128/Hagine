@@ -156,11 +156,11 @@ void DrawSystem::Draw(const ViewProjection &vp) {
             }
         }
 
-        // GPUパーティクルエディタのエミッターをシーン非依存で常時描画する（stage0 のシーン offscreen へ）。
-        // Compute は上のフェーズで実行済み。各シーンでの Register に依存しない全体駆動。
-        if (stageIdx == 0) {
-            ParticleCSEditor::GetInstance()->DrawAllGraphics(vp);
-        }
+        // 注: GPUパーティクルエディタのエミッターは「プレビュー窓のみ」で確認する。
+        // 以前はここで DrawAllGraphics(vp) を呼び現在のシーン offscreen にも描画していたが、
+        // 編集中のパーティクルがゲームシーンに漏れて見えてしまうため撤去。
+        // シミュレーション（DrawAllCompute）は上のフェーズで実行済みで、
+        // 描画は RenderPreview()（プレビュー専用VP）だけが行う。
 
 #ifdef _DEBUG
         if (stageIdx == 0) {

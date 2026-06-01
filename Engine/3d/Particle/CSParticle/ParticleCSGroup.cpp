@@ -29,6 +29,13 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
 
     perViewData_->enableBillboard = 1;
 
+    // 既定 OFF（全 N ディスパッチ）。間接ディスパッチが有利なのは「生存数 ≪ 最大数」
+    // （死スロットが多い疎なグループ）のときだけで、満杯近いグループでは逆にオーバーヘッドで遅くなる。
+    // 生存率は実行時にしか分からないため自動判定はせず、ImGui「実験: 間接ディスパッチ(Phase3)」での
+    // 手動 ON を基本とする（巨大 maxParticleCount で実生存が少ないグループだけ ON にすると効く）。
+    (void)kIndirectSimAutoThreshold;
+    SetUseIndirectSim(false);
+
     isInitialized_ = true;
 }
 
@@ -149,6 +156,13 @@ ParticleCSGroupData ParticleCSGroup::CreatePrimitiveParticleGroup(const std::str
 }
 
 void ParticleCSGroup::InitParticle() {
+    // プール再利用時はここで全スロットが死亡状態へ初期化される。
+    // 入力(In)生存リストには前の使用時の stale な index が残るため、
+    // 次フレームを bootstrap（In を空扱い）にして取りこぼし/誤処理を防ぐ。
+    if (useIndirectSim_) {
+        indirectBootstrap_ = true;
+    }
+
     srvManager_->SetDescriptorHeap();
 
     dxCommon_->TransitionUAVBarrier(outputParticleResource_.Get());
@@ -212,22 +226,29 @@ void ParticleCSGroup::RecordAliveCountReadback(ID3D12GraphicsCommandList *comput
     // この時点でカウンタは UnorderedAccess へ昇格済みなので状態遷移は整合する。
     ID3D12GraphicsCommandList *cl = computeCmdList ? computeCmdList : commandList;
 
+    // indirect モード有効時は「このフレームの出力(Out)」カウンタを読み戻す（ping-pong）。
+    // 既定(OFF)では従来どおり単一の aliveCounter を読み戻すため挙動不変。
+    ID3D12Resource *counterRes =
+        (useIndirectSim_ && indirectResourcesCreated_)
+            ? (writeToB_ ? aliveCounterBResource_.Get() : aliveCounterResource_.Get())
+            : aliveCounterResource_.Get();
+
     // Update の append 完了を保証
     D3D12_RESOURCE_BARRIER uavBarrier{};
     uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-    uavBarrier.UAV.pResource = aliveCounterResource_.Get();
+    uavBarrier.UAV.pResource = counterRes;
     cl->ResourceBarrier(1, &uavBarrier);
 
     auto toCopy = CD3DX12_RESOURCE_BARRIER::Transition(
-        aliveCounterResource_.Get(),
+        counterRes,
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
         D3D12_RESOURCE_STATE_COPY_SOURCE);
     cl->ResourceBarrier(1, &toCopy);
 
-    cl->CopyResource(aliveCounterReadbackResource_.Get(), aliveCounterResource_.Get());
+    cl->CopyResource(aliveCounterReadbackResource_.Get(), counterRes);
 
     auto toUAV = CD3DX12_RESOURCE_BARRIER::Transition(
-        aliveCounterResource_.Get(),
+        counterRes,
         D3D12_RESOURCE_STATE_COPY_SOURCE,
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     cl->ResourceBarrier(1, &toUAV);
@@ -249,6 +270,9 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     perFrameData_->deltaTime = Frame::DeltaTime();
 
     perViewData_->viewProjection = vp.matView_ * vp.matProjection_;
+    // 回転を使わないグループは VS の回転行列計算（sincos×3＋行列積）を省くためのフラグ。
+    perViewData_->enableRotation =
+        (settingsData_->enableRandomRotation != 0 || settingsData_->enableRandomAngularVelocity != 0) ? 1u : 0u;
     if (perViewData_->enableBillboard) {
         perViewData_->billboardMatrix = vp.matView_;
         perViewData_->billboardMatrix.m[3][0] = 0.0f;
@@ -569,6 +593,216 @@ void ParticleCSGroup::CreateAliveListResources() {
         nullptr,
         IID_PPV_ARGS(&aliveCounterReadbackResource_));
     aliveCounterReadbackResource_->SetName(L"AliveCounter_Readback");
+}
+
+// =============================================
+// Phase 3: ping-pong + DispatchIndirect（既定 OFF・遅延生成）
+//
+//   旧パス（全 N ディスパッチ）は非改変のまま温存し、useIndirectSim_ が true の
+//   ときだけ以下の B 系リソース／専用 PSO を使う。OFF の間は一切作られないため
+//   ゲーム挙動・起動コストは完全に不変。
+// =============================================
+void ParticleCSGroup::SetUseIndirectSim(bool enable) {
+    if (enable) {
+        // 専用 PSO（DXC コンパイル）と B 系 GPU リソースを遅延生成する。
+        ComputePipeLineManager::GetInstance()->EnsureIndirectSimPipelines();
+        EnsureIndirectSimResources();
+    }
+    useIndirectSim_ = enable;
+}
+
+void ParticleCSGroup::EnsureIndirectSimResources() {
+    if (indirectResourcesCreated_) {
+        return;
+    }
+    CreateIndirectSimResources();
+    indirectResourcesCreated_ = true;
+    // 初回フレームは入力(In)を空(0)として扱い、未初期化スロットの誤処理を避ける。
+    indirectBootstrap_ = true;
+    // 初回 Swap 後に Out=A / In=B になるよう true 始点（Swap でトグルされる）。
+    writeToB_ = true;
+}
+
+void ParticleCSGroup::CreateIndirectSimResources() {
+    const uint32_t maxCount = settingsData_->maxParticleCount;
+
+    // --- aliveList B（A=既存 aliveListResource_ の相方）---
+    aliveListBResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t) * maxCount, true);
+
+    aliveListBUavIndex_ = srvManager_->Allocate() + 1;
+    aliveListBUavHandle_.first = srvManager_->GetCPUDescriptorHandle(aliveListBUavIndex_);
+    aliveListBUavHandle_.second = srvManager_->GetGPUDescriptorHandle(aliveListBUavIndex_);
+    srvManager_->CreateUAVStructuredBuffer(aliveListBUavIndex_, aliveListBResource_.Get(), maxCount, sizeof(uint32_t));
+
+    aliveListBSrvForVSIndex_ = srvManager_->Allocate() + 1;
+    srvManager_->CreateSRVforStructuredBuffer(aliveListBSrvForVSIndex_, aliveListBResource_.Get(), maxCount, sizeof(uint32_t));
+
+    // --- aliveCounter B ---
+    aliveCounterBResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t), true);
+
+    aliveCounterBUavIndex_ = srvManager_->Allocate() + 1;
+    aliveCounterBUavHandle_.first = srvManager_->GetCPUDescriptorHandle(aliveCounterBUavIndex_);
+    aliveCounterBUavHandle_.second = srvManager_->GetGPUDescriptorHandle(aliveCounterBUavIndex_);
+    srvManager_->CreateUAVStructuredBuffer(aliveCounterBUavIndex_, aliveCounterBResource_.Get(), 1, sizeof(uint32_t));
+
+    aliveCounterBSrvForVSIndex_ = srvManager_->Allocate() + 1;
+    srvManager_->CreateSRVforStructuredBuffer(aliveCounterBSrvForVSIndex_, aliveCounterBResource_.Get(), 1, sizeof(uint32_t));
+
+    // --- 間接ディスパッチ引数（D3D12_DISPATCH_ARGUMENTS = uint x3）---
+    dispatchArgsResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t) * 3, true);
+
+    dispatchArgsUavIndex_ = srvManager_->Allocate() + 1;
+    dispatchArgsUavHandle_.first = srvManager_->GetCPUDescriptorHandle(dispatchArgsUavIndex_);
+    dispatchArgsUavHandle_.second = srvManager_->GetGPUDescriptorHandle(dispatchArgsUavIndex_);
+    srvManager_->CreateUAVStructuredBuffer(dispatchArgsUavIndex_, dispatchArgsResource_.Get(), 3, sizeof(uint32_t));
+    // COMMON で生成されるが、BuildDispatchArgs の UAV 書き込みで暗黙昇格(→UAV)される。
+    dispatchArgsState_ = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+    // --- Phase 5: グループ単位トレイル予算カウンタ（1 uint・u8）---
+    trailBudgetResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t), true);
+    trailBudgetUavIndex_ = srvManager_->Allocate() + 1;
+    trailBudgetUavHandle_.first = srvManager_->GetCPUDescriptorHandle(trailBudgetUavIndex_);
+    trailBudgetUavHandle_.second = srvManager_->GetGPUDescriptorHandle(trailBudgetUavIndex_);
+    srvManager_->CreateUAVStructuredBuffer(trailBudgetUavIndex_, trailBudgetResource_.Get(), 1, sizeof(uint32_t));
+}
+
+void ParticleCSGroup::ResetIndirectOutCounterDispatch(ID3D12GraphicsCommandList *cmdList) {
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    // 出力(Out)カウンタを 0 に（emit / update の append より前に呼ぶ）。
+    auto outCounterHandle = writeToB_ ? aliveCounterBUavHandle_ : aliveCounterUavHandle_;
+    ID3D12Resource *outCounterRes = writeToB_ ? aliveCounterBResource_.Get() : aliveCounterResource_.Get();
+
+    ComputePipeLineManager::GetInstance()->DrawCommonSetting(
+        ComputePipelineType::kResetArgs, BlendMode::kNormal, ShaderMode::kNone, cl);
+    cl->SetComputeRootDescriptorTable(0, outCounterHandle.second);
+    cl->Dispatch(1, 1, 1);
+
+    D3D12_RESOURCE_BARRIER outBarrier{};
+    outBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    outBarrier.UAV.pResource = outCounterRes;
+    cl->ResourceBarrier(1, &outBarrier);
+
+    // Phase 5: グループ単位トレイル予算カウンタも 0 にリセット。
+    // 予算機能を使うとき(enableTrailBudget)だけ実行し、未使用時はディスパッチ＋バリアを省く
+    // （シェーダ側も enableTrailBudget==0 なら予算カウンタを読まないため安全）。
+    if (settingsData_->enableTrailBudget != 0) {
+        cl->SetComputeRootDescriptorTable(0, trailBudgetUavHandle_.second);
+        cl->Dispatch(1, 1, 1);
+        D3D12_RESOURCE_BARRIER budgetBarrier{};
+        budgetBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        budgetBarrier.UAV.pResource = trailBudgetResource_.Get();
+        cl->ResourceBarrier(1, &budgetBarrier);
+    }
+
+    if (indirectBootstrap_) {
+        // 初回フレーム: 入力(In)カウンタも 0 にして空リスト扱いにする。
+        // B は生成直後で値が不定なため、これを行わないと Update が
+        // ゴミ index を処理してしまう。
+        auto inCounterHandle = writeToB_ ? aliveCounterUavHandle_ : aliveCounterBUavHandle_;
+        ID3D12Resource *inCounterRes = writeToB_ ? aliveCounterResource_.Get() : aliveCounterBResource_.Get();
+        cl->SetComputeRootDescriptorTable(0, inCounterHandle.second);
+        cl->Dispatch(1, 1, 1);
+
+        D3D12_RESOURCE_BARRIER inBarrier{};
+        inBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        inBarrier.UAV.pResource = inCounterRes;
+        cl->ResourceBarrier(1, &inBarrier);
+
+        indirectBootstrap_ = false;
+    }
+}
+
+void ParticleCSGroup::BuildDispatchArgsDispatch(ID3D12GraphicsCommandList *cmdList) {
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    // 入力(In)生存数から間接ディスパッチ引数を生成する 1スレッドパス。
+    auto inCounterHandle = writeToB_ ? aliveCounterUavHandle_ : aliveCounterBUavHandle_;
+
+    ComputePipeLineManager::GetInstance()->DrawCommonSetting(
+        ComputePipelineType::kBuildDispatchArgs, BlendMode::kNormal, ShaderMode::kNone, cl);
+    cl->SetComputeRootDescriptorTable(0, inCounterHandle.second); // u0: gAliveCounterIn
+    cl->SetComputeRootDescriptorTable(1, dispatchArgsUavHandle_.second); // u1: gDispatchArgs
+    cl->Dispatch(1, 1, 1);
+
+    // 書き込み完了を保証してから INDIRECT_ARGUMENT へ遷移する。
+    D3D12_RESOURCE_BARRIER uavBarrier{};
+    uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    uavBarrier.UAV.pResource = dispatchArgsResource_.Get();
+    cl->ResourceBarrier(1, &uavBarrier);
+
+    auto toIndirect = CD3DX12_RESOURCE_BARRIER::Transition(
+        dispatchArgsResource_.Get(),
+        dispatchArgsState_,
+        D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+    cl->ResourceBarrier(1, &toIndirect);
+    dispatchArgsState_ = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+}
+
+void ParticleCSGroup::UpdateParticleIndirectDispatch(
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
+    Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
+    ID3D12GraphicsCommandList *cmdList) {
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+
+    // emit が gParticles / freeList / Out へ書いた内容を update が観測できるよう、
+    // 直前に共有 UAV 群へ UAV バリアを張る（emit→update の順序保証）。
+    auto outListHandle = writeToB_ ? aliveListBUavHandle_ : aliveListUavHandle_;
+    auto outCounterHandle = writeToB_ ? aliveCounterBUavHandle_ : aliveCounterUavHandle_;
+    ID3D12Resource *outListRes = writeToB_ ? aliveListBResource_.Get() : aliveListResource_.Get();
+    ID3D12Resource *outCounterRes = writeToB_ ? aliveCounterBResource_.Get() : aliveCounterResource_.Get();
+
+    ID3D12Resource *sharedUAVs[] = {
+        outputParticleResource_.Get(),
+        freeListIndexResource_.Get(),
+        freeListResource_.Get(),
+        freeListTrailIndexResource_.Get(),
+        outListRes,
+        outCounterRes,
+    };
+    D3D12_RESOURCE_BARRIER barriers[_countof(sharedUAVs)] = {};
+    for (uint32_t i = 0; i < _countof(sharedUAVs); ++i) {
+        barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        barriers[i].UAV.pResource = sharedUAVs[i];
+    }
+    cl->ResourceBarrier(_countof(barriers), barriers);
+
+    // 入力(In) aliveList / counter（u6/u7・UAV のまま読む）
+    auto inListHandle = writeToB_ ? aliveListUavHandle_ : aliveListBUavHandle_;
+    auto inCounterHandle = writeToB_ ? aliveCounterUavHandle_ : aliveCounterBUavHandle_;
+
+    ComputePipeLineManager::GetInstance()->DrawCommonSetting(
+        ComputePipelineType::kUpdateEmitterIndirect, BlendMode::kNormal, ShaderMode::kNone, cl);
+    cl->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);  // u0
+    cl->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);   // u1
+    cl->SetComputeRootDescriptorTable(2, freeListSrvHandle_.second);        // u2
+    cl->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second); // u3
+    cl->SetComputeRootConstantBufferView(4, perFrameResource_->GetGPUVirtualAddress());  // b0
+    cl->SetComputeRootConstantBufferView(5, settingsResource_->GetGPUVirtualAddress());  // b1
+    cl->SetComputeRootDescriptorTable(6, fieldsSrvHandle.second);           // t0
+    cl->SetComputeRootConstantBufferView(7, fieldCountResource->GetGPUVirtualAddress()); // b2
+    cl->SetComputeRootDescriptorTable(8, overrideSrvHandle.second);         // t1
+    cl->SetComputeRootDescriptorTable(9, outListHandle.second);             // u4 (Out)
+    cl->SetComputeRootDescriptorTable(10, outCounterHandle.second);         // u5 (Out)
+    cl->SetComputeRootDescriptorTable(11, inListHandle.second);             // u6 (In)
+    cl->SetComputeRootDescriptorTable(12, inCounterHandle.second);          // u7 (In)
+    cl->SetComputeRootDescriptorTable(13, trailBudgetUavHandle_.second);    // u8 (トレイル予算)
+
+    // 生存数ぶんだけ起動（dispatchArgs は INDIRECT_ARGUMENT 状態）。
+    cl->ExecuteIndirect(
+        dxCommon_->GetDispatchIndirectCommandSignature(),
+        1,
+        dispatchArgsResource_.Get(),
+        0,
+        nullptr,
+        0);
+
+    // 次フレームの BuildDispatchArgs が UAV 書き込みできるよう状態を戻す。
+    auto toUAV = CD3DX12_RESOURCE_BARRIER::Transition(
+        dispatchArgsResource_.Get(),
+        dispatchArgsState_,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    cl->ResourceBarrier(1, &toUAV);
+    dispatchArgsState_ = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 }
 
 void ParticleCSGroup::CountAliveParticles() {
@@ -1554,6 +1788,29 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::PopStyleColor();
                 ImGui::Unindent();
             }
+
+            // --- Phase 5: グループ単位トレイル予算（indirect パスのみ有効）---
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.7f, 1.0f));
+            ImGui::TextUnformatted("トレイル予算（グループ全体/フレーム）");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+            bool tb = settingsData_->enableTrailBudget != 0;
+            if (ImGui::Checkbox("本数上限を有効化##etb", &tb))
+                settingsData_->enableTrailBudget = tb ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("1フレームにこのグループ全体で生成するトレイル本数を上限します。\n"
+                                  "高密度バーストが freeList を食い潰すのを防ぎます（間接ディスパッチ時のみ）。");
+            if (tb) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.3f, 0.15f, 0.5f));
+                int budget = static_cast<int>(settingsData_->maxTrailBudgetPerGroup);
+                int absMax = static_cast<int>(settingsData_->maxParticleCount);
+                if (ImGui::DragInt("最大トレイル数##mtb", &budget, 100, 0, absMax))
+                    settingsData_->maxTrailBudgetPerGroup = static_cast<uint32_t>(std::clamp(budget, 0, absMax));
+                ImGui::PopStyleColor();
+                ImGui::Unindent();
+            }
         }
 
         ImGui::PopStyleColor(); // CheckMark
@@ -1623,6 +1880,32 @@ void ParticleCSGroup::DrawImGui() {
         }
 
         ImPlot::PopStyleColor(3);
+    }
+
+    // =======================================================
+    // 実験: Phase 3 ping-pong + DispatchIndirect（既定 OFF）
+    // =======================================================
+    PushSectionColor(ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
+    bool openIndirect = ImGui::CollapsingHeader("  実験: 間接ディスパッチ(Phase3)");
+    PopSectionColor();
+    if (openIndirect) {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+        bool v = useIndirectSim_;
+        if (ImGui::Checkbox("間接ディスパッチで更新##indirectSim", &v)) {
+            SetUseIndirectSim(v);
+        }
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("ON で生存数ぶんだけ DispatchIndirect で更新します（ping-pong）。\n"
+                              "実験的機能: 見た目が壊れる/重くなる場合は OFF に戻してください。");
+        if (useIndirectSim_) {
+            ImGui::TextDisabled("状態: %s  /  Out=%s  /  生存数(描画)=%u",
+                                IsIndirectSimReady() ? "有効" : "準備中",
+                                writeToB_ ? "B" : "A",
+                                aliveDrawCount_);
+        }
+        ImGui::Unindent();
     }
 
     ImGui::PopItemWidth();

@@ -31,19 +31,6 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
     uint particleSlot = gAliveList[instanceId];
     Particle particle = gParticles[particleSlot];
 
-    // --- XYZ 3軸回転行列 (Rz * Ry * Rx の順で合成) ---
-    float sx, cx, sy, cy, sz, cz;
-    sincos(particle.rotation.x, sx, cx);
-    sincos(particle.rotation.y, sy, cy);
-    sincos(particle.rotation.z, sz, cz);
-
-    float4x4 rotXYZ = float4x4(
-        cy * cz, cy * sz, -sy, 0,
-        sx * sy * cz - cx * sz, sx * sy * sz + cx * cz, sx * cy, 0,
-        cx * sy * cz + sx * sz, cx * sy * sz - sx * cz, cx * cy, 0,
-        0, 0, 0, 1
-    );
-
     // --- スケール → XYZ回転 → ビルボード → 平行移動 ---
     float4x4 worldMatrix;
 
@@ -91,7 +78,24 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
         worldMatrix[3].xyz = particle.translate;
     }
 
-    output.position = mul(input.position, mul(rotXYZ, mul(worldMatrix, gPerView.viewProjection)));
+    // ワールド×ビュープロジェクション。回転を使うグループのみ回転行列を合成する
+    // （回転なしグループでは sincos×3＋行列積をスキップ＝全頂点ぶんの無駄を削減）。
+    float4x4 wvp = mul(worldMatrix, gPerView.viewProjection);
+    if (gPerView.enableRotation != 0)
+    {
+        float sx, cx, sy, cy, sz, cz;
+        sincos(particle.rotation.x, sx, cx);
+        sincos(particle.rotation.y, sy, cy);
+        sincos(particle.rotation.z, sz, cz);
+        float4x4 rotXYZ = float4x4(
+            cy * cz, cy * sz, -sy, 0,
+            sx * sy * cz - cx * sz, sx * sy * sz + cx * cz, sx * cy, 0,
+            cx * sy * cz + sx * sz, cx * sy * sz - sx * cz, cx * cy, 0,
+            0, 0, 0, 1
+        );
+        wvp = mul(rotXYZ, wvp);
+    }
+    output.position = mul(input.position, wvp);
     output.texcoord = input.texcoord;
     output.color = particle.color;
     return output;

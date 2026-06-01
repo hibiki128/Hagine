@@ -19,9 +19,11 @@ SamplerState gSampler : register(s0);
 PixelShaderOutput main(VertexShaderOutput input)
 {
     PixelShaderOutput output;
-    float4 transformedUV = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
-    float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
+    // CS パーティクルの uvTransform は常に単位行列のため、per-pixel の 4x4 変換を省略する。
+    // （オーバードロー時はこの 1 画素あたりの行列積が積み上がるため、削るとフィルが軽くなる）
+    float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
     output.color = gMaterial.color * textureColor * input.color;
+    // 完全に寄与しない画素のみ discard（加算合成では微小寄与の総和が見えるため閾値は上げない）。
     if (output.color.a == 0.0f)
     {
         discard;
