@@ -144,7 +144,7 @@ void EnemyAttackCollider::OnCollision(ColliderBase *other) {
         shake_->StartShake();
     }
 
-  // エネルギー回復処理を追加
+    // エネルギー回復処理
     if (enemy_) {
         float currentEnergy = enemy_->GetEnergy();
         float maxEnergy = enemy_->GetMaxEnergy();

@@ -445,7 +445,7 @@ void ParticleCSEditor::ShowPreviewWindow(bool *pOpen) {
 #endif // USE_IMGUI
 }
 
-// カラーテーマの設定メソッドを追加
+// カラーテーマを設定する
 void ParticleCSEditor::SetupColors() {
 #ifdef USE_IMGUI
     // 各CollapsingHeaderに使用する色を定義

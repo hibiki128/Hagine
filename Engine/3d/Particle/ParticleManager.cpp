@@ -47,7 +47,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection) {
             float t = particle.currentTime / particle.lifeTime;
             t = std::clamp(t, 0.0f, 1.0f);
 
-            // --- 色補間処理を追加 ---
+            // --- 色補間処理 ---
             if (!particle.isChild && !particleSetting.isRandomColor) {
                 // 通常パーティクルのみ補間
                 const Vector4 &startColor = particleSetting.startColor;

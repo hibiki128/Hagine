@@ -16,10 +16,10 @@
 namespace Hagine {
 class Sprite;
 
-// -----------------------------------------------------------------------
-// ギズモ操作対象を型に依存せず統一的に扱うためのラッパー構造体
-// BaseObject・WorldTransform・Vector3直接参照の3種類に対応する
-// -----------------------------------------------------------------------
+/// <summary>
+/// ギズモ操作対象を型に依存せず統一的に扱うためのラッパー構造体
+/// BaseObject・WorldTransform・Vector3直接参照・Spriteの各種に対応する
+/// </summary>
 struct GizmoTarget {
     enum class Type {
         BaseObject,     // BaseObject* を持つオブジェクト
@@ -51,21 +51,44 @@ struct GizmoTarget {
     // ImGui 詳細表示コールバック（nullptr の場合はデフォルト表示）
     std::function<void()> imguiCallback;
 
-    // ワールド行列を構築して返す
+    /// <summary>
+    /// ワールド行列を構築して返す
+    /// </summary>
+    /// <returns>Matrix4x4: ワールド行列</returns>
     Matrix4x4 GetWorldMatrix() const;
-    // ワールド座標（位置成分）を返す
+
+    /// <summary>
+    /// ワールド座標（位置成分）を返す
+    /// </summary>
+    /// <returns>Vector3: ワールド座標</returns>
     Vector3 GetWorldPosition() const;
-    // 平行移動デルタを各型に応じて適用する
+
+    /// <summary>
+    /// 平行移動デルタを各型に応じて適用する
+    /// </summary>
+    /// <param name="delta">適用する平行移動量</param>
     void ApplyTranslationDelta(const Vector3 &delta);
-    // ImGui で変換詳細を表示する
+
+    /// <summary>
+    /// ImGui で変換詳細を表示する
+    /// </summary>
     void ShowImGui();
 };
 
-// -----------------------------------------------------------------------
-
+/// <summary>
+/// ImGuizmoを用いたオブジェクトのギズモ操作（移動・回転・拡縮）を管理するシングルトン
+/// 複数選択・コピー＆ペースト・マウス選択・デバッグ描画などを提供する
+/// </summary>
 class ImGuizmoManager {
   private:
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
     ImGuizmoManager() = default;
+
+    /// <summary>
+    /// デストラクタ
+    /// </summary>
     ~ImGuizmoManager() = default;
     ImGuizmoManager(const ImGuizmoManager &) = delete;
     ImGuizmoManager &operator=(const ImGuizmoManager &) = delete;

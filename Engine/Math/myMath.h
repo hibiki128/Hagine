@@ -8,14 +8,26 @@
 #include <type/Vector3.h>
 
 namespace Hagine {
+
+/// <summary>
+/// 球の形状データ
+/// </summary>
 struct Sphere {
-    Vector3 center = {0.0f, 0.0f, 0.0f}; // !< 中心点
-    float radius = 0.0f;                 // !< 半径
+    Vector3 center = {0.0f, 0.0f, 0.0f}; //!< 中心点
+    float radius = 0.0f;                 //!< 半径
 };
+
+/// <summary>
+/// 軸平行境界ボックス（AABB）の形状データ
+/// </summary>
 struct AABB {
     Vector3 min; //!< 最小点
     Vector3 max; //!< 最大点
 };
+
+/// <summary>
+/// 有向境界ボックス（OBB）の形状データ
+/// </summary>
 struct OBB {
     Vector3 rotationCenter;     // 回転中心
     Vector3 scaleCenter;        // スケール中心
@@ -29,14 +41,12 @@ class ViewProjection;
 static const int kColumnWidth = 60;
 static const int kRowHeight = 20;
 
+// 線形補間
 float Lerp(float _start, float _end, float _t);
 Vector3 Lerp(const Vector3 &_start, const Vector3 &_end, float _t);
 Vector4 Lerp(const Vector4 &_start, const Vector4 &_end, float _t);
 
-// float Lerp(float _start, float _end, float _t);
-// Vector3 Lerp(const Vector3& _start, const Vector3& _end, float _t);
-// Vector4 Lerp(const Vector4& _start, const Vector4& _end, float _t);
-//  平行移動行列
+// 平行移動行列
 Matrix4x4 MakeTranslateMatrix(const Vector3 &translate);
 
 // 拡大縮小行列

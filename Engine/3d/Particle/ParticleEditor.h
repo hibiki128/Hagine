@@ -13,11 +13,21 @@
 #include "ParticleStruct.h"
 
 namespace Hagine {
+
+/// <summary>
+/// パーティクルのエミッター・グループをImGuiで編集するエディタ（シングルトン）
+/// エミッターの追加・描画・統計表示・テンプレート生成・保存/読み込みを行う
+/// </summary>
 class ParticleEditor {
   private:
-    // プライベートコンストラクタ
+    /// ===================================================
+    /// private method / variants
+    /// ===================================================
+
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
     ParticleEditor() = default;
-    // コピー禁止
     ParticleEditor(const ParticleEditor &) = delete;
     ParticleEditor &operator=(const ParticleEditor &) = delete;
 
@@ -54,56 +64,92 @@ class ParticleEditor {
     std::string fileName_;
     std::string texturePath_;
 
-    // カラーテーマの設定
+    /// <summary>カラーテーマを設定</summary>
     void SetupColors();
 
-    // カラー付きCollapsingHeader表示関数
+    /// <summary>カラー付きCollapsingHeaderを表示</summary>
+    /// <param name="label">ヘッダーのラベル</param>
+    /// <param name="colorIndex">使用する色のインデックス</param>
+    /// <returns>bool: 展開されていれば true</returns>
     bool ColoredCollapsingHeader(const char *label, int colorIndex);
 
-    // ファイルセレクタ表示関数
+    /// <summary>ファイルセレクタを表示</summary>
     void ShowFileSelector();
 
-    // JSONファイル一覧取得関数
+    /// <summary>JSONファイル一覧を取得</summary>
+    /// <returns>std::vector&lt;std::string&gt;: JSONファイル名一覧</returns>
     std::vector<std::string> GetJsonFiles();
 
   public:
-    // インスタンスの取得
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>インスタンスを取得</summary>
+    /// <returns>ParticleEditor*: シングルトンインスタンス</returns>
     static ParticleEditor *GetInstance() {
         static ParticleEditor instance;
         return &instance;
     }
-    // 終了処理
-    void Finalize();
-    // 初期化
-    void Initialize();
-    // パーティクルエミッター追加（名前指定）
-    void AddParticleEmitter(const std::string &name);
-    // パーティクルエミッター追加（名前・ファイル・テクスチャ指定）
-    void AddParticleEmitter(const std::string &name, const std::string &fileName, const std::string &texturePath);
-    // パーティクルグループ追加（OBJモデル使用）
-    void AddParticleGroup(const std::string &name, const std::string &fileName, const std::string &texturePath);
-    // パーティクルグループ追加（プリミティブ使用）
-    void AddPrimitiveParticleGroup(const std::string &name, const std::string &texturePath, PrimitiveType type);
-    // エミッターの取得
-    // std::unique_ptr<ParticleEmitter> GetEmitter(const std::string &name);
 
-    // 外部パーティクル数をセット（シーン側から呼び出し）
+    /// <summary>終了処理</summary>
+    void Finalize();
+
+    /// <summary>初期化</summary>
+    void Initialize();
+
+    /// <summary>パーティクルエミッターを追加（名前指定）</summary>
+    /// <param name="name">エミッター名</param>
+    void AddParticleEmitter(const std::string &name);
+
+    /// <summary>パーティクルエミッターを追加（名前・ファイル・テクスチャ指定）</summary>
+    /// <param name="name">エミッター名</param>
+    /// <param name="fileName">ファイル名</param>
+    /// <param name="texturePath">テクスチャパス</param>
+    void AddParticleEmitter(const std::string &name, const std::string &fileName, const std::string &texturePath);
+
+    /// <summary>パーティクルグループを追加（OBJモデル使用）</summary>
+    /// <param name="name">グループ名</param>
+    /// <param name="fileName">モデルファイル名</param>
+    /// <param name="texturePath">テクスチャパス</param>
+    void AddParticleGroup(const std::string &name, const std::string &fileName, const std::string &texturePath);
+
+    /// <summary>パーティクルグループを追加（プリミティブ使用）</summary>
+    /// <param name="name">グループ名</param>
+    /// <param name="texturePath">テクスチャパス</param>
+    /// <param name="type">プリミティブの種類</param>
+    void AddPrimitiveParticleGroup(const std::string &name, const std::string &texturePath, PrimitiveType type);
+
+    /// <summary>外部パーティクル数をセット（シーン側から呼び出し）</summary>
+    /// <param name="name">エミッター名</param>
+    /// <param name="count">パーティクル数</param>
     void SetExternalParticleCount(const std::string &name, size_t count);
 
+    /// <summary>シーン全体のパーティクル数を集計</summary>
     void SceneParticleCount();
 
+    /// <summary>フレームごとの統計を更新</summary>
     void UpdateFrameStats();
 
+    /// <summary>テンプレートからエミッターを生成</summary>
+    /// <param name="name">テンプレート名</param>
+    /// <returns>std::unique_ptr&lt;ParticleEmitter&gt;: 生成されたエミッター</returns>
     std::unique_ptr<ParticleEmitter> CreateEmitterFromTemplate(const std::string &name);
-    // ImGuiエディターの表示
+
+    /// <summary>ImGuiエディターウィンドウを表示</summary>
     void EditorWindow();
-    // すべてのエミッターを描画
+
+    /// <summary>すべてのエミッターを描画</summary>
+    /// <param name="vp_">ビュープロジェクション</param>
     void DrawAll(const ViewProjection &vp_);
-    // すべてのエミッターのデバッグ情報を表示
+
+    /// <summary>すべてのエミッターのデバッグ情報を表示</summary>
     void DebugAll();
-    // ImGuiエディターの表示処理
+
+    /// <summary>ImGuiエディターの表示処理</summary>
     void ShowImGuiEditor();
-    // データのロード
+
+    /// <summary>データの読み込み</summary>
     void Load();
 };
 } // namespace Hagine

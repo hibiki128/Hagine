@@ -12,12 +12,21 @@
 #include <wrl.h>
 
 namespace Hagine {
+
+/// <summary>
+/// GPUパーティクル1グループ分のリソースとコンピュート処理を管理するクラス
+/// パーティクルバッファ・生存リスト・各種定数バッファを保持し、
+/// 更新コンピュートのディスパッチ（indirect対応）と描画用データの提供を行う
+/// </summary>
 class ParticleCSGroup {
   public:
     /// ===================================
     /// public methods
     /// ===================================
 
+    /// <summary>
+    /// デストラクタ
+    /// </summary>
     ~ParticleCSGroup();
     ParticleCSGroupData CreateParticleGroup(const std::string &groupName, const std::string &filename, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
     ParticleCSGroupData CreatePrimitiveParticleGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);

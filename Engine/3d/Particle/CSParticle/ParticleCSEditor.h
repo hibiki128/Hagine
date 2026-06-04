@@ -5,15 +5,21 @@
 #include "map"
 #include <unordered_map>
 namespace Hagine {
+
+/// <summary>
+/// GPUパーティクルのエミッター・グループをImGuiで編集するエディタ（シングルトン）
+/// エミッターの追加・描画（Compute/Graphicsの2フェーズ）・統計表示・プレビュー窓を提供する
+/// </summary>
 class ParticleCSEditor {
   private:
     /// ===================================
     /// private methods
     /// ===================================
 
-    // プライベートコンストラクタ
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
     ParticleCSEditor() = default;
-    // コピー禁止
     ParticleCSEditor(const ParticleCSEditor &) = delete;
     ParticleCSEditor &operator=(const ParticleCSEditor &) = delete;
 

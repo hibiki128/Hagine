@@ -19,7 +19,7 @@ void ParticleEditor::Initialize() {
     SetupColors();
 }
 
-// カラーテーマの設定メソッドを追加
+// カラーテーマを設定する
 void ParticleEditor::SetupColors() {
 #ifdef USE_IMGUI
     // 各CollapsingHeaderに使用する色を定義

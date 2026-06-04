@@ -10,36 +10,64 @@
 #include <unordered_set>
 
 namespace Hagine {
+
+/// <summary>
+/// コライダーのタグを一元管理するシングルトン
+/// 利用可能なタグの登録・削除・存在確認を行う
+/// </summary>
 class ColliderTagManager {
   public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// インスタンスを取得
+    /// </summary>
+    /// <returns>ColliderTagManager*: シングルトンインスタンス</returns>
     static ColliderTagManager *GetInstance() {
         static ColliderTagManager instance;
         return &instance;
     }
 
-    // タグの追加
+    /// <summary>
+    /// タグを追加
+    /// </summary>
+    /// <param name="tag">追加するタグ名</param>
     void AddTag(const std::string &tag) {
         if (!tag.empty()) {
             availableTags_.insert(tag);
         }
     }
 
-    // タグの削除
+    /// <summary>
+    /// タグを削除
+    /// </summary>
+    /// <param name="tag">削除するタグ名</param>
     void RemoveTag(const std::string &tag) {
         availableTags_.erase(tag);
     }
 
-    // 全タグ取得
+    /// <summary>
+    /// 全タグを取得
+    /// </summary>
+    /// <returns>const std::unordered_set&lt;std::string&gt;&: 登録済みタグの集合</returns>
     const std::unordered_set<std::string> &GetAllTags() const {
         return availableTags_;
     }
 
-    // タグが存在するか確認
+    /// <summary>
+    /// タグが存在するか確認
+    /// </summary>
+    /// <param name="tag">確認するタグ名</param>
+    /// <returns>bool: 存在すれば true</returns>
     bool HasTag(const std::string &tag) const {
         return availableTags_.find(tag) != availableTags_.end();
     }
 
-    // デフォルトタグの初期化
+    /// <summary>
+    /// デフォルトタグを初期化
+    /// </summary>
     void InitializeDefaultTags() {
         AddTag("None");
         AddTag("Environment");
@@ -58,18 +86,35 @@ class ColliderTagManager {
     }
 
 #ifdef _DEBUG
-    // ImGuiでタグ管理UI表示
+    /// <summary>
+    /// ImGuiでタグ管理UIを表示
+    /// </summary>
     void ImGuiTagManager();
 #endif
 
   private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// コンストラクタ（デフォルトタグを初期化）
+    /// </summary>
     ColliderTagManager() {
         InitializeDefaultTags();
     }
+
+    /// <summary>
+    /// デストラクタ
+    /// </summary>
     ~ColliderTagManager() = default;
     ColliderTagManager(const ColliderTagManager &) = delete;
     ColliderTagManager &operator=(const ColliderTagManager &) = delete;
 
-    std::unordered_set<std::string> availableTags_;
+    /// ===================================================
+    /// private variants
+    /// ===================================================
+
+    std::unordered_set<std::string> availableTags_; // 利用可能なタグの集合
 };
 } // namespace Hagine

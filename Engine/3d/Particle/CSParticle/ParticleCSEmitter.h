@@ -10,24 +10,79 @@
 #include <vector>
 
 namespace Hagine {
+
+/// <summary>
+/// GPU（コンピュートシェーダー）パーティクルの発生源クラス
+/// 発生源メッシュ・グループを保持し、Emit/Updateのコンピュート実行と描画を行う
+/// </summary>
 class ParticleCSEmitter {
 
   public:
     /// ==============================================
     /// public methods
     /// ==============================================
+
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
     ParticleCSEmitter() = default;
-    // 破棄時に保有する独立グループを再利用プールへ返却する（バッファ累積を防ぐ）
+
+    /// <summary>
+    /// デストラクタ（保有する独立グループを再利用プールへ返却しバッファ累積を防ぐ）
+    /// </summary>
     ~ParticleCSEmitter();
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    /// <param name="name">エミッター名</param>
     void Initialize(const std::string &name);
+
+    /// <summary>
+    /// 初期化（モデルを指定）
+    /// </summary>
+    /// <param name="name">エミッター名</param>
+    /// <param name="modelPath">発生源メッシュのモデルパス</param>
     void Initialize(const std::string &name, const std::string &modelPath);
+
+    /// <summary>
+    /// 初期化（プリミティブを指定）
+    /// </summary>
+    /// <param name="name">エミッター名</param>
+    /// <param name="primitiveType">発生源メッシュのプリミティブ種別</param>
     void Initialize(const std::string &name, PrimitiveType primitiveType);
+
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update();
+
+    /// <summary>
+    /// 描画処理
+    /// </summary>
+    /// <param name="vp">ビュープロジェクション</param>
     void Draw(const ViewProjection &vp);
+
+    /// <summary>
+    /// ImGuiでの設定UIを表示
+    /// </summary>
     void DrawImGui();
+
+    /// <summary>
+    /// パーティクルグループを追加
+    /// </summary>
+    /// <param name="particleGroup">追加するグループ</param>
     void AddParticleGroup(ParticleCSGroup *particleGroup);
+
+    /// <summary>
+    /// 名前を指定してパーティクルグループを削除
+    /// </summary>
+    /// <param name="groupName">削除するグループ名</param>
     void RemoveParticleGroup(const std::string &groupName);
+
+    /// <summary>
+    /// 1回だけパーティクルを発生させる
+    /// </summary>
     void EmitOnce();
 
     EmitterMesh GetEmitterMesh() const {
@@ -75,6 +130,10 @@ class ParticleCSEmitter {
         }
     }
 
+    /// <summary>
+    /// 自身を複製する
+    /// </summary>
+    /// <returns>std::unique_ptr&lt;ParticleCSEmitter&gt;: 複製されたエミッター</returns>
     std::unique_ptr<ParticleCSEmitter> Clone() const;
 
     void SetTranslate(Vector3 transform) {
@@ -184,23 +243,52 @@ class ParticleCSEmitter {
     /// private methods
     /// ==============================================
 
+    /// <summary>
+    /// 発生源メッシュ用の定数バッファリソースを生成
+    /// </summary>
     void CreateEmitterMeshResource();
+
+    /// <summary>
+    /// 発生源メッシュの更新
+    /// </summary>
     void EmitterUpdate();
-    // indirectGroup を渡すと kEmitterIndirect PSO を使い、そのグループのみ emit して
-    // 発生スロットを出力(Out) aliveList(B) にも append する（Phase 3）。
-    // nullptr の場合は従来パス（全グループ・kEmitter PSO）で挙動不変。
+
+    /// <summary>
+    /// Emitのコンピュートをディスパッチする
+    /// indirectGroup を渡すと kEmitterIndirect PSO を使い、そのグループのみ emit して
+    /// 発生スロットを出力(Out) aliveList(B) にも append する（Phase 3）。
+    /// nullptr の場合は従来パス（全グループ・kEmitter PSO）で挙動不変。
+    /// </summary>
+    /// <param name="cmdList">使用するコマンドリスト（省略時は既定）</param>
+    /// <param name="indirectGroup">indirect発生の対象グループ（省略可）</param>
     void EmitterDisPatch(ID3D12GraphicsCommandList *cmdList = nullptr,
                          ParticleCSGroup *indirectGroup = nullptr);
 
   public:
-    // ---- バッチ非同期コンピュート用 2フェーズ API ----
+    /// ---- バッチ非同期コンピュート用 2フェーズ API ----
+
+    /// <summary>
     /// Compute フェーズ: Emit/Update を Compute Queue に記録するだけ（Execute しない）
+    /// </summary>
+    /// <param name="vp">ビュープロジェクション</param>
     void DrawCompute(const ViewProjection &vp);
+
+    /// <summary>
     /// Graphics フェーズ: Count + DrawIndexed を Direct Queue で実行（Compute 済み前提）
+    /// </summary>
+    /// <param name="vp">ビュープロジェクション</param>
     void DrawGraphics(const ViewProjection &vp);
-    // プレビュー隔離描画: 外部 per-view CB（プレビューVP）で Graphics のみ描画する。
-    // RT/DSV/Viewport/DescriptorHeap は呼び出し側で設定済みであること。ワイヤー(DrawEmitter)は描かない。
+
+    /// <summary>
+    /// プレビュー隔離描画: 外部 per-view CB（プレビューVP）で Graphics のみ描画する。
+    /// RT/DSV/Viewport/DescriptorHeap は呼び出し側で設定済みであること。ワイヤー(DrawEmitter)は描かない。
+    /// </summary>
+    /// <param name="perViewGpuAddress">プレビュー用 per-view 定数バッファのGPUアドレス</param>
     void DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress);
+
+    /// <summary>
+    /// エミッターのワイヤーフレームを描画
+    /// </summary>
     void DrawEmitter();
 
     // プレビュー窓用: エミッタのワイヤーフレーム線分を取得する（DrawEmitter と同一形状）。
@@ -212,13 +300,27 @@ class ParticleCSEmitter {
     };
     std::vector<WireSegment> GetWireframeSegments() const;
 
+    /// <summary>設定をJsonへ保存</summary>
     void SaveSetting();
+
+    /// <summary>設定をJsonから読み込み</summary>
     void LoadSetting();
+
+    /// <summary>複製時の設定を読み込み</summary>
     void LoadCloneSetting();
 
+    /// <summary>発生源メッシュのモデルを読み込み</summary>
+    /// <param name="modelPath">モデルパス</param>
     void LoadModel(const std::string &modelPath);
+
+    /// <summary>発生源メッシュのプリミティブモデルを読み込み</summary>
+    /// <param name="type">プリミティブの種類</param>
     void LoadPrimitiveModel(PrimitiveType type);
+
+    /// <summary>発生源メッシュの三角形情報を生成</summary>
     void CreateModelTriangles();
+
+    /// <summary>発生源メッシュのエッジ情報を生成</summary>
     void CreateModelEdges();
 
   private:

@@ -557,7 +557,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGPUParticleRo
 
     // b0: PerView用のConstantBufferView (VertexShaderで使用)
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX; // VERTEXに変更
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX; // VertexShaderから参照
     rootParameters[0].Descriptor.ShaderRegister = 0;
 
     // t0: パーティクル用のStructuredBuffer (VertexShaderで使用)
@@ -1291,7 +1291,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     skinShadowDescriptorRange[0].RegisterSpace = 0;
     skinShadowDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    // 元のrootParameters配列を11要素に変更
+    // スキン+シャドウ用に11要素のrootParametersを構築する
     D3D12_ROOT_PARAMETER rootParameters11[11] = {};
     for (int _i = 0; _i < 9; ++_i) rootParameters11[_i] = rootParameters[_i];
     // rootParameters[9]: シャドウマップ SRV (t2) - PIXEL

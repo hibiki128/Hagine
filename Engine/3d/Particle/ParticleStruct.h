@@ -13,6 +13,10 @@
 #include <vector>
 
 namespace Hagine {
+
+/// <summary>
+/// パーティクルのマテリアル情報（色・UV変換・テクスチャ）
+/// </summary>
 struct ParticleMaterial {
     Vector4 color;
     Matrix4x4 uvTransform;
@@ -23,6 +27,9 @@ struct ParticleMaterial {
 
 /// ===== GPUParticle =====
 
+/// <summary>
+/// GPUパーティクルの発生源メッシュ情報
+/// </summary>
 struct EmitterMesh {
     Vector3 translate;
     uint32_t triangleCount;
@@ -37,6 +44,9 @@ struct EmitterMesh {
     float padding;
 };
 
+/// <summary>
+/// GPU上で管理する1パーティクル分のデータ（HLSL側 Particle と対応）
+/// </summary>
 struct CSParticle {
     Vector3 translate;
     Vector3 scale;
@@ -65,6 +75,9 @@ struct CSParticle {
     float paddingScale = 0.0f;
 };
 
+/// <summary>
+/// 描画時にビュー単位で渡す情報（ビュープロジェクション・ビルボード設定など）
+/// </summary>
 struct PerView {
     Matrix4x4 viewProjection;
     Matrix4x4 billboardMatrix;
@@ -91,6 +104,9 @@ struct ParticleDrawAttrib {
 };
 static_assert(sizeof(ParticleDrawAttrib) == 64, "ParticleDrawAttrib must be 64 bytes to match HLSL StructuredBuffer layout");
 
+/// <summary>
+/// 発生源メッシュの三角形1枚分の頂点情報
+/// </summary>
 struct TriangleInfo {
     Vector3 v0;
     float padding0;
@@ -100,6 +116,9 @@ struct TriangleInfo {
     float padding2;
 };
 
+/// <summary>
+/// 描画時にフレーム単位で渡す情報（時間・グループID など）
+/// </summary>
 struct PerFrame {
     float time;
     float deltaTime;
@@ -107,15 +126,24 @@ struct PerFrame {
     int32_t emitterFieldGroupId; // -1=全フィールド対象, 0以上=同IDのフィールドのみ対象
 };
 
+/// <summary>
+/// エミッターデータ（発生源メッシュを保持）
+/// </summary>
 struct EmitterData {
     EmitterMesh mesh;
 };
 
+/// <summary>
+/// メッシュ表面上のサンプル点
+/// </summary>
 struct SurfacePoint {
     Vector3 position;
     float padding;
 };
 
+/// <summary>
+/// 発生源メッシュのエッジ1本分の頂点情報
+/// </summary>
 struct EdgeInfo {
     Vector3 v0;
     float padding0;
@@ -123,6 +151,9 @@ struct EdgeInfo {
     float padding1;
 };
 
+/// <summary>
+/// GPUパーティクルグループの保持データ（マテリアル・パーティクル一覧など）
+/// </summary>
 struct ParticleCSGroupData {
     // マテリアルデータ
     std::vector<ParticleMaterial> materials;
@@ -138,6 +169,10 @@ static const uint32_t kMaxParticleCount = 100000; // 最大パーティクル数
 extern uint32_t threadsPerGroup_;                 // 1グループあたりのスレッド数
 extern int threadGroupSize_;                      // スレッドグループの数
 
+/// <summary>
+/// GPUパーティクルの挙動設定（寿命・速度・色・各種エフェクトの有効化など）
+/// HLSL側 struct ParticleCSSettings とレイアウトを一致させること
+/// </summary>
 struct ParticleCSSettings {
     float lifeTimeMin = 1.0f;
     float lifeTimeMax = 3.0f;
@@ -393,6 +428,9 @@ struct ParticleField {
 
 /// ====== CPUParticle ======
 
+/// <summary>
+/// CPUパーティクルの挙動設定（寿命・速度・色・軌跡・各種オプションなど）
+/// </summary>
 struct ParticleSetting {
     int maxTrailParticles; // 最大軌跡パーティクル数
     float gatherStartRatio = 0.5f;
@@ -456,17 +494,26 @@ struct ParticleSetting {
                         trailInheritVelocity(true), trailVelocityScale(0.3f) {}
 };
 
+/// <summary>
+/// パーティクルの統計情報（数・インスタンス数）
+/// </summary>
 struct ParticleStats {
     size_t count = 0;
     size_t instanceCount = 0; // 同じ名前のエミッター数
 };
 
+/// <summary>
+/// GPUへ送る描画用パーティクルデータ（WVP・World・色）
+/// </summary>
 struct ParticleForGPU {
     Matrix4x4 WVP;
     Matrix4x4 World;
     Vector4 color;
 };
 
+/// <summary>
+/// CPUで管理する1パーティクル分のデータ
+/// </summary>
 struct Particle {
     WorldTransform transform{}; // 位置
     Vector3 emitterPosition{};
@@ -499,6 +546,9 @@ struct Particle {
                  trailSpawnInterval(0.1f), maxChildren(10), childLifeScale(0.8f) {}
 };
 
+/// <summary>
+/// CPUパーティクルグループの保持データ（マテリアル・パーティクル一覧・インスタンシング情報）
+/// </summary>
 struct ParticleGroupData {
     // マテリアルデータ
     std::vector<ParticleMaterial> materials;
@@ -520,7 +570,17 @@ struct ParticleGroupData {
 
 /// =========================
 
+/// <summary>
+/// MaterialData を ParticleMaterial へ変換
+/// </summary>
+/// <param name="material">変換元のマテリアルデータ</param>
+/// <returns>ParticleMaterial: 変換後のパーティクルマテリアル</returns>
 ParticleMaterial ForParticleMaterial(MaterialData material);
 
+/// <summary>
+/// MaterialData の配列を ParticleMaterial の配列へ変換
+/// </summary>
+/// <param name="materials">変換元のマテリアルデータ配列</param>
+/// <returns>std::vector&lt;ParticleMaterial&gt;: 変換後の配列</returns>
 std::vector<ParticleMaterial> ForParticleMaterials(std::vector<MaterialData> materials);
 } // namespace Hagine

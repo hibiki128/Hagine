@@ -14,42 +14,89 @@
 #include <fstream>
 
 namespace Hagine {
+
+/// <summary>
+/// パーティクルの発生源（エミッター）クラス
+/// パーティクルグループの設定を保持し、発生・更新・描画・ImGui編集・Json保存を行う
+/// </summary>
 class ParticleEmitter {
   public:
-    // コンストラクタでメンバ変数を初期化
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// コンストラクタ（メンバ変数を初期化）
+    /// </summary>
     ParticleEmitter();
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
+    /// <param name="name">エミッター名</param>
     void Initialize(std::string name = {});
 
-    // 更新処理を行うUpdate関数
+    /// <summary>
+    /// 更新処理
+    /// </summary>
     void Update();
 
+    /// <summary>
+    /// 1回だけ発生させる更新処理
+    /// </summary>
     void UpdateOnce();
 
+    /// <summary>
+    /// 描画処理
+    /// </summary>
+    /// <param name="vp_">ビュープロジェクション</param>
     void Draw(const ViewProjection &vp_);
 
+    /// <summary>
+    /// エミッター自体（発生範囲）の描画
+    /// </summary>
     void DrawEmitter();
 
-    void Debug(); // ImGui用の関数を追加
+    /// <summary>
+    /// ImGuiでのデバッグ表示
+    /// </summary>
+    void Debug();
 
+    /// <summary>
+    /// 全パーティクルが寿命を終えたかを判定
+    /// </summary>
+    /// <returns>bool: 全て完了していれば true</returns>
     bool IsAllParticlesComplete();
 
+    /// <summary>
+    /// パーティクルグループを追加
+    /// </summary>
+    /// <param name="particleGroup">追加するパーティクルグループ</param>
     void AddParticleGroup(ParticleGroup *particleGroup);
+
+    /// <summary>
+    /// 名前を指定してパーティクルグループを削除
+    /// </summary>
+    /// <param name="name">削除するグループ名</param>
     void RemoveParticleGroup(const std::string &name) {
         Manager_->RemoveParticleGroup(name);
     }
 
-    int selectedGroupIndex_ = 0;
+    int selectedGroupIndex_ = 0; // ImGuiで選択中のグループインデックス
 
+    /// <summary>
+    /// 自身を複製する
+    /// </summary>
+    /// <returns>std::unique_ptr&lt;ParticleEmitter&gt;: 複製されたエミッター</returns>
     std::unique_ptr<ParticleEmitter> Clone() const;
 
-    bool GetIsAuto() { return isAuto_; }
-    Matrix4x4 GetWorldMatrix() { return transform_.matWorld_; }
-    Vector3 GetPosition() { return transform_.translation_; }
-    void SetPosition(const Vector3 &position) { transform_.translation_ = position; }
+    bool GetIsAuto() { return isAuto_; }                                          // 自動発生フラグを取得
+    Matrix4x4 GetWorldMatrix() { return transform_.matWorld_; }                  // ワールド行列を取得
+    Vector3 GetPosition() { return transform_.translation_; }                    // 位置を取得
+    void SetPosition(const Vector3 &position) { transform_.translation_ = position; } // 位置を設定
 
-    bool IsGizmoSelectable() const { return isGizmoSelectable_; }
-    void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; }
+    bool IsGizmoSelectable() const { return isGizmoSelectable_; }                 // ギズモ選択可能か取得
+    void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; } // ギズモ選択可否を設定
 
   public:
     void SetPositionY(const std::string &groupName, float positionY) {
@@ -69,12 +116,9 @@ class ParticleEmitter {
         FlushSetting(groupName);
     }
 
-    // -------------------------------------------------------
-    // 【修正】SetStartScale / SetEndScale
-    //   particleSettings_ への書き込みと同時に Manager_ にも
-    //   即時反映する。
-    //   transform の dirty 判定とは独立して動作する。
-    // -------------------------------------------------------
+    // SetStartScale / SetEndScale:
+    //   particleSettings_ への書き込みと同時に Manager_ にも即時反映する
+    //   （transform の dirty 判定とは独立して動作する）
     void SetStartScale(const std::string &groupName, const Vector3 &scale) {
         particleSettings_[groupName].particleStartScale = scale;
         FlushSetting(groupName);
@@ -119,10 +163,8 @@ class ParticleEmitter {
         FlushSetting(groupName);
     }
 
-    // -------------------------------------------------------
-    // 【修正】SetScaleAll / SetStartAcce 系
+    // SetScaleAll / SetStartAcce 系:
     //   全グループへの一括書き込みも Manager_ に即時反映する
-    // -------------------------------------------------------
     void SetScaleAll(const Vector3 &scale) {
         for (auto &[groupName, setting] : particleSettings_) {
             if (setting.isSinMove) {
@@ -168,13 +210,29 @@ class ParticleEmitter {
     }
 
   private:
-    // パーティクルを発生させるEmit関数（外部用・設定同期込み）
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// パーティクルを発生させる（外部用・設定同期込み）
+    /// </summary>
     void Emit();
-    // transform を全グループの ParticleSetting に反映する（dirty判定用）
+
+    /// <summary>
+    /// transform を全グループの ParticleSetting に反映する（dirty判定用）
+    /// </summary>
     void SyncSettingsToTransform();
-    // 設定同期なしで発射するだけの内部用関数
+
+    /// <summary>
+    /// 設定同期なしで発射するだけの内部用処理
+    /// </summary>
     void EmitInternal();
 
+    /// <summary>
+    /// 指定グループの設定を Manager_ に即時反映する
+    /// </summary>
+    /// <param name="groupName">対象グループ名</param>
     void FlushSetting(const std::string &groupName) {
         if (!Manager_)
             return;
@@ -188,33 +246,50 @@ class ParticleEmitter {
         Manager_->SetParticleSetting(groupName, it->second);
     }
 
+    /// <summary>設定をJsonへ保存</summary>
     void SaveToJson();
+
+    /// <summary>設定をJsonから読み込み</summary>
     void LoadFromJson();
+
+    /// <summary>パーティクルグループを読み込み</summary>
     void LoadParticleGroup();
+
+    /// <summary>既定のパーティクル設定を生成</summary>
+    /// <returns>ParticleSetting: 既定設定</returns>
     ParticleSetting DefaultSetting();
+
+    /// <summary>ブレンドモード選択コンボを表示</summary>
+    /// <param name="currentMode">現在のブレンドモード</param>
     void ShowBlendModeCombo(BlendMode &currentMode);
+
+    /// <summary>パーティクルデータのデバッグ表示</summary>
     void DebugParticleData();
 
   private:
+    /// ===================================================
+    /// private variants
+    /// ===================================================
+
     using json = nlohmann::json;
     float elapsedTime_ = 0.0f;   // 経過時間
     float emitFrequency_ = 0.1f; // パーティクルの発生頻度
 
-    bool isVisible_ = false;
-    bool isActive_ = false;
-    bool isAuto_ = false;
-    bool isGizmoSelectable_ = true;
+    bool isVisible_ = false;          // 表示フラグ
+    bool isActive_ = false;           // アクティブフラグ
+    bool isAuto_ = false;             // 自動発生フラグ
+    bool isGizmoSelectable_ = true;   // ギズモ選択可能フラグ
 
     std::string name_;         // パーティクルの名前
     WorldTransform transform_; // 位置や回転などのトランスフォーム
 
-    std::unordered_map<std::string, ParticleSetting> particleSettings_;
+    std::unordered_map<std::string, ParticleSetting> particleSettings_; // グループごとの設定
 
-    std::unique_ptr<ParticleManager> Manager_;
-    std::unique_ptr<DataHandler> datas_;
-    std::vector<std::string> particleGroupNames_;
+    std::unique_ptr<ParticleManager> Manager_;      // パーティクル管理
+    std::unique_ptr<DataHandler> datas_;            // データ管理
+    std::vector<std::string> particleGroupNames_;   // パーティクルグループ名一覧
 
-    // ★ dirty判定用：前フレームの transform を保持する
+    // dirty判定用：前フレームの transform を保持する
     Vector3 lastTranslation_ = {};
     Quaternion lastRotation_ = Quaternion::IdentityQuaternion();
     Vector3 lastScale_ = {1.0f, 1.0f, 1.0f};

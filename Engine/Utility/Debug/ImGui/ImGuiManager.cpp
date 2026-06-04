@@ -585,7 +585,7 @@ void ImGuiManager::ShowSceneSettingWindow() {
     if (!showSceneView_)
         return; // 表示しない場合は早期リターン
 
-    // パフォーマンス改善: 軽量化フラグを追加
+    // 出現時にフォーカスを奪わない軽量フラグ
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
     
 

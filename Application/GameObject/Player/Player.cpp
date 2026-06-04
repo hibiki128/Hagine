@@ -1241,7 +1241,6 @@ void Player::UpdateAnimation() {
                 SetAnima(path);
             }
             // else: 該当段のアニメーションが未設定（空文字）なので何もしない
-            // SetAnima(""); ← パスなし段はここでコメントアウト
         }
         return; // 攻撃中は以降のステート判定をスキップ
     }

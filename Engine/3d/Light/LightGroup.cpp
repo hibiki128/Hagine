@@ -506,7 +506,7 @@ void LightGroup::imgui() {
         ImGui::EndTabBar();
     }
 
-    // セーブ・ロード機能を追加
+    // セーブ・ロードのUI
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Text("セーブ・ロード");

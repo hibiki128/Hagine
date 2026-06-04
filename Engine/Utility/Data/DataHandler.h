@@ -14,15 +14,25 @@ namespace Hagine {
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
+/// <summary>
+/// JSONファイルへのデータの保存・読み込みを管理するクラス
+/// メモリ上にキャッシュし、変更があればデストラクタやFlushでファイルへ書き出す
+/// </summary>
 class DataHandler {
   private:
+    /// ===================================================
+    /// private variants
+    /// ===================================================
+
     std::string basePath_ = "resources/jsons"; // 固定の基準パス
     std::string folderPath_ = "";              // インスタンスごとのフォルダパス
     std::string fileName_ = "data.json";       // インスタンスごとのファイル名
     json cachedJson_;                          // メモリ上にキャッシュしたJSONデータ
     bool isDirty_ = false;                     // Saveによる変更がある場合にファイル書き出しが必要かを示すフラグ
 
-    // ファイルからJSONを読み込んでキャッシュに格納する
+    /// <summary>
+    /// ファイルからJSONを読み込んでキャッシュに格納する
+    /// </summary>
     void LoadFromFile() {
         std::string filePath = folderPath_ + "/" + fileName_;
         std::ifstream inFile(filePath);
@@ -34,7 +44,14 @@ class DataHandler {
 
 
   public:
-    // キャッシュ内容をファイルに書き出す
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// キャッシュ内容をファイルに書き出す
+    /// </summary>
+    /// <returns>bool: 書き出しに成功（または変更なし）なら true</returns>
     bool Flush() {
         if (!isDirty_)
             return true;
@@ -48,30 +65,58 @@ class DataHandler {
         }
         return false;
     }
-    // コンストラクタ
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
+    /// <param name="folder">フォルダパス</param>
+    /// <param name="file">ファイル名</param>
     DataHandler(const std::string &folder, const std::string &file);
 
-    // デストラクタで未書き出しの変更をファイルに反映
+    /// <summary>
+    /// デストラクタ（未書き出しの変更をファイルに反映）
+    /// </summary>
     ~DataHandler() { Flush(); }
 
-    // キャッシュに書き込み、ダーティフラグを立てる
+    /// <summary>
+    /// キャッシュに書き込み、ダーティフラグを立てる
+    /// </summary>
+    /// <param name="key">キー</param>
+    /// <param name="value">保存する値</param>
     template <typename T>
     void Save(const std::string &key, const T &value);
 
-    // キャッシュから直接読み込む
+    /// <summary>
+    /// キャッシュから直接読み込む
+    /// </summary>
+    /// <param name="key">キー</param>
+    /// <param name="defaultValue">キーが存在しない場合の既定値</param>
+    /// <returns>T: 読み込んだ値（なければ既定値）</returns>
     template <typename T>
     T Load(const std::string &key, const T &defaultValue);
 
-    // JSONファイルの存在確認（あるときtrue、ないときfalse）
+    /// <summary>
+    /// JSONファイルの存在確認
+    /// </summary>
+    /// <returns>bool: 存在すれば true</returns>
     bool Exists() const;
 
+    /// <summary>
+    /// 指定したJSONファイルを削除
+    /// </summary>
+    /// <param name="jsonName">削除するJSONファイル名</param>
     void DeleteJson(const std::string &jsonName);
 
-    // 対象フォルダ内のすべてのJSONファイルを削除
+    /// <summary>
+    /// 対象フォルダ内のすべてのJSONファイルを削除
+    /// </summary>
     void DeleteAllJsonsInFolder();
 };
 
-// JSON変換の定義 (Vector2)
+/// ===================================================
+/// 各型のJSON変換定義（nlohmann::json 用 to_json / from_json）
+/// ===================================================
+
+// Vector2
 inline void to_json(json &j, const Vector2 &v) {
     j = json{{"x", v.x}, {"y", v.y}};
 }

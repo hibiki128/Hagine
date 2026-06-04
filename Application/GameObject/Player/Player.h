@@ -55,7 +55,6 @@ class Player : public Hagine::BaseObject {
     /// 描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    /// <param name="offSet">描画オフセット</param>
     void Draw(const Hagine::ViewProjection &viewProjection) override;
 
     /// <summary>
@@ -352,7 +351,6 @@ class Player : public Hagine::BaseObject {
     static constexpr float kTimerReset = 0.0f;
     static constexpr float kPlayerDamageTiltDegrees = 20.0f;
     static constexpr float kNoDamage = 0.0f;
-    // kGuardDamageMultiplier は定数から変数へ移動済み (guardDamageMultiplier_)
 
     // 点滅関連定数
     static constexpr float kPlayerBlinkInterval = 0.05f;
@@ -454,9 +452,9 @@ class Player : public Hagine::BaseObject {
     float dashInputZ_ = 0.0f;           // ダッシュ開始時のスティックZ入力
     bool dashStartedThisFrame_ = false; // ダッシュ開始フラグ
     float dashDuration_ = 0.0f;         // ダッシュ継続時間
-    bool wasDashing_ = false;           // 前フレームのダッシュ状態（static ローカルを昇格）
+    bool wasDashing_ = false;           // 前フレームのダッシュ状態
 
-    bool wasRTPressed_ = false; // 前フレームのRT押下状態（static ローカルを昇格）
+    bool wasRTPressed_ = false; // 前フレームのRT押下状態
 
     bool started_ = false;        // ゲーム開始フラグ
     bool isPause_ = false;        // ポーズ中フラグ

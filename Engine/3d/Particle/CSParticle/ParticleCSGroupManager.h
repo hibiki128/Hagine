@@ -8,12 +8,26 @@
 #include <unordered_set>
 #include <vector>
 namespace Hagine {
+
+/// <summary>
+/// GPUパーティクルグループを一元管理するシングルトン
+/// グループの生成・複製・削除に加え、エミッター用独立グループの再利用プールを管理し、
+/// クローン毎のGPUバッファ確保とSRVの入れ替わりを抑制する
+/// </summary>
 class ParticleCSGroupManager {
   private:
     /// ===================================================
     /// private methods
     /// ===================================================
+
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
     ParticleCSGroupManager() = default;
+
+    /// <summary>
+    /// デストラクタ
+    /// </summary>
     ~ParticleCSGroupManager() = default;
     ParticleCSGroupManager(ParticleCSGroupManager &) = delete;
     ParticleCSGroupManager &operator=(ParticleCSGroupManager &) = delete;
@@ -22,20 +36,57 @@ class ParticleCSGroupManager {
     /// ===================================================
     /// public methods
     /// ===================================================
+
+    /// <summary>
+    /// インスタンスを取得
+    /// </summary>
+    /// <returns>ParticleCSGroupManager*: シングルトンインスタンス</returns>
     static ParticleCSGroupManager *GetInstance() {
         static ParticleCSGroupManager instance;
         return &instance;
     }
 
+    /// <summary>
+    /// 初期化
+    /// </summary>
     void Initialize();
 
+    /// <summary>
+    /// 終了処理
+    /// </summary>
     void Finalize();
 
+    /// <summary>
+    /// GPUパーティクルグループを追加
+    /// </summary>
+    /// <param name="particleCSGroup">追加するグループ</param>
     void AddParticleCSGroup(std::unique_ptr<ParticleCSGroup> particleCSGroup);
 
+    /// <summary>
+    /// モデルファイルからGPUパーティクルグループを生成
+    /// </summary>
+    /// <param name="groupName">グループ名</param>
+    /// <param name="fileName">モデルファイル名</param>
+    /// <param name="maxParticleCount">最大パーティクル数</param>
+    /// <param name="texturePath">テクスチャパス（省略可）</param>
+    /// <param name="blendMode">ブレンドモード</param>
     void CreateParticleCSGroup(const std::string &groupName, const std::string &fileName, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
+
+    /// <summary>
+    /// プリミティブ形状からGPUパーティクルグループを生成
+    /// </summary>
+    /// <param name="groupName">グループ名</param>
+    /// <param name="type">プリミティブの種類</param>
+    /// <param name="maxParticleCount">最大パーティクル数</param>
+    /// <param name="texturePath">テクスチャパス（省略可）</param>
+    /// <param name="blendMode">ブレンドモード</param>
     void CreatePrimitiveParticleCSGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount = 10000, const std::string &texturePath = {}, BlendMode blendMode = BlendMode::kAdd);
 
+    /// <summary>
+    /// 名前を指定してGPUパーティクルグループを取得
+    /// </summary>
+    /// <param name="name">グループ名</param>
+    /// <returns>ParticleCSGroup*: 該当グループ（なければ nullptr）</returns>
     ParticleCSGroup *GetParticleCSGroup(const std::string &name) {
         for (const auto &group : particleGroups_) {
             if (group->GetGroupName() == name) {

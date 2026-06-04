@@ -406,7 +406,7 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
 
         if (indices.empty()) {
             for (size_t i = 0; i + 2 < vertices.size(); i += 3) {
-                // 修正：transformationMatrixData->Worldを使用
+                // 頂点をワールド行列で変換
                 Vector4 v0_4 = Transformation(Vector4{vertices[i].position.x, vertices[i].position.y, vertices[i].position.z, 1.0f}, transformationMatrixData_->World);
                 Vector4 v1_4 = Transformation(Vector4{vertices[i + 1].position.x, vertices[i + 1].position.y, vertices[i + 1].position.z, 1.0f}, transformationMatrixData_->World);
                 Vector4 v2_4 = Transformation(Vector4{vertices[i + 2].position.x, vertices[i + 2].position.y, vertices[i + 2].position.z, 1.0f}, transformationMatrixData_->World);
@@ -422,7 +422,7 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
                 if (idx0 >= vertices.size() || idx1 >= vertices.size() || idx2 >= vertices.size())
                     continue;
 
-                // 修正：transformationMatrixData->Worldを使用
+                // 頂点をワールド行列で変換
                 Vector4 v0_4 = Transformation(Vector4{vertices[idx0].position.x, vertices[idx0].position.y, vertices[idx0].position.z, 1.0f}, transformationMatrixData_->World);
                 Vector4 v1_4 = Transformation(Vector4{vertices[idx1].position.x, vertices[idx1].position.y, vertices[idx1].position.z, 1.0f}, transformationMatrixData_->World);
                 Vector4 v2_4 = Transformation(Vector4{vertices[idx2].position.x, vertices[idx2].position.y, vertices[idx2].position.z, 1.0f}, transformationMatrixData_->World);
