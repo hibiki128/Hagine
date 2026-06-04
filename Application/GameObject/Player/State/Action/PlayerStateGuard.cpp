@@ -36,9 +36,11 @@ void PlayerStateGuard::Update(Player &player) {
         vel.y = kGroundPullVelocity;
     }
 
-    // 押しっぱ式：ボタンが離されたらガード解除
-    bool guardHeld = player.GetGamePad()->IsPress(XINPUT_GAMEPAD_B) ||
-                     Input::GetInstance()->PushKey(DIK_RSHIFT);
+    // 押しっぱ式：ボタンが離されたらガード解除。
+    // エネルギーが被弾消費量未満になった場合も維持できずに解除する。
+    bool guardHeld = (player.GetGamePad()->IsPress(XINPUT_GAMEPAD_B) ||
+                      Input::GetInstance()->PushKey(DIK_RSHIFT)) &&
+                     player.CanGuard();
     if (guardHeld) {
         return;
     }

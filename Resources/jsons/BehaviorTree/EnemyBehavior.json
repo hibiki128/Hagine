@@ -1399,8 +1399,8 @@
     },
     {
       "id": 800,
-      "title": "Seq:被弾リスクガード",
-      "type": 0,
+      "title": "SeqOnce:被弾リスクガード",
+      "type": 27,
       "param": 0.0,
       "param2": 0.0,
       "param3": 0.0,

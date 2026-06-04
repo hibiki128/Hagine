@@ -179,6 +179,9 @@ class Player : public Hagine::BaseObject {
     /// <summary>ガード中かどうか（敵BTの被弾リスク判定などから参照）</summary>
     bool IsGuarding() const { return isGuarding_; }
 
+    /// <summary>ガード可能か（被弾で消費するエネルギーを支払えるか）</summary>
+    bool CanGuard() const { return energy_ >= guardEnergyCost_; }
+
     /// <summary>パンチコンボが進行中か（敵BTの脅威判定から参照）</summary>
     bool IsComboActive() const { return punchCombo_.IsComboActive(); }
 

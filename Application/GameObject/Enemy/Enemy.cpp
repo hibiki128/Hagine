@@ -704,10 +704,11 @@ void Enemy::DamageUpdate() {
         return;
     }
 
-    // ダメージ計算（ガード時は軽減）
+    // ダメージ計算（ガード時は軽減し、エネルギーを消費する：プレイヤーと同様）
     float actualDamage = damage_;
     if (isGuarding_) {
         actualDamage *= kGuardDamageMultiplier;
+        ConsumeEnergy(kGuardEnergyCost);
     }
     HP_ -= actualDamage;
     damage_ = kNoDamage;

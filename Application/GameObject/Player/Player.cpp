@@ -498,7 +498,8 @@ void Player::DirectionUpdate() {
 }
 
 void Player::Shot() {
-    if (currentState_ != states_["EnergyCharge"].get() && !isSkillMenu_) {
+    // ガード中は遠距離射撃を発射できない（既存弾の更新は下で継続する）
+    if (currentState_ != states_["EnergyCharge"].get() && !isSkillMenu_ && !isGuarding_) {
         if (!gamePad_->IsConnected()) {
             // キーボード入力
             if (input_->TriggerKey(DIK_J)) {
@@ -567,6 +568,10 @@ void Player::Shot() {
 }
 
 void Player::SkillShot() {
+    // ガード中は必殺技を発動できない
+    if (isGuarding_) {
+        return;
+    }
     if (!chargeShot_->GetIsCharge()) {
         if (!gamePad_->IsConnected()) {
             // キーボード入力
@@ -656,7 +661,8 @@ void Player::RotateUpdate() {
 }
 
 void Player::ComboUpdate() {
-    if (currentState_ != states_["EnergyCharge"].get() && !chargeShot_->GetIsCharge()) {
+    // ガード中は近接コンボを実行できない
+    if (currentState_ != states_["EnergyCharge"].get() && !chargeShot_->GetIsCharge() && !isGuarding_) {
         punchCombo_.Update(Frame::DeltaTime());
 
         if (!gamePad_->IsConnected()) {
@@ -1198,6 +1204,16 @@ void Player::UpdateGuardInput() {
         currentState_ == states_["FlyIdle"].get() ||
         currentState_ == states_["FlyMove"].get();
     if (!canGuard) {
+        return;
+    }
+
+    // エネルギーが被弾消費量未満ならガードに入れない（無くなった/支払えない場合は不可）
+    if (!CanGuard()) {
+        return;
+    }
+
+    // 近接コンボ中・チャージショット溜め中はガードに入れない（攻撃とガードは排他）
+    if (punchCombo_.IsComboActive() || (chargeShot_ && chargeShot_->GetIsCharge())) {
         return;
     }
 

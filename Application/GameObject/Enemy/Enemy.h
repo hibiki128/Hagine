@@ -72,6 +72,8 @@ class Enemy : public Hagine::BaseObject {
     bool &GetAlive() { return isAlive_; }
     bool &GetIsGrounded() { return isGrounded_; }
     bool IsGuarding() const { return isGuarding_; }
+    /// <summary>ガード可能か（被弾で消費するエネルギーを支払えるか）</summary>
+    bool CanGuard() const { return energy_ >= kGuardEnergyCost; }
     bool GetIsLockOn() const { return isLockOn_; }
     Player *GetTarget() { return target_; }
     Direction &GetDirection() { return dir_; }
@@ -220,6 +222,7 @@ class Enemy : public Hagine::BaseObject {
     static constexpr float kNoDamage = 0.0f;
     static constexpr float kMinHP = 0.0f;
     static constexpr float kGuardDamageMultiplier = 0.15f;
+    static constexpr float kGuardEnergyCost = 10.0f; // ガード中の被弾で消費するエネルギー（プレイヤーと同様）
 
     // 色関連定数
     static constexpr float kColorRed = 1.0f;

@@ -1083,6 +1083,9 @@ void EnemyGuardNode::OnEnter() {
     timer_ = 0.0f;
     if (!enemy_)
         return;
+    // エネルギーが被弾消費量未満ならガードしない（OnUpdateでFailureを返す）
+    if (!enemy_->CanGuard())
+        return;
     enemy_->SetGuarding(true);
     enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
     enemy_->StopMovement();
@@ -1091,6 +1094,12 @@ void EnemyGuardNode::OnEnter() {
 NodeStatus EnemyGuardNode::OnUpdate() {
     if (!enemy_)
         return NodeStatus::Failure;
+
+    // エネルギーが被弾消費量未満になったらガードできない（無くなったら維持もできない）
+    if (!enemy_->CanGuard()) {
+        enemy_->SetGuarding(false);
+        return NodeStatus::Failure;
+    }
 
     timer_ += 1.0f / 60.0f;
     enemy_->SetVelocity({0.0f, enemy_->GetVelocity().y, 0.0f});

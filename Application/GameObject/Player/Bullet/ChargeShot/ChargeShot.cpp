@@ -73,6 +73,12 @@ void ChargeShot::Update() {
         chargeRelease = player_->GetGamePad()->IsRelease(XINPUT_GAMEPAD_Y);
     }
 
+    // ガード中はチャージショットを溜め・発射できない（発射済みの弾はそのまま飛ばす）
+    if (player_ && player_->IsGuarding()) {
+        chargeHold = false;
+        chargeRelease = false;
+    }
+
     if (!isAlive_ && !isSkillMenu_) {
         // チャージ開始判定：ボタンが押され続けている時間を計測
         if (chargeHold) {
