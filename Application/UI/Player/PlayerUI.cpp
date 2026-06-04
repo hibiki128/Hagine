@@ -1,6 +1,7 @@
 #include "PlayerUI.h"
 #include "SpriteCommon.h"
 
+using namespace Hagine;
 void PlayerUI::Init(Player *player) {
     player_ = player;
     // HPバーの初期化

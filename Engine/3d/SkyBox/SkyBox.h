@@ -6,6 +6,7 @@
 #include <type/Vector3.h>
 #include <type/Vector4.h>
 #include <vector>
+namespace Hagine {
 class PipeLineManager;
 class DirectXCommon;
 class SrvManager;
@@ -88,3 +89,4 @@ class SkyBox {
 
     uint32_t textureIndex_ = 0;
 };
+} // namespace Hagine

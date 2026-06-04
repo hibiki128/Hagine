@@ -1,6 +1,7 @@
 #include "CsvLoad.h"
 #include <cassert>
 
+namespace Hagine {
 void CsvLoad::Finalize() {
    
 }
@@ -8,15 +9,15 @@ void CsvLoad::Finalize() {
 // CSVファイルを読み込み、キャッシュに存在すればそれを返す
 std::vector<std::vector<int>> CsvLoad::LoadCsv(const std::string &filePath) {
     // すでにキャッシュに存在する場合、それを返す
-    if (csvCache.find(filePath) != csvCache.end()) {
-        return csvCache[filePath];
+    if (csvCache_.find(filePath) != csvCache_.end()) {
+        return csvCache_[filePath];
     }
 
     // CSVファイルを読み込む
     std::vector<std::vector<int>> mapChipData = ReadCsvFile(filePath);
 
     // 読み込んだデータをキャッシュに保存し、コピーを返す
-    csvCache[filePath] = mapChipData;
+    csvCache_[filePath] = mapChipData;
     return mapChipData;
 }
 
@@ -52,3 +53,4 @@ std::vector<std::vector<int>> CsvLoad::ReadCsvFile(const std::string &filePath) 
 
     return mapChipGrid;
 }
+} // namespace Hagine

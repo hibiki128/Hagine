@@ -7,9 +7,10 @@
 #include <Engine/Frame/Frame.h>
 #include <cmath>
 
+using namespace Hagine;
 void FollowCamera::Init() {
     // ViewProjectionの初期設定
-    viewProjection_.farZ = kFarZ;
+    viewProjection_.farZ_ = kFarZ;
     viewProjection_.Initialize("");
     worldTransform_.Initialize();
     yaw_ = kInitialYaw;

@@ -24,6 +24,7 @@
 #include"Object/Base/BaseObjectManager.h"
 #include "Engine/Render/DrawSystem.h"
 
+namespace Hagine {
 class SceneManager;
 
 class BaseScene {
@@ -101,3 +102,4 @@ class BaseScene {
     float ClearTime_ = 0.0f;
     float HP_ = 0.0f;
 };
+} // namespace Hagine

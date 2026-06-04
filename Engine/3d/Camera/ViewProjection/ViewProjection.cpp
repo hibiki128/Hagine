@@ -11,6 +11,7 @@
 #endif
 #include <type/Vector2.h>
 
+namespace Hagine {
 void ViewProjection::Initialize(std::string jsonFile) {
     // 各種行列を単位行列で初期化
     matView_ = MakeIdentity4x4();
@@ -34,7 +35,7 @@ void ViewProjection::CreateConstBuffer() {
 
 void ViewProjection::Map() {
     // 定数バッファをCPUからアクセス可能なメモリにマッピング
-    HRESULT hr = constBuffer_->Map(0, nullptr, reinterpret_cast<void **>(&constMap));
+    HRESULT hr = constBuffer_->Map(0, nullptr, reinterpret_cast<void **>(&constMap_));
     if (FAILED(hr)) {
         // 必要に応じてエラー処理を記述
     }
@@ -68,10 +69,10 @@ void ViewProjection::UpdateMatrix() {
 
 void ViewProjection::TransferMatrix() {
     // マッピングされたメモリへ現在値を書き込み、GPUへ送信
-    if (constMap) {
-        constMap->view = matView_;
-        constMap->projection = matProjection_;
-        constMap->cameraPos = translation_;
+    if (constMap_) {
+        constMap_->view = matView_;
+        constMap_->projection = matProjection_;
+        constMap_->cameraPos = translation_;
     }
 }
 
@@ -94,7 +95,7 @@ void ViewProjection::UpdateViewMatrix() {
 
 void ViewProjection::UpdateProjectionMatrix() {
     // 透視投影行列の作成
-    matProjection_ = MakePerspectiveFovMatrix(fovAngleY, aspectRatio, nearZ, farZ);
+    matProjection_ = MakePerspectiveFovMatrix(fovAngleY_, aspectRatio, nearZ_, farZ_);
 }
 
 void ViewProjection::EaseCameraMove(EasingType easeType, const std::string &jsonName, float duration) {
@@ -218,10 +219,10 @@ void ViewProjection::ShowDebugInfo() {
             ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
             ImGui::TextUnformatted("視野角 (FOV)  [度]");
             ImGui::PopStyleColor();
-            float fovDeg = fovAngleY * 180.f / std::numbers::pi_v<float>;
+            float fovDeg = fovAngleY_ * 180.f / std::numbers::pi_v<float>;
             ImGui::SetNextItemWidth(-1);
             if (ImGui::SliderFloat("##vpfov", &fovDeg, 10.f, 170.f, "%.1f"))
-                fovAngleY = fovDeg * std::numbers::pi_v<float> / 180.f;
+                fovAngleY_ = fovDeg * std::numbers::pi_v<float> / 180.f;
 
             ImGui::Spacing();
 
@@ -251,7 +252,7 @@ void ViewProjection::ShowDebugInfo() {
                 ImGui::TableNextColumn();
                 ImGui::SetNextItemWidth(-1);
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgOrange);
-                ImGui::DragFloat("##vpnear", &nearZ, 0.01f, 0.001f, 10.f, "%.3f");
+                ImGui::DragFloat("##vpnear", &nearZ_, 0.01f, 0.001f, 10.f, "%.3f");
                 ImGui::PopStyleColor();
 
                 ImGui::TableNextRow();
@@ -263,7 +264,7 @@ void ViewProjection::ShowDebugInfo() {
                 ImGui::TableNextColumn();
                 ImGui::SetNextItemWidth(-1);
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgOrange);
-                ImGui::DragFloat("##vpfar", &farZ, 1.f, 1.f, 10000.f, "%.1f");
+                ImGui::DragFloat("##vpfar", &farZ_, 1.f, 1.f, 10000.f, "%.1f");
                 ImGui::PopStyleColor();
 
                 ImGui::EndTable();
@@ -518,9 +519,9 @@ void ViewProjection::Save(std::string jsonFile) {
     data->Save("translation", translation_);
     data->Save("eulerRotation", eulerRotation_);
     data->Save("isUseQuaternion", isUseQuaternion_);
-    data->Save("fov", fovAngleY);
-    data->Save("nearZ", nearZ);
-    data->Save("farZ", farZ);
+    data->Save("fov", fovAngleY_);
+    data->Save("nearZ", nearZ_);
+    data->Save("farZ", farZ_);
     data->Save("aspectRatio", aspectRatio);
     data->Save("quateRotation", quateRotation_);
     ImGuiNotification::Post("カメラ設定を保存しました: " + jsonFile, {0.2f, 0.8f, 0.2f, 1.0f});
@@ -538,9 +539,10 @@ void ViewProjection::Load(std::string jsonFile) {
     eulerRotation_ = data->Load<Vector3>("eulerRotation", {0.0f, 0.0f, 0.0f});
     quateRotation_ = data->Load("quateRotation", Quaternion::IdentityQuaternion());
     isUseQuaternion_ = data->Load("isUseQuaternion", true);
-    fovAngleY = data->Load("fov", fovAngleY);
-    nearZ = data->Load("nearZ", nearZ);
-    farZ = data->Load("farZ", farZ);
+    fovAngleY_ = data->Load("fov", fovAngleY_);
+    nearZ_ = data->Load("nearZ", nearZ_);
+    farZ_ = data->Load("farZ", farZ_);
     aspectRatio = data->Load("aspectRatio", aspectRatio);
     ImGuiNotification::Post("カメラ設定を読み込みました: " + jsonFile, {0.2f, 0.8f, 0.8f, 1.0f});
 }
+} // namespace Hagine

@@ -15,6 +15,7 @@
 /// =============================================
 /// フィールドの種類
 /// =============================================
+namespace Hagine {
 enum class ParticleFieldType : uint32_t {
     Wind = 0,    // 一定方向に力を加える
     Attract = 1, // 中心に引き寄せる
@@ -133,3 +134,4 @@ class ParticleCSFieldManager {
     // --- デバッグ表示状態 ---
     bool showGizmos_ = false;
 };
+} // namespace Hagine

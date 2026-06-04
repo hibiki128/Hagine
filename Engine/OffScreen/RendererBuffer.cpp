@@ -1,5 +1,6 @@
 #include "RendererBuffer.h"
 
+namespace Hagine {
 void RenderBuffer::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager) {
     assert(dxCommon);
     assert(srvManager);
@@ -67,3 +68,4 @@ void RenderBuffer::CreateFinalResultTexture() {
 
     dxCommon_->GetDevice()->CreateRenderTargetView(finalResultResource_.Get(), &rtvDesc, finalResultRtvHandle_);
 }
+} // namespace Hagine

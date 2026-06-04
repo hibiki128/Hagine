@@ -3,6 +3,7 @@
 #include <SpriteManager.h>
 #include <cassert>
 
+namespace Hagine {
 SceneManager::~SceneManager() {
     
 }
@@ -15,7 +16,7 @@ void SceneManager::Initialize() {
 void SceneManager::SceneFinalize() {
     if (scene_) {
         scene_->Finalize();
-        firstChange = false;
+        firstChange_ = false;
     }
 }
 
@@ -31,18 +32,18 @@ void SceneManager::Finalize() {
 void SceneManager::Update() {
     // 次のシーンの予約があるなら
     if (nextScene_) {
-        if (!firstChange) {
+        if (!firstChange_) {
             transition_->SetFadeInFinish(true);
-            firstChange = true;
+            firstChange_ = true;
         }
         SceneChange();
     }
 
     if (!transition_->IsEnd()) {
-        transitionEnd = false;
+        transitionEnd_ = false;
         transition_->Update();
     } else {
-        transitionEnd = true;
+        transitionEnd_ = true;
     }
 
     if (scene_) {
@@ -93,7 +94,7 @@ void SceneManager::NextSceneReservation(const std::string &sceneName) {
     nextScene_ = sceneFactory_->CreateScene(sceneName);
     nextScene_->SetOffScreen(offscreen_);
     nextScene_->SetDrawSystem(drawSystem_);
-    if (!firstChange) {
+    if (!firstChange_) {
         transition_->SetFadeOutStart(true);
     } else {
         transition_->SetFadeInStart(true);
@@ -128,3 +129,4 @@ void SceneManager::SceneChange() {
         ImGuiNotification::Post("シーンを切り替えました: " + currentSceneName_, {0.4f, 0.8f, 1.0f, 1.0f});
     }
 }
+} // namespace Hagine

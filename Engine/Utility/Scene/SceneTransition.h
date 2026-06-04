@@ -2,6 +2,7 @@
 #include "Sprite.h"
 #include "memory"
 #include "vector"
+namespace Hagine {
 class SceneTransition {
   private:
 
@@ -46,19 +47,19 @@ class SceneTransition {
     /// セット
     /// </summary>
     /// <param name="start"></param>
-    void SetFadeInStart(bool start) { fadeInStart = start; }
-    void SetFadeOutStart(bool start) { fadeOutStart = start; }
-    void SetFadeInFinish(bool finish) { fadeInFinish = finish; }
-    void SetUseTransition(bool use) { useTransition = use; }
+    void SetFadeInStart(bool start) { fadeInStart_ = start; }
+    void SetFadeOutStart(bool start) { fadeOutStart_ = start; }
+    void SetFadeInFinish(bool finish) { fadeInFinish_ = finish; }
+    void SetUseTransition(bool use) { useTransition_ = use; }
 
     /// <summary>
     /// getter
     /// </summary>
     /// <returns></returns>
-    bool IsEnd() { return isEnd; }
-    bool FadeInFinish() { return fadeInFinish; }
-    bool FadeInStart() { return fadeInStart; }
-    bool GetUseTransition() const { return useTransition; }
+    bool IsEnd() { return isEnd_; }
+    bool FadeInFinish() { return fadeInFinish_; }
+    bool FadeInStart() { return fadeInStart_; }
+    bool GetUseTransition() const { return useTransition_; }
 
     /// <summary>
     /// リセット
@@ -119,10 +120,11 @@ class SceneTransition {
 
     Vector2 spPos_ = {0.0f, 0.0f};
 
-    bool fadeInStart = false;
-    bool fadeOutStart = false;
-    bool fadeInFinish = false;
-    bool fadeOutFinish = false;
-    bool isEnd = false;
-    bool useTransition = true; // デフォルトはトランジションを使用
+    bool fadeInStart_ = false;
+    bool fadeOutStart_ = false;
+    bool fadeInFinish_ = false;
+    bool fadeOutFinish_ = false;
+    bool isEnd_ = false;
+    bool useTransition_ = true; // デフォルトはトランジションを使用
 };
+} // namespace Hagine

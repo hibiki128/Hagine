@@ -9,6 +9,7 @@
 /// で共通使用する。
 /// uint64_t なので最大64項目まで対応。
 /// =====================================================================
+namespace Hagine {
 namespace ParticleSettingsOverrideBits {
 static constexpr uint64_t LifeTimeMin = 1ULL << 0;
 static constexpr uint64_t LifeTimeMax = 1ULL << 1;
@@ -57,3 +58,4 @@ static constexpr uint64_t CurlNoiseBlendMode = 1ULL << 43;
 static constexpr uint64_t CurlNoisePosRandom = 1ULL << 44;
 // 必要があれば 45〜63 を追加可能
 } // namespace ParticleSettingsOverrideBits
+} // namespace Hagine

@@ -5,6 +5,7 @@
 #include <string>
 
 /// @brief スロットベースのエフェクトチェーンのセーブ/ロードを担当
+namespace Hagine {
 class PostEffectDataManager {
   public:
     /// @brief エフェクトチェーンとDirectXCommonへのポインタを受け取り初期化する
@@ -20,3 +21,4 @@ class PostEffectDataManager {
     PostEffectChain *chain_ = nullptr;
     DirectXCommon *dxCommon_ = nullptr;
 };
+} // namespace Hagine

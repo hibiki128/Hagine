@@ -24,7 +24,7 @@ class Enemy;
 /// プレイヤーのゲームオブジェクトクラス
 /// 状態管理、移動、攻撃、カメラ制御などを行う
 /// </summary>
-class Player : public BaseObject {
+class Player : public Hagine::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -56,14 +56,14 @@ class Player : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection) override;
+    void Draw(const Hagine::ViewProjection &viewProjection) override;
 
     /// <summary>
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
-    void DrawParticleCompute(const ViewProjection &viewProjection);
+    void DrawParticle(const Hagine::ViewProjection &viewProjection);
+    void DrawParticleCompute(const Hagine::ViewProjection &viewProjection);
 
     /// <summary>
     /// 状態を変更
@@ -75,13 +75,13 @@ class Player : public BaseObject {
     /// 当たってる間
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollision(ColliderBase *other);
+    void OnCollision(Hagine::ColliderBase *other);
 
     /// <summary>
     /// 当たった瞬間
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter(ColliderBase *other);
+    void OnCollisionEnter(Hagine::ColliderBase *other);
 
     /// <summary>
     /// 方向情報を更新
@@ -125,24 +125,24 @@ class Player : public BaseObject {
     /// ===================================================
     /// Getter
     /// ===================================================
-    GamePad *GetGamePad() { return gamePad_.get(); }
+    Hagine::GamePad *GetGamePad() { return gamePad_.get(); }
     FollowCamera *GetCamera() { return FollowCamera_; }
     Enemy *GetEnemy() { return enemy_; }
-    Vector3 &GetAcceleration() { return acceleration_; }
-    Vector3 &GetVelocity() { return velocity_; }
-    Vector3 GetMovementDirection() const;
-    Vector3 GetForward() const;
-    Vector3 GetBackward() const;
-    Vector3 GetRight() const;
-    Vector3 GetLeft() const;
-    Vector3 GetUp() const;
-    Vector3 GetDown() const;
-    Vector3 GetPositionBehind(float distance = 3.0f) const;
-    Vector3 GetPositionFront(float distance = 3.0f) const;
-    Vector3 GetPositionRight(float distance = 3.0f) const;
-    Vector3 GetPositionLeft(float distance = 3.0f) const;
-    Vector3 GetPositionAbove(float distance = 3.0f) const;
-    Vector3 GetPositionBelow(float distance = 3.0f) const;
+    Hagine::Vector3 &GetAcceleration() { return acceleration_; }
+    Hagine::Vector3 &GetVelocity() { return velocity_; }
+    Hagine::Vector3 GetMovementDirection() const;
+    Hagine::Vector3 GetForward() const;
+    Hagine::Vector3 GetBackward() const;
+    Hagine::Vector3 GetRight() const;
+    Hagine::Vector3 GetLeft() const;
+    Hagine::Vector3 GetUp() const;
+    Hagine::Vector3 GetDown() const;
+    Hagine::Vector3 GetPositionBehind(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionFront(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionRight(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionLeft(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionAbove(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionBelow(float distance = 3.0f) const;
     float GetVelocityMagnitude() const;
     float &GetFallSpeed() { return fallSpeed_; }
     float &GetMoveSpeed() { return moveSpeed_; }
@@ -165,13 +165,13 @@ class Player : public BaseObject {
     bool GetIsDashing() const { return isDashing_; }
     float GetDashDuration() const { return dashDuration_; }
     bool GetDashStartedThisFrame() const { return dashStartedThisFrame_; }
-    ViewProjection &GetViewProjection();
+    Hagine::ViewProjection &GetViewProjection();
     PlayerHand *GetRightHand() { return rightHand_ptr_; }
     PlayerHand *GetLeftHand() { return leftHand_ptr_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
     std::string GetCurrentStateName() const;
-    std::string GetPreviewStateName() const { return previousStateName; }
+    std::string GetPreviewStateName() const { return previousStateName_; }
     std::vector<std::unique_ptr<PlayerBullet>> &GetBullets() { return bullets_; }
     PlayerAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
     bool GetIsSkillActive() const { return makanAttack_ptr_->IsActive(); }
@@ -198,7 +198,7 @@ class Player : public BaseObject {
     /// Setter
     /// ===================================================
     void SetCamera(FollowCamera *camera);
-    void SetVp(ViewProjection *vp);
+    void SetVp(Hagine::ViewProjection *vp);
     void SetStart(bool flag) {
         started_ = flag;
     }
@@ -239,7 +239,7 @@ class Player : public BaseObject {
     /// </summary>
     /// <param name="direction">ノックバック方向（正規化済みでなくてもよい）</param>
     /// <param name="power">ノックバック強度</param>
-    void SetKnockback(const Vector3 &direction, float power);
+    void SetKnockback(const Hagine::Vector3 &direction, float power);
 
   private:
     /// ===================================================
@@ -412,8 +412,8 @@ class Player : public BaseObject {
     Direction dir_;
     MoveDirection moveDir_;
 
-    Vector3 velocity_{};
-    Vector3 acceleration_{};
+    Hagine::Vector3 velocity_{};
+    Hagine::Vector3 acceleration_{};
 
     float moveSpeed_ = 0.0f; // 移動速度
     float fallSpeed_ = 0.0f; // 落下速度
@@ -472,47 +472,47 @@ class Player : public BaseObject {
 
     std::vector<std::unique_ptr<PlayerBullet>> bullets_; // 発射した弾
 
-    std::unique_ptr<DataHandler> data_;              // データ管理
-    std::unique_ptr<BaseObject> shadow_;             // 影
+    std::unique_ptr<Hagine::DataHandler> data_;              // データ管理
+    std::unique_ptr<Hagine::BaseObject> shadow_;             // 影
     std::unique_ptr<ChargeShot> chargeShot_;         // チャージショット
     std::unique_ptr<PlayerHand> leftHand_;           // 左手
     std::unique_ptr<PlayerHand> rightHand_;          // 右手
     std::unique_ptr<Shake> shake_;                   // シェイク
-    std::unique_ptr<ParticleCSEmitter> auraEmitter_; // オーラパーティクル
-    std::unique_ptr<ParticleEmitter> hitEmitter_;
+    std::unique_ptr<Hagine::ParticleCSEmitter> auraEmitter_; // オーラパーティクル
+    std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;
     std::unique_ptr<DeathStaging> deathStaging_;    // 死亡演出
     std::unique_ptr<MakanAttackSkill> makanAttack_; // 必殺技
-    std::unique_ptr<GamePad> gamePad_;
+    std::unique_ptr<Hagine::GamePad> gamePad_;
     std::unique_ptr<PlayerAttackCollider> attackCollider_; // 前方攻撃判定
 
-    ViewProjection *vp_;                    // カメラ
-    OBBCollider *playerCollider_ = nullptr; // コライダー
-    AABBCollider *playerWallCollider_ = nullptr;
+    Hagine::ViewProjection *vp_;                    // カメラ
+    Hagine::OBBCollider *playerCollider_ = nullptr; // コライダー
+    Hagine::AABBCollider *playerWallCollider_ = nullptr;
     PlayerHand *leftHand_ptr_;                    // 左手
     PlayerHand *rightHand_ptr_;                   // 右手
     PlayerBaseState *currentState_ = nullptr;     // 現在の状態
     MakanAttackSkill *makanAttack_ptr_ = nullptr; // 必殺技
-    ParticleField *generatedField_ = nullptr;     // 生成するフィールド
+    Hagine::ParticleField *generatedField_ = nullptr;     // 生成するフィールド
 
     bool isDamageReact_ = false;       // リアクション中かどうか
     float damageReactTimer_ = 0.0f;    // 経過時間
     float damageReactDuration_ = 0.5f; // リアクション時間
-    EasingData<float> tiltEase_;       // 回転角イージング
-    Quaternion baseRotation_;          // 通常時の向き
-    Quaternion tiltRotation_;          // のけぞり用の回転
+    Hagine::EasingData<float> tiltEase_;       // 回転角イージング
+    Hagine::Quaternion baseRotation_;          // 通常時の向き
+    Hagine::Quaternion tiltRotation_;          // のけぞり用の回転
 
     // 死亡時の回転リセット
     static constexpr float kDeathRotationResetDuration = 0.5f; // 回転リセット時間
     bool isDeathRotationReset_ = false;                        // 死亡時の回転リセット中フラグ
     float deathRotationResetTimer_ = 0.0f;                     // 回転リセット経過時間
-    Quaternion deathRotationStart_;                            // リセット開始時の回転
+    Hagine::Quaternion deathRotationStart_;                            // リセット開始時の回転
 
-    std::string previousStateName = "";
+    std::string previousStateName_ = "";
 
-    Input *input_ = nullptr;
+    Hagine::Input *input_ = nullptr;
 
     bool activeDebugCamrera_ = false;                // デバッグカメラがアクティブかどうか
-    Vector3 knockbackVelocity_ = {0.0f, 0.0f, 0.0f}; // 適用待ちノックバック
+    Hagine::Vector3 knockbackVelocity_ = {0.0f, 0.0f, 0.0f}; // 適用待ちノックバック
     bool hasKnockback_ = false;
 
     // ─── チュートリアル連携 ───

@@ -4,6 +4,7 @@
 #include "application/GameObject/Player/Player.h"
 #include <Particle/ParticleEditor.h>
 
+using namespace Hagine;
 void PlayerStateRush::Enter(Player &player) {
     // ロックオン中の敵への突撃経路を計算
     Enemy *enemy = player.GetEnemy();

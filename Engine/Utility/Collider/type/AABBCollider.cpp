@@ -2,6 +2,7 @@
 #include "line/DrawLine3D.h"
 #include <array>
 
+namespace Hagine {
 void AABBCollider::UpdateWorldTransform() {
     Vector3 center = GetCenterPosition() + offset_;
     Vector3 halfSize = size_ * 0.5f;
@@ -47,3 +48,4 @@ void AABBCollider::LoadFromJson() {
     size_ = dataHandler_->Load<Vector3>("size", {1.0f, 1.0f, 1.0f});
     offset_ = dataHandler_->Load<Vector3>("offset", {0.0f, 0.0f, 0.0f});
 }
+} // namespace Hagine

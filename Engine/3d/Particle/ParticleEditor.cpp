@@ -6,6 +6,7 @@
 #include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG
 
+namespace Hagine {
 void ParticleEditor::Finalize() {
     emitters_.clear();
     currentFrameStats_.clear();
@@ -539,3 +540,4 @@ std::vector<std::string> ParticleEditor::GetJsonFiles() {
 
     return jsonFiles;
 }
+} // namespace Hagine

@@ -9,6 +9,7 @@
 #include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "algorithm"
 
+namespace Hagine {
 void DebugCamera::Initialize(ViewProjection *viewProjection) {
     viewProjection_ = viewProjection;
     translation_ = viewProjection->translation_;
@@ -18,9 +19,9 @@ void DebugCamera::Initialize(ViewProjection *viewProjection) {
     matRot_ = MakeIdentity4x4();
     isActive_ = false;
     lockCamera_ = false;
-    mouseSensitivity = 0.003f;
-    moveZspeed = 0.005f;
-    mouse = {0.0f, 0.0f};
+    mouseSensitivity_ = 0.003f;
+    moveZspeed_ = 0.005f;
+    mouse_ = {0.0f, 0.0f};
 }
 
 void DebugCamera::Update() {
@@ -28,7 +29,7 @@ void DebugCamera::Update() {
     if (isActive_) {
         // カメラ操作がロックされていない場合のみ移動計算
         if (!lockCamera_) {
-            CameraMove(eulerRotation_, translation_, mouse);
+            CameraMove(eulerRotation_, translation_, mouse_);
         }
 
         Matrix4x4 cameraMatrix;
@@ -83,7 +84,7 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
     if (useKey_) {
         // コントロールキーで加速
         bool isDashing = Input::GetInstance()->PushKey(DIK_LCONTROL);
-        float speed = moveZspeed * 10.0f * (isDashing ? 5.0f : 1.0f);
+        float speed = moveZspeed_ * 10.0f * (isDashing ? 5.0f : 1.0f);
 
         // 各キー入力に基づく移動ベクトルの計算
         Vector3 move = {0, 0, 0};
@@ -113,8 +114,8 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
             float deltaY = static_cast<float>(currentMousePos.y - clickPosition.y);
 
             // X方向（右）とY方向（上）にカメラを平行移動
-            translation_ -= right * deltaX * mouseSensitivity;
-            translation_ += up * deltaY * mouseSensitivity;
+            translation_ -= right * deltaX * mouseSensitivity_;
+            translation_ += up * deltaY * mouseSensitivity_;
 
             // マウス位置更新
             clickPosition = currentMousePos;
@@ -123,7 +124,7 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
         // ホイール回転でカメラの前後移動（Z軸）
         int wheel = Input::GetInstance()->GetWheel();
         if (wheel != 0) {
-            translation_ -= forward * static_cast<float>(wheel) * mouseSensitivity;
+            translation_ -= forward * static_cast<float>(wheel) * mouseSensitivity_;
         }
     }
 
@@ -135,8 +136,8 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
 
         if (isUseQuaternion_) {
             // クォータニオンでの回転処理
-            Quaternion yawRotation = Quaternion::FromAxisAngle({0, 1, 0}, deltaX * mouseSensitivity);
-            Quaternion pitchRotation = Quaternion::FromAxisAngle({1, 0, 0}, deltaY * mouseSensitivity);
+            Quaternion yawRotation = Quaternion::FromAxisAngle({0, 1, 0}, deltaX * mouseSensitivity_);
+            Quaternion pitchRotation = Quaternion::FromAxisAngle({1, 0, 0}, deltaY * mouseSensitivity_);
 
             quateRotation_ = yawRotation * pitchRotation * quateRotation_;
             quateRotation_ = quateRotation_.Normalize();
@@ -145,8 +146,8 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
             eulerRotation_ = quateRotation_.ToEulerAngles();
         } else {
             // オイラー角での回転処理
-            cameraRotate.y += deltaX * mouseSensitivity;
-            cameraRotate.x += deltaY * mouseSensitivity;
+            cameraRotate.y += deltaX * mouseSensitivity_;
+            cameraRotate.x += deltaY * mouseSensitivity_;
 
             // 上下反転制限
             const float pi_2 = std::numbers::pi_v<float> / 2.0f - 0.01f;
@@ -337,7 +338,7 @@ void DebugCamera::imgui() {
         ImGui::TextUnformatted("カメラ移動速度 (Z軸)");
         ImGui::PopStyleColor();
         ImGui::SetNextItemWidth(-1);
-        ImGui::SliderFloat("##camspd", &moveZspeed, 0.001f, 1.0f, "%.3f");
+        ImGui::SliderFloat("##camspd", &moveZspeed_, 0.001f, 1.0f, "%.3f");
 
         ImGui::Spacing();
 
@@ -345,13 +346,13 @@ void DebugCamera::imgui() {
         ImGui::TextUnformatted("マウス感度 (回転ドラッグ)");
         ImGui::PopStyleColor();
         ImGui::SetNextItemWidth(-1);
-        ImGui::SliderFloat("##camsen", &mouseSensitivity, 0.001f, 0.1f, "%.3f");
+        ImGui::SliderFloat("##camsen", &mouseSensitivity_, 0.001f, 0.1f, "%.3f");
 
         ImGui::PopStyleColor(3);
 
         if (ImGui::SmallButton("速度リセット##csrst")) {
-            mouseSensitivity = 0.003f;
-            moveZspeed = 0.005f;
+            mouseSensitivity_ = 0.003f;
+            moveZspeed_ = 0.005f;
         }
         ImGui::Unindent(6.0f);
         ImGui::Spacing();
@@ -431,3 +432,4 @@ void DebugCamera::imgui() {
     ImGui::PopStyleVar(3);
 #endif // _DEBUG
 }
+} // namespace Hagine

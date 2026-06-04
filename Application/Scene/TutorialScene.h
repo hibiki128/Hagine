@@ -19,7 +19,7 @@
 /// チュートリアルシーンのクラス
 /// 基本操作のレクチャーを行うシーンを管理する
 /// </summary>
-class TutorialScene : public BaseScene {
+class TutorialScene : public Hagine::BaseScene {
   public:
     /// ===================================================
     /// public method
@@ -99,13 +99,13 @@ class TutorialScene : public BaseScene {
     std::unique_ptr<EnemyUI> enemyUI_;           // 敵UI
     std::unique_ptr<FadeOut> fadeOut_;           // フェードアウト
     std::unique_ptr<GameUI> gameUI_;             // ゲームUI
-    std::unique_ptr<GamePad> gamePad_;           // ゲームパッド
+    std::unique_ptr<Hagine::GamePad> gamePad_;           // ゲームパッド
 
     // ─── チュートリアル管理 ───
     std::unique_ptr<TutorialSystem> tutorialSystem_; // チュートリアルシステム
     std::unique_ptr<TutorialUI> tutorialUI_;         // チュートリアルUI
 
-    SkyBox *skyBox_ = nullptr;    // スカイボックス
+    Hagine::SkyBox *skyBox_ = nullptr;    // スカイボックス
     Enemy *enemy_ptr = nullptr;   // 敵のポインタ
     Player *player_ptr = nullptr; // プレイヤーのポインタ
 

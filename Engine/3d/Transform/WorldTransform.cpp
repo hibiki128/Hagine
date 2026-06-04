@@ -1,5 +1,6 @@
 #include "WorldTransform.h"
 
+namespace Hagine {
 WorldTransform::WorldTransform() {
 }
 
@@ -24,8 +25,8 @@ void WorldTransform::Initialize() {
 
 void WorldTransform::TransferMatrix() {
     // 定数バッファに転送
-    if (constMap) {
-        constMap->matWorld = matWorld_;
+    if (constMap_) {
+        constMap_->matWorld = matWorld_;
     }
 }
 
@@ -36,7 +37,7 @@ void WorldTransform::CreateConstBuffer() {
 
 void WorldTransform::Map() {
     // バッファのマッピング
-    HRESULT hr = constBuffer_->Map(0, nullptr, reinterpret_cast<void **>(&constMap));
+    HRESULT hr = constBuffer_->Map(0, nullptr, reinterpret_cast<void **>(&constMap_));
     if (FAILED(hr)) {
         // エラーハンドリング
     }
@@ -165,3 +166,4 @@ Vector3 WorldTransform::GetWorldScale() const {
 
     return worldScale;
 }
+} // namespace Hagine

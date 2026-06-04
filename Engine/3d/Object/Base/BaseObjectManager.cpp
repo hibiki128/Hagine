@@ -7,6 +7,7 @@
 #include <Debug/Log/Logger.h>
 #include <ShowFolder/ShowFolder.h>
 
+namespace Hagine {
 void BaseObjectManager::Finalize() {
     RemoveAllObjects();
 }
@@ -858,3 +859,4 @@ void BaseObjectManager::DrawHierarchyEditor() {
     ImGui::End();
 #endif // _DEBUG
 }
+} // namespace Hagine

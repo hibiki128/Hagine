@@ -1,6 +1,7 @@
 #include "AroundField.h"
 #include "Particle/CSParticle/ParticleCSEditor.h"
 
+using namespace Hagine;
 void AroundField::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cylinder);

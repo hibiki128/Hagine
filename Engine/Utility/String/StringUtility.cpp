@@ -2,6 +2,7 @@
 #include"cassert"
 #include "dxgidebug.h"
 
+namespace Hagine {
 namespace StringUtility {
 
 	std::wstring ConvertString(const std::string& str) {
@@ -34,3 +35,4 @@ namespace StringUtility {
 
 
 }
+} // namespace Hagine

@@ -13,6 +13,8 @@ RWStructuredBuffer<int> gFreeListTailIndex : register(u3);
 RWStructuredBuffer<uint> gAliveList : register(u4);
 // 生存コンパクション用: append 位置を返すアトミックカウンタ (各フレーム先頭で 0 にリセット)
 RWStructuredBuffer<uint> gAliveCounter : register(u5);
+// Candidate A: コンパクト描画属性バッファ（slot index で書き込む。VS が読む）。
+RWStructuredBuffer<ParticleDrawAttrib> gDrawAttribs : register(u6);
 StructuredBuffer<ParticleField> gFields : register(t0);
 StructuredBuffer<ParticleFieldSettingsOverrideData> gFieldsOverride : register(t1);
 
@@ -763,6 +765,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
     }
 
     gParticles[particleIndex] = p;
+
+    // Candidate A: 生存スロットの描画属性をコンパクトバッファへ書き出す（VS が 64B で読む）。
+    //   このフレームに新規生成したトレイル子は自スレッドが既に early return しているため
+    //   次フレームに自スレッドが書き込む（aliveList への追加と同じ 1F 遅延・許容）。
+    if (gSettings.enableCompactDraw != 0 && IsAliveParticle(p))
+    {
+        ParticleDrawAttrib attrib;
+        attrib.translate = p.translate;
+        attrib.scale = p.scale;
+        attrib.velocity = p.velocity;
+        attrib.rotation = p.rotation;
+        attrib.color = p.color;
+        gDrawAttribs[particleIndex] = attrib;
+    }
 
     // =============================================
     // 生存コンパクション

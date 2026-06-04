@@ -1,6 +1,7 @@
 #pragma once
 #include "../ColliderBase.h"
 
+namespace Hagine {
 class AABBCollider : public ColliderBase {
   public:
     AABBCollider() = default;
@@ -30,3 +31,4 @@ class AABBCollider : public ColliderBase {
     Vector3 offset_ = {0.0f, 0.0f, 0.0f};
     AABB cachedAABB_;
 };
+} // namespace Hagine

@@ -9,6 +9,7 @@
 #endif
 
 // 定数定義
+using namespace Hagine;
 const float ComboSystem::COMBO_INTERVAL = 0.15f;
 const float ComboSystem::INPUT_BUFFER_DURATION = 0.4f;
 const float ComboSystem::FINAL_RETURN_DELAY = 0.8f;

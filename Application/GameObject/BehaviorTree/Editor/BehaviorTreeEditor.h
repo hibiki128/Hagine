@@ -263,14 +263,14 @@ class BehaviorTreeEditor {
     /// <param name="enemy">敵オブジェクト</param>
     /// <param name="player">プレイヤーオブジェクト</param>
     void SetDebugTargets(Enemy *enemy, Player *player) {
-        m_DebugEnemy = enemy;
-        m_DebugPlayer = player;
+        debugEnemy_ = enemy;
+        debugPlayer_ = player;
     }
 
     /// <summary>
     /// ランタイムのルートノードを取得
     /// </summary>
-    std::shared_ptr<BTNode> GetRuntimeRoot() { return m_RuntimeRoot; }
+    std::shared_ptr<BTNode> GetRuntimeRoot() { return runtimeRoot_; }
 
   private:
     /// ===================================================
@@ -366,37 +366,37 @@ class BehaviorTreeEditor {
     /// private variants
     /// ===================================================
 
-    ax::NodeEditor::EditorContext *m_Context = nullptr; // エディタコンテキスト
-    std::vector<EditorNode> m_Nodes;                    // ノードリスト
-    std::vector<EditorLink> m_Links;                    // リンク（接続）リスト
+    ax::NodeEditor::EditorContext *context_ = nullptr; // エディタコンテキスト
+    std::vector<EditorNode> nodes_;                    // ノードリスト
+    std::vector<EditorLink> links_;                    // リンク（接続）リスト
 
-    int m_NextNodeId = 1;              // 次回割り当てノードID
-    int m_NextLinkId = 1;              // 次回割り当てリンクID
-    int m_NextPinId = 200000;          // 次回割り当てピンID
-    ImVec2 m_CreatePos = ImVec2(0, 0); // ノード作成位置
+    int nextNodeId_ = 1;              // 次回割り当てノードID
+    int nextLinkId_ = 1;              // 次回割り当てリンクID
+    int nextPinId_ = 200000;          // 次回割り当てピンID
+    ImVec2 createPos_ = ImVec2(0, 0); // ノード作成位置
 
-    bool m_IsRunning = false;        // 実行中フラグ
-    Enemy *m_DebugEnemy = nullptr;   // デバッグ対象敵
-    Player *m_DebugPlayer = nullptr; // デバッグ対象プレイヤー
+    bool isRunning_ = false;        // 実行中フラグ
+    Enemy *debugEnemy_ = nullptr;   // デバッグ対象敵
+    Player *debugPlayer_ = nullptr; // デバッグ対象プレイヤー
 
-    std::shared_ptr<BTNode> m_RuntimeRoot = nullptr;          // ランタイムツリーのルート
-    std::map<int, std::shared_ptr<BTNode>> m_nodeInstanceMap; // ノードIDとインスタンスのマップ
-    std::map<int, float> m_statusTimers;                      // ステータス表示用タイマー
-    std::string m_LastResultText = "待機中";                  // 最終実行結果テキスト
-    ImVec4 m_LastResultColor = ImVec4(1, 1, 1, 1);            // 最終実行結果表示色
+    std::shared_ptr<BTNode> runtimeRoot_ = nullptr;          // ランタイムツリーのルート
+    std::map<int, std::shared_ptr<BTNode>> nodeInstanceMap_; // ノードIDとインスタンスのマップ
+    std::map<int, float> statusTimers_;                      // ステータス表示用タイマー
+    std::string lastResultText_ = "待機中";                  // 最終実行結果テキスト
+    ImVec4 lastResultColor_ = ImVec4(1, 1, 1, 1);            // 最終実行結果表示色
 
-    char m_InputFileNameBuf[128] = "NewBehavior"; // ファイル名入力バッファ
-    std::string m_SelectedFileName = "";          // 選択されたファイル名
-    bool m_ShowLoadWindow = false;                // 読込窓表示フラグ
+    char inputFileNameBuf_[128] = "NewBehavior"; // ファイル名入力バッファ
+    std::string selectedFileName_ = "";          // 選択されたファイル名
+    bool showLoadWindow_ = false;                // 読込窓表示フラグ
 
-    bool m_LayoutDirty_ = false;                     // レイアウト変更フラグ
-    float m_SaveCooldown_ = 0.0f;                    // 保存クールダウン
+    bool layoutDirty_ = false;                     // レイアウト変更フラグ
+    float saveCooldown_ = 0.0f;                    // 保存クールダウン
     static constexpr float kSaveCooldownTime = 2.0f; // 自動保存までの待機時間
 
     // ── ノード単体デバッグ実行 ──────────────────────────
-    int m_SingleTestNodeId = -1;                        // 単体テスト対象のエディタノードID (-1=未選択)
-    std::shared_ptr<BTNode> m_SingleTestNode = nullptr; // 単体テスト用ランタイムノード
-    bool m_IsSingleTesting = false;                     // 単体テスト実行中フラグ
+    int singleTestNodeId_ = -1;                        // 単体テスト対象のエディタノードID (-1=未選択)
+    std::shared_ptr<BTNode> singleTestNode_ = nullptr; // 単体テスト用ランタイムノード
+    bool isSingleTesting_ = false;                     // 単体テスト実行中フラグ
 };
 
 #endif // _DEBUG

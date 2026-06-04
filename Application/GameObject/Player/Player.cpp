@@ -24,6 +24,7 @@
 #include <Particle/ParticleEditor.h>
 #include <cmath>
 
+using namespace Hagine;
 Player::Player() {
 }
 
@@ -398,7 +399,7 @@ void Player::DrawParticle(const ViewProjection &viewProjection) {
 void Player::ChangeState(const std::string &stateName) {
     auto it = states_.find(stateName);
     if (it != states_.end()) {
-        previousStateName = GetCurrentStateName();
+        previousStateName_ = GetCurrentStateName();
         if (currentState_) {
             currentState_->Exit(*this);
         }

@@ -4,8 +4,8 @@
 #include <array>
 
 // 前方宣言
-class Input;
-class GamePad;
+namespace Hagine { class Input; }
+namespace Hagine { class GamePad; }
 
 /// <summary>
 /// リザルト画面のUI管理クラス
@@ -153,12 +153,12 @@ class ResultUI {
     static constexpr float kNormalizeValue = 1.0f;     // 正規化値
     static constexpr int kZeroValue = 0;               // ゼロ値
 
-    std::array<SpriteData *, kMaxSprite> sprites_; // スプライト配列
+    std::array<Hagine::SpriteData *, kMaxSprite> sprites_; // スプライト配列
 
-    std::array<EasingData<Vector2>, kMaxSprite> positionEasings_; // 位置イージング
+    std::array<Hagine::EasingData<Hagine::Vector2>, kMaxSprite> positionEasings_; // 位置イージング
 
-    std::array<Vector2, kMaxSprite> startPositions_; // 開始位置
-    std::array<Vector2, kMaxSprite> endPositions_;   // 終了位置
+    std::array<Hagine::Vector2, kMaxSprite> startPositions_; // 開始位置
+    std::array<Hagine::Vector2, kMaxSprite> endPositions_;   // 終了位置
 
     bool isStartEasing_ = false;          // イージング開始フラグ
     bool isAllAnimationFinished_ = false; // 全アニメーション完了フラグ
@@ -176,8 +176,8 @@ class ResultUI {
     float ClearTime_ = kDefaultClearTime; // クリアタイム
     std::string Rank_ = "A";              // ランク
 
-    Input *input_ = nullptr;                    // 入力
-    std::unique_ptr<GamePad> gamePad_ = nullptr; // ゲームパッド
+    Hagine::Input *input_ = nullptr;                    // 入力
+    std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr; // ゲームパッド
 
     SkipPhase skipPhase_ = kNoSkip; // スキップ段階
 };

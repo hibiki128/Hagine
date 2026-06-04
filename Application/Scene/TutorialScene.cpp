@@ -4,6 +4,7 @@
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
 
+using namespace Hagine;
 void TutorialScene::Initialize() {
     /// ===================================================
     /// インスタンス生成

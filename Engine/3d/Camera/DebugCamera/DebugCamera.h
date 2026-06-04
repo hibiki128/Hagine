@@ -14,6 +14,7 @@
 /// デバッグカメラクラス
 /// 開発時の視点操作と各種デバッグ用視点機能を提供する
 /// </summary>
+namespace Hagine {
 class DebugCamera {
 public:
     // ===================================================
@@ -69,16 +70,17 @@ private:
     // ===================================================
 
     ViewProjection *viewProjection_{};                            // 対象のビュープロジェクション
-    Vector2 mouse{};                                              // 現在のマウス座標
+    Vector2 mouse_{};                                              // 現在のマウス座標
     Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                  // オイラー角による回転
     Quaternion quateRotation_ = Quaternion::IdentityQuaternion(); // クォータニオンによる回転
-    Matrix4x4 rotateXYZMatrix{};                                  // XYZ回転行列
-    Matrix4x4 matRotDelta{};                                      // 回転差分行列
-    float mouseSensitivity = 0.003f;                              // マウスの感度
-    float moveZspeed = 0.005f;                                    // Z軸方向の移動速度
+    Matrix4x4 rotateXYZMatrix_{};                                  // XYZ回転行列
+    Matrix4x4 matRotDelta_{};                                      // 回転差分行列
+    float mouseSensitivity_ = 0.003f;                              // マウスの感度
+    float moveZspeed_ = 0.005f;                                    // Z軸方向の移動速度
     bool lockCamera_ = true;                                      // カメラ操作のロック状態
     bool useKey_ = true;                                          // キー操作の有効状態
     bool useMouse_ = false;                                       // マウス操作の有効状態
     bool isActive_ = false;                                       // カメラ自体のアクティブ状態
     bool isUseQuaternion_ = false;                                // クォータニオン計算の利用フラグ
 };
+} // namespace Hagine

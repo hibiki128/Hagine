@@ -13,13 +13,14 @@
 #include <myMath.h>
 #include <type/Matrix4x4.h>
 
+namespace Hagine {
 void Object3d::Initialize() {
     objectCommon_ = std::make_unique<Object3dCommon>();
     objectCommon_->Initialize();
 
     dxCommon_ = DirectXCommon::GetInstance();
 
-    lightGroup = LightGroup::GetInstance();
+    lightGroup_ = LightGroup::GetInstance();
 
     CreateTransformationMatrix();
 }
@@ -33,37 +34,37 @@ void Object3d::CreateModel(const std::string &filePath) {
     ModelManager::GetInstance()->LoadModel(modelFilePath_);
 
     // モデルを検索してセットする
-    model = ModelManager::GetInstance()->FindModel(modelFilePath_);
+    model_ = ModelManager::GetInstance()->FindModel(modelFilePath_);
 
     // マテリアル配列のサイズを調整
-    materials_.resize(model->GetModelData().materials.size());
-    color_.resize(model->GetModelData().materials.size());
+    materials_.resize(model_->GetModelData().materials.size());
+    color_.resize(model_->GetModelData().materials.size());
 
     // 各マテリアルの初期化
-    for (size_t i = 0; i < model->GetModelData().materials.size(); ++i) {
+    for (size_t i = 0; i < model_->GetModelData().materials.size(); ++i) {
         materials_[i] = std::make_unique<Material>();
         materials_[i]->Initialize();
-        materials_[i]->GetMaterialData() = model->GetModelData().materials[i];
+        materials_[i]->GetMaterialData() = model_->GetModelData().materials[i];
         materials_[i]->LoadTexture();
         color_[i].Initialize();
-        color_[i].SetColor(model->GetModelData().materials[i].color);
+        color_[i].SetColor(model_->GetModelData().materials[i].color);
     }
 
-    if (model->IsGltf()) {
+    if (model_->IsGltf()) {
         currentModelAnimation_ = std::make_unique<ModelAnimation>();
-        currentModelAnimation_->SetModelData(model->GetModelData());
+        currentModelAnimation_->SetModelData(model_->GetModelData());
         currentModelAnimation_->Initialize("resources/models/", modelFilePath_);
 
-        model->SetAnimator(currentModelAnimation_->GetAnimator());
-        if (model->GetModelData().hasBones) {
-            model->SetBone(currentModelAnimation_->GetBone());
-            model->SetSkin(currentModelAnimation_->GetSkin());
+        model_->SetAnimator(currentModelAnimation_->GetAnimator());
+        if (model_->GetModelData().hasBones) {
+            model_->SetBone(currentModelAnimation_->GetBone());
+            model_->SetSkin(currentModelAnimation_->GetSkin());
         }
     }
 }
 
 void Object3d::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath) {
-    model = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type, texPath));
+    model_ = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type, texPath));
     isPrimitive_ = true;
     materials_.resize(1);
     color_.resize(1);
@@ -79,8 +80,8 @@ void Object3d::CreatePrimitiveModel(const PrimitiveType &type, std::string texPa
 }
 
 void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection &viewProjection) {
-    if (lightGroup) {
-        lightGroup->Update(viewProjection);
+    if (lightGroup_) {
+        lightGroup_->Update(viewProjection);
     }
 
     // ローカル行列を作成
@@ -97,30 +98,30 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
     worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
     Matrix4x4 worldInverseMatrix = Inverse(worldMatrix);
 
-    if (!model->GetModelData().hasAnimations) {
-        transformationMatrixData->WVP = worldViewProjectionMatrix;
-        transformationMatrixData->World = worldMatrix;
-        transformationMatrixData->WorldInverseTranspose = Transpose(worldInverseMatrix);
-        transformationMatrixData->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+    if (!model_->GetModelData().hasAnimations) {
+        transformationMatrixData_->WVP = worldViewProjectionMatrix;
+        transformationMatrixData_->World = worldMatrix;
+        transformationMatrixData_->WorldInverseTranspose = Transpose(worldInverseMatrix);
+        transformationMatrixData_->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
     } else {
-        if (model->GetModelData().hasBones) {
-            transformationMatrixData->WVP = worldViewProjectionMatrix;
-            transformationMatrixData->World = worldMatrix;
-            transformationMatrixData->WorldInverseTranspose = Transpose(worldInverseMatrix);
-            transformationMatrixData->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+        if (model_->GetModelData().hasBones) {
+            transformationMatrixData_->WVP = worldViewProjectionMatrix;
+            transformationMatrixData_->World = worldMatrix;
+            transformationMatrixData_->WorldInverseTranspose = Transpose(worldInverseMatrix);
+            transformationMatrixData_->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
         } else {
-            Matrix4x4 localMat = model->GetAnimator()->GetLocalMatrix();
-            transformationMatrixData->WVP = localMat * worldViewProjectionMatrix;
-            transformationMatrixData->World = localMat * worldMatrix;
-            transformationMatrixData->WorldInverseTranspose = MakeIdentity4x4();
-            transformationMatrixData->LightWVP = localMat * worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+            Matrix4x4 localMat = model_->GetAnimator()->GetLocalMatrix();
+            transformationMatrixData_->WVP = localMat * worldViewProjectionMatrix;
+            transformationMatrixData_->World = localMat * worldMatrix;
+            transformationMatrixData_->WorldInverseTranspose = MakeIdentity4x4();
+            transformationMatrixData_->LightWVP = localMat * worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
         }
     }
 
-    if (model && model->IsGltf()) {
-        if (model->GetModelData().hasAnimations) {
+    if (model_ && model_->IsGltf()) {
+        if (model_->GetModelData().hasAnimations) {
             objectCommon_->computeSkinningDrawCommonSetting();
-            model->Update();
+            model_->Update();
         }
     }
 
@@ -138,24 +139,24 @@ void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &
     Update(worldTransform, viewProjection);
 
     // アニメーション設定
-    if (model && model->IsGltf()) {
-        if (model->GetModelData().hasAnimations) {
+    if (model_ && model_->IsGltf()) {
+        if (model_->GetModelData().hasAnimations) {
             objectCommon_->skinningDrawCommonSetting();
         }
     }
 
     // 変換行列設定
-    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResource_->GetGPUVirtualAddress());
 
     // ライティング設定
-    if (lightGroup) {
-        lightGroup->Draw();
+    if (lightGroup_) {
+        lightGroup_->Draw();
     }
 
     // モデル描画
     if (modelDraw) {
-        if (model) {
-            model->Draw(materials_, color_, lighting, reflect);
+        if (model_) {
+            model_->Draw(materials_, color_, lighting, reflect);
         }
     }
 }
@@ -219,9 +220,9 @@ void Object3d::SetAnimationImmediate(const std::string &fileName) {
     currentModelAnimation_->GetAnimator()->SetAnimationTime(0.0f);
     currentModelAnimation_->GetAnimator()->SetIsAnimation(true);
 
-    model->SetAnimator(currentModelAnimation_->GetAnimator());
-    model->SetBone(currentModelAnimation_->GetBone());
-    model->SetSkin(currentModelAnimation_->GetSkin());
+    model_->SetAnimator(currentModelAnimation_->GetAnimator());
+    model_->SetBone(currentModelAnimation_->GetBone());
+    model_->SetSkin(currentModelAnimation_->GetSkin());
 
     modelFilePath_ = fileName;
 
@@ -274,7 +275,7 @@ void Object3d::AddAnimation(const std::string &fileName, bool loop) {
 
     auto animation = std::make_unique<ModelAnimation>();
 
-    animation->SetModelData(model->GetModelData());
+    animation->SetModelData(model_->GetModelData());
     animation->Initialize("resources/models/", fileName);
     animation->GetAnimator()->SetAnimationTime(0.0f);
     animation->SetSpeed(animationSpeed_);
@@ -319,11 +320,11 @@ bool Object3d::GetAnimationLoop(const std::string &fileName) {
 void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewProjection &viewProjection, bool isRainbow) {
     // worldTransformを更新
     Update(worldTransform, viewProjection);
-    if (!model) {
+    if (!model_) {
         return;
     }
 
-    const ModelData &modelData = model->GetModelData();
+    const ModelData &modelData = model_->GetModelData();
 
     // ====== フラグで切り替え可能 ======
     bool gamingMode = isRainbow;
@@ -406,9 +407,9 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
         if (indices.empty()) {
             for (size_t i = 0; i + 2 < vertices.size(); i += 3) {
                 // 修正：transformationMatrixData->Worldを使用
-                Vector4 v0_4 = Transformation(Vector4{vertices[i].position.x, vertices[i].position.y, vertices[i].position.z, 1.0f}, transformationMatrixData->World);
-                Vector4 v1_4 = Transformation(Vector4{vertices[i + 1].position.x, vertices[i + 1].position.y, vertices[i + 1].position.z, 1.0f}, transformationMatrixData->World);
-                Vector4 v2_4 = Transformation(Vector4{vertices[i + 2].position.x, vertices[i + 2].position.y, vertices[i + 2].position.z, 1.0f}, transformationMatrixData->World);
+                Vector4 v0_4 = Transformation(Vector4{vertices[i].position.x, vertices[i].position.y, vertices[i].position.z, 1.0f}, transformationMatrixData_->World);
+                Vector4 v1_4 = Transformation(Vector4{vertices[i + 1].position.x, vertices[i + 1].position.y, vertices[i + 1].position.z, 1.0f}, transformationMatrixData_->World);
+                Vector4 v2_4 = Transformation(Vector4{vertices[i + 2].position.x, vertices[i + 2].position.y, vertices[i + 2].position.z, 1.0f}, transformationMatrixData_->World);
 
                 drawTriangle({v0_4.x, v0_4.y, v0_4.z}, {v1_4.x, v1_4.y, v1_4.z}, {v2_4.x, v2_4.y, v2_4.z});
             }
@@ -422,9 +423,9 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
                     continue;
 
                 // 修正：transformationMatrixData->Worldを使用
-                Vector4 v0_4 = Transformation(Vector4{vertices[idx0].position.x, vertices[idx0].position.y, vertices[idx0].position.z, 1.0f}, transformationMatrixData->World);
-                Vector4 v1_4 = Transformation(Vector4{vertices[idx1].position.x, vertices[idx1].position.y, vertices[idx1].position.z, 1.0f}, transformationMatrixData->World);
-                Vector4 v2_4 = Transformation(Vector4{vertices[idx2].position.x, vertices[idx2].position.y, vertices[idx2].position.z, 1.0f}, transformationMatrixData->World);
+                Vector4 v0_4 = Transformation(Vector4{vertices[idx0].position.x, vertices[idx0].position.y, vertices[idx0].position.z, 1.0f}, transformationMatrixData_->World);
+                Vector4 v1_4 = Transformation(Vector4{vertices[idx1].position.x, vertices[idx1].position.y, vertices[idx1].position.z, 1.0f}, transformationMatrixData_->World);
+                Vector4 v2_4 = Transformation(Vector4{vertices[idx2].position.x, vertices[idx2].position.y, vertices[idx2].position.z, 1.0f}, transformationMatrixData_->World);
 
                 drawTriangle({v0_4.x, v0_4.y, v0_4.z}, {v1_4.x, v1_4.y, v1_4.z}, {v2_4.x, v2_4.y, v2_4.z});
             }
@@ -561,20 +562,20 @@ void Object3d::DrawArmatureShape(const Vector3 &startPos, const Vector3 &endPos,
 void Object3d::SetModel(const std::string &filePath) {
     // モデルを検索してセットする
     ModelManager::GetInstance()->LoadModel(filePath);
-    model = ModelManager::GetInstance()->FindModel(filePath);
+    model_ = ModelManager::GetInstance()->FindModel(filePath);
 
-    if (model->IsGltf()) {
-        currentModelAnimation_->SetModelData(model->GetModelData());
+    if (model_->IsGltf()) {
+        currentModelAnimation_->SetModelData(model_->GetModelData());
         currentModelAnimation_->Initialize("resources/models/", filePath);
 
-        model->SetAnimator(currentModelAnimation_->GetAnimator());
-        model->SetBone(currentModelAnimation_->GetBone());
-        model->SetSkin(currentModelAnimation_->GetSkin());
+        model_->SetAnimator(currentModelAnimation_->GetAnimator());
+        model_->SetBone(currentModelAnimation_->GetBone());
+        model_->SetSkin(currentModelAnimation_->GetSkin());
     }
 }
 
 void Object3d::DrawShadow(const WorldTransform &worldTransform) {
-    if (!model) return;
+    if (!model_) return;
 
     Matrix4x4 localMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quateRotation_, worldTransform.translation_);
     Matrix4x4 worldMatrix = localMatrix;
@@ -582,36 +583,36 @@ void Object3d::DrawShadow(const WorldTransform &worldTransform) {
         worldMatrix = localMatrix * worldTransform.parent_->matWorld_;
     }
 
-    if (!model->GetModelData().hasAnimations) {
-        transformationMatrixData->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
-    } else if (model->GetModelData().hasBones) {
-        transformationMatrixData->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+    if (!model_->GetModelData().hasAnimations) {
+        transformationMatrixData_->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+    } else if (model_->GetModelData().hasBones) {
+        transformationMatrixData_->LightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
     } else {
-        transformationMatrixData->LightWVP = model->GetAnimator()->GetLocalMatrix() * worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+        transformationMatrixData_->LightWVP = model_->GetAnimator()->GetLocalMatrix() * worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
     }
 
     PipeLineManager::GetInstance()->DrawCommonSetting(PipelineType::kShadowMap);
-    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(0, transformationMatrixResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(0, transformationMatrixResource_->GetGPUVirtualAddress());
 
-    if (model) {
-        model->DrawShadow();
+    if (model_) {
+        model_->DrawShadow();
     }
 }
 
 void Object3d::CreateTransformationMatrix() {
 
-    transformationMatrixResource = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
+    transformationMatrixResource_ = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
     // 書き込むかめのアドレスを取得
-    transformationMatrixResource->Map(0, nullptr, reinterpret_cast<void **>(&transformationMatrixData));
+    transformationMatrixResource_->Map(0, nullptr, reinterpret_cast<void **>(&transformationMatrixData_));
     // 単位行列を書き込んでおく
-    transformationMatrixData->WVP = MakeIdentity4x4();
-    transformationMatrixData->World = MakeIdentity4x4();
-    transformationMatrixData->WorldInverseTranspose = MakeIdentity4x4();
-    transformationMatrixData->LightWVP = MakeIdentity4x4();
+    transformationMatrixData_->WVP = MakeIdentity4x4();
+    transformationMatrixData_->World = MakeIdentity4x4();
+    transformationMatrixData_->WorldInverseTranspose = MakeIdentity4x4();
+    transformationMatrixData_->LightWVP = MakeIdentity4x4();
 }
 
 void Object3d::CreateIndependentMaterials() {
-    if (!model)
+    if (!model_)
         return;
 
     size_t materialCount = materials_.size();
@@ -642,3 +643,4 @@ void Object3d::SetEnvironmentCoefficients(float value) {
         material->SetEnvironmentCoefficients(value);
     }
 }
+} // namespace Hagine

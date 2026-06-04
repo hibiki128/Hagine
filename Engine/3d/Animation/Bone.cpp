@@ -2,6 +2,7 @@
 #include <myMath.h>
 #include "Animator.h"
 
+namespace Hagine {
 void Bone::Initialize(ModelData modelData)
 {
 	// モデルデータのルートノードからスケルトン構造を生成
@@ -119,3 +120,4 @@ void Bone::ApplyAnimation(const Animation& animation, float animationTime)
 		}
 	}
 }
+} // namespace Hagine

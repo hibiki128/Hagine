@@ -2,6 +2,7 @@
 #include "line/DrawLine3D.h"
 #include <numbers>
 
+namespace Hagine {
 void SphereCollider::UpdateWorldTransform() {
     cachedSphere_.center = GetCenterPosition() + offset_;
     cachedSphere_.radius = radius_;
@@ -56,3 +57,4 @@ void SphereCollider::LoadFromJson() {
     radius_ = dataHandler_->Load<float>("radius", 1.0f);
     offset_ = dataHandler_->Load<Vector3>("offset", {0.0f, 0.0f, 0.0f});
 }
+} // namespace Hagine

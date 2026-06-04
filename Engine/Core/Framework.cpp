@@ -3,6 +3,7 @@
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
 
+namespace Hagine {
 void Framework::Run() {
     // ゲームの初期化
     Initialize();
@@ -378,3 +379,4 @@ void Framework::PlaySounds() {
 
 void Framework::Draw() {
 }
+} // namespace Hagine

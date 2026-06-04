@@ -8,6 +8,9 @@ struct VertexShaderInput
 };
 
 StructuredBuffer<Particle> gParticles : register(t0);
+// Candidate A: コンパクト描画属性バッファ（64B/スロット）。
+// gPerView.enableCompactDraw != 0 のとき、150B の gParticles の代わりにこちらを読む。
+StructuredBuffer<ParticleDrawAttrib> gDrawAttribs : register(t1);
 // 生存コンパクション: instanceId -> 生存パーティクルの実 slot index
 StructuredBuffer<uint> gAliveList : register(t2);
 // 生存コンパクション: 当該フレームの生存数（これを超える instanceId は破棄）
@@ -29,7 +32,33 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
     }
 
     uint particleSlot = gAliveList[instanceId];
-    Particle particle = gParticles[particleSlot];
+
+    // 描画に必要な属性だけをローカルへ読み出す。
+    //   enableCompactDraw=1 : 64B の gDrawAttribs[slot] から読む（VS 帯域 150B→64B）。
+    //   enableCompactDraw=0 : 従来どおり 150B の gParticles[slot] から読む。
+    float3 pTranslate;
+    float3 pScale;
+    float3 pVelocity;
+    float3 pRotation;
+    float4 pColor;
+    if (gPerView.enableCompactDraw != 0)
+    {
+        ParticleDrawAttrib a = gDrawAttribs[particleSlot];
+        pTranslate = a.translate;
+        pScale = a.scale;
+        pVelocity = a.velocity;
+        pRotation = a.rotation;
+        pColor = a.color;
+    }
+    else
+    {
+        Particle particle = gParticles[particleSlot];
+        pTranslate = particle.translate;
+        pScale = particle.scale;
+        pVelocity = particle.velocity;
+        pRotation = particle.rotation;
+        pColor = particle.color;
+    }
 
     // --- スケール → XYZ回転 → ビルボード → 平行移動 ---
     float4x4 worldMatrix;
@@ -37,7 +66,7 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
     if (gPerView.enableVelocityStretch != 0)
     {
         // 速度方向に引き伸ばすストレッチビルボード
-        float3 vel = particle.velocity;
+        float3 vel = pVelocity;
         float3 camRight = normalize(gPerView.billboardMatrix[0].xyz);
         float3 camUp    = normalize(gPerView.billboardMatrix[1].xyz);
         float vRight = dot(vel, camRight);
@@ -53,29 +82,29 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
             float3 newRight = normalize(cross(newUp, camBack));
             float stretchScale = 1.0f + speed * gPerView.velocityStretchFactor;
 
-            worldMatrix[0] = float4(newRight * particle.scale.x, 0.0f);
-            worldMatrix[1] = float4(newUp * (particle.scale.y * stretchScale), 0.0f);
-            worldMatrix[2] = float4(camBack * particle.scale.z, 0.0f);
-            worldMatrix[3] = float4(particle.translate, 1.0f);
+            worldMatrix[0] = float4(newRight * pScale.x, 0.0f);
+            worldMatrix[1] = float4(newUp * (pScale.y * stretchScale), 0.0f);
+            worldMatrix[2] = float4(camBack * pScale.z, 0.0f);
+            worldMatrix[3] = float4(pTranslate, 1.0f);
         }
         else
         {
             // 速度ゼロ時は通常ビルボード
             worldMatrix = gPerView.billboardMatrix;
-            worldMatrix[0] *= particle.scale.x;
-            worldMatrix[1] *= particle.scale.y;
-            worldMatrix[2] *= particle.scale.z;
-            worldMatrix[3].xyz = particle.translate;
+            worldMatrix[0] *= pScale.x;
+            worldMatrix[1] *= pScale.y;
+            worldMatrix[2] *= pScale.z;
+            worldMatrix[3].xyz = pTranslate;
         }
     }
     else
     {
         // 通常ビルボード
         worldMatrix = gPerView.billboardMatrix;
-        worldMatrix[0] *= particle.scale.x;
-        worldMatrix[1] *= particle.scale.y;
-        worldMatrix[2] *= particle.scale.z;
-        worldMatrix[3].xyz = particle.translate;
+        worldMatrix[0] *= pScale.x;
+        worldMatrix[1] *= pScale.y;
+        worldMatrix[2] *= pScale.z;
+        worldMatrix[3].xyz = pTranslate;
     }
 
     // ワールド×ビュープロジェクション。回転を使うグループのみ回転行列を合成する
@@ -84,9 +113,9 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
     if (gPerView.enableRotation != 0)
     {
         float sx, cx, sy, cy, sz, cz;
-        sincos(particle.rotation.x, sx, cx);
-        sincos(particle.rotation.y, sy, cy);
-        sincos(particle.rotation.z, sz, cz);
+        sincos(pRotation.x, sx, cx);
+        sincos(pRotation.y, sy, cy);
+        sincos(pRotation.z, sz, cz);
         float4x4 rotXYZ = float4x4(
             cy * cz, cy * sz, -sy, 0,
             sx * sy * cz - cx * sz, sx * sy * sz + cx * cz, sx * cy, 0,
@@ -97,6 +126,6 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
     }
     output.position = mul(input.position, wvp);
     output.texcoord = input.texcoord;
-    output.color = particle.color;
+    output.color = pColor;
     return output;
 }

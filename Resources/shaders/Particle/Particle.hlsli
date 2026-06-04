@@ -88,6 +88,24 @@ struct PerView
     uint enableVelocityStretch;
     float velocityStretchFactor;
     uint enableRotation; // 1=回転あり / 0=回転なし（VSで回転行列計算をスキップ）
+    // Candidate A: 1=VS はコンパクト描画属性バッファ(gDrawAttribs)を読む / 0=従来どおり gParticles を読む。
+    // C++ PerView と offset(144) を一致させること。
+    uint enableCompactDraw;
+};
+
+// =============================================
+// Candidate A: コンパクト描画属性バッファ
+//   VS は 150B の Particle 全体ではなく、描画に必要な属性だけ（= 64B）を読む。
+//   update/emit が生存スロット(slot index)で書き込み、VS は aliveList[instanceId]→slot で読む。
+//   StructuredBuffer のタイトパッキングで合計 64 バイト（C++ 側と一致させること）。
+// =============================================
+struct ParticleDrawAttrib
+{
+    float3 translate; // 0  (12)
+    float3 scale;     // 12 (12)
+    float3 velocity;  // 24 (12) velocityStretch 用
+    float3 rotation;  // 36 (12)
+    float4 color;     // 48 (16) = 64B
 };
 
 struct EmitterMesh
@@ -217,6 +235,13 @@ struct ParticleCSSettings
     uint maxTrailBudgetPerGroup;
     float trailBudgetPad0;
     float trailBudgetPad1;
+    // ---- Candidate A: コンパクト描画バッファ書き込みトグル ----
+    // 1 のとき、update/emit が生存スロットの描画属性を gDrawAttribs に書き込む（VS が読む）。
+    // C++ struct ParticleCSSettings と末尾の並び・型を一致させること。
+    uint enableCompactDraw;
+    float compactDrawPad0;
+    float compactDrawPad1;
+    float compactDrawPad2;
 };
 
 // 【重要】このレイアウトは C++ 側 `struct ParticleFieldData`

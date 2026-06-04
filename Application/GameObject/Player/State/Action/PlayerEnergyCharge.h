@@ -42,7 +42,7 @@ class PlayerEnergyCharge : public PlayerBaseState {
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(Player &player, const ViewProjection &viewProjection) override;
+    void DrawParticle(Player &player, const Hagine::ViewProjection &viewProjection) override;
 
     float GetChageRate() { return chargeRate_; }
 
@@ -59,5 +59,5 @@ class PlayerEnergyCharge : public PlayerBaseState {
     float chargeRate_ = kChargeRate;
     float beforeChargeRate_ = kInitialChargeRate;
     std::string beforeState_ = "";
-    std::unique_ptr<ParticleCSEmitter> chargeAuraEmitter_; // チャージオーラパーティクル
+    std::unique_ptr<Hagine::ParticleCSEmitter> chargeAuraEmitter_; // チャージオーラパーティクル
 };

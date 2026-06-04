@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 
+namespace Hagine {
 class ParticleEmitter {
   public:
     // コンストラクタでメンバ変数を初期化
@@ -218,3 +219,4 @@ class ParticleEmitter {
     Quaternion lastRotation_ = Quaternion::IdentityQuaternion();
     Vector3 lastScale_ = {1.0f, 1.0f, 1.0f};
 };
+} // namespace Hagine

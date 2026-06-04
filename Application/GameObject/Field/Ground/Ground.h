@@ -5,7 +5,7 @@
 /// 地面のゲームオブジェクトクラス
 /// ステージの基盤となる固定オブジェクト
 /// </summary>
-class Ground : public BaseObject {
+class Ground : public Hagine::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -27,7 +27,7 @@ class Ground : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection) override;
+    void Draw(const Hagine::ViewProjection &viewProjection) override;
 
     /// <summary>
     /// ライティングの有効フラグを設定

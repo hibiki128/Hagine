@@ -10,6 +10,7 @@
 #include "imgui.h"
 #endif
 
+namespace Hagine {
 using namespace Microsoft::WRL;
 
 void ShadowMap::Initialize() {
@@ -275,3 +276,4 @@ void ShadowMap::LoadConfig(const std::string &fileName) {
     Update();
     ImGuiNotification::Post("シャドウ設定を読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
+} // namespace Hagine

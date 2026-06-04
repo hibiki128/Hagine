@@ -1,6 +1,7 @@
 #include "GamePad.h"
 #include <algorithm>
 
+namespace Hagine {
 void GamePad::Init(int32_t playerIndex) {
     playerIndex_ = playerIndex;
     isConnected_ = false;
@@ -191,3 +192,4 @@ float GamePad::ApplyDeadZone(SHORT value, float deadZone) const {
 
     return sign * std::clamp(remappedValue, 0.0f, 1.0f);
 }
+} // namespace Hagine

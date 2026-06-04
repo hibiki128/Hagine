@@ -8,7 +8,7 @@ class Enemy;
 /// 敵が発射する弾のゲームオブジェクトクラス
 /// 追尾、移動、衝突判定などを行う
 /// </summary>
-class EnemyBullet : public BaseObject {
+class EnemyBullet : public Hagine::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -30,13 +30,13 @@ class EnemyBullet : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection) override;
+    void Draw(const Hagine::ViewProjection &viewProjection) override;
 
     /// <summary>
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticle(const Hagine::ViewProjection &viewProjection);
 
     /// <summary>
     /// 敵の情報から弾のトランスフォームを初期化
@@ -48,7 +48,7 @@ class EnemyBullet : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="collider">衝突したコライダー</param>
-    void OnCollisionEnter(ColliderBase *collider);
+    void OnCollisionEnter(Hagine::ColliderBase *collider);
 
     /// ===================================================
     /// Getter
@@ -104,7 +104,7 @@ class EnemyBullet : public BaseObject {
     /// 速度を直接上書きする
     /// </summary>
     /// <param name="vel">設定する速度ベクトル</param>
-    void SetVelocity(const Vector3 &vel) { velocity_ = vel; }
+    void SetVelocity(const Hagine::Vector3 &vel) { velocity_ = vel; }
 
     /// <summary>
     /// ロックオン追従フラグを設定
@@ -135,7 +135,7 @@ class EnemyBullet : public BaseObject {
     static constexpr float kVerticalOffset = 1.0f;        // 垂直方向オフセット
     static constexpr int kBulletDamage = 1;               // 弾のダメージ値
 
-    Vector3 velocity_;                  // 速度
+    Hagine::Vector3 velocity_;                  // 速度
     float   speed_ = kDefaultSpeed;     // 移動速度
     float   acce_  = kDefaultAcceleration; // 加速度
 
@@ -147,7 +147,7 @@ class EnemyBullet : public BaseObject {
     bool    isLockOnBullet_ = false;   // ロックオン弾かどうか
     float   damage_         = static_cast<float>(kBulletDamage); // 弾のダメージ量
     Player *target_         = nullptr; // ターゲットのプレイヤー
-    std::unique_ptr<ParticleEmitter> emitter_; // エミッター
+    std::unique_ptr<Hagine::ParticleEmitter> emitter_; // エミッター
 
-    SphereCollider *collider_ = nullptr; // コライダー
+    Hagine::SphereCollider *collider_ = nullptr; // コライダー
 };

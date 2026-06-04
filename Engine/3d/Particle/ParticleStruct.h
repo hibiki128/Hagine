@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+namespace Hagine {
 struct ParticleMaterial {
     Vector4 color;
     Matrix4x4 uvTransform;
@@ -74,7 +75,21 @@ struct PerView {
     // グループが回転を使わない（enableRandomRotation/enableRandomAngularVelocity が両方OFF）なら
     // 全パーティクルの rotation が常に 0 なので、VS の回転計算を丸ごと省ける。
     uint32_t enableRotation = 0;
+    // Candidate A: 1=VS はコンパクト描画属性バッファ(gDrawAttribs)を読む / 0=従来どおり gParticles を読む。
+    // HLSL struct PerView の enableCompactDraw(offset 144) と一致させること。
+    uint32_t enableCompactDraw = 0;
 };
+
+// Candidate A: VS が読むコンパクト描画属性（HLSL struct ParticleDrawAttrib と 64B 一致）。
+// GPU 専用（CPU は内容を読み書きしない）。バッファ確保時の stride にのみ使う。
+struct ParticleDrawAttrib {
+    Vector3 translate; // 0
+    Vector3 scale;     // 12
+    Vector3 velocity;  // 24
+    Vector3 rotation;  // 36
+    Vector4 color;     // 48  = 64B
+};
+static_assert(sizeof(ParticleDrawAttrib) == 64, "ParticleDrawAttrib must be 64 bytes to match HLSL StructuredBuffer layout");
 
 struct TriangleInfo {
     Vector3 v0;
@@ -228,6 +243,13 @@ struct ParticleCSSettings {
     uint32_t maxTrailBudgetPerGroup = 20000;
     float trailBudgetPad0 = 0.0f;
     float trailBudgetPad1 = 0.0f;
+    // ---- Candidate A: コンパクト描画バッファ書き込みトグル ----
+    // 1 のとき、update/emit が生存スロットの描画属性を gDrawAttribs に書き込む。
+    // HLSL struct ParticleCSSettings と末尾の並び・型を一致させること。
+    uint32_t enableCompactDraw = 0;
+    float compactDrawPad0 = 0.0f;
+    float compactDrawPad1 = 0.0f;
+    float compactDrawPad2 = 0.0f;
 };
 
 /// =====================================================================
@@ -501,3 +523,4 @@ struct ParticleGroupData {
 ParticleMaterial ForParticleMaterial(MaterialData material);
 
 std::vector<ParticleMaterial> ForParticleMaterials(std::vector<MaterialData> materials);
+} // namespace Hagine

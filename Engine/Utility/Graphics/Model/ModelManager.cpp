@@ -4,6 +4,7 @@
 #include <functional>
 #include <sstream>
 
+namespace Hagine {
 void ModelManager::LoadModel(const std::string &filePath) {
 
     // .gltfファイルの場合、内容に基づくハッシュを生成しない（毎回新しいモデルを作成）
@@ -14,39 +15,39 @@ void ModelManager::LoadModel(const std::string &filePath) {
 
         // モデルの生成とファイル読み込み、初期化
         std::unique_ptr<Model> model = std::make_unique<Model>();
-        model->Initialize(modelCommon);
+        model->Initialize(modelCommon_);
         model->CreateModel("resources/models/", filePath);
-        model->SetSrv(srvManager);
+        model->SetSrv(srvManager_);
 
         // モデルをmapコンテナに格納する
-        models.insert(std::make_pair(uniqueKey, std::move(model)));
+        models_.insert(std::make_pair(uniqueKey, std::move(model)));
         ImGuiNotification::Post("モデルを読み込みました: " + filePath, {0.2f, 0.8f, 0.8f, 1.0f});
         return;
     }
 
     // .gltf以外のファイルは元のパスで検索（重複チェック）
-    if (models.contains(filePath)) {
+    if (models_.contains(filePath)) {
         return;
     }
 
     std::unique_ptr<Model> model = std::make_unique<Model>();
-    model->Initialize(modelCommon);
+    model->Initialize(modelCommon_);
     model->CreateModel("resources/models/", filePath);
-    model->SetSrv(srvManager);
-    models.insert(std::make_pair(filePath, std::move(model)));
+    model->SetSrv(srvManager_);
+    models_.insert(std::make_pair(filePath, std::move(model)));
     ImGuiNotification::Post("モデルを読み込みました: " + filePath, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
 std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string texPath) {
     std::unique_ptr<Model> model = std::make_unique<Model>();
-    model->Initialize(modelCommon);
+    model->Initialize(modelCommon_);
     model->CreatePrimitiveModel(type,texPath);
-    model->SetSrv(srvManager);
+    model->SetSrv(srvManager_);
     // モデルのユニークな識別子を生成
     static int modelIndex = 0;
     std::string uniqueKey = "PrimitiveModel_" + std::to_string(modelIndex++);
     // モデルをmapコンテナに格納する
-    models.insert(std::make_pair(uniqueKey, std::move(model)));
+    models_.insert(std::make_pair(uniqueKey, std::move(model)));
     ImGuiNotification::Post("プリミティブモデルを作成しました: " + uniqueKey, {0.4f, 0.8f, 1.0f, 1.0f});
     return uniqueKey;
 }
@@ -58,7 +59,7 @@ Model *ModelManager::FindModel(const std::string &filePath) {
         std::vector<Model *> matchedModels;
 
         // キーがファイルパスを含むモデルをすべて収集
-        for (const auto &[key, model] : models) {
+        for (const auto &[key, model] : models_) {
             if (key.find(filePath) != std::string::npos) {
                 matchedModels.push_back(model.get());
             }
@@ -71,20 +72,21 @@ Model *ModelManager::FindModel(const std::string &filePath) {
         }
     } else {
         // .gltf以外のファイルはファイルパスそのもので検索
-        if (models.contains(filePath)) {
-            return models.at(filePath).get();
+        if (models_.contains(filePath)) {
+            return models_.at(filePath).get();
         }
     }
 
     return nullptr;
 }
 
-void ModelManager::Initialize(SrvManager *srvManager) {
-    modelCommon = ModelCommon::GetInstance();
-    modelCommon->Initialize();
-    this->srvManager = srvManager;
+void ModelManager::Initialize(SrvManager *srvManager_) {
+    modelCommon_ = ModelCommon::GetInstance();
+    modelCommon_->Initialize();
+    this->srvManager_ = srvManager_;
 }
 
 void ModelManager::Finalize() {
-    models.clear();
+    models_.clear();
 }
+} // namespace Hagine

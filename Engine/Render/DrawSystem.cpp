@@ -16,6 +16,7 @@
 #include "line/DrawLine3D.h"
 #endif
 
+namespace Hagine {
 void DrawSystem::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager,
                              OffScreen *offscreen, SceneManager *sceneManager,
                              CollisionManager *collision) {
@@ -98,7 +99,7 @@ void DrawSystem::Draw(const ViewProjection &vp) {
         }
         // GPUパーティクルエディタのエミッターをシーン非依存で常時シミュレートする。
         // （プレビュー窓・各シーンでの確認のため。各シーンでの Register に依存しない全体駆動）
-        ParticleCSEditor::GetInstance()->DrawAllCompute(vp);
+       // ParticleCSEditor::GetInstance()->DrawAllCompute(vp);
 
         // 記録が無ければ ExecuteComputeCommands は自己ガードで no-op、Wait も signaled 済み値への待ちで無害。
         dxCommon_->ExecuteComputeCommands();
@@ -293,3 +294,4 @@ void DrawSystem::LoadConfig(const std::string &fileName) {
     }
     ImGuiNotification::Post("描画設定を読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
+} // namespace Hagine

@@ -3,6 +3,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+namespace Hagine {
 class Input;
 class ShortcutManager {
   private:
@@ -38,3 +39,4 @@ class ShortcutManager {
 
     Input *input_ = nullptr;
 };
+} // namespace Hagine

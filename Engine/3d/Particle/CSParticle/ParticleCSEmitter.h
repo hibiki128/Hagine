@@ -9,6 +9,7 @@
 #include <set>
 #include <vector>
 
+namespace Hagine {
 class ParticleCSEmitter {
 
   public:
@@ -235,7 +236,7 @@ class ParticleCSEmitter {
     EmitterMesh *emitterMeshData_ = nullptr;
 
     DirectXCommon *dxCommon_ = nullptr;
-    ID3D12GraphicsCommandList *commandList = nullptr;
+    ID3D12GraphicsCommandList *commandList_ = nullptr;
     ParticleCommon *particleCommon_ = nullptr;
     SrvManager *srvManager_ = nullptr;
 
@@ -281,3 +282,4 @@ class ParticleCSEmitter {
     bool emitOnlyOnFieldContact_ = false;   // true=フィールド接触時のみEmit（シェーダー側で位置を決定）
     uint32_t fieldContactEmitCount_ = 1000; // 接触Emitモード時の発生数/フレーム
 };
+} // namespace Hagine

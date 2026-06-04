@@ -1,6 +1,7 @@
 #include "PlayerStateIdle.h"
 #include "application/GameObject/Player/Player.h"
 
+using namespace Hagine;
 void PlayerStateIdle::Enter(Player &player) {
 }
 

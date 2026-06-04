@@ -4,6 +4,7 @@
 /// <summary>
 /// 2次元ベクトル
 /// </summary>
+namespace Hagine {
 struct Vector2 final {
     float x;
     float y;
@@ -111,3 +112,4 @@ struct Vector2Int final {
         return *this;
     }
 };
+} // namespace Hagine

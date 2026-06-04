@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+namespace Hagine {
 class ParticleCSGroupManager {
   private:
     /// ===================================================
@@ -187,3 +188,4 @@ class ParticleCSGroupManager {
     // テンプレートごとのプール保持上限（メモリの青天井退避を防ぐ）
     static constexpr size_t kMaxPooledPerTemplate = 32;
 };
+} // namespace Hagine

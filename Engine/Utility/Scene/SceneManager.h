@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+namespace Hagine {
 class BaseScene;
 class SceneManager {
   private:
@@ -60,7 +61,7 @@ class SceneManager {
     /// </summary>
     void DrawTransition();
 
-    bool GetTransitionEnd() const { return transitionEnd; }
+    bool GetTransitionEnd() const { return transitionEnd_; }
 
   public: // setter / getter
     void SetSceneFactory(std::unique_ptr<AbstractSceneFactory> sceneFactory) { sceneFactory_ = std::move(sceneFactory); }
@@ -100,9 +101,10 @@ class SceneManager {
 
     std::string currentSceneName_;
 
-    bool transitionEnd = false;
-    bool firstChange = false;
+    bool transitionEnd_ = false;
+    bool firstChange_ = false;
 
     float clearTime_ = 0.0f;
     float hp_ = 0.0f;
 };
+} // namespace Hagine

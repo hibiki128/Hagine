@@ -4,6 +4,7 @@
 #include <Primitive/PrimitiveModel.h>
 #include <d3d12.h>
 
+namespace Hagine {
 class DirectXCommon;
 
 /// <summary>
@@ -88,3 +89,4 @@ class Material {
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_; // GPUバッファリソース
     MaterialDataGPU *materialDataGPU_ = nullptr;              // GPUバッファデータポインタ
 };
+} // namespace Hagine

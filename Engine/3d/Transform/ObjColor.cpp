@@ -1,5 +1,6 @@
 #include "ObjColor.h"
 
+namespace Hagine {
 void ObjColor::Initialize()
 {
 
@@ -38,3 +39,4 @@ void ObjColor::Map()
 		throw std::runtime_error("Failed to map constant buffer.");
 	}
 }
+} // namespace Hagine

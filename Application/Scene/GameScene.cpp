@@ -5,6 +5,7 @@
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
 
+using namespace Hagine;
 static constexpr const char *kBTFolder = "BehaviorTree";
 static constexpr const char *kBTFileName = "EnemyBehavior";
 
@@ -83,9 +84,9 @@ void GameScene::Initialize() {
     /// ===================================================
     /// BehaviorTreeのロード
     /// ===================================================
-    m_BehaviorTreeRoot = BehaviorTreeLoader::LoadAndBuild(kBTFolder, kBTFileName);
-    if (m_BehaviorTreeRoot) {
-        enemy_ptr->SetBehaviorTree(m_BehaviorTreeRoot);
+    behaviorTreeRoot_ = BehaviorTreeLoader::LoadAndBuild(kBTFolder, kBTFileName);
+    if (behaviorTreeRoot_) {
+        enemy_ptr->SetBehaviorTree(behaviorTreeRoot_);
     }
 #endif
 

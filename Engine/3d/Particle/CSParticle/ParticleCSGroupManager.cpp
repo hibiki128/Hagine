@@ -1,5 +1,6 @@
 #include "ParticleCSGroupManager.h"
 
+namespace Hagine {
 void ParticleCSGroupManager::Initialize() {
     const std::string directoryPath = "resources/jsons/ParticleCSGroup/";
 
@@ -70,3 +71,4 @@ void ParticleCSGroupManager::AddParticleCSGroup(std::unique_ptr<ParticleCSGroup>
     data.Save("blendMode", particleCSGroup->GetParticleGroupData().blendMode);
     particleGroups_.emplace_back(std::move(particleCSGroup));
 }
+} // namespace Hagine

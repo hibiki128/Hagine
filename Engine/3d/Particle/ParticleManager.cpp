@@ -5,10 +5,11 @@
 #include <fstream>
 #include <random>
 
+namespace Hagine {
 void ParticleManager::Initialize(SrvManager *srvManager) {
-    particleCommon = ParticleCommon::GetInstance();
+    particleCommon_ = ParticleCommon::GetInstance();
     srvManager_ = srvManager;
-    randomEngine.seed(seedGenerator());
+    randomEngine_.seed(seedGenerator_());
 }
 
 void ParticleManager::Update(const ViewProjection &viewProjection) {
@@ -280,18 +281,18 @@ void ParticleManager::SetTrailSettings(const std::string &groupName, float inter
 
 void ParticleManager::Draw() {
     for (auto &[groupName, particleGroup] : particleGroups_) {
-        particleCommon->DrawCommonSetting(particleGroup->GetParticleGroupData().blendMode);
+        particleCommon_->DrawCommonSetting(particleGroup->GetParticleGroupData().blendMode);
         const auto &meshes = particleGroup->GetModelData().meshes;
         for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
             D3D12_INDEX_BUFFER_VIEW indexBufferView = particleGroup->GetIndexBufferView();
             D3D12_VERTEX_BUFFER_VIEW vertexBufferView = particleGroup->GetVertexBufferView();
-            particleCommon->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&indexBufferView);
-            particleCommon->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
+            particleCommon_->GetDxCommon()->GetCommandList()->IASetIndexBuffer(&indexBufferView);
+            particleCommon_->GetDxCommon()->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferView);
             if (particleGroup->GetParticleGroupData().instanceCount > 0) {
-                particleCommon->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(0, particleGroup->GetmaterialResource()->GetGPUVirtualAddress());
+                particleCommon_->GetDxCommon()->GetCommandList()->SetGraphicsRootConstantBufferView(0, particleGroup->GetmaterialResource()->GetGPUVirtualAddress());
                 srvManager_->SetGraphicsRootDescriptorTable(1, particleGroup->GetParticleGroupData().instancingSRVIndex);
                 srvManager_->SetGraphicsRootDescriptorTable(2, particleGroup->GetParticleGroupData().materials[meshIndex].textureIndex);
-                particleCommon->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(
+                particleCommon_->GetDxCommon()->GetCommandList()->DrawIndexedInstanced(
                     UINT(meshes[meshIndex].indices.size()),
                     particleGroup->GetParticleGroupData().instanceCount,
                     0, 0, 0);
@@ -333,7 +334,7 @@ std::vector<std::string> ParticleManager::GetParticleGroupsName() {
     return particleGroupNames_;
 }
 
-Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const ParticleSetting &setting) {
+Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine_, const ParticleSetting &setting) {
     std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
     std::uniform_real_distribution<float> distVelocityX(setting.velocityMin.x, setting.velocityMax.x);
     std::uniform_real_distribution<float> distVelocityY(setting.velocityMin.y, setting.velocityMax.y);
@@ -348,8 +349,8 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
     if (setting.isEmitOnEdge) {
         std::uniform_int_distribution<int> edgeSelector(0, 11);
         std::uniform_real_distribution<float> edgePosition(0.0f, 1.0f);
-        int selectedEdge = edgeSelector(randomEngine);
-        float position = edgePosition(randomEngine);
+        int selectedEdge = edgeSelector(randomEngine_);
+        float position = edgePosition(randomEngine_);
         const Vector3 v0 = {-1.0f, -1.0f, -1.0f};
         const Vector3 v1 = {1.0f, -1.0f, -1.0f};
         const Vector3 v2 = {-1.0f, 1.0f, -1.0f};
@@ -371,9 +372,9 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         randomTranslate.z *= setting.scale.z;
     } else {
         randomTranslate = {
-            distribution(randomEngine) * setting.scale.x,
-            distribution(randomEngine) * setting.scale.y,
-            distribution(randomEngine) * setting.scale.z};
+            distribution(randomEngine_) * setting.scale.x,
+            distribution(randomEngine_) * setting.scale.y,
+            distribution(randomEngine_) * setting.scale.z};
     }
     Matrix4x4 rotationMatrix = MakeRotateXYZMatrix(setting.rotation);
     Vector3 rotatedPosition = {
@@ -386,13 +387,13 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         std::uniform_real_distribution<float> distScaleX(setting.allScaleMin.x, setting.allScaleMax.x);
         std::uniform_real_distribution<float> distScaleY(setting.allScaleMin.y, setting.allScaleMax.y);
         std::uniform_real_distribution<float> distScaleZ(setting.allScaleMin.z, setting.allScaleMax.z);
-        particle.startScale = {distScaleX(randomEngine), distScaleY(randomEngine), distScaleZ(randomEngine)};
+        particle.startScale = {distScaleX(randomEngine_), distScaleY(randomEngine_), distScaleZ(randomEngine_)};
         if (setting.isEndScale) {
             particle.endScale = particle.startScale;
         }
     } else if (setting.isRandomSize) {
         std::uniform_real_distribution<float> distScale(setting.scaleMin, setting.scaleMax);
-        particle.startScale.x = distScale(randomEngine);
+        particle.startScale.x = distScale(randomEngine_);
         particle.startScale.y = particle.startScale.x;
         particle.startScale.z = particle.startScale.x;
     } else {
@@ -404,9 +405,9 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
     particle.startAcce = setting.startAcce;
     particle.endAcce = setting.endAcce;
     Vector3 randomVelocity = {
-        distVelocityX(randomEngine),
-        distVelocityY(randomEngine),
-        distVelocityZ(randomEngine)};
+        distVelocityX(randomEngine_),
+        distVelocityY(randomEngine_),
+        distVelocityZ(randomEngine_)};
     particle.velocity = {
         randomVelocity.x * rotationMatrix.m[0][0] + randomVelocity.y * rotationMatrix.m[1][0] + randomVelocity.z * rotationMatrix.m[2][0],
         randomVelocity.x * rotationMatrix.m[0][1] + randomVelocity.y * rotationMatrix.m[1][1] + randomVelocity.z * rotationMatrix.m[2][1],
@@ -415,16 +416,16 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         std::uniform_real_distribution<float> distRotateX(setting.rotateStartMin.x, setting.rotateStartMax.x);
         std::uniform_real_distribution<float> distRotateY(setting.rotateStartMin.y, setting.rotateStartMax.y);
         std::uniform_real_distribution<float> distRotateZ(setting.rotateStartMin.z, setting.rotateStartMax.z);
-        particle.transform.eulerRotation_.x = distRotateX(randomEngine);
-        particle.transform.eulerRotation_.y = distRotateY(randomEngine);
-        particle.transform.eulerRotation_.z = distRotateZ(randomEngine);
+        particle.transform.eulerRotation_.x = distRotateX(randomEngine_);
+        particle.transform.eulerRotation_.y = distRotateY(randomEngine_);
+        particle.transform.eulerRotation_.z = distRotateZ(randomEngine_);
         if (setting.isRotateVelocity) {
             std::uniform_real_distribution<float> distRotateXVelocity(setting.rotateVelocityMin.x, setting.rotateVelocityMax.x);
             std::uniform_real_distribution<float> distRotateYVelocity(setting.rotateVelocityMin.y, setting.rotateVelocityMax.y);
             std::uniform_real_distribution<float> distRotateZVelocity(setting.rotateVelocityMin.z, setting.rotateVelocityMax.z);
-            particle.rotateVelocity.x = distRotateXVelocity(randomEngine);
-            particle.rotateVelocity.y = distRotateYVelocity(randomEngine);
-            particle.rotateVelocity.z = distRotateZVelocity(randomEngine);
+            particle.rotateVelocity.x = distRotateXVelocity(randomEngine_);
+            particle.rotateVelocity.y = distRotateYVelocity(randomEngine_);
+            particle.rotateVelocity.z = distRotateZVelocity(randomEngine_);
         }
     } else {
         particle.startRote = setting.startRote;
@@ -433,10 +434,10 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
 
     if (setting.isRandomColor) {
         std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
-        particle.color = {distColor(randomEngine), distColor(randomEngine), distColor(randomEngine), distAlpha(randomEngine)};
+        particle.color = {distColor(randomEngine_), distColor(randomEngine_), distColor(randomEngine_), distAlpha(randomEngine_)};
     } else {
         particle.color = setting.startColor;
-        particle.color.w = distAlpha(randomEngine);
+        particle.color.w = distAlpha(randomEngine_);
     }
     if (setting.isFaceDirection) {
         Vector3 initialUp = {0.0f, 1.0f, 0.0f};
@@ -449,8 +450,8 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine, const Part
         particle.transform.eulerRotation_.y = rotationAxis.y * angle;
         particle.transform.eulerRotation_.z = rotationAxis.z * angle;
     }
-    particle.initialAlpha = distAlpha(randomEngine);
-    particle.lifeTime = distLifeTime(randomEngine);
+    particle.initialAlpha = distAlpha(randomEngine_);
+    particle.lifeTime = distLifeTime(randomEngine_);
     particle.currentTime = 0.0f;
 
     particle.blendMode = setting.blendMode;
@@ -464,7 +465,7 @@ std::list<Particle> ParticleManager::Emit() {
         std::list<Particle> newParticles;
         ParticleSetting &setting = particleSettings_[groupName];
         for (uint32_t nowCount = 0; nowCount < setting.count; ++nowCount) {
-            Particle particle = MakeNewParticle(randomEngine, setting);
+            Particle particle = MakeNewParticle(randomEngine_, setting);
             newParticles.push_back(particle);
         }
         particleGroup->GetParticleGroupData().particles.splice(
@@ -512,3 +513,4 @@ size_t ParticleManager::GetActiveParticleCount(const std::string &groupName) con
     const auto &particles = it->second->GetParticleGroupData().particles;
     return particles.size();
 }
+} // namespace Hagine

@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <iostream>
 
+using namespace Hagine;
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
@@ -522,12 +523,12 @@ EditorLink::EditorLink(int id, ed::PinId start, ed::PinId end)
 BehaviorTreeEditor::BehaviorTreeEditor() {
     ed::Config config;
     config.SettingsFile = nullptr;
-    m_Context = ed::CreateEditor(&config);
+    context_ = ed::CreateEditor(&config);
 }
 
 BehaviorTreeEditor::~BehaviorTreeEditor() {
-    if (m_Context)
-        ed::DestroyEditor(m_Context);
+    if (context_)
+        ed::DestroyEditor(context_);
 }
 
 bool BehaviorTreeEditor::IsInputPin(ed::PinId p) { return ((int)p.Get() - kPinOffset) % 10 == 1; }
@@ -536,7 +537,7 @@ bool BehaviorTreeEditor::IsSuccessPin(ed::PinId p) { return ((int)p.Get() - kPin
 bool BehaviorTreeEditor::IsFailurePin(ed::PinId p) { return ((int)p.Get() - kPinOffset) % 10 == 4; }
 
 bool BehaviorTreeEditor::IsWeightedOutputPin(ed::PinId pinId, int &outNodeId, int &outOutputIndex) {
-    for (auto &node : m_Nodes) {
+    for (auto &node : nodes_) {
         if (node.IsWeightNode()) {
             for (int i = 0; i < (int)node.WeightedOutputs.size(); ++i) {
                 if (node.WeightedOutputs[i].PinID == pinId) {
@@ -642,23 +643,23 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
 }
 
 void BehaviorTreeEditor::BuildAndRunTree() {
-    m_nodeInstanceMap.clear();
-    m_RuntimeRoot = nullptr;
+    nodeInstanceMap_.clear();
+    runtimeRoot_ = nullptr;
     int rootId = FindRootNodeId();
     if (rootId == -1)
         return;
-    m_RuntimeRoot = BuildNodeRecursive(rootId);
-    if (m_RuntimeRoot) {
-        m_RuntimeRoot->SetContext(m_DebugEnemy, m_DebugPlayer);
-        if (m_DebugEnemy)
-            m_DebugEnemy->SetBehaviorTree(m_RuntimeRoot);
+    runtimeRoot_ = BuildNodeRecursive(rootId);
+    if (runtimeRoot_) {
+        runtimeRoot_->SetContext(debugEnemy_, debugPlayer_);
+        if (debugEnemy_)
+            debugEnemy_->SetBehaviorTree(runtimeRoot_);
     }
 }
 
 std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId) {
-    auto it = std::find_if(m_Nodes.begin(), m_Nodes.end(),
+    auto it = std::find_if(nodes_.begin(), nodes_.end(),
                            [editorNodeId](const EditorNode &n) { return (int)n.ID.Get() == editorNodeId; });
-    if (it == m_Nodes.end())
+    if (it == nodes_.end())
         return nullptr;
     const EditorNode &eNode = *it;
     std::shared_ptr<BTNode> runtimeNode;
@@ -788,7 +789,7 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
 
     if (!runtimeNode)
         return nullptr;
-    m_nodeInstanceMap[editorNodeId] = runtimeNode;
+    nodeInstanceMap_[editorNodeId] = runtimeNode;
 
     bool isLeaf = eNode.IsActionNode() || eNode.IsConditionNode();
     if (!isLeaf) {
@@ -863,7 +864,7 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
 
 std::vector<int> BehaviorTreeEditor::FindChildrenNodeIds(int outputPinId) {
     std::vector<int> children;
-    for (const auto &link : m_Links) {
+    for (const auto &link : links_) {
         if ((int)link.StartPinID.Get() == outputPinId) {
             int endPin = (int)link.EndPinID.Get();
             children.push_back((endPin - kPinOffset - 1) / 10);
@@ -877,7 +878,7 @@ std::vector<std::pair<int, float>> BehaviorTreeEditor::FindWeightedChildrenNodeI
     for (int i = 0; i < (int)node.WeightedOutputs.size(); ++i) {
         int outputPinId = (int)node.WeightedOutputs[i].PinID.Get();
         float weight = node.WeightedOutputs[i].Weight;
-        for (const auto &link : m_Links) {
+        for (const auto &link : links_) {
             if ((int)link.StartPinID.Get() == outputPinId) {
                 int childNodeId = ((int)link.EndPinID.Get() - kPinOffset - 1) / 10;
                 result.emplace_back(childNodeId, weight);
@@ -888,10 +889,10 @@ std::vector<std::pair<int, float>> BehaviorTreeEditor::FindWeightedChildrenNodeI
 }
 
 int BehaviorTreeEditor::FindRootNodeId() {
-    for (const auto &node : m_Nodes) {
+    for (const auto &node : nodes_) {
         int inputPin = (int)node.InputPinID.Get();
         bool hasInput = false;
-        for (const auto &link : m_Links) {
+        for (const auto &link : links_) {
             if ((int)link.EndPinID.Get() == inputPin) {
                 hasInput = true;
                 break;
@@ -904,12 +905,12 @@ int BehaviorTreeEditor::FindRootNodeId() {
 }
 
 void BehaviorTreeEditor::SaveTree() {
-    std::string fileName = m_InputFileNameBuf;
+    std::string fileName = inputFileNameBuf_;
     if (fileName.empty())
         fileName = "NewBehavior";
     DataHandler handler("BehaviorTree", fileName);
     json nodesJson = json::array();
-    for (const auto &node : m_Nodes) {
+    for (const auto &node : nodes_) {
         json n;
         n["id"] = (int)node.ID.Get();
         n["title"] = node.Title;
@@ -938,7 +939,7 @@ void BehaviorTreeEditor::SaveTree() {
     }
     handler.Save("nodes", nodesJson);
     json linksJson = json::array();
-    for (const auto &link : m_Links) {
+    for (const auto &link : links_) {
         json l;
         l["id"] = (int)link.ID.Get();
         l["start"] = (int)link.StartPinID.Get();
@@ -952,11 +953,11 @@ void BehaviorTreeEditor::SaveTree() {
 void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
     std::string folderName, fileName;
     ParsePathToFolderAndFile(filePath, folderName, fileName);
-    if (fileName.size() < sizeof(m_InputFileNameBuf))
-        strcpy_s(m_InputFileNameBuf, fileName.c_str());
+    if (fileName.size() < sizeof(inputFileNameBuf_))
+        strcpy_s(inputFileNameBuf_, fileName.c_str());
     DataHandler handler(folderName, fileName);
-    m_Nodes.clear();
-    m_Links.clear();
+    nodes_.clear();
+    links_.clear();
     json nodesJson = handler.Load("nodes", json::array());
     int maxNodeId = 0, maxPinId = 0;
     for (const auto &n : nodesJson) {
@@ -984,24 +985,24 @@ void BehaviorTreeEditor::LoadTree(const std::string &filePath) {
                     maxPinId = (int)output.PinID.Get();
             }
         }
-        m_Nodes.push_back(node);
+        nodes_.push_back(node);
         ed::SetNodePosition(node.ID, ImVec2(x, y));
         if (id > maxNodeId)
             maxNodeId = id;
     }
-    m_NextNodeId = maxNodeId + 1;
-    m_NextPinId = (maxPinId > 0) ? maxPinId + 1 : 200000;
+    nextNodeId_ = maxNodeId + 1;
+    nextPinId_ = (maxPinId > 0) ? maxPinId + 1 : 200000;
     json linksJson = handler.Load("links", json::array());
     int maxLinkId = 0;
     for (const auto &l : linksJson) {
         int id = l["id"].get<int>();
         int start = l["start"].get<int>();
         int end = l["end"].get<int>();
-        m_Links.emplace_back(id, ed::PinId(start), ed::PinId(end));
+        links_.emplace_back(id, ed::PinId(start), ed::PinId(end));
         if (id > maxLinkId)
             maxLinkId = id;
     }
-    m_NextLinkId = maxLinkId + 1;
+    nextLinkId_ = maxLinkId + 1;
     ImGuiNotification::Post("ビヘイビアツリーを読み込みました: " + fileName);
 }
 
@@ -1014,22 +1015,22 @@ void BehaviorTreeEditor::OnImGuiRender() {
     //   正値 = 成功グロー残り時間 (秒)
     //   負値 = 失敗グロー残り時間 (秒, 絶対値)
     // ────────────────────────────────────────────────────────────
-    for (auto &[id, timer] : m_statusTimers) {
+    for (auto &[id, timer] : statusTimers_) {
         if (timer > 0.0f)
             timer = std::max(0.0f, timer - dt * 1.5f);
         else if (timer < 0.0f)
             timer = std::min(0.0f, timer + dt * 1.5f);
     }
-    if (m_IsRunning) {
-        for (const auto &node : m_Nodes) {
+    if (isRunning_) {
+        for (const auto &node : nodes_) {
             const int nid = static_cast<int>(node.ID.Get());
-            auto it = m_nodeInstanceMap.find(nid);
-            if (it != m_nodeInstanceMap.end() && it->second) {
+            auto it = nodeInstanceMap_.find(nid);
+            if (it != nodeInstanceMap_.end() && it->second) {
                 const NodeStatus s = it->second->GetStatus();
                 if (s == NodeStatus::Success)
-                    m_statusTimers[nid] = 1.2f;
+                    statusTimers_[nid] = 1.2f;
                 else if (s == NodeStatus::Failure)
-                    m_statusTimers[nid] = -1.2f;
+                    statusTimers_[nid] = -1.2f;
             }
         }
     }
@@ -1037,12 +1038,12 @@ void BehaviorTreeEditor::OnImGuiRender() {
     // ────────────────────────────────────────────────────────────
     // ツールバー
     // ────────────────────────────────────────────────────────────
-    ed::SetCurrentEditor(m_Context);
+    ed::SetCurrentEditor(context_);
 
     ImGui::Text("ファイル名:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(150);
-    ImGui::InputText("##FileName", m_InputFileNameBuf, IM_ARRAYSIZE(m_InputFileNameBuf));
+    ImGui::InputText("##FileName", inputFileNameBuf_, IM_ARRAYSIZE(inputFileNameBuf_));
     ImGui::SameLine();
     ImGui::Text(".json");
     ImGui::SameLine();
@@ -1050,12 +1051,12 @@ void BehaviorTreeEditor::OnImGuiRender() {
         SaveTree();
     ImGui::SameLine();
     if (ImGui::Button("  読込  "))
-        m_ShowLoadWindow = true;
+        showLoadWindow_ = true;
     ImGui::SameLine();
     ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
     ImGui::SameLine();
 
-    if (m_IsRunning) {
+    if (isRunning_) {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.45f, 0.18f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.22f, 0.55f, 0.22f, 1.0f));
         if (ImGui::Button(" [実行中...] ")) { /* nothing */
@@ -1064,16 +1065,16 @@ void BehaviorTreeEditor::OnImGuiRender() {
     } else {
         if (ImGui::Button(" ▶ ビルド＆実行 ")) {
             BuildAndRunTree();
-            m_IsRunning = true;
+            isRunning_ = true;
         }
     }
     ImGui::SameLine();
     if (ImGui::Button(" ■ 停止 ")) {
-        m_IsRunning = false;
-        m_RuntimeRoot = nullptr;
-        m_IsSingleTesting = false;
-        m_SingleTestNode = nullptr;
-        m_SingleTestNodeId = -1;
+        isRunning_ = false;
+        runtimeRoot_ = nullptr;
+        isSingleTesting_ = false;
+        singleTestNode_ = nullptr;
+        singleTestNodeId_ = -1;
     }
 
     // ── 単体ノードテスト ──────────────────────────────
@@ -1089,7 +1090,7 @@ void BehaviorTreeEditor::OnImGuiRender() {
 
         // 選択ノード名を表示
         const char *selName = "---";
-        for (const auto &n : m_Nodes) {
+        for (const auto &n : nodes_) {
             if ((int)n.ID.Get() == selNodeId) {
                 selName = n.Title.c_str();
                 break;
@@ -1098,34 +1099,34 @@ void BehaviorTreeEditor::OnImGuiRender() {
         ImGui::TextDisabled("選択: %s", selName);
         ImGui::SameLine();
 
-        if (m_IsSingleTesting) {
+        if (isSingleTesting_) {
             // テスト実行中 → 停止ボタン
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.45f, 0.18f, 0.18f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.60f, 0.22f, 0.22f, 1.0f));
             if (ImGui::Button(" ■ 単体テスト停止 ")) {
-                m_IsSingleTesting = false;
-                m_SingleTestNode = nullptr;
-                m_SingleTestNodeId = -1;
+                isSingleTesting_ = false;
+                singleTestNode_ = nullptr;
+                singleTestNodeId_ = -1;
             }
             ImGui::PopStyleColor(2);
         } else {
-            bool canTest = (selNodeId != -1) && (m_DebugEnemy != nullptr);
+            bool canTest = (selNodeId != -1) && (debugEnemy_ != nullptr);
             if (!canTest)
                 ImGui::BeginDisabled();
             if (ImGui::Button(" ▷ 単体テスト ")) {
                 // 選択ノードだけをビルドして単体実行
-                m_IsSingleTesting = false;
-                m_SingleTestNode = nullptr;
-                m_SingleTestNodeId = selNodeId;
+                isSingleTesting_ = false;
+                singleTestNode_ = nullptr;
+                singleTestNodeId_ = selNodeId;
                 auto singleNode = BuildNodeRecursive(selNodeId);
                 if (singleNode) {
-                    singleNode->SetContext(m_DebugEnemy, m_DebugPlayer);
+                    singleNode->SetContext(debugEnemy_, debugPlayer_);
                     singleNode->Reset();
-                    m_SingleTestNode = singleNode;
-                    m_IsSingleTesting = true;
+                    singleTestNode_ = singleNode;
+                    isSingleTesting_ = true;
                     // 全体ツリー実行は停止
-                    m_IsRunning = false;
-                    m_RuntimeRoot = nullptr;
+                    isRunning_ = false;
+                    runtimeRoot_ = nullptr;
                 }
             }
             if (!canTest)
@@ -1133,39 +1134,39 @@ void BehaviorTreeEditor::OnImGuiRender() {
         }
 
         // 単体テスト実行中は毎フレームTickしてステータスを表示
-        if (m_IsSingleTesting && m_SingleTestNode) {
-            NodeStatus s = m_SingleTestNode->Tick();
+        if (isSingleTesting_ && singleTestNode_) {
+            NodeStatus s = singleTestNode_->Tick();
             ImGui::SameLine();
             if (s == NodeStatus::Running)
                 ImGui::TextColored(ImVec4(1.0f, 0.88f, 0.15f, 1.0f), "[実行中]");
             else if (s == NodeStatus::Success) {
                 ImGui::TextColored(ImVec4(0.25f, 1.0f, 0.35f, 1.0f), "[成功]");
                 // 成功/失敗で自動停止
-                m_IsSingleTesting = false;
+                isSingleTesting_ = false;
             } else if (s == NodeStatus::Failure) {
                 ImGui::TextColored(ImVec4(1.0f, 0.28f, 0.28f, 1.0f), "[失敗]");
-                m_IsSingleTesting = false;
+                isSingleTesting_ = false;
             }
 
             // 単体テスト中もステータスタイマーを更新してノードの色に反映
-            if (m_SingleTestNodeId != -1) {
+            if (singleTestNodeId_ != -1) {
                 if (s == NodeStatus::Success)
-                    m_statusTimers[m_SingleTestNodeId] = 1.2f;
+                    statusTimers_[singleTestNodeId_] = 1.2f;
                 else if (s == NodeStatus::Failure)
-                    m_statusTimers[m_SingleTestNodeId] = -1.2f;
+                    statusTimers_[singleTestNodeId_] = -1.2f;
             }
         }
     }
 
     // 実行中ノード名をインラインに表示
-    if (m_IsRunning) {
+    if (isRunning_) {
         ImGui::SameLine();
         ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
         ImGui::SameLine();
         std::string runningName = "---";
-        for (const auto &node : m_Nodes) {
-            auto it = m_nodeInstanceMap.find(static_cast<int>(node.ID.Get()));
-            if (it != m_nodeInstanceMap.end() && it->second &&
+        for (const auto &node : nodes_) {
+            auto it = nodeInstanceMap_.find(static_cast<int>(node.ID.Get()));
+            if (it != nodeInstanceMap_.end() && it->second &&
                 it->second->GetStatus() == NodeStatus::Running) {
                 runningName = node.Title;
                 break;
@@ -1193,14 +1194,14 @@ void BehaviorTreeEditor::OnImGuiRender() {
     ImGui::TextColored(ImVec4(0.35f, 0.85f, 0.45f, 1.0f), "■ Action");
 
     // ロードウィンドウ
-    if (m_ShowLoadWindow) {
-        ImGui::Begin("ビヘイビアツリーを読込", &m_ShowLoadWindow);
+    if (showLoadWindow_) {
+        ImGui::Begin("ビヘイビアツリーを読込", &showLoadWindow_);
         static std::string startPath = "BehaviorTree";
-        ShowJsonFile(m_SelectedFileName, startPath);
-        if (!m_SelectedFileName.empty()) {
+        ShowJsonFile(selectedFileName_, startPath);
+        if (!selectedFileName_.empty()) {
             if (ImGui::Button("選択したファイルを読込")) {
-                LoadTree(m_SelectedFileName);
-                m_ShowLoadWindow = false;
+                LoadTree(selectedFileName_);
+                showLoadWindow_ = false;
             }
         }
         ImGui::End();
@@ -1213,17 +1214,17 @@ void BehaviorTreeEditor::OnImGuiRender() {
 
     const float pulse = sinf(now * 5.0f) * 0.5f + 0.5f; // 0→1 sin波
 
-    for (auto &node : m_Nodes) {
+    for (auto &node : nodes_) {
         const int nid = static_cast<int>(node.ID.Get());
 
         // ── ランタイムステータス取得 ──────────────────────────
         NodeStatus status = NodeStatus::Idle;
-        if (m_IsRunning) {
-            auto it = m_nodeInstanceMap.find(nid);
-            if (it != m_nodeInstanceMap.end() && it->second)
+        if (isRunning_) {
+            auto it = nodeInstanceMap_.find(nid);
+            if (it != nodeInstanceMap_.end() && it->second)
                 status = it->second->GetStatus();
         }
-        const float timer = m_statusTimers.count(nid) ? m_statusTimers.at(nid) : 0.0f;
+        const float timer = statusTimers_.count(nid) ? statusTimers_.at(nid) : 0.0f;
 
         // ── ノードカラー計算 ──────────────────────────────────
         ImVec4 bgColor, borderColor;
@@ -1442,15 +1443,15 @@ void BehaviorTreeEditor::OnImGuiRender() {
     ed::PushStyleColor(ed::StyleColor_Flow, ImVec4(1.0f, 0.90f, 0.10f, 1.0f));
     ed::PushStyleColor(ed::StyleColor_FlowMarker, ImVec4(1.0f, 1.00f, 0.40f, 1.0f));
 
-    for (auto &link : m_Links) {
+    for (auto &link : links_) {
         ImVec4 linkColor(0.50f, 0.50f, 0.50f, 0.80f);
         float thickness = 1.5f;
         bool doFlow = false;
 
-        if (m_IsRunning) {
+        if (isRunning_) {
             // リンク起点ノードを検索
             const EditorNode *srcNode = nullptr;
-            for (const auto &n : m_Nodes) {
+            for (const auto &n : nodes_) {
                 if (n.OutputPinID == link.StartPinID ||
                     n.SuccessPinID == link.StartPinID ||
                     n.FailurePinID == link.StartPinID) {
@@ -1468,10 +1469,10 @@ void BehaviorTreeEditor::OnImGuiRender() {
             }
             if (srcNode) {
                 const int srcId = static_cast<int>(srcNode->ID.Get());
-                auto it = m_nodeInstanceMap.find(srcId);
-                if (it != m_nodeInstanceMap.end() && it->second) {
+                auto it = nodeInstanceMap_.find(srcId);
+                if (it != nodeInstanceMap_.end() && it->second) {
                     const NodeStatus s = it->second->GetStatus();
-                    const float t = m_statusTimers.count(srcId) ? m_statusTimers.at(srcId) : 0.0f;
+                    const float t = statusTimers_.count(srcId) ? statusTimers_.at(srcId) : 0.0f;
                     if (s == NodeStatus::Running) {
                         linkColor = ImVec4(1.0f, 0.78f + pulse * 0.22f, 0.0f, 1.0f);
                         thickness = 3.0f;
@@ -1579,10 +1580,10 @@ void BehaviorTreeEditor::OnImGuiRender() {
 }
 
 void BehaviorTreeEditor::CreateNode(const std::string &title, EditorNodeType type) {
-    int id = m_NextNodeId++;
+    int id = nextNodeId_++;
     EditorNode node(id, title, type);
-    m_Nodes.push_back(node);
-    ed::SetNodePosition(node.ID, m_CreatePos);
+    nodes_.push_back(node);
+    ed::SetNodePosition(node.ID, createPos_);
     ImGuiNotification::Post("ノードを作成しました: " + title);
 }
 
@@ -1591,7 +1592,7 @@ void BehaviorTreeEditor::HandleCreateAction() {
         ed::PinId start, end;
         if (ed::QueryNewLink(&start, &end)) {
             if (ed::AcceptNewItem()) {
-                m_Links.emplace_back(m_NextLinkId++, start, end);
+                links_.emplace_back(nextLinkId_++, start, end);
                 ImGuiNotification::Post("リンクを作成しました");
             }
         }
@@ -1605,10 +1606,10 @@ void BehaviorTreeEditor::DeleteSelectedItems() {
         while (ed::QueryDeletedNode(&nodeId)) {
             if (ed::AcceptDeletedItem()) {
                 int id = (int)nodeId.Get();
-                auto it = std::find_if(m_Nodes.begin(), m_Nodes.end(), [id](const EditorNode &n) { return (int)n.ID.Get() == id; });
-                if (it != m_Nodes.end()) {
+                auto it = std::find_if(nodes_.begin(), nodes_.end(), [id](const EditorNode &n) { return (int)n.ID.Get() == id; });
+                if (it != nodes_.end()) {
                     std::string title = it->Title;
-                    m_Nodes.erase(it);
+                    nodes_.erase(it);
                     ImGuiNotification::Post("ノードを削除しました: " + title);
                 }
             }
@@ -1617,7 +1618,7 @@ void BehaviorTreeEditor::DeleteSelectedItems() {
         while (ed::QueryDeletedLink(&linkId)) {
             if (ed::AcceptDeletedItem()) {
                 int id = (int)linkId.Get();
-                m_Links.erase(std::remove_if(m_Links.begin(), m_Links.end(), [id](const EditorLink &l) { return (int)l.ID.Get() == id; }), m_Links.end());
+                links_.erase(std::remove_if(links_.begin(), links_.end(), [id](const EditorLink &l) { return (int)l.ID.Get() == id; }), links_.end());
                 ImGuiNotification::Post("リンクを削除しました");
             }
         }

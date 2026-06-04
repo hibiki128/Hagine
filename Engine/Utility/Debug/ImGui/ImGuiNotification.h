@@ -8,6 +8,7 @@
 
 
 /// @brief ImGuiによる通知システム
+namespace Hagine {
 class ImGuiNotification {
   public:
     struct Notification {
@@ -29,12 +30,13 @@ class ImGuiNotification {
     static void Draw();
 
     /// @brief ログ履歴を取得する
-    static const std::vector<Notification> &GetHistory() { return history; }
+    static const std::vector<Notification> &GetHistory() { return history_; }
 
     /// @brief ログ履歴をクリアする
-    static void ClearHistory() { history.clear(); }
+    static void ClearHistory() { history_.clear(); }
 
   private:
-    static std::vector<Notification> notifications;
-    static std::vector<Notification> history;
+    static std::vector<Notification> notifications_;
+    static std::vector<Notification> history_;
 };
+} // namespace Hagine

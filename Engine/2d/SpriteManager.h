@@ -10,6 +10,7 @@
 /// <summary>
 /// インスタンス単位でのSRTデータ構造体
 /// </summary>
+namespace Hagine {
 struct InstanceSRT {
     Vector3 scale = {1.0f, 1.0f, 1.0f};       // スケール
     Vector3 rotation = {0.0f, 0.0f, 0.0f};    // 回転
@@ -192,3 +193,4 @@ class SpriteManager {
     std::string texturePath_ = "";                     // テクスチャパス
     std::string saveFolder_ = "Sprite";                // 保存先フォルダ
 };
+} // namespace Hagine

@@ -4,6 +4,7 @@
 #include <array>
 #include <numbers>
 
+namespace Hagine {
 void OBBCollider::UpdateWorldTransform() {
     cachedOBB_.rotationCenter = GetCenterPosition() + rotationOffset_;
 
@@ -121,3 +122,4 @@ void OBBCollider::LoadFromJson() {
     positionOffset_ = dataHandler_->Load<Vector3>("scaleOffset", {0.0f, 0.0f, 0.0f});
     anchorPoint_ = dataHandler_->Load<Vector3>("anchorPoint", {0.5f, 0.5f, 0.5f});
 }
+} // namespace Hagine

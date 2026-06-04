@@ -14,6 +14,7 @@
 // ============================================================
 //  Initialize
 // ============================================================
+using namespace Hagine;
 void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey) {
     system_ = system;
 

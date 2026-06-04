@@ -5,6 +5,7 @@
 #include "Particle/CSParticle/ParticleCSEditor.h"
 #include <Frame.h>
 #include <cmath>
+using namespace Hagine;
 void MakanAttackSkill::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);

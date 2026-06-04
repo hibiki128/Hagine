@@ -15,6 +15,7 @@
 
 // 各型に対応したワールド行列を返す
 // FreeTransform の場合は translate/rotate/scale ポインタから行列を構築する
+namespace Hagine {
 Matrix4x4 GizmoTarget::GetWorldMatrix() const {
     switch (type) {
     case Type::BaseObject:
@@ -176,9 +177,9 @@ void GizmoTarget::ShowImGui() {
 // =======================================================================
 
 void ImGuizmoManager::Finalize() {
-    transformMap.clear();
-    selectedNames.clear();
-    copiedObjects.clear();
+    transformMap_.clear();
+    selectedNames_.clear();
+    copiedObjects_.clear();
 }
 
 void ImGuizmoManager::BeginFrame() {
@@ -186,7 +187,7 @@ void ImGuizmoManager::BeginFrame() {
 }
 
 void ImGuizmoManager::SetViewProjection(ViewProjection *vp) {
-    viewProjection = vp;
+    viewProjection_ = vp;
 }
 
 // ---- AddTarget オーバーロード群 ----------------------------------------
@@ -198,12 +199,12 @@ void ImGuizmoManager::AddTarget(const std::string &name, BaseObject *object, boo
     target.name = name;
     target.baseObject = object;
     target.selectable = selectable;
-    transformMap[name] = target;
+    transformMap_[name] = target;
 
     UpdateFilteredNames();
 
-    if (selectedNames.empty()) {
-        selectedNames.insert(name);
+    if (selectedNames_.empty()) {
+        selectedNames_.insert(name);
     }
 }
 
@@ -217,12 +218,12 @@ void ImGuizmoManager::AddTarget(const std::string &name, WorldTransform *worldTr
     target.worldTransform = worldTransform;
     target.selectable = selectable;
     target.imguiCallback = imguiCallback;
-    transformMap[name] = target;
+    transformMap_[name] = target;
 
     UpdateFilteredNames();
 
-    if (selectedNames.empty()) {
-        selectedNames.insert(name);
+    if (selectedNames_.empty()) {
+        selectedNames_.insert(name);
     }
 }
 
@@ -241,12 +242,12 @@ void ImGuizmoManager::AddTarget(const std::string &name,
     target.scale = scale;
     target.selectable = selectable;
     target.imguiCallback = imguiCallback;
-    transformMap[name] = target;
+    transformMap_[name] = target;
 
     UpdateFilteredNames();
 
-    if (selectedNames.empty()) {
-        selectedNames.insert(name);
+    if (selectedNames_.empty()) {
+        selectedNames_.insert(name);
     }
 }
 
@@ -259,12 +260,12 @@ void ImGuizmoManager::AddTarget(const std::string &name, Sprite *sprite, bool se
     target.selectable = selectable;
     target.isScreenSpace = true;
     target.screenHitRadius = 50.0f;
-    transformMap[name] = target;
+    transformMap_[name] = target;
 
     UpdateFilteredNames();
 
-    if (selectedNames.empty()) {
-        selectedNames.insert(name);
+    if (selectedNames_.empty()) {
+        selectedNames_.insert(name);
     }
 }
 
@@ -272,11 +273,11 @@ void ImGuizmoManager::AddTarget(const std::string &name, Sprite *sprite, bool se
 
 // 選択中の最初のエントリが BaseObject である場合に返す
 BaseObject *ImGuizmoManager::GetSelectedTarget() {
-    if (selectedNames.empty())
+    if (selectedNames_.empty())
         return nullptr;
 
-    auto it = transformMap.find(*selectedNames.begin());
-    if (it != transformMap.end() && it->second.type == GizmoTarget::Type::BaseObject) {
+    auto it = transformMap_.find(*selectedNames_.begin());
+    if (it != transformMap_.end() && it->second.type == GizmoTarget::Type::BaseObject) {
         return it->second.baseObject;
     }
     return nullptr;
@@ -285,9 +286,9 @@ BaseObject *ImGuizmoManager::GetSelectedTarget() {
 // 選択中のエントリのうち BaseObject のもののみを返す
 std::vector<BaseObject *> ImGuizmoManager::GetSelectedTargets() {
     std::vector<BaseObject *> selected;
-    for (const std::string &name : selectedNames) {
-        auto it = transformMap.find(name);
-        if (it != transformMap.end() && it->second.type == GizmoTarget::Type::BaseObject) {
+    for (const std::string &name : selectedNames_) {
+        auto it = transformMap_.find(name);
+        if (it != transformMap_.end() && it->second.type == GizmoTarget::Type::BaseObject) {
             selected.push_back(it->second.baseObject);
         }
     }
@@ -297,27 +298,27 @@ std::vector<BaseObject *> ImGuizmoManager::GetSelectedTargets() {
 // ---- imgui ------------------------------------------------------------
 
 void ImGuizmoManager::imgui() {
-    if (!viewProjection)
+    if (!viewProjection_)
         return;
 
     ImGui::Checkbox("デバッグ表示する", &isDrawDebug_);
 
     // 操作モード選択
-    if (ImGui::RadioButton("移動", currentOperation == ImGuizmo::TRANSLATE))
-        currentOperation = ImGuizmo::TRANSLATE;
+    if (ImGui::RadioButton("移動", currentOperation_ == ImGuizmo::TRANSLATE))
+        currentOperation_ = ImGuizmo::TRANSLATE;
     ImGui::SameLine();
-    if (ImGui::RadioButton("回転", currentOperation == ImGuizmo::ROTATE))
-        currentOperation = ImGuizmo::ROTATE;
+    if (ImGui::RadioButton("回転", currentOperation_ == ImGuizmo::ROTATE))
+        currentOperation_ = ImGuizmo::ROTATE;
     ImGui::SameLine();
-    if (ImGui::RadioButton("スケール", currentOperation == ImGuizmo::SCALE))
-        currentOperation = ImGuizmo::SCALE;
+    if (ImGui::RadioButton("スケール", currentOperation_ == ImGuizmo::SCALE))
+        currentOperation_ = ImGuizmo::SCALE;
 
     // 座標系選択
-    if (ImGui::RadioButton("ローカル", currentMode == ImGuizmo::LOCAL))
-        currentMode = ImGuizmo::LOCAL;
+    if (ImGui::RadioButton("ローカル", currentMode_ == ImGuizmo::LOCAL))
+        currentMode_ = ImGuizmo::LOCAL;
     ImGui::SameLine();
-    if (ImGui::RadioButton("ワールド", currentMode == ImGuizmo::WORLD))
-        currentMode = ImGuizmo::WORLD;
+    if (ImGui::RadioButton("ワールド", currentMode_ == ImGuizmo::WORLD))
+        currentMode_ = ImGuizmo::WORLD;
 
     ImGui::Separator();
 
@@ -329,24 +330,24 @@ void ImGuizmoManager::imgui() {
     if (filteredNames_.empty())
         UpdateFilteredNames();
 
-    std::string currentDisplayName = selectedNames.empty() ? "なし"
-                                                           : (selectedNames.size() == 1 ? *selectedNames.begin()
-                                                                                        : "複数選択 (" + std::to_string(selectedNames.size()) + "個)");
+    std::string currentDisplayName = selectedNames_.empty() ? "なし"
+                                                           : (selectedNames_.size() == 1 ? *selectedNames_.begin()
+                                                                                        : "複数選択 (" + std::to_string(selectedNames_.size()) + "個)");
 
     if (ImGui::BeginCombo("選択オブジェクト", currentDisplayName.c_str())) {
-        bool isNoneSelected = selectedNames.empty();
+        bool isNoneSelected = selectedNames_.empty();
         if (ImGui::Selectable("なし", isNoneSelected))
-            selectedNames.clear();
+            selectedNames_.clear();
         if (isNoneSelected)
             ImGui::SetItemDefaultFocus();
 
         for (const std::string &name : filteredNames_) {
-            auto it = transformMap.find(name);
-            if (it != transformMap.end()) {
-                bool isSelected = (selectedNames.find(name) != selectedNames.end());
+            auto it = transformMap_.find(name);
+            if (it != transformMap_.end()) {
+                bool isSelected = (selectedNames_.find(name) != selectedNames_.end());
                 if (ImGui::Selectable(name.c_str(), isSelected)) {
-                    selectedNames.clear();
-                    selectedNames.insert(name);
+                    selectedNames_.clear();
+                    selectedNames_.insert(name);
                 }
                 if (isSelected)
                     ImGui::SetItemDefaultFocus();
@@ -360,10 +361,10 @@ void ImGuizmoManager::imgui() {
     }
 
     ImGui::Spacing();
-    ImGui::Text("選択中のオブジェクト数: %zu", selectedNames.size());
-    if (!selectedNames.empty()) {
+    ImGui::Text("選択中のオブジェクト数: %zu", selectedNames_.size());
+    if (!selectedNames_.empty()) {
         ImGui::Text("選択中:");
-        for (const std::string &name : selectedNames) {
+        for (const std::string &name : selectedNames_) {
             ImGui::BulletText("%s", name.c_str());
         }
     }
@@ -371,19 +372,19 @@ void ImGuizmoManager::imgui() {
     ImGui::Separator();
 
     if (ImGui::Button("全選択")) {
-        selectedNames.clear();
-        for (const auto &pair : transformMap)
-            selectedNames.insert(pair.first);
+        selectedNames_.clear();
+        for (const auto &pair : transformMap_)
+            selectedNames_.insert(pair.first);
     }
     ImGui::SameLine();
     if (ImGui::Button("選択解除"))
-        selectedNames.clear();
+        selectedNames_.clear();
 
     ImGui::Spacing();
 
-    if (!selectedNames.empty()) {
+    if (!selectedNames_.empty()) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.6f, 1.0f));
-        ImGui::Text("オブジェクト詳細 (%s)", selectedNames.begin()->c_str());
+        ImGui::Text("オブジェクト詳細 (%s)", selectedNames_.begin()->c_str());
         ImGui::PopStyleColor();
         ImGui::Separator();
 
@@ -393,11 +394,11 @@ void ImGuizmoManager::imgui() {
         ImGui::Spacing();
 
         // BaseObject のみコピー・ペーストが可能
-        auto it = transformMap.find(*selectedNames.begin());
-        if (it != transformMap.end() && it->second.type == GizmoTarget::Type::BaseObject) {
+        auto it = transformMap_.find(*selectedNames_.begin());
+        if (it != transformMap_.end() && it->second.type == GizmoTarget::Type::BaseObject) {
             if (ImGui::Button("コピー", ImVec2(-1, 30)))
                 CopySelectedObjects();
-            if (!copiedObjects.empty()) {
+            if (!copiedObjects_.empty()) {
                 if (ImGui::Button("ペースト", ImVec2(-1, 30)))
                     PasteObjects();
             }
@@ -438,7 +439,7 @@ void ImGuizmoManager::imgui() {
 // ---- Update -----------------------------------------------------------
 
 void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSize) {
-    if (!viewProjection)
+    if (!viewProjection_)
         return;
 
     ImGuizmo::SetRect(scenePosition.x, scenePosition.y, sceneSize.x, sceneSize.y);
@@ -455,7 +456,7 @@ void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSiz
 
     DrawSelectedObjectHighlight();
 
-    if (!selectedNames.empty()) {
+    if (!selectedNames_.empty()) {
         // スプライト用正射影 VP を使うためシーン情報を渡す
         DisplayGizmo(scenePosition, sceneSize);
     }
@@ -465,19 +466,19 @@ void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSiz
 
 // 選択中エントリの ShowImGui を呼び出す
 void ImGuizmoManager::ShowSelectedObjectImGui() {
-    if (selectedNames.empty())
+    if (selectedNames_.empty())
         return;
 
-    std::string firstName = *selectedNames.begin();
-    auto it = transformMap.find(firstName);
-    if (it != transformMap.end()) {
+    std::string firstName = *selectedNames_.begin();
+    auto it = transformMap_.find(firstName);
+    if (it != transformMap_.end()) {
         it->second.ShowImGui();
     }
 
-    if (selectedNames.size() > 1) {
+    if (selectedNames_.size() > 1) {
         ImGui::Separator();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 1.0f, 1.0f));
-        ImGui::Text("※ %zu個のオブジェクトが選択されています", selectedNames.size());
+        ImGui::Text("※ %zu個のオブジェクトが選択されています", selectedNames_.size());
         ImGui::Text("表示しているのは '%s' の設定です", firstName.c_str());
         ImGui::PopStyleColor();
     }
@@ -493,7 +494,7 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     bool isInScene = (mousePos.x >= scenePosition.x && mousePos.x <= scenePosition.x + sceneSize.x &&
                       mousePos.y >= scenePosition.y && mousePos.y <= scenePosition.y + sceneSize.y);
 
-    if (ImGuizmo::IsUsing() || !isInScene || !Input::IsTriggerMouse(0) || !viewProjection)
+    if (ImGuizmo::IsUsing() || !isInScene || !Input::IsTriggerMouse(0) || !viewProjection_)
         return;
 
     bool isCtrlPressed = Input::GetInstance()->PushKey(DIK_LCONTROL);
@@ -509,11 +510,11 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
 
     // ---- パス1: スクリーン空間ターゲット優先 2D ヒットテスト ----
     float minDist2D = std::numeric_limits<float>::max();
-    for (const auto &pair : transformMap) {
+    for (const auto &pair : transformMap_) {
         const GizmoTarget &target = pair.second;
         if (!target.selectable || !target.isScreenSpace)
             continue;
-        if (isMultiSelecting && selectedNames.find(pair.first) != selectedNames.end())
+        if (isMultiSelecting_ && selectedNames_.find(pair.first) != selectedNames_.end())
             continue;
 
         float posX = 0.0f, posY = 0.0f;
@@ -562,7 +563,7 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
         defaultSphere.center = {0.0f, 0.0f, 0.0f};
         defaultSphere.radius = 1.3f;
 
-        for (const auto &pair : transformMap) {
+        for (const auto &pair : transformMap_) {
             const GizmoTarget &target = pair.second;
             if (!target.selectable || target.isScreenSpace)
                 continue;
@@ -570,7 +571,7 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
                 if (!target.baseObject || !target.baseObject->IsGizmoSelectable())
                     continue;
             }
-            if (isMultiSelecting && selectedNames.find(pair.first) != selectedNames.end())
+            if (isMultiSelecting_ && selectedNames_.find(pair.first) != selectedNames_.end())
                 continue;
 
             Matrix4x4 worldMatrix = target.GetWorldMatrix();
@@ -618,28 +619,28 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     // 選択状態を更新
     if (foundHit && !pickedName.empty()) {
         if (isCtrlPressed) {
-            if (selectedNames.find(pickedName) != selectedNames.end()) {
-                selectedNames.erase(pickedName);
+            if (selectedNames_.find(pickedName) != selectedNames_.end()) {
+                selectedNames_.erase(pickedName);
             } else {
-                selectedNames.insert(pickedName);
+                selectedNames_.insert(pickedName);
             }
-            isMultiSelecting = true;
+            isMultiSelecting_ = true;
         } else {
-            selectedNames.clear();
-            selectedNames.insert(pickedName);
-            isMultiSelecting = false;
+            selectedNames_.clear();
+            selectedNames_.insert(pickedName);
+            isMultiSelecting_ = false;
         }
     } else {
         if (!isCtrlPressed) {
-            selectedNames.clear();
+            selectedNames_.clear();
             overlapCandidates_.clear();
             overlapCycleIndex_ = 0;
-            isMultiSelecting = false;
+            isMultiSelecting_ = false;
         }
     }
 
-    if (!isCtrlPressed && isMultiSelecting) {
-        isMultiSelecting = false;
+    if (!isCtrlPressed && isMultiSelecting_) {
+        isMultiSelecting_ = false;
     }
 }
 
@@ -648,21 +649,21 @@ void ImGuizmoManager::CycleOverlapSelection() {
     if (overlapCandidates_.size() <= 1)
         return;
     overlapCycleIndex_ = (overlapCycleIndex_ + 1) % static_cast<int>(overlapCandidates_.size());
-    selectedNames.clear();
-    selectedNames.insert(overlapCandidates_[overlapCycleIndex_].first);
+    selectedNames_.clear();
+    selectedNames_.insert(overlapCandidates_[overlapCycleIndex_].first);
 }
 
 // ---- DisplayGizmo -----------------------------------------------------
 
 // 選択中の全エントリの重心位置にギズモを表示し、操作量を各エントリに反映する
 void ImGuizmoManager::DisplayGizmo(const ImVec2 &scenePosition, const ImVec2 &sceneSize) {
-    if (!viewProjection || selectedNames.empty())
+    if (!viewProjection_ || selectedNames_.empty())
         return;
 
     std::vector<GizmoTarget *> selectedTargets;
-    for (const std::string &name : selectedNames) {
-        auto it = transformMap.find(name);
-        if (it != transformMap.end()) {
+    for (const std::string &name : selectedNames_) {
+        auto it = transformMap_.find(name);
+        if (it != transformMap_.end()) {
             selectedTargets.push_back(&it->second);
         }
     }
@@ -713,19 +714,19 @@ void ImGuizmoManager::DisplayGizmo(const ImVec2 &scenePosition, const ImVec2 &sc
         // 3Dオブジェクト用：カメラの View/Projection をそのまま使用
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
-                viewArray[i * 4 + j] = viewProjection->matView_.m[i][j];
-                projArray[i * 4 + j] = viewProjection->matProjection_.m[i][j];
+                viewArray[i * 4 + j] = viewProjection_->matView_.m[i][j];
+                projArray[i * 4 + j] = viewProjection_->matProjection_.m[i][j];
             }
         }
     }
 
     // スクリーン空間（Sprite 等）は XY 移動のみ許可
-    ImGuizmo::OPERATION effectiveOp = currentOperation;
+    ImGuizmo::OPERATION effectiveOp = currentOperation_;
     if (anyScreenSpace) {
         effectiveOp = ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y;
     }
 
-    if (ImGuizmo::Manipulate(viewArray, projArray, effectiveOp, currentMode, matrixArray)) {
+    if (ImGuizmo::Manipulate(viewArray, projArray, effectiveOp, currentMode_, matrixArray)) {
         Matrix4x4 newMatrix;
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)
@@ -785,15 +786,15 @@ bool ImGuizmoManager::WorldToScreen(const Vector3 &worldPos, Vector3 &screenPos,
     Vector4 clipPos;
     {
         Vector3 v = worldPos;
-        float x = v.x * viewProjection->matView_.m[0][0] + v.y * viewProjection->matView_.m[1][0] + v.z * viewProjection->matView_.m[2][0] + viewProjection->matView_.m[3][0];
-        float y = v.x * viewProjection->matView_.m[0][1] + v.y * viewProjection->matView_.m[1][1] + v.z * viewProjection->matView_.m[2][1] + viewProjection->matView_.m[3][1];
-        float z = v.x * viewProjection->matView_.m[0][2] + v.y * viewProjection->matView_.m[1][2] + v.z * viewProjection->matView_.m[2][2] + viewProjection->matView_.m[3][2];
-        float w = v.x * viewProjection->matView_.m[0][3] + v.y * viewProjection->matView_.m[1][3] + v.z * viewProjection->matView_.m[2][3] + viewProjection->matView_.m[3][3];
+        float x = v.x * viewProjection_->matView_.m[0][0] + v.y * viewProjection_->matView_.m[1][0] + v.z * viewProjection_->matView_.m[2][0] + viewProjection_->matView_.m[3][0];
+        float y = v.x * viewProjection_->matView_.m[0][1] + v.y * viewProjection_->matView_.m[1][1] + v.z * viewProjection_->matView_.m[2][1] + viewProjection_->matView_.m[3][1];
+        float z = v.x * viewProjection_->matView_.m[0][2] + v.y * viewProjection_->matView_.m[1][2] + v.z * viewProjection_->matView_.m[2][2] + viewProjection_->matView_.m[3][2];
+        float w = v.x * viewProjection_->matView_.m[0][3] + v.y * viewProjection_->matView_.m[1][3] + v.z * viewProjection_->matView_.m[2][3] + viewProjection_->matView_.m[3][3];
 
-        clipPos.x = x * viewProjection->matProjection_.m[0][0] + y * viewProjection->matProjection_.m[1][0] + z * viewProjection->matProjection_.m[2][0] + w * viewProjection->matProjection_.m[3][0];
-        clipPos.y = x * viewProjection->matProjection_.m[0][1] + y * viewProjection->matProjection_.m[1][1] + z * viewProjection->matProjection_.m[2][1] + w * viewProjection->matProjection_.m[3][1];
-        clipPos.z = x * viewProjection->matProjection_.m[0][2] + y * viewProjection->matProjection_.m[1][2] + z * viewProjection->matProjection_.m[2][2] + w * viewProjection->matProjection_.m[3][2];
-        clipPos.w = x * viewProjection->matProjection_.m[0][3] + y * viewProjection->matProjection_.m[1][3] + z * viewProjection->matProjection_.m[2][3] + w * viewProjection->matProjection_.m[3][3];
+        clipPos.x = x * viewProjection_->matProjection_.m[0][0] + y * viewProjection_->matProjection_.m[1][0] + z * viewProjection_->matProjection_.m[2][0] + w * viewProjection_->matProjection_.m[3][0];
+        clipPos.y = x * viewProjection_->matProjection_.m[0][1] + y * viewProjection_->matProjection_.m[1][1] + z * viewProjection_->matProjection_.m[2][1] + w * viewProjection_->matProjection_.m[3][1];
+        clipPos.z = x * viewProjection_->matProjection_.m[0][2] + y * viewProjection_->matProjection_.m[1][2] + z * viewProjection_->matProjection_.m[2][2] + w * viewProjection_->matProjection_.m[3][2];
+        clipPos.w = x * viewProjection_->matProjection_.m[0][3] + y * viewProjection_->matProjection_.m[1][3] + z * viewProjection_->matProjection_.m[2][3] + w * viewProjection_->matProjection_.m[3][3];
     }
 
     if (clipPos.w <= 0.0f)
@@ -833,7 +834,7 @@ std::string ImGuizmoManager::GenerateUniqueName(const std::string &baseName) {
 
     do {
         newName = cleanBaseName + "_" + std::to_string(counter++);
-    } while (transformMap.find(newName) != transformMap.end());
+    } while (transformMap_.find(newName) != transformMap_.end());
 
     return newName;
 }
@@ -842,23 +843,23 @@ std::string ImGuizmoManager::GenerateUniqueName(const std::string &baseName) {
 
 // 選択中の BaseObject をコピーバッファに保存する（非 BaseObject はスキップ）
 void ImGuizmoManager::CopySelectedObjects() {
-    copiedObjects.clear();
-    for (const std::string &name : selectedNames) {
-        auto it = transformMap.find(name);
-        if (it != transformMap.end() && it->second.type == GizmoTarget::Type::BaseObject) {
-            copiedObjects.push_back(it->second.baseObject);
+    copiedObjects_.clear();
+    for (const std::string &name : selectedNames_) {
+        auto it = transformMap_.find(name);
+        if (it != transformMap_.end() && it->second.type == GizmoTarget::Type::BaseObject) {
+            copiedObjects_.push_back(it->second.baseObject);
         }
     }
 }
 
 // コピー済み BaseObject を複製して BaseObjectManager に追加する
 void ImGuizmoManager::PasteObjects() {
-    if (copiedObjects.empty())
+    if (copiedObjects_.empty())
         return;
 
-    selectedNames.clear();
+    selectedNames_.clear();
 
-    for (BaseObject *copiedObj : copiedObjects) {
+    for (BaseObject *copiedObj : copiedObjects_) {
         std::unique_ptr<BaseObject> newObject = std::make_unique<BaseObject>();
         newObject->SetPrimitive(copiedObj->IsPrimitive());
         newObject->Init(copiedObj->GetName());
@@ -890,33 +891,33 @@ void ImGuizmoManager::PasteObjects() {
             AddTarget(uniqueName, addedObject);
         }
 
-        selectedNames.insert(uniqueName);
+        selectedNames_.insert(uniqueName);
     }
 
-    copiedObjects.clear();
+    copiedObjects_.clear();
     ImGuiNotification::Post("オブジェクトを貼り付けました", {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
 // 選択中の全エントリを削除する
 // BaseObject の場合は BaseObjectManager からも削除する
 void ImGuizmoManager::DeleteSelectedObjects() {
-    if (selectedNames.empty())
+    if (selectedNames_.empty())
         return;
 
-    size_t count = selectedNames.size();
-    for (const std::string &name : selectedNames) {
-        auto it = transformMap.find(name);
-        if (it != transformMap.end() && it->second.type == GizmoTarget::Type::BaseObject) {
+    size_t count = selectedNames_.size();
+    for (const std::string &name : selectedNames_) {
+        auto it = transformMap_.find(name);
+        if (it != transformMap_.end() && it->second.type == GizmoTarget::Type::BaseObject) {
             BaseObjectManager::GetInstance()->RemoveObject(name);
         }
-        transformMap.erase(name);
+        transformMap_.erase(name);
     }
 
     UpdateFilteredNames();
-    selectedNames.clear();
+    selectedNames_.clear();
 
-    if (!transformMap.empty()) {
-        selectedNames.insert(transformMap.begin()->first);
+    if (!transformMap_.empty()) {
+        selectedNames_.insert(transformMap_.begin()->first);
     }
     ImGuiNotification::Post("選択オブジェクトを削除しました: " + std::to_string(count) + "個", {0.9f, 0.7f, 0.2f, 1.0f});
 }
@@ -925,12 +926,12 @@ void ImGuizmoManager::DeleteSelectedObjects() {
 
 // 選択中の全エントリにハイライトマーカーを描画する
 void ImGuizmoManager::DrawSelectedObjectHighlight() {
-    if (selectedNames.empty() || !viewProjection)
+    if (selectedNames_.empty() || !viewProjection_)
         return;
 
-    for (const std::string &selectedName : selectedNames) {
-        auto it = transformMap.find(selectedName);
-        if (it == transformMap.end())
+    for (const std::string &selectedName : selectedNames_) {
+        auto it = transformMap_.find(selectedName);
+        if (it == transformMap_.end())
             continue;
 
         // スクリーン空間ターゲットはピクセル座標を3D世界座標として扱えないためスキップ
@@ -970,7 +971,7 @@ void ImGuizmoManager::UpdateFilteredNames() {
     filteredNames_.clear();
 
     std::vector<std::string> allNames;
-    for (const auto &pair : transformMap)
+    for (const auto &pair : transformMap_)
         allNames.push_back(pair.first);
     std::sort(allNames.begin(), allNames.end());
 
@@ -994,14 +995,14 @@ void ImGuizmoManager::UpdateFilteredNames() {
 
 // 全エントリのAABB・スフィアワイヤーフレームとレイを描画する
 void ImGuizmoManager::DrawDebugRaycast() {
-    if (!showDebugRaycast)
+    if (!showDebugRaycast_)
         return;
 
     Ray currentRay = Input::GetInstance()->GetCurrentRay();
     Vector3 rayEnd = currentRay.origin + (currentRay.direction * currentRay.length);
     DrawLine3D::GetInstance()->SetPoints(currentRay.origin, rayEnd, {1.0f, 0.0f, 0.0f, 1.0f});
 
-    for (const auto &pair : transformMap) {
+    for (const auto &pair : transformMap_) {
         const GizmoTarget &target = pair.second;
 
         // スクリーン空間ターゲットは3Dデバッグ描画対象外
@@ -1009,7 +1010,7 @@ void ImGuizmoManager::DrawDebugRaycast() {
             continue;
 
         Matrix4x4 worldMatrix = target.GetWorldMatrix();
-        bool isSelected = selectedNames.find(pair.first) != selectedNames.end();
+        bool isSelected = selectedNames_.find(pair.first) != selectedNames_.end();
         Vector4 aabbColor = isSelected ? Vector4{1.0f, 1.0f, 0.0f, 1.0f} : Vector4{0.0f, 0.0f, 1.0f, 1.0f};
         Vector4 sphereColor = isSelected ? Vector4{1.0f, 0.5f, 0.0f, 1.0f} : Vector4{1.0f, 0.0f, 1.0f, 1.0f};
 
@@ -1100,4 +1101,5 @@ void ImGuizmoManager::TestAndDrawRayHit(const Ray &ray, const GizmoTarget &targe
     }
 }
 
+} // namespace Hagine
 #endif // _DEBUG

@@ -33,6 +33,7 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include"Engine/Utility/LoadFile/Csv/CsvLoad.h"
 #include "Engine/Render/DrawSystem.h"
+namespace Hagine {
 class Framework {
   public: // メンバ関数
     virtual ~Framework() = default;
@@ -130,3 +131,4 @@ class Framework {
 
     bool endRequest_;
 };
+} // namespace Hagine

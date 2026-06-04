@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 
+namespace Hagine {
 enum class BlendMode {
     // ブレンドなし
     kNone,
@@ -196,3 +197,4 @@ class PipeLineManager {
 
     D3D12_DEPTH_STENCIL_DESC SettingDepthStencilDesc(bool depth);
 };
+} // namespace Hagine

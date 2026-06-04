@@ -5,6 +5,7 @@
 #include <variant>
 #include <wrl.h>
 
+namespace Hagine {
 struct MouseMove {
     LONG lX;
     LONG lY;
@@ -65,3 +66,4 @@ class Mouse {
     /// <returns></returns>
     Vector3 GetMousePos3D(const ViewProjection &viewprojection, float depthFactor, float blockSpacing = 1.0f) const;
 };
+} // namespace Hagine

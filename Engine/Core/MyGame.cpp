@@ -3,6 +3,7 @@
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
 
+namespace Hagine {
 void MyGame::Initialize() {
     Framework::Initialize();
     Framework::LoadResource();
@@ -74,3 +75,4 @@ void MyGame::Draw() {
 
     dxCommon_->PostDraw();
 }
+} // namespace Hagine

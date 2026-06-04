@@ -5,6 +5,7 @@
 /// モデル共通クラス
 /// モデルシステムで共有するDirectXCommonを管理する
 /// </summary>
+namespace Hagine {
 class ModelCommon {
   public:
     /// ===================================================
@@ -52,3 +53,4 @@ class ModelCommon {
 
     DirectXCommon *dxCommon_;     // DirectX共通クラス
 };
+} // namespace Hagine

@@ -10,6 +10,7 @@
 #include <ShowFolder/ShowFolder.h>
 #include <filesystem>
 
+namespace Hagine {
 namespace fs = std::filesystem;
 
 void SpriteManager::Finalize() {
@@ -1133,3 +1134,4 @@ void SpriteManager::LoadAllSprites() {
     LoadDrawOrder();
     ImGuiNotification::Post("スプライトデータを読み込みました: " + saveFolder_, {0.2f, 0.8f, 0.8f, 1.0f});
 }
+} // namespace Hagine

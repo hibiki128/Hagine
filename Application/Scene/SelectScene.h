@@ -5,7 +5,7 @@
 /// セレクトシーンのクラス
 /// ステージ選択や設定などを行うシーンを管理する
 /// </summary>
-class SelectScene : public BaseScene {
+class SelectScene : public Hagine::BaseScene {
   public:
     /// ===================================================
     /// public method

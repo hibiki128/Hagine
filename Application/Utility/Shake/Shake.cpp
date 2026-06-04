@@ -4,6 +4,7 @@
 #include <myMath.h>
 #include <random>
 
+using namespace Hagine;
 void Shake::Initialize(ViewProjection *viewProjection, std::string jsonName) {
     viewProjection_ = viewProjection;
     // 設定ファイルが指定されていれば読み込む

@@ -3,12 +3,13 @@
 #include <myMath.h>
 
 
+namespace Hagine {
 std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, UINT indexCount) {
 
     std::unique_ptr<LineData> mesh = std::make_unique<LineData>();
 
     UINT vertBufferSize = sizeof(VertexPosColor) * vertexCount;
-    mesh->vertBuffer = dxCommon->CreateBufferResource(vertBufferSize);
+    mesh->vertBuffer = dxCommon_->CreateBufferResource(vertBufferSize);
 
     mesh->vbView.BufferLocation = mesh->vertBuffer->GetGPUVirtualAddress();
     mesh->vbView.StrideInBytes = sizeof(VertexPosColor);
@@ -19,7 +20,7 @@ std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, U
 
     UINT indexBufferSize = sizeof(uint16_t) * indexCount;
     if (indexCount > 0) {
-        mesh->indexBuffer = dxCommon->CreateBufferResource(indexBufferSize);
+        mesh->indexBuffer = dxCommon_->CreateBufferResource(indexBufferSize);
 
         mesh->ibView.BufferLocation = mesh->indexBuffer->GetGPUVirtualAddress();
         mesh->ibView.Format = DXGI_FORMAT_R16_UINT;
@@ -32,7 +33,7 @@ std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, U
 }
 
 void DrawLine3D::Initialize() {
-    dxCommon = DirectXCommon::GetInstance();
+    dxCommon_ = DirectXCommon::GetInstance();
     CreateMeshes();
     CreateResource();
     psoManager_ = PipeLineManager::GetInstance();
@@ -70,9 +71,9 @@ void DrawLine3D::Draw(const ViewProjection &viewProjection) {
 
     psoManager_->DrawCommonSetting(PipelineType::kLine3d);
     D3D12_VERTEX_BUFFER_VIEW vbView = line_->vbView;
-    dxCommon->GetCommandList()->IASetVertexBuffers(0, 1, &vbView);
-    dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(0, cBufferResource_->GetGPUVirtualAddress());
-    dxCommon->GetCommandList()->DrawInstanced(indexLine_ * 2, 1, 0, 0);
+    dxCommon_->GetCommandList()->IASetVertexBuffers(0, 1, &vbView);
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(0, cBufferResource_->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->DrawInstanced(indexLine_ * 2, 1, 0, 0);
 
     Reset();
 }
@@ -114,7 +115,7 @@ void DrawLine3D::CreateMeshes() {
 }
 
 void DrawLine3D::CreateResource() {
-    cBufferResource_ = dxCommon->CreateBufferResource(sizeof(CBuffer));
+    cBufferResource_ = dxCommon_->CreateBufferResource(sizeof(CBuffer));
     cBufferData_ = nullptr;
     cBufferResource_->Map(0, nullptr, reinterpret_cast<void **>(&cBufferData_));
     cBufferData_->viewProject = MakeIdentity4x4();
@@ -206,3 +207,4 @@ void DrawLine3D::DrawSphere(const Vector3 &position, const Vector4 &color, float
         }
     }
 }
+} // namespace Hagine

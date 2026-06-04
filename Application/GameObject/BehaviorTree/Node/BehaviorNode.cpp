@@ -8,19 +8,20 @@
 // ---------------------------------------------------------
 // BTNode / CompositeNode 基底
 // ---------------------------------------------------------
+using namespace Hagine;
 NodeStatus BTNode::Tick() {
     // 初回実行時、または Running 以外から再開された時に OnEnter を呼ぶ
-    if (m_Status != NodeStatus::Running)
+    if (status_ != NodeStatus::Running)
         OnEnter();
 
     // 更新処理を実行しステータスを更新
-    m_Status = OnUpdate();
+    status_ = OnUpdate();
 
     // 終了（Success または Failure）した時に OnExit を呼ぶ
-    if (m_Status != NodeStatus::Running)
+    if (status_ != NodeStatus::Running)
         OnExit();
 
-    return m_Status;
+    return status_;
 }
 void BTNode::AddChild(std::shared_ptr<BTNode> child) {}
 void BTNode::SetContext(Enemy *enemy, Player *player) {}
@@ -29,45 +30,45 @@ void BTNode::OnExit() {}
 
 void CompositeNode::AddChild(std::shared_ptr<BTNode> child) {
     // 子ノードリストに追加
-    m_Children.push_back(child);
+    children_.push_back(child);
 }
 
 void CompositeNode::SetContext(Enemy *enemy, Player *player) {
     BTNode::SetContext(enemy, player);
     // 全ての子ノードにコンテキストを伝播
-    for (auto &child : m_Children)
+    for (auto &child : children_)
         child->SetContext(enemy, player);
 }
 
 void CompositeNode::OnEnter() {
     // 最初の子から実行するようにインデックスをリセット
-    m_CurrentChildIndex = 0;
+    currentChildIndex_ = 0;
 }
 
 // ---------------------------------------------------------
 // SequenceNode (Reactive)
 // ---------------------------------------------------------
 NodeStatus SequenceNode::OnUpdate() {
-    if (m_Children.empty()) {
+    if (children_.empty()) {
         return NodeStatus::Failure;
     }
 
     // 毎フレーム先頭から順に子ノードを評価する (Reactive)
-    for (int i = 0; i < m_Children.size(); ++i) {
-        NodeStatus childStatus = m_Children[i]->Tick();
+    for (int i = 0; i < children_.size(); ++i) {
+        NodeStatus childStatus = children_[i]->Tick();
 
         if (childStatus == NodeStatus::Running) {
             // Running 中のノードより後のノードはリセットしておく
-            for (int j = i + 1; j < m_Children.size(); ++j) {
-                m_Children[j]->Reset();
+            for (int j = i + 1; j < children_.size(); ++j) {
+                children_[j]->Reset();
             }
             return NodeStatus::Running;
         }
 
         if (childStatus == NodeStatus::Failure) {
             // 一つでも失敗した時点で以降のノードをリセットして失敗を返す
-            for (int j = i + 1; j < m_Children.size(); ++j) {
-                m_Children[j]->Reset();
+            for (int j = i + 1; j < children_.size(); ++j) {
+                children_[j]->Reset();
             }
             return NodeStatus::Failure;
         }
@@ -82,12 +83,12 @@ NodeStatus SequenceNode::OnUpdate() {
 // SequenceOnceNode (Non-Reactive)
 // ---------------------------------------------------------
 NodeStatus SequenceOnceNode::OnUpdate() {
-    if (m_Children.empty())
+    if (children_.empty())
         return NodeStatus::Failure;
 
     // 前回の続きから子ノードを順次実行する
-    while (m_CurrentChildIndex < (int)m_Children.size()) {
-        NodeStatus status = m_Children[m_CurrentChildIndex]->Tick();
+    while (currentChildIndex_ < (int)children_.size()) {
+        NodeStatus status = children_[currentChildIndex_]->Tick();
 
         // 実行中の場合はそのノードで止まる
         if (status == NodeStatus::Running)
@@ -98,7 +99,7 @@ NodeStatus SequenceOnceNode::OnUpdate() {
             return NodeStatus::Failure;
 
         // 成功した場合は次の子ノードへ進む
-        m_CurrentChildIndex++;
+        currentChildIndex_++;
     }
 
     return NodeStatus::Success;
@@ -108,26 +109,26 @@ NodeStatus SequenceOnceNode::OnUpdate() {
 // SelectorNode (Reactive)
 // ---------------------------------------------------------
 NodeStatus SelectorNode::OnUpdate() {
-    if (m_Children.empty()) {
+    if (children_.empty()) {
         return NodeStatus::Failure;
     }
 
     // 毎フレーム先頭から順に子ノードを評価する (Reactive)
-    for (int i = 0; i < m_Children.size(); ++i) {
-        NodeStatus childStatus = m_Children[i]->Tick();
+    for (int i = 0; i < children_.size(); ++i) {
+        NodeStatus childStatus = children_[i]->Tick();
 
         if (childStatus == NodeStatus::Running) {
             // 実行中のノード以降はリセット
-            for (int j = i + 1; j < m_Children.size(); ++j) {
-                m_Children[j]->Reset();
+            for (int j = i + 1; j < children_.size(); ++j) {
+                children_[j]->Reset();
             }
             return NodeStatus::Running;
         }
 
         if (childStatus == NodeStatus::Success) {
             // 一つでも成功した時点で以降のノードをリセットして成功を返す
-            for (int j = i + 1; j < m_Children.size(); ++j) {
-                m_Children[j]->Reset();
+            for (int j = i + 1; j < children_.size(); ++j) {
+                children_[j]->Reset();
             }
             return NodeStatus::Success;
         }
@@ -140,92 +141,92 @@ NodeStatus SelectorNode::OnUpdate() {
 // ---------------------------------------------------------
 // RunActionNode
 // ---------------------------------------------------------
-RunActionNode::RunActionNode() : m_Counter(0), m_Duration(180) {}
+RunActionNode::RunActionNode() : counter_(0), duration_(180) {}
 
 void RunActionNode::OnEnter() {
     // カウンターをリセット
-    m_Counter = 0;
+    counter_ = 0;
 }
 
 NodeStatus RunActionNode::OnUpdate() {
-    m_Counter++;
+    counter_++;
     // 指定されたデュレーションが経過するまで Running を返す
-    if (m_Counter < m_Duration)
+    if (counter_ < duration_)
         return NodeStatus::Running;
     return NodeStatus::Success;
 }
 
 void TimedActionNode::OnEnter() {
-    m_CurrentTimer = 0.0f;
+    currentTimer_ = 0.0f;
     // 設定された最小時間と最大時間の範囲からランダムに実行時間を決定
-    m_TargetDuration = Random::Range(m_MinTime, m_MaxTime);
+    targetDuration_ = Random::Range(minTime_, maxTime_);
 
-    if (m_Enemy) {
+    if (enemy_) {
         // 敵の移動速度を設定
-        m_Enemy->SetMoveSpeed(m_Speed);
+        enemy_->SetMoveSpeed(speed_);
         // 各派生クラス固有の初期化（方向決定など）を実行
         SetupAction();
     }
 }
 
 NodeStatus TimedActionNode::OnUpdate() {
-    if (!m_Enemy || !m_Player)
+    if (!enemy_ || !player_)
         return NodeStatus::Failure;
 
     // 各派生クラスの具体的な行動を実行
     ExecuteAction();
 
     // 経過時間を加算
-    m_CurrentTimer += 1.0f / 60.0f;
+    currentTimer_ += 1.0f / 60.0f;
     // 目標時間に達したら成功を返す
-    if (m_CurrentTimer >= m_TargetDuration) {
+    if (currentTimer_ >= targetDuration_) {
         return NodeStatus::Success;
     }
     return NodeStatus::Running;
 }
 
 void TimedActionNode::OnExit() {
-    if (m_Enemy) {
+    if (enemy_) {
         // アクション終了時に移動を停止
-        m_Enemy->StopMovement();
+        enemy_->StopMovement();
     }
 }
 
 void EnemyApproachNode::ExecuteAction() {
     // プレイヤーの位置に向かって移動
-    m_Enemy->MoveToTarget(m_Player->GetWorldPosition());
+    enemy_->MoveToTarget(player_->GetWorldPosition());
 }
 
 void EnemyDashNode::ExecuteAction() {
     // 高速でプレイヤーの位置に向かって移動（速度は OnEnter で設定済み）
-    m_Enemy->MoveToTarget(m_Player->GetWorldPosition());
+    enemy_->MoveToTarget(player_->GetWorldPosition());
 }
 
 void EnemyStrafeNode::SetupAction() {
     // 開始時に左右どちらに回り込むかをランダムに決定
     int dir = (Random::Range(0, 1) == 0) ? -1 : 1;
-    m_Enemy->SetStrafeDirection(dir);
+    enemy_->SetStrafeDirection(dir);
 }
 
 void EnemyStrafeNode::ExecuteAction() {
     // 設定された方向に回り込み移動を実行
-    m_Enemy->MoveStrafe();
+    enemy_->MoveStrafe();
 }
 
 void EnemyRetreatNode::ExecuteAction() {
     // プレイヤーから離れる方向に移動
-    m_Enemy->MoveRetreat();
+    enemy_->MoveRetreat();
 }
 
 NodeStatus EnemyAttackNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // 攻撃動作を実行
-    m_Enemy->PerformAttack();
+    enemy_->PerformAttack();
     // 攻撃演出時間を加算（固定1秒）
-    m_Timer += 1.0f / 60.0f;
-    if (m_Timer >= 1.0f)
+    timer_ += 1.0f / 60.0f;
+    if (timer_ >= 1.0f)
         return NodeStatus::Success;
 
     return NodeStatus::Running;
@@ -235,21 +236,21 @@ NodeStatus EnemyAttackNode::OnUpdate() {
 // IsPlayerCloseNode
 // ---------------------------------------------------------
 NodeStatus IsPlayerCloseNode::OnUpdate() {
-    if (!m_Enemy || !m_Player)
+    if (!enemy_ || !player_)
         return NodeStatus::Failure;
 
     // 敵とプレイヤーの距離を算出
-    float dist = (m_Enemy->GetWorldPosition() - m_Player->GetWorldPosition()).Length();
+    float dist = (enemy_->GetWorldPosition() - player_->GetWorldPosition()).Length();
 
     // ヒステリシスを考慮した判定用距離を設定
-    float effectiveMinDist = m_MinDist;
-    float effectiveMaxDist = m_MaxDist;
+    float effectiveMinDist = minDist_;
+    float effectiveMaxDist = maxDist_;
 
-    if (m_LastResult == NodeStatus::Success) {
+    if (lastResult_ == NodeStatus::Success) {
         // 前回成功していたらマージンを広げて状態を維持しやすくする
         effectiveMinDist -= kHysteresisMargin * 2.0f;
         effectiveMaxDist += kHysteresisMargin * 2.0f;
-    } else if (m_LastResult == NodeStatus::Failure) {
+    } else if (lastResult_ == NodeStatus::Failure) {
         // 前回失敗していたらマージンを狭めて判定を厳しくする
         effectiveMinDist += kHysteresisMargin;
         effectiveMaxDist -= kHysteresisMargin;
@@ -260,88 +261,88 @@ NodeStatus IsPlayerCloseNode::OnUpdate() {
     NodeStatus newResult = isInRange ? NodeStatus::Success : NodeStatus::Failure;
 
     // 判定結果が変わった場合の処理
-    if (newResult != m_LastResult) {
+    if (newResult != lastResult_) {
         // 成功から失敗に変わる際、保持時間をチェックしてチャタリングを防止
-        if (m_LastResult == NodeStatus::Success && m_StableTimer < kSuccessHoldTime) {
-            m_StableTimer += 1.0f / 60.0f;
+        if (lastResult_ == NodeStatus::Success && stableTimer_ < kSuccessHoldTime) {
+            stableTimer_ += 1.0f / 60.0f;
             return NodeStatus::Success;
         }
 
-        m_StableTimer = 0.0f;
-        m_LastResult = newResult;
+        stableTimer_ = 0.0f;
+        lastResult_ = newResult;
     } else {
-        m_StableTimer += 1.0f / 60.0f;
+        stableTimer_ += 1.0f / 60.0f;
     }
 
     // 最小安定時間を経過するまでは前回の結果を維持
-    if (m_StableTimer < kMinStableTime && m_LastResult != NodeStatus::Idle) {
-        return m_LastResult;
+    if (stableTimer_ < kMinStableTime && lastResult_ != NodeStatus::Idle) {
+        return lastResult_;
     }
 
     return newResult;
 }
 
 NodeStatus IsHealthLowNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // HP比率を計算して閾値以下か判定
-    float maxHP = m_Enemy->GetMaxHP();
-    float currentHP = m_Enemy->GetHP();
-    if (maxHP > 0 && (currentHP / maxHP) <= m_ThresholdPercentage)
+    float maxHP = enemy_->GetMaxHP();
+    float currentHP = enemy_->GetHP();
+    if (maxHP > 0 && (currentHP / maxHP) <= thresholdPercentage_)
         return NodeStatus::Success;
 
     return NodeStatus::Failure;
 }
 
 NodeStatus IsEnergyLowNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // エネルギー比率を計算して閾値以下か判定
-    float maxEnergy = m_Enemy->GetMaxEnergy();
-    float currentEnergy = m_Enemy->GetEnergy();
-    if (maxEnergy > 0.0f && (currentEnergy / maxEnergy) <= m_ThresholdPercentage)
+    float maxEnergy = enemy_->GetMaxEnergy();
+    float currentEnergy = enemy_->GetEnergy();
+    if (maxEnergy > 0.0f && (currentEnergy / maxEnergy) <= thresholdPercentage_)
         return NodeStatus::Success;
 
     return NodeStatus::Failure;
 }
 
 NodeStatus IsGroundedNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // 接地フラグをそのまま返す
-    return m_Enemy->GetIsGrounded() ? NodeStatus::Success : NodeStatus::Failure;
+    return enemy_->GetIsGrounded() ? NodeStatus::Success : NodeStatus::Failure;
 }
 
 NodeStatus IsAirborneNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // 非接地（空中）状態か判定
-    return !m_Enemy->GetIsGrounded() ? NodeStatus::Success : NodeStatus::Failure;
+    return !enemy_->GetIsGrounded() ? NodeStatus::Success : NodeStatus::Failure;
 }
 
 NodeStatus IsPlayerStateNode::OnUpdate() {
-    if (!m_Enemy || !m_Player)
+    if (!enemy_ || !player_)
         return NodeStatus::Failure;
 
     // プレイヤーの現在のステート名を取得して一致するか判定
-    std::string currentState = m_Player->GetCurrentStateName();
-    return (currentState == m_StateName) ? NodeStatus::Success : NodeStatus::Failure;
+    std::string currentState = player_->GetCurrentStateName();
+    return (currentState == stateName_) ? NodeStatus::Success : NodeStatus::Failure;
 }
 
 void RandomSelectorNode::OnEnter() {
-    m_SelectedChildIndex = -1;
-    if (m_Children.empty())
+    selectedChildIndex_ = -1;
+    if (children_.empty())
         return;
 
     // 重みの合計を算出
     float totalWeight = 0.0f;
     std::vector<float> weights;
 
-    for (const auto &child : m_Children) {
+    for (const auto &child : children_) {
         float w = 1.0f;
         auto weightNode = std::dynamic_pointer_cast<WeightDecoratorNode>(child);
         if (weightNode) {
@@ -360,70 +361,70 @@ void RandomSelectorNode::OnEnter() {
     for (int i = 0; i < weights.size(); ++i) {
         currentSum += weights[i];
         if (randomValue <= currentSum) {
-            m_SelectedChildIndex = i;
+            selectedChildIndex_ = i;
             break;
         }
     }
 
     // 誤差等で決まらなかった場合は最後の要素を選択
-    if (m_SelectedChildIndex == -1 && !m_Children.empty()) {
-        m_SelectedChildIndex = (int)m_Children.size() - 1;
+    if (selectedChildIndex_ == -1 && !children_.empty()) {
+        selectedChildIndex_ = (int)children_.size() - 1;
     }
 }
 
 NodeStatus RandomSelectorNode::OnUpdate() {
-    if (m_Children.empty()) {
+    if (children_.empty()) {
         return NodeStatus::Failure;
     }
 
-    if (m_SelectedChildIndex < 0 || m_SelectedChildIndex >= m_Children.size()) {
+    if (selectedChildIndex_ < 0 || selectedChildIndex_ >= children_.size()) {
         return NodeStatus::Failure;
     }
 
     // 選択された子ノードのみを実行
-    return m_Children[m_SelectedChildIndex]->Tick();
+    return children_[selectedChildIndex_]->Tick();
 }
 
 void EnemyIdleNode::Reset() {
     BTNode::Reset();
-    m_Timer = 0.0f;
+    timer_ = 0.0f;
 }
 
 void EnemyIdleNode::OnEnter() {
     BTNode::Reset();
-    m_Timer = 0.0f;
+    timer_ = 0.0f;
 }
 
 void EnemyJumpNode::OnEnter() {
-    m_JumpExecuted = false;
+    jumpExecuted_ = false;
 
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
     // 地面にいる時のみジャンプを実行
-    if (m_Enemy->GetIsGrounded()) {
+    if (enemy_->GetIsGrounded()) {
         // 上向きの初速を与える
-        m_Enemy->SetVerticalVelocity(m_JumpPower);
-        m_Enemy->SetIsGrounded(false);
+        enemy_->SetVerticalVelocity(jumpPower_);
+        enemy_->SetIsGrounded(false);
 
         // 重力を下向きに設定
-        float fallSpeed = m_Enemy->GetFallSpeed();
-        m_Enemy->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
+        float fallSpeed = enemy_->GetFallSpeed();
+        enemy_->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
 
-        m_JumpExecuted = true;
+        jumpExecuted_ = true;
     }
 }
 
 NodeStatus EnemyJumpNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    if (!m_JumpExecuted) {
+    if (!jumpExecuted_) {
         return NodeStatus::Failure;
     }
 
     // 着地するまで Running を返し、着地したら Success
-    if (m_Enemy->GetIsGrounded()) {
+    if (enemy_->GetIsGrounded()) {
         return NodeStatus::Success;
     }
 
@@ -431,46 +432,46 @@ NodeStatus EnemyJumpNode::OnUpdate() {
 }
 
 void EnemyJumpToFlyNode::OnEnter() {
-    m_ElapsedTime = 0.0f;
+    elapsedTime_ = 0.0f;
 
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
     // 上向きの速度を与えてジャンプ開始
-    m_Enemy->SetVerticalVelocity(m_JumpPower);
-    m_Enemy->SetIsGrounded(false);
+    enemy_->SetVerticalVelocity(jumpPower_);
+    enemy_->SetIsGrounded(false);
 
     // 飛行状態へ移行（重力を自前で制御するためフラグを立てる）
-    m_Enemy->SetIsFlying(true);
-    m_Enemy->SetVerticalAcceleration(0.0f);
+    enemy_->SetIsFlying(true);
+    enemy_->SetVerticalAcceleration(0.0f);
 }
 
 NodeStatus EnemyJumpToFlyNode::OnUpdate() {
-    if (!m_Enemy || !m_Player)
+    if (!enemy_ || !player_)
         return NodeStatus::Failure;
 
     // 移動と方向更新を実行
-    m_Enemy->Move();
-    m_Enemy->DirectionUpdate();
+    enemy_->Move();
+    enemy_->DirectionUpdate();
 
-    float velY = m_Enemy->GetVerticalVelocity();
+    float velY = enemy_->GetVerticalVelocity();
 
     // 上昇中であれば減速させていく
     if (velY > 0.0f) {
-        float fallSpeed = m_Enemy->GetFallSpeed();
+        float fallSpeed = enemy_->GetFallSpeed();
         float newVelY = velY - fallSpeed * (1.0f / 60.0f);
         if (newVelY < 0.0f)
             newVelY = 0.0f;
-        m_Enemy->SetVerticalVelocity(newVelY);
+        enemy_->SetVerticalVelocity(newVelY);
         return NodeStatus::Running;
     }
 
     // 最高到達点で停止
-    m_Enemy->SetVerticalVelocity(0.0f);
+    enemy_->SetVerticalVelocity(0.0f);
 
     // 遷移時間を待機
-    m_ElapsedTime += 1.0f / 60.0f;
-    if (m_ElapsedTime >= kFlyTransitionTime) {
+    elapsedTime_ += 1.0f / 60.0f;
+    if (elapsedTime_ >= kFlyTransitionTime) {
         return NodeStatus::Success;
     }
 
@@ -482,31 +483,31 @@ void EnemyJumpToFlyNode::OnExit() {
 }
 
 void EnemyFlyAscendNode::OnEnter() {
-    m_CurrentTimer = 0.0f;
-    m_TargetDuration = Random::Range(m_MinTime, m_MaxTime);
+    currentTimer_ = 0.0f;
+    targetDuration_ = Random::Range(minTime_, maxTime_);
 
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
     // 飛行状態を有効化し、重力を切る
-    m_Enemy->SetIsFlying(true);
-    m_Enemy->SetVerticalAcceleration(0.0f);
+    enemy_->SetIsFlying(true);
+    enemy_->SetVerticalAcceleration(0.0f);
     // 上昇速度を設定
-    m_Enemy->SetVerticalVelocity(m_Speed);
+    enemy_->SetVerticalVelocity(speed_);
 }
 
 NodeStatus EnemyFlyAscendNode::OnUpdate() {
-    if (!m_Enemy || !m_Player)
+    if (!enemy_ || !player_)
         return NodeStatus::Failure;
 
     // 上昇速度を維持
-    m_Enemy->SetVerticalVelocity(m_Speed);
-    m_Enemy->Move();
-    m_Enemy->DirectionUpdate();
+    enemy_->SetVerticalVelocity(speed_);
+    enemy_->Move();
+    enemy_->DirectionUpdate();
 
-    m_CurrentTimer += 1.0f / 60.0f;
+    currentTimer_ += 1.0f / 60.0f;
     // 規定時間経過したら終了
-    if (m_CurrentTimer >= m_TargetDuration) {
+    if (currentTimer_ >= targetDuration_) {
         return NodeStatus::Success;
     }
 
@@ -514,31 +515,31 @@ NodeStatus EnemyFlyAscendNode::OnUpdate() {
 }
 
 void EnemyFlyAscendNode::OnExit() {
-    if (!m_Enemy)
+    if (!enemy_)
         return;
     // 上昇を停止し、空中停止状態へ
-    m_Enemy->SetVerticalVelocity(0.0f);
-    m_Enemy->SetVerticalAcceleration(0.0f);
+    enemy_->SetVerticalVelocity(0.0f);
+    enemy_->SetVerticalAcceleration(0.0f);
 }
 
 void EnemyFlyDescendNode::OnEnter() {
-    m_CurrentTimer = 0.0f;
-    m_TargetDuration = Random::Range(m_MinTime, m_MaxTime);
+    currentTimer_ = 0.0f;
+    targetDuration_ = Random::Range(minTime_, maxTime_);
 
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
     // 飛行状態を維持し、下降速度を設定
-    m_Enemy->SetIsFlying(true);
-    m_Enemy->SetVerticalAcceleration(0.0f);
-    m_Enemy->SetVerticalVelocity(-m_Speed);
+    enemy_->SetIsFlying(true);
+    enemy_->SetVerticalAcceleration(0.0f);
+    enemy_->SetVerticalVelocity(-speed_);
 }
 
 NodeStatus EnemyFlyDescendNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    Vector3 pos = m_Enemy->GetLocalPosition();
+    Vector3 pos = enemy_->GetLocalPosition();
     float dt = Frame::DeltaTime();
 
     // 垂直座標を更新
@@ -548,82 +549,82 @@ NodeStatus EnemyFlyDescendNode::OnUpdate() {
     // 着地判定
     if (pos.y <= 0.0f) {
         pos.y = 0.0f;
-        m_Enemy->SetLocalPosition(pos);
+        enemy_->SetLocalPosition(pos);
 
         // 地上状態へ切り替え
-        m_Enemy->SetIsFlying(false);
-        m_Enemy->SetIsGrounded(true);
-        m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+        enemy_->SetIsFlying(false);
+        enemy_->SetIsGrounded(true);
+        enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
 
         return NodeStatus::Success;
     }
 
-    m_Enemy->SetLocalPosition(pos);
+    enemy_->SetLocalPosition(pos);
     return NodeStatus::Running;
 }
 
 void EnemyFlyDescendNode::OnExit() {
-    if (!m_Enemy)
+    if (!enemy_)
         return;
     // 下降を停止
-    m_Enemy->SetVerticalVelocity(0.0f);
-    m_Enemy->SetVerticalAcceleration(0.0f);
+    enemy_->SetVerticalVelocity(0.0f);
+    enemy_->SetVerticalAcceleration(0.0f);
 }
 
 void EnemyFlyApproachNode::OnEnter() {
-    m_CurrentTimer = 0.0f;
-    m_TargetDuration = Random::Range(m_MinTime, m_MaxTime);
+    currentTimer_ = 0.0f;
+    targetDuration_ = Random::Range(minTime_, maxTime_);
 
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
     // 飛行状態で水平移動のみ行う
-    m_Enemy->SetIsFlying(true);
-    m_Enemy->SetVerticalAcceleration(0.0f);
-    m_Enemy->SetVerticalVelocity(0.0f);
-    m_Enemy->GetMoveSpeed() = m_Speed;
+    enemy_->SetIsFlying(true);
+    enemy_->SetVerticalAcceleration(0.0f);
+    enemy_->SetVerticalVelocity(0.0f);
+    enemy_->GetMoveSpeed() = speed_;
 }
 
 NodeStatus EnemyFlyApproachNode::OnUpdate() {
-    if (!m_Enemy || !m_Player)
+    if (!enemy_ || !player_)
         return NodeStatus::Failure;
 
     // プレイヤーに向かって水平移動
-    m_Enemy->MoveToTarget(m_Player->GetWorldPosition());
-    m_Enemy->DirectionUpdate();
+    enemy_->MoveToTarget(player_->GetWorldPosition());
+    enemy_->DirectionUpdate();
 
-    m_CurrentTimer += 1.0f / 60.0f;
-    if (m_CurrentTimer >= m_TargetDuration)
+    currentTimer_ += 1.0f / 60.0f;
+    if (currentTimer_ >= targetDuration_)
         return NodeStatus::Success;
 
     return NodeStatus::Running;
 }
 
 void EnemyFlyApproachNode::OnExit() {
-    if (!m_Enemy)
+    if (!enemy_)
         return;
     // 水平移動を停止
-    m_Enemy->StopMovement();
+    enemy_->StopMovement();
 }
 
 void EnemyFlyToGroundNode::OnEnter() {
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
     // 飛行状態を解除し、重力を再開させて落下させる
-    m_Enemy->SetIsFlying(false);
-    float fallSpeed = m_Enemy->GetFallSpeed();
-    m_Enemy->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
+    enemy_->SetIsFlying(false);
+    float fallSpeed = enemy_->GetFallSpeed();
+    enemy_->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
 }
 
 NodeStatus EnemyFlyToGroundNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // 着地するまで Running
-    if (m_Enemy->GetIsGrounded()) {
-        m_Enemy->SetVerticalVelocity(0.0f);
-        m_Enemy->SetVerticalAcceleration(0.0f);
+    if (enemy_->GetIsGrounded()) {
+        enemy_->SetVerticalVelocity(0.0f);
+        enemy_->SetVerticalAcceleration(0.0f);
         return NodeStatus::Success;
     }
 
@@ -631,23 +632,23 @@ NodeStatus EnemyFlyToGroundNode::OnUpdate() {
 }
 
 void EnemyShootNode::OnEnter() {
-    m_Timer = 0.0f;
-    m_HasShot = false;
+    timer_ = 0.0f;
+    hasShot_ = false;
 }
 
 NodeStatus EnemyShootNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // 初回更新時に弾を発射
-    if (!m_HasShot) {
-        m_Enemy->Shot();
-        m_HasShot = true;
+    if (!hasShot_) {
+        enemy_->Shot();
+        hasShot_ = true;
     }
 
     // クールダウン待機
-    m_Timer += 1.0f / 60.0f;
-    if (m_Timer >= m_Cooldown) {
+    timer_ += 1.0f / 60.0f;
+    if (timer_ >= cooldown_) {
         return NodeStatus::Success;
     }
 
@@ -655,78 +656,78 @@ NodeStatus EnemyShootNode::OnUpdate() {
 }
 
 NodeStatus EnemyLockOnNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // ロックオン状態を更新
-    m_Enemy->SetIsLockOn(m_LockOn);
+    enemy_->SetIsLockOn(lockOn_);
     return NodeStatus::Success;
 }
 
 NodeStatus IsEnemyLockOnNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // 現在のロックオン状態を返す
-    return m_Enemy->GetIsLockOn() ? NodeStatus::Success : NodeStatus::Failure;
+    return enemy_->GetIsLockOn() ? NodeStatus::Success : NodeStatus::Failure;
 }
 
 void EnemyComboStepNode::OnEnter() {
-    m_Timer = 0.0f;
-    m_HasStep = false;
+    timer_ = 0.0f;
+    hasStep_ = false;
 }
 
 NodeStatus EnemyComboStepNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
     // コンボステップを開始
-    if (!m_HasStep) {
-        m_Enemy->SetComboAttack(true);
-        m_HasStep = true;
+    if (!hasStep_) {
+        enemy_->SetComboAttack(true);
+        hasStep_ = true;
     }
 
     // 指定された待機時間が経過するまで Running
-    float waitTime = (m_ComboInterval > 0.0f) ? m_ComboInterval : m_StepDuration;
-    m_Timer += 1.0f / 60.0f;
-    if (m_Timer >= waitTime)
+    float waitTime = (comboInterval_ > 0.0f) ? comboInterval_ : stepDuration_;
+    timer_ += 1.0f / 60.0f;
+    if (timer_ >= waitTime)
         return NodeStatus::Success;
 
     return NodeStatus::Running;
 }
 
 void EnemyComboFullNode::OnEnter() {
-    m_Timer = 0.0f;
-    m_StepCount = 0;
-    m_WaitingStep = false;
+    timer_ = 0.0f;
+    stepCount_ = 0;
+    waitingStep_ = false;
 }
 
 NodeStatus EnemyComboFullNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    int comboLength = m_Enemy->GetPunchComboLength();
-    int limit = (m_MaxSteps > 0) ? m_MaxSteps : comboLength;
+    int comboLength = enemy_->GetPunchComboLength();
+    int limit = (maxSteps_ > 0) ? maxSteps_ : comboLength;
 
     // 全てのステップが完了したか判定
-    if (m_StepCount >= limit)
+    if (stepCount_ >= limit)
         return NodeStatus::Success;
 
-    m_Timer += 1.0f / 60.0f;
+    timer_ += 1.0f / 60.0f;
 
     // 各ステップを順次実行
-    if (!m_WaitingStep) {
-        m_Enemy->SetComboAttack(true);
-        m_StepCount++;
-        m_WaitingStep = true;
-        m_Timer = 0.0f;
+    if (!waitingStep_) {
+        enemy_->SetComboAttack(true);
+        stepCount_++;
+        waitingStep_ = true;
+        timer_ = 0.0f;
     }
 
-    float waitTime = (m_ComboInterval > 0.0f) ? m_ComboInterval : m_StepDuration;
-    if (m_Timer >= waitTime) {
-        m_WaitingStep = false;
+    float waitTime = (comboInterval_ > 0.0f) ? comboInterval_ : stepDuration_;
+    if (timer_ >= waitTime) {
+        waitingStep_ = false;
         // 途中でコンボがリセットされたら終了
-        if (!m_Enemy->IsPunchComboActive())
+        if (!enemy_->IsPunchComboActive())
             return NodeStatus::Success;
     }
 
@@ -734,32 +735,32 @@ NodeStatus EnemyComboFullNode::OnUpdate() {
 }
 
 void EnemyBurstShootNode::FireOneBullet() {
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
     // ホーミング弾の場合
-    if (m_HomingMode) {
-        m_Enemy->Shot();
+    if (homingMode_) {
+        enemy_->Shot();
         return;
     }
 
     // 通常弾または拡散弾の場合
-    if (m_SpreadAngle <= 0.0f) {
-        m_Enemy->ShotWithDirection(m_Enemy->GetForward(), false);
+    if (spreadAngle_ <= 0.0f) {
+        enemy_->ShotWithDirection(enemy_->GetForward(), false);
         return;
     }
 
     // 指定された角度内でランダムな方向に発射
-    float halfAngle = m_SpreadAngle * 0.5f;
+    float halfAngle = spreadAngle_ * 0.5f;
     float yawDeg = Random::Range(-halfAngle, halfAngle);
     float pitchDeg = Random::Range(-halfAngle * 0.3f, halfAngle * 0.3f);
 
     float yawRad = yawDeg * (3.14159265f / 180.0f);
     float pitchRad = pitchDeg * (3.14159265f / 180.0f);
 
-    Vector3 forward = m_Enemy->GetForward();
-    Vector3 up = m_Enemy->GetUp();
-    Vector3 right = m_Enemy->GetRight();
+    Vector3 forward = enemy_->GetForward();
+    Vector3 up = enemy_->GetUp();
+    Vector3 right = enemy_->GetRight();
 
     Vector3 yawed = forward * std::cos(yawRad) + right * std::sin(yawRad);
     Vector3 dir = yawed * std::cos(pitchRad) + up * std::sin(pitchRad);
@@ -768,76 +769,76 @@ void EnemyBurstShootNode::FireOneBullet() {
     if (len > 0.001f)
         dir = dir / len;
 
-    m_Enemy->ShotWithDirection(dir, false);
+    enemy_->ShotWithDirection(dir, false);
 }
 
 void EnemyBurstShootNode::OnEnter() {
-    m_Timer = 0.0f;
-    m_ShotsFired = 0;
-    m_Phase = Phase::Shooting;
+    timer_ = 0.0f;
+    shotsFired_ = 0;
+    phase_ = Phase::Shooting;
 
     // 最初の弾を発射
-    if (m_Enemy && m_BurstCount > 0) {
+    if (enemy_ && burstCount_ > 0) {
         FireOneBullet();
-        m_ShotsFired = 1;
+        shotsFired_ = 1;
 
-        if (m_ShotsFired >= m_BurstCount) {
-            m_Phase = Phase::Cooldown;
+        if (shotsFired_ >= burstCount_) {
+            phase_ = Phase::Cooldown;
         }
     }
 }
 
 NodeStatus EnemyBurstShootNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    m_Timer += 1.0f / 60.0f;
+    timer_ += 1.0f / 60.0f;
 
-    if (m_Phase == Phase::Shooting) {
+    if (phase_ == Phase::Shooting) {
         // 発射間隔を待機して次弾を発射
-        if (m_Timer >= m_Interval) {
-            m_Timer = 0.0f;
+        if (timer_ >= interval_) {
+            timer_ = 0.0f;
 
-            if (m_ShotsFired < m_BurstCount) {
+            if (shotsFired_ < burstCount_) {
                 FireOneBullet();
-                m_ShotsFired++;
+                shotsFired_++;
             }
 
-            if (m_ShotsFired >= m_BurstCount) {
-                m_Phase = Phase::Cooldown;
+            if (shotsFired_ >= burstCount_) {
+                phase_ = Phase::Cooldown;
             }
         }
         return NodeStatus::Running;
     }
 
     // 全弾発射後のクールダウン待機
-    if (m_Timer >= m_Cooldown)
+    if (timer_ >= cooldown_)
         return NodeStatus::Success;
 
     return NodeStatus::Running;
 }
 
 void EnemyEnergyChargeNode::OnEnter() {
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
     // チャージ開始時に移動を停止
-    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
-    m_Enemy->StopMovement();
+    enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
+    enemy_->StopMovement();
 
     // 元のエネルギー回復レートを保存し、チャージ用の高速レートを設定
-    m_OriginalRecoveryRate = m_Enemy->GetEnergyRecoveryRate();
-    float chargeRate = 15.0f * m_ChargeRateMultiplier;
-    m_Enemy->SetEnergyRecoveryRate(chargeRate);
+    originalRecoveryRate_ = enemy_->GetEnergyRecoveryRate();
+    float chargeRate = 15.0f * chargeRateMultiplier_;
+    enemy_->SetEnergyRecoveryRate(chargeRate);
 }
 
 NodeStatus EnemyEnergyChargeNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    float maxEnergy = m_Enemy->GetMaxEnergy();
-    float currentEnergy = m_Enemy->GetEnergy();
-    float targetEnergy = (m_TargetRatio > 0.0f) ? maxEnergy * m_TargetRatio : maxEnergy;
+    float maxEnergy = enemy_->GetMaxEnergy();
+    float currentEnergy = enemy_->GetEnergy();
+    float targetEnergy = (targetRatio_ > 0.0f) ? maxEnergy * targetRatio_ : maxEnergy;
 
     // 目標エネルギーに達するまで回復を継続
     if (currentEnergy >= targetEnergy) {
@@ -845,19 +846,19 @@ NodeStatus EnemyEnergyChargeNode::OnUpdate() {
     }
 
     // チャージ中は移動不可
-    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+    enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
 
     float dt = Frame::DeltaTime();
-    float newEnergy = currentEnergy + (m_Enemy->GetEnergyRecoveryRate() * dt);
-    m_Enemy->SetEnergy(std::min(newEnergy, maxEnergy));
+    float newEnergy = currentEnergy + (enemy_->GetEnergyRecoveryRate() * dt);
+    enemy_->SetEnergy(std::min(newEnergy, maxEnergy));
 
     return NodeStatus::Running;
 }
 
 void EnemyEnergyChargeNode::OnExit() {
-    if (m_Enemy) {
+    if (enemy_) {
         // 保存しておいた元の回復レートに戻す
-        m_Enemy->SetEnergyRecoveryRate(m_OriginalRecoveryRate);
+        enemy_->SetEnergyRecoveryRate(originalRecoveryRate_);
     }
 }
 
@@ -865,28 +866,28 @@ void EnemyEnergyChargeNode::OnExit() {
 // IsPlayerHPLowNode
 // ---------------------------------------------------------
 NodeStatus IsPlayerHPLowNode::OnUpdate() {
-    if (!m_Player)
+    if (!player_)
         return NodeStatus::Failure;
 
-    float maxHP = m_Player->GetMaxHP();
+    float maxHP = player_->GetMaxHP();
     if (maxHP <= 0.0f)
         return NodeStatus::Failure;
 
-    return (m_Player->GetHP() / maxHP) <= m_Threshold ? NodeStatus::Success : NodeStatus::Failure;
+    return (player_->GetHP() / maxHP) <= threshold_ ? NodeStatus::Success : NodeStatus::Failure;
 }
 
 // ---------------------------------------------------------
 // IsEnergyHighNode
 // ---------------------------------------------------------
 NodeStatus IsEnergyHighNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    float maxEnergy = m_Enemy->GetMaxEnergy();
+    float maxEnergy = enemy_->GetMaxEnergy();
     if (maxEnergy <= 0.0f)
         return NodeStatus::Failure;
 
-    return (m_Enemy->GetEnergy() / maxEnergy) >= m_Threshold ? NodeStatus::Success : NodeStatus::Failure;
+    return (enemy_->GetEnergy() / maxEnergy) >= threshold_ ? NodeStatus::Success : NodeStatus::Failure;
 }
 
 // ---------------------------------------------------------
@@ -894,38 +895,38 @@ NodeStatus IsEnergyHighNode::OnUpdate() {
 // プレイヤーの ChargeShot 相当: 溜め演出 → 強化ホーミング弾を1発放つ
 // ---------------------------------------------------------
 void EnemyChargeAttackNode::OnEnter() {
-    m_Timer = 0.0f;
-    m_ShotsFired = 0;
-    m_Phase = Phase::Charge;
+    timer_ = 0.0f;
+    shotsFired_ = 0;
+    phase_ = Phase::Charge;
 
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
     // 溜め中は停止し、チャージ演出（魔法陣＋魂の渦）を開始
-    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
-    m_Enemy->StopMovement();
-    m_Enemy->StartChargeAura();
+    enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
+    enemy_->StopMovement();
+    enemy_->StartChargeAura();
 }
 
 NodeStatus EnemyChargeAttackNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    m_Timer += 1.0f / 60.0f;
+    timer_ += 1.0f / 60.0f;
 
-    if (m_Phase == Phase::Charge) {
-        m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
-        if (m_Timer >= m_ChargeDuration) {
+    if (phase_ == Phase::Charge) {
+        enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
+        if (timer_ >= chargeDuration_) {
             // 溜め完了 → 閃光＋強化ホーミング弾を放つ
-            m_Enemy->FireChargeBlast();
-            m_Timer = 0.0f;
-            m_Phase = Phase::Cooldown;
+            enemy_->FireChargeBlast();
+            timer_ = 0.0f;
+            phase_ = Phase::Cooldown;
         }
         return NodeStatus::Running;
     }
 
     // Phase::Cooldown（発射後の硬直）
-    if (m_Timer >= kCooldown)
+    if (timer_ >= kCooldown)
         return NodeStatus::Success;
 
     return NodeStatus::Running;
@@ -933,8 +934,8 @@ NodeStatus EnemyChargeAttackNode::OnUpdate() {
 
 void EnemyChargeAttackNode::OnExit() {
     // 中断された場合でも溜め演出を確実に止める
-    if (m_Enemy)
-        m_Enemy->StopChargeAura();
+    if (enemy_)
+        enemy_->StopChargeAura();
 }
 
 // ---------------------------------------------------------
@@ -943,71 +944,71 @@ void EnemyChargeAttackNode::OnExit() {
 // EnemyUltimateNode
 // 重スキル: フルコンボ → ホーミング連射（必殺技より格下の強攻撃として運用）
 void EnemyUltimateNode::OnEnter() {
-    m_Timer = 0.0f;
-    m_StepCount = 0;
-    m_ShotsFired = 0;
-    m_WaitingStep = false;
-    m_Phase = Phase::Combo;
+    timer_ = 0.0f;
+    stepCount_ = 0;
+    shotsFired_ = 0;
+    waitingStep_ = false;
+    phase_ = Phase::Combo;
 
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
-    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
-    m_Enemy->StopMovement();
+    enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
+    enemy_->StopMovement();
 }
 
 NodeStatus EnemyUltimateNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    m_Timer += 1.0f / 60.0f;
+    timer_ += 1.0f / 60.0f;
 
-    if (m_Phase == Phase::Combo) {
-        if (m_StepCount >= kMaxComboSteps) {
+    if (phase_ == Phase::Combo) {
+        if (stepCount_ >= kMaxComboSteps) {
             // コンボ完了 → 連射フェーズへ
-            m_Enemy->Shot();
-            m_ShotsFired = 1;
-            m_Timer = 0.0f;
-            m_Phase = (m_ShotsFired >= m_ShotCount) ? Phase::Cooldown : Phase::Shoot;
+            enemy_->Shot();
+            shotsFired_ = 1;
+            timer_ = 0.0f;
+            phase_ = (shotsFired_ >= shotCount_) ? Phase::Cooldown : Phase::Shoot;
             return NodeStatus::Running;
         }
 
-        if (!m_WaitingStep) {
-            m_Enemy->SetComboAttack(true);
-            ++m_StepCount;
-            m_WaitingStep = true;
-            m_Timer = 0.0f;
+        if (!waitingStep_) {
+            enemy_->SetComboAttack(true);
+            ++stepCount_;
+            waitingStep_ = true;
+            timer_ = 0.0f;
         }
 
-        if (m_Timer >= m_StepDuration) {
-            m_WaitingStep = false;
-            if (!m_Enemy->IsPunchComboActive())
-                m_StepCount = kMaxComboSteps;
+        if (timer_ >= stepDuration_) {
+            waitingStep_ = false;
+            if (!enemy_->IsPunchComboActive())
+                stepCount_ = kMaxComboSteps;
         }
         return NodeStatus::Running;
     }
 
-    if (m_Phase == Phase::Shoot) {
-        if (m_Timer >= kShootInterval) {
-            m_Timer = 0.0f;
-            m_Enemy->Shot();
-            ++m_ShotsFired;
-            if (m_ShotsFired >= m_ShotCount) {
-                m_Phase = Phase::Cooldown;
-                m_Timer = 0.0f;
+    if (phase_ == Phase::Shoot) {
+        if (timer_ >= kShootInterval) {
+            timer_ = 0.0f;
+            enemy_->Shot();
+            ++shotsFired_;
+            if (shotsFired_ >= shotCount_) {
+                phase_ = Phase::Cooldown;
+                timer_ = 0.0f;
             }
         }
         return NodeStatus::Running;
     }
 
-    if (m_Timer >= kCooldown)
+    if (timer_ >= kCooldown)
         return NodeStatus::Success;
     return NodeStatus::Running;
 }
 
 void EnemyUltimateNode::OnExit() {
-    if (m_Enemy)
-        m_Enemy->StopMovement();
+    if (enemy_)
+        enemy_->StopMovement();
 }
 
 // ---------------------------------------------------------
@@ -1016,61 +1017,61 @@ void EnemyUltimateNode::OnExit() {
 // 溜め(ロックオン+オーラ) → ビーム発射 → 硬直
 // ---------------------------------------------------------
 void EnemyBeamUltimateNode::OnEnter() {
-    m_Timer = 0.0f;
-    m_Phase = Phase::Windup;
+    timer_ = 0.0f;
+    phase_ = Phase::Windup;
 
-    if (!m_Enemy)
+    if (!enemy_)
         return;
 
-    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
-    m_Enemy->StopMovement();
-    m_Enemy->SetIsLockOn(true);
-    m_Enemy->StartChargeAura(); // 溜め中はチャージオーラを発光
+    enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
+    enemy_->StopMovement();
+    enemy_->SetIsLockOn(true);
+    enemy_->StartChargeAura(); // 溜め中はチャージオーラを発光
 }
 
 NodeStatus EnemyBeamUltimateNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    m_Timer += 1.0f / 60.0f;
+    timer_ += 1.0f / 60.0f;
 
-    if (m_Phase == Phase::Windup) {
-        m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
-        if (m_Timer >= m_WindupDuration) {
+    if (phase_ == Phase::Windup) {
+        enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
+        if (timer_ >= windupDuration_) {
             // 溜め完了 → ビーム発射
             // ロックオンを解除して RotateUpdate による向き追従を止める。
             // ActivateBeam() の中で発射時の quateRotation_ が beamLockedRotation_ に
             // スナップショットされるため、この後は向きが完全に固定される。
-            m_Enemy->SetIsLockOn(false);
-            m_Enemy->StopChargeAura();
-            m_Enemy->ActivateBeam();
-            m_Timer = 0.0f;
-            m_Phase = Phase::Beam;
+            enemy_->SetIsLockOn(false);
+            enemy_->StopChargeAura();
+            enemy_->ActivateBeam();
+            timer_ = 0.0f;
+            phase_ = Phase::Beam;
         }
         return NodeStatus::Running;
     }
 
-    if (m_Phase == Phase::Beam) {
-        m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
+    if (phase_ == Phase::Beam) {
+        enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
         // ビームが自然終了するまで待つ
-        if (!m_Enemy->IsBeamActive()) {
-            m_Timer = 0.0f;
-            m_Phase = Phase::Cooldown;
+        if (!enemy_->IsBeamActive()) {
+            timer_ = 0.0f;
+            phase_ = Phase::Cooldown;
         }
         return NodeStatus::Running;
     }
 
     // Phase::Cooldown
-    if (m_Timer >= kCooldown)
+    if (timer_ >= kCooldown)
         return NodeStatus::Success;
     return NodeStatus::Running;
 }
 
 void EnemyBeamUltimateNode::OnExit() {
-    if (m_Enemy) {
-        m_Enemy->StopChargeAura();
-        m_Enemy->DeactivateBeam();
-        m_Enemy->StopMovement();
+    if (enemy_) {
+        enemy_->StopChargeAura();
+        enemy_->DeactivateBeam();
+        enemy_->StopMovement();
     }
 }
 
@@ -1079,29 +1080,37 @@ void EnemyBeamUltimateNode::OnExit() {
 // 一定時間ガード状態に入り、被ダメージを軽減する
 // ---------------------------------------------------------
 void EnemyGuardNode::OnEnter() {
-    m_Timer = 0.0f;
-    if (!m_Enemy)
+    timer_ = 0.0f;
+    if (!enemy_)
         return;
-    m_Enemy->SetGuarding(true);
-    m_Enemy->SetVelocity({0.0f, 0.0f, 0.0f});
-    m_Enemy->StopMovement();
+    enemy_->SetGuarding(true);
+    enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
+    enemy_->StopMovement();
 }
 
 NodeStatus EnemyGuardNode::OnUpdate() {
-    if (!m_Enemy)
+    if (!enemy_)
         return NodeStatus::Failure;
 
-    m_Timer += 1.0f / 60.0f;
-    m_Enemy->SetVelocity({0.0f, m_Enemy->GetVelocity().y, 0.0f});
+    timer_ += 1.0f / 60.0f;
+    enemy_->SetVelocity({0.0f, enemy_->GetVelocity().y, 0.0f});
 
-    if (m_Timer >= m_Duration)
+    if (timer_ >= duration_)
         return NodeStatus::Success;
     return NodeStatus::Running;
 }
 
 void EnemyGuardNode::OnExit() {
-    if (m_Enemy)
-        m_Enemy->SetGuarding(false);
+    if (enemy_)
+        enemy_->SetGuarding(false);
+}
+
+void EnemyGuardNode::Reset() {
+    BTNode::Reset();
+    timer_ = 0.0f;
+    // 別の枝に切り替わって Reset された場合でもガード状態を確実に解除する
+    if (enemy_)
+        enemy_->SetGuarding(false);
 }
 
 // ---------------------------------------------------------
@@ -1109,13 +1118,13 @@ void EnemyGuardNode::OnExit() {
 // プレイヤーが脅威（Rush中・スキル発動中・コンボ中）かを判定する
 // ---------------------------------------------------------
 NodeStatus IsPlayerAttackingNode::OnUpdate() {
-    if (!m_Player)
+    if (!player_)
         return NodeStatus::Failure;
 
     bool threatening =
-        m_Player->GetCurrentStateName() == "Rush" ||
-        m_Player->GetIsSkillActive() ||
-        m_Player->IsComboActive();
+        player_->GetCurrentStateName() == "Rush" ||
+        player_->GetIsSkillActive() ||
+        player_->IsComboActive();
 
     return threatening ? NodeStatus::Success : NodeStatus::Failure;
 }

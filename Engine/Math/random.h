@@ -1,6 +1,7 @@
 #pragma once
 #include <random>
 
+namespace Hagine {
 class Random {
 public:
     // int型のランダムな値を返す（minからmaxまで）
@@ -13,3 +14,4 @@ private:
     // 乱数生成器（メルセンヌ・ツイスタ）
     static std::mt19937& GetEngine();
 };
+} // namespace Hagine

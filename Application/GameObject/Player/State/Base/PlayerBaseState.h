@@ -40,7 +40,7 @@ class PlayerBaseState {
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    virtual void DrawParticle(Player &player, const ViewProjection &viewProjection) {}
+    virtual void DrawParticle(Player &player, const Hagine::ViewProjection &viewProjection) {}
 
   protected:
     /// ===================================================

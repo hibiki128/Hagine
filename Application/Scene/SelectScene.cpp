@@ -1,6 +1,7 @@
 #include "SelectScene.h"
 #include "Engine/Utility/Scene/SceneManager.h"
 
+using namespace Hagine;
 void SelectScene::Initialize() {
     /// ===================================================
     /// 初期化

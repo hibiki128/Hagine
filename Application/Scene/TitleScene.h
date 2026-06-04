@@ -11,7 +11,7 @@
 /// タイトルシーンのクラス
 /// ゲーム起動後のタイトル画面を管理する
 /// </summary>
-class TitleScene : public BaseScene {
+class TitleScene : public Hagine::BaseScene {
   public:
     /// ===================================================
     /// public method
@@ -82,8 +82,8 @@ class TitleScene : public BaseScene {
     bool firstMove_ = false;                // 最初のカメラ移動フラグ
     bool secondMove_ = false;               // 二番目のカメラ移動フラグ
 
-    SkyBox *skyBox_ = nullptr;              // スカイボックス
+    Hagine::SkyBox *skyBox_ = nullptr;              // スカイボックス
 
     std::unique_ptr<TitleUI> titleUI_ = nullptr; // タイトルUI
-    std::unique_ptr<GamePad> gamePad_ = nullptr; // ゲームパッド
+    std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr; // ゲームパッド
 };

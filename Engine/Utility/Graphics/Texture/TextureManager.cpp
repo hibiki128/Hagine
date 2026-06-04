@@ -9,6 +9,7 @@
 #include <vector>
 
 // ImGuiで0番を使用するため、1番から使用
+namespace Hagine {
 uint32_t TextureManager::kSRVIndexTop = 1;
 
 void TextureManager::LoadTexture(const std::string &filePath) {
@@ -16,7 +17,7 @@ void TextureManager::LoadTexture(const std::string &filePath) {
     std::string newFilePath = "resources/images/" + filePath;
 
     // 読み込み済みテクスチャを検索
-    if (textureDatas.contains(newFilePath)) {
+    if (textureDatas_.contains(newFilePath)) {
         return;
     }
 
@@ -51,7 +52,7 @@ void TextureManager::LoadTexture(const std::string &filePath) {
     }
 
     // テクスチャデータを追加して書き込む
-    TextureData &textureData = textureDatas[newFilePath];
+    TextureData &textureData = textureDatas_[newFilePath];
 
     textureData.metadata = imageToUse->GetMetadata();
     textureData.resource = dxCommon_->CreateTextureResource(textureData.metadata);
@@ -161,15 +162,15 @@ void TextureManager::Initialize(SrvManager *srvManager) {
     dxCommon_ = DirectXCommon::GetInstance();
     srvManager_ = srvManager;
     // SRVの数と同数
-    textureDatas.reserve(SrvManager::kMaxSRVCount);
+    textureDatas_.reserve(SrvManager::kMaxSRVCount);
 }
 
 void TextureManager::Finalize() {
     // 通常テクスチャのSRVインデックスを解放する
-    for (auto &pair : textureDatas) {
+    for (auto &pair : textureDatas_) {
         srvManager_->Free(pair.second.srvIndex - kSRVIndexTop);
     }
-    textureDatas.clear();
+    textureDatas_.clear();
 
     // フォントアトラスのSRVインデックスを解放する
     for (auto &pair : fontDatas_) {
@@ -182,8 +183,8 @@ uint32_t TextureManager::GetTextureIndexByFilePath(const std::string &filePath) 
     // ファイル名を取り出して、resources/images/を付ける
     std::string newFilePath = "resources/images/" + filePath;
 
-    auto it = textureDatas.find(newFilePath);
-    if (it != textureDatas.end()) {
+    auto it = textureDatas_.find(newFilePath);
+    if (it != textureDatas_.end()) {
         return it->second.srvIndex;
     }
 
@@ -194,18 +195,18 @@ uint32_t TextureManager::GetTextureIndexByFilePath(const std::string &filePath) 
 
 D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrvHandleGPU(const std::string &filePath) {
     // 指定されたファイルパスが存在するかチェック
-    assert(textureDatas.find(filePath) != textureDatas.end());
+    assert(textureDatas_.find(filePath) != textureDatas_.end());
 
-    TextureData &textureData = textureDatas[filePath];
+    TextureData &textureData = textureDatas_[filePath];
     return textureData.srvHandleGPU;
 }
 
 const DirectX::TexMetadata &TextureManager::GetMetaData(const std::string &filePath) {
     std::string fullPath = ("resources/images/" + filePath);
     // 指定されたファイルパスが存在するかチェック
-    assert(textureDatas.find(fullPath) != textureDatas.end());
+    assert(textureDatas_.find(fullPath) != textureDatas_.end());
 
-    TextureData &textureData = textureDatas[fullPath];
+    TextureData &textureData = textureDatas_[fullPath];
     return textureData.metadata;
 }
 
@@ -263,7 +264,7 @@ void TextureManager::LoadAllTextures() {
         std::replace(file.begin(), file.end(), '\\', '/');
 
         // 既にロード済みならスキップ
-        if (textureDatas.contains("resources/images/" + file)) {
+        if (textureDatas_.contains("resources/images/" + file)) {
             continue;
         }
 
@@ -271,3 +272,4 @@ void TextureManager::LoadAllTextures() {
         LoadTexture(file);
     }
 }
+} // namespace Hagine

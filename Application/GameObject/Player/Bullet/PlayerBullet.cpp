@@ -7,6 +7,7 @@
 #include <Engine/Frame/Frame.h>
 #include <cmath>
 
+using namespace Hagine;
 void PlayerBullet::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     this->CreatePrimitiveModel(PrimitiveType::Sphere);

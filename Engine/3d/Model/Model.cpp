@@ -8,6 +8,7 @@
 #include <Shadow/ShadowMap.h>
 #include <SkyBox/SkyBox.h>
 
+namespace Hagine {
 void Model::Initialize(ModelCommon *modelCommon) {
     modelCommon_ = modelCommon;
     srvManager_ = SrvManager::GetInstance();
@@ -50,7 +51,7 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath)
 }
 
 void Model::Update() {
-    if (isGltf && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
+    if (isGltf_ && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
         skin_->UpdateInputVertices(modelData_);
 
         ID3D12GraphicsCommandList *commandList = modelCommon_->GetDxCommon()->GetCommandList().Get();
@@ -97,7 +98,7 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
         commandList->IASetIndexBuffer(&indexBufferView);
 
         // 頂点バッファ設定 - アニメーション有無で使用するバッファを切り替え
-        if (isGltf && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
+        if (isGltf_ && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
             // スキニング後の頂点バッファのみを使用
             D3D12_VERTEX_BUFFER_VIEW vbv = skin_->GetOutputVertexBufferView();
             commandList->IASetVertexBuffers(0, 1, &vbv);
@@ -116,7 +117,7 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
         // シャドウマップをバインド
         {
             ShadowMap *shadowMap = ShadowMap::GetInstance();
-            bool isSkinned = isGltf && animator_ && modelData_.hasAnimations && modelData_.hasBones;
+            bool isSkinned = isGltf_ && animator_ && modelData_.hasAnimations && modelData_.hasBones;
             uint32_t shadowSrvSlot    = isSkinned ? 9 : 8;
             uint32_t shadowDataSlot   = isSkinned ? 10 : 9;
             srvManager_->SetGraphicsRootDescriptorTable(shadowSrvSlot, shadowMap->GetShadowSrvIndex());
@@ -149,7 +150,7 @@ void Model::DrawShadow() {
         commandList->IASetIndexBuffer(&indexBufferView);
 
         INT vertexOffset = 0;
-        if (isGltf && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
+        if (isGltf_ && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
             D3D12_VERTEX_BUFFER_VIEW vbv = skin_->GetOutputVertexBufferView();
             commandList->IASetVertexBuffers(0, 1, &vbv);
             vertexOffset = static_cast<INT>(skin_->GetMeshVertexOffset(meshIndex));
@@ -168,11 +169,11 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
     ModelData modelData;
 
     // 拡張子に応じたisGltfフラグの設定
-    isGltf = false;
+    isGltf_ = false;
     if (filename.size() >= 5 && filename.substr(filename.size() - 5) == ".gltf") {
-        isGltf = true;
+        isGltf_ = true;
     } else if (filename.size() >= 4 && filename.substr(filename.size() - 4) == ".obj") {
-        isGltf = false;
+        isGltf_ = false;
     } else {
         assert(false && "Unsupported file format");
     }
@@ -355,3 +356,4 @@ Node Model::ReadNode(aiNode *node) {
     }
     return result;
 }
+} // namespace Hagine

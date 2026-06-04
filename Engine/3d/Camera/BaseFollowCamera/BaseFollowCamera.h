@@ -10,6 +10,7 @@
 /// 基本追従カメラクラス
 /// ターゲットを追従するカメラの基底機能を提供する
 /// </summary>
+namespace Hagine {
 class BaseFollowCamera {
 public:
     // ===================================================
@@ -68,3 +69,4 @@ private:
     float distanceFromTarget_ = 10.0f;       // ターゲットからの距離
     float heightOffset_ = 2.0f;              // 高さのオフセット
 };
+} // namespace Hagine

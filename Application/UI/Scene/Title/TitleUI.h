@@ -29,7 +29,7 @@ class TitleUI {
     /// 描画処理
     /// </summary>
     /// <param name="vp_">ビュープロジェクション</param>
-    void Draw(ViewProjection &vp_);
+    void Draw(Hagine::ViewProjection &vp_);
 
     /// <summary>
     /// 完了したかを取得
@@ -106,19 +106,19 @@ class TitleUI {
     bool isFinish_ = false;         // 完了フラグ
     bool cameraMove_ = false;       // カメラ移動フラグ
 
-    Vector2 titleLogoStartPos_ = {kTitleLogoStartPosX, kTitleLogoStartPosY};    // タイトルロゴ開始位置
-    Vector2 pressStartStartPos_ = {kPressStartStartPosX, kPressStartStartPosY}; // Press Start開始位置
-    Vector2 titleLogoEndPos_ = {};                                              // タイトルロゴ終了位置
-    Vector2 pressStartEndPos_ = {};                                             // Press Start終了位置
+    Hagine::Vector2 titleLogoStartPos_ = {kTitleLogoStartPosX, kTitleLogoStartPosY};    // タイトルロゴ開始位置
+    Hagine::Vector2 pressStartStartPos_ = {kPressStartStartPosX, kPressStartStartPosY}; // Press Start開始位置
+    Hagine::Vector2 titleLogoEndPos_ = {};                                              // タイトルロゴ終了位置
+    Hagine::Vector2 pressStartEndPos_ = {};                                             // Press Start終了位置
 
-    Vector3 targetPos_{}; // ターゲット位置
+    Hagine::Vector3 targetPos_{}; // ターゲット位置
     const float kMaxTime_ = kMaxTime; // 最大時間
     float timer_ = 0.0f; // 汎用タイマー
 
-    std::unique_ptr<ParticleEmitter> chargeBullet_ = nullptr;   // チャージ弾パーティクル
-    std::unique_ptr<ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
-    std::unique_ptr<ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
-    std::unique_ptr<GamePad> gamePad_ = nullptr;              // ゲームパッド
+    std::unique_ptr<Hagine::ParticleEmitter> chargeBullet_ = nullptr;   // チャージ弾パーティクル
+    std::unique_ptr<Hagine::ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
+    std::unique_ptr<Hagine::ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
+    std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr;              // ゲームパッド
 
-    std::array<SpriteData *, kMaxSprite> sprites_; // スプライト配列
+    std::array<Hagine::SpriteData *, kMaxSprite> sprites_; // スプライト配列
 };

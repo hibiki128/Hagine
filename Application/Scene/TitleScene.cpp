@@ -3,6 +3,7 @@
 #include "myMath.h"
 #include <Frame.h>
 
+using namespace Hagine;
 void TitleScene::Initialize() {
     /// ===================================================
     /// 初期化

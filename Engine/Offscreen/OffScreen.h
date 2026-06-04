@@ -15,6 +15,7 @@
 ///   if (auto* p = offScreen_.GetEffectParams<VignetteParams>(slotIndex)) {
 ///       p->GetData().strength = 2.0f;
 ///   }
+namespace Hagine {
 class OffScreen {
   public:
     void Initialize();
@@ -91,3 +92,4 @@ class OffScreen {
     std::string saveMessage_;
     int saveMessageTimer_ = 0;
 };
+} // namespace Hagine

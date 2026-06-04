@@ -25,7 +25,7 @@ class ResultStaging {
     /// <summary>
     /// 描画処理
     /// </summary>
-    void Draw(const ViewProjection &viewProjection);
+    void Draw(const Hagine::ViewProjection &viewProjection);
 
     /// <summary>
     /// ImGui描画
@@ -47,7 +47,7 @@ class ResultStaging {
     /// エリア内のランダムな座標を取得
     /// </summary>
     /// <returns>Vector3: ランダム座標</returns>
-    Vector3 GetRandomPositionInArea();
+    Hagine::Vector3 GetRandomPositionInArea();
 
     /// <summary>
     /// 使用可能な花火のインデックスを検索
@@ -79,11 +79,11 @@ class ResultStaging {
     static constexpr float kLineColorB = 0.0f;             // ライン色(B)
     static constexpr float kLineColorA = 1.0f;             // ライン色(A)
 
-    BaseObject *RightHand_ = nullptr; // 右手
-    BaseObject *LeftHand_ = nullptr;  // 左手
+    Hagine::BaseObject *RightHand_ = nullptr; // 右手
+    Hagine::BaseObject *LeftHand_ = nullptr;  // 左手
 
-    std::vector<std::unique_ptr<ParticleCSEmitter>> fireWorks_explosions_; // 花火の爆発パーティクル
-    std::vector<std::unique_ptr<ParticleCSEmitter>> fireWorks_trails_;     // 花火の軌跡パーティクル
+    std::vector<std::unique_ptr<Hagine::ParticleCSEmitter>> fireWorks_explosions_; // 花火の爆発パーティクル
+    std::vector<std::unique_ptr<Hagine::ParticleCSEmitter>> fireWorks_trails_;     // 花火の軌跡パーティクル
 
     bool secondMove_ = false;      // 2つ目の動きフラグ
     bool motionStarted_ = false;   // モーション開始フラグ
@@ -100,15 +100,15 @@ class ResultStaging {
         };
         Phase phase = Phase::Ready;     // 現在のフェーズ
         float timer = 0.0f;             // タイマー
-        Vector3 startPosition;          // 開始位置
-        Vector3 explodePosition;        // 爆発位置
+        Hagine::Vector3 startPosition;          // 開始位置
+        Hagine::Vector3 explodePosition;        // 爆発位置
     };
 
     std::vector<FireWorkState> fireWorkStates_; // 花火の状態リスト
 
-    Vector3 fireWorkAreaCenter_ = {-135.0f, -25.0f, -200.0f};            // 花火発生エリアの中心
-    Vector3 fireWorkAreaSize_ = {300.0f, 20.0f, 100.0f};      // 花火発生エリアのサイズ
-    Quaternion fireWorkAreaRotation_ = Quaternion::IdentityQuaternion(); // 花火発生エリアの回転
+    Hagine::Vector3 fireWorkAreaCenter_ = {-135.0f, -25.0f, -200.0f};            // 花火発生エリアの中心
+    Hagine::Vector3 fireWorkAreaSize_ = {300.0f, 20.0f, 100.0f};      // 花火発生エリアのサイズ
+    Hagine::Quaternion fireWorkAreaRotation_ = Hagine::Quaternion::IdentityQuaternion(); // 花火発生エリアの回転
 
     float nextFireWorkTimer_ = 0.0f;             // 次の花火までのタイマー
     float minFireWorkInterval_ = kMinFireWorkInterval; // 最小発射間隔

@@ -14,6 +14,7 @@
 #include <Model/Model.h>
 #include <Transform/ObjColor.h>
 
+namespace Hagine {
 class ModelCommon;
 class Object3d {
   private: // メンバ変数
@@ -34,24 +35,24 @@ class Object3d {
     DirectXCommon *dxCommon_ = nullptr;
 
     // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource_;
     // バッファリソース内のデータを指すポインタ
-    TransformationMatrix *transformationMatrixData = nullptr;
+    TransformationMatrix *transformationMatrixData_ = nullptr;
 
-    Transform transform;
+    Transform transform_;
 
-    Model *model = nullptr;
+    Model *model_ = nullptr;
     std::shared_ptr<ModelAnimation> currentModelAnimation_ = nullptr;
     std::map<std::string, std::shared_ptr<ModelAnimation>> modelAnimations_;
     std::vector<std::unique_ptr<Material>> materials_;
     std::vector<ObjColor> color_;
-    ModelCommon *modelCommon = nullptr;
-    LightGroup *lightGroup = nullptr;
+    ModelCommon *modelCommon_ = nullptr;
+    LightGroup *lightGroup_ = nullptr;
 
     // 移動させる用各SRT
-    Vector3 position = {0.0f, 0.0f, 0.0f};
-    Vector3 rotation = {0.0f, 0.0f, 0.0f};
-    Vector3 size = {1.0f, 1.0f, 1.0f};
+    Vector3 position_ = {0.0f, 0.0f, 0.0f};
+    Vector3 rotation_ = {0.0f, 0.0f, 0.0f};
+    Vector3 size_ = {1.0f, 1.0f, 1.0f};
     bool isPrimitive_ = false;
     bool isAnimationSwitchPending_ = false;
     std::string nextAnimationFileName_;
@@ -129,9 +130,9 @@ class Object3d {
     /// getter
     /// </summary>
     /// <returns></returns>
-    const Vector3 &GetPosition() const { return position; }
-    const Vector3 &GetRotation() const { return rotation; }
-    const Vector3 &GetSize() const { return size; }
+    const Vector3 &GetPosition() const { return position_; }
+    const Vector3 &GetRotation() const { return rotation_; }
+    const Vector3 &GetSize() const { return size_; }
     size_t GetMaterialCount() const { return materials_.size(); }
     std::string GetModelFilePath() const { return modelFilePath_; }
     std::string GetTextureFilePath(uint32_t materialIndex) const {
@@ -148,7 +149,7 @@ class Object3d {
         return currentModelAnimation_.get();
     }
 
-    const bool GetHaveAnimation() const { return model->GetModelData().hasAnimations; }
+    const bool GetHaveAnimation() const { return model_->GetModelData().hasAnimations; }
     bool IsFinish() { return currentModelAnimation_->IsFinish(); }
 
     Material *GetMaterial(uint32_t index) {
@@ -160,10 +161,10 @@ class Object3d {
     /// setter
     /// </summary>
     /// <param name="position"></param>
-    void SetModel(Model *model) { this->model = model; }
-    void SetPosition(const Vector3 &position) { this->position = position; }
-    void SetRotation(const Vector3 &rotation) { this->rotation = rotation; }
-    void SetSize(const Vector3 &size) { this->size = size; }
+    void SetModel(Model *model_) { this->model_ = model_; }
+    void SetPosition(const Vector3 &position_) { this->position_ = position_; }
+    void SetRotation(const Vector3 &rotation_) { this->rotation_ = rotation_; }
+    void SetSize(const Vector3 &size_) { this->size_ = size_; }
     void SetModel(const std::string &filePath);
     void SetBlendMode(BlendMode blendMode) { blendMode_ = blendMode; }
     void SetColor(Vector4 color, int index = 0) { color_[index].SetColor(color); }
@@ -214,3 +215,4 @@ class Object3d {
         return Vector3(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);
     }
 };
+} // namespace Hagine

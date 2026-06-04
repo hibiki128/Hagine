@@ -11,6 +11,7 @@
 //  ステップ設定テーブル
 //  TutorialStep の順序と 1:1 対応させること
 // ============================================================
+using namespace Hagine;
 const TutorialStepConfig TutorialSystem::kConfigs[static_cast<int>(TutorialStep::StepCount)] = {
     //  instructionText                                                         subText                                             reqTime  reqCount  needsEnemy
     {"[WASD / 左スティック] で移動しよう", nullptr, 3.0f, 0, false},                                      // Move

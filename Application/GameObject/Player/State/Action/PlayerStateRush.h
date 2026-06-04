@@ -43,7 +43,7 @@ class PlayerStateRush : public PlayerBaseState {
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(Player &player, const ViewProjection &viewProjection) override;
+    void DrawParticle(Player &player, const Hagine::ViewProjection &viewProjection) override;
 
   private:
     /// ===================================================
@@ -56,7 +56,7 @@ class PlayerStateRush : public PlayerBaseState {
     /// <param name="forward">前方向ベクトル</param>
     /// <param name="up">上方向ベクトル</param>
     /// <returns>Quaternion: 計算されたクォータニオン</returns>
-    Quaternion LookRotation(const Vector3 &forward, const Vector3 &up);
+    Hagine::Quaternion LookRotation(const Hagine::Vector3 &forward, const Hagine::Vector3 &up);
 
     /// <summary>
     /// 弧形の移動経路を計算
@@ -64,14 +64,14 @@ class PlayerStateRush : public PlayerBaseState {
     /// <param name="startPos">開始位置</param>
     /// <param name="targetPos">目標位置</param>
     /// <param name="player">プレイヤー参照</param>
-    void CalculateArcPath(const Vector3 &startPos, const Vector3 &targetPos, Player &player);
+    void CalculateArcPath(const Hagine::Vector3 &startPos, const Hagine::Vector3 &targetPos, Player &player);
 
     /// <summary>
     /// 進捗度合いから弧上の位置を取得
     /// </summary>
     /// <param name="progress">進捗度合い（0.0～1.0）</param>
     /// <returns>Vector3: 弧上の位置座標</returns>
-    Vector3 GetArcPosition(float progress);
+    Hagine::Vector3 GetArcPosition(float progress);
 
     /// <summary>
     /// 終了入力をチェック
@@ -104,7 +104,7 @@ class PlayerStateRush : public PlayerBaseState {
     /// <param name="progress">進捗度合い</param>
     /// <param name="player">プレイヤー参照</param>
     /// <returns>Vector3: 計算された移動方向</returns>
-    Vector3 CalculateMovementDirection(float progress, Player &player);
+    Hagine::Vector3 CalculateMovementDirection(float progress, Player &player);
 
     /// <summary>
     /// 回転を更新
@@ -140,10 +140,10 @@ class PlayerStateRush : public PlayerBaseState {
     static constexpr int kMatrixCol1 = 1;
     static constexpr int kMatrixCol2 = 2;
 
-    Vector3 targetPosition_;  // 目標位置
-    Vector3 rushDirection_;   // 突撃方向
-    Vector3 startPosition_;   // 開始位置
-    Vector3 arcControlPoint_; // 弧制御点
+    Hagine::Vector3 targetPosition_;  // 目標位置
+    Hagine::Vector3 rushDirection_;   // 突撃方向
+    Hagine::Vector3 startPosition_;   // 開始位置
+    Hagine::Vector3 arcControlPoint_; // 弧制御点
 
     float distance_ = 3.0f;           // 移動距離
     float rushSpeed_ = 200.0f;        // 突撃速度
@@ -156,5 +156,5 @@ class PlayerStateRush : public PlayerBaseState {
     bool isRushing_ = false; // 突撃中フラグ
 
     std::unique_ptr<Shake> shake_;
-    std::unique_ptr<ParticleEmitter> rushEmitter_; // 突撃パーティクル
+    std::unique_ptr<Hagine::ParticleEmitter> rushEmitter_; // 突撃パーティクル
 };

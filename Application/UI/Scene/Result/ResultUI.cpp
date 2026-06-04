@@ -3,6 +3,7 @@
 #include <GamePad.h>
 #include <Input.h>
 
+using namespace Hagine;
 void ResultUI::Initialize() {
     SpriteManager::GetInstance()->SetSaveFolder("Result");
     SpriteManager::GetInstance()->LoadAllSprites();

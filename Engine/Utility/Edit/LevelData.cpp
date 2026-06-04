@@ -2,6 +2,7 @@
 #include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include <iostream>
 
+namespace Hagine {
 void LevelData::LoadFromJson(const std::string &fileName) {
     // 既存データをクリア
     objectsData_.clear();
@@ -249,3 +250,4 @@ void LevelData::SetupParentChild(BaseObject *parent, const std::vector<ObjectDat
 float LevelData::DegreesToRadians(float degrees) {
     return degrees * (3.14159265359f / 180.0f);
 }
+} // namespace Hagine

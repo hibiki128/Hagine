@@ -7,6 +7,7 @@
 #ifdef _DEBUG
 
 
+namespace Hagine {
 namespace DebugTheme {
 constexpr ImVec4 kAccentBlue = {0.20f, 0.55f, 1.00f, 1.0f};
 constexpr ImVec4 kAccentGreen = {0.20f, 0.85f, 0.50f, 1.0f};
@@ -137,4 +138,5 @@ static bool LabeledSlider(const char *label, const char *id,
     ImGui::PopStyleColor(2);
     return changed;
 }
+} // namespace Hagine
 #endif // _DEBUG

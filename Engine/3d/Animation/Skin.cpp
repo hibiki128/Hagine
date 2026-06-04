@@ -5,6 +5,7 @@
 #include <cassert>
 #include <myMath.h>
 
+namespace Hagine {
 void Skin::Initialize(const Skeleton &skeleton, const ModelData &modelData) {
     dxCommon_ = DirectXCommon::GetInstance();
     srvManager_ = SrvManager::GetInstance();
@@ -28,11 +29,11 @@ void Skin::UpdateInputVertices(const ModelData &modelData) {
     // モデルデータから各メッシュの頂点情報を取得し、GPU上のバッファへコピー
     for (const auto &mesh : modelData.meshes) {
         for (size_t i = 0; i < mesh.vertices.size(); ++i) {
-            if (vertexOffset + i < totalVertexCount) {
-                skinCluster_.mappedVertex[vertexOffset + i] = mesh.vertices[i];
+            if (vertexOffset_ + i < totalVertexCount_) {
+                skinCluster_.mappedVertex[vertexOffset_ + i] = mesh.vertices[i];
             }
         }
-        vertexOffset += mesh.vertices.size();
+        vertexOffset_ += mesh.vertices.size();
     }
 }
 
@@ -46,7 +47,7 @@ void Skin::ExecuteSkinning(ID3D12GraphicsCommandList *commandList) {
                                                   skinCluster_.skinningInformationResource->GetGPUVirtualAddress());
 
     // 頂点数に応じてスレッドグループ数を計算し、スキニング計算シェーダーを実行
-    uint32_t numGroups = (static_cast<uint32_t>(totalVertexCount) + 1023) / 1024;
+    uint32_t numGroups = (static_cast<uint32_t>(totalVertexCount_) + 1023) / 1024;
     commandList->Dispatch(numGroups, 1, 1);
 }
 
@@ -55,7 +56,7 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
 
     // 全頂点数を集計し、必要なバッファサイズを確定
     for (const auto &mesh : modelData.meshes) {
-        totalVertexCount += mesh.vertices.size();
+        totalVertexCount_ += mesh.vertices.size();
     }
 
     // 各種バッファ（パレット、ウェイト、頂点データ）のリソース生成
@@ -71,11 +72,11 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
 
     // メッシュごとの頂点オフセットを計算
     std::vector<size_t> meshVertexOffsets;
-    size_t vertexOffset = 0;
+    size_t vertexOffset_ = 0;
     meshVertexOffsets.reserve(modelData.meshes.size());
     for (const auto &mesh : modelData.meshes) {
-        meshVertexOffsets.push_back(vertexOffset);
-        vertexOffset += mesh.vertices.size();
+        meshVertexOffsets.push_back(vertexOffset_);
+        vertexOffset_ += mesh.vertices.size();
     }
 
     // モデルデータ内のウェイト情報を解析し、頂点ごとの影響ボーンとウェイト値を設定
@@ -101,7 +102,7 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
             if (meshIndex >= meshVertexOffsets.size())
                 continue;
             size_t globalVertexIndex = meshVertexOffsets[meshIndex] + localVertexIndex;
-            if (globalVertexIndex >= totalVertexCount)
+            if (globalVertexIndex >= totalVertexCount_)
                 continue;
             
             // 頂点に影響を与えるボーンのインデックスと重みを書き込む
@@ -141,42 +142,42 @@ void Skin::CreatePaletteResource(SkinCluster &skinCluster, const Skeleton &skele
 
 void Skin::CreateInfluenceResource(SkinCluster &skinCluster, const Skeleton &skeleton) {
     // 頂点ごとのボーン影響データ用のバッファ生成とSRV登録
-    skinCluster.influenceResource = dxCommon_->CreateBufferResource(sizeof(VertexInfluence) * totalVertexCount);
+    skinCluster.influenceResource = dxCommon_->CreateBufferResource(sizeof(VertexInfluence) * totalVertexCount_);
     VertexInfluence *mappedInfluence = nullptr;
     skinCluster.influenceResource->Map(0, nullptr, reinterpret_cast<void **>(&mappedInfluence));
-    std::memset(mappedInfluence, 0, sizeof(VertexInfluence) * totalVertexCount);
-    skinCluster.mappedInfluence = {mappedInfluence, totalVertexCount};
+    std::memset(mappedInfluence, 0, sizeof(VertexInfluence) * totalVertexCount_);
+    skinCluster.mappedInfluence = {mappedInfluence, totalVertexCount_};
     skinClusterInfluenceSrvIndex_ = srvManager_->Allocate() + 1;
     skinCluster.influenceSrvHandle.first = srvManager_->GetCPUDescriptorHandle(skinClusterInfluenceSrvIndex_);
     skinCluster.influenceSrvHandle.second = srvManager_->GetGPUDescriptorHandle(skinClusterInfluenceSrvIndex_);
 
-    srvManager_->CreateSRVforStructuredBuffer(skinClusterInfluenceSrvIndex_, skinCluster.influenceResource.Get(), UINT(totalVertexCount), sizeof(VertexInfluence));
+    srvManager_->CreateSRVforStructuredBuffer(skinClusterInfluenceSrvIndex_, skinCluster.influenceResource.Get(), UINT(totalVertexCount_), sizeof(VertexInfluence));
 }
 
 void Skin::CreateInputVertexResource(SkinCluster &skinCluster, const Skeleton &skeleton) {
     // スキニング前の入力頂点バッファ生成とSRV登録
-    skinCluster.inputVertexResource = dxCommon_->CreateBufferResource(sizeof(VertexData) * totalVertexCount);
+    skinCluster.inputVertexResource = dxCommon_->CreateBufferResource(sizeof(VertexData) * totalVertexCount_);
     VertexData *mappedVertex = nullptr;
     skinCluster.inputVertexResource->Map(0, nullptr, reinterpret_cast<void **>(&mappedVertex));
-    skinCluster.mappedVertex = {mappedVertex, totalVertexCount};
+    skinCluster.mappedVertex = {mappedVertex, totalVertexCount_};
     skinClusterInputVertexSrvIndex_ = srvManager_->Allocate() + 1;
     skinCluster.inputVertexSrvHandle.first = srvManager_->GetCPUDescriptorHandle(skinClusterInputVertexSrvIndex_);
     skinCluster.inputVertexSrvHandle.second = srvManager_->GetGPUDescriptorHandle(skinClusterInputVertexSrvIndex_);
 
-    srvManager_->CreateSRVforStructuredBuffer(skinClusterInputVertexSrvIndex_, skinCluster.inputVertexResource.Get(), UINT(totalVertexCount), sizeof(VertexData));
+    srvManager_->CreateSRVforStructuredBuffer(skinClusterInputVertexSrvIndex_, skinCluster.inputVertexResource.Get(), UINT(totalVertexCount_), sizeof(VertexData));
 }
 
 void Skin::CreateOutputVertexResource(SkinCluster &skinCluster, const Skeleton &skeleton) {
     // スキニング後の出力頂点バッファ（UAV）生成とVBV設定
-    skinCluster.outputVertexResource = dxCommon_->CreateBufferResource(sizeof(VertexData) * totalVertexCount, true);
+    skinCluster.outputVertexResource = dxCommon_->CreateBufferResource(sizeof(VertexData) * totalVertexCount_, true);
     skinClusterOutputVertexSrvIndex_ = srvManager_->Allocate() + 1;
     skinCluster.outputVertexSrvHandle.first = srvManager_->GetCPUDescriptorHandle(skinClusterOutputVertexSrvIndex_);
     skinCluster.outputVertexSrvHandle.second = srvManager_->GetGPUDescriptorHandle(skinClusterOutputVertexSrvIndex_);
 
-    srvManager_->CreateUAVStructuredBuffer(skinClusterOutputVertexSrvIndex_, skinCluster.outputVertexResource.Get(), static_cast<uint32_t>(totalVertexCount), sizeof(VertexData));
+    srvManager_->CreateUAVStructuredBuffer(skinClusterOutputVertexSrvIndex_, skinCluster.outputVertexResource.Get(), static_cast<uint32_t>(totalVertexCount_), sizeof(VertexData));
 
     skinCluster.outputVertexBufferView.BufferLocation = skinCluster.outputVertexResource->GetGPUVirtualAddress();
-    skinCluster.outputVertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * totalVertexCount);
+    skinCluster.outputVertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * totalVertexCount_);
     skinCluster.outputVertexBufferView.StrideInBytes = sizeof(VertexData);
 }
 
@@ -185,6 +186,7 @@ void Skin::CreateSkinningInformationResource(SkinCluster &skinCluster, const Ske
     skinCluster.skinningInformationResource = dxCommon_->CreateBufferResource(sizeof(SkinningInformationForGPU));
     skinCluster.SkinningInfomationData = nullptr;
     skinCluster.skinningInformationResource->Map(0, nullptr, reinterpret_cast<void **>(&skinCluster.SkinningInfomationData));
-    skinCluster.SkinningInfomationData->numVertices = static_cast<uint32_t>(totalVertexCount);
+    skinCluster.SkinningInfomationData->numVertices = static_cast<uint32_t>(totalVertexCount_);
 }
 
+} // namespace Hagine

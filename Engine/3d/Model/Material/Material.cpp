@@ -4,6 +4,7 @@
 #include <Graphics/Srv/SrvManager.h>
 #include <Graphics/Texture/TextureManager.h>
 
+namespace Hagine {
 void Material::Initialize() {
     dxCommon_ = DirectXCommon::GetInstance();
     CreateMaterial();
@@ -98,3 +99,4 @@ void Material::UpdateGPUData() {
         materialDataGPU_->environmentCoefficient = materialData_.environmentCoefficient;
     }
 }
+} // namespace Hagine

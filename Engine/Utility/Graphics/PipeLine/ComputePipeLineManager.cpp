@@ -1,6 +1,7 @@
 #include "ComputePipeLineManager.h"
 #include <Debug/Log/Logger.h>
 
+namespace Hagine {
 void ComputePipeLineManager::Finalize() {
     pipelines_.clear();
     rootSignatures_.clear();
@@ -548,8 +549,15 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdate
     uavRange5[0].BaseShaderRegister = 5; // register(u5)
     uavRange5[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    // スロット数を 9 → 11 に拡張
-    D3D12_ROOT_PARAMETER rootParameters[11] = {};
+    // ★ Candidate A: u6 : gDrawAttribs (コンパクト描画属性バッファ)
+    D3D12_DESCRIPTOR_RANGE uavRange6[1] = {};
+    uavRange6[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange6[0].NumDescriptors = 1;
+    uavRange6[0].BaseShaderRegister = 6; // register(u6)
+    uavRange6[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // スロット数を 11 → 12 に拡張（u6 を追加）
+    D3D12_ROOT_PARAMETER rootParameters[12] = {};
 
     // [0] u0: gParticles
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -616,6 +624,12 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdate
     rootParameters[10].DescriptorTable.pDescriptorRanges = uavRange5;
     rootParameters[10].DescriptorTable.NumDescriptorRanges = _countof(uavRange5);
     rootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    // [11] u6: gDrawAttribs ★Candidate A
+    rootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[11].DescriptorTable.pDescriptorRanges = uavRange6;
+    rootParameters[11].DescriptorTable.NumDescriptorRanges = _countof(uavRange6);
+    rootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
     descriptionRootSignature.NumParameters = _countof(rootParameters);
@@ -983,7 +997,14 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitte
     uavRange5[0].BaseShaderRegister = 5;
     uavRange5[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[14] = {};
+    // ★ Candidate A: u6 : gDrawAttribs（コンパクト描画属性バッファ）
+    D3D12_DESCRIPTOR_RANGE uavRange6[1] = {};
+    uavRange6[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange6[0].NumDescriptors = 1;
+    uavRange6[0].BaseShaderRegister = 6;
+    uavRange6[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[15] = {};
 
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[0].DescriptorTable.pDescriptorRanges = uavRange0;
@@ -1042,6 +1063,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitte
     rootParameters[13].DescriptorTable.pDescriptorRanges = uavRange5;
     rootParameters[13].DescriptorTable.NumDescriptorRanges = _countof(uavRange5);
     rootParameters[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    // ★ [14] u6（gDrawAttribs・Candidate A）
+    rootParameters[14].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[14].DescriptorTable.pDescriptorRanges = uavRange6;
+    rootParameters[14].DescriptorTable.NumDescriptorRanges = _countof(uavRange6);
+    rootParameters[14].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
     descriptionRootSignature.NumParameters = _countof(rootParameters);
@@ -1171,7 +1197,14 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdate
     uavRange8[0].BaseShaderRegister = 8;
     uavRange8[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[14] = {};
+    // ★ Candidate A: u9 : gDrawAttribs（コンパクト描画属性バッファ）
+    D3D12_DESCRIPTOR_RANGE uavRange9[1] = {};
+    uavRange9[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange9[0].NumDescriptors = 1;
+    uavRange9[0].BaseShaderRegister = 9;
+    uavRange9[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[15] = {};
 
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[0].DescriptorTable.pDescriptorRanges = uavRange0;
@@ -1231,6 +1264,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdate
     rootParameters[13].DescriptorTable.pDescriptorRanges = uavRange8;
     rootParameters[13].DescriptorTable.NumDescriptorRanges = _countof(uavRange8);
     rootParameters[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    // ★ [14] u9（gDrawAttribs・Candidate A）
+    rootParameters[14].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[14].DescriptorTable.pDescriptorRanges = uavRange9;
+    rootParameters[14].DescriptorTable.NumDescriptorRanges = _countof(uavRange9);
+    rootParameters[14].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
     descriptionRootSignature.NumParameters = _countof(rootParameters);
@@ -1269,3 +1307,4 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateUpdate
     assert(SUCCEEDED(hr));
     return graphicsPipelineState;
 }
+} // namespace Hagine

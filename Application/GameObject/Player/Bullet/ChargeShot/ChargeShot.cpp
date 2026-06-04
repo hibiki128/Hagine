@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
+using namespace Hagine;
 void ChargeShot::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);
@@ -89,7 +90,7 @@ void ChargeShot::Update() {
                 isFired_ = false;
                 scale_ = kInitialScale;
                 isMaxScale_ = false;
-                isCharge = true;
+                isCharge_ = true;
             }
         } else {
             // ボタンが離されたらタイマーリセット
@@ -105,7 +106,7 @@ void ChargeShot::Update() {
             if (!isMaxScale_) {
                 chargeEmitter_->Update();
             }
-            isCharge = true;
+            isCharge_ = true;
         }
         if (chargeRelease && !isFired_) {
             // エネルギー消費量を計算(チャージ率に応じて5~20)
@@ -116,7 +117,7 @@ void ChargeShot::Update() {
             if (!player_->ConsumeEnergy(energyCost)) {
                 // エネルギー不足ならリセット
                 Reset();
-                isCharge = false;
+                isCharge_ = false;
                 chargeStartTimer_ = 0.0f;
                 return;
             }
@@ -141,7 +142,7 @@ void ChargeShot::Update() {
 
             Fire(pos, dir);
             isFired_ = true;
-            isCharge = false;
+            isCharge_ = false;
             chargeStartTimer_ = 0.0f;
         }
     }

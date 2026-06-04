@@ -3,6 +3,7 @@
 #include <Debug/Log/Logger.h>
 #include <d3dx12.h>
 
+namespace Hagine {
 void PipeLineManager::Finalize() {
     pipelines_.clear();
     rootSignatures_.clear();
@@ -544,8 +545,15 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGPUParticleRo
     descriptorRangeAliveCount[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     descriptorRangeAliveCount[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
+    // ★ Candidate A: t1 コンパクト描画属性バッファ (VertexShaderで使用)
+    D3D12_DESCRIPTOR_RANGE descriptorRangeDrawAttribs[1] = {};
+    descriptorRangeDrawAttribs[0].BaseShaderRegister = 1; // register(t1) ※VS。PS の t0 テクスチャとは visibility で分離
+    descriptorRangeDrawAttribs[0].NumDescriptors = 1;
+    descriptorRangeDrawAttribs[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRangeDrawAttribs[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     // RootParameter作成。複数設定できるので配列。
-    D3D12_ROOT_PARAMETER rootParameters[6] = {}; // b0,t0,t1(tex),b1,t2,t3
+    D3D12_ROOT_PARAMETER rootParameters[7] = {}; // b0,t0,t1(tex),b1,t2,t3,t1(drawAttribs)
 
     // b0: PerView用のConstantBufferView (VertexShaderで使用)
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -580,6 +588,12 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGPUParticleRo
     rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[5].DescriptorTable.pDescriptorRanges = descriptorRangeAliveCount;
     rootParameters[5].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeAliveCount);
+
+    // ★ Candidate A: t1 コンパクト描画属性バッファ (VertexShaderで使用)
+    rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[6].DescriptorTable.pDescriptorRanges = descriptorRangeDrawAttribs;
+    rootParameters[6].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeDrawAttribs);
 
     descriptionRootSignature.pParameters = rootParameters;
     descriptionRootSignature.NumParameters = _countof(rootParameters);
@@ -2144,3 +2158,4 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShockwaveGrap
     return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Shockwave.PS.hlsl", rootSignature);
 }
 
+} // namespace Hagine

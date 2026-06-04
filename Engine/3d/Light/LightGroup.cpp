@@ -5,11 +5,12 @@
 #include <filesystem>
 #include <fstream>
 
+namespace Hagine {
 void LightGroup::Finalize() {
-    directionalLightResource.Reset();
-    pointLightsResource.Reset();
-    spotLightsResource.Reset();
-    cameraForGPUResource.Reset();
+    directionalLightResource_.Reset();
+    pointLightsResource_.Reset();
+    spotLightsResource_.Reset();
+    cameraForGPUResource_.Reset();
     pointLights_.clear();
     spotLights_.clear();
     DLightData_.reset();
@@ -24,12 +25,12 @@ void LightGroup::Initialize() {
 }
 
 void LightGroup::Update(const ViewProjection &viewProjection) {
-    cameraForGPUData->worldPosition = viewProjection.translation_;
+    cameraForGPUData_->worldPosition = viewProjection.translation_;
 
-    if (isDirectionalLight) {
-        directionalLightData->active = true;
+    if (isDirectionalLight_) {
+        directionalLightData_->active = true;
     } else {
-        directionalLightData->active = false;
+        directionalLightData_->active = false;
     }
 
     // ポイントライトデータ更新
@@ -43,13 +44,13 @@ void LightGroup::Update(const ViewProjection &viewProjection) {
 
 void LightGroup::Draw() {
     // DirectionalLight用のCBufferの場所を設定
-    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(3, directionalLightResource_->GetGPUVirtualAddress());
 
-    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(4, cameraForGPUResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(4, cameraForGPUResource_->GetGPUVirtualAddress());
 
-    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(5, pointLightsResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(5, pointLightsResource_->GetGPUVirtualAddress());
 
-    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(6, spotLightsResource->GetGPUVirtualAddress());
+    dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(6, spotLightsResource_->GetGPUVirtualAddress());
 }
 
 void LightGroup::AddPointLight() {
@@ -107,79 +108,79 @@ void LightGroup::RemoveSpotLight(int index) {
 }
 
 void LightGroup::UpdatePointLightBuffer() {
-    pointLightsData->count = static_cast<int32_t>(pointLights_.size());
+    pointLightsData_->count = static_cast<int32_t>(pointLights_.size());
 
     for (size_t i = 0; i < pointLights_.size() && i < MAX_POINT_LIGHTS; ++i) {
-        pointLightsData->lights[i] = pointLights_[i];
+        pointLightsData_->lights[i] = pointLights_[i];
     }
 }
 
 void LightGroup::UpdateSpotLightBuffer() {
-    spotLightsData->count = static_cast<int32_t>(spotLights_.size());
+    spotLightsData_->count = static_cast<int32_t>(spotLights_.size());
 
     for (size_t i = 0; i < spotLights_.size() && i < MAX_SPOT_LIGHTS; ++i) {
-        spotLightsData->lights[i] = spotLights_[i];
+        spotLightsData_->lights[i] = spotLights_[i];
     }
 }
 
 void LightGroup::CreatePointLights() {
     // サイズを明示的に計算
     size_t bufferSize = sizeof(PointLights);
-    pointLightsResource = dxCommon_->CreateBufferResource(bufferSize);
-    pointLightsResource->Map(0, nullptr, reinterpret_cast<void **>(&pointLightsData));
+    pointLightsResource_ = dxCommon_->CreateBufferResource(bufferSize);
+    pointLightsResource_->Map(0, nullptr, reinterpret_cast<void **>(&pointLightsData_));
 
     for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
-        pointLightsData->lights[i].color = {1.0f, 1.0f, 1.0f, 1.0f};
-        pointLightsData->lights[i].position = {-1.0f, 4.0f, -3.0f};
-        pointLightsData->lights[i].intensity = 1.0f;
-        pointLightsData->lights[i].decay = 1.0f;
-        pointLightsData->lights[i].radius = 2.0f;
-        pointLightsData->lights[i].active = false;
-        pointLightsData->lights[i].HalfLambert = false;
-        pointLightsData->lights[i].BlinnPhong = true;
+        pointLightsData_->lights[i].color = {1.0f, 1.0f, 1.0f, 1.0f};
+        pointLightsData_->lights[i].position = {-1.0f, 4.0f, -3.0f};
+        pointLightsData_->lights[i].intensity = 1.0f;
+        pointLightsData_->lights[i].decay = 1.0f;
+        pointLightsData_->lights[i].radius = 2.0f;
+        pointLightsData_->lights[i].active = false;
+        pointLightsData_->lights[i].HalfLambert = false;
+        pointLightsData_->lights[i].BlinnPhong = true;
     }
 
-    pointLightsData->count = 0;
+    pointLightsData_->count = 0;
 }
 
 void LightGroup::CreateSpotLights() {
-    spotLightsResource = dxCommon_->CreateBufferResource(sizeof(SpotLights));
+    spotLightsResource_ = dxCommon_->CreateBufferResource(sizeof(SpotLights));
     // 書き込むためのアドレスを取得
-    spotLightsResource->Map(0, nullptr, reinterpret_cast<void **>(&spotLightsData));
+    spotLightsResource_->Map(0, nullptr, reinterpret_cast<void **>(&spotLightsData_));
 
     for (int i = 0; i < MAX_SPOT_LIGHTS; i++) {
-        spotLightsData->lights[i].color = {1.0f, 1.0f, 1.0f, 1.0f};
-        spotLightsData->lights[i].position = {0.0f, -4.0f, -3.0f};
-        spotLightsData->lights[i].direction = {0.0f, -1.0f, 0.0f};
-        spotLightsData->lights[i].intensity = 1.0f;
-        spotLightsData->lights[i].distance = 10.0f;
-        spotLightsData->lights[i].decay = 1.0f;
-        spotLightsData->lights[i].cosAngle = 3.0f;
-        spotLightsData->lights[i].active = false;
-        spotLightsData->lights[i].HalfLambert = false;
-        spotLightsData->lights[i].BlinnPhong = true;
+        spotLightsData_->lights[i].color = {1.0f, 1.0f, 1.0f, 1.0f};
+        spotLightsData_->lights[i].position = {0.0f, -4.0f, -3.0f};
+        spotLightsData_->lights[i].direction = {0.0f, -1.0f, 0.0f};
+        spotLightsData_->lights[i].intensity = 1.0f;
+        spotLightsData_->lights[i].distance = 10.0f;
+        spotLightsData_->lights[i].decay = 1.0f;
+        spotLightsData_->lights[i].cosAngle = 3.0f;
+        spotLightsData_->lights[i].active = false;
+        spotLightsData_->lights[i].HalfLambert = false;
+        spotLightsData_->lights[i].BlinnPhong = true;
     }
 
-    spotLightsData->count = 0;
+    spotLightsData_->count = 0;
 }
 
 void LightGroup::CreateDirectionLight() {
-    directionalLightResource = dxCommon_->CreateBufferResource(sizeof(DirectionLight));
+    directionalLightResource_ = dxCommon_->CreateBufferResource(sizeof(DirectionLight));
     // 書き込むためのアドレスを取得
-    directionalLightResource->Map(0, nullptr, reinterpret_cast<void **>(&directionalLightData));
+    directionalLightResource_->Map(0, nullptr, reinterpret_cast<void **>(&directionalLightData_));
     // デフォルト値
-    directionalLightData->color = {1.0f, 1.0f, 1.0f, 1.0f};
-    directionalLightData->direction = {0.0f, -1.0f, 0.0f};
-    directionalLightData->intensity = 1.0f;
-    directionalLightData->active = true;
-    directionalLightData->HalfLambert = false;
-    directionalLightData->BlinnPhong = true;
+    directionalLightData_->color = {1.0f, 1.0f, 1.0f, 1.0f};
+    directionalLightData_->direction = {0.0f, -1.0f, 0.0f};
+    directionalLightData_->intensity = 1.0f;
+    directionalLightData_->active = true;
+    directionalLightData_->HalfLambert = false;
+    directionalLightData_->BlinnPhong = true;
 }
 
 void LightGroup::CreateCamera() {
-    cameraForGPUResource = dxCommon_->CreateBufferResource(sizeof(CameraForGPU));
-    cameraForGPUResource->Map(0, nullptr, reinterpret_cast<void **>(&cameraForGPUData));
-    cameraForGPUData->worldPosition = {0.0f, 0.0f, -50.0f};
+    cameraForGPUResource_ = dxCommon_->CreateBufferResource(sizeof(CameraForGPU));
+    cameraForGPUResource_->Map(0, nullptr, reinterpret_cast<void **>(&cameraForGPUData_));
+    cameraForGPUData_->worldPosition = {0.0f, 0.0f, -50.0f};
 }
 
 void LightGroup::imgui() {
@@ -216,10 +217,10 @@ void LightGroup::imgui() {
 
             // アクティブ状態
             ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
-            ImGui::Checkbox("平行光源を有効にする", &isDirectionalLight);
+            ImGui::Checkbox("平行光源を有効にする", &isDirectionalLight_);
             ImGui::PopStyleColor();
 
-            if (directionalLightData->active) {
+            if (directionalLightData_->active) {
                 ImGui::Spacing();
                 ImGui::Separator();
                 ImGui::Spacing();
@@ -237,8 +238,8 @@ void LightGroup::imgui() {
                         ImGui::SetTooltip("光の進む方向を指定します");
                     }
                     ImGui::NextColumn();
-                    ImGui::DragFloat3("##direction", &directionalLightData->direction.x, 0.1f);
-                    directionalLightData->direction = directionalLightData->direction.Normalize();
+                    ImGui::DragFloat3("##direction", &directionalLightData_->direction.x, 0.1f);
+                    directionalLightData_->direction = directionalLightData_->direction.Normalize();
                     ImGui::NextColumn();
 
                     ImGui::Text("輝度");
@@ -246,7 +247,7 @@ void LightGroup::imgui() {
                         ImGui::SetTooltip("光の明るさを調整します");
                     }
                     ImGui::NextColumn();
-                    ImGui::DragFloat("##intensity", &directionalLightData->intensity, 0.01f, 0.0f, 10.0f);
+                    ImGui::DragFloat("##intensity", &directionalLightData_->intensity, 0.01f, 0.0f, 10.0f);
                     ImGui::NextColumn();
 
                     ImGui::Text("色");
@@ -254,7 +255,7 @@ void LightGroup::imgui() {
                         ImGui::SetTooltip("光の色を設定します");
                     }
                     ImGui::NextColumn();
-                    ImGui::ColorEdit3("##color", &directionalLightData->color.x);
+                    ImGui::ColorEdit3("##color", &directionalLightData_->color.x);
 
                     ImGui::Columns(1);
                 }
@@ -268,12 +269,12 @@ void LightGroup::imgui() {
                     ImGui::Spacing();
 
                     const char *lightingTypes[] = {"HalfLambert", "BlinnPhong"};
-                    int selectedLightingType = directionalLightData->BlinnPhong ? 1 : 0;
+                    int selectedLightingType = directionalLightData_->BlinnPhong ? 1 : 0;
 
                     ImGui::SetNextItemWidth(200);
                     if (ImGui::Combo("##lightingType", &selectedLightingType, lightingTypes, IM_ARRAYSIZE(lightingTypes))) {
-                        directionalLightData->HalfLambert = (selectedLightingType == 0) ? 1 : 0;
-                        directionalLightData->BlinnPhong = (selectedLightingType == 1) ? 1 : 0;
+                        directionalLightData_->HalfLambert = (selectedLightingType == 0) ? 1 : 0;
+                        directionalLightData_->BlinnPhong = (selectedLightingType == 1) ? 1 : 0;
                     }
                 }
                 ImGui::EndChild();
@@ -548,12 +549,12 @@ void LightGroup::SaveLightData(const std::string &fileName) {
     auto dataHandler = std::make_unique<DataHandler>("LightGroup", fileName);
 
     // Directional Light
-    dataHandler->Save<bool>("directional_active", isDirectionalLight);
-    dataHandler->Save<Vector3>("directional_direction", directionalLightData->direction);
-    dataHandler->Save<float>("directional_intensity", directionalLightData->intensity);
-    dataHandler->Save<Vector4>("directional_color", directionalLightData->color);
-    dataHandler->Save<int32_t>("directional_HalfLambert", directionalLightData->HalfLambert);
-    dataHandler->Save<int32_t>("directional_BlinnPhong", directionalLightData->BlinnPhong);
+    dataHandler->Save<bool>("directional_active", isDirectionalLight_);
+    dataHandler->Save<Vector3>("directional_direction", directionalLightData_->direction);
+    dataHandler->Save<float>("directional_intensity", directionalLightData_->intensity);
+    dataHandler->Save<Vector4>("directional_color", directionalLightData_->color);
+    dataHandler->Save<int32_t>("directional_HalfLambert", directionalLightData_->HalfLambert);
+    dataHandler->Save<int32_t>("directional_BlinnPhong", directionalLightData_->BlinnPhong);
 
     // Point Lights
     dataHandler->Save<int32_t>("pointLight_count", static_cast<int32_t>(pointLights_.size()));
@@ -592,12 +593,12 @@ void LightGroup::LoadLightData(const std::string &fileName) {
     auto dataHandler = std::make_unique<DataHandler>("LightGroup", fileName);
 
     // Directional Light
-    isDirectionalLight = dataHandler->Load<bool>("directional_active", true);
-    directionalLightData->color = dataHandler->Load<Vector4>("directional_color", {1.0f, 1.0f, 1.0f, 1.0f});
-    directionalLightData->direction = dataHandler->Load<Vector3>("directional_direction", {0.0f, -1.0f, 0.0f});
-    directionalLightData->HalfLambert = dataHandler->Load<int32_t>("directional_HalfLambert", false);
-    directionalLightData->BlinnPhong = dataHandler->Load<int32_t>("directional_BlinnPhong", true);
-    directionalLightData->intensity = dataHandler->Load<float>("directional_intensity", 1.0f);
+    isDirectionalLight_ = dataHandler->Load<bool>("directional_active", true);
+    directionalLightData_->color = dataHandler->Load<Vector4>("directional_color", {1.0f, 1.0f, 1.0f, 1.0f});
+    directionalLightData_->direction = dataHandler->Load<Vector3>("directional_direction", {0.0f, -1.0f, 0.0f});
+    directionalLightData_->HalfLambert = dataHandler->Load<int32_t>("directional_HalfLambert", false);
+    directionalLightData_->BlinnPhong = dataHandler->Load<int32_t>("directional_BlinnPhong", true);
+    directionalLightData_->intensity = dataHandler->Load<float>("directional_intensity", 1.0f);
 
     // Point Lights
     pointLights_.clear();
@@ -644,14 +645,14 @@ void LightGroup::DrawLightVisualization() {
     DrawLine3D *drawLine = DrawLine3D::GetInstance();
 
     // 平行光源の可視化
-    if (isDirectionalLight && directionalLightData->active) {
-        Vector4 dirColor = {directionalLightData->color.x, directionalLightData->color.y, directionalLightData->color.z, 0.8f};
+    if (isDirectionalLight_ && directionalLightData_->active) {
+        Vector4 dirColor = {directionalLightData_->color.x, directionalLightData_->color.y, directionalLightData_->color.z, 0.8f};
 
         // 複数の平行線で方向を表示
         for (int i = -2; i <= 2; i++) {
             for (int j = -2; j <= 2; j++) {
                 Vector3 startPos = {i * 5.0f, 20.0f, j * 5.0f};
-                Vector3 endPos = startPos + directionalLightData->direction * 15.0f;
+                Vector3 endPos = startPos + directionalLightData_->direction * 15.0f;
                 drawLine->SetPoints(startPos, endPos, dirColor);
             }
         }
@@ -728,3 +729,4 @@ void LightGroup::DrawLightVisualization() {
         }
     }
 }
+} // namespace Hagine

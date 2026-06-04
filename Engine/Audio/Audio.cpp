@@ -7,18 +7,19 @@
 #include "imgui.h"
 #endif // _DEBUG
 
+namespace Hagine {
 void Audio::Initialize(const std::string &directoryPath) {
     HRESULT hr;
 
     directoryPath_ = directoryPath;
 
-    hr = XAudio2Create(&xAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
-    hr = xAudio2->CreateMasteringVoice(&masterVoice);
+    hr = XAudio2Create(&xAudio2_, 0, XAUDIO2_DEFAULT_PROCESSOR);
+    hr = xAudio2_->CreateMasteringVoice(&masterVoice_);
 }
 
 uint32_t Audio::LoadWave(const std::string &filename) {
 
-    if (loadedFiles.find(filename) != loadedFiles.end()) {
+    if (loadedFiles_.find(filename) != loadedFiles_.end()) {
         for (size_t i = 0; i < kMaxSoundData; ++i) {
             if (soundDatas_[i].name_ == filename) {
                 return static_cast<uint32_t>(i);
@@ -77,15 +78,15 @@ uint32_t Audio::LoadWave(const std::string &filename) {
     file.read(reinterpret_cast<char *>(buffer.data()), data.size);
     file.close();
 
-    SoundData &soundData = soundDatas_[soundDataIndex];
+    SoundData &soundData = soundDatas_[soundDataIndex_];
     soundData.wfex = format.fmt;
     soundData.buffer = std::move(buffer);
     soundData.name_ = filename;
 
-    loadedFiles.insert(filename);
+    loadedFiles_.insert(filename);
 
-    uint32_t currentIndex = static_cast<uint32_t>(soundDataIndex);
-    soundDataIndex = (soundDataIndex + 1) % kMaxSoundData;
+    uint32_t currentIndex = static_cast<uint32_t>(soundDataIndex_);
+    soundDataIndex_ = (soundDataIndex_ + 1) % kMaxSoundData;
 
     ImGuiNotification::Post("音声ファイルを読み込みました: " + filename, {0.2f, 0.8f, 0.8f, 1.0f});
     return currentIndex;
@@ -110,7 +111,7 @@ void Audio::PlayWave(uint32_t soundIndex, float volume, bool loop) {
     voice->volume = volume;
     voice->callback = std::make_unique<VoiceCallback>();
 
-    result = xAudio2->CreateSourceVoice(&voice->sourceVoice, &soundData.wfex, 0, XAUDIO2_DEFAULT_FREQ_RATIO, voice->callback.get());
+    result = xAudio2_->CreateSourceVoice(&voice->sourceVoice, &soundData.wfex, 0, XAUDIO2_DEFAULT_FREQ_RATIO, voice->callback.get());
     assert(SUCCEEDED(result));
 
     XAUDIO2_BUFFER buf{};
@@ -166,9 +167,9 @@ void Audio::CleanupFinishedVoices() {
 }
 
 void Audio::Finalize() {
-    if (masterVoice) {
-        masterVoice->DestroyVoice();
-        masterVoice = nullptr;
+    if (masterVoice_) {
+        masterVoice_->DestroyVoice();
+        masterVoice_ = nullptr;
     }
 
     for (auto &voice : voices_) {
@@ -177,8 +178,8 @@ void Audio::Finalize() {
         }
     }
 
-    if (xAudio2) {
-        xAudio2.Reset();
+    if (xAudio2_) {
+        xAudio2_.Reset();
     }
 
     voices_.clear();
@@ -276,8 +277,8 @@ void Audio::Debug() {
     //------------------------------------------------------------------
     ImGui::SeparatorText("マスター");
     if (ImGui::SliderFloat("マスター音量", &debugMasterVolume_, 0.0f, 1.0f)) {
-        if (masterVoice) {
-            masterVoice->SetVolume(debugMasterVolume_);
+        if (masterVoice_) {
+            masterVoice_->SetVolume(debugMasterVolume_);
         }
     }
 
@@ -383,7 +384,7 @@ void Audio::Debug() {
                 StopWave(idx);
                 Unload(idx);
                 debugLoadedMap_.erase(selectedName);
-                loadedFiles.erase(selectedName);
+                loadedFiles_.erase(selectedName);
             }
             ImGui::EndDisabled();
 
@@ -453,3 +454,4 @@ void Audio::Debug() {
     ImGui::PopStyleColor(2);
 #endif // _DEBUG
 }
+} // namespace Hagine

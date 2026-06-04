@@ -1,4 +1,5 @@
 #include "Object3dCommon.h"
+namespace Hagine {
 void Object3dCommon::Initialize() {
    psoManager_ = PipeLineManager::GetInstance();
     computePsoManager_ = ComputePipeLineManager::GetInstance();
@@ -19,3 +20,4 @@ void Object3dCommon::computeSkinningDrawCommonSetting() {
 void Object3dCommon::SetBlendMode(BlendMode blendMode) {
     psoManager_->DrawCommonSetting(PipelineType::kStandard, blendMode);
 }
+} // namespace Hagine

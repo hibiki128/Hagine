@@ -1,6 +1,7 @@
 #include "ColliderBase.h"
 #include"Collider/CollisionManager.h"
 
+namespace Hagine {
 ColliderBase::~ColliderBase() {
     CollisionManager::GetInstance()->Unregister(this);
 }
@@ -101,3 +102,4 @@ void ColliderBase::ImGuiTagSettings() {
     }
 }
 #endif // _DEBUG
+} // namespace Hagine

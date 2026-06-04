@@ -5,6 +5,7 @@
 
 /// @brief ShaderModeに対応するIPostEffectParamsを生成するファクトリ
 /// 新しいエフェクトを追加する場合はここにcaseを追加する
+namespace Hagine {
 class PostEffectParamsFactory {
   public:
     static std::unique_ptr<IPostEffectParams> Create(ShaderMode mode, DirectXCommon *dxCommon) {
@@ -37,3 +38,4 @@ class PostEffectParamsFactory {
         return params;
     }
 };
+} // namespace Hagine

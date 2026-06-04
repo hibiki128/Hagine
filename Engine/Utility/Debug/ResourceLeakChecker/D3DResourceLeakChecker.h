@@ -1,4 +1,5 @@
 #pragma once
+namespace Hagine {
 class D3DResourceLeakChecker
 {
 public:
@@ -9,3 +10,4 @@ public:
 	~D3DResourceLeakChecker();
 };
 
+} // namespace Hagine

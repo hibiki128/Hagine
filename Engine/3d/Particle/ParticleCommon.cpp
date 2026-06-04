@@ -1,5 +1,6 @@
 #include "ParticleCommon.h"
 
+namespace Hagine {
 void ParticleCommon::Finalize() {
     dxCommon_ = nullptr;
     psoManager_ = nullptr;
@@ -36,3 +37,4 @@ void ParticleCommon::ComputeUpdateEmitterDrawCommonSetting() {
 void ParticleCommon::ComputeCountDrawCommonSetting() {
     computePsoManager_->DrawCommonSetting(ComputePipelineType::kCount);
 }
+} // namespace Hagine

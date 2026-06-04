@@ -9,12 +9,13 @@
 #include <implot.h>
 #endif // DEBUG
 
+namespace Hagine {
 void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
     srvManager_ = SrvManager::GetInstance();
     particleCommon_ = ParticleCommon::GetInstance();
     texManager_ = TextureManager::GetInstance();
-    commandList = dxCommon_->GetCommandList().Get();
+    commandList_ = dxCommon_->GetCommandList().Get();
     computeCommandList_ = dxCommon_->GetComputeCommandList().Get();
     CreateSettingsResource();
     settingsData_->maxParticleCount = maxParticleCount;
@@ -26,6 +27,7 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     CreateFreeListResource();
     CreateAliveCountResource();
     CreateAliveListResources();
+    CreateDrawAttribsResource();
 
     perViewData_->enableBillboard = 1;
 
@@ -88,14 +90,14 @@ ParticleCSGroupData ParticleCSGroup::CreateParticleGroup(const std::string &grou
     modelFilePath_ = filename;
     ModelManager::GetInstance()->LoadModel(filename);
     model_ = ModelManager::GetInstance()->FindModel(filename);
-    modelData = model_->GetModelData();
+    modelData_ = model_->GetModelData();
     CreateVertexResource();
     CreateIndexResource();
     // マテリアルが複数ある場合は最初のものを使う
     particleGroupData_.materials.clear();
     if (texturePath.empty()) {
-        if (!modelData.materials.empty()) {
-            particleGroupData_.materials = ForParticleMaterials(modelData.materials);
+        if (!modelData_.materials.empty()) {
+            particleGroupData_.materials = ForParticleMaterials(modelData_.materials);
         } else {
             particleGroupData_.materials.push_back(ParticleMaterial{});
         }
@@ -124,14 +126,14 @@ ParticleCSGroupData ParticleCSGroup::CreatePrimitiveParticleGroup(const std::str
     type_ = type;
     model_ = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type, texturePath));
     texManager_->LoadTexture(texturePath);
-    modelData = model_->GetModelData();
+    modelData_ = model_->GetModelData();
     CreateVertexResource();
     CreateIndexResource();
     // マテリアルが複数ある場合は最初のものを使う
     particleGroupData_.materials.clear();
     if (texturePath.empty()) {
-        if (!modelData.materials.empty()) {
-            particleGroupData_.materials = ForParticleMaterials(modelData.materials);
+        if (!modelData_.materials.empty()) {
+            particleGroupData_.materials = ForParticleMaterials(modelData_.materials);
         } else {
             particleGroupData_.materials.push_back(ParticleMaterial{});
         }
@@ -169,13 +171,13 @@ void ParticleCSGroup::InitParticle() {
 
     // InitParticle.CSの処理
     particleCommon_->ComputeInitDrawCommonSetting();
-    commandList->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
-    commandList->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
-    commandList->SetComputeRootDescriptorTable(2, freeListSrvHandle_.second);
-    commandList->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
-    commandList->SetComputeRootConstantBufferView(4, settingsResource_->GetGPUVirtualAddress());
+    commandList_->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
+    commandList_->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
+    commandList_->SetComputeRootDescriptorTable(2, freeListSrvHandle_.second);
+    commandList_->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
+    commandList_->SetComputeRootConstantBufferView(4, settingsResource_->GetGPUVirtualAddress());
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
-    commandList->Dispatch(disPatchCount, 1, 1);
+    commandList_->Dispatch(disPatchCount, 1, 1);
 
     dxCommon_->TransitionSRVBarrier();
 }
@@ -186,7 +188,7 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
     ID3D12GraphicsCommandList *cmdList) {
     // cmdList が渡された場合はそちら（非同期 Compute Queue）を使う
-    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
     auto *computePSOMgr = ComputePipeLineManager::GetInstance();
     computePSOMgr->DrawCommonSetting(ComputePipelineType::kUpdateEmitter,
                                      BlendMode::kNormal, ShaderMode::kNone, cl);
@@ -202,13 +204,15 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     // 生存コンパクション (Phase 1)
     cl->SetComputeRootDescriptorTable(9, aliveListUavHandle_.second);
     cl->SetComputeRootDescriptorTable(10, aliveCounterUavHandle_.second);
+    // Candidate A: コンパクト描画属性バッファ (u6)
+    cl->SetComputeRootDescriptorTable(11, drawAttribsUavHandle_.second);
 
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
     cl->Dispatch(disPatchCount, 1, 1);
 }
 
 void ParticleCSGroup::ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdList) {
-    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
     ComputePipeLineManager::GetInstance()->DrawCommonSetting(
         ComputePipelineType::kResetArgs, BlendMode::kNormal, ShaderMode::kNone, cl);
     cl->SetComputeRootDescriptorTable(0, aliveCounterUavHandle_.second);
@@ -224,7 +228,7 @@ void ParticleCSGroup::ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdLi
 void ParticleCSGroup::RecordAliveCountReadback(ID3D12GraphicsCommandList *computeCmdList) {
     // Update が compute queue で書いた直後（バッファが UAV 状態）にコピーする。
     // この時点でカウンタは UnorderedAccess へ昇格済みなので状態遷移は整合する。
-    ID3D12GraphicsCommandList *cl = computeCmdList ? computeCmdList : commandList;
+    ID3D12GraphicsCommandList *cl = computeCmdList ? computeCmdList : commandList_;
 
     // indirect モード有効時は「このフレームの出力(Out)」カウンタを読み戻す（ping-pong）。
     // 既定(OFF)では従来どおり単一の aliveCounter を読み戻すため挙動不変。
@@ -273,6 +277,10 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     // 回転を使わないグループは VS の回転行列計算（sincos×3＋行列積）を省くためのフラグ。
     perViewData_->enableRotation =
         (settingsData_->enableRandomRotation != 0 || settingsData_->enableRandomAngularVelocity != 0) ? 1u : 0u;
+    // Candidate A: コンパクト描画トグルを CS(書き込み) と VS(読み出し) の両方へ伝える。
+    // 毎フレーム設定しておくことで、SetSettingData による上書きより後勝ちになり整合する。
+    settingsData_->enableCompactDraw = useCompactDraw_ ? 1u : 0u;
+    perViewData_->enableCompactDraw = useCompactDraw_ ? 1u : 0u;
     if (perViewData_->enableBillboard) {
         perViewData_->billboardMatrix = vp.matView_;
         perViewData_->billboardMatrix.m[3][0] = 0.0f;
@@ -320,7 +328,7 @@ void ParticleCSGroup::CreateIndexResource() {
     // 複数メッシュ対応: 全メッシュのインデックスを連結し、頂点オフセットを考慮
     std::vector<uint32_t> allIndices;
     uint32_t vertexOffset = 0;
-    for (const auto &mesh : modelData.meshes) {
+    for (const auto &mesh : modelData_.meshes) {
         for (auto idx : mesh.indices) {
             allIndices.push_back(idx + vertexOffset);
         }
@@ -337,7 +345,7 @@ void ParticleCSGroup::CreateIndexResource() {
 void ParticleCSGroup::CreateVertexResource() {
     // クアッド用の頂点データ
     std::vector<VertexData> allVertices;
-    for (const auto &mesh : modelData.meshes) {
+    for (const auto &mesh : modelData_.meshes) {
         allVertices.insert(allVertices.end(), mesh.vertices.begin(), mesh.vertices.end());
     }
     vertexResource_ = dxCommon_->CreateBufferResource(sizeof(VertexData) * allVertices.size());
@@ -409,9 +417,9 @@ void ParticleCSGroup::CopyDebugDataToReadback() {
         freeListIndexResource_.Get(),
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
         D3D12_RESOURCE_STATE_COPY_SOURCE);
-    commandList->ResourceBarrier(1, &barrierHeadToCopy);
+    commandList_->ResourceBarrier(1, &barrierHeadToCopy);
 
-    commandList->CopyBufferRegion(
+    commandList_->CopyBufferRegion(
         freeListIndexReadbackBuffer_.Get(), 0,
         freeListIndexResource_.Get(), 0,
         sizeof(int32_t));
@@ -420,16 +428,16 @@ void ParticleCSGroup::CopyDebugDataToReadback() {
         freeListIndexResource_.Get(),
         D3D12_RESOURCE_STATE_COPY_SOURCE,
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    commandList->ResourceBarrier(1, &barrierHeadToUAV);
+    commandList_->ResourceBarrier(1, &barrierHeadToUAV);
 
     // === Tail (freeListTrailIndex) のコピー ===
     auto barrierTailToCopy = CD3DX12_RESOURCE_BARRIER::Transition(
         freeListTrailIndexResource_.Get(),
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
         D3D12_RESOURCE_STATE_COPY_SOURCE);
-    commandList->ResourceBarrier(1, &barrierTailToCopy);
+    commandList_->ResourceBarrier(1, &barrierTailToCopy);
 
-    commandList->CopyBufferRegion(
+    commandList_->CopyBufferRegion(
         freeListTrailIndexReadbackBuffer_.Get(), 0,
         freeListTrailIndexResource_.Get(), 0,
         sizeof(int32_t));
@@ -438,7 +446,7 @@ void ParticleCSGroup::CopyDebugDataToReadback() {
         freeListTrailIndexResource_.Get(),
         D3D12_RESOURCE_STATE_COPY_SOURCE,
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    commandList->ResourceBarrier(1, &barrierTailToUAV);
+    commandList_->ResourceBarrier(1, &barrierTailToUAV);
 }
 
 void ParticleCSGroup::CreateFreeListResource() {
@@ -595,6 +603,23 @@ void ParticleCSGroup::CreateAliveListResources() {
     aliveCounterReadbackResource_->SetName(L"AliveCounter_Readback");
 }
 
+void ParticleCSGroup::CreateDrawAttribsResource() {
+    // Candidate A: コンパクト描画属性バッファ（slot index 単位・64B/スロット）。
+    //   update/emit が UAV として書き込み、VS が SRV として読む。
+    //   常時確保（gParticles と同じ最大数ぶん）。トグル OFF 時は書き込みも読み出しもしないが、
+    //   シェーダが静的に参照するため UAV/SRV は常にバインドする。
+    const uint32_t maxCount = settingsData_->maxParticleCount;
+    drawAttribsResource_ = dxCommon_->CreateBufferResource(sizeof(ParticleDrawAttrib) * maxCount, true);
+
+    drawAttribsUavIndex_ = srvManager_->Allocate() + 1;
+    drawAttribsUavHandle_.first = srvManager_->GetCPUDescriptorHandle(drawAttribsUavIndex_);
+    drawAttribsUavHandle_.second = srvManager_->GetGPUDescriptorHandle(drawAttribsUavIndex_);
+    srvManager_->CreateUAVStructuredBuffer(drawAttribsUavIndex_, drawAttribsResource_.Get(), maxCount, sizeof(ParticleDrawAttrib));
+
+    drawAttribsSrvForVSIndex_ = srvManager_->Allocate() + 1;
+    srvManager_->CreateSRVforStructuredBuffer(drawAttribsSrvForVSIndex_, drawAttribsResource_.Get(), maxCount, sizeof(ParticleDrawAttrib));
+}
+
 // =============================================
 // Phase 3: ping-pong + DispatchIndirect（既定 OFF・遅延生成）
 //
@@ -667,7 +692,7 @@ void ParticleCSGroup::CreateIndirectSimResources() {
 }
 
 void ParticleCSGroup::ResetIndirectOutCounterDispatch(ID3D12GraphicsCommandList *cmdList) {
-    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
     // 出力(Out)カウンタを 0 に（emit / update の append より前に呼ぶ）。
     auto outCounterHandle = writeToB_ ? aliveCounterBUavHandle_ : aliveCounterUavHandle_;
     ID3D12Resource *outCounterRes = writeToB_ ? aliveCounterBResource_.Get() : aliveCounterResource_.Get();
@@ -713,7 +738,7 @@ void ParticleCSGroup::ResetIndirectOutCounterDispatch(ID3D12GraphicsCommandList 
 }
 
 void ParticleCSGroup::BuildDispatchArgsDispatch(ID3D12GraphicsCommandList *cmdList) {
-    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
     // 入力(In)生存数から間接ディスパッチ引数を生成する 1スレッドパス。
     auto inCounterHandle = writeToB_ ? aliveCounterUavHandle_ : aliveCounterBUavHandle_;
 
@@ -742,7 +767,7 @@ void ParticleCSGroup::UpdateParticleIndirectDispatch(
     Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
     ID3D12GraphicsCommandList *cmdList) {
-    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
 
     // emit が gParticles / freeList / Out へ書いた内容を update が観測できるよう、
     // 直前に共有 UAV 群へ UAV バリアを張る（emit→update の順序保証）。
@@ -786,6 +811,7 @@ void ParticleCSGroup::UpdateParticleIndirectDispatch(
     cl->SetComputeRootDescriptorTable(11, inListHandle.second);             // u6 (In)
     cl->SetComputeRootDescriptorTable(12, inCounterHandle.second);          // u7 (In)
     cl->SetComputeRootDescriptorTable(13, trailBudgetUavHandle_.second);    // u8 (トレイル予算)
+    cl->SetComputeRootDescriptorTable(14, drawAttribsUavHandle_.second);    // u9 (Candidate A)
 
     // 生存数ぶんだけ起動（dispatchArgs は INDIRECT_ARGUMENT 状態）。
     cl->ExecuteIndirect(
@@ -809,12 +835,12 @@ void ParticleCSGroup::CountAliveParticles() {
     // CountParticle.CSを実行
     particleCommon_->ComputeCountDrawCommonSetting();
 
-    commandList->SetComputeRootConstantBufferView(0, settingsResource_->GetGPUVirtualAddress());
-    commandList->SetComputeRootDescriptorTable(1, aliveCountSrvHandle_.second);
-    commandList->SetComputeRootDescriptorTable(2, outputParticleSrvHandle_.second);
+    commandList_->SetComputeRootConstantBufferView(0, settingsResource_->GetGPUVirtualAddress());
+    commandList_->SetComputeRootDescriptorTable(1, aliveCountSrvHandle_.second);
+    commandList_->SetComputeRootDescriptorTable(2, outputParticleSrvHandle_.second);
 
     int dispatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
-    commandList->Dispatch(dispatchCount, 1, 1);
+    commandList_->Dispatch(dispatchCount, 1, 1);
 
     // UAVバリア（UAV書き込み完了を保証）
     dxCommon_->TransitionUAVBarrier(aliveCountResource_.Get());
@@ -826,7 +852,7 @@ void ParticleCSGroup::CountAliveParticles() {
         D3D12_RESOURCE_STATE_COPY_SOURCE);
 
     // GPU→CPUへコピー
-    commandList->CopyResource(aliveCountReadbackResource_.Get(), aliveCountResource_.Get());
+    commandList_->CopyResource(aliveCountReadbackResource_.Get(), aliveCountResource_.Get());
 
     // 戻す（次のDispatch用に再びUAV状態へ）
     dxCommon_->BarrierTransition(
@@ -1908,6 +1934,26 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::Unindent();
     }
 
+    // =======================================================
+    // 実験: Candidate A コンパクト描画バッファ（既定 OFF）
+    // =======================================================
+    PushSectionColor(ImVec4(0.2f, 0.5f, 0.6f, 1.0f));
+    bool openCompact = ImGui::CollapsingHeader("  実験: コンパクト描画バッファ(A)");
+    PopSectionColor();
+    if (openCompact) {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.5f, 0.9f, 1.0f, 1.0f));
+        bool vc = useCompactDraw_;
+        if (ImGui::Checkbox("コンパクト描画を使う##compactDraw", &vc)) {
+            SetUseCompactDraw(vc);
+        }
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("ON で VS が 150B の Particle ではなく 64B の描画属性だけを読みます\n"
+                              "（頂点ごとのロード帯域を削減）。実験的機能: 見た目が壊れる場合は OFF に戻してください。");
+        ImGui::Unindent();
+    }
+
     ImGui::PopItemWidth();
 
     if (settingsData_->enableGather)
@@ -1917,3 +1963,4 @@ void ParticleCSGroup::DrawImGui() {
 
 #endif // USE_IMGUI
 }
+} // namespace Hagine

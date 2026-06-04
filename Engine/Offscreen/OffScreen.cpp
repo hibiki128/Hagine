@@ -7,6 +7,7 @@
 #include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #endif
 
+namespace Hagine {
 void OffScreen::Initialize() {
     dxCommon_ = DirectXCommon::GetInstance();
     SrvManager *srvManager = SrvManager::GetInstance();
@@ -285,3 +286,4 @@ void OffScreen::Setting() {
     ImGui::PopStyleColor();
 #endif
 }
+} // namespace Hagine

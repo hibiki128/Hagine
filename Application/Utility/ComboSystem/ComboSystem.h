@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-class BaseObject;
+namespace Hagine { class BaseObject; }
 class MotionEditor;
 
 /// <summary>
@@ -23,7 +23,7 @@ class ComboSystem {
     /// コンボ1段分のデータ
     /// </summary>
     struct ComboData {
-        BaseObject *target;     // モーションを再生するオブジェクト（見た目用）
+        Hagine::BaseObject *target;     // モーションを再生するオブジェクト（見た目用）
         std::string attackData; // 攻撃モーションのファイル名（Jsonキーとしても使用）
 
         // --- 攻撃パラメータ（ImGuiで調整・セーブ可能）---
@@ -32,7 +32,7 @@ class ComboSystem {
         float colliderActiveDuration = 0.25f; // 判定が有効な時間（秒）
         float colliderActivateDelay = 0.08f;  // 攻撃開始からコライダーが有効になる遅延（秒）
 
-        ComboData(BaseObject *obj, const std::string &attack,
+        ComboData(Hagine::BaseObject *obj, const std::string &attack,
                   float dmg, float knockback,
                   float duration, float delay)
             : target(obj), attackData(attack),
@@ -56,7 +56,7 @@ class ComboSystem {
     std::string name_ = "DefaultCombo"; // DataHandlerのファイル名に使用
 
     std::vector<ComboData> comboData_;              // コンボデータ配列
-    std::vector<BaseObject *> comboStartObjects_;   // コンボ開始オブジェクト配列
+    std::vector<Hagine::BaseObject *> comboStartObjects_;   // コンボ開始オブジェクト配列
 
     int comboIndex_ = 0;             // 現在のコンボインデックス
     float comboCooldown_ = 0.0f;     // コンボクールダウン
@@ -77,7 +77,7 @@ class ComboSystem {
     using AttackFiredCallback = std::function<void(float, float, float, float)>;
     AttackFiredCallback onAttackFired_; // 攻撃発火時のコールバック
 
-    std::unique_ptr<DataHandler> dataHandler_; // データハンドラ
+    std::unique_ptr<Hagine::DataHandler> dataHandler_; // データハンドラ
 
   public:
     /// ===================================================
@@ -102,7 +102,7 @@ class ComboSystem {
     /// <param name="knockbackPower">ノックバック強さ（デフォルト3.0）</param>
     /// <param name="colliderActiveDuration">コライダー有効時間（デフォルト0.25秒）</param>
     /// <param name="colliderActivateDelay">コライダー有効化遅延（デフォルト0.08秒）</param>
-    ComboSystem &Add(BaseObject *target, const std::string &attackData,
+    ComboSystem &Add(Hagine::BaseObject *target, const std::string &attackData,
                      float damage = 10.0f, float knockbackPower = 3.0f,
                      float colliderActiveDuration = 0.25f, float colliderActivateDelay = 0.08f);
 
@@ -144,7 +144,7 @@ class ComboSystem {
     /// Getter
     /// </summary>
     bool IsComboActive() const { return comboStarted_; }
-    bool IsObjectAttackCompleted(BaseObject *target) const;
+    bool IsObjectAttackCompleted(Hagine::BaseObject *target) const;
     bool IsCurrentAttackCompleted() const;
     int GetCurrentComboIndex() const { return comboIndex_; }
     int GetComboLength() const { return static_cast<int>(comboData_.size()); }

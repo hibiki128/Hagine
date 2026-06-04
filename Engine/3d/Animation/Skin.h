@@ -2,6 +2,7 @@
 #include "Model/ModelStructs.h"
 #include <cstdint>
 
+namespace Hagine {
 class DirectXCommon;
 class SrvManager;
 
@@ -59,7 +60,7 @@ class Skin {
     uint32_t GetInfluenceSrvIndex() { return skinClusterInfluenceSrvIndex_; }
     uint32_t GetInputVertexSrvIndex() { return skinClusterInputVertexSrvIndex_; }
     uint32_t GetOutputVertexSrvIndex() { return skinClusterOutputVertexSrvIndex_; }
-    uint32_t GetTotalVertex() { return static_cast<uint32_t>(totalVertexCount); }
+    uint32_t GetTotalVertex() { return static_cast<uint32_t>(totalVertexCount_); }
     Microsoft::WRL::ComPtr<ID3D12Resource> GetSkinningInformationResource() { return skinCluster_.skinningInformationResource; }
     ID3D12Resource *GetOutputVertexResource() { return skinCluster_.outputVertexResource.Get(); }
     D3D12_VERTEX_BUFFER_VIEW GetOutputVertexBufferView() { return skinCluster_.outputVertexBufferView; }
@@ -123,9 +124,10 @@ class Skin {
     uint32_t skinClusterInfluenceSrvIndex_ = 0;    // 影響度SRVインデックス
     uint32_t skinClusterOutputVertexSrvIndex_ = 0; // 出力頂点SRVインデックス
     uint32_t skinClusterInputVertexSrvIndex_ = 0;  // 入力頂点SRVインデックス
-    size_t totalVertexCount = 0;                   // 総頂点数
-    size_t vertexOffset = 0;                       // 頂点オフセット
+    size_t totalVertexCount_ = 0;                   // 総頂点数
+    size_t vertexOffset_ = 0;                       // 頂点オフセット
     DirectXCommon *dxCommon_ = nullptr;            // DirectX共通クラス
     SrvManager *srvManager_ = nullptr;             // SRVマネージャー
     std::vector<size_t> meshVertexOffsets_;        // メッシュごとの頂点オフセット
 };
+} // namespace Hagine

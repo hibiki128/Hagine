@@ -1,5 +1,6 @@
 #include "PostEffectRenderer.h"
 
+namespace Hagine {
 void PostEffectRenderer::Initialize(DirectXCommon *dxCommon,
                                      SrvManager *srvManager,
                                      PipeLineManager *psoManager) {
@@ -196,3 +197,4 @@ void PostEffectRenderer::DrawSingleEffect(const EffectSlot &slot,
                                       D3D12_RESOURCE_STATE_GENERIC_READ);
     }
 }
+} // namespace Hagine

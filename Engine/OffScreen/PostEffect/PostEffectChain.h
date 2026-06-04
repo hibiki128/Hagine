@@ -6,6 +6,7 @@
 #include <optional>
 
 /// @brief ポストエフェクトの1スロット分のデータ
+namespace Hagine {
 struct EffectSlot {
     bool occupied = false;   ///< このスロットが使用中かどうか
     bool enabled  = false;   ///< エフェクトが有効かどうか
@@ -118,3 +119,4 @@ class PostEffectChain {
 
     std::array<EffectSlot, kMaxSlots> slots_;
 };
+} // namespace Hagine

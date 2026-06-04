@@ -1,5 +1,6 @@
 #include "SpriteCommon.h"
 
+namespace Hagine {
 void SpriteCommon::Finalize() {
     // 参照を解放するためnullptrに設定する
     dxCommon_ = nullptr;
@@ -21,3 +22,4 @@ void SpriteCommon::SetBlendMode(BlendMode blendMode) {
     // パイプライン管理を使用して、指定されたブレンドモードでスプライト描画の設定を適用する
     psoManager_->DrawCommonSetting(PipelineType::kSprite, blendMode);
 }
+} // namespace Hagine

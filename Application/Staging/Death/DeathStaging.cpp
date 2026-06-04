@@ -2,6 +2,7 @@
 #include "Particle/CSParticle/ParticleCSEditor.h"
 #include <Frame.h>
 
+using namespace Hagine;
 DeathStaging::DeathStaging() {
     deathParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death");
     deathParticle_R_Arm = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death_arm");

@@ -7,6 +7,7 @@
 /// <summary>
 /// 4次元ベクトル
 /// </summary>
+namespace Hagine {
 struct Vector4 final {
     float x;
     float y;
@@ -135,3 +136,4 @@ struct Vector4 final {
     operator ImVec4() const { return ImVec4(x, y, z, w); }
 #endif // _DEBUG
 };
+} // namespace Hagine

@@ -2,9 +2,10 @@
 #include"Input.h"
 #include <cmath>
 
+namespace Hagine {
 void BaseFollowCamera::Init() {
     // 遠クリップ面の設定と初期化
-	viewProjection_.farZ = 1100;
+	viewProjection_.farZ_ = 1100;
 	viewProjection_.Initialize();
 	worldTransform_.Initialize();
 
@@ -61,3 +62,4 @@ void BaseFollowCamera::Move() {
 		yaw_ += 0.04f;
 	}
 }
+} // namespace Hagine

@@ -9,7 +9,7 @@
 /// チャージショットのゲームオブジェクトクラス
 /// プレイヤーがチャージして発射する特殊な弾
 /// </summary>
-class ChargeShot : public BaseObject {
+class ChargeShot : public Hagine::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -31,14 +31,14 @@ class ChargeShot : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection) override;
+    void Draw(const Hagine::ViewProjection &viewProjection) override;
 
     /// <summary>
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
-    void DrawParticleCompute(const ViewProjection &viewProjection);
+    void DrawParticle(const Hagine::ViewProjection &viewProjection);
+    void DrawParticleCompute(const Hagine::ViewProjection &viewProjection);
 
     /// <summary>
     /// ImGui表示
@@ -49,7 +49,7 @@ class ChargeShot : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnterCallback(ColliderBase *other);
+    void OnCollisionEnterCallback(Hagine::ColliderBase *other);
 
     /// <summary>
     /// 生存状態を取得
@@ -80,7 +80,7 @@ class ChargeShot : public BaseObject {
     /// </summary>
     /// <param name="pos">発射位置</param>
     /// <param name="dir">発射方向</param>
-    void Fire(const Vector3 &pos, const Vector3 &dir);
+    void Fire(const Hagine::Vector3 &pos, const Hagine::Vector3 &dir);
 
     /// <summary>
     /// チャージショットのリセット
@@ -121,7 +121,7 @@ class ChargeShot : public BaseObject {
     /// チャージ中かを取得
     /// </summary>
     /// <returns>bool: チャージ状態フラグ</returns>
-    bool GetIsCharge() const { return isCharge; }
+    bool GetIsCharge() const { return isCharge_; }
 
     void SetIsSkillMenu(bool isSkillMenu) { isSkillMenu_ = isSkillMenu; }
 
@@ -149,17 +149,17 @@ class ChargeShot : public BaseObject {
     static constexpr float kParticleEndScaleOffset = 0.2f;        // パーティクル終了時のスケールオフセット
     static constexpr float kBulletParticleScaleMultiplier = 2.0f; // 弾パーティクルのスケール倍率
 
-    Vector3 offset_{};
+    Hagine::Vector3 offset_{};
     bool isAlive_ = false;    // 生存フラグ
     bool isMaxScale_ = false; // 最大スケール到達フラグ
     bool isFired_ = false;    // 発射済みフラグ
-    bool isCharge = false;    // チャージ中フラグ
+    bool isCharge_ = false;    // チャージ中フラグ
 
     float scale_ = kInitialScale;    // 現在のスケール
     float scaleSpeed_ = kScaleSpeed; // スケール増加速度
     float maxScale_ = kMaxScale;     // 最大スケール値
 
-    Vector3 velocity_{};
+    Hagine::Vector3 velocity_{};
     float speed_ = kSpeed; // 発射速度
 
     Player *player_ = nullptr;
@@ -168,10 +168,10 @@ class ChargeShot : public BaseObject {
     float offsetMargin_ = kDefaultOffsetMargin;     // オフセット余裕距離
     float verticalOffset_ = kDefaultVerticalOffset; // 垂直方向のオフセット
 
-    std::unique_ptr<ParticleCSEmitter> chargeEmitter_;
-    std::unique_ptr<ParticleEmitter> bulletEmitter_;
+    std::unique_ptr<Hagine::ParticleCSEmitter> chargeEmitter_;
+    std::unique_ptr<Hagine::ParticleEmitter> bulletEmitter_;
 
-    SphereCollider *bulletCollider_ = nullptr;
+    Hagine::SphereCollider *bulletCollider_ = nullptr;
     float chargeStartTimer_ = 0.0f;
 
     bool isSkillMenu_ = false;

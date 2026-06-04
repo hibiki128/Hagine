@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+namespace Hagine {
 class AbstractSceneFactory {
   public:
     virtual ~AbstractSceneFactory() = default;
@@ -14,3 +15,4 @@ class AbstractSceneFactory {
     /// <returns></returns>
     virtual std::unique_ptr<BaseScene> CreateScene(const std::string &sceneName) = 0;
 };
+} // namespace Hagine

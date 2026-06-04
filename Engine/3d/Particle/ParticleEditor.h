@@ -12,6 +12,7 @@
 
 #include "ParticleStruct.h"
 
+namespace Hagine {
 class ParticleEditor {
   private:
     // プライベートコンストラクタ
@@ -105,3 +106,4 @@ class ParticleEditor {
     // データのロード
     void Load();
 };
+} // namespace Hagine

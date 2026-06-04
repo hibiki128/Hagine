@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+namespace Hagine {
 class DirectXCommon;
 class SrvManager;
 class SceneManager;
@@ -107,3 +108,4 @@ class DrawSystem {
     std::vector<std::unique_ptr<OffScreen>> ownedOffScreens_;
     int nextStageIndex_ = 1;
 };
+} // namespace Hagine

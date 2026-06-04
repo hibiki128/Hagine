@@ -11,6 +11,7 @@
 #include <utility>
 #include <wrl.h>
 
+namespace Hagine {
 class ParticleCSGroup {
   public:
     /// ===================================
@@ -71,7 +72,7 @@ class ParticleCSGroup {
     D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const { return vertexBufferView_; }
     uint32_t GetOutputParticleSrvIndex() const { return outputParticleSrvIndex_; }
     uint32_t GetOutputParticleSrvForVSIndex() const { return outputParticleSrvForVSIndex_; }
-    ModelData GetModelData() const { return modelData; }
+    ModelData GetModelData() const { return modelData_; }
     PerFrame *GetPerFrameData() const { return perFrameData_; }
     uint32_t GetMaxParticleCount() const { return settingsData_->maxParticleCount; }
     ParticleCSSettings *GetSettingsData() const { return settingsData_; }
@@ -141,6 +142,17 @@ class ParticleCSGroup {
         return writeToB_ ? aliveCounterBUavHandle_ : aliveCounterUavHandle_;
     }
 
+    // ===================================
+    // Candidate A: コンパクト描画属性バッファ（既定 OFF・実験トグル）
+    //   update/emit が生存スロットの描画属性(64B)を書き、VS は 150B の Particle 全体ではなく
+    //   こちらを読む（VS の頂点ごとのロード帯域を 150B→64B に削減）。
+    //   トグル ON で settingsData_/perViewData_ の enableCompactDraw を立て、書き込み＋読み出しを有効化。
+    // ===================================
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetDrawAttribsUavHandle() const { return drawAttribsUavHandle_; }
+    uint32_t GetDrawAttribsSrvForVSIndex() const { return drawAttribsSrvForVSIndex_; }
+    bool GetUseCompactDraw() const { return useCompactDraw_; }
+    void SetUseCompactDraw(bool enable) { useCompactDraw_ = enable; }
+
   private:
     /// ===================================
     /// private methods
@@ -162,6 +174,8 @@ class ParticleCSGroup {
     void CreateAliveListResources();
     // Phase 3: B 系 aliveList/counter ＋ dispatchArgs を生成
     void CreateIndirectSimResources();
+    // Candidate A: コンパクト描画属性バッファ（UAV+SRV）を生成
+    void CreateDrawAttribsResource();
 
   private:
     /// ===================================
@@ -245,13 +259,20 @@ class ParticleCSGroup {
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> trailBudgetUavHandle_{};
     uint32_t trailBudgetUavIndex_ = 0;
 
+    // ===== Candidate A: コンパクト描画属性バッファ（slot index で書き込み）=====
+    Microsoft::WRL::ComPtr<ID3D12Resource> drawAttribsResource_{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> drawAttribsUavHandle_{};
+    uint32_t drawAttribsUavIndex_ = 0;
+    uint32_t drawAttribsSrvForVSIndex_ = 0;
+    bool useCompactDraw_ = true; // 既定 ON（2026-06-02 実機で 60FPS 安定確認）。ImGui トグルで OFF 可。
+
     Microsoft::WRL::ComPtr<ID3D12Resource> aliveCountResource_{};
     Microsoft::WRL::ComPtr<ID3D12Resource> aliveCountReadbackResource_{};
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveCountSrvHandle_{};
     uint32_t aliveCountSrvIndex_ = 0;
     uint32_t cachedAliveCount_ = 0;
 
-    ID3D12GraphicsCommandList *commandList{};
+    ID3D12GraphicsCommandList *commandList_{};
     ID3D12GraphicsCommandList *computeCommandList_{};
 
     ParticleCommon *particleCommon_{};
@@ -259,7 +280,7 @@ class ParticleCSGroup {
     SrvManager *srvManager_{};
     TextureManager *texManager_{};
     Model *model_{};
-    ModelData modelData{};
+    ModelData modelData_{};
     std::string modelFilePath_{};
 
     PrimitiveType type_ = PrimitiveType::None;
@@ -277,3 +298,4 @@ class ParticleCSGroup {
     int32_t debugFreeListCount_ = 0;
     int32_t debugFreeListTailCount_ = 0;
 };
+} // namespace Hagine

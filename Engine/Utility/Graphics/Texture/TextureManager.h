@@ -10,6 +10,7 @@
 #include <array>
 #include <memory>
 
+namespace Hagine {
 class TextureManager {
   private:
     TextureManager() = default;
@@ -134,7 +135,7 @@ class TextureManager {
     };
 
     // ファイルパスをキーとするテクスチャデータのマップ
-    std::unordered_map<std::string, TextureData> textureDatas;
+    std::unordered_map<std::string, TextureData> textureDatas_;
 
     // MakeFontKey() で生成したキーをキーとするフォントデータのマップ
     std::unordered_map<std::string, FontData> fontDatas_;
@@ -147,3 +148,4 @@ class TextureManager {
     // ImGuiが0番を使用するため1番から使用するSRVインデックスの開始番号
     static uint32_t kSRVIndexTop;
 };
+} // namespace Hagine

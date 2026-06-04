@@ -5,6 +5,7 @@
 #include <wrl.h>
 #include"externals/DirectXTex/DirectXTex.h"
 
+namespace Hagine {
 class DirectXCommon;
 
 class SrvManager {
@@ -16,16 +17,16 @@ class SrvManager {
     SrvManager &operator=(SrvManager &) = delete;
 
   private:
-    DirectXCommon *dxCommon = nullptr;
+    DirectXCommon *dxCommon_ = nullptr;
 
     // SRV用のでスクリプタサイズ
-    uint32_t descriptorSize;
+    uint32_t descriptorSize_;
     // SRV用デスクリプタヒープ
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap_;
     // 次に使用するSRVインデックス
-    uint32_t useIndex = 0;
+    uint32_t useIndex_ = 0;
     // 空きインデックスを管理するキュー
-    std::queue<uint32_t> freeIndices; // 解放されたSRVインデックスを保存
+    std::queue<uint32_t> freeIndices_; // 解放されたSRVインデックスを保存
 
   public:
     // 最大SRV数(最大テクスチャ枚数)
@@ -123,7 +124,7 @@ class SrvManager {
     D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(uint32_t index);
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(uint32_t index);
     ID3D12DescriptorHeap *GetDescriptorHeap() const {
-        return descriptorHeap.Get(); // 管理してるSRVヒープ
+        return descriptorHeap_.Get(); // 管理してるSRVヒープ
     }
 
     /// <summary>
@@ -133,3 +134,4 @@ class SrvManager {
     /// <param name="srvIndex"></param>
     void SetGraphicsRootDescriptorTable(UINT RootParameterIndex, uint32_t srvIndex);
 };
+} // namespace Hagine

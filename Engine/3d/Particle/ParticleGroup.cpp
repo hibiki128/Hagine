@@ -4,7 +4,8 @@
 #include "fstream"
 #include <Graphics/Texture/TextureManager.h>
 
-std::unordered_map<std::string, ModelData> ParticleGroup::modelCache;
+namespace Hagine {
+std::unordered_map<std::string, ModelData> ParticleGroup::modelCache_;
 
 void ParticleGroup::Initialize() {
 }
@@ -16,14 +17,14 @@ ParticleGroupData ParticleGroup::CreateParticleGroup(const std::string &groupNam
     modelFilePath_ = filename;
     ModelManager::GetInstance()->LoadModel(filename);
     model_ = ModelManager::GetInstance()->FindModel(filename);
-    modelData = model_->GetModelData();
+    modelData_ = model_->GetModelData();
     CreateVertexData();
     CreateIndexResource();
     // マテリアルが複数ある場合は最初のものを使う
     particleGroupData_.materials.clear();
     if (texturePath.empty()) {
-        if (!modelData.materials.empty()) {
-            particleGroupData_.materials = ForParticleMaterials(modelData.materials);
+        if (!modelData_.materials.empty()) {
+            particleGroupData_.materials = ForParticleMaterials(modelData_.materials);
         } else {
             particleGroupData_.materials.push_back(ParticleMaterial{});
         }
@@ -54,14 +55,14 @@ ParticleGroupData ParticleGroup::CreatePrimitiveParticleGroup(const std::string 
     type_ = type;
     model_ = ModelManager::GetInstance()->FindModel(ModelManager::GetInstance()->CreatePrimitiveModel(type, texturePath));
     TextureManager::GetInstance()->LoadTexture(texturePath);
-    modelData = model_->GetModelData();
+    modelData_ = model_->GetModelData();
     CreateVertexData();
     CreateIndexResource();
     // マテリアルが複数ある場合は最初のものを使う
     particleGroupData_.materials.clear();
     if (texturePath.empty()) {
-        if (!modelData.materials.empty()) {
-            particleGroupData_.materials = ForParticleMaterials(modelData.materials);
+        if (!modelData_.materials.empty()) {
+            particleGroupData_.materials = ForParticleMaterials(modelData_.materials);
         } else {
             particleGroupData_.materials.push_back(ParticleMaterial{});
         }
@@ -90,40 +91,41 @@ ParticleGroupData ParticleGroup::CreatePrimitiveParticleGroup(const std::string 
 void ParticleGroup::CreateVertexData() {
     // 複数メッシュ対応: 全メッシュの頂点を連結
     std::vector<VertexData> allVertices;
-    for (const auto &mesh : modelData.meshes) {
+    for (const auto &mesh : modelData_.meshes) {
         allVertices.insert(allVertices.end(), mesh.vertices.begin(), mesh.vertices.end());
     }
-    vertexResource = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(VertexData) * allVertices.size());
-    vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-    vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * allVertices.size());
-    vertexBufferView.StrideInBytes = sizeof(VertexData);
-    vertexResource->Map(0, nullptr, reinterpret_cast<void **>(&vertexData));
-    std::memcpy(vertexData, allVertices.data(), sizeof(VertexData) * allVertices.size());
+    vertexResource_ = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(VertexData) * allVertices.size());
+    vertexBufferView_.BufferLocation = vertexResource_->GetGPUVirtualAddress();
+    vertexBufferView_.SizeInBytes = UINT(sizeof(VertexData) * allVertices.size());
+    vertexBufferView_.StrideInBytes = sizeof(VertexData);
+    vertexResource_->Map(0, nullptr, reinterpret_cast<void **>(&vertexData_));
+    std::memcpy(vertexData_, allVertices.data(), sizeof(VertexData) * allVertices.size());
 }
 
 void ParticleGroup::CreateIndexResource() {
     // 複数メッシュ対応: 全メッシュのインデックスを連結し、頂点オフセットを考慮
     std::vector<uint32_t> allIndices;
     uint32_t vertexOffset = 0;
-    for (const auto &mesh : modelData.meshes) {
+    for (const auto &mesh : modelData_.meshes) {
         for (auto idx : mesh.indices) {
             allIndices.push_back(idx + vertexOffset);
         }
         vertexOffset += static_cast<uint32_t>(mesh.vertices.size());
     }
-    indexResource = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * allIndices.size());
-    indexBufferView.BufferLocation = indexResource->GetGPUVirtualAddress();
-    indexBufferView.SizeInBytes = UINT(sizeof(uint32_t) * allIndices.size());
-    indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-    indexResource->Map(0, nullptr, reinterpret_cast<void **>(&indexData));
-    std::memcpy(indexData, allIndices.data(), sizeof(uint32_t) * allIndices.size());
+    indexResource_ = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * allIndices.size());
+    indexBufferView_.BufferLocation = indexResource_->GetGPUVirtualAddress();
+    indexBufferView_.SizeInBytes = UINT(sizeof(uint32_t) * allIndices.size());
+    indexBufferView_.Format = DXGI_FORMAT_R32_UINT;
+    indexResource_->Map(0, nullptr, reinterpret_cast<void **>(&indexData_));
+    std::memcpy(indexData_, allIndices.data(), sizeof(uint32_t) * allIndices.size());
 }
 
 void ParticleGroup::CreateMaterial() {
     // Sprite用のマテリアルリソースをつくる
-    materialResource = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(ParticleMaterial));
+    materialResource_ = ParticleCommon::GetInstance()->GetDxCommon()->CreateBufferResource(sizeof(ParticleMaterial));
     // 書き込むためのアドレスを取得
-    materialResource->Map(0, nullptr, reinterpret_cast<void **>(&materialData));
-    materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-    materialData->uvTransform = MakeIdentity4x4();
+    materialResource_->Map(0, nullptr, reinterpret_cast<void **>(&materialData_));
+    materialData_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    materialData_->uvTransform = MakeIdentity4x4();
 }
+} // namespace Hagine

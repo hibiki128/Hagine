@@ -154,22 +154,22 @@ class GameUI {
     float inputCooldown_ = 0.0f;           // 入力クールダウン
     const float kInputCooldownTime = 0.15f; // 入力クールダウン時間
 
-    std::unique_ptr<GamePad> gamePad_ = nullptr;            // ゲームパッド
-    std::array<SpriteData *, kMaxSprite> sprites_; // スプライト配列
+    std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr;            // ゲームパッド
+    std::array<Hagine::SpriteData *, kMaxSprite> sprites_; // スプライト配列
 
     /// <summary>
     /// UI要素のアニメーション構造体
     /// </summary>
     struct UIElementAnimation {
-        EasingData<Vector2> position; // 位置
-        EasingData<float> alpha;      // 透明度
-        EasingData<Vector2> scale;     // スケール
+        Hagine::EasingData<Hagine::Vector2> position; // 位置
+        Hagine::EasingData<float> alpha;      // 透明度
+        Hagine::EasingData<Hagine::Vector2> scale;     // スケール
     };
 
     std::array<UIElementAnimation, kMaxSprite> animations_; // アニメーション配列
 
-    std::array<Vector2, kMaxSprite> targetPositions_; // 目標位置
-    std::array<Vector2, kMaxSprite> defaultSizes_;    // デフォルトサイズ
+    std::array<Hagine::Vector2, kMaxSprite> targetPositions_; // 目標位置
+    std::array<Hagine::Vector2, kMaxSprite> defaultSizes_;    // デフォルトサイズ
 
     const float kAnimationDuration = 0.5f;      // アニメーション時間
     const float kFadeOutDuration = 0.2f;        // フェードアウト時間
@@ -178,7 +178,7 @@ class GameUI {
     const float kStartOffsetY = -50.0f; // 出現時のオフセット
     const float kEndOffsetY = 100.0f;   // 消去時のオフセット
     const float kSelectedScale = 1.05f;  // 選択時の拡大率
-    const Vector3 kNormalColor = {1.0f, 1.0f, 1.0f}; // 通常時の色
+    const Hagine::Vector3 kNormalColor = {1.0f, 1.0f, 1.0f}; // 通常時の色
 
-    const Vector3 kSelectedColor = {1.0f, 1.0f, 0.5f}; // 選択時の色
+    const Hagine::Vector3 kSelectedColor = {1.0f, 1.0f, 0.5f}; // 選択時の色
 };

@@ -6,6 +6,7 @@
 #include <type/Matrix4x4.h>
 #include <type/Vector3.h>
 
+namespace Hagine {
 class LightGroup;
 
 class DirectXCommon;
@@ -109,3 +110,4 @@ private:
     DirectXCommon *dxCommon_ = nullptr;
     SrvManager *srvManager_ = nullptr;
 };
+} // namespace Hagine

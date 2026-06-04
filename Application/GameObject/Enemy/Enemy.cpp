@@ -14,6 +14,7 @@
 #include <cmath>
 #include <numbers>
 
+using namespace Hagine;
 Enemy::Enemy() {}
 Enemy::~Enemy() {}
 
@@ -252,8 +253,14 @@ void Enemy::Update() {
             rootNode_->SetContext(this, target_);
             rootNode_->Tick();
 
-            // 速度イージングの更新
-            if (velocityEase_.isActive) {
+            // ガード中は移動させない（EnemyGuardNode が毎フレーム速度を0にしているため、
+            // ここで移動イージングを適用すると追跡速度で上書きされて動いてしまう）
+            if (isGuarding_) {
+                velocity_.x = 0.0f;
+                velocity_.z = 0.0f;
+            }
+            // 速度イージングの更新（ガード中は適用しない）
+            else if (velocityEase_.isActive) {
                 Vector3 easedVelocity = velocityEase_.Update(Frame::DeltaTime());
                 velocity_.x = easedVelocity.x;
                 velocity_.z = easedVelocity.z;

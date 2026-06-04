@@ -3,6 +3,7 @@
 #include <Input.h>
 #include <Particle/CSParticle/ParticleCSEditor.h>
 
+using namespace Hagine;
 void PlayerEnergyCharge::Enter(Player &player) {
     beforeChargeRate_ = player.GetChargeRate();
     beforeState_ = player.GetPreviewStateName();

@@ -9,6 +9,7 @@
 #include "imgui.h"
 #endif
 
+using namespace Hagine;
 void TitleUI::Initialize() {
 
     chargeBullet_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");

@@ -4,6 +4,7 @@
 #include "ParticleCSGroupManager.h"
 #include "map"
 #include <unordered_map>
+namespace Hagine {
 class ParticleCSEditor {
   private:
     /// ===================================
@@ -173,3 +174,4 @@ class ParticleCSEditor {
     // 現在のカメラパラメータから view 行列と view*projection 行列を計算する。
     void ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &outViewProj) const;
 };
+} // namespace Hagine

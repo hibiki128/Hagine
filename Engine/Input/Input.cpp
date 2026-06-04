@@ -8,6 +8,7 @@
 #pragma comment(lib, "xinput.lib")
 #include "Object/Base/BaseObject.h"
 
+namespace Hagine {
 std::unique_ptr<Mouse> Input::mouse_ = nullptr;
 
 template bool Input::GetJoystickState<DIJOYSTATE2>(int32_t stickNo, DIJOYSTATE2 &out) const;
@@ -479,3 +480,4 @@ RayHitInfo Input::RaycastMultipleSphere(const Ray &ray, const std::vector<BaseOb
 
     return closestHit;
 }
+} // namespace Hagine

@@ -3,6 +3,7 @@
 #include <memory>
 #include"Graphics/Srv/SrvManager.h"
 
+namespace Hagine {
 class PostEffectParameters {
   public:
     void Initialize(DirectXCommon *dxCommon);
@@ -119,43 +120,44 @@ class PostEffectParameters {
     };
 
     // バッファリソース（既存のまま）
-    Microsoft::WRL::ComPtr<ID3D12Resource> vignetteResource;
-    VignetteParameter *vignetteData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> vignetteResource_;
+    VignetteParameter *vignetteData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> smoothResource;
-    KernelSettings *smoothData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> smoothResource_;
+    KernelSettings *smoothData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> gaussianResouce;
-    GaussianParams *gaussianData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> gaussianResouce_;
+    GaussianParams *gaussianData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> depthResouce;
-    Depth *depthData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> depthResouce_;
+    Depth *depthData_ = nullptr;
 
     Matrix4x4 projectionInverse_;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> radialResource;
-    RadialBlur *radialData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> radialResource_;
+    RadialBlur *radialData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> cinematicResource;
-    Cinematic *cinematicData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> cinematicResource_;
+    Cinematic *cinematicData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> dissolveResource;
-    Dissolve *dissolveData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> dissolveResource_;
+    Dissolve *dissolveData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> randomResource;
-    Random *randomData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> randomResource_;
+    Random *randomData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> focusLineResource;
-    FocusLine *focusLineData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> focusLineResource_;
+    FocusLine *focusLineData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> pixelateResource;
-    Pixelate *pixelateData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> pixelateResource_;
+    Pixelate *pixelateData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> bloomResource;
-    Bloom *bloomData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> bloomResource_;
+    Bloom *bloomData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> retroResource;
-    Retro *retroData = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> retroResource_;
+    Retro *retroData_ = nullptr;
 
     std::string texPath_ = "debug/noise0.png";
 };
+} // namespace Hagine

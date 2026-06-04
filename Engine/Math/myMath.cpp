@@ -2,6 +2,7 @@
 #include <numbers>
 #include <WinApp.h>
 
+namespace Hagine {
 float Lerp(float _start, float _end, float _t)
 {
 	return (1.0f - _t) * _start + _end * _t;
@@ -464,3 +465,4 @@ Vector3 ExtractScale(const Matrix4x4 &matrix) {
     scale.z = sqrt(matrix.m[2][0] * matrix.m[2][0] + matrix.m[2][1] * matrix.m[2][1] + matrix.m[2][2] * matrix.m[2][2]);
     return scale;
 }
+} // namespace Hagine

@@ -5,6 +5,7 @@
 #include"DirectXCommon.h"
 
 // 定数バッファ用データ構造体
+namespace Hagine {
 struct ConstBufferDataObjColor {
 	Vector4 color_;
 };
@@ -57,3 +58,4 @@ private:
 	void Map();
 };
 
+} // namespace Hagine

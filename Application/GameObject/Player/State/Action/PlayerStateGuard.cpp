@@ -2,17 +2,21 @@
 #include "Input.h"
 #include "application/GameObject/Player/Player.h"
 
+using namespace Hagine;
 namespace {
 constexpr float kHorizontalDamping = 0.6f;   // 水平速度の減衰係数
 constexpr float kGroundPullVelocity = -0.1f;  // 接地維持用の下向き速度
 const Vector4 kGuardColor = {0.3f, 0.6f, 1.0f, 1.0f}; // ガード中の青みがかった色
-const Vector4 kNormalColor = {1.0f, 1.0f, 1.0f, 1.0f};
 } // namespace
 
 void PlayerStateGuard::Enter(Player &player) {
     // ガードに入る直前のステートを覚えておき、解除時に適切な状態へ戻す
     enteredFromFly_ = player.GetPreviewStateName() == "FlyIdle" ||
                       player.GetPreviewStateName() == "FlyMove";
+
+    // ガード前の本体色を覚えておき、解除時にこの色へ戻す
+    // （白固定で戻すと元の青色が失われるため）
+    originalColor_ = player.GetColor();
 
     player.SetGuarding(true);
     player.SetColor(kGuardColor);
@@ -50,7 +54,7 @@ void PlayerStateGuard::Update(Player &player) {
 
 void PlayerStateGuard::Exit(Player &player) {
     player.SetGuarding(false);
-    player.SetColor(kNormalColor);
+    player.SetColor(originalColor_);
 }
 
 void PlayerStateGuard::DrawParticle(Player &player, const ViewProjection &viewProjection) {

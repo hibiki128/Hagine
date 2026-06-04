@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
+namespace Hagine {
 class Sprite;
 
 // -----------------------------------------------------------------------
@@ -70,26 +71,26 @@ class ImGuizmoManager {
     ImGuizmoManager &operator=(const ImGuizmoManager &) = delete;
 
     // 操作対象一覧（名前付き、GizmoTarget で型を統一管理）
-    std::unordered_map<std::string, GizmoTarget> transformMap;
+    std::unordered_map<std::string, GizmoTarget> transformMap_;
     // 選択されているオブジェクト名のセット
-    std::unordered_set<std::string> selectedNames;
+    std::unordered_set<std::string> selectedNames_;
 
-    std::vector<BaseObject *> copiedObjects; // コピー対象（BaseObject のみ）
+    std::vector<BaseObject *> copiedObjects_; // コピー対象（BaseObject のみ）
 
-    bool isMultiSelecting = false;
+    bool isMultiSelecting_ = false;
     bool isDrawDebug_ = true;
 
     // カメラのビュープロジェクション
-    const ViewProjection *viewProjection = nullptr;
+    const ViewProjection *viewProjection_ = nullptr;
 
     // 現在の操作モード・座標空間
-    ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
-    ImGuizmo::MODE currentMode = ImGuizmo::LOCAL;
+    ImGuizmo::OPERATION currentOperation_ = ImGuizmo::TRANSLATE;
+    ImGuizmo::MODE currentMode_ = ImGuizmo::LOCAL;
 
-    bool showDebugRaycast = true;
-    bool showDebugAABB = true;
-    bool showDebugSphere = true;
-    bool showDebugHitPoints = true;
+    bool showDebugRaycast_ = true;
+    bool showDebugAABB_ = true;
+    bool showDebugSphere_ = true;
+    bool showDebugHitPoints_ = true;
     char searchBuffer_[256] = "";
     std::vector<std::string> filteredNames_;
 
@@ -139,7 +140,7 @@ class ImGuizmoManager {
     /// 選択中の全 BaseObject を返す（非 BaseObject エントリは除外）
     std::vector<BaseObject *> GetSelectedTargets();
 
-    void DeleteTarget() { transformMap.clear(); }
+    void DeleteTarget() { transformMap_.clear(); }
 
     void CopySelectedObjects();
     void PasteObjects();
@@ -152,19 +153,19 @@ class ImGuizmoManager {
     // ギズモの選択状態をセット
     // selectable が false になった場合は、現在の選択状態からも除外する
     void SetSelectable(const std::string &name, bool selectable) {
-        auto it = transformMap.find(name);
-        if (it != transformMap.end()) {
+        auto it = transformMap_.find(name);
+        if (it != transformMap_.end()) {
             it->second.selectable = selectable;
             if (!selectable) {
-                selectedNames.erase(name);
+                selectedNames_.erase(name);
             }
         }
     }
 
     // スクリーン空間フラグと2Dヒット半径を設定する（Sprite登録後に呼ぶ）
     void SetScreenSpace(const std::string &name, bool isScreenSpace, float hitRadius = 50.0f) {
-        auto it = transformMap.find(name);
-        if (it != transformMap.end()) {
+        auto it = transformMap_.find(name);
+        if (it != transformMap_.end()) {
             it->second.isScreenSpace = isScreenSpace;
             it->second.screenHitRadius = hitRadius;
         }
@@ -172,15 +173,15 @@ class ImGuizmoManager {
 
     // ギズモの選択状態を取得
     bool GetSelectable(const std::string &name) {
-        if (transformMap.find(name) != transformMap.end()) {
-            return transformMap[name].selectable;
+        if (transformMap_.find(name) != transformMap_.end()) {
+            return transformMap_[name].selectable;
         }
         return false;
     }
 
     // オブジェクト削除時にギズモからも消すためのメソッド
     void RemoveTarget(const std::string &name) {
-        transformMap.erase(name);
+        transformMap_.erase(name);
     }
 
   private:
@@ -202,7 +203,8 @@ class ImGuizmoManager {
     // sceneSize を追加（スクリーン空間ギズモの描画に必要）
     void DisplayGizmo(const ImVec2 &scenePosition, const ImVec2 &sceneSize);
 
-    RayHitInfo hitInfo;
+    RayHitInfo hitInfo_;
 };
 
+} // namespace Hagine
 #endif // _DEBUG

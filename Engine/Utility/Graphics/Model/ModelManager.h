@@ -5,6 +5,7 @@
 #include <Graphics/Srv/SrvManager.h>
 #include <Model/Model.h>
 
+namespace Hagine {
 class ModelManager {
   private:
     ModelManager() = default;
@@ -17,7 +18,7 @@ class ModelManager {
     /// 初期化
     /// </summary>
     /// <param name="dxCommon"></param>
-    void Initialize(SrvManager *srvManager);
+    void Initialize(SrvManager *srvManager_);
 
     /// <summary>
     /// 終了
@@ -53,9 +54,10 @@ class ModelManager {
     std::string CreatePrimitiveModel(PrimitiveType type, std::string texPath);
 
   public:
-    std::unordered_map<std::string, std::unique_ptr<Model>> models;
+    std::unordered_map<std::string, std::unique_ptr<Model>> models_;
 
   private:
-    ModelCommon *modelCommon = nullptr;
-    SrvManager *srvManager = nullptr;
+    ModelCommon *modelCommon_ = nullptr;
+    SrvManager *srvManager_ = nullptr;
 };
+} // namespace Hagine

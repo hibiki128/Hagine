@@ -2,6 +2,7 @@
 #include "DirectXCommon.h"
 #include <Graphics/Srv/SrvManager.h>
 
+namespace Hagine {
 class RenderBuffer {
   public:
     void Initialize(DirectXCommon *dxCommon, SrvManager *srvManager);
@@ -43,3 +44,4 @@ class RenderBuffer {
     D3D12_CPU_DESCRIPTOR_HANDLE finalResultSrvHandleCPU_;
     D3D12_GPU_DESCRIPTOR_HANDLE finalResultSrvHandleGPU_;
 };
+} // namespace Hagine

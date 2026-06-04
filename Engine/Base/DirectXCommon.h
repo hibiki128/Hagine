@@ -10,6 +10,7 @@
 #include <type/Vector4.h>
 
 // DirectX基盤
+namespace Hagine {
 class DirectXCommon {
   private:
     DirectXCommon() = default;
@@ -141,13 +142,13 @@ class DirectXCommon {
     /// コマンドリストの取得
     /// </summary>
     /// <returns></returns>
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return commandList; }
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return commandList_; }
 
     /// <summary>
     /// デバイスの取得
     /// </summary>
     /// <returns></returns>
-    Microsoft::WRL::ComPtr<ID3D12Device> GetDevice() { return device; }
+    Microsoft::WRL::ComPtr<ID3D12Device> GetDevice() { return device_; }
 
     /// <summary>
     /// DescriptorHeapの作成
@@ -157,32 +158,32 @@ class DirectXCommon {
     /// <param name="shaderVisible"></param>
     /// <returns></returns>
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible);
-    ID3D12Resource *GetOffScreenResource() { return offScreenResource.Get(); }
-    IDxcUtils *GetDxcUtils() { return dxcUtils; }
-    IDxcCompiler3 *GetDxcCompiler() { return dxcCompiler; }
+    ID3D12Resource *GetOffScreenResource() { return offScreenResource_.Get(); }
+    IDxcUtils *GetDxcUtils() { return dxcUtils_; }
+    IDxcCompiler3 *GetDxcCompiler() { return dxcCompiler_; }
 
     Vector4 GetClearColor() const {
         return Vector4(
-            clearColorValue.Color[0], // R
-            clearColorValue.Color[1], // G
-            clearColorValue.Color[2], // B
-            clearColorValue.Color[3]  // A
+            clearColorValue_.Color[0], // R
+            clearColorValue_.Color[1], // G
+            clearColorValue_.Color[2], // B
+            clearColorValue_.Color[3]  // A
         );
     }
 
     // バックバッファの数を取得
-    size_t GetBackBufferCount() const { return backBuffers.size(); }
+    size_t GetBackBufferCount() const { return backBuffers_.size(); }
 
-    D3D12_GPU_DESCRIPTOR_HANDLE GetOffScreenGPUHandle() { return offScreenSrvHandleGPU; }
-    D3D12_CPU_DESCRIPTOR_HANDLE GetOffScreenCPUHandle() { return offScreenSrvHandleCPU; }
-    uint32_t GetOffScreenSrvIndex() { return offScreenSrvIndex; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetOffScreenGPUHandle() { return offScreenSrvHandleGPU_; }
+    D3D12_CPU_DESCRIPTOR_HANDLE GetOffScreenCPUHandle() { return offScreenSrvHandleCPU_; }
+    uint32_t GetOffScreenSrvIndex() { return offScreenSrvIndex_; }
 
-    D3D12_GPU_DESCRIPTOR_HANDLE GetDepthGPUHandle() { return depthSrvHandleGPU; }
-    D3D12_CPU_DESCRIPTOR_HANDLE GetDepthCPUHandle() { return depthSrvHandleCPU; }
-    uint32_t GetDepthSrvIndex() { return depthSrvIndex; }
-    D3D12_CLEAR_VALUE GetClearColorValue() const { return clearColorValue; }
-    IDXGISwapChain4 *GetSwapChain() { return swapChain.Get(); }
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetRTVDescriptorHeap() { return rtvDescriptorHeap; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetDepthGPUHandle() { return depthSrvHandleGPU_; }
+    D3D12_CPU_DESCRIPTOR_HANDLE GetDepthCPUHandle() { return depthSrvHandleCPU_; }
+    uint32_t GetDepthSrvIndex() { return depthSrvIndex_; }
+    D3D12_CLEAR_VALUE GetClearColorValue() const { return clearColorValue_; }
+    IDXGISwapChain4 *GetSwapChain() { return swapChain_.Get(); }
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetRTVDescriptorHeap() { return rtvDescriptorHeap_; }
 
     // ---- 非同期コンピュートキュー API ----
     /// コンピュートコマンドリストを取得
@@ -275,7 +276,7 @@ class DirectXCommon {
     /// <param name="width"></param>
     /// <param name="height"></param>
     /// <returns></returns>
-    Microsoft::WRL::ComPtr<ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height);
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device_, int32_t width, int32_t height);
 
     /// <summary>
     /// 指定番号のCPUデスクリプタハンドルを取得する
@@ -299,18 +300,18 @@ class DirectXCommon {
     // WindowsAPI
     WinApp *winApp_ = nullptr;
     // DirectX12デバイス
-    Microsoft::WRL::ComPtr<ID3D12Device> device;
+    Microsoft::WRL::ComPtr<ID3D12Device> device_;
     // DXGIファクトリ
-    Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory;
+    Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory_;
     // コマンドキュー
-    Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue;
+    Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue_;
     // フレームごとのコマンドアロケータ（ダブルバッファ）
     static constexpr UINT kFrameCount = 2;
-    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[kFrameCount];
+    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators_[kFrameCount];
     // コマンドリスト
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList_;
     // フェンス
-    Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+    Microsoft::WRL::ComPtr<ID3D12Fence> fence_;
 
     // ---- 非同期コンピュートキュー ----
     Microsoft::WRL::ComPtr<ID3D12CommandQueue>        computeCommandQueue_;
@@ -320,56 +321,57 @@ class DirectXCommon {
     UINT64 computeFenceCounter_ = 0;
     bool   computeListIsOpen_  = true; // Compute コマンドリストが記録中か
     // スワップチェーン
-    Microsoft::WRL::ComPtr<IDXGISwapChain4> swapChain;
-    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> backBuffers;
-    Microsoft::WRL::ComPtr<ID3D12Resource> offScreenResource;
-    D3D12_CLEAR_VALUE clearColorValue{};
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap;
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap;
+    Microsoft::WRL::ComPtr<IDXGISwapChain4> swapChain_;
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> backBuffers_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> offScreenResource_;
+    D3D12_CLEAR_VALUE clearColorValue_{};
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap_;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap_;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> depthStencilResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> depthStencilResource_;
 
     // Phase 3 基盤: DispatchIndirect 用コマンドシグネチャ（遅延生成）
     Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature_;
 
   private:
-    uint32_t descriptorSizeRTV;
-    uint32_t descriptorSizeDSV;
+    uint32_t descriptorSizeRTV_;
+    uint32_t descriptorSizeDSV_;
 
     // DXCコンパイラ関連
-    IDxcUtils *dxcUtils;
-    IDxcCompiler3 *dxcCompiler;
+    IDxcUtils *dxcUtils_;
+    IDxcCompiler3 *dxcCompiler_;
 
     // RTVを2つ作るのでディスクリプタを2つ用意
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[3];
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles_[3];
     // RTV
-    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc_{};
     // スワップチェーン
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc_{};
 
     UINT64 fenceCounter_ = 0;            // 単調増加カウンタ
-    UINT64 fenceValues[kFrameCount] = {}; // フレームごとの最終 Signal 値
+    UINT64 fenceValues_[kFrameCount] = {}; // フレームごとの最終 Signal 値
     UINT   frameIndex_ = 0;              // 現在の描画フレームスロット（0 or 1）
-    HANDLE fenceEvent;
+    HANDLE fenceEvent_;
     // ビューポート
-    D3D12_VIEWPORT viewport{};
+    D3D12_VIEWPORT viewport_{};
     // シザー矩形
-    D3D12_RECT scissorRect{};
+    D3D12_RECT scissorRect_{};
     // TransitionBarrierの設定
-    D3D12_RESOURCE_BARRIER barrier{};
+    D3D12_RESOURCE_BARRIER barrier_{};
     // 現時点ではincludeはしないが、includeに対応するための設定を行っておく
-    IDxcIncludeHandler *includeHandler;
+    IDxcIncludeHandler *includeHandler_;
 
-    uint32_t offScreenSrvIndex = 0;
-    D3D12_CPU_DESCRIPTOR_HANDLE offScreenSrvHandleCPU; // SRV作成時に必要なCPUハンドル
-    D3D12_GPU_DESCRIPTOR_HANDLE offScreenSrvHandleGPU; // 描画コマンドに必要なGPUハンドル
+    uint32_t offScreenSrvIndex_ = 0;
+    D3D12_CPU_DESCRIPTOR_HANDLE offScreenSrvHandleCPU_; // SRV作成時に必要なCPUハンドル
+    D3D12_GPU_DESCRIPTOR_HANDLE offScreenSrvHandleGPU_; // 描画コマンドに必要なGPUハンドル
 
-    uint32_t depthSrvIndex = 0;
-    D3D12_CPU_DESCRIPTOR_HANDLE depthSrvHandleCPU; // SRV作成時に必要なCPUハンドル
-    D3D12_GPU_DESCRIPTOR_HANDLE depthSrvHandleGPU; // 描画コマンドに必要なGPUハンドル
+    uint32_t depthSrvIndex_ = 0;
+    D3D12_CPU_DESCRIPTOR_HANDLE depthSrvHandleCPU_; // SRV作成時に必要なCPUハンドル
+    D3D12_GPU_DESCRIPTOR_HANDLE depthSrvHandleGPU_; // 描画コマンドに必要なGPUハンドル
 
     // FPS固定用の時間計測
     std::chrono::steady_clock::time_point reference_;
     const double targetFPS_ = 60.0;
     const std::chrono::microseconds frameTime_{static_cast<uint64_t>(1000000.0 / targetFPS_)};
 };
+} // namespace Hagine

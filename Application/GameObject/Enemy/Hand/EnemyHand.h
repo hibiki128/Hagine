@@ -6,7 +6,7 @@
 /// <summary>
 /// 敵の手（見た目）のゲームオブジェクトクラス
 /// </summary>
-class EnemyHand : public BaseObject {
+class EnemyHand : public Hagine::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -28,5 +28,5 @@ class EnemyHand : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection) override;
+    void Draw(const Hagine::ViewProjection &viewProjection) override;
 };

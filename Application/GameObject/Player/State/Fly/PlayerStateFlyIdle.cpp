@@ -4,6 +4,7 @@
 #include "application/GameObject/Player/Player.h"
 #include <cmath>
 
+using namespace Hagine;
 void PlayerStateFlyIdle::Enter(Player &player) {
     player.GetAcceleration().y = kAccelerationZero;
     player.GetVelocity().y     = kVelocityZero;

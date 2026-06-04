@@ -10,23 +10,24 @@
 #include <type/Vector2.h>
 #include <type/Vector3.h>
 
+namespace Hagine {
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
 class DataHandler {
   private:
-    std::string basePath = "resources/jsons"; // 固定の基準パス
-    std::string folderPath = "";              // インスタンスごとのフォルダパス
-    std::string fileName = "data.json";       // インスタンスごとのファイル名
-    json cachedJson;                          // メモリ上にキャッシュしたJSONデータ
-    bool isDirty = false;                     // Saveによる変更がある場合にファイル書き出しが必要かを示すフラグ
+    std::string basePath_ = "resources/jsons"; // 固定の基準パス
+    std::string folderPath_ = "";              // インスタンスごとのフォルダパス
+    std::string fileName_ = "data.json";       // インスタンスごとのファイル名
+    json cachedJson_;                          // メモリ上にキャッシュしたJSONデータ
+    bool isDirty_ = false;                     // Saveによる変更がある場合にファイル書き出しが必要かを示すフラグ
 
     // ファイルからJSONを読み込んでキャッシュに格納する
     void LoadFromFile() {
-        std::string filePath = folderPath + "/" + fileName;
+        std::string filePath = folderPath_ + "/" + fileName_;
         std::ifstream inFile(filePath);
         if (inFile.is_open()) {
-            inFile >> cachedJson;
+            inFile >> cachedJson_;
             inFile.close();
         }
     }
@@ -35,14 +36,14 @@ class DataHandler {
   public:
     // キャッシュ内容をファイルに書き出す
     bool Flush() {
-        if (!isDirty)
+        if (!isDirty_)
             return true;
-        std::string filePath = folderPath + "/" + fileName;
+        std::string filePath = folderPath_ + "/" + fileName_;
         std::ofstream outFile(filePath);
         if (outFile.is_open()) {
-            outFile << cachedJson.dump(4);
+            outFile << cachedJson_.dump(4);
             outFile.close();
-            isDirty = false;
+            isDirty_ = false;
             return true;
         }
         return false;
@@ -156,19 +157,20 @@ inline void from_json(const json &j, BlendMode &mode) {
 // キャッシュに書き込み、ダーティフラグを立てる
 template <typename T>
 void DataHandler::Save(const std::string &key, const T &value) {
-    cachedJson[key] = value;
-    isDirty = true;
+    cachedJson_[key] = value;
+    isDirty_ = true;
 }
 
 // キャッシュから直接読み込む（ファイルアクセスなし）
 template <typename T>
 T DataHandler::Load(const std::string &key, const T &defaultValue) {
-    if (cachedJson.contains(key)) {
+    if (cachedJson_.contains(key)) {
         try {
-            return cachedJson[key].get<T>();
+            return cachedJson_[key].get<T>();
         } catch (const json::exception &e) {
             std::cerr << "JSON Load Error: " << e.what() << " (Key: " << key << ")" << std::endl;
         }
     }
     return defaultValue;
 }
+} // namespace Hagine

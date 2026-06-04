@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include"ParticleStruct.h"
 
+namespace Hagine {
 class ParticleManager {
   public:
     void Initialize(SrvManager *srvManager);
@@ -39,14 +40,14 @@ class ParticleManager {
     size_t GetActiveParticleCount(const std::string &groupName) const;
 
   private:
-    ParticleCommon *particleCommon = nullptr;
+    ParticleCommon *particleCommon_ = nullptr;
     SrvManager *srvManager_;
     std::unordered_map<std::string, ParticleGroup *> particleGroups_;
     std::unordered_map<std::string, ParticleSetting> particleSettings_; // ここがポイント
 
     std::vector<std::string> particleGroupNames_;
-    std::random_device seedGenerator;
-    std::mt19937 randomEngine;
+    std::random_device seedGenerator_;
+    std::mt19937 randomEngine_;
     Vector3 emitterCenter_{};
 
   public:
@@ -55,5 +56,6 @@ class ParticleManager {
   private:
     void CreateTrailParticle(const Particle &parent, const ParticleSetting &setting);
 
-    Particle MakeNewParticle(std::mt19937 &randomEngine, const ParticleSetting &setting);
+    Particle MakeNewParticle(std::mt19937 &randomEngine_, const ParticleSetting &setting);
 };
+} // namespace Hagine

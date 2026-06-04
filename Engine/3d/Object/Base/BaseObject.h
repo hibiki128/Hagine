@@ -14,6 +14,7 @@
 #include <Graphics/PipeLine/PipeLineManager.h>
 #include <string>
 
+namespace Hagine {
 class SkyBox;
 class BaseObject {
   public:
@@ -35,7 +36,7 @@ class BaseObject {
     // ベースのワールド変換データ
     std::unique_ptr<WorldTransform> transform_{};
 
-    Quaternion q{};
+    Quaternion q_{};
     // ライティング
     bool isLighting_ = true;
     // isLoop_ は後方互換のために残しているが、ループ制御は
@@ -238,3 +239,4 @@ class BaseObject {
     // スケールイージングテストのImGuiウィジェットを描画し再生状態を更新する
     void DrawScaleEaseImGui();
 };
+} // namespace Hagine

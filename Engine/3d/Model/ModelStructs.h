@@ -20,6 +20,7 @@
 /// <summary>
 /// クォータニオン変換データ
 /// </summary>
+namespace Hagine {
 struct QuaternionTransform {
     Vector3 scale{};   // スケール
     Quaternion rotate{}; // 回転
@@ -222,3 +223,4 @@ struct Animation {
     float duration{};                                    // アニメーション時間
     std::map<std::string, NodeAnimation> nodeAnimations{}; // ノードアニメーションマップ
 };
+} // namespace Hagine

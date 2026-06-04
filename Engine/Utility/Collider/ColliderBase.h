@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+namespace Hagine {
 enum class ColliderType {
     Sphere,
     AABB,
@@ -135,3 +136,4 @@ class ColliderBase {
 
     std::unique_ptr<DataHandler> dataHandler_;
 };
+} // namespace Hagine

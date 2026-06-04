@@ -2,6 +2,7 @@
 #include "type/Vector2.h"
 #include "type/Vector3.h"
 
+namespace Hagine {
 enum class EasingType {
     Linear,
     InSine, OutSine, InOutSine,
@@ -149,3 +150,4 @@ T EaseOutElastic(const T& start, const T& end, float x, float totalX);
 
 template<typename T>
 T EaseInOutElastic(const T& start, const T& end, float x, float totalX);
+} // namespace Hagine

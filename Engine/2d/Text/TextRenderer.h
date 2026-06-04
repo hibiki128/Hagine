@@ -11,6 +11,7 @@
 /// SpriteManagerにスプライトとして登録するシングルトンクラス。
 /// 生成したPNGはresources/images/Text/配下に保存される。
 /// </summary>
+namespace Hagine {
 class TextRenderer {
   private:
     TextRenderer() = default;
@@ -150,3 +151,4 @@ class TextRenderer {
     float imguiAtlasOutlineThickness_ = 2.0f;
     float imguiAtlasOutlineColor_[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 };
+} // namespace Hagine

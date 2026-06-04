@@ -16,7 +16,7 @@
 /// 敵のゲームオブジェクトクラス
 /// ビヘイビアツリーに基づいて行動し、プレイヤーとの相互作用を管理する
 /// </summary>
-class Enemy : public BaseObject {
+class Enemy : public Hagine::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -27,37 +27,37 @@ class Enemy : public BaseObject {
 
     void Init(const std::string objectName) override;
     void Update() override;
-    void Draw(const ViewProjection &viewProjection) override;
-    void DrawParticle(const ViewProjection &viewProjection);
-    void DrawParticleCompute(const ViewProjection &viewProjection);
+    void Draw(const Hagine::ViewProjection &viewProjection) override;
+    void DrawParticle(const Hagine::ViewProjection &viewProjection);
+    void DrawParticleCompute(const Hagine::ViewProjection &viewProjection);
     void DrawFrustum();
     void Debug();
 
-    void OnCollisionEnter(ColliderBase *collider);
-    void OnCollision(ColliderBase *collider);
+    void OnCollisionEnter(Hagine::ColliderBase *collider);
+    void OnCollision(Hagine::ColliderBase *collider);
     void ConboUpdate();
 
     /// ===================================================
     /// Getter
     /// ===================================================
 
-    Vector3 &GetAcceleration() { return acceleration_; }
-    Vector3 GetVelocity() { return velocity_; }
-    Vector3 GetMovementDirection() const;
-    Vector3 GetForward() const;
-    Vector3 GetBackward() const;
-    Vector3 GetRight() const;
-    Vector3 GetLeft() const;
-    Vector3 GetUp() const;
-    Vector3 GetDown() const;
-    Vector3 GetPositionBehind(float distance = 3.0f) const;
-    Vector3 GetPositionFront(float distance = 3.0f) const;
-    Vector3 GetPositionRight(float distance = 3.0f) const;
-    Vector3 GetPositionLeft(float distance = 3.0f) const;
-    Vector3 GetPositionAbove(float distance = 3.0f) const;
-    Vector3 GetPositionBelow(float distance = 3.0f) const;
-    Vector3 GetPosition() const { return transform_->translation_; }
-    Vector3 GetLocalPosition() const { return transform_->translation_; }
+    Hagine::Vector3 &GetAcceleration() { return acceleration_; }
+    Hagine::Vector3 GetVelocity() { return velocity_; }
+    Hagine::Vector3 GetMovementDirection() const;
+    Hagine::Vector3 GetForward() const;
+    Hagine::Vector3 GetBackward() const;
+    Hagine::Vector3 GetRight() const;
+    Hagine::Vector3 GetLeft() const;
+    Hagine::Vector3 GetUp() const;
+    Hagine::Vector3 GetDown() const;
+    Hagine::Vector3 GetPositionBehind(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionFront(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionRight(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionLeft(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionAbove(float distance = 3.0f) const;
+    Hagine::Vector3 GetPositionBelow(float distance = 3.0f) const;
+    Hagine::Vector3 GetPosition() const { return transform_->translation_; }
+    Hagine::Vector3 GetLocalPosition() const { return transform_->translation_; }
     float GetVelocityMagnitude() const;
     float &GetFallSpeed() { return fallSpeed_; }
     float &GetMoveSpeed() { return moveSpeed_; }
@@ -104,7 +104,7 @@ class Enemy : public BaseObject {
     float GetEnergyRecoveryRate() const { return energyRecoveryRate_; }
 
     // ConditionNode用
-    Vector3 GetWorldPosition() const { return transform_->translation_; }
+    Hagine::Vector3 GetWorldPosition() const { return transform_->translation_; }
 
     /// ===================================================
     /// Setter
@@ -118,9 +118,9 @@ class Enemy : public BaseObject {
     /// </summary>
     /// <param name="direction">ノックバック方向（正規化済みでなくてもよい）</param>
     /// <param name="power">ノックバック強度</param>
-    void SetKnockback(const Vector3 &direction, float power);
+    void SetKnockback(const Hagine::Vector3 &direction, float power);
 
-    void SetVp(ViewProjection *vp);
+    void SetVp(Hagine::ViewProjection *vp);
     void SetTarget(Player *target) {
         target_ = target;
         // 前方攻撃判定コライダーにもプレイヤーを設定する
@@ -133,7 +133,7 @@ class Enemy : public BaseObject {
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
     void SetDrawShadow(bool flag) { drawShadow_ = flag; }
-    void SetVelocity(const Vector3 &vel) { velocity_ = vel; }
+    void SetVelocity(const Hagine::Vector3 &vel) { velocity_ = vel; }
     void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
     void SetStrafeDirection(int dir) { strafeDirection_ = dir; }
     void SetBehaviorTree(std::shared_ptr<BTNode> rootNode) {
@@ -149,7 +149,7 @@ class Enemy : public BaseObject {
     void SetIsGrounded(bool grounded) { isGrounded_ = grounded; }
     void SetIsFlying(bool flying) { isFlying_ = flying; }
     void SetEnergyRecoveryRate(float rate) { energyRecoveryRate_ = rate; }
-    void SetLocalPosition(const Vector3 &pos) { transform_->translation_ = pos; }
+    void SetLocalPosition(const Hagine::Vector3 &pos) { transform_->translation_ = pos; }
 
     bool ConsumeEnergy(float amount);
     void RecoverEnergy();
@@ -157,7 +157,7 @@ class Enemy : public BaseObject {
     void UpdateFrustumLockOn();
     void ReleaseLockOn() { isLockOn_ = false; }
 
-    void MoveToTarget(const Vector3 &targetPos);
+    void MoveToTarget(const Hagine::Vector3 &targetPos);
     void PerformAttack();
     void MoveStrafe();
     void MoveRetreat();
@@ -165,7 +165,7 @@ class Enemy : public BaseObject {
     void Move();
     void DirectionUpdate();
     void Shot();
-    void ShotWithDirection(const Vector3 &direction, bool forceHoming = false);
+    void ShotWithDirection(const Hagine::Vector3 &direction, bool forceHoming = false);
 
     /// ===================================================
     /// 大技（チャージ攻撃・必殺技）演出＆処理
@@ -297,8 +297,8 @@ class Enemy : public BaseObject {
     Direction dir_;         // 現在の方向
     MoveDirection moveDir_; // 移動方向
 
-    Vector3 velocity_{};       // 速度
-    Vector3 acceleration_{};   // 加速度
+    Hagine::Vector3 velocity_{};       // 速度
+    Hagine::Vector3 acceleration_{};   // 加速度
     Player *target_ = nullptr; // ターゲットプレイヤー
 
     int strafeDirection_ = 1; // 横移動方向
@@ -313,14 +313,14 @@ class Enemy : public BaseObject {
     float maxSpeed_ = 0.0f;  // 最大速度
     float accelRate_ = 0.0f; // 加速レート
 
-    Vector3 velocityTarget_{};         // 目標速度
-    EasingData<Vector3> velocityEase_; // 速度補間用イージング
+    Hagine::Vector3 velocityTarget_{};         // 目標速度
+    Hagine::EasingData<Hagine::Vector3> velocityEase_; // 速度補間用イージング
 
     // -----------------------------------------------
     // ノックバック関連
     // -----------------------------------------------
     bool hasKnockback_ = false;            // ノックバック中フラグ
-    Vector3 pendingKnockback_ = {0, 0, 0}; // ノックバック速度
+    Hagine::Vector3 pendingKnockback_ = {0, 0, 0}; // ノックバック速度
 
     // -----------------------------------------------
     // コンボ攻撃パラメータ（ComboSystemのコールバックで更新される）
@@ -341,25 +341,25 @@ class Enemy : public BaseObject {
     bool isGuarding_ = false;    // ガード中フラグ
     bool isComboAttack_ = false; // コンボ攻撃中フラグ
 
-    std::unique_ptr<DataHandler> data_;           // データハンドラ
-    std::unique_ptr<BaseObject> shadow_;          // 影オブジェクト
-    std::unique_ptr<ParticleEmitter> hitEmitter_; // ヒットエミッター
+    std::unique_ptr<Hagine::DataHandler> data_;           // データハンドラ
+    std::unique_ptr<Hagine::BaseObject> shadow_;          // 影オブジェクト
+    std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; // ヒットエミッター
     std::unique_ptr<Shake> chargeShake_;          // シェイク
 
     // 大技演出用CSパーティクル
-    std::unique_ptr<ParticleCSEmitter> chargeAura_;       // チャージ溜めオーラ (enemyChargeAura)
-    std::unique_ptr<ParticleCSEmitter> burstFlash_;       // チャージ発射閃光 (burstFlash)
-    std::unique_ptr<ParticleCSEmitter> beamMainEffect_;   // ビームメイン演出 (makan_main)
-    std::unique_ptr<ParticleCSEmitter> beamAroundEffect_; // ビームらせん演出 (makan_around)
+    std::unique_ptr<Hagine::ParticleCSEmitter> chargeAura_;       // チャージ溜めオーラ (enemyChargeAura)
+    std::unique_ptr<Hagine::ParticleCSEmitter> burstFlash_;       // チャージ発射閃光 (burstFlash)
+    std::unique_ptr<Hagine::ParticleCSEmitter> beamMainEffect_;   // ビームメイン演出 (makan_main)
+    std::unique_ptr<Hagine::ParticleCSEmitter> beamAroundEffect_; // ビームらせん演出 (makan_around)
 
     // ビーム必殺技状態
-    OBBCollider *beamCollider_ = nullptr;        // ビーム判定コライダー（動的にOBBを更新）
+    Hagine::OBBCollider *beamCollider_ = nullptr;        // ビーム判定コライダー（動的にOBBを更新）
     bool beamActive_ = false;                    // ビームアクティブフラグ
     bool beamDamageDealt_ = false;               // ビームダメージ適用済みフラグ
     float beamLength_ = 0.0f;                    // 現在のビーム長
     float beamActiveTime_ = 0.0f;                // ビームアクティブ経過時間
     float beamSpiralTime_ = 0.0f;                // らせんアニメーション経過時間
-    Quaternion beamLockedRotation_{};            // ビーム発射時に固定した向き（発射後ホーミング防止）
+    Hagine::Quaternion beamLockedRotation_{};            // ビーム発射時に固定した向き（発射後ホーミング防止）
     float beamSpiralRadius_ = 2.0f;              // らせんの半径
     float beamSpiralRevolution_ = 3.0f;          // 最大長に達した時の巻き数
     float beamSpiralForwardSpeed_ = 30.0f;       // らせんパーティクルの前進速度
@@ -386,12 +386,12 @@ class Enemy : public BaseObject {
     // -----------------------------------------------
     std::unique_ptr<EnemyAttackCollider> attackCollider_; // 攻撃コライダー
 
-    EasingData<float> tiltEase_; // のけぞり回転イージング
-    Quaternion baseRotation_;    // 基本回転
-    Quaternion tiltRotation_;    // のけぞり回転
+    Hagine::EasingData<float> tiltEase_; // のけぞり回転イージング
+    Hagine::Quaternion baseRotation_;    // 基本回転
+    Hagine::Quaternion tiltRotation_;    // のけぞり回転
 
-    OBBCollider *enemyCollider_ = nullptr;      // 敵コライダー
-    AABBCollider *enemyWallCollider_ = nullptr; // 壁用コライダー
+    Hagine::OBBCollider *enemyCollider_ = nullptr;      // 敵コライダー
+    Hagine::AABBCollider *enemyWallCollider_ = nullptr; // 壁用コライダー
 
     EnemyHand *leftHand_ptr_;  // 左手ポインタ
     EnemyHand *rightHand_ptr_; // 右手ポインタ

@@ -3,6 +3,7 @@
 #include "SpriteManager.h"
 #include <Particle/CSParticle/ParticleCSEditor.h>
 
+using namespace Hagine;
 void FadeOut::Initialize() {
     // スプライトマネージャーの設定と読み込み
     SpriteManager::GetInstance()->SetSaveFolder("Transition");

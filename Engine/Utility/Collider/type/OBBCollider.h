@@ -1,6 +1,7 @@
 #pragma once
 #include "../ColliderBase.h"
 
+namespace Hagine {
 class OBBCollider : public ColliderBase {
   public:
     OBBCollider() = default;
@@ -38,3 +39,4 @@ class OBBCollider : public ColliderBase {
     OBB cachedOBB_;
     Vector3 anchorPoint_ = {0.5f, 0.5f, 0.5f};
 };
+} // namespace Hagine

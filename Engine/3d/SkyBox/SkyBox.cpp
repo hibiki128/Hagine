@@ -6,6 +6,7 @@
 #include <Shadow/ShadowMap.h>
 #include <myMath.h>
 
+namespace Hagine {
 void SkyBox::Finalize() {
     vertexResource_.Reset();
     indexResource_.Reset();
@@ -165,3 +166,4 @@ void SkyBox::CreateCamera() {
     cameraData_->worldPosition = {0.0f, 0.0f, 0.0f};
     cameraData_->padding = 0.0f;
 }
+} // namespace Hagine

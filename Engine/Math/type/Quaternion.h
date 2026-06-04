@@ -4,6 +4,7 @@
 #include <cmath>
 #include <numbers>
 
+namespace Hagine {
 class Quaternion final {
   public:
     float x, y, z, w;
@@ -97,3 +98,4 @@ class Quaternion final {
 
     Vector3 Rotate(const Vector3 &v) const;
 };
+} // namespace Hagine

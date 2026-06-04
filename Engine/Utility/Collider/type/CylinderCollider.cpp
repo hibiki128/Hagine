@@ -2,6 +2,7 @@
 #include "line/DrawLine3D.h"
 #include <numbers>
 
+namespace Hagine {
 void CylinderCollider::DebugDraw(const ViewProjection &viewProjection) {
     if (!isVisible_ || !isEnabled_) {
         return;
@@ -49,3 +50,4 @@ void CylinderCollider::DebugDraw(const ViewProjection &viewProjection) {
         }
     }
 }
+} // namespace Hagine

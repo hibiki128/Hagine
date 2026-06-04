@@ -3,6 +3,7 @@
 
 #include"../Utility/Debug/ImGui/ImGuiNotification.h"
 
+namespace Hagine {
 void PostEffectDataManager::Initialize(PostEffectChain *chain, DirectXCommon *dxCommon) {
     chain_ = chain;
     dxCommon_ = dxCommon;
@@ -79,3 +80,4 @@ void PostEffectDataManager::LoadData(const std::string &fileName) {
         ImGuiNotification::Post("パスが見つかりません: " + fileName, {0.8f, 0.2f, 0.2f, 1.0f});
     }
 }
+} // namespace Hagine

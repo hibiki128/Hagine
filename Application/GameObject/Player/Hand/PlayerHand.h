@@ -6,7 +6,7 @@
 /// 攻撃判定は PlayerAttackCollider が担当するため、
 /// このクラスはモーションアニメーションの見た目のみを管理する
 /// </summary>
-class PlayerHand : public BaseObject {
+class PlayerHand : public Hagine::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -25,5 +25,5 @@ class PlayerHand : public BaseObject {
     /// <summary>
     /// 描画処理
     /// </summary>
-    void Draw(const ViewProjection &viewProjection) override;
+    void Draw(const Hagine::ViewProjection &viewProjection) override;
 };

@@ -2,6 +2,7 @@
 #include "Input.h"
 #include "application/GameObject/Player/Player.h"
 
+using namespace Hagine;
 bool PlayerBaseState::HasMovementInput(Player &player) {
     if (!player.GetGamePad()->IsConnected()) {
         return Input::GetInstance()->PushKey(DIK_A) ||

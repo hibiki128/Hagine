@@ -1,5 +1,6 @@
 #include "BaseScene.h"
 
+namespace Hagine {
 void BaseScene::Initialize() {
     audio_ = Audio::GetInstance();
     input_ = Input::GetInstance();
@@ -56,3 +57,4 @@ void BaseScene::DrawAllObjects() {
     ptCSEditor_->DrawAll(vp_);
 }
 
+} // namespace Hagine

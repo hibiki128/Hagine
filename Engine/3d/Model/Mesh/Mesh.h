@@ -4,6 +4,7 @@
 #include <Primitive/PrimitiveModel.h>
 #include <d3d12.h>
 
+namespace Hagine {
 class DirectXCommon;
 
 /// <summary>
@@ -31,8 +32,8 @@ class Mesh {
     /// Getter
     /// </summary>
     MeshData &GetMeshData() { return meshData_; }
-    D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() { return vertexBufferView; }
-    D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() { return indexBufferView; }
+    D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() { return vertexBufferView_; }
+    D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() { return indexBufferView_; }
 
   private:
     /// ===================================================
@@ -58,12 +59,13 @@ class Mesh {
     MeshData meshData_;       // メッシュデータ
 
     // 頂点バッファ
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr; // バッファリソース
-    VertexData *vertexData = nullptr;                                // データポインタ
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;                       // バッファビュー
+    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_ = nullptr; // バッファリソース
+    VertexData *vertexData_ = nullptr;                                // データポインタ
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView_;                       // バッファビュー
 
     // インデックスバッファ
-    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource = nullptr; // バッファリソース
-    uint32_t *indexData;                                            // データポインタ
-    D3D12_INDEX_BUFFER_VIEW indexBufferView;                        // バッファビュー
+    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource_ = nullptr; // バッファリソース
+    uint32_t *indexData_;                                            // データポインタ
+    D3D12_INDEX_BUFFER_VIEW indexBufferView_;                        // バッファビュー
 };
+} // namespace Hagine

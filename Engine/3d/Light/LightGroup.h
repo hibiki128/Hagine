@@ -14,6 +14,7 @@
 /// <summary>
 /// ライトタイプ種別
 /// </summary>
+namespace Hagine {
 enum class LightType {
     Directional, // 平行光源
     Point,       // ポイントライト
@@ -84,11 +85,11 @@ public:
     void SetShowLightVisualization(bool show) { showLightVisualization_ = show; }
 
     Vector3 GetDirectionalLightDirection() const {
-        if (directionalLightData) return directionalLightData->direction;
+        if (directionalLightData_) return directionalLightData_->direction;
         return {0.f, -1.f, 0.f};
     }
     bool IsDirectionalLightActive() const {
-        return directionalLightData && directionalLightData->active != 0;
+        return directionalLightData_ && directionalLightData_->active != 0;
     }
 
 private:
@@ -240,17 +241,17 @@ private:
     DirectXCommon *dxCommon_ = nullptr; // DirectX基盤へのポインタ
 
     // リソース管理
-    Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource; // 平行光源バッファ
-    DirectionLight *directionalLightData = nullptr;                  
+    Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource_; // 平行光源バッファ
+    DirectionLight *directionalLightData_ = nullptr;                  
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> pointLightsResource;      // ポイントライトバッファ
-    PointLights *pointLightsData = nullptr;                     
+    Microsoft::WRL::ComPtr<ID3D12Resource> pointLightsResource_;      // ポイントライトバッファ
+    PointLights *pointLightsData_ = nullptr;                     
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> spotLightsResource;       // スポットライトバッファ
-    SpotLights *spotLightsData = nullptr;                      
+    Microsoft::WRL::ComPtr<ID3D12Resource> spotLightsResource_;       // スポットライトバッファ
+    SpotLights *spotLightsData_ = nullptr;                      
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> cameraForGPUResource;     // カメラデータバッファ
-    CameraForGPU *cameraForGPUData = nullptr;                    
+    Microsoft::WRL::ComPtr<ID3D12Resource> cameraForGPUResource_;     // カメラデータバッファ
+    CameraForGPU *cameraForGPUData_ = nullptr;                    
 
     // ライトリスト管理
     std::vector<PointLight> pointLights_; 
@@ -259,8 +260,9 @@ private:
     // UI状態
     std::string saveMessage_;  
     int saveMessageTimer_ = 0; 
-    bool isDirectionalLight = true;       // 平行光源の全体有効フラグ
+    bool isDirectionalLight_ = true;       // 平行光源の全体有効フラグ
     bool showLightVisualization_ = false; 
 
     std::unique_ptr<DataHandler> DLightData_ = nullptr; // JSONハンドラー
 };
+} // namespace Hagine

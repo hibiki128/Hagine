@@ -3,6 +3,7 @@
 #ifdef _DEBUG
 #include <imgui.h>
 
+namespace Hagine {
 void ColliderTagManager::ImGuiTagManager() {
 
     ImGui::Text("登録済みタグ一覧");
@@ -47,4 +48,5 @@ void ColliderTagManager::ImGuiTagManager() {
     }
 }
 
+} // namespace Hagine
 #endif

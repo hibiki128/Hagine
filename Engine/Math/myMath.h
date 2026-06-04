@@ -7,6 +7,7 @@
 #include <type/Quaternion.h>
 #include <type/Vector3.h>
 
+namespace Hagine {
 struct Sphere {
     Vector3 center = {0.0f, 0.0f, 0.0f}; // !< 中心点
     float radius = 0.0f;                 // !< 半径
@@ -122,3 +123,4 @@ Vector3 ExtractScale(const Matrix4x4 &matrix);
 //// デバッグ用
 // void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 // void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);
+} // namespace Hagine

@@ -6,6 +6,7 @@
 #include "myMath.h"
 #include <Line/DrawLine3D.h>
 
+using namespace Hagine;
 const float MotionEditor::ATTACK_END_INTERVAL = 0.1f;
 
 // イージング適用関数

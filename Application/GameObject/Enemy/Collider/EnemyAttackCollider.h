@@ -5,7 +5,7 @@
 
 class Enemy;
 class Player;
-class ColliderBase;
+namespace Hagine { class ColliderBase; }
 
 /// <summary>
 /// 敵前方に展開する攻撃判定コライダー
@@ -35,7 +35,7 @@ class EnemyAttackCollider {
     /// パーティクル描画
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticle(const Hagine::ViewProjection &viewProjection);
 
     /// <summary>
     /// 攻撃コライダーを有効化する
@@ -71,7 +71,7 @@ class EnemyAttackCollider {
     /// <summary>
     /// コライダーのサイズを設定
     /// </summary>
-    void SetColliderSize(const Vector3 &size) {
+    void SetColliderSize(const Hagine::Vector3 &size) {
         if (collider_) {
             collider_->SetSize(size);
         }
@@ -90,7 +90,7 @@ class EnemyAttackCollider {
     /// 衝突時のコールバック
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollision(ColliderBase *other);
+    void OnCollision(Hagine::ColliderBase *other);
 
     /// ===================================================
     /// private variants
@@ -100,7 +100,7 @@ class EnemyAttackCollider {
     Player *player_ = nullptr; // プレイヤー参照
 
     // OBBコライダー本体
-    OBBCollider *collider_ = nullptr; // コライダー
+    Hagine::OBBCollider *collider_ = nullptr; // コライダー
 
     // 現在の攻撃パラメータ
     float currentDamage_ = 0.0f;    // 現在のダメージ
@@ -123,6 +123,6 @@ class EnemyAttackCollider {
 
     float energyRecoveryAmount_ = 5.0f;
 
-    std::unique_ptr<ParticleEmitter> hitEmitter_; // ヒットパーティクル
+    std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; // ヒットパーティクル
     std::unique_ptr<Shake> shake_;                // シェイク
 };

@@ -4,6 +4,7 @@
 #include"dxgi1_6.h"
 #include"wrl.h"
 
+namespace Hagine {
 D3DResourceLeakChecker::~D3DResourceLeakChecker()
 {
 	// リソースリークチェック
@@ -14,3 +15,4 @@ D3DResourceLeakChecker::~D3DResourceLeakChecker()
 		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
 	}
 }
+} // namespace Hagine

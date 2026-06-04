@@ -7,7 +7,7 @@ class Enemy;
 /// <summary>
 /// プレイヤーが発射する弾のゲームオブジェクトクラス
 /// </summary>
-class PlayerBullet : public BaseObject {
+class PlayerBullet : public Hagine::BaseObject {
   public:
     /// ===================================================
     /// public method
@@ -29,13 +29,13 @@ class PlayerBullet : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection) override;
+    void Draw(const Hagine::ViewProjection &viewProjection) override;
 
     /// <summary>
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticle(const Hagine::ViewProjection &viewProjection);
 
     /// <summary>
     /// プレイヤーの情報から弾のトランスフォームを初期化
@@ -47,7 +47,7 @@ class PlayerBullet : public BaseObject {
     /// 衝突判定時の処理
     /// </summary>
     /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter(ColliderBase *collider);
+    void OnCollisionEnter(Hagine::ColliderBase *collider);
 
     /// <summary>
     /// 弾が生きているかを取得
@@ -113,7 +113,7 @@ class PlayerBullet : public BaseObject {
     static constexpr float kVerticalOffset = 1.0f;        // 垂直方向オフセット
     static constexpr int kBulletDamage = 1;               // 弾のダメージ値
 
-    Vector3 velocity_;
+    Hagine::Vector3 velocity_;
     float speed_ = kDefaultSpeed;       // 移動速度
     float acce_ = kDefaultAcceleration; // 加速度
 
@@ -124,7 +124,7 @@ class PlayerBullet : public BaseObject {
 
     bool isLockOnBullet_ = false;  // ロックオン弾かどうか
     Enemy *targetEnemy_ = nullptr; // ターゲットの敵
-    std::unique_ptr<ParticleEmitter> emitter_;
+    std::unique_ptr<Hagine::ParticleEmitter> emitter_;
 
-    SphereCollider *collider_ = nullptr;
+    Hagine::SphereCollider *collider_ = nullptr;
 };

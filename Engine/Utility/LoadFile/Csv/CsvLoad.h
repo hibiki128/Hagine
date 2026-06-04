@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 
+namespace Hagine {
 class CsvLoad {
   private:
     CsvLoad() = default;
@@ -38,8 +39,9 @@ class CsvLoad {
 
   private:
     // CSV 読み込みキャッシュ（キー: ファイル名, 値: 二次元配列のマップチップ）
-    std::unordered_map<std::string, std::vector<std::vector<int>>> csvCache;
+    std::unordered_map<std::string, std::vector<std::vector<int>>> csvCache_;
 
     // 実際に CSV を開いて読み込む関数
     std::vector<std::vector<int>> ReadCsvFile(const std::string &filePath);
 };
+} // namespace Hagine

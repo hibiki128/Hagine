@@ -1,14 +1,15 @@
 #include "DataHandler.h"
 
+namespace Hagine {
 DataHandler::DataHandler(const std::string &folder, const std::string &file) {
-    folderPath = basePath + "/" + folder;
-    fileName = file + ".json";
-    fs::create_directories(folderPath); // フォルダを作成
+    folderPath_ = basePath_ + "/" + folder;
+    fileName_ = file + ".json";
+    fs::create_directories(folderPath_); // フォルダを作成
     LoadFromFile();                     // コンストラクタで一度だけファイルを読み込む
 }
 
 void DataHandler::DeleteJson(const std::string &jsonName) {
-    std::string filePath = folderPath + "/" + jsonName + ".json";
+    std::string filePath = folderPath_ + "/" + jsonName + ".json";
 
     if (fs::exists(filePath)) {
         fs::remove(filePath);
@@ -16,12 +17,12 @@ void DataHandler::DeleteJson(const std::string &jsonName) {
 }
 
 bool DataHandler::Exists() const {
-    std::string filePath = folderPath + "/" + fileName;
+    std::string filePath = folderPath_ + "/" + fileName_;
     return fs::exists(filePath);
 }
 
 void DataHandler::DeleteAllJsonsInFolder() {
-    std::string fullFolderPath = folderPath;
+    std::string fullFolderPath = folderPath_;
 
     if (!fs::exists(fullFolderPath) || !fs::is_directory(fullFolderPath)) {
         return;
@@ -60,3 +61,4 @@ template Quaternion DataHandler::Load<Quaternion>(const std::string &, const Qua
 template PrimitiveType DataHandler::Load<PrimitiveType>(const std::string &, const PrimitiveType &);
 template Matrix4x4 DataHandler::Load<Matrix4x4>(const std::string &, const Matrix4x4 &);
 template BlendMode DataHandler::Load<BlendMode>(const std::string &, const BlendMode &);
+} // namespace Hagine

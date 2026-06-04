@@ -83,20 +83,20 @@ class EnemyUI {
 
     Enemy *enemy_ = nullptr; // 敵へのポインタ
 
-    std::unique_ptr<Sprite> hpBar_;           // HPバー
-    std::unique_ptr<Sprite> enemyIcon_;       // アイコン
-    std::unique_ptr<Sprite> energyBar_;       // エネルギーバー
-    std::unique_ptr<Sprite> barFrame_;        // HPバーフレーム
-    std::unique_ptr<Sprite> energyBarFrame_;  // エネルギーバーフレーム
+    std::unique_ptr<Hagine::Sprite> hpBar_;           // HPバー
+    std::unique_ptr<Hagine::Sprite> enemyIcon_;       // アイコン
+    std::unique_ptr<Hagine::Sprite> energyBar_;       // エネルギーバー
+    std::unique_ptr<Hagine::Sprite> barFrame_;        // HPバーフレーム
+    std::unique_ptr<Hagine::Sprite> energyBarFrame_;  // エネルギーバーフレーム
 
-    Vector2 hpBarPosition_ = {kHPBarPositionX, kHPBarPositionY};                            // HPバーの位置
-    Vector2 hpBarSize_ = {kHPBarSizeX, kHPBarSizeY};                                        // HPバーのサイズ
-    Vector2 enemyIconPosition_ = {kEnemyIconPositionX, kEnemyIconPositionY};                // アイコンの位置
-    Vector2 iconSize_ = {kIconSizeX, kIconSizeY};                                           // アイコンのサイズ
-    Vector2 energyBarPosition_ = {kEnergyBarPositionX, kEnergyBarPositionY};                // エネルギーバーの位置
-    Vector2 energyBarSize_ = {kEnergyBarSizeX, kEnergyBarSizeY};                            // エネルギーバーのサイズ
-    Vector2 barFramePosition_ = {kBarFramePositionX, kBarFramePositionY};                   // バーフレームの位置
-    Vector2 barSize_ = {kBarSizeX, kBarSizeY};                                              // バーのサイズ
-    Vector2 energyBarFramePosition_ = {kEnergyBarFramePositionX, kEnergyBarFramePositionY}; // エネルギーバーフレームの位置
-    Vector2 energyBarFrameSize_ = {kEnergyBarFrameSizeX, kEnergyBarFrameSizeY};             // エネルギーバーフレームのサイズ
+    Hagine::Vector2 hpBarPosition_ = {kHPBarPositionX, kHPBarPositionY};                            // HPバーの位置
+    Hagine::Vector2 hpBarSize_ = {kHPBarSizeX, kHPBarSizeY};                                        // HPバーのサイズ
+    Hagine::Vector2 enemyIconPosition_ = {kEnemyIconPositionX, kEnemyIconPositionY};                // アイコンの位置
+    Hagine::Vector2 iconSize_ = {kIconSizeX, kIconSizeY};                                           // アイコンのサイズ
+    Hagine::Vector2 energyBarPosition_ = {kEnergyBarPositionX, kEnergyBarPositionY};                // エネルギーバーの位置
+    Hagine::Vector2 energyBarSize_ = {kEnergyBarSizeX, kEnergyBarSizeY};                            // エネルギーバーのサイズ
+    Hagine::Vector2 barFramePosition_ = {kBarFramePositionX, kBarFramePositionY};                   // バーフレームの位置
+    Hagine::Vector2 barSize_ = {kBarSizeX, kBarSizeY};                                              // バーのサイズ
+    Hagine::Vector2 energyBarFramePosition_ = {kEnergyBarFramePositionX, kEnergyBarFramePositionY}; // エネルギーバーフレームの位置
+    Hagine::Vector2 energyBarFrameSize_ = {kEnergyBarFrameSizeX, kEnergyBarFrameSizeY};             // エネルギーバーフレームのサイズ
 };

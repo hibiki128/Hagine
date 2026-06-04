@@ -7,6 +7,7 @@
 /// ゲームパッド入力を管理するクラス
 /// XInput専用のラッパークラス
 /// </summary>
+namespace Hagine {
 class GamePad {
   private:
     XINPUT_STATE state_;    // 現在の状態
@@ -164,3 +165,4 @@ class GamePad {
     /// <returns>正規化された値 (-1.0f ~ 1.0f)</returns>
     float ApplyDeadZone(SHORT value, float deadZone) const;
 };
+} // namespace Hagine

@@ -4,9 +4,10 @@
 #include <GamePad.h>
 #include <Input.h>
 
+using namespace Hagine;
 void StartCamera::Init() {
     // ViewProjectionの初期設定
-    vp_.farZ = kFarZ;
+    vp_.farZ_ = kFarZ;
     vp_.Initialize("");
     wt_.Initialize();
 

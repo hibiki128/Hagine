@@ -6,6 +6,7 @@
 #include"SpriteManager.h"
 #include <Audio.h>
 
+namespace Hagine {
 class ImGuizmoManager;
 class OffScreen;
 class ImGuiManager {
@@ -92,7 +93,7 @@ class ImGuiManager {
     }
 
     void SetShortcutWindow(bool show) {
-        showShortcutWindow = show;
+        showShortcutWindow_ = show;
     }
 
     // 必要に応じてImGuizmoManagerへのアクセサを追加
@@ -194,15 +195,15 @@ class ImGuiManager {
     ImVec2 actualScenePos_ = {};
 
 #endif // USE_IMGUI
-    int cubeCount = 0;
-    int sphereCount = 0;
-    int planeCount = 0;
-    int cylinderCount = 0;
-    int ringCount = 0;
-    int triangleCount = 0;
-    int capsuleCount = 0;
-    int pyramidCount = 0;
-    int coneCount = 0;
+    int cubeCount_ = 0;
+    int sphereCount_ = 0;
+    int planeCount_ = 0;
+    int cylinderCount_ = 0;
+    int ringCount_ = 0;
+    int triangleCount_ = 0;
+    int capsuleCount_ = 0;
+    int pyramidCount_ = 0;
+    int coneCount_ = 0;
 
     // エンジンのウィンドウを描画するフラグ
     // 重いUIコンポーネントの表示状態管理
@@ -215,7 +216,7 @@ class ImGuiManager {
     bool showOfScreenView_ = true;
     bool showLightView_ = true;
     bool isEditorMode_ = true; // エディターモードフラグ
-    bool showShortcutWindow = false;
+    bool showShortcutWindow_ = false;
     bool showGizmoView_ = true;
     bool showHierarchyView_ = true;
     bool showMotionEditorView_ = true;
@@ -237,3 +238,4 @@ class ImGuiManager {
     std::string editorIniFilePath_ = "imgui_editor.ini";
     std::string gameIniFilePath_ = "imgui_game.ini";
 };
+} // namespace Hagine

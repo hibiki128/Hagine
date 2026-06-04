@@ -3,7 +3,7 @@
 #include "Particle/CSParticle/ParticleCSEmitter.h"
 
 class Player;
-class MakanAttackSkill : public BaseObject {
+class MakanAttackSkill : public Hagine::BaseObject {
   public:
     /// <summary>
     /// 初期化
@@ -21,18 +21,18 @@ class MakanAttackSkill : public BaseObject {
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     /// <param name="offSet">描画オフセット</param>
-    void Draw(const ViewProjection &viewProjection) override;
+    void Draw(const Hagine::ViewProjection &viewProjection) override;
 
     /// <summary>
     /// パーティクルの描画処理
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const ViewProjection &viewProjection);
+    void DrawParticle(const Hagine::ViewProjection &viewProjection);
 
     void SetPlayer(Player *player) { player_ = player; }
 
     bool IsActive() const { return isActive_; }
-    void Activate(WorldTransform *playerTransform);
+    void Activate(Hagine::WorldTransform *playerTransform);
 
         /// <summary>
     /// ImGuiでのデバッグ表示
@@ -44,18 +44,18 @@ class MakanAttackSkill : public BaseObject {
     /// 当たってる間
     /// </summary>
     /// <param name="other"></param>
-    void OnCollisionEnter(ColliderBase *other);
+    void OnCollisionEnter(Hagine::ColliderBase *other);
 
     void Deactivate();
 
   private:
-    std::unique_ptr<ParticleCSEmitter> makanMainEffect_{};
-    std::unique_ptr<ParticleCSEmitter> makanAroundEffect_{};
+    std::unique_ptr<Hagine::ParticleCSEmitter> makanMainEffect_{};
+    std::unique_ptr<Hagine::ParticleCSEmitter> makanAroundEffect_{};
 
-    OBBCollider *makanCollider_ = nullptr;
+    Hagine::OBBCollider *makanCollider_ = nullptr;
 
     bool isActive_ = false;
-    WorldTransform *playerTransform_ = nullptr;
+    Hagine::WorldTransform *playerTransform_ = nullptr;
     float currentLength_ = 0.0f;
     float maxLength_ = 50.0f;
     float extendSpeed_ = 200.0f;

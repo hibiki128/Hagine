@@ -10,6 +10,7 @@
 #include <map>
 #include <set>
 
+namespace Hagine {
 class Audio {
 
     class VoiceCallback : public IXAudio2VoiceCallback {
@@ -147,20 +148,20 @@ class Audio {
     //------------------------------------------------------------------
     // 通常メンバ
     //------------------------------------------------------------------
-    Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
-    IXAudio2MasteringVoice *masterVoice = nullptr;
+    Microsoft::WRL::ComPtr<IXAudio2> xAudio2_;
+    IXAudio2MasteringVoice *masterVoice_ = nullptr;
     std::string directoryPath_;
     std::array<SoundData, kMaxSoundData> soundDatas_;
-    size_t soundDataIndex = 0;
+    size_t soundDataIndex_ = 0;
     std::set<std::unique_ptr<Voice>> voices_;
-    std::set<std::string> loadedFiles;
+    std::set<std::string> loadedFiles_;
 
-    uint16_t audioFormat = 0;
-    uint16_t numChannels = 0;
-    uint32_t sampleRate = 0;
-    uint32_t byteRate = 0;
-    uint16_t blockAlign = 0;
-    uint16_t bitsPerSample = 0;
+    uint16_t audioFormat_ = 0;
+    uint16_t numChannels_ = 0;
+    uint32_t sampleRate_ = 0;
+    uint32_t byteRate_ = 0;
+    uint16_t blockAlign_ = 0;
+    uint16_t bitsPerSample_ = 0;
 
     //------------------------------------------------------------------
     // デバッグ専用メンバ
@@ -172,3 +173,4 @@ class Audio {
     float debugMasterVolume_ = 1.0f;                 // マスター音量
     std::map<std::string, uint32_t> debugLoadedMap_; // ファイル名 → soundIndex
 };
+} // namespace Hagine

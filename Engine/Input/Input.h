@@ -20,6 +20,7 @@
 #include <type/Vector3.h>
 #include <type/Vector4.h>
 
+namespace Hagine {
 struct Ray {
     Vector3 origin;    // レイの開始点
     Vector3 direction; // レイの方向（正規化済み）
@@ -225,3 +226,4 @@ class Input {
     const BYTE *GetKeyState() const { return key_.data(); }
     const BYTE *GetPreviousKeyState() const { return keyPre_.data(); }
 };
+} // namespace Hagine

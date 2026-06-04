@@ -1,6 +1,7 @@
 #pragma once
 #include "Object/Base/BaseObject.h"
 #include "unordered_map"
+namespace Hagine {
 class BaseObjectManager {
   private:
     /// ===================================================
@@ -96,3 +97,4 @@ class BaseObjectManager {
     bool showObjectLoadModal_ = false;
     std::string selectedJsonPath_;
 };
+} // namespace Hagine

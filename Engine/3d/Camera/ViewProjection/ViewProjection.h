@@ -11,6 +11,7 @@
 /// <summary>
 /// ビュープロジェクション用定数バッファ
 /// </summary>
+namespace Hagine {
 struct ConstBufferDataViewProjection {
     Matrix4x4 view;       // ビュー行列
     Matrix4x4 projection; // 射影行列
@@ -98,10 +99,10 @@ public:
     Quaternion quateRotation_ = Quaternion::IdentityQuaternion();                   // クォータニオンによる回転
     Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                                    // オイラー角による回転(ラジアン)
     Vector3 translation_ = {0.0f, 0.0f, -10.0f};                                    // カメラ座標
-    float fovAngleY = 45.0f * std::numbers::pi_v<float> / 180.0f;                   // 垂直方向視野角(ラジアン)
+    float fovAngleY_ = 45.0f * std::numbers::pi_v<float> / 180.0f;                   // 垂直方向視野角(ラジアン)
     float aspectRatio = float(WinApp::kClientWidth) / float(WinApp::kClientHeight); // アスペクト比
-    float nearZ = 0.1f;                                                             // 近距離クリッピング面
-    float farZ = 1000.0f;                                                           // 遠距離クリッピング面
+    float nearZ_ = 0.1f;                                                             // 近距離クリッピング面
+    float farZ_ = 1000.0f;                                                           // 遠距離クリッピング面
     Matrix4x4 matView_{};                                                           // ビュー行列
     Matrix4x4 matProjection_{};                                                     // 射影行列
     Matrix4x4 matWorld_{};                                                          // ワールド行列
@@ -152,7 +153,8 @@ private:
 
     // 定数バッファ関連
     Microsoft::WRL::ComPtr<ID3D12Resource> constBuffer_{}; 
-    ConstBufferDataViewProjection *constMap = nullptr;   
+    ConstBufferDataViewProjection *constMap_ = nullptr;   
 };
 
 static_assert(!std::is_copy_assignable_v<ViewProjection>);
+} // namespace Hagine

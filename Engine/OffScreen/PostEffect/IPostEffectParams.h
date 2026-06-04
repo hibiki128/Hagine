@@ -9,6 +9,7 @@
 
 /// @brief ポストエフェクトパラメータの基底インターフェース
 /// 各エフェクトはこのインターフェースを実装し、自身のパラメータを所有する
+namespace Hagine {
 class IPostEffectParams {
   public:
     virtual ~IPostEffectParams() = default;
@@ -36,3 +37,4 @@ class IPostEffectParams {
     /// @brief 時間更新が必要なエフェクト向け（デフォルトは何もしない）
     virtual void UpdateTime(float /*deltaTime*/) {}
 };
+} // namespace Hagine

@@ -1,6 +1,7 @@
 #pragma once
 #include <cstring>
 #include"Vector3.h"
+namespace Hagine {
 struct Matrix4x4 {
 public:
 	float m[4][4];
@@ -96,3 +97,4 @@ public:
 		return Vector3(m[0][col], m[1][col], m[2][col]);
 	}
 };
+} // namespace Hagine

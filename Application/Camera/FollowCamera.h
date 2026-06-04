@@ -4,7 +4,7 @@
 #include "Transform/WorldTransform.h"
 
 class Player;
-class DrawLine3D;
+namespace Hagine { class DrawLine3D; }
 
 /// <summary>
 /// ターゲットを追従するカメラクラス
@@ -45,7 +45,7 @@ class FollowCamera {
     /// 視錐台のデバッグ描画
     /// </summary>
     /// <param name="drawLine3D">ライン描画クラスのポインタ</param>
-    void DrawLockOnFrustum(DrawLine3D *drawLine3D) const;
+    void DrawLockOnFrustum(Hagine::DrawLine3D *drawLine3D) const;
 
     /// ===================================================
     /// Getter
@@ -61,7 +61,7 @@ class FollowCamera {
     /// ビュープロジェクションを取得
     /// </summary>
     /// <returns>ViewProjection&: ビュープロジェクション参照</returns>
-    ViewProjection &GetViewProjection() { return viewProjection_; }
+    Hagine::ViewProjection &GetViewProjection() { return viewProjection_; }
 
     /// <summary>
     /// ロックオン有効距離を取得
@@ -102,7 +102,7 @@ class FollowCamera {
     /// </summary>
     /// <param name="fov">視野角（度数）</param>
     void SetCameraFov(float fov) {
-        viewProjection_.fovAngleY = fov * std::numbers::pi_v<float> / 180.0f;
+        viewProjection_.fovAngleY_ = fov * std::numbers::pi_v<float> / 180.0f;
     }
 
     /// <summary>
@@ -144,7 +144,7 @@ class FollowCamera {
     /// </summary>
     /// <param name="point">判定する座標</param>
     /// <returns>bool: 範囲内であればtrue</returns>
-    bool IsPointInLockOnFrustum(const Vector3 &point) const;
+    bool IsPointInLockOnFrustum(const Hagine::Vector3 &point) const;
 
   private:
     /// ===================================================
@@ -193,19 +193,19 @@ class FollowCamera {
     float rushPosArrivalThreshold_ = 0.5f;       ///< 到着判定しきい値（位置）
     float rushRotationArrivalThreshold_ = 0.01f; ///< 到着判定しきい値（回転）
 
-    ViewProjection viewProjection_; ///< ビュープロジェクション
-    WorldTransform worldTransform_; ///< ワールドトランスフォーム
+    Hagine::ViewProjection viewProjection_; ///< ビュープロジェクション
+    Hagine::WorldTransform worldTransform_; ///< ワールドトランスフォーム
 
     Player *target_ = nullptr; ///< 追従対象のプレイヤー
 
-    Quaternion rushCameraRotation_; ///< Rush中の固定回転
+    Hagine::Quaternion rushCameraRotation_; ///< Rush中の固定回転
 
-    Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f};        ///< ベースのカメラオフセット
-    Vector3 shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f};  ///< 肩オフセット目標値
-    Vector3 shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f}; ///< 現在の肩オフセット
-    Vector3 shoulderOffsetStart_ = {0.0f, 0.0f, 0.0f};   ///< 補間開始時の肩オフセット
-    Vector3 rushCameraPosition_;                         ///< Rush中の固定位置
-    Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f};    ///< Rush中のカメラオフセット
+    Hagine::Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f};        ///< ベースのカメラオフセット
+    Hagine::Vector3 shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f};  ///< 肩オフセット目標値
+    Hagine::Vector3 shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f}; ///< 現在の肩オフセット
+    Hagine::Vector3 shoulderOffsetStart_ = {0.0f, 0.0f, 0.0f};   ///< 補間開始時の肩オフセット
+    Hagine::Vector3 rushCameraPosition_;                         ///< Rush中の固定位置
+    Hagine::Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f};    ///< Rush中のカメラオフセット
 
     float yaw_{};                            ///< 現在のヨー角
     float shoulderMaxOffset_ = 12.5f;        ///< 肩の最大ズレ幅
@@ -234,10 +234,10 @@ class FollowCamera {
     float rushRotationTimer_ = 0.0f;      ///< Rush回転補間用タイマー
     float rushResumeTimer_ = 0.0f;        ///< Rush復帰補間用タイマー
 
-    EasingType shoulderEasingType_ = EasingType::InQuad;        ///< 肩補間のイージングタイプ
-    EasingType shoulderResetEasingType_ = EasingType::OutCubic; ///< 肩リセットのイージングタイプ
-    EasingType rushCameraEasingType_ = EasingType::InQuad;      ///< Rushカメラのイージングタイプ
-    EasingType rushResumeEasingType_ = EasingType::OutCubic;    ///< Rush復帰のイージングタイプ
+    Hagine::EasingType shoulderEasingType_ = Hagine::EasingType::InQuad;        ///< 肩補間のイージングタイプ
+    Hagine::EasingType shoulderResetEasingType_ = Hagine::EasingType::OutCubic; ///< 肩リセットのイージングタイプ
+    Hagine::EasingType rushCameraEasingType_ = Hagine::EasingType::InQuad;      ///< Rushカメラのイージングタイプ
+    Hagine::EasingType rushResumeEasingType_ = Hagine::EasingType::OutCubic;    ///< Rush復帰のイージングタイプ
 
     // 視錐台ロックオン関連
     static constexpr float kDefaultLockOnRange = 150.0f;                            ///< デフォルトのロックオン射程

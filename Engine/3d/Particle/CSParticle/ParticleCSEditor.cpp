@@ -8,6 +8,7 @@
 #include <myMath.h>
 #include <vector>
 
+namespace Hagine {
 void ParticleCSEditor::Finalize() {
     emitters_.clear();
 }
@@ -1163,3 +1164,4 @@ std::vector<std::string> ParticleCSEditor::GetJsonFiles() {
 
     return jsonFiles;
 }
+} // namespace Hagine

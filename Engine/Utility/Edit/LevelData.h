@@ -9,6 +9,7 @@
 #include <type/Vector3.h>
 #include <Object/Base/BaseObject.h>
 
+namespace Hagine {
 class LevelData {
   public:
     /// ===================================================
@@ -100,3 +101,4 @@ class LevelData {
     std::vector<ObjectData> objectsData_;
     std::unordered_map<std::string, BaseObject *> createdObjects_;
 };
+} // namespace Hagine

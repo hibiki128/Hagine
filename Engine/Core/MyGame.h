@@ -2,6 +2,7 @@
 #include"Framework.h"
 #include "memory"
 
+namespace Hagine {
 class MyGame : public Framework
 {
 public: // メンバ関数
@@ -30,3 +31,4 @@ private:
 	// シーン
 
 };
+} // namespace Hagine

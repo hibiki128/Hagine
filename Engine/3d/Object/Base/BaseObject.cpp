@@ -10,6 +10,7 @@
 #include <implot.h>
 #endif // DEBUG
 
+namespace Hagine {
 BaseObject::~BaseObject() {
     colliders_.clear();
 }
@@ -1607,3 +1608,4 @@ void BaseObject::ShowBlendModeCombo(BlendMode &currentMode) {
     }
 #endif // _DEBUG
 }
+} // namespace Hagine

@@ -26,6 +26,7 @@
 /// モデルクラス
 /// 3Dモデルのメッシュ、マテリアル、アニメーションを管理する
 /// </summary>
+namespace Hagine {
 class Model {
   public:
     /// ===================================================
@@ -75,7 +76,7 @@ class Model {
     /// Getter
     /// </summary>
     ModelData GetModelData() { return modelData_; }
-    bool IsGltf() { return isGltf; }
+    bool IsGltf() { return isGltf_; }
     size_t GetMeshCount() const { return meshes_.size(); }
     Mesh *GetMesh(uint32_t index) { return (index < meshes_.size()) ? meshes_[index].get() : nullptr; }
     Animator *GetAnimator() { return animator_; }
@@ -121,8 +122,8 @@ class Model {
     ModelData modelData_;       // モデルデータ
     std::string filename_;      // ファイル名
     std::string directorypath_; // ディレクトリパス
-    bool isGltf;                // GLTFフォーマットフラグ
-    Matrix4x4 localMatrix;      // ローカル行列
+    bool isGltf_;                // GLTFフォーマットフラグ
+    Matrix4x4 localMatrix_;      // ローカル行列
 
     // マルチメッシュ対応
     std::vector<std::unique_ptr<Mesh>> meshes_; // メッシュ配列
@@ -134,3 +135,4 @@ class Model {
 
     bool skinOutputInVertexState_ = false; // skin出力バッファの現在の状態追跡
 };
+} // namespace Hagine

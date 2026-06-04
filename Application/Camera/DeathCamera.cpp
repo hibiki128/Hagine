@@ -2,9 +2,10 @@
 #include "DeathCamera.h"
 #include <Frame.h>
 
+using namespace Hagine;
 void DeathCamera::Init() {
     // ViewProjectionの初期設定
-    vp_.farZ = kFarZ;
+    vp_.farZ_ = kFarZ;
     vp_.Initialize("");
     
     // WorldTransformの初期化

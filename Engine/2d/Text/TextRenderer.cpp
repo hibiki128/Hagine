@@ -18,6 +18,7 @@
 #include <vector>
 #include <wincodec.h>
 
+namespace Hagine {
 const std::string TextRenderer::kSaveFolderRelative = "Text";
 const std::string TextRenderer::kSaveFolder = "resources/images/Text";
 
@@ -725,3 +726,4 @@ void TextRenderer::EnsureOutputDirectory() {
         std::filesystem::create_directories(dir);
     }
 }
+} // namespace Hagine

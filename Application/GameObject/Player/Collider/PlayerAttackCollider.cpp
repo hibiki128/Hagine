@@ -5,6 +5,7 @@
 #include "Particle/ParticleEditor.h"
 #include "Scene/SceneManager.h"
 
+using namespace Hagine;
 void PlayerAttackCollider::Init(Player *player, Enemy *enemy) {
     player_ = player;
     enemy_ = enemy;

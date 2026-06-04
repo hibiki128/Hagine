@@ -1,6 +1,7 @@
 #include "DemoScene.h"
 #include "Engine/Utility/Scene/SceneManager.h"
 
+using namespace Hagine;
 void DemoScene::Initialize() {
     /// ===================================================
     /// 初期化

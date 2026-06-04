@@ -4,7 +4,7 @@
 #include <string>
 
 class TutorialSystem;
-class DataHandler;
+namespace Hagine { class DataHandler; }
 enum class TutorialStep : int;
 
 /// <summary>
@@ -149,28 +149,28 @@ class TutorialUI {
     bool subMessageVisible_ = false; // 補足メッセージ表示フラグ
     float subMessageTimer_ = 0.0f;   // 補足メッセージタイマー
 
-    Sprite barSprite_;        // 進捗バー
-    Sprite frameSprite_;      // バーの枠
-    Sprite SkipButtonSprite_; // スキップボタン
+    Hagine::Sprite barSprite_;        // 進捗バー
+    Hagine::Sprite frameSprite_;      // バーの枠
+    Hagine::Sprite SkipButtonSprite_; // スキップボタン
 
     float barAlpha_ = 1.0f;   // バーのアルファ値
     float frameAlpha_ = 1.0f; // 枠のアルファ値
 
-    Sprite okSprite_;            // OK!スプライト
+    Hagine::Sprite okSprite_;            // OK!スプライト
     bool okSpriteReady_ = false; // OK!準備完了フラグ
     float okAlpha_ = 0.0f;       // OK!のアルファ値
 
-    Vector2 okPosition_ = {640.0f, 400.0f}; // OK!の位置
+    Hagine::Vector2 okPosition_ = {640.0f, 400.0f}; // OK!の位置
     float okRotation_ = 0.0f;               // OK!の回転
-    Vector2 okSize_ = {200.0f, 80.0f};      // OK!のサイズ
+    Hagine::Vector2 okSize_ = {200.0f, 80.0f};      // OK!のサイズ
 
-    Vector2 barPosition_ = {100.0f, 880.0f}; // バーの位置
+    Hagine::Vector2 barPosition_ = {100.0f, 880.0f}; // バーの位置
     float barHeight_ = 24.0f;                // バーの高さ
     float barMaxWidth_ = 500.0f;             // バーの最大幅
     float borderThickness_ = 3.0f;           // 枠の太さ
 
-    Vector2 skipButtonPosition_ = {1600.0f, 946.0f}; // スキップボタンの位置
-    Vector2 skipButtonSize_ = {320.0f, 64.0f};       // スキップボタンのサイズ
+    Hagine::Vector2 skipButtonPosition_ = {1600.0f, 946.0f}; // スキップボタンの位置
+    Hagine::Vector2 skipButtonSize_ = {320.0f, 64.0f};       // スキップボタンのサイズ
 
-    std::unique_ptr<DataHandler> dataHandler_; // データハンドラ
+    std::unique_ptr<Hagine::DataHandler> dataHandler_; // データハンドラ
 };

@@ -6,7 +6,8 @@
 #include <myMath.h>
 #include <set>
 
-std::unordered_map<std::string, Animation> Animator::animationCache;
+namespace Hagine {
+std::unordered_map<std::string, Animation> Animator::animationCache_;
 
 void Animator::Initialize(const std::string &directorypath, const std::string &filename) {
     // ディレクトリパスとファイル名を保存
@@ -18,7 +19,7 @@ void Animator::Initialize(const std::string &directorypath, const std::string &f
 
     // 初期状態は補間なし、アニメーション時間は0から開始
     blendState_.isBlending = false;
-    animationTime = 0.0f;
+    animationTime_ = 0.0f;
 }
 
 void Animator::Update(bool loop) {
@@ -44,7 +45,7 @@ void Animator::UpdateBlend(bool loop) {
 
         // 補間先のアニメーションを現在のメインアニメーションに設定
         currentAnimation_ = blendState_.toAnimation;
-        animationTime = blendState_.toAnimationTime;
+        animationTime_ = blendState_.toAnimationTime;
 
         // ファイル情報を現在のものに更新
         directorypath_ = blendState_.toDirectoryPath;
@@ -55,15 +56,15 @@ void Animator::UpdateBlend(bool loop) {
         isFinish_ = false;
 
         // 補間完了直後に 1フレーム分進める
-        animationTime += Frame::DeltaTime() * speed_;
+        animationTime_ += Frame::DeltaTime() * speed_;
         if (loop) {
             // ループ再生時は時間を正規化
-            animationTime = std::fmod(animationTime, currentAnimation_.duration);
+            animationTime_ = std::fmod(animationTime_, currentAnimation_.duration);
         } else {
             // ループしない場合は時間をクランプ
-            animationTime = std::min(animationTime, currentAnimation_.duration);
+            animationTime_ = std::min(animationTime_, currentAnimation_.duration);
             // 終了判定
-            if (animationTime >= currentAnimation_.duration) {
+            if (animationTime_ >= currentAnimation_.duration) {
                 isFinish_ = true;
                 isAnimation_ = false;
             }
@@ -94,7 +95,7 @@ void Animator::UpdateBlend(bool loop) {
     }
 
     // 現在の表示用アニメーション時間を更新
-    animationTime = blendState_.toAnimationTime;
+    animationTime_ = blendState_.toAnimationTime;
 }
 void Animator::UpdateSingle(bool loop) {
     if (loop) {
@@ -102,36 +103,36 @@ void Animator::UpdateSingle(bool loop) {
         isAnimation_ = true; // ループ時は常に再生状態を維持
         isFinish_ = false;
 
-        animationTime += Frame::DeltaTime() * speed_;
+        animationTime_ += Frame::DeltaTime() * speed_;
         // 時間を正規化してループさせる
-        animationTime = std::fmod(animationTime, currentAnimation_.duration);
+        animationTime_ = std::fmod(animationTime_, currentAnimation_.duration);
 
         // ボーンを持たないモデルの場合、ルートノードのアニメーションを適用
         if (!modelData_.hasBones) {
             NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
-            Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
-            Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime);
-            Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime);
-            localMatrix = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
+            Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime_);
+            Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime_);
+            Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime_);
+            localMatrix_ = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
         }
     } else {
         // ループしない場合、アニメーションが終了するまで進行
-        if (animationTime < currentAnimation_.duration) {
+        if (animationTime_ < currentAnimation_.duration) {
             isFinish_ = false;
-            animationTime += Frame::DeltaTime() * speed_;
+            animationTime_ += Frame::DeltaTime() * speed_;
 
             // ボーンを持たないモデルの場合のルートノード適用
             if (!modelData_.hasBones) {
                 NodeAnimation &rootNodeAnimation = currentAnimation_.nodeAnimations[modelData_.rootNode.name];
-                Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime);
-                Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime);
-                Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime);
-                localMatrix = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
+                Vector3 translate = CalculateValue(rootNodeAnimation.translate, animationTime_);
+                Quaternion rotate = CalculateValue(rootNodeAnimation.rotate, animationTime_);
+                Vector3 scale = CalculateValue(rootNodeAnimation.scale, animationTime_);
+                localMatrix_ = MakeAffineMatrix(scale, rotate.ToEulerAngles(), translate);
             }
 
             // 再生時間が総時間（duration）を超えたら停止
-            if (animationTime >= currentAnimation_.duration) {
-                animationTime = currentAnimation_.duration;
+            if (animationTime_ >= currentAnimation_.duration) {
+                animationTime_ = currentAnimation_.duration;
                 isAnimation_ = false;
                 isFinish_ = true;
             }
@@ -145,7 +146,7 @@ void Animator::BlendToAnimation(const Animation &newAnimation, float blendDurati
     }
 
     blendState_.fromAnimation = currentAnimation_;
-    blendState_.fromAnimationTime = animationTime;
+    blendState_.fromAnimationTime = animationTime_;
 
     blendState_.toAnimation = newAnimation;
     blendState_.toAnimationTime = 0.0f;
@@ -173,11 +174,11 @@ void Animator::BlendToAnimation(const std::string &directoryPath, const std::str
     if (blendState_.isBlending) {
         // 現在の補間結果を元アニメーションとして使用
         blendState_.fromAnimation = GetCurrentAnimation();
-        blendState_.fromAnimationTime = animationTime;
+        blendState_.fromAnimationTime = animationTime_;
     } else {
         // 通常の切り替え
         blendState_.fromAnimation = currentAnimation_;
-        blendState_.fromAnimationTime = animationTime;
+        blendState_.fromAnimationTime = animationTime_;
     }
 
     blendState_.toAnimation = newAnimation;
@@ -244,7 +245,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
                     blendState_.fromAnimationTime, blendState_.toAnimationTime,
                     blendState_.blendFactor);
 
-                KeyframeVector3 keyframe = {blendedTranslate, animationTime};
+                KeyframeVector3 keyframe = {blendedTranslate, animationTime_};
                 blendedNode.translate.push_back(keyframe);
             }
 
@@ -255,7 +256,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
                     blendState_.fromAnimationTime, blendState_.toAnimationTime,
                     blendState_.blendFactor);
 
-                KeyframeQuaternion keyframe = {blendedRotate, animationTime};
+                KeyframeQuaternion keyframe = {blendedRotate, animationTime_};
                 blendedNode.rotate.push_back(keyframe);
             }
 
@@ -266,7 +267,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
                     blendState_.fromAnimationTime, blendState_.toAnimationTime,
                     blendState_.blendFactor);
 
-                KeyframeVector3 keyframe = {blendedScale, animationTime};
+                KeyframeVector3 keyframe = {blendedScale, animationTime_};
                 blendedNode.scale.push_back(keyframe);
             }
 
@@ -282,7 +283,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
                 Vector3 fromTranslate = CalculateValue(fromNode.translate, blendState_.fromAnimationTime);
                 Vector3 blendedTranslate = Lerp(fromTranslate, defaultTranslate, blendState_.blendFactor);
 
-                KeyframeVector3 keyframe = {blendedTranslate, animationTime};
+                KeyframeVector3 keyframe = {blendedTranslate, animationTime_};
                 blendedNode.translate.push_back(keyframe);
             }
 
@@ -290,7 +291,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
                 Quaternion fromRotate = CalculateValue(fromNode.rotate, blendState_.fromAnimationTime);
                 Quaternion blendedRotate = Quaternion::Slerp(fromRotate, defaultRotate, blendState_.blendFactor);
 
-                KeyframeQuaternion keyframe = {blendedRotate, animationTime};
+                KeyframeQuaternion keyframe = {blendedRotate, animationTime_};
                 blendedNode.rotate.push_back(keyframe);
             }
 
@@ -298,7 +299,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
                 Vector3 fromScale = CalculateValue(fromNode.scale, blendState_.fromAnimationTime);
                 Vector3 blendedScale = Lerp(fromScale, defaultScale, blendState_.blendFactor);
 
-                KeyframeVector3 keyframe = {blendedScale, animationTime};
+                KeyframeVector3 keyframe = {blendedScale, animationTime_};
                 blendedNode.scale.push_back(keyframe);
             }
 
@@ -314,7 +315,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
                 Vector3 toTranslate = CalculateValue(toNode.translate, blendState_.toAnimationTime);
                 Vector3 blendedTranslate = Lerp(defaultTranslate, toTranslate, blendState_.blendFactor);
 
-                KeyframeVector3 keyframe = {blendedTranslate, animationTime};
+                KeyframeVector3 keyframe = {blendedTranslate, animationTime_};
                 blendedNode.translate.push_back(keyframe);
             }
 
@@ -322,7 +323,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
                 Quaternion toRotate = CalculateValue(toNode.rotate, blendState_.toAnimationTime);
                 Quaternion blendedRotate = Slerp(defaultRotate, toRotate, blendState_.blendFactor);
 
-                KeyframeQuaternion keyframe = {blendedRotate, animationTime};
+                KeyframeQuaternion keyframe = {blendedRotate, animationTime_};
                 blendedNode.rotate.push_back(keyframe);
             }
 
@@ -330,7 +331,7 @@ std::map<std::string, NodeAnimation> Animator::GetBlendedNodeAnimations() const 
                 Vector3 toScale = CalculateValue(toNode.scale, blendState_.toAnimationTime);
                 Vector3 blendedScale = Lerp(defaultScale, toScale, blendState_.blendFactor);
 
-                KeyframeVector3 keyframe = {blendedScale, animationTime};
+                KeyframeVector3 keyframe = {blendedScale, animationTime_};
                 blendedNode.scale.push_back(keyframe);
             }
         }
@@ -346,8 +347,8 @@ Animation Animator::LoadAnimationFile(const std::string &directoryPath, const st
     Animation animation;
 
     // キャッシュチェック
-    auto it = animationCache.find(filePath);
-    if (it != animationCache.end()) {
+    auto it = animationCache_.find(filePath);
+    if (it != animationCache_.end()) {
         return it->second;
     }
 
@@ -393,7 +394,7 @@ Animation Animator::LoadAnimationFile(const std::string &directoryPath, const st
         }
     }
 
-    animationCache[filePath] = animation;
+    animationCache_[filePath] = animation;
     return animation;
 }
 
@@ -448,3 +449,4 @@ Quaternion Animator::CalculateBlendedValue(
     Quaternion toValue = CalculateValue(toKeyframes, toTime);
     return Slerp(fromValue, toValue, blendFactor);
 }
+} // namespace Hagine

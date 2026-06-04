@@ -18,7 +18,10 @@
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
 #include <implot.h>
+#endif // _DEBUG
 
+namespace Hagine {
+#ifdef _DEBUG
 void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) {
 
     dxCommon_ = DirectXCommon::GetInstance();
@@ -403,9 +406,9 @@ void ImGuiManager::ShowMainMenu() {
             // 3Dオブジェクト
             if (ImGui::BeginMenu(ICON_FA_CUBE " 3Dオブジェクト")) {
                 if (ImGui::MenuItem(ICON_FA_CUBE " キューブ")) {
-                    std::string name = "cube_" + std::to_string(++cubeCount);
+                    std::string name = "cube_" + std::to_string(++cubeCount_);
                     if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "cube_" + std::to_string(++cubeCount);
+                        name = "cube_" + std::to_string(++cubeCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->SetPrimitive(true);
@@ -415,9 +418,9 @@ void ImGuiManager::ShowMainMenu() {
                 }
 
                 if (ImGui::MenuItem(ICON_FA_CIRCLE " 球体")) {
-                    std::string name = "sphere_" + std::to_string(++sphereCount);
+                    std::string name = "sphere_" + std::to_string(++sphereCount_);
                     if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "sphere_" + std::to_string(++sphereCount);
+                        name = "sphere_" + std::to_string(++sphereCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->SetPrimitive(true);
@@ -427,9 +430,9 @@ void ImGuiManager::ShowMainMenu() {
                 }
 
                 if (ImGui::MenuItem(ICON_FA_CUBE " 平面")) {
-                    std::string name = "plane_" + std::to_string(++planeCount);
+                    std::string name = "plane_" + std::to_string(++planeCount_);
                     if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "plane_" + std::to_string(++planeCount);
+                        name = "plane_" + std::to_string(++planeCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->SetPrimitive(true);
@@ -439,9 +442,9 @@ void ImGuiManager::ShowMainMenu() {
                 }
 
                 if (ImGui::MenuItem(ICON_FA_CIRCLE " シリンダー")) {
-                    std::string name = "cylinder_" + std::to_string(++cylinderCount);
+                    std::string name = "cylinder_" + std::to_string(++cylinderCount_);
                     if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "cylinder_" + std::to_string(++cylinderCount);
+                        name = "cylinder_" + std::to_string(++cylinderCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->SetPrimitive(true);
@@ -451,9 +454,9 @@ void ImGuiManager::ShowMainMenu() {
                 }
 
                 if (ImGui::MenuItem(ICON_FA_RING " リング")) {
-                    std::string name = "ring_" + std::to_string(++ringCount);
+                    std::string name = "ring_" + std::to_string(++ringCount_);
                     if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "ring_" + std::to_string(++ringCount);
+                        name = "ring_" + std::to_string(++ringCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->SetPrimitive(true);
@@ -463,9 +466,9 @@ void ImGuiManager::ShowMainMenu() {
                 }
 
                 if (ImGui::MenuItem(ICON_FA_CARET_UP " 三角形")) {
-                    std::string name = "triangle_" + std::to_string(++triangleCount);
+                    std::string name = "triangle_" + std::to_string(++triangleCount_);
                     if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "triangle_" + std::to_string(++triangleCount);
+                        name = "triangle_" + std::to_string(++triangleCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->SetPrimitive(true);
@@ -475,9 +478,9 @@ void ImGuiManager::ShowMainMenu() {
                 }
 
                 if (ImGui::MenuItem(ICON_FA_MOUNTAIN " ピラミッド")) {
-                    std::string name = "pyramid_" + std::to_string(++pyramidCount);
+                    std::string name = "pyramid_" + std::to_string(++pyramidCount_);
                     if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "pyramid_" + std::to_string(++pyramidCount);
+                        name = "pyramid_" + std::to_string(++pyramidCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->SetPrimitive(true);
@@ -487,9 +490,9 @@ void ImGuiManager::ShowMainMenu() {
                 }
 
                 if (ImGui::MenuItem(ICON_FA_CHART_AREA " 円柱")) {
-                    std::string name = "cone_" + std::to_string(++coneCount);
+                    std::string name = "cone_" + std::to_string(++coneCount_);
                     if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "cone_" + std::to_string(++coneCount);
+                        name = "cone_" + std::to_string(++coneCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
                     object->SetPrimitive(true);
@@ -536,7 +539,7 @@ void ImGuiManager::ShowMainMenu() {
         // ヘルプメニュー
         if (ImGui::BeginMenu(ICON_FA_QUESTION_CIRCLE " ヘルプ")) {
             if (ImGui::MenuItem(ICON_FA_KEYBOARD " ショートカット一覧", "F1")) {
-                showShortcutWindow = !showShortcutWindow;
+                showShortcutWindow_ = !showShortcutWindow_;
             }
             if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE " バージョン情報")) {
             }
@@ -1224,9 +1227,9 @@ void ImGuiManager::ShowHelpWindow() {
 #ifdef _DEBUG
 
     // ショートカット一覧ウィンドウの表示
-    if (showShortcutWindow) {
+    if (showShortcutWindow_) {
         ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin(ICON_FA_KEYBOARD " ショートカット一覧", &showShortcutWindow, ImGuiWindowFlags_NoCollapse)) {
+        if (ImGui::Begin(ICON_FA_KEYBOARD " ショートカット一覧", &showShortcutWindow_, ImGuiWindowFlags_NoCollapse)) {
 
             // テーブルでショートカットを整理して表示
             if (ImGui::BeginTable("ShortcutTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable)) {
@@ -1362,7 +1365,7 @@ void ImGuiManager::ShowHelpWindow() {
             // 閉じるボタン
             ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 35);
             if (ImGui::Button("閉じる", ImVec2(100, 25))) {
-                showShortcutWindow = false;
+                showShortcutWindow_ = false;
             }
         }
         ImGui::End();
@@ -1384,7 +1387,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showGizmoView", showGizmoView_);
     data->Save("showHierarchyView", showHierarchyView_);
     data->Save("showMotionEditorView", showMotionEditorView_);
-    data->Save("showShortcutWindow", showShortcutWindow);
+    data->Save("showShortcutWindow", showShortcutWindow_);
     data->Save("showSpriteManagerView", showSpriteManagerView_);
     data->Save("isEditorMode", isEditorMode_);
     data->Save("gridColor", gridColor_);
@@ -1407,8 +1410,9 @@ void ImGuiManager::LoadFlag() {
     showGizmoView_ = data->Load("showGizmoView", false);
     showHierarchyView_ = data->Load("showHierarchyView", true);
     showMotionEditorView_ = data->Load("showMotionEditorView", false);
-    showShortcutWindow = data->Load("showShortcutWindow", false);
+    showShortcutWindow_ = data->Load("showShortcutWindow", false);
     showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
     isEditorMode_ = data->Load("isEditorMode", true);
     gridColor_ = data->Load("gridColor", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 }
+} // namespace Hagine

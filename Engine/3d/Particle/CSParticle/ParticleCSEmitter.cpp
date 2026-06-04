@@ -12,6 +12,7 @@
 #include"../Utility/Debug/ImGui/ImGuizmoManager.h"
 #include"../Utility/Debug/ImGui/ImGuiNotification.h"
 
+namespace Hagine {
 ParticleCSEmitter::~ParticleCSEmitter() {
     // 保有していた独立グループを破棄せず再利用プールへ返却する。
     // これにより弾・ヒット等の高頻度スポーンでもバッファが累積しない。
@@ -29,7 +30,7 @@ ParticleCSEmitter::~ParticleCSEmitter() {
 void ParticleCSEmitter::Initialize(const std::string &name) {
     particleCommon_ = ParticleCommon::GetInstance();
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
-    commandList = dxCommon_->GetCommandList().Get();
+    commandList_ = dxCommon_->GetCommandList().Get();
     srvManager_ = SrvManager::GetInstance();
     name_ = name;
     CreateEmitterMeshResource();
@@ -149,16 +150,18 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
         for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
             D3D12_INDEX_BUFFER_VIEW indexBufferView = group->GetIndexBufferView();
             D3D12_VERTEX_BUFFER_VIEW vertexBufferView = group->GetVertexBufferView();
-            commandList->IASetIndexBuffer(&indexBufferView);
-            commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-            commandList->SetGraphicsRootConstantBufferView(0, group->GetPerViewResource()->GetGPUVirtualAddress());
+            commandList_->IASetIndexBuffer(&indexBufferView);
+            commandList_->IASetVertexBuffers(0, 1, &vertexBufferView);
+            commandList_->SetGraphicsRootConstantBufferView(0, group->GetPerViewResource()->GetGPUVirtualAddress());
             srvManager_->SetGraphicsRootDescriptorTable(1, group->GetOutputParticleSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
-            commandList->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
+            commandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
             // 生存コンパクション SRV (t2: aliveList, t3: aliveCount)
             srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
-            commandList->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
+            // Candidate A: コンパクト描画属性バッファ SRV (t1)
+            srvManager_->SetGraphicsRootDescriptorTable(6, group->GetDrawAttribsSrvForVSIndex());
+            commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
 }
@@ -193,16 +196,18 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
         for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
             D3D12_INDEX_BUFFER_VIEW indexBufferView = group->GetIndexBufferView();
             D3D12_VERTEX_BUFFER_VIEW vertexBufferView = group->GetVertexBufferView();
-            commandList->IASetIndexBuffer(&indexBufferView);
-            commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+            commandList_->IASetIndexBuffer(&indexBufferView);
+            commandList_->IASetVertexBuffers(0, 1, &vertexBufferView);
             // root param 0 のみプレビュー専用 per-view CB に差し替える（共有グループの VP は不変）
-            commandList->SetGraphicsRootConstantBufferView(0, perViewGpuAddress);
+            commandList_->SetGraphicsRootConstantBufferView(0, perViewGpuAddress);
             srvManager_->SetGraphicsRootDescriptorTable(1, group->GetOutputParticleSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
-            commandList->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
+            commandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
             srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
-            commandList->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
+            // Candidate A: コンパクト描画属性バッファ SRV (t1)
+            srvManager_->SetGraphicsRootDescriptorTable(6, group->GetDrawAttribsSrvForVSIndex());
+            commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
 }
@@ -379,7 +384,7 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
 
 void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList, ParticleCSGroup *indirectGroup) {
     // cmdList が渡された場合はそちら（Compute Queue）を使う
-    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList;
+    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
     // indirectGroup 指定時は kEmitterIndirect（u4/u5 へ Out append）を使う。
     ComputePipeLineManager::GetInstance()->DrawCommonSetting(
         indirectGroup ? ComputePipelineType::kEmitterIndirect : ComputePipelineType::kEmitter,
@@ -413,6 +418,8 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList, Part
         if (indirectGroup) {
             cl->SetComputeRootDescriptorTable(12, group->GetIndirectOutAliveListUavHandle().second);
             cl->SetComputeRootDescriptorTable(13, group->GetIndirectOutAliveCounterUavHandle().second);
+            // Candidate A: 発生分の描画属性を書く gDrawAttribs (u6)
+            cl->SetComputeRootDescriptorTable(14, group->GetDrawAttribsUavHandle().second);
         }
 
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
@@ -1661,3 +1668,4 @@ void ParticleCSEmitter::DrawImGui() {
     }
 #endif // USE_IMGUI
 }
+} // namespace Hagine

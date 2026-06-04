@@ -24,6 +24,10 @@ RWStructuredBuffer<int> gFreeListTailIndex : register(u3);
 // ★ Phase 3: このフレームの出力 aliveList B（新規発生スロットを append）
 RWStructuredBuffer<uint> gAliveList : register(u4);
 RWStructuredBuffer<uint> gAliveCounter : register(u5);
+// Candidate A: コンパクト描画属性バッファ（新規発生スロットの描画属性を書き出す。VS が読む）。
+//   indirect 版 Update は入力 A しか処理しないため、当フレーム発生分はここで書かないと
+//   VS が stale な属性を読む（emit が Out に append するのと同じ理由）。
+RWStructuredBuffer<ParticleDrawAttrib> gDrawAttribs : register(u6);
 StructuredBuffer<TriangleInfo> gTriangles : register(t0);
 StructuredBuffer<float> gTriangleCDF : register(t1);
 StructuredBuffer<EdgeInfo> gEdges : register(t2);
@@ -379,4 +383,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
     uint dstIndex;
     InterlockedAdd(gAliveCounter[0], 1, dstIndex);
     gAliveList[dstIndex] = particleIndex;
+
+    // Candidate A: 当フレーム発生分の描画属性をコンパクトバッファへ書き出す（VS が読む）。
+    //   rotation/color は直前に gParticles へ書いた値を読み戻す（同一スレッド・ハザードなし）。
+    if (gSettings.enableCompactDraw != 0)
+    {
+        ParticleDrawAttrib attrib;
+        attrib.translate = emitPosition;
+        attrib.scale = float3(scaleValue, scaleValue, scaleValue);
+        attrib.velocity = vel;
+        attrib.rotation = gParticles[particleIndex].rotation;
+        attrib.color = gParticles[particleIndex].color;
+        gDrawAttribs[particleIndex] = attrib;
+    }
 }

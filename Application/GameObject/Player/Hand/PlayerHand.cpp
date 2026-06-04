@@ -1,5 +1,6 @@
 #include "PlayerHand.h"
 
+using namespace Hagine;
 void PlayerHand::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);

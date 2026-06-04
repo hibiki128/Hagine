@@ -1,5 +1,6 @@
 #include "Ground.h"
 
+using namespace Hagine;
 void Ground::Init(const std::string className) {
     BaseObject::Init(className);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Plane);

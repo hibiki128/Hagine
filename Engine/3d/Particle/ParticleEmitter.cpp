@@ -12,6 +12,7 @@
 #include <type/Quaternion.h>
 
 // コンストラクタ
+namespace Hagine {
 ParticleEmitter::ParticleEmitter() {}
 
 void ParticleEmitter::Initialize(std::string name) {
@@ -1240,3 +1241,4 @@ void ParticleEmitter::ShowBlendModeCombo(BlendMode &currentMode) {
     }
 #endif // USE_IMGUI
 }
+} // namespace Hagine

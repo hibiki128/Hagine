@@ -7,6 +7,7 @@
 #include <Transform/WorldTransform.h>
 #include <list>
 
+namespace Hagine {
 class ParticleGroup {
   public:
     void Initialize();
@@ -25,17 +26,17 @@ class ParticleGroup {
     std::string &GetTexturePath(uint32_t index) { return particleGroupData_.materials[index].textureFilePath; }
     std::string &GetModelPath() { return modelFilePath_; }
 
-    D3D12_VERTEX_BUFFER_VIEW &GetVertexBufferView() { return vertexBufferView; }
-    D3D12_INDEX_BUFFER_VIEW &GetIndexBufferView() { return indexBufferView; }
+    D3D12_VERTEX_BUFFER_VIEW &GetVertexBufferView() { return vertexBufferView_; }
+    D3D12_INDEX_BUFFER_VIEW &GetIndexBufferView() { return indexBufferView_; }
 
-    ModelData GetModelData() { return modelData; }
+    ModelData GetModelData() { return modelData_; }
 
-    MaterialData GetMaterialData(uint32_t index) { return modelData.materials[index]; }
+    MaterialData GetMaterialData(uint32_t index) { return modelData_.materials[index]; }
 
     PrimitiveType GetPrimitiveType() { return type_; }
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetVertexResource() { return vertexResource; }
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetmaterialResource() { return materialResource; }
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetVertexResource() { return vertexResource_; }
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetmaterialResource() { return materialResource_; }
 
   private:
     void CreateVertexData();
@@ -43,29 +44,30 @@ class ParticleGroup {
     void CreateIndexResource();
 
   private:
-    static std::unordered_map<std::string, ModelData> modelCache;
+    static std::unordered_map<std::string, ModelData> modelCache_;
     static const uint32_t kNumMaxInstance = 10000; // 最大インスタンス数の制限
 
     // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_ = nullptr;
     // バッファリソース内のデータを指すポインタ
-    VertexData *vertexData = nullptr;
+    VertexData *vertexData_ = nullptr;
     // バッファリソースの使い道を補足するバッファビュー
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView_{};
 
     // バッファリソース
-    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_ = nullptr;
     // バッファリソース内のデータを指すポインタ
-    ParticleMaterial *materialData = nullptr;
+    ParticleMaterial *materialData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource = nullptr;
-    uint32_t *indexData{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource_ = nullptr;
+    uint32_t *indexData_{};
     // バッファリソースの使い道を補足するバッファビュー
-    D3D12_INDEX_BUFFER_VIEW indexBufferView{};
+    D3D12_INDEX_BUFFER_VIEW indexBufferView_{};
 
     Model *model_{};
-    ModelData modelData{};
+    ModelData modelData_{};
     ParticleGroupData particleGroupData_{};
     PrimitiveType type_{};
     std::string modelFilePath_{};
 };
+} // namespace Hagine

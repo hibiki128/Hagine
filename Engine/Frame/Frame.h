@@ -4,6 +4,7 @@
 /// <summary>
 /// フレームクラス
 /// </summary>
+namespace Hagine {
 class Frame {
   private:
     /// ========================================================
@@ -26,3 +27,4 @@ class Frame {
     static float GetFPS();    ///< 現在のFPSを取得
     static float Time();      ///< 起動からの経過時間を秒単位で返す
 };
+} // namespace Hagine

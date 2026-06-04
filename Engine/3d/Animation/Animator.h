@@ -10,6 +10,7 @@
 /// <summary>
 /// アニメーション補間の状態を管理する構造体
 /// </summary>
+namespace Hagine {
 struct AnimationBlendState {
     Animation fromAnimation;        // 補間元のアニメーション
     Animation toAnimation;          // 補間先のアニメーション
@@ -109,10 +110,10 @@ class Animator {
     bool IsFinish() const { return isFinish_; }
     bool IsFinished() const { return isFinish_; }
     bool IsPlaying() const { return isAnimation_; }
-    float GetAnimationTime() const { return animationTime; }
+    float GetAnimationTime() const { return animationTime_; }
     std::string GetCurrentFilename() const { return filename_; }
     std::string GetCurrentDirectoryPath() const { return directorypath_; }
-    Matrix4x4 GetLocalMatrix() { return localMatrix; }
+    Matrix4x4 GetLocalMatrix() { return localMatrix_; }
     float GetSpeed() const { return speed_; }
     float GetBlendDuration() const { return blendDuration_; }
 
@@ -120,7 +121,7 @@ class Animator {
     /// Setter
     /// ===================================================
     void SetIsAnimation(bool isAnimation) { isAnimation_ = isAnimation; }
-    void SetAnimationTime(float time) { animationTime = time; }
+    void SetAnimationTime(float time) { animationTime_ = time; }
     void SetModelData(ModelData modelData) { modelData_ = modelData; }
     void SetSpeed(float speed) { speed_ = speed; }
     void SetBlendDuration(float duration) { blendDuration_ = duration; }
@@ -185,15 +186,16 @@ class Animator {
 
     std::string filename_;           // 現在のファイル名
     std::string directorypath_;      // 現在のディレクトリパス
-    float animationTime = 0.0f;      // アニメーション再生時間
+    float animationTime_ = 0.0f;      // アニメーション再生時間
     Animation currentAnimation_;     // 現在のアニメーション
     AnimationBlendState blendState_; // 補間状態
-    Matrix4x4 localMatrix;           // ローカル行列
+    Matrix4x4 localMatrix_;           // ローカル行列
     bool isAnimation_ = true;        // アニメーション再生フラグ
     bool isFinish_ = false;          // アニメーション終了フラグ
     ModelData modelData_;            // モデルデータ
     float speed_ = 1.0f;             // アニメーション速度
     float blendDuration_ = 0.5f;     // アニメーション補間時間
 
-    static std::unordered_map<std::string, Animation> animationCache; // アニメーションキャッシュ
+    static std::unordered_map<std::string, Animation> animationCache_; // アニメーションキャッシュ
 };
+} // namespace Hagine

@@ -1,6 +1,7 @@
 #include "EnemyUI.h"
 #include "SpriteCommon.h"
 
+using namespace Hagine;
 void EnemyUI::Init(Enemy *enemy) {
     enemy_ = enemy;
     // HPバーの初期化

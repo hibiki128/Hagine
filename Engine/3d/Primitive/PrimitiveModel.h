@@ -2,6 +2,7 @@
 #include "Model/ModelStructs.h"
 #include <unordered_map>
 
+namespace Hagine {
 enum class PrimitiveType {
     None = 0,
     Plane,
@@ -74,3 +75,4 @@ class PrimitiveModel {
 
     std::unordered_map<PrimitiveType, PrimitiveData> primitiveDataMap_;
 };
+} // namespace Hagine

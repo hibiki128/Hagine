@@ -3,6 +3,7 @@
 /// <summary>
 /// 3次元ベクトル
 /// </summary>
+namespace Hagine {
 struct Vector3 final {
 	float x;
 	float y;
@@ -129,3 +130,4 @@ struct Vector3 final {
 		);
 	}
 };
+} // namespace Hagine

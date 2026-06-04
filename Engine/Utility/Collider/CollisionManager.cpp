@@ -2,6 +2,7 @@
 #include "myMath.h"
 #include <algorithm>
 
+namespace Hagine {
 void CollisionManager::Register(ColliderBase *collider) {
     if (!collider)
         return;
@@ -612,3 +613,4 @@ bool CollisionManager::TestAxis(const Vector3 &axis, const AABB &aabb, const OBB
 
     return sumSpan >= longSpan;
 }
+} // namespace Hagine

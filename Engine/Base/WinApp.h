@@ -2,10 +2,11 @@
 #include "Windows.h"
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd_, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif //  USE_IMGUI
 #include <cstdint>
 // WindowsAPI
+namespace Hagine {
 class WinApp {
   private:
     WinApp() = default;
@@ -14,7 +15,7 @@ class WinApp {
     const WinApp &operator=(const WinApp &) = delete;
 
   public: // 静的メンバ関数
-    static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+    static LRESULT CALLBACK WindowProc(HWND hwnd_, UINT msg, WPARAM wparam, LPARAM lparam);
 
   public: // メンバ関数
     /// <summary>
@@ -58,8 +59,8 @@ class WinApp {
     /// getter
     /// </summary>
     /// <returns></returns>
-    HWND GetHwnd() const { return hwnd; }
-    HINSTANCE GetHInstance() const { return wc.hInstance; }
+    HWND GetHwnd() const { return hwnd_; }
+    HINSTANCE GetHInstance() const { return wc_.hInstance; }
     bool &IsFullScreen() { return isFullScreen_; }
 
   public: // 定数
@@ -67,9 +68,10 @@ class WinApp {
     static const int32_t kClientWidth = 1760; // 横
     static const int32_t kClientHeight = 990; // 縦
   private:                                    // メンバ変数
-    HWND hwnd = nullptr;                      // ウィンドウハンドル
-    WNDCLASS wc{};                            // ウィンドウクラスの設定
+    HWND hwnd_ = nullptr;                      // ウィンドウハンドル
+    WNDCLASS wc_{};                            // ウィンドウクラスの設定
     bool isFullScreen_ = false;
     // ウィンドウモードの復元用の矩形
     RECT windowRect_ = {0, 0, kClientWidth, kClientHeight};
 };
+} // namespace Hagine

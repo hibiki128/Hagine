@@ -10,8 +10,7 @@
 #include <type/Vector4.h>
 #include <wrl/client.h>
 
-using namespace Microsoft::WRL;
-
+namespace Hagine {
 /// <summary>
 /// 3D線描画クラス
 /// デバッグ用の線、グリッド、図形を描画する
@@ -42,8 +41,8 @@ class DrawLine3D {
     /// 線描画用データ
     /// </summary>
     struct LineData {
-        ComPtr<ID3D12Resource> vertBuffer;  // 頂点バッファ
-        ComPtr<ID3D12Resource> indexBuffer; // インデックスバッファ
+        Microsoft::WRL::ComPtr<ID3D12Resource> vertBuffer;  // 頂点バッファ
+        Microsoft::WRL::ComPtr<ID3D12Resource> indexBuffer; // インデックスバッファ
         D3D12_VERTEX_BUFFER_VIEW vbView{};  // 頂点バッファビュー
         D3D12_INDEX_BUFFER_VIEW ibView{};   // インデックスバッファビュー
         VertexPosColor *vertMap = nullptr;  // 頂点マップ
@@ -166,9 +165,10 @@ class DrawLine3D {
     std::unique_ptr<LineData> line_; // 線データ
     uint32_t indexLine_ = 0;         // 線のインデックス
 
-    DirectXCommon *dxCommon = nullptr;      // DirectX共通クラス
+    DirectXCommon *dxCommon_ = nullptr;      // DirectX共通クラス
     PipeLineManager *psoManager_ = nullptr; // パイプラインマネージャー
 
-    ComPtr<ID3D12Resource> cBufferResource_ = nullptr; // 定数バッファリソース
+    Microsoft::WRL::ComPtr<ID3D12Resource> cBufferResource_ = nullptr; // 定数バッファリソース
     CBuffer *cBufferData_ = nullptr;                   // 定数バッファデータ
 };
+} // namespace Hagine

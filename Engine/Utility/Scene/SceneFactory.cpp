@@ -6,6 +6,7 @@
 #include "Application/Scene/TitleScene.h"
 #include "Application/Scene/TutorialScene.h"
 
+namespace Hagine {
 std::unique_ptr<BaseScene> SceneFactory::CreateScene(const std::string &sceneName) {
     if (sceneName == "TITLE")
         return std::make_unique<TitleScene>();
@@ -21,3 +22,4 @@ std::unique_ptr<BaseScene> SceneFactory::CreateScene(const std::string &sceneNam
         return std::make_unique<TutorialScene>();
     return nullptr;
 }
+} // namespace Hagine

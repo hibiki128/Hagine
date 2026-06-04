@@ -39,6 +39,8 @@ RWStructuredBuffer<uint> gAliveCounterIn : register(u7);
 // Phase 5: グループ単位トレイル予算カウンタ（このフレームに生成したトレイル本数）。
 // 毎フレーム 0 にリセットされ、gSettings.maxTrailBudgetPerGroup を上限にする。
 RWStructuredBuffer<int> gTrailBudget : register(u8);
+// Candidate A: コンパクト描画属性バッファ（slot index で書き込む。VS が読む）。
+RWStructuredBuffer<ParticleDrawAttrib> gDrawAttribs : register(u9);
 
 // =============================================
 // フィールド適用結果
@@ -350,6 +352,19 @@ void SpawnTrailParticles(inout Particle p, int particleIndex, float3 currentPosi
         uint dstTrail;
         InterlockedAdd(gAliveCounter[0], 1, dstTrail);
         gAliveList[dstTrail] = (uint) trailIndex;
+
+        // Candidate A: 同フレーム描画のため、生成したトレイルの描画属性も書き出す。
+        // トレイルは回転を設定しないため rotation は 0（回転グループでも次フレームに自スレッドが更新）。
+        if (gSettings.enableCompactDraw != 0)
+        {
+            ParticleDrawAttrib trailAttrib;
+            trailAttrib.translate = spawnPosition;
+            trailAttrib.scale = gParticles[trailIndex].scale;
+            trailAttrib.velocity = gParticles[trailIndex].velocity;
+            trailAttrib.rotation = float3(0.0f, 0.0f, 0.0f);
+            trailAttrib.color = gParticles[trailIndex].color;
+            gDrawAttribs[trailIndex] = trailAttrib;
+        }
     }
 
     float consumedDistance = capped ? totalDistance : (float(requiredCount) * targetDistance);
@@ -685,5 +700,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
         uint dstIndex;
         InterlockedAdd(gAliveCounter[0], 1, dstIndex);
         gAliveList[dstIndex] = (uint) particleIndex;
+
+        // Candidate A: 生存スロットの描画属性をコンパクトバッファへ書き出す（VS が 64B で読む）。
+        if (gSettings.enableCompactDraw != 0)
+        {
+            ParticleDrawAttrib attrib;
+            attrib.translate = p.translate;
+            attrib.scale = p.scale;
+            attrib.velocity = p.velocity;
+            attrib.rotation = p.rotation;
+            attrib.color = p.color;
+            gDrawAttribs[particleIndex] = attrib;
+        }
     }
 }

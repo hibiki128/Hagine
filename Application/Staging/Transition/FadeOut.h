@@ -25,7 +25,7 @@ class FadeOut {
     /// 描画処理
     /// </summary>
     /// <param name="vp">ビュープロジェクション</param>
-    void Draw(const ViewProjection &vp);
+    void Draw(const Hagine::ViewProjection &vp);
 
     /// <summary>
     /// 終了処理
@@ -58,7 +58,7 @@ class FadeOut {
     static constexpr float kPositionZ = -65.1f;         // パーティクル位置Z
     static constexpr float kRotationX = 0.0f;       // パーティクル回転X(度)
 
-    std::unique_ptr<ParticleCSEmitter> fadeOut_ = nullptr; // フェードアウトパーティクル
+    std::unique_ptr<Hagine::ParticleCSEmitter> fadeOut_ = nullptr; // フェードアウトパーティクル
     float timer_ = 0.0f;    // 経過時間
     bool isFinish_ = false; // 終了フラグ
 };

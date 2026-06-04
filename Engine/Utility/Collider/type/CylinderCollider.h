@@ -6,6 +6,7 @@
 /// 円柱コライダー
 /// 内側に押し戻す用途にも、外側に押し出す用途にも使える汎用円柱判定
 /// </summary>
+namespace Hagine {
 class CylinderCollider : public ColliderBase {
   public:
     CylinderCollider() = default;
@@ -80,3 +81,4 @@ class CylinderCollider : public ColliderBase {
     float height_ = 100.0f; // Y方向は現状チェックなし（必要なら追加可）
     bool inward_ = true;    // デフォルトはフィールド壁（内側に閉じ込める）
 };
+} // namespace Hagine

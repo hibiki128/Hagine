@@ -2,6 +2,7 @@
 #include <cmath>
 #include"myMath.h"
 #include<assert.h>
+namespace Hagine {
 void Mouse::Init(Microsoft::WRL::ComPtr<IDirectInput8>directInput,HWND hWnd) {
     hWnd_ = hWnd;
     //マウスデバイスの生成
@@ -92,3 +93,4 @@ Vector2 Mouse::GetMousePos() {
 
     return mousePosition_;
 }
+} // namespace Hagine

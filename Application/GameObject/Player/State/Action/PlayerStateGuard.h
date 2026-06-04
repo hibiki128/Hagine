@@ -1,5 +1,6 @@
 #pragma once
 #include "../Base/PlayerBaseState.h"
+#include <type/Vector4.h>
 class PlayerStateGuard : public PlayerBaseState {
   public:
     /// ===================================================
@@ -30,8 +31,9 @@ class PlayerStateGuard : public PlayerBaseState {
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
     /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(Player &player, const ViewProjection &viewProjection) override;
+    void DrawParticle(Player &player, const Hagine::ViewProjection &viewProjection) override;
 
   private:
     bool enteredFromFly_ = false; // 飛行状態からガードに入ったか
+    Hagine::Vector4 originalColor_ = {1.0f, 1.0f, 1.0f, 1.0f}; // ガード前の本体色（解除時に復元する）
 };

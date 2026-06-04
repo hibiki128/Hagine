@@ -1,6 +1,7 @@
 #include "PrimitiveModel.h"
 #include <DirectXMath.h>
 #include <myMath.h>
+namespace Hagine {
 using namespace DirectX;
 
 void PrimitiveModel::Initialize() {
@@ -662,3 +663,4 @@ void PrimitiveModel::CreateClosedCylinder() {
 
     primitiveDataMap_.insert(std::make_pair(PrimitiveType::ClosedCylinder, primitiveData));
 }
+} // namespace Hagine

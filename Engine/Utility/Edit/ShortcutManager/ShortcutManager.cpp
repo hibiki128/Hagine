@@ -1,6 +1,7 @@
 #include "ShortcutManager.h"
 #include "Input.h"
 
+namespace Hagine {
 void ShortcutManager::RegisterShortcut(const std::string &name, BYTE key, std::function<void()> callback) {
     shortcuts_[name] = Shortcut{std::vector<BYTE>{key}, callback};
 }
@@ -42,3 +43,4 @@ void ShortcutManager::Update() {
 void ShortcutManager::Finalize() {
     shortcuts_.clear();
 }
+} // namespace Hagine

@@ -6,6 +6,7 @@
 #include "myMath.h"
 #include <vector>
 
+namespace Hagine {
 void SceneTransition::Finalize() {
     transitionSprite_.reset();
     instanceSizes_.clear();
@@ -19,12 +20,12 @@ void SceneTransition::Initialize() {
     sprite_->SetAlpha(0.0f);                                                // 最初は完全に透明
     duration_ = 1.0f;                                                       // フェードの持続時間（例: 1秒）
     counter_ = 0.0f;                                                        // 経過時間カウンターを初期化
-    fadeInFinish = false;
-    fadeOutFinish = false;
-    fadeInStart = false;
-    fadeOutStart = false;
-    isEnd = false;
-    useTransition = true; // デフォルトはトランジションを使用
+    fadeInFinish_ = false;
+    fadeOutFinish_ = false;
+    fadeInStart_ = false;
+    fadeOutStart_ = false;
+    isEnd_ = false;
+    useTransition_ = true; // デフォルトはトランジションを使用
 
     // インスタンシング用の初期化
     rows_ = 15;                                      // 縦方向のスプライト数
@@ -53,17 +54,17 @@ void SceneTransition::Initialize() {
 
 void SceneTransition::Update() {
     // トランジションを使用しない場合は即座に完了状態にする
-    if (!useTransition) {
-        if (fadeInStart && !fadeInFinish) {
-            fadeInFinish = true;
+    if (!useTransition_) {
+        if (fadeInStart_ && !fadeInFinish_) {
+            fadeInFinish_ = true;
         }
-        if (fadeOutStart && !fadeOutFinish) {
-            fadeOutFinish = true;
+        if (fadeOutStart_ && !fadeOutFinish_) {
+            fadeOutFinish_ = true;
         }
-        if (fadeInFinish && fadeOutFinish) {
-            isEnd = true;
-            fadeInStart = false;
-            fadeOutStart = false;
+        if (fadeInFinish_ && fadeOutFinish_) {
+            isEnd_ = true;
+            fadeInStart_ = false;
+            fadeOutStart_ = false;
         }
         return;
     }
@@ -74,7 +75,7 @@ void SceneTransition::Update() {
 void SceneTransition::Draw() {
     SpriteCommon::GetInstance()->DrawCommonSetting();
     // トランジションを使用しない場合は描画しない
-    if (!useTransition) {
+    if (!useTransition_) {
         return;
     }
 
@@ -86,30 +87,30 @@ void SceneTransition::Debug() {
 #ifdef USE_IMGUI
     ImGui::Begin("遷移");
     ImGui::DragFloat2("位置", &spPos_.x, 0.1f);
-    ImGui::Checkbox("トランジション使用", &useTransition);
+    ImGui::Checkbox("トランジション使用", &useTransition_);
     ImGui::End();
 #endif // USE_IMGUI
 }
 
 void SceneTransition::FadeUpdate() {
-    if (fadeInStart) {
+    if (fadeInStart_) {
         // フェードイン中
-        if (!fadeInFinish) {
+        if (!fadeInFinish_) {
             FadeIn();
         }
     }
-    if (fadeOutStart) {
+    if (fadeOutStart_) {
         // フェードインが終わったら、フェードアウトを開始
-        if (fadeInFinish && !fadeOutFinish) {
+        if (fadeInFinish_ && !fadeOutFinish_) {
             FadeOut();
         }
     }
 
     // トランジションが終了したら、終了フラグを立てる
-    if (fadeInFinish && fadeOutFinish) {
-        isEnd = true;
-        fadeInStart = false;
-        fadeOutStart = false;
+    if (fadeInFinish_ && fadeOutFinish_) {
+        isEnd_ = true;
+        fadeInStart_ = false;
+        fadeOutStart_ = false;
     }
 }
 
@@ -120,7 +121,7 @@ void SceneTransition::FadeIn() {
     counter_ += 1.0f / 60.0f; // フレームレートを基にカウント（1フレームごとに0.0167秒進む）
     if (counter_ >= duration_) {
         counter_ = duration_; // 終了時間を超えないように制限
-        fadeInFinish = true;  // フェードイン終了フラグを立てる
+        fadeInFinish_ = true;  // フェードイン終了フラグを立てる
     }
 }
 
@@ -132,7 +133,7 @@ void SceneTransition::FadeOut() {
     counter_ -= 1.0f / 60.0f;
     if (counter_ <= 0.0f) {
         counter_ = 0.0f;      // カウンターが負になるのを防ぐ
-        fadeOutFinish = true; // フェードアウト完了フラグを立てる
+        fadeOutFinish_ = true; // フェードアウト完了フラグを立てる
     }
 }
 
@@ -250,11 +251,11 @@ void SceneTransition::UpdateTransitionInstances() {
 // トランジション状態をリセット
 void SceneTransition::Reset() {
     counter_ = 0.0f;
-    fadeInFinish = false;
-    fadeOutFinish = false;
-    fadeInStart = false;
-    fadeOutStart = false;
-    isEnd = false;
+    fadeInFinish_ = false;
+    fadeOutFinish_ = false;
+    fadeInStart_ = false;
+    fadeOutStart_ = false;
+    isEnd_ = false;
     sprite_->SetAlpha(0.0f); // 最初の透明状態に戻す
 
     // 全インスタンスのサイズを0にリセット
@@ -265,3 +266,4 @@ void SceneTransition::Reset() {
     }
     UpdateTransitionInstances();
 }
+} // namespace Hagine

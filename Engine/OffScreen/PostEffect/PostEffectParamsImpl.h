@@ -12,6 +12,7 @@
 // ============================================================
 //  ヘルパー: 定数バッファ作成
 // ============================================================
+namespace Hagine {
 namespace PostEffectParamsHelper {
 template <typename T>
 static void CreateConstantBuffer(DirectXCommon *dxCommon,
@@ -732,3 +733,4 @@ class ShockwaveParams : public IPostEffectParams {
     Data *data_ = nullptr;
     static constexpr const char *kFlareTexPath_ = "Particle/tetrio/flare.png";
 };
+} // namespace Hagine

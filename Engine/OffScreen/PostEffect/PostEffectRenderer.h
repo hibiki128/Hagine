@@ -5,6 +5,7 @@
 /// @brief ポストエフェクトの描画を担当するクラス
 /// PostEffectChainのスロット順にエフェクトをピンポンバッファで適用し
 /// 最終結果をfinalResultTextureに書き込む
+namespace Hagine {
 class PostEffectRenderer {
   public:
     void Initialize(DirectXCommon *dxCommon, SrvManager *srvManager, PipeLineManager *psoManager);
@@ -48,3 +49,4 @@ class PostEffectRenderer {
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle_{};
     D3D12_CPU_DESCRIPTOR_HANDLE finalResultRtvHandle_{};
 };
+} // namespace Hagine

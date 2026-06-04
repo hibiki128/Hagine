@@ -6,6 +6,7 @@
 #include "unordered_map"
 #include "wrl.h"
 
+namespace Hagine {
 enum class ComputePipelineType {
     kSkinning,
     kInitParticle,
@@ -129,3 +130,4 @@ class ComputePipeLineManager {
     std::string MakePipelineKey(ComputePipelineType type, BlendMode blendMode, ShaderMode shaderMode);
     std::string MakeRootSignatureKey(ComputePipelineType type, ShaderMode shaderMode);
 };
+} // namespace Hagine

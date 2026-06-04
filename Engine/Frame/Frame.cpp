@@ -5,6 +5,7 @@
 /// 静的メンバ変数の定義
 /// </summary>
 // 静的メンバ変数の定義
+namespace Hagine {
 std::chrono::high_resolution_clock::time_point Frame::lastTime_ = std::chrono::high_resolution_clock::now();
 std::chrono::high_resolution_clock::time_point Frame::fpsCalcTime_ = std::chrono::high_resolution_clock::now();
 std::chrono::high_resolution_clock::time_point Frame::startTime_ = std::chrono::high_resolution_clock::now();
@@ -75,3 +76,4 @@ float Frame::Time() {
     std::chrono::duration<float> elapsed = now - startTime_;
     return elapsed.count();
 }
+} // namespace Hagine

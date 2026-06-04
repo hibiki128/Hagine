@@ -2,7 +2,7 @@
 #include <string>
 
 class Player;
-class Input;
+namespace Hagine { class Input; }
 
 // ============================================================
 //  チュートリアルのステップ定義
@@ -201,7 +201,7 @@ class TutorialSystem {
     /// ===================================================
 
     Player *player_ = nullptr; // プレイヤー
-    Input *input_ = nullptr;   // 入力マネージャ
+    Hagine::Input *input_ = nullptr;   // 入力マネージャ
 
     TutorialStep currentStep_ = TutorialStep::Move; // 現在のステップ
     float progress_ = 0.0f; // 現ステップの進捗 0.0〜1.0

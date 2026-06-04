@@ -5,7 +5,7 @@
 /// デモシーンのクラス
 /// 演出やテスト用のシーンを管理する
 /// </summary>
-class DemoScene : public BaseScene {
+class DemoScene : public Hagine::BaseScene {
   public:
     /// ===================================================
     /// public method

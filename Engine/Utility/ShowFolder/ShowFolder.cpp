@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
+namespace Hagine {
 void ShowTextureFile(std::string &selectedTexturePath) {
     namespace fs = std::filesystem;
     ImGuiStyle &style = ImGui::GetStyle();
@@ -785,4 +786,5 @@ void ShowGltfFile(std::string &selectedGltfPath) {
     ImGui::PopStyleColor();
 }
 
+} // namespace Hagine
 #endif // _DEBUG

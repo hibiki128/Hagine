@@ -2,6 +2,7 @@
 #include "DirectXCommon.h"
 #include "Graphics/PipeLine/PipeLineManager.h"
 #include <Graphics/PipeLine/ComputePipeLineManager.h>
+namespace Hagine {
 class ParticleCommon {
   private:
     ParticleCommon() = default;
@@ -55,3 +56,4 @@ class ParticleCommon {
     PipeLineManager *psoManager_ = nullptr;
     ComputePipeLineManager *computePsoManager_ = nullptr;
 };
+} // namespace Hagine

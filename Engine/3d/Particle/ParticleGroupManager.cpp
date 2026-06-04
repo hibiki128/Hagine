@@ -1,5 +1,6 @@
 #include "ParticleGroupManager.h"
 
+namespace Hagine {
 void ParticleGroupManager::Initialize() {
     const std::string directoryPath = "resources/jsons/ParticleGroup/";
 
@@ -65,3 +66,4 @@ void ParticleGroupManager::CreatePrimitiveParticleGroup(const std::string &group
     particleGroup->CreatePrimitiveParticleGroup(groupName, type, texturePath);
     AddParticleGroup(std::move(particleGroup));
 }
+} // namespace Hagine

@@ -2,6 +2,7 @@
 #include "Engine/Frame/Frame.h"
 #include "application/GameObject/Player/Player.h"
 
+using namespace Hagine;
 void PlayerStateAir::Enter(Player &player) {
     player.GetAcceleration().y = player.GetFallSpeed();
     elapsedTime_ = kInitialElapsedTime;

@@ -5,6 +5,7 @@
 /// <summary>
 /// スプライト描画の共通処理を管理するシングルトンクラス
 /// </summary>
+namespace Hagine {
 class SpriteCommon {
   public:
     /// ===================================================
@@ -62,3 +63,4 @@ class SpriteCommon {
     DirectXCommon* dxCommon_ = nullptr;        // DirectX共通処理
     PipeLineManager* psoManager_ = nullptr;    // パイプライン管理
 };
+} // namespace Hagine

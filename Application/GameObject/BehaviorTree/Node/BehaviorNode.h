@@ -42,12 +42,12 @@ class BTNode {
     /// 現在の状態を取得
     /// </summary>
     /// <returns>NodeStatus: 現在の状態</returns>
-    NodeStatus GetStatus() const { return m_Status; }
+    NodeStatus GetStatus() const { return status_; }
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
-    virtual void Reset() { m_Status = NodeStatus::Idle; }
+    virtual void Reset() { status_ = NodeStatus::Idle; }
 
     /// <summary>
     /// コンテキスト（敵・プレイヤー）を設定
@@ -77,7 +77,7 @@ class BTNode {
     /// </summary>
     virtual void OnExit();
 
-    NodeStatus m_Status = NodeStatus::Idle; // ノードの現在の状態
+    NodeStatus status_ = NodeStatus::Idle; // ノードの現在の状態
 };
 
 /// <summary>
@@ -95,15 +95,15 @@ class ContextNode : public BTNode {
     /// <param name="enemy">敵オブジェクト</param>
     /// <param name="player">プレイヤーオブジェクト</param>
     void SetContext(Enemy *enemy, Player *player) override {
-        m_Enemy = enemy;
-        m_Player = player;
+        enemy_ = enemy;
+        player_ = player;
     }
 
     /// ===================================================
     /// protected variants
     /// ===================================================
-    Enemy *m_Enemy = nullptr;  // 敵オブジェクトへのポインタ
-    Player *m_Player = nullptr; // プレイヤーオブジェクトへのポインタ
+    Enemy *enemy_ = nullptr;  // 敵オブジェクトへのポインタ
+    Player *player_ = nullptr; // プレイヤーオブジェクトへのポインタ
 };
 
 /// <summary>
@@ -133,8 +133,8 @@ class CompositeNode : public BTNode {
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_CurrentChildIndex = 0;
-        for (auto &child : m_Children) {
+        currentChildIndex_ = 0;
+        for (auto &child : children_) {
             child->Reset();
         }
     }
@@ -152,8 +152,8 @@ class CompositeNode : public BTNode {
     /// ===================================================
     /// protected variants
     /// ===================================================
-    std::vector<std::shared_ptr<BTNode>> m_Children; // 子ノードのリスト
-    int m_CurrentChildIndex = 0;                      // 現在実行中の子ノードのインデックス
+    std::vector<std::shared_ptr<BTNode>> children_; // 子ノードのリスト
+    int currentChildIndex_ = 0;                      // 現在実行中の子ノードのインデックス
 };
 
 /// <summary>
@@ -172,15 +172,15 @@ class TimedActionNode : public ContextNode {
     /// <param name="maxTime">最大実行時間</param>
     /// <param name="speed">移動速度</param>
     TimedActionNode(float minTime, float maxTime, float speed)
-        : m_MinTime(minTime), m_MaxTime(maxTime), m_Speed(speed) {}
+        : minTime_(minTime), maxTime_(maxTime), speed_(speed) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_CurrentTimer = 0.0f;
-        m_TargetDuration = 0.0f;
+        currentTimer_ = 0.0f;
+        targetDuration_ = 0.0f;
     }
 
   protected:
@@ -217,11 +217,11 @@ class TimedActionNode : public ContextNode {
     /// ===================================================
     /// protected variants
     /// ===================================================
-    float m_MinTime;                 // 最小実行時間
-    float m_MaxTime;                 // 最大実行時間
-    float m_Speed;                   // 移動速度
-    float m_CurrentTimer = 0.0f;    // 現在の経過時間
-    float m_TargetDuration = 0.0f;  // 目標の実行時間
+    float minTime_;                 // 最小実行時間
+    float maxTime_;                 // 最大実行時間
+    float speed_;                   // 移動速度
+    float currentTimer_ = 0.0f;    // 現在の経過時間
+    float targetDuration_ = 0.0f;  // 目標の実行時間
 };
 
 /// <summary>
@@ -238,29 +238,29 @@ class WeightDecoratorNode : public CompositeNode {
     /// コンストラクタ
     /// </summary>
     /// <param name="weight">重み</param>
-    WeightDecoratorNode(float weight) : m_Weight(weight) {}
+    WeightDecoratorNode(float weight) : weight_(weight) {}
 
     /// <summary>
     /// 更新処理（子ノードにパススルー）
     /// </summary>
     /// <returns>NodeStatus: 実行結果の状態</returns>
     NodeStatus OnUpdate() override {
-        if (m_Children.empty())
+        if (children_.empty())
             return NodeStatus::Failure;
-        return m_Children[0]->Tick();
+        return children_[0]->Tick();
     }
 
     /// <summary>
     /// 重みを取得
     /// </summary>
     /// <returns>float: 重みの値</returns>
-    float GetWeight() const { return m_Weight; }
+    float GetWeight() const { return weight_; }
 
   private:
     /// ===================================================
     /// private variants
     /// ===================================================
-    float m_Weight = 1.0f; // 重みの値
+    float weight_ = 1.0f; // 重みの値
 };
 
 /// <summary>
@@ -287,7 +287,7 @@ class RandomSelectorNode : public CompositeNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    int m_SelectedChildIndex = -1; // 選択された子のインデックス
+    int selectedChildIndex_ = -1; // 選択された子のインデックス
 };
 
 /// <summary>
@@ -359,7 +359,7 @@ class RunActionNode : public BTNode {
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_Counter = 0;
+        counter_ = 0;
     }
 
   protected:
@@ -382,8 +382,8 @@ class RunActionNode : public BTNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    int m_Counter;  // 経過フレームカウンター
-    int m_Duration; // 実行フレーム数
+    int counter_;  // 経過フレームカウンター
+    int duration_; // 実行フレーム数
 };
 
 /// <summary>
@@ -400,15 +400,15 @@ class IsPlayerCloseNode : public ContextNode {
     /// </summary>
     /// <param name="min">最小距離</param>
     /// <param name="max">最大距離</param>
-    IsPlayerCloseNode(float min, float max) : m_MinDist(min), m_MaxDist(max) {}
+    IsPlayerCloseNode(float min, float max) : minDist_(min), maxDist_(max) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_LastResult = NodeStatus::Idle;
-        m_StableTimer = 0.0f;
+        lastResult_ = NodeStatus::Idle;
+        stableTimer_ = 0.0f;
     }
 
   protected:
@@ -426,11 +426,11 @@ class IsPlayerCloseNode : public ContextNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    float m_MinDist; // 判定の最小距離
-    float m_MaxDist; // 判定の最大距離
+    float minDist_; // 判定の最小距離
+    float maxDist_; // 判定の最大距離
 
-    NodeStatus m_LastResult = NodeStatus::Idle;      // 前回の判定結果
-    float m_StableTimer = 0.0f;                      // 状態が安定している時間
+    NodeStatus lastResult_ = NodeStatus::Idle;      // 前回の判定結果
+    float stableTimer_ = 0.0f;                      // 状態が安定している時間
     static constexpr float kHysteresisMargin = 1.0f; // ヒステリシスのマージン
     static constexpr float kMinStableTime = 0.3f;    // 最小安定時間
     static constexpr float kSuccessHoldTime = 0.5f;  // 成功状態の保持時間
@@ -449,7 +449,7 @@ class IsHealthLowNode : public ContextNode {
     /// コンストラクタ
     /// </summary>
     /// <param name="percentage">閾値（0.0〜1.0）</param>
-    IsHealthLowNode(float percentage) : m_ThresholdPercentage(percentage) {}
+    IsHealthLowNode(float percentage) : thresholdPercentage_(percentage) {}
 
   protected:
     /// ===================================================
@@ -466,7 +466,7 @@ class IsHealthLowNode : public ContextNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    float m_ThresholdPercentage; // HP比率の閾値
+    float thresholdPercentage_; // HP比率の閾値
 };
 
 /// <summary>
@@ -482,7 +482,7 @@ class IsEnergyLowNode : public ContextNode {
     /// コンストラクタ
     /// </summary>
     /// <param name="percentage">閾値（0.0〜1.0）</param>
-    IsEnergyLowNode(float percentage) : m_ThresholdPercentage(percentage) {}
+    IsEnergyLowNode(float percentage) : thresholdPercentage_(percentage) {}
 
   protected:
     /// ===================================================
@@ -499,7 +499,7 @@ class IsEnergyLowNode : public ContextNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    float m_ThresholdPercentage; // エネルギー比率の閾値
+    float thresholdPercentage_; // エネルギー比率の閾値
 };
 
 /// <summary>
@@ -561,7 +561,7 @@ class IsPlayerStateNode : public ContextNode {
     /// コンストラクタ
     /// </summary>
     /// <param name="stateName">ステート名</param>
-    IsPlayerStateNode(const std::string &stateName) : m_StateName(stateName) {}
+    IsPlayerStateNode(const std::string &stateName) : stateName_(stateName) {}
 
   protected:
     /// ===================================================
@@ -578,7 +578,7 @@ class IsPlayerStateNode : public ContextNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    std::string m_StateName; // チェックするステート名
+    std::string stateName_; // チェックするステート名
 };
 
 /// <summary>
@@ -646,14 +646,14 @@ class EnemyAttackNode : public ContextNode {
     /// <summary>
     /// コンストラクタ
     /// </summary>
-    EnemyAttackNode() { m_Timer = 0.0f; }
+    EnemyAttackNode() { timer_ = 0.0f; }
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_Timer = 0.0f;
+        timer_ = 0.0f;
     }
 
   protected:
@@ -664,7 +664,7 @@ class EnemyAttackNode : public ContextNode {
     NodeStatus OnUpdate() override;
 
   private:
-    float m_Timer = 0.0f; // 攻撃の経過時間
+    float timer_ = 0.0f; // 攻撃の経過時間
 };
 
 /// <summary>
@@ -676,7 +676,7 @@ class EnemyIdleNode : public ContextNode {
     /// コンストラクタ
     /// </summary>
     /// <param name="duration">待機時間</param>
-    EnemyIdleNode(float duration = 1.0f) : m_Duration(duration), m_Timer(0.0f) {}
+    EnemyIdleNode(float duration = 1.0f) : duration_(duration), timer_(0.0f) {}
 
     /// <summary>
     /// 状態をリセット
@@ -694,15 +694,15 @@ class EnemyIdleNode : public ContextNode {
     /// </summary>
     /// <returns>NodeStatus: 実行結果</returns>
     NodeStatus OnUpdate() override {
-        m_Timer += 1.0f / 60.0f;
-        if (m_Timer >= m_Duration)
+        timer_ += 1.0f / 60.0f;
+        if (timer_ >= duration_)
             return NodeStatus::Success;
         return NodeStatus::Running;
     }
 
   private:
-    float m_Duration; // 待機する秒数
-    float m_Timer;    // 現在の経過時間
+    float duration_; // 待機する秒数
+    float timer_;    // 現在の経過時間
 };
 
 /// <summary>
@@ -714,14 +714,14 @@ class EnemyJumpNode : public ContextNode {
     /// コンストラクタ
     /// </summary>
     /// <param name="jumpPower">ジャンプ力</param>
-    EnemyJumpNode(float jumpPower = 15.0f) : m_JumpPower(jumpPower) {}
+    EnemyJumpNode(float jumpPower = 15.0f) : jumpPower_(jumpPower) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_JumpExecuted = false;
+        jumpExecuted_ = false;
     }
 
   protected:
@@ -737,8 +737,8 @@ class EnemyJumpNode : public ContextNode {
     NodeStatus OnUpdate() override;
 
   private:
-    float m_JumpPower;           // ジャンプ力
-    bool m_JumpExecuted = false; // ジャンプが実行されたか
+    float jumpPower_;           // ジャンプ力
+    bool jumpExecuted_ = false; // ジャンプが実行されたか
 };
 
 /// <summary>
@@ -750,14 +750,14 @@ class EnemyJumpToFlyNode : public ContextNode {
     /// コンストラクタ
     /// </summary>
     /// <param name="jumpPower">ジャンプ力</param>
-    EnemyJumpToFlyNode(float jumpPower = 15.0f) : m_JumpPower(jumpPower), m_ElapsedTime(0.0f) {}
+    EnemyJumpToFlyNode(float jumpPower = 15.0f) : jumpPower_(jumpPower), elapsedTime_(0.0f) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_ElapsedTime = 0.0f;
+        elapsedTime_ = 0.0f;
     }
 
   protected:
@@ -778,8 +778,8 @@ class EnemyJumpToFlyNode : public ContextNode {
     void OnExit() override;
 
   private:
-    float m_JumpPower;  // ジャンプ力
-    float m_ElapsedTime; // 経過時間
+    float jumpPower_;  // ジャンプ力
+    float elapsedTime_; // 経過時間
     static constexpr float kFlyTransitionTime = 1.0f; // 飛行遷移可能時間
 };
 
@@ -795,15 +795,15 @@ class EnemyFlyAscendNode : public ContextNode {
     /// <param name="maxTime">最大実行時間</param>
     /// <param name="speed">上昇速度</param>
     EnemyFlyAscendNode(float minTime, float maxTime, float speed = 15.0f)
-        : m_MinTime(minTime), m_MaxTime(maxTime), m_Speed(speed) {}
+        : minTime_(minTime), maxTime_(maxTime), speed_(speed) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_CurrentTimer = 0.0f;
-        m_TargetDuration = 0.0f;
+        currentTimer_ = 0.0f;
+        targetDuration_ = 0.0f;
     }
 
   protected:
@@ -824,11 +824,11 @@ class EnemyFlyAscendNode : public ContextNode {
     void OnExit() override;
 
   private:
-    float m_MinTime;                 // 最小実行時間
-    float m_MaxTime;                 // 最大実行時間
-    float m_Speed;                   // 上昇速度
-    float m_CurrentTimer;           // 現在の経過時間
-    float m_TargetDuration;         // 目標の実行時間
+    float minTime_;                 // 最小実行時間
+    float maxTime_;                 // 最大実行時間
+    float speed_;                   // 上昇速度
+    float currentTimer_;           // 現在の経過時間
+    float targetDuration_;         // 目標の実行時間
     static constexpr float kFlyAcceleration = 30.0f; // 飛行加速度
 };
 
@@ -844,15 +844,15 @@ class EnemyFlyDescendNode : public ContextNode {
     /// <param name="maxTime">最大実行時間</param>
     /// <param name="speed">下降速度</param>
     EnemyFlyDescendNode(float minTime, float maxTime, float speed = 15.0f)
-        : m_MinTime(minTime), m_MaxTime(maxTime), m_Speed(speed) {}
+        : minTime_(minTime), maxTime_(maxTime), speed_(speed) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_CurrentTimer = 0.0f;
-        m_TargetDuration = 0.0f;
+        currentTimer_ = 0.0f;
+        targetDuration_ = 0.0f;
     }
 
   protected:
@@ -873,11 +873,11 @@ class EnemyFlyDescendNode : public ContextNode {
     void OnExit() override;
 
   private:
-    float m_MinTime;                 // 最小実行時間
-    float m_MaxTime;                 // 最大実行時間
-    float m_Speed;                   // 下降速度
-    float m_CurrentTimer;           // 現在の経過時間
-    float m_TargetDuration;         // 目標の実行時間
+    float minTime_;                 // 最小実行時間
+    float maxTime_;                 // 最大実行時間
+    float speed_;                   // 下降速度
+    float currentTimer_;           // 現在の経過時間
+    float targetDuration_;         // 目標の実行時間
     static constexpr float kFlyAcceleration = 30.0f; // 飛行加速度
 };
 
@@ -893,15 +893,15 @@ class EnemyFlyApproachNode : public ContextNode {
     /// <param name="maxTime">最大実行時間</param>
     /// <param name="speed">移動速度</param>
     EnemyFlyApproachNode(float minTime, float maxTime, float speed = 10.0f)
-        : m_MinTime(minTime), m_MaxTime(maxTime), m_Speed(speed) {}
+        : minTime_(minTime), maxTime_(maxTime), speed_(speed) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_CurrentTimer = 0.0f;
-        m_TargetDuration = 0.0f;
+        currentTimer_ = 0.0f;
+        targetDuration_ = 0.0f;
     }
 
   protected:
@@ -922,11 +922,11 @@ class EnemyFlyApproachNode : public ContextNode {
     void OnExit() override;
 
   private:
-    float m_MinTime;                 // 最小実行時間
-    float m_MaxTime;                 // 最大実行時間
-    float m_Speed;                   // 移動速度
-    float m_CurrentTimer = 0.0f;    // 現在の経過時間
-    float m_TargetDuration = 0.0f;  // 目標の実行時間
+    float minTime_;                 // 最小実行時間
+    float maxTime_;                 // 最大実行時間
+    float speed_;                   // 移動速度
+    float currentTimer_ = 0.0f;    // 現在の経過時間
+    float targetDuration_ = 0.0f;  // 目標の実行時間
 };
 
 /// <summary>
@@ -972,15 +972,15 @@ class EnemyShootNode : public ContextNode {
     /// コンストラクタ
     /// </summary>
     /// <param name="cooldown">発射後のクールダウン時間</param>
-    EnemyShootNode(float cooldown = 1.0f) : m_Cooldown(cooldown) {}
+    EnemyShootNode(float cooldown = 1.0f) : cooldown_(cooldown) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_Timer = 0.0f;
-        m_HasShot = false;
+        timer_ = 0.0f;
+        hasShot_ = false;
     }
 
   protected:
@@ -1003,9 +1003,9 @@ class EnemyShootNode : public ContextNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    float m_Cooldown;       // 発射後の待機時間(秒)
-    float m_Timer = 0.0f;   // 経過時間
-    bool m_HasShot = false; // 発射済みフラグ
+    float cooldown_;       // 発射後の待機時間(秒)
+    float timer_ = 0.0f;   // 経過時間
+    bool hasShot_ = false; // 発射済みフラグ
 };
 
 /// <summary>
@@ -1021,7 +1021,7 @@ class EnemyLockOnNode : public ContextNode {
     /// コンストラクタ
     /// </summary>
     /// <param name="lockOn">ロックオンを有効にするか</param>
-    EnemyLockOnNode(bool lockOn = true) : m_LockOn(lockOn) {}
+    EnemyLockOnNode(bool lockOn = true) : lockOn_(lockOn) {}
 
     /// <summary>
     /// 状態をリセット
@@ -1043,7 +1043,7 @@ class EnemyLockOnNode : public ContextNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    bool m_LockOn; // trueでロックオンON、falseでOFF
+    bool lockOn_; // trueでロックオンON、falseでOFF
 };
 
 /// <summary>
@@ -1084,15 +1084,15 @@ class EnemyComboStepNode : public ContextNode {
     /// <param name="stepDuration">1段階の実行時間</param>
     /// <param name="comboInterval">コンボ間隔オーバーライド</param>
     EnemyComboStepNode(float stepDuration = 0.5f, float comboInterval = 0.0f)
-        : m_StepDuration(stepDuration), m_ComboInterval(comboInterval) {}
+        : stepDuration_(stepDuration), comboInterval_(comboInterval) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_Timer = 0.0f;
-        m_HasStep = false;
+        timer_ = 0.0f;
+        hasStep_ = false;
     }
 
   protected:
@@ -1115,10 +1115,10 @@ class EnemyComboStepNode : public ContextNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    float m_StepDuration;  // 1段階の実行時間(秒)
-    float m_ComboInterval; // コンボ間隔オーバーライド
-    float m_Timer = 0.0f;   // 経過時間
-    bool m_HasStep = false; // ステップ実行済みフラグ
+    float stepDuration_;  // 1段階の実行時間(秒)
+    float comboInterval_; // コンボ間隔オーバーライド
+    float timer_ = 0.0f;   // 経過時間
+    bool hasStep_ = false; // ステップ実行済みフラグ
 };
 
 /// <summary>
@@ -1137,16 +1137,16 @@ class EnemyComboFullNode : public ContextNode {
     /// <param name="maxSteps">最大段数</param>
     /// <param name="comboInterval">コンボ間隔オーバーライド</param>
     EnemyComboFullNode(float stepDuration = 0.5f, int maxSteps = 0, float comboInterval = 0.0f)
-        : m_StepDuration(stepDuration), m_MaxSteps(maxSteps), m_ComboInterval(comboInterval) {}
+        : stepDuration_(stepDuration), maxSteps_(maxSteps), comboInterval_(comboInterval) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_Timer = 0.0f;
-        m_StepCount = 0;
-        m_WaitingStep = false;
+        timer_ = 0.0f;
+        stepCount_ = 0;
+        waitingStep_ = false;
     }
 
   protected:
@@ -1169,12 +1169,12 @@ class EnemyComboFullNode : public ContextNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    float m_StepDuration;  // 1段あたりの実行時間(秒)
-    int m_MaxSteps;        // 最大段数
-    float m_ComboInterval; // コンボ間隔オーバーライド
-    float m_Timer = 0.0f;   // 経過時間
-    int m_StepCount = 0;   // 現在の段数
-    bool m_WaitingStep = false; // ステップ待ちフラグ
+    float stepDuration_;  // 1段あたりの実行時間(秒)
+    int maxSteps_;        // 最大段数
+    float comboInterval_; // コンボ間隔オーバーライド
+    float timer_ = 0.0f;   // 経過時間
+    int stepCount_ = 0;   // 現在の段数
+    bool waitingStep_ = false; // ステップ待ちフラグ
 };
 
 /// <summary>
@@ -1200,16 +1200,16 @@ class EnemyBurstShootNode : public ContextNode {
         float cooldown = 0.5f,
         float spreadAngle = 0.0f,
         bool homingMode = false)
-        : m_Interval(interval), m_BurstCount(count), m_Cooldown(cooldown), m_SpreadAngle(spreadAngle), m_HomingMode(homingMode) {}
+        : interval_(interval), burstCount_(count), cooldown_(cooldown), spreadAngle_(spreadAngle), homingMode_(homingMode) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_Timer = 0.0f;
-        m_ShotsFired = 0;
-        m_Phase = Phase::Shooting;
+        timer_ = 0.0f;
+        shotsFired_ = 0;
+        phase_ = Phase::Shooting;
     }
 
   protected:
@@ -1244,15 +1244,15 @@ class EnemyBurstShootNode : public ContextNode {
     enum class Phase { Shooting,
                        Cooldown };
 
-    float m_Interval;    // 発射間隔(秒)
-    int m_BurstCount;    // 連発弾数
-    float m_Cooldown;    // 全弾後クールダウン(秒)
-    float m_SpreadAngle; // 拡散角度の半角(度)
-    bool m_HomingMode;   // true=ロックオン追従, false=拡散固定弾
+    float interval_;    // 発射間隔(秒)
+    int burstCount_;    // 連発弾数
+    float cooldown_;    // 全弾後クールダウン(秒)
+    float spreadAngle_; // 拡散角度の半角(度)
+    bool homingMode_;   // true=ロックオン追従, false=拡散固定弾
 
-    float m_Timer = 0.0f;   // 経過時間
-    int m_ShotsFired = 0;   // 発射済み弾数
-    Phase m_Phase = Phase::Shooting; // 現在のフェーズ
+    float timer_ = 0.0f;   // 経過時間
+    int shotsFired_ = 0;   // 発射済み弾数
+    Phase phase_ = Phase::Shooting; // 現在のフェーズ
 };
 
 /// <summary>
@@ -1270,14 +1270,14 @@ class EnemyEnergyChargeNode : public ContextNode {
     /// <param name="chargeRateMultiplier">チャージ速度倍率</param>
     /// <param name="targetRatio">目標エネルギー比率</param>
     EnemyEnergyChargeNode(float chargeRateMultiplier = 1.0f, float targetRatio = 1.0f)
-        : m_ChargeRateMultiplier(chargeRateMultiplier), m_TargetRatio(targetRatio) {}
+        : chargeRateMultiplier_(chargeRateMultiplier), targetRatio_(targetRatio) {}
 
     /// <summary>
     /// 状態をリセット
     /// </summary>
     void Reset() override {
         BTNode::Reset();
-        m_Timer = 0.0f;
+        timer_ = 0.0f;
     }
 
   protected:
@@ -1305,10 +1305,10 @@ class EnemyEnergyChargeNode : public ContextNode {
     /// ===================================================
     /// private variants
     /// ===================================================
-    float m_ChargeRateMultiplier; // チャージ速度の倍率
-    float m_TargetRatio;          // 目標エネルギー比率
-    float m_Timer = 0.0f;         // 経過時間
-    float m_OriginalRecoveryRate = 0.0f; // 元の回復レート保存用
+    float chargeRateMultiplier_; // チャージ速度の倍率
+    float targetRatio_;          // 目標エネルギー比率
+    float timer_ = 0.0f;         // 経過時間
+    float originalRecoveryRate_ = 0.0f; // 元の回復レート保存用
 };
 
 /// <summary>
@@ -1316,13 +1316,13 @@ class EnemyEnergyChargeNode : public ContextNode {
 /// </summary>
 class IsPlayerHPLowNode : public ContextNode {
   public:
-    IsPlayerHPLowNode(float threshold) : m_Threshold(threshold) {}
+    IsPlayerHPLowNode(float threshold) : threshold_(threshold) {}
 
   protected:
     NodeStatus OnUpdate() override;
 
   private:
-    float m_Threshold;
+    float threshold_;
 };
 
 /// <summary>
@@ -1330,13 +1330,13 @@ class IsPlayerHPLowNode : public ContextNode {
 /// </summary>
 class IsEnergyHighNode : public ContextNode {
   public:
-    IsEnergyHighNode(float threshold) : m_Threshold(threshold) {}
+    IsEnergyHighNode(float threshold) : threshold_(threshold) {}
 
   protected:
     NodeStatus OnUpdate() override;
 
   private:
-    float m_Threshold;
+    float threshold_;
 };
 
 /// <summary>
@@ -1348,13 +1348,13 @@ class IsEnergyHighNode : public ContextNode {
 class EnemyChargeAttackNode : public ContextNode {
   public:
     EnemyChargeAttackNode(float chargeDuration, int burstCount, float /*energyCost*/)
-        : m_ChargeDuration(chargeDuration), m_BurstCount(burstCount) {}
+        : chargeDuration_(chargeDuration), burstCount_(burstCount) {}
 
     void Reset() override {
         BTNode::Reset();
-        m_Timer     = 0.0f;
-        m_ShotsFired = 0;
-        m_Phase     = Phase::Charge;
+        timer_     = 0.0f;
+        shotsFired_ = 0;
+        phase_     = Phase::Charge;
     }
 
   protected:
@@ -1365,11 +1365,11 @@ class EnemyChargeAttackNode : public ContextNode {
   private:
     enum class Phase { Charge, Shoot, Cooldown };
 
-    float m_ChargeDuration;
-    int   m_BurstCount;
-    float m_Timer     = 0.0f;
-    int   m_ShotsFired = 0;
-    Phase m_Phase     = Phase::Charge;
+    float chargeDuration_;
+    int   burstCount_;
+    float timer_     = 0.0f;
+    int   shotsFired_ = 0;
+    Phase phase_     = Phase::Charge;
 
     static constexpr float kShootInterval = 0.07f;
     static constexpr float kCooldown      = 0.4f;
@@ -1384,15 +1384,15 @@ class EnemyChargeAttackNode : public ContextNode {
 class EnemyUltimateNode : public ContextNode {
   public:
     EnemyUltimateNode(float /*energyCost*/, int shotCount, float stepDuration)
-        : m_ShotCount(shotCount), m_StepDuration(stepDuration) {}
+        : shotCount_(shotCount), stepDuration_(stepDuration) {}
 
     void Reset() override {
         BTNode::Reset();
-        m_Timer      = 0.0f;
-        m_StepCount  = 0;
-        m_ShotsFired = 0;
-        m_WaitingStep = false;
-        m_Phase      = Phase::Combo;
+        timer_      = 0.0f;
+        stepCount_  = 0;
+        shotsFired_ = 0;
+        waitingStep_ = false;
+        phase_      = Phase::Combo;
     }
 
   protected:
@@ -1403,13 +1403,13 @@ class EnemyUltimateNode : public ContextNode {
   private:
     enum class Phase { Combo, Shoot, Cooldown };
 
-    int   m_ShotCount;
-    float m_StepDuration;
-    float m_Timer      = 0.0f;
-    int   m_StepCount  = 0;
-    int   m_ShotsFired = 0;
-    bool  m_WaitingStep = false;
-    Phase m_Phase      = Phase::Combo;
+    int   shotCount_;
+    float stepDuration_;
+    float timer_      = 0.0f;
+    int   stepCount_  = 0;
+    int   shotsFired_ = 0;
+    bool  waitingStep_ = false;
+    Phase phase_      = Phase::Combo;
 
     static constexpr int   kMaxComboSteps  = 8;
     static constexpr float kShootInterval  = 0.08f;
@@ -1424,12 +1424,12 @@ class EnemyUltimateNode : public ContextNode {
 class EnemyBeamUltimateNode : public ContextNode {
   public:
     EnemyBeamUltimateNode(float windupDuration = 1.5f)
-        : m_WindupDuration(windupDuration) {}
+        : windupDuration_(windupDuration) {}
 
     void Reset() override {
         BTNode::Reset();
-        m_Timer = 0.0f;
-        m_Phase = Phase::Windup;
+        timer_ = 0.0f;
+        phase_ = Phase::Windup;
     }
 
   protected:
@@ -1440,9 +1440,9 @@ class EnemyBeamUltimateNode : public ContextNode {
   private:
     enum class Phase { Windup, Beam, Cooldown };
 
-    float m_WindupDuration;
-    float m_Timer = 0.0f;
-    Phase m_Phase = Phase::Windup;
+    float windupDuration_;
+    float timer_ = 0.0f;
+    Phase phase_ = Phase::Windup;
 
     static constexpr float kCooldown = 1.2f; // ビーム後の硬直
 };
@@ -1453,12 +1453,12 @@ class EnemyBeamUltimateNode : public ContextNode {
 /// </summary>
 class EnemyGuardNode : public ContextNode {
   public:
-    EnemyGuardNode(float duration = 0.8f) : m_Duration(duration) {}
+    EnemyGuardNode(float duration = 0.8f) : duration_(duration) {}
 
-    void Reset() override {
-        BTNode::Reset();
-        m_Timer = 0.0f;
-    }
+    // 別の枝に切り替わって Reset されても確実にガード状態を解除する
+    // （Reset は OnExit を呼ばないため、ここでフラグを落とさないと
+    //   isGuarding_ が true のまま残り、他の行動中もガード扱いになる）
+    void Reset() override;
 
   protected:
     void OnEnter() override;
@@ -1466,8 +1466,8 @@ class EnemyGuardNode : public ContextNode {
     void OnExit() override;
 
   private:
-    float m_Duration;     // ガード継続時間(秒)
-    float m_Timer = 0.0f; // 経過時間
+    float duration_;     // ガード継続時間(秒)
+    float timer_ = 0.0f; // 経過時間
 };
 
 /// <summary>

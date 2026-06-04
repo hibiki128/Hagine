@@ -5,6 +5,7 @@
 //  追加・削除
 // -------------------------------------------------------
 
+namespace Hagine {
 int PostEffectChain::AddEffect(ShaderMode mode,
                                const std::string &name,
                                DirectXCommon *dxCommon,
@@ -197,3 +198,4 @@ int PostEffectChain::FindFirstFreeSlot() const {
     }
     return -1;
 }
+} // namespace Hagine

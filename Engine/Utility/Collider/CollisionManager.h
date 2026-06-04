@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+namespace Hagine {
 class CollisionManager {
   public:
     static CollisionManager *GetInstance() {
@@ -90,3 +91,4 @@ class CollisionManager {
 
     bool isVisible_ = false;
 };
+} // namespace Hagine

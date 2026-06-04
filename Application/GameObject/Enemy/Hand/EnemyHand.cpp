@@ -1,5 +1,6 @@
 #include "EnemyHand.h"
 
+using namespace Hagine;
 void EnemyHand::Init(const std::string objectName) {
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);

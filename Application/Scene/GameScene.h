@@ -18,7 +18,7 @@
 /// ゲーム本編のシーンクラス
 /// プレイヤー、敵、カメラ、UIなどのゲームメインループを管理する
 /// </summary>
-class GameScene : public BaseScene {
+class GameScene : public Hagine::BaseScene {
   public:
     /// ===================================================
     /// public method
@@ -95,7 +95,7 @@ class GameScene : public BaseScene {
     std::unique_ptr<EnemyUI> enemyUI_;      // 敵UI
     std::unique_ptr<GameUI> gameUI_;        // ゲームUI
 
-    SkyBox *skyBox_ = nullptr;              // スカイボックス
+    Hagine::SkyBox *skyBox_ = nullptr;              // スカイボックス
 
     Enemy *enemy_ptr = nullptr;             // 敵のポインタ（共有用）
     Player *player_ptr = nullptr;           // プレイヤーのポインタ（共有用）
@@ -109,5 +109,5 @@ class GameScene : public BaseScene {
 #ifdef _DEBUG
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_; // ビヘイビアツリーエディタ
 #endif
-    std::shared_ptr<BTNode> m_BehaviorTreeRoot; // ビヘイビアツリールート
+    std::shared_ptr<BTNode> behaviorTreeRoot_; // ビヘイビアツリールート
 };

@@ -7,6 +7,7 @@
 /// <summary>
 /// オブジェクトの変形情報を保持する構造体
 /// </summary>
+namespace Hagine {
 struct Transform {
     Vector3 scale;     // スケール
     Vector3 rotate;    // 回転
@@ -37,3 +38,4 @@ struct TransformationMatrix {
     Matrix4x4 WVP;   // WVP行列
     Matrix4x4 World; // ワールド行列
 };
+} // namespace Hagine

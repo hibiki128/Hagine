@@ -4,6 +4,7 @@
 #include <cmath>
 #include"type/Quaternion.h"
 
+namespace Hagine {
 float LerpE(const float& start, const float& end, float t) { return (1.0f - t) * start + end * t; }
 
 Vector3 LerpE(const Vector3& start, const Vector3& end, float t) {
@@ -755,3 +756,4 @@ template Quaternion EaseInOutElastic<Quaternion>(const Quaternion &start, const 
 template Quaternion EaseInBounce<Quaternion>(const Quaternion &start, const Quaternion &end, float x, float totalX);
 template Quaternion EaseOutBounce<Quaternion>(const Quaternion &start, const Quaternion &end, float x, float totalX);
 template Quaternion EaseInOutBounce<Quaternion>(const Quaternion &start, const Quaternion &end, float x, float totalX);
+} // namespace Hagine

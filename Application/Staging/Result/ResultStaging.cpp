@@ -6,6 +6,7 @@
 #include <Object/Base/BaseObjectManager.h>
 #include <random>
 
+using namespace Hagine;
 void ResultStaging::Initialize() {
 
     /// ===================================================

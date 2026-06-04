@@ -1,6 +1,7 @@
 #include "GameUI.h"
 #include <Input.h>
 
+using namespace Hagine;
 void GameUI::Initialize() {
     gamePad_ = std::make_unique<GamePad>();
     gamePad_->Init(0);

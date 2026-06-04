@@ -1,5 +1,6 @@
 #include "SkyDome.h"
 
+using namespace Hagine;
 void SkyDome::Init(const std::string className) {
     BaseObject::Init(className);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);

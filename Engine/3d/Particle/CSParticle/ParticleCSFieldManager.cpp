@@ -9,6 +9,7 @@
 #endif
 
 #pragma pack(push, 1)
+namespace Hagine {
 struct GPU_FieldSettingsOverride {
     uint32_t overrideMaskX; // overrideMask.x (bit0-31)
     uint32_t overrideMaskY; // overrideMask.y (bit32-63)
@@ -1314,3 +1315,4 @@ void ParticleCSFieldManager::DrawVortexArcs(const ParticleField &field, const Ve
     Vector3 axisBot = {center.x - axis.x * r * 0.6f, center.y - axis.y * r * 0.6f, center.z - axis.z * r * 0.6f};
     DrawLine3D::GetInstance()->SetPoints(axisBot, axisTop, color);
 }
+} // namespace Hagine
