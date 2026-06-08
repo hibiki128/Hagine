@@ -187,11 +187,15 @@ void Object3d::AnimationUpdate() {
                 std::string currentFile = currentAnimator->GetCurrentFilename();
                 std::string nextFile = nextAnimationFileName_;
 
-                // ファイル名が異なる場合のみ更新
+                // アニメーター側のファイル情報がまだ切り替え先と異なる場合のみ更新する
                 if (currentFile != nextFile) {
                     currentAnimator->UpdateCurrentFileInfo("resources/models/", nextFile);
-                    modelFilePath_ = nextFile;
                 }
+
+                // ループフラグは modelFilePath_ をキーに参照するため、
+                // 補間完了後は必ず切り替え先のファイルへ更新しておく
+                // （未更新だと常に旧ファイルのループ設定が使われ、全クリップがループしてしまう）
+                modelFilePath_ = nextFile;
 
                 // 切り替え完了フラグをリセット
                 isAnimationSwitchPending_ = false;

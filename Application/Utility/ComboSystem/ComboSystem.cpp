@@ -10,10 +10,22 @@
 
 // 定数定義
 using namespace Hagine;
-const float ComboSystem::COMBO_INTERVAL = 0.15f;
+
+// ある段を繰り出してから次の段を受け付けるまでのクールダウン（秒）。
+// この間にコンボ入力されても即発動はせず、先行入力としてバッファされる
+const float ComboSystem::COMBO_INTERVAL = 0.45f;
+
+// クールダウン中に行われた先行入力を保持する有効時間（秒）。
+// この時間内であればクールダウンが明けた瞬間に次の段が自動発動する
 const float ComboSystem::INPUT_BUFFER_DURATION = 0.4f;
-const float ComboSystem::FINAL_RETURN_DELAY = 0.8f;
-const float ComboSystem::COMBO_TIMEOUT_DURATION = 2.0f;
+
+// 最終段を出し切ってから開始姿勢へ戻すまでの待機時間（秒）。
+// フィニッシュモーションを見せる余韻として確保する
+const float ComboSystem::FINAL_RETURN_DELAY = 0.5f;
+
+// コンボ継続中に次の入力が来ないまま経過すると、コンボを打ち切って
+// 開始姿勢へ戻すまでの放置タイムアウト時間（秒）
+const float ComboSystem::COMBO_TIMEOUT_DURATION = 0.5f;
 
 ComboSystem::ComboSystem()
     : comboIndex_(0), comboCooldown_(0.0f), comboStarted_(false),

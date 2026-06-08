@@ -171,6 +171,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\ImGuizmo.cpp" />
     <ClCompile Include="Engine\3d\Model\Material\Material.cpp" />
     <ClCompile Include="Engine\3d\Model\Mesh\Mesh.cpp" />
+    <ClCompile Include="Engine\3d\Animation\AnimationController.cpp" />
     <ClCompile Include="Engine\3d\Animation\ModelAnimation.cpp" />
     <ClCompile Include="Engine\3d\Animation\Bone.cpp" />
     <ClCompile Include="Engine\3d\Animation\Animator.cpp" />
@@ -368,6 +369,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\ImGuizmo.h" />
     <ClInclude Include="Engine\3d\Model\Material\Material.h" />
     <ClInclude Include="Engine\3d\Model\Mesh\Mesh.h" />
+    <ClInclude Include="Engine\3d\Animation\AnimationController.h" />
     <ClInclude Include="Engine\3d\Animation\ModelAnimation.h" />
     <ClInclude Include="Engine\3d\Animation\Bone.h" />
     <ClInclude Include="Engine\3d\Animation\Animator.h" />

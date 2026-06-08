@@ -33,30 +33,45 @@ Player::~Player() {
 
 void Player::Init(const std::string objectName) {
     BaseObject::Init(objectName);
-     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
-    ///BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
-    // ────────────────────────────────────────────────
-    // ループあり：待機・移動など継続する動作
-    // ────────────────────────────────────────────────
-    ///BaseObject::AddAnimation("animation/Player/Idle_Ground.gltf", true); // 浮遊待機
-    ///BaseObject::AddAnimation("animation/Player/Idle_Flying.gltf", true); // 浮遊待機
-    ///BaseObject::AddAnimation("animation/Run.gltf", true);                // 地上移動
-    // ────────────────────────────────────────────────
-    // ループなし：攻撃・ジャンプなど一回きりの動作
-    // ────────────────────────────────────────────────
-    ///BaseObject::AddAnimation("animation/Player/Punch_1.gltf", false); // Jab
-    ///BaseObject::AddAnimation("animation/Player/Punch_2.gltf", false); // Hook
-    ///BaseObject::AddAnimation("animation/Player/Punch_3.gltf", false); // Cross
-    ///BaseObject::AddAnimation("animation/Player/Punch_4.gltf", false); // Uppercut
-    ///BaseObject::AddAnimation("animation/Player/Kick_1.gltf", false);  // Overhand
-    ///BaseObject::AddAnimation("animation/Player/Kick_2.gltf", false);  // Swing
-    ///BaseObject::AddAnimation("animation/Player/Kick_3.gltf", false);  // Elbow
-    ///BaseObject::AddAnimation("animation/Jump.gltf", false);           // ジャンプ
 
-    ///BaseObject::SetOffset({0.0f, -0.5f, 0.0f}); // 描画オフセット（地面に足がつくように）
-   /// BaseObject::GetLocalScale() = {3.0f, 3.0f, 3.0f};
-   /// BaseObject::SetAnimationSpeed(1.5f);
-   /// BaseObject::SetAnimationBlendDuration(0.75f);
+    // ベースモデル（地上待機）を生成する。各 gltf はメッシュ＋スケルトン＋
+    // アニメーションを内包しており、スケルトンを共有するクリップを切り替えて再生する
+    BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
+    BaseObject::SetOffset({0.0f, -0.5f, 0.0f}); // 描画オフセット（地面に足がつくように）
+    BaseObject::GetLocalScale() = {3.0f, 3.0f, 3.0f};
+    BaseObject::SetAnimationSpeed(1.0f);
+    BaseObject::SetAnimationBlendDuration(0.2f);
+
+    // ───────────────────────────────────────────
+    // アニメーションコントローラへ全クリップを登録する
+    // RegisterClip(識別名, ファイルパス, ループ, 速度, 補間時間)
+    // ───────────────────────────────────────────
+    animationController_.Initialize(GetObject3d());
+
+    // ループあり：待機・移動など継続する動作
+    animationController_.RegisterClip("Idle", "animation/Player/Idle_Ground.gltf", true);
+    animationController_.RegisterClip("FlyIdle", "animation/Player/Idle_Flying.gltf", true);
+    animationController_.RegisterClip("Run", "animation/Player/Running.gltf", true);
+    animationController_.RegisterClip("RunBack", "animation/Player/Running_Back.gltf", true);
+    animationController_.RegisterClip("RunLeft", "animation/Player/Running_Left.gltf", true);
+    animationController_.RegisterClip("RunRight", "animation/Player/Running_Right.gltf", true);
+    animationController_.RegisterClip("FlyMove", "animation/Player/Running_Fly.gltf", true);
+    animationController_.RegisterClip("Guard", "animation/Player/Block_Idle.gltf", true);
+
+    // ループなし：攻撃・ジャンプなど一回きりの動作
+    animationController_.RegisterClip("Jump", "animation/Player/Running_Jamp.gltf", false);
+    animationController_.RegisterClip("GuardHit", "animation/Player/Block_Hit.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Punch_1", "animation/Player/Punch_1.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Punch_2", "animation/Player/Punch_2.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Punch_3", "animation/Player/Punch_3.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Punch_4", "animation/Player/Punch_4.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Kick_1", "animation/Player/Kick_1.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Kick_2", "animation/Player/Kick_2.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Kick_3", "animation/Player/Kick_3.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Smash", "animation/Player/Smash.gltf", false, 1.0f, 0.1f);
+
+    // JSONに保存済みの調整値があれば読み込む
+    animationController_.LoadClips("AnimationController", "PlayerClips");
 
     playerCollider_ = AddOBBCollider("player_Collider");
     playerCollider_->SetTag("Player");
@@ -114,8 +129,8 @@ void Player::Init(const std::string objectName) {
     makanAttack_ = std::make_unique<MakanAttackSkill>();
     makanAttack_->Init("makanAttack");
 
-    this->AddChild(leftHand_.get());
-    this->AddChild(rightHand_.get());
+    //this->AddChild(leftHand_.get());
+    //this->AddChild(rightHand_.get());
 
     MotionEditor::GetInstance()->Register(leftHand_.get());
     MotionEditor::GetInstance()->Register(rightHand_.get());
@@ -124,8 +139,8 @@ void Player::Init(const std::string objectName) {
     leftHand_ptr_ = leftHand_.get();
     makanAttack_ptr_ = makanAttack_.get();
 
-    BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
-    BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
+    //BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
+    //BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
     BaseObjectManager::GetInstance()->AddObject(std::move(makanAttack_));
 
     Load();
@@ -153,8 +168,8 @@ void Player::Init(const std::string objectName) {
         "animation/Player/Punch_4.gltf", // 4段目: Uppercut
         "animation/Player/Kick_1.gltf",  // 5段目: Overhand
         "animation/Player/Kick_2.gltf",  // 6段目: Swing
-        "animation/Player/Punch_3.gltf",  // 7段目: Elbow
-        "animation/Player/Kick_3.gltf",  // 8段目: Slam
+        "animation/Player/Kick_3.gltf",  // 7段目: Elbow
+        "animation/Player/Smash.gltf",   // 8段目: Slam
     };
 
     shake_ = std::make_unique<Shake>();
@@ -238,7 +253,7 @@ void Player::Update() {
                 currentState_->Update(*this);
             }
 
-           // UpdateAnimation(); // ステート・コンボに応じてアニメーションを切り替え
+            UpdateAnimation(); // ステート・コンボに応じてアニメーションを切り替え
 
             // RotateUpdate はロックオン追従と手動スティック回転を行う
             // Rush ステートは自前で UpdateRotation() を持つため除外する
@@ -1093,6 +1108,11 @@ void Player::Debug() {
         punchCombo_.DrawImGui();
     }
 
+    // ─── アニメーション制御 ───
+    if (ImGui::CollapsingHeader("アニメーション制御")) {
+        animationController_.DrawImGui();
+    }
+
     // ─── コンボアニメーション割り当て ───
     if (ImGui::CollapsingHeader("コンボアニメーション割り当て")) {
         static const char *kComboLabels[] = {
@@ -1238,7 +1258,8 @@ void Player::UpdateAnimation() {
         if (animIdx >= 0 && animIdx < static_cast<int>(comboAnimations_.size())) {
             const std::string &path = comboAnimations_[animIdx];
             if (!path.empty()) {
-                SetAnima(path);
+                // 攻撃モーションはループ無し・短い補間でテンポよく切り替える
+                animationController_.PlayFile(path, false, 1.0f, 0.1f);
             }
             // else: 該当段のアニメーションが未設定（空文字）なので何もしない
         }
@@ -1246,44 +1267,59 @@ void Player::UpdateAnimation() {
     }
 
     // ──────────────────────────────────────────
-    // 通常ステート：ステート名に応じてアニメーションを切り替え
+    // 通常ステート：ステート名に応じてクリップを切り替え
     // ──────────────────────────────────────────
     const std::string stateName = GetCurrentStateName();
 
     if (stateName == "Idle") {
         // 地上待機
-        SetAnima("animation/Player/Idle_Ground.gltf");
+        animationController_.Play("Idle");
 
     } else if (stateName == "Move") {
-        // 地上移動
-        SetAnima("animation/Run.gltf");
+        // 地上移動 ― 移動方向に応じて前後左右のクリップを使い分ける
+        switch (moveDir_) {
+        case MoveDirection::Behind:
+            animationController_.Play("RunBack");
+            break;
+        case MoveDirection::Left:
+            animationController_.Play("RunLeft");
+            break;
+        case MoveDirection::Right:
+            animationController_.Play("RunRight");
+            break;
+        case MoveDirection::Forward:
+        default:
+            animationController_.Play("Run");
+            break;
+        }
 
-    } else if (stateName == "Jump") {
-        // ジャンプ直後（上昇）
-        SetAnima("animation/Jump.gltf");
-
-    } else if (stateName == "Air") {
-        // 空中（下降・滞空）― 専用モーションがないためジャンプで代用
-        SetAnima("animation/Jump.gltf");
-        // SetAnima("animation/Player/Air.gltf"); // 専用モーションがあれば差し替え
+    } else if (stateName == "Jump" || stateName == "Air") {
+        // ジャンプ・空中（上昇/滞空/下降）
+        animationController_.Play("Jump");
 
     } else if (stateName == "FlyIdle") {
         // 浮遊待機
-        SetAnima("animation/Player/Idle_Flying.gltf");
+        animationController_.Play("FlyIdle");
 
     } else if (stateName == "FlyMove") {
-        // 浮遊移動 ― 専用モーションがないため Idle_Flying で代用
-        SetAnima("animation/Player/Idle_Flying.gltf");
-        // SetAnima("animation/Player/Fly_Move.gltf"); // 専用モーションがあれば差し替え
+        // 浮遊移動 ― 上昇・下降中は Idle_Flying、水平移動は Running_Fly を使う
+        if (std::abs(velocity_.y) > kFlyVerticalAnimThreshold) {
+            animationController_.Play("FlyIdle");
+        } else {
+            animationController_.Play("FlyMove");
+        }
 
     } else if (stateName == "Rush") {
-        // ダッシュ突進 ― 専用モーションがないため Run で代用
-        SetAnima("animation/Run.gltf");
-        // SetAnima("animation/Player/Rush.gltf"); // 専用モーションがあれば差し替え
+        // ダッシュ突進
+        animationController_.Play("FlyMove");
+
+    } else if (stateName == "Guard") {
+        // ガード
+        animationController_.Play("Guard");
 
     } else if (stateName == "EnergyCharge") {
-        // エネルギーチャージ ― 専用モーションなし（現状は何もしない）
-        // SetAnima("animation/Player/EnergyCharge.gltf"); // 専用モーションがあれば差し替え
+        // エネルギーチャージ ― 専用モーションなし（待機で代用）
+        animationController_.Play("Idle");
     }
 }
 

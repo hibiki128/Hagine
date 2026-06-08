@@ -10,6 +10,7 @@
 #include "PlayerData.h"
 #include "Skill/MakanAttackSkill.h"
 #include "State/Base/PlayerBaseState.h"
+#include <Animation/AnimationController.h>
 #include <Application/Utility/Shake/Shake.h>
 #include <Input.h>
 #include <Particle/CSParticle/ParticleCSEmitter.h>
@@ -383,6 +384,7 @@ class Player : public Hagine::BaseObject {
     static constexpr float kParallelThreshold = 0.999f;
     static constexpr float kPlayerRotationSpeed = 10.0f;
     static constexpr float kManualRotationSpeed = 0.04f;
+    static constexpr float kFlyVerticalAnimThreshold = 0.5f; // 飛行中、上昇・下降アニメに切り替えるY速度の閾値
 
     // 入力・移動制御定数
     static constexpr float kInputZero = 0.0f;
@@ -468,6 +470,8 @@ class Player : public Hagine::BaseObject {
     ComboSystem punchCombo_;
     bool comboInitialized_ = false;            // コンボ初期化済みフラグ
     std::vector<std::string> comboAnimations_; // コンボ段ごとのプレイヤー本体アニメーションパス
+
+    Hagine::AnimationController animationController_; // アニメーション制御
 
     std::unordered_map<std::string, std::unique_ptr<PlayerBaseState>> states_; // 状態マップ
 

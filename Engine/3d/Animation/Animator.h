@@ -107,6 +107,13 @@ class Animator {
     /// Getter
     /// </summary>
     Animation GetAnimation() const { return currentAnimation_; }
+
+    /// <summary>
+    /// 現在のアニメーションへの可変参照を取得（キーフレーム編集用）
+    /// 補間中は表示用ポーズが別途生成されるため、編集結果は補間終了後に反映される
+    /// </summary>
+    /// <returns>Animation&: 現在のアニメーションデータへの参照</returns>
+    Animation &GetMutableAnimation() { return currentAnimation_; }
     bool IsFinish() const { return isFinish_; }
     bool IsFinished() const { return isFinish_; }
     bool IsPlaying() const { return isAnimation_; }

@@ -20,5 +20,5 @@
     "showParticleView": true,
     "showSceneView": true,
     "showShortcutWindow": false,
-    "showSpriteManagerView": true
+    "showSpriteManagerView": false
 }
