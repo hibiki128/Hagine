@@ -757,9 +757,21 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
 
-    ImGui::Begin("タグマネージャー", &showColliderTagManagerView_, flags);
+    ImGui::Begin("コライダー", &showColliderTagManagerView_, flags);
 
-    CollisionManager::GetInstance()->ImGuiTagManager();
+    if (ImGui::BeginTabBar("##ColliderTabs")) {
+        // コライダーの選択・サイズ調整・デバッグ表示の切り替え
+        if (ImGui::BeginTabItem("コライダー設定")) {
+            CollisionManager::GetInstance()->ImGuiColliderInspector();
+            ImGui::EndTabItem();
+        }
+        // タグの追加・削除
+        if (ImGui::BeginTabItem("タグ管理")) {
+            CollisionManager::GetInstance()->ImGuiTagManager();
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
 
     ImGui::End();
 }

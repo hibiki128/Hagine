@@ -218,9 +218,9 @@ void GameScene::AddObjectSetting() {
     enemyUI_->Debug();
 
 #ifdef USE_IMGUI
-    //ImGui::Begin("BehaviorTreeEditor");
-    //behaviorTreeEditor_->OnImGuiRender();
-    //ImGui::End();
+    ImGui::Begin("BehaviorTreeEditor");
+    behaviorTreeEditor_->OnImGuiRender();
+    ImGui::End();
 #endif
 }
 

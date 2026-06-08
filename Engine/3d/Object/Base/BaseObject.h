@@ -188,6 +188,30 @@ class BaseObject {
     void SetIsAlive(bool flag) { isAlive_ = flag; }
     void SetIsModelDraw(bool isModelDraw) { isModelDraw_ = isModelDraw; }
     void SetOffset(const Vector3 &offset) { offSet_ = offset; }
+
+    /// <summary>
+    /// 描画専用の回転オフセットを設定する
+    /// ゲームプレイ用の向き（transform_ の回転）は変えず、描画時のみモデルを傾ける用途。
+    /// ローカル空間の回転として現在の向きへ合成される（例：進行方向への体の傾け表現）
+    /// </summary>
+    /// <param name="offset">ローカル空間の回転オフセット</param>
+    /// <param name="pivot">回転中心（ローカル軸・ワールド単位、原点からのオフセット）。
+    /// モデルの中心が原点にない場合に、回転で位置がずれないよう補正するために使う</param>
+    void SetRenderRotationOffset(const Quaternion &offset, const Vector3 &pivot = {0.0f, 0.0f, 0.0f}) {
+        renderRotationOffset_ = offset;
+        renderRotationPivot_ = pivot;
+        applyRenderRotationOffset_ = true;
+    }
+
+    /// <summary>
+    /// 描画専用の回転オフセットを解除する
+    /// </summary>
+    void ClearRenderRotationOffset() {
+        renderRotationOffset_ = Quaternion::IdentityQuaternion();
+        renderRotationPivot_ = {0.0f, 0.0f, 0.0f};
+        applyRenderRotationOffset_ = false;
+    }
+
     void SetAnimationSpeed(float speed) { obj3d_->SetAnimationSpeed(speed); }
     void SetAnimationBlendDuration(float duration) { obj3d_->SetAnimationBlendDuration(duration); }
   
@@ -233,6 +257,11 @@ class BaseObject {
     };
 
     Vector3 offSet_ = {0.0f, 0.0f, 0.0f};
+
+    // 描画専用の回転オフセット（ゲームプレイ用の向きには影響しない。描画時のみ適用）
+    Quaternion renderRotationOffset_ = Quaternion::IdentityQuaternion(); // ローカル空間の追加回転
+    Vector3 renderRotationPivot_ = {0.0f, 0.0f, 0.0f};                   // 回転中心（原点からのオフセット）
+    bool applyRenderRotationOffset_ = false;                            // 描画回転オフセットを適用するか
 
     ScaleEaseState scaleEase_{};
 

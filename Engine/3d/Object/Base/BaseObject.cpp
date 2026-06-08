@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "BaseObject.h"
+#include "BaseObjectManager.h"
 #include "Collider/CollisionManager.h"
 #include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
@@ -12,6 +13,11 @@
 
 namespace Hagine {
 BaseObject::~BaseObject() {
+    // 非所有(RegisterExternal)でマネージャに登録されている場合、所有者(シーン等)が
+    // 先に破棄されると BaseObjectManager::objects_ にダングリングポインタが残り、
+    // アプリ終了時の RemoveAllObjects() でアクセス違反になる。破棄時に必ず自身を
+    // 登録解除して防ぐ。未登録・所有オブジェクトでも erase は no-op なので安全
+    BaseObjectManager::GetInstance()->UnregisterExternal(this);
     colliders_.clear();
 }
 
@@ -36,12 +42,30 @@ void BaseObject::Update() {
 }
 
 void BaseObject::Draw(const ViewProjection &viewProjection) {
-    // オフセットを適用する場合は、一時的にローカル位置を変更
+    // 描画専用の位置オフセット・回転オフセットを一時的に適用する。
+    // これらは描画時のみ反映し、ゲームプレイで参照する transform_ の値は描画後に元へ戻す
     Vector3 originalPosition = transform_->translation_;
+    Quaternion originalRotation = transform_->quateRotation_;
 
-    if (offSet_.x != 0.0f || offSet_.y != 0.0f || offSet_.z != 0.0f) {
+    bool hasOffset = (offSet_.x != 0.0f || offSet_.y != 0.0f || offSet_.z != 0.0f);
+    bool applyRenderTransform = hasOffset || applyRenderRotationOffset_;
+
+    if (applyRenderTransform) {
         transform_->translation_ = originalPosition + offSet_;
-        // オフセット適用時は行列を更新
+
+        if (applyRenderRotationOffset_) {
+            // ローカル空間の回転として現在の向きへ合成
+            transform_->quateRotation_ = originalRotation * renderRotationOffset_;
+
+            // モデル中心が原点にない場合、回転で位置がずれる。
+            // ピボット（回転中心）が固定されるよう平行移動で補正する
+            if (renderRotationPivot_.x != 0.0f || renderRotationPivot_.y != 0.0f || renderRotationPivot_.z != 0.0f) {
+                Vector3 rotatedPivot = renderRotationOffset_.Rotate(renderRotationPivot_);
+                Vector3 pivotShift = originalRotation.Rotate(renderRotationPivot_ - rotatedPivot);
+                transform_->translation_ += pivotShift;
+            }
+        }
+
         transform_->UpdateMatrix();
     }
 
@@ -56,10 +80,10 @@ void BaseObject::Draw(const ViewProjection &viewProjection) {
         obj3d_->DrawWireframe(*transform_, viewProjection, isRainbow_);
     }
 
-    // オフセットを適用した場合は元の位置に戻す
-    if (offSet_.x != 0.0f || offSet_.y != 0.0f || offSet_.z != 0.0f) {
+    // 描画専用の変更を元へ戻す
+    if (applyRenderTransform) {
         transform_->translation_ = originalPosition;
-        // 元の位置に戻した後も行列を更新
+        transform_->quateRotation_ = originalRotation;
         transform_->UpdateMatrix();
     }
 }
@@ -847,6 +871,23 @@ void BaseObject::ImGui() {
 #endif // _DEBUG
 }
 
+namespace {
+/// <summary>
+/// コライダー生成時、保存フォルダ(resources/jsons/Collider)に同名のJSONがあれば
+/// その設定（サイズ・オフセット・色・表示/判定・タグ・マスク）を読み込む。
+/// 無ければ何もしない（コードの既定値のまま）。
+/// CollisionManager への登録より前に呼ぶことで、保存されたタグで正しく登録される。
+/// </summary>
+void LoadColliderIfSaved(ColliderBase *collider) {
+    if (!collider)
+        return;
+    DataHandler probe("Collider", collider->GetName());
+    if (probe.Exists()) {
+        collider->LoadFromJson();
+    }
+}
+} // namespace
+
 SphereCollider *BaseObject::AddSphereCollider(const std::string &name) {
     auto collider = std::make_unique<SphereCollider>();
 
@@ -858,6 +899,7 @@ SphereCollider *BaseObject::AddSphereCollider(const std::string &name) {
 
     SphereCollider *raw = collider.get();
     colliders_.push_back(std::move(collider));
+    LoadColliderIfSaved(raw); // 保存済み設定があれば反映（登録より前）
     CollisionManager::GetInstance()->Register(raw);
 
     return raw;
@@ -874,6 +916,7 @@ AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
 
     AABBCollider *raw = collider.get();
     colliders_.push_back(std::move(collider));
+    LoadColliderIfSaved(raw); // 保存済み設定があれば反映（登録より前）
     CollisionManager::GetInstance()->Register(raw);
 
     return raw;
@@ -890,6 +933,7 @@ OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
 
     OBBCollider *raw = collider.get();
     colliders_.push_back(std::move(collider));
+    LoadColliderIfSaved(raw); // 保存済み設定があれば反映（登録より前）
     CollisionManager::GetInstance()->Register(raw);
 
     return raw;
@@ -906,8 +950,8 @@ CylinderCollider *BaseObject::AddCylinderCollider(const std::string &name) {
 
     CylinderCollider *raw = collider.get();
     colliders_.push_back(std::move(collider));
+    LoadColliderIfSaved(raw); // 保存済み設定があれば反映（登録より前）
     CollisionManager::GetInstance()->Register(raw);
-
     return raw;
 }
 

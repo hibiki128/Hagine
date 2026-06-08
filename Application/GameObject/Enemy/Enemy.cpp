@@ -20,7 +20,39 @@ Enemy::~Enemy() {}
 
 void Enemy::Init(const std::string objectName) {
     BaseObject::Init(objectName);
-    BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
+
+    // プレイヤーと同じスケルトン付きモデルを使い、同一クリップでアニメーションさせる。
+    // モデル素体のマテリアル色は赤なので、敵はそのまま赤で表示される
+    BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
+    BaseObject::SetOffset({0.0f, -0.75f, 0.0f}); // 描画オフセット（足が地面につくように）
+    BaseObject::GetLocalScale() = {4.0f, 4.0f, 4.0f};
+    BaseObject::SetAnimationSpeed(1.0f);
+    BaseObject::SetAnimationBlendDuration(0.2f);
+
+    // ───────────────────────────────────────────
+    // アニメーションコントローラへクリップを登録（プレイヤーと同一構成）
+    // ───────────────────────────────────────────
+    animationController_.Initialize(GetObject3d());
+    animationController_.RegisterClip("Idle", "animation/Player/Idle_Ground.gltf", true);
+    animationController_.RegisterClip("FlyIdle", "animation/Player/Idle_Flying.gltf", true);
+    animationController_.RegisterClip("Run", "animation/Player/Running.gltf", true);
+    animationController_.RegisterClip("RunBack", "animation/Player/Running_Back.gltf", true);
+    animationController_.RegisterClip("RunLeft", "animation/Player/Running_Left.gltf", true);
+    animationController_.RegisterClip("RunRight", "animation/Player/Running_Right.gltf", true);
+    animationController_.RegisterClip("FlyMove", "animation/Player/Running_Fly.gltf", true);
+    animationController_.RegisterClip("Guard", "animation/Player/Block_Idle.gltf", true);
+    animationController_.RegisterClip("Jump", "animation/Player/Running_Jamp.gltf", false);
+    animationController_.RegisterClip("GuardHit", "animation/Player/Block_Hit.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Punch_1", "animation/Player/Punch_1.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Punch_2", "animation/Player/Punch_2.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Punch_3", "animation/Player/Punch_3.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Punch_4", "animation/Player/Punch_4.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Kick_1", "animation/Player/Kick_1.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Kick_2", "animation/Player/Kick_2.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Kick_3", "animation/Player/Kick_3.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Smash", "animation/Player/Smash.gltf", false, 1.0f, 0.1f);
+    // プレイヤー側で調整済みのクリップ設定（速度・補間）を流用する
+    animationController_.LoadClips("AnimationController", "PlayerClips");
 
     enemyCollider_ = AddOBBCollider("enemy_Collider");
     enemyCollider_->SetTag("Enemy");
@@ -46,7 +78,6 @@ void Enemy::Init(const std::string objectName) {
         this->OnCollision(other);
     });
 
-    BaseObject::SetTexture("debug/white1x1.png", kTextureIndex);
     BaseObject::SetColor(Vector4(kColorRed, kColorZero, kColorZero, kColorOpaque));
 
     /* shadow_ = std::make_unique<BaseObject>();
@@ -83,30 +114,11 @@ void Enemy::Init(const std::string objectName) {
         }
     });
 
-    // -----------------------------------------------
-    // 手の生成（ビジュアルと攻撃判定を担う）
-    // -----------------------------------------------
-    leftHand_ = std::make_unique<EnemyHand>();
-    leftHand_->Init("enemy_leftHand");
-
-    rightHand_ = std::make_unique<EnemyHand>();
-    rightHand_->Init("enemy_rightHand");
+    // 移動パラメータ
     moveSpeed_ = 5.0f;
     jumpSpeed_ = 15.0f;
     maxSpeed_ = 10.0f;
     accelRate_ = 1.0f;
-
-    this->AddChild(leftHand_.get());
-    this->AddChild(rightHand_.get());
-
-    MotionEditor::GetInstance()->Register(leftHand_.get());
-    MotionEditor::GetInstance()->Register(rightHand_.get());
-
-    rightHand_ptr_ = rightHand_.get();
-    leftHand_ptr_ = leftHand_.get();
-
-    BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
-    BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
 
     // -----------------------------------------------
     // 前方攻撃判定コライダーの生成
@@ -123,15 +135,17 @@ void Enemy::Init(const std::string objectName) {
     if (!comboInitialized_) {
         punchCombo_.SetName("EnemyPunchCombo"); // DataHandlerのファイル名
 
+        // 攻撃の見た目は本体アニメーション（comboAnimations_）で再生するため、
+        // モーション再生用ターゲットは不要（nullptr）。ダメージ等のパラメータのみ指定する
         punchCombo_
-            .Add(GetRightHand(), "Jab", 8.0f, 2.0f, 0.25f, 0.08f)
-            .Add(GetLeftHand(), "Hook", 10.0f, 3.0f, 0.25f, 0.08f)
-            .Add(GetRightHand(), "Cross", 10.0f, 3.0f, 0.25f, 0.08f)
-            .Add(GetLeftHand(), "Uppercut", 12.0f, 5.0f, 0.30f, 0.10f)
-            .Add(GetRightHand(), "Overhand", 12.0f, 5.0f, 0.30f, 0.10f)
-            .Add(GetLeftHand(), "Swing", 14.0f, 6.0f, 0.30f, 0.10f)
-            .Add(GetRightHand(), "Elbow", 16.0f, 7.0f, 0.25f, 0.06f)
-            .Add(GetLeftHand(), "Slam", 20.0f, 10.0f, 0.35f, 0.12f);
+            .Add(nullptr, "Jab", 8.0f, 2.0f, 0.25f, 0.08f)
+            .Add(nullptr, "Hook", 10.0f, 3.0f, 0.25f, 0.08f)
+            .Add(nullptr, "Cross", 10.0f, 3.0f, 0.25f, 0.08f)
+            .Add(nullptr, "Uppercut", 12.0f, 5.0f, 0.30f, 0.10f)
+            .Add(nullptr, "Overhand", 12.0f, 5.0f, 0.30f, 0.10f)
+            .Add(nullptr, "Swing", 14.0f, 6.0f, 0.30f, 0.10f)
+            .Add(nullptr, "Elbow", 16.0f, 7.0f, 0.25f, 0.06f)
+            .Add(nullptr, "Slam", 20.0f, 10.0f, 0.35f, 0.12f);
 
         // JSONがあれば保存済みの値で上書き
         punchCombo_.LoadAttackParams();
@@ -159,6 +173,18 @@ void Enemy::Init(const std::string objectName) {
 
         comboInitialized_ = true;
     }
+
+    // コンボ段ごとの本体アニメーション（プレイヤーと同じ割り当て：パンチ4段＋キック3段＋叩きつけ）
+    comboAnimations_ = {
+        "animation/Player/Punch_1.gltf", // 1段目: Jab
+        "animation/Player/Punch_2.gltf", // 2段目: Hook
+        "animation/Player/Punch_3.gltf", // 3段目: Cross
+        "animation/Player/Punch_4.gltf", // 4段目: Uppercut
+        "animation/Player/Kick_1.gltf",  // 5段目: Overhand
+        "animation/Player/Kick_2.gltf",  // 6段目: Swing
+        "animation/Player/Kick_3.gltf",  // 7段目: Elbow
+        "animation/Player/Smash.gltf",   // 8段目: Slam
+    };
 
     isGrounded_ = true;
     velocity_ = Vector3(0.0f, 0.0f, 0.0f);
@@ -197,10 +223,8 @@ void Enemy::Update() {
             SetColor(Vector4(kColorOpaque, kColorZero, kColorZero, kColorOpaque));
         }
 
-        // ダメージリアクション中でなければ回転を更新
-        if (!isDamageReact_) {
-            RotateUpdate();
-        }
+        // 回転を更新（敵をプレイヤーへ向ける）
+        RotateUpdate();
 
         ConboUpdate();
         UpdateShadowScale();
@@ -229,13 +253,9 @@ void Enemy::Update() {
         // ビーム必殺技のフレーム更新
         UpdateBeam();
 
-        // ダメージリアクション処理（のけぞり回転と点滅）
+        // ダメージリアクション処理（高速点滅のみ。傾き(のけぞり)演出は廃止）
         if (isDamageReact_) {
             damageReactTimer_ += Frame::DeltaTime();
-            float angleX = tiltEase_.Update(Frame::DeltaTime());
-            tiltRotation_ = Quaternion::FromAxisAngle(
-                Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
-            transform_->quateRotation_ = tiltRotation_ * baseRotation_;
 
             float blinkInterval = kDamageBlinkInterval;
             int blink = static_cast<int>(damageReactTimer_ / blinkInterval);
@@ -243,7 +263,6 @@ void Enemy::Update() {
 
             if (damageReactTimer_ >= damageReactDuration_) {
                 isDamageReact_ = false;
-                transform_->quateRotation_ = baseRotation_;
                 SetAlpha(kAlphaOpaque);
             }
         }
@@ -281,6 +300,9 @@ void Enemy::Update() {
                 acceleration_.y = 0.0f;
             }
         }
+
+        // 移動・コンボ・ガード状態に応じてアニメーションクリップを切り替える
+        UpdateAnimation();
 
         // 接地判定と位置更新
         CollisionGround();
@@ -350,11 +372,82 @@ void Enemy::Move() {
 
 void Enemy::DirectionUpdate() {}
 
+void Enemy::UpdateAnimation() {
+    // ──────────────────────────────────────────
+    // コンボ攻撃中：段数に対応したアニメーションを再生（プレイヤーと同じロジック）
+    // GetCurrentComboIndex() は「次に実行する」インデックスなので、
+    // 現在再生中の段 = nextIdx - 1（0 のときは最終段の後）
+    // ──────────────────────────────────────────
+    if (punchCombo_.IsComboActive()) {
+        int nextIdx = punchCombo_.GetCurrentComboIndex();
+        int comboLen = punchCombo_.GetComboLength();
+        int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
+
+        if (animIdx >= 0 && animIdx < static_cast<int>(comboAnimations_.size())) {
+            const std::string &path = comboAnimations_[animIdx];
+            if (!path.empty()) {
+                animationController_.PlayFile(path, false, 1.0f, 0.1f);
+            }
+        }
+        return; // 攻撃中は以降の判定をスキップ
+    }
+
+    // ガード中
+    if (isGuarding_) {
+        animationController_.Play("Guard");
+        return;
+    }
+
+    // ──────────────────────────────────────────
+    // 移動状態でクリップを選択する。
+    // 敵はBT駆動で moveDir_ を持たないため、velocity と向きから進行方向を判定する
+    // ──────────────────────────────────────────
+    Vector3 horizontalVel = {velocity_.x, 0.0f, velocity_.z};
+    float hSpeed = horizontalVel.Length();
+    bool verticalMove = std::abs(velocity_.y) > kFlyVerticalAnimThreshold;
+
+    if (isFlying_ || !isGrounded_) {
+        // 飛行中 ― プレイヤーと同じ規則：
+        // 後退・上昇・下降は Idle_Flying、前進・左右移動は Running_Fly
+        if (hSpeed < kMoveAnimMinSpeed && !verticalMove) {
+            animationController_.Play("FlyIdle");
+            return;
+        }
+
+        // 「前進／後退」はプレイヤーの位置を基準に判定する。
+        // 敵は常にプレイヤーへ向くため、プレイヤーへ近づく成分が＋＝前進、離れる成分が－＝後退。
+        // 向き(GetForward)はクォータニオン規約の影響でプレイヤーと逆を指すことがあるため、
+        // 実ワールド位置から求めたベクトルで判定する方が確実
+        bool movingBackward = false;
+        if (target_ && hSpeed > kMinRotationDistance) {
+            Vector3 toPlayer = target_->GetWorldPosition() - GetWorldPosition();
+            toPlayer.y = 0.0f;
+            float toLen = toPlayer.Length();
+            if (toLen > kMinRotationDistance) {
+                float f = (horizontalVel / hSpeed).Dot(toPlayer / toLen); // +接近(前進) / -後退
+                movingBackward = (f < -kBackwardDotThreshold);
+            }
+        }
+
+        if (verticalMove || movingBackward) {
+            animationController_.Play("FlyIdle");
+        } else {
+            animationController_.Play("FlyMove");
+        }
+        return;
+    }
+
+    // 地上 ― 待機 / 移動
+    if (hSpeed < kMoveAnimMinSpeed) {
+        animationController_.Play("Idle");
+    } else {
+        animationController_.Play("Run");
+    }
+}
+
 void Enemy::Draw(const ViewProjection &viewProjection) {
     if (!isAlive_) {
         enemyCollider_->SetEnabled(false);
-        leftHand_ptr_->SetIsAlive(false);
-        rightHand_ptr_->SetIsAlive(false);
         return;
     }
     BaseObject::Draw(viewProjection);
@@ -771,11 +864,6 @@ void Enemy::SetKnockback(const Vector3 &direction, float power) {
 void Enemy::StartDamageReact() {
     isDamageReact_ = true;
     damageReactTimer_ = kTimerReset;
-    baseRotation_ = transform_->quateRotation_;
-
-    float startAngle = kRotationZero;
-    float endAngle = degreesToRadians(kDamageTiltDegrees);
-    tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
 }
 
 Direction Enemy::CalculateDirectionFromRotation() { return Direction(); }

@@ -1,10 +1,34 @@
 #include "Collider/CollisionManager.h"
 #include "myMath.h"
 #include <algorithm>
+#ifdef _DEBUG
+#include <imgui.h>
+#include <string>
+#include <vector>
+#endif
 
 namespace Hagine {
+
+#ifdef _DEBUG
+namespace {
+/// <summary>コライダー種別を日本語名に変換する</summary>
+const char *ColliderTypeName(ColliderType type) {
+    switch (type) {
+    case ColliderType::Sphere:   return "球 (Sphere)";
+    case ColliderType::AABB:     return "AABB";
+    case ColliderType::OBB:      return "OBB";
+    case ColliderType::Cylinder: return "円柱 (Cylinder)";
+    default:                     return "不明";
+    }
+}
+} // namespace
+#endif
 void CollisionManager::Register(ColliderBase *collider) {
     if (!collider)
+        return;
+
+    // 既に登録済みなら二重登録しない（同一コライダーが複数回 Register されても1つだけ保持する）
+    if (collider->isRegistered_)
         return;
 
     const std::string &tag = collider->GetTag();
@@ -245,6 +269,201 @@ void CollisionManager::DebugDraw(const ViewProjection &viewProjection) {
         }
     }
 }
+
+#ifdef _DEBUG
+void CollisionManager::ImGuiColliderInspector() {
+    // ── 全体設定 ──
+    ImGui::Checkbox("コライダーを表示", &isVisible_);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("全コライダーのデバッグ描画のオン/オフ（個別の表示は下のリストで切替）");
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton("全部表示")) {
+        for (auto &[tag, colliders] : collidersByTag_)
+            for (auto *c : colliders)
+                c->SetVisible(true);
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("全部非表示")) {
+        for (auto &[tag, colliders] : collidersByTag_)
+            for (auto *c : colliders)
+                c->SetVisible(false);
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("全部保存")) {
+        for (auto &[tag, colliders] : collidersByTag_)
+            for (auto *c : colliders)
+                c->SaveToJson();
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("全コライダーの設定を Resources/jsons/Collider/ 以下へ保存");
+
+    int total = 0;
+    for (auto &[tag, colliders] : collidersByTag_)
+        total += static_cast<int>(colliders.size());
+    ImGui::TextDisabled("登録: %d コライダー / %d タグ", total, static_cast<int>(collidersByTag_.size()));
+
+    // 選択中ポインタの有効性チェック（破棄/登録解除済みなら選択を解除する）
+    bool stillExists = false;
+    if (inspectorSelected_) {
+        for (auto &[tag, colliders] : collidersByTag_) {
+            if (std::find(colliders.begin(), colliders.end(), inspectorSelected_) != colliders.end()) {
+                stillExists = true;
+                break;
+            }
+        }
+    }
+    if (!stillExists)
+        inspectorSelected_ = nullptr;
+
+    ImGui::Separator();
+
+    // ── 左ペイン: 登録コライダー一覧（タグごと） ──
+    ImGui::BeginChild("##ColliderList", ImVec2(240.0f, 340.0f), true);
+
+    std::vector<std::string> tags;
+    for (auto &[tag, colliders] : collidersByTag_)
+        tags.push_back(tag);
+    std::sort(tags.begin(), tags.end());
+
+    for (const auto &tag : tags) {
+        auto &colliders = collidersByTag_[tag];
+        if (colliders.empty())
+            continue;
+
+        std::string header = tag + "  (" + std::to_string(colliders.size()) + ")";
+        if (ImGui::TreeNodeEx(header.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+            for (auto *c : colliders) {
+                ImGui::PushID(c);
+
+                // 個別の表示トグル
+                bool vis = c->IsVisible();
+                if (ImGui::Checkbox("##vis", &vis))
+                    c->SetVisible(vis);
+
+                ImGui::SameLine();
+
+                // 選択
+                const std::string &name = c->GetName();
+                std::string label = name.empty() ? "(名前なし)" : name;
+                if (ImGui::Selectable(label.c_str(), inspectorSelected_ == c))
+                    inspectorSelected_ = c;
+
+                ImGui::PopID();
+            }
+            ImGui::TreePop();
+        }
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    // ── 右ペイン: 選択中コライダーの詳細 ──
+    ImGui::BeginChild("##ColliderDetail", ImVec2(0.0f, 340.0f), true);
+    if (inspectorSelected_) {
+        ColliderBase *c = inspectorSelected_;
+
+        const std::string &name = c->GetName();
+        ImGui::Text("名前: %s", name.empty() ? "(名前なし)" : name.c_str());
+        ImGui::Text("タグ: %s", c->GetTag().c_str());
+        ImGui::Text("種別: %s", ColliderTypeName(c->GetType()));
+        ImGui::Separator();
+
+        bool enabled = c->IsEnabled();
+        if (ImGui::Checkbox("当たり判定 有効", &enabled))
+            c->SetEnabled(enabled);
+        ImGui::SameLine();
+        bool vis = c->IsVisible();
+        if (ImGui::Checkbox("デバッグ表示", &vis))
+            c->SetVisible(vis);
+
+        Vector4 col = c->GetColor();
+        float colArr[4] = {col.x, col.y, col.z, col.w};
+        if (ImGui::ColorEdit4("描画色", colArr))
+            c->SetColor({colArr[0], colArr[1], colArr[2], colArr[3]});
+
+        ImGui::Separator();
+        ImGui::SeparatorText("サイズ設定");
+
+        switch (c->GetType()) {
+        case ColliderType::OBB: {
+            auto *obb = static_cast<OBBCollider *>(c);
+            Vector3 size = obb->GetSize();
+            float s[3] = {size.x, size.y, size.z};
+            if (ImGui::DragFloat3("サイズ", s, 0.05f, 0.0f, 1000.0f))
+                obb->SetSize({s[0], s[1], s[2]});
+            Vector3 off = obb->GetPositionOffset();
+            float o[3] = {off.x, off.y, off.z};
+            if (ImGui::DragFloat3("位置オフセット", o, 0.05f))
+                obb->SetPositionOffSet({o[0], o[1], o[2]});
+            Vector3 rot = obb->GetRotationOffset();
+            float r[3] = {rot.x, rot.y, rot.z};
+            if (ImGui::DragFloat3("回転オフセット", r, 0.01f))
+                obb->SetRotationOffset({r[0], r[1], r[2]});
+            break;
+        }
+        case ColliderType::AABB: {
+            auto *aabb = static_cast<AABBCollider *>(c);
+            Vector3 size = aabb->GetSize();
+            float s[3] = {size.x, size.y, size.z};
+            if (ImGui::DragFloat3("サイズ", s, 0.05f, 0.0f, 1000.0f))
+                aabb->SetSize({s[0], s[1], s[2]});
+            Vector3 off = aabb->GetOffset();
+            float o[3] = {off.x, off.y, off.z};
+            if (ImGui::DragFloat3("オフセット", o, 0.05f))
+                aabb->SetOffset({o[0], o[1], o[2]});
+            break;
+        }
+        case ColliderType::Sphere: {
+            auto *sph = static_cast<SphereCollider *>(c);
+            float radius = sph->GetRadius();
+            if (ImGui::DragFloat("半径", &radius, 0.05f, 0.0f, 1000.0f))
+                sph->SetRadius(radius);
+            Vector3 off = sph->GetOffset();
+            float o[3] = {off.x, off.y, off.z};
+            if (ImGui::DragFloat3("オフセット", o, 0.05f))
+                sph->SetOffset({o[0], o[1], o[2]});
+            break;
+        }
+        case ColliderType::Cylinder: {
+            auto *cyl = static_cast<CylinderCollider *>(c);
+            float radius = cyl->GetRadius();
+            if (ImGui::DragFloat("半径", &radius, 0.05f, 0.0f, 1000.0f))
+                cyl->SetRadius(radius);
+            float height = cyl->GetHeight();
+            if (ImGui::DragFloat("高さ", &height, 0.05f, 0.0f, 1000.0f))
+                cyl->SetHeight(height);
+            bool inward = cyl->IsInward();
+            if (ImGui::Checkbox("内側に閉じ込める（フィールド壁）", &inward))
+                cyl->SetInward(inward);
+            break;
+        }
+        }
+
+        ImGui::Separator();
+
+        // 保存 / 読込（Resources/jsons/Collider/<名前>.json）
+        float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.45f, 0.20f, 0.8f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.55f, 0.25f, 0.9f));
+        if (ImGui::Button("保存", ImVec2(bw, 0.0f)))
+            c->SaveToJson();
+        ImGui::PopStyleColor(2);
+        ImGui::SameLine();
+        if (ImGui::Button("読込", ImVec2(bw, 0.0f)))
+            c->LoadFromJson();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("保存済みの設定を読み込み直す");
+
+        ImGui::Separator();
+        Vector3 center = c->GetCenterPosition();
+        ImGui::TextDisabled("中心座標: (%.2f, %.2f, %.2f)", center.x, center.y, center.z);
+    } else {
+        ImGui::TextDisabled("左の一覧からコライダーを選択してください");
+    }
+    ImGui::EndChild();
+}
+#endif
 
 bool CollisionManager::CalculateDepenetration(OBBCollider *colliderA, OBBCollider *colliderB, Vector3 &outMTV) {
     const OBB &obbA = colliderA->GetOBB();

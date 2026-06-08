@@ -22,6 +22,7 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Particle/CSParticle/ParticleCSEditor.h>
 #include <Particle/ParticleEditor.h>
+#include <algorithm>
 #include <cmath>
 
 using namespace Hagine;
@@ -37,10 +38,16 @@ void Player::Init(const std::string objectName) {
     // ベースモデル（地上待機）を生成する。各 gltf はメッシュ＋スケルトン＋
     // アニメーションを内包しており、スケルトンを共有するクリップを切り替えて再生する
     BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
-    BaseObject::SetOffset({0.0f, -0.5f, 0.0f}); // 描画オフセット（地面に足がつくように）
-    BaseObject::GetLocalScale() = {3.0f, 3.0f, 3.0f};
+    BaseObject::SetOffset({0.0f, -0.75f, 0.0f}); // 描画オフセット（地面に足がつくように）
+    BaseObject::GetLocalScale() = {4.0f, 4.0f, 4.0f};
     BaseObject::SetAnimationSpeed(1.0f);
     BaseObject::SetAnimationBlendDuration(0.2f);
+
+    // 体色を青系にする。モデル素体（マテリアル色）は赤なので、敵は赤のまま、
+    // プレイヤーだけここで青へ上書きする（シェーダは material.color * texture）
+    for (int i = 0; i < GetObject3d()->GetMaterialCount(); ++i) {
+        BaseObject::SetColor({0.15f, 0.35f, 1.0f, 1.0f}, i);
+    }
 
     // ───────────────────────────────────────────
     // アニメーションコントローラへ全クリップを登録する
@@ -119,42 +126,26 @@ void Player::Init(const std::string objectName) {
     chargeShot_->SetPlayer(this);
     chargeShot_->Init("chageShot");
 
-    // 手の生成
-    leftHand_ = std::make_unique<PlayerHand>();
-    leftHand_->Init("leftHand");
-
-    rightHand_ = std::make_unique<PlayerHand>();
-    rightHand_->Init("rightHand");
-
     makanAttack_ = std::make_unique<MakanAttackSkill>();
     makanAttack_->Init("makanAttack");
-
-    //this->AddChild(leftHand_.get());
-    //this->AddChild(rightHand_.get());
-
-    MotionEditor::GetInstance()->Register(leftHand_.get());
-    MotionEditor::GetInstance()->Register(rightHand_.get());
-
-    rightHand_ptr_ = rightHand_.get();
-    leftHand_ptr_ = leftHand_.get();
     makanAttack_ptr_ = makanAttack_.get();
 
-    //BaseObjectManager::GetInstance()->AddObject(std::move(leftHand_));
-    //BaseObjectManager::GetInstance()->AddObject(std::move(rightHand_));
     BaseObjectManager::GetInstance()->AddObject(std::move(makanAttack_));
 
     Load();
 
     punchCombo_.SetName("PunchCombo"); // DataHandlerのファイル名に使われる
+    // 攻撃の見た目は本体アニメーション（comboAnimations_）で再生するため、
+    // モーション再生用ターゲットは不要（nullptr）。ダメージ等のパラメータのみ指定する
     punchCombo_
-        .Add(GetRightHand(), "Jab", 10.0f, 3.0f, 0.25f, 0.08f)
-        .Add(GetLeftHand(), "Hook", 12.0f, 4.0f, 0.25f, 0.08f)
-        .Add(GetRightHand(), "Cross", 12.0f, 4.0f, 0.25f, 0.08f)
-        .Add(GetLeftHand(), "Uppercut", 15.0f, 6.0f, 0.30f, 0.10f)
-        .Add(GetRightHand(), "Overhand", 15.0f, 6.0f, 0.30f, 0.10f)
-        .Add(GetLeftHand(), "Swing", 18.0f, 7.0f, 0.30f, 0.10f)
-        .Add(GetRightHand(), "Elbow", 20.0f, 8.0f, 0.25f, 0.06f)
-        .Add(GetLeftHand(), "Slam", 25.0f, 12.0f, 0.35f, 0.12f);
+        .Add(nullptr, "Jab", 10.0f, 3.0f, 0.25f, 0.08f)
+        .Add(nullptr, "Hook", 12.0f, 4.0f, 0.25f, 0.08f)
+        .Add(nullptr, "Cross", 12.0f, 4.0f, 0.25f, 0.08f)
+        .Add(nullptr, "Uppercut", 15.0f, 6.0f, 0.30f, 0.10f)
+        .Add(nullptr, "Overhand", 15.0f, 6.0f, 0.30f, 0.10f)
+        .Add(nullptr, "Swing", 18.0f, 7.0f, 0.30f, 0.10f)
+        .Add(nullptr, "Elbow", 20.0f, 8.0f, 0.25f, 0.06f)
+        .Add(nullptr, "Slam", 25.0f, 12.0f, 0.35f, 0.12f);
 
     punchCombo_.LoadAttackParams(); // JSONがあれば値を上書き読み込み
 
@@ -210,21 +201,7 @@ void Player::Update() {
     }
 
     if (!isAlive_) {
-        // 死亡時：ダメージリアクションの回転をイージングでリセット
-        if (isDeathRotationReset_) {
-            deathRotationResetTimer_ += dt_;
-            float t = deathRotationResetTimer_ / kDeathRotationResetDuration;
-            if (t >= 1.0f) {
-                t = 1.0f;
-                isDeathRotationReset_ = false;
-            }
-            // EaseOutQuad: t を二次イージングで補間
-            float easedT = 1.0f - (1.0f - t) * (1.0f - t);
-
-            // Y軸回転（baseRotation_）のみ維持し、X軸傾き（tiltRotation_）を除去した目標回転へ
-            Quaternion targetRotation = baseRotation_;
-            transform_->quateRotation_ = Quaternion::Slerp(deathRotationStart_, targetRotation, easedT);
-        }
+        // 死亡時は本体の回転処理なし（死亡演出は DrawParticle 側で描画する）
     } else {
         generatedField_->data.position = GetWorldPosition();
         gamePad_->Update();
@@ -261,6 +238,9 @@ void Player::Update() {
                 RotateUpdate();
             }
 
+            // 飛行移動中の体の傾き（描画専用）を更新する。RotateUpdate 後の向きを基準にする
+            UpdateFlyLean();
+
             if (chargeShot_) {
                 chargeShot_->SetIsSkillMenu(isSkillMenu_);
                 chargeShot_->Update();
@@ -271,15 +251,9 @@ void Player::Update() {
             SkillShot();
         }
 
-        // ダメージリアクション処理
+        // ダメージリアクション処理（高速点滅のみ。傾き(のけぞり)演出は廃止）
         if (isDamageReact_) {
             damageReactTimer_ += dt_;
-
-            float angleX = tiltEase_.Update(dt_);
-
-            tiltRotation_ = Quaternion::FromAxisAngle(Vector3(kXAxisX, kXAxisY, kXAxisZ), angleX);
-
-            transform_->quateRotation_ = tiltRotation_ * baseRotation_;
 
             // 高速点滅
             float blinkInterval = kPlayerBlinkInterval;
@@ -289,7 +263,6 @@ void Player::Update() {
             // 終了処理
             if (damageReactTimer_ >= damageReactDuration_) {
                 isDamageReact_ = false;
-                transform_->quateRotation_ = baseRotation_;
                 SetAlpha(kAlphaOpaque);
             }
         }
@@ -330,11 +303,6 @@ void Player::Update() {
         //UpdateShadowScale();
         if (HP_ <= kMinHP) {
             if (isAlive_) {
-                // 死亡した瞬間：回転リセットのイージングを開始
-                isDeathRotationReset_ = true;
-                deathRotationResetTimer_ = 0.0f;
-                deathRotationStart_ = transform_->quateRotation_;
-
                 // ダメージリアクション中なら即座に終了させる
                 isDamageReact_ = false;
                 SetAlpha(kAlphaOpaque);
@@ -356,8 +324,6 @@ void Player::Update() {
 
 void Player::Draw(const ViewProjection &viewProjection) {
     if (deathStaging_->GetIsStart()) {
-        leftHand_ptr_->SetIsAlive(false);
-        rightHand_ptr_->SetIsAlive(false);
         return;
     }
     BaseObject::Draw(viewProjection);
@@ -379,10 +345,11 @@ void Player::DrawParticleCompute(const ViewProjection &viewProjection) {
 void Player::DrawParticle(const ViewProjection &viewProjection) {
 
     if (!isAlive_ && isDeathStaging_) {
+        // 手クラス廃止に伴い、両腕の発生位置は体の左右オフセットで近似する
         deathStaging_->Initialize(
             GetWorldPosition(), GetColor(),
-            rightHand_ptr_->GetWorldPosition(), rightHand_ptr_->GetColor(),
-            leftHand_ptr_->GetWorldPosition(), leftHand_ptr_->GetColor());
+            GetPositionRight(1.0f), GetColor(),
+            GetPositionLeft(1.0f), GetColor());
         deathStaging_->Update();
         deathStaging_->Draw(viewProjection);
     }
@@ -482,8 +449,11 @@ void Player::DirectionUpdate() {
         }
     } else {
         // ゲームパッド入力 - 左スティック
-        float xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
-        float zInput = gamePad_->GetLeftStickY();  // 左スティックY軸
+        // 方向分類用の X はスティックの符号そのままを使う（右スティック→右アニメ）。
+        // Move() の移動計算では cameraRight が -X 基準のため符号を反転しているが、
+        // ここは方向分類なので反転しないことでキーボード(D=Right)と左右を一致させる
+        float xInput = gamePad_->GetLeftStickX(); // 左スティックX軸
+        float zInput = gamePad_->GetLeftStickY(); // 左スティックY軸
 
         // スティック入力から方向を判定
         if (xInput != 0.0f || zInput != 0.0f) {
@@ -891,15 +861,9 @@ void Player::DamageUpdate() {
     isInvincible_ = true;
     invincibleTime_ = kTimerReset;
 
-    // ダメージリアクションの開始
+    // ダメージリアクションの開始（点滅のみ）
     isDamageReact_ = true;
     damageReactTimer_ = kTimerReset;
-
-    // 現在の向きを保存してのけぞりイージングをセット
-    baseRotation_ = transform_->quateRotation_;
-    float startAngle = kRotationZero;
-    float endAngle = degreesToRadians(kPlayerDamageTiltDegrees);
-    tiltEase_.Reset(startAngle, endAngle, damageReactDuration_, EasingType::OutQuad);
 }
 
 void Player::InvincibleUpdate() {
@@ -1113,6 +1077,24 @@ void Player::Debug() {
         animationController_.DrawImGui();
     }
 
+    // ─── 飛行リーン（体の傾き）───
+    if (ImGui::CollapsingHeader("飛行リーン")) {
+        ImGui::Checkbox("有効", &flyLeanEnabled_);
+        ImGui::TextDisabled("ロックオン飛行移動中、顔は敵向きのまま体を進行方向へ倒します");
+        ImGui::DragFloat("前傾の最大角(度)", &flyLeanMaxFwdPitchDeg_, 0.5f, 0.0f, 90.0f);
+        ImGui::DragFloat("仰け反りの最大角(度)", &flyLeanMaxBackPitchDeg_, 0.5f, 0.0f, 90.0f);
+        ImGui::DragFloat("横移動のヨー(Y回転)最大角(度・90で真横)", &flyLeanMaxSideDeg_, 0.5f, 0.0f, 90.0f);
+        ImGui::DragFloat("基準速度", &flyLeanRefSpeed_, 0.1f, 0.1f, 30.0f);
+        ImGui::DragFloat("追従速度", &flyLeanResponse_, 0.1f, 0.1f, 30.0f);
+        ImGui::DragFloat3("回転中心(ピボット)", &flyLeanPivot_.x, 0.05f);
+        Vector3 leanEuler = flyLeanRotation_.ToEulerDegrees();
+        ImGui::Text("現在の傾き(オイラー換算): X %.1f / Y %.1f / Z %.1f度",
+                    leanEuler.x, leanEuler.y, leanEuler.z);
+        if (ImGui::Button("飛行リーン設定を保存")) {
+            Save();
+        }
+    }
+
     // ─── コンボアニメーション割り当て ───
     if (ImGui::CollapsingHeader("コンボアニメーション割り当て")) {
         static const char *kComboLabels[] = {
@@ -1302,8 +1284,12 @@ void Player::UpdateAnimation() {
         animationController_.Play("FlyIdle");
 
     } else if (stateName == "FlyMove") {
-        // 浮遊移動 ― 上昇・下降中は Idle_Flying、水平移動は Running_Fly を使う
-        if (std::abs(velocity_.y) > kFlyVerticalAnimThreshold) {
+        // 浮遊移動 ― 後退・上昇・下降は Idle_Flying、前進・左右移動は Running_Fly を使う。
+        // 縦移動(|velocity_.y| > 閾値)または後退(moveDir_ == Behind)は、仰向け気味の
+        // Idle_Flying の方がモーションとして自然なため優先する
+        bool verticalMove = std::abs(velocity_.y) > kFlyVerticalAnimThreshold;
+        bool movingBackward = (moveDir_ == MoveDirection::Behind);
+        if (verticalMove || movingBackward) {
             animationController_.Play("FlyIdle");
         } else {
             animationController_.Play("FlyMove");
@@ -1321,6 +1307,67 @@ void Player::UpdateAnimation() {
         // エネルギーチャージ ― 専用モーションなし（待機で代用）
         animationController_.Play("Idle");
     }
+}
+
+void Player::UpdateFlyLean() {
+    // 目標姿勢をクォータニオンで構築する。条件を満たさないときは無回転（直立）へ戻す
+    Quaternion targetLean = Quaternion::IdentityQuaternion();
+
+    // ロックオン飛行移動中のみ傾ける。
+    // 非ロックオン時は体が進行方向を向くため傾け不要、地上やその他ステートでも適用しない
+    bool active = flyLeanEnabled_ && isLockOn_ &&
+                  currentState_ == states_["FlyMove"].get();
+
+    if (active) {
+        Vector3 horizontalVel = {velocity_.x, 0.0f, velocity_.z};
+        float speed = horizontalVel.Length();
+
+        // 体の「水平」な前方・右方向（ロックオンの上下ピッチを除いた安定フレーム）。
+        // 傾きはこの体の実ワールド軸まわりに作ることで、向きが変わっても
+        // 「後ろへ倒れる」方向が一定になる（ワールド固定軸だと向きでズレる）
+        Vector3 fwdAxis = {GetForward().x, 0.0f, GetForward().z};
+        Vector3 rightAxis = {GetRight().x, 0.0f, GetRight().z};
+        float fwdLen = fwdAxis.Length();
+        float rightLen = rightAxis.Length();
+
+        if (speed > 0.001f && fwdLen > 0.001f && rightLen > 0.001f) {
+            Vector3 dir = horizontalVel / speed; // 進行方向（ワールド・水平）
+            fwdAxis = fwdAxis / fwdLen;
+            rightAxis = rightAxis / rightLen;
+
+            // 進行方向を体の水平フレームへ分解する
+            float f = dir.Dot(fwdAxis);   // +で前進（敵方向） / -で後退
+            float r = dir.Dot(rightAxis); // +で右 / -で左
+
+            float refSpeed = (flyLeanRefSpeed_ > 0.001f) ? flyLeanRefSpeed_ : 1.0f;
+            float speedFrac = std::clamp(speed / refSpeed, 0.0f, 1.0f);
+
+            // 後退時は仰向け、前進時は前傾。左右はヨーのみ（ロールなし）
+            float pitchMaxDeg = (f >= 0.0f) ? flyLeanMaxFwdPitchDeg_ : flyLeanMaxBackPitchDeg_;
+            float pitch = degreesToRadians(-f * pitchMaxDeg) * speedFrac;
+            float yaw = degreesToRadians(-r * flyLeanMaxSideDeg_) * speedFrac;
+
+            // ピッチは体の水平右方向まわり（向きに追従＝向き非依存の仰向け）、
+            // ヨーは鉛直まわり（向き非依存）。横移動のみのときはヨーだけになる
+            Quaternion qPitch = Quaternion::FromAxisAngle(rightAxis, pitch);
+            Quaternion qYaw = Quaternion::FromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), yaw);
+            targetLean = qYaw * qPitch;
+        }
+    }
+
+    // クォータニオンの球面補間（Slerp）で滑らかに追従させる（フレームレート非依存）
+    float t = std::clamp(flyLeanResponse_ * dt_, 0.0f, 1.0f);
+    flyLeanRotation_ = Quaternion::Slerp(flyLeanRotation_, targetLean, t);
+
+    // ほぼ無回転（直立）に戻ったら描画オフセットを解除する
+    if (flyLeanRotation_.w > 0.99999f) {
+        flyLeanRotation_ = Quaternion::IdentityQuaternion();
+        ClearRenderRotationOffset();
+        return;
+    }
+
+    // 体のローカル空間の傾きとして適用。モデル中心が原点にないため flyLeanPivot_ で回転中心を補正する
+    SetRenderRotationOffset(flyLeanRotation_, flyLeanPivot_);
 }
 
 Vector3 Player::GetMovementDirection() const {
@@ -1369,6 +1416,13 @@ void Player::Save() {
     data_->Save("invincibleDuration", invincibleDuration_);
     data_->Save("guardDamageMultiplier", guardDamageMultiplier_);
     data_->Save("guardEnergyCost", guardEnergyCost_);
+    data_->Save("flyLeanEnabled", flyLeanEnabled_ ? 1 : 0);
+    data_->Save("flyLeanMaxFwdPitchDeg", flyLeanMaxFwdPitchDeg_);
+    data_->Save("flyLeanMaxBackPitchDeg", flyLeanMaxBackPitchDeg_);
+    data_->Save("flyLeanMaxSideDeg", flyLeanMaxSideDeg_);
+    data_->Save("flyLeanRefSpeed", flyLeanRefSpeed_);
+    data_->Save("flyLeanResponse", flyLeanResponse_);
+    data_->Save("flyLeanPivot", flyLeanPivot_);
     ImGuiNotification::Post("プレイヤー設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
@@ -1387,6 +1441,13 @@ void Player::Load() {
     invincibleDuration_ = data_->Load<float>("invincibleDuration", 0.25f);
     guardDamageMultiplier_ = data_->Load<float>("guardDamageMultiplier", 0.20f);
     guardEnergyCost_ = data_->Load<float>("guardEnergyCost", 10.0f);
+    flyLeanEnabled_ = data_->Load<int>("flyLeanEnabled", flyLeanEnabled_ ? 1 : 0) != 0;
+    flyLeanMaxFwdPitchDeg_ = data_->Load<float>("flyLeanMaxFwdPitchDeg", flyLeanMaxFwdPitchDeg_);
+    flyLeanMaxBackPitchDeg_ = data_->Load<float>("flyLeanMaxBackPitchDeg", flyLeanMaxBackPitchDeg_);
+    flyLeanMaxSideDeg_ = data_->Load<float>("flyLeanMaxSideDeg", flyLeanMaxSideDeg_);
+    flyLeanRefSpeed_ = data_->Load<float>("flyLeanRefSpeed", flyLeanRefSpeed_);
+    flyLeanResponse_ = data_->Load<float>("flyLeanResponse", flyLeanResponse_);
+    flyLeanPivot_ = data_->Load<Hagine::Vector3>("flyLeanPivot", flyLeanPivot_);
     ImGuiNotification::Post("プレイヤー設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
 }
 

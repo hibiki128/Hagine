@@ -18,18 +18,15 @@ void PlayerAttackCollider::Init(Player *player, Enemy *enemy) {
     collider_ = player_->AddOBBCollider("PlayerAttackFront");
     collider_->SetTag("PlayerHand"); // 既存の衝突タグを流用
     collider_->AddCollisionMask("Enemy");
-    collider_->SetSize({2.0f, 1.5f, 2.0f}); // 横2・縦1.5・奥行2：やや広めで当てやすく
     collider_->SetEnabled(false);           // 初期は無効
-
-    collider_->SetPositionOffSet({0.0f, 0.0f, 2.25f});
 
     // 衝突開始コールバック
     collider_->SetOnCollision([this](ColliderBase *other) {
         this->OnCollision(other);
     });
 
-    // CollisionManagerに登録（デストラクタで自動解除される）
-    CollisionManager::GetInstance()->Register(collider_);
+    // ※ AddOBBCollider() の時点で CollisionManager へ登録済みのため、ここで再登録しない
+    //   （二重登録の原因になる。解除はコライダーのデストラクタで自動的に行われる）
 
     // ヒットエフェクト・カメラシェイク初期化
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("punchEmitter");

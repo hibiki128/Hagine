@@ -2,10 +2,10 @@
 #include "Application/Utility/Shake/Shake.h"
 #include "Bullet/EnemyBullet.h"
 #include "Collider/EnemyAttackCollider.h"
-#include "Hand/EnemyHand.h"
 #include "Object/Base/BaseObject.h"
 #include "Particle/ParticleEmitter.h"
 #include <Application/GameObject/BehaviorTree/Node/BehaviorNode.h>
+#include <Animation/AnimationController.h>
 #include <Application/GameObject/Player/Player.h>
 #include <Easing.h>
 #include <application/GameObject/Player/PlayerData.h>
@@ -78,8 +78,6 @@ class Enemy : public Hagine::BaseObject {
     Player *GetTarget() { return target_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
-    EnemyHand *GetRightHand() { return rightHand_ptr_; }
-    EnemyHand *GetLeftHand() { return leftHand_ptr_; }
 
     /// <summary>
     /// 前方攻撃判定コライダーを返す
@@ -203,6 +201,12 @@ class Enemy : public Hagine::BaseObject {
     void UpdateBeam(); // ビーム必殺技の毎フレーム更新
     void RotateUpdate();
     void CollisionGround();
+
+    /// <summary>
+    /// 移動・コンボ・ガード状態に応じてアニメーションクリップを切り替える
+    /// 敵はBT駆動で moveDir_ を持たないため、向きと velocity から進行方向を判定する
+    /// </summary>
+    void UpdateAnimation();
     void DamageUpdate();
     void StartDamageReact();
     Direction CalculateDirectionFromRotation();
@@ -242,7 +246,6 @@ class Enemy : public Hagine::BaseObject {
     // 回転・ベクトル定数
     static constexpr float kRotationZero = 0.0f;
     static constexpr float kTimerReset = 0.0f;
-    static constexpr float kDamageTiltDegrees = 20.0f;
     static constexpr float kXAxisX = 1.0f;
     static constexpr float kXAxisY = 0.0f;
     static constexpr float kXAxisZ = 0.0f;
@@ -259,6 +262,11 @@ class Enemy : public Hagine::BaseObject {
     // 距離・閾値定数
     static constexpr float kMinRotationDistance = 0.001f;
     static constexpr float kParallelThreshold = 0.999f;
+
+    // アニメーション切り替え閾値
+    static constexpr float kFlyVerticalAnimThreshold = 0.5f; // 飛行中、上昇/下降アニメに切り替えるY速度の閾値
+    static constexpr float kMoveAnimMinSpeed = 0.1f;         // 待機/移動アニメを切り替える水平速度の閾値
+    static constexpr float kBackwardDotThreshold = 0.5f;     // 後退とみなす（前方ベクトルとの内積）の閾値
     static constexpr float kRotationSpeed = 8.0f;
     static constexpr float kGroundLevel = 0.0f;
     static constexpr float kVelocityZero = 0.0f;
@@ -367,8 +375,6 @@ class Enemy : public Hagine::BaseObject {
     float beamSpiralRevolution_ = 3.0f;          // 最大長に達した時の巻き数
     float beamSpiralForwardSpeed_ = 30.0f;       // らせんパーティクルの前進速度
     std::shared_ptr<BTNode> rootNode_ = nullptr; // ビヘイビアツリーのルートノード
-    std::unique_ptr<EnemyHand> leftHand_;        // 左手
-    std::unique_ptr<EnemyHand> rightHand_;       // 右手
 
     bool isDamageReact_ = false;       // ダメージ反応中フラグ
     float damageReactTimer_ = 0.0f;    // ダメージ反応タイマー
@@ -382,6 +388,9 @@ class Enemy : public Hagine::BaseObject {
     ComboSystem punchCombo_;        // パンチコンボシステム
     bool comboInitialized_ = false; // コンボ初期化済みフラグ
 
+    Hagine::AnimationController animationController_; // アニメーション制御（プレイヤーと同一クリップ構成）
+    std::vector<std::string> comboAnimations_;       // コンボ段ごとの本体アニメーションパス
+
     // -----------------------------------------------
     // 前方攻撃判定コライダー
     // EnemyHandのコライダーの代わりに敵前方に判定を展開する
@@ -389,15 +398,9 @@ class Enemy : public Hagine::BaseObject {
     // -----------------------------------------------
     std::unique_ptr<EnemyAttackCollider> attackCollider_; // 攻撃コライダー
 
-    Hagine::EasingData<float> tiltEase_; // のけぞり回転イージング
-    Hagine::Quaternion baseRotation_;    // 基本回転
-    Hagine::Quaternion tiltRotation_;    // のけぞり回転
-
     Hagine::OBBCollider *enemyCollider_ = nullptr;      // 敵コライダー
     Hagine::AABBCollider *enemyWallCollider_ = nullptr; // 壁用コライダー
 
-    EnemyHand *leftHand_ptr_;  // 左手ポインタ
-    EnemyHand *rightHand_ptr_; // 右手ポインタ
 
     std::vector<std::unique_ptr<EnemyBullet>> bullets_; // 敵の弾
 

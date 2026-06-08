@@ -15,19 +15,15 @@ void EnemyAttackCollider::Init(Enemy *enemy, Player *player) {
     collider_ = enemy_->AddOBBCollider("EnemyAttackFront");
     collider_->SetTag("EnemyHand"); 
     collider_->AddCollisionMask("Player");
-    collider_->SetSize({2.0f, 1.5f, 2.0f}); // 当てやすいようやや広めに設定
     collider_->SetEnabled(false);           // 初期状態は無効
-
-    // 前方オフセット設定
-    collider_->SetPositionOffSet({0.0f, 0.0f, forwardOffset_});
 
     // 衝突コールバックの設定
     collider_->SetOnCollision([this](ColliderBase *other) {
         this->OnCollision(other);
     });
 
-    // CollisionManagerに登録
-    CollisionManager::GetInstance()->Register(collider_);
+    // ※ AddOBBCollider() の時点で CollisionManager へ登録済みのため、ここで再登録しない
+    //   （二重登録の原因になる。解除はコライダーのデストラクタで自動的に行われる）
 
     // ヒットエフェクト・カメラシェイク初期化
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("punchEmitter");

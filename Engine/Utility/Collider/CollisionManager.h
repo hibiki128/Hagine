@@ -103,12 +103,17 @@ class CollisionManager {
 
 #ifdef _DEBUG
     /// <summary>
-    /// ImGuiでタグマネージャーとコライダー表示設定UIを表示
+    /// タグの追加・削除UI（タグ管理タブ）
     /// </summary>
     void ImGuiTagManager() {
         ColliderTagManager::GetInstance()->ImGuiTagManager();
-        ImGui::Checkbox("コライダーを表示", &isVisible_);
     }
+
+    /// <summary>
+    /// コライダーの選択・サイズ調整・デバッグ表示切り替えUI（コライダー設定タブ）。
+    /// 登録済みコライダーを一覧から選び、サイズ・色・表示/判定の有効を個別に編集できる
+    /// </summary>
+    void ImGuiColliderInspector();
 #endif
 
   private:
@@ -200,6 +205,10 @@ class CollisionManager {
 
     std::unordered_map<CollisionPair, bool, CollisionPairHash> collisionStates_; // ペアごとの衝突状態
 
-    bool isVisible_ = false; // コライダーのデバッグ表示フラグ
+    bool isVisible_ = false; // コライダーのデバッグ表示フラグ（全体）
+
+#ifdef _DEBUG
+    ColliderBase *inspectorSelected_ = nullptr; // インスペクタで選択中のコライダー
+#endif
 };
 } // namespace Hagine

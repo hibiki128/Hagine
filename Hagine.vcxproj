@@ -113,7 +113,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\GameObject\Field\SkyDome\SkyDome.cpp" />
     <ClCompile Include="Application\GameObject\Player\Bullet\ChargeShot\ChargeShot.cpp" />
     <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp" />
-    <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp" />
     <ClCompile Include="Application\GameObject\Player\Player.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Air\PlayerStateAir.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Base\PlayerBaseState.cpp" />
@@ -138,7 +137,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.cpp" />
     <ClCompile Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Bullet\EnemyBullet.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\Hand\EnemyHand.cpp" />
     <ClCompile Include="Application\GameObject\Field\AroundField\AroundField.cpp" />
     <ClCompile Include="Application\GameObject\Enemy\Collider\EnemyAttackCollider.cpp" />
     <ClCompile Include="Engine\OffScreen\PostEffect\PostEffectParamsImpl.cpp" />
@@ -326,7 +324,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\GameObject\BehaviorTree\Node\BehaviorNode.h" />
     <ClInclude Include="Application\GameObject\BehaviorTree\Editor\BehaviorTreeEditor.h" />
     <ClInclude Include="Application\GameObject\Enemy\Bullet\EnemyBullet.h" />
-    <ClInclude Include="Application\GameObject\Enemy\Hand\EnemyHand.h" />
     <ClInclude Include="Application\GameObject\Field\AroundField\AroundField.h" />
     <ClInclude Include="Application\GameObject\Enemy\Collider\EnemyAttackCollider.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\IPostEffectParams.h" />
@@ -427,7 +424,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\OffScreen\RendererBuffer.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParameters.h" />
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectDataManager.h" />
-    <ClInclude Include="Application\GameObject\Player\Hand\PlayerHand.h" />
     <ClInclude Include="application\GameObject\Player\State\Action\PlayerStateRush.h" />
     <ClInclude Include="Application\UI\Player\PlayerUI.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSEmitter.h" />

@@ -143,9 +143,6 @@
     <ClCompile Include="application\GameObject\Player\State\Action\PlayerStateRush.cpp">
       <Filter>Application\GameObject\Player\State\Action</Filter>
     </ClCompile>
-    <ClCompile Include="Application\GameObject\Player\Hand\PlayerHand.cpp">
-      <Filter>Application\GameObject\Player\Bullet\Hand</Filter>
-    </ClCompile>
     <ClCompile Include="Application\GameObject\Player\Bullet\ChargeShot\ChargeShot.cpp">
       <Filter>Application\GameObject\Player\Bullet\ChargeShot</Filter>
     </ClCompile>
@@ -477,7 +474,6 @@
       <Filter>Application\GameObject\BehaviorTree\Editor</Filter>
     </ClCompile>
     <ClCompile Include="Application\GameObject\Enemy\Bullet\EnemyBullet.cpp" />
-    <ClCompile Include="Application\GameObject\Enemy\Hand\EnemyHand.cpp" />
     <ClCompile Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.cpp" />
     <ClCompile Include="Engine\Utility\Collider\type\CylinderCollider.cpp" />
     <ClCompile Include="Application\GameObject\Field\AroundField\AroundField.cpp" />
@@ -545,9 +541,6 @@
     </ClInclude>
     <ClInclude Include="application\GameObject\Player\State\Action\PlayerStateRush.h">
       <Filter>Application\GameObject\Player\State\Action</Filter>
-    </ClInclude>
-    <ClInclude Include="Application\GameObject\Player\Hand\PlayerHand.h">
-      <Filter>Application\GameObject\Player\Bullet\Hand</Filter>
     </ClInclude>
     <ClInclude Include="Application\GameObject\Player\Bullet\ChargeShot\ChargeShot.h">
       <Filter>Application\GameObject\Player\Bullet\ChargeShot</Filter>
@@ -907,7 +900,6 @@
       <Filter>Engine\Utility\Debug\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="Application\GameObject\Enemy\Bullet\EnemyBullet.h" />
-    <ClInclude Include="Application\GameObject\Enemy\Hand\EnemyHand.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldSettingOverride.h" />
     <ClInclude Include="Engine\Utility\Collider\type\CylinderCollider.h" />

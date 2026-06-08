@@ -5,7 +5,6 @@
 #include "Collider/PlayerAttackCollider.h"
 #include "Data/DataHandler.h"
 #include "GamePad.h"
-#include "Hand/PlayerHand.h"
 #include "Object/Base/BaseObject.h"
 #include "PlayerData.h"
 #include "Skill/MakanAttackSkill.h"
@@ -166,8 +165,6 @@ class Player : public Hagine::BaseObject {
     float GetDashDuration() const { return dashDuration_; }
     bool GetDashStartedThisFrame() const { return dashStartedThisFrame_; }
     Hagine::ViewProjection &GetViewProjection();
-    PlayerHand *GetRightHand() { return rightHand_ptr_; }
-    PlayerHand *GetLeftHand() { return leftHand_ptr_; }
     Direction &GetDirection() { return dir_; }
     MoveDirection &GetMoveDirection() { return moveDir_; }
     std::string GetCurrentStateName() const;
@@ -335,6 +332,13 @@ class Player : public Hagine::BaseObject {
     /// </summary>
     void UpdateAnimation();
 
+    /// <summary>
+    /// 飛行移動中の体の傾き（リーン）を更新する
+    /// ロックオン中は顔（向き）を敵に向けたまま、進行方向へ体を傾けて見せる。
+    /// 描画専用の回転オフセットとして適用するため、射撃などの向きには影響しない
+    /// </summary>
+    void UpdateFlyLean();
+
   private:
     /// ===================================================
     /// private variants
@@ -350,7 +354,6 @@ class Player : public Hagine::BaseObject {
     static constexpr float kMinHP = 0.0f;
     static constexpr float kEnemyCollisionDamage = 7.5f;
     static constexpr float kTimerReset = 0.0f;
-    static constexpr float kPlayerDamageTiltDegrees = 20.0f;
     static constexpr float kNoDamage = 0.0f;
 
     // 点滅関連定数
@@ -471,6 +474,18 @@ class Player : public Hagine::BaseObject {
     bool comboInitialized_ = false;            // コンボ初期化済みフラグ
     std::vector<std::string> comboAnimations_; // コンボ段ごとのプレイヤー本体アニメーションパス
 
+    // ─── 飛行移動中の体の傾き（リーン）───
+    // ロックオン飛行移動中、顔は敵向きのまま進行方向へ体を倒して見せるための描画専用の傾き。
+    // すべて ImGui で調整可・セーブ対象。後ろ移動＝仰向け、左右移動＝バンク表現
+    bool flyLeanEnabled_ = true;              // リーン演出の有効/無効
+    float flyLeanMaxFwdPitchDeg_ = 10.0f;     // 前進時の前傾の最大角（度）
+    float flyLeanMaxBackPitchDeg_ = 50.0f;    // 後退時の仰け反り（仰向け）の最大角（度）
+    float flyLeanMaxSideDeg_ = 70.0f;         // 左右移動時に体を進行方向へ向けるヨー(Y回転)の最大角（度。90で真横）
+    float flyLeanRefSpeed_ = 8.0f;            // 最大傾きに達する基準の水平速度
+    float flyLeanResponse_ = 10.0f;           // 傾きの追従速度（大きいほど即座に追従）
+    Hagine::Vector3 flyLeanPivot_ = {0.0f, 1.0f, 0.0f}; // 回転中心（モデル中心が原点にないため補正用）
+    Hagine::Quaternion flyLeanRotation_ = Hagine::Quaternion::IdentityQuaternion(); // 現在の傾き（平滑化後・クォータニオン）
+
     Hagine::AnimationController animationController_; // アニメーション制御
 
     std::unordered_map<std::string, std::unique_ptr<PlayerBaseState>> states_; // 状態マップ
@@ -480,8 +495,6 @@ class Player : public Hagine::BaseObject {
     std::unique_ptr<Hagine::DataHandler> data_;              // データ管理
     std::unique_ptr<Hagine::BaseObject> shadow_;             // 影
     std::unique_ptr<ChargeShot> chargeShot_;         // チャージショット
-    std::unique_ptr<PlayerHand> leftHand_;           // 左手
-    std::unique_ptr<PlayerHand> rightHand_;          // 右手
     std::unique_ptr<Shake> shake_;                   // シェイク
     std::unique_ptr<Hagine::ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;
@@ -493,24 +506,13 @@ class Player : public Hagine::BaseObject {
     Hagine::ViewProjection *vp_;                    // カメラ
     Hagine::OBBCollider *playerCollider_ = nullptr; // コライダー
     Hagine::AABBCollider *playerWallCollider_ = nullptr;
-    PlayerHand *leftHand_ptr_;                    // 左手
-    PlayerHand *rightHand_ptr_;                   // 右手
     PlayerBaseState *currentState_ = nullptr;     // 現在の状態
     MakanAttackSkill *makanAttack_ptr_ = nullptr; // 必殺技
     Hagine::ParticleField *generatedField_ = nullptr;     // 生成するフィールド
 
-    bool isDamageReact_ = false;       // リアクション中かどうか
+    bool isDamageReact_ = false;       // リアクション中かどうか（被弾点滅）
     float damageReactTimer_ = 0.0f;    // 経過時間
     float damageReactDuration_ = 0.5f; // リアクション時間
-    Hagine::EasingData<float> tiltEase_;       // 回転角イージング
-    Hagine::Quaternion baseRotation_;          // 通常時の向き
-    Hagine::Quaternion tiltRotation_;          // のけぞり用の回転
-
-    // 死亡時の回転リセット
-    static constexpr float kDeathRotationResetDuration = 0.5f; // 回転リセット時間
-    bool isDeathRotationReset_ = false;                        // 死亡時の回転リセット中フラグ
-    float deathRotationResetTimer_ = 0.0f;                     // 回転リセット経過時間
-    Hagine::Quaternion deathRotationStart_;                            // リセット開始時の回転
 
     std::string previousStateName_ = "";
 
