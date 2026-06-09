@@ -86,57 +86,95 @@ void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) 
 }
 
 void ImGuiManager::SetupTheme() {
-    // モダンなダークテーマ
+    // シックなモノクローム調ダークテーマ
+    // 無彩色のグラファイトを基調とし、選択・操作中のみ淡いスチールブルーで強調する
     ImGuiStyle &style = ImGui::GetStyle();
+
+    // アクセントカラー（淡いスチールブルー）。色味はこの3段階に統一する
+    const ImVec4 accentDim = ImVec4(0.369f, 0.471f, 0.580f, 1.00f);    // 通常
+    const ImVec4 accent = ImVec4(0.435f, 0.541f, 0.659f, 1.00f);       // ホバー
+    const ImVec4 accentBright = ImVec4(0.533f, 0.635f, 0.745f, 1.00f); // アクティブ
 
     // カラースキーム
     ImVec4 *colors = style.Colors;
-    colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.10f, 0.13f, 1.00f);
-    colors[ImGuiCol_ChildBg] = ImVec4(0.12f, 0.12f, 0.15f, 1.00f);
-    colors[ImGuiCol_PopupBg] = ImVec4(0.08f, 0.08f, 0.10f, 0.94f);
-    colors[ImGuiCol_Border] = ImVec4(0.16f, 0.16f, 0.21f, 1.00f);
-    colors[ImGuiCol_FrameBg] = ImVec4(0.16f, 0.16f, 0.21f, 1.00f);
-    colors[ImGuiCol_FrameBgHovered] = ImVec4(0.25f, 0.25f, 0.32f, 1.00f);
-    colors[ImGuiCol_FrameBgActive] = ImVec4(0.28f, 0.27f, 0.36f, 1.00f);
-    colors[ImGuiCol_TitleBg] = ImVec4(0.12f, 0.12f, 0.15f, 1.00f);
-    colors[ImGuiCol_TitleBgActive] = ImVec4(0.16f, 0.16f, 0.21f, 1.00f);
-    colors[ImGuiCol_MenuBarBg] = ImVec4(0.12f, 0.12f, 0.15f, 1.00f);
-    colors[ImGuiCol_ScrollbarBg] = ImVec4(0.10f, 0.10f, 0.13f, 1.00f);
-    colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.37f, 0.37f, 0.48f, 1.00f);
-    colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.49f, 0.49f, 0.63f, 1.00f);
-    colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.67f, 0.67f, 0.86f, 1.00f);
-    colors[ImGuiCol_CheckMark] = ImVec4(0.57f, 0.67f, 0.94f, 1.00f);
-    colors[ImGuiCol_SliderGrab] = ImVec4(0.53f, 0.54f, 0.72f, 1.00f);
-    colors[ImGuiCol_SliderGrabActive] = ImVec4(0.71f, 0.72f, 0.96f, 1.00f);
-    colors[ImGuiCol_Button] = ImVec4(0.25f, 0.25f, 0.32f, 1.00f);
-    colors[ImGuiCol_ButtonHovered] = ImVec4(0.38f, 0.38f, 0.49f, 1.00f);
-    colors[ImGuiCol_ButtonActive] = ImVec4(0.47f, 0.47f, 0.61f, 1.00f);
-    colors[ImGuiCol_Header] = ImVec4(0.22f, 0.22f, 0.27f, 1.00f);
-    colors[ImGuiCol_HeaderHovered] = ImVec4(0.31f, 0.31f, 0.38f, 1.00f);
-    colors[ImGuiCol_HeaderActive] = ImVec4(0.37f, 0.37f, 0.45f, 1.00f);
-    colors[ImGuiCol_Separator] = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
-    colors[ImGuiCol_SeparatorHovered] = ImVec4(0.61f, 0.59f, 0.87f, 0.78f);
-    colors[ImGuiCol_SeparatorActive] = ImVec4(0.73f, 0.71f, 0.94f, 1.00f);
-    colors[ImGuiCol_ResizeGrip] = ImVec4(0.43f, 0.43f, 0.54f, 0.25f);
-    colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.55f, 0.53f, 0.88f, 0.67f);
-    colors[ImGuiCol_ResizeGripActive] = ImVec4(0.71f, 0.69f, 0.94f, 0.95f);
-    colors[ImGuiCol_Tab] = ImVec4(0.16f, 0.16f, 0.21f, 1.00f);
-    colors[ImGuiCol_TabHovered] = ImVec4(0.53f, 0.53f, 0.66f, 0.80f);
-    colors[ImGuiCol_TabActive] = ImVec4(0.31f, 0.31f, 0.41f, 1.00f);
-    colors[ImGuiCol_TabUnfocused] = ImVec4(0.16f, 0.16f, 0.21f, 1.00f);
-    colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.25f, 0.25f, 0.35f, 1.00f);
-    colors[ImGuiCol_DockingPreview] = ImVec4(0.57f, 0.57f, 0.91f, 0.70f);
-    colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
-    colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
-    colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
-    colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-    colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
-    colors[ImGuiCol_TextSelectedBg] = ImVec4(0.47f, 0.60f, 0.76f, 0.47f);
-    colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
-    colors[ImGuiCol_NavHighlight] = ImVec4(0.60f, 0.60f, 0.86f, 1.00f);
+
+    // テキスト（純白を避けたやわらかいオフホワイト）
+    colors[ImGuiCol_Text] = ImVec4(0.878f, 0.882f, 0.890f, 1.00f);
+    colors[ImGuiCol_TextDisabled] = ImVec4(0.416f, 0.424f, 0.439f, 1.00f);
+
+    // 背景・枠
+    colors[ImGuiCol_WindowBg] = ImVec4(0.090f, 0.094f, 0.102f, 1.00f);
+    colors[ImGuiCol_ChildBg] = ImVec4(0.106f, 0.110f, 0.122f, 1.00f);
+    colors[ImGuiCol_PopupBg] = ImVec4(0.075f, 0.078f, 0.086f, 0.98f);
+    colors[ImGuiCol_Border] = ImVec4(0.227f, 0.235f, 0.251f, 0.50f);
+    colors[ImGuiCol_BorderShadow] = ImVec4(0.000f, 0.000f, 0.000f, 0.00f);
+
+    // 入力フィールド
+    colors[ImGuiCol_FrameBg] = ImVec4(0.145f, 0.149f, 0.165f, 1.00f);
+    colors[ImGuiCol_FrameBgHovered] = ImVec4(0.188f, 0.192f, 0.204f, 1.00f);
+    colors[ImGuiCol_FrameBgActive] = ImVec4(0.227f, 0.235f, 0.251f, 1.00f);
+
+    // タイトルバー・メニューバー
+    colors[ImGuiCol_TitleBg] = ImVec4(0.075f, 0.078f, 0.086f, 1.00f);
+    colors[ImGuiCol_TitleBgActive] = ImVec4(0.122f, 0.125f, 0.137f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.075f, 0.078f, 0.086f, 0.80f);
+    colors[ImGuiCol_MenuBarBg] = ImVec4(0.102f, 0.106f, 0.114f, 1.00f);
+
+    // スクロールバー（無彩色のグレー）
+    colors[ImGuiCol_ScrollbarBg] = ImVec4(0.075f, 0.078f, 0.086f, 0.60f);
+    colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.227f, 0.235f, 0.251f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.290f, 0.302f, 0.322f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.353f, 0.369f, 0.392f, 1.00f);
+
+    // チェック・スライダー（アクセント）
+    colors[ImGuiCol_CheckMark] = accentBright;
+    colors[ImGuiCol_SliderGrab] = accent;
+    colors[ImGuiCol_SliderGrabActive] = accentBright;
+
+    // ボタン（無彩色ベース、ホバー時のみ淡くスチールへ寄せる）
+    colors[ImGuiCol_Button] = ImVec4(0.180f, 0.188f, 0.204f, 1.00f);
+    colors[ImGuiCol_ButtonHovered] = ImVec4(0.243f, 0.306f, 0.369f, 1.00f);
+    colors[ImGuiCol_ButtonActive] = ImVec4(0.204f, 0.255f, 0.310f, 1.00f);
+
+    // ヘッダー（CollapsingHeader / Selectable など）
+    colors[ImGuiCol_Header] = ImVec4(0.165f, 0.173f, 0.188f, 1.00f);
+    colors[ImGuiCol_HeaderHovered] = ImVec4(0.173f, 0.216f, 0.259f, 1.00f);
+    colors[ImGuiCol_HeaderActive] = ImVec4(0.204f, 0.255f, 0.310f, 1.00f);
+
+    // セパレータ
+    colors[ImGuiCol_Separator] = ImVec4(0.227f, 0.235f, 0.251f, 0.50f);
+    colors[ImGuiCol_SeparatorHovered] = ImVec4(accent.x, accent.y, accent.z, 0.60f);
+    colors[ImGuiCol_SeparatorActive] = accentBright;
+
+    // リサイズグリップ
+    colors[ImGuiCol_ResizeGrip] = ImVec4(0.227f, 0.235f, 0.251f, 0.40f);
+    colors[ImGuiCol_ResizeGripHovered] = ImVec4(accent.x, accent.y, accent.z, 0.60f);
+    colors[ImGuiCol_ResizeGripActive] = ImVec4(accentBright.x, accentBright.y, accentBright.z, 0.90f);
+
+    // タブ
+    colors[ImGuiCol_Tab] = ImVec4(0.102f, 0.106f, 0.114f, 1.00f);
+    colors[ImGuiCol_TabHovered] = ImVec4(accent.x, accent.y, accent.z, 0.50f);
+    colors[ImGuiCol_TabActive] = ImVec4(0.173f, 0.216f, 0.259f, 1.00f);
+    colors[ImGuiCol_TabUnfocused] = ImVec4(0.090f, 0.094f, 0.102f, 1.00f);
+    colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.122f, 0.125f, 0.137f, 1.00f);
+
+    // ドッキング
+    colors[ImGuiCol_DockingPreview] = ImVec4(accent.x, accent.y, accent.z, 0.55f);
+    colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.075f, 0.078f, 0.086f, 1.00f);
+
+    // プロット（アクセントに統一）
+    colors[ImGuiCol_PlotLines] = accentBright;
+    colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.643f, 0.737f, 0.847f, 1.00f);
+    colors[ImGuiCol_PlotHistogram] = accent;
+    colors[ImGuiCol_PlotHistogramHovered] = accentBright;
+
+    // 選択範囲・ドラッグ＆ドロップ・ナビゲーション
+    colors[ImGuiCol_TextSelectedBg] = ImVec4(accent.x, accent.y, accent.z, 0.35f);
+    colors[ImGuiCol_DragDropTarget] = ImVec4(accentBright.x, accentBright.y, accentBright.z, 0.90f);
+    colors[ImGuiCol_NavHighlight] = accentBright;
     colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
-    colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
-    colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.60f);
+    colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.050f, 0.050f, 0.060f, 0.60f);
+    colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.020f, 0.020f, 0.030f, 0.65f);
 
     // スタイル設定
     style.WindowPadding = ImVec2(10, 10);
@@ -1006,7 +1044,7 @@ void ImGuiManager::DisplayFPS() {
 
         ImPlot::PushStyleColor(ImPlotCol_FrameBg, ImVec4(0.08f, 0.08f, 0.12f, 1.0f));
         ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(0.05f, 0.05f, 0.09f, 1.0f));
-        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.3f, 0.8f, 1.0f, 1.0f));
+        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.45f, 0.65f, 0.85f, 1.0f));
 
         if (ImPlot::BeginPlot("##FPSPlot", ImVec2(-1, 90),
                               ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoInputs |
@@ -1029,7 +1067,7 @@ void ImGuiManager::DisplayFPS() {
             ImPlot::PopStyleColor();
 
             // FPS折れ線
-            ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.3f, 0.8f, 1.0f, 1.0f));
+            ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.45f, 0.65f, 0.85f, 1.0f));
             ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 1.5f);
             ImPlot::PlotLine("FPS", fpsHistory, kHistSize, 1.0, 0.0,
                              ImPlotLineFlags_None, offset);

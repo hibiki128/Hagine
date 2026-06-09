@@ -8,6 +8,7 @@
 #include <myMath.h>
 #ifdef _DEBUG
 #include "imgui.h"
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #endif
 
 namespace Hagine {
@@ -203,34 +204,86 @@ D3D12_GPU_VIRTUAL_ADDRESS ShadowMap::GetShadowDataGpuAddress() const {
 
 void ShadowMap::UpdateImGui() {
 #ifdef _DEBUG
+    // ラベル列を作って次の列に全幅ウィジェットを置く準備をする
+    auto label = [](const char *text) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::AlignTextToFramePadding();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted(text);
+        ImGui::PopStyleColor();
+        ImGui::TableNextColumn();
+        ImGui::SetNextItemWidth(-1);
+    };
+
     if (ImGui::Begin("ShadowMap")) {
-        ImGui::Checkbox("有効", &enabled_);
-        ImGui::Separator();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
+        ImGui::Checkbox("シャドウ有効", &enabled_);
+        ImGui::PopStyleColor();
+        ImGui::SetItemTooltip("シャドウマップ描画の ON / OFF");
 
+        ImGui::Spacing();
+        SectionHeader("[ ライト ]", DebugTheme::kAccentBlue);
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentCyan);
         ImGui::Checkbox("DirectionalLight と同期", &syncWithDirectionalLight_);
+        ImGui::PopStyleColor();
+        ImGui::SetItemTooltip("ライト方向を平行光源から自動取得します");
 
-        ImGui::Text("ライトパラメータ");
-        if (!syncWithDirectionalLight_) {
-            ImGui::DragFloat3("ライト方向", &lightDir_.x, 0.01f, -1.f, 1.f);
-        } else {
-            ImGui::TextDisabled("ライト方向: DirectionalLight から自動取得中");
+        if (ImGui::BeginTable("##ShadowLight", 2, ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 110.0f);
+            ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
+
+            label("ライト方向");
+            if (!syncWithDirectionalLight_) {
+                ImGui::DragFloat3("##lightDir", &lightDir_.x, 0.01f, -1.f, 1.f, "%.2f");
+            } else {
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("自動取得中");
+                ImGui::PopStyleColor();
+            }
+            label("シャドウ中心");
+            ImGui::DragFloat3("##target", &lightTarget_.x, 0.1f, 0.0f, 0.0f, "%.2f");
+            label("ライト距離");
+            ImGui::DragFloat("##dist", &lightDistance_, 0.5f, 1.f, 300.f, "%.1f");
+            label("正射影幅");
+            ImGui::DragFloat("##ow", &orthoWidth_, 0.5f, 1.f, 200.f, "%.1f");
+            label("正射影高さ");
+            ImGui::DragFloat("##oh", &orthoHeight_, 0.5f, 1.f, 200.f, "%.1f");
+            label("Near");
+            ImGui::DragFloat("##near", &nearZ_, 0.01f, 0.01f, 10.f, "%.2f");
+            label("Far");
+            ImGui::DragFloat("##far", &farZ_, 1.f, 10.f, 1000.f, "%.1f");
+
+            ImGui::EndTable();
         }
-        ImGui::DragFloat3("シャドウ中心", &lightTarget_.x, 0.1f);
-        ImGui::DragFloat("ライト距離", &lightDistance_, 0.5f, 1.f, 300.f);
-        ImGui::DragFloat("正射影幅", &orthoWidth_, 0.5f, 1.f, 200.f);
-        ImGui::DragFloat("正射影高さ", &orthoHeight_, 0.5f, 1.f, 200.f);
-        ImGui::DragFloat("Near", &nearZ_, 0.01f, 0.01f, 10.f);
-        ImGui::DragFloat("Far", &farZ_, 1.f, 10.f, 1000.f);
 
-        ImGui::Separator();
-        ImGui::Text("シャドウパラメータ");
-        ImGui::DragFloat("バイアス", &bias_, 0.0001f, 0.f, 0.1f, "%.5f");
-        ImGui::DragFloat("強度", &strength_, 0.01f, 0.f, 1.f);
+        ImGui::Spacing();
+        SectionHeader("[ シャドウ品質 ]", DebugTheme::kAccentOrange);
+        if (ImGui::BeginTable("##ShadowQual", 2, ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 110.0f);
+            ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
-        ImGui::Separator();
-        if (ImGui::Button("保存")) { SaveConfig(); }
+            label("バイアス");
+            ImGui::DragFloat("##bias", &bias_, 0.0001f, 0.f, 0.1f, "%.5f");
+            ImGui::SetItemTooltip("シャドウアクネ対策の深度オフセット");
+            label("強度");
+            ImGui::DragFloat("##strength", &strength_, 0.01f, 0.f, 1.f, "%.2f");
+
+            ImGui::EndTable();
+        }
+
+        ImGui::Spacing();
+        SectionHeader("[ セーブ / ロード ]", DebugTheme::kAccentPurple);
+        float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.42f, 0.58f, 0.85f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.52f, 0.70f, 0.95f));
+        if (ImGui::Button("保存", ImVec2(bw, 0))) { SaveConfig(); }
+        ImGui::PopStyleColor(2);
         ImGui::SameLine();
-        if (ImGui::Button("読み込み")) { LoadConfig(); }
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.48f, 0.40f, 0.85f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.60f, 0.50f, 0.95f));
+        if (ImGui::Button("読み込み", ImVec2(bw, 0))) { LoadConfig(); }
+        ImGui::PopStyleColor(2);
     }
     ImGui::End();
 #endif

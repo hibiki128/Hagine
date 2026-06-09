@@ -5,6 +5,8 @@
 #include <imgui.h>
 #include <string>
 #include <vector>
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #endif
 
 namespace Hagine {
@@ -272,10 +274,11 @@ void CollisionManager::DebugDraw(const ViewProjection &viewProjection) {
 
 #ifdef _DEBUG
 void CollisionManager::ImGuiColliderInspector() {
-    // ── 全体設定 ──
+    // ── 全体操作 ──
+    ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentCyan);
     ImGui::Checkbox("コライダーを表示", &isVisible_);
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("全コライダーのデバッグ描画のオン/オフ（個別の表示は下のリストで切替）");
+    ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("全コライダーのデバッグ描画のオン/オフ（個別はリストで切替）");
 
     ImGui::SameLine();
     if (ImGui::SmallButton("全部表示")) {
@@ -290,18 +293,27 @@ void CollisionManager::ImGuiColliderInspector() {
                 c->SetVisible(false);
     }
     ImGui::SameLine();
-    if (ImGui::SmallButton("全部保存")) {
+    ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgGreen);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 0.52f, 0.40f));
+    bool saveAll = ImGui::SmallButton("全部保存");
+    ImGui::PopStyleColor(2);
+    ImGui::SetItemTooltip("全コライダー設定を Resources/jsons/Collider/ 以下へ保存");
+    if (saveAll) {
+        int saved = 0;
         for (auto &[tag, colliders] : collidersByTag_)
-            for (auto *c : colliders)
+            for (auto *c : colliders) {
                 c->SaveToJson();
+                ++saved;
+            }
+        ImGuiNotification::Post(std::to_string(saved) + " 個のコライダーを保存しました", {0.45f, 0.68f, 0.52f, 1.0f});
     }
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("全コライダーの設定を Resources/jsons/Collider/ 以下へ保存");
 
     int total = 0;
     for (auto &[tag, colliders] : collidersByTag_)
         total += static_cast<int>(colliders.size());
-    ImGui::TextDisabled("登録: %d コライダー / %d タグ", total, static_cast<int>(collidersByTag_.size()));
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+    ImGui::Text("登録: %d コライダー / %d タグ", total, static_cast<int>(collidersByTag_.size()));
+    ImGui::PopStyleColor();
 
     // 選択中ポインタの有効性チェック（破棄/登録解除済みなら選択を解除する）
     bool stillExists = false;
@@ -319,7 +331,7 @@ void CollisionManager::ImGuiColliderInspector() {
     ImGui::Separator();
 
     // ── 左ペイン: 登録コライダー一覧（タグごと） ──
-    ImGui::BeginChild("##ColliderList", ImVec2(240.0f, 340.0f), true);
+    ImGui::BeginChild("##ColliderList", ImVec2(240.0f, 340.0f), ImGuiChildFlags_Borders);
 
     std::vector<std::string> tags;
     for (auto &[tag, colliders] : collidersByTag_)
@@ -359,31 +371,36 @@ void CollisionManager::ImGuiColliderInspector() {
     ImGui::SameLine();
 
     // ── 右ペイン: 選択中コライダーの詳細 ──
-    ImGui::BeginChild("##ColliderDetail", ImVec2(0.0f, 340.0f), true);
+    ImGui::BeginChild("##ColliderDetail", ImVec2(0.0f, 340.0f), ImGuiChildFlags_Borders);
     if (inspectorSelected_) {
         ColliderBase *c = inspectorSelected_;
 
+        SectionHeader("[ 基本情報 ]", DebugTheme::kAccentBlue);
         const std::string &name = c->GetName();
-        ImGui::Text("名前: %s", name.empty() ? "(名前なし)" : name.c_str());
-        ImGui::Text("タグ: %s", c->GetTag().c_str());
-        ImGui::Text("種別: %s", ColliderTypeName(c->GetType()));
-        ImGui::Separator();
+        ReadOnlyRow("名前", "%s", name.empty() ? "(名前なし)" : name.c_str());
+        ReadOnlyRow("タグ", "%s", c->GetTag().c_str());
+        ReadOnlyRow("種別", "%s", ColliderTypeName(c->GetType()));
 
+        ImGui::Spacing();
         bool enabled = c->IsEnabled();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
         if (ImGui::Checkbox("当たり判定 有効", &enabled))
             c->SetEnabled(enabled);
+        ImGui::PopStyleColor();
         ImGui::SameLine();
         bool vis = c->IsVisible();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentCyan);
         if (ImGui::Checkbox("デバッグ表示", &vis))
             c->SetVisible(vis);
+        ImGui::PopStyleColor();
 
         Vector4 col = c->GetColor();
         float colArr[4] = {col.x, col.y, col.z, col.w};
-        if (ImGui::ColorEdit4("描画色", colArr))
+        if (ImGui::ColorEdit4("描画色", colArr, ImGuiColorEditFlags_NoInputs))
             c->SetColor({colArr[0], colArr[1], colArr[2], colArr[3]});
 
-        ImGui::Separator();
-        ImGui::SeparatorText("サイズ設定");
+        ImGui::Spacing();
+        SectionHeader("[ サイズ設定 ]", DebugTheme::kAccentOrange);
 
         switch (c->GetType()) {
         case ColliderType::OBB: {
@@ -440,26 +457,32 @@ void CollisionManager::ImGuiColliderInspector() {
         }
         }
 
-        ImGui::Separator();
+        ImGui::Spacing();
+        SectionHeader("[ 保存 / 読込 ]", DebugTheme::kAccentGreen);
 
-        // 保存 / 読込（Resources/jsons/Collider/<名前>.json）
+        // Resources/jsons/Collider/<名前>.json への保存・読込
         float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.45f, 0.20f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.55f, 0.25f, 0.9f));
-        if (ImGui::Button("保存", ImVec2(bw, 0.0f)))
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.45f, 0.20f, 0.85f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.55f, 0.26f, 0.95f));
+        if (ImGui::Button("保存", ImVec2(bw, 0.0f))) {
             c->SaveToJson();
+            ImGuiNotification::Post("コライダーを保存しました: " + (name.empty() ? std::string("(名前なし)") : name), {0.45f, 0.68f, 0.52f, 1.0f});
+        }
         ImGui::PopStyleColor(2);
         ImGui::SameLine();
-        if (ImGui::Button("読込", ImVec2(bw, 0.0f)))
+        if (ImGui::Button("読込", ImVec2(bw, 0.0f))) {
             c->LoadFromJson();
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("保存済みの設定を読み込み直す");
+            ImGuiNotification::Post("コライダーを読み込みました: " + (name.empty() ? std::string("(名前なし)") : name), {0.42f, 0.66f, 0.68f, 1.0f});
+        }
+        ImGui::SetItemTooltip("保存済みの設定を読み込み直す");
 
-        ImGui::Separator();
+        ImGui::Spacing();
         Vector3 center = c->GetCenterPosition();
-        ImGui::TextDisabled("中心座標: (%.2f, %.2f, %.2f)", center.x, center.y, center.z);
+        ReadOnlyRow("中心座標", "%.2f, %.2f, %.2f", center.x, center.y, center.z);
     } else {
-        ImGui::TextDisabled("左の一覧からコライダーを選択してください");
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("左の一覧からコライダーを選択してください");
+        ImGui::PopStyleColor();
     }
     ImGui::EndChild();
 }

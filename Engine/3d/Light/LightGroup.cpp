@@ -1,6 +1,7 @@
 #include "LightGroup.h"
 #include "DirectXCommon.h"
 #include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
+#include <Engine/Utility/Debug/ImGui/Debugui_improved.h>
 #include <Line/DrawLine3D.h>
 #include <filesystem>
 #include <fstream>
@@ -185,363 +186,275 @@ void LightGroup::CreateCamera() {
 
 void LightGroup::imgui() {
 #ifdef USE_IMGUI
+    // ラベル + 全幅ウィジェットの2列行を描くヘルパー
+    auto Row = [](const char *label, const char *tip, auto &&drawWidget) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::AlignTextToFramePadding();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted(label);
+        ImGui::PopStyleColor();
+        if (tip && tip[0])
+            ImGui::SetItemTooltip("%s", tip);
+        ImGui::TableNextColumn();
+        ImGui::SetNextItemWidth(-1);
+        drawWidget();
+    };
 
-    // スタイル設定
-    ImGuiStyle &style = ImGui::GetStyle();
-    float originalRounding = style.ChildRounding;
-    float originalPadding = style.FramePadding.x;
-
-    style.ChildRounding = 6.0f;
-    style.FramePadding = ImVec2(8.0f, 4.0f);
+    // ── デバッグ描画 ──
+    SectionHeader("[ デバッグ描画 ]", DebugTheme::kAccentCyan);
+    ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentCyan);
+    ImGui::Checkbox("光源を可視化##lightvis", &showLightVisualization_);
+    ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("光源の位置・方向・範囲を線で表示します");
 
     ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Text("デバッグ設定");
-    ImGui::Spacing();
 
-    ImGui::Checkbox("光源可視化を表示", &showLightVisualization_);
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("光源の位置、方向、範囲を線で表示します");
-    }
+    if (ImGui::BeginTabBar("LightTypeTabs", ImGuiTabBarFlags_FittingPolicyScroll)) {
 
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    // メインタブバー
-    if (ImGui::BeginTabBar("LightTypeTabs", ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyScroll)) {
-
-        // 平行光源タブ
+        // ============================================================
+        // 平行光源
+        // ============================================================
         if (ImGui::BeginTabItem("平行光源")) {
             ImGui::Spacing();
-
-            // アクティブ状態
-            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
-            ImGui::Checkbox("平行光源を有効にする", &isDirectionalLight_);
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
+            ImGui::Checkbox("平行光源を有効にする##diren", &isDirectionalLight_);
             ImGui::PopStyleColor();
 
             if (directionalLightData_->active) {
                 ImGui::Spacing();
-                ImGui::Separator();
-                ImGui::Spacing();
+                SectionHeader("[ 基本設定 ]", DebugTheme::kAccentBlue);
 
-                // 基本設定セクション
-                if (ImGui::BeginChild("DirectionalBasic", ImVec2(0, 120), true, ImGuiWindowFlags_NoScrollbar)) {
-                    ImGui::Text("基本設定");
-                    ImGui::Spacing();
+                if (ImGui::BeginTable("##DirTable", 2, ImGuiTableFlags_SizingStretchProp)) {
+                    ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                    ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
-                    ImGui::Columns(2, nullptr, false);
-                    ImGui::SetColumnWidth(0, 200);
+                    Row("方向", "光の進む方向（自動で正規化）", [&] {
+                        if (ImGui::DragFloat3("##direction", &directionalLightData_->direction.x, 0.01f, -1.0f, 1.0f, "%.2f"))
+                            directionalLightData_->direction = directionalLightData_->direction.Normalize();
+                    });
+                    Row("輝度", "光の明るさ", [&] {
+                        ImGui::DragFloat("##intensity", &directionalLightData_->intensity, 0.01f, 0.0f, 10.0f, "%.2f");
+                    });
+                    Row("色", "光の色", [&] {
+                        ImGui::ColorEdit3("##color", &directionalLightData_->color.x, ImGuiColorEditFlags_NoInputs);
+                    });
+                    Row("ライティング", "陰影計算モデル", [&] {
+                        const char *types[] = {"HalfLambert", "BlinnPhong"};
+                        int sel = directionalLightData_->BlinnPhong ? 1 : 0;
+                        if (ImGui::Combo("##lightingType", &sel, types, IM_ARRAYSIZE(types))) {
+                            directionalLightData_->HalfLambert = (sel == 0) ? 1 : 0;
+                            directionalLightData_->BlinnPhong = (sel == 1) ? 1 : 0;
+                        }
+                    });
 
-                    ImGui::Text("方向");
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("光の進む方向を指定します");
-                    }
-                    ImGui::NextColumn();
-                    ImGui::DragFloat3("##direction", &directionalLightData_->direction.x, 0.1f);
-                    directionalLightData_->direction = directionalLightData_->direction.Normalize();
-                    ImGui::NextColumn();
-
-                    ImGui::Text("輝度");
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("光の明るさを調整します");
-                    }
-                    ImGui::NextColumn();
-                    ImGui::DragFloat("##intensity", &directionalLightData_->intensity, 0.01f, 0.0f, 10.0f);
-                    ImGui::NextColumn();
-
-                    ImGui::Text("色");
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::SetTooltip("光の色を設定します");
-                    }
-                    ImGui::NextColumn();
-                    ImGui::ColorEdit3("##color", &directionalLightData_->color.x);
-
-                    ImGui::Columns(1);
+                    ImGui::EndTable();
                 }
-                ImGui::EndChild();
-
-                ImGui::Spacing();
-
-                // 光源タイプセクション
-                if (ImGui::BeginChild("DirectionalType", ImVec2(0, 80), true, ImGuiWindowFlags_NoScrollbar)) {
-                    ImGui::Text("光源タイプ");
-                    ImGui::Spacing();
-
-                    const char *lightingTypes[] = {"HalfLambert", "BlinnPhong"};
-                    int selectedLightingType = directionalLightData_->BlinnPhong ? 1 : 0;
-
-                    ImGui::SetNextItemWidth(200);
-                    if (ImGui::Combo("##lightingType", &selectedLightingType, lightingTypes, IM_ARRAYSIZE(lightingTypes))) {
-                        directionalLightData_->HalfLambert = (selectedLightingType == 0) ? 1 : 0;
-                        directionalLightData_->BlinnPhong = (selectedLightingType == 1) ? 1 : 0;
-                    }
-                }
-                ImGui::EndChild();
-
                 ImGui::Spacing();
             }
             ImGui::EndTabItem();
         }
 
-        // 点光源タブ
+        // ============================================================
+        // 点光源
+        // ============================================================
         if (ImGui::BeginTabItem("点光源")) {
             ImGui::Spacing();
 
-            // 追加・削除ボタン
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
-            if (ImGui::Button("点光源を追加") && pointLights_.size() < MAX_POINT_LIGHTS) {
+            // 追加ボタン（上限到達時は無効化）+ 個数表示
+            const bool canAddPoint = pointLights_.size() < MAX_POINT_LIGHTS;
+            ImGui::BeginDisabled(!canAddPoint);
+            ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgGreen);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 0.52f, 0.40f));
+            if (ImGui::Button("点光源を追加")) {
                 AddPointLight();
             }
+            ImGui::PopStyleColor(2);
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::Text("(%d / %d)", static_cast<int>(pointLights_.size()), MAX_POINT_LIGHTS);
             ImGui::PopStyleColor();
 
-            ImGui::SameLine();
-            ImGui::Text("(%d/%d)", static_cast<int>(pointLights_.size()), MAX_POINT_LIGHTS);
-
-            ImGui::Separator();
             ImGui::Spacing();
 
-            // 各点光源の設定
             for (int i = 0; i < static_cast<int>(pointLights_.size()); ++i) {
                 ImGui::PushID(i);
 
                 std::string headerLabel = std::format("点光源 #{}", i + 1);
                 if (ImGui::CollapsingHeader(headerLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
 
-                    // 削除ボタン
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-                    if (ImGui::Button("削除", ImVec2(60, 25))) {
+                    // 削除
+                    ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgRed);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.46f, 0.46f, 0.40f));
+                    bool del = ImGui::SmallButton("削除");
+                    ImGui::PopStyleColor(2);
+                    if (del) {
                         RemovePointLight(i);
-                        ImGui::PopStyleColor();
                         ImGui::PopID();
                         break;
                     }
-                    ImGui::PopStyleColor();
 
-                    ImGui::Spacing();
+                    if (ImGui::BeginTable("##PtTable", 2, ImGuiTableFlags_SizingStretchProp)) {
+                        ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                        ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
-                    if (ImGui::BeginChild(("PointLight" + std::to_string(i)).c_str(), ImVec2(0, 200), true)) {
+                        Row("有効", "この光源の有効 / 無効", [&] {
+                            bool active = pointLights_[i].active;
+                            if (ImGui::Checkbox("##active", &active))
+                                pointLights_[i].active = active;
+                        });
+                        Row("位置", nullptr, [&] {
+                            ImGui::DragFloat3("##position", &pointLights_[i].position.x, 0.1f, 0.0f, 0.0f, "%.2f");
+                        });
+                        Row("色", nullptr, [&] {
+                            ImGui::ColorEdit3("##color", &pointLights_[i].color.x, ImGuiColorEditFlags_NoInputs);
+                        });
+                        Row("輝度", nullptr, [&] {
+                            ImGui::DragFloat("##intensity", &pointLights_[i].intensity, 0.01f, 0.0f, 10.0f, "%.2f");
+                        });
+                        Row("半径", nullptr, [&] {
+                            ImGui::DragFloat("##radius", &pointLights_[i].radius, 0.1f, 0.1f, 100.0f, "%.2f");
+                        });
+                        Row("減衰率", nullptr, [&] {
+                            ImGui::DragFloat("##decay", &pointLights_[i].decay, 0.1f, 0.0f, 5.0f, "%.2f");
+                        });
+                        Row("ライティング", nullptr, [&] {
+                            const char *types[] = {"HalfLambert", "BlinnPhong"};
+                            int sel = pointLights_[i].BlinnPhong ? 1 : 0;
+                            if (ImGui::Combo("##lighting", &sel, types, IM_ARRAYSIZE(types))) {
+                                pointLights_[i].HalfLambert = (sel == 0) ? 1 : 0;
+                                pointLights_[i].BlinnPhong = (sel == 1) ? 1 : 0;
+                            }
+                        });
 
-                        ImGui::Columns(2, nullptr, false);
-                        ImGui::SetColumnWidth(0, 150);
-
-                        // アクティブ状態
-                        ImGui::Text("有効");
-                        ImGui::NextColumn();
-                        bool active = pointLights_[i].active;
-                        if (ImGui::Checkbox("##active", &active)) {
-                            pointLights_[i].active = active;
-                        }
-                        ImGui::NextColumn();
-
-                        // 位置
-                        ImGui::Text("位置");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat3("##position", &pointLights_[i].position.x, 0.1f);
-                        ImGui::NextColumn();
-
-                        // 色
-                        ImGui::Text("色");
-                        ImGui::NextColumn();
-                        ImGui::ColorEdit3("##color", &pointLights_[i].color.x);
-                        ImGui::NextColumn();
-
-                        // 輝度
-                        ImGui::Text("輝度");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat("##intensity", &pointLights_[i].intensity, 0.01f, 0.0f, 10.0f);
-                        ImGui::NextColumn();
-
-                        // 半径
-                        ImGui::Text("半径");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat("##radius", &pointLights_[i].radius, 0.1f, 0.1f, 100.0f);
-                        ImGui::NextColumn();
-
-                        // 減衰率
-                        ImGui::Text("減衰率");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat("##decay", &pointLights_[i].decay, 0.1f, 0.0f, 5.0f);
-                        ImGui::NextColumn();
-
-                        // ライティングタイプ
-                        ImGui::Text("ライティング");
-                        ImGui::NextColumn();
-                        const char *lightingTypes[] = {"HalfLambert", "BlinnPhong"};
-                        int selectedType = pointLights_[i].BlinnPhong ? 1 : 0;
-                        if (ImGui::Combo("##lighting", &selectedType, lightingTypes, IM_ARRAYSIZE(lightingTypes))) {
-                            pointLights_[i].HalfLambert = (selectedType == 0) ? 1 : 0;
-                            pointLights_[i].BlinnPhong = (selectedType == 1) ? 1 : 0;
-                        }
-
-                        ImGui::Columns(1);
+                        ImGui::EndTable();
                     }
-                    ImGui::EndChild();
                 }
 
                 ImGui::PopID();
             }
 
             ImGui::Spacing();
-
             ImGui::EndTabItem();
         }
 
-        // スポットライトタブ
+        // ============================================================
+        // スポットライト
+        // ============================================================
         if (ImGui::BeginTabItem("スポットライト")) {
             ImGui::Spacing();
 
-            // 追加・削除ボタン
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
-            if (ImGui::Button("スポットライトを追加") && spotLights_.size() < MAX_SPOT_LIGHTS) {
+            const bool canAddSpot = spotLights_.size() < MAX_SPOT_LIGHTS;
+            ImGui::BeginDisabled(!canAddSpot);
+            ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgGreen);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 0.52f, 0.40f));
+            if (ImGui::Button("スポットライトを追加")) {
                 AddSpotLight();
             }
+            ImGui::PopStyleColor(2);
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::Text("(%d / %d)", static_cast<int>(spotLights_.size()), MAX_SPOT_LIGHTS);
             ImGui::PopStyleColor();
 
-            ImGui::SameLine();
-            ImGui::Text("(%d/%d)", static_cast<int>(spotLights_.size()), MAX_SPOT_LIGHTS);
-
-            ImGui::Separator();
             ImGui::Spacing();
 
-            // 各スポットライトの設定
             for (int i = 0; i < static_cast<int>(spotLights_.size()); ++i) {
                 ImGui::PushID(i);
 
                 std::string headerLabel = std::format("スポットライト #{}", i + 1);
                 if (ImGui::CollapsingHeader(headerLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
 
-                    // 削除ボタン
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-                    if (ImGui::Button("削除", ImVec2(60, 25))) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgRed);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.46f, 0.46f, 0.40f));
+                    bool del = ImGui::SmallButton("削除");
+                    ImGui::PopStyleColor(2);
+                    if (del) {
                         RemoveSpotLight(i);
-                        ImGui::PopStyleColor();
                         ImGui::PopID();
                         break;
                     }
-                    ImGui::PopStyleColor();
 
-                    ImGui::Spacing();
+                    if (ImGui::BeginTable("##SpTable", 2, ImGuiTableFlags_SizingStretchProp)) {
+                        ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                        ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
-                    if (ImGui::BeginChild(("SpotLight" + std::to_string(i)).c_str(), ImVec2(0, 280), true)) {
+                        Row("有効", "この光源の有効 / 無効", [&] {
+                            bool active = spotLights_[i].active;
+                            if (ImGui::Checkbox("##active", &active))
+                                spotLights_[i].active = active;
+                        });
+                        Row("位置", nullptr, [&] {
+                            ImGui::DragFloat3("##position", &spotLights_[i].position.x, 0.1f, 0.0f, 0.0f, "%.2f");
+                        });
+                        Row("方向", "自動で正規化", [&] {
+                            if (ImGui::DragFloat3("##direction", &spotLights_[i].direction.x, 0.01f, -1.0f, 1.0f, "%.2f"))
+                                spotLights_[i].direction = spotLights_[i].direction.Normalize();
+                        });
+                        Row("色", nullptr, [&] {
+                            ImGui::ColorEdit3("##color", &spotLights_[i].color.x, ImGuiColorEditFlags_NoInputs);
+                        });
+                        Row("輝度", nullptr, [&] {
+                            ImGui::DragFloat("##intensity", &spotLights_[i].intensity, 0.01f, 0.0f, 10.0f, "%.2f");
+                        });
+                        Row("距離", nullptr, [&] {
+                            ImGui::DragFloat("##distance", &spotLights_[i].distance, 0.1f, 0.1f, 100.0f, "%.2f");
+                        });
+                        Row("減衰率", nullptr, [&] {
+                            ImGui::DragFloat("##decay", &spotLights_[i].decay, 0.1f, 0.0f, 5.0f, "%.2f");
+                        });
+                        Row("余弦", "スポットの広がり (cos)", [&] {
+                            ImGui::DragFloat("##cosAngle", &spotLights_[i].cosAngle, 0.01f, -1.0f, 1.0f, "%.2f");
+                        });
+                        Row("ライティング", nullptr, [&] {
+                            const char *types[] = {"HalfLambert", "BlinnPhong"};
+                            int sel = spotLights_[i].BlinnPhong ? 1 : 0;
+                            if (ImGui::Combo("##lighting", &sel, types, IM_ARRAYSIZE(types))) {
+                                spotLights_[i].HalfLambert = (sel == 0) ? 1 : 0;
+                                spotLights_[i].BlinnPhong = (sel == 1) ? 1 : 0;
+                            }
+                        });
 
-                        ImGui::Columns(2, nullptr, false);
-                        ImGui::SetColumnWidth(0, 150);
-
-                        // アクティブ状態
-                        ImGui::Text("有効");
-                        ImGui::NextColumn();
-                        bool active = spotLights_[i].active;
-                        if (ImGui::Checkbox("##active", &active)) {
-                            spotLights_[i].active = active;
-                        }
-                        ImGui::NextColumn();
-
-                        // 位置
-                        ImGui::Text("位置");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat3("##position", &spotLights_[i].position.x, 0.1f);
-                        ImGui::NextColumn();
-
-                        // 方向
-                        ImGui::Text("方向");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat3("##direction", &spotLights_[i].direction.x, 0.1f);
-                        spotLights_[i].direction = spotLights_[i].direction.Normalize();
-                        ImGui::NextColumn();
-
-                        // 色
-                        ImGui::Text("色");
-                        ImGui::NextColumn();
-                        ImGui::ColorEdit3("##color", &spotLights_[i].color.x);
-                        ImGui::NextColumn();
-
-                        // 輝度
-                        ImGui::Text("輝度");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat("##intensity", &spotLights_[i].intensity, 0.01f, 0.0f, 10.0f);
-                        ImGui::NextColumn();
-
-                        // 距離
-                        ImGui::Text("距離");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat("##distance", &spotLights_[i].distance, 0.1f, 0.1f, 100.0f);
-                        ImGui::NextColumn();
-
-                        // 減衰率
-                        ImGui::Text("減衰率");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat("##decay", &spotLights_[i].decay, 0.1f, 0.0f, 5.0f);
-                        ImGui::NextColumn();
-
-                        // 余弦
-                        ImGui::Text("余弦");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat("##cosAngle", &spotLights_[i].cosAngle, 0.01f, -1.0f, 1.0f);
-                        ImGui::NextColumn();
-
-                        // ライティングタイプ
-                        ImGui::Text("ライティング");
-                        ImGui::NextColumn();
-                        const char *lightingTypes[] = {"HalfLambert", "BlinnPhong"};
-                        int selectedType = spotLights_[i].BlinnPhong ? 1 : 0;
-                        if (ImGui::Combo("##lighting", &selectedType, lightingTypes, IM_ARRAYSIZE(lightingTypes))) {
-                            spotLights_[i].HalfLambert = (selectedType == 0) ? 1 : 0;
-                            spotLights_[i].BlinnPhong = (selectedType == 1) ? 1 : 0;
-                        }
-
-                        ImGui::Columns(1);
+                        ImGui::EndTable();
                     }
-                    ImGui::EndChild();
                 }
 
                 ImGui::PopID();
             }
 
             ImGui::Spacing();
-
             ImGui::EndTabItem();
         }
 
         ImGui::EndTabBar();
     }
 
-    // セーブ・ロードのUI
+    // ── セーブ / ロード ──
     ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Text("セーブ・ロード");
-    ImGui::Spacing();
+    SectionHeader("[ セーブ / ロード ]", DebugTheme::kAccentPurple);
 
-    // ファイル名入力
     static char saveFileName[256] = "DefaultLightSetting";
-    ImGui::SetNextItemWidth(200);
-    ImGui::InputText("ファイル名", saveFileName, sizeof(saveFileName));
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputTextWithHint("##lightfile", "ファイル名", saveFileName, sizeof(saveFileName));
+    ImGui::Spacing();
 
-    ImGui::SameLine();
-
-    // セーブボタン
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f));
-    if (ImGui::Button("セーブ", ImVec2(80, 25))) {
+    // 保存・読込（通知は SaveLightData / LoadLightData 側で投稿する）
+    float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.42f, 0.58f, 0.85f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.52f, 0.70f, 0.95f));
+    if (ImGui::Button("セーブ", ImVec2(bw, 0.0f))) {
         SaveLightData(std::string(saveFileName));
-        std::string msg = std::format("LightData saved to: 「{}」", saveFileName);
-        ImGuiNotification::Post(msg);
     }
-    ImGui::PopStyleColor();
-
+    ImGui::PopStyleColor(2);
     ImGui::SameLine();
-
-    // ロードボタン
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.8f, 0.2f, 1.0f));
-    if (ImGui::Button("ロード", ImVec2(80, 25))) {
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.48f, 0.40f, 0.85f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.60f, 0.50f, 0.95f));
+    if (ImGui::Button("ロード", ImVec2(bw, 0.0f))) {
         LoadLightData(std::string(saveFileName));
-        std::string msg = std::format("LightData loaded from: 「{}」", saveFileName);
-        ImGuiNotification::Post(msg, {0.2f, 0.2f, 0.8f, 1.0f});
     }
-    ImGui::PopStyleColor();
-
-    // スタイルを元に戻す
-    style.ChildRounding = originalRounding;
-    style.FramePadding = ImVec2(originalPadding, style.FramePadding.y);
+    ImGui::PopStyleColor(2);
 #endif // USE_IMGUI
 }
 

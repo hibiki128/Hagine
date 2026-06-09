@@ -1180,14 +1180,14 @@ void ParticleCSEmitter::DrawImGui() {
             ImGuiStyle &style = ImGui::GetStyle();
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.13f, 0.14f, 0.15f, 1.00f));
 
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.2f, 0.2f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.5f, 0.3f, 0.3f, 0.9f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.6f, 0.4f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.34f, 0.26f, 0.26f, 0.55f));
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.42f, 0.32f, 0.32f, 0.70f));
+            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.50f, 0.40f, 0.40f, 0.85f));
 
             if (ImGui::CollapsingHeader("エミッターデータ##EmitterData")) {
                 ImGui::PopStyleColor(3);
 
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.6f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
                 ImGui::Text("エミッター設定:");
                 ImGui::PopStyleColor();
 
@@ -1227,7 +1227,7 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::Separator();
 
                 ImGui::Spacing();
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.7f, 0.9f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
                 ImGui::Text("アンカーポイント:");
                 ImGui::PopStyleColor();
 
@@ -1238,7 +1238,7 @@ void ParticleCSEmitter::DrawImGui() {
 
                 // 発生位置設定（ラジオボタンで3択）
                 if (emitterMeshData_->triangleCount > 0 || emitterMeshData_->edgeCount > 0) {
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.9f, 0.6f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
                     ImGui::Text("発生位置:");
                     ImGui::PopStyleColor();
 
@@ -1318,7 +1318,7 @@ void ParticleCSEmitter::DrawImGui() {
             }
 
             ImGui::Separator();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.9f, 1.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("フィールド影響設定");
             ImGui::PopStyleColor();
             bool rf = receiveFields_;
@@ -1403,9 +1403,9 @@ void ParticleCSEmitter::DrawImGui() {
                 for (auto &n : groupNames)
                     groupNameCStrs.push_back(n.c_str());
 
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.4f, 0.8f));
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 0.8f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.9f));
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.16f, 0.18f, 0.22f, 0.85f));
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.34f, 0.48f, 0.85f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.44f, 0.60f, 0.95f));
 
                 ImGui::SetNextItemWidth(200.0f);
                 ImGui::Combo("選択中のグループ##GroupCombo", &selectedGroupIndex, groupNameCStrs.data(), (int)groupNameCStrs.size());
@@ -1428,9 +1428,9 @@ void ParticleCSEmitter::DrawImGui() {
             ImGui::Spacing();
 
             // グループ管理セクション
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.3f, 0.5f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.4f, 0.6f, 0.9f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.5f, 0.7f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.28f, 0.32f, 0.40f, 0.55f));
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.34f, 0.40f, 0.50f, 0.70f));
+            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.42f, 0.48f, 0.58f, 0.85f));
 
             if (ImGui::CollapsingHeader("GPUグループ管理##GPUGroupManagement")) {
                 ImGui::PopStyleColor(3);
@@ -1473,7 +1473,7 @@ void ParticleCSEmitter::DrawImGui() {
                 float halfWidth = width * 0.45f;
 
                 // ヘッダーテキストのスタイル
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.9f, 1.0f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
                 ImGui::Text("利用可能なGPUグループ");
                 ImGui::SameLine(width - halfWidth - 50);
                 ImGui::Text("アタッチ済みGPUグループ");
@@ -1487,9 +1487,9 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::BeginChild("gpu_available_groups##GPUAvailableGroups", ImVec2(halfWidth, 200), true);
 
-                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.6f, 0.6f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.8f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.6f, 0.8f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.28f, 0.34f, 0.42f, 0.55f));
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.34f, 0.42f, 0.52f, 0.70f));
+                ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.40f, 0.50f, 0.60f, 0.85f));
 
                 if (availableItems.empty()) {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
@@ -1528,9 +1528,9 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 12));
 
                 // ボタンのスタイル設定
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.40f, 0.30f, 0.85f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.28f, 0.50f, 0.38f, 0.95f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.32f, 0.58f, 0.44f, 1.0f));
 
                 bool canMoveRight = !leftSelected.empty();
                 if (!canMoveRight) {
@@ -1577,9 +1577,9 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::BeginChild("gpu_attached_groups##GPUAttachedGroups", ImVec2(halfWidth, 200), true);
 
-                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.6f, 0.4f, 0.2f, 0.6f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.7f, 0.5f, 0.3f, 0.8f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.8f, 0.6f, 0.4f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.44f, 0.36f, 0.26f, 0.55f));
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.52f, 0.42f, 0.30f, 0.70f));
+                ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.58f, 0.48f, 0.36f, 0.85f));
 
                 if (attachedItems.empty()) {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
@@ -1629,18 +1629,18 @@ void ParticleCSEmitter::DrawImGui() {
             ImGui::Spacing();
 
             // ファイル操作セクション
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.3f, 0.2f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.5f, 0.4f, 0.3f, 0.9f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.6f, 0.5f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.38f, 0.32f, 0.26f, 0.55f));
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.46f, 0.38f, 0.30f, 0.70f));
+            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.52f, 0.44f, 0.36f, 0.85f));
 
             if (ImGui::CollapsingHeader("GPUファイル操作##GPUFileOperations")) {
                 ImGui::PopStyleColor(3);
 
                 ImGui::Spacing();
 
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 0.8f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.6f, 0.9f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.7f, 1.0f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.34f, 0.48f, 0.85f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.44f, 0.60f, 0.95f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.36f, 0.52f, 0.70f, 1.0f));
 
                 if (ImGui::Button("GPU設定を保存##GPUSaveButton", ImVec2(120, 35))) {
                     SaveSetting();

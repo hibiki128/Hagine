@@ -195,7 +195,7 @@ void DebugCamera::imgui() {
     // [1] Position / Rotation
     // ====================================================
     ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderBlue);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.25f, 0.60f, 1.0f, 0.35f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.60f, 0.78f, 0.35f});
     bool posOpen = ImGui::CollapsingHeader("位置 / 回転##campr",
                                            ImGuiTreeNodeFlags_DefaultOpen);
     ImGui::PopStyleColor(2);
@@ -213,7 +213,7 @@ void DebugCamera::imgui() {
 
         // 位置履歴グラフ
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgBlue);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.55f, 1.0f, 0.20f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.60f, 0.78f, 0.20f});
         if (ImGui::CollapsingHeader("位置履歴 (グラフ)##camhist")) {
             constexpr int kN = 100;
             static float hx[kN]{}, hy[kN]{}, hz[kN]{};
@@ -272,7 +272,7 @@ void DebugCamera::imgui() {
             ImGui::TextUnformatted("クォータニオン (X / Y / Z / W)");
             ImGui::PopStyleColor();
             ImGui::SetNextItemWidth(-1);
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.42f, 0.66f, 0.68f, 0.12f});
             ImGui::DragFloat4("##camquat", &quateRotation_.x, 0.01f, -1.f, 1.f, "%.3f");
             ImGui::PopStyleColor();
 
@@ -292,7 +292,7 @@ void DebugCamera::imgui() {
                            eulerRotation_.y * r2d,
                            eulerRotation_.z * r2d};
             ImGui::SetNextItemWidth(-1);
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.42f, 0.66f, 0.68f, 0.12f});
             if (ImGui::DragFloat3("##cameuler", &deg.x, 1.f, -360.f, 360.f, "%.1f"))
                 eulerRotation_ = {deg.x * d2r, deg.y * d2r, deg.z * d2r};
             ImGui::PopStyleColor();
@@ -321,7 +321,7 @@ void DebugCamera::imgui() {
     // [2] Move Speed
     // ====================================================
     ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderOrange);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.65f, 0.15f, 0.35f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.82f, 0.58f, 0.36f, 0.35f});
     bool moveOpen = ImGui::CollapsingHeader("移動速度##cammv",
                                             ImGuiTreeNodeFlags_DefaultOpen);
     ImGui::PopStyleColor(2);
@@ -362,7 +362,7 @@ void DebugCamera::imgui() {
     // [3] Input / Control
     // ====================================================
     ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderPurple);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.75f, 0.35f, 1.0f, 0.35f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.62f, 0.50f, 0.74f, 0.35f});
     bool ctrlOpen = ImGui::CollapsingHeader("入力 / 操作##camctl",
                                             ImGuiTreeNodeFlags_DefaultOpen);
     ImGui::PopStyleColor(2);
@@ -413,7 +413,7 @@ void DebugCamera::imgui() {
     // [4] Status (compact read-only table)
     // ====================================================
     ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgGreen);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.85f, 0.50f, 0.20f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.68f, 0.52f, 0.20f});
     bool stOpen = ImGui::CollapsingHeader("ステータス##camst");
     ImGui::PopStyleColor(2);
 

@@ -531,7 +531,7 @@ ParticleField *ParticleCSFieldManager::CreateField(const std::string &name, cons
 // =============================================
 void ParticleCSFieldManager::DrawImGui() {
 #ifdef USE_IMGUI
-    ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(0.15f, 0.3f, 0.5f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(0.16f, 0.18f, 0.22f, 1.0f));
     ImGui::SetNextWindowSize(ImVec2(420, 600), ImGuiCond_FirstUseEver);
 
     bool show = true;
@@ -544,16 +544,16 @@ void ParticleCSFieldManager::DrawImGui() {
     ImGui::PopStyleColor();
 
     // ヘッダー情報
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.9f, 1.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::Text("フィールド数: %d / %d", static_cast<int>(fields_.size()), kMaxFields);
     ImGui::PopStyleColor();
     ImGui::Separator();
     ImGui::Spacing();
 
     // フィールド追加ボタン
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.55f, 0.2f, 0.8f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.85f, 0.4f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.40f, 0.30f, 0.85f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.28f, 0.50f, 0.38f, 0.95f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.32f, 0.58f, 0.44f, 1.0f));
     if (ImGui::Button("フィールドを追加", ImVec2(-1, 30))) {
         ParticleField newField;
         newField.name = "Field_" + std::to_string(fields_.size());
@@ -573,30 +573,30 @@ void ParticleCSFieldManager::DrawImGui() {
         const char *typeLabel;
         switch (static_cast<ParticleFieldType>(f.data.fieldType)) {
         case ParticleFieldType::Wind:
-            headerColor = ImVec4(0.2f, 0.5f, 0.8f, 0.9f);
+            headerColor = ImVec4(0.30f, 0.40f, 0.52f, 0.55f);
             typeLabel = "[風]";
             break;
         case ParticleFieldType::Attract:
-            headerColor = ImVec4(0.7f, 0.3f, 0.7f, 0.9f);
+            headerColor = ImVec4(0.42f, 0.34f, 0.50f, 0.55f);
             typeLabel = "[引力]";
             break;
         case ParticleFieldType::Repel:
-            headerColor = ImVec4(0.8f, 0.4f, 0.2f, 0.9f);
+            headerColor = ImVec4(0.52f, 0.40f, 0.28f, 0.55f);
             typeLabel = "[斥力]";
             break;
         case ParticleFieldType::Vortex:
-            headerColor = ImVec4(0.2f, 0.7f, 0.6f, 0.9f);
+            headerColor = ImVec4(0.30f, 0.46f, 0.44f, 0.55f);
             typeLabel = "[渦巻き]";
             break;
         default:
-            headerColor = ImVec4(0.4f, 0.4f, 0.4f, 0.9f);
+            headerColor = ImVec4(0.32f, 0.33f, 0.36f, 0.55f);
             typeLabel = "[不明]";
             break;
         }
 
         // 無効時はグレーアウト
         if (!f.enabled) {
-            headerColor = ImVec4(0.35f, 0.35f, 0.35f, 0.8f);
+            headerColor = ImVec4(0.28f, 0.28f, 0.30f, 0.55f);
         }
 
         ImGui::PushStyleColor(ImGuiCol_Header, headerColor);
@@ -616,9 +616,9 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::SameLine();
 
             // 保存ボタン
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.7f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.55f, 0.9f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.7f, 1.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.34f, 0.48f, 0.85f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.44f, 0.60f, 0.95f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.36f, 0.52f, 0.70f, 1.0f));
             if (ImGui::Button(("保存##save" + std::to_string(i)).c_str(), ImVec2(50, 0))) {
                 SaveField(f);
             }
@@ -626,9 +626,9 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::SameLine();
 
             // 削除ボタン
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.2f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.46f, 0.24f, 0.24f, 0.85f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.58f, 0.30f, 0.30f, 0.95f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.66f, 0.36f, 0.36f, 1.0f));
             if (ImGui::Button(("削除##del" + std::to_string(i)).c_str(), ImVec2(60, 0))) {
                 removeIndex = i;
             }
@@ -647,7 +647,7 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::Separator();
 
             // フィールドタイプ選択
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.9f, 1.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("フィールド種類");
             ImGui::PopStyleColor();
 
@@ -661,7 +661,7 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::Separator();
 
             // 位置・範囲
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.9f, 1.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("位置・影響範囲");
             ImGui::PopStyleColor();
 
@@ -675,7 +675,7 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::Separator();
 
             // タイプ別パラメータ
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.9f, 1.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("フィールドパラメータ");
             ImGui::PopStyleColor();
 
@@ -698,7 +698,7 @@ void ParticleCSFieldManager::DrawImGui() {
             // -----------------------------------------------
             // 寿命ドレイン
             // -----------------------------------------------
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.7f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("寿命ドレイン");
             ImGui::PopStyleColor();
 
@@ -719,7 +719,7 @@ void ParticleCSFieldManager::DrawImGui() {
             // -----------------------------------------------
             // トレイル強制生成
             // -----------------------------------------------
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 1.0f, 0.7f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("トレイル強制生成");
             ImGui::PopStyleColor();
 
@@ -740,7 +740,7 @@ void ParticleCSFieldManager::DrawImGui() {
             // -----------------------------------------------
             // カラー乗算
             // -----------------------------------------------
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.9f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("カラー乗算");
             ImGui::PopStyleColor();
 
@@ -762,7 +762,7 @@ void ParticleCSFieldManager::DrawImGui() {
             // -----------------------------------------------
             // 一度きり設定上書き
             // -----------------------------------------------
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.9f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("一度きり設定上書き");
             ImGui::PopStyleColor();
             ImGui::SameLine();
@@ -782,7 +782,7 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::Separator();
 
             // --- Emit時スポーン判定 ---
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 1.0f, 0.6f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("Emit スポーン判定");
             ImGui::PopStyleColor();
             ImGui::SameLine();
@@ -825,7 +825,7 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::Separator();
 
             // --- グループID ---
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.85f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("グループID");
             ImGui::PopStyleColor();
             ImGui::SameLine();
@@ -864,7 +864,7 @@ void ParticleCSFieldManager::DrawImGui() {
     // -----------------------------------------------
     ImGui::Spacing();
     ImGui::Separator();
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 1.0f, 0.7f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("デバッグ表示");
     ImGui::PopStyleColor();
     ImGui::Checkbox("ギズモ表示##gizmo", &showGizmos_);
@@ -961,7 +961,7 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     ImGui::TextDisabled("チェックした項目だけ上書きされます");
 
     // ---- 寿命 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.4f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ 寿命 ]");
     ImGui::PopStyleColor();
     CheckBit("寿命Min##ov", LifeTimeMin, ov.lifeTimeMin, 0.0f, 99999.0f);
@@ -970,28 +970,28 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
         ImGui::SetTooltip("lifeTimeMax は lifeTime を直接上書きします\n例: 100000→1.5");
 
     // ---- スケール ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 1.0f, 0.6f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ スケール ]");
     ImGui::PopStyleColor();
     CheckBit("スケールMin##ov", ScaleMin, ov.scaleMin, 0.0f, 99.0f);
     CheckBit("スケールMax##ov", ScaleMax, ov.scaleMax, 0.0f, 99.0f);
 
     // ---- 速度 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.8f, 1.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ 速度 ]");
     ImGui::PopStyleColor();
     CheckBitVec3("速度Min##ov", VelocityMin, ov.velocityMin);
     CheckBitVec3("速度Max##ov", VelocityMax, ov.velocityMax);
 
     // ---- 色 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.9f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ 色 ]");
     ImGui::PopStyleColor();
     CheckBitVec4("開始色##ov", StartColor, ov.startColor);
     CheckBitVec4("終了色##ov", EndColor, ov.endColor);
 
     // ---- LifetimeScale ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ スケールアニメーション ]");
     ImGui::PopStyleColor();
     CheckBitBool("LifetimeScale有効##ov", EnableLifetimeScale, ov.enableLifetimeScale);
@@ -1001,14 +1001,14 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     CheckBit("Sin振幅##ov", SinScaleAmplitude, ov.sinScaleAmplitude, 0.0f, 10.0f);
 
     // ---- 重力 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ 重力 ]");
     ImGui::PopStyleColor();
     CheckBitBool("重力有効##ov", EnableGravity, ov.enableGravity);
     CheckBitVec3("重力ベクトル##ov", Gravity, ov.gravity);
 
     // ---- トレイル ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 1.0f, 0.8f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ トレイル ]");
     ImGui::PopStyleColor();
     CheckBitBool("トレイル有効##ov", EnableTrail, ov.enableTrail);
@@ -1022,7 +1022,7 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     CheckBit("最小寿命##ov", TrailMinLifeTime, ov.trailMinLifeTime, 0.0f, 10.0f);
 
     // ---- ギャザー ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ ギャザー ]");
     ImGui::PopStyleColor();
     CheckBitBool("ギャザー有効##ov", EnableGather, ov.enableGather);
@@ -1031,7 +1031,7 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     CheckBitVec3("目標座標##ov", GatherTarget, ov.gatherTarget);
 
     // ---- ヴォルテックス ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ ヴォルテックス ]");
     ImGui::PopStyleColor();
     CheckBitBool("渦有効##ov", EnableVortex, ov.enableVortex);
@@ -1039,7 +1039,7 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     CheckBitVec3("渦軸##ov", VortexAxis, ov.vortexAxis);
 
     // ---- 加速度・減衰 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ 加速度 / ダンピング ]");
     ImGui::PopStyleColor();
     CheckBitBool("加速度有効##ov", EnableAcceleration, ov.enableAcceleration);
@@ -1050,7 +1050,7 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     CheckBit("開始比率##ovd", LifetimeVelDampingStart, ov.lifetimeVelDampingStart, 0.0f, 1.0f);
 
     // ---- CurlNoise ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
     ImGui::TextUnformatted("[ CurlNoise ]");
     ImGui::PopStyleColor();
     CheckBitBool("CurlNoise有効##ov", EnableCurlNoise, ov.enableCurlNoise);

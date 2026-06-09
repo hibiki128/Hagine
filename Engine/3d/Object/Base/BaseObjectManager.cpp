@@ -182,6 +182,14 @@ void BaseObjectManager::OpenObjectLoadModal() {
     showObjectLoadModal_ = true;
 }
 
+namespace {
+// 階層ツリーのドラッグ＆ドロップ結果は、ツリー描画中に親子を変更すると
+// イテレータが壊れるため、フレーム末にまとめて適用する
+std::string g_dndReparentChild;  // ドラッグされた子オブジェクト名
+std::string g_dndReparentParent; // ドロップ先の親（空文字 = ルートへ解除）
+bool g_dndReparentRequested = false;
+} // namespace
+
 void BaseObjectManager::ShowParentChildHierarchy() {
 #ifdef _DEBUG
 
@@ -231,9 +239,12 @@ void BaseObjectManager::ShowParentChildHierarchy() {
 
         ImGui::Separator();
         ImGui::Text("階層表示:");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.60f, 1.0f));
+        ImGui::TextUnformatted("（ノードをドラッグして別ノードに重ねると親子付け / 余白へドロップで解除）");
+        ImGui::PopStyleColor();
 
         // 階層構造を表示
-        ImGui::BeginChild("HierarchyView", ImVec2(0, 300), true);
+        ImGui::BeginChild("HierarchyView", ImVec2(0, 300), ImGuiChildFlags_Borders);
 
         for (auto &[name, obj] : objects_) {
             if (!obj->GetParent()) { // ルートオブジェクトのみ表示
@@ -241,7 +252,39 @@ void BaseObjectManager::ShowParentChildHierarchy() {
             }
         }
 
+        // 余白へのドロップでルート（親なし）へ解除できるようにする
+        ImVec2 dropAvail = ImGui::GetContentRegionAvail();
+        ImGui::Dummy(ImVec2(dropAvail.x, dropAvail.y > 8.0f ? dropAvail.y : 8.0f));
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload *p = ImGui::AcceptDragDropPayload("OBJ_NODE")) {
+                g_dndReparentChild = static_cast<const char *>(p->Data);
+                g_dndReparentParent.clear();
+                g_dndReparentRequested = true;
+            }
+            ImGui::EndDragDropTarget();
+        }
+
         ImGui::EndChild();
+
+        // ドラッグ＆ドロップの結果をツリー描画後にまとめて適用する
+        if (g_dndReparentRequested) {
+            if (g_dndReparentParent.empty()) {
+                RemoveParentChild(g_dndReparentChild);
+                ImGuiNotification::Post("親子付けを解除しました: " + g_dndReparentChild, {0.82f, 0.58f, 0.36f, 1.0f});
+            } else if (g_dndReparentChild != g_dndReparentParent) {
+                SetParentChild(g_dndReparentChild, g_dndReparentParent);
+                BaseObject *c = GetObjectByName(g_dndReparentChild);
+                BaseObject *p = GetObjectByName(g_dndReparentParent);
+                if (c && c->GetParent() == p) {
+                    ImGuiNotification::Post(g_dndReparentChild + " を " + g_dndReparentParent + " の子にしました", {0.45f, 0.68f, 0.52f, 1.0f});
+                } else {
+                    ImGuiNotification::Post("親子付けできません（循環参照など）", {0.82f, 0.58f, 0.36f, 1.0f});
+                }
+            }
+            g_dndReparentRequested = false;
+            g_dndReparentChild.clear();
+            g_dndReparentParent.clear();
+        }
     }
 #endif // _DEBUG
 }
@@ -264,6 +307,23 @@ void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth) {
     }
 
     bool nodeOpen = ImGui::TreeNodeEx(displayName.c_str(), flags);
+
+    // ドラッグ元: このノード
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+        const std::string &dragName = obj->GetName();
+        ImGui::SetDragDropPayload("OBJ_NODE", dragName.c_str(), dragName.size() + 1);
+        ImGui::Text("移動: %s", dragName.c_str());
+        ImGui::EndDragDropSource();
+    }
+    // ドロップ先: このノードを親にする
+    if (ImGui::BeginDragDropTarget()) {
+        if (const ImGuiPayload *p = ImGui::AcceptDragDropPayload("OBJ_NODE")) {
+            g_dndReparentChild = static_cast<const char *>(p->Data);
+            g_dndReparentParent = obj->GetName();
+            g_dndReparentRequested = true;
+        }
+        ImGui::EndDragDropTarget();
+    }
 
     if (nodeOpen) {
         // 子オブジェクトを表示
@@ -410,14 +470,14 @@ void BaseObjectManager::ShowSaveTargetManager() {
         ImGui::PopStyleColor();
 
         // 左リスト（セーブしない）
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.1f, 0.1f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.5f, 0.3f, 0.3f, 0.8f));
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.14f, 0.85f));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.30f, 0.32f, 0.36f, 0.60f));
 
         ImGui::BeginChild("non_save_targets##NonSaveTargets", ImVec2(listWidth, 200), true);
 
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.6f, 0.2f, 0.2f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.7f, 0.3f, 0.3f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.8f, 0.4f, 0.4f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.40f, 0.28f, 0.28f, 0.55f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.48f, 0.34f, 0.34f, 0.70f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.54f, 0.40f, 0.40f, 0.85f));
 
         if (nonSaveTargets.empty()) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
@@ -462,9 +522,9 @@ void BaseObjectManager::ShowSaveTargetManager() {
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
         } else {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.40f, 0.30f, 0.85f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.28f, 0.50f, 0.38f, 0.95f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.32f, 0.58f, 0.44f, 1.0f));
         }
 
         if (ImGui::Button("追加 >>##SaveAddButton", ImVec2(buttonWidth, 30)) && canMoveRight) {
@@ -482,9 +542,9 @@ void BaseObjectManager::ShowSaveTargetManager() {
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
         } else {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.3f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.4f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.46f, 0.24f, 0.24f, 0.85f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.58f, 0.30f, 0.30f, 0.95f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.66f, 0.36f, 0.36f, 1.0f));
         }
 
         if (ImGui::Button("<< 削除##SaveRemoveButton", ImVec2(buttonWidth, 30)) && canMoveLeft) {
@@ -502,9 +562,9 @@ void BaseObjectManager::ShowSaveTargetManager() {
         // 右リスト（セーブする）
         ImGui::BeginChild("save_targets##SaveTargets", ImVec2(listWidth, 200), true);
 
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.6f, 0.2f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.7f, 0.3f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.28f, 0.40f, 0.30f, 0.55f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.34f, 0.48f, 0.36f, 0.70f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.40f, 0.54f, 0.42f, 0.85f));
 
         if (saveTargets.empty()) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));

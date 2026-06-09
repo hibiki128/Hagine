@@ -6,6 +6,7 @@
 
 #include "../Utility/Debug/ImGui/ImGuiNotification.h"
 #include "../Utility/Debug/ImGui/ImGuizmoManager.h"
+#include "../Utility/Debug/ImGui/Debugui_improved.h"
 #include "ParticleGroupManager.h"
 #include <Particle/ParticleEditor.h>
 #include <set>
@@ -337,165 +338,113 @@ void ParticleEmitter::DebugParticleData() {
     if (!Manager_)
         return;
 
-    ImGuiStyle &style = ImGui::GetStyle();
-
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.13f, 0.14f, 0.15f, 1.00f));
-
     std::vector<std::string> groupNames = Manager_->GetParticleGroupsName();
     if (selectedGroupIndex_ >= groupNames.size()) {
         selectedGroupIndex_ = std::max(0, (int)groupNames.size() - 1);
     }
 
     if (!groupNames.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.4f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.9f));
-
         std::vector<const char *> groupNameCStrs;
         for (auto &n : groupNames)
             groupNameCStrs.push_back(n.c_str());
 
-        ImGui::SetNextItemWidth(200.0f);
-        ImGui::Combo("編集グループ", &selectedGroupIndex_, groupNameCStrs.data(), (int)groupNameCStrs.size());
-
-        ImGui::PopStyleColor(3);
+        SectionHeader("[ 編集グループ ]", DebugTheme::kAccentBlue);
+        ImGui::SetNextItemWidth(-1);
+        ImGui::Combo("##editGroup", &selectedGroupIndex_, groupNameCStrs.data(), (int)groupNameCStrs.size());
 
         std::string selectedGroup = groupNames[selectedGroupIndex_];
         ParticleSetting &setting = particleSettings_[selectedGroup];
 
-        ImGui::Separator();
         ImGui::Spacing();
 
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.2f, 0.2f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.5f, 0.3f, 0.3f, 0.9f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.6f, 0.4f, 0.4f, 1.0f));
-
         if (ImGui::CollapsingHeader("エミッターデータ")) {
-            ImGui::PopStyleColor(3);
+            if (ImGui::BeginTable("##EmitterTf", 2, ImGuiTableFlags_SizingStretchProp)) {
+                ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+                ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.6f, 1.0f));
-            ImGui::Text("Transformデータ:");
-            ImGui::PopStyleColor();
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted("位置");
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat3("##pos", &transform_.translation_.x, 0.1f, 0.0f, 0.0f, "%.2f");
 
-            ImGui::Separator();
-            ImGui::Columns(2, "TransformColumns", false);
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted("回転");
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(-1);
+                float rotationDegrees[3] = {
+                    radiansToDegrees(transform_.quateRotation_.x),
+                    radiansToDegrees(transform_.quateRotation_.y),
+                    radiansToDegrees(transform_.quateRotation_.z)};
+                if (ImGui::DragFloat3("##rot", rotationDegrees, 0.1f, -360.0f, 360.0f, "%.1f")) {
+                    transform_.quateRotation_.x = degreesToRadians(rotationDegrees[0]);
+                    transform_.quateRotation_.y = degreesToRadians(rotationDegrees[1]);
+                    transform_.quateRotation_.z = degreesToRadians(rotationDegrees[2]);
+                }
 
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 1.0f, 0.6f, 1.0f));
-            ImGui::Text("位置");
-            ImGui::PopStyleColor();
-            ImGui::NextColumn();
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.4f, 0.2f, 0.5f));
-            ImGui::DragFloat3("##位置", &transform_.translation_.x, 0.1f);
-            ImGui::PopStyleColor();
-            ImGui::NextColumn();
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted("大きさ");
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat3("##scl", &transform_.scale_.x, 0.1f, 0.0f, 0.0f, "%.2f");
 
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.8f, 1.0f, 1.0f));
-            ImGui::Text("回転");
-            ImGui::PopStyleColor();
-            ImGui::NextColumn();
-            float rotationDegrees[3] = {
-                radiansToDegrees(transform_.quateRotation_.x),
-                radiansToDegrees(transform_.quateRotation_.y),
-                radiansToDegrees(transform_.quateRotation_.z)};
-
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.3f, 0.4f, 0.5f));
-            if (ImGui::DragFloat3("##回転 (度)", rotationDegrees, 0.1f, -360.0f, 360.0f)) {
-                transform_.quateRotation_.x = degreesToRadians(rotationDegrees[0]);
-                transform_.quateRotation_.y = degreesToRadians(rotationDegrees[1]);
-                transform_.quateRotation_.z = degreesToRadians(rotationDegrees[2]);
+                ImGui::EndTable();
             }
-            ImGui::PopStyleColor();
-            ImGui::NextColumn();
 
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.6f, 1.0f));
-            ImGui::Text("大きさ");
-            ImGui::PopStyleColor();
-            ImGui::NextColumn();
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.3f, 0.2f, 0.5f));
-            ImGui::DragFloat3("##大きさ", &transform_.scale_.x, 0.1f, 0.0f);
-            ImGui::PopStyleColor();
-
-            ImGui::Columns(1);
-            ImGui::Separator();
-
-            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
             ImGui::Checkbox("表示", &isVisible_);
+            ImGui::PopStyleColor();
 #ifdef _DEBUG
+            ImGui::SameLine();
             if (ImGui::Checkbox("ギズモ選択", &isGizmoSelectable_)) {
                 ImGuizmoManager::GetInstance()->SetSelectable(name_, isGizmoSelectable_);
             }
 #endif
-            ImGui::PopStyleColor();
-        } else {
-            ImGui::PopStyleColor(3);
         }
 
         ImGui::Spacing();
 
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.2f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.5f, 0.3f, 0.9f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.6f, 0.4f, 1.0f));
-
         if (ImGui::CollapsingHeader("パーティクルデータ")) {
-            ImGui::PopStyleColor(3);
 
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
             if (ImGui::TreeNode("寿命")) {
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("寿命設定");
                 ImGui::PopStyleColor();
-
-                ImGui::Text("寿命設定:");
-                ImGui::Separator();
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.2f, 0.4f));
                 ImGui::DragFloat("最大値", &setting.lifeTimeMax, 0.01f, 0.0f);
                 ImGui::DragFloat("最小値", &setting.lifeTimeMin, 0.01f, 0.0f);
-                ImGui::PopStyleColor();
 
                 setting.lifeTimeMax = std::clamp(setting.lifeTimeMax, setting.lifeTimeMin, 10.0f);
                 setting.lifeTimeMin = std::clamp(setting.lifeTimeMin, 0.0f, setting.lifeTimeMax);
 
                 ImGui::TreePop();
-            } else {
-                ImGui::PopStyleColor();
             }
 
-            ImGui::Separator();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 1.0f, 0.8f, 1.0f));
             if (ImGui::TreeNode("位置")) {
-                ImGui::PopStyleColor();
-
-                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
                 ImGui::Checkbox("中心に集める", &setting.isGatherMode);
-                ImGui::PopStyleColor();
 
                 if (setting.isGatherMode) {
                     ImGui::Indent();
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.4f, 0.2f, 0.4f));
                     ImGui::DragFloat("強さ", &setting.gatherStrength, 0.1f);
                     ImGui::DragFloat("始まるタイミング", &setting.gatherStartRatio, 0.1f);
-                    ImGui::PopStyleColor();
                     ImGui::Unindent();
                 }
 
-                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
                 ImGui::Checkbox("外周", &setting.isEmitOnEdge);
-                ImGui::PopStyleColor();
                 ImGui::TreePop();
-            } else {
-                ImGui::PopStyleColor();
             }
 
-            ImGui::Separator();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 1.0f, 1.0f));
             if (ImGui::TreeNode("速度、加速度")) {
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("速度");
                 ImGui::PopStyleColor();
-
-                ImGui::Text("速度:");
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.4f, 0.4f));
                 ImGui::DragFloat3("最大値", &setting.velocityMax.x, 0.1f);
                 ImGui::DragFloat3("最小値", &setting.velocityMin.x, 0.1f);
-                ImGui::PopStyleColor();
 
                 setting.velocityMin.x = std::clamp(setting.velocityMin.x, -FLT_MAX, setting.velocityMax.x);
                 setting.velocityMax.x = std::clamp(setting.velocityMax.x, setting.velocityMin.x, FLT_MAX);
@@ -504,37 +453,25 @@ void ParticleEmitter::DebugParticleData() {
                 setting.velocityMin.z = std::clamp(setting.velocityMin.z, -FLT_MAX, setting.velocityMax.z);
                 setting.velocityMax.z = std::clamp(setting.velocityMax.z, setting.velocityMin.z, FLT_MAX);
 
-                ImGui::Text("加速度:");
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.2f, 0.4f, 0.4f));
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("加速度");
+                ImGui::PopStyleColor();
                 ImGui::DragFloat3("最初", &setting.startAcce.x, 0.001f);
                 ImGui::DragFloat3("最後", &setting.endAcce.x, 0.001f);
-                ImGui::PopStyleColor();
 
-                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.4f, 0.8f, 1.0f));
                 ImGui::Checkbox("乗算", &setting.isAcceMultiply);
-                ImGui::PopStyleColor();
 
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.2f, 0.4f));
                 ImGui::DragFloat("重力", &setting.gravity, 0.01f, -FLT_MAX, FLT_MAX);
-                ImGui::PopStyleColor();
                 ImGui::TreePop();
-            } else {
-                ImGui::PopStyleColor();
             }
 
-            ImGui::Separator();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.6f, 1.0f));
             if (ImGui::TreeNode("大きさ")) {
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                ImGui::TextUnformatted("大きさ");
                 ImGui::PopStyleColor();
 
-                ImGui::Text("大きさ:");
-
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.4f, 0.2f, 0.4f));
                 if (setting.isRandomAllSize) {
-                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.8f, 0.2f, 1.0f));
                     ImGui::Checkbox("最初と最後同じ大きさ", &setting.isEndScale);
-                    ImGui::PopStyleColor();
 
                     ImGui::DragFloat3("最大値", &setting.allScaleMax.x, 0.1f, 0.0f);
                     ImGui::DragFloat3("最小値", &setting.allScaleMin.x, 0.1f, 0.0f);
@@ -558,25 +495,14 @@ void ParticleEmitter::DebugParticleData() {
                     ImGui::DragFloat3("最初", &setting.particleStartScale.x, 0.1f, 0.0f);
                     ImGui::DragFloat3("最後", &setting.particleEndScale.x, 0.1f);
                 }
-                ImGui::PopStyleColor();
 
-                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.8f, 0.2f, 1.0f));
                 ImGui::Checkbox("均等にランダムな大きさ", &setting.isRandomSize);
                 ImGui::Checkbox("ばらばらにランダムな大きさ", &setting.isRandomAllSize);
                 ImGui::Checkbox("sin波の動き", &setting.isSinMove);
-                ImGui::PopStyleColor();
                 ImGui::TreePop();
-            } else {
-                ImGui::PopStyleColor();
             }
 
-            ImGui::Separator();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 1.0f, 1.0f, 1.0f));
             if (ImGui::TreeNode("回転")) {
-                ImGui::PopStyleColor();
-
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.4f, 0.4f, 0.4f));
                 if (!setting.isRandomRotate) {
                     float startRotationDegrees[3] = {
                         radiansToDegrees(setting.startRote.x),
@@ -619,9 +545,7 @@ void ParticleEmitter::DebugParticleData() {
                         setting.rotateStartMin.z = degreesToRadians(std::clamp(endRotationDegrees[2], -180.0f, radiansToDegrees(setting.rotateStartMax.z)));
                     }
 
-                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.8f, 1.0f));
                     ImGui::Checkbox("ランダムな回転速度", &setting.isRotateVelocity);
-                    ImGui::PopStyleColor();
 
                     if (setting.isRotateVelocity) {
                         ImGui::DragFloat3("最大値", &setting.rotateVelocityMax.x, 0.01f);
@@ -634,32 +558,19 @@ void ParticleEmitter::DebugParticleData() {
                         setting.rotateVelocityMax.z = std::clamp(setting.rotateVelocityMax.z, setting.rotateVelocityMin.z, FLT_MAX);
                     }
                 }
-                ImGui::PopStyleColor();
 
-                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 0.8f, 0.8f, 1.0f));
                 ImGui::Checkbox("ランダムな回転", &setting.isRandomRotate);
                 ImGui::Checkbox("進行方向に向ける", &setting.isFaceDirection);
-                ImGui::PopStyleColor();
                 ImGui::TreePop();
-            } else {
-                ImGui::PopStyleColor();
             }
 
-            ImGui::Separator();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 1.0f, 1.0f));
             if (ImGui::TreeNode("トレイル設定")) {
-                ImGui::PopStyleColor();
-
-                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.2f, 0.8f, 1.0f));
                 if (ImGui::Checkbox("トレイルを有効にする", &setting.enableTrail)) {
                     SetTrailEnabled(selectedGroup, setting.enableTrail);
                 }
-                ImGui::PopStyleColor();
 
                 if (setting.enableTrail) {
                     ImGui::Indent();
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.4f, 0.4f));
 
                     if (ImGui::DragFloat("トレイル生成間隔", &setting.trailSpawnInterval, 0.001f, 0.001f, 10.0f)) {
                         SetTrailInterval(selectedGroup, setting.trailSpawnInterval);
@@ -674,159 +585,92 @@ void ParticleEmitter::DebugParticleData() {
                         SetTrailColorMultiplier(selectedGroup, setting.trailColorMultiplier);
                     }
 
-                    ImGui::PopStyleColor();
-
-                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.2f, 0.8f, 1.0f));
                     if (ImGui::Checkbox("トレイル速度継承", &setting.trailInheritVelocity)) {
                         SetTrailVelocityInheritance(selectedGroup, setting.trailInheritVelocity, setting.trailVelocityScale);
                     }
-                    ImGui::PopStyleColor();
 
                     if (setting.trailInheritVelocity) {
-                        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.2f, 0.4f, 0.4f));
                         if (ImGui::DragFloat("トレイル速度スケール", &setting.trailVelocityScale, 0.01f)) {
                             SetTrailVelocityInheritance(selectedGroup, setting.trailInheritVelocity, setting.trailVelocityScale);
                         }
-                        ImGui::PopStyleColor();
                     }
                     ImGui::Unindent();
                 }
                 ImGui::TreePop();
-            } else {
-                ImGui::PopStyleColor();
             }
 
-            ImGui::Separator();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.8f, 1.0f));
             if (ImGui::TreeNode("色彩")) {
-                ImGui::PopStyleColor();
-
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
                 if (ImGui::TreeNode("色")) {
-                    ImGui::PopStyleColor();
                     ImGui::ColorEdit4("開始色", &setting.startColor.x);
                     ImGui::ColorEdit4("終了色", &setting.endColor.x);
                     ImGui::TreePop();
-                } else {
-                    ImGui::PopStyleColor();
                 }
 
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 1.0f, 1.0f));
                 if (ImGui::TreeNode("透明度")) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("透明度の設定");
                     ImGui::PopStyleColor();
-                    ImGui::Text("透明度の設定:");
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.4f, 0.4f));
                     ImGui::DragFloat("最大値", &setting.alphaMax, 0.01f, 0.0f, 1.0f);
                     ImGui::DragFloat("最小値", &setting.alphaMin, 0.01f, 0.0f, 1.0f);
-                    ImGui::PopStyleColor();
                     setting.alphaMin = std::clamp(setting.alphaMin, 0.0f, setting.alphaMax);
                     setting.alphaMax = std::clamp(setting.alphaMax, setting.alphaMin, 1.0f);
                     ImGui::TreePop();
-                } else {
-                    ImGui::PopStyleColor();
                 }
                 ImGui::TreePop();
-            } else {
-                ImGui::PopStyleColor();
             }
-        } else {
-            ImGui::PopStyleColor(3);
         }
 
         ImGui::Spacing();
-
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.2f, 0.4f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.5f, 0.9f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.4f, 0.6f, 1.0f));
 
         if (ImGui::CollapsingHeader("パーティクルの数、間隔")) {
-            ImGui::PopStyleColor(3);
-
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.4f, 0.5f));
             ImGui::DragFloat("間隔", &emitFrequency_, 0.001f, 0.001f, 100.0f);
             ImGui::InputInt("数", reinterpret_cast<int *>(&setting.count), 1, 100);
-            ImGui::PopStyleColor();
             setting.count = std::clamp(static_cast<int>(setting.count), 0, 10000);
-        } else {
-            ImGui::PopStyleColor(3);
         }
 
         ImGui::Spacing();
 
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.3f, 0.3f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.4f, 0.4f, 0.9f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
-
         if (ImGui::CollapsingHeader("各状態の設定")) {
-            ImGui::PopStyleColor(3);
-
             ImGui::Spacing();
 
-            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.6f, 0.8f, 0.6f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.4f, 0.4f, 0.4f, 0.7f));
-
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.7f, 1.0f));
-            ImGui::Text("レンダリング設定:");
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("レンダリング設定");
             ImGui::PopStyleColor();
 
-            ImGui::Separator();
-            ImGui::Indent();
             if (ImGui::TreeNode("ビルボード関連")) {
-
                 ImGui::Checkbox("ビルボード", &setting.isBillboard);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("パーティクルを常にカメラに向ける");
-                }
+                ImGui::SetItemTooltip("パーティクルを常にカメラに向ける");
 
                 ImGui::Checkbox("Xビルボード", &setting.isBillboardX);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("パーティクルのX軸を常にカメラに向ける");
-                }
+                ImGui::SetItemTooltip("パーティクルのX軸を常にカメラに向ける");
 
                 ImGui::Checkbox("Yビルボード", &setting.isBillboardY);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("パーティクルのY軸を常にカメラに向ける");
-                }
+                ImGui::SetItemTooltip("パーティクルのY軸を常にカメラに向ける");
 
                 ImGui::Checkbox("Zビルボード", &setting.isBillboardZ);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("パーティクルのZ軸を常にカメラに向ける");
-                }
+                ImGui::SetItemTooltip("パーティクルのZ軸を常にカメラに向ける");
 
                 ImGui::Checkbox("ランダムカラー", &setting.isRandomColor);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("パーティクルごとに異なる色を適用");
-                }
+                ImGui::SetItemTooltip("パーティクルごとに異なる色を適用");
                 ImGui::TreePop();
             }
-            ImGui::Unindent();
-            ImGui::PopStyleColor(3);
+
             ImGui::Spacing();
 
             if (ImGui::TreeNode("ブレンドモード")) {
                 ShowBlendModeCombo(setting.blendMode);
                 ImGui::TreePop();
             }
-
-        } else {
-            ImGui::PopStyleColor(3);
         }
 
         ImGui::Spacing();
     } else {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.6f, 0.6f, 1.0f));
-        ImGui::Text("グループがありません。");
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("グループがありません。");
         ImGui::PopStyleColor();
     }
 
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.3f, 0.5f, 0.8f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.4f, 0.6f, 0.9f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.5f, 0.7f, 1.0f));
-
     if (ImGui::CollapsingHeader("グループ管理")) {
-        ImGui::PopStyleColor(3);
 
         ImGui::Spacing();
 
@@ -867,29 +711,24 @@ void ParticleEmitter::DebugParticleData() {
         while (!rightSelected.empty() && rightSelected.back() >= attachedNames.size())
             rightSelected.pop_back();
 
+        // ドラッグ＆ドロップで利用可能 ⇔ アタッチ済み を移動する。ループ後にまとめて反映
+        std::string dndAttachName;   // 利用可能 → アタッチ
+        std::string dndDetachName;   // アタッチ → 解除
+
         float width = ImGui::GetContentRegionAvail().x;
         float halfWidth = width * 0.45f;
 
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.9f, 1.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::Text("利用可能なグループ");
         ImGui::SameLine(width - halfWidth - 50);
         ImGui::Text("アタッチ済みグループ");
         ImGui::PopStyleColor();
 
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 4));
-
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.1f, 0.15f, 0.2f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.4f, 0.5f, 0.8f));
-
-        ImGui::BeginChild("available_groups", ImVec2(halfWidth, 200), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
-
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.4f, 0.6f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.5f, 0.7f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.4f, 0.6f, 0.8f, 1.0f));
-
+        // ── 左: 利用可能（ドラッグ元 / アタッチ済みのドロップ先=解除）──
+        ImGui::BeginChild("available_groups", ImVec2(halfWidth, 200), ImGuiChildFlags_Borders);
         if (availableItems.empty()) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
-            ImGui::Text("利用可能なグループがありません");
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("利用可能なグループがありません");
             ImGui::PopStyleColor();
         } else {
             for (int i = 0; i < availableItems.size(); i++) {
@@ -913,10 +752,24 @@ void ParticleEmitter::DebugParticleData() {
                         leftSelected.clear();
                     }
                 }
+                // 利用可能アイテムをドラッグ元に
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                    ImGui::SetDragDropPayload("PG_AVAIL", &i, sizeof(int));
+                    ImGui::Text("追加: %s", availableItems[i]);
+                    ImGui::EndDragDropSource();
+                }
             }
         }
-
-        ImGui::PopStyleColor(3);
+        // アタッチ済みをこの領域にドロップ → 解除
+        ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, std::max(ImGui::GetContentRegionAvail().y, 8.0f)));
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("PG_ATTACHED")) {
+                int idx = *static_cast<const int *>(payload->Data);
+                if (idx >= 0 && idx < (int)attachedNames.size())
+                    dndDetachName = attachedNames[idx];
+            }
+            ImGui::EndDragDropTarget();
+        }
         ImGui::EndChild();
 
         ImGui::SameLine();
@@ -924,72 +777,55 @@ void ParticleEmitter::DebugParticleData() {
         ImGui::BeginGroup();
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 12));
 
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
-
         ImGui::PushID("move_right");
         bool canMoveRight = !leftSelected.empty();
-        if (!canMoveRight) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-        }
-
-        if (ImGui::Button("追加 >>", ImVec2(80, 35)) && canMoveRight) {
+        ImGui::BeginDisabled(!canMoveRight);
+        if (ImGui::Button("追加 >>", ImVec2(80, 35))) {
+            int moved = 0;
             for (auto it = leftSelected.rbegin(); it != leftSelected.rend(); ++it) {
                 int idx = *it;
                 ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(availableNames[idx]);
                 if (group) {
                     AddParticleGroup(group);
                     particleGroupNames_ = Manager_->GetParticleGroupsName();
+                    ++moved;
                 }
             }
             leftSelected.clear();
+            if (moved > 0)
+                ImGuiNotification::Post(std::to_string(moved) + " 個のグループをアタッチしました", {0.45f, 0.68f, 0.52f, 1.0f});
         }
-
-        if (!canMoveRight) {
-            ImGui::PopStyleColor(3);
-        }
+        ImGui::EndDisabled();
         ImGui::PopID();
 
         ImGui::PushID("move_left");
         bool canMoveLeft = !rightSelected.empty();
-        if (!canMoveLeft) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-        }
-
-        if (ImGui::Button("<< 削除", ImVec2(80, 35)) && canMoveLeft) {
+        ImGui::BeginDisabled(!canMoveLeft);
+        if (ImGui::Button("<< 削除", ImVec2(80, 35))) {
+            int moved = 0;
             for (auto it = rightSelected.rbegin(); it != rightSelected.rend(); ++it) {
                 int idx = *it;
                 RemoveParticleGroup(attachedNames[idx]);
                 particleGroupNames_ = Manager_->GetParticleGroupsName();
+                ++moved;
             }
             rightSelected.clear();
+            if (moved > 0)
+                ImGuiNotification::Post(std::to_string(moved) + " 個のグループを解除しました", {0.82f, 0.58f, 0.36f, 1.0f});
         }
-
-        if (!canMoveLeft) {
-            ImGui::PopStyleColor(3);
-        }
+        ImGui::EndDisabled();
         ImGui::PopID();
 
-        ImGui::PopStyleColor(3);
         ImGui::PopStyleVar();
         ImGui::EndGroup();
 
         ImGui::SameLine();
 
-        ImGui::BeginChild("attached_groups", ImVec2(halfWidth, 200), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
-
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.6f, 0.4f, 0.2f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.7f, 0.5f, 0.3f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.8f, 0.6f, 0.4f, 1.0f));
-
+        // ── 右: アタッチ済み（ドラッグ元 / 利用可能のドロップ先=追加）──
+        ImGui::BeginChild("attached_groups", ImVec2(halfWidth, 200), ImGuiChildFlags_Borders);
         if (attachedItems.empty()) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
-            ImGui::Text("アタッチされたグループがありません");
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("アタッチされたグループがありません");
             ImGui::PopStyleColor();
         } else {
             for (int i = 0; i < attachedItems.size(); i++) {
@@ -1010,107 +846,84 @@ void ParticleEmitter::DebugParticleData() {
                         rightSelected.clear();
                     }
                 }
+                // アタッチ済みアイテムをドラッグ元に
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                    ImGui::SetDragDropPayload("PG_ATTACHED", &i, sizeof(int));
+                    ImGui::Text("解除: %s", attachedItems[i]);
+                    ImGui::EndDragDropSource();
+                }
             }
         }
-
-        ImGui::PopStyleColor(3);
+        // 利用可能をこの領域にドロップ → 追加
+        ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, std::max(ImGui::GetContentRegionAvail().y, 8.0f)));
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("PG_AVAIL")) {
+                int idx = *static_cast<const int *>(payload->Data);
+                if (idx >= 0 && idx < (int)availableNames.size())
+                    dndAttachName = availableNames[idx];
+            }
+            ImGui::EndDragDropTarget();
+        }
         ImGui::EndChild();
 
-        ImGui::PopStyleColor(2);
-        ImGui::PopStyleVar();
+        // ドロップ確定をまとめて反映する
+        if (!dndAttachName.empty()) {
+            ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(dndAttachName);
+            if (group) {
+                AddParticleGroup(group);
+                particleGroupNames_ = Manager_->GetParticleGroupsName();
+                ImGuiNotification::Post("グループをアタッチしました: " + dndAttachName, {0.45f, 0.68f, 0.52f, 1.0f});
+            }
+        }
+        if (!dndDetachName.empty()) {
+            RemoveParticleGroup(dndDetachName);
+            particleGroupNames_ = Manager_->GetParticleGroupsName();
+            ImGuiNotification::Post("グループを解除しました: " + dndDetachName, {0.82f, 0.58f, 0.36f, 1.0f});
+        }
 
         ImGui::Spacing();
-        ImGui::Separator();
-
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-        ImGui::Text("操作: Ctrlキー + クリックで複数選択, ダブルクリックで追加/削除");
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("操作: Ctrl + クリックで複数選択 / ダブルクリック または ドラッグ＆ドロップで追加・削除");
         ImGui::PopStyleColor();
-
-    } else {
-        ImGui::PopStyleColor(3);
     }
 
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
 
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.3f, 0.2f, 0.8f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.5f, 0.4f, 0.3f, 0.9f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.6f, 0.5f, 0.4f, 1.0f));
-
     if (ImGui::CollapsingHeader("ファイル操作")) {
-        ImGui::PopStyleColor(3);
-
         ImGui::Spacing();
-
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.6f, 0.9f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.7f, 1.0f, 1.0f));
-
-        if (ImGui::Button("設定を保存", ImVec2(120, 35))) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.42f, 0.58f, 0.85f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.52f, 0.70f, 0.95f));
+        if (ImGui::Button("設定を保存", ImVec2(140, 32))) {
             SaveToJson();
             datas_->Flush();
-            std::string message = std::format("ParticleData saved.");
-            ImGuiNotification::Post(message);
+            ImGuiNotification::Post("パーティクル設定を保存しました", {0.45f, 0.68f, 0.52f, 1.0f});
         }
-        ImGui::PopStyleColor(3);
-
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("現在のパーティクル設定をJSONファイルに保存します");
-        }
-
+        ImGui::PopStyleColor(2);
+        ImGui::SetItemTooltip("現在のパーティクル設定をJSONファイルに保存します");
         ImGui::Spacing();
-
-    } else {
-        ImGui::PopStyleColor(3);
     }
 
     ImGui::Spacing();
 
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.5f, 0.2f, 0.3f, 0.8f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.6f, 0.3f, 0.4f, 0.9f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.7f, 0.4f, 0.5f, 1.0f));
-
     if (ImGui::CollapsingHeader("エミッター制御")) {
-        ImGui::PopStyleColor(3);
-
         ImGui::Spacing();
-
-        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.2f, 0.1f, 0.5f));
-        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.4f, 0.3f, 0.2f, 0.7f));
-
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
         ImGui::Checkbox("自動生成", &isAuto_);
-        ImGui::PopStyleColor(3);
-
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("パーティクルを自動的に継続生成します");
-        }
+        ImGui::PopStyleColor();
+        ImGui::SetItemTooltip("パーティクルを自動的に継続生成します");
 
         ImGui::SameLine();
-        ImGui::Spacing();
-        ImGui::SameLine();
-
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.3f, 0.1f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.4f, 0.2f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.5f, 0.3f, 1.0f));
-
-        if (ImGui::Button("手動生成", ImVec2(100, 30))) {
+        ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgBlue);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.60f, 0.78f, 0.40f));
+        if (ImGui::Button("手動生成", ImVec2(110, 0))) {
             UpdateOnce();
         }
-        ImGui::PopStyleColor(3);
-
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("パーティクルを1回だけ生成します");
-        }
-
+        ImGui::PopStyleColor(2);
+        ImGui::SetItemTooltip("パーティクルを1回だけ生成します");
         ImGui::Spacing();
-
-    } else {
-        ImGui::PopStyleColor(3);
     }
-
-    ImGui::PopStyleColor();
 #endif // USE_IMGUI
 }
 

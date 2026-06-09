@@ -874,9 +874,9 @@ void ParticleCSGroup::DrawImGui() {
         return;
 
     auto PushSectionColor = [](ImVec4 col) {
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(col.x * 0.7f, col.y * 0.7f, col.z * 0.7f, 0.75f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(col.x * 0.85f, col.y * 0.85f, col.z * 0.85f, 0.9f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, col);
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(col.x * 0.45f, col.y * 0.45f, col.z * 0.45f, 0.55f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(col.x * 0.55f, col.y * 0.55f, col.z * 0.55f, 0.70f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(col.x * 0.65f, col.y * 0.65f, col.z * 0.65f, 0.85f));
     };
     auto PopSectionColor = []() { ImGui::PopStyleColor(3); };
 
@@ -904,7 +904,7 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::SetTooltip("推奨上限: %d  /  絶対上限: %d", dynMax, absMax);
             if (emitCount > dynMax) {
                 ImGui::SameLine();
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.2f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
                 ImGui::TextUnformatted(" 推奨超過");
                 ImGui::PopStyleColor();
             }
@@ -1590,7 +1590,7 @@ void ParticleCSGroup::DrawImGui() {
             // ブレンドモード（新規追加）
             // --------------------------------------------------
             ImGui::Spacing();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("速度合成モード");
             ImGui::PopStyleColor();
             ImGui::Separator();
@@ -1617,7 +1617,7 @@ void ParticleCSGroup::DrawImGui() {
                 // 加算モード時の注意表示
                 if (blendMode == 1) {
                     ImGui::Indent();
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.85f, 0.3f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
                     ImGui::TextUnformatted("! 速度減衰との併用を推奨");
                     ImGui::PopStyleColor();
                     ImGui::Unindent();
@@ -1629,7 +1629,7 @@ void ParticleCSGroup::DrawImGui() {
             // --------------------------------------------------
             // ノイズパラメータ
             // --------------------------------------------------
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("ノイズパラメータ");
             ImGui::PopStyleColor();
             ImGui::Separator();
@@ -1654,7 +1654,7 @@ void ParticleCSGroup::DrawImGui() {
             // 分散オフセット（新規追加）
             // --------------------------------------------------
             ImGui::Spacing();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("分散オフセット");
             ImGui::PopStyleColor();
             ImGui::Separator();
@@ -1674,7 +1674,7 @@ void ParticleCSGroup::DrawImGui() {
             // 分散強度が有効なとき視覚的な補足を表示
             if (settingsData_->curlNoisePosRandomStrength > 0.0f) {
                 ImGui::Indent();
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 0.8f));
                 ImGui::Text("  現在: %.4f  (各パーティクルが固有の方向に発散)", settingsData_->curlNoisePosRandomStrength);
                 ImGui::PopStyleColor();
                 ImGui::Unindent();
@@ -1684,7 +1684,7 @@ void ParticleCSGroup::DrawImGui() {
             // 引き戻し設定
             // --------------------------------------------------
             ImGui::Spacing();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.85f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("引き戻し設定");
             ImGui::PopStyleColor();
             ImGui::Separator();
@@ -1774,7 +1774,7 @@ void ParticleCSGroup::DrawImGui() {
         if (v) {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.3f, 0.15f, 0.5f));
 
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.7f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("基本設定");
             ImGui::PopStyleColor();
             ImGui::Separator();
@@ -1786,7 +1786,7 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->maxTrailPerParticle = static_cast<uint32_t>(maxT);
 
             ImGui::Spacing();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.7f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("トレイル特性");
             ImGui::PopStyleColor();
             ImGui::Separator();
@@ -1798,7 +1798,7 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::ColorEdit4("色倍率##tco", &settingsData_->trailColorMultiplier.x);
 
             ImGui::Spacing();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.7f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("速度設定");
             ImGui::PopStyleColor();
             ImGui::Separator();
@@ -1817,7 +1817,7 @@ void ParticleCSGroup::DrawImGui() {
 
             // --- Phase 5: グループ単位トレイル予算（indirect パスのみ有効）---
             ImGui::Spacing();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.9f, 0.7f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
             ImGui::TextUnformatted("トレイル予算（グループ全体/フレーム）");
             ImGui::PopStyleColor();
             ImGui::Separator();
@@ -1884,7 +1884,7 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::PopStyleColor(3);
 
         ImGui::Spacing();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.85f, 1.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
         ImGui::TextUnformatted("パーティクル数 (履歴)");
         ImGui::PopStyleColor();
 

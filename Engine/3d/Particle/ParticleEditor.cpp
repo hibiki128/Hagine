@@ -22,13 +22,13 @@ void ParticleEditor::Initialize() {
 // カラーテーマを設定する
 void ParticleEditor::SetupColors() {
 #ifdef USE_IMGUI
-    // 各CollapsingHeaderに使用する色を定義
-    headerColors_[0] = ImVec4(0.2f, 0.4f, 0.8f, 0.8f); // 青系
-    headerColors_[1] = ImVec4(0.8f, 0.4f, 0.2f, 0.8f); // オレンジ系
-    headerColors_[2] = ImVec4(0.2f, 0.7f, 0.4f, 0.8f); // 緑系
-    headerColors_[3] = ImVec4(0.7f, 0.3f, 0.7f, 0.8f); // 紫系
-    headerColors_[4] = ImVec4(0.7f, 0.7f, 0.2f, 0.8f); // 黄色系
-    headerColors_[5] = ImVec4(0.5f, 0.5f, 0.5f, 0.8f); // グレー系
+    // 各CollapsingHeaderに使用する色を定義（彩度を抑えたシックなトーンに統一）
+    headerColors_[0] = ImVec4(0.30f, 0.38f, 0.50f, 0.55f); // 青系
+    headerColors_[1] = ImVec4(0.50f, 0.38f, 0.24f, 0.55f); // オレンジ系
+    headerColors_[2] = ImVec4(0.30f, 0.44f, 0.34f, 0.55f); // 緑系
+    headerColors_[3] = ImVec4(0.40f, 0.33f, 0.48f, 0.55f); // 紫系
+    headerColors_[4] = ImVec4(0.50f, 0.46f, 0.28f, 0.55f); // 黄色系
+    headerColors_[5] = ImVec4(0.32f, 0.33f, 0.36f, 0.55f); // グレー系
 #endif                                                 // USE_IMGUI
 }
 
@@ -185,31 +185,30 @@ void ParticleEditor::SceneParticleCount() {
             totalInstances += stats.instanceCount;
         }
 
-        // ヘッダー情報
-        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "合計: %zu個", grandTotal);
+        // ヘッダー情報（くすみ色で控えめに）
+        ImGui::TextColored(ImVec4(0.80f, 0.72f, 0.42f, 1.0f), "合計: %zu個", grandTotal);
         ImGui::SameLine();
-        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(%zu種類)", displayStats_.size());
+        ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.60f, 1.0f), "(%zu種類)", displayStats_.size());
 
         if (!displayStats_.empty()) {
             ImGui::Separator();
 
             // シンプルなリスト表示
             for (const auto &[name, stats] : displayStats_) {
-                // 色付きドット + 名前 + 数値
                 ImGui::Bullet();
                 ImGui::SameLine();
-                ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "%s", name.c_str());
+                ImGui::TextColored(ImVec4(0.45f, 0.60f, 0.78f, 1.0f), "%s", name.c_str());
                 ImGui::SameLine();
                 ImGui::Text(": %zu", stats.count);
 
                 // インスタンス数が1より多い場合のみ表示
                 if (stats.instanceCount > 1) {
                     ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "×%zu", stats.instanceCount);
+                    ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.60f, 1.0f), "×%zu", stats.instanceCount);
                 }
             }
         } else {
-            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "エミッターなし");
+            ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.60f, 1.0f), "エミッターなし");
         }
     }
 #endif // USE_IMGUI

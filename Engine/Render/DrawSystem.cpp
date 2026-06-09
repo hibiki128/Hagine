@@ -14,6 +14,7 @@
 #ifdef _DEBUG
 #include "imgui.h"
 #include "line/DrawLine3D.h"
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #endif
 
 namespace Hagine {
@@ -216,42 +217,68 @@ void DrawSystem::Draw(const ViewProjection &vp) {
 void DrawSystem::UpdateImGui() {
 #ifdef _DEBUG
     if (ImGui::Begin("DrawSystem")) {
-        ImGui::Text("登録エントリ数: %zu", entries_.size());
-        ImGui::Separator();
+        SectionHeader("[ 描画エントリ ]", DebugTheme::kAccentBlue);
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::Text("登録: %zu 件", entries_.size());
+        ImGui::PopStyleColor();
 
-        for (auto &entry : entries_) {
-            ImGui::PushID(entry.name.c_str());
+        if (ImGui::BeginTable("##DrawEntries", 3,
+                              ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH |
+                                  ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableSetupColumn("表示", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+            ImGui::TableSetupColumn("ステージ", ImGuiTableColumnFlags_WidthFixed, 96.0f);
+            ImGui::TableSetupColumn("名前", ImGuiTableColumnFlags_WidthStretch);
 
-            ImGui::Checkbox("##en", &entry.enabled);
-            ImGui::SameLine();
+            for (auto &entry : entries_) {
+                ImGui::PushID(entry.name.c_str());
+                ImGui::TableNextRow();
 
-            if (entry.stageIndex == kUILayer) {
-                ImGui::PushStyleColor(ImGuiCol_Button, {0.5f, 0.3f, 0.7f, 0.85f});
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.6f, 0.4f, 0.8f, 0.90f});
-                if (ImGui::Button("[UI Layer]")) {
-                    entry.stageIndex = 0;
+                ImGui::TableNextColumn();
+                ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
+                ImGui::Checkbox("##en", &entry.enabled);
+                ImGui::PopStyleColor();
+                ImGui::SetItemTooltip("描画の ON / OFF");
+
+                ImGui::TableNextColumn();
+                if (entry.stageIndex == kUILayer) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgPurple);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.62f, 0.50f, 0.74f, 0.40f));
+                    if (ImGui::SmallButton("UI Layer"))
+                        entry.stageIndex = 0;
+                    ImGui::PopStyleColor(2);
+                } else {
+                    ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgBlue);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.60f, 0.78f, 0.40f));
+                    char label[32];
+                    snprintf(label, sizeof(label), "Stage %d", entry.stageIndex);
+                    if (ImGui::SmallButton(label))
+                        entry.stageIndex = kUILayer;
+                    ImGui::PopStyleColor(2);
                 }
-            } else {
-                ImGui::PushStyleColor(ImGuiCol_Button, {0.2f, 0.5f, 0.8f, 0.85f});
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.3f, 0.6f, 0.9f, 0.90f});
-                char label[32];
-                snprintf(label, sizeof(label), "[Stage %d] ", entry.stageIndex);
-                if (ImGui::Button(label)) {
-                    entry.stageIndex = kUILayer;
-                }
+                ImGui::SetItemTooltip("クリックで UI レイヤー / ステージ を切り替え");
+
+                ImGui::TableNextColumn();
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(entry.name.c_str());
+
+                ImGui::PopID();
             }
-            ImGui::PopStyleColor(2);
 
-            ImGui::SameLine();
-            ImGui::TextUnformatted(entry.name.c_str());
-
-            ImGui::PopID();
+            ImGui::EndTable();
         }
 
-        ImGui::Separator();
-        if (ImGui::Button("保存")) { SaveConfig(); }
+        ImGui::Spacing();
+        SectionHeader("[ セーブ / ロード ]", DebugTheme::kAccentPurple);
+        float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.42f, 0.58f, 0.85f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.52f, 0.70f, 0.95f));
+        if (ImGui::Button("保存", ImVec2(bw, 0))) { SaveConfig(); }
+        ImGui::PopStyleColor(2);
         ImGui::SameLine();
-        if (ImGui::Button("読み込み")) { LoadConfig(); }
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.48f, 0.40f, 0.85f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.60f, 0.50f, 0.95f));
+        if (ImGui::Button("読み込み", ImVec2(bw, 0))) { LoadConfig(); }
+        ImGui::PopStyleColor(2);
     }
     ImGui::End();
 #endif

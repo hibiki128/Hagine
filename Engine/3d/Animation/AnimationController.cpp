@@ -8,6 +8,8 @@
 
 #ifdef USE_IMGUI
 #include <imgui.h>
+#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #endif
 
 namespace Hagine {
@@ -246,47 +248,71 @@ void AnimationController::DrawImGui() {
     }
 
     DrawTransportImGui();
-    ImGui::Separator();
+    ImGui::Spacing();
     DrawClipListImGui();
-    ImGui::Separator();
+    ImGui::Spacing();
     DrawKeyframeImGui();
 
-    ImGui::Separator();
-    if (ImGui::Button("クリップ設定を保存")) {
+    ImGui::Spacing();
+    SectionHeader("[ クリップ設定 セーブ / ロード ]", DebugTheme::kAccentPurple);
+    float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.42f, 0.58f, 0.85f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.52f, 0.70f, 0.95f));
+    if (ImGui::Button("保存", ImVec2(bw, 0))) {
         SaveClips("AnimationController", "PlayerClips");
+        ImGuiNotification::Post("クリップ設定を保存しました", {0.45f, 0.68f, 0.52f, 1.0f});
     }
+    ImGui::PopStyleColor(2);
     ImGui::SameLine();
-    if (ImGui::Button("クリップ設定を読込")) {
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.48f, 0.40f, 0.85f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.60f, 0.50f, 0.95f));
+    if (ImGui::Button("読込", ImVec2(bw, 0))) {
         LoadClips("AnimationController", "PlayerClips");
+        ImGuiNotification::Post("クリップ設定を読み込みました", {0.42f, 0.66f, 0.68f, 1.0f});
     }
+    ImGui::PopStyleColor(2);
 #endif // USE_IMGUI
 }
 
 void AnimationController::DrawTransportImGui() {
 #ifdef USE_IMGUI
-    ImGui::Text("現在クリップ: %s", currentClipName_.empty() ? "(なし)" : currentClipName_.c_str());
+    SectionHeader("[ 再生 ]", DebugTheme::kAccentGreen);
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+    ImGui::TextUnformatted("現在クリップ");
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    StatusBadge(currentClipName_.empty() ? "(なし)" : currentClipName_.c_str(),
+                currentClipName_.empty() ? DebugTheme::kTextDim : DebugTheme::kAccentGreen);
     if (IsBlending()) {
         ImGui::SameLine();
-        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), "[補間中]");
+        StatusBadge("補間中", DebugTheme::kAccentYellow);
     }
 
     float duration = GetDuration();
     float time = GetAnimationTime();
     float fraction = (duration > 0.0f) ? (time / duration) : 0.0f;
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, DebugTheme::kAccentGreen);
     ImGui::ProgressBar(fraction, ImVec2(-1.0f, 0.0f));
+    ImGui::PopStyleColor();
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+    ImGui::Text("%.2f / %.2f s", time, duration);
+    ImGui::PopStyleColor();
 
     // 再生 / 一時停止トグル
-    if (ImGui::Button(paused_ ? "再生" : "一時停止")) {
+    if (ImGui::Button(paused_ ? "再生" : "一時停止", ImVec2(120, 0))) {
         SetPaused(!paused_);
     }
     ImGui::SameLine();
-    if (ImGui::Button("先頭へ")) {
+    if (ImGui::Button("先頭へ", ImVec2(120, 0))) {
         SetTime(0.0f);
     }
 
     // 時間スクラブ（一時停止中のみ手動操作を反映）
     if (duration > 0.0f) {
-        if (ImGui::SliderFloat("再生時間", &time, 0.0f, duration, "%.3f s")) {
+        ImGui::SetNextItemWidth(-1);
+        if (ImGui::SliderFloat("##scrub", &time, 0.0f, duration, "再生時間 %.3f s")) {
             if (!paused_) {
                 SetPaused(true);
             }
@@ -295,7 +321,8 @@ void AnimationController::DrawTransportImGui() {
     }
 
     // 全体速度
-    if (ImGui::DragFloat("全体速度", &globalSpeed_, 0.01f, 0.0f, 8.0f)) {
+    ImGui::SetNextItemWidth(-1);
+    if (ImGui::DragFloat("##gspeed", &globalSpeed_, 0.01f, 0.0f, 8.0f, "全体速度 %.2f")) {
         SetGlobalSpeed(globalSpeed_);
     }
 #endif // USE_IMGUI
@@ -307,32 +334,49 @@ void AnimationController::DrawClipListImGui() {
         return;
     }
 
+    if (clips_.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("（クリップがありません）");
+        ImGui::PopStyleColor();
+        return;
+    }
+
     for (int i = 0; i < static_cast<int>(clips_.size()); ++i) {
         AnimationClip &clip = clips_[i];
         ImGui::PushID(i);
+        bool isCurrent = (clip.name == currentClipName_);
 
-        if (ImGui::Button("再生")) {
+        ImGui::PushStyleColor(ImGuiCol_Button, isCurrent ? DebugTheme::kBgGreen : DebugTheme::kBgBlue);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                              isCurrent ? ImVec4(0.45f, 0.68f, 0.52f, 0.40f) : ImVec4(0.45f, 0.60f, 0.78f, 0.40f));
+        if (ImGui::SmallButton("再生")) {
             Play(clip.name);
         }
+        ImGui::PopStyleColor(2);
         ImGui::SameLine();
-        bool isCurrent = (clip.name == currentClipName_);
         if (isCurrent) {
-            ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "%s", clip.name.c_str());
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentGreen);
+            ImGui::Text("%s", clip.name.c_str());
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            StatusBadge("再生中", DebugTheme::kAccentGreen);
         } else {
             ImGui::Text("%s", clip.name.c_str());
         }
 
         ImGui::Indent();
-        ImGui::TextDisabled("%s", clip.filePath.c_str());
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted(clip.filePath.c_str());
+        ImGui::PopStyleColor();
         if (ImGui::Checkbox("ループ", &clip.loop)) {
             object_->SetAnimationLoop(clip.filePath, clip.loop);
         }
         ImGui::SameLine();
         ImGui::SetNextItemWidth(120.0f);
-        ImGui::DragFloat("速度", &clip.speed, 0.01f, 0.0f, 8.0f);
+        ImGui::DragFloat("速度", &clip.speed, 0.01f, 0.0f, 8.0f, "%.2f");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(120.0f);
-        ImGui::DragFloat("補間", &clip.blendDuration, 0.01f, 0.0f, 2.0f);
+        ImGui::DragFloat("補間", &clip.blendDuration, 0.01f, 0.0f, 2.0f, "%.2f");
         // 現在再生中のクリップなら変更を即時反映
         if (isCurrent) {
             ApplyClipParams(clip);
@@ -403,14 +447,22 @@ void AnimationController::DrawKeyframeImGui() {
             ImGui::SetNextItemWidth(260.0f);
             ImGui::DragFloat4("XYZW", &keys[i].value.x, 0.01f);
             ImGui::SameLine();
-            if (ImGui::SmallButton("削除")) {
+            ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgRed);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.46f, 0.46f, 0.40f));
+            bool delKey = ImGui::SmallButton("削除");
+            ImGui::PopStyleColor(2);
+            if (delKey) {
                 keys.erase(keys.begin() + i);
                 ImGui::PopID();
                 break;
             }
             ImGui::PopID();
         }
-        if (ImGui::Button("キーフレーム追加")) {
+        ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgGreen);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 0.52f, 0.40f));
+        bool addKey = ImGui::Button("キーフレーム追加");
+        ImGui::PopStyleColor(2);
+        if (addKey) {
             KeyframeQuaternion kf = keys.empty() ? KeyframeQuaternion{{0.0f, 0.0f, 0.0f, 1.0f}, 0.0f} : keys.back();
             kf.time += 0.1f;
             keys.push_back(kf);
@@ -426,14 +478,22 @@ void AnimationController::DrawKeyframeImGui() {
             ImGui::SetNextItemWidth(200.0f);
             ImGui::DragFloat3("XYZ", &keys[i].value.x, 0.01f);
             ImGui::SameLine();
-            if (ImGui::SmallButton("削除")) {
+            ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgRed);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.46f, 0.46f, 0.40f));
+            bool delKey = ImGui::SmallButton("削除");
+            ImGui::PopStyleColor(2);
+            if (delKey) {
                 keys.erase(keys.begin() + i);
                 ImGui::PopID();
                 break;
             }
             ImGui::PopID();
         }
-        if (ImGui::Button("キーフレーム追加")) {
+        ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgGreen);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 0.52f, 0.40f));
+        bool addKey = ImGui::Button("キーフレーム追加");
+        ImGui::PopStyleColor(2);
+        if (addKey) {
             Vector3 defaultValue = (selectedChannel_ == 2) ? Vector3{1.0f, 1.0f, 1.0f} : Vector3{0.0f, 0.0f, 0.0f};
             KeyframeVector3 kf = keys.empty() ? KeyframeVector3{defaultValue, 0.0f} : keys.back();
             kf.time += 0.1f;

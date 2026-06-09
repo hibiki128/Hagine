@@ -136,7 +136,7 @@ void ViewProjection::ShowDebugInfo() {
         // [1] Position / Rotation
         // ====================================================
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderBlue);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.25f, 0.60f, 1.0f, 0.35f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.60f, 0.78f, 0.35f});
         bool basicOpen = ImGui::CollapsingHeader("位置 / 回転##vpb",
                                                  ImGuiTreeNodeFlags_DefaultOpen);
         ImGui::PopStyleColor(2);
@@ -164,7 +164,7 @@ void ViewProjection::ShowDebugInfo() {
                 ImGui::TextUnformatted("クォータニオン (X / Y / Z / W)");
                 ImGui::PopStyleColor();
                 ImGui::SetNextItemWidth(-1);
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.42f, 0.66f, 0.68f, 0.12f});
                 ImGui::DragFloat4("##vpquat", &quateRotation_.x, 0.01f, -1.f, 1.f, "%.3f");
                 ImGui::PopStyleColor();
 
@@ -183,7 +183,7 @@ void ViewProjection::ShowDebugInfo() {
                                eulerRotation_.y * r2d,
                                eulerRotation_.z * r2d};
                 ImGui::SetNextItemWidth(-1);
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.42f, 0.66f, 0.68f, 0.12f});
                 if (ImGui::DragFloat3("##vpeuler", &deg.x, 1.f, -360.f, 360.f, "%.1f"))
                     eulerRotation_ = {deg.x * d2r, deg.y * d2r, deg.z * d2r};
                 ImGui::PopStyleColor();
@@ -203,7 +203,7 @@ void ViewProjection::ShowDebugInfo() {
         // [2] Camera Parameters (FOV / Near / Far)
         // ====================================================
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderOrange);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.65f, 0.15f, 0.35f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.82f, 0.58f, 0.36f, 0.35f});
         bool paramOpen = ImGui::CollapsingHeader("カメラパラメータ##vpp");
         ImGui::PopStyleColor(2);
 
@@ -278,7 +278,7 @@ void ViewProjection::ShowDebugInfo() {
         // [3] Calculated Info
         // ====================================================
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderGreen);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.85f, 0.50f, 0.35f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.68f, 0.52f, 0.35f});
         bool calcOpen = ImGui::CollapsingHeader("計算情報##vpcalc",
                                                 ImGuiTreeNodeFlags_DefaultOpen);
         ImGui::PopStyleColor(2);
@@ -306,7 +306,7 @@ void ViewProjection::ShowDebugInfo() {
         // [4] Matrix Info (collapsible)
         // ====================================================
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgPurple);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.7f, 0.3f, 1.0f, 0.20f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.62f, 0.50f, 0.74f, 0.20f});
         bool matOpen = ImGui::CollapsingHeader("行列情報##vpmat");
         ImGui::PopStyleColor(2);
 
@@ -336,7 +336,7 @@ void ViewProjection::ShowDebugInfo() {
         // [5] Save / Load
         // ====================================================
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgOrange);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.60f, 0.10f, 0.20f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.82f, 0.58f, 0.36f, 0.20f});
         bool ioOpen = ImGui::CollapsingHeader("保存 / 読み込み##vpio");
         ImGui::PopStyleColor(2);
 
@@ -366,7 +366,7 @@ void ViewProjection::ShowDebugInfo() {
         // [6] Camera Easing
         // ====================================================
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderYellow);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.88f, 0.15f, 0.35f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.80f, 0.72f, 0.42f, 0.35f});
         bool easeOpen = ImGui::CollapsingHeader("カメライージング##vpease");
         ImGui::PopStyleColor(2);
 
@@ -463,7 +463,7 @@ void ViewProjection::ShowDebugInfo() {
             if (isEasing_) {
                 ImGui::Spacing();
                 ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgYellow);
-                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.85f, 0.10f, 0.20f});
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.80f, 0.72f, 0.42f, 0.20f});
                 if (ImGui::CollapsingHeader("イージング詳細##vpdet")) {
                     ImGui::Indent(6.0f);
                     auto R3 = [](const char *lbl, ImVec4 col, float x, float y, float z) {

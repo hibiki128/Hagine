@@ -5,6 +5,7 @@
 
 #ifdef _DEBUG
 #include "imgui.h"
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #endif // _DEBUG
 
 namespace Hagine {
@@ -272,31 +273,38 @@ uint32_t Audio::DebugResolveIndex(const std::string &filename) const {
 
 void Audio::Debug() {
 #ifdef _DEBUG
-    //------------------------------------------------------------------
-    // マスター音量
-    //------------------------------------------------------------------
-    ImGui::SeparatorText("マスター");
-    if (ImGui::SliderFloat("マスター音量", &debugMasterVolume_, 0.0f, 1.0f)) {
+    // ── マスター音量 ──
+    SectionHeader("[ マスター ]", DebugTheme::kAccentBlue);
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+    ImGui::TextUnformatted("マスター音量");
+    ImGui::PopStyleColor();
+    ImGui::SetNextItemWidth(-1);
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, DebugTheme::kAccentBlue);
+    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, DebugTheme::kAccentBlue);
+    if (ImGui::SliderFloat("##master", &debugMasterVolume_, 0.0f, 1.0f, "%.2f")) {
         if (masterVoice_) {
             masterVoice_->SetVolume(debugMasterVolume_);
         }
     }
+    ImGui::PopStyleColor(2);
 
-    //------------------------------------------------------------------
-    // ファイルスキャン
-    //------------------------------------------------------------------
-    ImGui::SeparatorText("ファイルブラウザ  [ Resources\\sounds\\ ]");
+    ImGui::Spacing();
 
+    // ── ファイルブラウザ ──
+    SectionHeader("[ ファイルブラウザ  Resources\\sounds\\ ]", DebugTheme::kAccentGreen);
+    ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgGreen);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 0.52f, 0.40f));
     if (ImGui::Button("WAVファイルをスキャン")) {
         DebugScanWavFiles();
         debugSelectedFile_ = -1;
+        ImGuiNotification::Post("WAVを " + std::to_string(debugWavFileList_.size()) + " 件検出しました",
+                                {0.45f, 0.68f, 0.52f, 1.0f});
     }
-
+    ImGui::PopStyleColor(2);
     ImGui::SameLine();
-    ImGui::TextDisabled("(%zuファイル検出)", debugWavFileList_.size());
+    ImGui::TextDisabled("(%zu ファイル)", debugWavFileList_.size());
 
-    // ファイルリスト
-    ImGui::BeginChild("##filelist", ImVec2(0, 160), true);
+    ImGui::BeginChild("##filelist", ImVec2(0, 150), ImGuiChildFlags_Borders);
     for (int i = 0; i < static_cast<int>(debugWavFileList_.size()); ++i) {
         const bool selected = (debugSelectedFile_ == i);
         if (ImGui::Selectable(debugWavFileList_[i].c_str(), selected)) {
@@ -305,51 +313,57 @@ void Audio::Debug() {
     }
     ImGui::EndChild();
 
-    //------------------------------------------------------------------
-    // 選択ファイルの操作
-    //------------------------------------------------------------------
-    ImGui::SeparatorText("再生コントロール");
+    ImGui::Spacing();
+
+    // ── 再生コントロール ──
+    SectionHeader("[ 再生コントロール ]", DebugTheme::kAccentOrange);
 
     const bool hasSelection = (debugSelectedFile_ >= 0 &&
                                debugSelectedFile_ < static_cast<int>(debugWavFileList_.size()));
 
     if (!hasSelection) {
-        ImGui::TextDisabled("-- 上のリストからファイルを選択してください --");
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("上のリストからファイルを選択してください");
+        ImGui::PopStyleColor();
     } else {
         const std::string &selectedName = debugWavFileList_[debugSelectedFile_];
-        ImGui::Text("ファイル : %s", selectedName.c_str());
 
         uint32_t idx = DebugResolveIndex(selectedName);
         const bool loaded = (idx != UINT32_MAX);
         const bool playing = loaded && DebugIsPlaying(idx);
 
-        // ロード状態バッジ
+        // 名前 + 状態バッジ
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("%s", selectedName.c_str());
+        ImGui::SameLine();
         if (loaded) {
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "[ロード済み  idx=%u]", idx);
+            StatusBadge(playing ? "再生中" : "ロード済み",
+                        playing ? DebugTheme::kAccentGreen : DebugTheme::kAccentCyan);
         } else {
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "[未ロード]");
+            StatusBadge("未ロード", DebugTheme::kAccentOrange);
         }
 
         // 再生パラメータ
-        ImGui::SliderFloat("音量", &debugVolume_, 0.0f, 1.0f);
-        ImGui::Checkbox("ループ", &debugLoop_);
+        ImGui::SetNextItemWidth(-1);
+        ImGui::SliderFloat("##vol", &debugVolume_, 0.0f, 1.0f, "音量 %.2f");
+        ImGui::Checkbox("ループ再生", &debugLoop_);
 
         ImGui::Spacing();
 
-        //-- Load ボタン
         if (!loaded) {
-            if (ImGui::Button("ロード")) {
-                // Resources\sounds\ を directoryPath_ として LoadWave へ渡す
-                // directoryPath_ が既に "Resources/sounds" 相当に設定されている想定
-                // ただしデバッグ用に固定パスからロード
+            //-- Load ボタン
+            ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgBlue);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.60f, 0.78f, 0.40f));
+            if (ImGui::Button("ロード", ImVec2(120, 0))) {
+                // デバッグ用に Resources/sounds から一時的にロードする
                 std::string savedDir = directoryPath_;
                 directoryPath_ = "Resources/sounds";
                 uint32_t newIdx = LoadWave(selectedName);
                 directoryPath_ = savedDir;
                 debugLoadedMap_[selectedName] = newIdx;
+                ImGuiNotification::Post("ロードしました: " + selectedName, {0.42f, 0.66f, 0.68f, 1.0f});
             }
+            ImGui::PopStyleColor(2);
         } else {
             //-- Play ボタン
             ImGui::BeginDisabled(playing);
@@ -374,18 +388,21 @@ void Audio::Debug() {
                 if (ImGui::Button("音量を適用")) {
                     SetVolume(idx, debugVolume_);
                 }
+                ImGui::SameLine();
             }
-
-            ImGui::SameLine();
 
             //-- Unload ボタン
             ImGui::BeginDisabled(playing);
+            ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgRed);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.46f, 0.46f, 0.40f));
             if (ImGui::Button("アンロード")) {
                 StopWave(idx);
                 Unload(idx);
                 debugLoadedMap_.erase(selectedName);
                 loadedFiles_.erase(selectedName);
+                ImGuiNotification::Post("アンロードしました: " + selectedName, {0.82f, 0.58f, 0.36f, 1.0f});
             }
+            ImGui::PopStyleColor(2);
             ImGui::EndDisabled();
 
             //-- 再生時間バー
@@ -404,52 +421,57 @@ void Audio::Debug() {
                 float fraction = (duration > 0.0f) ? (position / duration) : 0.0f;
                 char overlay[64];
                 snprintf(overlay, sizeof(overlay), "%.2f s / %.2f s", position, duration);
+                ImGui::PushStyleColor(ImGuiCol_PlotHistogram, DebugTheme::kAccentGreen);
                 ImGui::ProgressBar(fraction, ImVec2(-1.0f, 0.0f), overlay);
+                ImGui::PopStyleColor();
 
                 // 詳細情報
                 if (duration > 0.0f) {
                     const SoundData &sd = soundDatas_[idx];
-                    ImGui::TextDisabled(
-                        "チャンネル:%u  サンプルレート:%u Hz  ビット数:%u  平均:%u B/s",
-                        sd.wfex.nChannels,
-                        sd.wfex.nSamplesPerSec,
-                        sd.wfex.wBitsPerSample,
-                        sd.wfex.nAvgBytesPerSec);
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::Text("ch:%u   %u Hz   %u bit   %u B/s",
+                                sd.wfex.nChannels,
+                                sd.wfex.nSamplesPerSec,
+                                sd.wfex.wBitsPerSample,
+                                sd.wfex.nAvgBytesPerSec);
+                    ImGui::PopStyleColor();
                 }
             }
         }
     }
 
-    //------------------------------------------------------------------
-    // 全ロード済みファイル一覧
-    //------------------------------------------------------------------
-    ImGui::SeparatorText("ロード済みファイル一覧");
-    ImGui::BeginChild("##loadedlist", ImVec2(0, 120), true);
+    ImGui::Spacing();
+
+    // ── ロード済みファイル一覧 ──
+    SectionHeader("[ ロード済みファイル ]", DebugTheme::kAccentPurple);
+    ImGui::BeginChild("##loadedlist", ImVec2(0, 120), ImGuiChildFlags_Borders);
+    if (debugLoadedMap_.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("（ロード済みファイルはありません）");
+        ImGui::PopStyleColor();
+    }
     for (auto &[name, soundIdx] : debugLoadedMap_) {
         bool isPlaying = DebugIsPlaying(soundIdx);
         float dur = DebugGetDurationSec(soundIdx);
         float pos = isPlaying ? DebugGetPositionSec(soundIdx) : 0.0f;
 
-        if (isPlaying) {
-            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "[再生中]");
-        } else {
-            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "[停止中]");
-        }
+        ImGui::PushStyleColor(ImGuiCol_Text, isPlaying ? DebugTheme::kAccentGreen : DebugTheme::kTextDim);
+        ImGui::TextUnformatted(isPlaying ? "[再生中]" : "[停止]");
+        ImGui::PopStyleColor();
         ImGui::SameLine();
-        ImGui::Text("idx=%-4u  %.2f/%.2fs  %s", soundIdx, pos, dur, name.c_str());
+        ImGui::Text("idx=%-3u  %.2f/%.2fs  %s", soundIdx, pos, dur, name.c_str());
     }
     ImGui::EndChild();
 
-    //------------------------------------------------------------------
-    // 全停止ボタン
-    //------------------------------------------------------------------
+    // ── 全停止 ──
     ImGui::Spacing();
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgRed);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.46f, 0.46f, 0.40f));
     if (ImGui::Button("すべて停止", ImVec2(-1.0f, 0.0f))) {
         for (auto &[name, soundIdx] : debugLoadedMap_) {
             StopWave(soundIdx);
         }
+        ImGuiNotification::Post("すべての再生を停止しました", {0.82f, 0.58f, 0.36f, 1.0f});
     }
     ImGui::PopStyleColor(2);
 #endif // _DEBUG

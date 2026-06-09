@@ -594,7 +594,7 @@ void SpriteManager::DrawSpriteManager() {
 
         for (auto &sp : sprites_) {
             ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgPurple);
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.7f, 0.3f, 1.0f, 0.20f});
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.62f, 0.50f, 0.74f, 0.20f});
             bool open = ImGui::CollapsingHeader(sp->name.c_str());
             ImGui::PopStyleColor(2);
             if (!open)
@@ -605,7 +605,7 @@ void SpriteManager::DrawSpriteManager() {
 
             // ---- Basic (共通設定) ----
             ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgBlue);
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.55f, 1.0f, 0.20f});
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.60f, 0.78f, 0.20f});
             if (ImGui::TreeNodeEx("共通設定##bs", ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 // Size - 比率維持 / XY独立 モード切り替え
                 {
@@ -619,7 +619,7 @@ void SpriteManager::DrawSpriteManager() {
                     const bool locked = sp->lockAspectRatio;
                     if (locked) {
                         ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kAccentBlue);
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.35f, 0.65f, 1.0f, 0.9f});
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.52f, 0.66f, 0.84f, 0.9f});
                     } else {
                         ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgBlue);
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.2f, 0.4f, 0.6f, 0.5f});
@@ -704,7 +704,7 @@ void SpriteManager::DrawSpriteManager() {
 
             // ---- UV ----
             ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgOrange);
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.60f, 0.10f, 0.20f});
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.82f, 0.58f, 0.36f, 0.20f});
             if (ImGui::TreeNodeEx("UV設定##uv", ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 Vector2 uvPos = sp->sprite->GetUVPosition();
                 Vector2 uvSz = sp->sprite->GetUVSize();

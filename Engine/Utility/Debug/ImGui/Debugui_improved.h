@@ -9,26 +9,28 @@
 
 namespace Hagine {
 namespace DebugTheme {
-constexpr ImVec4 kAccentBlue = {0.20f, 0.55f, 1.00f, 1.0f};
-constexpr ImVec4 kAccentGreen = {0.20f, 0.85f, 0.50f, 1.0f};
-constexpr ImVec4 kAccentOrange = {1.00f, 0.60f, 0.10f, 1.0f};
-constexpr ImVec4 kAccentPurple = {0.70f, 0.30f, 1.00f, 1.0f};
-constexpr ImVec4 kAccentRed = {1.00f, 0.30f, 0.30f, 1.0f};
-constexpr ImVec4 kAccentCyan = {0.10f, 0.85f, 0.90f, 1.0f};
-constexpr ImVec4 kAccentYellow = {1.00f, 0.85f, 0.10f, 1.0f};
+// 原色を避け、色相は保ちつつ彩度を落としたシックなトーンで統一する。
+// カテゴリの識別性は残しつつ、画面全体が落ち着いた印象になるよう調整。
+constexpr ImVec4 kAccentBlue = {0.45f, 0.60f, 0.78f, 1.0f};
+constexpr ImVec4 kAccentGreen = {0.45f, 0.68f, 0.52f, 1.0f};
+constexpr ImVec4 kAccentOrange = {0.82f, 0.58f, 0.36f, 1.0f};
+constexpr ImVec4 kAccentPurple = {0.62f, 0.50f, 0.74f, 1.0f};
+constexpr ImVec4 kAccentRed = {0.80f, 0.46f, 0.46f, 1.0f};
+constexpr ImVec4 kAccentCyan = {0.42f, 0.66f, 0.68f, 1.0f};
+constexpr ImVec4 kAccentYellow = {0.80f, 0.72f, 0.42f, 1.0f};
 
-constexpr ImVec4 kBgBlue = {0.20f, 0.55f, 1.00f, 0.12f};
-constexpr ImVec4 kBgGreen = {0.20f, 0.85f, 0.50f, 0.12f};
-constexpr ImVec4 kBgOrange = {1.00f, 0.60f, 0.10f, 0.12f};
-constexpr ImVec4 kBgPurple = {0.70f, 0.30f, 1.00f, 0.12f};
-constexpr ImVec4 kBgRed = {1.00f, 0.30f, 0.30f, 0.12f};
-constexpr ImVec4 kBgYellow = {1.00f, 0.85f, 0.10f, 0.12f};
+constexpr ImVec4 kBgBlue = {0.45f, 0.60f, 0.78f, 0.12f};
+constexpr ImVec4 kBgGreen = {0.45f, 0.68f, 0.52f, 0.12f};
+constexpr ImVec4 kBgOrange = {0.82f, 0.58f, 0.36f, 0.12f};
+constexpr ImVec4 kBgPurple = {0.62f, 0.50f, 0.74f, 0.12f};
+constexpr ImVec4 kBgRed = {0.80f, 0.46f, 0.46f, 0.12f};
+constexpr ImVec4 kBgYellow = {0.80f, 0.72f, 0.42f, 0.12f};
 
-constexpr ImVec4 kHeaderBlue = {0.20f, 0.55f, 1.00f, 0.25f};
-constexpr ImVec4 kHeaderGreen = {0.20f, 0.85f, 0.50f, 0.25f};
-constexpr ImVec4 kHeaderOrange = {1.00f, 0.60f, 0.10f, 0.25f};
-constexpr ImVec4 kHeaderPurple = {0.70f, 0.30f, 1.00f, 0.25f};
-constexpr ImVec4 kHeaderYellow = {1.00f, 0.85f, 0.10f, 0.25f};
+constexpr ImVec4 kHeaderBlue = {0.45f, 0.60f, 0.78f, 0.22f};
+constexpr ImVec4 kHeaderGreen = {0.45f, 0.68f, 0.52f, 0.22f};
+constexpr ImVec4 kHeaderOrange = {0.82f, 0.58f, 0.36f, 0.22f};
+constexpr ImVec4 kHeaderPurple = {0.62f, 0.50f, 0.74f, 0.22f};
+constexpr ImVec4 kHeaderYellow = {0.80f, 0.72f, 0.42f, 0.22f};
 
 constexpr ImVec4 kTextDim = {0.55f, 0.55f, 0.60f, 1.0f};
 constexpr ImVec4 kTextReadOnly = {0.70f, 0.75f, 0.80f, 1.0f};

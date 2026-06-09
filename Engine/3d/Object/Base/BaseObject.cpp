@@ -968,8 +968,8 @@ void BaseObject::DebugObject() {
     // [1] Transform
     // ====================================================
     ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderBlue);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.25f, 0.60f, 1.0f, 0.35f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.30f, 0.65f, 1.0f, 0.45f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.60f, 0.78f, 0.35f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.50f, 0.64f, 0.82f, 0.45f});
     bool tfOpen = ImGui::CollapsingHeader("トランスフォーム##hdr", ImGuiTreeNodeFlags_DefaultOpen);
     ImGui::PopStyleColor(3);
 
@@ -1013,7 +1013,7 @@ void BaseObject::DebugObject() {
             ImGui::TableNextColumn();
             static Vector3 deltaRot{};
             ImGui::SetNextItemWidth(-1);
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.42f, 0.66f, 0.68f, 0.12f});
             if (ImGui::DragFloat3("##lrot", &deltaRot.x, 0.1f, -10.f, 10.f, "%.1fdeg")) {
                 float r = std::numbers::pi_v<float> / 180.f;
                 Quaternion cur = transform_->GetRotationQuaternion();
@@ -1099,7 +1099,7 @@ void BaseObject::DebugObject() {
 
         // ---- ImPlot: Scale history ----
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgGreen);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.85f, 0.50f, 0.20f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.68f, 0.52f, 0.20f});
         bool plotOpen = ImGui::CollapsingHeader("スケール履歴 (グラフ)##scgr");
         ImGui::PopStyleColor(2);
 
@@ -1164,8 +1164,8 @@ void BaseObject::DebugObject() {
     // [2] Material
     // ====================================================
     ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderOrange);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.65f, 0.15f, 0.35f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {1.0f, 0.70f, 0.20f, 0.45f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.82f, 0.58f, 0.36f, 0.35f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.86f, 0.62f, 0.40f, 0.45f});
     bool matOpen = ImGui::CollapsingHeader("マテリアル##hdr");
     ImGui::PopStyleColor(3);
 
@@ -1193,8 +1193,8 @@ void BaseObject::DebugObject() {
     // [3] Model
     // ====================================================
     ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderPurple);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.75f, 0.35f, 1.0f, 0.35f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.80f, 0.40f, 1.0f, 0.45f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.62f, 0.50f, 0.74f, 0.35f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.66f, 0.54f, 0.78f, 0.45f});
     bool modelOpen = ImGui::CollapsingHeader("モデル##hdr");
     ImGui::PopStyleColor(3);
 
@@ -1228,7 +1228,7 @@ void BaseObject::DebugObject() {
 
         // Color
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgPurple);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.7f, 0.3f, 1.0f, 0.20f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.62f, 0.50f, 0.74f, 0.20f});
         if (ImGui::TreeNodeEx("カラー##mc", ImGuiTreeNodeFlags_SpanAvailWidth)) {
             Vector4 cur = GetColor(selMat);
             float c[4] = {cur.x, cur.y, cur.z, cur.w};
@@ -1270,8 +1270,8 @@ void BaseObject::DebugObject() {
     // ====================================================
     if (obj3d_->GetHaveAnimation()) {
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderYellow);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.88f, 0.15f, 0.35f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {1.0f, 0.90f, 0.20f, 0.45f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.80f, 0.72f, 0.42f, 0.35f});
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.84f, 0.76f, 0.46f, 0.45f});
         bool animOpen = ImGui::CollapsingHeader("アニメーション##hdr");
         ImGui::PopStyleColor(3);
 
@@ -1310,7 +1310,7 @@ void BaseObject::DebugObject() {
             ImGui::TextUnformatted("ブレンド時間 (秒)");
             ImGui::PopStyleColor();
             ImGui::SetNextItemWidth(-1);
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.10f, 0.85f, 0.90f, 0.12f});
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.42f, 0.66f, 0.68f, 0.12f});
             if (ImGui::DragFloat("##ablend", &blendDuration, 0.01f, 0.0f, 5.0f, "%.2f")) {
                 obj3d_->SetAnimationBlendDuration(blendDuration);
             }
@@ -1326,7 +1326,7 @@ void BaseObject::DebugObject() {
 
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgYellow);
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.85f, 0.10f, 0.20f});
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.80f, 0.72f, 0.42f, 0.20f});
             if (ImGui::TreeNodeEx("アニメーション設定##as", ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ShowFileSelector();
                 ImGui::TreePop();
@@ -1340,7 +1340,7 @@ void BaseObject::DebugObject() {
     // [5] Gizmo
     // ====================================================
     ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgRed);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {1.0f, 0.30f, 0.30f, 0.20f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.80f, 0.46f, 0.46f, 0.20f});
     bool gizOpen = ImGui::CollapsingHeader("ギズモ##hdr");
     ImGui::PopStyleColor(2);
 
