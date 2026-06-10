@@ -143,6 +143,14 @@ class ParticleEditor {
     /// <param name="vp_">ビュープロジェクション</param>
     void DrawAll(const ViewProjection &vp_);
 
+    /// <summary>
+    /// プレビュー窓用: 選択中エミッターを指定VPで更新＆描画する。
+    /// エミッター枠(ワイヤー)は描かず、共有 DrawLine3D も汚さない。
+    /// CPUエディタのエミッターはシーンには描かれないため、ここでのみ確認できる。
+    /// </summary>
+    /// <param name="vp">プレビューカメラのビュープロジェクション</param>
+    void DrawSelectedForPreview(const ViewProjection &vp);
+
     /// <summary>すべてのエミッターのデバッグ情報を表示</summary>
     void DebugAll();
 

@@ -114,6 +114,28 @@ void ParticleEditor::DrawAll(const ViewProjection &vp_) {
     }
 }
 
+void ParticleEditor::DrawSelectedForPreview(const ViewProjection &vp) {
+    if (selectedEmitterName_.empty()) {
+        return;
+    }
+    auto it = emitters_.find(selectedEmitterName_);
+    if (it == emitters_.end() || !it->second) {
+        return;
+    }
+    ParticleEmitter *emitter = it->second.get();
+    // 自動発生中なら時間ベースで Emit を進める（Draw 内ではなくここで駆動）。
+    if (emitter->GetIsAuto()) {
+        emitter->Update();
+    }
+    // ParticleManager を直接駆動して更新＋描画する（DrawEmitter のワイヤーは描かない）。
+    ParticleManager *mgr = emitter->GetParticleManager();
+    if (mgr) {
+        mgr->SetEmitterCenter(emitter->GetPosition());
+        mgr->Update(vp);
+        mgr->Draw();
+    }
+}
+
 void ParticleEditor::DebugAll() {
 #ifdef USE_IMGUI
     if (ImGui::BeginTabBar("CPUパーティクル")) {

@@ -14,10 +14,6 @@ enum class ComputePipelineType {
     kUpdateEmitter,
     kResetArgs,
     kCount,
-    // ===== Phase 3: ping-pong + DispatchIndirect（既定OFF・遅延生成） =====
-    kBuildDispatchArgs,     // 生存数(A)から間接ディスパッチ引数を生成
-    kEmitterIndirect,       // 発生スロットを aliveList(B) にも append
-    kUpdateEmitterIndirect, // 入力 A を処理し生存/トレイルを B に append
 };
 
 class ComputePipeLineManager {
@@ -63,13 +59,6 @@ class ComputePipeLineManager {
                            ShaderMode shaderMode = ShaderMode::kNone,
                            ID3D12GraphicsCommandList *cmdList = nullptr);
 
-    /// <summary>
-    /// Phase 3 (ping-pong + DispatchIndirect) 用 PSO を遅延生成する。
-    /// 既定では作られないため、新シェーダの DXC エラーが OFF 時の起動に影響しない。
-    /// indirect モードを有効化したときに 1 度だけ呼ぶこと（2回目以降は no-op）。
-    /// </summary>
-    void EnsureIndirectSimPipelines();
-
   private:
     // 内部パイプライン作成メソッド
     void CreateAllPipelines();
@@ -104,23 +93,8 @@ class ComputePipeLineManager {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateResetArgsRootSignature();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateResetArgsGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
 
-    // ===== Phase 3: ping-pong + DispatchIndirect（遅延生成） =====
-    void CreateBuildDispatchArgsPipelines();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateBuildDispatchArgsRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateBuildDispatchArgsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-
-    void CreateEmitterIndirectPipelines();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateEmitterIndirectRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateEmitterIndirectPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-
-    void CreateUpdateEmitterIndirectPipelines();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateUpdateEmitterIndirectRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateUpdateEmitterIndirectPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-
   private:
     DirectXCommon *dxCommon_;
-    // Phase 3 PSO を生成済みかどうか（EnsureIndirectSimPipelines の冪等ガード）
-    bool indirectSimPipelinesCreated_ = false;
 
     // パイプラインとルートシグネチャの格納用マップ
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_;

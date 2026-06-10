@@ -111,7 +111,8 @@ public:
     /// <summary>
     /// ImGuiでのシャドウ設定UIを更新
     /// </summary>
-    void UpdateImGui();
+    /// <param name="open">ウィンドウの表示状態。閉じるボタン押下で false になる（nullptr で閉じるボタン非表示）</param>
+    void UpdateImGui(bool *open = nullptr);
 
     /// <summary>
     /// 設定をJsonへ保存

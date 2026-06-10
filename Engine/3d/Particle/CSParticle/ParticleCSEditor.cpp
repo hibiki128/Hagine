@@ -2,6 +2,7 @@
 #include "ParticleCSEditor.h"
 #include "../Utility/Debug/ImGui/ImGuizmoManager.h"
 #include <Camera/ViewProjection/ViewProjection.h>
+#include <Particle/ParticleEditor.h>
 #include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
 #include <algorithm>
@@ -285,6 +286,27 @@ void ParticleCSEditor::RenderPreview() {
         }
     }
 
+    // CPU パーティクル（ParticleEditor の選択中エミッタ）を同じプレビューRTへ描画する。
+    // 編集中の CPU エミッタはシーンには描かれないため、このプレビューでのみ確認できる。
+    {
+        // CPU パーティクルPSOは SRV ディスクリプタテーブルを使うのでヒープを束ね直し、
+        // RT/DSV/Viewport も（GPU側で未設定のケースに備え）念のため再設定する。
+        SrvManager::GetInstance()->SetDescriptorHeap();
+        cl->OMSetRenderTargets(1, &previewRtvHandle_, false, &previewDsvHandle_);
+        cl->RSSetViewports(1, &viewport);
+        cl->RSSetScissorRects(1, &scissor);
+
+        // プレビューカメラの view / projection から CPU 用 ViewProjection を組む
+        // （matView_ でビルボード、matView_×matProjection_ で WVP が決まる）。
+        ViewProjection cpuVP;
+        cpuVP.matView_ = view;
+        const float fovY = 45.0f * 3.14159265358979323846f / 180.0f;
+        const uint32_t ph = (previewRenderHeight_ > 0) ? previewRenderHeight_ : 1;
+        const float aspect = static_cast<float>(previewRenderWidth_) / static_cast<float>(ph);
+        cpuVP.matProjection_ = MakePerspectiveFovMatrix(fovY, aspect, 0.1f, 1000.0f);
+        ParticleEditor::GetInstance()->DrawSelectedForPreview(cpuVP);
+    }
+
     // ImGui サンプリング用に PIXEL_SHADER_RESOURCE へ戻す
     D3D12_RESOURCE_BARRIER toSRV{};
     toSRV.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -435,9 +457,22 @@ void ParticleCSEditor::ShowPreviewWindow(bool *pOpen) {
 
         ImGui::Separator();
 
-        // ---- エミッタ/グループ作成・選択・動き設定（エディタ本体）----
-        ShowImGuiEditor(); // 「パーティクル作成」タブ
-        DebugAll();        // 「GPUエミッター設定」タブ（選択コンボ＋選択エミッタの詳細設定）
+        // ---- エミッタ/グループ作成・選択・動き設定（GPU / CPU をタブで切り替え）----
+        if (ImGui::BeginTabBar("##previewParticleKind")) {
+            if (ImGui::BeginTabItem("GPUパーティクル")) {
+                ShowImGuiEditor(); // 「パーティクル作成」タブ
+                DebugAll();        // 「GPUエミッター設定」タブ（選択コンボ＋選択エミッタの詳細設定）
+                ImGui::EndTabItem();
+            }
+            // CPU パーティクルも同じプレビュー窓で確認・編集できるようにする。
+            // 選択中の CPU エミッタは RenderPreview でプレビューRTへ描画される。
+            if (ImGui::BeginTabItem("CPUパーティクル")) {
+                ParticleEditor::GetInstance()->ShowImGuiEditor();
+                ParticleEditor::GetInstance()->DebugAll();
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
+        }
     }
     ImGui::EndChild();
 

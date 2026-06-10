@@ -8,9 +8,6 @@ struct VertexShaderInput
 };
 
 StructuredBuffer<Particle> gParticles : register(t0);
-// Candidate A: コンパクト描画属性バッファ（64B/スロット）。
-// gPerView.enableCompactDraw != 0 のとき、150B の gParticles の代わりにこちらを読む。
-StructuredBuffer<ParticleDrawAttrib> gDrawAttribs : register(t1);
 // 生存コンパクション: instanceId -> 生存パーティクルの実 slot index
 StructuredBuffer<uint> gAliveList : register(t2);
 // 生存コンパクション: 当該フレームの生存数（これを超える instanceId は破棄）
@@ -33,32 +30,13 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
 
     uint particleSlot = gAliveList[instanceId];
 
-    // 描画に必要な属性だけをローカルへ読み出す。
-    //   enableCompactDraw=1 : 64B の gDrawAttribs[slot] から読む（VS 帯域 150B→64B）。
-    //   enableCompactDraw=0 : 従来どおり 150B の gParticles[slot] から読む。
-    float3 pTranslate;
-    float3 pScale;
-    float3 pVelocity;
-    float3 pRotation;
-    float4 pColor;
-    if (gPerView.enableCompactDraw != 0)
-    {
-        ParticleDrawAttrib a = gDrawAttribs[particleSlot];
-        pTranslate = a.translate;
-        pScale = a.scale;
-        pVelocity = a.velocity;
-        pRotation = a.rotation;
-        pColor = a.color;
-    }
-    else
-    {
-        Particle particle = gParticles[particleSlot];
-        pTranslate = particle.translate;
-        pScale = particle.scale;
-        pVelocity = particle.velocity;
-        pRotation = particle.rotation;
-        pColor = particle.color;
-    }
+    // 描画に必要な属性を 150B の Particle からローカルへ読み出す。
+    Particle particle = gParticles[particleSlot];
+    float3 pTranslate = particle.translate;
+    float3 pScale = particle.scale;
+    float3 pVelocity = particle.velocity;
+    float3 pRotation = particle.rotation;
+    float4 pColor = particle.color;
 
     // --- スケール → XYZ回転 → ビルボード → 平行移動 ---
     float4x4 worldMatrix;

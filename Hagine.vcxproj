@@ -437,7 +437,6 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
     <ClInclude Include="Application\GameObject\Player\Collider\PlayerAttackCollider.h" />
     <ClInclude Include="Application\GameObject\Player\State\Action\PlayerStateGuard.h" />
-    <ClInclude Include="Externals\std_truetype\stb_truetype.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\Utility\Edit\ShortcutManager\ShortcutManager.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />

@@ -140,6 +140,52 @@ class FollowCamera {
     void Move();
 
     /// <summary>
+    /// ロックオンの開始/解除フレームに肩オフセットの目標を切り替える
+    /// </summary>
+    /// <param name="isCurrentlyLockedOn">今フレームのロックオン状態</param>
+    void UpdateLockOnTransition(bool isCurrentlyLockedOn);
+
+    /// <summary>
+    /// Rush（突進）中の専用カメラ制御
+    /// </summary>
+    /// <param name="player">追従対象プレイヤー（nullptr可）</param>
+    /// <returns>bool: trueなら専用追従でカメラを確定済み（以降の通常処理を行わない）</returns>
+    bool UpdateRushCamera(Player *player);
+
+    /// <summary>
+    /// ロックオン中の肩オフセット目標・高さオフセットを更新する（敵方向からヨー角も更新）
+    /// </summary>
+    /// <param name="player">追従対象プレイヤー</param>
+    /// <param name="targetPos">追従対象の位置</param>
+    /// <param name="velocity">追従対象の速度</param>
+    void UpdateLockOnShoulderAndHeight(Player *player, const Hagine::Vector3 &targetPos, const Hagine::Vector3 &velocity);
+
+    /// <summary>
+    /// 肩オフセットを目標値へ補間する（解除時の戻り or 通常追従）
+    /// </summary>
+    void UpdateShoulderOffset();
+
+    /// <summary>
+    /// ロックオン有無に応じて最終的なカメラ位置を算出し、回転を worldTransform_ に設定する
+    /// </summary>
+    /// <param name="isCurrentlyLockedOn">今フレームのロックオン状態</param>
+    /// <param name="player">追従対象プレイヤー</param>
+    /// <param name="targetPos">追従対象の位置</param>
+    /// <returns>Vector3: 算出したカメラ位置</returns>
+    Hagine::Vector3 ComputeCameraTransform(bool isCurrentlyLockedOn, Player *player, const Hagine::Vector3 &targetPos);
+
+    /// <summary>
+    /// Rush演出からの復帰補間、または通常時の位置確定を行い行列を更新する
+    /// </summary>
+    /// <param name="cameraPos">確定先のカメラ位置</param>
+    void ApplyCameraPosition(const Hagine::Vector3 &cameraPos);
+
+    /// <summary>
+    /// worldTransform_ の位置・回転を ViewProjection へ反映して行列を更新する
+    /// </summary>
+    void ApplyToViewProjection();
+
+    /// <summary>
     /// 指定した点がロックオン視錐台内にあるか判定
     /// </summary>
     /// <param name="point">判定する座標</param>

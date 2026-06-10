@@ -6,6 +6,7 @@
 #include "WinApp.h"
 #include "myMath.h"
 #include <Data/DataHandler.h>
+#include <Shadow/ShadowMap.h>
 #include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
 #include <filesystem>
@@ -66,6 +67,11 @@ void SpriteManager::UnregisterSprite(const std::string &name) {
 }
 
 void SpriteManager::DrawAll() {
+    // シャドウパス中(D32 DSV)はスプライト(D24 PSO)を描かない。
+    // スプライトは影を落とさないためスキップして良い（深度フォーマット不一致を防ぐ）。
+    if (ShadowMap::GetInstance()->IsShadowPassActive()) {
+        return;
+    }
     // 所有スプライトの描画
     for (auto &spriteData : sprites_) {
         if (spriteData->isVisible) {

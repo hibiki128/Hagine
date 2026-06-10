@@ -15,6 +15,8 @@
 #include <Engine/Frame/Frame.h>
 #include <Line/DrawLine3D.h>
 #include <Particle/CSParticle/ParticleCSFieldManager.h>
+#include <Engine/Render/DrawSystem.h>
+#include <Shadow/ShadowMap.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
 #include <implot.h>
@@ -324,34 +326,39 @@ void ImGuiManager::ShowMainMenu() {
 
         // 表示メニュー
         if (ImGui::BeginMenu(ICON_FA_EYE " 表示")) {
-            // ウィンドウ表示設定
+            // ウィンドウ表示設定（カテゴリ別にまとめて見やすくする）
             if (ImGui::BeginMenu(ICON_FA_WINDOW_MAXIMIZE " ウィンドウ")) {
-                if (ImGui::Selectable(ICON_FA_BOOK_OPEN " シーンビュー", showSceneView_, ImGuiSelectableFlags_DontClosePopups))
-                    showSceneView_ = !showSceneView_;
-                if (ImGui::Selectable(ICON_FA_CUBE " オブジェクトビュー", showObjectView_, ImGuiSelectableFlags_DontClosePopups))
-                    showObjectView_ = !showObjectView_;
-                if (ImGui::Selectable(ICON_FA_STAR " パーティクルビュー", showParticleView_, ImGuiSelectableFlags_DontClosePopups))
-                    showParticleView_ = !showParticleView_;
-                if (ImGui::Selectable(ICON_FA_IMAGE " パーティクルプレビュー", showParticlePreviewView_, ImGuiSelectableFlags_DontClosePopups))
-                    showParticlePreviewView_ = !showParticlePreviewView_;
-                if (ImGui::Selectable(ICON_FA_DATABASE " FPSビュー", showFPSView_, ImGuiSelectableFlags_DontClosePopups))
-                    showFPSView_ = !showFPSView_;
-                if (ImGui::Selectable(ICON_FA_STAR_OF_DAVID " オフスクリーンビュー", showOfScreenView_, ImGuiSelectableFlags_DontClosePopups))
-                    showOfScreenView_ = !showOfScreenView_;
-                if (ImGui::Selectable(ICON_FA_LIGHTBULB " ライトビュー", showLightView_, ImGuiSelectableFlags_DontClosePopups))
-                    showLightView_ = !showLightView_;
-                if (ImGui::Selectable(ICON_FA_ARROWS_ALT " ギズモビュー", showGizmoView_, ImGuiSelectableFlags_DontClosePopups))
-                    showGizmoView_ = !showGizmoView_;
-                if (ImGui::Selectable(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャビュー", showHierarchyView_, ImGuiSelectableFlags_DontClosePopups))
-                    showHierarchyView_ = !showHierarchyView_;
-                if (ImGui::Selectable(ICON_FA_CODE_BRANCH " モーションエディタービュー", showMotionEditorView_, ImGuiSelectableFlags_DontClosePopups))
-                    showMotionEditorView_ = !showMotionEditorView_;
-                if (ImGui::Selectable(ICON_FA_SQUARE " スプライトマネージャビュー", showSpriteManagerView_, ImGuiSelectableFlags_DontClosePopups))
-                    showSpriteManagerView_ = !showSpriteManagerView_;
-                if (ImGui::Selectable(ICON_FA_SHAPES " コライダービュー", showColliderTagManagerView_, ImGuiSelectableFlags_DontClosePopups))
-                    showColliderTagManagerView_ = !showColliderTagManagerView_;
-                if (ImGui::Selectable(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_, ImGuiSelectableFlags_DontClosePopups))
-                    showAudioManagerView_ = !showAudioManagerView_;
+                // チェック付きのトグル行。クリックしてもメニューは閉じない
+                auto windowToggle = [](const char *label, bool &flag) {
+                    if (ImGui::Selectable(label, flag, ImGuiSelectableFlags_DontClosePopups))
+                        flag = !flag;
+                };
+
+                ImGui::SeparatorText("シーン・オブジェクト");
+                windowToggle(ICON_FA_BOOK_OPEN " シーンビュー", showSceneView_);
+                windowToggle(ICON_FA_CUBE " オブジェクトビュー", showObjectView_);
+                windowToggle(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャ", showHierarchyView_);
+                windowToggle(ICON_FA_ARROWS_ALT " ギズモ", showGizmoView_);
+
+                ImGui::SeparatorText("アセット・エディタ");
+                windowToggle(ICON_FA_SQUARE " スプライトマネージャ", showSpriteManagerView_);
+                windowToggle(ICON_FA_SHAPES " コライダー", showColliderTagManagerView_);
+                windowToggle(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_);
+                windowToggle(ICON_FA_CODE_BRANCH " モーションエディター", showMotionEditorView_);
+
+                ImGui::SeparatorText("パーティクル");
+                windowToggle(ICON_FA_STAR " パーティクルビュー", showParticleView_);
+                windowToggle(ICON_FA_IMAGE " パーティクルプレビュー", showParticlePreviewView_);
+
+                ImGui::SeparatorText("レンダリング");
+                windowToggle(ICON_FA_STAR_OF_DAVID " オフスクリーン", showOfScreenView_);
+                windowToggle(ICON_FA_LIGHTBULB " ライト", showLightView_);
+                windowToggle(ICON_FA_ADJUST " シャドウマップ", showShadowMapView_);
+                windowToggle(ICON_FA_LAYER_GROUP " 描画システム", showDrawSystemView_);
+
+                ImGui::SeparatorText("統計・デバッグ");
+                windowToggle(ICON_FA_DATABASE " FPS統計", showFPSView_);
+
                 ImGui::EndMenu();
             }
 
@@ -827,6 +834,22 @@ void ImGuiManager::ShowAudioManagerWindow() {
     ImGui::End();
 }
 
+void ImGuiManager::ShowShadowMapWindow() {
+    if (!showShadowMapView_)
+        return; // 表示しない場合は早期リターン
+
+    // ウィンドウの生成・閉じるボタンは ShadowMap 側に委譲する
+    ShadowMap::GetInstance()->UpdateImGui(&showShadowMapView_);
+}
+
+void ImGuiManager::ShowDrawSystemWindow() {
+    if (!showDrawSystemView_)
+        return; // 表示しない場合は早期リターン
+
+    // ウィンドウの生成・閉じるボタンは DrawSystem 側に委譲する
+    DrawSystem::GetInstance()->UpdateImGui(&showDrawSystemView_);
+}
+
 void ImGuiManager::FixAspectRatio() {
 
     // 横幅ベースで16:9に合わせた高さ
@@ -966,6 +989,10 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowColliderTagManagerWindow();
     // オーディオマネージャウィンドウを描画
     ShowAudioManagerWindow();
+    // シャドウマップ設定ウィンドウを描画
+    ShowShadowMapWindow();
+    // 描画システム設定ウィンドウを描画
+    ShowDrawSystemWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();
@@ -1439,6 +1466,8 @@ void ImGuiManager::SaveFlag() {
     data->Save("showMotionEditorView", showMotionEditorView_);
     data->Save("showShortcutWindow", showShortcutWindow_);
     data->Save("showSpriteManagerView", showSpriteManagerView_);
+    data->Save("showShadowMapView", showShadowMapView_);
+    data->Save("showDrawSystemView", showDrawSystemView_);
     data->Save("isEditorMode", isEditorMode_);
     data->Save("gridColor", gridColor_);
 #ifdef _DEBUG
@@ -1462,6 +1491,8 @@ void ImGuiManager::LoadFlag() {
     showMotionEditorView_ = data->Load("showMotionEditorView", false);
     showShortcutWindow_ = data->Load("showShortcutWindow", false);
     showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
+    showShadowMapView_ = data->Load("showShadowMapView", true);
+    showDrawSystemView_ = data->Load("showDrawSystemView", true);
     isEditorMode_ = data->Load("isEditorMode", true);
     gridColor_ = data->Load("gridColor", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 }

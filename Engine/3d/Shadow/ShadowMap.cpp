@@ -202,7 +202,7 @@ D3D12_GPU_VIRTUAL_ADDRESS ShadowMap::GetShadowDataGpuAddress() const {
     return shadowDataResource_->GetGPUVirtualAddress();
 }
 
-void ShadowMap::UpdateImGui() {
+void ShadowMap::UpdateImGui(bool *open) {
 #ifdef _DEBUG
     // ラベル列を作って次の列に全幅ウィジェットを置く準備をする
     auto label = [](const char *text) {
@@ -216,7 +216,7 @@ void ShadowMap::UpdateImGui() {
         ImGui::SetNextItemWidth(-1);
     };
 
-    if (ImGui::Begin("ShadowMap")) {
+    if (ImGui::Begin("ShadowMap", open, ImGuiWindowFlags_NoFocusOnAppearing)) {
         ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
         ImGui::Checkbox("シャドウ有効", &enabled_);
         ImGui::PopStyleColor();

@@ -98,9 +98,12 @@ void DrawSystem::Draw(const ViewProjection &vp) {
                 entry.draw(vp);
             }
         }
-        // GPUパーティクルエディタのエミッターをシーン非依存で常時シミュレートする。
-        // （プレビュー窓・各シーンでの確認のため。各シーンでの Register に依存しない全体駆動）
-       // ParticleCSEditor::GetInstance()->DrawAllCompute(vp);
+#ifdef _DEBUG
+        // GPUパーティクルエディタのエミッターをシーン非依存でシミュレートする。
+        // 描画はプレビュー窓(RenderPreview)の専用VPだけが行うためゲームシーンには漏れない。
+        // （Compute=シミュレーションのみここで実行。Graphics はプレビューに隔離済み）
+        ParticleCSEditor::GetInstance()->DrawAllCompute(vp);
+#endif
 
         // 記録が無ければ ExecuteComputeCommands は自己ガードで no-op、Wait も signaled 済み値への待ちで無害。
         dxCommon_->ExecuteComputeCommands();
@@ -214,9 +217,9 @@ void DrawSystem::Draw(const ViewProjection &vp) {
 // ImGui
 // -------------------------------------------------------
 
-void DrawSystem::UpdateImGui() {
+void DrawSystem::UpdateImGui(bool *open) {
 #ifdef _DEBUG
-    if (ImGui::Begin("DrawSystem")) {
+    if (ImGui::Begin("DrawSystem", open, ImGuiWindowFlags_NoFocusOnAppearing)) {
         SectionHeader("[ 描画エントリ ]", DebugTheme::kAccentBlue);
         ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::Text("登録: %zu 件", entries_.size());

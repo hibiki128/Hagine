@@ -1,7 +1,6 @@
 #include "MyGame.h"
 #include "Scene/SceneFactory.h"
 #include <Frame.h>
-#include <Shadow/ShadowMap.h>
 
 namespace Hagine {
 void MyGame::Initialize() {
@@ -53,8 +52,6 @@ void MyGame::Update() {
         imGuiManager_->ShowSceneWindow(offscreen_.get(), sceneManager_->GetCurrentSceneName());
     }
     imGuiManager_->ShowMainUI(offscreen_.get());
-    drawSystem_->UpdateImGui();
-    ShadowMap::GetInstance()->UpdateImGui();
     imGuiManager_->End();
 #endif // _DEBUG
 #ifndef _DEBUG

@@ -254,15 +254,10 @@ class ParticleCSEmitter {
     void EmitterUpdate();
 
     /// <summary>
-    /// Emitのコンピュートをディスパッチする
-    /// indirectGroup を渡すと kEmitterIndirect PSO を使い、そのグループのみ emit して
-    /// 発生スロットを出力(Out) aliveList(B) にも append する（Phase 3）。
-    /// nullptr の場合は従来パス（全グループ・kEmitter PSO）で挙動不変。
+    /// Emitのコンピュートをディスパッチする（全グループ・kEmitter PSO）。
     /// </summary>
     /// <param name="cmdList">使用するコマンドリスト（省略時は既定）</param>
-    /// <param name="indirectGroup">indirect発生の対象グループ（省略可）</param>
-    void EmitterDisPatch(ID3D12GraphicsCommandList *cmdList = nullptr,
-                         ParticleCSGroup *indirectGroup = nullptr);
+    void EmitterDisPatch(ID3D12GraphicsCommandList *cmdList = nullptr);
 
   public:
     /// ---- バッチ非同期コンピュート用 2フェーズ API ----

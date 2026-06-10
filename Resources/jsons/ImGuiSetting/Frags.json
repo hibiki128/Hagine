@@ -8,17 +8,19 @@
         "z": 0.5
     },
     "isEditorMode": true,
-    "showFPSView": true,
+    "showDrawSystemView": false,
+    "showFPSView": false,
     "showGizmoView": false,
-    "showHierarchyView": true,
+    "showHierarchyView": false,
     "showKeyOperationDebugView": false,
     "showLightView": false,
-    "showMotionEditorView": true,
+    "showMotionEditorView": false,
     "showObjectView": false,
     "showOfScreenView": false,
     "showParticlePreviewView": false,
     "showParticleView": false,
     "showSceneView": false,
+    "showShadowMapView": false,
     "showShortcutWindow": false,
     "showSpriteManagerView": true
 }

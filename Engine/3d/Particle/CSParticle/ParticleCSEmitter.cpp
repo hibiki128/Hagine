@@ -77,29 +77,6 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
         auto fieldCountRes = receiveFields_ ? fieldMgr->GetFieldCountResource()
                                             : fieldMgr->GetZeroFieldCountResource();
 
-        if (group->IsIndirectSimReady()) {
-            // ===== Phase 3: ping-pong + DispatchIndirect 経路 =====
-            // 1. In/Out を入れ替える（描画は Out を読む）
-            group->SwapIndirectAliveLists();
-            // 2. 出力(Out)カウンタを 0 に（emit / update の append より前）
-            group->ResetIndirectOutCounterDispatch(computeCmdList);
-            // 3. emit: 発生スロットを Out に append（このグループのみ・kEmitterIndirect）
-            EmitterDisPatch(computeCmdList, group);
-            // 4. 入力(In)生存数から間接ディスパッチ引数を生成（UAV->INDIRECT_ARGUMENT）
-            //    ※emit→update の UAV バリアは UpdateParticleIndirectDispatch 冒頭で張る
-            group->BuildDispatchArgsDispatch(computeCmdList);
-            // 5. update: In を処理し生存/トレイルを Out に append（生存数ぶんだけ起動）
-            group->UpdateParticleIndirectDispatch(
-                fieldMgr->GetFieldsSrvHandle(),
-                fieldCountRes,
-                fieldMgr->GetOverrideSrvHandle(),
-                computeCmdList);
-            // 6. 描画 instanceCount 用に Out カウンタを readback
-            group->RecordAliveCountReadback(computeCmdList);
-            continue;
-        }
-
-        // ===== 既存パス（全 N ディスパッチ・挙動不変）=====
         EmitterDisPatch(computeCmdList);
 
         D3D12_RESOURCE_BARRIER uavBarrier{};
@@ -159,8 +136,6 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
             // 生存コンパクション SRV (t2: aliveList, t3: aliveCount)
             srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
-            // Candidate A: コンパクト描画属性バッファ SRV (t1)
-            srvManager_->SetGraphicsRootDescriptorTable(6, group->GetDrawAttribsSrvForVSIndex());
             commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
@@ -205,8 +180,6 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
             commandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
             srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
-            // Candidate A: コンパクト描画属性バッファ SRV (t1)
-            srvManager_->SetGraphicsRootDescriptorTable(6, group->GetDrawAttribsSrvForVSIndex());
             commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
@@ -382,21 +355,15 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->anchorPoint = Vector3(0.5f, 0.5f, 0.5f);
 }
 
-void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList, ParticleCSGroup *indirectGroup) {
+void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
     // cmdList が渡された場合はそちら（Compute Queue）を使う
     ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
-    // indirectGroup 指定時は kEmitterIndirect（u4/u5 へ Out append）を使う。
     ComputePipeLineManager::GetInstance()->DrawCommonSetting(
-        indirectGroup ? ComputePipelineType::kEmitterIndirect : ComputePipelineType::kEmitter,
+        ComputePipelineType::kEmitter,
         BlendMode::kNormal, ShaderMode::kNone, cl);
 
     uint32_t groupIndex = 0;
     for (auto &group : particleGroups_) {
-        // indirect 指定時は対象グループのみ処理（groupId は維持する）
-        if (indirectGroup && group != indirectGroup) {
-            groupIndex++;
-            continue;
-        }
         group->GetPerFrameData()->groupId = groupIndex;
         group->GetPerFrameData()->emitterFieldGroupId = fieldGroupId_;
 
@@ -413,14 +380,6 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList, Part
         cl->SetComputeRootConstantBufferView(4, emitterMeshResource_->GetGPUVirtualAddress());
         cl->SetComputeRootConstantBufferView(5, group->GetPerFrameResource()->GetGPUVirtualAddress());
         cl->SetComputeRootConstantBufferView(6, group->GetSettingsResource()->GetGPUVirtualAddress());
-
-        // ★ Phase 3: 出力(Out) aliveList/counter を u4/u5 に束ねる（発生スロットを append）。
-        if (indirectGroup) {
-            cl->SetComputeRootDescriptorTable(12, group->GetIndirectOutAliveListUavHandle().second);
-            cl->SetComputeRootDescriptorTable(13, group->GetIndirectOutAliveCounterUavHandle().second);
-            // Candidate A: 発生分の描画属性を書く gDrawAttribs (u6)
-            cl->SetComputeRootDescriptorTable(14, group->GetDrawAttribsUavHandle().second);
-        }
 
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
             cl->SetComputeRootDescriptorTable(8, triangleInfoSrvHandle_.second);
@@ -801,8 +760,6 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "trailVelocityScale", group->GetSettingsData()->trailVelocityScale);
         data->Save(prefix + "trailInheritVelocity", group->GetSettingsData()->trailInheritVelocity);
         data->Save(prefix + "trailMinLifeTime", group->GetSettingsData()->trailMinLifeTime);
-        data->Save(prefix + "enableTrailBudget", group->GetSettingsData()->enableTrailBudget);
-        data->Save(prefix + "maxTrailBudgetPerGroup", group->GetSettingsData()->maxTrailBudgetPerGroup);
 
         data->Save(prefix + "enableGather", group->GetSettingsData()->enableGather);
         data->Save(prefix + "gatherStartRatio", group->GetSettingsData()->gatherStartRatio);
@@ -942,8 +899,6 @@ void ParticleCSEmitter::LoadSetting() {
         settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
         settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
         settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
-        settings.enableTrailBudget = data->Load<uint32_t>(prefix + "enableTrailBudget", 0);
-        settings.maxTrailBudgetPerGroup = data->Load<uint32_t>(prefix + "maxTrailBudgetPerGroup", 20000);
 
         settings.enableGather = data->Load(prefix + "enableGather", 0);
         settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
@@ -1095,8 +1050,6 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
         settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
         settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
-        settings.enableTrailBudget = data->Load<uint32_t>(prefix + "enableTrailBudget", 0);
-        settings.maxTrailBudgetPerGroup = data->Load<uint32_t>(prefix + "maxTrailBudgetPerGroup", 20000);
 
         settings.enableGather = data->Load(prefix + "enableGather", 0);
         settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
