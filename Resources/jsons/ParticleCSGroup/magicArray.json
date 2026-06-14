@@ -1,8 +1,0 @@
-{
-    "blendMode": 2,
-    "groupName": "magicArray",
-    "maxParticleCount": 150000,
-    "modelfilePath": "",
-    "primitiveType": 1,
-    "textureName": "debug/circle2.png"
-}

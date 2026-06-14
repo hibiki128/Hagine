@@ -348,7 +348,6 @@ void Framework::LoadResource() {
 
     textureManager_->LoadFontTexture("NotoSansJP-Medium.ttf", 100);
 
-    particleEditor_->AddParticleEmitter("fire");
     particleEditor_->AddParticleEmitter("hitEmitter");
     particleEditor_->AddParticleEmitter("bulletEmitter");
     particleEditor_->AddParticleEmitter("enemyBulletEmitter");
