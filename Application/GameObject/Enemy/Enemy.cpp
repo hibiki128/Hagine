@@ -304,9 +304,8 @@ void Enemy::Update() {
         // 移動・コンボ・ガード状態に応じてアニメーションクリップを切り替える
         UpdateAnimation();
 
-        // 接地判定と位置更新
+        // 接地判定
         CollisionGround();
-        BaseObject::Update();
         UpdateFrustumLockOn();
 
         // 弾の更新
@@ -320,6 +319,11 @@ void Enemy::Update() {
             }
         }
     }
+
+    // ワールドトランスフォームの行列更新は started_ に関わらず毎フレーム実行する。
+    // StartCamera演出中は started_ が false のためゲームロジックはスキップされるが、
+    // 行列が未更新のままだと Draw() に正しい行列が渡らず描画されなくなる。
+    BaseObject::Update();
 }
 
 void Enemy::MoveToTarget(const Vector3 &targetPos) {
@@ -458,19 +462,27 @@ void Enemy::Draw(const ViewProjection &viewProjection) {
 }
 
 void Enemy::DrawParticleCompute(const ViewProjection &viewProjection) {
-    if (chargeAura_)      chargeAura_->DrawCompute(viewProjection);
-    if (burstFlash_)      burstFlash_->DrawCompute(viewProjection);
-    if (beamMainEffect_)  beamMainEffect_->DrawCompute(viewProjection);
-    if (beamAroundEffect_) beamAroundEffect_->DrawCompute(viewProjection);
+    if (chargeAura_)
+        chargeAura_->DrawCompute(viewProjection);
+    if (burstFlash_)
+        burstFlash_->DrawCompute(viewProjection);
+    if (beamMainEffect_)
+        beamMainEffect_->DrawCompute(viewProjection);
+    if (beamAroundEffect_)
+        beamAroundEffect_->DrawCompute(viewProjection);
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection) {
     hitEmitter_->Draw(viewProjection); // CPU emitter
     // 大技演出（Graphics フェーズ）
-    if (chargeAura_)      chargeAura_->DrawGraphics(viewProjection);
-    if (burstFlash_)      burstFlash_->DrawGraphics(viewProjection);
-    if (beamMainEffect_)  beamMainEffect_->DrawGraphics(viewProjection);
-    if (beamAroundEffect_) beamAroundEffect_->DrawGraphics(viewProjection);
+    if (chargeAura_)
+        chargeAura_->DrawGraphics(viewProjection);
+    if (burstFlash_)
+        burstFlash_->DrawGraphics(viewProjection);
+    if (beamMainEffect_)
+        beamMainEffect_->DrawGraphics(viewProjection);
+    if (beamAroundEffect_)
+        beamAroundEffect_->DrawGraphics(viewProjection);
     // -----------------------------------------------
     // 前方攻撃判定コライダーのヒットエフェクト描画
     // -----------------------------------------------

@@ -66,8 +66,8 @@ void FollowCamera::Update() {
     // Rush演出からの復帰補間、または位置の確定
     ApplyCameraPosition(cameraPos);
 
-    // ViewProjection へ反映
-    //ApplyToViewProjection();
+    // worldTransform_ の位置・回転を ViewProjection へ反映して行列を更新する
+    ApplyToViewProjection();
 
     // 視錐台ロックオン判定の更新
     UpdateFrustumLockOn();
@@ -449,7 +449,7 @@ void FollowCamera::DrawFrustum() {
 void FollowCamera::Move() {
     Player *player = dynamic_cast<Player *>(target_);
     GamePad *gamePad = player->GetGamePad();
-    
+
     // ロックオン中は手動回転を受け付けない
     if (player && player->GetIsLockOn()) {
         return;

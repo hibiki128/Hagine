@@ -102,6 +102,7 @@ class GameScene : public Hagine::BaseScene {
 
     bool isGameOver_ = false;               // ゲームオーバーフラグ
     bool deathCameraStarted_ = false;       // 死亡時カメラ開始フラグ
+    bool testDeathCameraStarted_ = false;   // テスト用死亡カメラ開始フラグ
     float GameOverTimer_ = 0.0f;            // ゲームオーバータイマー
     float ClearTimer_ = 0.0f;               // クリアタイマー
 
