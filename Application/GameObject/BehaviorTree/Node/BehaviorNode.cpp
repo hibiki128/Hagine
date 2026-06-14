@@ -655,15 +655,6 @@ NodeStatus EnemyShootNode::OnUpdate() {
     return NodeStatus::Running;
 }
 
-NodeStatus EnemyLockOnNode::OnUpdate() {
-    if (!enemy_)
-        return NodeStatus::Failure;
-
-    // ロックオン状態を更新
-    enemy_->SetIsLockOn(lockOn_);
-    return NodeStatus::Success;
-}
-
 NodeStatus IsEnemyLockOnNode::OnUpdate() {
     if (!enemy_)
         return NodeStatus::Failure;

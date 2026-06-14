@@ -33,8 +33,9 @@ enum class EditorNodeType {
     ConditionPlayerState, // 20
     // ===== 射撃・ロックオン =====
     ActionShoot,       // 21
-    ActionLockOn,      // 22
-    ConditionIsLockOn, // 23
+    // ActionLockOn (22) は自動ロックオン化に伴い削除。22は欠番として予約し、
+    // 以降のint値がずれないよう ConditionIsLockOn を明示的に 23 へ固定する
+    ConditionIsLockOn = 23, // 23
     // ===== 近接コンボ =====
     ActionComboStep, // 24  コンボ1段
     ActionComboFull, // 25  コンボ全段
@@ -199,7 +200,6 @@ struct EditorNode {
                Type == EditorNodeType::ActionFlyDescend ||
                Type == EditorNodeType::ActionFlyToGround ||
                Type == EditorNodeType::ActionShoot ||
-               Type == EditorNodeType::ActionLockOn ||
                Type == EditorNodeType::ActionComboStep ||
                Type == EditorNodeType::ActionComboFull ||
                Type == EditorNodeType::ActionBurstShoot ||

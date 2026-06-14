@@ -1009,44 +1009,6 @@ class EnemyShootNode : public ContextNode {
 };
 
 /// <summary>
-/// ロックオン状態を切り替えるアクションノード
-/// </summary>
-class EnemyLockOnNode : public ContextNode {
-  public:
-    /// ===================================================
-    /// public method
-    /// ===================================================
-
-    /// <summary>
-    /// コンストラクタ
-    /// </summary>
-    /// <param name="lockOn">ロックオンを有効にするか</param>
-    EnemyLockOnNode(bool lockOn = true) : lockOn_(lockOn) {}
-
-    /// <summary>
-    /// 状態をリセット
-    /// </summary>
-    void Reset() override { BTNode::Reset(); }
-
-  protected:
-    /// ===================================================
-    /// protected method
-    /// ===================================================
-
-    /// <summary>
-    /// 更新処理
-    /// </summary>
-    /// <returns>NodeStatus: 実行結果</returns>
-    NodeStatus OnUpdate() override;
-
-  private:
-    /// ===================================================
-    /// private variants
-    /// ===================================================
-    bool lockOn_; // trueでロックオンON、falseでOFF
-};
-
-/// <summary>
 /// ロックオン中かどうかをチェックする条件ノード
 /// </summary>
 class IsEnemyLockOnNode : public ContextNode {

@@ -126,9 +126,6 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
     case EditorNodeType::ActionShoot:
         runtimeNode = std::make_shared<EnemyShootNode>(nd.param);
         break;
-    case EditorNodeType::ActionLockOn:
-        runtimeNode = std::make_shared<EnemyLockOnNode>(nd.param >= 1.0f);
-        break;
     case EditorNodeType::ConditionIsLockOn:
         runtimeNode = std::make_shared<IsEnemyLockOnNode>();
         break;
@@ -246,7 +243,6 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                    nd.type == EditorNodeType::ActionFlyToGround ||
                    nd.type == EditorNodeType::ActionFlyApproach ||
                    nd.type == EditorNodeType::ActionShoot ||
-                   nd.type == EditorNodeType::ActionLockOn ||
                    nd.type == EditorNodeType::ActionComboStep ||
                    nd.type == EditorNodeType::ActionComboFull ||
                    nd.type == EditorNodeType::ActionBurstShoot ||
@@ -483,8 +479,6 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
         Parameter3 = 10.0f;
     } else if (type == EditorNodeType::ActionShoot) {
         Parameter = 1.0f;
-    } else if (type == EditorNodeType::ActionLockOn) {
-        Parameter = 1.0f;
     } else if (type == EditorNodeType::ActionComboStep) {
         Parameter = 0.5f;
         Parameter2 = 0.0f;
@@ -611,8 +605,6 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type) {
         return "飛行中に水平方向へプレイヤーへ接近する";
     case EditorNodeType::ActionShoot:
         return "弾を1発発射し、指定秒数クールダウンする";
-    case EditorNodeType::ActionLockOn:
-        return "ロックオン状態を切り替える";
     case EditorNodeType::ConditionIsLockOn:
         return "ロックオン中かどうかをチェックする";
     case EditorNodeType::ActionComboStep:
@@ -694,9 +686,6 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         break;
     case EditorNodeType::ActionShoot:
         runtimeNode = std::make_shared<EnemyShootNode>(eNode.Parameter);
-        break;
-    case EditorNodeType::ActionLockOn:
-        runtimeNode = std::make_shared<EnemyLockOnNode>(eNode.Parameter >= 1.0f);
         break;
     case EditorNodeType::ConditionIsLockOn:
         runtimeNode = std::make_shared<IsEnemyLockOnNode>();
@@ -1553,7 +1542,6 @@ void BehaviorTreeEditor::OnImGuiRender() {
         }
         if (ImGui::BeginMenu("戦闘アクション")) {
             addBtn("攻撃", EditorNodeType::ActionAttack);
-            addBtn("ロックオン", EditorNodeType::ActionLockOn);
             addBtn("射撃", EditorNodeType::ActionShoot);
             addBtn("連射", EditorNodeType::ActionBurstShoot);
             addBtn("コンボ(1段)", EditorNodeType::ActionComboStep);
