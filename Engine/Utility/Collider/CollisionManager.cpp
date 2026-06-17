@@ -20,11 +20,45 @@ const char *ColliderTypeName(ColliderType type) {
     case ColliderType::AABB:     return "AABB";
     case ColliderType::OBB:      return "OBB";
     case ColliderType::Cylinder: return "円柱 (Cylinder)";
+    case ColliderType::Mesh:     return "メッシュ (Mesh)";
     default:                     return "不明";
     }
 }
 } // namespace
 #endif
+
+namespace {
+/// <summary>円柱をAABBで近似する（メッシュ判定用の簡易変換）</summary>
+AABB CylinderToAABB(CylinderCollider *cyl) {
+    Vector3 c = cyl->GetCenterPosition();
+    float r = cyl->GetRadius();
+    float halfH = cyl->GetHeight() * 0.5f;
+    return {c - Vector3(r, halfH, r), c + Vector3(r, halfH, r)};
+}
+
+/// <summary>メッシュと任意形状のヒット判定（円柱はAABB近似）</summary>
+bool MeshIntersectShape(MeshCollider *mesh, ColliderBase *other) {
+    switch (other->GetType()) {
+    case ColliderType::Sphere:   return mesh->Intersect(static_cast<SphereCollider *>(other)->GetSphere());
+    case ColliderType::OBB:      return mesh->Intersect(static_cast<OBBCollider *>(other)->GetOBB());
+    case ColliderType::AABB:     return mesh->Intersect(static_cast<AABBCollider *>(other)->GetAABB());
+    case ColliderType::Cylinder: return mesh->Intersect(CylinderToAABB(static_cast<CylinderCollider *>(other)));
+    case ColliderType::Mesh:     return mesh->Intersect(*static_cast<MeshCollider *>(other));
+    default:                     return false;
+    }
+}
+
+/// <summary>形状をメッシュから押し出すMTV（円柱はAABB近似）。MTVは形状側を押し出す向き</summary>
+bool DepenetrateShapeFromMesh(ColliderBase *shape, MeshCollider *mesh, Vector3 &outMTV) {
+    switch (shape->GetType()) {
+    case ColliderType::Sphere:   return mesh->Depenetrate(static_cast<SphereCollider *>(shape)->GetSphere(), outMTV);
+    case ColliderType::OBB:      return mesh->Depenetrate(static_cast<OBBCollider *>(shape)->GetOBB(), outMTV);
+    case ColliderType::AABB:     return mesh->Depenetrate(static_cast<AABBCollider *>(shape)->GetAABB(), outMTV);
+    case ColliderType::Cylinder: return mesh->Depenetrate(CylinderToAABB(static_cast<CylinderCollider *>(shape)), outMTV);
+    default:                     return false;
+    }
+}
+} // namespace
 void CollisionManager::Register(ColliderBase *collider) {
     if (!collider)
         return;
@@ -123,8 +157,9 @@ void CollisionManager::CheckCollisions() {
             const std::unordered_set<std::string> &mask = colliderA->GetCollisionMask();
 
             for (auto &[tagB, collidersB] : collidersByTag_) {
-                // マスクにtagBが含まれているかチェック
-                if (mask.find(tagB) == mask.end())
+                // 「全判定」フラグが立っている場合はマスクを無視して全タグを対象にする。
+                // （相手側が全判定の場合は、相手が外側ループに来たときにペアが拾われる）
+                if (!colliderA->CollidesWithAll() && mask.find(tagB) == mask.end())
                     continue;
 
                 for (auto *colliderB : collidersB) {
@@ -146,8 +181,10 @@ void CollisionManager::CheckCollisionPair(ColliderBase *a, ColliderBase *b) {
         pair = {b, a};
     }
 
-    // 双方向チェック: どちらかが判定を望んでいる場合のみ衝突判定を行う
-    bool shouldCheck = a->ShouldCollideWith(b) || b->ShouldCollideWith(a);
+    // 双方向チェック: どちらかが判定を望んでいる場合のみ衝突判定を行う。
+    // どちらかが「全判定」フラグ有効ならタグ・マスクを無視して判定する。
+    bool shouldCheck = a->ShouldCollideWith(b) || b->ShouldCollideWith(a) ||
+                       a->CollidesWithAll() || b->CollidesWithAll();
 
     if (!shouldCheck) {
         // 判定が不要な場合は、以前の衝突状態をクリア
@@ -189,6 +226,15 @@ void CollisionManager::CheckCollisionPair(ColliderBase *a, ColliderBase *b) {
 bool CollisionManager::TestCollision(ColliderBase *a, ColliderBase *b) {
     ColliderType typeA = a->GetType();
     ColliderType typeB = b->GetType();
+
+    // Mesh - (Sphere/OBB/AABB/Cylinder/Mesh)
+    // どちらかがメッシュなら、メッシュ側を基準に三角形判定へディスパッチする
+    if (typeA == ColliderType::Mesh || typeB == ColliderType::Mesh) {
+        bool aIsMesh = (typeA == ColliderType::Mesh);
+        auto *mesh = static_cast<MeshCollider *>(aIsMesh ? a : b);
+        ColliderBase *other = aIsMesh ? b : a;
+        return MeshIntersectShape(mesh, other);
+    }
 
     // Sphere - Sphere
     if (typeA == ColliderType::Sphere && typeB == ColliderType::Sphere) {
@@ -455,6 +501,16 @@ void CollisionManager::ImGuiColliderInspector() {
                 cyl->SetInward(inward);
             break;
         }
+        case ColliderType::Mesh: {
+            auto *mesh = static_cast<MeshCollider *>(c);
+            ReadOnlyRow("三角形数", "%d", static_cast<int>(mesh->GetTriangleCount()));
+            if (!mesh->GetSourceModelPath().empty())
+                ReadOnlyRow("ソース", "%s", mesh->GetSourceModelPath().c_str());
+            bool wire = mesh->IsWireframeVisible();
+            if (ImGui::Checkbox("ワイヤーフレーム表示", &wire))
+                mesh->SetWireframeVisible(wire);
+            break;
+        }
         }
 
         ImGui::Spacing();
@@ -674,6 +730,54 @@ bool CollisionManager::CalculateDepenetrationOBBCylinder(OBBCollider *obbCol, Cy
     }
 
     return true;
+}
+
+bool CollisionManager::ComputeDepenetration(ColliderBase *a, ColliderBase *b, Vector3 &outMTV) {
+    if (!a || !b)
+        return false;
+
+    ColliderType ta = a->GetType();
+    ColliderType tb = b->GetType();
+
+    // ===== メッシュが絡むペア =====
+    // b がメッシュ → a（形状）をメッシュから押し出す MTV をそのまま返す
+    if (tb == ColliderType::Mesh && ta != ColliderType::Mesh) {
+        return DepenetrateShapeFromMesh(a, static_cast<MeshCollider *>(b), outMTV);
+    }
+    // a がメッシュ → b をメッシュから押し出す MTV の逆向き（メッシュ a を b から離す）
+    if (ta == ColliderType::Mesh && tb != ColliderType::Mesh) {
+        Vector3 mtv;
+        if (DepenetrateShapeFromMesh(b, static_cast<MeshCollider *>(a), mtv)) {
+            outMTV = -mtv;
+            return true;
+        }
+        return false;
+    }
+    // メッシュ同士は静的同士前提のため未対応
+    if (ta == ColliderType::Mesh && tb == ColliderType::Mesh) {
+        return false;
+    }
+
+    // ===== 既存の非メッシュペア =====
+    if (ta == ColliderType::OBB && tb == ColliderType::OBB) {
+        return CalculateDepenetration(static_cast<OBBCollider *>(a), static_cast<OBBCollider *>(b), outMTV);
+    }
+    if (ta == ColliderType::AABB && tb == ColliderType::AABB) {
+        return CalculateDepenetration(static_cast<AABBCollider *>(a), static_cast<AABBCollider *>(b), outMTV);
+    }
+    if (ta == ColliderType::OBB && tb == ColliderType::Cylinder) {
+        return CalculateDepenetrationOBBCylinder(static_cast<OBBCollider *>(a), static_cast<CylinderCollider *>(b), outMTV);
+    }
+    if (ta == ColliderType::Cylinder && tb == ColliderType::OBB) {
+        Vector3 mtv;
+        if (CalculateDepenetrationOBBCylinder(static_cast<OBBCollider *>(b), static_cast<CylinderCollider *>(a), mtv)) {
+            outMTV = -mtv; // OBBを押し出す向きの逆 = 円柱を押し出す向き
+            return true;
+        }
+        return false;
+    }
+
+    return false; // 未対応ペア
 }
 
 bool CollisionManager::IsCollision(const Sphere &s1, const Sphere &s2) {

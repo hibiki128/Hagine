@@ -54,6 +54,15 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     if (gMaterial.enableLighting != 0)
     {
+        // 両面ライティング: 法線が視線と逆を向く面（薄い板の裏面や、法線が下を向いた床など）は
+        // 法線を反転し、どちらの面から見ても正しく陰影が付くようにする。
+        // 閉じたモデルの可視面は元から視線側を向くため影響せず、裏面はカリングされるため見た目は変わらない。
+        float3 viewDir = normalize(gCamera.worldPosition - input.worldPosition);
+        if (dot(normalize(input.normal), viewDir) < 0.0f)
+        {
+            input.normal = -input.normal;
+        }
+
         output.color.rgb = float3(0.0f, 0.0f, 0.0f);
 
         // 指向性ライトの計算

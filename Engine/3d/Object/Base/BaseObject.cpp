@@ -2,6 +2,7 @@
 #include "BaseObject.h"
 #include "BaseObjectManager.h"
 #include "Collider/CollisionManager.h"
+#include "Engine/Frame/Frame.h"
 #include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Scene/SceneManager.h"
@@ -39,6 +40,10 @@ void BaseObject::Update() {
         obj3d_->AnimationUpdate();
     }
     SetBlendMode(blendMode_);
+
+    // リジッドボディの物理を更新（重力・速度積分）。
+    // 衝突解消（押し出し）はこの後の CollisionManager::Update のコールバックで行う。
+    UpdatePhysics(Frame::DeltaTime());
 }
 
 void BaseObject::Draw(const ViewProjection &viewProjection) {
@@ -338,6 +343,9 @@ void BaseObject::SaveToJson() {
 
     SaveParentChildRelationship();
 
+    // 物理（リジッドボディ）情報を保存
+    SavePhysics();
+
     // コライダー情報を保存
     SaveColliders();
     ObjectDatas_->Flush();
@@ -370,6 +378,9 @@ void BaseObject::SceneSaveToJson() {
     ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
 
     SaveParentChildRelationship();
+
+    // 物理（リジッドボディ）情報を保存
+    SavePhysics();
 
     // コライダー情報を保存
     SaveColliders();
@@ -423,8 +434,16 @@ void BaseObject::LoadFromJson() {
 
     LoadParentChildRelationship();
 
+    // 物理（リジッドボディ）情報を読み込み
+    LoadPhysics();
+
     // コライダー情報を読み込み
     LoadColliders();
+
+    // 押し出しが有効ならコライダーにコールバックを仕込む（コライダー生成後に行う）
+    if (resolveCollision_) {
+        InstallResolveCallbacks();
+    }
 }
 
 void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
@@ -474,8 +493,16 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
 
     LoadParentChildRelationship();
 
+    // 物理（リジッドボディ）情報を読み込み
+    LoadPhysics();
+
     // コライダー情報を読み込み
     LoadColliders();
+
+    // 押し出しが有効ならコライダーにコールバックを仕込む（コライダー生成後に行う）
+    if (resolveCollision_) {
+        InstallResolveCallbacks();
+    }
 }
 
 void BaseObject::SaveColliders() {
@@ -517,6 +544,15 @@ void BaseObject::SaveColliders() {
             ObjectDatas_->Save<Vector3>(prefix + "size", obb->GetSize());
             ObjectDatas_->Save<Vector3>(prefix + "rotationOffset", obb->GetRotationOffset());
             ObjectDatas_->Save<Vector3>(prefix + "scaleOffset", obb->GetPositionOffset());
+        } else if (auto *cyl = dynamic_cast<CylinderCollider *>(collider)) {
+            ObjectDatas_->Save<float>(prefix + "radius", cyl->GetRadius());
+            ObjectDatas_->Save<float>(prefix + "height", cyl->GetHeight());
+            ObjectDatas_->Save<bool>(prefix + "inward", cyl->IsInward());
+        } else if (auto *mesh = dynamic_cast<MeshCollider *>(collider)) {
+            // メッシュ形状（三角形データ）は保存せず、オブジェクトのモデルから再構築する。
+            // ここでは復元に必要な最低限の情報のみ保存する。
+            ObjectDatas_->Save<std::string>(prefix + "sourceModelPath", mesh->GetSourceModelPath());
+            ObjectDatas_->Save<bool>(prefix + "wireframeVisible", mesh->IsWireframeVisible());
         }
     }
 }
@@ -573,6 +609,28 @@ void BaseObject::LoadColliders() {
             obb->SetPositionOffSet(ObjectDatas_->Load<Vector3>(prefix + "scaleOffset", {0.0f, 0.0f, 0.0f}));
             collider = obb.get();
             colliderOwner = std::move(obb);
+            break;
+        }
+        case ColliderType::Cylinder: {
+            auto cyl = std::make_unique<CylinderCollider>();
+            cyl->SetRadius(ObjectDatas_->Load<float>(prefix + "radius", 30.0f));
+            cyl->SetHeight(ObjectDatas_->Load<float>(prefix + "height", 100.0f));
+            cyl->SetInward(ObjectDatas_->Load<bool>(prefix + "inward", true));
+            collider = cyl.get();
+            colliderOwner = std::move(cyl);
+            break;
+        }
+        case ColliderType::Mesh: {
+            auto mesh = std::make_unique<MeshCollider>();
+            mesh->SetSourceModelPath(ObjectDatas_->Load<std::string>(prefix + "sourceModelPath", modelPath_));
+            mesh->SetWireframeVisible(ObjectDatas_->Load<bool>(prefix + "wireframeVisible", true));
+            // 三角形データは保存していないため、オブジェクトのモデルから再構築する
+            if (obj3d_) {
+                mesh->SetMatrixGetter([this]() { return this->GetWorldMatrix(); });
+                mesh->BuildFromModel(obj3d_->GetModel());
+            }
+            collider = mesh.get();
+            colliderOwner = std::move(mesh);
             break;
         }
         default:
@@ -780,6 +838,52 @@ void BaseObject::DebugCollider() {
             if (ImGui::DragFloat3("##opoff", &posOff.x, 0.1f, -1000.f, 1000.f, "%.2f"))
                 obb->SetPositionOffSet(posOff);
             ImGui::PopStyleColor();
+        } else if (auto *cyl = dynamic_cast<CylinderCollider *>(col)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentYellow);
+            ImGui::TextUnformatted("種別: 円柱");
+            ImGui::PopStyleColor();
+
+            float r = cyl->GetRadius();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("半径");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgYellow);
+            if (ImGui::DragFloat("##cyrad", &r, 0.1f, 0.1f, 1000.f, "%.2f"))
+                cyl->SetRadius(r);
+            ImGui::PopStyleColor();
+
+            float h = cyl->GetHeight();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::TextUnformatted("高さ");
+            ImGui::PopStyleColor();
+            ImGui::SetNextItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, DebugTheme::kBgYellow);
+            if (ImGui::DragFloat("##cyhgt", &h, 0.1f, 0.1f, 1000.f, "%.2f"))
+                cyl->SetHeight(h);
+            ImGui::PopStyleColor();
+
+            bool inward = cyl->IsInward();
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentYellow);
+            if (ImGui::Checkbox("内側に閉じ込める##cyin", &inward))
+                cyl->SetInward(inward);
+            ImGui::PopStyleColor();
+        } else if (auto *mesh = dynamic_cast<MeshCollider *>(col)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentOrange);
+            ImGui::TextUnformatted("種別: メッシュ");
+            ImGui::PopStyleColor();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::Text("三角形数: %d", static_cast<int>(mesh->GetTriangleCount()));
+            if (!mesh->GetSourceModelPath().empty())
+                ImGui::Text("ソース: %s", mesh->GetSourceModelPath().c_str());
+            ImGui::PopStyleColor();
+
+            bool wire = mesh->IsWireframeVisible();
+            ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentOrange);
+            if (ImGui::Checkbox("ワイヤーフレーム表示##mwire", &wire))
+                mesh->SetWireframeVisible(wire);
+            ImGui::PopStyleColor();
         }
 
         ImGui::Spacing();
@@ -902,6 +1006,9 @@ SphereCollider *BaseObject::AddSphereCollider(const std::string &name) {
     LoadColliderIfSaved(raw); // 保存済み設定があれば反映（登録より前）
     CollisionManager::GetInstance()->Register(raw);
 
+    if (resolveCollision_) {
+        raw->SetOnCollision([this, raw](ColliderBase *other) { this->ResolveCollisionWith(raw, other); });
+    }
     return raw;
 }
 
@@ -919,6 +1026,9 @@ AABBCollider *BaseObject::AddAABBCollider(const std::string &name) {
     LoadColliderIfSaved(raw); // 保存済み設定があれば反映（登録より前）
     CollisionManager::GetInstance()->Register(raw);
 
+    if (resolveCollision_) {
+        raw->SetOnCollision([this, raw](ColliderBase *other) { this->ResolveCollisionWith(raw, other); });
+    }
     return raw;
 }
 
@@ -936,6 +1046,9 @@ OBBCollider *BaseObject::AddOBBCollider(const std::string &name) {
     LoadColliderIfSaved(raw); // 保存済み設定があれば反映（登録より前）
     CollisionManager::GetInstance()->Register(raw);
 
+    if (resolveCollision_) {
+        raw->SetOnCollision([this, raw](ColliderBase *other) { this->ResolveCollisionWith(raw, other); });
+    }
     return raw;
 }
 
@@ -952,7 +1065,158 @@ CylinderCollider *BaseObject::AddCylinderCollider(const std::string &name) {
     colliders_.push_back(std::move(collider));
     LoadColliderIfSaved(raw); // 保存済み設定があれば反映（登録より前）
     CollisionManager::GetInstance()->Register(raw);
+
+    if (resolveCollision_) {
+        raw->SetOnCollision([this, raw](ColliderBase *other) { this->ResolveCollisionWith(raw, other); });
+    }
     return raw;
+}
+
+MeshCollider *BaseObject::AddMeshCollider(const std::string &name) {
+    auto collider = std::make_unique<MeshCollider>();
+
+    std::string colliderName = name.empty() ? objectName_ + "_MeshCollider" : name;
+    collider->SetName(colliderName);
+
+    // 位置・回転に加え、スケールを含むワールド行列も取得できるよう配線する
+    collider->SetPositionGetter([this]() { return this->GetWorldPosition(); });
+    collider->SetRotationGetter([this]() { return this->GetWorldRotation(); });
+    collider->SetMatrixGetter([this]() { return this->GetWorldMatrix(); });
+
+    // 自身のモデル形状（ローカル空間の頂点）から三角形群とBVHを構築する
+    if (obj3d_) {
+        collider->SetSourceModelPath(modelPath_);
+        collider->BuildFromModel(obj3d_->GetModel());
+    }
+
+    MeshCollider *raw = collider.get();
+    colliders_.push_back(std::move(collider));
+    LoadColliderIfSaved(raw); // 保存済み設定があれば反映（登録より前）
+    CollisionManager::GetInstance()->Register(raw);
+
+    // 押し出しが有効なら、追加したコライダーにも押し出しコールバックを仕込む
+    if (resolveCollision_) {
+        raw->SetOnCollision([this, raw](ColliderBase *other) {
+            this->ResolveCollisionWith(raw, other);
+        });
+    }
+    return raw;
+}
+
+void BaseObject::UpdatePhysics(float deltaTime) {
+    if (!rigidBody_.enabled || deltaTime <= 0.0f || !transform_) {
+        return;
+    }
+
+    // 重力（加速度）を速度へ積分
+    if (rigidBody_.useGravity) {
+        rigidBody_.velocity += rigidBody_.gravity * deltaTime;
+    }
+
+    // 外力を加速度（a = F / m）として速度へ積分
+    if (rigidBody_.mass > 1e-4f) {
+        rigidBody_.velocity += (accumulatedForce_ / rigidBody_.mass) * deltaTime;
+    }
+    accumulatedForce_ = {0.0f, 0.0f, 0.0f};
+
+    // 速度の減衰（空気抵抗）
+    float damp = 1.0f - rigidBody_.linearDamping * deltaTime;
+    if (damp < 0.0f) {
+        damp = 0.0f;
+    }
+    rigidBody_.velocity *= damp;
+
+    // 速度を位置へ積分（ローカル座標。物理は親なしルートオブジェクト向け）
+    transform_->translation_ += rigidBody_.velocity * deltaTime;
+}
+
+void BaseObject::ResolveCollisionWith(ColliderBase *self, ColliderBase *other) {
+    if (!resolveCollision_ || !transform_) {
+        return;
+    }
+
+    // self を other から押し出す MTV を統一APIで取得する
+    Vector3 mtv;
+    if (!CollisionManager::GetInstance()->ComputeDepenetration(self, other, mtv)) {
+        return;
+    }
+    if (mtv.LengthSq() < 1e-10f) {
+        return;
+    }
+
+    // めり込み解消（押し出し）
+    transform_->translation_ += mtv;
+
+    // リジッドボディなら、接触面に沿うよう速度を補正する
+    if (rigidBody_.enabled) {
+        Vector3 n = mtv.Normalize();
+        float vn = rigidBody_.velocity.Dot(n);
+        if (vn < 0.0f) {
+            // 法線方向の侵入成分を除去（反発係数で跳ね返り）
+            rigidBody_.velocity -= n * (vn * (1.0f + rigidBody_.restitution));
+        }
+        // 接線方向に摩擦をかける（坂を滑り落ちる挙動になる）
+        Vector3 vTangent = rigidBody_.velocity - n * rigidBody_.velocity.Dot(n);
+        rigidBody_.velocity -= vTangent * rigidBody_.friction;
+    }
+}
+
+void BaseObject::InstallResolveCallbacks() {
+    for (auto &c : colliders_) {
+        if (!c) {
+            continue;
+        }
+        ColliderBase *self = c.get();
+        self->SetOnCollision([this, self](ColliderBase *other) {
+            this->ResolveCollisionWith(self, other);
+        });
+    }
+}
+
+void BaseObject::ClearResolveCallbacks() {
+    for (auto &c : colliders_) {
+        if (c) {
+            c->SetOnCollision(nullptr);
+        }
+    }
+}
+
+void BaseObject::SetResolveCollision(bool enable) {
+    resolveCollision_ = enable;
+    if (enable) {
+        InstallResolveCallbacks();
+    } else {
+        ClearResolveCallbacks();
+    }
+}
+
+void BaseObject::SavePhysics() {
+    if (!ObjectDatas_) {
+        return;
+    }
+    ObjectDatas_->Save<bool>("rb_enabled", rigidBody_.enabled);
+    ObjectDatas_->Save<bool>("rb_useGravity", rigidBody_.useGravity);
+    ObjectDatas_->Save<float>("rb_mass", rigidBody_.mass);
+    ObjectDatas_->Save<Vector3>("rb_gravity", rigidBody_.gravity);
+    ObjectDatas_->Save<float>("rb_linearDamping", rigidBody_.linearDamping);
+    ObjectDatas_->Save<float>("rb_restitution", rigidBody_.restitution);
+    ObjectDatas_->Save<float>("rb_friction", rigidBody_.friction);
+    ObjectDatas_->Save<bool>("resolveCollision", resolveCollision_);
+}
+
+void BaseObject::LoadPhysics() {
+    if (!ObjectDatas_) {
+        return;
+    }
+    rigidBody_.enabled = ObjectDatas_->Load<bool>("rb_enabled", false);
+    rigidBody_.useGravity = ObjectDatas_->Load<bool>("rb_useGravity", true);
+    rigidBody_.mass = ObjectDatas_->Load<float>("rb_mass", 1.0f);
+    rigidBody_.gravity = ObjectDatas_->Load<Vector3>("rb_gravity", {0.0f, -9.8f, 0.0f});
+    rigidBody_.linearDamping = ObjectDatas_->Load<float>("rb_linearDamping", 0.05f);
+    rigidBody_.restitution = ObjectDatas_->Load<float>("rb_restitution", 0.0f);
+    rigidBody_.friction = ObjectDatas_->Load<float>("rb_friction", 0.3f);
+    resolveCollision_ = ObjectDatas_->Load<bool>("resolveCollision", false);
+    rigidBody_.velocity = {0.0f, 0.0f, 0.0f}; // 速度はランタイム状態なのでリセット
 }
 
 void BaseObject::DebugObject() {
@@ -1393,6 +1657,18 @@ void BaseObject::DebugObject() {
                 makeDefault(c);
                 c->SetSize({2.0f, 2.0f, 2.0f});
             }
+            if (ImGui::MenuItem("Cylinder")) {
+                auto *c = AddCylinderCollider();
+                makeDefault(c);
+                c->SetRadius(2.0f);
+                c->SetHeight(4.0f);
+                c->SetInward(false); // 障害物として外側に押し出す
+            }
+            if (ImGui::MenuItem("Mesh")) {
+                // 自身のモデル形状から三角形メッシュコライダーを生成する
+                auto *c = AddMeshCollider();
+                makeDefault(c);
+            }
             ImGui::EndPopup();
         }
 
@@ -1407,7 +1683,61 @@ void BaseObject::DebugObject() {
     }
 
     // ====================================================
-    // [7] Scale Easing Test
+    // [7] RigidBody / Push-out
+    // ====================================================
+    ImGui::PushStyleColor(ImGuiCol_Header, {0.55f, 0.35f, 0.15f, 0.40f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.65f, 0.45f, 0.20f, 0.45f});
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.70f, 0.50f, 0.25f, 0.55f});
+    bool rbOpen = ImGui::CollapsingHeader("リジッドボディ / 押し出し##hdr");
+    ImGui::PopStyleColor(3);
+
+    if (rbOpen) {
+        ImGui::Indent(6.0f);
+
+        // 押し出し（衝突解消）フラグ。トグルでコールバックの仕込み/解除も行う
+        bool resolve = resolveCollision_;
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentOrange);
+        if (ImGui::Checkbox("押し出し（衝突解消）##resolve", &resolve)) {
+            SetResolveCollision(resolve);
+        }
+        ImGui::PopStyleColor();
+        ImGui::SetItemTooltip("衝突した相手から押し出す。独自の衝突処理を持つオブジェクトでは使わないこと");
+
+        ImGui::Spacing();
+        SectionHeader("[ リジッドボディ ]", DebugTheme::kAccentOrange);
+
+        bool rb = rigidBody_.enabled;
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
+        if (ImGui::Checkbox("リジッドボディとして扱う##rbenable", &rb))
+            rigidBody_.enabled = rb;
+        ImGui::PopStyleColor();
+        ImGui::SetItemTooltip("重力で落下する。押し出しと併用すると坂を滑り落ちる");
+
+        ImGui::SameLine();
+        bool grav = rigidBody_.useGravity;
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentBlue);
+        if (ImGui::Checkbox("重力##rbgrav", &grav))
+            rigidBody_.useGravity = grav;
+        ImGui::PopStyleColor();
+
+        ImGui::DragFloat("質量##rbmass", &rigidBody_.mass, 0.05f, 0.01f, 1000.0f, "%.2f");
+        ImGui::DragFloat3("重力加速度##rbg", &rigidBody_.gravity.x, 0.1f, -100.0f, 100.0f, "%.2f");
+        ImGui::DragFloat("減衰(空気抵抗)##rbdamp", &rigidBody_.linearDamping, 0.005f, 0.0f, 10.0f, "%.3f");
+        ImGui::DragFloat("反発係数##rbrest", &rigidBody_.restitution, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::DragFloat("摩擦##rbfric", &rigidBody_.friction, 0.01f, 0.0f, 1.0f, "%.2f");
+
+        ImGui::Spacing();
+        Vector3 v = rigidBody_.velocity;
+        ReadOnlyRow("速度", "%.2f, %.2f, %.2f", v.x, v.y, v.z);
+        if (ImGui::Button("速度をリセット##rbresetv", ImVec2(-1, 0)))
+            rigidBody_.velocity = {0.0f, 0.0f, 0.0f};
+
+        ImGui::Unindent(6.0f);
+        ImGui::Spacing();
+    }
+
+    // ====================================================
+    // [8] Scale Easing Test
     // ====================================================
     ImGui::PushStyleColor(ImGuiCol_Header, {0.15f, 0.50f, 0.35f, 0.40f});
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.65f, 0.45f, 0.45f});
