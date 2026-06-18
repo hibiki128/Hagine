@@ -348,6 +348,26 @@ void MeshCollider::BuildFromTriangles(const std::vector<Triangle> &localTriangle
     BuildEdges();
     worldEdgesValid_ = false; // ワールドエッジキャッシュを作り直させる
 
+    // Mesh×Mesh押し戻し用のローカル・バウンディング球を算出する。
+    // 中心はローカルAABBの中点、半径は中心から最も遠い頂点までの距離。
+    if (triangles_.empty()) {
+        localBoundingCenter_ = {0.0f, 0.0f, 0.0f};
+        localBoundingRadius_ = 0.0f;
+    } else {
+        AABB bounds = TriangleBounds(triangles_[0]);
+        for (size_t i = 1; i < triangles_.size(); ++i)
+            bounds = MergeAABB(bounds, TriangleBounds(triangles_[i]));
+        localBoundingCenter_ = (bounds.min + bounds.max) * 0.5f;
+        float maxDistSq = 0.0f;
+        for (const auto &t : triangles_)
+            for (int k = 0; k < 3; ++k) {
+                float dSq = (t.v[k] - localBoundingCenter_).LengthSq();
+                if (dSq > maxDistSq)
+                    maxDistSq = dSq;
+            }
+        localBoundingRadius_ = std::sqrt(maxDistSq);
+    }
+
     // 生成直後（最初の更新前）に描画・判定されても正しい行列を使えるよう、
     // ここでワールド行列キャッシュを一度確定させておく。
     UpdateWorldTransform();
@@ -689,5 +709,12 @@ bool MeshCollider::Depenetrate(const AABB &aabb, Vector3 &outMTV) const {
     }
     outMTV = sum;
     return hit;
+}
+
+Sphere MeshCollider::GetWorldBoundingSphere() const {
+    Sphere s;
+    s.center = Transformation(localBoundingCenter_, cachedWorld_);
+    s.radius = localBoundingRadius_ * cachedScale_; // 一様スケール前提
+    return s;
 }
 } // namespace Hagine

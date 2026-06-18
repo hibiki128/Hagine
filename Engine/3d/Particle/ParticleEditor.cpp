@@ -2,6 +2,7 @@
 #include "ParticleEditor.h"
 #include "Debug/ImGui/ImGuiManager.h"
 #include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
+#include "Engine/Render/DrawGroupManager.h"
 #ifdef _DEBUG
 #include "ShowFolder/ShowFolder.h"
 #endif // _DEBUG
@@ -40,6 +41,7 @@ void ParticleEditor::AddParticleEmitter(const std::string &name, const std::stri
     emitter->Initialize(name);
     // マップに追加
     emitters_[name] = std::move(emitter);
+    DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
     ImGuiNotification::Post("パーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -54,6 +56,7 @@ void ParticleEditor::AddParticleEmitter(const std::string &name) {
     emitter->Initialize(name);
     // マップに追加
     emitters_[name] = std::move(emitter);
+    DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
     ImGuiNotification::Post("パーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -112,6 +115,20 @@ void ParticleEditor::DrawAll(const ViewProjection &vp_) {
             emitter->Draw(vp_);
         }
     }
+}
+
+std::vector<std::string> ParticleEditor::GetEmitterNames() const {
+    std::vector<std::string> names;
+    names.reserve(emitters_.size());
+    for (const auto &[name, emitter] : emitters_) {
+        names.push_back(name);
+    }
+    return names;
+}
+
+ParticleEmitter *ParticleEditor::GetEmitterByName(const std::string &name) {
+    auto it = emitters_.find(name);
+    return (it != emitters_.end()) ? it->second.get() : nullptr;
 }
 
 void ParticleEditor::DrawSelectedForPreview(const ViewProjection &vp) {

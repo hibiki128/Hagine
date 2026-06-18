@@ -710,6 +710,7 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("isAuto", isAuto_);
     data->Save("isVisible", isVisible_);
     data->Save("isGizmoSelectable", isGizmoSelectable_);
+    data->Save("drawGroup", drawGroup_);
     data->Save("frequency", emitterMeshData_->frequency);
     data->Save("frequencyTime", emitterMeshData_->frequencyTime);
     data->Save<Vector3>("translate", emitterMeshData_->translate);
@@ -837,6 +838,10 @@ void ParticleCSEmitter::LoadSetting() {
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
     isGizmoSelectable_ = data->Load("isGizmoSelectable", true);
+    drawGroup_ = data->Load<std::string>("drawGroup", "3D");
+    if (drawGroup_ != "UI") {
+        drawGroup_ = "3D"; // 旧データは3D扱いに正規化
+    }
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
@@ -987,6 +992,10 @@ void ParticleCSEmitter::LoadCloneSetting() {
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
     isGizmoSelectable_ = data->Load("isGizmoSelectable", true);
+    drawGroup_ = data->Load<std::string>("drawGroup", "3D");
+    if (drawGroup_ != "UI") {
+        drawGroup_ = "3D"; // 旧データは3D扱いに正規化
+    }
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));

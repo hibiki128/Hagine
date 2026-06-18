@@ -140,6 +140,7 @@ void ParticleEmitter::SaveToJson() {
     datas_->Save("isActive", isActive_);
     datas_->Save("isAuto", isAuto_);
     datas_->Save("isGizmoSelectable", isGizmoSelectable_);
+    datas_->Save("drawGroup", drawGroup_);
     for (const auto &[groupName, setting] : particleSettings_) {
         datas_->Save(groupName + "_translate", setting.translate);
         datas_->Save(groupName + "_rotation", setting.rotation);
@@ -209,6 +210,10 @@ void ParticleEmitter::LoadFromJson() {
     isActive_ = datas_->Load<bool>("isActive", false);
     isAuto_ = datas_->Load<bool>("isAuto", false);
     isGizmoSelectable_ = datas_->Load<bool>("isGizmoSelectable", true);
+    drawGroup_ = datas_->Load<std::string>("drawGroup", "3D");
+    if (drawGroup_ != "UI") {
+        drawGroup_ = "3D"; // 旧データは3D扱いに正規化
+    }
 
     for (const auto &groupName : particleGroupNames_) {
         ParticleSetting setting;

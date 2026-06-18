@@ -216,7 +216,8 @@ void ShadowMap::UpdateImGui(bool *open) {
         ImGui::SetNextItemWidth(-1);
     };
 
-    if (ImGui::Begin("ShadowMap", open, ImGuiWindowFlags_NoFocusOnAppearing)) {
+    // 表示名は日本語、ウィンドウIDは "ShadowMap" のまま（保存済みレイアウトとの互換維持）
+    if (ImGui::Begin("シャドウマップ###ShadowMap", open, ImGuiWindowFlags_NoFocusOnAppearing)) {
         ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
         ImGui::Checkbox("シャドウ有効", &enabled_);
         ImGui::PopStyleColor();

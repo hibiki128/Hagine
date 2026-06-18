@@ -159,5 +159,14 @@ class ParticleEditor {
 
     /// <summary>データの読み込み</summary>
     void Load();
+
+    /// <summary>登録済みエミッター名の一覧を取得（描画グループ管理UIで使用）</summary>
+    /// <returns>エミッター名一覧</returns>
+    std::vector<std::string> GetEmitterNames() const;
+
+    /// <summary>名前からエミッターを取得（なければ nullptr）</summary>
+    /// <param name="name">エミッター名</param>
+    /// <returns>ParticleEmitter*</returns>
+    ParticleEmitter *GetEmitterByName(const std::string &name);
 };
 } // namespace Hagine

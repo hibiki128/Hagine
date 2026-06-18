@@ -58,6 +58,215 @@ bool DepenetrateShapeFromMesh(ColliderBase *shape, MeshCollider *mesh, Vector3 &
     default:                     return false;
     }
 }
+
+/// ===================================================
+/// プリミティブ同士の押し戻し（MTVは「第1引数を第2引数から押し出す向き」で統一。
+/// 戻り値が true のとき outMTV を第1引数の形状へ加算するとめり込みが解消される）
+/// ===================================================
+
+/// <summary>球Aを球Bから押し出すMTV</summary>
+bool DepenetrateSphereSphere(const Sphere &a, const Sphere &b, Vector3 &outMTV) {
+    Vector3 d = a.center - b.center;
+    float distSq = d.LengthSq();
+    float rsum = a.radius + b.radius;
+    if (distSq >= rsum * rsum)
+        return false;
+    float dist = std::sqrt(distSq);
+    // 中心が完全一致のときは適当な向き（上）へ逃がす
+    Vector3 dir = (dist > 1e-6f) ? (d / dist) : Vector3{0.0f, 1.0f, 0.0f};
+    outMTV = dir * (rsum - dist);
+    return true;
+}
+
+/// <summary>
+/// 球をボックス（中心C・単位軸u[3]・半径extent e[3]）から押し出すMTV。
+/// AABBは u に world軸、OBBは u に orientations を渡すことで共通化する。
+/// </summary>
+bool DepenetrateSphereBox(const Vector3 &sc, float r, const Vector3 &C, const Vector3 u[3], const float e[3], Vector3 &outMTV) {
+    // 球中心をボックスのローカル空間へ
+    Vector3 d = sc - C;
+    Vector3 local = {d.Dot(u[0]), d.Dot(u[1]), d.Dot(u[2])};
+
+    // ローカルAABB [-e, e] 上の最近点
+    Vector3 closest = {
+        std::clamp(local.x, -e[0], e[0]),
+        std::clamp(local.y, -e[1], e[1]),
+        std::clamp(local.z, -e[2], e[2])};
+    Vector3 diff = local - closest;
+    float distSq = diff.LengthSq();
+    if (distSq > r * r)
+        return false;
+
+    if (distSq > 1e-12f) {
+        // 球中心はボックス外。最近点から球中心への向きへ押し出す
+        float dist = std::sqrt(distSq);
+        Vector3 nLocal = diff / dist;
+        float pen = r - dist;
+        Vector3 m = nLocal * pen;
+        outMTV = u[0] * m.x + u[1] * m.y + u[2] * m.z;
+    } else {
+        // 球中心がボックス内部。最も浅い面へ押し出す
+        float px = e[0] - std::abs(local.x);
+        float py = e[1] - std::abs(local.y);
+        float pz = e[2] - std::abs(local.z);
+        int axis = (px <= py && px <= pz) ? 0 : ((py <= pz) ? 1 : 2);
+        float comp = (axis == 0) ? local.x : (axis == 1) ? local.y : local.z;
+        float sign = (comp >= 0.0f) ? 1.0f : -1.0f;
+        float pen = ((axis == 0) ? px : (axis == 1) ? py : pz) + r;
+        outMTV = u[axis] * (sign * pen);
+    }
+    return true;
+}
+
+/// <summary>
+/// ボックスAをボックスBから押し出すMTV（SAT 15軸、貫通最小の軸を選ぶ）。
+/// AABBは u に world軸を渡せばOBBと共通に扱える。e は半径extent。
+/// </summary>
+bool DepenetrateBoxBox(const Vector3 &cA, const Vector3 uA[3], const float eA[3],
+                       const Vector3 &cB, const Vector3 uB[3], const float eB[3], Vector3 &outMTV) {
+    Vector3 axes[15] = {
+        uA[0], uA[1], uA[2],
+        uB[0], uB[1], uB[2],
+        uA[0].Cross(uB[0]), uA[0].Cross(uB[1]), uA[0].Cross(uB[2]),
+        uA[1].Cross(uB[0]), uA[1].Cross(uB[1]), uA[1].Cross(uB[2]),
+        uA[2].Cross(uB[0]), uA[2].Cross(uB[1]), uA[2].Cross(uB[2])};
+
+    Vector3 d = cA - cB; // B→A（MTVをAが離れる向きへ揃えるために使う）
+    float minPen = FLT_MAX;
+    Vector3 bestAxis = {};
+
+    for (const Vector3 &ax : axes) {
+        float len = ax.Length();
+        if (len < 1e-6f)
+            continue; // 退化軸（平行辺のクロス積）はスキップ
+        Vector3 L = ax / len;
+
+        float ra = eA[0] * std::abs(uA[0].Dot(L)) + eA[1] * std::abs(uA[1].Dot(L)) + eA[2] * std::abs(uA[2].Dot(L));
+        float rb = eB[0] * std::abs(uB[0].Dot(L)) + eB[1] * std::abs(uB[1].Dot(L)) + eB[2] * std::abs(uB[2].Dot(L));
+        float centerDist = d.Dot(L);
+        float pen = ra + rb - std::abs(centerDist);
+        if (pen < 0.0f)
+            return false; // 分離軸 → 衝突なし
+
+        if (pen < minPen) {
+            minPen = pen;
+            // AをBから離す向き（d側）へ揃える
+            bestAxis = (centerDist < 0.0f) ? -L : L;
+        }
+    }
+
+    outMTV = bestAxis * minPen;
+    return true;
+}
+
+/// <summary>
+/// XZ円で近似した形状（中心center・XZ半径xzR・上端top・下端bot）を円柱から押し出すMTV。
+/// 円柱はY軸方向に直立した形状とみなす（既存のOBB×円柱と同じ規約）。
+/// inward=true（フィールド壁）は内側へ、false（障害物）は外側へ押し出す。
+/// </summary>
+bool DepenetrateXZShapeCylinder(const Vector3 &center, float xzR, float top, float bot,
+                                CylinderCollider *cyl, Vector3 &outMTV) {
+    Vector3 cc = cyl->GetCenterPosition();
+    float R = cyl->GetRadius();
+    float halfH = cyl->GetHeight() * 0.5f;
+
+    float dx = center.x - cc.x;
+    float dz = center.z - cc.z;
+    float distXZ = std::sqrt(dx * dx + dz * dz);
+
+    if (cyl->IsInward()) {
+        // フィールド壁：はみ出した側面・天井・床を内側へ押し戻す
+        outMTV = {0.0f, 0.0f, 0.0f};
+        bool hit = false;
+
+        float penXZ = (distXZ + xzR) - R;
+        if (penXZ > 0.0f) {
+            if (distXZ < 1e-4f) {
+                outMTV.z += -penXZ;
+            } else {
+                float nx = dx / distXZ;
+                float nz = dz / distXZ;
+                outMTV.x += -nx * penXZ;
+                outMTV.z += -nz * penXZ;
+            }
+            hit = true;
+        }
+        float ceilPen = top - (cc.y + halfH);
+        if (ceilPen > 0.0f) {
+            outMTV.y += -ceilPen;
+            hit = true;
+        }
+        float floorPen = (cc.y - halfH) - bot;
+        if (floorPen > 0.0f) {
+            outMTV.y += floorPen;
+            hit = true;
+        }
+        return hit;
+    }
+
+    // 障害物：側面のみ外側へ押し出す（垂直方向に重なっているときだけ）
+    bool verticalOverlap = (bot < cc.y + halfH) && (top > cc.y - halfH);
+    if (!verticalOverlap)
+        return false;
+    float pen = R - (distXZ - xzR);
+    if (pen <= 0.0f)
+        return false;
+    if (distXZ < 1e-4f) {
+        outMTV = {0.0f, 0.0f, pen};
+    } else {
+        float nx = dx / distXZ;
+        float nz = dz / distXZ;
+        outMTV = {nx * pen, 0.0f, nz * pen};
+    }
+    return true;
+}
+
+/// <summary>XZ円で近似した形状と円柱のヒット判定（押し出しのコールバック発火用）</summary>
+bool IsCollisionXZShapeCylinder(const Vector3 &center, float xzR, float top, float bot, CylinderCollider *cyl) {
+    Vector3 cc = cyl->GetCenterPosition();
+    float R = cyl->GetRadius();
+    float halfH = cyl->GetHeight() * 0.5f;
+
+    float dx = center.x - cc.x;
+    float dz = center.z - cc.z;
+    float distXZ = std::sqrt(dx * dx + dz * dz);
+
+    if (cyl->IsInward()) {
+        bool sideOut = (distXZ + xzR) > R;
+        bool ceilOut = top > (cc.y + halfH);
+        bool floorOut = bot < (cc.y - halfH);
+        return sideOut || ceilOut || floorOut;
+    }
+    bool verticalOverlap = (bot < cc.y + halfH) && (top > cc.y - halfH);
+    return verticalOverlap && ((distXZ - xzR) < R);
+}
+
+/// <summary>球をXZ円近似（中心・半径・上下端）として取り出す</summary>
+void SphereToXZShape(const Sphere &s, Vector3 &center, float &xzR, float &top, float &bot) {
+    center = s.center;
+    xzR = s.radius;
+    top = s.center.y + s.radius;
+    bot = s.center.y - s.radius;
+}
+
+/// <summary>AABBをXZ円近似（外接円のXZ半径）として取り出す</summary>
+void AABBToXZShape(const AABB &box, Vector3 &center, float &xzR, float &top, float &bot) {
+    center = (box.min + box.max) * 0.5f;
+    float hx = (box.max.x - box.min.x) * 0.5f;
+    float hz = (box.max.z - box.min.z) * 0.5f;
+    xzR = std::sqrt(hx * hx + hz * hz);
+    top = box.max.y;
+    bot = box.min.y;
+}
+
+/// <summary>円柱をXZ円近似として取り出す</summary>
+void CylinderToXZShape(CylinderCollider *cyl, Vector3 &center, float &xzR, float &top, float &bot) {
+    center = cyl->GetCenterPosition();
+    xzR = cyl->GetRadius();
+    float halfH = cyl->GetHeight() * 0.5f;
+    top = center.y + halfH;
+    bot = center.y - halfH;
+}
 } // namespace
 void CollisionManager::Register(ColliderBase *collider) {
     if (!collider)
@@ -303,6 +512,35 @@ bool CollisionManager::TestCollision(ColliderBase *a, ColliderBase *b) {
         auto *cyl = static_cast<CylinderCollider *>(a);
         auto *obb = static_cast<OBBCollider *>(b);
         return IsCollisionOBBCylinder(obb, cyl);
+    }
+
+    // Sphere - Cylinder
+    if ((typeA == ColliderType::Sphere && typeB == ColliderType::Cylinder) ||
+        (typeA == ColliderType::Cylinder && typeB == ColliderType::Sphere)) {
+        auto *sphere = static_cast<SphereCollider *>(typeA == ColliderType::Sphere ? a : b);
+        auto *cyl = static_cast<CylinderCollider *>(typeA == ColliderType::Cylinder ? a : b);
+        Vector3 center; float xzR, top, bot;
+        SphereToXZShape(sphere->GetSphere(), center, xzR, top, bot);
+        return IsCollisionXZShapeCylinder(center, xzR, top, bot, cyl);
+    }
+
+    // AABB - Cylinder
+    if ((typeA == ColliderType::AABB && typeB == ColliderType::Cylinder) ||
+        (typeA == ColliderType::Cylinder && typeB == ColliderType::AABB)) {
+        auto *aabb = static_cast<AABBCollider *>(typeA == ColliderType::AABB ? a : b);
+        auto *cyl = static_cast<CylinderCollider *>(typeA == ColliderType::Cylinder ? a : b);
+        Vector3 center; float xzR, top, bot;
+        AABBToXZShape(aabb->GetAABB(), center, xzR, top, bot);
+        return IsCollisionXZShapeCylinder(center, xzR, top, bot, cyl);
+    }
+
+    // Cylinder - Cylinder
+    if (typeA == ColliderType::Cylinder && typeB == ColliderType::Cylinder) {
+        auto *cylA = static_cast<CylinderCollider *>(a);
+        auto *cylB = static_cast<CylinderCollider *>(b);
+        Vector3 center; float xzR, top, bot;
+        CylinderToXZShape(cylA, center, xzR, top, bot);
+        return IsCollisionXZShapeCylinder(center, xzR, top, bot, cylB);
     }
 
     return false;
@@ -753,9 +991,19 @@ bool CollisionManager::ComputeDepenetration(ColliderBase *a, ColliderBase *b, Ve
         }
         return false;
     }
-    // メッシュ同士は静的同士前提のため未対応
+    // メッシュ同士：動かす側 a をワールド・バウンディング球で近似し、相手メッシュ b から押し出す。
+    // 球モデルのような凸でコンパクトな形状なら近似誤差は小さい。地形のような巨大平面を
+    // 動かす側にすると外接球が極端に大きくなり破綻するため、静的な側は押し出しOFFで運用すること。
     if (ta == ColliderType::Mesh && tb == ColliderType::Mesh) {
-        return false;
+        auto *meshA = static_cast<MeshCollider *>(a);
+        auto *meshB = static_cast<MeshCollider *>(b);
+        if (!meshA->IsBuilt() || !meshB->IsBuilt())
+            return false;
+        Sphere approxA = meshA->GetWorldBoundingSphere();
+        if (approxA.radius <= 0.0f)
+            return false;
+        // a の近似球を b から押し出すMTV = a を押し出すMTV
+        return meshB->Depenetrate(approxA, outMTV);
     }
 
     // ===== 既存の非メッシュペア =====
@@ -775,6 +1023,125 @@ bool CollisionManager::ComputeDepenetration(ColliderBase *a, ColliderBase *b, Ve
             return true;
         }
         return false;
+    }
+
+    // ===== 追加の非メッシュペア（a を b から押し出す向きで統一） =====
+
+    // Sphere - Sphere
+    if (ta == ColliderType::Sphere && tb == ColliderType::Sphere) {
+        return DepenetrateSphereSphere(static_cast<SphereCollider *>(a)->GetSphere(),
+                                       static_cast<SphereCollider *>(b)->GetSphere(), outMTV);
+    }
+
+    // Sphere - AABB
+    if (ta == ColliderType::Sphere && tb == ColliderType::AABB) {
+        Sphere s = static_cast<SphereCollider *>(a)->GetSphere();
+        AABB box = static_cast<AABBCollider *>(b)->GetAABB();
+        Vector3 c = (box.min + box.max) * 0.5f;
+        const Vector3 u[3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+        const float e[3] = {(box.max.x - box.min.x) * 0.5f, (box.max.y - box.min.y) * 0.5f, (box.max.z - box.min.z) * 0.5f};
+        return DepenetrateSphereBox(s.center, s.radius, c, u, e, outMTV);
+    }
+    if (ta == ColliderType::AABB && tb == ColliderType::Sphere) {
+        Sphere s = static_cast<SphereCollider *>(b)->GetSphere();
+        AABB box = static_cast<AABBCollider *>(a)->GetAABB();
+        Vector3 c = (box.min + box.max) * 0.5f;
+        const Vector3 u[3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+        const float e[3] = {(box.max.x - box.min.x) * 0.5f, (box.max.y - box.min.y) * 0.5f, (box.max.z - box.min.z) * 0.5f};
+        Vector3 mtv;
+        if (DepenetrateSphereBox(s.center, s.radius, c, u, e, mtv)) {
+            outMTV = -mtv; // 球を押し出す向きの逆 = AABBを押し出す向き
+            return true;
+        }
+        return false;
+    }
+
+    // Sphere - OBB
+    if (ta == ColliderType::Sphere && tb == ColliderType::OBB) {
+        Sphere s = static_cast<SphereCollider *>(a)->GetSphere();
+        const OBB &obb = static_cast<OBBCollider *>(b)->GetOBB();
+        const Vector3 u[3] = {obb.orientations[0], obb.orientations[1], obb.orientations[2]};
+        const float e[3] = {obb.size.x, obb.size.y, obb.size.z};
+        return DepenetrateSphereBox(s.center, s.radius, obb.scaleCenterRotated, u, e, outMTV);
+    }
+    if (ta == ColliderType::OBB && tb == ColliderType::Sphere) {
+        Sphere s = static_cast<SphereCollider *>(b)->GetSphere();
+        const OBB &obb = static_cast<OBBCollider *>(a)->GetOBB();
+        const Vector3 u[3] = {obb.orientations[0], obb.orientations[1], obb.orientations[2]};
+        const float e[3] = {obb.size.x, obb.size.y, obb.size.z};
+        Vector3 mtv;
+        if (DepenetrateSphereBox(s.center, s.radius, obb.scaleCenterRotated, u, e, mtv)) {
+            outMTV = -mtv; // 球を押し出す向きの逆 = OBBを押し出す向き
+            return true;
+        }
+        return false;
+    }
+
+    // AABB - OBB（AABBを軸平行ボックスとして一般SATで処理）
+    if (ta == ColliderType::AABB && tb == ColliderType::OBB) {
+        AABB box = static_cast<AABBCollider *>(a)->GetAABB();
+        const OBB &obb = static_cast<OBBCollider *>(b)->GetOBB();
+        Vector3 cA = (box.min + box.max) * 0.5f;
+        const Vector3 uA[3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+        const float eA[3] = {(box.max.x - box.min.x) * 0.5f, (box.max.y - box.min.y) * 0.5f, (box.max.z - box.min.z) * 0.5f};
+        const Vector3 uB[3] = {obb.orientations[0], obb.orientations[1], obb.orientations[2]};
+        const float eB[3] = {obb.size.x, obb.size.y, obb.size.z};
+        return DepenetrateBoxBox(cA, uA, eA, obb.scaleCenterRotated, uB, eB, outMTV);
+    }
+    if (ta == ColliderType::OBB && tb == ColliderType::AABB) {
+        AABB box = static_cast<AABBCollider *>(b)->GetAABB();
+        const OBB &obb = static_cast<OBBCollider *>(a)->GetOBB();
+        Vector3 cB = (box.min + box.max) * 0.5f;
+        const Vector3 uB[3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+        const float eB[3] = {(box.max.x - box.min.x) * 0.5f, (box.max.y - box.min.y) * 0.5f, (box.max.z - box.min.z) * 0.5f};
+        const Vector3 uA[3] = {obb.orientations[0], obb.orientations[1], obb.orientations[2]};
+        const float eA[3] = {obb.size.x, obb.size.y, obb.size.z};
+        return DepenetrateBoxBox(obb.scaleCenterRotated, uA, eA, cB, uB, eB, outMTV);
+    }
+
+    // Sphere - Cylinder
+    if (ta == ColliderType::Sphere && tb == ColliderType::Cylinder) {
+        Sphere s = static_cast<SphereCollider *>(a)->GetSphere();
+        Vector3 center; float xzR, top, bot;
+        SphereToXZShape(s, center, xzR, top, bot);
+        return DepenetrateXZShapeCylinder(center, xzR, top, bot, static_cast<CylinderCollider *>(b), outMTV);
+    }
+    if (ta == ColliderType::Cylinder && tb == ColliderType::Sphere) {
+        Sphere s = static_cast<SphereCollider *>(b)->GetSphere();
+        Vector3 center; float xzR, top, bot;
+        SphereToXZShape(s, center, xzR, top, bot);
+        Vector3 mtv;
+        if (DepenetrateXZShapeCylinder(center, xzR, top, bot, static_cast<CylinderCollider *>(a), mtv)) {
+            outMTV = -mtv;
+            return true;
+        }
+        return false;
+    }
+
+    // AABB - Cylinder
+    if (ta == ColliderType::AABB && tb == ColliderType::Cylinder) {
+        AABB box = static_cast<AABBCollider *>(a)->GetAABB();
+        Vector3 center; float xzR, top, bot;
+        AABBToXZShape(box, center, xzR, top, bot);
+        return DepenetrateXZShapeCylinder(center, xzR, top, bot, static_cast<CylinderCollider *>(b), outMTV);
+    }
+    if (ta == ColliderType::Cylinder && tb == ColliderType::AABB) {
+        AABB box = static_cast<AABBCollider *>(b)->GetAABB();
+        Vector3 center; float xzR, top, bot;
+        AABBToXZShape(box, center, xzR, top, bot);
+        Vector3 mtv;
+        if (DepenetrateXZShapeCylinder(center, xzR, top, bot, static_cast<CylinderCollider *>(a), mtv)) {
+            outMTV = -mtv;
+            return true;
+        }
+        return false;
+    }
+
+    // Cylinder - Cylinder（a をXZ円近似し、b から押し出す）
+    if (ta == ColliderType::Cylinder && tb == ColliderType::Cylinder) {
+        Vector3 center; float xzR, top, bot;
+        CylinderToXZShape(static_cast<CylinderCollider *>(a), center, xzR, top, bot);
+        return DepenetrateXZShapeCylinder(center, xzR, top, bot, static_cast<CylinderCollider *>(b), outMTV);
     }
 
     return false; // 未対応ペア

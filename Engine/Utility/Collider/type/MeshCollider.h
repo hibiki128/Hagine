@@ -88,6 +88,14 @@ class MeshCollider : public ColliderBase {
     bool Depenetrate(const OBB &obb, Vector3 &outMTV) const;
     bool Depenetrate(const AABB &aabb, Vector3 &outMTV) const;
 
+    /// <summary>
+    /// 全三角形を内包するワールド空間のバウンディング球を返す。
+    /// Mesh×Meshの押し戻しで、動かす側を球近似して相手メッシュから押し出す用途に使う。
+    /// （球モデルのような凸でコンパクトな形状なら近似誤差は小さい）
+    /// </summary>
+    /// <returns>Sphere: ワールド空間の中心と半径（未構築なら半径0）</returns>
+    Sphere GetWorldBoundingSphere() const;
+
     /// ===================================================
     /// getter / setter
     /// ===================================================
@@ -160,5 +168,9 @@ class MeshCollider : public ColliderBase {
 
     std::string sourceModelPath_;       // 構築元モデルのパス（保存用）
     bool isWireframeVisible_ = true;    // 三角形ワイヤー表示フラグ
+
+    // Mesh×Mesh押し戻し用：全三角形を内包するローカル空間のバウンディング球（構築時に算出）
+    Vector3 localBoundingCenter_ = {0.0f, 0.0f, 0.0f};
+    float localBoundingRadius_ = 0.0f;
 };
 } // namespace Hagine

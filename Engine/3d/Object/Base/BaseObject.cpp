@@ -13,6 +13,47 @@
 #endif // DEBUG
 
 namespace Hagine {
+
+#ifdef _DEBUG
+namespace {
+/// <summary>テーマのアクセント色から3状態の色を作り、折りたたみヘッダーを描く</summary>
+/// <param name="label">ヘッダーラベル（## でID付与可）</param>
+/// <param name="accent">基準となるアクセント色</param>
+/// <param name="defaultOpen">初期状態で開くか</param>
+/// <returns>bool: 開いていれば true</returns>
+bool ThemedHeader(const char *label, ImVec4 accent, bool defaultOpen = false) {
+    ImVec4 base = accent;   base.w = 0.22f;
+    ImVec4 hov = accent;    hov.w = 0.38f;
+    ImVec4 act = accent;    act.w = 0.50f;
+    ImGui::PushStyleColor(ImGuiCol_Header, base);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hov);
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, act);
+    bool open = ImGui::CollapsingHeader(label, defaultOpen ? ImGuiTreeNodeFlags_DefaultOpen : 0);
+    ImGui::PopStyleColor(3);
+    return open;
+}
+
+/// <summary>チェックマーク色だけアクセント色にしたチェックボックス</summary>
+bool AccentCheckbox(const char *label, bool *v, ImVec4 accent) {
+    ImGui::PushStyleColor(ImGuiCol_CheckMark, accent);
+    bool changed = ImGui::Checkbox(label, v);
+    ImGui::PopStyleColor();
+    return changed;
+}
+
+/// <summary>地色を指定した横幅可変ボタン（width&lt;0 で全幅）</summary>
+bool ColoredButton(const char *label, ImVec4 base, float width = -1.0f) {
+    ImVec4 hov = {(std::min)(base.x + 0.08f, 1.0f), (std::min)(base.y + 0.08f, 1.0f),
+                  (std::min)(base.z + 0.08f, 1.0f), (std::min)(base.w + 0.1f, 1.0f)};
+    ImGui::PushStyleColor(ImGuiCol_Button, base);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hov);
+    bool hit = ImGui::Button(label, ImVec2(width, 0.0f));
+    ImGui::PopStyleColor(2);
+    return hit;
+}
+} // namespace
+#endif // _DEBUG
+
 BaseObject::~BaseObject() {
     // 非所有(RegisterExternal)でマネージャに登録されている場合、所有者(シーン等)が
     // 先に破棄されると BaseObjectManager::objects_ にダングリングポインタが残り、
@@ -329,6 +370,7 @@ void BaseObject::SaveToJson() {
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
+    ObjectDatas_->Save<std::string>("drawGroup", drawGroup_);
     if (parent_) {
         ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
     }
@@ -364,6 +406,7 @@ void BaseObject::SceneSaveToJson() {
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
+    ObjectDatas_->Save<std::string>("drawGroup", drawGroup_);
     if (parent_) {
         ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
     }
@@ -399,6 +442,10 @@ void BaseObject::LoadFromJson() {
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::kCount);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
+    drawGroup_ = ObjectDatas_->Load<std::string>("drawGroup", "3D");
+    if (drawGroup_ != "UI") {
+        drawGroup_ = "3D"; // 旧データ("Default"等)は3D扱いに正規化
+    }
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
@@ -458,6 +505,10 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", type_);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
+    drawGroup_ = ObjectDatas_->Load<std::string>("drawGroup", "3D");
+    if (drawGroup_ != "UI") {
+        drawGroup_ = "3D"; // 旧データ("Default"等)は3D扱いに正規化
+    }
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
@@ -891,25 +942,23 @@ void BaseObject::DebugCollider() {
         // ---- 保存 / 削除ボタン ----
         float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
 
-        ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.45f, 0.20f, 0.8f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.25f, 0.55f, 0.25f, 0.9f});
-        if (ImGui::Button("保存##colsv", ImVec2(bw, 0)))
+        if (ColoredButton("保存##colsv", {0.20f, 0.45f, 0.20f, 0.80f}, bw)) {
             col->SaveToJson();
-        ImGui::PopStyleColor(2);
+            ImGuiNotification::Post("コライダーを保存しました: " + col->GetName(), {0.45f, 0.68f, 0.52f, 1.0f});
+        }
 
         ImGui::SameLine();
 
-        ImGui::PushStyleColor(ImGuiCol_Button, {0.55f, 0.15f, 0.15f, 0.8f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.75f, 0.20f, 0.20f, 0.9f});
-        if (ImGui::Button("削除##coldel", ImVec2(bw, 0))) {
-            CollisionManager::GetInstance()->Unregister(col);
-            delete col;
+        if (ColoredButton("削除##coldel", {0.55f, 0.15f, 0.15f, 0.80f}, bw)) {
+            // colliders_ は unique_ptr 所有。erase で ~ColliderBase が走り
+            // CollisionManager から自動的に Unregister される（delete は呼ばない）。
+            std::string removedName = col->GetName();
             colliders_.erase(colliders_.begin() + i);
+            ImGuiNotification::Post("コライダーを削除しました: " + removedName, {0.80f, 0.46f, 0.46f, 1.0f});
             ImGui::Unindent(8.0f);
             ImGui::PopID();
             break;
         }
-        ImGui::PopStyleColor(2);
 
         ImGui::Unindent(8.0f);
         ImGui::Spacing();
@@ -925,53 +974,50 @@ void BaseObject::DebugCollider() {
 // ============================================================
 void BaseObject::ImGui() {
 #ifdef _DEBUG
-    if (ImGui::BeginTabBar(objectName_.c_str())) {
-        if (ImGui::BeginTabItem(objectName_.c_str())) {
-            // トランスフォーム・マテリアル等
-            DebugObject();
+    if (!ImGui::BeginTabBar(objectName_.c_str()))
+        return;
 
-            ImGui::Spacing();
+    if (ImGui::BeginTabItem(objectName_.c_str())) {
+        // ---- 状態サマリー（一目で現在の挙動が分かる行）----
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextColored(DebugTheme::kTextDim, "状態:");
+        ImGui::SameLine();
+        ImGui::TextColored(isAlive_ ? DebugTheme::kAccentGreen : DebugTheme::kAccentRed,
+                           isAlive_ ? "生存" : "停止");
+        ImGui::SameLine();
+        ImGui::TextColored(DebugTheme::kTextDim, "|");
+        ImGui::SameLine();
+        ImGui::TextColored(rigidBody_.enabled ? DebugTheme::kAccentOrange : DebugTheme::kTextDim,
+                           rigidBody_.enabled ? "物理ON" : "物理OFF");
+        ImGui::SameLine();
+        ImGui::TextColored(resolveCollision_ ? DebugTheme::kAccentOrange : DebugTheme::kTextDim,
+                           resolveCollision_ ? "押出ON" : "押出OFF");
+        ImGui::SameLine();
+        ImGui::TextColored(DebugTheme::kTextDim, "|  コライダー %d 個", static_cast<int>(colliders_.size()));
 
-            // ---- 描画モード ----
-            SectionHeader("[ 描画モード ]", DebugTheme::kAccentBlue);
+        ImGui::Separator();
 
-            ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentBlue);
-            if (ImGui::Checkbox("モデル描画##mdraw", &isModelDraw_) && isModelDraw_)
-                isWireframe_ = false;
-            ImGui::SameLine(160.f);
-            if (ImGui::Checkbox("ワイヤーフレーム##wf", &isWireframe_) && isWireframe_)
-                isModelDraw_ = false;
-            ImGui::PopStyleColor();
+        // ---- 各セクション（保存バーの分だけ高さを残してスクロール領域に収める）----
+        float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+        ImGui::BeginChild("BaseObjectBody", ImVec2(0, -footer), ImGuiChildFlags_Borders);
+        DebugObject();
+        ImGui::EndChild();
 
-            if (isWireframe_) {
-                ImGui::SameLine(280.f);
-                ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentYellow);
-                ImGui::Checkbox("レインボー##rb", &isRainbow_);
-                ImGui::PopStyleColor();
-            } else {
-                isRainbow_ = false;
-            }
+        // ---- 保存バー（常に最下部に固定）----
+        if (ColoredButton("この設定を全て保存##objsave", {0.20f, 0.45f, 0.20f, 0.80f})) {
+            SaveToJson();
+            AnimaSaveToJson();
+            for (auto &c : colliders_)
+                c->SaveToJson();
 
-            ImGui::Spacing();
-
-            // ---- セーブボタン ----
-            ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.45f, 0.20f, 0.80f});
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.25f, 0.55f, 0.25f, 0.90f});
-            if (ImGui::Button("全て保存##objsave", ImVec2(-1, 0))) {
-                SaveToJson();
-                AnimaSaveToJson();
-                for (auto &c : colliders_)
-                    c->SaveToJson();
-
-                std::string msg = std::format("対象のオブジェクトをセーブしました！: {}", objectName_);
-                ImGuiNotification::Post(msg);
-            }
-            ImGui::PopStyleColor(2);
-
-            ImGui::EndTabItem();
+            ImGuiNotification::Post(std::format("「{}」をセーブしました", objectName_),
+                                    {0.45f, 0.68f, 0.52f, 1.0f});
         }
-        ImGui::EndTabBar();
+        ImGui::SetItemTooltip("オブジェクト設定・アニメ・全コライダーをまとめて保存する");
+
+        ImGui::EndTabItem();
     }
+    ImGui::EndTabBar();
 #endif // _DEBUG
 }
 
@@ -1226,18 +1272,10 @@ void BaseObject::DebugObject() {
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 4.0f);
 
-    ImGui::BeginChild("DebugObjectRoot", ImVec2(0, 0), false);
-
     // ====================================================
-    // [1] Transform
+    // トランスフォーム
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderBlue);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.60f, 0.78f, 0.35f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.50f, 0.64f, 0.82f, 0.45f});
-    bool tfOpen = ImGui::CollapsingHeader("トランスフォーム##hdr", ImGuiTreeNodeFlags_DefaultOpen);
-    ImGui::PopStyleColor(3);
-
-    if (tfOpen) {
+    if (ThemedHeader("トランスフォーム##hdr", DebugTheme::kAccentBlue, true)) {
         ImGui::Indent(6.0f);
 
         // ---- Local ----
@@ -1425,44 +1463,54 @@ void BaseObject::DebugObject() {
     }
 
     // ====================================================
-    // [2] Material
+    // 表示（描画モード・ライティング・ギズモ）
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderOrange);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.82f, 0.58f, 0.36f, 0.35f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.86f, 0.62f, 0.40f, 0.45f});
-    bool matOpen = ImGui::CollapsingHeader("マテリアル##hdr");
-    ImGui::PopStyleColor(3);
-
-    if (matOpen) {
+    if (ThemedHeader("表示##hdr", DebugTheme::kAccentCyan)) {
         ImGui::Indent(6.0f);
-        SectionHeader("[ ライティング ]", DebugTheme::kAccentOrange);
 
+        // ---- 描画モード（モデル / ワイヤーフレームは排他）----
+        SectionHeader("[ 描画モード ]", DebugTheme::kAccentBlue);
+        if (AccentCheckbox("モデル描画##mdraw", &isModelDraw_, DebugTheme::kAccentBlue) && isModelDraw_)
+            isWireframe_ = false;
+        ImGui::SameLine(170.0f);
+        if (AccentCheckbox("ワイヤーフレーム##wf", &isWireframe_, DebugTheme::kAccentBlue) && isWireframe_)
+            isModelDraw_ = false;
+        if (isWireframe_) {
+            ImGui::SameLine(330.0f);
+            AccentCheckbox("レインボー##rb", &isRainbow_, DebugTheme::kAccentYellow);
+        } else {
+            isRainbow_ = false;
+        }
+
+        ImGui::Spacing();
+
+        // ---- ライティング ----
+        SectionHeader("[ ライティング ]", DebugTheme::kAccentOrange);
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("状態:");
+        ImGui::TextColored(DebugTheme::kTextDim, "状態:");
         ImGui::SameLine();
         StatusBadge(isLighting_ ? "オン" : "オフ",
                     isLighting_ ? DebugTheme::kAccentGreen : DebugTheme::kAccentRed);
         ImGui::SameLine();
-        ImGui::PushStyleColor(ImGuiCol_Button,
-                              isLighting_ ? ImVec4{0.6f, 0.2f, 0.2f, 0.7f} : ImVec4{0.2f, 0.5f, 0.2f, 0.7f});
-        if (ImGui::SmallButton(isLighting_ ? "無効にする##lt" : "有効にする##lt"))
+        if (ColoredButton(isLighting_ ? "無効にする##lt" : "有効にする##lt",
+                          isLighting_ ? ImVec4{0.55f, 0.25f, 0.25f, 0.70f} : ImVec4{0.25f, 0.45f, 0.25f, 0.70f}, 0.0f))
             isLighting_ = !isLighting_;
-        ImGui::PopStyleColor();
+
+        ImGui::Spacing();
+
+        // ---- ギズモ ----
+        SectionHeader("[ ギズモ ]", DebugTheme::kAccentRed);
+        AccentCheckbox("ギズモ選択可##gsel", &isGizmoSelectable_, DebugTheme::kAccentRed);
+        ImGui::SetItemTooltip("オフ: マウスクリック / ギズモ操作の対象外になる");
 
         ImGui::Unindent(6.0f);
         ImGui::Spacing();
     }
 
     // ====================================================
-    // [3] Model
+    // マテリアル（スロット・カラー・テクスチャ・ブレンド）
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderPurple);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.62f, 0.50f, 0.74f, 0.35f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.66f, 0.54f, 0.78f, 0.45f});
-    bool modelOpen = ImGui::CollapsingHeader("モデル##hdr");
-    ImGui::PopStyleColor(3);
-
-    if (modelOpen) {
+    if (ThemedHeader("マテリアル##hdr", DebugTheme::kAccentPurple)) {
         ImGui::Indent(6.0f);
         static int selMat = 0;
         size_t matCount = obj3d_->GetMaterialCount();
@@ -1530,16 +1578,10 @@ void BaseObject::DebugObject() {
     }
 
     // ====================================================
-    // [4] Animation
+    // アニメーション
     // ====================================================
     if (obj3d_->GetHaveAnimation()) {
-        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderYellow);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.80f, 0.72f, 0.42f, 0.35f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.84f, 0.76f, 0.46f, 0.45f});
-        bool animOpen = ImGui::CollapsingHeader("アニメーション##hdr");
-        ImGui::PopStyleColor(3);
-
-        if (animOpen) {
+        if (ThemedHeader("アニメーション##hdr", DebugTheme::kAccentYellow)) {
             ImGui::Indent(6.0f);
             SectionHeader("[ 制御 ]", DebugTheme::kAccentYellow);
 
@@ -1601,41 +1643,15 @@ void BaseObject::DebugObject() {
     }
 
     // ====================================================
-    // [5] Gizmo
+    // コライダー
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgRed);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.80f, 0.46f, 0.46f, 0.20f});
-    bool gizOpen = ImGui::CollapsingHeader("ギズモ##hdr");
-    ImGui::PopStyleColor(2);
-
-    if (gizOpen) {
-        ImGui::Indent(6.0f);
-        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentRed);
-        ImGui::Checkbox("ギズモ選択可##gsel", &isGizmoSelectable_);
-        ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("オフ: マウスクリック/ギズモ操作の対象外");
-        ImGui::Unindent(6.0f);
-    }
-
-    // ====================================================
-    // [6] Collider
-    // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.15f, 0.50f, 0.65f, 0.40f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.25f, 0.60f, 0.75f, 0.45f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.30f, 0.65f, 0.80f, 0.55f));
-    bool colOpen = ImGui::CollapsingHeader("コライダー##hdr");
-    ImGui::PopStyleColor(3);
-
-    if (colOpen) {
+    if (ThemedHeader("コライダー##hdr", DebugTheme::kAccentCyan)) {
         ImGui::Indent(6.0f);
 
         // コライダー追加ボタン
-        ImGui::PushStyleColor(ImGuiCol_Button, {0.20f, 0.40f, 0.60f, 0.80f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.30f, 0.50f, 0.70f, 0.90f});
-        if (ImGui::Button("+ コライダー追加##addcol"))
+        if (ColoredButton("+ コライダー追加##addcol", {0.20f, 0.40f, 0.60f, 0.80f}, 0.0f))
             ImGui::OpenPopup("AddColliderPopup##acp");
-        ImGui::PopStyleColor(2);
+        ImGui::SetItemTooltip("形状を選んで追加。当たって押し返す挙動は『物理』セクションで設定する");
 
         if (ImGui::BeginPopup("AddColliderPopup##acp")) {
             auto makeDefault = [](auto *c) {
@@ -1683,77 +1699,88 @@ void BaseObject::DebugObject() {
     }
 
     // ====================================================
-    // [7] RigidBody / Push-out
+    // 物理（押し出し・リジッドボディ）
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, {0.55f, 0.35f, 0.15f, 0.40f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.65f, 0.45f, 0.20f, 0.45f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.70f, 0.50f, 0.25f, 0.55f});
-    bool rbOpen = ImGui::CollapsingHeader("リジッドボディ / 押し出し##hdr");
-    ImGui::PopStyleColor(3);
-
-    if (rbOpen) {
+    if (ThemedHeader("物理 (押し出し / リジッドボディ)##hdr", DebugTheme::kAccentOrange)) {
         ImGui::Indent(6.0f);
 
-        // 押し出し（衝突解消）フラグ。トグルでコールバックの仕込み/解除も行う
-        bool resolve = resolveCollision_;
-        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentOrange);
-        if (ImGui::Checkbox("押し出し（衝突解消）##resolve", &resolve)) {
-            SetResolveCollision(resolve);
+        // ---- クイック設定（用途別プリセット）----
+        SectionHeader("[ クイック設定 ]", DebugTheme::kAccentGreen);
+        ImGui::TextColored(DebugTheme::kTextDim, "用途を選ぶとまとめて設定されます");
+        if (ColoredButton("跳ねる物##presetDyn", DebugTheme::kBgGreen, 0.0f)) {
+            SetResolveCollision(true);
+            rigidBody_.enabled = true;
+            rigidBody_.useGravity = true;
+            rigidBody_.restitution = 0.5f;
+            rigidBody_.velocity = {0.0f, 0.0f, 0.0f};
+            ImGuiNotification::Post("プリセット: 跳ねる物（重力＋押し出し＋反発）", {0.45f, 0.68f, 0.52f, 1.0f});
         }
-        ImGui::PopStyleColor();
-        ImGui::SetItemTooltip("衝突した相手から押し出す。独自の衝突処理を持つオブジェクトでは使わないこと");
+        ImGui::SetItemTooltip("重力で落下し、地面に当たって跳ね返る動的オブジェクト");
+        ImGui::SameLine();
+        if (ColoredButton("静的な地面##presetStatic", DebugTheme::kBgBlue, 0.0f)) {
+            SetResolveCollision(false);
+            rigidBody_.enabled = false;
+            rigidBody_.useGravity = false;
+            rigidBody_.velocity = {0.0f, 0.0f, 0.0f};
+            ImGuiNotification::Post("プリセット: 静的な地面（動かない受け止め側）", {0.42f, 0.66f, 0.68f, 1.0f});
+        }
+        ImGui::SetItemTooltip("動かない床・壁。相手を受け止める側はこちら（押し出しはOFF）");
 
         ImGui::Spacing();
+
+        // ---- 押し出し（衝突解消）----
+        SectionHeader("[ 押し出し（衝突解消）]", DebugTheme::kAccentOrange);
+        bool resolve = resolveCollision_;
+        if (AccentCheckbox("めり込んだら押し出す##resolve", &resolve, DebugTheme::kAccentOrange))
+            SetResolveCollision(resolve);
+        ImGui::SetItemTooltip("衝突した相手から自分を押し出す。動かしたい側だけONにする\n"
+                              "（床など受け止める側はOFF。独自の衝突処理を持つオブジェクトでも使わない）");
+
+        ImGui::Spacing();
+
+        // ---- リジッドボディ ----
         SectionHeader("[ リジッドボディ ]", DebugTheme::kAccentOrange);
+        AccentCheckbox("リジッドボディとして扱う##rbenable", &rigidBody_.enabled, DebugTheme::kAccentGreen);
+        ImGui::SetItemTooltip("重力で落下し速度を持つ。押し出しと併用すると坂を滑り落ちる");
 
-        bool rb = rigidBody_.enabled;
-        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
-        if (ImGui::Checkbox("リジッドボディとして扱う##rbenable", &rb))
-            rigidBody_.enabled = rb;
-        ImGui::PopStyleColor();
-        ImGui::SetItemTooltip("重力で落下する。押し出しと併用すると坂を滑り落ちる");
+        // リジッドボディOFFのときは物理パラメータを淡色＝無効表示にする
+        ImGui::BeginDisabled(!rigidBody_.enabled);
 
-        ImGui::SameLine();
-        bool grav = rigidBody_.useGravity;
-        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentBlue);
-        if (ImGui::Checkbox("重力##rbgrav", &grav))
-            rigidBody_.useGravity = grav;
-        ImGui::PopStyleColor();
+        AccentCheckbox("重力を受ける##rbgrav", &rigidBody_.useGravity, DebugTheme::kAccentBlue);
 
         ImGui::DragFloat("質量##rbmass", &rigidBody_.mass, 0.05f, 0.01f, 1000.0f, "%.2f");
+        ImGui::SetItemTooltip("外力 F=ma に効く。大きいほど力で動きにくい");
         ImGui::DragFloat3("重力加速度##rbg", &rigidBody_.gravity.x, 0.1f, -100.0f, 100.0f, "%.2f");
-        ImGui::DragFloat("減衰(空気抵抗)##rbdamp", &rigidBody_.linearDamping, 0.005f, 0.0f, 10.0f, "%.3f");
+        ImGui::DragFloat("減衰 (空気抵抗)##rbdamp", &rigidBody_.linearDamping, 0.005f, 0.0f, 10.0f, "%.3f");
+        ImGui::SetItemTooltip("毎フレーム速度を減らす。大きいほどすぐ止まる");
         ImGui::DragFloat("反発係数##rbrest", &rigidBody_.restitution, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::SetItemTooltip("0=跳ねない / 1=完全反発。押し出しONのとき跳ね返りに効く");
         ImGui::DragFloat("摩擦##rbfric", &rigidBody_.friction, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::SetItemTooltip("接触面に沿う速度の減衰。坂の滑り方に効く");
 
         ImGui::Spacing();
         Vector3 v = rigidBody_.velocity;
         ReadOnlyRow("速度", "%.2f, %.2f, %.2f", v.x, v.y, v.z);
-        if (ImGui::Button("速度をリセット##rbresetv", ImVec2(-1, 0)))
+        if (ColoredButton("速度をリセット##rbresetv", {0.30f, 0.30f, 0.36f, 1.0f}))
             rigidBody_.velocity = {0.0f, 0.0f, 0.0f};
+
+        ImGui::EndDisabled();
 
         ImGui::Unindent(6.0f);
         ImGui::Spacing();
     }
 
     // ====================================================
-    // [8] Scale Easing Test
+    // ツール（スケールイージング検証）
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, {0.15f, 0.50f, 0.35f, 0.40f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.65f, 0.45f, 0.45f});
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.25f, 0.70f, 0.50f, 0.55f});
-    bool seOpen = ImGui::CollapsingHeader("スケールイージングテスト##hdr");
-    ImGui::PopStyleColor(3);
-
-    if (seOpen) {
+    if (ThemedHeader("ツール##hdr", DebugTheme::kAccentGreen)) {
         ImGui::Indent(6.0f);
-        SectionHeader("[ イージングタイプ ]", DebugTheme::kAccentGreen);
+        SectionHeader("[ スケールイージング検証 ]", DebugTheme::kAccentGreen);
         DrawScaleEaseImGui();
         ImGui::Unindent(6.0f);
         ImGui::Spacing();
     }
 
-    ImGui::EndChild();
     ImGui::PopStyleVar(4);
 #endif // _DEBUG
 }

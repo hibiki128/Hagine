@@ -9,6 +9,7 @@
 #include <Shadow/ShadowMap.h>
 #include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
+#include "Engine/Render/DrawGroupManager.h"
 #include <filesystem>
 
 namespace Hagine {
@@ -41,6 +42,7 @@ void SpriteManager::RegisterSprite(const std::string &name, const std::string &t
 
     sprites_.push_back(std::move(spriteData));
     UpdateSpriteInstances(sprites_.back().get());
+    DrawGroupManager::GetInstance()->RegisterGroup(sprites_.back()->drawGroup); // 所属グループを登録
 #ifdef _DEBUG
     // instanceData[0].translation の xy をギズモで直接編集できるよう登録
     ImGuizmoManager::GetInstance()->AddTarget(
@@ -80,7 +82,7 @@ void SpriteManager::DrawAll() {
         }
     }
     // 外部登録スプライトの描画
-    for (auto* sprite : externalSprites_) {
+    for (auto *sprite : externalSprites_) {
         if (sprite) {
             sprite->Draw();
         }
@@ -1057,6 +1059,9 @@ void SpriteManager::SaveAllSprites() {
         // アスペクト比ロック状態を保存
         data->Save("lockAspectRatio", static_cast<int>(spriteData->lockAspectRatio));
 
+        // 描画グループを保存
+        data->Save("drawGroup", spriteData->drawGroup);
+
         // インスタンスデータを保存する
         int instCount = static_cast<int>(spriteData->instanceData.size());
         data->Save("instanceCount", instCount);
@@ -1105,6 +1110,12 @@ void SpriteManager::LoadAllSprites() {
         // アスペクト比ロック状態を復元（旧データには存在しないためデフォルトfalse）
         bool lockAspectRatio = static_cast<bool>(data->Load<int>("lockAspectRatio", 0));
 
+        // 描画グループを復元（旧データには存在しないため "UI"。"3D" 以外はUIに正規化）
+        std::string drawGroup = data->Load<std::string>("drawGroup", "UI");
+        if (drawGroup != "3D") {
+            drawGroup = "UI";
+        }
+
         // インスタンスデータを復元する（旧データは1インスタンスとして扱う）
         int savedInstCount = data->Load<int>("instanceCount", 1);
 
@@ -1123,6 +1134,8 @@ void SpriteManager::LoadAllSprites() {
             sprite->sprite->SetUVTransform(uvTransform);
             sprite->blendMode = static_cast<BlendMode>(blendModeInt);
             sprite->lockAspectRatio = lockAspectRatio;
+            sprite->drawGroup = drawGroup;
+            DrawGroupManager::GetInstance()->RegisterGroup(drawGroup);
 
             // 保存されたインスタンスデータを反映する
             for (int idx = 0; idx < savedInstCount && idx < (int)sprite->instanceData.size(); ++idx) {

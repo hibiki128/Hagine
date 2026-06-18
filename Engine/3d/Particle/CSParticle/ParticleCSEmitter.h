@@ -106,6 +106,8 @@ class ParticleCSEmitter {
     void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; }
 
     std::string GetName() const { return name_; }
+    const std::string &GetDrawGroup() const { return drawGroup_; }
+    void SetDrawGroup(const std::string &group) { drawGroup_ = group; }
     void SetEnableGravity(bool enable) {
         for (auto &group : particleGroups_) {
             group->GetSettingsData()->enableGravity = enable;
@@ -367,6 +369,7 @@ class ParticleCSEmitter {
     PrimitiveType primitiveType_ = PrimitiveType::None;
 
     std::string name_;
+    std::string drawGroup_ = "3D"; // 描画グループ＝描画ステージ（既定は3D）
     int groupNum_ = 0;
 
     bool isAuto_ = false;

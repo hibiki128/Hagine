@@ -103,6 +103,11 @@ class ParticleCSEditor {
     // エミッターを名前指定で削除
     void RemoveParticleEmitter(const std::string &name);
 
+    // 登録済みエミッター名の一覧を取得（描画グループ管理UIで使用）
+    std::vector<std::string> GetEmitterNames() const;
+    // 名前からエミッターを取得（なければ nullptr）
+    ParticleCSEmitter *GetEmitterByName(const std::string &name);
+
     // ===== プレビュー窓 (Phase 8) =====
     // 専用オフスクリーンRTを生成する（初回のみ）。Initialize から呼ぶ。
     void InitializePreview();

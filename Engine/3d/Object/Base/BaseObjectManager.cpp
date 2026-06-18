@@ -6,6 +6,7 @@
 #include "Application/Utility/MotionEditor/MotionEditor.h"
 #include <Debug/Log/Logger.h>
 #include <ShowFolder/ShowFolder.h>
+#include "Engine/Render/DrawGroupManager.h"
 
 namespace Hagine {
 void BaseObjectManager::Finalize() {
@@ -44,6 +45,7 @@ void BaseObjectManager::RegisterExternal(BaseObject* obj) {
 #endif
     MotionEditor::GetInstance()->Register(obj);
     objects_.emplace(name, obj);
+    DrawGroupManager::GetInstance()->RegisterGroup(obj->GetDrawGroup()); // 所属グループを既知グループに登録
     ImGuiNotification::Post("オブジェクトを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 

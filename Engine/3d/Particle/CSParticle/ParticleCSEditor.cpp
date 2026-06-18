@@ -5,6 +5,7 @@
 #include <Particle/ParticleEditor.h>
 #include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
+#include "Engine/Render/DrawGroupManager.h"
 #include <algorithm>
 #include <myMath.h>
 #include <vector>
@@ -498,6 +499,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name) {
     auto emitter = std::make_unique<ParticleCSEmitter>();
     emitter->Initialize(name);
     emitters_[name] = std::move(emitter);
+    DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
     ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -506,6 +508,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, const std::st
     auto emitter = std::make_unique<ParticleCSEmitter>();
     emitter->Initialize(name, modelPath);
     emitters_[name] = std::move(emitter);
+    DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
     ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -514,6 +517,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, PrimitiveType
     auto emitter = std::make_unique<ParticleCSEmitter>();
     emitter->Initialize(name, primitiveType);
     emitters_[name] = std::move(emitter);
+    DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
     ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -528,6 +532,20 @@ void ParticleCSEditor::DrawAllGraphics(const ViewProjection &vp_) {
     for (auto &[name, emitter] : emitters_) {
         emitter->DrawGraphics(vp_);
     }
+}
+
+std::vector<std::string> ParticleCSEditor::GetEmitterNames() const {
+    std::vector<std::string> names;
+    names.reserve(emitters_.size());
+    for (const auto &[name, emitter] : emitters_) {
+        names.push_back(name);
+    }
+    return names;
+}
+
+ParticleCSEmitter *ParticleCSEditor::GetEmitterByName(const std::string &name) {
+    auto it = emitters_.find(name);
+    return (it != emitters_.end()) ? it->second.get() : nullptr;
 }
 
 void ParticleCSEditor::DrawAll(const ViewProjection &vp_) {

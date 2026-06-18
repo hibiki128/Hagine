@@ -30,7 +30,6 @@ void DemoScene::Initialize() {
     drawSystem_->Register("DemoScene_All", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
         spriteManager_->DrawAll();
         objectManager_->Draw(vp);
-        ptEditor_->DrawAll(vp);
     });
 }
 
@@ -81,7 +80,6 @@ void DemoScene::AddParticleSetting() {
     /// ===================================================
     /// パーティクル設定（デバッグ）
     /// ===================================================
-    DrawParticleEditorUI();
 }
 
 void DemoScene::CameraUpdate() {
