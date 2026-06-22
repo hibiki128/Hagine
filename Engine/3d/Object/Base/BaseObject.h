@@ -134,7 +134,6 @@ class BaseObject {
     const WorldTransform &GetTransform() { return *transform_; }
     std::string &GetName() { return objectName_; }
     std::string &GetModelPath() { return modelPath_; }
-    std::string &GetDrawGroup() { return drawGroup_; }
     bool &GetIsModelDraw() { return isModelDraw_; }
     std::string &GetTexturePath(int index = 0) { return texturePaths_[index]; }
     std::string GetParentName() const;
@@ -192,7 +191,6 @@ class BaseObject {
     void SetGizmoSelectable(bool selectable) { isGizmoSelectable_ = selectable; }
     void SetIsAlive(bool flag) { isAlive_ = flag; }
     void SetIsModelDraw(bool isModelDraw) { isModelDraw_ = isModelDraw; }
-    void SetDrawGroup(const std::string &group) { drawGroup_ = group; }
     void SetOffset(const Vector3 &offset) { offSet_ = offset; }
 
     /// <summary>

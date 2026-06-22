@@ -10,12 +10,13 @@ void PlayerEnergyCharge::Enter(Player &player) {
     player.GetVelocity() = {kVelocityZero, kVelocityZero, kVelocityZero};
     player.SetEnergyRecoveryRate(chargeRate_);
 
-    chargeAuraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("ChargeAura");
+    chargeAuraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
 }
 
 void PlayerEnergyCharge::Update(Player &player) {
     chargeAuraEmitter_->Update();
-    chargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y + kParticleYOffset, player.GetWorldPosition().z});
+    chargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y + chargeAuraEmitter_->GetScale().y - 1.0f, player.GetWorldPosition().z});
+    chargeAuraEmitter_->SetRotation(player.GetWorldRotation());
     chargeAuraEmitter_->SetAuto(true);
 
     bool chargeRelease = false;

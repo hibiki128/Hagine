@@ -370,7 +370,6 @@ void BaseObject::SaveToJson() {
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
-    ObjectDatas_->Save<std::string>("drawGroup", drawGroup_);
     if (parent_) {
         ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
     }
@@ -406,7 +405,6 @@ void BaseObject::SceneSaveToJson() {
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
-    ObjectDatas_->Save<std::string>("drawGroup", drawGroup_);
     if (parent_) {
         ObjectDatas_->Save<std::string>("parentName", parent_->GetName());
     }
@@ -442,10 +440,6 @@ void BaseObject::LoadFromJson() {
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::kCount);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
-    drawGroup_ = ObjectDatas_->Load<std::string>("drawGroup", "3D");
-    if (drawGroup_ != "UI") {
-        drawGroup_ = "3D"; // 旧データ("Default"等)は3D扱いに正規化
-    }
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
@@ -505,10 +499,6 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", type_);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
-    drawGroup_ = ObjectDatas_->Load<std::string>("drawGroup", "3D");
-    if (drawGroup_ != "UI") {
-        drawGroup_ = "3D"; // 旧データ("Default"等)は3D扱いに正規化
-    }
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）

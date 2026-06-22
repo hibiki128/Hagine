@@ -369,6 +369,7 @@ const char *TutorialUI::GetFolderNameForStep(TutorialStep step) const {
         "TutorialStep9",  // Landing
         "TutorialStep10", // MeleeAttack
         "TutorialStep11", // RangedAttack
+        "TutorialStep15", // Guard（後から追加したため番号は連番ではない）
         "TutorialStep12", // ChargeAttack
         "TutorialStep13", // EnergyCharge
         "TutorialStep14", // SpecialAttack

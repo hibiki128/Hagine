@@ -359,7 +359,6 @@ class Enemy : public Hagine::BaseObject {
 
     // 大技演出用CSパーティクル
     std::unique_ptr<Hagine::ParticleCSEmitter> chargeAura_;       // チャージ溜めオーラ (enemyChargeAura)
-    std::unique_ptr<Hagine::ParticleCSEmitter> burstFlash_;       // チャージ発射閃光 (burstFlash)
     std::unique_ptr<Hagine::ParticleCSEmitter> beamMainEffect_;   // ビームメイン演出 (makan_main)
     std::unique_ptr<Hagine::ParticleCSEmitter> beamAroundEffect_; // ビームらせん演出 (makan_around)
 

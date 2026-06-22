@@ -10,18 +10,18 @@
         "y": 1.0,
         "z": 1.0
     },
-    "lockAspectRatio": 0,
-    "name": "hold_step7",
+    "lockAspectRatio": 1,
+    "name": "Bbutton_step15",
     "position": {
-        "x": 450.0,
-        "y": 340.0
+        "x": 760.0,
+        "y": 195.0
     },
     "rotation": 0.0,
     "size": {
-        "x": 160.0,
-        "y": 82.20183563232422
+        "x": 195.0,
+        "y": 195.0
     },
-    "texturePath": "Text/hold.png",
+    "texturePath": "Tutorial/Bbutton.png",
     "uvTransform": [
         [
             1.0,
