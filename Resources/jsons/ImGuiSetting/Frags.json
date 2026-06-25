@@ -17,7 +17,7 @@
     "showMotionEditorView": false,
     "showObjectView": false,
     "showOfScreenView": false,
-    "showParticlePreviewView": false,
+    "showParticlePreviewView": true,
     "showParticleView": false,
     "showSceneView": false,
     "showShadowMapView": false,

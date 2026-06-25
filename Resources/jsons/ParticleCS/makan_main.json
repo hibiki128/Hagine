@@ -5,7 +5,7 @@
     "fieldContactEmitCount": 1000,
     "fieldGroupId": -1,
     "frequency": 0.0010000000474974513,
-    "frequencyTime": 630.4951782226563,
+    "frequencyTime": 691.0259399414063,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -173,7 +173,7 @@
         "y": 0.0,
         "z": 0.0
     },
-    "isAuto": true,
+    "isAuto": false,
     "isGizmoSelectable": true,
     "isVisible": false,
     "modelPath": "",
