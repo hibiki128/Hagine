@@ -1,5 +1,6 @@
 #include "Audio.h"
 #include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include <Debug/Log/Logger.h>
 #include <cassert>
 #include <fstream>
 
@@ -32,15 +33,21 @@ uint32_t Audio::LoadWave(const std::string &filename) {
 
     std::ifstream file;
     file.open(fullPath, std::ios_base::binary);
-    assert(file.is_open());
+    if (!file.is_open()) {
+        Logger::Error("Failed to open audio file: \"" + fullPath + "\". The file was not found.");
+        assert(file.is_open());
+        return UINT32_MAX;
+    }
 
     RiffHeader riff;
     file.read((char *)&riff, sizeof(riff));
 
     if (strncmp(riff.chunk.id, "RIFF", 4) != 0) {
+        Logger::Error("Invalid audio file (missing RIFF header): \"" + fullPath + "\".");
         assert(0);
     }
     if (strncmp(riff.type, "WAVE", 4) != 0) {
+        Logger::Error("Invalid audio file (not WAVE format): \"" + fullPath + "\".");
         assert(0);
     }
 
@@ -59,6 +66,7 @@ uint32_t Audio::LoadWave(const std::string &filename) {
     }
 
     if (strncmp(format.chunk.id, "fmt ", 4) != 0) {
+        Logger::Error("Invalid audio file (missing fmt chunk): \"" + fullPath + "\".");
         assert(0);
     }
 
@@ -72,6 +80,7 @@ uint32_t Audio::LoadWave(const std::string &filename) {
     }
 
     if (strncmp(data.id, "data", 4) != 0) {
+        Logger::Error("Invalid audio file (missing data chunk): \"" + fullPath + "\".");
         assert(0);
     }
 

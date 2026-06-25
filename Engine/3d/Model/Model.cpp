@@ -5,6 +5,7 @@
 #include "fstream"
 #include "myMath.h"
 #include "sstream"
+#include <Debug/Log/Logger.h>
 #include <Shadow/ShadowMap.h>
 #include <SkyBox/SkyBox.h>
 
@@ -175,6 +176,7 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
     } else if (filename.size() >= 4 && filename.substr(filename.size() - 4) == ".obj") {
         isGltf_ = false;
     } else {
+        Logger::Error("Unsupported model format: \"" + filename + "\". Only .gltf and .obj are supported.");
         assert(false && "Unsupported file format");
     }
 
@@ -190,6 +192,13 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
 
     // メッシュが存在しない場合
     if (!scene || !scene->HasMeshes()) {
+        if (!scene) {
+            // ファイルが見つからない・破損しているなど、読み込み自体に失敗したケース
+            Logger::Error("Failed to load model: \"" + filePath + "\". " + importer.GetErrorString());
+        } else {
+            // 読み込めたがメッシュが無いケース（デフォルトメッシュで代替する）
+            Logger::Warn("Model has no meshes: \"" + filePath + "\". Using a default mesh instead.");
+        }
         // デフォルトのメッシュとマテリアルを作成
         MeshData defaultMesh;
         MaterialData defaultMaterial;

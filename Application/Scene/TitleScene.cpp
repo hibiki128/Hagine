@@ -3,6 +3,8 @@
 #include "myMath.h"
 #include <Frame.h>
 
+REGISTER_SCENE("TITLE", TitleScene)
+
 using namespace Hagine;
 void TitleScene::Initialize() {
     /// ===================================================

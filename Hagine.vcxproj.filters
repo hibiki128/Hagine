@@ -428,9 +428,6 @@
     <ClCompile Include="Engine\Utility\LoadFile\Csv\CsvLoad.cpp">
       <Filter>Engine\Utility\LoadFile\Csv</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Utility\Scene\SceneFactory.cpp">
-      <Filter>Engine\Utility\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\Utility\Scene\SceneManager.cpp">
       <Filter>Engine\Utility\Scene</Filter>
     </ClCompile>
@@ -850,13 +847,10 @@
     <ClInclude Include="Engine\Utility\LoadFile\Csv\CsvLoad.h">
       <Filter>Engine\Utility\LoadFile\Csv</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Utility\Scene\AbstractSceneFactory.h">
-      <Filter>Engine\Utility\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Utility\Scene\SceneFactory.h">
-      <Filter>Engine\Utility\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\Utility\Scene\SceneManager.h">
+      <Filter>Engine\Utility\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Utility\Scene\SceneRegistry.h">
       <Filter>Engine\Utility\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Utility\Scene\SceneTransition.h">

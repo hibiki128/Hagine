@@ -3,6 +3,8 @@
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Frame.h>
 
+REGISTER_SCENE("CLEAR", ClearScene)
+
 using namespace Hagine;
 void ClearScene::Initialize() {
     /// ===================================================

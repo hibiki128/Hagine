@@ -884,7 +884,7 @@ void BaseObjectManager::LoadObjectFromJson(const std::string &startPath, const s
 
     this->AddObject(std::move(newObject));
     ImGuiNotification::Post("オブジェクトを読み込みました: " + objectName, {0.2f, 0.8f, 0.8f, 1.0f});
-    Logger::Log("オブジェクト読み込み完了: " + objectName + " (" + fullPath + ")");
+    Logger::Info("Object loaded: " + objectName + " (" + fullPath + ")");
 }
 
 void BaseObjectManager::RestoreParentChildRelationshipForObject(BaseObject *object) {

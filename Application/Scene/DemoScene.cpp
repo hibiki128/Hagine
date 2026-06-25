@@ -1,6 +1,8 @@
 #include "DemoScene.h"
 #include "Engine/Utility/Scene/SceneManager.h"
 
+REGISTER_SCENE("DEMO", DemoScene)
+
 using namespace Hagine;
 void DemoScene::Initialize() {
     /// ===================================================

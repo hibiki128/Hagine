@@ -23,7 +23,6 @@
 #include "Particle/ParticleCommon.h"
 #include "Particle/ParticleEditor.h"
 #include "Particle/ParticleGroupManager.h"
-#include "Scene/AbstractSceneFactory.h"
 #include "Scene/SceneManager.h"
 #include "Scene/SceneTransition.h"
 #include "SkyBox/SkyBox.h"
@@ -90,8 +89,6 @@ class Framework {
     DrawLine3D *line3d_ = nullptr;
     SkyBox *skyBox_ = nullptr;
 
-    // シーンファクトリー
-    std::unique_ptr<AbstractSceneFactory> sceneFactory_ = nullptr;
     SceneTransition *sceneTransition_ = nullptr;
 
     SceneManager *sceneManager_ = nullptr;

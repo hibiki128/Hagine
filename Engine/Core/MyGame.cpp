@@ -1,5 +1,4 @@
 #include "MyGame.h"
-#include "Scene/SceneFactory.h"
 #include <Frame.h>
 
 namespace Hagine {
@@ -10,10 +9,7 @@ void MyGame::Initialize() {
     Framework::RegisterShortcutKey();
     // -----ゲーム固有の処理-----
 
-    // 最初のシーンの生成
-    sceneFactory_ = std::make_unique<SceneFactory>();
-    // シーンマネージャに最初のシーンをセット
-    sceneManager_->SetSceneFactory(std::move(sceneFactory_));
+    // 最初のシーンを予約（シーンは各 .cpp の REGISTER_SCENE で自己登録済み）
 #ifdef _DEBUG
     sceneManager_->NextSceneReservation("TITLE");
 #else
