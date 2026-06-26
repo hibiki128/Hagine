@@ -7,6 +7,7 @@
 #include <Line/DrawLine3D.h>
 #include <Shadow/ShadowMap.h>
 #include <Particle/ParticleCommon.h>
+#include <Debug/GpuProfiler/GpuProfiler.h>
 #include <random>
 #include <regex>
 #include"../Utility/Debug/ImGui/ImGuizmoManager.h"
@@ -77,7 +78,9 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
         auto fieldCountRes = receiveFields_ ? fieldMgr->GetFieldCountResource()
                                             : fieldMgr->GetZeroFieldCountResource();
 
+        int emitSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Emit");
         EmitterDisPatch(computeCmdList);
+        GpuProfiler::GetInstance()->Close(computeCmdList, emitSpan);
 
         D3D12_RESOURCE_BARRIER uavBarrier{};
         uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
@@ -87,11 +90,13 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
         // 生存コンパクションカウンタを 0 にリセット（Update の append より前）
         group->ResetAliveCounterDispatch(computeCmdList);
 
+        int updateSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Update");
         group->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),
             fieldCountRes,
             fieldMgr->GetOverrideSrvHandle(),
             computeCmdList);
+        GpuProfiler::GetInstance()->Close(computeCmdList, updateSpan);
 
         // 生存数を readback バッファへコピー（compute キュー上で記録）
         group->RecordAliveCountReadback(computeCmdList);
@@ -105,6 +110,7 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
 
     DrawEmitter();
 
+    int drawSpan = GpuProfiler::GetInstance()->OpenGraphics(commandList_, "Draw");
     for (auto &group : particleGroups_) {
         // Phase 2: 旧 CountParticle 全Nディスパッチは廃止（生存数は aliveCounter に統合）
 
@@ -139,6 +145,7 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
             commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
+    GpuProfiler::GetInstance()->Close(commandList_, drawSpan);
 }
 
 void ParticleCSEmitter::Draw(const ViewProjection &vp) {
@@ -154,6 +161,7 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
     if (particleGroups_.empty()) return;
 
     // ワイヤーフレーム(DrawEmitter)はプレビューでは描かない。
+    int drawSpan = GpuProfiler::GetInstance()->OpenGraphics(commandList_, "Draw(プレビュー)");
     for (auto &group : particleGroups_) {
         group->FetchAliveDrawCount();
         const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
@@ -183,6 +191,7 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
             commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
+    GpuProfiler::GetInstance()->Close(commandList_, drawSpan);
 }
 
 void ParticleCSEmitter::LoadModel(const std::string &modelPath) {

@@ -1,6 +1,7 @@
 #include "DrawSystem.h"
 #include "DirectXCommon.h"
 #include "Collider/CollisionManager.h"
+#include "Debug/GpuProfiler/GpuProfiler.h"
 #include "Data/DataHandler.h"
 #include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Graphics/Srv/SrvManager.h"
@@ -93,6 +94,9 @@ OffScreen *DrawSystem::GetStageOffScreen(int stageIndex) {
 // -------------------------------------------------------
 
 void DrawSystem::Draw(const ViewProjection &vp) {
+    // GPU プロファイラ: フレーム先頭で ring を進め、過去フレームの結果を取り込む
+    GpuProfiler::GetInstance()->BeginFrame();
+
     // ─── GPU パーティクル Compute フェーズ（全エミッターを一括実行して Direct Queue に Wait 挿入）───
     {
         for (auto &entry : entries_) {
@@ -106,6 +110,9 @@ void DrawSystem::Draw(const ViewProjection &vp) {
         // （Compute=シミュレーションのみここで実行。Graphics はプレビューに隔離済み）
         ParticleCSEditor::GetInstance()->DrawAllCompute(vp);
 #endif
+
+        // Compute スパンを Execute 前に resolve（リストが閉じる前に記録する必要がある）
+        GpuProfiler::GetInstance()->ResolveCompute(dxCommon_->GetComputeCommandList().Get());
 
         // 記録が無ければ ExecuteComputeCommands は自己ガードで no-op、Wait も signaled 済み値への待ちで無害。
         dxCommon_->ExecuteComputeCommands();
@@ -190,6 +197,7 @@ void DrawSystem::Draw(const ViewProjection &vp) {
     }
 
     if (!lastOffScreen) {
+        GpuProfiler::GetInstance()->ResolveGraphics(dxCommon_->GetCommandList().Get());
         ParticleEditor::GetInstance()->UpdateFrameStats();
         return;
     }
@@ -211,6 +219,9 @@ void DrawSystem::Draw(const ViewProjection &vp) {
 
     // ─── finalResult（フルフレーム）をバックバッファへコピー ───
     lastOffScreen->CopyFinalResultToBackBuffer();
+
+    // Graphics スパンを resolve（描画コマンド記録が全て済んだ後・リスト Close 前）
+    GpuProfiler::GetInstance()->ResolveGraphics(dxCommon_->GetCommandList().Get());
 
     ParticleEditor::GetInstance()->UpdateFrameStats();
 }

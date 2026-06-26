@@ -16,6 +16,7 @@
 #include <Line/DrawLine3D.h>
 #include <Particle/CSParticle/ParticleCSFieldManager.h>
 #include <Engine/Render/DrawSystem.h>
+#include <Debug/GpuProfiler/GpuProfiler.h>
 #include <Shadow/ShadowMap.h>
 #include <externals/icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
@@ -693,6 +694,9 @@ void ImGuiManager::ShowStatisticsWindow() {
     ParticleEditor::GetInstance()->SceneParticleCount();
 
     ParticleCSEditor::GetInstance()->ShowGPUParticleStatistics();
+
+    ImGui::Separator();
+    GpuProfiler::GetInstance()->DrawImGui();
 
     ImGui::Separator();
     if (ImGui::CollapsingHeader("ログ履歴", ImGuiTreeNodeFlags_DefaultOpen)) {

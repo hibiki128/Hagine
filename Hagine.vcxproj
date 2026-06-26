@@ -203,6 +203,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Base\DirectXCommon.cpp" />
     <ClCompile Include="Engine\Input\Input.cpp" />
     <ClCompile Include="Engine\Utility\Debug\ImGui\ImGuiManager.cpp" />
+    <ClCompile Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.cpp" />
     <ClCompile Include="Engine\Utility\Debug\Log\Logger.cpp" />
     <ClCompile Include="Engine\3d\Model\Model.cpp" />
     <ClCompile Include="Engine\3d\Model\ModelCommon.cpp" />
