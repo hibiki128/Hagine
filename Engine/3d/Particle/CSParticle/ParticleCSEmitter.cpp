@@ -82,9 +82,11 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
         EmitterDisPatch(computeCmdList);
         GpuProfiler::GetInstance()->Close(computeCmdList, emitSpan);
 
+        // SoA: Emit が書いた6本のバッファすべてを Update の前に可視化するため
+        // グローバル UAV バリア（pResource=nullptr）で一括同期する。
         D3D12_RESOURCE_BARRIER uavBarrier{};
         uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-        uavBarrier.UAV.pResource = group->GetOutputParticleResource().Get();
+        uavBarrier.UAV.pResource = nullptr;
         computeCmdList->ResourceBarrier(1, &uavBarrier);
 
         // 生存コンパクションカウンタを 0 にリセット（Update の append より前）
@@ -136,12 +138,14 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
             commandList_->IASetIndexBuffer(&indexBufferView);
             commandList_->IASetVertexBuffers(0, 1, &vertexBufferView);
             commandList_->SetGraphicsRootConstantBufferView(0, group->GetPerViewResource()->GetGPUVirtualAddress());
-            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetOutputParticleSrvForVSIndex());
+            // SoA: t0=DrawCore, t4=Rotation（回転グループのみVSが参照）
+            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetDrawCoreSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
             commandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
             // 生存コンパクション SRV (t2: aliveList, t3: aliveCount)
             srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
+            srvManager_->SetGraphicsRootDescriptorTable(6, group->GetRotationSrvForVSIndex());
             commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
@@ -183,11 +187,13 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
             commandList_->IASetVertexBuffers(0, 1, &vertexBufferView);
             // root param 0 のみプレビュー専用 per-view CB に差し替える（共有グループの VP は不変）
             commandList_->SetGraphicsRootConstantBufferView(0, perViewGpuAddress);
-            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetOutputParticleSrvForVSIndex());
+            // SoA: t0=DrawCore, t4=Rotation
+            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetDrawCoreSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
             commandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
             srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
+            srvManager_->SetGraphicsRootDescriptorTable(6, group->GetRotationSrvForVSIndex());
             commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
@@ -381,27 +387,34 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
         settings->gatherTarget = emitterMeshData_->translate + settings->gatherTargetOffset;
         settings->vortexTarget = emitterMeshData_->translate + settings->vortexTargetOffset;
 
-        cl->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
-        cl->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
-        cl->SetComputeRootDescriptorTable(2, group->GetFreeListSrvHandle().second);
-        cl->SetComputeRootDescriptorTable(3, group->GetFreeListTrailIndexSrvHandle().second);
-
-        cl->SetComputeRootConstantBufferView(4, emitterMeshResource_->GetGPUVirtualAddress());
-        cl->SetComputeRootConstantBufferView(5, group->GetPerFrameResource()->GetGPUVirtualAddress());
-        cl->SetComputeRootConstantBufferView(6, group->GetSettingsResource()->GetGPUVirtualAddress());
+        // SoA UAV (u0-u5)
+        cl->SetComputeRootDescriptorTable(0, group->GetLifeUavGpu());
+        cl->SetComputeRootDescriptorTable(1, group->GetDrawCoreUavGpu());
+        cl->SetComputeRootDescriptorTable(2, group->GetSimCoreUavGpu());
+        cl->SetComputeRootDescriptorTable(3, group->GetTrailUavGpu());
+        cl->SetComputeRootDescriptorTable(4, group->GetRotationUavGpu());
+        cl->SetComputeRootDescriptorTable(5, group->GetOverrideUavGpu());
+        // フリーリスト (u6-u8)
+        cl->SetComputeRootDescriptorTable(6, group->GetFreeListIndexSrvHandle().second);
+        cl->SetComputeRootDescriptorTable(7, group->GetFreeListSrvHandle().second);
+        cl->SetComputeRootDescriptorTable(8, group->GetFreeListTrailIndexSrvHandle().second);
+        // CBV (b0-b2)。b3:FieldCB はフィールド有無で下の分岐が param 12 に設定する。
+        cl->SetComputeRootConstantBufferView(9, emitterMeshResource_->GetGPUVirtualAddress());
+        cl->SetComputeRootConstantBufferView(10, group->GetPerFrameResource()->GetGPUVirtualAddress());
+        cl->SetComputeRootConstantBufferView(11, group->GetSettingsResource()->GetGPUVirtualAddress());
 
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
-            cl->SetComputeRootDescriptorTable(8, triangleInfoSrvHandle_.second);
-            cl->SetComputeRootDescriptorTable(9, triangleCDFSrvHandle_.second);
+            cl->SetComputeRootDescriptorTable(13, triangleInfoSrvHandle_.second);
+            cl->SetComputeRootDescriptorTable(14, triangleCDFSrvHandle_.second);
         }
 
         if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
-            cl->SetComputeRootDescriptorTable(10, edgeInfoSrvHandle_.second);
+            cl->SetComputeRootDescriptorTable(15, edgeInfoSrvHandle_.second);
         }
 
         {
             auto *fieldManager = ParticleCSFieldManager::GetInstance();
-            cl->SetComputeRootDescriptorTable(11, fieldManager->GetFieldsSrvHandle().second);
+            cl->SetComputeRootDescriptorTable(16, fieldManager->GetFieldsSrvHandle().second);
 
             if (emitOnlyOnFieldContact_ && receiveFields_) {
                 bool hasEmitSpawnField = false;
@@ -418,7 +431,7 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
                 }
 
                 if (!hasEmitSpawnField) {
-                    cl->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
+                    cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
                     groupIndex++;
                     continue;
                 }
@@ -444,7 +457,7 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
                     break;
                 }
 
-                cl->SetComputeRootConstantBufferView(7, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
+                cl->SetComputeRootConstantBufferView(12, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
 
                 int dispatchCount = (settings->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
                 cl->Dispatch(dispatchCount, 1, 1);
@@ -457,7 +470,7 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
                 continue;
 
             } else {
-                cl->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
+                cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
             }
         }
 

@@ -7,11 +7,14 @@ struct VertexShaderInput
     float3 normal : NORMAL0;
 };
 
-StructuredBuffer<Particle> gParticles : register(t0);
+// SoA: 描画は DrawCore(translate/scale/velocity/color) を gather する。
+StructuredBuffer<PDrawCore> gDrawCore : register(t0);
 // 生存コンパクション: instanceId -> 生存パーティクルの実 slot index
 StructuredBuffer<uint> gAliveList : register(t2);
 // 生存コンパクション: 当該フレームの生存数（これを超える instanceId は破棄）
 StructuredBuffer<uint> gAliveCount : register(t3);
+// SoA: 回転は回転グループのみ参照（enableRotation==0 なら gather しない）
+StructuredBuffer<PRotation> gRotation : register(t4);
 ConstantBuffer<PerView> gPerView : register(b0);
 
 VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID)
@@ -30,13 +33,16 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
 
     uint particleSlot = gAliveList[instanceId];
 
-    // 描画に必要な属性を 150B の Particle からローカルへ読み出す。
-    Particle particle = gParticles[particleSlot];
-    float3 pTranslate = particle.translate;
-    float3 pScale = particle.scale;
-    float3 pVelocity = particle.velocity;
-    float3 pRotation = particle.rotation;
-    float4 pColor = particle.color;
+    // 描画に必要な属性を SoA バッファから読み出す（DrawCore=52B）。
+    PDrawCore dc = gDrawCore[particleSlot];
+    float3 pTranslate = dc.translate;
+    float3 pScale = dc.scale;
+    float3 pVelocity = dc.velocity;
+    float4 pColor = dc.color;
+    // 回転は回転グループのみ gather（非回転グループは Rotation バッファに触れない）
+    float3 pRotation = float3(0.0f, 0.0f, 0.0f);
+    if (gPerView.enableRotation != 0)
+        pRotation = gRotation[particleSlot].rotation;
 
     // --- スケール → XYZ回転 → ビルボード → 平行移動 ---
     float4x4 worldMatrix;

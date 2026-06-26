@@ -19,7 +19,7 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     computeCommandList_ = dxCommon_->GetComputeCommandList().Get();
     CreateSettingsResource();
     settingsData_->maxParticleCount = maxParticleCount;
-    CreateOutputParticleResource();
+    CreateParticleSoABuffers();
     CreatePerViewResource();
     CreatePerFrameResource();
     CreateFreeListIndexResource();
@@ -152,11 +152,11 @@ ParticleCSGroupData ParticleCSGroup::CreatePrimitiveParticleGroup(const std::str
 void ParticleCSGroup::InitParticle() {
     srvManager_->SetDescriptorHeap();
 
-    dxCommon_->TransitionUAVBarrier(outputParticleResource_.Get());
+    dxCommon_->TransitionUAVBarrier(soaLife_.resource.Get());
 
-    // InitParticle.CSの処理
+    // InitParticle.CS: SoA は Life バッファ(u0)のみ初期化すればよい
     particleCommon_->ComputeInitDrawCommonSetting();
-    commandList_->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
+    commandList_->SetComputeRootDescriptorTable(0, soaLife_.uavHandle.second);
     commandList_->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
     commandList_->SetComputeRootDescriptorTable(2, freeListSrvHandle_.second);
     commandList_->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
@@ -177,18 +177,26 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     auto *computePSOMgr = ComputePipeLineManager::GetInstance();
     computePSOMgr->DrawCommonSetting(ComputePipelineType::kUpdateEmitter,
                                      BlendMode::kNormal, ShaderMode::kNone, cl);
-    cl->SetComputeRootDescriptorTable(0, outputParticleSrvHandle_.second);
-    cl->SetComputeRootDescriptorTable(1, freeListIndexSrvHandle_.second);
-    cl->SetComputeRootDescriptorTable(2, freeListSrvHandle_.second);
-    cl->SetComputeRootDescriptorTable(3, freeListTrailIndexSrvHandle_.second);
-    cl->SetComputeRootConstantBufferView(4, perFrameResource_->GetGPUVirtualAddress());
-    cl->SetComputeRootConstantBufferView(5, settingsResource_->GetGPUVirtualAddress());
-    cl->SetComputeRootDescriptorTable(6, fieldsSrvHandle.second);
-    cl->SetComputeRootConstantBufferView(7, fieldCountResource->GetGPUVirtualAddress());
-    cl->SetComputeRootDescriptorTable(8, overrideSrvHandle.second);
-    // 生存コンパクション (Phase 1)
+    // SoA UAV (u0-u5)
+    cl->SetComputeRootDescriptorTable(0, soaLife_.uavHandle.second);
+    cl->SetComputeRootDescriptorTable(1, soaDrawCore_.uavHandle.second);
+    cl->SetComputeRootDescriptorTable(2, soaSimCore_.uavHandle.second);
+    cl->SetComputeRootDescriptorTable(3, soaTrail_.uavHandle.second);
+    cl->SetComputeRootDescriptorTable(4, soaRotation_.uavHandle.second);
+    cl->SetComputeRootDescriptorTable(5, soaOverride_.uavHandle.second);
+    // フリーリスト (u6-u8)
+    cl->SetComputeRootDescriptorTable(6, freeListIndexSrvHandle_.second);
+    cl->SetComputeRootDescriptorTable(7, freeListSrvHandle_.second);
+    cl->SetComputeRootDescriptorTable(8, freeListTrailIndexSrvHandle_.second);
+    // 生存コンパクション (u9-u10)
     cl->SetComputeRootDescriptorTable(9, aliveListUavHandle_.second);
     cl->SetComputeRootDescriptorTable(10, aliveCounterUavHandle_.second);
+    // CBV (b0-b2) / SRV (t0-t1)
+    cl->SetComputeRootConstantBufferView(11, perFrameResource_->GetGPUVirtualAddress());
+    cl->SetComputeRootConstantBufferView(12, settingsResource_->GetGPUVirtualAddress());
+    cl->SetComputeRootConstantBufferView(13, fieldCountResource->GetGPUVirtualAddress());
+    cl->SetComputeRootDescriptorTable(14, fieldsSrvHandle.second);
+    cl->SetComputeRootDescriptorTable(15, overrideSrvHandle.second);
 
     int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
     cl->Dispatch(disPatchCount, 1, 1);
@@ -269,19 +277,29 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     CopyDebugDataToReadback();
 }
 
-void ParticleCSGroup::CreateOutputParticleResource() {
+void ParticleCSGroup::CreateParticleSoABuffers() {
+    const uint32_t maxCount = settingsData_->maxParticleCount;
 
-    outputParticleResource_ = dxCommon_->CreateBufferResource(sizeof(CSParticle) * settingsData_->maxParticleCount, true);
+    // 各 SoA バッファに Compute 用 UAV を作る。
+    // withSrvForVS=true のもの（DrawCore/Rotation）は描画VS用 SRV も作る。
+    auto createSoA = [&](SoABuffer &buf, uint32_t stride, bool withSrvForVS) {
+        buf.resource = dxCommon_->CreateBufferResource(static_cast<size_t>(stride) * maxCount, true);
+        buf.uavIndex = srvManager_->Allocate() + 1;
+        buf.uavHandle.first = srvManager_->GetCPUDescriptorHandle(buf.uavIndex);
+        buf.uavHandle.second = srvManager_->GetGPUDescriptorHandle(buf.uavIndex);
+        srvManager_->CreateUAVStructuredBuffer(buf.uavIndex, buf.resource.Get(), maxCount, stride);
+        if (withSrvForVS) {
+            buf.srvForVSIndex = srvManager_->Allocate() + 1;
+            srvManager_->CreateSRVforStructuredBuffer(buf.srvForVSIndex, buf.resource.Get(), maxCount, stride);
+        }
+    };
 
-    // UAV用のインデックス（Compute Shader用）
-    outputParticleSrvIndex_ = srvManager_->Allocate() + 1;
-    outputParticleSrvHandle_.first = srvManager_->GetCPUDescriptorHandle(outputParticleSrvIndex_);
-    outputParticleSrvHandle_.second = srvManager_->GetGPUDescriptorHandle(outputParticleSrvIndex_);
-    srvManager_->CreateUAVStructuredBuffer(outputParticleSrvIndex_, outputParticleResource_.Get(), settingsData_->maxParticleCount, sizeof(CSParticle));
-
-    // SRV用のインデックス（Vertex Shader用）
-    outputParticleSrvForVSIndex_ = srvManager_->Allocate() + 1;
-    srvManager_->CreateSRVforStructuredBuffer(outputParticleSrvForVSIndex_, outputParticleResource_.Get(), settingsData_->maxParticleCount, sizeof(CSParticle));
+    createSoA(soaLife_, sizeof(float), false);
+    createSoA(soaDrawCore_, sizeof(CSParticleDrawCore), true); // 描画VS t0
+    createSoA(soaSimCore_, sizeof(CSParticleSimCore), false);
+    createSoA(soaTrail_, sizeof(CSParticleTrail), false);
+    createSoA(soaRotation_, sizeof(CSParticleRotation), true); // 描画VS t4
+    createSoA(soaOverride_, sizeof(CSParticleOverride), false);
 }
 
 void ParticleCSGroup::CreatePerViewResource() {
@@ -583,7 +601,8 @@ void ParticleCSGroup::CountAliveParticles() {
 
     commandList_->SetComputeRootConstantBufferView(0, settingsResource_->GetGPUVirtualAddress());
     commandList_->SetComputeRootDescriptorTable(1, aliveCountSrvHandle_.second);
-    commandList_->SetComputeRootDescriptorTable(2, outputParticleSrvHandle_.second);
+    // SoA: 生存判定は Life バッファ(u1)で行う
+    commandList_->SetComputeRootDescriptorTable(2, soaLife_.uavHandle.second);
 
     int dispatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
     commandList_->Dispatch(dispatchCount, 1, 1);

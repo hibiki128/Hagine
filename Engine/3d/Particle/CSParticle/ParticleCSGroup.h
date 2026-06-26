@@ -44,7 +44,16 @@ class ParticleCSGroup {
     /// Getter
     /// ===================================
 
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetOutputParticleSrvHandle() const { return outputParticleSrvHandle_; }
+    // SoA: Compute(Emit/Update) が u0-u5 にバインドする UAV の GPU ハンドル
+    D3D12_GPU_DESCRIPTOR_HANDLE GetLifeUavGpu() const { return soaLife_.uavHandle.second; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetDrawCoreUavGpu() const { return soaDrawCore_.uavHandle.second; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetSimCoreUavGpu() const { return soaSimCore_.uavHandle.second; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetTrailUavGpu() const { return soaTrail_.uavHandle.second; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetRotationUavGpu() const { return soaRotation_.uavHandle.second; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetOverrideUavGpu() const { return soaOverride_.uavHandle.second; }
+    // SoA: 描画VS が読む SRV インデックス（t0:DrawCore / t4:Rotation）
+    uint32_t GetDrawCoreSrvForVSIndex() const { return soaDrawCore_.srvForVSIndex; }
+    uint32_t GetRotationSrvForVSIndex() const { return soaRotation_.srvForVSIndex; }
     // 生存コンパクション用ハンドル/インデックス
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveListUavHandle() const { return aliveListUavHandle_; }
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveCounterUavHandle() const { return aliveCounterUavHandle_; }
@@ -64,13 +73,10 @@ class ParticleCSGroup {
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetFreeListSrvHandle() const { return freeListSrvHandle_; }
     Microsoft::WRL::ComPtr<ID3D12Resource> GetPerFrameResource() const { return perFrameResource_; }
     Microsoft::WRL::ComPtr<ID3D12Resource> GetMaterialResource() const { return materialResource_; }
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetOutputParticleResource() const { return outputParticleResource_; }
     Microsoft::WRL::ComPtr<ID3D12Resource> GetPerViewResource() const { return perViewResource_; }
     Microsoft::WRL::ComPtr<ID3D12Resource> GetSettingsResource() const { return settingsResource_; }
     D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() const { return indexBufferView_; }
     D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const { return vertexBufferView_; }
-    uint32_t GetOutputParticleSrvIndex() const { return outputParticleSrvIndex_; }
-    uint32_t GetOutputParticleSrvForVSIndex() const { return outputParticleSrvForVSIndex_; }
     ModelData GetModelData() const { return modelData_; }
     PerFrame *GetPerFrameData() const { return perFrameData_; }
     uint32_t GetMaxParticleCount() const { return settingsData_->maxParticleCount; }
@@ -104,7 +110,7 @@ class ParticleCSGroup {
     /// ===================================
     void Initialize(uint32_t maxParticleCount = 10000);
     void InitParticle();
-    void CreateOutputParticleResource();
+    void CreateParticleSoABuffers();
     void CreatePerViewResource();
     void CreateMaterialResource();
     void CreateIndexResource();
@@ -122,10 +128,21 @@ class ParticleCSGroup {
     /// ===================================
     /// private variaus
     /// ===================================
-    Microsoft::WRL::ComPtr<ID3D12Resource> outputParticleResource_{};
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> outputParticleSrvHandle_{};
-    uint32_t outputParticleSrvIndex_ = 0;
-    uint32_t outputParticleSrvForVSIndex_ = 0;
+    // ===== GPUパーティクル SoA バッファ（旧 outputParticleResource_ を機能別に分割） =====
+    // 各バッファは Compute(Emit/Update) 用 UAV を持つ。描画VSが読む DrawCore/Rotation のみ
+    // 追加で SRV(srvForVSIndex) を持つ。
+    struct SoABuffer {
+        Microsoft::WRL::ComPtr<ID3D12Resource> resource;
+        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> uavHandle{};
+        uint32_t uavIndex = 0;
+        uint32_t srvForVSIndex = 0;
+    };
+    SoABuffer soaLife_;     // float            (生存判定。早期returnで4Bのみ読む)
+    SoABuffer soaDrawCore_; // CSParticleDrawCore (translate/scale/velocity/color)
+    SoABuffer soaSimCore_;  // CSParticleSimCore  (currentTime/initialScale/isTrailParticle)
+    SoABuffer soaTrail_;    // CSParticleTrail    (parentIndex/lastTrailPosition/trailSpawnDistance)
+    SoABuffer soaRotation_; // CSParticleRotation (rotation/angularVelocity)
+    SoABuffer soaOverride_; // CSParticleOverride (settingsOverrideFlags uint2)
 
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource_ = nullptr;
     uint32_t *indexData_{};

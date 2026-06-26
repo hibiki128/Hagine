@@ -45,7 +45,9 @@ struct EmitterMesh {
 };
 
 /// <summary>
-/// GPU上で管理する1パーティクル分のデータ（HLSL側 Particle と対応）
+/// GPU上で管理する1パーティクル分のデータ（旧AoSレイアウト）。
+/// SoA化(下の CSParticleXxx 群)に伴い GPU バッファとしては未使用になったが、
+/// ParticleCSGroupData::particles（CPU側 std::list、現状未使用）の要素型として残置。
 /// </summary>
 struct CSParticle {
     Vector3 translate;
@@ -60,20 +62,76 @@ struct CSParticle {
     uint32_t parentIndex;
     Vector3 lastTrailPosition;
     float trailSpawnDistance;
-    // フィールドによる「一度きり設定上書き」完了フラグ (ビットマスク)
-    // HLSL側の Particle::settingsOverrideFlags (uint2) と対応。
-    // lo=bit0-31, hi=bit32-63
     uint32_t settingsOverrideFlagsLo = 0;
     uint32_t settingsOverrideFlagsHi = 0;
-    // 回転 (XYZ軸回転、ラジアン)
     Vector3 rotation = {0.0f, 0.0f, 0.0f};
     float paddingRot = 0.0f;
     Vector3 angularVelocity = {0.0f, 0.0f, 0.0f};
     float paddingAngVel = 0.0f;
-    // 終了スケール
     Vector3 endScale = {0.0f, 0.0f, 0.0f};
     float paddingScale = 0.0f;
 };
+
+/// =============================================================
+/// GPUパーティクル SoA（Structure of Arrays）レイアウト
+///
+/// 旧 156B 単一バッファ(CSParticle)を機能別バッファに分割し、
+/// Update CS が「使う機能のバッファだけ load/store」できるようにして
+/// メモリ帯域を削減する（演出なし構成で 156B → 76B）。
+///
+/// 【重要】各構造体は HLSL 側（Resources/shaders/Particle/Particle.hlsli の
+///   PDrawCore / PSimCore / PTrail / PRotation 等）と**バイト単位で一致**させること。
+///   StructuredBuffer は 4 バイト境界のタイトパッキング（float3=12B, float4=16B）。
+///   末尾の static_assert がレイアウト契約を固定する。
+///
+///   gLife      : float            (4B)  — 生存判定。死亡/未使用スロットは早期returnで4Bのみ
+///   gDrawCore  : CSParticleDrawCore(52B) — translate/scale/velocity/color（描画VSもここを読む）
+///   gSimCore   : CSParticleSimCore (20B) — currentTime/initialScale/isTrailParticle
+///   gTrail     : CSParticleTrail   (20B) — parentIndex/lastTrailPosition/trailSpawnDistance
+///   gRotation  : CSParticleRotation(24B) — rotation/angularVelocity
+///   gOverride  : uint2             (8B)  — settingsOverrideFlags(lo/hi)
+/// =============================================================
+
+/// 描画コア。translate/scale/velocity/color。Update が常時 load/store し、描画VSも読む。
+struct CSParticleDrawCore {
+    Vector3 translate;
+    Vector3 scale;
+    Vector3 velocity;
+    Vector4 color;
+};
+
+/// シミュレーションコア。Update が常時 load/store する補助状態。
+struct CSParticleSimCore {
+    float currentTime;
+    Vector3 initialScale;
+    uint32_t isTrailParticle;
+};
+
+/// トレイル状態。トレイル機能が有効なときのみ load/store。
+struct CSParticleTrail {
+    uint32_t parentIndex;
+    Vector3 lastTrailPosition;
+    float trailSpawnDistance;
+};
+
+/// 回転状態。回転機能が有効なときのみ load/store。描画VSも回転時のみ読む。
+struct CSParticleRotation {
+    Vector3 rotation;
+    Vector3 angularVelocity;
+};
+
+/// 設定上書き完了フラグ（lo=bit0-31 / hi=bit32-63）。フィールド存在時のみ load/store。
+struct CSParticleOverride {
+    uint32_t settingsOverrideFlagsLo;
+    uint32_t settingsOverrideFlagsHi;
+};
+
+// GPUレイアウト契約の固定（HLSL 側とバイト単位で一致させること）。
+static_assert(sizeof(CSParticleDrawCore) == 52, "CSParticleDrawCore は52B。HLSL PDrawCore と一致させること");
+static_assert(sizeof(CSParticleSimCore) == 20, "CSParticleSimCore は20B。HLSL PSimCore と一致させること");
+static_assert(sizeof(CSParticleTrail) == 20, "CSParticleTrail は20B。HLSL PTrail と一致させること");
+static_assert(sizeof(CSParticleRotation) == 24, "CSParticleRotation は24B。HLSL PRotation と一致させること");
+static_assert(sizeof(CSParticleOverride) == 8, "CSParticleOverride は8B。HLSL uint2 と一致させること");
 
 /// <summary>
 /// 描画時にビュー単位で渡す情報（ビュープロジェクション・ビルボード設定など）

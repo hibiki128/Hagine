@@ -5,10 +5,17 @@ ConstantBuffer<EmitterMesh> gEmitterMesh : register(b0);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
 ConstantBuffer<ParticleCSSettings> gSettings : register(b2);
 ConstantBuffer<FieldCountCB> gFieldCB : register(b3);
-RWStructuredBuffer<Particle> gParticles : register(u0);
-RWStructuredBuffer<int> gFreeListIndex : register(u1);
-RWStructuredBuffer<uint> gFreeList : register(u2);
-RWStructuredBuffer<int> gFreeListTailIndex : register(u3);
+// SoA バッファ（u0-u5）
+RWStructuredBuffer<float>     gLife     : register(u0);
+RWStructuredBuffer<PDrawCore> gDrawCore : register(u1);
+RWStructuredBuffer<PSimCore>  gSimCore  : register(u2);
+RWStructuredBuffer<PTrail>    gTrail    : register(u3);
+RWStructuredBuffer<PRotation> gRotation : register(u4);
+RWStructuredBuffer<uint2>     gOverride : register(u5);
+// フリーリスト（u6-u8）
+RWStructuredBuffer<int>  gFreeListIndex     : register(u6);
+RWStructuredBuffer<uint> gFreeList          : register(u7);
+RWStructuredBuffer<int>  gFreeListTailIndex : register(u8);
 StructuredBuffer<TriangleInfo> gTriangles : register(t0);
 StructuredBuffer<float> gTriangleCDF : register(t1);
 StructuredBuffer<EdgeInfo> gEdges : register(t2);
@@ -345,22 +352,29 @@ void main(uint3 DTid : SV_DispatchThreadID)
     }
 
     // -------------------------------------------------------
-    // パーティクル初期化
+    // パーティクル初期化（SoA: 各バッファへローカルに組んで1回ずつ書き出す）
+    //   endScale は廃止（Update で gSettings.endScaleValue を直読み）
     // -------------------------------------------------------
+    PDrawCore dc;
+    PSimCore sc;
+    PTrail tr;
+    PRotation rot;
+
     float scaleValue = lerp(gSettings.scaleMin, gSettings.scaleMax, generator.Generate1d());
-    gParticles[particleIndex].scale = float3(scaleValue, scaleValue, scaleValue);
-    gParticles[particleIndex].initialScale = float3(scaleValue, scaleValue, scaleValue);
-    gParticles[particleIndex].translate = emitPosition;
-    gParticles[particleIndex].lastTrailPosition = emitPosition;
+    float3 scale3 = float3(scaleValue, scaleValue, scaleValue);
+    dc.scale = scale3;
+    sc.initialScale = scale3;
+    dc.translate = emitPosition;
+    tr.lastTrailPosition = emitPosition;
 
     if (gSettings.enableRandomColor)
     {
-        gParticles[particleIndex].color.rgb = generator.Generate3d() * 0.5f + 0.5f;
-        gParticles[particleIndex].color.a = 1.0f;
+        dc.color.rgb = generator.Generate3d() * 0.5f + 0.5f;
+        dc.color.a = 1.0f;
     }
     else
     {
-        gParticles[particleIndex].color = gSettings.startColor;
+        dc.color = gSettings.startColor;
     }
 
     float3 vel;
@@ -384,46 +398,52 @@ void main(uint3 DTid : SV_DispatchThreadID)
             lerp(gSettings.velocityMin.z, gSettings.velocityMax.z, generator.Generate1d())
         );
     }
-    gParticles[particleIndex].velocity = vel;
+    dc.velocity = vel;
 
-    gParticles[particleIndex].lifeTime = lerp(gSettings.lifeTimeMin, gSettings.lifeTimeMax, generator.Generate1d());
-    gParticles[particleIndex].currentTime = 0.0f;
+    float life = lerp(gSettings.lifeTimeMin, gSettings.lifeTimeMax, generator.Generate1d());
 
     // フィールドにヒットしていれば lifeTime をフィールド値で上書き
     if (hitFieldIndex >= 0 && gFields[hitFieldIndex].emitSpawnLifeTimeMax > 0.0f)
     {
-        gParticles[particleIndex].lifeTime = lerp(
+        life = lerp(
             gFields[hitFieldIndex].emitSpawnLifeTimeMin,
             gFields[hitFieldIndex].emitSpawnLifeTimeMax,
             generator.Generate1d()
         );
     }
 
-    gParticles[particleIndex].isTrailParticle = 0;
-    gParticles[particleIndex].parentIndex = 0xFFFFFFFF;
-    gParticles[particleIndex].trailSpawnDistance = gSettings.trailSpawnDistance;
-    gParticles[particleIndex].settingsOverrideFlags = uint2(0u, 0u);
-    gParticles[particleIndex].endScale = gSettings.endScaleValue;
+    sc.currentTime = 0.0f;
+    sc.isTrailParticle = 0;
+    tr.parentIndex = 0xFFFFFFFF;
+    tr.trailSpawnDistance = gSettings.trailSpawnDistance;
 
     if (gSettings.enableRandomRotation)
     {
-        gParticles[particleIndex].rotation = float3(
+        rot.rotation = float3(
             lerp(gSettings.rotationMin.x, gSettings.rotationMax.x, generator.Generate1d()),
             lerp(gSettings.rotationMin.y, gSettings.rotationMax.y, generator.Generate1d()),
             lerp(gSettings.rotationMin.z, gSettings.rotationMax.z, generator.Generate1d())
         );
     }
     else
-        gParticles[particleIndex].rotation = float3(0, 0, 0);
+        rot.rotation = float3(0, 0, 0);
 
     if (gSettings.enableRandomAngularVelocity)
     {
-        gParticles[particleIndex].angularVelocity = float3(
+        rot.angularVelocity = float3(
             lerp(gSettings.angularVelocityMin.x, gSettings.angularVelocityMax.x, generator.Generate1d()),
             lerp(gSettings.angularVelocityMin.y, gSettings.angularVelocityMax.y, generator.Generate1d()),
             lerp(gSettings.angularVelocityMin.z, gSettings.angularVelocityMax.z, generator.Generate1d())
         );
     }
     else
-        gParticles[particleIndex].angularVelocity = float3(0, 0, 0);
+        rot.angularVelocity = float3(0, 0, 0);
+
+    // SoA バッファへ書き出し（Life は最後に書いてスロットを「生存」にする）
+    gDrawCore[particleIndex] = dc;
+    gSimCore[particleIndex] = sc;
+    gTrail[particleIndex] = tr;
+    gRotation[particleIndex] = rot;
+    gOverride[particleIndex] = uint2(0u, 0u);
+    gLife[particleIndex] = life;
 }

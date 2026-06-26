@@ -30,6 +30,41 @@ struct Particle
     float paddingScale;
 };
 
+// =============================================
+// SoA バッファ要素（C++ ParticleStruct.h の CSParticleXxx と**バイト単位で一致**）
+//   StructuredBuffer は 4 バイト境界のタイトパッキング（float3=12B / float4=16B）。
+//   gLife=float(4B) / gDrawCore=PDrawCore(52B) / gSimCore=PSimCore(20B)
+//   gTrail=PTrail(20B) / gRotation=PRotation(24B) / gOverride=uint2(8B)
+//   上記サイズは C++ 側 static_assert が固定している。
+// =============================================
+struct PDrawCore
+{
+    float3 translate;
+    float3 scale;
+    float3 velocity;
+    float4 color;
+};
+
+struct PSimCore
+{
+    float currentTime;
+    float3 initialScale;
+    uint isTrailParticle;
+};
+
+struct PTrail
+{
+    uint parentIndex;
+    float3 lastTrailPosition;
+    float trailSpawnDistance;
+};
+
+struct PRotation
+{
+    float3 rotation;
+    float3 angularVelocity;
+};
+
 Particle CreateEmptyParticle()
 {
     Particle p;
