@@ -16,6 +16,12 @@ RWStructuredBuffer<uint2>     gOverride : register(u5);
 RWStructuredBuffer<int>  gFreeListIndex     : register(u6);
 RWStructuredBuffer<uint> gFreeList          : register(u7);
 RWStructuredBuffer<int>  gFreeListTailIndex : register(u8);
+// 生存リスト間接ディスパッチ（§8）: 新規粒子を out リストへ append する。
+//   out リスト = [今フレームEmitした粒子] + [Update後も生存した粒子]。
+//   描画用 renderCompact にも同じ idx で書き、今フレームから即描画する（1F遅延なし）。
+RWStructuredBuffer<uint>      gAliveList     : register(u9);  // out: 生存slot indexリスト
+RWStructuredBuffer<uint>      gAliveCounter  : register(u10); // out: リスト長(append位置のアトミックカウンタ)
+RWStructuredBuffer<PDrawCore> gRenderCompact : register(u11); // out: 描画データ(詰めた順)
 StructuredBuffer<TriangleInfo> gTriangles : register(t0);
 StructuredBuffer<float> gTriangleCDF : register(t1);
 StructuredBuffer<EdgeInfo> gEdges : register(t2);
@@ -362,20 +368,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
     float scaleValue = lerp(gSettings.scaleMin, gSettings.scaleMax, generator.Generate1d());
     float3 scale3 = float3(scaleValue, scaleValue, scaleValue);
-    dc.scale = scale3;
-    sc.initialScale = scale3;
+    dc.scaleXY = PackScaleXY(scale3);
+    dc.scaleZ = PackScaleZ(scale3);
+    sc.initialScaleXY = PackScaleXY(scale3);
+    sc.initialScaleZ_isTrail = PackScaleZTrail(scale3, 0u); // 通常パーティクル isTrail=0
     dc.translate = emitPosition;
     tr.lastTrailPosition = emitPosition;
 
+    float4 emitColor;
     if (gSettings.enableRandomColor)
     {
-        dc.color.rgb = generator.Generate3d() * 0.5f + 0.5f;
-        dc.color.a = 1.0f;
+        emitColor.rgb = generator.Generate3d() * 0.5f + 0.5f;
+        emitColor.a = 1.0f;
     }
     else
     {
-        dc.color = gSettings.startColor;
+        emitColor = gSettings.startColor;
     }
+    dc.color = PackColorRGBA8(emitColor);
 
     float3 vel;
     if (gSettings.enableRadialVelocity)
@@ -413,7 +423,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     }
 
     sc.currentTime = 0.0f;
-    sc.isTrailParticle = 0;
+    // isTrailParticle(=0) は上の sc.initialScaleZ_isTrail に同梱済み
     tr.parentIndex = 0xFFFFFFFF;
     tr.trailSpawnDistance = gSettings.trailSpawnDistance;
 
@@ -446,4 +456,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
     gRotation[particleIndex] = rot;
     gOverride[particleIndex] = uint2(0u, 0u);
     gLife[particleIndex] = life;
+
+    // 生存リスト間接ディスパッチ（§8）: 新規粒子を out リストへ append する。
+    //   これにより次フレームの Update がこの粒子を sim 対象にする。
+    //   renderCompact にも同じ idx で書き、今フレームから即描画する（drawCount=out カウンタ）。
+    uint emitDst;
+    InterlockedAdd(gAliveCounter[0], 1, emitDst);
+    gAliveList[emitDst] = particleIndex;
+    gRenderCompact[emitDst] = dc;
 }

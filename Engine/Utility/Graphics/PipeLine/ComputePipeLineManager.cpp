@@ -74,6 +74,12 @@ void ComputePipeLineManager::CreateUpdateEmitterPipelines() {
 
     auto pipeline = CreateUpdateEmitterGraphicsPipeLine(rootSignature);
     pipelines_[MakePipelineKey(ComputePipelineType::kUpdateEmitter, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
+
+    // 演出なし専用の軽量 Update。シェーダは触るレジスタが部分集合なので
+    // ルートシグネチャはフル版と同一オブジェクトを共有する（両キーへ登録）。
+    rootSignatures_[MakeRootSignatureKey(ComputePipelineType::kUpdateEmitterLite, ShaderMode::kNone)] = rootSignature;
+    auto litePipeline = CreateUpdateEmitterLiteGraphicsPipeLine(rootSignature);
+    pipelines_[MakePipelineKey(ComputePipelineType::kUpdateEmitterLite, BlendMode::kNormal, ShaderMode::kNone)] = litePipeline;
 }
 
 void ComputePipeLineManager::CreateCountPipelines() {
@@ -324,12 +330,13 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitte
     HRESULT hr;
 
     // SoA UAV (u0-u5: Life/DrawCore/SimCore/Trail/Rotation/Override)
-    //   + フリーリスト UAV (u6-u8) = 計9本。
-    D3D12_DESCRIPTOR_RANGE uavRanges[9] = {};
-    for (UINT i = 0; i < 9; ++i) {
+    //   + フリーリスト UAV (u6-u8)
+    //   + 生存リスト間接ディスパッチ UAV (u9:AliveList out / u10:AliveCounter out / u11:RenderCompact) = 計12本。
+    D3D12_DESCRIPTOR_RANGE uavRanges[12] = {};
+    for (UINT i = 0; i < 12; ++i) {
         uavRanges[i].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
         uavRanges[i].NumDescriptors = 1;
-        uavRanges[i].BaseShaderRegister = i; // u0..u8
+        uavRanges[i].BaseShaderRegister = i; // u0..u11
         uavRanges[i].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
     }
     // SRV (t0:TriangleInfo / t1:TriangleCDF / t2:EdgeInfo / t3:ParticleField)
@@ -341,11 +348,12 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitte
         srvRanges[i].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
     }
 
-    // スロット対応:
+    // スロット対応（既存 param 番号は不変。新規 u9-u11 を末尾 17-19 に追加）:
     //   [0..8]   u0..u8 (SoA6本 + フリーリスト3本)
     //   [9..12]  b0..b3 (EmitterMesh / PerFrame / Settings / FieldCB)
     //   [13..16] t0..t3 (TriangleInfo / TriangleCDF / EdgeInfo / ParticleField)
-    D3D12_ROOT_PARAMETER rootParameters[17] = {};
+    //   [17..19] u9..u11 (AliveList out / AliveCounter out / RenderCompact) ★生存リスト間接ディスパッチ
+    D3D12_ROOT_PARAMETER rootParameters[20] = {};
     for (UINT i = 0; i < 9; ++i) {
         rootParameters[i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
         rootParameters[i].DescriptorTable.pDescriptorRanges = &uavRanges[i];
@@ -363,6 +371,12 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateEmitte
         rootParameters[13 + i].DescriptorTable.pDescriptorRanges = &srvRanges[i];
         rootParameters[13 + i].DescriptorTable.NumDescriptorRanges = 1;
         rootParameters[13 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    }
+    for (UINT i = 0; i < 3; ++i) {
+        rootParameters[17 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        rootParameters[17 + i].DescriptorTable.pDescriptorRanges = &uavRanges[9 + i]; // u9..u11
+        rootParameters[17 + i].DescriptorTable.NumDescriptorRanges = 1;
+        rootParameters[17 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     }
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
@@ -419,56 +433,62 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateEmitte
 //   [8]  u8  : gFreeListTailIndex (UAV)
 //   [9]  u9  : gAliveList         (UAV) ★生存コンパクション
 //   [10] u10 : gAliveCounter      (UAV) ★生存コンパクション
-//   [11] b0  : gPerFrame      (CBV)
-//   [12] b1  : gSettings      (CBV)
-//   [13] b2  : gFieldCB       (CBV)
-//   [14] t0  : gFields        (SRV)
-//   [15] t1  : gFieldsOverride(SRV)
+//   [11] u11 : gRenderCompact     (UAV) ★描画コンパクション(詰めた描画データ)
+//   [12] b0  : gPerFrame      (CBV)
+//   [13] b1  : gSettings      (CBV)
+//   [14] b2  : gFieldCB       (CBV)
+//   [15] t0  : gFields        (SRV)
+//   [16] t1  : gFieldsOverride(SRV)
+//   [17] t2  : gAliveListIn    (SRV) ★生存リスト間接ディスパッチの入力(前フレーム out リスト)
+//   [18] t3  : gAliveCounterIn (SRV) ★生存リスト間接ディスパッチの入力(リスト長)
 // =============================================
 Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipeLineManager::CreateUpdateEmitterRootSignature() {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
 
     // SoA UAV (u0-u5: Life/DrawCore/SimCore/Trail/Rotation/Override)
-    //   + フリーリスト UAV (u6-u8) + 生存コンパクション UAV (u9-u10) = 計11本。
-    D3D12_DESCRIPTOR_RANGE uavRanges[11] = {};
-    for (UINT i = 0; i < 11; ++i) {
+    //   + フリーリスト UAV (u6-u8) + 生存コンパクション UAV (u9-u10)
+    //   + 描画コンパクション UAV (u11: gRenderCompact) = 計12本。
+    D3D12_DESCRIPTOR_RANGE uavRanges[12] = {};
+    for (UINT i = 0; i < 12; ++i) {
         uavRanges[i].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
         uavRanges[i].NumDescriptors = 1;
-        uavRanges[i].BaseShaderRegister = i; // u0..u10
+        uavRanges[i].BaseShaderRegister = i; // u0..u11
         uavRanges[i].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
     }
-    // SRV (t0:gFields / t1:gFieldsOverride)
-    D3D12_DESCRIPTOR_RANGE srvRanges[2] = {};
-    for (UINT i = 0; i < 2; ++i) {
+    // SRV (t0:gFields / t1:gFieldsOverride / t2:gAliveListIn / t3:gAliveCounterIn)
+    //   t2/t3 = 生存リスト間接ディスパッチの in（前フレームの out リスト/カウンタ）。
+    D3D12_DESCRIPTOR_RANGE srvRanges[4] = {};
+    for (UINT i = 0; i < 4; ++i) {
         srvRanges[i].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         srvRanges[i].NumDescriptors = 1;
-        srvRanges[i].BaseShaderRegister = i; // t0..t1
+        srvRanges[i].BaseShaderRegister = i; // t0..t3
         srvRanges[i].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
     }
 
     // スロット対応:
-    //   [0..10]  u0..u10 (SoA6本 + フリーリスト3本 + 生存コンパクション2本)
-    //   [11..13] b0..b2  (PerFrame / Settings / FieldCB)
-    //   [14..15] t0..t1  (Fields / FieldsOverride)
-    D3D12_ROOT_PARAMETER rootParameters[16] = {};
-    for (UINT i = 0; i < 11; ++i) {
+    //   [0..11]  u0..u11 (SoA6本 + フリーリスト3本 + 生存コンパクション2本(out) + 描画コンパクション1本)
+    //   [12..14] b0..b2  (PerFrame / Settings / FieldCB)
+    //   [15..16] t0..t1  (Fields / FieldsOverride)
+    //   [17..18] t2..t3  (AliveListIn / AliveCounterIn) ★生存リスト間接ディスパッチの入力
+    D3D12_ROOT_PARAMETER rootParameters[19] = {};
+    for (UINT i = 0; i < 12; ++i) {
         rootParameters[i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
         rootParameters[i].DescriptorTable.pDescriptorRanges = &uavRanges[i];
         rootParameters[i].DescriptorTable.NumDescriptorRanges = 1;
         rootParameters[i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     }
     for (UINT i = 0; i < 3; ++i) {
-        rootParameters[11 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-        rootParameters[11 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-        rootParameters[11 + i].Descriptor.ShaderRegister = i; // b0..b2
-        rootParameters[11 + i].Descriptor.RegisterSpace = 0;
+        rootParameters[12 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+        rootParameters[12 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+        rootParameters[12 + i].Descriptor.ShaderRegister = i; // b0..b2
+        rootParameters[12 + i].Descriptor.RegisterSpace = 0;
     }
-    for (UINT i = 0; i < 2; ++i) {
-        rootParameters[14 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        rootParameters[14 + i].DescriptorTable.pDescriptorRanges = &srvRanges[i];
-        rootParameters[14 + i].DescriptorTable.NumDescriptorRanges = 1;
-        rootParameters[14 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    for (UINT i = 0; i < 4; ++i) {
+        rootParameters[15 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        rootParameters[15 + i].DescriptorTable.pDescriptorRanges = &srvRanges[i];
+        rootParameters[15 + i].DescriptorTable.NumDescriptorRanges = 1;
+        rootParameters[15 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     }
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};
@@ -496,6 +516,25 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateUpdate
 
     IDxcBlob *computerShaderBlob = nullptr;
     computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/UpdateParticle.CS.hlsl", L"cs_6_0");
+    assert(computerShaderBlob != nullptr);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+    computePipelineStateDesc.CS = {
+        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
+        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+    };
+    computePipelineStateDesc.pRootSignature = rootSignature.Get();
+    HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
+    assert(SUCCEEDED(hr));
+    return graphicsPipelineState;
+}
+
+// 演出なし専用の軽量 Update PSO（root sig はフル版 UpdateEmitter と共有）。
+Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipeLineManager::CreateUpdateEmitterLiteGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
+
+    IDxcBlob *computerShaderBlob = nullptr;
+    computerShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/UpdateParticleLite.CS.hlsl", L"cs_6_0");
     assert(computerShaderBlob != nullptr);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};

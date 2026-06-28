@@ -20,6 +20,11 @@ namespace Hagine {
 /// </summary>
 class ParticleCSGroup {
   public:
+    // 軽量 Update バリアントのスレッドグループサイズ。
+    // フル版(threadsPerGroup_=1024)と異なり、Ampere の1SM常駐1536スレッド上限で
+    // 占有率を上げるため256にする。UpdateParticleLite.CS.hlsl の [numthreads] と一致必須。
+    static constexpr uint32_t kLiteUpdateThreadsPerGroup = 256;
+
     /// ===================================
     /// public methods
     /// ===================================
@@ -33,11 +38,19 @@ class ParticleCSGroup {
     void Update(const ViewProjection &vp);
     void DrawImGui();
     int CalculateOptimalEmitCount() const;
+    // fieldsActive: このグループがフィールドの影響を受けるか（receiveFields_ かつ有効フィールド>0）。
+    //   演出設定が全 OFF かつ fieldsActive==false のとき軽量 Update PSO を使う。
     void UpdateParticleCSDisPatch(
         std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
         Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
         std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
+        bool fieldsActive,
         ID3D12GraphicsCommandList *cmdList = nullptr);
+
+    // 軽量 Update バリアントを使えるグループか判定する。
+    // 重い演出(curl/vortex/gather/turbulence/trail/rotation)が全 OFF かつ
+    // フィールドの影響を受けない場合のみ true。
+    bool CanUseLiteUpdate(bool fieldsActive) const;
     ParticleCSGroupData GetParticleGroupData() { return particleGroupData_; }
 
     /// ===================================
@@ -51,17 +64,21 @@ class ParticleCSGroup {
     D3D12_GPU_DESCRIPTOR_HANDLE GetTrailUavGpu() const { return soaTrail_.uavHandle.second; }
     D3D12_GPU_DESCRIPTOR_HANDLE GetRotationUavGpu() const { return soaRotation_.uavHandle.second; }
     D3D12_GPU_DESCRIPTOR_HANDLE GetOverrideUavGpu() const { return soaOverride_.uavHandle.second; }
-    // SoA: 描画VS が読む SRV インデックス（t0:DrawCore / t4:Rotation）
-    uint32_t GetDrawCoreSrvForVSIndex() const { return soaDrawCore_.srvForVSIndex; }
+    // 描画コンパクション: Update が u11 に書く UAV / 描画VS が t0 で読む SRV
+    D3D12_GPU_DESCRIPTOR_HANDLE GetRenderCompactUavGpu() const { return soaRenderCompact_.uavHandle.second; }
+    uint32_t GetRenderCompactSrvForVSIndex() const { return soaRenderCompact_.srvForVSIndex; }
+    // SoA: 描画VS が回転グループのみ読む SRV インデックス（t4:Rotation）
     uint32_t GetRotationSrvForVSIndex() const { return soaRotation_.srvForVSIndex; }
-    // 生存コンパクション用ハンドル/インデックス
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveListUavHandle() const { return aliveListUavHandle_; }
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveCounterUavHandle() const { return aliveCounterUavHandle_; }
-    // 描画(VS)が読む生存リスト/カウンタの SRV インデックス。
-    uint32_t GetAliveListSrvForVSIndex() const { return aliveListSrvForVSIndex_; }
-    uint32_t GetAliveCounterSrvForVSIndex() const { return aliveCounterSrvForVSIndex_; }
+    // 生存コンパクション用ハンドル/インデックス（out フェーズ＝今フレームの書込先を返す）
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveListUavHandle() const { return aliveListUavHandle_[alivePhase_]; }
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> GetAliveCounterUavHandle() const { return aliveCounterUavHandle_[alivePhase_]; }
+    // 描画(VS)が読む生存リスト/カウンタの SRV インデックス（out フェーズ）。
+    uint32_t GetAliveListSrvForVSIndex() const { return aliveListSrvForVSIndex_[alivePhase_]; }
+    uint32_t GetAliveCounterSrvForVSIndex() const { return aliveCounterSrvForVSIndex_[alivePhase_]; }
     // 直近フレームに読み戻した生存数(描画 instanceCount のヒント)
     uint32_t GetAliveDrawCount() const { return aliveDrawCount_; }
+    // 生存リスト ping-pong のフェーズを反転する（§8: 毎フレーム先頭で呼び、out/in を入れ替える）。
+    void AdvanceAliveFrame() { alivePhase_ ^= 1u; }
     // 生存コンパクションカウンタを 0 にリセットする 1スレッドパス
     void ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdList);
     // 生存数を readback バッファへコピーする（compute キュー上で記録すること）
@@ -106,11 +123,34 @@ class ParticleCSGroup {
 
   private:
     /// ===================================
+    /// private types
+    /// ===================================
+    // GPUパーティクル SoA バッファ1本分のリソースとディスクリプタ。
+    // 各バッファは Compute(Emit/Update) 用 UAV を持つ。描画VSが読む Rotation/RenderCompact のみ
+    // 追加で SRV(srvForVSIndex) を持つ。Trail/Rotation/Override は使うグループだけ本確保する。
+    struct SoABuffer {
+        Microsoft::WRL::ComPtr<ID3D12Resource> resource;
+        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> uavHandle{};
+        uint32_t uavIndex = 0;
+        uint32_t srvForVSIndex = 0;
+        uint32_t stride = 0;          // 要素サイズ（再確保時に使う）
+        bool withSrvForVS = false;    // 描画VS用SRVも作るか
+        uint32_t allocatedCount = 0;  // 現在の確保要素数（1=未使用ダミー / maxParticleCount=本確保）
+    };
+
+    /// ===================================
     /// private methods
     /// ===================================
     void Initialize(uint32_t maxParticleCount = 10000);
     void InitParticle();
     void CreateParticleSoABuffers();
+    // SoA バッファを count 要素で（再）確保しディスクリプタを作る。
+    // 再確保時は in-flight 参照中の旧リソース／ディスクリプタを上書きせず、
+    // 旧リソースは retiredSoABuffers_ へ退避し新しいディスクリプタ枠に作り直す（ハザード回避）。
+    void AllocateSoABuffer(SoABuffer &buf, uint32_t count);
+    // Trail/Rotation/Override を「使うグループだけ」本確保する（演出なしは 1要素ダミーのまま）。
+    // フル版 Update がこれらを load/store する前（毎フレーム冒頭）に呼ぶ。
+    void EnsureUpdateOptionalBuffers(bool fieldsActive);
     void CreatePerViewResource();
     void CreateMaterialResource();
     void CreateIndexResource();
@@ -131,18 +171,19 @@ class ParticleCSGroup {
     // ===== GPUパーティクル SoA バッファ（旧 outputParticleResource_ を機能別に分割） =====
     // 各バッファは Compute(Emit/Update) 用 UAV を持つ。描画VSが読む DrawCore/Rotation のみ
     // 追加で SRV(srvForVSIndex) を持つ。
-    struct SoABuffer {
-        Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> uavHandle{};
-        uint32_t uavIndex = 0;
-        uint32_t srvForVSIndex = 0;
-    };
     SoABuffer soaLife_;     // float            (生存判定。早期returnで4Bのみ読む)
     SoABuffer soaDrawCore_; // CSParticleDrawCore (translate/scale/velocity/color)
     SoABuffer soaSimCore_;  // CSParticleSimCore  (currentTime/initialScale/isTrailParticle)
     SoABuffer soaTrail_;    // CSParticleTrail    (parentIndex/lastTrailPosition/trailSpawnDistance)
     SoABuffer soaRotation_; // CSParticleRotation (rotation/angularVelocity)
     SoABuffer soaOverride_; // CSParticleOverride (settingsOverrideFlags uint2)
+    // 描画コンパクション: Update が生存パーティクルの描画データ(DrawCore形式)を
+    // 詰めた順(instanceId順)に書き出す。描画VSはこれを順次読みして散乱gatherを排除する。
+    SoABuffer soaRenderCompact_; // CSParticleDrawCore (詰めた描画データ)
+    // 条件付き確保で本確保へ作り直したときの旧リソース退避先。
+    // in-flight のコマンドリストが旧リソース/旧ディスクリプタを参照中でも安全なように、
+    // 即解放せずグループ破棄まで生かす（要素1個のダミーなので極小）。
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> retiredSoABuffers_;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource_ = nullptr;
     uint32_t *indexData_{};
@@ -177,18 +218,26 @@ class ParticleCSGroup {
     Microsoft::WRL::ComPtr<ID3D12Resource> settingsResource_{};
     ParticleCSSettings *settingsData_ = nullptr;
 
-    // ===== 生存コンパクション (Phase 1) =====
-    // 生存パーティクルの slot index を詰めるバッファ (UAV: compute u4 / SRV: VS t2)
-    Microsoft::WRL::ComPtr<ID3D12Resource> aliveListResource_{};
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveListUavHandle_{};
-    uint32_t aliveListUavIndex_ = 0;
-    uint32_t aliveListSrvForVSIndex_ = 0;
-    // 生存数アトミックカウンタ (UAV: compute u5 / SRV: VS t3)
-    Microsoft::WRL::ComPtr<ID3D12Resource> aliveCounterResource_{};
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveCounterUavHandle_{};
-    uint32_t aliveCounterUavIndex_ = 0;
-    uint32_t aliveCounterSrvForVSIndex_ = 0;
+    // ===== 生存コンパクション（生存リスト間接ディスパッチの ping-pong 基盤・§8）=====
+    // listBuf[2]/counterBuf[2] を毎フレーム ping-pong する。
+    //   out = alivePhase_      : 今フレームの生存リスト書込先（Reset/Update/Readback/Draw が参照）
+    //   in  = 1 - alivePhase_  : 前フレームの生存リスト（Step3 で Update の入力に使う・現状未使用）
+    // 現状は Update が全スロット走査で out を毎フレーム作り直すため、どちらの物理バッファに
+    // 書いても見た目は不変（ping-pong は将来 listIn 読みを入れるための土台）。
+    static constexpr uint32_t kAlivePingPong = 2;
+    // 生存パーティクルの slot index を詰めるバッファ (UAV: compute u9 / SRV: VS t2)
+    Microsoft::WRL::ComPtr<ID3D12Resource> aliveListResource_[kAlivePingPong]{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveListUavHandle_[kAlivePingPong]{};
+    uint32_t aliveListUavIndex_[kAlivePingPong] = {};
+    uint32_t aliveListSrvForVSIndex_[kAlivePingPong] = {};
+    // 生存数アトミックカウンタ (UAV: compute u10 / SRV: VS t3)
+    Microsoft::WRL::ComPtr<ID3D12Resource> aliveCounterResource_[kAlivePingPong]{};
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> aliveCounterUavHandle_[kAlivePingPong]{};
+    uint32_t aliveCounterUavIndex_[kAlivePingPong] = {};
+    uint32_t aliveCounterSrvForVSIndex_[kAlivePingPong] = {};
+    // 読み戻しは out からコピーする共有 1個（1〜2F遅延は従来どおり許容）。
     Microsoft::WRL::ComPtr<ID3D12Resource> aliveCounterReadbackResource_{};
+    uint32_t alivePhase_ = 0; // out インデックス。AdvanceAliveFrame で毎フレーム反転
     uint32_t aliveDrawCount_ = 0;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> aliveCountResource_{};

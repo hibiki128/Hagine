@@ -5,7 +5,7 @@
     "fieldContactEmitCount": 1000,
     "fieldGroupId": -1,
     "frequency": 0.0010000000474974513,
-    "frequencyTime": 173.56719970703125,
+    "frequencyTime": 266.91522216796875,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -35,7 +35,7 @@
     "group_0_curlNoiseStrength": 1.2000000476837158,
     "group_0_curlNoiseTimeScale": 0.20000000298023224,
     "group_0_emitConeAngle": 0.0,
-    "group_0_emitCount": 52330,
+    "group_0_emitCount": 75000,
     "group_0_emitShape": 0,
     "group_0_emitSphereRadius": 0.0,
     "group_0_enableAcceleration": 0,
@@ -88,7 +88,7 @@
         "z": 0.0
     },
     "group_0_lifetimeVelocityDampingStart": 0.5,
-    "group_0_maxLifetime": 3.0,
+    "group_0_maxLifetime": 1.0,
     "group_0_maxScale": 0.05000000074505806,
     "group_0_maxTrailPerParticle": 5,
     "group_0_maxVelocity": {

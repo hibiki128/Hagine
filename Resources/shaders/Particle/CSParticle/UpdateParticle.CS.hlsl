@@ -19,8 +19,15 @@ RWStructuredBuffer<int>  gFreeListTailIndex : register(u8);
 // 生存コンパクション用（u9-u10）: 生存slot indexを詰める / append位置のアトミックカウンタ
 RWStructuredBuffer<uint> gAliveList    : register(u9);
 RWStructuredBuffer<uint> gAliveCounter : register(u10);
+// 描画コンパクション（u11）: 描画データ(DrawCore=40B)を詰めた順(instanceId順)に書き出す。
+// 描画VSはこれを順次読みして散乱gatherを排除する。
+RWStructuredBuffer<PDrawCore> gRenderCompact : register(u11);
 StructuredBuffer<ParticleField> gFields : register(t0);
 StructuredBuffer<ParticleFieldSettingsOverrideData> gFieldsOverride : register(t1);
+// 生存リスト間接ディスパッチ（§8）: 前フレームの out リスト = 今フレームの in（処理対象）。
+//   Update は全スロット走査をやめ、この in リストの tid 番目だけを sim する → O(生存数)。
+StructuredBuffer<uint> gAliveListIn    : register(t2); // in: 処理対象 slot index 列
+StructuredBuffer<uint> gAliveCounterIn : register(t3); // in: リスト長
 
 // =============================================
 // フィールド適用結果
@@ -354,17 +361,18 @@ void SpawnTrailParticles(inout Particle p, int particleIndex, float3 currentPosi
 
         PDrawCore cdc;
         cdc.translate = spawnPosition;
-        cdc.scale = childInitialScale;
+        cdc.scaleXY = PackScaleXY(childInitialScale);
+        cdc.scaleZ = PackScaleZ(childInitialScale);
         cdc.velocity = (gSettings.trailInheritVelocity != 0)
                            ? (parentVelocity * gSettings.trailVelocityScale)
                            : float3(0.0f, 0.0f, 0.0f);
-        cdc.color = parentColor * gSettings.trailColorMultiplier;
+        cdc.color = PackColorRGBA8(parentColor * gSettings.trailColorMultiplier);
         gDrawCore[trailIndex] = cdc;
 
         PSimCore csc;
         csc.currentTime = 0.0f;
-        csc.initialScale = childInitialScale;
-        csc.isTrailParticle = 1;
+        csc.initialScaleXY = PackScaleXY(childInitialScale);
+        csc.initialScaleZ_isTrail = PackScaleZTrail(childInitialScale, 1u); // トレイル isTrail=1
         gSimCore[trailIndex] = csc;
 
         PTrail ctr;
@@ -375,6 +383,14 @@ void SpawnTrailParticles(inout Particle p, int particleIndex, float3 currentPosi
 
         // Life は最後に書いてスロットを「生存」にする（次フレームから更新対象）
         gLife[trailIndex] = trailLifeTime;
+
+        // 生存リスト間接ディスパッチ（§8）: 生成したトレイル子も out リストへ append する。
+        //   in リスト経由でしか sim しない設計のため、append しないと子が処理も描画もされない。
+        //   renderCompact にも同じ idx で書き、子を今フレームから即描画する。
+        uint trailDst;
+        InterlockedAdd(gAliveCounter[0], 1, trailDst);
+        gAliveList[trailDst] = (uint) trailIndex;
+        gRenderCompact[trailDst] = cdc;
     }
 
     // capped のときは移動区間を全消費して lastTrailPosition を currentPosition まで進め、
@@ -386,8 +402,13 @@ void SpawnTrailParticles(inout Particle p, int particleIndex, float3 currentPosi
 [numthreads(1024, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-    int particleIndex = DTid.x;
-    if (particleIndex >= (int) gSettings.maxParticleCount)
+    // 生存リスト間接ディスパッチ（§8）: 全スロット走査ではなく in リストの tid 番目だけ処理する。
+    //   tid >= リスト長 のスレッドは何もしない（早期 return。フル版は Wave 集約なのでバリア制約なし）。
+    uint tid = DTid.x;
+    if (tid >= gAliveCounterIn[0])
+        return;
+    int particleIndex = (int) gAliveListIn[tid];
+    if (particleIndex < 0 || particleIndex >= (int) gSettings.maxParticleCount)
         return;
 
     // =============================================
@@ -411,14 +432,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
     PDrawCore dc = gDrawCore[particleIndex];
     p.translate = dc.translate;
-    p.scale = dc.scale;
+    p.scale = UnpackScale3(dc.scaleXY, dc.scaleZ);
     p.velocity = dc.velocity;
-    p.color = dc.color;
+    p.color = UnpackColorRGBA8(dc.color);
 
     PSimCore sc = gSimCore[particleIndex];
     p.currentTime = sc.currentTime;
-    p.initialScale = sc.initialScale;
-    p.isTrailParticle = sc.isTrailParticle;
+    p.initialScale = UnpackScale3(sc.initialScaleXY, sc.initialScaleZ_isTrail);
+    p.isTrailParticle = sc.initialScaleZ_isTrail >> 16; // 上位16bit = isTrailParticle
 
     if (useTrail)
     {
@@ -815,15 +836,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
     PDrawCore odc;
     odc.translate = p.translate;
-    odc.scale = p.scale;
+    odc.scaleXY = PackScaleXY(p.scale);
+    odc.scaleZ = PackScaleZ(p.scale);
     odc.velocity = p.velocity;
-    odc.color = p.color;
+    odc.color = PackColorRGBA8(p.color);
     gDrawCore[particleIndex] = odc;
 
     PSimCore osc;
     osc.currentTime = p.currentTime;
-    osc.initialScale = p.initialScale;
-    osc.isTrailParticle = p.isTrailParticle;
+    osc.initialScaleXY = PackScaleXY(p.initialScale);
+    osc.initialScaleZ_isTrail = PackScaleZTrail(p.initialScale, p.isTrailParticle);
     gSimCore[particleIndex] = osc;
 
     if (useTrail)
@@ -852,8 +874,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
     //   aliveList の先頭から詰めて書き出す。
     //   描画側は aliveCounter 個だけ instance を発行すればよく、
     //   死亡スロットへの無駄な VS 起動（オーバードロー要因）を排除する。
-    //   ※ このフレームに新規生成されたトレイル子は、自身のスレッドが
-    //     既に早期 return しているため次フレームから描画対象になる（1F遅延・許容）。
+    //   ※ このフレームに新規生成されたトレイル子は SpawnTrailParticles 内で
+    //     out リスト/renderCompact へ即 append 済み（今フレームから描画、次フレームから sim）。
     // =============================================
     //   高速化: 生存スレッドが各自 InterlockedAdd すると高密度時に単一カウンタへ
     //   数万回の atomic が殺到し直列化する。Wave 内で生存数をまとめ、先頭レーンが
@@ -872,7 +894,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
         waveBase = WaveReadLaneFirst(waveBase);
         if (alive)
         {
-            gAliveList[waveBase + laneOffset] = (uint) particleIndex;
+            uint dst = waveBase + laneOffset;
+            gAliveList[dst] = (uint) particleIndex;
+            // 描画データを詰めた順に書き出す（odc は上の DrawCore 書き戻しで構築済み）。
+            // 描画VSは gRenderCompact[instanceId] を順次読みできる。
+            gRenderCompact[dst] = odc;
         }
     }
 }

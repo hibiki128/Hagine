@@ -71,36 +71,50 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
     auto *computeCmdList = dxCommon_->GetComputeCommandList().Get();
     dxCommon_->BeginComputeFrame();
 
+    auto *fieldMgr = ParticleCSFieldManager::GetInstance();
+    auto fieldCountRes = receiveFields_ ? fieldMgr->GetFieldCountResource()
+                                        : fieldMgr->GetZeroFieldCountResource();
+    // このグループ群がフィールドの影響を受けるか（軽量 Update 適格判定に使う）。
+    // receiveFields_=false なら shader へ渡る fieldCount は 0 なので影響なし扱い。
+    const bool fieldsActive = receiveFields_ && (fieldMgr->GetActiveFieldCount() > 0);
+
+    // §8 生存リスト間接ディスパッチ:
+    //   Emit と Update がどちらも out リストへ append するため、フレーム順序は
+    //   「reset(out) → Emit(append) → barrier → Update(read in, append out) → readback」。
+    //   Emit は全グループを一括ディスパッチするので、reset/フェーズ反転は全グループ分先に行う。
+
+    // 1) 各グループ: CPU更新 + フェーズ反転 + out カウンタを 0 リセット（Emit の append より前）
     for (auto &group : particleGroups_) {
         group->Update(vp);
-
-        auto *fieldMgr = ParticleCSFieldManager::GetInstance();
-        auto fieldCountRes = receiveFields_ ? fieldMgr->GetFieldCountResource()
-                                            : fieldMgr->GetZeroFieldCountResource();
-
-        int emitSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Emit");
-        EmitterDisPatch(computeCmdList);
-        GpuProfiler::GetInstance()->Close(computeCmdList, emitSpan);
-
-        // SoA: Emit が書いた6本のバッファすべてを Update の前に可視化するため
-        // グローバル UAV バリア（pResource=nullptr）で一括同期する。
-        D3D12_RESOURCE_BARRIER uavBarrier{};
-        uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-        uavBarrier.UAV.pResource = nullptr;
-        computeCmdList->ResourceBarrier(1, &uavBarrier);
-
-        // 生存コンパクションカウンタを 0 にリセット（Update の append より前）
+        group->AdvanceAliveFrame();
         group->ResetAliveCounterDispatch(computeCmdList);
+    }
 
-        int updateSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Update");
+    // 2) Emit（全グループ一括）: 新規粒子を out リスト/renderCompact へ append
+    int emitSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Emit");
+    EmitterDisPatch(computeCmdList);
+    GpuProfiler::GetInstance()->Close(computeCmdList, emitSpan);
+
+    // 3) Emit が書いた SoA6本 + 生存リストを Update の前に可視化（グローバル UAV バリア）
+    D3D12_RESOURCE_BARRIER uavBarrier{};
+    uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    uavBarrier.UAV.pResource = nullptr;
+    computeCmdList->ResourceBarrier(1, &uavBarrier);
+
+    // 4) 各グループ: Update（in リストを sim し survivor を out へ append）
+    int updateSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Update");
+    for (auto &group : particleGroups_) {
         group->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),
             fieldCountRes,
             fieldMgr->GetOverrideSrvHandle(),
+            fieldsActive,
             computeCmdList);
-        GpuProfiler::GetInstance()->Close(computeCmdList, updateSpan);
+    }
+    GpuProfiler::GetInstance()->Close(computeCmdList, updateSpan);
 
-        // 生存数を readback バッファへコピー（compute キュー上で記録）
+    // 5) 各グループ: 生存数(out カウンタ)を readback バッファへコピー（compute キュー上で記録）
+    for (auto &group : particleGroups_) {
         group->RecordAliveCountReadback(computeCmdList);
     }
     // Execute は DrawSystem（または呼び出し元）が一括で行う
@@ -138,8 +152,8 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
             commandList_->IASetIndexBuffer(&indexBufferView);
             commandList_->IASetVertexBuffers(0, 1, &vertexBufferView);
             commandList_->SetGraphicsRootConstantBufferView(0, group->GetPerViewResource()->GetGPUVirtualAddress());
-            // SoA: t0=DrawCore, t4=Rotation（回転グループのみVSが参照）
-            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetDrawCoreSrvForVSIndex());
+            // 描画コンパクション: t0=詰めた描画バッファ(順次読み), t4=Rotation(回転グループのみscatter)
+            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetRenderCompactSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
             commandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
             // 生存コンパクション SRV (t2: aliveList, t3: aliveCount)
@@ -160,13 +174,30 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
     DrawGraphics(vp);
 }
 
-void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress) {
+void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress,
+                                               PerView *previewPerView,
+                                               const Vector3 &cameraPos,
+                                               float projScaleY) {
     if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
     if (particleGroups_.empty()) return;
 
     // ワイヤーフレーム(DrawEmitter)はプレビューでは描かない。
     int drawSpan = GpuProfiler::GetInstance()->OpenGraphics(commandList_, "Draw(プレビュー)");
     for (auto &group : particleGroups_) {
+        // 描画カリング(距離/サイズ)をプレビューでも効かせる。プレビューは独立 per-view CB を
+        // 使うため、グループの設定とプレビューカメラ位置/射影をここで per-view へ反映する。
+        // （単一バッファなので複数グループ時は最後のグループ設定が全体に効く＝プレビューの簡略許容）
+        if (previewPerView) {
+            const PerView *gpv = group->GetPerView();
+            previewPerView->cameraPosition = cameraPos;
+            previewPerView->projScaleY = projScaleY;
+            previewPerView->enableDistanceCull = gpv->enableDistanceCull;
+            previewPerView->distanceCullStart = gpv->distanceCullStart;
+            previewPerView->distanceCullEnd = gpv->distanceCullEnd;
+            previewPerView->enableSizeClamp = gpv->enableSizeClamp;
+            previewPerView->maxScreenHeight = gpv->maxScreenHeight;
+            previewPerView->minScreenHeight = gpv->minScreenHeight;
+        }
         group->FetchAliveDrawCount();
         const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
         uint32_t drawCount = group->GetAliveDrawCount();
@@ -187,8 +218,8 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
             commandList_->IASetVertexBuffers(0, 1, &vertexBufferView);
             // root param 0 のみプレビュー専用 per-view CB に差し替える（共有グループの VP は不変）
             commandList_->SetGraphicsRootConstantBufferView(0, perViewGpuAddress);
-            // SoA: t0=DrawCore, t4=Rotation
-            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetDrawCoreSrvForVSIndex());
+            // 描画コンパクション: t0=詰めた描画バッファ, t4=Rotation(回転グループのみ)
+            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetRenderCompactSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
             commandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
             srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
@@ -398,6 +429,11 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
         cl->SetComputeRootDescriptorTable(6, group->GetFreeListIndexSrvHandle().second);
         cl->SetComputeRootDescriptorTable(7, group->GetFreeListSrvHandle().second);
         cl->SetComputeRootDescriptorTable(8, group->GetFreeListTrailIndexSrvHandle().second);
+        // 生存リスト間接ディスパッチ (u9-u11): out リスト/カウンタ + renderCompact。
+        //   Emit は新規粒子をここへ append する。continue より前に常時バインドしておく。
+        cl->SetComputeRootDescriptorTable(17, group->GetAliveListUavHandle().second);
+        cl->SetComputeRootDescriptorTable(18, group->GetAliveCounterUavHandle().second);
+        cl->SetComputeRootDescriptorTable(19, group->GetRenderCompactUavGpu());
         // CBV (b0-b2)。b3:FieldCB はフィールド有無で下の分岐が param 12 に設定する。
         cl->SetComputeRootConstantBufferView(9, emitterMeshResource_->GetGPUVirtualAddress());
         cl->SetComputeRootConstantBufferView(10, group->GetPerFrameResource()->GetGPUVirtualAddress());
@@ -836,6 +872,14 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "enableVelocityStretch", group->GetPerView()->enableVelocityStretch);
         data->Save(prefix + "velocityStretchFactor", group->GetPerView()->velocityStretchFactor);
 
+        // ★ 描画カリング(overdraw対策)設定の保存
+        data->Save(prefix + "enableDistanceCull", group->GetPerView()->enableDistanceCull);
+        data->Save(prefix + "distanceCullStart", group->GetPerView()->distanceCullStart);
+        data->Save(prefix + "distanceCullEnd", group->GetPerView()->distanceCullEnd);
+        data->Save(prefix + "enableSizeClamp", group->GetPerView()->enableSizeClamp);
+        data->Save(prefix + "maxScreenHeight", group->GetPerView()->maxScreenHeight);
+        data->Save(prefix + "minScreenHeight", group->GetPerView()->minScreenHeight);
+
         // ★ 中間カラー設定の保存
         data->Save(prefix + "enableMidColor", group->GetSettingsData()->enableMidColor);
         data->Save(prefix + "midColorRatio", group->GetSettingsData()->midColorRatio);
@@ -978,6 +1022,14 @@ void ParticleCSEmitter::LoadSetting() {
         // ★ 速度ストレッチ設定のロード
         group->GetPerView()->enableVelocityStretch = data->Load<uint32_t>(prefix + "enableVelocityStretch", 0);
         group->GetPerView()->velocityStretchFactor  = data->Load(prefix + "velocityStretchFactor", 0.1f);
+
+        // ★ 描画カリング(overdraw対策)設定のロード
+        group->GetPerView()->enableDistanceCull = data->Load<uint32_t>(prefix + "enableDistanceCull", 0);
+        group->GetPerView()->distanceCullStart  = data->Load(prefix + "distanceCullStart", 50.0f);
+        group->GetPerView()->distanceCullEnd    = data->Load(prefix + "distanceCullEnd", 100.0f);
+        group->GetPerView()->enableSizeClamp    = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
+        group->GetPerView()->maxScreenHeight    = data->Load(prefix + "maxScreenHeight", 1.0f);
+        group->GetPerView()->minScreenHeight    = data->Load(prefix + "minScreenHeight", 0.0f);
 
         // ★ 中間カラー設定のロード
         settings.enableMidColor  = data->Load<uint32_t>(prefix + "enableMidColor", 0);
@@ -1133,6 +1185,14 @@ void ParticleCSEmitter::LoadCloneSetting() {
         // ★ 速度ストレッチ設定のロード
         group->GetPerView()->enableVelocityStretch = data->Load<uint32_t>(prefix + "enableVelocityStretch", 0);
         group->GetPerView()->velocityStretchFactor  = data->Load(prefix + "velocityStretchFactor", 0.1f);
+
+        // ★ 描画カリング(overdraw対策)設定のロード
+        group->GetPerView()->enableDistanceCull = data->Load<uint32_t>(prefix + "enableDistanceCull", 0);
+        group->GetPerView()->distanceCullStart  = data->Load(prefix + "distanceCullStart", 50.0f);
+        group->GetPerView()->distanceCullEnd    = data->Load(prefix + "distanceCullEnd", 100.0f);
+        group->GetPerView()->enableSizeClamp    = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
+        group->GetPerView()->maxScreenHeight    = data->Load(prefix + "maxScreenHeight", 1.0f);
+        group->GetPerView()->minScreenHeight    = data->Load(prefix + "minScreenHeight", 0.0f);
 
         // ★ 中間カラー設定のロード
         settings.enableMidColor  = data->Load<uint32_t>(prefix + "enableMidColor", 0);

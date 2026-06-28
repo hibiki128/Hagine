@@ -281,7 +281,13 @@ class ParticleCSEmitter {
     /// RT/DSV/Viewport/DescriptorHeap は呼び出し側で設定済みであること。ワイヤー(DrawEmitter)は描かない。
     /// </summary>
     /// <param name="perViewGpuAddress">プレビュー用 per-view 定数バッファのGPUアドレス</param>
-    void DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress);
+    /// <param name="previewPerView">プレビュー per-view のマップ済みポインタ（描画カリング設定の書込先・nullptr可）</param>
+    /// <param name="cameraPos">プレビューカメラのワールド座標（距離カリング用）</param>
+    /// <param name="projScaleY">プレビュー射影の[1][1]（画面サイズカリング用）</param>
+    void DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress,
+                                PerView *previewPerView = nullptr,
+                                const Vector3 &cameraPos = {0.0f, 0.0f, 0.0f},
+                                float projScaleY = 1.0f);
 
     /// <summary>
     /// エミッターのワイヤーフレームを描画

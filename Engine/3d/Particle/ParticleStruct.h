@@ -85,26 +85,30 @@ struct CSParticle {
 ///   末尾の static_assert がレイアウト契約を固定する。
 ///
 ///   gLife      : float            (4B)  — 生存判定。死亡/未使用スロットは早期returnで4Bのみ
-///   gDrawCore  : CSParticleDrawCore(52B) — translate/scale/velocity/color（描画VSもここを読む）
-///   gSimCore   : CSParticleSimCore (20B) — currentTime/initialScale/isTrailParticle
+///   gDrawCore  : CSParticleDrawCore(36B) — translate/scale(half3)/velocity/color(RGBA8)（描画VSもここを読む）
+///   gSimCore   : CSParticleSimCore (12B) — currentTime/initialScale(half3)/isTrailParticle
 ///   gTrail     : CSParticleTrail   (20B) — parentIndex/lastTrailPosition/trailSpawnDistance
 ///   gRotation  : CSParticleRotation(24B) — rotation/angularVelocity
 ///   gOverride  : uint2             (8B)  — settingsOverrideFlags(lo/hi)
 /// =============================================================
 
 /// 描画コア。translate/scale/velocity/color。Update が常時 load/store し、描画VSも読む。
+/// scale は half3 パック(scaleXY=half x|y, scaleZ=half z)、color は RGBA8 パック(uint)。
+/// 計算は float で行い、バッファ境界でのみ pack/unpack する（HLSL PackScaleXY/Z 等）。
 struct CSParticleDrawCore {
     Vector3 translate;
-    Vector3 scale;
+    uint32_t scaleXY; // half(x) | half(y)<<16
+    uint32_t scaleZ;  // half(z)（上位16bitは空き）
     Vector3 velocity;
-    Vector4 color;
+    uint32_t color;
 };
 
 /// シミュレーションコア。Update が常時 load/store する補助状態。
+/// initialScale は half3 パック。isTrailParticle(0/1) は initialScaleZ_isTrail の上位16bitに同梱。
 struct CSParticleSimCore {
     float currentTime;
-    Vector3 initialScale;
-    uint32_t isTrailParticle;
+    uint32_t initialScaleXY;        // half(x) | half(y)<<16
+    uint32_t initialScaleZ_isTrail; // 下位16bit=half(z) / 上位16bit=isTrailParticle
 };
 
 /// トレイル状態。トレイル機能が有効なときのみ load/store。
@@ -127,8 +131,8 @@ struct CSParticleOverride {
 };
 
 // GPUレイアウト契約の固定（HLSL 側とバイト単位で一致させること）。
-static_assert(sizeof(CSParticleDrawCore) == 52, "CSParticleDrawCore は52B。HLSL PDrawCore と一致させること");
-static_assert(sizeof(CSParticleSimCore) == 20, "CSParticleSimCore は20B。HLSL PSimCore と一致させること");
+static_assert(sizeof(CSParticleDrawCore) == 36, "CSParticleDrawCore は36B(scale=half3 pack/color=RGBA8 pack)。HLSL PDrawCore と一致させること");
+static_assert(sizeof(CSParticleSimCore) == 12, "CSParticleSimCore は12B(initialScale=half3 pack/isTrailは上位16bit同梱)。HLSL PSimCore と一致させること");
 static_assert(sizeof(CSParticleTrail) == 20, "CSParticleTrail は20B。HLSL PTrail と一致させること");
 static_assert(sizeof(CSParticleRotation) == 24, "CSParticleRotation は24B。HLSL PRotation と一致させること");
 static_assert(sizeof(CSParticleOverride) == 8, "CSParticleOverride は8B。HLSL uint2 と一致させること");
@@ -146,6 +150,20 @@ struct PerView {
     // グループが回転を使わない（enableRandomRotation/enableRandomAngularVelocity が両方OFF）なら
     // 全パーティクルの rotation が常に 0 なので、VS の回転計算を丸ごと省ける。
     uint32_t enableRotation = 0;
+    // ---- 描画カリング (overdraw 対策) ----
+    // 距離カリング: 遠い粒子をアルファフェード→縮退カリングしてフィルレート(ROP/blend)を節約する。
+    // 画面サイズ上限/微小カリング: 巨大粒子のスケールを抑え、サブピクセル粒子を破棄する。
+    // HLSL PerView（Particle.hlsli）とバイト単位で一致させること（CB の16B境界straddle無し）。
+    Vector3 cameraPosition = {0.0f, 0.0f, 0.0f}; // 距離計算用カメラワールド座標(Update で vp.translation_ をコピー)
+    uint32_t enableDistanceCull = 0;             // 1=距離フェード+カリング
+    float distanceCullStart = 50.0f;             // この距離からアルファをフェード開始
+    float distanceCullEnd = 100.0f;              // この距離で完全カリング(縮退頂点で破棄)
+    float projScaleY = 1.0f;                     // projection[1][1]（画面サイズ計算用, Update でコピー）
+    uint32_t enableSizeClamp = 0;                // 1=画面サイズ上限+微小カリング
+    float maxScreenHeight = 1.0f;                // 画面上の最大高さ(NDC, 2=画面全体)。超過分はスケール縮小
+    float minScreenHeight = 0.0f;                // これ未満の画面高さは微小カリング(0=無効)
+    float drawCullPad0 = 0.0f;
+    float drawCullPad1 = 0.0f;
 };
 
 /// <summary>

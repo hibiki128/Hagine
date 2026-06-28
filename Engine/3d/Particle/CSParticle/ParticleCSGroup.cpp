@@ -167,15 +167,47 @@ void ParticleCSGroup::InitParticle() {
     dxCommon_->TransitionSRVBarrier();
 }
 
+bool ParticleCSGroup::CanUseLiteUpdate(bool fieldsActive) const {
+    // フィールドの影響を受けるグループはフル版必須（force-trail/override/colorMul 等）。
+    if (fieldsActive)
+        return false;
+    const ParticleCSSettings *s = settingsData_;
+    // 軽量版が持たない重い演出が1つでも有効ならフル版を使う。
+    if (s->enableTrail != 0)
+        return false;
+    if (s->enableGather != 0)
+        return false;
+    if (s->enableVortex != 0)
+        return false;
+    if (s->enableCurlNoise != 0)
+        return false;
+    if (s->enableTurbulence != 0)
+        return false;
+    if (s->enableRandomRotation != 0 || s->enableRandomAngularVelocity != 0)
+        return false;
+    return true;
+}
+
 void ParticleCSGroup::UpdateParticleCSDisPatch(
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> fieldsSrvHandle,
     Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
+    bool fieldsActive,
     ID3D12GraphicsCommandList *cmdList) {
+    // フル版が Trail/Rotation/Override を触る場合のみ、ここで本確保へ作り直す
+    // （演出なしグループは 1要素ダミーのままで VRAM を節約）。バインドより前に行う。
+    EnsureUpdateOptionalBuffers(fieldsActive);
+
     // cmdList が渡された場合はそちら（非同期 Compute Queue）を使う
     ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
     auto *computePSOMgr = ComputePipeLineManager::GetInstance();
-    computePSOMgr->DrawCommonSetting(ComputePipelineType::kUpdateEmitter,
+    // 演出なしグループは軽量 PSO を使う。root sig はフル版と共有なので
+    // バインド（下記 17 パラメータ）は両者で同一。軽量シェーダは未使用の
+    // テーブルを無視するだけで安全。
+    const ComputePipelineType updateType = CanUseLiteUpdate(fieldsActive)
+                                               ? ComputePipelineType::kUpdateEmitterLite
+                                               : ComputePipelineType::kUpdateEmitter;
+    computePSOMgr->DrawCommonSetting(updateType,
                                      BlendMode::kNormal, ShaderMode::kNone, cl);
     // SoA UAV (u0-u5)
     cl->SetComputeRootDescriptorTable(0, soaLife_.uavHandle.second);
@@ -188,17 +220,47 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     cl->SetComputeRootDescriptorTable(6, freeListIndexSrvHandle_.second);
     cl->SetComputeRootDescriptorTable(7, freeListSrvHandle_.second);
     cl->SetComputeRootDescriptorTable(8, freeListTrailIndexSrvHandle_.second);
-    // 生存コンパクション (u9-u10)
-    cl->SetComputeRootDescriptorTable(9, aliveListUavHandle_.second);
-    cl->SetComputeRootDescriptorTable(10, aliveCounterUavHandle_.second);
+    // 生存コンパクション (u9-u10): out フェーズへ書き出す
+    cl->SetComputeRootDescriptorTable(9, aliveListUavHandle_[alivePhase_].second);
+    cl->SetComputeRootDescriptorTable(10, aliveCounterUavHandle_[alivePhase_].second);
+    // 描画コンパクション (u11)
+    cl->SetComputeRootDescriptorTable(11, soaRenderCompact_.uavHandle.second);
     // CBV (b0-b2) / SRV (t0-t1)
-    cl->SetComputeRootConstantBufferView(11, perFrameResource_->GetGPUVirtualAddress());
-    cl->SetComputeRootConstantBufferView(12, settingsResource_->GetGPUVirtualAddress());
-    cl->SetComputeRootConstantBufferView(13, fieldCountResource->GetGPUVirtualAddress());
-    cl->SetComputeRootDescriptorTable(14, fieldsSrvHandle.second);
-    cl->SetComputeRootDescriptorTable(15, overrideSrvHandle.second);
+    cl->SetComputeRootConstantBufferView(12, perFrameResource_->GetGPUVirtualAddress());
+    cl->SetComputeRootConstantBufferView(13, settingsResource_->GetGPUVirtualAddress());
+    cl->SetComputeRootConstantBufferView(14, fieldCountResource->GetGPUVirtualAddress());
+    cl->SetComputeRootDescriptorTable(15, fieldsSrvHandle.second);
+    cl->SetComputeRootDescriptorTable(16, overrideSrvHandle.second);
+    // 生存リスト間接ディスパッチ (t2,t3): in リスト/カウンタ = 前フレームの out フェーズ
+    const uint32_t inIdx = alivePhase_ ^ 1u;
+    cl->SetComputeRootDescriptorTable(17, srvManager_->GetGPUDescriptorHandle(aliveListSrvForVSIndex_[inIdx]));
+    cl->SetComputeRootDescriptorTable(18, srvManager_->GetGPUDescriptorHandle(aliveCounterSrvForVSIndex_[inIdx]));
 
-    int disPatchCount = (settingsData_->maxParticleCount + threadsPerGroup_ - 1) / threadsPerGroup_;
+    // 軽量版はスレッドグループ256（Ampere の常駐1536上限で占有率を上げる狙い）。
+    // フル版は従来どおり threadsPerGroup_(1024)。シェーダの [numthreads] と一致必須。
+    const uint32_t groupSize = (updateType == ComputePipelineType::kUpdateEmitterLite)
+                                   ? kLiteUpdateThreadsPerGroup
+                                   : threadsPerGroup_;
+
+    // 生存リスト間接ディスパッチ Step3: dispatch 本数を「in リスト長」由来にして O(生存数) 化する。
+    //   in リスト = 前フレームの out リスト。その長さは out カウンタの readback 値(aliveDrawCount_,
+    //   1〜2F 遅延)で近似する。最新値を取り込んでから使う。
+    //   GPU 側は `tid >= gAliveCounterIn[0]` で多い分を捨てるので over-dispatch は無害。
+    //   ★逆に in リスト長より少なく dispatch すると未処理粒子が out に積まれず、その slot が
+    //     漏れる（描画の取りこぼしと違い自己回収しない）。readback 遅延中の成長(新規Emit/
+    //     トレイル子)を取りこぼさないよう margin（25% + emitCount + 定数）を安全側に上乗せし、
+    //     maxParticleCount でクランプする。これで疎なら数千万 MAX でも Update が ~0.1ms に近づく。
+    FetchAliveDrawCount();
+    const uint32_t maxCount = settingsData_->maxParticleCount;
+    uint32_t inLenEst = aliveDrawCount_;
+    if (inLenEst > maxCount)
+        inLenEst = maxCount; // 初回フレーム等の未初期化/異常値ガード（オーバーフロー防止）
+    uint32_t threadCount = inLenEst + inLenEst / 4u + settingsData_->emitCount + 4096u;
+    if (threadCount > maxCount)
+        threadCount = maxCount;
+    int disPatchCount = (threadCount + groupSize - 1) / groupSize;
+    if (disPatchCount < 1)
+        disPatchCount = 1;
     cl->Dispatch(disPatchCount, 1, 1);
 }
 
@@ -206,13 +268,14 @@ void ParticleCSGroup::ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdLi
     ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
     ComputePipeLineManager::GetInstance()->DrawCommonSetting(
         ComputePipelineType::kResetArgs, BlendMode::kNormal, ShaderMode::kNone, cl);
-    cl->SetComputeRootDescriptorTable(0, aliveCounterUavHandle_.second);
+    // out フェーズのカウンタを 0 にリセットする。
+    cl->SetComputeRootDescriptorTable(0, aliveCounterUavHandle_[alivePhase_].second);
     cl->Dispatch(1, 1, 1);
 
     // リセット完了を Update の InterlockedAdd より前に保証する
     D3D12_RESOURCE_BARRIER uavBarrier{};
     uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-    uavBarrier.UAV.pResource = aliveCounterResource_.Get();
+    uavBarrier.UAV.pResource = aliveCounterResource_[alivePhase_].Get();
     cl->ResourceBarrier(1, &uavBarrier);
 }
 
@@ -221,7 +284,8 @@ void ParticleCSGroup::RecordAliveCountReadback(ID3D12GraphicsCommandList *comput
     // この時点でカウンタは UnorderedAccess へ昇格済みなので状態遷移は整合する。
     ID3D12GraphicsCommandList *cl = computeCmdList ? computeCmdList : commandList_;
 
-    ID3D12Resource *counterRes = aliveCounterResource_.Get();
+    // out フェーズのカウンタを読み戻す（共有 readback へコピー）。
+    ID3D12Resource *counterRes = aliveCounterResource_[alivePhase_].Get();
 
     // Update の append 完了を保証
     D3D12_RESOURCE_BARRIER uavBarrier{};
@@ -260,6 +324,11 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     perFrameData_->deltaTime = Frame::DeltaTime();
 
     perViewData_->viewProjection = vp.matView_ * vp.matProjection_;
+    // 距離カリング(overdraw 対策)用のカメラワールド座標。enableDistanceCull 等の設定値は
+    // ImGui/ロードで設定された perView の値をそのまま保持する（Update では上書きしない）。
+    perViewData_->cameraPosition = vp.translation_;
+    // 画面サイズ上限/微小カリング用の射影スケール（projection[1][1] = cot(fovY/2)）。
+    perViewData_->projScaleY = vp.matProjection_.m[1][1];
     // 回転を使わないグループは VS の回転行列計算（sincos×3＋行列積）を省くためのフラグ。
     perViewData_->enableRotation =
         (settingsData_->enableRandomRotation != 0 || settingsData_->enableRandomAngularVelocity != 0) ? 1u : 0u;
@@ -277,29 +346,67 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     CopyDebugDataToReadback();
 }
 
+void ParticleCSGroup::AllocateSoABuffer(SoABuffer &buf, uint32_t count) {
+    if (count == 0)
+        count = 1;
+    // 旧リソースは in-flight のコマンドリストが参照中の可能性があるため即解放しない。
+    // 退避先へ移し、グループ破棄まで生かす（ダミーは要素1個なので極小）。
+    if (buf.resource) {
+        retiredSoABuffers_.push_back(buf.resource);
+    }
+    buf.resource = dxCommon_->CreateBufferResource(static_cast<size_t>(buf.stride) * count, true);
+    // 既存ディスクリプタ枠を上書きすると in-flight 参照とハザードになるため、
+    // 毎回「新しい枠」を確保して作り直す（SrvManager は bump 割当なので枠は使い捨て）。
+    buf.uavIndex = srvManager_->Allocate() + 1;
+    buf.uavHandle.first = srvManager_->GetCPUDescriptorHandle(buf.uavIndex);
+    buf.uavHandle.second = srvManager_->GetGPUDescriptorHandle(buf.uavIndex);
+    srvManager_->CreateUAVStructuredBuffer(buf.uavIndex, buf.resource.Get(), count, buf.stride);
+    if (buf.withSrvForVS) {
+        buf.srvForVSIndex = srvManager_->Allocate() + 1;
+        srvManager_->CreateSRVforStructuredBuffer(buf.srvForVSIndex, buf.resource.Get(), count, buf.stride);
+    }
+    buf.allocatedCount = count;
+}
+
 void ParticleCSGroup::CreateParticleSoABuffers() {
     const uint32_t maxCount = settingsData_->maxParticleCount;
 
-    // 各 SoA バッファに Compute 用 UAV を作る。
-    // withSrvForVS=true のもの（DrawCore/Rotation）は描画VS用 SRV も作る。
-    auto createSoA = [&](SoABuffer &buf, uint32_t stride, bool withSrvForVS) {
-        buf.resource = dxCommon_->CreateBufferResource(static_cast<size_t>(stride) * maxCount, true);
-        buf.uavIndex = srvManager_->Allocate() + 1;
-        buf.uavHandle.first = srvManager_->GetCPUDescriptorHandle(buf.uavIndex);
-        buf.uavHandle.second = srvManager_->GetGPUDescriptorHandle(buf.uavIndex);
-        srvManager_->CreateUAVStructuredBuffer(buf.uavIndex, buf.resource.Get(), maxCount, stride);
-        if (withSrvForVS) {
-            buf.srvForVSIndex = srvManager_->Allocate() + 1;
-            srvManager_->CreateSRVforStructuredBuffer(buf.srvForVSIndex, buf.resource.Get(), maxCount, stride);
-        }
+    auto initSoA = [&](SoABuffer &buf, uint32_t stride, bool withSrvForVS, uint32_t count) {
+        buf.stride = stride;
+        buf.withSrvForVS = withSrvForVS;
+        AllocateSoABuffer(buf, count);
     };
 
-    createSoA(soaLife_, sizeof(float), false);
-    createSoA(soaDrawCore_, sizeof(CSParticleDrawCore), true); // 描画VS t0
-    createSoA(soaSimCore_, sizeof(CSParticleSimCore), false);
-    createSoA(soaTrail_, sizeof(CSParticleTrail), false);
-    createSoA(soaRotation_, sizeof(CSParticleRotation), true); // 描画VS t4
-    createSoA(soaOverride_, sizeof(CSParticleOverride), false);
+    // 常時必要なバッファは maxCount で本確保。
+    initSoA(soaLife_, sizeof(float), false, maxCount);
+    initSoA(soaDrawCore_, sizeof(CSParticleDrawCore), false, maxCount); // sim専用(VSは描画コンパクションを読む)
+    initSoA(soaSimCore_, sizeof(CSParticleSimCore), false, maxCount);
+    // Trail/Rotation/Override は「使うグループだけ」後から本確保（演出なしは1要素ダミーのまま）。
+    // → 演出なしグループの per-particle VRAM を 148B→96B(-35%) に削減し積める上限を引き上げる。
+    //   EnsureUpdateOptionalBuffers が必要時に maxCount へ作り直す。
+    initSoA(soaTrail_, sizeof(CSParticleTrail), false, 1);
+    initSoA(soaRotation_, sizeof(CSParticleRotation), true, 1); // 描画VS t4(回転グループのみ)
+    initSoA(soaOverride_, sizeof(CSParticleOverride), false, 1);
+    // 描画コンパクション: 詰めた描画データ(DrawCore形式)。Update u11(UAV) / 描画VS t0(SRV)。常時必要。
+    initSoA(soaRenderCompact_, sizeof(CSParticleDrawCore), true, maxCount);
+}
+
+void ParticleCSGroup::EnsureUpdateOptionalBuffers(bool fieldsActive) {
+    const uint32_t maxCount = settingsData_->maxParticleCount;
+    // フル版 Update のバッファ load/store ゲートと一致させる:
+    //   useTrail    = enableTrail || fieldCount>0
+    //   useRotation = enableRandomRotation || enableRandomAngularVelocity
+    //   useOverride = fieldCount>0
+    const bool needTrail = (settingsData_->enableTrail != 0) || fieldsActive;
+    const bool needRotation = (settingsData_->enableRandomRotation != 0 || settingsData_->enableRandomAngularVelocity != 0);
+    const bool needOverride = fieldsActive;
+
+    if (needTrail && soaTrail_.allocatedCount < maxCount)
+        AllocateSoABuffer(soaTrail_, maxCount);
+    if (needRotation && soaRotation_.allocatedCount < maxCount)
+        AllocateSoABuffer(soaRotation_, maxCount);
+    if (needOverride && soaOverride_.allocatedCount < maxCount)
+        AllocateSoABuffer(soaOverride_, maxCount);
 }
 
 void ParticleCSGroup::CreatePerViewResource() {
@@ -560,29 +667,32 @@ void ParticleCSGroup::CreateAliveCountResource() {
 void ParticleCSGroup::CreateAliveListResources() {
     const uint32_t maxCount = settingsData_->maxParticleCount;
 
-    // --- aliveList: 生存 slot index バッファ (UAV: compute u4 / SRV: VS t2) ---
-    aliveListResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t) * maxCount, true);
+    // ping-pong の2枚それぞれに aliveList / aliveCounter を本確保する（§8）。
+    for (uint32_t i = 0; i < kAlivePingPong; ++i) {
+        // --- aliveList: 生存 slot index バッファ (UAV: compute u9 / SRV: VS t2) ---
+        aliveListResource_[i] = dxCommon_->CreateBufferResource(sizeof(uint32_t) * maxCount, true);
 
-    aliveListUavIndex_ = srvManager_->Allocate() + 1;
-    aliveListUavHandle_.first = srvManager_->GetCPUDescriptorHandle(aliveListUavIndex_);
-    aliveListUavHandle_.second = srvManager_->GetGPUDescriptorHandle(aliveListUavIndex_);
-    srvManager_->CreateUAVStructuredBuffer(aliveListUavIndex_, aliveListResource_.Get(), maxCount, sizeof(uint32_t));
+        aliveListUavIndex_[i] = srvManager_->Allocate() + 1;
+        aliveListUavHandle_[i].first = srvManager_->GetCPUDescriptorHandle(aliveListUavIndex_[i]);
+        aliveListUavHandle_[i].second = srvManager_->GetGPUDescriptorHandle(aliveListUavIndex_[i]);
+        srvManager_->CreateUAVStructuredBuffer(aliveListUavIndex_[i], aliveListResource_[i].Get(), maxCount, sizeof(uint32_t));
 
-    aliveListSrvForVSIndex_ = srvManager_->Allocate() + 1;
-    srvManager_->CreateSRVforStructuredBuffer(aliveListSrvForVSIndex_, aliveListResource_.Get(), maxCount, sizeof(uint32_t));
+        aliveListSrvForVSIndex_[i] = srvManager_->Allocate() + 1;
+        srvManager_->CreateSRVforStructuredBuffer(aliveListSrvForVSIndex_[i], aliveListResource_[i].Get(), maxCount, sizeof(uint32_t));
 
-    // --- aliveCounter: 生存数アトミックカウンタ (UAV: compute u5 / SRV: VS t3) ---
-    aliveCounterResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t), true);
+        // --- aliveCounter: 生存数アトミックカウンタ (UAV: compute u10 / SRV: VS t3) ---
+        aliveCounterResource_[i] = dxCommon_->CreateBufferResource(sizeof(uint32_t), true);
 
-    aliveCounterUavIndex_ = srvManager_->Allocate() + 1;
-    aliveCounterUavHandle_.first = srvManager_->GetCPUDescriptorHandle(aliveCounterUavIndex_);
-    aliveCounterUavHandle_.second = srvManager_->GetGPUDescriptorHandle(aliveCounterUavIndex_);
-    srvManager_->CreateUAVStructuredBuffer(aliveCounterUavIndex_, aliveCounterResource_.Get(), 1, sizeof(uint32_t));
+        aliveCounterUavIndex_[i] = srvManager_->Allocate() + 1;
+        aliveCounterUavHandle_[i].first = srvManager_->GetCPUDescriptorHandle(aliveCounterUavIndex_[i]);
+        aliveCounterUavHandle_[i].second = srvManager_->GetGPUDescriptorHandle(aliveCounterUavIndex_[i]);
+        srvManager_->CreateUAVStructuredBuffer(aliveCounterUavIndex_[i], aliveCounterResource_[i].Get(), 1, sizeof(uint32_t));
 
-    aliveCounterSrvForVSIndex_ = srvManager_->Allocate() + 1;
-    srvManager_->CreateSRVforStructuredBuffer(aliveCounterSrvForVSIndex_, aliveCounterResource_.Get(), 1, sizeof(uint32_t));
+        aliveCounterSrvForVSIndex_[i] = srvManager_->Allocate() + 1;
+        srvManager_->CreateSRVforStructuredBuffer(aliveCounterSrvForVSIndex_[i], aliveCounterResource_[i].Get(), 1, sizeof(uint32_t));
+    }
 
-    // CPU 読み取り用 Readback バッファ
+    // CPU 読み取り用 Readback バッファ（out からコピーする共有 1個）
     D3D12_HEAP_PROPERTIES readbackHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
     D3D12_RESOURCE_DESC readbackDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint32_t));
     dxCommon_->GetDevice()->CreateCommittedResource(
@@ -935,6 +1045,65 @@ void ParticleCSGroup::DrawImGui() {
                     perViewData_->enableVelocityStretch = 1;
                     perViewData_->velocityStretchFactor = 0.5f;
                 }
+                ImGui::Unindent();
+            }
+        }
+
+        ImGui::PopStyleColor(); // CheckMark
+        ImGui::Unindent();
+    }
+
+    // =======================================================
+    // 3.3.5 描画カリング（overdraw 対策・水色系）
+    // =======================================================
+    PushSectionColor(ImVec4(0.3f, 0.7f, 0.8f, 1.0f));
+    bool openDrawCull = ImGui::CollapsingHeader("  描画カリング（overdraw対策）");
+    PopSectionColor();
+    if (openDrawCull) {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.4f, 0.8f, 0.9f, 1.0f));
+
+        // 距離カリング + 距離フェード（遠い粒子のフィルレートを節約）
+        {
+            bool v = perViewData_->enableDistanceCull != 0;
+            if (ImGui::Checkbox("距離カリング##dc", &v))
+                perViewData_->enableDistanceCull = v ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("遠い粒子をアルファフェード→縮退カリングして\n半透明の重なり(ROP/blend)を減らします");
+            if (v) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.3f, 0.35f, 0.5f));
+                ImGui::DragFloat("フェード開始距離##dcs", &perViewData_->distanceCullStart, 0.5f, 0.0f, 100000.0f, "%.2f");
+                ImGui::DragFloat("カリング距離##dce", &perViewData_->distanceCullEnd, 0.5f, 0.0f, 100000.0f, "%.2f");
+                ImGui::PopStyleColor();
+                // 開始 <= カリング距離 を保証（フェード範囲が負にならないように）
+                if (perViewData_->distanceCullEnd < perViewData_->distanceCullStart)
+                    perViewData_->distanceCullEnd = perViewData_->distanceCullStart;
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("開始距離からアルファをフェードし、カリング距離で完全に消えます\nカメラからの距離(ワールド単位)");
+                ImGui::Unindent();
+            }
+        }
+
+        ImGui::Spacing();
+
+        // 画面サイズ上限 + 微小カリング
+        {
+            bool v = perViewData_->enableSizeClamp != 0;
+            if (ImGui::Checkbox("画面サイズ制限##sc", &v))
+                perViewData_->enableSizeClamp = v ? 1 : 0;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("巨大粒子のサイズを画面上で上限クランプし、\nサブピクセル粒子を破棄してフィルレートを節約します");
+            if (v) {
+                ImGui::Indent();
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.3f, 0.35f, 0.5f));
+                ImGui::DragFloat("最大画面高さ##scmax", &perViewData_->maxScreenHeight, 0.01f, 0.01f, 2.0f, "%.3f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("画面上の最大高さ(NDC)。2.0=画面全体, 1.0=画面の半分\nこれを超える巨大粒子はスケールを縮小します");
+                ImGui::DragFloat("微小カリング高さ##scmin", &perViewData_->minScreenHeight, 0.0005f, 0.0f, 0.5f, "%.4f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("画面上の高さがこれ未満の粒子を破棄(0=無効)\n例: 0.002 ≒ 1080pで約2px");
+                ImGui::PopStyleColor();
                 ImGui::Unindent();
             }
         }
