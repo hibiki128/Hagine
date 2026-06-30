@@ -376,7 +376,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
     tr.lastTrailPosition = emitPosition;
 
     float4 emitColor;
-    if (gSettings.enableRandomColor)
+    if (gSettings.enableColorGradient)
+    {
+        // グラデーション有効時は発生フレームから始点色(LUT[0])で描画する（次フレーム以降は Update が更新）
+        emitColor = UnpackColorRGBA8(gSettings.colorLUT[0].x);
+    }
+    else if (gSettings.enableRandomColor)
     {
         emitColor.rgb = generator.Generate3d() * 0.5f + 0.5f;
         emitColor.a = 1.0f;

@@ -562,6 +562,33 @@ void main(uint3 DTid : SV_DispatchThreadID)
         p.velocity += turbForce * gPerFrame.deltaTime;
     }
 
+        // 7.1 音声振動（音量に合わせて各粒子をバラバラに揺らす）
+        //   各粒子は「自分固有のランダム方向」へ、滑らかな sin 振動で揺れる。
+        //   揺れ幅 = 今の音量(audioAmplitude) × 感度 × 振動の大きさ。音が大きいほど大きく揺れる。
+        //   ★sin は反転するので velocity は発散しない（飛んでいかない）。
+        //   ★方向・位相・周波数を粒子ごとに散らすので「全体が同じ方向」にならずバラバラに動く。
+    if (gSettings.enableAudioVibration)
+    {
+        float fi = float(particleIndex);
+        // per-particle 固定ランダム方向（決定論的・毎フレーム不変）
+        float3 dir = float3(
+            frac(sin(fi * 12.9898f) * 43758.5453f) * 2.0f - 1.0f,
+            frac(sin(fi * 78.2330f) * 43758.5453f) * 2.0f - 1.0f,
+            frac(sin(fi * 37.7190f) * 43758.5453f) * 2.0f - 1.0f);
+        float dlen = length(dir);
+        if (dlen > 0.0001f)
+        {
+            dir /= dlen;
+            // per-particle 位相・周波数（organic に散らす。周波数 2〜8 はタービュランス同等の見える速さ）
+            float phase = frac(sin(fi * 45.13f) * 43758.5453f) * 6.28318f;
+            float freq = 2.0f + frac(sin(fi * 98.71f) * 43758.5453f) * 6.0f;
+            float osc = sin(gPerFrame.time * freq + phase); // [-1,1] 滑らか＝発散しない
+            float amp = saturate(gSettings.audioAmplitude * gSettings.audioVibrationSensitivity);
+            float vib = osc * amp * gSettings.audioVibrationStrength;
+            p.velocity += dir * vib * gPerFrame.deltaTime;
+        }
+    }
+
         // 8. Curl Noise による速度場
     if (gSettings.enableCurlNoise)
     {
@@ -702,8 +729,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
         // 10. 各種パラメータ更新
     float lifeRatio = p.currentTime / p.lifeTime;
-        
-    if (!gSettings.enableRandomColor)
+
+    if (gSettings.enableColorGradient)
+    {
+        // N段カラーグラデーション: CPUがベイクした256段LUTをlifeRatioでサンプル（start/mid/end/random を上書き）
+        uint gi = (uint) (saturate(lifeRatio) * 255.0f + 0.5f);
+        p.color = UnpackColorRGBA8(gSettings.colorLUT[gi >> 2][gi & 3]);
+    }
+    else if (!gSettings.enableRandomColor)
     {
         float4 lerpedColor;
         if (gSettings.enableMidColor)
@@ -755,7 +788,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
             p.scale = p.initialScale * lifetimeMul * sinMul;
         }
     }
-    
+
+        // 寿命カーブ: サイズ/アルファに倍率カーブを乗算（256段LUTをlifeRatioでサンプル）
+    if (gSettings.enableSizeCurve)
+    {
+        uint si = (uint) (saturate(lifeRatio) * 255.0f + 0.5f);
+        p.scale *= gSettings.sizeCurveLUT[si >> 2][si & 3];
+    }
+    if (gSettings.enableAlphaCurve)
+    {
+        uint ai = (uint) (saturate(lifeRatio) * 255.0f + 0.5f);
+        p.color.a *= gSettings.alphaCurveLUT[ai >> 2][ai & 3];
+    }
+
         // 回転更新
     p.rotation += p.angularVelocity * gPerFrame.deltaTime;
         

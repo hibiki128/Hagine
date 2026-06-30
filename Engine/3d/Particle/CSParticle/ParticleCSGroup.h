@@ -98,6 +98,15 @@ class ParticleCSGroup {
     PerFrame *GetPerFrameData() const { return perFrameData_; }
     uint32_t GetMaxParticleCount() const { return settingsData_->maxParticleCount; }
     ParticleCSSettings *GetSettingsData() const { return settingsData_; }
+    // カラーグラデーション(N段)のストップ列。ImGui エディタ/セーブロードが参照・編集する。
+    // 編集後は MarkColorStopsDirty() を呼ぶと次フレームの Update(vp) で 256段 LUT を再ベイクする。
+    std::vector<GradientStop> &GetColorStops() { return colorStops_; }
+    void MarkColorStopsDirty() { colorStopsDirty_ = true; }
+    // 寿命カーブ(サイズ/アルファ倍率)の制御点。ImCurveEdit エディタ/セーブロードが参照・編集する。
+    // 編集後は MarkLifeCurvesDirty() で次フレームの Update(vp) が 256段 LUT を再ベイクする。
+    std::vector<CurvePoint> &GetSizeCurvePoints() { return sizeCurvePoints_; }
+    std::vector<CurvePoint> &GetAlphaCurvePoints() { return alphaCurvePoints_; }
+    void MarkLifeCurvesDirty() { lifeCurvesDirty_ = true; }
     std::string GetGroupName() { return particleGroupData_.groupName; }
     PrimitiveType GetPrimitiveType() { return type_; }
     std::string GetModelPath() { return modelFilePath_; }
@@ -163,6 +172,11 @@ class ParticleCSGroup {
     void CreateSettingsResource();
     void CreateAliveCountResource();
     void CreateAliveListResources();
+    // colorStops_ を位置でソートし 256段 RGBA8 LUT を settingsData_->colorLUT へベイクする。
+    // enableColorGradient 有効時、Update(vp) が colorStopsDirty_ のとき呼ぶ。
+    void BakeColorLUT();
+    // sizeCurvePoints_ / alphaCurvePoints_ を 256段 float LUT へベイクする（有効時 dirty で呼ぶ）。
+    void BakeLifetimeCurveLUTs();
 
   private:
     /// ===================================
@@ -217,6 +231,14 @@ class ParticleCSGroup {
 
     Microsoft::WRL::ComPtr<ID3D12Resource> settingsResource_{};
     ParticleCSSettings *settingsData_ = nullptr;
+
+    // カラーグラデーション(N段)のストップ列（CPU保持）。256段 RGBA8 LUT へベイクして CB に積む。
+    std::vector<GradientStop> colorStops_;
+    bool colorStopsDirty_ = true; // true のとき次の Update(vp) で LUT を再ベイク
+    // 寿命カーブ(サイズ/アルファ倍率)の制御点（CPU保持）。256段 float LUT へベイクして CB に積む。
+    std::vector<CurvePoint> sizeCurvePoints_;
+    std::vector<CurvePoint> alphaCurvePoints_;
+    bool lifeCurvesDirty_ = true;
 
     // ===== 生存コンパクション（生存リスト間接ディスパッチの ping-pong 基盤・§8）=====
     // listBuf[2]/counterBuf[2] を毎フレーム ping-pong する。

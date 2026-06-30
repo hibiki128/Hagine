@@ -20,11 +20,45 @@ void PrimitiveModel::Finalize() {
     primitiveDataMap_.clear();
 }
 
+bool IsParametricPrimitive(PrimitiveType type) {
+    return type == PrimitiveType::Ring ||
+           type == PrimitiveType::Sphere ||
+           type == PrimitiveType::Cylinder ||
+           type == PrimitiveType::Cone;
+}
+
+PrimitiveModel::PrimitiveData PrimitiveModel::BuildParametricData(const PrimitiveType &type, const PrimitiveParams &params) {
+    // 分割数は最低3（潰れ防止）。Ring の内半径は外半径以下にクランプする。
+    const uint32_t divide = params.divide < 3u ? 3u : params.divide;
+    switch (type) {
+    case PrimitiveType::Sphere:
+        return BuildSphere(divide);
+    case PrimitiveType::Cylinder:
+        return BuildCylinder(divide);
+    case PrimitiveType::Cone:
+        return BuildCone(divide);
+    case PrimitiveType::Ring: {
+        float outer = params.ringOuterRadius;
+        float inner = params.ringInnerRadius;
+        if (inner > outer)
+            inner = outer;
+        return BuildRing(divide, outer, inner);
+    }
+    default:
+        // パラメータ非対応の形状は既定の固定データを返す
+        return GetPrimitiveData(type);
+    }
+}
+
 void PrimitiveModel::CreateSphere() {
+    primitiveDataMap_.insert(std::make_pair(PrimitiveType::Sphere, BuildSphere(32)));
+}
+
+PrimitiveModel::PrimitiveData PrimitiveModel::BuildSphere(uint32_t divide) {
     // Sphereの頂点データ
     PrimitiveData primitiveData{};
     // 球分割数
-    const uint32_t kSubdivision = 32;
+    const uint32_t kSubdivision = divide;
     const float kLonEvery = std::numbers::pi_v<float> * 2.0f / static_cast<float>(kSubdivision);
     const float kLatEvery = std::numbers::pi_v<float> / static_cast<float>(kSubdivision);
 
@@ -69,8 +103,7 @@ void PrimitiveModel::CreateSphere() {
     primitiveData.color = {1.0f, 1.0f, 1.0f, 1.0f};
     primitiveData.uvMatrix = MakeIdentity4x4();
 
-    // コンテナに挿入
-    primitiveDataMap_.insert(std::make_pair(PrimitiveType::Sphere, primitiveData));
+    return primitiveData;
 }
 
 void PrimitiveModel::CreatePlane() {
@@ -192,10 +225,14 @@ void PrimitiveModel::CreateCube() {
 }
 
 void PrimitiveModel::CreateCylinder() {
+    primitiveDataMap_.insert(std::make_pair(PrimitiveType::Cylinder, BuildCylinder(32)));
+}
+
+PrimitiveModel::PrimitiveData PrimitiveModel::BuildCylinder(uint32_t divide) {
     // Cylinderの頂点データ
     PrimitiveData primitiveData{};
 
-    const uint32_t kRingDivide = 32;
+    const uint32_t kRingDivide = divide;
     const float kRadius = 1.0f;
     const float kHeight = 2.0f;
     const float halfHeight = kHeight / 2.0f;
@@ -245,17 +282,20 @@ void PrimitiveModel::CreateCylinder() {
     primitiveData.color = {1.0f, 1.0f, 1.0f, 1.0f};
     primitiveData.uvMatrix = MakeIdentity4x4();
 
-    // マップに登録
-    primitiveDataMap_.insert(std::make_pair(PrimitiveType::Cylinder, primitiveData));
+    return primitiveData;
 }
 
 void PrimitiveModel::CreateRing() {
+    primitiveDataMap_.insert(std::make_pair(PrimitiveType::Ring, BuildRing(32, 1.0f, 0.5f)));
+}
+
+PrimitiveModel::PrimitiveData PrimitiveModel::BuildRing(uint32_t divide, float outerRadius, float innerRadius) {
     // Ringの頂点データ（垂直配置）
     PrimitiveData primitiveData{};
 
-    const uint32_t kRingDivide = 32;
-    const float kOuterRadius = 1.0f;
-    const float kInnerRadius = 0.5f;
+    const uint32_t kRingDivide = divide;
+    const float kOuterRadius = outerRadius;
+    const float kInnerRadius = innerRadius;
     const float radianPerDivide = 2.0f * std::numbers::pi_v<float> / float(kRingDivide);
 
     // 頂点の生成（垂直にするためにX軸90度回転）
@@ -301,8 +341,7 @@ void PrimitiveModel::CreateRing() {
     primitiveData.color = {1.0f, 1.0f, 1.0f, 1.0f};
     primitiveData.uvMatrix = MakeIdentity4x4();
 
-    // マップに挿入
-    primitiveDataMap_.insert(std::make_pair(PrimitiveType::Ring, primitiveData));
+    return primitiveData;
 }
 
 void PrimitiveModel::CreateTriangle() {
@@ -335,10 +374,14 @@ void PrimitiveModel::CreateTriangle() {
 }
 
 void PrimitiveModel::CreateCone() {
+    primitiveDataMap_.insert(std::make_pair(PrimitiveType::Cone, BuildCone(32)));
+}
+
+PrimitiveModel::PrimitiveData PrimitiveModel::BuildCone(uint32_t divide) {
     // 円錐の頂点データ
     PrimitiveData primitiveData{};
 
-    const uint32_t kBaseDivide = 32;
+    const uint32_t kBaseDivide = divide;
     const float kRadius = 1.0f;
     const float kHeight = 2.0f;
     const float radianPerDivide = 2.0f * std::numbers::pi_v<float> / float(kBaseDivide);
@@ -407,8 +450,7 @@ void PrimitiveModel::CreateCone() {
     primitiveData.color = {1.0f, 1.0f, 1.0f, 1.0f};
     primitiveData.uvMatrix = MakeIdentity4x4();
 
-    // PrimitiveTypeを追加する必要があります
-    primitiveDataMap_.insert(std::make_pair(PrimitiveType::Cone, primitiveData));
+    return primitiveData;
 }
 
 void PrimitiveModel::CreatePyramid() {

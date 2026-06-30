@@ -10,7 +10,10 @@
 #include <fstream>
 #include <vector>
 
-// ImGuiで0番を使用するため、1番から使用
+// SRVインデックスのオフセット（=1）。エンジン共通の規約に合わせる。
+// SrvManager::Allocate() で予約した r に対し、実際の書き込みは r+1（先頭1枠を空ける）。
+// この +1 規約はエンジン全体で使われており（Sprite/Skin/Particle 各種/RendererBuffer 等）、
+// ここだけ変えると他の +1 利用箇所と衝突するため 1 のまま維持すること。
 namespace Hagine {
 uint32_t TextureManager::kSRVIndexTop = 1;
 

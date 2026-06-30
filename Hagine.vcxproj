@@ -195,6 +195,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="externals\imgui\imgui_tables.cpp" />
     <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="externals\imgui\ImGradient.cpp" />
+    <ClCompile Include="externals\imgui\ImCurveEdit.cpp" />
     <ClCompile Include="Application\Staging\Transition\FadeOut.cpp" />
     <ClCompile Include="Engine\Input\GamePad.cpp" />
     <ClCompile Include="Application\UI\Scene\Game\GameUI.cpp" />
@@ -332,6 +334,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\OffScreen\PostEffect\PostEffectParamsImpl.h" />
     <ClInclude Include="Engine\Utility\Collider\type\CylinderCollider.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldSettingOverride.h" />
+    <ClInclude Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.h" />
     <ClInclude Include="Engine\Utility\Debug\ImGui\Debugui_improved.h" />
     <ClInclude Include="Engine\2d\SpriteStruct.h" />
     <ClInclude Include="Engine\3d\Camera\BaseFollowCamera\BaseFollowCamera.h" />

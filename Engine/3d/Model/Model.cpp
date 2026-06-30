@@ -51,6 +51,20 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath)
     modelData_.meshes[0].materialIndex = 0;
 }
 
+void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath, const PrimitiveParams &params) {
+    (void)texPath;
+    // プリミティブモデルは単一メッシュ・単一マテリアル
+    meshes_.resize(1);
+    modelData_.meshes.resize(1);
+
+    meshes_[0] = std::make_unique<Mesh>();
+    meshes_[0]->PrimitiveInitialize(type, params); // 分割数・形状パラメータ反映
+    meshes_[0]->Initialize();
+
+    modelData_.meshes[0] = meshes_[0]->GetMeshData();
+    modelData_.meshes[0].materialIndex = 0;
+}
+
 void Model::Update() {
     if (isGltf_ && animator_ && modelData_.hasAnimations && modelData_.hasBones) {
         skin_->UpdateInputVertices(modelData_);

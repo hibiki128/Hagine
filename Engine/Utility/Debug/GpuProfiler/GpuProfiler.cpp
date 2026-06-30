@@ -1,7 +1,11 @@
 #include "GpuProfiler.h"
 #include <DirectXCommon.h>
 #ifdef USE_IMGUI
+#include <cstdio>
 #include <imgui.h>
+#include <implot.h>
+// Debugui_improved.h は ImVec4 / ImGui:: を使うので imgui.h の後に include する
+#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
 #endif
 
 namespace Hagine {
@@ -151,40 +155,120 @@ void GpuProfiler::ResolveGraphics(ID3D12GraphicsCommandList *cl) { Resolve(cl, f
 
 void GpuProfiler::DrawImGui() {
 #ifdef USE_IMGUI
-    if (ImGui::CollapsingHeader("GPU プロファイラ (パス別)")) {
-        bool en = enabled_;
-        if (ImGui::Checkbox("計測ON##gpuprof", &en))
-            enabled_ = en;
-        ImGui::SameLine();
-        ImGui::TextDisabled("(3F遅延)");
+    if (!ImGui::CollapsingHeader("GPU プロファイラ (パス別)"))
+        return;
 
-        double computeTotal = 0.0, graphicsTotal = 0.0;
+    const ImVec4 kCompute = DebugTheme::kAccentCyan;
+    const ImVec4 kGraphics = DebugTheme::kAccentOrange;
+
+    // ---- 計測トグル ----
+    bool en = enabled_;
+    ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
+    if (ImGui::Checkbox("計測ON##gpuprof", &en))
+        enabled_ = en;
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    ImGui::TextDisabled("(タイムスタンプ・3フレーム遅延)");
+
+    // ---- 集計 ----
+    double computeTotal = 0.0, graphicsTotal = 0.0, maxMs = 1e-6;
+    for (const auto &r : results_) {
+        (r.isCompute ? computeTotal : graphicsTotal) += r.ms;
+        if (r.ms > maxMs)
+            maxMs = r.ms;
+    }
+    double gpuTotal = computeTotal + graphicsTotal;
+
+    // ---- 合計サマリー（色分け）----
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, kGraphics);
+    ImGui::Text("Graphics %.3f ms", graphicsTotal);
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text, kCompute);
+    ImGui::Text(" / Compute %.3f ms", computeTotal);
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    ImGui::Text(" / GPU合計 %.3f ms", gpuTotal);
+
+    // ---- 履歴グラフ（ImPlot: Graphics / Compute の ms 推移）----
+    static const int kHist = 240;
+    static float histCompute[kHist] = {};
+    static float histGraphics[kHist] = {};
+    static int histOff = 0;
+    static float yMax = 4.0f;
+    histGraphics[histOff] = static_cast<float>(graphicsTotal);
+    histCompute[histOff] = static_cast<float>(computeTotal);
+    histOff = (histOff + 1) % kHist;
+    float curMax = static_cast<float>(gpuTotal) * 1.3f + 0.5f;
+    yMax = (curMax > yMax) ? curMax : (yMax + (curMax - yMax) * 0.02f); // 緩やかに追従
+
+    ImPlot::PushStyleColor(ImPlotCol_FrameBg, ImVec4(0.08f, 0.08f, 0.10f, 1.0f));
+    ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(0.05f, 0.05f, 0.07f, 1.0f));
+    if (ImPlot::BeginPlot("##gpuHist", ImVec2(-1, 90),
+                          ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoInputs |
+                              ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText)) {
+        ImPlot::SetupAxes(nullptr, "ms",
+                          ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoGridLines,
+                          ImPlotAxisFlags_None);
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, kHist, ImPlotCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, yMax, ImPlotCond_Always);
+        ImPlot::SetNextLineStyle(kGraphics, 1.5f);
+        ImPlot::PlotLine("Graphics", histGraphics, kHist, 1.0, 0.0, ImPlotLineFlags_None, histOff);
+        ImPlot::SetNextLineStyle(kCompute, 1.5f);
+        ImPlot::PlotLine("Compute", histCompute, kHist, 1.0, 0.0, ImPlotLineFlags_None, histOff);
+        ImPlot::EndPlot();
+    }
+    ImPlot::PopStyleColor(2);
+
+    // ---- パス別テーブル（占有バー付き）----
+    ImGui::Spacing();
+    SectionHeader("[ パス別 ]", DebugTheme::kAccentBlue);
+    if (results_.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("（計測データなし — 計測ON かつ数フレーム経過で表示されます）");
+        ImGui::PopStyleColor();
+    } else if (ImGui::BeginTable("##gpuprofTable", 4,
+                                 ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableSetupColumn("キュー", ImGuiTableColumnFlags_WidthFixed, 72.0f);
+        ImGui::TableSetupColumn("パス", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("ms", ImGuiTableColumnFlags_WidthFixed, 64.0f);
+        ImGui::TableSetupColumn("占有", ImGuiTableColumnFlags_WidthFixed, 110.0f);
+        ImGui::TableHeadersRow();
+
         for (const auto &r : results_) {
-            (r.isCompute ? computeTotal : graphicsTotal) += r.ms;
+            const ImVec4 qc = r.isCompute ? kCompute : kGraphics;
+            ImGui::TableNextRow();
+
+            // キュー（色付きラベル）
+            ImGui::TableSetColumnIndex(0);
+            ImGui::PushStyleColor(ImGuiCol_Text, qc);
+            ImGui::TextUnformatted(r.isCompute ? "Compute" : "Graphics");
+            ImGui::PopStyleColor();
+
+            // パス名
+            ImGui::TableSetColumnIndex(1);
+            ImGui::TextUnformatted(r.label.c_str());
+
+            // ms（数値そのものを右寄せの明るいテキストで＝小さい値も読みやすく）
+            ImGui::TableSetColumnIndex(2);
+            char num[24];
+            snprintf(num, sizeof(num), "%.3f", r.ms);
+            float tw = ImGui::CalcTextSize(num).x;
+            float avail = ImGui::GetContentRegionAvail().x;
+            if (avail > tw)
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail - tw));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextReadOnly);
+            ImGui::TextUnformatted(num);
+            ImGui::PopStyleColor();
+
+            // 占有バー（最大パス基準・キュー色。オーバーレイ文字は載せない）
+            ImGui::TableSetColumnIndex(3);
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, qc);
+            ImGui::ProgressBar(static_cast<float>(r.ms / maxMs), ImVec2(-1.0f, 12.0f), "");
+            ImGui::PopStyleColor();
         }
-
-        if (ImGui::BeginTable("##gpuprofTable", 3,
-                              ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
-            ImGui::TableSetupColumn("キュー", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-            ImGui::TableSetupColumn("パス", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("ms", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-
-            for (const auto &r : results_) {
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::TextUnformatted(r.isCompute ? "Compute" : "Graphics");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::TextUnformatted(r.label.c_str());
-                ImGui::TableSetColumnIndex(2);
-                ImGui::Text("%.3f", r.ms);
-            }
-            ImGui::EndTable();
-        }
-
-        ImGui::Separator();
-        ImGui::Text("Compute 合計: %.3f ms", computeTotal);
-        ImGui::Text("Graphics 合計: %.3f ms", graphicsTotal);
-        ImGui::Text("GPU 合計: %.3f ms", computeTotal + graphicsTotal);
+        ImGui::EndTable();
     }
 #endif
 }

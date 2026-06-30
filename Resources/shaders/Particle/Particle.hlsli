@@ -298,6 +298,24 @@ struct ParticleCSSettings
     float emitSphereRadius;
     float emitConeAngle;
     float emitShapePad;
+    // ---- カラーグラデーション (N段 LUT を CB 同梱)。C++ ParticleCSSettings と一致させること ----
+    uint enableColorGradient; // 1=colorLUT を色に使う（start/mid/end/random を上書き）
+    float colorGradPad0;
+    float colorGradPad1;
+    float colorGradPad2;
+    uint4 colorLUT[64];       // 256段 RGBA8。idx の色 = colorLUT[idx>>2][idx&3]
+    // ---- 寿命カーブ(サイズ/アルファ倍率) LUT。C++ ParticleCSSettings と一致させること ----
+    uint enableSizeCurve;     // 1=scale に sizeCurveLUT を乗算
+    uint enableAlphaCurve;    // 1=color.a に alphaCurveLUT を乗算
+    float lifeCurvePad0;
+    float lifeCurvePad1;
+    float4 sizeCurveLUT[64];  // 256段 float 倍率。idx の倍率 = sizeCurveLUT[idx>>2][idx&3]
+    float4 alphaCurveLUT[64];
+    // ---- 音声振動（音量に合わせて全方向に揺らす）。C++ ParticleCSSettings 末尾と一致させること ----
+    uint enableAudioVibration;       // 1=今流れている音量で各粒子を揺らす
+    float audioVibrationStrength;    // 振動の大きさ（揺れ幅）
+    float audioVibrationSensitivity; // 感度（音量に掛ける入力ゲイン）
+    float audioAmplitude;            // 現在の音量[0,1]（振動の大きさを駆動）
 };
 
 // 【重要】このレイアウトは C++ 側 `struct ParticleFieldData`

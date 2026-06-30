@@ -320,6 +320,12 @@ class ParticleCSEmitter {
     /// <param name="type">プリミティブの種類</param>
     void LoadPrimitiveModel(PrimitiveType type);
 
+    /// <summary>
+    /// 現在のプリミティブ形状パラメータ(分割数/半径など)でモデルと発生メッシュを作り直す。
+    /// 分割数や円の幅を変更したときに呼ぶ。
+    /// </summary>
+    void RebuildPrimitiveModel();
+
     /// <summary>発生源メッシュの三角形情報を生成</summary>
     void CreateModelTriangles();
 
@@ -373,6 +379,7 @@ class ParticleCSEmitter {
     ModelData modelData_;
     std::string modelPath_;
     PrimitiveType primitiveType_ = PrimitiveType::None;
+    PrimitiveParams primitiveParams_; // プリミティブの分割数/半径など（リング等で調整可）
 
     std::string name_;
     std::string drawGroup_ = "3D"; // 描画グループ＝描画ステージ（既定は3D）

@@ -22,6 +22,19 @@ enum class PrimitiveType {
 };
 
 /// <summary>
+/// 円形プリミティブ（Ring/Sphere/Cylinder/Cone）の生成パラメータ。
+/// 既定値は従来の固定形状と同一なので、未指定時は見た目が変わらない。
+/// </summary>
+struct PrimitiveParams {
+    uint32_t divide = 32;         // 円周方向の分割数（多いほど滑らか）
+    float ringOuterRadius = 1.0f; // Ring の外半径
+    float ringInnerRadius = 0.5f; // Ring の内半径（円の幅 = 外半径 - 内半径）
+};
+
+/// <summary>指定の PrimitiveType がパラメータ調整に対応するか</summary>
+bool IsParametricPrimitive(PrimitiveType type);
+
+/// <summary>
 /// 各種プリミティブ形状の頂点データを生成・保持するシングルトン
 /// </summary>
 class PrimitiveModel {
@@ -89,6 +102,12 @@ class PrimitiveModel {
         return {};
     }
 
+    /// <summary>
+    /// パラメータ指定でプリミティブ頂点データを生成する（キャッシュしない）。
+    /// 円形系(Ring/Sphere/Cylinder/Cone)は params を反映、それ以外は既定の固定データを返す。
+    /// </summary>
+    PrimitiveData BuildParametricData(const PrimitiveType &type, const PrimitiveParams &params);
+
   private:
     /// ===================================================
     /// private method（各プリミティブの頂点生成）
@@ -138,6 +157,14 @@ class PrimitiveModel {
     /// 上下に蓋のある円柱の頂点データを生成
     /// </summary>
     void CreateClosedCylinder();
+
+    /// ===================================================
+    /// パラメータ版ビルダー（Create* は既定値でこれらを呼ぶ）
+    /// ===================================================
+    PrimitiveData BuildSphere(uint32_t divide);
+    PrimitiveData BuildCylinder(uint32_t divide);
+    PrimitiveData BuildRing(uint32_t divide, float outerRadius, float innerRadius);
+    PrimitiveData BuildCone(uint32_t divide);
 
   private:
     /// ===================================================

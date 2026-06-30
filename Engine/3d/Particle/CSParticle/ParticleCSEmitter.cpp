@@ -240,11 +240,23 @@ void ParticleCSEmitter::LoadModel(const std::string &modelPath) {
 }
 
 void ParticleCSEmitter::LoadPrimitiveModel(PrimitiveType type) {
-    std::string modelKey = ModelManager::GetInstance()->CreatePrimitiveModel(type, "");
+    // 円形系(Ring/Sphere/Cylinder/Cone)は分割数/半径パラメータを反映して生成する。
+    std::string modelKey = IsParametricPrimitive(type)
+                               ? ModelManager::GetInstance()->CreatePrimitiveModel(type, "", primitiveParams_)
+                               : ModelManager::GetInstance()->CreatePrimitiveModel(type, "");
     model_ = ModelManager::GetInstance()->FindModel(modelKey);
     if (model_) {
         modelData_ = model_->GetModelData();
     }
+}
+
+void ParticleCSEmitter::RebuildPrimitiveModel() {
+    if (primitiveType_ == PrimitiveType::None)
+        return;
+    // モデルを作り直し、発生面(三角形)・エッジも新しい形状で再構築する。
+    LoadPrimitiveModel(primitiveType_);
+    CreateModelTriangles();
+    CreateModelEdges();
 }
 
 void ParticleCSEmitter::Update() {
@@ -358,6 +370,14 @@ void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group) {
         return;
     }
     independentGroup->SetSettingData(*group->GetSettingsData());
+    // カラーグラデーションのストップ列は settings とは別ストレージなので別途コピーし、
+    // 独立グループ側で 256段 LUT を再ベイクさせる（コピーしないと既定ストップでベイクされ崩れる）。
+    independentGroup->GetColorStops() = group->GetColorStops();
+    independentGroup->MarkColorStopsDirty();
+    // 寿命カーブの制御点も別ストレージなので伝播させ、独立グループ側で再ベイクさせる。
+    independentGroup->GetSizeCurvePoints() = group->GetSizeCurvePoints();
+    independentGroup->GetAlphaCurvePoints() = group->GetAlphaCurvePoints();
+    independentGroup->MarkLifeCurvesDirty();
     independentGroup->SetBlendMode(group->GetParticleGroupData().blendMode);
     independentGroup->SetBillboard(group->GetPerView()->enableBillboard);
     particleGroups_.push_back(independentGroup);
@@ -777,6 +797,10 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("emitFromSurface", emitterMeshData_->emitFromSurface);
     data->Save("modelPath", modelPath_);
     data->Save("primitiveType", static_cast<int>(primitiveType_));
+    // プリミティブ形状パラメータ（リング等の分割数・半径）
+    data->Save("primitiveDivide", static_cast<int>(primitiveParams_.divide));
+    data->Save("primitiveRingOuter", primitiveParams_.ringOuterRadius);
+    data->Save("primitiveRingInner", primitiveParams_.ringInnerRadius);
 
     // フィールド影響設定
     data->Save("receiveFields", receiveFields_);
@@ -890,10 +914,39 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "turbulenceStrength", group->GetSettingsData()->turbulenceStrength);
         data->Save(prefix + "turbulenceFrequency", group->GetSettingsData()->turbulenceFrequency);
 
+        // ★ 音声振動設定の保存（audioAmplitude/audioWaveform は実行時注入なので保存しない）
+        data->Save(prefix + "enableAudioVibration", group->GetSettingsData()->enableAudioVibration);
+        data->Save(prefix + "audioVibrationStrength", group->GetSettingsData()->audioVibrationStrength);
+        data->Save(prefix + "audioVibrationSensitivity", group->GetSettingsData()->audioVibrationSensitivity);
+
         // ★ 発生形状設定の保存
         data->Save(prefix + "emitShape", group->GetSettingsData()->emitShape);
         data->Save(prefix + "emitSphereRadius", group->GetSettingsData()->emitSphereRadius);
         data->Save(prefix + "emitConeAngle", group->GetSettingsData()->emitConeAngle);
+
+        // ★ カラーグラデーション(N段)設定の保存（有効フラグ + ストップ列）
+        data->Save(prefix + "enableColorGradient", group->GetSettingsData()->enableColorGradient);
+        const auto &stops = group->GetColorStops();
+        data->Save(prefix + "colorStopCount", static_cast<int>(stops.size()));
+        for (size_t si = 0; si < stops.size(); ++si) {
+            std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
+            data->Save<Vector4>(sp + "color", stops[si].color);
+            data->Save(sp + "pos", stops[si].pos);
+        }
+
+        // ★ 寿命カーブ(サイズ/アルファ)設定の保存（有効フラグ + 制御点列）
+        data->Save(prefix + "enableSizeCurve", group->GetSettingsData()->enableSizeCurve);
+        data->Save(prefix + "enableAlphaCurve", group->GetSettingsData()->enableAlphaCurve);
+        auto saveCurve = [&](const std::string &key, const std::vector<CurvePoint> &pts) {
+            data->Save(prefix + key + "Count", static_cast<int>(pts.size()));
+            for (size_t pi = 0; pi < pts.size(); ++pi) {
+                std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
+                data->Save(pp + "x", pts[pi].x);
+                data->Save(pp + "y", pts[pi].y);
+            }
+        };
+        saveCurve("sizeCurve", group->GetSizeCurvePoints());
+        saveCurve("alphaCurve", group->GetAlphaCurvePoints());
     }
     ImGuiNotification::Post("パーティクル設定を保存しました: " + name_, {0.2f, 0.8f, 0.2f, 1.0f});
 }
@@ -917,6 +970,10 @@ void ParticleCSEmitter::LoadSetting() {
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
+    // プリミティブ形状パラメータ（LoadPrimitiveModel より前に復元しておくこと）
+    primitiveParams_.divide = static_cast<uint32_t>(data->Load("primitiveDivide", 32));
+    primitiveParams_.ringOuterRadius = data->Load("primitiveRingOuter", 1.0f);
+    primitiveParams_.ringInnerRadius = data->Load("primitiveRingInner", 0.5f);
     // フィールド影響設定
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
@@ -1041,12 +1098,55 @@ void ParticleCSEmitter::LoadSetting() {
         settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
         settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
 
+        // ★ 音声振動設定のロード（audioAmplitude/audioWaveform は実行時注入なので既定のまま）
+        settings.enableAudioVibration   = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
+        settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 8.0f);
+        settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 1.0f);
+
         // ★ 発生形状設定のロード
         settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);
         settings.emitSphereRadius = data->Load(prefix + "emitSphereRadius", 1.0f);
         settings.emitConeAngle    = data->Load(prefix + "emitConeAngle", 0.5236f);
 
+        // ★ カラーグラデーション(N段)設定のロード（有効フラグは settings、ストップは group 側ストレージ）
+        settings.enableColorGradient = data->Load<uint32_t>(prefix + "enableColorGradient", 0);
+        // ★ 寿命カーブ(サイズ/アルファ)の有効フラグ（点は group 側ストレージ）
+        settings.enableSizeCurve  = data->Load<uint32_t>(prefix + "enableSizeCurve", 0);
+        settings.enableAlphaCurve = data->Load<uint32_t>(prefix + "enableAlphaCurve", 0);
+
         group->SetSettingData(settings);
+
+        {
+            int stopCount = data->Load(prefix + "colorStopCount", 0);
+            if (stopCount > 0) {
+                auto &stops = group->GetColorStops();
+                stops.clear();
+                for (int si = 0; si < stopCount; ++si) {
+                    std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
+                    GradientStop gs;
+                    gs.color = data->Load<Vector4>(sp + "color", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+                    gs.pos = data->Load(sp + "pos", 0.0f);
+                    stops.push_back(gs);
+                }
+                group->MarkColorStopsDirty();
+            }
+            // 寿命カーブの制御点をロード（サイズ/アルファ）。
+            auto loadCurve = [&](const std::string &key, std::vector<CurvePoint> &out) {
+                int cnt = data->Load(prefix + key + "Count", 0);
+                if (cnt <= 0) return;
+                out.clear();
+                for (int pi = 0; pi < cnt; ++pi) {
+                    std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
+                    CurvePoint cp;
+                    cp.x = data->Load(pp + "x", 0.0f);
+                    cp.y = data->Load(pp + "y", 1.0f);
+                    out.push_back(cp);
+                }
+            };
+            loadCurve("sizeCurve", group->GetSizeCurvePoints());
+            loadCurve("alphaCurve", group->GetAlphaCurvePoints());
+            group->MarkLifeCurvesDirty();
+        }
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
 
         AddParticleGroup(group);
@@ -1079,6 +1179,10 @@ void ParticleCSEmitter::LoadCloneSetting() {
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
+    // プリミティブ形状パラメータ（LoadPrimitiveModel より前に復元しておくこと）
+    primitiveParams_.divide = static_cast<uint32_t>(data->Load("primitiveDivide", 32));
+    primitiveParams_.ringOuterRadius = data->Load("primitiveRingOuter", 1.0f);
+    primitiveParams_.ringInnerRadius = data->Load("primitiveRingInner", 0.5f);
     // フィールド影響設定
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
@@ -1204,12 +1308,55 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
         settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
 
+        // ★ 音声振動設定のロード（audioAmplitude/audioWaveform は実行時注入なので既定のまま）
+        settings.enableAudioVibration   = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
+        settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 8.0f);
+        settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 1.0f);
+
         // ★ 発生形状設定のロード
         settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);
         settings.emitSphereRadius = data->Load(prefix + "emitSphereRadius", 1.0f);
         settings.emitConeAngle    = data->Load(prefix + "emitConeAngle", 0.5236f);
 
+        // ★ カラーグラデーション(N段)設定のロード（有効フラグは settings、ストップは group 側ストレージ）
+        settings.enableColorGradient = data->Load<uint32_t>(prefix + "enableColorGradient", 0);
+        // ★ 寿命カーブ(サイズ/アルファ)の有効フラグ（点は group 側ストレージ）
+        settings.enableSizeCurve  = data->Load<uint32_t>(prefix + "enableSizeCurve", 0);
+        settings.enableAlphaCurve = data->Load<uint32_t>(prefix + "enableAlphaCurve", 0);
+
         group->SetSettingData(settings);
+
+        {
+            int stopCount = data->Load(prefix + "colorStopCount", 0);
+            if (stopCount > 0) {
+                auto &stops = group->GetColorStops();
+                stops.clear();
+                for (int si = 0; si < stopCount; ++si) {
+                    std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
+                    GradientStop gs;
+                    gs.color = data->Load<Vector4>(sp + "color", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+                    gs.pos = data->Load(sp + "pos", 0.0f);
+                    stops.push_back(gs);
+                }
+                group->MarkColorStopsDirty();
+            }
+            // 寿命カーブの制御点をロード（サイズ/アルファ）。
+            auto loadCurve = [&](const std::string &key, std::vector<CurvePoint> &out) {
+                int cnt = data->Load(prefix + key + "Count", 0);
+                if (cnt <= 0) return;
+                out.clear();
+                for (int pi = 0; pi < cnt; ++pi) {
+                    std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
+                    CurvePoint cp;
+                    cp.x = data->Load(pp + "x", 0.0f);
+                    cp.y = data->Load(pp + "y", 1.0f);
+                    out.push_back(cp);
+                }
+            };
+            loadCurve("sizeCurve", group->GetSizeCurvePoints());
+            loadCurve("alphaCurve", group->GetAlphaCurvePoints());
+            group->MarkLifeCurvesDirty();
+        }
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
 
         AddParticleGroup(group);
@@ -1327,6 +1474,44 @@ void ParticleCSEmitter::DrawImGui() {
                         ImGui::Text("モデル: %s", modelPath_.c_str());
                     } else if (primitiveType_ != PrimitiveType::None) {
                         ImGui::Text("プリミティブタイプ");
+
+                        // 円形プリミティブ(Ring/Sphere/Cylinder/Cone)は分割数・形状を調整できる。
+                        if (IsParametricPrimitive(primitiveType_)) {
+                            ImGui::Spacing();
+                            ImGui::TextDisabled("形状パラメータ");
+                            bool rebuild = false;
+
+                            int divide = static_cast<int>(primitiveParams_.divide);
+                            ImGui::SetNextItemWidth(180.0f);
+                            if (ImGui::DragInt("分割数##primDivide", &divide, 0.5f, 3, 256)) {
+                                primitiveParams_.divide = static_cast<uint32_t>(divide < 3 ? 3 : divide);
+                            }
+                            if (ImGui::IsItemDeactivatedAfterEdit())
+                                rebuild = true;
+                            if (ImGui::IsItemHovered())
+                                ImGui::SetTooltip("円周方向の分割数。多いほど滑らか（頂点・三角形が増えます）");
+
+                            // リングは外半径・内半径（円の幅 = 外 - 内）を調整できる。
+                            if (primitiveType_ == PrimitiveType::Ring) {
+                                ImGui::SetNextItemWidth(180.0f);
+                                ImGui::DragFloat("外半径##primOuter", &primitiveParams_.ringOuterRadius, 0.01f, 0.01f, 100.0f, "%.3f");
+                                if (ImGui::IsItemDeactivatedAfterEdit())
+                                    rebuild = true;
+                                ImGui::SetNextItemWidth(180.0f);
+                                ImGui::DragFloat("内半径##primInner", &primitiveParams_.ringInnerRadius, 0.01f, 0.0f, 100.0f, "%.3f");
+                                if (ImGui::IsItemDeactivatedAfterEdit())
+                                    rebuild = true;
+                                if (ImGui::IsItemHovered())
+                                    ImGui::SetTooltip("円の幅 = 外半径 - 内半径");
+                            }
+
+                            if (rebuild) {
+                                // 内半径が外半径を超えないようクランプしてから作り直す。
+                                if (primitiveParams_.ringInnerRadius > primitiveParams_.ringOuterRadius)
+                                    primitiveParams_.ringInnerRadius = primitiveParams_.ringOuterRadius;
+                                RebuildPrimitiveModel();
+                            }
+                        }
                     }
                 }
 

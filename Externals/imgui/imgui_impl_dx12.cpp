@@ -1104,6 +1104,20 @@ void ImGui_ImplDX12_NewFrame()
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
+// [Hagine patch] Flip-model swap chains cannot use an sRGB format directly. When the
+// application uses an sRGB RTVFormat (to match an sRGB back buffer), create the secondary
+// viewport swap chain with the equivalent non-sRGB format and place an sRGB RTV on top of it
+// (the same UNORM-buffer + sRGB-RTV pattern the engine uses for its main swap chain).
+static DXGI_FORMAT ImGui_ImplDX12_GetNonSRGBFormat(DXGI_FORMAT fmt)
+{
+    switch (fmt)
+    {
+    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB: return DXGI_FORMAT_R8G8B8A8_UNORM;
+    case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB: return DXGI_FORMAT_B8G8R8A8_UNORM;
+    default:                              return fmt;
+    }
+}
+
 static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
@@ -1139,7 +1153,7 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     sd1.BufferCount = bd->numFramesInFlight;
     sd1.Width = (UINT)viewport->Size.x;
     sd1.Height = (UINT)viewport->Size.y;
-    sd1.Format = bd->RTVFormat;
+    sd1.Format = ImGui_ImplDX12_GetNonSRGBFormat(bd->RTVFormat); // [Hagine patch] flip model は sRGB 不可
     sd1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd1.SampleDesc.Count = 1;
     sd1.SampleDesc.Quality = 0;
@@ -1183,12 +1197,18 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
             rtv_handle.ptr += rtv_descriptor_size;
         }
 
+        // [Hagine patch] スワップチェインは非sRGBで作るが、RTV は PSO に合わせて
+        // bd->RTVFormat（sRGB の場合あり）で明示生成する。
+        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+        rtvDesc.Format = bd->RTVFormat;
+        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
         ID3D12Resource* back_buffer;
         for (UINT i = 0; i < bd->numFramesInFlight; i++)
         {
             IM_ASSERT(vd->FrameCtx[i].RenderTarget == nullptr);
             vd->SwapChain->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
-            bd->pd3dDevice->CreateRenderTargetView(back_buffer, nullptr, vd->FrameCtx[i].RenderTargetCpuDescriptors);
+            bd->pd3dDevice->CreateRenderTargetView(back_buffer, &rtvDesc, vd->FrameCtx[i].RenderTargetCpuDescriptors);
             vd->FrameCtx[i].RenderTarget = back_buffer;
         }
 
@@ -1272,10 +1292,14 @@ static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
         DXGI_SWAP_CHAIN_DESC1 desc = {};
         vd->SwapChain->GetDesc1(&desc);
         vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, desc.Format, desc.Flags);
+        // [Hagine patch] RTV は PSO に合わせて bd->RTVFormat（sRGB の場合あり）で明示生成する。
+        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+        rtvDesc.Format = bd->RTVFormat;
+        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
         for (UINT i = 0; i < bd->numFramesInFlight; i++)
         {
             vd->SwapChain->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
-            bd->pd3dDevice->CreateRenderTargetView(back_buffer, nullptr, vd->FrameCtx[i].RenderTargetCpuDescriptors);
+            bd->pd3dDevice->CreateRenderTargetView(back_buffer, &rtvDesc, vd->FrameCtx[i].RenderTargetCpuDescriptors);
             vd->FrameCtx[i].RenderTarget = back_buffer;
         }
     }

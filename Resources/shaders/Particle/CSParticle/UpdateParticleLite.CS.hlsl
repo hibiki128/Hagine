@@ -127,9 +127,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
             p.translate += p.velocity * gPerFrame.deltaTime;
             p.currentTime += gPerFrame.deltaTime;
 
-            // 6. 色更新（フル版と同一: 3-stop gradient / randomColor アルファ補間）
+            // 6. 色更新（フル版と同一: グラデーションLUT / 3-stop gradient / randomColor アルファ補間）
             float lifeRatio = p.currentTime / p.lifeTime;
-            if (!gSettings.enableRandomColor)
+            if (gSettings.enableColorGradient)
+            {
+                uint gi = (uint) (saturate(lifeRatio) * 255.0f + 0.5f);
+                p.color = UnpackColorRGBA8(gSettings.colorLUT[gi >> 2][gi & 3]);
+            }
+            else if (!gSettings.enableRandomColor)
             {
                 float4 lerpedColor;
                 if (gSettings.enableMidColor)
@@ -175,6 +180,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
                 {
                     p.scale = p.initialScale * lifetimeMul * sinMul;
                 }
+            }
+
+            // 寿命カーブ: サイズ/アルファに倍率カーブを乗算（フル版と同一）
+            if (gSettings.enableSizeCurve)
+            {
+                uint si = (uint) (saturate(lifeRatio) * 255.0f + 0.5f);
+                p.scale *= gSettings.sizeCurveLUT[si >> 2][si & 3];
+            }
+            if (gSettings.enableAlphaCurve)
+            {
+                uint ai = (uint) (saturate(lifeRatio) * 255.0f + 0.5f);
+                p.color.a *= gSettings.alphaCurveLUT[ai >> 2][ai & 3];
             }
 
             // 8. 死亡判定（寿命切れで freeList へ返却。死亡は低頻度なので従来どおり Wave 集約のまま）

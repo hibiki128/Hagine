@@ -232,6 +232,25 @@ extern uint32_t threadsPerGroup_;                 // 1グループあたりの�
 extern int threadGroupSize_;                      // スレッドグループの数
 
 /// <summary>
+/// カラーグラデーションのストップ（位置 pos[0..1] と RGBA）。CPU側のみ保持。
+/// colorStops 列を Update 用に 256段 RGBA8 LUT へベイクして ParticleCSSettings.colorLUT に積む
+/// （GPU は LUT をサンプルするだけ＝ストップ数に依存しない O(1)）。
+/// </summary>
+struct GradientStop {
+    Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};
+    float pos = 0.0f;
+};
+
+/// <summary>
+/// 寿命カーブの制御点（x=寿命比[0,1], y=倍率）。CPU側のみ保持（ImVec2 と同レイアウト）。
+/// サイズ/アルファの倍率カーブを 256段 LUT へベイクして ParticleCSSettings に積む。
+/// </summary>
+struct CurvePoint {
+    float x = 0.0f; // 寿命比 [0,1]
+    float y = 1.0f; // 倍率（1.0=変化なし）
+};
+
+/// <summary>
 /// GPUパーティクルの挙動設定（寿命・速度・色・各種エフェクトの有効化など）
 /// HLSL側 struct ParticleCSSettings とレイアウトを一致させること
 /// </summary>
@@ -332,6 +351,34 @@ struct ParticleCSSettings {
     float emitSphereRadius = 1.0f;         // Sphere/Cone 半径
     float emitConeAngle = 0.5236f;         // Cone 半開角 (ラジアン, デフォルト30°)
     float emitShapePad = 0.0f;
+    // ---- カラーグラデーション (N段・LUT を CB に同梱) ----
+    // enableColorGradient=1 のとき、Update は colorLUT[lifeRatio*255] を色に使う（start/mid/end/random を上書き）。
+    // colorLUT は CPU が colorStops からベイクした 256段 RGBA8(uint)。HLSL 側は uint4 colorLUT[64]（同じ 1024B）。
+    // ※ HLSL CB は uint4 配列で16B境界に並ぶため、C++ uint32_t[256](1024B) と uint4[64](1024B) はバイト一致する。
+    uint32_t enableColorGradient = 0;
+    float colorGradPad0 = 0.0f;
+    float colorGradPad1 = 0.0f;
+    float colorGradPad2 = 0.0f;
+    uint32_t colorLUT[256] = {};
+    // ---- 寿命カーブ(サイズ/アルファ倍率)・LUT を CB に同梱 ----
+    // enable*Curve=1 のとき Update が *CurveLUT[lifeRatio*255] を scale / color.a に乗算する。
+    // CPU が CurvePoint 列からベイクした 256段 float。HLSL 側は float4[64]（同じ 1024B）。
+    uint32_t enableSizeCurve = 0;
+    uint32_t enableAlphaCurve = 0;
+    float lifeCurvePad0 = 0.0f;
+    float lifeCurvePad1 = 0.0f;
+    float sizeCurveLUT[256] = {};
+    float alphaCurveLUT[256] = {};
+    // ---- 音声振動（今流れている音量に合わせて全方向に揺らす。形状を選ばない） ----
+    // enableAudioVibration=1 のとき、Update が各粒子を「自分固有のランダム方向」へ
+    //   滑らかな sin 振動 × 今の音量 で揺らす（中心・半径を使わないのでどんな形でも使える）。
+    //   sin は反転するので velocity は発散せず（＝飛んでいかない）、音量で揺れ幅が膨らむ。
+    //   方向・位相・周波数を粒子ごとに散らすので動きがバラバラ＆ビートで一斉でなくズレて動く。
+    // ※ HLSL ParticleCSSettings 末尾と一致させること（末尾追記なので既存オフセット不変＝OFFで無回帰）。
+    uint32_t enableAudioVibration = 0;
+    float audioVibrationStrength = 8.0f;    // 振動の大きさ（揺れ幅）
+    float audioVibrationSensitivity = 1.0f; // 感度（音量に掛ける入力ゲイン。大きいほど小さい音にも反応）
+    float audioAmplitude = 0.0f;            // 現在の音量[0,1]（CPU が毎フレーム注入。振動の大きさを駆動）
 };
 
 /// =====================================================================
