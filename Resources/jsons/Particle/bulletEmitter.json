@@ -88,8 +88,8 @@
         "y": 0.0,
         "z": 0.0
     },
-    "bullet_scaleMax": 0.800000011920929,
-    "bullet_scaleMin": 0.10000000149011612,
+    "bullet_scaleMax": 2.0,
+    "bullet_scaleMin": 1.25,
     "bullet_startAcce": {
         "x": 0.0,
         "y": 0.0,
@@ -141,6 +141,7 @@
         "y": -1.0,
         "z": -1.0
     },
+    "drawGroup": "3D",
     "emitFrequency": 0.0010000000474974513,
     "emitterRotation": {
         "w": 1.0,
@@ -160,5 +161,6 @@
     },
     "isActive": true,
     "isAuto": true,
+    "isGizmoSelectable": true,
     "isVisible": false
 }

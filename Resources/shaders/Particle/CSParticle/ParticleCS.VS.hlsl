@@ -129,14 +129,22 @@ VertexShaderOutput main(VertexShaderInput input, uint instanceId : SV_InstanceID
             worldMatrix[3].xyz = pTranslate;
         }
     }
-    else
+    else if (gPerView.enableBillboard != 0)
     {
-        // 通常ビルボード
+        // 通常ビルボード（常にカメラを向く）
         worldMatrix = gPerView.billboardMatrix;
         worldMatrix[0] *= pScale.x;
         worldMatrix[1] *= pScale.y;
         worldMatrix[2] *= pScale.z;
         worldMatrix[3].xyz = pTranslate;
+    }
+    else
+    {
+        // 非ビルボード: ワールド軸に固定（カメラ追従しない）。向きは回転(rotXYZ)で付与する。
+        worldMatrix[0] = float4(pScale.x, 0.0f, 0.0f, 0.0f);
+        worldMatrix[1] = float4(0.0f, pScale.y, 0.0f, 0.0f);
+        worldMatrix[2] = float4(0.0f, 0.0f, pScale.z, 0.0f);
+        worldMatrix[3] = float4(pTranslate, 1.0f);
     }
 
     // ワールド×ビュープロジェクション。回転を使うグループのみ回転行列を合成する

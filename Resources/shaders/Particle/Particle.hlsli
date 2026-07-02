@@ -189,6 +189,8 @@ struct EmitterMesh
     uint emit;
     uint edgeCount;
     float3 anchorPoint;
+    // 発生数ゲートの上書き値。0=通常(gSettings.emitCount)、>0=この値を発生数に使う（フィールド接触Emit用）
+    uint emitCountOverride;
 };
 
 struct PerFrame

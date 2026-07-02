@@ -41,7 +41,11 @@ struct EmitterMesh {
     uint32_t emit;
     uint32_t edgeCount;
     Vector3 anchorPoint;
-    float padding;
+    // 発生数ゲートの上書き値。0=通常(グループの gSettings.emitCount を使用)、
+    // >0=この値を1フレームの発生数として使う（フィールド接触Emitモード用）。
+    // gSettings.emitCount を一時書き換え＋即復元する方式は GPU 実行時に復元後の値を
+    // 読んでしまい効かなかったため、per-emitter CB のこの専用フィールドで渡す。
+    uint32_t emitCountOverride;
 };
 
 /// <summary>
