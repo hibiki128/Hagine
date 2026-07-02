@@ -1,6 +1,7 @@
 #pragma once
 #include "iostream"
 #include "type/Vector4.h"
+#include <Debug/Log/Logger.h>
 #include <Primitive/PrimitiveModel.h>
 #include <cstdint>
 #include <externals/nlohmann/json.hpp>
@@ -37,7 +38,12 @@ class DataHandler {
         std::string filePath = folderPath_ + "/" + fileName_;
         std::ifstream inFile(filePath);
         if (inFile.is_open()) {
-            inFile >> cachedJson_;
+            try {
+                inFile >> cachedJson_;
+            } catch (const json::exception &e) {
+                // ファイルは開けたが中身が壊れている（JSONとして不正な）ケース
+                Logger::Error("Failed to parse JSON: \"" + filePath + "\". " + e.what());
+            }
             inFile.close();
         }
     }
