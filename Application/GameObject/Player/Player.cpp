@@ -696,15 +696,27 @@ void Player::Move() {
             isDashing_ = true;
             dashStartedThisFrame_ = true;
             dashDuration_ = 0.0f;
+            // A押下時にスティックがニュートラルなら、猶予時間内に倒せばダッシュ継続を許可。
+            // 既にスティックを倒していれば従来通り即ダッシュ確定（猶予不要）。
+            dashGraceTimer_ = hasStickInput ? 0.0f : kDashGraceTime;
+        }
+
+        // 猶予中にスティックを倒したらダッシュを確定（以降は通常の維持判定に従う）。
+        // ニュートラルのままなら猶予時間をカウントダウンする。
+        if (isDashing_ && hasStickInput) {
+            dashGraceTimer_ = 0.0f;
+        } else if (isDashing_ && dashGraceTimer_ > 0.0f) {
+            dashGraceTimer_ -= dt_;
         }
 
         // スティックをニュートラルに戻したらダッシュ解除。
-        // ただし開始フレームはニュートラル始動（敵方向への急接近）を許可するため維持する。
-        if (isDashing_ && !hasStickInput && !dashStartedThisFrame_) {
+        // ただし開始フレームと猶予時間中（A押下→移動待ち）はニュートラルでも維持する。
+        if (isDashing_ && !hasStickInput && !dashStartedThisFrame_ && dashGraceTimer_ <= 0.0f) {
             isDashing_ = false;
             dashInputX_ = kInputZero;
             dashInputZ_ = kInputZero;
             dashDuration_ = 0.0f;
+            dashGraceTimer_ = 0.0f;
         }
     }
 
