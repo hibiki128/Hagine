@@ -399,7 +399,10 @@ void SpawnTrailParticles(inout Particle p, int particleIndex, float3 currentPosi
     p.lastTrailPosition = lastPos + direction * consumedDistance;
 }
 
-[numthreads(1024, 1, 1)]
+// スレッドグループ256（C++ kFullUpdateThreadsPerGroup と一致必須）。
+// 演出多用でレジスタが多くオキュパンシが低いため、常駐ブロック数を増やす狙いで1024→256に縮小。
+// Wave 単位集約（下記 WaveActiveSum/WavePrefixSum 等）はブロックサイズ非依存なので正しさ不変。
+[numthreads(256, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
     // 生存リスト間接ディスパッチ（§8）: 全スロット走査ではなく in リストの tid 番目だけ処理する。

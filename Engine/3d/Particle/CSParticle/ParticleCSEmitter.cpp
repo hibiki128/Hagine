@@ -68,6 +68,32 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
     if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
     if (particleGroups_.empty()) return;
 
+    // --- アイドルグループのスキップ判定 ---
+    // 「前フレームの生存数(readback)が0」かつ「今フレーム発生しない」グループは、
+    // Reset/Emit/Update/Readback のGPUディスパッチ・バリア・readbackコピーをまるごと省く。
+    // これでグループごとの固定オーバーヘッド（最低4096スレッドのUpdate + バリア数本 + CopyResource）が消える。
+    //
+    // 安全性: 判定に使う aliveDrawCount_ は readback で1〜2フレーム遅延する。
+    //   ・発生を止めた直後は遅延中 生存数>0 のまま → スキップせず drain し切るので取りこぼしなし。
+    //   ・生存0が観測できた時点で両ping-pongカウンタは既に0 → 凍結しても位相/カウンタは不整合にならない。
+    //   ・フィールド接触発生(emitOnlyOnFieldContact_)はGPU判定でCPUから確定できないため常時アクティブ扱い(安全側)。
+    groupActive_.assign(particleGroups_.size(), 1);
+    const bool fieldSpawnPossible = emitOnlyOnFieldContact_ && receiveFields_;
+    const bool emitterEmitting = (emitterMeshData_->emit != 0);
+    bool anyActive = false;
+    for (size_t i = 0; i < particleGroups_.size(); ++i) {
+        ParticleCSGroup *group = particleGroups_[i];
+        // aliveDrawCount_ は前フレームの DrawGraphics/プレビューが全グループで更新済み(1〜2F遅延)。
+        // ここで再度 FetchAliveDrawCount(Map/Unmap) すると全グループ分の余計なCPUコストになるので既存値を使う。
+        const bool willEmit = fieldSpawnPossible ||
+                              (emitterEmitting && group->GetSettingsData()->emitCount > 0);
+        const bool active = willEmit || (group->GetAliveDrawCount() > 0);
+        groupActive_[i] = active ? 1u : 0u;
+        anyActive = anyActive || active;
+    }
+    // 全グループがアイドルなら、このエミッターのコンピュートは丸ごと不要（グローバルバリアも省ける）。
+    if (!anyActive) return;
+
     auto *computeCmdList = dxCommon_->GetComputeCommandList().Get();
     dxCommon_->BeginComputeFrame();
 
@@ -84,7 +110,10 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
     //   Emit は全グループを一括ディスパッチするので、reset/フェーズ反転は全グループ分先に行う。
 
     // 1) 各グループ: CPU更新 + フェーズ反転 + out カウンタを 0 リセット（Emit の append より前）
-    for (auto &group : particleGroups_) {
+    //    アイドルグループはここも省く（位相を進めず凍結する）。
+    for (size_t i = 0; i < particleGroups_.size(); ++i) {
+        if (!groupActive_[i]) continue;
+        auto &group = particleGroups_[i];
         group->Update(vp);
         group->AdvanceAliveFrame();
         group->ResetAliveCounterDispatch(computeCmdList);
@@ -103,8 +132,9 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
 
     // 4) 各グループ: Update（in リストを sim し survivor を out へ append）
     int updateSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Update");
-    for (auto &group : particleGroups_) {
-        group->UpdateParticleCSDisPatch(
+    for (size_t i = 0; i < particleGroups_.size(); ++i) {
+        if (!groupActive_[i]) continue;
+        particleGroups_[i]->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),
             fieldCountRes,
             fieldMgr->GetOverrideSrvHandle(),
@@ -114,8 +144,9 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
     GpuProfiler::GetInstance()->Close(computeCmdList, updateSpan);
 
     // 5) 各グループ: 生存数(out カウンタ)を readback バッファへコピー（compute キュー上で記録）
-    for (auto &group : particleGroups_) {
-        group->RecordAliveCountReadback(computeCmdList);
+    for (size_t i = 0; i < particleGroups_.size(); ++i) {
+        if (!groupActive_[i]) continue;
+        particleGroups_[i]->RecordAliveCountReadback(computeCmdList);
     }
     // Execute は DrawSystem（または呼び出し元）が一括で行う
 }
@@ -428,8 +459,11 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
         ComputePipelineType::kEmitter,
         BlendMode::kNormal, ShaderMode::kNone, cl);
 
-    uint32_t groupIndex = 0;
-    for (auto &group : particleGroups_) {
+    for (uint32_t groupIndex = 0; groupIndex < particleGroups_.size(); ++groupIndex) {
+        auto &group = particleGroups_[groupIndex];
+        // アイドルグループ(生存0かつ発生なし。DrawCompute で判定)は発生ディスパッチも省く。
+        if (groupIndex < groupActive_.size() && !groupActive_[groupIndex])
+            continue;
         group->GetPerFrameData()->groupId = groupIndex;
         group->GetPerFrameData()->emitterFieldGroupId = fieldGroupId_;
 
@@ -488,7 +522,6 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
 
                 if (!hasEmitSpawnField) {
                     cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
-                    groupIndex++;
                     continue;
                 }
 
@@ -522,7 +555,6 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
                 settings->lifeTimeMin = savedLifeMin;
                 settings->lifeTimeMax = savedLifeMax;
 
-                groupIndex++;
                 continue;
 
             } else {
@@ -531,14 +563,11 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
         }
 
         if (emitterMeshData_->emit == 0 || settings->emitCount == 0) {
-            groupIndex++;
             continue;
         }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
         cl->Dispatch(dispatchCount, 1, 1);
-
-        groupIndex++;
     }
 }
 
@@ -1675,13 +1704,14 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::Spacing();
 
-                auto allGroups = ParticleCSGroupManager::GetInstance()->GetParticleGroups();
+                // 遅延生成対応: 実体(GPUバッファ)未確保のグループも選べるよう、
+                // ロード済みテンプレートではなく登録簿の全グループ名から一覧を作る。
+                auto allGroupNames = ParticleCSGroupManager::GetInstance()->GetAllGroupNames();
 
                 std::vector<std::string> availableNames;
                 std::vector<std::string> attachedNames;
 
-                for (auto *group : allGroups) {
-                    const std::string &name = group->GetGroupName();
+                for (const auto &name : allGroupNames) {
                     if (particleGroupNames_.contains(name)) {
                         attachedNames.push_back(name);
                     } else {

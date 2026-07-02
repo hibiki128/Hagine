@@ -25,6 +25,12 @@ class ParticleCSGroup {
     // 占有率を上げるため256にする。UpdateParticleLite.CS.hlsl の [numthreads] と一致必須。
     static constexpr uint32_t kLiteUpdateThreadsPerGroup = 256;
 
+    // フル版 Update のスレッドグループサイズ。演出多用でレジスタが多くオキュパンシが
+    // 低い(1024だと1SMに1ブロック=67%頭打ち)ため、Lite同様に縮小して常駐ブロック数を増やす。
+    // フル版は Wave 単位集約(ブロックサイズ非依存)なので縮小しても正しさ不変。
+    // UpdateParticle.CS.hlsl の [numthreads] と一致必須。他の全N系(Init/Count)は threadsPerGroup_ のまま。
+    static constexpr uint32_t kFullUpdateThreadsPerGroup = 256;
+
     /// ===================================
     /// public methods
     /// ===================================

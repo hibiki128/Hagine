@@ -354,6 +354,11 @@ class ParticleCSEmitter {
     std::vector<ParticleCSGroup *> particleGroups_;
     std::set<std::string> particleGroupNames_;
 
+    // DrawCompute の各フェーズ(Reset/Emit/Update/Readback)で参照する、グループごとの
+    // 「今フレーム処理するか」フラグ。生存0かつ発生なしのアイドルグループを一括スキップする。
+    // particleGroups_ と同じ順序・サイズ。DrawCompute 冒頭で毎フレーム再計算する。
+    std::vector<uint8_t> groupActive_;
+
     Microsoft::WRL::ComPtr<ID3D12Resource> triangleInfoResource_ = nullptr;
     TriangleInfo *triangleInfoData_ = nullptr;
     std::vector<TriangleInfo> triangleInfoList_;

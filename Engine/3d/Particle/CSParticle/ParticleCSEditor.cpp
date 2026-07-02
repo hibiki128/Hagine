@@ -619,17 +619,15 @@ void ParticleCSEditor::ShowDeleteSection() {
 
     // パーティクルグループ一覧と削除ボタン
     if (ColoredCollapsingHeader("グループ一覧・削除", 1)) {
-        auto groups = particleGroupManager_->GetParticleGroups();
-        if (groups.empty()) {
+        // 遅延生成対応: 実体未確保のグループも一覧・削除できるよう、
+        // ロード済みテンプレートではなく登録簿の全グループ名を使う。
+        auto groupNames = particleGroupManager_->GetAllGroupNames();
+        if (groupNames.empty()) {
             ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "グループがありません");
         } else {
             // ループ中の削除を避けるため、削除対象を先に確定してから消す
             std::string toDelete;
-            for (const auto &group : groups) {
-                if (!group) {
-                    continue;
-                }
-                const std::string &groupName = group->GetGroupName();
+            for (const auto &groupName : groupNames) {
                 ImGui::Bullet();
                 ImGui::SameLine();
                 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "%s", groupName.c_str());

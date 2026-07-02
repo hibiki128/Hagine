@@ -331,7 +331,5 @@ FodyWeavers.xsd
 /imgui_editor.ini
 /imgui_game.ini
 /CLAUDE.md
-/GPUParticle改修まとめ.md
 /Resources/images/Text
-/GPUParticle最適化メモ.md
-/GPUParticleエディタUXメモ.md
+/GPUParticleメモ.md

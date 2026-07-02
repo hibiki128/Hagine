@@ -251,11 +251,11 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     cl->SetComputeRootDescriptorTable(17, srvManager_->GetGPUDescriptorHandle(aliveListSrvForVSIndex_[inIdx]));
     cl->SetComputeRootDescriptorTable(18, srvManager_->GetGPUDescriptorHandle(aliveCounterSrvForVSIndex_[inIdx]));
 
-    // 軽量版はスレッドグループ256（Ampere の常駐1536上限で占有率を上げる狙い）。
-    // フル版は従来どおり threadsPerGroup_(1024)。シェーダの [numthreads] と一致必須。
+    // 軽量版・フル版ともスレッドグループ256（Ampere の常駐1536上限で占有率を上げる狙い）。
+    // 各シェーダの [numthreads] と一致必須（Lite=UpdateParticleLite / Full=UpdateParticle）。
     const uint32_t groupSize = (updateType == ComputePipelineType::kUpdateEmitterLite)
                                    ? kLiteUpdateThreadsPerGroup
-                                   : threadsPerGroup_;
+                                   : kFullUpdateThreadsPerGroup;
 
     // 生存リスト間接ディスパッチ Step3: dispatch 本数を「in リスト長」由来にして O(生存数) 化する。
     //   in リスト = 前フレームの out リスト。その長さは out カウンタの readback 値(aliveDrawCount_,
