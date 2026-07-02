@@ -562,9 +562,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
         p.velocity += turbForce * gPerFrame.deltaTime;
     }
 
-        // 7.1 音声振動（音量に合わせて各粒子をバラバラに揺らす）
-        //   各粒子は「自分固有のランダム方向」へ、滑らかな sin 振動で揺れる。
-        //   揺れ幅 = 今の音量(audioAmplitude) × 感度 × 振動の大きさ。音が大きいほど大きく揺れる。
+        // 7.1 音声振動（音の“立ち上がり”でバンっと揺らす）
+        //   各粒子は「自分固有のランダム方向」へ、高周波 sin 振動で震える。
+        //   揺れ幅 = 立ち上がりエンベロープ(audioAmplitude) × 感度 × 振動の大きさ。
+        //   ★audioAmplitude は CPU が onset(音量の増加分)で跳ね上げ時間で減衰させた値。
+        //     → 波形が大きくなった瞬間にバンっと強く震え、その後スッと落ち着く（＝振動っぽい）。
+        //   ★pow(・, audioAttackSharpness) で「大きい音だけドンと・小さい音は無視」を作る。
         //   ★sin は反転するので velocity は発散しない（飛んでいかない）。
         //   ★方向・位相・周波数を粒子ごとに散らすので「全体が同じ方向」にならずバラバラに動く。
     if (gSettings.enableAudioVibration)
@@ -579,12 +582,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
         if (dlen > 0.0001f)
         {
             dir /= dlen;
-            // per-particle 位相・周波数（organic に散らす。周波数 2〜8 はタービュランス同等の見える速さ）
+            // per-particle 位相・周波数（organic に散らす）。基準周波数を粒子ごとに ±20% ジッタ。
             float phase = frac(sin(fi * 45.13f) * 43758.5453f) * 6.28318f;
-            float freq = 2.0f + frac(sin(fi * 98.71f) * 43758.5453f) * 6.0f;
-            float osc = sin(gPerFrame.time * freq + phase); // [-1,1] 滑らか＝発散しない
-            float amp = saturate(gSettings.audioAmplitude * gSettings.audioVibrationSensitivity);
-            float vib = osc * amp * gSettings.audioVibrationStrength;
+            float freqJitter = 0.8f + frac(sin(fi * 98.71f) * 43758.5453f) * 0.4f;
+            float freq = max(gSettings.audioVibrationFrequency, 0.0f) * freqJitter;
+            float osc = sin(gPerFrame.time * freq + phase); // [-1,1] 高周波＝細かく震える
+            // 立ち上がりエンベロープに感度を掛け、反応カーブ(指数)で「大きい音だけドンと」に整形
+            float env = saturate(gSettings.audioAmplitude * gSettings.audioVibrationSensitivity);
+            env = pow(env, max(gSettings.audioAttackSharpness, 0.0001f));
+            float vib = osc * env * gSettings.audioVibrationStrength;
             p.velocity += dir * vib * gPerFrame.deltaTime;
         }
     }

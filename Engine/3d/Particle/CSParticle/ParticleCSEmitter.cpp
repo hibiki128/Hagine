@@ -914,10 +914,13 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "turbulenceStrength", group->GetSettingsData()->turbulenceStrength);
         data->Save(prefix + "turbulenceFrequency", group->GetSettingsData()->turbulenceFrequency);
 
-        // ★ 音声振動設定の保存（audioAmplitude/audioWaveform は実行時注入なので保存しない）
+        // ★ 音声振動設定の保存（audioAmplitude は実行時注入のエンベロープなので保存しない）
         data->Save(prefix + "enableAudioVibration", group->GetSettingsData()->enableAudioVibration);
         data->Save(prefix + "audioVibrationStrength", group->GetSettingsData()->audioVibrationStrength);
         data->Save(prefix + "audioVibrationSensitivity", group->GetSettingsData()->audioVibrationSensitivity);
+        data->Save(prefix + "audioVibrationFrequency", group->GetSettingsData()->audioVibrationFrequency);
+        data->Save(prefix + "audioAttackSharpness", group->GetSettingsData()->audioAttackSharpness);
+        data->Save(prefix + "audioReleaseRate", group->GetSettingsData()->audioReleaseRate);
 
         // ★ 発生形状設定の保存
         data->Save(prefix + "emitShape", group->GetSettingsData()->emitShape);
@@ -1098,10 +1101,13 @@ void ParticleCSEmitter::LoadSetting() {
         settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
         settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
 
-        // ★ 音声振動設定のロード（audioAmplitude/audioWaveform は実行時注入なので既定のまま）
+        // ★ 音声振動設定のロード（audioAmplitude は実行時注入のエンベロープなので既定のまま）
         settings.enableAudioVibration   = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
-        settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 8.0f);
-        settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 1.0f);
+        settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 12.0f);
+        settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 4.0f);
+        settings.audioVibrationFrequency = data->Load(prefix + "audioVibrationFrequency", 22.0f);
+        settings.audioAttackSharpness = data->Load(prefix + "audioAttackSharpness", 1.8f);
+        settings.audioReleaseRate = data->Load(prefix + "audioReleaseRate", 10.0f);
 
         // ★ 発生形状設定のロード
         settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);
@@ -1308,10 +1314,13 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
         settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
 
-        // ★ 音声振動設定のロード（audioAmplitude/audioWaveform は実行時注入なので既定のまま）
+        // ★ 音声振動設定のロード（audioAmplitude は実行時注入のエンベロープなので既定のまま）
         settings.enableAudioVibration   = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
-        settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 8.0f);
-        settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 1.0f);
+        settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 12.0f);
+        settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 4.0f);
+        settings.audioVibrationFrequency = data->Load(prefix + "audioVibrationFrequency", 22.0f);
+        settings.audioAttackSharpness = data->Load(prefix + "audioAttackSharpness", 1.8f);
+        settings.audioReleaseRate = data->Load(prefix + "audioReleaseRate", 10.0f);
 
         // ★ 発生形状設定のロード
         settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);

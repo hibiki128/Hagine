@@ -232,6 +232,11 @@ class ParticleCSGroup {
     Microsoft::WRL::ComPtr<ID3D12Resource> settingsResource_{};
     ParticleCSSettings *settingsData_ = nullptr;
 
+    // 音声振動の実行時状態（保存しない）。onset(音量の立ち上がり)で跳ね、時間で指数減衰させる
+    // エンベロープを毎フレーム計算し settingsData_->audioAmplitude へ注入する（GPU が振動の駆動に使う）。
+    float audioEnvelope_ = 0.0f; // 現在のエンベロープ値[0,1]（ビートで跳ね、releaseRate で減衰）
+    float audioPrevPeak_ = 0.0f; // 前フレームのピーク（onset=増加分の算出用）
+
     // カラーグラデーション(N段)のストップ列（CPU保持）。256段 RGBA8 LUT へベイクして CB に積む。
     std::vector<GradientStop> colorStops_;
     bool colorStopsDirty_ = true; // true のとき次の Update(vp) で LUT を再ベイク

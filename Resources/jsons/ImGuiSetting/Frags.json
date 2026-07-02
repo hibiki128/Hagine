@@ -8,7 +8,7 @@
         "z": 0.5
     },
     "isEditorMode": true,
-    "showAssetBrowserView": false,
+    "showAssetBrowserView": true,
     "showDrawSystemView": false,
     "showFPSView": true,
     "showGizmoView": false,

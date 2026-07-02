@@ -1,6 +1,8 @@
 #define NOMINMAX
 #include "ParticleCSGroup.h"
 #include <Engine/Audio/Audio.h>
+#include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <functional>
 #include <Frame.h>
@@ -348,10 +350,27 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
         lifeCurvesDirty_ = false;
     }
 
-    // 音声振動: 有効なときだけ「今流れている音量」を CB に注入する（GPU の Update が各粒子を揺らす）。
+    // 音声振動: 有効なときだけ「音の立ち上がり(onset)」からエンベロープを作って CB に注入する。
+    //   onset  = 今のピーク − 前フレームのピーク の正の部分（＝音が大きくなった“増加分”）。
+    //   エンベロープ = 時間で指数減衰させつつ onset で即座に跳ね上げる（アタック即・リリース減衰）。
+    //   → 波形が大きくなった瞬間にバンっと跳ね、その後スッと落ち着く（GPU が振動の駆動に使う）。
     // OFF のグループは触らない＝無回帰。Audio 参照は有効時のみで軽量（再生中ボイスの PCM をサンプルするだけ）。
-    settingsData_->audioAmplitude =
-        (settingsData_->enableAudioVibration != 0) ? Audio::GetInstance()->GetCurrentAmplitude() : 0.0f;
+    if (settingsData_->enableAudioVibration != 0) {
+        const float peak = Audio::GetInstance()->GetCurrentAmplitude(); // [0,1] 現在のピーク
+        const float dt = Frame::DeltaTime();
+        const float onset = (std::max)(0.0f, peak - audioPrevPeak_);    // 立ち上がり（増加分）
+        audioPrevPeak_ = peak;
+        // リリース: releaseRate[1/s] が大きいほど早く落ち着く（フレームレート非依存な指数減衰）
+        const float releaseRate = (settingsData_->audioReleaseRate > 0.0f) ? settingsData_->audioReleaseRate : 10.0f;
+        audioEnvelope_ *= std::exp(-releaseRate * dt);
+        // アタック: onset の方が大きければ即座に跳ね上げる（＝バンっ）
+        audioEnvelope_ = (std::max)(audioEnvelope_, onset);
+        settingsData_->audioAmplitude = audioEnvelope_;
+    } else {
+        audioEnvelope_ = 0.0f;
+        audioPrevPeak_ = 0.0f;
+        settingsData_->audioAmplitude = 0.0f;
+    }
 
     perViewData_->viewProjection = vp.matView_ * vp.matProjection_;
     // 距離カリング(overdraw 対策)用のカメラワールド座標。enableDistanceCull 等の設定値は
@@ -679,9 +698,15 @@ void ParticleCSGroup::CreateSettingsResource() {
 
     // ---- 音声振動 デフォルト ----
     settingsData_->enableAudioVibration = 0;
-    settingsData_->audioVibrationStrength = 8.0f;
-    settingsData_->audioVibrationSensitivity = 1.0f;
+    settingsData_->audioVibrationStrength = 12.0f;
+    settingsData_->audioVibrationSensitivity = 4.0f;
     settingsData_->audioAmplitude = 0.0f;
+    settingsData_->audioVibrationFrequency = 22.0f;
+    settingsData_->audioAttackSharpness = 1.8f;
+    settingsData_->audioReleaseRate = 10.0f;
+    settingsData_->audioPad0 = 0.0f;
+    audioEnvelope_ = 0.0f;
+    audioPrevPeak_ = 0.0f;
 }
 
 namespace {
@@ -1672,25 +1697,34 @@ void ParticleCSGroup::DrawImGui() {
 
     // ---- 音声振動 ----
     if (settingsData_->enableAudioVibration &&
-        effectHeader("音声振動（音の波形で揺らす）", ImVec4(0.35f, 0.75f, 0.9f, 1.0f),
+        effectHeader("音声振動（音の立ち上がりでバンっと揺らす）", ImVec4(0.35f, 0.75f, 0.9f, 1.0f),
                      [&] { settingsData_->enableAudioVibration = 0; })) {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.5f, 0.85f, 1.0f, 1.0f));
 
-        ImGui::TextDisabled("今 Audio で再生中の音量に合わせて、各粒子をそれぞれの向き・速さで揺らします（形状を選びません）");
+        ImGui::TextDisabled("音が大きくなった“瞬間”にバンっと強く震え、その後スッと落ち着きます（各粒子バラバラ／形状を選びません）");
 
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.08f, 0.28f, 0.38f, 0.5f));
         ImGui::DragFloat("感度##avsens", &settingsData_->audioVibrationSensitivity, 0.05f, 0.0f, 50.0f, "%.3f");
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("音への反応の強さ（音量に掛ける入力ゲイン）。大きいほど小さい音にも反応\n推奨: 1〜10");
+            ImGui::SetTooltip("音の立ち上がりへの反応の強さ（入力ゲイン）。大きいほど小さなビートにも反応\n推奨: 2〜10");
         ImGui::DragFloat("振動の大きさ##avs", &settingsData_->audioVibrationStrength, 0.1f, 0.0f, 200.0f, "%.3f");
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("揺れ幅。大きいほど激しく振動\n推奨: 4〜30");
+            ImGui::SetTooltip("揺れ幅。大きいほど激しく振動\n推奨: 6〜40");
+        ImGui::DragFloat("振動の速さ##avfreq", &settingsData_->audioVibrationFrequency, 0.2f, 0.0f, 120.0f, "%.2f");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("震える速さ（Hz的スケール）。大きいほど細かくブルブル震える\n推奨: 12〜40");
+        ImGui::DragFloat("反応カーブ##avsharp", &settingsData_->audioAttackSharpness, 0.02f, 0.1f, 8.0f, "%.2f");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("反応の鋭さ（指数）。1より大きいほど「大きい音だけドンと・小さい音は無視」\n推奨: 1.5〜3");
+        ImGui::DragFloat("落ち着く速さ##avrel", &settingsData_->audioReleaseRate, 0.1f, 0.5f, 60.0f, "%.2f");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("バンっの後どれだけ早く静まるか[1/s]。大きいほど一瞬で落ち着く（キレが増す）\n推奨: 6〜20");
         ImGui::PopStyleColor();
 
-        // 現在の音量を可視化（CB 注入値をそのまま表示。バーが音に反応すれば駆動できている）
+        // エンベロープを可視化（CB 注入値をそのまま表示。ビートで跳ねて減衰すれば駆動できている）
         ImGui::Spacing();
-        ImGui::TextDisabled("現在の音量:");
+        ImGui::TextDisabled("立ち上がり:");
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.35f, 0.75f, 0.9f, 1.0f));
         ImGui::ProgressBar(settingsData_->audioAmplitude, ImVec2(-1.0f, 0.0f));

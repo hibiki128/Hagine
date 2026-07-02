@@ -311,11 +311,15 @@ struct ParticleCSSettings
     float lifeCurvePad1;
     float4 sizeCurveLUT[64];  // 256段 float 倍率。idx の倍率 = sizeCurveLUT[idx>>2][idx&3]
     float4 alphaCurveLUT[64];
-    // ---- 音声振動（音量に合わせて全方向に揺らす）。C++ ParticleCSSettings 末尾と一致させること ----
+    // ---- 音声振動（音の立ち上がりでバンっと揺らす）。C++ ParticleCSSettings 末尾と一致させること ----
     uint enableAudioVibration;       // 1=今流れている音量で各粒子を揺らす
     float audioVibrationStrength;    // 振動の大きさ（揺れ幅）
-    float audioVibrationSensitivity; // 感度（音量に掛ける入力ゲイン）
-    float audioAmplitude;            // 現在の音量[0,1]（振動の大きさを駆動）
+    float audioVibrationSensitivity; // 感度（音の立ち上がりに掛ける入力ゲイン）
+    float audioAmplitude;            // 音の立ち上がりエンベロープ[0,1]（CPU注入。ビートで跳ね時間で減衰＝振動の駆動）
+    float audioVibrationFrequency;   // 振動の速さ（Hz的スケール。大きいほど細かく震える）
+    float audioAttackSharpness;      // 反応カーブ指数（>1で大きい音だけドンと反応・小さい音は無視）
+    float audioReleaseRate;          // エンベロープ減衰速度[1/s]（CPUが使用。shaderは未使用）
+    float audioPad0;                 // 16B境界パディング
 };
 
 // 【重要】このレイアウトは C++ 側 `struct ParticleFieldData`

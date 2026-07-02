@@ -369,16 +369,22 @@ struct ParticleCSSettings {
     float lifeCurvePad1 = 0.0f;
     float sizeCurveLUT[256] = {};
     float alphaCurveLUT[256] = {};
-    // ---- 音声振動（今流れている音量に合わせて全方向に揺らす。形状を選ばない） ----
+    // ---- 音声振動（音の“立ち上がり”に合わせてバンっと揺らす。形状を選ばない） ----
     // enableAudioVibration=1 のとき、Update が各粒子を「自分固有のランダム方向」へ
-    //   滑らかな sin 振動 × 今の音量 で揺らす（中心・半径を使わないのでどんな形でも使える）。
-    //   sin は反転するので velocity は発散せず（＝飛んでいかない）、音量で揺れ幅が膨らむ。
+    //   高周波 sin 振動 × エンベロープ で揺らす（中心・半径を使わないのでどんな形でも使える）。
+    //   ★エンベロープは CPU が「音の立ち上がり(onset)」で跳ね上げ、時間で指数減衰させる値。
+    //     → 波形が大きくなった“瞬間”にバンっと強く震え、その後スッと落ち着く（＝振動っぽい）。
+    //   ★sin は反転するので velocity は発散せず（＝飛んでいかない）。
     //   方向・位相・周波数を粒子ごとに散らすので動きがバラバラ＆ビートで一斉でなくズレて動く。
     // ※ HLSL ParticleCSSettings 末尾と一致させること（末尾追記なので既存オフセット不変＝OFFで無回帰）。
     uint32_t enableAudioVibration = 0;
-    float audioVibrationStrength = 8.0f;    // 振動の大きさ（揺れ幅）
-    float audioVibrationSensitivity = 1.0f; // 感度（音量に掛ける入力ゲイン。大きいほど小さい音にも反応）
-    float audioAmplitude = 0.0f;            // 現在の音量[0,1]（CPU が毎フレーム注入。振動の大きさを駆動）
+    float audioVibrationStrength = 12.0f;   // 振動の大きさ（揺れ幅）
+    float audioVibrationSensitivity = 4.0f; // 感度（音の立ち上がりに掛ける入力ゲイン。onset は音量より小さいので既定は大きめ）
+    float audioAmplitude = 0.0f;            // 立ち上がりエンベロープ[0,1]（CPU が毎フレーム注入。振動の大きさを駆動）
+    float audioVibrationFrequency = 22.0f;  // 振動の速さ（Hz的スケール。大きいほど細かく震える）
+    float audioAttackSharpness = 1.8f;      // 反応カーブ指数（>1で大きい音だけドンと反応）
+    float audioReleaseRate = 10.0f;         // エンベロープ減衰速度[1/s]（大きいほど早く落ち着く）
+    float audioPad0 = 0.0f;                 // 16B境界パディング
 };
 
 /// =====================================================================
