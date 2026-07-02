@@ -55,6 +55,7 @@ struct SpriteData {
     bool isBackMost = false;                                 // 背面フラグ
     BlendMode blendMode = BlendMode::kNormal;                // ブレンドモード
     bool lockAspectRatio = false;                            // アスペクト比維持フラグ
+    std::string drawGroup = "UI";                            // 描画グループ＝描画ステージ（スプライトは既定でUIレイヤー）
 
     /// <summary>
     /// コンストラクタ

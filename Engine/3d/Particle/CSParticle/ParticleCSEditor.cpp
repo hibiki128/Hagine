@@ -5,6 +5,7 @@
 #include <Particle/ParticleEditor.h>
 #include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
+#include "Engine/Render/DrawGroupManager.h"
 #include <algorithm>
 #include <myMath.h>
 #include <vector>
@@ -154,7 +155,7 @@ void ParticleCSEditor::RebuildPreviewGridContents() {
 }
 
 // オービットカメラパラメータから view 行列と view*projection 行列を計算する。
-void ParticleCSEditor::ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &outViewProj) const {
+void ParticleCSEditor::ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &outViewProj, Vector3 &outEye, float &outProjScaleY) const {
     // 球面座標からカメラ位置を求める。
     float cp = std::cos(previewCamPitch_);
     Vector3 eye = {
@@ -162,6 +163,7 @@ void ParticleCSEditor::ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &out
         previewCamTarget_.y + previewCamDistance_ * std::sin(previewCamPitch_),
         previewCamTarget_.z + previewCamDistance_ * cp * std::cos(previewCamYaw_),
     };
+    outEye = eye; // プレビューの距離カリング用カメラワールド座標
 
     // LookAt（左手系）。forward = target - eye。
     Vector3 forward = (previewCamTarget_ - eye).Normalize();
@@ -182,6 +184,7 @@ void ParticleCSEditor::ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &out
     float aspect = static_cast<float>(previewRenderWidth_) / static_cast<float>(h);
     Matrix4x4 proj = MakePerspectiveFovMatrix(fovY, aspect, 0.1f, 1000.0f);
     outViewProj = outView * proj;
+    outProjScaleY = proj.m[1][1]; // = cot(fovY/2)。プレビューの画面サイズカリング用
 }
 
 void ParticleCSEditor::RenderPreview() {
@@ -225,7 +228,9 @@ void ParticleCSEditor::RenderPreview() {
 
     // プレビューカメラ行列を計算（グリッド用 viewProject と、パーティクル用 per-view を構築）
     Matrix4x4 view{}, viewProj{};
-    ComputePreviewMatrices(view, viewProj);
+    Vector3 previewEye{};
+    float previewProjScaleY = 1.0f;
+    ComputePreviewMatrices(view, viewProj, previewEye, previewProjScaleY);
 
     // 白グリッドを描画（共有 DrawLine3D の頂点バッファとは衝突しない専用VB＋kLine3d PSO）
     if (previewShowGrid_ && previewGridVertexCount_ > 0) {
@@ -282,7 +287,10 @@ void ParticleCSEditor::RenderPreview() {
             cl->OMSetRenderTargets(1, &previewRtvHandle_, false, &previewDsvHandle_);
             cl->RSSetViewports(1, &viewport);
             cl->RSSetScissorRects(1, &scissor);
-            it->second->DrawGraphicsForPreview(previewPerViewCB_->GetGPUVirtualAddress());
+            // 描画カリング(距離/サイズ)をプレビューでも効かせるため、プレビューカメラ位置・射影と
+            // 各グループのカリング設定を per-view へ流し込む（DrawGraphicsForPreview 内でグループ毎に反映）。
+            it->second->DrawGraphicsForPreview(previewPerViewCB_->GetGPUVirtualAddress(),
+                                               previewPerViewData_, previewEye, previewProjScaleY);
         }
     }
 
@@ -498,6 +506,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name) {
     auto emitter = std::make_unique<ParticleCSEmitter>();
     emitter->Initialize(name);
     emitters_[name] = std::move(emitter);
+    DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
     ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -506,6 +515,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, const std::st
     auto emitter = std::make_unique<ParticleCSEmitter>();
     emitter->Initialize(name, modelPath);
     emitters_[name] = std::move(emitter);
+    DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
     ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -514,6 +524,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, PrimitiveType
     auto emitter = std::make_unique<ParticleCSEmitter>();
     emitter->Initialize(name, primitiveType);
     emitters_[name] = std::move(emitter);
+    DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
     ImGuiNotification::Post("GPUパーティクルエミッターを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -528,6 +539,20 @@ void ParticleCSEditor::DrawAllGraphics(const ViewProjection &vp_) {
     for (auto &[name, emitter] : emitters_) {
         emitter->DrawGraphics(vp_);
     }
+}
+
+std::vector<std::string> ParticleCSEditor::GetEmitterNames() const {
+    std::vector<std::string> names;
+    names.reserve(emitters_.size());
+    for (const auto &[name, emitter] : emitters_) {
+        names.push_back(name);
+    }
+    return names;
+}
+
+ParticleCSEmitter *ParticleCSEditor::GetEmitterByName(const std::string &name) {
+    auto it = emitters_.find(name);
+    return (it != emitters_.end()) ? it->second.get() : nullptr;
 }
 
 void ParticleCSEditor::DrawAll(const ViewProjection &vp_) {
@@ -594,17 +619,15 @@ void ParticleCSEditor::ShowDeleteSection() {
 
     // パーティクルグループ一覧と削除ボタン
     if (ColoredCollapsingHeader("グループ一覧・削除", 1)) {
-        auto groups = particleGroupManager_->GetParticleGroups();
-        if (groups.empty()) {
+        // 遅延生成対応: 実体未確保のグループも一覧・削除できるよう、
+        // ロード済みテンプレートではなく登録簿の全グループ名を使う。
+        auto groupNames = particleGroupManager_->GetAllGroupNames();
+        if (groupNames.empty()) {
             ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "グループがありません");
         } else {
             // ループ中の削除を避けるため、削除対象を先に確定してから消す
             std::string toDelete;
-            for (const auto &group : groups) {
-                if (!group) {
-                    continue;
-                }
-                const std::string &groupName = group->GetGroupName();
+            for (const auto &groupName : groupNames) {
                 ImGui::Bullet();
                 ImGui::SameLine();
                 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "%s", groupName.c_str());

@@ -8,6 +8,7 @@
         "z": 0.5
     },
     "isEditorMode": true,
+    "showAssetBrowserView": false,
     "showDrawSystemView": false,
     "showFPSView": true,
     "showGizmoView": false,
@@ -17,7 +18,7 @@
     "showMotionEditorView": false,
     "showObjectView": false,
     "showOfScreenView": false,
-    "showParticlePreviewView": true,
+    "showParticlePreviewView": false,
     "showParticleView": false,
     "showSceneView": false,
     "showShadowMapView": false,

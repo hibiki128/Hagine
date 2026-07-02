@@ -1,6 +1,8 @@
 #include "DemoScene.h"
 #include "Engine/Utility/Scene/SceneManager.h"
 
+REGISTER_SCENE("DEMO", DemoScene)
+
 using namespace Hagine;
 void DemoScene::Initialize() {
     /// ===================================================
@@ -30,7 +32,6 @@ void DemoScene::Initialize() {
     drawSystem_->Register("DemoScene_All", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
         spriteManager_->DrawAll();
         objectManager_->Draw(vp);
-        ptEditor_->DrawAll(vp);
     });
 }
 
@@ -81,7 +82,6 @@ void DemoScene::AddParticleSetting() {
     /// ===================================================
     /// パーティクル設定（デバッグ）
     /// ===================================================
-    DrawParticleEditorUI();
 }
 
 void DemoScene::CameraUpdate() {

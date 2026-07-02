@@ -103,6 +103,11 @@ class ParticleCSEditor {
     // エミッターを名前指定で削除
     void RemoveParticleEmitter(const std::string &name);
 
+    // 登録済みエミッター名の一覧を取得（描画グループ管理UIで使用）
+    std::vector<std::string> GetEmitterNames() const;
+    // 名前からエミッターを取得（なければ nullptr）
+    ParticleCSEmitter *GetEmitterByName(const std::string &name);
+
     // ===== プレビュー窓 (Phase 8) =====
     // 専用オフスクリーンRTを生成する（初回のみ）。Initialize から呼ぶ。
     void InitializePreview();
@@ -178,6 +183,7 @@ class ParticleCSEditor {
     // ワイヤーフレーム用VBを最大容量で確保し永続マップする（初回のみ）。
     void BuildPreviewWireBuffer();
     // 現在のカメラパラメータから view 行列と view*projection 行列を計算する。
-    void ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &outViewProj) const;
+    // outEye=カメラワールド座標, outProjScaleY=projection[1][1]（プレビューの描画カリング用）。
+    void ComputePreviewMatrices(Matrix4x4 &outView, Matrix4x4 &outViewProj, Vector3 &outEye, float &outProjScaleY) const;
 };
 } // namespace Hagine

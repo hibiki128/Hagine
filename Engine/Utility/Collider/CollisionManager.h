@@ -3,6 +3,7 @@
 #include "ColliderBase.h"
 #include "type/AABBCollider.h"
 #include "type/CylinderCollider.h"
+#include "type/MeshCollider.h"
 #include "type/OBBCollider.h"
 #include "type/SphereCollider.h"
 #include <Camera/ViewProjection/ViewProjection.h>
@@ -83,6 +84,23 @@ class CollisionManager {
     /// <param name="outMTV">出力されるめり込み解消ベクトル</param>
     /// <returns>bool: めり込みがあれば true</returns>
     bool CalculateDepenetration(AABBCollider *a, AABBCollider *b, Vector3 &outMTV);
+
+    /// <summary>
+    /// 任意の2コライダーのめり込み解消ベクトル（MTV）を計算する統一API。
+    /// ヒット判定（TestCollision）とは独立した「押し戻し」専用の入口。
+    /// 形状ペアに応じて適切な計算へディスパッチし、a を b から押し出す向きの MTV を返す。
+    /// Sphere/AABB/OBB/Cylinder/Mesh の全組み合わせに対応する。
+    /// ・Mesh×形状：メッシュ三角形からの正確な押し出し（円柱はAABB近似）。
+    /// ・Mesh×Mesh：動かす側 a をワールド外接球で近似し、相手メッシュ b から押し出す
+    ///   （球モデル等のコンパクトな凸形状なら近似誤差は小さい。巨大な静的メッシュを
+    ///   動かす側にすると外接球が破綻するため、静的側は押し出しOFFで運用すること）。
+    /// ・円柱が絡むペアはY軸直立円柱とみなしたXZ近似（inwardは内側へ、それ以外は外側へ）。
+    /// </summary>
+    /// <param name="a">押し出される側のコライダー</param>
+    /// <param name="b">押し出す基準となるコライダー</param>
+    /// <param name="outMTV">a に加算するとめり込みが解消される MTV</param>
+    /// <returns>bool: めり込みがあれば true</returns>
+    bool ComputeDepenetration(ColliderBase *a, ColliderBase *b, Vector3 &outMTV);
 
     /// <summary>
     /// OBBと円柱の衝突判定

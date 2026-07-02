@@ -151,6 +151,7 @@ class Object3d {
 
     const bool GetHaveAnimation() const { return model_->GetModelData().hasAnimations; }
     bool IsFinish() { return currentModelAnimation_->IsFinish(); }
+    Model *GetModel() const { return model_; }
 
     Material *GetMaterial(uint32_t index) {
         return (index < materials_.size()) ? materials_[index].get() : nullptr;

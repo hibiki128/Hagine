@@ -147,6 +147,9 @@ class ParticleEmitter {
     void SetActive(bool isActive) { isActive_ = isActive; }
     void SetFrequency(float frequency) { emitFrequency_ = frequency; }
     void SetName(const std::string &name) { name_ = name; }
+    const std::string &GetName() const { return name_; }
+    const std::string &GetDrawGroup() const { return drawGroup_; }
+    void SetDrawGroup(const std::string &group) { drawGroup_ = group; }
     void SetTrailEnabled(const std::string &groupName, bool enabled);
     void SetTrailInterval(const std::string &groupName, float interval);
     void SetMaxTrailParticles(const std::string &groupName, int maxTrails);
@@ -280,7 +283,8 @@ class ParticleEmitter {
     bool isAuto_ = false;             // 自動発生フラグ
     bool isGizmoSelectable_ = true;   // ギズモ選択可能フラグ
 
-    std::string name_;         // パーティクルの名前
+    std::string name_;                   // パーティクルの名前
+    std::string drawGroup_ = "3D";       // 描画グループ＝描画ステージ（既定は3D）
     WorldTransform transform_; // 位置や回転などのトランスフォーム
 
     std::unordered_map<std::string, ParticleSetting> particleSettings_; // グループごとの設定

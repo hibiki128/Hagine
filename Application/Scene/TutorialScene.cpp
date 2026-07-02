@@ -4,6 +4,8 @@
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
 
+REGISTER_SCENE("TUTORIAL", TutorialScene)
+
 using namespace Hagine;
 void TutorialScene::Initialize() {
     /// ===================================================

@@ -7,6 +7,7 @@
 #include <Line/DrawLine3D.h>
 #include <Shadow/ShadowMap.h>
 #include <Particle/ParticleCommon.h>
+#include <Debug/GpuProfiler/GpuProfiler.h>
 #include <random>
 #include <regex>
 #include"../Utility/Debug/ImGui/ImGuizmoManager.h"
@@ -67,34 +68,85 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
     if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
     if (particleGroups_.empty()) return;
 
+    // --- アイドルグループのスキップ判定 ---
+    // 「前フレームの生存数(readback)が0」かつ「今フレーム発生しない」グループは、
+    // Reset/Emit/Update/Readback のGPUディスパッチ・バリア・readbackコピーをまるごと省く。
+    // これでグループごとの固定オーバーヘッド（最低4096スレッドのUpdate + バリア数本 + CopyResource）が消える。
+    //
+    // 安全性: 判定に使う aliveDrawCount_ は readback で1〜2フレーム遅延する。
+    //   ・発生を止めた直後は遅延中 生存数>0 のまま → スキップせず drain し切るので取りこぼしなし。
+    //   ・生存0が観測できた時点で両ping-pongカウンタは既に0 → 凍結しても位相/カウンタは不整合にならない。
+    //   ・フィールド接触発生(emitOnlyOnFieldContact_)はGPU判定でCPUから確定できないため常時アクティブ扱い(安全側)。
+    groupActive_.assign(particleGroups_.size(), 1);
+    const bool fieldSpawnPossible = emitOnlyOnFieldContact_ && receiveFields_;
+    const bool emitterEmitting = (emitterMeshData_->emit != 0);
+    bool anyActive = false;
+    for (size_t i = 0; i < particleGroups_.size(); ++i) {
+        ParticleCSGroup *group = particleGroups_[i];
+        // aliveDrawCount_ は前フレームの DrawGraphics/プレビューが全グループで更新済み(1〜2F遅延)。
+        // ここで再度 FetchAliveDrawCount(Map/Unmap) すると全グループ分の余計なCPUコストになるので既存値を使う。
+        const bool willEmit = fieldSpawnPossible ||
+                              (emitterEmitting && group->GetSettingsData()->emitCount > 0);
+        const bool active = willEmit || (group->GetAliveDrawCount() > 0);
+        groupActive_[i] = active ? 1u : 0u;
+        anyActive = anyActive || active;
+    }
+    // 全グループがアイドルなら、このエミッターのコンピュートは丸ごと不要（グローバルバリアも省ける）。
+    if (!anyActive) return;
+
     auto *computeCmdList = dxCommon_->GetComputeCommandList().Get();
     dxCommon_->BeginComputeFrame();
 
-    for (auto &group : particleGroups_) {
+    auto *fieldMgr = ParticleCSFieldManager::GetInstance();
+    auto fieldCountRes = receiveFields_ ? fieldMgr->GetFieldCountResource()
+                                        : fieldMgr->GetZeroFieldCountResource();
+    // このグループ群がフィールドの影響を受けるか（軽量 Update 適格判定に使う）。
+    // receiveFields_=false なら shader へ渡る fieldCount は 0 なので影響なし扱い。
+    const bool fieldsActive = receiveFields_ && (fieldMgr->GetActiveFieldCount() > 0);
+
+    // §8 生存リスト間接ディスパッチ:
+    //   Emit と Update がどちらも out リストへ append するため、フレーム順序は
+    //   「reset(out) → Emit(append) → barrier → Update(read in, append out) → readback」。
+    //   Emit は全グループを一括ディスパッチするので、reset/フェーズ反転は全グループ分先に行う。
+
+    // 1) 各グループ: CPU更新 + フェーズ反転 + out カウンタを 0 リセット（Emit の append より前）
+    //    アイドルグループはここも省く（位相を進めず凍結する）。
+    for (size_t i = 0; i < particleGroups_.size(); ++i) {
+        if (!groupActive_[i]) continue;
+        auto &group = particleGroups_[i];
         group->Update(vp);
-
-        auto *fieldMgr = ParticleCSFieldManager::GetInstance();
-        auto fieldCountRes = receiveFields_ ? fieldMgr->GetFieldCountResource()
-                                            : fieldMgr->GetZeroFieldCountResource();
-
-        EmitterDisPatch(computeCmdList);
-
-        D3D12_RESOURCE_BARRIER uavBarrier{};
-        uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-        uavBarrier.UAV.pResource = group->GetOutputParticleResource().Get();
-        computeCmdList->ResourceBarrier(1, &uavBarrier);
-
-        // 生存コンパクションカウンタを 0 にリセット（Update の append より前）
+        group->AdvanceAliveFrame();
         group->ResetAliveCounterDispatch(computeCmdList);
+    }
 
-        group->UpdateParticleCSDisPatch(
+    // 2) Emit（全グループ一括）: 新規粒子を out リスト/renderCompact へ append
+    int emitSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Emit");
+    EmitterDisPatch(computeCmdList);
+    GpuProfiler::GetInstance()->Close(computeCmdList, emitSpan);
+
+    // 3) Emit が書いた SoA6本 + 生存リストを Update の前に可視化（グローバル UAV バリア）
+    D3D12_RESOURCE_BARRIER uavBarrier{};
+    uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    uavBarrier.UAV.pResource = nullptr;
+    computeCmdList->ResourceBarrier(1, &uavBarrier);
+
+    // 4) 各グループ: Update（in リストを sim し survivor を out へ append）
+    int updateSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Update");
+    for (size_t i = 0; i < particleGroups_.size(); ++i) {
+        if (!groupActive_[i]) continue;
+        particleGroups_[i]->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),
             fieldCountRes,
             fieldMgr->GetOverrideSrvHandle(),
+            fieldsActive,
             computeCmdList);
+    }
+    GpuProfiler::GetInstance()->Close(computeCmdList, updateSpan);
 
-        // 生存数を readback バッファへコピー（compute キュー上で記録）
-        group->RecordAliveCountReadback(computeCmdList);
+    // 5) 各グループ: 生存数(out カウンタ)を readback バッファへコピー（compute キュー上で記録）
+    for (size_t i = 0; i < particleGroups_.size(); ++i) {
+        if (!groupActive_[i]) continue;
+        particleGroups_[i]->RecordAliveCountReadback(computeCmdList);
     }
     // Execute は DrawSystem（または呼び出し元）が一括で行う
 }
@@ -105,6 +157,7 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
 
     DrawEmitter();
 
+    int drawSpan = GpuProfiler::GetInstance()->OpenGraphics(commandList_, "Draw");
     for (auto &group : particleGroups_) {
         // Phase 2: 旧 CountParticle 全Nディスパッチは廃止（生存数は aliveCounter に統合）
 
@@ -130,15 +183,18 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
             commandList_->IASetIndexBuffer(&indexBufferView);
             commandList_->IASetVertexBuffers(0, 1, &vertexBufferView);
             commandList_->SetGraphicsRootConstantBufferView(0, group->GetPerViewResource()->GetGPUVirtualAddress());
-            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetOutputParticleSrvForVSIndex());
+            // 描画コンパクション: t0=詰めた描画バッファ(順次読み), t4=Rotation(回転グループのみscatter)
+            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetRenderCompactSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
             commandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
             // 生存コンパクション SRV (t2: aliveList, t3: aliveCount)
             srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
+            srvManager_->SetGraphicsRootDescriptorTable(6, group->GetRotationSrvForVSIndex());
             commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
+    GpuProfiler::GetInstance()->Close(commandList_, drawSpan);
 }
 
 void ParticleCSEmitter::Draw(const ViewProjection &vp) {
@@ -149,12 +205,30 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
     DrawGraphics(vp);
 }
 
-void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress) {
+void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress,
+                                               PerView *previewPerView,
+                                               const Vector3 &cameraPos,
+                                               float projScaleY) {
     if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
     if (particleGroups_.empty()) return;
 
     // ワイヤーフレーム(DrawEmitter)はプレビューでは描かない。
+    int drawSpan = GpuProfiler::GetInstance()->OpenGraphics(commandList_, "Draw(プレビュー)");
     for (auto &group : particleGroups_) {
+        // 描画カリング(距離/サイズ)をプレビューでも効かせる。プレビューは独立 per-view CB を
+        // 使うため、グループの設定とプレビューカメラ位置/射影をここで per-view へ反映する。
+        // （単一バッファなので複数グループ時は最後のグループ設定が全体に効く＝プレビューの簡略許容）
+        if (previewPerView) {
+            const PerView *gpv = group->GetPerView();
+            previewPerView->cameraPosition = cameraPos;
+            previewPerView->projScaleY = projScaleY;
+            previewPerView->enableDistanceCull = gpv->enableDistanceCull;
+            previewPerView->distanceCullStart = gpv->distanceCullStart;
+            previewPerView->distanceCullEnd = gpv->distanceCullEnd;
+            previewPerView->enableSizeClamp = gpv->enableSizeClamp;
+            previewPerView->maxScreenHeight = gpv->maxScreenHeight;
+            previewPerView->minScreenHeight = gpv->minScreenHeight;
+        }
         group->FetchAliveDrawCount();
         const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
         uint32_t drawCount = group->GetAliveDrawCount();
@@ -175,14 +249,17 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
             commandList_->IASetVertexBuffers(0, 1, &vertexBufferView);
             // root param 0 のみプレビュー専用 per-view CB に差し替える（共有グループの VP は不変）
             commandList_->SetGraphicsRootConstantBufferView(0, perViewGpuAddress);
-            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetOutputParticleSrvForVSIndex());
+            // 描画コンパクション: t0=詰めた描画バッファ, t4=Rotation(回転グループのみ)
+            srvManager_->SetGraphicsRootDescriptorTable(1, group->GetRenderCompactSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
             commandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
             srvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
             srvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
+            srvManager_->SetGraphicsRootDescriptorTable(6, group->GetRotationSrvForVSIndex());
             commandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
         }
     }
+    GpuProfiler::GetInstance()->Close(commandList_, drawSpan);
 }
 
 void ParticleCSEmitter::LoadModel(const std::string &modelPath) {
@@ -194,11 +271,23 @@ void ParticleCSEmitter::LoadModel(const std::string &modelPath) {
 }
 
 void ParticleCSEmitter::LoadPrimitiveModel(PrimitiveType type) {
-    std::string modelKey = ModelManager::GetInstance()->CreatePrimitiveModel(type, "");
+    // 円形系(Ring/Sphere/Cylinder/Cone)は分割数/半径パラメータを反映して生成する。
+    std::string modelKey = IsParametricPrimitive(type)
+                               ? ModelManager::GetInstance()->CreatePrimitiveModel(type, "", primitiveParams_)
+                               : ModelManager::GetInstance()->CreatePrimitiveModel(type, "");
     model_ = ModelManager::GetInstance()->FindModel(modelKey);
     if (model_) {
         modelData_ = model_->GetModelData();
     }
+}
+
+void ParticleCSEmitter::RebuildPrimitiveModel() {
+    if (primitiveType_ == PrimitiveType::None)
+        return;
+    // モデルを作り直し、発生面(三角形)・エッジも新しい形状で再構築する。
+    LoadPrimitiveModel(primitiveType_);
+    CreateModelTriangles();
+    CreateModelEdges();
 }
 
 void ParticleCSEmitter::Update() {
@@ -312,6 +401,14 @@ void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group) {
         return;
     }
     independentGroup->SetSettingData(*group->GetSettingsData());
+    // カラーグラデーションのストップ列は settings とは別ストレージなので別途コピーし、
+    // 独立グループ側で 256段 LUT を再ベイクさせる（コピーしないと既定ストップでベイクされ崩れる）。
+    independentGroup->GetColorStops() = group->GetColorStops();
+    independentGroup->MarkColorStopsDirty();
+    // 寿命カーブの制御点も別ストレージなので伝播させ、独立グループ側で再ベイクさせる。
+    independentGroup->GetSizeCurvePoints() = group->GetSizeCurvePoints();
+    independentGroup->GetAlphaCurvePoints() = group->GetAlphaCurvePoints();
+    independentGroup->MarkLifeCurvesDirty();
     independentGroup->SetBlendMode(group->GetParticleGroupData().blendMode);
     independentGroup->SetBillboard(group->GetPerView()->enableBillboard);
     particleGroups_.push_back(independentGroup);
@@ -362,8 +459,11 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
         ComputePipelineType::kEmitter,
         BlendMode::kNormal, ShaderMode::kNone, cl);
 
-    uint32_t groupIndex = 0;
-    for (auto &group : particleGroups_) {
+    for (uint32_t groupIndex = 0; groupIndex < particleGroups_.size(); ++groupIndex) {
+        auto &group = particleGroups_[groupIndex];
+        // アイドルグループ(生存0かつ発生なし。DrawCompute で判定)は発生ディスパッチも省く。
+        if (groupIndex < groupActive_.size() && !groupActive_[groupIndex])
+            continue;
         group->GetPerFrameData()->groupId = groupIndex;
         group->GetPerFrameData()->emitterFieldGroupId = fieldGroupId_;
 
@@ -372,27 +472,39 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
         settings->gatherTarget = emitterMeshData_->translate + settings->gatherTargetOffset;
         settings->vortexTarget = emitterMeshData_->translate + settings->vortexTargetOffset;
 
-        cl->SetComputeRootDescriptorTable(0, group->GetOutputParticleSrvHandle().second);
-        cl->SetComputeRootDescriptorTable(1, group->GetFreeListIndexSrvHandle().second);
-        cl->SetComputeRootDescriptorTable(2, group->GetFreeListSrvHandle().second);
-        cl->SetComputeRootDescriptorTable(3, group->GetFreeListTrailIndexSrvHandle().second);
-
-        cl->SetComputeRootConstantBufferView(4, emitterMeshResource_->GetGPUVirtualAddress());
-        cl->SetComputeRootConstantBufferView(5, group->GetPerFrameResource()->GetGPUVirtualAddress());
-        cl->SetComputeRootConstantBufferView(6, group->GetSettingsResource()->GetGPUVirtualAddress());
+        // SoA UAV (u0-u5)
+        cl->SetComputeRootDescriptorTable(0, group->GetLifeUavGpu());
+        cl->SetComputeRootDescriptorTable(1, group->GetDrawCoreUavGpu());
+        cl->SetComputeRootDescriptorTable(2, group->GetSimCoreUavGpu());
+        cl->SetComputeRootDescriptorTable(3, group->GetTrailUavGpu());
+        cl->SetComputeRootDescriptorTable(4, group->GetRotationUavGpu());
+        cl->SetComputeRootDescriptorTable(5, group->GetOverrideUavGpu());
+        // フリーリスト (u6-u8)
+        cl->SetComputeRootDescriptorTable(6, group->GetFreeListIndexSrvHandle().second);
+        cl->SetComputeRootDescriptorTable(7, group->GetFreeListSrvHandle().second);
+        cl->SetComputeRootDescriptorTable(8, group->GetFreeListTrailIndexSrvHandle().second);
+        // 生存リスト間接ディスパッチ (u9-u11): out リスト/カウンタ + renderCompact。
+        //   Emit は新規粒子をここへ append する。continue より前に常時バインドしておく。
+        cl->SetComputeRootDescriptorTable(17, group->GetAliveListUavHandle().second);
+        cl->SetComputeRootDescriptorTable(18, group->GetAliveCounterUavHandle().second);
+        cl->SetComputeRootDescriptorTable(19, group->GetRenderCompactUavGpu());
+        // CBV (b0-b2)。b3:FieldCB はフィールド有無で下の分岐が param 12 に設定する。
+        cl->SetComputeRootConstantBufferView(9, emitterMeshResource_->GetGPUVirtualAddress());
+        cl->SetComputeRootConstantBufferView(10, group->GetPerFrameResource()->GetGPUVirtualAddress());
+        cl->SetComputeRootConstantBufferView(11, group->GetSettingsResource()->GetGPUVirtualAddress());
 
         if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
-            cl->SetComputeRootDescriptorTable(8, triangleInfoSrvHandle_.second);
-            cl->SetComputeRootDescriptorTable(9, triangleCDFSrvHandle_.second);
+            cl->SetComputeRootDescriptorTable(13, triangleInfoSrvHandle_.second);
+            cl->SetComputeRootDescriptorTable(14, triangleCDFSrvHandle_.second);
         }
 
         if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
-            cl->SetComputeRootDescriptorTable(10, edgeInfoSrvHandle_.second);
+            cl->SetComputeRootDescriptorTable(15, edgeInfoSrvHandle_.second);
         }
 
         {
             auto *fieldManager = ParticleCSFieldManager::GetInstance();
-            cl->SetComputeRootDescriptorTable(11, fieldManager->GetFieldsSrvHandle().second);
+            cl->SetComputeRootDescriptorTable(16, fieldManager->GetFieldsSrvHandle().second);
 
             if (emitOnlyOnFieldContact_ && receiveFields_) {
                 bool hasEmitSpawnField = false;
@@ -409,8 +521,7 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
                 }
 
                 if (!hasEmitSpawnField) {
-                    cl->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
-                    groupIndex++;
+                    cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
                     continue;
                 }
 
@@ -435,7 +546,7 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
                     break;
                 }
 
-                cl->SetComputeRootConstantBufferView(7, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
+                cl->SetComputeRootConstantBufferView(12, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
 
                 int dispatchCount = (settings->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
                 cl->Dispatch(dispatchCount, 1, 1);
@@ -444,23 +555,19 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
                 settings->lifeTimeMin = savedLifeMin;
                 settings->lifeTimeMax = savedLifeMax;
 
-                groupIndex++;
                 continue;
 
             } else {
-                cl->SetComputeRootConstantBufferView(7, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
+                cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
             }
         }
 
         if (emitterMeshData_->emit == 0 || settings->emitCount == 0) {
-            groupIndex++;
             continue;
         }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
         cl->Dispatch(dispatchCount, 1, 1);
-
-        groupIndex++;
     }
 }
 
@@ -710,6 +817,7 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("isAuto", isAuto_);
     data->Save("isVisible", isVisible_);
     data->Save("isGizmoSelectable", isGizmoSelectable_);
+    data->Save("drawGroup", drawGroup_);
     data->Save("frequency", emitterMeshData_->frequency);
     data->Save("frequencyTime", emitterMeshData_->frequencyTime);
     data->Save<Vector3>("translate", emitterMeshData_->translate);
@@ -718,6 +826,10 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("emitFromSurface", emitterMeshData_->emitFromSurface);
     data->Save("modelPath", modelPath_);
     data->Save("primitiveType", static_cast<int>(primitiveType_));
+    // プリミティブ形状パラメータ（リング等の分割数・半径）
+    data->Save("primitiveDivide", static_cast<int>(primitiveParams_.divide));
+    data->Save("primitiveRingOuter", primitiveParams_.ringOuterRadius);
+    data->Save("primitiveRingInner", primitiveParams_.ringInnerRadius);
 
     // フィールド影響設定
     data->Save("receiveFields", receiveFields_);
@@ -813,6 +925,14 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "enableVelocityStretch", group->GetPerView()->enableVelocityStretch);
         data->Save(prefix + "velocityStretchFactor", group->GetPerView()->velocityStretchFactor);
 
+        // ★ 描画カリング(overdraw対策)設定の保存
+        data->Save(prefix + "enableDistanceCull", group->GetPerView()->enableDistanceCull);
+        data->Save(prefix + "distanceCullStart", group->GetPerView()->distanceCullStart);
+        data->Save(prefix + "distanceCullEnd", group->GetPerView()->distanceCullEnd);
+        data->Save(prefix + "enableSizeClamp", group->GetPerView()->enableSizeClamp);
+        data->Save(prefix + "maxScreenHeight", group->GetPerView()->maxScreenHeight);
+        data->Save(prefix + "minScreenHeight", group->GetPerView()->minScreenHeight);
+
         // ★ 中間カラー設定の保存
         data->Save(prefix + "enableMidColor", group->GetSettingsData()->enableMidColor);
         data->Save(prefix + "midColorRatio", group->GetSettingsData()->midColorRatio);
@@ -823,10 +943,42 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "turbulenceStrength", group->GetSettingsData()->turbulenceStrength);
         data->Save(prefix + "turbulenceFrequency", group->GetSettingsData()->turbulenceFrequency);
 
+        // ★ 音声振動設定の保存（audioAmplitude は実行時注入のエンベロープなので保存しない）
+        data->Save(prefix + "enableAudioVibration", group->GetSettingsData()->enableAudioVibration);
+        data->Save(prefix + "audioVibrationStrength", group->GetSettingsData()->audioVibrationStrength);
+        data->Save(prefix + "audioVibrationSensitivity", group->GetSettingsData()->audioVibrationSensitivity);
+        data->Save(prefix + "audioVibrationFrequency", group->GetSettingsData()->audioVibrationFrequency);
+        data->Save(prefix + "audioAttackSharpness", group->GetSettingsData()->audioAttackSharpness);
+        data->Save(prefix + "audioReleaseRate", group->GetSettingsData()->audioReleaseRate);
+
         // ★ 発生形状設定の保存
         data->Save(prefix + "emitShape", group->GetSettingsData()->emitShape);
         data->Save(prefix + "emitSphereRadius", group->GetSettingsData()->emitSphereRadius);
         data->Save(prefix + "emitConeAngle", group->GetSettingsData()->emitConeAngle);
+
+        // ★ カラーグラデーション(N段)設定の保存（有効フラグ + ストップ列）
+        data->Save(prefix + "enableColorGradient", group->GetSettingsData()->enableColorGradient);
+        const auto &stops = group->GetColorStops();
+        data->Save(prefix + "colorStopCount", static_cast<int>(stops.size()));
+        for (size_t si = 0; si < stops.size(); ++si) {
+            std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
+            data->Save<Vector4>(sp + "color", stops[si].color);
+            data->Save(sp + "pos", stops[si].pos);
+        }
+
+        // ★ 寿命カーブ(サイズ/アルファ)設定の保存（有効フラグ + 制御点列）
+        data->Save(prefix + "enableSizeCurve", group->GetSettingsData()->enableSizeCurve);
+        data->Save(prefix + "enableAlphaCurve", group->GetSettingsData()->enableAlphaCurve);
+        auto saveCurve = [&](const std::string &key, const std::vector<CurvePoint> &pts) {
+            data->Save(prefix + key + "Count", static_cast<int>(pts.size()));
+            for (size_t pi = 0; pi < pts.size(); ++pi) {
+                std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
+                data->Save(pp + "x", pts[pi].x);
+                data->Save(pp + "y", pts[pi].y);
+            }
+        };
+        saveCurve("sizeCurve", group->GetSizeCurvePoints());
+        saveCurve("alphaCurve", group->GetAlphaCurvePoints());
     }
     ImGuiNotification::Post("パーティクル設定を保存しました: " + name_, {0.2f, 0.8f, 0.2f, 1.0f});
 }
@@ -837,6 +989,10 @@ void ParticleCSEmitter::LoadSetting() {
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
     isGizmoSelectable_ = data->Load("isGizmoSelectable", true);
+    drawGroup_ = data->Load<std::string>("drawGroup", "3D");
+    if (drawGroup_ != "UI") {
+        drawGroup_ = "3D"; // 旧データは3D扱いに正規化
+    }
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
@@ -846,6 +1002,10 @@ void ParticleCSEmitter::LoadSetting() {
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
+    // プリミティブ形状パラメータ（LoadPrimitiveModel より前に復元しておくこと）
+    primitiveParams_.divide = static_cast<uint32_t>(data->Load("primitiveDivide", 32));
+    primitiveParams_.ringOuterRadius = data->Load("primitiveRingOuter", 1.0f);
+    primitiveParams_.ringInnerRadius = data->Load("primitiveRingInner", 0.5f);
     // フィールド影響設定
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
@@ -952,6 +1112,14 @@ void ParticleCSEmitter::LoadSetting() {
         group->GetPerView()->enableVelocityStretch = data->Load<uint32_t>(prefix + "enableVelocityStretch", 0);
         group->GetPerView()->velocityStretchFactor  = data->Load(prefix + "velocityStretchFactor", 0.1f);
 
+        // ★ 描画カリング(overdraw対策)設定のロード
+        group->GetPerView()->enableDistanceCull = data->Load<uint32_t>(prefix + "enableDistanceCull", 0);
+        group->GetPerView()->distanceCullStart  = data->Load(prefix + "distanceCullStart", 50.0f);
+        group->GetPerView()->distanceCullEnd    = data->Load(prefix + "distanceCullEnd", 100.0f);
+        group->GetPerView()->enableSizeClamp    = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
+        group->GetPerView()->maxScreenHeight    = data->Load(prefix + "maxScreenHeight", 1.0f);
+        group->GetPerView()->minScreenHeight    = data->Load(prefix + "minScreenHeight", 0.0f);
+
         // ★ 中間カラー設定のロード
         settings.enableMidColor  = data->Load<uint32_t>(prefix + "enableMidColor", 0);
         settings.midColorRatio   = data->Load(prefix + "midColorRatio", 0.5f);
@@ -962,12 +1130,58 @@ void ParticleCSEmitter::LoadSetting() {
         settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
         settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
 
+        // ★ 音声振動設定のロード（audioAmplitude は実行時注入のエンベロープなので既定のまま）
+        settings.enableAudioVibration   = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
+        settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 12.0f);
+        settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 4.0f);
+        settings.audioVibrationFrequency = data->Load(prefix + "audioVibrationFrequency", 22.0f);
+        settings.audioAttackSharpness = data->Load(prefix + "audioAttackSharpness", 1.8f);
+        settings.audioReleaseRate = data->Load(prefix + "audioReleaseRate", 10.0f);
+
         // ★ 発生形状設定のロード
         settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);
         settings.emitSphereRadius = data->Load(prefix + "emitSphereRadius", 1.0f);
         settings.emitConeAngle    = data->Load(prefix + "emitConeAngle", 0.5236f);
 
+        // ★ カラーグラデーション(N段)設定のロード（有効フラグは settings、ストップは group 側ストレージ）
+        settings.enableColorGradient = data->Load<uint32_t>(prefix + "enableColorGradient", 0);
+        // ★ 寿命カーブ(サイズ/アルファ)の有効フラグ（点は group 側ストレージ）
+        settings.enableSizeCurve  = data->Load<uint32_t>(prefix + "enableSizeCurve", 0);
+        settings.enableAlphaCurve = data->Load<uint32_t>(prefix + "enableAlphaCurve", 0);
+
         group->SetSettingData(settings);
+
+        {
+            int stopCount = data->Load(prefix + "colorStopCount", 0);
+            if (stopCount > 0) {
+                auto &stops = group->GetColorStops();
+                stops.clear();
+                for (int si = 0; si < stopCount; ++si) {
+                    std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
+                    GradientStop gs;
+                    gs.color = data->Load<Vector4>(sp + "color", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+                    gs.pos = data->Load(sp + "pos", 0.0f);
+                    stops.push_back(gs);
+                }
+                group->MarkColorStopsDirty();
+            }
+            // 寿命カーブの制御点をロード（サイズ/アルファ）。
+            auto loadCurve = [&](const std::string &key, std::vector<CurvePoint> &out) {
+                int cnt = data->Load(prefix + key + "Count", 0);
+                if (cnt <= 0) return;
+                out.clear();
+                for (int pi = 0; pi < cnt; ++pi) {
+                    std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
+                    CurvePoint cp;
+                    cp.x = data->Load(pp + "x", 0.0f);
+                    cp.y = data->Load(pp + "y", 1.0f);
+                    out.push_back(cp);
+                }
+            };
+            loadCurve("sizeCurve", group->GetSizeCurvePoints());
+            loadCurve("alphaCurve", group->GetAlphaCurvePoints());
+            group->MarkLifeCurvesDirty();
+        }
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
 
         AddParticleGroup(group);
@@ -987,6 +1201,10 @@ void ParticleCSEmitter::LoadCloneSetting() {
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
     isGizmoSelectable_ = data->Load("isGizmoSelectable", true);
+    drawGroup_ = data->Load<std::string>("drawGroup", "3D");
+    if (drawGroup_ != "UI") {
+        drawGroup_ = "3D"; // 旧データは3D扱いに正規化
+    }
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
     emitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     emitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
@@ -996,6 +1214,10 @@ void ParticleCSEmitter::LoadCloneSetting() {
 
     modelPath_ = data->Load("modelPath", std::string(""));
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
+    // プリミティブ形状パラメータ（LoadPrimitiveModel より前に復元しておくこと）
+    primitiveParams_.divide = static_cast<uint32_t>(data->Load("primitiveDivide", 32));
+    primitiveParams_.ringOuterRadius = data->Load("primitiveRingOuter", 1.0f);
+    primitiveParams_.ringInnerRadius = data->Load("primitiveRingInner", 0.5f);
     // フィールド影響設定
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
@@ -1103,6 +1325,14 @@ void ParticleCSEmitter::LoadCloneSetting() {
         group->GetPerView()->enableVelocityStretch = data->Load<uint32_t>(prefix + "enableVelocityStretch", 0);
         group->GetPerView()->velocityStretchFactor  = data->Load(prefix + "velocityStretchFactor", 0.1f);
 
+        // ★ 描画カリング(overdraw対策)設定のロード
+        group->GetPerView()->enableDistanceCull = data->Load<uint32_t>(prefix + "enableDistanceCull", 0);
+        group->GetPerView()->distanceCullStart  = data->Load(prefix + "distanceCullStart", 50.0f);
+        group->GetPerView()->distanceCullEnd    = data->Load(prefix + "distanceCullEnd", 100.0f);
+        group->GetPerView()->enableSizeClamp    = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
+        group->GetPerView()->maxScreenHeight    = data->Load(prefix + "maxScreenHeight", 1.0f);
+        group->GetPerView()->minScreenHeight    = data->Load(prefix + "minScreenHeight", 0.0f);
+
         // ★ 中間カラー設定のロード
         settings.enableMidColor  = data->Load<uint32_t>(prefix + "enableMidColor", 0);
         settings.midColorRatio   = data->Load(prefix + "midColorRatio", 0.5f);
@@ -1113,12 +1343,58 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
         settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
 
+        // ★ 音声振動設定のロード（audioAmplitude は実行時注入のエンベロープなので既定のまま）
+        settings.enableAudioVibration   = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
+        settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 12.0f);
+        settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 4.0f);
+        settings.audioVibrationFrequency = data->Load(prefix + "audioVibrationFrequency", 22.0f);
+        settings.audioAttackSharpness = data->Load(prefix + "audioAttackSharpness", 1.8f);
+        settings.audioReleaseRate = data->Load(prefix + "audioReleaseRate", 10.0f);
+
         // ★ 発生形状設定のロード
         settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);
         settings.emitSphereRadius = data->Load(prefix + "emitSphereRadius", 1.0f);
         settings.emitConeAngle    = data->Load(prefix + "emitConeAngle", 0.5236f);
 
+        // ★ カラーグラデーション(N段)設定のロード（有効フラグは settings、ストップは group 側ストレージ）
+        settings.enableColorGradient = data->Load<uint32_t>(prefix + "enableColorGradient", 0);
+        // ★ 寿命カーブ(サイズ/アルファ)の有効フラグ（点は group 側ストレージ）
+        settings.enableSizeCurve  = data->Load<uint32_t>(prefix + "enableSizeCurve", 0);
+        settings.enableAlphaCurve = data->Load<uint32_t>(prefix + "enableAlphaCurve", 0);
+
         group->SetSettingData(settings);
+
+        {
+            int stopCount = data->Load(prefix + "colorStopCount", 0);
+            if (stopCount > 0) {
+                auto &stops = group->GetColorStops();
+                stops.clear();
+                for (int si = 0; si < stopCount; ++si) {
+                    std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
+                    GradientStop gs;
+                    gs.color = data->Load<Vector4>(sp + "color", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+                    gs.pos = data->Load(sp + "pos", 0.0f);
+                    stops.push_back(gs);
+                }
+                group->MarkColorStopsDirty();
+            }
+            // 寿命カーブの制御点をロード（サイズ/アルファ）。
+            auto loadCurve = [&](const std::string &key, std::vector<CurvePoint> &out) {
+                int cnt = data->Load(prefix + key + "Count", 0);
+                if (cnt <= 0) return;
+                out.clear();
+                for (int pi = 0; pi < cnt; ++pi) {
+                    std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
+                    CurvePoint cp;
+                    cp.x = data->Load(pp + "x", 0.0f);
+                    cp.y = data->Load(pp + "y", 1.0f);
+                    out.push_back(cp);
+                }
+            };
+            loadCurve("sizeCurve", group->GetSizeCurvePoints());
+            loadCurve("alphaCurve", group->GetAlphaCurvePoints());
+            group->MarkLifeCurvesDirty();
+        }
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
 
         AddParticleGroup(group);
@@ -1236,6 +1512,44 @@ void ParticleCSEmitter::DrawImGui() {
                         ImGui::Text("モデル: %s", modelPath_.c_str());
                     } else if (primitiveType_ != PrimitiveType::None) {
                         ImGui::Text("プリミティブタイプ");
+
+                        // 円形プリミティブ(Ring/Sphere/Cylinder/Cone)は分割数・形状を調整できる。
+                        if (IsParametricPrimitive(primitiveType_)) {
+                            ImGui::Spacing();
+                            ImGui::TextDisabled("形状パラメータ");
+                            bool rebuild = false;
+
+                            int divide = static_cast<int>(primitiveParams_.divide);
+                            ImGui::SetNextItemWidth(180.0f);
+                            if (ImGui::DragInt("分割数##primDivide", &divide, 0.5f, 3, 256)) {
+                                primitiveParams_.divide = static_cast<uint32_t>(divide < 3 ? 3 : divide);
+                            }
+                            if (ImGui::IsItemDeactivatedAfterEdit())
+                                rebuild = true;
+                            if (ImGui::IsItemHovered())
+                                ImGui::SetTooltip("円周方向の分割数。多いほど滑らか（頂点・三角形が増えます）");
+
+                            // リングは外半径・内半径（円の幅 = 外 - 内）を調整できる。
+                            if (primitiveType_ == PrimitiveType::Ring) {
+                                ImGui::SetNextItemWidth(180.0f);
+                                ImGui::DragFloat("外半径##primOuter", &primitiveParams_.ringOuterRadius, 0.01f, 0.01f, 100.0f, "%.3f");
+                                if (ImGui::IsItemDeactivatedAfterEdit())
+                                    rebuild = true;
+                                ImGui::SetNextItemWidth(180.0f);
+                                ImGui::DragFloat("内半径##primInner", &primitiveParams_.ringInnerRadius, 0.01f, 0.0f, 100.0f, "%.3f");
+                                if (ImGui::IsItemDeactivatedAfterEdit())
+                                    rebuild = true;
+                                if (ImGui::IsItemHovered())
+                                    ImGui::SetTooltip("円の幅 = 外半径 - 内半径");
+                            }
+
+                            if (rebuild) {
+                                // 内半径が外半径を超えないようクランプしてから作り直す。
+                                if (primitiveParams_.ringInnerRadius > primitiveParams_.ringOuterRadius)
+                                    primitiveParams_.ringInnerRadius = primitiveParams_.ringOuterRadius;
+                                RebuildPrimitiveModel();
+                            }
+                        }
                     }
                 }
 
@@ -1390,13 +1704,14 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::Spacing();
 
-                auto allGroups = ParticleCSGroupManager::GetInstance()->GetParticleGroups();
+                // 遅延生成対応: 実体(GPUバッファ)未確保のグループも選べるよう、
+                // ロード済みテンプレートではなく登録簿の全グループ名から一覧を作る。
+                auto allGroupNames = ParticleCSGroupManager::GetInstance()->GetAllGroupNames();
 
                 std::vector<std::string> availableNames;
                 std::vector<std::string> attachedNames;
 
-                for (auto *group : allGroups) {
-                    const std::string &name = group->GetGroupName();
+                for (const auto &name : allGroupNames) {
                     if (particleGroupNames_.contains(name)) {
                         attachedNames.push_back(name);
                     } else {

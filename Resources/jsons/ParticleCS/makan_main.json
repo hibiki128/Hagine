@@ -1,10 +1,11 @@
 {
+    "drawGroup": "3D",
     "emitFromSurface": 0,
     "emitOnlyOnFieldContact": false,
     "fieldContactEmitCount": 1000,
     "fieldGroupId": -1,
     "frequency": 0.0010000000474974513,
-    "frequencyTime": 435.59521484375,
+    "frequencyTime": 691.0259399414063,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -30,48 +31,55 @@
     "group_0_curlNoiseBlendMode": 0,
     "group_0_curlNoiseOctaves": 1,
     "group_0_curlNoisePosRandomStrength": 0.0,
-    "group_0_curlNoiseScale": 1.0,
-    "group_0_curlNoiseStrength": 1.0,
-    "group_0_curlNoiseTimeScale": 1.0,
+    "group_0_curlNoiseScale": 0.0,
+    "group_0_curlNoiseStrength": 90.30000305175781,
+    "group_0_curlNoiseTimeScale": 11.550000190734863,
+    "group_0_emitConeAngle": 0.5235999822616577,
     "group_0_emitCount": 100,
+    "group_0_emitShape": 0,
+    "group_0_emitSphereRadius": 1.0,
     "group_0_enableAcceleration": 0,
+    "group_0_enableBillboard": 1,
     "group_0_enableCurlNoise": 0,
     "group_0_enableEndScale": 0,
     "group_0_enableGather": 0,
-    "group_0_enableGatherForTrail": 0,
+    "group_0_enableGatherForTrail": 1,
     "group_0_enableGravity": 0,
     "group_0_enableLifetimeScale": 1,
     "group_0_enableLifetimeVelocityDamping": 0,
+    "group_0_enableMidColor": 1,
     "group_0_enableRadialVelocity": 0,
     "group_0_enableRandomAngularVelocity": 0,
     "group_0_enableRandomColor": 0,
     "group_0_enableRandomRotation": 0,
     "group_0_enableSinScale": 1,
     "group_0_enableTrail": 0,
+    "group_0_enableTurbulence": 0,
     "group_0_enableVelocityDamping": 0,
+    "group_0_enableVelocityStretch": 0,
     "group_0_enableVortex": 0,
     "group_0_enableVortexForTrail": 0,
     "group_0_enablebilboard": 1,
     "group_0_endColor": {
         "w": 1.0,
         "x": 1.0,
-        "y": 0.4279569983482361,
-        "z": 0.06666666269302368
+        "y": 0.7311827540397644,
+        "z": 0.0
     },
     "group_0_endScaleValue": {
         "x": 0.0,
-        "y": 0.0,
+        "y": 2.369999885559082,
         "z": 0.0
     },
-    "group_0_gatherStartRatio": 0.5,
-    "group_0_gatherStrength": 1.0,
+    "group_0_gatherStartRatio": 0.0,
+    "group_0_gatherStrength": 217.10000610351563,
     "group_0_gatherTarget": {
-        "x": -0.4000000059604645,
+        "x": -100.4000015258789,
         "y": 0.0,
         "z": 0.0
     },
     "group_0_gatherTargetOffset": {
-        "x": 0.0,
+        "x": -100.0,
         "y": 0.0,
         "z": 0.0
     },
@@ -89,6 +97,13 @@
         "y": 0.0,
         "z": 0.0
     },
+    "group_0_midColor": {
+        "w": 1.0,
+        "x": 0.9247312545776367,
+        "y": 1.0,
+        "z": 0.0
+    },
+    "group_0_midColorRatio": 0.25,
     "group_0_minLifetime": 0.25,
     "group_0_minScale": 0.25,
     "group_0_minVelocity": {
@@ -98,12 +113,12 @@
     },
     "group_0_name": "makan_main",
     "group_0_radialVelocityCenter": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
+        "x": -6.199999809265137,
+        "y": 11.899999618530273,
+        "z": 7.400000095367432
     },
-    "group_0_radialVelocityRandomness": 0.0,
-    "group_0_radialVelocityStrength": 0.0,
+    "group_0_radialVelocityRandomness": 1.0,
+    "group_0_radialVelocityStrength": 106.0,
     "group_0_rotationMax": {
         "x": 0.0,
         "y": 0.0,
@@ -118,9 +133,9 @@
     "group_0_sinScaleFrequency": 1000.0,
     "group_0_startColor": {
         "w": 1.0,
-        "x": 1.0,
-        "y": 0.5806451439857483,
-        "z": 0.0
+        "x": 0.4086017608642578,
+        "y": 0.0,
+        "z": 1.0
     },
     "group_0_trailColorMultiplier": {
         "w": 0.699999988079071,
@@ -138,13 +153,16 @@
     },
     "group_0_trailSpawnDistance": 0.10000000149011612,
     "group_0_trailVelocityScale": 0.30000001192092896,
+    "group_0_turbulenceFrequency": 26.299999237060547,
+    "group_0_turbulenceStrength": 31.25,
     "group_0_velocityDampingFactor": 0.0,
+    "group_0_velocityStretchFactor": 0.0,
     "group_0_vortexAxis": {
         "x": 0.0,
-        "y": 1.0,
-        "z": 0.0
+        "y": 0.0,
+        "z": 1.0
     },
-    "group_0_vortexStrength": 1.0,
+    "group_0_vortexStrength": 34.70000076293945,
     "group_0_vortexTarget": {
         "x": -0.4000000059604645,
         "y": 0.0,
@@ -156,6 +174,7 @@
         "z": 0.0
     },
     "isAuto": false,
+    "isGizmoSelectable": true,
     "isVisible": false,
     "modelPath": "",
     "particleGroupCount": 1,

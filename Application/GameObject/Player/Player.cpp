@@ -206,8 +206,8 @@ void Player::Update() {
         generatedField_->data.position = GetWorldPosition();
         gamePad_->Update();
 
-        //shadow_->GetLocalPosition() = {transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
-        //shadow_->Update();
+        // shadow_->GetLocalPosition() = {transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
+        // shadow_->Update();
 
         if (isInvincible_) {
             InvincibleUpdate();
@@ -288,7 +288,7 @@ void Player::Update() {
 
         shake_->Update();
 
-        auraEmitter_->SetTranslate(GetWorldPosition());
+        auraEmitter_->SetTranslate({GetWorldPosition().x, GetWorldPosition().y + auraEmitter_->GetScale().y, GetWorldPosition().z});
         auraEmitter_->SetRotation(-GetWorldRotation());
         auraEmitter_->Update();
 
@@ -684,30 +684,27 @@ void Player::Move() {
         xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
         zInput = gamePad_->GetLeftStickY();  // 左スティックY軸
 
-        bool isLTHeld = gamePad_->GetLeftTrigger() > 0.25f;
+        // 左スティックが倒れているか（ダッシュ維持の判定に使う）
+        bool hasStickInput = (xInput != kInputZero || zInput != kInputZero);
 
-        if (isLTHeld) {
-            // LT中にAボタンでダッシュ開始
-            if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
-                dashInputX_ = xInput;
-                dashInputZ_ = zInput;
-                isDashing_ = true;
-                dashStartedThisFrame_ = true;
-                dashDuration_ = 0.0f;
-            }
+        // Aボタンのトリガーでダッシュ開始（LTは不要）。
+        // すでにダッシュ中の場合は再始動しないため、ダッシュ中のA入力は
+        // Rush 側のトリガーとして扱われる（PlayerStateFly* の TryChangeToRush）。
+        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
+            dashInputX_ = xInput;
+            dashInputZ_ = zInput;
+            isDashing_ = true;
+            dashStartedThisFrame_ = true;
+            dashDuration_ = 0.0f;
+        }
 
-            // エネルギー不足の場合はダッシュ中以外は移動させない
-            if (energy_ < maxEnergy_ && !isDashing_) {
-                xInput = kInputZero;
-                zInput = kInputZero;
-            }
-        } else {
-            // LTを離したらダッシュ解除
+        // スティックをニュートラルに戻したらダッシュ解除。
+        // ただし開始フレームはニュートラル始動（敵方向への急接近）を許可するため維持する。
+        if (isDashing_ && !hasStickInput && !dashStartedThisFrame_) {
             isDashing_ = false;
             dashInputX_ = kInputZero;
             dashInputZ_ = kInputZero;
             dashDuration_ = 0.0f;
-            dashStartedThisFrame_ = false;
         }
     }
 
@@ -1173,10 +1170,8 @@ void Player::UpdateDashState() {
         return; // キーボードの場合はダッシュ継続時間を管理しない
     }
 
-    bool isLTHeld = gamePad_->GetLeftTrigger() > 0.25f;
-
-    if (isLTHeld && isDashing_) {
-        dashDuration_ += dt_; // ダッシュ継続時間を更新
+    if (isDashing_) {
+        dashDuration_ += dt_; // ダッシュ継続時間を更新（A＋スティックで維持）
     }
 
     // dashStartedThisFrame_ は1フレームだけ true になるフラグ

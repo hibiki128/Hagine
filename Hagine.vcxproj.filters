@@ -428,9 +428,6 @@
     <ClCompile Include="Engine\Utility\LoadFile\Csv\CsvLoad.cpp">
       <Filter>Engine\Utility\LoadFile\Csv</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Utility\Scene\SceneFactory.cpp">
-      <Filter>Engine\Utility\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\Utility\Scene\SceneManager.cpp">
       <Filter>Engine\Utility\Scene</Filter>
     </ClCompile>
@@ -489,6 +486,10 @@
     <ClCompile Include="Engine\Utility\Debug\ImGui\ImGuiNotification.cpp" />
     <ClCompile Include="Engine\3d\Shadow\ShadowMap.cpp" />
     <ClCompile Include="Engine\Render\DrawSystem.cpp" />
+    <ClCompile Include="Engine\Utility\Collider\type\MeshCollider.cpp" />
+    <ClCompile Include="externals\imgui\ImGradient.cpp" />
+    <ClCompile Include="externals\imgui\ImCurveEdit.cpp" />
+    <ClCompile Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -850,13 +851,10 @@
     <ClInclude Include="Engine\Utility\LoadFile\Csv\CsvLoad.h">
       <Filter>Engine\Utility\LoadFile\Csv</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Utility\Scene\AbstractSceneFactory.h">
-      <Filter>Engine\Utility\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Utility\Scene\SceneFactory.h">
-      <Filter>Engine\Utility\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\Utility\Scene\SceneManager.h">
+      <Filter>Engine\Utility\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Utility\Scene\SceneRegistry.h">
       <Filter>Engine\Utility\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Utility\Scene\SceneTransition.h">
@@ -918,6 +916,8 @@
     <ClInclude Include="Engine\2d\Text\TextRenderer.h" />
     <ClInclude Include="Engine\Utility\Debug\ImGui\ImGuiNotification.h" />
     <ClInclude Include="Engine\Render\DrawSystem.h" />
+    <ClInclude Include="Engine\Utility\Collider\type\MeshCollider.h" />
+    <ClInclude Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />

@@ -64,6 +64,12 @@ class ImGuiManager {
     void Draw();
 
     /// <summary>
+    /// マルチビューポート描画（ドックから切り離したウィンドウを独立OSウィンドウとして描画）。
+    /// メインビューポートの Present 後に呼ぶこと。
+    /// </summary>
+    void RenderMultiViewport();
+
+    /// <summary>
     /// .iniファイル関連の更新
     /// </summary>
     void UpdateIni();
@@ -109,8 +115,10 @@ class ImGuiManager {
     Vector2 GetSceneSize() const {
         return Vector2(sceneTextureSize_.x, sceneTextureSize_.y);
     }
+    // レイ計算用のシーン位置（クライアント座標系。Mouse::GetMousePos と同じ空間）。
+    // マルチビューポートで ImGui 座標がスクリーン全体座標になってもマウスと整合させるため。
     Vector2 GetScenePos() const {
-        return Vector2(actualScenePos_.x, actualScenePos_.y);
+        return Vector2(scenePosForRay_.x, scenePosForRay_.y);
     }
 #endif // USE_IMGUI
 
@@ -162,6 +170,9 @@ class ImGuiManager {
 
     void ShowDrawSystemWindow();
 
+    // アセットブラウザ窓（resources/images をサムネ一覧表示、各サムネをD&Dのドラッグ元にする）
+    void ShowAssetBrowserWindow();
+
     void FixAspectRatio();
 
     void BackupDockLayout();
@@ -196,7 +207,8 @@ class ImGuiManager {
 
     // シーンウィンドウ
     ImVec2 sceneTextureSize_ = {800.0f, 450.0f};
-    ImVec2 actualScenePos_ = {};
+    ImVec2 actualScenePos_ = {};   // ImGui座標系（ImGuizmo用）
+    ImVec2 scenePosForRay_ = {};   // クライアント座標系（レイ計算用）
 
 #endif // USE_IMGUI
     int cubeCount_ = 0;
@@ -219,7 +231,8 @@ class ImGuiManager {
     bool showFPSView_ = true;
     bool showOfScreenView_ = true;
     bool showLightView_ = true;
-    bool isEditorMode_ = true; // エディターモードフラグ
+    bool isEditorMode_ = true;    // エディターモードフラグ
+    bool multiViewport_ = false;  // マルチビューポート有効フラグ
     bool showShortcutWindow_ = false;
     bool showGizmoView_ = true;
     bool showHierarchyView_ = true;
@@ -229,6 +242,7 @@ class ImGuiManager {
     bool showAudioManagerView_ = false;
     bool showShadowMapView_ = true;
     bool showDrawSystemView_ = true;
+    bool showAssetBrowserView_ = false; // アセットブラウザ窓
 
     // グリッド設定用メンバ変数
     bool showGrid_ = true;

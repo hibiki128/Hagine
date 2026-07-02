@@ -19,9 +19,10 @@ enum class TutorialStep : int {
     Landing,       ///< 09. 空中状態解除・着地
     MeleeAttack,   ///< 10. 近接攻撃（エネミー必要）
     RangedAttack,  ///< 11. 遠距離攻撃（エネミー必要）
-    ChargeAttack,  ///< 12. チャージ攻撃（エネミー必要）
-    EnergyCharge,  ///< 13. エネルギーチャージ
-    SpecialAttack, ///< 14. 必殺技
+    Guard,         ///< 12. ガード（防御）（エネミー必要）
+    ChargeAttack,  ///< 13. チャージ攻撃（エネミー必要）
+    EnergyCharge,  ///< 14. エネルギーチャージ
+    SpecialAttack, ///< 15. 必殺技
     Complete,      ///< 完了
     StepCount      ///< 配列サイズ用（値として使用しない）
 };
@@ -181,6 +182,7 @@ class TutorialSystem {
     bool CheckLanding();
     bool CheckMeleeAttack();
     bool CheckRangedAttack();
+    bool CheckGuard();
     bool CheckChargeAttack(float dt);
     bool CheckEnergyCharge();
     bool CheckSpecialAttack();

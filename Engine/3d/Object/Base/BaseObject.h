@@ -3,6 +3,7 @@
 #include "Collider/ColliderBase.h"
 #include "Collider/type/AABBCollider.h"
 #include "Collider/type/CylinderCollider.h"
+#include "Collider/type/MeshCollider.h"
 #include "Collider/type/OBBCollider.h"
 #include "Collider/type/SphereCollider.h"
 #include "Data/DataHandler.h"
@@ -85,6 +86,8 @@ class BaseObject {
     AABBCollider *AddAABBCollider(const std::string &name = "");
     OBBCollider *AddOBBCollider(const std::string &name = "");
     CylinderCollider *AddCylinderCollider(const std::string &name = "");
+    // 自身のモデル形状から三角形メッシュコライダーを生成する（静的な複雑形状向け）
+    MeshCollider *AddMeshCollider(const std::string &name = "");
 
     // 中心座標取得
     WorldTransform *GetWorldTransform() { return transform_.get(); }
@@ -131,6 +134,7 @@ class BaseObject {
     const WorldTransform &GetTransform() { return *transform_; }
     std::string &GetName() { return objectName_; }
     std::string &GetModelPath() { return modelPath_; }
+    bool &GetIsModelDraw() { return isModelDraw_; }
     std::string &GetTexturePath(int index = 0) { return texturePaths_[index]; }
     std::string GetParentName() const;
     std::vector<std::string> GetChildrenNames() const;
@@ -222,11 +226,61 @@ class BaseObject {
     /// <param name="loop">ループ再生するか（デフォルト true）。攻撃系は false を渡すこと</param>
     void AddAnimation(const std::string &filePath, bool loop = true) { obj3d_->AddAnimation(filePath, loop); }
 
+    /// ===================================================
+    /// 物理（リジッドボディ）
+    /// ===================================================
+
+    /// <summary>
+    /// リジッドボディの物理パラメータ
+    /// </summary>
+    struct RigidBodyParams {
+        bool enabled = false;                  // リジッドボディとして物理挙動させるか
+        bool useGravity = true;                // 重力を適用するか
+        float mass = 1.0f;                     // 質量（外力 F=ma に使用）
+        Vector3 gravity = {0.0f, -9.8f, 0.0f}; // 重力加速度
+        float linearDamping = 0.05f;           // 速度の減衰（空気抵抗）
+        float restitution = 0.0f;              // 反発係数（0=跳ねない, 1=完全反発）
+        float friction = 0.3f;                 // 接触摩擦（接線速度の減衰, 坂の滑り方に影響）
+        Vector3 velocity = {0.0f, 0.0f, 0.0f}; // 速度（ランタイム状態。保存しない）
+    };
+
+    /// <summary>重力・速度を積分して位置を更新する（Update から毎フレーム呼ばれる）</summary>
+    /// <param name="deltaTime">前フレームからの経過秒</param>
+    void UpdatePhysics(float deltaTime);
+
+    /// <summary>外力を加える（次の UpdatePhysics で a=F/m として速度に反映）</summary>
+    void AddForce(const Vector3 &force) { accumulatedForce_ += force; }
+
+    /// <summary>リジッドボディ（物理挙動）の有効/無効を設定</summary>
+    void SetRigidBody(bool enable) { rigidBody_.enabled = enable; }
+    bool IsRigidBody() const { return rigidBody_.enabled; }
+    RigidBodyParams &GetRigidBody() { return rigidBody_; }
+
+    /// <summary>
+    /// 衝突時の押し出し（めり込み解消）の有効/無効を設定する。
+    /// 有効化すると、このオブジェクトの各コライダーの OnCollision に押し出し処理を仕込む。
+    /// ※ 独自の衝突コールバックを持つオブジェクト（Player 等）では使わないこと（上書きされる）。
+    /// </summary>
+    void SetResolveCollision(bool enable);
+    bool IsResolveCollision() const { return resolveCollision_; }
+
   private:
     void DebugObject();
     void ShowFileSelector();
     // ブレンドモードの選択UI
     void ShowBlendModeCombo(BlendMode &currentMode);
+
+    // --- 物理 ---
+    /// <summary>衝突相手に対して押し出し（＋リジッドボディなら速度補正）を適用する</summary>
+    void ResolveCollisionWith(ColliderBase *self, ColliderBase *other);
+    /// <summary>全コライダーの OnCollision に押し出しコールバックを仕込む</summary>
+    void InstallResolveCallbacks();
+    /// <summary>全コライダーの OnCollision をクリアする</summary>
+    void ClearResolveCallbacks();
+    /// <summary>物理パラメータを ObjectDatas_ へ保存</summary>
+    void SavePhysics();
+    /// <summary>物理パラメータを ObjectDatas_ から読み込み</summary>
+    void LoadPhysics();
 
     bool shouldSave_ = true;
     bool isGizmoSelectable_ = true;
@@ -234,6 +288,11 @@ class BaseObject {
     std::string parentName_{};
 
     std::vector<std::unique_ptr<ColliderBase>> colliders_;
+
+    // --- 物理（リジッドボディ）状態 ---
+    RigidBodyParams rigidBody_;                       // 物理パラメータ
+    Vector3 accumulatedForce_ = {0.0f, 0.0f, 0.0f};   // 1フレーム分の外力
+    bool resolveCollision_ = false;                   // 衝突時に押し出すか
 
     // スケールにイージングを適用してモーションを確認するためのデバッグ用状態
     struct ScaleEaseState {

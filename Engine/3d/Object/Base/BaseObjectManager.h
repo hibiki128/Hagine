@@ -188,6 +188,16 @@ class BaseObjectManager {
     /// </summary>
     void ShowSaveTargetManager();
 
+    /// ===================================================
+    /// 描画グループ関連
+    /// ===================================================
+
+    /// <summary>
+    /// 登録済みオブジェクトの統合ビューを取得（描画システムの一覧表示などで使用）
+    /// </summary>
+    /// <returns>名前 → オブジェクトのマップ（読み取り専用）</returns>
+    const std::unordered_map<std::string, BaseObject *> &GetObjects() const { return objects_; }
+
   private:
     /// ===================================================
     /// private method（各機能の個別描画・内部処理）

@@ -20,11 +20,12 @@ const TutorialStepConfig TutorialSystem::kConfigs[static_cast<int>(TutorialStep:
     {"[SPACE保持 / RBボタン保持] で上昇しよう", nullptr, 2.0f, 0, false},                                 // Ascend
     {"[LSHIFT保持 / RT] で下降しよう", "着地してしまったら、もう一度空中状態になろう！", 2.0f, 0, false}, // Descend
     {"[WASD / 左スティック] で空中を移動しよう", nullptr, 3.0f, 0, false},                                // AirMove
-    {"[C / LT] を長押ししながら [WASD / スティック] でダッシュ！", nullptr, 0.0f, 1, false},              // Dash
+    {"[Ctrl保持 / Aボタン] ＋ [WASD / スティック] でダッシュ！", nullptr, 0.0f, 1, false},                // Dash
     {"ダッシュ中に [Ctrl×2 / Aボタン] でダミーへ急接近！", nullptr, 0.0f, 1, true},                       // Rush
     {"[LSHIFT×2 / RT] で空中状態を解除して着地しよう", nullptr, 0.0f, 1, false},                          // Landing
     {"[H / Xボタン] でダミーを近接攻撃！（3回）", nullptr, 0.0f, 3, true},                                // MeleeAttack
     {"[J / Yボタン] で通常射撃！（3回）", nullptr, 0.0f, 3, true},                                        // RangedAttack
+    {"[RShift保持 / Bボタン保持] でガード！", nullptr, 0.0f, 1, true},                                     // Guard
     {"[J長押し → 離す / Y長押し → 離す] でチャージ攻撃！", nullptr, 0.0f, 1, true},                       // ChargeAttack
     {"[C保持 / LT保持] でエネルギーをチャージしよう！（3秒）", nullptr, 3.0f, 0, false},                  // EnergyCharge
     {"エネルギーが溜まったら [G / LT長押し中にYボタン] で必殺技！", nullptr, 0.0f, 1, false},             // SpecialAttack
@@ -160,6 +161,9 @@ void TutorialSystem::UpdateCurrentStep(float dt) {
     case TutorialStep::RangedAttack:
         conditionMet = CheckRangedAttack();
         break;
+    case TutorialStep::Guard:
+        conditionMet = CheckGuard();
+        break;
     case TutorialStep::ChargeAttack:
         conditionMet = CheckChargeAttack(dt);
         break;
@@ -284,6 +288,12 @@ bool TutorialSystem::CheckMeleeAttack() {
 bool TutorialSystem::CheckRangedAttack() {
     // 通常射撃トリガー（3 回）
     return IsRangedTrigger();
+}
+
+bool TutorialSystem::CheckGuard() {
+    // Guard ステートへ遷移した瞬間を検出（前フレームとの比較）
+    const std::string &current = player_->GetCurrentStateName();
+    return (current == "Guard" && prevStateName_ != "Guard");
 }
 
 bool TutorialSystem::CheckChargeAttack(float dt) {
@@ -429,9 +439,10 @@ void TutorialSystem::DrawImGui() {
         "09. 着地",               // Landing
         "10. 近接攻撃",           // MeleeAttack
         "11. 遠距離攻撃",         // RangedAttack
-        "12. チャージ攻撃",       // ChargeAttack
-        "13. エネルギーチャージ", // EnergyCharge
-        "14. 必殺技",             // SpecialAttack
+        "12. ガード",             // Guard
+        "13. チャージ攻撃",       // ChargeAttack
+        "14. エネルギーチャージ", // EnergyCharge
+        "15. 必殺技",             // SpecialAttack
         "--- 完了 ---",           // Complete
     };
 

@@ -188,6 +188,10 @@ class DirectXCommon {
     // ---- 非同期コンピュートキュー API ----
     /// コンピュートコマンドリストを取得
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetComputeCommandList() { return computeCommandList_; }
+    /// Direct(graphics) コマンドキューを取得（GPUタイムスタンプ周波数取得などに使用）
+    ID3D12CommandQueue *GetCommandQueue() { return commandQueue_.Get(); }
+    /// Compute コマンドキューを取得（GPUタイムスタンプ周波数取得などに使用）
+    ID3D12CommandQueue *GetComputeCommandQueue() { return computeCommandQueue_.Get(); }
     /// コンピュートコマンドをGPUに送信し完了フェンスを発行する
     void ExecuteComputeCommands();
     /// Direct Queue が Compute Queue の完了を GPU 側で待機する（CPU はブロックしない）

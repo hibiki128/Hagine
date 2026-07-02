@@ -18,7 +18,8 @@ enum class ColliderType {
     Sphere,
     AABB,
     OBB,
-    Cylinder
+    Cylinder,
+    Mesh
 };
 
 class CollisionManager;
@@ -162,6 +163,18 @@ class ColliderBase {
     }
 
     /// <summary>
+    /// タグ・マスクを無視して全コライダーと判定するか設定（デバッグ用）
+    /// </summary>
+    /// <param name="enable">全判定を有効にするなら true</param>
+    void SetCollideWithAll(bool enable) { collideWithAll_ = enable; }
+
+    /// <summary>
+    /// タグ・マスクを無視して全コライダーと判定するかを取得
+    /// </summary>
+    /// <returns>bool: 全判定が有効なら true</returns>
+    bool CollidesWithAll() const { return collideWithAll_; }
+
+    /// <summary>
     /// 衝突判定の有効/無効を設定
     /// </summary>
     /// <param name="enabled">有効にするなら true</param>
@@ -294,6 +307,7 @@ class ColliderBase {
     std::string name_;                              // 名前
     std::string tag_ = "None";                      // 自身のタグ
     std::unordered_set<std::string> collisionMask_; // 衝突対象タグの集合
+    bool collideWithAll_ = false;                    // タグ無視で全コライダーと判定（デバッグ用）
     bool isEnabled_ = true;                          // 衝突判定の有効フラグ
     bool isVisible_ = true;                          // デバッグ表示の可視フラグ
     bool isCollidingInCurrentFrame_ = false;         // 現フレームの衝突フラグ

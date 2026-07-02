@@ -27,6 +27,7 @@ void ColliderBase::SaveToJson() {
 
     dataHandler_->Save("isVisible", isVisible_);
     dataHandler_->Save("isEnabled", isEnabled_);
+    dataHandler_->Save("collideWithAll", collideWithAll_);
     dataHandler_->Save("tag", tag_);
 
     // 衝突マスクを配列として保存
@@ -41,6 +42,7 @@ void ColliderBase::LoadFromJson() {
 
     isVisible_ = dataHandler_->Load<bool>("isVisible", true);
     isEnabled_ = dataHandler_->Load<bool>("isEnabled", true);
+    collideWithAll_ = dataHandler_->Load<bool>("collideWithAll", false);
     tag_ = dataHandler_->Load<std::string>("tag", "None");
 
     // 衝突マスクを配列から読み込み
@@ -53,6 +55,11 @@ void ColliderBase::LoadFromJson() {
 
 #ifdef _DEBUG
 void ColliderBase::ImGuiTagSettings() {
+    // タグ・マスクを無視して全コライダーと判定する（押し戻し検証用）
+    ImGui::Checkbox("全コライダーと判定（タグ無視）", &collideWithAll_);
+    ImGui::SetItemTooltip("タグ/マスク設定に関係なく、全てのコライダーと衝突判定する。タグ設定ミスの切り分け用");
+    ImGui::Spacing();
+
     // タグ選択
     ImGui::Text("タグ:");
     ImGui::SameLine(120);

@@ -94,8 +94,6 @@ void Enemy::Init(const std::string objectName) {
 
     // チャージ攻撃演出（enemyChargeAura: 既存の気弾チャージオーラ）
     chargeAura_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("enemyChargeAura");
-    // チャージ発射閃光
-    burstFlash_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("burstFlash");
     // ビームメイン演出（プレイヤーの MakanAttackSkill と同じテンプレートを流用）
     beamMainEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("makan_main");
     // ビームらせん演出
@@ -238,9 +236,6 @@ void Enemy::Update() {
                 chargeAura_->SetTranslate(selfPos);
                 chargeAura_->SetRotation(-selfRot);
                 chargeAura_->Update();
-            }
-            if (burstFlash_) {
-                burstFlash_->Update();
             }
             if (beamMainEffect_) {
                 beamMainEffect_->Update();
@@ -464,8 +459,6 @@ void Enemy::Draw(const ViewProjection &viewProjection) {
 void Enemy::DrawParticleCompute(const ViewProjection &viewProjection) {
     if (chargeAura_)
         chargeAura_->DrawCompute(viewProjection);
-    if (burstFlash_)
-        burstFlash_->DrawCompute(viewProjection);
     if (beamMainEffect_)
         beamMainEffect_->DrawCompute(viewProjection);
     if (beamAroundEffect_)
@@ -477,8 +470,6 @@ void Enemy::DrawParticle(const ViewProjection &viewProjection) {
     // 大技演出（Graphics フェーズ）
     if (chargeAura_)
         chargeAura_->DrawGraphics(viewProjection);
-    if (burstFlash_)
-        burstFlash_->DrawGraphics(viewProjection);
     if (beamMainEffect_)
         beamMainEffect_->DrawGraphics(viewProjection);
     if (beamAroundEffect_)
@@ -1050,12 +1041,6 @@ void Enemy::StopChargeAura() {
 
 void Enemy::FireChargeBlast() {
     StopChargeAura();
-
-    // 発射閃光
-    if (burstFlash_) {
-        burstFlash_->SetTranslate(GetPositionFront(2.0f));
-        burstFlash_->EmitOnce();
-    }
 
     if (!target_)
         return;

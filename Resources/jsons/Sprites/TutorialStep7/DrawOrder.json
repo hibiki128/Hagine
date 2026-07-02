@@ -1,10 +1,7 @@
 {
     "sprite_0": "Tutorial_step7",
-    "sprite_1": "LTtrigger_step7",
-    "sprite_2": "Abutton_step7",
+    "sprite_1": "Abutton_step7",
+    "sprite_2": "plus_step7_second",
     "sprite_3": "Lstick_step7",
-    "sprite_4": "hold_step7",
-    "sprite_5": "plus_step7_first",
-    "sprite_6": "plus_step7_second",
-    "sprite_count": 7
+    "sprite_count": 4
 }

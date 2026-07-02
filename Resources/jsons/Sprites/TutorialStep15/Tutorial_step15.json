@@ -10,18 +10,18 @@
         "y": 1.0,
         "z": 1.0
     },
-    "lockAspectRatio": 0,
-    "name": "plus_step7_first",
+    "lockAspectRatio": 1,
+    "name": "Tutorial_step15",
     "position": {
-        "x": 510.0,
-        "y": 205.0
+        "x": 1111.6,
+        "y": 195.0
     },
     "rotation": 0.0,
     "size": {
-        "x": 80.0,
-        "y": 112.0
+        "x": 308.2,
+        "y": 118.96
     },
-    "texturePath": "Text/plus.png",
+    "texturePath": "Text/Tutorial_step15.png",
     "uvTransform": [
         [
             1.0,

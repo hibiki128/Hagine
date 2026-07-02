@@ -5,6 +5,8 @@
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
 
+REGISTER_SCENE("GAME", GameScene)
+
 using namespace Hagine;
 static constexpr const char *kBTFolder = "BehaviorTree";
 static constexpr const char *kBTFileName = "EnemyBehavior";

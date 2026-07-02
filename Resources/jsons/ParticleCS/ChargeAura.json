@@ -1,10 +1,11 @@
 {
+    "drawGroup": "3D",
     "emitFromSurface": 1,
     "emitOnlyOnFieldContact": false,
     "fieldContactEmitCount": 1000,
     "fieldGroupId": -1,
     "frequency": 0.0010000000474974513,
-    "frequencyTime": 195.3203125,
+    "frequencyTime": 360.5769958496094,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -27,28 +28,35 @@
         "z": 0.0
     },
     "group_0_curlNoiseAttractStrength": 0.0,
-    "group_0_curlNoiseBlendMode": 0,
+    "group_0_curlNoiseBlendMode": 1,
     "group_0_curlNoiseOctaves": 1,
     "group_0_curlNoisePosRandomStrength": 0.0,
-    "group_0_curlNoiseScale": 1.0,
-    "group_0_curlNoiseStrength": 1.0,
-    "group_0_curlNoiseTimeScale": 1.0,
+    "group_0_curlNoiseScale": 5.429999828338623,
+    "group_0_curlNoiseStrength": 100.0,
+    "group_0_curlNoiseTimeScale": 100.0,
+    "group_0_emitConeAngle": 0.5235999822616577,
     "group_0_emitCount": 1,
+    "group_0_emitShape": 0,
+    "group_0_emitSphereRadius": 1.0,
     "group_0_enableAcceleration": 0,
-    "group_0_enableCurlNoise": 0,
+    "group_0_enableBillboard": 1,
+    "group_0_enableCurlNoise": 1,
     "group_0_enableEndScale": 0,
     "group_0_enableGather": 1,
     "group_0_enableGatherForTrail": 0,
     "group_0_enableGravity": 0,
     "group_0_enableLifetimeScale": 1,
     "group_0_enableLifetimeVelocityDamping": 0,
+    "group_0_enableMidColor": 1,
     "group_0_enableRadialVelocity": 0,
     "group_0_enableRandomAngularVelocity": 0,
     "group_0_enableRandomColor": 0,
     "group_0_enableRandomRotation": 0,
-    "group_0_enableSinScale": 0,
+    "group_0_enableSinScale": 1,
     "group_0_enableTrail": 1,
+    "group_0_enableTurbulence": 0,
     "group_0_enableVelocityDamping": 0,
+    "group_0_enableVelocityStretch": 0,
     "group_0_enableVortex": 0,
     "group_0_enableVortexForTrail": 0,
     "group_0_enablebilboard": 1,
@@ -67,12 +75,12 @@
     "group_0_gatherStrength": 20.0,
     "group_0_gatherTarget": {
         "x": 0.0,
-        "y": 3.5,
+        "y": 10.699999809265137,
         "z": 0.0
     },
     "group_0_gatherTargetOffset": {
         "x": 0.0,
-        "y": 5.0,
+        "y": 12.199999809265137,
         "z": 0.0
     },
     "group_0_gravity": {
@@ -89,6 +97,13 @@
         "y": 1.5,
         "z": 0.0
     },
+    "group_0_midColor": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 0.6129032373428345,
+        "z": 0.9458897709846497
+    },
+    "group_0_midColorRatio": 0.5,
     "group_0_minLifetime": 0.25,
     "group_0_minScale": 0.05000000074505806,
     "group_0_minVelocity": {
@@ -102,8 +117,8 @@
         "y": 0.0,
         "z": 0.0
     },
-    "group_0_radialVelocityRandomness": 0.20000000298023224,
-    "group_0_radialVelocityStrength": 1.0,
+    "group_0_radialVelocityRandomness": 1.0,
+    "group_0_radialVelocityStrength": 31.200000762939453,
     "group_0_rotationMax": {
         "x": 0.0,
         "y": 0.0,
@@ -114,8 +129,8 @@
         "y": 0.0,
         "z": 0.0
     },
-    "group_0_sinScaleAmplitude": 0.07000000029802322,
-    "group_0_sinScaleFrequency": 50.0,
+    "group_0_sinScaleAmplitude": 0.23999999463558197,
+    "group_0_sinScaleFrequency": 32.70000076293945,
     "group_0_startColor": {
         "w": 1.0,
         "x": 0.0,
@@ -138,7 +153,10 @@
     },
     "group_0_trailSpawnDistance": 0.009999999776482582,
     "group_0_trailVelocityScale": 0.30000001192092896,
+    "group_0_turbulenceFrequency": 2.0,
+    "group_0_turbulenceStrength": 1.0,
     "group_0_velocityDampingFactor": 0.9800000190734863,
+    "group_0_velocityStretchFactor": 0.0,
     "group_0_vortexAxis": {
         "x": 0.0,
         "y": 0.0,
@@ -155,7 +173,8 @@
         "y": 0.0,
         "z": 0.0
     },
-    "isAuto": false,
+    "isAuto": true,
+    "isGizmoSelectable": true,
     "isVisible": false,
     "modelPath": "Particle/Aura.obj",
     "particleGroupCount": 1,
@@ -168,9 +187,9 @@
         "z": 0.0
     },
     "scale": {
-        "x": 1.5,
-        "y": 1.7000000476837158,
-        "z": 1.5
+        "x": 2.0,
+        "y": 3.0,
+        "z": 2.0
     },
     "translate": {
         "x": 0.0,

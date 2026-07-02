@@ -36,6 +36,15 @@ struct OBB {
     Vector3 orientations[3];    // 各軸の方向ベクトル
 };
 
+/// <summary>
+/// 三角形の形状データ
+/// メッシュコライダーの最小要素として利用する
+/// </summary>
+struct Triangle {
+    Vector3 v[3];   // 3頂点
+    Vector3 normal; // 面法線（正規化済みを想定）
+};
+
 class ViewProjection;
 
 static const int kColumnWidth = 60;

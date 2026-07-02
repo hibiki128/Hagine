@@ -1,6 +1,8 @@
 #include "SelectScene.h"
 #include "Engine/Utility/Scene/SceneManager.h"
 
+REGISTER_SCENE("SELECT", SelectScene)
+
 using namespace Hagine;
 void SelectScene::Initialize() {
     /// ===================================================
