@@ -3,6 +3,6 @@
     "groupName": "aroundField",
     "maxParticleCount": 10000,
     "modelfilePath": "",
-    "primitiveType": 3,
+    "primitiveType": 1,
     "textureName": "debug/white1x1.png"
 }

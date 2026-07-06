@@ -192,6 +192,7 @@ class Player : public Hagine::BaseObject {
     void ClearDashState() {
         isDashing_ = false;
         dashDuration_ = 0.0f;
+        dashGraceTimer_ = 0.0f;
     }
 
     /// ===================================================
@@ -396,6 +397,7 @@ class Player : public Hagine::BaseObject {
     static constexpr float kVelocityStopThreshold = 0.01f;
     static constexpr float kYComponentZero = 0.0f;
     static constexpr float kDashSpeedMultiplier = 1.5f;
+    static constexpr float kDashGraceTime = 0.3f; // A押下後、移動入力を待つ猶予時間（秒）
 
     // 弾丸関連定数
     static constexpr float kBulletScale = 0.5f;
@@ -458,6 +460,7 @@ class Player : public Hagine::BaseObject {
     bool dashStartedThisFrame_ = false; // ダッシュ開始フラグ
     float dashDuration_ = 0.0f;         // ダッシュ継続時間
     bool wasDashing_ = false;           // 前フレームのダッシュ状態
+    float dashGraceTimer_ = 0.0f;       // A押下後、移動入力を待つ猶予時間の残り
 
     bool wasRTPressed_ = false; // 前フレームのRT押下状態
 

@@ -155,7 +155,12 @@ bool TryFieldContactEmit(inout RandomGenerator rng, float3x3 rotMatrix,
 
     static const int kMaxRetry = 32;
 
-    if (gEmitterMesh.triangleCount > 0)
+    // エッジ発生モード(2)が選ばれ辺があれば辺を、そうでなければ三角形を優先。
+    // 三角形が無ければ辺、それも無ければ点にフォールバックする。
+    bool useEdges = (gEmitterMesh.edgeCount > 0) &&
+                    (gEmitterMesh.emitFromSurface == 2 || gEmitterMesh.triangleCount == 0);
+
+    if (!useEdges && gEmitterMesh.triangleCount > 0)
     {
         // ---- メッシュエミッター: CDF面積加重でリトライ ----
         [loop]
@@ -222,7 +227,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
     if (gEmitterMesh.emit == 0)
         return;
 
-    if (DTid.x >= gSettings.emitCount)
+    // 発生数のゲート。フィールド接触Emitモードでは gEmitterMesh.emitCountOverride が発生数を決める。
+    // （通常モードは override=0 なのでグループ設定 gSettings.emitCount を使う）
+    uint effectiveEmitCount = (gEmitterMesh.emitCountOverride > 0u)
+                                  ? gEmitterMesh.emitCountOverride
+                                  : gSettings.emitCount;
+    if (DTid.x >= effectiveEmitCount)
         return;
 
     // -------------------------------------------------------

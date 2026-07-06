@@ -228,6 +228,11 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
             previewPerView->enableSizeClamp = gpv->enableSizeClamp;
             previewPerView->maxScreenHeight = gpv->maxScreenHeight;
             previewPerView->minScreenHeight = gpv->minScreenHeight;
+            // 速度ストレッチもプレビューへ反映（これが無いとプレビューで引き伸ばしを確認できない）。
+            previewPerView->enableVelocityStretch = gpv->enableVelocityStretch;
+            previewPerView->velocityStretchFactor = gpv->velocityStretchFactor;
+            // ビルボードのON/OFFもプレビューへ反映（OFFなら非ビルボード表示にする）。
+            previewPerView->enableBillboard = gpv->enableBillboard;
         }
         group->FetchAliveDrawCount();
         const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
@@ -411,6 +416,13 @@ void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group) {
     independentGroup->MarkLifeCurvesDirty();
     independentGroup->SetBlendMode(group->GetParticleGroupData().blendMode);
     independentGroup->SetBillboard(group->GetPerView()->enableBillboard);
+    // テクスチャ(materials)は settings とは別ストレージなので明示的に伝播させる。
+    // これがないと差し替えたテクスチャが描画対象の独立グループに反映されない。
+    // GetParticleGroupData() は値返しなのでローカルに受けてから参照する。
+    ParticleCSGroupData srcData = group->GetParticleGroupData();
+    if (!srcData.materials.empty()) {
+        independentGroup->SetTexture(srcData.materials[0].textureFilePath);
+    }
     particleGroups_.push_back(independentGroup);
     particleGroupNames_.insert(name);
     ImGuiNotification::Post("パーティクルグループを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
@@ -450,6 +462,7 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->emitFromSurface = 1;
     emitterMeshData_->edgeCount = 0;
     emitterMeshData_->anchorPoint = Vector3(0.5f, 0.5f, 0.5f);
+    emitterMeshData_->emitCountOverride = 0;
 }
 
 void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
@@ -458,6 +471,12 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
     ComputePipeLineManager::GetInstance()->DrawCommonSetting(
         ComputePipelineType::kEmitter,
         BlendMode::kNormal, ShaderMode::kNone, cl);
+
+    // フィールド接触Emitモードでは発生数を fieldContactEmitCount_ で上書きする。
+    // per-emitter CB（全グループ共通・接触モードでは全グループ同値）に入れるためエイリアシングしない。
+    // 通常モードは 0 にしてグループ設定 gSettings.emitCount を使わせる。
+    emitterMeshData_->emitCountOverride =
+        (emitOnlyOnFieldContact_ && receiveFields_) ? fieldContactEmitCount_ : 0u;
 
     for (uint32_t groupIndex = 0; groupIndex < particleGroups_.size(); ++groupIndex) {
         auto &group = particleGroups_[groupIndex];
@@ -525,35 +544,13 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
                     continue;
                 }
 
-                uint32_t savedEmitCount = settings->emitCount;
-                float savedLifeMin = settings->lifeTimeMin;
-                float savedLifeMax = settings->lifeTimeMax;
-
-                settings->emitCount = fieldContactEmitCount_;
-
-                for (const auto &field : fieldManager->GetFields()) {
-                    if (!field.enabled || !field.data.enableEmitSpawn)
-                        continue;
-                    bool groupMatch = (field.data.groupId == -1) ||
-                                      (fieldGroupId_ == -1) ||
-                                      (field.data.groupId == fieldGroupId_);
-                    if (!groupMatch)
-                        continue;
-                    if (field.data.emitSpawnLifeTimeMax > 0.0f) {
-                        settings->lifeTimeMin = field.data.emitSpawnLifeTimeMin;
-                        settings->lifeTimeMax = field.data.emitSpawnLifeTimeMax;
-                    }
-                    break;
-                }
-
+                // 発生数は emitterMeshData_->emitCountOverride(=fieldContactEmitCount_) 経由でシェーダへ渡す。
+                // 寿命は接触したフィールドの emitSpawnLifeTime をシェーダ側が per-field で上書きするため
+                // ここでの CPU 側 settings 書き換えは不要（旧実装は CB エイリアシングで無効だった）。
                 cl->SetComputeRootConstantBufferView(12, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
 
-                int dispatchCount = (settings->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
+                int dispatchCount = (static_cast<int>(fieldContactEmitCount_) + threadGroupSize_ - 1) / threadGroupSize_;
                 cl->Dispatch(dispatchCount, 1, 1);
-
-                settings->emitCount = savedEmitCount;
-                settings->lifeTimeMin = savedLifeMin;
-                settings->lifeTimeMax = savedLifeMax;
 
                 continue;
 
@@ -707,69 +704,85 @@ void ParticleCSEmitter::CreateModelTriangles() {
 }
 
 void ParticleCSEmitter::CreateModelEdges() {
-    if (modelData_.meshes.empty())
-        return;
-
     edgeInfoList_.clear();
 
-    std::map<std::pair<uint32_t, uint32_t>, int> edgeMap;
+    // Cylinder プリミティブは三角形由来のエッジ（対角線が混じる）ではなく、
+    // 縦線＋横リングだけの綺麗な格子線を解析的に生成する（エッジ発生モードで籠状になる）。
+    if (modelPath_.empty() && primitiveType_ == PrimitiveType::Cylinder) {
+        auto lines = PrimitiveModel::GetInstance()->BuildCylinderGridLines(
+            primitiveParams_.divide, primitiveParams_.heightDivide);
+        edgeInfoList_.reserve(lines.size());
+        for (const auto &seg : lines) {
+            EdgeInfo edgeInfo;
+            edgeInfo.v0 = seg.first;
+            edgeInfo.v1 = seg.second;
+            edgeInfo.padding0 = 0.0f;
+            edgeInfo.padding1 = 0.0f;
+            edgeInfoList_.push_back(edgeInfo);
+        }
+    } else {
+        if (modelData_.meshes.empty())
+            return;
 
-    for (const auto &mesh : modelData_.meshes) {
-        for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
-            uint32_t i0 = mesh.indices[i];
-            uint32_t i1 = mesh.indices[i + 1];
-            uint32_t i2 = mesh.indices[i + 2];
+        std::map<std::pair<uint32_t, uint32_t>, int> edgeMap;
 
-            if (i0 >= mesh.vertices.size() || i1 >= mesh.vertices.size() || i2 >= mesh.vertices.size())
-                continue;
+        for (const auto &mesh : modelData_.meshes) {
+            for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
+                uint32_t i0 = mesh.indices[i];
+                uint32_t i1 = mesh.indices[i + 1];
+                uint32_t i2 = mesh.indices[i + 2];
 
-            std::array<std::pair<uint32_t, uint32_t>, 3> edges = {{{std::min(i0, i1), std::max(i0, i1)},
-                                                                   {std::min(i1, i2), std::max(i1, i2)},
-                                                                   {std::min(i2, i0), std::max(i2, i0)}}};
+                if (i0 >= mesh.vertices.size() || i1 >= mesh.vertices.size() || i2 >= mesh.vertices.size())
+                    continue;
 
-            for (const auto &edge : edges) {
-                edgeMap[edge]++;
+                std::array<std::pair<uint32_t, uint32_t>, 3> edges = {{{std::min(i0, i1), std::max(i0, i1)},
+                                                                       {std::min(i1, i2), std::max(i1, i2)},
+                                                                       {std::min(i2, i0), std::max(i2, i0)}}};
+
+                for (const auto &edge : edges) {
+                    edgeMap[edge]++;
+                }
             }
         }
-    }
 
-    bool isClosedMesh = true;
-    for (const auto &[edge, count] : edgeMap) {
-        if (count == 1) {
-            isClosedMesh = false;
-            break;
-        }
-    }
-
-    for (const auto &[edge, count] : edgeMap) {
-        if (!isClosedMesh && count != 1)
-            continue;
-
-        uint32_t idx0 = edge.first;
-        uint32_t idx1 = edge.second;
-
-        Vector3 v0, v1;
-        bool found = false;
-        for (const auto &mesh : modelData_.meshes) {
-            if (idx0 < mesh.vertices.size() && idx1 < mesh.vertices.size()) {
-                v0 = Vector3(mesh.vertices[idx0].position.x,
-                             mesh.vertices[idx0].position.y,
-                             mesh.vertices[idx0].position.z);
-                v1 = Vector3(mesh.vertices[idx1].position.x,
-                             mesh.vertices[idx1].position.y,
-                             mesh.vertices[idx1].position.z);
-                found = true;
+        bool isClosedMesh = true;
+        for (const auto &[edge, count] : edgeMap) {
+            if (count == 1) {
+                isClosedMesh = false;
                 break;
             }
         }
 
-        if (found) {
-            EdgeInfo edgeInfo;
-            edgeInfo.v0 = v0;
-            edgeInfo.v1 = v1;
-            edgeInfo.padding0 = 0.0f;
-            edgeInfo.padding1 = 0.0f;
-            edgeInfoList_.push_back(edgeInfo);
+        for (const auto &[edge, count] : edgeMap) {
+            if (!isClosedMesh && count != 1)
+                continue;
+
+            uint32_t idx0 = edge.first;
+            uint32_t idx1 = edge.second;
+
+            Vector3 v0, v1;
+            bool found = false;
+            for (const auto &mesh : modelData_.meshes) {
+                if (idx0 < mesh.vertices.size() && idx1 < mesh.vertices.size()) {
+                    v0 = Vector3(mesh.vertices[idx0].position.x,
+                                 mesh.vertices[idx0].position.y,
+                                 mesh.vertices[idx0].position.z);
+                    v1 = Vector3(mesh.vertices[idx1].position.x,
+                                 mesh.vertices[idx1].position.y,
+                                 mesh.vertices[idx1].position.z);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found) {
+                EdgeInfo edgeInfo;
+                edgeInfo.v0 = v0;
+                edgeInfo.v1 = v1;
+                edgeInfo.padding0 = 0.0f;
+                edgeInfo.padding1 = 0.0f;
+                edgeInfoList_.push_back(edgeInfo);
+            }
         }
     }
 
@@ -828,6 +841,7 @@ void ParticleCSEmitter::SaveSetting() {
     data->Save("primitiveType", static_cast<int>(primitiveType_));
     // プリミティブ形状パラメータ（リング等の分割数・半径）
     data->Save("primitiveDivide", static_cast<int>(primitiveParams_.divide));
+    data->Save("primitiveHeightDivide", static_cast<int>(primitiveParams_.heightDivide));
     data->Save("primitiveRingOuter", primitiveParams_.ringOuterRadius);
     data->Save("primitiveRingInner", primitiveParams_.ringInnerRadius);
 
@@ -861,6 +875,11 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "enableGravity", group->GetSettingsData()->enableGravity);
         data->Save(prefix + "gravity", group->GetSettingsData()->gravity);
         data->Save(prefix + "blendMode", static_cast<int>(group->GetParticleGroupData().blendMode));
+        // テクスチャ差し替えを永続化する（materials は settings とは別なので個別に保存）。
+        {
+            ParticleCSGroupData gd = group->GetParticleGroupData();
+            data->Save(prefix + "texture", gd.materials.empty() ? std::string("") : gd.materials[0].textureFilePath);
+        }
 
         // ★ トレイル設定の保存
         data->Save(prefix + "enableTrail", group->GetSettingsData()->enableTrail);
@@ -1004,6 +1023,7 @@ void ParticleCSEmitter::LoadSetting() {
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
     // プリミティブ形状パラメータ（LoadPrimitiveModel より前に復元しておくこと）
     primitiveParams_.divide = static_cast<uint32_t>(data->Load("primitiveDivide", 32));
+    primitiveParams_.heightDivide = static_cast<uint32_t>(data->Load("primitiveHeightDivide", 1));
     primitiveParams_.ringOuterRadius = data->Load("primitiveRingOuter", 1.0f);
     primitiveParams_.ringInnerRadius = data->Load("primitiveRingInner", 0.5f);
     // フィールド影響設定
@@ -1183,6 +1203,13 @@ void ParticleCSEmitter::LoadSetting() {
             group->MarkLifeCurvesDirty();
         }
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
+        // 保存済みテクスチャがあれば適用（無ければグループ定義のテクスチャを維持）。
+        // AddParticleGroup がこの group のテクスチャを描画対象の独立グループへ伝播する。
+        {
+            std::string tex = data->Load<std::string>(prefix + "texture", "");
+            if (!tex.empty())
+                group->SetTexture(tex);
+        }
 
         AddParticleGroup(group);
     }
@@ -1216,6 +1243,7 @@ void ParticleCSEmitter::LoadCloneSetting() {
     primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
     // プリミティブ形状パラメータ（LoadPrimitiveModel より前に復元しておくこと）
     primitiveParams_.divide = static_cast<uint32_t>(data->Load("primitiveDivide", 32));
+    primitiveParams_.heightDivide = static_cast<uint32_t>(data->Load("primitiveHeightDivide", 1));
     primitiveParams_.ringOuterRadius = data->Load("primitiveRingOuter", 1.0f);
     primitiveParams_.ringInnerRadius = data->Load("primitiveRingInner", 0.5f);
     // フィールド影響設定
@@ -1396,6 +1424,13 @@ void ParticleCSEmitter::LoadCloneSetting() {
             group->MarkLifeCurvesDirty();
         }
         group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::kAdd))));
+        // 保存済みテクスチャがあれば適用（無ければグループ定義のテクスチャを維持）。
+        // AddParticleGroup がこの group のテクスチャを描画対象の独立グループへ伝播する。
+        {
+            std::string tex = data->Load<std::string>(prefix + "texture", "");
+            if (!tex.empty())
+                group->SetTexture(tex);
+        }
 
         AddParticleGroup(group);
     }
@@ -1528,6 +1563,19 @@ void ParticleCSEmitter::DrawImGui() {
                                 rebuild = true;
                             if (ImGui::IsItemHovered())
                                 ImGui::SetTooltip("円周方向の分割数。多いほど滑らか（頂点・三角形が増えます）");
+
+                            // Cylinder は高さ方向の分割数（格子の横リング本数）を調整できる。
+                            if (primitiveType_ == PrimitiveType::Cylinder) {
+                                int heightDivide = static_cast<int>(primitiveParams_.heightDivide);
+                                ImGui::SetNextItemWidth(180.0f);
+                                if (ImGui::DragInt("高さ分割##primHeightDivide", &heightDivide, 0.5f, 1, 256)) {
+                                    primitiveParams_.heightDivide = static_cast<uint32_t>(heightDivide < 1 ? 1 : heightDivide);
+                                }
+                                if (ImGui::IsItemDeactivatedAfterEdit())
+                                    rebuild = true;
+                                if (ImGui::IsItemHovered())
+                                    ImGui::SetTooltip("高さ方向の分割数。線上発生モードで横リングの本数が増え格子状になります（横リング = 高さ分割 + 1 本）");
+                            }
 
                             // リングは外半径・内半径（円の幅 = 外 - 内）を調整できる。
                             if (primitiveType_ == PrimitiveType::Ring) {

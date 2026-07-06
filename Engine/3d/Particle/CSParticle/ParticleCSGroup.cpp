@@ -162,6 +162,19 @@ ParticleCSGroupData ParticleCSGroup::CreatePrimitiveParticleGroup(const std::str
     return particleGroupData_;
 }
 
+void ParticleCSGroup::SetTexture(const std::string &path) {
+    if (path.empty() || particleGroupData_.materials.empty())
+        return;
+    texManager_->LoadTexture(path);
+    uint32_t index = texManager_->GetTextureIndexByFilePath(path);
+    // 描画は毎フレーム textureFilePath で SRV を引くのでパス差し替えで即時反映される。
+    // textureIndex も一応更新しておく。
+    for (auto &m : particleGroupData_.materials) {
+        m.textureFilePath = path;
+        m.textureIndex = index;
+    }
+}
+
 void ParticleCSGroup::InitParticle() {
     srvManager_->SetDescriptorHeap();
 
@@ -1306,11 +1319,7 @@ void ParticleCSGroup::DrawImGui() {
         // テクスチャを差し替えて全マテリアルへ反映するヘルパー。
         // 描画は毎フレーム textureFilePath で引くので、パス差し替え + LoadTexture で即時反映される。
         auto applyTexture = [&](const std::string &path) {
-            if (path.empty())
-                return;
-            texManager_->LoadTexture(path);
-            for (auto &m : particleGroupData_.materials)
-                m.textureFilePath = path;
+            SetTexture(path);
         };
 
         // 選択中テクスチャのサムネイルプレビュー（読み込み済み前提）。

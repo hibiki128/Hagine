@@ -2,6 +2,7 @@
 #include "ParticleCSEditor.h"
 #include "../Utility/Debug/ImGui/ImGuizmoManager.h"
 #include <Camera/ViewProjection/ViewProjection.h>
+#include <Line/DrawLine3D.h>
 #include <Particle/ParticleEditor.h>
 #include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
@@ -266,6 +267,15 @@ void ParticleCSEditor::RenderPreview() {
         }
     }
 
+    // フィールド枠・ギャザー/ボルテックス点など、Update フェーズ(ImGui)で共有 DrawLine3D に
+    // 積まれたデバッグ線をプレビューVPでも再描画する。この RenderPreview はシーンの
+    // DrawLine3D::Draw(sceneVP)+Reset より前に呼ばれるため、線バッファはまだ生きている。
+    // Reset しないので後段のシーン描画（シーンVP）にも同じ線がそのまま出る。
+    {
+        *previewLineCBData_ = viewProj;
+        DrawLine3D::GetInstance()->DrawWithExternalCB(cl, previewLineCB_->GetGPUVirtualAddress());
+    }
+
     // 選択中エミッタのパーティクルを隔離描画（Compute 済みバッファをプレビューVPで再描画）
     if (!selectedEmitterName_.empty()) {
         auto it = emitters_.find(selectedEmitterName_);
@@ -278,8 +288,10 @@ void ParticleCSEditor::RenderPreview() {
             billboard.m[3][2] = 0.0f;
             billboard.m[3][3] = 1.0f;
             previewPerViewData_->billboardMatrix = Inverse(billboard);
-            previewPerViewData_->enableBillboard = 1;
-            previewPerViewData_->enableVelocityStretch = 0;
+            // enableBillboard / enableVelocityStretch / velocityStretchFactor は
+            // DrawGraphicsForPreview 内で各グループの設定から流し込む
+            // （ここで固定するとビルボードOFFや速度ストレッチをプレビューで確認できない）。
+            // billboardMatrix はビルボードON時に使うのでプレビューカメラ基準で設定しておく。
 
             // パーティクル PSO は SRV ディスクリプタテーブルを使うのでヒープを束ねる
             SrvManager::GetInstance()->SetDescriptorHeap();

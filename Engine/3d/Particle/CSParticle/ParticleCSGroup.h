@@ -126,6 +126,11 @@ class ParticleCSGroup {
     void SetFrequency(float frequency) { frequency_ = frequency; }
     void SetSettingData(const ParticleCSSettings &settings) { *settingsData_ = settings; }
     void SetBlendMode(BlendMode blendMode) { particleGroupData_.blendMode = blendMode; }
+    /// <summary>
+    /// 全マテリアルのテクスチャを差し替える（ロード＋パス/インデックス更新）。
+    /// エディタのD&Dや設定ロード時のテクスチャ適用に使う。空パスは無視。
+    /// </summary>
+    void SetTexture(const std::string &path);
     void SetPerView(PerView *perViewData) { perViewData_ = perViewData; }
     void SetBillboard(bool flag) { perViewData_->enableBillboard = flag; }
 
