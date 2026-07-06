@@ -4,7 +4,7 @@
 #include "Debug/CpuProfiler/CpuProfiler.h"
 #include "Debug/GpuProfiler/GpuProfiler.h"
 #include "Data/DataHandler.h"
-#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Graphics/Srv/SrvManager.h"
 #include "Particle/ParticleEditor.h"
 #include "Scene/SceneManager.h"
@@ -16,7 +16,7 @@
 #ifdef _DEBUG
 #include "imgui.h"
 #include "line/DrawLine3D.h"
-#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
+#include "Utility/Debug/ImGui/Debugui_improved.h"
 #include <set>
 #include <vector>
 #endif

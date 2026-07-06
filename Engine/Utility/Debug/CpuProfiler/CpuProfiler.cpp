@@ -4,7 +4,7 @@
 #include <imgui.h>
 #include <implot.h>
 // Debugui_improved.h は ImVec4 / ImGui:: を使うので imgui.h の後に include する
-#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
+#include "Utility/Debug/ImGui/Debugui_improved.h"
 #endif
 
 namespace Hagine {

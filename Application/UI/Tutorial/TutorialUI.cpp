@@ -2,9 +2,9 @@
 #include "TutorialUI.h"
 #include "../../System/Tutorial/TutorialSystem.h"
 #include "Data/DataHandler.h"
-#include "Engine/2d/SpriteManager.h"
-#include "Engine/2d/Text/TextRenderer.h"
-#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "2d/SpriteManager.h"
+#include "2d/Text/TextRenderer.h"
+#include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include <Graphics/Texture/TextureManager.h>
 #include <algorithm>
 #ifdef _DEBUG

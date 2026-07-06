@@ -1,6 +1,6 @@
 #define NOMINMAX
 #include "ParticleCSGroup.h"
-#include <Engine/Audio/Audio.h>
+#include <Audio/Audio.h>
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -19,7 +19,7 @@
 #include "imgui.h"
 #include "ImGradient.h"
 #include "ImCurveEdit.h"
-#include "Engine/Utility/Debug/ImGui/AssetDragDrop.h"
+#include "Utility/Debug/ImGui/AssetDragDrop.h"
 #endif
 
 namespace Hagine {

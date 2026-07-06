@@ -1,6 +1,6 @@
 #include "Ground.h"
 #include <Model/Material/Material.h>
-#include"Engine/3d/Object/Base/BaseObjectManager.h"
+#include"3d/Object/Base/BaseObjectManager.h"
 
 using namespace Hagine;
 void Ground::Init(const std::string className) {

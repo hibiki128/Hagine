@@ -1,14 +1,14 @@
 #define NOMINMAX
 #include "Enemy.h"
 #include "Collider/CollisionManager.h"
-#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Debug/Log/Logger.h>
-#include <Engine/3d/Line/DrawLine3D.h>
+#include <3d/Line/DrawLine3D.h>
 #include <Frame.h>
 #include <Object/Base/BaseObjectManager.h>
 #include <cmath>

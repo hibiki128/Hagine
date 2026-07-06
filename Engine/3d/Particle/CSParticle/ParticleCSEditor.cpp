@@ -4,9 +4,9 @@
 #include <Camera/ViewProjection/ViewProjection.h>
 #include <Line/DrawLine3D.h>
 #include <Particle/ParticleEditor.h>
-#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
+#include <Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
-#include "Engine/Render/DrawGroupManager.h"
+#include "Render/DrawGroupManager.h"
 #include <algorithm>
 #include <myMath.h>
 #include <vector>

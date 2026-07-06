@@ -2,10 +2,10 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #define NOMINMAX
 #include "ShowFolder.h"
-#include "Engine/Utility/Debug/ImGui/AssetDragDrop.h"
+#include "Utility/Debug/ImGui/AssetDragDrop.h"
 #include <Graphics/Texture/TextureManager.h>
 #include <algorithm>
-#include <externals/icon/IconsFontAwesome5.h>
+#include <icon/IconsFontAwesome5.h>
 #include <filesystem>
 #include <imgui.h>
 #include <string>

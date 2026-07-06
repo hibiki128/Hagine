@@ -1,6 +1,6 @@
 #pragma once
 #include "Application/GameObject/BehaviorTree/Node/BehaviorNode.h"
-#include "Engine/Utility/Data/DataHandler.h"
+#include "Utility/Data/DataHandler.h"
 #include <memory>
 #include <string>
 
@@ -126,7 +126,7 @@ class BehaviorTreeLoader {
 #ifdef _DEBUG
 #include "imgui.h"
 #include "imgui_node_editor.h"
-#include <externals/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 #include <map>
 #include <vector>
 

@@ -2,9 +2,9 @@
 #include "BehaviorTreeEditor.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
-#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include <algorithm>
-#include <externals/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 #include <filesystem>
 #include <iostream>
 

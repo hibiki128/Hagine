@@ -1,8 +1,8 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
 #include "Collider/CollisionManager.h"
-#include "Engine/2d/Text/TextRenderer.h"
-#include "Engine/OffScreen/OffScreen.h"
+#include "2d/Text/TextRenderer.h"
+#include "OffScreen/OffScreen.h"
 #include "AssetDragDrop.h"
 #include "ImGuiNotification.h"
 #include "ImGuizmo.h"
@@ -17,14 +17,14 @@
 #include <map>
 #include <Application/Utility/MotionEditor/MotionEditor.h>
 #include <Data/DataHandler.h>
-#include <Engine/Frame/Frame.h>
+#include <Frame/Frame.h>
 #include <Line/DrawLine3D.h>
 #include <Particle/CSParticle/ParticleCSFieldManager.h>
-#include <Engine/Render/DrawSystem.h>
+#include <Render/DrawSystem.h>
 #include <Debug/GpuProfiler/GpuProfiler.h>
 #include <Debug/CpuProfiler/CpuProfiler.h>
 #include <Shadow/ShadowMap.h>
-#include <externals/icon/IconsFontAwesome5.h>
+#include <icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
 #include <implot.h>
 #endif // _DEBUG

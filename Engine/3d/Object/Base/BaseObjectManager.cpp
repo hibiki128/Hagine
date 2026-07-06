@@ -1,12 +1,12 @@
 #include "BaseObjectManager.h"
-#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
+#include <Utility/Debug/ImGui/ImGuiNotification.h>
 #ifdef _DEBUG
 #include "Debug/ImGui/ImGuizmoManager.h"
 #endif // _DEBUG
 #include "Application/Utility/MotionEditor/MotionEditor.h"
 #include <Debug/Log/Logger.h>
 #include <ShowFolder/ShowFolder.h>
-#include "Engine/Render/DrawGroupManager.h"
+#include "Render/DrawGroupManager.h"
 
 namespace Hagine {
 void BaseObjectManager::Finalize() {

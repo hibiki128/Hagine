@@ -3,8 +3,8 @@
 #include "Input.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "application/GameObject/Player/Player.h"
-#include <Engine/3d/Line/DrawLine3D.h>
-#include <Engine/Frame/Frame.h>
+#include <3d/Line/DrawLine3D.h>
+#include <Frame/Frame.h>
 #include <cmath>
 
 using namespace Hagine;

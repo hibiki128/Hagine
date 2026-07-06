@@ -1,13 +1,13 @@
 #define NOMINMAX
 #include "Player.h"
-#include "Engine/Frame/Frame.h"
-#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Frame/Frame.h"
+#include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include "State/Air/PlayerStateAir.h"
 #include "State/Fly/PlayerStateFlyIdle.h"
 
 #include "Bullet/ChargeShot/ChargeShot.h"
 #include "Collider/CollisionManager.h"
-#include "Engine/3d/Line/DrawLine3D.h"
+#include "3d/Line/DrawLine3D.h"
 #include "Object/Base/BaseObjectManager.h"
 #include "State/Action/PlayerEnergyCharge.h"
 #include "State/Action/PlayerStateGuard.h"

@@ -1,5 +1,5 @@
 #include "Audio.h"
-#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include <Debug/Log/Logger.h>
 #include <cassert>
 #include <cmath>
@@ -8,7 +8,7 @@
 
 #ifdef _DEBUG
 #include "imgui.h"
-#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
+#include "Utility/Debug/ImGui/Debugui_improved.h"
 #include <implot.h>
 #endif // _DEBUG
 
