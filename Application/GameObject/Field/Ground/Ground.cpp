@@ -20,7 +20,7 @@ void Ground::Init(const std::string className) {
     // uvSize でタイル数を調整（アルベドも一緒にタイリングされる）。強さは normalStrength で調整可。
     if (Material *mat = GetMaterial(0)) {
         mat->SetNormalMap("NormalMap/ground.png");
-        mat->SetNormalStrength(1.0f);
+        mat->SetNormalStrength(0.1f);
         mat->SetUVSize({20.0f, 20.0f});
     }
 

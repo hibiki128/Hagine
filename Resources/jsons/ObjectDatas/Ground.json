@@ -1,0 +1,48 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 1,
+    "blendMode": 1,
+    "childrenNames": [],
+    "colliderCount": 0,
+    "color_0": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "isLighting": true,
+    "isModelDraw": true,
+    "modelName": "",
+    "objectName": "Ground",
+    "parentName": "",
+    "rb_enabled": false,
+    "rb_friction": 0.30000001192092896,
+    "rb_gravity": {
+        "x": 0.0,
+        "y": -9.800000190734863,
+        "z": 0.0
+    },
+    "rb_linearDamping": 0.05000000074505806,
+    "rb_mass": 1.0,
+    "rb_restitution": 0.0,
+    "rb_useGravity": true,
+    "resolveCollision": false,
+    "rotation": {
+        "w": 0.7071067690849304,
+        "x": -0.7071067690849304,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 200.0,
+        "y": 200.0,
+        "z": 200.0
+    },
+    "skeletonDraw": false,
+    "textureName_0": "debug/ground.png",
+    "translation": {
+        "x": 0.0,
+        "y": -1.0,
+        "z": 0.0
+    }
+}
