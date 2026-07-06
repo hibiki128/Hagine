@@ -362,6 +362,17 @@ class BehaviorTreeEditor {
     /// </summary>
     const char *GetNodeDescription(EditorNodeType type);
 
+    /// <summary>
+    /// 選択中ノードのプロパティを編集するインスペクターパネルを描画
+    /// </summary>
+    void DrawInspectorPanel();
+
+    /// <summary>
+    /// 指定ノードの編集可能なパラメータ群をインスペクターに描画
+    /// </summary>
+    /// <param name="node">対象のエディタノード</param>
+    void DrawNodeParameters(EditorNode &node);
+
     /// ===================================================
     /// private variants
     /// ===================================================
@@ -392,6 +403,8 @@ class BehaviorTreeEditor {
     bool layoutDirty_ = false;                     // レイアウト変更フラグ
     float saveCooldown_ = 0.0f;                    // 保存クールダウン
     static constexpr float kSaveCooldownTime = 2.0f; // 自動保存までの待機時間
+
+    float inspectorWidth_ = 340.0f; // 右側インスペクターパネルの横幅
 
     // ── ノード単体デバッグ実行 ──────────────────────────
     int singleTestNodeId_ = -1;                        // 単体テスト対象のエディタノードID (-1=未選択)

@@ -63,7 +63,6 @@ void GameScene::Initialize() {
     player_->SetVp(&vp_);
     enemy_->SetVp(&vp_);
     enemy_->SetTarget(player_.get());
-    ground_->GetLighting() = false;
 
     /// ===================================================
     /// ポインタ共有
@@ -104,13 +103,12 @@ void GameScene::Initialize() {
     drawSystem_->Register("GameScene_3D", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
         objectManager_->Draw(vp);
         skyBox_->Draw(vp);
-        ground_->Draw(vp);
         aroundField_->Draw(vp);
         player_ptr->DrawParticle(vp);   // Graphics フェーズのみ実行される
         enemy_ptr->DrawParticle(vp);
         aroundField_->DrawParticle(vp);
         followCamera_->DrawFrustum();
-        enemy_ptr->DrawFrustum();
+       // enemy_ptr->DrawFrustum();
     });
     drawSystem_->Register("GameScene_UI", DrawLayer::kPostEffect, [this](const ViewProjection &) {
         playerUI_->Draw();
@@ -153,8 +151,6 @@ void GameScene::Update() {
     }
 #endif
 
-    // 環境オブジェクトの更新
-    ground_->Update();
     aroundField_->Update();
     playerUI_->Update();
     enemyUI_->Update();

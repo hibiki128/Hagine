@@ -1,5 +1,6 @@
 #include "Framework.h"
 #include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include <Debug/CpuProfiler/CpuProfiler.h>
 #include <Debug/Log/Logger.h>
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
@@ -330,23 +331,36 @@ void Framework::Update() {
     /// deltaTimeの更新
     Frame::Update();
 
-    particleCSFieldManager_->Update();
-
-    sceneManager_->Update();
-
-    baseObjectManager_->Update();
-
-    spriteManager_->UpdateAll(Frame::DeltaTime());
-
-    collisionManager_->Update();
-
-    LightGroup::GetInstance()->Update(*sceneManager_->GetBaseScene()->GetViewProjection());
-
-    input_->Update();
-
-    shortcutManager_->Update();
-
-    endRequest_ = winApp_->ProcessMessage();
+    {
+        HAGINE_CPU_PROFILE("Update/ParticleField");
+        particleCSFieldManager_->Update();
+    }
+    {
+        HAGINE_CPU_PROFILE("Update/Scene(logic+ImGui)");
+        sceneManager_->Update();
+    }
+    {
+        HAGINE_CPU_PROFILE("Update/Objects(anim+phys)");
+        baseObjectManager_->Update();
+    }
+    {
+        HAGINE_CPU_PROFILE("Update/Sprites");
+        spriteManager_->UpdateAll(Frame::DeltaTime());
+    }
+    {
+        HAGINE_CPU_PROFILE("Update/Collision");
+        collisionManager_->Update();
+    }
+    {
+        HAGINE_CPU_PROFILE("Update/Light");
+        LightGroup::GetInstance()->Update(*sceneManager_->GetBaseScene()->GetViewProjection());
+    }
+    {
+        HAGINE_CPU_PROFILE("Update/Input");
+        input_->Update();
+        shortcutManager_->Update();
+        endRequest_ = winApp_->ProcessMessage();
+    }
 }
 
 void Framework::LoadResource() {

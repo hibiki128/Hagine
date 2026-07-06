@@ -490,6 +490,7 @@
     <ClCompile Include="externals\imgui\ImGradient.cpp" />
     <ClCompile Include="externals\imgui\ImCurveEdit.cpp" />
     <ClCompile Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.cpp" />
+    <ClCompile Include="Engine\Utility\Debug\CpuProfiler\CpuProfiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -918,6 +919,7 @@
     <ClInclude Include="Engine\Render\DrawSystem.h" />
     <ClInclude Include="Engine\Utility\Collider\type\MeshCollider.h" />
     <ClInclude Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.h" />
+    <ClInclude Include="Engine\Utility\Debug\CpuProfiler\CpuProfiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
