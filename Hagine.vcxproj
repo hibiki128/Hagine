@@ -129,7 +129,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Scene\ClearScene.cpp" />
     <ClCompile Include="Application\Scene\DemoScene.cpp" />
     <ClCompile Include="Application\Scene\GameScene.cpp" />
-    <ClCompile Include="Application\Scene\SelectScene.cpp" />
+    <ClCompile Include="Application\Scene\TrainingScene.cpp" />
     <ClCompile Include="Application\Scene\TitleScene.cpp" />
     <ClCompile Include="Application\Utility\HitStop\HitStop.cpp" />
     <ClCompile Include="Engine\Base\Command\DXCommandList.cpp" />
@@ -213,6 +213,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\Staging\Transition\FadeOut.cpp" />
     <ClCompile Include="Engine\Input\GamePad.cpp" />
     <ClCompile Include="Application\UI\Scene\Game\GameUI.cpp" />
+    <ClCompile Include="Application\UI\Scene\Training\InputDisplayUI.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\Utility\Debug\ResourceLeakChecker\D3DResourceLeakChecker.cpp" />
     <ClCompile Include="Engine\Base\DirectXCommon.cpp" />
@@ -329,7 +330,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\Scene\ClearScene.h" />
     <ClInclude Include="Application\Scene\DemoScene.h" />
     <ClInclude Include="Application\Scene\GameScene.h" />
-    <ClInclude Include="Application\Scene\SelectScene.h" />
+    <ClInclude Include="Application\Scene\TrainingScene.h" />
     <ClInclude Include="Application\Scene\TitleScene.h" />
     <ClInclude Include="Application\Utility\HitStop\HitStop.h" />
     <ClInclude Include="Engine\Base\Command\DXCommandList.h" />
@@ -463,6 +464,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\GameObject\Player\State\Action\PlayerEnergyCharge.h" />
     <ClInclude Include="Engine\Input\GamePad.h" />
     <ClInclude Include="Application\UI\Scene\Game\GameUI.h" />
+    <ClInclude Include="Application\UI\Scene\Training\InputDisplayUI.h" />
     <ClInclude Include="Engine\3d\Particle\CSParticle\ParticleCSFieldManager.h" />
     <ClInclude Include="Application\GameObject\Player\Collider\PlayerAttackCollider.h" />
     <ClInclude Include="Application\GameObject\Player\State\Action\PlayerStateGuard.h" />

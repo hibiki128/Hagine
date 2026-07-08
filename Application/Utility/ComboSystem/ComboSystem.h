@@ -57,6 +57,8 @@ class ComboSystem {
     std::vector<ComboData> comboData_;              // コンボデータ配列
     std::vector<Hagine::BaseObject *> comboStartObjects_;   // コンボ開始オブジェクト配列
 
+    std::string lastAttackName_;     // 直近に発火した攻撃の名前（入力表示UI等が参照）
+
     int comboIndex_ = 0;             // 現在のコンボインデックス
     float comboCooldown_ = 0.0f;     // コンボクールダウン
     bool comboStarted_ = false;      // コンボ開始フラグ
@@ -147,6 +149,11 @@ class ComboSystem {
     bool IsCurrentAttackCompleted() const;
     int GetCurrentComboIndex() const { return comboIndex_; }
     int GetComboLength() const { return static_cast<int>(comboData_.size()); }
+
+    /// <summary>
+    /// 直近に発火した攻撃段の名前を取得する（"Jab" 等）。入力表示UIが参照する
+    /// </summary>
+    const std::string &GetCurrentAttackName() const { return lastAttackName_; }
 
 #ifdef _DEBUG
     /// <summary>

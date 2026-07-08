@@ -204,8 +204,13 @@ void Enemy::Update() {
 
         // 死亡判定
         if (HP_ <= kMinHP) {
-            isAlive_ = false;
-            HP_ = kMinHP;
+            if (dummyMode_) {
+                // ダミーはHPが尽きたら即復活する（満タン・初期位置へ）
+                Revive();
+            } else {
+                isAlive_ = false;
+                HP_ = kMinHP;
+            }
         }
 
         // ガード中のエフェクト（点滅）
@@ -224,7 +229,10 @@ void Enemy::Update() {
         // 回転を更新（敵をプレイヤーへ向ける）
         RotateUpdate();
 
-        ConboUpdate();
+        // ダミーモードでは自身の攻撃(コンボ)は行わない
+        if (!dummyMode_) {
+            ConboUpdate();
+        }
         UpdateShadowScale();
         chargeShake_->Update();
 
@@ -262,8 +270,8 @@ void Enemy::Update() {
             }
         }
 
-        // ビヘイビアツリーの更新
-        if (rootNode_) {
+        // ビヘイビアツリーの更新（ダミーモードではAIを動かさない）
+        if (rootNode_ && !dummyMode_) {
             rootNode_->SetContext(this, target_);
             rootNode_->Tick();
 
@@ -286,6 +294,16 @@ void Enemy::Update() {
             } else if (isGrounded_) {
                 acceleration_.y = 0.0f;
             }
+        } else if (dummyMode_) {
+            // ダミー: AIは動かさないが、被弾ノックバックは残す。
+            // 水平速度に摩擦をかけて徐々に停止させ、重力だけ適用する。
+            velocity_.x *= kDummyGroundFriction;
+            velocity_.z *= kDummyGroundFriction;
+            if (!isGrounded_) {
+                velocity_.y += acceleration_.y * Frame::DeltaTime();
+            } else {
+                acceleration_.y = 0.0f;
+            }
         } else {
             // ルートノードがなければ停止
             velocity_.x = 0.0f;
@@ -303,14 +321,16 @@ void Enemy::Update() {
         CollisionGround();
         UpdateFrustumLockOn();
 
-        // 弾の更新
-        for (auto it = bullets_.begin(); it != bullets_.end();) {
-            (*it)->Update();
-            (*it)->UpdateWorldTransformHierarchy();
-            if (!(*it)->IsAlive()) {
-                it = bullets_.erase(it);
-            } else {
-                ++it;
+        // 弾の更新（ダミーモードでは弾を撃たないためスキップ）
+        if (!dummyMode_) {
+            for (auto it = bullets_.begin(); it != bullets_.end();) {
+                (*it)->Update();
+                (*it)->UpdateWorldTransformHierarchy();
+                if (!(*it)->IsAlive()) {
+                    it = bullets_.erase(it);
+                } else {
+                    ++it;
+                }
             }
         }
     }
@@ -950,6 +970,34 @@ void Enemy::DrawFrustum() {
 
 void Enemy::SetVp(ViewProjection *vp) {
     chargeShake_->Initialize(vp, "chargehit");
+}
+
+void Enemy::SetDummy(bool enable) {
+    dummyMode_ = enable;
+    if (enable && transform_) {
+        // 呼び出し時点の位置を復活位置として記録する
+        spawnPosition_ = transform_->translation_;
+    }
+}
+
+void Enemy::Revive() {
+    HP_ = maxHP_;
+    energy_ = maxEnergy_;
+    isAlive_ = true;
+
+    // 速度・ノックバック・被弾リアクションをクリア
+    velocity_ = {0.0f, 0.0f, 0.0f};
+    acceleration_ = {0.0f, 0.0f, 0.0f};
+    hasKnockback_ = false;
+    pendingKnockback_ = {0.0f, 0.0f, 0.0f};
+    isDamageReact_ = false;
+    isGrounded_ = true;
+    SetAlpha(kAlphaOpaque);
+
+    // 初期位置へ戻す
+    if (transform_) {
+        transform_->translation_ = spawnPosition_;
+    }
 }
 
 void Enemy::SetEnergy(float energy) {

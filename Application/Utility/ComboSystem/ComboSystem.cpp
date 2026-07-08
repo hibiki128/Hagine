@@ -184,6 +184,9 @@ void ComboSystem::ExecuteComboAttack() {
 
     comboCooldown_ = COMBO_INTERVAL;
 
+    // 今まさに発火した攻撃の名前を記録する（発火コールバックから参照できるよう先に確定）
+    lastAttackName_ = currentCombo.attackData;
+
     if (!comboStarted_) {
         SaveComboStartPositions();
         comboStarted_ = true;

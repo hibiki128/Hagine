@@ -123,6 +123,16 @@ class ChargeShot : public Hagine::BaseObject {
     /// <returns>bool: チャージ状態フラグ</returns>
     bool GetIsCharge() const { return isCharge_; }
 
+    /// <summary>
+    /// このフレームにチャージ弾を発射したかを取得し、フラグをクリアする（入力表示UI用）
+    /// </summary>
+    /// <returns>bool: 発射した瞬間なら true</returns>
+    bool ConsumeFired() {
+        bool fired = firedThisFrame_;
+        firedThisFrame_ = false;
+        return fired;
+    }
+
     void SetIsSkillMenu(bool isSkillMenu) { isSkillMenu_ = isSkillMenu; }
 
   private:
@@ -154,6 +164,7 @@ class ChargeShot : public Hagine::BaseObject {
     bool isMaxScale_ = false; // 最大スケール到達フラグ
     bool isFired_ = false;    // 発射済みフラグ
     bool isCharge_ = false;    // チャージ中フラグ
+    bool firedThisFrame_ = false; // このフレームに発射したか（入力表示UI用）
 
     float scale_ = kInitialScale;    // 現在のスケール
     float scaleSpeed_ = kScaleSpeed; // スケール増加速度

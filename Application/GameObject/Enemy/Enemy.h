@@ -132,6 +132,19 @@ class Enemy : public Hagine::BaseObject {
     void SetIsLockOn(bool lockOn) { isLockOn_ = lockOn; }
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
+
+    /// <summary>
+    /// トレーニング用ダミーモードを設定する。
+    /// 有効時はAI(ビヘイビアツリー)・自身の攻撃・弾を停止し、
+    /// 被弾リアクション(点滅・ノックバック)と復活のみ行う。
+    /// 呼び出し時点のワールド位置を復活位置として記録する。
+    /// </summary>
+    void SetDummy(bool enable);
+
+    /// <summary>
+    /// HP・状態・位置を初期化して復活させる(ダミー用)
+    /// </summary>
+    void Revive();
     void SetDrawShadow(bool flag) { drawShadow_ = flag; }
     void SetVelocity(const Hagine::Vector3 &vel) { velocity_ = vel; }
     void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
@@ -271,6 +284,9 @@ class Enemy : public Hagine::BaseObject {
     static constexpr float kGroundLevel = 0.0f;
     static constexpr float kVelocityZero = 0.0f;
 
+    // ダミーモード(トレーニング)関連
+    static constexpr float kDummyGroundFriction = 0.8f; // ノックバック後の水平減衰率(毎フレーム)
+
     // イージング関連定数
     static constexpr float kVelocityEaseTime = 0.15f;
     static constexpr float kStopEaseTime = 0.2f;
@@ -348,6 +364,8 @@ class Enemy : public Hagine::BaseObject {
     bool isStop_ = false;        // 停止中フラグ
     bool started_ = false;       // 開始フラグ
     bool isPause_ = false;       // ポーズフラグ
+    bool dummyMode_ = false;     // トレーニング用ダミーモード(AI停止・復活のみ)
+    Hagine::Vector3 spawnPosition_{}; // ダミー復活時に戻る初期位置
     bool drawShadow_ = true;     // 影描画フラグ
     bool isGuarding_ = false;    // ガード中フラグ
     bool isComboAttack_ = false; // コンボ攻撃中フラグ

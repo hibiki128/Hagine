@@ -186,10 +186,17 @@ void Player::Init(const std::string objectName) {
             if (attackCollider_) {
                 attackCollider_->Activate(damage, knockback, duration, delay);
             }
+            // 入力表示UI用: 実際に発火した近接攻撃の段名を記録する
+            // （先行入力バッファ経由の発火もここを通るため取りこぼしがない）
+            meleeAttackFired_ = true;
+            lastMeleeAttackName_ = punchCombo_.GetCurrentAttackName();
         });
 }
 
 void Player::Update() {
+
+    // 入力表示UI用アクションイベントは毎フレーム先頭でクリアする
+    actionEvents_.clear();
 
     if (activeDebugCamrera_)
         return;
@@ -244,6 +251,16 @@ void Player::Update() {
             if (chargeShot_) {
                 chargeShot_->SetIsSkillMenu(isSkillMenu_);
                 chargeShot_->Update();
+
+                // 入力表示UI用：チャージ開始（溜め始め）とチャージ弾発射を通知
+                bool nowCharge = chargeShot_->GetIsCharge();
+                if (nowCharge && !prevChargeState_) {
+                    EmitAction(ActionKind::ChargeStart);
+                }
+                prevChargeState_ = nowCharge;
+                if (chargeShot_->ConsumeFired()) {
+                    EmitAction(ActionKind::ChargeShot);
+                }
             }
 
             Shot();
@@ -387,6 +404,15 @@ void Player::ChangeState(const std::string &stateName) {
         }
         currentState_ = it->second.get();
         currentState_->Enter(*this);
+
+        // 入力表示UI用：ステート遷移で実際に発動したアクションを通知
+        if (stateName == "Rush") {
+            EmitAction(ActionKind::Rush);
+        } else if (stateName == "Guard") {
+            EmitAction(ActionKind::Guard);
+        } else if (stateName == "EnergyCharge") {
+            EmitAction(ActionKind::EnergyCharge);
+        }
     }
 }
 
@@ -501,6 +527,7 @@ void Player::Shot() {
                 bullets_.push_back(std::move(bullet));
 
                 timeSinceLastShot_ = kTimerReset; // 射撃タイマーをリセット
+                EmitAction(ActionKind::NormalShot); // 入力表示UI用：通常射撃を通知
             }
         } else {
             // ゲームパッド入力 - Yボタンの押下時間を計測
@@ -525,6 +552,7 @@ void Player::Shot() {
                     bullets_.push_back(std::move(bullet));
 
                     timeSinceLastShot_ = kTimerReset; // 射撃タイマーをリセット
+                    EmitAction(ActionKind::NormalShot); // 入力表示UI用：通常射撃を通知
                 }
 
                 yButtonHoldTime_ = 0.0f; // 押下時間をリセット
@@ -569,6 +597,7 @@ void Player::SkillShot() {
                 }
                 makanAttack_ptr_->SetPlayer(this);
                 makanAttack_ptr_->Activate(transform_.get());
+                EmitAction(ActionKind::Special); // 入力表示UI用：必殺技を通知
             }
         } else {
             // ゲームパッド入力
@@ -582,6 +611,7 @@ void Player::SkillShot() {
                     }
                     makanAttack_ptr_->SetPlayer(this);
                     makanAttack_ptr_->Activate(transform_.get());
+                    EmitAction(ActionKind::Special); // 入力表示UI用：必殺技を通知
                 }
             }
         }
@@ -679,6 +709,9 @@ void Player::Move() {
         if (input_->PushKey(DIK_S))
             zInput -= kInputValue;
         isDashing_ = input_->PushKey(DIK_LCONTROL);
+        if (input_->TriggerKey(DIK_LCONTROL)) {
+            EmitAction(ActionKind::Dash); // 入力表示UI用：ダッシュ開始を通知
+        }
     } else {
         // ゲームパッド入力
         xInput = -gamePad_->GetLeftStickX(); // 左スティックX軸
@@ -699,6 +732,7 @@ void Player::Move() {
             // A押下時にスティックがニュートラルなら、猶予時間内に倒せばダッシュ継続を許可。
             // 既にスティックを倒していれば従来通り即ダッシュ確定（猶予不要）。
             dashGraceTimer_ = hasStickInput ? 0.0f : kDashGraceTime;
+            EmitAction(ActionKind::Dash); // 入力表示UI用：ダッシュ開始を通知
         }
 
         // 猶予中にスティックを倒したらダッシュを確定（以降は通常の維持判定に従う）。

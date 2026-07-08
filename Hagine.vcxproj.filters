@@ -167,6 +167,9 @@
     <ClCompile Include="Application\UI\Scene\Game\GameUI.cpp">
       <Filter>Application\UI\Scene\Game</Filter>
     </ClCompile>
+    <ClCompile Include="Application\UI\Scene\Training\InputDisplayUI.cpp">
+      <Filter>Application\UI\Scene\Training</Filter>
+    </ClCompile>
     <ClCompile Include="Application\UI\Player\PlayerUI.cpp">
       <Filter>Application\UI\Player</Filter>
     </ClCompile>
@@ -194,7 +197,7 @@
     <ClCompile Include="Application\Scene\GameScene.cpp">
       <Filter>Application\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Application\Scene\SelectScene.cpp">
+    <ClCompile Include="Application\Scene\TrainingScene.cpp">
       <Filter>Application\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Application\Scene\TitleScene.cpp">
@@ -581,6 +584,9 @@
     <ClInclude Include="Application\UI\Scene\Game\GameUI.h">
       <Filter>Application\UI\Scene\Game</Filter>
     </ClInclude>
+    <ClInclude Include="Application\UI\Scene\Training\InputDisplayUI.h">
+      <Filter>Application\UI\Scene\Training</Filter>
+    </ClInclude>
     <ClInclude Include="Application\UI\Player\PlayerUI.h">
       <Filter>Application\UI\Player</Filter>
     </ClInclude>
@@ -608,7 +614,7 @@
     <ClInclude Include="Application\Scene\GameScene.h">
       <Filter>Application\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Application\Scene\SelectScene.h">
+    <ClInclude Include="Application\Scene\TrainingScene.h">
       <Filter>Application\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Application\Scene\TitleScene.h">
@@ -1081,6 +1087,9 @@
     </Filter>
     <Filter Include="Application\UI\Scene\Game">
       <UniqueIdentifier>{244785ee-4ad7-41c1-b384-a5f160c6b52d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\UI\Scene\Training">
+      <UniqueIdentifier>{7b9c2e14-3d6a-4f28-9a51-2c8e4d0b6f31}</UniqueIdentifier>
     </Filter>
     <Filter Include="Application\UI\Scene\Result">
       <UniqueIdentifier>{c920d9e7-fd91-4bc1-be53-ea5709b133e0}</UniqueIdentifier>

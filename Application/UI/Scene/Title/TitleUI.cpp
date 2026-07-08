@@ -116,19 +116,7 @@ void TitleUI::Update() {
         }
     }
 
-    if (!gamePad_->IsConnected()) {
-        if (time_ >= kMinStartInputTime && Input::GetInstance()->TriggerKey(DIK_SPACE) && !secondMove_ && !cameraMove_) {
-            secondMove_ = true;
-            isSpriteExiting_ = true;
-            spriteExitTimer_ = 0.0f;
-        }
-    } else {
-        if (time_ >= kMinStartInputTime && gamePad_->IsTrigger(XINPUT_GAMEPAD_A) && !secondMove_ && !cameraMove_) {
-            secondMove_ = true;
-            isSpriteExiting_ = true;
-            spriteExitTimer_ = 0.0f;
-        }
-    }
+    // 開始演出の発火はシーン側（メニューでチュートリアル選択時）から RequestStartCinematic() で行う
 
     if (secondMove_) {
         bulletEaseTimer_ += kDeltaTime;
@@ -156,6 +144,21 @@ void TitleUI::Update() {
     }
     if (timer_ >= kFinishDelayTime) {
         isFinish_ = true;
+    }
+}
+
+void TitleUI::RequestStartCinematic() {
+    if (secondMove_) {
+        return;
+    }
+    secondMove_ = true;
+    isSpriteExiting_ = true;
+    spriteExitTimer_ = 0.0f;
+}
+
+void TitleUI::HidePressStart() {
+    if (sprites_[kPressStart] && sprites_[kPressStart]->sprite) {
+        sprites_[kPressStart]->sprite->SetAlpha(0.0f);
     }
 }
 

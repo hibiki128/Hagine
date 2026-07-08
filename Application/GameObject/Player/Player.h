@@ -125,6 +125,39 @@ class Player : public Hagine::BaseObject {
     /// Getter
     /// ===================================================
     Hagine::GamePad *GetGamePad() { return gamePad_.get(); }
+
+    /// <summary>
+    /// このフレームに近接攻撃が発火していれば true を返し、その段名を out に格納する。
+    /// 取得すると内部フラグはクリアされる（1発火につき1回だけ true）。入力表示UI用。
+    /// </summary>
+    bool ConsumeMeleeAttackFired(std::string &outName) {
+        if (!meleeAttackFired_) {
+            return false;
+        }
+        meleeAttackFired_ = false;
+        outName = lastMeleeAttackName_;
+        return true;
+    }
+
+    /// <summary>
+    /// 入力表示UI用のアクション種別。入力の有無ではなく「実際に発動したもの」だけを通知する。
+    /// </summary>
+    enum class ActionKind {
+        NormalShot,   // 通常射撃
+        ChargeStart,  // チャージ開始（溜め始め）
+        ChargeShot,   // チャージ弾発射
+        Special,      // 必殺技
+        Dash,         // ダッシュ
+        Rush,         // 急接近（ラッシュ）
+        Guard,        // ガード
+        EnergyCharge, // エネルギーチャージ
+    };
+
+    /// <summary>このフレームに実際に発動したアクションイベント列（入力表示UI用）</summary>
+    const std::vector<ActionKind> &GetActionEvents() const { return actionEvents_; }
+
+    /// <summary>アクションイベントを1件記録する（各アクションの実発動箇所から呼ぶ）</summary>
+    void EmitAction(ActionKind kind) { actionEvents_.push_back(kind); }
     FollowCamera *GetCamera() { return FollowCamera_; }
     Enemy *GetEnemy() { return enemy_; }
     Hagine::Vector3 &GetAcceleration() { return acceleration_; }
@@ -476,6 +509,14 @@ class Player : public Hagine::BaseObject {
     ComboSystem punchCombo_;
     bool comboInitialized_ = false;            // コンボ初期化済みフラグ
     std::vector<std::string> comboAnimations_; // コンボ段ごとのプレイヤー本体アニメーションパス
+
+    // 入力表示UI用: 近接攻撃の発火通知（発火コールバックで設定し、Consumeでクリア）
+    bool meleeAttackFired_ = false;    // このフレームに近接攻撃が発火したか
+    std::string lastMeleeAttackName_;  // 直近に発火した近接攻撃の段名
+
+    // 入力表示UI用: 実発動アクションのイベント列（Update先頭でクリア）
+    std::vector<ActionKind> actionEvents_;
+    bool prevChargeState_ = false;     // チャージ開始のエッジ検出用
 
     // ─── 飛行移動中の体の傾き（リーン）───
     // ロックオン飛行移動中、顔は敵向きのまま進行方向へ体を倒して見せるための描画専用の傾き。
