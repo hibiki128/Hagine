@@ -6,7 +6,6 @@
 #include <vector>
 
 namespace Hagine { class BaseObject; }
-class MotionEditor;
 
 /// <summary>
 /// コンボシステムを管理するクラス

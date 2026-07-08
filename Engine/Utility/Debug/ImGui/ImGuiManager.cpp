@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <map>
-#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include "Edit/MotionEditor/MotionEditor.h"
 #include <Data/DataHandler.h>
 #include <Frame/Frame.h>
 #include <Line/DrawLine3D.h>
@@ -59,6 +59,7 @@ void ImGuiSrvFree(ImGui_ImplDX12_InitInfo * /*info*/,
 
 void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) {
 
+    winApp_ = winApp;
     dxCommon_ = DirectXCommon::GetInstance();
     baseObjectManager_ = BaseObjectManager::GetInstance();
     spriteManager_ = SpriteManager::GetInstance();
@@ -355,7 +356,7 @@ void ImGuiManager::ShowMainMenu() {
             ImGui::Separator();
             if (ImGui::MenuItem(ICON_FA_DOOR_OPEN " 終了", "Alt+F4")) {
                 // アプリケーション終了処理
-                WinApp::GetInstance()->ClosedWindow(); // 終了メッセージ送信
+                winApp_->ClosedWindow(); // 終了メッセージ送信
             }
             ImGui::EndMenu();
         }
@@ -489,7 +490,7 @@ void ImGuiManager::ShowMainMenu() {
             }
             ImGui::Separator();
             if (ImGui::MenuItem(ICON_FA_EXPAND " フルスクリーン切替", "F11")) {
-                WinApp::GetInstance()->ToggleFullScreen();
+                winApp_->ToggleFullScreen();
             }
             ImGui::EndMenu();
         }
@@ -649,32 +650,19 @@ void ImGuiManager::ShowMainMenu() {
             ImGui::EndMenu();
         }
 
-        // シーンメニュー
+        // シーンメニュー（SceneRegistry に自己登録された全シーンを列挙する）
         if (ImGui::BeginMenu(ICON_FA_GLOBE " シーン選択")) { // 地球アイコン（意味：全体メニュー）
 
-            if (ImGui::MenuItem(ICON_FA_HOME " タイトルシーン", "Ctrl+1")) { // home アイコン
-                SceneManager::GetInstance()->NextSceneReservation("TITLE");
-                ImGuiNotification::Post("タイトルシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_BARS " セレクトシーン", "Ctrl+2")) { // bars アイコン（メニュー選択感）
-                SceneManager::GetInstance()->NextSceneReservation("SELECT");
-                ImGuiNotification::Post("セレクトシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームシーン", "Ctrl+3")) { // gamepad アイコン
-                SceneManager::GetInstance()->NextSceneReservation("GAME");
-                ImGuiNotification::Post("ゲームシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_TROPHY " クリアシーン", "Ctrl+4")) { // trophy アイコン
-                SceneManager::GetInstance()->NextSceneReservation("CLEAR");
-                ImGuiNotification::Post("クリアシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_FILM " デモシーン", "Ctrl+5")) { // film アイコン
-                SceneManager::GetInstance()->NextSceneReservation("DEMO");
-                ImGuiNotification::Post("デモシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_BOOK_OPEN " チュートリアルシーン", "Ctrl+6")) {
-                SceneManager::GetInstance()->NextSceneReservation("TUTORIAL");
-                ImGuiNotification::Post("チュートリアルシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
+            const std::vector<std::string> sceneNames = SceneRegistry::GetInstance()->GetSceneNames();
+            for (size_t i = 0; i < sceneNames.size(); ++i) {
+                const std::string &sceneName = sceneNames[i];
+                const std::string label = std::string(ICON_FA_GAMEPAD " ") + sceneName;
+                // Framework::RegisterShortcutKey と同じ名前順で Ctrl+数字 が割り当てられている
+                const std::string shortcut = (i < 9) ? "Ctrl+" + std::to_string(i + 1) : "";
+                if (ImGui::MenuItem(label.c_str(), shortcut.empty() ? nullptr : shortcut.c_str())) {
+                    SceneManager::GetInstance()->NextSceneReservation(sceneName);
+                    ImGuiNotification::Post(sceneName + " シーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
+                }
             }
 
             ImGui::EndMenu();
@@ -931,7 +919,9 @@ void ImGuiManager::ShowDrawSystemWindow() {
         return; // 表示しない場合は早期リターン
 
     // ウィンドウの生成・閉じるボタンは DrawSystem 側に委譲する
-    DrawSystem::GetInstance()->UpdateImGui(&showDrawSystemView_);
+    if (drawSystem_) {
+        drawSystem_->UpdateImGui(&showDrawSystemView_);
+    }
 }
 
 void ImGuiManager::ShowAssetBrowserWindow() {

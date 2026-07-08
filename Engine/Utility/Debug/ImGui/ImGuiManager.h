@@ -9,8 +9,14 @@
 namespace Hagine {
 class ImGuizmoManager;
 class OffScreen;
+class DrawSystem;
 class ImGuiManager {
   private:
+    ImGuizmoManager *imGuizmoManager_ = nullptr;
+    WinApp *winApp_ = nullptr;
+    DrawSystem *drawSystem_ = nullptr;
+
+  public:
     /// ====================================
     /// public method
     /// ====================================
@@ -20,13 +26,6 @@ class ImGuiManager {
     ImGuiManager(ImGuiManager &) = delete;
     ImGuiManager &operator=(ImGuiManager &) = delete;
 
-    ImGuizmoManager *imGuizmoManager_ = nullptr;
-
-  public:
-    /// ====================================
-    /// public method
-    /// ====================================
-
     /// <summary>
     /// 初期化
     /// </summary>
@@ -35,13 +34,9 @@ class ImGuiManager {
     void SetupTheme();
 
     /// <summary>
-    /// シングルトンインスタンスの取得
+    /// 統計ウィンドウで参照する DrawSystem を設定（Framework が注入する）
     /// </summary>
-    /// <returns></returns>
-    static ImGuiManager* GetInstance() {
-        static ImGuiManager instance;
-        return &instance;
-    }
+    void SetDrawSystem(DrawSystem *drawSystem) { drawSystem_ = drawSystem; }
 
     /// <summary>
     /// 終了

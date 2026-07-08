@@ -1,9 +1,11 @@
 #include "Framework.h"
 #include "Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Utility/Scene/SceneRegistry.h"
 #include <Debug/CpuProfiler/CpuProfiler.h>
 #include <Debug/Log/Logger.h>
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
+#include <iterator>
 
 namespace Hagine {
 void Framework::Run() {
@@ -30,14 +32,14 @@ void Framework::Initialize() {
 
     ///---------WinApp--------
     // WindowsAPIの初期化
-    winApp_ = WinApp::GetInstance();
+    winApp_ = std::make_unique<WinApp>();
     winApp_->Initialize();
     ///-----------------------
 
     ///---------DirectXCommon----------
     // DirectXCommonの初期化
     dxCommon_ = DirectXCommon::GetInstance();
-    dxCommon_->Initialize(winApp_);
+    dxCommon_->Initialize(winApp_.get());
     ///--------------------------------
 
     ///--------SRVManager--------
@@ -66,8 +68,8 @@ void Framework::Initialize() {
 
     /// ---------ImGui---------
 #ifdef _DEBUG
-    imGuiManager_ = ImGuiManager::GetInstance();
-    imGuiManager_->Initialize(winApp_, imGuizmoManager_);
+    imGuiManager_ = std::make_unique<ImGuiManager>();
+    imGuiManager_->Initialize(winApp_.get(), imGuizmoManager_);
     imGuiManager_->GetIsShowMainUI() = true;
 #endif // _DEBUG
        /// -----------------------
@@ -99,13 +101,13 @@ void Framework::Initialize() {
     ///-----------------------------------
 
     ///-----------ModelCommon-------------
-    modelCommon_ = ModelCommon::GetInstance();
+    modelCommon_ = std::make_unique<ModelCommon>();
     modelCommon_->Initialize();
     ///-----------------------------------
 
     ///-----------ModelManager------------
     modelManager_ = ModelManager::GetInstance();
-    modelManager_->Initialize(srvManager_);
+    modelManager_->Initialize(srvManager_, modelCommon_.get());
     ///----------------------------------
 
     ///----------PrimitiveModel-----------
@@ -129,9 +131,13 @@ void Framework::Initialize() {
     audio_->Initialize();
     ///---------------------------
 
+    ///-------SceneTransition-------
+    sceneTransition_ = std::make_unique<SceneTransition>();
+    ///-----------------------------
+
     ///-------SceneManager--------
     sceneManager_ = SceneManager::GetInstance();
-    sceneManager_->Initialize();
+    sceneManager_->Initialize(sceneTransition_.get());
     ///---------------------------
 
     ///-------OffScreen--------
@@ -141,9 +147,12 @@ void Framework::Initialize() {
     ///------------------------
 
     ///-------DrawSystem-------
-    drawSystem_ = DrawSystem::GetInstance();
+    drawSystem_ = std::make_unique<DrawSystem>();
     drawSystem_->Initialize(dxCommon_, srvManager_, offscreen_.get(), sceneManager_, collisionManager_);
-    sceneManager_->SetDrawSystem(drawSystem_);
+    sceneManager_->SetDrawSystem(drawSystem_.get());
+#ifdef _DEBUG
+    imGuiManager_->SetDrawSystem(drawSystem_.get());
+#endif // _DEBUG
     ///------------------------
 
     ///-------DrawLine3D-------
@@ -186,20 +195,16 @@ void Framework::Initialize() {
     ///---------------------------------
 
     ///--------ShortcutManager------------
-    shortcutManager_ = ShortcutManager::GetInstance();
+    shortcutManager_ = std::make_unique<ShortcutManager>();
     shortcutManager_->Initialize(input_);
     ///-----------------------------------
 
-    ///-------AttackManager-------
+    ///-------MotionEditor-------
     motionEditor_ = MotionEditor::GetInstance();
-    ///---------------------------
-
-    ///-------SceneTransition-------
-    sceneTransition_ = SceneTransition::GetInstance();
-    ///-----------------------------
+    ///--------------------------
 
     ///-------csvLoad-------
-    csvLoad_ = CsvLoad::GetInstance();
+    csvLoad_ = std::make_unique<CsvLoad>();
     ///---------------------
 
     ///-------ShadowMap-------
@@ -282,30 +287,15 @@ void Framework::RegisterShortcutKey() {
     shortcutManager_->RegisterShortcut("CreateModel", {DIK_LCONTROL, DIK_LSHIFT, DIK_N}, [this]() {
         baseObjectManager_->OpenObjectCreationModal();
     });
-    // タイトル
-    shortcutManager_->RegisterShortcut("TitleScene", {DIK_LCONTROL, DIK_1}, [this]() {
-        sceneManager_->SceneSelection("TITLE");
-    });
-    // セレクト
-    shortcutManager_->RegisterShortcut("SelectScene", {DIK_LCONTROL, DIK_2}, [this]() {
-        sceneManager_->SceneSelection("SELECT");
-    });
-    // ゲーム
-    shortcutManager_->RegisterShortcut("GameScene", {DIK_LCONTROL, DIK_3}, [this]() {
-        sceneManager_->SceneSelection("GAME");
-    });
-    // クリア
-    shortcutManager_->RegisterShortcut("ClearScene", {DIK_LCONTROL, DIK_4}, [this]() {
-        sceneManager_->SceneSelection("CLEAR");
-    });
-    // デモ
-    shortcutManager_->RegisterShortcut("DemoScene", {DIK_LCONTROL, DIK_5}, [this]() {
-        sceneManager_->SceneSelection("DEMO");
-    });
-    // チュートリアル
-    shortcutManager_->RegisterShortcut("TutorialScene", {DIK_LCONTROL, DIK_6}, [this]() {
-        sceneManager_->SceneSelection("TUTORIAL");
-    });
+    // シーン切替（SceneRegistry に自己登録された全シーンへ Ctrl+数字 を割り当てる）
+    const std::vector<std::string> sceneNames = SceneRegistry::GetInstance()->GetSceneNames();
+    constexpr BYTE kNumberKeys[] = {DIK_1, DIK_2, DIK_3, DIK_4, DIK_5, DIK_6, DIK_7, DIK_8, DIK_9};
+    for (size_t i = 0; i < sceneNames.size() && i < std::size(kNumberKeys); ++i) {
+        const std::string sceneName = sceneNames[i];
+        shortcutManager_->RegisterShortcut(sceneName + "Scene", {DIK_LCONTROL, kNumberKeys[i]}, [this, sceneName]() {
+            sceneManager_->SceneSelection(sceneName);
+        });
+    }
     // ゲームデバッグ画面切り替え
     shortcutManager_->RegisterShortcut("SwichMode", DIK_F5, [this]() {
         imGuiManager_->GetIsShowMainUI() = !imGuiManager_->GetIsShowMainUI();
@@ -368,28 +358,6 @@ void Framework::LoadResource() {
     textureManager_->LoadAllTextures();
 
     textureManager_->LoadFontTexture("NotoSansJP-Medium.ttf", 100);
-
-    particleEditor_->AddParticleEmitter("hitEmitter");
-    particleEditor_->AddParticleEmitter("bulletEmitter");
-    particleEditor_->AddParticleEmitter("enemyBulletEmitter");
-    particleEditor_->AddParticleEmitter("chageBullet");
-    particleEditor_->AddParticleEmitter("RushEmitter");
-    particleEditor_->AddParticleEmitter("punchEmitter");
-    particleEditor_->AddParticleEmitter("smokeEmitter");
-    particleCSEditor_->AddParticleEmitter("playerAura");
-    particleCSEditor_->AddParticleEmitter("FadeOut");
-    particleCSEditor_->AddParticleEmitter("death");
-    particleCSEditor_->AddParticleEmitter("death_arm");
-    particleCSEditor_->AddParticleEmitter("makan_main");
-    particleCSEditor_->AddParticleEmitter("makan_around");
-    particleCSEditor_->AddParticleEmitter("chargeEmitter");
-    particleCSEditor_->AddParticleEmitter("fireWork_explosion");
-    particleCSEditor_->AddParticleEmitter("fireWork_Trail");
-    particleCSEditor_->AddParticleEmitter("ChargeAura");
-    particleCSEditor_->AddParticleEmitter("enemyChargeAura");
-    particleCSEditor_->AddParticleEmitter("AroundField");
-   
-    particleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
 
     ImGuiNotification::Post("全ての基本リソースを読み込みました", {0.2f, 0.8f, 0.2f, 1.0f});
     Logger::Info("All base resources loaded.");

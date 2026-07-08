@@ -3,7 +3,7 @@
 #ifdef _DEBUG
 #include "Debug/ImGui/ImGuizmoManager.h"
 #endif // _DEBUG
-#include "Application/Utility/MotionEditor/MotionEditor.h"
+#include "Edit/MotionEditor/MotionEditor.h"
 #include <Debug/Log/Logger.h>
 #include <ShowFolder/ShowFolder.h>
 #include "Render/DrawGroupManager.h"

@@ -19,7 +19,7 @@
 #include "application/Camera/FollowCamera.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include "numbers"
-#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include "Edit/MotionEditor/MotionEditor.h"
 #include <Particle/CSParticle/ParticleCSEditor.h>
 #include <Particle/ParticleEditor.h>
 #include <algorithm>

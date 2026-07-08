@@ -134,7 +134,7 @@ void TitleScene::ChangeScene() {
     /// シーン切り替え
     /// ===================================================
     if (secondMove_ && !vp_.GetIsCameraMove() && titleUI_->GetIsFinish()) {
-        SceneTransition::GetInstance()->SetUseTransition(false);
+        sceneManager_->GetSceneTransition()->SetUseTransition(false);
         sceneManager_->NextSceneReservation("TUTORIAL");
     }
 }

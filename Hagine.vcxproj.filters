@@ -155,8 +155,8 @@
     <ClCompile Include="Application\Utility\HitStop\HitStop.cpp">
       <Filter>Application\Utility\HitStop</Filter>
     </ClCompile>
-    <ClCompile Include="Application\Utility\MotionEditor\MotionEditor.cpp">
-      <Filter>Application\Utility\MotionEditor</Filter>
+    <ClCompile Include="Engine\Utility\Edit\MotionEditor\MotionEditor.cpp">
+      <Filter>Engine\Utility\Edit\MotionEditor</Filter>
     </ClCompile>
     <ClCompile Include="Application\Utility\Shake\Shake.cpp">
       <Filter>Application\Utility\Shake</Filter>
@@ -317,14 +317,17 @@
     <ClCompile Include="Engine\Base\DirectXCommon.cpp">
       <Filter>Engine\Base</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Base\WinApp.cpp">
-      <Filter>Engine\Base</Filter>
+    <ClCompile Include="Engine\Utility\Graphics\Rtv\RtvManager.cpp">
+      <Filter>Engine\Utility\Graphics\Rtv</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Utility\Graphics\Dsv\DsvManager.cpp">
+      <Filter>Engine\Utility\Graphics\Dsv</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Core\Framework.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Core\MyGame.cpp">
-      <Filter>Engine\Core</Filter>
+    <ClCompile Include="Application\SparkingFight.cpp">
+      <Filter>Application</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Frame\Frame.cpp">
       <Filter>Engine\Frame</Filter>
@@ -491,6 +494,14 @@
     <ClCompile Include="externals\imgui\ImCurveEdit.cpp" />
     <ClCompile Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.cpp" />
     <ClCompile Include="Engine\Utility\Debug\CpuProfiler\CpuProfiler.cpp" />
+    <ClCompile Include="Engine\Base\WinApp\WinApp.cpp" />
+    <ClCompile Include="Engine\Base\SwapChain\DXSwapChain.cpp" />
+    <ClCompile Include="Engine\Base\Shader\ShaderCompiler.cpp" />
+    <ClCompile Include="Engine\Base\Resource\ResourceFactory.cpp" />
+    <ClCompile Include="Engine\Base\Frame\FrameRateLimiter.cpp" />
+    <ClCompile Include="Engine\Base\Device\DXDevice.cpp" />
+    <ClCompile Include="Engine\Base\Command\DXCommandList.cpp" />
+    <ClCompile Include="Engine\Base\Command\DXCommandQueue.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -558,8 +569,8 @@
     <ClInclude Include="Application\Utility\HitStop\HitStop.h">
       <Filter>Application\Utility\HitStop</Filter>
     </ClInclude>
-    <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h">
-      <Filter>Application\Utility\MotionEditor</Filter>
+    <ClInclude Include="Engine\Utility\Edit\MotionEditor\MotionEditor.h">
+      <Filter>Engine\Utility\Edit\MotionEditor</Filter>
     </ClInclude>
     <ClInclude Include="Application\Utility\Shake\Shake.h">
       <Filter>Application\Utility\Shake</Filter>
@@ -723,17 +734,20 @@
     <ClInclude Include="Engine\Audio\Audio.h">
       <Filter>Engine\Audio</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Base\DirectXCommon.h">
-      <Filter>Engine\Base</Filter>
+    <ClInclude Include="Engine\Utility\Graphics\Rtv\RtvManager.h">
+      <Filter>Engine\Utility\Graphics\Rtv</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Base\WinApp.h">
+    <ClInclude Include="Engine\Utility\Graphics\Dsv\DsvManager.h">
+      <Filter>Engine\Utility\Graphics\Dsv</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Base\DirectXCommon.h">
       <Filter>Engine\Base</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Core\Framework.h">
       <Filter>Engine\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Core\MyGame.h">
-      <Filter>Engine\Core</Filter>
+    <ClInclude Include="Application\SparkingFight.h">
+      <Filter>Application</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Frame\Frame.h">
       <Filter>Engine\Frame</Filter>
@@ -920,6 +934,14 @@
     <ClInclude Include="Engine\Utility\Collider\type\MeshCollider.h" />
     <ClInclude Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.h" />
     <ClInclude Include="Engine\Utility\Debug\CpuProfiler\CpuProfiler.h" />
+    <ClInclude Include="Engine\Base\WinApp\WinApp.h" />
+    <ClInclude Include="Engine\Base\SwapChain\DXSwapChain.h" />
+    <ClInclude Include="Engine\Base\Shader\ShaderCompiler.h" />
+    <ClInclude Include="Engine\Base\Resource\ResourceFactory.h" />
+    <ClInclude Include="Engine\Base\Frame\FrameRateLimiter.h" />
+    <ClInclude Include="Engine\Base\Device\DXDevice.h" />
+    <ClInclude Include="Engine\Base\Command\DXCommandList.h" />
+    <ClInclude Include="Engine\Base\Command\DXCommandQueue.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
@@ -1075,7 +1097,7 @@
     <Filter Include="Application\Utility\HitStop">
       <UniqueIdentifier>{0ceed33a-183b-449d-b99c-82cca270766e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Application\Utility\MotionEditor">
+    <Filter Include="Engine\Utility\Edit\MotionEditor">
       <UniqueIdentifier>{c6039326-4c92-4d9f-8421-8babee2d4e0c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Application\Utility\Shake">
@@ -1221,6 +1243,12 @@
     </Filter>
     <Filter Include="Engine\Utility\Graphics\Srv">
       <UniqueIdentifier>{4f441bde-4a8e-4fd1-8b36-0d55b554be9a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Utility\Graphics\Rtv">
+      <UniqueIdentifier>{a3f1c2d4-8b5e-4c6f-9d21-1e7a52c94b03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Utility\Graphics\Dsv">
+      <UniqueIdentifier>{b7e2d3c5-9c6f-4d70-8e32-2f8b63da5c14}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Utility\Graphics\Texture">
       <UniqueIdentifier>{b069db75-7357-4d06-bfed-f67d3c3ccfa6}</UniqueIdentifier>

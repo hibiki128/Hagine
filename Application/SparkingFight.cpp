@@ -1,25 +1,49 @@
-#include "MyGame.h"
+#include "SparkingFight.h"
 #include <Debug/CpuProfiler/CpuProfiler.h>
 #include <Frame.h>
 
-namespace Hagine {
-void MyGame::Initialize() {
+using namespace Hagine;
+
+void SparkingFight::Initialize() {
     Framework::Initialize();
     Framework::LoadResource();
+    LoadGameResources();
     Framework::PlaySounds();
     Framework::RegisterShortcutKey();
-    // -----ゲーム固有の処理-----
 
     // 最初のシーンを予約（シーンは各 .cpp の REGISTER_SCENE で自己登録済み）
-#ifdef _DEBUG
     sceneManager_->NextSceneReservation("TITLE");
-#else
-    sceneManager_->NextSceneReservation("TITLE");
-#endif // _DEBUG
-    // -----------------------
 }
 
-void MyGame::Finalize() {
+void SparkingFight::LoadGameResources() {
+    // CPUパーティクルのエミッター
+    particleEditor_->AddParticleEmitter("hitEmitter");
+    particleEditor_->AddParticleEmitter("bulletEmitter");
+    particleEditor_->AddParticleEmitter("enemyBulletEmitter");
+    particleEditor_->AddParticleEmitter("chageBullet");
+    particleEditor_->AddParticleEmitter("RushEmitter");
+    particleEditor_->AddParticleEmitter("punchEmitter");
+    particleEditor_->AddParticleEmitter("smokeEmitter");
+
+    // GPU(CS)パーティクルのエミッター
+    particleCSEditor_->AddParticleEmitter("playerAura");
+    particleCSEditor_->AddParticleEmitter("FadeOut");
+    particleCSEditor_->AddParticleEmitter("death");
+    particleCSEditor_->AddParticleEmitter("death_arm");
+    particleCSEditor_->AddParticleEmitter("makan_main");
+    particleCSEditor_->AddParticleEmitter("makan_around");
+    particleCSEditor_->AddParticleEmitter("chargeEmitter");
+    particleCSEditor_->AddParticleEmitter("fireWork_explosion");
+    particleCSEditor_->AddParticleEmitter("fireWork_Trail");
+    particleCSEditor_->AddParticleEmitter("ChargeAura");
+    particleCSEditor_->AddParticleEmitter("enemyChargeAura");
+    particleCSEditor_->AddParticleEmitter("AroundField");
+
+    // パーティクルフィールド
+    particleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
+}
+
+void SparkingFight::Finalize() {
     // -----ゲーム固有の処理-----
 
     // -----------------------
@@ -27,7 +51,7 @@ void MyGame::Finalize() {
     Framework::Finalize();
 }
 
-void MyGame::Update() {
+void SparkingFight::Update() {
     // フレーム先頭：前フレームの計測結果を確定し、当フレームの計測を開始する
 #ifdef _DEBUG
     CpuProfiler::GetInstance()->BeginFrame();
@@ -42,7 +66,7 @@ void MyGame::Update() {
         if (imGuiManager_->GetEditorMode()) {
             input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()}, 10000.0f);
         } else {
-            input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(winApp_->kClientWidth, winApp_->kClientHeight)}, 10000.0f);
+            input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::kClientWidth), float(WinApp::kClientHeight))}, 10000.0f);
         }
 
         imGuiManager_->Begin();
@@ -60,7 +84,7 @@ void MyGame::Update() {
     }
 #endif // _DEBUG
 #ifndef _DEBUG
-    input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(winApp_->kClientWidth, winApp_->kClientHeight)});
+    input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::kClientWidth), float(WinApp::kClientHeight))});
 #endif // _DEBUG
 
     {
@@ -71,7 +95,7 @@ void MyGame::Update() {
     // -----------------------
 }
 
-void MyGame::Draw() {
+void SparkingFight::Draw() {
     {
         HAGINE_CPU_PROFILE("Draw/DrawSystem(rec)");
         drawSystem_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
@@ -99,4 +123,3 @@ void MyGame::Draw() {
     }
 #endif // _DEBUG
 }
-} // namespace Hagine

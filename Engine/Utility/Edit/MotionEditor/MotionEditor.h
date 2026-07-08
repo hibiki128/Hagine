@@ -6,6 +6,8 @@
 #include <string>
 #include <unordered_map>
 
+namespace Hagine {
+
 /// <summary>
 /// モーションのイージングタイプを表す列挙型
 /// </summary>
@@ -336,3 +338,5 @@ class MotionEditor {
     std::string jsonName_;                  // JSONファイル名
     int selectedControlPoint_ = -1;         // 選択中のコントロールポイント番号
 };
+
+} // namespace Hagine

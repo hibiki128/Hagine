@@ -1,6 +1,6 @@
 #include "TutorialScene.h"
 #include "Utility/Scene/SceneManager.h"
-#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include "Edit/MotionEditor/MotionEditor.h"
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
 

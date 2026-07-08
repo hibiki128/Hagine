@@ -6,7 +6,7 @@
 #include "myMath.h"
 #include <Line/DrawLine3D.h>
 
-using namespace Hagine;
+namespace Hagine {
 const float MotionEditor::ATTACK_END_INTERVAL = 0.1f;
 
 // イージング適用関数
@@ -717,3 +717,4 @@ Motion MotionEditor::Load(const std::string &fileName) {
     ImGuiNotification::Post("モーションデータを読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
     return m;
 }
+} // namespace Hagine
