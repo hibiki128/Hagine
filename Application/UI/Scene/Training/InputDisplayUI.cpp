@@ -89,9 +89,11 @@ void InputDisplayUI::Initialize(Player *player, GamePad *gamePad) {
         arrowPool_.push_back(std::move(a));
     }
 
-    // 履歴の背景パネル（暗い半透明。white1x1 を着色して使う）
+    // 履歴の背景パネル（暗い半透明）。
+    // 白ベースのグラデーション画像を着色して使う。α側に「左(新しい)=濃い→右(古い)=薄い」の
+    // 横グラデーションと、古い側の「上から斜め下へ薄くなる」斜めフェードを焼き込んである。
     bgPanel_ = std::make_unique<Sprite>();
-    bgPanel_->Initialize("debug/white1x1.png", {0.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f});
+    bgPanel_->Initialize("UI/inputHistoryGradient.png", {0.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f});
     bgPanel_->SetColor({0.05f, 0.06f, 0.10f}); // 濃紺寄りの暗色
     panelWidth_ = 0.0f;
     panelAlpha_ = 0.0f;
