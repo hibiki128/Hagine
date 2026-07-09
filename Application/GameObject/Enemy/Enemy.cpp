@@ -80,14 +80,6 @@ void Enemy::Init(const std::string objectName) {
 
     BaseObject::SetColor(Vector4(kColorRed, kColorZero, kColorZero, kColorOpaque));
 
-    /* shadow_ = std::make_unique<BaseObject>();
-     shadow_->Init("shadow");
-     shadow_->CreatePrimitiveModel(PrimitiveType::Plane);
-     shadow_->SetTexture("game/shadow.png");
-     shadow_->GetWorldTransform()->SetRotationEuler(
-         Vector3(degreesToRadians(kShadowRotationDegrees), kRotationZero, kRotationZero));
-     shadow_->GetLocalScale() = {kShadowScale, kShadowScale, kShadowScale};*/
-
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
     chargeShake_ = std::make_unique<Shake>();
     isGuarding_ = false;
@@ -118,18 +110,11 @@ void Enemy::Init(const std::string objectName) {
     maxSpeed_ = 10.0f;
     accelRate_ = 1.0f;
 
-    // -----------------------------------------------
-    // 前方攻撃判定コライダーの生成
-    // EnemyHandのコライダーは無効化し、こちらで近接攻撃の判定を一元管理する
-    // PlayerAttackColliderと対称の設計
-    // -----------------------------------------------
+    // 前方攻撃判定コライダー（PlayerAttackColliderと対称の設計）
     attackCollider_ = std::make_unique<EnemyAttackCollider>();
     attackCollider_->Init(this);
 
-    // -----------------------------------------------
-    // コンボ登録
-    // ダメージ・ノックバックをAdd()で指定し、後でImGuiで調整してセーブ可能
-    // -----------------------------------------------
+    // コンボ登録（ダメージ・ノックバックはImGuiで調整・セーブ可能）
     if (!comboInitialized_) {
         punchCombo_.SetName("EnemyPunchCombo"); // DataHandlerのファイル名
 
@@ -148,22 +133,12 @@ void Enemy::Init(const std::string objectName) {
         // JSONがあれば保存済みの値で上書き
         punchCombo_.LoadAttackParams();
 
-        // -----------------------------------------------
-        // 攻撃発火コールバック
-        // ComboSystemが次の攻撃を実行するとき、ダメージ・ノックバックを
-        // currentAttackDamage_ / currentAttackKnockback_ に保存する
-        // EnemyHandのOnCollisionEnterがGetCurrentAttackDamage()で参照する
-        // -----------------------------------------------
+        // 攻撃発火時にダメージ・ノックバックを保存し、前方コライダーを有効化する
         punchCombo_.SetOnAttackFired(
             [this](float damage, float knockback, float duration, float /*delay*/) {
                 currentAttackDamage_ = damage;
                 currentAttackKnockback_ = knockback;
                 currentAttackDuration_ = duration;
-                // -----------------------------------------------
-                // 前方攻撃判定コライダーをここで直接 Activate する
-                // タイミングはコンボシステムが管理し、
-                // ConboUpdate の IsObjectAttackCompleted に依存しない
-                // -----------------------------------------------
                 if (attackCollider_) {
                     attackCollider_->Activate(damage, knockback, duration);
                 }
@@ -192,11 +167,6 @@ void Enemy::Init(const std::string objectName) {
 }
 
 void Enemy::Update() {
-    // 影の位置を更新
-    /* shadow_->GetLocalPosition() = {
-         transform_->translation_.x, kShadowYPosition, transform_->translation_.z};
-     shadow_->Update();*/
-
     // 開始フラグが立っており、ポーズ中でなく、ターゲットが生きている場合に更新
     if (started_ && !isPause_ && target_->GetIsAlive()) {
         DamageUpdate();
@@ -233,7 +203,6 @@ void Enemy::Update() {
         if (!dummyMode_) {
             ConboUpdate();
         }
-        UpdateShadowScale();
         chargeShake_->Update();
 
         // 大技演出エミッタの追従＆更新
@@ -472,8 +441,6 @@ void Enemy::Draw(const ViewProjection &viewProjection) {
     BaseObject::Draw(viewProjection);
     if (transform_->translation_.y < kGroundLevel)
         return;
-    /* shadow_->SetIsModelDraw(drawShadow_);
-     shadow_->Draw(viewProjection);*/
 }
 
 void Enemy::DrawParticleCompute(const ViewProjection &viewProjection) {
@@ -494,9 +461,7 @@ void Enemy::DrawParticle(const ViewProjection &viewProjection) {
         beamMainEffect_->DrawGraphics(viewProjection);
     if (beamAroundEffect_)
         beamAroundEffect_->DrawGraphics(viewProjection);
-    // -----------------------------------------------
-    // 前方攻撃判定コライダーのヒットエフェクト描画
-    // -----------------------------------------------
+    // 前方攻撃判定コライダーのヒットエフェクト
     if (attackCollider_) {
         attackCollider_->DrawParticle(viewProjection);
     }
@@ -640,12 +605,6 @@ void Enemy::Debug() {
 #endif
 }
 
-// -----------------------------------------------
-// OnCollisionEnter
-// PlayerAttackCollider（タグ "PlayerHand"）が当たった時の
-// ビジュアルエフェクトをここで処理する
-// ダメージ/ノックバックの実計算はPlayerAttackCollider側が行う
-// -----------------------------------------------
 void Enemy::OnCollisionEnter(ColliderBase *other) {
     if (other->GetTag() == "PlayerBullet" ||
         other->GetTag() == "PlayerChargeBullet" ||
@@ -658,11 +617,7 @@ void Enemy::OnCollisionEnter(ColliderBase *other) {
         chargeShake_->StartShake();
     }
 
-    // -----------------------------------------------
-    // プレイヤーの前方攻撃判定（PlayerAttackCollider）との衝突時
-    // ヒットパーティクルを再生する
-    // ダメージとノックバックはPlayerAttackCollider::OnCollisionEnterで適用済み
-    // -----------------------------------------------
+    // 前方攻撃判定（PlayerHand）ヒット時のパーティクル（ダメージ計算はコライダー側）
     if (other->GetTag() == "PlayerHand") {
         hitEmitter_->SetPosition(transform_->translation_);
         hitEmitter_->UpdateOnce();
@@ -700,11 +655,6 @@ void Enemy::OnCollision(ColliderBase *other) {
     }
 }
 
-// -----------------------------------------------
-// ConboUpdate
-// コンボシステムの更新と前方攻撃判定コライダーの有効時間管理
-// コライダーの Activate は SetOnAttackFired コールバックが行う
-// -----------------------------------------------
 void Enemy::ConboUpdate() {
     punchCombo_.Update(Frame::DeltaTime());
 
@@ -713,10 +663,7 @@ void Enemy::ConboUpdate() {
         isComboAttack_ = false;
     }
 
-    // -----------------------------------------------
-    // 前方攻撃判定コライダーの毎フレーム更新
-    // 遅延・有効時間タイマーを進める
-    // -----------------------------------------------
+    // 前方攻撃判定コライダーの遅延・有効時間タイマーを進める
     if (attackCollider_) {
         attackCollider_->Update(Frame::DeltaTime());
     }
@@ -736,14 +683,6 @@ void Enemy::Save() {
 }
 void Enemy::Load() {
     ImGuiNotification::Post("エネミー設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
-}
-
-void Enemy::UpdateShadowScale() {
-    /* if (transform_->translation_.y < kGroundLevel)
-         return;
-     float height = transform_->translation_.y;
-     float scale = std::max(kShadowMinScale, kShadowBaseScale - height * kShadowScaleFactor);
-     shadow_->GetLocalScale() = {scale, scale, scale};*/
 }
 
 void Enemy::RotateUpdate() {
@@ -796,10 +735,6 @@ void Enemy::CollisionGround() {
     }
 }
 
-// -----------------------------------------------
-// DamageUpdate
-// ダメージ処理とノックバックをまとめて行う
-// -----------------------------------------------
 void Enemy::DamageUpdate() {
     if (damage_ <= kNoDamage) {
         // ダメージがなくてもノックバックだけ適用する場合に備えてチェック
@@ -829,11 +764,7 @@ void Enemy::DamageUpdate() {
     HP_ -= actualDamage;
     damage_ = kNoDamage;
 
-    // -----------------------------------------------
-    // ノックバック適用
-    // SetKnockback()で設定されたペンディング速度をvelocityに加算する
-    // ガード中はノックバックも軽減する
-    // -----------------------------------------------
+    // ノックバック適用（ガード中は軽減）
     if (hasKnockback_) {
         float knockbackMult = isGuarding_ ? kGuardDamageMultiplier : 1.0f;
         velocity_.x += pendingKnockback_.x * knockbackMult;
@@ -856,11 +787,6 @@ void Enemy::DamageUpdate() {
     StartDamageReact();
 }
 
-// -----------------------------------------------
-// SetKnockback
-// PlayerAttackCollider::OnCollisionEnterから呼ばれる
-// DamageUpdateのタイミングで一括処理するためペンディングに積む
-// -----------------------------------------------
 void Enemy::SetKnockback(const Vector3 &direction, float power) {
     if (power <= 0.0f) {
         return;
@@ -889,7 +815,6 @@ void Enemy::StartDamageReact() {
     damageReactTimer_ = kTimerReset;
 }
 
-Direction Enemy::CalculateDirectionFromRotation() { return Direction(); }
 const char *Enemy::GetDirectionName(Direction dir) { return nullptr; }
 
 void Enemy::UpdateFrustumLockOn() {
@@ -1069,9 +994,6 @@ void Enemy::ShotWithDirection(const Vector3 &direction, bool forceHoming) {
     bullets_.push_back(std::move(bullet));
 }
 
-// ---------------------------------------------------------
-// チャージ攻撃・必殺技（プレイヤー演出の使いまわし）
-// ---------------------------------------------------------
 void Enemy::StartChargeAura() {
     if (chargeAura_) {
         chargeAura_->SetTranslate(GetWorldPosition());
@@ -1118,10 +1040,6 @@ void Enemy::FireChargeBlast() {
     bullets_.push_back(std::move(bullet));
 }
 
-// ---------------------------------------------------------
-// ビーム必殺技 (MakanAttackSkill 相当)
-// OBBコライダーを前方に伸ばし、lightningBolt パーティクルでビームを表現
-// ---------------------------------------------------------
 void Enemy::ActivateBeam() {
     if (beamActive_)
         return;

@@ -82,10 +82,4 @@ void DeathStaging::Draw(const ViewProjection &vp) {
 }
 
 void DeathStaging::imgui() {
-    /* if (ImGui::CollapsingHeader("右手")) {
-         deathParticle_R_Arm->DrawImGui();
-     }
-     if (ImGui::CollapsingHeader("左手")) {
-         deathParticle_L_Arm->DrawImGui();
-     }*/
 }

@@ -44,10 +44,6 @@ void SparkingFight::LoadGameResources() {
 }
 
 void SparkingFight::Finalize() {
-    // -----ゲーム固有の処理-----
-
-    // -----------------------
-
     Framework::Finalize();
 }
 

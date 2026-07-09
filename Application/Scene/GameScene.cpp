@@ -108,7 +108,6 @@ void GameScene::Initialize() {
         enemy_ptr->DrawParticle(vp);
         aroundField_->DrawParticle(vp);
         followCamera_->DrawFrustum();
-       // enemy_ptr->DrawFrustum();
     });
     drawSystem_->Register("GameScene_UI", DrawLayer::kPostEffect, [this](const ViewProjection &) {
         playerUI_->Draw();
@@ -177,7 +176,6 @@ void GameScene::Update() {
     // 死亡演出中のモデル非表示
     if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
         enemy_ptr->SetIsModelDraw(false);
-        enemy_ptr->SetDrawShadow(false);
     }
 
     // UIの更新

@@ -11,9 +11,6 @@
 
 using namespace Hagine;
 
-// ============================================================
-//  Initialize
-// ============================================================
 void InputDisplayUI::Initialize(Player *player, GamePad *gamePad) {
     player_ = player;
     gamePad_ = gamePad;
@@ -99,9 +96,7 @@ void InputDisplayUI::Initialize(Player *player, GamePad *gamePad) {
     panelAlpha_ = 0.0f;
 }
 
-// ============================================================
-//  テクスチャ情報の登録
-// ============================================================
+// テクスチャ情報の登録
 void InputDisplayUI::RegisterText(const std::string &key, const std::string &text, float displayHeight) {
     if (fontKey_.empty()) {
         return;
@@ -154,9 +149,6 @@ float InputDisplayUI::SlotAlpha(int slot) {
     }
 }
 
-// ============================================================
-//  入力検出
-// ============================================================
 void InputDisplayUI::PollInputs() {
     Input *input = Input::GetInstance();
     const bool pad = IsGamePad();
@@ -204,9 +196,6 @@ void InputDisplayUI::PollInputs() {
     }
 }
 
-// ============================================================
-//  アクションイベント → 履歴
-// ============================================================
 void InputDisplayUI::PushActionEvent(Player::ActionKind kind) {
     const bool pad = IsGamePad();
     switch (kind) {
@@ -237,9 +226,6 @@ void InputDisplayUI::PushActionEvent(Player::ActionKind kind) {
     }
 }
 
-// ============================================================
-//  履歴への追加
-// ============================================================
 void InputDisplayUI::PushEntry(const std::string &glyphKey, const std::string &labelKey) {
     auto gIt = glyphs_.find(glyphKey);
     auto lIt = glyphs_.find(labelKey);
@@ -275,9 +261,6 @@ void InputDisplayUI::PushEntry(const std::string &glyphKey, const std::string &l
     }
 }
 
-// ============================================================
-//  Update
-// ============================================================
 void InputDisplayUI::Update() {
     PollInputs();
 
@@ -325,9 +308,6 @@ void InputDisplayUI::Update() {
     panelAlpha_ += (targetAlpha - panelAlpha_) * panelT;
 }
 
-// ============================================================
-//  描画補助
-// ============================================================
 void InputDisplayUI::BindAndDraw(Sprite *sprite, const std::string &path,
                                  Vector2 size, Vector2 pos, float alpha) {
     if (!sprite) {
@@ -344,9 +324,6 @@ void InputDisplayUI::BindAndDraw(Sprite *sprite, const std::string &path,
     sprite->Draw();
 }
 
-// ============================================================
-//  Draw
-// ============================================================
 void InputDisplayUI::Draw() {
     // 背景パネル（エントリの後ろに1枚。エントリより先に描く）
     if (bgPanel_ && panelAlpha_ > 0.01f && panelWidth_ > 1.0f) {
@@ -395,9 +372,6 @@ void InputDisplayUI::Draw() {
     }
 }
 
-// ============================================================
-//  Finalize
-// ============================================================
 void InputDisplayUI::Finalize() {
     history_.clear();
     glyphs_.clear();

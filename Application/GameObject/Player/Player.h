@@ -306,11 +306,6 @@ class Player : public Hagine::BaseObject {
     void SkillShot();
 
     /// <summary>
-    /// 影のスケールを更新
-    /// </summary>
-    void UpdateShadowScale();
-
-    /// <summary>
     /// 回転を更新（ロックオン追従 / スティック手動回転）
     /// </summary>
     void RotateUpdate();
@@ -537,7 +532,6 @@ class Player : public Hagine::BaseObject {
     std::vector<std::unique_ptr<PlayerBullet>> bullets_; // 発射した弾
 
     std::unique_ptr<Hagine::DataHandler> data_;              // データ管理
-    std::unique_ptr<Hagine::BaseObject> shadow_;             // 影
     std::unique_ptr<ChargeShot> chargeShot_;         // チャージショット
     std::unique_ptr<Shake> shake_;                   // シェイク
     std::unique_ptr<Hagine::ParticleCSEmitter> auraEmitter_; // オーラパーティクル

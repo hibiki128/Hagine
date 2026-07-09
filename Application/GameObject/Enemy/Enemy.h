@@ -145,7 +145,6 @@ class Enemy : public Hagine::BaseObject {
     /// HP・状態・位置を初期化して復活させる(ダミー用)
     /// </summary>
     void Revive();
-    void SetDrawShadow(bool flag) { drawShadow_ = flag; }
     void SetVelocity(const Hagine::Vector3 &vel) { velocity_ = vel; }
     void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
     void SetStrafeDirection(int dir) { strafeDirection_ = dir; }
@@ -210,7 +209,6 @@ class Enemy : public Hagine::BaseObject {
 
     void Save();
     void Load();
-    void UpdateShadowScale();
     void UpdateBeam(); // ビーム必殺技の毎フレーム更新
     void RotateUpdate();
     void CollisionGround();
@@ -222,7 +220,6 @@ class Enemy : public Hagine::BaseObject {
     void UpdateAnimation();
     void DamageUpdate();
     void StartDamageReact();
-    Direction CalculateDirectionFromRotation();
     const char *GetDirectionName(Direction dir);
 
     /// ===================================================
@@ -343,16 +340,11 @@ class Enemy : public Hagine::BaseObject {
     Hagine::Vector3 velocityTarget_{};         // 目標速度
     Hagine::EasingData<Hagine::Vector3> velocityEase_; // 速度補間用イージング
 
-    // -----------------------------------------------
     // ノックバック関連
-    // -----------------------------------------------
     bool hasKnockback_ = false;            // ノックバック中フラグ
     Hagine::Vector3 pendingKnockback_ = {0, 0, 0}; // ノックバック速度
 
-    // -----------------------------------------------
-    // コンボ攻撃パラメータ（ComboSystemのコールバックで更新される）
-    // EnemyHandがヒット時に参照する
-    // -----------------------------------------------
+    // コンボ攻撃パラメータ（ComboSystemのコールバックで更新）
     float currentAttackDamage_ = 10.0f;   // 現在の攻撃ダメージ量
     float currentAttackKnockback_ = 3.0f; // 現在の攻撃ノックバック強度
     float currentAttackDuration_ = 0.25f; // 現在の攻撃有効時間
@@ -366,12 +358,10 @@ class Enemy : public Hagine::BaseObject {
     bool isPause_ = false;       // ポーズフラグ
     bool dummyMode_ = false;     // トレーニング用ダミーモード(AI停止・復活のみ)
     Hagine::Vector3 spawnPosition_{}; // ダミー復活時に戻る初期位置
-    bool drawShadow_ = true;     // 影描画フラグ
     bool isGuarding_ = false;    // ガード中フラグ
     bool isComboAttack_ = false; // コンボ攻撃中フラグ
 
     std::unique_ptr<Hagine::DataHandler> data_;           // データハンドラ
-    std::unique_ptr<Hagine::BaseObject> shadow_;          // 影オブジェクト
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; // ヒットエミッター
     std::unique_ptr<Shake> chargeShake_;          // シェイク
 
@@ -408,22 +398,15 @@ class Enemy : public Hagine::BaseObject {
     Hagine::AnimationController animationController_; // アニメーション制御（プレイヤーと同一クリップ構成）
     std::vector<std::string> comboAnimations_;       // コンボ段ごとの本体アニメーションパス
 
-    // -----------------------------------------------
-    // 前方攻撃判定コライダー
-    // EnemyHandのコライダーの代わりに敵前方に判定を展開する
-    // PlayerAttackColliderと対称の設計
-    // -----------------------------------------------
+    // 前方攻撃判定コライダー（PlayerAttackColliderと対称の設計）
     std::unique_ptr<EnemyAttackCollider> attackCollider_; // 攻撃コライダー
 
     Hagine::OBBCollider *enemyCollider_ = nullptr;      // 敵コライダー
     Hagine::AABBCollider *enemyWallCollider_ = nullptr; // 壁用コライダー
 
-
     std::vector<std::unique_ptr<EnemyBullet>> bullets_; // 敵の弾
 
-    // ===================================================
     // 視錐台ロックオン関連
-    // ===================================================
     static constexpr float kDefaultFrustumRange = 150.0f;
     static constexpr float kDefaultFrustumHalfFovH = 40.0f * (3.14159265f / 180.0f);
     static constexpr float kDefaultFrustumHalfFovV = 30.0f * (3.14159265f / 180.0f);

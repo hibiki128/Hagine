@@ -201,9 +201,7 @@ void TitleScene::ChangeScene() {
     }
 }
 
-// ============================================================
-//  選択メニュー
-// ============================================================
+// 選択メニュー
 void TitleScene::CreateMenuSprites() {
     auto keys = TextureManager::GetInstance()->GetAllFontKeys();
     if (keys.empty()) {
@@ -288,9 +286,7 @@ void TitleScene::DrawMenu() {
     }
 }
 
-// ============================================================
-//  入力ヘルパ
-// ============================================================
+// 入力ヘルパ
 bool TitleScene::PressStartInput() {
     if (gamePad_->IsConnected()) {
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
