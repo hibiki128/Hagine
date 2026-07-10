@@ -1,8 +1,8 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
 #include "Collider/CollisionManager.h"
-#include "Engine/2d/Text/TextRenderer.h"
-#include "Engine/OffScreen/OffScreen.h"
+#include "2d/Text/TextRenderer.h"
+#include "OffScreen/OffScreen.h"
 #include "AssetDragDrop.h"
 #include "ImGuiNotification.h"
 #include "ImGuizmo.h"
@@ -10,20 +10,23 @@
 #include "Object/Base/BaseObject.h"
 #include "Scene/SceneManager.h"
 #include "Graphics/Texture/TextureManager.h"
+#include <Asset/AssetPath.h>
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include <algorithm>
 #include <filesystem>
 #include <map>
-#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include "Edit/MotionEditor/MotionEditor.h"
 #include <Data/DataHandler.h>
-#include <Engine/Frame/Frame.h>
+#include <Frame/Frame.h>
 #include <Line/DrawLine3D.h>
 #include <Particle/CSParticle/ParticleCSFieldManager.h>
-#include <Engine/Render/DrawSystem.h>
+#include <Render/DrawSystem.h>
+#include <Debug/GameParam/GameParamHub.h>
 #include <Debug/GpuProfiler/GpuProfiler.h>
+#include <Debug/CpuProfiler/CpuProfiler.h>
 #include <Shadow/ShadowMap.h>
-#include <externals/icon/IconsFontAwesome5.h>
+#include <icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
 #include <implot.h>
 #endif // _DEBUG
@@ -58,6 +61,7 @@ void ImGuiSrvFree(ImGui_ImplDX12_InitInfo * /*info*/,
 
 void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) {
 
+    winApp_ = winApp;
     dxCommon_ = DirectXCommon::GetInstance();
     baseObjectManager_ = BaseObjectManager::GetInstance();
     spriteManager_ = SpriteManager::GetInstance();
@@ -86,7 +90,7 @@ void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) 
 
     float fontSize = 16.0f;
 
-    io.Fonts->AddFontFromFileTTF("resources/fonts/PixelMplus12-Regular.ttf", 14.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+    io.Fonts->AddFontFromFileTTF(AssetPath::Font("PixelMplus12-Regular.ttf").c_str(), 14.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
 
     // アイコンフォント読み込み（FontAwesomeなど）
     // FontAwesomeの設定
@@ -95,7 +99,7 @@ void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) 
     icons_config.MergeMode = true;
     icons_config.PixelSnapH = true;
     icons_config.GlyphMinAdvanceX = fontSize;
-    io.Fonts->AddFontFromFileTTF("resources/fonts/fa-solid-900.ttf", fontSize, &icons_config, icon_ranges);
+    io.Fonts->AddFontFromFileTTF(AssetPath::Font("fa-solid-900.ttf").c_str(), fontSize, &icons_config, icon_ranges);
 
     // ImGui 1.92 の新DX12バックエンド（ImGui_ImplDX12_InitInfo）は
     // ImGuiBackendFlags_RendererHasTextures を立て、フォントアトラスを動的管理する。
@@ -354,7 +358,7 @@ void ImGuiManager::ShowMainMenu() {
             ImGui::Separator();
             if (ImGui::MenuItem(ICON_FA_DOOR_OPEN " 終了", "Alt+F4")) {
                 // アプリケーション終了処理
-                WinApp::GetInstance()->ClosedWindow(); // 終了メッセージ送信
+                winApp_->ClosedWindow(); // 終了メッセージ送信
             }
             ImGui::EndMenu();
         }
@@ -415,6 +419,7 @@ void ImGuiManager::ShowMainMenu() {
 
                 ImGui::SeparatorText("統計・デバッグ");
                 windowToggle(ICON_FA_DATABASE " FPS統計", showFPSView_);
+                windowToggle(ICON_FA_SLIDERS_H " ゲームパラメータ", showGameParamView_);
 
                 ImGui::EndMenu();
             }
@@ -488,7 +493,7 @@ void ImGuiManager::ShowMainMenu() {
             }
             ImGui::Separator();
             if (ImGui::MenuItem(ICON_FA_EXPAND " フルスクリーン切替", "F11")) {
-                WinApp::GetInstance()->ToggleFullScreen();
+                winApp_->ToggleFullScreen();
             }
             ImGui::EndMenu();
         }
@@ -648,32 +653,19 @@ void ImGuiManager::ShowMainMenu() {
             ImGui::EndMenu();
         }
 
-        // シーンメニュー
+        // シーンメニュー（SceneRegistry に自己登録された全シーンを列挙する）
         if (ImGui::BeginMenu(ICON_FA_GLOBE " シーン選択")) { // 地球アイコン（意味：全体メニュー）
 
-            if (ImGui::MenuItem(ICON_FA_HOME " タイトルシーン", "Ctrl+1")) { // home アイコン
-                SceneManager::GetInstance()->NextSceneReservation("TITLE");
-                ImGuiNotification::Post("タイトルシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_BARS " セレクトシーン", "Ctrl+2")) { // bars アイコン（メニュー選択感）
-                SceneManager::GetInstance()->NextSceneReservation("SELECT");
-                ImGuiNotification::Post("セレクトシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームシーン", "Ctrl+3")) { // gamepad アイコン
-                SceneManager::GetInstance()->NextSceneReservation("GAME");
-                ImGuiNotification::Post("ゲームシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_TROPHY " クリアシーン", "Ctrl+4")) { // trophy アイコン
-                SceneManager::GetInstance()->NextSceneReservation("CLEAR");
-                ImGuiNotification::Post("クリアシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_FILM " デモシーン", "Ctrl+5")) { // film アイコン
-                SceneManager::GetInstance()->NextSceneReservation("DEMO");
-                ImGuiNotification::Post("デモシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
-            }
-            if (ImGui::MenuItem(ICON_FA_BOOK_OPEN " チュートリアルシーン", "Ctrl+6")) {
-                SceneManager::GetInstance()->NextSceneReservation("TUTORIAL");
-                ImGuiNotification::Post("チュートリアルシーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
+            const std::vector<std::string> sceneNames = SceneRegistry::GetInstance()->GetSceneNames();
+            for (size_t i = 0; i < sceneNames.size(); ++i) {
+                const std::string &sceneName = sceneNames[i];
+                const std::string label = std::string(ICON_FA_GAMEPAD " ") + sceneName;
+                // Framework::RegisterShortcutKey と同じ名前順で Ctrl+数字 が割り当てられている
+                const std::string shortcut = (i < 9) ? "Ctrl+" + std::to_string(i + 1) : "";
+                if (ImGui::MenuItem(label.c_str(), shortcut.empty() ? nullptr : shortcut.c_str())) {
+                    SceneManager::GetInstance()->NextSceneReservation(sceneName);
+                    ImGuiNotification::Post(sceneName + " シーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
+                }
             }
 
             ImGui::EndMenu();
@@ -736,6 +728,10 @@ void ImGuiManager::ShowParticlePreviewWindow() {
     ParticleCSEditor::GetInstance()->ShowPreviewWindow(&showParticlePreviewView_);
 }
 
+void ImGuiManager::ShowGameParamWindow() {
+    GameParamHub::GetInstance()->DrawImGui(&showGameParamView_);
+}
+
 void ImGuiManager::ShowStatisticsWindow() {
     if (!showFPSView_)
         return; // 表示しない場合は早期リターン
@@ -750,6 +746,9 @@ void ImGuiManager::ShowStatisticsWindow() {
     ParticleEditor::GetInstance()->SceneParticleCount();
 
     ParticleCSEditor::GetInstance()->ShowGPUParticleStatistics();
+
+    ImGui::Separator();
+    CpuProfiler::GetInstance()->DrawImGui();
 
     ImGui::Separator();
     GpuProfiler::GetInstance()->DrawImGui();
@@ -927,7 +926,9 @@ void ImGuiManager::ShowDrawSystemWindow() {
         return; // 表示しない場合は早期リターン
 
     // ウィンドウの生成・閉じるボタンは DrawSystem 側に委譲する
-    DrawSystem::GetInstance()->UpdateImGui(&showDrawSystemView_);
+    if (drawSystem_) {
+        drawSystem_->UpdateImGui(&showDrawSystemView_);
+    }
 }
 
 void ImGuiManager::ShowAssetBrowserWindow() {
@@ -937,7 +938,7 @@ void ImGuiManager::ShowAssetBrowserWindow() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
     ImGui::Begin("アセットブラウザ", &showAssetBrowserView_, flags);
 
-    // resources/images 配下の画像を列挙（初回スキャン + 再スキャン）。
+    // Application/Assets/images 配下の画像を列挙（初回スキャン + 再スキャン）。
     // textureFilePath 規約に合わせ base からの相対パス('/'区切り)で保持し、
     // 親フォルダごとにまとめる（map のキーがフォルダ＝表示順もフォルダ順になる）。
     static std::map<std::string, std::vector<std::string>> s_byDir;
@@ -947,8 +948,10 @@ void ImGuiManager::ShowAssetBrowserWindow() {
         s_byDir.clear();
         s_fileCount = 0;
         std::error_code ec;
-        const std::string base = "resources/images";
-        if (std::filesystem::exists(base, ec)) {
+        // images はエンジン(debug)とアプリの 2 ルートに分割されているため両方を走査する。
+        for (const std::string &base : AssetPath::ImageScanRoots()) {
+            if (!std::filesystem::exists(base, ec))
+                continue;
             for (auto &e : std::filesystem::recursive_directory_iterator(base, ec)) {
                 if (ec)
                     break;
@@ -972,9 +975,9 @@ void ImGuiManager::ShowAssetBrowserWindow() {
                 s_byDir[dir].push_back(rel);
                 ++s_fileCount;
             }
-            for (auto &kv : s_byDir)
-                std::sort(kv.second.begin(), kv.second.end());
         }
+        for (auto &kv : s_byDir)
+            std::sort(kv.second.begin(), kv.second.end());
     };
     if (!s_scanned) {
         scan();
@@ -1006,7 +1009,7 @@ void ImGuiManager::ShowAssetBrowserWindow() {
             const DirectX::TexMetadata &meta = tex->GetMetaData(rel);
             isCube = meta.IsCubemap();
             if (!isCube) {
-                D3D12_GPU_DESCRIPTOR_HANDLE h = tex->GetSrvHandleGPU("resources/images/" + rel);
+                D3D12_GPU_DESCRIPTOR_HANDLE h = tex->GetSrvHandleGPU(AssetPath::Image(rel));
                 if (h.ptr != 0)
                     id = static_cast<ImTextureID>(h.ptr);
             }
@@ -1209,6 +1212,8 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowDrawSystemWindow();
     // アセットブラウザ窓を描画
     ShowAssetBrowserWindow();
+    // ゲームパラメータHub窓を描画
+    ShowGameParamWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();
@@ -1461,6 +1466,10 @@ void ImGuiManager::SaveCurrentLayout() {
     // 現在のモードに応じたファイルにレイアウトを保存
     const char *iniFilePath = isEditorMode_ ? editorIniFilePath_.c_str() : gameIniFilePath_.c_str();
 
+    // 保存先フォルダ(Application/Config)が無ければ作成する（fopen はディレクトリを作らないため）。
+    std::error_code ec;
+    std::filesystem::create_directories(std::filesystem::path(iniFilePath).parent_path(), ec);
+
     // メモリからiniデータを取得
     size_t size = 0;
     const char *iniData = ImGui::SaveIniSettingsToMemory(&size);
@@ -1685,6 +1694,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showShadowMapView", showShadowMapView_);
     data->Save("showDrawSystemView", showDrawSystemView_);
     data->Save("showAssetBrowserView", showAssetBrowserView_);
+    data->Save("showGameParamView", showGameParamView_);
     data->Save("isEditorMode", isEditorMode_);
     data->Save("gridColor", gridColor_);
 #ifdef _DEBUG
@@ -1711,6 +1721,7 @@ void ImGuiManager::LoadFlag() {
     showShadowMapView_ = data->Load("showShadowMapView", true);
     showDrawSystemView_ = data->Load("showDrawSystemView", true);
     showAssetBrowserView_ = data->Load("showAssetBrowserView", false);
+    showGameParamView_ = data->Load("showGameParamView", true);
     isEditorMode_ = data->Load("isEditorMode", true);
     gridColor_ = data->Load("gridColor", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 }

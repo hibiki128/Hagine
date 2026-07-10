@@ -1,5 +1,5 @@
 #include "FadeOut.h"
-#include "Scene/SceneTransition.h"
+#include "Scene/SceneManager.h"
 #include "SpriteManager.h"
 #include <Particle/CSParticle/ParticleCSEditor.h>
 
@@ -20,7 +20,7 @@ void FadeOut::Initialize() {
     fadeOut_->SetRotation(rotation);
 
     // シーントランジションの使用を有効化
-    SceneTransition::GetInstance()->SetUseTransition(true);
+    SceneManager::GetInstance()->GetSceneTransition()->SetUseTransition(true);
 }
 
 void FadeOut::Update() {

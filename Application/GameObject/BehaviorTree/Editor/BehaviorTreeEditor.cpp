@@ -2,9 +2,9 @@
 #include "BehaviorTreeEditor.h"
 #include "Application/GameObject/Enemy/Enemy.h"
 #include "Application/GameObject/Player/Player.h"
-#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include <algorithm>
-#include <externals/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 #include <filesystem>
 #include <iostream>
 
@@ -1164,23 +1164,17 @@ void BehaviorTreeEditor::OnImGuiRender() {
         ImGui::TextColored(ImVec4(1.0f, 0.88f, 0.15f, 1.0f), "実行中: %s", runningName.c_str());
     }
 
-    // 凡例
+    // 凡例 + 操作ヒント（実行状態の色のみ表示し、視認性を優先）
     ImGui::SameLine();
     ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
     ImGui::SameLine();
-    ImGui::TextColored(ImVec4(1.0f, 0.88f, 0.15f, 1.0f), "● 実行");
+    ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.25f, 1.0f), "● 実行中");
     ImGui::SameLine();
-    ImGui::TextColored(ImVec4(0.25f, 1.0f, 0.35f, 1.0f), "● 成功");
+    ImGui::TextColored(ImVec4(0.35f, 0.82f, 0.45f, 1.0f), "● 成功");
     ImGui::SameLine();
-    ImGui::TextColored(ImVec4(1.0f, 0.28f, 0.28f, 1.0f), "● 失敗");
+    ImGui::TextColored(ImVec4(0.85f, 0.38f, 0.38f, 1.0f), "● 失敗");
     ImGui::SameLine();
-    ImGui::TextColored(ImVec4(0.55f, 0.75f, 1.0f, 1.0f), "■ Seq");
-    ImGui::SameLine();
-    ImGui::TextColored(ImVec4(1.0f, 0.70f, 0.25f, 1.0f), "■ Sel");
-    ImGui::SameLine();
-    ImGui::TextColored(ImVec4(0.80f, 0.40f, 1.0f, 1.0f), "■ 条件");
-    ImGui::SameLine();
-    ImGui::TextColored(ImVec4(0.35f, 0.85f, 0.45f, 1.0f), "■ Action");
+    ImGui::TextDisabled("|  右クリック: ノード追加  /  ノードを選択して右パネルで値を編集");
 
     // ロードウィンドウ
     if (showLoadWindow_) {
@@ -1197,9 +1191,14 @@ void BehaviorTreeEditor::OnImGuiRender() {
     }
 
     // ────────────────────────────────────────────────────────────
-    // エディタ本体
+    // 本体レイアウト: 左=ノードキャンバス / 右=インスペクター
     // ────────────────────────────────────────────────────────────
-    ed::Begin("ビヘイビアツリーエディタ", ImVec2(0, 0));
+    const float availW = ImGui::GetContentRegionAvail().x;
+    // ウィンドウが狭いときはインスペクター幅を縮めて両ペインが収まるようにする
+    const float inspW = std::min(inspectorWidth_, availW * 0.45f);
+    const float canvasW = std::max(200.0f, availW - inspW - 8.0f);
+
+    ed::Begin("ビヘイビアツリーエディタ", ImVec2(canvasW, 0));
 
     const float pulse = sinf(now * 5.0f) * 0.5f + 0.5f; // 0→1 sin波
 
@@ -1216,54 +1215,51 @@ void BehaviorTreeEditor::OnImGuiRender() {
         const float timer = statusTimers_.count(nid) ? statusTimers_.at(nid) : 0.0f;
 
         // ── ノードカラー計算 ──────────────────────────────────
-        ImVec4 bgColor, borderColor;
+        // 落ち着いた配色:
+        //   ・待機中は全ノード共通の暗いグレー地。カテゴリはボーダー/タイトルの
+        //     低彩度アクセント色だけで示し、画面全体がカラフルになりすぎないようにする
+        //   ・実行状態(実行中/成功/失敗)のみ視認性のため控えめに色を付ける
+        ImVec4 bgColor = ImVec4(0.13f, 0.14f, 0.16f, 1.0f);
+        ImVec4 borderColor;
         float borderWidth = 1.5f;
 
+        // カテゴリ別アクセント色(低彩度) — 待機時のボーダー・タイトルに使用
+        ImVec4 accent;
+        switch (node.Type) {
+        case EditorNodeType::Sequence:
+        case EditorNodeType::SequenceOnce:
+        case EditorNodeType::Selector:
+        case EditorNodeType::SelectorRandom:
+        case EditorNodeType::DecoratorWeight:
+            accent = ImVec4(0.56f, 0.70f, 0.88f, 1.0f); // コンポジット: 青灰
+            break;
+        default:
+            if (node.IsConditionNode())
+                accent = ImVec4(0.80f, 0.72f, 0.92f, 1.0f); // 条件: 淡い藤色
+            else if (node.IsActionNode())
+                accent = ImVec4(0.62f, 0.83f, 0.66f, 1.0f); // アクション: 淡い緑
+            else
+                accent = ImVec4(0.72f, 0.72f, 0.74f, 1.0f);
+            break;
+        }
+
         if (status == NodeStatus::Running) {
-            // 金色パルス
-            bgColor = ImVec4(0.30f + pulse * 0.14f, 0.24f + pulse * 0.06f, 0.0f, 1.0f);
-            borderColor = ImVec4(1.0f, 0.68f + pulse * 0.32f, 0.0f, 1.0f);
-            borderWidth = 3.0f + pulse * 2.0f;
+            bgColor = ImVec4(0.20f, 0.18f, 0.09f, 1.0f);
+            borderColor = ImVec4(0.95f, 0.75f, 0.25f, 0.85f + pulse * 0.15f);
+            borderWidth = 2.5f + pulse * 1.5f;
         } else if (status == NodeStatus::Success || timer > 0.0f) {
             const float i = (status == NodeStatus::Success) ? 1.0f : timer / 1.2f;
-            bgColor = ImVec4(0.07f + i * 0.13f, 0.20f + i * 0.18f, 0.07f, 1.0f);
-            borderColor = ImVec4(0.15f, 0.88f, 0.25f, 0.30f + i * 0.70f);
-            borderWidth = 2.5f;
+            bgColor = ImVec4(0.11f, 0.18f, 0.12f, 1.0f);
+            borderColor = ImVec4(0.30f, 0.78f, 0.42f, 0.35f + i * 0.55f);
+            borderWidth = 2.0f;
         } else if (status == NodeStatus::Failure || timer < 0.0f) {
             const float i = (status == NodeStatus::Failure) ? 1.0f : (-timer) / 1.2f;
-            bgColor = ImVec4(0.22f + i * 0.12f, 0.07f, 0.07f, 1.0f);
-            borderColor = ImVec4(0.88f, 0.15f, 0.15f, 0.30f + i * 0.70f);
-            borderWidth = 2.5f;
+            bgColor = ImVec4(0.20f, 0.12f, 0.12f, 1.0f);
+            borderColor = ImVec4(0.82f, 0.34f, 0.34f, 0.35f + i * 0.55f);
+            borderWidth = 2.0f;
         } else {
-            // カテゴリ別ベースカラー
-            switch (node.Type) {
-            case EditorNodeType::Sequence:
-            case EditorNodeType::SequenceOnce:
-                bgColor = ImVec4(0.09f, 0.14f, 0.28f, 1.0f);
-                borderColor = ImVec4(0.35f, 0.55f, 0.92f, 0.70f);
-                break;
-            case EditorNodeType::Selector:
-            case EditorNodeType::SelectorRandom:
-                bgColor = ImVec4(0.26f, 0.16f, 0.05f, 1.0f);
-                borderColor = ImVec4(0.92f, 0.62f, 0.15f, 0.70f);
-                break;
-            case EditorNodeType::DecoratorWeight:
-                bgColor = ImVec4(0.13f, 0.20f, 0.23f, 1.0f);
-                borderColor = ImVec4(0.42f, 0.72f, 0.82f, 0.70f);
-                break;
-            default:
-                if (node.IsConditionNode()) {
-                    bgColor = ImVec4(0.18f, 0.10f, 0.26f, 1.0f);
-                    borderColor = ImVec4(0.75f, 0.35f, 0.95f, 0.70f);
-                } else if (node.IsActionNode()) {
-                    bgColor = ImVec4(0.09f, 0.20f, 0.12f, 1.0f);
-                    borderColor = ImVec4(0.25f, 0.72f, 0.35f, 0.70f);
-                } else {
-                    bgColor = ImVec4(0.14f, 0.14f, 0.14f, 1.0f);
-                    borderColor = ImVec4(0.40f, 0.40f, 0.40f, 0.70f);
-                }
-                break;
-            }
+            // 待機中: 共通の暗色地 + カテゴリアクセントの淡いボーダー
+            borderColor = ImVec4(accent.x, accent.y, accent.z, 0.45f);
             borderWidth = 1.5f;
         }
 
@@ -1279,37 +1275,17 @@ void BehaviorTreeEditor::OnImGuiRender() {
         const char *statusBadge = "";
 
         if (status == NodeStatus::Running) {
-            titleColor = ImVec4(1.0f, 0.92f, 0.20f, 1.0f);
+            titleColor = ImVec4(1.0f, 0.86f, 0.35f, 1.0f);
             statusBadge = " [>>]";
         } else if (status == NodeStatus::Success || timer > 0.0f) {
-            titleColor = ImVec4(0.28f, 1.0f, 0.40f, 1.0f);
+            titleColor = ImVec4(0.45f, 0.90f, 0.55f, 1.0f);
             statusBadge = " [OK]";
         } else if (status == NodeStatus::Failure || timer < 0.0f) {
-            titleColor = ImVec4(1.0f, 0.30f, 0.30f, 1.0f);
+            titleColor = ImVec4(0.95f, 0.45f, 0.45f, 1.0f);
             statusBadge = " [NG]";
         } else {
-            // カテゴリ別タイトル色
-            switch (node.Type) {
-            case EditorNodeType::Sequence:
-            case EditorNodeType::SequenceOnce:
-                titleColor = ImVec4(0.60f, 0.82f, 1.0f, 1.0f);
-                break;
-            case EditorNodeType::Selector:
-            case EditorNodeType::SelectorRandom:
-                titleColor = ImVec4(1.0f, 0.78f, 0.38f, 1.0f);
-                break;
-            case EditorNodeType::DecoratorWeight:
-                titleColor = ImVec4(0.50f, 0.88f, 1.0f, 1.0f);
-                break;
-            default:
-                if (node.IsConditionNode())
-                    titleColor = ImVec4(0.88f, 0.55f, 1.0f, 1.0f);
-                else if (node.IsActionNode())
-                    titleColor = ImVec4(0.42f, 0.92f, 0.52f, 1.0f);
-                else
-                    titleColor = ImVec4(0.90f, 0.90f, 0.90f, 1.0f);
-                break;
-            }
+            // 待機中はカテゴリアクセント色をタイトルに使用
+            titleColor = accent;
         }
 
         ImGui::TextColored(titleColor, "%s%s", node.Title.c_str(), statusBadge);
@@ -1363,33 +1339,10 @@ void BehaviorTreeEditor::OnImGuiRender() {
         } else if (node.Type == EditorNodeType::ActionBurstShoot) {
             ImGui::TextDisabled("x%.0f  %.2fs", node.Parameter2, node.Parameter);
         } else if (node.Type == EditorNodeType::ConditionPlayerState) {
-            // ステート選択ドロップダウン（ノード内インライン編集）
-            static const char *kPlayerStates[] = {
-                "Idle", "Move", "Jump", "Air",
-                "FlyIdle", "FlyMove", "Rush", "Guard",
-                "EnergyCharge", "Attack", "Dead"};
-            static constexpr int kPlayerStateCount = 11;
-            // 現在のStateNameParameterに一致するインデックスを探す
-            int currentIdx = 0;
-            for (int si = 0; si < kPlayerStateCount; ++si) {
-                if (node.StateNameParameter == kPlayerStates[si]) {
-                    currentIdx = si;
-                    break;
-                }
-            }
-            // ノードIDをユニークIDに使ってウィジェットを識別する
-            ImGui::SetNextItemWidth(110.0f);
-            std::string comboId = "##state_" + std::to_string((int)node.ID.Get());
-            if (ImGui::BeginCombo(comboId.c_str(), kPlayerStates[currentIdx])) {
-                for (int si = 0; si < kPlayerStateCount; ++si) {
-                    bool selected = (si == currentIdx);
-                    if (ImGui::Selectable(kPlayerStates[si], selected))
-                        node.StateNameParameter = kPlayerStates[si];
-                    if (selected)
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
+            // ノード上では現在値を表示するのみ。編集は右のインスペクターで行う
+            // (ノード内でBeginComboを開くとnode-editorのキャンバス変換により
+            //  ドロップダウンが正しく展開されないため)
+            ImGui::TextDisabled("state: %s", node.StateNameParameter.c_str());
         } else if (node.IsActionNode() && node.Parameter != 0.0f) {
             ImGui::TextDisabled("%.1f / %.1f", node.Parameter, node.Parameter2);
         }
@@ -1490,8 +1443,11 @@ void BehaviorTreeEditor::OnImGuiRender() {
     // バックグラウンドコンテキストメニュー（カテゴリ別）
     // ────────────────────────────────────────────────────────────
     ed::Suspend();
-    if (ed::ShowBackgroundContextMenu())
+    if (ed::ShowBackgroundContextMenu()) {
+        // 右クリックしたキャンバス位置に新規ノードを配置する
+        createPos_ = ed::ScreenToCanvas(ImGui::GetMousePos());
         ImGui::OpenPopup("BTNodeCreateMenu");
+    }
     if (ImGui::BeginPopup("BTNodeCreateMenu")) {
         auto addBtn = [&](const char *label, EditorNodeType type) {
             if (ImGui::MenuItem(label))
@@ -1564,7 +1520,291 @@ void BehaviorTreeEditor::OnImGuiRender() {
     HandleCreateAction();
     DeleteSelectedItems();
     ed::End();
+
+    // ────────────────────────────────────────────────────────────
+    // 右側インスペクター（選択ノードのプロパティ編集）
+    //   通常のImGuiウィンドウなのでCombo/Slider等が正しく動作する
+    // ────────────────────────────────────────────────────────────
+    ImGui::SameLine();
+    ImGui::BeginChild("##bt_inspector", ImVec2(inspW, 0), ImGuiChildFlags_Borders);
+    DrawInspectorPanel();
+    ImGui::EndChild();
+
     ed::SetCurrentEditor(nullptr);
+}
+
+void BehaviorTreeEditor::DrawInspectorPanel() {
+    ImGui::TextColored(ImVec4(0.78f, 0.82f, 0.92f, 1.0f), "インスペクター");
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ── 選択中ノードを取得（先頭の1つ） ─────────────────
+    const int selCount = ed::GetSelectedObjectCount();
+    std::vector<ed::NodeId> selectedNodes;
+    selectedNodes.resize(std::max(1, selCount));
+    const int n = ed::GetSelectedNodes(selectedNodes.data(), (int)selectedNodes.size());
+
+    EditorNode *target = nullptr;
+    if (n > 0) {
+        const int selId = (int)selectedNodes[0].Get();
+        for (auto &node : nodes_) {
+            if ((int)node.ID.Get() == selId) {
+                target = &node;
+                break;
+            }
+        }
+    }
+
+    if (!target) {
+        ImGui::TextDisabled("ノードが選択されていません。");
+        ImGui::Spacing();
+        ImGui::TextDisabled("キャンバス上のノードをクリックすると、");
+        ImGui::TextDisabled("ここでパラメータを編集できます。");
+        return;
+    }
+
+    // ── ヘッダー（タイトル・種別・説明） ─────────────────
+    const char *catLabel;
+    ImVec4 catColor;
+    if (target->IsConditionNode()) {
+        catLabel = "条件ノード";
+        catColor = ImVec4(0.80f, 0.72f, 0.92f, 1.0f);
+    } else if (target->IsActionNode()) {
+        catLabel = "アクションノード";
+        catColor = ImVec4(0.62f, 0.83f, 0.66f, 1.0f);
+    } else if (target->IsWeightNode()) {
+        catLabel = "デコレータ";
+        catColor = ImVec4(0.56f, 0.70f, 0.88f, 1.0f);
+    } else {
+        catLabel = "コンポジット";
+        catColor = ImVec4(0.56f, 0.70f, 0.88f, 1.0f);
+    }
+
+    ImGui::TextColored(catColor, "%s", target->Title.c_str());
+    ImGui::TextDisabled("種別: %s  (ID:%d)", catLabel, (int)target->ID.Get());
+    ImGui::Spacing();
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", GetNodeDescription(target->Type));
+    ImGui::PopTextWrapPos();
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ── パラメータ編集 ───────────────────────────────────
+    DrawNodeParameters(*target);
+
+    // ── 実行中は編集内容を反映するための再ビルドを提供 ──
+    if (isRunning_) {
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        if (ImGui::Button("変更をツリーへ反映（再ビルド）", ImVec2(-1.0f, 0.0f))) {
+            BuildAndRunTree();
+        }
+        ImGui::TextDisabled("※実行中の値の変更はこのボタンで反映されます");
+    }
+}
+
+void BehaviorTreeEditor::DrawNodeParameters(EditorNode &node) {
+    ImGui::PushID((int)node.ID.Get());
+    ImGui::PushItemWidth(150.0f);
+
+    switch (node.Type) {
+    // ===== コンポジット（パラメータなし）=====
+    case EditorNodeType::Sequence:
+    case EditorNodeType::SequenceOnce:
+    case EditorNodeType::Selector:
+    case EditorNodeType::SelectorRandom:
+    case EditorNodeType::ActionRun:
+    case EditorNodeType::ActionAttack:
+    case EditorNodeType::ActionFlyToGround:
+    case EditorNodeType::ConditionIsGrounded:
+    case EditorNodeType::ConditionIsAirborne:
+    case EditorNodeType::ConditionIsLockOn:
+    case EditorNodeType::ConditionPlayerAttacking:
+        ImGui::TextDisabled("編集可能なパラメータはありません。");
+        break;
+
+    // ===== 重み付けデコレータ =====
+    case EditorNodeType::DecoratorWeight: {
+        ImGui::TextUnformatted("各出力の重み:");
+        int removeIndex = -1;
+        for (int i = 0; i < (int)node.WeightedOutputs.size(); ++i) {
+            ImGui::PushID(i);
+            std::string label = "出力" + std::to_string(i + 1);
+            ImGui::DragFloat(label.c_str(), &node.WeightedOutputs[i].Weight, 0.05f, 0.0f, 100.0f, "%.2f");
+            if (node.WeightedOutputs.size() > 1) {
+                ImGui::SameLine();
+                if (ImGui::SmallButton("削除"))
+                    removeIndex = i;
+            }
+            ImGui::PopID();
+        }
+        if (removeIndex >= 0) {
+            // 削除する出力ピンに繋がっているリンクも一緒に除去する
+            const int removedPin = (int)node.WeightedOutputs[removeIndex].PinID.Get();
+            links_.erase(std::remove_if(links_.begin(), links_.end(),
+                                        [removedPin](const EditorLink &l) { return (int)l.StartPinID.Get() == removedPin; }),
+                         links_.end());
+            node.WeightedOutputs.erase(node.WeightedOutputs.begin() + removeIndex);
+        }
+        ImGui::Spacing();
+        if (ImGui::Button("＋ 出力を追加")) {
+            WeightedOutput wo;
+            wo.PinID = nextPinId_++;
+            wo.Weight = 1.0f;
+            node.WeightedOutputs.push_back(wo);
+        }
+        break;
+    }
+
+    // ===== 条件ノード =====
+    case EditorNodeType::ConditionPlayerClose:
+        ImGui::DragFloat("最小距離", &node.Parameter, 0.1f, 0.0f, 1000.0f, "%.1f");
+        ImGui::DragFloat("最大距離", &node.Parameter2, 0.1f, 0.0f, 1000.0f, "%.1f");
+        ImGui::TextDisabled("この距離範囲内でSuccess");
+        break;
+    case EditorNodeType::ConditionHealthLow:
+        ImGui::SliderFloat("HP閾値", &node.Parameter, 0.0f, 1.0f, "%.2f");
+        ImGui::TextDisabled("自身のHPがこの割合以下でSuccess");
+        break;
+    case EditorNodeType::ConditionEnergyLow:
+        ImGui::SliderFloat("EP閾値", &node.Parameter, 0.0f, 1.0f, "%.2f");
+        ImGui::TextDisabled("エネルギーがこの割合以下でSuccess");
+        break;
+    case EditorNodeType::ConditionEnergyHigh:
+        ImGui::SliderFloat("EP閾値", &node.Parameter, 0.0f, 1.0f, "%.2f");
+        ImGui::TextDisabled("エネルギーがこの割合以上でSuccess");
+        break;
+    case EditorNodeType::ConditionPlayerHPLow:
+        ImGui::SliderFloat("HP閾値", &node.Parameter, 0.0f, 1.0f, "%.2f");
+        ImGui::TextDisabled("プレイヤーHPがこの割合以下でSuccess");
+        break;
+    case EditorNodeType::ConditionPlayerState: {
+        // Playerに登録されているステート名（Player::Init と一致させる）
+        static const char *kStates[] = {
+            "Idle", "Move", "Jump", "Air", "FlyIdle",
+            "FlyMove", "Rush", "EnergyCharge", "Guard"};
+        constexpr int kStateCount = IM_ARRAYSIZE(kStates);
+        int cur = 0;
+        for (int i = 0; i < kStateCount; ++i) {
+            if (node.StateNameParameter == kStates[i]) {
+                cur = i;
+                break;
+            }
+        }
+        ImGui::SetNextItemWidth(180.0f);
+        if (ImGui::BeginCombo("プレイヤーステート", kStates[cur])) {
+            for (int i = 0; i < kStateCount; ++i) {
+                const bool selected = (i == cur);
+                if (ImGui::Selectable(kStates[i], selected))
+                    node.StateNameParameter = kStates[i];
+                if (selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::TextDisabled("このステートと一致でSuccess");
+        break;
+    }
+
+    // ===== 移動アクション（最小/最大時間 + 速度）=====
+    case EditorNodeType::ActionApproach:
+    case EditorNodeType::ActionDash:
+    case EditorNodeType::ActionStrafe:
+    case EditorNodeType::ActionRetreat:
+        ImGui::DragFloat("最小時間(s)", &node.Parameter, 0.05f, 0.0f, 60.0f, "%.2f");
+        ImGui::DragFloat("最大時間(s)", &node.Parameter2, 0.05f, 0.0f, 60.0f, "%.2f");
+        ImGui::DragFloat("移動速度", &node.Parameter3, 0.01f, 0.0f, 100.0f, "%.3f");
+        break;
+
+    // ===== 飛行アクション（最小/最大時間 + 速度）=====
+    case EditorNodeType::ActionFlyAscend:
+    case EditorNodeType::ActionFlyDescend:
+    case EditorNodeType::ActionFlyApproach:
+        ImGui::DragFloat("最小時間(s)", &node.Parameter, 0.05f, 0.0f, 60.0f, "%.2f");
+        ImGui::DragFloat("最大時間(s)", &node.Parameter2, 0.05f, 0.0f, 60.0f, "%.2f");
+        ImGui::DragFloat("速度", &node.Parameter3, 0.1f, 0.0f, 100.0f, "%.2f");
+        break;
+
+    case EditorNodeType::ActionIdle:
+        ImGui::DragFloat("待機時間(s)", &node.Parameter, 0.05f, 0.0f, 60.0f, "%.2f");
+        break;
+
+    case EditorNodeType::ActionJump:
+    case EditorNodeType::ActionJumpToFly:
+        ImGui::DragFloat("ジャンプ力", &node.Parameter, 0.1f, 0.0f, 100.0f, "%.1f");
+        break;
+
+    case EditorNodeType::ActionShoot:
+        ImGui::DragFloat("クールダウン(s)", &node.Parameter, 0.05f, 0.0f, 30.0f, "%.2f");
+        break;
+
+    case EditorNodeType::ActionComboStep:
+        ImGui::DragFloat("1段の時間(s)", &node.Parameter, 0.02f, 0.0f, 10.0f, "%.2f");
+        ImGui::DragFloat("コンボ間隔(s)", &node.Parameter2, 0.02f, 0.0f, 10.0f, "%.2f");
+        ImGui::TextDisabled("コンボ間隔 0 = 既定値を使用");
+        break;
+
+    case EditorNodeType::ActionComboFull: {
+        ImGui::DragFloat("1段の時間(s)", &node.Parameter, 0.02f, 0.0f, 10.0f, "%.2f");
+        int steps = (int)node.Parameter2;
+        if (ImGui::DragInt("最大段数", &steps, 0.1f, 0, 20))
+            node.Parameter2 = (float)steps;
+        ImGui::DragFloat("コンボ間隔(s)", &node.Parameter3, 0.02f, 0.0f, 10.0f, "%.2f");
+        ImGui::TextDisabled("最大段数 0 = 全段 / 間隔 0 = 既定");
+        break;
+    }
+
+    case EditorNodeType::ActionBurstShoot: {
+        ImGui::DragFloat("発射間隔(s)", &node.Parameter, 0.01f, 0.0f, 5.0f, "%.2f");
+        int cnt = (int)node.Parameter2;
+        if (ImGui::DragInt("発射弾数", &cnt, 0.1f, 1, 100))
+            node.Parameter2 = (float)cnt;
+        ImGui::DragFloat("クールダウン(s)", &node.Parameter3, 0.02f, 0.0f, 10.0f, "%.2f");
+        ImGui::DragFloat("拡散角度(度)", &node.Parameter4, 0.5f, 0.0f, 180.0f, "%.1f");
+        bool homing = node.Parameter5 >= 1.0f;
+        if (ImGui::Checkbox("ホーミング弾", &homing))
+            node.Parameter5 = homing ? 1.0f : 0.0f;
+        break;
+    }
+
+    case EditorNodeType::ActionEnergyCharge:
+        ImGui::DragFloat("チャージ速度倍率", &node.Parameter, 0.05f, 0.0f, 20.0f, "%.2f");
+        ImGui::SliderFloat("目標EP比率", &node.Parameter2, 0.0f, 1.0f, "%.2f");
+        break;
+
+    case EditorNodeType::ActionChargeAttack: {
+        ImGui::DragFloat("溜め時間(s)", &node.Parameter, 0.05f, 0.0f, 10.0f, "%.2f");
+        int cnt = (int)node.Parameter2;
+        if (ImGui::DragInt("発射弾数", &cnt, 0.1f, 1, 100))
+            node.Parameter2 = (float)cnt;
+        break;
+    }
+
+    case EditorNodeType::ActionUltimate: {
+        int cnt = (int)node.Parameter2;
+        if (ImGui::DragInt("発射弾数", &cnt, 0.1f, 1, 100))
+            node.Parameter2 = (float)cnt;
+        ImGui::DragFloat("コンボ1段の時間(s)", &node.Parameter3, 0.02f, 0.0f, 5.0f, "%.2f");
+        break;
+    }
+
+    case EditorNodeType::ActionGuard:
+        ImGui::DragFloat("ガード継続(s)", &node.Parameter, 0.05f, 0.0f, 10.0f, "%.2f");
+        break;
+
+    case EditorNodeType::ActionBeamUltimate:
+        ImGui::DragFloat("溜め時間(s)", &node.Parameter, 0.05f, 0.0f, 10.0f, "%.2f");
+        break;
+
+    default:
+        ImGui::TextDisabled("編集可能なパラメータはありません。");
+        break;
+    }
+
+    ImGui::PopItemWidth();
+    ImGui::PopID();
 }
 
 void BehaviorTreeEditor::CreateNode(const std::string &title, EditorNodeType type) {

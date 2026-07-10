@@ -1400,7 +1400,7 @@ class EnemyBeamUltimateNode : public ContextNode {
     void OnExit() override;
 
   private:
-    enum class Phase { Windup, Beam, Cooldown };
+    enum class Phase { Windup, Staging, Beam, Cooldown };
 
     float windupDuration_;
     float timer_ = 0.0f;

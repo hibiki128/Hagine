@@ -2,10 +2,11 @@
 #include "TextRenderer.h"
 #include "../SpriteCommon.h"
 #include "../SpriteManager.h"
+#include <Asset/AssetPath.h>
 #include <Graphics/Texture/TextureManager.h>
 #include <String/StringUtility.h>
-#include <externals/DirectXTex/DirectXTex.h>
-#include <externals/imgui/imstb_truetype.h>
+#include <DirectXTex/DirectXTex.h>
+#include <imgui/imstb_truetype.h>
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG
@@ -20,7 +21,8 @@
 
 namespace Hagine {
 const std::string TextRenderer::kSaveFolderRelative = "Text";
-const std::string TextRenderer::kSaveFolder = "resources/images/Text";
+// LoadTexture が引く相対パス("Text/...")と同じルートへ保存されるよう AssetPath 経由で解決する。
+const std::string TextRenderer::kSaveFolder = AssetPath::Image(TextRenderer::kSaveFolderRelative);
 
 // --------------------------------------------------------------------------
 // ローカルヘルパー

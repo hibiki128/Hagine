@@ -56,6 +56,9 @@ class MakanAttackSkill : public Hagine::BaseObject {
 
     bool isActive_ = false;
     Hagine::WorldTransform *playerTransform_ = nullptr;
+    // 発動時に固定した向き。発動後にプレイヤーが回転してもビームは追従しない
+    // （回避可能にするため。発動までの照準追従はプレイヤー本体の回転が担う）
+    Hagine::Quaternion lockedRotation_ = Hagine::Quaternion::IdentityQuaternion();
     float currentLength_ = 0.0f;
     float maxLength_ = 50.0f;
     float extendSpeed_ = 200.0f;

@@ -1,100 +1,100 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <FxCompile Include="resources\shaders\Line\Line3d.PS.hlsl">
-      <Filter>Resources\shaders\Line</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Line\Line3d.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Line</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Line\Line3d.VS.hlsl">
-      <Filter>Resources\shaders\Line</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Line\Line3d.VS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Line</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Object\Object3d.PS.hlsl">
-      <Filter>Resources\shaders\Object</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Object\Object3d.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Object</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Object\Object3d.VS.hlsl">
-      <Filter>Resources\shaders\Object</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Object\Object3d.VS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Object</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\Particle.PS.hlsl">
-      <Filter>Resources\shaders\Particle</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Particle\Particle.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Particle</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\CSParticle\ParticleCS.PS.hlsl">
-      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Particle\CSParticle\ParticleCS.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Particle\CSParticle</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\CSParticle\ParticleCS.VS.hlsl">
-      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Particle\CSParticle\ParticleCS.VS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Particle\CSParticle</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\CSParticle\CountParticle.CS.hlsl">
-      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Particle\CSParticle\CountParticle.CS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Particle\CSParticle</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\CSParticle\EmitParticle.CS.hlsl">
-      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Particle\CSParticle\EmitParticle.CS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Particle\CSParticle</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\CSParticle\InitParticle.CS.hlsl">
-      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Particle\CSParticle\InitParticle.CS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Particle\CSParticle</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Particle\CSParticle\UpdateParticle.CS.hlsl">
-      <Filter>Resources\shaders\Particle\CSParticle</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Particle\CSParticle\UpdateParticle.CS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Particle\CSParticle</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Skinning\Skinning.VS.hlsl">
-      <Filter>Resources\shaders\Skinning</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Skinning\Skinning.VS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Skinning</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Skinning\Skinning.CS.hlsl">
-      <Filter>Resources\shaders\Skinning</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Skinning\Skinning.CS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Skinning</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Skybox\Skybox.PS.hlsl">
-      <Filter>Resources\shaders\Skybox</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Skybox\Skybox.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Skybox</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\Skybox\Skybox.VS.hlsl">
-      <Filter>Resources\shaders\Skybox</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Skybox\Skybox.VS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Skybox</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Sprite\Sprite.PS.hlsl">
-      <Filter>Resources\shaders\Sprite</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Sprite\Sprite.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Sprite</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\Sprite\Sprite.VS.hlsl">
-      <Filter>Resources\shaders\Sprite</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\Sprite\Sprite.VS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Sprite</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\Vignette.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\Vignette.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\BoxFilter.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\BoxFilter.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\Cinematic.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\Cinematic.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\CopyImage.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\CopyImage.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\DepthBasedOutline.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\DepthBasedOutline.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\OffScreen\Dissolve.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\Dissolve.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\OffScreen\FocusLine.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\FocusLine.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\FullScreen.VS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\FullScreen.VS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\GaussianFilter.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\GaussianFilter.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\Grayscale.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\Grayscale.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\LuminanceBasedOutline.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\LuminanceBasedOutline.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\OffScreen\Pixelate.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\Pixelate.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="resources\shaders\OffScreen\RadialBlur.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\RadialBlur.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\OffScreen\Random.PS.hlsl">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\Random.PS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\shaders\OffScreen\Bloom.PS.hlsl" />
+    <FxCompile Include="Engine\EngineAssets\shaders\OffScreen\Bloom.PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -115,6 +115,24 @@
     </ClCompile>
     <ClCompile Include="Application\GameObject\Player\Player.cpp">
       <Filter>Application\GameObject\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerCombat.cpp">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerMovement.cpp">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerStatus.cpp">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerVisual.cpp">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Utility\SkillCutscene\SkillCutscene.cpp">
+      <Filter>Application\Utility\SkillCutscene</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Utility\Debug\GameParam\GameParamHub.cpp">
+      <Filter>Engine\Utility\Debug\GameParam</Filter>
     </ClCompile>
     <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp">
       <Filter>Application\GameObject\Player\Bullet</Filter>
@@ -155,8 +173,8 @@
     <ClCompile Include="Application\Utility\HitStop\HitStop.cpp">
       <Filter>Application\Utility\HitStop</Filter>
     </ClCompile>
-    <ClCompile Include="Application\Utility\MotionEditor\MotionEditor.cpp">
-      <Filter>Application\Utility\MotionEditor</Filter>
+    <ClCompile Include="Engine\Utility\Edit\MotionEditor\MotionEditor.cpp">
+      <Filter>Engine\Utility\Edit\MotionEditor</Filter>
     </ClCompile>
     <ClCompile Include="Application\Utility\Shake\Shake.cpp">
       <Filter>Application\Utility\Shake</Filter>
@@ -166,6 +184,9 @@
     </ClCompile>
     <ClCompile Include="Application\UI\Scene\Game\GameUI.cpp">
       <Filter>Application\UI\Scene\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\UI\Scene\Training\InputDisplayUI.cpp">
+      <Filter>Application\UI\Scene\Training</Filter>
     </ClCompile>
     <ClCompile Include="Application\UI\Player\PlayerUI.cpp">
       <Filter>Application\UI\Player</Filter>
@@ -194,7 +215,7 @@
     <ClCompile Include="Application\Scene\GameScene.cpp">
       <Filter>Application\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Application\Scene\SelectScene.cpp">
+    <ClCompile Include="Application\Scene\TrainingScene.cpp">
       <Filter>Application\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Application\Scene\TitleScene.cpp">
@@ -317,14 +338,17 @@
     <ClCompile Include="Engine\Base\DirectXCommon.cpp">
       <Filter>Engine\Base</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Base\WinApp.cpp">
-      <Filter>Engine\Base</Filter>
+    <ClCompile Include="Engine\Utility\Graphics\Rtv\RtvManager.cpp">
+      <Filter>Engine\Utility\Graphics\Rtv</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Utility\Graphics\Dsv\DsvManager.cpp">
+      <Filter>Engine\Utility\Graphics\Dsv</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Core\Framework.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Core\MyGame.cpp">
-      <Filter>Engine\Core</Filter>
+    <ClCompile Include="Application\SparkingFight.cpp">
+      <Filter>Application</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Frame\Frame.cpp">
       <Filter>Engine\Frame</Filter>
@@ -490,6 +514,15 @@
     <ClCompile Include="externals\imgui\ImGradient.cpp" />
     <ClCompile Include="externals\imgui\ImCurveEdit.cpp" />
     <ClCompile Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.cpp" />
+    <ClCompile Include="Engine\Utility\Debug\CpuProfiler\CpuProfiler.cpp" />
+    <ClCompile Include="Engine\Base\WinApp\WinApp.cpp" />
+    <ClCompile Include="Engine\Base\SwapChain\DXSwapChain.cpp" />
+    <ClCompile Include="Engine\Base\Shader\ShaderCompiler.cpp" />
+    <ClCompile Include="Engine\Base\Resource\ResourceFactory.cpp" />
+    <ClCompile Include="Engine\Base\Frame\FrameRateLimiter.cpp" />
+    <ClCompile Include="Engine\Base\Device\DXDevice.cpp" />
+    <ClCompile Include="Engine\Base\Command\DXCommandList.cpp" />
+    <ClCompile Include="Engine\Base\Command\DXCommandQueue.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -511,6 +544,27 @@
     </ClInclude>
     <ClInclude Include="Application\GameObject\Player\Player.h">
       <Filter>Application\GameObject\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerCombat.h">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerMovement.h">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerStatus.h">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerVisual.h">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Utility\SkillCutscene\SkillCutscene.h">
+      <Filter>Application\Utility\SkillCutscene</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Utility\Debug\GameParam\GameParamHub.h">
+      <Filter>Engine\Utility\Debug\GameParam</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Utility\Asset\AssetPath.h">
+      <Filter>Engine\Utility\Asset</Filter>
     </ClInclude>
     <ClInclude Include="Application\GameObject\Player\PlayerData.h">
       <Filter>Application\GameObject\Player</Filter>
@@ -557,8 +611,8 @@
     <ClInclude Include="Application\Utility\HitStop\HitStop.h">
       <Filter>Application\Utility\HitStop</Filter>
     </ClInclude>
-    <ClInclude Include="Application\Utility\MotionEditor\MotionEditor.h">
-      <Filter>Application\Utility\MotionEditor</Filter>
+    <ClInclude Include="Engine\Utility\Edit\MotionEditor\MotionEditor.h">
+      <Filter>Engine\Utility\Edit\MotionEditor</Filter>
     </ClInclude>
     <ClInclude Include="Application\Utility\Shake\Shake.h">
       <Filter>Application\Utility\Shake</Filter>
@@ -568,6 +622,9 @@
     </ClInclude>
     <ClInclude Include="Application\UI\Scene\Game\GameUI.h">
       <Filter>Application\UI\Scene\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\UI\Scene\Training\InputDisplayUI.h">
+      <Filter>Application\UI\Scene\Training</Filter>
     </ClInclude>
     <ClInclude Include="Application\UI\Player\PlayerUI.h">
       <Filter>Application\UI\Player</Filter>
@@ -596,7 +653,7 @@
     <ClInclude Include="Application\Scene\GameScene.h">
       <Filter>Application\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Application\Scene\SelectScene.h">
+    <ClInclude Include="Application\Scene\TrainingScene.h">
       <Filter>Application\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Application\Scene\TitleScene.h">
@@ -722,17 +779,20 @@
     <ClInclude Include="Engine\Audio\Audio.h">
       <Filter>Engine\Audio</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Base\DirectXCommon.h">
-      <Filter>Engine\Base</Filter>
+    <ClInclude Include="Engine\Utility\Graphics\Rtv\RtvManager.h">
+      <Filter>Engine\Utility\Graphics\Rtv</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Base\WinApp.h">
+    <ClInclude Include="Engine\Utility\Graphics\Dsv\DsvManager.h">
+      <Filter>Engine\Utility\Graphics\Dsv</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Base\DirectXCommon.h">
       <Filter>Engine\Base</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Core\Framework.h">
       <Filter>Engine\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Core\MyGame.h">
-      <Filter>Engine\Core</Filter>
+    <ClInclude Include="Application\SparkingFight.h">
+      <Filter>Application</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Frame\Frame.h">
       <Filter>Engine\Frame</Filter>
@@ -918,6 +978,15 @@
     <ClInclude Include="Engine\Render\DrawSystem.h" />
     <ClInclude Include="Engine\Utility\Collider\type\MeshCollider.h" />
     <ClInclude Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.h" />
+    <ClInclude Include="Engine\Utility\Debug\CpuProfiler\CpuProfiler.h" />
+    <ClInclude Include="Engine\Base\WinApp\WinApp.h" />
+    <ClInclude Include="Engine\Base\SwapChain\DXSwapChain.h" />
+    <ClInclude Include="Engine\Base\Shader\ShaderCompiler.h" />
+    <ClInclude Include="Engine\Base\Resource\ResourceFactory.h" />
+    <ClInclude Include="Engine\Base\Frame\FrameRateLimiter.h" />
+    <ClInclude Include="Engine\Base\Device\DXDevice.h" />
+    <ClInclude Include="Engine\Base\Command\DXCommandList.h" />
+    <ClInclude Include="Engine\Base\Command\DXCommandQueue.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
@@ -927,32 +996,32 @@
     <None Include=".gitattributes" />
     <None Include=".gitignore" />
     <None Include="README.md" />
-    <None Include="resources\shaders\Line\Line3d.hlsli">
-      <Filter>Resources\shaders\Line</Filter>
+    <None Include="Engine\EngineAssets\shaders\Line\Line3d.hlsli">
+      <Filter>Engine\EngineAssets\shaders\Line</Filter>
     </None>
-    <None Include="resources\shaders\Object\Object3d.hlsli">
-      <Filter>Resources\shaders\Object</Filter>
+    <None Include="Engine\EngineAssets\shaders\Object\Object3d.hlsli">
+      <Filter>Engine\EngineAssets\shaders\Object</Filter>
     </None>
-    <None Include="resources\shaders\Particle\Particle.hlsli">
-      <Filter>Resources\shaders\Particle</Filter>
+    <None Include="Engine\EngineAssets\shaders\Particle\Particle.hlsli">
+      <Filter>Engine\EngineAssets\shaders\Particle</Filter>
     </None>
-    <None Include="Resources\shaders\Particle\Particle.VS.hlsl">
-      <Filter>Resources\shaders\Particle</Filter>
+    <None Include="Engine\EngineAssets\shaders\Particle\Particle.VS.hlsl">
+      <Filter>Engine\EngineAssets\shaders\Particle</Filter>
     </None>
-    <None Include="Resources\shaders\Random\Random.hlsli">
-      <Filter>Resources\shaders\Random</Filter>
+    <None Include="Engine\EngineAssets\shaders\Random\Random.hlsli">
+      <Filter>Engine\EngineAssets\shaders\Random</Filter>
     </None>
-    <None Include="Resources\shaders\Skinning\Skinning.hlsli">
-      <Filter>Resources\shaders\Skinning</Filter>
+    <None Include="Engine\EngineAssets\shaders\Skinning\Skinning.hlsli">
+      <Filter>Engine\EngineAssets\shaders\Skinning</Filter>
     </None>
-    <None Include="Resources\shaders\Skybox\Skybox.hlsli">
-      <Filter>Resources\shaders\Skybox</Filter>
+    <None Include="Engine\EngineAssets\shaders\Skybox\Skybox.hlsli">
+      <Filter>Engine\EngineAssets\shaders\Skybox</Filter>
     </None>
-    <None Include="resources\shaders\Sprite\Sprite.hlsli">
-      <Filter>Resources\shaders\Sprite</Filter>
+    <None Include="Engine\EngineAssets\shaders\Sprite\Sprite.hlsli">
+      <Filter>Engine\EngineAssets\shaders\Sprite</Filter>
     </None>
-    <None Include="resources\shaders\OffScreen\FullScreen.hlsli">
-      <Filter>Resources\shaders\OffScreen</Filter>
+    <None Include="Engine\EngineAssets\shaders\OffScreen\FullScreen.hlsli">
+      <Filter>Engine\EngineAssets\shaders\OffScreen</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -964,9 +1033,6 @@
     </Filter>
     <Filter Include="Externals">
       <UniqueIdentifier>{1c323e53-2ff7-4c83-99ab-373e4dedf576}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Resources">
-      <UniqueIdentifier>{c87fcc78-7c33-4acf-b7f5-cb53f66386d5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Application\Camera">
       <UniqueIdentifier>{4e00fe5a-70fa-4f1a-a437-17c009c250df}</UniqueIdentifier>
@@ -1058,6 +1124,9 @@
     <Filter Include="Application\UI\Scene\Game">
       <UniqueIdentifier>{244785ee-4ad7-41c1-b384-a5f160c6b52d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Application\UI\Scene\Training">
+      <UniqueIdentifier>{7b9c2e14-3d6a-4f28-9a51-2c8e4d0b6f31}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Application\UI\Scene\Result">
       <UniqueIdentifier>{c920d9e7-fd91-4bc1-be53-ea5709b133e0}</UniqueIdentifier>
     </Filter>
@@ -1073,11 +1142,20 @@
     <Filter Include="Application\Utility\HitStop">
       <UniqueIdentifier>{0ceed33a-183b-449d-b99c-82cca270766e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Application\Utility\MotionEditor">
+    <Filter Include="Engine\Utility\Edit\MotionEditor">
       <UniqueIdentifier>{c6039326-4c92-4d9f-8421-8babee2d4e0c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Application\Utility\Shake">
       <UniqueIdentifier>{0580369b-7d5d-4411-859d-529bd7f67a44}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\GameObject\Player\Parts">
+      <UniqueIdentifier>{a1c2f3d4-5e6b-4c7d-8e9f-0a1b2c3d4e5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\Utility\SkillCutscene">
+      <UniqueIdentifier>{b2d3e4f5-6a7c-4d8e-9f0a-1b2c3d4e5f6a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Utility\Debug\GameParam">
+      <UniqueIdentifier>{c3e4f5a6-7b8d-4e9f-0a1b-2c3d4e5f6a7b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\2d">
       <UniqueIdentifier>{f6580ddd-27d8-4bcd-9721-7b8876ed7ec3}</UniqueIdentifier>
@@ -1220,40 +1298,46 @@
     <Filter Include="Engine\Utility\Graphics\Srv">
       <UniqueIdentifier>{4f441bde-4a8e-4fd1-8b36-0d55b554be9a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Utility\Graphics\Rtv">
+      <UniqueIdentifier>{a3f1c2d4-8b5e-4c6f-9d21-1e7a52c94b03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Utility\Graphics\Dsv">
+      <UniqueIdentifier>{b7e2d3c5-9c6f-4d70-8e32-2f8b63da5c14}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Engine\Utility\Graphics\Texture">
       <UniqueIdentifier>{b069db75-7357-4d06-bfed-f67d3c3ccfa6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Utility\LoadFile\Csv">
       <UniqueIdentifier>{c1216338-3048-4806-be59-7ccef6b4d2eb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders">
+    <Filter Include="Engine\EngineAssets\shaders">
       <UniqueIdentifier>{a4e81e65-f36f-4452-97b7-4bb84ab22d51}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders\Line">
+    <Filter Include="Engine\EngineAssets\shaders\Line">
       <UniqueIdentifier>{d046da19-14b1-4e7e-b0be-94fe12f58107}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders\Object">
+    <Filter Include="Engine\EngineAssets\shaders\Object">
       <UniqueIdentifier>{b453a91d-a4c8-4e72-a35d-e4b918ea65d1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders\OffScreen">
+    <Filter Include="Engine\EngineAssets\shaders\OffScreen">
       <UniqueIdentifier>{663fd2ca-b598-4706-b53a-daa62d03acfd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders\Particle">
+    <Filter Include="Engine\EngineAssets\shaders\Particle">
       <UniqueIdentifier>{0f1a74aa-72db-4ac1-8b2b-4981ca69f7a3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders\Random">
+    <Filter Include="Engine\EngineAssets\shaders\Random">
       <UniqueIdentifier>{e65d9b4f-f6cc-4254-a622-090b5fa48a94}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders\Skinning">
+    <Filter Include="Engine\EngineAssets\shaders\Skinning">
       <UniqueIdentifier>{068a5c53-11bd-4d7d-80d0-93f02af64be9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders\Skybox">
+    <Filter Include="Engine\EngineAssets\shaders\Skybox">
       <UniqueIdentifier>{3096e1a9-726d-42e1-b0f4-08fc7f94c929}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders\Sprite">
+    <Filter Include="Engine\EngineAssets\shaders\Sprite">
       <UniqueIdentifier>{e228ab96-c657-445b-86c0-1ebed1a3ddf4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resources\shaders\Particle\CSParticle">
+    <Filter Include="Engine\EngineAssets\shaders\Particle\CSParticle">
       <UniqueIdentifier>{e2eb09d7-9dac-416f-a3f9-ff37395e3766}</UniqueIdentifier>
     </Filter>
     <Filter Include="Externals\imgui">

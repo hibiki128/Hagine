@@ -1,6 +1,6 @@
 #include "ClearScene.h"
-#include "Engine/Utility/Scene/SceneManager.h"
-#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include "Utility/Scene/SceneManager.h"
+#include "Edit/MotionEditor/MotionEditor.h"
 #include <Frame.h>
 
 REGISTER_SCENE("CLEAR", ClearScene)

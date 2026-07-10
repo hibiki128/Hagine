@@ -328,8 +328,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/imgui_editor.ini
-/imgui_game.ini
+/Application/Config/imgui_editor.ini
+/Application/Config/imgui_game.ini
 /CLAUDE.md
-/Resources/images/Text
+/Application/Assets/images/Text
 /GPUParticleメモ.md

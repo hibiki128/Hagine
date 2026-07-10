@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "ParticleCSGroup.h"
-#include <Engine/Audio/Audio.h>
+#include <Asset/AssetPath.h>
+#include <Audio/Audio.h>
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -19,7 +20,7 @@
 #include "imgui.h"
 #include "ImGradient.h"
 #include "ImCurveEdit.h"
-#include "Engine/Utility/Debug/ImGui/AssetDragDrop.h"
+#include "Utility/Debug/ImGui/AssetDragDrop.h"
 #endif
 
 namespace Hagine {
@@ -826,7 +827,7 @@ void ParticleCSGroup::CreateAliveCountResource() {
 void ParticleCSGroup::CreateAliveListResources() {
     const uint32_t maxCount = settingsData_->maxParticleCount;
 
-    // ping-pong の2枚それぞれに aliveList / aliveCounter を本確保する（§8）。
+    // ping-pong の2枚それぞれに aliveList / aliveCounter を本確保する。
     for (uint32_t i = 0; i < kAlivePingPong; ++i) {
         // --- aliveList: 生存 slot index バッファ (UAV: compute u9 / SRV: VS t2) ---
         aliveListResource_[i] = dxCommon_->CreateBufferResource(sizeof(uint32_t) * maxCount, true);
@@ -896,7 +897,7 @@ void ParticleCSGroup::CountAliveParticles() {
 }
 
 uint32_t ParticleCSGroup::GetAliveParticleCount() {
-    // Phase 2: 旧 CountParticle 全Nディスパッチを廃止し、生存コンパクションの
+    // 旧 CountParticle 全Nディスパッチを廃止し、生存コンパクションの
     // aliveCounter 読み戻し値(FetchAliveDrawCount で更新)をそのまま統計に流用する。
     cachedAliveCount_ = aliveDrawCount_;
     return cachedAliveCount_;
@@ -1283,15 +1284,17 @@ void ParticleCSGroup::DrawImGui() {
     PopSectionColor();
     if (openTex && !particleGroupData_.materials.empty()) {
         ImGui::Indent();
-        // resources/images 配下の画像を列挙（初回スキャン + 再スキャンボタン）。
+        // Application/Assets/images 配下の画像を列挙（初回スキャン + 再スキャンボタン）。
         // textureFilePath は base からの相対パス('/'区切り)で持つ規約に合わせる。
         static std::vector<std::string> s_imageFiles;
         static bool s_scanned = false;
         auto scanImages = []() {
             s_imageFiles.clear();
             std::error_code ec;
-            const std::string base = "resources/images";
-            if (std::filesystem::exists(base, ec)) {
+            // images はエンジン(debug)とアプリの 2 ルートに分割されているため両方を走査する。
+            for (const std::string &base : AssetPath::ImageScanRoots()) {
+                if (!std::filesystem::exists(base, ec))
+                    continue;
                 for (auto &e : std::filesystem::recursive_directory_iterator(base, ec)) {
                     if (ec)
                         break;
@@ -1306,8 +1309,8 @@ void ParticleCSGroup::DrawImGui() {
                     if (!rel.empty())
                         s_imageFiles.push_back(rel);
                 }
-                std::sort(s_imageFiles.begin(), s_imageFiles.end());
             }
+            std::sort(s_imageFiles.begin(), s_imageFiles.end());
         };
         if (!s_scanned) {
             scanImages();
@@ -1323,7 +1326,7 @@ void ParticleCSGroup::DrawImGui() {
         };
 
         // 選択中テクスチャのサムネイルプレビュー（読み込み済み前提）。
-        // ※ GetSrvHandleGPU は他の getter と違い "resources/images/" を前置しない＝フルパスを要求する。
+        // ※ GetSrvHandleGPU は他の getter と違い相対パスを前置しない＝フルパス(＝マップキー)を要求する。
         if (!curPath.empty()) {
             texManager_->LoadTexture(curPath); // 念のため未ロードならロード（ロード済みなら即return）
             // キューブマップは SRV が TEXTURECUBE。Texture2D として Image 描画すると
@@ -1331,7 +1334,7 @@ void ParticleCSGroup::DrawImGui() {
             if (texManager_->GetMetaData(curPath).IsCubemap()) {
                 ImGui::Button("CUBE", ImVec2(56.0f, 56.0f));
             } else {
-                D3D12_GPU_DESCRIPTOR_HANDLE h = texManager_->GetSrvHandleGPU("resources/images/" + curPath);
+                D3D12_GPU_DESCRIPTOR_HANDLE h = texManager_->GetSrvHandleGPU(AssetPath::Image(curPath));
                 if (h.ptr != 0)
                     ImGui::Image(static_cast<ImTextureID>(h.ptr), ImVec2(56.0f, 56.0f));
                 else
@@ -2073,7 +2076,7 @@ void ParticleCSGroup::DrawImGui() {
 
         if (v) {
             // --------------------------------------------------
-            // ブレンドモード（新規追加）
+            // ブレンドモード
             // --------------------------------------------------
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
@@ -2137,7 +2140,7 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::SetTooltip("1=軽量なめらか / 4=複雑（負荷増）");
 
             // --------------------------------------------------
-            // 分散オフセット（新規追加）
+            // 分散オフセット
             // --------------------------------------------------
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));

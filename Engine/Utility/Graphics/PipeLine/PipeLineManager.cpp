@@ -154,7 +154,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateCommonRootSig
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFullScreenPostEffectPipeline(const std::wstring &psPath, Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
-    IDxcBlob *vs = dxCommon_->CompileShader(L"./resources/shaders/OffScreen/FullScreen.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vs = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/OffScreen/FullScreen.VS.hlsl", L"vs_6_0");
     IDxcBlob *ps = dxCommon_->CompileShader(psPath.c_str(), L"ps_6_0");
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
@@ -286,8 +286,17 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
     shadowDescriptorRange[0].RegisterSpace = 0;
     shadowDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
+    // ノーマルマップ用DescriptorRange (t3)
+    D3D12_DESCRIPTOR_RANGE normalMapDescriptorRange[1] = {};
+    normalMapDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    normalMapDescriptorRange[0].NumDescriptors = 1;
+    normalMapDescriptorRange[0].BaseShaderRegister = 3; // t3
+    normalMapDescriptorRange[0].RegisterSpace = 0;
+    normalMapDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     // RootParameter作成。複数設定できるので配列。
-    D3D12_ROOT_PARAMETER rootParameters[10] = {};
+    // 末尾に t3(ノーマルマップ) を追加。既存 index(0..9) は変更しない。
+    D3D12_ROOT_PARAMETER rootParameters[11] = {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;                   // CBVを使う
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;                // VertexShaderで使う
     rootParameters[0].Descriptor.ShaderRegister = 0;                                   // レジスタ番号0とバインド
@@ -323,6 +332,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
     rootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[9].Descriptor.ShaderRegister = 5;
+    // ノーマルマップ SRV (t3) - param 10
+    rootParameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[10].DescriptorTable.pDescriptorRanges = normalMapDescriptorRange;
+    rootParameters[10].DescriptorTable.NumDescriptorRanges = _countof(normalMapDescriptorRange);
 
     descriptionRootSignature.pParameters = rootParameters;
     descriptionRootSignature.NumParameters = _countof(rootParameters);
@@ -438,10 +452,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGraphicsPipeL
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Object/Object3d.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Object/Object3d.VS.hlsl", L"vs_6_0");
     assert(vertexShaderBlob != nullptr);
 
-    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Object/Object3d.PS.hlsl", L"ps_6_0");
+    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Object/Object3d.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
 
     ///=========DepthStencilStateの設定==========
@@ -699,10 +713,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGPUParticleGr
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/ParticleCS.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Particle/CSParticle/ParticleCS.VS.hlsl", L"vs_6_0");
     assert(vertexShaderBlob != nullptr);
 
-    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/CSParticle/ParticleCS.PS.hlsl", L"ps_6_0");
+    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Particle/CSParticle/ParticleCS.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
 
     ///=========DepthStencilStateの設定==========
@@ -887,10 +901,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateParticleGraph
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/Particle.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Particle/Particle.VS.hlsl", L"vs_6_0");
     assert(vertexShaderBlob != nullptr);
 
-    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./Resources/shaders/Particle/Particle.PS.hlsl", L"ps_6_0");
+    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Particle/Particle.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
 
     ///=========DepthStencilStateの設定==========
@@ -1073,10 +1087,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSpriteGraphic
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Sprite/Sprite.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Sprite/Sprite.VS.hlsl", L"vs_6_0");
     assert(vertexShaderBlob != nullptr);
 
-    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Sprite/Sprite.PS.hlsl", L"ps_6_0");
+    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Sprite/Sprite.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
 
     ///=========DepthStencilStateの設定==========
@@ -1291,8 +1305,16 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     skinShadowDescriptorRange[0].RegisterSpace = 0;
     skinShadowDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    // スキン+シャドウ用に11要素のrootParametersを構築する
-    D3D12_ROOT_PARAMETER rootParameters11[11] = {};
+    // ノーマルマップ用 DescriptorRange (t3 PIXEL)
+    D3D12_DESCRIPTOR_RANGE skinNormalMapDescriptorRange[1] = {};
+    skinNormalMapDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    skinNormalMapDescriptorRange[0].NumDescriptors = 1;
+    skinNormalMapDescriptorRange[0].BaseShaderRegister = 3; // t3
+    skinNormalMapDescriptorRange[0].RegisterSpace = 0;
+    skinNormalMapDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // スキン+シャドウ+ノーマルマップ用に12要素のrootParametersを構築する
+    D3D12_ROOT_PARAMETER rootParameters11[12] = {};
     for (int _i = 0; _i < 9; ++_i) rootParameters11[_i] = rootParameters[_i];
     // rootParameters[9]: シャドウマップ SRV (t2) - PIXEL
     rootParameters11[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -1303,6 +1325,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     rootParameters11[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters11[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters11[10].Descriptor.ShaderRegister = 5;
+    // rootParameters[11]: ノーマルマップ SRV (t3) - PIXEL
+    rootParameters11[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters11[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters11[11].DescriptorTable.pDescriptorRanges = skinNormalMapDescriptorRange;
+    rootParameters11[11].DescriptorTable.NumDescriptorRanges = _countof(skinNormalMapDescriptorRange);
 
     descriptionRootSignature.pParameters = rootParameters11;
     descriptionRootSignature.NumParameters = _countof(rootParameters11);
@@ -1393,10 +1420,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSkinningGraph
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Skinning/Skinning.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Skinning/Skinning.VS.hlsl", L"vs_6_0");
     assert(vertexShaderBlob != nullptr);
 
-    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Object/Object3d.PS.hlsl", L"ps_6_0");
+    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Object/Object3d.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
 
     ///=========DepthStencilStateの設定==========
@@ -1525,10 +1552,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateLine3dGraphic
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Line/Line3d.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Line/Line3d.VS.hlsl", L"vs_6_0");
     assert(vertexShaderBlob != nullptr);
 
-    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Line/Line3d.PS.hlsl", L"ps_6_0");
+    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Line/Line3d.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
 
     ///=========DepthStencilStateの設定==========
@@ -1687,10 +1714,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSkyboxGraphic
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
     // Shaderをコンパイル
-    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Skybox/Skybox.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vertexShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Skybox/Skybox.VS.hlsl", L"vs_6_0");
     assert(vertexShaderBlob != nullptr);
 
-    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./resources/shaders/Skybox/Skybox.PS.hlsl", L"ps_6_0");
+    IDxcBlob *pixelShaderBlob = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Skybox/Skybox.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
 
     // DepthStencilStateの設定
@@ -2041,7 +2068,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShadowMapGrap
     inputLayoutDesc.pInputElementDescs = inputElementDescs;
     inputLayoutDesc.NumElements        = _countof(inputElementDescs);
 
-    IDxcBlob *vs = dxCommon_->CompileShader(L"./Resources/shaders/Shadow/ShadowMap.VS.hlsl", L"vs_6_0");
+    IDxcBlob *vs = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Shadow/ShadowMap.VS.hlsl", L"vs_6_0");
     assert(vs != nullptr);
 
     D3D12_RASTERIZER_DESC rasterizerDesc{};
@@ -2080,82 +2107,82 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShadowMapGrap
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/CopyImage.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/CopyImage.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGrayGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/GrayScale.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/GrayScale.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateVigneetGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Vignette.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Vignette.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSmoothGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/BoxFilter.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/BoxFilter.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGaussGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/GaussianFilter.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/GaussianFilter.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateOutLineGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/LuminanceBasedOutline.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/LuminanceBasedOutline.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateDepthGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(true);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/DepthBasedOutline.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/DepthBasedOutline.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBlurGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/RadialBlur.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/RadialBlur.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateCinematicGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Cinematic.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Cinematic.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateDissolveGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Dissolve.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Dissolve.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRandomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Random.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Random.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFocusLineGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/FocusLine.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/FocusLine.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreatePixelateGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Pixelate.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Pixelate.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBloomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Bloom.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Bloom.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRetroGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Retro.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Retro.PS.hlsl", rootSignature);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShockwaveGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
     SettingDepthStencilDesc(false);
-    return CreateFullScreenPostEffectPipeline(L"./resources/shaders/OffScreen/Shockwave.PS.hlsl", rootSignature);
+    return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Shockwave.PS.hlsl", rootSignature);
 }
 
 } // namespace Hagine

@@ -7,10 +7,7 @@
 #include <implot.h>
 #endif // _DEBUG
 
-// ============================================================
-//  ステップ設定テーブル
-//  TutorialStep の順序と 1:1 対応させること
-// ============================================================
+// ステップ設定テーブル（TutorialStep の順序と 1:1 対応させること）
 using namespace Hagine;
 const TutorialStepConfig TutorialSystem::kConfigs[static_cast<int>(TutorialStep::StepCount)] = {
     //  instructionText                                                         subText                                             reqTime  reqCount  needsEnemy
@@ -32,7 +29,6 @@ const TutorialStepConfig TutorialSystem::kConfigs[static_cast<int>(TutorialStep:
     {"チュートリアル完了！", nullptr, 0.0f, 0, false},                                                    // Complete
 };
 
-// ============================================================
 void TutorialSystem::Initialize(Player *player) {
     assert(player && "TutorialSystem: player が nullptr です");
     player_ = player;
@@ -43,7 +39,6 @@ void TutorialSystem::Initialize(Player *player) {
     ResetStepState();
 }
 
-// ============================================================
 void TutorialSystem::Update(float dt) {
     stepJustChanged_ = false;
 
@@ -58,20 +53,15 @@ void TutorialSystem::Update(float dt) {
     wasGroundedLastFrame_ = player_->GetIsGrounded();
 }
 
-// ============================================================
 void TutorialSystem::Finalize() {
     player_ = nullptr;
     input_ = nullptr;
 }
 
-// ============================================================
-//  GetInstructionText
-// ============================================================
 const char *TutorialSystem::GetInstructionText() const {
     return kConfigs[static_cast<int>(currentStep_)].instructionText;
 }
 
-// ============================================================
 const char *TutorialSystem::GetSubText() const {
     // 着地補正メッセージを最優先で返す
     if (showReturnToAirMessage_) {
@@ -80,9 +70,6 @@ const char *TutorialSystem::GetSubText() const {
     return kConfigs[static_cast<int>(currentStep_)].subText;
 }
 
-// ============================================================
-//  AdvanceStep  次のステップへ進む
-// ============================================================
 void TutorialSystem::AdvanceStep() {
     const bool currNeedsEnemy = kConfigs[static_cast<int>(currentStep_)].needsEnemy;
     const int nextIdx = static_cast<int>(currentStep_) + 1;
@@ -106,7 +93,6 @@ void TutorialSystem::AdvanceStep() {
     stepJustChanged_ = true;
 }
 
-// ============================================================
 void TutorialSystem::ResetStepState() {
     timer_ = 0.0f;
     count_ = 0;
@@ -116,13 +102,9 @@ void TutorialSystem::ResetStepState() {
     chargeInputActive_ = false;
 }
 
-// ============================================================
 void TutorialSystem::RequestSpawnEnemy() { spawnEnemyRequested_ = true; }
 void TutorialSystem::RequestDespawnEnemy() { despawnEnemyRequested_ = true; }
 
-// ============================================================
-//  UpdateCurrentStep  各ステップの進行チェックと進捗更新
-// ============================================================
 void TutorialSystem::UpdateCurrentStep(float dt) {
     bool conditionMet = false;
 
@@ -202,10 +184,7 @@ void TutorialSystem::UpdateCurrentStep(float dt) {
     }
 }
 
-// ============================================================
-//  ステップ個別チェック
-// ============================================================
-
+// ステップ個別チェック
 bool TutorialSystem::CheckMove() {
     // Move または Idle ステートにいる間、移動入力を 3 秒間継続
     const std::string &state = player_->GetCurrentStateName();
@@ -344,10 +323,7 @@ bool TutorialSystem::CheckSpecialAttack() {
     return player_->GetIsSkillActive();
 }
 
-// ============================================================
-//  入力判定ヘルパー
-// ============================================================
-
+// 入力判定ヘルパー
 bool TutorialSystem::IsMoveInput() const {
     GamePad *pad = player_->GetGamePad();
     if (!pad->IsConnected()) {
@@ -421,9 +397,6 @@ bool TutorialSystem::IsRangedTrigger() const {
     return pad->IsRelease(XINPUT_GAMEPAD_Y);
 }
 
-// ============================================================
-//  DrawImGui  チュートリアル進行状況のデバッグウィンドウ
-// ============================================================
 void TutorialSystem::DrawImGui() {
 #ifdef _DEBUG
     // ステップ番号→日本語名のテーブル（TutorialStep の順序と 1:1 対応）

@@ -1,6 +1,6 @@
 #include "ResultStaging.h"
 #include "Particle/CSParticle/ParticleCSEditor.h"
-#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include "Edit/MotionEditor/MotionEditor.h"
 #include <Frame.h>
 #include <Line/DrawLine3D.h>
 #include <Object/Base/BaseObjectManager.h>

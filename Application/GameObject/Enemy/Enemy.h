@@ -1,5 +1,6 @@
 #pragma once
 #include "Application/Utility/Shake/Shake.h"
+#include "Application/Utility/SkillCutscene/SkillCutscene.h"
 #include "Bullet/EnemyBullet.h"
 #include "Collider/EnemyAttackCollider.h"
 #include "Object/Base/BaseObject.h"
@@ -132,7 +133,19 @@ class Enemy : public Hagine::BaseObject {
     void SetIsLockOn(bool lockOn) { isLockOn_ = lockOn; }
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
-    void SetDrawShadow(bool flag) { drawShadow_ = flag; }
+
+    /// <summary>
+    /// トレーニング用ダミーモードを設定する。
+    /// 有効時はAI(ビヘイビアツリー)・自身の攻撃・弾を停止し、
+    /// 被弾リアクション(点滅・ノックバック)と復活のみ行う。
+    /// 呼び出し時点のワールド位置を復活位置として記録する。
+    /// </summary>
+    void SetDummy(bool enable);
+
+    /// <summary>
+    /// HP・状態・位置を初期化して復活させる(ダミー用)
+    /// </summary>
+    void Revive();
     void SetVelocity(const Hagine::Vector3 &vel) { velocity_ = vel; }
     void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
     void SetStrafeDirection(int dir) { strafeDirection_ = dir; }
@@ -190,6 +203,17 @@ class Enemy : public Hagine::BaseObject {
     /// <summary>ビームが現在アクティブかどうか</summary>
     bool IsBeamActive() const { return beamActive_; }
 
+    /// <summary>
+    /// ビーム必殺技の発動前演出（カメラ顔アップ→通常カメラ復帰→遅延→発動）を開始する。
+    /// 演出・遅延中はロックオン（照準追従）を維持し、発動の瞬間に向きを固定する。
+    /// 溜め完了後にBTノードから呼ぶ
+    /// </summary>
+    void StartBeamStaging();
+    /// <summary>ビーム発動前演出を中断する（BT中断時など）</summary>
+    void CancelBeamStaging();
+    /// <summary>ビーム発動前演出中かどうか</summary>
+    bool IsBeamStaging() const { return beamCutscene_.IsActive(); }
+
   private:
     /// ===================================================
     /// private method
@@ -197,7 +221,6 @@ class Enemy : public Hagine::BaseObject {
 
     void Save();
     void Load();
-    void UpdateShadowScale();
     void UpdateBeam(); // ビーム必殺技の毎フレーム更新
     void RotateUpdate();
     void CollisionGround();
@@ -209,7 +232,6 @@ class Enemy : public Hagine::BaseObject {
     void UpdateAnimation();
     void DamageUpdate();
     void StartDamageReact();
-    Direction CalculateDirectionFromRotation();
     const char *GetDirectionName(Direction dir);
 
     /// ===================================================
@@ -271,6 +293,9 @@ class Enemy : public Hagine::BaseObject {
     static constexpr float kGroundLevel = 0.0f;
     static constexpr float kVelocityZero = 0.0f;
 
+    // ダミーモード(トレーニング)関連
+    static constexpr float kDummyGroundFriction = 0.8f; // ノックバック後の水平減衰率(毎フレーム)
+
     // イージング関連定数
     static constexpr float kVelocityEaseTime = 0.15f;
     static constexpr float kStopEaseTime = 0.2f;
@@ -327,16 +352,11 @@ class Enemy : public Hagine::BaseObject {
     Hagine::Vector3 velocityTarget_{};         // 目標速度
     Hagine::EasingData<Hagine::Vector3> velocityEase_; // 速度補間用イージング
 
-    // -----------------------------------------------
     // ノックバック関連
-    // -----------------------------------------------
     bool hasKnockback_ = false;            // ノックバック中フラグ
     Hagine::Vector3 pendingKnockback_ = {0, 0, 0}; // ノックバック速度
 
-    // -----------------------------------------------
-    // コンボ攻撃パラメータ（ComboSystemのコールバックで更新される）
-    // EnemyHandがヒット時に参照する
-    // -----------------------------------------------
+    // コンボ攻撃パラメータ（ComboSystemのコールバックで更新）
     float currentAttackDamage_ = 10.0f;   // 現在の攻撃ダメージ量
     float currentAttackKnockback_ = 3.0f; // 現在の攻撃ノックバック強度
     float currentAttackDuration_ = 0.25f; // 現在の攻撃有効時間
@@ -348,12 +368,12 @@ class Enemy : public Hagine::BaseObject {
     bool isStop_ = false;        // 停止中フラグ
     bool started_ = false;       // 開始フラグ
     bool isPause_ = false;       // ポーズフラグ
-    bool drawShadow_ = true;     // 影描画フラグ
+    bool dummyMode_ = false;     // トレーニング用ダミーモード(AI停止・復活のみ)
+    Hagine::Vector3 spawnPosition_{}; // ダミー復活時に戻る初期位置
     bool isGuarding_ = false;    // ガード中フラグ
     bool isComboAttack_ = false; // コンボ攻撃中フラグ
 
     std::unique_ptr<Hagine::DataHandler> data_;           // データハンドラ
-    std::unique_ptr<Hagine::BaseObject> shadow_;          // 影オブジェクト
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; // ヒットエミッター
     std::unique_ptr<Shake> chargeShake_;          // シェイク
 
@@ -370,6 +390,7 @@ class Enemy : public Hagine::BaseObject {
     float beamActiveTime_ = 0.0f;                // ビームアクティブ経過時間
     float beamSpiralTime_ = 0.0f;                // らせんアニメーション経過時間
     Hagine::Quaternion beamLockedRotation_{};            // ビーム発射時に固定した向き（発射後ホーミング防止）
+    SkillCutscene beamCutscene_;                 // ビーム発動前演出（カメラ顔アップ＋発動遅延）
     float beamSpiralRadius_ = 2.0f;              // らせんの半径
     float beamSpiralRevolution_ = 3.0f;          // 最大長に達した時の巻き数
     float beamSpiralForwardSpeed_ = 30.0f;       // らせんパーティクルの前進速度
@@ -390,22 +411,15 @@ class Enemy : public Hagine::BaseObject {
     Hagine::AnimationController animationController_; // アニメーション制御（プレイヤーと同一クリップ構成）
     std::vector<std::string> comboAnimations_;       // コンボ段ごとの本体アニメーションパス
 
-    // -----------------------------------------------
-    // 前方攻撃判定コライダー
-    // EnemyHandのコライダーの代わりに敵前方に判定を展開する
-    // PlayerAttackColliderと対称の設計
-    // -----------------------------------------------
+    // 前方攻撃判定コライダー（PlayerAttackColliderと対称の設計）
     std::unique_ptr<EnemyAttackCollider> attackCollider_; // 攻撃コライダー
 
     Hagine::OBBCollider *enemyCollider_ = nullptr;      // 敵コライダー
     Hagine::AABBCollider *enemyWallCollider_ = nullptr; // 壁用コライダー
 
-
     std::vector<std::unique_ptr<EnemyBullet>> bullets_; // 敵の弾
 
-    // ===================================================
     // 視錐台ロックオン関連
-    // ===================================================
     static constexpr float kDefaultFrustumRange = 150.0f;
     static constexpr float kDefaultFrustumHalfFovH = 40.0f * (3.14159265f / 180.0f);
     static constexpr float kDefaultFrustumHalfFovV = 30.0f * (3.14159265f / 180.0f);

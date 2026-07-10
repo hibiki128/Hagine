@@ -1,6 +1,6 @@
 #include "ComboSystem.h"
-#include "Application/Utility/MotionEditor/MotionEditor.h"
-#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "Edit/MotionEditor/MotionEditor.h"
+#include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Object/Base/BaseObject.h"
 #include <algorithm>
 
@@ -183,6 +183,9 @@ void ComboSystem::ExecuteComboAttack() {
     }
 
     comboCooldown_ = COMBO_INTERVAL;
+
+    // 今まさに発火した攻撃の名前を記録する（発火コールバックから参照できるよう先に確定）
+    lastAttackName_ = currentCombo.attackData;
 
     if (!comboStarted_) {
         SaveComboStartPositions();

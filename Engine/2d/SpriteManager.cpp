@@ -1,15 +1,15 @@
 #define NOMINMAX
 #include "SpriteManager.h"
-#include "Engine/Utility/Debug/ImGui/Debugui_improved.h"
-#include "Engine/Utility/Debug/ImGui/ImGuizmoManager.h"
+#include "Utility/Debug/ImGui/Debugui_improved.h"
+#include "Utility/Debug/ImGui/ImGuizmoManager.h"
 #include "SpriteCommon.h"
 #include "WinApp.h"
 #include "myMath.h"
 #include <Data/DataHandler.h>
 #include <Shadow/ShadowMap.h>
-#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
+#include <Utility/Debug/ImGui/ImGuiNotification.h>
 #include <ShowFolder/ShowFolder.h>
-#include "Engine/Render/DrawGroupManager.h"
+#include "Render/DrawGroupManager.h"
 #include <filesystem>
 
 namespace Hagine {
@@ -895,7 +895,7 @@ void SpriteManager::DrawSpriteManager() {
 
     // 説明テキスト
     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
-    ImGui::TextWrapped("スプライトは resources/jsons/Sprites/<フォルダ名> にJSONとして保存されます。");
+    ImGui::TextWrapped("スプライトは Application/Assets/jsons/Sprites/<フォルダ名> にJSONとして保存されます。");
     ImGui::PopStyleColor();
     ImGui::Spacing();
 
@@ -981,7 +981,7 @@ void SpriteManager::SaveDrawOrder() {
 
 void SpriteManager::LoadDrawOrder() {
     // DrawOrder.jsonファイルが存在するかチェック
-    std::string drawOrderPath = "resources/jsons/Sprites/" + saveFolder_ + "/DrawOrder.json";
+    std::string drawOrderPath = "Application/Assets/jsons/Sprites/" + saveFolder_ + "/DrawOrder.json";
     if (!fs::exists(drawOrderPath)) {
         return;
     }
@@ -1027,7 +1027,7 @@ void SpriteManager::LoadDrawOrder() {
 void SpriteManager::SaveAllSprites() {
     SaveDrawOrder();
 
-    std::string folderPath = "resources/jsons/Sprites/" + saveFolder_;
+    std::string folderPath = "Application/Assets/jsons/Sprites/" + saveFolder_;
     if (!fs::exists(folderPath)) {
         fs::create_directories(folderPath);
     }
@@ -1080,7 +1080,7 @@ void SpriteManager::SaveAllSprites() {
 }
 
 void SpriteManager::LoadAllSprites() {
-    std::string folderPath = "resources/jsons/Sprites/" + saveFolder_;
+    std::string folderPath = "Application/Assets/jsons/Sprites/" + saveFolder_;
 
     if (!fs::exists(folderPath) || !fs::is_directory(folderPath)) {
         return;

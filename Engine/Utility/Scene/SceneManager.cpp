@@ -1,5 +1,5 @@
 #include "SceneManager.h"
-#include <Engine/Utility/Debug/ImGui/ImGuiNotification.h>
+#include <Utility/Debug/ImGui/ImGuiNotification.h>
 #include <SpriteManager.h>
 #include <cassert>
 
@@ -8,8 +8,8 @@ SceneManager::~SceneManager() {
     
 }
 
-void SceneManager::Initialize() {
-    transition_ = SceneTransition::GetInstance();
+void SceneManager::Initialize(SceneTransition *transition) {
+    transition_ = transition;
     transition_->Initialize();
 }
 

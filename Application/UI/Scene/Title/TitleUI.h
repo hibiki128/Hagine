@@ -37,6 +37,17 @@ class TitleUI {
     /// <returns>完了していたらtrue</returns>
     bool GetIsFinish() const { return isFinish_; }
 
+    /// <summary>
+    /// タイトル開始演出（ロゴ退場＋弾の発射）を開始する。
+    /// メニューで「チュートリアル」が選択されたときにシーンから呼ぶ。
+    /// </summary>
+    void RequestStartCinematic();
+
+    /// <summary>
+    /// 「Press Start」表示を隠す（メニューを開くときに呼ぶ）
+    /// </summary>
+    void HidePressStart();
+
 #ifdef _DEBUG
     /// <summary>
     /// ImGuiデバッグ表示

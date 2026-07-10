@@ -10,11 +10,7 @@ void PlayerAttackCollider::Init(Player *player, Enemy *enemy) {
     player_ = player;
     enemy_ = enemy;
 
-    // -----------------------------------------------
-    // OBBコライダーを生成・設定
-    // OBBを選んだ理由：プレイヤーの向きに追従して回転できるため
-    // 空中戦でも前方に正確に判定を出せる
-    // -----------------------------------------------
+    // OBBコライダー（プレイヤーの向きに追従して前方へ判定を出す）
     collider_ = player_->AddOBBCollider("PlayerAttackFront");
     collider_->SetTag("PlayerHand"); // 既存の衝突タグを流用
     collider_->AddCollisionMask("Enemy");
@@ -25,8 +21,7 @@ void PlayerAttackCollider::Init(Player *player, Enemy *enemy) {
         this->OnCollision(other);
     });
 
-    // ※ AddOBBCollider() の時点で CollisionManager へ登録済みのため、ここで再登録しない
-    //   （二重登録の原因になる。解除はコライダーのデストラクタで自動的に行われる）
+    // AddOBBCollider() で登録済みのため再登録しない（二重登録防止）
 
     // ヒットエフェクト・カメラシェイク初期化
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("punchEmitter");
@@ -41,9 +36,7 @@ void PlayerAttackCollider::Update(float deltaTime) {
     }
     shake_->Update();
 
-    // -----------------------------------------------
-    // 遅延処理：delay > 0 の場合、一定時間後にコライダーを有効化
-    // -----------------------------------------------
+    // 遅延処理：delay > 0 なら一定時間後に有効化
     if (isPending_) {
         delayTimer_ -= deltaTime;
         if (delayTimer_ <= 0.0f) {
@@ -56,9 +49,7 @@ void PlayerAttackCollider::Update(float deltaTime) {
         return;
     }
 
-    // -----------------------------------------------
-    // 有効時間の管理：activeDuration_を超えたら自動無効化
-    // -----------------------------------------------
+    // 有効時間の管理：activeDuration_ を超えたら自動無効化
     if (isActive_) {
         activeTimer_ += deltaTime;
         if (activeTimer_ >= activeDuration_) {
@@ -122,21 +113,14 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other) {
     // 1アクティブ中1ヒットのみ（連続ヒット防止）
     hasHitThisActivation_ = true;
 
-    // -----------------------------------------------
     // ダメージ適用
-    // -----------------------------------------------
     enemy_->SetDamage(currentDamage_);
 
-    // -----------------------------------------------
     // ノックバック適用
-    // ※ Enemy側に SetKnockback(Vector3 dir, float power) の実装が必要
-    // -----------------------------------------------
     Vector3 knockbackDir = player_->GetForward();
     enemy_->SetKnockback(knockbackDir, currentKnockback_);
 
-    // -----------------------------------------------
     // ヒットエフェクト
-    // -----------------------------------------------
     if (hitEmitter_) {
         Vector3 forward = player_->GetForward();
         Vector3 playerPos = player_->GetWorldPosition();
@@ -149,7 +133,7 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other) {
         hitEmitter_->UpdateOnce();
     }
 
-    // エネルギー回復処理を追加
+    // 攻撃ヒット時のエネルギー回復
     if (player_) {
         float currentEnergy = player_->GetEnergy();
         float maxEnergy = player_->GetMaxEnergy();
@@ -160,9 +144,7 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other) {
         player_->GetEnergy() = newEnergy;
     }
 
-    // -----------------------------------------------
     // カメラシェイク
-    // -----------------------------------------------
     if (shake_) {
         shake_->StartShake();
     }

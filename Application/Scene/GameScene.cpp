@@ -1,7 +1,7 @@
 #include "GameScene.h"
 
-#include "Engine/Utility/Scene/SceneManager.h"
-#include <Application/Utility/MotionEditor/MotionEditor.h>
+#include "Utility/Scene/SceneManager.h"
+#include "Edit/MotionEditor/MotionEditor.h"
 #include <Frame.h>
 #include <Shadow/ShadowMap.h>
 
@@ -63,7 +63,6 @@ void GameScene::Initialize() {
     player_->SetVp(&vp_);
     enemy_->SetVp(&vp_);
     enemy_->SetTarget(player_.get());
-    ground_->GetLighting() = false;
 
     /// ===================================================
     /// ポインタ共有
@@ -104,13 +103,11 @@ void GameScene::Initialize() {
     drawSystem_->Register("GameScene_3D", DrawLayer::kPreEffect, [this](const ViewProjection &vp) {
         objectManager_->Draw(vp);
         skyBox_->Draw(vp);
-        ground_->Draw(vp);
         aroundField_->Draw(vp);
         player_ptr->DrawParticle(vp);   // Graphics フェーズのみ実行される
         enemy_ptr->DrawParticle(vp);
         aroundField_->DrawParticle(vp);
         followCamera_->DrawFrustum();
-        enemy_ptr->DrawFrustum();
     });
     drawSystem_->Register("GameScene_UI", DrawLayer::kPostEffect, [this](const ViewProjection &) {
         playerUI_->Draw();
@@ -153,8 +150,6 @@ void GameScene::Update() {
     }
 #endif
 
-    // 環境オブジェクトの更新
-    ground_->Update();
     aroundField_->Update();
     playerUI_->Update();
     enemyUI_->Update();
@@ -181,7 +176,6 @@ void GameScene::Update() {
     // 死亡演出中のモデル非表示
     if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
         enemy_ptr->SetIsModelDraw(false);
-        enemy_ptr->SetDrawShadow(false);
     }
 
     // UIの更新

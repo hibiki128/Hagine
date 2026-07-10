@@ -1,6 +1,6 @@
 #define NOMINMAX
 #include "ChargeShot.h"
-#include "Engine/Input/Input.h"
+#include "Input/Input.h"
 #include "Particle/ParticleEditor.h"
 #include "application/GameObject/Enemy/Enemy.h"
 #include <Frame.h>
@@ -149,6 +149,7 @@ void ChargeShot::Update() {
             Fire(pos, dir);
             isFired_ = true;
             isCharge_ = false;
+            firedThisFrame_ = true; // 入力表示UI用：発射した瞬間を通知
             chargeStartTimer_ = 0.0f;
         }
     }

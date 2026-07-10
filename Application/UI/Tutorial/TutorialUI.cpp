@@ -2,18 +2,15 @@
 #include "TutorialUI.h"
 #include "../../System/Tutorial/TutorialSystem.h"
 #include "Data/DataHandler.h"
-#include "Engine/2d/SpriteManager.h"
-#include "Engine/2d/Text/TextRenderer.h"
-#include "Engine/Utility/Debug/ImGui/ImGuiNotification.h"
+#include "2d/SpriteManager.h"
+#include "2d/Text/TextRenderer.h"
+#include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include <Graphics/Texture/TextureManager.h>
 #include <algorithm>
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG
 
-// ============================================================
-//  Initialize
-// ============================================================
 using namespace Hagine;
 void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey) {
     system_ = system;
@@ -276,9 +273,6 @@ void TutorialUI::Finalize() {
     okSpriteReady_ = false;
 }
 
-// ============================================================
-//  DrawImGui
-// ============================================================
 void TutorialUI::DrawImGui() {
 #ifdef _DEBUG
     ImGui::SetNextWindowSize(ImVec2(400.0f, 0.0f), ImGuiCond_Once);
@@ -349,9 +343,6 @@ void TutorialUI::DrawImGui() {
 #endif // _DEBUG
 }
 
-// ============================================================
-//  GetFolderNameForStep
-// ============================================================
 const char *TutorialUI::GetFolderNameForStep(TutorialStep step) const {
     if (step == TutorialStep::Complete) {
         return "TutorialFinish";
@@ -384,9 +375,6 @@ const char *TutorialUI::GetFolderNameForStep(TutorialStep step) const {
     return kFolderNames[index];
 }
 
-// ============================================================
-//  LoadStepSprites
-// ============================================================
 void TutorialUI::LoadStepSprites(TutorialStep step) {
     const char *folder = GetFolderNameForStep(step);
     if (!folder) {
@@ -399,9 +387,6 @@ void TutorialUI::LoadStepSprites(TutorialStep step) {
     sm->LoadAllSprites();
 }
 
-// ============================================================
-//  LoadMeterSettings
-// ============================================================
 void TutorialUI::LoadMeterSettings() {
     if (!dataHandler_) {
         return;
@@ -422,9 +407,6 @@ void TutorialUI::LoadMeterSettings() {
     ImGuiNotification::Post("チュートリアルUI設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-// ============================================================
-//  SaveMeterSettings
-// ============================================================
 void TutorialUI::SaveMeterSettings() {
     if (!dataHandler_) {
         return;
