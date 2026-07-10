@@ -116,6 +116,24 @@
     <ClCompile Include="Application\GameObject\Player\Player.cpp">
       <Filter>Application\GameObject\Player</Filter>
     </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerCombat.cpp">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerMovement.cpp">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerStatus.cpp">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerVisual.cpp">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Utility\SkillCutscene\SkillCutscene.cpp">
+      <Filter>Application\Utility\SkillCutscene</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Utility\Debug\GameParam\GameParamHub.cpp">
+      <Filter>Engine\Utility\Debug\GameParam</Filter>
+    </ClCompile>
     <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp">
       <Filter>Application\GameObject\Player\Bullet</Filter>
     </ClCompile>
@@ -526,6 +544,24 @@
     </ClInclude>
     <ClInclude Include="Application\GameObject\Player\Player.h">
       <Filter>Application\GameObject\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerCombat.h">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerMovement.h">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerStatus.h">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerVisual.h">
+      <Filter>Application\GameObject\Player\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Utility\SkillCutscene\SkillCutscene.h">
+      <Filter>Application\Utility\SkillCutscene</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Utility\Debug\GameParam\GameParamHub.h">
+      <Filter>Engine\Utility\Debug\GameParam</Filter>
     </ClInclude>
     <ClInclude Include="Application\GameObject\Player\PlayerData.h">
       <Filter>Application\GameObject\Player</Filter>
@@ -1111,6 +1147,15 @@
     </Filter>
     <Filter Include="Application\Utility\Shake">
       <UniqueIdentifier>{0580369b-7d5d-4411-859d-529bd7f67a44}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\GameObject\Player\Parts">
+      <UniqueIdentifier>{a1c2f3d4-5e6b-4c7d-8e9f-0a1b2c3d4e5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\Utility\SkillCutscene">
+      <UniqueIdentifier>{b2d3e4f5-6a7c-4d8e-9f0a-1b2c3d4e5f6a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Utility\Debug\GameParam">
+      <UniqueIdentifier>{c3e4f5a6-7b8d-4e9f-0a1b-2c3d4e5f6a7b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\2d">
       <UniqueIdentifier>{f6580ddd-27d8-4bcd-9721-7b8876ed7ec3}</UniqueIdentifier>

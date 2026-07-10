@@ -1028,13 +1028,21 @@ NodeStatus EnemyBeamUltimateNode::OnUpdate() {
     if (phase_ == Phase::Windup) {
         enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
         if (timer_ >= windupDuration_) {
-            // 溜め完了 → ビーム発射
-            // ロックオンを解除して RotateUpdate による向き追従を止める。
-            // ActivateBeam() の中で発射時の quateRotation_ が beamLockedRotation_ に
-            // スナップショットされるため、この後は向きが完全に固定される。
-            enemy_->SetIsLockOn(false);
-            enemy_->StopChargeAura();
-            enemy_->ActivateBeam();
+            // 溜め完了 → 発動前演出（カメラ顔アップ→通常カメラ復帰→遅延→発動）へ。
+            // 演出・遅延中はロックオン（照準追従）を維持し、発動の瞬間に
+            // Enemy 側のコールバックがロックオン解除＋向き固定＋発射を行う。
+            // これにより無予備動作の即発射ではなくなり、プレイヤーが回避できる
+            enemy_->StartBeamStaging();
+            timer_ = 0.0f;
+            phase_ = Phase::Staging;
+        }
+        return NodeStatus::Running;
+    }
+
+    if (phase_ == Phase::Staging) {
+        enemy_->SetVelocity({0.0f, 0.0f, 0.0f});
+        // 演出＋遅延が終わり実際にビームが発射されたら Beam フェーズへ
+        if (enemy_->IsBeamActive()) {
             timer_ = 0.0f;
             phase_ = Phase::Beam;
         }
@@ -1059,6 +1067,7 @@ NodeStatus EnemyBeamUltimateNode::OnUpdate() {
 
 void EnemyBeamUltimateNode::OnExit() {
     if (enemy_) {
+        enemy_->CancelBeamStaging();
         enemy_->StopChargeAura();
         enemy_->DeactivateBeam();
         enemy_->StopMovement();

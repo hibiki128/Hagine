@@ -4,7 +4,10 @@
 #include "Transform/WorldTransform.h"
 
 class Player;
-namespace Hagine { class DrawLine3D; }
+namespace Hagine {
+class DrawLine3D;
+class BaseObject;
+}
 
 /// <summary>
 /// ターゲットを追従するカメラクラス
@@ -14,6 +17,11 @@ class FollowCamera {
     /// ===================================================
     /// public method
     /// ===================================================
+
+    /// <summary>
+    /// デストラクタ
+    /// </summary>
+    ~FollowCamera();
 
     /// <summary>
     /// 初期化
@@ -46,6 +54,25 @@ class FollowCamera {
     /// </summary>
     /// <param name="drawLine3D">ライン描画クラスのポインタ</param>
     void DrawLockOnFrustum(Hagine::DrawLine3D *drawLine3D) const;
+
+    /// <summary>
+    /// 必殺技の顔アップ演出を開始する
+    /// 対象モデルの前方へ回り込み、顔の高さへ寄っていく。
+    /// EndSkillCloseUp() が呼ばれるまで通常の追従処理は行わない
+    /// </summary>
+    /// <param name="performer">技の使用者（プレイヤー/敵どちらでも可）</param>
+    void StartSkillCloseUp(Hagine::BaseObject *performer);
+
+    /// <summary>
+    /// 必殺技の顔アップ演出を終了する（次フレームから通常カメラへ補間なしで即復帰）
+    /// </summary>
+    void EndSkillCloseUp();
+
+    /// <summary>
+    /// 顔アップ演出中かどうか
+    /// </summary>
+    /// <returns>bool: 演出中なら true</returns>
+    bool IsSkillCloseUpActive() const { return skillCloseUpTarget_ != nullptr; }
 
     /// ===================================================
     /// Getter
@@ -192,6 +219,12 @@ class FollowCamera {
     /// <returns>bool: 範囲内であればtrue</returns>
     bool IsPointInLockOnFrustum(const Hagine::Vector3 &point) const;
 
+    /// <summary>
+    /// 必殺技の顔アップ演出の更新（Update()冒頭から呼ぶ）
+    /// </summary>
+    /// <returns>bool: trueなら演出中でカメラを確定済み（以降の通常処理を行わない）</returns>
+    bool UpdateSkillCloseUp();
+
   private:
     /// ===================================================
     /// private variants
@@ -295,4 +328,10 @@ class FollowCamera {
     float lockOnHalfFovH_ = kDefaultLockOnHalfFovH; ///< ロックオン水平半角
     float lockOnHalfFovV_ = kDefaultLockOnHalfFovV; ///< ロックオン垂直半角
     bool drawLockOnFrustumDebug_ = false;           ///< 視錐台デバッグ描画フラグ
+
+    // 必殺技の顔アップ演出関連（すべてImGui/ParamHubで調整可）
+    Hagine::BaseObject *skillCloseUpTarget_ = nullptr; ///< 顔アップ対象（nullptrなら演出なし）
+    float closeUpDistance_ = 6.0f;                     ///< 顔からカメラまでの距離
+    float closeUpFaceHeight_ = 2.8f;                   ///< 対象位置から顔までの高さオフセット
+    float closeUpApproachSpeed_ = 8.0f;                ///< 回り込みの速さ（指数補間の係数）
 };

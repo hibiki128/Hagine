@@ -21,6 +21,7 @@
 #include <Line/DrawLine3D.h>
 #include <Particle/CSParticle/ParticleCSFieldManager.h>
 #include <Render/DrawSystem.h>
+#include <Debug/GameParam/GameParamHub.h>
 #include <Debug/GpuProfiler/GpuProfiler.h>
 #include <Debug/CpuProfiler/CpuProfiler.h>
 #include <Shadow/ShadowMap.h>
@@ -417,6 +418,7 @@ void ImGuiManager::ShowMainMenu() {
 
                 ImGui::SeparatorText("統計・デバッグ");
                 windowToggle(ICON_FA_DATABASE " FPS統計", showFPSView_);
+                windowToggle(ICON_FA_SLIDERS_H " ゲームパラメータ", showGameParamView_);
 
                 ImGui::EndMenu();
             }
@@ -723,6 +725,10 @@ void ImGuiManager::ShowParticlePreviewWindow() {
     if (!showParticlePreviewView_)
         return;
     ParticleCSEditor::GetInstance()->ShowPreviewWindow(&showParticlePreviewView_);
+}
+
+void ImGuiManager::ShowGameParamWindow() {
+    GameParamHub::GetInstance()->DrawImGui(&showGameParamView_);
 }
 
 void ImGuiManager::ShowStatisticsWindow() {
@@ -1203,6 +1209,8 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowDrawSystemWindow();
     // アセットブラウザ窓を描画
     ShowAssetBrowserWindow();
+    // ゲームパラメータHub窓を描画
+    ShowGameParamWindow();
 
     ShowHelpWindow();
     baseObjectManager_->UpdateImGui();
@@ -1679,6 +1687,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showShadowMapView", showShadowMapView_);
     data->Save("showDrawSystemView", showDrawSystemView_);
     data->Save("showAssetBrowserView", showAssetBrowserView_);
+    data->Save("showGameParamView", showGameParamView_);
     data->Save("isEditorMode", isEditorMode_);
     data->Save("gridColor", gridColor_);
 #ifdef _DEBUG
@@ -1705,6 +1714,7 @@ void ImGuiManager::LoadFlag() {
     showShadowMapView_ = data->Load("showShadowMapView", true);
     showDrawSystemView_ = data->Load("showDrawSystemView", true);
     showAssetBrowserView_ = data->Load("showAssetBrowserView", false);
+    showGameParamView_ = data->Load("showGameParamView", true);
     isEditorMode_ = data->Load("isEditorMode", true);
     gridColor_ = data->Load("gridColor", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 }

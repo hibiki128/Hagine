@@ -1,5 +1,6 @@
 #pragma once
 #include "Application/Utility/Shake/Shake.h"
+#include "Application/Utility/SkillCutscene/SkillCutscene.h"
 #include "Bullet/EnemyBullet.h"
 #include "Collider/EnemyAttackCollider.h"
 #include "Object/Base/BaseObject.h"
@@ -202,6 +203,17 @@ class Enemy : public Hagine::BaseObject {
     /// <summary>ビームが現在アクティブかどうか</summary>
     bool IsBeamActive() const { return beamActive_; }
 
+    /// <summary>
+    /// ビーム必殺技の発動前演出（カメラ顔アップ→通常カメラ復帰→遅延→発動）を開始する。
+    /// 演出・遅延中はロックオン（照準追従）を維持し、発動の瞬間に向きを固定する。
+    /// 溜め完了後にBTノードから呼ぶ
+    /// </summary>
+    void StartBeamStaging();
+    /// <summary>ビーム発動前演出を中断する（BT中断時など）</summary>
+    void CancelBeamStaging();
+    /// <summary>ビーム発動前演出中かどうか</summary>
+    bool IsBeamStaging() const { return beamCutscene_.IsActive(); }
+
   private:
     /// ===================================================
     /// private method
@@ -378,6 +390,7 @@ class Enemy : public Hagine::BaseObject {
     float beamActiveTime_ = 0.0f;                // ビームアクティブ経過時間
     float beamSpiralTime_ = 0.0f;                // らせんアニメーション経過時間
     Hagine::Quaternion beamLockedRotation_{};            // ビーム発射時に固定した向き（発射後ホーミング防止）
+    SkillCutscene beamCutscene_;                 // ビーム発動前演出（カメラ顔アップ＋発動遅延）
     float beamSpiralRadius_ = 2.0f;              // らせんの半径
     float beamSpiralRevolution_ = 3.0f;          // 最大長に達した時の巻き数
     float beamSpiralForwardSpeed_ = 30.0f;       // らせんパーティクルの前進速度

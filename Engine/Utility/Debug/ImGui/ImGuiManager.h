@@ -168,6 +168,9 @@ class ImGuiManager {
     // アセットブラウザ窓（resources/images をサムネ一覧表示、各サムネをD&Dのドラッグ元にする）
     void ShowAssetBrowserWindow();
 
+    // ゲームパラメータHub窓（コード登録済みパラメータを実行中に仕分け・調整する）
+    void ShowGameParamWindow();
+
     void FixAspectRatio();
 
     void BackupDockLayout();
@@ -237,6 +240,7 @@ class ImGuiManager {
     bool showAudioManagerView_ = false;
     bool showShadowMapView_ = true;
     bool showDrawSystemView_ = true;
+    bool showGameParamView_ = true; // ゲームパラメータHub窓
     bool showAssetBrowserView_ = false; // アセットブラウザ窓
 
     // グリッド設定用メンバ変数

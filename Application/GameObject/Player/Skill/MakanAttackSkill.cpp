@@ -41,7 +41,7 @@ void MakanAttackSkill::Update() {
     }
 
     transform_->translation_ = playerTransform_->translation_;
-    transform_->quateRotation_ = playerTransform_->quateRotation_;
+    transform_->quateRotation_ = lockedRotation_; // 発動時の向きで固定（発動後は追従しない）
 
     // コライダー設定
     makanCollider_->SetEnabled(true);
@@ -54,7 +54,7 @@ void MakanAttackSkill::Update() {
         makanMainEffect_->SetScale(Vector3(0.0f, 0.0f, currentLength_));
         makanMainEffect_->SetAnchorPoint(Vector3(0.5f, 0.5f, 0.75f));
         makanMainEffect_->SetTranslate(playerTransform_->translation_);
-        makanMainEffect_->SetRotation(playerTransform_->quateRotation_);
+        makanMainEffect_->SetRotation(lockedRotation_);
     }
 
     // らせん状エミッター（新しいアプローチ）
@@ -62,9 +62,9 @@ void MakanAttackSkill::Update() {
         makanAroundEffect_->SetAuto(true);
         spiralTime_ += Frame::DeltaTime();
 
-        // プレイヤーのローカル座標系の基底ベクトルを直接計算
+        // 発動時に固定した向きのローカル座標系の基底ベクトルを直接計算
         // クォータニオンから回転行列を作成
-        Quaternion q = playerTransform_->quateRotation_;
+        Quaternion q = lockedRotation_;
 
         // ローカルX軸(右方向)
         Vector3 localRight(
@@ -119,6 +119,8 @@ void MakanAttackSkill::Activate(WorldTransform *playerTransform) {
 
     isActive_ = true;
     playerTransform_ = playerTransform;
+    // 発動の瞬間の向きをスナップショットして固定する（発動後のホーミング防止）
+    lockedRotation_ = playerTransform->quateRotation_;
     currentLength_ = 0.0f;
     activeTime_ = 0.0f;
     spiralTime_ = 0.0f;

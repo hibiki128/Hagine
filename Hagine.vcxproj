@@ -119,6 +119,11 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\GameObject\Player\Bullet\ChargeShot\ChargeShot.cpp" />
     <ClCompile Include="Application\GameObject\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="Application\GameObject\Player\Player.cpp" />
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerCombat.cpp" />
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerMovement.cpp" />
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerStatus.cpp" />
+    <ClCompile Include="Application\GameObject\Player\Parts\PlayerVisual.cpp" />
+    <ClCompile Include="Application\Utility\SkillCutscene\SkillCutscene.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Air\PlayerStateAir.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Base\PlayerBaseState.cpp" />
     <ClCompile Include="Application\GameObject\Player\State\Fly\PlayerStateFlyIdle.cpp" />
@@ -220,6 +225,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Utility\Graphics\Rtv\RtvManager.cpp" />
     <ClCompile Include="Engine\Utility\Graphics\Dsv\DsvManager.cpp" />
     <ClCompile Include="Engine\Input\Input.cpp" />
+    <ClCompile Include="Engine\Utility\Debug\GameParam\GameParamHub.cpp" />
     <ClCompile Include="Engine\Utility\Debug\ImGui\ImGuiManager.cpp" />
     <ClCompile Include="Engine\Utility\Debug\GpuProfiler\GpuProfiler.cpp" />
     <ClCompile Include="Engine\Utility\Debug\CpuProfiler\CpuProfiler.cpp" />
@@ -319,6 +325,12 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\GameObject\Player\Bullet\ChargeShot\ChargeShot.h" />
     <ClInclude Include="Application\GameObject\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="Application\GameObject\Player\Player.h" />
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerCombat.h" />
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerMovement.h" />
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerStatus.h" />
+    <ClInclude Include="Application\GameObject\Player\Parts\PlayerVisual.h" />
+    <ClInclude Include="Application\Utility\SkillCutscene\SkillCutscene.h" />
+    <ClInclude Include="Engine\Utility\Debug\GameParam\GameParamHub.h" />
     <ClInclude Include="Application\GameObject\Player\PlayerData.h" />
     <ClInclude Include="Application\GameObject\Player\State\Air\PlayerStateAir.h" />
     <ClInclude Include="Application\GameObject\Player\State\Base\PlayerBaseState.h" />

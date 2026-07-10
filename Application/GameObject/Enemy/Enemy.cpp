@@ -8,6 +8,7 @@
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include "Edit/MotionEditor/MotionEditor.h"
 #include <Debug/Log/Logger.h>
+#include <Utility/Debug/GameParam/GameParamHub.h>
 #include <3d/Line/DrawLine3D.h>
 #include <Frame.h>
 #include <Object/Base/BaseObjectManager.h>
@@ -16,7 +17,11 @@
 
 using namespace Hagine;
 Enemy::Enemy() {}
-Enemy::~Enemy() {}
+Enemy::~Enemy() {
+    // ポインタ失効前にゲームパラメータHubから登録を解除する
+    GameParamHub::GetInstance()->Unregister("Enemy");
+    GameParamHub::GetInstance()->Unregister("必殺演出(Enemy)");
+}
 
 void Enemy::Init(const std::string objectName) {
     BaseObject::Init(objectName);
@@ -164,6 +169,20 @@ void Enemy::Init(const std::string objectName) {
     acceleration_ = Vector3(0.0f, 0.0f, 0.0f);
 
     transform_->SetRotationEuler({0.0f, degreesToRadians(180.0f), 0.0f});
+
+    // ─── 調整パラメータをゲームパラメータHubへ登録 ───
+    {
+        auto *hub = GameParamHub::GetInstance();
+        hub->Register("Enemy", "HP", static_cast<const float *>(&HP_));
+        hub->Register("Enemy", "エネルギー", static_cast<const float *>(&energy_));
+        hub->Register("Enemy", "移動速度", &moveSpeed_, {0.1f, 0.0f, 50.0f});
+        hub->Register("Enemy", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});
+        hub->Register("Enemy", "加速率", &accelRate_, {0.1f, 0.0f, 50.0f});
+        hub->Register("Enemy", "ジャンプ速度", &jumpSpeed_, {0.1f, 0.0f, 50.0f});
+        hub->Register("Enemy", "エネルギー回復速度", &energyRecoveryRate_, {0.1f, 0.0f, 50.0f});
+        hub->Register("Enemy", "被弾リアクション時間", &damageReactDuration_, {0.05f, 0.0f, 3.0f});
+    }
+    beamCutscene_.RegisterParams("必殺演出(Enemy)");
 }
 
 void Enemy::Update() {
@@ -221,6 +240,9 @@ void Enemy::Update() {
                 beamAroundEffect_->Update();
             }
         }
+
+        // ビーム発動前演出（カメラ顔アップ→遅延→発動）の進行
+        beamCutscene_.Update(Frame::DeltaTime());
 
         // ビーム必殺技のフレーム更新
         UpdateBeam();
@@ -1060,6 +1082,27 @@ void Enemy::ActivateBeam() {
         beamAroundEffect_->SetAuto(true);
     if (chargeShake_)
         chargeShake_->StartShake();
+}
+
+void Enemy::StartBeamStaging() {
+    if (beamActive_ || beamCutscene_.IsActive())
+        return;
+
+    // カメラはプレイヤーのフォローカメラを借りて敵の顔に寄せる
+    FollowCamera *camera = target_ ? target_->GetCamera() : nullptr;
+
+    // 演出・遅延中はロックオン（照準追従）を維持し、発動の瞬間に固定する。
+    // ActivateBeam() 内で発射時の quateRotation_ が beamLockedRotation_ に
+    // スナップショットされるため、以降は向きが固定され回避が可能になる
+    beamCutscene_.Start(this, camera, [this] {
+        SetIsLockOn(false);
+        StopChargeAura();
+        ActivateBeam();
+    });
+}
+
+void Enemy::CancelBeamStaging() {
+    beamCutscene_.Cancel();
 }
 
 void Enemy::DeactivateBeam() {
