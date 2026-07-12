@@ -42,7 +42,9 @@ void ChargeShot::Update() {
 
     if (isAlive_) {
         if (bulletCollider_) {
-            bulletCollider_->SetEnabled(true);
+            // 当たり判定は発射済みの弾のみ有効化する。
+            // 溜め中(未発射)に大きく育った弾が敵へ触れて誤爆・フラグ不整合を起こすのを防ぐ
+            bulletCollider_->SetEnabled(isFired_);
             bulletCollider_->SetRadius(scale_);
         }
 
@@ -79,12 +81,23 @@ void ChargeShot::Update() {
         chargeRelease = false;
     }
 
-    if (!isAlive_ && !isSkillMenu_) {
-        // チャージ開始判定：ボタンが押され続けている時間を計測
-        if (chargeHold) {
+    // 必殺技のカメラ演出中など、溜め操作がロックされている間は入力を無効化する。
+    // 溜め中だった場合はその場で凍結し（成長・発射しない）、演出の新規発生も止まる
+    if (isActionLocked_) {
+        chargeHold = false;
+        chargeRelease = false;
+    }
+
+    if (!isAlive_) {
+        // まだ溜めていない状態。
+        // スキルメニュー中(LT長押しで必殺技を照準している間)は溜めを開始しない。
+        // ここを分けないと、必殺技発動のYボタン押下で溜めロジックへ入り、
+        // チャージ演出(chargeEmitter_)が誤って発生してしまう
+        if (!isSkillMenu_ && chargeHold) {
+            // チャージ開始判定：ボタンが押され続けている時間を計測
             chargeStartTimer_ += Frame::DeltaTime();
 
-            // kChargeStartThreshold以上押され続けた場合のみチャージ開始
+            // 閾値以上押され続けた場合のみチャージ開始
             if (chargeStartTimer_ >= player_->GetChargeThreshold()) {
                 // エネルギーチェック
                 if (player_ && player_->GetEnergy() < kMinEnergyToStart) {
@@ -99,19 +112,19 @@ void ChargeShot::Update() {
                 isCharge_ = true;
             }
         } else {
-            // ボタンが離されたらタイマーリセット
+            // ボタンを離した / スキルメニュー中 はタイマーをリセット
             chargeStartTimer_ = 0.0f;
         }
     } else {
+        // 溜め中(isAlive_)のみスケール成長・発射を扱う
         if (chargeHold && !isFired_) {
             scale_ += scaleSpeed_ * (Frame::DeltaTime());
             if (scale_ >= maxScale_) {
                 scale_ = maxScale_;
                 isMaxScale_ = true;
             }
-            if (!isMaxScale_) {
-                chargeEmitter_->Update();
-            }
+            // 溜め演出の Update() はフレーム末尾で毎フレーム呼ぶ（emitフラグ残留防止）。
+            // ここでは溜め中フラグのみ立てる
             isCharge_ = true;
         }
         if (chargeRelease && !isFired_) {
@@ -191,12 +204,20 @@ void ChargeShot::Update() {
             // エミッター位置も更新
             chargeEmitter_->SetTranslate(transform_->translation_);
 
-            Vector3 playerEuler = rot.ToEulerAngles();
+            // 溜め中(未発射)は当たり判定を持たせない
             if (bulletCollider_) {
-                bulletCollider_->SetEnabled(true);
+                bulletCollider_->SetEnabled(false);
             }
         }
     }
+
+    // チャージ溜め演出(GPUパーティクル)の発生制御。
+    // Update() を毎フレーム呼ばないと emit フラグが前回値のまま残り、
+    // 溜め終了後も演出が消えなくなる。発生の有無に関わらず必ず毎フレーム更新する。
+    // 実際に溜め上げ中(未発射・最大到達前)で、かつロックされていないときだけ発生させる
+    chargeEmitter_->SetAuto(isCharge_ && !isFired_ && !isMaxScale_ && !isActionLocked_);
+    chargeEmitter_->Update();
+
     // 階層的ワールド変換更新
     BaseObject::UpdateWorldTransformHierarchy();
 }
@@ -204,6 +225,12 @@ void ChargeShot::Update() {
 void ChargeShot::Fire(const Vector3 &pos, const Vector3 &dir) {
     transform_->translation_ = pos;
     velocity_ = dir * speed_;
+
+    // 発射した瞬間から当たり判定を有効化する（溜め中は無効だったものをここで有効化）
+    if (bulletCollider_) {
+        bulletCollider_->SetEnabled(true);
+        bulletCollider_->SetRadius(scale_);
+    }
 }
 
 void ChargeShot::Reset() {
@@ -214,10 +241,19 @@ void ChargeShot::Reset() {
 
     isAlive_ = false;
     isFired_ = false;
+    isCharge_ = false; // 溜め中フラグも必ずクリアする（オーラ演出等の残留防止）
     scale_ = kInitialScale;
     isMaxScale_ = false;
     velocity_ = {0, 0, 0};
     transform_->translation_ = {0, 0, 0};
+
+    // 溜め演出(GPUパーティクル)の新規発生を止める（既存分は自然消滅させる）。
+    // SetAuto(false) 後に一度 Update() して emit フラグを即0へ反映し、
+    // 途中リターン経路でも演出が残留しないようにする
+    if (chargeEmitter_) {
+        chargeEmitter_->SetAuto(false);
+        chargeEmitter_->Update();
+    }
 }
 
 float ChargeShot::GetDamage() const {
@@ -250,6 +286,11 @@ void ChargeShot::imgui() {
 }
 
 void ChargeShot::OnCollisionEnterCallback(ColliderBase *other) {
+    // 発射済みの弾のみ命中扱いにする。
+    // 溜め中(未発射)の弾は当たり判定を無効化しているが、念のためここでも弾く
+    if (!isFired_) {
+        return;
+    }
     // Enemyタグを持つコライダーと衝突した場合
     if (other->GetTag() == "Enemy") {
         // プレイヤーの敵が存在し、生きている場合

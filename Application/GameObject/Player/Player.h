@@ -317,6 +317,7 @@ class Player : public Hagine::BaseObject {
     bool isPause_ = false;        // ポーズ中フラグ
     bool isDeathStaging_ = false; // 死亡演出中フラグ
     bool wasRTPressed_ = false;   // 前フレームのRT押下状態
+    bool wasSkillLocked_ = false; // 前フレームの必殺技演出ロック状態（ロック開始検出用）
 
     // 入力表示UI用: 実発動アクションのイベント列（Update先頭でクリア）
     std::vector<ActionKind> actionEvents_;

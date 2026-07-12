@@ -332,6 +332,6 @@ class FollowCamera {
     // 必殺技の顔アップ演出関連（すべてImGui/ParamHubで調整可）
     Hagine::BaseObject *skillCloseUpTarget_ = nullptr; ///< 顔アップ対象（nullptrなら演出なし）
     float closeUpDistance_ = 6.0f;                     ///< 顔からカメラまでの距離
-    float closeUpFaceHeight_ = 2.8f;                   ///< 対象位置から顔までの高さオフセット
+    float closeUpFaceHeight_ = 4.0f;                   ///< 対象位置から顔までの高さオフセット
     float closeUpApproachSpeed_ = 8.0f;                ///< 回り込みの速さ（指数補間の係数）
 };

@@ -135,6 +135,14 @@ class ChargeShot : public Hagine::BaseObject {
 
     void SetIsSkillMenu(bool isSkillMenu) { isSkillMenu_ = isSkillMenu; }
 
+    /// <summary>
+    /// 溜め操作の一時ロックを設定する（必殺技のカメラ演出中など）。
+    /// ロック中は溜め開始・成長・発射を受け付けず、溜め演出の新規発生も止める。
+    /// エミッタの毎フレーム更新自体は継続するため、emitフラグが残留して演出が消えなくなることはない。
+    /// </summary>
+    /// <param name="locked">ロックするなら true</param>
+    void SetActionLocked(bool locked) { isActionLocked_ = locked; }
+
   private:
     /// ===================================================
     /// private varians
@@ -186,4 +194,5 @@ class ChargeShot : public Hagine::BaseObject {
     float chargeStartTimer_ = 0.0f;
 
     bool isSkillMenu_ = false;
+    bool isActionLocked_ = false; // 溜め操作の一時ロック（必殺技カメラ演出中など）
 };

@@ -145,35 +145,72 @@ void Player::Update() {
 
         if (started_ && !isPause_) {
             status_->RecoverEnergy();
-            combat_->UpdateComboAndCollider();
 
-            movement_->UpdateDashState();
+            // ─── 必殺技のカメラ演出中は行動不能にする ───
+            // ・カメラワーク（顔アップ）中: 自分/相手どちらの必殺技でも移動・行動をロックする
+            // ・自分の必殺技演出中（顔アップ後の発動遅延も含む）: 発動が終わるまで自分をロックする
+            //   （相手はカメラワーク終了後に回避できるよう、ここではロックしない）
+            const bool cameraCloseUp = FollowCamera_ && FollowCamera_->IsSkillCloseUpActive();
+            const bool selfSkillStaging = combat_->IsSkillStaging();
+            const bool skillLocked = cameraCloseUp || selfSkillStaging;
 
-            UpdateGuardInput();
+            // ロック中は溜め操作を受け付けない（溜め演出のエミッタ管理は継続する）
+            combat_->SetChargeActionLocked(skillLocked);
 
-            if (currentState_) {
-                currentState_->Update(*this);
+            if (skillLocked) {
+                // ロック開始の瞬間に一度だけ待機ステートへ移し、移動アニメの足踏みを防ぐ
+                if (!wasSkillLocked_) {
+                    ChangeState(GetIsGrounded() ? "Idle" : "FlyIdle");
+                }
+
+                // その場で停止させる（水平移動を止める）
+                Hagine::Vector3 &vel = movement_->GetVelocity();
+                vel.x = 0.0f;
+                vel.z = 0.0f;
+
+                // 発動前演出（顔アップ→遅延→発動）は進める必要がある。
+                // 相手の必殺技でロックされている場合は自分の演出は非アクティブなので実質何もしない
+                combat_->UpdateSkillCutscene();
+
+                // 溜め演出のエミッタが emit フラグ残留で消えなくなるのを防ぐため、
+                // ロック中も更新自体は継続する（入力は上のロックで無効化済み）
+                combat_->UpdateChargeShot();
+
+                // 待機アニメーションを反映
+                visual_->UpdateAnimation();
+            } else {
+                combat_->UpdateComboAndCollider();
+
+                movement_->UpdateDashState();
+
+                UpdateGuardInput();
+
+                if (currentState_) {
+                    currentState_->Update(*this);
+                }
+
+                visual_->UpdateAnimation(); // ステート・コンボに応じてアニメーションを切り替え
+
+                // RotateUpdate はロックオン追従と手動スティック回転を行う
+                // Rush ステートは自前で UpdateRotation() を持つため除外する
+                if (currentState_ != states_["Rush"].get()) {
+                    movement_->RotateUpdate();
+                }
+
+                // 飛行移動中の体の傾き（描画専用）を更新する。RotateUpdate 後の向きを基準にする
+                visual_->UpdateFlyLean();
+
+                combat_->UpdateChargeShot();
+
+                // 必殺技の発動前演出（カメラ顔アップ→遅延→発動）の進行
+                combat_->UpdateSkillCutscene();
+
+                combat_->Shot();
+
+                combat_->SkillShot();
             }
 
-            visual_->UpdateAnimation(); // ステート・コンボに応じてアニメーションを切り替え
-
-            // RotateUpdate はロックオン追従と手動スティック回転を行う
-            // Rush ステートは自前で UpdateRotation() を持つため除外する
-            if (currentState_ != states_["Rush"].get()) {
-                movement_->RotateUpdate();
-            }
-
-            // 飛行移動中の体の傾き（描画専用）を更新する。RotateUpdate 後の向きを基準にする
-            visual_->UpdateFlyLean();
-
-            combat_->UpdateChargeShot();
-
-            // 必殺技の発動前演出（カメラ顔アップ→遅延→発動）の進行
-            combat_->UpdateSkillCutscene();
-
-            combat_->Shot();
-
-            combat_->SkillShot();
+            wasSkillLocked_ = skillLocked;
         }
 
         // ダメージリアクション処理（高速点滅のみ）

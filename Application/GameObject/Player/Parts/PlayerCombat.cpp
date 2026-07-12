@@ -128,6 +128,12 @@ bool PlayerCombat::IsCharging() const {
     return chargeShot_ && chargeShot_->GetIsCharge();
 }
 
+void PlayerCombat::SetChargeActionLocked(bool locked) {
+    if (chargeShot_) {
+        chargeShot_->SetActionLocked(locked);
+    }
+}
+
 void PlayerCombat::FireNormalBullet() {
     std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
     auto bullet = std::make_unique<PlayerBullet>();
