@@ -1946,7 +1946,7 @@ class FollowCamera {
     // 必殺技の顔アップ演出関連（すべてImGui/ParamHubで調整可）
     Hagine::BaseObject *skillCloseUpTarget_ = nullptr; ///< 顔アップ対象（nullptrなら演出なし）
     float closeUpDistance_ = 6.0f;                     ///< 顔からカメラまでの距離
-    float closeUpFaceHeight_ = 2.8f;                   ///< 対象位置から顔までの高さオフセット
+    float closeUpFaceHeight_ = 4.0f;                   ///< 対象位置から顔までの高さオフセット
     float closeUpApproachSpeed_ = 8.0f;                ///< 回り込みの速さ（指数補間の係数）
 };
 
@@ -7815,6 +7815,7 @@ File Path: Application/GameObject/Enemy/Enemy.cpp
 #include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleEditor.h"
+#include "application/Camera/FollowCamera.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include "Edit/MotionEditor/MotionEditor.h"
@@ -8026,11 +8027,21 @@ void Enemy::Update() {
             SetColor(Vector4(kColorOpaque, kColorZero, kColorZero, kColorOpaque));
         }
 
-        // 回転を更新（敵をプレイヤーへ向ける）
-        RotateUpdate();
+        // ─── プレイヤーの必殺技カメラワーク中は完全停止させる ───
+        // カメラワーク（顔アップ演出）中は相手も動けない、という仕様。
+        // ただし自分がビーム発動者の場合(beamCutscene_ がアクティブ)は、照準追従の
+        // 回転を維持したいのでここではロックしない（発動中の停止はBT側が速度0で担保）。
+        FollowCamera *followCamera = target_ ? target_->GetCamera() : nullptr;
+        const bool cameraCloseUp = followCamera && followCamera->IsSkillCloseUpActive();
+        const bool frozenByOpponentSkill = cameraCloseUp && !beamCutscene_.IsActive();
 
-        // ダミーモードでは自身の攻撃(コンボ)は行わない
-        if (!dummyMode_) {
+        // 回転を更新（敵をプレイヤーへ向ける）
+        if (!frozenByOpponentSkill) {
+            RotateUpdate();
+        }
+
+        // ダミーモードでは自身の攻撃(コンボ)は行わない。カメラワーク中も攻撃させない
+        if (!dummyMode_ && !frozenByOpponentSkill) {
             ConboUpdate();
         }
         chargeShake_->Update();
@@ -8073,7 +8084,13 @@ void Enemy::Update() {
         }
 
         // ビヘイビアツリーの更新（ダミーモードではAIを動かさない）
-        if (rootNode_ && !dummyMode_) {
+        if (frozenByOpponentSkill) {
+            // プレイヤーの必殺技カメラワーク中は移動・重力ごと完全停止させ、その場に固定する
+            velocity_ = {0.0f, 0.0f, 0.0f};
+            if (isGrounded_) {
+                acceleration_.y = 0.0f;
+            }
+        } else if (rootNode_ && !dummyMode_) {
             rootNode_->SetContext(this, target_);
             rootNode_->Tick();
 
@@ -9778,7 +9795,9 @@ void ChargeShot::Update() {
 
     if (isAlive_) {
         if (bulletCollider_) {
-            bulletCollider_->SetEnabled(true);
+            // 当たり判定は発射済みの弾のみ有効化する。
+            // 溜め中(未発射)に大きく育った弾が敵へ触れて誤爆・フラグ不整合を起こすのを防ぐ
+            bulletCollider_->SetEnabled(isFired_);
             bulletCollider_->SetRadius(scale_);
         }
 
@@ -9815,12 +9834,23 @@ void ChargeShot::Update() {
         chargeRelease = false;
     }
 
-    if (!isAlive_ && !isSkillMenu_) {
-        // チャージ開始判定：ボタンが押され続けている時間を計測
-        if (chargeHold) {
+    // 必殺技のカメラ演出中など、溜め操作がロックされている間は入力を無効化する。
+    // 溜め中だった場合はその場で凍結し（成長・発射しない）、演出の新規発生も止まる
+    if (isActionLocked_) {
+        chargeHold = false;
+        chargeRelease = false;
+    }
+
+    if (!isAlive_) {
+        // まだ溜めていない状態。
+        // スキルメニュー中(LT長押しで必殺技を照準している間)は溜めを開始しない。
+        // ここを分けないと、必殺技発動のYボタン押下で溜めロジックへ入り、
+        // チャージ演出(chargeEmitter_)が誤って発生してしまう
+        if (!isSkillMenu_ && chargeHold) {
+            // チャージ開始判定：ボタンが押され続けている時間を計測
             chargeStartTimer_ += Frame::DeltaTime();
 
-            // kChargeStartThreshold以上押され続けた場合のみチャージ開始
+            // 閾値以上押され続けた場合のみチャージ開始
             if (chargeStartTimer_ >= player_->GetChargeThreshold()) {
                 // エネルギーチェック
                 if (player_ && player_->GetEnergy() < kMinEnergyToStart) {
@@ -9835,19 +9865,19 @@ void ChargeShot::Update() {
                 isCharge_ = true;
             }
         } else {
-            // ボタンが離されたらタイマーリセット
+            // ボタンを離した / スキルメニュー中 はタイマーをリセット
             chargeStartTimer_ = 0.0f;
         }
     } else {
+        // 溜め中(isAlive_)のみスケール成長・発射を扱う
         if (chargeHold && !isFired_) {
             scale_ += scaleSpeed_ * (Frame::DeltaTime());
             if (scale_ >= maxScale_) {
                 scale_ = maxScale_;
                 isMaxScale_ = true;
             }
-            if (!isMaxScale_) {
-                chargeEmitter_->Update();
-            }
+            // 溜め演出の Update() はフレーム末尾で毎フレーム呼ぶ（emitフラグ残留防止）。
+            // ここでは溜め中フラグのみ立てる
             isCharge_ = true;
         }
         if (chargeRelease && !isFired_) {
@@ -9927,12 +9957,20 @@ void ChargeShot::Update() {
             // エミッター位置も更新
             chargeEmitter_->SetTranslate(transform_->translation_);
 
-            Vector3 playerEuler = rot.ToEulerAngles();
+            // 溜め中(未発射)は当たり判定を持たせない
             if (bulletCollider_) {
-                bulletCollider_->SetEnabled(true);
+                bulletCollider_->SetEnabled(false);
             }
         }
     }
+
+    // チャージ溜め演出(GPUパーティクル)の発生制御。
+    // Update() を毎フレーム呼ばないと emit フラグが前回値のまま残り、
+    // 溜め終了後も演出が消えなくなる。発生の有無に関わらず必ず毎フレーム更新する。
+    // 実際に溜め上げ中(未発射・最大到達前)で、かつロックされていないときだけ発生させる
+    chargeEmitter_->SetAuto(isCharge_ && !isFired_ && !isMaxScale_ && !isActionLocked_);
+    chargeEmitter_->Update();
+
     // 階層的ワールド変換更新
     BaseObject::UpdateWorldTransformHierarchy();
 }
@@ -9940,6 +9978,12 @@ void ChargeShot::Update() {
 void ChargeShot::Fire(const Vector3 &pos, const Vector3 &dir) {
     transform_->translation_ = pos;
     velocity_ = dir * speed_;
+
+    // 発射した瞬間から当たり判定を有効化する（溜め中は無効だったものをここで有効化）
+    if (bulletCollider_) {
+        bulletCollider_->SetEnabled(true);
+        bulletCollider_->SetRadius(scale_);
+    }
 }
 
 void ChargeShot::Reset() {
@@ -9950,10 +9994,19 @@ void ChargeShot::Reset() {
 
     isAlive_ = false;
     isFired_ = false;
+    isCharge_ = false; // 溜め中フラグも必ずクリアする（オーラ演出等の残留防止）
     scale_ = kInitialScale;
     isMaxScale_ = false;
     velocity_ = {0, 0, 0};
     transform_->translation_ = {0, 0, 0};
+
+    // 溜め演出(GPUパーティクル)の新規発生を止める（既存分は自然消滅させる）。
+    // SetAuto(false) 後に一度 Update() して emit フラグを即0へ反映し、
+    // 途中リターン経路でも演出が残留しないようにする
+    if (chargeEmitter_) {
+        chargeEmitter_->SetAuto(false);
+        chargeEmitter_->Update();
+    }
 }
 
 float ChargeShot::GetDamage() const {
@@ -9986,6 +10039,11 @@ void ChargeShot::imgui() {
 }
 
 void ChargeShot::OnCollisionEnterCallback(ColliderBase *other) {
+    // 発射済みの弾のみ命中扱いにする。
+    // 溜め中(未発射)の弾は当たり判定を無効化しているが、念のためここでも弾く
+    if (!isFired_) {
+        return;
+    }
     // Enemyタグを持つコライダーと衝突した場合
     if (other->GetTag() == "Enemy") {
         // プレイヤーの敵が存在し、生きている場合
@@ -10141,6 +10199,14 @@ class ChargeShot : public Hagine::BaseObject {
 
     void SetIsSkillMenu(bool isSkillMenu) { isSkillMenu_ = isSkillMenu; }
 
+    /// <summary>
+    /// 溜め操作の一時ロックを設定する（必殺技のカメラ演出中など）。
+    /// ロック中は溜め開始・成長・発射を受け付けず、溜め演出の新規発生も止める。
+    /// エミッタの毎フレーム更新自体は継続するため、emitフラグが残留して演出が消えなくなることはない。
+    /// </summary>
+    /// <param name="locked">ロックするなら true</param>
+    void SetActionLocked(bool locked) { isActionLocked_ = locked; }
+
   private:
     /// ===================================================
     /// private varians
@@ -10192,6 +10258,7 @@ class ChargeShot : public Hagine::BaseObject {
     float chargeStartTimer_ = 0.0f;
 
     bool isSkillMenu_ = false;
+    bool isActionLocked_ = false; // 溜め操作の一時ロック（必殺技カメラ演出中など）
 };
 
 ============================================================
@@ -10908,6 +10975,12 @@ bool PlayerCombat::IsCharging() const {
     return chargeShot_ && chargeShot_->GetIsCharge();
 }
 
+void PlayerCombat::SetChargeActionLocked(bool locked) {
+    if (chargeShot_) {
+        chargeShot_->SetActionLocked(locked);
+    }
+}
+
 void PlayerCombat::FireNormalBullet() {
     std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
     auto bullet = std::make_unique<PlayerBullet>();
@@ -11277,6 +11350,14 @@ class PlayerCombat {
     /// Setter
     /// ===================================================
     void SetSkillMenu(bool flag) { isSkillMenu_ = flag; }
+
+    /// <summary>
+    /// チャージショットの溜め操作を一時ロックする（必殺技カメラ演出中など）。
+    /// ロック中でも UpdateChargeShot() は呼び続けることで溜め演出のエミッタ管理が継続し、
+    /// 演出が消えなくなるのを防ぐ。
+    /// </summary>
+    /// <param name="locked">ロックするなら true</param>
+    void SetChargeActionLocked(bool locked);
 
   private:
     /// ===================================================
@@ -12852,35 +12933,72 @@ void Player::Update() {
 
         if (started_ && !isPause_) {
             status_->RecoverEnergy();
-            combat_->UpdateComboAndCollider();
 
-            movement_->UpdateDashState();
+            // ─── 必殺技のカメラ演出中は行動不能にする ───
+            // ・カメラワーク（顔アップ）中: 自分/相手どちらの必殺技でも移動・行動をロックする
+            // ・自分の必殺技演出中（顔アップ後の発動遅延も含む）: 発動が終わるまで自分をロックする
+            //   （相手はカメラワーク終了後に回避できるよう、ここではロックしない）
+            const bool cameraCloseUp = FollowCamera_ && FollowCamera_->IsSkillCloseUpActive();
+            const bool selfSkillStaging = combat_->IsSkillStaging();
+            const bool skillLocked = cameraCloseUp || selfSkillStaging;
 
-            UpdateGuardInput();
+            // ロック中は溜め操作を受け付けない（溜め演出のエミッタ管理は継続する）
+            combat_->SetChargeActionLocked(skillLocked);
 
-            if (currentState_) {
-                currentState_->Update(*this);
+            if (skillLocked) {
+                // ロック開始の瞬間に一度だけ待機ステートへ移し、移動アニメの足踏みを防ぐ
+                if (!wasSkillLocked_) {
+                    ChangeState(GetIsGrounded() ? "Idle" : "FlyIdle");
+                }
+
+                // その場で停止させる（水平移動を止める）
+                Hagine::Vector3 &vel = movement_->GetVelocity();
+                vel.x = 0.0f;
+                vel.z = 0.0f;
+
+                // 発動前演出（顔アップ→遅延→発動）は進める必要がある。
+                // 相手の必殺技でロックされている場合は自分の演出は非アクティブなので実質何もしない
+                combat_->UpdateSkillCutscene();
+
+                // 溜め演出のエミッタが emit フラグ残留で消えなくなるのを防ぐため、
+                // ロック中も更新自体は継続する（入力は上のロックで無効化済み）
+                combat_->UpdateChargeShot();
+
+                // 待機アニメーションを反映
+                visual_->UpdateAnimation();
+            } else {
+                combat_->UpdateComboAndCollider();
+
+                movement_->UpdateDashState();
+
+                UpdateGuardInput();
+
+                if (currentState_) {
+                    currentState_->Update(*this);
+                }
+
+                visual_->UpdateAnimation(); // ステート・コンボに応じてアニメーションを切り替え
+
+                // RotateUpdate はロックオン追従と手動スティック回転を行う
+                // Rush ステートは自前で UpdateRotation() を持つため除外する
+                if (currentState_ != states_["Rush"].get()) {
+                    movement_->RotateUpdate();
+                }
+
+                // 飛行移動中の体の傾き（描画専用）を更新する。RotateUpdate 後の向きを基準にする
+                visual_->UpdateFlyLean();
+
+                combat_->UpdateChargeShot();
+
+                // 必殺技の発動前演出（カメラ顔アップ→遅延→発動）の進行
+                combat_->UpdateSkillCutscene();
+
+                combat_->Shot();
+
+                combat_->SkillShot();
             }
 
-            visual_->UpdateAnimation(); // ステート・コンボに応じてアニメーションを切り替え
-
-            // RotateUpdate はロックオン追従と手動スティック回転を行う
-            // Rush ステートは自前で UpdateRotation() を持つため除外する
-            if (currentState_ != states_["Rush"].get()) {
-                movement_->RotateUpdate();
-            }
-
-            // 飛行移動中の体の傾き（描画専用）を更新する。RotateUpdate 後の向きを基準にする
-            visual_->UpdateFlyLean();
-
-            combat_->UpdateChargeShot();
-
-            // 必殺技の発動前演出（カメラ顔アップ→遅延→発動）の進行
-            combat_->UpdateSkillCutscene();
-
-            combat_->Shot();
-
-            combat_->SkillShot();
+            wasSkillLocked_ = skillLocked;
         }
 
         // ダメージリアクション処理（高速点滅のみ）
@@ -13557,6 +13675,7 @@ class Player : public Hagine::BaseObject {
     bool isPause_ = false;        // ポーズ中フラグ
     bool isDeathStaging_ = false; // 死亡演出中フラグ
     bool wasRTPressed_ = false;   // 前フレームのRT押下状態
+    bool wasSkillLocked_ = false; // 前フレームの必殺技演出ロック状態（ロック開始検出用）
 
     // 入力表示UI用: 実発動アクションのイベント列（Update先頭でクリア）
     std::vector<ActionKind> actionEvents_;
