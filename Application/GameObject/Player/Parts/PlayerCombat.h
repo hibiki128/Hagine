@@ -149,6 +149,14 @@ class PlayerCombat {
     /// ===================================================
     void SetSkillMenu(bool flag) { isSkillMenu_ = flag; }
 
+    /// <summary>
+    /// チャージショットの溜め操作を一時ロックする（必殺技カメラ演出中など）。
+    /// ロック中でも UpdateChargeShot() は呼び続けることで溜め演出のエミッタ管理が継続し、
+    /// 演出が消えなくなるのを防ぐ。
+    /// </summary>
+    /// <param name="locked">ロックするなら true</param>
+    void SetChargeActionLocked(bool locked);
+
   private:
     /// ===================================================
     /// private method

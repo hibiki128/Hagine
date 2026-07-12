@@ -4,6 +4,7 @@
 #include "Utility/Debug/ImGui/ImGuiNotification.h"
 #include "Particle/CSParticle/ParticleCSEditor.h"
 #include "Particle/ParticleEditor.h"
+#include "application/Camera/FollowCamera.h"
 #include "application/GameObject/Player/Bullet/ChargeShot/ChargeShot.h"
 #include "application/GameObject/Player/Bullet/PlayerBullet.h"
 #include "Edit/MotionEditor/MotionEditor.h"
@@ -215,11 +216,21 @@ void Enemy::Update() {
             SetColor(Vector4(kColorOpaque, kColorZero, kColorZero, kColorOpaque));
         }
 
-        // 回転を更新（敵をプレイヤーへ向ける）
-        RotateUpdate();
+        // ─── プレイヤーの必殺技カメラワーク中は完全停止させる ───
+        // カメラワーク（顔アップ演出）中は相手も動けない、という仕様。
+        // ただし自分がビーム発動者の場合(beamCutscene_ がアクティブ)は、照準追従の
+        // 回転を維持したいのでここではロックしない（発動中の停止はBT側が速度0で担保）。
+        FollowCamera *followCamera = target_ ? target_->GetCamera() : nullptr;
+        const bool cameraCloseUp = followCamera && followCamera->IsSkillCloseUpActive();
+        const bool frozenByOpponentSkill = cameraCloseUp && !beamCutscene_.IsActive();
 
-        // ダミーモードでは自身の攻撃(コンボ)は行わない
-        if (!dummyMode_) {
+        // 回転を更新（敵をプレイヤーへ向ける）
+        if (!frozenByOpponentSkill) {
+            RotateUpdate();
+        }
+
+        // ダミーモードでは自身の攻撃(コンボ)は行わない。カメラワーク中も攻撃させない
+        if (!dummyMode_ && !frozenByOpponentSkill) {
             ConboUpdate();
         }
         chargeShake_->Update();
@@ -262,7 +273,13 @@ void Enemy::Update() {
         }
 
         // ビヘイビアツリーの更新（ダミーモードではAIを動かさない）
-        if (rootNode_ && !dummyMode_) {
+        if (frozenByOpponentSkill) {
+            // プレイヤーの必殺技カメラワーク中は移動・重力ごと完全停止させ、その場に固定する
+            velocity_ = {0.0f, 0.0f, 0.0f};
+            if (isGrounded_) {
+                acceleration_.y = 0.0f;
+            }
+        } else if (rootNode_ && !dummyMode_) {
             rootNode_->SetContext(this, target_);
             rootNode_->Tick();
 
