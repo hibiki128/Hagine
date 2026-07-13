@@ -21,9 +21,9 @@ void StartCamera::Init()
     wt_.UpdateMatrix();
 
     // 入力システムの初期化
-    gamePad_ = std::make_unique<GamePad>();
-    gamePad_->Init(0);
-    input_ = Input::GetInstance();
+    pGamePad_ = std::make_unique<GamePad>();
+    pGamePad_->Init(0);
+    pInput_ = Input::GetInstance();
 
     isSkipping_ = false;
 }
@@ -31,29 +31,29 @@ void StartCamera::Init()
 bool StartCamera::CheckSkipInput()
 {
     // 入力インスタンスの存在確認
-    if (!input_ || !gamePad_)
+    if (!pInput_ || !pGamePad_)
     {
         return false;
     }
 
-    if (!gamePad_->IsConnected())
+    if (!pGamePad_->IsConnected())
     {
         // キーボード：スペースキーでスキップ
-        return input_->TriggerKey(DIK_SPACE);
+        return pInput_->TriggerKey(DIK_SPACE);
     }
     else
     {
         // ゲームパッド：Aボタンでスキップ
-        return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
+        return pGamePad_->IsTrigger(XINPUT_GAMEPAD_A);
     }
 }
 
 void StartCamera::Update()
 {
     // ゲームパッド情報の更新
-    if (gamePad_)
+    if (pGamePad_)
     {
-        gamePad_->Update();
+        pGamePad_->Update();
     }
 
     // スキップ入力の監視（未完了時のみ）

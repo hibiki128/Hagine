@@ -1,26 +1,26 @@
 #define NOMINMAX
 #include "CameraRush.h"
-#include "Easing.h"
-#include "application/Camera/FollowCamera.h"
-#include "application/GameObject/Enemy/Enemy.h"
-#include "application/GameObject/Player/Player.h"
+#include <Easing.h>
+#include <Application/Camera/FollowCamera/FollowCamera.h>
+#include <Application/GameObject/Enemy/Enemy.h>
+#include <Application/GameObject/Player/Player.h>
 #include <Frame/Frame.h>
 #include <algorithm>
 #include <cmath>
 
 using namespace Hagine;
 
-bool CameraRush::UpdateRushCamera(Player *player)
+bool CameraRush::UpdateRushCamera(Player *pPlayer)
 {
-    if (!player)
+    if (!pPlayer)
     {
         return false;
     }
 
-    WorldTransform &worldTransform = owner_->GetCameraWorldTransform();
+    WorldTransform &worldTransform = pOwner_->GetCameraWorldTransform();
 
     // Rush状態でなければ各種フラグ・タイマーをリセットして通常処理へ
-    if (player->GetCurrentStateName() != "Rush")
+    if (pPlayer->GetCurrentStateName() != "Rush")
     {
         if (isResumeFromRush_)
             isResumeFromRush_ = false;
@@ -31,13 +31,13 @@ bool CameraRush::UpdateRushCamera(Player *player)
     }
 
     // Rush中でもロックオンしていなければ専用カメラは使わない
-    if (!(player->GetIsLockOn() && player->GetEnemy()))
+    if (!(pPlayer->GetIsLockOn() && pPlayer->GetEnemy()))
     {
         return false;
     }
 
-    const Vector3 currentPos = player->GetLocalPosition();
-    const Vector3 enemyTargetPos = player->GetEnemy()->GetPositionBehind(rushEnemyBehindOffset_);
+    const Vector3 currentPos = pPlayer->GetLocalPosition();
+    const Vector3 enemyTargetPos = pPlayer->GetEnemy()->GetPositionBehind(rushEnemyBehindOffset_);
     const float distanceToTarget = (enemyTargetPos - currentPos).Length();
 
     // ターゲットに十分近ければ通常カメラへの復帰を開始（専用追従はしない）
@@ -87,8 +87,8 @@ bool CameraRush::UpdateRushCamera(Player *player)
     rushCameraPosition_ = blendedPos;
 
     // 敵とプレイヤーの中間を注視する回転の計算
-    const float yaw = owner_->GetYaw();
-    Vector3 toEnemy = (player->GetEnemy()->GetLocalPosition() - worldTransform.translation_).Normalize();
+    const float yaw = pOwner_->GetYaw();
+    Vector3 toEnemy = (pPlayer->GetEnemy()->GetLocalPosition() - worldTransform.translation_).Normalize();
     Vector3 toPlayer = (currentPos - worldTransform.translation_).Normalize();
     Vector3 blendedDir = ApplyEasing(rushCameraEasingType_, toEnemy, toPlayer, kRushDirectionBlendRatio, kEasingMaxValue).Normalize();
 
@@ -119,13 +119,13 @@ bool CameraRush::UpdateRushCamera(Player *player)
     worldTransform.UpdateMatrix();
 
     // ビュープロジェクションへ反映してカメラを確定
-    owner_->ApplyToViewProjection();
+    pOwner_->ApplyToViewProjection();
     return true;
 }
 
 void CameraRush::ApplyCameraPosition(const Vector3 &cameraPos)
 {
-    WorldTransform &worldTransform = owner_->GetCameraWorldTransform();
+    WorldTransform &worldTransform = pOwner_->GetCameraWorldTransform();
 
     if (isResumeFromRush_)
     {

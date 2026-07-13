@@ -1,6 +1,6 @@
 #define NOMINMAX
 #include "CameraSkillCutscene.h"
-#include "application/Camera/FollowCamera.h"
+#include <Application/Camera/FollowCamera/FollowCamera.h>
 #include <Frame/Frame.h>
 #include <Object/Base/BaseObject.h>
 #include <Utility/Debug/GameParam/GameParamHub.h>
@@ -9,15 +9,15 @@
 
 using namespace Hagine;
 
-void CameraSkillCutscene::Init(FollowCamera *owner)
+void CameraSkillCutscene::Init(FollowCamera *pOwner)
 {
-    owner_ = owner;
+    pOwner_ = pOwner;
 
     // 必殺技の顔アップ演出パラメータをゲームパラメータHubへ登録する
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register("カメラ演出", "顔からの距離", &closeUpDistance_, {0.1f, 1.0f, 30.0f});
-    hub->Register("カメラ演出", "顔の高さオフセット", &closeUpFaceHeight_, {0.1f, 0.0f, 10.0f});
-    hub->Register("カメラ演出", "回り込み速度", &closeUpApproachSpeed_, {0.1f, 0.5f, 30.0f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register("カメラ演出", "顔からの距離", &closeUpDistance_, {0.1f, 1.0f, 30.0f});
+    pHub->Register("カメラ演出", "顔の高さオフセット", &closeUpFaceHeight_, {0.1f, 0.0f, 10.0f});
+    pHub->Register("カメラ演出", "回り込み速度", &closeUpApproachSpeed_, {0.1f, 0.5f, 30.0f});
 }
 
 CameraSkillCutscene::~CameraSkillCutscene()
@@ -28,7 +28,7 @@ CameraSkillCutscene::~CameraSkillCutscene()
 
 bool CameraSkillCutscene::UpdateSkillCloseUp()
 {
-    if (!skillCloseUpTarget_)
+    if (!pSkillCloseUpTarget_)
     {
         return false;
     }
@@ -36,8 +36,8 @@ bool CameraSkillCutscene::UpdateSkillCloseUp()
     const float deltaTime = Frame::DeltaTime();
 
     // 対象の正面方向（+Z基準）。演出中も対象が照準追従で回るため毎フレーム取り直す
-    const Vector3 basePos = skillCloseUpTarget_->GetWorldPosition();
-    Matrix4x4 rotMat = QuaternionToMatrix4x4(skillCloseUpTarget_->GetLocalRotation());
+    const Vector3 basePos = pSkillCloseUpTarget_->GetWorldPosition();
+    Matrix4x4 rotMat = QuaternionToMatrix4x4(pSkillCloseUpTarget_->GetLocalRotation());
     Vector3 forward = TransformNormal(Vector3(kVectorZero, kVectorZero, 1.0f), rotMat);
 
     // 回り込みは水平面で行い、高さは顔オフセットで合わせる
@@ -51,7 +51,7 @@ bool CameraSkillCutscene::UpdateSkillCloseUp()
     const Vector3 facePos = basePos + Vector3(kVectorZero, closeUpFaceHeight_, kVectorZero);
     const Vector3 goalPos = facePos + forward * closeUpDistance_;
 
-    WorldTransform &wt = owner_->GetCameraWorldTransform();
+    WorldTransform &wt = pOwner_->GetCameraWorldTransform();
 
     // 現在位置から目標へ指数補間で回り込む（目標が動いても滑らかに追従する）
     float t = std::min(closeUpApproachSpeed_ * deltaTime, kMaxBlendValue);
@@ -78,7 +78,7 @@ bool CameraSkillCutscene::UpdateSkillCloseUp()
     }
 
     wt.UpdateMatrix();
-    owner_->ApplyToViewProjection();
+    pOwner_->ApplyToViewProjection();
     return true;
 }
 

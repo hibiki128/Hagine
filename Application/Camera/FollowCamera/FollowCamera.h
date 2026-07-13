@@ -1,10 +1,10 @@
 #pragma once
-#include "Camera/ViewProjection/ViewProjection.h"
-#include "Easing.h"
-#include "Parts/CameraLockOn.h"
-#include "Parts/CameraRush.h"
-#include "Parts/CameraSkillCutscene.h"
-#include "Transform/WorldTransform.h"
+#include <Camera/ViewProjection/ViewProjection.h>
+#include <Easing.h>
+#include <Application/Camera/FollowCamera/Parts/CameraLockOn.h>
+#include <Application/Camera/FollowCamera/Parts/CameraRush.h>
+#include <Application/Camera/FollowCamera/Parts/CameraSkillCutscene.h>
+#include <Transform/WorldTransform.h>
 #include <memory>
 #include <numbers>
 
@@ -54,36 +54,36 @@ class FollowCamera
     /// <summary>
     /// 視錐台の描画
     /// </summary>
-    void DrawFrustum() { lockOn_->DrawFrustum(); }
+    void DrawFrustum() { pLockOn_->DrawFrustum(); }
 
     /// <summary>
     /// 視錐台ロックオンの更新処理
     /// 視錐台内に敵が入った際、自動的にロックオンを試みる
     /// </summary>
-    void UpdateFrustumLockOn() { lockOn_->UpdateFrustumLockOn(); }
+    void UpdateFrustumLockOn() { pLockOn_->UpdateFrustumLockOn(); }
 
     /// <summary>
     /// 視錐台のデバッグ描画
     /// </summary>
-    /// <param name="drawLine3D">ライン描画クラスのポインタ</param>
-    void DrawLockOnFrustum(Hagine::DrawLine3D *drawLine3D) const { lockOn_->DrawLockOnFrustum(drawLine3D); }
+    /// <param name="pDrawLine3D">ライン描画クラスのポインタ</param>
+    void DrawLockOnFrustum(Hagine::DrawLine3D *pDrawLine3D) const { pLockOn_->DrawLockOnFrustum(pDrawLine3D); }
 
     /// <summary>
     /// 必殺技の顔アップ演出を開始する
     /// </summary>
-    /// <param name="performer">技の使用者（プレイヤー/敵どちらでも可）</param>
-    void StartSkillCloseUp(Hagine::BaseObject *performer) { skillCutscene_->StartSkillCloseUp(performer); }
+    /// <param name="pPerformer">技の使用者（プレイヤー/敵どちらでも可）</param>
+    void StartSkillCloseUp(Hagine::BaseObject *pPerformer) { pSkillCutscene_->StartSkillCloseUp(pPerformer); }
 
     /// <summary>
     /// 必殺技の顔アップ演出を終了する（次フレームから通常カメラへ補間なしで即復帰）
     /// </summary>
-    void EndSkillCloseUp() { skillCutscene_->EndSkillCloseUp(); }
+    void EndSkillCloseUp() { pSkillCutscene_->EndSkillCloseUp(); }
 
     /// <summary>
     /// 顔アップ演出中かどうか
     /// </summary>
     /// <returns>bool: 演出中なら true</returns>
-    bool IsSkillCloseUpActive() const { return skillCutscene_->IsSkillCloseUpActive(); }
+    bool IsSkillCloseUpActive() const { return pSkillCutscene_->IsSkillCloseUpActive(); }
 
     /// ===================================================
     /// パーツ向けアクセサ（各パーツが owner 経由で参照する）
@@ -93,7 +93,7 @@ class FollowCamera
     Hagine::WorldTransform &GetCameraWorldTransform() { return worldTransform_; }
 
     /// <summary>追従対象のプレイヤーを取得</summary>
-    Player *GetTarget() { return target_; }
+    Player *GetTarget() { return pTarget_; }
 
     /// <summary>ヨー角を設定</summary>
     void SetYaw(float yaw) { yaw_ = yaw; }
@@ -114,24 +114,24 @@ class FollowCamera
     Hagine::ViewProjection &GetViewProjection() { return viewProjection_; }
 
     /// <summary>ロックオン有効距離を取得</summary>
-    float GetLockOnRange() const { return lockOn_->GetLockOnRange(); }
+    float GetLockOnRange() const { return pLockOn_->GetLockOnRange(); }
 
     /// <summary>ロックオン水平半角を取得</summary>
-    float GetLockOnHalfFovH() const { return lockOn_->GetLockOnHalfFovH(); }
+    float GetLockOnHalfFovH() const { return pLockOn_->GetLockOnHalfFovH(); }
 
     /// <summary>ロックオン垂直半角を取得</summary>
-    float GetLockOnHalfFovV() const { return lockOn_->GetLockOnHalfFovV(); }
+    float GetLockOnHalfFovV() const { return pLockOn_->GetLockOnHalfFovV(); }
 
     /// <summary>視錐台デバッグ描画フラグを取得</summary>
-    bool GetDrawLockOnFrustumDebug() const { return lockOn_->GetDrawLockOnFrustumDebug(); }
+    bool GetDrawLockOnFrustumDebug() const { return pLockOn_->GetDrawLockOnFrustumDebug(); }
 
     /// ===================================================
     /// Setter
     /// ===================================================
 
     /// <summary>追従対象を設定</summary>
-    /// <param name="target">ターゲットプレイヤーのポインタ</param>
-    void SetPlayer(Player *target) { target_ = target; }
+    /// <param name="pTarget">ターゲットプレイヤーのポインタ</param>
+    void SetPlayer(Player *pTarget) { pTarget_ = pTarget; }
 
     /// <summary>カメラの視野角を設定</summary>
     /// <param name="fov">視野角（度数）</param>
@@ -141,16 +141,16 @@ class FollowCamera
     }
 
     /// <summary>ロックオン有効距離を設定</summary>
-    void SetLockOnRange(float range) { lockOn_->SetLockOnRange(range); }
+    void SetLockOnRange(float range) { pLockOn_->SetLockOnRange(range); }
 
     /// <summary>ロックオン水平半角を設定</summary>
-    void SetLockOnHalfFovH(float rad) { lockOn_->SetLockOnHalfFovH(rad); }
+    void SetLockOnHalfFovH(float rad) { pLockOn_->SetLockOnHalfFovH(rad); }
 
     /// <summary>ロックオン垂直半角を設定</summary>
-    void SetLockOnHalfFovV(float rad) { lockOn_->SetLockOnHalfFovV(rad); }
+    void SetLockOnHalfFovV(float rad) { pLockOn_->SetLockOnHalfFovV(rad); }
 
     /// <summary>視錐台デバッグ描画フラグを設定</summary>
-    void SetDrawLockOnFrustumDebug(bool flag) { lockOn_->SetDrawLockOnFrustumDebug(flag); }
+    void SetDrawLockOnFrustumDebug(bool flag) { pLockOn_->SetDrawLockOnFrustumDebug(flag); }
 
   private:
     /// ===================================================
@@ -166,14 +166,14 @@ class FollowCamera
     /// ロックオン有無に応じて最終的なカメラ位置を算出し、回転を worldTransform_ に設定する
     /// </summary>
     /// <param name="isCurrentlyLockedOn">今フレームのロックオン状態</param>
-    /// <param name="player">追従対象プレイヤー</param>
+    /// <param name="pPlayer">追従対象プレイヤー</param>
     /// <param name="targetPos">追従対象の位置</param>
     /// <returns>Vector3: 算出したカメラ位置</returns>
-    Hagine::Vector3 ComputeCameraTransform(bool isCurrentlyLockedOn, Player *player, const Hagine::Vector3 &targetPos);
+    Hagine::Vector3 ComputeCameraTransform(bool isCurrentlyLockedOn, Player *pPlayer, const Hagine::Vector3 &targetPos);
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // カメラ設定
@@ -189,16 +189,16 @@ class FollowCamera
     static constexpr float kInitialYaw = 0.0f; ///< 初期ヨー角
 
     // ─── パーツ ───
-    std::unique_ptr<CameraLockOn> lockOn_;               ///< 肩・高さ・視錐台ロックオン
-    std::unique_ptr<CameraRush> rush_;                   ///< Rush（突進）専用カメラ
-    std::unique_ptr<CameraSkillCutscene> skillCutscene_; ///< 必殺技の顔アップ演出
+    std::unique_ptr<CameraLockOn> pLockOn_;               ///< 肩・高さ・視錐台ロックオン
+    std::unique_ptr<CameraRush> pRush_;                   ///< Rush（突進）専用カメラ
+    std::unique_ptr<CameraSkillCutscene> pSkillCutscene_; ///< 必殺技の顔アップ演出
 
     Hagine::ViewProjection viewProjection_; ///< ビュープロジェクション
     Hagine::WorldTransform worldTransform_; ///< ワールドトランスフォーム
 
-    Player *target_ = nullptr; ///< 追従対象のプレイヤー
+    Player *pTarget_ = nullptr; ///< 追従対象のプレイヤー
 
-    Hagine::Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f}; ///< ベースのカメラオフセット
+    Hagine::Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f}; ///< ベース of カメラオフセット
 
     float yaw_ = 0.0f;             ///< 現在のヨー角
     float manualYawSpeed_ = 0.04f; ///< 手動回転速度

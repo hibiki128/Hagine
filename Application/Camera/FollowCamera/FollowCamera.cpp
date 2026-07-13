@@ -1,17 +1,17 @@
 #define NOMINMAX
 #include "FollowCamera.h"
-#include "Input.h"
-#include "application/GameObject/Enemy/Enemy.h"
-#include "application/GameObject/Player/Player.h"
+#include <Input.h>
+#include <Application/GameObject/Enemy/Enemy.h>
+#include <Application/GameObject/Player/Player.h>
 #include <cmath>
 
 using namespace Hagine;
 
 FollowCamera::FollowCamera()
 {
-    lockOn_ = std::make_unique<CameraLockOn>();
-    rush_ = std::make_unique<CameraRush>();
-    skillCutscene_ = std::make_unique<CameraSkillCutscene>();
+    pLockOn_ = std::make_unique<CameraLockOn>();
+    pRush_ = std::make_unique<CameraRush>();
+    pSkillCutscene_ = std::make_unique<CameraSkillCutscene>();
 }
 
 FollowCamera::~FollowCamera()
@@ -28,19 +28,19 @@ void FollowCamera::Init()
     yaw_ = kInitialYaw;
 
     // ─── 各パーツの初期化 ───
-    lockOn_->Init(this);
-    rush_->Init(this);
-    skillCutscene_->Init(this);
+    pLockOn_->Init(this);
+    pRush_->Init(this);
+    pSkillCutscene_->Init(this);
 }
 
 void FollowCamera::Update()
 {
     // ターゲットが存在しない場合は処理を行わない
-    if (!target_)
+    if (!pTarget_)
         return;
 
     // 必殺技の顔アップ演出中は専用処理でカメラを確定する
-    if (skillCutscene_->UpdateSkillCloseUp())
+    if (pSkillCutscene_->UpdateSkillCloseUp())
     {
         return;
     }
@@ -48,18 +48,18 @@ void FollowCamera::Update()
     // カメラの入力移動処理（手動ヨー回転）
     Move();
 
-    Player *player = dynamic_cast<Player *>(target_);
-    const Vector3 targetPos = target_->GetLocalPosition();
-    const Vector3 velocity = target_->GetVelocity();
+    Player *pPlayer = dynamic_cast<Player *>(pTarget_);
+    const Vector3 targetPos = pTarget_->GetLocalPosition();
+    const Vector3 velocity = pTarget_->GetVelocity();
 
     // ロックオン状態の取得
-    const bool isCurrentlyLockedOn = player && player->GetIsLockOn() && player->GetEnemy();
+    const bool isCurrentlyLockedOn = pPlayer && pPlayer->GetIsLockOn() && pPlayer->GetEnemy();
 
     // ロックオンの開始/解除に伴う肩オフセットの切り替え
-    lockOn_->UpdateLockOnTransition(isCurrentlyLockedOn);
+    pLockOn_->UpdateLockOnTransition(isCurrentlyLockedOn);
 
     // Rush中の専用カメラ。遠距離追従ではここでカメラを確定し、以降の通常処理をスキップする
-    if (rush_->UpdateRushCamera(player))
+    if (pRush_->UpdateRushCamera(pPlayer))
     {
         return;
     }
@@ -67,45 +67,45 @@ void FollowCamera::Update()
     // ロックオン時のみ：肩オフセット目標と高さオフセットを更新
     if (isCurrentlyLockedOn)
     {
-        lockOn_->UpdateLockOnShoulderAndHeight(player, targetPos, velocity);
+        pLockOn_->UpdateLockOnShoulderAndHeight(pPlayer, targetPos, velocity);
     }
 
     // 肩オフセットの補間（解除時の戻り or 通常追従）
-    lockOn_->UpdateShoulderOffset();
+    pLockOn_->UpdateShoulderOffset();
 
     // 最終的なカメラ位置・回転を算出
-    const Vector3 cameraPos = ComputeCameraTransform(isCurrentlyLockedOn, player, targetPos);
+    const Vector3 cameraPos = ComputeCameraTransform(isCurrentlyLockedOn, pPlayer, targetPos);
 
     // Rush演出からの復帰補間、または位置の確定
-    rush_->ApplyCameraPosition(cameraPos);
+    pRush_->ApplyCameraPosition(cameraPos);
 
     // worldTransform_ の位置・回転を ViewProjection へ反映して行列を更新する
     ApplyToViewProjection();
 
     // 視錐台ロックオン判定の更新
-    lockOn_->UpdateFrustumLockOn();
+    pLockOn_->UpdateFrustumLockOn();
 }
 
 void FollowCamera::Move()
 {
-    Player *player = dynamic_cast<Player *>(target_);
-    GamePad *gamePad = player->GetGamePad();
+    Player *pPlayer = dynamic_cast<Player *>(pTarget_);
+    GamePad *pGamePad = pPlayer->GetGamePad();
 
     // ロックオン中は手動回転を受け付けない
-    if (player && player->GetIsLockOn())
+    if (pPlayer && pPlayer->GetIsLockOn())
     {
         return;
     }
 
-    if (!gamePad->IsConnected())
+    if (!pGamePad->IsConnected())
     {
-        Input *input = Input::GetInstance();
+        Input *pInput = Input::GetInstance();
         // キーボードによる手動回転
-        if (input->PushKey(DIK_LEFT))
+        if (pInput->PushKey(DIK_LEFT))
         {
             yaw_ -= manualYawSpeed_;
         }
-        if (input->PushKey(DIK_RIGHT))
+        if (pInput->PushKey(DIK_RIGHT))
         {
             yaw_ += manualYawSpeed_;
         }
@@ -113,22 +113,22 @@ void FollowCamera::Move()
     else
     {
         // ゲームパッドによる手動回転
-        if (player)
+        if (pPlayer)
         {
             const float stickSensitivity = 0.05f;
-            yaw_ += gamePad->GetRightStickX() * stickSensitivity;
+            yaw_ += pGamePad->GetRightStickX() * stickSensitivity;
         }
     }
 }
 
-Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *player, const Vector3 &targetPos)
+Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *pPlayer, const Vector3 &targetPos)
 {
     Vector3 cameraPos;
 
     if (isCurrentlyLockedOn)
     {
         // ロックオン時：敵の方向を基準にした計算
-        Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
+        Vector3 enemyPos = pPlayer->GetEnemy()->GetLocalPosition();
         Vector3 toEnemyDir = enemyPos - targetPos;
         float length = toEnemyDir.Length();
         if (length > kEpsilon)
@@ -143,8 +143,8 @@ Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *p
 
         // 各種オフセットの反映
         cameraPos = targetPos - forward * std::abs(cameraOffset_.z);
-        cameraPos += up * lockOn_->GetLockOnHeightOffsetCurrent();
-        cameraPos += right * lockOn_->GetShoulderOffsetX();
+        cameraPos += up * pLockOn_->GetLockOnHeightOffsetCurrent();
+        cameraPos += right * pLockOn_->GetShoulderOffsetX();
     }
     else
     {
@@ -155,7 +155,7 @@ Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *p
         worldTransform_.quateRotation_ = Quaternion::FromEulerAngles({kVectorZero, -yaw_, kVectorZero});
 
         Vector3 right = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
-        cameraPos += right * lockOn_->GetShoulderOffsetX();
+        cameraPos += right * pLockOn_->GetShoulderOffsetX();
     }
 
     return cameraPos;
@@ -177,13 +177,13 @@ void FollowCamera::imgui()
     ImGui::DragFloat3("vp position", &viewProjection_.translation_.x, 0.1f);
 
     // ロックオン（肩・高さ・イージング・視錐台）
-    lockOn_->DrawImGui();
+    pLockOn_->DrawImGui();
 
     // Rush（突進）カメラのイージング
-    rush_->DrawImGui();
+    pRush_->DrawImGui();
 
     // 必殺技の顔アップ演出
-    skillCutscene_->DrawImGui();
+    pSkillCutscene_->DrawImGui();
 
     ImGui::End();
 #endif

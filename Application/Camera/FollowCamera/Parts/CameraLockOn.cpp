@@ -1,10 +1,10 @@
 #define NOMINMAX
 #include "CameraLockOn.h"
-#include "Easing.h"
-#include "Input.h"
-#include "application/Camera/FollowCamera.h"
-#include "application/GameObject/Enemy/Enemy.h"
-#include "application/GameObject/Player/Player.h"
+#include <Easing.h>
+#include <Input.h>
+#include <Application/Camera/FollowCamera/FollowCamera.h>
+#include <Application/GameObject/Enemy/Enemy.h>
+#include <Application/GameObject/Player/Player.h>
 #include <3d/Line/DrawLine3D.h>
 #include <Frame/Frame.h>
 #include <algorithm>
@@ -13,9 +13,9 @@
 
 using namespace Hagine;
 
-void CameraLockOn::Init(FollowCamera *owner)
+void CameraLockOn::Init(FollowCamera *pOwner)
 {
-    owner_ = owner;
+    pOwner_ = pOwner;
 
     // 肩オフセットの初期化
     shoulderOffsetTarget_ = {kVectorZero, kVectorZero, kVectorZero};
@@ -51,21 +51,21 @@ void CameraLockOn::UpdateLockOnTransition(bool isCurrentlyLockedOn)
     wasLockedOn_ = isCurrentlyLockedOn;
 }
 
-void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &targetPos, const Vector3 &velocity)
+void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *pPlayer, const Vector3 &targetPos, const Vector3 &velocity)
 {
-    Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
+    Vector3 enemyPos = pPlayer->GetEnemy()->GetLocalPosition();
     Vector3 toEnemyDir = enemyPos - targetPos;
 
     Vector3 toEnemyDirXZ = {toEnemyDir.x, kVectorZero, toEnemyDir.z};
     float lengthXZ = toEnemyDirXZ.Length();
 
     // 敵の方向に基づいてヨー角を更新
-    float yaw = owner_->GetYaw();
+    float yaw = pOwner_->GetYaw();
     if (lengthXZ > kEpsilon)
     {
         toEnemyDirXZ = toEnemyDirXZ.Normalize();
         yaw = std::atan2(toEnemyDirXZ.x, toEnemyDirXZ.z);
-        owner_->SetYaw(yaw);
+        pOwner_->SetYaw(yaw);
     }
 
     Vector3 cameraRightDir = {std::cos(yaw), kVectorZero, -std::sin(yaw)};
@@ -73,7 +73,7 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &
 
     // 入力の確認
     bool hasInput = false;
-    if (!player->GetGamePad()->IsConnected())
+    if (!pPlayer->GetGamePad()->IsConnected())
     {
         hasInput = Input::GetInstance()->PushKey(DIK_W) ||
                    Input::GetInstance()->PushKey(DIK_A) ||
@@ -82,8 +82,8 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &
     }
     else
     {
-        float leftStickX = player->GetGamePad()->GetLeftStickX();
-        float leftStickY = player->GetGamePad()->GetLeftStickY();
+        float leftStickX = pPlayer->GetGamePad()->GetLeftStickX();
+        float leftStickY = pPlayer->GetGamePad()->GetLeftStickY();
         hasInput = (leftStickX != 0.0f || leftStickY != 0.0f);
     }
 
@@ -104,7 +104,7 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &
     }
 
     // 接地状態に応じた高さオフセットの目標値設定
-    if (player->GetIsGrounded())
+    if (pPlayer->GetIsGrounded())
     {
         lockOnHeightOffsetTarget_ = lockOnGroundedHeight_;
     }
@@ -159,7 +159,7 @@ void CameraLockOn::UpdateShoulderOffset()
 
 bool CameraLockOn::IsPointInLockOnFrustum(const Vector3 &point) const
 {
-    WorldTransform &worldTransform = owner_->GetCameraWorldTransform();
+    WorldTransform &worldTransform = pOwner_->GetCameraWorldTransform();
     const Vector3 origin = worldTransform.translation_;
     Vector3 toTarget = point - origin;
 
@@ -202,28 +202,28 @@ bool CameraLockOn::IsPointInLockOnFrustum(const Vector3 &point) const
 
 void CameraLockOn::UpdateFrustumLockOn()
 {
-    Player *player = owner_->GetTarget();
-    if (!player)
+    Player *pPlayer = pOwner_->GetTarget();
+    if (!pPlayer)
     {
         return;
     }
 
-    Enemy *enemy = player->GetEnemy();
-    if (!enemy)
+    Enemy *pEnemy = pPlayer->GetEnemy();
+    if (!pEnemy)
     {
         return;
     }
 
     // 既にロックオンしている場合はスキップ
-    if (player->GetIsLockOn())
+    if (pPlayer->GetIsLockOn())
     {
         return;
     }
 
     // 敵が視錐台内に入った瞬間にロックオンを開始
-    if (IsPointInLockOnFrustum(enemy->GetPosition()))
+    if (IsPointInLockOnFrustum(pEnemy->GetPosition()))
     {
-        player->SetIsLockOn(true);
+        pPlayer->SetIsLockOn(true);
     }
 }
 
@@ -236,17 +236,17 @@ void CameraLockOn::DrawFrustum()
     }
 }
 
-void CameraLockOn::DrawLockOnFrustum(DrawLine3D *drawLine3D) const
+void CameraLockOn::DrawLockOnFrustum(DrawLine3D *pDrawLine3D) const
 {
-    if (!drawLine3D)
+    if (!pDrawLine3D)
     {
         return;
     }
 
-    Player *player = owner_->GetTarget();
-    const bool isLockedOn = player && player->GetIsLockOn();
+    Player *pPlayer = pOwner_->GetTarget();
+    const bool isLockedOn = pPlayer && pPlayer->GetIsLockOn();
 
-    WorldTransform &worldTransform = owner_->GetCameraWorldTransform();
+    WorldTransform &worldTransform = pOwner_->GetCameraWorldTransform();
     const Vector3 origin = worldTransform.translation_;
 
     // カメラのローカル軸情報を取得
@@ -279,19 +279,19 @@ void CameraLockOn::DrawLockOnFrustum(DrawLine3D *drawLine3D) const
     // 面の輪郭を描画
     for (int i = 0; i < 4; ++i)
     {
-        drawLine3D->SetPoints(nearCorners[i], nearCorners[(i + 1) % 4], color);
+        pDrawLine3D->SetPoints(nearCorners[i], nearCorners[(i + 1) % 4], color);
     }
     for (int i = 0; i < 4; ++i)
     {
-        drawLine3D->SetPoints(farCorners[i], farCorners[(i + 1) % 4], color);
+        pDrawLine3D->SetPoints(farCorners[i], farCorners[(i + 1) % 4], color);
     }
     for (int i = 0; i < 4; ++i)
     {
-        drawLine3D->SetPoints(nearCorners[i], farCorners[i], color);
+        pDrawLine3D->SetPoints(nearCorners[i], farCorners[i], color);
     }
 
     // 中心軸の描画
-    drawLine3D->SetPoints(origin, origin + forward * lockOnRange_, axisColor);
+    pDrawLine3D->SetPoints(origin, origin + forward * lockOnRange_, axisColor);
 }
 
 void CameraLockOn::DrawImGui()
@@ -343,10 +343,10 @@ void CameraLockOn::DrawImGui()
     ImGui::Separator();
     ImGui::Text("【視錐台ロックオン】");
 
-    Player *player = owner_->GetTarget();
-    if (player)
+    Player *pPlayer = pOwner_->GetTarget();
+    if (pPlayer)
     {
-        if (player->GetIsLockOn())
+        if (pPlayer->GetIsLockOn())
         {
             ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "ロックオン中: ON");
         }
@@ -359,9 +359,9 @@ void CameraLockOn::DrawImGui()
     ImGui::Checkbox("視錐台デバッグ描画", &drawLockOnFrustumDebug_);
     if (ImGui::Button("ロックオン解除"))
     {
-        if (player)
+        if (pPlayer)
         {
-            player->ReleaseLockOn();
+            pPlayer->ReleaseLockOn();
         }
     }
 
@@ -382,10 +382,10 @@ void CameraLockOn::DrawImGui()
     ImGui::Text("  水平全角: %.1f°  垂直全角: %.1f°", halfFovHDeg * 2.0f, halfFovVDeg * 2.0f);
 
     // 敵との距離情報の表示
-    if (player && player->GetEnemy())
+    if (pPlayer && pPlayer->GetEnemy())
     {
         ImGui::Separator();
-        const float dist = (player->GetEnemy()->GetPosition() - owner_->GetCameraWorldTransform().translation_).Length();
+        const float dist = (pPlayer->GetEnemy()->GetPosition() - pOwner_->GetCameraWorldTransform().translation_).Length();
         ImGui::Text("カメラ-敵 距離: %.2f / %.1f", dist, lockOnRange_);
     }
 #endif // USE_IMGUI

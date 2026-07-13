@@ -1,6 +1,6 @@
 #pragma once
-#include "Easing.h"
-#include "type/Vector3.h"
+#include <Easing.h>
+#include <type/Vector3.h>
 
 class FollowCamera;
 class Player;
@@ -23,8 +23,8 @@ class CameraLockOn
     /// <summary>
     /// 初期化（肩・高さオフセットの初期化）
     /// </summary>
-    /// <param name="owner">所有者のフォローカメラ</param>
-    void Init(FollowCamera *owner);
+    /// <param name="pOwner">所有者のフォローカメラ</param>
+    void Init(FollowCamera *pOwner);
 
     /// <summary>
     /// ロックオンの開始/解除フレームに肩オフセットの目標を切り替える
@@ -35,10 +35,10 @@ class CameraLockOn
     /// <summary>
     /// ロックオン中の肩オフセット目標・高さオフセットを更新する（敵方向からヨー角も更新）
     /// </summary>
-    /// <param name="player">追従対象プレイヤー</param>
+    /// <param name="pPlayer">追従対象プレイヤー</param>
     /// <param name="targetPos">追従対象の位置</param>
     /// <param name="velocity">追従対象の速度</param>
-    void UpdateLockOnShoulderAndHeight(Player *player, const Hagine::Vector3 &targetPos, const Hagine::Vector3 &velocity);
+    void UpdateLockOnShoulderAndHeight(Player *pPlayer, const Hagine::Vector3 &targetPos, const Hagine::Vector3 &velocity);
 
     /// <summary>
     /// 肩オフセットを目標値へ補間する（解除時の戻り or 通常追従）
@@ -58,8 +58,8 @@ class CameraLockOn
     /// <summary>
     /// 視錐台のデバッグ描画
     /// </summary>
-    /// <param name="drawLine3D">ライン描画クラスのポインタ</param>
-    void DrawLockOnFrustum(Hagine::DrawLine3D *drawLine3D) const;
+    /// <param name="pDrawLine3D">ライン描画クラスのポインタ</param>
+    void DrawLockOnFrustum(Hagine::DrawLine3D *pDrawLine3D) const;
 
     /// <summary>
     /// ロックオン関連のImGui表示（肩・高さ・イージング・視錐台）
@@ -97,7 +97,7 @@ class CameraLockOn
     bool IsPointInLockOnFrustum(const Hagine::Vector3 &point) const;
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 閾値定数
@@ -120,7 +120,7 @@ class CameraLockOn
     static constexpr float kDefaultLockOnHalfFovV = 23.0f * (3.14159265f / 180.0f); ///< 垂直視野角の半分
     static constexpr float kFrustumDebugNear = 1.0f;                                ///< デバッグ描画の近面距離
 
-    FollowCamera *owner_ = nullptr; ///< 所有者のフォローカメラ
+    FollowCamera *pOwner_ = nullptr; ///< 所有者のフォローカメラ
 
     Hagine::Vector3 shoulderOffsetTarget_ = {0.0f, 0.0f, 0.0f};  ///< 肩オフセット目標値
     Hagine::Vector3 shoulderOffsetCurrent_ = {0.0f, 0.0f, 0.0f}; ///< 現在の肩オフセット

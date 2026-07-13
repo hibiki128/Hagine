@@ -86,7 +86,7 @@ class StartCamera
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // カメラ設定
@@ -136,8 +136,8 @@ class StartCamera
     Hagine::Vector3 easingTargetPos2_ = {5.0f, 3.6f, -33.0f};                                                                                ///< 目標位置2
     Hagine::Vector3 easingTargetRot2_ = {Hagine::degreesToRadians(9.6f), Hagine::degreesToRadians(-149.0f), Hagine::degreesToRadians(0.0f)}; ///< 目標回転2
 
-    Hagine::Input *input_ = nullptr;                     ///< 入力クラスのポインタ
-    std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr; ///< ゲームパッドのインスタンス
+    Hagine::Input *pInput_ = nullptr;                     ///< 入力クラスのポインタ
+    std::unique_ptr<Hagine::GamePad> pGamePad_ = nullptr; ///< ゲームパッドのインスタンス
 
     bool isSkipping_ = false; ///< スキップ実行中フラグ
 };

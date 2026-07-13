@@ -19,15 +19,15 @@ class CameraRush
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="owner">所有者のフォローカメラ</param>
-    void Init(FollowCamera *owner) { owner_ = owner; }
+    /// <param name="pOwner">所有者のフォローカメラ</param>
+    void Init(FollowCamera *pOwner) { pOwner_ = pOwner; }
 
     /// <summary>
     /// Rush（突進）中の専用カメラ制御
     /// </summary>
-    /// <param name="player">追従対象プレイヤー（nullptr可）</param>
+    /// <param name="pPlayer">追従対象プレイヤー（nullptr可）</param>
     /// <returns>bool: trueなら専用追従でカメラを確定済み（以降の通常処理を行わない）</returns>
-    bool UpdateRushCamera(Player *player);
+    bool UpdateRushCamera(Player *pPlayer);
 
     /// <summary>
     /// Rush演出からの復帰補間、または通常時の位置確定を行い行列を更新する
@@ -42,7 +42,7 @@ class CameraRush
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 閾値・ベクトル定数
@@ -61,7 +61,7 @@ class CameraRush
     static constexpr float kRotationSpeedMultiplier = 0.5f; ///< 回転速度倍率
     static constexpr float kRushDirectionBlendRatio = 0.3f; ///< Rush方向ブレンド率
 
-    FollowCamera *owner_ = nullptr; ///< 所有者のフォローカメラ
+    FollowCamera *pOwner_ = nullptr; ///< 所有者のフォローカメラ
 
     Hagine::Quaternion rushCameraRotation_;                   ///< Rush中の固定回転
     Hagine::Vector3 rushCameraPosition_;                      ///< Rush中の固定位置

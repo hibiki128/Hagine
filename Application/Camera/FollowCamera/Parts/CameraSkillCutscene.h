@@ -19,8 +19,8 @@ class CameraSkillCutscene
     /// <summary>
     /// 初期化（調整パラメータをゲームパラメータHubへ登録する）
     /// </summary>
-    /// <param name="owner">所有者のフォローカメラ</param>
-    void Init(FollowCamera *owner);
+    /// <param name="pOwner">所有者のフォローカメラ</param>
+    void Init(FollowCamera *pOwner);
 
     /// <summary>
     /// デストラクタ（ゲームパラメータHubからの登録解除）
@@ -30,18 +30,18 @@ class CameraSkillCutscene
     /// <summary>
     /// 顔アップ演出を開始する
     /// </summary>
-    /// <param name="performer">技の使用者（プレイヤー/敵どちらでも可）</param>
-    void StartSkillCloseUp(Hagine::BaseObject *performer) { skillCloseUpTarget_ = performer; }
+    /// <param name="pPerformer">技の使用者（プレイヤー/敵どちらでも可）</param>
+    void StartSkillCloseUp(Hagine::BaseObject *pPerformer) { pSkillCloseUpTarget_ = pPerformer; }
 
     /// <summary>
     /// 顔アップ演出を終了する（次フレームから通常カメラへ補間なしで即復帰）
     /// </summary>
-    void EndSkillCloseUp() { skillCloseUpTarget_ = nullptr; }
+    void EndSkillCloseUp() { pSkillCloseUpTarget_ = nullptr; }
 
     /// <summary>
     /// 顔アップ演出中かどうか
     /// </summary>
-    bool IsSkillCloseUpActive() const { return skillCloseUpTarget_ != nullptr; }
+    bool IsSkillCloseUpActive() const { return pSkillCloseUpTarget_ != nullptr; }
 
     /// <summary>
     /// 顔アップ演出の更新（Update()冒頭から呼ぶ）
@@ -56,7 +56,7 @@ class CameraSkillCutscene
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 閾値・ベクトル定数
@@ -67,10 +67,10 @@ class CameraSkillCutscene
     static constexpr float kUpVectorY = 1.0f;           ///< Y軸上方向
     static constexpr float kRightVectorX = 1.0f;        ///< X軸右方向
 
-    FollowCamera *owner_ = nullptr; ///< 所有者のフォローカメラ
+    FollowCamera *pOwner_ = nullptr; ///< 所有者のフォローカメラ
 
     // 必殺技の顔アップ演出関連（すべてImGui/ParamHubで調整可）
-    Hagine::BaseObject *skillCloseUpTarget_ = nullptr; ///< 顔アップ対象（nullptrなら演出なし）
+    Hagine::BaseObject *pSkillCloseUpTarget_ = nullptr; ///< 顔アップ対象（nullptrなら演出なし）
     float closeUpDistance_ = 6.0f;                     ///< 顔からカメラまでの距離
     float closeUpFaceHeight_ = 4.0f;                   ///< 対象位置から顔までの高さオフセット
     float closeUpApproachSpeed_ = 8.0f;                ///< 回り込みの速さ（指数補間の係数）
