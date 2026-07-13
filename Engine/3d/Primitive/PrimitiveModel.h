@@ -187,7 +187,7 @@ class PrimitiveModel
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::unordered_map<PrimitiveType, PrimitiveData> primitiveDataMap_; // 種類ごとのプリミティブデータ

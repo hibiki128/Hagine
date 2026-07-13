@@ -260,7 +260,7 @@ class BaseObjectManager
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // LoadAll/CreateObject が所有するオブジェクト

@@ -83,7 +83,7 @@ class ParticleGroup
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     static std::unordered_map<std::string, ModelData> modelCache_; // モデルのキャッシュ

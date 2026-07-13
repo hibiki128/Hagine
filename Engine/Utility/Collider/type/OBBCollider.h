@@ -128,7 +128,7 @@ class OBBCollider : public ColliderBase
     void DrawRotationCenter(const ViewProjection &viewProjection);
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     Vector3 size_ = {1.0f, 1.0f, 1.0f};           // サイズ

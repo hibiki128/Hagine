@@ -89,7 +89,7 @@ class Bone
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     Skeleton skeleton_; // スケルトンデータ

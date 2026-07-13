@@ -72,7 +72,7 @@ class ShortcutManager
     };
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::unordered_map<std::string, Shortcut> shortcuts_; // 登録済みショートカット

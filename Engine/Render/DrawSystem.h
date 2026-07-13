@@ -173,7 +173,7 @@ class DrawSystem
                       std::function<void(const ViewProjection &)> drawFunc);
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::vector<DrawEntry> entries_; // 登録された描画エントリ

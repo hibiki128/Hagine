@@ -124,7 +124,7 @@ class ParticleManager
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     ParticleCommon *particleCommon_ = nullptr;                          // パーティクル共通描画処理

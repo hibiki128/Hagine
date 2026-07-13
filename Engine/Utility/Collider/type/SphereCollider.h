@@ -88,7 +88,7 @@ class SphereCollider : public ColliderBase
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     float radius_ = 1.0f;                 // 半径

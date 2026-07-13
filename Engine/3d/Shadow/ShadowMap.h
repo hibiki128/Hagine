@@ -179,7 +179,7 @@ class ShadowMap
     void CreateShadowSRV();
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // GPUリソース

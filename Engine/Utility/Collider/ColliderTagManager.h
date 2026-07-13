@@ -121,7 +121,7 @@ class ColliderTagManager
     ColliderTagManager &operator=(const ColliderTagManager &) = delete;
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::unordered_set<std::string> availableTags_; // 利用可能なタグの集合

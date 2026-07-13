@@ -165,7 +165,7 @@ class GameParamHub
     WindowDef *FindWindowDef(const std::string &name);
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::vector<Entry> entries_;                              ///< 登録済みパラメータ（登録順を保持）

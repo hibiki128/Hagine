@@ -86,7 +86,7 @@ class PostEffectParameters
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     DirectXCommon *dxCommon_ = nullptr; // DirectX共通処理

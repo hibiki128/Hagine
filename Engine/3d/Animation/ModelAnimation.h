@@ -53,7 +53,7 @@ class ModelAnimation
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::unique_ptr<Animator> animator_; // アニメーター

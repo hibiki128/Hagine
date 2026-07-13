@@ -159,7 +159,7 @@ class ParticleGroupManager
 
   private:
     /// ============================================
-    /// private variants
+    /// private variables
     /// ============================================
 
     std::vector<std::unique_ptr<ParticleGroup>> particleGroups_;    // 管理する全パーティクルグループ

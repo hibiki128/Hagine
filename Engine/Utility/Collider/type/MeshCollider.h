@@ -149,7 +149,7 @@ class MeshCollider : public ColliderBase
     AABB WorldBoundsToLocal(const AABB &worldBounds) const;
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::vector<Triangle> triangles_; // ローカル空間の三角形群（BVH構築で並べ替えられる）

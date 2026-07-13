@@ -1,22 +1,22 @@
 #include "DebugCamera.h"
-#include "DirectXCommon.h"
-#include "Input.h"
-#include "Mymath.h"
+#include <DirectXCommon.h>
+#include <Input.h>
+#include <Mymath.h>
 #ifdef _DEBUG
-#include "imgui.h"
+#include <imgui.h>
 #include <implot.h>
 #endif
-#include "Utility/Debug/ImGui/Debugui_improved.h"
-#include "algorithm"
+#include <Utility/Debug/ImGui/Debugui_improved.h>
+#include <algorithm>
 
 namespace Hagine {
-void DebugCamera::Initialize(ViewProjection *viewProjection)
+void DebugCamera::Initialize(ViewProjection *pViewProjection)
 {
-    viewProjection_ = viewProjection;
-    translation_ = viewProjection->translation_;
-    isUseQuaternion_ = viewProjection->isUseQuaternion_;
-    eulerRotation_ = viewProjection->eulerRotation_;
-    quateRotation_ = viewProjection->quateRotation_;
+    pViewProjection_ = pViewProjection;
+    translation_ = pViewProjection->translation_;
+    isUseQuaternion_ = pViewProjection->isUseQuaternion_;
+    eulerRotation_ = pViewProjection->eulerRotation_;
+    quateRotation_ = pViewProjection->quateRotation_;
     matRot_ = MakeIdentity4x4();
     isActive_ = false;
     lockCamera_ = false;
@@ -55,15 +55,15 @@ void DebugCamera::Update()
         }
 
         // ビュープロジェクションの状態を更新
-        viewProjection_->matWorld_ = cameraMatrix;
-        viewProjection_->matView_ = Inverse(cameraMatrix);
-        viewProjection_->translation_ = translation_;
-        viewProjection_->eulerRotation_ = eulerRotation_;
-        viewProjection_->quateRotation_ = quateRotation_;
-        viewProjection_->isUseQuaternion_ = isUseQuaternion_;
+        pViewProjection_->matWorld_ = cameraMatrix;
+        pViewProjection_->matView_ = Inverse(cameraMatrix);
+        pViewProjection_->translation_ = translation_;
+        pViewProjection_->eulerRotation_ = eulerRotation_;
+        pViewProjection_->quateRotation_ = quateRotation_;
+        pViewProjection_->isUseQuaternion_ = isUseQuaternion_;
 
         // 投影行列の再計算
-        viewProjection_->matProjection_ = MakePerspectiveFovMatrix(
+        pViewProjection_->matProjection_ = MakePerspectiveFovMatrix(
             45.0f * std::numbers::pi_v<float> / 180.0f,
             float(WinApp::kClientWidth) / float(WinApp::kClientHeight),
             0.1f, 1000.0f);
@@ -71,7 +71,7 @@ void DebugCamera::Update()
     else
     {
         // 非アクティブ時は通常更新
-        viewProjection_->UpdateMatrix();
+        pViewProjection_->UpdateMatrix();
     }
 }
 

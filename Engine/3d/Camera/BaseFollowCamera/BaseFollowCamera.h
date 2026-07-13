@@ -1,10 +1,6 @@
 #pragma once
-#include "Camera/ViewProjection/ViewProjection.h"
-#include "Transform/WorldTransform.h"
-
-#pragma once
-#include "Camera/ViewProjection/ViewProjection.h"
-#include "Transform/WorldTransform.h"
+#include <Camera/ViewProjection/ViewProjection.h>
+#include <Transform/WorldTransform.h>
 
 /// <summary>
 /// 基本追従カメラクラス
@@ -46,7 +42,7 @@ class BaseFollowCamera
     /// <summary>
     /// 追従対象を設定
     /// </summary>
-    void SetTarget(const WorldTransform *target) { target_ = target; }
+    void SetTarget(const WorldTransform *pTarget) { pTarget_ = pTarget; }
 
   private:
     // ===================================================
@@ -65,7 +61,7 @@ class BaseFollowCamera
 
     ViewProjection viewProjection_;          // ビュープロジェクション
     WorldTransform worldTransform_;          // ワールド変換
-    const WorldTransform *target_ = nullptr; // 追従対象のワールド変換
+    const WorldTransform *pTarget_ = nullptr; // 追従対象のワールド変換
     float yaw_ = 0.0f;                       // ヨー角(左右回転)
     float distanceFromTarget_ = 10.0f;       // ターゲットからの距離
     float heightOffset_ = 2.0f;              // 高さのオフセット

@@ -1,14 +1,8 @@
 #pragma once
-#include "Camera/ViewProjection/ViewProjection.h"
-#include "type/Matrix4x4.h"
-#include "type/Vector2.h"
-#include "type/Vector3.h"
-
-#pragma once
-#include "Camera/ViewProjection/ViewProjection.h"
-#include "type/Matrix4x4.h"
-#include "type/Vector2.h"
-#include "type/Vector3.h"
+#include <Camera/ViewProjection/ViewProjection.h>
+#include <type/Matrix4x4.h>
+#include <type/Vector2.h>
+#include <type/Vector3.h>
 
 /// <summary>
 /// デバッグカメラクラス
@@ -25,8 +19,8 @@ class DebugCamera
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="viewProjection">対象のビュープロジェクション</param>
-    void Initialize(ViewProjection *viewProjection);
+    /// <param name="pViewProjection">対象 of ビュープロジェクション</param>
+    void Initialize(ViewProjection *pViewProjection);
 
     /// <summary>
     /// 更新処理
@@ -70,7 +64,7 @@ class DebugCamera
     // メンバ変数
     // ===================================================
 
-    ViewProjection *viewProjection_{};                            // 対象のビュープロジェクション
+    ViewProjection *pViewProjection_{};                            // 対象のビュープロジェクション
     Vector2 mouse_{};                                             // 現在のマウス座標
     Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                  // オイラー角による回転
     Quaternion quateRotation_ = Quaternion::IdentityQuaternion(); // クォータニオンによる回転

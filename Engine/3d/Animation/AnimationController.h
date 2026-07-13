@@ -174,7 +174,7 @@ class AnimationController
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     Object3d *object_ = nullptr;                 // 制御対象

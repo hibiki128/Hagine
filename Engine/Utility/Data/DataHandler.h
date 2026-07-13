@@ -24,7 +24,7 @@ class DataHandler
 {
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::string basePath_ = AssetPath::JsonRoot(); // 固定の基準パス（Application/Assets/jsons）

@@ -194,7 +194,7 @@ class CollisionManager
     bool TestAxis(const Vector3 &axis, const AABB &aabb, const OBB &obb);
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // タグごとにコライダーをグループ化（文字列キー対応）

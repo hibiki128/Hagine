@@ -1,5 +1,5 @@
 #include "BaseFollowCamera.h"
-#include "Input.h"
+#include <Input.h>
 #include <cmath>
 
 namespace Hagine {
@@ -19,13 +19,13 @@ void BaseFollowCamera::Init()
 void BaseFollowCamera::Update()
 {
     // 追従対象が存在する場合のみ処理
-    if (target_)
+    if (pTarget_)
     {
         // ユーザー入力によるカメラ回転の更新
         Move();
 
         // ターゲットの位置に基づいて、極座標系からカメラの座標を計算
-        Vector3 targetPosition = target_->translation_;
+        Vector3 targetPosition = pTarget_->translation_;
         worldTransform_.translation_.x = targetPosition.x + std::sin(yaw_) * distanceFromTarget_;
         worldTransform_.translation_.z = targetPosition.z + std::cos(yaw_) * distanceFromTarget_;
         worldTransform_.translation_.y = targetPosition.y + heightOffset_;

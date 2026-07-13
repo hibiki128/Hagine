@@ -301,7 +301,7 @@ class ParticleEmitter
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     using json = nlohmann::json;

@@ -100,7 +100,7 @@ class RenderBuffer
     void CreateFinalResultTexture();
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     int currentPingPongBuffer_ = 0; // 現在の書き込み対象ピンポンバッファ

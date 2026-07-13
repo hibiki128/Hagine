@@ -167,7 +167,7 @@ class OffScreen
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     PostEffectChain effectChain_;       // エフェクトの連結チェーン

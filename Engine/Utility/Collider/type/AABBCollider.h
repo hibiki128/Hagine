@@ -87,7 +87,7 @@ class AABBCollider : public ColliderBase
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     Vector3 size_ = {1.0f, 1.0f, 1.0f};   // サイズ
