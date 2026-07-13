@@ -1,0 +1,298 @@
+{
+    "GroupNames": [
+        "charge1"
+    ],
+    "charge1_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "charge1_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_alphaMax": 0.5,
+    "charge1_alphaMin": 0.5,
+    "charge1_blendMode": 5,
+    "charge1_count": 4,
+    "charge1_enableTrail": true,
+    "charge1_endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_endColor": {
+        "w": 1.0,
+        "x": 0.5376344919204712,
+        "y": 1.0,
+        "z": 0.0
+    },
+    "charge1_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_gatherStartRatio": -0.10000000149011612,
+    "charge1_gatherStrength": 10.0,
+    "charge1_gravity": 0.0,
+    "charge1_isAcceMultiply": false,
+    "charge1_isAllRandomScale": false,
+    "charge1_isBillboard": true,
+    "charge1_isBillboardX": false,
+    "charge1_isBillboardY": false,
+    "charge1_isBillboardZ": false,
+    "charge1_isEmitOnEdge": false,
+    "charge1_isEndScale": false,
+    "charge1_isFaceDirection": false,
+    "charge1_isGatherMode": true,
+    "charge1_isRandomColor": false,
+    "charge1_isRandomRotate": false,
+    "charge1_isRandomScale": true,
+    "charge1_isSinMove": false,
+    "charge1_lifeTimeMax": 1.5,
+    "charge1_lifeTimeMin": 1.5,
+    "charge1_maxTrailParticles": 1,
+    "charge1_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "charge1_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "charge1_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_scale": {
+        "x": 10.0,
+        "y": 10.0,
+        "z": 10.0
+    },
+    "charge1_scaleMax": 0.5,
+    "charge1_scaleMin": 0.10000000149011612,
+    "charge1_startAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_startColor": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 1.0,
+        "z": 0.5591397285461426
+    },
+    "charge1_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "charge1_trailColorMultiplier": {
+        "w": 5.0,
+        "x": 1.0,
+        "y": 3.0,
+        "z": 5.0
+    },
+    "charge1_trailInheritVelocity": false,
+    "charge1_trailLifeScale": 0.25,
+    "charge1_trailScaleMultiplier": {
+        "x": 0.75,
+        "y": 0.75,
+        "z": 0.75
+    },
+    "charge1_trailSpawnInterval": 0.009999999776482582,
+    "charge1_trailVelocityScale": -34.720001220703125,
+    "charge1_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge1_velocityMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "charge1_velocityMin": {
+        "x": -1.0,
+        "y": -1.0,
+        "z": -1.0
+    },
+    "charge_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "charge_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_alphaMax": 1.0,
+    "charge_alphaMin": 1.0,
+    "charge_count": 5,
+    "charge_enableTrail": true,
+    "charge_endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_endColor": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 1.0,
+        "z": 0.3440859317779541
+    },
+    "charge_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_gatherStartRatio": -0.10000000149011612,
+    "charge_gatherStrength": 4.900000095367432,
+    "charge_gravity": 0.0,
+    "charge_isAcceMultiply": true,
+    "charge_isAllRandomScale": false,
+    "charge_isBillboard": false,
+    "charge_isEmitOnEdge": false,
+    "charge_isEndScale": false,
+    "charge_isFaceDirection": false,
+    "charge_isGatherMode": true,
+    "charge_isRandomColor": false,
+    "charge_isRandomRotate": false,
+    "charge_isRandomScale": false,
+    "charge_isSinMove": false,
+    "charge_lifeTimeMax": 3.0,
+    "charge_lifeTimeMin": 1.0,
+    "charge_maxTrailParticles": 1,
+    "charge_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "charge_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "charge_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_scale": {
+        "x": 10.0,
+        "y": 10.0,
+        "z": 10.0
+    },
+    "charge_scaleMax": 1.0,
+    "charge_scaleMin": 1.0,
+    "charge_startAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_startColor": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.9032258987426758,
+        "z": 1.0
+    },
+    "charge_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "charge_trailColorMultiplier": {
+        "w": 2.0,
+        "x": 2.0,
+        "y": 2.0,
+        "z": 2.0
+    },
+    "charge_trailInheritVelocity": false,
+    "charge_trailLifeScale": 0.23000000417232513,
+    "charge_trailScaleMultiplier": {
+        "x": 0.75,
+        "y": 0.75,
+        "z": 0.75
+    },
+    "charge_trailSpawnInterval": 0.0010000000474974513,
+    "charge_trailVelocityScale": 0.699999988079071,
+    "charge_translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "charge_velocityMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "charge_velocityMin": {
+        "x": -1.0,
+        "y": -1.0,
+        "z": -1.0
+    },
+    "emitFrequency": 0.10000000149011612,
+    "emitterRotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 10.0,
+        "y": 10.0,
+        "z": 10.0
+    },
+    "emitterTranslation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "isActive": false,
+    "isAuto": true,
+    "isVisible": false
+}

@@ -4,26 +4,26 @@ namespace Hagine {
 void SpriteCommon::Finalize()
 {
     // 参照を解放するためnullptrに設定する
-    dxCommon_ = nullptr;
-    psoManager_ = nullptr;
+    pDxCommon_ = nullptr;
+    pPsoManager_ = nullptr;
 }
 
 void SpriteCommon::Initialize()
 {
     // DirectXおよびパイプライン管理のインスタンスを取得して保持する
-    dxCommon_ = DirectXCommon::GetInstance();
-    psoManager_ = PipeLineManager::GetInstance();
+    pDxCommon_ = DirectXCommon::GetInstance();
+    pPsoManager_ = PipelineManager::GetInstance();
 }
 
 void SpriteCommon::DrawCommonSetting()
 {
     // パイプライン管理を使用してスプライト描画用の共通設定を適用する
-    psoManager_->DrawCommonSetting(PipelineType::kSprite);
+    pPsoManager_->DrawCommonSetting(PipelineType::Sprite);
 }
 
 void SpriteCommon::SetBlendMode(BlendMode blendMode)
 {
     // パイプライン管理を使用して、指定されたブレンドモードでスプライト描画の設定を適用する
-    psoManager_->DrawCommonSetting(PipelineType::kSprite, blendMode);
+    pPsoManager_->DrawCommonSetting(PipelineType::Sprite, blendMode);
 }
 } // namespace Hagine

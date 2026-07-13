@@ -39,7 +39,7 @@
     "Burst_gatherStrength": 0.0,
     "Burst_gravity": 0.0,
     "Burst_isAcceMultiply": true,
-    "Burst_isAllRamdomScale": false,
+    "Burst_isAllRandomScale": false,
     "Burst_isBillboard": false,
     "Burst_isBillboardX": false,
     "Burst_isBillboardY": false,

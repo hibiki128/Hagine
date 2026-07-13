@@ -1,15 +1,15 @@
 #define NOMINMAX
 #include "SpriteManager.h"
-#include "Utility/Debug/ImGui/Debugui_improved.h"
-#include "Utility/Debug/ImGui/ImGuizmoManager.h"
+#include "utility/debug/imgui/DebugUIHelper.h"
+#include "utility/debug/imgui/ImGuizmoManager.h"
 #include "SpriteCommon.h"
 #include "WinApp.h"
-#include "myMath.h"
-#include <Data/DataHandler.h>
-#include <Shadow/ShadowMap.h>
-#include <Utility/Debug/ImGui/ImGuiNotification.h>
-#include <ShowFolder/ShowFolder.h>
-#include "Render/DrawGroupManager.h"
+#include "MyMath.h"
+#include <data/DataHandler.h>
+#include <shadow/ShadowMap.h>
+#include <utility/debug/imgui/ImGuiNotification.h>
+#include <browser/ShowFolder.h>
+#include "render/DrawGroupManager.h"
 #include <filesystem>
 
 namespace Hagine {
@@ -590,7 +590,7 @@ void SpriteManager::DrawSpriteManager()
         // ====================================================
         SectionHeader("[ 描画順 (上が手前) ]", DebugTheme::kAccentBlue);
 
-        float tableH = std::min((float)sprites_.size() * 26.f + 36.f, 160.f);
+        float tableH = std::min(static_cast<float>(sprites_.size()) * 26.f + 36.f, 160.f);
 
         if (ImGui::BeginTable("SprList", 6,
                               ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
@@ -611,7 +611,7 @@ void SpriteManager::DrawSpriteManager()
             {
                 auto &sp = sprites_[i];
                 ImGui::TableNextRow();
-                ImGui::PushID((int)i);
+                ImGui::PushID(static_cast<int>(i));
 
                 // 順序 & 矢印
                 ImGui::TableNextColumn();
@@ -872,7 +872,7 @@ void SpriteManager::DrawSpriteManager()
                 {
                     // インスタンス選択 Combo
                     int &selIdx = selectedInstanceMap[sp->name];
-                    selIdx = std::clamp(selIdx, 0, (int)instCount - 1);
+                    selIdx = std::clamp(selIdx, 0, static_cast<int>(instCount) - 1);
 
                     // Comboラベル生成
                     std::string comboLabel = "インスタンス " + std::to_string(selIdx) +
@@ -887,11 +887,11 @@ void SpriteManager::DrawSpriteManager()
                     {
                         for (uint32_t idx = 0; idx < instCount; ++idx)
                         {
-                            bool selected = (selIdx == (int)idx);
+                            bool selected = (selIdx == static_cast<int>(idx));
                             std::string label = "インスタンス " + std::to_string(idx) +
                                                 (sp->instanceData[idx].isActive ? "" : " [非表示]");
                             if (ImGui::Selectable(label.c_str(), selected))
-                                selIdx = (int)idx;
+                                selIdx = static_cast<int>(idx);
                             if (selected)
                                 ImGui::SetItemDefaultFocus();
                         }
@@ -1228,7 +1228,7 @@ void SpriteManager::LoadAllSprites()
         float rotation = data->Load<float>("rotation", 0.0f);
         Vector2 anchor = data->Load<Vector2>("anchor", {0.0f, 0.0f});
         Matrix4x4 uvTransform = data->Load<Matrix4x4>("uvTransform", MakeIdentity4x4());
-        int blendModeInt = data->Load<int>("blendMode", static_cast<int>(BlendMode::kNormal));
+        int blendModeInt = data->Load<int>("blendMode", static_cast<int>(BlendMode::Normal));
 
         // アスペクト比ロック状態を復元（旧データには存在しないためデフォルトfalse）
         bool lockAspectRatio = static_cast<bool>(data->Load<int>("lockAspectRatio", 0));
@@ -1263,7 +1263,7 @@ void SpriteManager::LoadAllSprites()
             DrawGroupManager::GetInstance()->RegisterGroup(drawGroup);
 
             // 保存されたインスタンスデータを反映する
-            for (int idx = 0; idx < savedInstCount && idx < (int)sprite->instanceData.size(); ++idx)
+            for (int idx = 0; idx < savedInstCount && idx < static_cast<int>(sprite->instanceData.size()); ++idx)
             {
                 std::string prefix = "inst_" + std::to_string(idx) + "_";
                 sprite->instanceData[idx].translation.x = data->Load<float>(prefix + "tx", position.x);

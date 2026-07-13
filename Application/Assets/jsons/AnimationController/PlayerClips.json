@@ -80,7 +80,7 @@
     "clip7_name": "Guard",
     "clip7_speed": 1.0,
     "clip8_blend": 0.30000001192092896,
-    "clip8_file": "animation/Player/Running_Jamp.gltf",
+    "clip8_file": "animation/Player/Running_Jump.gltf",
     "clip8_loop": 0,
     "clip8_name": "Jump",
     "clip8_speed": 1.0,

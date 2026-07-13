@@ -1,6 +1,6 @@
 #pragma once
 #include "Sprite.h"
-#include <Graphics/PipeLine/PipeLineManager.h>
+#include <graphics/pipeline/PipelineManager.h>
 #include <functional>
 #include <memory>
 #include <string>
@@ -56,7 +56,7 @@ struct SpriteData
     std::function<void(SpriteData &, float)> updateFunction; // カスタム更新関数
     bool isVisible = true;                                   // 表示フラグ
     bool isBackMost = false;                                 // 背面フラグ
-    BlendMode blendMode = BlendMode::kNormal;                // ブレンドモード
+    BlendMode blendMode = BlendMode::Normal;                // ブレンドモード
     bool lockAspectRatio = false;                            // アスペクト比維持フラグ
     std::string drawGroup = "UI";                            // 描画グループ＝描画ステージ（スプライトは既定でUIレイヤー）
 
