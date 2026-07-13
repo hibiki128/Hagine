@@ -104,11 +104,32 @@
     <ClCompile Include="Application\Camera\FollowCamera.cpp">
       <Filter>Application\Camera</Filter>
     </ClCompile>
+    <ClCompile Include="Application\Camera\Parts\CameraLockOn.cpp">
+      <Filter>Application\Camera\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Camera\Parts\CameraRush.cpp">
+      <Filter>Application\Camera\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Camera\Parts\CameraSkillCutscene.cpp">
+      <Filter>Application\Camera\Parts</Filter>
+    </ClCompile>
     <ClCompile Include="Application\Camera\StartCamera.cpp">
       <Filter>Application\Camera</Filter>
     </ClCompile>
     <ClCompile Include="Application\GameObject\Enemy\Enemy.cpp">
       <Filter>Application\GameObject\Enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Enemy\Parts\EnemyCombat.cpp">
+      <Filter>Application\GameObject\Enemy\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Enemy\Parts\EnemyMovement.cpp">
+      <Filter>Application\GameObject\Enemy\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Enemy\Parts\EnemyStatus.cpp">
+      <Filter>Application\GameObject\Enemy\Parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\GameObject\Enemy\Parts\EnemyVisual.cpp">
+      <Filter>Application\GameObject\Enemy\Parts</Filter>
     </ClCompile>
     <ClCompile Include="Application\GameObject\Field\Ground\Ground.cpp">
       <Filter>Application\GameObject\Field\Ground</Filter>
@@ -533,11 +554,32 @@
     <ClInclude Include="Application\Camera\FollowCamera.h">
       <Filter>Application\Camera</Filter>
     </ClInclude>
+    <ClInclude Include="Application\Camera\Parts\CameraLockOn.h">
+      <Filter>Application\Camera\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Camera\Parts\CameraRush.h">
+      <Filter>Application\Camera\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Camera\Parts\CameraSkillCutscene.h">
+      <Filter>Application\Camera\Parts</Filter>
+    </ClInclude>
     <ClInclude Include="Application\Camera\StartCamera.h">
       <Filter>Application\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Application\GameObject\Enemy\Enemy.h">
       <Filter>Application\GameObject\Enemy\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Enemy\Parts\EnemyCombat.h">
+      <Filter>Application\GameObject\Enemy\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Enemy\Parts\EnemyMovement.h">
+      <Filter>Application\GameObject\Enemy\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Enemy\Parts\EnemyStatus.h">
+      <Filter>Application\GameObject\Enemy\Parts</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\GameObject\Enemy\Parts\EnemyVisual.h">
+      <Filter>Application\GameObject\Enemy\Parts</Filter>
     </ClInclude>
     <ClInclude Include="Application\GameObject\Field\Ground\Ground.h">
       <Filter>Application\GameObject\Field\Ground</Filter>
@@ -562,9 +604,6 @@
     </ClInclude>
     <ClInclude Include="Engine\Utility\Debug\GameParam\GameParamHub.h">
       <Filter>Engine\Utility\Debug\GameParam</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Utility\Asset\AssetPath.h">
-      <Filter>Engine\Utility\Asset</Filter>
     </ClInclude>
     <ClInclude Include="Application\GameObject\Player\PlayerData.h">
       <Filter>Application\GameObject\Player</Filter>
@@ -987,6 +1026,8 @@
     <ClInclude Include="Engine\Base\Device\DXDevice.h" />
     <ClInclude Include="Engine\Base\Command\DXCommandList.h" />
     <ClInclude Include="Engine\Base\Command\DXCommandQueue.h" />
+    <ClInclude Include="Engine\Utility\Asset\AssetPath.h" />
+    <ClInclude Include="Engine\Utility\Debug\ImGui\AssetDragDrop.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
@@ -1037,6 +1078,9 @@
     <Filter Include="Application\Camera">
       <UniqueIdentifier>{4e00fe5a-70fa-4f1a-a437-17c009c250df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Application\Camera\Parts">
+      <UniqueIdentifier>{d4e5f6a7-8b9c-4d0e-9f1a-2b3c4d5e6f70}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Application\GameObject">
       <UniqueIdentifier>{a72003a5-7881-4be7-ac0f-c01c38bf6151}</UniqueIdentifier>
     </Filter>
@@ -1054,6 +1098,9 @@
     </Filter>
     <Filter Include="Application\GameObject\Enemy">
       <UniqueIdentifier>{b527691d-dbf5-43f4-9914-dfcf44b3aa08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\GameObject\Enemy\Parts">
+      <UniqueIdentifier>{c3d4e5f6-7a8b-4c9d-8e0f-1a2b3c4d5e6f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Application\GameObject\Field">
       <UniqueIdentifier>{4d2ac09c-f0a4-4725-a8f3-2e6e4391ef73}</UniqueIdentifier>
@@ -1309,9 +1356,6 @@
     </Filter>
     <Filter Include="Engine\Utility\LoadFile\Csv">
       <UniqueIdentifier>{c1216338-3048-4806-be59-7ccef6b4d2eb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\EngineAssets\shaders">
-      <UniqueIdentifier>{a4e81e65-f36f-4452-97b7-4bb84ab22d51}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\EngineAssets\shaders\Line">
       <UniqueIdentifier>{d046da19-14b1-4e7e-b0be-94fe12f58107}</UniqueIdentifier>

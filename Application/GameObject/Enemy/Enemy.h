@@ -1,21 +1,19 @@
 #pragma once
-#include "Application/Utility/Shake/Shake.h"
-#include "Application/Utility/SkillCutscene/SkillCutscene.h"
-#include "Bullet/EnemyBullet.h"
-#include "Collider/EnemyAttackCollider.h"
 #include "Object/Base/BaseObject.h"
+#include "Parts/EnemyCombat.h"
+#include "Parts/EnemyMovement.h"
+#include "Parts/EnemyStatus.h"
+#include "Parts/EnemyVisual.h"
 #include "Particle/ParticleEmitter.h"
 #include <Application/GameObject/BehaviorTree/Node/BehaviorNode.h>
-#include <Animation/AnimationController.h>
 #include <Application/GameObject/Player/Player.h>
-#include <Easing.h>
-#include <application/GameObject/Player/PlayerData.h>
-#include <application/Utility/ComboSystem/ComboSystem.h>
 #include <memory>
 
 /// <summary>
 /// 敵のゲームオブジェクトクラス
-/// ビヘイビアツリーに基づいて行動し、プレイヤーとの相互作用を管理する
+/// ビヘイビアツリー駆動で行動し、各パーツ（移動・戦闘・ステータス・見た目）の統括を行うファサード。
+/// 視錐台ロックオン（視界）・BT・コライダー・トレーニング用ダミー制御を本体が担当し、
+/// 実際のロジックは Parts/ 以下の各パーツクラスが担当する
 /// </summary>
 class Enemy : public Hagine::BaseObject {
   public:
@@ -36,15 +34,63 @@ class Enemy : public Hagine::BaseObject {
 
     void OnCollisionEnter(Hagine::ColliderBase *collider);
     void OnCollision(Hagine::ColliderBase *collider);
-    void ConboUpdate();
+    void ConboUpdate() { combat_->ConboUpdate(); }
+
+    /// ===================================================
+    /// パーツ（新規コードはこちらを直接使ってよい）
+    /// ===================================================
+    EnemyMovement &Movement() { return *movement_; }
+    EnemyCombat &Combat() { return *combat_; }
+    EnemyStatus &Status() { return *status_; }
+    EnemyVisual &Visual() { return *visual_; }
 
     /// ===================================================
     /// Getter
     /// ===================================================
 
-    Hagine::Vector3 &GetAcceleration() { return acceleration_; }
-    Hagine::Vector3 GetVelocity() { return velocity_; }
-    Hagine::Vector3 GetMovementDirection() const;
+    // ─── 移動（EnemyMovement） ───
+    Hagine::Vector3 &GetAcceleration() { return movement_->GetAcceleration(); }
+    Hagine::Vector3 GetVelocity() { return movement_->GetVelocity(); }
+    Hagine::Vector3 GetMovementDirection() const { return movement_->GetMovementDirection(); }
+    float GetVelocityMagnitude() const { return movement_->GetVelocityMagnitude(); }
+    float &GetFallSpeed() { return movement_->GetFallSpeed(); }
+    float &GetMoveSpeed() { return movement_->GetMoveSpeed(); }
+    float &GetJumpSpeed() { return movement_->GetJumpSpeed(); }
+    float &GetMaxSpeed() { return movement_->GetMaxSpeed(); }
+    float &GetAccelRate() { return movement_->GetAccelRate(); }
+    bool &GetCanJump() { return movement_->GetCanJump(); }
+    bool &GetIsGrounded() { return movement_->GetIsGrounded(); }
+    bool GetIsFlying() const { return movement_->GetIsFlying(); }
+    float GetVerticalVelocity() const { return movement_->GetVerticalVelocity(); }
+    float GetVerticalAcceleration() const { return movement_->GetVerticalAcceleration(); }
+    Direction &GetDirection() { return movement_->GetDirection(); }
+    MoveDirection &GetMoveDirection() { return movement_->GetMoveDirection(); }
+
+    // ─── ステータス（EnemyStatus） ───
+    float GetHP() const { return status_->GetHP(); }
+    float GetMaxHP() const { return status_->GetMaxHP(); }
+    float &GetEnergy() { return status_->GetEnergy(); }
+    float GetMaxEnergy() const { return status_->GetMaxEnergy(); }
+    float GetEnergyRecoveryRate() const { return status_->GetEnergyRecoveryRate(); }
+    bool IsGuarding() const { return status_->IsGuarding(); }
+    /// <summary>ガード可能か（被弾で消費するエネルギーを支払えるか）</summary>
+    bool CanGuard() const { return status_->CanGuard(); }
+
+    // ─── 戦闘（EnemyCombat） ───
+    /// <summary>前方攻撃判定コライダーを返す</summary>
+    EnemyAttackCollider *GetAttackCollider() { return combat_->GetAttackCollider(); }
+    /// <summary>現在の攻撃のダメージ量を返す（EnemyHandから参照）</summary>
+    float GetCurrentAttackDamage() const { return combat_->GetCurrentAttackDamage(); }
+    /// <summary>現在の攻撃のノックバック強度を返す（EnemyHandから参照）</summary>
+    float GetCurrentAttackKnockback() const { return combat_->GetCurrentAttackKnockback(); }
+    // コンボ状態Getter（BTノードから参照）
+    int GetPunchComboLength() const { return combat_->GetPunchComboLength(); }
+    bool IsPunchComboActive() const { return combat_->IsPunchComboActive(); }
+
+    // ─── 本体（視界・位置・向き） ───
+    bool &GetAlive() { return isAlive_; }
+    bool GetIsLockOn() const { return isLockOn_; }
+    Player *GetTarget() { return target_; }
     Hagine::Vector3 GetForward() const;
     Hagine::Vector3 GetBackward() const;
     Hagine::Vector3 GetRight() const;
@@ -59,50 +105,6 @@ class Enemy : public Hagine::BaseObject {
     Hagine::Vector3 GetPositionBelow(float distance = 3.0f) const;
     Hagine::Vector3 GetPosition() const { return transform_->translation_; }
     Hagine::Vector3 GetLocalPosition() const { return transform_->translation_; }
-    float GetVelocityMagnitude() const;
-    float &GetFallSpeed() { return fallSpeed_; }
-    float &GetMoveSpeed() { return moveSpeed_; }
-    float &GetJumpSpeed() { return jumpSpeed_; }
-    float &GetMaxSpeed() { return maxSpeed_; }
-    float &GetAccelRate() { return accelRate_; }
-    float GetHP() const { return HP_; }
-    float GetMaxHP() const { return maxHP_; }
-    float &GetEnergy() { return energy_; }
-    float GetMaxEnergy() const { return maxEnergy_; }
-    bool &GetCanJump() { return canJump_; }
-    bool &GetAlive() { return isAlive_; }
-    bool &GetIsGrounded() { return isGrounded_; }
-    bool IsGuarding() const { return isGuarding_; }
-    /// <summary>ガード可能か（被弾で消費するエネルギーを支払えるか）</summary>
-    bool CanGuard() const { return energy_ >= kGuardEnergyCost; }
-    bool GetIsLockOn() const { return isLockOn_; }
-    Player *GetTarget() { return target_; }
-    Direction &GetDirection() { return dir_; }
-    MoveDirection &GetMoveDirection() { return moveDir_; }
-
-    /// <summary>
-    /// 前方攻撃判定コライダーを返す
-    /// </summary>
-    EnemyAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
-    float GetVerticalVelocity() const { return velocity_.y; }
-    float GetVerticalAcceleration() const { return acceleration_.y; }
-    bool GetIsFlying() const { return isFlying_; }
-
-    // コンボ状態Getter（BTノードから参照）
-    int GetPunchComboLength() const { return punchCombo_.GetComboLength(); }
-    bool IsPunchComboActive() const { return punchCombo_.IsComboActive(); }
-
-    /// <summary>
-    /// 現在の攻撃のダメージ量を返す（EnemyHandから参照）
-    /// </summary>
-    float GetCurrentAttackDamage() const { return currentAttackDamage_; }
-
-    /// <summary>
-    /// 現在の攻撃のノックバック強度を返す（EnemyHandから参照）
-    /// </summary>
-    float GetCurrentAttackKnockback() const { return currentAttackKnockback_; }
-
-    float GetEnergyRecoveryRate() const { return energyRecoveryRate_; }
 
     // ConditionNode用
     Hagine::Vector3 GetWorldPosition() const { return transform_->translation_; }
@@ -111,7 +113,20 @@ class Enemy : public Hagine::BaseObject {
     /// Setter
     /// ===================================================
 
-    void SetDamage(float damage) { damage_ = damage; }
+    // ─── 移動（EnemyMovement） ───
+    void SetVelocity(const Hagine::Vector3 &vel) { movement_->SetVelocity(vel); }
+    void SetMoveSpeed(float speed) { movement_->SetMoveSpeed(speed); }
+    void SetStrafeDirection(int dir) { movement_->SetStrafeDirection(dir); }
+    void SetVerticalVelocity(float velocity) { movement_->SetVerticalVelocity(velocity); }
+    void SetVerticalAcceleration(float accel) { movement_->SetVerticalAcceleration(accel); }
+    void SetIsGrounded(bool grounded) { movement_->SetIsGrounded(grounded); }
+    void SetIsFlying(bool flying) { movement_->SetIsFlying(flying); }
+
+    // ─── ステータス（EnemyStatus） ───
+    void SetDamage(float damage) { status_->SetDamage(damage); }
+    void SetGuarding(bool guarding) { status_->SetGuarding(guarding); }
+    void SetEnergy(float energy) { status_->SetEnergy(energy); }
+    void SetEnergyRecoveryRate(float rate) { status_->SetEnergyRecoveryRate(rate); }
 
     /// <summary>
     /// ノックバックを設定する
@@ -119,20 +134,31 @@ class Enemy : public Hagine::BaseObject {
     /// </summary>
     /// <param name="direction">ノックバック方向（正規化済みでなくてもよい）</param>
     /// <param name="power">ノックバック強度</param>
-    void SetKnockback(const Hagine::Vector3 &direction, float power);
+    void SetKnockback(const Hagine::Vector3 &direction, float power) { status_->SetKnockback(direction, power); }
 
+    // ─── 戦闘（EnemyCombat） ───
+    void SetComboAttack(bool flag) { combat_->SetComboAttack(flag); }
+
+    // ─── 本体 ───
     void SetVp(Hagine::ViewProjection *vp);
     void SetTarget(Player *target) {
         target_ = target;
         // 前方攻撃判定コライダーにもプレイヤーを設定する
-        if (attackCollider_) {
-            attackCollider_->SetPlayer(target);
+        if (combat_->GetAttackCollider()) {
+            combat_->GetAttackCollider()->SetPlayer(target);
         }
     }
-    void SetGuarding(bool guarding) { isGuarding_ = guarding; }
     void SetIsLockOn(bool lockOn) { isLockOn_ = lockOn; }
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
+    void SetLocalPosition(const Hagine::Vector3 &pos) { transform_->translation_ = pos; }
+
+    void SetBehaviorTree(std::shared_ptr<BTNode> rootNode) {
+        rootNode_ = rootNode;
+        if (rootNode_) {
+            rootNode_->SetContext(this, target_);
+        }
+    }
 
     /// <summary>
     /// トレーニング用ダミーモードを設定する。
@@ -146,73 +172,41 @@ class Enemy : public Hagine::BaseObject {
     /// HP・状態・位置を初期化して復活させる(ダミー用)
     /// </summary>
     void Revive();
-    void SetVelocity(const Hagine::Vector3 &vel) { velocity_ = vel; }
-    void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
-    void SetStrafeDirection(int dir) { strafeDirection_ = dir; }
-    void SetBehaviorTree(std::shared_ptr<BTNode> rootNode) {
-        rootNode_ = rootNode;
-        if (rootNode_) {
-            rootNode_->SetContext(this, target_);
-        }
-    }
-    void SetComboAttack(bool flag) { isComboAttack_ = flag; }
-    void SetEnergy(float energy);
-    void SetVerticalVelocity(float velocity) { velocity_.y = velocity; }
-    void SetVerticalAcceleration(float accel) { acceleration_.y = accel; }
-    void SetIsGrounded(bool grounded) { isGrounded_ = grounded; }
-    void SetIsFlying(bool flying) { isFlying_ = flying; }
-    void SetEnergyRecoveryRate(float rate) { energyRecoveryRate_ = rate; }
-    void SetLocalPosition(const Hagine::Vector3 &pos) { transform_->translation_ = pos; }
 
-    bool ConsumeEnergy(float amount);
-    void RecoverEnergy();
+    /// ===================================================
+    /// エネルギー・戦闘・移動の転送
+    /// ===================================================
+    bool ConsumeEnergy(float amount) { return status_->ConsumeEnergy(amount); }
+    void RecoverEnergy() { status_->RecoverEnergy(); }
 
     void UpdateFrustumLockOn();
     void ReleaseLockOn() { isLockOn_ = false; }
 
-    void MoveToTarget(const Hagine::Vector3 &targetPos);
-    void PerformAttack();
-    void MoveStrafe();
-    void MoveRetreat();
-    void StopMovement();
-    void Move();
-    void DirectionUpdate();
-    void Shot();
-    void ShotWithDirection(const Hagine::Vector3 &direction, bool forceHoming = false);
+    void MoveToTarget(const Hagine::Vector3 &targetPos) { movement_->MoveToTarget(targetPos); }
+    void PerformAttack() { combat_->PerformAttack(); }
+    void MoveStrafe() { movement_->MoveStrafe(); }
+    void MoveRetreat() { movement_->MoveRetreat(); }
+    void StopMovement() { movement_->StopMovement(); }
+    void Move() { movement_->Move(); }
+    void DirectionUpdate() { movement_->DirectionUpdate(); }
+    void Shot() { combat_->Shot(); }
+    void ShotWithDirection(const Hagine::Vector3 &direction, bool forceHoming = false) {
+        combat_->ShotWithDirection(direction, forceHoming);
+    }
 
     /// ===================================================
-    /// 大技（チャージ攻撃・必殺技）演出＆処理
+    /// 大技（チャージ攻撃・必殺技）の転送
     /// BTノード(EnemyChargeAttackNode / EnemyUltimateNode)から駆動する
-    /// プレイヤーの ChargeShot / MakanAttackSkill 相当の演出を流用する
     /// ===================================================
-
-    /// <summary>チャージ溜めオーラ演出を開始する</summary>
-    void StartChargeAura();
-    /// <summary>チャージ溜めオーラ演出を停止する</summary>
-    void StopChargeAura();
-    /// <summary>チャージ発射: 閃光演出＋強化ホーミング弾を1発撃つ</summary>
-    void FireChargeBlast();
-
-    // ===================================================
-    // ビーム必殺技（MakanAttackSkill 相当）
-    // ===================================================
-    /// <summary>ビーム必殺技を起動する。溜め完了後にBTノードから呼ぶ</summary>
-    void ActivateBeam();
-    /// <summary>ビーム必殺技を強制停止する（BT中断時など）</summary>
-    void DeactivateBeam();
-    /// <summary>ビームが現在アクティブかどうか</summary>
-    bool IsBeamActive() const { return beamActive_; }
-
-    /// <summary>
-    /// ビーム必殺技の発動前演出（カメラ顔アップ→通常カメラ復帰→遅延→発動）を開始する。
-    /// 演出・遅延中はロックオン（照準追従）を維持し、発動の瞬間に向きを固定する。
-    /// 溜め完了後にBTノードから呼ぶ
-    /// </summary>
-    void StartBeamStaging();
-    /// <summary>ビーム発動前演出を中断する（BT中断時など）</summary>
-    void CancelBeamStaging();
-    /// <summary>ビーム発動前演出中かどうか</summary>
-    bool IsBeamStaging() const { return beamCutscene_.IsActive(); }
+    void StartChargeAura() { combat_->StartChargeAura(); }
+    void StopChargeAura() { combat_->StopChargeAura(); }
+    void FireChargeBlast() { combat_->FireChargeBlast(); }
+    void ActivateBeam() { combat_->ActivateBeam(); }
+    void DeactivateBeam() { combat_->DeactivateBeam(); }
+    bool IsBeamActive() const { return combat_->IsBeamActive(); }
+    void StartBeamStaging() { combat_->StartBeamStaging(); }
+    void CancelBeamStaging() { combat_->CancelBeamStaging(); }
+    bool IsBeamStaging() const { return combat_->IsBeamStaging(); }
 
   private:
     /// ===================================================
@@ -221,56 +215,26 @@ class Enemy : public Hagine::BaseObject {
 
     void Save();
     void Load();
-    void UpdateBeam(); // ビーム必殺技の毎フレーム更新
-    void RotateUpdate();
-    void CollisionGround();
-
-    /// <summary>
-    /// 移動・コンボ・ガード状態に応じてアニメーションクリップを切り替える
-    /// 敵はBT駆動で moveDir_ を持たないため、向きと velocity から進行方向を判定する
-    /// </summary>
-    void UpdateAnimation();
-    void DamageUpdate();
-    void StartDamageReact();
-    const char *GetDirectionName(Direction dir);
 
     /// ===================================================
     /// private variants
     /// ===================================================
 
     // 初期化定数
-    static constexpr int kTextureIndex = 0;
-    static constexpr float kShadowRotationDegrees = -90.0f;
-    static constexpr float kShadowScale = 1.5f;
-    static constexpr float kShadowYPosition = -0.95f;
-
-    // ダメージ・HP関連定数
-    static constexpr float kNoDamage = 0.0f;
-    static constexpr float kMinHP = 0.0f;
-    static constexpr float kGuardDamageMultiplier = 0.15f;
-    static constexpr float kGuardEnergyCost = 10.0f; // ガード中の被弾で消費するエネルギー（プレイヤーと同様）
+    static constexpr float kAlphaOpaque = 1.0f;
 
     // 色関連定数
     static constexpr float kColorRed = 1.0f;
     static constexpr float kColorZero = 0.0f;
     static constexpr float kColorOpaque = 1.0f;
 
-    // 点滅関連定数
-    static constexpr float kBlinkInterval = 0.1f;
-    static constexpr float kDamageBlinkInterval = 0.03f;
-    static constexpr int kBlinkModulo = 2;
-    static constexpr int kEvenBlink = 0;
-
-    // 透明度定数
-    static constexpr float kAlphaTransparent = 0.0f;
-    static constexpr float kAlphaOpaque = 1.0f;
+    // 距離・閾値定数
+    static constexpr float kMinRotationDistance = 0.001f;
+    static constexpr float kGroundLevel = 0.0f;
+    static constexpr float kVelocityZero = 0.0f;
+    static constexpr float kMinHP = 0.0f;
 
     // 回転・ベクトル定数
-    static constexpr float kRotationZero = 0.0f;
-    static constexpr float kTimerReset = 0.0f;
-    static constexpr float kXAxisX = 1.0f;
-    static constexpr float kXAxisY = 0.0f;
-    static constexpr float kXAxisZ = 0.0f;
     static constexpr float kForwardVectorX = 0.0f;
     static constexpr float kForwardVectorY = 0.0f;
     static constexpr float kForwardVectorZ = -1.0f;
@@ -281,151 +245,35 @@ class Enemy : public Hagine::BaseObject {
     static constexpr float kUpVectorY = 1.0f;
     static constexpr float kUpVectorZ = 0.0f;
 
-    // 距離・閾値定数
-    static constexpr float kMinRotationDistance = 0.001f;
-    static constexpr float kParallelThreshold = 0.999f;
+    // ─── パーツ ───
+    std::unique_ptr<EnemyMovement> movement_; ///< 移動・回転・接地
+    std::unique_ptr<EnemyCombat> combat_;     ///< 射撃・コンボ・大技
+    std::unique_ptr<EnemyStatus> status_;     ///< HP・エネルギー・被ダメージ・ガード
+    std::unique_ptr<EnemyVisual> visual_;     ///< アニメーション・被弾/ガード色
 
-    // アニメーション切り替え閾値
-    static constexpr float kFlyVerticalAnimThreshold = 0.5f; // 飛行中、上昇/下降アニメに切り替えるY速度の閾値
-    static constexpr float kMoveAnimMinSpeed = 0.1f;         // 待機/移動アニメを切り替える水平速度の閾値
-    static constexpr float kBackwardDotThreshold = 0.5f;     // 後退とみなす（前方ベクトルとの内積）の閾値
-    static constexpr float kRotationSpeed = 8.0f;
-    static constexpr float kGroundLevel = 0.0f;
-    static constexpr float kVelocityZero = 0.0f;
+    Player *target_ = nullptr; ///< ターゲットプレイヤー
 
-    // ダミーモード(トレーニング)関連
-    static constexpr float kDummyGroundFriction = 0.8f; // ノックバック後の水平減衰率(毎フレーム)
+    std::shared_ptr<BTNode> rootNode_ = nullptr; ///< ビヘイビアツリーのルートノード
 
-    // イージング関連定数
-    static constexpr float kVelocityEaseTime = 0.15f;
-    static constexpr float kStopEaseTime = 0.2f;
+    std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; ///< ヒットエミッター
 
-    // 影のスケール関連定数
-    static constexpr float kShadowBaseScale = 1.5f;
-    static constexpr float kShadowMinScale = 0.3f;
-    static constexpr float kShadowScaleFactor = 0.1f;
+    Hagine::OBBCollider *enemyCollider_ = nullptr;      ///< 敵コライダー
+    Hagine::AABBCollider *enemyWallCollider_ = nullptr; ///< 壁用コライダー
 
-    // ビヘイビアツリー距離定数
-    static constexpr float kFarDistanceMin = 10.0f;
-    static constexpr float kFarDistanceMax = 100.0f;
-    static constexpr float kMidDistanceMin = 5.0f;
-    static constexpr float kMidDistanceMax = 10.0f;
-    static constexpr float kCloseDistanceMin = 0.0f;
-    static constexpr float kCloseDistanceMax = 5.0f;
-
-    // 弾丸関連定数
-    static constexpr float kBulletScale = 0.5f;
-    static constexpr float kBulletColliderRadius = 0.5f;
-    static constexpr float kNormalShotEnergyCost = 5.0f;
-
-    // 大技関連定数
-    static constexpr float kChargeAttackEnergyCost = 30.0f; // チャージ攻撃の消費エネルギー
-    static constexpr float kChargeBlastScale = 1.6f;        // チャージ弾のスケール
-    static constexpr float kChargeBlastDamage = 15.0f;      // チャージ弾のダメージ
-    static constexpr float kChargeBlastSpeed = 60.0f;       // チャージ弾の速度
-    static constexpr float kUltimateEnergyCost = 60.0f;     // ビーム必殺技の消費エネルギー
-    static constexpr float kBeamDamage = 40.0f;             // ビーム必殺技のダメージ
-    static constexpr float kBeamMaxLength = 55.0f;          // ビームの最大長さ
-    static constexpr float kBeamExtendSpeed = 110.0f;       // ビームが伸びる速度
-    static constexpr float kBeamWidth = 2.5f;               // ビーム幅
-    static constexpr float kBeamDuration = 2.0f;            // ビーム持続時間(秒)
-
-    Direction dir_;         // 現在の方向
-    MoveDirection moveDir_; // 移動方向
-
-    Hagine::Vector3 velocity_{};       // 速度
-    Hagine::Vector3 acceleration_{};   // 加速度
-    Player *target_ = nullptr; // ターゲットプレイヤー
-
-    int strafeDirection_ = 1; // 横移動方向
-
-    float HP_ = 100.0f;    // HP
-    float maxHP_ = 100.0f; // 最大HP
-    float damage_ = 0.0f;  // 受けるダメージ量
-
-    float moveSpeed_ = 0.0f; // 移動速度
-    float fallSpeed_ = 0.0f; // 落下速度
-    float jumpSpeed_ = 0.0f; // ジャンプ速度
-    float maxSpeed_ = 0.0f;  // 最大速度
-    float accelRate_ = 0.0f; // 加速レート
-
-    Hagine::Vector3 velocityTarget_{};         // 目標速度
-    Hagine::EasingData<Hagine::Vector3> velocityEase_; // 速度補間用イージング
-
-    // ノックバック関連
-    bool hasKnockback_ = false;            // ノックバック中フラグ
-    Hagine::Vector3 pendingKnockback_ = {0, 0, 0}; // ノックバック速度
-
-    // コンボ攻撃パラメータ（ComboSystemのコールバックで更新）
-    float currentAttackDamage_ = 10.0f;   // 現在の攻撃ダメージ量
-    float currentAttackKnockback_ = 3.0f; // 現在の攻撃ノックバック強度
-    float currentAttackDuration_ = 0.25f; // 現在の攻撃有効時間
-
-    bool canJump_ = false;       // ジャンプ可能フラグ
-    bool isLockOn_ = false;      // ロックオンフラグ
-    bool isGrounded_ = true;     // 接地フラグ
-    bool isFlying_ = false;      // 飛行中フラグ
-    bool isStop_ = false;        // 停止中フラグ
-    bool started_ = false;       // 開始フラグ
-    bool isPause_ = false;       // ポーズフラグ
-    bool dummyMode_ = false;     // トレーニング用ダミーモード(AI停止・復活のみ)
-    Hagine::Vector3 spawnPosition_{}; // ダミー復活時に戻る初期位置
-    bool isGuarding_ = false;    // ガード中フラグ
-    bool isComboAttack_ = false; // コンボ攻撃中フラグ
-
-    std::unique_ptr<Hagine::DataHandler> data_;           // データハンドラ
-    std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; // ヒットエミッター
-    std::unique_ptr<Shake> chargeShake_;          // シェイク
-
-    // 大技演出用CSパーティクル
-    std::unique_ptr<Hagine::ParticleCSEmitter> chargeAura_;       // チャージ溜めオーラ (enemyChargeAura)
-    std::unique_ptr<Hagine::ParticleCSEmitter> beamMainEffect_;   // ビームメイン演出 (makan_main)
-    std::unique_ptr<Hagine::ParticleCSEmitter> beamAroundEffect_; // ビームらせん演出 (makan_around)
-
-    // ビーム必殺技状態
-    Hagine::OBBCollider *beamCollider_ = nullptr;        // ビーム判定コライダー（動的にOBBを更新）
-    bool beamActive_ = false;                    // ビームアクティブフラグ
-    bool beamDamageDealt_ = false;               // ビームダメージ適用済みフラグ
-    float beamLength_ = 0.0f;                    // 現在のビーム長
-    float beamActiveTime_ = 0.0f;                // ビームアクティブ経過時間
-    float beamSpiralTime_ = 0.0f;                // らせんアニメーション経過時間
-    Hagine::Quaternion beamLockedRotation_{};            // ビーム発射時に固定した向き（発射後ホーミング防止）
-    SkillCutscene beamCutscene_;                 // ビーム発動前演出（カメラ顔アップ＋発動遅延）
-    float beamSpiralRadius_ = 2.0f;              // らせんの半径
-    float beamSpiralRevolution_ = 3.0f;          // 最大長に達した時の巻き数
-    float beamSpiralForwardSpeed_ = 30.0f;       // らせんパーティクルの前進速度
-    std::shared_ptr<BTNode> rootNode_ = nullptr; // ビヘイビアツリーのルートノード
-
-    bool isDamageReact_ = false;       // ダメージ反応中フラグ
-    float damageReactTimer_ = 0.0f;    // ダメージ反応タイマー
-    float damageReactDuration_ = 0.5f; // ダメージ反応時間
-    float energy_ = 100.0f;            // エネルギー
-    float maxEnergy_ = 100.0f;         // 最大エネルギー
-    float energyRecoveryRate_ = 0.01f; // エネルギー回復速度
-    float energyRecoveryDelay_ = 1.0f; // エネルギー回復遅延
-    float timeSinceLastShot_ = 0.0f;   // 最終射撃からの経過時間
-
-    ComboSystem punchCombo_;        // パンチコンボシステム
-    bool comboInitialized_ = false; // コンボ初期化済みフラグ
-
-    Hagine::AnimationController animationController_; // アニメーション制御（プレイヤーと同一クリップ構成）
-    std::vector<std::string> comboAnimations_;       // コンボ段ごとの本体アニメーションパス
-
-    // 前方攻撃判定コライダー（PlayerAttackColliderと対称の設計）
-    std::unique_ptr<EnemyAttackCollider> attackCollider_; // 攻撃コライダー
-
-    Hagine::OBBCollider *enemyCollider_ = nullptr;      // 敵コライダー
-    Hagine::AABBCollider *enemyWallCollider_ = nullptr; // 壁用コライダー
-
-    std::vector<std::unique_ptr<EnemyBullet>> bullets_; // 敵の弾
+    bool started_ = false;   ///< 開始フラグ
+    bool isPause_ = false;   ///< ポーズフラグ
+    bool isStop_ = false;    ///< 停止中フラグ
+    bool dummyMode_ = false; ///< トレーニング用ダミーモード(AI停止・復活のみ)
+    Hagine::Vector3 spawnPosition_{}; ///< ダミー復活時に戻る初期位置
 
     // 視錐台ロックオン関連
     static constexpr float kDefaultFrustumRange = 150.0f;
     static constexpr float kDefaultFrustumHalfFovH = 40.0f * (3.14159265f / 180.0f);
     static constexpr float kDefaultFrustumHalfFovV = 30.0f * (3.14159265f / 180.0f);
 
-    float frustumLockOnRange_ = kDefaultFrustumRange;       // 視錐台範囲
-    float frustumLockOnHalfFovH_ = kDefaultFrustumHalfFovH; // 視錐台水平半角
-    float frustumLockOnHalfFovV_ = kDefaultFrustumHalfFovV; // 視錐台垂直半角
-    bool drawFrustumDebug_ = false;                         // 視錐台デバッグ表示フラグ
+    bool isLockOn_ = false;                                  ///< ロックオンフラグ
+    float frustumLockOnRange_ = kDefaultFrustumRange;       ///< 視錐台範囲
+    float frustumLockOnHalfFovH_ = kDefaultFrustumHalfFovH; ///< 視錐台水平半角
+    float frustumLockOnHalfFovV_ = kDefaultFrustumHalfFovV; ///< 視錐台垂直半角
+    bool drawFrustumDebug_ = false;                         ///< 視錐台デバッグ表示フラグ
 };

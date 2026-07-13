@@ -1,30 +1,4 @@
 {
-    "assignments": {
-        "カメラ演出/回り込み速度": {
-            "section": "",
-            "tab": "距離",
-            "window": "カメラ"
-        },
-        "カメラ演出/顔からの距離": {
-            "section": "",
-            "tab": "距離",
-            "window": "カメラ"
-        },
-        "カメラ演出/顔の高さオフセット": {
-            "section": "",
-            "tab": "距離",
-            "window": "カメラ"
-        }
-    },
-    "windows": [
-        {
-            "name": "カメラ",
-            "tabs": [
-                {
-                    "name": "距離",
-                    "sections": []
-                }
-            ]
-        }
-    ]
+    "assignments": {},
+    "windows": []
 }

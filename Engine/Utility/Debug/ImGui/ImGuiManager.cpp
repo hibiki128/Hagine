@@ -1082,8 +1082,11 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
     if (!isShowMainUI_) {
         flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
     }
-    ImGui::Begin("Scene", nullptr, flags);
-    sceneName;
+    // ウィンドウの表示名は現在のシーン名にしつつ、"###Scene" で ImGui の内部IDを固定する。
+    // これにより docking レイアウトや imgui.ini の位置・サイズ設定を維持したまま、
+    // タブ／タイトルの表示だけがシーンごとに切り替わる（NoTitleBar でもドッキング時のタブに表示される）。
+    const std::string sceneWindowLabel = (sceneName.empty() ? std::string("Scene") : sceneName) + "###Scene";
+    ImGui::Begin(sceneWindowLabel.c_str(), nullptr, flags);
     // ウィンドウ内の位置を取得（ImGuizmoのためにシーンウィンドウの絶対位置を計算）
     ImVec2 sceneWindowPos = ImGui::GetWindowPos();
     ImVec2 contentPos = ImGui::GetCursorScreenPos();

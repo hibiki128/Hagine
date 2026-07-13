@@ -41,6 +41,7 @@ void MakanAttackSkill::Update() {
     }
 
     transform_->translation_ = playerTransform_->translation_;
+    transform_->translation_.y = playerTransform_->translation_.y + kLockOffsetY;
     transform_->quateRotation_ = lockedRotation_; // 発動時の向きで固定（発動後は追従しない）
 
     // コライダー設定
@@ -53,7 +54,7 @@ void MakanAttackSkill::Update() {
         makanMainEffect_->SetAuto(true);
         makanMainEffect_->SetScale(Vector3(0.0f, 0.0f, currentLength_));
         makanMainEffect_->SetAnchorPoint(Vector3(0.5f, 0.5f, 0.75f));
-        makanMainEffect_->SetTranslate(playerTransform_->translation_);
+        makanMainEffect_->SetTranslate(transform_->translation_);
         makanMainEffect_->SetRotation(lockedRotation_);
     }
 
@@ -98,7 +99,7 @@ void MakanAttackSkill::Update() {
                                localUp * (std::sin(angle) * spiralRadius_);
 
         // エミッター位置（ワールド座標）
-        Vector3 emitterPos = playerTransform_->translation_ +
+        Vector3 emitterPos = transform_->translation_ +
                              localForward * forwardDistance +
                              spiralOffset;
 

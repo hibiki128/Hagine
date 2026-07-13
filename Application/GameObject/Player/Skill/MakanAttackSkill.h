@@ -34,7 +34,7 @@ class MakanAttackSkill : public Hagine::BaseObject {
     bool IsActive() const { return isActive_; }
     void Activate(Hagine::WorldTransform *playerTransform);
 
-        /// <summary>
+    /// <summary>
     /// ImGuiでのデバッグ表示
     /// </summary>
     void DebugImGui();
@@ -49,6 +49,8 @@ class MakanAttackSkill : public Hagine::BaseObject {
     void Deactivate();
 
   private:
+    static constexpr float kLockOffsetY = 2.5f;
+
     std::unique_ptr<Hagine::ParticleCSEmitter> makanMainEffect_{};
     std::unique_ptr<Hagine::ParticleCSEmitter> makanAroundEffect_{};
 
@@ -68,8 +70,8 @@ class MakanAttackSkill : public Hagine::BaseObject {
     float duration_ = 2.0f;
     float spiralTime_ = 0.0f;
     // らせんビーム制御用パラメータ
-    float spiralRadius_ = 2.0f;     // らせんの半径
-    float spiralRevolution_ = 3.0f; // 最大長に達した時の巻き数
+    float spiralRadius_ = 2.0f;        // らせんの半径
+    float spiralRevolution_ = 3.0f;    // 最大長に達した時の巻き数
     float spiralForwardSpeed_ = 30.0f; // らせんパーティクルの前進速度
     Player *player_ = nullptr;
 };
