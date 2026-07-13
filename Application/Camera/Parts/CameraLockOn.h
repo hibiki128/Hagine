@@ -13,7 +13,8 @@ class DrawLine3D;
 /// 肩オフセット・高さオフセット・ロックオン遷移と、視錐台ロックオン（範囲内の敵検出）
 /// および視錐台デバッグ描画を担当する
 /// </summary>
-class CameraLockOn {
+class CameraLockOn
+{
   public:
     /// ===================================================
     /// public method

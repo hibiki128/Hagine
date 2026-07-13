@@ -2,7 +2,8 @@
 #include "Graphics/PipeLine/ComputePipeLineManager.h"
 #include "Graphics/PipeLine/PipeLineManager.h"
 namespace Hagine {
-class Object3dCommon {
+class Object3dCommon
+{
   public: // メンバ関数
     /// <summary>
     ///  初期化

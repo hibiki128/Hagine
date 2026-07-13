@@ -10,7 +10,8 @@ namespace Hagine {
 /// GPUパーティクルのエミッター・グループをImGuiで編集するエディタ（シングルトン）
 /// エミッターの追加・描画（Compute/Graphicsの2フェーズ）・統計表示・プレビュー窓を提供する
 /// </summary>
-class ParticleCSEditor {
+class ParticleCSEditor
+{
   private:
     /// ===================================
     /// private methods
@@ -68,7 +69,8 @@ class ParticleCSEditor {
 
   public:
     // インスタンスの取得
-    static ParticleCSEditor *GetInstance() {
+    static ParticleCSEditor *GetInstance()
+    {
         static ParticleCSEditor instance;
         return &instance;
     }
@@ -120,10 +122,10 @@ class ParticleCSEditor {
     /// ===== プレビュー窓 内部状態 =====
     // RT/深度はクライアント解像度ぶんを最大確保し、実描画は ImGui ウィンドウのサイズに合わせて
     // ビューポート＋UV部分表示で可変にする（リソース再確保による frame-latency ハザードを回避）。
-    static constexpr uint32_t kPreviewMaxWidth_ = 1760;  // = WinApp::kClientWidth
-    static constexpr uint32_t kPreviewMaxHeight_ = 990;  // = WinApp::kClientHeight
-    uint32_t previewRenderWidth_ = 512;                  // 今フレームの実描画幅（ImGuiウィンドウ依存）
-    uint32_t previewRenderHeight_ = 512;                 // 今フレームの実描画高
+    static constexpr uint32_t kPreviewMaxWidth_ = 1760; // = WinApp::kClientWidth
+    static constexpr uint32_t kPreviewMaxHeight_ = 990; // = WinApp::kClientHeight
+    uint32_t previewRenderWidth_ = 512;                 // 今フレームの実描画幅（ImGuiウィンドウ依存）
+    uint32_t previewRenderHeight_ = 512;                // 今フレームの実描画高
     Microsoft::WRL::ComPtr<ID3D12Resource> previewColorResource_;
     uint32_t previewColorSrvIndex_ = 0;
     D3D12_CPU_DESCRIPTOR_HANDLE previewRtvHandle_{};
@@ -135,7 +137,8 @@ class ParticleCSEditor {
     D3D12_CPU_DESCRIPTOR_HANDLE previewDsvHandle_{};
 
     // 白グリッド線（共有 DrawLine3D とは独立した専用VB）。kLine3d PSO を流用して描画する。
-    struct PreviewLineVertex {
+    struct PreviewLineVertex
+    {
         Vector3 pos;
         Vector4 color;
     };

@@ -12,7 +12,8 @@ namespace Hagine {
 /// <summary>
 /// 球の形状データ
 /// </summary>
-struct Sphere {
+struct Sphere
+{
     Vector3 center = {0.0f, 0.0f, 0.0f}; //!< 中心点
     float radius = 0.0f;                 //!< 半径
 };
@@ -20,7 +21,8 @@ struct Sphere {
 /// <summary>
 /// 軸平行境界ボックス（AABB）の形状データ
 /// </summary>
-struct AABB {
+struct AABB
+{
     Vector3 min; //!< 最小点
     Vector3 max; //!< 最大点
 };
@@ -28,7 +30,8 @@ struct AABB {
 /// <summary>
 /// 有向境界ボックス（OBB）の形状データ
 /// </summary>
-struct OBB {
+struct OBB
+{
     Vector3 rotationCenter;     // 回転中心
     Vector3 scaleCenter;        // スケール中心
     Vector3 scaleCenterRotated; // 回転後のスケール中心
@@ -40,7 +43,8 @@ struct OBB {
 /// 三角形の形状データ
 /// メッシュコライダーの最小要素として利用する
 /// </summary>
-struct Triangle {
+struct Triangle
+{
     Vector3 v[3];   // 3頂点
     Vector3 normal; // 面法線（正規化済みを想定）
 };

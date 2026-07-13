@@ -10,7 +10,8 @@
 
 #pragma pack(push, 1)
 namespace Hagine {
-struct GPU_FieldSettingsOverride {
+struct GPU_FieldSettingsOverride
+{
     uint32_t overrideMaskX; // overrideMask.x (bit0-31)
     uint32_t overrideMaskY; // overrideMask.y (bit32-63)
     float maskPadding[2];   // アライメント
@@ -76,7 +77,8 @@ struct GPU_FieldSettingsOverride {
 
 static constexpr size_t kGPUOverrideStride = sizeof(GPU_FieldSettingsOverride);
 
-static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_FieldSettingsOverride &dst) {
+static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_FieldSettingsOverride &dst)
+{
     dst.overrideMaskX = static_cast<uint32_t>(src.overrideMask & 0xFFFFFFFFULL);
     dst.overrideMaskY = static_cast<uint32_t>((src.overrideMask >> 32) & 0xFFFFFFFFULL);
     dst.maskPadding[0] = dst.maskPadding[1] = 0.0f;
@@ -162,18 +164,21 @@ static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_Fiel
     dst.curlNoisePosRandom = src.curlNoisePosRandom;
 }
 
-
-void ParticleCSFieldManager::Finalize() {
+void ParticleCSFieldManager::Finalize()
+{
     // マップ中のリソースはアンマップしてから解放する
-    if (fieldsResource_) {
+    if (fieldsResource_)
+    {
         fieldsResource_->Unmap(0, nullptr);
         fieldsMappedData_ = nullptr;
     }
-    if (fieldCountResource_) {
+    if (fieldCountResource_)
+    {
         fieldCountResource_->Unmap(0, nullptr);
         fieldCountMappedData_ = nullptr;
     }
-    if (overrideResource_) {
+    if (overrideResource_)
+    {
         overrideResource_->Unmap(0, nullptr);
         overrideMappedData_ = nullptr;
     }
@@ -187,14 +192,15 @@ void ParticleCSFieldManager::Finalize() {
     fields_.clear();
 }
 
-
-void ParticleCSFieldManager::Initialize() {
+void ParticleCSFieldManager::Initialize()
+{
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
     srvManager_ = SrvManager::GetInstance();
     CreateGPUResources();
 }
 
-void ParticleCSFieldManager::CreateGPUResources() {
+void ParticleCSFieldManager::CreateGPUResources()
+{
     // フィールド配列バッファ（StructuredBuffer として使う）
     size_t bufSize = sizeof(ParticleFieldData) * kMaxFields;
     fieldsResource_ = dxCommon_->CreateBufferResource(bufSize);
@@ -240,13 +246,16 @@ void ParticleCSFieldManager::CreateGPUResources() {
         kGPUOverrideStride);
 }
 
-void ParticleCSFieldManager::Update() {
+void ParticleCSFieldManager::Update()
+{
     UploadToGPU();
 }
 
-void ParticleCSFieldManager::UploadToGPU() {
+void ParticleCSFieldManager::UploadToGPU()
+{
     uint32_t count = 0;
-    for (auto &f : fields_) {
+    for (auto &f : fields_)
+    {
         if (!f.enabled)
             continue;
         if (count >= kMaxFields)
@@ -263,19 +272,22 @@ void ParticleCSFieldManager::UploadToGPU() {
     *fieldCountMappedData_ = count;
 }
 
-void ParticleCSFieldManager::AddField(const ParticleField &field) {
+void ParticleCSFieldManager::AddField(const ParticleField &field)
+{
     if (static_cast<uint32_t>(fields_.size()) >= kMaxFields)
         return;
     fields_.push_back(field);
 }
 
-void ParticleCSFieldManager::RemoveField(int index) {
+void ParticleCSFieldManager::RemoveField(int index)
+{
     if (index < 0 || index >= static_cast<int>(fields_.size()))
         return;
     fields_.erase(fields_.begin() + index);
 }
 
-ParticleField *ParticleCSFieldManager::GetField(int index) {
+ParticleField *ParticleCSFieldManager::GetField(int index)
+{
     if (index < 0 || index >= static_cast<int>(fields_.size()))
         return nullptr;
     return &fields_[index];
@@ -285,7 +297,8 @@ ParticleField *ParticleCSFieldManager::GetField(int index) {
 // セーブ / ロード
 // =============================================
 
-void ParticleCSFieldManager::SaveFieldData(DataHandler &data, const ParticleField &field) {
+void ParticleCSFieldManager::SaveFieldData(DataHandler &data, const ParticleField &field)
+{
     // 基本情報
     data.Save("name", field.name);
     data.Save("enabled", field.enabled);
@@ -312,13 +325,15 @@ void ParticleCSFieldManager::SaveFieldData(DataHandler &data, const ParticleFiel
 
     // 一度きり設定上書き
     data.Save("enableSettingsOverride", field.data.enableSettingsOverride);
-    if (field.data.enableSettingsOverride) {
+    if (field.data.enableSettingsOverride)
+    {
         SaveOverrideData(data, field.override_);
     }
 
     // Emit時スポーン判定
     data.Save("enableEmitSpawn", field.data.enableEmitSpawn);
-    if (field.data.enableEmitSpawn) {
+    if (field.data.enableEmitSpawn)
+    {
         data.Save("emitSpawnLifeTimeMin", field.data.emitSpawnLifeTimeMin);
         data.Save("emitSpawnLifeTimeMax", field.data.emitSpawnLifeTimeMax);
         data.Save("emitSpawnCount", field.data.emitSpawnCount);
@@ -328,7 +343,8 @@ void ParticleCSFieldManager::SaveFieldData(DataHandler &data, const ParticleFiel
     data.Save("groupId", field.data.groupId);
 }
 
-void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &field) {
+void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &field)
+{
     // 基本情報
     field.name = data.Load("name", field.name);
     field.enabled = data.Load("enabled", field.enabled);
@@ -355,13 +371,15 @@ void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &fie
 
     // 一度きり設定上書き
     field.data.enableSettingsOverride = data.Load("enableSettingsOverride", field.data.enableSettingsOverride);
-    if (field.data.enableSettingsOverride) {
+    if (field.data.enableSettingsOverride)
+    {
         LoadOverrideData(data, field.override_);
     }
 
     // Emit時スポーン判定
     field.data.enableEmitSpawn = data.Load("enableEmitSpawn", field.data.enableEmitSpawn);
-    if (field.data.enableEmitSpawn) {
+    if (field.data.enableEmitSpawn)
+    {
         field.data.emitSpawnLifeTimeMin = data.Load("emitSpawnLifeTimeMin", field.data.emitSpawnLifeTimeMin);
         field.data.emitSpawnLifeTimeMax = data.Load("emitSpawnLifeTimeMax", field.data.emitSpawnLifeTimeMax);
         field.data.emitSpawnCount = data.Load("emitSpawnCount", field.data.emitSpawnCount);
@@ -371,7 +389,8 @@ void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &fie
     field.data.groupId = data.Load("groupId", field.data.groupId);
 }
 
-void ParticleCSFieldManager::SaveOverrideData(DataHandler &data, const ParticleFieldSettingsOverride &ov) {
+void ParticleCSFieldManager::SaveOverrideData(DataHandler &data, const ParticleFieldSettingsOverride &ov)
+{
     // overrideMask を上位/下位 32bit に分けて保存（uint64_t は DataHandler 非対応の場合に対応）
     data.Save("ov_maskLo", static_cast<uint32_t>(ov.overrideMask & 0xFFFFFFFFULL));
     data.Save("ov_maskHi", static_cast<uint32_t>((ov.overrideMask >> 32) & 0xFFFFFFFFULL));
@@ -422,7 +441,8 @@ void ParticleCSFieldManager::SaveOverrideData(DataHandler &data, const ParticleF
     data.Save("ov_curlNoisePosRandom", ov.curlNoisePosRandom);
 }
 
-void ParticleCSFieldManager::LoadOverrideData(DataHandler &data, ParticleFieldSettingsOverride &ov) {
+void ParticleCSFieldManager::LoadOverrideData(DataHandler &data, ParticleFieldSettingsOverride &ov)
+{
     uint32_t lo = data.Load("ov_maskLo", static_cast<uint32_t>(ov.overrideMask & 0xFFFFFFFFULL));
     uint32_t hi = data.Load("ov_maskHi", static_cast<uint32_t>((ov.overrideMask >> 32) & 0xFFFFFFFFULL));
     ov.overrideMask = (static_cast<uint64_t>(hi) << 32) | lo;
@@ -473,16 +493,19 @@ void ParticleCSFieldManager::LoadOverrideData(DataHandler &data, ParticleFieldSe
     ov.curlNoisePosRandom = data.Load("ov_curlNoisePosRandom", ov.curlNoisePosRandom);
 }
 
-void ParticleCSFieldManager::SaveField(const ParticleField &field) {
+void ParticleCSFieldManager::SaveField(const ParticleField &field)
+{
     // フォルダ: Application/Assets/jsons/ParticleField/  ファイル名: field.name.json
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleField", field.name);
     SaveFieldData(*data, field);
     ImGuiNotification::Post("パーティクルフィールドを保存しました: " + field.name, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
-ParticleField ParticleCSFieldManager::LoadField(const std::string &fileName, const ParticleField &defaultField) {
+ParticleField ParticleCSFieldManager::LoadField(const std::string &fileName, const ParticleField &defaultField)
+{
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleField", fileName);
-    if (!data->Exists()) {
+    if (!data->Exists())
+    {
         return defaultField;
     }
     ParticleField field = defaultField;
@@ -495,15 +518,18 @@ ParticleField ParticleCSFieldManager::LoadField(const std::string &fileName, con
 // CreateField
 // =============================================
 
-ParticleField *ParticleCSFieldManager::CreateField(const std::string &name, const std::string &templateName) {
+ParticleField *ParticleCSFieldManager::CreateField(const std::string &name, const std::string &templateName)
+{
     // 上限チェック
-    if (static_cast<uint32_t>(fields_.size()) >= kMaxFields) {
+    if (static_cast<uint32_t>(fields_.size()) >= kMaxFields)
+    {
         return nullptr;
     }
 
     ParticleField newField;
 
-    if (!templateName.empty()) {
+    if (!templateName.empty())
+    {
         // ★ テンプレートjsonが指定されていれば、そのデータを複製して土台にする
         newField = LoadField(templateName, ParticleField{});
     }
@@ -515,7 +541,8 @@ ParticleField *ParticleCSFieldManager::CreateField(const std::string &name, cons
     // （再起動後の復元など、name.json が保存済みの場合に対応）
     {
         std::unique_ptr<DataHandler> selfData = std::make_unique<DataHandler>("ParticleField", name);
-        if (selfData->Exists()) {
+        if (selfData->Exists())
+        {
             LoadFieldData(*selfData, newField);
             newField.name = name; // name だけは引数を優先
         }
@@ -529,14 +556,16 @@ ParticleField *ParticleCSFieldManager::CreateField(const std::string &name, cons
 // =============================================
 // ImGui
 // =============================================
-void ParticleCSFieldManager::DrawImGui() {
+void ParticleCSFieldManager::DrawImGui()
+{
 #ifdef USE_IMGUI
     ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(0.16f, 0.18f, 0.22f, 1.0f));
     ImGui::SetNextWindowSize(ImVec2(420, 600), ImGuiCond_FirstUseEver);
 
     bool show = true;
 
-    if (!ImGui::Begin("パーティクルフィールド管理", &show, ImGuiWindowFlags_NoFocusOnAppearing)) {
+    if (!ImGui::Begin("パーティクルフィールド管理", &show, ImGuiWindowFlags_NoFocusOnAppearing))
+    {
         ImGui::PopStyleColor();
         ImGui::End();
         return;
@@ -554,7 +583,8 @@ void ParticleCSFieldManager::DrawImGui() {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.40f, 0.30f, 0.85f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.28f, 0.50f, 0.38f, 0.95f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.32f, 0.58f, 0.44f, 1.0f));
-    if (ImGui::Button("フィールドを追加", ImVec2(-1, 30))) {
+    if (ImGui::Button("フィールドを追加", ImVec2(-1, 30)))
+    {
         ParticleField newField;
         newField.name = "Field_" + std::to_string(fields_.size());
         newField.enabled = true;
@@ -565,13 +595,15 @@ void ParticleCSFieldManager::DrawImGui() {
 
     // フィールドリスト
     int removeIndex = -1;
-    for (int i = 0; i < static_cast<int>(fields_.size()); ++i) {
+    for (int i = 0; i < static_cast<int>(fields_.size()); ++i)
+    {
         auto &f = fields_[i];
 
         // フィールドタイプ別の色
         ImVec4 headerColor;
         const char *typeLabel;
-        switch (static_cast<ParticleFieldType>(f.data.fieldType)) {
+        switch (static_cast<ParticleFieldType>(f.data.fieldType))
+        {
         case ParticleFieldType::Wind:
             headerColor = ImVec4(0.30f, 0.40f, 0.52f, 0.55f);
             typeLabel = "[風]";
@@ -595,7 +627,8 @@ void ParticleCSFieldManager::DrawImGui() {
         }
 
         // 無効時はグレーアウト
-        if (!f.enabled) {
+        if (!f.enabled)
+        {
             headerColor = ImVec4(0.28f, 0.28f, 0.30f, 0.55f);
         }
 
@@ -607,7 +640,8 @@ void ParticleCSFieldManager::DrawImGui() {
         bool open = ImGui::CollapsingHeader(label.c_str());
         ImGui::PopStyleColor(3);
 
-        if (open) {
+        if (open)
+        {
             ImGui::Indent();
             ImGui::PushItemWidth(200.0f);
 
@@ -619,7 +653,8 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.34f, 0.48f, 0.85f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.44f, 0.60f, 0.95f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.36f, 0.52f, 0.70f, 1.0f));
-            if (ImGui::Button(("保存##save" + std::to_string(i)).c_str(), ImVec2(50, 0))) {
+            if (ImGui::Button(("保存##save" + std::to_string(i)).c_str(), ImVec2(50, 0)))
+            {
                 SaveField(f);
             }
             ImGui::PopStyleColor(3);
@@ -629,7 +664,8 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.46f, 0.24f, 0.24f, 0.85f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.58f, 0.30f, 0.30f, 0.95f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.66f, 0.36f, 0.36f, 1.0f));
-            if (ImGui::Button(("削除##del" + std::to_string(i)).c_str(), ImVec2(60, 0))) {
+            if (ImGui::Button(("削除##del" + std::to_string(i)).c_str(), ImVec2(60, 0)))
+            {
                 removeIndex = i;
             }
             ImGui::PopStyleColor(3);
@@ -639,7 +675,8 @@ void ParticleCSFieldManager::DrawImGui() {
             // 名前
             char nameBuf[128];
             strncpy_s(nameBuf, f.name.c_str(), sizeof(nameBuf) - 1);
-            if (ImGui::InputText(("名前##nm" + std::to_string(i)).c_str(), nameBuf, sizeof(nameBuf))) {
+            if (ImGui::InputText(("名前##nm" + std::to_string(i)).c_str(), nameBuf, sizeof(nameBuf)))
+            {
                 f.name = nameBuf;
             }
 
@@ -653,7 +690,8 @@ void ParticleCSFieldManager::DrawImGui() {
 
             const char *typeItems[] = {"風 (Wind)", "引力 (Attract)", "斥力 (Repel)", "渦巻き (Vortex)"};
             int typeIdx = static_cast<int>(f.data.fieldType);
-            if (ImGui::Combo(("##type" + std::to_string(i)).c_str(), &typeIdx, typeItems, 4)) {
+            if (ImGui::Combo(("##type" + std::to_string(i)).c_str(), &typeIdx, typeItems, 4))
+            {
                 f.data.fieldType = static_cast<uint32_t>(typeIdx);
             }
 
@@ -682,11 +720,14 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::DragFloat(("強さ##str" + std::to_string(i)).c_str(), &f.data.strength, 0.05f, -999.0f, 999.0f, "%.3f");
 
             auto ft = static_cast<ParticleFieldType>(f.data.fieldType);
-            if (ft == ParticleFieldType::Wind) {
+            if (ft == ParticleFieldType::Wind)
+            {
                 ImGui::DragFloat3(("方向##dir" + std::to_string(i)).c_str(), &f.data.direction.x, 0.01f, -1.0f, 1.0f, "%.3f");
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("正規化しなくてもシェーダー側で正規化されます");
-            } else if (ft == ParticleFieldType::Vortex) {
+            }
+            else if (ft == ParticleFieldType::Vortex)
+            {
                 ImGui::DragFloat3(("回転軸##dir" + std::to_string(i)).c_str(), &f.data.direction.x, 0.01f, -1.0f, 1.0f, "%.3f");
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("渦の回転軸（例: 0,1,0 = Y軸回り）");
@@ -703,10 +744,12 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::PopStyleColor();
 
             bool lifeDrainEnabled = (f.data.enableLifeDrain != 0);
-            if (ImGui::Checkbox(("有効##ld" + std::to_string(i)).c_str(), &lifeDrainEnabled)) {
+            if (ImGui::Checkbox(("有効##ld" + std::to_string(i)).c_str(), &lifeDrainEnabled))
+            {
                 f.data.enableLifeDrain = lifeDrainEnabled ? 1u : 0u;
             }
-            if (lifeDrainEnabled) {
+            if (lifeDrainEnabled)
+            {
                 ImGui::DragFloat(("ドレイン量(秒/秒)##ldr" + std::to_string(i)).c_str(),
                                  &f.data.lifeTimeDrain, 0.05f, 0.0f, 100.0f, "%.3f");
                 if (ImGui::IsItemHovered())
@@ -724,10 +767,12 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::PopStyleColor();
 
             bool forceTrail = (f.data.enableForceTrail != 0);
-            if (ImGui::Checkbox(("有効##ft" + std::to_string(i)).c_str(), &forceTrail)) {
+            if (ImGui::Checkbox(("有効##ft" + std::to_string(i)).c_str(), &forceTrail))
+            {
                 f.data.enableForceTrail = forceTrail ? 1u : 0u;
             }
-            if (forceTrail) {
+            if (forceTrail)
+            {
                 ImGui::DragFloat(("生成間隔上書き##tdo" + std::to_string(i)).c_str(),
                                  &f.data.trailSpawnDistanceOverride, 0.01f, 0.0f, 10.0f, "%.3f");
                 if (ImGui::IsItemHovered())
@@ -745,10 +790,12 @@ void ParticleCSFieldManager::DrawImGui() {
             ImGui::PopStyleColor();
 
             bool colorMul = (f.data.enableColorMultiply != 0);
-            if (ImGui::Checkbox(("有効##cm" + std::to_string(i)).c_str(), &colorMul)) {
+            if (ImGui::Checkbox(("有効##cm" + std::to_string(i)).c_str(), &colorMul))
+            {
                 f.data.enableColorMultiply = colorMul ? 1u : 0u;
             }
-            if (colorMul) {
+            if (colorMul)
+            {
                 ImGui::ColorEdit4(("乗算色##clr" + std::to_string(i)).c_str(),
                                   &f.data.colorMultiplier.x,
                                   ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR);
@@ -771,10 +818,12 @@ void ParticleCSFieldManager::DrawImGui() {
                 ImGui::SetTooltip("フィールドに最初に入ったとき、チェックした\nParticleCSSettingsの項目を書き換えます。\n一度書き換えたパーティクルは再度入っても変化しません。");
 
             bool settingsOvEnabled = (f.data.enableSettingsOverride != 0);
-            if (ImGui::Checkbox(("有効##so" + std::to_string(i)).c_str(), &settingsOvEnabled)) {
+            if (ImGui::Checkbox(("有効##so" + std::to_string(i)).c_str(), &settingsOvEnabled))
+            {
                 f.data.enableSettingsOverride = settingsOvEnabled ? 1u : 0u;
             }
-            if (settingsOvEnabled) {
+            if (settingsOvEnabled)
+            {
                 DrawOverrideImGui(f.override_, i);
             }
 
@@ -795,15 +844,18 @@ void ParticleCSFieldManager::DrawImGui() {
                     "大きさ・間隔はエミッター側の設定に従います。");
 
             bool emitSpawn = (f.data.enableEmitSpawn != 0);
-            if (ImGui::Checkbox(("有効##es" + std::to_string(i)).c_str(), &emitSpawn)) {
+            if (ImGui::Checkbox(("有効##es" + std::to_string(i)).c_str(), &emitSpawn))
+            {
                 f.data.enableEmitSpawn = emitSpawn ? 1u : 0u;
             }
-            if (emitSpawn) {
+            if (emitSpawn)
+            {
                 ImGui::Indent();
                 ImGui::PushItemWidth(180.0f);
 
                 int spawnCount = (int)f.data.emitSpawnCount;
-                if (ImGui::DragInt(("発生数/秒##esCount" + std::to_string(i)).c_str(), &spawnCount, 100, 0, 500000)) {
+                if (ImGui::DragInt(("発生数/秒##esCount" + std::to_string(i)).c_str(), &spawnCount, 100, 0, 500000))
+                {
                     f.data.emitSpawnCount = (uint32_t)std::max(0, spawnCount);
                 }
                 if (ImGui::IsItemHovered())
@@ -837,14 +889,18 @@ void ParticleCSFieldManager::DrawImGui() {
                     "エミッター側は SetFieldGroupId() で設定します。");
             ImGui::PushItemWidth(120.0f);
             int gid = f.data.groupId;
-            if (ImGui::DragInt(("##groupId" + std::to_string(i)).c_str(), &gid, 1, -1, 255)) {
+            if (ImGui::DragInt(("##groupId" + std::to_string(i)).c_str(), &gid, 1, -1, 255))
+            {
                 f.data.groupId = std::max(-1, gid);
             }
             ImGui::PopItemWidth();
             ImGui::SameLine();
-            if (f.data.groupId == -1) {
+            if (f.data.groupId == -1)
+            {
                 ImGui::TextDisabled("(全エミッター対象)");
-            } else {
+            }
+            else
+            {
                 ImGui::Text("(ID: %d のエミッターのみ)", f.data.groupId);
             }
 
@@ -855,7 +911,8 @@ void ParticleCSFieldManager::DrawImGui() {
         ImGui::Spacing();
     }
 
-    if (removeIndex >= 0) {
+    if (removeIndex >= 0)
+    {
         RemoveField(removeIndex);
     }
 
@@ -871,7 +928,8 @@ void ParticleCSFieldManager::DrawImGui() {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("各フィールドの影響範囲・方向をワイヤーフレームで表示します");
 
-    if (showGizmos_) {
+    if (showGizmos_)
+    {
         DrawFieldGizmos();
     }
 
@@ -882,7 +940,8 @@ void ParticleCSFieldManager::DrawImGui() {
 // =============================================
 // DrawOverrideImGui
 // =============================================
-void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov, int idx) {
+void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov, int idx)
+{
 #ifdef USE_IMGUI
     using namespace ParticleSettingsOverrideBits;
     const std::string s = std::to_string(idx);
@@ -890,7 +949,8 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     // ビット操作ヘルパー（チェックボックスのトグルに使う）
     auto CheckBit = [&](const char *label, uint64_t bit, auto &value, auto min_v, auto max_v, const char *fmt = "%.3f") {
         bool checked = (ov.overrideMask & bit) != 0;
-        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked)) {
+        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked))
+        {
             if (checked)
                 ov.overrideMask |= bit;
             else
@@ -899,9 +959,12 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
         ImGui::SameLine();
         if (!checked)
             ImGui::BeginDisabled();
-        if constexpr (std::is_same_v<std::decay_t<decltype(value)>, float>) {
+        if constexpr (std::is_same_v<std::decay_t<decltype(value)>, float>)
+        {
             ImGui::DragFloat((label + s).c_str(), &value, 0.01f, min_v, max_v, fmt);
-        } else if constexpr (std::is_same_v<std::decay_t<decltype(value)>, uint32_t>) {
+        }
+        else if constexpr (std::is_same_v<std::decay_t<decltype(value)>, uint32_t>)
+        {
             int v = static_cast<int>(value);
             if (ImGui::DragInt((label + s).c_str(), &v, 1, (int)min_v, (int)max_v))
                 value = static_cast<uint32_t>(v);
@@ -911,7 +974,8 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     };
     auto CheckBitBool = [&](const char *label, uint64_t bit, uint32_t &flag) {
         bool checked = (ov.overrideMask & bit) != 0;
-        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked)) {
+        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked))
+        {
             if (checked)
                 ov.overrideMask |= bit;
             else
@@ -928,7 +992,8 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     };
     auto CheckBitVec3 = [&](const char *label, uint64_t bit, Vector3 &v) {
         bool checked = (ov.overrideMask & bit) != 0;
-        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked)) {
+        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked))
+        {
             if (checked)
                 ov.overrideMask |= bit;
             else
@@ -943,7 +1008,8 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
     };
     auto CheckBitVec4 = [&](const char *label, uint64_t bit, Vector4 &v) {
         bool checked = (ov.overrideMask & bit) != 0;
-        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked)) {
+        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked))
+        {
             if (checked)
                 ov.overrideMask |= bit;
             else
@@ -1070,8 +1136,10 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
 // ギズモ描画
 // =============================================
 
-void ParticleCSFieldManager::DrawFieldGizmos() {
-    for (const auto &f : fields_) {
+void ParticleCSFieldManager::DrawFieldGizmos()
+{
+    for (const auto &f : fields_)
+    {
         if (!f.enabled)
             continue;
 
@@ -1081,7 +1149,8 @@ void ParticleCSFieldManager::DrawFieldGizmos() {
 
         Vector4 color;
         auto ft = static_cast<ParticleFieldType>(f.data.fieldType);
-        switch (ft) {
+        switch (ft)
+        {
         case ParticleFieldType::Wind:
             // 風 → 水色
             color = {0.3f, 0.7f, 1.0f, alpha};
@@ -1107,7 +1176,8 @@ void ParticleCSFieldManager::DrawFieldGizmos() {
         DrawFieldSphere(f, color);
 
         // タイプ別の方向・強さ表示
-        switch (ft) {
+        switch (ft)
+        {
         case ParticleFieldType::Wind:
             DrawWindArrows(f, color);
             break;
@@ -1129,12 +1199,14 @@ void ParticleCSFieldManager::DrawFieldGizmos() {
 }
 
 // --- 影響範囲球 ---
-void ParticleCSFieldManager::DrawFieldSphere(const ParticleField &field, const Vector4 &color) {
+void ParticleCSFieldManager::DrawFieldSphere(const ParticleField &field, const Vector4 &color)
+{
     DrawLine3D::GetInstance()->DrawSphere(field.data.position, color, field.data.radius, 16);
 }
 
 // --- Wind：球内に等間隔で方向矢印を描く ---
-void ParticleCSFieldManager::DrawWindArrows(const ParticleField &field, const Vector4 &color) {
+void ParticleCSFieldManager::DrawWindArrows(const ParticleField &field, const Vector4 &color)
+{
     const Vector3 &center = field.data.position;
     const float r = field.data.radius;
 
@@ -1155,9 +1227,12 @@ void ParticleCSFieldManager::DrawWindArrows(const ParticleField &field, const Ve
     // 球内に 3×3×3 グリッドで矢印を配置
     const int grid = 3;
     float step = r * 1.6f / (grid - 1);
-    for (int ix = 0; ix < grid; ++ix) {
-        for (int iy = 0; iy < grid; ++iy) {
-            for (int iz = 0; iz < grid; ++iz) {
+    for (int ix = 0; ix < grid; ++ix)
+    {
+        for (int iy = 0; iy < grid; ++iy)
+        {
+            for (int iz = 0; iz < grid; ++iz)
+            {
                 Vector3 offset = {
                     -r * 0.8f + ix * step,
                     -r * 0.8f + iy * step,
@@ -1184,7 +1259,8 @@ void ParticleCSFieldManager::DrawWindArrows(const ParticleField &field, const Ve
                     dir.x * up.y - dir.y * up.x,
                 };
                 float sLen = std::sqrt(side.x * side.x + side.y * side.y + side.z * side.z);
-                if (sLen > 1e-5f) {
+                if (sLen > 1e-5f)
+                {
                     side.x /= sLen;
                     side.y /= sLen;
                     side.z /= sLen;
@@ -1200,7 +1276,8 @@ void ParticleCSFieldManager::DrawWindArrows(const ParticleField &field, const Ve
 }
 
 // --- Attract / Repel：球面から中心、または中心から球面へ向かう放射線 ---
-void ParticleCSFieldManager::DrawRadialLines(const ParticleField &field, const Vector4 &color, bool inward) {
+void ParticleCSFieldManager::DrawRadialLines(const ParticleField &field, const Vector4 &color, bool inward)
+{
     const Vector3 &center = field.data.position;
     const float r = field.data.radius;
 
@@ -1211,9 +1288,11 @@ void ParticleCSFieldManager::DrawRadialLines(const ParticleField &field, const V
     const int stacks = 4;
     const int slices = 8;
     const float PI = 3.1415926535f;
-    for (int si = 0; si < stacks; ++si) {
+    for (int si = 0; si < stacks; ++si)
+    {
         float theta = PI * (si + 0.5f) / stacks; // 0 〜 π
-        for (int sj = 0; sj < slices; ++sj) {
+        for (int sj = 0; sj < slices; ++sj)
+        {
             float phi = 2.0f * PI * sj / slices;
             Vector3 dir = {
                 std::sin(theta) * std::cos(phi),
@@ -1227,10 +1306,13 @@ void ParticleCSFieldManager::DrawRadialLines(const ParticleField &field, const V
                 center.y + dir.y * r * (1.0f - ratio),
                 center.z + dir.z * r * (1.0f - ratio),
             };
-            if (inward) {
+            if (inward)
+            {
                 // 球面 → 中心方向へ（Attract）
                 DrawLine3D::GetInstance()->SetPoints(surface, inner, color);
-            } else {
+            }
+            else
+            {
                 // 中心 → 球面方向へ（Repel）
                 DrawLine3D::GetInstance()->SetPoints(inner, surface, color);
             }
@@ -1239,7 +1321,8 @@ void ParticleCSFieldManager::DrawRadialLines(const ParticleField &field, const V
 }
 
 // --- Vortex：回転軸周りに螺旋状の円弧を描く ---
-void ParticleCSFieldManager::DrawVortexArcs(const ParticleField &field, const Vector4 &color) {
+void ParticleCSFieldManager::DrawVortexArcs(const ParticleField &field, const Vector4 &color)
+{
     const Vector3 &center = field.data.position;
     const float r = field.data.radius;
 
@@ -1281,7 +1364,8 @@ void ParticleCSFieldManager::DrawVortexArcs(const ParticleField &field, const Ve
     const int arcLayers = 3;
     const int arcSegments = 24;
     const float PI = 3.1415926535f;
-    for (int layer = 0; layer < arcLayers; ++layer) {
+    for (int layer = 0; layer < arcLayers; ++layer)
+    {
         // 各段を軸方向にオフセット（-r*0.5 〜 r*0.5）
         float heightOffset = -r * 0.5f + r * layer / (arcLayers - 1);
         Vector3 layerCenter = {
@@ -1292,7 +1376,8 @@ void ParticleCSFieldManager::DrawVortexArcs(const ParticleField &field, const Ve
         // 段ごとに半径を変えて円錐状に見せる
         float layerRadius = r * (0.5f + 0.5f * std::sin(PI * layer / (arcLayers - 1)));
 
-        for (int seg = 0; seg < arcSegments; ++seg) {
+        for (int seg = 0; seg < arcSegments; ++seg)
+        {
             float t1 = sign * 2.0f * PI * turns * seg / arcSegments;
             float t2 = sign * 2.0f * PI * turns * (seg + 1) / arcSegments;
 

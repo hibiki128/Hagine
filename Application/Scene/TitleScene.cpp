@@ -12,7 +12,8 @@
 REGISTER_SCENE("TITLE", TitleScene)
 
 using namespace Hagine;
-void TitleScene::Initialize() {
+void TitleScene::Initialize()
+{
     /// ===================================================
     /// 初期化
     /// ===================================================
@@ -56,14 +57,16 @@ void TitleScene::Initialize() {
     });
 }
 
-void TitleScene::Finalize() {
+void TitleScene::Finalize()
+{
     /// ===================================================
     /// 終了処理
     /// ===================================================
     BaseScene::Finalize();
 }
 
-void TitleScene::Update() {
+void TitleScene::Update()
+{
     /// ===================================================
     /// 更新処理
     /// ===================================================
@@ -81,16 +84,19 @@ void TitleScene::Update() {
     time_ += Frame::DeltaTime();
 
     // 一定時間経過後にカメラを移動
-    if (time_ >= kMaxTime_ && !firstMove_) {
+    if (time_ >= kMaxTime_ && !firstMove_)
+    {
         vp_.EaseCameraMove(EasingType::InCubic, "TitleMovedCamera", 1.0f);
         firstMove_ = true;
     }
 
     // 進行フェーズごとの入力処理
-    switch (titlePhase_) {
+    switch (titlePhase_)
+    {
     case TitlePhase::WaitStart:
         // Press Start でメニューを開く
-        if (time_ >= 3.0f && !vp_.GetIsCameraMove() && PressStartInput()) {
+        if (time_ >= 3.0f && !vp_.GetIsCameraMove() && PressStartInput())
+        {
             titlePhase_ = TitlePhase::Menu;
             menuIndex_ = 0;
             menuAnimTimer_ = 0.0f;  // 出現アニメを最初から
@@ -106,10 +112,12 @@ void TitleScene::Update() {
         menuAnimTimer_ += dt;
 
         // カーソル移動（上=チュートリアル / 下=トレーニング）
-        if (UpInput()) {
+        if (UpInput())
+        {
             menuIndex_ = 0;
         }
-        if (DownInput()) {
+        if (DownInput())
+        {
             menuIndex_ = 1;
         }
 
@@ -118,7 +126,8 @@ void TitleScene::Update() {
         menuSelectLerp_ += (static_cast<float>(menuIndex_) - menuSelectLerp_) * selT;
 
         // 決定 → 退場アニメへ（即遷移せず、メニューをスムーズに閉じてから分岐する）
-        if (ConfirmInput()) {
+        if (ConfirmInput())
+        {
             titlePhase_ = TitlePhase::MenuClosing;
             menuCloseTimer_ = 0.0f;
         }
@@ -128,14 +137,18 @@ void TitleScene::Update() {
     case TitlePhase::MenuClosing:
         // 退場アニメを進め、完了したら選択に応じて分岐する
         menuCloseTimer_ += Frame::DeltaTime();
-        if (menuCloseTimer_ >= kMenuCloseDuration) {
-            if (menuIndex_ == 0) {
+        if (menuCloseTimer_ >= kMenuCloseDuration)
+        {
+            if (menuIndex_ == 0)
+            {
                 // チュートリアル: 従来のカメラ演出→トランジションなしで遷移
                 vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
                 titleUI_->RequestStartCinematic();
                 secondMove_ = true;
                 titlePhase_ = TitlePhase::TutorialCinematic;
-            } else {
+            }
+            else
+            {
                 // トレーニング: カメラ演出なし、通常フェードで遷移
                 sceneManager_->GetSceneTransition()->SetUseTransition(true);
                 sceneManager_->NextSceneReservation("TRAINING");
@@ -152,17 +165,20 @@ void TitleScene::Update() {
     titleUI_->Update();
 }
 
-void TitleScene::Draw() {
+void TitleScene::Draw()
+{
     // 描画は DrawSystem が管理
 }
 
-void TitleScene::DrawForOffScreen() {
+void TitleScene::DrawForOffScreen()
+{
     /// ===================================================
     /// オフスクリーン描画処理
     /// ===================================================
 }
 
-void TitleScene::AddSceneSetting() {
+void TitleScene::AddSceneSetting()
+{
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
@@ -170,41 +186,48 @@ void TitleScene::AddSceneSetting() {
     vp_.ShowDebugInfo();
 }
 
-void TitleScene::AddObjectSetting() {
+void TitleScene::AddObjectSetting()
+{
     /// ===================================================
     /// オブジェクト設定（デバッグ）
     /// ===================================================
 }
 
-void TitleScene::AddParticleSetting() {
+void TitleScene::AddParticleSetting()
+{
     /// ===================================================
     /// パーティクル設定（デバッグ）
     /// ===================================================
     DrawParticleEditorUI();
 }
 
-void TitleScene::CameraUpdate() {
+void TitleScene::CameraUpdate()
+{
     /// ===================================================
     /// カメラ更新
     /// ===================================================
     debugCamera_->Update();
 }
 
-void TitleScene::ChangeScene() {
+void TitleScene::ChangeScene()
+{
     /// ===================================================
     /// シーン切り替え（チュートリアル演出の完了を待って遷移）
     /// ===================================================
     if (titlePhase_ == TitlePhase::TutorialCinematic &&
-        !vp_.GetIsCameraMove() && titleUI_->GetIsFinish()) {
+        !vp_.GetIsCameraMove() && titleUI_->GetIsFinish())
+    {
         sceneManager_->GetSceneTransition()->SetUseTransition(false);
         sceneManager_->NextSceneReservation("TUTORIAL");
     }
 }
 
 // 選択メニュー
-void TitleScene::CreateMenuSprites() {
+void TitleScene::CreateMenuSprites()
+{
     auto keys = TextureManager::GetInstance()->GetAllFontKeys();
-    if (keys.empty()) {
+    if (keys.empty())
+    {
         return;
     }
     const std::string &fontKey = keys[0];
@@ -231,8 +254,10 @@ void TitleScene::CreateMenuSprites() {
     make(menuCursor_, "title_menu_cursor", "▶", {kMenuX - kMenuCursorGap, kMenuTutorialY});
 }
 
-void TitleScene::DrawMenu() {
-    if (titlePhase_ != TitlePhase::Menu && titlePhase_ != TitlePhase::MenuClosing) {
+void TitleScene::DrawMenu()
+{
+    if (titlePhase_ != TitlePhase::Menu && titlePhase_ != TitlePhase::MenuClosing)
+    {
         return;
     }
 
@@ -254,7 +279,8 @@ void TitleScene::DrawMenu() {
 
     // 決定後は右へずらしながらフェードアウト（ease-in）する
     float closeFade = 1.0f;
-    if (titlePhase_ == TitlePhase::MenuClosing) {
+    if (titlePhase_ == TitlePhase::MenuClosing)
+    {
         const float closeT = std::clamp(menuCloseTimer_ / kMenuCloseDuration, 0.0f, 1.0f);
         const float slide = kMenuCloseSlide * (closeT * closeT); // ease-in
         tutorialPos.x += slide;
@@ -266,17 +292,20 @@ void TitleScene::DrawMenu() {
     const float tutorialHi = 0.55f + 0.45f * (1.0f - menuSelectLerp_);
     const float trainingHi = 0.55f + 0.45f * menuSelectLerp_;
 
-    if (menuTutorial_) {
+    if (menuTutorial_)
+    {
         menuTutorial_->SetPosition(tutorialPos);
         menuTutorial_->SetAlpha(tutorialHi * tutorialSlide * closeFade);
         menuTutorial_->Draw();
     }
-    if (menuTraining_) {
+    if (menuTraining_)
+    {
         menuTraining_->SetPosition(trainingPos);
         menuTraining_->SetAlpha(trainingHi * trainingSlide * closeFade);
         menuTraining_->Draw();
     }
-    if (menuCursor_) {
+    if (menuCursor_)
+    {
         // カーソルは補間値に応じて2項目の間を滑らかに移動する
         const float cursorX = tutorialPos.x + (trainingPos.x - tutorialPos.x) * menuSelectLerp_;
         const float cursorY = tutorialPos.y + (trainingPos.y - tutorialPos.y) * menuSelectLerp_;
@@ -287,29 +316,37 @@ void TitleScene::DrawMenu() {
 }
 
 // 入力ヘルパ
-bool TitleScene::PressStartInput() {
-    if (gamePad_->IsConnected()) {
+bool TitleScene::PressStartInput()
+{
+    if (gamePad_->IsConnected())
+    {
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
     }
     return input_->TriggerKey(DIK_SPACE);
 }
 
-bool TitleScene::ConfirmInput() {
-    if (gamePad_->IsConnected()) {
+bool TitleScene::ConfirmInput()
+{
+    if (gamePad_->IsConnected())
+    {
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
     }
     return input_->TriggerKey(DIK_SPACE) || input_->TriggerKey(DIK_RETURN);
 }
 
-bool TitleScene::UpInput() {
-    if (gamePad_->IsConnected()) {
+bool TitleScene::UpInput()
+{
+    if (gamePad_->IsConnected())
+    {
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_DPAD_UP) || gamePad_->GetLeftStickY() > 0.5f;
     }
     return input_->TriggerKey(DIK_W) || input_->TriggerKey(DIK_UP);
 }
 
-bool TitleScene::DownInput() {
-    if (gamePad_->IsConnected()) {
+bool TitleScene::DownInput()
+{
+    if (gamePad_->IsConnected())
+    {
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_DPAD_DOWN) || gamePad_->GetLeftStickY() < -0.5f;
     }
     return input_->TriggerKey(DIK_S) || input_->TriggerKey(DIK_DOWN);

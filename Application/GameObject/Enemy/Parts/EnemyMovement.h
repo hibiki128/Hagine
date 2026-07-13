@@ -10,7 +10,8 @@ class Enemy;
 /// 速度・加速度・イージング移動・回転（プレイヤー追従）・接地判定と、
 /// それらのパラメータを担当する。実際の駆動はビヘイビアツリーから行われる
 /// </summary>
-class EnemyMovement {
+class EnemyMovement
+{
   public:
     /// ===================================================
     /// public method

@@ -14,7 +14,8 @@ namespace Hagine {
 /// グループの生成・複製・削除に加え、エミッター用独立グループの再利用プールを管理し、
 /// クローン毎のGPUバッファ確保とSRVの入れ替わりを抑制する
 /// </summary>
-class ParticleCSGroupManager {
+class ParticleCSGroupManager
+{
   private:
     /// ===================================================
     /// private methods
@@ -41,7 +42,8 @@ class ParticleCSGroupManager {
     /// インスタンスを取得
     /// </summary>
     /// <returns>ParticleCSGroupManager*: シングルトンインスタンス</returns>
-    static ParticleCSGroupManager *GetInstance() {
+    static ParticleCSGroupManager *GetInstance()
+    {
         static ParticleCSGroupManager instance;
         return &instance;
     }
@@ -100,21 +102,26 @@ class ParticleCSGroupManager {
     /// <returns>グループ名の一覧（名前順）</returns>
     std::vector<std::string> GetAllGroupNames() const;
 
-    std::unique_ptr<ParticleCSGroup> CreateParticleCSGroupCopy(const std::string &name) {
+    std::unique_ptr<ParticleCSGroup> CreateParticleCSGroupCopy(const std::string &name)
+    {
         ParticleCSGroup *originalGroup = GetParticleCSGroup(name);
-        if (!originalGroup) {
+        if (!originalGroup)
+        {
             return nullptr;
         }
 
         auto copiedGroup = std::make_unique<ParticleCSGroup>();
 
         // プリミティブタイプか通常のモデルかを判定してコピー
-        if (originalGroup->GetPrimitiveType() != PrimitiveType::None) {
+        if (originalGroup->GetPrimitiveType() != PrimitiveType::None)
+        {
             // プリミティブパーティクルグループの場合
             std::string texturePath = originalGroup->GetParticleGroupData().materials.empty() ? "" : originalGroup->GetParticleGroupData().materials[0].textureFilePath;
             uint32_t maxParticleCount = originalGroup->GetSettingsData()->maxParticleCount;
             copiedGroup->CreatePrimitiveParticleGroup(name, originalGroup->GetPrimitiveType(), maxParticleCount, texturePath);
-        } else {
+        }
+        else
+        {
             // 通常のモデルパーティクルグループの場合
             std::string texturePath = originalGroup->GetParticleGroupData().materials.empty() ? "" : originalGroup->GetParticleGroupData().materials[0].textureFilePath;
             uint32_t maxParticleCount = originalGroup->GetSettingsData()->maxParticleCount;
@@ -128,9 +135,11 @@ class ParticleCSGroupManager {
     // テンプレート名キーの再利用プールに空きがあれば GPU バッファ/SRV を
     // 再確保せず使い回し（InitParticle で状態だけリセット）、無ければ新規生成する。
     // これによりクローン毎の maxParticleCount*sizeof(CSParticle) 確保 + SRV churn を解消する。
-    ParticleCSGroup *GetIndependentParticleGroup(const std::string &name) {
+    ParticleCSGroup *GetIndependentParticleGroup(const std::string &name)
+    {
         auto poolIt = groupPool_.find(name);
-        if (poolIt != groupPool_.end() && !poolIt->second.empty()) {
+        if (poolIt != groupPool_.end() && !poolIt->second.empty())
+        {
             std::unique_ptr<ParticleCSGroup> reused = std::move(poolIt->second.back());
             poolIt->second.pop_back();
             ParticleCSGroup *groupPtr = reused.get();
@@ -141,7 +150,8 @@ class ParticleCSGroupManager {
 
         // プールに無ければ新規生成（従来通り）
         auto copiedGroup = CreateParticleCSGroupCopy(name);
-        if (!copiedGroup) {
+        if (!copiedGroup)
+        {
             return nullptr;
         }
 
@@ -157,15 +167,20 @@ class ParticleCSGroupManager {
     //       ここでは「ポインタ値の比較」しか行わずデリファレンスしない。
     //       名前は所有側 (*it) の有効なオブジェクトから取得する。
     //       Finalize 後など independentGroups_ が空なら単に何もしない（安全）。
-    void ReleaseIndependentGroup(ParticleCSGroup *group) {
-        if (!group) {
+    void ReleaseIndependentGroup(ParticleCSGroup *group)
+    {
+        if (!group)
+        {
             return;
         }
-        for (auto it = independentGroups_.begin(); it != independentGroups_.end(); ++it) {
-            if (it->get() == group) {                          // ポインタ比較のみ（derefしない）
+        for (auto it = independentGroups_.begin(); it != independentGroups_.end(); ++it)
+        {
+            if (it->get() == group)
+            {                                                   // ポインタ比較のみ（derefしない）
                 const std::string name = (*it)->GetGroupName(); // 所有側は有効なので安全
                 auto &pool = groupPool_[name];
-                if (pool.size() < kMaxPooledPerTemplate) {
+                if (pool.size() < kMaxPooledPerTemplate)
+                {
                     pool.emplace_back(std::move(*it)); // 上限内なら再利用のため保持
                 }
                 // 上限超過分は unique_ptr 破棄（GPU リソース解放）
@@ -176,9 +191,11 @@ class ParticleCSGroupManager {
         // 見つからない（既に返却済み / Finalize 済み）→ 何もしない
     }
 
-    std::vector<ParticleCSGroup *> GetParticleGroups() {
+    std::vector<ParticleCSGroup *> GetParticleGroups()
+    {
         std::vector<ParticleCSGroup *> result;
-        for (const auto &group : particleGroups_) {
+        for (const auto &group : particleGroups_)
+        {
             result.push_back(group.get()); // unique_ptr から生ポインタを取得
         }
         return result;
@@ -186,13 +203,17 @@ class ParticleCSGroupManager {
 
     // シーン遷移時に呼ばれる。使用中の独立グループを破棄せず（上限内で）プールへ
     // 退避し、次シーンで再利用できるようにする。上限超過分のみ解放する。
-    void ClearIndependentGroups() {
-        for (auto &group : independentGroups_) {
-            if (!group) {
+    void ClearIndependentGroups()
+    {
+        for (auto &group : independentGroups_)
+        {
+            if (!group)
+            {
                 continue;
             }
             auto &pool = groupPool_[group->GetGroupName()];
-            if (pool.size() < kMaxPooledPerTemplate) {
+            if (pool.size() < kMaxPooledPerTemplate)
+            {
                 pool.emplace_back(std::move(group));
             }
         }
@@ -201,7 +222,8 @@ class ParticleCSGroupManager {
 
     // 名前を指定してパーティクルグループを削除する
     // particleGroups_ と independentGroups_ の両方から探して削除する
-    void RemoveParticleCSGroup(const std::string &groupName) {
+    void RemoveParticleCSGroup(const std::string &groupName)
+    {
         // メタデータ登録簿からも削除（以降の遅延生成・一覧表示から除外する）
         groupDescs_.erase(groupName);
         // particleGroups_ から削除
@@ -220,7 +242,8 @@ class ParticleCSGroupManager {
             independentGroups_.end());
     }
 
-    void RemoveUnusedIndependentGroups(const std::unordered_set<std::string> &usedGroupNames) {
+    void RemoveUnusedIndependentGroups(const std::unordered_set<std::string> &usedGroupNames)
+    {
         independentGroups_.erase(
             std::remove_if(independentGroups_.begin(), independentGroups_.end(),
                            [&usedGroupNames](const std::unique_ptr<ParticleCSGroup> &group) {
@@ -236,7 +259,8 @@ class ParticleCSGroupManager {
 
     // JSON から読み出したグループ生成用メタデータ。
     // 起動時はこれだけを保持し、実体(GPUバッファ)は要求時に遅延生成する。
-    struct GroupDesc {
+    struct GroupDesc
+    {
         std::string groupName;
         std::string texturePath;
         std::string modelPath;

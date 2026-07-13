@@ -8,7 +8,8 @@
 #include <unordered_map>
 
 namespace Hagine {
-class CsvLoad {
+class CsvLoad
+{
   public:
     CsvLoad() = default;
     ~CsvLoad() = default;
@@ -19,7 +20,7 @@ class CsvLoad {
     /// 終了
     /// </summary>
     void Finalize();
- 
+
     /// <summary>
     /// CSVファイルを読み込み、二次元配列の MapChip に変換
     /// </summary>

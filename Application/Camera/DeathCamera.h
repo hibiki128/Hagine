@@ -5,7 +5,8 @@
 /// <summary>
 /// プレイヤー死亡時のカメラ演出を行うクラス
 /// </summary>
-class DeathCamera {
+class DeathCamera
+{
   public:
     /// ===================================================
     /// public method
@@ -64,10 +65,10 @@ class DeathCamera {
     static constexpr float kFarZ = 1100.0f; // 描画距離の遠面
 
     // イージング設定
-    static constexpr float kHalfwayRatio = 0.5f;        // 中間地点の割合
-    static constexpr float kEasingEndThreshold = 1.0f;  // イージング終了しきい値
-    static constexpr float kEasingMaxValue = 1.0f;      // イージングの最大値
-    static constexpr float kTimerReset = 0.0f;          // タイマーリセット値
+    static constexpr float kHalfwayRatio = 0.5f;       // 中間地点の割合
+    static constexpr float kEasingEndThreshold = 1.0f; // イージング終了しきい値
+    static constexpr float kEasingMaxValue = 1.0f;     // イージングの最大値
+    static constexpr float kTimerReset = 0.0f;         // タイマーリセット値
 
     // ベクトル設定
     static constexpr float kParallelThreshold = 0.999f; // 平行判定のしきい値
@@ -78,8 +79,8 @@ class DeathCamera {
     static constexpr float kRightVectorY = 0.0f;        // 右方向ベクトルのY成分
     static constexpr float kRightVectorZ = 0.0f;        // 右方向ベクトルのZ成分
 
-    Hagine::ViewProjection vp_;    ///< ビュープロジェクション
-    Hagine::WorldTransform wt_;    ///< ワールドトランスフォーム
+    Hagine::ViewProjection vp_; ///< ビュープロジェクション
+    Hagine::WorldTransform wt_; ///< ワールドトランスフォーム
 
     bool isEasing_ = false;       ///< イージング中フラグ
     bool isComplete_ = false;     ///< 完了フラグ
@@ -87,10 +88,10 @@ class DeathCamera {
     float easingTimer_ = 0.0f;    ///< イージングタイマー
     float easingDuration_ = 0.8f; ///< イージング時間
 
-    Hagine::Vector3 easingStartPos_;      ///< イージング開始位置
-    Hagine::Quaternion easingStartRot_;   ///< イージング開始回転
-    Hagine::Vector3 easingTargetPos_;     ///< イージング目標位置
-    Hagine::Quaternion easingTargetRot_;  ///< イージング目標回転
+    Hagine::Vector3 easingStartPos_;     ///< イージング開始位置
+    Hagine::Quaternion easingStartRot_;  ///< イージング開始回転
+    Hagine::Vector3 easingTargetPos_;    ///< イージング目標位置
+    Hagine::Quaternion easingTargetRot_; ///< イージング目標回転
 
     // プレイヤーからのオフセット（正面やや斜め上）
     Hagine::Vector3 cameraOffset_ = {3.0f, 2.5f, 8.0f}; ///< カメラオフセット

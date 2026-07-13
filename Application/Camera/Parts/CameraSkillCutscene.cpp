@@ -9,7 +9,8 @@
 
 using namespace Hagine;
 
-void CameraSkillCutscene::Init(FollowCamera *owner) {
+void CameraSkillCutscene::Init(FollowCamera *owner)
+{
     owner_ = owner;
 
     // 必殺技の顔アップ演出パラメータをゲームパラメータHubへ登録する
@@ -19,13 +20,16 @@ void CameraSkillCutscene::Init(FollowCamera *owner) {
     hub->Register("カメラ演出", "回り込み速度", &closeUpApproachSpeed_, {0.1f, 0.5f, 30.0f});
 }
 
-CameraSkillCutscene::~CameraSkillCutscene() {
+CameraSkillCutscene::~CameraSkillCutscene()
+{
     // ポインタ失効前にゲームパラメータHubから登録を解除する
     GameParamHub::GetInstance()->Unregister("カメラ演出");
 }
 
-bool CameraSkillCutscene::UpdateSkillCloseUp() {
-    if (!skillCloseUpTarget_) {
+bool CameraSkillCutscene::UpdateSkillCloseUp()
+{
+    if (!skillCloseUpTarget_)
+    {
         return false;
     }
 
@@ -38,7 +42,8 @@ bool CameraSkillCutscene::UpdateSkillCloseUp() {
 
     // 回り込みは水平面で行い、高さは顔オフセットで合わせる
     forward.y = kVectorZero;
-    if (forward.Length() < kEpsilon) {
+    if (forward.Length() < kEpsilon)
+    {
         forward = {kVectorZero, kVectorZero, 1.0f};
     }
     forward = forward.Normalize();
@@ -54,14 +59,18 @@ bool CameraSkillCutscene::UpdateSkillCloseUp() {
 
     // 常に顔を注視する
     Vector3 look = facePos - wt.translation_;
-    if (look.Length() > kEpsilon) {
+    if (look.Length() > kEpsilon)
+    {
         look = look.Normalize();
         Vector3 worldUp = {kVectorZero, kUpVectorY, kVectorZero};
 
         Vector3 right;
-        if (std::abs(look.Dot(worldUp)) > kParallelThreshold) {
+        if (std::abs(look.Dot(worldUp)) > kParallelThreshold)
+        {
             right = {kRightVectorX, kVectorZero, kVectorZero};
-        } else {
+        }
+        else
+        {
             right = (worldUp.Cross(look)).Normalize();
         }
         Vector3 up = (look.Cross(right)).Normalize();
@@ -73,7 +82,8 @@ bool CameraSkillCutscene::UpdateSkillCloseUp() {
     return true;
 }
 
-void CameraSkillCutscene::DrawImGui() {
+void CameraSkillCutscene::DrawImGui()
+{
 #ifdef USE_IMGUI
     ImGui::Separator();
     ImGui::Text("【必殺技 顔アップ演出】");

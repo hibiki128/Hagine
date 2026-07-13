@@ -10,17 +10,20 @@
 #include <Debug/GpuProfiler/GpuProfiler.h>
 #include <random>
 #include <regex>
-#include"../Utility/Debug/ImGui/ImGuizmoManager.h"
-#include"../Utility/Debug/ImGui/ImGuiNotification.h"
+#include "../Utility/Debug/ImGui/ImGuizmoManager.h"
+#include "../Utility/Debug/ImGui/ImGuiNotification.h"
 
 namespace Hagine {
-ParticleCSEmitter::~ParticleCSEmitter() {
+ParticleCSEmitter::~ParticleCSEmitter()
+{
     // 保有していた独立グループを破棄せず再利用プールへ返却する。
     // これにより弾・ヒット等の高頻度スポーンでもバッファが累積しない。
     // 注意: group は Finalize 順序によっては既に破棄済みの場合がある。
     // ReleaseIndependentGroup はポインタ比較のみで deref しないため安全。
-    for (ParticleCSGroup *group : particleGroups_) {
-        if (group) {
+    for (ParticleCSGroup *group : particleGroups_)
+    {
+        if (group)
+        {
             ParticleCSGroupManager::GetInstance()->ReleaseIndependentGroup(group);
         }
     }
@@ -28,7 +31,8 @@ ParticleCSEmitter::~ParticleCSEmitter() {
     particleGroupNames_.clear();
 }
 
-void ParticleCSEmitter::Initialize(const std::string &name) {
+void ParticleCSEmitter::Initialize(const std::string &name)
+{
     particleCommon_ = ParticleCommon::GetInstance();
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
     commandList_ = dxCommon_->GetCommandList().Get();
@@ -37,7 +41,8 @@ void ParticleCSEmitter::Initialize(const std::string &name) {
     CreateEmitterMeshResource();
     LoadSetting();
 #ifdef _DEBUG
-    if (emitterMeshData_) {
+    if (emitterMeshData_)
+    {
         ImGuizmoManager::GetInstance()->AddTarget(
             name_,
             &emitterMeshData_->translate,
@@ -48,7 +53,8 @@ void ParticleCSEmitter::Initialize(const std::string &name) {
 #endif
 }
 
-void ParticleCSEmitter::Initialize(const std::string &name, const std::string &modelPath) {
+void ParticleCSEmitter::Initialize(const std::string &name, const std::string &modelPath)
+{
     Initialize(name);
     modelPath_ = modelPath;
     LoadModel(modelPath);
@@ -56,7 +62,8 @@ void ParticleCSEmitter::Initialize(const std::string &name, const std::string &m
     CreateModelEdges();
 }
 
-void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primitiveType) {
+void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primitiveType)
+{
     Initialize(name);
     primitiveType_ = primitiveType;
     LoadPrimitiveModel(primitiveType);
@@ -64,9 +71,12 @@ void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primit
     CreateModelEdges();
 }
 
-void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
-    if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
-    if (particleGroups_.empty()) return;
+void ParticleCSEmitter::DrawCompute(const ViewProjection &vp)
+{
+    if (ShadowMap::GetInstance()->IsShadowPassActive())
+        return;
+    if (particleGroups_.empty())
+        return;
 
     // --- アイドルグループのスキップ判定 ---
     // 「前フレームの生存数(readback)が0」かつ「今フレーム発生しない」グループは、
@@ -81,7 +91,8 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
     const bool fieldSpawnPossible = emitOnlyOnFieldContact_ && receiveFields_;
     const bool emitterEmitting = (emitterMeshData_->emit != 0);
     bool anyActive = false;
-    for (size_t i = 0; i < particleGroups_.size(); ++i) {
+    for (size_t i = 0; i < particleGroups_.size(); ++i)
+    {
         ParticleCSGroup *group = particleGroups_[i];
         // aliveDrawCount_ は前フレームの DrawGraphics/プレビューが全グループで更新済み(1〜2F遅延)。
         // ここで再度 FetchAliveDrawCount(Map/Unmap) すると全グループ分の余計なCPUコストになるので既存値を使う。
@@ -92,7 +103,8 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
         anyActive = anyActive || active;
     }
     // 全グループがアイドルなら、このエミッターのコンピュートは丸ごと不要（グローバルバリアも省ける）。
-    if (!anyActive) return;
+    if (!anyActive)
+        return;
 
     auto *computeCmdList = dxCommon_->GetComputeCommandList().Get();
     dxCommon_->BeginComputeFrame();
@@ -111,8 +123,10 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
 
     // 1) 各グループ: CPU更新 + フェーズ反転 + out カウンタを 0 リセット（Emit の append より前）
     //    アイドルグループはここも省く（位相を進めず凍結する）。
-    for (size_t i = 0; i < particleGroups_.size(); ++i) {
-        if (!groupActive_[i]) continue;
+    for (size_t i = 0; i < particleGroups_.size(); ++i)
+    {
+        if (!groupActive_[i])
+            continue;
         auto &group = particleGroups_[i];
         group->Update(vp);
         group->AdvanceAliveFrame();
@@ -126,14 +140,16 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
 
     // 3) Emit が書いた SoA6本 + 生存リストを Update の前に可視化（グローバル UAV バリア）
     D3D12_RESOURCE_BARRIER uavBarrier{};
-    uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
     uavBarrier.UAV.pResource = nullptr;
     computeCmdList->ResourceBarrier(1, &uavBarrier);
 
     // 4) 各グループ: Update（in リストを sim し survivor を out へ append）
     int updateSpan = GpuProfiler::GetInstance()->OpenCompute(computeCmdList, "Update");
-    for (size_t i = 0; i < particleGroups_.size(); ++i) {
-        if (!groupActive_[i]) continue;
+    for (size_t i = 0; i < particleGroups_.size(); ++i)
+    {
+        if (!groupActive_[i])
+            continue;
         particleGroups_[i]->UpdateParticleCSDisPatch(
             fieldMgr->GetFieldsSrvHandle(),
             fieldCountRes,
@@ -144,21 +160,27 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp) {
     GpuProfiler::GetInstance()->Close(computeCmdList, updateSpan);
 
     // 5) 各グループ: 生存数(out カウンタ)を readback バッファへコピー（compute キュー上で記録）
-    for (size_t i = 0; i < particleGroups_.size(); ++i) {
-        if (!groupActive_[i]) continue;
+    for (size_t i = 0; i < particleGroups_.size(); ++i)
+    {
+        if (!groupActive_[i])
+            continue;
         particleGroups_[i]->RecordAliveCountReadback(computeCmdList);
     }
     // Execute は DrawSystem（または呼び出し元）が一括で行う
 }
 
-void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
-    if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
-    if (particleGroups_.empty()) return;
+void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp)
+{
+    if (ShadowMap::GetInstance()->IsShadowPassActive())
+        return;
+    if (particleGroups_.empty())
+        return;
 
     DrawEmitter();
 
     int drawSpan = GpuProfiler::GetInstance()->OpenGraphics(commandList_, "Draw");
-    for (auto &group : particleGroups_) {
+    for (auto &group : particleGroups_)
+    {
         // 旧 CountParticle 全Nディスパッチは廃止（生存数は aliveCounter に統合）
 
         // 生存数を読み戻し、描画 instanceCount を決定する。
@@ -168,16 +190,19 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
         const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
         uint32_t drawCount = group->GetAliveDrawCount();
         drawCount = drawCount + (drawCount / 4) + 256; // 急増分のマージン
-        if (drawCount > maxCount) {
+        if (drawCount > maxCount)
+        {
             drawCount = maxCount;
         }
-        if (drawCount == 0) {
+        if (drawCount == 0)
+        {
             continue; // 生存ゼロなら描画スキップ
         }
 
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
         const auto &meshes = group->GetModelData().meshes;
-        for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
+        for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex)
+        {
             D3D12_INDEX_BUFFER_VIEW indexBufferView = group->GetIndexBufferView();
             D3D12_VERTEX_BUFFER_VIEW vertexBufferView = group->GetVertexBufferView();
             commandList_->IASetIndexBuffer(&indexBufferView);
@@ -197,7 +222,8 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp) {
     GpuProfiler::GetInstance()->Close(commandList_, drawSpan);
 }
 
-void ParticleCSEmitter::Draw(const ViewProjection &vp) {
+void ParticleCSEmitter::Draw(const ViewProjection &vp)
+{
     // 後方互換: 単体で呼ばれる場合は Compute→Execute→Wait→Graphics を自前で完結させる
     DrawCompute(vp);
     dxCommon_->ExecuteComputeCommands();
@@ -208,17 +234,22 @@ void ParticleCSEmitter::Draw(const ViewProjection &vp) {
 void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perViewGpuAddress,
                                                PerView *previewPerView,
                                                const Vector3 &cameraPos,
-                                               float projScaleY) {
-    if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
-    if (particleGroups_.empty()) return;
+                                               float projScaleY)
+{
+    if (ShadowMap::GetInstance()->IsShadowPassActive())
+        return;
+    if (particleGroups_.empty())
+        return;
 
     // ワイヤーフレーム(DrawEmitter)はプレビューでは描かない。
     int drawSpan = GpuProfiler::GetInstance()->OpenGraphics(commandList_, "Draw(プレビュー)");
-    for (auto &group : particleGroups_) {
+    for (auto &group : particleGroups_)
+    {
         // 描画カリング(距離/サイズ)をプレビューでも効かせる。プレビューは独立 per-view CB を
         // 使うため、グループの設定とプレビューカメラ位置/射影をここで per-view へ反映する。
         // （単一バッファなので複数グループ時は最後のグループ設定が全体に効く＝プレビューの簡略許容）
-        if (previewPerView) {
+        if (previewPerView)
+        {
             const PerView *gpv = group->GetPerView();
             previewPerView->cameraPosition = cameraPos;
             previewPerView->projScaleY = projScaleY;
@@ -238,16 +269,19 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
         const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
         uint32_t drawCount = group->GetAliveDrawCount();
         drawCount = drawCount + (drawCount / 4) + 256; // 急増分のマージン
-        if (drawCount > maxCount) {
+        if (drawCount > maxCount)
+        {
             drawCount = maxCount;
         }
-        if (drawCount == 0) {
+        if (drawCount == 0)
+        {
             continue;
         }
 
         particleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
         const auto &meshes = group->GetModelData().meshes;
-        for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
+        for (size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex)
+        {
             D3D12_INDEX_BUFFER_VIEW indexBufferView = group->GetIndexBufferView();
             D3D12_VERTEX_BUFFER_VIEW vertexBufferView = group->GetVertexBufferView();
             commandList_->IASetIndexBuffer(&indexBufferView);
@@ -267,26 +301,31 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
     GpuProfiler::GetInstance()->Close(commandList_, drawSpan);
 }
 
-void ParticleCSEmitter::LoadModel(const std::string &modelPath) {
+void ParticleCSEmitter::LoadModel(const std::string &modelPath)
+{
     ModelManager::GetInstance()->LoadModel(modelPath);
     model_ = ModelManager::GetInstance()->FindModel(modelPath);
-    if (model_) {
+    if (model_)
+    {
         modelData_ = model_->GetModelData();
     }
 }
 
-void ParticleCSEmitter::LoadPrimitiveModel(PrimitiveType type) {
+void ParticleCSEmitter::LoadPrimitiveModel(PrimitiveType type)
+{
     // 円形系(Ring/Sphere/Cylinder/Cone)は分割数/半径パラメータを反映して生成する。
     std::string modelKey = IsParametricPrimitive(type)
                                ? ModelManager::GetInstance()->CreatePrimitiveModel(type, "", primitiveParams_)
                                : ModelManager::GetInstance()->CreatePrimitiveModel(type, "");
     model_ = ModelManager::GetInstance()->FindModel(modelKey);
-    if (model_) {
+    if (model_)
+    {
         modelData_ = model_->GetModelData();
     }
 }
 
-void ParticleCSEmitter::RebuildPrimitiveModel() {
+void ParticleCSEmitter::RebuildPrimitiveModel()
+{
     if (primitiveType_ == PrimitiveType::None)
         return;
     // モデルを作り直し、発生面(三角形)・エッジも新しい形状で再構築する。
@@ -295,22 +334,30 @@ void ParticleCSEmitter::RebuildPrimitiveModel() {
     CreateModelEdges();
 }
 
-void ParticleCSEmitter::Update() {
-    if (isAuto_) {
+void ParticleCSEmitter::Update()
+{
+    if (isAuto_)
+    {
         EmitterUpdate();
-    } else if (emitOnce_) {
+    }
+    else if (emitOnce_)
+    {
         emitterMeshData_->emit = 1;
         emitOnce_ = false;
-    } else {
+    }
+    else
+    {
         emitterMeshData_->emit = 0;
     }
 }
 
-void ParticleCSEmitter::EmitOnce() {
+void ParticleCSEmitter::EmitOnce()
+{
     emitOnce_ = true;
 }
 
-void ParticleCSEmitter::DrawEmitter() {
+void ParticleCSEmitter::DrawEmitter()
+{
     if (!isVisible_)
         return;
     Vector3 translate = emitterMeshData_->translate;
@@ -322,16 +369,21 @@ void ParticleCSEmitter::DrawEmitter() {
     Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
     Matrix4x4 transformMatrix = MakeAffineMatrix(scale, rotation, translate);
 
-    if (emitterMeshData_->emitFromSurface == 2 && !edgeInfoList_.empty()) {
+    if (emitterMeshData_->emitFromSurface == 2 && !edgeInfoList_.empty())
+    {
         Vector4 color = {1.0f, 0.5f, 0.0f, 1.0f};
-        for (const auto &edge : edgeInfoList_) {
+        for (const auto &edge : edgeInfoList_)
+        {
             Vector3 v0 = Transformation(edge.v0, transformMatrix);
             Vector3 v1 = Transformation(edge.v1, transformMatrix);
             DrawLine3D::GetInstance()->SetPoints(v0, v1);
         }
-    } else if (!triangleInfoList_.empty()) {
+    }
+    else if (!triangleInfoList_.empty())
+    {
         Vector4 color = {0.0f, 1.0f, 0.0f, 1.0f};
-        for (const auto &tri : triangleInfoList_) {
+        for (const auto &tri : triangleInfoList_)
+        {
             Vector3 v0 = Transformation(tri.v0, transformMatrix);
             Vector3 v1 = Transformation(tri.v1, transformMatrix);
             Vector3 v2 = Transformation(tri.v2, transformMatrix);
@@ -340,7 +392,9 @@ void ParticleCSEmitter::DrawEmitter() {
             DrawLine3D::GetInstance()->SetPoints(v1, v2);
             DrawLine3D::GetInstance()->SetPoints(v2, v0);
         }
-    } else {
+    }
+    else
+    {
         Vector3 center = emitterMeshData_->translate;
         Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f};
         float maxRadius = std::max(std::max(scale.x, scale.y), scale.z);
@@ -348,9 +402,11 @@ void ParticleCSEmitter::DrawEmitter() {
     }
 }
 
-std::vector<ParticleCSEmitter::WireSegment> ParticleCSEmitter::GetWireframeSegments() const {
+std::vector<ParticleCSEmitter::WireSegment> ParticleCSEmitter::GetWireframeSegments() const
+{
     std::vector<WireSegment> segs;
-    if (!emitterMeshData_) {
+    if (!emitterMeshData_)
+    {
         return segs;
     }
     Vector3 translate = emitterMeshData_->translate;
@@ -358,15 +414,20 @@ std::vector<ParticleCSEmitter::WireSegment> ParticleCSEmitter::GetWireframeSegme
     Vector3 scale = emitterMeshData_->scale;
     Matrix4x4 transformMatrix = MakeAffineMatrix(scale, rotation, translate);
 
-    if (emitterMeshData_->emitFromSurface == 2 && !edgeInfoList_.empty()) {
+    if (emitterMeshData_->emitFromSurface == 2 && !edgeInfoList_.empty())
+    {
         const Vector4 color = {1.0f, 0.5f, 0.0f, 1.0f}; // 橙: エッジ
-        for (const auto &edge : edgeInfoList_) {
+        for (const auto &edge : edgeInfoList_)
+        {
             segs.push_back({Transformation(edge.v0, transformMatrix),
                             Transformation(edge.v1, transformMatrix), color});
         }
-    } else if (!triangleInfoList_.empty()) {
+    }
+    else if (!triangleInfoList_.empty())
+    {
         const Vector4 color = {0.0f, 1.0f, 0.0f, 1.0f}; // 緑: 三角形
-        for (const auto &tri : triangleInfoList_) {
+        for (const auto &tri : triangleInfoList_)
+        {
             Vector3 v0 = Transformation(tri.v0, transformMatrix);
             Vector3 v1 = Transformation(tri.v1, transformMatrix);
             Vector3 v2 = Transformation(tri.v2, transformMatrix);
@@ -374,35 +435,43 @@ std::vector<ParticleCSEmitter::WireSegment> ParticleCSEmitter::GetWireframeSegme
             segs.push_back({v1, v2, color});
             segs.push_back({v2, v0, color});
         }
-    } else {
+    }
+    else
+    {
         // メッシュ無し: 半径を示す球ワイヤー（XY/XZ/YZ の3円）
         const Vector3 center = emitterMeshData_->translate;
         const Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f}; // 黄: 球
         const float r = std::max(std::max(scale.x, scale.y), scale.z);
         const int N = 24;
         const float twoPi = 6.28318530718f;
-        for (int i = 0; i < N; ++i) {
+        for (int i = 0; i < N; ++i)
+        {
             float a0 = twoPi * static_cast<float>(i) / N;
             float a1 = twoPi * static_cast<float>(i + 1) / N;
             float c0 = std::cos(a0), s0 = std::sin(a0);
             float c1 = std::cos(a1), s1 = std::sin(a1);
             segs.push_back({{center.x + c0 * r, center.y + s0 * r, center.z},
-                            {center.x + c1 * r, center.y + s1 * r, center.z}, color}); // XY
+                            {center.x + c1 * r, center.y + s1 * r, center.z},
+                            color}); // XY
             segs.push_back({{center.x + c0 * r, center.y, center.z + s0 * r},
-                            {center.x + c1 * r, center.y, center.z + s1 * r}, color}); // XZ
+                            {center.x + c1 * r, center.y, center.z + s1 * r},
+                            color}); // XZ
             segs.push_back({{center.x, center.y + c0 * r, center.z + s0 * r},
-                            {center.x, center.y + c1 * r, center.z + s1 * r}, color}); // YZ
+                            {center.x, center.y + c1 * r, center.z + s1 * r},
+                            color}); // YZ
         }
     }
     return segs;
 }
 
-void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group) {
+void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group)
+{
     if (!group)
         return;
     const std::string &name = group->GetGroupName();
     ParticleCSGroup *independentGroup = ParticleCSGroupManager::GetInstance()->GetIndependentParticleGroup(name);
-    if (!independentGroup) {
+    if (!independentGroup)
+    {
         return;
     }
     independentGroup->SetSettingData(*group->GetSettingsData());
@@ -420,7 +489,8 @@ void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group) {
     // これがないと差し替えたテクスチャが描画対象の独立グループに反映されない。
     // GetParticleGroupData() は値返しなのでローカルに受けてから参照する。
     ParticleCSGroupData srcData = group->GetParticleGroupData();
-    if (!srcData.materials.empty()) {
+    if (!srcData.materials.empty())
+    {
         independentGroup->SetTexture(srcData.materials[0].textureFilePath);
     }
     particleGroups_.push_back(independentGroup);
@@ -428,28 +498,35 @@ void ParticleCSEmitter::AddParticleGroup(ParticleCSGroup *group) {
     ImGuiNotification::Post("パーティクルグループを追加しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
-void ParticleCSEmitter::RemoveParticleGroup(const std::string &groupName) {
+void ParticleCSEmitter::RemoveParticleGroup(const std::string &groupName)
+{
     auto it = std::remove_if(particleGroups_.begin(), particleGroups_.end(),
                              [&](ParticleCSGroup *group) {
                                  return group->GetGroupName() == groupName;
                              });
-    if (it != particleGroups_.end()) {
+    if (it != particleGroups_.end())
+    {
         particleGroups_.erase(it, particleGroups_.end());
     }
     particleGroupNames_.erase(groupName);
     ImGuiNotification::Post("パーティクルグループを削除しました: " + groupName, {0.9f, 0.7f, 0.2f, 1.0f});
 }
 
-void ParticleCSEmitter::EmitterUpdate() {
+void ParticleCSEmitter::EmitterUpdate()
+{
     emitterMeshData_->frequencyTime += Frame::DeltaTime();
-    if (emitterMeshData_->frequency <= emitterMeshData_->frequencyTime) {
+    if (emitterMeshData_->frequency <= emitterMeshData_->frequencyTime)
+    {
         emitterMeshData_->frequencyTime -= emitterMeshData_->frequency;
         emitterMeshData_->emit = 1;
-    } else {
+    }
+    else
+    {
         emitterMeshData_->emit = 0;
     }
 }
-void ParticleCSEmitter::CreateEmitterMeshResource() {
+void ParticleCSEmitter::CreateEmitterMeshResource()
+{
     emitterMeshResource_ = dxCommon_->CreateBufferResource(sizeof(EmitterMesh));
     emitterMeshResource_->Map(0, nullptr, reinterpret_cast<void **>(&emitterMeshData_));
     emitterMeshData_->frequency = 0.5f;
@@ -465,7 +542,8 @@ void ParticleCSEmitter::CreateEmitterMeshResource() {
     emitterMeshData_->emitCountOverride = 0;
 }
 
-void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
+void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
+{
     // cmdList が渡された場合はそちら（Compute Queue）を使う
     ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
     ComputePipeLineManager::GetInstance()->DrawCommonSetting(
@@ -478,7 +556,8 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
     emitterMeshData_->emitCountOverride =
         (emitOnlyOnFieldContact_ && receiveFields_) ? fieldContactEmitCount_ : 0u;
 
-    for (uint32_t groupIndex = 0; groupIndex < particleGroups_.size(); ++groupIndex) {
+    for (uint32_t groupIndex = 0; groupIndex < particleGroups_.size(); ++groupIndex)
+    {
         auto &group = particleGroups_[groupIndex];
         // アイドルグループ(生存0かつ発生なし。DrawCompute で判定)は発生ディスパッチも省く。
         if (groupIndex < groupActive_.size() && !groupActive_[groupIndex])
@@ -512,12 +591,14 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
         cl->SetComputeRootConstantBufferView(10, group->GetPerFrameResource()->GetGPUVirtualAddress());
         cl->SetComputeRootConstantBufferView(11, group->GetSettingsResource()->GetGPUVirtualAddress());
 
-        if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_) {
+        if (emitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_)
+        {
             cl->SetComputeRootDescriptorTable(13, triangleInfoSrvHandle_.second);
             cl->SetComputeRootDescriptorTable(14, triangleCDFSrvHandle_.second);
         }
 
-        if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_) {
+        if (emitterMeshData_->edgeCount > 0 && edgeInfoResource_)
+        {
             cl->SetComputeRootDescriptorTable(15, edgeInfoSrvHandle_.second);
         }
 
@@ -525,21 +606,25 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
             auto *fieldManager = ParticleCSFieldManager::GetInstance();
             cl->SetComputeRootDescriptorTable(16, fieldManager->GetFieldsSrvHandle().second);
 
-            if (emitOnlyOnFieldContact_ && receiveFields_) {
+            if (emitOnlyOnFieldContact_ && receiveFields_)
+            {
                 bool hasEmitSpawnField = false;
-                for (const auto &field : fieldManager->GetFields()) {
+                for (const auto &field : fieldManager->GetFields())
+                {
                     if (!field.enabled || !field.data.enableEmitSpawn)
                         continue;
                     bool groupMatch = (field.data.groupId == -1) ||
                                       (fieldGroupId_ == -1) ||
                                       (field.data.groupId == fieldGroupId_);
-                    if (groupMatch) {
+                    if (groupMatch)
+                    {
                         hasEmitSpawnField = true;
                         break;
                     }
                 }
 
-                if (!hasEmitSpawnField) {
+                if (!hasEmitSpawnField)
+                {
                     cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
                     continue;
                 }
@@ -553,13 +638,15 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
                 cl->Dispatch(dispatchCount, 1, 1);
 
                 continue;
-
-            } else {
+            }
+            else
+            {
                 cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
             }
         }
 
-        if (emitterMeshData_->emit == 0 || settings->emitCount == 0) {
+        if (emitterMeshData_->emit == 0 || settings->emitCount == 0)
+        {
             continue;
         }
 
@@ -568,7 +655,8 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList) {
     }
 }
 
-std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const {
+std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const
+{
     auto newEmitter = std::make_unique<ParticleCSEmitter>();
 
     auto &nameCounter = GetNameCounter();
@@ -585,7 +673,8 @@ std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const {
     newEmitter->SetName(newName);
 #ifdef _DEBUG
     ImGuizmoManager::GetInstance()->RemoveTarget(baseName);
-    if (newEmitter->emitterMeshData_) {
+    if (newEmitter->emitterMeshData_)
+    {
         ImGuizmoManager::GetInstance()->AddTarget(
             newName,
             &newEmitter->emitterMeshData_->translate,
@@ -603,7 +692,8 @@ std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const {
 
     return newEmitter;
 }
-void ParticleCSEmitter::CreateModelTriangles() {
+void ParticleCSEmitter::CreateModelTriangles()
+{
     if (modelData_.meshes.empty())
         return;
 
@@ -611,8 +701,10 @@ void ParticleCSEmitter::CreateModelTriangles() {
     triangleCDF_.clear();
     std::vector<float> triangleAreas;
 
-    for (const auto &mesh : modelData_.meshes) {
-        for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
+    for (const auto &mesh : modelData_.meshes)
+    {
+        for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3)
+        {
             uint32_t i0 = mesh.indices[i];
             uint32_t i1 = mesh.indices[i + 1];
             uint32_t i2 = mesh.indices[i + 2];
@@ -629,7 +721,8 @@ void ParticleCSEmitter::CreateModelTriangles() {
             Vector3 crossProd = edge1.Cross(edge2);
             float area = crossProd.Length() * 0.5f;
 
-            if (area > 1e-6f) {
+            if (area > 1e-6f)
+            {
                 triangleAreas.push_back(area);
 
                 TriangleInfo triInfo;
@@ -649,29 +742,34 @@ void ParticleCSEmitter::CreateModelTriangles() {
         return;
 
     std::vector<size_t> indices(triangleInfoList_.size());
-    for (size_t i = 0; i < indices.size(); i++) {
+    for (size_t i = 0; i < indices.size(); i++)
+    {
         indices[i] = i;
     }
 
     float totalArea = 0.0f;
-    for (float area : triangleAreas) {
+    for (float area : triangleAreas)
+    {
         totalArea += area;
     }
 
     triangleCDF_.resize(triangleAreas.size());
     float accum = 0.0f;
-    for (size_t i = 0; i < triangleAreas.size(); i++) {
+    for (size_t i = 0; i < triangleAreas.size(); i++)
+    {
         accum += triangleAreas[i] / totalArea;
         triangleCDF_[i] = accum;
     }
 
     // 最後の値を強制的に1.0にして誤差を修正
-    if (!triangleCDF_.empty()) {
+    if (!triangleCDF_.empty())
+    {
         triangleCDF_.back() = 1.0f;
     }
 
     int histogram[10] = {0};
-    for (float cdf : triangleCDF_) {
+    for (float cdf : triangleCDF_)
+    {
         int bucket = static_cast<int>(cdf * 10.0f);
         if (bucket >= 10)
             bucket = 9;
@@ -703,16 +801,19 @@ void ParticleCSEmitter::CreateModelTriangles() {
     emitterMeshData_->triangleCount = static_cast<uint32_t>(triangleInfoList_.size());
 }
 
-void ParticleCSEmitter::CreateModelEdges() {
+void ParticleCSEmitter::CreateModelEdges()
+{
     edgeInfoList_.clear();
 
     // Cylinder プリミティブは三角形由来のエッジ（対角線が混じる）ではなく、
     // 縦線＋横リングだけの綺麗な格子線を解析的に生成する（エッジ発生モードで籠状になる）。
-    if (modelPath_.empty() && primitiveType_ == PrimitiveType::Cylinder) {
+    if (modelPath_.empty() && primitiveType_ == PrimitiveType::Cylinder)
+    {
         auto lines = PrimitiveModel::GetInstance()->BuildCylinderGridLines(
             primitiveParams_.divide, primitiveParams_.heightDivide);
         edgeInfoList_.reserve(lines.size());
-        for (const auto &seg : lines) {
+        for (const auto &seg : lines)
+        {
             EdgeInfo edgeInfo;
             edgeInfo.v0 = seg.first;
             edgeInfo.v1 = seg.second;
@@ -720,14 +821,18 @@ void ParticleCSEmitter::CreateModelEdges() {
             edgeInfo.padding1 = 0.0f;
             edgeInfoList_.push_back(edgeInfo);
         }
-    } else {
+    }
+    else
+    {
         if (modelData_.meshes.empty())
             return;
 
         std::map<std::pair<uint32_t, uint32_t>, int> edgeMap;
 
-        for (const auto &mesh : modelData_.meshes) {
-            for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
+        for (const auto &mesh : modelData_.meshes)
+        {
+            for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3)
+            {
                 uint32_t i0 = mesh.indices[i];
                 uint32_t i1 = mesh.indices[i + 1];
                 uint32_t i2 = mesh.indices[i + 2];
@@ -739,21 +844,25 @@ void ParticleCSEmitter::CreateModelEdges() {
                                                                        {std::min(i1, i2), std::max(i1, i2)},
                                                                        {std::min(i2, i0), std::max(i2, i0)}}};
 
-                for (const auto &edge : edges) {
+                for (const auto &edge : edges)
+                {
                     edgeMap[edge]++;
                 }
             }
         }
 
         bool isClosedMesh = true;
-        for (const auto &[edge, count] : edgeMap) {
-            if (count == 1) {
+        for (const auto &[edge, count] : edgeMap)
+        {
+            if (count == 1)
+            {
                 isClosedMesh = false;
                 break;
             }
         }
 
-        for (const auto &[edge, count] : edgeMap) {
+        for (const auto &[edge, count] : edgeMap)
+        {
             if (!isClosedMesh && count != 1)
                 continue;
 
@@ -762,8 +871,10 @@ void ParticleCSEmitter::CreateModelEdges() {
 
             Vector3 v0, v1;
             bool found = false;
-            for (const auto &mesh : modelData_.meshes) {
-                if (idx0 < mesh.vertices.size() && idx1 < mesh.vertices.size()) {
+            for (const auto &mesh : modelData_.meshes)
+            {
+                if (idx0 < mesh.vertices.size() && idx1 < mesh.vertices.size())
+                {
                     v0 = Vector3(mesh.vertices[idx0].position.x,
                                  mesh.vertices[idx0].position.y,
                                  mesh.vertices[idx0].position.z);
@@ -775,7 +886,8 @@ void ParticleCSEmitter::CreateModelEdges() {
                 }
             }
 
-            if (found) {
+            if (found)
+            {
                 EdgeInfo edgeInfo;
                 edgeInfo.v0 = v0;
                 edgeInfo.v1 = v1;
@@ -803,18 +915,22 @@ void ParticleCSEmitter::CreateModelEdges() {
     emitterMeshData_->edgeCount = static_cast<uint32_t>(edgeInfoList_.size());
 }
 
-size_t ParticleCSEmitter::GetTotalAliveParticles() {
+size_t ParticleCSEmitter::GetTotalAliveParticles()
+{
     size_t total = 0;
-    for (auto &group : particleGroups_) {
+    for (auto &group : particleGroups_)
+    {
         total += group->GetAliveParticleCount();
     }
     return total;
 }
 
-std::vector<ParticleCSEmitter::GroupStatistics> ParticleCSEmitter::GetGroupStatistics() {
+std::vector<ParticleCSEmitter::GroupStatistics> ParticleCSEmitter::GetGroupStatistics()
+{
     std::vector<GroupStatistics> stats;
 
-    for (auto &group : particleGroups_) {
+    for (auto &group : particleGroups_)
+    {
         GroupStatistics stat;
         stat.groupName = group->GetGroupName();
         stat.aliveCount = group->GetAliveParticleCount();
@@ -824,7 +940,8 @@ std::vector<ParticleCSEmitter::GroupStatistics> ParticleCSEmitter::GetGroupStati
     return stats;
 }
 
-void ParticleCSEmitter::SaveSetting() {
+void ParticleCSEmitter::SaveSetting()
+{
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
 
     data->Save("isAuto", isAuto_);
@@ -853,7 +970,8 @@ void ParticleCSEmitter::SaveSetting() {
 
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
 
-    for (int i = 0; i < particleGroups_.size(); i++) {
+    for (int i = 0; i < particleGroups_.size(); i++)
+    {
         auto &group = particleGroups_[i];
         std::string prefix = "group_" + std::to_string(i) + "_";
 
@@ -979,7 +1097,8 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "enableColorGradient", group->GetSettingsData()->enableColorGradient);
         const auto &stops = group->GetColorStops();
         data->Save(prefix + "colorStopCount", static_cast<int>(stops.size()));
-        for (size_t si = 0; si < stops.size(); ++si) {
+        for (size_t si = 0; si < stops.size(); ++si)
+        {
             std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
             data->Save<Vector4>(sp + "color", stops[si].color);
             data->Save(sp + "pos", stops[si].pos);
@@ -990,7 +1109,8 @@ void ParticleCSEmitter::SaveSetting() {
         data->Save(prefix + "enableAlphaCurve", group->GetSettingsData()->enableAlphaCurve);
         auto saveCurve = [&](const std::string &key, const std::vector<CurvePoint> &pts) {
             data->Save(prefix + key + "Count", static_cast<int>(pts.size()));
-            for (size_t pi = 0; pi < pts.size(); ++pi) {
+            for (size_t pi = 0; pi < pts.size(); ++pi)
+            {
                 std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
                 data->Save(pp + "x", pts[pi].x);
                 data->Save(pp + "y", pts[pi].y);
@@ -1002,14 +1122,16 @@ void ParticleCSEmitter::SaveSetting() {
     ImGuiNotification::Post("パーティクル設定を保存しました: " + name_, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
-void ParticleCSEmitter::LoadSetting() {
+void ParticleCSEmitter::LoadSetting()
+{
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
 
     isAuto_ = data->Load("isAuto", false);
     isVisible_ = data->Load("isVisible", true);
     isGizmoSelectable_ = data->Load("isGizmoSelectable", true);
     drawGroup_ = data->Load<std::string>("drawGroup", "3D");
-    if (drawGroup_ != "UI") {
+    if (drawGroup_ != "UI")
+    {
         drawGroup_ = "3D"; // 旧データは3D扱いに正規化
     }
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
@@ -1032,17 +1154,21 @@ void ParticleCSEmitter::LoadSetting() {
     emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
     fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
 
-    if (!modelPath_.empty()) {
+    if (!modelPath_.empty())
+    {
         LoadModel(modelPath_);
         CreateModelTriangles();
-    } else if (primitiveType_ != PrimitiveType::None) {
+    }
+    else if (primitiveType_ != PrimitiveType::None)
+    {
         LoadPrimitiveModel(primitiveType_);
         CreateModelTriangles();
         CreateModelEdges();
     }
 
     groupNum_ = data->Load("particleGroupCount", 0);
-    for (int i = 0; i < groupNum_; i++) {
+    for (int i = 0; i < groupNum_; i++)
+    {
         std::string prefix = "group_" + std::to_string(i) + "_";
         std::string groupName = data->Load(prefix + "name", std::string(""));
 
@@ -1130,28 +1256,28 @@ void ParticleCSEmitter::LoadSetting() {
 
         // ★ 速度ストレッチ設定のロード
         group->GetPerView()->enableVelocityStretch = data->Load<uint32_t>(prefix + "enableVelocityStretch", 0);
-        group->GetPerView()->velocityStretchFactor  = data->Load(prefix + "velocityStretchFactor", 0.1f);
+        group->GetPerView()->velocityStretchFactor = data->Load(prefix + "velocityStretchFactor", 0.1f);
 
         // ★ 描画カリング(overdraw対策)設定のロード
         group->GetPerView()->enableDistanceCull = data->Load<uint32_t>(prefix + "enableDistanceCull", 0);
-        group->GetPerView()->distanceCullStart  = data->Load(prefix + "distanceCullStart", 50.0f);
-        group->GetPerView()->distanceCullEnd    = data->Load(prefix + "distanceCullEnd", 100.0f);
-        group->GetPerView()->enableSizeClamp    = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
-        group->GetPerView()->maxScreenHeight    = data->Load(prefix + "maxScreenHeight", 1.0f);
-        group->GetPerView()->minScreenHeight    = data->Load(prefix + "minScreenHeight", 0.0f);
+        group->GetPerView()->distanceCullStart = data->Load(prefix + "distanceCullStart", 50.0f);
+        group->GetPerView()->distanceCullEnd = data->Load(prefix + "distanceCullEnd", 100.0f);
+        group->GetPerView()->enableSizeClamp = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
+        group->GetPerView()->maxScreenHeight = data->Load(prefix + "maxScreenHeight", 1.0f);
+        group->GetPerView()->minScreenHeight = data->Load(prefix + "minScreenHeight", 0.0f);
 
         // ★ 中間カラー設定のロード
-        settings.enableMidColor  = data->Load<uint32_t>(prefix + "enableMidColor", 0);
-        settings.midColorRatio   = data->Load(prefix + "midColorRatio", 0.5f);
-        settings.midColor        = data->Load(prefix + "midColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        settings.enableMidColor = data->Load<uint32_t>(prefix + "enableMidColor", 0);
+        settings.midColorRatio = data->Load(prefix + "midColorRatio", 0.5f);
+        settings.midColor = data->Load(prefix + "midColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
         // ★ タービュランス設定のロード
-        settings.enableTurbulence    = data->Load<uint32_t>(prefix + "enableTurbulence", 0);
-        settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
+        settings.enableTurbulence = data->Load<uint32_t>(prefix + "enableTurbulence", 0);
+        settings.turbulenceStrength = data->Load(prefix + "turbulenceStrength", 1.0f);
         settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
 
         // ★ 音声振動設定のロード（audioAmplitude は実行時注入のエンベロープなので既定のまま）
-        settings.enableAudioVibration   = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
+        settings.enableAudioVibration = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
         settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 12.0f);
         settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 4.0f);
         settings.audioVibrationFrequency = data->Load(prefix + "audioVibrationFrequency", 22.0f);
@@ -1159,24 +1285,26 @@ void ParticleCSEmitter::LoadSetting() {
         settings.audioReleaseRate = data->Load(prefix + "audioReleaseRate", 10.0f);
 
         // ★ 発生形状設定のロード
-        settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);
+        settings.emitShape = data->Load<uint32_t>(prefix + "emitShape", 0);
         settings.emitSphereRadius = data->Load(prefix + "emitSphereRadius", 1.0f);
-        settings.emitConeAngle    = data->Load(prefix + "emitConeAngle", 0.5236f);
+        settings.emitConeAngle = data->Load(prefix + "emitConeAngle", 0.5236f);
 
         // ★ カラーグラデーション(N段)設定のロード（有効フラグは settings、ストップは group 側ストレージ）
         settings.enableColorGradient = data->Load<uint32_t>(prefix + "enableColorGradient", 0);
         // ★ 寿命カーブ(サイズ/アルファ)の有効フラグ（点は group 側ストレージ）
-        settings.enableSizeCurve  = data->Load<uint32_t>(prefix + "enableSizeCurve", 0);
+        settings.enableSizeCurve = data->Load<uint32_t>(prefix + "enableSizeCurve", 0);
         settings.enableAlphaCurve = data->Load<uint32_t>(prefix + "enableAlphaCurve", 0);
 
         group->SetSettingData(settings);
 
         {
             int stopCount = data->Load(prefix + "colorStopCount", 0);
-            if (stopCount > 0) {
+            if (stopCount > 0)
+            {
                 auto &stops = group->GetColorStops();
                 stops.clear();
-                for (int si = 0; si < stopCount; ++si) {
+                for (int si = 0; si < stopCount; ++si)
+                {
                     std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
                     GradientStop gs;
                     gs.color = data->Load<Vector4>(sp + "color", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -1188,9 +1316,11 @@ void ParticleCSEmitter::LoadSetting() {
             // 寿命カーブの制御点をロード（サイズ/アルファ）。
             auto loadCurve = [&](const std::string &key, std::vector<CurvePoint> &out) {
                 int cnt = data->Load(prefix + key + "Count", 0);
-                if (cnt <= 0) return;
+                if (cnt <= 0)
+                    return;
                 out.clear();
-                for (int pi = 0; pi < cnt; ++pi) {
+                for (int pi = 0; pi < cnt; ++pi)
+                {
                     std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
                     CurvePoint cp;
                     cp.x = data->Load(pp + "x", 0.0f);
@@ -1216,11 +1346,15 @@ void ParticleCSEmitter::LoadSetting() {
     ImGuiNotification::Post("パーティクル設定を読み込みました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-void ParticleCSEmitter::LoadCloneSetting() {
+void ParticleCSEmitter::LoadCloneSetting()
+{
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
-    if (!data->Exists()) {
+    if (!data->Exists())
+    {
         return;
-    } else {
+    }
+    else
+    {
         particleGroups_.clear();
         particleGroupNames_.clear();
     }
@@ -1229,7 +1363,8 @@ void ParticleCSEmitter::LoadCloneSetting() {
     isVisible_ = data->Load("isVisible", true);
     isGizmoSelectable_ = data->Load("isGizmoSelectable", true);
     drawGroup_ = data->Load<std::string>("drawGroup", "3D");
-    if (drawGroup_ != "UI") {
+    if (drawGroup_ != "UI")
+    {
         drawGroup_ = "3D"; // 旧データは3D扱いに正規化
     }
     emitterMeshData_->frequency = data->Load("frequency", 0.1f);
@@ -1252,18 +1387,22 @@ void ParticleCSEmitter::LoadCloneSetting() {
     emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
     fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
 
-    if (!modelPath_.empty()) {
+    if (!modelPath_.empty())
+    {
         LoadModel(modelPath_);
         CreateModelTriangles();
         CreateModelEdges();
-    } else if (primitiveType_ != PrimitiveType::None) {
+    }
+    else if (primitiveType_ != PrimitiveType::None)
+    {
         LoadPrimitiveModel(primitiveType_);
         CreateModelTriangles();
         CreateModelEdges();
     }
 
     groupNum_ = data->Load("particleGroupCount", 0);
-    for (int i = 0; i < groupNum_; i++) {
+    for (int i = 0; i < groupNum_; i++)
+    {
         std::string prefix = "group_" + std::to_string(i) + "_";
         std::string groupName = data->Load(prefix + "name", std::string(""));
 
@@ -1351,28 +1490,28 @@ void ParticleCSEmitter::LoadCloneSetting() {
 
         // ★ 速度ストレッチ設定のロード
         group->GetPerView()->enableVelocityStretch = data->Load<uint32_t>(prefix + "enableVelocityStretch", 0);
-        group->GetPerView()->velocityStretchFactor  = data->Load(prefix + "velocityStretchFactor", 0.1f);
+        group->GetPerView()->velocityStretchFactor = data->Load(prefix + "velocityStretchFactor", 0.1f);
 
         // ★ 描画カリング(overdraw対策)設定のロード
         group->GetPerView()->enableDistanceCull = data->Load<uint32_t>(prefix + "enableDistanceCull", 0);
-        group->GetPerView()->distanceCullStart  = data->Load(prefix + "distanceCullStart", 50.0f);
-        group->GetPerView()->distanceCullEnd    = data->Load(prefix + "distanceCullEnd", 100.0f);
-        group->GetPerView()->enableSizeClamp    = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
-        group->GetPerView()->maxScreenHeight    = data->Load(prefix + "maxScreenHeight", 1.0f);
-        group->GetPerView()->minScreenHeight    = data->Load(prefix + "minScreenHeight", 0.0f);
+        group->GetPerView()->distanceCullStart = data->Load(prefix + "distanceCullStart", 50.0f);
+        group->GetPerView()->distanceCullEnd = data->Load(prefix + "distanceCullEnd", 100.0f);
+        group->GetPerView()->enableSizeClamp = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
+        group->GetPerView()->maxScreenHeight = data->Load(prefix + "maxScreenHeight", 1.0f);
+        group->GetPerView()->minScreenHeight = data->Load(prefix + "minScreenHeight", 0.0f);
 
         // ★ 中間カラー設定のロード
-        settings.enableMidColor  = data->Load<uint32_t>(prefix + "enableMidColor", 0);
-        settings.midColorRatio   = data->Load(prefix + "midColorRatio", 0.5f);
-        settings.midColor        = data->Load(prefix + "midColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        settings.enableMidColor = data->Load<uint32_t>(prefix + "enableMidColor", 0);
+        settings.midColorRatio = data->Load(prefix + "midColorRatio", 0.5f);
+        settings.midColor = data->Load(prefix + "midColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
         // ★ タービュランス設定のロード
-        settings.enableTurbulence    = data->Load<uint32_t>(prefix + "enableTurbulence", 0);
-        settings.turbulenceStrength  = data->Load(prefix + "turbulenceStrength", 1.0f);
+        settings.enableTurbulence = data->Load<uint32_t>(prefix + "enableTurbulence", 0);
+        settings.turbulenceStrength = data->Load(prefix + "turbulenceStrength", 1.0f);
         settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
 
         // ★ 音声振動設定のロード（audioAmplitude は実行時注入のエンベロープなので既定のまま）
-        settings.enableAudioVibration   = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
+        settings.enableAudioVibration = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
         settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 12.0f);
         settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 4.0f);
         settings.audioVibrationFrequency = data->Load(prefix + "audioVibrationFrequency", 22.0f);
@@ -1380,24 +1519,26 @@ void ParticleCSEmitter::LoadCloneSetting() {
         settings.audioReleaseRate = data->Load(prefix + "audioReleaseRate", 10.0f);
 
         // ★ 発生形状設定のロード
-        settings.emitShape        = data->Load<uint32_t>(prefix + "emitShape", 0);
+        settings.emitShape = data->Load<uint32_t>(prefix + "emitShape", 0);
         settings.emitSphereRadius = data->Load(prefix + "emitSphereRadius", 1.0f);
-        settings.emitConeAngle    = data->Load(prefix + "emitConeAngle", 0.5236f);
+        settings.emitConeAngle = data->Load(prefix + "emitConeAngle", 0.5236f);
 
         // ★ カラーグラデーション(N段)設定のロード（有効フラグは settings、ストップは group 側ストレージ）
         settings.enableColorGradient = data->Load<uint32_t>(prefix + "enableColorGradient", 0);
         // ★ 寿命カーブ(サイズ/アルファ)の有効フラグ（点は group 側ストレージ）
-        settings.enableSizeCurve  = data->Load<uint32_t>(prefix + "enableSizeCurve", 0);
+        settings.enableSizeCurve = data->Load<uint32_t>(prefix + "enableSizeCurve", 0);
         settings.enableAlphaCurve = data->Load<uint32_t>(prefix + "enableAlphaCurve", 0);
 
         group->SetSettingData(settings);
 
         {
             int stopCount = data->Load(prefix + "colorStopCount", 0);
-            if (stopCount > 0) {
+            if (stopCount > 0)
+            {
                 auto &stops = group->GetColorStops();
                 stops.clear();
-                for (int si = 0; si < stopCount; ++si) {
+                for (int si = 0; si < stopCount; ++si)
+                {
                     std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
                     GradientStop gs;
                     gs.color = data->Load<Vector4>(sp + "color", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -1409,9 +1550,11 @@ void ParticleCSEmitter::LoadCloneSetting() {
             // 寿命カーブの制御点をロード（サイズ/アルファ）。
             auto loadCurve = [&](const std::string &key, std::vector<CurvePoint> &out) {
                 int cnt = data->Load(prefix + key + "Count", 0);
-                if (cnt <= 0) return;
+                if (cnt <= 0)
+                    return;
                 out.clear();
-                for (int pi = 0; pi < cnt; ++pi) {
+                for (int pi = 0; pi < cnt; ++pi)
+                {
                     std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
                     CurvePoint cp;
                     cp.x = data->Load(pp + "x", 0.0f);
@@ -1437,10 +1580,13 @@ void ParticleCSEmitter::LoadCloneSetting() {
     ImGuiNotification::Post("パーティクル設定を読み込みました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-void ParticleCSEmitter::DrawImGui() {
+void ParticleCSEmitter::DrawImGui()
+{
 #ifdef USE_IMGUI
-    if (ImGui::BeginTabBar("EmitterTabBar")) {
-        if (ImGui::BeginTabItem(name_.c_str())) {
+    if (ImGui::BeginTabBar("EmitterTabBar"))
+    {
+        if (ImGui::BeginTabItem(name_.c_str()))
+        {
             ImGuiStyle &style = ImGui::GetStyle();
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.13f, 0.14f, 0.15f, 1.00f));
 
@@ -1448,7 +1594,8 @@ void ParticleCSEmitter::DrawImGui() {
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.42f, 0.32f, 0.32f, 0.70f));
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.50f, 0.40f, 0.40f, 0.85f));
 
-            if (ImGui::CollapsingHeader("エミッターデータ##EmitterData")) {
+            if (ImGui::CollapsingHeader("エミッターデータ##EmitterData"))
+            {
                 ImGui::PopStyleColor(3);
 
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
@@ -1466,7 +1613,8 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::Text("現在の回転: %.1f° %.1f° %.1f°", currentEuler.x, currentEuler.y, currentEuler.z);
 
                 static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
-                if (ImGui::DragFloat3("##EmitterRotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°")) {
+                if (ImGui::DragFloat3("##EmitterRotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°"))
+                {
                     Quaternion currentRotation = emitterMeshData_->rotation;
                     Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
                     Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
@@ -1478,7 +1626,8 @@ void ParticleCSEmitter::DrawImGui() {
                 }
 
                 ImGui::SameLine();
-                if (ImGui::Button("リセット##EmitterRotation")) {
+                if (ImGui::Button("リセット##EmitterRotation"))
+                {
                     emitterMeshData_->rotation = Quaternion::IdentityQuaternion();
                     deltaRotation = {0.0f, 0.0f, 0.0f};
                 }
@@ -1501,7 +1650,8 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::Separator();
 
                 // 発生位置設定（ラジオボタンで3択）
-                if (emitterMeshData_->triangleCount > 0 || emitterMeshData_->edgeCount > 0) {
+                if (emitterMeshData_->triangleCount > 0 || emitterMeshData_->edgeCount > 0)
+                {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
                     ImGui::Text("発生位置:");
                     ImGui::PopStyleColor();
@@ -1522,7 +1672,8 @@ void ParticleCSEmitter::DrawImGui() {
                     ImGui::PopStyleColor(2);
 
                     // ツールチップ
-                    if (ImGui::IsItemHovered()) {
+                    if (ImGui::IsItemHovered())
+                    {
                         const char *tooltip = "";
                         if (emitMode == 0)
                             tooltip = "メッシュの内側全体からパーティクルが発生します";
@@ -1537,26 +1688,33 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.4f, 0.2f, 0.5f));
 
                 // モデル情報表示
-                if (emitterMeshData_->triangleCount > 0) {
+                if (emitterMeshData_->triangleCount > 0)
+                {
                     ImGui::Spacing();
                     ImGui::Text("三角形数: %d", emitterMeshData_->triangleCount);
-                    if (emitterMeshData_->edgeCount > 0) {
+                    if (emitterMeshData_->edgeCount > 0)
+                    {
                         ImGui::Text("エッジ数: %d", emitterMeshData_->edgeCount);
                     }
-                    if (!modelPath_.empty()) {
+                    if (!modelPath_.empty())
+                    {
                         ImGui::Text("モデル: %s", modelPath_.c_str());
-                    } else if (primitiveType_ != PrimitiveType::None) {
+                    }
+                    else if (primitiveType_ != PrimitiveType::None)
+                    {
                         ImGui::Text("プリミティブタイプ");
 
                         // 円形プリミティブ(Ring/Sphere/Cylinder/Cone)は分割数・形状を調整できる。
-                        if (IsParametricPrimitive(primitiveType_)) {
+                        if (IsParametricPrimitive(primitiveType_))
+                        {
                             ImGui::Spacing();
                             ImGui::TextDisabled("形状パラメータ");
                             bool rebuild = false;
 
                             int divide = static_cast<int>(primitiveParams_.divide);
                             ImGui::SetNextItemWidth(180.0f);
-                            if (ImGui::DragInt("分割数##primDivide", &divide, 0.5f, 3, 256)) {
+                            if (ImGui::DragInt("分割数##primDivide", &divide, 0.5f, 3, 256))
+                            {
                                 primitiveParams_.divide = static_cast<uint32_t>(divide < 3 ? 3 : divide);
                             }
                             if (ImGui::IsItemDeactivatedAfterEdit())
@@ -1565,10 +1723,12 @@ void ParticleCSEmitter::DrawImGui() {
                                 ImGui::SetTooltip("円周方向の分割数。多いほど滑らか（頂点・三角形が増えます）");
 
                             // Cylinder は高さ方向の分割数（格子の横リング本数）を調整できる。
-                            if (primitiveType_ == PrimitiveType::Cylinder) {
+                            if (primitiveType_ == PrimitiveType::Cylinder)
+                            {
                                 int heightDivide = static_cast<int>(primitiveParams_.heightDivide);
                                 ImGui::SetNextItemWidth(180.0f);
-                                if (ImGui::DragInt("高さ分割##primHeightDivide", &heightDivide, 0.5f, 1, 256)) {
+                                if (ImGui::DragInt("高さ分割##primHeightDivide", &heightDivide, 0.5f, 1, 256))
+                                {
                                     primitiveParams_.heightDivide = static_cast<uint32_t>(heightDivide < 1 ? 1 : heightDivide);
                                 }
                                 if (ImGui::IsItemDeactivatedAfterEdit())
@@ -1578,7 +1738,8 @@ void ParticleCSEmitter::DrawImGui() {
                             }
 
                             // リングは外半径・内半径（円の幅 = 外 - 内）を調整できる。
-                            if (primitiveType_ == PrimitiveType::Ring) {
+                            if (primitiveType_ == PrimitiveType::Ring)
+                            {
                                 ImGui::SetNextItemWidth(180.0f);
                                 ImGui::DragFloat("外半径##primOuter", &primitiveParams_.ringOuterRadius, 0.01f, 0.01f, 100.0f, "%.3f");
                                 if (ImGui::IsItemDeactivatedAfterEdit())
@@ -1591,7 +1752,8 @@ void ParticleCSEmitter::DrawImGui() {
                                     ImGui::SetTooltip("円の幅 = 外半径 - 内半径");
                             }
 
-                            if (rebuild) {
+                            if (rebuild)
+                            {
                                 // 内半径が外半径を超えないようクランプしてから作り直す。
                                 if (primitiveParams_.ringInnerRadius > primitiveParams_.ringOuterRadius)
                                     primitiveParams_.ringInnerRadius = primitiveParams_.ringOuterRadius;
@@ -1611,24 +1773,34 @@ void ParticleCSEmitter::DrawImGui() {
                     bool disabled = isAuto_ || noGroups;
                     uint32_t cnt = noGroups ? 0u : particleGroups_[0]->GetSettingsData()->emitCount;
                     std::string btnLabel = "一回発生 (x" + std::to_string(cnt) + ")##EmitOnce";
-                    if (disabled) ImGui::BeginDisabled();
-                    if (ImGui::Button(btnLabel.c_str())) {
+                    if (disabled)
+                        ImGui::BeginDisabled();
+                    if (ImGui::Button(btnLabel.c_str()))
+                    {
                         EmitOnce();
                         ImGuiNotification::Post("パーティクルを " + std::to_string(cnt) + " 個発生しました", {0.3f, 1.0f, 0.5f, 1.0f});
                     }
-                    if (disabled) ImGui::EndDisabled();
-                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-                        if (isAuto_)      ImGui::SetTooltip("自動更新がONのため使用できません\n（自動更新をOFFにしてください）");
-                        else if (noGroups) ImGui::SetTooltip("パーティクルグループが未設定です\n（グループを追加してください）");
-                        else if (cnt == 0) ImGui::SetTooltip("発生数が0のため効果がありません\n（発生数設定を確認してください）");
+                    if (disabled)
+                        ImGui::EndDisabled();
+                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                    {
+                        if (isAuto_)
+                            ImGui::SetTooltip("自動更新がONのため使用できません\n（自動更新をOFFにしてください）");
+                        else if (noGroups)
+                            ImGui::SetTooltip("パーティクルグループが未設定です\n（グループを追加してください）");
+                        else if (cnt == 0)
+                            ImGui::SetTooltip("発生数が0のため効果がありません\n（発生数設定を確認してください）");
                     }
                 }
-                if (ImGui::Checkbox("ギズモ選択", &isGizmoSelectable_)) {
+                if (ImGui::Checkbox("ギズモ選択", &isGizmoSelectable_))
+                {
                     ImGuizmoManager::GetInstance()->SetSelectable(name_, isGizmoSelectable_);
                 }
                 ImGui::Checkbox("エミッター表示##Visible", &isVisible_);
                 ImGui::PopStyleColor();
-            } else {
+            }
+            else
+            {
                 ImGui::PopStyleColor(3);
             }
 
@@ -1637,18 +1809,22 @@ void ParticleCSEmitter::DrawImGui() {
             ImGui::TextUnformatted("フィールド影響設定");
             ImGui::PopStyleColor();
             bool rf = receiveFields_;
-            if (ImGui::Checkbox("フィールドの影響を受ける", &rf)) {
+            if (ImGui::Checkbox("フィールドの影響を受ける", &rf))
+            {
                 receiveFields_ = rf;
             }
-            if (ImGui::IsItemHovered()) {
+            if (ImGui::IsItemHovered())
+            {
                 ImGui::SetTooltip("オフにするとParticleFieldManagerのフィールドが\nこのエミッターに作用しなくなります");
             }
 
-            if (receiveFields_) {
+            if (receiveFields_)
+            {
                 ImGui::Indent();
                 ImGui::PushItemWidth(120.0f);
                 int fgid = fieldGroupId_;
-                if (ImGui::DragInt("フィールドグループID##fgid", &fgid, 1, -1, 255)) {
+                if (ImGui::DragInt("フィールドグループID##fgid", &fgid, 1, -1, 255))
+                {
                     fieldGroupId_ = std::max(-1, fgid);
                 }
                 ImGui::PopItemWidth();
@@ -1658,18 +1834,23 @@ void ParticleCSEmitter::DrawImGui() {
                     ImGui::SetTooltip(
                         "-1 = 全フィールドから影響を受ける（デフォルト）\n"
                         "0以上 = 同じIDのフィールドのみから影響を受ける");
-                if (fieldGroupId_ == -1) {
+                if (fieldGroupId_ == -1)
+                {
                     ImGui::TextDisabled("  全フィールド対象");
-                } else {
+                }
+                else
+                {
                     ImGui::Text("  ID: %d のフィールドのみ対象", fieldGroupId_);
                 }
 
                 ImGui::Spacing();
                 bool eofc = emitOnlyOnFieldContact_;
-                if (ImGui::Checkbox("フィールド接触時のみEmit##EmitOnFieldContact", &eofc)) {
+                if (ImGui::Checkbox("フィールド接触時のみEmit##EmitOnFieldContact", &eofc))
+                {
                     emitOnlyOnFieldContact_ = eofc;
                 }
-                if (ImGui::IsItemHovered()) {
+                if (ImGui::IsItemHovered())
+                {
                     ImGui::SetTooltip(
                         "ON : シェーダー側でフィールド球内のランダム点を生成し\n"
                         "     エミッター表面に投影してEmit位置を決定します\n"
@@ -1679,15 +1860,18 @@ void ParticleCSEmitter::DrawImGui() {
                         "OFF: 通常通りエミッター全体からランダムEmitします");
                 }
 
-                if (emitOnlyOnFieldContact_) {
+                if (emitOnlyOnFieldContact_)
+                {
                     ImGui::Indent();
                     ImGui::PushItemWidth(180.0f);
                     int emitCnt = static_cast<int>(fieldContactEmitCount_);
-                    if (ImGui::DragInt("接触Emit発生数/フレーム##FieldContactEmit", &emitCnt, 10, 1, 50000)) {
+                    if (ImGui::DragInt("接触Emit発生数/フレーム##FieldContactEmit", &emitCnt, 10, 1, 50000))
+                    {
                         fieldContactEmitCount_ = static_cast<uint32_t>(std::max(1, emitCnt));
                     }
                     ImGui::PopItemWidth();
-                    if (ImGui::IsItemHovered()) {
+                    if (ImGui::IsItemHovered())
+                    {
                         ImGui::SetTooltip(
                             "フィールド接触Emitモード時の1フレームあたり発生数\n"
                             "全スレッドがフィールド接触点にEmitするため\n"
@@ -1703,14 +1887,17 @@ void ParticleCSEmitter::DrawImGui() {
             ImGui::Spacing();
 
             // パーティクルグループ設定セクション（既存のコードと同じ）
-            if (!particleGroups_.empty()) {
+            if (!particleGroups_.empty())
+            {
                 static int selectedGroupIndex = 0;
-                if (selectedGroupIndex >= static_cast<int>(particleGroups_.size())) {
+                if (selectedGroupIndex >= static_cast<int>(particleGroups_.size()))
+                {
                     selectedGroupIndex = 0;
                 }
 
                 std::vector<std::string> groupNames;
-                for (const auto &group : particleGroups_) {
+                for (const auto &group : particleGroups_)
+                {
                     groupNames.push_back(group->GetGroupName());
                 }
 
@@ -1727,12 +1914,15 @@ void ParticleCSEmitter::DrawImGui() {
 
                 ImGui::PopStyleColor(3);
 
-                if (selectedGroupIndex >= 0 && selectedGroupIndex < static_cast<int>(particleGroups_.size())) {
+                if (selectedGroupIndex >= 0 && selectedGroupIndex < static_cast<int>(particleGroups_.size()))
+                {
                     ImGui::Separator();
                     particleGroups_[selectedGroupIndex]->SetFrequency(emitterMeshData_->frequency);
                     particleGroups_[selectedGroupIndex]->DrawImGui();
                 }
-            } else {
+            }
+            else
+            {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.6f, 0.6f, 1.0f));
                 ImGui::Text("GPUパーティクルグループがありません");
                 ImGui::PopStyleColor();
@@ -1747,7 +1937,8 @@ void ParticleCSEmitter::DrawImGui() {
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.34f, 0.40f, 0.50f, 0.70f));
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.42f, 0.48f, 0.58f, 0.85f));
 
-            if (ImGui::CollapsingHeader("GPUグループ管理##GPUGroupManagement")) {
+            if (ImGui::CollapsingHeader("GPUグループ管理##GPUGroupManagement"))
+            {
                 ImGui::PopStyleColor(3);
 
                 ImGui::Spacing();
@@ -1759,10 +1950,14 @@ void ParticleCSEmitter::DrawImGui() {
                 std::vector<std::string> availableNames;
                 std::vector<std::string> attachedNames;
 
-                for (const auto &name : allGroupNames) {
-                    if (particleGroupNames_.contains(name)) {
+                for (const auto &name : allGroupNames)
+                {
+                    if (particleGroupNames_.contains(name))
+                    {
                         attachedNames.push_back(name);
-                    } else {
+                    }
+                    else
+                    {
                         availableNames.push_back(name);
                     }
                 }
@@ -1807,15 +2002,20 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.34f, 0.42f, 0.52f, 0.70f));
                 ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.40f, 0.50f, 0.60f, 0.85f));
 
-                if (availableItems.empty()) {
+                if (availableItems.empty())
+                {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
                     ImGui::Text("利用可能なGPUグループがありません");
                     ImGui::PopStyleColor();
-                } else {
-                    for (int i = 0; i < availableItems.size(); ++i) {
+                }
+                else
+                {
+                    for (int i = 0; i < availableItems.size(); ++i)
+                    {
                         bool selected = std::find(leftSelected.begin(), leftSelected.end(), i) != leftSelected.end();
                         std::string selectableId = std::string(availableItems[i]) + "##GPUAvailable" + std::to_string(i);
-                        if (ImGui::Selectable(selectableId.c_str(), selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                        if (ImGui::Selectable(selectableId.c_str(), selected, ImGuiSelectableFlags_AllowDoubleClick))
+                        {
                             if (!ImGui::GetIO().KeyCtrl)
                                 leftSelected.clear();
 
@@ -1825,7 +2025,8 @@ void ParticleCSEmitter::DrawImGui() {
                             else
                                 leftSelected.push_back(i);
 
-                            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+                            {
                                 auto group = ParticleCSGroupManager::GetInstance()->GetParticleCSGroup(availableNames[i]);
                                 AddParticleGroup(group);
                                 leftSelected.clear();
@@ -1849,39 +2050,47 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.32f, 0.58f, 0.44f, 1.0f));
 
                 bool canMoveRight = !leftSelected.empty();
-                if (!canMoveRight) {
+                if (!canMoveRight)
+                {
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
                     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
                 }
 
-                if (ImGui::Button("追加 >>##GPUAddButton", ImVec2(80, 35)) && canMoveRight) {
-                    for (int idx : leftSelected) {
+                if (ImGui::Button("追加 >>##GPUAddButton", ImVec2(80, 35)) && canMoveRight)
+                {
+                    for (int idx : leftSelected)
+                    {
                         auto group = ParticleCSGroupManager::GetInstance()->GetParticleCSGroup(availableNames[idx]);
                         AddParticleGroup(group);
                     }
                     leftSelected.clear();
                 }
 
-                if (!canMoveRight) {
+                if (!canMoveRight)
+                {
                     ImGui::PopStyleColor(3);
                 }
 
                 bool canMoveLeft = !rightSelected.empty();
-                if (!canMoveLeft) {
+                if (!canMoveLeft)
+                {
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
                     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
                 }
 
-                if (ImGui::Button("<< 削除##GPURemoveButton", ImVec2(80, 35)) && canMoveLeft) {
-                    for (int idx : rightSelected) {
+                if (ImGui::Button("<< 削除##GPURemoveButton", ImVec2(80, 35)) && canMoveLeft)
+                {
+                    for (int idx : rightSelected)
+                    {
                         RemoveParticleGroup(attachedNames[idx]);
                     }
                     rightSelected.clear();
                 }
 
-                if (!canMoveLeft) {
+                if (!canMoveLeft)
+                {
                     ImGui::PopStyleColor(3);
                 }
 
@@ -1897,15 +2106,20 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.52f, 0.42f, 0.30f, 0.70f));
                 ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.58f, 0.48f, 0.36f, 0.85f));
 
-                if (attachedItems.empty()) {
+                if (attachedItems.empty())
+                {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
                     ImGui::Text("アタッチされたGPUグループがありません");
                     ImGui::PopStyleColor();
-                } else {
-                    for (int i = 0; i < attachedItems.size(); ++i) {
+                }
+                else
+                {
+                    for (int i = 0; i < attachedItems.size(); ++i)
+                    {
                         bool selected = std::find(rightSelected.begin(), rightSelected.end(), i) != rightSelected.end();
                         std::string selectableId = std::string(attachedItems[i]) + "##GPUAttached" + std::to_string(i);
-                        if (ImGui::Selectable(selectableId.c_str(), selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                        if (ImGui::Selectable(selectableId.c_str(), selected, ImGuiSelectableFlags_AllowDoubleClick))
+                        {
                             if (!ImGui::GetIO().KeyCtrl)
                                 rightSelected.clear();
 
@@ -1915,7 +2129,8 @@ void ParticleCSEmitter::DrawImGui() {
                             else
                                 rightSelected.push_back(i);
 
-                            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+                            {
                                 RemoveParticleGroup(attachedNames[i]);
                                 rightSelected.clear();
                             }
@@ -1935,8 +2150,9 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
                 ImGui::Text("操作: Ctrlキー + クリックで複数選択, ダブルクリックで追加/削除");
                 ImGui::PopStyleColor();
-
-            } else {
+            }
+            else
+            {
                 ImGui::PopStyleColor(3);
             }
 
@@ -1949,7 +2165,8 @@ void ParticleCSEmitter::DrawImGui() {
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.46f, 0.38f, 0.30f, 0.70f));
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.52f, 0.44f, 0.36f, 0.85f));
 
-            if (ImGui::CollapsingHeader("GPUファイル操作##GPUFileOperations")) {
+            if (ImGui::CollapsingHeader("GPUファイル操作##GPUFileOperations"))
+            {
                 ImGui::PopStyleColor(3);
 
                 ImGui::Spacing();
@@ -1958,7 +2175,8 @@ void ParticleCSEmitter::DrawImGui() {
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.44f, 0.60f, 0.95f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.36f, 0.52f, 0.70f, 1.0f));
 
-                if (ImGui::Button("GPU設定を保存##GPUSaveButton", ImVec2(120, 35))) {
+                if (ImGui::Button("GPU設定を保存##GPUSaveButton", ImVec2(120, 35)))
+                {
                     SaveSetting();
                     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
                     data->Flush();
@@ -1966,13 +2184,15 @@ void ParticleCSEmitter::DrawImGui() {
                 }
                 ImGui::PopStyleColor(3);
 
-                if (ImGui::IsItemHovered()) {
+                if (ImGui::IsItemHovered())
+                {
                     ImGui::SetTooltip("現在のGPUパーティクル設定をファイルに保存します");
                 }
 
                 ImGui::Spacing();
-
-            } else {
+            }
+            else
+            {
                 ImGui::PopStyleColor(3);
             }
 

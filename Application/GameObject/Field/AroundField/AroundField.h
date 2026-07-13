@@ -6,7 +6,8 @@
 /// 周囲のフィールド（境界線）を管理するクラス
 /// 円柱状の衝突判定とパーティクルによる表現を行う
 /// </summary>
-class AroundField : public Hagine::BaseObject {
+class AroundField : public Hagine::BaseObject
+{
   public:
     /// ===================================================
     /// public method
@@ -52,6 +53,6 @@ class AroundField : public Hagine::BaseObject {
     /// private variants
     /// ===================================================
 
-    Hagine::CylinderCollider *AroundField_ = nullptr; // 円柱コライダー
+    Hagine::CylinderCollider *AroundField_ = nullptr;                    // 円柱コライダー
     std::unique_ptr<Hagine::ParticleCSEmitter> fieldParticle_ = nullptr; // フィールドパーティクル
 };

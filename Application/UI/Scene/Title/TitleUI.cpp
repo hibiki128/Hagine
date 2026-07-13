@@ -10,7 +10,8 @@
 #endif
 
 using namespace Hagine;
-void TitleUI::Initialize() {
+void TitleUI::Initialize()
+{
 
     chargeBullet_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
     chargeEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("chargeEmitter");
@@ -63,18 +64,21 @@ void TitleUI::Initialize() {
     gamePad_->Init(0);
 }
 
-void TitleUI::Update() {
+void TitleUI::Update()
+{
     gamePad_->Update();
     time_ += kDeltaTime;
 
     // タイマーがkMaxTime以上でスプライト表示開始
-    if (time_ >= kMaxTime_ && !isSpriteVisible_) {
+    if (time_ >= kMaxTime_ && !isSpriteVisible_)
+    {
         isSpriteVisible_ = true;
         spriteEaseTimer_ = 0.0f;
     }
 
     // スプライトの移動処理
-    if (isSpriteVisible_ && spriteEaseTimer_ < spriteEaseDuration_) {
+    if (isSpriteVisible_ && spriteEaseTimer_ < spriteEaseDuration_)
+    {
         spriteEaseTimer_ += kDeltaTime;
 
         // イージングで位置を計算
@@ -86,11 +90,14 @@ void TitleUI::Update() {
         sprites_[kPressStart]->sprite->SetPosition(pressStartPos);
     }
 
-    if (time_ >= kMaxTime_) {
+    if (time_ >= kMaxTime_)
+    {
         // チャージスケールの更新
-        if (!isMaxChargeScale_) {
+        if (!isMaxChargeScale_)
+        {
             chargeScale_ += chargeScaleSpeed_ * kDeltaTime / kParticleScaleSpeedDivisor;
-            if (chargeScale_ >= maxChargeScale_) {
+            if (chargeScale_ >= maxChargeScale_)
+            {
                 chargeScale_ = maxChargeScale_;
                 isMaxChargeScale_ = true;
             }
@@ -109,8 +116,10 @@ void TitleUI::Update() {
         chargeBullet_->Update();
     }
 
-    if (time_ >= kMaxTime_ - kChargeEffectStartTime) {
-        if (!secondMove_) {
+    if (time_ >= kMaxTime_ - kChargeEffectStartTime)
+    {
+        if (!secondMove_)
+        {
             chargeEffect_->Update();
             playerAura_->Update();
         }
@@ -118,11 +127,13 @@ void TitleUI::Update() {
 
     // 開始演出の発火はシーン側（メニューでチュートリアル選択時）から RequestStartCinematic() で行う
 
-    if (secondMove_) {
+    if (secondMove_)
+    {
         bulletEaseTimer_ += kDeltaTime;
 
         // スプライト横出し処理
-        if (isSpriteExiting_ && spriteExitTimer_ < spriteEaseDuration_) {
+        if (isSpriteExiting_ && spriteExitTimer_ < spriteEaseDuration_)
+        {
             spriteExitTimer_ += kDeltaTime;
 
             // 逆方向にイージング(開始位置に戻す)
@@ -132,23 +143,28 @@ void TitleUI::Update() {
             sprites_[kTitleLogo]->sprite->SetPosition(titleLogoPos);
             sprites_[kPressStart]->sprite->SetPosition(pressStartPos);
 
-            if (spriteExitTimer_ >= spriteEaseDuration_) {
+            if (spriteExitTimer_ >= spriteEaseDuration_)
+            {
                 isSpriteExiting_ = false;
             }
         }
     }
 
     chargeBullet_->SetPosition(ApplyEasing(EasingType::InSine, chargeBullet_->GetPosition(), targetPos_, bulletEaseTimer_, kBulletEaseDuration));
-    if (chargeBullet_->GetPosition() == targetPos_) {
+    if (chargeBullet_->GetPosition() == targetPos_)
+    {
         timer_ += kDeltaTime;
     }
-    if (timer_ >= kFinishDelayTime) {
+    if (timer_ >= kFinishDelayTime)
+    {
         isFinish_ = true;
     }
 }
 
-void TitleUI::RequestStartCinematic() {
-    if (secondMove_) {
+void TitleUI::RequestStartCinematic()
+{
+    if (secondMove_)
+    {
         return;
     }
     secondMove_ = true;
@@ -156,13 +172,16 @@ void TitleUI::RequestStartCinematic() {
     spriteExitTimer_ = 0.0f;
 }
 
-void TitleUI::HidePressStart() {
-    if (sprites_[kPressStart] && sprites_[kPressStart]->sprite) {
+void TitleUI::HidePressStart()
+{
+    if (sprites_[kPressStart] && sprites_[kPressStart]->sprite)
+    {
         sprites_[kPressStart]->sprite->SetAlpha(0.0f);
     }
 }
 
-void TitleUI::Draw(ViewProjection &vp_) {
+void TitleUI::Draw(ViewProjection &vp_)
+{
     chargeBullet_->Draw(vp_);
     chargeEffect_->Draw(vp_);
     playerAura_->Draw(vp_);
@@ -170,7 +189,8 @@ void TitleUI::Draw(ViewProjection &vp_) {
 }
 
 #ifdef _DEBUG
-void TitleUI::DrawImGui() {
+void TitleUI::DrawImGui()
+{
     ImGui::Begin("TitleUI Debug");
 
     ImGui::SeparatorText("Timer");

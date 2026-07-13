@@ -3,7 +3,8 @@
 #include "Graphics/PipeLine/PipeLineManager.h"
 #include <Graphics/PipeLine/ComputePipeLineManager.h>
 namespace Hagine {
-class ParticleCommon {
+class ParticleCommon
+{
   private:
     ParticleCommon() = default;
     ~ParticleCommon() = default;
@@ -15,9 +16,10 @@ class ParticleCommon {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-      static ParticleCommon* GetInstance() {
+    static ParticleCommon *GetInstance()
+    {
         static ParticleCommon instance;
-          return &instance;
+        return &instance;
     }
 
     /// <summary>

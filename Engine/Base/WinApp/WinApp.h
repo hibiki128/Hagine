@@ -7,7 +7,8 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd_, UINT ms
 #include <cstdint>
 // WindowsAPI
 namespace Hagine {
-class WinApp {
+class WinApp
+{
   public:
     WinApp() = default;
     ~WinApp() = default;
@@ -59,8 +60,8 @@ class WinApp {
     static const int32_t kClientWidth = 1760; // 横
     static const int32_t kClientHeight = 990; // 縦
   private:                                    // メンバ変数
-    HWND hwnd_ = nullptr;                      // ウィンドウハンドル
-    WNDCLASS wc_{};                            // ウィンドウクラスの設定
+    HWND hwnd_ = nullptr;                     // ウィンドウハンドル
+    WNDCLASS wc_{};                           // ウィンドウクラスの設定
     bool isFullScreen_ = false;
     // ウィンドウモードの復元用の矩形
     RECT windowRect_ = {0, 0, kClientWidth, kClientHeight};

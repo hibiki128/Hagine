@@ -12,7 +12,8 @@
 #endif // _DEBUG
 
 using namespace Hagine;
-void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey) {
+void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey)
+{
     system_ = system;
 
     // 内部状態の初期化
@@ -59,16 +60,20 @@ void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey
     InitializeOKSprite(okFontKey);
 }
 
-void TutorialUI::InitializeOKSprite(const std::string &fontKey) {
+void TutorialUI::InitializeOKSprite(const std::string &fontKey)
+{
     std::string resolvedKey = fontKey;
-    if (resolvedKey.empty()) {
+    if (resolvedKey.empty())
+    {
         auto keys = TextureManager::GetInstance()->GetAllFontKeys();
-        if (!keys.empty()) {
+        if (!keys.empty())
+        {
             resolvedKey = keys[0];
         }
     }
 
-    if (resolvedKey.empty()) {
+    if (resolvedKey.empty())
+    {
         return;
     }
 
@@ -94,8 +99,10 @@ void TutorialUI::InitializeOKSprite(const std::string &fontKey) {
     okSpriteReady_ = true;
 }
 
-void TutorialUI::Update(float dt) {
-    if (!system_) {
+void TutorialUI::Update(float dt)
+{
+    if (!system_)
+    {
         return;
     }
 
@@ -105,11 +112,14 @@ void TutorialUI::Update(float dt) {
     UpdateMeterSprites();
 }
 
-void TutorialUI::UpdateTransition(float dt) {
-    switch (transitionState_) {
+void TutorialUI::UpdateTransition(float dt)
+{
+    switch (transitionState_)
+    {
 
     case UITransitionState::Idle:
-        if (system_->IsStepJustChanged()) {
+        if (system_->IsStepJustChanged())
+        {
             transitionState_ = UITransitionState::FadingOut;
             fadeTimer_ = 0.0f;
         }
@@ -122,7 +132,8 @@ void TutorialUI::UpdateTransition(float dt) {
         ApplyAlphaToAllManagedSprites(1.0f - t);
         okAlpha_ = t;
 
-        if (fadeTimer_ >= fadeOutDuration_) {
+        if (fadeTimer_ >= fadeOutDuration_)
+        {
             LoadStepSprites(system_->GetCurrentStep());
             ApplyAlphaToAllManagedSprites(0.0f);
             displayedProgress_ = 0.0f;
@@ -140,19 +151,26 @@ void TutorialUI::UpdateTransition(float dt) {
         ApplyAlphaToAllManagedSprites(t);
 
         // Complete ステップでは OK! を永続表示、それ以外はフェードアウト
-        if (system_->GetCurrentStep() == TutorialStep::Complete) {
+        if (system_->GetCurrentStep() == TutorialStep::Complete)
+        {
             okAlpha_ = 1.0f;
-        } else {
+        }
+        else
+        {
             okAlpha_ = 1.0f - t;
         }
 
-        if (fadeTimer_ >= fadeInDuration_) {
+        if (fadeTimer_ >= fadeInDuration_)
+        {
             ApplyAlphaToAllManagedSprites(1.0f);
 
-            if (system_->GetCurrentStep() != TutorialStep::Complete) {
+            if (system_->GetCurrentStep() != TutorialStep::Complete)
+            {
                 okAlpha_ = 0.0f;
                 transitionState_ = UITransitionState::Idle;
-            } else {
+            }
+            else
+            {
                 okAlpha_ = 1.0f;
                 barAlpha_ = 1.0f;
                 frameAlpha_ = 1.0f;
@@ -173,7 +191,8 @@ void TutorialUI::UpdateTransition(float dt) {
         barAlpha_ = alpha;
         frameAlpha_ = alpha;
 
-        if (fadeTimer_ >= completeFadeOutDuration_) {
+        if (fadeTimer_ >= completeFadeOutDuration_)
+        {
             ApplyAlphaToAllManagedSprites(0.0f);
             okAlpha_ = 0.0f;
             barAlpha_ = 0.0f;
@@ -187,9 +206,11 @@ void TutorialUI::UpdateTransition(float dt) {
     }
 
     case UITransitionState::CompleteDone:
-        if (!isFinished_) {
+        if (!isFinished_)
+        {
             postCompleteTimer_ += dt;
-            if (postCompleteTimer_ >= postCompleteDelay_) {
+            if (postCompleteTimer_ >= postCompleteDelay_)
+            {
                 isFinished_ = true;
             }
         }
@@ -197,10 +218,12 @@ void TutorialUI::UpdateTransition(float dt) {
     }
 }
 
-void TutorialUI::UpdateProgressBar(float dt) {
+void TutorialUI::UpdateProgressBar(float dt)
+{
     float target = 0.0f;
 
-    switch (transitionState_) {
+    switch (transitionState_)
+    {
     case UITransitionState::Idle:
         target = system_->GetProgress();
         break;
@@ -220,14 +243,17 @@ void TutorialUI::UpdateProgressBar(float dt) {
     displayedProgress_ = std::clamp(displayedProgress_, 0.0f, 1.0f);
 }
 
-void TutorialUI::UpdateSubMessage() {
+void TutorialUI::UpdateSubMessage()
+{
     const bool shouldShow = system_->IsShowingReturnToAirMessage();
-    if (shouldShow != subMessageVisible_) {
+    if (shouldShow != subMessageVisible_)
+    {
         subMessageVisible_ = shouldShow;
     }
 }
 
-void TutorialUI::UpdateMeterSprites() {
+void TutorialUI::UpdateMeterSprites()
+{
     const float barWidth = std::max(1.0f, barMaxWidth_ * displayedProgress_);
     barSprite_.SetPosition(barPosition_);
     barSprite_.SetSize({barWidth, barHeight_});
@@ -238,15 +264,19 @@ void TutorialUI::UpdateMeterSprites() {
                           barHeight_ + borderThickness_ * 2.0f});
 }
 
-void TutorialUI::ApplyAlphaToAllManagedSprites(float alpha) {
-    for (SpriteData *sd : SpriteManager::GetInstance()->GetAllSprites()) {
-        if (sd && sd->sprite) {
+void TutorialUI::ApplyAlphaToAllManagedSprites(float alpha)
+{
+    for (SpriteData *sd : SpriteManager::GetInstance()->GetAllSprites())
+    {
+        if (sd && sd->sprite)
+        {
             sd->sprite->SetAlpha(alpha);
         }
     }
 }
 
-void TutorialUI::Draw() {
+void TutorialUI::Draw()
+{
     // 枠 -> バー の順で描画
     frameSprite_.SetAlpha(frameAlpha_);
     frameSprite_.Draw();
@@ -258,7 +288,8 @@ void TutorialUI::Draw() {
     SkipButtonSprite_.Draw();
 
     // OK! スプライトの描画
-    if (okSpriteReady_ && okAlpha_ > 0.001f) {
+    if (okSpriteReady_ && okAlpha_ > 0.001f)
+    {
         okSprite_.SetAlpha(okAlpha_);
         okSprite_.SetPosition(okPosition_);
         okSprite_.SetRotation(okRotation_);
@@ -267,16 +298,19 @@ void TutorialUI::Draw() {
     }
 }
 
-void TutorialUI::Finalize() {
+void TutorialUI::Finalize()
+{
     dataHandler_.reset();
     system_ = nullptr;
     okSpriteReady_ = false;
 }
 
-void TutorialUI::DrawImGui() {
+void TutorialUI::DrawImGui()
+{
 #ifdef _DEBUG
     ImGui::SetNextWindowSize(ImVec2(400.0f, 0.0f), ImGuiCond_Once);
-    if (!ImGui::Begin("チュートリアル UI 設定")) {
+    if (!ImGui::Begin("チュートリアル UI 設定"))
+    {
         ImGui::End();
         return;
     }
@@ -285,7 +319,8 @@ void TutorialUI::DrawImGui() {
     ImGui::SeparatorText("進捗メーター  位置 / サイズ");
 
     float pos[2] = {barPosition_.x, barPosition_.y};
-    if (ImGui::DragFloat2("位置##meter", pos, 1.0f)) {
+    if (ImGui::DragFloat2("位置##meter", pos, 1.0f))
+    {
         barPosition_ = {pos[0], pos[1]};
     }
     ImGui::DragFloat("高さ", &barHeight_, 1.0f, 4.0f, 200.0f, "%.1f px");
@@ -309,12 +344,14 @@ void TutorialUI::DrawImGui() {
     ImGui::SeparatorText("OK! スプライト");
 
     float okPos[2] = {okPosition_.x, okPosition_.y};
-    if (ImGui::DragFloat2("位置##ok", okPos, 1.0f)) {
+    if (ImGui::DragFloat2("位置##ok", okPos, 1.0f))
+    {
         okPosition_ = {okPos[0], okPos[1]};
     }
     ImGui::DragFloat("回転 (rad)##ok", &okRotation_, 0.005f, -3.14159f, 3.14159f, "%.3f");
     float okSz[2] = {okSize_.x, okSize_.y};
-    if (ImGui::DragFloat2("サイズ##ok", okSz, 1.0f, 1.0f, 2000.0f)) {
+    if (ImGui::DragFloat2("サイズ##ok", okSz, 1.0f, 1.0f, 2000.0f))
+    {
         okSize_ = {okSz[0], okSz[1]};
     }
     ImGui::Text("表示アルファ : %.3f", okAlpha_);
@@ -335,7 +372,8 @@ void TutorialUI::DrawImGui() {
 
     // ── 設定の保存 ───────────────────────────────────────────
     ImGui::SeparatorText("設定の保存");
-    if (ImGui::Button("保存 (DataHandler::Flush)")) {
+    if (ImGui::Button("保存 (DataHandler::Flush)"))
+    {
         SaveMeterSettings();
     }
 
@@ -343,8 +381,10 @@ void TutorialUI::DrawImGui() {
 #endif // _DEBUG
 }
 
-const char *TutorialUI::GetFolderNameForStep(TutorialStep step) const {
-    if (step == TutorialStep::Complete) {
+const char *TutorialUI::GetFolderNameForStep(TutorialStep step) const
+{
+    if (step == TutorialStep::Complete)
+    {
         return "TutorialFinish";
     }
 
@@ -369,15 +409,18 @@ const char *TutorialUI::GetFolderNameForStep(TutorialStep step) const {
     const int index = static_cast<int>(step);
     const int validCount = static_cast<int>(TutorialStep::StepCount) - 1;
 
-    if (index < 0 || index >= validCount) {
+    if (index < 0 || index >= validCount)
+    {
         return nullptr;
     }
     return kFolderNames[index];
 }
 
-void TutorialUI::LoadStepSprites(TutorialStep step) {
+void TutorialUI::LoadStepSprites(TutorialStep step)
+{
     const char *folder = GetFolderNameForStep(step);
-    if (!folder) {
+    if (!folder)
+    {
         return;
     }
 
@@ -387,8 +430,10 @@ void TutorialUI::LoadStepSprites(TutorialStep step) {
     sm->LoadAllSprites();
 }
 
-void TutorialUI::LoadMeterSettings() {
-    if (!dataHandler_) {
+void TutorialUI::LoadMeterSettings()
+{
+    if (!dataHandler_)
+    {
         return;
     }
 
@@ -407,8 +452,10 @@ void TutorialUI::LoadMeterSettings() {
     ImGuiNotification::Post("チュートリアルUI設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-void TutorialUI::SaveMeterSettings() {
-    if (!dataHandler_) {
+void TutorialUI::SaveMeterSettings()
+{
+    if (!dataHandler_)
+    {
         return;
     }
 

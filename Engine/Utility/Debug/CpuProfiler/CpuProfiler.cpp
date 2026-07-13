@@ -9,17 +9,20 @@
 
 namespace Hagine {
 
-CpuProfiler *CpuProfiler::GetInstance() {
+CpuProfiler *CpuProfiler::GetInstance()
+{
     static CpuProfiler instance;
     return &instance;
 }
 
-void CpuProfiler::BeginFrame() {
+void CpuProfiler::BeginFrame()
+{
     using clock = std::chrono::high_resolution_clock;
     const clock::time_point now = clock::now();
 
     // ---- 実フレーム時間（BeginFrame 間隔・present 待ち込み）----
-    if (hasLastBegin_) {
+    if (hasLastBegin_)
+    {
         const double wallMs = std::chrono::duration<double, std::milli>(now - lastBegin_).count();
         smoothedWallMs_ = (smoothedWallMs_ <= 0.0) ? wallMs : smoothedWallMs_ * 0.85 + wallMs * 0.15;
     }
@@ -30,12 +33,15 @@ void CpuProfiler::BeginFrame() {
     double measuredTotal = 0.0;
     std::vector<Result> next;
     next.reserve(current_.size());
-    for (const auto &s : current_) {
+    for (const auto &s : current_)
+    {
         measuredTotal += s.ms;
         // 直前フレームの同ラベル値を引いて指数移動平均
         double prev = -1.0;
-        for (const auto &r : results_) {
-            if (r.label == s.label) {
+        for (const auto &r : results_)
+        {
+            if (r.label == s.label)
+            {
                 prev = r.ms;
                 break;
             }
@@ -44,10 +50,12 @@ void CpuProfiler::BeginFrame() {
         next.push_back({s.label, smoothed, s.order});
     }
     // order（フレーム内の実行順）で安定ソート
-    for (size_t i = 1; i < next.size(); ++i) {
+    for (size_t i = 1; i < next.size(); ++i)
+    {
         Result key = next[i];
         size_t j = i;
-        while (j > 0 && next[j - 1].order > key.order) {
+        while (j > 0 && next[j - 1].order > key.order)
+        {
             next[j] = next[j - 1];
             --j;
         }
@@ -62,11 +70,14 @@ void CpuProfiler::BeginFrame() {
     nextOrder_ = 0;
 }
 
-void CpuProfiler::Accumulate(const char *label, double ms) {
+void CpuProfiler::Accumulate(const char *label, double ms)
+{
     if (!enabled_ || !label)
         return;
-    for (auto &s : current_) {
-        if (s.label == label) {
+    for (auto &s : current_)
+    {
+        if (s.label == label)
+        {
             s.ms += ms;
             return;
         }
@@ -77,14 +88,16 @@ void CpuProfiler::Accumulate(const char *label, double ms) {
 CpuProfileScope::CpuProfileScope(const char *label)
     : label_(label), t0_(std::chrono::high_resolution_clock::now()) {}
 
-CpuProfileScope::~CpuProfileScope() {
+CpuProfileScope::~CpuProfileScope()
+{
     const double ms = std::chrono::duration<double, std::milli>(
                           std::chrono::high_resolution_clock::now() - t0_)
                           .count();
     CpuProfiler::GetInstance()->Accumulate(label_, ms);
 }
 
-void CpuProfiler::DrawImGui() {
+void CpuProfiler::DrawImGui()
+{
 #ifdef USE_IMGUI
     if (!ImGui::CollapsingHeader("CPU プロファイラ (フェーズ別)"))
         return;
@@ -127,7 +140,8 @@ void CpuProfiler::DrawImGui() {
     ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(0.05f, 0.05f, 0.07f, 1.0f));
     if (ImPlot::BeginPlot("##cpuHist", ImVec2(-1, 90),
                           ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoInputs |
-                              ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText)) {
+                              ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText))
+    {
         ImPlot::SetupAxes(nullptr, "ms",
                           ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoGridLines,
                           ImPlotAxisFlags_None);
@@ -147,25 +161,31 @@ void CpuProfiler::DrawImGui() {
     // ---- フェーズ別テーブル（占有バー付き）----
     ImGui::Spacing();
     SectionHeader("[ フェーズ別 ]", DebugTheme::kAccentBlue);
-    if (results_.empty()) {
+    if (results_.empty())
+    {
         ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::TextUnformatted("（計測データなし — 計測ON かつ数フレーム経過で表示されます）");
         ImGui::PopStyleColor();
-    } else {
+    }
+    else
+    {
         double maxMs = 1e-6;
-        for (const auto &r : results_) {
+        for (const auto &r : results_)
+        {
             if (r.ms > maxMs)
                 maxMs = r.ms;
         }
 
         if (ImGui::BeginTable("##cpuprofTable", 3,
-                              ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit)) {
+                              ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit))
+        {
             ImGui::TableSetupColumn("フェーズ", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("ms", ImGuiTableColumnFlags_WidthFixed, 64.0f);
             ImGui::TableSetupColumn("占有", ImGuiTableColumnFlags_WidthFixed, 130.0f);
             ImGui::TableHeadersRow();
 
-            for (const auto &r : results_) {
+            for (const auto &r : results_)
+            {
                 ImGui::TableNextRow();
 
                 // フェーズ名

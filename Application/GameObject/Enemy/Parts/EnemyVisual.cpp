@@ -10,7 +10,8 @@
 
 using namespace Hagine;
 
-void EnemyVisual::Init(Enemy *owner) {
+void EnemyVisual::Init(Enemy *owner)
+{
     owner_ = owner;
 
     // ───────────────────────────────────────────
@@ -39,7 +40,8 @@ void EnemyVisual::Init(Enemy *owner) {
     animationController_.LoadClips("AnimationController", "PlayerClips");
 }
 
-void EnemyVisual::UpdateAnimation() {
+void EnemyVisual::UpdateAnimation()
+{
     ComboSystem &punchCombo = owner_->Combat().GetPunchCombo();
     const std::vector<std::string> &comboAnimations = owner_->Combat().GetComboAnimations();
 
@@ -48,14 +50,17 @@ void EnemyVisual::UpdateAnimation() {
     // GetCurrentComboIndex() は「次に実行する」インデックスなので、
     // 現在再生中の段 = nextIdx - 1（0 のときは最終段の後）
     // ──────────────────────────────────────────
-    if (punchCombo.IsComboActive()) {
+    if (punchCombo.IsComboActive())
+    {
         int nextIdx = punchCombo.GetCurrentComboIndex();
         int comboLen = punchCombo.GetComboLength();
         int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
 
-        if (animIdx >= 0 && animIdx < static_cast<int>(comboAnimations.size())) {
+        if (animIdx >= 0 && animIdx < static_cast<int>(comboAnimations.size()))
+        {
             const std::string &path = comboAnimations[animIdx];
-            if (!path.empty()) {
+            if (!path.empty())
+            {
                 animationController_.PlayFile(path, false, 1.0f, 0.1f);
             }
         }
@@ -63,7 +68,8 @@ void EnemyVisual::UpdateAnimation() {
     }
 
     // ガード中
-    if (owner_->Status().IsGuarding()) {
+    if (owner_->Status().IsGuarding())
+    {
         animationController_.Play("Guard");
         return;
     }
@@ -78,10 +84,12 @@ void EnemyVisual::UpdateAnimation() {
     float hSpeed = horizontalVel.Length();
     bool verticalMove = std::abs(velocity.y) > kFlyVerticalAnimThreshold;
 
-    if (mv.GetIsFlying() || !mv.GetIsGrounded()) {
+    if (mv.GetIsFlying() || !mv.GetIsGrounded())
+    {
         // 飛行中 ― プレイヤーと同じ規則：
         // 後退・上昇・下降は Idle_Flying、前進・左右移動は Running_Fly
-        if (hSpeed < kMoveAnimMinSpeed && !verticalMove) {
+        if (hSpeed < kMoveAnimMinSpeed && !verticalMove)
+        {
             animationController_.Play("FlyIdle");
             return;
         }
@@ -92,43 +100,58 @@ void EnemyVisual::UpdateAnimation() {
         // 実ワールド位置から求めたベクトルで判定する方が確実
         bool movingBackward = false;
         Player *target = owner_->GetTarget();
-        if (target && hSpeed > kMinRotationDistance) {
+        if (target && hSpeed > kMinRotationDistance)
+        {
             Vector3 toPlayer = target->GetWorldPosition() - owner_->GetWorldPosition();
             toPlayer.y = 0.0f;
             float toLen = toPlayer.Length();
-            if (toLen > kMinRotationDistance) {
+            if (toLen > kMinRotationDistance)
+            {
                 float f = (horizontalVel / hSpeed).Dot(toPlayer / toLen); // +接近(前進) / -後退
                 movingBackward = (f < -kBackwardDotThreshold);
             }
         }
 
-        if (verticalMove || movingBackward) {
+        if (verticalMove || movingBackward)
+        {
             animationController_.Play("FlyIdle");
-        } else {
+        }
+        else
+        {
             animationController_.Play("FlyMove");
         }
         return;
     }
 
     // 地上 ― 待機 / 移動
-    if (hSpeed < kMoveAnimMinSpeed) {
+    if (hSpeed < kMoveAnimMinSpeed)
+    {
         animationController_.Play("Idle");
-    } else {
+    }
+    else
+    {
         animationController_.Play("Run");
     }
 }
 
-void EnemyVisual::UpdateGuardBlink() {
+void EnemyVisual::UpdateGuardBlink()
+{
     // ガード中のエフェクト（点滅）
-    if (owner_->Status().IsGuarding()) {
+    if (owner_->Status().IsGuarding())
+    {
         const float blinkInterval = kBlinkInterval;
         int blinkCount = static_cast<int>(Frame::Time() / blinkInterval);
-        if (blinkCount % kBlinkModulo == kEvenBlink) {
+        if (blinkCount % kBlinkModulo == kEvenBlink)
+        {
             owner_->SetColor(Vector4(kColorOpaque, kColorZero, kColorZero, kColorOpaque));
-        } else {
+        }
+        else
+        {
             owner_->SetColor(Vector4(kColorOpaque, kColorOpaque, kColorOpaque, kColorOpaque));
         }
-    } else {
+    }
+    else
+    {
         owner_->SetColor(Vector4(kColorOpaque, kColorZero, kColorZero, kColorOpaque));
     }
 }

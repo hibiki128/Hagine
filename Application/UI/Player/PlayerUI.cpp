@@ -2,7 +2,8 @@
 #include "SpriteCommon.h"
 
 using namespace Hagine;
-void PlayerUI::Init(Player *player) {
+void PlayerUI::Init(Player *player)
+{
     player_ = player;
     // HPバーの初期化
     hpBar_ = std::make_unique<Sprite>();
@@ -21,8 +22,10 @@ void PlayerUI::Init(Player *player) {
     playerIcon_->Initialize("UI/playerIcon.png", playerIconPosition_);
 }
 
-void PlayerUI::Update() {
-    if (player_) {
+void PlayerUI::Update()
+{
+    if (player_)
+    {
 
         float hpRatio = static_cast<float>(player_->GetHP()) / static_cast<float>(player_->GetMaxHP());
         float energyRatio = static_cast<float>(player_->GetEnergy()) / static_cast<float>(player_->GetMaxEnergy());
@@ -43,64 +46,84 @@ void PlayerUI::Update() {
     }
 }
 
-void PlayerUI::Draw() {
+void PlayerUI::Draw()
+{
     SpriteCommon::GetInstance()->DrawCommonSetting();
-    if (player_) {
+    if (player_)
+    {
         // バーフレームの描画
-        if (barFrame_) {
+        if (barFrame_)
+        {
             barFrame_->Draw();
         }
         // エネルギーバーフレームの描画
-        if (energyBarFrame_) {
+        if (energyBarFrame_)
+        {
             energyBarFrame_->Draw();
         }
         // プレイヤーアイコンの描画
-        if (playerIcon_) {
+        if (playerIcon_)
+        {
             playerIcon_->Draw();
         }
         // エネルギーバーの描画
-        if (energyBar_) {
+        if (energyBar_)
+        {
             energyBar_->Draw();
         }
         // HPバーの描画
-        if (hpBar_) {
+        if (hpBar_)
+        {
             hpBar_->Draw();
         }
     }
 }
 
-void PlayerUI::SetFadeAlpha(float alpha) {
-    if (hpBar_) hpBar_->SetAlpha(kHPBarColorA * alpha);
-    if (barFrame_) barFrame_->SetAlpha(kFrameColorA * alpha);
-    if (energyBar_) energyBar_->SetAlpha(kEnergyBarColorA * alpha);
-    if (energyBarFrame_) energyBarFrame_->SetAlpha(kFrameColorA * alpha);
-    if (playerIcon_) playerIcon_->SetAlpha(alpha);
+void PlayerUI::SetFadeAlpha(float alpha)
+{
+    if (hpBar_)
+        hpBar_->SetAlpha(kHPBarColorA * alpha);
+    if (barFrame_)
+        barFrame_->SetAlpha(kFrameColorA * alpha);
+    if (energyBar_)
+        energyBar_->SetAlpha(kEnergyBarColorA * alpha);
+    if (energyBarFrame_)
+        energyBarFrame_->SetAlpha(kFrameColorA * alpha);
+    if (playerIcon_)
+        playerIcon_->SetAlpha(alpha);
 }
 
-void PlayerUI::Debug() {
+void PlayerUI::Debug()
+{
 #ifdef USE_IMGUI
-    if (ImGui::CollapsingHeader("プレイヤーUI")) {
-        if (ImGui::TreeNode("HPバー")) {
+    if (ImGui::CollapsingHeader("プレイヤーUI"))
+    {
+        if (ImGui::TreeNode("HPバー"))
+        {
             ImGui::DragFloat2("位置", &hpBarPosition_.x, 0.1f);
             ImGui::DragFloat2("サイズ", &hpBarSize_.x, 0.1f);
             ImGui::TreePop();
         }
-        if (ImGui::TreeNode("プレイヤーアイコン")) {
+        if (ImGui::TreeNode("プレイヤーアイコン"))
+        {
             ImGui::DragFloat2("位置", &playerIconPosition_.x, 0.1f);
             ImGui::DragFloat2("サイズ", &iconSize_.x, 0.1f);
             ImGui::TreePop();
         }
-        if (ImGui::TreeNode("エネルギーバー")) {
+        if (ImGui::TreeNode("エネルギーバー"))
+        {
             ImGui::DragFloat2("位置", &energyBarPosition_.x, 0.1f);
             ImGui::DragFloat2("サイズ", &energyBarSize_.x, 0.1f);
             ImGui::TreePop();
         }
-        if (ImGui::TreeNode("バーのフレーム")) {
+        if (ImGui::TreeNode("バーのフレーム"))
+        {
             ImGui::DragFloat2("位置", &barFramePosition_.x, 0.1f);
             ImGui::DragFloat2("サイズ", &barSize_.x, 0.1f);
             ImGui::TreePop();
         }
-        if (ImGui::TreeNode("エネルギーバーのフレーム")) {
+        if (ImGui::TreeNode("エネルギーバーのフレーム"))
+        {
             ImGui::DragFloat2("位置", &energyBarFramePosition_.x, 0.1f);
             ImGui::DragFloat2("サイズ", &energyBarFrameSize_.x, 0.1f);
             ImGui::TreePop();

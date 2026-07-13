@@ -18,7 +18,8 @@ namespace Hagine {
 /// パーティクルのエミッター・グループをImGuiで編集するエディタ（シングルトン）
 /// エミッターの追加・描画・統計表示・テンプレート生成・保存/読み込みを行う
 /// </summary>
-class ParticleEditor {
+class ParticleEditor
+{
   private:
     /// ===================================================
     /// private method / variants
@@ -87,7 +88,8 @@ class ParticleEditor {
 
     /// <summary>インスタンスを取得</summary>
     /// <returns>ParticleEditor*: シングルトンインスタンス</returns>
-    static ParticleEditor *GetInstance() {
+    static ParticleEditor *GetInstance()
+    {
         static ParticleEditor instance;
         return &instance;
     }

@@ -3,13 +3,18 @@
 #include <Transform/WorldTransform.h>
 
 // 前方宣言
-namespace Hagine { class Input; }
-namespace Hagine { class GamePad; }
+namespace Hagine {
+class Input;
+}
+namespace Hagine {
+class GamePad;
+}
 
 /// <summary>
 /// スタート時のカメラの動きを行うカメラクラス
 /// </summary>
-class StartCamera {
+class StartCamera
+{
   public:
     /// ===================================================
     /// public method
@@ -59,7 +64,8 @@ class StartCamera {
     /// 目標となるビュープロジェクションを設定
     /// </summary>
     /// <param name="vp">コピー元のビュープロジェクション</param>
-    void SetTargetVp(Hagine::ViewProjection &vp) {
+    void SetTargetVp(Hagine::ViewProjection &vp)
+    {
         targetVp_.matWorld_ = vp.matWorld_;
         targetVp_.matView_ = vp.matView_;
         targetVp_.matProjection_ = vp.matProjection_;
@@ -89,10 +95,10 @@ class StartCamera {
     static constexpr float kInitialAngleDegrees = -90.0f; ///< 初期角度
 
     // 数値定数
-    static constexpr float kTimerReset = 0.0f;                        ///< タイマーリセット値
-    static constexpr float kMaxBlendValue = 1.0f;                     ///< 最大ブレンド値
-    static constexpr float kEasingMaxValue = 1.0f;                    ///< イージング最大値
-    static constexpr float kZeroRotation = 0.0f;                      ///< 回転ゼロ値
+    static constexpr float kTimerReset = 0.0f;                         ///< タイマーリセット値
+    static constexpr float kMaxBlendValue = 1.0f;                      ///< 最大ブレンド値
+    static constexpr float kEasingMaxValue = 1.0f;                     ///< イージング最大値
+    static constexpr float kZeroRotation = 0.0f;                       ///< 回転ゼロ値
     static constexpr float kHalfPi = 0.5f * std::numbers::pi_v<float>; ///< PI/2
 
     // フェーズ定数
@@ -111,26 +117,26 @@ class StartCamera {
     Hagine::ViewProjection targetVp_; ///< 目標ビュープロジェクション
     Hagine::WorldTransform wt_;       ///< ワールドトランスフォーム
 
-    float speed_ = 1.5f;   ///< 回転速度
-    float angle_ = 0.0f;   ///< 現在の角度
-    float radius_ = 60.0f; ///< 回転半径
+    float speed_ = 1.5f;                               ///< 回転速度
+    float angle_ = 0.0f;                               ///< 現在の角度
+    float radius_ = 60.0f;                             ///< 回転半径
     Hagine::Vector3 centerPos_ = {0.0f, 0.0f, -21.0f}; ///< 中心座標
 
-    bool isEasing_ = false;           ///< イージング中フラグ
-    bool isComplete_ = false;         ///< 完了フラグ
-    float easingTimer_ = 0.0f;        ///< イージングタイマー
-    float easingDuration_ = 2.0f;     ///< イージング時間
-    float finalWaitDuration_ = 1.0f;  ///< 最終待機時間
-    Hagine::Vector3 easingStartPos_;          ///< イージング開始位置
-    Hagine::Vector3 easingStartRot_;          ///< イージング開始回転
-    Hagine::Vector3 easingTargetPos_ = {-6.0f, 3.6f, -7.40f}; ///< 目標位置1
-    Hagine::Vector3 easingTargetRot_ = {Hagine::degreesToRadians(8.6f), Hagine::degreesToRadians(40.0f), Hagine::degreesToRadians(0.0f)}; ///< 目標回転1
-    int easingPhase_ = 0;             ///< 現在のイージングフェーズ
-    float waitDuration_ = 1.0f;       ///< フェーズ間の待機時間
-    Hagine::Vector3 easingTargetPos2_ = {5.0f, 3.6f, -33.0f}; ///< 目標位置2
+    bool isEasing_ = false;                                                                                                                  ///< イージング中フラグ
+    bool isComplete_ = false;                                                                                                                ///< 完了フラグ
+    float easingTimer_ = 0.0f;                                                                                                               ///< イージングタイマー
+    float easingDuration_ = 2.0f;                                                                                                            ///< イージング時間
+    float finalWaitDuration_ = 1.0f;                                                                                                         ///< 最終待機時間
+    Hagine::Vector3 easingStartPos_;                                                                                                         ///< イージング開始位置
+    Hagine::Vector3 easingStartRot_;                                                                                                         ///< イージング開始回転
+    Hagine::Vector3 easingTargetPos_ = {-6.0f, 3.6f, -7.40f};                                                                                ///< 目標位置1
+    Hagine::Vector3 easingTargetRot_ = {Hagine::degreesToRadians(8.6f), Hagine::degreesToRadians(40.0f), Hagine::degreesToRadians(0.0f)};    ///< 目標回転1
+    int easingPhase_ = 0;                                                                                                                    ///< 現在のイージングフェーズ
+    float waitDuration_ = 1.0f;                                                                                                              ///< フェーズ間の待機時間
+    Hagine::Vector3 easingTargetPos2_ = {5.0f, 3.6f, -33.0f};                                                                                ///< 目標位置2
     Hagine::Vector3 easingTargetRot2_ = {Hagine::degreesToRadians(9.6f), Hagine::degreesToRadians(-149.0f), Hagine::degreesToRadians(0.0f)}; ///< 目標回転2
 
-    Hagine::Input *input_ = nullptr; ///< 入力クラスのポインタ
+    Hagine::Input *input_ = nullptr;                     ///< 入力クラスのポインタ
     std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr; ///< ゲームパッドのインスタンス
 
     bool isSkipping_ = false; ///< スキップ実行中フラグ

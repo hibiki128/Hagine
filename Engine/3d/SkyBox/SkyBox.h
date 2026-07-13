@@ -10,7 +10,8 @@ namespace Hagine {
 class PipeLineManager;
 class DirectXCommon;
 class SrvManager;
-class SkyBox {
+class SkyBox
+{
   private:
     /// ===========================================
     /// private methods
@@ -34,7 +35,8 @@ class SkyBox {
 
     void Initialize(std::string filePath);
     void Draw(const ViewProjection &viewProjection);
-    static SkyBox* GetInstance() {
+    static SkyBox *GetInstance()
+    {
         static SkyBox instance;
         return &instance;
     }
@@ -45,21 +47,24 @@ class SkyBox {
     /// <summary>
     /// 背景ボックスの頂点データ
     /// </summary>
-    struct SkyBoxVertexData3D {
+    struct SkyBoxVertexData3D
+    {
         Vector4 position;
     };
 
     /// <summary>
     /// GPUに送る背景ボックスのデータ
     /// </summary>
-    struct SkyBoxDataForGPU {
+    struct SkyBoxDataForGPU
+    {
         Matrix4x4 worldMatrix;
     };
 
     /// <summary>
     /// GPUに送るカメラデータ
     /// </summary>
-    struct CameraDataForGPU {
+    struct CameraDataForGPU
+    {
         Matrix4x4 viewProjection;
         Vector3 worldPosition;
         // パディング（16バイト境界に合わせる）

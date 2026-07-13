@@ -5,21 +5,25 @@
 #include <random>
 
 using namespace Hagine;
-void Shake::Initialize(ViewProjection *viewProjection, std::string jsonName) {
+void Shake::Initialize(ViewProjection *viewProjection, std::string jsonName)
+{
     viewProjection_ = viewProjection;
     // 設定ファイルが指定されていれば読み込む
-    if (!jsonName.empty()) {
+    if (!jsonName.empty())
+    {
         LoadSettings(jsonName);
     }
 }
 
-void Shake::Update() {
+void Shake::Update()
+{
     // 揺れ中でなければ処理しない
     if (!isShaking_)
         return;
 
     // 指定間隔で揺れ処理を実行
-    if (currentFrame_ % shakeInterval_ == 0 && currentFrame_ < shakeDuration_) {
+    if (currentFrame_ % shakeInterval_ == 0 && currentFrame_ < shakeDuration_)
+    {
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<float> distX(shakeMin_.x, shakeMax_.x);
@@ -38,17 +42,20 @@ void Shake::Update() {
 
     // フレーム経過処理
     currentFrame_++;
-    if (currentFrame_ >= shakeDuration_) {
+    if (currentFrame_ >= shakeDuration_)
+    {
         isShaking_ = false;
     }
 }
 
-void Shake::StartShake() {
+void Shake::StartShake()
+{
     isShaking_ = true;
     currentFrame_ = 0;
 }
 
-void Shake::LoadSettings(std::string jsonName) {
+void Shake::LoadSettings(std::string jsonName)
+{
     dataHandler_ = std::make_unique<DataHandler>("Shake", jsonName);
 
     // JSONから各パラメータをロード
@@ -61,7 +68,8 @@ void Shake::LoadSettings(std::string jsonName) {
     ImGuiNotification::Post("シェイク設定を読み込みました: " + jsonName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-void Shake::SaveSettings(std::string jsonName) {
+void Shake::SaveSettings(std::string jsonName)
+{
     dataHandler_ = std::make_unique<DataHandler>("Shake", jsonName);
 
     // 現在のパラメータをJSONに保存
@@ -74,9 +82,11 @@ void Shake::SaveSettings(std::string jsonName) {
     ImGuiNotification::Post("シェイク設定を保存しました: " + jsonName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
-void Shake::imgui() {
+void Shake::imgui()
+{
 #ifdef _DEBUG
-    if (ImGui::Begin("シェイク設定")) {
+    if (ImGui::Begin("シェイク設定"))
+    {
         ImGui::DragFloat2("揺れの最小値", &shakeMin_.x, 0.01f);
         ImGui::DragFloat2("揺れの最大値", &shakeMax_.x, 0.01f);
         ImGui::DragFloat("回転の最小値", &rotationShakeMin_, 0.01f);
@@ -87,16 +97,21 @@ void Shake::imgui() {
         static char saveNameBuffer[256] = "";
         ImGui::InputText("セーブ名", saveNameBuffer, sizeof(saveNameBuffer));
 
-        if (ImGui::Button("セーブ")) {
+        if (ImGui::Button("セーブ"))
+        {
             std::string saveName = saveNameBuffer;
-            if (!saveName.empty()) {
+            if (!saveName.empty())
+            {
                 SaveSettings(saveName);
-            } else {
+            }
+            else
+            {
                 ImGuiNotification::Post("セーブ名を入力してください", {1.0f, 0.2f, 0.2f, 1.0f});
             }
         }
 
-        if (ImGui::Button("シェイク開始")) {
+        if (ImGui::Button("シェイク開始"))
+        {
             StartShake();
         }
     }

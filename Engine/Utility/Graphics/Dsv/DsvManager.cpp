@@ -4,7 +4,8 @@
 
 namespace Hagine {
 
-void DsvManager::Initialize(DXDevice *device) {
+void DsvManager::Initialize(DXDevice *device)
+{
     assert(device);
     device_ = device;
 
@@ -15,11 +16,13 @@ void DsvManager::Initialize(DXDevice *device) {
     heap_ = device_->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, kMaxDSVCount, false);
 }
 
-void DsvManager::Finalize() {
+void DsvManager::Finalize()
+{
     heap_.Reset();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DsvManager::Create(uint32_t index, ID3D12Resource *resource, DXGI_FORMAT format) {
+D3D12_CPU_DESCRIPTOR_HANDLE DsvManager::Create(uint32_t index, ID3D12Resource *resource, DXGI_FORMAT format)
+{
     assert(index < kMaxDSVCount);
 
     D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
@@ -31,13 +34,15 @@ D3D12_CPU_DESCRIPTOR_HANDLE DsvManager::Create(uint32_t index, ID3D12Resource *r
     return handle;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DsvManager::GetCPUHandle(uint32_t index) const {
+D3D12_CPU_DESCRIPTOR_HANDLE DsvManager::GetCPUHandle(uint32_t index) const
+{
     D3D12_CPU_DESCRIPTOR_HANDLE handle = heap_->GetCPUDescriptorHandleForHeapStart();
     handle.ptr += static_cast<SIZE_T>(descriptorSize_) * index;
     return handle;
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE DsvManager::GetGPUHandle(uint32_t index) const {
+D3D12_GPU_DESCRIPTOR_HANDLE DsvManager::GetGPUHandle(uint32_t index) const
+{
     D3D12_GPU_DESCRIPTOR_HANDLE handle = heap_->GetGPUDescriptorHandleForHeapStart();
     handle.ptr += static_cast<UINT64>(descriptorSize_) * index;
     return handle;

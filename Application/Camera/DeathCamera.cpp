@@ -3,18 +3,21 @@
 #include <Frame.h>
 
 using namespace Hagine;
-void DeathCamera::Init() {
+void DeathCamera::Init()
+{
     // ViewProjectionの初期設定
     vp_.farZ_ = kFarZ;
     vp_.Initialize("");
-    
+
     // WorldTransformの初期化
     wt_.Initialize();
 }
 
-void DeathCamera::Update() {
+void DeathCamera::Update()
+{
     // イージング中でなければ終了
-    if (!isEasing_) {
+    if (!isEasing_)
+    {
         return;
     }
 
@@ -23,7 +26,8 @@ void DeathCamera::Update() {
     float t = std::min(easingTimer_ / easingDuration_, kEasingEndThreshold);
 
     // 中間地点到達判定（一度だけフラグを立てる）
-    if (!isHalfway_ && easingTimer_ >= easingDuration_ * kHalfwayRatio) {
+    if (!isHalfway_ && easingTimer_ >= easingDuration_ * kHalfwayRatio)
+    {
         isHalfway_ = true;
     }
 
@@ -41,13 +45,15 @@ void DeathCamera::Update() {
     vp_.UpdateMatrix();
 
     // イージング完了判定
-    if (t >= kEasingMaxValue) {
+    if (t >= kEasingMaxValue)
+    {
         isEasing_ = false;
         isComplete_ = true;
     }
 }
 
-void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &targetPosition) {
+void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &targetPosition)
+{
     // 各種フラグのリセットとタイマーの初期化
     isEasing_ = true;
     isComplete_ = false;
@@ -58,9 +64,12 @@ void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &ta
     easingStartPos_ = currentVp.translation_;
 
     // クォータニオンが使用されているか確認して開始回転をセット
-    if (currentVp.isUseQuaternion_) {
+    if (currentVp.isUseQuaternion_)
+    {
         easingStartRot_ = currentVp.quateRotation_;
-    } else {
+    }
+    else
+    {
         easingStartRot_ = Quaternion::FromEulerAngles(currentVp.eulerRotation_);
     }
 
@@ -75,12 +84,15 @@ void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &ta
 
     // 前方ベクトルと上方向ベクトルから右方向ベクトルを算出
     Vector3 right;
-    if (std::abs(forward.Dot(worldUp)) > kParallelThreshold) {
+    if (std::abs(forward.Dot(worldUp)) > kParallelThreshold)
+    {
         right = {kRightVectorX, kRightVectorY, kRightVectorZ};
-    } else {
+    }
+    else
+    {
         right = (worldUp.Cross(forward)).Normalize();
     }
-    
+
     // 直交する正確な上方向ベクトルを再算出
     Vector3 up = (forward.Cross(right)).Normalize();
 
@@ -94,7 +106,8 @@ void DeathCamera::StartEasing(const ViewProjection &currentVp, const Vector3 &ta
     wt_.UpdateMatrix();
 }
 
-void DeathCamera::imgui() {
+void DeathCamera::imgui()
+{
 #ifdef USE_IMGUI
     ImGui::Begin("DeathCamera");
     ImGui::DragFloat3("Offset", &cameraOffset_.x, 0.1f, -10.0f, 10.0f);

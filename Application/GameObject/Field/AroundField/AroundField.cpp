@@ -2,7 +2,8 @@
 #include "Particle/CSParticle/ParticleCSEditor.h"
 
 using namespace Hagine;
-void AroundField::Init(const std::string objectName) {
+void AroundField::Init(const std::string objectName)
+{
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cylinder);
 
@@ -18,32 +19,39 @@ void AroundField::Init(const std::string objectName) {
     fieldParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("AroundField");
 }
 
-void AroundField::Update() {
+void AroundField::Update()
+{
     // パーティクルの更新
-    if (!fieldParticle_->GetAcitve()) {
+    if (!fieldParticle_->GetAcitve())
+    {
         fieldParticle_->SetActive(true);
     }
     fieldParticle_->Update();
 }
 
-void AroundField::Draw(const ViewProjection &viewProjection) {
+void AroundField::Draw(const ViewProjection &viewProjection)
+{
     // モデルとしての描画は行わない（パーティクルで表現するため）
 }
 
-void AroundField::DrawParticleCompute(const ViewProjection &viewProjection) {
+void AroundField::DrawParticleCompute(const ViewProjection &viewProjection)
+{
     fieldParticle_->DrawCompute(viewProjection);
 }
 
-void AroundField::DrawParticle(const ViewProjection &viewProjection) {
+void AroundField::DrawParticle(const ViewProjection &viewProjection)
+{
     fieldParticle_->DrawGraphics(viewProjection);
 }
 
-void AroundField::Debug() {
+void AroundField::Debug()
+{
     // パーティクルのデバッグ用GUI
     fieldParticle_->DrawImGui();
 }
 
-void AroundField::Finalize() {
+void AroundField::Finalize()
+{
     // パーティクルのカウンターをクリア
     ParticleCSEmitter::ClearNameCounter("AroundField");
 }

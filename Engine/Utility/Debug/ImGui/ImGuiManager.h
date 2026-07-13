@@ -3,14 +3,15 @@
 #include "WinApp.h"
 #include <BaseScene.h>
 #include "Object/Base/BaseObjectManager.h"
-#include"SpriteManager.h"
+#include "SpriteManager.h"
 #include <Audio.h>
 
 namespace Hagine {
 class ImGuizmoManager;
 class OffScreen;
 class DrawSystem;
-class ImGuiManager {
+class ImGuiManager
+{
   private:
     ImGuizmoManager *imGuizmoManager_ = nullptr;
     WinApp *winApp_ = nullptr;
@@ -89,16 +90,19 @@ class ImGuiManager {
     bool &GetIsShowMainUI();
     void SetCurrentScene(BaseScene *currentScene) { currentScene_ = currentScene; };
 
-    void SetImGuizmoManager(ImGuizmoManager *manager) {
+    void SetImGuizmoManager(ImGuizmoManager *manager)
+    {
         imGuizmoManager_ = manager;
     }
 
-    void SetShortcutWindow(bool show) {
+    void SetShortcutWindow(bool show)
+    {
         showShortcutWindow_ = show;
     }
 
     // 必要に応じてImGuizmoManagerへのアクセサを追加
-    ImGuizmoManager *GetImGuizmoManager() const {
+    ImGuizmoManager *GetImGuizmoManager() const
+    {
         return imGuizmoManager_;
     }
 
@@ -107,17 +111,20 @@ class ImGuiManager {
     /// </summary>
     void ShowSceneWindow(OffScreen *offScreen, const std::string &sceneName);
 #ifdef USE_IMGUI
-    Vector2 GetSceneSize() const {
+    Vector2 GetSceneSize() const
+    {
         return Vector2(sceneTextureSize_.x, sceneTextureSize_.y);
     }
     // レイ計算用のシーン位置（クライアント座標系。Mouse::GetMousePos と同じ空間）。
     // マルチビューポートで ImGui 座標がスクリーン全体座標になってもマウスと整合させるため。
-    Vector2 GetScenePos() const {
+    Vector2 GetScenePos() const
+    {
         return Vector2(scenePosForRay_.x, scenePosForRay_.y);
     }
 #endif // USE_IMGUI
 
-    bool GetEditorMode() const {
+    bool GetEditorMode() const
+    {
         return isEditorMode_;
     }
 
@@ -148,7 +155,7 @@ class ImGuiManager {
     void ShowOffScreenSettingWindow(OffScreen *offscreen);
 
     void ShowLightSettingWindow();
-    
+
     void ShowGizmoWindow();
 
     void ShowHierarchyWindow();
@@ -205,8 +212,8 @@ class ImGuiManager {
 
     // シーンウィンドウ
     ImVec2 sceneTextureSize_ = {800.0f, 450.0f};
-    ImVec2 actualScenePos_ = {};   // ImGui座標系（ImGuizmo用）
-    ImVec2 scenePosForRay_ = {};   // クライアント座標系（レイ計算用）
+    ImVec2 actualScenePos_ = {}; // ImGui座標系（ImGuizmo用）
+    ImVec2 scenePosForRay_ = {}; // クライアント座標系（レイ計算用）
 
 #endif // USE_IMGUI
     int cubeCount_ = 0;
@@ -229,8 +236,8 @@ class ImGuiManager {
     bool showFPSView_ = true;
     bool showOfScreenView_ = true;
     bool showLightView_ = true;
-    bool isEditorMode_ = true;    // エディターモードフラグ
-    bool multiViewport_ = false;  // マルチビューポート有効フラグ
+    bool isEditorMode_ = true;   // エディターモードフラグ
+    bool multiViewport_ = false; // マルチビューポート有効フラグ
     bool showShortcutWindow_ = false;
     bool showGizmoView_ = true;
     bool showHierarchyView_ = true;
@@ -240,7 +247,7 @@ class ImGuiManager {
     bool showAudioManagerView_ = false;
     bool showShadowMapView_ = true;
     bool showDrawSystemView_ = true;
-    bool showGameParamView_ = true; // ゲームパラメータHub窓
+    bool showGameParamView_ = true;     // ゲームパラメータHub窓
     bool showAssetBrowserView_ = false; // アセットブラウザ窓
 
     // グリッド設定用メンバ変数

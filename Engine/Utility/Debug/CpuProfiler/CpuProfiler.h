@@ -27,7 +27,8 @@ namespace Hagine {
 /// 同名ラベルは1フレーム内で合算される。表示値はフレーム間で指数移動平均を掛けて
 /// ちらつきを抑える。Release ビルドでは HAGINE_CPU_PROFILE は何もしない。
 /// </summary>
-class CpuProfiler {
+class CpuProfiler
+{
   public:
     static CpuProfiler *GetInstance();
 
@@ -54,19 +55,21 @@ class CpuProfiler {
     CpuProfiler(const CpuProfiler &) = delete;
     CpuProfiler &operator=(const CpuProfiler &) = delete;
 
-    struct Sample {
+    struct Sample
+    {
         std::string label;
-        double ms = 0.0;   // 当フレーム累積
-        int order = 0;     // フレーム内で初めて現れた順
+        double ms = 0.0; // 当フレーム累積
+        int order = 0;   // フレーム内で初めて現れた順
     };
-    struct Result {
+    struct Result
+    {
         std::string label;
-        double ms = 0.0;   // 指数移動平均済み
+        double ms = 0.0; // 指数移動平均済み
         int order = 0;
     };
 
-    std::vector<Sample> current_;   // 当フレームの累積
-    std::vector<Result> results_;   // 表示用（EMA）
+    std::vector<Sample> current_; // 当フレームの累積
+    std::vector<Result> results_; // 表示用（EMA）
     int nextOrder_ = 0;
 
     bool enabled_ = true;
@@ -81,7 +84,8 @@ class CpuProfiler {
 /// RAII スコープ計測。ctor で開始、dtor で経過を CpuProfiler へ加算する。
 /// 直接使わず HAGINE_CPU_PROFILE マクロ経由で使う。
 /// </summary>
-struct CpuProfileScope {
+struct CpuProfileScope
+{
     const char *label_;
     std::chrono::high_resolution_clock::time_point t0_;
     explicit CpuProfileScope(const char *label);

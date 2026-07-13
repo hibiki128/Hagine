@@ -2,8 +2,8 @@
 #include "Model/Model.h"
 #include "Primitive/PrimitiveModel.h"
 #include <Model/ModelStructs.h>
-#include"ParticleStruct.h"
-#include"ParticleCommon.h"
+#include "ParticleStruct.h"
+#include "ParticleCommon.h"
 #include <Transform/WorldTransform.h>
 #include <list>
 
@@ -13,7 +13,8 @@ namespace Hagine {
 /// 同一モデル・マテリアルを共有するパーティクルのグループ
 /// 頂点・マテリアル・インデックスの各バッファを保持し、インスタンシング描画に使う
 /// </summary>
-class ParticleGroup {
+class ParticleGroup
+{
   public:
     /// ===================================================
     /// public method
@@ -47,18 +48,18 @@ class ParticleGroup {
     /// <returns>ParticleGroupData: 生成されたグループデータ</returns>
     ParticleGroupData CreatePrimitiveParticleGroup(const std::string &groupName, PrimitiveType type, const std::string &texturePath = {});
 
-    const std::string GetGroupName() { return particleGroupData_.groupName; }                                  // グループ名を取得
-    uint32_t GetMaxInstance() { return kNumMaxInstance; }                                                      // 最大インスタンス数を取得
-    ParticleGroupData &GetParticleGroupData() { return particleGroupData_; }                                   // グループデータを取得
+    const std::string GetGroupName() { return particleGroupData_.groupName; }                                   // グループ名を取得
+    uint32_t GetMaxInstance() { return kNumMaxInstance; }                                                       // 最大インスタンス数を取得
+    ParticleGroupData &GetParticleGroupData() { return particleGroupData_; }                                    // グループデータを取得
     std::string &GetTexturePath(uint32_t index) { return particleGroupData_.materials[index].textureFilePath; } // テクスチャパスを取得
-    std::string &GetModelPath() { return modelFilePath_; }                                                     // モデルパスを取得
-    D3D12_VERTEX_BUFFER_VIEW &GetVertexBufferView() { return vertexBufferView_; }                              // 頂点バッファビューを取得
-    D3D12_INDEX_BUFFER_VIEW &GetIndexBufferView() { return indexBufferView_; }                                 // インデックスバッファビューを取得
-    ModelData GetModelData() { return modelData_; }                                                            // モデルデータを取得
-    MaterialData GetMaterialData(uint32_t index) { return modelData_.materials[index]; }                       // マテリアルデータを取得
-    PrimitiveType GetPrimitiveType() { return type_; }                                                         // プリミティブ種別を取得
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetVertexResource() { return vertexResource_; }                     // 頂点リソースを取得
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetmaterialResource() { return materialResource_; }                 // マテリアルリソースを取得
+    std::string &GetModelPath() { return modelFilePath_; }                                                      // モデルパスを取得
+    D3D12_VERTEX_BUFFER_VIEW &GetVertexBufferView() { return vertexBufferView_; }                               // 頂点バッファビューを取得
+    D3D12_INDEX_BUFFER_VIEW &GetIndexBufferView() { return indexBufferView_; }                                  // インデックスバッファビューを取得
+    ModelData GetModelData() { return modelData_; }                                                             // モデルデータを取得
+    MaterialData GetMaterialData(uint32_t index) { return modelData_.materials[index]; }                        // マテリアルデータを取得
+    PrimitiveType GetPrimitiveType() { return type_; }                                                          // プリミティブ種別を取得
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetVertexResource() { return vertexResource_; }                      // 頂点リソースを取得
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetmaterialResource() { return materialResource_; }                  // マテリアルリソースを取得
 
   private:
     /// ===================================================
@@ -102,10 +103,10 @@ class ParticleGroup {
     uint32_t *indexData_{};                                          // バッファ内データへのポインタ
     D3D12_INDEX_BUFFER_VIEW indexBufferView_{};                      // インデックスバッファビュー
 
-    Model *model_{};                          // モデル
-    ModelData modelData_{};                   // モデルデータ
-    ParticleGroupData particleGroupData_{};   // パーティクルグループデータ
-    PrimitiveType type_{};                    // プリミティブ種別
-    std::string modelFilePath_{};             // モデルファイルパス
+    Model *model_{};                        // モデル
+    ModelData modelData_{};                 // モデルデータ
+    ParticleGroupData particleGroupData_{}; // パーティクルグループデータ
+    PrimitiveType type_{};                  // プリミティブ種別
+    std::string modelFilePath_{};           // モデルファイルパス
 };
 } // namespace Hagine

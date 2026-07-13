@@ -14,14 +14,15 @@ namespace Hagine {
 class ParticleCSEmitter;
 class OBBCollider;
 class ViewProjection;
-}
+} // namespace Hagine
 
 /// <summary>
 /// 敵の戦闘パーツクラス
 /// 通常射撃・弾管理・近接コンボ・前方攻撃判定と、
 /// 大技（チャージ攻撃・ビーム必殺技）の演出＆処理を担当する
 /// </summary>
-class EnemyCombat {
+class EnemyCombat
+{
   public:
     /// ===================================================
     /// public method
@@ -109,8 +110,10 @@ class EnemyCombat {
     /// <summary>
     /// 被弾ヒット時のシェイクを開始する（強化弾・必殺技被弾用）
     /// </summary>
-    void StartHitShake() {
-        if (chargeShake_) {
+    void StartHitShake()
+    {
+        if (chargeShake_)
+        {
             chargeShake_->StartShake();
         }
     }
@@ -173,8 +176,7 @@ class EnemyCombat {
     static constexpr float kBeamExtendSpeed = 110.0f;       // ビームが伸びる速度
     static constexpr float kBeamWidth = 2.5f;               // ビーム幅
     static constexpr float kBeamDuration = 2.0f;            // ビーム持続時間(秒)
-    static constexpr float kLockOffsetY = 2.5f; // ビーム発射時のYオフセット（敵中心からの相対値）
-
+    static constexpr float kLockOffsetY = 2.5f;             // ビーム発射時のYオフセット（敵中心からの相対値）
 
     Enemy *owner_ = nullptr; ///< 所有者の敵
 
@@ -183,10 +185,10 @@ class EnemyCombat {
     // 前方攻撃判定コライダー（PlayerAttackColliderと対称の設計）
     std::unique_ptr<EnemyAttackCollider> attackCollider_; ///< 攻撃コライダー
 
-    ComboSystem punchCombo_;                    ///< パンチコンボシステム
-    bool comboInitialized_ = false;             ///< コンボ初期化済みフラグ
-    bool isComboAttack_ = false;                ///< コンボ攻撃中フラグ
-    std::vector<std::string> comboAnimations_;  ///< コンボ段ごとの本体アニメーションパス
+    ComboSystem punchCombo_;                   ///< パンチコンボシステム
+    bool comboInitialized_ = false;            ///< コンボ初期化済みフラグ
+    bool isComboAttack_ = false;               ///< コンボ攻撃中フラグ
+    std::vector<std::string> comboAnimations_; ///< コンボ段ごとの本体アニメーションパス
 
     // コンボ攻撃パラメータ（ComboSystemのコールバックで更新）
     float currentAttackDamage_ = 10.0f;   ///< 現在の攻撃ダメージ量

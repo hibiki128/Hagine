@@ -5,7 +5,8 @@
 /// プレイヤーの待機状態を管理するクラス
 /// 地面上での待機や入力待ちを処理する
 /// </summary>
-class PlayerStateIdle : public PlayerBaseState {
+class PlayerStateIdle : public PlayerBaseState
+{
   public:
     /// ===================================================
     /// public method
@@ -39,9 +40,9 @@ class PlayerStateIdle : public PlayerBaseState {
     /// private varians
     /// ===================================================
 
-    static constexpr float kGroundPullVelocity    = -0.1f;  // 地面への引き付け速度
-    static constexpr float kDampingFactor         = 0.75f;  // 減衰率
-    static constexpr float kVelocityStopThreshold = 0.01f;  // 速度停止閾値
-    static constexpr float kVelocityZero          = 0.0f;   // 速度ゼロ
-    static constexpr float kMoveSpeedZero         = 0.0f;   // 移動速度ゼロ
+    static constexpr float kGroundPullVelocity = -0.1f;    // 地面への引き付け速度
+    static constexpr float kDampingFactor = 0.75f;         // 減衰率
+    static constexpr float kVelocityStopThreshold = 0.01f; // 速度停止閾値
+    static constexpr float kVelocityZero = 0.0f;           // 速度ゼロ
+    static constexpr float kMoveSpeedZero = 0.0f;          // 移動速度ゼロ
 };

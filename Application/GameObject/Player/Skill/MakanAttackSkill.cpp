@@ -6,7 +6,8 @@
 #include <Frame.h>
 #include <cmath>
 using namespace Hagine;
-void MakanAttackSkill::Init(const std::string objectName) {
+void MakanAttackSkill::Init(const std::string objectName)
+{
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cube);
     makanCollider_ = AddOBBCollider("makan_Collider");
@@ -24,19 +25,22 @@ void MakanAttackSkill::Init(const std::string objectName) {
     makanAroundEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("makan_around");
 }
 
-void MakanAttackSkill::Update() {
+void MakanAttackSkill::Update()
+{
     BaseObject::Update();
     makanMainEffect_->Update();
     makanAroundEffect_->Update();
 
-    if (!isActive_ || !playerTransform_) {
+    if (!isActive_ || !playerTransform_)
+    {
         makanCollider_->SetEnabled(false);
         return;
     }
 
     // 長さを伸ばす
     currentLength_ += extendSpeed_ * Frame::DeltaTime();
-    if (currentLength_ > maxLength_) {
+    if (currentLength_ > maxLength_)
+    {
         currentLength_ = maxLength_;
     }
 
@@ -50,7 +54,8 @@ void MakanAttackSkill::Update() {
     makanCollider_->SetAnchorPoint(Vector3(0.5f, 0.5f, 1.0f));
 
     // メインビーム設定
-    if (makanMainEffect_) {
+    if (makanMainEffect_)
+    {
         makanMainEffect_->SetAuto(true);
         makanMainEffect_->SetScale(Vector3(0.0f, 0.0f, currentLength_));
         makanMainEffect_->SetAnchorPoint(Vector3(0.5f, 0.5f, 0.75f));
@@ -59,7 +64,8 @@ void MakanAttackSkill::Update() {
     }
 
     // らせん状エミッター（新しいアプローチ）
-    if (makanAroundEffect_) {
+    if (makanAroundEffect_)
+    {
         makanAroundEffect_->SetAuto(true);
         spiralTime_ += Frame::DeltaTime();
 
@@ -75,14 +81,14 @@ void MakanAttackSkill::Update() {
 
         // ローカルY軸(上方向)
         Vector3 localUp(
-            2.0f * (q.x * q.y + q.w * q.z), 
+            2.0f * (q.x * q.y + q.w * q.z),
             1.0f - 2.0f * (q.x * q.x + q.z * q.z),
-            2.0f * (q.y * q.z - q.w * q.x)); 
+            2.0f * (q.y * q.z - q.w * q.x));
 
         // ローカルZ軸(前方向)
         Vector3 localForward(
-            2.0f * (q.x * q.z - q.w * q.y), 
-            2.0f * (q.y * q.z + q.w * q.x), 
+            2.0f * (q.x * q.z - q.w * q.y),
+            2.0f * (q.y * q.z + q.w * q.x),
             1.0f - 2.0f * (q.x * q.x + q.y * q.y));
 
         // 前進距離
@@ -109,12 +115,14 @@ void MakanAttackSkill::Update() {
 
     // 持続時間チェック
     activeTime_ += Frame::DeltaTime();
-    if (activeTime_ >= duration_) {
+    if (activeTime_ >= duration_)
+    {
         Deactivate();
     }
 }
 
-void MakanAttackSkill::Activate(WorldTransform *playerTransform) {
+void MakanAttackSkill::Activate(WorldTransform *playerTransform)
+{
     if (isActive_)
         return;
 
@@ -127,7 +135,8 @@ void MakanAttackSkill::Activate(WorldTransform *playerTransform) {
     spiralTime_ = 0.0f;
 }
 
-void MakanAttackSkill::Deactivate() {
+void MakanAttackSkill::Deactivate()
+{
     isActive_ = false;
     currentLength_ = 0.0f;
     activeTime_ = 0.0f;
@@ -138,22 +147,29 @@ void MakanAttackSkill::Deactivate() {
     makanAroundEffect_->SetAuto(false);
 }
 
-void MakanAttackSkill::Draw(const ViewProjection &viewProjection) {
+void MakanAttackSkill::Draw(const ViewProjection &viewProjection)
+{
 }
 
-void MakanAttackSkill::DrawParticle(const ViewProjection &viewProjection) {
-    if (makanMainEffect_) {
+void MakanAttackSkill::DrawParticle(const ViewProjection &viewProjection)
+{
+    if (makanMainEffect_)
+    {
         makanMainEffect_->Draw(viewProjection);
     }
-    if (makanAroundEffect_) {
+    if (makanAroundEffect_)
+    {
         makanAroundEffect_->Draw(viewProjection);
     }
 }
 
-void MakanAttackSkill::OnCollisionEnter(ColliderBase *other) {
-    if (other->GetTag() == "Enemy") {
+void MakanAttackSkill::OnCollisionEnter(ColliderBase *other)
+{
+    if (other->GetTag() == "Enemy")
+    {
         // プレイヤーの敵が存在し、生きている場合
-        if (player_ && player_->GetEnemy() && player_->GetEnemy()->GetAlive()) {
+        if (player_ && player_->GetEnemy() && player_->GetEnemy()->GetAlive())
+        {
             isAlive_ = false;
 
             // チャージ度合いに応じたダメージを計算して適用
@@ -163,11 +179,12 @@ void MakanAttackSkill::OnCollisionEnter(ColliderBase *other) {
     }
 }
 
-void MakanAttackSkill::DebugImGui() {
+void MakanAttackSkill::DebugImGui()
+{
 #ifdef _DEBUG
 
-
-    if (ImGui::TreeNode("MakanAttackSkill Debug")) {
+    if (ImGui::TreeNode("MakanAttackSkill Debug"))
+    {
         ImGui::Checkbox("Is Active", &isActive_);
         ImGui::Text("Current Length: %.2f / %.2f", currentLength_, maxLength_);
         ImGui::Text("Active Time: %.2f / %.2f", activeTime_, duration_);
@@ -180,7 +197,8 @@ void MakanAttackSkill::DebugImGui() {
         ImGui::DragFloat("Spiral Revolution", &spiralRevolution_, 0.1f, 0.0f, 10.0f);
         ImGui::DragFloat("Spiral Forward Speed", &spiralForwardSpeed_, 1.0f, 0.0f, 100.0f);
 
-        if (playerTransform_) {
+        if (playerTransform_)
+        {
             ImGui::Separator();
             ImGui::Text("Player Transform");
             ImGui::Text("Position: (%.2f, %.2f, %.2f)",
@@ -214,7 +232,8 @@ void MakanAttackSkill::DebugImGui() {
             ImGui::Text("Up:      (%.2f, %.2f, %.2f)", localUp.x, localUp.y, localUp.z);
             ImGui::Text("Forward: (%.2f, %.2f, %.2f)", localForward.x, localForward.y, localForward.z);
 
-            if (makanAroundEffect_) {
+            if (makanAroundEffect_)
+            {
                 ImGui::Separator();
                 ImGui::Text("Spiral Emitter Position: (%.2f, %.2f, %.2f)",
                             makanAroundEffect_->GetTranslate().x,

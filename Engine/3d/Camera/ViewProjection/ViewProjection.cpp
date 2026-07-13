@@ -12,7 +12,8 @@
 #include <type/Vector2.h>
 
 namespace Hagine {
-void ViewProjection::Initialize(std::string jsonFile) {
+void ViewProjection::Initialize(std::string jsonFile)
+{
     // 各種行列を単位行列で初期化
     matView_ = MakeIdentity4x4();
     matProjection_ = MakeIdentity4x4();
@@ -28,32 +29,40 @@ void ViewProjection::Initialize(std::string jsonFile) {
     Load(jsonFile);
 }
 
-void ViewProjection::CreateConstBuffer() {
+void ViewProjection::CreateConstBuffer()
+{
     const UINT bufferSize = sizeof(ConstBufferDataViewProjection);
     constBuffer_ = dxCommon_->CreateBufferResource(bufferSize);
 }
 
-void ViewProjection::Map() {
+void ViewProjection::Map()
+{
     // 定数バッファをCPUからアクセス可能なメモリにマッピング
     HRESULT hr = constBuffer_->Map(0, nullptr, reinterpret_cast<void **>(&constMap_));
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         // 必要に応じてエラー処理を記述
     }
 }
 
-void ViewProjection::UpdateMatrix() {
+void ViewProjection::UpdateMatrix()
+{
     // イージング処理がアクティブな場合
-    if (isEasing_) {
+    if (isEasing_)
+    {
         easingTime_ += Frame::DeltaTime();
 
-        if (easingTime_ >= easingDuration_) {
+        if (easingTime_ >= easingDuration_)
+        {
             // イージング終了時に値を目標値で確定させる
             easingTime_ = easingDuration_;
             translation_ = targetTranslation_;
             eulerRotation_ = targetEulerRotation_;
             quateRotation_ = targetQuaternionRotation_;
             isEasing_ = false;
-        } else {
+        }
+        else
+        {
             // 経過時間に基づき、イージング関数を適用して現在値を補間
             translation_ = ApplyEasing(currentEasingType_, startTranslation_, targetTranslation_, easingTime_, easingDuration_);
             eulerRotation_ = ApplyEasing(currentEasingType_, startEulerRotation_, targetEulerRotation_, easingTime_, easingDuration_);
@@ -67,22 +76,28 @@ void ViewProjection::UpdateMatrix() {
     TransferMatrix();
 }
 
-void ViewProjection::TransferMatrix() {
+void ViewProjection::TransferMatrix()
+{
     // マッピングされたメモリへ現在値を書き込み、GPUへ送信
-    if (constMap_) {
+    if (constMap_)
+    {
         constMap_->view = matView_;
         constMap_->projection = matProjection_;
         constMap_->cameraPos = translation_;
     }
 }
 
-void ViewProjection::UpdateViewMatrix() {
+void ViewProjection::UpdateViewMatrix()
+{
     Matrix4x4 worldMatrix;
 
     // クォータニオンまたはオイラー角の選択に基づいてアフィン行列を生成
-    if (isUseQuaternion_) {
+    if (isUseQuaternion_)
+    {
         worldMatrix = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, quateRotation_, translation_);
-    } else {
+    }
+    else
+    {
         worldMatrix = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, eulerRotation_, translation_);
     }
 
@@ -93,13 +108,16 @@ void ViewProjection::UpdateViewMatrix() {
     matView_ = Inverse(worldMatrix);
 }
 
-void ViewProjection::UpdateProjectionMatrix() {
+void ViewProjection::UpdateProjectionMatrix()
+{
     // 透視投影行列の作成
     matProjection_ = MakePerspectiveFovMatrix(fovAngleY_, aspectRatio, nearZ_, farZ_);
 }
 
-void ViewProjection::EaseCameraMove(EasingType easeType, const std::string &jsonName, float duration) {
-    if (isEasing_) {
+void ViewProjection::EaseCameraMove(EasingType easeType, const std::string &jsonName, float duration)
+{
+    if (isEasing_)
+    {
         return; // 既にイージング移動中であれば処理をスキップ
     }
 
@@ -122,7 +140,8 @@ void ViewProjection::EaseCameraMove(EasingType easeType, const std::string &json
     isEasing_ = true;
 }
 
-void ViewProjection::ShowDebugInfo() {
+void ViewProjection::ShowDebugInfo()
+{
 #ifdef USE_IMGUI
     ImGui::SetNextWindowSize(ImVec2(320, 0), ImGuiCond_FirstUseEver);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
@@ -131,7 +150,8 @@ void ViewProjection::ShowDebugInfo() {
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 4.0f);
 
-    if (ImGui::Begin("カメラ設定##vpwin")) {
+    if (ImGui::Begin("カメラ設定##vpwin"))
+    {
         // ====================================================
         // [1] Position / Rotation
         // ====================================================
@@ -141,7 +161,8 @@ void ViewProjection::ShowDebugInfo() {
                                                  ImGuiTreeNodeFlags_DefaultOpen);
         ImGui::PopStyleColor(2);
 
-        if (basicOpen) {
+        if (basicOpen)
+        {
             ImGui::Indent(6.0f);
 
             // Quaternion switch
@@ -159,7 +180,8 @@ void ViewProjection::ShowDebugInfo() {
 
             // Rotation
             SectionHeader("[ 回転 ]", DebugTheme::kAccentCyan);
-            if (isUseQuaternion_) {
+            if (isUseQuaternion_)
+            {
                 ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
                 ImGui::TextUnformatted("クォータニオン (X / Y / Z / W)");
                 ImGui::PopStyleColor();
@@ -173,7 +195,9 @@ void ViewProjection::ShowDebugInfo() {
                 ImGui::Text("  Euler (ref)  X:%.1f  Y:%.1f  Z:%.1f (deg)",
                             eulerRotation_.x * d, eulerRotation_.y * d, eulerRotation_.z * d);
                 ImGui::PopStyleColor();
-            } else {
+            }
+            else
+            {
                 ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
                 ImGui::TextUnformatted("オイラー角 (度)  X / Y / Z");
                 ImGui::PopStyleColor();
@@ -207,7 +231,8 @@ void ViewProjection::ShowDebugInfo() {
         bool paramOpen = ImGui::CollapsingHeader("カメラパラメータ##vpp");
         ImGui::PopStyleColor(2);
 
-        if (paramOpen) {
+        if (paramOpen)
+        {
             ImGui::Indent(6.0f);
             SectionHeader("[ 投影 ]", DebugTheme::kAccentOrange);
 
@@ -239,7 +264,8 @@ void ViewProjection::ShowDebugInfo() {
             SectionHeader("[ クリップ距離 ]", DebugTheme::kAccentOrange);
 
             if (ImGui::BeginTable("NearFar", 2,
-                                  ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoPadOuterX)) {
+                                  ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoPadOuterX))
+            {
                 ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 48.0f);
                 ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
@@ -283,7 +309,8 @@ void ViewProjection::ShowDebugInfo() {
                                                 ImGuiTreeNodeFlags_DefaultOpen);
         ImGui::PopStyleColor(2);
 
-        if (calcOpen) {
+        if (calcOpen)
+        {
             ImGui::Indent(6.0f);
             Vector3 wp = {matWorld_.m[3][0], matWorld_.m[3][1], matWorld_.m[3][2]};
             float dist = sqrtf(wp.x * wp.x + wp.y * wp.y + wp.z * wp.z);
@@ -310,12 +337,14 @@ void ViewProjection::ShowDebugInfo() {
         bool matOpen = ImGui::CollapsingHeader("行列情報##vpmat");
         ImGui::PopStyleColor(2);
 
-        if (matOpen) {
+        if (matOpen)
+        {
             ImGui::Indent(6.0f);
             auto ShowMat = [](const char *lbl, const Matrix4x4 &m) {
                 ImGui::PushStyleColor(ImGuiCol_Header, {0.15f, 0.15f, 0.18f, 1.0f});
                 ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.20f, 0.20f, 0.25f, 1.0f});
-                if (ImGui::TreeNodeEx(lbl, ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                if (ImGui::TreeNodeEx(lbl, ImGuiTreeNodeFlags_SpanAvailWidth))
+                {
                     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextReadOnly);
                     for (int i = 0; i < 4; ++i)
                         ImGui::Text("[%d] %7.3f %7.3f %7.3f %7.3f",
@@ -340,7 +369,8 @@ void ViewProjection::ShowDebugInfo() {
         bool ioOpen = ImGui::CollapsingHeader("保存 / 読み込み##vpio");
         ImGui::PopStyleColor(2);
 
-        if (ioOpen) {
+        if (ioOpen)
+        {
             ImGui::Indent(6.0f);
             ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
             ImGui::TextUnformatted("JSONファイル名 (拡張子なし)");
@@ -370,7 +400,8 @@ void ViewProjection::ShowDebugInfo() {
         bool easeOpen = ImGui::CollapsingHeader("カメライージング##vpease");
         ImGui::PopStyleColor(2);
 
-        if (easeOpen) {
+        if (easeOpen)
+        {
             ImGui::Indent(6.0f);
 
             // 状態バッジ
@@ -382,7 +413,8 @@ void ViewProjection::ShowDebugInfo() {
             StatusBadge(isEasing_ ? "イージング中" : "待機",
                         isEasing_ ? DebugTheme::kAccentYellow : DebugTheme::kAccentGreen);
 
-            if (isEasing_) {
+            if (isEasing_)
+            {
                 ImGui::PushStyleColor(ImGuiCol_PlotHistogram, DebugTheme::kAccentYellow);
                 ImGui::ProgressBar(easingTime_ / easingDuration_, ImVec2(-1, 6), "");
                 ImGui::PopStyleColor();
@@ -453,18 +485,21 @@ void ViewProjection::ShowDebugInfo() {
 
             ImGui::PushStyleColor(ImGuiCol_Button, {0.50f, 0.15f, 0.15f, 0.85f});
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.70f, 0.20f, 0.20f, 0.90f});
-            if (ImGui::Button("イージング停止##vpstop", ImVec2(-1, 0)) && isEasing_) {
+            if (ImGui::Button("イージング停止##vpstop", ImVec2(-1, 0)) && isEasing_)
+            {
                 isEasing_ = false;
                 easingTime_ = 0.f;
             }
             ImGui::PopStyleColor(2);
 
             // 実行中の詳細
-            if (isEasing_) {
+            if (isEasing_)
+            {
                 ImGui::Spacing();
                 ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgYellow);
                 ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.80f, 0.72f, 0.42f, 0.20f});
-                if (ImGui::CollapsingHeader("イージング詳細##vpdet")) {
+                if (ImGui::CollapsingHeader("イージング詳細##vpdet"))
+                {
                     ImGui::Indent(6.0f);
                     auto R3 = [](const char *lbl, ImVec4 col, float x, float y, float z) {
                         ImGui::PushStyleColor(ImGuiCol_Text, col);
@@ -491,7 +526,8 @@ void ViewProjection::ShowDebugInfo() {
             if (ImGui::SmallButton("現在位置を保存##vpqsave"))
                 Save("CurrentCamera");
             ImGui::SameLine();
-            if (ImGui::SmallButton("原点に戻す##vpqorig") && !isEasing_) {
+            if (ImGui::SmallButton("原点に戻す##vpqorig") && !isEasing_)
+            {
                 auto tmp = std::make_unique<DataHandler>("Camera", "TempOrigin");
                 tmp->Save("translation", Vector3{0.f, 0.f, -10.f});
                 tmp->Save("eulerRotation", Vector3{0.f, 0.f, 0.f});
@@ -508,8 +544,10 @@ void ViewProjection::ShowDebugInfo() {
 #endif // USE_IMGUI
 }
 
-void ViewProjection::Save(std::string jsonFile) {
-    if (jsonFile.empty()) {
+void ViewProjection::Save(std::string jsonFile)
+{
+    if (jsonFile.empty())
+    {
         return;
     }
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("Camera", jsonFile);
@@ -527,8 +565,10 @@ void ViewProjection::Save(std::string jsonFile) {
     ImGuiNotification::Post("カメラ設定を保存しました: " + jsonFile, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
-void ViewProjection::Load(std::string jsonFile) {
-    if (jsonFile.empty()) {
+void ViewProjection::Load(std::string jsonFile)
+{
+    if (jsonFile.empty())
+    {
         return;
     }
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("Camera", jsonFile);

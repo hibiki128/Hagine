@@ -4,7 +4,8 @@
 #include <Particle/CSParticle/ParticleCSEditor.h>
 
 using namespace Hagine;
-void PlayerEnergyCharge::Enter(Player &player) {
+void PlayerEnergyCharge::Enter(Player &player)
+{
     beforeChargeRate_ = player.GetChargeRate();
     beforeState_ = player.GetPreviewStateName();
     player.GetVelocity() = {kVelocityZero, kVelocityZero, kVelocityZero};
@@ -13,7 +14,8 @@ void PlayerEnergyCharge::Enter(Player &player) {
     chargeAuraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
 }
 
-void PlayerEnergyCharge::Update(Player &player) {
+void PlayerEnergyCharge::Update(Player &player)
+{
     chargeAuraEmitter_->Update();
     chargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y + chargeAuraEmitter_->GetScale().y - 1.0f, player.GetWorldPosition().z});
     chargeAuraEmitter_->SetRotation(player.GetWorldRotation());
@@ -22,19 +24,26 @@ void PlayerEnergyCharge::Update(Player &player) {
     bool chargeRelease = false;
     bool shouldExitCharge = false;
 
-    if (!player.GetGamePad()->IsConnected()) {
+    if (!player.GetGamePad()->IsConnected())
+    {
         // キーボード入力
         chargeRelease = Input::GetInstance()->ReleaseKey(DIK_C);
-    } else {
+    }
+    else
+    {
         // ゲームパッド入力
         bool isLTHeld = player.GetGamePad()->GetLeftTrigger() > 0.25f;
 
         // LTが押されていない場合はチャージ解除
-        if (!isLTHeld) {
+        if (!isLTHeld)
+        {
             shouldExitCharge = true;
-        } else {
+        }
+        else
+        {
             // LT押しながらAボタンが押された場合、ダッシュフラグを立ててチャージ解除
-            if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_A)) {
+            if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_A))
+            {
                 float leftStickX = -player.GetGamePad()->GetLeftStickX();
                 float leftStickY = player.GetGamePad()->GetLeftStickY();
 
@@ -45,9 +54,11 @@ void PlayerEnergyCharge::Update(Player &player) {
             }
 
             // Yボタンが押された時、スキルが実際に打てる場合のみチャージを中断
-            if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_Y)) {
+            if (player.GetGamePad()->IsTrigger(XINPUT_GAMEPAD_Y))
+            {
                 const float kSkillShotEnergyCost = 65.0f;
-                if (player.GetEnergy() >= kSkillShotEnergyCost) {
+                if (player.GetEnergy() >= kSkillShotEnergyCost)
+                {
                     shouldExitCharge = true;
                 }
             }
@@ -55,28 +66,34 @@ void PlayerEnergyCharge::Update(Player &player) {
     }
 
     // チャージ解除条件
-    if (chargeRelease || shouldExitCharge || player.GetEnergy() >= player.GetMaxEnergy()) {
+    if (chargeRelease || shouldExitCharge || player.GetEnergy() >= player.GetMaxEnergy())
+    {
         if (beforeState_ == "Idle" ||
-            beforeState_ == "Move") {
+            beforeState_ == "Move")
+        {
             player.ChangeState("Idle");
         }
         if (beforeState_ == "FlyIdle" ||
-            beforeState_ == "FlyMove") {
+            beforeState_ == "FlyMove")
+        {
             player.ChangeState("FlyIdle");
         }
     }
 }
 
-void PlayerEnergyCharge::Exit(Player &player) {
+void PlayerEnergyCharge::Exit(Player &player)
+{
     player.SetEnergyRecoveryRate(beforeChargeRate_);
     chargeAuraEmitter_->SetAuto(false);
     chargeAuraEmitter_->Update();
     ParticleCSEmitter::ClearNameCounter("ChargeAura");
 }
 
-void PlayerEnergyCharge::DrawParticle(Player &player, const ViewProjection &viewProjection) {
+void PlayerEnergyCharge::DrawParticle(Player &player, const ViewProjection &viewProjection)
+{
 
-    if (chargeAuraEmitter_) {
+    if (chargeAuraEmitter_)
+    {
         chargeAuraEmitter_->Draw(viewProjection);
     }
 }

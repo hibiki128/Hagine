@@ -4,7 +4,8 @@
 /// <summary>
 /// 空のドームを表現するゲームオブジェクトクラス
 /// </summary>
-class SkyDome : public Hagine::BaseObject {
+class SkyDome : public Hagine::BaseObject
+{
   public:
     /// ===================================================
     /// public method

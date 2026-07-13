@@ -9,24 +9,29 @@
 
 using namespace Hagine;
 
-void EnemyStatus::Init(Enemy *owner) {
+void EnemyStatus::Init(Enemy *owner)
+{
     owner_ = owner;
 }
 
-void EnemyStatus::DamageUpdate() {
+void EnemyStatus::DamageUpdate()
+{
     EnemyMovement &mv = owner_->Movement();
     Vector3 &velocity = mv.GetVelocity();
 
-    if (damage_ <= kNoDamage) {
+    if (damage_ <= kNoDamage)
+    {
         // ダメージがなくてもノックバックだけ適用する場合に備えてチェック
-        if (hasKnockback_) {
+        if (hasKnockback_)
+        {
             velocity.x += pendingKnockback_.x;
             velocity.y += pendingKnockback_.y;
             velocity.z += pendingKnockback_.z;
             // velocityEaseをキャンセルしてノックバックが上書きされないようにする
             mv.CancelVelocityEase();
             // ノックバックでXZ方向に飛ぶ場合、地上判定を解除して浮かせる
-            if (mv.GetIsGrounded() && (pendingKnockback_.y > 0.0f)) {
+            if (mv.GetIsGrounded() && (pendingKnockback_.y > 0.0f))
+            {
                 mv.GetIsGrounded() = false;
                 mv.GetAcceleration().y = -mv.GetFallSpeed();
             }
@@ -38,7 +43,8 @@ void EnemyStatus::DamageUpdate() {
 
     // ダメージ計算（ガード時は軽減し、エネルギーを消費する：プレイヤーと同様）
     float actualDamage = damage_;
-    if (isGuarding_) {
+    if (isGuarding_)
+    {
         actualDamage *= kGuardDamageMultiplier;
         ConsumeEnergy(kGuardEnergyCost);
     }
@@ -46,7 +52,8 @@ void EnemyStatus::DamageUpdate() {
     damage_ = kNoDamage;
 
     // ノックバック適用（ガード中は軽減）
-    if (hasKnockback_) {
+    if (hasKnockback_)
+    {
         float knockbackMult = isGuarding_ ? kGuardDamageMultiplier : 1.0f;
         velocity.x += pendingKnockback_.x * knockbackMult;
         velocity.y += pendingKnockback_.y * knockbackMult;
@@ -56,7 +63,8 @@ void EnemyStatus::DamageUpdate() {
         mv.CancelVelocityEase();
 
         // ノックバックに上方成分があれば空中に飛ばす
-        if (mv.GetIsGrounded() && pendingKnockback_.y > 0.0f) {
+        if (mv.GetIsGrounded() && pendingKnockback_.y > 0.0f)
+        {
             mv.GetIsGrounded() = false;
             mv.GetAcceleration().y = -mv.GetFallSpeed();
         }
@@ -68,9 +76,11 @@ void EnemyStatus::DamageUpdate() {
     StartDamageReact();
 }
 
-void EnemyStatus::UpdateDamageReact() {
+void EnemyStatus::UpdateDamageReact()
+{
     // ダメージリアクション処理（高速点滅のみ。傾き(のけぞり)演出は廃止）
-    if (!isDamageReact_) {
+    if (!isDamageReact_)
+    {
         return;
     }
 
@@ -80,14 +90,17 @@ void EnemyStatus::UpdateDamageReact() {
     int blink = static_cast<int>(damageReactTimer_ / blinkInterval);
     owner_->SetAlpha((blink % kBlinkModulo == kEvenBlink) ? kAlphaTransparent : kAlphaOpaque);
 
-    if (damageReactTimer_ >= damageReactDuration_) {
+    if (damageReactTimer_ >= damageReactDuration_)
+    {
         isDamageReact_ = false;
         owner_->SetAlpha(kAlphaOpaque);
     }
 }
 
-bool EnemyStatus::ConsumeEnergy(float amount) {
-    if (energy_ >= amount) {
+bool EnemyStatus::ConsumeEnergy(float amount)
+{
+    if (energy_ >= amount)
+    {
         energy_ -= amount;
         timeSinceLastShot_ = kTimerReset;
         return true;
@@ -95,23 +108,28 @@ bool EnemyStatus::ConsumeEnergy(float amount) {
     return false;
 }
 
-void EnemyStatus::RecoverEnergy() {
+void EnemyStatus::RecoverEnergy()
+{
     timeSinceLastShot_ += Frame::DeltaTime();
-    if (timeSinceLastShot_ >= energyRecoveryDelay_) {
+    if (timeSinceLastShot_ >= energyRecoveryDelay_)
+    {
         energy_ += energyRecoveryRate_ * Frame::DeltaTime();
         if (energy_ > maxEnergy_)
             energy_ = maxEnergy_;
     }
 }
 
-void EnemyStatus::SetKnockback(const Vector3 &direction, float power) {
-    if (power <= 0.0f) {
+void EnemyStatus::SetKnockback(const Vector3 &direction, float power)
+{
+    if (power <= 0.0f)
+    {
         return;
     }
 
     Vector3 dir = direction;
     float len = std::sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
-    if (len < 0.001f) {
+    if (len < 0.001f)
+    {
         return;
     }
     dir.x /= len;
@@ -127,16 +145,19 @@ void EnemyStatus::SetKnockback(const Vector3 &direction, float power) {
     hasKnockback_ = true;
 }
 
-void EnemyStatus::StartDamageReact() {
+void EnemyStatus::StartDamageReact()
+{
     isDamageReact_ = true;
     damageReactTimer_ = kTimerReset;
 }
 
-void EnemyStatus::SetEnergy(float energy) {
+void EnemyStatus::SetEnergy(float energy)
+{
     energy_ = std::clamp(energy, 0.0f, maxEnergy_);
 }
 
-void EnemyStatus::ResetForRevive() {
+void EnemyStatus::ResetForRevive()
+{
     HP_ = maxHP_;
     energy_ = maxEnergy_;
     hasKnockback_ = false;
@@ -144,7 +165,8 @@ void EnemyStatus::ResetForRevive() {
     isDamageReact_ = false;
 }
 
-void EnemyStatus::RegisterParams() {
+void EnemyStatus::RegisterParams()
+{
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Enemy", "HP", static_cast<const float *>(&HP_));
     hub->Register("Enemy", "エネルギー", static_cast<const float *>(&energy_));

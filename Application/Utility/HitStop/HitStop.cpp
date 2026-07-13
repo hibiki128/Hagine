@@ -5,11 +5,13 @@
 #include <Frame.h>
 
 using namespace Hagine;
-void HitStop::Initialize() {
+void HitStop::Initialize()
+{
     LoadSettings();
 }
 
-void HitStop::Update() {
+void HitStop::Update()
+{
     // アクティブでないなら何もしない
     if (!isActive_)
         return;
@@ -17,19 +19,22 @@ void HitStop::Update() {
     // 経過時間を加算
     elapsedTime_ += Frame::DeltaTime();
     // 停止時間を経過したら終了
-    if (elapsedTime_ >= stopDuration_) {
+    if (elapsedTime_ >= stopDuration_)
+    {
         isActive_ = false;
         elapsedTime_ = 0.0f;
     }
 }
 
-void HitStop::Start() {
+void HitStop::Start()
+{
     // 経過時間をリセットして開始
     elapsedTime_ = 0.0f;
     isActive_ = true;
 }
 
-void HitStop::LoadSettings() {
+void HitStop::LoadSettings()
+{
     // JSONファイルから設定を読み込み
     std::ifstream file("Application/Assets/jsons/HitStop/hitstop.json");
     if (!file)
@@ -43,7 +48,8 @@ void HitStop::LoadSettings() {
     ImGuiNotification::Post("ヒットストップ設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-void HitStop::SaveSettings() {
+void HitStop::SaveSettings()
+{
     // フォルダが存在しなければ作成
     std::filesystem::create_directories("Application/Assets/jsons/HitStop");
     nlohmann::json json;
@@ -57,19 +63,23 @@ void HitStop::SaveSettings() {
     ImGuiNotification::Post("ヒットストップ設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
-void HitStop::imgui() {
+void HitStop::imgui()
+{
 #ifdef _DEBUG
-    if (ImGui::Begin("ヒットストップ設定")) {
+    if (ImGui::Begin("ヒットストップ設定"))
+    {
         // 停止時間のスライダー
         ImGui::DragFloat("停止時間 (秒)", &stopDuration_, 0.01f, 0.01f, 5.0f);
 
         // セーブボタン
-        if (ImGui::Button("セーブ")) {
+        if (ImGui::Button("セーブ"))
+        {
             SaveSettings();
         }
 
         // テスト用の開始ボタン
-        if (ImGui::Button("ヒットストップ開始")) {
+        if (ImGui::Button("ヒットストップ開始"))
+        {
             Start();
         }
     }

@@ -7,7 +7,8 @@
 #include <random>
 
 using namespace Hagine;
-void ResultStaging::Initialize() {
+void ResultStaging::Initialize()
+{
 
     /// ===================================================
     /// ポインタ共有
@@ -18,7 +19,8 @@ void ResultStaging::Initialize() {
 
     fireWorkStates_.resize(fireWorks_count_);
 
-    for (int i = 0; i < fireWorks_count_; ++i) {
+    for (int i = 0; i < fireWorks_count_; ++i)
+    {
         fireWorks_explosions_.push_back(ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("fireWork_explosion"));
         fireWorks_trails_.push_back(ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("fireWork_Trail"));
 
@@ -36,11 +38,14 @@ void ResultStaging::Initialize() {
     MotionEditor::GetInstance()->Register(LeftHand_);
 }
 
-void ResultStaging::Update() {
+void ResultStaging::Update()
+{
 
     // イージング開始時のモーション制御
-    if (startEasing_) {
-        if (!secondMove_ && !motionStarted_) {
+    if (startEasing_)
+    {
+        if (!secondMove_ && !motionStarted_)
+        {
             // 最初のパンチモーション
             MotionEditor::GetInstance()->PlayFromFile(LeftHand_, "LeftPunch");
             MotionEditor::GetInstance()->PlayFromFile(RightHand_, "RightBack");
@@ -48,7 +53,8 @@ void ResultStaging::Update() {
         }
         if (!secondMove_ &&
             MotionEditor::GetInstance()->IsAttackFinished(LeftHand_) &&
-            MotionEditor::GetInstance()->IsAttackFinished(RightHand_)) {
+            MotionEditor::GetInstance()->IsAttackFinished(RightHand_))
+        {
             // 2つ目のパンチモーション
             secondMove_ = true;
             MotionEditor::GetInstance()->PlayFromFile(LeftHand_, "LeftBack");
@@ -60,20 +66,24 @@ void ResultStaging::Update() {
     DrawFireWorkArea();
 
     // 全パーティクルの更新
-    for (int i = 0; i < fireWorks_count_; i++) {
+    for (int i = 0; i < fireWorks_count_; i++)
+    {
         fireWorks_explosions_[i]->Update();
         fireWorks_trails_[i]->Update();
     }
 
     // 花火の打ち上げ制御
-    if (fireWorkStarted_) {
+    if (fireWorkStarted_)
+    {
         float deltaTime = Frame::DeltaTime();
 
         // 新しい花火の発射タイマー
         nextFireWorkTimer_ -= deltaTime;
-        if (nextFireWorkTimer_ <= 0.0f) {
+        if (nextFireWorkTimer_ <= 0.0f)
+        {
             int availableIndex = FindAvailableFireWork();
-            if (availableIndex != -1) {
+            if (availableIndex != -1)
+            {
                 // 新しい花火を発射
                 FireWorkState &state = fireWorkStates_[availableIndex];
                 state.phase = FireWorkState::Phase::Rising;
@@ -94,15 +104,18 @@ void ResultStaging::Update() {
         }
 
         // 各花火の状態更新
-        for (int i = 0; i < (int)fireWorkStates_.size(); ++i) {
+        for (int i = 0; i < (int)fireWorkStates_.size(); ++i)
+        {
             FireWorkState &state = fireWorkStates_[i];
 
-            switch (state.phase) {
+            switch (state.phase)
+            {
             case FireWorkState::Phase::Rising:
                 // 上昇中
                 state.timer += deltaTime;
 
-                if (state.timer >= kFireWorkRisingTime) {
+                if (state.timer >= kFireWorkRisingTime)
+                {
                     // 爆発フェーズへ
                     state.phase = FireWorkState::Phase::Exploding;
                     state.timer = 0.0f;
@@ -117,7 +130,8 @@ void ResultStaging::Update() {
                 // 爆発中
                 state.timer += deltaTime;
 
-                if (state.timer >= kFireWorkExplodingTime) {
+                if (state.timer >= kFireWorkExplodingTime)
+                {
                     // 待機状態に戻す
                     state.phase = FireWorkState::Phase::Ready;
                     state.timer = 0.0f;
@@ -132,15 +146,18 @@ void ResultStaging::Update() {
     }
 }
 
-void ResultStaging::Draw(const ViewProjection &viewProjection) {
+void ResultStaging::Draw(const ViewProjection &viewProjection)
+{
 
-    for (int i = 0; i < fireWorks_count_; i++) {
+    for (int i = 0; i < fireWorks_count_; i++)
+    {
         fireWorks_explosions_[i]->Draw(viewProjection);
         fireWorks_trails_[i]->Draw(viewProjection);
     }
 }
 
-Vector3 ResultStaging::GetRandomPositionInArea() {
+Vector3 ResultStaging::GetRandomPositionInArea()
+{
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> distX(-kRandomPositionRange, kRandomPositionRange);
@@ -161,16 +178,20 @@ Vector3 ResultStaging::GetRandomPositionInArea() {
     return fireWorkAreaCenter_ + rotatedPos;
 }
 
-int ResultStaging::FindAvailableFireWork() {
-    for (int i = 0; i < fireWorkStates_.size(); ++i) {
-        if (fireWorkStates_[i].phase == FireWorkState::Phase::Ready) {
+int ResultStaging::FindAvailableFireWork()
+{
+    for (int i = 0; i < fireWorkStates_.size(); ++i)
+    {
+        if (fireWorkStates_[i].phase == FireWorkState::Phase::Ready)
+        {
             return i;
         }
     }
     return -1; // 利用可能な花火がない
 }
 
-void ResultStaging::DrawFireWorkArea() {
+void ResultStaging::DrawFireWorkArea()
+{
     // 立方体の8つの頂点をローカル座標で定義
     Vector3 halfSize = fireWorkAreaSize_ * kAreaHalfSizeMultiplier;
     Vector3 vertices[8] = {
@@ -187,7 +208,8 @@ void ResultStaging::DrawFireWorkArea() {
     // 回転と平行移動を適用
     Matrix4x4 rotationMatrix = MakeRotateXYZMatrix(fireWorkAreaRotation_);
     Vector3 worldVertices[8];
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 8; ++i)
+    {
         worldVertices[i] = Transformation(vertices[i], rotationMatrix) + fireWorkAreaCenter_;
     }
 
@@ -213,9 +235,11 @@ void ResultStaging::DrawFireWorkArea() {
     DrawLine3D::GetInstance()->SetPoints(worldVertices[4], worldVertices[7], lineColor);
 }
 
-void ResultStaging::DrawImGui() {
+void ResultStaging::DrawImGui()
+{
 #ifdef USE_IMGUI
-    if (ImGui::Begin("Result Staging Settings")) {
+    if (ImGui::Begin("Result Staging Settings"))
+    {
 
         ImGui::SeparatorText("花火システム");
 
@@ -225,7 +249,8 @@ void ResultStaging::DrawImGui() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        if (ImGui::CollapsingHeader("花火発生エリア設定##FireWorkArea")) {
+        if (ImGui::CollapsingHeader("花火発生エリア設定##FireWorkArea"))
+        {
             ImGui::DragFloat3("エリア中心座標##AreaCenter", &fireWorkAreaCenter_.x, 0.5f);
             ImGui::DragFloat3("エリアサイズ##AreaSize", &fireWorkAreaSize_.x, 0.5f, 1.0f, 200.0f);
 
@@ -233,7 +258,8 @@ void ResultStaging::DrawImGui() {
             ImGui::Text("現在の回転: %.1f° %.1f° %.1f°", currentEuler.x, currentEuler.y, currentEuler.z);
 
             static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
-            if (ImGui::DragFloat3("エリア回転##AreaRotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°")) {
+            if (ImGui::DragFloat3("エリア回転##AreaRotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°"))
+            {
                 Quaternion currentRotation = fireWorkAreaRotation_;
                 Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
                 Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
@@ -245,7 +271,8 @@ void ResultStaging::DrawImGui() {
             }
 
             ImGui::SameLine();
-            if (ImGui::Button("リセット##AreaRotation")) {
+            if (ImGui::Button("リセット##AreaRotation"))
+            {
                 fireWorkAreaRotation_ = Quaternion::IdentityQuaternion();
                 deltaRotation = {0.0f, 0.0f, 0.0f};
             }
@@ -255,11 +282,13 @@ void ResultStaging::DrawImGui() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        if (ImGui::CollapsingHeader("花火発射間隔設定##FireWorkInterval")) {
+        if (ImGui::CollapsingHeader("花火発射間隔設定##FireWorkInterval"))
+        {
             ImGui::DragFloat("最小間隔 (秒)##MinInterval", &minFireWorkInterval_, 0.01f, 0.1f, 5.0f, "%.2f");
             ImGui::DragFloat("最大間隔 (秒)##MaxInterval", &maxFireWorkInterval_, 0.01f, 0.1f, 10.0f, "%.2f");
 
-            if (minFireWorkInterval_ > maxFireWorkInterval_) {
+            if (minFireWorkInterval_ > maxFireWorkInterval_)
+            {
                 maxFireWorkInterval_ = minFireWorkInterval_;
             }
 
@@ -270,13 +299,16 @@ void ResultStaging::DrawImGui() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        if (ImGui::CollapsingHeader("花火ステータス##FireWorkStatus")) {
+        if (ImGui::CollapsingHeader("花火ステータス##FireWorkStatus"))
+        {
             int readyCount = 0;
             int risingCount = 0;
             int explodingCount = 0;
 
-            for (const auto &state : fireWorkStates_) {
-                switch (state.phase) {
+            for (const auto &state : fireWorkStates_)
+            {
+                switch (state.phase)
+                {
                 case FireWorkState::Phase::Ready:
                     readyCount++;
                     break;

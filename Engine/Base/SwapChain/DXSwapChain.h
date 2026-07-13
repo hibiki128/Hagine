@@ -12,7 +12,8 @@ namespace Hagine {
 /// スワップチェーンクラス
 /// IDXGISwapChain4 とバックバッファの管理・Present を担当する
 /// </summary>
-class DXSwapChain {
+class DXSwapChain
+{
   public:
     DXSwapChain() = default;
     ~DXSwapChain() = default;

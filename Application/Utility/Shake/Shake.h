@@ -12,7 +12,8 @@
 /// カメラ揺れ効果を管理するクラス
 /// 攻撃ヒット時などにカメラを振動させる演出を制御
 /// </summary>
-class Shake {
+class Shake
+{
   public:
     /// ===================================================
     /// public method
@@ -66,8 +67,8 @@ class Shake {
 
     Hagine::Vector2 shakeMin_ = {-0.5f, -0.5f}; // 揺れ最小値
     Hagine::Vector2 shakeMax_ = {0.5f, 0.5f};   // 揺れ最大値
-    float rotationShakeMin_ = -0.1f;    // 回転揺れ最小値
-    float rotationShakeMax_ = 0.1f;     // 回転揺れ最大値
+    float rotationShakeMin_ = -0.1f;            // 回転揺れ最小値
+    float rotationShakeMax_ = 0.1f;             // 回転揺れ最大値
 
     int shakeInterval_ = 2;  // 揺らす間隔（フレーム）
     int shakeDuration_ = 30; // 揺れの持続時間（フレーム）

@@ -13,7 +13,8 @@
 
 using namespace Hagine;
 
-void CameraLockOn::Init(FollowCamera *owner) {
+void CameraLockOn::Init(FollowCamera *owner)
+{
     owner_ = owner;
 
     // 肩オフセットの初期化
@@ -30,14 +31,18 @@ void CameraLockOn::Init(FollowCamera *owner) {
     lockOnHeightOffsetTarget_ = lockOnGroundedHeight_;
 }
 
-void CameraLockOn::UpdateLockOnTransition(bool isCurrentlyLockedOn) {
-    if (wasLockedOn_ && !isCurrentlyLockedOn) {
+void CameraLockOn::UpdateLockOnTransition(bool isCurrentlyLockedOn)
+{
+    if (wasLockedOn_ && !isCurrentlyLockedOn)
+    {
         // ロックオン解除：肩オフセットを中央へ戻す演出を開始
         isResettingShoulderOffset_ = true;
         shoulderResetTimer_ = kTimerReset;
         shoulderOffsetStart_ = shoulderOffsetCurrent_;
         shoulderOffsetTarget_ = {kVectorZero, kVectorZero, kVectorZero};
-    } else if (!wasLockedOn_ && isCurrentlyLockedOn) {
+    }
+    else if (!wasLockedOn_ && isCurrentlyLockedOn)
+    {
         // ロックオン開始：肩を片側へ寄せる
         shoulderOffsetTarget_.x = shoulderMaxOffset_;
     }
@@ -46,7 +51,8 @@ void CameraLockOn::UpdateLockOnTransition(bool isCurrentlyLockedOn) {
     wasLockedOn_ = isCurrentlyLockedOn;
 }
 
-void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &targetPos, const Vector3 &velocity) {
+void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &targetPos, const Vector3 &velocity)
+{
     Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
     Vector3 toEnemyDir = enemyPos - targetPos;
 
@@ -55,7 +61,8 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &
 
     // 敵の方向に基づいてヨー角を更新
     float yaw = owner_->GetYaw();
-    if (lengthXZ > kEpsilon) {
+    if (lengthXZ > kEpsilon)
+    {
         toEnemyDirXZ = toEnemyDirXZ.Normalize();
         yaw = std::atan2(toEnemyDirXZ.x, toEnemyDirXZ.z);
         owner_->SetYaw(yaw);
@@ -66,23 +73,28 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &
 
     // 入力の確認
     bool hasInput = false;
-    if (!player->GetGamePad()->IsConnected()) {
+    if (!player->GetGamePad()->IsConnected())
+    {
         hasInput = Input::GetInstance()->PushKey(DIK_W) ||
                    Input::GetInstance()->PushKey(DIK_A) ||
                    Input::GetInstance()->PushKey(DIK_S) ||
                    Input::GetInstance()->PushKey(DIK_D);
-    } else {
+    }
+    else
+    {
         float leftStickX = player->GetGamePad()->GetLeftStickX();
         float leftStickY = player->GetGamePad()->GetLeftStickY();
         hasInput = (leftStickX != 0.0f || leftStickY != 0.0f);
     }
 
     // 入力方向に応じた肩オフセットの切り替え
-    if (hasInput && std::abs(lateralVelocity) > kVelocityThreshold) {
+    if (hasInput && std::abs(lateralVelocity) > kVelocityThreshold)
+    {
         float sign = lateralVelocity > 0.0f ? 1.0f : -1.0f;
         float newTarget = -sign * shoulderMaxOffset_;
 
-        if (std::abs(newTarget - shoulderOffsetTarget_.x) > kShoulderTargetThreshold) {
+        if (std::abs(newTarget - shoulderOffsetTarget_.x) > kShoulderTargetThreshold)
+        {
             shoulderLerpTimer_ = kTimerReset;
             shoulderLerpStartValue_ = shoulderOffsetCurrent_.x;
         }
@@ -92,9 +104,12 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &
     }
 
     // 接地状態に応じた高さオフセットの目標値設定
-    if (player->GetIsGrounded()) {
+    if (player->GetIsGrounded())
+    {
         lockOnHeightOffsetTarget_ = lockOnGroundedHeight_;
-    } else {
+    }
+    else
+    {
         lockOnHeightOffsetTarget_ = lockOnAirborneHeight_;
     }
 
@@ -103,44 +118,55 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *player, const Vector3 &
     float heightDiff = lockOnHeightOffsetTarget_ - lockOnHeightOffsetCurrent_;
     lockOnHeightOffsetCurrent_ += heightDiff * lockOnHeightLerpSpeed_ * deltaTime;
 
-    if (std::abs(heightDiff) < kHeightDiffThreshold) {
+    if (std::abs(heightDiff) < kHeightDiffThreshold)
+    {
         lockOnHeightOffsetCurrent_ = lockOnHeightOffsetTarget_;
     }
 }
 
-void CameraLockOn::UpdateShoulderOffset() {
-    if (isResettingShoulderOffset_) {
+void CameraLockOn::UpdateShoulderOffset()
+{
+    if (isResettingShoulderOffset_)
+    {
         // 解除時の戻り演出
         shoulderResetTimer_ += Frame::DeltaTime();
         float t = std::min(shoulderResetTimer_ / shoulderResetDuration_, kMaxBlendValue);
         shoulderOffsetCurrent_ = ApplyEasing(shoulderResetEasingType_, shoulderOffsetStart_, shoulderOffsetTarget_, t, kEasingMaxValue);
 
-        if (t >= kMaxBlendValue) {
+        if (t >= kMaxBlendValue)
+        {
             isResettingShoulderOffset_ = false;
         }
-    } else {
+    }
+    else
+    {
         // 通常の追従演出
         float deltaTime = Frame::DeltaTime();
         float lerpSpeed = shoulderLerpSpeed_ * deltaTime;
 
         float diff = shoulderOffsetTarget_.x - shoulderOffsetCurrent_.x;
-        if (std::abs(diff) < kShoulderDiffThreshold) {
+        if (std::abs(diff) < kShoulderDiffThreshold)
+        {
             shoulderOffsetCurrent_.x = shoulderOffsetTarget_.x;
-        } else {
+        }
+        else
+        {
             float t = std::min(lerpSpeed, kMaxBlendValue);
             shoulderOffsetCurrent_.x += diff * ApplyEasing(shoulderEasingType_, kVectorZero, kEasingMaxValue, t, kEasingMaxValue);
         }
     }
 }
 
-bool CameraLockOn::IsPointInLockOnFrustum(const Vector3 &point) const {
+bool CameraLockOn::IsPointInLockOnFrustum(const Vector3 &point) const
+{
     WorldTransform &worldTransform = owner_->GetCameraWorldTransform();
     const Vector3 origin = worldTransform.translation_;
     Vector3 toTarget = point - origin;
 
     // 距離による判定
     float distance = toTarget.Length();
-    if (distance < kEpsilon || distance > lockOnRange_) {
+    if (distance < kEpsilon || distance > lockOnRange_)
+    {
         return false;
     }
 
@@ -152,56 +178,68 @@ bool CameraLockOn::IsPointInLockOnFrustum(const Vector3 &point) const {
 
     // 前方判定（カメラの背面にあれば除外）
     float dotF = toTarget.Dot(forward);
-    if (dotF <= kVectorZero) {
+    if (dotF <= kVectorZero)
+    {
         return false;
     }
 
     // 水平角による判定
     float tanH = toTarget.Dot(right) / dotF;
-    if (std::abs(tanH) > std::tan(lockOnHalfFovH_)) {
+    if (std::abs(tanH) > std::tan(lockOnHalfFovH_))
+    {
         return false;
     }
 
     // 垂直角による判定
     float tanV = toTarget.Dot(up) / dotF;
-    if (std::abs(tanV) > std::tan(lockOnHalfFovV_)) {
+    if (std::abs(tanV) > std::tan(lockOnHalfFovV_))
+    {
         return false;
     }
 
     return true;
 }
 
-void CameraLockOn::UpdateFrustumLockOn() {
+void CameraLockOn::UpdateFrustumLockOn()
+{
     Player *player = owner_->GetTarget();
-    if (!player) {
+    if (!player)
+    {
         return;
     }
 
     Enemy *enemy = player->GetEnemy();
-    if (!enemy) {
+    if (!enemy)
+    {
         return;
     }
 
     // 既にロックオンしている場合はスキップ
-    if (player->GetIsLockOn()) {
+    if (player->GetIsLockOn())
+    {
         return;
     }
 
     // 敵が視錐台内に入った瞬間にロックオンを開始
-    if (IsPointInLockOnFrustum(enemy->GetPosition())) {
+    if (IsPointInLockOnFrustum(enemy->GetPosition()))
+    {
         player->SetIsLockOn(true);
     }
 }
 
-void CameraLockOn::DrawFrustum() {
+void CameraLockOn::DrawFrustum()
+{
     // デバッグ描画が有効な場合に視錐台を描画
-    if (drawLockOnFrustumDebug_) {
+    if (drawLockOnFrustumDebug_)
+    {
         DrawLockOnFrustum(DrawLine3D::GetInstance());
     }
 }
 
-void CameraLockOn::DrawLockOnFrustum(DrawLine3D *drawLine3D) const {
-    if (!drawLine3D) {
+void CameraLockOn::DrawLockOnFrustum(DrawLine3D *drawLine3D) const
+{
+    if (!drawLine3D)
+    {
         return;
     }
 
@@ -239,13 +277,16 @@ void CameraLockOn::DrawLockOnFrustum(DrawLine3D *drawLine3D) const {
     CalcCorners(lockOnRange_, farCorners);
 
     // 面の輪郭を描画
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i)
+    {
         drawLine3D->SetPoints(nearCorners[i], nearCorners[(i + 1) % 4], color);
     }
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i)
+    {
         drawLine3D->SetPoints(farCorners[i], farCorners[(i + 1) % 4], color);
     }
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i)
+    {
         drawLine3D->SetPoints(nearCorners[i], farCorners[i], color);
     }
 
@@ -253,7 +294,8 @@ void CameraLockOn::DrawLockOnFrustum(DrawLine3D *drawLine3D) const {
     drawLine3D->SetPoints(origin, origin + forward * lockOnRange_, axisColor);
 }
 
-void CameraLockOn::DrawImGui() {
+void CameraLockOn::DrawImGui()
+{
 #ifdef USE_IMGUI
     ImGui::DragFloat3("offsetCurrent", &shoulderOffsetCurrent_.x, 0.1f);
     ImGui::DragFloat3("offsetTarget", &shoulderOffsetTarget_.x, 0.1f);
@@ -286,10 +328,12 @@ void CameraLockOn::DrawImGui() {
     int shoulderEasing = static_cast<int>(shoulderEasingType_);
     int shoulderResetEasing = static_cast<int>(shoulderResetEasingType_);
 
-    if (ImGui::Combo("Shoulder Easing", &shoulderEasing, easingTypes, IM_ARRAYSIZE(easingTypes))) {
+    if (ImGui::Combo("Shoulder Easing", &shoulderEasing, easingTypes, IM_ARRAYSIZE(easingTypes)))
+    {
         shoulderEasingType_ = static_cast<EasingType>(shoulderEasing);
     }
-    if (ImGui::Combo("Shoulder Reset Easing", &shoulderResetEasing, easingTypes, IM_ARRAYSIZE(easingTypes))) {
+    if (ImGui::Combo("Shoulder Reset Easing", &shoulderResetEasing, easingTypes, IM_ARRAYSIZE(easingTypes)))
+    {
         shoulderResetEasingType_ = static_cast<EasingType>(shoulderResetEasing);
     }
 
@@ -300,17 +344,23 @@ void CameraLockOn::DrawImGui() {
     ImGui::Text("【視錐台ロックオン】");
 
     Player *player = owner_->GetTarget();
-    if (player) {
-        if (player->GetIsLockOn()) {
+    if (player)
+    {
+        if (player->GetIsLockOn())
+        {
             ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "ロックオン中: ON");
-        } else {
+        }
+        else
+        {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "ロックオン中: OFF");
         }
     }
 
     ImGui::Checkbox("視錐台デバッグ描画", &drawLockOnFrustumDebug_);
-    if (ImGui::Button("ロックオン解除")) {
-        if (player) {
+    if (ImGui::Button("ロックオン解除"))
+    {
+        if (player)
+        {
             player->ReleaseLockOn();
         }
     }
@@ -321,16 +371,19 @@ void CameraLockOn::DrawImGui() {
     ImGui::DragFloat("有効距離", &lockOnRange_, 0.5f, 1.0f, 100.0f, "%.1f");
     float halfFovHDeg = lockOnHalfFovH_ * kToDeg;
     float halfFovVDeg = lockOnHalfFovV_ * kToDeg;
-    if (ImGui::DragFloat("水平半角 (度)", &halfFovHDeg, 0.5f, 1.0f, 89.0f, "%.1f")) {
+    if (ImGui::DragFloat("水平半角 (度)", &halfFovHDeg, 0.5f, 1.0f, 89.0f, "%.1f"))
+    {
         lockOnHalfFovH_ = halfFovHDeg * kToRad;
     }
-    if (ImGui::DragFloat("垂直半角 (度)", &halfFovVDeg, 0.5f, 1.0f, 89.0f, "%.1f")) {
+    if (ImGui::DragFloat("垂直半角 (度)", &halfFovVDeg, 0.5f, 1.0f, 89.0f, "%.1f"))
+    {
         lockOnHalfFovV_ = halfFovVDeg * kToRad;
     }
     ImGui::Text("  水平全角: %.1f°  垂直全角: %.1f°", halfFovHDeg * 2.0f, halfFovVDeg * 2.0f);
 
     // 敵との距離情報の表示
-    if (player && player->GetEnemy()) {
+    if (player && player->GetEnemy())
+    {
         ImGui::Separator();
         const float dist = (player->GetEnemy()->GetPosition() - owner_->GetCameraWorldTransform().translation_).Length();
         ImGui::Text("カメラ-敵 距離: %.2f / %.1f", dist, lockOnRange_);

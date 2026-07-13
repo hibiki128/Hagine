@@ -6,17 +6,20 @@
 #include <myMath.h>
 
 namespace Hagine {
-void Skin::Initialize(const Skeleton &skeleton, const ModelData &modelData) {
+void Skin::Initialize(const Skeleton &skeleton, const ModelData &modelData)
+{
     dxCommon_ = DirectXCommon::GetInstance();
     srvManager_ = SrvManager::GetInstance();
     // モデルデータとスケルトンに基づいて、GPUスキニングに必要なバッファ類を作成
     skinCluster_ = CreateSkinCluster(skeleton, modelData);
 }
 
-void Skin::Update(const Skeleton &skeleton) {
+void Skin::Update(const Skeleton &skeleton)
+{
     // 各ジョイントについて、現在のスケルトン空間行列と逆バインドポーズ行列を掛け合わせ、
     // シェーダーが頂点変形に使える行列（Palette）を算出
-    for (size_t jointIndex = 0; jointIndex < skeleton.joints.size(); ++jointIndex) {
+    for (size_t jointIndex = 0; jointIndex < skeleton.joints.size(); ++jointIndex)
+    {
         assert(jointIndex < skinCluster_.inverseBindPoseMatrices.size());
         skinCluster_.mappedPalette[jointIndex].skeletonSpaceMatrix =
             skinCluster_.inverseBindPoseMatrices[jointIndex] * skeleton.joints[jointIndex].skeletonSpaceMatrix;
@@ -25,18 +28,23 @@ void Skin::Update(const Skeleton &skeleton) {
     }
 }
 
-void Skin::UpdateInputVertices(const ModelData &modelData) {
+void Skin::UpdateInputVertices(const ModelData &modelData)
+{
     // 入力頂点はバインドポーズ（静的データ）でありスキニングでも書き換わらないため、
     // 毎フレーム転送する必要はない。マップ済みバッファへ初回だけコピーすれば十分。
-    if (inputVerticesUploaded_) {
+    if (inputVerticesUploaded_)
+    {
         return;
     }
 
     // モデルデータから各メッシュの頂点情報を取得し、GPU上のバッファへコピー
     size_t vertexOffset = 0;
-    for (const auto &mesh : modelData.meshes) {
-        for (size_t i = 0; i < mesh.vertices.size(); ++i) {
-            if (vertexOffset + i < totalVertexCount_) {
+    for (const auto &mesh : modelData.meshes)
+    {
+        for (size_t i = 0; i < mesh.vertices.size(); ++i)
+        {
+            if (vertexOffset + i < totalVertexCount_)
+            {
                 skinCluster_.mappedVertex[vertexOffset + i] = mesh.vertices[i];
             }
         }
@@ -46,7 +54,8 @@ void Skin::UpdateInputVertices(const ModelData &modelData) {
     inputVerticesUploaded_ = true;
 }
 
-void Skin::ExecuteSkinning(ID3D12GraphicsCommandList *commandList) {
+void Skin::ExecuteSkinning(ID3D12GraphicsCommandList *commandList)
+{
     // ComputeShaderで使用するリソース（パレット、頂点、ウェイト等）をバインド
     commandList->SetComputeRootDescriptorTable(0, skinCluster_.paletteSrvHandle.second);
     commandList->SetComputeRootDescriptorTable(1, skinCluster_.inputVertexSrvHandle.second);
@@ -60,11 +69,13 @@ void Skin::ExecuteSkinning(ID3D12GraphicsCommandList *commandList) {
     commandList->Dispatch(numGroups, 1, 1);
 }
 
-SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &modelData) {
+SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &modelData)
+{
     SkinCluster skinCluster;
 
     // 全頂点数を集計し、必要なバッファサイズを確定
-    for (const auto &mesh : modelData.meshes) {
+    for (const auto &mesh : modelData.meshes)
+    {
         totalVertexCount_ += mesh.vertices.size();
     }
 
@@ -83,13 +94,15 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
     std::vector<size_t> meshVertexOffsets;
     size_t vertexOffset_ = 0;
     meshVertexOffsets.reserve(modelData.meshes.size());
-    for (const auto &mesh : modelData.meshes) {
+    for (const auto &mesh : modelData.meshes)
+    {
         meshVertexOffsets.push_back(vertexOffset_);
         vertexOffset_ += mesh.vertices.size();
     }
 
     // モデルデータ内のウェイト情報を解析し、頂点ごとの影響ボーンとウェイト値を設定
-    for (const auto &jointWeight : modelData.skinClusterData) {
+    for (const auto &jointWeight : modelData.skinClusterData)
+    {
         const std::string &key = jointWeight.first;
         size_t colonPos = key.find(':');
         if (colonPos == std::string::npos)
@@ -99,13 +112,15 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
         std::string jointName = key.substr(colonPos + 1);
 
         auto it = skeleton.jointMap.find(jointName);
-        if (it == skeleton.jointMap.end()) {
+        if (it == skeleton.jointMap.end())
+        {
             continue;
         }
 
         skinCluster.inverseBindPoseMatrices[(*it).second] = jointWeight.second.inverseBindPoseMatrix;
 
-        for (const auto &vertexWeight : jointWeight.second.vertexWeights) {
+        for (const auto &vertexWeight : jointWeight.second.vertexWeights)
+        {
             size_t meshIndex = vertexWeight.meshIndex;
             size_t localVertexIndex = vertexWeight.vertexIndex;
             if (meshIndex >= meshVertexOffsets.size())
@@ -113,11 +128,13 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
             size_t globalVertexIndex = meshVertexOffsets[meshIndex] + localVertexIndex;
             if (globalVertexIndex >= totalVertexCount_)
                 continue;
-            
+
             // 頂点に影響を与えるボーンのインデックスと重みを書き込む
             auto &currentInfluence = skinCluster.mappedInfluence[globalVertexIndex];
-            for (uint32_t index = 0; index < kNumMaxInfluence; ++index) {
-                if (currentInfluence.weights[index] == 0.0f) {
+            for (uint32_t index = 0; index < kNumMaxInfluence; ++index)
+            {
+                if (currentInfluence.weights[index] == 0.0f)
+                {
                     currentInfluence.weights[index] = vertexWeight.weight;
                     currentInfluence.jointIndices[index] = (*it).second;
                     break;
@@ -125,10 +142,11 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
             }
         }
     }
- 
+
     meshVertexOffsets_.clear();
     size_t offset = 0;
-    for (const auto &mesh : modelData.meshes) {
+    for (const auto &mesh : modelData.meshes)
+    {
         meshVertexOffsets_.push_back(offset);
         offset += mesh.vertices.size();
     }
@@ -136,7 +154,8 @@ SkinCluster Skin::CreateSkinCluster(const Skeleton &skeleton, const ModelData &m
     return skinCluster;
 }
 
-void Skin::CreatePaletteResource(SkinCluster &skinCluster, const Skeleton &skeleton) {
+void Skin::CreatePaletteResource(SkinCluster &skinCluster, const Skeleton &skeleton)
+{
     // ボーン行列パレット用のバッファ生成とSRV登録
     skinCluster.paletteResource = dxCommon_->CreateBufferResource(sizeof(WellForGPU) * skeleton.joints.size());
     WellForGPU *mappedPalette = nullptr;
@@ -149,7 +168,8 @@ void Skin::CreatePaletteResource(SkinCluster &skinCluster, const Skeleton &skele
     srvManager_->CreateSRVforStructuredBuffer(skinClusterPaletteSrvIndex_, skinCluster.paletteResource.Get(), UINT(skeleton.joints.size()), sizeof(WellForGPU));
 }
 
-void Skin::CreateInfluenceResource(SkinCluster &skinCluster, const Skeleton &skeleton) {
+void Skin::CreateInfluenceResource(SkinCluster &skinCluster, const Skeleton &skeleton)
+{
     // 頂点ごとのボーン影響データ用のバッファ生成とSRV登録
     skinCluster.influenceResource = dxCommon_->CreateBufferResource(sizeof(VertexInfluence) * totalVertexCount_);
     VertexInfluence *mappedInfluence = nullptr;
@@ -163,7 +183,8 @@ void Skin::CreateInfluenceResource(SkinCluster &skinCluster, const Skeleton &ske
     srvManager_->CreateSRVforStructuredBuffer(skinClusterInfluenceSrvIndex_, skinCluster.influenceResource.Get(), UINT(totalVertexCount_), sizeof(VertexInfluence));
 }
 
-void Skin::CreateInputVertexResource(SkinCluster &skinCluster, const Skeleton &skeleton) {
+void Skin::CreateInputVertexResource(SkinCluster &skinCluster, const Skeleton &skeleton)
+{
     // スキニング前の入力頂点バッファ生成とSRV登録
     skinCluster.inputVertexResource = dxCommon_->CreateBufferResource(sizeof(VertexData) * totalVertexCount_);
     VertexData *mappedVertex = nullptr;
@@ -176,7 +197,8 @@ void Skin::CreateInputVertexResource(SkinCluster &skinCluster, const Skeleton &s
     srvManager_->CreateSRVforStructuredBuffer(skinClusterInputVertexSrvIndex_, skinCluster.inputVertexResource.Get(), UINT(totalVertexCount_), sizeof(VertexData));
 }
 
-void Skin::CreateOutputVertexResource(SkinCluster &skinCluster, const Skeleton &skeleton) {
+void Skin::CreateOutputVertexResource(SkinCluster &skinCluster, const Skeleton &skeleton)
+{
     // スキニング後の出力頂点バッファ（UAV）生成とVBV設定
     skinCluster.outputVertexResource = dxCommon_->CreateBufferResource(sizeof(VertexData) * totalVertexCount_, true);
     skinClusterOutputVertexSrvIndex_ = srvManager_->Allocate() + 1;
@@ -190,7 +212,8 @@ void Skin::CreateOutputVertexResource(SkinCluster &skinCluster, const Skeleton &
     skinCluster.outputVertexBufferView.StrideInBytes = sizeof(VertexData);
 }
 
-void Skin::CreateSkinningInformationResource(SkinCluster &skinCluster, const Skeleton &skeleton) {
+void Skin::CreateSkinningInformationResource(SkinCluster &skinCluster, const Skeleton &skeleton)
+{
     // スキニングに必要な定数情報（頂点数など）を格納するバッファ生成
     skinCluster.skinningInformationResource = dxCommon_->CreateBufferResource(sizeof(SkinningInformationForGPU));
     skinCluster.SkinningInfomationData = nullptr;

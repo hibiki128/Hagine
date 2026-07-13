@@ -15,7 +15,8 @@
 /// 視錐台ロックオン（視界）・BT・コライダー・トレーニング用ダミー制御を本体が担当し、
 /// 実際のロジックは Parts/ 以下の各パーツクラスが担当する
 /// </summary>
-class Enemy : public Hagine::BaseObject {
+class Enemy : public Hagine::BaseObject
+{
   public:
     /// ===================================================
     /// public method
@@ -141,10 +142,12 @@ class Enemy : public Hagine::BaseObject {
 
     // ─── 本体 ───
     void SetVp(Hagine::ViewProjection *vp);
-    void SetTarget(Player *target) {
+    void SetTarget(Player *target)
+    {
         target_ = target;
         // 前方攻撃判定コライダーにもプレイヤーを設定する
-        if (combat_->GetAttackCollider()) {
+        if (combat_->GetAttackCollider())
+        {
             combat_->GetAttackCollider()->SetPlayer(target);
         }
     }
@@ -153,9 +156,11 @@ class Enemy : public Hagine::BaseObject {
     void SetPause(bool flag) { isPause_ = flag; }
     void SetLocalPosition(const Hagine::Vector3 &pos) { transform_->translation_ = pos; }
 
-    void SetBehaviorTree(std::shared_ptr<BTNode> rootNode) {
+    void SetBehaviorTree(std::shared_ptr<BTNode> rootNode)
+    {
         rootNode_ = rootNode;
-        if (rootNode_) {
+        if (rootNode_)
+        {
             rootNode_->SetContext(this, target_);
         }
     }
@@ -190,7 +195,8 @@ class Enemy : public Hagine::BaseObject {
     void Move() { movement_->Move(); }
     void DirectionUpdate() { movement_->DirectionUpdate(); }
     void Shot() { combat_->Shot(); }
-    void ShotWithDirection(const Hagine::Vector3 &direction, bool forceHoming = false) {
+    void ShotWithDirection(const Hagine::Vector3 &direction, bool forceHoming = false)
+    {
         combat_->ShotWithDirection(direction, forceHoming);
     }
 
@@ -260,10 +266,10 @@ class Enemy : public Hagine::BaseObject {
     Hagine::OBBCollider *enemyCollider_ = nullptr;      ///< 敵コライダー
     Hagine::AABBCollider *enemyWallCollider_ = nullptr; ///< 壁用コライダー
 
-    bool started_ = false;   ///< 開始フラグ
-    bool isPause_ = false;   ///< ポーズフラグ
-    bool isStop_ = false;    ///< 停止中フラグ
-    bool dummyMode_ = false; ///< トレーニング用ダミーモード(AI停止・復活のみ)
+    bool started_ = false;            ///< 開始フラグ
+    bool isPause_ = false;            ///< ポーズフラグ
+    bool isStop_ = false;             ///< 停止中フラグ
+    bool dummyMode_ = false;          ///< トレーニング用ダミーモード(AI停止・復活のみ)
     Hagine::Vector3 spawnPosition_{}; ///< ダミー復活時に戻る初期位置
 
     // 視錐台ロックオン関連
@@ -271,7 +277,7 @@ class Enemy : public Hagine::BaseObject {
     static constexpr float kDefaultFrustumHalfFovH = 40.0f * (3.14159265f / 180.0f);
     static constexpr float kDefaultFrustumHalfFovV = 30.0f * (3.14159265f / 180.0f);
 
-    bool isLockOn_ = false;                                  ///< ロックオンフラグ
+    bool isLockOn_ = false;                                 ///< ロックオンフラグ
     float frustumLockOnRange_ = kDefaultFrustumRange;       ///< 視錐台範囲
     float frustumLockOnHalfFovH_ = kDefaultFrustumHalfFovH; ///< 視錐台水平半角
     float frustumLockOnHalfFovV_ = kDefaultFrustumHalfFovV; ///< 視錐台垂直半角

@@ -8,7 +8,8 @@
 #include <cmath>
 
 using namespace Hagine;
-void PlayerBullet::Init(const std::string objectName) {
+void PlayerBullet::Init(const std::string objectName)
+{
     BaseObject::Init(objectName);
     this->CreatePrimitiveModel(PrimitiveType::Sphere);
     this->SetTexture("debug/white1x1.png");
@@ -22,12 +23,15 @@ void PlayerBullet::Init(const std::string objectName) {
     emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("bulletEmitter");
 }
 
-void PlayerBullet::Update() {
-    if (isHit_ && emitter_->IsAllParticlesComplete()) {
+void PlayerBullet::Update()
+{
+    if (isHit_ && emitter_->IsAllParticlesComplete())
+    {
         isAlive_ = false;
     }
 
-    if (isAlive_ && !isHit_) {
+    if (isAlive_ && !isHit_)
+    {
         emitter_->SetPosition(GetLocalPosition());
         emitter_->Update();
     }
@@ -36,37 +40,43 @@ void PlayerBullet::Update() {
 
     currentLifeTime_ += deltaTime;
 
-    if (currentLifeTime_ >= lifeTime_) {
+    if (currentLifeTime_ >= lifeTime_)
+    {
         isAlive_ = false;
         return;
     }
 
     // 地面に埋まったら消える
-    if (transform_->translation_.y <= -0.5f) {
+    if (transform_->translation_.y <= -0.5f)
+    {
         isAlive_ = false;
         return;
     }
 
-    if (isLockOnBullet_ && targetEnemy_) {
+    if (isLockOnBullet_ && targetEnemy_)
+    {
         Vector3 bulletPos = GetLocalPosition();
         Vector3 enemyPos = targetEnemy_->GetLocalPosition();
 
         Vector3 toEnemy = enemyPos - bulletPos;
         float distance = toEnemy.Length();
 
-        if (distance > kMinDistanceThreshold) {
+        if (distance > kMinDistanceThreshold)
+        {
             toEnemy = toEnemy / distance;
 
             Vector3 currentDir = velocity_;
             float currentSpeed = currentDir.Length();
 
-            if (currentSpeed > kMinSpeedThreshold) {
+            if (currentSpeed > kMinSpeedThreshold)
+            {
                 currentDir = currentDir / currentSpeed;
 
                 Vector3 newDir = currentDir + (toEnemy - currentDir) * kHomingStrength * deltaTime;
                 float newDirLength = newDir.Length();
 
-                if (newDirLength > kMinSpeedThreshold) {
+                if (newDirLength > kMinSpeedThreshold)
+                {
                     newDir = newDir / newDirLength;
                     velocity_ = newDir * currentSpeed;
                 }
@@ -78,7 +88,8 @@ void PlayerBullet::Update() {
     Vector3 currentDir = velocity_;
     float currentSpeed = currentDir.Length();
 
-    if (currentSpeed > kMinSpeedThreshold) {
+    if (currentSpeed > kMinSpeedThreshold)
+    {
         currentDir = currentDir / currentSpeed;
 
         float newSpeed = currentSpeed + acce_ * deltaTime;
@@ -91,17 +102,21 @@ void PlayerBullet::Update() {
     // 位置更新
     transform_->translation_ += velocity_ * deltaTime;
 }
-void PlayerBullet::Draw(const ViewProjection &viewProjection) {
+void PlayerBullet::Draw(const ViewProjection &viewProjection)
+{
 }
 
-void PlayerBullet::DrawParticle(const ViewProjection &viewProjection) {
+void PlayerBullet::DrawParticle(const ViewProjection &viewProjection)
+{
     // 生きている場合のみ描画
-    if (isAlive_) {
+    if (isAlive_)
+    {
         emitter_->Draw(viewProjection);
     }
 }
 
-void PlayerBullet::InitTransform(Player *player) {
+void PlayerBullet::InitTransform(Player *player)
+{
     // プレイヤーの位置を弾の初期位置に設定
     this->transform_->translation_ = player->GetLocalPosition();
     collider_ = AddSphereCollider("player_bullet");
@@ -113,7 +128,8 @@ void PlayerBullet::InitTransform(Player *player) {
     });
 
     targetEnemy_ = player->GetEnemy();
-    if (player->GetIsLockOn() && player->GetEnemy()) {
+    if (player->GetIsLockOn() && player->GetEnemy())
+    {
         isLockOnBullet_ = true;
 
         Vector3 playerPos = player->GetLocalPosition();
@@ -122,16 +138,21 @@ void PlayerBullet::InitTransform(Player *player) {
         Vector3 direction = enemyPos - playerPos;
 
         float length = std::sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
-        if (length > kMinSpeedThreshold) {
+        if (length > kMinSpeedThreshold)
+        {
             direction.x /= length;
             direction.y /= length;
             direction.z /= length;
-        } else {
+        }
+        else
+        {
             direction = {0.0f, 0.0f, 1.0f};
         }
 
         velocity_ = direction * speed_;
-    } else {
+    }
+    else
+    {
         isLockOnBullet_ = false;
 
         Quaternion rot = player->GetLocalRotation();
@@ -149,8 +170,10 @@ void PlayerBullet::InitTransform(Player *player) {
     this->transform_->translation_ += forwardOffset;
 }
 
-void PlayerBullet::OnCollisionEnter(ColliderBase *other) {
-    if (other->GetTag() == "Enemy" && isAlive_ && targetEnemy_->GetAlive()) {
+void PlayerBullet::OnCollisionEnter(ColliderBase *other)
+{
+    if (other->GetTag() == "Enemy" && isAlive_ && targetEnemy_->GetAlive())
+    {
         isHit_ = true;
         targetEnemy_->SetDamage(kBulletDamage);
     }

@@ -7,7 +7,8 @@
 // ============================================================
 // ノードタイプ定義 (Debug / Release 共通)
 // ============================================================
-enum class EditorNodeType {
+enum class EditorNodeType
+{
     // ===== 既存ノード (Before と同じ順序・int値を保持) =====
     Sequence,             // 0
     Selector,             // 1
@@ -32,7 +33,7 @@ enum class EditorNodeType {
     ConditionIsAirborne,  // 19
     ConditionPlayerState, // 20
     // ===== 射撃・ロックオン =====
-    ActionShoot,       // 21
+    ActionShoot, // 21
     // ActionLockOn (22) は自動ロックオン化に伴い削除。22は欠番として予約し、
     // 以降のint値がずれないよう ConditionIsLockOn を明示的に 23 へ固定する
     ConditionIsLockOn = 23, // 23
@@ -64,7 +65,8 @@ enum class EditorNodeType {
 /// <summary>
 /// ビヘイビアツリーをJSONから読み込み構築するクラス
 /// </summary>
-class BehaviorTreeLoader {
+class BehaviorTreeLoader
+{
   public:
     /// ===================================================
     /// public method
@@ -80,7 +82,8 @@ class BehaviorTreeLoader {
 
   private:
     // --- JSONから復元したノード情報 (内部用) ---
-    struct NodeData {
+    struct NodeData
+    {
         int id = 0;
         EditorNodeType type = EditorNodeType::ActionIdle;
         float param = 0.0f;
@@ -90,14 +93,16 @@ class BehaviorTreeLoader {
         float param5 = 0.0f; // homingMode(0=拡散, 1=ホーミング)など
         std::string stateName = "Idle";
         // 重み付けノード用
-        struct WeightPin {
+        struct WeightPin
+        {
             int pinId = 0;
             float weight = 1.0f;
         };
         std::vector<WeightPin> weightedOutputs;
     };
 
-    struct LinkData {
+    struct LinkData
+    {
         int startPin = 0;
         int endPin = 0;
     };
@@ -134,7 +139,8 @@ class Enemy;
 class Player;
 
 // 重み付けノードの各出力の情報
-struct WeightedOutput {
+struct WeightedOutput
+{
     ax::NodeEditor::PinId PinID;
     float Weight = 1.0f;
 };
@@ -142,7 +148,8 @@ struct WeightedOutput {
 /// <summary>
 /// エディタ上のノード情報
 /// </summary>
-struct EditorNode {
+struct EditorNode
+{
     ax::NodeEditor::NodeId ID;          // ノードID
     std::string Title;                  // タイトル
     EditorNodeType Type;                // タイプ
@@ -170,7 +177,8 @@ struct EditorNode {
     /// <summary>
     /// 条件ノードか判定
     /// </summary>
-    bool IsConditionNode() const {
+    bool IsConditionNode() const
+    {
         return Type == EditorNodeType::ConditionPlayerClose ||
                Type == EditorNodeType::ConditionHealthLow ||
                Type == EditorNodeType::ConditionEnergyLow ||
@@ -186,7 +194,8 @@ struct EditorNode {
     /// <summary>
     /// アクションノードか判定
     /// </summary>
-    bool IsActionNode() const {
+    bool IsActionNode() const
+    {
         return Type == EditorNodeType::ActionRun ||
                Type == EditorNodeType::ActionApproach ||
                Type == EditorNodeType::ActionDash ||
@@ -214,7 +223,8 @@ struct EditorNode {
     /// <summary>
     /// 重み付けノードか判定
     /// </summary>
-    bool IsWeightNode() const {
+    bool IsWeightNode() const
+    {
         return Type == EditorNodeType::DecoratorWeight;
     }
 };
@@ -222,7 +232,8 @@ struct EditorNode {
 /// <summary>
 /// エディタ上の接続（リンク）情報
 /// </summary>
-struct EditorLink {
+struct EditorLink
+{
     ax::NodeEditor::LinkId ID;        // リンクID
     ax::NodeEditor::PinId StartPinID; // 開始ピンID
     ax::NodeEditor::PinId EndPinID;   // 終了ピンID
@@ -236,7 +247,8 @@ struct EditorLink {
 /// <summary>
 /// ビヘイビアツリーエディタクラス
 /// </summary>
-class BehaviorTreeEditor {
+class BehaviorTreeEditor
+{
   public:
     /// ===================================================
     /// public method
@@ -262,7 +274,8 @@ class BehaviorTreeEditor {
     /// </summary>
     /// <param name="enemy">敵オブジェクト</param>
     /// <param name="player">プレイヤーオブジェクト</param>
-    void SetDebugTargets(Enemy *enemy, Player *player) {
+    void SetDebugTargets(Enemy *enemy, Player *player)
+    {
         debugEnemy_ = enemy;
         debugPlayer_ = player;
     }
@@ -400,8 +413,8 @@ class BehaviorTreeEditor {
     std::string selectedFileName_ = "";          // 選択されたファイル名
     bool showLoadWindow_ = false;                // 読込窓表示フラグ
 
-    bool layoutDirty_ = false;                     // レイアウト変更フラグ
-    float saveCooldown_ = 0.0f;                    // 保存クールダウン
+    bool layoutDirty_ = false;                       // レイアウト変更フラグ
+    float saveCooldown_ = 0.0f;                      // 保存クールダウン
     static constexpr float kSaveCooldownTime = 2.0f; // 自動保存までの待機時間
 
     float inspectorWidth_ = 340.0f; // 右側インスペクターパネルの横幅

@@ -12,7 +12,8 @@ class BaseObject;
 /// 予備動作のない必殺技にテレグラフを与え、相手に回避の猶予を作る。
 /// 演出中も技の照準追従は呼び出し側で維持し、onActivate の中で固定する想定
 /// </summary>
-class SkillCutscene {
+class SkillCutscene
+{
   public:
     /// ===================================================
     /// public method
@@ -63,7 +64,8 @@ class SkillCutscene {
     /// ===================================================
 
     /// <summary>演出の進行フェーズ</summary>
-    enum class Phase {
+    enum class Phase
+    {
         Idle,    ///< 何もしていない
         CloseUp, ///< カメラが顔アップ中
         Delay,   ///< 通常カメラ復帰後の発動待ち

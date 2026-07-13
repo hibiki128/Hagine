@@ -11,7 +11,8 @@ class DataHandler;
 /// プレイヤーの移動パーツクラス
 /// 移動・回転・ダッシュ・接地・方向判定と、それらのパラメータを担当する
 /// </summary>
-class PlayerMovement {
+class PlayerMovement
+{
   public:
     /// ===================================================
     /// public method
@@ -52,7 +53,8 @@ class PlayerMovement {
     /// <summary>
     /// ダッシュ状態をリセットする
     /// </summary>
-    void ClearDashState() {
+    void ClearDashState()
+    {
         isDashing_ = false;
         dashDuration_ = 0.0f;
         dashGraceTimer_ = 0.0f;
@@ -136,7 +138,8 @@ class PlayerMovement {
     /// Setter
     /// ===================================================
     void SetDashing(bool flag) { isDashing_ = flag; }
-    void SetDashInput(float x, float z) {
+    void SetDashInput(float x, float z)
+    {
         dashInputX_ = x;
         dashInputZ_ = z;
     }

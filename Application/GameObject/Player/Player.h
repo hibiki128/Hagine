@@ -23,7 +23,8 @@ class Enemy;
 /// ステート管理と各パーツ（移動・戦闘・ステータス・見た目）の統括を行うファサード。
 /// 実際のロジックは Parts/ 以下の各パーツクラスが担当する
 /// </summary>
-class Player : public Hagine::BaseObject {
+class Player : public Hagine::BaseObject
+{
   public:
     /// ===================================================
     /// public method
@@ -199,7 +200,8 @@ class Player : public Hagine::BaseObject {
     /// <summary>
     /// 入力表示UI用のアクション種別。入力の有無ではなく「実際に発動したもの」だけを通知する。
     /// </summary>
-    enum class ActionKind {
+    enum class ActionKind
+    {
         NormalShot,   // 通常射撃
         ChargeStart,  // チャージ開始（溜め始め）
         ChargeShot,   // チャージ弾発射
@@ -326,18 +328,18 @@ class Player : public Hagine::BaseObject {
     PlayerBaseState *currentState_ = nullptr;                                  // 現在の状態
     std::string previousStateName_ = "";
 
-    std::unique_ptr<Hagine::DataHandler> data_;               // データ管理
-    std::unique_ptr<Shake> shake_;                            // シェイク
-    std::unique_ptr<Hagine::ParticleCSEmitter> auraEmitter_;  // オーラパーティクル
-    std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;     // 被弾ヒットエミッター
-    std::unique_ptr<DeathStaging> deathStaging_;              // 死亡演出
-    std::unique_ptr<Hagine::GamePad> gamePad_;                // ゲームパッド
+    std::unique_ptr<Hagine::DataHandler> data_;              // データ管理
+    std::unique_ptr<Shake> shake_;                           // シェイク
+    std::unique_ptr<Hagine::ParticleCSEmitter> auraEmitter_; // オーラパーティクル
+    std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;    // 被弾ヒットエミッター
+    std::unique_ptr<DeathStaging> deathStaging_;             // 死亡演出
+    std::unique_ptr<Hagine::GamePad> gamePad_;               // ゲームパッド
 
-    Hagine::ViewProjection *vp_ = nullptr;                // カメラ
-    Hagine::OBBCollider *playerCollider_ = nullptr;       // コライダー
-    Hagine::AABBCollider *playerWallCollider_ = nullptr;  // 壁用コライダー
-    Hagine::ParticleField *generatedField_ = nullptr;     // 生成するフィールド
-    Hagine::Input *input_ = nullptr;                      // 入力
+    Hagine::ViewProjection *vp_ = nullptr;               // カメラ
+    Hagine::OBBCollider *playerCollider_ = nullptr;      // コライダー
+    Hagine::AABBCollider *playerWallCollider_ = nullptr; // 壁用コライダー
+    Hagine::ParticleField *generatedField_ = nullptr;    // 生成するフィールド
+    Hagine::Input *input_ = nullptr;                     // 入力
 
     bool activeDebugCamrera_ = false; // デバッグカメラがアクティブかどうか
 

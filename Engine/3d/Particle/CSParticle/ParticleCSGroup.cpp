@@ -24,7 +24,8 @@
 #endif
 
 namespace Hagine {
-void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
+void ParticleCSGroup::Initialize(uint32_t maxParticleCount)
+{
     dxCommon_ = ParticleCommon::GetInstance()->GetDxCommon();
     srvManager_ = SrvManager::GetInstance();
     particleCommon_ = ParticleCommon::GetInstance();
@@ -47,50 +48,64 @@ void ParticleCSGroup::Initialize(uint32_t maxParticleCount) {
     isInitialized_ = true;
 }
 
-int ParticleCSGroup::CalculateOptimalEmitCount() const {
-    if (frequency_ <= 0.0f || settingsData_->lifeTimeMax <= 0.0f) {
+int ParticleCSGroup::CalculateOptimalEmitCount() const
+{
+    if (frequency_ <= 0.0f || settingsData_->lifeTimeMax <= 0.0f)
+    {
         return static_cast<int>(settingsData_->maxParticleCount);
     }
 
     float emissionCount = settingsData_->lifeTimeMax / frequency_;
 
     int result;
-    if (emissionCount <= 1.0f) {
+    if (emissionCount <= 1.0f)
+    {
         result = static_cast<int>(settingsData_->maxParticleCount);
-    } else {
+    }
+    else
+    {
         result = static_cast<int>(settingsData_->maxParticleCount / emissionCount);
     }
 
     return std::clamp(result, 1, static_cast<int>(settingsData_->maxParticleCount));
 }
 
-ParticleCSGroup::~ParticleCSGroup() {
-    if (!isInitialized_) {
+ParticleCSGroup::~ParticleCSGroup()
+{
+    if (!isInitialized_)
+    {
         return;
     }
 
     // Map済みリソースのUnmap
-    if (settingsResource_) {
+    if (settingsResource_)
+    {
         settingsResource_->Unmap(0, nullptr);
     }
-    if (perViewResource_) {
+    if (perViewResource_)
+    {
         perViewResource_->Unmap(0, nullptr);
     }
-    if (perFrameResource_) {
+    if (perFrameResource_)
+    {
         perFrameResource_->Unmap(0, nullptr);
     }
-    if (materialResource_) {
+    if (materialResource_)
+    {
         materialResource_->Unmap(0, nullptr);
     }
-    if (vertexResource_) {
+    if (vertexResource_)
+    {
         vertexResource_->Unmap(0, nullptr);
     }
-    if (indexResource_) {
+    if (indexResource_)
+    {
         indexResource_->Unmap(0, nullptr);
     }
 }
 
-ParticleCSGroupData ParticleCSGroup::CreateParticleGroup(const std::string &groupName, const std::string &filename, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {
+ParticleCSGroupData ParticleCSGroup::CreateParticleGroup(const std::string &groupName, const std::string &filename, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode)
+{
     Initialize(maxParticleCount);
     particleGroupData_.groupName = groupName;
     modelFilePath_ = filename;
@@ -101,20 +116,27 @@ ParticleCSGroupData ParticleCSGroup::CreateParticleGroup(const std::string &grou
     CreateIndexResource();
     // マテリアルが複数ある場合は最初のものを使う
     particleGroupData_.materials.clear();
-    if (texturePath.empty()) {
-        if (!modelData_.materials.empty()) {
+    if (texturePath.empty())
+    {
+        if (!modelData_.materials.empty())
+        {
             particleGroupData_.materials = ForParticleMaterials(modelData_.materials);
-        } else {
+        }
+        else
+        {
             particleGroupData_.materials.push_back(ParticleMaterial{});
         }
-    } else {
+    }
+    else
+    {
         ParticleMaterial mat;
         mat.textureFilePath = texturePath;
         mat.textureIndex = texManager_->GetTextureIndexByFilePath(texturePath);
         particleGroupData_.materials.push_back(mat);
     }
     // すべてのマテリアルのテクスチャをロード
-    for (auto &mat : particleGroupData_.materials) {
+    for (auto &mat : particleGroupData_.materials)
+    {
         texManager_->LoadTexture(mat.textureFilePath);
         mat.textureIndex = texManager_->GetTextureIndexByFilePath(mat.textureFilePath);
     }
@@ -126,7 +148,8 @@ ParticleCSGroupData ParticleCSGroup::CreateParticleGroup(const std::string &grou
     return particleGroupData_;
 }
 
-ParticleCSGroupData ParticleCSGroup::CreatePrimitiveParticleGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {
+ParticleCSGroupData ParticleCSGroup::CreatePrimitiveParticleGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode)
+{
     Initialize(maxParticleCount);
     particleGroupData_.groupName = groupName;
     type_ = type;
@@ -137,20 +160,27 @@ ParticleCSGroupData ParticleCSGroup::CreatePrimitiveParticleGroup(const std::str
     CreateIndexResource();
     // マテリアルが複数ある場合は最初のものを使う
     particleGroupData_.materials.clear();
-    if (texturePath.empty()) {
-        if (!modelData_.materials.empty()) {
+    if (texturePath.empty())
+    {
+        if (!modelData_.materials.empty())
+        {
             particleGroupData_.materials = ForParticleMaterials(modelData_.materials);
-        } else {
+        }
+        else
+        {
             particleGroupData_.materials.push_back(ParticleMaterial{});
         }
-    } else {
+    }
+    else
+    {
         ParticleMaterial mat;
         mat.textureFilePath = texturePath;
         mat.textureIndex = texManager_->GetTextureIndexByFilePath(texturePath);
         particleGroupData_.materials.push_back(mat);
     }
     // すべてのマテリアルのテクスチャをロード
-    for (auto &mat : particleGroupData_.materials) {
+    for (auto &mat : particleGroupData_.materials)
+    {
         texManager_->LoadTexture(mat.textureFilePath);
         mat.textureIndex = texManager_->GetTextureIndexByFilePath(mat.textureFilePath);
     }
@@ -163,20 +193,23 @@ ParticleCSGroupData ParticleCSGroup::CreatePrimitiveParticleGroup(const std::str
     return particleGroupData_;
 }
 
-void ParticleCSGroup::SetTexture(const std::string &path) {
+void ParticleCSGroup::SetTexture(const std::string &path)
+{
     if (path.empty() || particleGroupData_.materials.empty())
         return;
     texManager_->LoadTexture(path);
     uint32_t index = texManager_->GetTextureIndexByFilePath(path);
     // 描画は毎フレーム textureFilePath で SRV を引くのでパス差し替えで即時反映される。
     // textureIndex も一応更新しておく。
-    for (auto &m : particleGroupData_.materials) {
+    for (auto &m : particleGroupData_.materials)
+    {
         m.textureFilePath = path;
         m.textureIndex = index;
     }
 }
 
-void ParticleCSGroup::InitParticle() {
+void ParticleCSGroup::InitParticle()
+{
     srvManager_->SetDescriptorHeap();
 
     dxCommon_->TransitionUAVBarrier(soaLife_.resource.Get());
@@ -194,7 +227,8 @@ void ParticleCSGroup::InitParticle() {
     dxCommon_->TransitionSRVBarrier();
 }
 
-bool ParticleCSGroup::CanUseLiteUpdate(bool fieldsActive) const {
+bool ParticleCSGroup::CanUseLiteUpdate(bool fieldsActive) const
+{
     // フィールドの影響を受けるグループはフル版必須（force-trail/override/colorMul 等）。
     if (fieldsActive)
         return false;
@@ -222,7 +256,8 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
     bool fieldsActive,
-    ID3D12GraphicsCommandList *cmdList) {
+    ID3D12GraphicsCommandList *cmdList)
+{
     // フル版が Trail/Rotation/Override を触る場合のみ、ここで本確保へ作り直す
     // （演出なしグループは 1要素ダミーのままで VRAM を節約）。バインドより前に行う。
     EnsureUpdateOptionalBuffers(fieldsActive);
@@ -293,7 +328,8 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     cl->Dispatch(disPatchCount, 1, 1);
 }
 
-void ParticleCSGroup::ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdList) {
+void ParticleCSGroup::ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdList)
+{
     ID3D12GraphicsCommandList *cl = cmdList ? cmdList : commandList_;
     ComputePipeLineManager::GetInstance()->DrawCommonSetting(
         ComputePipelineType::kResetArgs, BlendMode::kNormal, ShaderMode::kNone, cl);
@@ -308,7 +344,8 @@ void ParticleCSGroup::ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdLi
     cl->ResourceBarrier(1, &uavBarrier);
 }
 
-void ParticleCSGroup::RecordAliveCountReadback(ID3D12GraphicsCommandList *computeCmdList) {
+void ParticleCSGroup::RecordAliveCountReadback(ID3D12GraphicsCommandList *computeCmdList)
+{
     // Update が compute queue で書いた直後（バッファが UAV 状態）にコピーする。
     // この時点でカウンタは UnorderedAccess へ昇格済みなので状態遷移は整合する。
     ID3D12GraphicsCommandList *cl = computeCmdList ? computeCmdList : commandList_;
@@ -337,29 +374,34 @@ void ParticleCSGroup::RecordAliveCountReadback(ID3D12GraphicsCommandList *comput
     cl->ResourceBarrier(1, &toUAV);
 }
 
-void ParticleCSGroup::FetchAliveDrawCount() {
+void ParticleCSGroup::FetchAliveDrawCount()
+{
     // 直近フレームにコピー済みの値を読み取る（1〜2フレーム遅延・許容）
     uint32_t *mappedData = nullptr;
     D3D12_RANGE readRange{0, sizeof(uint32_t)};
     HRESULT hr = aliveCounterReadbackResource_->Map(0, &readRange, reinterpret_cast<void **>(&mappedData));
-    if (SUCCEEDED(hr) && mappedData) {
+    if (SUCCEEDED(hr) && mappedData)
+    {
         aliveDrawCount_ = *mappedData;
         aliveCounterReadbackResource_->Unmap(0, nullptr);
     }
 }
 
-void ParticleCSGroup::Update(const ViewProjection &vp) {
+void ParticleCSGroup::Update(const ViewProjection &vp)
+{
     perFrameData_->time += Frame::DeltaTime();
     perFrameData_->deltaTime = Frame::DeltaTime();
 
     // カラーグラデーション: ストップが変更された(dirty)なら 256段 LUT を CB へ再ベイクする。
     // 有効時のみベイク（OFF のグループは LUT を読まないので無駄を省く）。
-    if (settingsData_->enableColorGradient != 0 && colorStopsDirty_) {
+    if (settingsData_->enableColorGradient != 0 && colorStopsDirty_)
+    {
         BakeColorLUT();
         colorStopsDirty_ = false;
     }
     // 寿命カーブ(サイズ/アルファ)も同様に dirty 時のみ再ベイク（どちらか有効なら）。
-    if ((settingsData_->enableSizeCurve != 0 || settingsData_->enableAlphaCurve != 0) && lifeCurvesDirty_) {
+    if ((settingsData_->enableSizeCurve != 0 || settingsData_->enableAlphaCurve != 0) && lifeCurvesDirty_)
+    {
         BakeLifetimeCurveLUTs();
         lifeCurvesDirty_ = false;
     }
@@ -369,10 +411,11 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     //   エンベロープ = 時間で指数減衰させつつ onset で即座に跳ね上げる（アタック即・リリース減衰）。
     //   → 波形が大きくなった瞬間にバンっと跳ね、その後スッと落ち着く（GPU が振動の駆動に使う）。
     // OFF のグループは触らない＝無回帰。Audio 参照は有効時のみで軽量（再生中ボイスの PCM をサンプルするだけ）。
-    if (settingsData_->enableAudioVibration != 0) {
+    if (settingsData_->enableAudioVibration != 0)
+    {
         const float peak = Audio::GetInstance()->GetCurrentAmplitude(); // [0,1] 現在のピーク
         const float dt = Frame::DeltaTime();
-        const float onset = (std::max)(0.0f, peak - audioPrevPeak_);    // 立ち上がり（増加分）
+        const float onset = (std::max)(0.0f, peak - audioPrevPeak_); // 立ち上がり（増加分）
         audioPrevPeak_ = peak;
         // リリース: releaseRate[1/s] が大きいほど早く落ち着く（フレームレート非依存な指数減衰）
         const float releaseRate = (settingsData_->audioReleaseRate > 0.0f) ? settingsData_->audioReleaseRate : 10.0f;
@@ -380,7 +423,9 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
         // アタック: onset の方が大きければ即座に跳ね上げる（＝バンっ）
         audioEnvelope_ = (std::max)(audioEnvelope_, onset);
         settingsData_->audioAmplitude = audioEnvelope_;
-    } else {
+    }
+    else
+    {
         audioEnvelope_ = 0.0f;
         audioPrevPeak_ = 0.0f;
         settingsData_->audioAmplitude = 0.0f;
@@ -395,26 +440,31 @@ void ParticleCSGroup::Update(const ViewProjection &vp) {
     // 回転を使わないグループは VS の回転行列計算（sincos×3＋行列積）を省くためのフラグ。
     perViewData_->enableRotation =
         (settingsData_->enableRandomRotation != 0 || settingsData_->enableRandomAngularVelocity != 0) ? 1u : 0u;
-    if (perViewData_->enableBillboard) {
+    if (perViewData_->enableBillboard)
+    {
         perViewData_->billboardMatrix = vp.matView_;
         perViewData_->billboardMatrix.m[3][0] = 0.0f;
         perViewData_->billboardMatrix.m[3][1] = 0.0f;
         perViewData_->billboardMatrix.m[3][2] = 0.0f;
         perViewData_->billboardMatrix.m[3][3] = 1.0f;
         perViewData_->billboardMatrix = Inverse(perViewData_->billboardMatrix);
-    } else {
+    }
+    else
+    {
         perViewData_->billboardMatrix = MakeIdentity4x4();
     }
 
     CopyDebugDataToReadback();
 }
 
-void ParticleCSGroup::AllocateSoABuffer(SoABuffer &buf, uint32_t count) {
+void ParticleCSGroup::AllocateSoABuffer(SoABuffer &buf, uint32_t count)
+{
     if (count == 0)
         count = 1;
     // 旧リソースは in-flight のコマンドリストが参照中の可能性があるため即解放しない。
     // 退避先へ移し、グループ破棄まで生かす（ダミーは要素1個なので極小）。
-    if (buf.resource) {
+    if (buf.resource)
+    {
         retiredSoABuffers_.push_back(buf.resource);
     }
     buf.resource = dxCommon_->CreateBufferResource(static_cast<size_t>(buf.stride) * count, true);
@@ -424,14 +474,16 @@ void ParticleCSGroup::AllocateSoABuffer(SoABuffer &buf, uint32_t count) {
     buf.uavHandle.first = srvManager_->GetCPUDescriptorHandle(buf.uavIndex);
     buf.uavHandle.second = srvManager_->GetGPUDescriptorHandle(buf.uavIndex);
     srvManager_->CreateUAVStructuredBuffer(buf.uavIndex, buf.resource.Get(), count, buf.stride);
-    if (buf.withSrvForVS) {
+    if (buf.withSrvForVS)
+    {
         buf.srvForVSIndex = srvManager_->Allocate() + 1;
         srvManager_->CreateSRVforStructuredBuffer(buf.srvForVSIndex, buf.resource.Get(), count, buf.stride);
     }
     buf.allocatedCount = count;
 }
 
-void ParticleCSGroup::CreateParticleSoABuffers() {
+void ParticleCSGroup::CreateParticleSoABuffers()
+{
     const uint32_t maxCount = settingsData_->maxParticleCount;
 
     auto initSoA = [&](SoABuffer &buf, uint32_t stride, bool withSrvForVS, uint32_t count) {
@@ -454,7 +506,8 @@ void ParticleCSGroup::CreateParticleSoABuffers() {
     initSoA(soaRenderCompact_, sizeof(CSParticleDrawCore), true, maxCount);
 }
 
-void ParticleCSGroup::EnsureUpdateOptionalBuffers(bool fieldsActive) {
+void ParticleCSGroup::EnsureUpdateOptionalBuffers(bool fieldsActive)
+{
     const uint32_t maxCount = settingsData_->maxParticleCount;
     // フル版 Update のバッファ load/store ゲートと一致させる:
     //   useTrail    = enableTrail || fieldCount>0
@@ -472,26 +525,31 @@ void ParticleCSGroup::EnsureUpdateOptionalBuffers(bool fieldsActive) {
         AllocateSoABuffer(soaOverride_, maxCount);
 }
 
-void ParticleCSGroup::CreatePerViewResource() {
+void ParticleCSGroup::CreatePerViewResource()
+{
     perViewResource_ = dxCommon_->CreateBufferResource(sizeof(PerView));
     perViewResource_->Map(0, nullptr, reinterpret_cast<void **>(&perViewData_));
     perViewData_->viewProjection = MakeIdentity4x4();
     perViewData_->billboardMatrix = MakeIdentity4x4();
 }
 
-void ParticleCSGroup::CreateMaterialResource() {
+void ParticleCSGroup::CreateMaterialResource()
+{
     materialResource_ = dxCommon_->CreateBufferResource(sizeof(ParticleMaterial));
     materialResource_->Map(0, nullptr, reinterpret_cast<void **>(&materialData_));
     materialData_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     materialData_->uvTransform = MakeIdentity4x4();
 }
 
-void ParticleCSGroup::CreateIndexResource() {
+void ParticleCSGroup::CreateIndexResource()
+{
     // 複数メッシュ対応: 全メッシュのインデックスを連結し、頂点オフセットを考慮
     std::vector<uint32_t> allIndices;
     uint32_t vertexOffset = 0;
-    for (const auto &mesh : modelData_.meshes) {
-        for (auto idx : mesh.indices) {
+    for (const auto &mesh : modelData_.meshes)
+    {
+        for (auto idx : mesh.indices)
+        {
             allIndices.push_back(idx + vertexOffset);
         }
         vertexOffset += static_cast<uint32_t>(mesh.vertices.size());
@@ -504,10 +562,12 @@ void ParticleCSGroup::CreateIndexResource() {
     std::memcpy(indexData_, allIndices.data(), sizeof(uint32_t) * allIndices.size());
 }
 
-void ParticleCSGroup::CreateVertexResource() {
+void ParticleCSGroup::CreateVertexResource()
+{
     // クアッド用の頂点データ
     std::vector<VertexData> allVertices;
-    for (const auto &mesh : modelData_.meshes) {
+    for (const auto &mesh : modelData_.meshes)
+    {
         allVertices.insert(allVertices.end(), mesh.vertices.begin(), mesh.vertices.end());
     }
     vertexResource_ = dxCommon_->CreateBufferResource(sizeof(VertexData) * allVertices.size());
@@ -518,7 +578,8 @@ void ParticleCSGroup::CreateVertexResource() {
     std::memcpy(vertexData_, allVertices.data(), sizeof(VertexData) * allVertices.size());
 }
 
-void ParticleCSGroup::CreatePerFrameResource() {
+void ParticleCSGroup::CreatePerFrameResource()
+{
     perFrameResource_ = dxCommon_->CreateBufferResource(sizeof(PerFrame));
     perFrameResource_->Map(0, nullptr, reinterpret_cast<void **>(&perFrameData_));
     perFrameData_->time = 0.0f;
@@ -526,7 +587,8 @@ void ParticleCSGroup::CreatePerFrameResource() {
     perFrameData_->groupId = 0;
 }
 
-void ParticleCSGroup::CreateFreeListIndexResource() {
+void ParticleCSGroup::CreateFreeListIndexResource()
+{
     freeListIndexResource_ = dxCommon_->CreateBufferResource(sizeof(int), true);
 
     // UAV用のインデックス（Compute Shader用）
@@ -551,7 +613,8 @@ void ParticleCSGroup::CreateFreeListIndexResource() {
     freeListIndexReadbackBuffer_->SetName(L"FreeListIndex_Readback");
 }
 
-void ParticleCSGroup::CreateFreeListTrailIndexResource() {
+void ParticleCSGroup::CreateFreeListTrailIndexResource()
+{
     freeListTrailIndexResource_ = dxCommon_->CreateBufferResource(sizeof(int), true);
 
     freeListTrailIndexSrvIndex_ = srvManager_->Allocate() + 1;
@@ -573,7 +636,8 @@ void ParticleCSGroup::CreateFreeListTrailIndexResource() {
     freeListTrailIndexReadbackBuffer_->SetName(L"FreeListTrailIndex_Readback");
 }
 
-void ParticleCSGroup::CopyDebugDataToReadback() {
+void ParticleCSGroup::CopyDebugDataToReadback()
+{
     // === Head (freeListIndex) のコピー ===
     auto barrierHeadToCopy = CD3DX12_RESOURCE_BARRIER::Transition(
         freeListIndexResource_.Get(),
@@ -611,7 +675,8 @@ void ParticleCSGroup::CopyDebugDataToReadback() {
     commandList_->ResourceBarrier(1, &barrierTailToUAV);
 }
 
-void ParticleCSGroup::CreateFreeListResource() {
+void ParticleCSGroup::CreateFreeListResource()
+{
     freeListResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t) * settingsData_->maxParticleCount, true);
 
     // UAV用のインデックス（Compute Shader用）
@@ -621,7 +686,8 @@ void ParticleCSGroup::CreateFreeListResource() {
     srvManager_->CreateUAVStructuredBuffer(freeListSrvIndex_, freeListResource_.Get(), settingsData_->maxParticleCount, sizeof(uint32_t));
 }
 
-void ParticleCSGroup::CreateSettingsResource() {
+void ParticleCSGroup::CreateSettingsResource()
+{
     settingsResource_ = dxCommon_->CreateBufferResource(sizeof(ParticleCSSettings));
     settingsResource_->Map(0, nullptr, reinterpret_cast<void **>(&settingsData_));
 
@@ -725,7 +791,8 @@ void ParticleCSGroup::CreateSettingsResource() {
 
 namespace {
 // float RGBA[0,1] → RGBA8 パック（HLSL PackColorRGBA8 と一致: r | g<<8 | b<<16 | a<<24）。
-uint32_t PackRGBA8(const Vector4 &c) {
+uint32_t PackRGBA8(const Vector4 &c)
+{
     auto q = [](float v) -> uint32_t {
         v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
         return static_cast<uint32_t>(v * 255.0f + 0.5f);
@@ -733,12 +800,18 @@ uint32_t PackRGBA8(const Vector4 &c) {
     return q(c.x) | (q(c.y) << 8) | (q(c.z) << 16) | (q(c.w) << 24);
 }
 // 寿命カーブ点列（x昇順）を t[0,1] で線形補間する。空なら 1.0（変化なし）。
-float SampleCurve(const std::vector<CurvePoint> &pts, float t) {
-    if (pts.empty()) return 1.0f;
-    if (t <= pts.front().x) return pts.front().y;
-    if (t >= pts.back().x) return pts.back().y;
-    for (size_t i = 1; i < pts.size(); ++i) {
-        if (t <= pts[i].x) {
+float SampleCurve(const std::vector<CurvePoint> &pts, float t)
+{
+    if (pts.empty())
+        return 1.0f;
+    if (t <= pts.front().x)
+        return pts.front().y;
+    if (t >= pts.back().x)
+        return pts.back().y;
+    for (size_t i = 1; i < pts.size(); ++i)
+    {
+        if (t <= pts[i].x)
+        {
             float span = pts[i].x - pts[i - 1].x;
             float u = span > 1e-6f ? (t - pts[i - 1].x) / span : 0.0f;
             return pts[i - 1].y + (pts[i].y - pts[i - 1].y) * u;
@@ -747,15 +820,18 @@ float SampleCurve(const std::vector<CurvePoint> &pts, float t) {
     return pts.back().y;
 }
 // 位置でソート済みのストップ列を lifeRatio t[0,1] で線形補間する。
-Vector4 SampleGradient(const std::vector<GradientStop> &sorted, float t) {
+Vector4 SampleGradient(const std::vector<GradientStop> &sorted, float t)
+{
     if (sorted.empty())
         return {1.0f, 1.0f, 1.0f, 1.0f};
     if (t <= sorted.front().pos)
         return sorted.front().color;
     if (t >= sorted.back().pos)
         return sorted.back().color;
-    for (size_t i = 1; i < sorted.size(); ++i) {
-        if (t <= sorted[i].pos) {
+    for (size_t i = 1; i < sorted.size(); ++i)
+    {
+        if (t <= sorted[i].pos)
+        {
             const Vector4 &a = sorted[i - 1].color;
             const Vector4 &b = sorted[i].color;
             float span = sorted[i].pos - sorted[i - 1].pos;
@@ -768,32 +844,37 @@ Vector4 SampleGradient(const std::vector<GradientStop> &sorted, float t) {
 }
 } // namespace
 
-void ParticleCSGroup::BakeColorLUT() {
+void ParticleCSGroup::BakeColorLUT()
+{
     // colorStops_ を位置でソートし、256段 RGBA8 LUT を settingsData_->colorLUT にベイクする。
     // ストップ数に依存しない O(256) で、GPU は LUT を1点サンプルするだけになる。
     std::vector<GradientStop> sorted = colorStops_;
     std::sort(sorted.begin(), sorted.end(),
               [](const GradientStop &a, const GradientStop &b) { return a.pos < b.pos; });
-    for (int i = 0; i < 256; ++i) {
+    for (int i = 0; i < 256; ++i)
+    {
         float t = static_cast<float>(i) / 255.0f;
         settingsData_->colorLUT[i] = PackRGBA8(SampleGradient(sorted, t));
     }
 }
 
-void ParticleCSGroup::BakeLifetimeCurveLUTs() {
+void ParticleCSGroup::BakeLifetimeCurveLUTs()
+{
     // サイズ/アルファの倍率カーブを 256段 float LUT にベイクする。点が無ければ全 1.0（変化なし）。
     std::vector<CurvePoint> sz = sizeCurvePoints_;
     std::vector<CurvePoint> al = alphaCurvePoints_;
     std::sort(sz.begin(), sz.end(), [](const CurvePoint &a, const CurvePoint &b) { return a.x < b.x; });
     std::sort(al.begin(), al.end(), [](const CurvePoint &a, const CurvePoint &b) { return a.x < b.x; });
-    for (int i = 0; i < 256; ++i) {
+    for (int i = 0; i < 256; ++i)
+    {
         float t = static_cast<float>(i) / 255.0f;
         settingsData_->sizeCurveLUT[i] = SampleCurve(sz, t);
         settingsData_->alphaCurveLUT[i] = SampleCurve(al, t);
     }
 }
 
-void ParticleCSGroup::CreateAliveCountResource() {
+void ParticleCSGroup::CreateAliveCountResource()
+{
     // GPU側のカウント用バッファ (UAV)
     aliveCountResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t), true);
 
@@ -824,11 +905,13 @@ void ParticleCSGroup::CreateAliveCountResource() {
         IID_PPV_ARGS(&aliveCountReadbackResource_));
 }
 
-void ParticleCSGroup::CreateAliveListResources() {
+void ParticleCSGroup::CreateAliveListResources()
+{
     const uint32_t maxCount = settingsData_->maxParticleCount;
 
     // ping-pong の2枚それぞれに aliveList / aliveCounter を本確保する。
-    for (uint32_t i = 0; i < kAlivePingPong; ++i) {
+    for (uint32_t i = 0; i < kAlivePingPong; ++i)
+    {
         // --- aliveList: 生存 slot index バッファ (UAV: compute u9 / SRV: VS t2) ---
         aliveListResource_[i] = dxCommon_->CreateBufferResource(sizeof(uint32_t) * maxCount, true);
 
@@ -865,7 +948,8 @@ void ParticleCSGroup::CreateAliveListResources() {
     aliveCounterReadbackResource_->SetName(L"AliveCounter_Readback");
 }
 
-void ParticleCSGroup::CountAliveParticles() {
+void ParticleCSGroup::CountAliveParticles()
+{
     // CountParticle.CSを実行
     particleCommon_->ComputeCountDrawCommonSetting();
 
@@ -896,7 +980,8 @@ void ParticleCSGroup::CountAliveParticles() {
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 }
 
-uint32_t ParticleCSGroup::GetAliveParticleCount() {
+uint32_t ParticleCSGroup::GetAliveParticleCount()
+{
     // 旧 CountParticle 全Nディスパッチを廃止し、生存コンパクションの
     // aliveCounter 読み戻し値(FetchAliveDrawCount で更新)をそのまま統計に流用する。
     cachedAliveCount_ = aliveDrawCount_;
@@ -907,14 +992,22 @@ uint32_t ParticleCSGroup::GetAliveParticleCount() {
 namespace {
 // ImGradient ウィジェット用デリゲート。GradientStop 列(RGBA+位置)を
 // ImVec4(xyz=RGB, w=位置) のスクラッチ配列を介して編集する（2Dエンジンの ColorGradient と同型）。
-struct ColorGradientDelegate : public ImGradient::Delegate {
+struct ColorGradientDelegate : public ImGradient::Delegate
+{
     std::vector<Hagine::GradientStop> *stops = nullptr;
     std::vector<ImVec4> scratch;
     std::vector<Hagine::GradientStop> sorted;
-    void Sync() {
-        if (!stops) { scratch.clear(); sorted.clear(); return; }
+    void Sync()
+    {
+        if (!stops)
+        {
+            scratch.clear();
+            sorted.clear();
+            return;
+        }
         scratch.resize(stops->size());
-        for (size_t i = 0; i < stops->size(); ++i) {
+        for (size_t i = 0; i < stops->size(); ++i)
+        {
             const auto &s = (*stops)[i];
             scratch[i] = ImVec4(s.color.x, s.color.y, s.color.z, s.pos);
         }
@@ -922,12 +1015,18 @@ struct ColorGradientDelegate : public ImGradient::Delegate {
         std::sort(sorted.begin(), sorted.end(),
                   [](const Hagine::GradientStop &a, const Hagine::GradientStop &b) { return a.pos < b.pos; });
     }
-    Hagine::Vector4 Sample(float t) const {
-        if (sorted.empty()) return {1.0f, 1.0f, 1.0f, 1.0f};
-        if (t <= sorted.front().pos) return sorted.front().color;
-        if (t >= sorted.back().pos) return sorted.back().color;
-        for (size_t i = 1; i < sorted.size(); ++i) {
-            if (t <= sorted[i].pos) {
+    Hagine::Vector4 Sample(float t) const
+    {
+        if (sorted.empty())
+            return {1.0f, 1.0f, 1.0f, 1.0f};
+        if (t <= sorted.front().pos)
+            return sorted.front().color;
+        if (t >= sorted.back().pos)
+            return sorted.back().color;
+        for (size_t i = 1; i < sorted.size(); ++i)
+        {
+            if (t <= sorted[i].pos)
+            {
                 const auto &a = sorted[i - 1].color;
                 const auto &b = sorted[i].color;
                 float span = sorted[i].pos - sorted[i - 1].pos;
@@ -940,19 +1039,29 @@ struct ColorGradientDelegate : public ImGradient::Delegate {
     }
     size_t GetPointCount() override { return stops ? stops->size() : 0; }
     ImVec4 *GetPoints() override { return scratch.data(); }
-    int EditPoint(int index, ImVec4 value) override {
-        if (!stops || index < 0 || index >= static_cast<int>(stops->size())) return index;
-        float p = value.w; p = p < 0.0f ? 0.0f : (p > 1.0f ? 1.0f : p);
+    int EditPoint(int index, ImVec4 value) override
+    {
+        if (!stops || index < 0 || index >= static_cast<int>(stops->size()))
+            return index;
+        float p = value.w;
+        p = p < 0.0f ? 0.0f : (p > 1.0f ? 1.0f : p);
         (*stops)[index].pos = p;
         (*stops)[index].color.x = value.x;
         (*stops)[index].color.y = value.y;
         (*stops)[index].color.z = value.z;
-        if (index < static_cast<int>(scratch.size())) scratch[index] = ImVec4(value.x, value.y, value.z, p);
+        if (index < static_cast<int>(scratch.size()))
+            scratch[index] = ImVec4(value.x, value.y, value.z, p);
         return index;
     }
-    ImVec4 GetPoint(float t) override { Hagine::Vector4 c = Sample(t); return ImVec4(c.x, c.y, c.z, t); }
-    void AddPoint(ImVec4 value) override {
-        if (!stops) return;
+    ImVec4 GetPoint(float t) override
+    {
+        Hagine::Vector4 c = Sample(t);
+        return ImVec4(c.x, c.y, c.z, t);
+    }
+    void AddPoint(ImVec4 value) override
+    {
+        if (!stops)
+            return;
         Hagine::GradientStop s;
         s.pos = value.w;
         Hagine::Vector4 sampled = Sample(value.w); // アルファは既存グラデから補間して引き継ぐ
@@ -964,18 +1073,22 @@ struct ColorGradientDelegate : public ImGradient::Delegate {
 
 // ImCurveEdit 用デリゲート。サイズ(0)/アルファ(1) の倍率カーブを1つのエディタで編集する。
 // 点の実体は group の sizeCurvePoints_/alphaCurvePoints_(CurvePoint列)。ImVec2 スクラッチ経由で編集する。
-struct LifetimeCurvesDelegate : public ImCurveEdit::Delegate {
+struct LifetimeCurvesDelegate : public ImCurveEdit::Delegate
+{
     std::vector<Hagine::CurvePoint> *pts[2] = {nullptr, nullptr}; // 0=size, 1=alpha
     std::vector<ImVec2> scratch[2];
     bool visible[2] = {true, true};
     bool changed = false; // この Edit 呼び出しで点が編集されたか（dirty 判定用）
     ImVec2 vmin = ImVec2(0.0f, 0.0f);
     ImVec2 vmax = ImVec2(1.0f, 2.0f);
-    void Sync() {
-        for (int c = 0; c < 2; ++c) {
+    void Sync()
+    {
+        for (int c = 0; c < 2; ++c)
+        {
             scratch[c].clear();
             if (pts[c])
-                for (const auto &p : *pts[c]) scratch[c].push_back(ImVec2(p.x, p.y));
+                for (const auto &p : *pts[c])
+                    scratch[c].push_back(ImVec2(p.x, p.y));
         }
     }
     size_t GetCurveCount() override { return 2; }
@@ -986,29 +1099,37 @@ struct LifetimeCurvesDelegate : public ImCurveEdit::Delegate {
     size_t GetPointCount(size_t c) override { return (c < 2 && pts[c]) ? pts[c]->size() : 0; }
     uint32_t GetCurveColor(size_t c) override { return c == 0 ? 0xFF3399FF : 0xFFFFCC66; } // size=橙 / alpha=水(ABGR)
     ImVec2 *GetPoints(size_t c) override { return c < 2 ? scratch[c].data() : nullptr; }
-    int EditPoint(size_t c, int index, ImVec2 value) override {
-        if (c >= 2 || !pts[c] || index < 0 || index >= static_cast<int>(pts[c]->size())) return index;
+    int EditPoint(size_t c, int index, ImVec2 value) override
+    {
+        if (c >= 2 || !pts[c] || index < 0 || index >= static_cast<int>(pts[c]->size()))
+            return index;
         value.x = value.x < 0.0f ? 0.0f : (value.x > 1.0f ? 1.0f : value.x);
-        if (value.y < 0.0f) value.y = 0.0f;
+        if (value.y < 0.0f)
+            value.y = 0.0f;
         (*pts[c])[index] = {value.x, value.y};
         scratch[c][index] = value;
         changed = true;
-        while (index > 0 && (*pts[c])[index].x < (*pts[c])[index - 1].x) {
+        while (index > 0 && (*pts[c])[index].x < (*pts[c])[index - 1].x)
+        {
             std::swap((*pts[c])[index], (*pts[c])[index - 1]);
             std::swap(scratch[c][index], scratch[c][index - 1]);
             --index;
         }
-        while (index < static_cast<int>(pts[c]->size()) - 1 && (*pts[c])[index].x > (*pts[c])[index + 1].x) {
+        while (index < static_cast<int>(pts[c]->size()) - 1 && (*pts[c])[index].x > (*pts[c])[index + 1].x)
+        {
             std::swap((*pts[c])[index], (*pts[c])[index + 1]);
             std::swap(scratch[c][index], scratch[c][index + 1]);
             ++index;
         }
         return index;
     }
-    void AddPoint(size_t c, ImVec2 value) override {
-        if (c >= 2 || !pts[c]) return;
+    void AddPoint(size_t c, ImVec2 value) override
+    {
+        if (c >= 2 || !pts[c])
+            return;
         value.x = value.x < 0.0f ? 0.0f : (value.x > 1.0f ? 1.0f : value.x);
-        if (value.y < 0.0f) value.y = 0.0f;
+        if (value.y < 0.0f)
+            value.y = 0.0f;
         pts[c]->push_back({value.x, value.y});
         std::sort(pts[c]->begin(), pts[c]->end(),
                   [](const Hagine::CurvePoint &a, const Hagine::CurvePoint &b) { return a.x < b.x; });
@@ -1019,7 +1140,8 @@ struct LifetimeCurvesDelegate : public ImCurveEdit::Delegate {
 } // namespace
 #endif
 
-void ParticleCSGroup::DrawImGui() {
+void ParticleCSGroup::DrawImGui()
+{
 #ifdef USE_IMGUI
     if (!settingsData_)
         return;
@@ -1062,7 +1184,8 @@ void ParticleCSGroup::DrawImGui() {
     PushSectionColor(ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
     bool openBasic = ImGui::CollapsingHeader("  出現 / 寿命 / サイズ");
     PopSectionColor();
-    if (openBasic) {
+    if (openBasic)
+    {
         ImGui::Indent();
 
         // 出現数
@@ -1076,7 +1199,8 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::PopStyleColor();
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("推奨上限: %d  /  絶対上限: %d", dynMax, absMax);
-            if (emitCount > dynMax) {
+            if (emitCount > dynMax)
+            {
                 ImGui::SameLine();
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
                 ImGui::TextUnformatted(" 推奨超過");
@@ -1121,7 +1245,8 @@ void ParticleCSGroup::DrawImGui() {
     PushSectionColor(ImVec4(0.25f, 0.45f, 0.8f, 1.0f));
     bool openAppearance = ImGui::CollapsingHeader("  速度 / 色彩 / ブレンド");
     PopSectionColor();
-    if (openAppearance) {
+    if (openAppearance)
+    {
         ImGui::Indent();
 
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.2f, 0.4f, 0.5f));
@@ -1136,7 +1261,8 @@ void ParticleCSGroup::DrawImGui() {
             // グラデーション(多段) モード — ON で寿命に沿った N段カラーを使う（既存の3段/ランダムを上書き）
             bool grad = settingsData_->enableColorGradient != 0;
             ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.7f, 0.3f, 1.0f));
-            if (ImGui::Checkbox("グラデーション(多段)", &grad)) {
+            if (ImGui::Checkbox("グラデーション(多段)", &grad))
+            {
                 settingsData_->enableColorGradient = grad ? 1 : 0;
                 MarkColorStopsDirty();
             }
@@ -1144,7 +1270,8 @@ void ParticleCSGroup::DrawImGui() {
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("寿命に沿った多段カラーグラデーション\nバー上ダブルクリックで色追加 / 点ドラッグで移動 / 選択して色・削除");
 
-            if (grad) {
+            if (grad)
+            {
                 // ===== ImGradient エディタ（連続プレビューバー + ストップ編集） =====
                 ColorGradientDelegate dg;
                 dg.stops = &colorStops_;
@@ -1156,7 +1283,8 @@ void ParticleCSGroup::DrawImGui() {
                     float barW = ImGui::GetContentRegionAvail().x;
                     const float barH = 16.0f;
                     const int kSteps = 64;
-                    for (int i = 0; i < kSteps; ++i) {
+                    for (int i = 0; i < kSteps; ++i)
+                    {
                         float t0 = static_cast<float>(i) / kSteps;
                         float t1 = static_cast<float>(i + 1) / kSteps;
                         Vector4 c0 = dg.Sample(t0);
@@ -1172,94 +1300,110 @@ void ParticleCSGroup::DrawImGui() {
                 if (ImGradient::Edit(dg, ImVec2(ImGui::GetContentRegionAvail().x, 40.0f), sel))
                     MarkColorStopsDirty();
                 ImGui::TextDisabled("点ドラッグ=移動 / バー上ダブルクリック=追加");
-                if (sel >= 0 && sel < static_cast<int>(colorStops_.size())) {
+                if (sel >= 0 && sel < static_cast<int>(colorStops_.size()))
+                {
                     if (ImGui::ColorEdit4("ストップ RGBA##grad", &colorStops_[sel].color.x))
                         MarkColorStopsDirty();
                     ImGui::SameLine();
-                    if (ImGui::SmallButton("削除##gradStop") && colorStops_.size() > 1) {
+                    if (ImGui::SmallButton("削除##gradStop") && colorStops_.size() > 1)
+                    {
                         colorStops_.erase(colorStops_.begin() + sel);
                         MarkColorStopsDirty();
                     }
-                } else {
+                }
+                else
+                {
                     ImGui::TextDisabled("(ストップ未選択 — バー上の点をクリックで選択)");
                 }
                 // プリセット
                 ImGui::TextDisabled("プリセット:");
                 ImGui::SameLine();
-                if (ImGui::SmallButton("炎##gradPre1")) {
+                if (ImGui::SmallButton("炎##gradPre1"))
+                {
                     colorStops_ = {{{1.0f, 1.0f, 0.6f, 1.0f}, 0.0f}, {{1.0f, 0.55f, 0.1f, 1.0f}, 0.35f}, {{0.9f, 0.12f, 0.0f, 0.6f}, 0.75f}, {{0.3f, 0.0f, 0.0f, 0.0f}, 1.0f}};
                     MarkColorStopsDirty();
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("虹##gradPre2")) {
+                if (ImGui::SmallButton("虹##gradPre2"))
+                {
                     colorStops_ = {{{1.0f, 0.3f, 0.4f, 1.0f}, 0.0f}, {{0.3f, 0.8f, 1.0f, 1.0f}, 0.33f}, {{1.0f, 0.9f, 0.3f, 1.0f}, 0.66f}, {{0.5f, 1.0f, 0.5f, 0.0f}, 1.0f}};
                     MarkColorStopsDirty();
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("魔法##gradPre3")) {
+                if (ImGui::SmallButton("魔法##gradPre3"))
+                {
                     colorStops_ = {{{0.8f, 0.4f, 1.0f, 1.0f}, 0.0f}, {{0.4f, 0.7f, 1.0f, 1.0f}, 0.45f}, {{1.0f, 0.9f, 1.0f, 0.7f}, 0.8f}, {{0.6f, 0.4f, 1.0f, 0.0f}, 1.0f}};
                     MarkColorStopsDirty();
                 }
-            } else {
-            bool rnd = settingsData_->enableRandomColor != 0;
-            ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.7f, 0.3f, 1.0f));
-            if (ImGui::Checkbox("ランダムカラー", &rnd))
-                settingsData_->enableRandomColor = rnd ? 1 : 0;
-            ImGui::PopStyleColor();
-            if (!rnd) {
-                ImGui::ColorEdit4("開始色", &settingsData_->startColor.x);
-                // 中間色
-                {
-                    bool mc = settingsData_->enableMidColor != 0;
-                    if (ImGui::Checkbox("中間色を有効化##mc", &mc))
-                        settingsData_->enableMidColor = mc ? 1 : 0;
-                    if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("開始→中間→終了の3段階カラーグラデーション");
-                    if (mc) {
-                        ImGui::Indent();
-                        ImGui::ColorEdit4("中間色##mcc", &settingsData_->midColor.x);
-                        ImGui::DragFloat("中間タイミング##mcr", &settingsData_->midColorRatio, 0.01f, 0.0f, 1.0f, "%.2f");
-                        if (ImGui::IsItemHovered())
-                            ImGui::SetTooltip("中間色に達するlife比率\n0=開始直後 / 0.5=寿命半分 / 1=終了直前");
-                        ImGui::Spacing();
-                        ImGui::TextDisabled("プリセット:");
-                        ImGui::SameLine();
-                        if (ImGui::SmallButton("炎##mcPre1")) {
-                            settingsData_->startColor  = {1.0f, 0.3f, 0.0f, 1.0f};
-                            settingsData_->midColor    = {1.0f, 1.0f, 0.3f, 1.0f};
-                            settingsData_->endColor    = {0.2f, 0.2f, 0.2f, 0.0f};
-                            settingsData_->midColorRatio = 0.35f;
-                        }
-                        ImGui::SameLine();
-                        if (ImGui::SmallButton("魔法陣##mcPre2")) {
-                            settingsData_->startColor  = {0.2f, 0.5f, 1.0f, 0.0f};
-                            settingsData_->midColor    = {1.0f, 1.0f, 1.0f, 1.0f};
-                            settingsData_->endColor    = {0.5f, 0.2f, 1.0f, 0.0f};
-                            settingsData_->midColorRatio = 0.5f;
-                        }
-                        ImGui::SameLine();
-                        if (ImGui::SmallButton("雷##mcPre3")) {
-                            settingsData_->startColor  = {1.0f, 1.0f, 1.0f, 1.0f};
-                            settingsData_->midColor    = {0.7f, 0.9f, 1.0f, 0.8f};
-                            settingsData_->endColor    = {0.2f, 0.4f, 0.8f, 0.0f};
-                            settingsData_->midColorRatio = 0.4f;
-                        }
-                        ImGui::Unindent();
-                    }
-                }
-                ImGui::ColorEdit4("終了色", &settingsData_->endColor.x);
-            } else {
-                // ランダムカラー時はRGBがランダムのため色編集は非表示にするが、
-                // アルファ（透明度）は startColor.a / endColor.a で補間されるので個別に編集できるようにする
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.2f, 0.4f, 0.5f));
-                ImGui::DragFloat("開始アルファ##rndAlphaStart", &settingsData_->startColor.w, 0.01f, 0.0f, 1.0f, "%.4f");
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("発生時の透明度 (0=完全透明, 1=完全不透明)");
-                ImGui::DragFloat("終了アルファ##rndAlphaEnd", &settingsData_->endColor.w, 0.01f, 0.0f, 1.0f, "%.4f");
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("消滅時の透明度 (0=完全透明, 1=完全不透明)");
-                ImGui::PopStyleColor();
             }
+            else
+            {
+                bool rnd = settingsData_->enableRandomColor != 0;
+                ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.7f, 0.3f, 1.0f));
+                if (ImGui::Checkbox("ランダムカラー", &rnd))
+                    settingsData_->enableRandomColor = rnd ? 1 : 0;
+                ImGui::PopStyleColor();
+                if (!rnd)
+                {
+                    ImGui::ColorEdit4("開始色", &settingsData_->startColor.x);
+                    // 中間色
+                    {
+                        bool mc = settingsData_->enableMidColor != 0;
+                        if (ImGui::Checkbox("中間色を有効化##mc", &mc))
+                            settingsData_->enableMidColor = mc ? 1 : 0;
+                        if (ImGui::IsItemHovered())
+                            ImGui::SetTooltip("開始→中間→終了の3段階カラーグラデーション");
+                        if (mc)
+                        {
+                            ImGui::Indent();
+                            ImGui::ColorEdit4("中間色##mcc", &settingsData_->midColor.x);
+                            ImGui::DragFloat("中間タイミング##mcr", &settingsData_->midColorRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+                            if (ImGui::IsItemHovered())
+                                ImGui::SetTooltip("中間色に達するlife比率\n0=開始直後 / 0.5=寿命半分 / 1=終了直前");
+                            ImGui::Spacing();
+                            ImGui::TextDisabled("プリセット:");
+                            ImGui::SameLine();
+                            if (ImGui::SmallButton("炎##mcPre1"))
+                            {
+                                settingsData_->startColor = {1.0f, 0.3f, 0.0f, 1.0f};
+                                settingsData_->midColor = {1.0f, 1.0f, 0.3f, 1.0f};
+                                settingsData_->endColor = {0.2f, 0.2f, 0.2f, 0.0f};
+                                settingsData_->midColorRatio = 0.35f;
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::SmallButton("魔法陣##mcPre2"))
+                            {
+                                settingsData_->startColor = {0.2f, 0.5f, 1.0f, 0.0f};
+                                settingsData_->midColor = {1.0f, 1.0f, 1.0f, 1.0f};
+                                settingsData_->endColor = {0.5f, 0.2f, 1.0f, 0.0f};
+                                settingsData_->midColorRatio = 0.5f;
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::SmallButton("雷##mcPre3"))
+                            {
+                                settingsData_->startColor = {1.0f, 1.0f, 1.0f, 1.0f};
+                                settingsData_->midColor = {0.7f, 0.9f, 1.0f, 0.8f};
+                                settingsData_->endColor = {0.2f, 0.4f, 0.8f, 0.0f};
+                                settingsData_->midColorRatio = 0.4f;
+                            }
+                            ImGui::Unindent();
+                        }
+                    }
+                    ImGui::ColorEdit4("終了色", &settingsData_->endColor.x);
+                }
+                else
+                {
+                    // ランダムカラー時はRGBがランダムのため色編集は非表示にするが、
+                    // アルファ（透明度）は startColor.a / endColor.a で補間されるので個別に編集できるようにする
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.2f, 0.4f, 0.5f));
+                    ImGui::DragFloat("開始アルファ##rndAlphaStart", &settingsData_->startColor.w, 0.01f, 0.0f, 1.0f, "%.4f");
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("発生時の透明度 (0=完全透明, 1=完全不透明)");
+                    ImGui::DragFloat("終了アルファ##rndAlphaEnd", &settingsData_->endColor.w, 0.01f, 0.0f, 1.0f, "%.4f");
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("消滅時の透明度 (0=完全透明, 1=完全不透明)");
+                    ImGui::PopStyleColor();
+                }
             } // else: グラデーション(多段) OFF
         }
 
@@ -1282,7 +1426,8 @@ void ParticleCSGroup::DrawImGui() {
     PushSectionColor(ImVec4(0.4f, 0.7f, 0.75f, 1.0f));
     bool openTex = ImGui::CollapsingHeader("  テクスチャ");
     PopSectionColor();
-    if (openTex && !particleGroupData_.materials.empty()) {
+    if (openTex && !particleGroupData_.materials.empty())
+    {
         ImGui::Indent();
         // Application/Assets/images 配下の画像を列挙（初回スキャン + 再スキャンボタン）。
         // textureFilePath は base からの相対パス('/'区切り)で持つ規約に合わせる。
@@ -1292,10 +1437,12 @@ void ParticleCSGroup::DrawImGui() {
             s_imageFiles.clear();
             std::error_code ec;
             // images はエンジン(debug)とアプリの 2 ルートに分割されているため両方を走査する。
-            for (const std::string &base : AssetPath::ImageScanRoots()) {
+            for (const std::string &base : AssetPath::ImageScanRoots())
+            {
                 if (!std::filesystem::exists(base, ec))
                     continue;
-                for (auto &e : std::filesystem::recursive_directory_iterator(base, ec)) {
+                for (auto &e : std::filesystem::recursive_directory_iterator(base, ec))
+                {
                     if (ec)
                         break;
                     if (!e.is_regular_file())
@@ -1312,7 +1459,8 @@ void ParticleCSGroup::DrawImGui() {
             }
             std::sort(s_imageFiles.begin(), s_imageFiles.end());
         };
-        if (!s_scanned) {
+        if (!s_scanned)
+        {
             scanImages();
             s_scanned = true;
         }
@@ -1327,20 +1475,26 @@ void ParticleCSGroup::DrawImGui() {
 
         // 選択中テクスチャのサムネイルプレビュー（読み込み済み前提）。
         // ※ GetSrvHandleGPU は他の getter と違い相対パスを前置しない＝フルパス(＝マップキー)を要求する。
-        if (!curPath.empty()) {
+        if (!curPath.empty())
+        {
             texManager_->LoadTexture(curPath); // 念のため未ロードならロード（ロード済みなら即return）
             // キューブマップは SRV が TEXTURECUBE。Texture2D として Image 描画すると
             // GPU ベース検証 #940 で落ちるためプレビューしない。
-            if (texManager_->GetMetaData(curPath).IsCubemap()) {
+            if (texManager_->GetMetaData(curPath).IsCubemap())
+            {
                 ImGui::Button("CUBE", ImVec2(56.0f, 56.0f));
-            } else {
+            }
+            else
+            {
                 D3D12_GPU_DESCRIPTOR_HANDLE h = texManager_->GetSrvHandleGPU(AssetPath::Image(curPath));
                 if (h.ptr != 0)
                     ImGui::Image(static_cast<ImTextureID>(h.ptr), ImVec2(56.0f, 56.0f));
                 else
                     ImGui::Button("画像\nなし", ImVec2(56.0f, 56.0f));
             }
-        } else {
+        }
+        else
+        {
             // 未設定。アセットブラウザからのドロップ先となるプレースホルダ。
             ImGui::Button("ここへ\nドロップ", ImVec2(56.0f, 56.0f));
         }
@@ -1353,8 +1507,10 @@ void ParticleCSGroup::DrawImGui() {
         ImGui::SameLine();
 
         ImGui::BeginGroup();
-        if (ImGui::BeginCombo("画像", curPath.c_str())) {
-            for (const std::string &f : s_imageFiles) {
+        if (ImGui::BeginCombo("画像", curPath.c_str()))
+        {
+            for (const std::string &f : s_imageFiles)
+            {
                 bool sel = (f == curPath);
                 if (ImGui::Selectable(f.c_str(), sel))
                     applyTexture(f); // パスを差し替え（毎フレーム path 参照なので即時反映）
@@ -1398,7 +1554,8 @@ void ParticleCSGroup::DrawImGui() {
     {
         // 「＋追加」リスト。各エフェクトの「追加済みか」と「追加アクション」を列挙する。
         // グループ系（描画カリング/寿命カーブ/回転）は内部フラグのいずれかが立っていれば追加済み扱い。
-        struct AddItem {
+        struct AddItem
+        {
             const char *name;
             bool added;
             std::function<void()> add;
@@ -1429,8 +1586,10 @@ void ParticleCSGroup::DrawImGui() {
                 ++notAdded;
         ImGui::SetNextItemWidth(-1.0f);
         const char *preview = notAdded > 0 ? "＋ エフェクトを追加..." : "（すべて追加済み）";
-        if (ImGui::BeginCombo("##addEffect", preview)) {
-            for (const auto &it : addItems) {
+        if (ImGui::BeginCombo("##addEffect", preview))
+        {
+            for (const auto &it : addItems)
+            {
                 if (it.added)
                     continue;
                 if (ImGui::Selectable(it.name))
@@ -1444,8 +1603,10 @@ void ParticleCSGroup::DrawImGui() {
     const ImVec4 kMotionColor = ImVec4(0.5f, 0.75f, 0.2f, 1.0f);
 
     // ---- 寿命で縮小 ----
-    if (settingsData_->enableLifetimeScale) {
-        if (effectHeader("寿命で縮小", kMotionColor, [&] { settingsData_->enableLifetimeScale = 0; })) {
+    if (settingsData_->enableLifetimeScale)
+    {
+        if (effectHeader("寿命で縮小", kMotionColor, [&] { settingsData_->enableLifetimeScale = 0; }))
+        {
             ImGui::Indent();
             ImGui::TextDisabled("時間経過と共にスケールが 0 に近づきます（パラメータなし）");
             ImGui::Unindent();
@@ -1453,8 +1614,10 @@ void ParticleCSGroup::DrawImGui() {
     }
 
     // ---- Sin波で拡縮 ----
-    if (settingsData_->enableSinScale) {
-        if (effectHeader("Sin波で拡縮", kMotionColor, [&] { settingsData_->enableSinScale = 0; })) {
+    if (settingsData_->enableSinScale)
+    {
+        if (effectHeader("Sin波で拡縮", kMotionColor, [&] { settingsData_->enableSinScale = 0; }))
+        {
             ImGui::Indent();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
             ImGui::DragFloat("周波数##sf", &settingsData_->sinScaleFrequency, 0.1f, 0.0f, 999.0f, "%.4f");
@@ -1465,8 +1628,10 @@ void ParticleCSGroup::DrawImGui() {
     }
 
     // ---- 重力 ----
-    if (settingsData_->enableGravity) {
-        if (effectHeader("重力", kMotionColor, [&] { settingsData_->enableGravity = 0; })) {
+    if (settingsData_->enableGravity)
+    {
+        if (effectHeader("重力", kMotionColor, [&] { settingsData_->enableGravity = 0; }))
+        {
             ImGui::Indent();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
             ImGui::DragFloat3("重力ベクトル", &settingsData_->gravity.x, 0.1f, -9999.0f, 9999.0f, "%.4f");
@@ -1476,8 +1641,10 @@ void ParticleCSGroup::DrawImGui() {
     }
 
     // ---- 加速度 ----
-    if (settingsData_->enableAcceleration) {
-        if (effectHeader("加速度", kMotionColor, [&] { settingsData_->enableAcceleration = 0; })) {
+    if (settingsData_->enableAcceleration)
+    {
+        if (effectHeader("加速度", kMotionColor, [&] { settingsData_->enableAcceleration = 0; }))
+        {
             ImGui::Indent();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
             ImGui::DragFloat3("加速度ベクトル", &settingsData_->acceleration.x, 0.1f, -9999.0f, 9999.0f, "%.4f");
@@ -1488,8 +1655,10 @@ void ParticleCSGroup::DrawImGui() {
     }
 
     // ---- 速度減衰 ----
-    if (settingsData_->enableVelocityDamping) {
-        if (effectHeader("速度減衰", kMotionColor, [&] { settingsData_->enableVelocityDamping = 0; })) {
+    if (settingsData_->enableVelocityDamping)
+    {
+        if (effectHeader("速度減衰", kMotionColor, [&] { settingsData_->enableVelocityDamping = 0; }))
+        {
             ImGui::Indent();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
             ImGui::DragFloat("減衰係数##vd", &settingsData_->velocityDampingFactor, 0.001f, 0.0f, 1.0f, "%.4f");
@@ -1501,8 +1670,10 @@ void ParticleCSGroup::DrawImGui() {
     }
 
     // ---- 寿命による速度減衰 ----
-    if (settingsData_->enableLifetimeVelocityDamping) {
-        if (effectHeader("寿命による速度減衰", kMotionColor, [&] { settingsData_->enableLifetimeVelocityDamping = 0; })) {
+    if (settingsData_->enableLifetimeVelocityDamping)
+    {
+        if (effectHeader("寿命による速度減衰", kMotionColor, [&] { settingsData_->enableLifetimeVelocityDamping = 0; }))
+        {
             ImGui::Indent();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
             ImGui::DragFloat("開始タイミング##ld", &settingsData_->lifetimeVelocityDampingStart, 0.01f, 0.0f, 1.0f, "%.4f");
@@ -1514,8 +1685,10 @@ void ParticleCSGroup::DrawImGui() {
     }
 
     // ---- 速度ストレッチ ----
-    if (perViewData_->enableVelocityStretch) {
-        if (effectHeader("速度ストレッチ", kMotionColor, [&] { perViewData_->enableVelocityStretch = 0; })) {
+    if (perViewData_->enableVelocityStretch)
+    {
+        if (effectHeader("速度ストレッチ", kMotionColor, [&] { perViewData_->enableVelocityStretch = 0; }))
+        {
             ImGui::Indent();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.25f, 0.35f, 0.15f, 0.5f));
             ImGui::DragFloat("ストレッチ係数##vsf", &perViewData_->velocityStretchFactor, 0.01f, 0.0f, 10.0f, "%.4f");
@@ -1525,12 +1698,14 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::Spacing();
             ImGui::TextDisabled("プリセット:");
             ImGui::SameLine();
-            if (ImGui::SmallButton("火花##vsPre1")) {
+            if (ImGui::SmallButton("火花##vsPre1"))
+            {
                 perViewData_->enableVelocityStretch = 1;
                 perViewData_->velocityStretchFactor = 0.15f;
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("銃弾##vsPre2")) {
+            if (ImGui::SmallButton("銃弾##vsPre2"))
+            {
                 perViewData_->enableVelocityStretch = 1;
                 perViewData_->velocityStretchFactor = 0.5f;
             }
@@ -1541,7 +1716,8 @@ void ParticleCSGroup::DrawImGui() {
     // ---- 描画カリング（距離カリング / 画面サイズ制限）----
     if ((perViewData_->enableDistanceCull || perViewData_->enableSizeClamp) &&
         effectHeader("描画カリング（overdraw対策）", ImVec4(0.3f, 0.7f, 0.8f, 1.0f),
-                     [&] { perViewData_->enableDistanceCull = 0; perViewData_->enableSizeClamp = 0; })) {
+                     [&] { perViewData_->enableDistanceCull = 0; perViewData_->enableSizeClamp = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.4f, 0.8f, 0.9f, 1.0f));
 
@@ -1552,7 +1728,8 @@ void ParticleCSGroup::DrawImGui() {
                 perViewData_->enableDistanceCull = v ? 1 : 0;
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("遠い粒子をアルファフェード→縮退カリングして\n半透明の重なり(ROP/blend)を減らします");
-            if (v) {
+            if (v)
+            {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.3f, 0.35f, 0.5f));
                 ImGui::DragFloat("フェード開始距離##dcs", &perViewData_->distanceCullStart, 0.5f, 0.0f, 100000.0f, "%.2f");
@@ -1576,7 +1753,8 @@ void ParticleCSGroup::DrawImGui() {
                 perViewData_->enableSizeClamp = v ? 1 : 0;
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("巨大粒子のサイズを画面上で上限クランプし、\nサブピクセル粒子を破棄してフィルレートを節約します");
-            if (v) {
+            if (v)
+            {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.3f, 0.35f, 0.5f));
                 ImGui::DragFloat("最大画面高さ##scmax", &perViewData_->maxScreenHeight, 0.01f, 0.01f, 2.0f, "%.3f");
@@ -1597,12 +1775,14 @@ void ParticleCSGroup::DrawImGui() {
     // ---- 寿命カーブ（サイズ/アルファ。1つのカーブエディタを共有）----
     if ((settingsData_->enableSizeCurve || settingsData_->enableAlphaCurve) &&
         effectHeader("寿命カーブ（サイズ/アルファ）", ImVec4(0.6f, 0.45f, 0.8f, 1.0f),
-                     [&] { settingsData_->enableSizeCurve = 0; settingsData_->enableAlphaCurve = 0; MarkLifeCurvesDirty(); })) {
+                     [&] { settingsData_->enableSizeCurve = 0; settingsData_->enableAlphaCurve = 0; MarkLifeCurvesDirty(); }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.6f, 0.95f, 1.0f));
 
         bool sizeOn = settingsData_->enableSizeCurve != 0;
-        if (ImGui::Checkbox("サイズ倍率##szc", &sizeOn)) {
+        if (ImGui::Checkbox("サイズ倍率##szc", &sizeOn))
+        {
             settingsData_->enableSizeCurve = sizeOn ? 1 : 0;
             MarkLifeCurvesDirty();
         }
@@ -1610,14 +1790,16 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::SetTooltip("寿命に沿ってサイズを倍率(0〜2)で変化させる\n例: 0→大きく→0 でポップ感");
         ImGui::SameLine();
         bool alphaOn = settingsData_->enableAlphaCurve != 0;
-        if (ImGui::Checkbox("アルファ倍率##alc", &alphaOn)) {
+        if (ImGui::Checkbox("アルファ倍率##alc", &alphaOn))
+        {
             settingsData_->enableAlphaCurve = alphaOn ? 1 : 0;
             MarkLifeCurvesDirty();
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("寿命に沿って不透明度を倍率で変化させる\n例: フェードイン→アウト");
 
-        if (sizeOn || alphaOn) {
+        if (sizeOn || alphaOn)
+        {
             LifetimeCurvesDelegate dg;
             dg.pts[0] = &sizeCurvePoints_;
             dg.pts[1] = &alphaCurvePoints_;
@@ -1626,12 +1808,15 @@ void ParticleCSGroup::DrawImGui() {
             dg.Sync();
             // 凡例 + リセット
             ImGui::ColorButton("##lcS", ImVec4(1.0f, 0.6f, 0.2f, 1.0f), ImGuiColorEditFlags_NoTooltip, ImVec2(12, 12));
-            ImGui::SameLine(); ImGui::TextUnformatted("サイズ");
+            ImGui::SameLine();
+            ImGui::TextUnformatted("サイズ");
             ImGui::SameLine();
             ImGui::ColorButton("##lcA", ImVec4(0.4f, 0.8f, 1.0f, 1.0f), ImGuiColorEditFlags_NoTooltip, ImVec2(12, 12));
-            ImGui::SameLine(); ImGui::TextUnformatted("アルファ");
             ImGui::SameLine();
-            if (ImGui::SmallButton("リセット##lcReset")) {
+            ImGui::TextUnformatted("アルファ");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("リセット##lcReset"))
+            {
                 sizeCurvePoints_ = {{0.0f, 1.0f}, {1.0f, 1.0f}};
                 alphaCurvePoints_ = {{0.0f, 1.0f}, {1.0f, 1.0f}};
                 MarkLifeCurvesDirty();
@@ -1643,19 +1828,22 @@ void ParticleCSGroup::DrawImGui() {
             // プリセット
             ImGui::TextDisabled("プリセット:");
             ImGui::SameLine();
-            if (ImGui::SmallButton("ポップ##lcP1")) {
+            if (ImGui::SmallButton("ポップ##lcP1"))
+            {
                 sizeCurvePoints_ = {{0.0f, 0.0f}, {0.2f, 1.2f}, {1.0f, 0.0f}};
                 alphaCurvePoints_ = {{0.0f, 0.0f}, {0.1f, 1.0f}, {1.0f, 0.0f}};
                 MarkLifeCurvesDirty();
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("煙##lcP2")) {
+            if (ImGui::SmallButton("煙##lcP2"))
+            {
                 sizeCurvePoints_ = {{0.0f, 0.3f}, {1.0f, 1.0f}};
                 alphaCurvePoints_ = {{0.0f, 0.0f}, {0.25f, 1.0f}, {1.0f, 0.0f}};
                 MarkLifeCurvesDirty();
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("フェード##lcP3")) {
+            if (ImGui::SmallButton("フェード##lcP3"))
+            {
                 alphaCurvePoints_ = {{0.0f, 0.0f}, {0.15f, 1.0f}, {0.85f, 1.0f}, {1.0f, 0.0f}};
                 MarkLifeCurvesDirty();
             }
@@ -1668,13 +1856,15 @@ void ParticleCSGroup::DrawImGui() {
     // ---- タービュランス ----
     if (settingsData_->enableTurbulence &&
         effectHeader("タービュランス（振動力）", ImVec4(0.9f, 0.55f, 0.1f, 1.0f),
-                     [&] { settingsData_->enableTurbulence = 0; })) {
+                     [&] { settingsData_->enableTurbulence = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.75f, 0.3f, 1.0f));
 
         bool v = settingsData_->enableTurbulence != 0;
 
-        if (v) {
+        if (v)
+        {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.25f, 0.05f, 0.5f));
             ImGui::DragFloat("振動強度##tbs", &settingsData_->turbulenceStrength, 0.05f, 0.0f, 50.0f, "%.4f");
             if (ImGui::IsItemHovered())
@@ -1687,18 +1877,21 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::Spacing();
             ImGui::TextDisabled("プリセット:");
             ImGui::SameLine();
-            if (ImGui::SmallButton("ゆらめき##tbPre1")) {
-                settingsData_->turbulenceStrength  = 0.8f;
+            if (ImGui::SmallButton("ゆらめき##tbPre1"))
+            {
+                settingsData_->turbulenceStrength = 0.8f;
                 settingsData_->turbulenceFrequency = 2.0f;
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("嵐##tbPre2")) {
-                settingsData_->turbulenceStrength  = 4.0f;
+            if (ImGui::SmallButton("嵐##tbPre2"))
+            {
+                settingsData_->turbulenceStrength = 4.0f;
                 settingsData_->turbulenceFrequency = 6.0f;
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("細かい揺れ##tbPre3")) {
-                settingsData_->turbulenceStrength  = 1.5f;
+            if (ImGui::SmallButton("細かい揺れ##tbPre3"))
+            {
+                settingsData_->turbulenceStrength = 1.5f;
                 settingsData_->turbulenceFrequency = 10.0f;
             }
         }
@@ -1710,7 +1903,8 @@ void ParticleCSGroup::DrawImGui() {
     // ---- 音声振動 ----
     if (settingsData_->enableAudioVibration &&
         effectHeader("音声振動（音の立ち上がりでバンっと揺らす）", ImVec4(0.35f, 0.75f, 0.9f, 1.0f),
-                     [&] { settingsData_->enableAudioVibration = 0; })) {
+                     [&] { settingsData_->enableAudioVibration = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.5f, 0.85f, 1.0f, 1.0f));
 
@@ -1749,14 +1943,16 @@ void ParticleCSGroup::DrawImGui() {
     // ---- 終了スケール ----
     if (settingsData_->enableEndScale &&
         effectHeader("終了スケール", ImVec4(0.2f, 0.7f, 0.65f, 1.0f),
-                     [&] { settingsData_->enableEndScale = 0; })) {
+                     [&] { settingsData_->enableEndScale = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.4f, 1.0f, 0.9f, 1.0f));
         ImGui::TextDisabled("初期スケール→終了スケールへ寿命に応じてlerp（「寿命で縮小」より優先）");
 
         bool v = settingsData_->enableEndScale != 0;
 
-        if (v) {
+        if (v)
+        {
             ImGui::Indent();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.3f, 0.3f, 0.5f));
             ImGui::DragFloat3("終了スケール##esv", &settingsData_->endScaleValue.x, 0.01f, 0.0f, 9999.0f, "%.4f");
@@ -1767,11 +1963,13 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::Spacing();
             ImGui::TextDisabled("プリセット:");
             ImGui::SameLine();
-            if (ImGui::SmallButton("消える##esPreset1")) {
+            if (ImGui::SmallButton("消える##esPreset1"))
+            {
                 settingsData_->endScaleValue = {0.0f, 0.0f, 0.0f};
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("大きくなる##esPreset2")) {
+            if (ImGui::SmallButton("大きくなる##esPreset2"))
+            {
                 settingsData_->endScaleValue = {
                     settingsData_->scaleMax * 2.0f,
                     settingsData_->scaleMax * 2.0f,
@@ -1787,7 +1985,8 @@ void ParticleCSGroup::DrawImGui() {
     // ---- 回転（ランダム初期角度 / ランダム角速度）----
     if ((settingsData_->enableRandomRotation || settingsData_->enableRandomAngularVelocity) &&
         effectHeader("回転", ImVec4(0.75f, 0.3f, 0.75f, 1.0f),
-                     [&] { settingsData_->enableRandomRotation = 0; settingsData_->enableRandomAngularVelocity = 0; })) {
+                     [&] { settingsData_->enableRandomRotation = 0; settingsData_->enableRandomAngularVelocity = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.5f, 1.0f, 1.0f));
 
@@ -1798,7 +1997,8 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->enableRandomRotation = v ? 1 : 0;
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("発生時にランダムな角度で出現します (XYZ, ラジアン)");
-            if (v) {
+            if (v)
+            {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.15f, 0.35f, 0.5f));
 
@@ -1818,17 +2018,20 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::Spacing();
                 ImGui::TextDisabled("プリセット:");
                 ImGui::SameLine();
-                if (ImGui::SmallButton("全方向##rrPreset1")) {
+                if (ImGui::SmallButton("全方向##rrPreset1"))
+                {
                     settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
                     settingsData_->rotationMax = {6.2831853f, 6.2831853f, 6.2831853f};
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("Z軸のみ##rrPreset2")) {
+                if (ImGui::SmallButton("Z軸のみ##rrPreset2"))
+                {
                     settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
                     settingsData_->rotationMax = {0.0f, 0.0f, 6.2831853f};
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("リセット##rrPreset3")) {
+                if (ImGui::SmallButton("リセット##rrPreset3"))
+                {
                     settingsData_->rotationMin = {0.0f, 0.0f, 0.0f};
                     settingsData_->rotationMax = {0.0f, 0.0f, 0.0f};
                 }
@@ -1845,7 +2048,8 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->enableRandomAngularVelocity = v ? 1 : 0;
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("発生時にランダムな回転速度を設定します (XYZ, ラジアン/秒)");
-            if (v) {
+            if (v)
+            {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.15f, 0.35f, 0.5f));
 
@@ -1865,22 +2069,26 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::Spacing();
                 ImGui::TextDisabled("プリセット:");
                 ImGui::SameLine();
-                if (ImGui::SmallButton("ゆっくり##ravPreset1")) {
+                if (ImGui::SmallButton("ゆっくり##ravPreset1"))
+                {
                     settingsData_->angularVelocityMin = {-1.0f, -1.0f, -1.0f};
                     settingsData_->angularVelocityMax = {1.0f, 1.0f, 1.0f};
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("速い##ravPreset2")) {
+                if (ImGui::SmallButton("速い##ravPreset2"))
+                {
                     settingsData_->angularVelocityMin = {-6.2831853f, -6.2831853f, -6.2831853f};
                     settingsData_->angularVelocityMax = {6.2831853f, 6.2831853f, 6.2831853f};
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("Z軸のみ##ravPreset3")) {
+                if (ImGui::SmallButton("Z軸のみ##ravPreset3"))
+                {
                     settingsData_->angularVelocityMin = {0.0f, 0.0f, -3.14159265f};
                     settingsData_->angularVelocityMax = {0.0f, 0.0f, 3.14159265f};
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("リセット##ravPreset4")) {
+                if (ImGui::SmallButton("リセット##ravPreset4"))
+                {
                     settingsData_->angularVelocityMin = {0.0f, 0.0f, 0.0f};
                     settingsData_->angularVelocityMax = {0.0f, 0.0f, 0.0f};
                 }
@@ -1895,14 +2103,16 @@ void ParticleCSGroup::DrawImGui() {
     // ---- 放射状速度 ----
     if (settingsData_->enableRadialVelocity &&
         effectHeader("放射状速度", ImVec4(0.85f, 0.5f, 0.1f, 1.0f),
-                     [&] { settingsData_->enableRadialVelocity = 0; })) {
+                     [&] { settingsData_->enableRadialVelocity = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.7f, 0.3f, 1.0f));
         ImGui::TextDisabled("中心点から放射状に飛び散る速度（花火・爆発の演出に）");
 
         bool v = settingsData_->enableRadialVelocity != 0;
 
-        if (v) {
+        if (v)
+        {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.25f, 0.05f, 0.5f));
             ImGui::DragFloat("放射強度##rs", &settingsData_->radialVelocityStrength, 0.1f, 0.0f, 999.0f, "%.4f");
             ImGui::DragFloat("ランダム性##rr", &settingsData_->radialVelocityRandomness, 0.01f, 0.0f, 1.0f, "%.4f");
@@ -1914,7 +2124,8 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::Spacing();
             ImGui::TextDisabled("プリセット:");
             ImGui::SameLine();
-            if (ImGui::SmallButton("花火")) {
+            if (ImGui::SmallButton("花火"))
+            {
                 settingsData_->enableRadialVelocity = 1;
                 settingsData_->radialVelocityStrength = 5.0f;
                 settingsData_->radialVelocityRandomness = 0.2f;
@@ -1924,7 +2135,8 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->velocityDampingFactor = 0.95f;
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("爆発")) {
+            if (ImGui::SmallButton("爆発"))
+            {
                 settingsData_->enableRadialVelocity = 1;
                 settingsData_->radialVelocityStrength = 8.0f;
                 settingsData_->radialVelocityRandomness = 0.3f;
@@ -1945,7 +2157,8 @@ void ParticleCSGroup::DrawImGui() {
     PushSectionColor(ImVec4(0.85f, 0.35f, 0.6f, 1.0f));
     bool openEmitShape = ImGui::CollapsingHeader("  発生形状");
     PopSectionColor();
-    if (openEmitShape) {
+    if (openEmitShape)
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.0f, 0.6f, 0.8f, 1.0f));
 
@@ -1959,14 +2172,17 @@ void ParticleCSGroup::DrawImGui() {
                 "Box: エミッターのScaleが発生ボックスの半辺になります\n"
                 "Sphere/Cone: 下の半径パラメータで範囲を指定");
 
-        if (settingsData_->emitShape == 0) {
+        if (settingsData_->emitShape == 0)
+        {
             ImGui::TextDisabled("  ← エミッターのScale（変換設定）で発生範囲を調整");
         }
 
-        if (settingsData_->emitShape == 1 || settingsData_->emitShape == 2) {
+        if (settingsData_->emitShape == 1 || settingsData_->emitShape == 2)
+        {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.4f, 0.15f, 0.25f, 0.5f));
             ImGui::DragFloat("半径##esr", &settingsData_->emitSphereRadius, 0.05f, 0.0f, 999.0f, "%.4f");
-            if (settingsData_->emitShape == 2) {
+            if (settingsData_->emitShape == 2)
+            {
                 float angleDeg = settingsData_->emitConeAngle * (180.0f / 3.14159265f);
                 if (ImGui::DragFloat("半開角(°)##eca", &angleDeg, 1.0f, 1.0f, 180.0f, "%.1f°"))
                     settingsData_->emitConeAngle = angleDeg * (3.14159265f / 180.0f);
@@ -1978,19 +2194,26 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::Spacing();
             ImGui::TextDisabled("プリセット:");
             ImGui::SameLine();
-            if (settingsData_->emitShape == 1) {
-                if (ImGui::SmallButton("小球##espre1")) settingsData_->emitSphereRadius = 0.5f;
+            if (settingsData_->emitShape == 1)
+            {
+                if (ImGui::SmallButton("小球##espre1"))
+                    settingsData_->emitSphereRadius = 0.5f;
                 ImGui::SameLine();
-                if (ImGui::SmallButton("爆発球##espre2")) settingsData_->emitSphereRadius = 2.0f;
-            } else {
-                if (ImGui::SmallButton("細コーン##ecpre1")) {
+                if (ImGui::SmallButton("爆発球##espre2"))
+                    settingsData_->emitSphereRadius = 2.0f;
+            }
+            else
+            {
+                if (ImGui::SmallButton("細コーン##ecpre1"))
+                {
                     settingsData_->emitSphereRadius = 3.0f;
-                    settingsData_->emitConeAngle    = 0.2618f; // 15°
+                    settingsData_->emitConeAngle = 0.2618f; // 15°
                 }
                 ImGui::SameLine();
-                if (ImGui::SmallButton("広コーン##ecpre2")) {
+                if (ImGui::SmallButton("広コーン##ecpre2"))
+                {
                     settingsData_->emitSphereRadius = 2.0f;
-                    settingsData_->emitConeAngle    = 0.7854f; // 45°
+                    settingsData_->emitConeAngle = 0.7854f; // 45°
                 }
             }
         }
@@ -2002,13 +2225,15 @@ void ParticleCSGroup::DrawImGui() {
     // ---- ギャザー（集合）----
     if (settingsData_->enableGather &&
         effectHeader("ギャザー（集合）", ImVec4(0.6f, 0.2f, 0.8f, 1.0f),
-                     [&] { settingsData_->enableGather = 0; })) {
+                     [&] { settingsData_->enableGather = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.8f, 0.5f, 1.0f, 1.0f));
 
         bool v = settingsData_->enableGather != 0;
 
-        if (v) {
+        if (v)
+        {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.1f, 0.4f, 0.5f));
             ImGui::DragFloat("開始タイミング##gs", &settingsData_->gatherStartRatio, 0.01f, 0.0f, 1.0f, "%.4f");
             if (ImGui::IsItemHovered())
@@ -2028,13 +2253,15 @@ void ParticleCSGroup::DrawImGui() {
     // ---- 渦巻き（Vortex）----
     if (settingsData_->enableVortex &&
         effectHeader("渦巻き（Vortex）", ImVec4(0.1f, 0.65f, 0.75f, 1.0f),
-                     [&] { settingsData_->enableVortex = 0; })) {
+                     [&] { settingsData_->enableVortex = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.3f, 0.9f, 1.0f, 1.0f));
 
         bool v = settingsData_->enableVortex != 0;
 
-        if (v) {
+        if (v)
+        {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.05f, 0.3f, 0.4f, 0.5f));
             ImGui::DragFloat("回転強度##vstr", &settingsData_->vortexStrength, 0.1f, -999.0f, 999.0f, "%.4f");
             if (ImGui::IsItemHovered())
@@ -2068,13 +2295,15 @@ void ParticleCSGroup::DrawImGui() {
     // ---- カールノイズ ----
     if (settingsData_->enableCurlNoise &&
         effectHeader("カールノイズ", ImVec4(0.0f, 0.8f, 0.7f, 1.0f),
-                     [&] { settingsData_->enableCurlNoise = 0; })) {
+                     [&] { settingsData_->enableCurlNoise = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.2f, 1.0f, 0.9f, 1.0f));
 
         bool v = settingsData_->enableCurlNoise != 0;
 
-        if (v) {
+        if (v)
+        {
             // --------------------------------------------------
             // ブレンドモード
             // --------------------------------------------------
@@ -2104,7 +2333,8 @@ void ParticleCSGroup::DrawImGui() {
                 ImGui::PopStyleColor();
 
                 // 加算モード時の注意表示
-                if (blendMode == 1) {
+                if (blendMode == 1)
+                {
                     ImGui::Indent();
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
                     ImGui::TextUnformatted("! 速度減衰との併用を推奨");
@@ -2161,7 +2391,8 @@ void ParticleCSGroup::DrawImGui() {
                     "推奨: 0.5〜2.0  一点から広がる演出に");
 
             // 分散強度が有効なとき視覚的な補足を表示
-            if (settingsData_->curlNoisePosRandomStrength > 0.0f) {
+            if (settingsData_->curlNoisePosRandomStrength > 0.0f)
+            {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 0.8f));
                 ImGui::Text("  現在: %.4f  (各パーティクルが固有の方向に発散)", settingsData_->curlNoisePosRandomStrength);
@@ -2198,7 +2429,8 @@ void ParticleCSGroup::DrawImGui() {
             ImGui::Spacing();
             ImGui::TextDisabled("プリセット:");
             ImGui::SameLine();
-            if (ImGui::SmallButton("煙・霧")) {
+            if (ImGui::SmallButton("煙・霧"))
+            {
                 settingsData_->curlNoiseScale = 0.4f;
                 settingsData_->curlNoiseStrength = 1.5f;
                 settingsData_->curlNoiseTimeScale = 0.15f;
@@ -2208,7 +2440,8 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->curlNoisePosRandomStrength = 0.0f;
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("炎・乱流")) {
+            if (ImGui::SmallButton("炎・乱流"))
+            {
                 settingsData_->curlNoiseScale = 1.2f;
                 settingsData_->curlNoiseStrength = 4.0f;
                 settingsData_->curlNoiseTimeScale = 0.6f;
@@ -2218,7 +2451,8 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->curlNoisePosRandomStrength = 0.0f;
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("水流")) {
+            if (ImGui::SmallButton("水流"))
+            {
                 settingsData_->curlNoiseScale = 0.7f;
                 settingsData_->curlNoiseStrength = 2.5f;
                 settingsData_->curlNoiseTimeScale = 0.25f;
@@ -2228,7 +2462,8 @@ void ParticleCSGroup::DrawImGui() {
                 settingsData_->curlNoisePosRandomStrength = 0.0f;
             }
             ImGui::SameLine();
-            if (ImGui::SmallButton("一点放射")) {
+            if (ImGui::SmallButton("一点放射"))
+            {
                 // 小さいエミッタから四方八方に広がる演出向けプリセット
                 settingsData_->curlNoiseScale = 0.6f;
                 settingsData_->curlNoiseStrength = 2.0f;
@@ -2249,13 +2484,15 @@ void ParticleCSGroup::DrawImGui() {
     // ---- トレイル ----
     if (settingsData_->enableTrail &&
         effectHeader("トレイル", ImVec4(0.2f, 0.7f, 0.35f, 1.0f),
-                     [&] { settingsData_->enableTrail = 0; })) {
+                     [&] { settingsData_->enableTrail = 0; }))
+    {
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.4f, 1.0f, 0.6f, 1.0f));
 
         bool v = settingsData_->enableTrail != 0;
 
-        if (v) {
+        if (v)
+        {
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.3f, 0.15f, 0.5f));
 
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
@@ -2291,7 +2528,8 @@ void ParticleCSGroup::DrawImGui() {
             bool inh = settingsData_->trailInheritVelocity != 0;
             if (ImGui::Checkbox("親の速度を継承##tiv", &inh))
                 settingsData_->trailInheritVelocity = inh ? 1 : 0;
-            if (inh) {
+            if (inh)
+            {
                 ImGui::Indent();
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.3f, 0.15f, 0.5f));
                 ImGui::DragFloat("速度倍率##tvs", &settingsData_->trailVelocityScale, 0.01f, 0.0f, 99.0f, "%.4f");
@@ -2315,11 +2553,13 @@ void ParticleCSGroup::DrawImGui() {
         int32_t headVal = 0, tailVal = 0;
         int32_t *p = nullptr;
         D3D12_RANGE r = {0, sizeof(int32_t)};
-        if (SUCCEEDED(freeListIndexReadbackBuffer_->Map(0, &r, reinterpret_cast<void **>(&p)))) {
+        if (SUCCEEDED(freeListIndexReadbackBuffer_->Map(0, &r, reinterpret_cast<void **>(&p))))
+        {
             headVal = *p;
             freeListIndexReadbackBuffer_->Unmap(0, nullptr);
         }
-        if (SUCCEEDED(freeListTrailIndexReadbackBuffer_->Map(0, &r, reinterpret_cast<void **>(&p)))) {
+        if (SUCCEEDED(freeListTrailIndexReadbackBuffer_->Map(0, &r, reinterpret_cast<void **>(&p))))
+        {
             tailVal = *p;
             freeListTrailIndexReadbackBuffer_->Unmap(0, nullptr);
         }
@@ -2355,7 +2595,8 @@ void ParticleCSGroup::DrawImGui() {
 
         if (ImPlot::BeginPlot("##ParticleCount", ImVec2(-1, 80),
                               ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoInputs |
-                                  ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText)) {
+                                  ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText))
+        {
             ImPlot::SetupAxes(nullptr, nullptr,
                               ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoGridLines,
                               ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoTickMarks);

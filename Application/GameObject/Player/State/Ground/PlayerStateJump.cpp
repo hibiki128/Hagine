@@ -2,15 +2,18 @@
 #include "application/GameObject/Player/Player.h"
 
 using namespace Hagine;
-void PlayerStateJump::Enter(Player &player) {
+void PlayerStateJump::Enter(Player &player)
+{
     player.GetVelocity().y = player.GetJumpSpeed();
-    player.GetCanJump() = false;  
-    player.GetIsGrounded() = false; 
+    player.GetCanJump() = false;
+    player.GetIsGrounded() = false;
 }
 
-void PlayerStateJump::Update(Player &player) {
+void PlayerStateJump::Update(Player &player)
+{
     player.ChangeState("Air");
 }
 
-void PlayerStateJump::Exit(Player &player) {
+void PlayerStateJump::Exit(Player &player)
+{
 }

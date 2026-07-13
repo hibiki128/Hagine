@@ -4,7 +4,8 @@
 
 using namespace Hagine;
 
-void SparkingFight::Initialize() {
+void SparkingFight::Initialize()
+{
     Framework::Initialize();
     Framework::LoadResource();
     LoadGameResources();
@@ -15,7 +16,8 @@ void SparkingFight::Initialize() {
     sceneManager_->NextSceneReservation("TITLE");
 }
 
-void SparkingFight::LoadGameResources() {
+void SparkingFight::LoadGameResources()
+{
     // CPUパーティクルのエミッター
     particleEditor_->AddParticleEmitter("hitEmitter");
     particleEditor_->AddParticleEmitter("bulletEmitter");
@@ -43,11 +45,13 @@ void SparkingFight::LoadGameResources() {
     particleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
 }
 
-void SparkingFight::Finalize() {
+void SparkingFight::Finalize()
+{
     Framework::Finalize();
 }
 
-void SparkingFight::Update() {
+void SparkingFight::Update()
+{
     // フレーム先頭：前フレームの計測結果を確定し、当フレームの計測を開始する
 #ifdef _DEBUG
     CpuProfiler::GetInstance()->BeginFrame();
@@ -59,9 +63,12 @@ void SparkingFight::Update() {
 #ifdef _DEBUG
     {
         HAGINE_CPU_PROFILE("Update/ImGuiUI(build)");
-        if (imGuiManager_->GetEditorMode()) {
+        if (imGuiManager_->GetEditorMode())
+        {
             input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()}, 10000.0f);
-        } else {
+        }
+        else
+        {
             input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::kClientWidth), float(WinApp::kClientHeight))}, 10000.0f);
         }
 
@@ -71,7 +78,8 @@ void SparkingFight::Update() {
         imGuiManager_->UpdateIni();
         imGuiManager_->SetCurrentScene(sceneManager_->GetBaseScene());
         imGuiManager_->ShowMainMenu();
-        if (imGuiManager_->GetIsShowMainUI()) {
+        if (imGuiManager_->GetIsShowMainUI())
+        {
             imGuiManager_->ShowDockSpace();
             imGuiManager_->ShowSceneWindow(offscreen_.get(), sceneManager_->GetCurrentSceneName());
         }
@@ -91,7 +99,8 @@ void SparkingFight::Update() {
     // -----------------------
 }
 
-void SparkingFight::Draw() {
+void SparkingFight::Draw()
+{
     {
         HAGINE_CPU_PROFILE("Draw/DrawSystem(rec)");
         drawSystem_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());

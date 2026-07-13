@@ -2,9 +2,9 @@
 #include "DirectXCommon.h"
 #include <myMath.h>
 
-
 namespace Hagine {
-std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, UINT indexCount) {
+std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, UINT indexCount)
+{
 
     std::unique_ptr<LineData> mesh = std::make_unique<LineData>();
 
@@ -19,7 +19,8 @@ std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, U
     mesh->vertBuffer->Map(0, &readRange, reinterpret_cast<void **>(&mesh->vertMap));
 
     UINT indexBufferSize = sizeof(uint16_t) * indexCount;
-    if (indexCount > 0) {
+    if (indexCount > 0)
+    {
         mesh->indexBuffer = dxCommon_->CreateBufferResource(indexBufferSize);
 
         mesh->ibView.BufferLocation = mesh->indexBuffer->GetGPUVirtualAddress();
@@ -32,25 +33,30 @@ std::unique_ptr<DrawLine3D::LineData> DrawLine3D::CreateMesh(UINT vertexCount, U
     return mesh;
 }
 
-void DrawLine3D::Initialize() {
+void DrawLine3D::Initialize()
+{
     dxCommon_ = DirectXCommon::GetInstance();
     CreateMeshes();
     CreateResource();
     psoManager_ = PipeLineManager::GetInstance();
 }
 
-void DrawLine3D::Finalize() {
+void DrawLine3D::Finalize()
+{
     cBufferResource_.Reset();
-    if (line_) {
+    if (line_)
+    {
         line_->vertBuffer.Reset();
         line_->indexBuffer.Reset();
         line_.reset();
     }
 }
 
-void DrawLine3D::SetPoints(const Vector3 &p1, const Vector3 &p2, const Vector4 &color) {
+void DrawLine3D::SetPoints(const Vector3 &p1, const Vector3 &p2, const Vector4 &color)
+{
 
-    if (indexLine_ < kMaxLineCount) {
+    if (indexLine_ < kMaxLineCount)
+    {
         line_->vertMap[indexLine_ * 2] = {p1, color};
         line_->vertMap[indexLine_ * 2 + 1] = {p2, color};
 
@@ -58,13 +64,16 @@ void DrawLine3D::SetPoints(const Vector3 &p1, const Vector3 &p2, const Vector4 &
     }
 }
 
-void DrawLine3D::Reset() {
+void DrawLine3D::Reset()
+{
     indexLine_ = 0;
 }
 
-void DrawLine3D::Draw(const ViewProjection &viewProjection) {
+void DrawLine3D::Draw(const ViewProjection &viewProjection)
+{
 
-    if (indexLine_ == 0) {
+    if (indexLine_ == 0)
+    {
         return;
     }
     cBufferData_->viewProject = viewProjection.matView_ * viewProjection.matProjection_;
@@ -78,8 +87,10 @@ void DrawLine3D::Draw(const ViewProjection &viewProjection) {
     Reset();
 }
 
-void DrawLine3D::DrawWithExternalCB(ID3D12GraphicsCommandList *cl, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB) {
-    if (indexLine_ == 0) {
+void DrawLine3D::DrawWithExternalCB(ID3D12GraphicsCommandList *cl, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB)
+{
+    if (indexLine_ == 0)
+    {
         return;
     }
     // Reset しない: この後シーン側の Draw(sceneVP) が同じ線をシーンVPで描画して Reset する。
@@ -91,9 +102,11 @@ void DrawLine3D::DrawWithExternalCB(ID3D12GraphicsCommandList *cl, D3D12_GPU_VIR
     cl->DrawInstanced(indexLine_ * 2, 1, 0, 0);
 }
 
-void DrawLine3D::DrawGrid(float y, int division, float size, Vector4 color) {
+void DrawLine3D::DrawGrid(float y, int division, float size, Vector4 color)
+{
     // 分割数が無効な場合は何もしない
-    if (division <= 0 || size <= 0.0f) {
+    if (division <= 0 || size <= 0.0f)
+    {
         return;
     }
 
@@ -103,7 +116,8 @@ void DrawLine3D::DrawGrid(float y, int division, float size, Vector4 color) {
     // グリッド線の色（薄いグレー）
     const Vector4 gridColor = color;
 
-    for (int i = 0; i <= division; ++i) {
+    for (int i = 0; i <= division; ++i)
+    {
         // 現在の位置
         float offset = -size + i * interval;
 
@@ -119,7 +133,8 @@ void DrawLine3D::DrawGrid(float y, int division, float size, Vector4 color) {
     }
 }
 
-void DrawLine3D::CreateMeshes() {
+void DrawLine3D::CreateMeshes()
+{
 
     const UINT maxVertex = kMaxLineCount * kVertexCountLine;
     const UINT maxIndices = 20;
@@ -127,14 +142,16 @@ void DrawLine3D::CreateMeshes() {
     line_ = CreateMesh(maxVertex, maxIndices);
 }
 
-void DrawLine3D::CreateResource() {
+void DrawLine3D::CreateResource()
+{
     cBufferResource_ = dxCommon_->CreateBufferResource(sizeof(CBuffer));
     cBufferData_ = nullptr;
     cBufferResource_->Map(0, nullptr, reinterpret_cast<void **>(&cBufferData_));
     cBufferData_->viewProject = MakeIdentity4x4();
 }
 
-void DrawLine3D::DrawCube(const Vector3 &position, const Vector4 &color, float size) {
+void DrawLine3D::DrawCube(const Vector3 &position, const Vector4 &color, float size)
+{
     // 半サイズ（中心から各辺までの距離）
     float hs = size * 0.5f;
 
@@ -163,12 +180,14 @@ void DrawLine3D::DrawCube(const Vector3 &position, const Vector4 &color, float s
         {3, 7} // 側面
     };
 
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < 12; ++i)
+    {
         SetPoints(corners[edges[i][0]], corners[edges[i][1]], color);
     }
 }
 
-void DrawLine3D::DrawSphere(const Vector3 &position, const Vector4 &color, float radius, int divisions) {
+void DrawLine3D::DrawSphere(const Vector3 &position, const Vector4 &color, float radius, int divisions)
+{
     // 分割数が最低限必要
     if (divisions < 3)
         return;
@@ -176,11 +195,13 @@ void DrawLine3D::DrawSphere(const Vector3 &position, const Vector4 &color, float
     const float PI = 3.1415926535f;
 
     // 緯度方向（Y軸周り）の分割
-    for (int i = 0; i <= divisions; ++i) {
+    for (int i = 0; i <= divisions; ++i)
+    {
         float theta1 = PI * (float)(i) / divisions - PI / 2.0f;
         float theta2 = PI * (float)(i + 1) / divisions - PI / 2.0f;
 
-        for (int j = 0; j <= divisions; ++j) {
+        for (int j = 0; j <= divisions; ++j)
+        {
             float phi = 2.0f * PI * (float)(j) / divisions;
 
             // 緯線用の点1・点2
@@ -199,11 +220,13 @@ void DrawLine3D::DrawSphere(const Vector3 &position, const Vector4 &color, float
     }
 
     // 経度方向（Z軸周り）の分割
-    for (int j = 0; j <= divisions; ++j) {
+    for (int j = 0; j <= divisions; ++j)
+    {
         float phi1 = 2.0f * PI * (float)(j) / divisions;
         float phi2 = 2.0f * PI * (float)(j + 1) / divisions;
 
-        for (int i = 0; i <= divisions; ++i) {
+        for (int i = 0; i <= divisions; ++i)
+        {
             float theta = PI * (float)(i) / divisions - PI / 2.0f;
 
             Vector3 p1 = {

@@ -16,7 +16,8 @@ class CollisionManager;
 /// <summary>
 /// 描画レイヤー（後方互換用）
 /// </summary>
-enum class DrawLayer {
+enum class DrawLayer
+{
     kPreEffect = 0,
     kPostEffect = 1,
 };
@@ -24,11 +25,12 @@ enum class DrawLayer {
 /// <summary>
 /// 描画エントリ（登録された描画処理1件分の情報）
 /// </summary>
-struct DrawEntry {
-    std::string name;                                       // エントリ名
-    int stageIndex = 0;                                     // 0,1,2... = 3Dステージ; kUILayer = UI（ポストエフェクトなし）
-    std::function<void(const ViewProjection &)> draw;       // 描画処理
-    bool enabled = true;                                    // 有効フラグ
+struct DrawEntry
+{
+    std::string name;                                 // エントリ名
+    int stageIndex = 0;                               // 0,1,2... = 3Dステージ; kUILayer = UI（ポストエフェクトなし）
+    std::function<void(const ViewProjection &)> draw; // 描画処理
+    bool enabled = true;                              // 有効フラグ
 };
 
 /// <summary>
@@ -42,7 +44,8 @@ struct DrawEntry {
 /// 【描画順】
 ///   stage0 → PostEffect0 → stage1(+bg) → PostEffect1 → ... → UI → SceneTransition
 /// </summary>
-class DrawSystem {
+class DrawSystem
+{
   public:
     /// ===================================================
     /// public method

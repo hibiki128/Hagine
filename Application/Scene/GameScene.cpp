@@ -11,7 +11,8 @@ using namespace Hagine;
 static constexpr const char *kBTFolder = "BehaviorTree";
 static constexpr const char *kBTFileName = "EnemyBehavior";
 
-void GameScene::Initialize() {
+void GameScene::Initialize()
+{
     /// ===================================================
     /// 初期化
     /// ===================================================
@@ -86,7 +87,8 @@ void GameScene::Initialize() {
     /// BehaviorTreeのロード
     /// ===================================================
     behaviorTreeRoot_ = BehaviorTreeLoader::LoadAndBuild(kBTFolder, kBTFileName);
-    if (behaviorTreeRoot_) {
+    if (behaviorTreeRoot_)
+    {
         enemy_ptr->SetBehaviorTree(behaviorTreeRoot_);
     }
 #endif
@@ -104,7 +106,7 @@ void GameScene::Initialize() {
         objectManager_->Draw(vp);
         skyBox_->Draw(vp);
         aroundField_->Draw(vp);
-        player_ptr->DrawParticle(vp);   // Graphics フェーズのみ実行される
+        player_ptr->DrawParticle(vp); // Graphics フェーズのみ実行される
         enemy_ptr->DrawParticle(vp);
         aroundField_->DrawParticle(vp);
         followCamera_->DrawFrustum();
@@ -117,19 +119,22 @@ void GameScene::Initialize() {
     });
 }
 
-void GameScene::Finalize() {
+void GameScene::Finalize()
+{
     /// ===================================================
     /// 終了処理
     /// ===================================================
     aroundField_->Finalize();
     sceneManager_->SetClearTime(ClearTimer_);
-    if (player_ptr->GetIsAlive()) {
+    if (player_ptr->GetIsAlive())
+    {
         sceneManager_->SetHP(player_ptr->GetHP());
     }
     BaseScene::Finalize();
 }
 
-void GameScene::Update() {
+void GameScene::Update()
+{
     /// ===================================================
     /// 更新処理
     /// ===================================================
@@ -144,7 +149,8 @@ void GameScene::Update() {
     // ビヘイビアツリーの更新
     {
         auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
-        if (runtimeRoot) {
+        if (runtimeRoot)
+        {
             enemy_ptr->SetBehaviorTree(runtimeRoot);
         }
     }
@@ -164,17 +170,20 @@ void GameScene::Update() {
     enemy_ptr->SetStart(true);
 #else
     // 開始演出待ち
-    if (startCamera_->IsComplete()) {
+    if (startCamera_->IsComplete())
+    {
         player_ptr->SetStart(true);
         enemy_ptr->SetStart(true);
-        if (enemy_ptr->GetIsAlive()) {
+        if (enemy_ptr->GetIsAlive())
+        {
             ClearTimer_ += Frame::DeltaTime();
         }
     }
 #endif
 
     // 死亡演出中のモデル非表示
-    if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway()) {
+    if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway())
+    {
         enemy_ptr->SetIsModelDraw(false);
     }
 
@@ -184,17 +193,20 @@ void GameScene::Update() {
     enemy_ptr->SetPause(gameUI_->GetIsPause());
 }
 
-void GameScene::Draw() {
+void GameScene::Draw()
+{
     // 描画は DrawSystem が管理
 }
 
-void GameScene::DrawForOffScreen() {
+void GameScene::DrawForOffScreen()
+{
     /// ===================================================
     /// オフスクリーン描画処理
     /// ===================================================
 }
 
-void GameScene::AddSceneSetting() {
+void GameScene::AddSceneSetting()
+{
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
@@ -205,7 +217,8 @@ void GameScene::AddSceneSetting() {
     MotionEditor::GetInstance()->DrawImGui();
 }
 
-void GameScene::AddObjectSetting() {
+void GameScene::AddObjectSetting()
+{
     /// ===================================================
     /// オブジェクト設定（デバッグ）
     /// ===================================================
@@ -220,31 +233,40 @@ void GameScene::AddObjectSetting() {
 #endif
 }
 
-void GameScene::AddParticleSetting() {
+void GameScene::AddParticleSetting()
+{
     /// ===================================================
     /// パーティクル設定（デバッグ）
     /// ===================================================
     aroundField_->Debug();
 }
 
-void GameScene::CameraUpdate() {
+void GameScene::CameraUpdate()
+{
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    if (player_ptr->GetIsAlive()) {
-        if (debugCamera_->GetActive()) {
+    if (player_ptr->GetIsAlive())
+    {
+        if (debugCamera_->GetActive())
+        {
             debugCamera_->Update();
-        } else {
+        }
+        else
+        {
             followCamera_->Update();
 #ifndef _DEBUG
-            if (!startCamera_->IsComplete()) {
+            if (!startCamera_->IsComplete())
+            {
                 startCamera_->Move();
                 startCamera_->SetTargetVp(followCamera_->GetViewProjection());
                 startCamera_->Update();
                 vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
                 vp_.matView_ = startCamera_->GetViewProjection().matView_;
                 vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
-            } else {
+            }
+            else
+            {
 #endif
                 vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
                 vp_.matView_ = followCamera_->GetViewProjection().matView_;
@@ -253,8 +275,11 @@ void GameScene::CameraUpdate() {
             }
 #endif
         }
-    } else {
-        if (!deathCamera_->IsComplete() && !deathCameraStarted_) {
+    }
+    else
+    {
+        if (!deathCamera_->IsComplete() && !deathCameraStarted_)
+        {
             deathCamera_->StartEasing(
                 followCamera_->GetViewProjection(),
                 player_ptr->GetWorldPosition());
@@ -267,24 +292,29 @@ void GameScene::CameraUpdate() {
     }
 }
 
-void GameScene::ChangeScene() {
+void GameScene::ChangeScene()
+{
     /// ===================================================
     /// シーン切り替え
     /// ===================================================
-    if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete()) {
+    if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete())
+    {
         GameOverTimer_ += Frame::DeltaTime();
         player_ptr->SetIsDeathStaging(true);
-        if (GameOverTimer_ >= 2.0f && !isGameOver_) {
+        if (GameOverTimer_ >= 2.0f && !isGameOver_)
+        {
             sceneManager_->NextSceneReservation("CLEAR");
             isGameOver_ = true;
         }
     }
 
-    if (!enemy_ptr->GetIsAlive()) {
+    if (!enemy_ptr->GetIsAlive())
+    {
         sceneManager_->NextSceneReservation("CLEAR");
     }
 
-    if (gameUI_->GetIsBackTitle()) {
+    if (gameUI_->GetIsBackTitle())
+    {
         sceneManager_->NextSceneReservation("TITLE");
     }
 }

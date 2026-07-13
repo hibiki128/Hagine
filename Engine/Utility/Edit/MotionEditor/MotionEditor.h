@@ -11,7 +11,8 @@ namespace Hagine {
 /// <summary>
 /// モーションのイージングタイプを表す列挙型
 /// </summary>
-enum class MotionEasingType {
+enum class MotionEasingType
+{
     Linear,
     EaseInSine,
     EaseOutSine,
@@ -47,7 +48,8 @@ enum class MotionEasingType {
 /// <summary>
 /// モーション再生状態を表す列挙型
 /// </summary>
-enum class MotionStatus {
+enum class MotionStatus
+{
     Stopped, // 停止状態
     Playing, // 再生中
     Finished // 再生終了
@@ -56,7 +58,8 @@ enum class MotionStatus {
 /// <summary>
 /// モーションデータ構造体
 /// </summary>
-struct Motion {
+struct Motion
+{
     Hagine::BaseObject *target = nullptr;
     std::string objectName;
     float totalTime = 1.0f;
@@ -93,7 +96,8 @@ struct Motion {
 /// <summary>
 /// モーション管理とエディタのシングルトンクラス
 /// </summary>
-class MotionEditor {
+class MotionEditor
+{
   public:
     /// ===================================================
     /// public method
@@ -103,7 +107,8 @@ class MotionEditor {
     /// シングルトンインスタンスを取得
     /// </summary>
     /// <returns>MotionEditor*: インスタンスのポインタ</returns>
-    static MotionEditor *GetInstance() {
+    static MotionEditor *GetInstance()
+    {
         static MotionEditor instance;
         return &instance;
     }
@@ -329,14 +334,14 @@ class MotionEditor {
     std::unordered_map<Hagine::BaseObject *, Hagine::Vector3> comboStartPositions_; // コンボ開始位置
     std::unordered_map<Hagine::BaseObject *, Hagine::Vector3> comboStartRotations_; // コンボ開始回転
     std::unordered_map<Hagine::BaseObject *, Hagine::Vector3> comboStartScales_;    // コンボ開始スケール
-    std::unordered_map<std::string, Motion> motions_;               // モーションマップ
-    std::unordered_map<Hagine::BaseObject *, float> attackEndIntervals_;    // 攻撃終了インターバル
+    std::unordered_map<std::string, Motion> motions_;                               // モーションマップ
+    std::unordered_map<Hagine::BaseObject *, float> attackEndIntervals_;            // 攻撃終了インターバル
 
     static const float ATTACK_END_INTERVAL; // 攻撃終了後のインターバル時間
 
-    std::string selectedName_;              // 選択中モーション名
-    std::string jsonName_;                  // JSONファイル名
-    int selectedControlPoint_ = -1;         // 選択中のコントロールポイント番号
+    std::string selectedName_;      // 選択中モーション名
+    std::string jsonName_;          // JSONファイル名
+    int selectedControlPoint_ = -1; // 選択中のコントロールポイント番号
 };
 
 } // namespace Hagine

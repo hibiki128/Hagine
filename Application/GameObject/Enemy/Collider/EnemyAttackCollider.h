@@ -5,14 +5,17 @@
 
 class Enemy;
 class Player;
-namespace Hagine { class ColliderBase; }
+namespace Hagine {
+class ColliderBase;
+}
 
 /// <summary>
 /// 敵前方に展開する攻撃判定コライダー
 /// PlayerAttackCollider と対称の設計で、手のモーション（見た目）とは完全に独立して機能する
 /// 攻撃ごとにダメージ・ノックバック・有効時間・遅延を個別設定できる
 /// </summary>
-class EnemyAttackCollider {
+class EnemyAttackCollider
+{
   public:
     /// ===================================================
     /// public method
@@ -71,8 +74,10 @@ class EnemyAttackCollider {
     /// <summary>
     /// コライダーのサイズを設定
     /// </summary>
-    void SetColliderSize(const Hagine::Vector3 &size) {
-        if (collider_) {
+    void SetColliderSize(const Hagine::Vector3 &size)
+    {
+        if (collider_)
+        {
             collider_->SetSize(size);
         }
     }
@@ -124,5 +129,5 @@ class EnemyAttackCollider {
     float energyRecoveryAmount_ = 5.0f;
 
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; // ヒットパーティクル
-    std::unique_ptr<Shake> shake_;                // シェイク
+    std::unique_ptr<Shake> shake_;                        // シェイク
 };

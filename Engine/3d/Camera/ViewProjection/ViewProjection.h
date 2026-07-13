@@ -12,7 +12,8 @@
 /// ビュープロジェクション用定数バッファ
 /// </summary>
 namespace Hagine {
-struct ConstBufferDataViewProjection {
+struct ConstBufferDataViewProjection
+{
     Matrix4x4 view;       // ビュー行列
     Matrix4x4 projection; // 射影行列
     Vector3 cameraPos;    // カメラのワールド座標
@@ -22,8 +23,9 @@ struct ConstBufferDataViewProjection {
 /// ビュープロジェクションクラス
 /// カメラの行列計算、イージング処理、各種投影設定を一元管理する
 /// </summary>
-class ViewProjection {
-public:
+class ViewProjection
+{
+  public:
     // ===================================================
     // 公開メソッド
     // ===================================================
@@ -84,13 +86,13 @@ public:
     /// 定数バッファを取得
     /// </summary>
     const Microsoft::WRL::ComPtr<ID3D12Resource> &GetConstBuffer() const { return constBuffer_; }
-    
+
     /// <summary>
     /// 移動処理中か判定
     /// </summary>
     bool GetIsCameraMove() { return isEasing_; }
 
-public:
+  public:
     // ===================================================
     // 公開メンバ変数
     // ===================================================
@@ -99,15 +101,15 @@ public:
     Quaternion quateRotation_ = Quaternion::IdentityQuaternion();                   // クォータニオンによる回転
     Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                                    // オイラー角による回転(ラジアン)
     Vector3 translation_ = {0.0f, 0.0f, -10.0f};                                    // カメラ座標
-    float fovAngleY_ = 45.0f * std::numbers::pi_v<float> / 180.0f;                   // 垂直方向視野角(ラジアン)
+    float fovAngleY_ = 45.0f * std::numbers::pi_v<float> / 180.0f;                  // 垂直方向視野角(ラジアン)
     float aspectRatio = float(WinApp::kClientWidth) / float(WinApp::kClientHeight); // アスペクト比
-    float nearZ_ = 0.1f;                                                             // 近距離クリッピング面
-    float farZ_ = 1000.0f;                                                           // 遠距離クリッピング面
+    float nearZ_ = 0.1f;                                                            // 近距離クリッピング面
+    float farZ_ = 1000.0f;                                                          // 遠距離クリッピング面
     Matrix4x4 matView_{};                                                           // ビュー行列
     Matrix4x4 matProjection_{};                                                     // 射影行列
     Matrix4x4 matWorld_{};                                                          // ワールド行列
 
-private:
+  private:
     // ===================================================
     // 非公開メソッド
     // ===================================================
@@ -128,7 +130,7 @@ private:
     ViewProjection(const ViewProjection &) = delete;
     ViewProjection &operator=(const ViewProjection &) = delete;
 
-private:
+  private:
     // ===================================================
     // メンバ変数
     // ===================================================
@@ -142,18 +144,18 @@ private:
     EasingType currentEasingType_ = EasingType::OutQuad; // アルゴリズム種別
 
     // イージング始点
-    Vector3 startTranslation_{};           
-    Vector3 startEulerRotation_{};         
-    Quaternion startQuaternionRotation_{}; 
+    Vector3 startTranslation_{};
+    Vector3 startEulerRotation_{};
+    Quaternion startQuaternionRotation_{};
 
     // イージング目標点
-    Vector3 targetTranslation_{};         
-    Vector3 targetEulerRotation_{};       
-    Quaternion targetQuaternionRotation_{}; 
+    Vector3 targetTranslation_{};
+    Vector3 targetEulerRotation_{};
+    Quaternion targetQuaternionRotation_{};
 
     // 定数バッファ関連
-    Microsoft::WRL::ComPtr<ID3D12Resource> constBuffer_{}; 
-    ConstBufferDataViewProjection *constMap_ = nullptr;   
+    Microsoft::WRL::ComPtr<ID3D12Resource> constBuffer_{};
+    ConstBufferDataViewProjection *constMap_ = nullptr;
 };
 
 static_assert(!std::is_copy_assignable_v<ViewProjection>);

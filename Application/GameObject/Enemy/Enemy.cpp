@@ -13,20 +13,23 @@
 
 using namespace Hagine;
 
-Enemy::Enemy() {
+Enemy::Enemy()
+{
     movement_ = std::make_unique<EnemyMovement>();
     combat_ = std::make_unique<EnemyCombat>();
     status_ = std::make_unique<EnemyStatus>();
     visual_ = std::make_unique<EnemyVisual>();
 }
 
-Enemy::~Enemy() {
+Enemy::~Enemy()
+{
     // ポインタ失効前にゲームパラメータHubから登録を解除する
     // （"必殺演出(Enemy)" は EnemyCombat のデストラクタで解除する）
     GameParamHub::GetInstance()->Unregister("Enemy");
 }
 
-void Enemy::Init(const std::string objectName) {
+void Enemy::Init(const std::string objectName)
+{
     BaseObject::Init(objectName);
 
     // プレイヤーと同じスケルトン付きモデルを使い、同一クリップでアニメーションさせる。
@@ -79,20 +82,26 @@ void Enemy::Init(const std::string objectName) {
     combat_->RegisterParams();
 }
 
-void Enemy::Update() {
+void Enemy::Update()
+{
     // 開始フラグが立っており、ポーズ中でなく、ターゲットが生きている場合に更新
-    if (started_ && !isPause_ && target_->GetIsAlive()) {
+    if (started_ && !isPause_ && target_->GetIsAlive())
+    {
         const float dt = Frame::DeltaTime();
 
         status_->DamageUpdate();
         status_->RecoverEnergy();
 
         // 死亡判定
-        if (status_->GetHP() <= kMinHP) {
-            if (dummyMode_) {
+        if (status_->GetHP() <= kMinHP)
+        {
+            if (dummyMode_)
+            {
                 // ダミーはHPが尽きたら即復活する（満タン・初期位置へ）
                 Revive();
-            } else {
+            }
+            else
+            {
                 isAlive_ = false;
                 status_->SetHP(kMinHP);
             }
@@ -110,12 +119,14 @@ void Enemy::Update() {
         const bool frozenByOpponentSkill = cameraCloseUp && !combat_->IsBeamStaging();
 
         // 回転を更新（敵をプレイヤーへ向ける）
-        if (!frozenByOpponentSkill) {
+        if (!frozenByOpponentSkill)
+        {
             movement_->RotateUpdate();
         }
 
         // ダミーモードでは自身の攻撃(コンボ)は行わない。カメラワーク中も攻撃させない
-        if (!dummyMode_ && !frozenByOpponentSkill) {
+        if (!dummyMode_ && !frozenByOpponentSkill)
+        {
             combat_->ConboUpdate();
         }
 
@@ -126,29 +137,38 @@ void Enemy::Update() {
         status_->UpdateDamageReact();
 
         // ビヘイビアツリーの更新（ダミーモードではAIを動かさない）
-        if (frozenByOpponentSkill) {
+        if (frozenByOpponentSkill)
+        {
             // プレイヤーの必殺技カメラワーク中は移動・重力ごと完全停止させ、その場に固定する
             movement_->Freeze();
-        } else if (rootNode_ && !dummyMode_) {
+        }
+        else if (rootNode_ && !dummyMode_)
+        {
             rootNode_->SetContext(this, target_);
             rootNode_->Tick();
 
             // ガード中は移動させない（EnemyGuardNode が毎フレーム速度を0にしているため、
             // ここで移動イージングを適用すると追跡速度で上書きされて動いてしまう）
-            if (status_->IsGuarding()) {
+            if (status_->IsGuarding())
+            {
                 movement_->StopHorizontal();
             }
             // 速度イージングの更新（ガード中は適用しない）
-            else {
+            else
+            {
                 movement_->UpdateVelocityEase(dt);
             }
 
             // 重力処理
             movement_->ApplyGravity(dt);
-        } else if (dummyMode_) {
+        }
+        else if (dummyMode_)
+        {
             // ダミー: AIは動かさないが、被弾ノックバックは残す。
             movement_->ApplyDummyFriction(dt);
-        } else {
+        }
+        else
+        {
             // ルートノードがなければ停止
             movement_->StopAll();
         }
@@ -161,7 +181,8 @@ void Enemy::Update() {
         UpdateFrustumLockOn();
 
         // 弾の更新（ダミーモードでは弾を撃たないためスキップ）
-        if (!dummyMode_) {
+        if (!dummyMode_)
+        {
             combat_->UpdateBullets();
         }
     }
@@ -172,8 +193,10 @@ void Enemy::Update() {
     BaseObject::Update();
 }
 
-void Enemy::Draw(const ViewProjection &viewProjection) {
-    if (!isAlive_) {
+void Enemy::Draw(const ViewProjection &viewProjection)
+{
+    if (!isAlive_)
+    {
         enemyCollider_->SetEnabled(false);
         return;
     }
@@ -182,26 +205,31 @@ void Enemy::Draw(const ViewProjection &viewProjection) {
         return;
 }
 
-void Enemy::DrawParticleCompute(const ViewProjection &viewProjection) {
+void Enemy::DrawParticleCompute(const ViewProjection &viewProjection)
+{
     combat_->DrawParticleCompute(viewProjection);
 }
 
-void Enemy::DrawParticle(const ViewProjection &viewProjection) {
+void Enemy::DrawParticle(const ViewProjection &viewProjection)
+{
     hitEmitter_->Draw(viewProjection); // CPU emitter
     combat_->DrawParticle(viewProjection);
 }
 
-void Enemy::Debug() {
+void Enemy::Debug()
+{
 #ifdef USE_IMGUI
     EnemyMovement &mv = *movement_;
     EnemyStatus &st = *status_;
 
-    if (ImGui::BeginTabBar("EnemyTabs")) {
+    if (ImGui::BeginTabBar("EnemyTabs"))
+    {
 
         // ──────────────────────────────────────────
         // 基本情報タブ
         // ──────────────────────────────────────────
-        if (ImGui::BeginTabItem("基本情報")) {
+        if (ImGui::BeginTabItem("基本情報"))
+        {
             ImGui::Text("HP");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(120.0f);
@@ -233,7 +261,8 @@ void Enemy::Debug() {
                 st.SetEnergy(st.GetMaxEnergy());
 
             ImGui::Spacing();
-            if (ImGui::Button("HP・Energy 全回復")) {
+            if (ImGui::Button("HP・Energy 全回復"))
+            {
                 st.SetHP(st.GetMaxHP());
                 st.SetEnergy(st.GetMaxEnergy());
             }
@@ -247,15 +276,19 @@ void Enemy::Debug() {
             ImGui::Separator();
 
             ImGui::Text("【視錐台ロックオン】");
-            if (isLockOn_) {
+            if (isLockOn_)
+            {
                 ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.0f, 1.0f), "ロックオン: ON");
                 if (ImGui::SmallButton("解除##frustum"))
                     ReleaseLockOn();
-            } else {
+            }
+            else
+            {
                 ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "ロックオン: OFF");
             }
             ImGui::Checkbox("視錐台デバッグ描画", &drawFrustumDebug_);
-            if (target_) {
+            if (target_)
+            {
                 float dist = (target_->GetLocalPosition() - transform_->translation_).Length();
                 ImGui::Text("プレイヤーまでの距離: %.2f / %.1f", dist, frustumLockOnRange_);
             }
@@ -274,7 +307,8 @@ void Enemy::Debug() {
             ImGui::Checkbox("ストップ", &isStop_);
             ImGui::Separator();
             ImGui::Text("ガード状態: %s", st.IsGuarding() ? "ON" : "OFF");
-            if (st.IsGuarding()) {
+            if (st.IsGuarding())
+            {
                 ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "ダメージ85%%軽減中");
             }
             ImGui::EndTabItem();
@@ -283,7 +317,8 @@ void Enemy::Debug() {
         // ──────────────────────────────────────────
         // ジャンプ/重力タブ
         // ──────────────────────────────────────────
-        if (ImGui::BeginTabItem("ジャンプ/重力")) {
+        if (ImGui::BeginTabItem("ジャンプ/重力"))
+        {
             ImGui::Text("=== 状態 ===");
             ImGui::TextColored(
                 mv.GetIsGrounded() ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(1.0f, 0.5f, 0.2f, 1.0f),
@@ -297,15 +332,18 @@ void Enemy::Debug() {
             ImGui::DragFloat("ジャンプ力 (jumpSpeed)", &mv.GetJumpSpeed(), 0.5f, 1.0f, 50.0f);
             ImGui::DragFloat("移動速度 (moveSpeed)", &mv.GetMoveSpeed(), 0.1f, 0.0f, 20.0f);
             ImGui::Separator();
-            if (ImGui::Button("手動ジャンプテスト")) {
-                if (mv.GetIsGrounded()) {
+            if (ImGui::Button("手動ジャンプテスト"))
+            {
+                if (mv.GetIsGrounded())
+                {
                     mv.GetVelocity().y = mv.GetJumpSpeed();
                     mv.SetIsGrounded(false);
                     mv.GetAcceleration().y = -mv.GetFallSpeed();
                 }
             }
             ImGui::SameLine();
-            if (ImGui::Button("リセット（地上に戻す）")) {
+            if (ImGui::Button("リセット（地上に戻す）"))
+            {
                 transform_->translation_.y = 0.0f;
                 mv.GetVelocity().y = 0.0f;
                 mv.GetAcceleration().y = 0.0f;
@@ -317,7 +355,8 @@ void Enemy::Debug() {
         // ──────────────────────────────────────────
         // コンボ攻撃パラメータタブ
         // ──────────────────────────────────────────
-        if (ImGui::BeginTabItem("コンボパラメータ")) {
+        if (ImGui::BeginTabItem("コンボパラメータ"))
+        {
             combat_->DrawComboImGui();
             ImGui::EndTabItem();
         }
@@ -327,34 +366,41 @@ void Enemy::Debug() {
 #endif
 }
 
-void Enemy::OnCollisionEnter(ColliderBase *other) {
+void Enemy::OnCollisionEnter(ColliderBase *other)
+{
     if (other->GetTag() == "PlayerBullet" ||
         other->GetTag() == "PlayerChargeBullet" ||
-        other->GetTag() == "Makan") {
+        other->GetTag() == "Makan")
+    {
         hitEmitter_->SetPosition(transform_->translation_);
         hitEmitter_->UpdateOnce();
     }
     if (other->GetTag() == "PlayerChargeBullet" ||
-        other->GetTag() == "Makan") {
+        other->GetTag() == "Makan")
+    {
         combat_->StartHitShake();
     }
 
     // 前方攻撃判定（PlayerHand）ヒット時のパーティクル（ダメージ計算はコライダー側）
-    if (other->GetTag() == "PlayerHand") {
+    if (other->GetTag() == "PlayerHand")
+    {
         hitEmitter_->SetPosition(transform_->translation_);
         hitEmitter_->UpdateOnce();
     }
 }
 
-void Enemy::OnCollision(ColliderBase *other) {
+void Enemy::OnCollision(ColliderBase *other)
+{
     Vector3 &velocity = movement_->GetVelocity();
 
-    if (other->GetTag() == "CylinderField") {
+    if (other->GetTag() == "CylinderField")
+    {
         if (other->GetType() != ColliderType::Cylinder)
             return;
         auto *cyl = static_cast<CylinderCollider *>(other);
         Vector3 mtv;
-        if (CollisionManager::GetInstance()->CalculateDepenetrationOBBCylinder(enemyCollider_, cyl, mtv)) {
+        if (CollisionManager::GetInstance()->CalculateDepenetrationOBBCylinder(enemyCollider_, cyl, mtv))
+        {
             transform_->translation_ += mtv;
             Vector3 mtvDir = mtv.Normalize();
             float dot = velocity.Dot(mtvDir);
@@ -368,7 +414,8 @@ void Enemy::OnCollision(ColliderBase *other) {
         return;
     auto *otherAABB = static_cast<AABBCollider *>(other);
     Vector3 mtv;
-    if (CollisionManager::GetInstance()->CalculateDepenetration(enemyWallCollider_, otherAABB, mtv)) {
+    if (CollisionManager::GetInstance()->CalculateDepenetration(enemyWallCollider_, otherAABB, mtv))
+    {
         if (mtv.Length() < 0.0001f)
             return;
         transform_->translation_ += mtv;
@@ -379,14 +426,17 @@ void Enemy::OnCollision(ColliderBase *other) {
     }
 }
 
-void Enemy::Save() {
+void Enemy::Save()
+{
     ImGuiNotification::Post("エネミー設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
 }
-void Enemy::Load() {
+void Enemy::Load()
+{
     ImGuiNotification::Post("エネミー設定を読み込みました", {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-void Enemy::UpdateFrustumLockOn() {
+void Enemy::UpdateFrustumLockOn()
+{
     if (!target_ || isLockOn_)
         return;
 
@@ -416,7 +466,8 @@ void Enemy::UpdateFrustumLockOn() {
     isLockOn_ = true;
 }
 
-void Enemy::DrawFrustum() {
+void Enemy::DrawFrustum()
+{
 #ifdef USE_IMGUI
     if (!drawFrustumDebug_)
         return;
@@ -451,30 +502,36 @@ void Enemy::DrawFrustum() {
     CalcCorners(kFrustumDebugNear, nearCorners);
     CalcCorners(frustumLockOnRange_, farCorners);
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i)
+    {
         drawLine3D->SetPoints(nearCorners[i], nearCorners[(i + 1) % 4], color);
         drawLine3D->SetPoints(farCorners[i], farCorners[(i + 1) % 4], color);
     }
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i)
+    {
         drawLine3D->SetPoints(nearCorners[i], farCorners[i], color);
     }
     drawLine3D->SetPoints(origin, origin + forward * frustumLockOnRange_, axisColor);
 #endif
 }
 
-void Enemy::SetVp(ViewProjection *vp) {
+void Enemy::SetVp(ViewProjection *vp)
+{
     combat_->SetVp(vp);
 }
 
-void Enemy::SetDummy(bool enable) {
+void Enemy::SetDummy(bool enable)
+{
     dummyMode_ = enable;
-    if (enable && transform_) {
+    if (enable && transform_)
+    {
         // 呼び出し時点の位置を復活位置として記録する
         spawnPosition_ = transform_->translation_;
     }
 }
 
-void Enemy::Revive() {
+void Enemy::Revive()
+{
     status_->ResetForRevive();
     isAlive_ = true;
 
@@ -483,24 +540,28 @@ void Enemy::Revive() {
     SetAlpha(kAlphaOpaque);
 
     // 初期位置へ戻す
-    if (transform_) {
+    if (transform_)
+    {
         transform_->translation_ = spawnPosition_;
     }
 }
 
-Vector3 Enemy::GetForward() const {
+Vector3 Enemy::GetForward() const
+{
     return TransformNormal(
         Vector3(kForwardVectorX, kForwardVectorY, kForwardVectorZ),
         QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 Vector3 Enemy::GetBackward() const { return -GetForward(); }
-Vector3 Enemy::GetRight() const {
+Vector3 Enemy::GetRight() const
+{
     return TransformNormal(
         Vector3(kRightVectorX, kRightVectorY, kRightVectorZ),
         QuaternionToMatrix4x4(transform_->quateRotation_));
 }
 Vector3 Enemy::GetLeft() const { return -GetRight(); }
-Vector3 Enemy::GetUp() const {
+Vector3 Enemy::GetUp() const
+{
     return TransformNormal(
         Vector3(kUpVectorX, kUpVectorY, kUpVectorZ),
         QuaternionToMatrix4x4(transform_->quateRotation_));

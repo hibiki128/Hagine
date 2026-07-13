@@ -4,7 +4,8 @@
 REGISTER_SCENE("DEMO", DemoScene)
 
 using namespace Hagine;
-void DemoScene::Initialize() {
+void DemoScene::Initialize()
+{
     /// ===================================================
     /// 初期化
     /// ===================================================
@@ -26,14 +27,16 @@ void DemoScene::Initialize() {
     });
 }
 
-void DemoScene::Finalize() {
+void DemoScene::Finalize()
+{
     /// ===================================================
     /// 終了処理
     /// ===================================================
     BaseScene::Finalize();
 }
 
-void DemoScene::Update() {
+void DemoScene::Update()
+{
     /// ===================================================
     /// 更新処理
     /// ===================================================
@@ -45,17 +48,20 @@ void DemoScene::Update() {
     ChangeScene();
 }
 
-void DemoScene::Draw() {
+void DemoScene::Draw()
+{
     // 描画は DrawSystem が管理
 }
 
-void DemoScene::DrawForOffScreen() {
+void DemoScene::DrawForOffScreen()
+{
     /// ===================================================
     /// オフスクリーン描画処理
     /// ===================================================
 }
 
-void DemoScene::AddSceneSetting() {
+void DemoScene::AddSceneSetting()
+{
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
@@ -63,30 +69,37 @@ void DemoScene::AddSceneSetting() {
     vp_.ShowDebugInfo();
 }
 
-void DemoScene::AddObjectSetting() {
+void DemoScene::AddObjectSetting()
+{
     /// ===================================================
     /// オブジェクト設定（デバッグ）
     /// ===================================================
 }
 
-void DemoScene::AddParticleSetting() {
+void DemoScene::AddParticleSetting()
+{
     /// ===================================================
     /// パーティクル設定（デバッグ）
     /// ===================================================
 }
 
-void DemoScene::CameraUpdate() {
+void DemoScene::CameraUpdate()
+{
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    if (debugCamera_->GetActive()) {
+    if (debugCamera_->GetActive())
+    {
         debugCamera_->Update();
-    } else {
+    }
+    else
+    {
         vp_.UpdateMatrix();
     }
 }
 
-void DemoScene::ChangeScene() {
+void DemoScene::ChangeScene()
+{
     /// ===================================================
     /// シーン切り替え
     /// ===================================================

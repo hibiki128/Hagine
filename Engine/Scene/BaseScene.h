@@ -20,14 +20,15 @@
 #include <imgui.h>
 #endif // _DEBUG
 #include <OffScreen.h>
-#include"SpriteManager.h"
-#include"Object/Base/BaseObjectManager.h"
+#include "SpriteManager.h"
+#include "Object/Base/BaseObjectManager.h"
 #include "Render/DrawSystem.h"
 
 namespace Hagine {
 class SceneManager;
 
-class BaseScene {
+class BaseScene
+{
   public:
     virtual ~BaseScene() = default;
 
@@ -95,7 +96,7 @@ class BaseScene {
     std::unique_ptr<DebugCamera> debugCamera_;
 
     SceneManager *sceneManager_ = nullptr;
-    SpriteManager* spriteManager_= nullptr;
+    SpriteManager *spriteManager_ = nullptr;
     BaseObjectManager *objectManager_ = nullptr;
     DrawSystem *drawSystem_ = nullptr;
 

@@ -8,7 +8,8 @@
 #include <cmath>
 
 using namespace Hagine;
-void EnemyBullet::Init(const std::string objectName) {
+void EnemyBullet::Init(const std::string objectName)
+{
     BaseObject::Init(objectName);
     this->CreatePrimitiveModel(PrimitiveType::Sphere);
     this->SetTexture("debug/white1x1.png");
@@ -23,14 +24,17 @@ void EnemyBullet::Init(const std::string objectName) {
     emitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("enemyBulletEmitter");
 }
 
-void EnemyBullet::Update() {
+void EnemyBullet::Update()
+{
     // 衝突済みかつパーティクルが全て終了していたら生存フラグを折る
-    if (isHit_ && emitter_->IsAllParticlesComplete()) {
+    if (isHit_ && emitter_->IsAllParticlesComplete())
+    {
         isAlive_ = false;
     }
 
     // 生存中かつ未衝突ならパーティクルを更新
-    if (isAlive_ && !isHit_) {
+    if (isAlive_ && !isHit_)
+    {
         emitter_->SetPosition(GetLocalPosition());
         emitter_->Update();
     }
@@ -41,39 +45,45 @@ void EnemyBullet::Update() {
     currentLifeTime_ += deltaTime;
 
     // 生存時間を超えたら消滅
-    if (currentLifeTime_ >= lifeTime_) {
+    if (currentLifeTime_ >= lifeTime_)
+    {
         isAlive_ = false;
         return;
     }
 
     // 地面に埋まったら消滅
-    if (transform_->translation_.y <= -0.5f) {
+    if (transform_->translation_.y <= -0.5f)
+    {
         isAlive_ = false;
         return;
     }
 
     // ホーミング処理
-    if (isLockOnBullet_ && target_) {
+    if (isLockOnBullet_ && target_)
+    {
         Vector3 bulletPos = GetLocalPosition();
         Vector3 enemyPos = target_->GetLocalPosition();
 
         Vector3 toEnemy = enemyPos - bulletPos;
         float distance = toEnemy.Length();
 
-        if (distance > kMinDistanceThreshold) {
+        if (distance > kMinDistanceThreshold)
+        {
             toEnemy = toEnemy / distance;
 
             Vector3 currentDir = velocity_;
             float currentSpeed = currentDir.Length();
 
-            if (currentSpeed > kMinSpeedThreshold) {
+            if (currentSpeed > kMinSpeedThreshold)
+            {
                 currentDir = currentDir / currentSpeed;
 
                 // 現在の方向からターゲットの方向へ徐々に補間
                 Vector3 newDir = currentDir + (toEnemy - currentDir) * kHomingStrength * deltaTime;
                 float newDirLength = newDir.Length();
 
-                if (newDirLength > kMinSpeedThreshold) {
+                if (newDirLength > kMinSpeedThreshold)
+                {
                     newDir = newDir / newDirLength;
                     velocity_ = newDir * currentSpeed;
                 }
@@ -85,7 +95,8 @@ void EnemyBullet::Update() {
     Vector3 currentDir = velocity_;
     float currentSpeed = currentDir.Length();
 
-    if (currentSpeed > kMinSpeedThreshold) {
+    if (currentSpeed > kMinSpeedThreshold)
+    {
         currentDir = currentDir / currentSpeed;
 
         float newSpeed = currentSpeed + acce_ * deltaTime;
@@ -98,21 +109,25 @@ void EnemyBullet::Update() {
     // 最終的な座標更新
     transform_->translation_ += velocity_ * deltaTime;
 }
-void EnemyBullet::Draw(const ViewProjection &viewProjection) {
+void EnemyBullet::Draw(const ViewProjection &viewProjection)
+{
     // モデルの直接描画は行わない（必要に応じて実装）
 }
 
-void EnemyBullet::DrawParticle(const ViewProjection &viewProjection) {
+void EnemyBullet::DrawParticle(const ViewProjection &viewProjection)
+{
     // 生きている場合のみパーティクルを描画
-    if (isAlive_) {
+    if (isAlive_)
+    {
         emitter_->Draw(viewProjection);
     }
 }
 
-void EnemyBullet::InitTransform(Enemy *enemy) {
+void EnemyBullet::InitTransform(Enemy *enemy)
+{
     // 発射元の敵の位置を初期座標に設定
     this->transform_->translation_ = enemy->GetLocalPosition();
-    
+
     // コライダーの設定
     collider_ = AddSphereCollider("enemy_bullet");
     collider_->SetTag("EnemyBullet");
@@ -125,7 +140,8 @@ void EnemyBullet::InitTransform(Enemy *enemy) {
     target_ = enemy->GetTarget();
 
     // ロックオン状態ならターゲットへ向ける
-    if (enemy->GetIsLockOn() && enemy->GetTarget()) {
+    if (enemy->GetIsLockOn() && enemy->GetTarget())
+    {
         isLockOnBullet_ = true;
 
         Vector3 playerPos = enemy->GetLocalPosition();
@@ -134,16 +150,21 @@ void EnemyBullet::InitTransform(Enemy *enemy) {
         Vector3 direction = enemyPos - playerPos;
 
         float length = std::sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
-        if (length > kMinSpeedThreshold) {
+        if (length > kMinSpeedThreshold)
+        {
             direction.x /= length;
             direction.y /= length;
             direction.z /= length;
-        } else {
+        }
+        else
+        {
             direction = {0.0f, 0.0f, 1.0f};
         }
 
         velocity_ = direction * speed_;
-    } else {
+    }
+    else
+    {
         // 非ロックオン時は敵の正面方向へ
         isLockOnBullet_ = false;
 
@@ -164,9 +185,11 @@ void EnemyBullet::InitTransform(Enemy *enemy) {
     this->transform_->translation_ += forwardOffset;
 }
 
-void EnemyBullet::OnCollisionEnter(ColliderBase *other) {
+void EnemyBullet::OnCollisionEnter(ColliderBase *other)
+{
     // プレイヤーに当たった時の処理
-    if (other->GetTag() == "Player" && isAlive_ && target_ && target_->GetAlive()) {
+    if (other->GetTag() == "Player" && isAlive_ && target_ && target_->GetAlive())
+    {
         isHit_ = true;
         target_->SetDamage(damage_);
     }

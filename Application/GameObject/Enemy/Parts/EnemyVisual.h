@@ -8,7 +8,8 @@ class Enemy;
 /// アニメーションクリップの切り替えと、ガード・被弾に伴う色（点滅）を担当する。
 /// アニメーション構成はプレイヤーと同一のクリップを流用する
 /// </summary>
-class EnemyVisual {
+class EnemyVisual
+{
   public:
     /// ===================================================
     /// public method

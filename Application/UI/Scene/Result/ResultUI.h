@@ -4,14 +4,19 @@
 #include <array>
 
 // 前方宣言
-namespace Hagine { class Input; }
-namespace Hagine { class GamePad; }
+namespace Hagine {
+class Input;
+}
+namespace Hagine {
+class GamePad;
+}
 
 /// <summary>
 /// リザルト画面のUI管理クラス
 /// クリアタイム、残り体力、ランクなどの表示を制御
 /// </summary>
-class ResultUI {
+class ResultUI
+{
   public:
     /// ===================================================
     /// public method
@@ -94,7 +99,8 @@ class ResultUI {
     /// <summary>
     /// スプライトのインデックス
     /// </summary>
-    enum SpriteIndex {
+    enum SpriteIndex
+    {
         kBackground, // 背景
         kResult,     // 結果
         kClearTime,  // クリアタイム
@@ -115,7 +121,8 @@ class ResultUI {
     /// <summary>
     /// スキップ段階
     /// </summary>
-    enum SkipPhase {
+    enum SkipPhase
+    {
         kNoSkip,    // スキップなし
         kSkipTime,  // クリアタイムをスキップ
         kSkipHP,    // HPをスキップ
@@ -126,7 +133,8 @@ class ResultUI {
     /// <summary>
     /// 数字カウントアップの状態
     /// </summary>
-    enum NumberAnimState {
+    enum NumberAnimState
+    {
         kWaiting,       // 待機中
         kAnimatingTime, // タイムアニメーション中
         kWaitingForHP,  // HP表示待ち
@@ -167,7 +175,7 @@ class ResultUI {
     float delayTimer_ = 0.0f;    // 遅延タイマー
 
     NumberAnimState numberAnimState_ = kWaiting; // カウントアップ状態
-    float animTimer_ = 0.0f;                    // アニメーションタイマー
+    float animTimer_ = 0.0f;                     // アニメーションタイマー
 
     float displayedTime_ = 0.0f; // 表示中のタイム
     float displayedHP_ = 0.0f;   // 表示中のHP
@@ -176,7 +184,7 @@ class ResultUI {
     float ClearTime_ = kDefaultClearTime; // クリアタイム
     std::string Rank_ = "A";              // ランク
 
-    Hagine::Input *input_ = nullptr;                    // 入力
+    Hagine::Input *input_ = nullptr;                     // 入力
     std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr; // ゲームパッド
 
     SkipPhase skipPhase_ = kNoSkip; // スキップ段階

@@ -11,7 +11,8 @@
 /// クリア画面のシーンクラス
 /// ゲームクリア時の処理と表示を管理する
 /// </summary>
-class ClearScene : public Hagine::BaseScene {
+class ClearScene : public Hagine::BaseScene
+{
   public:
     /// ===================================================
     /// public method
@@ -77,13 +78,13 @@ class ClearScene : public Hagine::BaseScene {
     /// private variants
     /// ===================================================
 
-    std::unique_ptr<Ground> ground_;        // 地面
-    std::unique_ptr<ResultStaging> resultStaging_; // リザルト演出
-    std::unique_ptr<ResultUI> resultUI_;    // リザルトUI
+    std::unique_ptr<Ground> ground_;                     // 地面
+    std::unique_ptr<ResultStaging> resultStaging_;       // リザルト演出
+    std::unique_ptr<ResultUI> resultUI_;                 // リザルトUI
     std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr; // ゲームパッド
-    Hagine::SkyBox *skyBox_ = nullptr;              // スカイボックス
+    Hagine::SkyBox *skyBox_ = nullptr;                   // スカイボックス
 
-    const float cameraStartTimer_ = 3.0f;   // カメラ開始タイマー
-    float currentCameraStartTimer_ = 0.0f;  // 現在のカメラ開始タイマー
-    bool cameraStart_ = false;              // カメラ開始フラグ
+    const float cameraStartTimer_ = 3.0f;  // カメラ開始タイマー
+    float currentCameraStartTimer_ = 0.0f; // 現在のカメラ開始タイマー
+    bool cameraStart_ = false;             // カメラ開始フラグ
 };

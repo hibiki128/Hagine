@@ -7,7 +7,8 @@
 #include "wrl.h"
 
 namespace Hagine {
-enum class ComputePipelineType {
+enum class ComputePipelineType
+{
     kSkinning,
     kInitParticle,
     kEmitter,
@@ -17,7 +18,8 @@ enum class ComputePipelineType {
     kCount,
 };
 
-class ComputePipeLineManager {
+class ComputePipeLineManager
+{
   private:
     /// ====================================
     /// public method
@@ -29,11 +31,11 @@ class ComputePipeLineManager {
     ComputePipeLineManager &operator=(ComputePipeLineManager &) = delete;
 
   public:
-    static ComputePipeLineManager *GetInstance() {
+    static ComputePipeLineManager *GetInstance()
+    {
         static ComputePipeLineManager instance;
         return &instance;
     }
-
 
     void Finalize();
 

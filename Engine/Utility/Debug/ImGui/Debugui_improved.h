@@ -41,7 +41,8 @@ constexpr ImVec4 kTextReadOnly = {0.70f, 0.75f, 0.80f, 1.0f};
 // ------------------------------------------------------------
 // 左サイドバー付きセクション見出し (ASCII ラベルのみ)
 // ------------------------------------------------------------
-static void SectionHeader(const char *label, ImVec4 color) {
+static void SectionHeader(const char *label, ImVec4 color)
+{
     ImVec2 p = ImGui::GetCursorScreenPos();
     float lh = ImGui::GetTextLineHeightWithSpacing();
     ImGui::GetWindowDrawList()->AddRectFilled(
@@ -57,7 +58,8 @@ static void SectionHeader(const char *label, ImVec4 color) {
 // ------------------------------------------------------------
 // 読み取り専用行  label : value  (## が表示に出ない)
 // ------------------------------------------------------------
-static void ReadOnlyRow(const char *label, const char *fmt, ...) {
+static void ReadOnlyRow(const char *label, const char *fmt, ...)
+{
     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
     ImGui::Text("%-12s", label);
     ImGui::PopStyleColor();
@@ -73,7 +75,8 @@ static void ReadOnlyRow(const char *label, const char *fmt, ...) {
 // ------------------------------------------------------------
 // ステータスバッジ（角丸ボックス）
 // ------------------------------------------------------------
-static void StatusBadge(const char *text, ImVec4 color) {
+static void StatusBadge(const char *text, ImVec4 color)
+{
     ImVec2 p = ImGui::GetCursorScreenPos();
     ImVec2 ts = ImGui::CalcTextSize(text);
     float pad = 4.0f;
@@ -93,7 +96,8 @@ static void StatusBadge(const char *text, ImVec4 color) {
 // ------------------------------------------------------------
 // 目立たないリセットボタン
 // ------------------------------------------------------------
-static bool SmallResetButton(const char *id) {
+static bool SmallResetButton(const char *id)
+{
     ImGui::PushStyleColor(ImGuiCol_Button, {0.25f, 0.25f, 0.30f, 1.0f});
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.35f, 0.35f, 0.45f, 1.0f});
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, {0.45f, 0.45f, 0.55f, 1.0f});
@@ -114,7 +118,8 @@ static bool LabeledDrag3(const char *label, const char *id,
                          float *v, float speed,
                          float vmin, float vmax,
                          const char *fmt,
-                         ImVec4 frameBgColor) {
+                         ImVec4 frameBgColor)
+{
     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
     ImGui::TextUnformatted(label);
     ImGui::PopStyleColor();
@@ -131,7 +136,8 @@ static bool LabeledDrag3(const char *label, const char *id,
 static bool LabeledSlider(const char *label, const char *id,
                           float *v, float vmin, float vmax,
                           const char *fmt,
-                          ImVec4 accentColor) {
+                          ImVec4 accentColor)
+{
     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
     ImGui::TextUnformatted(label);
     ImGui::PopStyleColor();
@@ -158,7 +164,8 @@ static bool ThemedKnob(const char *label, float *v,
                        float vmin, float vmax,
                        const char *fmt, ImVec4 accent,
                        float size = 0.0f,
-                       ImGuiKnobFlags flags = ImGuiKnobFlags_ValueTooltip) {
+                       ImGuiKnobFlags flags = ImGuiKnobFlags_ValueTooltip)
+{
     const ImVec4 track = {accent.x, accent.y, accent.z, 0.22f};
     const ImVec4 active = {accent.x, accent.y, accent.z, 1.0f};
     ImGui::PushStyleColor(ImGuiCol_Button, track);         // ワイパー軌道（地）

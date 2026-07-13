@@ -7,7 +7,8 @@
 /// <summary>
 /// ゲーム中のUI(ポーズメニューなど)を管理するクラス
 /// </summary>
-class GameUI {
+class GameUI
+{
   public:
     /// ===================================================
     /// public method
@@ -31,7 +32,8 @@ class GameUI {
     /// <summary>
     /// スプライトのインデックス
     /// </summary>
-    enum SpriteIndex {
+    enum SpriteIndex
+    {
         MenuButton,       // メニューボタン
         SkillButton,      // スキルボタン
         Controller,       // コントローラー(地上)
@@ -54,7 +56,8 @@ class GameUI {
     /// <summary>
     /// メニューの状態
     /// </summary>
-    enum MenuState {
+    enum MenuState
+    {
         MainMenu,    // メインメニュー
         Explanation, // 操作説明画面
     };
@@ -62,7 +65,8 @@ class GameUI {
     /// <summary>
     /// 画面遷移の待機状態
     /// </summary>
-    enum class TransitionState {
+    enum class TransitionState
+    {
         None,          // なし
         ToExplanation, // 操作説明へ
         ToMain,        // メインメニューへ
@@ -145,25 +149,26 @@ class GameUI {
     bool isBackTitle_ = false; // タイトルに戻るフラグ
     bool isTutorial_ = false;  // チュートリアルフラグ
 
-    MenuState menuState_ = MainMenu;                    // メニュー状態
+    MenuState menuState_ = MainMenu;                          // メニュー状態
     TransitionState transitionState_ = TransitionState::None; // 遷移状態
 
     int currentMenuItem_ = 0; // 現在の選択項目
     int maxMenuItem_ = 3;     // 最大項目数
 
-    float inputCooldown_ = 0.0f;           // 入力クールダウン
+    float inputCooldown_ = 0.0f;            // 入力クールダウン
     const float kInputCooldownTime = 0.15f; // 入力クールダウン時間
 
-    std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr;            // ゲームパッド
+    std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr;   // ゲームパッド
     std::array<Hagine::SpriteData *, kMaxSprite> sprites_; // スプライト配列
 
     /// <summary>
     /// UI要素のアニメーション構造体
     /// </summary>
-    struct UIElementAnimation {
+    struct UIElementAnimation
+    {
         Hagine::EasingData<Hagine::Vector2> position; // 位置
-        Hagine::EasingData<float> alpha;      // 透明度
-        Hagine::EasingData<Hagine::Vector2> scale;     // スケール
+        Hagine::EasingData<float> alpha;              // 透明度
+        Hagine::EasingData<Hagine::Vector2> scale;    // スケール
     };
 
     std::array<UIElementAnimation, kMaxSprite> animations_; // アニメーション配列
@@ -175,9 +180,9 @@ class GameUI {
     const float kFadeOutDuration = 0.2f;        // フェードアウト時間
     const float kScaleAnimationDuration = 0.2f; // スケールアニメーション時間
 
-    const float kStartOffsetY = -50.0f; // 出現時のオフセット
-    const float kEndOffsetY = 100.0f;   // 消去時のオフセット
-    const float kSelectedScale = 1.05f;  // 選択時の拡大率
+    const float kStartOffsetY = -50.0f;                      // 出現時のオフセット
+    const float kEndOffsetY = 100.0f;                        // 消去時のオフセット
+    const float kSelectedScale = 1.05f;                      // 選択時の拡大率
     const Hagine::Vector3 kNormalColor = {1.0f, 1.0f, 1.0f}; // 通常時の色
 
     const Hagine::Vector3 kSelectedColor = {1.0f, 1.0f, 0.5f}; // 選択時の色

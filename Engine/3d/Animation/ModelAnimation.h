@@ -9,7 +9,8 @@
 /// Animator、Bone、Skinを統合してモデルのアニメーションを制御する
 /// </summary>
 namespace Hagine {
-class ModelAnimation {
+class ModelAnimation
+{
   public:
     /// ===================================================
     /// public method

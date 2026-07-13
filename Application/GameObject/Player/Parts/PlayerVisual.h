@@ -13,7 +13,8 @@ class DataHandler;
 /// プレイヤーの見た目パーツクラス
 /// アニメーションの切り替えと飛行リーン（体の傾き）を担当する
 /// </summary>
-class PlayerVisual {
+class PlayerVisual
+{
   public:
     /// ===================================================
     /// public method
@@ -75,12 +76,12 @@ class PlayerVisual {
     // ─── 飛行移動中の体の傾き（リーン）───
     // ロックオン飛行移動中、顔は敵向きのまま進行方向へ体を倒して見せるための描画専用の傾き。
     // すべて ImGui で調整可・セーブ対象。後ろ移動＝仰向け、左右移動＝バンク表現
-    bool flyLeanEnabled_ = true;                        ///< リーン演出の有効/無効
-    float flyLeanMaxFwdPitchDeg_ = 10.0f;               ///< 前進時の前傾の最大角（度）
-    float flyLeanMaxBackPitchDeg_ = 50.0f;              ///< 後退時の仰け反り（仰向け）の最大角（度）
-    float flyLeanMaxSideDeg_ = 70.0f;                   ///< 左右移動時に体を進行方向へ向けるヨー(Y回転)の最大角（度。90で真横）
-    float flyLeanRefSpeed_ = 8.0f;                      ///< 最大傾きに達する基準の水平速度
-    float flyLeanResponse_ = 10.0f;                     ///< 傾きの追従速度（大きいほど即座に追従）
-    Hagine::Vector3 flyLeanPivot_ = {0.0f, 1.0f, 0.0f}; ///< 回転中心（モデル中心が原点にないため補正用）
+    bool flyLeanEnabled_ = true;                                                    ///< リーン演出の有効/無効
+    float flyLeanMaxFwdPitchDeg_ = 10.0f;                                           ///< 前進時の前傾の最大角（度）
+    float flyLeanMaxBackPitchDeg_ = 50.0f;                                          ///< 後退時の仰け反り（仰向け）の最大角（度）
+    float flyLeanMaxSideDeg_ = 70.0f;                                               ///< 左右移動時に体を進行方向へ向けるヨー(Y回転)の最大角（度。90で真横）
+    float flyLeanRefSpeed_ = 8.0f;                                                  ///< 最大傾きに達する基準の水平速度
+    float flyLeanResponse_ = 10.0f;                                                 ///< 傾きの追従速度（大きいほど即座に追従）
+    Hagine::Vector3 flyLeanPivot_ = {0.0f, 1.0f, 0.0f};                             ///< 回転中心（モデル中心が原点にないため補正用）
     Hagine::Quaternion flyLeanRotation_ = Hagine::Quaternion::IdentityQuaternion(); ///< 現在の傾き（平滑化後・クォータニオン）
 };

@@ -27,7 +27,8 @@
 /// 3Dモデルのメッシュ、マテリアル、アニメーションを管理する
 /// </summary>
 namespace Hagine {
-class Model {
+class Model
+{
   public:
     /// ===================================================
     /// public method
@@ -90,7 +91,8 @@ class Model {
     /// Setter
     /// </summary>
     void SetSrv(SrvManager *srvManager) { srvManager_ = srvManager; }
-    void SetAnimator(Animator *animator) {
+    void SetAnimator(Animator *animator)
+    {
         animator_ = animator;
         animator_->SetModelData(modelData_);
     }
@@ -127,8 +129,8 @@ class Model {
     ModelData modelData_;       // モデルデータ
     std::string filename_;      // ファイル名
     std::string directorypath_; // ディレクトリパス
-    bool isGltf_;                // GLTFフォーマットフラグ
-    Matrix4x4 localMatrix_;      // ローカル行列
+    bool isGltf_;               // GLTFフォーマットフラグ
+    Matrix4x4 localMatrix_;     // ローカル行列
 
     // マルチメッシュ対応
     std::vector<std::unique_ptr<Mesh>> meshes_; // メッシュ配列

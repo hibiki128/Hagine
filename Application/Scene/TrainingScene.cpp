@@ -6,7 +6,8 @@
 REGISTER_SCENE("TRAINING", TrainingScene)
 
 using namespace Hagine;
-void TrainingScene::Initialize() {
+void TrainingScene::Initialize()
+{
     /// ===================================================
     /// インスタンス生成
     /// ===================================================
@@ -110,7 +111,8 @@ void TrainingScene::Initialize() {
     });
 }
 
-void TrainingScene::Finalize() {
+void TrainingScene::Finalize()
+{
     /// ===================================================
     /// 終了処理
     /// ===================================================
@@ -119,7 +121,8 @@ void TrainingScene::Finalize() {
     BaseScene::Finalize();
 }
 
-void TrainingScene::Update() {
+void TrainingScene::Update()
+{
     /// ===================================================
     /// 更新処理
     /// ===================================================
@@ -151,17 +154,20 @@ void TrainingScene::Update() {
     inputDisplay_->Update();
 }
 
-void TrainingScene::Draw() {
+void TrainingScene::Draw()
+{
     // 描画は DrawSystem が管理
 }
 
-void TrainingScene::DrawForOffScreen() {
+void TrainingScene::DrawForOffScreen()
+{
     /// ===================================================
     /// オフスクリーン描画処理
     /// ===================================================
 }
 
-void TrainingScene::AddSceneSetting() {
+void TrainingScene::AddSceneSetting()
+{
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
@@ -170,7 +176,8 @@ void TrainingScene::AddSceneSetting() {
     vp_.ShowDebugInfo();
 }
 
-void TrainingScene::AddObjectSetting() {
+void TrainingScene::AddObjectSetting()
+{
     /// ===================================================
     /// オブジェクト設定（デバッグ）
     /// ===================================================
@@ -179,20 +186,25 @@ void TrainingScene::AddObjectSetting() {
     enemyUI_->Debug();
 }
 
-void TrainingScene::AddParticleSetting() {
+void TrainingScene::AddParticleSetting()
+{
     /// ===================================================
     /// パーティクル設定（デバッグ）
     /// ===================================================
     DrawParticleEditorUI();
 }
 
-void TrainingScene::CameraUpdate() {
+void TrainingScene::CameraUpdate()
+{
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    if (debugCamera_->GetActive()) {
+    if (debugCamera_->GetActive())
+    {
         debugCamera_->Update();
-    } else {
+    }
+    else
+    {
         followCamera_->Update();
         vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
         vp_.matView_ = followCamera_->GetViewProjection().matView_;
@@ -200,16 +212,22 @@ void TrainingScene::CameraUpdate() {
     }
 }
 
-void TrainingScene::ChangeScene() {
+void TrainingScene::ChangeScene()
+{
     /// ===================================================
     /// シーン切り替え：入力でタイトルへ戻る
     /// ===================================================
-    if (gamePad_->IsConnected()) {
-        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START)) {
+    if (gamePad_->IsConnected())
+    {
+        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START))
+        {
             sceneManager_->NextSceneReservation("TITLE");
         }
-    } else {
-        if (input_->TriggerKey(DIK_RETURN)) {
+    }
+    else
+    {
+        if (input_->TriggerKey(DIK_RETURN))
+        {
             sceneManager_->NextSceneReservation("TITLE");
         }
     }

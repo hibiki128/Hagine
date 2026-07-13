@@ -18,7 +18,8 @@ namespace Hagine {
 /// パーティクルバッファ・生存リスト・各種定数バッファを保持し、
 /// 更新コンピュートのディスパッチ（indirect対応）と描画用データの提供を行う
 /// </summary>
-class ParticleCSGroup {
+class ParticleCSGroup
+{
   public:
     // 軽量 Update バリアントのスレッドグループサイズ。
     // フル版(threadsPerGroup_=1024)と異なり、Ampere の1SM常駐1536スレッド上限で
@@ -148,14 +149,15 @@ class ParticleCSGroup {
     // GPUパーティクル SoA バッファ1本分のリソースとディスクリプタ。
     // 各バッファは Compute(Emit/Update) 用 UAV を持つ。描画VSが読む Rotation/RenderCompact のみ
     // 追加で SRV(srvForVSIndex) を持つ。Trail/Rotation/Override は使うグループだけ本確保する。
-    struct SoABuffer {
+    struct SoABuffer
+    {
         Microsoft::WRL::ComPtr<ID3D12Resource> resource;
         std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> uavHandle{};
         uint32_t uavIndex = 0;
         uint32_t srvForVSIndex = 0;
-        uint32_t stride = 0;          // 要素サイズ（再確保時に使う）
-        bool withSrvForVS = false;    // 描画VS用SRVも作るか
-        uint32_t allocatedCount = 0;  // 現在の確保要素数（1=未使用ダミー / maxParticleCount=本確保）
+        uint32_t stride = 0;         // 要素サイズ（再確保時に使う）
+        bool withSrvForVS = false;   // 描画VS用SRVも作るか
+        uint32_t allocatedCount = 0; // 現在の確保要素数（1=未使用ダミー / maxParticleCount=本確保）
     };
 
     /// ===================================

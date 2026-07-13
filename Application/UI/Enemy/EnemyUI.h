@@ -6,7 +6,8 @@
 /// 敵のUI表示を管理するクラス
 /// HPバー、アイコン、エネルギーバーなどを描画
 /// </summary>
-class EnemyUI {
+class EnemyUI
+{
   public:
     /// ===================================================
     /// public method
@@ -52,7 +53,7 @@ class EnemyUI {
     static constexpr float kEnemyIconPositionY = -30.0f;       // アイコン位置Y
     static constexpr float kIconSizeX = 384.0f;                // アイコン幅
     static constexpr float kIconSizeY = 216.0f;                // アイコン高さ
-    static constexpr float kEnergyBarPositionX = 1560.0f;     // エネルギーバー位置X
+    static constexpr float kEnergyBarPositionX = 1560.0f;      // エネルギーバー位置X
     static constexpr float kEnergyBarPositionY = 93.0f;        // エネルギーバー位置Y
     static constexpr float kEnergyBarSizeX = 300.0f;           // エネルギーバー幅
     static constexpr float kEnergyBarSizeY = 20.0f;            // エネルギーバー高さ
@@ -83,11 +84,11 @@ class EnemyUI {
 
     Enemy *enemy_ = nullptr; // 敵へのポインタ
 
-    std::unique_ptr<Hagine::Sprite> hpBar_;           // HPバー
-    std::unique_ptr<Hagine::Sprite> enemyIcon_;       // アイコン
-    std::unique_ptr<Hagine::Sprite> energyBar_;       // エネルギーバー
-    std::unique_ptr<Hagine::Sprite> barFrame_;        // HPバーフレーム
-    std::unique_ptr<Hagine::Sprite> energyBarFrame_;  // エネルギーバーフレーム
+    std::unique_ptr<Hagine::Sprite> hpBar_;          // HPバー
+    std::unique_ptr<Hagine::Sprite> enemyIcon_;      // アイコン
+    std::unique_ptr<Hagine::Sprite> energyBar_;      // エネルギーバー
+    std::unique_ptr<Hagine::Sprite> barFrame_;       // HPバーフレーム
+    std::unique_ptr<Hagine::Sprite> energyBarFrame_; // エネルギーバーフレーム
 
     Hagine::Vector2 hpBarPosition_ = {kHPBarPositionX, kHPBarPositionY};                            // HPバーの位置
     Hagine::Vector2 hpBarSize_ = {kHPBarSizeX, kHPBarSizeY};                                        // HPバーのサイズ

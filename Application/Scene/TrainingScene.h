@@ -18,7 +18,8 @@
 /// 動かないダミー敵を相手に、操作方法を自由に確かめられる練習場を管理する。
 /// カメラ演出は行わず、通常のシーン遷移フェードで出入りする。
 /// </summary>
-class TrainingScene : public Hagine::BaseScene {
+class TrainingScene : public Hagine::BaseScene
+{
   public:
     /// ===================================================
     /// public method
@@ -84,16 +85,16 @@ class TrainingScene : public Hagine::BaseScene {
     /// private variables
     /// ===================================================
 
-    std::unique_ptr<Player> player_;             // プレイヤー
-    std::unique_ptr<Enemy> enemy_;               // ダミー敵
-    std::unique_ptr<AroundField> aroundField_;   // 周囲のフィールド
-    std::unique_ptr<FollowCamera> followCamera_; // フォローカメラ
-    std::unique_ptr<Ground> ground_;             // 地面
-    std::unique_ptr<PlayerUI> playerUI_;         // プレイヤーUI
-    std::unique_ptr<EnemyUI> enemyUI_;           // 敵UI
-    std::unique_ptr<GameUI> gameUI_;             // ゲームUI
+    std::unique_ptr<Player> player_;               // プレイヤー
+    std::unique_ptr<Enemy> enemy_;                 // ダミー敵
+    std::unique_ptr<AroundField> aroundField_;     // 周囲のフィールド
+    std::unique_ptr<FollowCamera> followCamera_;   // フォローカメラ
+    std::unique_ptr<Ground> ground_;               // 地面
+    std::unique_ptr<PlayerUI> playerUI_;           // プレイヤーUI
+    std::unique_ptr<EnemyUI> enemyUI_;             // 敵UI
+    std::unique_ptr<GameUI> gameUI_;               // ゲームUI
     std::unique_ptr<InputDisplayUI> inputDisplay_; // 入力表示UI
-    std::unique_ptr<Hagine::GamePad> gamePad_;   // ゲームパッド
+    std::unique_ptr<Hagine::GamePad> gamePad_;     // ゲームパッド
 
     Hagine::SkyBox *skyBox_ = nullptr; // スカイボックス
     Enemy *enemy_ptr = nullptr;        // ダミー敵のポインタ（非所有）

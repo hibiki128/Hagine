@@ -11,12 +11,14 @@
 
 using namespace Hagine;
 
-void PlayerMovement::Init(Player *owner) {
+void PlayerMovement::Init(Player *owner)
+{
     owner_ = owner;
     isGrounded_ = true; // 初期状態は地面にいる
 }
 
-void PlayerMovement::Move() {
+void PlayerMovement::Move()
+{
     float xInput = kInputZero;
     float zInput = kInputZero;
 
@@ -24,7 +26,8 @@ void PlayerMovement::Move() {
     Input *input = owner_->GetInput();
     const float dt = owner_->GetDt();
 
-    if (!gamePad->IsConnected()) {
+    if (!gamePad->IsConnected())
+    {
         // キーボード入力
         if (input->PushKey(DIK_A))
             xInput += kInputValue;
@@ -35,10 +38,13 @@ void PlayerMovement::Move() {
         if (input->PushKey(DIK_S))
             zInput -= kInputValue;
         isDashing_ = input->PushKey(DIK_LCONTROL);
-        if (input->TriggerKey(DIK_LCONTROL)) {
+        if (input->TriggerKey(DIK_LCONTROL))
+        {
             owner_->EmitAction(Player::ActionKind::Dash); // 入力表示UI用：ダッシュ開始を通知
         }
-    } else {
+    }
+    else
+    {
         // ゲームパッド入力
         xInput = -gamePad->GetLeftStickX(); // 左スティックX軸
         zInput = gamePad->GetLeftStickY();  // 左スティックY軸
@@ -49,7 +55,8 @@ void PlayerMovement::Move() {
         // Aボタンのトリガーでダッシュ開始（LTは不要）。
         // すでにダッシュ中の場合は再始動しないため、ダッシュ中のA入力は
         // Rush 側のトリガーとして扱われる（PlayerStateFly* の TryChangeToRush）。
-        if (gamePad->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_) {
+        if (gamePad->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_)
+        {
             dashInputX_ = xInput;
             dashInputZ_ = zInput;
             isDashing_ = true;
@@ -63,15 +70,19 @@ void PlayerMovement::Move() {
 
         // 猶予中にスティックを倒したらダッシュを確定（以降は通常の維持判定に従う）。
         // ニュートラルのままなら猶予時間をカウントダウンする。
-        if (isDashing_ && hasStickInput) {
+        if (isDashing_ && hasStickInput)
+        {
             dashGraceTimer_ = 0.0f;
-        } else if (isDashing_ && dashGraceTimer_ > 0.0f) {
+        }
+        else if (isDashing_ && dashGraceTimer_ > 0.0f)
+        {
             dashGraceTimer_ -= dt;
         }
 
         // スティックをニュートラルに戻したらダッシュ解除。
         // ただし開始フレームと猶予時間中（A押下→移動待ち）はニュートラルでも維持する。
-        if (isDashing_ && !hasStickInput && !dashStartedThisFrame_ && dashGraceTimer_ <= 0.0f) {
+        if (isDashing_ && !hasStickInput && !dashStartedThisFrame_ && dashGraceTimer_ <= 0.0f)
+        {
             isDashing_ = false;
             dashInputX_ = kInputZero;
             dashInputZ_ = kInputZero;
@@ -81,7 +92,8 @@ void PlayerMovement::Move() {
     }
 
     // 入力がない場合の減速処理
-    if (xInput == kInputZero && zInput == kInputZero && !isDashing_) {
+    if (xInput == kInputZero && zInput == kInputZero && !isDashing_)
+    {
         velocity_.x *= kDecelerationFactor;
         velocity_.z *= kDecelerationFactor;
         if (std::abs(velocity_.x) < kVelocityStopThreshold)
@@ -103,24 +115,32 @@ void PlayerMovement::Move() {
     Vector3 moveDir = cameraRight * xInput + cameraForward * zInput;
 
     // ダッシュ開始時のスティック入力がない場合、敵または自機正面方向へ移動
-    if (dashStartedThisFrame_ && dashInputX_ == kInputZero && dashInputZ_ == kInputZero) {
-        if (owner_->GetEnemy()) {
+    if (dashStartedThisFrame_ && dashInputX_ == kInputZero && dashInputZ_ == kInputZero)
+    {
+        if (owner_->GetEnemy())
+        {
             Vector3 toEnemy = owner_->GetEnemy()->GetWorldPosition() - owner_->GetWorldPosition();
             toEnemy.y = 0;
-            if (toEnemy.Length() > 0.001f) {
+            if (toEnemy.Length() > 0.001f)
+            {
                 moveDir = toEnemy.Normalize();
             }
-        } else {
+        }
+        else
+        {
             moveDir = owner_->GetForward();
             moveDir.y = 0;
             moveDir = moveDir.Normalize();
         }
-    } else if (moveDir.Length() > 0.001f) {
+    }
+    else if (moveDir.Length() > 0.001f)
+    {
         moveDir = moveDir.Normalize();
     }
 
     // ロックオン中でない場合、移動方向に向けて回転
-    if (!owner_->GetIsLockOn() && moveDir.Length() > 0.001f) {
+    if (!owner_->GetIsLockOn() && moveDir.Length() > 0.001f)
+    {
         float targetYaw = std::atan2(-moveDir.x, moveDir.z);
         Quaternion targetRot = Quaternion::FromEulerAngles({kRotationZero, targetYaw, kRotationZero});
         float rotateSpeed = kPlayerRotationSpeed;
@@ -135,29 +155,41 @@ void PlayerMovement::Move() {
 
     // 最高速度制限
     float speed = std::sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
-    if (speed > currentMaxSpeed) {
+    if (speed > currentMaxSpeed)
+    {
         float scale = currentMaxSpeed / speed;
         velocity_.x *= scale;
         velocity_.z *= scale;
     }
 }
 
-void PlayerMovement::DirectionUpdate() {
+void PlayerMovement::DirectionUpdate()
+{
     GamePad *gamePad = owner_->GetGamePad();
     Input *input = owner_->GetInput();
 
-    if (!gamePad->IsConnected()) {
+    if (!gamePad->IsConnected())
+    {
         // キーボード入力
-        if (input->PushKey(DIK_D)) {
+        if (input->PushKey(DIK_D))
+        {
             moveDir_ = MoveDirection::Right;
-        } else if (input->PushKey(DIK_A)) {
+        }
+        else if (input->PushKey(DIK_A))
+        {
             moveDir_ = MoveDirection::Left;
-        } else if (input->PushKey(DIK_W)) {
+        }
+        else if (input->PushKey(DIK_W))
+        {
             moveDir_ = MoveDirection::Forward;
-        } else if (input->PushKey(DIK_S)) {
+        }
+        else if (input->PushKey(DIK_S))
+        {
             moveDir_ = MoveDirection::Behind;
         }
-    } else {
+    }
+    else
+    {
         // ゲームパッド入力 - 左スティック
         // 方向分類用の X はスティックの符号そのままを使う（右スティック→右アニメ）。
         // Move() の移動計算では cameraRight が -X 基準のため符号を反転しているが、
@@ -166,40 +198,54 @@ void PlayerMovement::DirectionUpdate() {
         float zInput = gamePad->GetLeftStickY(); // 左スティックY軸
 
         // スティック入力から方向を判定
-        if (xInput != 0.0f || zInput != 0.0f) {
+        if (xInput != 0.0f || zInput != 0.0f)
+        {
             float angle = std::atan2(xInput, zInput);
 
             const float PI = std::numbers::pi_v<float>;
             const float segment = PI / 4.0f; // 45度
 
-            if (angle >= -segment && angle < segment) {
+            if (angle >= -segment && angle < segment)
+            {
                 moveDir_ = MoveDirection::Forward;
-            } else if (angle >= segment && angle < segment * 3.0f) {
+            }
+            else if (angle >= segment && angle < segment * 3.0f)
+            {
                 moveDir_ = MoveDirection::Right;
-            } else if (angle >= segment * 3.0f || angle < -segment * 3.0f) {
+            }
+            else if (angle >= segment * 3.0f || angle < -segment * 3.0f)
+            {
                 moveDir_ = MoveDirection::Behind;
-            } else if (angle >= -segment * 3.0f && angle < -segment) {
+            }
+            else if (angle >= -segment * 3.0f && angle < -segment)
+            {
                 moveDir_ = MoveDirection::Left;
             }
         }
     }
 
     // 向いてる方向は回転値から計算(ロックオン時以外)
-    if (!owner_->GetIsLockOn()) {
+    if (!owner_->GetIsLockOn())
+    {
         dir_ = CalculateDirectionFromRotation();
-    } else {
+    }
+    else
+    {
         dir_ = Direction::Forward;
     }
 }
 
-void PlayerMovement::RotateUpdate() {
+void PlayerMovement::RotateUpdate()
+{
     GamePad *gamePad = owner_->GetGamePad();
     Input *input = owner_->GetInput();
     const float dt = owner_->GetDt();
 
-    if (owner_->GetIsLockOn() && owner_->GetEnemy()) {
+    if (owner_->GetIsLockOn() && owner_->GetEnemy())
+    {
         Vector3 toEnemy = owner_->GetEnemy()->GetWorldPosition() - owner_->GetWorldPosition();
-        if (toEnemy.Length() > kMinRotationDistance) {
+        if (toEnemy.Length() > kMinRotationDistance)
+        {
             toEnemy = toEnemy.Normalize();
 
             // プレイヤーの正面方向(+Z方向)を敵の方向に向ける
@@ -208,9 +254,12 @@ void PlayerMovement::RotateUpdate() {
 
             // forwardとworldUpが平行になる場合の対処
             Vector3 right;
-            if (std::abs(forward.Dot(worldUp)) > kParallelThreshold) {
+            if (std::abs(forward.Dot(worldUp)) > kParallelThreshold)
+            {
                 right = {kRightVectorX, kRightVectorY, kRightVectorZ};
-            } else {
+            }
+            else
+            {
                 right = (worldUp.Cross(forward)).Normalize();
             }
 
@@ -223,28 +272,37 @@ void PlayerMovement::RotateUpdate() {
             float rotateSpeed = kPlayerRotationSpeed;
             owner_->GetLocalRotation() = Quaternion::Slerp(owner_->GetLocalRotation(), targetRot, rotateSpeed * dt);
         }
-    } else {
-        if (!gamePad->IsConnected()) {
+    }
+    else
+    {
+        if (!gamePad->IsConnected())
+        {
             // キーボード入力（左右矢印キーで手動回転）
             Vector3 euler = owner_->GetLocalRotation().ToEulerAngles();
             bool rotationChanged = false;
-            if (input->PushKey(DIK_RIGHT)) {
+            if (input->PushKey(DIK_RIGHT))
+            {
                 euler.y -= kManualRotationSpeed;
                 rotationChanged = true;
             }
-            if (input->PushKey(DIK_LEFT)) {
+            if (input->PushKey(DIK_LEFT))
+            {
                 euler.y += kManualRotationSpeed;
                 rotationChanged = true;
             }
-            if (rotationChanged) {
+            if (rotationChanged)
+            {
                 owner_->GetLocalRotation() = Quaternion::FromEulerAngles(euler);
             }
-        } else {
+        }
+        else
+        {
             // ゲームパッド入力（右スティックX軸で左右回転）
             float rightStickX = gamePad->GetRightStickX();
             float rightStickY = gamePad->GetRightStickY();
 
-            if (rightStickX != 0.0f || rightStickY != 0.0f) {
+            if (rightStickX != 0.0f || rightStickY != 0.0f)
+            {
                 Vector3 euler = owner_->GetLocalRotation().ToEulerAngles();
                 euler.y += rightStickX * kManualRotationSpeed * 2.0f;
                 owner_->GetLocalRotation() = Quaternion::FromEulerAngles(euler);
@@ -253,11 +311,13 @@ void PlayerMovement::RotateUpdate() {
     }
 }
 
-void PlayerMovement::CollisionGround() {
+void PlayerMovement::CollisionGround()
+{
     const float dt = owner_->GetDt();
 
     // 下方向の速度を制限
-    if (velocity_.y < kMaxFallVelocity) {
+    if (velocity_.y < kMaxFallVelocity)
+    {
         velocity_.y = kMaxFallVelocity;
     }
 
@@ -267,9 +327,11 @@ void PlayerMovement::CollisionGround() {
     owner_->GetLocalPosition().x += velocity_.x * dt;
     owner_->GetLocalPosition().z += velocity_.z * dt;
 
-    if (nextY <= kGroundLevel) {
+    if (nextY <= kGroundLevel)
+    {
         // Rush状態の場合は地面から押し戻す（地面に埋まらないよう浮かせる）
-        if (owner_->GetCurrentStateName() == "Rush") {
+        if (owner_->GetCurrentStateName() == "Rush")
+        {
             owner_->GetLocalPosition().y = kRushGroundOffset;
             velocity_.y = kVelocityZero;
             return;
@@ -277,70 +339,99 @@ void PlayerMovement::CollisionGround() {
 
         // 地面に接地（Rush 以外）
         owner_->GetLocalPosition().y = kGroundLevel;
-        if (!isGrounded_) {
+        if (!isGrounded_)
+        {
             velocity_.y = kVelocityZero;
             isGrounded_ = true;
             // 空中からの着地で水平速度に応じて状態遷移
-            if (owner_->GetCurrentStateName() == "Air") {
+            if (owner_->GetCurrentStateName() == "Air")
+            {
                 float horizontalSpeed = sqrt(velocity_.x * velocity_.x + velocity_.z * velocity_.z);
-                if (horizontalSpeed > kLandingSpeedThreshold) {
+                if (horizontalSpeed > kLandingSpeedThreshold)
+                {
                     owner_->ChangeState("Move");
-                } else {
+                }
+                else
+                {
                     owner_->ChangeState("Idle");
                 }
             }
         }
-    } else {
+    }
+    else
+    {
         owner_->GetLocalPosition().y = nextY;
         isGrounded_ = false;
     }
 }
 
-void PlayerMovement::UpdateDashState() {
-    if (!owner_->GetGamePad()->IsConnected()) {
+void PlayerMovement::UpdateDashState()
+{
+    if (!owner_->GetGamePad()->IsConnected())
+    {
         return; // キーボードの場合はダッシュ継続時間を管理しない
     }
 
-    if (isDashing_) {
+    if (isDashing_)
+    {
         dashDuration_ += owner_->GetDt(); // ダッシュ継続時間を更新（A＋スティックで維持）
     }
 
     // dashStartedThisFrame_ は1フレームだけ true になるフラグ
     // wasDashing_ で前フレームのダッシュ状態を保持し、次フレームでリセットする
-    if (dashStartedThisFrame_ && wasDashing_) {
+    if (dashStartedThisFrame_ && wasDashing_)
+    {
         dashStartedThisFrame_ = false;
     }
 
     wasDashing_ = isDashing_;
 }
 
-Direction PlayerMovement::CalculateDirectionFromRotation() {
+Direction PlayerMovement::CalculateDirectionFromRotation()
+{
     // クォータニオンからオイラー角（Yaw）を取得し、8方向に分類
     float yaw = owner_->GetLocalRotation().ToEulerAngles().y;
     float angle = NormalizeAngle(yaw);
 
-    if (angle >= 7.0f * std::numbers::pi_v<float> / 4.0f || angle < std::numbers::pi_v<float> / 4.0f) {
+    if (angle >= 7.0f * std::numbers::pi_v<float> / 4.0f || angle < std::numbers::pi_v<float> / 4.0f)
+    {
         return Direction::Forward;
-    } else if (angle >= std::numbers::pi_v<float> / 4.0f && angle < 2.0f * std::numbers::pi_v<float> / 4.0f) {
+    }
+    else if (angle >= std::numbers::pi_v<float> / 4.0f && angle < 2.0f * std::numbers::pi_v<float> / 4.0f)
+    {
         return Direction::ForwardRight;
-    } else if (angle >= 2.0f * std::numbers::pi_v<float> / 4.0f && angle < 3.0f * std::numbers::pi_v<float> / 4.0f) {
+    }
+    else if (angle >= 2.0f * std::numbers::pi_v<float> / 4.0f && angle < 3.0f * std::numbers::pi_v<float> / 4.0f)
+    {
         return Direction::Right;
-    } else if (angle >= 3.0f * std::numbers::pi_v<float> / 4.0f && angle < 4.0f * std::numbers::pi_v<float> / 4.0f) {
+    }
+    else if (angle >= 3.0f * std::numbers::pi_v<float> / 4.0f && angle < 4.0f * std::numbers::pi_v<float> / 4.0f)
+    {
         return Direction::BackwardRight;
-    } else if (angle >= 4.0f * std::numbers::pi_v<float> / 4.0f && angle < 5.0f * std::numbers::pi_v<float> / 4.0f) {
+    }
+    else if (angle >= 4.0f * std::numbers::pi_v<float> / 4.0f && angle < 5.0f * std::numbers::pi_v<float> / 4.0f)
+    {
         return Direction::Behind;
-    } else if (angle >= 5.0f * std::numbers::pi_v<float> / 4.0f && angle < 6.0f * std::numbers::pi_v<float> / 4.0f) {
+    }
+    else if (angle >= 5.0f * std::numbers::pi_v<float> / 4.0f && angle < 6.0f * std::numbers::pi_v<float> / 4.0f)
+    {
         return Direction::BackwardLeft;
-    } else if (angle >= 6.0f * std::numbers::pi_v<float> / 4.0f && angle < 7.0f * std::numbers::pi_v<float> / 4.0f) {
+    }
+    else if (angle >= 6.0f * std::numbers::pi_v<float> / 4.0f && angle < 7.0f * std::numbers::pi_v<float> / 4.0f)
+    {
         return Direction::Left;
-    } else if (angle >= 7.0f * std::numbers::pi_v<float> / 4.0f && angle < 8.0f * std::numbers::pi_v<float> / 4.0f) {
+    }
+    else if (angle >= 7.0f * std::numbers::pi_v<float> / 4.0f && angle < 8.0f * std::numbers::pi_v<float> / 4.0f)
+    {
         return Direction::ForwardLeft;
     }
     return Direction::Forward;
 }
 
-const char *PlayerMovement::GetDirectionName(Direction dir) {
-    switch (dir) {
+const char *PlayerMovement::GetDirectionName(Direction dir)
+{
+    switch (dir)
+    {
     case Direction::Forward:
         return "前";
     case Direction::ForwardRight:
@@ -362,7 +453,8 @@ const char *PlayerMovement::GetDirectionName(Direction dir) {
     }
 }
 
-float PlayerMovement::NormalizeAngle(float angle) {
+float PlayerMovement::NormalizeAngle(float angle)
+{
     const float TWO_PI = 2.0f * std::numbers::pi_v<float>;
     while (angle < 0.0f)
         angle += TWO_PI;
@@ -371,7 +463,8 @@ float PlayerMovement::NormalizeAngle(float angle) {
     return angle;
 }
 
-float PlayerMovement::CalculateShortestRotation(float from, float to) {
+float PlayerMovement::CalculateShortestRotation(float from, float to)
+{
     float diff = to - from;
     const float PI = std::numbers::pi_v<float>;
 
@@ -383,26 +476,32 @@ float PlayerMovement::CalculateShortestRotation(float from, float to) {
     return diff;
 }
 
-Vector3 PlayerMovement::GetMovementDirection() const {
+Vector3 PlayerMovement::GetMovementDirection() const
+{
     Vector3 dir = velocity_;
     float len = GetVelocityMagnitude();
 
-    if (len > 0.001f) {
+    if (len > 0.001f)
+    {
         dir.x /= len;
         dir.y /= len;
         dir.z /= len;
-    } else {
+    }
+    else
+    {
         dir = {0.0f, 0.0f, 0.0f};
     }
 
     return dir;
 }
 
-float PlayerMovement::GetVelocityMagnitude() const {
+float PlayerMovement::GetVelocityMagnitude() const
+{
     return std::sqrt(velocity_.x * velocity_.x + velocity_.y * velocity_.y + velocity_.z * velocity_.z);
 }
 
-void PlayerMovement::Save(DataHandler *data) {
+void PlayerMovement::Save(DataHandler *data)
+{
     data->Save("fallSpeed", fallSpeed_);
     data->Save("moveSpeed", moveSpeed_);
     data->Save("jumpSpeed", jumpSpeed_);
@@ -410,7 +509,8 @@ void PlayerMovement::Save(DataHandler *data) {
     data->Save("accelRate", accelRate_);
 }
 
-void PlayerMovement::Load(DataHandler *data) {
+void PlayerMovement::Load(DataHandler *data)
+{
     fallSpeed_ = data->Load<float>("fallSpeed", -9.8f);
     moveSpeed_ = data->Load<float>("moveSpeed", 0.0f);
     jumpSpeed_ = data->Load<float>("jumpSpeed", 10.0f);
@@ -418,7 +518,8 @@ void PlayerMovement::Load(DataHandler *data) {
     accelRate_ = data->Load<float>("accelRate", 15.0f);
 }
 
-void PlayerMovement::DrawImGui() {
+void PlayerMovement::DrawImGui()
+{
 #ifdef USE_IMGUI
     ImGui::Text("ダッシュ始めたフレームかどうか: %s", dashStartedThisFrame_ ? "True" : "False");
     ImGui::Text("ダッシュ時間: %f", dashDuration_);
@@ -434,7 +535,8 @@ void PlayerMovement::DrawImGui() {
 #endif // USE_IMGUI
 }
 
-void PlayerMovement::RegisterParams() {
+void PlayerMovement::RegisterParams()
+{
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Player", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});
     hub->Register("Player", "加速率", &accelRate_, {0.1f, 0.0f, 50.0f});

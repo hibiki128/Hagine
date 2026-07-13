@@ -10,7 +10,8 @@ class DataHandler;
 /// プレイヤーのステータスパーツクラス
 /// HP・エネルギー・被ダメージ・無敵時間・ガード・ノックバックを担当する
 /// </summary>
-class PlayerStatus {
+class PlayerStatus
+{
   public:
     /// ===================================================
     /// public method
@@ -99,7 +100,8 @@ class PlayerStatus {
     void SetDamage(float damage) { damage_ = damage; }
     void SetGuarding(bool flag) { isGuarding_ = flag; }
     void SetEnergyRecoveryRate(float rate) { energyRecoveryRate_ = rate; }
-    void ResetEnergyForTutorial() {
+    void ResetEnergyForTutorial()
+    {
         energy_ = 0.0f;
         timeSinceLastShot_ = 0.0f; // 回復遅延タイマーもリセット
     }

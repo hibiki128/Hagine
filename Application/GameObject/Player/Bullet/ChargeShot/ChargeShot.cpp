@@ -9,7 +9,8 @@
 #include <cmath>
 
 using namespace Hagine;
-void ChargeShot::Init(const std::string objectName) {
+void ChargeShot::Init(const std::string objectName)
+{
     BaseObject::Init(objectName);
     BaseObject::CreatePrimitiveModel(PrimitiveType::Sphere);
     BaseObject::SetTexture("debug/white1x1.png");
@@ -37,11 +38,14 @@ void ChargeShot::Init(const std::string objectName) {
     bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chageBullet");
 }
 
-void ChargeShot::Update() {
+void ChargeShot::Update()
+{
     Input *input = Input::GetInstance();
 
-    if (isAlive_) {
-        if (bulletCollider_) {
+    if (isAlive_)
+    {
+        if (bulletCollider_)
+        {
             // 当たり判定は発射済みの弾のみ有効化する。
             // 溜め中(未発射)に大きく育った弾が敵へ触れて誤爆・フラグ不整合を起こすのを防ぐ
             bulletCollider_->SetEnabled(isFired_);
@@ -52,7 +56,8 @@ void ChargeShot::Update() {
         bulletEmitter_->Update();
         bulletEmitter_->SetPosition(transform_->translation_);
         bulletEmitter_->SetStartScale("chageBullet", transform_->scale_ * kBulletParticleScaleMultiplier);
-        if (!isMaxScale_) {
+        if (!isMaxScale_)
+        {
             bulletEmitter_->SetStartScale("chageAround", {(kParticleScaleBase + scale_) * kParticleScaleMultiplier,
                                                           (kParticleScaleBase + scale_) * kParticleScaleMultiplier,
                                                           (kParticleScaleBase + scale_) * kParticleScaleMultiplier});
@@ -65,42 +70,51 @@ void ChargeShot::Update() {
     bool chargeHold = false;
     bool chargeRelease = false;
 
-    if (!player_->GetGamePad()->IsConnected()) {
+    if (!player_->GetGamePad()->IsConnected())
+    {
         // キーボード入力
         chargeHold = input->PushKey(DIK_K);
         chargeRelease = input->ReleaseMomentKey(DIK_K);
-    } else {
+    }
+    else
+    {
         // ゲームパッド入力 - Yボタン
         chargeHold = player_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y);
         chargeRelease = player_->GetGamePad()->IsRelease(XINPUT_GAMEPAD_Y);
     }
 
     // ガード中はチャージショットを溜め・発射できない（発射済みの弾はそのまま飛ばす）
-    if (player_ && player_->IsGuarding()) {
+    if (player_ && player_->IsGuarding())
+    {
         chargeHold = false;
         chargeRelease = false;
     }
 
     // 必殺技のカメラ演出中など、溜め操作がロックされている間は入力を無効化する。
     // 溜め中だった場合はその場で凍結し（成長・発射しない）、演出の新規発生も止まる
-    if (isActionLocked_) {
+    if (isActionLocked_)
+    {
         chargeHold = false;
         chargeRelease = false;
     }
 
-    if (!isAlive_) {
+    if (!isAlive_)
+    {
         // まだ溜めていない状態。
         // スキルメニュー中(LT長押しで必殺技を照準している間)は溜めを開始しない。
         // ここを分けないと、必殺技発動のYボタン押下で溜めロジックへ入り、
         // チャージ演出(chargeEmitter_)が誤って発生してしまう
-        if (!isSkillMenu_ && chargeHold) {
+        if (!isSkillMenu_ && chargeHold)
+        {
             // チャージ開始判定：ボタンが押され続けている時間を計測
             chargeStartTimer_ += Frame::DeltaTime();
 
             // 閾値以上押され続けた場合のみチャージ開始
-            if (chargeStartTimer_ >= player_->GetChargeThreshold()) {
+            if (chargeStartTimer_ >= player_->GetChargeThreshold())
+            {
                 // エネルギーチェック
-                if (player_ && player_->GetEnergy() < kMinEnergyToStart) {
+                if (player_ && player_->GetEnergy() < kMinEnergyToStart)
+                {
                     // エネルギー不足でチャージ開始できない
                     chargeStartTimer_ = 0.0f;
                     return;
@@ -111,15 +125,21 @@ void ChargeShot::Update() {
                 isMaxScale_ = false;
                 isCharge_ = true;
             }
-        } else {
+        }
+        else
+        {
             // ボタンを離した / スキルメニュー中 はタイマーをリセット
             chargeStartTimer_ = 0.0f;
         }
-    } else {
+    }
+    else
+    {
         // 溜め中(isAlive_)のみスケール成長・発射を扱う
-        if (chargeHold && !isFired_) {
+        if (chargeHold && !isFired_)
+        {
             scale_ += scaleSpeed_ * (Frame::DeltaTime());
-            if (scale_ >= maxScale_) {
+            if (scale_ >= maxScale_)
+            {
                 scale_ = maxScale_;
                 isMaxScale_ = true;
             }
@@ -127,13 +147,15 @@ void ChargeShot::Update() {
             // ここでは溜め中フラグのみ立てる
             isCharge_ = true;
         }
-        if (chargeRelease && !isFired_) {
+        if (chargeRelease && !isFired_)
+        {
             // エネルギー消費量を計算(チャージ率に応じて5~20)
             float scaleRatio = (scale_ - kInitialScale) / (maxScale_ - kInitialScale);
             float energyCost = kMinEnergyCost + ((kMaxEnergyCost - kMinEnergyCost) * scaleRatio);
 
             // エネルギーチェック
-            if (!player_->ConsumeEnergy(energyCost)) {
+            if (!player_->ConsumeEnergy(energyCost))
+            {
                 // エネルギー不足ならリセット
                 Reset();
                 isCharge_ = false;
@@ -144,15 +166,20 @@ void ChargeShot::Update() {
             Vector3 dir = {0, 0, 1};
             Vector3 pos = transform_->translation_;
 
-            if (player_) {
-                if (player_->GetIsLockOn() && player_->GetEnemy()) {
+            if (player_)
+            {
+                if (player_->GetIsLockOn() && player_->GetEnemy())
+                {
                     // ロックオン時は敵方向に向けて発射
                     dir = player_->GetEnemy()->GetLocalPosition() - pos;
                     float len = dir.Length();
-                    if (len > 0.0001f) {
+                    if (len > 0.0001f)
+                    {
                         dir = dir / len;
                     }
-                } else {
+                }
+                else
+                {
                     // プレイヤーの回転をかけて発射方向を計算
                     dir = (player_->GetLocalRotation() * Vector3(0.0f, 0.0f, 1.0f)).Normalize();
                     dir.x = -dir.x;
@@ -168,19 +195,23 @@ void ChargeShot::Update() {
     }
 
     // 発射後の移動処理
-    if (isFired_ && isAlive_) {
+    if (isFired_ && isAlive_)
+    {
         transform_->translation_.x += velocity_.x * (1.0f / 60.0f);
         transform_->translation_.y += velocity_.y * (1.0f / 60.0f);
         transform_->translation_.z += velocity_.z * (1.0f / 60.0f);
 
         // プレイヤーから一定距離離れたらリセット
-        if ((transform_->translation_ - player_->GetLocalPosition()).Length() > kMaxDistance) {
+        if ((transform_->translation_ - player_->GetLocalPosition()).Length() > kMaxDistance)
+        {
             Reset();
         }
     }
 
-    if (isAlive_ && !isFired_) {
-        if (player_) {
+    if (isAlive_ && !isFired_)
+    {
+        if (player_)
+        {
             Vector3 playerPos = player_->GetLocalPosition();
             Quaternion rot = player_->GetLocalRotation();
             Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
@@ -205,7 +236,8 @@ void ChargeShot::Update() {
             chargeEmitter_->SetTranslate(transform_->translation_);
 
             // 溜め中(未発射)は当たり判定を持たせない
-            if (bulletCollider_) {
+            if (bulletCollider_)
+            {
                 bulletCollider_->SetEnabled(false);
             }
         }
@@ -222,20 +254,24 @@ void ChargeShot::Update() {
     BaseObject::UpdateWorldTransformHierarchy();
 }
 
-void ChargeShot::Fire(const Vector3 &pos, const Vector3 &dir) {
+void ChargeShot::Fire(const Vector3 &pos, const Vector3 &dir)
+{
     transform_->translation_ = pos;
     velocity_ = dir * speed_;
 
     // 発射した瞬間から当たり判定を有効化する（溜め中は無効だったものをここで有効化）
-    if (bulletCollider_) {
+    if (bulletCollider_)
+    {
         bulletCollider_->SetEnabled(true);
         bulletCollider_->SetRadius(scale_);
     }
 }
 
-void ChargeShot::Reset() {
+void ChargeShot::Reset()
+{
 
-    if (bulletCollider_) {
+    if (bulletCollider_)
+    {
         bulletCollider_->SetEnabled(false);
     }
 
@@ -250,13 +286,15 @@ void ChargeShot::Reset() {
     // 溜め演出(GPUパーティクル)の新規発生を止める（既存分は自然消滅させる）。
     // SetAuto(false) 後に一度 Update() して emit フラグを即0へ反映し、
     // 途中リターン経路でも演出が残留しないようにする
-    if (chargeEmitter_) {
+    if (chargeEmitter_)
+    {
         chargeEmitter_->SetAuto(false);
         chargeEmitter_->Update();
     }
 }
 
-float ChargeShot::GetDamage() const {
+float ChargeShot::GetDamage() const
+{
     // スケールの割合を計算(1.0f~maxScale_の範囲を0.0f~1.0fに正規化)
     float scaleRatio = (scale_ - kInitialScale) / (maxScale_ - kInitialScale);
 
@@ -265,36 +303,44 @@ float ChargeShot::GetDamage() const {
     return std::max(kMinDamage, damage);
 }
 
-void ChargeShot::Draw(const ViewProjection &viewProjection) {
+void ChargeShot::Draw(const ViewProjection &viewProjection)
+{
     if (!isAlive_)
         return;
     // スケールを反映
     transform_->scale_ = {scale_, scale_, scale_};
 }
-void ChargeShot::DrawParticleCompute(const ViewProjection &viewProjection) {
+void ChargeShot::DrawParticleCompute(const ViewProjection &viewProjection)
+{
     chargeEmitter_->DrawCompute(viewProjection);
 }
 
-void ChargeShot::DrawParticle(const ViewProjection &viewProjection) {
+void ChargeShot::DrawParticle(const ViewProjection &viewProjection)
+{
     chargeEmitter_->DrawGraphics(viewProjection);
     if (!isAlive_)
         return;
     bulletEmitter_->Draw(viewProjection); // CPU emitter
 }
 
-void ChargeShot::imgui() {
+void ChargeShot::imgui()
+{
 }
 
-void ChargeShot::OnCollisionEnterCallback(ColliderBase *other) {
+void ChargeShot::OnCollisionEnterCallback(ColliderBase *other)
+{
     // 発射済みの弾のみ命中扱いにする。
     // 溜め中(未発射)の弾は当たり判定を無効化しているが、念のためここでも弾く
-    if (!isFired_) {
+    if (!isFired_)
+    {
         return;
     }
     // Enemyタグを持つコライダーと衝突した場合
-    if (other->GetTag() == "Enemy") {
+    if (other->GetTag() == "Enemy")
+    {
         // プレイヤーの敵が存在し、生きている場合
-        if (player_ && player_->GetEnemy() && player_->GetEnemy()->GetAlive()) {
+        if (player_ && player_->GetEnemy() && player_->GetEnemy()->GetAlive())
+        {
             isAlive_ = false;
 
             // チャージ度合いに応じたダメージを計算して適用

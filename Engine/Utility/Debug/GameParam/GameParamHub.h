@@ -17,7 +17,8 @@ namespace Hagine {
 /// ハブUI上で行う。仕分けレイアウトはJSONへ保存され、次回起動時に復元される。
 /// ※デバッグ専用のためシングルトンを許容する（どこからでも登録できる必要がある）
 /// </summary>
-class GameParamHub {
+class GameParamHub
+{
   public:
     /// ===================================================
     /// public method
@@ -32,7 +33,8 @@ class GameParamHub {
     /// <summary>
     /// 登録時のオプション（ドラッグ速度・範囲・色表示・変更時コールバック）
     /// </summary>
-    struct Options {
+    struct Options
+    {
         float speed = 0.1f;             ///< ドラッグ速度
         float min = 0.0f;               ///< 最小値（min==maxなら制限なし）
         float max = 0.0f;               ///< 最大値
@@ -89,7 +91,8 @@ class GameParamHub {
     /// ===================================================
 
     /// <summary>登録された1パラメータ</summary>
-    struct Entry {
+    struct Entry
+    {
         std::string owner; ///< 出所ラベル
         std::string name;  ///< 表示名
         ParamPtr ptr;      ///< 対象変数
@@ -97,24 +100,28 @@ class GameParamHub {
     };
 
     /// <summary>ユーザーが作るセクション（CollapsingHeader相当）</summary>
-    struct SectionDef {
+    struct SectionDef
+    {
         std::string name;
     };
 
     /// <summary>ユーザーが作るタブ</summary>
-    struct TabDef {
+    struct TabDef
+    {
         std::string name;
         std::vector<SectionDef> sections;
     };
 
     /// <summary>ユーザーが作るウィンドウ</summary>
-    struct WindowDef {
+    struct WindowDef
+    {
         std::string name;
         std::vector<TabDef> tabs;
     };
 
     /// <summary>パラメータの仕分け先（空文字は「直下」を表す）</summary>
-    struct Assignment {
+    struct Assignment
+    {
         std::string window;
         std::string tab;
         std::string section;

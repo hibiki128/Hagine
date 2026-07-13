@@ -12,7 +12,8 @@ class DXDevice;
 /// バッファ・テクスチャ・レンダーテクスチャ・深度ステンシルなど各種リソースの生成と
 /// テクスチャデータのアップロードを担当する
 /// </summary>
-class ResourceFactory {
+class ResourceFactory
+{
   public:
     ResourceFactory() = default;
     ~ResourceFactory() = default;

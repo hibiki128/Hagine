@@ -16,7 +16,8 @@
 /// フィールドの種類
 /// =============================================
 namespace Hagine {
-enum class ParticleFieldType : uint32_t {
+enum class ParticleFieldType : uint32_t
+{
     Wind = 0,    // 一定方向に力を加える
     Attract = 1, // 中心に引き寄せる
     Repel = 2,   // 中心から押し出す
@@ -28,9 +29,11 @@ enum class ParticleFieldType : uint32_t {
 ///   シングルトン。全フィールドを管理し、
 ///   GPUバッファを毎フレーム更新する。
 /// =============================================
-class ParticleCSFieldManager {
+class ParticleCSFieldManager
+{
   public:
-    static ParticleCSFieldManager *GetInstance() {
+    static ParticleCSFieldManager *GetInstance()
+    {
         static ParticleCSFieldManager instance;
         return &instance;
     }
@@ -48,9 +51,11 @@ class ParticleCSFieldManager {
     // GPU へ転送される「有効(enabled)」フィールド数。UploadToGPU が gFieldCB.fieldCount に
     // 書き込む値と一致する（= シェーダが実際に走査する本数）。
     // 軽量 Update バリアントの適格判定（フィールドの影響を受けないか）に使う。
-    int GetActiveFieldCount() const {
+    int GetActiveFieldCount() const
+    {
         int count = 0;
-        for (const auto &f : fields_) {
+        for (const auto &f : fields_)
+        {
             if (f.enabled)
                 ++count;
         }

@@ -2,10 +2,12 @@
 #include "application/GameObject/Player/Player.h"
 
 using namespace Hagine;
-void PlayerStateIdle::Enter(Player &player) {
+void PlayerStateIdle::Enter(Player &player)
+{
 }
 
-void PlayerStateIdle::Update(Player &player) {
+void PlayerStateIdle::Update(Player &player)
+{
     player.GetCanJump() = player.GetIsGrounded();
     player.GetVelocity().y = kGroundPullVelocity;
 
@@ -13,28 +15,37 @@ void PlayerStateIdle::Update(Player &player) {
     float &vx = player.GetVelocity().x;
     float &vz = player.GetVelocity().z;
 
-    if (std::abs(vx) < kVelocityStopThreshold) {
+    if (std::abs(vx) < kVelocityStopThreshold)
+    {
         vx = kVelocityZero;
-    } else {
+    }
+    else
+    {
         vx *= kDampingFactor;
     }
 
-    if (std::abs(vz) < kVelocityStopThreshold) {
+    if (std::abs(vz) < kVelocityStopThreshold)
+    {
         vz = kVelocityZero;
-    } else {
+    }
+    else
+    {
         vz *= kDampingFactor;
     }
 
-    if (vx == kVelocityZero && vz == kVelocityZero) {
+    if (vx == kVelocityZero && vz == kVelocityZero)
+    {
         player.GetMoveSpeed() = kMoveSpeedZero;
     }
 
-    if (HasMovementInput(player)) {
+    if (HasMovementInput(player))
+    {
         player.ChangeState("Move");
         return;
     }
 
-    if (IsJumpOrFlyTriggered(player) && player.GetCanJump()) {
+    if (IsJumpOrFlyTriggered(player) && player.GetCanJump())
+    {
         player.ChangeState("Jump");
         return;
     }
@@ -43,5 +54,6 @@ void PlayerStateIdle::Update(Player &player) {
     player.ChangeEnergyCharge();
 }
 
-void PlayerStateIdle::Exit(Player &player) {
+void PlayerStateIdle::Exit(Player &player)
+{
 }

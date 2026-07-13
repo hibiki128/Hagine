@@ -25,7 +25,8 @@ class DirectXCommon;
 /// QueryHeap は kRing(3) フレーム分を確保し、書き込んだフレームの結果は
 /// kRing フレーム後（GPU 完了保証後）に読み戻すため CPU/GPU を待たせない。
 /// </summary>
-class GpuProfiler {
+class GpuProfiler
+{
   public:
     static GpuProfiler *GetInstance();
 
@@ -60,22 +61,25 @@ class GpuProfiler {
     int Open(ID3D12GraphicsCommandList *cl, const char *label, bool isCompute);
     void Resolve(ID3D12GraphicsCommandList *cl, bool isCompute);
 
-    static constexpr uint32_t kRing = 3;             // リングバッファ段数（in-flight 2F + 余裕1）
-    static constexpr uint32_t kMaxPairsPerFrame = 64; // 1フレームに記録できるスパン上限
+    static constexpr uint32_t kRing = 3;                             // リングバッファ段数（in-flight 2F + 余裕1）
+    static constexpr uint32_t kMaxPairsPerFrame = 64;                // 1フレームに記録できるスパン上限
     static constexpr uint32_t kSlotsPerRing = kMaxPairsPerFrame * 2; // begin/end で2スロット
     static constexpr uint32_t kTotalSlots = kRing * kSlotsPerRing;
 
-    struct Entry {
+    struct Entry
+    {
         std::string label;
-        uint32_t pair;   // ring 内ペアindex
-        bool isCompute;  // どちらのキューで記録したか
+        uint32_t pair;  // ring 内ペアindex
+        bool isCompute; // どちらのキューで記録したか
     };
-    struct RingFrame {
+    struct RingFrame
+    {
         std::vector<Entry> entries;
         bool valid = false; // 一度でも記録・resolve したか（最初の数フレームの読み戻し抑止）
     };
 
-    struct Result {
+    struct Result
+    {
         std::string label;
         double ms;
         bool isCompute;

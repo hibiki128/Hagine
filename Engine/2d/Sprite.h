@@ -12,7 +12,8 @@ class SpriteCommon;
 /// スプライト描画を管理するクラス
 /// 2D画像の描画、トランスフォーム、UV変換などを制御
 /// </summary>
-class Sprite {
+class Sprite
+{
   public:
     /// ===================================================
     /// public method
@@ -68,7 +69,8 @@ class Sprite {
     void SetFlipY(bool isFlipY) { isFlipY_ = isFlipY; }
     void SetTexLeftTop(const Vector2 &textureLeftTop_) { this->textureLeftTop_ = textureLeftTop_; }
     void SetTexSize(const Vector2 &textureSize_) { this->textureSize_ = textureSize_; }
-    void SetUVTransform(const Matrix4x4 &uvTransform) {
+    void SetUVTransform(const Matrix4x4 &uvTransform)
+    {
         materialData_->uvTransform = uvTransform;
         uvSize_.x = sqrt(uvTransform.m[0][0] * uvTransform.m[0][0] + uvTransform.m[1][0] * uvTransform.m[1][0]);
         uvSize_.y = sqrt(uvTransform.m[0][1] * uvTransform.m[0][1] + uvTransform.m[1][1] * uvTransform.m[1][1]);
@@ -118,41 +120,41 @@ class Sprite {
     /// private variables
     /// ===================================================
 
-    SpriteCommon *spriteCommon_ = nullptr;        // スプライト共通処理
-    SrvManager *srvManager_ = nullptr;            // SRV管理
+    SpriteCommon *spriteCommon_ = nullptr; // スプライト共通処理
+    SrvManager *srvManager_ = nullptr;     // SRV管理
 
     Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_ = nullptr; // 頂点リソース
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource_ = nullptr;  // インデックスリソース
-    SpriteVertexData *vertexData_ = nullptr;                         // 頂点データ
+    SpriteVertexData *vertexData_ = nullptr;                          // 頂点データ
     uint32_t *indexData_ = nullptr;                                   // インデックスデータ
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView_{};                     // 頂点バッファビュー
     D3D12_INDEX_BUFFER_VIEW indexBufferView_{};                       // インデックスバッファビュー
 
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_ = nullptr; // マテリアルリソース
-    SpriteMaterial *materialData_ = nullptr;                           // マテリアルデータ
+    SpriteMaterial *materialData_ = nullptr;                            // マテリアルデータ
 
     Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource_; // 変換行列リソース
     TransformationMatrix *transformationMatrixData_ = nullptr;            // 変換行列データ
 
-    Vector2 position_ = {0.0f, 0.0f};           // 座標
-    float rotation_ = 0.0f;                      // 回転角度
-    Vector2 size_ = {640.0f, 360.0f};            // サイズ
+    Vector2 position_ = {0.0f, 0.0f}; // 座標
+    float rotation_ = 0.0f;           // 回転角度
+    Vector2 size_ = {640.0f, 360.0f}; // サイズ
 
-    std::string fullpath_;                       // ファイルパス
-    Vector2 anchorPoint_ = {0.0f, 0.0f};        // アンカーポイント
+    std::string fullpath_;               // ファイルパス
+    Vector2 anchorPoint_ = {0.0f, 0.0f}; // アンカーポイント
 
-    bool isFlipX_ = false;                      // 左右反転フラグ
-    bool isFlipY_ = false;                      // 上下反転フラグ
-    bool isbackmost_ = false;                   // 背面フラグ
+    bool isFlipX_ = false;    // 左右反転フラグ
+    bool isFlipY_ = false;    // 上下反転フラグ
+    bool isbackmost_ = false; // 背面フラグ
 
-    Vector2 textureLeftTop_ = {0.0f, 0.0f};      // テクスチャ左上座標
-    Vector2 textureSize_ = {512.0f, 512.0f};     // テクスチャサイズ
+    Vector2 textureLeftTop_ = {0.0f, 0.0f};  // テクスチャ左上座標
+    Vector2 textureSize_ = {512.0f, 512.0f}; // テクスチャサイズ
 
-    uint32_t instanceCount_ = 1;                 // インスタンス数
-    uint32_t transformationMatrixSrvIndex_ = 0;  // 変換行列SRVインデックス
+    uint32_t instanceCount_ = 1;                // インスタンス数
+    uint32_t transformationMatrixSrvIndex_ = 0; // 変換行列SRVインデックス
 
-    float uvRotate_ = 0.0f;                     // UV回転角度
-    Vector2 uvSize_ = {1.0f, 1.0f};             // UVサイズ
-    Vector2 uvPosition_ = {0.0f, 0.0f};         // UV座標
+    float uvRotate_ = 0.0f;             // UV回転角度
+    Vector2 uvSize_ = {1.0f, 1.0f};     // UVサイズ
+    Vector2 uvPosition_ = {0.0f, 0.0f}; // UV座標
 };
 } // namespace Hagine

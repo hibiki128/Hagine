@@ -30,11 +30,12 @@
 #include "SpriteManager.h"
 #include "line/DrawLine3D.h"
 #include "Edit/MotionEditor/MotionEditor.h"
-#include"Utility/LoadFile/Csv/CsvLoad.h"
+#include "Utility/LoadFile/Csv/CsvLoad.h"
 #include "Render/DrawSystem.h"
 #include <memory>
 namespace Hagine {
-class Framework {
+class Framework
+{
   public: // メンバ関数
     virtual ~Framework() = default;
 

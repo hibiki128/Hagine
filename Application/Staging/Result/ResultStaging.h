@@ -5,7 +5,8 @@
 /// <summary>
 /// リザルト演出用クラス
 /// </summary>
-class ResultStaging {
+class ResultStaging
+{
 
   public:
     /// ===================================================
@@ -92,25 +93,27 @@ class ResultStaging {
 
     int fireWorks_count_ = kFireWorksCount; // 花火の総数
 
-    struct FireWorkState {
-        enum class Phase {
+    struct FireWorkState
+    {
+        enum class Phase
+        {
             Ready,     // 待機中
             Rising,    // 上昇中
             Exploding, // 爆発中
         };
-        Phase phase = Phase::Ready;     // 現在のフェーズ
-        float timer = 0.0f;             // タイマー
-        Hagine::Vector3 startPosition;          // 開始位置
-        Hagine::Vector3 explodePosition;        // 爆発位置
+        Phase phase = Phase::Ready;      // 現在のフェーズ
+        float timer = 0.0f;              // タイマー
+        Hagine::Vector3 startPosition;   // 開始位置
+        Hagine::Vector3 explodePosition; // 爆発位置
     };
 
     std::vector<FireWorkState> fireWorkStates_; // 花火の状態リスト
 
-    Hagine::Vector3 fireWorkAreaCenter_ = {-135.0f, -25.0f, -200.0f};            // 花火発生エリアの中心
-    Hagine::Vector3 fireWorkAreaSize_ = {300.0f, 20.0f, 100.0f};      // 花火発生エリアのサイズ
+    Hagine::Vector3 fireWorkAreaCenter_ = {-135.0f, -25.0f, -200.0f};                    // 花火発生エリアの中心
+    Hagine::Vector3 fireWorkAreaSize_ = {300.0f, 20.0f, 100.0f};                         // 花火発生エリアのサイズ
     Hagine::Quaternion fireWorkAreaRotation_ = Hagine::Quaternion::IdentityQuaternion(); // 花火発生エリアの回転
 
-    float nextFireWorkTimer_ = 0.0f;             // 次の花火までのタイマー
+    float nextFireWorkTimer_ = 0.0f;                   // 次の花火までのタイマー
     float minFireWorkInterval_ = kMinFireWorkInterval; // 最小発射間隔
     float maxFireWorkInterval_ = kMaxFireWorkInterval; // 最大発射間隔
 };

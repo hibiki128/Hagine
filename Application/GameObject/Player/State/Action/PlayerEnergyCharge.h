@@ -8,7 +8,8 @@
 /// プレイヤーのエネルギーチャージ状態を管理するクラス
 /// エネルギーを回復する
 /// </summary>
-class PlayerEnergyCharge : public PlayerBaseState {
+class PlayerEnergyCharge : public PlayerBaseState
+{
   public:
     /// ===================================================
     /// public method

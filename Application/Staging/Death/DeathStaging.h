@@ -6,7 +6,8 @@
 /// <summary>
 /// 死亡演出用クラス
 /// </summary>
-class DeathStaging {
+class DeathStaging
+{
   public:
     /// ===================================================
     /// public method
@@ -60,18 +61,18 @@ class DeathStaging {
     static constexpr float kMinVelocityY = -1.0f;      // Y方向最小速度
     static constexpr float kMinVelocityZ = -0.5f;      // Z方向最小速度
 
-    Hagine::Vector3 position_{};       // 座標
-    Hagine::Vector3 position_R_Arm{};  // 右腕座標
-    Hagine::Vector3 position_L_Arm{};  // 左腕座標
-    Hagine::Vector4 color_{};          // 色
-    Hagine::Vector4 color_R_Arm{};     // 右腕の色
-    Hagine::Vector4 color_L_Arm{};     // 左腕の色
+    Hagine::Vector3 position_{};      // 座標
+    Hagine::Vector3 position_R_Arm{}; // 右腕座標
+    Hagine::Vector3 position_L_Arm{}; // 左腕座標
+    Hagine::Vector4 color_{};         // 色
+    Hagine::Vector4 color_R_Arm{};    // 右腕の色
+    Hagine::Vector4 color_L_Arm{};    // 左腕の色
 
-    float time_{};             // 経過時間
+    float time_{}; // 経過時間
 
-    bool isStart_ = false;      // 開始フラグ
+    bool isStart_ = false; // 開始フラグ
 
-    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_ = nullptr;       // 死亡パーティクル
-    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_R_Arm = nullptr;  // 右腕死亡パーティクル
-    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_L_Arm = nullptr;  // 左腕死亡パーティクル
+    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_ = nullptr;      // 死亡パーティクル
+    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_R_Arm = nullptr; // 右腕死亡パーティクル
+    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_L_Arm = nullptr; // 左腕死亡パーティクル
 };

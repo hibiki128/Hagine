@@ -10,7 +10,8 @@
 #include <Object/Base/BaseObject.h>
 
 namespace Hagine {
-class LevelData {
+class LevelData
+{
   public:
     /// ===================================================
     /// public method
@@ -39,19 +40,22 @@ class LevelData {
     /// private structs
     /// ===================================================
 
-    struct Transform {
+    struct Transform
+    {
         Vector3 translation = {0.0f, 0.0f, 0.0f};
         Vector3 rotation = {0.0f, 0.0f, 0.0f};
         Vector3 scaling = {1.0f, 1.0f, 1.0f};
     };
 
-    struct ColliderData {
+    struct ColliderData
+    {
         std::string type;
         Vector3 center = {0.0f, 0.0f, 0.0f};
         Vector3 size = {1.0f, 1.0f, 1.0f};
     };
 
-    struct ObjectData {
+    struct ObjectData
+    {
         std::string type;
         std::string name;
         Transform transform;

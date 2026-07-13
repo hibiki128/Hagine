@@ -1,7 +1,8 @@
 #include "BaseScene.h"
 
 namespace Hagine {
-void BaseScene::Initialize() {
+void BaseScene::Initialize()
+{
     audio_ = Audio::GetInstance();
     input_ = Input::GetInstance();
     lightGroup_ = LightGroup::GetInstance();
@@ -11,31 +12,40 @@ void BaseScene::Initialize() {
     objectManager_ = BaseObjectManager::GetInstance();
 }
 
-void BaseScene::Finalize() {
-    if (drawSystem_) {
+void BaseScene::Finalize()
+{
+    if (drawSystem_)
+    {
         drawSystem_->Clear();
     }
 }
 
-void BaseScene::Update() {
+void BaseScene::Update()
+{
 }
 
-void BaseScene::Draw() {
+void BaseScene::Draw()
+{
 }
 
-void BaseScene::AddSceneSetting() {
+void BaseScene::AddSceneSetting()
+{
 }
 
-void BaseScene::AddObjectSetting() {
+void BaseScene::AddObjectSetting()
+{
 }
 
-void BaseScene::AddParticleSetting() {
+void BaseScene::AddParticleSetting()
+{
 }
 
-void BaseScene::DrawForOffScreen() {
+void BaseScene::DrawForOffScreen()
+{
 }
 
-void BaseScene::DrawParticleEditorUI() {
+void BaseScene::DrawParticleEditorUI()
+{
 #ifdef USE_IMGUI
     // CPUパーティクルは従来どおり専用ウィンドウで編集。
     ImGui::Begin("CPUパーティクル");
@@ -49,7 +59,8 @@ void BaseScene::DrawParticleEditorUI() {
 #endif // USE_IMGUI
 }
 
-void BaseScene::DrawAllObjects() {
+void BaseScene::DrawAllObjects()
+{
     spriteManager_->DrawAll();
     objectManager_->Draw(vp_);
 

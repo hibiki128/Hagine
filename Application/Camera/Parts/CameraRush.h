@@ -9,7 +9,8 @@ class Player;
 /// フォローカメラの Rush（突進）専用カメラパーツ
 /// 突進中の遠距離追従と、通常カメラへの復帰補間を担当する
 /// </summary>
-class CameraRush {
+class CameraRush
+{
   public:
     /// ===================================================
     /// public method
@@ -55,15 +56,15 @@ class CameraRush {
     static constexpr float kEasingMaxValue = 1.0f;      ///< イージング最大値
 
     // Rush関連の倍率
-    static constexpr float kHighDistSpeedMultiplier = 3.0f;  ///< 高速追従倍率
-    static constexpr float kMidDistSpeedMultiplier = 2.0f;   ///< 中速追従倍率
-    static constexpr float kRotationSpeedMultiplier = 0.5f;  ///< 回転速度倍率
-    static constexpr float kRushDirectionBlendRatio = 0.3f;  ///< Rush方向ブレンド率
+    static constexpr float kHighDistSpeedMultiplier = 3.0f; ///< 高速追従倍率
+    static constexpr float kMidDistSpeedMultiplier = 2.0f;  ///< 中速追従倍率
+    static constexpr float kRotationSpeedMultiplier = 0.5f; ///< 回転速度倍率
+    static constexpr float kRushDirectionBlendRatio = 0.3f; ///< Rush方向ブレンド率
 
     FollowCamera *owner_ = nullptr; ///< 所有者のフォローカメラ
 
-    Hagine::Quaternion rushCameraRotation_;                  ///< Rush中の固定回転
-    Hagine::Vector3 rushCameraPosition_;                     ///< Rush中の固定位置
+    Hagine::Quaternion rushCameraRotation_;                   ///< Rush中の固定回転
+    Hagine::Vector3 rushCameraPosition_;                      ///< Rush中の固定位置
     Hagine::Vector3 rushCameraOffset_ = {0.0f, 8.0f, -20.0f}; ///< Rush中のカメラオフセット
 
     float rushEnemyBehindOffset_ = 3.0f;         ///< 敵の背後にとる距離

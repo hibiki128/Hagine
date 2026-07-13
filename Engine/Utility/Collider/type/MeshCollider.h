@@ -16,7 +16,8 @@ class Model;
 /// ワールド空間へ変換して評価する（BVHはローカル空間のまま保持し再構築不要）。
 /// ※ 非一様スケールには未対応（一様スケール前提）。
 /// </summary>
-class MeshCollider : public ColliderBase {
+class MeshCollider : public ColliderBase
+{
   public:
     /// ===================================================
     /// public method
@@ -117,12 +118,13 @@ class MeshCollider : public ColliderBase {
     /// 内部ノードは left/right に子インデックスを持ち、葉ノードは start/count に
     /// triangles_ 配列内の三角形範囲を持つ
     /// </summary>
-    struct BVHNode {
-        AABB bounds{};   // ノードの境界ボックス
-        int left = -1;   // 左子ノードインデックス（葉なら-1）
-        int right = -1;  // 右子ノードインデックス
-        int start = 0;   // 葉: 三角形開始インデックス
-        int count = 0;   // 葉: 三角形数
+    struct BVHNode
+    {
+        AABB bounds{};  // ノードの境界ボックス
+        int left = -1;  // 左子ノードインデックス（葉なら-1）
+        int right = -1; // 右子ノードインデックス
+        int start = 0;  // 葉: 三角形開始インデックス
+        int count = 0;  // 葉: 三角形数
         bool IsLeaf() const { return left < 0; }
     };
 
@@ -160,14 +162,14 @@ class MeshCollider : public ColliderBase {
     Matrix4x4 lastDrawMatrix_ = MakeIdentity4x4();        // 前回ワールド変換に使った行列
     bool worldEdgesValid_ = false;                        // ワールドエッジキャッシュが有効か
 
-    std::function<Matrix4x4()> getMatrixFunc_;       // ワールド行列取得関数
+    std::function<Matrix4x4()> getMatrixFunc_; // ワールド行列取得関数
     // 初回 UpdateWorldTransform 前に描画・判定されても不正な行列にならないよう単位行列で初期化する
-    Matrix4x4 cachedWorld_ = MakeIdentity4x4();      // キャッシュしたワールド行列
-    Matrix4x4 cachedInverse_ = MakeIdentity4x4();    // その逆行列
-    float cachedScale_ = 1.0f;                       // 一様スケール（半径・距離補正用）
+    Matrix4x4 cachedWorld_ = MakeIdentity4x4();   // キャッシュしたワールド行列
+    Matrix4x4 cachedInverse_ = MakeIdentity4x4(); // その逆行列
+    float cachedScale_ = 1.0f;                    // 一様スケール（半径・距離補正用）
 
-    std::string sourceModelPath_;       // 構築元モデルのパス（保存用）
-    bool isWireframeVisible_ = true;    // 三角形ワイヤー表示フラグ
+    std::string sourceModelPath_;    // 構築元モデルのパス（保存用）
+    bool isWireframeVisible_ = true; // 三角形ワイヤー表示フラグ
 
     // Mesh×Mesh押し戻し用：全三角形を内包するローカル空間のバウンディング球（構築時に算出）
     Vector3 localBoundingCenter_ = {0.0f, 0.0f, 0.0f};

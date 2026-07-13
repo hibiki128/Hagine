@@ -6,7 +6,8 @@
 /// PostEffectChainのスロット順にエフェクトをピンポンバッファで適用し
 /// 最終結果をfinalResultTextureに書き込む
 namespace Hagine {
-class PostEffectRenderer {
+class PostEffectRenderer
+{
   public:
     void Initialize(DirectXCommon *dxCommon, SrvManager *srvManager, PipeLineManager *psoManager);
 
@@ -42,8 +43,8 @@ class PostEffectRenderer {
                           int inputPingPong,
                           int outputRtvIndex);
 
-    DirectXCommon *dxCommon_   = nullptr;
-    SrvManager *srvManager_    = nullptr;
+    DirectXCommon *dxCommon_ = nullptr;
+    SrvManager *srvManager_ = nullptr;
     PipeLineManager *psoManager_ = nullptr;
     RenderBuffer renderBuffer_;
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle_{};

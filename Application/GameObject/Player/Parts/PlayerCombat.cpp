@@ -8,13 +8,16 @@
 
 using namespace Hagine;
 
-PlayerCombat::PlayerCombat() {
+PlayerCombat::PlayerCombat()
+{
 }
 
-PlayerCombat::~PlayerCombat() {
+PlayerCombat::~PlayerCombat()
+{
 }
 
-void PlayerCombat::Init(Player *owner) {
+void PlayerCombat::Init(Player *owner)
+{
     owner_ = owner;
 
     chargeShot_ = std::make_unique<ChargeShot>();
@@ -27,7 +30,8 @@ void PlayerCombat::Init(Player *owner) {
     makanAttack_ptr_ = makanAttack.get();
     BaseObjectManager::GetInstance()->AddObject(std::move(makanAttack));
 
-    if (!comboInitialized_) {
+    if (!comboInitialized_)
+    {
         punchCombo_.SetName("PunchCombo"); // DataHandlerのファイル名に使われる
         // 攻撃の見た目は本体アニメーション（comboAnimations_）で再生するため、
         // モーション再生用ターゲットは不要（nullptr）。ダメージ等のパラメータのみ指定する
@@ -65,7 +69,8 @@ void PlayerCombat::Init(Player *owner) {
     // コンボが攻撃を発火したとき attackCollider_ を有効化するコールバックを登録
     punchCombo_.SetOnAttackFired(
         [this](float damage, float knockback, float duration, float delay) {
-            if (attackCollider_) {
+            if (attackCollider_)
+            {
                 attackCollider_->Activate(damage, knockback, duration, delay);
             }
             // 入力表示UI用: 実際に発火した近接攻撃の段名を記録する
@@ -75,35 +80,46 @@ void PlayerCombat::Init(Player *owner) {
         });
 }
 
-void PlayerCombat::UpdateComboAndCollider() {
+void PlayerCombat::UpdateComboAndCollider()
+{
     ComboUpdate();
-    if (attackCollider_) {
+    if (attackCollider_)
+    {
         attackCollider_->Update(owner_->GetDt());
     }
 }
 
-void PlayerCombat::ComboUpdate() {
+void PlayerCombat::ComboUpdate()
+{
     // ガード中・必殺技演出中は近接コンボを実行できない
     if (owner_->GetCurrentStateName() != "EnergyCharge" && !IsCharging() &&
-        !owner_->IsGuarding() && !IsSkillStaging()) {
+        !owner_->IsGuarding() && !IsSkillStaging())
+    {
         punchCombo_.Update(owner_->GetDt());
 
-        if (!owner_->GetGamePad()->IsConnected()) {
+        if (!owner_->GetGamePad()->IsConnected())
+        {
             // キーボード入力
-            if (owner_->GetInput()->TriggerKey(DIK_H)) {
+            if (owner_->GetInput()->TriggerKey(DIK_H))
+            {
                 punchCombo_.TryExecuteCombo();
             }
-        } else {
+        }
+        else
+        {
             // ゲームパッド入力
-            if (owner_->GetGamePad()->IsTrigger(XINPUT_GAMEPAD_X)) {
+            if (owner_->GetGamePad()->IsTrigger(XINPUT_GAMEPAD_X))
+            {
                 punchCombo_.TryExecuteCombo();
             }
         }
     }
 }
 
-void PlayerCombat::UpdateChargeShot() {
-    if (!chargeShot_) {
+void PlayerCombat::UpdateChargeShot()
+{
+    if (!chargeShot_)
+    {
         return;
     }
     chargeShot_->SetIsSkillMenu(isSkillMenu_);
@@ -111,30 +127,37 @@ void PlayerCombat::UpdateChargeShot() {
 
     // 入力表示UI用：チャージ開始（溜め始め）とチャージ弾発射を通知
     bool nowCharge = chargeShot_->GetIsCharge();
-    if (nowCharge && !prevChargeState_) {
+    if (nowCharge && !prevChargeState_)
+    {
         owner_->EmitAction(Player::ActionKind::ChargeStart);
     }
     prevChargeState_ = nowCharge;
-    if (chargeShot_->ConsumeFired()) {
+    if (chargeShot_->ConsumeFired())
+    {
         owner_->EmitAction(Player::ActionKind::ChargeShot);
     }
 }
 
-void PlayerCombat::UpdateSkillCutscene() {
+void PlayerCombat::UpdateSkillCutscene()
+{
     skillCutscene_.Update(owner_->GetDt());
 }
 
-bool PlayerCombat::IsCharging() const {
+bool PlayerCombat::IsCharging() const
+{
     return chargeShot_ && chargeShot_->GetIsCharge();
 }
 
-void PlayerCombat::SetChargeActionLocked(bool locked) {
-    if (chargeShot_) {
+void PlayerCombat::SetChargeActionLocked(bool locked)
+{
+    if (chargeShot_)
+    {
         chargeShot_->SetActionLocked(locked);
     }
 }
 
-void PlayerCombat::FireNormalBullet() {
+void PlayerCombat::FireNormalBullet()
+{
     std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
     auto bullet = std::make_unique<PlayerBullet>();
     bullet->Init(bulletName);
@@ -146,27 +169,38 @@ void PlayerCombat::FireNormalBullet() {
     owner_->EmitAction(Player::ActionKind::NormalShot); // 入力表示UI用：通常射撃を通知
 }
 
-void PlayerCombat::Shot() {
+void PlayerCombat::Shot()
+{
     // ガード中・必殺技演出中は遠距離射撃を発射できない（既存弾の更新は下で継続する）
     if (owner_->GetCurrentStateName() != "EnergyCharge" && !isSkillMenu_ &&
-        !owner_->IsGuarding() && !IsSkillStaging()) {
-        if (!owner_->GetGamePad()->IsConnected()) {
+        !owner_->IsGuarding() && !IsSkillStaging())
+    {
+        if (!owner_->GetGamePad()->IsConnected())
+        {
             // キーボード入力
-            if (owner_->GetInput()->TriggerKey(DIK_J)) {
-                if (owner_->ConsumeEnergy(kNormalShotEnergyCost)) {
+            if (owner_->GetInput()->TriggerKey(DIK_J))
+            {
+                if (owner_->ConsumeEnergy(kNormalShotEnergyCost))
+                {
                     FireNormalBullet();
                 }
             }
-        } else {
+        }
+        else
+        {
             // ゲームパッド入力 - Yボタンの押下時間を計測
-            if (owner_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y) && !isSkillMenu_) {
+            if (owner_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y) && !isSkillMenu_)
+            {
                 yButtonHoldTime_ += owner_->GetDt();
             }
 
             // Yボタンが離された瞬間、長押し判定閾値未満なら通常弾を発射
-            if (owner_->GetGamePad()->IsRelease(XINPUT_GAMEPAD_Y) && !isSkillMenu_) {
-                if (yButtonHoldTime_ < kYButtonChargeThreshold) {
-                    if (owner_->ConsumeEnergy(kNormalShotEnergyCost)) {
+            if (owner_->GetGamePad()->IsRelease(XINPUT_GAMEPAD_Y) && !isSkillMenu_)
+            {
+                if (yButtonHoldTime_ < kYButtonChargeThreshold)
+                {
+                    if (owner_->ConsumeEnergy(kNormalShotEnergyCost))
+                    {
                         FireNormalBullet();
                     }
                 }
@@ -175,62 +209,77 @@ void PlayerCombat::Shot() {
             }
 
             // Yボタンが押されていない時はタイマーをリセット
-            if (!owner_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y)) {
+            if (!owner_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y))
+            {
                 yButtonHoldTime_ = 0.0f;
             }
         }
     }
 
     // 弾の更新と生存チェック
-    for (auto it = bullets_.begin(); it != bullets_.end();) {
+    for (auto it = bullets_.begin(); it != bullets_.end();)
+    {
         (*it)->Update();
         (*it)->SetSpeed(B_speed_);
         (*it)->SetAcce(B_acce_);
         (*it)->UpdateWorldTransformHierarchy();
 
-        if (!(*it)->IsAlive()) {
+        if (!(*it)->IsAlive())
+        {
             it = bullets_.erase(it);
-        } else {
+        }
+        else
+        {
             ++it;
         }
     }
 }
 
-void PlayerCombat::SkillShot() {
+void PlayerCombat::SkillShot()
+{
     // ガード中は必殺技を発動できない
-    if (owner_->IsGuarding()) {
+    if (owner_->IsGuarding())
+    {
         return;
     }
     // チャージショット溜め中は発動できない
-    if (IsCharging()) {
+    if (IsCharging())
+    {
         return;
     }
 
     // 発動入力の判定
     bool triggered = false;
-    if (!owner_->GetGamePad()->IsConnected()) {
+    if (!owner_->GetGamePad()->IsConnected())
+    {
         // キーボード入力
         triggered = owner_->GetInput()->TriggerKey(DIK_G);
-    } else {
+    }
+    else
+    {
         // ゲームパッド入力（スキルメニュー中のYボタン）
         triggered = isSkillMenu_ && owner_->GetGamePad()->IsTrigger(XINPUT_GAMEPAD_Y);
     }
-    if (!triggered) {
+    if (!triggered)
+    {
         return;
     }
 
     // 既に発動中・演出中なら何もしない
-    if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive() || skillCutscene_.IsActive()) {
+    if (!makanAttack_ptr_ || makanAttack_ptr_->IsActive() || skillCutscene_.IsActive())
+    {
         return;
     }
-    if (!owner_->ConsumeEnergy(kSkillShotEnergyCost)) {
+    if (!owner_->ConsumeEnergy(kSkillShotEnergyCost))
+    {
         return; // エネルギー不足なら発射しない
     }
 
     StartSkillStaging();
 }
 
-void PlayerCombat::StartSkillStaging() {
+void PlayerCombat::StartSkillStaging()
+{
     makanAttack_ptr_->SetPlayer(owner_);
 
     // 入力の時点では撃たず、カメラ顔アップ演出→通常カメラ復帰→遅延の後に発動する。
@@ -242,64 +291,79 @@ void PlayerCombat::StartSkillStaging() {
     });
 }
 
-void PlayerCombat::Draw(const ViewProjection &viewProjection) {
-    for (auto &bullet : bullets_) {
+void PlayerCombat::Draw(const ViewProjection &viewProjection)
+{
+    for (auto &bullet : bullets_)
+    {
         bullet->Draw(viewProjection);
     }
     chargeShot_->Draw(viewProjection);
 }
 
-void PlayerCombat::DrawChargeParticle(const ViewProjection &viewProjection) {
+void PlayerCombat::DrawChargeParticle(const ViewProjection &viewProjection)
+{
     chargeShot_->DrawParticle(viewProjection);
 }
 
-void PlayerCombat::DrawAttackParticles(const ViewProjection &viewProjection) {
-    for (auto &bullet : bullets_) {
+void PlayerCombat::DrawAttackParticles(const ViewProjection &viewProjection)
+{
+    for (auto &bullet : bullets_)
+    {
         bullet->DrawParticle(viewProjection);
     }
 
-    if (attackCollider_) {
+    if (attackCollider_)
+    {
         attackCollider_->DrawParticle(viewProjection);
     }
 
-    if (makanAttack_ptr_) {
+    if (makanAttack_ptr_)
+    {
         makanAttack_ptr_->DrawParticle(viewProjection);
     }
 }
 
-void PlayerCombat::DrawParticleCompute(const ViewProjection &viewProjection) {
+void PlayerCombat::DrawParticleCompute(const ViewProjection &viewProjection)
+{
     chargeShot_->DrawParticleCompute(viewProjection);
 }
 
-void PlayerCombat::Save(DataHandler *data) {
+void PlayerCombat::Save(DataHandler *data)
+{
     data->Save("bulletSpeed", B_speed_);
     data->Save("bulletAcce", B_acce_);
 }
 
-void PlayerCombat::Load(DataHandler *data) {
+void PlayerCombat::Load(DataHandler *data)
+{
     B_speed_ = data->Load<float>("bulletSpeed", 60.0f);
     B_acce_ = data->Load<float>("bulletAcce", 5.0f);
 }
 
-void PlayerCombat::DrawBulletImGui() {
+void PlayerCombat::DrawBulletImGui()
+{
 #ifdef USE_IMGUI
     ImGui::DragFloat("弾の速度", &B_speed_, 0.1f);
     ImGui::DragFloat("弾の加速度", &B_acce_, 0.1f);
 #endif // USE_IMGUI
 }
 
-void PlayerCombat::DrawImGui() {
+void PlayerCombat::DrawImGui()
+{
 #ifdef USE_IMGUI
-    if (makanAttack_ptr_) {
+    if (makanAttack_ptr_)
+    {
         makanAttack_ptr_->DebugImGui();
     }
 
-    if (ImGui::CollapsingHeader("コンボパラメータ")) {
+    if (ImGui::CollapsingHeader("コンボパラメータ"))
+    {
         punchCombo_.DrawImGui();
     }
 
     // ─── コンボアニメーション割り当て ───
-    if (ImGui::CollapsingHeader("コンボアニメーション割り当て")) {
+    if (ImGui::CollapsingHeader("コンボアニメーション割り当て"))
+    {
         static const char *kComboLabels[] = {
             "1段目: Jab",
             "2段目: Hook",
@@ -314,7 +378,8 @@ void PlayerCombat::DrawImGui() {
         ImGui::TextDisabled("空白のままにすると、その段はアニメーションを変更しません");
         ImGui::Spacing();
 
-        for (int i = 0; i < static_cast<int>(comboAnimations_.size()); ++i) {
+        for (int i = 0; i < static_cast<int>(comboAnimations_.size()); ++i)
+        {
             ImGui::PushID(i);
 
             // 現在実行中の段をハイライト
@@ -322,16 +387,20 @@ void PlayerCombat::DrawImGui() {
                                   ((punchCombo_.GetCurrentComboIndex() == 0
                                         ? punchCombo_.GetComboLength() - 1
                                         : punchCombo_.GetCurrentComboIndex() - 1) == i);
-            if (isCurrentStage) {
+            if (isCurrentStage)
+            {
                 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), ">>> %s", kComboLabels[i]);
-            } else {
+            }
+            else
+            {
                 ImGui::Text("%s", kComboLabels[i]);
             }
 
             char buf[256] = {};
             snprintf(buf, sizeof(buf), "%s", comboAnimations_[i].c_str());
             ImGui::SetNextItemWidth(380.0f);
-            if (ImGui::InputText("##animPath", buf, sizeof(buf))) {
+            if (ImGui::InputText("##animPath", buf, sizeof(buf)))
+            {
                 comboAnimations_[i] = buf;
             }
 
@@ -342,7 +411,8 @@ void PlayerCombat::DrawImGui() {
 #endif // USE_IMGUI
 }
 
-void PlayerCombat::RegisterParams() {
+void PlayerCombat::RegisterParams()
+{
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Player", "弾の速度", &B_speed_, {0.1f});
     hub->Register("Player", "弾の加速度", &B_acce_, {0.1f});

@@ -8,7 +8,8 @@ namespace Hagine {
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxcompiler.lib")
 
-void DirectXCommon::Finalize() {
+void DirectXCommon::Finalize()
+{
     // DXCコンパイラ関連の解放
     shaderCompiler_->Finalize();
 
@@ -41,7 +42,8 @@ void DirectXCommon::Finalize() {
     dxDevice_.reset();
 }
 
-void DirectXCommon::Initialize(WinApp *winApp) {
+void DirectXCommon::Initialize(WinApp *winApp)
+{
 
     // NULL検出
     assert(winApp);
@@ -102,28 +104,32 @@ void DirectXCommon::Initialize(WinApp *winApp) {
     computeCommandList_->Initialize(dxDevice_.get(), D3D12_COMMAND_LIST_TYPE_COMPUTE);
 }
 
-void DirectXCommon::CreateOffscreenSRV() {
+void DirectXCommon::CreateOffscreenSRV()
+{
     offScreenSrvIndex_ = SrvManager::GetInstance()->Allocate();
     SrvManager::GetInstance()->CreateSRVforRenderTexture(offScreenSrvIndex_, offScreenResource_.Get());
     offScreenSrvHandleCPU_ = SrvManager::GetInstance()->GetCPUDescriptorHandle(offScreenSrvIndex_);
     offScreenSrvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(offScreenSrvIndex_);
 }
 
-void DirectXCommon::CreateDepthSRV() {
+void DirectXCommon::CreateDepthSRV()
+{
     depthSrvIndex_ = SrvManager::GetInstance()->Allocate();
     SrvManager::GetInstance()->CreateSRVforDepth(depthSrvIndex_, depthStencilResource_.Get());
     depthSrvHandleCPU_ = SrvManager::GetInstance()->GetCPUDescriptorHandle(depthSrvIndex_);
     depthSrvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(depthSrvIndex_);
 }
 
-void DirectXCommon::RenderTargetViewInitialize() {
+void DirectXCommon::RenderTargetViewInitialize()
+{
     // バックバッファ・オフスクリーン共通のRTV設定
     D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
     rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
     //=================バックバッファ用のRTV（slot 0, 1）======================
-    for (uint32_t i = 0; i < swapChain_->GetBackBufferCount(); ++i) {
+    for (uint32_t i = 0; i < swapChain_->GetBackBufferCount(); ++i)
+    {
         rtvManager_->Create(i, swapChain_->GetBackBuffer(i), rtvDesc);
     }
 
@@ -138,7 +144,8 @@ void DirectXCommon::RenderTargetViewInitialize() {
     rtvManager_->Create(2, offScreenResource_.Get(), rtvDesc);
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::CreateAdditionalRTV(ID3D12Resource *resource, int index) {
+D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::CreateAdditionalRTV(ID3D12Resource *resource, int index)
+{
     D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
     rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -146,7 +153,8 @@ D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::CreateAdditionalRTV(ID3D12Resource *r
     return rtvManager_->Create(3 + index, resource, rtvDesc);
 }
 
-void DirectXCommon::PreRenderTexture() {
+void DirectXCommon::PreRenderTexture()
+{
     BarrierTransition(offScreenResource_.Get(),
                       D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -163,7 +171,8 @@ void DirectXCommon::PreRenderTexture() {
     commandList->RSSetScissorRects(1, &scissorRect_); // Scissorを設定
 }
 
-void DirectXCommon::PreDraw() {
+void DirectXCommon::PreDraw()
+{
     // 深度リソースをピクセルシェーダーリソースとして読み取る準備
     BarrierTransition(depthStencilResource_.Get(),
                       D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -184,11 +193,13 @@ void DirectXCommon::PreDraw() {
     commandList->RSSetScissorRects(1, &scissorRect_);
 }
 
-void DirectXCommon::TransitionDepthBarrier() {
+void DirectXCommon::TransitionDepthBarrier()
+{
     BarrierTransition(depthStencilResource_.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 }
 
-void DirectXCommon::PreDrawForEffects() {
+void DirectXCommon::PreDrawForEffects()
+{
     // マルチステージ用: バックバッファは既に遷移済みなので深度とオフスクリーンのみ遷移
     BarrierTransition(depthStencilResource_.Get(),
                       D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -199,7 +210,8 @@ void DirectXCommon::PreDrawForEffects() {
     commandList->RSSetScissorRects(1, &scissorRect_);
 }
 
-void DirectXCommon::PostDraw() {
+void DirectXCommon::PostDraw()
+{
     UINT backBufferIndex = swapChain_->GetCurrentBackBufferIndex();
 
     // バックバッファを PRESENT 状態に遷移
@@ -232,16 +244,19 @@ void DirectXCommon::PostDraw() {
 
     // Compute 側も同スロットをリセット（Direct の完了が Compute 完了を含意するため安全）
     // このフレームでパーティクルが1つも描画されなかった場合はリストが Open のままなので先に Close する
-    if (computeCommandList_->IsOpen()) {
+    if (computeCommandList_->IsOpen())
+    {
         computeCommandList_->Close();
     }
     computeCommandList_->Reset(frameIndex_);
 }
 
-void DirectXCommon::BeginComputeFrame() {
+void DirectXCommon::BeginComputeFrame()
+{
     // 同フレーム内で前のエミッターが既に Close+Execute 済みの場合
     // → CPU 側で完了を待ち、アロケータをリセットして再オープンする
-    if (!computeCommandList_->IsOpen()) {
+    if (!computeCommandList_->IsOpen())
+    {
         computeQueue_->WaitForFenceCPU(computeQueue_->GetLastSignaledValue());
         computeCommandList_->Reset(frameIndex_);
     }
@@ -251,9 +266,11 @@ void DirectXCommon::BeginComputeFrame() {
     computeCommandList_->Get()->SetDescriptorHeaps(_countof(heaps), heaps);
 }
 
-void DirectXCommon::ExecuteComputeCommands() {
+void DirectXCommon::ExecuteComputeCommands()
+{
     // 記録されていない（リストが既に閉じている）場合は何もしない
-    if (!computeCommandList_->IsOpen()) {
+    if (!computeCommandList_->IsOpen())
+    {
         return;
     }
 
@@ -264,18 +281,22 @@ void DirectXCommon::ExecuteComputeCommands() {
     computeQueue_->Signal();
 }
 
-void DirectXCommon::WaitForComputeOnDirectQueue() {
+void DirectXCommon::WaitForComputeOnDirectQueue()
+{
     // GPU 側で Direct Queue が Compute Queue の完了を待つ（CPU はブロックしない）
     directQueue_->WaitOnGPU(*computeQueue_);
 }
 
-void DirectXCommon::FlushComputeQueue() {
-    if (computeQueue_) {
+void DirectXCommon::FlushComputeQueue()
+{
+    if (computeQueue_)
+    {
         computeQueue_->Flush();
     }
 }
 
-void DirectXCommon::TransitionUAVBarrier(ID3D12Resource *pResource) {
+void DirectXCommon::TransitionUAVBarrier(ID3D12Resource *pResource)
+{
     barrier_.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier_.Transition.pResource = pResource;
     barrier_.Transition.StateBefore = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
@@ -283,13 +304,15 @@ void DirectXCommon::TransitionUAVBarrier(ID3D12Resource *pResource) {
     directCommandList_->Get()->ResourceBarrier(1, &barrier_);
 }
 
-void DirectXCommon::TransitionSRVBarrier() {
+void DirectXCommon::TransitionSRVBarrier()
+{
     barrier_.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barrier_.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
     directCommandList_->Get()->ResourceBarrier(1, &barrier_);
 }
 
-void DirectXCommon::BarrierTransition(ID3D12Resource *pResource, D3D12_RESOURCE_STATES Before, D3D12_RESOURCE_STATES After) {
+void DirectXCommon::BarrierTransition(ID3D12Resource *pResource, D3D12_RESOURCE_STATES Before, D3D12_RESOURCE_STATES After)
+{
     // 今回のバリアはTransition
     barrier_.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     // Noneにしておく
@@ -304,7 +327,8 @@ void DirectXCommon::BarrierTransition(ID3D12Resource *pResource, D3D12_RESOURCE_
     directCommandList_->Get()->ResourceBarrier(1, &barrier_);
 }
 
-void DirectXCommon::ViewPortRectInitialize() {
+void DirectXCommon::ViewPortRectInitialize()
+{
     // クライアント領域のサイズと一緒にして画面全体に表示
     viewport_.Width = FLOAT(WinApp::kClientWidth);
     viewport_.Height = FLOAT(WinApp::kClientHeight);
@@ -314,7 +338,8 @@ void DirectXCommon::ViewPortRectInitialize() {
     viewport_.MaxDepth = 1.0f;
 }
 
-void DirectXCommon::ScissorRectInitialize() {
+void DirectXCommon::ScissorRectInitialize()
+{
     // 基本的にビューポートと同じ矩形が構成されるようにする
     scissorRect_.left = 0;
     scissorRect_.right = WinApp::kClientWidth;
@@ -323,31 +348,38 @@ void DirectXCommon::ScissorRectInitialize() {
 }
 
 #pragma region 委譲API
-IDxcBlob *DirectXCommon::CompileShader(const std::wstring &filePath, const wchar_t *profile) {
+IDxcBlob *DirectXCommon::CompileShader(const std::wstring &filePath, const wchar_t *profile)
+{
     return shaderCompiler_->Compile(filePath, profile);
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_t sizeInBytes, bool isUAV) {
+Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_t sizeInBytes, bool isUAV)
+{
     return resourceFactory_->CreateBufferResource(sizeInBytes, isUAV);
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(const DirectX::TexMetadata &metadata) {
+Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(const DirectX::TexMetadata &metadata)
+{
     return resourceFactory_->CreateTextureResource(metadata);
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateRenderTextureResource(uint32_t width, uint32_t height, DXGI_FORMAT format, D3D12_CLEAR_VALUE color) {
+Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateRenderTextureResource(uint32_t width, uint32_t height, DXGI_FORMAT format, D3D12_CLEAR_VALUE color)
+{
     return resourceFactory_->CreateRenderTextureResource(width, height, format, color);
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateAdditionalDepthResource(int32_t width, int32_t height) {
+Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateAdditionalDepthResource(int32_t width, int32_t height)
+{
     return resourceFactory_->CreateDepthStencilTextureResource(width, height);
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage &mipImages) {
+Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage &mipImages)
+{
     return resourceFactory_->UploadTextureData(texture, mipImages, directCommandList_->Get());
 }
 
-ID3D12CommandSignature *DirectXCommon::GetDispatchIndirectCommandSignature() {
+ID3D12CommandSignature *DirectXCommon::GetDispatchIndirectCommandSignature()
+{
     return resourceFactory_->GetDispatchIndirectCommandSignature();
 }
 #pragma endregion

@@ -44,14 +44,16 @@ namespace {
 //   同じデスクリプタに書き込んでしまい、フォントSRVが上書きされて文字・塗りが黒化する。
 static constexpr uint32_t kImGuiSrvOffset = 1;
 void ImGuiSrvAlloc(ImGui_ImplDX12_InitInfo * /*info*/,
-                   D3D12_CPU_DESCRIPTOR_HANDLE *outCpu, D3D12_GPU_DESCRIPTOR_HANDLE *outGpu) {
+                   D3D12_CPU_DESCRIPTOR_HANDLE *outCpu, D3D12_GPU_DESCRIPTOR_HANDLE *outGpu)
+{
     SrvManager *srv = SrvManager::GetInstance();
     uint32_t index = srv->Allocate() + kImGuiSrvOffset;
     *outCpu = srv->GetCPUDescriptorHandle(index);
     *outGpu = srv->GetGPUDescriptorHandle(index);
 }
 void ImGuiSrvFree(ImGui_ImplDX12_InitInfo * /*info*/,
-                  D3D12_CPU_DESCRIPTOR_HANDLE /*cpu*/, D3D12_GPU_DESCRIPTOR_HANDLE /*gpu*/) {
+                  D3D12_CPU_DESCRIPTOR_HANDLE /*cpu*/, D3D12_GPU_DESCRIPTOR_HANDLE /*gpu*/)
+{
     // 解放はあえて no-op（インデックスをプールへ戻さない）。
     // SrvManager::Free は ClearDescriptor で「予約インデックス側」をクリアするが、+1 規約では
     // そこは隣のリソースの実使用スロットに当たり、巻き込んでnull化してしまう。フォントアトラスの
@@ -59,7 +61,8 @@ void ImGuiSrvFree(ImGui_ImplDX12_InitInfo * /*info*/,
 }
 } // namespace
 
-void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) {
+void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager)
+{
 
     winApp_ = winApp;
     dxCommon_ = DirectXCommon::GetInstance();
@@ -136,7 +139,8 @@ void ImGuiManager::Initialize(WinApp *winApp, ImGuizmoManager *imguizmoManager) 
     imGuizmoManager_ = imguizmoManager;
 }
 
-void ImGuiManager::SetupTheme() {
+void ImGuiManager::SetupTheme()
+{
     // シックなモノクローム調ダークテーマ
     // 無彩色のグラファイトを基調とし、選択・操作中のみ淡いスチールブルーで強調する
     ImGuiStyle &style = ImGui::GetStyle();
@@ -255,13 +259,15 @@ void ImGuiManager::SetupTheme() {
     style.TabRounding = 4;
 
     // Viewportsの設定（マルチウィンドウモード）
-    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
 }
 
-void ImGuiManager::CreateDescriptorHeap() {
+void ImGuiManager::CreateDescriptorHeap()
+{
     HRESULT result;
 
     // デスクリプタヒープ設定
@@ -280,7 +286,8 @@ void ImGuiManager::CreateDescriptorHeap() {
         srvHeap_->GetGPUDescriptorHandleForHeapStart());
 }
 
-void ImGuiManager::Finalize() {
+void ImGuiManager::Finalize()
+{
     SaveCurrentLayout();
 // 後始末
 #ifdef USE_IMGUI
@@ -296,20 +303,23 @@ void ImGuiManager::Finalize() {
     SaveFlag();
 }
 
-void ImGuiManager::Begin() {
+void ImGuiManager::Begin()
+{
     // ImGuiフレーム開始
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 }
 
-void ImGuiManager::End() {
+void ImGuiManager::End()
+{
     ImGuiNotification::Draw();
     // 描画前準備
     ImGui::Render();
 }
 
-void ImGuiManager::Draw() {
+void ImGuiManager::Draw()
+{
     ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
 
     //// デスクリプタヒープの配列をセットするコマンド
@@ -319,8 +329,10 @@ void ImGuiManager::Draw() {
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 }
 
-void ImGuiManager::RenderMultiViewport() {
-    if (!multiViewport_) {
+void ImGuiManager::RenderMultiViewport()
+{
+    if (!multiViewport_)
+    {
         return;
     }
     // メインビューポートの描画・Present が済んだ後に、ドックから切り離した
@@ -330,33 +342,44 @@ void ImGuiManager::RenderMultiViewport() {
     ImGui::RenderPlatformWindowsDefault();
 }
 
-void ImGuiManager::UpdateIni() {
-    if (showGrid_) {
+void ImGuiManager::UpdateIni()
+{
+    if (showGrid_)
+    {
         DrawLine3D::GetInstance()->DrawGrid(gridY_, gridDivision_, gridSize_, gridColor_);
     }
-    if (!isShowMainUI_) {
+    if (!isShowMainUI_)
+    {
         SwitchToGameMode();
-    } else {
+    }
+    else
+    {
         SwitchToEditorMode();
     }
 }
 
-void ImGuiManager::ShowMainMenu() {
+void ImGuiManager::ShowMainMenu()
+{
     // メインメニューバー作成
-    if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMainMenuBar())
+    {
         // ファイルメニュー
-        if (ImGui::BeginMenu(ICON_FA_FILE " ファイル")) {
+        if (ImGui::BeginMenu(ICON_FA_FILE " ファイル"))
+        {
             // シーン管理セクション
-            if (ImGui::MenuItem(ICON_FA_DOWNLOAD " シーン保存", "Ctrl+Shift+S")) {
+            if (ImGui::MenuItem(ICON_FA_DOWNLOAD " シーン保存", "Ctrl+Shift+S"))
+            {
                 // BaseObjectManagerのシーン保存モーダルを開く
                 baseObjectManager_->OpenSceneSaveModal();
             }
-            if (ImGui::MenuItem(ICON_FA_UPLOAD " シーン読み込み", "Ctrl+Shift+L")) {
+            if (ImGui::MenuItem(ICON_FA_UPLOAD " シーン読み込み", "Ctrl+Shift+L"))
+            {
                 // BaseObjectManagerのシーン読み込みモーダルを開く
                 baseObjectManager_->OpenSceneLoadModal();
             }
             ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_DOOR_OPEN " 終了", "Alt+F4")) {
+            if (ImGui::MenuItem(ICON_FA_DOOR_OPEN " 終了", "Alt+F4"))
+            {
                 // アプリケーション終了処理
                 winApp_->ClosedWindow(); // 終了メッセージ送信
             }
@@ -364,30 +387,40 @@ void ImGuiManager::ShowMainMenu() {
         }
 
         // 編集メニュー
-        if (ImGui::BeginMenu(ICON_FA_EDIT " 編集")) {
-            if (ImGui::MenuItem(ICON_FA_UNDO " 元に戻す", "Ctrl+Z", false, false)) {
+        if (ImGui::BeginMenu(ICON_FA_EDIT " 編集"))
+        {
+            if (ImGui::MenuItem(ICON_FA_UNDO " 元に戻す", "Ctrl+Z", false, false))
+            {
             }
-            if (ImGui::MenuItem(ICON_FA_REDO " やり直し", "Ctrl+Y", false, false)) {
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_CUT " 切り取り", "Ctrl+X")) {
-            }
-            if (ImGui::MenuItem(ICON_FA_COPY " コピー", "Ctrl+C")) {
-            }
-            if (ImGui::MenuItem(ICON_FA_PASTE " 貼り付け", "Ctrl+V")) {
-            }
-            if (ImGui::MenuItem(ICON_FA_TRASH_ALT " 削除", "Delete")) {
+            if (ImGui::MenuItem(ICON_FA_REDO " やり直し", "Ctrl+Y", false, false))
+            {
             }
             ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_COG " 環境設定", "Ctrl+,")) {
+            if (ImGui::MenuItem(ICON_FA_CUT " 切り取り", "Ctrl+X"))
+            {
+            }
+            if (ImGui::MenuItem(ICON_FA_COPY " コピー", "Ctrl+C"))
+            {
+            }
+            if (ImGui::MenuItem(ICON_FA_PASTE " 貼り付け", "Ctrl+V"))
+            {
+            }
+            if (ImGui::MenuItem(ICON_FA_TRASH_ALT " 削除", "Delete"))
+            {
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem(ICON_FA_COG " 環境設定", "Ctrl+,"))
+            {
             }
             ImGui::EndMenu();
         }
 
         // 表示メニュー
-        if (ImGui::BeginMenu(ICON_FA_EYE " 表示")) {
+        if (ImGui::BeginMenu(ICON_FA_EYE " 表示"))
+        {
             // ウィンドウ表示設定（カテゴリ別にまとめて見やすくする）
-            if (ImGui::BeginMenu(ICON_FA_WINDOW_MAXIMIZE " ウィンドウ")) {
+            if (ImGui::BeginMenu(ICON_FA_WINDOW_MAXIMIZE " ウィンドウ"))
+            {
                 // チェック付きのトグル行。クリックしてもメニューは閉じない
                 auto windowToggle = [](const char *label, bool &flag) {
                     if (ImGui::Selectable(label, flag, ImGuiSelectableFlags_DontClosePopups))
@@ -424,24 +457,29 @@ void ImGuiManager::ShowMainMenu() {
                 ImGui::EndMenu();
             }
 
-            if (ImGui::BeginMenu(ICON_FA_BORDER_ALL " グリッド設定")) {
+            if (ImGui::BeginMenu(ICON_FA_BORDER_ALL " グリッド設定"))
+            {
                 // グリッド表示のON/OFFチェックボックス
                 ImGui::MenuItem(ICON_FA_BORDER_ALL " グリッド表示", nullptr, &showGrid_);
 
-                if (showGrid_) {
+                if (showGrid_)
+                {
                     ImGui::Separator();
 
                     // Y座標設定
                     ImGui::PushItemWidth(120.0f);
-                    if (ImGui::DragFloat(ICON_FA_ARROWS_ALT_V " Y座標", &gridY_, 0.1f, -100.0f, 100.0f, "%.1f")) {
+                    if (ImGui::DragFloat(ICON_FA_ARROWS_ALT_V " Y座標", &gridY_, 0.1f, -100.0f, 100.0f, "%.1f"))
+                    {
                     }
 
                     // 分割数設定
-                    if (ImGui::DragInt(ICON_FA_TH " 分割数", &gridDivision_, 1, 1, 100)) {
+                    if (ImGui::DragInt(ICON_FA_TH " 分割数", &gridDivision_, 1, 1, 100))
+                    {
                     }
 
                     // サイズ設定
-                    if (ImGui::DragFloat(ICON_FA_EXPAND_ARROWS_ALT " サイズ", &gridSize_, 0.1f, 0.1f, 500.0f, "%.1f")) {
+                    if (ImGui::DragFloat(ICON_FA_EXPAND_ARROWS_ALT " サイズ", &gridSize_, 0.1f, 0.1f, 500.0f, "%.1f"))
+                    {
                     }
                     ImGui::PopItemWidth();
 
@@ -449,24 +487,30 @@ void ImGuiManager::ShowMainMenu() {
                     ImGui::ColorEdit4(ICON_FA_PALETTE " グリッド色", &gridColor_.x, ImGuiColorEditFlags_NoInputs);
 
                     // プリセット（サブメニュー）
-                    if (ImGui::BeginMenu(ICON_FA_SWATCHBOOK " プリセット")) {
-                        if (ImGui::MenuItem("デフォルト (グレー)")) {
+                    if (ImGui::BeginMenu(ICON_FA_SWATCHBOOK " プリセット"))
+                    {
+                        if (ImGui::MenuItem("デフォルト (グレー)"))
+                        {
                             gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f};
                         }
-                        if (ImGui::MenuItem("白")) {
+                        if (ImGui::MenuItem("白"))
+                        {
                             gridColor_ = {1.0f, 1.0f, 1.0f, 1.0f};
                         }
-                        if (ImGui::MenuItem("青")) {
+                        if (ImGui::MenuItem("青"))
+                        {
                             gridColor_ = {0.3f, 0.5f, 1.0f, 1.0f};
                         }
-                        if (ImGui::MenuItem("緑")) {
+                        if (ImGui::MenuItem("緑"))
+                        {
                             gridColor_ = {0.3f, 1.0f, 0.5f, 1.0f};
                         }
                         ImGui::EndMenu();
                     }
 
                     // リセットボタン
-                    if (ImGui::Button(ICON_FA_UNDO " リセット")) {
+                    if (ImGui::Button(ICON_FA_UNDO " リセット"))
+                    {
                         gridY_ = 0.0f;
                         gridDivision_ = 10;
                         gridSize_ = 1.0f;
@@ -480,41 +524,53 @@ void ImGuiManager::ShowMainMenu() {
 
             // 表示モード切替
             ImGui::Separator();
-            if (isShowMainUI_) {
-                if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームモードに切替", "F5")) {
+            if (isShowMainUI_)
+            {
+                if (ImGui::MenuItem(ICON_FA_GAMEPAD " ゲームモードに切替", "F5"))
+                {
                     isShowMainUI_ = false;
                     SwitchToGameMode();
                 }
-            } else {
-                if (ImGui::MenuItem(ICON_FA_WRENCH " エディターモードに切替", "F5")) {
+            }
+            else
+            {
+                if (ImGui::MenuItem(ICON_FA_WRENCH " エディターモードに切替", "F5"))
+                {
                     isShowMainUI_ = true;
                     SwitchToEditorMode();
                 }
             }
             ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_EXPAND " フルスクリーン切替", "F11")) {
+            if (ImGui::MenuItem(ICON_FA_EXPAND " フルスクリーン切替", "F11"))
+            {
                 winApp_->ToggleFullScreen();
             }
             ImGui::EndMenu();
         }
 
         // オブジェクトメニュー
-        if (ImGui::BeginMenu(ICON_FA_CUBE " オブジェクト")) {
-            if (ImGui::MenuItem(ICON_FA_PLUS " 新規オブジェクト", "Ctrl+Shift+N")) {
+        if (ImGui::BeginMenu(ICON_FA_CUBE " オブジェクト"))
+        {
+            if (ImGui::MenuItem(ICON_FA_PLUS " 新規オブジェクト", "Ctrl+Shift+N"))
+            {
                 // 新規オブジェクト作成
                 baseObjectManager_->OpenObjectCreationModal();
             }
 
-            if (ImGui::MenuItem(ICON_FA_PLUS " オブジェクト読み込み", "Ctrl+Shift+M")) {
+            if (ImGui::MenuItem(ICON_FA_PLUS " オブジェクト読み込み", "Ctrl+Shift+M"))
+            {
                 // 新規オブジェクト作成
                 baseObjectManager_->OpenObjectLoadModal();
             }
 
             // 3Dオブジェクト
-            if (ImGui::BeginMenu(ICON_FA_CUBE " 3Dオブジェクト")) {
-                if (ImGui::MenuItem(ICON_FA_CUBE " キューブ")) {
+            if (ImGui::BeginMenu(ICON_FA_CUBE " 3Dオブジェクト"))
+            {
+                if (ImGui::MenuItem(ICON_FA_CUBE " キューブ"))
+                {
                     std::string name = "cube_" + std::to_string(++cubeCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name))
+                    {
                         name = "cube_" + std::to_string(++cubeCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
@@ -524,9 +580,11 @@ void ImGuiManager::ShowMainMenu() {
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
-                if (ImGui::MenuItem(ICON_FA_CIRCLE " 球体")) {
+                if (ImGui::MenuItem(ICON_FA_CIRCLE " 球体"))
+                {
                     std::string name = "sphere_" + std::to_string(++sphereCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name))
+                    {
                         name = "sphere_" + std::to_string(++sphereCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
@@ -536,9 +594,11 @@ void ImGuiManager::ShowMainMenu() {
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
-                if (ImGui::MenuItem(ICON_FA_CUBE " 平面")) {
+                if (ImGui::MenuItem(ICON_FA_CUBE " 平面"))
+                {
                     std::string name = "plane_" + std::to_string(++planeCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name))
+                    {
                         name = "plane_" + std::to_string(++planeCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
@@ -548,9 +608,11 @@ void ImGuiManager::ShowMainMenu() {
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
-                if (ImGui::MenuItem(ICON_FA_CIRCLE " シリンダー")) {
+                if (ImGui::MenuItem(ICON_FA_CIRCLE " シリンダー"))
+                {
                     std::string name = "cylinder_" + std::to_string(++cylinderCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name))
+                    {
                         name = "cylinder_" + std::to_string(++cylinderCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
@@ -560,9 +622,11 @@ void ImGuiManager::ShowMainMenu() {
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
-                if (ImGui::MenuItem(ICON_FA_RING " リング")) {
+                if (ImGui::MenuItem(ICON_FA_RING " リング"))
+                {
                     std::string name = "ring_" + std::to_string(++ringCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name))
+                    {
                         name = "ring_" + std::to_string(++ringCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
@@ -572,9 +636,11 @@ void ImGuiManager::ShowMainMenu() {
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
-                if (ImGui::MenuItem(ICON_FA_CARET_UP " 三角形")) {
+                if (ImGui::MenuItem(ICON_FA_CARET_UP " 三角形"))
+                {
                     std::string name = "triangle_" + std::to_string(++triangleCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name))
+                    {
                         name = "triangle_" + std::to_string(++triangleCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
@@ -584,9 +650,11 @@ void ImGuiManager::ShowMainMenu() {
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
-                if (ImGui::MenuItem(ICON_FA_MOUNTAIN " ピラミッド")) {
+                if (ImGui::MenuItem(ICON_FA_MOUNTAIN " ピラミッド"))
+                {
                     std::string name = "pyramid_" + std::to_string(++pyramidCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name))
+                    {
                         name = "pyramid_" + std::to_string(++pyramidCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
@@ -596,9 +664,11 @@ void ImGuiManager::ShowMainMenu() {
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
-                if (ImGui::MenuItem(ICON_FA_CHART_AREA " 円柱")) {
+                if (ImGui::MenuItem(ICON_FA_CHART_AREA " 円柱"))
+                {
                     std::string name = "cone_" + std::to_string(++coneCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
+                    if (BaseObjectManager::GetInstance()->GetObjectByName(name))
+                    {
                         name = "cone_" + std::to_string(++coneCount_);
                     }
                     std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
@@ -608,7 +678,8 @@ void ImGuiManager::ShowMainMenu() {
                     baseObjectManager_->AddObject(std::move(object));
                 }
 
-                if (ImGui::MenuItem(ICON_FA_TRASH_ALT " オブジェクト全削除")) {
+                if (ImGui::MenuItem(ICON_FA_TRASH_ALT " オブジェクト全削除"))
+                {
                     baseObjectManager_->RemoveAllObjects();
                     imGuizmoManager_->DeleteTarget();
                     ImGuiNotification::Post("全オブジェクトを削除しました", {0.9f, 0.7f, 0.2f, 1.0f});
@@ -618,24 +689,32 @@ void ImGuiManager::ShowMainMenu() {
             }
 
             // 2Dオブジェクト
-            if (ImGui::BeginMenu(ICON_FA_SQUARE " 2Dオブジェクト")) {
-                if (ImGui::MenuItem(ICON_FA_SQUARE " スプライト")) {
+            if (ImGui::BeginMenu(ICON_FA_SQUARE " 2Dオブジェクト"))
+            {
+                if (ImGui::MenuItem(ICON_FA_SQUARE " スプライト"))
+                {
                     spriteManager_->ShowSpriteCreationModal();
                 }
-                if (ImGui::MenuItem(ICON_FA_FONT " テキスト")) {
+                if (ImGui::MenuItem(ICON_FA_FONT " テキスト"))
+                {
                 }
-                if (ImGui::MenuItem(ICON_FA_IMAGE " 画像")) {
+                if (ImGui::MenuItem(ICON_FA_IMAGE " 画像"))
+                {
                 }
                 ImGui::EndMenu();
             }
 
             // エフェクト
-            if (ImGui::BeginMenu(ICON_FA_MAGIC " エフェクト")) {
-                if (ImGui::MenuItem(ICON_FA_SNOWFLAKE " パーティクルシステム")) {
+            if (ImGui::BeginMenu(ICON_FA_MAGIC " エフェクト"))
+            {
+                if (ImGui::MenuItem(ICON_FA_SNOWFLAKE " パーティクルシステム"))
+                {
                 }
-                if (ImGui::MenuItem(ICON_FA_LIGHTBULB " ライト")) {
+                if (ImGui::MenuItem(ICON_FA_LIGHTBULB " ライト"))
+                {
                 }
-                if (ImGui::MenuItem(ICON_FA_VIDEO " カメラ")) {
+                if (ImGui::MenuItem(ICON_FA_VIDEO " カメラ"))
+                {
                 }
                 ImGui::EndMenu();
             }
@@ -644,25 +723,31 @@ void ImGuiManager::ShowMainMenu() {
         }
 
         // ヘルプメニュー
-        if (ImGui::BeginMenu(ICON_FA_QUESTION_CIRCLE " ヘルプ")) {
-            if (ImGui::MenuItem(ICON_FA_KEYBOARD " ショートカット一覧", "F1")) {
+        if (ImGui::BeginMenu(ICON_FA_QUESTION_CIRCLE " ヘルプ"))
+        {
+            if (ImGui::MenuItem(ICON_FA_KEYBOARD " ショートカット一覧", "F1"))
+            {
                 showShortcutWindow_ = !showShortcutWindow_;
             }
-            if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE " バージョン情報")) {
+            if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE " バージョン情報"))
+            {
             }
             ImGui::EndMenu();
         }
 
         // シーンメニュー（SceneRegistry に自己登録された全シーンを列挙する）
-        if (ImGui::BeginMenu(ICON_FA_GLOBE " シーン選択")) { // 地球アイコン（意味：全体メニュー）
+        if (ImGui::BeginMenu(ICON_FA_GLOBE " シーン選択"))
+        { // 地球アイコン（意味：全体メニュー）
 
             const std::vector<std::string> sceneNames = SceneRegistry::GetInstance()->GetSceneNames();
-            for (size_t i = 0; i < sceneNames.size(); ++i) {
+            for (size_t i = 0; i < sceneNames.size(); ++i)
+            {
                 const std::string &sceneName = sceneNames[i];
                 const std::string label = std::string(ICON_FA_GAMEPAD " ") + sceneName;
                 // Framework::RegisterShortcutKey と同じ名前順で Ctrl+数字 が割り当てられている
                 const std::string shortcut = (i < 9) ? "Ctrl+" + std::to_string(i + 1) : "";
-                if (ImGui::MenuItem(label.c_str(), shortcut.empty() ? nullptr : shortcut.c_str())) {
+                if (ImGui::MenuItem(label.c_str(), shortcut.empty() ? nullptr : shortcut.c_str()))
+                {
                     SceneManager::GetInstance()->NextSceneReservation(sceneName);
                     ImGuiNotification::Post(sceneName + " シーンへ移行します", {0.4f, 0.8f, 1.0f, 1.0f});
                 }
@@ -675,13 +760,13 @@ void ImGuiManager::ShowMainMenu() {
     }
 }
 
-void ImGuiManager::ShowSceneSettingWindow() {
+void ImGuiManager::ShowSceneSettingWindow()
+{
     if (!showSceneView_)
         return; // 表示しない場合は早期リターン
 
     // 出現時にフォーカスを奪わない軽量フラグ
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    
 
     ImGui::Begin("シーン設定", &showSceneView_, flags);
 
@@ -690,12 +775,12 @@ void ImGuiManager::ShowSceneSettingWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowObjectSettingWindow() {
+void ImGuiManager::ShowObjectSettingWindow()
+{
     if (!showObjectView_)
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    
 
     ImGui::Begin("オブジェクト設定", &showObjectView_, flags);
 
@@ -705,12 +790,12 @@ void ImGuiManager::ShowObjectSettingWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowParticleSettingWindow() {
+void ImGuiManager::ShowParticleSettingWindow()
+{
     if (!showParticleView_)
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    
 
     ImGui::Begin("パーティクル設定", &showParticleView_, flags);
 
@@ -721,23 +806,25 @@ void ImGuiManager::ShowParticleSettingWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowParticlePreviewWindow() {
+void ImGuiManager::ShowParticlePreviewWindow()
+{
     // 表示メニューの「パーティクルプレビュー」でON/OFF。ウィンドウのXボタンとフラグを同期させる。
     if (!showParticlePreviewView_)
         return;
     ParticleCSEditor::GetInstance()->ShowPreviewWindow(&showParticlePreviewView_);
 }
 
-void ImGuiManager::ShowGameParamWindow() {
+void ImGuiManager::ShowGameParamWindow()
+{
     GameParamHub::GetInstance()->DrawImGui(&showGameParamView_);
 }
 
-void ImGuiManager::ShowStatisticsWindow() {
+void ImGuiManager::ShowStatisticsWindow()
+{
     if (!showFPSView_)
         return; // 表示しない場合は早期リターン
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
-    
 
     ImGui::Begin("統計", &showFPSView_, flags);
 
@@ -754,7 +841,8 @@ void ImGuiManager::ShowStatisticsWindow() {
     GpuProfiler::GetInstance()->DrawImGui();
 
     ImGui::Separator();
-    if (ImGui::CollapsingHeader("ログ履歴", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("ログ履歴", ImGuiTreeNodeFlags_DefaultOpen))
+    {
         static ImGuiTextFilter logFilter;
         static bool autoScroll = true;
 
@@ -773,7 +861,8 @@ void ImGuiManager::ShowStatisticsWindow() {
         const auto &history = ImGuiNotification::GetHistory();
         int shown = 0;
         ImGui::BeginChild("LogScrollRegion", ImVec2(0, 200), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
-        for (const auto &n : history) {
+        for (const auto &n : history)
+        {
             if (!logFilter.PassFilter(n.message.c_str()))
                 continue;
             ++shown;
@@ -782,7 +871,8 @@ void ImGuiManager::ShowStatisticsWindow() {
             ImGui::PopStyleColor();
         }
         // 新しいログがあれば自動スクロール（最下部に居るときだけ）
-        if (autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+        if (autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+        {
             ImGui::SetScrollHereY(1.0f);
         }
         ImGui::EndChild();
@@ -795,7 +885,8 @@ void ImGuiManager::ShowStatisticsWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *offscreen) {
+void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *offscreen)
+{
     if (!showOfScreenView_)
         return; // 表示しない場合は早期リターン
 
@@ -808,7 +899,8 @@ void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *offscreen) {
     ImGui::End();
 }
 
-void ImGuiManager::ShowLightSettingWindow() {
+void ImGuiManager::ShowLightSettingWindow()
+{
     if (!showLightView_)
         return; // 表示しない場合は早期リターン
 
@@ -821,7 +913,8 @@ void ImGuiManager::ShowLightSettingWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowGizmoWindow() {
+void ImGuiManager::ShowGizmoWindow()
+{
     if (!showGizmoView_)
         return; // 表示しない場合は早期リターン
 
@@ -834,7 +927,8 @@ void ImGuiManager::ShowGizmoWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowHierarchyWindow() {
+void ImGuiManager::ShowHierarchyWindow()
+{
     if (!showHierarchyView_)
         return; // 表示しない場合は早期リターン
 
@@ -847,7 +941,8 @@ void ImGuiManager::ShowHierarchyWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowMotionEditorWindow() {
+void ImGuiManager::ShowMotionEditorWindow()
+{
     if (!showMotionEditorView_)
         return; // 表示しない場合は早期リターン
 
@@ -860,7 +955,8 @@ void ImGuiManager::ShowMotionEditorWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowSpriteManagerWindow() {
+void ImGuiManager::ShowSpriteManagerWindow()
+{
     if (!showSpriteManagerView_)
         return; // 表示しない場合は早期リターン
 
@@ -875,7 +971,8 @@ void ImGuiManager::ShowSpriteManagerWindow() {
     TextRenderer::GetInstance()->UpdateImGui();
 }
 
-void ImGuiManager::ShowColliderTagManagerWindow() {
+void ImGuiManager::ShowColliderTagManagerWindow()
+{
     if (!showColliderTagManagerView_)
         return; // 表示しない場合は早期リターン
 
@@ -883,14 +980,17 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
 
     ImGui::Begin("コライダー", &showColliderTagManagerView_, flags);
 
-    if (ImGui::BeginTabBar("##ColliderTabs")) {
+    if (ImGui::BeginTabBar("##ColliderTabs"))
+    {
         // コライダーの選択・サイズ調整・デバッグ表示の切り替え
-        if (ImGui::BeginTabItem("コライダー設定")) {
+        if (ImGui::BeginTabItem("コライダー設定"))
+        {
             CollisionManager::GetInstance()->ImGuiColliderInspector();
             ImGui::EndTabItem();
         }
         // タグの追加・削除
-        if (ImGui::BeginTabItem("タグ管理")) {
+        if (ImGui::BeginTabItem("タグ管理"))
+        {
             CollisionManager::GetInstance()->ImGuiTagManager();
             ImGui::EndTabItem();
         }
@@ -900,7 +1000,8 @@ void ImGuiManager::ShowColliderTagManagerWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowAudioManagerWindow() {
+void ImGuiManager::ShowAudioManagerWindow()
+{
     if (!showAudioManagerView_)
         return;
 
@@ -913,7 +1014,8 @@ void ImGuiManager::ShowAudioManagerWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowShadowMapWindow() {
+void ImGuiManager::ShowShadowMapWindow()
+{
     if (!showShadowMapView_)
         return; // 表示しない場合は早期リターン
 
@@ -921,17 +1023,20 @@ void ImGuiManager::ShowShadowMapWindow() {
     ShadowMap::GetInstance()->UpdateImGui(&showShadowMapView_);
 }
 
-void ImGuiManager::ShowDrawSystemWindow() {
+void ImGuiManager::ShowDrawSystemWindow()
+{
     if (!showDrawSystemView_)
         return; // 表示しない場合は早期リターン
 
     // ウィンドウの生成・閉じるボタンは DrawSystem 側に委譲する
-    if (drawSystem_) {
+    if (drawSystem_)
+    {
         drawSystem_->UpdateImGui(&showDrawSystemView_);
     }
 }
 
-void ImGuiManager::ShowAssetBrowserWindow() {
+void ImGuiManager::ShowAssetBrowserWindow()
+{
     if (!showAssetBrowserView_)
         return; // 表示しない場合は早期リターン
 
@@ -949,10 +1054,12 @@ void ImGuiManager::ShowAssetBrowserWindow() {
         s_fileCount = 0;
         std::error_code ec;
         // images はエンジン(debug)とアプリの 2 ルートに分割されているため両方を走査する。
-        for (const std::string &base : AssetPath::ImageScanRoots()) {
+        for (const std::string &base : AssetPath::ImageScanRoots())
+        {
             if (!std::filesystem::exists(base, ec))
                 continue;
-            for (auto &e : std::filesystem::recursive_directory_iterator(base, ec)) {
+            for (auto &e : std::filesystem::recursive_directory_iterator(base, ec))
+            {
                 if (ec)
                     break;
                 if (!e.is_regular_file())
@@ -979,7 +1086,8 @@ void ImGuiManager::ShowAssetBrowserWindow() {
         for (auto &kv : s_byDir)
             std::sort(kv.second.begin(), kv.second.end());
     };
-    if (!s_scanned) {
+    if (!s_scanned)
+    {
         scan();
         s_scanned = true;
     }
@@ -1004,11 +1112,13 @@ void ImGuiManager::ShowAssetBrowserWindow() {
         ImGui::BeginGroup();
         ImTextureID id = 0;
         bool isCube = false;
-        if (ImGui::IsRectVisible(ImVec2(thumb, thumb))) {
+        if (ImGui::IsRectVisible(ImVec2(thumb, thumb)))
+        {
             tex->LoadTexture(rel);
             const DirectX::TexMetadata &meta = tex->GetMetaData(rel);
             isCube = meta.IsCubemap();
-            if (!isCube) {
+            if (!isCube)
+            {
                 D3D12_GPU_DESCRIPTOR_HANDLE h = tex->GetSrvHandleGPU(AssetPath::Image(rel));
                 if (h.ptr != 0)
                     id = static_cast<ImTextureID>(h.ptr);
@@ -1029,15 +1139,18 @@ void ImGuiManager::ShowAssetBrowserWindow() {
     };
 
     int uid = 0;
-    for (auto &kv : s_byDir) {
+    for (auto &kv : s_byDir)
+    {
         const std::string &dir = kv.first;
         const std::vector<std::string> &fileList = kv.second;
         std::string header = (dir.empty() ? std::string("(ルート)") : dir) +
                              "  [" + std::to_string(fileList.size()) + "]##dir_" + dir;
-        if (ImGui::CollapsingHeader(header.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader(header.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+        {
             const float windowVisibleX2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
             const int n = static_cast<int>(fileList.size());
-            for (int k = 0; k < n; ++k) {
+            for (int k = 0; k < n; ++k)
+            {
                 ImGui::PushID(uid++);
                 drawThumb(fileList[k]);
                 // 次のサムネが右端を超えなければ同じ行に並べる（自動折り返し）。
@@ -1047,7 +1160,9 @@ void ImGuiManager::ShowAssetBrowserWindow() {
                     ImGui::SameLine();
                 ImGui::PopID();
             }
-        } else {
+        }
+        else
+        {
             uid += static_cast<int>(fileList.size()); // 折りたたみ時もIDを進めて安定させる
         }
     }
@@ -1056,7 +1171,8 @@ void ImGuiManager::ShowAssetBrowserWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::FixAspectRatio() {
+void ImGuiManager::FixAspectRatio()
+{
 
     // 横幅ベースで16:9に合わせた高さ
     float adjustedHeight = (sceneTextureSize_.x * 9.0f / 16.0f);
@@ -1068,18 +1184,23 @@ void ImGuiManager::FixAspectRatio() {
     float deltaFromHeight = std::abs(adjustedWidth - sceneTextureSize_.x);
 
     // 近い方を採用
-    if (deltaFromWidth < deltaFromHeight) {
+    if (deltaFromWidth < deltaFromHeight)
+    {
         sceneTextureSize_.y = adjustedHeight;
-    } else {
+    }
+    else
+    {
         sceneTextureSize_.x = adjustedWidth;
     }
 }
 
-void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &sceneName) {
+void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &sceneName)
+{
     // ImGuiウィンドウ開始前にNextWindowSizeは設定しない（手動サイズ変更を許可）
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
     // フォーカスされていない場合は描画を最適化
-    if (!isShowMainUI_) {
+    if (!isShowMainUI_)
+    {
         flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
     }
     // ウィンドウの表示名は現在のシーン名にしつつ、"###Scene" で ImGui の内部IDを固定する。
@@ -1100,7 +1221,8 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
     ImVec2 contentRegion = ImGui::GetContentRegionAvail();
     if (contentRegion.x != lastContentRegion.x ||
         contentRegion.y != lastContentRegion.y ||
-        ImGui::IsWindowFocused()) {
+        ImGui::IsWindowFocused())
+    {
         lastContentRegion = contentRegion;
 
         // 横幅ベースで16:9にしたときの高さ
@@ -1109,10 +1231,13 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
         float adjustedWidth = contentRegion.y * 16.0f / 9.0f;
 
         // 画面内に収まるように調整
-        if (adjustedHeight <= contentRegion.y) {
+        if (adjustedHeight <= contentRegion.y)
+        {
             lastSceneTextureSize.x = contentRegion.x;
             lastSceneTextureSize.y = adjustedHeight;
-        } else {
+        }
+        else
+        {
             lastSceneTextureSize.x = adjustedWidth;
             lastSceneTextureSize.y = contentRegion.y;
         }
@@ -1126,14 +1251,17 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
     ImVec4 backgroundColor;
 
     // 背景色も必要時のみ更新
-    if (ImGui::IsWindowFocused()) {
+    if (ImGui::IsWindowFocused())
+    {
         backgroundColor = ImVec4(
             dxCommon_->GetClearColor().x,
             dxCommon_->GetClearColor().y,
             dxCommon_->GetClearColor().z,
             dxCommon_->GetClearColor().w);
         lastBgColor = backgroundColor;
-    } else {
+    }
+    else
+    {
         backgroundColor = lastBgColor;
     }
 
@@ -1147,10 +1275,13 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
 
     // ポストエフェクトが適用された最終結果のテクスチャを取得
     uint32_t srvIndex;
-    if (offScreen != nullptr) {
+    if (offScreen != nullptr)
+    {
         // ポストエフェクトが適用された最終結果を使用
         srvIndex = offScreen->GetFinalResultSrvIndex();
-    } else {
+    }
+    else
+    {
         // フォールバック：通常のオフスクリーンバッファを使用
         srvIndex = dxCommon_->GetOffScreenSrvIndex();
     }
@@ -1181,7 +1312,8 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
     ImGui::End();
 }
 
-void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
+void ImGuiManager::ShowMainUI(OffScreen *offscreen)
+{
 
     // ヒエラルキーウィンドウ
     ShowSceneSettingWindow();
@@ -1223,11 +1355,13 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     spriteManager_->UpdateImGui();
 }
 
-bool &ImGuiManager::GetIsShowMainUI() {
+bool &ImGuiManager::GetIsShowMainUI()
+{
     return isShowMainUI_;
 }
 
-void ImGuiManager::ShowDockSpace() {
+void ImGuiManager::ShowDockSpace()
+{
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
     ImGuiViewport *viewport = ImGui::GetMainViewport();
 
@@ -1254,9 +1388,11 @@ void ImGuiManager::ShowDockSpace() {
 
 #endif //_DEBUG
 
-void ImGuiManager::DisplayFPS() {
+void ImGuiManager::DisplayFPS()
+{
 #ifdef _DEBUG
-    if (ImGui::CollapsingHeader("FPS")) {
+    if (ImGui::CollapsingHeader("FPS"))
+    {
 
         // 履歴サイズ（フレーム数）
         static const int kHistSize = 256;
@@ -1299,7 +1435,8 @@ void ImGuiManager::DisplayFPS() {
 
         if (ImPlot::BeginPlot("##FPSPlot", ImVec2(-1, 90),
                               ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoInputs |
-                                  ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText)) {
+                                  ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText))
+        {
             ImPlot::SetupAxes(nullptr, "FPS",
                               ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoGridLines,
                               ImPlotAxisFlags_None);
@@ -1343,7 +1480,8 @@ void ImGuiManager::DisplayFPS() {
 
         if (ImPlot::BeginPlot("##FrameTimePlot", ImVec2(-1, 70),
                               ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoInputs |
-                                  ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText)) {
+                                  ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText))
+        {
             ImPlot::SetupAxes(nullptr, "ms",
                               ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoGridLines,
                               ImPlotAxisFlags_None);
@@ -1373,10 +1511,12 @@ void ImGuiManager::DisplayFPS() {
 }
 
 // 現在のDockレイアウトを保存
-void ImGuiManager::BackupDockLayout() {
+void ImGuiManager::BackupDockLayout()
+{
 #ifdef USE_IMGUI
     ImGuiContext *context = ImGui::GetCurrentContext();
-    if (context) {
+    if (context)
+    {
         // Dockingレイアウトを文字列として保存
         dockLayoutBackup_ = ImGui::SaveIniSettingsToMemory();
     }
@@ -1384,17 +1524,21 @@ void ImGuiManager::BackupDockLayout() {
 }
 
 // 保存したレイアウトを復元
-void ImGuiManager::RestoreDockLayout() {
+void ImGuiManager::RestoreDockLayout()
+{
 #ifdef USE_IMGUI
-    if (!dockLayoutBackup_.empty()) {
+    if (!dockLayoutBackup_.empty())
+    {
         // メモリ上の設定を再適用
         ImGui::LoadIniSettingsFromMemory(dockLayoutBackup_.c_str(), dockLayoutBackup_.size());
     }
 #endif // USE_IMGUI
 }
 
-void ImGuiManager::SwitchToEditorMode() {
-    if (!isEditorMode_) {
+void ImGuiManager::SwitchToEditorMode()
+{
+    if (!isEditorMode_)
+    {
         // ゲームモードからエディターモードへの切替
         SaveCurrentLayout(); // 現在のゲームモードレイアウトを保存
         isEditorMode_ = true;
@@ -1405,8 +1549,10 @@ void ImGuiManager::SwitchToEditorMode() {
     }
 }
 
-void ImGuiManager::SwitchToGameMode() {
-    if (isEditorMode_) {
+void ImGuiManager::SwitchToGameMode()
+{
+    if (isEditorMode_)
+    {
         // エディターモードからゲームモードへの切替
         SaveCurrentLayout(); // 現在のエディターモードレイアウトを保存
         isEditorMode_ = false;
@@ -1421,22 +1567,26 @@ void ImGuiManager::SwitchToGameMode() {
 // F5でアンドックしたウィンドウのノードIDが次回起動時に存在せず
 // imgui.cpp の "node != 0" アサーションを引き起こすのを防ぐ
 #ifdef USE_IMGUI
-static std::string StripDockDataFromIni(const char* src, size_t srcSize) {
+static std::string StripDockDataFromIni(const char *src, size_t srcSize)
+{
     std::string result;
     result.reserve(srcSize);
     size_t pos = 0;
     bool skipSection = false;
 
-    while (pos < srcSize) {
+    while (pos < srcSize)
+    {
         size_t lineEnd = pos;
-        while (lineEnd < srcSize && src[lineEnd] != '\n') ++lineEnd;
+        while (lineEnd < srcSize && src[lineEnd] != '\n')
+            ++lineEnd;
         // line は src[pos..lineEnd) ('\n' を含まない)
-        const char* linePtr = src + pos;
+        const char *linePtr = src + pos;
         size_t lineLen = lineEnd - pos;
         pos = lineEnd + 1; // 次の行へ
 
         // セクションヘッダ判定
-        if (lineLen > 0 && linePtr[0] == '[') {
+        if (lineLen > 0 && linePtr[0] == '[')
+        {
             // [Docking] セクションはスキップフラグを立てる
             bool isDocking = (lineLen >= 9 &&
                               linePtr[1] == 'D' && linePtr[2] == 'o' &&
@@ -1444,16 +1594,19 @@ static std::string StripDockDataFromIni(const char* src, size_t srcSize) {
                               linePtr[5] == 'i' && linePtr[6] == 'n' &&
                               linePtr[7] == 'g' && linePtr[8] == ']');
             skipSection = isDocking;
-            if (isDocking) continue;
+            if (isDocking)
+                continue;
         }
 
-        if (skipSection) continue;
+        if (skipSection)
+            continue;
 
         // DockId= 行はスキップ（ウィンドウの古いノード参照を除去）
         if (lineLen >= 7 &&
             linePtr[0] == 'D' && linePtr[1] == 'o' && linePtr[2] == 'c' &&
             linePtr[3] == 'k' && linePtr[4] == 'I' && linePtr[5] == 'd' &&
-            linePtr[6] == '=') {
+            linePtr[6] == '=')
+        {
             continue;
         }
 
@@ -1464,7 +1617,8 @@ static std::string StripDockDataFromIni(const char* src, size_t srcSize) {
 }
 #endif // USE_IMGUI
 
-void ImGuiManager::SaveCurrentLayout() {
+void ImGuiManager::SaveCurrentLayout()
+{
 #ifdef USE_IMGUI
     // 現在のモードに応じたファイルにレイアウトを保存
     const char *iniFilePath = isEditorMode_ ? editorIniFilePath_.c_str() : gameIniFilePath_.c_str();
@@ -1479,12 +1633,16 @@ void ImGuiManager::SaveCurrentLayout() {
 
     // ファイルに書き込み
     FILE *f = nullptr;
-    if (fopen_s(&f, iniFilePath, "wt") == 0 && f) {
-        if (!isEditorMode_) {
+    if (fopen_s(&f, iniFilePath, "wt") == 0 && f)
+    {
+        if (!isEditorMode_)
+        {
             // ゲームモード: ドックノード参照を除去して保存
             std::string stripped = StripDockDataFromIni(iniData, size);
             fwrite(stripped.c_str(), sizeof(char), stripped.size(), f);
-        } else {
+        }
+        else
+        {
             fwrite(iniData, sizeof(char), size, f);
         }
         fclose(f);
@@ -1493,14 +1651,16 @@ void ImGuiManager::SaveCurrentLayout() {
 #endif // USE_IMGUI
 }
 
-void ImGuiManager::LoadLayoutForCurrentMode() {
+void ImGuiManager::LoadLayoutForCurrentMode()
+{
 #ifdef USE_IMGUI
     // モードに応じたiniファイルをロード
     const char *iniFilePath = isEditorMode_ ? editorIniFilePath_.c_str() : gameIniFilePath_.c_str();
 
     // ファイルが存在する場合はロード
     FILE *f = nullptr;
-    if (fopen_s(&f, iniFilePath, "rt") == 0 && f) {
+    if (fopen_s(&f, iniFilePath, "rt") == 0 && f)
+    {
         // ファイルサイズを取得
         fseek(f, 0, SEEK_END);
         size_t size = ftell(f);
@@ -1508,15 +1668,19 @@ void ImGuiManager::LoadLayoutForCurrentMode() {
 
         // バッファを確保してファイル内容を読み込む
         char *buf = new char[size + 1];
-        if (buf) {
+        if (buf)
+        {
             size_t read_size = fread(buf, 1, size, f);
             buf[read_size] = 0;
 
-            if (!isEditorMode_) {
+            if (!isEditorMode_)
+            {
                 // ゲームモード: 古いドックノード参照を除去してからロード
                 std::string stripped = StripDockDataFromIni(buf, read_size);
                 ImGui::LoadIniSettingsFromMemory(stripped.c_str(), stripped.size());
-            } else {
+            }
+            else
+            {
                 ImGui::LoadIniSettingsFromMemory(buf, read_size);
             }
 
@@ -1528,16 +1692,20 @@ void ImGuiManager::LoadLayoutForCurrentMode() {
 #endif // USE_IMGUI
 }
 
-void ImGuiManager::ShowHelpWindow() {
+void ImGuiManager::ShowHelpWindow()
+{
 #ifdef _DEBUG
 
     // ショートカット一覧ウィンドウの表示
-    if (showShortcutWindow_) {
+    if (showShortcutWindow_)
+    {
         ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin(ICON_FA_KEYBOARD " ショートカット一覧", &showShortcutWindow_, ImGuiWindowFlags_NoCollapse)) {
+        if (ImGui::Begin(ICON_FA_KEYBOARD " ショートカット一覧", &showShortcutWindow_, ImGuiWindowFlags_NoCollapse))
+        {
 
             // テーブルでショートカットを整理して表示
-            if (ImGui::BeginTable("ShortcutTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable)) {
+            if (ImGui::BeginTable("ShortcutTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+            {
                 ImGui::TableSetupColumn("機能", ImGuiTableColumnFlags_WidthStretch, 0.6f);
                 ImGui::TableSetupColumn("ショートカットキー", ImGuiTableColumnFlags_WidthStretch, 0.4f);
                 ImGui::TableHeadersRow();
@@ -1669,7 +1837,8 @@ void ImGuiManager::ShowHelpWindow() {
 
             // 閉じるボタン
             ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 35);
-            if (ImGui::Button("閉じる", ImVec2(100, 25))) {
+            if (ImGui::Button("閉じる", ImVec2(100, 25)))
+            {
                 showShortcutWindow_ = false;
             }
         }
@@ -1678,7 +1847,8 @@ void ImGuiManager::ShowHelpWindow() {
 #endif // _DEBUG
 }
 
-void ImGuiManager::SaveFlag() {
+void ImGuiManager::SaveFlag()
+{
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ImGuiSetting", "Frags");
     data->Save("IsShowMainUI", isShowMainUI_);
     data->Save("ShowGrid", showGrid_);
@@ -1705,7 +1875,8 @@ void ImGuiManager::SaveFlag() {
 #endif // _DEBUG
 }
 
-void ImGuiManager::LoadFlag() {
+void ImGuiManager::LoadFlag()
+{
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ImGuiSetting", "Frags");
     isShowMainUI_ = data->Load("IsShowMainUI", true);
     showGrid_ = data->Load("ShowGrid", true);

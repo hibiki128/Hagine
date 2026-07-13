@@ -7,17 +7,20 @@
 
 using namespace Hagine;
 
-FollowCamera::FollowCamera() {
+FollowCamera::FollowCamera()
+{
     lockOn_ = std::make_unique<CameraLockOn>();
     rush_ = std::make_unique<CameraRush>();
     skillCutscene_ = std::make_unique<CameraSkillCutscene>();
 }
 
-FollowCamera::~FollowCamera() {
+FollowCamera::~FollowCamera()
+{
     // "カメラ演出" の登録解除は CameraSkillCutscene のデストラクタで行う
 }
 
-void FollowCamera::Init() {
+void FollowCamera::Init()
+{
     // ViewProjectionの初期設定
     viewProjection_.farZ_ = kFarZ;
     viewProjection_.Initialize("");
@@ -30,13 +33,15 @@ void FollowCamera::Init() {
     skillCutscene_->Init(this);
 }
 
-void FollowCamera::Update() {
+void FollowCamera::Update()
+{
     // ターゲットが存在しない場合は処理を行わない
     if (!target_)
         return;
 
     // 必殺技の顔アップ演出中は専用処理でカメラを確定する
-    if (skillCutscene_->UpdateSkillCloseUp()) {
+    if (skillCutscene_->UpdateSkillCloseUp())
+    {
         return;
     }
 
@@ -54,12 +59,14 @@ void FollowCamera::Update() {
     lockOn_->UpdateLockOnTransition(isCurrentlyLockedOn);
 
     // Rush中の専用カメラ。遠距離追従ではここでカメラを確定し、以降の通常処理をスキップする
-    if (rush_->UpdateRushCamera(player)) {
+    if (rush_->UpdateRushCamera(player))
+    {
         return;
     }
 
     // ロックオン時のみ：肩オフセット目標と高さオフセットを更新
-    if (isCurrentlyLockedOn) {
+    if (isCurrentlyLockedOn)
+    {
         lockOn_->UpdateLockOnShoulderAndHeight(player, targetPos, velocity);
     }
 
@@ -79,37 +86,47 @@ void FollowCamera::Update() {
     lockOn_->UpdateFrustumLockOn();
 }
 
-void FollowCamera::Move() {
+void FollowCamera::Move()
+{
     Player *player = dynamic_cast<Player *>(target_);
     GamePad *gamePad = player->GetGamePad();
 
     // ロックオン中は手動回転を受け付けない
-    if (player && player->GetIsLockOn()) {
+    if (player && player->GetIsLockOn())
+    {
         return;
     }
 
-    if (!gamePad->IsConnected()) {
+    if (!gamePad->IsConnected())
+    {
         Input *input = Input::GetInstance();
         // キーボードによる手動回転
-        if (input->PushKey(DIK_LEFT)) {
+        if (input->PushKey(DIK_LEFT))
+        {
             yaw_ -= manualYawSpeed_;
         }
-        if (input->PushKey(DIK_RIGHT)) {
+        if (input->PushKey(DIK_RIGHT))
+        {
             yaw_ += manualYawSpeed_;
         }
-    } else {
+    }
+    else
+    {
         // ゲームパッドによる手動回転
-        if (player) {
+        if (player)
+        {
             const float stickSensitivity = 0.05f;
             yaw_ += gamePad->GetRightStickX() * stickSensitivity;
         }
     }
 }
 
-Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *player, const Vector3 &targetPos) {
+Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *player, const Vector3 &targetPos)
+{
     Vector3 cameraPos;
 
-    if (isCurrentlyLockedOn) {
+    if (isCurrentlyLockedOn)
+    {
         // ロックオン時：敵の方向を基準にした計算
         Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
         Vector3 toEnemyDir = enemyPos - targetPos;
@@ -128,7 +145,9 @@ Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *p
         cameraPos = targetPos - forward * std::abs(cameraOffset_.z);
         cameraPos += up * lockOn_->GetLockOnHeightOffsetCurrent();
         cameraPos += right * lockOn_->GetShoulderOffsetX();
-    } else {
+    }
+    else
+    {
         // 非ロックオン時：手動ヨー角を基準にした計算
         cameraPos.x = targetPos.x + std::sin(yaw_) * cameraOffset_.z;
         cameraPos.z = targetPos.z + std::cos(yaw_) * cameraOffset_.z;
@@ -142,14 +161,16 @@ Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *p
     return cameraPos;
 }
 
-void FollowCamera::ApplyToViewProjection() {
+void FollowCamera::ApplyToViewProjection()
+{
     viewProjection_.translation_ = worldTransform_.translation_;
     viewProjection_.isUseQuaternion_ = true;
     viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
     viewProjection_.UpdateMatrix();
 }
 
-void FollowCamera::imgui() {
+void FollowCamera::imgui()
+{
 #ifdef USE_IMGUI
     ImGui::Begin("FollowCamera");
     ImGui::DragFloat3("wt position", &worldTransform_.translation_.x, 0.1f);

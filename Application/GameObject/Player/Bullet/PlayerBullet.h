@@ -7,7 +7,8 @@ class Enemy;
 /// <summary>
 /// プレイヤーが発射する弾のゲームオブジェクトクラス
 /// </summary>
-class PlayerBullet : public Hagine::BaseObject {
+class PlayerBullet : public Hagine::BaseObject
+{
   public:
     /// ===================================================
     /// public method
@@ -76,7 +77,8 @@ class PlayerBullet : public Hagine::BaseObject {
     /// 現在の速度の大きさを取得
     /// </summary>
     /// <returns>float: 速度の大きさ</returns>
-    float GetCurrentSpeed() const {
+    float GetCurrentSpeed() const
+    {
         return std::sqrt(velocity_.x * velocity_.x + velocity_.y * velocity_.y + velocity_.z * velocity_.z);
     }
 
@@ -84,8 +86,10 @@ class PlayerBullet : public Hagine::BaseObject {
     /// コライダーの半径を設定
     /// </summary>
     /// <param name="radius">設定する半径</param>
-    void SetColliderRadius(float radius) {
-        if (collider_) {
+    void SetColliderRadius(float radius)
+    {
+        if (collider_)
+        {
             collider_->SetRadius(radius);
         }
     }
@@ -105,7 +109,7 @@ class PlayerBullet : public Hagine::BaseObject {
     static constexpr float kDefaultAcceleration = 10.0f;  // デフォルトの加速度
     static constexpr float kDefaultLifeTime = 5.0f;       // デフォルトの生存時間(秒)
     static constexpr float kMinDistanceThreshold = 0.1f;  // 距離判定の最小閾値
-    static constexpr float kHomingStrength = 20.0f;        // ホーミング強度
+    static constexpr float kHomingStrength = 20.0f;       // ホーミング強度
     static constexpr float kMinSpeedThreshold = 0.1f;     // 速度判定の最小閾値
     static constexpr float kMaxSpeed = 200.0f;            // 最大速度
     static constexpr float kForwardOffsetDistance = 2.0f; // 前方オフセット距離

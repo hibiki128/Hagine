@@ -21,13 +21,15 @@
 #include <type/Vector4.h>
 
 namespace Hagine {
-struct Ray {
+struct Ray
+{
     Vector3 origin;    // レイの開始点
     Vector3 direction; // レイの方向（正規化済み）
     float length;      // レイの最大長
 };
 
-struct RayHitInfo {
+struct RayHitInfo
+{
     bool hit;               // ヒットしたかどうか
     Vector3 hitPoint;       // ヒット点
     Vector3 hitNormal;      // ヒット面の法線
@@ -36,22 +38,26 @@ struct RayHitInfo {
 };
 
 // ImGuiシーン描画領域情報
-struct SceneViewport {
+struct SceneViewport
+{
     Vector2 position; // シーンウィンドウの左上座標
     Vector2 size;     // シーンウィンドウのサイズ
 };
 
 class BaseObject;
-class Input {
+class Input
+{
 
   private:
-    enum class PadType {
+    enum class PadType
+    {
         DirectInput,
         XInput,
     };
     using State = std::variant<DIJOYSTATE2, XINPUT_STATE>;
 
-    struct Joystick {
+    struct Joystick
+    {
         Microsoft::WRL::ComPtr<IDirectInputDevice8> device_;
         int32_t deadZoneL_;
         int32_t deadZoneR_;

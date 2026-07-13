@@ -7,11 +7,13 @@
 
 // 定数バッファ用データ構造体
 namespace Hagine {
-struct ConstBufferDataWorldTransform {
+struct ConstBufferDataWorldTransform
+{
     Matrix4x4 matWorld; // ローカル → ワールド変換行列
 };
 
-class WorldTransform {
+class WorldTransform
+{
   public:
     // クォータニオン角を使うかどうか（falseの場合はオイラー角）
     bool isUseQuaternion_ = true;
@@ -101,7 +103,6 @@ class WorldTransform {
     const Microsoft::WRL::ComPtr<ID3D12Resource> &GetConstBuffer() const { return constBuffer_; }
 
   private:
-    
     /// <summary>
     /// 定数バッファ生成
     /// </summary>
@@ -112,7 +113,7 @@ class WorldTransform {
     /// </summary>
     void Map();
 
-     // オイラー角→クォータニオン変換用
+    // オイラー角→クォータニオン変換用
     Vector3 preRotate_ = {0.0f, 0.0f, 0.0f};
 
     void UpdateEuler();

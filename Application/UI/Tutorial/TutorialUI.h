@@ -4,13 +4,16 @@
 #include <string>
 
 class TutorialSystem;
-namespace Hagine { class DataHandler; }
+namespace Hagine {
+class DataHandler;
+}
 enum class TutorialStep : int;
 
 /// <summary>
 /// チュートリアルの操作ガイド・進行度バーなどのUI表示を管理するクラス
 /// </summary>
-class TutorialUI {
+class TutorialUI
+{
   public:
     /// ===================================================
     /// public method
@@ -58,7 +61,8 @@ class TutorialUI {
     /// <summary>
     /// トランジション状態
     /// </summary>
-    enum class UITransitionState {
+    enum class UITransitionState
+    {
         Idle,            // 通常表示
         FadingOut,       // 旧ステップUIをフェードアウト中
         FadingIn,        // 新ステップUIをフェードイン中
@@ -156,18 +160,18 @@ class TutorialUI {
     float barAlpha_ = 1.0f;   // バーのアルファ値
     float frameAlpha_ = 1.0f; // 枠のアルファ値
 
-    Hagine::Sprite okSprite_;            // OK!スプライト
+    Hagine::Sprite okSprite_;    // OK!スプライト
     bool okSpriteReady_ = false; // OK!準備完了フラグ
     float okAlpha_ = 0.0f;       // OK!のアルファ値
 
     Hagine::Vector2 okPosition_ = {640.0f, 400.0f}; // OK!の位置
-    float okRotation_ = 0.0f;               // OK!の回転
+    float okRotation_ = 0.0f;                       // OK!の回転
     Hagine::Vector2 okSize_ = {200.0f, 80.0f};      // OK!のサイズ
 
     Hagine::Vector2 barPosition_ = {100.0f, 880.0f}; // バーの位置
-    float barHeight_ = 24.0f;                // バーの高さ
-    float barMaxWidth_ = 500.0f;             // バーの最大幅
-    float borderThickness_ = 3.0f;           // 枠の太さ
+    float barHeight_ = 24.0f;                        // バーの高さ
+    float barMaxWidth_ = 500.0f;                     // バーの最大幅
+    float borderThickness_ = 3.0f;                   // 枠の太さ
 
     Hagine::Vector2 skipButtonPosition_ = {1600.0f, 946.0f}; // スキップボタンの位置
     Hagine::Vector2 skipButtonSize_ = {320.0f, 64.0f};       // スキップボタンのサイズ

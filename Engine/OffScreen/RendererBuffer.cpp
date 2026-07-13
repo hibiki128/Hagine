@@ -1,7 +1,8 @@
 #include "RendererBuffer.h"
 
 namespace Hagine {
-void RenderBuffer::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager) {
+void RenderBuffer::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager)
+{
     assert(dxCommon);
     assert(srvManager);
     dxCommon_ = dxCommon;
@@ -10,9 +11,11 @@ void RenderBuffer::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager) {
     CreateFinalResultTexture();
 }
 
-void RenderBuffer::CreatePingPongBuffers() {
+void RenderBuffer::CreatePingPongBuffers()
+{
     // ピンポンバッファを作成
-    for (int i = 0; i < kPingPongBufferCount; ++i) {
+    for (int i = 0; i < kPingPongBufferCount; ++i)
+    {
         // レンダーターゲットリソースを作成
         pingPongResources_[i] = dxCommon_->CreateRenderTextureResource(WinApp::kClientWidth, WinApp::kClientHeight, dxCommon_->GetClearColorValue().Format, dxCommon_->GetClearColorValue());
 
@@ -40,7 +43,8 @@ void RenderBuffer::CreatePingPongBuffers() {
     }
 }
 
-void RenderBuffer::CreateFinalResultTexture() {
+void RenderBuffer::CreateFinalResultTexture()
+{
     // 最終結果用のレンダーターゲットリソースを作成
     finalResultResource_ = dxCommon_->CreateRenderTextureResource(
         WinApp::kClientWidth,

@@ -5,12 +5,13 @@
 #ifdef _DEBUG
 #include "imgui.h"
 #include <implot.h>
-#endif 
+#endif
 #include "Utility/Debug/ImGui/Debugui_improved.h"
 #include "algorithm"
 
 namespace Hagine {
-void DebugCamera::Initialize(ViewProjection *viewProjection) {
+void DebugCamera::Initialize(ViewProjection *viewProjection)
+{
     viewProjection_ = viewProjection;
     translation_ = viewProjection->translation_;
     isUseQuaternion_ = viewProjection->isUseQuaternion_;
@@ -24,23 +25,29 @@ void DebugCamera::Initialize(ViewProjection *viewProjection) {
     mouse_ = {0.0f, 0.0f};
 }
 
-void DebugCamera::Update() {
+void DebugCamera::Update()
+{
     // アクティブ時のみデバッグ操作を適用
-    if (isActive_) {
+    if (isActive_)
+    {
         // カメラ操作がロックされていない場合のみ移動計算
-        if (!lockCamera_) {
+        if (!lockCamera_)
+        {
             CameraMove(eulerRotation_, translation_, mouse_);
         }
 
         Matrix4x4 cameraMatrix;
 
         // 回転の定義形式に応じて行列を生成
-        if (isUseQuaternion_) {
+        if (isUseQuaternion_)
+        {
             cameraMatrix = MakeAffineMatrix(
                 {1.0f, 1.0f, 1.0f},
                 quateRotation_,
                 translation_);
-        } else {
+        }
+        else
+        {
             cameraMatrix = MakeAffineMatrix(
                 {1.0f, 1.0f, 1.0f},
                 eulerRotation_,
@@ -54,24 +61,30 @@ void DebugCamera::Update() {
         viewProjection_->eulerRotation_ = eulerRotation_;
         viewProjection_->quateRotation_ = quateRotation_;
         viewProjection_->isUseQuaternion_ = isUseQuaternion_;
-        
+
         // 投影行列の再計算
         viewProjection_->matProjection_ = MakePerspectiveFovMatrix(
             45.0f * std::numbers::pi_v<float> / 180.0f,
             float(WinApp::kClientWidth) / float(WinApp::kClientHeight),
             0.1f, 1000.0f);
-    } else {
+    }
+    else
+    {
         // 非アクティブ時は通常更新
         viewProjection_->UpdateMatrix();
     }
 }
 
-void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Vector2 &clickPosition) {
+void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Vector2 &clickPosition)
+{
     // 現在の回転状態から各軸の向きを算出
     Matrix4x4 matRot;
-    if (isUseQuaternion_) {
+    if (isUseQuaternion_)
+    {
         matRot = QuaternionToMatrix4x4(quateRotation_);
-    } else {
+    }
+    else
+    {
         matRot = MakeRotateXMatrix(eulerRotation_.x) * MakeRotateYMatrix(eulerRotation_.y);
     }
 
@@ -81,7 +94,8 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
     Vector3 up = {0.0f, 2.0f, 0.0f};
 
     // キーボード操作による移動処理
-    if (useKey_) {
+    if (useKey_)
+    {
         // コントロールキーで加速
         bool isDashing = Input::GetInstance()->PushKey(DIK_LCONTROL);
         float speed = moveZspeed_ * 10.0f * (isDashing ? 5.0f : 1.0f);
@@ -106,9 +120,11 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
     }
 
     // ---------- マウスによるカメラ移動 ----------
-    if (useMouse_) {
+    if (useMouse_)
+    {
         // ホイールクリックによるXY移動
-        if (Input::GetInstance()->IsPressMouse(2)) {
+        if (Input::GetInstance()->IsPressMouse(2))
+        {
             Vector2 currentMousePos = Input::GetInstance()->GetMousePos();
             float deltaX = static_cast<float>(currentMousePos.x - clickPosition.x);
             float deltaY = static_cast<float>(currentMousePos.y - clickPosition.y);
@@ -123,18 +139,21 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
 
         // ホイール回転でカメラの前後移動（Z軸）
         int wheel = Input::GetInstance()->GetWheel();
-        if (wheel != 0) {
+        if (wheel != 0)
+        {
             translation_ -= forward * static_cast<float>(wheel) * mouseSensitivity_;
         }
     }
 
     // ---------- マウス右クリックによる視点回転 ----------
-    if (Input::GetInstance()->IsPressMouse(1)) {
+    if (Input::GetInstance()->IsPressMouse(1))
+    {
         Vector2 currentMousePos = Input::GetInstance()->GetMousePos();
         float deltaX = static_cast<float>(currentMousePos.x - clickPosition.x);
         float deltaY = static_cast<float>(currentMousePos.y - clickPosition.y);
 
-        if (isUseQuaternion_) {
+        if (isUseQuaternion_)
+        {
             // クォータニオンでの回転処理
             Quaternion yawRotation = Quaternion::FromAxisAngle({0, 1, 0}, deltaX * mouseSensitivity_);
             Quaternion pitchRotation = Quaternion::FromAxisAngle({1, 0, 0}, deltaY * mouseSensitivity_);
@@ -144,7 +163,9 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
 
             // 参考用にオイラー角も更新
             eulerRotation_ = quateRotation_.ToEulerAngles();
-        } else {
+        }
+        else
+        {
             // オイラー角での回転処理
             cameraRotate.y += deltaX * mouseSensitivity_;
             cameraRotate.x += deltaY * mouseSensitivity_;
@@ -158,12 +179,15 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
         }
 
         clickPosition = currentMousePos;
-    } else if (!Input::GetInstance()->IsPressMouse(2)) {
+    }
+    else if (!Input::GetInstance()->IsPressMouse(2))
+    {
         clickPosition = Input::GetInstance()->GetMousePos();
     }
 }
 
-void DebugCamera::imgui() {
+void DebugCamera::imgui()
+{
 #ifdef _DEBUG
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 3));
@@ -180,7 +204,8 @@ void DebugCamera::imgui() {
                     isActive_ ? DebugTheme::kAccentGreen : DebugTheme::kTextDim);
     }
 
-    if (!isActive_) {
+    if (!isActive_)
+    {
         ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::TextUnformatted("  カメラは無効です。");
         ImGui::PopStyleColor();
@@ -200,7 +225,8 @@ void DebugCamera::imgui() {
                                            ImGuiTreeNodeFlags_DefaultOpen);
     ImGui::PopStyleColor(2);
 
-    if (posOpen) {
+    if (posOpen)
+    {
         ImGui::Indent(6.0f);
 
         // ---- Position ----
@@ -214,7 +240,8 @@ void DebugCamera::imgui() {
         // 位置履歴グラフ
         ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgBlue);
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.60f, 0.78f, 0.20f});
-        if (ImGui::CollapsingHeader("位置履歴 (グラフ)##camhist")) {
+        if (ImGui::CollapsingHeader("位置履歴 (グラフ)##camhist"))
+        {
             constexpr int kN = 100;
             static float hx[kN]{}, hy[kN]{}, hz[kN]{};
             static int head = 0, cnt = 0;
@@ -227,7 +254,8 @@ void DebugCamera::imgui() {
 
             static float dx[kN], dy[kN], dz[kN];
             int s = (head - cnt + kN) % kN;
-            for (int i = 0; i < cnt; ++i) {
+            for (int i = 0; i < cnt; ++i)
+            {
                 int id = (s + i) % kN;
                 dx[i] = hx[id];
                 dy[i] = hy[id];
@@ -237,7 +265,8 @@ void DebugCamera::imgui() {
             ImPlot::PushStyleColor(ImPlotCol_PlotBg, {0.08f, 0.08f, 0.10f, 1.0f});
             if (ImPlot::BeginPlot("##camposhist", ImVec2(-1, 65),
                                   ImPlotFlags_NoTitle | ImPlotFlags_NoLegend |
-                                      ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) {
+                                      ImPlotFlags_NoInputs | ImPlotFlags_NoFrame))
+            {
                 ImPlot::SetupAxes(nullptr, nullptr,
                                   ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_AutoFit);
                 ImPlot::SetupAxisLimits(ImAxis_X1, 0, kN, ImGuiCond_Always);
@@ -266,7 +295,8 @@ void DebugCamera::imgui() {
         ImGui::PopStyleColor();
         ImGui::Spacing();
 
-        if (isUseQuaternion_) {
+        if (isUseQuaternion_)
+        {
             // ラベルを上に置いてから全幅 DragFloat4
             ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
             ImGui::TextUnformatted("クォータニオン (X / Y / Z / W)");
@@ -281,7 +311,9 @@ void DebugCamera::imgui() {
             ImGui::Text("  Euler (ref)  X:%.1f  Y:%.1f  Z:%.1f (deg)",
                         eulerRotation_.x * d, eulerRotation_.y * d, eulerRotation_.z * d);
             ImGui::PopStyleColor();
-        } else {
+        }
+        else
+        {
             // ラベルを上に置いてから全幅 DragFloat3
             ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
             ImGui::TextUnformatted("オイラー角 (度)  X / Y / Z");
@@ -308,7 +340,8 @@ void DebugCamera::imgui() {
         if (ImGui::SmallButton("位置リセット##cprst"))
             translation_ = {0.f, 0.f, -50.f};
         ImGui::SameLine();
-        if (ImGui::SmallButton("回転リセット##crrst")) {
+        if (ImGui::SmallButton("回転リセット##crrst"))
+        {
             eulerRotation_ = {};
             quateRotation_ = Quaternion::IdentityQuaternion();
         }
@@ -326,7 +359,8 @@ void DebugCamera::imgui() {
                                             ImGuiTreeNodeFlags_DefaultOpen);
     ImGui::PopStyleColor(2);
 
-    if (moveOpen) {
+    if (moveOpen)
+    {
         ImGui::Indent(6.0f);
 
         // ラベルを上に → スライダーが全幅を使えて見切れない
@@ -350,7 +384,8 @@ void DebugCamera::imgui() {
 
         ImGui::PopStyleColor(3);
 
-        if (ImGui::SmallButton("速度リセット##csrst")) {
+        if (ImGui::SmallButton("速度リセット##csrst"))
+        {
             mouseSensitivity_ = 0.003f;
             moveZspeed_ = 0.005f;
         }
@@ -367,7 +402,8 @@ void DebugCamera::imgui() {
                                             ImGuiTreeNodeFlags_DefaultOpen);
     ImGui::PopStyleColor(2);
 
-    if (ctrlOpen) {
+    if (ctrlOpen)
+    {
         ImGui::Indent(6.0f);
         ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentPurple);
         ImGui::Checkbox("カメラロック (入力無効)##camlk", &lockCamera_);
@@ -379,18 +415,21 @@ void DebugCamera::imgui() {
         ImGui::PopStyleColor();
 
         ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentCyan);
-        if (ImGui::RadioButton("キーボード##rk", useKey_ && !useMouse_)) {
+        if (ImGui::RadioButton("キーボード##rk", useKey_ && !useMouse_))
+        {
             useKey_ = true;
             useMouse_ = false;
         }
         ImGui::SameLine();
-        if (ImGui::RadioButton("マウス##rm", useMouse_ && !useKey_)) {
+        if (ImGui::RadioButton("マウス##rm", useMouse_ && !useKey_))
+        {
             useMouse_ = true;
             useKey_ = false;
         }
         ImGui::PopStyleColor();
 
-        if (!useKey_ && !useMouse_) {
+        if (!useKey_ && !useMouse_)
+        {
             ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentOrange);
             ImGui::TextUnformatted("  [!] 入力モード未選択");
             ImGui::PopStyleColor();
@@ -417,7 +456,8 @@ void DebugCamera::imgui() {
     bool stOpen = ImGui::CollapsingHeader("ステータス##camst");
     ImGui::PopStyleColor(2);
 
-    if (stOpen) {
+    if (stOpen)
+    {
         ImGui::Indent(6.0f);
         ReadOnlyRow("状態", "%s", isActive_ ? "使用中" : "未使用");
         ReadOnlyRow("座標", "%.2f  %.2f  %.2f",

@@ -15,12 +15,14 @@ using namespace Hagine;
 
 EnemyCombat::EnemyCombat() {}
 
-EnemyCombat::~EnemyCombat() {
+EnemyCombat::~EnemyCombat()
+{
     // ポインタ失効前にゲームパラメータHubから登録を解除する
     GameParamHub::GetInstance()->Unregister("必殺演出(Enemy)");
 }
 
-void EnemyCombat::Init(Enemy *owner) {
+void EnemyCombat::Init(Enemy *owner)
+{
     owner_ = owner;
 
     chargeShake_ = std::make_unique<Shake>();
@@ -39,7 +41,8 @@ void EnemyCombat::Init(Enemy *owner) {
     beamCollider_->SetEnabled(false);
     beamCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         // ビームアクティブ中かつ未ダメージ処理のとき一度だけダメージを与える
-        if (other->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && owner_->GetTarget()) {
+        if (other->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && owner_->GetTarget())
+        {
             owner_->GetTarget()->SetDamage(kBeamDamage);
             beamDamageDealt_ = true;
         }
@@ -50,7 +53,8 @@ void EnemyCombat::Init(Enemy *owner) {
     attackCollider_->Init(owner_);
 
     // コンボ登録（ダメージ・ノックバックはImGuiで調整・セーブ可能）
-    if (!comboInitialized_) {
+    if (!comboInitialized_)
+    {
         punchCombo_.SetName("EnemyPunchCombo"); // DataHandlerのファイル名
 
         // 攻撃の見た目は本体アニメーション（comboAnimations_）で再生するため、
@@ -74,7 +78,8 @@ void EnemyCombat::Init(Enemy *owner) {
                 currentAttackDamage_ = damage;
                 currentAttackKnockback_ = knockback;
                 currentAttackDuration_ = duration;
-                if (attackCollider_) {
+                if (attackCollider_)
+                {
                     attackCollider_->Activate(damage, knockback, duration);
                 }
             });
@@ -95,29 +100,36 @@ void EnemyCombat::Init(Enemy *owner) {
     };
 }
 
-void EnemyCombat::ConboUpdate() {
+void EnemyCombat::ConboUpdate()
+{
     punchCombo_.Update(Frame::DeltaTime());
 
-    if (isComboAttack_) {
+    if (isComboAttack_)
+    {
         punchCombo_.TryExecuteCombo();
         isComboAttack_ = false;
     }
 
     // 前方攻撃判定コライダーの遅延・有効時間タイマーを進める
-    if (attackCollider_) {
+    if (attackCollider_)
+    {
         attackCollider_->Update(Frame::DeltaTime());
     }
 
     // コンボが非アクティブになったらコライダーも強制無効化
-    if (!punchCombo_.IsComboActive()) {
-        if (attackCollider_) {
+    if (!punchCombo_.IsComboActive())
+    {
+        if (attackCollider_)
+        {
             attackCollider_->Deactivate();
         }
     }
 }
 
-void EnemyCombat::UpdateEffects(float deltaTime) {
-    if (chargeShake_) {
+void EnemyCombat::UpdateEffects(float deltaTime)
+{
+    if (chargeShake_)
+    {
         chargeShake_->Update();
     }
 
@@ -131,35 +143,45 @@ void EnemyCombat::UpdateEffects(float deltaTime) {
     UpdateBeam();
 }
 
-void EnemyCombat::UpdateEmitters() {
+void EnemyCombat::UpdateEmitters()
+{
     Vector3 selfPos = owner_->GetWorldPosition();
     Quaternion selfRot = owner_->GetLocalRotation();
-    if (chargeAura_) {
+    if (chargeAura_)
+    {
         chargeAura_->SetTranslate(selfPos);
         chargeAura_->SetRotation(-selfRot);
         chargeAura_->Update();
     }
-    if (beamMainEffect_) {
+    if (beamMainEffect_)
+    {
         beamMainEffect_->Update();
     }
-    if (beamAroundEffect_) {
+    if (beamAroundEffect_)
+    {
         beamAroundEffect_->Update();
     }
 }
 
-void EnemyCombat::UpdateBullets() {
-    for (auto it = bullets_.begin(); it != bullets_.end();) {
+void EnemyCombat::UpdateBullets()
+{
+    for (auto it = bullets_.begin(); it != bullets_.end();)
+    {
         (*it)->Update();
         (*it)->UpdateWorldTransformHierarchy();
-        if (!(*it)->IsAlive()) {
+        if (!(*it)->IsAlive())
+        {
             it = bullets_.erase(it);
-        } else {
+        }
+        else
+        {
             ++it;
         }
     }
 }
 
-void EnemyCombat::DrawParticle(const ViewProjection &viewProjection) {
+void EnemyCombat::DrawParticle(const ViewProjection &viewProjection)
+{
     // 大技演出（Graphics フェーズ）
     if (chargeAura_)
         chargeAura_->DrawGraphics(viewProjection);
@@ -168,15 +190,18 @@ void EnemyCombat::DrawParticle(const ViewProjection &viewProjection) {
     if (beamAroundEffect_)
         beamAroundEffect_->DrawGraphics(viewProjection);
     // 前方攻撃判定コライダーのヒットエフェクト
-    if (attackCollider_) {
+    if (attackCollider_)
+    {
         attackCollider_->DrawParticle(viewProjection);
     }
-    for (auto &bullet : bullets_) {
+    for (auto &bullet : bullets_)
+    {
         bullet->DrawParticle(viewProjection);
     }
 }
 
-void EnemyCombat::DrawParticleCompute(const ViewProjection &viewProjection) {
+void EnemyCombat::DrawParticleCompute(const ViewProjection &viewProjection)
+{
     if (chargeAura_)
         chargeAura_->DrawCompute(viewProjection);
     if (beamMainEffect_)
@@ -185,7 +210,8 @@ void EnemyCombat::DrawParticleCompute(const ViewProjection &viewProjection) {
         beamAroundEffect_->DrawCompute(viewProjection);
 }
 
-void EnemyCombat::Shot() {
+void EnemyCombat::Shot()
+{
     if (!owner_->GetTarget() || !owner_->Status().ConsumeEnergy(kNormalShotEnergyCost))
         return;
     std::string bulletName = "EnemyBullet_" + std::to_string(bullets_.size());
@@ -197,7 +223,8 @@ void EnemyCombat::Shot() {
     bullets_.push_back(std::move(bullet));
 }
 
-void EnemyCombat::ShotWithDirection(const Vector3 &direction, bool forceHoming) {
+void EnemyCombat::ShotWithDirection(const Vector3 &direction, bool forceHoming)
+{
     if (!owner_->GetTarget() || !owner_->Status().ConsumeEnergy(kNormalShotEnergyCost))
         return;
 
@@ -213,9 +240,11 @@ void EnemyCombat::ShotWithDirection(const Vector3 &direction, bool forceHoming) 
     bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
     bullet->SetColliderRadius(kBulletColliderRadius);
 
-    if (forceHoming) {
+    if (forceHoming)
+    {
         bullet->SetIsLockOnBullet(true);
-        if (owner_->GetTarget()) {
+        if (owner_->GetTarget())
+        {
             Vector3 toTarget = owner_->GetTarget()->GetLocalPosition() - owner_->GetLocalPosition();
             float len = toTarget.Length();
             if (len > kMinRotationDistance)
@@ -224,7 +253,9 @@ void EnemyCombat::ShotWithDirection(const Vector3 &direction, bool forceHoming) 
                 toTarget = owner_->GetForward();
             bullet->SetVelocity(toTarget * bullet->GetCurrentSpeed());
         }
-    } else {
+    }
+    else
+    {
         bullet->SetIsLockOnBullet(false);
         bullet->SetVelocity(-direction * bullet->GetCurrentSpeed());
     }
@@ -232,33 +263,40 @@ void EnemyCombat::ShotWithDirection(const Vector3 &direction, bool forceHoming) 
     bullets_.push_back(std::move(bullet));
 }
 
-void EnemyCombat::PerformAttack() {
+void EnemyCombat::PerformAttack()
+{
     Logger::Log("Attack\n");
 }
 
-void EnemyCombat::StartChargeAura() {
-    if (chargeAura_) {
+void EnemyCombat::StartChargeAura()
+{
+    if (chargeAura_)
+    {
         chargeAura_->SetTranslate(owner_->GetWorldPosition());
         chargeAura_->SetAuto(true);
     }
-    if (chargeShake_) {
+    if (chargeShake_)
+    {
         chargeShake_->StartShake();
     }
 }
 
-void EnemyCombat::StopChargeAura() {
+void EnemyCombat::StopChargeAura()
+{
     if (chargeAura_)
         chargeAura_->SetAuto(false);
 }
 
-void EnemyCombat::FireChargeBlast() {
+void EnemyCombat::FireChargeBlast()
+{
     StopChargeAura();
 
     if (!owner_->GetTarget())
         return;
 
     // エネルギーが足りなければ通常弾にフォールバック
-    if (!owner_->Status().ConsumeEnergy(kChargeAttackEnergyCost)) {
+    if (!owner_->Status().ConsumeEnergy(kChargeAttackEnergyCost))
+    {
         Shot();
         return;
     }
@@ -282,7 +320,8 @@ void EnemyCombat::FireChargeBlast() {
     bullets_.push_back(std::move(bullet));
 }
 
-void EnemyCombat::ActivateBeam() {
+void EnemyCombat::ActivateBeam()
+{
     if (beamActive_)
         return;
 
@@ -304,7 +343,8 @@ void EnemyCombat::ActivateBeam() {
         chargeShake_->StartShake();
 }
 
-void EnemyCombat::StartBeamStaging() {
+void EnemyCombat::StartBeamStaging()
+{
     if (beamActive_ || beamCutscene_.IsActive())
         return;
 
@@ -321,11 +361,13 @@ void EnemyCombat::StartBeamStaging() {
     });
 }
 
-void EnemyCombat::CancelBeamStaging() {
+void EnemyCombat::CancelBeamStaging()
+{
     beamCutscene_.Cancel();
 }
 
-void EnemyCombat::DeactivateBeam() {
+void EnemyCombat::DeactivateBeam()
+{
     beamActive_ = false;
     beamLength_ = 0.0f;
     beamActiveTime_ = 0.0f;
@@ -339,7 +381,8 @@ void EnemyCombat::DeactivateBeam() {
         beamCollider_->SetEnabled(false); // 判定を即無効化（ダメージは止める）
 }
 
-void EnemyCombat::UpdateBeam() {
+void EnemyCombat::UpdateBeam()
+{
     if (!beamActive_)
         return;
 
@@ -362,7 +405,8 @@ void EnemyCombat::UpdateBeam() {
 
     // メインビームエミッタの設定（MakanAttackSkill と同じアプローチ）
     // SetScale の Z 成分でビームの長さを制御し、SetAnchorPoint でビームの起点を調整する
-    if (beamMainEffect_) {
+    if (beamMainEffect_)
+    {
         beamMainEffect_->SetAuto(true);
         beamMainEffect_->SetScale(Vector3(0.0f, 0.0f, beamLength_));
         beamMainEffect_->SetAnchorPoint(Vector3(0.5f, 0.5f, 0.75f));
@@ -371,7 +415,8 @@ void EnemyCombat::UpdateBeam() {
     }
 
     // らせん状エミッタの設定（MakanAttackSkill と同じアプローチ）
-    if (beamAroundEffect_) {
+    if (beamAroundEffect_)
+    {
         beamAroundEffect_->SetAuto(true);
         beamSpiralTime_ += dt;
 
@@ -411,27 +456,32 @@ void EnemyCombat::UpdateBeam() {
     }
 
     // OBBコライダーをビーム形状に更新する
-    if (beamCollider_) {
+    if (beamCollider_)
+    {
         beamCollider_->SetEnabled(true);
         beamCollider_->SetSize(Vector3(kBeamWidth, kBeamWidth, beamLength_));
         beamCollider_->SetAnchorPoint(Vector3(0.5f, 0.5f, 1.0f));
     }
 
     // 持続時間が過ぎたら自動停止
-    if (beamActiveTime_ >= kBeamDuration) {
+    if (beamActiveTime_ >= kBeamDuration)
+    {
         DeactivateBeam();
     }
 }
 
-void EnemyCombat::SetVp(ViewProjection *vp) {
+void EnemyCombat::SetVp(ViewProjection *vp)
+{
     chargeShake_->Initialize(vp, "chargehit");
 }
 
-void EnemyCombat::RegisterParams() {
+void EnemyCombat::RegisterParams()
+{
     beamCutscene_.RegisterParams("必殺演出(Enemy)");
 }
 
-void EnemyCombat::DrawComboImGui() {
+void EnemyCombat::DrawComboImGui()
+{
 #ifdef USE_IMGUI
     ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.2f, 1.0f),
                        "現在の攻撃: ダメージ %.1f / ノックバック %.1f",

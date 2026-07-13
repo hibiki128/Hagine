@@ -8,7 +8,8 @@ namespace Hagine {
 /// ポストエフェクト描画で使うバッファ群を管理するクラス
 /// エフェクトを繰り返し適用するためのピンポンバッファと、最終結果テクスチャを保持する
 /// </summary>
-class RenderBuffer {
+class RenderBuffer
+{
   public:
     /// ===================================================
     /// public method
@@ -78,7 +79,8 @@ class RenderBuffer {
     /// ピンポンバッファの数を取得
     /// </summary>
     /// <returns>const int: バッファ数</returns>
-    const int GetPingPongBufferCount() const {
+    const int GetPingPongBufferCount() const
+    {
         return kPingPongBufferCount;
     }
 

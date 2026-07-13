@@ -16,16 +16,19 @@
 
 namespace Hagine {
 class ModelCommon;
-class Object3d {
+class Object3d
+{
   private: // メンバ変数
-    struct Transform {
+    struct Transform
+    {
         Vector3 scale;
         Vector3 rotate;
         Vector3 translate;
     };
 
     // 座標変換行列データ
-    struct TransformationMatrix {
+    struct TransformationMatrix
+    {
         Matrix4x4 WVP;
         Matrix4x4 World;
         Matrix4x4 WorldInverseTranspose;
@@ -141,17 +144,21 @@ class Object3d {
     const Vector3 &GetSize() const { return size_; }
     size_t GetMaterialCount() const { return materials_.size(); }
     std::string GetModelFilePath() const { return modelFilePath_; }
-    std::string GetTextureFilePath(uint32_t materialIndex) const {
+    std::string GetTextureFilePath(uint32_t materialIndex) const
+    {
         return materials_[materialIndex]->GetMaterialData().textureFilePath;
     }
-    std::vector<std::string> GetAllTextruePath() {
+    std::vector<std::string> GetAllTextruePath()
+    {
         std::vector<std::string> texturePaths = {};
-        for (int i = 0; i < GetMaterialCount(); i++) {
+        for (int i = 0; i < GetMaterialCount(); i++)
+        {
             texturePaths.push_back(materials_[i]->GetMaterialData().textureFilePath);
         }
         return texturePaths;
     }
-    ModelAnimation *GetCurrentModelAnimation() const {
+    ModelAnimation *GetCurrentModelAnimation() const
+    {
         return currentModelAnimation_.get();
     }
 
@@ -159,7 +166,8 @@ class Object3d {
     bool IsFinish() { return currentModelAnimation_->IsFinish(); }
     Model *GetModel() const { return model_; }
 
-    Material *GetMaterial(uint32_t index) {
+    Material *GetMaterial(uint32_t index)
+    {
         return (index < materials_.size()) ? materials_[index].get() : nullptr;
     }
     Vector4 GetColor(int index = 0) { return color_[index].GetColor(); }
@@ -218,7 +226,8 @@ class Object3d {
 
     void DrawArmatureShape(const Vector3 &startPos, const Vector3 &endPos, float baseWidth, float tipWidth, const Vector4 &color);
 
-    Vector3 ExtractTranslation(const Matrix4x4 &matrix) {
+    Vector3 ExtractTranslation(const Matrix4x4 &matrix)
+    {
         return Vector3(matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]);
     }
 };

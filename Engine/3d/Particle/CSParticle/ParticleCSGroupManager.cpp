@@ -1,27 +1,33 @@
 #include "ParticleCSGroupManager.h"
 
 namespace Hagine {
-void ParticleCSGroupManager::Initialize() {
+void ParticleCSGroupManager::Initialize()
+{
     const std::string directoryPath = "Application/Assets/jsons/ParticleCSGroup/";
 
     // ディレクトリが存在しない場合は何もしない
-    if (!fs::exists(directoryPath) || !fs::is_directory(directoryPath)) {
+    if (!fs::exists(directoryPath) || !fs::is_directory(directoryPath))
+    {
         return;
     }
 
-    for (const auto &entry : fs::directory_iterator(directoryPath)) {
-        if (entry.is_regular_file() && entry.path().extension() == ".json") {
+    for (const auto &entry : fs::directory_iterator(directoryPath))
+    {
+        if (entry.is_regular_file() && entry.path().extension() == ".json")
+        {
             // ファイル名（拡張子なし）をグループ名として使用してDataHandlerを生成
             std::string groupName = entry.path().stem().string();
             DataHandler data("ParticleCSGroup", groupName);
 
             // グループ名キーが存在しない場合はスキップ
-            if (!data.Exists()) {
+            if (!data.Exists())
+            {
                 continue;
             }
 
             std::string loadedGroupName = data.Load<std::string>("groupName", "");
-            if (loadedGroupName.empty()) {
+            if (loadedGroupName.empty())
+            {
                 continue;
             }
 
@@ -40,35 +46,46 @@ void ParticleCSGroupManager::Initialize() {
     }
 }
 
-void ParticleCSGroupManager::Finalize() {
+void ParticleCSGroupManager::Finalize()
+{
     particleGroups_.clear();
     independentGroups_.clear();
     groupPool_.clear();
     groupDescs_.clear();
 }
 
-ParticleCSGroup *ParticleCSGroupManager::GetParticleCSGroup(const std::string &name) {
+ParticleCSGroup *ParticleCSGroupManager::GetParticleCSGroup(const std::string &name)
+{
     // 既に実体化済みなら返す
-    for (const auto &group : particleGroups_) {
-        if (group->GetGroupName() == name) {
+    for (const auto &group : particleGroups_)
+    {
+        if (group->GetGroupName() == name)
+        {
             return group.get();
         }
     }
     // 未生成: メタデータ登録簿にあれば、この時点で初めて遅延生成する
     auto it = groupDescs_.find(name);
-    if (it != groupDescs_.end()) {
+    if (it != groupDescs_.end())
+    {
         return LoadGroupFromDesc(it->second);
     }
     return nullptr;
 }
 
-ParticleCSGroup *ParticleCSGroupManager::LoadGroupFromDesc(const GroupDesc &desc) {
+ParticleCSGroup *ParticleCSGroupManager::LoadGroupFromDesc(const GroupDesc &desc)
+{
     auto particleGroup = std::make_unique<ParticleCSGroup>();
-    if (!desc.modelPath.empty()) {
+    if (!desc.modelPath.empty())
+    {
         particleGroup->CreateParticleGroup(desc.groupName, desc.modelPath, desc.maxParticleCount, desc.texturePath, desc.blendMode);
-    } else if (desc.primitiveType != PrimitiveType::None) {
+    }
+    else if (desc.primitiveType != PrimitiveType::None)
+    {
         particleGroup->CreatePrimitiveParticleGroup(desc.groupName, desc.primitiveType, desc.maxParticleCount, desc.texturePath, desc.blendMode);
-    } else {
+    }
+    else
+    {
         return nullptr;
     }
     ParticleCSGroup *groupPtr = particleGroup.get();
@@ -76,29 +93,34 @@ ParticleCSGroup *ParticleCSGroupManager::LoadGroupFromDesc(const GroupDesc &desc
     return groupPtr;
 }
 
-std::vector<std::string> ParticleCSGroupManager::GetAllGroupNames() const {
+std::vector<std::string> ParticleCSGroupManager::GetAllGroupNames() const
+{
     std::vector<std::string> names;
     names.reserve(groupDescs_.size());
-    for (const auto &[name, desc] : groupDescs_) {
+    for (const auto &[name, desc] : groupDescs_)
+    {
         names.push_back(name);
     }
     std::sort(names.begin(), names.end());
     return names;
 }
 
-void ParticleCSGroupManager::CreateParticleCSGroup(const std::string &groupName, const std::string &fileName, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {
+void ParticleCSGroupManager::CreateParticleCSGroup(const std::string &groupName, const std::string &fileName, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode)
+{
     auto particleGroup = std::make_unique<ParticleCSGroup>();
     particleGroup->CreateParticleGroup(groupName, fileName, maxParticleCount, texturePath, blendMode);
     AddParticleCSGroup(std::move(particleGroup));
 }
 
-void ParticleCSGroupManager::CreatePrimitiveParticleCSGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode) {
+void ParticleCSGroupManager::CreatePrimitiveParticleCSGroup(const std::string &groupName, PrimitiveType type, uint32_t maxParticleCount, const std::string &texturePath, BlendMode blendMode)
+{
     auto particleGroup = std::make_unique<ParticleCSGroup>();
     particleGroup->CreatePrimitiveParticleGroup(groupName, type, maxParticleCount, texturePath, blendMode);
     AddParticleCSGroup(std::move(particleGroup));
 }
 
-void ParticleCSGroupManager::AddParticleCSGroup(std::unique_ptr<ParticleCSGroup> particleCSGroup) {
+void ParticleCSGroupManager::AddParticleCSGroup(std::unique_ptr<ParticleCSGroup> particleCSGroup)
+{
     DataHandler data("ParticleCSGroup", particleCSGroup->GetGroupName());
     data.Save("groupName", particleCSGroup->GetGroupName());
     // materialがvectorになったため、最初のmaterialのtextureFilePathを保存

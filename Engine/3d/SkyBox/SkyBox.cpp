@@ -7,14 +7,16 @@
 #include <myMath.h>
 
 namespace Hagine {
-void SkyBox::Finalize() {
+void SkyBox::Finalize()
+{
     vertexResource_.Reset();
     indexResource_.Reset();
     skyBoxResource_.Reset();
     cameraResource_.Reset();
 }
 
-void SkyBox::Initialize(std::string filePath) {
+void SkyBox::Initialize(std::string filePath)
+{
     psoManager_ = PipeLineManager::GetInstance();
     dxCommon_ = DirectXCommon::GetInstance();
     srvManager_ = SrvManager::GetInstance();
@@ -27,7 +29,8 @@ void SkyBox::Initialize(std::string filePath) {
     textureIndex_ = TextureManager::GetInstance()->GetTextureIndexByFilePath(filePath);
 }
 
-void SkyBox::Update(const ViewProjection &viewProjection) {
+void SkyBox::Update(const ViewProjection &viewProjection)
+{
     // カメラ位置を抽出
     Vector3 cameraPosition = viewProjection.translation_;
 
@@ -55,8 +58,10 @@ void SkyBox::Update(const ViewProjection &viewProjection) {
     cameraData_->worldPosition = cameraPosition;
 }
 
-void SkyBox::Draw(const ViewProjection &viewProjection) {
-    if (ShadowMap::GetInstance()->IsShadowPassActive()) return;
+void SkyBox::Draw(const ViewProjection &viewProjection)
+{
+    if (ShadowMap::GetInstance()->IsShadowPassActive())
+        return;
     Update(viewProjection);
     ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
     psoManager_->DrawCommonSetting(PipelineType::kSkybox);
@@ -74,7 +79,8 @@ void SkyBox::Draw(const ViewProjection &viewProjection) {
     commandList->DrawIndexedInstanced(UINT(indices_.size()), 1, 0, 0, 0);
 }
 
-void SkyBox::CreateShape() {
+void SkyBox::CreateShape()
+{
     // 形状を作成
     vertices_.resize(24);
     indices_.resize(36);
@@ -125,7 +131,8 @@ void SkyBox::CreateShape() {
         20, 21, 22, 22, 21, 23};
 }
 
-void SkyBox::CreateVertex() {
+void SkyBox::CreateVertex()
+{
     vertexResource_ = dxCommon_->CreateBufferResource(sizeof(SkyBoxVertexData3D) * vertices_.size());
     // リソースの先頭のアドレスから使う
     vertexBufferView_.BufferLocation = vertexResource_->GetGPUVirtualAddress();
@@ -140,7 +147,8 @@ void SkyBox::CreateVertex() {
     std::memcpy(vertexData_, vertices_.data(), sizeof(SkyBoxVertexData3D) * vertices_.size());
 }
 
-void SkyBox::CreateIndex() {
+void SkyBox::CreateIndex()
+{
     indexResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t) * indices_.size());
     indexBufferView_.BufferLocation = indexResource_->GetGPUVirtualAddress();
     indexBufferView_.SizeInBytes = UINT(sizeof(uint32_t) * indices_.size());
@@ -149,14 +157,16 @@ void SkyBox::CreateIndex() {
     std::memcpy(indexData_, indices_.data(), sizeof(uint32_t) * indices_.size());
 }
 
-void SkyBox::CreateSkyBox() {
+void SkyBox::CreateSkyBox()
+{
     skyBoxResource_ = dxCommon_->CreateBufferResource(sizeof(SkyBoxDataForGPU));
     skyBoxData_ = nullptr;
     skyBoxResource_->Map(0, nullptr, reinterpret_cast<void **>(&skyBoxData_));
     skyBoxData_->worldMatrix = MakeIdentity4x4();
 }
 
-void SkyBox::CreateCamera() {
+void SkyBox::CreateCamera()
+{
     cameraResource_ = dxCommon_->CreateBufferResource(sizeof(CameraDataForGPU));
     cameraData_ = nullptr;
     cameraResource_->Map(0, nullptr, reinterpret_cast<void **>(&cameraData_));

@@ -6,7 +6,8 @@
 /// 空中での待機や移動、状態遷移を処理する
 /// Rush 遷移の入力検出もこのステートが担当する
 /// </summary>
-class PlayerStateFlyIdle : public PlayerBaseState {
+class PlayerStateFlyIdle : public PlayerBaseState
+{
   public:
     /// ===================================================
     /// public method
@@ -60,18 +61,18 @@ class PlayerStateFlyIdle : public PlayerBaseState {
     /// private varians
     /// ===================================================
 
-    static constexpr float kDampingFactor         = 0.75f;  // 減衰率
-    static constexpr float kVelocityStopThreshold = 0.01f;  // 速度停止閾値
-    static constexpr float kVelocityZero          = 0.0f;   // 速度ゼロ
-    static constexpr float kAccelerationZero      = 0.0f;   // 加速度ゼロ
-    static constexpr float kMoveSpeedZero         = 0.0f;   // 移動速度ゼロ
-    static constexpr float kGroundLevel           = 0.0f;   // 地面レベル
+    static constexpr float kDampingFactor = 0.75f;         // 減衰率
+    static constexpr float kVelocityStopThreshold = 0.01f; // 速度停止閾値
+    static constexpr float kVelocityZero = 0.0f;           // 速度ゼロ
+    static constexpr float kAccelerationZero = 0.0f;       // 加速度ゼロ
+    static constexpr float kMoveSpeedZero = 0.0f;          // 移動速度ゼロ
+    static constexpr float kGroundLevel = 0.0f;            // 地面レベル
 
     // Rush 遷移パラメータ
-    static constexpr float kRushEnergyCost       = 30.0f;  // Rush 遷移のエネルギーコスト
-    static constexpr float kInputResetTime       = 0.3f;   // キーボード入力リセット時間
-    static constexpr float kDashRushMinDuration  = 0.1f;   // ゲームパッドのダッシュから Rush に移行するための最低ダッシュ時間
+    static constexpr float kRushEnergyCost = 30.0f;     // Rush 遷移のエネルギーコスト
+    static constexpr float kInputResetTime = 0.3f;      // キーボード入力リセット時間
+    static constexpr float kDashRushMinDuration = 0.1f; // ゲームパッドのダッシュから Rush に移行するための最低ダッシュ時間
 
-    float lControlInputTime_  = 0.0f; // LCtrl 入力の保持時間（キーボード用）
-    int   lControlInputCount_ = 0;    // LCtrl の入力回数（キーボード用）
+    float lControlInputTime_ = 0.0f; // LCtrl 入力の保持時間（キーボード用）
+    int lControlInputCount_ = 0;     // LCtrl の入力回数（キーボード用）
 };

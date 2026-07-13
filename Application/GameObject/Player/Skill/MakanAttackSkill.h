@@ -3,7 +3,8 @@
 #include "Particle/CSParticle/ParticleCSEmitter.h"
 
 class Player;
-class MakanAttackSkill : public Hagine::BaseObject {
+class MakanAttackSkill : public Hagine::BaseObject
+{
   public:
     /// <summary>
     /// 初期化

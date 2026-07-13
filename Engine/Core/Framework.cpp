@@ -8,7 +8,8 @@
 #include <iterator>
 
 namespace Hagine {
-void Framework::Run() {
+void Framework::Run()
+{
     // ゲームの初期化
     Initialize();
 
@@ -17,7 +18,8 @@ void Framework::Run() {
         // 更新
         Update();
         // 終了リクエストが来たら抜ける
-        if (IsEndRequest()) {
+        if (IsEndRequest())
+        {
             break;
         }
         // 描画
@@ -27,7 +29,8 @@ void Framework::Run() {
     Finalize();
 }
 
-void Framework::Initialize() {
+void Framework::Initialize()
+{
     Logger::Info("Application initialization started.");
 
     ///---------WinApp--------
@@ -218,7 +221,8 @@ void Framework::Initialize() {
     Logger::Info("Application initialization finished.");
 }
 
-void Framework::Finalize() {
+void Framework::Finalize()
+{
     Logger::Info("Application shutting down.");
 
     collisionManager_->Clear();
@@ -258,7 +262,8 @@ void Framework::Finalize() {
     dxCommon_->Finalize();
 }
 
-void Framework::RegisterShortcutKey() {
+void Framework::RegisterShortcutKey()
+{
     // フルスクリーン
     shortcutManager_->RegisterShortcut("FullScreen", DIK_F11, [this]() {
         winApp_->ToggleFullScreen();
@@ -290,7 +295,8 @@ void Framework::RegisterShortcutKey() {
     // シーン切替（SceneRegistry に自己登録された全シーンへ Ctrl+数字 を割り当てる）
     const std::vector<std::string> sceneNames = SceneRegistry::GetInstance()->GetSceneNames();
     constexpr BYTE kNumberKeys[] = {DIK_1, DIK_2, DIK_3, DIK_4, DIK_5, DIK_6, DIK_7, DIK_8, DIK_9};
-    for (size_t i = 0; i < sceneNames.size() && i < std::size(kNumberKeys); ++i) {
+    for (size_t i = 0; i < sceneNames.size() && i < std::size(kNumberKeys); ++i)
+    {
         const std::string sceneName = sceneNames[i];
         shortcutManager_->RegisterShortcut(sceneName + "Scene", {DIK_LCONTROL, kNumberKeys[i]}, [this, sceneName]() {
             sceneManager_->SceneSelection(sceneName);
@@ -316,7 +322,8 @@ void Framework::RegisterShortcutKey() {
 #endif // _DEBUG
 }
 
-void Framework::Update() {
+void Framework::Update()
+{
 
     /// deltaTimeの更新
     Frame::Update();
@@ -353,7 +360,8 @@ void Framework::Update() {
     }
 }
 
-void Framework::LoadResource() {
+void Framework::LoadResource()
+{
 
     textureManager_->LoadAllTextures();
 
@@ -363,9 +371,11 @@ void Framework::LoadResource() {
     Logger::Info("All base resources loaded.");
 }
 
-void Framework::PlaySounds() {
+void Framework::PlaySounds()
+{
 }
 
-void Framework::Draw() {
+void Framework::Draw()
+{
 }
 } // namespace Hagine

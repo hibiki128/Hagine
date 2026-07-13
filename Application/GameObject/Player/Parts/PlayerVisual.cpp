@@ -9,7 +9,8 @@
 
 using namespace Hagine;
 
-void PlayerVisual::Init(Player *owner) {
+void PlayerVisual::Init(Player *owner)
+{
     owner_ = owner;
 
     // ───────────────────────────────────────────
@@ -44,14 +45,16 @@ void PlayerVisual::Init(Player *owner) {
     animationController_.LoadClips("AnimationController", "PlayerClips");
 }
 
-void PlayerVisual::UpdateAnimation() {
+void PlayerVisual::UpdateAnimation()
+{
     ComboSystem &punchCombo = owner_->Combat().GetPunchCombo();
     const std::vector<std::string> &comboAnimations = owner_->Combat().GetComboAnimations();
 
     // ──────────────────────────────────────────
     // コンボ攻撃中：段数に対応したアニメーションを再生
     // ──────────────────────────────────────────
-    if (punchCombo.IsComboActive()) {
+    if (punchCombo.IsComboActive())
+    {
         // GetCurrentComboIndex() は「次に実行する」インデックスを返す。
         // ExecuteComboAttack() が呼ばれるとインクリメントされるため、
         // 現在再生中の段 = nextIdx - 1（0 のときは最終段 Slam の後待機中）
@@ -59,9 +62,11 @@ void PlayerVisual::UpdateAnimation() {
         int comboLen = punchCombo.GetComboLength();
         int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
 
-        if (animIdx >= 0 && animIdx < static_cast<int>(comboAnimations.size())) {
+        if (animIdx >= 0 && animIdx < static_cast<int>(comboAnimations.size()))
+        {
             const std::string &path = comboAnimations[animIdx];
-            if (!path.empty()) {
+            if (!path.empty())
+            {
                 // 攻撃モーションはループ無し・短い補間でテンポよく切り替える
                 animationController_.PlayFile(path, false, 1.0f, 0.1f);
             }
@@ -75,13 +80,16 @@ void PlayerVisual::UpdateAnimation() {
     // ──────────────────────────────────────────
     const std::string stateName = owner_->GetCurrentStateName();
 
-    if (stateName == "Idle") {
+    if (stateName == "Idle")
+    {
         // 地上待機
         animationController_.Play("Idle");
-
-    } else if (stateName == "Move") {
+    }
+    else if (stateName == "Move")
+    {
         // 地上移動 ― 移動方向に応じて前後左右のクリップを使い分ける
-        switch (owner_->GetMoveDirection()) {
+        switch (owner_->GetMoveDirection())
+        {
         case MoveDirection::Behind:
             animationController_.Play("RunBack");
             break;
@@ -96,42 +104,52 @@ void PlayerVisual::UpdateAnimation() {
             animationController_.Play("Run");
             break;
         }
-
-    } else if (stateName == "Jump" || stateName == "Air") {
+    }
+    else if (stateName == "Jump" || stateName == "Air")
+    {
         // ジャンプ・空中（上昇/滞空/下降）
         animationController_.Play("Jump");
-
-    } else if (stateName == "FlyIdle") {
+    }
+    else if (stateName == "FlyIdle")
+    {
         // 浮遊待機
         animationController_.Play("FlyIdle");
-
-    } else if (stateName == "FlyMove") {
+    }
+    else if (stateName == "FlyMove")
+    {
         // 浮遊移動 ― 後退・上昇・下降は Idle_Flying、前進・左右移動は Running_Fly を使う。
         // 縦移動(|velocity.y| > 閾値)または後退(moveDir == Behind)は、仰向け気味の
         // Idle_Flying の方がモーションとして自然なため優先する
         bool verticalMove = std::abs(owner_->GetVelocity().y) > kFlyVerticalAnimThreshold;
         bool movingBackward = (owner_->GetMoveDirection() == MoveDirection::Behind);
-        if (verticalMove || movingBackward) {
+        if (verticalMove || movingBackward)
+        {
             animationController_.Play("FlyIdle");
-        } else {
+        }
+        else
+        {
             animationController_.Play("FlyMove");
         }
-
-    } else if (stateName == "Rush") {
+    }
+    else if (stateName == "Rush")
+    {
         // ダッシュ突進
         animationController_.Play("FlyMove");
-
-    } else if (stateName == "Guard") {
+    }
+    else if (stateName == "Guard")
+    {
         // ガード
         animationController_.Play("Guard");
-
-    } else if (stateName == "EnergyCharge") {
+    }
+    else if (stateName == "EnergyCharge")
+    {
         // エネルギーチャージ ― 専用モーションなし（待機で代用）
         animationController_.Play("Idle");
     }
 }
 
-void PlayerVisual::UpdateFlyLean() {
+void PlayerVisual::UpdateFlyLean()
+{
     // 目標姿勢をクォータニオンで構築する。条件を満たさないときは無回転（直立）へ戻す
     Quaternion targetLean = Quaternion::IdentityQuaternion();
 
@@ -142,7 +160,8 @@ void PlayerVisual::UpdateFlyLean() {
 
     const Vector3 &velocity = owner_->GetVelocity();
 
-    if (active) {
+    if (active)
+    {
         Vector3 horizontalVel = {velocity.x, 0.0f, velocity.z};
         float speed = horizontalVel.Length();
 
@@ -154,7 +173,8 @@ void PlayerVisual::UpdateFlyLean() {
         float fwdLen = fwdAxis.Length();
         float rightLen = rightAxis.Length();
 
-        if (speed > 0.001f && fwdLen > 0.001f && rightLen > 0.001f) {
+        if (speed > 0.001f && fwdLen > 0.001f && rightLen > 0.001f)
+        {
             Vector3 dir = horizontalVel / speed; // 進行方向（ワールド・水平）
             fwdAxis = fwdAxis / fwdLen;
             rightAxis = rightAxis / rightLen;
@@ -184,7 +204,8 @@ void PlayerVisual::UpdateFlyLean() {
     flyLeanRotation_ = Quaternion::Slerp(flyLeanRotation_, targetLean, t);
 
     // ほぼ無回転（直立）に戻ったら描画オフセットを解除する
-    if (flyLeanRotation_.w > 0.99999f) {
+    if (flyLeanRotation_.w > 0.99999f)
+    {
         flyLeanRotation_ = Quaternion::IdentityQuaternion();
         owner_->ClearRenderRotationOffset();
         return;
@@ -194,7 +215,8 @@ void PlayerVisual::UpdateFlyLean() {
     owner_->SetRenderRotationOffset(flyLeanRotation_, flyLeanPivot_);
 }
 
-void PlayerVisual::Save(DataHandler *data) {
+void PlayerVisual::Save(DataHandler *data)
+{
     data->Save("flyLeanEnabled", flyLeanEnabled_ ? 1 : 0);
     data->Save("flyLeanMaxFwdPitchDeg", flyLeanMaxFwdPitchDeg_);
     data->Save("flyLeanMaxBackPitchDeg", flyLeanMaxBackPitchDeg_);
@@ -204,7 +226,8 @@ void PlayerVisual::Save(DataHandler *data) {
     data->Save("flyLeanPivot", flyLeanPivot_);
 }
 
-void PlayerVisual::Load(DataHandler *data) {
+void PlayerVisual::Load(DataHandler *data)
+{
     flyLeanEnabled_ = data->Load<int>("flyLeanEnabled", flyLeanEnabled_ ? 1 : 0) != 0;
     flyLeanMaxFwdPitchDeg_ = data->Load<float>("flyLeanMaxFwdPitchDeg", flyLeanMaxFwdPitchDeg_);
     flyLeanMaxBackPitchDeg_ = data->Load<float>("flyLeanMaxBackPitchDeg", flyLeanMaxBackPitchDeg_);
@@ -214,15 +237,18 @@ void PlayerVisual::Load(DataHandler *data) {
     flyLeanPivot_ = data->Load<Hagine::Vector3>("flyLeanPivot", flyLeanPivot_);
 }
 
-void PlayerVisual::DrawImGui(const std::function<void()> &onSave) {
+void PlayerVisual::DrawImGui(const std::function<void()> &onSave)
+{
 #ifdef USE_IMGUI
     // ─── アニメーション制御 ───
-    if (ImGui::CollapsingHeader("アニメーション制御")) {
+    if (ImGui::CollapsingHeader("アニメーション制御"))
+    {
         animationController_.DrawImGui();
     }
 
     // ─── 飛行リーン（体の傾き）───
-    if (ImGui::CollapsingHeader("飛行リーン")) {
+    if (ImGui::CollapsingHeader("飛行リーン"))
+    {
         ImGui::Checkbox("有効", &flyLeanEnabled_);
         ImGui::TextDisabled("ロックオン飛行移動中、顔は敵向きのまま体を進行方向へ倒します");
         ImGui::DragFloat("前傾の最大角(度)", &flyLeanMaxFwdPitchDeg_, 0.5f, 0.0f, 90.0f);
@@ -234,7 +260,8 @@ void PlayerVisual::DrawImGui(const std::function<void()> &onSave) {
         Vector3 leanEuler = flyLeanRotation_.ToEulerDegrees();
         ImGui::Text("現在の傾き(オイラー換算): X %.1f / Y %.1f / Z %.1f度",
                     leanEuler.x, leanEuler.y, leanEuler.z);
-        if (ImGui::Button("飛行リーン設定を保存") && onSave) {
+        if (ImGui::Button("飛行リーン設定を保存") && onSave)
+        {
             onSave();
         }
     }
@@ -243,7 +270,8 @@ void PlayerVisual::DrawImGui(const std::function<void()> &onSave) {
 #endif // USE_IMGUI
 }
 
-void PlayerVisual::RegisterParams() {
+void PlayerVisual::RegisterParams()
+{
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Player", "飛行リーン有効", &flyLeanEnabled_);
     hub->Register("Player", "リーン前傾最大角(度)", &flyLeanMaxFwdPitchDeg_, {0.5f, 0.0f, 90.0f});

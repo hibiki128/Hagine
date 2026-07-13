@@ -9,7 +9,8 @@
 /// チャージショットのゲームオブジェクトクラス
 /// プレイヤーがチャージして発射する特殊な弾
 /// </summary>
-class ChargeShot : public Hagine::BaseObject {
+class ChargeShot : public Hagine::BaseObject
+{
   public:
     /// ===================================================
     /// public method
@@ -127,7 +128,8 @@ class ChargeShot : public Hagine::BaseObject {
     /// このフレームにチャージ弾を発射したかを取得し、フラグをクリアする（入力表示UI用）
     /// </summary>
     /// <returns>bool: 発射した瞬間なら true</returns>
-    bool ConsumeFired() {
+    bool ConsumeFired()
+    {
         bool fired = firedThisFrame_;
         firedThisFrame_ = false;
         return fired;
@@ -168,10 +170,10 @@ class ChargeShot : public Hagine::BaseObject {
     static constexpr float kBulletParticleScaleMultiplier = 2.0f; // 弾パーティクルのスケール倍率
 
     Hagine::Vector3 offset_{};
-    bool isAlive_ = false;    // 生存フラグ
-    bool isMaxScale_ = false; // 最大スケール到達フラグ
-    bool isFired_ = false;    // 発射済みフラグ
-    bool isCharge_ = false;    // チャージ中フラグ
+    bool isAlive_ = false;        // 生存フラグ
+    bool isMaxScale_ = false;     // 最大スケール到達フラグ
+    bool isFired_ = false;        // 発射済みフラグ
+    bool isCharge_ = false;       // チャージ中フラグ
     bool firedThisFrame_ = false; // このフレームに発射したか（入力表示UI用）
 
     float scale_ = kInitialScale;    // 現在のスケール

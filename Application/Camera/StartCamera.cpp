@@ -5,7 +5,8 @@
 #include <Input.h>
 
 using namespace Hagine;
-void StartCamera::Init() {
+void StartCamera::Init()
+{
     // ViewProjectionの初期設定
     vp_.farZ_ = kFarZ;
     vp_.Initialize("");
@@ -27,43 +28,54 @@ void StartCamera::Init() {
     isSkipping_ = false;
 }
 
-bool StartCamera::CheckSkipInput() {
+bool StartCamera::CheckSkipInput()
+{
     // 入力インスタンスの存在確認
-    if (!input_ || !gamePad_) {
+    if (!input_ || !gamePad_)
+    {
         return false;
     }
 
-    if (!gamePad_->IsConnected()) {
+    if (!gamePad_->IsConnected())
+    {
         // キーボード：スペースキーでスキップ
         return input_->TriggerKey(DIK_SPACE);
-    } else {
+    }
+    else
+    {
         // ゲームパッド：Aボタンでスキップ
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
     }
 }
 
-void StartCamera::Update() {
+void StartCamera::Update()
+{
     // ゲームパッド情報の更新
-    if (gamePad_) {
+    if (gamePad_)
+    {
         gamePad_->Update();
     }
 
     // スキップ入力の監視（未完了時のみ）
-    if (CheckSkipInput() && !isComplete_) {
+    if (CheckSkipInput() && !isComplete_)
+    {
         isSkipping_ = true;
     }
 
     // イージング演出の更新処理
-    if (isEasing_) {
+    if (isEasing_)
+    {
         // スキップ中は演出速度を加速させる
         float deltaTime = Frame::DeltaTime();
-        if (isSkipping_) {
+        if (isSkipping_)
+        {
             deltaTime *= kSkipSpeedMultiplier;
         }
         easingTimer_ += deltaTime;
 
         // フェーズに応じたイージング処理の分岐
-        switch (easingPhase_) {
+        switch (easingPhase_)
+        {
         case 1: // 第1フェーズ：位置と回転のイージング
         {
             float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
@@ -78,7 +90,8 @@ void StartCamera::Update() {
             vp_.eulerRotation_ = wt_.eulerRotation_;
             vp_.UpdateMatrix();
 
-            if (t >= kMaxBlendValue) {
+            if (t >= kMaxBlendValue)
+            {
                 easingPhase_ = kPhaseWait1;
                 easingTimer_ = kTimerReset;
                 isSkipping_ = false;
@@ -88,7 +101,8 @@ void StartCamera::Update() {
 
         case 2: // 第2フェーズ：待機
         {
-            if (easingTimer_ >= waitDuration_) {
+            if (easingTimer_ >= waitDuration_)
+            {
                 easingPhase_ = kPhaseEasing2;
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
@@ -111,7 +125,8 @@ void StartCamera::Update() {
             vp_.eulerRotation_ = wt_.eulerRotation_;
             vp_.UpdateMatrix();
 
-            if (t >= kMaxBlendValue) {
+            if (t >= kMaxBlendValue)
+            {
                 easingPhase_ = kPhaseWait2;
                 easingTimer_ = kTimerReset;
                 isSkipping_ = false;
@@ -121,7 +136,8 @@ void StartCamera::Update() {
 
         case 4: // 第4フェーズ：待機
         {
-            if (easingTimer_ >= waitDuration_) {
+            if (easingTimer_ >= waitDuration_)
+            {
                 easingPhase_ = kPhaseEasing3;
                 easingTimer_ = kTimerReset;
                 easingStartPos_ = wt_.translation_;
@@ -144,7 +160,8 @@ void StartCamera::Update() {
             vp_.eulerRotation_ = wt_.eulerRotation_;
             vp_.UpdateMatrix();
 
-            if (t >= kMaxBlendValue) {
+            if (t >= kMaxBlendValue)
+            {
                 easingPhase_ = kPhaseWait3;
                 easingTimer_ = kTimerReset;
                 isSkipping_ = false;
@@ -154,7 +171,8 @@ void StartCamera::Update() {
 
         case 6: // 第6フェーズ：最終待機
         {
-            if (easingTimer_ >= finalWaitDuration_) {
+            if (easingTimer_ >= finalWaitDuration_)
+            {
                 easingPhase_ = kPhaseComplete;
                 isEasing_ = false;
                 isComplete_ = true;
@@ -187,16 +205,19 @@ void StartCamera::Update() {
     vp_.UpdateMatrix();
 }
 
-void StartCamera::Move() {
+void StartCamera::Move()
+{
     // 時間経過による角度の更新
     float deltaTime = Frame::DeltaTime();
-    if (isSkipping_) {
+    if (isSkipping_)
+    {
         deltaTime *= kSkipSpeedMultiplier;
     }
     angle_ += speed_ * deltaTime;
 
     // 特定の角度に達した際、イージング演出フェーズへ移行
-    if (angle_ > kHalfPi && !isEasing_) {
+    if (angle_ > kHalfPi && !isEasing_)
+    {
         isEasing_ = true;
         easingPhase_ = kPhaseEasing1;
         easingTimer_ = kTimerReset;
@@ -206,7 +227,8 @@ void StartCamera::Move() {
     }
 }
 
-void StartCamera::imgui() {
+void StartCamera::imgui()
+{
 #ifdef USE_IMGUI
     ImGui::Begin("StartCamera");
     ImGui::DragFloat("Speed", &speed_, 0.1f, 0.0f, 10.0f);

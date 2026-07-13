@@ -22,14 +22,15 @@ const TutorialStepConfig TutorialSystem::kConfigs[static_cast<int>(TutorialStep:
     {"[LSHIFT×2 / RT] で空中状態を解除して着地しよう", nullptr, 0.0f, 1, false},                          // Landing
     {"[H / Xボタン] でダミーを近接攻撃！（3回）", nullptr, 0.0f, 3, true},                                // MeleeAttack
     {"[J / Yボタン] で通常射撃！（3回）", nullptr, 0.0f, 3, true},                                        // RangedAttack
-    {"[RShift保持 / Bボタン保持] でガード！", nullptr, 0.0f, 1, true},                                     // Guard
+    {"[RShift保持 / Bボタン保持] でガード！", nullptr, 0.0f, 1, true},                                    // Guard
     {"[J長押し → 離す / Y長押し → 離す] でチャージ攻撃！", nullptr, 0.0f, 1, true},                       // ChargeAttack
     {"[C保持 / LT保持] でエネルギーをチャージしよう！（3秒）", nullptr, 3.0f, 0, false},                  // EnergyCharge
     {"エネルギーが溜まったら [G / LT長押し中にYボタン] で必殺技！", nullptr, 0.0f, 1, false},             // SpecialAttack
     {"チュートリアル完了！", nullptr, 0.0f, 0, false},                                                    // Complete
 };
 
-void TutorialSystem::Initialize(Player *player) {
+void TutorialSystem::Initialize(Player *player)
+{
     assert(player && "TutorialSystem: player が nullptr です");
     player_ = player;
     input_ = Input::GetInstance();
@@ -39,10 +40,12 @@ void TutorialSystem::Initialize(Player *player) {
     ResetStepState();
 }
 
-void TutorialSystem::Update(float dt) {
+void TutorialSystem::Update(float dt)
+{
     stepJustChanged_ = false;
 
-    if (currentStep_ == TutorialStep::Complete) {
+    if (currentStep_ == TutorialStep::Complete)
+    {
         return;
     }
 
@@ -53,39 +56,50 @@ void TutorialSystem::Update(float dt) {
     wasGroundedLastFrame_ = player_->GetIsGrounded();
 }
 
-void TutorialSystem::Finalize() {
+void TutorialSystem::Finalize()
+{
     player_ = nullptr;
     input_ = nullptr;
 }
 
-const char *TutorialSystem::GetInstructionText() const {
+const char *TutorialSystem::GetInstructionText() const
+{
     return kConfigs[static_cast<int>(currentStep_)].instructionText;
 }
 
-const char *TutorialSystem::GetSubText() const {
+const char *TutorialSystem::GetSubText() const
+{
     // 着地補正メッセージを最優先で返す
-    if (showReturnToAirMessage_) {
+    if (showReturnToAirMessage_)
+    {
         return kConfigs[static_cast<int>(TutorialStep::Descend)].subText;
     }
     return kConfigs[static_cast<int>(currentStep_)].subText;
 }
 
-void TutorialSystem::AdvanceStep() {
+void TutorialSystem::AdvanceStep()
+{
     const bool currNeedsEnemy = kConfigs[static_cast<int>(currentStep_)].needsEnemy;
     const int nextIdx = static_cast<int>(currentStep_) + 1;
 
-    if (nextIdx < static_cast<int>(TutorialStep::StepCount)) {
+    if (nextIdx < static_cast<int>(TutorialStep::StepCount))
+    {
         const bool nextNeedsEnemy = kConfigs[nextIdx].needsEnemy;
 
         // 境界をまたぐときだけリクエストを発行する
-        if (!currNeedsEnemy && nextNeedsEnemy) {
+        if (!currNeedsEnemy && nextNeedsEnemy)
+        {
             RequestSpawnEnemy();
-        } else if (currNeedsEnemy && !nextNeedsEnemy) {
+        }
+        else if (currNeedsEnemy && !nextNeedsEnemy)
+        {
             RequestDespawnEnemy();
         }
 
         currentStep_ = static_cast<TutorialStep>(nextIdx);
-    } else {
+    }
+    else
+    {
         currentStep_ = TutorialStep::Complete;
     }
 
@@ -93,7 +107,8 @@ void TutorialSystem::AdvanceStep() {
     stepJustChanged_ = true;
 }
 
-void TutorialSystem::ResetStepState() {
+void TutorialSystem::ResetStepState()
+{
     timer_ = 0.0f;
     count_ = 0;
     progress_ = 0.0f;
@@ -105,11 +120,13 @@ void TutorialSystem::ResetStepState() {
 void TutorialSystem::RequestSpawnEnemy() { spawnEnemyRequested_ = true; }
 void TutorialSystem::RequestDespawnEnemy() { despawnEnemyRequested_ = true; }
 
-void TutorialSystem::UpdateCurrentStep(float dt) {
+void TutorialSystem::UpdateCurrentStep(float dt)
+{
     bool conditionMet = false;
 
     // 各ステップの達成条件をチェック
-    switch (currentStep_) {
+    switch (currentStep_)
+    {
     case TutorialStep::Move:
         conditionMet = CheckMove();
         break;
@@ -161,23 +178,30 @@ void TutorialSystem::UpdateCurrentStep(float dt) {
 
     const TutorialStepConfig &cfg = kConfigs[static_cast<int>(currentStep_)];
 
-    if (cfg.requiredTime > 0.0f) {
+    if (cfg.requiredTime > 0.0f)
+    {
         // 時間方式: 条件を満たしている間だけ timer を蓄積
-        if (conditionMet) {
+        if (conditionMet)
+        {
             timer_ += dt;
         }
         progress_ = std::min(timer_ / cfg.requiredTime, 1.0f);
-        if (timer_ >= cfg.requiredTime) {
+        if (timer_ >= cfg.requiredTime)
+        {
             // 必要時間に達したら次のステップへ
             AdvanceStep();
         }
-    } else {
+    }
+    else
+    {
         // 回数方式: 達成した瞬間（トリガー）に count++
-        if (conditionMet) {
+        if (conditionMet)
+        {
             count_++;
         }
         progress_ = std::min(static_cast<float>(count_) / static_cast<float>(cfg.requiredCount), 1.0f);
-        if (count_ >= cfg.requiredCount) {
+        if (count_ >= cfg.requiredCount)
+        {
             // 必要回数に達したら次のステップへ
             AdvanceStep();
         }
@@ -185,45 +209,53 @@ void TutorialSystem::UpdateCurrentStep(float dt) {
 }
 
 // ステップ個別チェック
-bool TutorialSystem::CheckMove() {
+bool TutorialSystem::CheckMove()
+{
     // Move または Idle ステートにいる間、移動入力を 3 秒間継続
     const std::string &state = player_->GetCurrentStateName();
     bool isOnGround = (state == "Idle" || state == "Move");
     return isOnGround && IsMoveInput();
 }
 
-bool TutorialSystem::CheckJump() {
+bool TutorialSystem::CheckJump()
+{
     // Jump ステートへ遷移した瞬間を検出（前フレームとの比較）
     const std::string &current = player_->GetCurrentStateName();
     return (current == "Jump" && prevStateName_ != "Jump");
 }
 
-bool TutorialSystem::CheckFlyTransition() {
+bool TutorialSystem::CheckFlyTransition()
+{
     // FlyIdle ステートへ遷移した瞬間を検出（前フレームとの比較）
     const std::string &current = player_->GetCurrentStateName();
     return (current == "FlyIdle" && prevStateName_ != "FlyIdle");
 }
 
-bool TutorialSystem::CheckAscend() {
+bool TutorialSystem::CheckAscend()
+{
     // 飛行ステートにいる間、上昇入力を 2 秒間継続
     const std::string &state = player_->GetCurrentStateName();
     bool inFly = (state == "FlyIdle" || state == "FlyMove");
     return inFly && IsAscendInput();
 }
 
-bool TutorialSystem::CheckDescend() {
+bool TutorialSystem::CheckDescend()
+{
     const std::string &state = player_->GetCurrentStateName();
     bool inFly = (state == "FlyIdle" || state == "FlyMove");
     bool isGrounded = player_->GetIsGrounded();
 
     // 飛行状態から着地した瞬間を検出して補正メッセージを表示
-    if (!inFly && isGrounded && !wasGroundedLastFrame_) {
+    if (!inFly && isGrounded && !wasGroundedLastFrame_)
+    {
         showReturnToAirMessage_ = true;
     }
 
-    if (showReturnToAirMessage_) {
+    if (showReturnToAirMessage_)
+    {
         // FlyIdle/FlyMove に戻るまで待機し、timer は進めない
-        if (inFly) {
+        if (inFly)
+        {
             showReturnToAirMessage_ = false;
         }
         return false;
@@ -233,23 +265,27 @@ bool TutorialSystem::CheckDescend() {
     return inFly && IsDescendInput();
 }
 
-bool TutorialSystem::CheckAirMove() {
+bool TutorialSystem::CheckAirMove()
+{
     // FlyMove ステートにいる間、3 秒間継続
     return (player_->GetCurrentStateName() == "FlyMove");
 }
 
-bool TutorialSystem::CheckDash() {
+bool TutorialSystem::CheckDash()
+{
     // ダッシュが開始したフレームを検出してカウント
     return player_->GetDashStartedThisFrame();
 }
 
-bool TutorialSystem::CheckRush() {
+bool TutorialSystem::CheckRush()
+{
     // Rush ステートへ遷移した瞬間を検出（前フレームとの比較）
     const std::string &current = player_->GetCurrentStateName();
     return (current == "Rush" && prevStateName_ != "Rush");
 }
 
-bool TutorialSystem::CheckLanding() {
+bool TutorialSystem::CheckLanding()
+{
     // 空中状態解除の遷移フロー: FlyState → "Air" → 着地（Idle/Move）
     // LSHIFT×2 / RT で FlyMove が "Air" ステートへ切り替わり、
     // その後 Air ステートが着地を検出して Idle/Move に遷移する。
@@ -259,23 +295,27 @@ bool TutorialSystem::CheckLanding() {
     return wasInAir && justLanded;
 }
 
-bool TutorialSystem::CheckMeleeAttack() {
+bool TutorialSystem::CheckMeleeAttack()
+{
     // 近接攻撃トリガー（3 回）
     return IsMeleeInput();
 }
 
-bool TutorialSystem::CheckRangedAttack() {
+bool TutorialSystem::CheckRangedAttack()
+{
     // 通常射撃トリガー（3 回）
     return IsRangedTrigger();
 }
 
-bool TutorialSystem::CheckGuard() {
+bool TutorialSystem::CheckGuard()
+{
     // Guard ステートへ遷移した瞬間を検出（前フレームとの比較）
     const std::string &current = player_->GetCurrentStateName();
     return (current == "Guard" && prevStateName_ != "Guard");
 }
 
-bool TutorialSystem::CheckChargeAttack(float dt) {
+bool TutorialSystem::CheckChargeAttack(float dt)
+{
     // J / Y ボタンの「長押し → 離す」を検出する
     // kYButtonChargeThreshold(0.15f) 以上押し続けてから離した場合のみカウント
     GamePad *pad = player_->GetGamePad();
@@ -283,22 +323,27 @@ bool TutorialSystem::CheckChargeAttack(float dt) {
     bool isHolding = false;
     bool isReleased = false;
 
-    if (!pad->IsConnected()) {
+    if (!pad->IsConnected())
+    {
         isHolding = input_->PushKey(DIK_J);
         isReleased = input_->ReleaseMomentKey(DIK_J);
-    } else {
+    }
+    else
+    {
         isHolding = pad->IsPress(XINPUT_GAMEPAD_Y);
         isReleased = pad->IsRelease(XINPUT_GAMEPAD_Y);
     }
 
     // 押し込み中: タイマー蓄積
-    if (isHolding) {
+    if (isHolding)
+    {
         chargeHoldTimer_ += dt;
         chargeInputActive_ = true;
     }
 
     // 離した瞬間: チャージショットが成立していたか判定
-    if (isReleased && chargeInputActive_) {
+    if (isReleased && chargeInputActive_)
+    {
         bool isChargeShot = (chargeHoldTimer_ >= player_->GetChargeThreshold());
         chargeHoldTimer_ = 0.0f;
         chargeInputActive_ = false;
@@ -306,7 +351,8 @@ bool TutorialSystem::CheckChargeAttack(float dt) {
     }
 
     // 入力なし: タイマーをリセット
-    if (!isHolding && !isReleased) {
+    if (!isHolding && !isReleased)
+    {
         chargeHoldTimer_ = 0.0f;
         chargeInputActive_ = false;
     }
@@ -314,90 +360,109 @@ bool TutorialSystem::CheckChargeAttack(float dt) {
     return false;
 }
 
-bool TutorialSystem::CheckEnergyCharge() {
+bool TutorialSystem::CheckEnergyCharge()
+{
     // EnergyCharge ステートにいる間、timer を 3 秒蓄積
     return (player_->GetCurrentStateName() == "EnergyCharge");
 }
 
-bool TutorialSystem::CheckSpecialAttack() {
+bool TutorialSystem::CheckSpecialAttack()
+{
     return player_->GetIsSkillActive();
 }
 
 // 入力判定ヘルパー
-bool TutorialSystem::IsMoveInput() const {
+bool TutorialSystem::IsMoveInput() const
+{
     GamePad *pad = player_->GetGamePad();
-    if (!pad->IsConnected()) {
+    if (!pad->IsConnected())
+    {
         return input_->PushKey(DIK_W) || input_->PushKey(DIK_A) ||
                input_->PushKey(DIK_S) || input_->PushKey(DIK_D);
     }
     return (pad->GetLeftStickX() != 0.0f || pad->GetLeftStickY() != 0.0f);
 }
 
-bool TutorialSystem::IsJumpTrigger() const {
+bool TutorialSystem::IsJumpTrigger() const
+{
     // SPACE トリガー / RBボタン トリガー
     GamePad *pad = player_->GetGamePad();
-    if (!pad->IsConnected()) {
+    if (!pad->IsConnected())
+    {
         return input_->TriggerKey(DIK_SPACE);
     }
     return pad->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER);
 }
 
-bool TutorialSystem::IsAirTransTrigger() const {
+bool TutorialSystem::IsAirTransTrigger() const
+{
     // SPACE トリガー / RBボタン トリガー（空中）
     GamePad *pad = player_->GetGamePad();
-    if (!pad->IsConnected()) {
+    if (!pad->IsConnected())
+    {
         return input_->TriggerKey(DIK_SPACE);
     }
     return pad->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER);
 }
 
-bool TutorialSystem::IsAscendInput() const {
+bool TutorialSystem::IsAscendInput() const
+{
     // SPACE 保持 / RBボタン 保持
     GamePad *pad = player_->GetGamePad();
-    if (!pad->IsConnected()) {
+    if (!pad->IsConnected())
+    {
         return input_->PushKey(DIK_SPACE);
     }
     return pad->IsPress(XINPUT_GAMEPAD_RIGHT_SHOULDER);
 }
 
-bool TutorialSystem::IsDescendInput() const {
+bool TutorialSystem::IsDescendInput() const
+{
     // LSHIFT 保持 / RT 押し込み
     GamePad *pad = player_->GetGamePad();
-    if (!pad->IsConnected()) {
+    if (!pad->IsConnected())
+    {
         return input_->PushKey(DIK_LSHIFT);
     }
     return (pad->GetRightTrigger() > 0.25f);
 }
 
-bool TutorialSystem::IsEnergyChargeInput() const {
+bool TutorialSystem::IsEnergyChargeInput() const
+{
     // C 保持 / LT 押し込み
     GamePad *pad = player_->GetGamePad();
-    if (!pad->IsConnected()) {
+    if (!pad->IsConnected())
+    {
         return input_->PushKey(DIK_C);
     }
     return (pad->GetLeftTrigger() > 0.25f);
 }
 
-bool TutorialSystem::IsMeleeInput() const {
+bool TutorialSystem::IsMeleeInput() const
+{
     // H トリガー / Xボタン トリガー
     GamePad *pad = player_->GetGamePad();
-    if (!pad->IsConnected()) {
+    if (!pad->IsConnected())
+    {
         return input_->TriggerKey(DIK_H);
     }
     return pad->IsTrigger(XINPUT_GAMEPAD_X);
 }
 
-bool TutorialSystem::IsRangedTrigger() const {
+bool TutorialSystem::IsRangedTrigger() const
+{
     // J トリガー / Yボタン 離した瞬間
     // Player::Shot() の短押し判定に合わせて IsRelease を使用
     GamePad *pad = player_->GetGamePad();
-    if (!pad->IsConnected()) {
+    if (!pad->IsConnected())
+    {
         return input_->TriggerKey(DIK_J);
     }
     return pad->IsRelease(XINPUT_GAMEPAD_Y);
 }
 
-void TutorialSystem::DrawImGui() {
+void TutorialSystem::DrawImGui()
+{
 #ifdef _DEBUG
     // ステップ番号→日本語名のテーブル（TutorialStep の順序と 1:1 対応）
     static const char *kStepNames[static_cast<int>(TutorialStep::StepCount)] = {
@@ -439,9 +504,12 @@ void TutorialSystem::DrawImGui() {
                                : "不明";
 
     ImGui::SeparatorText("現在のステップ");
-    if (isComplete) {
+    if (isComplete)
+    {
         ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "チュートリアル完了！");
-    } else {
+    }
+    else
+    {
         ImGui::Text("ステップ番号 : %d / %d",
                     stepIdx + 1,
                     static_cast<int>(TutorialStep::StepCount) - 1); // Complete を除く
@@ -449,39 +517,48 @@ void TutorialSystem::DrawImGui() {
     }
 
     ImGui::SeparatorText("操作指示");
-    if (!isComplete) {
+    if (!isComplete)
+    {
         const char *instruction = GetInstructionText();
-        if (instruction) {
+        if (instruction)
+        {
             ImGui::TextWrapped("%s", instruction);
         }
         const char *sub = GetSubText();
-        if (sub) {
+        if (sub)
+        {
             ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.1f, 1.0f), "補足: %s", sub);
         }
     }
 
-    if (!isComplete) {
+    if (!isComplete)
+    {
         ImGui::SeparatorText("進捗");
 
         const TutorialStepConfig &cfg = kConfigs[stepIdx];
 
         char barLabel[32];
-        if (cfg.requiredTime > 0.0f) {
+        if (cfg.requiredTime > 0.0f)
+        {
             snprintf(barLabel, sizeof(barLabel), "%.2f / %.2f 秒", timer_, cfg.requiredTime);
             ImGui::ProgressBar(progress_, ImVec2(-1.0f, 0.0f), barLabel);
-        } else {
+        }
+        else
+        {
             snprintf(barLabel, sizeof(barLabel), "%d / %d 回", count_, cfg.requiredCount);
             ImGui::ProgressBar(progress_, ImVec2(-1.0f, 0.0f), barLabel);
         }
 
-        if (currentStep_ == TutorialStep::ChargeAttack) {
+        if (currentStep_ == TutorialStep::ChargeAttack)
+        {
             ImGui::Text("チャージ保持時間 : %.2f 秒", chargeHoldTimer_);
         }
 
         // 直近 kHistorySize フレームの進捗推移グラフ
         if (ImPlot::BeginPlot("##進捗グラフ", ImVec2(-1.0f, 80.0f),
                               ImPlotFlags_NoTitle | ImPlotFlags_NoLegend |
-                                  ImPlotFlags_NoMouseText | ImPlotFlags_NoMenus)) {
+                                  ImPlotFlags_NoMouseText | ImPlotFlags_NoMenus))
+        {
             ImPlot::SetupAxes(nullptr, nullptr,
                               ImPlotAxisFlags_NoDecorations,
                               ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_Lock);
@@ -509,14 +586,17 @@ void TutorialSystem::DrawImGui() {
     Flag("エネミー消滅リクエスト", despawnEnemyRequested_);
     Flag("「空中へ戻れ」表示中  ", showReturnToAirMessage_);
 
-    if (!isComplete) {
+    if (!isComplete)
+    {
         const TutorialStepConfig &cfg = kConfigs[stepIdx];
         ImGui::SeparatorText("ステップ設定");
         ImGui::Text("エネミー必要 : %s", cfg.needsEnemy ? "はい" : "いいえ");
     }
 
-    if (ImGui::CollapsingHeader("ステップ一覧")) {
-        for (int i = 0; i < static_cast<int>(TutorialStep::StepCount); ++i) {
+    if (ImGui::CollapsingHeader("ステップ一覧"))
+    {
+        for (int i = 0; i < static_cast<int>(TutorialStep::StepCount); ++i)
+        {
             const bool isCurrent = (i == stepIdx);
             const bool isDone = (i < stepIdx);
             ImVec4 color = isDone      ? ImVec4(0.4f, 0.4f, 0.4f, 1.0f)

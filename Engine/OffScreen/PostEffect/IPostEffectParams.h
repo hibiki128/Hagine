@@ -10,7 +10,8 @@
 /// @brief ポストエフェクトパラメータの基底インターフェース
 /// 各エフェクトはこのインターフェースを実装し、自身のパラメータを所有する
 namespace Hagine {
-class IPostEffectParams {
+class IPostEffectParams
+{
   public:
     virtual ~IPostEffectParams() = default;
 

@@ -11,7 +11,7 @@
 #include <random>
 #include <type/Matrix4x4.h>
 #include <unordered_map>
-#include"ParticleStruct.h"
+#include "ParticleStruct.h"
 
 namespace Hagine {
 
@@ -19,7 +19,8 @@ namespace Hagine {
 /// CPUパーティクルの更新・描画・発生を管理するクラス
 /// グループごとの設定を保持し、パーティクルの生成と寿命管理を行う
 /// </summary>
-class ParticleManager {
+class ParticleManager
+{
   public:
     /// ===================================================
     /// public method

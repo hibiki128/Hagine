@@ -11,7 +11,8 @@
 
 using namespace Hagine;
 
-void InputDisplayUI::Initialize(Player *player, GamePad *gamePad) {
+void InputDisplayUI::Initialize(Player *player, GamePad *gamePad)
+{
     player_ = player;
     gamePad_ = gamePad;
     history_.clear();
@@ -61,7 +62,8 @@ void InputDisplayUI::Initialize(Player *player, GamePad *gamePad) {
     // 近接コンボの段名（Player.cpp の punchCombo_.Add(...) と対応）
     const char *atkNames[] = {"Jab", "Hook", "Cross", "Uppercut",
                               "Overhand", "Swing", "Elbow", "Slam"};
-    for (const char *n : atkNames) {
+    for (const char *n : atkNames)
+    {
         RegisterText(std::string("atk_") + n, n, kLabelHeight);
     }
 
@@ -72,7 +74,8 @@ void InputDisplayUI::Initialize(Player *player, GamePad *gamePad) {
     glyphPool_.clear();
     labelPool_.clear();
     arrowPool_.clear();
-    for (int i = 0; i < kMaxHistory; ++i) {
+    for (int i = 0; i < kMaxHistory; ++i)
+    {
         auto g = std::make_unique<Sprite>();
         g->Initialize("UI/AButton.png", {0.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f});
         glyphPool_.push_back(std::move(g));
@@ -97,8 +100,10 @@ void InputDisplayUI::Initialize(Player *player, GamePad *gamePad) {
 }
 
 // テクスチャ情報の登録
-void InputDisplayUI::RegisterText(const std::string &key, const std::string &text, float displayHeight) {
-    if (fontKey_.empty()) {
+void InputDisplayUI::RegisterText(const std::string &key, const std::string &text, float displayHeight)
+{
+    if (fontKey_.empty())
+    {
         return;
     }
 
@@ -123,7 +128,8 @@ void InputDisplayUI::RegisterText(const std::string &key, const std::string &tex
     glyphs_[key] = info;
 }
 
-void InputDisplayUI::RegisterButton(const std::string &key, const std::string &texturePath, float size) {
+void InputDisplayUI::RegisterButton(const std::string &key, const std::string &texturePath, float size)
+{
     TextureManager::GetInstance()->LoadTexture(texturePath);
     GlyphInfo info;
     info.path = texturePath;
@@ -131,12 +137,15 @@ void InputDisplayUI::RegisterButton(const std::string &key, const std::string &t
     glyphs_[key] = info;
 }
 
-bool InputDisplayUI::IsGamePad() const {
+bool InputDisplayUI::IsGamePad() const
+{
     return gamePad_ && gamePad_->IsConnected();
 }
 
-float InputDisplayUI::SlotAlpha(int slot) {
-    switch (slot) {
+float InputDisplayUI::SlotAlpha(int slot)
+{
+    switch (slot)
+    {
     case 0:
     case 1:
         return 1.0f;
@@ -149,56 +158,69 @@ float InputDisplayUI::SlotAlpha(int slot) {
     }
 }
 
-void InputDisplayUI::PollInputs() {
+void InputDisplayUI::PollInputs()
+{
     Input *input = Input::GetInstance();
     const bool pad = IsGamePad();
 
     // 移動（連続入力なので立ち上がりのみ表示）
     bool moving = false;
-    if (pad) {
+    if (pad)
+    {
         moving = std::abs(gamePad_->GetLeftStickX()) > 0.0f ||
                  std::abs(gamePad_->GetLeftStickY()) > 0.0f;
-    } else {
+    }
+    else
+    {
         moving = input->PushKey(DIK_W) || input->PushKey(DIK_A) ||
                  input->PushKey(DIK_S) || input->PushKey(DIK_D);
     }
-    if (moving && !wasMoving_) {
+    if (moving && !wasMoving_)
+    {
         PushEntry(pad ? "kc_LS" : "kc_WASD", "lbl_move");
     }
     wasMoving_ = moving;
 
     // ジャンプ / 飛行
-    if (pad ? gamePad_->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER) : input->TriggerKey(DIK_SPACE)) {
+    if (pad ? gamePad_->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER) : input->TriggerKey(DIK_SPACE))
+    {
         PushEntry(pad ? "kc_RB" : "kc_SPACE", "lbl_jump");
     }
 
     // 下降
-    if (pad ? gamePad_->IsRightTriggerTriggered(0.25f) : input->TriggerKey(DIK_LSHIFT)) {
+    if (pad ? gamePad_->IsRightTriggerTriggered(0.25f) : input->TriggerKey(DIK_LSHIFT))
+    {
         PushEntry(pad ? "kc_RT" : "kc_LSHIFT", "lbl_descend");
     }
 
     // 射撃/チャージ/必殺/ダッシュ/ラッシュ/ガード/エネチャは、入力の有無ではなく
     // Player が「実際に発動した」ときのイベントを表示する（発生条件の推測を避ける）
-    if (player_) {
-        for (Player::ActionKind kind : player_->GetActionEvents()) {
+    if (player_)
+    {
+        for (Player::ActionKind kind : player_->GetActionEvents())
+        {
             PushActionEvent(kind);
         }
     }
 
     // 近接攻撃（実際に発火した段名を使う：先行入力バッファ経由でも取りこぼさない）
     std::string atk;
-    if (player_ && player_->ConsumeMeleeAttackFired(atk)) {
+    if (player_ && player_->ConsumeMeleeAttackFired(atk))
+    {
         std::string labelKey = "atk_" + atk;
-        if (!HasGlyph(labelKey)) {
+        if (!HasGlyph(labelKey))
+        {
             labelKey = "lbl_melee"; // 未知の段名はフォールバック
         }
         PushEntry(pad ? "btnX" : "kc_H", labelKey);
     }
 }
 
-void InputDisplayUI::PushActionEvent(Player::ActionKind kind) {
+void InputDisplayUI::PushActionEvent(Player::ActionKind kind)
+{
     const bool pad = IsGamePad();
-    switch (kind) {
+    switch (kind)
+    {
     case Player::ActionKind::NormalShot:
         PushEntry(pad ? "btnY" : "kc_J", "lbl_shot");
         break;
@@ -226,15 +248,18 @@ void InputDisplayUI::PushActionEvent(Player::ActionKind kind) {
     }
 }
 
-void InputDisplayUI::PushEntry(const std::string &glyphKey, const std::string &labelKey) {
+void InputDisplayUI::PushEntry(const std::string &glyphKey, const std::string &labelKey)
+{
     auto gIt = glyphs_.find(glyphKey);
     auto lIt = glyphs_.find(labelKey);
-    if (gIt == glyphs_.end() || lIt == glyphs_.end()) {
+    if (gIt == glyphs_.end() || lIt == glyphs_.end())
+    {
         return;
     }
 
     // 既存エントリを1つずつ古い側（右）へずらす
-    for (HistoryEntry &e : history_) {
+    for (HistoryEntry &e : history_)
+    {
         e.slot += 1;
     }
 
@@ -250,10 +275,13 @@ void InputDisplayUI::PushEntry(const std::string &glyphKey, const std::string &l
     history_.push_back(ne);
 
     // 上限（プールサイズ）を超えたら最も古いものを整理する
-    while (static_cast<int>(history_.size()) > kMaxHistory) {
+    while (static_cast<int>(history_.size()) > kMaxHistory)
+    {
         size_t maxIdx = 0;
-        for (size_t i = 1; i < history_.size(); ++i) {
-            if (history_[i].slot > history_[maxIdx].slot) {
+        for (size_t i = 1; i < history_.size(); ++i)
+        {
+            if (history_[i].slot > history_[maxIdx].slot)
+            {
                 maxIdx = i;
             }
         }
@@ -261,14 +289,16 @@ void InputDisplayUI::PushEntry(const std::string &glyphKey, const std::string &l
     }
 }
 
-void InputDisplayUI::Update() {
+void InputDisplayUI::Update()
+{
     PollInputs();
 
     const float dt = Frame::DeltaTime();
     const float slideT = std::clamp(kSlideLerp * dt, 0.0f, 1.0f);
     const float alphaT = std::clamp(kAlphaLerp * dt, 0.0f, 1.0f);
 
-    for (HistoryEntry &e : history_) {
+    for (HistoryEntry &e : history_)
+    {
         e.appearT = std::min(1.0f, e.appearT + (kAppearTime > 0.0f ? dt / kAppearTime : 1.0f));
         const float eased = 1.0f - std::pow(1.0f - e.appearT, 3.0f); // OutCubic
 
@@ -292,11 +322,14 @@ void InputDisplayUI::Update() {
     // 背景パネルの幅・アルファを可視エントリに合わせて補間する
     bool anyVisible = false;
     float rightEdge = kAnchorX;
-    for (const HistoryEntry &e : history_) {
-        if (e.alpha > 0.02f) {
+    for (const HistoryEntry &e : history_)
+    {
+        if (e.alpha > 0.02f)
+        {
             anyVisible = true;
             float r = e.pos.x + e.glyphSize.x + kGlyphLabelGap + e.labelSize.x;
-            if (r > rightEdge) {
+            if (r > rightEdge)
+            {
                 rightEdge = r;
             }
         }
@@ -309,8 +342,10 @@ void InputDisplayUI::Update() {
 }
 
 void InputDisplayUI::BindAndDraw(Sprite *sprite, const std::string &path,
-                                 Vector2 size, Vector2 pos, float alpha) {
-    if (!sprite) {
+                                 Vector2 size, Vector2 pos, float alpha)
+{
+    if (!sprite)
+    {
         return;
     }
     sprite->SetTexturePath(path);
@@ -324,9 +359,11 @@ void InputDisplayUI::BindAndDraw(Sprite *sprite, const std::string &path,
     sprite->Draw();
 }
 
-void InputDisplayUI::Draw() {
+void InputDisplayUI::Draw()
+{
     // 背景パネル（エントリの後ろに1枚。エントリより先に描く）
-    if (bgPanel_ && panelAlpha_ > 0.01f && panelWidth_ > 1.0f) {
+    if (bgPanel_ && panelAlpha_ > 0.01f && panelWidth_ > 1.0f)
+    {
         Vector2 panelPos = {kAnchorX - kPanelPadX, kBaseY - kPanelPadTop};
         Vector2 panelSize = {panelWidth_, kGlyphSize + kPanelPadTop + kPanelPadBottom};
         bgPanel_->SetPosition(panelPos);
@@ -335,9 +372,11 @@ void InputDisplayUI::Draw() {
         bgPanel_->Draw();
     }
 
-    for (size_t i = 0; i < history_.size() && i < glyphPool_.size(); ++i) {
+    for (size_t i = 0; i < history_.size() && i < glyphPool_.size(); ++i)
+    {
         HistoryEntry &e = history_[i];
-        if (e.alpha < 0.01f) {
+        if (e.alpha < 0.01f)
+        {
             continue;
         }
 
@@ -352,16 +391,20 @@ void InputDisplayUI::Draw() {
         // 矢印（このエントリより1つ古い(slot+1)が存在すれば間に描く）
         bool hasOlder = false;
         float olderAlpha = 0.0f;
-        for (const HistoryEntry &o : history_) {
-            if (o.slot == e.slot + 1) {
+        for (const HistoryEntry &o : history_)
+        {
+            if (o.slot == e.slot + 1)
+            {
                 hasOlder = true;
                 olderAlpha = o.alpha;
                 break;
             }
         }
-        if (hasOlder) {
+        if (hasOlder)
+        {
             auto arrowIt = glyphs_.find("arrow");
-            if (arrowIt != glyphs_.end()) {
+            if (arrowIt != glyphs_.end())
+            {
                 Vector2 asz = arrowIt->second.size;
                 Vector2 apos = {e.pos.x + kArrowInSlotX,
                                 kBaseY + (kGlyphSize - asz.y) * 0.5f};
@@ -372,7 +415,8 @@ void InputDisplayUI::Draw() {
     }
 }
 
-void InputDisplayUI::Finalize() {
+void InputDisplayUI::Finalize()
+{
     history_.clear();
     glyphs_.clear();
     glyphPool_.clear();

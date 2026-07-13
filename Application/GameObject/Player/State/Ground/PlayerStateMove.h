@@ -5,7 +5,8 @@
 /// プレイヤーの移動状態を管理するクラス
 /// 地面上での移動を処理する
 /// </summary>
-class PlayerStateMove : public PlayerBaseState {
+class PlayerStateMove : public PlayerBaseState
+{
   public:
     /// ===================================================
     /// public method
@@ -34,6 +35,6 @@ class PlayerStateMove : public PlayerBaseState {
     /// private varians
     /// ===================================================
 
-    static constexpr float kMinInitialSpeed    = 2.0f;   // 最小初期速度
-    static constexpr float kGroundPullVelocity = -0.1f;  // 地面への引き付け速度
+    static constexpr float kMinInitialSpeed = 2.0f;     // 最小初期速度
+    static constexpr float kGroundPullVelocity = -0.1f; // 地面への引き付け速度
 };

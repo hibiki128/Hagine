@@ -10,7 +10,8 @@ class Input;
 /// キーボードショートカットを登録・実行するクラス
 /// 単一キー・複数キー同時押しのコマンドに対応する
 /// </summary>
-class ShortcutManager {
+class ShortcutManager
+{
   public:
     /// ===================================================
     /// public method
@@ -64,8 +65,9 @@ class ShortcutManager {
     /// <summary>
     /// ショートカット情報（拡張性を持たせるための構造体）
     /// </summary>
-    struct Shortcut {
-        std::vector<BYTE> keys;        // トリガーとなるキーの組み合わせ
+    struct Shortcut
+    {
+        std::vector<BYTE> keys;         // トリガーとなるキーの組み合わせ
         std::function<void()> callback; // 実行するコールバック
     };
 

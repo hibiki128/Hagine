@@ -5,14 +5,17 @@
 #include <string>
 #include <vector>
 
-namespace Hagine { class BaseObject; }
+namespace Hagine {
+class BaseObject;
+}
 
 /// <summary>
 /// コンボシステムを管理するクラス
 /// 連続攻撃のシーケンスと時間管理を制御する
 /// 攻撃ごとにダメージ・ノックバック・コライダータイミングを設定可能
 /// </summary>
-class ComboSystem {
+class ComboSystem
+{
   private:
     /// ===================================================
     /// private struct
@@ -21,9 +24,10 @@ class ComboSystem {
     /// <summary>
     /// コンボ1段分のデータ
     /// </summary>
-    struct ComboData {
-        Hagine::BaseObject *target;     // モーションを再生するオブジェクト（見た目用）
-        std::string attackData; // 攻撃モーションのファイル名（Jsonキーとしても使用）
+    struct ComboData
+    {
+        Hagine::BaseObject *target; // モーションを再生するオブジェクト（見た目用）
+        std::string attackData;     // 攻撃モーションのファイル名（Jsonキーとしても使用）
 
         // --- 攻撃パラメータ（ImGuiで調整・セーブ可能）---
         float damage = 10.0f;                 // ダメージ量
@@ -54,24 +58,24 @@ class ComboSystem {
 
     std::string name_ = "DefaultCombo"; // DataHandlerのファイル名に使用
 
-    std::vector<ComboData> comboData_;              // コンボデータ配列
-    std::vector<Hagine::BaseObject *> comboStartObjects_;   // コンボ開始オブジェクト配列
+    std::vector<ComboData> comboData_;                    // コンボデータ配列
+    std::vector<Hagine::BaseObject *> comboStartObjects_; // コンボ開始オブジェクト配列
 
-    std::string lastAttackName_;     // 直近に発火した攻撃の名前（入力表示UI等が参照）
+    std::string lastAttackName_; // 直近に発火した攻撃の名前（入力表示UI等が参照）
 
-    int comboIndex_ = 0;             // 現在のコンボインデックス
-    float comboCooldown_ = 0.0f;     // コンボクールダウン
-    bool comboStarted_ = false;      // コンボ開始フラグ
-    bool waitingForReturn_ = false;  // 戻り待ちフラグ
-    float returnDelay_ = 0.0f;       // 戻り遅延
-    float comboTimeout_ = 0.0f;      // コンボタイムアウトタイマー
-    bool inputBuffered_ = false;     // 入力バッファフラグ
-    float inputBufferTime_ = 0.0f;   // 入力バッファタイマー
+    int comboIndex_ = 0;            // 現在のコンボインデックス
+    float comboCooldown_ = 0.0f;    // コンボクールダウン
+    bool comboStarted_ = false;     // コンボ開始フラグ
+    bool waitingForReturn_ = false; // 戻り待ちフラグ
+    float returnDelay_ = 0.0f;      // 戻り遅延
+    float comboTimeout_ = 0.0f;     // コンボタイムアウトタイマー
+    bool inputBuffered_ = false;    // 入力バッファフラグ
+    float inputBufferTime_ = 0.0f;  // 入力バッファタイマー
 
-    static const float COMBO_INTERVAL;          // コンボ間隔
-    static const float INPUT_BUFFER_DURATION;   // 入力バッファ有効時間
-    static const float FINAL_RETURN_DELAY;      // 最終攻撃後の戻り遅延
-    static const float COMBO_TIMEOUT_DURATION;  // コンボタイムアウト時間
+    static const float COMBO_INTERVAL;         // コンボ間隔
+    static const float INPUT_BUFFER_DURATION;  // 入力バッファ有効時間
+    static const float FINAL_RETURN_DELAY;     // 最終攻撃後の戻り遅延
+    static const float COMBO_TIMEOUT_DURATION; // コンボタイムアウト時間
 
     // 攻撃発火コールバック
     // 引数: damage, knockbackPower, colliderActiveDuration, colliderActivateDelay

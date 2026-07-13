@@ -6,7 +6,8 @@
 
 /// @brief スロットベースのエフェクトチェーンのセーブ/ロードを担当
 namespace Hagine {
-class PostEffectDataManager {
+class PostEffectDataManager
+{
   public:
     /// @brief エフェクトチェーンとDirectXCommonへのポインタを受け取り初期化する
     void Initialize(PostEffectChain *chain, DirectXCommon *dxCommon);

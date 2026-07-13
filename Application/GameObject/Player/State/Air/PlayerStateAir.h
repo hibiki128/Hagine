@@ -5,7 +5,8 @@
 /// プレイヤーの空中状態を管理するクラス
 /// ジャンプ中や落下中の状態を処理する
 /// </summary>
-class PlayerStateAir : public PlayerBaseState {
+class PlayerStateAir : public PlayerBaseState
+{
   public:
     /// ===================================================
     /// public method

@@ -9,7 +9,8 @@
 /// プレイヤーの突撃状態を管理するクラス
 /// 弧を描く軌道で敵に向かって移動する
 /// </summary>
-class PlayerStateRush : public PlayerBaseState {
+class PlayerStateRush : public PlayerBaseState
+{
   public:
     /// ===================================================
     /// public method

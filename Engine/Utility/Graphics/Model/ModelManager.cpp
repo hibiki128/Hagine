@@ -6,10 +6,12 @@
 #include <sstream>
 
 namespace Hagine {
-void ModelManager::LoadModel(const std::string &filePath) {
+void ModelManager::LoadModel(const std::string &filePath)
+{
 
     // .gltfファイルの場合、内容に基づくハッシュを生成しない（毎回新しいモデルを作成）
-    if (filePath.substr(filePath.find_last_of(".") + 1) == "gltf") {
+    if (filePath.substr(filePath.find_last_of(".") + 1) == "gltf")
+    {
         // 新しいユニークな識別子を生成する（例えば、インデックスなど）
         static int modelIndex = 0;
         std::string uniqueKey = filePath + "_" + std::to_string(modelIndex++);
@@ -27,7 +29,8 @@ void ModelManager::LoadModel(const std::string &filePath) {
     }
 
     // .gltf以外のファイルは元のパスで検索（重複チェック）
-    if (models_.contains(filePath)) {
+    if (models_.contains(filePath))
+    {
         return;
     }
 
@@ -39,10 +42,11 @@ void ModelManager::LoadModel(const std::string &filePath) {
     ImGuiNotification::Post("モデルを読み込みました: " + filePath, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string texPath) {
+std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string texPath)
+{
     std::unique_ptr<Model> model = std::make_unique<Model>();
     model->Initialize(modelCommon_);
-    model->CreatePrimitiveModel(type,texPath);
+    model->CreatePrimitiveModel(type, texPath);
     model->SetSrv(srvManager_);
     // モデルのユニークな識別子を生成
     static int modelIndex = 0;
@@ -53,7 +57,8 @@ std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string t
     return uniqueKey;
 }
 
-std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string texPath, const PrimitiveParams &params) {
+std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string texPath, const PrimitiveParams &params)
+{
     std::unique_ptr<Model> model = std::make_unique<Model>();
     model->Initialize(modelCommon_);
     model->CreatePrimitiveModel(type, texPath, params);
@@ -65,27 +70,35 @@ std::string ModelManager::CreatePrimitiveModel(PrimitiveType type, std::string t
     return uniqueKey;
 }
 
-Model *ModelManager::FindModel(const std::string &filePath) {
+Model *ModelManager::FindModel(const std::string &filePath)
+{
     // .gltfファイルの場合はファイルパスにユニークな識別子を使って検索
-    if (filePath.substr(filePath.find_last_of(".") + 1) == "gltf") {
+    if (filePath.substr(filePath.find_last_of(".") + 1) == "gltf")
+    {
         // 同じファイルパスで複数のモデルがある可能性があるので、それを確認
         std::vector<Model *> matchedModels;
 
         // キーがファイルパスを含むモデルをすべて収集
-        for (const auto &[key, model] : models_) {
-            if (key.find(filePath) != std::string::npos) {
+        for (const auto &[key, model] : models_)
+        {
+            if (key.find(filePath) != std::string::npos)
+            {
                 matchedModels.push_back(model.get());
             }
         }
 
         // 一致するモデルがあれば、必要に応じて最も新しいモデルなどを選んで返す
-        if (!matchedModels.empty()) {
+        if (!matchedModels.empty())
+        {
             // 例えば、最も新しい（インデックスが最大）ものを返す
             return matchedModels.back();
         }
-    } else {
+    }
+    else
+    {
         // .gltf以外のファイルはファイルパスそのもので検索
-        if (models_.contains(filePath)) {
+        if (models_.contains(filePath))
+        {
             return models_.at(filePath).get();
         }
     }
@@ -93,12 +106,14 @@ Model *ModelManager::FindModel(const std::string &filePath) {
     return nullptr;
 }
 
-void ModelManager::Initialize(SrvManager *srvManager, ModelCommon *modelCommon) {
+void ModelManager::Initialize(SrvManager *srvManager, ModelCommon *modelCommon)
+{
     modelCommon_ = modelCommon;
     srvManager_ = srvManager;
 }
 
-void ModelManager::Finalize() {
+void ModelManager::Finalize()
+{
     models_.clear();
 }
 } // namespace Hagine

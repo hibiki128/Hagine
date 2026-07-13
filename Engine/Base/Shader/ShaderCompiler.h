@@ -10,7 +10,8 @@ namespace Hagine {
 /// シェーダーコンパイラクラス
 /// DXC（DirectX Shader Compiler）の初期化と HLSL のコンパイルを担当する
 /// </summary>
-class ShaderCompiler {
+class ShaderCompiler
+{
   public:
     ShaderCompiler() = default;
     ~ShaderCompiler() = default;

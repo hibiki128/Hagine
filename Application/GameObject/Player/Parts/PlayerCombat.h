@@ -18,7 +18,8 @@ class DataHandler;
 /// プレイヤーの戦闘パーツクラス
 /// 射撃・チャージショット・近接コンボ・必殺技・弾管理を担当する
 /// </summary>
-class PlayerCombat {
+class PlayerCombat
+{
   public:
     /// ===================================================
     /// public method
@@ -114,8 +115,10 @@ class PlayerCombat {
     /// このフレームに近接攻撃が発火していれば true を返し、その段名を out に格納する。
     /// 取得すると内部フラグはクリアされる（1発火につき1回だけ true）。入力表示UI用。
     /// </summary>
-    bool ConsumeMeleeAttackFired(std::string &outName) {
-        if (!meleeAttackFired_) {
+    bool ConsumeMeleeAttackFired(std::string &outName)
+    {
+        if (!meleeAttackFired_)
+        {
             return false;
         }
         meleeAttackFired_ = false;
@@ -206,7 +209,7 @@ class PlayerCombat {
     float yButtonHoldTime_ = 0.0f;               ///< Yボタン押下時間
     const float kYButtonChargeThreshold = 0.15f; ///< チャージ判定閾値(秒)
 
-    bool isSkillMenu_ = false;   ///< スキルメニュー（LT押下）中フラグ
+    bool isSkillMenu_ = false;     ///< スキルメニュー（LT押下）中フラグ
     bool prevChargeState_ = false; ///< チャージ開始のエッジ検出用
 
     // 入力表示UI用: 近接攻撃の発火通知（発火コールバックで設定し、Consumeでクリア）

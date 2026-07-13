@@ -7,10 +7,11 @@
 
 /// @brief ポストエフェクトの1スロット分のデータ
 namespace Hagine {
-struct EffectSlot {
-    bool occupied = false;   ///< このスロットが使用中かどうか
-    bool enabled  = false;   ///< エフェクトが有効かどうか
-    std::string name;        ///< 識別用の名前（任意）
+struct EffectSlot
+{
+    bool occupied = false;                     ///< このスロットが使用中かどうか
+    bool enabled = false;                      ///< エフェクトが有効かどうか
+    std::string name;                          ///< 識別用の名前（任意）
     std::unique_ptr<IPostEffectParams> params; ///< エフェクト固有パラメータ（所有権あり）
 };
 
@@ -18,7 +19,8 @@ struct EffectSlot {
 ///
 /// kMaxSlots個のスロットをあらかじめ確保し、AddEffectでスロットを占有する。
 /// 描画順 = スロットインデックス順（0が最初に適用される）
-class PostEffectChain {
+class PostEffectChain
+{
   public:
     /// スロットの最大数（空枠として事前確保される）
     static constexpr int kMaxSlots = 10;
@@ -81,8 +83,12 @@ class PostEffectChain {
 
     /// @brief 指定スロットのパラメータを取得する（型キャスト版）
     template <typename T>
-    T *GetParams(int slotIndex) {
-        if (!IsValidIndex(slotIndex) || !slots_[slotIndex].occupied) { return nullptr; }
+    T *GetParams(int slotIndex)
+    {
+        if (!IsValidIndex(slotIndex) || !slots_[slotIndex].occupied)
+        {
+            return nullptr;
+        }
         return dynamic_cast<T *>(slots_[slotIndex].params.get());
     }
 

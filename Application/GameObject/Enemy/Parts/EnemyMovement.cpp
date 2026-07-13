@@ -8,7 +8,8 @@
 
 using namespace Hagine;
 
-void EnemyMovement::Init(Enemy *owner) {
+void EnemyMovement::Init(Enemy *owner)
+{
     owner_ = owner;
 
     // 移動パラメータ
@@ -22,7 +23,8 @@ void EnemyMovement::Init(Enemy *owner) {
     acceleration_ = Vector3(0.0f, 0.0f, 0.0f);
 }
 
-void EnemyMovement::MoveToTarget(const Vector3 &targetPos) {
+void EnemyMovement::MoveToTarget(const Vector3 &targetPos)
+{
     if (!owner_->GetTarget())
         return;
     // ターゲットへの方向を計算
@@ -34,7 +36,8 @@ void EnemyMovement::MoveToTarget(const Vector3 &targetPos) {
     velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
-void EnemyMovement::MoveStrafe() {
+void EnemyMovement::MoveStrafe()
+{
     if (!owner_->GetTarget())
         return;
     // 横移動方向へ速度を設定
@@ -43,7 +46,8 @@ void EnemyMovement::MoveStrafe() {
     velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
-void EnemyMovement::MoveRetreat() {
+void EnemyMovement::MoveRetreat()
+{
     if (!owner_->GetTarget())
         return;
     // ターゲットから離れる方向へ速度を設定
@@ -54,21 +58,24 @@ void EnemyMovement::MoveRetreat() {
     velocityEase_.Reset(velocity_, velocityTarget_, kVelocityEaseTime, EasingType::OutQuad);
 }
 
-void EnemyMovement::StopMovement() {
+void EnemyMovement::StopMovement()
+{
     // 停止目標速度を設定
     Vector3 zeroVel(0.0f, velocity_.y, 0.0f);
     velocityTarget_ = zeroVel;
     velocityEase_.Reset(velocity_, velocityTarget_, kStopEaseTime, EasingType::OutQuad);
 }
 
-void EnemyMovement::Move() {
+void EnemyMovement::Move()
+{
     if (!owner_->GetTarget())
         return;
 }
 
 void EnemyMovement::DirectionUpdate() {}
 
-void EnemyMovement::RotateUpdate() {
+void EnemyMovement::RotateUpdate()
+{
     if (!owner_->GetIsLockOn() || !owner_->GetTarget())
         return;
 
@@ -82,9 +89,12 @@ void EnemyMovement::RotateUpdate() {
     Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ};
     Vector3 right;
 
-    if (std::abs(forward.Dot(worldUp)) > kParallelThreshold) {
+    if (std::abs(forward.Dot(worldUp)) > kParallelThreshold)
+    {
         right = {kRightVectorX, kRightVectorY, kRightVectorZ};
-    } else {
+    }
+    else
+    {
         right = (worldUp.Cross(forward)).Normalize();
     }
 
@@ -96,25 +106,31 @@ void EnemyMovement::RotateUpdate() {
         transform->quateRotation_, targetRot, kRotationSpeed * Frame::DeltaTime());
 }
 
-void EnemyMovement::CollisionGround() {
+void EnemyMovement::CollisionGround()
+{
     WorldTransform *transform = owner_->GetWorldTransform();
     float nextY = transform->translation_.y + velocity_.y * Frame::DeltaTime();
 
     transform->translation_.x += velocity_.x * Frame::DeltaTime();
     transform->translation_.z += velocity_.z * Frame::DeltaTime();
 
-    if (isFlying_) {
+    if (isFlying_)
+    {
         transform->translation_.y = nextY;
         return;
     }
 
-    if (nextY <= kGroundLevel) {
+    if (nextY <= kGroundLevel)
+    {
         transform->translation_.y = kGroundLevel;
-        if (!isGrounded_) {
+        if (!isGrounded_)
+        {
             velocity_.y = kVelocityZero;
             isGrounded_ = true;
         }
-    } else {
+    }
+    else
+    {
         transform->translation_.y = nextY;
         isGrounded_ = false;
     }
@@ -123,68 +139,85 @@ void EnemyMovement::CollisionGround() {
 Vector3 EnemyMovement::GetMovementDirection() const { return Vector3(); }
 float EnemyMovement::GetVelocityMagnitude() const { return kVelocityZero; }
 
-void EnemyMovement::Freeze() {
+void EnemyMovement::Freeze()
+{
     // プレイヤーの必殺技カメラワーク中は移動・重力ごと完全停止させ、その場に固定する
     velocity_ = {0.0f, 0.0f, 0.0f};
-    if (isGrounded_) {
+    if (isGrounded_)
+    {
         acceleration_.y = 0.0f;
     }
 }
 
-void EnemyMovement::StopHorizontal() {
+void EnemyMovement::StopHorizontal()
+{
     // ガード中は移動させない（EnemyGuardNode が毎フレーム速度を0にしているため、
     // ここで移動イージングを適用すると追跡速度で上書きされて動いてしまう）
     velocity_.x = 0.0f;
     velocity_.z = 0.0f;
 }
 
-void EnemyMovement::UpdateVelocityEase(float deltaTime) {
+void EnemyMovement::UpdateVelocityEase(float deltaTime)
+{
     // 速度イージングの更新（ガード中は適用しない）
-    if (velocityEase_.isActive) {
+    if (velocityEase_.isActive)
+    {
         Vector3 easedVelocity = velocityEase_.Update(deltaTime);
         velocity_.x = easedVelocity.x;
         velocity_.z = easedVelocity.z;
     }
 }
 
-void EnemyMovement::ApplyGravity(float deltaTime) {
+void EnemyMovement::ApplyGravity(float deltaTime)
+{
     // 重力処理
-    if (!isGrounded_ && !isFlying_) {
+    if (!isGrounded_ && !isFlying_)
+    {
         velocity_.y += acceleration_.y * deltaTime;
-    } else if (isGrounded_) {
+    }
+    else if (isGrounded_)
+    {
         acceleration_.y = 0.0f;
     }
 }
 
-void EnemyMovement::ApplyDummyFriction(float deltaTime) {
+void EnemyMovement::ApplyDummyFriction(float deltaTime)
+{
     // ダミー: AIは動かさないが、被弾ノックバックは残す。
     // 水平速度に摩擦をかけて徐々に停止させ、重力だけ適用する。
     velocity_.x *= kDummyGroundFriction;
     velocity_.z *= kDummyGroundFriction;
-    if (!isGrounded_) {
+    if (!isGrounded_)
+    {
         velocity_.y += acceleration_.y * deltaTime;
-    } else {
+    }
+    else
+    {
         acceleration_.y = 0.0f;
     }
 }
 
-void EnemyMovement::StopAll() {
+void EnemyMovement::StopAll()
+{
     // ルートノードがなければ停止
     velocity_.x = 0.0f;
     velocity_.z = 0.0f;
-    if (isGrounded_) {
+    if (isGrounded_)
+    {
         velocity_.y = 0.0f;
         acceleration_.y = 0.0f;
     }
 }
 
-void EnemyMovement::ResetMotion() {
+void EnemyMovement::ResetMotion()
+{
     velocity_ = {0.0f, 0.0f, 0.0f};
     acceleration_ = {0.0f, 0.0f, 0.0f};
     isGrounded_ = true;
 }
 
-void EnemyMovement::RegisterParams() {
+void EnemyMovement::RegisterParams()
+{
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Enemy", "移動速度", &moveSpeed_, {0.1f, 0.0f, 50.0f});
     hub->Register("Enemy", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});

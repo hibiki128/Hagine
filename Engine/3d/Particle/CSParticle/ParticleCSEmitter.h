@@ -15,7 +15,8 @@ namespace Hagine {
 /// GPU（コンピュートシェーダー）パーティクルの発生源クラス
 /// 発生源メッシュ・グループを保持し、Emit/Updateのコンピュート実行と描画を行う
 /// </summary>
-class ParticleCSEmitter {
+class ParticleCSEmitter
+{
 
   public:
     /// ==============================================
@@ -85,14 +86,16 @@ class ParticleCSEmitter {
     /// </summary>
     void EmitOnce();
 
-    EmitterMesh GetEmitterMesh() const {
+    EmitterMesh GetEmitterMesh() const
+    {
         if (emitterMeshData_)
             return *emitterMeshData_;
         return EmitterMesh{};
     }
 
     void SetName(const std::string &name) { name_ = name; }
-    void SetFrequency(float frequency) {
+    void SetFrequency(float frequency)
+    {
         if (emitterMeshData_)
             emitterMeshData_->frequency = frequency;
     }
@@ -108,26 +111,34 @@ class ParticleCSEmitter {
     std::string GetName() const { return name_; }
     const std::string &GetDrawGroup() const { return drawGroup_; }
     void SetDrawGroup(const std::string &group) { drawGroup_ = group; }
-    void SetEnableGravity(bool enable) {
-        for (auto &group : particleGroups_) {
+    void SetEnableGravity(bool enable)
+    {
+        for (auto &group : particleGroups_)
+        {
             group->GetSettingsData()->enableGravity = enable;
         }
     }
 
-    void SetEnableLifeTimeScale(bool enable) {
-        for (auto &group : particleGroups_) {
+    void SetEnableLifeTimeScale(bool enable)
+    {
+        for (auto &group : particleGroups_)
+        {
             group->GetSettingsData()->enableLifetimeScale = enable;
         }
     }
 
-    void SetMinVelocity(Vector3 minVelocity) {
-        for (auto &group : particleGroups_) {
+    void SetMinVelocity(Vector3 minVelocity)
+    {
+        for (auto &group : particleGroups_)
+        {
             group->GetSettingsData()->velocityMin = minVelocity;
         }
     }
 
-    void SetMaxVelocity(Vector3 maxVelocity) {
-        for (auto &group : particleGroups_) {
+    void SetMaxVelocity(Vector3 maxVelocity)
+    {
+        for (auto &group : particleGroups_)
+        {
             group->GetSettingsData()->velocityMax = maxVelocity;
         }
     }
@@ -138,34 +149,42 @@ class ParticleCSEmitter {
     /// <returns>std::unique_ptr&lt;ParticleCSEmitter&gt;: 複製されたエミッター</returns>
     std::unique_ptr<ParticleCSEmitter> Clone() const;
 
-    void SetTranslate(Vector3 transform) {
+    void SetTranslate(Vector3 transform)
+    {
         if (emitterMeshData_)
             emitterMeshData_->translate = transform;
     }
 
-    void SetStartColor(Vector4 color) {
-        for (auto &group : particleGroups_) {
+    void SetStartColor(Vector4 color)
+    {
+        for (auto &group : particleGroups_)
+        {
             group->GetSettingsData()->startColor = color;
         }
     }
 
-    void SetEndColor(Vector4 color) {
-        for (auto &group : particleGroups_) {
+    void SetEndColor(Vector4 color)
+    {
+        for (auto &group : particleGroups_)
+        {
             group->GetSettingsData()->endColor = color;
         }
     }
 
-    void SetRotation(Quaternion rotation) {
+    void SetRotation(Quaternion rotation)
+    {
         if (emitterMeshData_)
             emitterMeshData_->rotation = -rotation;
     }
 
-    void SetScale(Vector3 scale) {
+    void SetScale(Vector3 scale)
+    {
         if (emitterMeshData_)
             emitterMeshData_->scale = scale;
     }
 
-    void SetAnchorPoint(Vector3 anchor) {
+    void SetAnchorPoint(Vector3 anchor)
+    {
         if (emitterMeshData_)
             emitterMeshData_->anchorPoint = anchor;
     }
@@ -193,46 +212,54 @@ class ParticleCSEmitter {
     int32_t GetFieldGroupId() const { return fieldGroupId_; }
     bool GetAcitve() const { return isActive_; }
 
-    Vector3 GetAnchorPoint() const {
+    Vector3 GetAnchorPoint() const
+    {
         if (emitterMeshData_)
             return emitterMeshData_->anchorPoint;
         return Vector3(0.5f, 0.5f, 0.5f);
     }
 
-    Vector3 GetTranslate() const {
+    Vector3 GetTranslate() const
+    {
         if (emitterMeshData_)
             return emitterMeshData_->translate;
         return Vector3(0.0f, 0.0f, 0.0f);
     }
 
-    Quaternion GetRotation() const {
+    Quaternion GetRotation() const
+    {
         if (emitterMeshData_)
             return emitterMeshData_->rotation;
         return Quaternion::IdentityQuaternion();
     }
 
-    Vector3 GetScale() const {
+    Vector3 GetScale() const
+    {
         if (emitterMeshData_)
             return emitterMeshData_->scale;
         return Vector3(1.0f, 1.0f, 1.0f);
     }
 
-    Vector3 GetRadius() const {
+    Vector3 GetRadius() const
+    {
         return Vector3(1.0f, 1.0f, 1.0f);
     }
 
-    static void ClearNameCounter() {
+    static void ClearNameCounter()
+    {
         GetNameCounter().clear();
     }
 
-    static void ClearNameCounter(const std::string &baseName) {
+    static void ClearNameCounter(const std::string &baseName)
+    {
         GetNameCounter().erase(baseName);
     }
 
     size_t GetTotalAliveParticles();
 
     // グループごとの統計情報
-    struct GroupStatistics {
+    struct GroupStatistics
+    {
         std::string groupName;
         uint32_t aliveCount;
     };
@@ -296,7 +323,8 @@ class ParticleCSEmitter {
 
     // プレビュー窓用: エミッタのワイヤーフレーム線分を取得する（DrawEmitter と同一形状）。
     // 共有 DrawLine3D を使わず呼び出し側（プレビュー）が専用VPで描けるよう、線分列を返す。
-    struct WireSegment {
+    struct WireSegment
+    {
         Vector3 a;
         Vector3 b;
         Vector4 color;
@@ -338,7 +366,8 @@ class ParticleCSEmitter {
     /// ==============================================
     ///
 
-    static std::unordered_map<std::string, int> &GetNameCounter() {
+    static std::unordered_map<std::string, int> &GetNameCounter()
+    {
         static std::unordered_map<std::string, int> nameCounter;
         return nameCounter;
     }

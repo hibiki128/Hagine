@@ -9,7 +9,8 @@ class BaseObject;
 /// フォローカメラの必殺技「顔アップ演出」パーツ
 /// 技の使用者の顔前へ回り込み、注視するカメラワークを担当する
 /// </summary>
-class CameraSkillCutscene {
+class CameraSkillCutscene
+{
   public:
     /// ===================================================
     /// public method

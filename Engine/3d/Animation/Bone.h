@@ -6,7 +6,8 @@
 /// スケルトン構造の構築、アニメーション適用、ジョイント情報の取得を行う
 /// </summary>
 namespace Hagine {
-class Bone {
+class Bone
+{
   public:
     /// ===================================================
     /// public method

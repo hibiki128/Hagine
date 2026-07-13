@@ -19,7 +19,8 @@
 /// 描くと破綻する。そのため表示要素ごとに別インスタンスを割り当てる（プール）。
 /// 文字画像は TextRenderer で一度だけ生成し、テクスチャパスと表示サイズをキャッシュする。
 /// </summary>
-class InputDisplayUI {
+class InputDisplayUI
+{
   public:
     /// <summary>
     /// 初期化。グリフ・ラベルの文字画像とスプライトプールを生成する。
@@ -43,13 +44,15 @@ class InputDisplayUI {
     /// ===================================================
 
     // グリフ/ラベルのテクスチャ情報（テクスチャパスと表示サイズ）
-    struct GlyphInfo {
-        std::string path;         // テクスチャパス
-        Hagine::Vector2 size{};   // 表示サイズ
+    struct GlyphInfo
+    {
+        std::string path;       // テクスチャパス
+        Hagine::Vector2 size{}; // 表示サイズ
     };
 
     // 履歴1エントリ
-    struct HistoryEntry {
+    struct HistoryEntry
+    {
         std::string glyphPath;       // ボタン/キーのテクスチャパス
         std::string labelPath;       // 操作名のテクスチャパス
         Hagine::Vector2 glyphSize{}; // グリフの表示サイズ

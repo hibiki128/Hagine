@@ -4,7 +4,8 @@
 
 namespace Hagine {
 
-void RtvManager::Initialize(DXDevice *device) {
+void RtvManager::Initialize(DXDevice *device)
+{
     assert(device);
     device_ = device;
 
@@ -15,24 +16,28 @@ void RtvManager::Initialize(DXDevice *device) {
     heap_ = device_->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, kMaxRTVCount, false);
 }
 
-void RtvManager::Finalize() {
+void RtvManager::Finalize()
+{
     heap_.Reset();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE RtvManager::Create(uint32_t index, ID3D12Resource *resource, const D3D12_RENDER_TARGET_VIEW_DESC &desc) {
+D3D12_CPU_DESCRIPTOR_HANDLE RtvManager::Create(uint32_t index, ID3D12Resource *resource, const D3D12_RENDER_TARGET_VIEW_DESC &desc)
+{
     assert(index < kMaxRTVCount);
     D3D12_CPU_DESCRIPTOR_HANDLE handle = GetCPUHandle(index);
     device_->Get()->CreateRenderTargetView(resource, &desc, handle);
     return handle;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE RtvManager::GetCPUHandle(uint32_t index) const {
+D3D12_CPU_DESCRIPTOR_HANDLE RtvManager::GetCPUHandle(uint32_t index) const
+{
     D3D12_CPU_DESCRIPTOR_HANDLE handle = heap_->GetCPUDescriptorHandleForHeapStart();
     handle.ptr += static_cast<SIZE_T>(descriptorSize_) * index;
     return handle;
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE RtvManager::GetGPUHandle(uint32_t index) const {
+D3D12_GPU_DESCRIPTOR_HANDLE RtvManager::GetGPUHandle(uint32_t index) const
+{
     D3D12_GPU_DESCRIPTOR_HANDLE handle = heap_->GetGPUDescriptorHandleForHeapStart();
     handle.ptr += static_cast<UINT64>(descriptorSize_) * index;
     return handle;

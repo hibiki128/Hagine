@@ -4,7 +4,8 @@
 #include <Particle/CSParticle/ParticleCSEditor.h>
 
 using namespace Hagine;
-void FadeOut::Initialize() {
+void FadeOut::Initialize()
+{
     // スプライトマネージャーの設定と読み込み
     SpriteManager::GetInstance()->SetSaveFolder("Transition");
     SpriteManager::GetInstance()->LoadAllSprites();
@@ -23,19 +24,25 @@ void FadeOut::Initialize() {
     SceneManager::GetInstance()->GetSceneTransition()->SetUseTransition(true);
 }
 
-void FadeOut::Update() {
+void FadeOut::Update()
+{
     // パーティクルの更新
     fadeOut_->Update();
     // 経過時間を加算
     timer_ += kDeltaTime;
 }
 
-void FadeOut::Draw(const ViewProjection &vp) {
-    if (SpriteManager::GetInstance()->GetSprite("transition")) {
+void FadeOut::Draw(const ViewProjection &vp)
+{
+    if (SpriteManager::GetInstance()->GetSprite("transition"))
+    {
         // 一定時間内はスプライトを表示
-        if (timer_ <= kSpriteDrawTime) {
+        if (timer_ <= kSpriteDrawTime)
+        {
             SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(1.0f);
-        } else {
+        }
+        else
+        {
             // 時間経過後はスプライトを非表示にし、パーティクルの重力を有効化
             SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(0.0f);
             fadeOut_->SetEnableGravity(true);
@@ -43,7 +50,8 @@ void FadeOut::Draw(const ViewProjection &vp) {
     }
 
     // パーティクルの自動発生を停止
-    if (timer_ >= kParticleStopTime) {
+    if (timer_ >= kParticleStopTime)
+    {
         fadeOut_->SetAuto(false);
     }
 
@@ -51,17 +59,20 @@ void FadeOut::Draw(const ViewProjection &vp) {
     fadeOut_->Draw(vp);
 
     // フェードアウト完了判定
-    if (timer_ >= kFinishTime) {
+    if (timer_ >= kFinishTime)
+    {
         isFinish_ = true;
     }
 }
 
-void FadeOut::Finalize() {
+void FadeOut::Finalize()
+{
     // エミッター名のカウンターをクリア
     ParticleCSEmitter::ClearNameCounter("FadeOut");
 }
 
-void FadeOut::ImGui() {
+void FadeOut::ImGui()
+{
     // デバッグ用のImGui描画
     fadeOut_->DrawImGui();
 }

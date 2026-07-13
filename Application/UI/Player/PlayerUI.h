@@ -6,7 +6,8 @@
 /// プレイヤーのUI表示を管理するクラス
 /// HPバー、アイコン、エネルギーバーなどを描画
 /// </summary>
-class PlayerUI {
+class PlayerUI
+{
   public:
     /// ===================================================
     /// public method

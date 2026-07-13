@@ -25,7 +25,8 @@ namespace Hagine {
 /// デバイス・コマンド・スワップチェーン・RTV/DSV・シェーダーコンパイラ等の
 /// 各コンポーネントを所有し、フレーム進行（PreDraw/PostDraw）とリソースバリアを統括する
 /// </summary>
-class DirectXCommon {
+class DirectXCommon
+{
   private:
     DirectXCommon() = default;
     ~DirectXCommon() = default;
@@ -37,7 +38,8 @@ class DirectXCommon {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static DirectXCommon *GetInstance() {
+    static DirectXCommon *GetInstance()
+    {
         static DirectXCommon instance;
         return &instance;
     }
@@ -156,14 +158,16 @@ class DirectXCommon {
     /// <summary>
     /// DescriptorHeapの作成
     /// </summary>
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible) {
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible)
+    {
         return dxDevice_->CreateDescriptorHeap(heapType, numDescriptors, shaderVisible);
     }
     ID3D12Resource *GetOffScreenResource() { return offScreenResource_.Get(); }
     IDxcUtils *GetDxcUtils() { return shaderCompiler_->GetDxcUtils(); }
     IDxcCompiler3 *GetDxcCompiler() { return shaderCompiler_->GetDxcCompiler(); }
 
-    Vector4 GetClearColor() const {
+    Vector4 GetClearColor() const
+    {
         return Vector4(
             clearColorValue_.Color[0], // R
             clearColorValue_.Color[1], // G
@@ -224,17 +228,17 @@ class DirectXCommon {
     WinApp *winApp_ = nullptr;
 
     // ---- 分割された各コンポーネント（DirectXCommon が所有・統括する）----
-    std::unique_ptr<DXDevice> dxDevice_;                  // デバイス・アダプタ・ファクトリ
-    std::unique_ptr<ResourceFactory> resourceFactory_;    // 各種GPUリソースの生成
-    std::unique_ptr<DXCommandQueue> directQueue_;         // Direct キュー＋フェンス
-    std::unique_ptr<DXCommandList> directCommandList_;    // Direct リスト＋アロケータ
-    std::unique_ptr<DXCommandQueue> computeQueue_;        // 非同期 Compute キュー＋フェンス
-    std::unique_ptr<DXCommandList> computeCommandList_;   // Compute リスト＋アロケータ
-    std::unique_ptr<DXSwapChain> swapChain_;              // スワップチェーン＋バックバッファ
-    std::unique_ptr<RtvManager> rtvManager_;              // RTVヒープ・ビュー管理
-    std::unique_ptr<DsvManager> dsvManager_;              // DSVヒープ・ビュー管理
-    std::unique_ptr<ShaderCompiler> shaderCompiler_;      // DXCシェーダーコンパイラ
-    std::unique_ptr<FrameRateLimiter> fpsLimiter_;        // FPS固定
+    std::unique_ptr<DXDevice> dxDevice_;                // デバイス・アダプタ・ファクトリ
+    std::unique_ptr<ResourceFactory> resourceFactory_;  // 各種GPUリソースの生成
+    std::unique_ptr<DXCommandQueue> directQueue_;       // Direct キュー＋フェンス
+    std::unique_ptr<DXCommandList> directCommandList_;  // Direct リスト＋アロケータ
+    std::unique_ptr<DXCommandQueue> computeQueue_;      // 非同期 Compute キュー＋フェンス
+    std::unique_ptr<DXCommandList> computeCommandList_; // Compute リスト＋アロケータ
+    std::unique_ptr<DXSwapChain> swapChain_;            // スワップチェーン＋バックバッファ
+    std::unique_ptr<RtvManager> rtvManager_;            // RTVヒープ・ビュー管理
+    std::unique_ptr<DsvManager> dsvManager_;            // DSVヒープ・ビュー管理
+    std::unique_ptr<ShaderCompiler> shaderCompiler_;    // DXCシェーダーコンパイラ
+    std::unique_ptr<FrameRateLimiter> fpsLimiter_;      // FPS固定
 
     // ---- メインの描画先リソース ----
     Microsoft::WRL::ComPtr<ID3D12Resource> offScreenResource_;

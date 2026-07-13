@@ -4,14 +4,15 @@
 #include "Object/Base/BaseObject.h"
 
 #include "SkyBox/SkyBox.h"
-#include"Application/UI/Scene/Title/TitleUI.h"
+#include "Application/UI/Scene/Title/TitleUI.h"
 #include <GamePad.h>
 
 /// <summary>
 /// タイトルシーンのクラス
 /// ゲーム起動後のタイトル画面を管理する
 /// </summary>
-class TitleScene : public Hagine::BaseScene {
+class TitleScene : public Hagine::BaseScene
+{
   public:
     /// ===================================================
     /// public method
@@ -94,7 +95,8 @@ class TitleScene : public Hagine::BaseScene {
     /// ===================================================
 
     /// タイトル進行フェーズ
-    enum class TitlePhase {
+    enum class TitlePhase
+    {
         WaitStart,         // Press Start 待ち
         Menu,              // チュートリアル/トレーニング 選択中
         MenuClosing,       // 決定後のメニュー退場アニメ中
@@ -102,10 +104,10 @@ class TitleScene : public Hagine::BaseScene {
         Training,          // トレーニングへ遷移予約済み
     };
 
-    float time_ = 0.0f;                     // 経過時間
-    const float kMaxTime_ = 2.0f;           // カメラ移動開始までの時間
-    bool firstMove_ = false;                // 最初のカメラ移動フラグ
-    bool secondMove_ = false;               // 二番目のカメラ移動フラグ
+    float time_ = 0.0f;           // 経過時間
+    const float kMaxTime_ = 2.0f; // カメラ移動開始までの時間
+    bool firstMove_ = false;      // 最初のカメラ移動フラグ
+    bool secondMove_ = false;     // 二番目のカメラ移動フラグ
 
     TitlePhase titlePhase_ = TitlePhase::WaitStart; // 進行フェーズ
     int menuIndex_ = 0;                             // 0=チュートリアル / 1=トレーニング
@@ -113,9 +115,9 @@ class TitleScene : public Hagine::BaseScene {
     float menuSelectLerp_ = 0.0f;                   // カーソル/ハイライトの補間値(0=上, 1=下)
     float menuCloseTimer_ = 0.0f;                   // 決定後の退場アニメ経過時間
 
-    Hagine::SkyBox *skyBox_ = nullptr;              // スカイボックス
+    Hagine::SkyBox *skyBox_ = nullptr; // スカイボックス
 
-    std::unique_ptr<TitleUI> titleUI_ = nullptr; // タイトルUI
+    std::unique_ptr<TitleUI> titleUI_ = nullptr;         // タイトルUI
     std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr; // ゲームパッド
 
     // 選択メニュー用スプライト
@@ -126,19 +128,19 @@ class TitleScene : public Hagine::BaseScene {
     Hagine::Vector2 menuTrainingPos_{};
 
     // メニュー配置定数
-    static constexpr float kMenuTextHeight = 64.0f;  // メニュー文字の高さ（大きめ）
-    static constexpr float kMenuX = 720.0f;          // メニュー左端の最終X
-    static constexpr float kMenuTutorialY = 520.0f;  // チュートリアルY
-    static constexpr float kMenuTrainingY = 650.0f;  // トレーニングY
-    static constexpr float kMenuCursorGap = 78.0f;   // カーソルの左オフセット
+    static constexpr float kMenuTextHeight = 64.0f; // メニュー文字の高さ（大きめ）
+    static constexpr float kMenuX = 720.0f;         // メニュー左端の最終X
+    static constexpr float kMenuTutorialY = 520.0f; // チュートリアルY
+    static constexpr float kMenuTrainingY = 650.0f; // トレーニングY
+    static constexpr float kMenuCursorGap = 78.0f;  // カーソルの左オフセット
 
     // メニュー出現アニメ（画面右外からイージングでスライドイン）
-    static constexpr float kMenuStartX = 2000.0f;       // スライドイン開始X（画面右外）
-    static constexpr float kMenuSlideDuration = 0.45f;  // スライド時間(秒)
-    static constexpr float kMenuStagger = 0.09f;        // 2項目目の遅延(秒)
+    static constexpr float kMenuStartX = 2000.0f;      // スライドイン開始X（画面右外）
+    static constexpr float kMenuSlideDuration = 0.45f; // スライド時間(秒)
+    static constexpr float kMenuStagger = 0.09f;       // 2項目目の遅延(秒)
 
     // カーソル/ハイライトの補間・決定後の退場アニメ
-    static constexpr float kMenuSelectLerp = 16.0f;     // 選択切替の補間速度(毎秒)
-    static constexpr float kMenuCloseDuration = 0.3f;   // 決定後の退場アニメ時間(秒)
-    static constexpr float kMenuCloseSlide = 260.0f;    // 退場時に右へずらす量(px)
+    static constexpr float kMenuSelectLerp = 16.0f;   // 選択切替の補間速度(毎秒)
+    static constexpr float kMenuCloseDuration = 0.3f; // 決定後の退場アニメ時間(秒)
+    static constexpr float kMenuCloseSlide = 260.0f;  // 退場時に右へずらす量(px)
 };

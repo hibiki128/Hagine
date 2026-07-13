@@ -7,7 +7,8 @@ class Enemy;
 /// 敵のステータスパーツクラス
 /// HP・エネルギー・被ダメージ・ガード・ノックバック・被弾リアクションを担当する
 /// </summary>
-class EnemyStatus {
+class EnemyStatus
+{
   public:
     /// ===================================================
     /// public method

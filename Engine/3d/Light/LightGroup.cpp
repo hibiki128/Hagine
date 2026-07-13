@@ -7,7 +7,8 @@
 #include <fstream>
 
 namespace Hagine {
-void LightGroup::Finalize() {
+void LightGroup::Finalize()
+{
     directionalLightResource_.Reset();
     pointLightsResource_.Reset();
     spotLightsResource_.Reset();
@@ -17,7 +18,8 @@ void LightGroup::Finalize() {
     DLightData_.reset();
 }
 
-void LightGroup::Initialize() {
+void LightGroup::Initialize()
+{
     dxCommon_ = DirectXCommon::GetInstance();
     CreateCamera();
     CreatePointLights();
@@ -25,12 +27,16 @@ void LightGroup::Initialize() {
     CreateSpotLights();
 }
 
-void LightGroup::Update(const ViewProjection &viewProjection) {
+void LightGroup::Update(const ViewProjection &viewProjection)
+{
     cameraForGPUData_->worldPosition = viewProjection.translation_;
 
-    if (isDirectionalLight_) {
+    if (isDirectionalLight_)
+    {
         directionalLightData_->active = true;
-    } else {
+    }
+    else
+    {
         directionalLightData_->active = false;
     }
 
@@ -43,7 +49,8 @@ void LightGroup::Update(const ViewProjection &viewProjection) {
     DrawLightVisualization();
 }
 
-void LightGroup::Draw() {
+void LightGroup::Draw()
+{
     // DirectionalLight用のCBufferの場所を設定
     dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(3, directionalLightResource_->GetGPUVirtualAddress());
 
@@ -54,8 +61,10 @@ void LightGroup::Draw() {
     dxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(6, spotLightsResource_->GetGPUVirtualAddress());
 }
 
-void LightGroup::AddPointLight() {
-    if (pointLights_.size() >= MAX_POINT_LIGHTS) {
+void LightGroup::AddPointLight()
+{
+    if (pointLights_.size() >= MAX_POINT_LIGHTS)
+    {
         return; // 最大数に達している場合は追加しない
     }
 
@@ -73,15 +82,19 @@ void LightGroup::AddPointLight() {
     ImGuiNotification::Post("ポイントライトを追加しました", {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
-void LightGroup::RemovePointLight(int index) {
-    if (index >= 0 && index < static_cast<int>(pointLights_.size())) {
+void LightGroup::RemovePointLight(int index)
+{
+    if (index >= 0 && index < static_cast<int>(pointLights_.size()))
+    {
         pointLights_.erase(pointLights_.begin() + index);
         ImGuiNotification::Post("ポイントライトを削除しました", {0.9f, 0.7f, 0.2f, 1.0f});
     }
 }
 
-void LightGroup::AddSpotLight() {
-    if (spotLights_.size() >= MAX_SPOT_LIGHTS) {
+void LightGroup::AddSpotLight()
+{
+    if (spotLights_.size() >= MAX_SPOT_LIGHTS)
+    {
         return; // 最大数に達している場合は追加しない
     }
 
@@ -101,36 +114,44 @@ void LightGroup::AddSpotLight() {
     ImGuiNotification::Post("スポットライトを追加しました", {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
-void LightGroup::RemoveSpotLight(int index) {
-    if (index >= 0 && index < static_cast<int>(spotLights_.size())) {
+void LightGroup::RemoveSpotLight(int index)
+{
+    if (index >= 0 && index < static_cast<int>(spotLights_.size()))
+    {
         spotLights_.erase(spotLights_.begin() + index);
         ImGuiNotification::Post("スポットライトを削除しました", {0.9f, 0.7f, 0.2f, 1.0f});
     }
 }
 
-void LightGroup::UpdatePointLightBuffer() {
+void LightGroup::UpdatePointLightBuffer()
+{
     pointLightsData_->count = static_cast<int32_t>(pointLights_.size());
 
-    for (size_t i = 0; i < pointLights_.size() && i < MAX_POINT_LIGHTS; ++i) {
+    for (size_t i = 0; i < pointLights_.size() && i < MAX_POINT_LIGHTS; ++i)
+    {
         pointLightsData_->lights[i] = pointLights_[i];
     }
 }
 
-void LightGroup::UpdateSpotLightBuffer() {
+void LightGroup::UpdateSpotLightBuffer()
+{
     spotLightsData_->count = static_cast<int32_t>(spotLights_.size());
 
-    for (size_t i = 0; i < spotLights_.size() && i < MAX_SPOT_LIGHTS; ++i) {
+    for (size_t i = 0; i < spotLights_.size() && i < MAX_SPOT_LIGHTS; ++i)
+    {
         spotLightsData_->lights[i] = spotLights_[i];
     }
 }
 
-void LightGroup::CreatePointLights() {
+void LightGroup::CreatePointLights()
+{
     // サイズを明示的に計算
     size_t bufferSize = sizeof(PointLights);
     pointLightsResource_ = dxCommon_->CreateBufferResource(bufferSize);
     pointLightsResource_->Map(0, nullptr, reinterpret_cast<void **>(&pointLightsData_));
 
-    for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
+    for (int i = 0; i < MAX_POINT_LIGHTS; i++)
+    {
         pointLightsData_->lights[i].color = {1.0f, 1.0f, 1.0f, 1.0f};
         pointLightsData_->lights[i].position = {-1.0f, 4.0f, -3.0f};
         pointLightsData_->lights[i].intensity = 1.0f;
@@ -144,12 +165,14 @@ void LightGroup::CreatePointLights() {
     pointLightsData_->count = 0;
 }
 
-void LightGroup::CreateSpotLights() {
+void LightGroup::CreateSpotLights()
+{
     spotLightsResource_ = dxCommon_->CreateBufferResource(sizeof(SpotLights));
     // 書き込むためのアドレスを取得
     spotLightsResource_->Map(0, nullptr, reinterpret_cast<void **>(&spotLightsData_));
 
-    for (int i = 0; i < MAX_SPOT_LIGHTS; i++) {
+    for (int i = 0; i < MAX_SPOT_LIGHTS; i++)
+    {
         spotLightsData_->lights[i].color = {1.0f, 1.0f, 1.0f, 1.0f};
         spotLightsData_->lights[i].position = {0.0f, -4.0f, -3.0f};
         spotLightsData_->lights[i].direction = {0.0f, -1.0f, 0.0f};
@@ -165,7 +188,8 @@ void LightGroup::CreateSpotLights() {
     spotLightsData_->count = 0;
 }
 
-void LightGroup::CreateDirectionLight() {
+void LightGroup::CreateDirectionLight()
+{
     directionalLightResource_ = dxCommon_->CreateBufferResource(sizeof(DirectionLight));
     // 書き込むためのアドレスを取得
     directionalLightResource_->Map(0, nullptr, reinterpret_cast<void **>(&directionalLightData_));
@@ -178,13 +202,15 @@ void LightGroup::CreateDirectionLight() {
     directionalLightData_->BlinnPhong = true;
 }
 
-void LightGroup::CreateCamera() {
+void LightGroup::CreateCamera()
+{
     cameraForGPUResource_ = dxCommon_->CreateBufferResource(sizeof(CameraForGPU));
     cameraForGPUResource_->Map(0, nullptr, reinterpret_cast<void **>(&cameraForGPUData_));
     cameraForGPUData_->worldPosition = {0.0f, 0.0f, -50.0f};
 }
 
-void LightGroup::imgui() {
+void LightGroup::imgui()
+{
 #ifdef USE_IMGUI
     // ラベル + 全幅ウィジェットの2列行を描くヘルパー
     auto Row = [](const char *label, const char *tip, auto &&drawWidget) {
@@ -210,22 +236,26 @@ void LightGroup::imgui() {
 
     ImGui::Spacing();
 
-    if (ImGui::BeginTabBar("LightTypeTabs", ImGuiTabBarFlags_FittingPolicyScroll)) {
+    if (ImGui::BeginTabBar("LightTypeTabs", ImGuiTabBarFlags_FittingPolicyScroll))
+    {
 
         // ============================================================
         // 平行光源
         // ============================================================
-        if (ImGui::BeginTabItem("平行光源")) {
+        if (ImGui::BeginTabItem("平行光源"))
+        {
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
             ImGui::Checkbox("平行光源を有効にする##diren", &isDirectionalLight_);
             ImGui::PopStyleColor();
 
-            if (directionalLightData_->active) {
+            if (directionalLightData_->active)
+            {
                 ImGui::Spacing();
                 SectionHeader("[ 基本設定 ]", DebugTheme::kAccentBlue);
 
-                if (ImGui::BeginTable("##DirTable", 2, ImGuiTableFlags_SizingStretchProp)) {
+                if (ImGui::BeginTable("##DirTable", 2, ImGuiTableFlags_SizingStretchProp))
+                {
                     ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 100.0f);
                     ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
@@ -244,7 +274,8 @@ void LightGroup::imgui() {
                     Row("ライティング", "陰影計算モデル", [&] {
                         const char *types[] = {"HalfLambert", "BlinnPhong"};
                         int sel = directionalLightData_->BlinnPhong ? 1 : 0;
-                        if (ImGui::Combo("##lightingType", &sel, types, IM_ARRAYSIZE(types))) {
+                        if (ImGui::Combo("##lightingType", &sel, types, IM_ARRAYSIZE(types)))
+                        {
                             directionalLightData_->HalfLambert = (sel == 0) ? 1 : 0;
                             directionalLightData_->BlinnPhong = (sel == 1) ? 1 : 0;
                         }
@@ -260,7 +291,8 @@ void LightGroup::imgui() {
         // ============================================================
         // 点光源
         // ============================================================
-        if (ImGui::BeginTabItem("点光源")) {
+        if (ImGui::BeginTabItem("点光源"))
+        {
             ImGui::Spacing();
 
             // 追加ボタン（上限到達時は無効化）+ 個数表示
@@ -268,7 +300,8 @@ void LightGroup::imgui() {
             ImGui::BeginDisabled(!canAddPoint);
             ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgGreen);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 0.52f, 0.40f));
-            if (ImGui::Button("点光源を追加")) {
+            if (ImGui::Button("点光源を追加"))
+            {
                 AddPointLight();
             }
             ImGui::PopStyleColor(2);
@@ -280,24 +313,28 @@ void LightGroup::imgui() {
 
             ImGui::Spacing();
 
-            for (int i = 0; i < static_cast<int>(pointLights_.size()); ++i) {
+            for (int i = 0; i < static_cast<int>(pointLights_.size()); ++i)
+            {
                 ImGui::PushID(i);
 
                 std::string headerLabel = std::format("点光源 #{}", i + 1);
-                if (ImGui::CollapsingHeader(headerLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+                if (ImGui::CollapsingHeader(headerLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+                {
 
                     // 削除
                     ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgRed);
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.46f, 0.46f, 0.40f));
                     bool del = ImGui::SmallButton("削除");
                     ImGui::PopStyleColor(2);
-                    if (del) {
+                    if (del)
+                    {
                         RemovePointLight(i);
                         ImGui::PopID();
                         break;
                     }
 
-                    if (ImGui::BeginTable("##PtTable", 2, ImGuiTableFlags_SizingStretchProp)) {
+                    if (ImGui::BeginTable("##PtTable", 2, ImGuiTableFlags_SizingStretchProp))
+                    {
                         ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 100.0f);
                         ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
@@ -326,7 +363,8 @@ void LightGroup::imgui() {
                         Row("ライティング", nullptr, [&] {
                             const char *types[] = {"HalfLambert", "BlinnPhong"};
                             int sel = pointLights_[i].BlinnPhong ? 1 : 0;
-                            if (ImGui::Combo("##lighting", &sel, types, IM_ARRAYSIZE(types))) {
+                            if (ImGui::Combo("##lighting", &sel, types, IM_ARRAYSIZE(types)))
+                            {
                                 pointLights_[i].HalfLambert = (sel == 0) ? 1 : 0;
                                 pointLights_[i].BlinnPhong = (sel == 1) ? 1 : 0;
                             }
@@ -346,14 +384,16 @@ void LightGroup::imgui() {
         // ============================================================
         // スポットライト
         // ============================================================
-        if (ImGui::BeginTabItem("スポットライト")) {
+        if (ImGui::BeginTabItem("スポットライト"))
+        {
             ImGui::Spacing();
 
             const bool canAddSpot = spotLights_.size() < MAX_SPOT_LIGHTS;
             ImGui::BeginDisabled(!canAddSpot);
             ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgGreen);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 0.52f, 0.40f));
-            if (ImGui::Button("スポットライトを追加")) {
+            if (ImGui::Button("スポットライトを追加"))
+            {
                 AddSpotLight();
             }
             ImGui::PopStyleColor(2);
@@ -365,23 +405,27 @@ void LightGroup::imgui() {
 
             ImGui::Spacing();
 
-            for (int i = 0; i < static_cast<int>(spotLights_.size()); ++i) {
+            for (int i = 0; i < static_cast<int>(spotLights_.size()); ++i)
+            {
                 ImGui::PushID(i);
 
                 std::string headerLabel = std::format("スポットライト #{}", i + 1);
-                if (ImGui::CollapsingHeader(headerLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+                if (ImGui::CollapsingHeader(headerLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+                {
 
                     ImGui::PushStyleColor(ImGuiCol_Button, DebugTheme::kBgRed);
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.46f, 0.46f, 0.40f));
                     bool del = ImGui::SmallButton("削除");
                     ImGui::PopStyleColor(2);
-                    if (del) {
+                    if (del)
+                    {
                         RemoveSpotLight(i);
                         ImGui::PopID();
                         break;
                     }
 
-                    if (ImGui::BeginTable("##SpTable", 2, ImGuiTableFlags_SizingStretchProp)) {
+                    if (ImGui::BeginTable("##SpTable", 2, ImGuiTableFlags_SizingStretchProp))
+                    {
                         ImGui::TableSetupColumn("L", ImGuiTableColumnFlags_WidthFixed, 100.0f);
                         ImGui::TableSetupColumn("V", ImGuiTableColumnFlags_WidthStretch);
 
@@ -417,7 +461,8 @@ void LightGroup::imgui() {
                         Row("ライティング", nullptr, [&] {
                             const char *types[] = {"HalfLambert", "BlinnPhong"};
                             int sel = spotLights_[i].BlinnPhong ? 1 : 0;
-                            if (ImGui::Combo("##lighting", &sel, types, IM_ARRAYSIZE(types))) {
+                            if (ImGui::Combo("##lighting", &sel, types, IM_ARRAYSIZE(types)))
+                            {
                                 spotLights_[i].HalfLambert = (sel == 0) ? 1 : 0;
                                 spotLights_[i].BlinnPhong = (sel == 1) ? 1 : 0;
                             }
@@ -450,21 +495,24 @@ void LightGroup::imgui() {
     float bw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.42f, 0.58f, 0.85f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.52f, 0.70f, 0.95f));
-    if (ImGui::Button("セーブ", ImVec2(bw, 0.0f))) {
+    if (ImGui::Button("セーブ", ImVec2(bw, 0.0f)))
+    {
         SaveLightData(std::string(saveFileName));
     }
     ImGui::PopStyleColor(2);
     ImGui::SameLine();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.48f, 0.40f, 0.85f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.60f, 0.50f, 0.95f));
-    if (ImGui::Button("ロード", ImVec2(bw, 0.0f))) {
+    if (ImGui::Button("ロード", ImVec2(bw, 0.0f)))
+    {
         LoadLightData(std::string(saveFileName));
     }
     ImGui::PopStyleColor(2);
 #endif // USE_IMGUI
 }
 
-void LightGroup::SaveLightData(const std::string &fileName) {
+void LightGroup::SaveLightData(const std::string &fileName)
+{
     auto dataHandler = std::make_unique<DataHandler>("LightGroup", fileName);
 
     // Directional Light
@@ -477,7 +525,8 @@ void LightGroup::SaveLightData(const std::string &fileName) {
 
     // Point Lights
     dataHandler->Save<int32_t>("pointLight_count", static_cast<int32_t>(pointLights_.size()));
-    for (size_t i = 0; i < pointLights_.size(); ++i) {
+    for (size_t i = 0; i < pointLights_.size(); ++i)
+    {
         std::string prefix = std::format("pointLight_{:02d}_", i);
         dataHandler->Save<bool>(prefix + "active", pointLights_[i].active);
         dataHandler->Save<Vector4>(prefix + "color", pointLights_[i].color);
@@ -491,7 +540,8 @@ void LightGroup::SaveLightData(const std::string &fileName) {
 
     // Spot Lights
     dataHandler->Save<int32_t>("spotLight_count", static_cast<int32_t>(spotLights_.size()));
-    for (size_t i = 0; i < spotLights_.size(); ++i) {
+    for (size_t i = 0; i < spotLights_.size(); ++i)
+    {
         std::string prefix = std::format("spotLight_{:02d}_", i);
         dataHandler->Save<bool>(prefix + "active", spotLights_[i].active);
         dataHandler->Save<Vector4>(prefix + "color", spotLights_[i].color);
@@ -508,7 +558,8 @@ void LightGroup::SaveLightData(const std::string &fileName) {
     ImGuiNotification::Post("ライトデータを保存しました: " + fileName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
-void LightGroup::LoadLightData(const std::string &fileName) {
+void LightGroup::LoadLightData(const std::string &fileName)
+{
     auto dataHandler = std::make_unique<DataHandler>("LightGroup", fileName);
 
     // Directional Light
@@ -522,7 +573,8 @@ void LightGroup::LoadLightData(const std::string &fileName) {
     // Point Lights
     pointLights_.clear();
     int32_t pointLightCount = dataHandler->Load<int32_t>("pointLight_count", 0);
-    for (int32_t i = 0; i < pointLightCount && i < MAX_POINT_LIGHTS; ++i) {
+    for (int32_t i = 0; i < pointLightCount && i < MAX_POINT_LIGHTS; ++i)
+    {
         std::string prefix = std::format("pointLight_{:02d}_", i);
         PointLight light = {};
         light.active = dataHandler->Load<bool>(prefix + "active", true);
@@ -539,7 +591,8 @@ void LightGroup::LoadLightData(const std::string &fileName) {
     // Spot Lights
     spotLights_.clear();
     int32_t spotLightCount = dataHandler->Load<int32_t>("spotLight_count", 0);
-    for (int32_t i = 0; i < spotLightCount && i < MAX_SPOT_LIGHTS; ++i) {
+    for (int32_t i = 0; i < spotLightCount && i < MAX_SPOT_LIGHTS; ++i)
+    {
         std::string prefix = std::format("spotLight_{:02d}_", i);
         SpotLight light = {};
         light.active = dataHandler->Load<bool>(prefix + "active", true);
@@ -557,19 +610,23 @@ void LightGroup::LoadLightData(const std::string &fileName) {
     ImGuiNotification::Post("ライトデータを読み込みました: " + fileName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-void LightGroup::DrawLightVisualization() {
+void LightGroup::DrawLightVisualization()
+{
     if (!showLightVisualization_)
         return;
 
     DrawLine3D *drawLine = DrawLine3D::GetInstance();
 
     // 平行光源の可視化
-    if (isDirectionalLight_ && directionalLightData_->active) {
+    if (isDirectionalLight_ && directionalLightData_->active)
+    {
         Vector4 dirColor = {directionalLightData_->color.x, directionalLightData_->color.y, directionalLightData_->color.z, 0.8f};
 
         // 複数の平行線で方向を表示
-        for (int i = -2; i <= 2; i++) {
-            for (int j = -2; j <= 2; j++) {
+        for (int i = -2; i <= 2; i++)
+        {
+            for (int j = -2; j <= 2; j++)
+            {
                 Vector3 startPos = {i * 5.0f, 20.0f, j * 5.0f};
                 Vector3 endPos = startPos + directionalLightData_->direction * 15.0f;
                 drawLine->SetPoints(startPos, endPos, dirColor);
@@ -578,7 +635,8 @@ void LightGroup::DrawLightVisualization() {
     }
 
     // ポイントライトの可視化
-    for (size_t i = 0; i < pointLights_.size(); ++i) {
+    for (size_t i = 0; i < pointLights_.size(); ++i)
+    {
         if (!pointLights_[i].active)
             continue;
 
@@ -592,7 +650,8 @@ void LightGroup::DrawLightVisualization() {
         drawLine->DrawSphere(light.position, {lightColor.x, lightColor.y, lightColor.z, 0.3f}, light.radius, 16);
 
         // 放射線を描画（8方向）
-        for (int dir = 0; dir < 8; dir++) {
+        for (int dir = 0; dir < 8; dir++)
+        {
             float angle = (float)dir * (3.14159f * 2.0f) / 8.0f;
             Vector3 rayDirection = {cosf(angle), 0.0f, sinf(angle)};
             Vector3 rayEnd = light.position + rayDirection * light.radius;
@@ -601,7 +660,8 @@ void LightGroup::DrawLightVisualization() {
     }
 
     // スポットライトの可視化
-    for (size_t i = 0; i < spotLights_.size(); ++i) {
+    for (size_t i = 0; i < spotLights_.size(); ++i)
+    {
         if (!spotLights_[i].active)
             continue;
 
@@ -620,14 +680,18 @@ void LightGroup::DrawLightVisualization() {
         float coneRadius = light.distance * tanf(coneAngle);
 
         // コーンの外周を8本の線で表現
-        for (int edge = 0; edge < 8; edge++) {
+        for (int edge = 0; edge < 8; edge++)
+        {
             float angle = (float)edge * (3.14159f * 2.0f) / 8.0f;
 
             // 方向ベクトルに垂直な2つのベクトルを計算
             Vector3 right;
-            if (abs(light.direction.y) < 0.9f) {
+            if (abs(light.direction.y) < 0.9f)
+            {
                 right = Vector3(0, 1, 0).Cross(light.direction).Normalize();
-            } else {
+            }
+            else
+            {
                 right = Vector3(1, 0, 0).Cross(light.direction).Normalize();
             }
             Vector3 up = light.direction.Cross(right).Normalize();

@@ -1,7 +1,7 @@
 #pragma once
 #include "Data/DataHandler.h"
 #include <memory>
-#include"Graphics/Srv/SrvManager.h"
+#include "Graphics/Srv/SrvManager.h"
 
 namespace Hagine {
 
@@ -9,7 +9,8 @@ namespace Hagine {
 /// 各ポストエフェクトのパラメータと定数バッファを管理するクラス
 /// シェーダーへのパラメータ設定、ImGuiでの調整、Json保存/読み込みを行う
 /// </summary>
-class PostEffectParameters {
+class PostEffectParameters
+{
   public:
     /// ===================================================
     /// public method
@@ -91,18 +92,21 @@ class PostEffectParameters {
     DirectXCommon *dxCommon_ = nullptr; // DirectX共通処理
 
     /// <summary>平滑化のパラメータ</summary>
-    struct KernelSettings {
+    struct KernelSettings
+    {
         int kernelSize;
     };
 
     /// <summary>ガウスぼかしのパラメータ</summary>
-    struct GaussianParams {
+    struct GaussianParams
+    {
         int kernelSize;
         float sigma;
     };
 
     /// <summary>ビネットのパラメータ</summary>
-    struct VignetteParameter {
+    struct VignetteParameter
+    {
         float vignetteStrength;
         float vignetteRadius;
         float vignetteExponent;
@@ -111,19 +115,22 @@ class PostEffectParameters {
     };
 
     /// <summary>深度ぼかしのパラメータ</summary>
-    struct Depth {
+    struct Depth
+    {
         Matrix4x4 projectionInverse;
         int kernelSize;
     };
 
     /// <summary>ラジアルブラーのパラメータ</summary>
-    struct RadialBlur {
+    struct RadialBlur
+    {
         Vector2 kCenter;
         float kBlurWidth;
     };
 
     /// <summary>シネマティックのパラメータ</summary>
-    struct Cinematic {
+    struct Cinematic
+    {
         Vector2 iResolution;
         float contrast;
         float saturation;
@@ -131,7 +138,8 @@ class PostEffectParameters {
     };
 
     /// <summary>ディゾルブのパラメータ</summary>
-    struct Dissolve {
+    struct Dissolve
+    {
         float threshold;
         float edgeWidth;
         float _pad[2];
@@ -142,12 +150,14 @@ class PostEffectParameters {
     };
 
     /// <summary>ランダムノイズのパラメータ</summary>
-    struct Random {
+    struct Random
+    {
         float time;
     };
 
     /// <summary>集中線のパラメータ</summary>
-    struct FocusLine {
+    struct FocusLine
+    {
         float time;
         float lines;
         float width;
@@ -160,21 +170,24 @@ class PostEffectParameters {
     };
 
     /// <summary>モザイクのパラメータ</summary>
-    struct Pixelate {
+    struct Pixelate
+    {
         float blockSize;
         float centerX;
         float centerY;
     };
 
     /// <summary>ブルームのパラメータ</summary>
-    struct Bloom {
+    struct Bloom
+    {
         float bloomThreshold;
         float bloomIntensity;
         Vector2 texelSize;
     };
 
     /// <summary>レトロ調のパラメータ</summary>
-    struct Retro {
+    struct Retro
+    {
         float pixelSize;
         float colorLevels;
         float scanlineIntensity;

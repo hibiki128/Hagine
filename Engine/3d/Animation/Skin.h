@@ -10,7 +10,8 @@ class SrvManager;
 /// スキニング管理クラス
 /// ボーンの変形情報を頂点に適用し、スキンメッシュアニメーションを実現する
 /// </summary>
-class Skin {
+class Skin
+{
   public:
     /// ===================================================
     /// public method
@@ -46,8 +47,10 @@ class Skin {
     /// </summary>
     /// <param name="meshIndex">メッシュインデックス</param>
     /// <returns>size_t: 頂点オフセット</returns>
-    size_t GetMeshVertexOffset(size_t meshIndex) const {
-        if (meshIndex < meshVertexOffsets_.size()) {
+    size_t GetMeshVertexOffset(size_t meshIndex) const
+    {
+        if (meshIndex < meshVertexOffsets_.size())
+        {
             return meshVertexOffsets_[meshIndex];
         }
         return 0;
@@ -124,8 +127,8 @@ class Skin {
     uint32_t skinClusterInfluenceSrvIndex_ = 0;    // 影響度SRVインデックス
     uint32_t skinClusterOutputVertexSrvIndex_ = 0; // 出力頂点SRVインデックス
     uint32_t skinClusterInputVertexSrvIndex_ = 0;  // 入力頂点SRVインデックス
-    size_t totalVertexCount_ = 0;                   // 総頂点数
-    bool inputVerticesUploaded_ = false;            // 入力頂点(バインドポーズ)をGPUへ転送済みか
+    size_t totalVertexCount_ = 0;                  // 総頂点数
+    bool inputVerticesUploaded_ = false;           // 入力頂点(バインドポーズ)をGPUへ転送済みか
     DirectXCommon *dxCommon_ = nullptr;            // DirectX共通クラス
     SrvManager *srvManager_ = nullptr;             // SRVマネージャー
     std::vector<size_t> meshVertexOffsets_;        // メッシュごとの頂点オフセット

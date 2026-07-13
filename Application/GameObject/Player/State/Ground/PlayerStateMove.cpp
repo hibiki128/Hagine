@@ -4,7 +4,8 @@
 #include <cmath>
 
 using namespace Hagine;
-void PlayerStateMove::Enter(Player &player) {
+void PlayerStateMove::Enter(Player &player)
+{
     // 現在の水平速度を取得し、最小初期速度と最大速度の範囲に収める
     float currentHorizontalSpeed = std::sqrt(
         player.GetVelocity().x * player.GetVelocity().x +
@@ -14,18 +15,21 @@ void PlayerStateMove::Enter(Player &player) {
     player.GetMoveSpeed() = std::min(player.GetMoveSpeed(), player.GetMaxSpeed());
 }
 
-void PlayerStateMove::Update(Player &player) {
+void PlayerStateMove::Update(Player &player)
+{
     player.GetCanJump() = player.GetIsGrounded();
     player.GetVelocity().y = kGroundPullVelocity;
 
     player.Move();
 
-    if (!HasMovementInput(player)) {
+    if (!HasMovementInput(player))
+    {
         player.ChangeState("Idle");
         return;
     }
 
-    if (IsJumpOrFlyTriggered(player) && player.GetCanJump()) {
+    if (IsJumpOrFlyTriggered(player) && player.GetCanJump())
+    {
         player.ChangeState("Jump");
         return;
     }
@@ -34,5 +38,6 @@ void PlayerStateMove::Update(Player &player) {
     player.ChangeEnergyCharge();
 }
 
-void PlayerStateMove::Exit(Player &player) {
+void PlayerStateMove::Exit(Player &player)
+{
 }

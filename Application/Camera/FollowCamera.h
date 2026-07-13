@@ -12,14 +12,15 @@ class Player;
 namespace Hagine {
 class DrawLine3D;
 class BaseObject;
-}
+} // namespace Hagine
 
 /// <summary>
 /// ターゲットを追従するカメラクラス
 /// 基本追従・手動ヨー回転・行列反映を本体が担い、ロックオン（肩・高さ・視錐台）・
 /// Rush（突進）・必殺技の顔アップ演出は各パーツ（Parts/）が担当するファサード
 /// </summary>
-class FollowCamera {
+class FollowCamera
+{
   public:
     /// ===================================================
     /// public method
@@ -134,7 +135,8 @@ class FollowCamera {
 
     /// <summary>カメラの視野角を設定</summary>
     /// <param name="fov">視野角（度数）</param>
-    void SetCameraFov(float fov) {
+    void SetCameraFov(float fov)
+    {
         viewProjection_.fovAngleY_ = fov * std::numbers::pi_v<float> / 180.0f;
     }
 
@@ -187,8 +189,8 @@ class FollowCamera {
     static constexpr float kInitialYaw = 0.0f; ///< 初期ヨー角
 
     // ─── パーツ ───
-    std::unique_ptr<CameraLockOn> lockOn_;             ///< 肩・高さ・視錐台ロックオン
-    std::unique_ptr<CameraRush> rush_;                 ///< Rush（突進）専用カメラ
+    std::unique_ptr<CameraLockOn> lockOn_;               ///< 肩・高さ・視錐台ロックオン
+    std::unique_ptr<CameraRush> rush_;                   ///< Rush（突進）専用カメラ
     std::unique_ptr<CameraSkillCutscene> skillCutscene_; ///< 必殺技の顔アップ演出
 
     Hagine::ViewProjection viewProjection_; ///< ビュープロジェクション

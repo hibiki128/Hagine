@@ -1,25 +1,29 @@
 #include "Mesh.h"
 #include "DirectXCommon.h"
 namespace Hagine {
-void Mesh::Initialize() {
+void Mesh::Initialize()
+{
     dxCommon_ = DirectXCommon::GetInstance();
 
     CreateVartexData();
     CreateIndexResource();
 }
 
-void Mesh::PrimitiveInitialize(const PrimitiveType &type) {
+void Mesh::PrimitiveInitialize(const PrimitiveType &type)
+{
     meshData_.vertices = PrimitiveModel::GetInstance()->GetPrimitiveData(type).vertices;
     meshData_.indices = PrimitiveModel::GetInstance()->GetPrimitiveData(type).indices;
 }
 
-void Mesh::PrimitiveInitialize(const PrimitiveType &type, const PrimitiveParams &params) {
+void Mesh::PrimitiveInitialize(const PrimitiveType &type, const PrimitiveParams &params)
+{
     auto data = PrimitiveModel::GetInstance()->BuildParametricData(type, params);
     meshData_.vertices = data.vertices;
     meshData_.indices = data.indices;
 }
 
-void Mesh::CreateVartexData() {
+void Mesh::CreateVartexData()
+{
     vertexResource_ = dxCommon_->CreateBufferResource(sizeof(VertexData) * meshData_.vertices.size());
     // リソースの先頭のアドレスから使う
     vertexBufferView_.BufferLocation = vertexResource_->GetGPUVirtualAddress();
@@ -34,7 +38,8 @@ void Mesh::CreateVartexData() {
     std::memcpy(vertexData_, meshData_.vertices.data(), sizeof(VertexData) * meshData_.vertices.size());
 }
 
-void Mesh::CreateIndexResource() {
+void Mesh::CreateIndexResource()
+{
     indexResource_ = dxCommon_->CreateBufferResource(sizeof(uint32_t) * meshData_.indices.size());
     indexBufferView_.BufferLocation = indexResource_->GetGPUVirtualAddress();
     indexBufferView_.SizeInBytes = UINT(sizeof(uint32_t) * meshData_.indices.size());

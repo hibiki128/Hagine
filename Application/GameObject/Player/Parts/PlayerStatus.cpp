@@ -7,36 +7,43 @@
 
 using namespace Hagine;
 
-void PlayerStatus::Init(Player *owner) {
+void PlayerStatus::Init(Player *owner)
+{
     owner_ = owner;
 }
 
-void PlayerStatus::DamageUpdate() {
-    if (damage_ <= kNoDamage) {
+void PlayerStatus::DamageUpdate()
+{
+    if (damage_ <= kNoDamage)
+    {
         return;
     }
 
     // 無敵中はダメージを無視
-    if (isInvincible_) {
+    if (isInvincible_)
+    {
         damage_ = kNoDamage;
         return;
     }
 
     // ガード中はダメージ・ノックバックを軽減し、エネルギーを消費する
     float guardMult = isGuarding_ ? guardDamageMultiplier_ : 1.0f;
-    if (isGuarding_) {
+    if (isGuarding_)
+    {
         ConsumeEnergy(guardEnergyCost_);
     }
 
     HP_ -= damage_ * guardMult;
     damage_ = kNoDamage;
 
-    if (hasKnockback_) {
+    if (hasKnockback_)
+    {
         Vector3 &velocity = owner_->GetVelocity();
         velocity.x += knockbackVelocity_.x * guardMult;
         velocity.y += knockbackVelocity_.y * guardMult;
         velocity.z += knockbackVelocity_.z * guardMult;
-        if (owner_->GetIsGrounded() && knockbackVelocity_.y > 0.0f) {
+        if (owner_->GetIsGrounded() && knockbackVelocity_.y > 0.0f)
+        {
             owner_->GetIsGrounded() = false;
         }
         hasKnockback_ = false;
@@ -52,16 +59,20 @@ void PlayerStatus::DamageUpdate() {
     damageReactTimer_ = kTimerReset;
 }
 
-void PlayerStatus::InvincibleUpdate() {
+void PlayerStatus::InvincibleUpdate()
+{
     invincibleTime_ += owner_->GetDt();
-    if (invincibleTime_ >= invincibleDuration_) {
+    if (invincibleTime_ >= invincibleDuration_)
+    {
         isInvincible_ = false;
         invincibleTime_ = kTimerReset;
     }
 }
 
-void PlayerStatus::UpdateDamageReact() {
-    if (!isDamageReact_) {
+void PlayerStatus::UpdateDamageReact()
+{
+    if (!isDamageReact_)
+    {
         return;
     }
 
@@ -73,19 +84,23 @@ void PlayerStatus::UpdateDamageReact() {
     owner_->SetAlpha((blink % kBlinkModulo == kEvenBlink) ? kPlayerAlphaTransparent : kAlphaOpaque);
 
     // 終了処理
-    if (damageReactTimer_ >= damageReactDuration_) {
+    if (damageReactTimer_ >= damageReactDuration_)
+    {
         isDamageReact_ = false;
         owner_->SetAlpha(kAlphaOpaque);
     }
 }
 
-void PlayerStatus::StopDamageReact() {
+void PlayerStatus::StopDamageReact()
+{
     isDamageReact_ = false;
     owner_->SetAlpha(kAlphaOpaque);
 }
 
-bool PlayerStatus::ConsumeEnergy(float amount) {
-    if (energy_ >= amount) {
+bool PlayerStatus::ConsumeEnergy(float amount)
+{
+    if (energy_ >= amount)
+    {
         energy_ -= amount;
         timeSinceLastShot_ = kTimerReset;
         return true;
@@ -93,31 +108,38 @@ bool PlayerStatus::ConsumeEnergy(float amount) {
     return false;
 }
 
-void PlayerStatus::RecoverEnergy() {
+void PlayerStatus::RecoverEnergy()
+{
     bool canRecover = false;
     const float dt = owner_->GetDt();
 
     // エナジーチャージ中なら即回復
-    if (owner_->GetCurrentStateName() == "EnergyCharge") {
+    if (owner_->GetCurrentStateName() == "EnergyCharge")
+    {
         canRecover = true;
     }
     // EnergyCharge チュートリアルステップ中は自動回復を停止する
-    else if (owner_->GetTutorialStep() != TutorialStep::EnergyCharge) {
+    else if (owner_->GetTutorialStep() != TutorialStep::EnergyCharge)
+    {
         timeSinceLastShot_ += dt;
-        if (timeSinceLastShot_ >= energyRecoveryDelay_) {
+        if (timeSinceLastShot_ >= energyRecoveryDelay_)
+        {
             canRecover = true;
         }
     }
 
-    if (canRecover) {
+    if (canRecover)
+    {
         energy_ += energyRecoveryRate_ * dt;
-        if (energy_ > maxEnergy_) {
+        if (energy_ > maxEnergy_)
+        {
             energy_ = maxEnergy_;
         }
     }
 }
 
-void PlayerStatus::SetKnockback(const Vector3 &direction, float power) {
+void PlayerStatus::SetKnockback(const Vector3 &direction, float power)
+{
     if (power <= 0.0f)
         return;
 
@@ -139,7 +161,8 @@ void PlayerStatus::SetKnockback(const Vector3 &direction, float power) {
     hasKnockback_ = true;
 }
 
-void PlayerStatus::Save(DataHandler *data) {
+void PlayerStatus::Save(DataHandler *data)
+{
     data->Save("maxEnergy", maxEnergy_);
     data->Save("energyRecoveryRate", energyRecoveryRate_);
     data->Save("energyRecoveryDelay", energyRecoveryDelay_);
@@ -148,7 +171,8 @@ void PlayerStatus::Save(DataHandler *data) {
     data->Save("guardEnergyCost", guardEnergyCost_);
 }
 
-void PlayerStatus::Load(DataHandler *data) {
+void PlayerStatus::Load(DataHandler *data)
+{
     maxEnergy_ = data->Load<float>("maxEnergy", 100.0f);
     energyRecoveryRate_ = data->Load<float>("energyRecoveryRate", 0.01f);
     energyRecoveryDelay_ = data->Load<float>("energyRecoveryDelay", 1.0f);
@@ -158,14 +182,16 @@ void PlayerStatus::Load(DataHandler *data) {
     guardEnergyCost_ = data->Load<float>("guardEnergyCost", 10.0f);
 }
 
-void PlayerStatus::DrawImGui() {
+void PlayerStatus::DrawImGui()
+{
 #ifdef USE_IMGUI
     ImGui::Text("エネルギー: %.1f / %.1f", energy_, maxEnergy_);
     ImGui::DragFloat("エネルギー回復速度", &energyRecoveryRate_, 0.1f, 0.0f, 50.0f);
     ImGui::DragFloat("回復開始遅延", &energyRecoveryDelay_, 0.1f, 0.0f, 5.0f);
 
     ImGui::Text("無敵状態: %s", isInvincible_ ? "True" : "False");
-    if (isInvincible_) {
+    if (isInvincible_)
+    {
         ImGui::Text("無敵残り時間: %.2f秒", invincibleDuration_ - invincibleTime_);
     }
     ImGui::DragFloat("無敵時間", &invincibleDuration_, 0.01f, 0.0f, 2.0f);
@@ -180,7 +206,8 @@ void PlayerStatus::DrawImGui() {
 #endif // USE_IMGUI
 }
 
-void PlayerStatus::RegisterParams() {
+void PlayerStatus::RegisterParams()
+{
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Player", "HP", static_cast<const float *>(&HP_));
     hub->Register("Player", "エネルギー", static_cast<const float *>(&energy_));

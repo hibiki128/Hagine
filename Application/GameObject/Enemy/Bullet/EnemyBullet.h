@@ -8,7 +8,8 @@ class Enemy;
 /// 敵が発射する弾のゲームオブジェクトクラス
 /// 追尾、移動、衝突判定などを行う
 /// </summary>
-class EnemyBullet : public Hagine::BaseObject {
+class EnemyBullet : public Hagine::BaseObject
+{
   public:
     /// ===================================================
     /// public method
@@ -70,7 +71,8 @@ class EnemyBullet : public Hagine::BaseObject {
     /// 現在の速度の大きさを取得
     /// </summary>
     /// <returns>float: 速度の大きさ</returns>
-    float GetCurrentSpeed() const {
+    float GetCurrentSpeed() const
+    {
         return std::sqrt(velocity_.x * velocity_.x + velocity_.y * velocity_.y + velocity_.z * velocity_.z);
     }
 
@@ -94,8 +96,10 @@ class EnemyBullet : public Hagine::BaseObject {
     /// コライダーの半径を設定
     /// </summary>
     /// <param name="radius">設定する半径</param>
-    void SetColliderRadius(float radius) {
-        if (collider_) {
+    void SetColliderRadius(float radius)
+    {
+        if (collider_)
+        {
             collider_->SetRadius(radius);
         }
     }
@@ -135,18 +139,18 @@ class EnemyBullet : public Hagine::BaseObject {
     static constexpr float kVerticalOffset = 1.0f;        // 垂直方向オフセット
     static constexpr int kBulletDamage = 1;               // 弾のダメージ値
 
-    Hagine::Vector3 velocity_;                  // 速度
-    float   speed_ = kDefaultSpeed;     // 移動速度
-    float   acce_  = kDefaultAcceleration; // 加速度
+    Hagine::Vector3 velocity_;          // 速度
+    float speed_ = kDefaultSpeed;       // 移動速度
+    float acce_ = kDefaultAcceleration; // 加速度
 
-    float lifeTime_        = kDefaultLifeTime; // 弾の生存時間(秒)
-    float currentLifeTime_ = 0.0f;             // 現在の生存時間
-    bool  isAlive_         = true;             // 弾が生きているかどうか
-    bool  isHit_           = false;            // 衝突判定フラグ
+    float lifeTime_ = kDefaultLifeTime; // 弾の生存時間(秒)
+    float currentLifeTime_ = 0.0f;      // 現在の生存時間
+    bool isAlive_ = true;               // 弾が生きているかどうか
+    bool isHit_ = false;                // 衝突判定フラグ
 
-    bool    isLockOnBullet_ = false;   // ロックオン弾かどうか
-    float   damage_         = static_cast<float>(kBulletDamage); // 弾のダメージ量
-    Player *target_         = nullptr; // ターゲットのプレイヤー
+    bool isLockOnBullet_ = false;                      // ロックオン弾かどうか
+    float damage_ = static_cast<float>(kBulletDamage); // 弾のダメージ量
+    Player *target_ = nullptr;                         // ターゲットのプレイヤー
     std::unique_ptr<Hagine::ParticleEmitter> emitter_; // エミッター
 
     Hagine::SphereCollider *collider_ = nullptr; // コライダー

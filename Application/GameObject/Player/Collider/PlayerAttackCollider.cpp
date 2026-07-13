@@ -6,7 +6,8 @@
 #include "Scene/SceneManager.h"
 
 using namespace Hagine;
-void PlayerAttackCollider::Init(Player *player, Enemy *enemy) {
+void PlayerAttackCollider::Init(Player *player, Enemy *enemy)
+{
     player_ = player;
     enemy_ = enemy;
 
@@ -14,7 +15,7 @@ void PlayerAttackCollider::Init(Player *player, Enemy *enemy) {
     collider_ = player_->AddOBBCollider("PlayerAttackFront");
     collider_->SetTag("PlayerHand"); // 既存の衝突タグを流用
     collider_->AddCollisionMask("Enemy");
-    collider_->SetEnabled(false);           // 初期は無効
+    collider_->SetEnabled(false); // 初期は無効
 
     // 衝突開始コールバック
     collider_->SetOnCollision([this](ColliderBase *other) {
@@ -30,16 +31,20 @@ void PlayerAttackCollider::Init(Player *player, Enemy *enemy) {
         SceneManager::GetInstance()->GetBaseScene()->GetViewProjection(), "punchHit");
 }
 
-void PlayerAttackCollider::Update(float deltaTime) {
-    if (!shake_) {
+void PlayerAttackCollider::Update(float deltaTime)
+{
+    if (!shake_)
+    {
         return;
     }
     shake_->Update();
 
     // 遅延処理：delay > 0 なら一定時間後に有効化
-    if (isPending_) {
+    if (isPending_)
+    {
         delayTimer_ -= deltaTime;
-        if (delayTimer_ <= 0.0f) {
+        if (delayTimer_ <= 0.0f)
+        {
             isPending_ = false;
             isActive_ = true;
             hasHitThisActivation_ = false;
@@ -50,22 +55,27 @@ void PlayerAttackCollider::Update(float deltaTime) {
     }
 
     // 有効時間の管理：activeDuration_ を超えたら自動無効化
-    if (isActive_) {
+    if (isActive_)
+    {
         activeTimer_ += deltaTime;
-        if (activeTimer_ >= activeDuration_) {
+        if (activeTimer_ >= activeDuration_)
+        {
             Deactivate();
         }
     }
 }
 
-void PlayerAttackCollider::DrawParticle(const ViewProjection &viewProjection) {
-    if (hitEmitter_) {
+void PlayerAttackCollider::DrawParticle(const ViewProjection &viewProjection)
+{
+    if (hitEmitter_)
+    {
         hitEmitter_->Draw(viewProjection);
     }
 }
 
 void PlayerAttackCollider::Activate(float damage, float knockbackPower,
-                                    float activeDuration, float activateDelay) {
+                                    float activeDuration, float activateDelay)
+{
     // 前の判定を確実にリセットしてから開始
     Deactivate();
 
@@ -74,12 +84,15 @@ void PlayerAttackCollider::Activate(float damage, float knockbackPower,
     activeDuration_ = activeDuration;
     hasHitThisActivation_ = false;
 
-    if (activateDelay > 0.0f) {
+    if (activateDelay > 0.0f)
+    {
         // 遅延あり：ペンディング状態で待機
         isPending_ = true;
         delayTimer_ = activateDelay;
         collider_->SetEnabled(false);
-    } else {
+    }
+    else
+    {
         // 遅延なし：即座に有効化
         isPending_ = false;
         isActive_ = true;
@@ -88,25 +101,31 @@ void PlayerAttackCollider::Activate(float damage, float knockbackPower,
     }
 }
 
-void PlayerAttackCollider::Deactivate() {
+void PlayerAttackCollider::Deactivate()
+{
     isActive_ = false;
     isPending_ = false;
     activeTimer_ = 0.0f;
     delayTimer_ = 0.0f;
-    if (collider_) {
+    if (collider_)
+    {
         collider_->SetEnabled(false);
     }
 }
 
-void PlayerAttackCollider::OnCollision(ColliderBase *other) {
+void PlayerAttackCollider::OnCollision(ColliderBase *other)
+{
     // アクティブでない場合・すでにこのアクティブ中にヒット済みの場合は無視
-    if (!isActive_ || hasHitThisActivation_) {
+    if (!isActive_ || hasHitThisActivation_)
+    {
         return;
     }
-    if (!enemy_ || !player_) {
+    if (!enemy_ || !player_)
+    {
         return;
     }
-    if (other->GetTag() != "Enemy") {
+    if (other->GetTag() != "Enemy")
+    {
         return;
     }
 
@@ -121,7 +140,8 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other) {
     enemy_->SetKnockback(knockbackDir, currentKnockback_);
 
     // ヒットエフェクト
-    if (hitEmitter_) {
+    if (hitEmitter_)
+    {
         Vector3 forward = player_->GetForward();
         Vector3 playerPos = player_->GetWorldPosition();
         Vector3 hitPos = {
@@ -134,18 +154,21 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other) {
     }
 
     // 攻撃ヒット時のエネルギー回復
-    if (player_) {
+    if (player_)
+    {
         float currentEnergy = player_->GetEnergy();
         float maxEnergy = player_->GetMaxEnergy();
         float newEnergy = currentEnergy + energyRecoveryAmount_;
-        if (newEnergy > maxEnergy) {
+        if (newEnergy > maxEnergy)
+        {
             newEnergy = maxEnergy;
         }
         player_->GetEnergy() = newEnergy;
     }
 
     // カメラシェイク
-    if (shake_) {
+    if (shake_)
+    {
         shake_->StartShake();
     }
 }

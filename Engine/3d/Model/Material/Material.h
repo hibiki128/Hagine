@@ -11,7 +11,8 @@ class DirectXCommon;
 /// マテリアルクラス
 /// テクスチャ、色、ライティング設定を管理する
 /// </summary>
-class Material {
+class Material
+{
   public:
     /// ===================================================
     /// public method
@@ -73,7 +74,8 @@ class Material {
     /// <summary>
     /// 法線の強さを設定
     /// </summary>
-    void SetNormalStrength(float strength) {
+    void SetNormalStrength(float strength)
+    {
         materialData_.normalStrength = strength;
         UpdateGPUData();
     }
@@ -81,7 +83,8 @@ class Material {
     /// <summary>
     /// バインド用の法線マップテクスチャインデックスを取得（未設定時は albedo を流用）
     /// </summary>
-    uint32_t GetNormalMapIndex() const {
+    uint32_t GetNormalMapIndex() const
+    {
         return materialData_.hasNormalMapTexture ? materialData_.normalMapIndex : materialData_.textureIndex;
     }
 

@@ -9,7 +9,8 @@
 /// タイトル画面のUI管理クラス
 /// ロゴ、Press Startテキスト、パーティクルなどを制御
 /// </summary>
-class TitleUI {
+class TitleUI
+{
   public:
     /// ===================================================
     /// public method
@@ -63,7 +64,8 @@ class TitleUI {
     /// <summary>
     /// スプライトのインデックス
     /// </summary>
-    enum SpriteIndex {
+    enum SpriteIndex
+    {
         kTitleLogo,  // タイトルロゴ
         kPressStart, // Press Startテキスト
         kMaxSprite
@@ -122,14 +124,14 @@ class TitleUI {
     Hagine::Vector2 titleLogoEndPos_ = {};                                              // タイトルロゴ終了位置
     Hagine::Vector2 pressStartEndPos_ = {};                                             // Press Start終了位置
 
-    Hagine::Vector3 targetPos_{}; // ターゲット位置
+    Hagine::Vector3 targetPos_{};     // ターゲット位置
     const float kMaxTime_ = kMaxTime; // 最大時間
-    float timer_ = 0.0f; // 汎用タイマー
+    float timer_ = 0.0f;              // 汎用タイマー
 
     std::unique_ptr<Hagine::ParticleEmitter> chargeBullet_ = nullptr;   // チャージ弾パーティクル
     std::unique_ptr<Hagine::ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
     std::unique_ptr<Hagine::ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
-    std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr;              // ゲームパッド
+    std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr;                // ゲームパッド
 
     std::array<Hagine::SpriteData *, kMaxSprite> sprites_; // スプライト配列
 };

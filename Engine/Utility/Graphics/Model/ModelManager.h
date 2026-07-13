@@ -6,7 +6,8 @@
 #include <Model/Model.h>
 
 namespace Hagine {
-class ModelManager {
+class ModelManager
+{
   private:
     ModelManager() = default;
     ~ModelManager() = default;
@@ -30,7 +31,8 @@ class ModelManager {
     /// シングルトンインスタンスの取得
     /// </summary>
     /// <returns></returns>
-    static ModelManager *GetInstance() {
+    static ModelManager *GetInstance()
+    {
         static ModelManager instance;
         return &instance;
     }

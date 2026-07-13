@@ -5,7 +5,8 @@
 /// 地面のゲームオブジェクトクラス
 /// ステージの基盤となる固定オブジェクト
 /// </summary>
-class Ground : public Hagine::BaseObject {
+class Ground : public Hagine::BaseObject
+{
   public:
     /// ===================================================
     /// public method

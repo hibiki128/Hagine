@@ -17,7 +17,8 @@ namespace Hagine {
 /// <summary>
 /// パーティクルのマテリアル情報（色・UV変換・テクスチャ）
 /// </summary>
-struct ParticleMaterial {
+struct ParticleMaterial
+{
     Vector4 color;
     Matrix4x4 uvTransform;
     float padding[3];
@@ -30,7 +31,8 @@ struct ParticleMaterial {
 /// <summary>
 /// GPUパーティクルの発生源メッシュ情報
 /// </summary>
-struct EmitterMesh {
+struct EmitterMesh
+{
     Vector3 translate;
     uint32_t triangleCount;
     Quaternion rotation;
@@ -53,7 +55,8 @@ struct EmitterMesh {
 /// SoA化(下の CSParticleXxx 群)に伴い GPU バッファとしては未使用になったが、
 /// ParticleCSGroupData::particles（CPU側 std::list、現状未使用）の要素型として残置。
 /// </summary>
-struct CSParticle {
+struct CSParticle
+{
     Vector3 translate;
     Vector3 scale;
     float lifeTime;
@@ -99,7 +102,8 @@ struct CSParticle {
 /// 描画コア。translate/scale/velocity/color。Update が常時 load/store し、描画VSも読む。
 /// scale は half3 パック(scaleXY=half x|y, scaleZ=half z)、color は RGBA8 パック(uint)。
 /// 計算は float で行い、バッファ境界でのみ pack/unpack する（HLSL PackScaleXY/Z 等）。
-struct CSParticleDrawCore {
+struct CSParticleDrawCore
+{
     Vector3 translate;
     uint32_t scaleXY; // half(x) | half(y)<<16
     uint32_t scaleZ;  // half(z)（上位16bitは空き）
@@ -109,27 +113,31 @@ struct CSParticleDrawCore {
 
 /// シミュレーションコア。Update が常時 load/store する補助状態。
 /// initialScale は half3 パック。isTrailParticle(0/1) は initialScaleZ_isTrail の上位16bitに同梱。
-struct CSParticleSimCore {
+struct CSParticleSimCore
+{
     float currentTime;
     uint32_t initialScaleXY;        // half(x) | half(y)<<16
     uint32_t initialScaleZ_isTrail; // 下位16bit=half(z) / 上位16bit=isTrailParticle
 };
 
 /// トレイル状態。トレイル機能が有効なときのみ load/store。
-struct CSParticleTrail {
+struct CSParticleTrail
+{
     uint32_t parentIndex;
     Vector3 lastTrailPosition;
     float trailSpawnDistance;
 };
 
 /// 回転状態。回転機能が有効なときのみ load/store。描画VSも回転時のみ読む。
-struct CSParticleRotation {
+struct CSParticleRotation
+{
     Vector3 rotation;
     Vector3 angularVelocity;
 };
 
 /// 設定上書き完了フラグ（lo=bit0-31 / hi=bit32-63）。フィールド存在時のみ load/store。
-struct CSParticleOverride {
+struct CSParticleOverride
+{
     uint32_t settingsOverrideFlagsLo;
     uint32_t settingsOverrideFlagsHi;
 };
@@ -144,7 +152,8 @@ static_assert(sizeof(CSParticleOverride) == 8, "CSParticleOverride は8B。HLSL 
 /// <summary>
 /// 描画時にビュー単位で渡す情報（ビュープロジェクション・ビルボード設定など）
 /// </summary>
-struct PerView {
+struct PerView
+{
     Matrix4x4 viewProjection;
     Matrix4x4 billboardMatrix;
     uint32_t enableBillboard = 1;       // 1=ビルボードON(デフォルト), 0=OFF
@@ -173,7 +182,8 @@ struct PerView {
 /// <summary>
 /// 発生源メッシュの三角形1枚分の頂点情報
 /// </summary>
-struct TriangleInfo {
+struct TriangleInfo
+{
     Vector3 v0;
     float padding0;
     Vector3 v1;
@@ -185,7 +195,8 @@ struct TriangleInfo {
 /// <summary>
 /// 描画時にフレーム単位で渡す情報（時間・グループID など）
 /// </summary>
-struct PerFrame {
+struct PerFrame
+{
     float time;
     float deltaTime;
     uint32_t groupId;
@@ -195,14 +206,16 @@ struct PerFrame {
 /// <summary>
 /// エミッターデータ（発生源メッシュを保持）
 /// </summary>
-struct EmitterData {
+struct EmitterData
+{
     EmitterMesh mesh;
 };
 
 /// <summary>
 /// メッシュ表面上のサンプル点
 /// </summary>
-struct SurfacePoint {
+struct SurfacePoint
+{
     Vector3 position;
     float padding;
 };
@@ -210,7 +223,8 @@ struct SurfacePoint {
 /// <summary>
 /// 発生源メッシュのエッジ1本分の頂点情報
 /// </summary>
-struct EdgeInfo {
+struct EdgeInfo
+{
     Vector3 v0;
     float padding0;
     Vector3 v1;
@@ -220,7 +234,8 @@ struct EdgeInfo {
 /// <summary>
 /// GPUパーティクルグループの保持データ（マテリアル・パーティクル一覧など）
 /// </summary>
-struct ParticleCSGroupData {
+struct ParticleCSGroupData
+{
     // マテリアルデータ
     std::vector<ParticleMaterial> materials;
     // パーティクルのリスト (std::list<Particle> 型)
@@ -240,7 +255,8 @@ extern int threadGroupSize_;                      // スレッドグループの
 /// colorStops 列を Update 用に 256段 RGBA8 LUT へベイクして ParticleCSSettings.colorLUT に積む
 /// （GPU は LUT をサンプルするだけ＝ストップ数に依存しない O(1)）。
 /// </summary>
-struct GradientStop {
+struct GradientStop
+{
     Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};
     float pos = 0.0f;
 };
@@ -249,7 +265,8 @@ struct GradientStop {
 /// 寿命カーブの制御点（x=寿命比[0,1], y=倍率）。CPU側のみ保持（ImVec2 と同レイアウト）。
 /// サイズ/アルファの倍率カーブを 256段 LUT へベイクして ParticleCSSettings に積む。
 /// </summary>
-struct CurvePoint {
+struct CurvePoint
+{
     float x = 0.0f; // 寿命比 [0,1]
     float y = 1.0f; // 倍率（1.0=変化なし）
 };
@@ -258,7 +275,8 @@ struct CurvePoint {
 /// GPUパーティクルの挙動設定（寿命・速度・色・各種エフェクトの有効化など）
 /// HLSL側 struct ParticleCSSettings とレイアウトを一致させること
 /// </summary>
-struct ParticleCSSettings {
+struct ParticleCSSettings
+{
     float lifeTimeMin = 1.0f;
     float lifeTimeMax = 3.0f;
     float scaleMin = 0.5f;
@@ -340,20 +358,20 @@ struct ParticleCSSettings {
     Vector3 angularVelocityMax = {0.0f, 0.0f, 0.0f}; // 角速度 最大 (ラジアン/秒, XYZ)
     // ---- 中間カラー (3-stop gradient) ----
     // HLSL packing: enableMidColor(4)+midColorRatio(4)+padMidColor(8) = 16bytes, then float4 midColor = 16bytes
-    uint32_t enableMidColor = 0;           // 1=有効: start→mid→end の3段階補間
-    float midColorRatio = 0.5f;            // midColor に達するlife比率 [0,1]
+    uint32_t enableMidColor = 0; // 1=有効: start→mid→end の3段階補間
+    float midColorRatio = 0.5f;  // midColor に達するlife比率 [0,1]
     float padMidColor0 = 0.0f;
     float padMidColor1 = 0.0f;
     Vector4 midColor = {1.0f, 1.0f, 1.0f, 1.0f}; // 中間色
     // ---- タービュランス ----
-    uint32_t enableTurbulence = 0;         // 1=有効: per-particleランダム振動力
-    float turbulenceStrength = 1.0f;       // 振動力の大きさ
-    float turbulenceFrequency = 2.0f;      // 振動周波数 (Hz)
+    uint32_t enableTurbulence = 0;    // 1=有効: per-particleランダム振動力
+    float turbulenceStrength = 1.0f;  // 振動力の大きさ
+    float turbulenceFrequency = 2.0f; // 振動周波数 (Hz)
     float turbulencePad = 0.0f;
     // ---- 発生形状 ----
-    uint32_t emitShape = 0;                // 0=Box, 1=Sphere Surface, 2=Cone
-    float emitSphereRadius = 1.0f;         // Sphere/Cone 半径
-    float emitConeAngle = 0.5236f;         // Cone 半開角 (ラジアン, デフォルト30°)
+    uint32_t emitShape = 0;        // 0=Box, 1=Sphere Surface, 2=Cone
+    float emitSphereRadius = 1.0f; // Sphere/Cone 半径
+    float emitConeAngle = 0.5236f; // Cone 半開角 (ラジアン, デフォルト30°)
     float emitShapePad = 0.0f;
     // ---- カラーグラデーション (N段・LUT を CB に同梱) ----
     // enableColorGradient=1 のとき、Update は colorLUT[lifeRatio*255] を色に使う（start/mid/end/random を上書き）。
@@ -397,7 +415,8 @@ struct ParticleCSSettings {
 /// パーティクル側の settingsOverrideFlags に同じビットが既に立っていたら
 /// 上書きをスキップし、一度きり保証を実現する。
 /// =====================================================================
-struct ParticleFieldSettingsOverride {
+struct ParticleFieldSettingsOverride
+{
     /// 上書きするかどうかのビットマスク（0=上書きしない）
     /// ParticleSettingsOverrideBits の組み合わせ
     uint64_t overrideMask = 0;
@@ -476,7 +495,8 @@ struct ParticleFieldSettingsOverride {
 ///   - emitter.fieldGroupId == -1               → そのエミッターは全フィールドの影響を受ける
 ///   - 上記以外は field.groupId == emitter.fieldGroupId のときのみ影響
 /// =============================================
-struct ParticleFieldData {
+struct ParticleFieldData
+{
     // --- 1. Force（速度系エフェクト） ---
     Vector3 position = {0, 0, 0};  // フィールドの中心座標
     float radius = 5.0f;           // 影響範囲（球）
@@ -521,7 +541,8 @@ static_assert(offsetof(ParticleFieldData, groupId) == 96, "groupId のオフセ�
 /// =============================================
 /// エディタ用フィールド（名前付き）
 /// =============================================
-struct ParticleField {
+struct ParticleField
+{
     std::string name = "NewField";
     bool enabled = true;
     ParticleFieldData data = {};
@@ -535,7 +556,8 @@ struct ParticleField {
 /// <summary>
 /// CPUパーティクルの挙動設定（寿命・速度・色・軌跡・各種オプションなど）
 /// </summary>
-struct ParticleSetting {
+struct ParticleSetting
+{
     int maxTrailParticles; // 最大軌跡パーティクル数
     float gatherStartRatio = 0.5f;
     float gatherStrength = 2.0f;
@@ -601,7 +623,8 @@ struct ParticleSetting {
 /// <summary>
 /// パーティクルの統計情報（数・インスタンス数）
 /// </summary>
-struct ParticleStats {
+struct ParticleStats
+{
     size_t count = 0;
     size_t instanceCount = 0; // 同じ名前のエミッター数
 };
@@ -609,7 +632,8 @@ struct ParticleStats {
 /// <summary>
 /// GPUへ送る描画用パーティクルデータ（WVP・World・色）
 /// </summary>
-struct ParticleForGPU {
+struct ParticleForGPU
+{
     Matrix4x4 WVP;
     Matrix4x4 World;
     Vector4 color;
@@ -618,7 +642,8 @@ struct ParticleForGPU {
 /// <summary>
 /// CPUで管理する1パーティクル分のデータ
 /// </summary>
-struct Particle {
+struct Particle
+{
     WorldTransform transform{}; // 位置
     Vector3 emitterPosition{};
     Vector3 velocity{}; // 速度
@@ -653,7 +678,8 @@ struct Particle {
 /// <summary>
 /// CPUパーティクルグループの保持データ（マテリアル・パーティクル一覧・インスタンシング情報）
 /// </summary>
-struct ParticleGroupData {
+struct ParticleGroupData
+{
     // マテリアルデータ
     std::vector<ParticleMaterial> materials;
     // パーティクルのリスト (std::list<Particle> 型)

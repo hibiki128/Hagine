@@ -3,7 +3,8 @@
 #include <Frame.h>
 
 using namespace Hagine;
-DeathStaging::DeathStaging() {
+DeathStaging::DeathStaging()
+{
     deathParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death");
     deathParticle_R_Arm = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death_arm");
     deathParticle_L_Arm = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death_arm");
@@ -13,7 +14,8 @@ DeathStaging::DeathStaging() {
 void DeathStaging::Initialize(
     Vector3 position, Vector4 color,
     Vector3 pos_R_Arm, Vector4 c_R_Arm,
-    Vector3 pos_L_Arm, Vector4 c_L_Arm) {
+    Vector3 pos_L_Arm, Vector4 c_L_Arm)
+{
     position_ = position;
     color_ = color;
     position_R_Arm = pos_R_Arm;
@@ -22,7 +24,8 @@ void DeathStaging::Initialize(
     color_L_Arm = c_L_Arm;
 }
 
-void DeathStaging::Update() {
+void DeathStaging::Update()
+{
     time_ += Frame::DeltaTime();
 
     // パーティクルの更新
@@ -31,7 +34,8 @@ void DeathStaging::Update() {
     deathParticle_R_Arm->Update();
 
     // 一定時間内はパーティクルの発生位置と色を更新
-    if (time_ <= kParticleActiveTime) {
+    if (time_ <= kParticleActiveTime)
+    {
         deathParticle_->SetTranslate(position_);
         deathParticle_->SetStartColor(color_);
         deathParticle_->SetEndColor({color_.x, color_.y, color_.z, kAlphaZero});
@@ -46,7 +50,9 @@ void DeathStaging::Update() {
         deathParticle_L_Arm->SetStartColor(color_L_Arm);
         deathParticle_L_Arm->SetEndColor({color_L_Arm.x, color_L_Arm.y, color_L_Arm.z, kAlphaZero});
         deathParticle_L_Arm->SetAuto(true);
-    } else {
+    }
+    else
+    {
         // 時間経過後はパーティクルの自動発生を停止
         deathParticle_->SetAuto(false);
         deathParticle_R_Arm->SetAuto(false);
@@ -54,7 +60,8 @@ void DeathStaging::Update() {
     }
 
     // 重力の影響を開始
-    if (time_ >= kGravityStartTime) {
+    if (time_ >= kGravityStartTime)
+    {
         deathParticle_->SetEnableGravity(true);
         deathParticle_->SetEnableLifeTimeScale(true);
         deathParticle_->SetMaxVelocity({kMaxVelocityX, kMaxVelocityY, kMaxVelocityZ});
@@ -74,12 +81,14 @@ void DeathStaging::Update() {
     }
 }
 
-void DeathStaging::Draw(const ViewProjection &vp) {
+void DeathStaging::Draw(const ViewProjection &vp)
+{
 
     deathParticle_->Draw(vp);
     deathParticle_R_Arm->Draw(vp);
     deathParticle_L_Arm->Draw(vp);
 }
 
-void DeathStaging::imgui() {
+void DeathStaging::imgui()
+{
 }

@@ -6,7 +6,8 @@ namespace Hagine {
 /// <summary>
 /// 軸平行境界ボックス（AABB）のコライダー
 /// </summary>
-class AABBCollider : public ColliderBase {
+class AABBCollider : public ColliderBase
+{
   public:
     /// ===================================================
     /// public method
@@ -50,7 +51,8 @@ class AABBCollider : public ColliderBase {
     /// 現在のワールド情報からAABBの形状データを取得
     /// </summary>
     /// <returns>AABB: 最小点と最大点を持つボックスデータ</returns>
-    AABB GetAABB() const {
+    AABB GetAABB() const
+    {
         Vector3 center = GetCenterPosition() + offset_;
         Vector3 halfSize = size_ * 0.5f;
         return AABB{center - halfSize, center + halfSize};

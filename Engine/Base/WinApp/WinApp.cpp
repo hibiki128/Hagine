@@ -9,15 +9,18 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd_, UINT ms
 namespace Hagine {
 
 // ウィンドウプロシージャ
-LRESULT CALLBACK WinApp::WindowProc(HWND hwnd_, UINT msg, WPARAM wparam, LPARAM lparam) {
+LRESULT CALLBACK WinApp::WindowProc(HWND hwnd_, UINT msg, WPARAM wparam, LPARAM lparam)
+{
 #ifdef _DEBUG
     // ImGui用ウィンドウプロシージャ呼び出し
-    if (ImGui_ImplWin32_WndProcHandler(hwnd_, msg, wparam, lparam)) {
+    if (ImGui_ImplWin32_WndProcHandler(hwnd_, msg, wparam, lparam))
+    {
         return true;
     }
 #endif // _DEBUG
        // メッセージに応じてゲーム固有の処理を行う
-    switch (msg) {
+    switch (msg)
+    {
         // ウィンドウが破棄された
     case WM_DESTROY:
         // OSに対して、アプリの終了を伝える
@@ -28,7 +31,8 @@ LRESULT CALLBACK WinApp::WindowProc(HWND hwnd_, UINT msg, WPARAM wparam, LPARAM 
     return DefWindowProc(hwnd_, msg, wparam, lparam);
 }
 
-void WinApp::Initialize() {
+void WinApp::Initialize()
+{
     HRESULT hr = CoInitializeEx(0, COINIT_MULTITHREADED);
 
     // ウィンドウプロシージャ
@@ -54,51 +58,58 @@ void WinApp::Initialize() {
 
     // ウィンドウの生成
     hwnd_ = CreateWindow(
-        wc_.lpszClassName,     // 利用するクラス名
-        L"LE4B_20_ハギワラ_ヒビキ_スパーキングファイト",            // タイトルバーの文字
-        WS_OVERLAPPEDWINDOW,  // よく見るウィンドウスタイル
-        CW_USEDEFAULT,        // 表示X座標
-        CW_USEDEFAULT,        // 表示Y座標
-        wrc.right - wrc.left, // ウィンドウ横幅
-        wrc.bottom - wrc.top, // ウィンドウ縦幅
-        nullptr,              // 親ウィンドウハンドル
-        nullptr,              // メニューハンドル
-        wc_.hInstance,         // インスタンスハンドル
-        nullptr);             // オプション
+        wc_.lpszClassName,                               // 利用するクラス名
+        L"LE4B_20_ハギワラ_ヒビキ_スパーキングファイト", // タイトルバーの文字
+        WS_OVERLAPPEDWINDOW,                             // よく見るウィンドウスタイル
+        CW_USEDEFAULT,                                   // 表示X座標
+        CW_USEDEFAULT,                                   // 表示Y座標
+        wrc.right - wrc.left,                            // ウィンドウ横幅
+        wrc.bottom - wrc.top,                            // ウィンドウ縦幅
+        nullptr,                                         // 親ウィンドウハンドル
+        nullptr,                                         // メニューハンドル
+        wc_.hInstance,                                   // インスタンスハンドル
+        nullptr);                                        // オプション
 
     // ウィンドウを表示する
     ShowWindow(hwnd_, SW_SHOW);
 }
 
-void WinApp::Update() {
+void WinApp::Update()
+{
 }
 
-void WinApp::Finalize() {
+void WinApp::Finalize()
+{
     CoUninitialize();
     CloseWindow(hwnd_);
 }
 
-bool WinApp::ProcessMessage() {
+bool WinApp::ProcessMessage()
+{
     MSG msg{};
 
     // Windowにメッセージが来てたら最優先で処理させる
-    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+    {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
     // ウィンドウの×ボタンが押されるまでループ
-    if (msg.message == WM_QUIT) {
+    if (msg.message == WM_QUIT)
+    {
         return true;
     }
 
     return false;
 }
 
-void WinApp::ToggleFullScreen() {
+void WinApp::ToggleFullScreen()
+{
 
     // 現在のフルスクリーン状態を確認
-    if (!isFullScreen_) {
+    if (!isFullScreen_)
+    {
         // ウィンドウモードからフルスクリーンに変更
 
         // 現在のウィンドウの位置とサイズを保存
@@ -115,7 +126,9 @@ void WinApp::ToggleFullScreen() {
 
         // フルスクリーンフラグを設定
         isFullScreen_ = true;
-    } else {
+    }
+    else
+    {
         // フルスクリーンからウィンドウモードに変更
 
         // ウィンドウスタイルを元に戻す
@@ -129,9 +142,11 @@ void WinApp::ToggleFullScreen() {
     }
 }
 
-void WinApp::ClosedWindow() {
+void WinApp::ClosedWindow()
+{
     // ウィンドウハンドルが有効な場合のみ処理
-    if (hwnd_ != nullptr) {
+    if (hwnd_ != nullptr)
+    {
         // WM_CLOSEメッセージを送信してウィンドウを終了
         PostMessage(hwnd_, WM_CLOSE, 0, 0);
     }

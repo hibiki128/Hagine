@@ -6,7 +6,8 @@ class Player;
 /// プレイヤー状態の基底クラス
 /// 各プレイヤー状態はこのクラスを継承して実装される
 /// </summary>
-class PlayerBaseState {
+class PlayerBaseState
+{
   public:
     /// ===================================================
     /// public method

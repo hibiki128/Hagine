@@ -4,66 +4,83 @@
 #include <cassert>
 
 namespace Hagine {
-SceneManager::~SceneManager() {
-    
+SceneManager::~SceneManager()
+{
 }
 
-void SceneManager::Initialize(SceneTransition *transition) {
+void SceneManager::Initialize(SceneTransition *transition)
+{
     transition_ = transition;
     transition_->Initialize();
 }
 
-void SceneManager::SceneFinalize() {
-    if (scene_) {
+void SceneManager::SceneFinalize()
+{
+    if (scene_)
+    {
         scene_->Finalize();
         firstChange_ = false;
     }
 }
 
-void SceneManager::Finalize() {
+void SceneManager::Finalize()
+{
     // 次シーンが残っていれば先に解放
     nextScene_.reset();
     // 現在のシーンを解放
     scene_.reset();
 }
 
-void SceneManager::Update() {
+void SceneManager::Update()
+{
     // 次のシーンの予約があるなら
-    if (nextScene_) {
-        if (!firstChange_) {
+    if (nextScene_)
+    {
+        if (!firstChange_)
+        {
             transition_->SetFadeInFinish(true);
             firstChange_ = true;
         }
         SceneChange();
     }
 
-    if (!transition_->IsEnd()) {
+    if (!transition_->IsEnd())
+    {
         transitionEnd_ = false;
         transition_->Update();
-    } else {
+    }
+    else
+    {
         transitionEnd_ = true;
     }
 
-    if (scene_) {
+    if (scene_)
+    {
         scene_->Update();
     }
 }
 
-void SceneManager::Draw() {
-    if (scene_) {
+void SceneManager::Draw()
+{
+    if (scene_)
+    {
         scene_->Draw();
     }
 }
 
-void SceneManager::DrawForOffScreen() {
-    if (scene_) {
+void SceneManager::DrawForOffScreen()
+{
+    if (scene_)
+    {
         scene_->DrawForOffScreen();
     }
 }
 
-void SceneManager::SceneSelection(const std::string &sceneName) {
+void SceneManager::SceneSelection(const std::string &sceneName)
+{
 #ifdef _DEBUG
-    if (!transition_->IsEnd() && transition_->FadeInStart()) {
+    if (!transition_->IsEnd() && transition_->FadeInStart())
+    {
         return;
     }
     transition_->Reset();
@@ -72,14 +89,18 @@ void SceneManager::SceneSelection(const std::string &sceneName) {
 #endif // _DEBUG
 }
 
-void SceneManager::DrawTransition() {
-    if (!transition_->IsEnd()) {
+void SceneManager::DrawTransition()
+{
+    if (!transition_->IsEnd())
+    {
         transition_->Draw();
     }
 }
 
-void SceneManager::NextSceneReservation(const std::string &sceneName) {
-    if (!transition_->IsEnd() && transition_->FadeInStart()) {
+void SceneManager::NextSceneReservation(const std::string &sceneName)
+{
+    if (!transition_->IsEnd() && transition_->FadeInStart())
+    {
         return; // すでに遷移中なので次の予約はしない
     }
     transition_->Reset();
@@ -93,17 +114,23 @@ void SceneManager::NextSceneReservation(const std::string &sceneName) {
     assert(nextScene_ && "シーンが登録されていません。REGISTER_SCENE を確認してください");
     nextScene_->SetOffScreen(offscreen_);
     nextScene_->SetDrawSystem(drawSystem_);
-    if (!firstChange_) {
+    if (!firstChange_)
+    {
         transition_->SetFadeOutStart(true);
-    } else {
+    }
+    else
+    {
         transition_->SetFadeInStart(true);
     }
 }
 
-void SceneManager::SceneChange() {
-    if (transition_->FadeInFinish()) {
+void SceneManager::SceneChange()
+{
+    if (transition_->FadeInFinish())
+    {
         // 旧シーンの終了
-        if (scene_) {
+        if (scene_)
+        {
             scene_->Finalize();
             // delete 不要、reset() で解放
             scene_.reset();
@@ -115,7 +142,8 @@ void SceneManager::SceneChange() {
         }
 
         // 旧シーンの描画エントリをすべて削除（ダングリングラムダ呼び出し防止）
-        if (drawSystem_) {
+        if (drawSystem_)
+        {
             drawSystem_->Clear();
         }
 

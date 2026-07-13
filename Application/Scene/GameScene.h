@@ -18,7 +18,8 @@
 /// ゲーム本編のシーンクラス
 /// プレイヤー、敵、カメラ、UIなどのゲームメインループを管理する
 /// </summary>
-class GameScene : public Hagine::BaseScene {
+class GameScene : public Hagine::BaseScene
+{
   public:
     /// ===================================================
     /// public method
@@ -84,27 +85,27 @@ class GameScene : public Hagine::BaseScene {
     /// private variants
     /// ===================================================
 
-    std::unique_ptr<Player> player_;        // プレイヤー
-    std::unique_ptr<Enemy> enemy_;          // 敵
-    std::unique_ptr<AroundField> aroundField_; // 周囲のフィールド
+    std::unique_ptr<Player> player_;             // プレイヤー
+    std::unique_ptr<Enemy> enemy_;               // 敵
+    std::unique_ptr<AroundField> aroundField_;   // 周囲のフィールド
     std::unique_ptr<FollowCamera> followCamera_; // フォローカメラ
-    std::unique_ptr<StartCamera> startCamera_; // 開始時カメラ
-    std::unique_ptr<DeathCamera> deathCamera_; // 死亡時カメラ
-    std::unique_ptr<Ground> ground_;        // 地面
-    std::unique_ptr<PlayerUI> playerUI_;    // プレイヤーUI
-    std::unique_ptr<EnemyUI> enemyUI_;      // 敵UI
-    std::unique_ptr<GameUI> gameUI_;        // ゲームUI
+    std::unique_ptr<StartCamera> startCamera_;   // 開始時カメラ
+    std::unique_ptr<DeathCamera> deathCamera_;   // 死亡時カメラ
+    std::unique_ptr<Ground> ground_;             // 地面
+    std::unique_ptr<PlayerUI> playerUI_;         // プレイヤーUI
+    std::unique_ptr<EnemyUI> enemyUI_;           // 敵UI
+    std::unique_ptr<GameUI> gameUI_;             // ゲームUI
 
-    Hagine::SkyBox *skyBox_ = nullptr;              // スカイボックス
+    Hagine::SkyBox *skyBox_ = nullptr; // スカイボックス
 
-    Enemy *enemy_ptr = nullptr;             // 敵のポインタ（共有用）
-    Player *player_ptr = nullptr;           // プレイヤーのポインタ（共有用）
+    Enemy *enemy_ptr = nullptr;   // 敵のポインタ（共有用）
+    Player *player_ptr = nullptr; // プレイヤーのポインタ（共有用）
 
-    bool isGameOver_ = false;               // ゲームオーバーフラグ
-    bool deathCameraStarted_ = false;       // 死亡時カメラ開始フラグ
-    bool testDeathCameraStarted_ = false;   // テスト用死亡カメラ開始フラグ
-    float GameOverTimer_ = 0.0f;            // ゲームオーバータイマー
-    float ClearTimer_ = 0.0f;               // クリアタイマー
+    bool isGameOver_ = false;             // ゲームオーバーフラグ
+    bool deathCameraStarted_ = false;     // 死亡時カメラ開始フラグ
+    bool testDeathCameraStarted_ = false; // テスト用死亡カメラ開始フラグ
+    float GameOverTimer_ = 0.0f;          // ゲームオーバータイマー
+    float ClearTimer_ = 0.0f;             // クリアタイマー
 
     // ---------- BehaviorTree ----------
 #ifdef _DEBUG

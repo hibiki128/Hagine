@@ -5,7 +5,8 @@
 /// プレイヤーのジャンプ状態を管理するクラス
 /// ジャンプの初期段階を処理する
 /// </summary>
-class PlayerStateJump : public PlayerBaseState {
+class PlayerStateJump : public PlayerBaseState
+{
   public:
     /// ===================================================
     /// public method

@@ -4,7 +4,8 @@
 #include <Input.h>
 
 using namespace Hagine;
-void ResultUI::Initialize() {
+void ResultUI::Initialize()
+{
     SpriteManager::GetInstance()->SetSaveFolder("Result");
     SpriteManager::GetInstance()->LoadAllSprites();
 
@@ -25,7 +26,8 @@ void ResultUI::Initialize() {
     sprites_[kRank] = SpriteManager::GetInstance()->GetSprite("Rank");
 
     // 終了位置(本来の位置)を保存
-    for (int i = 0; i < kMaxSprite; ++i) {
+    for (int i = 0; i < kMaxSprite; ++i)
+    {
         endPositions_[i] = sprites_[i]->sprite->GetPosition();
     }
 
@@ -46,7 +48,8 @@ void ResultUI::Initialize() {
     sprites_[kRank]->sprite->SetPosition({-710.0f, 800.0f});
 
     // イージングデータの初期化
-    for (int i = 0; i < kMaxSprite; ++i) {
+    for (int i = 0; i < kMaxSprite; ++i)
+    {
         startPositions_[i] = sprites_[i]->sprite->GetPosition();
         positionEasings_[i] = EasingData<Vector2>(startPositions_[i], endPositions_[i], kEasingDuration, EasingType::InOutQuint);
         positionEasings_[i].isActive = false;
@@ -72,21 +75,27 @@ void ResultUI::Initialize() {
     input_ = Input::GetInstance();
 }
 
-bool ResultUI::CheckSkipInput() {
-    if (!input_ || !gamePad_) {
+bool ResultUI::CheckSkipInput()
+{
+    if (!input_ || !gamePad_)
+    {
         return false;
     }
 
-    if (!gamePad_->IsConnected()) {
+    if (!gamePad_->IsConnected())
+    {
         // キーボード操作(スペースキー)
         return input_->TriggerKey(DIK_SPACE);
-    } else {
+    }
+    else
+    {
         // コントローラー操作(Aボタン)
         return gamePad_->IsTrigger(XINPUT_GAMEPAD_A);
     }
 }
 
-void ResultUI::SkipTimeAnimation() {
+void ResultUI::SkipTimeAnimation()
+{
     // クリアタイムのカウントアップを即座に完了
     displayedTime_ = ClearTime_;
     animTimer_ = kAnimDuration;
@@ -96,13 +105,15 @@ void ResultUI::SkipTimeAnimation() {
     UpdateNumberSprites();
 }
 
-void ResultUI::SkipHPAnimation() {
+void ResultUI::SkipHPAnimation()
+{
     // HP関連のイージングを即座に完了
     positionEasings_[kHP].isActive = true;
     sprites_[kHP]->sprite->SetPosition(endPositions_[kHP]);
     positionEasings_[kHP].time = kEasingDuration;
 
-    for (int i = kHPHund; i <= kPercent; ++i) {
+    for (int i = kHPHund; i <= kPercent; ++i)
+    {
         positionEasings_[i].isActive = true;
         sprites_[i]->sprite->SetPosition(endPositions_[i]);
         positionEasings_[i].time = kEasingDuration;
@@ -118,7 +129,8 @@ void ResultUI::SkipHPAnimation() {
     UpdateNumberSprites();
 }
 
-void ResultUI::SkipRankDisplay() {
+void ResultUI::SkipRankDisplay()
+{
     // ランクの表示を即座に完了
     positionEasings_[kRank].isActive = true;
     sprites_[kRank]->sprite->SetPosition(endPositions_[kRank]);
@@ -127,52 +139,69 @@ void ResultUI::SkipRankDisplay() {
     skipPhase_ = kAllSkipped;
 }
 
-void ResultUI::Update() {
-    if (isStartEasing_) {
+void ResultUI::Update()
+{
+    if (isStartEasing_)
+    {
         gamePad_->Update();
         // スキップ入力チェック
-        if (CheckSkipInput()) {
-            if (skipPhase_ == kNoSkip) {
+        if (CheckSkipInput())
+        {
+            if (skipPhase_ == kNoSkip)
+            {
                 // 最初の入力：クリアタイムのアニメーションをスキップ
-                if (numberAnimState_ == kAnimatingTime) {
+                if (numberAnimState_ == kAnimatingTime)
+                {
                     SkipTimeAnimation();
                 }
-            } else if (skipPhase_ == kSkipTime) {
+            }
+            else if (skipPhase_ == kSkipTime)
+            {
                 // 2回目の入力：HPのアニメーションをスキップ
-                if (numberAnimState_ == kWaitingForHP || numberAnimState_ == kWaiting || numberAnimState_ == kAnimatingHP) {
+                if (numberAnimState_ == kWaitingForHP || numberAnimState_ == kWaiting || numberAnimState_ == kAnimatingHP)
+                {
                     SkipHPAnimation();
                 }
-            } else if (skipPhase_ == kSkipHP) {
+            }
+            else if (skipPhase_ == kSkipHP)
+            {
                 // 3回目の入力：ランクの表示をスキップ
-                if (currentEasingIndex_ < kMaxSprite || numberAnimState_ == kFinished) {
+                if (currentEasingIndex_ < kMaxSprite || numberAnimState_ == kFinished)
+                {
                     SkipRankDisplay();
                 }
             }
         }
 
         // 背景のイージング
-        if (currentEasingIndex_ == kBackground) {
+        if (currentEasingIndex_ == kBackground)
+        {
             positionEasings_[kBackground].isActive = true;
             sprites_[kBackground]->sprite->SetPosition(positionEasings_[kBackground].Update(Frame::DeltaTime()));
 
-            if (positionEasings_[kBackground].IsFinished()) {
+            if (positionEasings_[kBackground].IsFinished())
+            {
                 currentEasingIndex_++;
                 delayTimer_ = 0.0f;
             }
         }
         // Result～ClearTimeまで
-        else if (currentEasingIndex_ <= kClearTime) {
+        else if (currentEasingIndex_ <= kClearTime)
+        {
             delayTimer_ += Frame::DeltaTime();
 
             // 遅延時間が経過したら次のスプライトのイージングを開始
-            if (delayTimer_ >= kDelayTime) {
+            if (delayTimer_ >= kDelayTime)
+            {
                 positionEasings_[currentEasingIndex_].isActive = true;
                 delayTimer_ = 0.0f;
                 currentEasingIndex_++;
 
                 // ClearTimeが出たら時間の数字を全て同時に表示開始
-                if (currentEasingIndex_ > kClearTime) {
-                    for (int i = kMinTens; i <= kSecOnes; ++i) {
+                if (currentEasingIndex_ > kClearTime)
+                {
+                    for (int i = kMinTens; i <= kSecOnes; ++i)
+                    {
                         positionEasings_[i].isActive = true;
                     }
                     currentEasingIndex_ = kSecOnes + 1;
@@ -182,29 +211,36 @@ void ResultUI::Update() {
             }
         }
         // 時間の数字のイージング完了待ち
-        else if (currentEasingIndex_ == kSecOnes + 1 && numberAnimState_ == kWaiting) {
+        else if (currentEasingIndex_ == kSecOnes + 1 && numberAnimState_ == kWaiting)
+        {
             bool allFinished = true;
-            for (int i = kMinTens; i <= kSecOnes; ++i) {
-                if (!positionEasings_[i].IsFinished()) {
+            for (int i = kMinTens; i <= kSecOnes; ++i)
+            {
+                if (!positionEasings_[i].IsFinished())
+                {
                     allFinished = false;
                     break;
                 }
             }
 
             // 全てのイージングが完了したらカウントアップ開始
-            if (allFinished) {
+            if (allFinished)
+            {
                 numberAnimState_ = kAnimatingTime;
                 animTimer_ = 0.0f;
             }
         }
         // HPテキスト表示
-        else if (currentEasingIndex_ == kSecOnes + 1 && numberAnimState_ == kWaitingForHP) {
+        else if (currentEasingIndex_ == kSecOnes + 1 && numberAnimState_ == kWaitingForHP)
+        {
             delayTimer_ += Frame::DeltaTime();
 
             // 遅延時間が経過したらHPテキストと数字を同時に表示
-            if (delayTimer_ >= kDelayTime) {
+            if (delayTimer_ >= kDelayTime)
+            {
                 positionEasings_[kHP].isActive = true;
-                for (int i = kHPHund; i <= kPercent; ++i) {
+                for (int i = kHPHund; i <= kPercent; ++i)
+                {
                     positionEasings_[i].isActive = true;
                 }
                 currentEasingIndex_ = kPercent + 1;
@@ -213,27 +249,34 @@ void ResultUI::Update() {
             }
         }
         // HPの数字のイージング完了待ち
-        else if (currentEasingIndex_ == kPercent + 1 && numberAnimState_ == kWaiting) {
+        else if (currentEasingIndex_ == kPercent + 1 && numberAnimState_ == kWaiting)
+        {
             bool allFinished = positionEasings_[kHP].IsFinished();
-            for (int i = kHPHund; i <= kPercent; ++i) {
-                if (!positionEasings_[i].IsFinished()) {
+            for (int i = kHPHund; i <= kPercent; ++i)
+            {
+                if (!positionEasings_[i].IsFinished())
+                {
                     allFinished = false;
                     break;
                 }
             }
 
             // 全てのイージングが完了したらカウントアップ開始
-            if (allFinished) {
+            if (allFinished)
+            {
                 numberAnimState_ = kAnimatingHP;
                 animTimer_ = 0.0f;
             }
         }
         // ランクの表示
-        else if (currentEasingIndex_ < kMaxSprite) {
-            if (numberAnimState_ == kFinished) {
+        else if (currentEasingIndex_ < kMaxSprite)
+        {
+            if (numberAnimState_ == kFinished)
+            {
                 delayTimer_ += Frame::DeltaTime();
 
-                if (delayTimer_ >= kDelayTime) {
+                if (delayTimer_ >= kDelayTime)
+                {
                     positionEasings_[currentEasingIndex_].isActive = true;
                     delayTimer_ = 0.0f;
                     currentEasingIndex_++;
@@ -242,36 +285,47 @@ void ResultUI::Update() {
         }
 
         // アクティブなイージングの更新
-        for (int i = 0; i < kMaxSprite; ++i) {
-            if (positionEasings_[i].isActive || !positionEasings_[i].IsFinished()) {
+        for (int i = 0; i < kMaxSprite; ++i)
+        {
+            if (positionEasings_[i].isActive || !positionEasings_[i].IsFinished())
+            {
                 sprites_[i]->sprite->SetPosition(positionEasings_[i].Update(Frame::DeltaTime()));
             }
         }
     }
 
     // 数字のカウントアップアニメーションの更新
-    if (numberAnimState_ == kAnimatingTime) {
+    if (numberAnimState_ == kAnimatingTime)
+    {
         animTimer_ += Frame::DeltaTime();
         float t = animTimer_ / kAnimDuration;
 
-        if (t >= kNormalizeValue) {
+        if (t >= kNormalizeValue)
+        {
             t = kNormalizeValue;
             displayedTime_ = ClearTime_;
             numberAnimState_ = kWaitingForHP;
             delayTimer_ = 0.0f;
-        } else {
+        }
+        else
+        {
             displayedTime_ = ClearTime_ * t;
         }
-    } else if (numberAnimState_ == kAnimatingHP) {
+    }
+    else if (numberAnimState_ == kAnimatingHP)
+    {
         animTimer_ += Frame::DeltaTime();
         float t = animTimer_ / kAnimDuration;
 
-        if (t >= kNormalizeValue) {
+        if (t >= kNormalizeValue)
+        {
             t = kNormalizeValue;
             displayedHP_ = HP_;
             numberAnimState_ = kFinished;
             delayTimer_ = 0.0f;
-        } else {
+        }
+        else
+        {
             displayedHP_ = HP_ * t;
         }
     }
@@ -279,10 +333,13 @@ void ResultUI::Update() {
     UpdateNumberSprites();
 
     // 全てのアニメーションが終了したか判定
-    if (currentEasingIndex_ >= kMaxSprite && numberAnimState_ == kFinished) {
+    if (currentEasingIndex_ >= kMaxSprite && numberAnimState_ == kFinished)
+    {
         bool allFinished = true;
-        for (int i = 0; i < kMaxSprite; ++i) {
-            if (!positionEasings_[i].IsFinished()) {
+        for (int i = 0; i < kMaxSprite; ++i)
+        {
+            if (!positionEasings_[i].IsFinished())
+            {
                 allFinished = false;
                 break;
             }
@@ -291,7 +348,8 @@ void ResultUI::Update() {
     }
 }
 
-void ResultUI::UpdateNumberSprites() {
+void ResultUI::UpdateNumberSprites()
+{
     // 表示用の値を使用(カウントアップアニメーション用)
     int totalSeconds = static_cast<int>(displayedTime_);
     int minutes = totalSeconds / kSecondsPerMinute;
@@ -300,9 +358,12 @@ void ResultUI::UpdateNumberSprites() {
     // 分の十の位
     int minTens = minutes / kDigitDivisor;
     sprites_[kMinTens]->sprite->SetUVPosition({static_cast<float>(minTens) * kUVStep, 0.0f});
-    if (minTens == kZeroValue) {
+    if (minTens == kZeroValue)
+    {
         sprites_[kMinTens]->sprite->SetAlpha(kAlphaInvisible);
-    } else {
+    }
+    else
+    {
         sprites_[kMinTens]->sprite->SetAlpha(kAlphaVisible);
     }
 
@@ -325,9 +386,12 @@ void ResultUI::UpdateNumberSprites() {
     // HPの百の位
     int hpHund = hp / kHundredDivisor;
     sprites_[kHPHund]->sprite->SetUVPosition({static_cast<float>(hpHund) * kUVStep, 0.0f});
-    if (hpHund == kZeroValue) {
+    if (hpHund == kZeroValue)
+    {
         sprites_[kHPHund]->sprite->SetAlpha(kAlphaInvisible);
-    } else {
+    }
+    else
+    {
         sprites_[kHPHund]->sprite->SetAlpha(kAlphaVisible);
     }
 
@@ -335,9 +399,12 @@ void ResultUI::UpdateNumberSprites() {
     int hpTens = (hp % kHundredDivisor) / kDigitDivisor;
     sprites_[kHPTens]->sprite->SetUVPosition({static_cast<float>(hpTens) * kUVStep, 0.0f});
     // 百の位が0で十の位も0なら非表示
-    if (hpHund == kZeroValue && hpTens == kZeroValue) {
+    if (hpHund == kZeroValue && hpTens == kZeroValue)
+    {
         sprites_[kHPTens]->sprite->SetAlpha(kAlphaInvisible);
-    } else {
+    }
+    else
+    {
         sprites_[kHPTens]->sprite->SetAlpha(kAlphaVisible);
     }
 
@@ -346,5 +413,6 @@ void ResultUI::UpdateNumberSprites() {
     sprites_[kHPOnes]->sprite->SetUVPosition({static_cast<float>(hpOnes) * kUVStep, 0.0f});
 }
 
-void ResultUI::Draw() {
+void ResultUI::Draw()
+{
 }

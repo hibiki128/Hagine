@@ -19,7 +19,8 @@
 /// チュートリアルシーンのクラス
 /// 基本操作のレクチャーを行うシーンを管理する
 /// </summary>
-class TutorialScene : public Hagine::BaseScene {
+class TutorialScene : public Hagine::BaseScene
+{
   public:
     /// ===================================================
     /// public method
@@ -99,15 +100,15 @@ class TutorialScene : public Hagine::BaseScene {
     std::unique_ptr<EnemyUI> enemyUI_;           // 敵UI
     std::unique_ptr<FadeOut> fadeOut_;           // フェードアウト
     std::unique_ptr<GameUI> gameUI_;             // ゲームUI
-    std::unique_ptr<Hagine::GamePad> gamePad_;           // ゲームパッド
+    std::unique_ptr<Hagine::GamePad> gamePad_;   // ゲームパッド
 
     // ─── チュートリアル管理 ───
     std::unique_ptr<TutorialSystem> tutorialSystem_; // チュートリアルシステム
     std::unique_ptr<TutorialUI> tutorialUI_;         // チュートリアルUI
 
-    Hagine::SkyBox *skyBox_ = nullptr;    // スカイボックス
-    Enemy *enemy_ptr = nullptr;   // 敵のポインタ
-    Player *player_ptr = nullptr; // プレイヤーのポインタ
+    Hagine::SkyBox *skyBox_ = nullptr; // スカイボックス
+    Enemy *enemy_ptr = nullptr;        // 敵のポインタ
+    Player *player_ptr = nullptr;      // プレイヤーのポインタ
 
     float startDelayTimer_ = 0.0f;              // シーン開始からの経過時間
     bool sceneStarted_ = false;                 // 遅延終了フラグ

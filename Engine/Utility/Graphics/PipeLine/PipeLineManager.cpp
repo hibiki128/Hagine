@@ -4,23 +4,27 @@
 #include <d3dx12.h>
 
 namespace Hagine {
-void PipeLineManager::Finalize() {
+void PipeLineManager::Finalize()
+{
     pipelines_.clear();
     rootSignatures_.clear();
 }
 
-void PipeLineManager::Initialize(DirectXCommon *dxCommon) {
+void PipeLineManager::Initialize(DirectXCommon *dxCommon)
+{
     dxCommon_ = dxCommon;
 
     CreateAllPipelines();
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::GetPipeline(PipelineType type, BlendMode blendMode, ShaderMode shaderMode) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::GetPipeline(PipelineType type, BlendMode blendMode, ShaderMode shaderMode)
+{
     // キーを生成して対応するパイプラインを取得
     std::string key = MakePipelineKey(type, blendMode, shaderMode);
 
     // 対応するパイプラインが存在するか確認
-    if (pipelines_.find(key) == pipelines_.end()) {
+    if (pipelines_.find(key) == pipelines_.end())
+    {
         // パイプラインが見つからない場合は警告を出して、デフォルトを返す
         assert(false && "指定されたパイプラインが存在しません");
 
@@ -31,12 +35,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::GetPipeline(Pipelin
     return pipelines_[key];
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::GetRootSignature(PipelineType type, ShaderMode shaderMode) {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::GetRootSignature(PipelineType type, ShaderMode shaderMode)
+{
     // キーを生成して対応するルートシグネチャを取得
     std::string key = MakeRootSignatureKey(type, shaderMode);
 
     // 対応するルートシグネチャが存在するか確認
-    if (rootSignatures_.find(key) == rootSignatures_.end()) {
+    if (rootSignatures_.find(key) == rootSignatures_.end())
+    {
         // ルートシグネチャが見つからない場合は警告を出して、デフォルトを返す
         assert(false && "指定されたルートシグネチャが存在しません");
 
@@ -47,7 +53,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::GetRootSignature(Pi
     return rootSignatures_[key];
 }
 
-void PipeLineManager::DrawCommonSetting(PipelineType type, BlendMode blendMode, ShaderMode shaderMode) {
+void PipeLineManager::DrawCommonSetting(PipelineType type, BlendMode blendMode, ShaderMode shaderMode)
+{
     // 指定されたタイプのパイプラインとルートシグネチャを取得
     auto pipeline = GetPipeline(type, blendMode, shaderMode);
     auto rootSignature = GetRootSignature(type, shaderMode);
@@ -56,15 +63,19 @@ void PipeLineManager::DrawCommonSetting(PipelineType type, BlendMode blendMode, 
     ID3D12GraphicsCommandList *commandList = dxCommon_->GetCommandList().Get();
     commandList->SetPipelineState(pipeline.Get());
     commandList->SetGraphicsRootSignature(rootSignature.Get());
-    if (type == PipelineType::kLine3d) {
+    if (type == PipelineType::kLine3d)
+    {
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
-    } else {
+    }
+    else
+    {
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     }
 }
 
 // スキニングパイプラインの作成
-void PipeLineManager::CreateSkinningPipelines() {
+void PipeLineManager::CreateSkinningPipelines()
+{
     // ルートシグネチャを作成し、マップに格納
     auto rootSignature = CreateSkinningRootSignature();
     rootSignatures_[MakeRootSignatureKey(PipelineType::kSkinning, ShaderMode::kNone)] = rootSignature;
@@ -75,7 +86,8 @@ void PipeLineManager::CreateSkinningPipelines() {
 }
 
 // 3Dラインパイプラインの作成
-void PipeLineManager::CreateLine3dPipelines() {
+void PipeLineManager::CreateLine3dPipelines()
+{
     // ルートシグネチャを作成し、マップに格納
     auto rootSignature = CreateLine3dRootSignature();
     rootSignatures_[MakeRootSignatureKey(PipelineType::kLine3d, ShaderMode::kNone)] = rootSignature;
@@ -86,20 +98,23 @@ void PipeLineManager::CreateLine3dPipelines() {
 }
 
 // キー文字列を生成するヘルパー関数
-std::string PipeLineManager::MakePipelineKey(PipelineType type, BlendMode blendMode, ShaderMode shaderMode) {
+std::string PipeLineManager::MakePipelineKey(PipelineType type, BlendMode blendMode, ShaderMode shaderMode)
+{
     return std::format("Pipeline_{}_{}_{}",
                        static_cast<int>(type),
                        static_cast<int>(blendMode),
                        static_cast<int>(shaderMode));
 }
 
-std::string PipeLineManager::MakeRootSignatureKey(PipelineType type, ShaderMode shaderMode) {
+std::string PipeLineManager::MakeRootSignatureKey(PipelineType type, ShaderMode shaderMode)
+{
     return std::format("RootSignature_{}_{}",
                        static_cast<int>(type),
                        static_cast<int>(shaderMode));
 }
 
-D3D12_STATIC_SAMPLER_DESC PipeLineManager::CreateCommonSamplerDesc() {
+D3D12_STATIC_SAMPLER_DESC PipeLineManager::CreateCommonSamplerDesc()
+{
     D3D12_STATIC_SAMPLER_DESC desc{};
     desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     desc.AddressU = desc.AddressV = desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -110,7 +125,8 @@ D3D12_STATIC_SAMPLER_DESC PipeLineManager::CreateCommonSamplerDesc() {
     return desc;
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateCommonRootSignature(bool hasCBV) {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateCommonRootSignature(bool hasCBV)
+{
     D3D12_DESCRIPTOR_RANGE range{};
     range.BaseShaderRegister = 0;
     range.NumDescriptors = 1;
@@ -124,7 +140,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateCommonRootSig
     params[0].DescriptorTable.NumDescriptorRanges = 1;
 
     UINT paramCount = 1;
-    if (hasCBV) {
+    if (hasCBV)
+    {
         params[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
         params[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
         params[1].Descriptor.ShaderRegister = 0;
@@ -142,7 +159,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateCommonRootSig
 
     Microsoft::WRL::ComPtr<ID3DBlob> sigBlob, errBlob;
     HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errBlob->GetBufferPointer()));
         assert(false);
     }
@@ -153,7 +171,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateCommonRootSig
     return rootSig;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFullScreenPostEffectPipeline(const std::wstring &psPath, Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFullScreenPostEffectPipeline(const std::wstring &psPath, Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     IDxcBlob *vs = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/OffScreen/FullScreen.VS.hlsl", L"vs_6_0");
     IDxcBlob *ps = dxCommon_->CompileShader(psPath.c_str(), L"ps_6_0");
 
@@ -179,7 +198,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFullScreenPos
     return pipelineState;
 }
 
-D3D12_DEPTH_STENCIL_DESC PipeLineManager::SettingDepthStencilDesc(bool depth) {
+D3D12_DEPTH_STENCIL_DESC PipeLineManager::SettingDepthStencilDesc(bool depth)
+{
     ///=========DepthStencilStateの設定==========
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
     // Depthの機能を有効化する
@@ -194,7 +214,8 @@ D3D12_DEPTH_STENCIL_DESC PipeLineManager::SettingDepthStencilDesc(bool depth) {
     return depthStencilDesc;
 }
 
-void PipeLineManager::CreateAllPipelines() {
+void PipeLineManager::CreateAllPipelines()
+{
     // 各種パイプラインの作成
     CreateStandardPipelines();
     CreateParticlePipelines();
@@ -208,13 +229,15 @@ void PipeLineManager::CreateAllPipelines() {
 }
 
 // 標準パイプラインの作成
-void PipeLineManager::CreateStandardPipelines() {
+void PipeLineManager::CreateStandardPipelines()
+{
     // ルートシグネチャを作成し、マップに格納
     auto rootSignature = CreateRootSignature();
     rootSignatures_[MakeRootSignatureKey(PipelineType::kStandard, ShaderMode::kNone)] = rootSignature;
 
     // 各ブレンドモード用のパイプラインを作成し、マップに格納
-    for (int i = 0; i <= static_cast<int>(BlendMode::kScreen); i++) {
+    for (int i = 0; i <= static_cast<int>(BlendMode::kScreen); i++)
+    {
         BlendMode blendMode = static_cast<BlendMode>(i);
         auto pipeline = CreateGraphicsPipeLine(rootSignature, blendMode);
         pipelines_[MakePipelineKey(PipelineType::kStandard, blendMode, ShaderMode::kNone)] = pipeline;
@@ -222,13 +245,15 @@ void PipeLineManager::CreateStandardPipelines() {
 }
 
 // スプライトパイプラインの作成
-void PipeLineManager::CreateSpritePipelines() {
+void PipeLineManager::CreateSpritePipelines()
+{
     // ルートシグネチャを作成し、マップに格納
     auto rootSignature = CreateSpriteRootSignature();
     rootSignatures_[MakeRootSignatureKey(PipelineType::kSprite, ShaderMode::kNone)] = rootSignature;
 
     // 各ブレンドモード用のパイプラインを作成し、マップに格納
-    for (int i = 0; i <= static_cast<int>(BlendMode::kScreen); i++) {
+    for (int i = 0; i <= static_cast<int>(BlendMode::kScreen); i++)
+    {
         BlendMode blendMode = static_cast<BlendMode>(i);
         auto pipeline = CreateSpriteGraphicsPipeLine(rootSignature, blendMode);
         pipelines_[MakePipelineKey(PipelineType::kSprite, blendMode, ShaderMode::kNone)] = pipeline;
@@ -236,9 +261,11 @@ void PipeLineManager::CreateSpritePipelines() {
 }
 
 // レンダーパイプラインの作成
-void PipeLineManager::CreateRenderPipelines() {
+void PipeLineManager::CreateRenderPipelines()
+{
     // 各シェーダーモード用のルートシグネチャとパイプラインを作成
-    for (int i = 0; i <= static_cast<int>(ShaderMode::kCount) - 1; i++) {
+    for (int i = 0; i <= static_cast<int>(ShaderMode::kCount) - 1; i++)
+    {
         ShaderMode shaderMode = static_cast<ShaderMode>(i);
 
         // ルートシグネチャを作成し、マップに格納
@@ -251,7 +278,8 @@ void PipeLineManager::CreateRenderPipelines() {
     }
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
     // RootSignature作成
@@ -368,7 +396,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
     ID3DBlob *signatureBlob = nullptr;
     ID3DBlob *errorBlob = nullptr;
     hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
         assert(false);
     }
@@ -379,7 +408,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRootSignature
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGraphicsPipeLine(
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode) {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode)
+{
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
     HRESULT hr;
 
@@ -407,7 +437,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGraphicsPipeL
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
     blendDesc.RenderTarget[0].BlendEnable = TRUE;
 
-    switch (blendMode) {
+    switch (blendMode)
+    {
     case BlendMode::kNone:
         // ブレンドを無効化する
         blendDesc.RenderTarget[0].BlendEnable = FALSE;
@@ -496,33 +527,38 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGraphicsPipeL
     return graphicsPipelineState;
 }
 
-void PipeLineManager::CreateParticlePipelines() {
+void PipeLineManager::CreateParticlePipelines()
+{
     // ルートシグネチャを作成し、マップに格納
     auto rootSignature = CreateParticleRootSignature();
     rootSignatures_[MakeRootSignatureKey(PipelineType::kParticle, ShaderMode::kNone)] = rootSignature;
 
     // 各ブレンドモード用のパイプラインを作成し、マップに格納
-    for (int i = 0; i <= static_cast<int>(BlendMode::kScreen); i++) {
+    for (int i = 0; i <= static_cast<int>(BlendMode::kScreen); i++)
+    {
         BlendMode blendMode = static_cast<BlendMode>(i);
         auto pipeline = CreateParticleGraphicsPipeLine(rootSignature, blendMode);
         pipelines_[MakePipelineKey(PipelineType::kParticle, blendMode, ShaderMode::kNone)] = pipeline;
     }
 }
 
-void PipeLineManager::CreateGPUParticlePipelines() {
+void PipeLineManager::CreateGPUParticlePipelines()
+{
     // ルートシグネチャを作成し、マップに格納
     auto rootSignature = CreateGPUParticleRootSignature();
     rootSignatures_[MakeRootSignatureKey(PipelineType::kGPUParticle, ShaderMode::kNone)] = rootSignature;
 
     // 各ブレンドモード用のパイプラインを作成し、マップに格納
-    for (int i = 0; i <= static_cast<int>(BlendMode::kScreen); i++) {
+    for (int i = 0; i <= static_cast<int>(BlendMode::kScreen); i++)
+    {
         BlendMode blendMode = static_cast<BlendMode>(i);
         auto pipeline = CreateGPUParticleGraphicsPipeLine(rootSignature, blendMode);
         pipelines_[MakePipelineKey(PipelineType::kGPUParticle, blendMode, ShaderMode::kNone)] = pipeline;
     }
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGPUParticleRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGPUParticleRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
 
@@ -629,7 +665,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGPUParticleRo
     ID3DBlob *signatureBlob = nullptr;
     ID3DBlob *errorBlob = nullptr;
     hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
         assert(false);
     }
@@ -640,7 +677,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGPUParticleRo
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGPUParticleGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGPUParticleGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode)
+{
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
     HRESULT hr;
 
@@ -668,7 +706,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGPUParticleGr
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
     blendDesc.RenderTarget[0].BlendEnable = TRUE;
     // BlendMode = Add
-    switch (blendMode) {
+    switch (blendMode)
+    {
     case BlendMode::kNone:
         // ブレンドを無効化する
         blendDesc.RenderTarget[0].BlendEnable = FALSE;
@@ -758,7 +797,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGPUParticleGr
     return graphicsPipelineState;
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateParticleRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateParticleRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
 
@@ -817,7 +857,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateParticleRootS
     ID3DBlob *signatureBlob = nullptr;
     ID3DBlob *errorBlob = nullptr;
     hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
         assert(false);
     }
@@ -828,7 +869,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateParticleRootS
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateParticleGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateParticleGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode)
+{
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
     HRESULT hr;
 
@@ -856,7 +898,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateParticleGraph
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
     blendDesc.RenderTarget[0].BlendEnable = TRUE;
     // BlendMode = Add
-    switch (blendMode) {
+    switch (blendMode)
+    {
     case BlendMode::kNone:
         // ブレンドを無効化する
         blendDesc.RenderTarget[0].BlendEnable = FALSE;
@@ -946,8 +989,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateParticleGraph
     return graphicsPipelineState;
 }
 
-
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSpriteRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSpriteRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
 
@@ -1008,7 +1051,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSpriteRootSig
     ID3DBlob *signatureBlob = nullptr;
     ID3DBlob *errorBlob = nullptr;
     hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
         assert(false);
     }
@@ -1018,7 +1062,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSpriteRootSig
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSpriteGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSpriteGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode)
+{
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
     HRESULT hr;
 
@@ -1042,7 +1087,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSpriteGraphic
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
     blendDesc.RenderTarget[0].BlendEnable = TRUE;
 
-    switch (blendMode) {
+    switch (blendMode)
+    {
     case BlendMode::kNone:
         // ブレンドを無効化する
         blendDesc.RenderTarget[0].BlendEnable = FALSE;
@@ -1131,9 +1177,11 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSpriteGraphic
     return graphicsPipelineState;
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRenderRootSignature(ShaderMode shaderMode) {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRenderRootSignature(ShaderMode shaderMode)
+{
     // シェーダーモードに応じて適切なルートシグネチャ作成メソッドを呼び出す
-    switch (shaderMode) {
+    switch (shaderMode)
+    {
     case ShaderMode::kNone:
         return CreateBaseRootSignature();
     case ShaderMode::kGray:
@@ -1172,10 +1220,12 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRenderRootSig
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRenderGraphicsPipeLine(
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, ShaderMode shaderMode) {
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, ShaderMode shaderMode)
+{
 
     // シェーダーモードに応じて適切なパイプライン作成メソッドを呼び出す
-    switch (shaderMode) {
+    switch (shaderMode)
+    {
     case ShaderMode::kNone:
         return CreateNoneGraphicsPipeLine(rootSignature);
     case ShaderMode::kGray:
@@ -1213,7 +1263,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRenderGraphic
     }
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
     // RootSignature作成
@@ -1315,7 +1366,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
 
     // スキン+シャドウ+ノーマルマップ用に12要素のrootParametersを構築する
     D3D12_ROOT_PARAMETER rootParameters11[12] = {};
-    for (int _i = 0; _i < 9; ++_i) rootParameters11[_i] = rootParameters[_i];
+    for (int _i = 0; _i < 9; ++_i)
+        rootParameters11[_i] = rootParameters[_i];
     // rootParameters[9]: シャドウマップ SRV (t2) - PIXEL
     rootParameters11[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters11[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -1360,7 +1412,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     ID3DBlob *signatureBlob = nullptr;
     ID3DBlob *errorBlob = nullptr;
     hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
         assert(false);
     }
@@ -1370,7 +1423,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkinningRootS
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSkinningGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSkinningGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
     HRESULT hr;
 
@@ -1465,7 +1519,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSkinningGraph
     return graphicsPipelineState;
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateLine3dRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateLine3dRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
     // RootSignature作成
@@ -1505,7 +1560,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateLine3dRootSig
     ID3DBlob *signatureBlob = nullptr;
     ID3DBlob *errorBlob = nullptr;
     hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
         assert(false);
     }
@@ -1515,7 +1571,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateLine3dRootSig
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateLine3dGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateLine3dGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
     HRESULT hr;
 
@@ -1596,7 +1653,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateLine3dGraphic
     return graphicsPipelineState;
 }
 
-void PipeLineManager::CreateSkyboxPipelines() {
+void PipeLineManager::CreateSkyboxPipelines()
+{
     // ルートシグネチャを作成し、マップに格納
     auto rootSignature = CreateSkyboxRootSignature();
     rootSignatures_[MakeRootSignatureKey(PipelineType::kSkybox, ShaderMode::kNone)] = rootSignature;
@@ -1606,7 +1664,8 @@ void PipeLineManager::CreateSkyboxPipelines() {
     pipelines_[MakePipelineKey(PipelineType::kSkybox, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkyboxRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkyboxRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
 
@@ -1662,7 +1721,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkyboxRootSig
     ID3DBlob *signatureBlob = nullptr;
     ID3DBlob *errorBlob = nullptr;
     hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
         assert(false);
     }
@@ -1680,7 +1740,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSkyboxRootSig
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSkyboxGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSkyboxGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
     HRESULT hr;
 
@@ -1753,31 +1814,38 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSkyboxGraphic
     return graphicsPipelineState;
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateBaseRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateBaseRootSignature()
+{
     return CreateCommonRootSignature(false);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGrayRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGrayRootSignature()
+{
     return CreateBaseRootSignature();
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateVignetteRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateVignetteRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSmoothRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateSmoothRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGaussRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateGaussRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateOutLineRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateOutLineRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDepthRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDepthRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
 
@@ -1849,8 +1917,10 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDepthRootSign
     ID3DBlob *signatureBlob = nullptr;
     ID3DBlob *errorBlob = nullptr;
     hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
-        if (errorBlob) {
+    if (FAILED(hr))
+    {
+        if (errorBlob)
+        {
             Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
         }
         assert(false);
@@ -1861,15 +1931,18 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDepthRootSign
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateBlurRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateBlurRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateCinematicRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateCinematicRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDissolveRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDissolveRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     HRESULT hr;
 
@@ -1931,8 +2004,10 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDissolveRootS
     ID3DBlob *signatureBlob = nullptr;
     ID3DBlob *errorBlob = nullptr;
     hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-    if (FAILED(hr)) {
-        if (errorBlob) {
+    if (FAILED(hr))
+    {
+        if (errorBlob)
+        {
             Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
         }
         assert(false);
@@ -1943,27 +2018,33 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateDissolveRootS
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRandomRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRandomRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateFocusLineRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateFocusLineRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreatePixelateRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreatePixelateRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateBloomRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateBloomRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRetroRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateRetroRootSignature()
+{
     return CreateCommonRootSignature(true);
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShockwaveRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShockwaveRootSignature()
+{
     // 専用RootSig: t0(srcRT), t1(flareTex), b0(cbuffer)
     D3D12_DESCRIPTOR_RANGE rangeSrc{};
     rangeSrc.BaseShaderRegister = 0;
@@ -2003,7 +2084,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShockwaveRoot
 
     Microsoft::WRL::ComPtr<ID3DBlob> sigBlob, errBlob;
     HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errBlob->GetBufferPointer()));
         assert(false);
     }
@@ -2016,7 +2098,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShockwaveRoot
 
 // ========== シャドウマップパイプライン ==========
 
-void PipeLineManager::CreateShadowMapPipelines() {
+void PipeLineManager::CreateShadowMapPipelines()
+{
     auto rootSignature = CreateShadowMapRootSignature();
     rootSignatures_[MakeRootSignatureKey(PipelineType::kShadowMap, ShaderMode::kNone)] = rootSignature;
 
@@ -2024,22 +2107,24 @@ void PipeLineManager::CreateShadowMapPipelines() {
     pipelines_[MakePipelineKey(PipelineType::kShadowMap, BlendMode::kNormal, ShaderMode::kNone)] = pipeline;
 }
 
-Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShadowMapRootSignature() {
+Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShadowMapRootSignature()
+{
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
 
     D3D12_ROOT_PARAMETER rootParameters[1] = {};
-    rootParameters[0].ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    rootParameters[0].ShaderVisibility           = D3D12_SHADER_VISIBILITY_VERTEX;
-    rootParameters[0].Descriptor.ShaderRegister  = 0; // b0
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[0].Descriptor.ShaderRegister = 0; // b0
 
     D3D12_ROOT_SIGNATURE_DESC desc{};
-    desc.Flags          = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    desc.NumParameters  = _countof(rootParameters);
-    desc.pParameters    = rootParameters;
+    desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    desc.NumParameters = _countof(rootParameters);
+    desc.pParameters = rootParameters;
 
     ID3DBlob *sigBlob = nullptr, *errBlob = nullptr;
     HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errBlob);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         Logger::Log(reinterpret_cast<char *>(errBlob->GetBufferPointer()));
         assert(false);
     }
@@ -2048,55 +2133,56 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipeLineManager::CreateShadowMapRoot
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShadowMapGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShadowMapGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState;
 
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
-    inputElementDescs[0].SemanticName         = "POSITION";
-    inputElementDescs[0].SemanticIndex        = 0;
-    inputElementDescs[0].Format               = DXGI_FORMAT_R32G32B32A32_FLOAT;
-    inputElementDescs[0].AlignedByteOffset    = D3D12_APPEND_ALIGNED_ELEMENT;
-    inputElementDescs[1].SemanticName         = "TEXCOORD";
-    inputElementDescs[1].SemanticIndex        = 0;
-    inputElementDescs[1].Format               = DXGI_FORMAT_R32G32_FLOAT;
-    inputElementDescs[1].AlignedByteOffset    = D3D12_APPEND_ALIGNED_ELEMENT;
-    inputElementDescs[2].SemanticName         = "NORMAL";
-    inputElementDescs[2].SemanticIndex        = 0;
-    inputElementDescs[2].Format               = DXGI_FORMAT_R32G32B32_FLOAT;
-    inputElementDescs[2].AlignedByteOffset    = D3D12_APPEND_ALIGNED_ELEMENT;
+    inputElementDescs[0].SemanticName = "POSITION";
+    inputElementDescs[0].SemanticIndex = 0;
+    inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    inputElementDescs[0].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+    inputElementDescs[1].SemanticName = "TEXCOORD";
+    inputElementDescs[1].SemanticIndex = 0;
+    inputElementDescs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+    inputElementDescs[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+    inputElementDescs[2].SemanticName = "NORMAL";
+    inputElementDescs[2].SemanticIndex = 0;
+    inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
     inputLayoutDesc.pInputElementDescs = inputElementDescs;
-    inputLayoutDesc.NumElements        = _countof(inputElementDescs);
+    inputLayoutDesc.NumElements = _countof(inputElementDescs);
 
     IDxcBlob *vs = dxCommon_->CompileShader(L"./Engine/EngineAssets/shaders/Shadow/ShadowMap.VS.hlsl", L"vs_6_0");
     assert(vs != nullptr);
 
     D3D12_RASTERIZER_DESC rasterizerDesc{};
-    rasterizerDesc.FillMode              = D3D12_FILL_MODE_SOLID;
-    rasterizerDesc.CullMode              = D3D12_CULL_MODE_BACK;
-    rasterizerDesc.DepthClipEnable       = TRUE;
-    rasterizerDesc.DepthBias             = 100;
-    rasterizerDesc.DepthBiasClamp        = 0.0f;
-    rasterizerDesc.SlopeScaledDepthBias  = 1.0f;
+    rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+    rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+    rasterizerDesc.DepthClipEnable = TRUE;
+    rasterizerDesc.DepthBias = 100;
+    rasterizerDesc.DepthBiasClamp = 0.0f;
+    rasterizerDesc.SlopeScaledDepthBias = 1.0f;
 
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
-    depthStencilDesc.DepthEnable    = TRUE;
+    depthStencilDesc.DepthEnable = TRUE;
     depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    depthStencilDesc.DepthFunc      = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
-    desc.pRootSignature        = rootSignature.Get();
-    desc.InputLayout           = inputLayoutDesc;
-    desc.VS                    = {vs->GetBufferPointer(), vs->GetBufferSize()};
-    desc.BlendState            = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    desc.pRootSignature = rootSignature.Get();
+    desc.InputLayout = inputLayoutDesc;
+    desc.VS = {vs->GetBufferPointer(), vs->GetBufferSize()};
+    desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     desc.BlendState.RenderTarget[0].RenderTargetWriteMask = 0; // カラー書き込みなし
-    desc.RasterizerState       = rasterizerDesc;
-    desc.DepthStencilState     = depthStencilDesc;
-    desc.DSVFormat             = DXGI_FORMAT_D32_FLOAT;
-    desc.NumRenderTargets      = 0; // RTVなし（深度のみ）
+    desc.RasterizerState = rasterizerDesc;
+    desc.DepthStencilState = depthStencilDesc;
+    desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+    desc.NumRenderTargets = 0; // RTVなし（深度のみ）
     desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    desc.SampleDesc.Count      = 1;
-    desc.SampleMask            = D3D12_DEFAULT_SAMPLE_MASK;
+    desc.SampleDesc.Count = 1;
+    desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
 
     HRESULT hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineState));
     assert(SUCCEEDED(hr));
@@ -2105,82 +2191,98 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShadowMapGrap
 
 // ========== ポストエフェクト ==========
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateNoneGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/CopyImage.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGrayGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGrayGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/GrayScale.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateVigneetGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateVigneetGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Vignette.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSmoothGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateSmoothGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/BoxFilter.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGaussGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateGaussGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/GaussianFilter.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateOutLineGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateOutLineGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/LuminanceBasedOutline.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateDepthGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateDepthGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(true);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/DepthBasedOutline.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBlurGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBlurGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/RadialBlur.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateCinematicGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateCinematicGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Cinematic.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateDissolveGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateDissolveGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Dissolve.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRandomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRandomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Random.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFocusLineGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateFocusLineGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/FocusLine.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreatePixelateGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreatePixelateGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Pixelate.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBloomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateBloomGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Bloom.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRetroGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateRetroGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Retro.PS.hlsl", rootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShockwaveGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature) {
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipeLineManager::CreateShockwaveGraphicsPipeLine(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+{
     SettingDepthStencilDesc(false);
     return CreateFullScreenPostEffectPipeline(L"./Engine/EngineAssets/shaders/OffScreen/Shockwave.PS.hlsl", rootSignature);
 }

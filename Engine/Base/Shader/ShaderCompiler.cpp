@@ -8,7 +8,8 @@ namespace Hagine {
 using namespace Logger;
 using namespace StringUtility;
 
-void ShaderCompiler::Initialize() {
+void ShaderCompiler::Initialize()
+{
     HRESULT hr;
 
     // dxcCompilerを初期化
@@ -22,23 +23,28 @@ void ShaderCompiler::Initialize() {
     assert(SUCCEEDED(hr));
 }
 
-void ShaderCompiler::Finalize() {
+void ShaderCompiler::Finalize()
+{
     // ComPtrではなく生ポインタで保持しているため手動でReleaseが必要
-    if (includeHandler_) {
+    if (includeHandler_)
+    {
         includeHandler_->Release();
         includeHandler_ = nullptr;
     }
-    if (dxcCompiler_) {
+    if (dxcCompiler_)
+    {
         dxcCompiler_->Release();
         dxcCompiler_ = nullptr;
     }
-    if (dxcUtils_) {
+    if (dxcUtils_)
+    {
         dxcUtils_->Release();
         dxcUtils_ = nullptr;
     }
 }
 
-IDxcBlob *ShaderCompiler::Compile(const std::wstring &filePath, const wchar_t *profile) {
+IDxcBlob *ShaderCompiler::Compile(const std::wstring &filePath, const wchar_t *profile)
+{
     // これからシェーダーをコンパイルする旨をログに出す
     Log(ConvertString(std::format(L"Begin CompileSharder, path:{}, profile:{}\n", filePath, profile)));
     // hlslファイルを読む
@@ -75,7 +81,8 @@ IDxcBlob *ShaderCompiler::Compile(const std::wstring &filePath, const wchar_t *p
     // 警告・エラーが出てたらログに出して止める
     IDxcBlobUtf8 *shaderError = nullptr;
     shaderResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&shaderError), nullptr);
-    if (shaderError != nullptr && shaderError->GetStringLength() != 0) {
+    if (shaderError != nullptr && shaderError->GetStringLength() != 0)
+    {
         Log(shaderError->GetStringPointer());
         // 警告・エラーダメゼッタイ
         assert(false);

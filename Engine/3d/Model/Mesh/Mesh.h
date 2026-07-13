@@ -11,7 +11,8 @@ class DirectXCommon;
 /// メッシュクラス
 /// 頂点データとインデックスデータを管理する
 /// </summary>
-class Mesh {
+class Mesh
+{
   public:
     /// ===================================================
     /// public method

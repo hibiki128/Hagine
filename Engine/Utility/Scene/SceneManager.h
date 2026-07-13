@@ -8,7 +8,8 @@
 
 namespace Hagine {
 class BaseScene;
-class SceneManager {
+class SceneManager
+{
   private:
     SceneManager() = default;
     ~SceneManager();
@@ -19,7 +20,8 @@ class SceneManager {
     /// <summary>
     /// シングルトンインスタンスの取得
     /// </summary>
-    static SceneManager *GetInstance() {
+    static SceneManager *GetInstance()
+    {
         static SceneManager instance;
         return &instance;
     }

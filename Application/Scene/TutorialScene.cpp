@@ -7,7 +7,8 @@
 REGISTER_SCENE("TUTORIAL", TutorialScene)
 
 using namespace Hagine;
-void TutorialScene::Initialize() {
+void TutorialScene::Initialize()
+{
     /// ===================================================
     /// インスタンス生成
     /// ===================================================
@@ -104,7 +105,8 @@ void TutorialScene::Initialize() {
         fadeOut_->Draw(vp_);
         gameUI_->Draw();
         spriteManager_->DrawAll();
-        if (sceneStarted_) {
+        if (sceneStarted_)
+        {
             playerUI_->Draw();
             enemyUI_->Draw();
             tutorialUI_->Draw();
@@ -112,7 +114,8 @@ void TutorialScene::Initialize() {
     });
 }
 
-void TutorialScene::Finalize() {
+void TutorialScene::Finalize()
+{
     /// ===================================================
     /// 終了処理
     /// ===================================================
@@ -121,13 +124,15 @@ void TutorialScene::Finalize() {
 
     fadeOut_->Finalize();
     aroundField_->Finalize();
-    if (player_ptr->GetIsAlive()) {
+    if (player_ptr->GetIsAlive())
+    {
         sceneManager_->SetHP(player_ptr->GetHP());
     }
     BaseScene::Finalize();
 }
 
-void TutorialScene::Update() {
+void TutorialScene::Update()
+{
     /// ===================================================
     /// 更新処理
     /// ===================================================
@@ -153,9 +158,11 @@ void TutorialScene::Update() {
     gameUI_->Update();
 
     // シーン開始遅延
-    if (!sceneStarted_) {
+    if (!sceneStarted_)
+    {
         startDelayTimer_ += Frame::DeltaTime();
-        if (startDelayTimer_ >= kStartDelay_) {
+        if (startDelayTimer_ >= kStartDelay_)
+        {
             sceneStarted_ = true;
         }
         return;
@@ -167,7 +174,8 @@ void TutorialScene::Update() {
     enemyUI_->Update();
 
     // ポーズ中でなければチュートリアル進行
-    if (!gameUI_->GetIsPause()) {
+    if (!gameUI_->GetIsPause())
+    {
         float dt = Frame::DeltaTime();
         tutorialSystem_->Update(dt);
         tutorialUI_->Update(dt);
@@ -180,17 +188,20 @@ void TutorialScene::Update() {
     }
 }
 
-void TutorialScene::Draw() {
+void TutorialScene::Draw()
+{
     // 描画は DrawSystem が管理
 }
 
-void TutorialScene::DrawForOffScreen() {
+void TutorialScene::DrawForOffScreen()
+{
     /// ===================================================
     /// オフスクリーン描画処理
     /// ===================================================
 }
 
-void TutorialScene::AddSceneSetting() {
+void TutorialScene::AddSceneSetting()
+{
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
@@ -201,7 +212,8 @@ void TutorialScene::AddSceneSetting() {
     tutorialSystem_->DrawImGui();
 }
 
-void TutorialScene::AddObjectSetting() {
+void TutorialScene::AddObjectSetting()
+{
     /// ===================================================
     /// オブジェクト設定（デバッグ）
     /// ===================================================
@@ -211,21 +223,27 @@ void TutorialScene::AddObjectSetting() {
     tutorialUI_->DrawImGui();
 }
 
-void TutorialScene::AddParticleSetting() {
+void TutorialScene::AddParticleSetting()
+{
     /// ===================================================
     /// パーティクル設定（デバッグ）
     /// ===================================================
     fadeOut_->ImGui();
 }
 
-void TutorialScene::CameraUpdate() {
+void TutorialScene::CameraUpdate()
+{
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    if (player_ptr->GetIsAlive()) {
-        if (debugCamera_->GetActive()) {
+    if (player_ptr->GetIsAlive())
+    {
+        if (debugCamera_->GetActive())
+        {
             debugCamera_->Update();
-        } else {
+        }
+        else
+        {
             followCamera_->Update();
             vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
             vp_.matView_ = followCamera_->GetViewProjection().matView_;
@@ -234,36 +252,46 @@ void TutorialScene::CameraUpdate() {
     }
 }
 
-void TutorialScene::ChangeScene() {
+void TutorialScene::ChangeScene()
+{
     /// ===================================================
     /// シーン切り替え
     /// ===================================================
-    if (tutorialUI_->IsFinished()) {
+    if (tutorialUI_->IsFinished())
+    {
         sceneManager_->NextSceneReservation("GAME");
     }
 
     // スキップ操作
-    if (gamePad_->IsConnected()) {
-        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START)) {
+    if (gamePad_->IsConnected())
+    {
+        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START))
+        {
             sceneManager_->NextSceneReservation("GAME");
         }
-    } else {
-        if (input_->TriggerKey(DIK_RETURN)) {
+    }
+    else
+    {
+        if (input_->TriggerKey(DIK_RETURN))
+        {
             sceneManager_->NextSceneReservation("GAME");
         }
     }
 }
 
-void TutorialScene::HandleEnemySpawnRequest() {
+void TutorialScene::HandleEnemySpawnRequest()
+{
     /// ===================================================
     /// エネミー出現管理
     /// ===================================================
-    if (tutorialSystem_->ShouldSpawnEnemy()) {
+    if (tutorialSystem_->ShouldSpawnEnemy())
+    {
         enemy_ptr->GetAlive() = true;
         tutorialSystem_->ConsumeSpawnRequest();
     }
 
-    if (tutorialSystem_->ShouldDespawnEnemy()) {
+    if (tutorialSystem_->ShouldDespawnEnemy())
+    {
         enemy_ptr->GetAlive() = false;
         tutorialSystem_->ConsumeDespawnRequest();
     }

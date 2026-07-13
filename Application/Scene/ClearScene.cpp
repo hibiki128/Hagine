@@ -6,7 +6,8 @@
 REGISTER_SCENE("CLEAR", ClearScene)
 
 using namespace Hagine;
-void ClearScene::Initialize() {
+void ClearScene::Initialize()
+{
     /// ===================================================
     /// 初期化
     /// ===================================================
@@ -66,14 +67,16 @@ void ClearScene::Initialize() {
     });
 }
 
-void ClearScene::Finalize() {
+void ClearScene::Finalize()
+{
     /// ===================================================
     /// 終了処理
     /// ===================================================
     BaseScene::Finalize();
 }
 
-void ClearScene::Update() {
+void ClearScene::Update()
+{
     /// ===================================================
     /// 更新処理
     /// ===================================================
@@ -85,7 +88,8 @@ void ClearScene::Update() {
     CameraUpdate();
 
     // カメラ演出終了後の処理
-    if (!vp_.GetIsCameraMove() && cameraStart_) {
+    if (!vp_.GetIsCameraMove() && cameraStart_)
+    {
         resultUI_->SetIsStartEasing(true);
         resultStaging_->SetfireWorkStarted(true);
     }
@@ -103,17 +107,20 @@ void ClearScene::Update() {
     resultUI_->Update();
 }
 
-void ClearScene::Draw() {
+void ClearScene::Draw()
+{
     // 描画は DrawSystem が管理
 }
 
-void ClearScene::DrawForOffScreen() {
+void ClearScene::DrawForOffScreen()
+{
     /// ===================================================
     /// オフスクリーン描画処理
     /// ===================================================
 }
 
-void ClearScene::AddSceneSetting() {
+void ClearScene::AddSceneSetting()
+{
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
@@ -124,24 +131,28 @@ void ClearScene::AddSceneSetting() {
     resultStaging_->DrawImGui();
 }
 
-void ClearScene::AddObjectSetting() {
+void ClearScene::AddObjectSetting()
+{
     /// ===================================================
     /// オブジェクト設定（デバッグ）
     /// ===================================================
 }
 
-void ClearScene::AddParticleSetting() {
+void ClearScene::AddParticleSetting()
+{
     /// ===================================================
     /// パーティクル設定（デバッグ）
     /// ===================================================
 }
 
-void ClearScene::CameraUpdate() {
+void ClearScene::CameraUpdate()
+{
     /// ===================================================
     /// カメラ更新
     /// ===================================================
     currentCameraStartTimer_ += Frame::DeltaTime();
-    if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_) {
+    if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_)
+    {
         // カメラのイージング開始
         vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
         cameraStart_ = true;
@@ -149,23 +160,32 @@ void ClearScene::CameraUpdate() {
     }
 
     // デバッグカメラまたは通常カメラの更新
-    if (debugCamera_->GetActive()) {
+    if (debugCamera_->GetActive())
+    {
         debugCamera_->Update();
-    } else {
+    }
+    else
+    {
         vp_.UpdateMatrix();
     }
 }
 
-void ClearScene::ChangeScene() {
+void ClearScene::ChangeScene()
+{
     /// ===================================================
     /// シーン切り替え
     /// ===================================================
-    if (!gamePad_->IsConnected()) {
-        if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE)) {
+    if (!gamePad_->IsConnected())
+    {
+        if (resultUI_->IsAllAnimationFinished() && input_->TriggerKey(DIK_SPACE))
+        {
             sceneManager_->NextSceneReservation("TITLE");
         }
-    } else {
-        if (resultUI_->IsAllAnimationFinished() && gamePad_->IsTrigger(XINPUT_GAMEPAD_A)) {
+    }
+    else
+    {
+        if (resultUI_->IsAllAnimationFinished() && gamePad_->IsTrigger(XINPUT_GAMEPAD_A))
+        {
             sceneManager_->NextSceneReservation("TITLE");
         }
     }
