@@ -33,6 +33,18 @@ class PlayerVisual
     void UpdateAnimation();
 
     /// <summary>
+    /// 死亡アニメーションを再生する（死亡中は毎フレーム呼んでよい。同一クリップは無視される）
+    /// </summary>
+    void PlayDeathAnimation();
+
+    /// <summary>
+    /// 死亡アニメーションが最後まで再生し終わったか
+    /// （粒子化して消える死亡演出の開始判定に使う）
+    /// </summary>
+    /// <returns>bool: 再生終了していれば true</returns>
+    bool IsDeathAnimationFinished() const;
+
+    /// <summary>
     /// 飛行移動中の体の傾き（リーン）を更新する
     /// ロックオン中は顔（向き）を敵に向けたまま、進行方向へ体を傾けて見せる。
     /// 描画専用の回転オフセットとして適用するため、射撃などの向きには影響しない

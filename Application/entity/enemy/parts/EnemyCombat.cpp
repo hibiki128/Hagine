@@ -39,6 +39,15 @@ void EnemyCombat::Init(Enemy *owner)
     pBeamCollider_->SetTag("EnemyBeam");
     pBeamCollider_->AddCollisionMask("Player");
     pBeamCollider_->SetEnabled(false);
+
+    // ビームは手（右手ジョイント）から発射するため、コライダーの中心も
+    // 敵本体ではなく発射起点（beamOrigin_）に追従させる
+    pBeamCollider_->SetPositionGetter([this] { return beamOrigin_; });
+
+    // 発動前演出の長さを必殺技モーション（MakanSkill.gltf・30fps）に合わせる。
+    // 顔アップ＋発動遅延の合計 = 発射キーフレーム（30フレーム目 ≒ 1.0秒）
+    beamCutscene_.GetCloseUpDuration() = 0.6f;
+    beamCutscene_.GetActivationDelay() = 0.4f;
     pBeamCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         // ビームアクティブ中かつ未ダメージ処理のとき一度だけダメージを与える
         if (other->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && pOwner_->GetTarget())
@@ -399,8 +408,9 @@ void EnemyCombat::UpdateBeam()
     if (beamLength_ > kBeamMaxLength)
         beamLength_ = kBeamMaxLength;
 
-    Vector3 selfPos = pOwner_->GetWorldPosition();
-    selfPos.y = pOwner_->GetWorldPosition().y + kLockOffsetY;
+    // 発射起点は手（右手ジョイント）に追従させる。コライダー中心も同じ起点を使う
+    beamOrigin_ = GetBeamOrigin();
+    Vector3 selfPos = beamOrigin_;
     Quaternion selfRot = beamLockedRotation_;
 
     // メインビームエミッタの設定（MakanAttackSkill と同じアプローチ）
@@ -468,6 +478,30 @@ void EnemyCombat::UpdateBeam()
     {
         DeactivateBeam();
     }
+}
+
+Vector3 EnemyCombat::GetBeamOrigin()
+{
+    // 両手を前に突き出すモーションなので、両手ジョイントの中点から発射する。
+    // アニメーションに合わせて毎フレーム追従する
+    if (pOwner_)
+    {
+        auto rightHand = pOwner_->GetJointWorldPosition(kRightHandJointName);
+        auto leftHand = pOwner_->GetJointWorldPosition(kLeftHandJointName);
+        if (rightHand && leftHand)
+        {
+            return (*rightHand + *leftHand) * 0.5f;
+        }
+        if (rightHand)
+        {
+            return *rightHand;
+        }
+    }
+
+    // ジョイントが取得できない場合は従来どおり固定オフセットで代用する
+    Vector3 origin = pOwner_->GetWorldPosition();
+    origin.y += kLockOffsetY;
+    return origin;
 }
 
 void EnemyCombat::SetVp(ViewProjection *vp)

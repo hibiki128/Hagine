@@ -155,6 +155,14 @@ class EnemyCombat
     /// <summary>ビーム必殺技の毎フレーム更新</summary>
     void UpdateBeam();
 
+    /// <summary>
+    /// ビームの発射起点を取得する
+    /// 必殺技モーションは両手を前に突き出すため、両手ジョイントの中点を使う
+    /// （取得できない場合は従来のYオフセットで代用）
+    /// </summary>
+    /// <returns>Vector3: 発射起点のワールド座標</returns>
+    Hagine::Vector3 GetBeamOrigin();
+
     /// ===================================================
     /// private variants
     /// ===================================================
@@ -175,8 +183,12 @@ class EnemyCombat
     static constexpr float kBeamMaxLength = 55.0f;          // ビームの最大長さ
     static constexpr float kBeamExtendSpeed = 110.0f;       // ビームが伸びる速度
     static constexpr float kBeamWidth = 2.5f;               // ビーム幅
-    static constexpr float kBeamDuration = 2.0f;            // ビーム持続時間(秒)
-    static constexpr float kLockOffsetY = 2.5f;             // ビーム発射時のYオフセット（敵中心からの相対値）
+    // 必殺技モーション（MakanSkill.gltf・30fps）の発射(30フレーム目)〜撃ち終わり(80フレーム目)
+    // に合わせた持続時間（50フレーム）
+    static constexpr float kBeamDuration = 50.0f / 30.0f;
+    static constexpr float kLockOffsetY = 2.5f;                               // ビーム発射時のYオフセット（ジョイント取得失敗時の代用）
+    static constexpr const char *kRightHandJointName = "mixamorig:RightHand"; // 発射起点に使う右手ジョイント名
+    static constexpr const char *kLeftHandJointName = "mixamorig:LeftHand";   // 発射起点に使う左手ジョイント名
 
     Enemy *pOwner_ = nullptr; ///< 所有者の敵
 
@@ -204,6 +216,7 @@ class EnemyCombat
 
     // ビーム必殺技状態
     Hagine::OBBCollider *pBeamCollider_ = nullptr; ///< ビーム判定コライダー（動的にOBBを更新）
+    Hagine::Vector3 beamOrigin_{};                ///< ビーム発射起点（手ジョイント位置。コライダーの中心にも使う）
     bool beamActive_ = false;                     ///< ビームアクティブフラグ
     bool beamDamageDealt_ = false;                ///< ビームダメージ適用済みフラグ
     float beamLength_ = 0.0f;                     ///< 現在のビーム長

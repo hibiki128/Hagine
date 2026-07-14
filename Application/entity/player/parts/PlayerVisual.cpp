@@ -28,9 +28,12 @@ void PlayerVisual::Init(Player *owner)
     animationController_.RegisterClip("RunRight", "animation/Player/Running_Right.gltf", true);
     animationController_.RegisterClip("FlyMove", "animation/Player/Running_Fly.gltf", true);
     animationController_.RegisterClip("Guard", "animation/Player/Block_Idle.gltf", true);
+    animationController_.RegisterClip("Falling", "animation/Player/Falling.gltf", true);
 
     // ループなし：攻撃・ジャンプなど一回きりの動作
     animationController_.RegisterClip("Jump", "animation/Player/Running_Jump.gltf", false);
+    animationController_.RegisterClip("Die", "animation/Player/die.gltf", false, 1.0f, 0.15f);
+    animationController_.RegisterClip("MakanSkill", "animation/Player/MakanSkill.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("GuardHit", "animation/Player/Block_Hit.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Punch_1", "animation/Player/Punch_1.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Punch_2", "animation/Player/Punch_2.gltf", false, 1.0f, 0.1f);
@@ -47,6 +50,16 @@ void PlayerVisual::Init(Player *owner)
 
 void PlayerVisual::UpdateAnimation()
 {
+    // ──────────────────────────────────────────
+    // 必殺技（魔貫攻撃）中：発動前演出〜ビーム終了まで一続きの専用モーションを再生
+    // （構え→フレーム30付近で発射→フレーム80で撃ち終わりの構成）
+    // ──────────────────────────────────────────
+    if (pOwner_->Combat().IsSkillStaging() || pOwner_->GetIsSkillActive())
+    {
+        animationController_.Play("MakanSkill");
+        return;
+    }
+
     ComboSystem &punchCombo = pOwner_->Combat().GetPunchCombo();
     const std::vector<std::string> &comboAnimations = pOwner_->Combat().GetComboAnimations();
 
@@ -107,8 +120,16 @@ void PlayerVisual::UpdateAnimation()
     }
     else if (stateName == "Jump" || stateName == "Air")
     {
-        // ジャンプ・空中（上昇/滞空/下降）
-        animationController_.Play("Jump");
+        // ジャンプ・空中 ― 落下（下向き速度）に転じたら落下モーションへ切り替える。
+        // 飛行中の下降（FlyIdle/FlyMove）は対象外で、あくまで自由落下専用
+        if (stateName == "Air" && pOwner_->GetVelocity().y < 0.0f)
+        {
+            animationController_.Play("Falling");
+        }
+        else
+        {
+            animationController_.Play("Jump");
+        }
     }
     else if (stateName == "FlyIdle")
     {
@@ -146,6 +167,18 @@ void PlayerVisual::UpdateAnimation()
         // エネルギーチャージ ― 専用モーションなし（待機で代用）
         animationController_.Play("Idle");
     }
+}
+
+void PlayerVisual::PlayDeathAnimation()
+{
+    animationController_.Play("Die");
+}
+
+bool PlayerVisual::IsDeathAnimationFinished() const
+{
+    // 死亡クリップ再生中に最後（非ループのため終端で停止）まで到達したか
+    return animationController_.GetCurrentClipName() == "Die" &&
+           animationController_.IsFinished();
 }
 
 void PlayerVisual::UpdateFlyLean()

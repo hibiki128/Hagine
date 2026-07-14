@@ -299,6 +299,9 @@ class Player : public Hagine::BaseObject
     static constexpr float kNormalFov = 45.0f;
     static constexpr float kDashingFov = 55.0f;
 
+    // モデル描画オフセット（地面に足がつくように下げる量。死亡演出の発生位置にも使う）
+    static constexpr float kModelOffsetY = -0.75f;
+
     // ─── パーツ ───
     std::unique_ptr<PlayerMovement> movement_; // 移動・回転・ダッシュ・接地
     std::unique_ptr<PlayerCombat> combat_;     // 射撃・コンボ・必殺技

@@ -101,11 +101,20 @@ class GameScene : public Hagine::BaseScene
     Enemy *enemy_ptr = nullptr;   // 敵のポインタ（共有用）
     Player *player_ptr = nullptr; // プレイヤーのポインタ（共有用）
 
+    // 死亡カメラ完了からシーン切替までの待機時間(秒)
+    // （die アニメーション約2.6秒 → 粒子化演出を見届けるまでの猶予）
+    static constexpr float kGameOverWaitTime = 4.0f;
+
+    // 敵撃破からシーン切替までの待機時間(秒)
+    // （敵の die アニメーション約2.6秒 → 粒子化演出を見届けるまでの猶予）
+    static constexpr float kEnemyDeathWaitTime = 4.5f;
+
     bool isGameOver_ = false;             // ゲームオーバーフラグ
     bool deathCameraStarted_ = false;     // 死亡時カメラ開始フラグ
     bool testDeathCameraStarted_ = false; // テスト用死亡カメラ開始フラグ
     float GameOverTimer_ = 0.0f;          // ゲームオーバータイマー
     float ClearTimer_ = 0.0f;             // クリアタイマー
+    float enemyDownTimer_ = 0.0f;         // 敵撃破後の演出待ちタイマー
 
     // ---------- BehaviorTree ----------
 #ifdef _DEBUG

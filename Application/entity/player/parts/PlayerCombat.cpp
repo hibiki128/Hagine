@@ -66,6 +66,11 @@ void PlayerCombat::Init(Player *owner)
     attackCollider_ = std::make_unique<PlayerAttackCollider>();
     attackCollider_->Init(pOwner_);
 
+    // 必殺技モーション（MakanSkill.gltf・30fps）に演出の長さを合わせる。
+    // 顔アップ＋発動遅延の合計 = 発射キーフレーム（30フレーム目 ≒ 1.0秒）
+    skillCutscene_.GetCloseUpDuration() = 0.6f;
+    skillCutscene_.GetActivationDelay() = 0.4f;
+
     // コンボが攻撃を発火したとき attackCollider_ を有効化するコールバックを登録
     punchCombo_.SetOnAttackFired(
         [this](float damage, float knockback, float duration, float delay) {

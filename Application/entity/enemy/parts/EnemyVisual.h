@@ -28,6 +28,18 @@ class EnemyVisual
     void UpdateAnimation();
 
     /// <summary>
+    /// 死亡アニメーションを再生する（死亡中は毎フレーム呼んでよい。同一クリップは無視される）
+    /// </summary>
+    void PlayDeathAnimation();
+
+    /// <summary>
+    /// 死亡アニメーションが最後まで再生し終わったか
+    /// （粒子化して消える死亡演出の開始判定に使う）
+    /// </summary>
+    /// <returns>bool: 再生終了していれば true</returns>
+    bool IsDeathAnimationFinished() const;
+
+    /// <summary>
     /// ガード状態に応じた体色（点滅）を更新する
     /// </summary>
     void UpdateGuardBlink();

@@ -49,8 +49,18 @@ class MakanAttackSkill : public Hagine::BaseObject
 
     void Deactivate();
 
+    /// <summary>
+    /// ビームの発射起点を取得する
+    /// 必殺技モーションは両手を前に突き出すため、両手ジョイントの中点を使う
+    /// （取得できない場合は胸元オフセットで代用）
+    /// </summary>
+    /// <returns>Vector3: 発射起点のワールド座標</returns>
+    Hagine::Vector3 GetBeamOrigin();
+
   private:
     static constexpr float kLockOffsetY = 2.5f;
+    static constexpr const char *kRightHandJointName = "mixamorig:RightHand"; // 発射起点に使う右手ジョイント名
+    static constexpr const char *kLeftHandJointName = "mixamorig:LeftHand";   // 発射起点に使う左手ジョイント名
 
     std::unique_ptr<Hagine::ParticleCSEmitter> makanMainEffect_{};
     std::unique_ptr<Hagine::ParticleCSEmitter> makanAroundEffect_{};
@@ -68,7 +78,9 @@ class MakanAttackSkill : public Hagine::BaseObject
     float beamWidth_ = 2.0f;
     float beamHeight_ = 2.0f;
     float activeTime_ = 0.0f;
-    float duration_ = 2.0f;
+    // 必殺技モーション（MakanSkill.gltf・30fps）の発射(30フレーム目)〜撃ち終わり(80フレーム目)
+    // に合わせた持続時間（50フレーム）
+    float duration_ = 50.0f / 30.0f;
     float spiralTime_ = 0.0f;
     // らせんビーム制御用パラメータ
     float spiralRadius_ = 2.0f;        // らせんの半径

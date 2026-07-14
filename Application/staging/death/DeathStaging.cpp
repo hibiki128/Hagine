@@ -1,27 +1,24 @@
 #include "DeathStaging.h"
 #include "particle/gpu/ParticleCSEditor.h"
 #include <Frame.h>
+#include <numbers>
 
 using namespace Hagine;
 DeathStaging::DeathStaging()
 {
-    deathParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death");
-    deathParticle_R_Arm = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death_arm");
-    deathParticle_L_Arm = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("death_arm");
+    // die.obj（死亡ポーズメッシュ）の表面から発生するエミッター
+    deathParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("die");
     isStart_ = false;
 }
 
 void DeathStaging::Initialize(
-    Vector3 position, Vector4 color,
-    Vector3 pos_R_Arm, Vector4 c_R_Arm,
-    Vector3 pos_L_Arm, Vector4 c_L_Arm)
+    const Vector3 &position, const Quaternion &rotation,
+    const Vector3 &scale, const Vector4 &color)
 {
     position_ = position;
+    rotation_ = rotation;
+    scale_ = scale;
     color_ = color;
-    position_R_Arm = pos_R_Arm;
-    color_R_Arm = c_R_Arm;
-    position_L_Arm = pos_L_Arm;
-    color_L_Arm = c_L_Arm;
 }
 
 void DeathStaging::Update()
@@ -30,33 +27,27 @@ void DeathStaging::Update()
 
     // パーティクルの更新
     deathParticle_->Update();
-    deathParticle_L_Arm->Update();
-    deathParticle_R_Arm->Update();
 
-    // 一定時間内はパーティクルの発生位置と色を更新
+    // die.obj は Blender の OBJ 出力既定（前方=-Z）のため、glTF（前方=+Z）から再生される
+    // 死亡アニメーションの最終ポーズに対して Y軸180度回転した状態で出力されている。
+    // ここでメッシュローカルの補正を掛け、倒れたモデルとパーティクルの向きを一致させる
+    static const Quaternion kDieObjYawFix =
+        Quaternion::FromAxisAngle({0.0f, 1.0f, 0.0f}, std::numbers::pi_v<float>);
+
+    // 一定時間内は発生源メッシュを死亡ポーズへ重ね、色を体色に合わせて発生させる
     if (time_ <= kParticleActiveTime)
     {
         deathParticle_->SetTranslate(position_);
+        deathParticle_->SetRotation(rotation_ * kDieObjYawFix);
+        deathParticle_->SetScale(scale_);
         deathParticle_->SetStartColor(color_);
         deathParticle_->SetEndColor({color_.x, color_.y, color_.z, kAlphaZero});
         deathParticle_->SetAuto(true);
-
-        deathParticle_R_Arm->SetTranslate(position_R_Arm);
-        deathParticle_R_Arm->SetStartColor(color_R_Arm);
-        deathParticle_R_Arm->SetEndColor({color_R_Arm.x, color_R_Arm.y, color_R_Arm.z, kAlphaZero});
-        deathParticle_R_Arm->SetAuto(true);
-
-        deathParticle_L_Arm->SetTranslate(position_L_Arm);
-        deathParticle_L_Arm->SetStartColor(color_L_Arm);
-        deathParticle_L_Arm->SetEndColor({color_L_Arm.x, color_L_Arm.y, color_L_Arm.z, kAlphaZero});
-        deathParticle_L_Arm->SetAuto(true);
     }
     else
     {
         // 時間経過後はパーティクルの自動発生を停止
         deathParticle_->SetAuto(false);
-        deathParticle_R_Arm->SetAuto(false);
-        deathParticle_L_Arm->SetAuto(false);
     }
 
     // 重力の影響を開始
@@ -67,26 +58,13 @@ void DeathStaging::Update()
         deathParticle_->SetMaxVelocity({kMaxVelocityX, kMaxVelocityY, kMaxVelocityZ});
         deathParticle_->SetMinVelocity({kMinVelocityX, kMinVelocityY, kMinVelocityZ});
 
-        deathParticle_R_Arm->SetEnableGravity(true);
-        deathParticle_R_Arm->SetEnableLifeTimeScale(true);
-        deathParticle_R_Arm->SetMaxVelocity({kMaxVelocityX, kMaxVelocityY, kMaxVelocityZ});
-        deathParticle_R_Arm->SetMinVelocity({kMinVelocityX, kMinVelocityY, kMinVelocityZ});
-
-        deathParticle_L_Arm->SetEnableGravity(true);
-        deathParticle_L_Arm->SetEnableLifeTimeScale(true);
-        deathParticle_L_Arm->SetMaxVelocity({kMaxVelocityX, kMaxVelocityY, kMaxVelocityZ});
-        deathParticle_L_Arm->SetMinVelocity({kMinVelocityX, kMinVelocityY, kMinVelocityZ});
-
         isStart_ = true;
     }
 }
 
 void DeathStaging::Draw(const ViewProjection &vp)
 {
-
     deathParticle_->Draw(vp);
-    deathParticle_R_Arm->Draw(vp);
-    deathParticle_L_Arm->Draw(vp);
 }
 
 void DeathStaging::imgui()

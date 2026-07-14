@@ -44,8 +44,8 @@ void MakanAttackSkill::Update()
         currentLength_ = maxLength_;
     }
 
-    transform_->translation_ = pPlayerTransform_->translation_;
-    transform_->translation_.y = pPlayerTransform_->translation_.y + kLockOffsetY;
+    // 発射起点は手（右手ジョイント）に追従させる。向きは発動時のまま固定
+    transform_->translation_ = GetBeamOrigin();
     transform_->quateRotation_ = lockedRotation_; // 発動時の向きで固定（発動後は追従しない）
 
     // コライダー設定
@@ -119,6 +119,30 @@ void MakanAttackSkill::Update()
     {
         Deactivate();
     }
+}
+
+Vector3 MakanAttackSkill::GetBeamOrigin()
+{
+    // 両手を前に突き出すモーションなので、両手ジョイントの中点から発射する。
+    // アニメーションに合わせて毎フレーム追従する
+    if (pPlayer_)
+    {
+        auto rightHand = pPlayer_->GetJointWorldPosition(kRightHandJointName);
+        auto leftHand = pPlayer_->GetJointWorldPosition(kLeftHandJointName);
+        if (rightHand && leftHand)
+        {
+            return (*rightHand + *leftHand) * 0.5f;
+        }
+        if (rightHand)
+        {
+            return *rightHand;
+        }
+    }
+
+    // ジョイントが取得できない場合は従来どおり胸元の固定オフセットで代用する
+    Vector3 origin = pPlayerTransform_->translation_;
+    origin.y += kLockOffsetY;
+    return origin;
 }
 
 void MakanAttackSkill::Activate(WorldTransform *playerTransform)

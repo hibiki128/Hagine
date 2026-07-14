@@ -1,5 +1,5 @@
 {
-    "IsShowMainUI": true,
+    "IsShowMainUI": false,
     "ShowGrid": false,
     "gridColor": {
         "w": 1.0,
@@ -7,12 +7,12 @@
         "y": 0.5,
         "z": 0.5
     },
-    "isEditorMode": true,
+    "isEditorMode": false,
     "showAssetBrowserView": false,
     "showDrawSystemView": false,
-    "showFPSView": true,
+    "showFPSView": false,
     "showGameParamView": false,
-    "showGizmoView": true,
+    "showGizmoView": false,
     "showHierarchyView": false,
     "showKeyOperationDebugView": false,
     "showLightView": false,
@@ -21,7 +21,7 @@
     "showOfScreenView": false,
     "showParticlePreviewView": false,
     "showParticleView": false,
-    "showSceneView": true,
+    "showSceneView": false,
     "showShadowMapView": false,
     "showShortcutWindow": false,
     "showSpriteManagerView": false

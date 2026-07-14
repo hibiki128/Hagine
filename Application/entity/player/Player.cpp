@@ -45,7 +45,7 @@ void Player::Init(const std::string objectName)
     // ベースモデル（地上待機）を生成する。各 gltf はメッシュ＋スケルトン＋
     // アニメーションを内包しており、スケルトンを共有するクリップを切り替えて再生する
     BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
-    BaseObject::SetOffset({0.0f, -0.75f, 0.0f}); // 描画オフセット（地面に足がつくように）
+    BaseObject::SetOffset({0.0f, kModelOffsetY, 0.0f}); // 描画オフセット（地面に足がつくように）
     BaseObject::GetLocalScale() = {4.0f, 4.0f, 4.0f};
     BaseObject::SetAnimationSpeed(1.0f);
     BaseObject::SetAnimationBlendDuration(0.2f);
@@ -134,12 +134,18 @@ void Player::Update()
 
     if (combat_->IsSkillActive())
     {
+        // ビーム発動中も必殺技モーション（発射→フレーム80の撃ち終わりまで）は進める
+        visual_->UpdateAnimation();
+        BaseObject::Update();
         return;
     }
 
     if (!isAlive_)
     {
-        // 死亡時は本体の回転処理なし（死亡演出は DrawParticle 側で描画する）
+        // 死亡時は行動処理なし。死亡アニメーションだけ再生して進める
+        // （再生し終わった後の粒子化演出は DrawParticle 側で描画する）
+        visual_->PlayDeathAnimation();
+        BaseObject::Update();
     }
     else
     {
@@ -189,8 +195,12 @@ void Player::Update()
                 // ロック中も更新自体は継続する（入力は上のロックで無効化済み）
                 combat_->UpdateChargeShot();
 
-                // 待機アニメーションを反映
+                // 必殺技モーションを反映
                 visual_->UpdateAnimation();
+
+                // 飛行リーンの傾きを直立へ滑らかに戻す（放置すると傾いたまま固まり、
+                // 必殺技モーションや死亡時の倒れる向きがずれる）
+                visual_->UpdateFlyLean();
             }
             else
             {
@@ -264,6 +274,10 @@ void Player::Update()
             {
                 // ダメージリアクション中なら即座に終了させる
                 status_->StopDamageReact();
+
+                // 飛行リーンの描画回転オフセットが残っていると、死亡アニメーションの
+                // 倒れる向きが本来の向き（quateRotation_）からずれ、粒子化演出と合わなくなる
+                ClearRenderRotationOffset();
             }
             isAlive_ = false;
         }
@@ -298,13 +312,13 @@ void Player::DrawParticleCompute(const ViewProjection &viewProjection)
 void Player::DrawParticle(const ViewProjection &viewProjection)
 {
 
-    if (!isAlive_ && isDeathStaging_)
+    // 死亡アニメーションを再生し終わったら、死亡ポーズメッシュ(die.obj)の
+    // 表面からパーティクルを発生させて粒子化して消える演出を行う
+    if (!isAlive_ && isDeathStaging_ && visual_->IsDeathAnimationFinished())
     {
-        // 手クラス廃止に伴い、両腕の発生位置は体の左右オフセットで近似する
         deathStaging_->Initialize(
-            GetWorldPosition(), GetColor(),
-            GetPositionRight(1.0f), GetColor(),
-            GetPositionLeft(1.0f), GetColor());
+            GetWorldPosition() + Vector3(0.0f, kModelOffsetY, 0.0f),
+            GetWorldRotation(), GetWorldScale(), GetColor());
         deathStaging_->Update();
         deathStaging_->Draw(viewProjection);
     }

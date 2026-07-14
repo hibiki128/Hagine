@@ -1,4 +1,5 @@
 #pragma once
+#include "Application/staging/death/DeathStaging.h"
 #include "object/base/BaseObject.h"
 #include "parts/EnemyCombat.h"
 #include "parts/EnemyMovement.h"
@@ -240,6 +241,9 @@ class Enemy : public Hagine::BaseObject
     static constexpr float kVelocityZero = 0.0f;
     static constexpr float kMinHP = 0.0f;
 
+    // モデル描画オフセット（地面に足がつくように下げる量。死亡演出の発生位置にも使う）
+    static constexpr float kModelOffsetY = -0.75f;
+
     // 回転・ベクトル定数
     static constexpr float kForwardVectorX = 0.0f;
     static constexpr float kForwardVectorY = 0.0f;
@@ -262,6 +266,7 @@ class Enemy : public Hagine::BaseObject
     std::shared_ptr<BTNode> rootNode_ = nullptr; ///< ビヘイビアツリーのルートノード
 
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; ///< ヒットエミッター
+    std::unique_ptr<DeathStaging> deathStaging_;          ///< 死亡演出（粒子化して消える）
 
     Hagine::OBBCollider *pEnemyCollider_ = nullptr;      ///< 敵コライダー
     Hagine::AABBCollider *pEnemyWallCollider_ = nullptr; ///< 壁用コライダー

@@ -30,8 +30,7 @@ void SparkingFight::LoadGameResources()
     // GPU(CS)パーティクルのエミッター
     pParticleCSEditor_->AddParticleEmitter("playerAura");
     pParticleCSEditor_->AddParticleEmitter("FadeOut");
-    pParticleCSEditor_->AddParticleEmitter("death");
-    pParticleCSEditor_->AddParticleEmitter("death_arm");
+    pParticleCSEditor_->AddParticleEmitter("die");
     pParticleCSEditor_->AddParticleEmitter("makan_main");
     pParticleCSEditor_->AddParticleEmitter("makan_around");
     pParticleCSEditor_->AddParticleEmitter("chargeEmitter");

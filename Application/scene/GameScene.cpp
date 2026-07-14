@@ -307,7 +307,9 @@ void GameScene::ChangeScene()
     {
         GameOverTimer_ += Frame::DeltaTime();
         player_ptr->SetIsDeathStaging(true);
-        if (GameOverTimer_ >= 2.0f && !isGameOver_)
+        // 死亡アニメーション(約2.6秒)を再生し終えてから粒子化演出が始まるため、
+        // 演出を見届けられるだけの猶予を取ってからシーンを切り替える
+        if (GameOverTimer_ >= kGameOverWaitTime && !isGameOver_)
         {
             pSceneManager_->NextSceneReservation("CLEAR");
             isGameOver_ = true;
@@ -316,7 +318,13 @@ void GameScene::ChangeScene()
 
     if (!enemy_ptr->GetIsAlive())
     {
-        pSceneManager_->NextSceneReservation("CLEAR");
+        // 敵の死亡アニメーション(約2.6秒)→粒子化して消える演出を見届けてから
+        // リザルトへ切り替える
+        enemyDownTimer_ += Frame::DeltaTime();
+        if (enemyDownTimer_ >= kEnemyDeathWaitTime)
+        {
+            pSceneManager_->NextSceneReservation("CLEAR");
+        }
     }
 
     if (gameUI_->GetIsBackTitle())

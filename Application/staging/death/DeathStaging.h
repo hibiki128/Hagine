@@ -1,10 +1,13 @@
 #pragma once
 #include "particle/gpu/ParticleCSEmitter.h"
 #include <memory>
+#include <type/Quaternion.h>
 #include <type/Vector3.h>
 
 /// <summary>
 /// 死亡演出用クラス
+/// 死亡ポーズメッシュ(die.obj)の表面からパーティクルを発生させ、
+/// 本体が粒子になって消えていくように見せる
 /// </summary>
 class DeathStaging
 {
@@ -20,10 +23,14 @@ class DeathStaging
 
     /// <summary>
     /// 初期化
+    /// 発生源メッシュをプレイヤーの死亡ポーズへ重ねるための姿勢と色を設定する
     /// </summary>
-    void Initialize(Hagine::Vector3 position, Hagine::Vector4 color,
-                    Hagine::Vector3 pos_R_Arm, Hagine::Vector4 c_R_Arm,
-                    Hagine::Vector3 pos_L_Arm, Hagine::Vector4 c_L_Arm);
+    /// <param name="position">発生位置（描画オフセット適用後のモデル位置）</param>
+    /// <param name="rotation">プレイヤーの向き</param>
+    /// <param name="scale">プレイヤーのスケール</param>
+    /// <param name="color">パーティクルの色（プレイヤーの体色）</param>
+    void Initialize(const Hagine::Vector3 &position, const Hagine::Quaternion &rotation,
+                    const Hagine::Vector3 &scale, const Hagine::Vector4 &color);
 
     /// <summary>
     /// 更新
@@ -61,18 +68,14 @@ class DeathStaging
     static constexpr float kMinVelocityY = -1.0f;      // Y方向最小速度
     static constexpr float kMinVelocityZ = -0.5f;      // Z方向最小速度
 
-    Hagine::Vector3 position_{};      // 座標
-    Hagine::Vector3 position_R_Arm{}; // 右腕座標
-    Hagine::Vector3 position_L_Arm{}; // 左腕座標
-    Hagine::Vector4 color_{};         // 色
-    Hagine::Vector4 color_R_Arm{};    // 右腕の色
-    Hagine::Vector4 color_L_Arm{};    // 左腕の色
+    Hagine::Vector3 position_{};                                       // 発生位置
+    Hagine::Quaternion rotation_ = Hagine::Quaternion::IdentityQuaternion(); // 向き
+    Hagine::Vector3 scale_ = {1.0f, 1.0f, 1.0f};                       // スケール
+    Hagine::Vector4 color_{};                                          // 色
 
     float time_{}; // 経過時間
 
     bool isStart_ = false; // 開始フラグ
 
-    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_ = nullptr;      // 死亡パーティクル
-    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_R_Arm = nullptr; // 右腕死亡パーティクル
-    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_L_Arm = nullptr; // 左腕死亡パーティクル
+    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_ = nullptr; // 死亡パーティクル
 };

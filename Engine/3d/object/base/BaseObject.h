@@ -13,6 +13,7 @@
 #include "transform/WorldTransform.h"
 #include "nlohmann/json.hpp"
 #include <graphics/pipeline/PipelineManager.h>
+#include <optional>
 #include <string>
 
 namespace Hagine {
@@ -93,6 +94,14 @@ class BaseObject
     // 中心座標取得
     WorldTransform *GetWorldTransform() { return transform_.get(); }
     ModelAnimation *GetModelAnimation() { return obj3d_->GetCurrentModelAnimation(); }
+
+    /// <summary>
+    /// スキンモデルのジョイント（ボーン）のワールド座標を取得する
+    /// 描画オフセット(offSet_)込みで計算するため、描画中のモデル上の位置と一致する
+    /// </summary>
+    /// <param name="jointName">ジョイント名（例: "mixamorig:RightHand"）</param>
+    /// <returns>std::optional&lt;Vector3&gt;: ワールド座標（ジョイントが無ければ nullopt）</returns>
+    std::optional<Vector3> GetJointWorldPosition(const std::string &jointName);
 
     /// =================================================
     /// 親子付け

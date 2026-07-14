@@ -441,6 +441,29 @@ Vector3 BaseObject::GetWorldScale()
     return transform_->GetWorldScale();
 }
 
+std::optional<Vector3> BaseObject::GetJointWorldPosition(const std::string &jointName)
+{
+    if (!obj3d_)
+    {
+        return std::nullopt;
+    }
+    ModelAnimation *modelAnimation = obj3d_->GetCurrentModelAnimation();
+    if (!modelAnimation)
+    {
+        return std::nullopt;
+    }
+    Bone *bone = modelAnimation->GetBone();
+    if (!bone)
+    {
+        return std::nullopt;
+    }
+
+    // 描画時と同じ条件（描画オフセット込み）のワールド行列を組み立てて参照する
+    Matrix4x4 worldMatrix = MakeAffineMatrix(
+        transform_->scale_, transform_->quateRotation_, transform_->translation_ + offSet_);
+    return bone->GetJointWorldPosition(jointName, worldMatrix);
+}
+
 void BaseObject::SaveToJson()
 {
     // JSONデータを扱うハンドラを作成

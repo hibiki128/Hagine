@@ -35,7 +35,7 @@ void Enemy::Init(const std::string objectName)
     // プレイヤーと同じスケルトン付きモデルを使い、同一クリップでアニメーションさせる。
     // モデル素体のマテリアル色は赤なので、敵はそのまま赤で表示される
     BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
-    BaseObject::SetOffset({0.0f, -0.75f, 0.0f}); // 描画オフセット（足が地面につくように）
+    BaseObject::SetOffset({0.0f, kModelOffsetY, 0.0f}); // 描画オフセット（足が地面につくように）
     BaseObject::GetLocalScale() = {4.0f, 4.0f, 4.0f};
     BaseObject::SetAnimationSpeed(1.0f);
     BaseObject::SetAnimationBlendDuration(0.2f);
@@ -67,6 +67,8 @@ void Enemy::Init(const std::string objectName)
     BaseObject::SetColor(Vector4(kColorRed, kColorZero, kColorZero, kColorOpaque));
 
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
+
+    deathStaging_ = std::make_unique<DeathStaging>();
 
     // ─── 各パーツの初期化 ───
     movement_->Init(this);
@@ -100,11 +102,30 @@ void Enemy::Update()
                 // ダミーはHPが尽きたら即復活する（満タン・初期位置へ）
                 Revive();
             }
-            else
+            else if (isAlive_)
             {
                 isAlive_ = false;
                 status_->SetHP(kMinHP);
+
+                // 必殺技の演出・ビームは死亡で打ち切り、死体に判定が残らないようにする
+                combat_->CancelBeamStaging();
+                combat_->DeactivateBeam();
+                pEnemyCollider_->SetEnabled(false);
+                pEnemyWallCollider_->SetEnabled(false);
+
+                // 被弾点滅の途中（透明フレーム）で死ぬと見えないまま固まるため、不透明へ戻す
+                SetAlpha(kAlphaOpaque);
             }
+        }
+
+        // 死亡中は行動処理を行わず、死亡アニメーションだけ再生して進める。
+        // 再生し終わった後の粒子化演出は DrawParticle 側で描画する
+        if (!isAlive_)
+        {
+            visual_->PlayDeathAnimation();
+            combat_->UpdateEffects(dt); // ビーム等の残存パーティクルを自然消滅させる
+            BaseObject::Update();       // アニメーション・行列の更新
+            return;
         }
 
         // ガード中のエフェクト（点滅）
@@ -198,7 +219,12 @@ void Enemy::Draw(const ViewProjection &viewProjection)
     if (!isAlive_)
     {
         pEnemyCollider_->SetEnabled(false);
-        return;
+
+        // 死亡アニメーション中は本体を描画し続け、粒子化が始まったら非表示にする
+        if (deathStaging_->GetIsStart())
+        {
+            return;
+        }
     }
     BaseObject::Draw(viewProjection);
     if (transform_->translation_.y < kGroundLevel)
@@ -212,6 +238,17 @@ void Enemy::DrawParticleCompute(const ViewProjection &viewProjection)
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection)
 {
+    // 死亡アニメーションを再生し終わったら、死亡ポーズメッシュ(die.obj)の
+    // 表面からパーティクルを発生させて粒子化して消える演出を行う
+    if (!isAlive_ && visual_->IsDeathAnimationFinished())
+    {
+        deathStaging_->Initialize(
+            GetWorldPosition() + Vector3(0.0f, kModelOffsetY, 0.0f),
+            BaseObject::GetWorldRotation(), BaseObject::GetWorldScale(), GetColor());
+        deathStaging_->Update();
+        deathStaging_->Draw(viewProjection);
+    }
+
     hitEmitter_->Draw(viewProjection); // CPU emitter
     combat_->DrawParticle(viewProjection);
 }
