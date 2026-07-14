@@ -21,6 +21,7 @@ void ChargeShot::Init(const std::string objectName)
     pBulletCollider_ = AddSphereCollider("ChargeShot_Collider");
     pBulletCollider_->SetTag("PlayerChargeBullet");
     pBulletCollider_->AddCollisionMask("Enemy");
+    pBulletCollider_->AddCollisionMask("Ground");
     pBulletCollider_->SetRadius(scale_);
     pBulletCollider_->SetEnabled(false);
 
@@ -335,6 +336,14 @@ void ChargeShot::OnCollisionEnterCallback(ColliderBase *other)
     {
         return;
     }
+
+    // 地形メッシュに当たったら消滅させる
+    if (other->GetTag() == "Ground")
+    {
+        Reset();
+        return;
+    }
+
     // Enemyタグを持つコライダーと衝突した場合
     if (other->GetTag() == "Enemy")
     {

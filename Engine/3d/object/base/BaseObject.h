@@ -122,6 +122,8 @@ class BaseObject
     void LoadFromJson(std::string folderPath, std::string jsonName);
     void SaveColliders();
     void LoadColliders();
+    void SaveMaterials();
+    void LoadMaterials();
     void AnimaSaveToJson();
     void AnimaLoadFromJson();
     void DebugCollider();

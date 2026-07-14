@@ -51,8 +51,9 @@ void EnemyBullet::Update()
         return;
     }
 
-    // 地面に埋まったら消滅
-    if (transform_->translation_.y <= -0.5f)
+    // 地面との衝突はメッシュコライダーで判定するため、
+    // これは地形の外へ抜け落ちた場合の保険（地形の最低高さより下）
+    if (transform_->translation_.y <= kFallbackKillY)
     {
         isAlive_ = false;
         return;
@@ -132,6 +133,7 @@ void EnemyBullet::InitTransform(Enemy *enemy)
     pCollider_ = AddSphereCollider("enemy_bullet");
     pCollider_->SetTag("EnemyBullet");
     pCollider_->AddCollisionMask("Player");
+    pCollider_->AddCollisionMask("Ground");
 
     pCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
         this->OnCollisionEnter(other);
@@ -192,5 +194,11 @@ void EnemyBullet::OnCollisionEnter(ColliderBase *other)
     {
         isHit_ = true;
         pTarget_->SetDamage(damage_);
+    }
+
+    // 地形メッシュに当たったら消滅させる（パーティクル終了後に isAlive_ が折れる）
+    if (other->GetTag() == "Ground" && isAlive_)
+    {
+        isHit_ = true;
     }
 }

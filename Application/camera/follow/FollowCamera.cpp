@@ -2,7 +2,10 @@
 #include "FollowCamera.h"
 #include <Input.h>
 #include <Application/entity/enemy/Enemy.h>
+#include <Application/entity/field/around/AroundField.h>
+#include <Application/entity/field/ground/Ground.h>
 #include <Application/entity/player/Player.h>
+#include <algorithm>
 #include <cmath>
 
 using namespace Hagine;
@@ -78,6 +81,9 @@ void FollowCamera::Update()
 
     // Rush演出からの復帰補間、または位置の確定
     pRush_->ApplyCameraPosition(cameraPos);
+
+    // 地形・フィールド境界との衝突解消（すり抜け防止）
+    ResolveCameraCollision();
 
     // worldTransform_ の位置・回転を ViewProjection へ反映して行列を更新する
     ApplyToViewProjection();
@@ -167,6 +173,73 @@ void FollowCamera::ApplyToViewProjection()
     viewProjection_.isUseQuaternion_ = true;
     viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
     viewProjection_.UpdateMatrix();
+}
+
+void FollowCamera::ResolveCameraCollision()
+{
+    if (!pTarget_)
+    {
+        return;
+    }
+
+    Vector3 cameraPos = worldTransform_.translation_;
+
+    // ─── AroundField 円柱境界の内側へクランプ ───
+    if (const CylinderCollider *field = AroundField::GetFieldCollider())
+    {
+        const Vector3 center = field->GetCenterPosition();
+        const float maxRadius = field->GetRadius() - kFieldClampMargin;
+
+        Vector3 horizontal = {cameraPos.x - center.x, 0.0f, cameraPos.z - center.z};
+        float dist = horizontal.Length();
+        if (dist > maxRadius && dist > kEpsilon)
+        {
+            float scale = maxRadius / dist;
+            cameraPos.x = center.x + horizontal.x * scale;
+            cameraPos.z = center.z + horizontal.z * scale;
+        }
+
+        const float halfHeight = field->GetHeight() * 0.5f;
+        cameraPos.y = std::clamp(cameraPos.y,
+                                 center.y - halfHeight + kFieldClampMargin,
+                                 center.y + halfHeight - kFieldClampMargin);
+    }
+
+    // ─── 地形メッシュとの遮蔽・めり込み解消 ───
+    if (MeshCollider *terrain = Ground::GetTerrainCollider())
+    {
+        // 注視点（プレイヤーの少し上）からカメラへレイを飛ばし、
+        // 地形に遮られていたらヒット位置の手前へ引き寄せる
+        Vector3 pivot = pTarget_->GetLocalPosition();
+        pivot.y += kCameraPivotHeight;
+
+        Vector3 toCamera = cameraPos - pivot;
+        float distance = toCamera.Length();
+        if (distance > kEpsilon)
+        {
+            Vector3 dir = toCamera / distance;
+            float hitDistance = 0.0f;
+            Vector3 hitNormal;
+            if (terrain->Raycast(pivot, dir, distance, hitDistance, hitNormal))
+            {
+                float clamped = (std::max)(hitDistance - kCameraCollisionMargin, kCameraMinDistance);
+                cameraPos = pivot + dir * clamped;
+            }
+        }
+
+        // 地表すれすれ・地面下に潜るのを防ぐ最低高度を確保する
+        float floorY = Ground::GetSurfaceY(cameraPos.x, cameraPos.z) + kCameraFloorClearance;
+        if (cameraPos.y < floorY)
+        {
+            cameraPos.y = floorY;
+        }
+    }
+
+    if ((cameraPos - worldTransform_.translation_).LengthSq() > 0.0f)
+    {
+        worldTransform_.translation_ = cameraPos;
+        worldTransform_.UpdateMatrix();
+    }
 }
 
 void FollowCamera::imgui()

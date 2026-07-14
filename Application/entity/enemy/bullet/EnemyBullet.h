@@ -138,6 +138,7 @@ class EnemyBullet : public Hagine::BaseObject
     static constexpr float kForwardOffsetDistance = 2.0f; // 前方オフセット距離
     static constexpr float kVerticalOffset = 1.0f;        // 垂直方向オフセット
     static constexpr int kBulletDamage = 1;               // 弾のダメージ値
+    static constexpr float kFallbackKillY = -10.0f;       // 地形外へ抜けた弾を消す高さ（保険）
 
     Hagine::Vector3 velocity_;          // 速度
     float speed_ = kDefaultSpeed;       // 移動速度

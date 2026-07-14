@@ -1,9 +1,11 @@
 #define NOMINMAX
 #include "EnemyMovement.h"
 #include "Application/entity/enemy/Enemy.h"
+#include "Application/entity/field/ground/Ground.h"
 #include "Application/entity/player/Player.h"
 #include <Frame.h>
 #include <utility/debug/param/GameParamHub.h>
+#include <algorithm>
 #include <cmath>
 
 using namespace Hagine;
@@ -114,20 +116,30 @@ void EnemyMovement::CollisionGround()
     transform->translation_.x += velocity_.x * Frame::DeltaTime();
     transform->translation_.z += velocity_.z * Frame::DeltaTime();
 
+    // 移動後のXZ位置における接地レベル（地形メッシュの表面高さ＋立ちオフセット）
+    const float groundLevel = Ground::GetStandingY(transform->translation_.x, transform->translation_.z);
+
     if (isFlying_)
     {
-        transform->translation_.y = nextY;
+        // 飛行中でも地形には潜らないよう接地レベルでクランプする
+        transform->translation_.y = (std::max)(nextY, groundLevel);
         return;
     }
 
-    if (nextY <= kGroundLevel)
+    if (nextY <= groundLevel)
     {
-        transform->translation_.y = kGroundLevel;
+        transform->translation_.y = groundLevel;
         if (!isGrounded_)
         {
             velocity_.y = kVelocityZero;
             isGrounded_ = true;
         }
+    }
+    else if (isGrounded_ && velocity_.y <= kVelocityZero && nextY - groundLevel <= kGroundSnapDistance)
+    {
+        // 下り坂で毎フレーム接地が外れてガタつかないよう、僅かな段差は地面に吸着させる
+        transform->translation_.y = groundLevel;
+        velocity_.y = kVelocityZero;
     }
     else
     {

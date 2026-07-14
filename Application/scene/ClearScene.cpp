@@ -47,8 +47,10 @@ void ClearScene::Initialize()
     /// ===================================================
     /// セット
     /// ===================================================
+    isGameOver_ = pSceneManager_->GetIsGameOver();
     resultUI_->SetClearTime(pSceneManager_->GetClearTime());
     resultUI_->SetHP(pSceneManager_->GetHP());
+    resultUI_->SetIsGameOver(isGameOver_);
 
     ground_->GetLighting() = true;
 
@@ -91,7 +93,12 @@ void ClearScene::Update()
     if (!vp_.GetIsCameraMove() && cameraStart_)
     {
         resultUI_->SetIsStartEasing(true);
-        resultStaging_->SetfireWorkStarted(true);
+
+        // 花火はクリア時のみ（ゲームオーバー時は上げない）
+        if (!isGameOver_)
+        {
+            resultStaging_->SetfireWorkStarted(true);
+        }
     }
 
     // シーン切り替え

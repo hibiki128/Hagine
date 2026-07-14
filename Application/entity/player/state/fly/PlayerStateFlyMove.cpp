@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "PlayerStateFlyMove.h"
 #include "Input.h"
+#include "application/entity/field/ground/Ground.h"
 #include "application/entity/player/Player.h"
 #include <cmath>
 
@@ -86,8 +87,9 @@ void PlayerStateFlyMove::ChangeStateLogic(Player &player)
         return;
     }
 
-    // 地面に着地したら地上 Idle へ遷移
-    if (player.GetWorldTransform() && player.GetLocalPosition().y <= kGroundLevel)
+    // 地面に着地したら地上 Idle へ遷移（地形メッシュの高さ基準）
+    if (player.GetWorldTransform() &&
+        player.GetLocalPosition().y <= Ground::GetStandingY(player.GetLocalPosition().x, player.GetLocalPosition().z))
     {
         player.ChangeState("Idle");
         return;

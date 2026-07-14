@@ -91,6 +91,7 @@ class ColliderTagManager
         AddTag("PlayerWall");
         AddTag("EnemyWall");
         AddTag("CylinderField");
+        AddTag("Ground");
     }
 
 #ifdef _DEBUG

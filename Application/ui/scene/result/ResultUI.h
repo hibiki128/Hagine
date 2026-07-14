@@ -66,6 +66,12 @@ class ResultUI
     /// <param name="time">設定するクリアタイム</param>
     void SetClearTime(float time) { ClearTime_ = time; }
 
+    /// <summary>
+    /// ゲームオーバー経由かを設定（ランク計算用。ゲームオーバーは常にGランク）
+    /// </summary>
+    /// <param name="flag">ゲームオーバーならtrue</param>
+    void SetIsGameOver(bool flag) { isGameOver_ = flag; }
+
   private:
     /// ===================================================
     /// private method
@@ -92,6 +98,12 @@ class ResultUI
     /// </summary>
     void SkipRankDisplay();
 
+    /// <summary>
+    /// クリア時間と残りHPからランクを計算する
+    /// </summary>
+    /// <returns>int: ランクのアトラスインデックス（0=S, 1=A, ..., 6=F, 7=G）</returns>
+    int CalculateRankIndex() const;
+
     /// ===================================================
     /// private enum
     /// ===================================================
@@ -114,7 +126,8 @@ class ResultUI
         kHPTens,     // 体力の十の位
         kHPOnes,     // 体力の一の位
         kPercent,    // パーセント
-        kRank,       // ランク
+        kRank,       // ランク（見出し）
+        kRankValue,  // ランクの評価文字（S~G）
         kMaxSprite
     };
 
@@ -161,6 +174,14 @@ class ResultUI
     static constexpr float kNormalizeValue = 1.0f;     // 正規化値
     static constexpr int kZeroValue = 0;               // ゼロ値
 
+    // ランク計算関連（アトラスは "SABCDEFG" の8文字）
+    static constexpr float kRankUVStep = 1.0f / 8.0f; // ランク文字アトラスのUVステップ幅
+    static constexpr int kRankIndexG = 7;             // Gランクのアトラスインデックス
+    static constexpr int kRankIndexF = 6;             // Fランクのアトラスインデックス
+    static constexpr float kRankMaxHP = 100.0f;       // HPスコアの基準となる最大HP
+    static constexpr float kRankBestTime = 90.0f;     // これ以下ならタイムスコア満点(秒)
+    static constexpr float kRankWorstTime = 360.0f;   // これ以上ならタイムスコア0(秒)
+
     std::array<Hagine::SpriteData *, kMaxSprite> sprites_; // スプライト配列
 
     std::array<Hagine::EasingData<Hagine::Vector2>, kMaxSprite> positionEasings_; // 位置イージング
@@ -182,7 +203,7 @@ class ResultUI
 
     float HP_ = kDefaultHP;               // 残り体力
     float ClearTime_ = kDefaultClearTime; // クリアタイム
-    std::string Rank_ = "A";              // ランク
+    bool isGameOver_ = false;             // ゲームオーバー経由か（常にGランクにする）
 
     Hagine::Input *pInput_ = nullptr;                     // 入力
     std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr; // ゲームパッド

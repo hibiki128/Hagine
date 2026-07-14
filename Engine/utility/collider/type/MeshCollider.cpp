@@ -185,9 +185,10 @@ bool TriangleVsBox(const Triangle &tri, const Vector3 &C, const Vector3 u[3], co
     return true;
 }
 
-/// <summary>線分と三角形の交差判定（Möller–Trumbore）</summary>
-bool SegmentTriangle(const Vector3 &p, const Vector3 &q,
-                     const Vector3 &a, const Vector3 &b, const Vector3 &c)
+/// <summary>線分と三角形の交差判定（Möller–Trumbore）。ヒット時は媒介変数 t(0〜1) を返す</summary>
+bool SegmentTriangleParam(const Vector3 &p, const Vector3 &q,
+                          const Vector3 &a, const Vector3 &b, const Vector3 &c,
+                          float &outT)
 {
     Vector3 dir = q - p;
     Vector3 e1 = b - a;
@@ -209,7 +210,19 @@ bool SegmentTriangle(const Vector3 &p, const Vector3 &q,
         return false;
 
     float t = e2.Dot(qv) * inv;
-    return t >= 0.0f && t <= 1.0f;
+    if (t < 0.0f || t > 1.0f)
+        return false;
+
+    outT = t;
+    return true;
+}
+
+/// <summary>線分と三角形の交差判定（Möller–Trumbore）</summary>
+bool SegmentTriangle(const Vector3 &p, const Vector3 &q,
+                     const Vector3 &a, const Vector3 &b, const Vector3 &c)
+{
+    float t;
+    return SegmentTriangleParam(p, q, a, b, c, t);
 }
 
 /// <summary>三角形同士の交差判定（辺-面の交差で近似。共面ケースは非対応）</summary>
@@ -787,6 +800,51 @@ bool MeshCollider::Depenetrate(const AABB &aabb, Vector3 &outMTV) const
     }
     outMTV = sum;
     return hit;
+}
+
+bool MeshCollider::Raycast(const Vector3 &origin, const Vector3 &direction, float maxDistance,
+                           float &outDistance, Vector3 &outNormal) const
+{
+    if (triangles_.empty() || maxDistance <= 0.0f)
+        return false;
+
+    float dirLen = direction.Length();
+    if (dirLen < 1e-6f)
+        return false;
+    Vector3 dirN = direction / dirLen;
+
+    // ワールドの線分をローカルへ変換（アフィン変換なので媒介変数 t は保存される）
+    Vector3 p = Transformation(origin, cachedInverse_);
+    Vector3 q = Transformation(origin + dirN * maxDistance, cachedInverse_);
+
+    AABB segBounds;
+    segBounds.min = {(std::min)(p.x, q.x), (std::min)(p.y, q.y), (std::min)(p.z, q.z)};
+    segBounds.max = {(std::max)(p.x, q.x), (std::max)(p.y, q.y), (std::max)(p.z, q.z)};
+
+    std::vector<int> candidates;
+    QueryCandidates(segBounds, candidates);
+
+    float bestT = FLT_MAX;
+    Vector3 bestNormal = {0.0f, 1.0f, 0.0f};
+    for (int i : candidates)
+    {
+        const Triangle &tri = triangles_[i];
+        float t;
+        if (SegmentTriangleParam(p, q, tri.v[0], tri.v[1], tri.v[2], t) && t < bestT)
+        {
+            bestT = t;
+            bestNormal = tri.normal;
+        }
+    }
+    if (bestT == FLT_MAX)
+        return false;
+
+    outDistance = bestT * maxDistance;
+    Vector3 n = TransformNormal(bestNormal, cachedWorld_).Normalize();
+    if (n.Dot(dirN) > 0.0f)
+        n = -n; // レイと向かい合う側の法線を返す
+    outNormal = n;
+    return true;
 }
 
 Sphere MeshCollider::GetWorldBoundingSphere() const

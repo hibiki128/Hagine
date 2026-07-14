@@ -79,12 +79,14 @@ class SceneManager
 
     float GetClearTime() const { return clearTime_; }
     float GetHP() const { return hp_; }
+    bool GetIsGameOver() const { return isGameOver_; }
 
     BaseScene *GetBaseScene() const { return scene_.get(); }
     std::string GetCurrentSceneName() const { return currentSceneName_; }
 
     void SetClearTime(float time) { clearTime_ = time; }
     void SetHP(float hp) { hp_ = hp; }
+    void SetIsGameOver(bool flag) { isGameOver_ = flag; }
 
     void SetOffScreen(OffScreen *offscreen) { pOffscreen_ = offscreen; }
     void SetDrawSystem(DrawSystem *drawSystem) { pDrawSystem_ = drawSystem; }
@@ -110,5 +112,6 @@ class SceneManager
 
     float clearTime_ = 0.0f;
     float hp_ = 0.0f;
+    bool isGameOver_ = false; // 直前のゲームがゲームオーバーだったか（リザルト表示用）
 };
 } // namespace Hagine

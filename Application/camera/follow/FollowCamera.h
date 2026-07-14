@@ -103,6 +103,14 @@ class FollowCamera
     /// </summary>
     void ApplyToViewProjection();
 
+    /// <summary>
+    /// カメラ位置の衝突解消。
+    /// 地形メッシュに遮蔽・めり込みしないよう注視点→カメラのレイで手前へ引き寄せ、
+    /// AroundField の円柱境界の内側へクランプする。
+    /// worldTransform_ の位置を直接補正するため、ApplyToViewProjection の直前に呼ぶこと
+    /// </summary>
+    void ResolveCameraCollision();
+
     /// ===================================================
     /// Getter
     /// ===================================================
@@ -178,6 +186,13 @@ class FollowCamera
 
     // カメラ設定
     static constexpr float kFarZ = 1100.0f; ///< 描画距離の遠面
+
+    // カメラ衝突関連
+    static constexpr float kCameraPivotHeight = 2.0f;     ///< 遮蔽判定の注視点（プレイヤー位置からの上方オフセット）
+    static constexpr float kCameraCollisionMargin = 0.5f; ///< 地形ヒット位置からの手前マージン
+    static constexpr float kCameraMinDistance = 2.0f;     ///< 注視点へ引き寄せる際の最小距離
+    static constexpr float kCameraFloorClearance = 0.5f;  ///< 地表からの最低クリアランス
+    static constexpr float kFieldClampMargin = 2.0f;      ///< フィールド円柱境界からの内側マージン
 
     // 閾値定数
     static constexpr float kEpsilon = 0.001f; ///< 微小値

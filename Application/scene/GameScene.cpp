@@ -126,9 +126,15 @@ void GameScene::Finalize()
     /// ===================================================
     aroundField_->Finalize();
     pSceneManager_->SetClearTime(ClearTimer_);
+    pSceneManager_->SetIsGameOver(!player_ptr->GetIsAlive());
     if (player_ptr->GetIsAlive())
     {
         pSceneManager_->SetHP(player_ptr->GetHP());
+    }
+    else
+    {
+        // ゲームオーバー時は残りHPを0として扱う（リザルト表示用）
+        pSceneManager_->SetHP(0.0f);
     }
     BaseScene::Finalize();
 }

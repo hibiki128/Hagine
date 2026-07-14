@@ -87,4 +87,5 @@ class ClearScene : public Hagine::BaseScene
     const float cameraStartTimer_ = 3.0f;  // カメラ開始タイマー
     float currentCameraStartTimer_ = 0.0f; // 現在のカメラ開始タイマー
     bool cameraStart_ = false;             // カメラ開始フラグ
+    bool isGameOver_ = false;              // ゲームオーバー経由での遷移か（花火・ランク表示の分岐用）
 };

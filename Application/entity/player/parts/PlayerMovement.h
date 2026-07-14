@@ -166,7 +166,7 @@ class PlayerMovement
 
     // 速度・移動関連定数
     static constexpr float kMaxFallVelocity = -40.0f;
-    static constexpr float kGroundLevel = 0.0f;
+    static constexpr float kGroundSnapDistance = 1.0f; // 下り坂で接地を維持する吸着距離
     static constexpr float kVelocityZero = 0.0f;
     static constexpr float kRushGroundOffset = 0.1f;
     static constexpr float kLandingSpeedThreshold = 0.5f;

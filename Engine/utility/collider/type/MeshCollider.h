@@ -90,6 +90,19 @@ class MeshCollider : public ColliderBase
     bool Depenetrate(const AABB &aabb, Vector3 &outMTV) const;
 
     /// <summary>
+    /// ワールド空間のレイとメッシュの交差判定（最近傍ヒット）。
+    /// 地形の高さ問い合わせやカメラ遮蔽判定に使う。
+    /// </summary>
+    /// <param name="origin">レイの始点（ワールド空間）</param>
+    /// <param name="direction">レイの方向（正規化不要）</param>
+    /// <param name="maxDistance">判定する最大距離</param>
+    /// <param name="outDistance">ヒットした場合の始点からの距離</param>
+    /// <param name="outNormal">ヒット面の法線（レイと向かい合う側・ワールド空間）</param>
+    /// <returns>bool: ヒットしたら true</returns>
+    bool Raycast(const Vector3 &origin, const Vector3 &direction, float maxDistance,
+                 float &outDistance, Vector3 &outNormal) const;
+
+    /// <summary>
     /// 全三角形を内包するワールド空間のバウンディング球を返す。
     /// Mesh×Meshの押し戻しで、動かす側を球近似して相手メッシュから押し出す用途に使う。
     /// （球モデルのような凸でコンパクトな形状なら近似誤差は小さい）

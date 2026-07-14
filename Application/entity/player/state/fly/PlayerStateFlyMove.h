@@ -74,7 +74,6 @@ class PlayerStateFlyMove : public PlayerBaseState
     static constexpr float kFallThresholdTime = 0.3f;      // 落下入力閾値時間
     static constexpr float kVelocityZero = 0.0f;           // 速度ゼロ
     static constexpr float kAccelerationZero = 0.0f;       // 加速度ゼロ
-    static constexpr float kGroundLevel = 0.0f;            // 地面レベル
     static constexpr float kInitialTime = 0.0f;            // 初期時間
     static constexpr int kInitialCount = 0;                // 初期カウント
     static constexpr int kFallInputThreshold = 1;          // 落下入力閾値

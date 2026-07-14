@@ -332,6 +332,9 @@ void BaseObject::CreateModel(const std::string modelname)
         obj3d_->SetTexture(texturePaths_[i], i);
     }
 
+    // マテリアル（ノーマルマップ関連）情報を適用（マテリアル生成後に行う）
+    LoadMaterials();
+
     AnimaLoadFromJson();
 }
 
@@ -359,6 +362,9 @@ void BaseObject::CreatePrimitiveModel(const PrimitiveType &type)
     obj3d_->CreatePrimitiveModel(type_, texturePaths_[0]);
 
     SetColor(ObjectDatas_->Load<Vector4>("color_" + std::to_string(0), {1.0f, 1.0f, 1.0f, 1.0f}), 0);
+
+    // マテリアル（ノーマルマップ関連）情報を適用（マテリアル生成後に行う）
+    LoadMaterials();
 
     AnimaLoadFromJson();
 }
@@ -468,6 +474,9 @@ void BaseObject::SaveToJson()
     // 物理（リジッドボディ）情報を保存
     SavePhysics();
 
+    // マテリアル（ノーマルマップ関連）情報を保存
+    SaveMaterials();
+
     // コライダー情報を保存
     SaveColliders();
     ObjectDatas_->Flush();
@@ -506,6 +515,9 @@ void BaseObject::SceneSaveToJson()
 
     // 物理（リジッドボディ）情報を保存
     SavePhysics();
+
+    // マテリアル（ノーマルマップ関連）情報を保存
+    SaveMaterials();
 
     // コライダー情報を保存
     SaveColliders();
@@ -649,6 +661,64 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName)
     if (resolveCollision_)
     {
         InstallResolveCallbacks();
+    }
+}
+
+void BaseObject::SaveMaterials()
+{
+    if (!ObjectDatas_ || !obj3d_)
+    {
+        return;
+    }
+
+    // マテリアルごとのノーマルマップ関連設定を保存する
+    for (int i = 0; i < static_cast<int>(obj3d_->GetMaterialCount()); ++i)
+    {
+        Material *mat = obj3d_->GetMaterial(i);
+        if (!mat)
+            continue;
+
+        const MaterialData &md = mat->GetMaterialData();
+        std::string prefix = "material_" + std::to_string(i) + "_";
+
+        ObjectDatas_->Save<bool>(prefix + "enableNormalMap", md.enableNormalMap);
+        ObjectDatas_->Save<std::string>(prefix + "normalMapPath", md.hasNormalMapTexture ? md.normalMapFilePath : "");
+        ObjectDatas_->Save<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
+        ObjectDatas_->Save<float>(prefix + "proceduralScale", md.proceduralScale);
+        ObjectDatas_->Save<float>(prefix + "normalStrength", md.normalStrength);
+    }
+}
+
+void BaseObject::LoadMaterials()
+{
+    if (!ObjectDatas_ || !obj3d_)
+    {
+        return;
+    }
+
+    // マテリアルごとのノーマルマップ関連設定を読み込む
+    // （キーが存在しない場合は現在値を既定にして何も変えない）
+    for (int i = 0; i < static_cast<int>(obj3d_->GetMaterialCount()); ++i)
+    {
+        Material *mat = obj3d_->GetMaterial(i);
+        if (!mat)
+            continue;
+
+        MaterialData &md = mat->GetMaterialData();
+        std::string prefix = "material_" + std::to_string(i) + "_";
+
+        // 法線マップ画像が保存されていればテクスチャを読み込んで有効化する
+        std::string nmPath = ObjectDatas_->Load<std::string>(prefix + "normalMapPath", "");
+        if (!nmPath.empty())
+        {
+            mat->SetNormalMap(nmPath);
+        }
+
+        // フラグ類は SetNormalMap の副作用より保存値を優先する
+        md.enableNormalMap = ObjectDatas_->Load<bool>(prefix + "enableNormalMap", md.enableNormalMap);
+        md.enableProceduralNormal = ObjectDatas_->Load<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
+        md.proceduralScale = ObjectDatas_->Load<float>(prefix + "proceduralScale", md.proceduralScale);
+        mat->SetNormalStrength(ObjectDatas_->Load<float>(prefix + "normalStrength", md.normalStrength));
     }
 }
 

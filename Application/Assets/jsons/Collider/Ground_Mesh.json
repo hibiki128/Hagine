@@ -1,0 +1,9 @@
+{
+    "collideWithAll": false,
+    "collisionMask": [],
+    "isEnabled": true,
+    "isVisible": true,
+    "sourceModelPath": "Field/Ground.obj",
+    "tag": "Ground",
+    "wireframeVisible": true
+}

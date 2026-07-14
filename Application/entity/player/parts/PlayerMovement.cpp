@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "PlayerMovement.h"
 #include <Application/entity/enemy/Enemy.h>
+#include <Application/entity/field/ground/Ground.h>
 #include <Application/entity/player/Player.h>
 #include <Application/camera/follow/FollowCamera.h>
 #include <data/DataHandler.h>
@@ -327,18 +328,21 @@ void PlayerMovement::CollisionGround()
     pOwner_->GetLocalPosition().x += velocity_.x * dt;
     pOwner_->GetLocalPosition().z += velocity_.z * dt;
 
-    if (nextY <= kGroundLevel)
+    // 移動後のXZ位置における接地レベル（地形メッシュの表面高さ＋立ちオフセット）
+    const float groundLevel = Ground::GetStandingY(pOwner_->GetLocalPosition().x, pOwner_->GetLocalPosition().z);
+
+    if (nextY <= groundLevel)
     {
         // Rush状態の場合は地面から押し戻す（地面に埋まらないよう浮かせる）
         if (pOwner_->GetCurrentStateName() == "Rush")
         {
-            pOwner_->GetLocalPosition().y = kRushGroundOffset;
+            pOwner_->GetLocalPosition().y = groundLevel + kRushGroundOffset;
             velocity_.y = kVelocityZero;
             return;
         }
 
         // 地面に接地（Rush 以外）
-        pOwner_->GetLocalPosition().y = kGroundLevel;
+        pOwner_->GetLocalPosition().y = groundLevel;
         if (!isGrounded_)
         {
             velocity_.y = kVelocityZero;
@@ -357,6 +361,12 @@ void PlayerMovement::CollisionGround()
                 }
             }
         }
+    }
+    else if (isGrounded_ && velocity_.y <= kVelocityZero && nextY - groundLevel <= kGroundSnapDistance)
+    {
+        // 下り坂で毎フレーム接地が外れてガタつかないよう、僅かな段差は地面に吸着させる
+        pOwner_->GetLocalPosition().y = groundLevel;
+        velocity_.y = kVelocityZero;
     }
     else
     {

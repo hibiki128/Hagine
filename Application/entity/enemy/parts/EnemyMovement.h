@@ -153,7 +153,7 @@ class EnemyMovement
     static constexpr float kMinRotationDistance = 0.001f;
     static constexpr float kParallelThreshold = 0.999f;
     static constexpr float kRotationSpeed = 8.0f;
-    static constexpr float kGroundLevel = 0.0f;
+    static constexpr float kGroundSnapDistance = 1.0f; // 下り坂で接地を維持する吸着距離
     static constexpr float kVelocityZero = 0.0f;
 
     // イージング関連定数

@@ -2,6 +2,16 @@
 #include "particle/gpu/ParticleCSEditor.h"
 
 using namespace Hagine;
+
+AroundField::~AroundField()
+{
+    // 自身がアクティブフィールドとして登録されている場合のみ解除する
+    if (activeField_ == AroundField_)
+    {
+        activeField_ = nullptr;
+    }
+}
+
 void AroundField::Init(const std::string objectName)
 {
     BaseObject::Init(objectName);
@@ -14,6 +24,7 @@ void AroundField::Init(const std::string objectName)
     AroundField_->SetPositionGetter([]() -> Vector3 { return Vector3(0.0f, 70.0f, 0.0f); });
     AroundField_->SetInward(true); // 内側への押し戻しを設定
     AroundField_->SetTag("CylinderField");
+    activeField_ = AroundField_;
 
     // コンピュートシェーダパーティクルの生成
     fieldParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("AroundField");

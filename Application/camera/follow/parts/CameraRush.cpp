@@ -118,6 +118,9 @@ bool CameraRush::UpdateRushCamera(Player *pPlayer)
 
     worldTransform.UpdateMatrix();
 
+    // 地形・フィールド境界との衝突解消（すり抜け防止）
+    pOwner_->ResolveCameraCollision();
+
     // ビュープロジェクションへ反映してカメラを確定
     pOwner_->ApplyToViewProjection();
     return true;

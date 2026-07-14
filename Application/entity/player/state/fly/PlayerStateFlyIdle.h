@@ -66,7 +66,6 @@ class PlayerStateFlyIdle : public PlayerBaseState
     static constexpr float kVelocityZero = 0.0f;           // 速度ゼロ
     static constexpr float kAccelerationZero = 0.0f;       // 加速度ゼロ
     static constexpr float kMoveSpeedZero = 0.0f;          // 移動速度ゼロ
-    static constexpr float kGroundLevel = 0.0f;            // 地面レベル
 
     // Rush 遷移パラメータ
     static constexpr float kRushEnergyCost = 30.0f;     // Rush 遷移のエネルギーコスト

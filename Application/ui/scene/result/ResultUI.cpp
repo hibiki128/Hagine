@@ -2,6 +2,7 @@
 #include <Frame.h>
 #include <GamePad.h>
 #include <Input.h>
+#include <algorithm>
 
 using namespace Hagine;
 void ResultUI::Initialize()
@@ -24,6 +25,7 @@ void ResultUI::Initialize()
     sprites_[kHPOnes] = SpriteManager::GetInstance()->GetSprite("HpOnes");
     sprites_[kPercent] = SpriteManager::GetInstance()->GetSprite("percent");
     sprites_[kRank] = SpriteManager::GetInstance()->GetSprite("Rank");
+    sprites_[kRankValue] = SpriteManager::GetInstance()->GetSprite("RankValue");
 
     // 終了位置(本来の位置)を保存
     for (int i = 0; i < kMaxSprite; ++i)
@@ -46,6 +48,7 @@ void ResultUI::Initialize()
     sprites_[kHPOnes]->sprite->SetPosition({-510.0f, 610.0f});
     sprites_[kPercent]->sprite->SetPosition({-410.0f, 610.0f});
     sprites_[kRank]->sprite->SetPosition({-710.0f, 800.0f});
+    sprites_[kRankValue]->sprite->SetPosition({-410.0f, 800.0f});
 
     // イージングデータの初期化
     for (int i = 0; i < kMaxSprite; ++i)
@@ -131,10 +134,13 @@ void ResultUI::SkipHPAnimation()
 
 void ResultUI::SkipRankDisplay()
 {
-    // ランクの表示を即座に完了
-    positionEasings_[kRank].isActive = true;
-    sprites_[kRank]->sprite->SetPosition(endPositions_[kRank]);
-    positionEasings_[kRank].time = kEasingDuration;
+    // ランク（見出し・評価文字）の表示を即座に完了
+    for (int i = kRank; i < kMaxSprite; ++i)
+    {
+        positionEasings_[i].isActive = true;
+        sprites_[i]->sprite->SetPosition(endPositions_[i]);
+        positionEasings_[i].time = kEasingDuration;
+    }
     currentEasingIndex_ = kMaxSprite;
     skipPhase_ = kAllSkipped;
 }
@@ -411,6 +417,52 @@ void ResultUI::UpdateNumberSprites()
     // HPの一の位
     int hpOnes = hp % kDigitDivisor;
     sprites_[kHPOnes]->sprite->SetUVPosition({static_cast<float>(hpOnes) * kUVStep, 0.0f});
+
+    // ランクの評価文字（アトラス "SABCDEFG" から1文字を切り出し、ランク色で表示）
+    int rankIndex = CalculateRankIndex();
+    sprites_[kRankValue]->sprite->SetUVPosition({static_cast<float>(rankIndex) * kRankUVStep, 0.0f});
+
+    // ランクごとの色（S=金 ～ G=灰）
+    static const Hagine::Vector3 kRankColors[] = {
+        {1.00f, 0.85f, 0.20f}, // S: 金
+        {1.00f, 0.35f, 0.30f}, // A: 赤
+        {1.00f, 0.60f, 0.20f}, // B: 橙
+        {0.95f, 0.90f, 0.30f}, // C: 黄
+        {0.40f, 0.85f, 0.40f}, // D: 緑
+        {0.40f, 0.70f, 1.00f}, // E: 水色
+        {0.70f, 0.50f, 0.90f}, // F: 紫
+        {0.60f, 0.60f, 0.60f}, // G: 灰
+    };
+    sprites_[kRankValue]->sprite->SetColor(kRankColors[rankIndex]);
+}
+
+int ResultUI::CalculateRankIndex() const
+{
+    // ゲームオーバーは常に最低ランクG
+    if (isGameOver_)
+    {
+        return kRankIndexG;
+    }
+
+    // タイム（早いほど高い）とHP（多いほど高い）を半々で合成した0~1のスコア
+    float timeScore = kNormalizeValue - std::clamp((ClearTime_ - kRankBestTime) / (kRankWorstTime - kRankBestTime), 0.0f, 1.0f);
+    float hpScore = std::clamp(HP_ / kRankMaxHP, 0.0f, 1.0f);
+    float total = timeScore * 0.5f + hpScore * 0.5f;
+
+    // クリア時はF以上（Gにはならない）。スコアの高い順に S, A, B, C, D, E, F
+    if (total >= 0.90f)
+        return 0; // S
+    if (total >= 0.75f)
+        return 1; // A
+    if (total >= 0.60f)
+        return 2; // B
+    if (total >= 0.45f)
+        return 3; // C
+    if (total >= 0.30f)
+        return 4; // D
+    if (total >= 0.15f)
+        return 5; // E
+    return kRankIndexF;
 }
 
 void ResultUI::Draw()

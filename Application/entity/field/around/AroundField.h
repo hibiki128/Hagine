@@ -14,6 +14,11 @@ class AroundField : public Hagine::BaseObject
     /// ===================================================
 
     /// <summary>
+    /// デストラクタ（アクティブフィールドの登録を解除する）
+    /// </summary>
+    ~AroundField() override;
+
+    /// <summary>
     /// 初期化
     /// </summary>
     /// <param name="objectName">オブジェクト名</param>
@@ -48,6 +53,12 @@ class AroundField : public Hagine::BaseObject
     /// </summary>
     void Finalize();
 
+    /// <summary>
+    /// アクティブなフィールド境界の円柱コライダーを取得（存在しなければ nullptr）。
+    /// カメラをフィールド内へクランプする用途などに使う
+    /// </summary>
+    static const Hagine::CylinderCollider *GetFieldCollider() { return activeField_; }
+
   private:
     /// ===================================================
     /// private variants
@@ -55,4 +66,6 @@ class AroundField : public Hagine::BaseObject
 
     Hagine::CylinderCollider *AroundField_ = nullptr;                    // 円柱コライダー
     std::unique_ptr<Hagine::ParticleCSEmitter> fieldParticle_ = nullptr; // フィールドパーティクル
+
+    static inline const Hagine::CylinderCollider *activeField_ = nullptr; // アクティブシーンのフィールドコライダー
 };
