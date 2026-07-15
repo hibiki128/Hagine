@@ -94,6 +94,17 @@ void GameScene::Initialize()
 #endif
 
     /// ===================================================
+    /// シーン開始時のパーティクル遷移
+    /// タイトル演出経由（通常トランジション無効で遷移してきた）のときだけ使う。
+    /// チュートリアル等から通常トランジションで来た場合はそのまま開始する
+    /// ===================================================
+    if (!SceneManager::GetInstance()->GetSceneTransition()->GetUseTransition())
+    {
+        fadeOut_ = std::make_unique<FadeOut>();
+        fadeOut_->Initialize(); // 内部で通常トランジションを再有効化する
+    }
+
+    /// ===================================================
     /// DrawSystem 登録
     /// ===================================================
     // GPU パーティクル Compute フェーズ
@@ -112,6 +123,10 @@ void GameScene::Initialize()
         followCamera_->DrawFrustum();
     });
     pDrawSystem_->Register("GameScene_UI", DrawLayer::PostEffect, [this](const ViewProjection &) {
+        if (fadeOut_)
+        {
+            fadeOut_->Draw(vp_);
+        }
         playerUI_->Draw();
         enemyUI_->Draw();
         gameUI_->Draw();
@@ -124,6 +139,10 @@ void GameScene::Finalize()
     /// ===================================================
     /// 終了処理
     /// ===================================================
+    if (fadeOut_)
+    {
+        fadeOut_->Finalize();
+    }
     aroundField_->Finalize();
     pSceneManager_->SetClearTime(ClearTimer_);
     pSceneManager_->SetIsGameOver(!player_ptr->GetIsAlive());
@@ -163,6 +182,10 @@ void GameScene::Update()
 #endif
 
     aroundField_->Update();
+    if (fadeOut_)
+    {
+        fadeOut_->Update();
+    }
     playerUI_->Update();
     enemyUI_->Update();
 
@@ -172,10 +195,14 @@ void GameScene::Update()
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
 
 #ifdef _DEBUG
-    player_ptr->SetStart(true);
-    enemy_ptr->SetStart(true);
+    // パーティクル遷移中は操作開始しない（遷移中にカメラが動くのを防ぐ）。遷移なしなら即開始
+    if (!fadeOut_ || fadeOut_->IsFinish())
+    {
+        player_ptr->SetStart(true);
+        enemy_ptr->SetStart(true);
+    }
 #else
-    // 開始演出待ち
+    // 開始演出待ち（パーティクル遷移→開始カメラ演出の順に進む）
     if (startCamera_->IsComplete())
     {
         player_ptr->SetStart(true);
@@ -245,6 +272,10 @@ void GameScene::AddParticleSetting()
     /// パーティクル設定（デバッグ）
     /// ===================================================
     aroundField_->Debug();
+    if (fadeOut_)
+    {
+        fadeOut_->ImGui();
+    }
 }
 
 void GameScene::CameraUpdate()
@@ -262,7 +293,16 @@ void GameScene::CameraUpdate()
         {
             followCamera_->Update();
 #ifndef _DEBUG
-            if (!startCamera_->IsComplete())
+            // パーティクル遷移中はカメラを動かさない。
+            // 遷移パーティクル（長方形）はカメラ正面に追従配置されるため、
+            // 完了までフォローカメラの静止ポーズで固定する
+            if (fadeOut_ && !fadeOut_->IsFinish())
+            {
+                vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
+                vp_.matView_ = followCamera_->GetViewProjection().matView_;
+                vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
+            }
+            else if (!startCamera_->IsComplete())
             {
                 startCamera_->Move();
                 startCamera_->SetTargetVp(followCamera_->GetViewProjection());

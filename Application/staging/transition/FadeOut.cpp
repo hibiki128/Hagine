@@ -1,7 +1,10 @@
+#define NOMINMAX
 #include "FadeOut.h"
 #include "scene/SceneManager.h"
 #include "SpriteManager.h"
 #include <particle/gpu/ParticleCSEditor.h>
+#include <algorithm>
+#include <cmath>
 
 using namespace Hagine;
 void FadeOut::Initialize()
@@ -14,11 +17,9 @@ void FadeOut::Initialize()
     fadeOut_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("FadeOut");
     fadeOut_->SetAuto(true);
     timer_ = 0.0f;
-    fadeOut_->SetTranslate({kPositionX, kPositionY, kPositionZ});
 
-    // 回転の設定
-    Quaternion rotation = Quaternion::FromEulerAngles({degreesToRadians(kRotationX), 0.0f, 0.0f});
-    fadeOut_->SetRotation(rotation);
+    // 壁のサイズを画面を覆える大きさに設定（配置は Draw でカメラ正面に毎フレーム追従）
+    fadeOut_->SetScale({kWallHalfWidth, kWallHalfHeight, 1.0f});
 
     // シーントランジションの使用を有効化
     SceneManager::GetInstance()->GetSceneTransition()->SetUseTransition(true);
@@ -34,6 +35,25 @@ void FadeOut::Update()
 
 void FadeOut::Draw(const ViewProjection &vp)
 {
+    // パーティクル発生中は、エミッター（長方形の壁）をカメラの真正面に追従配置して
+    // 画面全体を確実に覆う（ワールド固定配置だとシーンごとのカメラ位置で隙間が出る）
+    if (timer_ <= kParticleStopTime)
+    {
+        Vector3 camPos = {vp.matWorld_.m[3][0], vp.matWorld_.m[3][1], vp.matWorld_.m[3][2]};
+        Vector3 forward = {vp.matWorld_.m[2][0], vp.matWorld_.m[2][1], vp.matWorld_.m[2][2]};
+        float len = forward.Length();
+        if (len > 0.001f)
+        {
+            forward = forward / len;
+
+            // 壁（XY面・法線+Z）をカメラの向きに合わせる（ヨー→ピッチの順で合成）
+            float yaw = std::atan2(forward.x, forward.z);
+            float pitch = std::asin(std::clamp(-forward.y, -1.0f, 1.0f));
+            fadeOut_->SetTranslate(camPos + forward * kCameraDistance);
+            fadeOut_->SetRotation(Quaternion::FromEulerAnglesSafe({pitch, yaw, 0.0f}));
+        }
+    }
+
     if (SpriteManager::GetInstance()->GetSprite("transition"))
     {
         // 一定時間内はスプライトを表示

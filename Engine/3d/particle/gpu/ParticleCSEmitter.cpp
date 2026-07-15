@@ -128,6 +128,11 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp)
         if (!groupActive_[i])
             continue;
         auto &group = particleGroups_[i];
+        // Trail/Rotation/Override バッファは Emit CS も書き込むため、Emit のバインドより前に本確保する。
+        // Update 内の確保だけだと、初回 Emit がダミーバッファへ書いて OOB で破棄され、
+        // その粒子のトレイル状態（lastTrailPosition 等）が未初期化になる
+        // （花火が偶にトレイル無しで打ち上がる不具合の原因）
+        group->EnsureUpdateOptionalBuffers(fieldsActive);
         group->Update(vp);
         group->AdvanceAliveFrame();
         group->ResetAliveCounterDispatch(computeCmdList);

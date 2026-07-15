@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <FxCompile Include="Engine\EngineAssets\shaders\particle\gpu\ParticleCS.PS.hlsl">
@@ -170,6 +170,9 @@
     </ClCompile>
     <ClCompile Include="Application\staging\death\DeathStaging.cpp">
       <Filter>Application\staging\death</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\staging\dash\DashEffect.cpp">
+      <Filter>Application\staging\dash</Filter>
     </ClCompile>
     <ClCompile Include="Application\staging\result\ResultStaging.cpp">
       <Filter>Application\staging\result</Filter>
@@ -626,6 +629,9 @@
     </ClInclude>
     <ClInclude Include="Application\staging\death\DeathStaging.h">
       <Filter>Application\staging\death</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\staging\dash\DashEffect.h">
+      <Filter>Application\staging\dash</Filter>
     </ClInclude>
     <ClInclude Include="Application\staging\result\ResultStaging.h">
       <Filter>Application\staging\result</Filter>
@@ -1084,6 +1090,9 @@
     </Filter>
     <Filter Include="Application\staging\death">
       <UniqueIdentifier>{e04ce879-c6d6-462c-8ae7-66c551d246e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\staging\dash">
+      <UniqueIdentifier>{1a8a64d1-7f67-4bbd-9416-a36a146faa89}</UniqueIdentifier>
     </Filter>
     <Filter Include="Application\staging\result">
       <UniqueIdentifier>{224742e9-1b6c-4d94-8da5-3b4f408e77b0}</UniqueIdentifier>

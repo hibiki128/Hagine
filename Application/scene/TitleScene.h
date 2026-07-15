@@ -6,6 +6,7 @@
 #include "skybox/SkyBox.h"
 #include "Application/ui/scene/title/TitleUI.h"
 #include <GamePad.h>
+#include <string>
 
 /// <summary>
 /// タイトルシーンのクラス
@@ -74,7 +75,7 @@ class TitleScene : public Hagine::BaseScene
     void ChangeScene();
 
     /// <summary>
-    /// チュートリアル/トレーニング選択メニューのスプライトを生成する
+    /// チュートリアル/ゲーム/トレーニング選択メニューのスプライトを生成する
     /// </summary>
     void CreateMenuSprites();
 
@@ -86,8 +87,8 @@ class TitleScene : public Hagine::BaseScene
     // ---- 入力ヘルパ（キーボード/パッド両対応）----
     bool PressStartInput(); // Press Start / 決定（A / SPACE）
     bool ConfirmInput();    // メニュー決定（A / SPACE / Enter）
-    bool UpInput();         // カーソル上（チュートリアル）
-    bool DownInput();       // カーソル下（トレーニング）
+    bool UpInput();         // カーソルを1つ上へ
+    bool DownInput();       // カーソルを1つ下へ
 
   private:
     /// ===================================================
@@ -97,11 +98,11 @@ class TitleScene : public Hagine::BaseScene
     /// タイトル進行フェーズ
     enum class TitlePhase
     {
-        WaitStart,         // Press Start 待ち
-        Menu,              // チュートリアル/トレーニング 選択中
-        MenuClosing,       // 決定後のメニュー退場アニメ中
-        TutorialCinematic, // チュートリアル開始演出中
-        Training,          // トレーニングへ遷移予約済み
+        WaitStart,   // Press Start 待ち
+        Menu,        // チュートリアル/ゲーム/トレーニング 選択中
+        MenuClosing, // 決定後のメニュー退場アニメ中
+        Cinematic,   // 開始演出中（チュートリアル/ゲーム共通）
+        Training,    // トレーニングへ遷移予約済み
     };
 
     float time_ = 0.0f;           // 経過時間
@@ -110,10 +111,13 @@ class TitleScene : public Hagine::BaseScene
     bool secondMove_ = false;     // 二番目のカメラ移動フラグ
 
     TitlePhase titlePhase_ = TitlePhase::WaitStart; // 進行フェーズ
-    int menuIndex_ = 0;                             // 0=チュートリアル / 1=トレーニング
+    int menuIndex_ = 0;                             // 0=チュートリアル / 1=ゲーム / 2=トレーニング
     float menuAnimTimer_ = 0.0f;                    // メニュー出現アニメの経過時間
-    float menuSelectLerp_ = 0.0f;                   // カーソル/ハイライトの補間値(0=上, 1=下)
+    float menuSelectLerp_ = 0.0f;                   // カーソル/ハイライトの補間値(0=上端)
     float menuCloseTimer_ = 0.0f;                   // 決定後の退場アニメ経過時間
+    std::string cinematicNextScene_ = "TUTORIAL";   // 開始演出後に遷移するシーン名
+    bool prevStickUp_ = false;                      // 前フレームのスティック上入力（エッジ検出用）
+    bool prevStickDown_ = false;                    // 前フレームのスティック下入力（エッジ検出用）
 
     Hagine::SkyBox *pSkyBox_ = nullptr; // スカイボックス
 
@@ -122,16 +126,25 @@ class TitleScene : public Hagine::BaseScene
 
     // 選択メニュー用スプライト
     std::unique_ptr<Hagine::Sprite> menuTutorial_ = nullptr;
+    std::unique_ptr<Hagine::Sprite> menuGame_ = nullptr;
     std::unique_ptr<Hagine::Sprite> menuTraining_ = nullptr;
     std::unique_ptr<Hagine::Sprite> menuCursor_ = nullptr;
     Hagine::Vector2 menuTutorialPos_{};
+    Hagine::Vector2 menuGamePos_{};
     Hagine::Vector2 menuTrainingPos_{};
+
+    // メニュー項目インデックス
+    static constexpr int kMenuItemCount = 3;    // メニュー項目数
+    static constexpr int kMenuIndexTutorial = 0; // チュートリアル
+    static constexpr int kMenuIndexGame = 1;     // ゲーム本編
+    static constexpr int kMenuIndexTraining = 2; // トレーニング
 
     // メニュー配置定数
     static constexpr float kMenuTextHeight = 64.0f; // メニュー文字の高さ（大きめ）
     static constexpr float kMenuX = 720.0f;         // メニュー左端の最終X
     static constexpr float kMenuTutorialY = 520.0f; // チュートリアルY
-    static constexpr float kMenuTrainingY = 650.0f; // トレーニングY
+    static constexpr float kMenuGameY = 650.0f;     // ゲームY
+    static constexpr float kMenuTrainingY = 780.0f; // トレーニングY
     static constexpr float kMenuCursorGap = 78.0f;  // カーソルの左オフセット
 
     // メニュー出現アニメ（画面右外からイージングでスライドイン）

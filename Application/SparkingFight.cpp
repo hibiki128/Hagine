@@ -39,6 +39,8 @@ void SparkingFight::LoadGameResources()
     pParticleCSEditor_->AddParticleEmitter("ChargeAura");
     pParticleCSEditor_->AddParticleEmitter("enemyChargeAura");
     pParticleCSEditor_->AddParticleEmitter("AroundField");
+    pParticleCSEditor_->AddParticleEmitter("dashWind");
+    pParticleCSEditor_->AddParticleEmitter("dashAfterglow");
 
     // パーティクルフィールド
     pParticleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");

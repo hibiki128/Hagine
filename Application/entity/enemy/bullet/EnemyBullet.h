@@ -135,10 +135,13 @@ class EnemyBullet : public Hagine::BaseObject
     static constexpr float kHomingStrength = 20.0f;       // ホーミング強度
     static constexpr float kMinSpeedThreshold = 0.1f;     // 速度判定の最小閾値
     static constexpr float kMaxSpeed = 200.0f;            // 最大速度
-    static constexpr float kForwardOffsetDistance = 2.0f; // 前方オフセット距離
-    static constexpr float kVerticalOffset = 1.0f;        // 垂直方向オフセット
+    static constexpr float kForwardOffsetDistance = 2.0f; // 前方オフセット距離（ジョイント取得失敗時の代用）
+    static constexpr float kVerticalOffset = 1.0f;        // 垂直方向オフセット（ジョイント取得失敗時の代用）
     static constexpr int kBulletDamage = 1;               // 弾のダメージ値
     static constexpr float kFallbackKillY = -10.0f;       // 地形外へ抜けた弾を消す高さ（保険）
+
+    static constexpr const char *kHandJointName = "mixamorig:RightHand"; // 発射起点に使う手ジョイント名
+    static constexpr float kHandForwardOffset = 0.5f;                    // 手からの前方オフセット距離
 
     Hagine::Vector3 velocity_;          // 速度
     float speed_ = kDefaultSpeed;       // 移動速度

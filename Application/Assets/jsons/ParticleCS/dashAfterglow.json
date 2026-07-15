@@ -1,0 +1,66 @@
+{
+    "drawGroup": "3D",
+    "emitFromSurface": 1,
+    "emitOnlyOnFieldContact": false,
+    "fieldContactEmitCount": 1000,
+    "fieldGroupId": -1,
+    "frequency": 0.016,
+    "frequencyTime": 0.0,
+    "group_0_blendMode": 2,
+    "group_0_emitCount": 3,
+    "group_0_emitShape": 0,
+    "group_0_emitSphereRadius": 1.0,
+    "group_0_emitConeAngle": 0.5236,
+    "group_0_enableBillboard": 1,
+    "group_0_enableLifetimeScale": 1,
+    "group_0_endColor": {
+        "w": 0.0,
+        "x": 0.1,
+        "y": 0.3,
+        "z": 1.0
+    },
+    "group_0_maxLifetime": 0.45,
+    "group_0_maxScale": 0.8,
+    "group_0_maxVelocity": {
+        "x": 0.3,
+        "y": 0.3,
+        "z": 0.3
+    },
+    "group_0_minLifetime": 0.25,
+    "group_0_minScale": 0.5,
+    "group_0_minVelocity": {
+        "x": -0.3,
+        "y": -0.3,
+        "z": -0.3
+    },
+    "group_0_name": "dashAfterglow",
+    "group_0_startColor": {
+        "w": 0.35,
+        "x": 0.3,
+        "y": 0.7,
+        "z": 1.0
+    },
+    "isAuto": false,
+    "isGizmoSelectable": true,
+    "isVisible": false,
+    "modelPath": "",
+    "particleGroupCount": 1,
+    "primitiveType": 2,
+    "receiveFields": false,
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 0.9,
+        "y": 0.9,
+        "z": 0.9
+    },
+    "translate": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    }
+}
