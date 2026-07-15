@@ -1,10 +1,11 @@
 #include "SparkingFight.h"
-#include <Debug/CpuProfiler/CpuProfiler.h>
+#include <debug/profiler/CpuProfiler.h>
 #include <Frame.h>
 
 using namespace Hagine;
 
-void SparkingFight::Initialize() {
+void SparkingFight::Initialize()
+{
     Framework::Initialize();
     Framework::LoadResource();
     LoadGameResources();
@@ -12,42 +13,44 @@ void SparkingFight::Initialize() {
     Framework::RegisterShortcutKey();
 
     // 最初のシーンを予約（シーンは各 .cpp の REGISTER_SCENE で自己登録済み）
-    sceneManager_->NextSceneReservation("TITLE");
+    pSceneManager_->NextSceneReservation("TITLE");
 }
 
-void SparkingFight::LoadGameResources() {
+void SparkingFight::LoadGameResources()
+{
     // CPUパーティクルのエミッター
-    particleEditor_->AddParticleEmitter("hitEmitter");
-    particleEditor_->AddParticleEmitter("bulletEmitter");
-    particleEditor_->AddParticleEmitter("enemyBulletEmitter");
-    particleEditor_->AddParticleEmitter("chageBullet");
-    particleEditor_->AddParticleEmitter("RushEmitter");
-    particleEditor_->AddParticleEmitter("punchEmitter");
-    particleEditor_->AddParticleEmitter("smokeEmitter");
+    pParticleEditor_->AddParticleEmitter("hitEmitter");
+    pParticleEditor_->AddParticleEmitter("bulletEmitter");
+    pParticleEditor_->AddParticleEmitter("enemyBulletEmitter");
+    pParticleEditor_->AddParticleEmitter("chargeBullet");
+    pParticleEditor_->AddParticleEmitter("RushEmitter");
+    pParticleEditor_->AddParticleEmitter("punchEmitter");
+    pParticleEditor_->AddParticleEmitter("smokeEmitter");
 
     // GPU(CS)パーティクルのエミッター
-    particleCSEditor_->AddParticleEmitter("playerAura");
-    particleCSEditor_->AddParticleEmitter("FadeOut");
-    particleCSEditor_->AddParticleEmitter("death");
-    particleCSEditor_->AddParticleEmitter("death_arm");
-    particleCSEditor_->AddParticleEmitter("makan_main");
-    particleCSEditor_->AddParticleEmitter("makan_around");
-    particleCSEditor_->AddParticleEmitter("chargeEmitter");
-    particleCSEditor_->AddParticleEmitter("fireWork_explosion");
-    particleCSEditor_->AddParticleEmitter("fireWork_Trail");
-    particleCSEditor_->AddParticleEmitter("ChargeAura");
-    particleCSEditor_->AddParticleEmitter("enemyChargeAura");
-    particleCSEditor_->AddParticleEmitter("AroundField");
+    pParticleCSEditor_->AddParticleEmitter("playerAura");
+    pParticleCSEditor_->AddParticleEmitter("FadeOut");
+    pParticleCSEditor_->AddParticleEmitter("die");
+    pParticleCSEditor_->AddParticleEmitter("makan_main");
+    pParticleCSEditor_->AddParticleEmitter("makan_around");
+    pParticleCSEditor_->AddParticleEmitter("chargeEmitter");
+    pParticleCSEditor_->AddParticleEmitter("fireWork_explosion");
+    pParticleCSEditor_->AddParticleEmitter("fireWork_Trail");
+    pParticleCSEditor_->AddParticleEmitter("ChargeAura");
+    pParticleCSEditor_->AddParticleEmitter("enemyChargeAura");
+    pParticleCSEditor_->AddParticleEmitter("AroundField");
 
     // パーティクルフィールド
-    particleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
+    pParticleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
 }
 
-void SparkingFight::Finalize() {
+void SparkingFight::Finalize()
+{
     Framework::Finalize();
 }
 
-void SparkingFight::Update() {
+void SparkingFight::Update()
+{
     // フレーム先頭：前フレームの計測結果を確定し、当フレームの計測を開始する
 #ifdef _DEBUG
     CpuProfiler::GetInstance()->BeginFrame();
@@ -59,42 +62,47 @@ void SparkingFight::Update() {
 #ifdef _DEBUG
     {
         HAGINE_CPU_PROFILE("Update/ImGuiUI(build)");
-        if (imGuiManager_->GetEditorMode()) {
-            input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()}, 10000.0f);
-        } else {
-            input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::kClientWidth), float(WinApp::kClientHeight))}, 10000.0f);
+        if (imGuiManager_->GetEditorMode())
+        {
+            pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()}, 10000.0f);
+        }
+        else
+        {
+            pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::kClientWidth), float(WinApp::kClientHeight))}, 10000.0f);
         }
 
         imGuiManager_->Begin();
-        imGuizmoManager_->BeginFrame();
-        imGuizmoManager_->SetViewProjection(sceneManager_->GetBaseScene()->GetViewProjection());
+        pImGuizmoManager_->BeginFrame();
+        pImGuizmoManager_->SetViewProjection(pSceneManager_->GetBaseScene()->GetViewProjection());
         imGuiManager_->UpdateIni();
-        imGuiManager_->SetCurrentScene(sceneManager_->GetBaseScene());
+        imGuiManager_->SetCurrentScene(pSceneManager_->GetBaseScene());
         imGuiManager_->ShowMainMenu();
-        if (imGuiManager_->GetIsShowMainUI()) {
+        if (imGuiManager_->GetIsShowMainUI())
+        {
             imGuiManager_->ShowDockSpace();
-            imGuiManager_->ShowSceneWindow(offscreen_.get(), sceneManager_->GetCurrentSceneName());
+            imGuiManager_->ShowSceneWindow(offscreen_.get(), pSceneManager_->GetCurrentSceneName());
         }
         imGuiManager_->ShowMainUI(offscreen_.get());
         imGuiManager_->End();
     }
 #endif // _DEBUG
 #ifndef _DEBUG
-    input_->UpdateRay(*sceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::kClientWidth), float(WinApp::kClientHeight))});
+    pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::kClientWidth), float(WinApp::kClientHeight))});
 #endif // _DEBUG
 
     {
         HAGINE_CPU_PROFILE("Update/MotionEditor");
-        motionEditor_->Update(Frame::DeltaTime());
+        pMotionEditor_->Update(Frame::DeltaTime());
     }
 
     // -----------------------
 }
 
-void SparkingFight::Draw() {
+void SparkingFight::Draw()
+{
     {
         HAGINE_CPU_PROFILE("Draw/DrawSystem(rec)");
-        drawSystem_->Draw(*sceneManager_->GetBaseScene()->GetViewProjection());
+        pDrawSystem_->Draw(*pSceneManager_->GetBaseScene()->GetViewProjection());
     }
 
 #ifdef _DEBUG
@@ -108,7 +116,7 @@ void SparkingFight::Draw() {
         // PostDraw は Present(VSync)・FPS固定スリープ・GPU完了待ちを含む。
         // ここが大きくCPUフェーズ計が予算内なら描画(GPU)/VSync待ちが支配的。
         HAGINE_CPU_PROFILE("Draw/Present(待ちVSync/GPU)");
-        dxCommon_->PostDraw();
+        pDxCommon_->PostDraw();
     }
 
 #ifdef _DEBUG

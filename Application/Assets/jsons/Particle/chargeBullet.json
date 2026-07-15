@@ -1,0 +1,303 @@
+{
+    "GroupNames": [
+        "chargeBullet",
+        "chargeAround"
+    ],
+    "chargeAround_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "chargeAround_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeAround_alphaMax": 1.0,
+    "chargeAround_alphaMin": 1.0,
+    "chargeAround_blendMode": 5,
+    "chargeAround_count": 1,
+    "chargeAround_enableTrail": false,
+    "chargeAround_endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeAround_endColor": {
+        "w": 1.0,
+        "x": 0.15412187576293945,
+        "y": 1.0,
+        "z": 0.9363316297531128
+    },
+    "chargeAround_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeAround_endScale": {
+        "x": 1.100000023841858,
+        "y": 1.100000023841858,
+        "z": 1.100000023841858
+    },
+    "chargeAround_gatherStartRatio": 0.0,
+    "chargeAround_gatherStrength": 0.0,
+    "chargeAround_gravity": 0.0,
+    "chargeAround_isAcceMultiply": true,
+    "chargeAround_isAllRandomScale": false,
+    "chargeAround_isBillboard": true,
+    "chargeAround_isBillboardX": false,
+    "chargeAround_isBillboardY": false,
+    "chargeAround_isBillboardZ": false,
+    "chargeAround_isEmitOnEdge": false,
+    "chargeAround_isEndScale": false,
+    "chargeAround_isFaceDirection": false,
+    "chargeAround_isGatherMode": false,
+    "chargeAround_isRandomColor": false,
+    "chargeAround_isRandomRotate": true,
+    "chargeAround_isRandomScale": false,
+    "chargeAround_isSinMove": false,
+    "chargeAround_lifeTimeMax": 0.10000000149011612,
+    "chargeAround_lifeTimeMin": 0.10000000149011612,
+    "chargeAround_maxTrailParticles": 20,
+    "chargeAround_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 3.1415927410125732
+    },
+    "chargeAround_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -3.1415927410125732
+    },
+    "chargeAround_rotateVelocityMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 5.0
+    },
+    "chargeAround_rotateVelocityMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -5.0
+    },
+    "chargeAround_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeAround_scale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeAround_scaleMax": 1.0,
+    "chargeAround_scaleMin": 1.0,
+    "chargeAround_startAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeAround_startColor": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 1.0,
+        "z": 0.5591397285461426
+    },
+    "chargeAround_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeAround_startScale": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "chargeAround_trailColorMultiplier": {
+        "w": 0.699999988079071,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "chargeAround_trailInheritVelocity": true,
+    "chargeAround_trailLifeScale": 0.5,
+    "chargeAround_trailScaleMultiplier": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "z": 0.800000011920929
+    },
+    "chargeAround_trailSpawnInterval": 0.05000000074505806,
+    "chargeAround_trailVelocityScale": 0.30000001192092896,
+    "chargeAround_translate": {
+        "x": 0.699999988079071,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeAround_velocityMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "chargeAround_velocityMin": {
+        "x": -1.0,
+        "y": -1.0,
+        "z": -1.0
+    },
+    "chargeBullet_allScaleMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "chargeBullet_allScaleMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_alphaMax": 1.0,
+    "chargeBullet_alphaMin": 1.0,
+    "chargeBullet_blendMode": 5,
+    "chargeBullet_count": 1,
+    "chargeBullet_enableTrail": false,
+    "chargeBullet_endAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_endColor": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.3261649012565613,
+        "z": 0.2946005165576935
+    },
+    "chargeBullet_endRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_endScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_gatherStartRatio": 0.0,
+    "chargeBullet_gatherStrength": 0.0,
+    "chargeBullet_gravity": 0.0,
+    "chargeBullet_isAcceMultiply": true,
+    "chargeBullet_isAllRandomScale": false,
+    "chargeBullet_isBillboard": true,
+    "chargeBullet_isBillboardX": false,
+    "chargeBullet_isBillboardY": false,
+    "chargeBullet_isBillboardZ": false,
+    "chargeBullet_isEmitOnEdge": false,
+    "chargeBullet_isEndScale": false,
+    "chargeBullet_isFaceDirection": false,
+    "chargeBullet_isGatherMode": false,
+    "chargeBullet_isRandomColor": false,
+    "chargeBullet_isRandomRotate": false,
+    "chargeBullet_isRandomScale": false,
+    "chargeBullet_isSinMove": true,
+    "chargeBullet_lifeTimeMax": 0.4000000059604645,
+    "chargeBullet_lifeTimeMin": 0.10000000149011612,
+    "chargeBullet_maxTrailParticles": 20,
+    "chargeBullet_rotateStartMax": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_rotateStartMin": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_rotateVelocityMax": {
+        "x": 0.07000000029802322,
+        "y": 0.07000000029802322,
+        "z": 0.07000000029802322
+    },
+    "chargeBullet_rotateVelocityMin": {
+        "x": -0.07000000029802322,
+        "y": -0.07000000029802322,
+        "z": -0.07000000029802322
+    },
+    "chargeBullet_rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_scale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_scaleMax": 1.0,
+    "chargeBullet_scaleMin": 1.0,
+    "chargeBullet_startAcce": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_startColor": {
+        "w": 1.0,
+        "x": 0.10919693857431412,
+        "y": 0.8960573673248291,
+        "z": 0.6845356225967407
+    },
+    "chargeBullet_startRote": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_startScale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "chargeBullet_trailColorMultiplier": {
+        "w": 2.0,
+        "x": 2.0,
+        "y": 2.0,
+        "z": 2.0
+    },
+    "chargeBullet_trailInheritVelocity": false,
+    "chargeBullet_trailLifeScale": 1.25,
+    "chargeBullet_trailScaleMultiplier": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+    },
+    "chargeBullet_trailSpawnInterval": 0.0010000000474974513,
+    "chargeBullet_trailVelocityScale": 2.630000114440918,
+    "chargeBullet_translate": {
+        "x": 0.699999988079071,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "chargeBullet_velocityMax": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "chargeBullet_velocityMin": {
+        "x": -1.0,
+        "y": -1.0,
+        "z": -1.0
+    },
+    "emitFrequency": 0.0010000000474974513,
+    "emitterRotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterScale": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "emitterTranslation": {
+        "x": 0.699999988079071,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "isActive": true,
+    "isAuto": true,
+    "isVisible": true
+}

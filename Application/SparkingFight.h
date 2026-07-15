@@ -5,7 +5,8 @@
 /// ゲーム本体クラス
 /// Hagine::Framework を継承し、SparkingFight 固有のリソース読み込み・更新処理を行う
 /// </summary>
-class SparkingFight : public Hagine::Framework {
+class SparkingFight : public Hagine::Framework
+{
   public: // メンバ関数
     /// <summary>
     /// 初期化

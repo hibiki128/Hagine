@@ -42,7 +42,7 @@
     "bullet_gatherStrength": 0.0,
     "bullet_gravity": 0.0,
     "bullet_isAcceMultiply": true,
-    "bullet_isAllRamdomScale": false,
+    "bullet_isAllRandomScale": false,
     "bullet_isBillboard": true,
     "bullet_isBillboardX": false,
     "bullet_isBillboardY": false,
