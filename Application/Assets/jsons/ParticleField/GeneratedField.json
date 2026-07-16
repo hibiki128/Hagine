@@ -10,7 +10,8 @@
         "y": 0.0,
         "z": 0.0
     },
-    "emitSpawnCount": 1,
+    "emitSpawnCount": 2000,
+    "emitSpawnInterval": 0.0,
     "emitSpawnLifeTimeMax": 0.5,
     "emitSpawnLifeTimeMin": 0.25,
     "enableColorMultiply": 0,

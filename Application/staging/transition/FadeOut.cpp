@@ -1,7 +1,6 @@
 #define NOMINMAX
 #include "FadeOut.h"
 #include "scene/SceneManager.h"
-#include "SpriteManager.h"
 #include <particle/gpu/ParticleCSEditor.h>
 #include <algorithm>
 #include <cmath>
@@ -9,10 +8,6 @@
 using namespace Hagine;
 void FadeOut::Initialize()
 {
-    // スプライトマネージャーの設定と読み込み
-    SpriteManager::GetInstance()->SetSaveFolder("Transition");
-    SpriteManager::GetInstance()->LoadAllSprites();
-
     // パーティクルエミッターの生成と初期設定
     fadeOut_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("FadeOut");
     fadeOut_->SetAuto(true);
@@ -46,27 +41,25 @@ void FadeOut::Draw(const ViewProjection &vp)
         {
             forward = forward / len;
 
-            // 壁（XY面・法線+Z）をカメラの向きに合わせる（ヨー→ピッチの順で合成）
+            // 壁（XY面・法線+Z）をカメラの向きに合わせる。
+            // エミッターの回転はGPU側で「渡したクォータニオンの逆回転」として
+            // 発生形状に適用されるため、共役を渡して打ち消す。
+            // （ヨーのみ・水平カメラでは逆回転でもズレが見えないが、
+            //   スタートカメラのような見下ろしピッチでは上下に隙間が出る）
             float yaw = std::atan2(forward.x, forward.z);
             float pitch = std::asin(std::clamp(-forward.y, -1.0f, 1.0f));
             fadeOut_->SetTranslate(camPos + forward * kCameraDistance);
-            fadeOut_->SetRotation(Quaternion::FromEulerAnglesSafe({pitch, yaw, 0.0f}));
+            fadeOut_->SetRotation(Quaternion::FromEulerAnglesSafe({pitch, yaw, 0.0f}).Conjugate());
         }
     }
 
-    if (SpriteManager::GetInstance()->GetSprite("transition"))
+    // 一定時間経過後はパーティクルに重力を掛けて落下させ、画面（シーン）を露出する。
+    // （以前はここで全画面の白スプライトを alpha=1 で被せていたが、パーティクル遷移だけで
+    //  演出するため撤去。白スプライトはランプ無しで即時表示され、画面が突然白くなって
+    //  フェードアウトする違和感の原因になっていた）
+    if (timer_ >= kSpriteDrawTime)
     {
-        // 一定時間内はスプライトを表示
-        if (timer_ <= kSpriteDrawTime)
-        {
-            SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(1.0f);
-        }
-        else
-        {
-            // 時間経過後はスプライトを非表示にし、パーティクルの重力を有効化
-            SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(0.0f);
-            fadeOut_->SetEnableGravity(true);
-        }
+        fadeOut_->SetEnableGravity(true);
     }
 
     // パーティクルの自動発生を停止

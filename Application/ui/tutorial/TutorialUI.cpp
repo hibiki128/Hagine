@@ -4,6 +4,7 @@
 #include "data/DataHandler.h"
 #include "2d/SpriteManager.h"
 #include "2d/text/TextRenderer.h"
+#include <DirectXCommon.h>
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include <graphics/texture/TextureManager.h>
 #include <algorithm>
@@ -443,6 +444,14 @@ void TutorialUI::LoadStepSprites(TutorialStep step)
     }
 
     SpriteManager *sm = SpriteManager::GetInstance();
+
+    // 現在のスプライト(D3D12リソース)を破棄する前に GPU の全作業完了を待つ。
+    // ダブルバッファのため、前フレームで投入した描画コマンドが古いスプライトの
+    // 頂点/インスタンスバッファをまだ参照している状態で Clear() で解放すると、
+    // デバッグレイヤーが「使用中リソースの解放」を ERROR 検出してブレークする
+    // (OBJECT_DELETED_WHILE_STILL_IN_USE)。SceneManager::SceneChange と同じ対策。
+    DirectXCommon::GetInstance()->WaitForGPU();
+
     sm->Clear();
     sm->SetSaveFolder(folder);
     sm->LoadAllSprites();

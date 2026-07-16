@@ -192,19 +192,13 @@ class ParticleCSEmitter
     void SetReceiveFields(bool receive) { receiveFields_ = receive; }
     bool GetReceiveFields() const { return receiveFields_; }
 
-    // フィールド接触時のみEmitするモード
-    // true  = enableEmitSpawnフィールドが存在する場合、シェーダー側で
-    //         フィールド球内のランダム点→エミッター表面投影でEmit位置を決定する。
-    //         emitCount は fieldContactEmitCount_ の値を使用する。
+    // フィールド接触部分にのみ発生するモード
+    // true  = enableEmitSpawn フィールドと接触しているエミッター表面にのみEmitする。
+    //         発生数・間隔・寿命はフィールド側（ParticleField の接触Emit設定）が管理し、
+    //         エミッター側の frequency / emitCount は使われない。
     // false = 通常の自動Emit（フィールドは UpdateCS での物理影響のみ）
     void SetEmitOnlyOnFieldContact(bool enable) { emitOnlyOnFieldContact_ = enable; }
     bool GetEmitOnlyOnFieldContact() const { return emitOnlyOnFieldContact_; }
-
-    // フィールド接触Emitモード時の1フレームあたり発生数
-    // 全スレッドがフィールド接触部分にEmitするので、
-    // 少ない値（例: 500〜2000）でも十分密になる
-    void SetFieldContactEmitCount(uint32_t count) { fieldContactEmitCount_ = count; }
-    uint32_t GetFieldContactEmitCount() const { return fieldContactEmitCount_; }
 
     // フィールドグループID（このIDと一致するフィールドのみ影響を受ける）
     // -1 = 全フィールドから影響を受ける（デフォルト）
@@ -425,8 +419,7 @@ class ParticleCSEmitter
     bool isGizmoSelectable_ = true;
     bool emitOnce_ = false;
     bool receiveFields_ = true;
-    int32_t fieldGroupId_ = -1;             // -1=全フィールド対象, 0以上=同じIDのフィールドのみ対象
-    bool emitOnlyOnFieldContact_ = false;   // true=フィールド接触時のみEmit（シェーダー側で位置を決定）
-    uint32_t fieldContactEmitCount_ = 1000; // 接触Emitモード時の発生数/フレーム
+    int32_t fieldGroupId_ = -1;           // -1=全フィールド対象, 0以上=同じIDのフィールドのみ対象
+    bool emitOnlyOnFieldContact_ = false; // true=フィールド接触部分にのみEmit（数・間隔はフィールド側が管理）
 };
 } // namespace Hagine

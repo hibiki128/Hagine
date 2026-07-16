@@ -107,6 +107,10 @@ class ParticleCSFieldManager
     void CreateGPUResources();
     void UploadToGPU();
 
+    /// 接触Emitのバースト管理：各フィールドの間隔タイマーを進め、
+    /// バーストするフレームだけ data.emitSpawnCount に発生数を書き込む
+    void UpdateEmitSpawnTimers();
+
     // --- セーブ/ロード内部処理 ---
     void SaveFieldData(DataHandler &data, const ParticleField &field);
     void LoadFieldData(DataHandler &data, ParticleField &field);

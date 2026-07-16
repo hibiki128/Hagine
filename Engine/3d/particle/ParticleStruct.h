@@ -411,64 +411,33 @@ struct ParticleCSSettings
 
 /// =====================================================================
 /// フィールドがパーティクルに適用する「一度きりの設定上書き」データ
-/// overrideMask のビットが立っている項目だけ上書きされる。
+/// overrideMask のビット（FieldOverrideBits）が立っている項目だけ上書きされる。
 /// パーティクル側の settingsOverrideFlags に同じビットが既に立っていたら
 /// 上書きをスキップし、一度きり保証を実現する。
+///
+/// 粒子単体へ確実に適用できる8項目のみ（旧45項目のうち大半は
+/// グループCB設定のため粒子単体では適用不可能で、実際は効いていなかった）。
 /// =====================================================================
 struct ParticleFieldSettingsOverride
 {
     /// 上書きするかどうかのビットマスク（0=上書きしない）
-    /// ParticleSettingsOverrideBits の組み合わせ
-    uint64_t overrideMask = 0;
+    /// FieldOverrideBits の組み合わせ
+    uint32_t overrideMask = 0;
 
     // ---------- 上書き値 ----------
     // overrideMask の対応ビットが立っているときのみ使用される
 
-    float lifeTimeMin = 1.0f;
-    float lifeTimeMax = 3.0f;
-    float scaleMin = 0.5f;
-    float scaleMax = 1.5f;
-    Vector3 velocityMin = {-0.5f, -0.5f, -0.5f};
-    Vector3 velocityMax = {0.5f, 0.5f, 0.5f};
-    Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f};
-    Vector4 endColor = {1.0f, 1.0f, 1.0f, 0.0f};
-    uint32_t enableLifetimeScale = 0;
-    uint32_t enableRandomColor = 0;
-    uint32_t enableSinScale = 0;
-    float sinScaleFrequency = 1.0f;
-    float sinScaleAmplitude = 0.5f;
-    uint32_t enableGravity = 0;
-    Vector3 gravity = {0.0f, -9.8f, 0.0f};
-    uint32_t enableTrail = 0;
-    float trailSpawnDistance = 0.1f;
-    uint32_t maxTrailPerParticle = 5;
-    float trailLifeTimeScale = 0.5f;
-    Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
-    Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
-    float trailVelocityScale = 0.3f;
-    uint32_t trailInheritVelocity = 1;
-    float trailMinLifeTime = 0.3f;
-    uint32_t enableGather = 0;
-    float gatherStartRatio = 0.5f;
-    float gatherStrength = 2.0f;
-    Vector3 gatherTarget = {0.0f, 0.0f, 0.0f};
-    uint32_t enableVortex = 0;
-    float vortexStrength = 5.0f;
-    Vector3 vortexAxis = {0.0f, 1.0f, 0.0f};
-    uint32_t enableAcceleration = 0;
-    Vector3 acceleration = {0.0f, 0.0f, 0.0f};
-    uint32_t enableVelocityDamping = 0;
-    float velocityDampingFactor = 0.95f;
-    uint32_t enableLifetimeVelDamping = 0;
-    float lifetimeVelDampingStart = 0.5f;
-    uint32_t enableCurlNoise = 0;
-    float curlNoiseScale = 1.0f;
-    float curlNoiseStrength = 1.0f;
-    float curlNoiseTimeScale = 1.0f;
-    uint32_t curlNoiseOctaves = 3;
-    float curlNoiseAttractStrength = 0.0f;
-    uint32_t curlNoiseBlendMode = 0;
-    float curlNoisePosRandom = 0.0f;
+    float lifeTimeMin = 0.5f;                          // 寿命上書き Min（Min/Max乱数）
+    float lifeTimeMax = 1.0f;                          // 寿命上書き Max
+    float scaleMin = 0.5f;                             // スケール上書き Min（Min/Max乱数）
+    float scaleMax = 1.5f;                             // スケール上書き Max
+    Vector3 velocityMin = {-0.5f, -0.5f, -0.5f};       // 速度置換 Min（成分ごと乱数）
+    Vector3 velocityMax = {0.5f, 0.5f, 0.5f};          // 速度置換 Max
+    float velocityMultiplier = 1.0f;                   // 速度倍率（一度だけ乗算）
+    Vector3 accelImpulse = {0.0f, 0.0f, 0.0f};         // 加速度インパルス（一度だけ加算）
+    Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};          // 色上書き（RGBを以後固定。Aは通常フェード継続）
+    float trailSpawnDistance = 0.1f;                   // トレイル生成間隔の上書き
+    Vector3 gatherTarget = {0.0f, 0.0f, 0.0f};         // 向け替えターゲット座標
 };
 
 /// =============================================
@@ -524,7 +493,11 @@ struct ParticleFieldData
     uint32_t enableEmitSpawn = 0;       // 1=このフィールド範囲内にのみEmit
     float emitSpawnLifeTimeMin = 0.25f; // enableEmitSpawn=1 時の寿命Min
     float emitSpawnLifeTimeMax = 0.25f; // enableEmitSpawn=1 時の寿命Max
-    uint32_t emitSpawnCount = 0;        // enableEmitSpawn=1 時の発生数（0=エミッター依存）
+    // 【GPU通信専用】今フレームこのフィールドが発生させる粒子数。
+    // ParticleCSFieldManager::Update() が設定値(ParticleField::emitSpawnCount)と
+    // 間隔タイマーから毎フレーム算出して書き込む（バースト無しフレームは0）。
+    // シェーダはこの値でスレッド→担当フィールドの割り当てを行う。直接編集しないこと。
+    uint32_t emitSpawnCount = 0;
 
     // --- 7. GroupFilter（グループID） ---
     int32_t groupId = -1;                      // -1=全エミッター対象 / 0以上=同IDのエミッターのみ
@@ -547,6 +520,15 @@ struct ParticleField
     bool enabled = true;
     ParticleFieldData data = {};
     ParticleFieldSettingsOverride override_ = {}; // 一度きり設定上書きデータ
+
+    // --- 接触Emit設定（CPU管理） ---
+    // 発生数/間隔はフィールド側が唯一の設定場所。エミッター側は
+    // 「フィールド接触部分にのみ発生」トグルとグループIDのみを持つ。
+    // 毎フレーム ParticleCSFieldManager::Update() がタイマーを進め、
+    // バーストするフレームだけ data.emitSpawnCount に emitSpawnCount を書き込む。
+    uint32_t emitSpawnCount = 1000;  // 1バーストあたりの発生数（対象エミッターごと）
+    float emitSpawnInterval = 0.0f;  // バースト間隔[秒]（0=毎フレーム発生）
+    float emitSpawnTimer = 0.0f;     // ランタイム: 間隔タイマー（保存対象外）
 };
 
 /// =======================

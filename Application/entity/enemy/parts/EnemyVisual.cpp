@@ -38,6 +38,7 @@ void EnemyVisual::Init(Enemy *owner)
     animationController_.RegisterClip("Kick_2", "animation/Player/Kick_2.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Kick_3", "animation/Player/Kick_3.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Smash", "animation/Player/Smash.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Shot", "animation/Player/Shot.gltf", false, 1.0f, 0.1f);
     // プレイヤー側で調整済みのクリップ設定（速度・補間）を流用する
     animationController_.LoadClips("AnimationController", "PlayerClips");
 }
@@ -77,6 +78,15 @@ void EnemyVisual::UpdateAnimation()
             }
         }
         return; // 攻撃中は以降の判定をスキップ
+    }
+
+    // ──────────────────────────────────────────
+    // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
+    // （発射のたびに PlayShotAnimation() で先頭から再生し直される）
+    // ──────────────────────────────────────────
+    if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished())
+    {
+        return;
     }
 
     // ガード中
@@ -149,6 +159,20 @@ void EnemyVisual::UpdateAnimation()
 void EnemyVisual::PlayDeathAnimation()
 {
     animationController_.Play("Die");
+}
+
+void EnemyVisual::PlayShotAnimation()
+{
+    // 同一クリップ再生中の Play() は無視されるため、既に Shot 中なら先頭へ巻き戻して再生し直す
+    if (animationController_.GetCurrentClipName() == "Shot")
+    {
+        animationController_.SetTime(0.0f);
+        animationController_.SetPaused(false); // 再生終了で停止していた場合に再開する
+    }
+    else
+    {
+        animationController_.Play("Shot");
+    }
 }
 
 bool EnemyVisual::IsDeathAnimationFinished() const

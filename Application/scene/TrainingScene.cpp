@@ -217,18 +217,8 @@ void TrainingScene::ChangeScene()
     /// ===================================================
     /// シーン切り替え：入力でタイトルへ戻る
     /// ===================================================
-    if (gamePad_->IsConnected())
+    if (gameUI_->GetIsBackTitle())
     {
-        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START))
-        {
-            pSceneManager_->NextSceneReservation("TITLE");
-        }
-    }
-    else
-    {
-        if (pInput_->TriggerKey(DIK_RETURN))
-        {
-            pSceneManager_->NextSceneReservation("TITLE");
-        }
+        pSceneManager_->NextSceneReservation("TITLE");
     }
 }
