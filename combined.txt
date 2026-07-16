@@ -3134,7 +3134,7 @@ class StartCamera
     Hagine::Vector3 easingTargetRot_ = {Hagine::degreesToRadians(8.6f), Hagine::degreesToRadians(40.0f), Hagine::degreesToRadians(0.0f)};    ///< 目標回転1
     int easingPhase_ = 0;                                                                                                                    ///< 現在のイージングフェーズ
     float waitDuration_ = 1.0f;                                                                                                              ///< フェーズ間の待機時間
-    Hagine::Vector3 easingTargetPos2_ = {5.0f, 3.6f, -33.0f};                                                                                ///< 目標位置2
+    Hagine::Vector3 easingTargetPos2_ = {5.0f, 4.5f, -33.0f};                                                                                ///< 目標位置2
     Hagine::Vector3 easingTargetRot2_ = {Hagine::degreesToRadians(9.6f), Hagine::degreesToRadians(-149.0f), Hagine::degreesToRadians(0.0f)}; ///< 目標回転2
 
     Hagine::Input *pInput_ = nullptr;                     ///< 入力クラスのポインタ
@@ -9503,7 +9503,7 @@ void EnemyBullet::Update()
     if (isLockOnBullet_ && pTarget_)
     {
         Vector3 bulletPos = GetLocalPosition();
-        Vector3 enemyPos = pTarget_->GetLocalPosition();
+        Vector3 enemyPos = {pTarget_->GetLocalPosition().x, pTarget_->GetLocalPosition().y + kHomingHeightOffset, pTarget_->GetLocalPosition().z};
 
         Vector3 toEnemy = enemyPos - bulletPos;
         float distance = toEnemy.Length();
@@ -9591,7 +9591,7 @@ void EnemyBullet::InitTransform(Enemy *enemy)
 
         // 発射起点（手）からターゲットへ向けて狙う
         Vector3 spawnPos = this->transform_->translation_;
-        Vector3 enemyPos = enemy->GetTarget()->GetLocalPosition();
+        Vector3 enemyPos = {enemy->GetTarget()->GetLocalPosition().x, enemy->GetTarget()->GetLocalPosition().y + kHomingHeightOffset, enemy->GetTarget()->GetLocalPosition().z};
 
         Vector3 direction = enemyPos - spawnPos;
 
@@ -9791,6 +9791,7 @@ class EnemyBullet : public Hagine::BaseObject
     static constexpr float kDefaultLifeTime = 5.0f;       // デフォルトの生存時間(秒)
     static constexpr float kMinDistanceThreshold = 0.1f;  // 距離判定の最小閾値
     static constexpr float kHomingStrength = 20.0f;       // ホーミング強度
+    static constexpr float kHomingHeightOffset = 1.5f;    // ホーミング終点の高さオフセット（人型モデルの胸あたりを狙う）
     static constexpr float kMinSpeedThreshold = 0.1f;     // 速度判定の最小閾値
     static constexpr float kMaxSpeed = 200.0f;            // 最大速度
     static constexpr float kForwardOffsetDistance = 2.0f; // 前方オフセット距離（ジョイント取得失敗時の代用）
@@ -10370,6 +10371,8 @@ void EnemyCombat::Shot()
     bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
     bullet->SetColliderRadius(kBulletColliderRadius);
     bullets_.push_back(std::move(bullet));
+
+    pOwner_->Visual().PlayShotAnimation(); // 発射モーション（連射時は毎回先頭から再生し直す）
 }
 
 void EnemyCombat::ShotWithDirection(const Vector3 &direction, bool forceHoming)
@@ -10410,6 +10413,8 @@ void EnemyCombat::ShotWithDirection(const Vector3 &direction, bool forceHoming)
     }
 
     bullets_.push_back(std::move(bullet));
+
+    pOwner_->Visual().PlayShotAnimation(); // 発射モーション（連射時は毎回先頭から再生し直す）
 }
 
 void EnemyCombat::PerformAttack()
@@ -11701,6 +11706,7 @@ void EnemyVisual::Init(Enemy *owner)
     animationController_.RegisterClip("Kick_2", "animation/Player/Kick_2.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Kick_3", "animation/Player/Kick_3.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Smash", "animation/Player/Smash.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Shot", "animation/Player/Shot.gltf", false, 1.0f, 0.1f);
     // プレイヤー側で調整済みのクリップ設定（速度・補間）を流用する
     animationController_.LoadClips("AnimationController", "PlayerClips");
 }
@@ -11740,6 +11746,15 @@ void EnemyVisual::UpdateAnimation()
             }
         }
         return; // 攻撃中は以降の判定をスキップ
+    }
+
+    // ──────────────────────────────────────────
+    // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
+    // （発射のたびに PlayShotAnimation() で先頭から再生し直される）
+    // ──────────────────────────────────────────
+    if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished())
+    {
+        return;
     }
 
     // ガード中
@@ -11814,6 +11829,20 @@ void EnemyVisual::PlayDeathAnimation()
     animationController_.Play("Die");
 }
 
+void EnemyVisual::PlayShotAnimation()
+{
+    // 同一クリップ再生中の Play() は無視されるため、既に Shot 中なら先頭へ巻き戻して再生し直す
+    if (animationController_.GetCurrentClipName() == "Shot")
+    {
+        animationController_.SetTime(0.0f);
+        animationController_.SetPaused(false); // 再生終了で停止していた場合に再開する
+    }
+    else
+    {
+        animationController_.Play("Shot");
+    }
+}
+
 bool EnemyVisual::IsDeathAnimationFinished() const
 {
     // 死亡クリップ再生中に最後（非ループのため終端で停止）まで到達したか
@@ -11880,6 +11909,12 @@ class EnemyVisual
     /// 死亡アニメーションを再生する（死亡中は毎フレーム呼んでよい。同一クリップは無視される）
     /// </summary>
     void PlayDeathAnimation();
+
+    /// <summary>
+    /// 通常弾の発射アニメーションを再生する（ループなし）
+    /// 再生中に再度呼ばれた場合も毎回先頭から再生し直す
+    /// </summary>
+    void PlayShotAnimation();
 
     /// <summary>
     /// 死亡アニメーションが最後まで再生し終わったか
@@ -13441,7 +13476,7 @@ void PlayerBullet::Update()
     if (isLockOnBullet_ && pTargetEnemy_)
     {
         Vector3 bulletPos = GetLocalPosition();
-        Vector3 enemyPos = pTargetEnemy_->GetLocalPosition();
+        Vector3 enemyPos = {pTargetEnemy_->GetLocalPosition().x, pTargetEnemy_->GetLocalPosition().y + kHomingHeightOffset, pTargetEnemy_->GetLocalPosition().z};
 
         Vector3 toEnemy = enemyPos - bulletPos;
         float distance = toEnemy.Length();
@@ -13523,7 +13558,7 @@ void PlayerBullet::InitTransform(Player *player)
 
         // 発射起点（手）からターゲットへ向けて狙う
         Vector3 spawnPos = this->transform_->translation_;
-        Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
+        Vector3 enemyPos = {player->GetEnemy()->GetLocalPosition().x, player->GetEnemy()->GetLocalPosition().y + kHomingHeightOffset, player->GetEnemy()->GetLocalPosition().z};
 
         Vector3 direction = enemyPos - spawnPos;
 
@@ -13697,6 +13732,7 @@ class PlayerBullet : public Hagine::BaseObject
     static constexpr float kDefaultLifeTime = 5.0f;       // デフォルトの生存時間(秒)
     static constexpr float kMinDistanceThreshold = 0.1f;  // 距離判定の最小閾値
     static constexpr float kHomingStrength = 20.0f;       // ホーミング強度
+    static constexpr float kHomingHeightOffset = 1.5f;    // ホーミング終点の高さオフセット（人型モデルの胸あたりを狙う）
     static constexpr float kMinSpeedThreshold = 0.1f;     // 速度判定の最小閾値
     static constexpr float kMaxSpeed = 200.0f;            // 最大速度
     static constexpr float kForwardOffsetDistance = 2.0f; // 前方オフセット距離（ジョイント取得失敗時の代用）
@@ -14799,6 +14835,8 @@ void PlayerCombat::FireNormalBullet()
     bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
     bullet->SetColliderRadius(kBulletColliderRadius);
     bullets_.push_back(std::move(bullet));
+
+    pOwner_->Visual().PlayShotAnimation(); // 発射モーション（連射時は毎回先頭から再生し直す）
 
     pOwner_->EmitAction(Player::ActionKind::NormalShot); // 入力表示UI用：通常射撃を通知
 }
@@ -16489,6 +16527,7 @@ void PlayerVisual::Init(Player *owner)
     animationController_.RegisterClip("Kick_2", "animation/Player/Kick_2.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Kick_3", "animation/Player/Kick_3.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Smash", "animation/Player/Smash.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Shot", "animation/Player/Shot.gltf", false, 1.0f, 0.1f);
 
     // JSONに保存済みの調整値があれば読み込む
     animationController_.LoadClips("AnimationController", "PlayerClips");
@@ -16532,6 +16571,15 @@ void PlayerVisual::UpdateAnimation()
             // else: 該当段のアニメーションが未設定（空文字）なので何もしない
         }
         return; // 攻撃中は以降のステート判定をスキップ
+    }
+
+    // ──────────────────────────────────────────
+    // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
+    // （発射のたびに PlayShotAnimation() で先頭から再生し直される）
+    // ──────────────────────────────────────────
+    if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished())
+    {
+        return;
     }
 
     // ──────────────────────────────────────────
@@ -16618,6 +16666,20 @@ void PlayerVisual::UpdateAnimation()
 void PlayerVisual::PlayDeathAnimation()
 {
     animationController_.Play("Die");
+}
+
+void PlayerVisual::PlayShotAnimation()
+{
+    // 同一クリップ再生中の Play() は無視されるため、既に Shot 中なら先頭へ巻き戻して再生し直す
+    if (animationController_.GetCurrentClipName() == "Shot")
+    {
+        animationController_.SetTime(0.0f);
+        animationController_.SetPaused(false); // 再生終了で停止していた場合に再開する
+    }
+    else
+    {
+        animationController_.Play("Shot");
+    }
 }
 
 bool PlayerVisual::IsDeathAnimationFinished() const
@@ -16803,6 +16865,12 @@ class PlayerVisual
     /// 死亡アニメーションを再生する（死亡中は毎フレーム呼んでよい。同一クリップは無視される）
     /// </summary>
     void PlayDeathAnimation();
+
+    /// <summary>
+    /// 通常弾の発射アニメーションを再生する（ループなし）
+    /// 再生中に再度呼ばれた場合も毎回先頭から再生し直す
+    /// </summary>
+    void PlayShotAnimation();
 
     /// <summary>
     /// 死亡アニメーションが最後まで再生し終わったか
@@ -19768,14 +19836,16 @@ void GameScene::CameraUpdate()
         {
             followCamera_->Update();
 #ifndef _DEBUG
-            // パーティクル遷移中はカメラを動かさない。
+            // パーティクル遷移中はスタートカメラの初期視点で静止する。
             // 遷移パーティクル（長方形）はカメラ正面に追従配置されるため、
-            // 完了までフォローカメラの静止ポーズで固定する
-            if (fadeOut_ && !fadeOut_->IsFinish())
+            // スタートカメラ初期位置の正面にパーティクルが発生し、
+            // 発生停止から待機時間を置いてカメラ演出（Move）を開始する
+            if (fadeOut_ && !fadeOut_->IsCameraStartReady())
             {
-                vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
-                vp_.matView_ = followCamera_->GetViewProjection().matView_;
-                vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
+                startCamera_->Update(); // Move()を呼ばないため初期位置に静止したまま
+                vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
+                vp_.matView_ = startCamera_->GetViewProjection().matView_;
+                vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
             }
             else if (!startCamera_->IsComplete())
             {
@@ -20740,19 +20810,9 @@ void TrainingScene::ChangeScene()
     /// ===================================================
     /// シーン切り替え：入力でタイトルへ戻る
     /// ===================================================
-    if (gamePad_->IsConnected())
+    if (gameUI_->GetIsBackTitle())
     {
-        if (gamePad_->IsTrigger(XINPUT_GAMEPAD_START))
-        {
-            pSceneManager_->NextSceneReservation("TITLE");
-        }
-    }
-    else
-    {
-        if (pInput_->TriggerKey(DIK_RETURN))
-        {
-            pSceneManager_->NextSceneReservation("TITLE");
-        }
+        pSceneManager_->NextSceneReservation("TITLE");
     }
 }
 
@@ -22080,7 +22140,6 @@ File Path: Application/staging/transition/FadeOut.cpp
 #define NOMINMAX
 #include "FadeOut.h"
 #include "scene/SceneManager.h"
-#include "SpriteManager.h"
 #include <particle/gpu/ParticleCSEditor.h>
 #include <algorithm>
 #include <cmath>
@@ -22088,10 +22147,6 @@ File Path: Application/staging/transition/FadeOut.cpp
 using namespace Hagine;
 void FadeOut::Initialize()
 {
-    // スプライトマネージャーの設定と読み込み
-    SpriteManager::GetInstance()->SetSaveFolder("Transition");
-    SpriteManager::GetInstance()->LoadAllSprites();
-
     // パーティクルエミッターの生成と初期設定
     fadeOut_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("FadeOut");
     fadeOut_->SetAuto(true);
@@ -22125,27 +22180,25 @@ void FadeOut::Draw(const ViewProjection &vp)
         {
             forward = forward / len;
 
-            // 壁（XY面・法線+Z）をカメラの向きに合わせる（ヨー→ピッチの順で合成）
+            // 壁（XY面・法線+Z）をカメラの向きに合わせる。
+            // エミッターの回転はGPU側で「渡したクォータニオンの逆回転」として
+            // 発生形状に適用されるため、共役を渡して打ち消す。
+            // （ヨーのみ・水平カメラでは逆回転でもズレが見えないが、
+            //   スタートカメラのような見下ろしピッチでは上下に隙間が出る）
             float yaw = std::atan2(forward.x, forward.z);
             float pitch = std::asin(std::clamp(-forward.y, -1.0f, 1.0f));
             fadeOut_->SetTranslate(camPos + forward * kCameraDistance);
-            fadeOut_->SetRotation(Quaternion::FromEulerAnglesSafe({pitch, yaw, 0.0f}));
+            fadeOut_->SetRotation(Quaternion::FromEulerAnglesSafe({pitch, yaw, 0.0f}).Conjugate());
         }
     }
 
-    if (SpriteManager::GetInstance()->GetSprite("transition"))
+    // 一定時間経過後はパーティクルに重力を掛けて落下させ、画面（シーン）を露出する。
+    // （以前はここで全画面の白スプライトを alpha=1 で被せていたが、パーティクル遷移だけで
+    //  演出するため撤去。白スプライトはランプ無しで即時表示され、画面が突然白くなって
+    //  フェードアウトする違和感の原因になっていた）
+    if (timer_ >= kSpriteDrawTime)
     {
-        // 一定時間内はスプライトを表示
-        if (timer_ <= kSpriteDrawTime)
-        {
-            SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(1.0f);
-        }
-        else
-        {
-            // 時間経過後はスプライトを非表示にし、パーティクルの重力を有効化
-            SpriteManager::GetInstance()->GetSprite("transition")->sprite->SetAlpha(0.0f);
-            fadeOut_->SetEnableGravity(true);
-        }
+        fadeOut_->SetEnableGravity(true);
     }
 
     // パーティクルの自動発生を停止
@@ -22224,6 +22277,13 @@ class FadeOut
     /// </summary>
     bool IsFinish() const { return isFinish_; }
 
+    /// <summary>
+    /// パーティクルの発生が止まり、待機時間が経過したか
+    /// （スタートカメラ演出を開始してよいタイミングの判定用）
+    /// </summary>
+    /// <returns>bool: カメラ演出を開始してよければtrue</returns>
+    bool IsCameraStartReady() const { return timer_ >= kParticleStopTime + kCameraStartDelay; }
+
   private:
     /// ===================================================
     /// private variants
@@ -22233,6 +22293,7 @@ class FadeOut
     static constexpr float kSpriteDrawTime = 0.5f;    // スプライト描画時間(秒)
     static constexpr float kGravityEnableTime = 0.5f; // 重力有効化時間(秒)
     static constexpr float kParticleStopTime = 0.6f;  // パーティクル停止時間(秒)
+    static constexpr float kCameraStartDelay = 0.3f;  // 発生停止からカメラ演出開始までの待機時間(秒)
     static constexpr float kFinishTime = 2.0f;        // フェードアウト完了時間(秒)
     static constexpr float kDeltaTime = 1.0f / 60.0f; // デルタタイム(秒)
 
@@ -26005,6 +26066,7 @@ File Path: Application/ui/tutorial/TutorialUI.cpp
 #include "data/DataHandler.h"
 #include "2d/SpriteManager.h"
 #include "2d/text/TextRenderer.h"
+#include <DirectXCommon.h>
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include <graphics/texture/TextureManager.h>
 #include <algorithm>
@@ -26444,6 +26506,14 @@ void TutorialUI::LoadStepSprites(TutorialStep step)
     }
 
     SpriteManager *sm = SpriteManager::GetInstance();
+
+    // 現在のスプライト(D3D12リソース)を破棄する前に GPU の全作業完了を待つ。
+    // ダブルバッファのため、前フレームで投入した描画コマンドが古いスプライトの
+    // 頂点/インスタンスバッファをまだ参照している状態で Clear() で解放すると、
+    // デバッグレイヤーが「使用中リソースの解放」を ERROR 検出してブレークする
+    // (OBJECT_DELETED_WHILE_STILL_IN_USE)。SceneManager::SceneChange と同じ対策。
+    DirectXCommon::GetInstance()->WaitForGPU();
+
     sm->Clear();
     sm->SetSaveFolder(folder);
     sm->LoadAllSprites();
@@ -47509,64 +47579,33 @@ struct ParticleCSSettings
 
 /// =====================================================================
 /// フィールドがパーティクルに適用する「一度きりの設定上書き」データ
-/// overrideMask のビットが立っている項目だけ上書きされる。
+/// overrideMask のビット（FieldOverrideBits）が立っている項目だけ上書きされる。
 /// パーティクル側の settingsOverrideFlags に同じビットが既に立っていたら
 /// 上書きをスキップし、一度きり保証を実現する。
+///
+/// 粒子単体へ確実に適用できる8項目のみ（旧45項目のうち大半は
+/// グループCB設定のため粒子単体では適用不可能で、実際は効いていなかった）。
 /// =====================================================================
 struct ParticleFieldSettingsOverride
 {
     /// 上書きするかどうかのビットマスク（0=上書きしない）
-    /// ParticleSettingsOverrideBits の組み合わせ
-    uint64_t overrideMask = 0;
+    /// FieldOverrideBits の組み合わせ
+    uint32_t overrideMask = 0;
 
     // ---------- 上書き値 ----------
     // overrideMask の対応ビットが立っているときのみ使用される
 
-    float lifeTimeMin = 1.0f;
-    float lifeTimeMax = 3.0f;
-    float scaleMin = 0.5f;
-    float scaleMax = 1.5f;
-    Vector3 velocityMin = {-0.5f, -0.5f, -0.5f};
-    Vector3 velocityMax = {0.5f, 0.5f, 0.5f};
-    Vector4 startColor = {1.0f, 1.0f, 1.0f, 1.0f};
-    Vector4 endColor = {1.0f, 1.0f, 1.0f, 0.0f};
-    uint32_t enableLifetimeScale = 0;
-    uint32_t enableRandomColor = 0;
-    uint32_t enableSinScale = 0;
-    float sinScaleFrequency = 1.0f;
-    float sinScaleAmplitude = 0.5f;
-    uint32_t enableGravity = 0;
-    Vector3 gravity = {0.0f, -9.8f, 0.0f};
-    uint32_t enableTrail = 0;
-    float trailSpawnDistance = 0.1f;
-    uint32_t maxTrailPerParticle = 5;
-    float trailLifeTimeScale = 0.5f;
-    Vector3 trailScaleMultiplier = {0.8f, 0.8f, 0.8f};
-    Vector4 trailColorMultiplier = {1.0f, 1.0f, 1.0f, 0.7f};
-    float trailVelocityScale = 0.3f;
-    uint32_t trailInheritVelocity = 1;
-    float trailMinLifeTime = 0.3f;
-    uint32_t enableGather = 0;
-    float gatherStartRatio = 0.5f;
-    float gatherStrength = 2.0f;
-    Vector3 gatherTarget = {0.0f, 0.0f, 0.0f};
-    uint32_t enableVortex = 0;
-    float vortexStrength = 5.0f;
-    Vector3 vortexAxis = {0.0f, 1.0f, 0.0f};
-    uint32_t enableAcceleration = 0;
-    Vector3 acceleration = {0.0f, 0.0f, 0.0f};
-    uint32_t enableVelocityDamping = 0;
-    float velocityDampingFactor = 0.95f;
-    uint32_t enableLifetimeVelDamping = 0;
-    float lifetimeVelDampingStart = 0.5f;
-    uint32_t enableCurlNoise = 0;
-    float curlNoiseScale = 1.0f;
-    float curlNoiseStrength = 1.0f;
-    float curlNoiseTimeScale = 1.0f;
-    uint32_t curlNoiseOctaves = 3;
-    float curlNoiseAttractStrength = 0.0f;
-    uint32_t curlNoiseBlendMode = 0;
-    float curlNoisePosRandom = 0.0f;
+    float lifeTimeMin = 0.5f;                          // 寿命上書き Min（Min/Max乱数）
+    float lifeTimeMax = 1.0f;                          // 寿命上書き Max
+    float scaleMin = 0.5f;                             // スケール上書き Min（Min/Max乱数）
+    float scaleMax = 1.5f;                             // スケール上書き Max
+    Vector3 velocityMin = {-0.5f, -0.5f, -0.5f};       // 速度置換 Min（成分ごと乱数）
+    Vector3 velocityMax = {0.5f, 0.5f, 0.5f};          // 速度置換 Max
+    float velocityMultiplier = 1.0f;                   // 速度倍率（一度だけ乗算）
+    Vector3 accelImpulse = {0.0f, 0.0f, 0.0f};         // 加速度インパルス（一度だけ加算）
+    Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};          // 色上書き（RGBを以後固定。Aは通常フェード継続）
+    float trailSpawnDistance = 0.1f;                   // トレイル生成間隔の上書き
+    Vector3 gatherTarget = {0.0f, 0.0f, 0.0f};         // 向け替えターゲット座標
 };
 
 /// =============================================
@@ -47622,7 +47661,11 @@ struct ParticleFieldData
     uint32_t enableEmitSpawn = 0;       // 1=このフィールド範囲内にのみEmit
     float emitSpawnLifeTimeMin = 0.25f; // enableEmitSpawn=1 時の寿命Min
     float emitSpawnLifeTimeMax = 0.25f; // enableEmitSpawn=1 時の寿命Max
-    uint32_t emitSpawnCount = 0;        // enableEmitSpawn=1 時の発生数（0=エミッター依存）
+    // 【GPU通信専用】今フレームこのフィールドが発生させる粒子数。
+    // ParticleCSFieldManager::Update() が設定値(ParticleField::emitSpawnCount)と
+    // 間隔タイマーから毎フレーム算出して書き込む（バースト無しフレームは0）。
+    // シェーダはこの値でスレッド→担当フィールドの割り当てを行う。直接編集しないこと。
+    uint32_t emitSpawnCount = 0;
 
     // --- 7. GroupFilter（グループID） ---
     int32_t groupId = -1;                      // -1=全エミッター対象 / 0以上=同IDのエミッターのみ
@@ -47645,6 +47688,15 @@ struct ParticleField
     bool enabled = true;
     ParticleFieldData data = {};
     ParticleFieldSettingsOverride override_ = {}; // 一度きり設定上書きデータ
+
+    // --- 接触Emit設定（CPU管理） ---
+    // 発生数/間隔はフィールド側が唯一の設定場所。エミッター側は
+    // 「フィールド接触部分にのみ発生」トグルとグループIDのみを持つ。
+    // 毎フレーム ParticleCSFieldManager::Update() がタイマーを進め、
+    // バーストするフレームだけ data.emitSpawnCount に emitSpawnCount を書き込む。
+    uint32_t emitSpawnCount = 1000;  // 1バーストあたりの発生数（対象エミッターごと）
+    float emitSpawnInterval = 0.0f;  // バースト間隔[秒]（0=毎フレーム発生）
+    float emitSpawnTimer = 0.0f;     // ランタイム: 間隔タイマー（保存対象外）
 };
 
 /// =======================
@@ -49976,6 +50028,15 @@ void ParticleCSEmitter::RemoveParticleGroup(const std::string &groupName)
 
 void ParticleCSEmitter::EmitterUpdate()
 {
+    // フィールド接触Emitモードでは発生タイミングをフィールド側の間隔タイマーが管理する。
+    // エミッターの frequency ゲートを重ねると2重の間隔制御になって分かりづらいため、
+    // ここでは常に許可してフィールド側だけをタイミングの決定者にする。
+    if (emitOnlyOnFieldContact_ && receiveFields_)
+    {
+        pEmitterMeshData_->emit = 1;
+        return;
+    }
+
     pEmitterMeshData_->frequencyTime += Frame::DeltaTime();
     if (pEmitterMeshData_->frequency <= pEmitterMeshData_->frequencyTime)
     {
@@ -50012,11 +50073,28 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
         ComputePipelineType::Emitter,
         BlendMode::Normal, ShaderMode::None, cl);
 
-    // フィールド接触Emitモードでは発生数を fieldContactEmitCount_ で上書きする。
-    // per-emitter CB（全グループ共通・接触モードでは全グループ同値）に入れるためエイリアシングしない。
+    // フィールド接触Emitモードの発生数は「対象フィールドの今フレームのバースト数合計」。
+    // 各フィールドの data.emitSpawnCount には ParticleCSFieldManager::Update() が
+    // 間隔タイマーから算出した今フレームの値が入っている（バースト無しフレームは0）。
+    // シェーダはこの合計スレッドを累積和でフィールドごとに配分する（FindEmitTargetField）。
     // 通常モードは 0 にしてグループ設定 gSettings.emitCount を使わせる。
-    pEmitterMeshData_->emitCountOverride =
-        (emitOnlyOnFieldContact_ && receiveFields_) ? fieldContactEmitCount_ : 0u;
+    uint32_t fieldBurstTotal = 0;
+    if (emitOnlyOnFieldContact_ && receiveFields_)
+    {
+        for (const auto &field : ParticleCSFieldManager::GetInstance()->GetFields())
+        {
+            if (!field.enabled || !field.data.enableEmitSpawn)
+                continue;
+            bool groupMatch = (field.data.groupId == -1) ||
+                              (fieldGroupId_ == -1) ||
+                              (field.data.groupId == fieldGroupId_);
+            if (groupMatch)
+            {
+                fieldBurstTotal += field.data.emitSpawnCount;
+            }
+        }
+    }
+    pEmitterMeshData_->emitCountOverride = fieldBurstTotal;
 
     for (uint32_t groupIndex = 0; groupIndex < particleGroups_.size(); ++groupIndex)
     {
@@ -50070,33 +50148,20 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
 
             if (emitOnlyOnFieldContact_ && receiveFields_)
             {
-                bool hasEmitSpawnField = false;
-                for (const auto &field : fieldManager->GetFields())
-                {
-                    if (!field.enabled || !field.data.enableEmitSpawn)
-                        continue;
-                    bool groupMatch = (field.data.groupId == -1) ||
-                                      (fieldGroupId_ == -1) ||
-                                      (field.data.groupId == fieldGroupId_);
-                    if (groupMatch)
-                    {
-                        hasEmitSpawnField = true;
-                        break;
-                    }
-                }
-
-                if (!hasEmitSpawnField)
+                // 今フレームのバーストが無ければディスパッチ自体を省く
+                // （対象フィールド不在・間隔待ちの両方をカバー）
+                if (fieldBurstTotal == 0)
                 {
                     cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
                     continue;
                 }
 
-                // 発生数は pEmitterMeshData_->emitCountOverride(=fieldContactEmitCount_) 経由でシェーダへ渡す。
-                // 寿命は接触したフィールドの emitSpawnLifeTime をシェーダ側が per-field で上書きするため
-                // ここでの CPU 側 settings 書き換えは不要（旧実装は CB エイリアシングで無効だった）。
+                // 発生数は pEmitterMeshData_->emitCountOverride(=バースト合計) 経由でシェーダへ渡す。
+                // 各スレッドの担当フィールドはシェーダが emitSpawnCount の累積和で決める。
+                // 寿命は担当フィールドの emitSpawnLifeTime をシェーダ側が per-field で上書きする。
                 cl->SetComputeRootConstantBufferView(12, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
 
-                int dispatchCount = (static_cast<int>(fieldContactEmitCount_) + threadGroupSize_ - 1) / threadGroupSize_;
+                int dispatchCount = (static_cast<int>(fieldBurstTotal) + threadGroupSize_ - 1) / threadGroupSize_;
                 cl->Dispatch(dispatchCount, 1, 1);
 
                 continue;
@@ -50428,7 +50493,6 @@ void ParticleCSEmitter::SaveSetting()
     data->Save("receiveFields", receiveFields_);
     data->Save("fieldGroupId", fieldGroupId_);
     data->Save("emitOnlyOnFieldContact", emitOnlyOnFieldContact_);
-    data->Save("fieldContactEmitCount", static_cast<int>(fieldContactEmitCount_));
 
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
 
@@ -50614,7 +50678,7 @@ void ParticleCSEmitter::LoadSetting()
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
     emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
-    fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
+    // 旧キー fieldContactEmitCount は廃止（発生数はフィールド側の接触Emit設定に一本化）
 
     if (!modelPath_.empty())
     {
@@ -50847,7 +50911,7 @@ void ParticleCSEmitter::LoadCloneSetting()
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
     emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
-    fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
+    // 旧キー fieldContactEmitCount は廃止（発生数はフィールド側の接触Emit設定に一本化）
 
     if (!modelPath_.empty())
     {
@@ -51307,39 +51371,60 @@ void ParticleCSEmitter::DrawImGui()
 
                 ImGui::Spacing();
                 bool eofc = emitOnlyOnFieldContact_;
-                if (ImGui::Checkbox("フィールド接触時のみEmit##EmitOnFieldContact", &eofc))
+                if (ImGui::Checkbox("フィールド接触部分にのみ発生##EmitOnFieldContact", &eofc))
                 {
                     emitOnlyOnFieldContact_ = eofc;
                 }
                 if (ImGui::IsItemHovered())
                 {
                     ImGui::SetTooltip(
-                        "ON : シェーダー側でフィールド球内のランダム点を生成し\n"
-                        "     エミッター表面に投影してEmit位置を決定します\n"
-                        "     全スレッドがフィールド接触部分にEmitするため\n"
-                        "     500000のような大量発生数は不要になります\n"
-                        "     (推奨: 500〜3000程度)\n"
+                        "ON : 「接触Emit」が有効なフィールドと接触している\n"
+                        "     エミッター表面にのみパーティクルを発生させます\n"
                         "OFF: 通常通りエミッター全体からランダムEmitします");
                 }
 
                 if (emitOnlyOnFieldContact_)
                 {
                     ImGui::Indent();
-                    ImGui::PushItemWidth(180.0f);
-                    int emitCnt = static_cast<int>(fieldContactEmitCount_);
-                    if (ImGui::DragInt("接触Emit発生数/フレーム##FieldContactEmit", &emitCnt, 10, 1, 50000))
+
+                    // 発生数・間隔・寿命はフィールド側に一本化されている。
+                    // ここでは対象フィールドの状態を読み取り専用で表示し、迷子を防ぐ。
+                    ImGui::TextDisabled("発生数・間隔・寿命はフィールド側の「接触Emit」で設定します");
+
+                    int matchCount = 0;
+                    for (const auto &field : ParticleCSFieldManager::GetInstance()->GetFields())
                     {
-                        fieldContactEmitCount_ = static_cast<uint32_t>(std::max(1, emitCnt));
+                        if (!field.enabled || !field.data.enableEmitSpawn)
+                            continue;
+                        bool groupMatch = (field.data.groupId == -1) ||
+                                          (fieldGroupId_ == -1) ||
+                                          (field.data.groupId == fieldGroupId_);
+                        if (!groupMatch)
+                            continue;
+                        ++matchCount;
+                        if (field.emitSpawnInterval > 0.0f)
+                        {
+                            ImGui::Text("  %s : %u個 / %.2fs間隔",
+                                        field.name.c_str(), field.emitSpawnCount, field.emitSpawnInterval);
+                        }
+                        else
+                        {
+                            ImGui::Text("  %s : %u個 / 毎フレーム",
+                                        field.name.c_str(), field.emitSpawnCount);
+                        }
                     }
-                    ImGui::PopItemWidth();
-                    if (ImGui::IsItemHovered())
+                    if (matchCount == 0)
                     {
-                        ImGui::SetTooltip(
-                            "フィールド接触Emitモード時の1フレームあたり発生数\n"
-                            "全スレッドがフィールド接触点にEmitするため\n"
-                            "500〜3000程度で十分密になります\n"
-                            "フィールドを動かすほどEmit位置も動的に追従します");
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.6f, 0.3f, 1.0f));
+                        ImGui::TextUnformatted("  対象フィールドがありません（発生しません）");
+                        ImGui::PopStyleColor();
+                        if (ImGui::IsItemHovered())
+                            ImGui::SetTooltip(
+                                "パーティクルフィールド管理ウィンドウで\n"
+                                "「接触Emit」を有効にしたフィールドを用意し、\n"
+                                "グループIDをこのエミッターと合わせてください。");
                     }
+
                     ImGui::Unindent();
                 }
 
@@ -51866,19 +51951,13 @@ class ParticleCSEmitter
     void SetReceiveFields(bool receive) { receiveFields_ = receive; }
     bool GetReceiveFields() const { return receiveFields_; }
 
-    // フィールド接触時のみEmitするモード
-    // true  = enableEmitSpawnフィールドが存在する場合、シェーダー側で
-    //         フィールド球内のランダム点→エミッター表面投影でEmit位置を決定する。
-    //         emitCount は fieldContactEmitCount_ の値を使用する。
+    // フィールド接触部分にのみ発生するモード
+    // true  = enableEmitSpawn フィールドと接触しているエミッター表面にのみEmitする。
+    //         発生数・間隔・寿命はフィールド側（ParticleField の接触Emit設定）が管理し、
+    //         エミッター側の frequency / emitCount は使われない。
     // false = 通常の自動Emit（フィールドは UpdateCS での物理影響のみ）
     void SetEmitOnlyOnFieldContact(bool enable) { emitOnlyOnFieldContact_ = enable; }
     bool GetEmitOnlyOnFieldContact() const { return emitOnlyOnFieldContact_; }
-
-    // フィールド接触Emitモード時の1フレームあたり発生数
-    // 全スレッドがフィールド接触部分にEmitするので、
-    // 少ない値（例: 500〜2000）でも十分密になる
-    void SetFieldContactEmitCount(uint32_t count) { fieldContactEmitCount_ = count; }
-    uint32_t GetFieldContactEmitCount() const { return fieldContactEmitCount_; }
 
     // フィールドグループID（このIDと一致するフィールドのみ影響を受ける）
     // -1 = 全フィールドから影響を受ける（デフォルト）
@@ -52099,9 +52178,8 @@ class ParticleCSEmitter
     bool isGizmoSelectable_ = true;
     bool emitOnce_ = false;
     bool receiveFields_ = true;
-    int32_t fieldGroupId_ = -1;             // -1=全フィールド対象, 0以上=同じIDのフィールドのみ対象
-    bool emitOnlyOnFieldContact_ = false;   // true=フィールド接触時のみEmit（シェーダー側で位置を決定）
-    uint32_t fieldContactEmitCount_ = 1000; // 接触Emitモード時の発生数/フレーム
+    int32_t fieldGroupId_ = -1;           // -1=全フィールド対象, 0以上=同じIDのフィールドのみ対象
+    bool emitOnlyOnFieldContact_ = false; // true=フィールド接触部分にのみEmit（数・間隔はフィールド側が管理）
 };
 } // namespace Hagine
 
@@ -52112,6 +52190,8 @@ File Path: Engine/3d/particle/gpu/ParticleCSFieldManager.cpp
 #define NOMINMAX
 #include "ParticleCSFieldManager.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
+#include <Frame.h>
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 
@@ -52121,82 +52201,45 @@ File Path: Engine/3d/particle/gpu/ParticleCSFieldManager.cpp
 
 #pragma pack(push, 1)
 namespace Hagine {
+// 【重要】HLSL 側 ParticleFieldSettingsOverrideData（Particle.hlsli）と
+// バイト単位で一致させること（合計112バイト）。
 struct GPU_FieldSettingsOverride
 {
-    uint32_t overrideMaskX; // overrideMask.x (bit0-31)
-    uint32_t overrideMaskY; // overrideMask.y (bit32-63)
-    float maskPadding[2];   // アライメント
+    uint32_t overrideMask; // FieldOverrideBits の組み合わせ
     float lifeTimeMin;
     float lifeTimeMax;
     float scaleMin;
     float scaleMax;
+    float velocityMultiplier;
+    float trailSpawnDistance;
+    float pad0;
     float velocityMin[3];
     float pad1;
     float velocityMax[3];
     float pad2;
-    float startColor[4];
-    float endColor[4];
-    uint32_t enableLifetimeScale;
-    uint32_t enableRandomColor;
-    uint32_t enableSinScale;
-    float sinScaleFrequency;
-    float sinScaleAmplitude;
-    uint32_t enableGravity;
-    float pad3[2];
-    float gravity[3];
-    float pad4;
-    uint32_t enableTrail;
-    float trailSpawnDistance;
-    uint32_t maxTrailPerParticle;
-    float trailLifeTimeScale;
-    float trailScaleMultiplier[3];
-    float pad5;
-    float trailColorMultiplier[4];
-    float trailVelocityScale;
-    uint32_t trailInheritVelocity;
-    float trailMinLifeTime;
-    float pad6;
-    uint32_t enableGather;
-    float gatherStartRatio;
-    float gatherStrength;
-    float pad7;
+    float accelImpulse[3];
+    float pad3;
+    float color[4];
     float gatherTarget[3];
-    float pad8;
-    uint32_t enableVortex;
-    float vortexStrength;
-    float pad9[2];
-    float vortexAxis[3];
-    float pad10;
-    uint32_t enableAcceleration;
-    float pad11[3];
-    float acceleration[3];
-    float pad12;
-    uint32_t enableVelocityDamping;
-    float velocityDampingFactor;
-    uint32_t enableLifetimeVelDamping;
-    float lifetimeVelDampingStart;
-    uint32_t enableCurlNoise;
-    float curlNoiseScale;
-    float curlNoiseStrength;
-    float curlNoiseTimeScale;
-    uint32_t curlNoiseOctaves;
-    float curlNoiseAttractStrength;
-    uint32_t curlNoiseBlendMode;
-    float curlNoisePosRandom;
+    float pad4;
 };
 #pragma pack(pop)
+
+static_assert(sizeof(GPU_FieldSettingsOverride) == 112,
+              "GPU_FieldSettingsOverride のサイズが変化。HLSL ParticleFieldSettingsOverrideData と一致させること");
 
 static constexpr size_t kGPUOverrideStride = sizeof(GPU_FieldSettingsOverride);
 
 static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_FieldSettingsOverride &dst)
 {
-    dst.overrideMaskX = static_cast<uint32_t>(src.overrideMask & 0xFFFFFFFFULL);
-    dst.overrideMaskY = static_cast<uint32_t>((src.overrideMask >> 32) & 0xFFFFFFFFULL);
-    dst.maskPadding[0] = dst.maskPadding[1] = 0.0f;
+    dst.overrideMask = src.overrideMask;
     dst.lifeTimeMin = src.lifeTimeMin;
     dst.lifeTimeMax = src.lifeTimeMax;
     dst.scaleMin = src.scaleMin;
     dst.scaleMax = src.scaleMax;
+    dst.velocityMultiplier = src.velocityMultiplier;
+    dst.trailSpawnDistance = src.trailSpawnDistance;
+    dst.pad0 = 0.0f;
     dst.velocityMin[0] = src.velocityMin.x;
     dst.velocityMin[1] = src.velocityMin.y;
     dst.velocityMin[2] = src.velocityMin.z;
@@ -52205,74 +52248,18 @@ static void PackOverrideToGPU(const ParticleFieldSettingsOverride &src, GPU_Fiel
     dst.velocityMax[1] = src.velocityMax.y;
     dst.velocityMax[2] = src.velocityMax.z;
     dst.pad2 = 0.0f;
-    dst.startColor[0] = src.startColor.x;
-    dst.startColor[1] = src.startColor.y;
-    dst.startColor[2] = src.startColor.z;
-    dst.startColor[3] = src.startColor.w;
-    dst.endColor[0] = src.endColor.x;
-    dst.endColor[1] = src.endColor.y;
-    dst.endColor[2] = src.endColor.z;
-    dst.endColor[3] = src.endColor.w;
-    dst.enableLifetimeScale = src.enableLifetimeScale;
-    dst.enableRandomColor = src.enableRandomColor;
-    dst.enableSinScale = src.enableSinScale;
-    dst.sinScaleFrequency = src.sinScaleFrequency;
-    dst.sinScaleAmplitude = src.sinScaleAmplitude;
-    dst.enableGravity = src.enableGravity;
-    dst.pad3[0] = dst.pad3[1] = 0.0f;
-    dst.gravity[0] = src.gravity.x;
-    dst.gravity[1] = src.gravity.y;
-    dst.gravity[2] = src.gravity.z;
-    dst.pad4 = 0.0f;
-    dst.enableTrail = src.enableTrail;
-    dst.trailSpawnDistance = src.trailSpawnDistance;
-    dst.maxTrailPerParticle = src.maxTrailPerParticle;
-    dst.trailLifeTimeScale = src.trailLifeTimeScale;
-    dst.trailScaleMultiplier[0] = src.trailScaleMultiplier.x;
-    dst.trailScaleMultiplier[1] = src.trailScaleMultiplier.y;
-    dst.trailScaleMultiplier[2] = src.trailScaleMultiplier.z;
-    dst.pad5 = 0.0f;
-    dst.trailColorMultiplier[0] = src.trailColorMultiplier.x;
-    dst.trailColorMultiplier[1] = src.trailColorMultiplier.y;
-    dst.trailColorMultiplier[2] = src.trailColorMultiplier.z;
-    dst.trailColorMultiplier[3] = src.trailColorMultiplier.w;
-    dst.trailVelocityScale = src.trailVelocityScale;
-    dst.trailInheritVelocity = src.trailInheritVelocity;
-    dst.trailMinLifeTime = src.trailMinLifeTime;
-    dst.pad6 = 0.0f;
-    dst.enableGather = src.enableGather;
-    dst.gatherStartRatio = src.gatherStartRatio;
-    dst.gatherStrength = src.gatherStrength;
-    dst.pad7 = 0.0f;
+    dst.accelImpulse[0] = src.accelImpulse.x;
+    dst.accelImpulse[1] = src.accelImpulse.y;
+    dst.accelImpulse[2] = src.accelImpulse.z;
+    dst.pad3 = 0.0f;
+    dst.color[0] = src.color.x;
+    dst.color[1] = src.color.y;
+    dst.color[2] = src.color.z;
+    dst.color[3] = src.color.w;
     dst.gatherTarget[0] = src.gatherTarget.x;
     dst.gatherTarget[1] = src.gatherTarget.y;
     dst.gatherTarget[2] = src.gatherTarget.z;
-    dst.pad8 = 0.0f;
-    dst.enableVortex = src.enableVortex;
-    dst.vortexStrength = src.vortexStrength;
-    dst.pad9[0] = dst.pad9[1] = 0.0f;
-    dst.vortexAxis[0] = src.vortexAxis.x;
-    dst.vortexAxis[1] = src.vortexAxis.y;
-    dst.vortexAxis[2] = src.vortexAxis.z;
-    dst.pad10 = 0.0f;
-    dst.enableAcceleration = src.enableAcceleration;
-    dst.pad11[0] = dst.pad11[1] = dst.pad11[2] = 0.0f;
-    dst.acceleration[0] = src.acceleration.x;
-    dst.acceleration[1] = src.acceleration.y;
-    dst.acceleration[2] = src.acceleration.z;
-    dst.pad12 = 0.0f;
-    dst.enableVelocityDamping = src.enableVelocityDamping;
-    dst.velocityDampingFactor = src.velocityDampingFactor;
-    dst.enableLifetimeVelDamping = src.enableLifetimeVelDamping;
-    dst.lifetimeVelDampingStart = src.lifetimeVelDampingStart;
-    dst.enableCurlNoise = src.enableCurlNoise;
-    dst.curlNoiseScale = src.curlNoiseScale;
-    dst.curlNoiseStrength = src.curlNoiseStrength;
-    dst.curlNoiseTimeScale = src.curlNoiseTimeScale;
-    dst.curlNoiseOctaves = src.curlNoiseOctaves;
-    dst.curlNoiseAttractStrength = src.curlNoiseAttractStrength;
-    dst.curlNoiseBlendMode = src.curlNoiseBlendMode;
-    dst.curlNoisePosRandom = src.curlNoisePosRandom;
+    dst.pad4 = 0.0f;
 }
 
 void ParticleCSFieldManager::Finalize()
@@ -52359,7 +52346,46 @@ void ParticleCSFieldManager::CreateGPUResources()
 
 void ParticleCSFieldManager::Update()
 {
+    UpdateEmitSpawnTimers();
     UploadToGPU();
+}
+
+void ParticleCSFieldManager::UpdateEmitSpawnTimers()
+{
+    // 接触Emitのバースト管理。
+    // 各フィールドの間隔タイマーを進め、バーストするフレームだけ
+    // data.emitSpawnCount（GPU通信スロット）に発生数を書き込む。
+    // エミッター側（EmitterDisPatch）はこの値の合計をディスパッチ数に使う。
+    const float dt = Frame::DeltaTime();
+    for (auto &f : fields_)
+    {
+        uint32_t burst = 0;
+        if (f.enabled && f.data.enableEmitSpawn != 0 && f.emitSpawnCount > 0)
+        {
+            if (f.emitSpawnInterval <= 0.0f)
+            {
+                // 間隔0 = 毎フレーム発生
+                burst = f.emitSpawnCount;
+                f.emitSpawnTimer = 0.0f;
+            }
+            else
+            {
+                f.emitSpawnTimer += dt;
+                if (f.emitSpawnTimer >= f.emitSpawnInterval)
+                {
+                    f.emitSpawnTimer -= f.emitSpawnInterval;
+                    // 低FPSで複数間隔ぶん経過しても1バーストに丸める（発生数の暴発防止）
+                    f.emitSpawnTimer = std::min(f.emitSpawnTimer, f.emitSpawnInterval);
+                    burst = f.emitSpawnCount;
+                }
+            }
+        }
+        else
+        {
+            f.emitSpawnTimer = 0.0f;
+        }
+        f.data.emitSpawnCount = burst;
+    }
 }
 
 void ParticleCSFieldManager::UploadToGPU()
@@ -52371,7 +52397,22 @@ void ParticleCSFieldManager::UploadToGPU()
             continue;
         if (count >= kMaxFields)
             break;
-        pFieldsMappedData_[count] = f.data;
+
+        ParticleFieldData gpuData = f.data;
+
+        // Wind/Vortex の方向はシェーダ側で正規化しない契約のため、ここで正規化して転送する。
+        // （長さが強さに紛れ込む・(0,0,0)で無反応になる、という不安定さの元だった）
+        const float dirLen = std::sqrt(gpuData.direction.x * gpuData.direction.x +
+                                       gpuData.direction.y * gpuData.direction.y +
+                                       gpuData.direction.z * gpuData.direction.z);
+        if (dirLen > 1e-5f)
+        {
+            gpuData.direction.x /= dirLen;
+            gpuData.direction.y /= dirLen;
+            gpuData.direction.z /= dirLen;
+        }
+
+        pFieldsMappedData_[count] = gpuData;
 
         // 設定上書きデータを GPU レイアウト構造体へパック
         auto *dst = reinterpret_cast<GPU_FieldSettingsOverride *>(
@@ -52441,13 +52482,14 @@ void ParticleCSFieldManager::SaveFieldData(DataHandler &data, const ParticleFiel
         SaveOverrideData(data, field.override_);
     }
 
-    // Emit時スポーン判定
+    // 接触Emit（発生数・間隔はフィールド側が唯一の設定場所）
     data.Save("enableEmitSpawn", field.data.enableEmitSpawn);
     if (field.data.enableEmitSpawn)
     {
         data.Save("emitSpawnLifeTimeMin", field.data.emitSpawnLifeTimeMin);
         data.Save("emitSpawnLifeTimeMax", field.data.emitSpawnLifeTimeMax);
-        data.Save("emitSpawnCount", field.data.emitSpawnCount);
+        data.Save("emitSpawnCount", static_cast<int>(field.emitSpawnCount));
+        data.Save("emitSpawnInterval", field.emitSpawnInterval);
     }
 
     // グループID
@@ -52487,14 +52529,19 @@ void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &fie
         LoadOverrideData(data, field.override_);
     }
 
-    // Emit時スポーン判定
+    // 接触Emit（発生数・間隔はフィールド側が唯一の設定場所）
     field.data.enableEmitSpawn = data.Load("enableEmitSpawn", field.data.enableEmitSpawn);
     if (field.data.enableEmitSpawn)
     {
         field.data.emitSpawnLifeTimeMin = data.Load("emitSpawnLifeTimeMin", field.data.emitSpawnLifeTimeMin);
         field.data.emitSpawnLifeTimeMax = data.Load("emitSpawnLifeTimeMax", field.data.emitSpawnLifeTimeMax);
-        field.data.emitSpawnCount = data.Load("emitSpawnCount", field.data.emitSpawnCount);
+        field.emitSpawnCount = static_cast<uint32_t>(
+            std::max(0, data.Load("emitSpawnCount", static_cast<int>(field.emitSpawnCount))));
+        field.emitSpawnInterval = data.Load("emitSpawnInterval", field.emitSpawnInterval);
     }
+    // data.emitSpawnCount はGPU通信専用（毎フレーム算出）なのでロードしない
+    field.data.emitSpawnCount = 0;
+    field.emitSpawnTimer = 0.0f;
 
     // グループID
     field.data.groupId = data.Load("groupId", field.data.groupId);
@@ -52502,106 +52549,36 @@ void ParticleCSFieldManager::LoadFieldData(DataHandler &data, ParticleField &fie
 
 void ParticleCSFieldManager::SaveOverrideData(DataHandler &data, const ParticleFieldSettingsOverride &ov)
 {
-    // overrideMask を上位/下位 32bit に分けて保存（uint64_t は DataHandler 非対応の場合に対応）
-    data.Save("ov_maskLo", static_cast<uint32_t>(ov.overrideMask & 0xFFFFFFFFULL));
-    data.Save("ov_maskHi", static_cast<uint32_t>((ov.overrideMask >> 32) & 0xFFFFFFFFULL));
+    data.Save("ov_mask", ov.overrideMask);
     data.Save("ov_lifeTimeMin", ov.lifeTimeMin);
     data.Save("ov_lifeTimeMax", ov.lifeTimeMax);
     data.Save("ov_scaleMin", ov.scaleMin);
     data.Save("ov_scaleMax", ov.scaleMax);
     data.Save<Vector3>("ov_velocityMin", ov.velocityMin);
     data.Save<Vector3>("ov_velocityMax", ov.velocityMax);
-    data.Save<Vector4>("ov_startColor", ov.startColor);
-    data.Save<Vector4>("ov_endColor", ov.endColor);
-    data.Save("ov_enableLifetimeScale", ov.enableLifetimeScale);
-    data.Save("ov_enableRandomColor", ov.enableRandomColor);
-    data.Save("ov_enableSinScale", ov.enableSinScale);
-    data.Save("ov_sinScaleFrequency", ov.sinScaleFrequency);
-    data.Save("ov_sinScaleAmplitude", ov.sinScaleAmplitude);
-    data.Save("ov_enableGravity", ov.enableGravity);
-    data.Save<Vector3>("ov_gravity", ov.gravity);
-    data.Save("ov_enableTrail", ov.enableTrail);
+    data.Save("ov_velocityMultiplier", ov.velocityMultiplier);
+    data.Save<Vector3>("ov_accelImpulse", ov.accelImpulse);
+    data.Save<Vector4>("ov_color", ov.color);
     data.Save("ov_trailSpawnDistance", ov.trailSpawnDistance);
-    data.Save("ov_maxTrailPerParticle", ov.maxTrailPerParticle);
-    data.Save("ov_trailLifeTimeScale", ov.trailLifeTimeScale);
-    data.Save<Vector3>("ov_trailScaleMultiplier", ov.trailScaleMultiplier);
-    data.Save<Vector4>("ov_trailColorMultiplier", ov.trailColorMultiplier);
-    data.Save("ov_trailVelocityScale", ov.trailVelocityScale);
-    data.Save("ov_trailInheritVelocity", ov.trailInheritVelocity);
-    data.Save("ov_trailMinLifeTime", ov.trailMinLifeTime);
-    data.Save("ov_enableGather", ov.enableGather);
-    data.Save("ov_gatherStartRatio", ov.gatherStartRatio);
-    data.Save("ov_gatherStrength", ov.gatherStrength);
     data.Save<Vector3>("ov_gatherTarget", ov.gatherTarget);
-    data.Save("ov_enableVortex", ov.enableVortex);
-    data.Save("ov_vortexStrength", ov.vortexStrength);
-    data.Save<Vector3>("ov_vortexAxis", ov.vortexAxis);
-    data.Save("ov_enableAcceleration", ov.enableAcceleration);
-    data.Save<Vector3>("ov_acceleration", ov.acceleration);
-    data.Save("ov_enableVelocityDamping", ov.enableVelocityDamping);
-    data.Save("ov_velocityDampingFactor", ov.velocityDampingFactor);
-    data.Save("ov_enableLifetimeVelDamping", ov.enableLifetimeVelDamping);
-    data.Save("ov_lifetimeVelDampingStart", ov.lifetimeVelDampingStart);
-    data.Save("ov_enableCurlNoise", ov.enableCurlNoise);
-    data.Save("ov_curlNoiseScale", ov.curlNoiseScale);
-    data.Save("ov_curlNoiseStrength", ov.curlNoiseStrength);
-    data.Save("ov_curlNoiseTimeScale", ov.curlNoiseTimeScale);
-    data.Save("ov_curlNoiseOctaves", ov.curlNoiseOctaves);
-    data.Save("ov_curlNoiseAttractStrength", ov.curlNoiseAttractStrength);
-    data.Save("ov_curlNoiseBlendMode", ov.curlNoiseBlendMode);
-    data.Save("ov_curlNoisePosRandom", ov.curlNoisePosRandom);
 }
 
 void ParticleCSFieldManager::LoadOverrideData(DataHandler &data, ParticleFieldSettingsOverride &ov)
 {
-    uint32_t lo = data.Load("ov_maskLo", static_cast<uint32_t>(ov.overrideMask & 0xFFFFFFFFULL));
-    uint32_t hi = data.Load("ov_maskHi", static_cast<uint32_t>((ov.overrideMask >> 32) & 0xFFFFFFFFULL));
-    ov.overrideMask = (static_cast<uint64_t>(hi) << 32) | lo;
+    // 新フォーマット（8項目）。旧フォーマット(ov_maskLo/Hi + 45項目)は
+    // ビット意味が異なり安全に変換できないため読み込まない（実質未使用だった）。
+    ov.overrideMask = data.Load("ov_mask", ov.overrideMask);
     ov.lifeTimeMin = data.Load("ov_lifeTimeMin", ov.lifeTimeMin);
     ov.lifeTimeMax = data.Load("ov_lifeTimeMax", ov.lifeTimeMax);
     ov.scaleMin = data.Load("ov_scaleMin", ov.scaleMin);
     ov.scaleMax = data.Load("ov_scaleMax", ov.scaleMax);
     ov.velocityMin = data.Load<Vector3>("ov_velocityMin", ov.velocityMin);
     ov.velocityMax = data.Load<Vector3>("ov_velocityMax", ov.velocityMax);
-    ov.startColor = data.Load<Vector4>("ov_startColor", ov.startColor);
-    ov.endColor = data.Load<Vector4>("ov_endColor", ov.endColor);
-    ov.enableLifetimeScale = data.Load("ov_enableLifetimeScale", ov.enableLifetimeScale);
-    ov.enableRandomColor = data.Load("ov_enableRandomColor", ov.enableRandomColor);
-    ov.enableSinScale = data.Load("ov_enableSinScale", ov.enableSinScale);
-    ov.sinScaleFrequency = data.Load("ov_sinScaleFrequency", ov.sinScaleFrequency);
-    ov.sinScaleAmplitude = data.Load("ov_sinScaleAmplitude", ov.sinScaleAmplitude);
-    ov.enableGravity = data.Load("ov_enableGravity", ov.enableGravity);
-    ov.gravity = data.Load<Vector3>("ov_gravity", ov.gravity);
-    ov.enableTrail = data.Load("ov_enableTrail", ov.enableTrail);
+    ov.velocityMultiplier = data.Load("ov_velocityMultiplier", ov.velocityMultiplier);
+    ov.accelImpulse = data.Load<Vector3>("ov_accelImpulse", ov.accelImpulse);
+    ov.color = data.Load<Vector4>("ov_color", ov.color);
     ov.trailSpawnDistance = data.Load("ov_trailSpawnDistance", ov.trailSpawnDistance);
-    ov.maxTrailPerParticle = data.Load("ov_maxTrailPerParticle", ov.maxTrailPerParticle);
-    ov.trailLifeTimeScale = data.Load("ov_trailLifeTimeScale", ov.trailLifeTimeScale);
-    ov.trailScaleMultiplier = data.Load<Vector3>("ov_trailScaleMultiplier", ov.trailScaleMultiplier);
-    ov.trailColorMultiplier = data.Load<Vector4>("ov_trailColorMultiplier", ov.trailColorMultiplier);
-    ov.trailVelocityScale = data.Load("ov_trailVelocityScale", ov.trailVelocityScale);
-    ov.trailInheritVelocity = data.Load("ov_trailInheritVelocity", ov.trailInheritVelocity);
-    ov.trailMinLifeTime = data.Load("ov_trailMinLifeTime", ov.trailMinLifeTime);
-    ov.enableGather = data.Load("ov_enableGather", ov.enableGather);
-    ov.gatherStartRatio = data.Load("ov_gatherStartRatio", ov.gatherStartRatio);
-    ov.gatherStrength = data.Load("ov_gatherStrength", ov.gatherStrength);
     ov.gatherTarget = data.Load<Vector3>("ov_gatherTarget", ov.gatherTarget);
-    ov.enableVortex = data.Load("ov_enableVortex", ov.enableVortex);
-    ov.vortexStrength = data.Load("ov_vortexStrength", ov.vortexStrength);
-    ov.vortexAxis = data.Load<Vector3>("ov_vortexAxis", ov.vortexAxis);
-    ov.enableAcceleration = data.Load("ov_enableAcceleration", ov.enableAcceleration);
-    ov.acceleration = data.Load<Vector3>("ov_acceleration", ov.acceleration);
-    ov.enableVelocityDamping = data.Load("ov_enableVelocityDamping", ov.enableVelocityDamping);
-    ov.velocityDampingFactor = data.Load("ov_velocityDampingFactor", ov.velocityDampingFactor);
-    ov.enableLifetimeVelDamping = data.Load("ov_enableLifetimeVelDamping", ov.enableLifetimeVelDamping);
-    ov.lifetimeVelDampingStart = data.Load("ov_lifetimeVelDampingStart", ov.lifetimeVelDampingStart);
-    ov.enableCurlNoise = data.Load("ov_enableCurlNoise", ov.enableCurlNoise);
-    ov.curlNoiseScale = data.Load("ov_curlNoiseScale", ov.curlNoiseScale);
-    ov.curlNoiseStrength = data.Load("ov_curlNoiseStrength", ov.curlNoiseStrength);
-    ov.curlNoiseTimeScale = data.Load("ov_curlNoiseTimeScale", ov.curlNoiseTimeScale);
-    ov.curlNoiseOctaves = data.Load("ov_curlNoiseOctaves", ov.curlNoiseOctaves);
-    ov.curlNoiseAttractStrength = data.Load("ov_curlNoiseAttractStrength", ov.curlNoiseAttractStrength);
-    ov.curlNoiseBlendMode = data.Load("ov_curlNoiseBlendMode", ov.curlNoiseBlendMode);
-    ov.curlNoisePosRandom = data.Load("ov_curlNoisePosRandom", ov.curlNoisePosRandom);
 }
 
 void ParticleCSFieldManager::SaveField(const ParticleField &field)
@@ -52818,7 +52795,7 @@ void ParticleCSFieldManager::DrawImGui()
             ImGui::DragFloat(("影響半径##rad" + std::to_string(i)).c_str(), &f.data.radius, 0.1f, 0.01f, 9999.0f, "%.2f");
             ImGui::DragFloat(("減衰指数##fal" + std::to_string(i)).c_str(), &f.data.falloff, 0.05f, 0.1f, 4.0f, "%.2f");
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("1.0=線形減衰  2.0=二乗減衰（端に近いほど弱くなる）");
+                ImGui::SetTooltip("中心=1 端=0 の減衰カーブの指数\n1.0=線形 / 2.0=二乗（端で急激に弱く） / 0.5=平方根（広範囲で強い）");
 
             ImGui::Spacing();
             ImGui::Separator();
@@ -52926,7 +52903,7 @@ void ParticleCSFieldManager::DrawImGui()
             ImGui::SameLine();
             ImGui::TextDisabled("(?)");
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("フィールドに最初に入ったとき、チェックした\nParticleCSSettingsの項目を書き換えます。\n一度書き換えたパーティクルは再度入っても変化しません。");
+                ImGui::SetTooltip("フィールドに最初に入ったとき、チェックした項目を\n粒子ごとに一度だけ書き換えます。\n一度書き換えた粒子は再度入っても変化しません。");
 
             bool settingsOvEnabled = (f.data.enableSettingsOverride != 0);
             if (ImGui::Checkbox(("有効##so" + std::to_string(i)).c_str(), &settingsOvEnabled))
@@ -52941,18 +52918,18 @@ void ParticleCSFieldManager::DrawImGui()
             ImGui::Spacing();
             ImGui::Separator();
 
-            // --- Emit時スポーン判定 ---
+            // --- 接触Emit ---
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-            ImGui::TextUnformatted("Emit スポーン判定");
+            ImGui::TextUnformatted("接触Emit");
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::TextDisabled("(?)");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip(
-                    "有効にすると、このフィールドの範囲内に座標がある\n"
-                    "パーティクルのみEmitされます。\n"
-                    "エミッター全体ではなく触れた部分だけに生成したい場合に使います。\n"
-                    "大きさ・間隔はエミッター側の設定に従います。");
+                    "「フィールド接触部分にのみ発生」を有効にしたエミッターが、\n"
+                    "このフィールドと接触している表面にだけパーティクルを発生させます。\n"
+                    "発生数・間隔・寿命はここ（フィールド側）が唯一の設定場所です。\n"
+                    "エミッター側はトグルとグループIDのみ持ちます。");
 
             bool emitSpawn = (f.data.enableEmitSpawn != 0);
             if (ImGui::Checkbox(("有効##es" + std::to_string(i)).c_str(), &emitSpawn))
@@ -52964,13 +52941,20 @@ void ParticleCSFieldManager::DrawImGui()
                 ImGui::Indent();
                 ImGui::PushItemWidth(180.0f);
 
-                int spawnCount = static_cast<int>(f.data.emitSpawnCount);
-                if (ImGui::DragInt(("発生数/秒##esCount" + std::to_string(i)).c_str(), &spawnCount, 100, 0, 500000))
+                int spawnCount = static_cast<int>(f.emitSpawnCount);
+                if (ImGui::DragInt(("発生数/バースト##esCount" + std::to_string(i)).c_str(), &spawnCount, 10, 0, 50000))
                 {
-                    f.data.emitSpawnCount = static_cast<uint32_t>(std::max(0, spawnCount));
+                    f.emitSpawnCount = static_cast<uint32_t>(std::max(0, spawnCount));
                 }
                 if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("0 の場合はエミッター側の emitCount をそのまま使います。");
+                    ImGui::SetTooltip(
+                        "1回のバーストで発生させる粒子数（対象エミッターごと）。\n"
+                        "全スレッドが接触点にEmitするため 500〜3000 程度で十分密になります。");
+
+                ImGui::DragFloat(("発生間隔##esInterval" + std::to_string(i)).c_str(),
+                                 &f.emitSpawnInterval, 0.005f, 0.0f, 10.0f, "%.3f s");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("バーストの間隔（秒）。0 = 毎フレーム発生します。");
 
                 ImGui::DragFloat(("寿命 Min##esLTMin" + std::to_string(i)).c_str(),
                                  &f.data.emitSpawnLifeTimeMin, 0.01f, 0.0f, 60.0f, "%.2f s");
@@ -52979,6 +52963,20 @@ void ParticleCSFieldManager::DrawImGui()
                 // Min > Max にならないよう補正
                 if (f.data.emitSpawnLifeTimeMin > f.data.emitSpawnLifeTimeMax)
                     f.data.emitSpawnLifeTimeMin = f.data.emitSpawnLifeTimeMax;
+
+                // ライブ状態（間隔タイマーの進行と今フレームのバースト）
+                if (f.emitSpawnInterval > 0.0f)
+                {
+                    const float ratio = std::clamp(f.emitSpawnTimer / f.emitSpawnInterval, 0.0f, 1.0f);
+                    ImGui::ProgressBar(ratio, ImVec2(180.0f, 0.0f), "");
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("次バーストまで %.2fs",
+                                        std::max(0.0f, f.emitSpawnInterval - f.emitSpawnTimer));
+                }
+                else
+                {
+                    ImGui::TextDisabled("毎フレーム %u 個発生中", f.emitSpawnCount);
+                }
 
                 ImGui::PopItemWidth();
                 ImGui::Unindent();
@@ -53054,13 +53052,14 @@ void ParticleCSFieldManager::DrawImGui()
 void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov, int idx)
 {
 #ifdef USE_IMGUI
-    using namespace ParticleSettingsOverrideBits;
+    using namespace FieldOverrideBits;
     const std::string s = std::to_string(idx);
 
-    // ビット操作ヘルパー（チェックボックスのトグルに使う）
-    auto CheckBit = [&](const char *label, uint64_t bit, auto &value, auto min_v, auto max_v, const char *fmt = "%.3f") {
+    // 項目ヘルパー: 先頭のチェックボックスで上書きON/OFFを切り替え、
+    // ONのときだけ右隣の値エディタを操作できるようにする
+    auto BitCheckbox = [&](const char *id, uint32_t bit) -> bool {
         bool checked = (ov.overrideMask & bit) != 0;
-        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked))
+        if (ImGui::Checkbox((std::string("##cb") + id + s).c_str(), &checked))
         {
             if (checked)
                 ov.overrideMask |= bit;
@@ -53068,176 +53067,119 @@ void ParticleCSFieldManager::DrawOverrideImGui(ParticleFieldSettingsOverride &ov
                 ov.overrideMask &= ~bit;
         }
         ImGui::SameLine();
-        if (!checked)
-            ImGui::BeginDisabled();
-        if constexpr (std::is_same_v<std::decay_t<decltype(value)>, float>)
-        {
-            ImGui::DragFloat((label + s).c_str(), &value, 0.01f, min_v, max_v, fmt);
-        }
-        else if constexpr (std::is_same_v<std::decay_t<decltype(value)>, uint32_t>)
-        {
-            int v = static_cast<int>(value);
-            if (ImGui::DragInt((label + s).c_str(), &v, 1, static_cast<int>(min_v), static_cast<int>(max_v)))
-                value = static_cast<uint32_t>(v);
-        }
-        if (!checked)
-            ImGui::EndDisabled();
-    };
-    auto CheckBitBool = [&](const char *label, uint64_t bit, uint32_t &flag) {
-        bool checked = (ov.overrideMask & bit) != 0;
-        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked))
-        {
-            if (checked)
-                ov.overrideMask |= bit;
-            else
-                ov.overrideMask &= ~bit;
-        }
-        ImGui::SameLine();
-        bool flagBool = (flag != 0);
-        if (!checked)
-            ImGui::BeginDisabled();
-        if (ImGui::Checkbox((label + s).c_str(), &flagBool))
-            flag = flagBool ? 1u : 0u;
-        if (!checked)
-            ImGui::EndDisabled();
-    };
-    auto CheckBitVec3 = [&](const char *label, uint64_t bit, Vector3 &v) {
-        bool checked = (ov.overrideMask & bit) != 0;
-        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked))
-        {
-            if (checked)
-                ov.overrideMask |= bit;
-            else
-                ov.overrideMask &= ~bit;
-        }
-        ImGui::SameLine();
-        if (!checked)
-            ImGui::BeginDisabled();
-        ImGui::DragFloat3((label + s).c_str(), &v.x, 0.01f, -999.0f, 999.0f, "%.3f");
-        if (!checked)
-            ImGui::EndDisabled();
-    };
-    auto CheckBitVec4 = [&](const char *label, uint64_t bit, Vector4 &v) {
-        bool checked = (ov.overrideMask & bit) != 0;
-        if (ImGui::Checkbox((std::string("##cb") + label + s).c_str(), &checked))
-        {
-            if (checked)
-                ov.overrideMask |= bit;
-            else
-                ov.overrideMask &= ~bit;
-        }
-        ImGui::SameLine();
-        if (!checked)
-            ImGui::BeginDisabled();
-        ImGui::ColorEdit4((label + s).c_str(), &v.x, ImGuiColorEditFlags_Float);
-        if (!checked)
-            ImGui::EndDisabled();
+        return checked;
     };
 
     ImGui::Indent(12.0f);
-    ImGui::TextDisabled("チェックした項目だけ上書きされます");
+    ImGui::TextDisabled("チェックした項目だけ、入った粒子へ一度だけ適用されます");
 
-    // ---- 寿命 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ 寿命 ]");
-    ImGui::PopStyleColor();
-    CheckBit("寿命Min##ov", LifeTimeMin, ov.lifeTimeMin, 0.0f, 99999.0f);
-    CheckBit("寿命Max##ov", LifeTimeMax, ov.lifeTimeMax, 0.0f, 99999.0f);
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("lifeTimeMax は lifeTime を直接上書きします\n例: 100000→1.5");
+    // ---- 寿命（Min/Max乱数で上書き） ----
+    {
+        const bool on = BitCheckbox("life", LifeTime);
+        if (!on)
+            ImGui::BeginDisabled();
+        float v[2] = {ov.lifeTimeMin, ov.lifeTimeMax};
+        if (ImGui::DragFloat2(("寿命 Min/Max##ov" + s).c_str(), v, 0.01f, 0.0f, 60.0f, "%.2f s"))
+        {
+            ov.lifeTimeMin = v[0];
+            ov.lifeTimeMax = std::max(v[0], v[1]);
+        }
+        if (!on)
+            ImGui::EndDisabled();
+        if (on && ImGui::IsItemHovered())
+            ImGui::SetTooltip("寿命を Min〜Max の乱数で上書きします。\n短くすると入った粒子が早く消えます。");
+    }
 
-    // ---- スケール ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ スケール ]");
-    ImGui::PopStyleColor();
-    CheckBit("スケールMin##ov", ScaleMin, ov.scaleMin, 0.0f, 99.0f);
-    CheckBit("スケールMax##ov", ScaleMax, ov.scaleMax, 0.0f, 99.0f);
+    // ---- スケール（Min/Max乱数で上書き） ----
+    {
+        const bool on = BitCheckbox("scale", Scale);
+        if (!on)
+            ImGui::BeginDisabled();
+        float v[2] = {ov.scaleMin, ov.scaleMax};
+        if (ImGui::DragFloat2(("スケール Min/Max##ov" + s).c_str(), v, 0.01f, 0.0f, 99.0f, "%.2f"))
+        {
+            ov.scaleMin = v[0];
+            ov.scaleMax = std::max(v[0], v[1]);
+        }
+        if (!on)
+            ImGui::EndDisabled();
+    }
 
-    // ---- 速度 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ 速度 ]");
-    ImGui::PopStyleColor();
-    CheckBitVec3("速度Min##ov", VelocityMin, ov.velocityMin);
-    CheckBitVec3("速度Max##ov", VelocityMax, ov.velocityMax);
+    // ---- 速度（Min/Max乱数で置換） ----
+    {
+        const bool on = BitCheckbox("vel", Velocity);
+        if (!on)
+            ImGui::BeginDisabled();
+        ImGui::DragFloat3(("速度 Min##ov" + s).c_str(), &ov.velocityMin.x, 0.01f, -999.0f, 999.0f, "%.2f");
+        if (on && ImGui::IsItemHovered())
+            ImGui::SetTooltip("速度を成分ごとの Min〜Max 乱数で置き換えます");
+        const float checkboxWidth = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.x;
+        ImGui::Indent(checkboxWidth);
+        ImGui::DragFloat3(("速度 Max##ov" + s).c_str(), &ov.velocityMax.x, 0.01f, -999.0f, 999.0f, "%.2f");
+        ImGui::Unindent(checkboxWidth);
+        if (!on)
+            ImGui::EndDisabled();
+    }
 
-    // ---- 色 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ 色 ]");
-    ImGui::PopStyleColor();
-    CheckBitVec4("開始色##ov", StartColor, ov.startColor);
-    CheckBitVec4("終了色##ov", EndColor, ov.endColor);
+    // ---- 速度倍率（一度だけ乗算） ----
+    {
+        const bool on = BitCheckbox("velmul", VelocityMul);
+        if (!on)
+            ImGui::BeginDisabled();
+        ImGui::DragFloat(("速度倍率##ov" + s).c_str(), &ov.velocityMultiplier, 0.01f, -10.0f, 10.0f, "%.2f");
+        if (!on)
+            ImGui::EndDisabled();
+        if (on && ImGui::IsItemHovered())
+            ImGui::SetTooltip("入った瞬間に速度へ一度だけ乗算します。\n0=停止 / 0.5=減速 / 負=反転");
+    }
 
-    // ---- LifetimeScale ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ スケールアニメーション ]");
-    ImGui::PopStyleColor();
-    CheckBitBool("LifetimeScale有効##ov", EnableLifetimeScale, ov.enableLifetimeScale);
-    CheckBitBool("ランダムカラー有効##ov", EnableRandomColor, ov.enableRandomColor);
-    CheckBitBool("SinScale有効##ov", EnableSinScale, ov.enableSinScale);
-    CheckBit("Sin周波数##ov", SinScaleFrequency, ov.sinScaleFrequency, 0.0f, 100.0f);
-    CheckBit("Sin振幅##ov", SinScaleAmplitude, ov.sinScaleAmplitude, 0.0f, 10.0f);
+    // ---- 加速度インパルス（一度だけ加算） ----
+    {
+        const bool on = BitCheckbox("impulse", AccelImpulse);
+        if (!on)
+            ImGui::BeginDisabled();
+        ImGui::DragFloat3(("加速インパルス##ov" + s).c_str(), &ov.accelImpulse.x, 0.01f, -999.0f, 999.0f, "%.2f");
+        if (!on)
+            ImGui::EndDisabled();
+        if (on && ImGui::IsItemHovered())
+            ImGui::SetTooltip("入った瞬間に速度へ一度だけ加算します（吹き飛ばし等）");
+    }
 
-    // ---- 重力 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ 重力 ]");
-    ImGui::PopStyleColor();
-    CheckBitBool("重力有効##ov", EnableGravity, ov.enableGravity);
-    CheckBitVec3("重力ベクトル##ov", Gravity, ov.gravity);
+    // ---- 色（RGBを上書きして固定） ----
+    {
+        const bool on = BitCheckbox("color", Color);
+        if (!on)
+            ImGui::BeginDisabled();
+        ImGui::ColorEdit4(("色上書き##ov" + s).c_str(), &ov.color.x, ImGuiColorEditFlags_Float);
+        if (!on)
+            ImGui::EndDisabled();
+        if (on && ImGui::IsItemHovered())
+            ImGui::SetTooltip("入った粒子のRGBをこの色に固定します。\nアルファのフェードは通常どおり継続します。");
+    }
 
-    // ---- トレイル ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ トレイル ]");
-    ImGui::PopStyleColor();
-    CheckBitBool("トレイル有効##ov", EnableTrail, ov.enableTrail);
-    CheckBit("生成間隔##ov", TrailSpawnDistance, ov.trailSpawnDistance, 0.001f, 10.0f);
-    CheckBit("最大数/粒##ov", MaxTrailPerParticle, ov.maxTrailPerParticle, 1.0f, 50.0f);
-    CheckBit("寿命スケール##ov", TrailLifeTimeScale, ov.trailLifeTimeScale, 0.0f, 5.0f);
-    CheckBitVec3("スケール倍率##ov", TrailScaleMultiplier, ov.trailScaleMultiplier);
-    CheckBitVec4("色倍率##ov", TrailColorMultiplier, ov.trailColorMultiplier);
-    CheckBit("速度スケール##ov", TrailVelocityScale, ov.trailVelocityScale, 0.0f, 5.0f);
-    CheckBitBool("速度継承##ov", TrailInheritVelocity, ov.trailInheritVelocity);
-    CheckBit("最小寿命##ov", TrailMinLifeTime, ov.trailMinLifeTime, 0.0f, 10.0f);
+    // ---- トレイル生成間隔の上書き ----
+    {
+        const bool on = BitCheckbox("traildist", TrailDistance);
+        if (!on)
+            ImGui::BeginDisabled();
+        ImGui::DragFloat(("トレイル生成間隔##ov" + s).c_str(), &ov.trailSpawnDistance, 0.005f, 0.001f, 10.0f, "%.3f");
+        if (!on)
+            ImGui::EndDisabled();
+        if (on && ImGui::IsItemHovered())
+            ImGui::SetTooltip("トレイルの生成間隔（距離）を上書きします。\n小さいほど濃く出ます。");
+    }
 
-    // ---- ギャザー ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ ギャザー ]");
-    ImGui::PopStyleColor();
-    CheckBitBool("ギャザー有効##ov", EnableGather, ov.enableGather);
-    CheckBit("開始比率##ov", GatherStartRatio, ov.gatherStartRatio, 0.0f, 1.0f);
-    CheckBit("強度##ovg", GatherStrength, ov.gatherStrength, 0.0f, 100.0f);
-    CheckBitVec3("目標座標##ov", GatherTarget, ov.gatherTarget);
-
-    // ---- ヴォルテックス ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ ヴォルテックス ]");
-    ImGui::PopStyleColor();
-    CheckBitBool("渦有効##ov", EnableVortex, ov.enableVortex);
-    CheckBit("渦強度##ov", VortexStrength, ov.vortexStrength, -100.0f, 100.0f);
-    CheckBitVec3("渦軸##ov", VortexAxis, ov.vortexAxis);
-
-    // ---- 加速度・減衰 ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ 加速度 / ダンピング ]");
-    ImGui::PopStyleColor();
-    CheckBitBool("加速度有効##ov", EnableAcceleration, ov.enableAcceleration);
-    CheckBitVec3("加速度ベクトル##ov", Acceleration, ov.acceleration);
-    CheckBitBool("速度ダンピング有効##ov", EnableVelocityDamping, ov.enableVelocityDamping);
-    CheckBit("ダンピング係数##ov", VelocityDampingFactor, ov.velocityDampingFactor, 0.0f, 1.0f);
-    CheckBitBool("寿命ダンピング有効##ov", EnableLifetimeVelDamping, ov.enableLifetimeVelDamping);
-    CheckBit("開始比率##ovd", LifetimeVelDampingStart, ov.lifetimeVelDampingStart, 0.0f, 1.0f);
-
-    // ---- CurlNoise ----
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
-    ImGui::TextUnformatted("[ CurlNoise ]");
-    ImGui::PopStyleColor();
-    CheckBitBool("CurlNoise有効##ov", EnableCurlNoise, ov.enableCurlNoise);
-    CheckBit("スケール##ovcn", CurlNoiseScale, ov.curlNoiseScale, 0.0f, 100.0f);
-    CheckBit("強度##ovcn", CurlNoiseStrength, ov.curlNoiseStrength, 0.0f, 100.0f);
-    CheckBit("時間スケール##ovcn", CurlNoiseTimeScale, ov.curlNoiseTimeScale, 0.0f, 100.0f);
-    CheckBit("オクターブ##ovcn", CurlNoiseOctaves, ov.curlNoiseOctaves, 1.0f, 8.0f);
-    CheckBit("引寄強度##ovcn", CurlNoiseAttractStrength, ov.curlNoiseAttractStrength, 0.0f, 100.0f);
-    CheckBit("ブレンドモード##ovcn", CurlNoiseBlendMode, ov.curlNoiseBlendMode, 0.0f, 1.0f);
-    CheckBit("位置ランダム##ovcn", CurlNoisePosRandom, ov.curlNoisePosRandom, 0.0f, 100.0f);
+    // ---- 向け替え（速さを保ったままターゲット方向へ） ----
+    {
+        const bool on = BitCheckbox("redirect", GatherRedirect);
+        if (!on)
+            ImGui::BeginDisabled();
+        ImGui::DragFloat3(("向け替え先##ov" + s).c_str(), &ov.gatherTarget.x, 0.1f, -9999.0f, 9999.0f, "%.1f");
+        if (!on)
+            ImGui::EndDisabled();
+        if (on && ImGui::IsItemHovered())
+            ImGui::SetTooltip("入った瞬間、速さを保ったままこの座標の方向へ向け替えます");
+    }
 
     ImGui::Unindent(12.0f);
 #endif
@@ -53626,6 +53568,10 @@ class ParticleCSFieldManager
     void CreateGPUResources();
     void UploadToGPU();
 
+    /// 接触Emitのバースト管理：各フィールドの間隔タイマーを進め、
+    /// バーストするフレームだけ data.emitSpawnCount に発生数を書き込む
+    void UpdateEmitSpawnTimers();
+
     // --- セーブ/ロード内部処理 ---
     void SaveFieldData(DataHandler &data, const ParticleField &field);
     void LoadFieldData(DataHandler &data, ParticleField &field);
@@ -53676,65 +53622,30 @@ class ParticleCSFieldManager
 File Path: Engine/3d/particle/gpu/ParticleCSFieldSettingOverride.h
 ============================================================
 #pragma once
-#include "type/Vector3.h"
-#include "type/Vector4.h"
 #include <cstdint>
 
 /// =====================================================================
-/// ParticleCSSettings 上書き用ビット定数
-/// フィールド側の overrideMask / パーティクル側の settingsOverrideFlags
+/// フィールドの「一度きり設定上書き」ビット定数
+/// フィールド側の overrideMask / パーティクル側の settingsOverrideFlags.x
 /// で共通使用する。
-/// uint64_t なので最大64項目まで対応。
+///
+/// 【設計メモ】
+/// 旧実装は ParticleCSSettings の45項目を上書き対象にしていたが、
+/// enableXxx 系などグループ全体の ConstantBuffer 設定は粒子単体では
+/// 適用不可能で、実際に効くのは一部だけだった。
+/// 粒子単体へ確実に適用できる8項目に絞って再設計している。
 /// =====================================================================
 namespace Hagine {
-namespace ParticleSettingsOverrideBits {
-static constexpr uint64_t LifeTimeMin = 1ULL << 0;
-static constexpr uint64_t LifeTimeMax = 1ULL << 1;
-static constexpr uint64_t ScaleMin = 1ULL << 2;
-static constexpr uint64_t ScaleMax = 1ULL << 3;
-static constexpr uint64_t VelocityMin = 1ULL << 4;
-static constexpr uint64_t VelocityMax = 1ULL << 5;
-static constexpr uint64_t StartColor = 1ULL << 6;
-static constexpr uint64_t EndColor = 1ULL << 7;
-static constexpr uint64_t EnableLifetimeScale = 1ULL << 8;
-static constexpr uint64_t EnableRandomColor = 1ULL << 9;
-static constexpr uint64_t EnableSinScale = 1ULL << 10;
-static constexpr uint64_t SinScaleFrequency = 1ULL << 11;
-static constexpr uint64_t SinScaleAmplitude = 1ULL << 12;
-static constexpr uint64_t EnableGravity = 1ULL << 13;
-static constexpr uint64_t Gravity = 1ULL << 14;
-static constexpr uint64_t EnableTrail = 1ULL << 15;
-static constexpr uint64_t TrailSpawnDistance = 1ULL << 16;
-static constexpr uint64_t MaxTrailPerParticle = 1ULL << 17;
-static constexpr uint64_t TrailLifeTimeScale = 1ULL << 18;
-static constexpr uint64_t TrailScaleMultiplier = 1ULL << 19;
-static constexpr uint64_t TrailColorMultiplier = 1ULL << 20;
-static constexpr uint64_t TrailVelocityScale = 1ULL << 21;
-static constexpr uint64_t TrailInheritVelocity = 1ULL << 22;
-static constexpr uint64_t TrailMinLifeTime = 1ULL << 23;
-static constexpr uint64_t EnableGather = 1ULL << 24;
-static constexpr uint64_t GatherStartRatio = 1ULL << 25;
-static constexpr uint64_t GatherStrength = 1ULL << 26;
-static constexpr uint64_t GatherTarget = 1ULL << 27;
-static constexpr uint64_t EnableVortex = 1ULL << 28;
-static constexpr uint64_t VortexStrength = 1ULL << 29;
-static constexpr uint64_t VortexAxis = 1ULL << 30;
-static constexpr uint64_t EnableAcceleration = 1ULL << 31;
-static constexpr uint64_t Acceleration = 1ULL << 32;
-static constexpr uint64_t EnableVelocityDamping = 1ULL << 33;
-static constexpr uint64_t VelocityDampingFactor = 1ULL << 34;
-static constexpr uint64_t EnableLifetimeVelDamping = 1ULL << 35;
-static constexpr uint64_t LifetimeVelDampingStart = 1ULL << 36;
-static constexpr uint64_t EnableCurlNoise = 1ULL << 37;
-static constexpr uint64_t CurlNoiseScale = 1ULL << 38;
-static constexpr uint64_t CurlNoiseStrength = 1ULL << 39;
-static constexpr uint64_t CurlNoiseTimeScale = 1ULL << 40;
-static constexpr uint64_t CurlNoiseOctaves = 1ULL << 41;
-static constexpr uint64_t CurlNoiseAttractStrength = 1ULL << 42;
-static constexpr uint64_t CurlNoiseBlendMode = 1ULL << 43;
-static constexpr uint64_t CurlNoisePosRandom = 1ULL << 44;
-// 必要があれば 45〜63 を追加可能
-} // namespace ParticleSettingsOverrideBits
+namespace FieldOverrideBits {
+static constexpr uint32_t LifeTime = 1u << 0;       // 寿命を Min/Max 乱数で上書き
+static constexpr uint32_t Scale = 1u << 1;          // スケールを Min/Max 乱数で上書き
+static constexpr uint32_t Velocity = 1u << 2;       // 速度を Min/Max 乱数で置換
+static constexpr uint32_t VelocityMul = 1u << 3;    // 速度に倍率を一度だけ乗算
+static constexpr uint32_t AccelImpulse = 1u << 4;   // 速度に加速度を一度だけ加算
+static constexpr uint32_t Color = 1u << 5;          // 色(RGB)を上書き（以後この色で固定）
+static constexpr uint32_t TrailDistance = 1u << 6;  // トレイル生成間隔を上書き
+static constexpr uint32_t GatherRedirect = 1u << 7; // 速度をターゲット方向へ向け替え
+} // namespace FieldOverrideBits
 } // namespace Hagine
 
 
@@ -88886,9 +88797,9 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateSpriteRootSig
     // Samplerの設定
     D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
     staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;   // バイリニアフィルタ
-    staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // 0～1の範囲外をリピート
-    staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-    staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP; // 0～1の範囲外をリピート
+    staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+    staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
     staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;     // 比較しない
     staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;                       // ありったけのMipmapを使う
     staticSamplers[0].ShaderRegister = 0;                               // レジスタ番号0を使う
