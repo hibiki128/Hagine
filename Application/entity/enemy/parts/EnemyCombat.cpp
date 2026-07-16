@@ -230,6 +230,8 @@ void EnemyCombat::Shot()
     bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
     bullet->SetColliderRadius(kBulletColliderRadius);
     bullets_.push_back(std::move(bullet));
+
+    pOwner_->Visual().PlayShotAnimation(); // 発射モーション（連射時は毎回先頭から再生し直す）
 }
 
 void EnemyCombat::ShotWithDirection(const Vector3 &direction, bool forceHoming)
@@ -270,6 +272,8 @@ void EnemyCombat::ShotWithDirection(const Vector3 &direction, bool forceHoming)
     }
 
     bullets_.push_back(std::move(bullet));
+
+    pOwner_->Visual().PlayShotAnimation(); // 発射モーション（連射時は毎回先頭から再生し直す）
 }
 
 void EnemyCombat::PerformAttack()

@@ -38,6 +38,12 @@ class PlayerVisual
     void PlayDeathAnimation();
 
     /// <summary>
+    /// 通常弾の発射アニメーションを再生する（ループなし）
+    /// 再生中に再度呼ばれた場合も毎回先頭から再生し直す
+    /// </summary>
+    void PlayShotAnimation();
+
+    /// <summary>
     /// 死亡アニメーションが最後まで再生し終わったか
     /// （粒子化して消える死亡演出の開始判定に使う）
     /// </summary>

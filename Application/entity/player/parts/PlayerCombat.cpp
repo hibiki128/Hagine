@@ -171,6 +171,8 @@ void PlayerCombat::FireNormalBullet()
     bullet->SetColliderRadius(kBulletColliderRadius);
     bullets_.push_back(std::move(bullet));
 
+    pOwner_->Visual().PlayShotAnimation(); // 発射モーション（連射時は毎回先頭から再生し直す）
+
     pOwner_->EmitAction(Player::ActionKind::NormalShot); // 入力表示UI用：通常射撃を通知
 }
 
