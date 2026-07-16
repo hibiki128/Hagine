@@ -67,7 +67,7 @@ void WinApp::Initialize()
     RegisterClass(&wc_);
 
     // ウィンドウサイズを表す構造体にクライアント領域を入れる
-    RECT wrc = {0, 0, kClientWidth, kClientHeight};
+    RECT wrc = {0, 0, virtualWidth_, virtualHeight_};
 
     // クライアント領域を元に実際のサイズにwrcを変更してもらう
     AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
@@ -182,6 +182,15 @@ void WinApp::SetClientSize(int32_t width, int32_t height)
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 }
 
+void WinApp::SetVirtualResolution(int32_t width, int32_t height)
+{
+    if (width > 0 && height > 0)
+    {
+        virtualWidth_ = width;
+        virtualHeight_ = height;
+    }
+}
+
 void WinApp::ComputeLetterboxRect(int32_t clientWidth, int32_t clientHeight,
                                   float &outX, float &outY, float &outWidth, float &outHeight)
 {
@@ -189,12 +198,12 @@ void WinApp::ComputeLetterboxRect(int32_t clientWidth, int32_t clientHeight,
     {
         outX = 0.0f;
         outY = 0.0f;
-        outWidth = static_cast<float>(kClientWidth);
-        outHeight = static_cast<float>(kClientHeight);
+        outWidth = static_cast<float>(virtualWidth_);
+        outHeight = static_cast<float>(virtualHeight_);
         return;
     }
 
-    const float targetAspect = static_cast<float>(kClientWidth) / static_cast<float>(kClientHeight);
+    const float targetAspect = static_cast<float>(virtualWidth_) / static_cast<float>(virtualHeight_);
     const float windowAspect = static_cast<float>(clientWidth) / static_cast<float>(clientHeight);
 
     if (windowAspect > targetAspect)

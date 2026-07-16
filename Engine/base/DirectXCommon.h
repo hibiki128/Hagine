@@ -220,6 +220,13 @@ class DirectXCommon
     void BeginComputeFrame();
     /// シャットダウン時：コンピュートキューの全作業を CPU 側で完了させる
     void FlushComputeQueue();
+
+    /// <summary>
+    /// GPU の全作業完了を CPU 側で待つ（Direct/Compute 両キューをフラッシュ）。
+    /// シーン破棄など、GPU がまだ参照している可能性のあるリソースを解放する前に呼ぶこと。
+    /// （デバッグレイヤーは「使用中リソースの解放」を ERROR としてブレークするため）
+    /// </summary>
+    void WaitForGPU();
 #pragma endregion
 
   private: // メンバ関数

@@ -48,6 +48,17 @@ void ClearScene::Initialize()
     /// セット
     /// ===================================================
     isGameOver_ = pSceneManager_->GetIsGameOver();
+
+    // cube_1 はゲームクリア時は Winner（JSON既定）、ゲームオーバー時は Loser を表示する。
+    // モデルのみ差し替える（コライダー・親子関係は再読込しない）
+    if (isGameOver_)
+    {
+        if (BaseObject *resultChara = pObjectManager_->GetObjectByName("cube_1"))
+        {
+            resultChara->SetModel("animation/Player/Loser.gltf");
+        }
+    }
+
     resultUI_->SetClearTime(pSceneManager_->GetClearTime());
     resultUI_->SetHP(pSceneManager_->GetHP());
     resultUI_->SetIsGameOver(isGameOver_);

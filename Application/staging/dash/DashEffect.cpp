@@ -7,12 +7,16 @@ void DashEffect::Init()
 {
     // 風切りライン（進行方向と逆へ高速で流れるストリーク）
     windEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("dashWind");
-    // 通過跡の残光（その場に残ってすっと消える淡い光）
-    afterglowEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("dashAfterglow");
+
+    // 生成時のスケールを基準として覚えておく（空中ダッシュ時にこの値へ戻す）
+    if (windEmitter_)
+    {
+        baseWindScale_ = windEmitter_->GetScale();
+    }
 }
 
 void DashEffect::Update(const Vector3 &position, const Vector3 &velocity,
-                        const Vector3 &forward, bool active)
+                        const Vector3 &forward, bool active, bool grounded)
 {
     // 進行方向を求める（十分な速度があれば速度から、低速時は正面方向で代用）
     Vector3 dir = velocity;
@@ -30,6 +34,12 @@ void DashEffect::Update(const Vector3 &position, const Vector3 &velocity,
 
     Vector3 center = position + Vector3(0.0f, kBodyHeightOffset, 0.0f);
 
+    // 空中ダッシュでは発生位置をさらに上げる
+    if (!grounded)
+    {
+        center.y += kAirDashRiseY;
+    }
+
     if (windEmitter_)
     {
         // 少し進行方向の先から発生させ、体の横を通り過ぎるように逆方向へ流す。
@@ -39,16 +49,14 @@ void DashEffect::Update(const Vector3 &position, const Vector3 &velocity,
         Vector3 spread = {kWindSpread, kWindSpread, kWindSpread};
         windEmitter_->SetMinVelocity(back * kWindSpeedMin - spread);
         windEmitter_->SetMaxVelocity(back * kWindSpeedMax + spread);
+
+        // 地上ダッシュはエミッターを縦に伸ばし、空中ダッシュは基準スケールに戻す
+        Vector3 scale = baseWindScale_;
+        scale.y = grounded ? kGroundWindScaleY : baseWindScale_.y;
+        windEmitter_->SetScale(scale);
+
         windEmitter_->SetAuto(active);
         windEmitter_->Update(); // emitフラグ残留防止のため毎フレーム呼ぶ
-    }
-
-    if (afterglowEmitter_)
-    {
-        // 残光はほぼ動かず、通り過ぎた軌跡として残るのでエミッターを体に追従させるだけでよい
-        afterglowEmitter_->SetTranslate(center);
-        afterglowEmitter_->SetAuto(active);
-        afterglowEmitter_->Update();
     }
 }
 
@@ -58,10 +66,6 @@ void DashEffect::DrawCompute(const ViewProjection &vp)
     {
         windEmitter_->DrawCompute(vp);
     }
-    if (afterglowEmitter_)
-    {
-        afterglowEmitter_->DrawCompute(vp);
-    }
 }
 
 void DashEffect::DrawGraphics(const ViewProjection &vp)
@@ -70,10 +74,6 @@ void DashEffect::DrawGraphics(const ViewProjection &vp)
     {
         windEmitter_->DrawGraphics(vp);
     }
-    if (afterglowEmitter_)
-    {
-        afterglowEmitter_->DrawGraphics(vp);
-    }
 }
 
 void DashEffect::DrawImGui()
@@ -81,9 +81,5 @@ void DashEffect::DrawImGui()
     if (windEmitter_)
     {
         windEmitter_->DrawImGui();
-    }
-    if (afterglowEmitter_)
-    {
-        afterglowEmitter_->DrawImGui();
     }
 }

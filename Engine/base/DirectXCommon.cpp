@@ -71,10 +71,10 @@ void DirectXCommon::Initialize(WinApp *winApp)
 
     // スワップチェーンの生成
     swapChain_ = std::make_unique<DXSwapChain>();
-    swapChain_->Initialize(dxDevice_->GetFactory(), directQueue_->Get(), pWinApp_->GetHwnd(), WinApp::kClientWidth, WinApp::kClientHeight);
+    swapChain_->Initialize(dxDevice_->GetFactory(), directQueue_->Get(), pWinApp_->GetHwnd(), WinApp::GetVirtualWidth(), WinApp::GetVirtualHeight());
 
     // 深度バッファの生成
-    depthStencilResource_ = resourceFactory_->CreateDepthStencilTextureResource(WinApp::kClientWidth, WinApp::kClientHeight);
+    depthStencilResource_ = resourceFactory_->CreateDepthStencilTextureResource(WinApp::GetVirtualWidth(), WinApp::GetVirtualHeight());
 
     // RTV / DSV 管理の初期化
     rtvManager_ = std::make_unique<RtvManager>();
@@ -93,7 +93,7 @@ void DirectXCommon::Initialize(WinApp *winApp)
     // シザリング矩形の初期化
     ScissorRectInitialize();
     // 最終合成用ビューポートの初期化（起動時はウィンドウ＝仮想解像度）
-    UpdatePresentViewport(WinApp::kClientWidth, WinApp::kClientHeight);
+    UpdatePresentViewport(WinApp::GetVirtualWidth(), WinApp::GetVirtualHeight());
 
     // DXCコンパイラの生成
     shaderCompiler_ = std::make_unique<ShaderCompiler>();
@@ -141,7 +141,7 @@ void DirectXCommon::RenderTargetViewInitialize()
     clearColorValue_.Color[1] = 0.25f; // 緑成分 (非常に暗い)
     clearColorValue_.Color[2] = 0.5f;  // 青成分 (少し強め)
     clearColorValue_.Color[3] = 1.0f;  // アルファ値 (完全な不透明)
-    offScreenResource_ = resourceFactory_->CreateRenderTextureResource(WinApp::kClientWidth, WinApp::kClientHeight, clearColorValue_.Format, clearColorValue_);
+    offScreenResource_ = resourceFactory_->CreateRenderTextureResource(WinApp::GetVirtualWidth(), WinApp::GetVirtualHeight(), clearColorValue_.Format, clearColorValue_);
 
     rtvManager_->Create(2, offScreenResource_.Get(), rtvDesc);
 }
@@ -297,6 +297,13 @@ void DirectXCommon::FlushComputeQueue()
     }
 }
 
+void DirectXCommon::WaitForGPU()
+{
+    // 送信済みの全コマンドが GPU で完了するまで CPU をブロックする
+    directQueue_->Flush();
+    FlushComputeQueue();
+}
+
 void DirectXCommon::TransitionUAVBarrier(ID3D12Resource *pResource)
 {
     barrier_.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -332,8 +339,8 @@ void DirectXCommon::BarrierTransition(ID3D12Resource *pResource, D3D12_RESOURCE_
 void DirectXCommon::ViewPortRectInitialize()
 {
     // クライアント領域のサイズと一緒にして画面全体に表示
-    viewport_.Width = FLOAT(WinApp::kClientWidth);
-    viewport_.Height = FLOAT(WinApp::kClientHeight);
+    viewport_.Width = FLOAT(WinApp::GetVirtualWidth());
+    viewport_.Height = FLOAT(WinApp::GetVirtualHeight());
     viewport_.TopLeftX = 0;
     viewport_.TopLeftY = 0;
     viewport_.MinDepth = 0.0f;
@@ -344,9 +351,9 @@ void DirectXCommon::ScissorRectInitialize()
 {
     // 基本的にビューポートと同じ矩形が構成されるようにする
     scissorRect_.left = 0;
-    scissorRect_.right = WinApp::kClientWidth;
+    scissorRect_.right = WinApp::GetVirtualWidth();
     scissorRect_.top = 0;
-    scissorRect_.bottom = WinApp::kClientHeight;
+    scissorRect_.bottom = WinApp::GetVirtualHeight();
 }
 
 void DirectXCommon::UpdatePresentViewport(uint32_t clientWidth, uint32_t clientHeight)

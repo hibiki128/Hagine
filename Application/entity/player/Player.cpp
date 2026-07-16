@@ -135,9 +135,12 @@ void Player::Update()
 
     dt_ = Frame::DeltaTime();
 
-    // ダッシュ演出は emit フラグ残留を防ぐため毎フレーム更新する。発生はダッシュ中のみ
+    // ダッシュ演出は emit フラグ残留を防ぐため毎フレーム更新する。
+    // 通常ダッシュに加えて急接近（Rush）中も dashWind を発生させる。
+    const bool dashActive = movement_->GetIsDashing() || (GetCurrentStateName() == "Rush");
     dashEffect_->Update(GetWorldPosition(), movement_->GetVelocity(), GetForward(),
-                        isAlive_ && started_ && !isPause_ && movement_->GetIsDashing());
+                        isAlive_ && started_ && !isPause_ && dashActive,
+                        movement_->GetIsGrounded());
 
     if (combat_->IsSkillActive())
     {

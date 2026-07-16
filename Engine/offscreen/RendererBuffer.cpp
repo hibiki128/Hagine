@@ -17,7 +17,7 @@ void RenderBuffer::CreatePingPongBuffers()
     for (int i = 0; i < kPingPongBufferCount; ++i)
     {
         // レンダーターゲットリソースを作成
-        pingPongResources_[i] = pDxCommon_->CreateRenderTextureResource(WinApp::kClientWidth, WinApp::kClientHeight, pDxCommon_->GetClearColorValue().Format, pDxCommon_->GetClearColorValue());
+        pingPongResources_[i] = pDxCommon_->CreateRenderTextureResource(WinApp::GetVirtualWidth(), WinApp::GetVirtualHeight(), pDxCommon_->GetClearColorValue().Format, pDxCommon_->GetClearColorValue());
 
         // SRV作成
         pingPongSrvIndices_[i] = pSrvManager_->Allocate() + 1;
@@ -47,8 +47,8 @@ void RenderBuffer::CreateFinalResultTexture()
 {
     // 最終結果用のレンダーターゲットリソースを作成
     finalResultResource_ = pDxCommon_->CreateRenderTextureResource(
-        WinApp::kClientWidth,
-        WinApp::kClientHeight,
+        WinApp::GetVirtualWidth(),
+        WinApp::GetVirtualHeight(),
         pDxCommon_->GetClearColorValue().Format,
         pDxCommon_->GetClearColorValue());
 

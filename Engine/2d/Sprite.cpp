@@ -31,7 +31,7 @@ void Sprite::Initialize(const std::string &textureFilePath, Vector2 position, Ve
 
         Matrix4x4 world = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
         Matrix4x4 view = MakeIdentity4x4();
-        Matrix4x4 proj = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
+        Matrix4x4 proj = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::GetVirtualWidth()), float(WinApp::GetVirtualHeight()), 0.0f, 100.0f);
         Matrix4x4 wvp = world * (view * proj);
 
         pTransformationMatrixData_[0].World = world;
@@ -119,7 +119,7 @@ void Sprite::Update(bool isBackMost)
 
         Matrix4x4 world = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
         Matrix4x4 view = MakeIdentity4x4();
-        Matrix4x4 proj = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
+        Matrix4x4 proj = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::GetVirtualWidth()), float(WinApp::GetVirtualHeight()), 0.0f, 100.0f);
         Matrix4x4 wvp = world * (view * proj);
 
         pTransformationMatrixData_[0].WVP = wvp;

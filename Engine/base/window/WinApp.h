@@ -55,6 +55,14 @@ class WinApp
     void SetClientSize(int32_t width, int32_t height);
 
     /// <summary>
+    /// 仮想解像度（内部レンダリング解像度）を設定する
+    /// ウィンドウ・レンダーターゲットが生成される前（Framework::Initialize より前）に呼ぶこと
+    /// </summary>
+    /// <param name="width">仮想解像度の横幅</param>
+    /// <param name="height">仮想解像度の高さ</param>
+    static void SetVirtualResolution(int32_t width, int32_t height);
+
+    /// <summary>
     /// 保留中のリサイズを1回だけ取得する（取得後フラグはクリアされる）
     /// </summary>
     /// <param name="width">実クライアント幅の出力先</param>
@@ -82,25 +90,32 @@ class WinApp
     HWND GetHwnd() const { return hwnd_; }
     HINSTANCE GetHInstance() const { return wc_.hInstance; }
     bool &IsFullScreen() { return isFullScreen_; }
-    int32_t GetClientWidth() const { return clientWidth_; }   // 実クライアント幅
-    int32_t GetClientHeight() const { return clientHeight_; } // 実クライアント高さ
+    int32_t GetClientWidth() const { return clientWidth_; }        // 実クライアント幅
+    int32_t GetClientHeight() const { return clientHeight_; }      // 実クライアント高さ
+    static int32_t GetVirtualWidth() { return virtualWidth_; }     // 仮想解像度の横幅
+    static int32_t GetVirtualHeight() { return virtualHeight_; }   // 仮想解像度の高さ
 
   public: // 定数
-    // 仮想解像度（内部レンダリング解像度）
+    // 仮想解像度（内部レンダリング解像度）の既定値
     // ウィンドウの実サイズが変わっても、ゲーム内の描画・スプライト座標・マウス座標は
-    // この解像度を基準にした空間で扱われ、最終合成パスで実ウィンドウサイズへ拡縮される
-    static const int32_t kClientWidth = 1760; // 横
-    static const int32_t kClientHeight = 990; // 縦
-  private:                                    // メンバ変数
-    HWND hwnd_ = nullptr;                     // ウィンドウハンドル
-    WNDCLASS wc_{};                           // ウィンドウクラスの設定
+    // この解像度を基準にした空間で扱われ、最終合成パスで実ウィンドウサイズへ拡縮される。
+    // ゲーム層は SetVirtualResolution で起動時にこの値を上書きできる。
+    static constexpr int32_t kDefaultVirtualWidth = 1760;  // 横
+    static constexpr int32_t kDefaultVirtualHeight = 990;  // 縦
+  private:                                                 // メンバ変数
+    // 仮想解像度（内部レンダリング解像度）。SetVirtualResolution で起動時に設定される。
+    inline static int32_t virtualWidth_ = kDefaultVirtualWidth;
+    inline static int32_t virtualHeight_ = kDefaultVirtualHeight;
+
+    HWND hwnd_ = nullptr; // ウィンドウハンドル
+    WNDCLASS wc_{};       // ウィンドウクラスの設定
     bool isFullScreen_ = false;
     // ウィンドウモードの復元用の矩形
-    RECT windowRect_ = {0, 0, kClientWidth, kClientHeight};
+    RECT windowRect_ = {0, 0, virtualWidth_, virtualHeight_};
 
     // 実クライアント領域のサイズ（WM_SIZE で更新される）
-    int32_t clientWidth_ = kClientWidth;
-    int32_t clientHeight_ = kClientHeight;
+    int32_t clientWidth_ = virtualWidth_;
+    int32_t clientHeight_ = virtualHeight_;
     bool resizeRequested_ = false; // スワップチェーン再構築待ちフラグ
 };
 } // namespace Hagine

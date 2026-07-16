@@ -56,8 +56,8 @@ Vector3 Mouse::GetMousePos3D(const ViewProjection &viewprojection, float depthFa
     Vector2 mousePos = mousePosition_;
 
     // 仮想解像度（マウス座標は GetMousePos で仮想解像度へ変換済み）
-    float windowWidth = static_cast<float>(WinApp::kClientWidth);
-    float windowHeight = static_cast<float>(WinApp::kClientHeight);
+    float windowWidth = static_cast<float>(WinApp::GetVirtualWidth());
+    float windowHeight = static_cast<float>(WinApp::GetVirtualHeight());
 
     // スクリーン座標を正規化デバイス座標 (NDC) に変換 [-1, 1] の範囲にする
     float ndcX = (2.0f * mousePos.x / windowWidth) - 1.0f;
@@ -110,8 +110,8 @@ Vector2 Mouse::GetMousePos()
     float viewX = 0.0f, viewY = 0.0f, viewW = 0.0f, viewH = 0.0f;
     WinApp::ComputeLetterboxRect(clientW, clientH, viewX, viewY, viewW, viewH);
 
-    float virtualX = (static_cast<float>(mousePos.x) - viewX) * (static_cast<float>(WinApp::kClientWidth) / viewW);
-    float virtualY = (static_cast<float>(mousePos.y) - viewY) * (static_cast<float>(WinApp::kClientHeight) / viewH);
+    float virtualX = (static_cast<float>(mousePos.x) - viewX) * (static_cast<float>(WinApp::GetVirtualWidth()) / viewW);
+    float virtualY = (static_cast<float>(mousePos.y) - viewY) * (static_cast<float>(WinApp::GetVirtualHeight()) / viewH);
 
     mousePosition_ = Vector2(virtualX, virtualY);
 

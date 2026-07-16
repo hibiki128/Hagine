@@ -474,8 +474,8 @@ void PostEffectParameters::CreateBloom()
     bloomResource_->Map(0, nullptr, reinterpret_cast<void **>(&pBloomData_));
     pBloomData_->bloomThreshold = 1.0f;
     pBloomData_->bloomIntensity = 1.2f;
-    pBloomData_->texelSize.x = 1.0f / WinApp::kClientWidth;
-    pBloomData_->texelSize.y = 1.0f / WinApp::kClientHeight;
+    pBloomData_->texelSize.x = 1.0f / static_cast<float>(WinApp::GetVirtualWidth());
+    pBloomData_->texelSize.y = 1.0f / static_cast<float>(WinApp::GetVirtualHeight());
 }
 
 void PostEffectParameters::CreateRetro()
@@ -489,6 +489,6 @@ void PostEffectParameters::CreateRetro()
     pRetroData_->vignetteStrength = 0.6f;
     pRetroData_->chromaticOffset = 0.003f;
     pRetroData_->time = 0.0f;
-    pRetroData_->resolutionX = static_cast<float>(WinApp::kClientWidth);
+    pRetroData_->resolutionX = static_cast<float>(WinApp::GetVirtualWidth());
 }
 } // namespace Hagine

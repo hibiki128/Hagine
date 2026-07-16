@@ -1,4 +1,5 @@
 #include "SceneManager.h"
+#include <DirectXCommon.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
 #include <SpriteManager.h>
 #include <cassert>
@@ -134,6 +135,12 @@ void SceneManager::SceneChange()
         // 旧シーンの終了
         if (scene_)
         {
+            // 旧シーンのオブジェクト（D3D12リソース）を破棄する前に GPU の全作業完了を待つ。
+            // ダブルバッファのため、前フレームで投入したGPUコマンドが旧シーンのリソースを
+            // まだ参照している状態で解放すると、デバッグレイヤーが「使用中リソースの解放」を
+            // ERROR 検出してブレークする（シーン遷移時に偶に起きるクラッシュの原因）。
+            DirectXCommon::GetInstance()->WaitForGPU();
+
             scene_->Finalize();
             // delete 不要、reset() で解放
             scene_.reset();

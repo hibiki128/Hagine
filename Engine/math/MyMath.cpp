@@ -305,7 +305,7 @@ float degreesToRadians(float degrees)
 Vector3 ScreenTransform(Vector3 worldPos, const ViewProjection &viewProjection)
 {
     // ビューポート行列
-    Matrix4x4 matViewport = MakeViewPortMatrix(0, 0, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0, 1);
+    Matrix4x4 matViewport = MakeViewPortMatrix(0, 0, float(WinApp::GetVirtualWidth()), float(WinApp::GetVirtualHeight()), 0, 1);
     // ビュー行列とプロジェクション行列、ビューポート行列を合成する
     Matrix4x4 matViewProjectionViewport = viewProjection.matView_ * viewProjection.matProjection_ * matViewport;
     // ワールド→スクリーン変換

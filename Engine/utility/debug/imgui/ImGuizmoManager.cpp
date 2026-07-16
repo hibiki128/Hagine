@@ -594,8 +594,8 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     // （Input::GetMousePos() はクライアント座標系なのでマルチビューポート時にずれる）。
     float relX = mousePos.x - scenePosition.x;
     float relY = mousePos.y - scenePosition.y;
-    float spriteSpaceX = (relX / sceneSize.x) * static_cast<float>(WinApp::kClientWidth);
-    float spriteSpaceY = (relY / sceneSize.y) * static_cast<float>(WinApp::kClientHeight);
+    float spriteSpaceX = (relX / sceneSize.x) * static_cast<float>(WinApp::GetVirtualWidth());
+    float spriteSpaceY = (relY / sceneSize.y) * static_cast<float>(WinApp::GetVirtualHeight());
 
     // ---- パス1: スクリーン空間ターゲット優先 2D ヒットテスト ----
     float minDist2D = std::numeric_limits<float>::max();
@@ -824,8 +824,8 @@ void ImGuizmoManager::DisplayGizmo(const ImVec2 &scenePosition, const ImVec2 &sc
         Matrix4x4 identView = MakeIdentity4x4();
         Matrix4x4 orthoProj = MakeOrthographicMatrix(
             0.0f, 0.0f,
-            static_cast<float>(WinApp::kClientWidth),
-            static_cast<float>(WinApp::kClientHeight),
+            static_cast<float>(WinApp::GetVirtualWidth()),
+            static_cast<float>(WinApp::GetVirtualHeight()),
             0.0f, 100.0f);
 
         for (int i = 0; i < 4; ++i)

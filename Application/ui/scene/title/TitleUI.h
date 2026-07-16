@@ -5,6 +5,10 @@
 #include <SpriteManager.h>
 #include <memory>
 
+namespace Hagine {
+class BaseObject;
+}
+
 /// <summary>
 /// タイトル画面のUI管理クラス
 /// ロゴ、Press Startテキスト、パーティクルなどを制御
@@ -94,7 +98,7 @@ class TitleUI
     static constexpr float kTargetPosX = -4.5f;                // ターゲット位置X
     static constexpr float kTargetPosY = -3.1f;                // ターゲット位置Y
     static constexpr float kTargetPosZ = 5.7f;                 // ターゲット位置Z
-    static constexpr float kPlayerPositionOffsetY = 6.5f;      // プレイヤー位置のYオフセット
+    static constexpr float kPlayerPositionOffsetY = 8.5f;      // プレイヤー位置のYオフセット
     static constexpr float kParticleScaleSpeedDivisor = 1.25f; // パーティクルスケール速度の除数
     static constexpr float kParticleScaleBase = 0.8f;          // パーティクルスケール基準値
     static constexpr float kParticleScaleMultiplier = 1.4f;    // パーティクルスケール倍率
@@ -132,6 +136,11 @@ class TitleUI
     std::unique_ptr<Hagine::ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
     std::unique_ptr<Hagine::ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
     std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr;                // ゲームパッド
+
+    // 弾を振り下ろすキャラ（cube_2）。溜め中は Charge をループ再生し、
+    // 弾が動き出す瞬間（RequestStartCinematic）に ChargeShot を一度だけ再生する
+    Hagine::BaseObject *pChargeChara_ = nullptr;                                   // 振り下ろすキャラ（cube_2）
+    static constexpr const char *kChargeShotAnim = "animation/Player/ChargeShot.gltf"; // 振り下ろしモーション（一回再生）
 
     std::array<Hagine::SpriteData *, kMaxSprite> sprites_; // スプライト配列
 };

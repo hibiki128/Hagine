@@ -38,11 +38,16 @@ void PlayerMovement::Move()
             zInput += kInputValue;
         if (input->PushKey(DIK_S))
             zInput -= kInputValue;
-        isDashing_ = input->PushKey(DIK_LCONTROL);
-        if (input->TriggerKey(DIK_LCONTROL))
+        // ダッシュは「Ctrl を押しながら移動しているとき」だけ有効。
+        // Ctrl を放した時点、または移動入力が無くなった時点でダッシュ解除する
+        // （その場に立ち止まったまま Ctrl 押しっぱなしで演出が続くのを防ぐ）。
+        const bool hasMoveInput = (xInput != kInputZero || zInput != kInputZero);
+        isDashing_ = input->PushKey(DIK_LCONTROL) && hasMoveInput;
+        if (isDashing_ && !wasDashing_)
         {
             pOwner_->EmitAction(Player::ActionKind::Dash); // 入力表示UI用：ダッシュ開始を通知
         }
+        wasDashing_ = isDashing_; // キーボードは UpdateDashState が早期returnするためここで更新
     }
     else
     {

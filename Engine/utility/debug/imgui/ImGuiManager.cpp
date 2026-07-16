@@ -602,7 +602,7 @@ void ImGuiManager::ShowMainMenu()
                 for (const auto &res : kResolutions)
                 {
                     std::string label = std::format("{} x {}", res.width, res.height);
-                    if (res.width == WinApp::kClientWidth && res.height == WinApp::kClientHeight)
+                    if (res.width == WinApp::GetVirtualWidth() && res.height == WinApp::GetVirtualHeight())
                     {
                         label += " (デフォルト)";
                     }
@@ -1377,8 +1377,8 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
 
     float viewX = 0.0f, viewY = 0.0f, viewW = 0.0f, viewH = 0.0f;
     WinApp::ComputeLetterboxRect(pWinApp_->GetClientWidth(), pWinApp_->GetClientHeight(), viewX, viewY, viewW, viewH);
-    const float toVirtualX = static_cast<float>(WinApp::kClientWidth) / viewW;
-    const float toVirtualY = static_cast<float>(WinApp::kClientHeight) / viewH;
+    const float toVirtualX = static_cast<float>(WinApp::GetVirtualWidth()) / viewW;
+    const float toVirtualY = static_cast<float>(WinApp::GetVirtualHeight()) / viewH;
     scenePosForRay_ = ImVec2((sceneClientPos.x - viewX) * toVirtualX, (sceneClientPos.y - viewY) * toVirtualY);
     sceneSizeForRay_ = ImVec2(sceneTextureSize_.x * toVirtualX, sceneTextureSize_.y * toVirtualY);
 

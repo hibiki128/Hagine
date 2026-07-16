@@ -385,8 +385,8 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData)
         Matrix4x4 viewMatrix = MakeIdentity4x4();
         Matrix4x4 projectionMatrix = MakeOrthographicMatrix(
             0.0f, 0.0f,
-            float(WinApp::kClientWidth),
-            float(WinApp::kClientHeight),
+            float(WinApp::GetVirtualWidth()),
+            float(WinApp::GetVirtualHeight()),
             0.0f, 100.0f);
 
         TransformationMatrix transformMatrix;
