@@ -1,6 +1,9 @@
 #pragma once
 #include "object/base/BaseObject.h"
 #include "unordered_map"
+#ifdef _DEBUG
+#include <edit/undo/ImGuiUndoTracker.h>
+#endif // _DEBUG
 namespace Hagine {
 
 /// <summary>
@@ -200,6 +203,23 @@ class BaseObjectManager
     /// <returns>名前 → オブジェクトのマップ（読み取り専用）</returns>
     const std::unordered_map<std::string, BaseObject *> &GetObjects() const { return objects_; }
 
+#ifdef _DEBUG
+    /// <summary>
+    /// Undo用: 所有オブジェクトの編集可能状態をJSON化する（トップレベル = 名前 → 状態）
+    /// 対象は所有オブジェクトのみ（シーン所有のゲームエンティティはゲームロジックが
+    /// 毎フレーム書き換えるため追跡しない）
+    /// </summary>
+    /// <returns>nlohmann::json: 状態JSON</returns>
+    nlohmann::json CaptureUndoState();
+
+    /// <summary>
+    /// Undo用: CaptureUndoState で得た状態（差分可）を適用する
+    /// null のキーはオブジェクト削除、存在しない名前は再生成として扱う
+    /// </summary>
+    /// <param name="state">適用する状態JSON</param>
+    void RestoreUndoState(const nlohmann::json &state);
+#endif // _DEBUG
+
   private:
     /// ===================================================
     /// private method（各機能の個別描画・内部処理）
@@ -279,5 +299,8 @@ class BaseObjectManager
     bool showObjectCreationModal_ = false; // オブジェクト生成モーダル表示フラグ
     bool showObjectLoadModal_ = false;     // オブジェクト読み込みモーダル表示フラグ
     std::string selectedJsonPath_;         // 選択中のJsonパス
+#ifdef _DEBUG
+    ImGuiUndoTracker undoTracker_; // オブジェクト編集のUndoトラッカー
+#endif                             // _DEBUG
 };
 } // namespace Hagine

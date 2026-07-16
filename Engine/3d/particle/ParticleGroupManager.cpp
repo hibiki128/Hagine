@@ -32,7 +32,7 @@ void ParticleGroupManager::Initialize()
             }
 
             std::string texturePath = data.Load<std::string>("textureName", "");
-            std::string modelPath = data.Load<std::string>("modelfilePath", "");
+            std::string modelPath = data.Load<std::string>("modelFilePath", "");
             PrimitiveType type = data.Load<PrimitiveType>("primitiveType", PrimitiveType::None);
 
             if (!modelPath.empty())
@@ -61,7 +61,7 @@ void ParticleGroupManager::AddParticleGroup(std::unique_ptr<ParticleGroup> parti
     const auto &materials = particleGroup->GetParticleGroupData().materials;
     std::string textureFilePath = (!materials.empty()) ? materials[0].textureFilePath : "";
     data.Save("textureName", textureFilePath);
-    data.Save("modelfilePath", particleGroup->GetModelPath());
+    data.Save("modelFilePath", particleGroup->GetModelPath());
     data.Save("primitiveType", particleGroup->GetPrimitiveType());
     particleGroups_.emplace_back(std::move(particleGroup));
 }

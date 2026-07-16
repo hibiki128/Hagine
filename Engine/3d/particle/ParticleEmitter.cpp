@@ -1185,4 +1185,86 @@ void ParticleEmitter::ShowBlendModeCombo(BlendMode &currentMode)
     }
 #endif // USE_IMGUI
 }
+
+#ifdef _DEBUG
+// -------------------------------------------------------
+// Undo/Redo 用の状態キャプチャ・復元
+// -------------------------------------------------------
+
+// ParticleSetting 全フィールドのJSON変換（Undoスナップショット用）
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
+    ParticleSetting,
+    maxTrailParticles, gatherStartRatio, gatherStrength, trailSpawnInterval, trailLifeScale,
+    lifeTimeMin, lifeTimeMax, gravity, alphaMin, alphaMax, scaleMin, scaleMax, trailVelocityScale,
+    translate, rotation, scale, velocityMin, velocityMax, particleStartScale, particleEndScale,
+    startAcce, endAcce, startRote, endRote, rotateVelocityMin, rotateVelocityMax,
+    allScaleMax, allScaleMin, rotateStartMax, rotateStartMin, trailScaleMultiplier,
+    startColor, endColor, trailColorMultiplier, count,
+    enableTrail, trailInheritVelocity, isRandomColor, isBillboard, isBillboardX, isBillboardY, isBillboardZ,
+    isRandomRotate, isRotateVelocity, isAcceMultiply, isRandomSize, isRandomAllSize, isSinMove,
+    isFaceDirection, isEndScale, isEmitOnEdge, isGatherMode, blendMode)
+
+nlohmann::json ParticleEmitter::CaptureUndoState() const
+{
+    json s;
+    s["frequency"] = emitFrequency_;
+    s["isVisible"] = isVisible_;
+    s["isActive"] = isActive_;
+    s["isAuto"] = isAuto_;
+    s["drawGroup"] = drawGroup_;
+    s["translation"] = transform_.translation_;
+    s["rotation"] = transform_.quateRotation_;
+    s["scale"] = transform_.scale_;
+
+    json groups = json::object();
+    for (const auto &[groupName, setting] : particleSettings_)
+    {
+        groups[groupName] = setting;
+    }
+    s["groups"] = groups;
+    return s;
+}
+
+void ParticleEmitter::RestoreUndoState(const nlohmann::json &state)
+{
+    if (!state.is_object())
+    {
+        return;
+    }
+
+    emitFrequency_ = state.value("frequency", emitFrequency_);
+    isVisible_ = state.value("isVisible", isVisible_);
+    isActive_ = state.value("isActive", isActive_);
+    isAuto_ = state.value("isAuto", isAuto_);
+    drawGroup_ = state.value("drawGroup", drawGroup_);
+
+    if (state.contains("translation"))
+    {
+        transform_.translation_ = state["translation"].get<Vector3>();
+    }
+    if (state.contains("rotation"))
+    {
+        transform_.quateRotation_ = state["rotation"].get<Quaternion>();
+    }
+    if (state.contains("scale"))
+    {
+        transform_.scale_ = state["scale"].get<Vector3>();
+    }
+
+    // 既存グループの設定のみ復元する（グループの追加・削除自体は対象外）
+    if (state.contains("groups") && state["groups"].is_object())
+    {
+        for (auto it = state["groups"].begin(); it != state["groups"].end(); ++it)
+        {
+            auto found = particleSettings_.find(it.key());
+            if (found == particleSettings_.end() || it.value().is_null())
+            {
+                continue;
+            }
+            found->second = it.value().get<ParticleSetting>();
+            FlushSetting(it.key());
+        }
+    }
+}
+#endif // _DEBUG
 } // namespace Hagine

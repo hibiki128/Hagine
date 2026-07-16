@@ -2,6 +2,9 @@
 #include <utility/debug/imgui/ImGuiNotification.h>
 #include <SpriteManager.h>
 #include <cassert>
+#ifdef _DEBUG
+#include <edit/undo/UndoRedoManager.h>
+#endif // _DEBUG
 
 namespace Hagine {
 SceneManager::~SceneManager()
@@ -138,6 +141,11 @@ void SceneManager::SceneChange()
             SpriteManager::GetInstance()->Clear();
 #ifndef _DEBUG
             ParticleCSGroupManager::GetInstance()->ClearIndependentGroups();
+#endif // _DEBUG
+#ifdef _DEBUG
+            // 旧シーンの編集履歴は新シーンでは無効（Undoで旧シーンのオブジェクトを
+            // 再生成してしまう事故を防ぐため、シーン切替時に全履歴を破棄する）
+            UndoRedoManager::GetInstance()->Clear();
 #endif // _DEBUG
         }
 

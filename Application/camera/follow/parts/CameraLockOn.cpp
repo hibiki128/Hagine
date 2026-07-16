@@ -54,12 +54,28 @@ void CameraLockOn::UpdateLockOnTransition(bool isCurrentlyLockedOn)
 void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *pPlayer, const Vector3 &targetPos, const Vector3 &velocity)
 {
     Vector3 enemyPos = pPlayer->GetEnemy()->GetLocalPosition();
-    Vector3 toEnemyDir = enemyPos - targetPos;
 
+    // 敵方向へヨー角を更新し、その向きに対する横方向速度を求める
+    float yaw = UpdateYawTowardEnemy(targetPos, enemyPos);
+    Vector3 cameraRightDir = {std::cos(yaw), kVectorZero, -std::sin(yaw)};
+    float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
+
+    // 移動入力があるときだけ横方向に応じて肩オフセットを切り替える
+    if (HasMovementInput(pPlayer))
+    {
+        UpdateShoulderOffsetTarget(lateralVelocity);
+    }
+
+    // 接地状態に応じた高さオフセットの更新
+    UpdateHeightOffset(pPlayer);
+}
+
+float CameraLockOn::UpdateYawTowardEnemy(const Vector3 &targetPos, const Vector3 &enemyPos)
+{
+    Vector3 toEnemyDir = enemyPos - targetPos;
     Vector3 toEnemyDirXZ = {toEnemyDir.x, kVectorZero, toEnemyDir.z};
     float lengthXZ = toEnemyDirXZ.Length();
 
-    // 敵の方向に基づいてヨー角を更新
     float yaw = pOwner_->GetYaw();
     if (lengthXZ > kEpsilon)
     {
@@ -67,42 +83,46 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *pPlayer, const Vector3 
         yaw = std::atan2(toEnemyDirXZ.x, toEnemyDirXZ.z);
         pOwner_->SetYaw(yaw);
     }
+    return yaw;
+}
 
-    Vector3 cameraRightDir = {std::cos(yaw), kVectorZero, -std::sin(yaw)};
-    float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
-
-    // 入力の確認
-    bool hasInput = false;
+bool CameraLockOn::HasMovementInput(Player *pPlayer) const
+{
     if (!pPlayer->GetGamePad()->IsConnected())
     {
-        hasInput = Input::GetInstance()->PushKey(DIK_W) ||
-                   Input::GetInstance()->PushKey(DIK_A) ||
-                   Input::GetInstance()->PushKey(DIK_S) ||
-                   Input::GetInstance()->PushKey(DIK_D);
+        return Input::GetInstance()->PushKey(DIK_W) ||
+               Input::GetInstance()->PushKey(DIK_A) ||
+               Input::GetInstance()->PushKey(DIK_S) ||
+               Input::GetInstance()->PushKey(DIK_D);
     }
-    else
+
+    float leftStickX = pPlayer->GetGamePad()->GetLeftStickX();
+    float leftStickY = pPlayer->GetGamePad()->GetLeftStickY();
+    return (leftStickX != 0.0f || leftStickY != 0.0f);
+}
+
+void CameraLockOn::UpdateShoulderOffsetTarget(float lateralVelocity)
+{
+    if (std::abs(lateralVelocity) <= kVelocityThreshold)
     {
-        float leftStickX = pPlayer->GetGamePad()->GetLeftStickX();
-        float leftStickY = pPlayer->GetGamePad()->GetLeftStickY();
-        hasInput = (leftStickX != 0.0f || leftStickY != 0.0f);
+        return;
     }
 
-    // 入力方向に応じた肩オフセットの切り替え
-    if (hasInput && std::abs(lateralVelocity) > kVelocityThreshold)
+    float sign = lateralVelocity > 0.0f ? 1.0f : -1.0f;
+    float newTarget = -sign * shoulderMaxOffset_;
+
+    if (std::abs(newTarget - shoulderOffsetTarget_.x) > kShoulderTargetThreshold)
     {
-        float sign = lateralVelocity > 0.0f ? 1.0f : -1.0f;
-        float newTarget = -sign * shoulderMaxOffset_;
-
-        if (std::abs(newTarget - shoulderOffsetTarget_.x) > kShoulderTargetThreshold)
-        {
-            shoulderLerpTimer_ = kTimerReset;
-            shoulderLerpStartValue_ = shoulderOffsetCurrent_.x;
-        }
-
-        shoulderOffsetTarget_.x = newTarget;
-        isResettingShoulderOffset_ = false;
+        shoulderLerpTimer_ = kTimerReset;
+        shoulderLerpStartValue_ = shoulderOffsetCurrent_.x;
     }
 
+    shoulderOffsetTarget_.x = newTarget;
+    isResettingShoulderOffset_ = false;
+}
+
+void CameraLockOn::UpdateHeightOffset(Player *pPlayer)
+{
     // 接地状態に応じた高さオフセットの目標値設定
     if (pPlayer->GetIsGrounded())
     {

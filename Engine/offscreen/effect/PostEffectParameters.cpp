@@ -24,11 +24,11 @@ void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCo
         commandList->SetGraphicsRootConstantBufferView(1, smoothResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Gauss:
-        commandList->SetGraphicsRootConstantBufferView(1, gaussianResouce_->GetGPUVirtualAddress());
+        commandList->SetGraphicsRootConstantBufferView(1, gaussianResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Depth:
         pDepthData_->projectionInverse = Inverse(projectionInverse_);
-        commandList->SetGraphicsRootConstantBufferView(1, depthResouce_->GetGPUVirtualAddress());
+        commandList->SetGraphicsRootConstantBufferView(1, depthResource_->GetGPUVirtualAddress());
         commandList->SetGraphicsRootDescriptorTable(2, dxCommon->GetDepthGPUHandle());
         break;
     case ShaderMode::Blur:
@@ -390,8 +390,8 @@ void PostEffectParameters::CreateSmooth()
 
 void PostEffectParameters::CreateGauss()
 {
-    gaussianResouce_ = pDxCommon_->CreateBufferResource(sizeof(GaussianParams));
-    gaussianResouce_->Map(0, nullptr, reinterpret_cast<void **>(&pGaussianData_));
+    gaussianResource_ = pDxCommon_->CreateBufferResource(sizeof(GaussianParams));
+    gaussianResource_->Map(0, nullptr, reinterpret_cast<void **>(&pGaussianData_));
     pGaussianData_->kernelSize = 3;
     pGaussianData_->sigma = 1;
 }
@@ -408,8 +408,8 @@ void PostEffectParameters::CreateVignette()
 
 void PostEffectParameters::CreateDepth()
 {
-    depthResouce_ = pDxCommon_->CreateBufferResource(sizeof(Depth));
-    depthResouce_->Map(0, nullptr, reinterpret_cast<void **>(&pDepthData_));
+    depthResource_ = pDxCommon_->CreateBufferResource(sizeof(Depth));
+    depthResource_->Map(0, nullptr, reinterpret_cast<void **>(&pDepthData_));
     pDepthData_->projectionInverse = MakeIdentity4x4();
     pDepthData_->kernelSize = 3;
 }

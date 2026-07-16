@@ -69,7 +69,11 @@ class ShortcutManager
     {
         std::vector<BYTE> keys;         // トリガーとなるキーの組み合わせ
         std::function<void()> callback; // 実行するコールバック
+        float repeatTimer = 0.0f;       // 押しっぱなし時の再発火までの残り時間（秒）
     };
+
+    // 複数キーショートカットを押しっぱなしにしたときの再発火間隔（秒）
+    static constexpr float kRepeatInterval = 0.2f;
 
     /// ===================================================
     /// private variables

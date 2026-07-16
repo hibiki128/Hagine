@@ -154,10 +154,21 @@ void PostEffectRenderer::CopyFinalResultToBackBuffer()
     UINT backBufferIndex = pDxCommon_->GetSwapChain()->GetCurrentBackBufferIndex();
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = pDxCommon_->GetRTVCPUDescriptorHandle(backBufferIndex);
 
-    cmdList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle_);
+    // バックバッファは実ウィンドウサイズなので、仮想解像度の深度バッファは束縛しない
+    // （このパスは深度不使用。サイズ不一致の検証エラーも防ぐ）
+    cmdList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
+
+    // レターボックス込みの最終合成用ビューポートで仮想解像度→実ウィンドウサイズへ拡縮する
+    cmdList->RSSetViewports(1, &pDxCommon_->GetPresentViewport());
+    cmdList->RSSetScissorRects(1, &pDxCommon_->GetPresentScissorRect());
+
     pPsoManager_->DrawCommonSetting(PipelineType::Render, BlendMode::Normal, ShaderMode::None);
     cmdList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetFinalResultSrvHandleGPU());
     cmdList->DrawInstanced(3, 1, 0, 0);
+
+    // 後続の描画（次フレームのオフスクリーンパス等）のためにレンダリング用ビューポートへ戻す
+    cmdList->RSSetViewports(1, &pDxCommon_->GetRenderViewport());
+    cmdList->RSSetScissorRects(1, &pDxCommon_->GetRenderScissorRect());
 }
 
 void PostEffectRenderer::DrawSingleEffect(const EffectSlot &slot,

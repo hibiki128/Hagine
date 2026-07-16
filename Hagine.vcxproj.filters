@@ -408,6 +408,9 @@
     <ClCompile Include="Engine\utility\edit\shortcut\ShortcutManager.cpp">
       <Filter>Engine\utility\edit\shortcut</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\utility\edit\undo\UndoRedoManager.cpp">
+      <Filter>Engine\utility\edit\undo</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\utility\graphics\model\ModelManager.cpp">
       <Filter>Engine\utility\graphics\model</Filter>
     </ClCompile>
@@ -888,6 +891,12 @@
     <ClInclude Include="Engine\utility\edit\shortcut\ShortcutManager.h">
       <Filter>Engine\utility\edit\shortcut</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\utility\edit\undo\UndoRedoManager.h">
+      <Filter>Engine\utility\edit\undo</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\utility\edit\undo\ImGuiUndoTracker.h">
+      <Filter>Engine\utility\edit\undo</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\utility\graphics\model\ModelManager.h">
       <Filter>Engine\utility\graphics\model</Filter>
     </ClInclude>
@@ -1276,6 +1285,9 @@
     </Filter>
     <Filter Include="Engine\utility\edit\shortcut">
       <UniqueIdentifier>{5537d5df-41da-435e-88ca-b62da8062fe9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\utility\edit\undo">
+      <UniqueIdentifier>{8f3c1a2b-6d94-4e7a-b1c5-2a9e04d7f318}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\utility\graphics\model">
       <UniqueIdentifier>{af8c7d44-b08b-4299-8a77-950813738443}</UniqueIdentifier>

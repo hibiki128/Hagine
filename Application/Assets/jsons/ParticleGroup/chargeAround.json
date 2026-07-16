@@ -1,6 +1,6 @@
 {
     "groupName": "chargeAround",
-    "modelfilePath": "",
+    "modelFilePath": "",
     "primitiveType": 5,
     "textureName": "debug/gradationLine.png"
 }

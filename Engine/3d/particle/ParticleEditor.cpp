@@ -5,6 +5,7 @@
 #include "render/DrawGroupManager.h"
 #ifdef _DEBUG
 #include "browser/ShowFolder.h"
+#include "ImGuizmo.h"
 #endif // _DEBUG
 
 namespace Hagine {
@@ -310,9 +311,18 @@ std::unique_ptr<ParticleEmitter> ParticleEditor::CreateEmitterFromTemplate(const
 void ParticleEditor::EditorWindow()
 {
 #ifdef USE_IMGUI
+    // エディタでの編集ジェスチャ（ウィジェット操作・ギズモドラッグ）をUndo履歴として追跡する
+    undoTracker_.Begin([this] { return CaptureUndoState(); });
+
     ImGui::Begin("パーティクルエディター");
     ShowImGuiEditor();
     ImGui::End();
+
+    undoTracker_.End(
+        "パーティクル編集",
+        [this] { return CaptureUndoState(); },
+        [](const nlohmann::json &s) { ParticleEditor::GetInstance()->RestoreUndoState(s); },
+        ImGuizmo::IsUsing());
 #endif // USE_IMGUI
 }
 
@@ -691,4 +701,44 @@ std::vector<std::string> ParticleEditor::GetJsonFiles()
 
     return jsonFiles;
 }
+
+#ifdef _DEBUG
+// -------------------------------------------------------
+// Undo/Redo 用の状態キャプチャ・復元
+// -------------------------------------------------------
+
+nlohmann::json ParticleEditor::CaptureUndoState()
+{
+    nlohmann::json state = nlohmann::json::object();
+    for (const auto &[name, emitter] : emitters_)
+    {
+        if (emitter)
+        {
+            state[name] = emitter->CaptureUndoState();
+        }
+    }
+    return state;
+}
+
+void ParticleEditor::RestoreUndoState(const nlohmann::json &state)
+{
+    if (!state.is_object())
+    {
+        return;
+    }
+    for (auto it = state.begin(); it != state.end(); ++it)
+    {
+        // エミッターの追加・削除自体は対象外（既存エミッターへの反映のみ）
+        if (it.value().is_null())
+        {
+            continue;
+        }
+        ParticleEmitter *emitter = GetEmitterByName(it.key());
+        if (emitter)
+        {
+            emitter->RestoreUndoState(it.value());
+        }
+    }
+}
+#endif // _DEBUG
 } // namespace Hagine

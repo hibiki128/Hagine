@@ -111,15 +111,16 @@ class ImGuiManager
     /// </summary>
     void ShowSceneWindow(OffScreen *offScreen, const std::string &sceneName);
 #ifdef USE_IMGUI
-    Vector2 GetSceneSize() const
-    {
-        return Vector2(sceneTextureSize_.x, sceneTextureSize_.y);
-    }
-    // レイ計算用のシーン位置（クライアント座標系。Mouse::GetMousePos と同じ空間）。
-    // マルチビューポートで ImGui 座標がスクリーン全体座標になってもマウスと整合させるため。
-    Vector2 GetScenePos() const
+    // レイ計算用のシーン矩形（仮想解像度座標系。Mouse::GetMousePos と同じ空間）。
+    // ImGui 座標のシーン矩形をマウスと同じレターボックス逆変換に通してあり、
+    // ウィンドウサイズ変更・マルチビューポート時もレイ計算と整合する。
+    Vector2 GetScenePosForRay() const
     {
         return Vector2(scenePosForRay_.x, scenePosForRay_.y);
+    }
+    Vector2 GetSceneSizeForRay() const
+    {
+        return Vector2(sceneSizeForRay_.x, sceneSizeForRay_.y);
     }
 #endif // USE_IMGUI
 
@@ -212,8 +213,9 @@ class ImGuiManager
 
     // シーンウィンドウ
     ImVec2 sceneTextureSize_ = {800.0f, 450.0f};
-    ImVec2 actualScenePos_ = {}; // ImGui座標系（ImGuizmo用）
-    ImVec2 scenePosForRay_ = {}; // クライアント座標系（レイ計算用）
+    ImVec2 actualScenePos_ = {};  // ImGui座標系（ImGuizmo用）
+    ImVec2 scenePosForRay_ = {};  // 仮想解像度座標系（レイ計算用）
+    ImVec2 sceneSizeForRay_ = {}; // 仮想解像度座標系（レイ計算用）
 
 #endif // USE_IMGUI
     int cubeCount_ = 0;

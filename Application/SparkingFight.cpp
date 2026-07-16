@@ -66,7 +66,7 @@ void SparkingFight::Update()
         HAGINE_CPU_PROFILE("Update/ImGuiUI(build)");
         if (imGuiManager_->GetEditorMode())
         {
-            pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()}, 10000.0f);
+            pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePosForRay(), imGuiManager_->GetSceneSizeForRay()}, 10000.0f);
         }
         else
         {

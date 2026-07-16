@@ -258,6 +258,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\utility\browser\ShowFolder.cpp" />
     <ClCompile Include="Engine\3d\skybox\SkyBox.cpp" />
     <ClCompile Include="Engine\utility\edit\shortcut\ShortcutManager.cpp" />
+    <ClCompile Include="Engine\utility\edit\undo\UndoRedoManager.cpp" />
     <ClCompile Include="Engine\offscreen\effect\PostEffectChain.cpp" />
     <ClCompile Include="Engine\offscreen\effect\PostEffectRenderer.cpp" />
     <ClCompile Include="Engine\offscreen\RendererBuffer.cpp" />
@@ -500,6 +501,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\entity\player\state\action\PlayerStateGuard.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\utility\edit\shortcut\ShortcutManager.h" />
+    <ClInclude Include="Engine\utility\edit\undo\UndoRedoManager.h" />
+    <ClInclude Include="Engine\utility\edit\undo\ImGuiUndoTracker.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
     <ClInclude Include="Application\ui\scene\title\TitleUI.h" />
     <ClInclude Include="Application\camera\start\StartCamera.h" />

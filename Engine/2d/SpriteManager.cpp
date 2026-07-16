@@ -534,7 +534,16 @@ void SpriteManager::DrawSpriteCreationModal()
                                         : ImVec4{0.25f, 0.25f, 0.28f, 0.60f});
         if (ImGui::Button("生成##spcreate", ImVec2(bw, 0)) && canCreate)
         {
+            // 生成操作をUndo履歴へ積む（生成前後の差分）
+            nlohmann::json before = CaptureUndoState();
             RegisterSprite(nameBuf, texturePath_, tf);
+            nlohmann::json after = CaptureUndoState();
+            auto [diffBefore, diffAfter] = MakeTopLevelJsonDiff(before, after);
+            UndoRedoManager::GetInstance()->Push(std::make_unique<JsonStateCommand>(
+                "スプライト作成: " + std::string(nameBuf), std::move(diffBefore), std::move(diffAfter),
+                [](const nlohmann::json &s) { SpriteManager::GetInstance()->RestoreUndoState(s); }));
+            // マネージャウィンドウ側トラッカーとの二重登録を防ぐ
+            undoTracker_.SkipCurrentGesture();
             ResetModal();
             ImGui::CloseCurrentPopup();
         }
@@ -560,6 +569,9 @@ void SpriteManager::DrawSpriteCreationModal()
 void SpriteManager::DrawSpriteManager()
 {
 #ifdef _DEBUG
+    // このウィンドウでの編集ジェスチャをUndo履歴として追跡する
+    undoTracker_.Begin([this] { return CaptureUndoState(); });
+
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 3));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
@@ -1065,6 +1077,12 @@ void SpriteManager::DrawSpriteManager()
     ImGui::PopStyleVar();
 
     ImGui::PopStyleVar(3);
+
+    // 編集ジェスチャが確定していたら差分をUndo履歴へ積む
+    undoTracker_.End(
+        "スプライト編集",
+        [this] { return CaptureUndoState(); },
+        [](const nlohmann::json &s) { SpriteManager::GetInstance()->RestoreUndoState(s); });
 #endif // _DEBUG
 }
 
@@ -1279,4 +1297,227 @@ void SpriteManager::LoadAllSprites()
     LoadDrawOrder();
     ImGuiNotification::Post("スプライトデータを読み込みました: " + saveFolder_, {0.2f, 0.8f, 0.8f, 1.0f});
 }
+
+#ifdef _DEBUG
+// -------------------------------------------------------
+// Undo/Redo 用の状態キャプチャ・復元
+// -------------------------------------------------------
+
+nlohmann::json SpriteManager::CaptureUndoState()
+{
+    using nlohmann::json;
+    json state = json::object();
+    json order = json::array();
+
+    for (auto &sp : sprites_)
+    {
+        if (!sp || !sp->sprite)
+        {
+            continue;
+        }
+        order.push_back(sp->name);
+
+        json s;
+        s["texturePath"] = sp->textureFilePath;
+        s["position"] = sp->sprite->GetPosition();
+        s["size"] = sp->sprite->GetSize();
+        s["color"] = sp->sprite->GetColor();
+        s["rotation"] = sp->sprite->GetRotation();
+        s["anchor"] = sp->sprite->GetAnchorPoint();
+        s["flipX"] = sp->sprite->GetFlipX();
+        s["flipY"] = sp->sprite->GetFlipY();
+        s["uvTransform"] = sp->sprite->GetUVTransform();
+        s["blendMode"] = static_cast<int>(sp->blendMode);
+        s["lockAspectRatio"] = sp->lockAspectRatio;
+        s["drawGroup"] = sp->drawGroup;
+        s["isVisible"] = sp->isVisible;
+        s["isBackMost"] = sp->isBackMost;
+
+        json instances = json::array();
+        for (const auto &inst : sp->instanceData)
+        {
+            json ij;
+            ij["scale"] = inst.scale;
+            ij["rotation"] = inst.rotation;
+            ij["translation"] = inst.translation;
+            ij["active"] = inst.isActive;
+            instances.push_back(ij);
+        }
+        s["instances"] = instances;
+
+        state[sp->name] = s;
+    }
+    state["__order"] = order;
+    return state;
+}
+
+void SpriteManager::RestoreUndoState(const nlohmann::json &state)
+{
+    using nlohmann::json;
+    if (!state.is_object())
+    {
+        return;
+    }
+
+    for (auto it = state.begin(); it != state.end(); ++it)
+    {
+        const std::string &name = it.key();
+        if (name == "__order")
+        {
+            continue; // 描画順は最後にまとめて処理する
+        }
+
+        // null = このスプライトは存在しない状態へ戻す（削除）
+        if (it.value().is_null())
+        {
+            UnregisterSprite(name);
+            continue;
+        }
+
+        const json &s = it.value();
+        SpriteData *sp = FindSpriteByName(name);
+
+        // 存在しなければ再生成（削除のUndo）
+        if (!sp)
+        {
+            SpriteTransform tf;
+            tf.position = s.value("position", Vector2{0.0f, 0.0f});
+            tf.color = s.value("color", Vector4{1.0f, 1.0f, 1.0f, 1.0f});
+            tf.anchorPoint = s.value("anchor", Vector2{0.0f, 0.0f});
+            const size_t instCount = s.contains("instances") ? s["instances"].size() : 1;
+            tf.instanceCount = static_cast<uint32_t>(instCount > 0 ? instCount : 1);
+            RegisterSprite(name, s.value("texturePath", std::string()), tf);
+            sp = FindSpriteByName(name);
+            if (!sp || !sp->sprite)
+            {
+                continue;
+            }
+        }
+
+        // 各フィールドを適用する
+        if (s.contains("texturePath"))
+        {
+            sp->textureFilePath = s["texturePath"].get<std::string>();
+            sp->sprite->SetTexturePath(sp->textureFilePath);
+        }
+        if (s.contains("position"))
+        {
+            sp->sprite->SetPosition(s["position"].get<Vector2>());
+        }
+        if (s.contains("size"))
+        {
+            sp->sprite->SetSize(s["size"].get<Vector2>());
+        }
+        if (s.contains("color"))
+        {
+            Vector4 color = s["color"].get<Vector4>();
+            sp->sprite->SetColor({color.x, color.y, color.z});
+            sp->sprite->SetAlpha(color.w);
+        }
+        if (s.contains("rotation"))
+        {
+            sp->sprite->SetRotation(s["rotation"].get<float>());
+        }
+        if (s.contains("anchor"))
+        {
+            sp->sprite->SetAnchorPoint(s["anchor"].get<Vector2>());
+        }
+        if (s.contains("flipX"))
+        {
+            sp->sprite->SetFlipX(s["flipX"].get<bool>());
+        }
+        if (s.contains("flipY"))
+        {
+            sp->sprite->SetFlipY(s["flipY"].get<bool>());
+        }
+        if (s.contains("uvTransform"))
+        {
+            sp->sprite->SetUVTransform(s["uvTransform"].get<Matrix4x4>());
+        }
+        if (s.contains("blendMode"))
+        {
+            sp->blendMode = static_cast<BlendMode>(s["blendMode"].get<int>());
+        }
+        if (s.contains("lockAspectRatio"))
+        {
+            sp->lockAspectRatio = s["lockAspectRatio"].get<bool>();
+        }
+        if (s.contains("drawGroup"))
+        {
+            sp->drawGroup = s["drawGroup"].get<std::string>();
+            DrawGroupManager::GetInstance()->RegisterGroup(sp->drawGroup);
+        }
+        if (s.contains("isVisible"))
+        {
+            sp->isVisible = s["isVisible"].get<bool>();
+        }
+        if (s.contains("isBackMost"))
+        {
+            sp->isBackMost = s["isBackMost"].get<bool>();
+        }
+
+        // インスタンスデータの復元
+        if (s.contains("instances") && s["instances"].is_array())
+        {
+            const json &instances = s["instances"];
+            const size_t newCount = instances.size();
+            const bool countChanged = (newCount != sp->instanceData.size());
+            sp->instanceData.resize(newCount);
+            for (size_t i = 0; i < newCount; ++i)
+            {
+                const json &ij = instances[i];
+                auto &inst = sp->instanceData[i];
+                inst.scale = ij.value("scale", Vector3{1.0f, 1.0f, 1.0f});
+                inst.rotation = ij.value("rotation", Vector3{0.0f, 0.0f, 0.0f});
+                inst.translation = ij.value("translation", Vector3{0.0f, 0.0f, 0.0f});
+                inst.isActive = ij.value("active", true);
+            }
+            if (countChanged)
+            {
+                sp->sprite->SetInstanceCount(static_cast<uint32_t>(newCount));
+                // instanceData の再確保でギズモ登録済みポインタが無効になるため登録し直す
+                ImGuizmoManager::GetInstance()->RemoveTarget(sp->name);
+                if (!sp->instanceData.empty())
+                {
+                    ImGuizmoManager::GetInstance()->AddTarget(
+                        sp->name, &sp->instanceData[0].translation, nullptr, nullptr, true);
+                    ImGuizmoManager::GetInstance()->SetScreenSpace(sp->name, true, 50.0f);
+                }
+            }
+        }
+
+        UpdateSpriteInstances(sp);
+    }
+
+    // 描画順の復元
+    auto orderIt = state.find("__order");
+    if (orderIt != state.end() && orderIt->is_array())
+    {
+        std::vector<std::unique_ptr<SpriteData>> reordered;
+        reordered.reserve(sprites_.size());
+        for (const auto &nameJson : *orderIt)
+        {
+            const std::string name = nameJson.get<std::string>();
+            auto found = std::find_if(sprites_.begin(), sprites_.end(),
+                                      [&name](const std::unique_ptr<SpriteData> &sp) {
+                                          return sp && sp->name == name;
+                                      });
+            if (found != sprites_.end())
+            {
+                reordered.push_back(std::move(*found));
+                sprites_.erase(found);
+            }
+        }
+        // 順序リストに含まれないスプライトは現在の順序のまま末尾へ
+        for (auto &sp : sprites_)
+        {
+            if (sp)
+            {
+                reordered.push_back(std::move(sp));
+            }
+        }
+        sprites_ = std::move(reordered);
+    }
+}
+#endif // _DEBUG
 } // namespace Hagine

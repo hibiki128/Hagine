@@ -184,61 +184,76 @@ void FollowCamera::ResolveCameraCollision()
 
     Vector3 cameraPos = worldTransform_.translation_;
 
-    // ─── AroundField 円柱境界の内側へクランプ ───
-    if (const CylinderCollider *field = AroundField::GetFieldCollider())
-    {
-        const Vector3 center = field->GetCenterPosition();
-        const float maxRadius = field->GetRadius() - kFieldClampMargin;
-
-        Vector3 horizontal = {cameraPos.x - center.x, 0.0f, cameraPos.z - center.z};
-        float dist = horizontal.Length();
-        if (dist > maxRadius && dist > kEpsilon)
-        {
-            float scale = maxRadius / dist;
-            cameraPos.x = center.x + horizontal.x * scale;
-            cameraPos.z = center.z + horizontal.z * scale;
-        }
-
-        const float halfHeight = field->GetHeight() * 0.5f;
-        cameraPos.y = std::clamp(cameraPos.y,
-                                 center.y - halfHeight + kFieldClampMargin,
-                                 center.y + halfHeight - kFieldClampMargin);
-    }
-
-    // ─── 地形メッシュとの遮蔽・めり込み解消 ───
-    if (MeshCollider *terrain = Ground::GetTerrainCollider())
-    {
-        // 注視点（プレイヤーの少し上）からカメラへレイを飛ばし、
-        // 地形に遮られていたらヒット位置の手前へ引き寄せる
-        Vector3 pivot = pTarget_->GetLocalPosition();
-        pivot.y += kCameraPivotHeight;
-
-        Vector3 toCamera = cameraPos - pivot;
-        float distance = toCamera.Length();
-        if (distance > kEpsilon)
-        {
-            Vector3 dir = toCamera / distance;
-            float hitDistance = 0.0f;
-            Vector3 hitNormal;
-            if (terrain->Raycast(pivot, dir, distance, hitDistance, hitNormal))
-            {
-                float clamped = (std::max)(hitDistance - kCameraCollisionMargin, kCameraMinDistance);
-                cameraPos = pivot + dir * clamped;
-            }
-        }
-
-        // 地表すれすれ・地面下に潜るのを防ぐ最低高度を確保する
-        float floorY = Ground::GetSurfaceY(cameraPos.x, cameraPos.z) + kCameraFloorClearance;
-        if (cameraPos.y < floorY)
-        {
-            cameraPos.y = floorY;
-        }
-    }
+    ResolveFieldCollision(cameraPos);
+    ResolveTerrainCollision(cameraPos);
 
     if ((cameraPos - worldTransform_.translation_).LengthSq() > 0.0f)
     {
         worldTransform_.translation_ = cameraPos;
         worldTransform_.UpdateMatrix();
+    }
+}
+
+void FollowCamera::ResolveFieldCollision(Vector3 &cameraPos)
+{
+    // ─── AroundField 円柱境界の内側へクランプ ───
+    const CylinderCollider *field = AroundField::GetFieldCollider();
+    if (!field)
+    {
+        return;
+    }
+
+    const Vector3 center = field->GetCenterPosition();
+    const float maxRadius = field->GetRadius() - kFieldClampMargin;
+
+    Vector3 horizontal = {cameraPos.x - center.x, 0.0f, cameraPos.z - center.z};
+    float dist = horizontal.Length();
+    if (dist > maxRadius && dist > kEpsilon)
+    {
+        float scale = maxRadius / dist;
+        cameraPos.x = center.x + horizontal.x * scale;
+        cameraPos.z = center.z + horizontal.z * scale;
+    }
+
+    const float halfHeight = field->GetHeight() * 0.5f;
+    cameraPos.y = std::clamp(cameraPos.y,
+                             center.y - halfHeight + kFieldClampMargin,
+                             center.y + halfHeight - kFieldClampMargin);
+}
+
+void FollowCamera::ResolveTerrainCollision(Vector3 &cameraPos)
+{
+    // ─── 地形メッシュとの遮蔽・めり込み解消 ───
+    MeshCollider *terrain = Ground::GetTerrainCollider();
+    if (!terrain)
+    {
+        return;
+    }
+
+    // 注視点（プレイヤーの少し上）からカメラへレイを飛ばし、
+    // 地形に遮られていたらヒット位置の手前へ引き寄せる
+    Vector3 pivot = pTarget_->GetLocalPosition();
+    pivot.y += kCameraPivotHeight;
+
+    Vector3 toCamera = cameraPos - pivot;
+    float distance = toCamera.Length();
+    if (distance > kEpsilon)
+    {
+        Vector3 dir = toCamera / distance;
+        float hitDistance = 0.0f;
+        Vector3 hitNormal;
+        if (terrain->Raycast(pivot, dir, distance, hitDistance, hitNormal))
+        {
+            float clamped = (std::max)(hitDistance - kCameraCollisionMargin, kCameraMinDistance);
+            cameraPos = pivot + dir * clamped;
+        }
+    }
+
+    // 地表すれすれ・地面下に潜るのを防ぐ最低高度を確保する
+    float floorY = Ground::GetSurfaceY(cameraPos.x, cameraPos.z) + kCameraFloorClearance;
+    if (cameraPos.y < floorY)
+    {
+        cameraPos.y = floorY;
     }
 }
 
