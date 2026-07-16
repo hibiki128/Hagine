@@ -31,6 +31,15 @@ void TitleUI::Initialize()
     playerAura_->SetTranslate(BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition());
     playerAura_->SetRotation(BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalRotation());
 
+    // 弾を振り下ろすキャラ（cube_2）。ベースモデルの Charge はループ再生されるので、
+    // 振り下ろし用の ChargeShot をループ無しで追加登録しておく（発火は RequestStartCinematic）。
+    pChargeChara_ = BaseObjectManager::GetInstance()->GetObjectByName("cube_2");
+    if (pChargeChara_)
+    {
+        pChargeChara_->SetAnimationBlendDuration(0.1f);
+        pChargeChara_->AddAnimation(kChargeShotAnim, false);
+    }
+
     chargeScale_ = kInitialChargeScale;
     isMaxChargeScale_ = false;
 
@@ -170,6 +179,12 @@ void TitleUI::RequestStartCinematic()
     secondMove_ = true;
     isSpriteExiting_ = true;
     spriteExitTimer_ = 0.0f;
+
+    // 弾が動き出す瞬間に、振り下ろしモーション（ChargeShot）を一度だけ再生する
+    if (pChargeChara_)
+    {
+        pChargeChara_->SetAnima(kChargeShotAnim);
+    }
 }
 
 void TitleUI::HidePressStart()

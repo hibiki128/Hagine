@@ -205,10 +205,10 @@ class PostEffectParameters
     Microsoft::WRL::ComPtr<ID3D12Resource> smoothResource_;
     KernelSettings *pSmoothData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> gaussianResouce_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> gaussianResource_;
     GaussianParams *pGaussianData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> depthResouce_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> depthResource_;
     Depth *pDepthData_ = nullptr;
 
     Matrix4x4 projectionInverse_; // 投影行列の逆行列（深度系エフェクト用）

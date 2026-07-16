@@ -48,6 +48,12 @@ class TutorialUI
     void DrawImGui();
 
     /// <summary>
+    /// シーン開始時のフェードインを開始する
+    /// （パーティクル遷移の完了後に呼ぶことで、説明書きが遷移より先に出るのを防ぐ）
+    /// </summary>
+    void BeginIntroFadeIn();
+
+    /// <summary>
     /// 完了したかを取得
     /// </summary>
     /// <returns>完了していたらtrue</returns>
@@ -146,6 +152,7 @@ class TutorialUI
     float postCompleteTimer_ = 0.0f;       // 完了後タイマー
     float postCompleteDelay_ = 1.0f;       // 完了後の待機時間
     bool isFinished_ = false;              // 完了フラグ
+    bool isIntroFade_ = false;             // シーン開始時のフェードイン中か（OK!表示を抑制する）
 
     float displayedProgress_ = 0.0f; // 表示用進捗率
     float progressLerpSpeed_ = 6.0f; // 進捗率の補間速度

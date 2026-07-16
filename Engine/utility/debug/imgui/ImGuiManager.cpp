@@ -29,6 +29,9 @@
 #include <icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
 #include <implot.h>
+#include "DebugUIHelper.h"
+#include <edit/undo/UndoRedoManager.h>
+#include <format>
 #endif // _DEBUG
 
 namespace Hagine {
@@ -389,11 +392,36 @@ void ImGuiManager::ShowMainMenu()
         // 編集メニュー
         if (ImGui::BeginMenu(ICON_FA_EDIT " 編集"))
         {
-            if (ImGui::MenuItem(ICON_FA_UNDO " 元に戻す", "Ctrl+Z", false, false))
+            UndoRedoManager *undoMgr = UndoRedoManager::GetInstance();
+
+            // 元に戻す（次にUndoされる操作名を表示する）
+            std::string undoLabel = ICON_FA_UNDO " 元に戻す";
+            if (undoMgr->CanUndo())
             {
+                undoLabel += ": " + undoMgr->GetUndoLabel();
             }
-            if (ImGui::MenuItem(ICON_FA_REDO " やり直し", "Ctrl+Y", false, false))
+            if (ImGui::MenuItem(undoLabel.c_str(), "Ctrl+Z", false, undoMgr->CanUndo()))
             {
+                const std::string label = undoMgr->GetUndoLabel();
+                if (undoMgr->Undo())
+                {
+                    ImGuiNotification::Post("元に戻す: " + label, {0.42f, 0.66f, 0.68f, 1.0f});
+                }
+            }
+
+            // やり直し（次にRedoされる操作名を表示する）
+            std::string redoLabel = ICON_FA_REDO " やり直し";
+            if (undoMgr->CanRedo())
+            {
+                redoLabel += ": " + undoMgr->GetRedoLabel();
+            }
+            if (ImGui::MenuItem(redoLabel.c_str(), "Ctrl+Y", false, undoMgr->CanRedo()))
+            {
+                const std::string label = undoMgr->GetRedoLabel();
+                if (undoMgr->Redo())
+                {
+                    ImGuiNotification::Post("やり直し: " + label, {0.42f, 0.66f, 0.68f, 1.0f});
+                }
             }
             ImGui::Separator();
             if (ImGui::MenuItem(ICON_FA_CUT " 切り取り", "Ctrl+X"))
@@ -544,6 +572,48 @@ void ImGuiManager::ShowMainMenu()
             if (ImGui::MenuItem(ICON_FA_EXPAND " フルスクリーン切替", "F11"))
             {
                 pWinApp_->ToggleFullScreen();
+            }
+
+            // 画面解像度（ウィンドウサイズ）の変更
+            // 内部レンダリングは仮想解像度固定のまま、ウィンドウと最終合成だけが変わる
+            if (ImGui::BeginMenu(ICON_FA_DESKTOP " 画面解像度"))
+            {
+                struct Resolution
+                {
+                    int32_t width;
+                    int32_t height;
+                };
+                static constexpr Resolution kResolutions[] = {
+                    {1280, 720},
+                    {1600, 900},
+                    {1760, 990},
+                    {1920, 1080},
+                };
+
+                const bool isFullScreen = pWinApp_->IsFullScreen();
+                if (isFullScreen)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+                    ImGui::TextUnformatted("フルスクリーン中は変更できません");
+                    ImGui::PopStyleColor();
+                    ImGui::Separator();
+                }
+
+                for (const auto &res : kResolutions)
+                {
+                    std::string label = std::format("{} x {}", res.width, res.height);
+                    if (res.width == WinApp::GetVirtualWidth() && res.height == WinApp::GetVirtualHeight())
+                    {
+                        label += " (デフォルト)";
+                    }
+                    const bool isCurrent =
+                        (pWinApp_->GetClientWidth() == res.width && pWinApp_->GetClientHeight() == res.height);
+                    if (ImGui::MenuItem(label.c_str(), nullptr, isCurrent, !isFullScreen))
+                    {
+                        pWinApp_->SetClientSize(res.width, res.height);
+                    }
+                }
+                ImGui::EndMenu();
             }
             ImGui::EndMenu();
         }
@@ -1297,12 +1367,20 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
         contentPos.x + sceneOffset.x,
         contentPos.y + sceneOffset.y);
 
-    // レイ計算用のシーン位置は、Mouse::GetMousePos()(ScreenToClient=クライアント座標) と
-    // 同じ空間に合わせる。ViewportsEnable 時は ImGui 座標がスクリーン全体座標になるため、
-    // メインビューポート位置（=メインウィンドウのクライアント原点のスクリーン座標）を引く。
-    // OFF 時は Pos=(0,0) なので無変換＝従来どおり。
+    // レイ計算用のシーン矩形は、Mouse::GetMousePos()（仮想解像度座標）と同じ空間に合わせる。
+    // ViewportsEnable 時は ImGui 座標がスクリーン全体座標になるため、まずメインビューポート位置
+    // （=メインウィンドウのクライアント原点のスクリーン座標）を引いてクライアント座標へ戻し、
+    // さらにマウスと同じレターボックス逆変換でクライアント座標→仮想解像度座標へ変換する。
+    // これを怠ると、実ウィンドウサイズが仮想解像度と異なるときにレイの起点がずれる。
     ImVec2 mainVpPos = ImGui::GetMainViewport()->Pos;
-    scenePosForRay_ = ImVec2(actualScenePos_.x - mainVpPos.x, actualScenePos_.y - mainVpPos.y);
+    ImVec2 sceneClientPos = ImVec2(actualScenePos_.x - mainVpPos.x, actualScenePos_.y - mainVpPos.y);
+
+    float viewX = 0.0f, viewY = 0.0f, viewW = 0.0f, viewH = 0.0f;
+    WinApp::ComputeLetterboxRect(pWinApp_->GetClientWidth(), pWinApp_->GetClientHeight(), viewX, viewY, viewW, viewH);
+    const float toVirtualX = static_cast<float>(WinApp::GetVirtualWidth()) / viewW;
+    const float toVirtualY = static_cast<float>(WinApp::GetVirtualHeight()) / viewH;
+    scenePosForRay_ = ImVec2((sceneClientPos.x - viewX) * toVirtualX, (sceneClientPos.y - viewY) * toVirtualY);
+    sceneSizeForRay_ = ImVec2(sceneTextureSize_.x * toVirtualX, sceneTextureSize_.y * toVirtualY);
 
     // 他の ImGui ウィンドウがシーンウィンドウの上に重なっているとき、その上でのクリックで
     // シーンのオブジェクト選択を誤発火させないよう、シーンウィンドウのホバー状態を渡す。

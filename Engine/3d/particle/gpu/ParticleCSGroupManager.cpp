@@ -37,7 +37,7 @@ void ParticleCSGroupManager::Initialize()
             GroupDesc desc;
             desc.groupName = loadedGroupName;
             desc.texturePath = data.Load<std::string>("textureName", "");
-            desc.modelPath = data.Load<std::string>("modelfilePath", "");
+            desc.modelPath = data.Load<std::string>("modelFilePath", "");
             desc.maxParticleCount = data.Load<uint32_t>("maxParticleCount", 10000);
             desc.blendMode = data.Load<BlendMode>("blendMode", BlendMode::Add);
             desc.primitiveType = data.Load<PrimitiveType>("primitiveType", PrimitiveType::None);
@@ -127,7 +127,7 @@ void ParticleCSGroupManager::AddParticleCSGroup(std::unique_ptr<ParticleCSGroup>
     const auto &materials = particleCSGroup->GetParticleGroupData().materials;
     std::string textureFilePath = (!materials.empty()) ? materials[0].textureFilePath : "";
     data.Save("textureName", textureFilePath);
-    data.Save("modelfilePath", particleCSGroup->GetModelPath());
+    data.Save("modelFilePath", particleCSGroup->GetModelPath());
     data.Save("primitiveType", particleCSGroup->GetPrimitiveType());
     data.Save("maxParticleCount", particleCSGroup->GetSettingsData()->maxParticleCount);
     data.Save("blendMode", particleCSGroup->GetParticleGroupData().blendMode);

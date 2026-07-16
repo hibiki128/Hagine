@@ -16,7 +16,7 @@ struct Vector4 final
     float w;
 
     // コンストラクタ
-    Vector4(float x = 0.0f, float y = 0.0f, float z = 0.0f, float w = 0.0f) : x(x), y(y), z(z), w(w) {}
+    constexpr Vector4(float x = 0.0f, float y = 0.0f, float z = 0.0f, float w = 0.0f) : x(x), y(y), z(z), w(w) {}
 
     // 符号反転
     Vector4 operator-() const { return Vector4(-x, -y, -z, -w); }

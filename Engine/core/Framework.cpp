@@ -6,6 +6,10 @@
 #include <Frame.h>
 #include <shadow/ShadowMap.h>
 #include <iterator>
+#ifdef _DEBUG
+#include <edit/undo/UndoRedoManager.h>
+#include <imgui.h>
+#endif // _DEBUG
 
 namespace Hagine {
 void Framework::Run()
@@ -306,6 +310,32 @@ void Framework::RegisterShortcutKey()
     shortcutManager_->RegisterShortcut("SwitchMode", DIK_F5, [this]() {
         imGuiManager_->GetIsShowMainUI() = !imGuiManager_->GetIsShowMainUI();
     });
+    // 元に戻す（ImGuiのテキスト入力中は入力欄自身のUndoを優先してスキップ）
+    shortcutManager_->RegisterShortcut("Undo", {DIK_LCONTROL, DIK_Z}, []() {
+        if (ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput)
+        {
+            return;
+        }
+        UndoRedoManager *undoMgr = UndoRedoManager::GetInstance();
+        const std::string label = undoMgr->GetUndoLabel();
+        if (undoMgr->Undo())
+        {
+            ImGuiNotification::Post("元に戻す: " + label, {0.42f, 0.66f, 0.68f, 1.0f});
+        }
+    });
+    // やり直し
+    shortcutManager_->RegisterShortcut("Redo", {DIK_LCONTROL, DIK_Y}, []() {
+        if (ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput)
+        {
+            return;
+        }
+        UndoRedoManager *undoMgr = UndoRedoManager::GetInstance();
+        const std::string label = undoMgr->GetRedoLabel();
+        if (undoMgr->Redo())
+        {
+            ImGuiNotification::Post("やり直し: " + label, {0.42f, 0.66f, 0.68f, 1.0f});
+        }
+    });
     // コピー
     shortcutManager_->RegisterShortcut("Copy", {DIK_LCONTROL, DIK_C}, [this]() {
         pImGuizmoManager_->CopySelectedObjects();
@@ -357,6 +387,16 @@ void Framework::Update()
         pInput_->Update();
         shortcutManager_->Update();
         endRequest_ = winApp_->ProcessMessage();
+    }
+
+    // ウィンドウサイズが変わっていたらスワップチェーンを追従させる
+    // （内部レンダリング解像度は固定のまま、最終合成時に拡縮される）
+    {
+        uint32_t newWidth = 0, newHeight = 0;
+        if (winApp_->ConsumeResize(newWidth, newHeight))
+        {
+            pDxCommon_->ResizeSwapChain(newWidth, newHeight);
+        }
     }
 }
 

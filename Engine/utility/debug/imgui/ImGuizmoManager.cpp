@@ -7,6 +7,7 @@
 #include <line/DrawLine3D.h>
 #include <object/base/BaseObjectManager.h>
 #include <transform/WorldTransform.h>
+#include <edit/undo/UndoRedoManager.h>
 #include "WinApp.h"
 #include <imgui.h>
 // DebugUIHelper.h は ImVec4 / ImGui:: を使うので imgui.h の後に include する
@@ -593,8 +594,8 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     // （Input::GetMousePos() はクライアント座標系なのでマルチビューポート時にずれる）。
     float relX = mousePos.x - scenePosition.x;
     float relY = mousePos.y - scenePosition.y;
-    float spriteSpaceX = (relX / sceneSize.x) * static_cast<float>(WinApp::kClientWidth);
-    float spriteSpaceY = (relY / sceneSize.y) * static_cast<float>(WinApp::kClientHeight);
+    float spriteSpaceX = (relX / sceneSize.x) * static_cast<float>(WinApp::GetVirtualWidth());
+    float spriteSpaceY = (relY / sceneSize.y) * static_cast<float>(WinApp::GetVirtualHeight());
 
     // ---- パス1: スクリーン空間ターゲット優先 2D ヒットテスト ----
     float minDist2D = std::numeric_limits<float>::max();
@@ -823,8 +824,8 @@ void ImGuizmoManager::DisplayGizmo(const ImVec2 &scenePosition, const ImVec2 &sc
         Matrix4x4 identView = MakeIdentity4x4();
         Matrix4x4 orthoProj = MakeOrthographicMatrix(
             0.0f, 0.0f,
-            static_cast<float>(WinApp::kClientWidth),
-            static_cast<float>(WinApp::kClientHeight),
+            static_cast<float>(WinApp::GetVirtualWidth()),
+            static_cast<float>(WinApp::GetVirtualHeight()),
             0.0f, 100.0f);
 
         for (int i = 0; i < 4; ++i)
@@ -1003,6 +1004,9 @@ void ImGuizmoManager::PasteObjects()
     if (copiedObjects_.empty())
         return;
 
+    // ショートカット起点の操作はImGuiの編集ジェスチャに乗らないため、明示的にUndo履歴へ積む
+    nlohmann::json undoBefore = BaseObjectManager::GetInstance()->CaptureUndoState();
+
     selectedNames_.clear();
 
     for (BaseObject *copiedObj : copiedObjects_)
@@ -1047,6 +1051,16 @@ void ImGuizmoManager::PasteObjects()
     }
 
     copiedObjects_.clear();
+
+    // 貼り付け操作をUndo履歴へ積む
+    {
+        nlohmann::json undoAfter = BaseObjectManager::GetInstance()->CaptureUndoState();
+        auto [diffBefore, diffAfter] = MakeTopLevelJsonDiff(undoBefore, undoAfter);
+        UndoRedoManager::GetInstance()->Push(std::make_unique<JsonStateCommand>(
+            "オブジェクト貼り付け", std::move(diffBefore), std::move(diffAfter),
+            [](const nlohmann::json &s) { BaseObjectManager::GetInstance()->RestoreUndoState(s); }));
+    }
+
     ImGuiNotification::Post("オブジェクトを貼り付けました", {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
@@ -1057,6 +1071,9 @@ void ImGuizmoManager::DeleteSelectedObjects()
     if (selectedNames_.empty())
         return;
 
+    // ショートカット起点の操作はImGuiの編集ジェスチャに乗らないため、明示的にUndo履歴へ積む
+    nlohmann::json undoBefore = BaseObjectManager::GetInstance()->CaptureUndoState();
+
     size_t count = selectedNames_.size();
     for (const std::string &name : selectedNames_)
     {
@@ -1066,6 +1083,15 @@ void ImGuizmoManager::DeleteSelectedObjects()
             BaseObjectManager::GetInstance()->RemoveObject(name);
         }
         transformMap_.erase(name);
+    }
+
+    // 削除操作をUndo履歴へ積む
+    {
+        nlohmann::json undoAfter = BaseObjectManager::GetInstance()->CaptureUndoState();
+        auto [diffBefore, diffAfter] = MakeTopLevelJsonDiff(undoBefore, undoAfter);
+        UndoRedoManager::GetInstance()->Push(std::make_unique<JsonStateCommand>(
+            "オブジェクト削除", std::move(diffBefore), std::move(diffAfter),
+            [](const nlohmann::json &s) { BaseObjectManager::GetInstance()->RestoreUndoState(s); }));
     }
 
     UpdateFilteredNames();

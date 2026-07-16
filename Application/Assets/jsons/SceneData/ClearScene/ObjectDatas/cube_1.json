@@ -2,37 +2,76 @@
     "Lighting": true,
     "PrimitiveType": 3,
     "blendMode": 1,
-    "childrenNames": [
-        "sphere_1",
-        "sphere_2"
-    ],
+    "childrenNames": [],
+    "colliderCount": 0,
     "color_0": {
         "w": 1.0,
         "x": 0.19607843458652496,
         "y": 0.3529411852359772,
         "z": 0.9411764740943909
     },
-    "isLighting": true,
-    "isModelDraw": true,
-    "modelName": "",
-    "objectName": "cube_1",
-    "parentName": "",
-    "rotation": {
+    "color_1": {
         "w": 1.0,
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
+        "x": 0.0786881148815155,
+        "y": 0.15535517036914825,
+        "z": 0.98591548204422
     },
-    "scale": {
+    "color_2": {
+        "w": 1.0,
         "x": 1.0,
         "y": 1.0,
         "z": 1.0
     },
+    "isLighting": true,
+    "isModelDraw": true,
+    "material_0_enableNormalMap": false,
+    "material_0_enableProceduralNormal": false,
+    "material_0_normalMapPath": "",
+    "material_0_normalStrength": 1.0,
+    "material_0_proceduralScale": 3.0,
+    "material_1_enableNormalMap": false,
+    "material_1_enableProceduralNormal": false,
+    "material_1_normalMapPath": "",
+    "material_1_normalStrength": 1.0,
+    "material_1_proceduralScale": 3.0,
+    "material_2_enableNormalMap": false,
+    "material_2_enableProceduralNormal": false,
+    "material_2_normalMapPath": "",
+    "material_2_normalStrength": 1.0,
+    "material_2_proceduralScale": 3.0,
+    "modelName": "animation/Player/Winner.gltf",
+    "objectName": "cube_1",
+    "parentName": "",
+    "rb_enabled": false,
+    "rb_friction": 0.30000001192092896,
+    "rb_gravity": {
+        "x": 0.0,
+        "y": -9.800000190734863,
+        "z": 0.0
+    },
+    "rb_linearDamping": 0.05000000074505806,
+    "rb_mass": 1.0,
+    "rb_restitution": 0.0,
+    "rb_useGravity": true,
+    "resolveCollision": false,
+    "rotation": {
+        "w": 0.9399905800819397,
+        "x": 0.0,
+        "y": -0.3412003815174103,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 2.5,
+        "y": 2.5,
+        "z": 2.5
+    },
     "skeletonDraw": false,
     "textureName_0": "debug/white1x1.png",
+    "textureName_1": "debug/white1x1.png",
+    "textureName_2": "debug/uvChecker.png",
     "translation": {
         "x": 0.959776759147644,
-        "y": 0.5218557715415955,
+        "y": -1.0,
         "z": 0.0
     }
 }

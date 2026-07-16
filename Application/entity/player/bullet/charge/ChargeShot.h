@@ -169,6 +169,9 @@ class ChargeShot : public Hagine::BaseObject
     static constexpr float kParticleEndScaleOffset = 0.2f;        // パーティクル終了時のスケールオフセット
     static constexpr float kBulletParticleScaleMultiplier = 2.0f; // 弾パーティクルのスケール倍率
 
+    static constexpr const char *kRightHandJointName = "mixamorig:RightHand"; // 溜め位置の基準にする右手ジョイント名
+    static constexpr const char *kLeftHandJointName = "mixamorig:LeftHand";   // 溜め位置の基準にする左手ジョイント名
+
     Hagine::Vector3 offset_{};
     bool isAlive_ = false;        // 生存フラグ
     bool isMaxScale_ = false;     // 最大スケール到達フラグ

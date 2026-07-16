@@ -56,8 +56,24 @@ void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey
     // 初期ステップのスプライトをロード
     LoadStepSprites(pSystem_->GetCurrentStep());
 
+    // 説明書きはパーティクル遷移の完了後にフェードインさせるため、
+    // それまでは非表示にしておく（BeginIntroFadeIn() で表示開始）
+    ApplyAlphaToAllManagedSprites(0.0f);
+    isIntroFade_ = true;
+
     // OK! スプライトの生成
     InitializeOKSprite(okFontKey);
+}
+
+void TutorialUI::BeginIntroFadeIn()
+{
+    // シーン開始時のみ有効（既に進行中なら何もしない）
+    if (transitionState_ != UITransitionState::Idle)
+    {
+        return;
+    }
+    transitionState_ = UITransitionState::FadingIn;
+    fadeTimer_ = 0.0f;
 }
 
 void TutorialUI::InitializeOKSprite(const std::string &fontKey)
@@ -151,18 +167,20 @@ void TutorialUI::UpdateTransition(float dt)
         ApplyAlphaToAllManagedSprites(t);
 
         // Complete ステップでは OK! を永続表示、それ以外はフェードアウト
+        // （シーン開始時のフェードインでは OK! はまだ出さない）
         if (pSystem_->GetCurrentStep() == TutorialStep::Complete)
         {
             okAlpha_ = 1.0f;
         }
         else
         {
-            okAlpha_ = 1.0f - t;
+            okAlpha_ = isIntroFade_ ? 0.0f : (1.0f - t);
         }
 
         if (fadeTimer_ >= fadeInDuration_)
         {
             ApplyAlphaToAllManagedSprites(1.0f);
+            isIntroFade_ = false;
 
             if (pSystem_->GetCurrentStep() != TutorialStep::Complete)
             {

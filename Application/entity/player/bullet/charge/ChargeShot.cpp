@@ -222,16 +222,29 @@ void ChargeShot::Update()
 
             // チャージ弾のオフセット距離
             float chargeRadius = scale_;
-            float offsetDistance = playerRadius_ + chargeRadius + offsetMargin_;
 
-            // オフセット計算
-            Vector3 offset = normForward * offsetDistance;
+            // 両手（ジョイント）の中点を基準に、弾の半径ぶん前方へ押し出して保持する。
+            // ジョイントが取得できない場合は従来どおり本体位置＋オフセットで代用する
+            auto rightHand = pPlayer_->GetJointWorldPosition(kRightHandJointName);
+            auto leftHand = pPlayer_->GetJointWorldPosition(kLeftHandJointName);
+            if (rightHand && leftHand)
+            {
+                Vector3 handMid = (*rightHand + *leftHand) * 0.5f;
+                transform_->translation_ = handMid + normForward * (chargeRadius + offsetMargin_);
+            }
+            else
+            {
+                float offsetDistance = playerRadius_ + chargeRadius + offsetMargin_;
 
-            // 高さ(Y軸)オフセット
-            offset.y = verticalOffset_;
+                // オフセット計算
+                Vector3 offset = normForward * offsetDistance;
 
-            // チャージ弾の位置更新
-            transform_->translation_ = playerPos + offset;
+                // 高さ(Y軸)オフセット
+                offset.y = verticalOffset_;
+
+                // チャージ弾の位置更新
+                transform_->translation_ = playerPos + offset;
+            }
 
             // エミッター位置も更新
             chargeEmitter_->SetTranslate(transform_->translation_);

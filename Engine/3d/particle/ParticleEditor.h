@@ -11,6 +11,9 @@
 #include <vector>
 
 #include "ParticleStruct.h"
+#ifdef _DEBUG
+#include <edit/undo/ImGuiUndoTracker.h>
+#endif // _DEBUG
 
 namespace Hagine {
 
@@ -170,5 +173,25 @@ class ParticleEditor
     /// <param name="name">エミッター名</param>
     /// <returns>ParticleEmitter*</returns>
     ParticleEmitter *GetEmitterByName(const std::string &name);
+
+#ifdef _DEBUG
+    /// <summary>
+    /// Undo用: 全エミッターの編集可能状態をJSON化する（トップレベル = エミッター名 → 状態）
+    /// </summary>
+    /// <returns>nlohmann::json: 状態JSON</returns>
+    nlohmann::json CaptureUndoState();
+
+    /// <summary>
+    /// Undo用: CaptureUndoState で得た状態（差分可）を適用する
+    /// 既存エミッターへの反映のみ行い、エミッターの追加・削除自体は対象外
+    /// </summary>
+    /// <param name="state">適用する状態JSON</param>
+    void RestoreUndoState(const nlohmann::json &state);
+
+  private:
+    ImGuiUndoTracker undoTracker_; // パーティクルエディタUIのUndoトラッカー
+
+  public:
+#endif // _DEBUG
 };
 } // namespace Hagine

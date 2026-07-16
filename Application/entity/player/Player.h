@@ -1,4 +1,5 @@
 #pragma once
+#include "Application/staging/dash/DashEffect.h"
 #include "Application/staging/death/DeathStaging.h"
 #include "Application/system/tutorial/TutorialSystem.h"
 #include "data/DataHandler.h"
@@ -335,6 +336,7 @@ class Player : public Hagine::BaseObject
     std::unique_ptr<Shake> shake_;                           // シェイク
     std::unique_ptr<Hagine::ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;    // 被弾ヒットエミッター
+    std::unique_ptr<DashEffect> dashEffect_;                 // ダッシュ中の演出
     std::unique_ptr<DeathStaging> deathStaging_;             // 死亡演出
     std::unique_ptr<Hagine::GamePad> gamePad_;               // ゲームパッド
 

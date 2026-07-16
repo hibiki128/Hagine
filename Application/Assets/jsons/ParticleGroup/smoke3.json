@@ -1,6 +1,6 @@
 {
     "groupName": "smoke3",
-    "modelfilePath": "",
+    "modelFilePath": "",
     "primitiveType": 1,
     "textureName": "Particle/smoke3.png"
 }

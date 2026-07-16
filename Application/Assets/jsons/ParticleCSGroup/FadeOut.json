@@ -1,8 +1,8 @@
 {
     "blendMode": 2,
     "groupName": "FadeOut",
-    "maxParticleCount": 45000,
-    "modelfilePath": "",
+    "maxParticleCount": 90000,
+    "modelFilePath": "",
     "primitiveType": 1,
     "textureName": "debug/circle2.png"
 }

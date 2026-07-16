@@ -90,6 +90,33 @@ class CameraLockOn
     /// ===================================================
 
     /// <summary>
+    /// 敵方向へヨー角を更新し、更新後のヨー角を返す
+    /// </summary>
+    /// <param name="targetPos">追従対象の位置</param>
+    /// <param name="enemyPos">敵の位置</param>
+    /// <returns>float: 更新後のヨー角</returns>
+    float UpdateYawTowardEnemy(const Hagine::Vector3 &targetPos, const Hagine::Vector3 &enemyPos);
+
+    /// <summary>
+    /// プレイヤーの移動入力（キー/スティック）があるかを判定する
+    /// </summary>
+    /// <param name="pPlayer">追従対象プレイヤー</param>
+    /// <returns>bool: 入力があれば true</returns>
+    bool HasMovementInput(Player *pPlayer) const;
+
+    /// <summary>
+    /// 横方向速度に応じて肩オフセットの目標値を更新する
+    /// </summary>
+    /// <param name="lateralVelocity">カメラ右方向への速度成分</param>
+    void UpdateShoulderOffsetTarget(float lateralVelocity);
+
+    /// <summary>
+    /// 接地状態に応じた高さオフセットの目標設定と補間を行う
+    /// </summary>
+    /// <param name="pPlayer">追従対象プレイヤー</param>
+    void UpdateHeightOffset(Player *pPlayer);
+
+    /// <summary>
     /// 指定した点がロックオン視錐台内にあるか判定
     /// </summary>
     /// <param name="point">判定する座標</param>

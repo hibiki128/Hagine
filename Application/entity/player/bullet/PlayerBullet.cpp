@@ -118,8 +118,11 @@ void PlayerBullet::DrawParticle(const ViewProjection &viewProjection)
 
 void PlayerBullet::InitTransform(Player *player)
 {
-    // プレイヤーの位置を弾の初期位置に設定
-    this->transform_->translation_ = player->GetLocalPosition();
+    // 手（右手ジョイント）を発射起点にする。
+    // ジョイントが取得できない場合は従来どおり本体位置＋オフセットで代用する
+    std::optional<Vector3> handPos = player->GetJointWorldPosition(kHandJointName);
+    const bool fromHand = handPos.has_value();
+    this->transform_->translation_ = fromHand ? *handPos : player->GetLocalPosition();
     pCollider_ = AddSphereCollider("player_bullet");
     pCollider_->SetTag("PlayerBullet");
     pCollider_->AddCollisionMask("Enemy");
@@ -134,10 +137,11 @@ void PlayerBullet::InitTransform(Player *player)
     {
         isLockOnBullet_ = true;
 
-        Vector3 playerPos = player->GetLocalPosition();
+        // 発射起点（手）からターゲットへ向けて狙う
+        Vector3 spawnPos = this->transform_->translation_;
         Vector3 enemyPos = player->GetEnemy()->GetLocalPosition();
 
-        Vector3 direction = enemyPos - playerPos;
+        Vector3 direction = enemyPos - spawnPos;
 
         float length = std::sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
         if (length > kMinSpeedThreshold)
@@ -166,10 +170,17 @@ void PlayerBullet::InitTransform(Player *player)
         velocity_ = direction.Normalize() * speed_;
     }
 
-    Vector3 forwardOffset = velocity_.Normalize() * kForwardOffsetDistance;
-    forwardOffset.y += kVerticalOffset; // 少し上に
-
-    this->transform_->translation_ += forwardOffset;
+    // 手から撃つ場合は手の少し先から、代用時は従来どおり前方＋少し上から発射する
+    if (fromHand)
+    {
+        this->transform_->translation_ += velocity_.Normalize() * kHandForwardOffset;
+    }
+    else
+    {
+        Vector3 forwardOffset = velocity_.Normalize() * kForwardOffsetDistance;
+        forwardOffset.y += kVerticalOffset; // 少し上に
+        this->transform_->translation_ += forwardOffset;
+    }
 }
 
 void PlayerBullet::OnCollisionEnter(ColliderBase *other)

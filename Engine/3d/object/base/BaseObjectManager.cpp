@@ -2,6 +2,7 @@
 #include <utility/debug/imgui/ImGuiNotification.h>
 #ifdef _DEBUG
 #include "debug/imgui/ImGuizmoManager.h"
+#include "ImGuizmo.h"
 #endif // _DEBUG
 #include "edit/motion/MotionEditor.h"
 #include <debug/log/Logger.h>
@@ -88,10 +89,19 @@ void BaseObjectManager::Draw(const ViewProjection &viewProjection)
 void BaseObjectManager::UpdateImGui()
 {
 #ifdef _DEBUG
+    // オブジェクトへの編集ジェスチャ（ImGuiウィジェット・ギズモドラッグ）をUndo履歴として追跡する
+    undoTracker_.Begin([this] { return CaptureUndoState(); });
+
     DrawSceneSaveModel();
     DrawSceneLoadModel();
     DrawObjectCreationModel();
     DrawObjectLoadModel();
+
+    undoTracker_.End(
+        "オブジェクト編集",
+        [this] { return CaptureUndoState(); },
+        [](const nlohmann::json &s) { BaseObjectManager::GetInstance()->RestoreUndoState(s); },
+        ImGuizmo::IsUsing());
 #endif // _DEBUG
 }
 
@@ -1073,4 +1083,189 @@ void BaseObjectManager::DrawHierarchyEditor()
     ImGui::End();
 #endif // _DEBUG
 }
+
+#ifdef _DEBUG
+// -------------------------------------------------------
+// Undo/Redo 用の状態キャプチャ・復元
+// -------------------------------------------------------
+
+nlohmann::json BaseObjectManager::CaptureUndoState()
+{
+    using nlohmann::json;
+    json state = json::object();
+
+    for (auto &[name, owned] : ownedObjects_)
+    {
+        BaseObject *obj = owned.get();
+        if (!obj)
+        {
+            continue;
+        }
+
+        json s;
+        // 再生成に必要な情報
+        s["modelPath"] = obj->GetModelPath();
+        s["isPrimitive"] = obj->IsPrimitive();
+        s["primitiveType"] = static_cast<int>(obj->GetPrimitiveType());
+
+        // トランスフォーム
+        const WorldTransform *transform = obj->GetWorldTransform();
+        s["scale"] = transform->scale_;
+        s["rotation"] = transform->quateRotation_;
+        s["translation"] = transform->translation_;
+
+        // 親子関係・フラグ類
+        s["parent"] = obj->GetParentName();
+        s["shouldSave"] = obj->GetShouldSave();
+        s["isModelDraw"] = obj->GetIsModelDraw();
+        s["isLighting"] = obj->GetLighting();
+
+        // マテリアルごとのテクスチャと色
+        const int materialCount = obj->GetObject3d() ? static_cast<int>(obj->GetObject3d()->GetMaterialCount()) : 0;
+        const int textureCount = obj->IsPrimitive() ? (materialCount > 0 ? 1 : 0) : materialCount;
+        json textures = json::array();
+        json colors = json::array();
+        for (int i = 0; i < textureCount; ++i)
+        {
+            textures.push_back(obj->GetTexturePath(i));
+        }
+        for (int i = 0; i < materialCount; ++i)
+        {
+            colors.push_back(obj->GetColor(i));
+        }
+        s["textures"] = textures;
+        s["colors"] = colors;
+
+        state[name] = s;
+    }
+    return state;
+}
+
+void BaseObjectManager::RestoreUndoState(const nlohmann::json &state)
+{
+    using nlohmann::json;
+    if (!state.is_object())
+    {
+        return;
+    }
+
+    // ---- パス1: 削除・再生成・フィールド適用 ----
+    for (auto it = state.begin(); it != state.end(); ++it)
+    {
+        const std::string &name = it.key();
+
+        // null = このオブジェクトは存在しない状態へ戻す（削除）
+        if (it.value().is_null())
+        {
+            RemoveObject(name);
+            ImGuizmoManager::GetInstance()->RemoveTarget(name);
+            continue;
+        }
+
+        const json &s = it.value();
+        BaseObject *obj = GetObjectByName(name);
+
+        // 存在しなければ所有オブジェクトとして再生成（削除のUndo）
+        if (!obj)
+        {
+            const std::string modelPath = s.value("modelPath", std::string());
+            const bool isPrimitive = s.value("isPrimitive", false);
+            std::unique_ptr<BaseObject> newObject = std::make_unique<BaseObject>();
+            newObject->Init(name);
+            if (!modelPath.empty())
+            {
+                newObject->CreateModel(modelPath);
+            }
+            else if (isPrimitive)
+            {
+                newObject->SetPrimitive(true);
+                newObject->CreatePrimitiveModel(
+                    static_cast<PrimitiveType>(s.value("primitiveType", static_cast<int>(PrimitiveType::Count))));
+            }
+            else
+            {
+                continue; // モデルもプリミティブも無い場合は再生成できない
+            }
+            AddObject(std::move(newObject));
+            obj = GetObjectByName(name);
+            if (!obj)
+            {
+                continue;
+            }
+        }
+
+        // トランスフォーム適用
+        WorldTransform *transform = obj->GetWorldTransform();
+        if (s.contains("scale"))
+        {
+            transform->scale_ = s["scale"].get<Vector3>();
+        }
+        if (s.contains("rotation"))
+        {
+            transform->quateRotation_ = s["rotation"].get<Quaternion>();
+        }
+        if (s.contains("translation"))
+        {
+            transform->translation_ = s["translation"].get<Vector3>();
+        }
+
+        // フラグ類の適用
+        if (s.contains("shouldSave"))
+        {
+            obj->SetShouldSave(s["shouldSave"].get<bool>());
+        }
+        if (s.contains("isModelDraw"))
+        {
+            obj->SetIsModelDraw(s["isModelDraw"].get<bool>());
+        }
+        if (s.contains("isLighting"))
+        {
+            obj->GetLighting() = s["isLighting"].get<bool>();
+        }
+
+        // マテリアルごとのテクスチャと色の適用
+        const int materialCount = obj->GetObject3d() ? static_cast<int>(obj->GetObject3d()->GetMaterialCount()) : 0;
+        if (s.contains("textures") && s["textures"].is_array())
+        {
+            const json &textures = s["textures"];
+            const int textureCount = obj->IsPrimitive() ? (materialCount > 0 ? 1 : 0) : materialCount;
+            for (int i = 0; i < static_cast<int>(textures.size()) && i < textureCount; ++i)
+            {
+                obj->SetTexture(textures[i].get<std::string>(), i);
+            }
+        }
+        if (s.contains("colors") && s["colors"].is_array())
+        {
+            const json &colors = s["colors"];
+            for (int i = 0; i < static_cast<int>(colors.size()) && i < materialCount; ++i)
+            {
+                obj->SetColor(colors[i].get<Vector4>(), i);
+            }
+        }
+    }
+
+    // ---- パス2: 親子関係の復元（全オブジェクトが揃ってから行う）----
+    for (auto it = state.begin(); it != state.end(); ++it)
+    {
+        if (it.value().is_null() || !it.value().is_object() || !it.value().contains("parent"))
+        {
+            continue;
+        }
+        const std::string &name = it.key();
+        if (!GetObjectByName(name))
+        {
+            continue;
+        }
+        const std::string parentName = it.value()["parent"].get<std::string>();
+        if (parentName.empty())
+        {
+            RemoveParentChild(name);
+        }
+        else if (GetObjectByName(parentName))
+        {
+            SetParentChild(name, parentName);
+        }
+    }
+}
+#endif // _DEBUG
 } // namespace Hagine

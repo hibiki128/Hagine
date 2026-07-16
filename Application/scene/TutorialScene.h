@@ -110,7 +110,5 @@ class TutorialScene : public Hagine::BaseScene
     Enemy *enemy_ptr = nullptr;        // 敵のポインタ
     Player *player_ptr = nullptr;      // プレイヤーのポインタ
 
-    float startDelayTimer_ = 0.0f;              // シーン開始からの経過時間
-    bool sceneStarted_ = false;                 // 遅延終了フラグ
-    static constexpr float kStartDelay_ = 2.0f; // 開始までの待機秒数
+    bool sceneStarted_ = false; // 遅延終了フラグ（パーティクル遷移完了で立つ）
 };

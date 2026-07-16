@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -157,6 +157,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\utility\combo\ComboSystem.cpp" />
     <ClCompile Include="Application\ui\enemy\EnemyUI.cpp" />
     <ClCompile Include="Application\staging\death\DeathStaging.cpp" />
+    <ClCompile Include="Application\staging\dash\DashEffect.cpp" />
     <ClCompile Include="Application\camera\death\DeathCamera.cpp" />
     <ClCompile Include="Application\entity\player\skill\MakanAttackSkill.cpp" />
     <ClCompile Include="Application\entity\behavior\node\BehaviorNode.cpp" />
@@ -257,6 +258,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\utility\browser\ShowFolder.cpp" />
     <ClCompile Include="Engine\3d\skybox\SkyBox.cpp" />
     <ClCompile Include="Engine\utility\edit\shortcut\ShortcutManager.cpp" />
+    <ClCompile Include="Engine\utility\edit\undo\UndoRedoManager.cpp" />
     <ClCompile Include="Engine\offscreen\effect\PostEffectChain.cpp" />
     <ClCompile Include="Engine\offscreen\effect\PostEffectRenderer.cpp" />
     <ClCompile Include="Engine\offscreen\RendererBuffer.cpp" />
@@ -374,6 +376,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="application\utility\combo\ComboSystem.h" />
     <ClInclude Include="Application\ui\enemy\EnemyUI.h" />
     <ClInclude Include="Application\staging\death\DeathStaging.h" />
+    <ClInclude Include="Application\staging\dash\DashEffect.h" />
     <ClInclude Include="Application\camera\death\DeathCamera.h" />
     <ClInclude Include="Application\entity\player\skill\MakanAttackSkill.h" />
     <ClInclude Include="Application\entity\behavior\node\BehaviorNode.h" />
@@ -498,6 +501,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\entity\player\state\action\PlayerStateGuard.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\utility\edit\shortcut\ShortcutManager.h" />
+    <ClInclude Include="Engine\utility\edit\undo\UndoRedoManager.h" />
+    <ClInclude Include="Engine\utility\edit\undo\ImGuiUndoTracker.h" />
     <ClInclude Include="Engine\2d\SpriteManager.h" />
     <ClInclude Include="Application\ui\scene\title\TitleUI.h" />
     <ClInclude Include="Application\camera\start\StartCamera.h" />

@@ -157,13 +157,14 @@ void TutorialScene::Update()
     gamePad_->Update();
     gameUI_->Update();
 
-    // シーン開始遅延
+    // シーン開始遅延（パーティクル遷移の完了を待つ）。
+    // 完了後に説明書きのフェードインを開始することで、遷移より先に出るのを防ぐ
     if (!sceneStarted_)
     {
-        startDelayTimer_ += Frame::DeltaTime();
-        if (startDelayTimer_ >= kStartDelay_)
+        if (fadeOut_->IsFinish())
         {
             sceneStarted_ = true;
+            tutorialUI_->BeginIntroFadeIn();
         }
         return;
     }

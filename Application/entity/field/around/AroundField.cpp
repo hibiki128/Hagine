@@ -6,7 +6,7 @@ using namespace Hagine;
 AroundField::~AroundField()
 {
     // 自身がアクティブフィールドとして登録されている場合のみ解除する
-    if (activeField_ == AroundField_)
+    if (activeField_ == aroundField_)
     {
         activeField_ = nullptr;
     }
@@ -18,13 +18,13 @@ void AroundField::Init(const std::string objectName)
     BaseObject::CreatePrimitiveModel(PrimitiveType::Cylinder);
 
     // 円柱状のコライダーを設定（フィールドの境界として使用）
-    AroundField_ = AddCylinderCollider("Around_Field");
-    AroundField_->SetRadius(150.0f);
-    AroundField_->SetHeight(150.0f);
-    AroundField_->SetPositionGetter([]() -> Vector3 { return Vector3(0.0f, 70.0f, 0.0f); });
-    AroundField_->SetInward(true); // 内側への押し戻しを設定
-    AroundField_->SetTag("CylinderField");
-    activeField_ = AroundField_;
+    aroundField_ = AddCylinderCollider("Around_Field");
+    aroundField_->SetRadius(150.0f);
+    aroundField_->SetHeight(150.0f);
+    aroundField_->SetPositionGetter([]() -> Vector3 { return Vector3(0.0f, 70.0f, 0.0f); });
+    aroundField_->SetInward(true); // 内側への押し戻しを設定
+    aroundField_->SetTag("CylinderField");
+    activeField_ = aroundField_;
 
     // コンピュートシェーダパーティクルの生成
     fieldParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("AroundField");

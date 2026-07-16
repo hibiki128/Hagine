@@ -102,7 +102,7 @@ class ViewProjection
     Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                                    // オイラー角による回転(ラジアン)
     Vector3 translation_ = {0.0f, 0.0f, -10.0f};                                    // カメラ座標
     float fovAngleY_ = 45.0f * std::numbers::pi_v<float> / 180.0f;                  // 垂直方向視野角(ラジアン)
-    float aspectRatio = float(WinApp::kClientWidth) / float(WinApp::kClientHeight); // アスペクト比
+    float aspectRatio = float(WinApp::GetVirtualWidth()) / float(WinApp::GetVirtualHeight()); // アスペクト比
     float nearZ_ = 0.1f;                                                            // 近距離クリッピング面
     float farZ_ = 1000.0f;                                                          // 遠距離クリッピング面
     Matrix4x4 matView_{};                                                           // ビュー行列

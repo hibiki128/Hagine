@@ -1,7 +1,11 @@
 #include "SceneManager.h"
+#include <DirectXCommon.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
 #include <SpriteManager.h>
 #include <cassert>
+#ifdef _DEBUG
+#include <edit/undo/UndoRedoManager.h>
+#endif // _DEBUG
 
 namespace Hagine {
 SceneManager::~SceneManager()
@@ -131,6 +135,12 @@ void SceneManager::SceneChange()
         // 旧シーンの終了
         if (scene_)
         {
+            // 旧シーンのオブジェクト（D3D12リソース）を破棄する前に GPU の全作業完了を待つ。
+            // ダブルバッファのため、前フレームで投入したGPUコマンドが旧シーンのリソースを
+            // まだ参照している状態で解放すると、デバッグレイヤーが「使用中リソースの解放」を
+            // ERROR 検出してブレークする（シーン遷移時に偶に起きるクラッシュの原因）。
+            DirectXCommon::GetInstance()->WaitForGPU();
+
             scene_->Finalize();
             // delete 不要、reset() で解放
             scene_.reset();
@@ -138,6 +148,11 @@ void SceneManager::SceneChange()
             SpriteManager::GetInstance()->Clear();
 #ifndef _DEBUG
             ParticleCSGroupManager::GetInstance()->ClearIndependentGroups();
+#endif // _DEBUG
+#ifdef _DEBUG
+            // 旧シーンの編集履歴は新シーンでは無効（Undoで旧シーンのオブジェクトを
+            // 再生成してしまう事故を防ぐため、シーン切替時に全履歴を破棄する）
+            UndoRedoManager::GetInstance()->Clear();
 #endif // _DEBUG
         }
 

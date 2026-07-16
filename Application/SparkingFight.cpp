@@ -6,6 +6,10 @@ using namespace Hagine;
 
 void SparkingFight::Initialize()
 {
+    // 仮想解像度（内部レンダリング解像度）をゲーム層で指定する。
+    // ウィンドウ・各レンダーターゲットは Framework::Initialize で生成されるため、それより前に設定する。
+    WinApp::SetVirtualResolution(WinApp::kDefaultVirtualWidth, WinApp::kDefaultVirtualHeight);
+
     Framework::Initialize();
     Framework::LoadResource();
     LoadGameResources();
@@ -39,6 +43,7 @@ void SparkingFight::LoadGameResources()
     pParticleCSEditor_->AddParticleEmitter("ChargeAura");
     pParticleCSEditor_->AddParticleEmitter("enemyChargeAura");
     pParticleCSEditor_->AddParticleEmitter("AroundField");
+    pParticleCSEditor_->AddParticleEmitter("dashWind");
 
     // パーティクルフィールド
     pParticleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
@@ -64,11 +69,11 @@ void SparkingFight::Update()
         HAGINE_CPU_PROFILE("Update/ImGuiUI(build)");
         if (imGuiManager_->GetEditorMode())
         {
-            pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePos(), imGuiManager_->GetSceneSize()}, 10000.0f);
+            pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {imGuiManager_->GetScenePosForRay(), imGuiManager_->GetSceneSizeForRay()}, 10000.0f);
         }
         else
         {
-            pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::kClientWidth), float(WinApp::kClientHeight))}, 10000.0f);
+            pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::GetVirtualWidth()), float(WinApp::GetVirtualHeight()))}, 10000.0f);
         }
 
         imGuiManager_->Begin();
@@ -87,7 +92,7 @@ void SparkingFight::Update()
     }
 #endif // _DEBUG
 #ifndef _DEBUG
-    pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::kClientWidth), float(WinApp::kClientHeight))});
+    pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::GetVirtualWidth()), float(WinApp::GetVirtualHeight()))});
 #endif // _DEBUG
 
     {

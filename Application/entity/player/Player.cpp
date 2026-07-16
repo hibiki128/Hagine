@@ -110,6 +110,9 @@ void Player::Init(const std::string objectName)
     auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
 
+    dashEffect_ = std::make_unique<DashEffect>();
+    dashEffect_->Init();
+
     deathStaging_ = std::make_unique<DeathStaging>();
 
     pGeneratedField_ = ParticleCSFieldManager::GetInstance()->GetField(0); // 0番目のフィールドを使用
@@ -131,6 +134,13 @@ void Player::Update()
         return;
 
     dt_ = Frame::DeltaTime();
+
+    // ダッシュ演出は emit フラグ残留を防ぐため毎フレーム更新する。
+    // 通常ダッシュに加えて急接近（Rush）中も dashWind を発生させる。
+    const bool dashActive = movement_->GetIsDashing() || (GetCurrentStateName() == "Rush");
+    dashEffect_->Update(GetWorldPosition(), movement_->GetVelocity(), GetForward(),
+                        isAlive_ && started_ && !isPause_ && dashActive,
+                        movement_->GetIsGrounded());
 
     if (combat_->IsSkillActive())
     {
@@ -306,6 +316,7 @@ void Player::Draw(const ViewProjection &viewProjection)
 void Player::DrawParticleCompute(const ViewProjection &viewProjection)
 {
     auraEmitter_->DrawCompute(viewProjection);
+    dashEffect_->DrawCompute(viewProjection);
     combat_->DrawParticleCompute(viewProjection);
 }
 
@@ -325,6 +336,7 @@ void Player::DrawParticle(const ViewProjection &viewProjection)
 
     combat_->DrawChargeParticle(viewProjection);
     auraEmitter_->DrawGraphics(viewProjection);
+    dashEffect_->DrawGraphics(viewProjection);
     hitEmitter_->Draw(viewProjection); // CPU emitter
 
     combat_->DrawAttackParticles(viewProjection);

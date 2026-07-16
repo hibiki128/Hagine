@@ -71,10 +71,10 @@ void DirectXCommon::Initialize(WinApp *winApp)
 
     // スワップチェーンの生成
     swapChain_ = std::make_unique<DXSwapChain>();
-    swapChain_->Initialize(dxDevice_->GetFactory(), directQueue_->Get(), pWinApp_->GetHwnd(), WinApp::kClientWidth, WinApp::kClientHeight);
+    swapChain_->Initialize(dxDevice_->GetFactory(), directQueue_->Get(), pWinApp_->GetHwnd(), WinApp::GetVirtualWidth(), WinApp::GetVirtualHeight());
 
     // 深度バッファの生成
-    depthStencilResource_ = resourceFactory_->CreateDepthStencilTextureResource(WinApp::kClientWidth, WinApp::kClientHeight);
+    depthStencilResource_ = resourceFactory_->CreateDepthStencilTextureResource(WinApp::GetVirtualWidth(), WinApp::GetVirtualHeight());
 
     // RTV / DSV 管理の初期化
     rtvManager_ = std::make_unique<RtvManager>();
@@ -92,6 +92,8 @@ void DirectXCommon::Initialize(WinApp *winApp)
     ViewPortRectInitialize();
     // シザリング矩形の初期化
     ScissorRectInitialize();
+    // 最終合成用ビューポートの初期化（起動時はウィンドウ＝仮想解像度）
+    UpdatePresentViewport(WinApp::GetVirtualWidth(), WinApp::GetVirtualHeight());
 
     // DXCコンパイラの生成
     shaderCompiler_ = std::make_unique<ShaderCompiler>();
@@ -139,7 +141,7 @@ void DirectXCommon::RenderTargetViewInitialize()
     clearColorValue_.Color[1] = 0.25f; // 緑成分 (非常に暗い)
     clearColorValue_.Color[2] = 0.5f;  // 青成分 (少し強め)
     clearColorValue_.Color[3] = 1.0f;  // アルファ値 (完全な不透明)
-    offScreenResource_ = resourceFactory_->CreateRenderTextureResource(WinApp::kClientWidth, WinApp::kClientHeight, clearColorValue_.Format, clearColorValue_);
+    offScreenResource_ = resourceFactory_->CreateRenderTextureResource(WinApp::GetVirtualWidth(), WinApp::GetVirtualHeight(), clearColorValue_.Format, clearColorValue_);
 
     rtvManager_->Create(2, offScreenResource_.Get(), rtvDesc);
 }
@@ -295,6 +297,13 @@ void DirectXCommon::FlushComputeQueue()
     }
 }
 
+void DirectXCommon::WaitForGPU()
+{
+    // 送信済みの全コマンドが GPU で完了するまで CPU をブロックする
+    directQueue_->Flush();
+    FlushComputeQueue();
+}
+
 void DirectXCommon::TransitionUAVBarrier(ID3D12Resource *pResource)
 {
     barrier_.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -330,8 +339,8 @@ void DirectXCommon::BarrierTransition(ID3D12Resource *pResource, D3D12_RESOURCE_
 void DirectXCommon::ViewPortRectInitialize()
 {
     // クライアント領域のサイズと一緒にして画面全体に表示
-    viewport_.Width = FLOAT(WinApp::kClientWidth);
-    viewport_.Height = FLOAT(WinApp::kClientHeight);
+    viewport_.Width = FLOAT(WinApp::GetVirtualWidth());
+    viewport_.Height = FLOAT(WinApp::GetVirtualHeight());
     viewport_.TopLeftX = 0;
     viewport_.TopLeftY = 0;
     viewport_.MinDepth = 0.0f;
@@ -342,9 +351,61 @@ void DirectXCommon::ScissorRectInitialize()
 {
     // 基本的にビューポートと同じ矩形が構成されるようにする
     scissorRect_.left = 0;
-    scissorRect_.right = WinApp::kClientWidth;
+    scissorRect_.right = WinApp::GetVirtualWidth();
     scissorRect_.top = 0;
-    scissorRect_.bottom = WinApp::kClientHeight;
+    scissorRect_.bottom = WinApp::GetVirtualHeight();
+}
+
+void DirectXCommon::UpdatePresentViewport(uint32_t clientWidth, uint32_t clientHeight)
+{
+    // 仮想解像度のアスペクト比を保った表示矩形を計算（レターボックス）
+    float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
+    WinApp::ComputeLetterboxRect(static_cast<int32_t>(clientWidth), static_cast<int32_t>(clientHeight), x, y, w, h);
+
+    presentViewport_.TopLeftX = x;
+    presentViewport_.TopLeftY = y;
+    presentViewport_.Width = w;
+    presentViewport_.Height = h;
+    presentViewport_.MinDepth = 0.0f;
+    presentViewport_.MaxDepth = 1.0f;
+
+    presentScissorRect_.left = static_cast<LONG>(x);
+    presentScissorRect_.top = static_cast<LONG>(y);
+    presentScissorRect_.right = static_cast<LONG>(x + w);
+    presentScissorRect_.bottom = static_cast<LONG>(y + h);
+}
+
+void DirectXCommon::ResizeSwapChain(uint32_t width, uint32_t height)
+{
+    if (width == 0 || height == 0)
+    {
+        return;
+    }
+    // サイズが変わっていなければ何もしない
+    if (width == swapChain_->GetWidth() && height == swapChain_->GetHeight())
+    {
+        UpdatePresentViewport(width, height);
+        return;
+    }
+
+    // GPUの全作業完了を待つ（バックバッファ解放の必須条件）
+    directQueue_->Flush();
+    FlushComputeQueue();
+
+    // スワップチェーンをリサイズしてバックバッファを取得し直す
+    swapChain_->Resize(width, height);
+
+    // バックバッファ用RTV（slot 0, 1）を再作成する（同スロットのデスクリプタを上書き）
+    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+    rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+    for (uint32_t i = 0; i < swapChain_->GetBackBufferCount(); ++i)
+    {
+        rtvManager_->Create(i, swapChain_->GetBackBuffer(i), rtvDesc);
+    }
+
+    // 最終合成用ビューポートを新しいウィンドウサイズに合わせて再計算
+    UpdatePresentViewport(width, height);
 }
 
 #pragma region 委譲API

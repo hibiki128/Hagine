@@ -1,0 +1,73 @@
+{
+    "Lighting": true,
+    "PrimitiveType": 1,
+    "blendMode": 1,
+    "childrenNames": [],
+    "colliderCount": 1,
+    "collider_0_collisionMask": [],
+    "collider_0_isEnabled": true,
+    "collider_0_isVisible": true,
+    "collider_0_name": "Ground_Mesh",
+    "collider_0_sourceModelPath": "Field/Ground.obj",
+    "collider_0_tag": "Ground",
+    "collider_0_type": 4,
+    "collider_0_wireframeVisible": true,
+    "color_0": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "color_1": {
+        "w": 1.0,
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+    },
+    "isLighting": true,
+    "isModelDraw": true,
+    "material_0_enableNormalMap": false,
+    "material_0_enableProceduralNormal": false,
+    "material_0_normalMapPath": "",
+    "material_0_normalStrength": 1.0,
+    "material_0_proceduralScale": 3.0,
+    "material_1_enableNormalMap": true,
+    "material_1_enableProceduralNormal": false,
+    "material_1_normalMapPath": "",
+    "material_1_normalStrength": 1.0,
+    "material_1_proceduralScale": 3.0,
+    "modelName": "Field/Ground.obj",
+    "objectName": "Ground",
+    "parentName": "",
+    "rb_enabled": false,
+    "rb_friction": 0.30000001192092896,
+    "rb_gravity": {
+        "x": 0.0,
+        "y": -9.800000190734863,
+        "z": 0.0
+    },
+    "rb_linearDamping": 0.05000000074505806,
+    "rb_mass": 1.0,
+    "rb_restitution": 0.0,
+    "rb_useGravity": true,
+    "resolveCollision": false,
+    "rotation": {
+        "w": 1.0,
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "scale": {
+        "x": 2.0,
+        "y": 2.0,
+        "z": 2.0
+    },
+    "skeletonDraw": false,
+    "textureName_0": "Field/ground.png",
+    "textureName_1": "Field/ground.png",
+    "translation": {
+        "x": 0.0,
+        "y": -1.0,
+        "z": 0.0
+    }
+}

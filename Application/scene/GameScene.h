@@ -95,6 +95,7 @@ class GameScene : public Hagine::BaseScene
     std::unique_ptr<PlayerUI> playerUI_;         // プレイヤーUI
     std::unique_ptr<EnemyUI> enemyUI_;           // 敵UI
     std::unique_ptr<GameUI> gameUI_;             // ゲームUI
+    std::unique_ptr<FadeOut> fadeOut_;           // シーン開始時のパーティクル遷移
 
     Hagine::SkyBox *pSkyBox_ = nullptr; // スカイボックス
 

@@ -1,4 +1,5 @@
 #include "Mouse.h"
+#include "WinApp.h"
 #include <cmath>
 #include "MyMath.h"
 #include <assert.h>
@@ -51,12 +52,12 @@ MouseMove Mouse::GetMouseMove()
 
 Vector3 Mouse::GetMousePos3D(const ViewProjection &viewprojection, float depthFactor, float blockSize) const
 {
-    // 2Dマウス座標を取得
+    // 2Dマウス座標を取得（仮想解像度座標系）
     Vector2 mousePos = mousePosition_;
 
-    // ウィンドウサイズ
-    float windowWidth = 1280.0f;
-    float windowHeight = 720.0f;
+    // 仮想解像度（マウス座標は GetMousePos で仮想解像度へ変換済み）
+    float windowWidth = static_cast<float>(WinApp::GetVirtualWidth());
+    float windowHeight = static_cast<float>(WinApp::GetVirtualHeight());
 
     // スクリーン座標を正規化デバイス座標 (NDC) に変換 [-1, 1] の範囲にする
     float ndcX = (2.0f * mousePos.x / windowWidth) - 1.0f;
@@ -98,7 +99,21 @@ Vector2 Mouse::GetMousePos()
     GetCursorPos(&mousePos);
     // スクリーン座標からウィンドウ内座標に変換
     ScreenToClient(hWnd_, &mousePos); // hWndはウィンドウハンドル
-    mousePosition_ = Vector2(float(mousePos.x), float(mousePos.y));
+
+    // 実クライアント座標 → 仮想解像度座標へ逆変換する
+    // （ウィンドウサイズ変更・フルスクリーン時もゲーム内座標系は仮想解像度で一定）
+    RECT clientRect{};
+    GetClientRect(hWnd_, &clientRect);
+    const int32_t clientW = clientRect.right - clientRect.left;
+    const int32_t clientH = clientRect.bottom - clientRect.top;
+
+    float viewX = 0.0f, viewY = 0.0f, viewW = 0.0f, viewH = 0.0f;
+    WinApp::ComputeLetterboxRect(clientW, clientH, viewX, viewY, viewW, viewH);
+
+    float virtualX = (static_cast<float>(mousePos.x) - viewX) * (static_cast<float>(WinApp::GetVirtualWidth()) / viewW);
+    float virtualY = (static_cast<float>(mousePos.y) - viewY) * (static_cast<float>(WinApp::GetVirtualHeight()) / viewH);
+
+    mousePosition_ = Vector2(virtualX, virtualY);
 
     return mousePosition_;
 }

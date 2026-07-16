@@ -6,6 +6,10 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#ifdef _DEBUG
+#include <edit/undo/ImGuiUndoTracker.h>
+#include <nlohmann/json.hpp>
+#endif // _DEBUG
 
 /// <summary>
 /// インスタンス単位でのSRTデータ構造体
@@ -175,6 +179,22 @@ class SpriteManager
     void LoadAllSprites();
     void Clear();
 
+#ifdef _DEBUG
+    /// <summary>
+    /// Undo用: 全所有スプライトの編集可能状態をJSON化する
+    /// （トップレベル = スプライト名 → 状態、"__order" = 描画順）
+    /// </summary>
+    /// <returns>nlohmann::json: 状態JSON</returns>
+    nlohmann::json CaptureUndoState();
+
+    /// <summary>
+    /// Undo用: CaptureUndoState で得た状態（差分可）を適用する
+    /// null のキーはスプライト削除、存在しない名前は再生成として扱う
+    /// </summary>
+    /// <param name="state">適用する状態JSON</param>
+    void RestoreUndoState(const nlohmann::json &state);
+#endif // _DEBUG
+
   private:
     /// ===================================================
     /// private method
@@ -198,5 +218,8 @@ class SpriteManager
     bool showSpriteCreationModal_ = false;             // 作成モーダル表示フラグ
     std::string texturePath_ = "";                     // テクスチャパス
     std::string saveFolder_ = "Sprite";                // 保存先フォルダ
+#ifdef _DEBUG
+    ImGuiUndoTracker undoTracker_; // スプライトマネージャUIのUndoトラッカー
+#endif                             // _DEBUG
 };
 } // namespace Hagine

@@ -142,6 +142,12 @@ class ParticleCSGroup
     // （新規生成時の InitParticle と同等。バッファ/SRV は再確保しない）
     void ResetForReuse() { InitParticle(); }
 
+    // Trail/Rotation/Override を「使うグループだけ」本確保する（演出なしは 1要素ダミーのまま）。
+    // Emit CS もこれらのバッファへ書き込むため、Emit のバインドより前に呼ぶこと。
+    // （Update 内の確保だけだと、初回 Emit がダミーバッファへ書いて OOB で破棄され、
+    //   その粒子のトレイル状態が未初期化のまま残る＝花火のトレイル欠落の原因）
+    void EnsureUpdateOptionalBuffers(bool fieldsActive);
+
   private:
     /// ===================================
     /// private types
@@ -170,9 +176,6 @@ class ParticleCSGroup
     // 再確保時は in-flight 参照中の旧リソース／ディスクリプタを上書きせず、
     // 旧リソースは retiredSoABuffers_ へ退避し新しいディスクリプタ枠に作り直す（ハザード回避）。
     void AllocateSoABuffer(SoABuffer &buf, uint32_t count);
-    // Trail/Rotation/Override を「使うグループだけ」本確保する（演出なしは 1要素ダミーのまま）。
-    // フル版 Update がこれらを load/store する前（毎フレーム冒頭）に呼ぶ。
-    void EnsureUpdateOptionalBuffers(bool fieldsActive);
     void CreatePerViewResource();
     void CreateMaterialResource();
     void CreateIndexResource();

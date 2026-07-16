@@ -179,6 +179,18 @@ class FollowCamera
     /// <returns>Vector3: 算出したカメラ位置</returns>
     Hagine::Vector3 ComputeCameraTransform(bool isCurrentlyLockedOn, Player *pPlayer, const Hagine::Vector3 &targetPos);
 
+    /// <summary>
+    /// AroundField の円柱境界の内側へカメラ位置をクランプする
+    /// </summary>
+    /// <param name="cameraPos">補正対象のカメラ位置（in/out）</param>
+    void ResolveFieldCollision(Hagine::Vector3 &cameraPos);
+
+    /// <summary>
+    /// 地形メッシュとの遮蔽・めり込みを解消し、最低高度を確保する
+    /// </summary>
+    /// <param name="cameraPos">補正対象のカメラ位置（in/out）</param>
+    void ResolveTerrainCollision(Hagine::Vector3 &cameraPos);
+
   private:
     /// ===================================================
     /// private variables

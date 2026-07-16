@@ -65,7 +65,7 @@ void DebugCamera::Update()
         // 投影行列の再計算
         pViewProjection_->matProjection_ = MakePerspectiveFovMatrix(
             45.0f * std::numbers::pi_v<float> / 180.0f,
-            float(WinApp::kClientWidth) / float(WinApp::kClientHeight),
+            float(WinApp::GetVirtualWidth()) / float(WinApp::GetVirtualHeight()),
             0.1f, 1000.0f);
     }
     else

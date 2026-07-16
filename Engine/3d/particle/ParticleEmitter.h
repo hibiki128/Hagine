@@ -235,6 +235,20 @@ class ParticleEmitter
         return Manager_ ? Manager_->GetActiveParticleCount() : 0;
     }
 
+#ifdef _DEBUG
+    /// <summary>
+    /// Undo用: エミッターの編集可能状態（トランスフォーム・フラグ・全グループ設定）をJSON化する
+    /// </summary>
+    /// <returns>nlohmann::json: 状態JSON</returns>
+    nlohmann::json CaptureUndoState() const;
+
+    /// <summary>
+    /// Undo用: CaptureUndoState で得た状態を適用する（既存グループのみ反映）
+    /// </summary>
+    /// <param name="state">適用する状態JSON</param>
+    void RestoreUndoState(const nlohmann::json &state);
+#endif // _DEBUG
+
     // パーティクルマネージャーへのアクセス（デバッグ用）
     ParticleManager *GetParticleManager() const
     {

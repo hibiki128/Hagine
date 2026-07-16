@@ -64,7 +64,7 @@ class AroundField : public Hagine::BaseObject
     /// private variants
     /// ===================================================
 
-    Hagine::CylinderCollider *AroundField_ = nullptr;                    // 円柱コライダー
+    Hagine::CylinderCollider *aroundField_ = nullptr;                    // 円柱コライダー
     std::unique_ptr<Hagine::ParticleCSEmitter> fieldParticle_ = nullptr; // フィールドパーティクル
 
     static inline const Hagine::CylinderCollider *activeField_ = nullptr; // アクティブシーンのフィールドコライダー

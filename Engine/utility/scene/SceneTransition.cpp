@@ -18,7 +18,7 @@ void SceneTransition::Initialize()
 {
     sprite_ = std::make_unique<Sprite>();
     sprite_->Initialize("debug/black1x1.png", {0, 0}, {1.0f, 1.0f, 1.0f, 1.0f});
-    sprite_->SetSize(Vector2(WinApp::kClientWidth, WinApp::kClientHeight)); // 画面全体を覆うサイズ
+    sprite_->SetSize(Vector2(static_cast<float>(WinApp::GetVirtualWidth()), static_cast<float>(WinApp::GetVirtualHeight()))); // 画面全体を覆うサイズ
     sprite_->SetAlpha(0.0f);                                                // 最初は完全に透明
     duration_ = 1.0f;                                                       // フェードの持続時間（例: 1秒）
     counter_ = 0.0f;                                                        // 経過時間カウンターを初期化
@@ -281,7 +281,7 @@ void SceneTransition::UpdateTransitionInstances()
             Transform transform{{size, size, 1.0f}, {0.0f, 0.0f, 0.0f}, {position.x, position.y, 0.0f}};
             Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
             Matrix4x4 viewMatrix = MakeIdentity4x4();
-            Matrix4x4 projectionMatrix = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
+            Matrix4x4 projectionMatrix = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::GetVirtualWidth()), float(WinApp::GetVirtualHeight()), 0.0f, 100.0f);
 
             TransformationMatrix transformMatrix;
             transformMatrix.WVP = worldMatrix * viewMatrix * projectionMatrix;
