@@ -63,7 +63,7 @@ void EnemyBullet::Update()
     if (isLockOnBullet_ && pTarget_)
     {
         Vector3 bulletPos = GetLocalPosition();
-        Vector3 enemyPos = pTarget_->GetLocalPosition();
+        Vector3 enemyPos = {pTarget_->GetLocalPosition().x, pTarget_->GetLocalPosition().y + kHomingHeightOffset, pTarget_->GetLocalPosition().z};
 
         Vector3 toEnemy = enemyPos - bulletPos;
         float distance = toEnemy.Length();
@@ -151,7 +151,7 @@ void EnemyBullet::InitTransform(Enemy *enemy)
 
         // 発射起点（手）からターゲットへ向けて狙う
         Vector3 spawnPos = this->transform_->translation_;
-        Vector3 enemyPos = enemy->GetTarget()->GetLocalPosition();
+        Vector3 enemyPos = {enemy->GetTarget()->GetLocalPosition().x, enemy->GetTarget()->GetLocalPosition().y + kHomingHeightOffset, enemy->GetTarget()->GetLocalPosition().z};
 
         Vector3 direction = enemyPos - spawnPos;
 

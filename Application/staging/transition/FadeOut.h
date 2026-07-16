@@ -43,6 +43,13 @@ class FadeOut
     /// </summary>
     bool IsFinish() const { return isFinish_; }
 
+    /// <summary>
+    /// パーティクルの発生が止まり、待機時間が経過したか
+    /// （スタートカメラ演出を開始してよいタイミングの判定用）
+    /// </summary>
+    /// <returns>bool: カメラ演出を開始してよければtrue</returns>
+    bool IsCameraStartReady() const { return timer_ >= kParticleStopTime + kCameraStartDelay; }
+
   private:
     /// ===================================================
     /// private variants
@@ -52,6 +59,7 @@ class FadeOut
     static constexpr float kSpriteDrawTime = 0.5f;    // スプライト描画時間(秒)
     static constexpr float kGravityEnableTime = 0.5f; // 重力有効化時間(秒)
     static constexpr float kParticleStopTime = 0.6f;  // パーティクル停止時間(秒)
+    static constexpr float kCameraStartDelay = 0.3f;  // 発生停止からカメラ演出開始までの待機時間(秒)
     static constexpr float kFinishTime = 2.0f;        // フェードアウト完了時間(秒)
     static constexpr float kDeltaTime = 1.0f / 60.0f; // デルタタイム(秒)
 

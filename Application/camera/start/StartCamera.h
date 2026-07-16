@@ -133,7 +133,7 @@ class StartCamera
     Hagine::Vector3 easingTargetRot_ = {Hagine::degreesToRadians(8.6f), Hagine::degreesToRadians(40.0f), Hagine::degreesToRadians(0.0f)};    ///< 目標回転1
     int easingPhase_ = 0;                                                                                                                    ///< 現在のイージングフェーズ
     float waitDuration_ = 1.0f;                                                                                                              ///< フェーズ間の待機時間
-    Hagine::Vector3 easingTargetPos2_ = {5.0f, 3.6f, -33.0f};                                                                                ///< 目標位置2
+    Hagine::Vector3 easingTargetPos2_ = {5.0f, 4.5f, -33.0f};                                                                                ///< 目標位置2
     Hagine::Vector3 easingTargetRot2_ = {Hagine::degreesToRadians(9.6f), Hagine::degreesToRadians(-149.0f), Hagine::degreesToRadians(0.0f)}; ///< 目標回転2
 
     Hagine::Input *pInput_ = nullptr;                     ///< 入力クラスのポインタ

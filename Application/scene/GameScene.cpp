@@ -293,14 +293,16 @@ void GameScene::CameraUpdate()
         {
             followCamera_->Update();
 #ifndef _DEBUG
-            // パーティクル遷移中はカメラを動かさない。
+            // パーティクル遷移中はスタートカメラの初期視点で静止する。
             // 遷移パーティクル（長方形）はカメラ正面に追従配置されるため、
-            // 完了までフォローカメラの静止ポーズで固定する
-            if (fadeOut_ && !fadeOut_->IsFinish())
+            // スタートカメラ初期位置の正面にパーティクルが発生し、
+            // 発生停止から待機時間を置いてカメラ演出（Move）を開始する
+            if (fadeOut_ && !fadeOut_->IsCameraStartReady())
             {
-                vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
-                vp_.matView_ = followCamera_->GetViewProjection().matView_;
-                vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
+                startCamera_->Update(); // Move()を呼ばないため初期位置に静止したまま
+                vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
+                vp_.matView_ = startCamera_->GetViewProjection().matView_;
+                vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
             }
             else if (!startCamera_->IsComplete())
             {

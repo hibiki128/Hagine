@@ -41,11 +41,15 @@ void FadeOut::Draw(const ViewProjection &vp)
         {
             forward = forward / len;
 
-            // 壁（XY面・法線+Z）をカメラの向きに合わせる（ヨー→ピッチの順で合成）
+            // 壁（XY面・法線+Z）をカメラの向きに合わせる。
+            // エミッターの回転はGPU側で「渡したクォータニオンの逆回転」として
+            // 発生形状に適用されるため、共役を渡して打ち消す。
+            // （ヨーのみ・水平カメラでは逆回転でもズレが見えないが、
+            //   スタートカメラのような見下ろしピッチでは上下に隙間が出る）
             float yaw = std::atan2(forward.x, forward.z);
             float pitch = std::asin(std::clamp(-forward.y, -1.0f, 1.0f));
             fadeOut_->SetTranslate(camPos + forward * kCameraDistance);
-            fadeOut_->SetRotation(Quaternion::FromEulerAnglesSafe({pitch, yaw, 0.0f}));
+            fadeOut_->SetRotation(Quaternion::FromEulerAnglesSafe({pitch, yaw, 0.0f}).Conjugate());
         }
     }
 
