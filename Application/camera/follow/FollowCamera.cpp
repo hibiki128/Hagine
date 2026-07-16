@@ -184,7 +184,7 @@ void FollowCamera::ResolveCameraCollision()
 
     Vector3 cameraPos = worldTransform_.translation_;
 
-    ResolveFieldCollision(cameraPos);
+    //ResolveFieldCollision(cameraPos);
     ResolveTerrainCollision(cameraPos);
 
     if ((cameraPos - worldTransform_.translation_).LengthSq() > 0.0f)
