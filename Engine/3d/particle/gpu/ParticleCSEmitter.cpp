@@ -519,6 +519,15 @@ void ParticleCSEmitter::RemoveParticleGroup(const std::string &groupName)
 
 void ParticleCSEmitter::EmitterUpdate()
 {
+    // フィールド接触Emitモードでは発生タイミングをフィールド側の間隔タイマーが管理する。
+    // エミッターの frequency ゲートを重ねると2重の間隔制御になって分かりづらいため、
+    // ここでは常に許可してフィールド側だけをタイミングの決定者にする。
+    if (emitOnlyOnFieldContact_ && receiveFields_)
+    {
+        pEmitterMeshData_->emit = 1;
+        return;
+    }
+
     pEmitterMeshData_->frequencyTime += Frame::DeltaTime();
     if (pEmitterMeshData_->frequency <= pEmitterMeshData_->frequencyTime)
     {
@@ -555,11 +564,28 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
         ComputePipelineType::Emitter,
         BlendMode::Normal, ShaderMode::None, cl);
 
-    // フィールド接触Emitモードでは発生数を fieldContactEmitCount_ で上書きする。
-    // per-emitter CB（全グループ共通・接触モードでは全グループ同値）に入れるためエイリアシングしない。
+    // フィールド接触Emitモードの発生数は「対象フィールドの今フレームのバースト数合計」。
+    // 各フィールドの data.emitSpawnCount には ParticleCSFieldManager::Update() が
+    // 間隔タイマーから算出した今フレームの値が入っている（バースト無しフレームは0）。
+    // シェーダはこの合計スレッドを累積和でフィールドごとに配分する（FindEmitTargetField）。
     // 通常モードは 0 にしてグループ設定 gSettings.emitCount を使わせる。
-    pEmitterMeshData_->emitCountOverride =
-        (emitOnlyOnFieldContact_ && receiveFields_) ? fieldContactEmitCount_ : 0u;
+    uint32_t fieldBurstTotal = 0;
+    if (emitOnlyOnFieldContact_ && receiveFields_)
+    {
+        for (const auto &field : ParticleCSFieldManager::GetInstance()->GetFields())
+        {
+            if (!field.enabled || !field.data.enableEmitSpawn)
+                continue;
+            bool groupMatch = (field.data.groupId == -1) ||
+                              (fieldGroupId_ == -1) ||
+                              (field.data.groupId == fieldGroupId_);
+            if (groupMatch)
+            {
+                fieldBurstTotal += field.data.emitSpawnCount;
+            }
+        }
+    }
+    pEmitterMeshData_->emitCountOverride = fieldBurstTotal;
 
     for (uint32_t groupIndex = 0; groupIndex < particleGroups_.size(); ++groupIndex)
     {
@@ -613,33 +639,20 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
 
             if (emitOnlyOnFieldContact_ && receiveFields_)
             {
-                bool hasEmitSpawnField = false;
-                for (const auto &field : fieldManager->GetFields())
-                {
-                    if (!field.enabled || !field.data.enableEmitSpawn)
-                        continue;
-                    bool groupMatch = (field.data.groupId == -1) ||
-                                      (fieldGroupId_ == -1) ||
-                                      (field.data.groupId == fieldGroupId_);
-                    if (groupMatch)
-                    {
-                        hasEmitSpawnField = true;
-                        break;
-                    }
-                }
-
-                if (!hasEmitSpawnField)
+                // 今フレームのバーストが無ければディスパッチ自体を省く
+                // （対象フィールド不在・間隔待ちの両方をカバー）
+                if (fieldBurstTotal == 0)
                 {
                     cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
                     continue;
                 }
 
-                // 発生数は pEmitterMeshData_->emitCountOverride(=fieldContactEmitCount_) 経由でシェーダへ渡す。
-                // 寿命は接触したフィールドの emitSpawnLifeTime をシェーダ側が per-field で上書きするため
-                // ここでの CPU 側 settings 書き換えは不要（旧実装は CB エイリアシングで無効だった）。
+                // 発生数は pEmitterMeshData_->emitCountOverride(=バースト合計) 経由でシェーダへ渡す。
+                // 各スレッドの担当フィールドはシェーダが emitSpawnCount の累積和で決める。
+                // 寿命は担当フィールドの emitSpawnLifeTime をシェーダ側が per-field で上書きする。
                 cl->SetComputeRootConstantBufferView(12, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
 
-                int dispatchCount = (static_cast<int>(fieldContactEmitCount_) + threadGroupSize_ - 1) / threadGroupSize_;
+                int dispatchCount = (static_cast<int>(fieldBurstTotal) + threadGroupSize_ - 1) / threadGroupSize_;
                 cl->Dispatch(dispatchCount, 1, 1);
 
                 continue;
@@ -971,7 +984,6 @@ void ParticleCSEmitter::SaveSetting()
     data->Save("receiveFields", receiveFields_);
     data->Save("fieldGroupId", fieldGroupId_);
     data->Save("emitOnlyOnFieldContact", emitOnlyOnFieldContact_);
-    data->Save("fieldContactEmitCount", static_cast<int>(fieldContactEmitCount_));
 
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
 
@@ -1157,7 +1169,7 @@ void ParticleCSEmitter::LoadSetting()
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
     emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
-    fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
+    // 旧キー fieldContactEmitCount は廃止（発生数はフィールド側の接触Emit設定に一本化）
 
     if (!modelPath_.empty())
     {
@@ -1390,7 +1402,7 @@ void ParticleCSEmitter::LoadCloneSetting()
     receiveFields_ = data->Load("receiveFields", false);
     fieldGroupId_ = data->Load("fieldGroupId", -1);
     emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
-    fieldContactEmitCount_ = static_cast<uint32_t>(data->Load("fieldContactEmitCount", 1000));
+    // 旧キー fieldContactEmitCount は廃止（発生数はフィールド側の接触Emit設定に一本化）
 
     if (!modelPath_.empty())
     {
@@ -1850,39 +1862,60 @@ void ParticleCSEmitter::DrawImGui()
 
                 ImGui::Spacing();
                 bool eofc = emitOnlyOnFieldContact_;
-                if (ImGui::Checkbox("フィールド接触時のみEmit##EmitOnFieldContact", &eofc))
+                if (ImGui::Checkbox("フィールド接触部分にのみ発生##EmitOnFieldContact", &eofc))
                 {
                     emitOnlyOnFieldContact_ = eofc;
                 }
                 if (ImGui::IsItemHovered())
                 {
                     ImGui::SetTooltip(
-                        "ON : シェーダー側でフィールド球内のランダム点を生成し\n"
-                        "     エミッター表面に投影してEmit位置を決定します\n"
-                        "     全スレッドがフィールド接触部分にEmitするため\n"
-                        "     500000のような大量発生数は不要になります\n"
-                        "     (推奨: 500〜3000程度)\n"
+                        "ON : 「接触Emit」が有効なフィールドと接触している\n"
+                        "     エミッター表面にのみパーティクルを発生させます\n"
                         "OFF: 通常通りエミッター全体からランダムEmitします");
                 }
 
                 if (emitOnlyOnFieldContact_)
                 {
                     ImGui::Indent();
-                    ImGui::PushItemWidth(180.0f);
-                    int emitCnt = static_cast<int>(fieldContactEmitCount_);
-                    if (ImGui::DragInt("接触Emit発生数/フレーム##FieldContactEmit", &emitCnt, 10, 1, 50000))
+
+                    // 発生数・間隔・寿命はフィールド側に一本化されている。
+                    // ここでは対象フィールドの状態を読み取り専用で表示し、迷子を防ぐ。
+                    ImGui::TextDisabled("発生数・間隔・寿命はフィールド側の「接触Emit」で設定します");
+
+                    int matchCount = 0;
+                    for (const auto &field : ParticleCSFieldManager::GetInstance()->GetFields())
                     {
-                        fieldContactEmitCount_ = static_cast<uint32_t>(std::max(1, emitCnt));
+                        if (!field.enabled || !field.data.enableEmitSpawn)
+                            continue;
+                        bool groupMatch = (field.data.groupId == -1) ||
+                                          (fieldGroupId_ == -1) ||
+                                          (field.data.groupId == fieldGroupId_);
+                        if (!groupMatch)
+                            continue;
+                        ++matchCount;
+                        if (field.emitSpawnInterval > 0.0f)
+                        {
+                            ImGui::Text("  %s : %u個 / %.2fs間隔",
+                                        field.name.c_str(), field.emitSpawnCount, field.emitSpawnInterval);
+                        }
+                        else
+                        {
+                            ImGui::Text("  %s : %u個 / 毎フレーム",
+                                        field.name.c_str(), field.emitSpawnCount);
+                        }
                     }
-                    ImGui::PopItemWidth();
-                    if (ImGui::IsItemHovered())
+                    if (matchCount == 0)
                     {
-                        ImGui::SetTooltip(
-                            "フィールド接触Emitモード時の1フレームあたり発生数\n"
-                            "全スレッドがフィールド接触点にEmitするため\n"
-                            "500〜3000程度で十分密になります\n"
-                            "フィールドを動かすほどEmit位置も動的に追従します");
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.6f, 0.3f, 1.0f));
+                        ImGui::TextUnformatted("  対象フィールドがありません（発生しません）");
+                        ImGui::PopStyleColor();
+                        if (ImGui::IsItemHovered())
+                            ImGui::SetTooltip(
+                                "パーティクルフィールド管理ウィンドウで\n"
+                                "「接触Emit」を有効にしたフィールドを用意し、\n"
+                                "グループIDをこのエミッターと合わせてください。");
                     }
+
                     ImGui::Unindent();
                 }
 
