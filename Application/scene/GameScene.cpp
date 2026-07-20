@@ -328,9 +328,13 @@ void GameScene::CameraUpdate()
     {
         if (!deathCamera_->IsComplete() && !deathCameraStarted_)
         {
+            // 空中で死んだ場合は地面まで落下してから倒れるため、
+            // カメラの注視点は現在位置ではなく落下先（接地位置）に合わせる
+            Vector3 deathPos = player_ptr->GetWorldPosition();
+            deathPos.y = Ground::GetStandingY(deathPos.x, deathPos.z);
             deathCamera_->StartEasing(
                 followCamera_->GetViewProjection(),
-                player_ptr->GetWorldPosition());
+                deathPos);
             deathCameraStarted_ = true;
         }
         deathCamera_->Update();

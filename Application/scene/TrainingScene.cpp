@@ -146,6 +146,10 @@ void TrainingScene::Update()
     gamePad_->Update();
     gameUI_->Update();
 
+    // ポーズ状態をプレイヤー・敵へ伝搬する（伝えないとポーズ中も行動し続ける）
+    player_ptr->SetPause(gameUI_->GetIsPause());
+    enemy_ptr->SetPause(gameUI_->GetIsPause());
+
     // UIの更新
     playerUI_->Update();
     enemyUI_->Update();

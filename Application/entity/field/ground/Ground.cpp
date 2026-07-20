@@ -23,6 +23,12 @@ void Ground::Init(const std::string className)
     // 地面の初期トランスフォーム設定
     transform_->translation_.y = -1.0f; // 少し下に配置
 
+    // 平行移動を反映したワールド行列を即座に確定させる。
+    // これを怠ると、初回の BaseObjectManager::Update までコライダーが
+    // 単位行列（y=0）のままになり、シーン開始直後の接地レイキャストが
+    // 実際より1ユニット高い位置を返してキャラが浮いてしまう
+    transform_->UpdateMatrix();
+
     // 隆起した地形モデルから三角形メッシュコライダーを構築する
     // （プレイヤー・敵の接地、弾の消滅、カメラの遮蔽判定に使う）
     // 保存済みJSONから既に復元されている場合はそれを再利用する
@@ -40,6 +46,10 @@ void Ground::Init(const std::string className)
         terrainCollider_ = AddMeshCollider("Ground_Mesh");
     }
     terrainCollider_->SetTag("Ground");
+
+    // JSON復元されたコライダーは行列確定前に構築されているため、
+    // ここでワールド行列キャッシュを最新化してから問い合わせに使う
+    terrainCollider_->UpdateWorldTransform();
     activeTerrain_ = terrainCollider_;
 
     BaseObjectManager::GetInstance()->RegisterExternal(this);

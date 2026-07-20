@@ -96,9 +96,11 @@ void PlayerCombat::UpdateComboAndCollider()
 
 void PlayerCombat::ComboUpdate()
 {
-    // ガード中・必殺技演出中は近接コンボを実行できない
+    // ガード中・必殺技演出中・射撃モーション中は近接コンボを実行できない
+    // （射撃と近接の同時発動を防ぐ排他。射撃側は Shot() がコンボ中を弾く）
     if (pOwner_->GetCurrentStateName() != "EnergyCharge" && !IsCharging() &&
-        !pOwner_->IsGuarding() && !IsSkillStaging())
+        !pOwner_->IsGuarding() && !IsSkillStaging() &&
+        !pOwner_->Visual().IsShotAnimationPlaying())
     {
         punchCombo_.Update(pOwner_->GetDt());
 
@@ -178,9 +180,11 @@ void PlayerCombat::FireNormalBullet()
 
 void PlayerCombat::Shot()
 {
-    // ガード中・必殺技演出中は遠距離射撃を発射できない（既存弾の更新は下で継続する）
+    // ガード中・必殺技演出中・近接コンボ中は遠距離射撃を発射できない
+    // （近接と射撃の同時発動を防ぐ排他。既存弾の更新は下で継続する）
     if (pOwner_->GetCurrentStateName() != "EnergyCharge" && !isSkillMenu_ &&
-        !pOwner_->IsGuarding() && !IsSkillStaging())
+        !pOwner_->IsGuarding() && !IsSkillStaging() &&
+        !punchCombo_.IsComboActive())
     {
         if (!pOwner_->GetGamePad()->IsConnected())
         {

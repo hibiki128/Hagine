@@ -12,7 +12,7 @@
     "showDrawSystemView": false,
     "showFPSView": false,
     "showGameParamView": false,
-    "showGizmoView": false,
+    "showGizmoView": true,
     "showHierarchyView": false,
     "showKeyOperationDebugView": false,
     "showLightView": false,

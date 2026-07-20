@@ -90,18 +90,21 @@ void PlayerVisual::UpdateAnimation()
     }
 
     // ──────────────────────────────────────────
-    // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
-    // （発射のたびに PlayShotAnimation() で先頭から再生し直される）
-    // ──────────────────────────────────────────
-    if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished())
-    {
-        return;
-    }
-
-    // ──────────────────────────────────────────
     // 通常ステート：ステート名に応じてクリップを切り替え
     // ──────────────────────────────────────────
     const std::string stateName = pOwner_->GetCurrentStateName();
+
+    // ──────────────────────────────────────────
+    // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
+    // （発射のたびに PlayShotAnimation() で先頭から再生し直される）。
+    // ただしガード中は防御姿勢を優先する（射撃直後にガードしたとき
+    // ガードアニメが適用されない問題の対策）
+    // ──────────────────────────────────────────
+    if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished() &&
+        stateName != "Guard")
+    {
+        return;
+    }
 
     if (stateName == "Idle")
     {
@@ -203,6 +206,12 @@ bool PlayerVisual::IsDeathAnimationFinished() const
     // 死亡クリップ再生中に最後（非ループのため終端で停止）まで到達したか
     return animationController_.GetCurrentClipName() == "Die" &&
            animationController_.IsFinished();
+}
+
+bool PlayerVisual::IsShotAnimationPlaying() const
+{
+    return animationController_.GetCurrentClipName() == "Shot" &&
+           !animationController_.IsFinished();
 }
 
 void PlayerVisual::UpdateFlyLean()

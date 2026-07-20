@@ -152,6 +152,14 @@ void Player::Update()
 
     if (!isAlive_)
     {
+        // 空中で死んだ場合は重力で地面まで落下させる
+        // （die モーション・粒子化演出は地面に倒れる前提のため、浮いたまま倒れると回転が合わない）
+        if (!movement_->GetIsGrounded())
+        {
+            movement_->GetVelocity().y += movement_->GetFallSpeed() * dt_;
+        }
+        movement_->CollisionGround();
+
         // 死亡時は行動処理なし。死亡アニメーションだけ再生して進める
         // （再生し終わった後の粒子化演出は DrawParticle 側で描画する）
         visual_->PlayDeathAnimation();
@@ -288,6 +296,15 @@ void Player::Update()
                 // 飛行リーンの描画回転オフセットが残っていると、死亡アニメーションの
                 // 倒れる向きが本来の向き（quateRotation_）からずれ、粒子化演出と合わなくなる
                 ClearRenderRotationOffset();
+
+                // 空中（飛行）中の死亡でピッチが残っていると、倒れるモーションや
+                // die.obj の粒子化演出が地面と合わない。ヨーのみ残して直立へ戻す
+                Vector3 euler = transform_->quateRotation_.ToEulerAngles();
+                transform_->quateRotation_ = Quaternion::FromEulerAngles({0.0f, euler.y, 0.0f});
+
+                // 死亡後は水平移動を止め、その場で真下に落下させる
+                movement_->GetVelocity().x = 0.0f;
+                movement_->GetVelocity().z = 0.0f;
             }
             isAlive_ = false;
         }
