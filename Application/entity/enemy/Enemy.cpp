@@ -115,6 +115,16 @@ void Enemy::Update()
 
                 // 被弾点滅の途中（透明フレーム）で死ぬと見えないまま固まるため、不透明へ戻す
                 SetAlpha(kAlphaOpaque);
+
+                // 空中（飛行）中の死亡でピッチが残っていると、倒れるモーションや
+                // die.obj の粒子化演出が地面と合わない。ヨーのみ残して直立へ戻す
+                Vector3 euler = transform_->quateRotation_.ToEulerAngles();
+                transform_->quateRotation_ = Quaternion::FromEulerAngles({0.0f, euler.y, 0.0f});
+
+                // 空中死亡時は飛行を打ち切り、その場から真下へ落下させて地面の上で倒れさせる
+                movement_->SetIsFlying(false);
+                movement_->GetIsGrounded() = false;
+                movement_->GetVelocity() = {0.0f, 0.0f, 0.0f};
             }
         }
 
@@ -122,6 +132,14 @@ void Enemy::Update()
         // 再生し終わった後の粒子化演出は DrawParticle 側で描画する
         if (!isAlive_)
         {
+            // 空中で死んだ場合は重力で地面まで落下させる
+            // （倒れるモーション・粒子化演出は地面の上で行う前提のため）
+            if (!movement_->GetIsGrounded())
+            {
+                movement_->GetVelocity().y += kDeathFallAcceleration * dt;
+            }
+            movement_->CollisionGround();
+
             visual_->PlayDeathAnimation();
             combat_->UpdateEffects(dt); // ビーム等の残存パーティクルを自然消滅させる
             BaseObject::Update();       // アニメーション・行列の更新

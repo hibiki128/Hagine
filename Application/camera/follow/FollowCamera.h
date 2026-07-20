@@ -209,6 +209,10 @@ class FollowCamera
     // 閾値定数
     static constexpr float kEpsilon = 0.001f; ///< 微小値
 
+    // ロックオンカメラのピッチ上限（敵の真上/真下付近で forward が垂直になり
+    // up ベクトルが退化してカメラが暴れるのを防ぐ）
+    static constexpr float kMaxLockOnPitch = 60.0f * std::numbers::pi_v<float> / 180.0f;
+
     // ベクトル定数
     static constexpr float kVectorZero = 0.0f; ///< ゼロ値
 

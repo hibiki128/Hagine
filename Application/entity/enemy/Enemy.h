@@ -241,6 +241,9 @@ class Enemy : public Hagine::BaseObject
     static constexpr float kVelocityZero = 0.0f;
     static constexpr float kMinHP = 0.0f;
 
+    // 空中死亡時の落下加速度（地面まで落ちてから倒れる演出用。プレイヤーの落下と同程度）
+    static constexpr float kDeathFallAcceleration = -40.0f;
+
     // モデル描画オフセット（地面に足がつくように下げる量。死亡演出の発生位置にも使う）
     static constexpr float kModelOffsetY = -0.75f;
 

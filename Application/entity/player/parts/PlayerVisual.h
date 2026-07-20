@@ -51,6 +51,13 @@ class PlayerVisual
     bool IsDeathAnimationFinished() const;
 
     /// <summary>
+    /// 通常弾の発射アニメーションを再生中か
+    /// （射撃中の近接コンボ開始を禁止する排他判定に使う）
+    /// </summary>
+    /// <returns>bool: 再生中なら true</returns>
+    bool IsShotAnimationPlaying() const;
+
+    /// <summary>
     /// 飛行移動中の体の傾き（リーン）を更新する
     /// ロックオン中は顔（向き）を敵に向けたまま、進行方向へ体を傾けて見せる。
     /// 描画専用の回転オフセットとして適用するため、射撃などの向きには影響しない

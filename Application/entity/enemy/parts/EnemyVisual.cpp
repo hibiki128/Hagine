@@ -81,18 +81,22 @@ void EnemyVisual::UpdateAnimation()
     }
 
     // ──────────────────────────────────────────
+    // ガード中：Shot（射撃）モーションの再生中でも防御姿勢を優先する。
+    // Shot 判定より後に置くと、射撃直後にガードを始めたとき Shot が
+    // 再生し終わるまでガードアニメが適用されない
+    // ──────────────────────────────────────────
+    if (pOwner_->Status().IsGuarding())
+    {
+        animationController_.Play("Guard");
+        return;
+    }
+
+    // ──────────────────────────────────────────
     // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
     // （発射のたびに PlayShotAnimation() で先頭から再生し直される）
     // ──────────────────────────────────────────
     if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished())
     {
-        return;
-    }
-
-    // ガード中
-    if (pOwner_->Status().IsGuarding())
-    {
-        animationController_.Play("Guard");
         return;
     }
 
