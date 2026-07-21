@@ -20,6 +20,10 @@ void PlayerVisual::Init(Player *owner)
     // ───────────────────────────────────────────
     animationController_.Initialize(pOwner_->GetObject3d());
 
+    // 射撃モーションは上半身だけに適用する（走りながら撃っても下半身は走行モーションのまま）。
+    // 背骨の根から上（胴・腕・首・頭）が対象で、腰と脚は移動モーション側が担当する
+    animationController_.SetLayerMaskRoot(kUpperBodyRootJoint);
+
     // ループあり：待機・移動など継続する動作
     animationController_.RegisterClip("Idle", "animation/Player/Idle_Ground.gltf", true);
     animationController_.RegisterClip("FlyIdle", "animation/Player/Idle_Flying.gltf", true);
@@ -63,6 +67,8 @@ void PlayerVisual::UpdateAnimation()
     // ──────────────────────────────────────────
     if (pOwner_->Combat().IsSkillStaging() || pOwner_->GetIsSkillActive())
     {
+        // 全身モーションを見せる場面では射撃の上半身レイヤーを解除する
+        animationController_.StopLayer(kShotLayerFade);
         animationController_.Play("MakanSkill");
         return;
     }
@@ -72,6 +78,7 @@ void PlayerVisual::UpdateAnimation()
     // ──────────────────────────────────────────
     if (pOwner_->Status().IsHitStun())
     {
+        animationController_.StopLayer(kShotLayerFade);
         animationController_.Play("Hitting_" + std::to_string(pOwner_->Status().GetFlinchAnimIndex()));
         return;
     }
@@ -84,6 +91,9 @@ void PlayerVisual::UpdateAnimation()
     // ──────────────────────────────────────────
     if (punchCombo.IsComboActive())
     {
+        // 近接は全身モーション（移動もロックされる）。射撃の上半身レイヤーが残っていたら解除する
+        animationController_.StopLayer(kShotLayerFade);
+
         // GetCurrentComboIndex() は「次に実行する」インデックスを返す。
         // ExecuteComboAttack() が呼ばれるとインクリメントされるため、
         // 現在再生中の段 = nextIdx - 1（0 のときは最終段 Slam の後待機中）
@@ -109,16 +119,12 @@ void PlayerVisual::UpdateAnimation()
     // ──────────────────────────────────────────
     const std::string stateName = pOwner_->GetCurrentStateName();
 
-    // ──────────────────────────────────────────
-    // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
-    // （発射のたびに PlayShotAnimation() で先頭から再生し直される）。
-    // ただしガード中は防御姿勢を優先する（射撃直後にガードしたとき
-    // ガードアニメが適用されない問題の対策）
-    // ──────────────────────────────────────────
-    if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished() &&
-        stateName != "Guard")
+    // 通常弾の発射モーションは上半身レイヤーで再生されるため、
+    // ここでの全身クリップの切り替えはそのまま続けてよい（下半身は移動モーションを維持する）。
+    // ただしガード中は防御姿勢を優先するのでレイヤーを解除する
+    if (stateName == "Guard" && animationController_.IsLayerPlaying())
     {
-        return;
+        animationController_.StopLayer(kShotLayerFade);
     }
 
     if (stateName == "Idle")
@@ -204,16 +210,9 @@ void PlayerVisual::PlayDeathAnimation()
 
 void PlayerVisual::PlayShotAnimation()
 {
-    // 同一クリップ再生中の Play() は無視されるため、既に Shot 中なら先頭へ巻き戻して再生し直す
-    if (animationController_.GetCurrentClipName() == "Shot")
-    {
-        animationController_.SetTime(0.0f);
-        animationController_.SetPaused(false); // 再生終了で停止していた場合に再開する
-    }
-    else
-    {
-        animationController_.Play("Shot");
-    }
+    // 上半身レイヤーとして再生する。連射時は PlayLayer 側が先頭へ巻き戻し、
+    // 撃ち終わり（ループなしクリップの終端）でレイヤーは自動的に解除される
+    animationController_.PlayLayer("Shot", kShotLayerFade);
 }
 
 bool PlayerVisual::IsDeathAnimationFinished() const
@@ -225,8 +224,8 @@ bool PlayerVisual::IsDeathAnimationFinished() const
 
 bool PlayerVisual::IsShotAnimationPlaying() const
 {
-    return animationController_.GetCurrentClipName() == "Shot" &&
-           !animationController_.IsFinished();
+    // 上半身レイヤーを使うのは射撃だけなので、レイヤー再生中＝射撃中
+    return animationController_.IsLayerPlaying();
 }
 
 void PlayerVisual::UpdateFlyLean()

@@ -5,13 +5,15 @@ class Enemy;
 
 /// <summary>
 /// 被弾リアクションの状態。
-/// Flinch=ひるみ（その場硬直）、Blow=大きく吹き飛ばされ中（着地でBlowAfterへ）
+/// Flinch=ひるみ（その場硬直）、Blow=大きく吹き飛ばされ中（着地でBlowAfterへ）、
+/// SkillBlow=必殺技被弾の大スタン（吹き飛ばされたまま減速しつつ落下・被ダメージ軽減）
 /// </summary>
 enum class EnemyReactState
 {
-    None,   // リアクションなし（通常行動可）
-    Flinch, // ひるみ（行動不能・Hittingアニメ）
-    Blow,   // 吹き飛ばし（行動不能・BlowBack→着地でBlowAfter）
+    None,      // リアクションなし（通常行動可）
+    Flinch,    // ひるみ（行動不能・Hittingアニメ）
+    Blow,      // 吹き飛ばし（行動不能・BlowBack→着地でBlowAfter）
+    SkillBlow, // 必殺技被弾スタン（行動不能・横速度を保ったまま減速しつつ落下）
 };
 
 /// <summary>
@@ -79,6 +81,14 @@ class EnemyStatus
     void RequestBlowReaction() { blowPending_ = true; }
 
     /// <summary>
+    /// 次に受けるダメージを「必殺技被弾スタン（SkillBlow）」として扱うよう予約する。
+    /// 大きく吹き飛ばされ、横速度を保ったまま徐々に減速しつつ地面へ落下する。
+    /// その間は行動不能だが、無防備すぎる時間の被ダメージは軽減される
+    /// </summary>
+    /// <param name="direction">吹き飛ばす水平方向（正規化不要・ゼロなら現在の向きの後方）</param>
+    void RequestSkillBlowReaction(const Hagine::Vector3 &direction);
+
+    /// <summary>
     /// 被弾リアクション（ひるみ・吹き飛ばし）の状態を進める（毎フレーム呼ぶ）
     /// </summary>
     void UpdateReaction();
@@ -103,8 +113,13 @@ class EnemyStatus
 
     /// <summary>被弾リアクション（ひるみ or 吹き飛ばし）中か。true の間はAI(BT)を停止する</summary>
     bool IsReacting() const { return reactState_ != EnemyReactState::None; }
-    /// <summary>吹き飛ばし（Blow）リアクション中か</summary>
-    bool IsBlow() const { return reactState_ == EnemyReactState::Blow; }
+    /// <summary>吹き飛ばし中か（必殺技スタンも含む。重力適用・BlowBackアニメの判定に使う）</summary>
+    bool IsBlow() const
+    {
+        return reactState_ == EnemyReactState::Blow || reactState_ == EnemyReactState::SkillBlow;
+    }
+    /// <summary>必殺技被弾スタン（SkillBlow）中か</summary>
+    bool IsSkillBlow() const { return reactState_ == EnemyReactState::SkillBlow; }
     /// <summary>ひるみ（Flinch）リアクション中か</summary>
     bool IsFlinch() const { return reactState_ == EnemyReactState::Flinch; }
     /// <summary>吹き飛ばし後、地面に着地済みか（BlowAfter再生の判定用）</summary>
@@ -134,6 +149,21 @@ class EnemyStatus
     void ResetForRevive();
 
   private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// 必殺技被弾スタンを開始する（吹き飛ばし速度の設定と落下状態への移行）
+    /// </summary>
+    void StartSkillBlow();
+
+    /// <summary>
+    /// 必殺技被弾スタンの更新（横速度の減速・着地判定）
+    /// </summary>
+    /// <param name="deltaTime">経過時間（秒）</param>
+    void UpdateSkillBlow(float deltaTime);
+
     /// ===================================================
     /// private variants
     /// ===================================================
@@ -181,6 +211,19 @@ class EnemyStatus
     float flinchDuration_ = 0.5f;                        ///< ひるみ継続時間（秒・コンボ間隔をまたぐ長さ）
     int flinchAnimIndex_ = 1;                            ///< ひるみアニメ番号（1〜3）
     bool blowPending_ = false;                           ///< 次のダメージをBlow扱いにする予約
+
+    // ─── 必殺技被弾スタン（SkillBlow）───
+    // 必殺技は強力な技なので、食らったら大きく吹き飛ばされてそのまま地面まで落下する。
+    // その間は行動不能（無防備）だが、追撃で一方的に不利にならないよう被ダメージを軽減する
+    bool skillBlowPending_ = false;                     ///< 次のダメージをSkillBlow扱いにする予約
+    Hagine::Vector3 skillBlowDirection_ = {0, 0, 0};    ///< 吹き飛ばす水平方向（正規化済み）
+    float skillBlowTimer_ = 0.0f;                       ///< スタン開始からの経過時間
+    float skillBlowSpeed_ = 35.0f;                      ///< 吹き飛ばしの水平初速
+    float skillBlowRiseSpeed_ = 12.0f;                  ///< 吹き飛ばしの上方初速（この後は落下する）
+    float skillBlowHorizontalRetain_ = 0.12f;           ///< 1秒あたりに残る横速度の割合（小さいほど早く減速）
+    float skillBlowMaxDuration_ = 5.0f;                 ///< 着地しないまま落下し続ける最大時間（秒・安全策）
+    float skillBlowDamageMultiplier_ = 0.2f;            ///< スタン中の被ダメージ倍率（0.2＝80%軽減）
+    static constexpr float kSkillBlowFallbackGravity = 30.0f; ///< 重力加速度が未設定のときに使う値
     bool blowLanded_ = false;                            ///< 吹き飛ばし後に着地したか
     float blowAfterTimer_ = 0.0f;                        ///< 着地後（BlowAfter）の残り硬直時間
     float blowAfterDuration_ = 0.6f;                     ///< 着地後の硬直時間（秒）

@@ -111,6 +111,9 @@ void PlayerCombat::Init(Player *owner)
 
                 attackCollider_->Activate(damage, kb, duration, delay, reaction);
             }
+            // 攻撃のたびに少し前へ踏み込む（その場で殴ると当てづらいため）
+            pOwner_->Movement().StartMeleeLunge();
+
             // 入力表示UI用: 実際に発火した近接攻撃の段名を記録する
             // （先行入力バッファ経由の発火もここを通るため取りこぼしがない）
             meleeAttackFired_ = true;
@@ -638,6 +641,7 @@ void PlayerCombat::RegisterParams()
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Player", "弾の速度", &B_speed_, {0.1f});
     hub->Register("Player", "弾の加速度", &B_acce_, {0.1f});
+    hub->Register("Player", "コンボ出し切り後の硬直", &punchCombo_.GetFinishRecovery(), {0.05f, 0.0f, 3.0f});
     skillCutscene_.RegisterParams("必殺演出(Player)");
 
     // 瞬間移動コンボ（横吹き飛ばし→先回り瞬間移動→叩きつけ）

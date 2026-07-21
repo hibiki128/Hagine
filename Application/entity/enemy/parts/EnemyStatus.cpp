@@ -50,8 +50,34 @@ void EnemyStatus::DamageUpdate()
         actualDamage *= kGuardDamageMultiplier;
         ConsumeEnergy(kGuardEnergyCost);
     }
+
+    // 必殺技被弾スタン中は行動できず無防備なので、追撃のダメージを軽減する
+    const bool inSkillBlow = (reactState_ == EnemyReactState::SkillBlow) && !skillBlowPending_;
+    if (inSkillBlow)
+    {
+        actualDamage *= skillBlowDamageMultiplier_;
+    }
+
     HP_ -= actualDamage;
     damage_ = kNoDamage;
+
+    // スタン中の追撃は落下の軌道を乱さないよう、ノックバックもリアクション変更も行わない
+    if (inSkillBlow)
+    {
+        hasKnockback_ = false;
+        pendingKnockback_ = {0.0f, 0.0f, 0.0f};
+        blowPending_ = false;
+        StartDamageReact();
+        return;
+    }
+
+    // 必殺技被弾：吹き飛ばして落下スタンへ移行する（他のリアクションより優先）
+    if (skillBlowPending_)
+    {
+        StartSkillBlow();
+        StartDamageReact();
+        return;
+    }
 
     // ノックバック適用（ガード中は軽減）
     if (hasKnockback_)
@@ -99,9 +125,78 @@ void EnemyStatus::DamageUpdate()
     blowPending_ = false;
 }
 
+void EnemyStatus::RequestSkillBlowReaction(const Vector3 &direction)
+{
+    skillBlowPending_ = true;
+
+    Vector3 dir = {direction.x, 0.0f, direction.z};
+    const float len = std::sqrt(dir.x * dir.x + dir.z * dir.z);
+    if (len < 0.001f)
+    {
+        // 方向が取れないときは敵の背面方向へ飛ばす
+        dir = pOwner_->GetForward();
+        dir.y = 0.0f;
+        dir = {-dir.x, 0.0f, -dir.z};
+        const float fallbackLen = std::sqrt(dir.x * dir.x + dir.z * dir.z);
+        if (fallbackLen < 0.001f)
+        {
+            skillBlowDirection_ = {0.0f, 0.0f, 0.0f};
+            return;
+        }
+        dir.x /= fallbackLen;
+        dir.z /= fallbackLen;
+    }
+    else
+    {
+        dir.x /= len;
+        dir.z /= len;
+    }
+    skillBlowDirection_ = dir;
+}
+
+void EnemyStatus::StartSkillBlow()
+{
+    EnemyMovement &mv = pOwner_->Movement();
+
+    reactState_ = EnemyReactState::SkillBlow;
+    skillBlowTimer_ = 0.0f;
+    blowLanded_ = false;
+    blowAfterTimer_ = 0.0f;
+    blowPending_ = false;
+    skillBlowPending_ = false;
+
+    // 予約済みのノックバックは使わず、必殺技専用の吹き飛ばし速度で上書きする
+    hasKnockback_ = false;
+    pendingKnockback_ = {0.0f, 0.0f, 0.0f};
+
+    Vector3 &velocity = mv.GetVelocity();
+    velocity.x = skillBlowDirection_.x * skillBlowSpeed_;
+    velocity.z = skillBlowDirection_.z * skillBlowSpeed_;
+    velocity.y = skillBlowRiseSpeed_; // 一度浮かせてから落下させる
+
+    // BTの移動イージング・飛行状態を打ち切り、重力で落ちる状態にする
+    mv.CancelVelocityEase();
+    mv.SetIsFlying(false);
+    mv.GetIsGrounded() = false;
+
+    // 重力加速度が未設定（0）でも必ず落下するようフォールバックを用意する
+    float gravity = std::abs(mv.GetFallSpeed());
+    if (gravity < 0.001f)
+    {
+        gravity = kSkillBlowFallbackGravity;
+    }
+    mv.GetAcceleration().y = -gravity;
+}
+
 void EnemyStatus::UpdateReaction()
 {
     const float dt = Frame::DeltaTime();
+
+    if (reactState_ == EnemyReactState::SkillBlow)
+    {
+        UpdateSkillBlow(dt);
+        return;
+    }
 
     if (reactState_ == EnemyReactState::Flinch)
     {
@@ -145,6 +240,44 @@ void EnemyStatus::UpdateReaction()
                 pOwner_->SetVelocity({0.0f, 0.0f, 0.0f});
             }
         }
+    }
+}
+
+void EnemyStatus::UpdateSkillBlow(float deltaTime)
+{
+    Vector3 &velocity = pOwner_->Movement().GetVelocity();
+
+    if (!blowLanded_)
+    {
+        skillBlowTimer_ += deltaTime;
+
+        // 吹き飛ばされた勢い（横移動）を保ったまま、徐々に減速させる。
+        // 落下（Y）は重力に任せるので、高い位置ほど無防備な時間が長くなる。
+        // 指数減衰にしてフレームレートに依存しないようにする
+        const float damping = std::pow(skillBlowHorizontalRetain_, deltaTime);
+        velocity.x *= damping;
+        velocity.z *= damping;
+
+        if (pOwner_->GetIsGrounded())
+        {
+            // 地面に落ちたら着地硬直（BlowAfter）へ
+            blowLanded_ = true;
+            blowAfterTimer_ = blowAfterDuration_;
+        }
+        else if (skillBlowTimer_ >= skillBlowMaxDuration_)
+        {
+            // 地形の穴などで落ち続けた場合の安全策
+            reactState_ = EnemyReactState::None;
+            pOwner_->SetVelocity({0.0f, 0.0f, 0.0f});
+        }
+        return;
+    }
+
+    blowAfterTimer_ -= deltaTime;
+    if (blowAfterTimer_ <= 0.0f)
+    {
+        reactState_ = EnemyReactState::None;
+        pOwner_->SetVelocity({0.0f, 0.0f, 0.0f});
     }
 }
 
@@ -245,6 +378,8 @@ void EnemyStatus::ResetForRevive()
     reactState_ = EnemyReactState::None;
     blowPending_ = false;
     blowLanded_ = false;
+    skillBlowPending_ = false;
+    skillBlowTimer_ = 0.0f;
 }
 
 void EnemyStatus::RegisterParams()
@@ -257,4 +392,9 @@ void EnemyStatus::RegisterParams()
     hub->Register("Enemy", "ひるみ時間", &flinchDuration_, {0.01f, 0.0f, 2.0f});
     hub->Register("Enemy", "吹き飛ばし着地後硬直", &blowAfterDuration_, {0.01f, 0.0f, 2.0f});
     hub->Register("Enemy", "吹き飛ばし最大時間", &blowMaxDuration_, {0.05f, 0.1f, 5.0f});
+    hub->Register("Enemy", "必殺技被弾の吹き飛び速度", &skillBlowSpeed_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Enemy", "必殺技被弾の浮き上がり速度", &skillBlowRiseSpeed_, {0.5f, 0.0f, 50.0f});
+    hub->Register("Enemy", "必殺技被弾の横速度残存率(1秒)", &skillBlowHorizontalRetain_, {0.01f, 0.001f, 1.0f});
+    hub->Register("Enemy", "必殺技被弾スタン最大時間", &skillBlowMaxDuration_, {0.1f, 0.5f, 10.0f});
+    hub->Register("Enemy", "必殺技被弾中の被ダメージ倍率", &skillBlowDamageMultiplier_, {0.01f, 0.0f, 1.0f});
 }

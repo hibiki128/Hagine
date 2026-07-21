@@ -121,6 +121,9 @@ void Player::Init(const std::string objectName)
     dashEffect_ = std::make_unique<DashEffect>();
     dashEffect_->Init();
 
+    footEffect_ = std::make_unique<FootEffect>();
+    footEffect_->Init();
+
     deathStaging_ = std::make_unique<DeathStaging>();
 
     // 必殺技の画面白黒フラッシュ演出（ポストエフェクトの Gray + Bloom を利用）
@@ -161,6 +164,11 @@ void Player::Update()
     dashEffect_->Update(GetWorldPosition(), movement_->GetVelocity(), GetForward(),
                         isAlive_ && started_ && !isPause_ && dashActive,
                         movement_->GetIsGrounded());
+
+    // 足元の演出（着地の砂煙・走行中の砂煙）も同様に毎フレーム更新する
+    footEffect_->Update(GetWorldPosition(), movement_->GetVelocity(),
+                        movement_->GetIsGrounded(),
+                        isAlive_ && started_ && !isPause_);
 
     if (combat_->IsSkillActive())
     {
@@ -379,6 +387,7 @@ void Player::DrawParticleCompute(const ViewProjection &viewProjection)
 {
     auraEmitter_->DrawCompute(viewProjection);
     dashEffect_->DrawCompute(viewProjection);
+    footEffect_->DrawCompute(viewProjection);
     combat_->DrawParticleCompute(viewProjection);
 }
 
@@ -399,6 +408,7 @@ void Player::DrawParticle(const ViewProjection &viewProjection)
     combat_->DrawChargeParticle(viewProjection);
     auraEmitter_->DrawGraphics(viewProjection);
     dashEffect_->DrawGraphics(viewProjection);
+    footEffect_->DrawGraphics(viewProjection);
     hitEmitter_->Draw(viewProjection); // CPU emitter
 
     combat_->DrawAttackParticles(viewProjection);

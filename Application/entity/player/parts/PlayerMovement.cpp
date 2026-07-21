@@ -27,6 +27,23 @@ void PlayerMovement::Move()
     Input *input = pOwner_->GetInput();
     const float dt = pOwner_->GetDt();
 
+    // ─── 近接コンボ中はその場で攻撃する（移動入力を受け付けない）───
+    // 射撃は移動しながら撃てるが、近接は踏み込んで殴る動きのため移動と噛み合わない。
+    // 入力を無視するだけだと直前の速度で滑り続けるので、水平速度も減衰させる
+    if (pOwner_->Combat().GetPunchCombo().IsComboActive())
+    {
+        velocity_.x *= kDecelerationFactor;
+        velocity_.z *= kDecelerationFactor;
+        if (std::abs(velocity_.x) < kVelocityStopThreshold)
+            velocity_.x = kVelocityZero;
+        if (std::abs(velocity_.z) < kVelocityStopThreshold)
+            velocity_.z = kVelocityZero;
+
+        // ダッシュ中に殴り始めたとき、攻撃後もダッシュ状態が残らないよう解除する
+        ClearDashState();
+        return;
+    }
+
     if (!gamePad->IsConnected())
     {
         // キーボード入力
@@ -345,6 +362,38 @@ void PlayerMovement::FaceTargetInstant(const Vector3 &targetPos)
     pOwner_->GetLocalRotation() = Quaternion::FromMatrix(rotMatrix);
 }
 
+void PlayerMovement::StartMeleeLunge()
+{
+    // 既定は自分の正面方向（敵がいない・ロックオンしていない場合）
+    Vector3 dir = pOwner_->GetForward();
+    dir.y = kYComponentZero;
+
+    if (Enemy *enemy = pOwner_->GetEnemy())
+    {
+        Vector3 toEnemy = enemy->GetWorldPosition() - pOwner_->GetWorldPosition();
+        toEnemy.y = kYComponentZero;
+        const float distance = toEnemy.Length();
+
+        // 密着状態でさらに踏み込むと相手を押し込んだりすり抜けたりするので何もしない
+        if (distance <= meleeLungeMinDistance_)
+        {
+            return;
+        }
+        dir = toEnemy / distance;
+    }
+
+    if (dir.Length() < kMinRotationDistance)
+    {
+        return;
+    }
+    dir = dir.Normalize();
+
+    // 水平速度を踏み込みの初速で上書きする。
+    // このあとは Move()（コンボ中）や Idle ステートの減衰で数フレームかけて止まる
+    velocity_.x = dir.x * meleeLungeSpeed_;
+    velocity_.z = dir.z * meleeLungeSpeed_;
+}
+
 void PlayerMovement::CollisionGround()
 {
     const float dt = pOwner_->GetDt();
@@ -550,6 +599,8 @@ void PlayerMovement::Save(DataHandler *data)
     data->Save("jumpSpeed", jumpSpeed_);
     data->Save("maxSpeed", maxSpeed_);
     data->Save("accelRate", accelRate_);
+    data->Save("meleeLungeSpeed", meleeLungeSpeed_);
+    data->Save("meleeLungeMinDistance", meleeLungeMinDistance_);
 }
 
 void PlayerMovement::Load(DataHandler *data)
@@ -559,6 +610,8 @@ void PlayerMovement::Load(DataHandler *data)
     jumpSpeed_ = data->Load<float>("jumpSpeed", 10.0f);
     maxSpeed_ = data->Load<float>("maxSpeed", 10.0f);
     accelRate_ = data->Load<float>("accelRate", 15.0f);
+    meleeLungeSpeed_ = data->Load<float>("meleeLungeSpeed", meleeLungeSpeed_);
+    meleeLungeMinDistance_ = data->Load<float>("meleeLungeMinDistance", meleeLungeMinDistance_);
 }
 
 void PlayerMovement::DrawImGui()
@@ -573,6 +626,8 @@ void PlayerMovement::DrawImGui()
     ImGui::DragFloat("現在速度", &moveSpeed_, 0.1f, 0.0f, maxSpeed_);
     ImGui::DragFloat("最大速度", &maxSpeed_, 0.1f, 0.0f, 50.0f);
     ImGui::DragFloat("加速率", &accelRate_, 0.1f, 0.0f, 50.0f);
+    ImGui::DragFloat("近接踏み込み速度", &meleeLungeSpeed_, 0.5f, 0.0f, 60.0f);
+    ImGui::DragFloat("近接踏み込み最小距離", &meleeLungeMinDistance_, 0.1f, 0.0f, 20.0f);
     ImGui::Text("現在速度: X=%.2f, Y=%.2f, Z=%.2f",
                 velocity_.x, velocity_.y, velocity_.z);
 #endif // USE_IMGUI
@@ -583,6 +638,8 @@ void PlayerMovement::RegisterParams()
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Player", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});
     hub->Register("Player", "加速率", &accelRate_, {0.1f, 0.0f, 50.0f});
+    hub->Register("Player", "近接踏み込み速度", &meleeLungeSpeed_, {0.5f, 0.0f, 60.0f});
+    hub->Register("Player", "近接踏み込み最小距離", &meleeLungeMinDistance_, {0.1f, 0.0f, 20.0f});
     hub->Register("Player", "ジャンプ速度", &jumpSpeed_, {0.1f, 0.0f, 50.0f});
     hub->Register("Player", "落下速度", &fallSpeed_, {0.1f, -20.0f, 0.0f});
 }
