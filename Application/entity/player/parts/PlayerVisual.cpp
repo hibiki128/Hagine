@@ -6,6 +6,7 @@
 #include <utility/debug/param/GameParamHub.h>
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 using namespace Hagine;
 
@@ -45,6 +46,11 @@ void PlayerVisual::Init(Player *owner)
     animationController_.RegisterClip("Smash", "animation/Player/Smash.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Shot", "animation/Player/Shot.gltf", false, 1.0f, 0.1f);
 
+    // 被弾リアクション（ひるみ）用のクリップ。被弾ごとにランダムで再生する
+    animationController_.RegisterClip("Hitting_1", "animation/Player/Hitting_1.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Hitting_2", "animation/Player/Hitting_2.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Hitting_3", "animation/Player/Hitting_3.gltf", false, 1.0f, 0.1f);
+
     // JSONに保存済みの調整値があれば読み込む
     animationController_.LoadClips("AnimationController", "PlayerClips");
 }
@@ -58,6 +64,15 @@ void PlayerVisual::UpdateAnimation()
     if (pOwner_->Combat().IsSkillStaging() || pOwner_->GetIsSkillActive())
     {
         animationController_.Play("MakanSkill");
+        return;
+    }
+
+    // ──────────────────────────────────────────
+    // ひるみ（ヒットスタン）中：Hitting モーションを再生（コンボ・ステートより優先）
+    // ──────────────────────────────────────────
+    if (pOwner_->Status().IsHitStun())
+    {
+        animationController_.Play("Hitting_" + std::to_string(pOwner_->Status().GetFlinchAnimIndex()));
         return;
     }
 

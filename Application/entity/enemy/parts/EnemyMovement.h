@@ -90,6 +90,13 @@ class EnemyMovement
     /// <summary>重力を適用する（非接地かつ非飛行のときのみ）</summary>
     void ApplyGravity(float deltaTime);
 
+    /// <summary>
+    /// プレイヤーがピンチ（HPが閾値未満）のとき、強制的にプレイヤーへ接近する。
+    /// ビヘイビアツリーが後退・回り込みを選んでいても、一定距離まではガンガン詰める。
+    /// 速度イージング適用後・接地判定前に毎フレーム呼ぶ
+    /// </summary>
+    void ApplyPinchApproach(float deltaTime);
+
     /// <summary>ダミーモードの摩擦減衰＋重力を適用する</summary>
     void ApplyDummyFriction(float deltaTime);
 
@@ -185,4 +192,11 @@ class EnemyMovement
     bool canJump_ = false;   ///< ジャンプ可能フラグ
     bool isGrounded_ = true; ///< 接地フラグ
     bool isFlying_ = false;  ///< 飛行中フラグ
+
+    // ─── ピンチ時の積極接近（GameParamで調整可）───
+    // プレイヤーHPが pinchThreshold_ 未満のとき、closeDistance まで強制接近する
+    bool pinchAggressionEnabled_ = true; ///< ピンチ時積極接近の有効フラグ
+    float pinchThreshold_ = 0.35f;       ///< ピンチ判定するプレイヤーHP比率（0〜1）
+    float pinchCloseDistance_ = 5.0f;    ///< この距離まで詰めたら強制接近を止める
+    float pinchSpeedMul_ = 1.6f;         ///< ピンチ接近時の移動速度倍率
 };

@@ -1,13 +1,14 @@
 #pragma once
 #include "d3d12.h"
+#include "string/stringUtility.h"
 #include "wrl.h"
+#include <Asset/AssetPath.h>
 #include <DirectXCommon.h>
 #include <string>
 #include <unordered_map>
 
 namespace Hagine {
-enum class BlendMode
-{
+enum class BlendMode {
     // ブレンドなし
     None,
     // 通常ブレンド
@@ -22,8 +23,7 @@ enum class BlendMode
     Screen,
 };
 
-enum class ShaderMode
-{
+enum class ShaderMode {
     None,
     Gray,
     Vignette,
@@ -40,11 +40,11 @@ enum class ShaderMode
     Bloom,
     Retro,
     Shockwave,
+    Monochrome, // 完全な白黒（明度で白or黒に二値化）
     Count,
 };
 
-enum class PipelineType
-{
+enum class PipelineType {
     Standard,
     Particle,
     Sprite,
@@ -56,8 +56,7 @@ enum class PipelineType
     ShadowMap,
 };
 
-class PipelineManager
-{
+class PipelineManager {
   private:
     /// ====================================
     /// public method
@@ -69,8 +68,7 @@ class PipelineManager
     PipelineManager &operator=(PipelineManager &) = delete;
 
   public:
-    static PipelineManager *GetInstance()
-    {
+    static PipelineManager *GetInstance() {
         static PipelineManager instance;
         return &instance;
     }
@@ -163,6 +161,7 @@ class PipelineManager
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateBloomRootSignature();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRetroRootSignature();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateShockwaveRootSignature();
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateMonochromeRootSignature();
 
     // シェーダーモード別のパイプライン作成
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateNoneGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
@@ -181,9 +180,12 @@ class PipelineManager
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateBloomGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateRetroGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateShockwaveGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateMonochromeGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
 
   private:
     DirectXCommon *pDxCommon_;
+
+    std::wstring shaderPath = Hagine::StringUtility::ConvertString(AssetPath::EngineRoot());
 
     // パイプラインとルートシグネチャの格納用マップ
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_;

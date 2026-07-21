@@ -18,6 +18,7 @@
 
 class FollowCamera;
 class Enemy;
+class ScreenFlash;
 
 /// <summary>
 /// プレイヤーのゲームオブジェクトクラス
@@ -250,6 +251,25 @@ class Player : public Hagine::BaseObject
     /// <summary>ワールドトランスフォームのポインタを取得（必殺技の追従用）</summary>
     Hagine::WorldTransform *GetTransformPtr() { return transform_.get(); }
 
+    /// <summary>
+    /// 必殺技発動時の画面白黒フラッシュ演出を開始する。
+    /// 必殺技のビーム発射コールバックから呼ばれる
+    /// </summary>
+    void TriggerScreenFlash();
+
+    /// ===================================================
+    /// 瞬間移動コンボ（PlayerAttackCollider のヒット時コールバック）
+    /// ===================================================
+
+    /// <summary>吹き飛ばし段のヒット：瞬間移動追撃を開始する</summary>
+    void OnMeleeLaunchHit() { combat_->StartTeleportChase(); }
+
+    /// <summary>追撃段のヒット：瞬間移動追撃を継続する</summary>
+    void OnMeleeChaseHit() { combat_->RefreshTeleportChase(); }
+
+    /// <summary>叩きつけ段のヒット：瞬間移動追撃を終了する</summary>
+    void OnMeleeSlamHit() { combat_->EndTeleportChase(); }
+
     /// ===================================================
     /// Setter
     /// ===================================================
@@ -303,6 +323,9 @@ class Player : public Hagine::BaseObject
     // モデル描画オフセット（地面に足がつくように下げる量。死亡演出の発生位置にも使う）
     static constexpr float kModelOffsetY = -0.75f;
 
+    // ひるみ中の水平速度の減衰率（毎フレーム）。ノックバックの横滑りが伸びすぎるのを防ぐ
+    static constexpr float kHitStunHorizontalDamping = 0.85f;
+
     // ─── パーツ ───
     std::unique_ptr<PlayerMovement> movement_; // 移動・回転・ダッシュ・接地
     std::unique_ptr<PlayerCombat> combat_;     // 射撃・コンボ・必殺技
@@ -338,6 +361,7 @@ class Player : public Hagine::BaseObject
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;    // 被弾ヒットエミッター
     std::unique_ptr<DashEffect> dashEffect_;                 // ダッシュ中の演出
     std::unique_ptr<DeathStaging> deathStaging_;             // 死亡演出
+    std::unique_ptr<ScreenFlash> screenFlash_;               // 必殺技の画面白黒フラッシュ演出
     std::unique_ptr<Hagine::GamePad> gamePad_;               // ゲームパッド
 
     Hagine::ViewProjection *pVp_ = nullptr;               // カメラ

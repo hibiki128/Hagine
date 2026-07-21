@@ -100,6 +100,9 @@
     <Filter Include="Application\staging\dash">
       <UniqueIdentifier>{14B7507A-3B1D-836B-52BF-F01321F264ED}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Application\staging\screen">
+      <UniqueIdentifier>{b7e3c1a4-9f2d-4e6a-8c1b-3f5a7d2e9c04}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Application\staging\death">
       <UniqueIdentifier>{3A5A9708-C6FD-FBF3-15E0-D2079ABFE9A8}</UniqueIdentifier>
     </Filter>
@@ -539,6 +542,9 @@
     </ClCompile>
     <ClCompile Include="Application\staging\dash\DashEffect.cpp">
       <Filter>Application\staging\dash</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\staging\screen\ScreenFlash.cpp">
+      <Filter>Application\staging\screen</Filter>
     </ClCompile>
     <ClCompile Include="Application\staging\death\DeathStaging.cpp">
       <Filter>Application\staging\death</Filter>
@@ -1055,6 +1061,9 @@
     </ClInclude>
     <ClInclude Include="Application\staging\dash\DashEffect.h">
       <Filter>Application\staging\dash</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\staging\screen\ScreenFlash.h">
+      <Filter>Application\staging\screen</Filter>
     </ClInclude>
     <ClInclude Include="Application\staging\death\DeathStaging.h">
       <Filter>Application\staging\death</Filter>

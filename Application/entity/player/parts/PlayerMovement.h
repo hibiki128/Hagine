@@ -41,6 +41,13 @@ class PlayerMovement
     void RotateUpdate();
 
     /// <summary>
+    /// 指定したワールド座標へ即座に（補間なしで）正面を向ける。
+    /// 瞬間移動コンボで敵へ貼り付いた瞬間に正しく攻撃判定を向けるために使う
+    /// </summary>
+    /// <param name="targetPos">向く先のワールド座標</param>
+    void FaceTargetInstant(const Hagine::Vector3 &targetPos);
+
+    /// <summary>
     /// 地面との衝突判定処理（落下速度の制限も行う）
     /// </summary>
     void CollisionGround();

@@ -126,7 +126,7 @@ class EnemyAttackCollider
     float forwardOffset_ = 2.25f; // 敵前方へのオフセット距離
     float heightOffset_ = 0.5f;   // 高さオフセット
 
-    float energyRecoveryAmount_ = 5.0f;
+    float energyRecoveryAmount_ = 2.0f;
 
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; // ヒットパーティクル
     std::unique_ptr<Shake> shake_;                        // シェイク

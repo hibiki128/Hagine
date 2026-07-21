@@ -10,6 +10,7 @@
 
 namespace Hagine {
 std::unique_ptr<Mouse> Input::mouse_ = nullptr;
+std::unique_ptr<GamePad> Input::gamePad_ = nullptr;
 
 template bool Input::GetJoystickState<DIJOYSTATE2>(int32_t stickNo, DIJOYSTATE2 &out) const;
 template bool Input::GetJoystickState<XINPUT_STATE>(int32_t stickNo, XINPUT_STATE &out) const;
@@ -47,6 +48,10 @@ void Input::Init(HINSTANCE hInstance, HWND hWnd)
     mouse_ = std::make_unique<Mouse>();
     mouse_->Init(directInput_, hWnd);
 
+    // ゲームパッド初期化
+    gamePad_ = std::make_unique<GamePad>();
+    gamePad_->Init(0);
+
     // XInputデバイスの追加
     for (DWORD i = 0; i < XUSER_MAX_COUNT; ++i)
     {
@@ -71,7 +76,10 @@ void Input::Update()
     keyboard_->Acquire();
     keyboard_->GetDeviceState(sizeof(key_), key_.data());
 
+    // マウスの更新
     mouse_->Update();
+    // ゲームパッドの更新
+    gamePad_->Update();
 
     for (auto &joystick : joysticks_)
     {

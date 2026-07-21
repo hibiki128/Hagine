@@ -34,6 +34,11 @@ class PlayerStatus
     void InvincibleUpdate();
 
     /// <summary>
+    /// ひるみ（ヒットスタン）時間の更新処理。毎フレーム呼ぶ
+    /// </summary>
+    void UpdateHitStun();
+
+    /// <summary>
     /// ダメージリアクション（高速点滅）の更新処理
     /// </summary>
     void UpdateDamageReact();
@@ -93,6 +98,12 @@ class PlayerStatus
     bool IsInvincible() const { return isInvincible_; }
     bool IsDamageReact() const { return isDamageReact_; }
 
+    /// <summary>ひるみ（ヒットスタン）中かどうか。true の間はプレイヤーは行動できない</summary>
+    bool IsHitStun() const { return hitStunTimer_ > 0.0f; }
+
+    /// <summary>ひるみアニメの番号（1〜3）。被弾ごとにランダムで選ばれる</summary>
+    int GetFlinchAnimIndex() const { return flinchAnimIndex_; }
+
     /// ===================================================
     /// Setter
     /// ===================================================
@@ -142,7 +153,7 @@ class PlayerStatus
 
     bool isGuarding_ = false;             ///< ガード中フラグ
     float guardDamageMultiplier_ = 0.20f; ///< ガード中の被ダメージ倍率（軽減率80%）ImGuiで調整可
-    float guardEnergyCost_ = 10.0f;       ///< ガード中に被弾した際のエネルギー消費量
+    float guardEnergyCost_ = 4.0f;        ///< ガード中に被弾した際のエネルギー消費量
 
     Hagine::Vector3 knockbackVelocity_ = {0.0f, 0.0f, 0.0f}; ///< 適用待ちノックバック
     bool hasKnockback_ = false;                              ///< ノックバック適用待ちフラグ
@@ -150,4 +161,11 @@ class PlayerStatus
     bool isDamageReact_ = false;       ///< リアクション中かどうか（被弾点滅）
     float damageReactTimer_ = 0.0f;    ///< 経過時間
     float damageReactDuration_ = 0.5f; ///< リアクション時間
+
+    // ─── ひるみ（ヒットスタン）───
+    // 通常攻撃を食らった直後、行動不能にする（ガード時は発生しない）。被弾ごとに再充填され、
+    // コンボ間隔をまたいで持続するため、相手のコンボが終わる/途切れるまで食らい続ける
+    float hitStunTimer_ = 0.0f;     ///< ひるみ残り時間（>0 で行動不能）
+    float hitStunDuration_ = 0.5f;  ///< ひるみ継続時間（秒）コンボ間隔をまたぐ長さ。GameParamで調整可
+    int flinchAnimIndex_ = 1;       ///< ひるみアニメ番号（1〜3・被弾ごとにランダム）
 };

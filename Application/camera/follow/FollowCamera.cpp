@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "FollowCamera.h"
+#include <Frame.h>
 #include <Input.h>
 #include <Application/entity/enemy/Enemy.h>
 #include <Application/entity/field/around/AroundField.h>
@@ -45,6 +46,15 @@ void FollowCamera::Update()
     // 必殺技の顔アップ演出中は専用処理でカメラを確定する
     if (pSkillCutscene_->UpdateSkillCloseUp())
     {
+        return;
+    }
+
+    // 瞬間移動コンボのカメラ固定中は、追従計算を行わず旧位置に留める。
+    // 時間切れになった次フレームから通常追従へ戻るため、瞬間移動先へパッとスナップする
+    if (holdTimer_ > 0.0f)
+    {
+        holdTimer_ -= Hagine::Frame::DeltaTime();
+        ApplyToViewProjection(); // 凍結した worldTransform_ をそのまま反映
         return;
     }
 

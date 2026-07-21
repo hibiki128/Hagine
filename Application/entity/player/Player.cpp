@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "Player.h"
+#include "Application/staging/screen/ScreenFlash.h"
 #include "frame/Frame.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
 
@@ -33,9 +34,16 @@ Player::Player()
 
 Player::~Player()
 {
+    // 追加したポストエフェクトスロットを解放する（グローバルなオフスクリーンに残さない）
+    if (screenFlash_)
+    {
+        screenFlash_->Finalize();
+    }
+
     // ポインタ失効前にゲームパラメータHubから登録を解除する
     GameParamHub::GetInstance()->Unregister("Player");
     GameParamHub::GetInstance()->Unregister("必殺演出(Player)");
+    GameParamHub::GetInstance()->Unregister("瞬間移動コンボ(Player)");
 }
 
 void Player::Init(const std::string objectName)
@@ -115,6 +123,10 @@ void Player::Init(const std::string objectName)
 
     deathStaging_ = std::make_unique<DeathStaging>();
 
+    // 必殺技の画面白黒フラッシュ演出（ポストエフェクトの Gray + Bloom を利用）
+    screenFlash_ = std::make_unique<ScreenFlash>();
+    screenFlash_->Initialize();
+
     pGeneratedField_ = ParticleCSFieldManager::GetInstance()->GetField(0); // 0番目のフィールドを使用
 
     // ─── 調整パラメータをゲームパラメータHubへ登録 ───
@@ -122,6 +134,7 @@ void Player::Init(const std::string objectName)
     status_->RegisterParams();
     combat_->RegisterParams();
     visual_->RegisterParams();
+    screenFlash_->RegisterParams("Player");
 }
 
 void Player::Update()
@@ -134,6 +147,13 @@ void Player::Update()
         return;
 
     dt_ = Frame::DeltaTime();
+
+    // 必殺技の画面白黒フラッシュ演出は、必殺技のビーム発射中（下の早期リターン経路）でも
+    // 進める必要があるため、ここで毎フレーム更新する
+    if (screenFlash_)
+    {
+        screenFlash_->Update(dt_);
+    }
 
     // ダッシュ演出は emit フラグ残留を防ぐため毎フレーム更新する。
     // 通常ダッシュに加えて急接近（Rush）中も dashWind を発生させる。
@@ -177,6 +197,9 @@ void Player::Update()
 
         status_->DamageUpdate();
 
+        // ひるみ（ヒットスタン）残り時間を進める
+        status_->UpdateHitStun();
+
         if (started_ && !isPause_)
         {
             status_->RecoverEnergy();
@@ -218,6 +241,28 @@ void Player::Update()
 
                 // 飛行リーンの傾きを直立へ滑らかに戻す（放置すると傾いたまま固まり、
                 // 必殺技モーションや死亡時の倒れる向きがずれる）
+                visual_->UpdateFlyLean();
+            }
+            else if (status_->IsHitStun())
+            {
+                // ─── ひるみ（ヒットスタン）中は行動不能 ───
+                // 攻撃・移動入力・ステート更新は行わない。ノックバック（速度）と重力・
+                // 被弾点滅は下の共通処理で継続するため、アニメーションだけ進めて硬直を表現する。
+                // 入力減速が効かないので、横滑りが伸びすぎないよう水平速度を減衰させる
+                Hagine::Vector3 &vel = movement_->GetVelocity();
+                vel.x *= kHitStunHorizontalDamping;
+                vel.z *= kHitStunHorizontalDamping;
+                visual_->UpdateAnimation();
+                visual_->UpdateFlyLean();
+            }
+            else if (combat_->IsTeleporting())
+            {
+                // ─── 瞬間移動追撃中 ───
+                // 敵に貼り付いて追撃を継続する。移動入力・射撃・ガードは無効化し、
+                // コンボと前方判定だけ進めてフィニッシュ（叩きつけ）まで繋ぐ
+                combat_->UpdateTeleport(dt_);      // 位置固定・向き・消える演出・カメラ制御
+                combat_->UpdateComboAndCollider(); // コンボ継続＋前方判定更新
+                visual_->UpdateAnimation();
                 visual_->UpdateFlyLean();
             }
             else
@@ -525,6 +570,14 @@ void Player::Debug()
     visual_->DrawImGui([this] { Save(); });
 
 #endif // USE_IMGUI
+}
+
+void Player::TriggerScreenFlash()
+{
+    if (screenFlash_)
+    {
+        screenFlash_->Trigger();
+    }
 }
 
 void Player::ChangeEnergyCharge()

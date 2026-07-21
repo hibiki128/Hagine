@@ -7,6 +7,7 @@
 #include "EnemyStatus.h"
 #include <Frame.h>
 #include <cmath>
+#include <string>
 
 using namespace Hagine;
 
@@ -39,6 +40,14 @@ void EnemyVisual::Init(Enemy *owner)
     animationController_.RegisterClip("Kick_3", "animation/Player/Kick_3.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Smash", "animation/Player/Smash.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Shot", "animation/Player/Shot.gltf", false, 1.0f, 0.1f);
+
+    // 被弾リアクション：ひるみ（Hitting）と吹き飛ばし（BlowBack→着地でBlowAfter）
+    animationController_.RegisterClip("Hitting_1", "animation/Player/Hitting_1.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Hitting_2", "animation/Player/Hitting_2.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("Hitting_3", "animation/Player/Hitting_3.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("BlowBack", "animation/Player/BlowBack.gltf", true, 1.0f, 0.1f);
+    animationController_.RegisterClip("BlowAfter", "animation/Player/BlowAfter.gltf", false, 1.0f, 0.1f);
+
     // プレイヤー側で調整済みのクリップ設定（速度・補間）を流用する
     animationController_.LoadClips("AnimationController", "PlayerClips");
 }
@@ -52,6 +61,24 @@ void EnemyVisual::UpdateAnimation()
     if (pOwner_->Combat().IsBeamStaging() || pOwner_->Combat().IsBeamActive())
     {
         animationController_.Play("MakanSkill");
+        return;
+    }
+
+    // ──────────────────────────────────────────
+    // 被弾リアクション：ひるみ / 吹き飛ばし（コンボ・移動より優先）
+    // ──────────────────────────────────────────
+    EnemyStatus &st = pOwner_->Status();
+    if (st.IsReacting())
+    {
+        if (st.IsBlow())
+        {
+            // 吹き飛ばされ中はBlowBack、地面に落ちたらBlowAfter
+            animationController_.Play(st.IsBlowLanded() ? "BlowAfter" : "BlowBack");
+        }
+        else
+        {
+            animationController_.Play("Hitting_" + std::to_string(st.GetFlinchAnimIndex()));
+        }
         return;
     }
 

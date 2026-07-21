@@ -27,7 +27,7 @@ class DataHandler
     /// private variables
     /// ===================================================
 
-    std::string basePath_ = AssetPath::JsonRoot(); // 固定の基準パス（Application/Assets/jsons）
+    std::string basePath_ = AssetPath::JsonRoot(); // 固定の基準パス（jsons ルート）
     std::string folderPath_ = "";                  // インスタンスごとのフォルダパス
     std::string fileName_ = "data.json";           // インスタンスごとのファイル名
     json cachedJson_;                              // メモリ上にキャッシュしたJSONデータ
@@ -107,6 +107,27 @@ class DataHandler
     /// <returns>T: 読み込んだ値（なければ既定値）</returns>
     template <typename T>
     T Load(const std::string &key, const T &defaultValue);
+
+    /// <summary>
+    /// 指定キーをキャッシュから削除する（次回Flushでファイルへ反映）
+    /// </summary>
+    /// <param name="key">削除するキー</param>
+    void Remove(const std::string &key)
+    {
+        if (cachedJson_.is_object() && cachedJson_.contains(key))
+        {
+            cachedJson_.erase(key);
+            isDirty_ = true;
+        }
+    }
+
+    /// <summary>
+    /// 指定キーが存在するか
+    /// </summary>
+    bool Contains(const std::string &key) const
+    {
+        return cachedJson_.is_object() && cachedJson_.contains(key);
+    }
 
     /// <summary>
     /// JSONファイルの存在確認

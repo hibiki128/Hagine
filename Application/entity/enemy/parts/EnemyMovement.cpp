@@ -193,6 +193,48 @@ void EnemyMovement::ApplyGravity(float deltaTime)
     }
 }
 
+void EnemyMovement::ApplyPinchApproach(float /*deltaTime*/)
+{
+    if (!pinchAggressionEnabled_)
+    {
+        return;
+    }
+    Player *target = pOwner_->GetTarget();
+    if (!target || !target->GetAlive())
+    {
+        return;
+    }
+
+    // プレイヤーHP比率がピンチ閾値未満のときだけ発動する
+    const float maxHP = target->GetMaxHP();
+    if (maxHP <= 0.0f)
+    {
+        return;
+    }
+    const float hpRatio = target->GetHP() / maxHP;
+    if (hpRatio >= pinchThreshold_)
+    {
+        return;
+    }
+
+    // XZ平面上の距離。近づき切っている（攻撃レンジ内）なら詰めを止めてBTに任せる
+    Vector3 toTarget = target->GetWorldPosition() - pOwner_->GetWorldTransform()->translation_;
+    toTarget.y = 0.0f;
+    const float distance = toTarget.Length();
+    if (distance <= pinchCloseDistance_)
+    {
+        return;
+    }
+
+    // BTが後退・回り込みを選んでいても、プレイヤーへ向かう水平速度で上書きして強制接近する
+    Vector3 dir = toTarget.Normalize();
+    const float speed = moveSpeed_ * pinchSpeedMul_;
+    velocity_.x = dir.x * speed;
+    velocity_.z = dir.z * speed;
+    // 追従が上書きされ続けないよう、速度イージングは畳んでおく
+    velocityEase_.isActive = false;
+}
+
 void EnemyMovement::ApplyDummyFriction(float deltaTime)
 {
     // ダミー: AIは動かさないが、被弾ノックバックは残す。
@@ -235,4 +277,10 @@ void EnemyMovement::RegisterParams()
     hub->Register("Enemy", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});
     hub->Register("Enemy", "加速率", &accelRate_, {0.1f, 0.0f, 50.0f});
     hub->Register("Enemy", "ジャンプ速度", &jumpSpeed_, {0.1f, 0.0f, 50.0f});
+
+    // ピンチ時の積極接近
+    hub->Register("Enemy", "ピンチ接近有効", &pinchAggressionEnabled_);
+    hub->Register("Enemy", "ピンチ判定HP比率", &pinchThreshold_, {0.01f, 0.0f, 1.0f});
+    hub->Register("Enemy", "ピンチ接近停止距離", &pinchCloseDistance_, {0.1f, 0.0f, 30.0f});
+    hub->Register("Enemy", "ピンチ接近速度倍率", &pinchSpeedMul_, {0.05f, 0.5f, 5.0f});
 }
