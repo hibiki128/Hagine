@@ -6,6 +6,12 @@
 #include "scene/SceneManager.h"
 
 using namespace Hagine;
+
+namespace {
+// 叩きつけ（Slam）時、下方向の強さに対して前方へ流す割合
+constexpr float kSlamHorizontalRatio = 0.3f;
+} // namespace
+
 void PlayerAttackCollider::Init(Player *player, Enemy *enemy)
 {
     pPlayer_ = player;
@@ -74,13 +80,15 @@ void PlayerAttackCollider::DrawParticle(const ViewProjection &viewProjection)
 }
 
 void PlayerAttackCollider::Activate(float damage, float knockbackPower,
-                                    float activeDuration, float activateDelay)
+                                    float activeDuration, float activateDelay,
+                                    MeleeHitReaction reaction)
 {
     // 前の判定を確実にリセットしてから開始
     Deactivate();
 
     currentDamage_ = damage;
     currentKnockback_ = knockbackPower;
+    currentReaction_ = reaction;
     activeDuration_ = activeDuration;
     hasHitThisActivation_ = false;
 
@@ -135,9 +143,40 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other)
     // ダメージ適用
     pEnemy_->SetDamage(currentDamage_);
 
-    // ノックバック適用
+    // ノックバック適用（リアクション種別で挙動を切り替える）
     Vector3 knockbackDir = pPlayer_->GetForward();
-    pEnemy_->SetKnockback(knockbackDir, currentKnockback_);
+    switch (currentReaction_)
+    {
+    case MeleeHitReaction::Slam:
+    {
+        // 下方向へ叩きつける（前方に少しだけ流しつつ強く下へ）。瞬間移動追撃を終了する。
+        // 吹き飛ばしリアクション（着地でBlowAfter）として扱う
+        Vector3 slamVel = {
+            knockbackDir.x * currentKnockback_ * kSlamHorizontalRatio,
+            -currentKnockback_,
+            knockbackDir.z * currentKnockback_ * kSlamHorizontalRatio,
+        };
+        pEnemy_->RequestBlowReaction();
+        pEnemy_->SetKnockbackDirect(slamVel);
+        pPlayer_->OnMeleeSlamHit();
+        break;
+    }
+    case MeleeHitReaction::Launch:
+        // 横方向への大きな吹き飛ばし速度と先回り瞬間移動は Player 側(combat)で設定する。
+        // ここでは吹き飛ばしリアクション（BT停止・BlowBack）だけ予約する
+        pEnemy_->RequestBlowReaction();
+        pPlayer_->OnMeleeLaunchHit();
+        break;
+    case MeleeHitReaction::Chase:
+        pEnemy_->RequestBlowReaction();
+        pPlayer_->OnMeleeChaseHit();
+        break;
+    case MeleeHitReaction::Normal:
+    default:
+        // 通常ヒットは前方＋やや上へ吹き飛ばし、ひるみ（Flinch）を発生させる
+        pEnemy_->SetKnockback(knockbackDir, currentKnockback_);
+        break;
+    }
 
     // ヒットエフェクト
     if (hitEmitter_)

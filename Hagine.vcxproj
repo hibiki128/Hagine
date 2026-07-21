@@ -158,6 +158,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\ui\enemy\EnemyUI.cpp" />
     <ClCompile Include="Application\staging\death\DeathStaging.cpp" />
     <ClCompile Include="Application\staging\dash\DashEffect.cpp" />
+    <ClCompile Include="Application\staging\screen\ScreenFlash.cpp" />
     <ClCompile Include="Application\camera\death\DeathCamera.cpp" />
     <ClCompile Include="Application\entity\player\skill\MakanAttackSkill.cpp" />
     <ClCompile Include="Application\entity\behavior\node\BehaviorNode.cpp" />
@@ -389,6 +390,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\ui\enemy\EnemyUI.h" />
     <ClInclude Include="Application\staging\death\DeathStaging.h" />
     <ClInclude Include="Application\staging\dash\DashEffect.h" />
+    <ClInclude Include="Application\staging\screen\ScreenFlash.h" />
     <ClInclude Include="Application\camera\death\DeathCamera.h" />
     <ClInclude Include="Application\entity\player\skill\MakanAttackSkill.h" />
     <ClInclude Include="Application\entity\behavior\node\BehaviorNode.h" />

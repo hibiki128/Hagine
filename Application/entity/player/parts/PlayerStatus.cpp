@@ -4,6 +4,7 @@
 #include <data/DataHandler.h>
 #include <utility/debug/param/GameParamHub.h>
 #include <cmath>
+#include <cstdlib>
 
 using namespace Hagine;
 
@@ -57,6 +58,26 @@ void PlayerStatus::DamageUpdate()
     // ダメージリアクションの開始（点滅のみ）
     isDamageReact_ = true;
     damageReactTimer_ = kTimerReset;
+
+    // ひるみ（ヒットスタン）の開始。ガード成立時は行動不能にしない。
+    // 被弾ごとに時間を再充填し、ひるみアニメをランダムに選び直す
+    if (!isGuarding_)
+    {
+        hitStunTimer_ = hitStunDuration_;
+        flinchAnimIndex_ = 1 + std::rand() % 3;
+    }
+}
+
+void PlayerStatus::UpdateHitStun()
+{
+    if (hitStunTimer_ > 0.0f)
+    {
+        hitStunTimer_ -= pOwner_->GetDt();
+        if (hitStunTimer_ < 0.0f)
+        {
+            hitStunTimer_ = 0.0f;
+        }
+    }
 }
 
 void PlayerStatus::InvincibleUpdate()
@@ -169,6 +190,7 @@ void PlayerStatus::Save(DataHandler *data)
     data->Save("invincibleDuration", invincibleDuration_);
     data->Save("guardDamageMultiplier", guardDamageMultiplier_);
     data->Save("guardEnergyCost", guardEnergyCost_);
+    data->Save("hitStunDuration", hitStunDuration_);
 }
 
 void PlayerStatus::Load(DataHandler *data)
@@ -179,7 +201,8 @@ void PlayerStatus::Load(DataHandler *data)
     energy_ = maxEnergy_; // 初期化時は最大値
     invincibleDuration_ = data->Load<float>("invincibleDuration", 0.25f);
     guardDamageMultiplier_ = data->Load<float>("guardDamageMultiplier", 0.20f);
-    guardEnergyCost_ = data->Load<float>("guardEnergyCost", 10.0f);
+    guardEnergyCost_ = data->Load<float>("guardEnergyCost", 4.0f);
+    hitStunDuration_ = data->Load<float>("hitStunDuration", 0.5f);
 }
 
 void PlayerStatus::DrawImGui()
@@ -203,6 +226,11 @@ void PlayerStatus::DrawImGui()
     ImGui::DragFloat("ガード被ダメ倍率 (0=無敵, 1=無効)", &guardDamageMultiplier_, 0.01f, 0.0f, 1.0f);
     ImGui::Text("  -> 軽減率 %.0f%%", (1.0f - guardDamageMultiplier_) * 100.0f);
     ImGui::DragFloat("ガード時エネルギー消費", &guardEnergyCost_, 0.5f, 0.0f, 100.0f);
+
+    ImGui::Separator();
+    ImGui::Text("ひるみ（ヒットスタン）");
+    ImGui::Text("  現在状態: %s", IsHitStun() ? "ひるみ中" : "-");
+    ImGui::DragFloat("ひるみ時間", &hitStunDuration_, 0.01f, 0.0f, 1.0f);
 #endif // USE_IMGUI
 }
 
@@ -217,4 +245,5 @@ void PlayerStatus::RegisterParams()
     hub->Register("Player", "無敵時間", &invincibleDuration_, {0.01f, 0.0f, 2.0f});
     hub->Register("Player", "ガード被ダメ倍率", &guardDamageMultiplier_, {0.01f, 0.0f, 1.0f});
     hub->Register("Player", "ガード時エネルギー消費", &guardEnergyCost_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Player", "ひるみ時間", &hitStunDuration_, {0.01f, 0.0f, 1.0f});
 }

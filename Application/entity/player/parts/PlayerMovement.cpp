@@ -317,6 +317,34 @@ void PlayerMovement::RotateUpdate()
     }
 }
 
+void PlayerMovement::FaceTargetInstant(const Vector3 &targetPos)
+{
+    // RotateUpdate のロックオン追従と同じ計算を、補間なし（即時）で行う
+    Vector3 toTarget = targetPos - pOwner_->GetWorldPosition();
+    if (toTarget.Length() < kMinRotationDistance)
+    {
+        return;
+    }
+    toTarget = toTarget.Normalize();
+
+    Vector3 forward = toTarget;
+    Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ};
+
+    Vector3 right;
+    if (std::abs(forward.Dot(worldUp)) > kParallelThreshold)
+    {
+        right = {kRightVectorX, kRightVectorY, kRightVectorZ};
+    }
+    else
+    {
+        right = (worldUp.Cross(forward)).Normalize();
+    }
+
+    Vector3 up = (forward.Cross(right)).Normalize();
+    Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
+    pOwner_->GetLocalRotation() = Quaternion::FromMatrix(rotMatrix);
+}
+
 void PlayerMovement::CollisionGround()
 {
     const float dt = pOwner_->GetDt();

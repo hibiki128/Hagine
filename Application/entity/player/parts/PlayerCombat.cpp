@@ -1,5 +1,7 @@
 #define NOMINMAX
 #include "PlayerCombat.h"
+#include "Application/camera/follow/FollowCamera.h"
+#include "Application/entity/enemy/Enemy.h"
 #include "Application/entity/player/bullet/charge/ChargeShot.h"
 #include "Application/entity/player/Player.h"
 #include "object/base/BaseObjectManager.h"
@@ -76,7 +78,38 @@ void PlayerCombat::Init(Player *owner)
         [this](float damage, float knockback, float duration, float delay) {
             if (attackCollider_)
             {
-                attackCollider_->Activate(damage, knockback, duration, delay);
+                // 段番号（1始まり）。コールバック時点では GetCurrentComboIndex() が
+                // 実行中の段の0始まりインデックスを指す
+                const int stage = punchCombo_.GetCurrentComboIndex() + 1;
+
+                // 瞬間移動コンボ：特定段のヒット挙動を切り替える。
+                // Launch/Chase の吹き飛ばし速度は combat 側（TeleportAhead）で設定するため、
+                // ここで渡すノックバック量は使われない（0）。Slam のみ下方向の強度を渡す
+                MeleeHitReaction reaction = MeleeHitReaction::Normal;
+                float kb = knockback;
+                if (teleportEnabled_)
+                {
+                    if (stage == teleportSlamStage_)
+                    {
+                        reaction = MeleeHitReaction::Slam; // 下へ叩きつけ＋追撃終了
+                        kb = teleportSlamKnockback_;
+                    }
+                    else if (stage == teleportLaunchStage_ &&
+                             pOwner_->GetEnergy() >= teleportEnergyCost_)
+                    {
+                        // エネルギーが足りるときだけ大吹き飛ばし＋瞬間移動開始。
+                        // 足りない場合は下の通常ヒットに落とし、敵を取り逃さない
+                        reaction = MeleeHitReaction::Launch;
+                        kb = 0.0f;
+                    }
+                    else if (stage > teleportLaunchStage_ && stage < teleportSlamStage_)
+                    {
+                        reaction = MeleeHitReaction::Chase; // 吹き飛ばし＋瞬間移動継続
+                        kb = 0.0f;
+                    }
+                }
+
+                attackCollider_->Activate(damage, kb, duration, delay, reaction);
             }
             // 入力表示UI用: 実際に発火した近接攻撃の段名を記録する
             // （先行入力バッファ経由の発火もここを通るため取りこぼしがない）
@@ -91,6 +124,155 @@ void PlayerCombat::UpdateComboAndCollider()
     if (attackCollider_)
     {
         attackCollider_->Update(pOwner_->GetDt());
+    }
+}
+
+void PlayerCombat::TeleportAhead()
+{
+    Enemy *enemy = pOwner_->GetEnemy();
+    if (!enemy)
+    {
+        return;
+    }
+
+    // 吹き飛ばし方向 = プレイヤーが今向いている方向（水平）。ヒット時点ではプレイヤーは
+    // 敵の方を向いているので、敵はこの方向へ大きく吹き飛ぶ
+    Hagine::Vector3 dir = pOwner_->GetForward();
+    dir.y = 0.0f;
+    if (dir.Length() > 0.001f)
+    {
+        dir = dir.Normalize();
+    }
+    else
+    {
+        dir = teleportDir_;
+    }
+    teleportDir_ = dir;
+
+    const Hagine::Vector3 enemyPos = enemy->GetWorldPosition();
+
+    // 敵へ横方向の大きな吹き飛ばし速度を与える（上方向は控えめ）。
+    // arrivalTime 秒で aheadDistance を進む速度にすることで、先回り地点へ丁度到達する
+    const float arrival = (teleportArrivalTime_ > 0.001f) ? teleportArrivalTime_ : 0.001f;
+    const float speed = teleportAheadDistance_ / arrival;
+    enemy->SetVelocity({dir.x * speed, teleportLaunchUp_, dir.z * speed});
+    enemy->Movement().CancelVelocityEase(); // BTの速度イージングに吹き飛ばし速度を上書きされないように
+
+    // プレイヤーは吹き飛ぶ方向の先へ先回り瞬間移動する。敵はこの地点へ吹き飛ばされてくる
+    Hagine::Vector3 aheadPos = enemyPos + dir * teleportAheadDistance_;
+    aheadPos.y = enemyPos.y;
+    pOwner_->GetLocalPosition() = aheadPos;
+    pOwner_->GetVelocity() = {0.0f, 0.0f, 0.0f};
+    pOwner_->GetIsGrounded() = false;
+    pOwner_->Movement().FaceTargetInstant(enemyPos); // 迎え撃つように敵の方を向く
+
+    // 消える演出をやり直す
+    teleportVanishTimer_ = 0.0f;
+
+    // カメラを一瞬だけ旧位置に留めてから、瞬間移動先のプレイヤーへパッとスナップさせる。
+    // （吹き飛ばし方向は概ね画面奥なので、旧カメラからでも移動先のプレイヤーが見える）
+    if (pOwner_->GetCamera())
+    {
+        pOwner_->GetCamera()->HoldThenSnap(teleportCameraHold_);
+    }
+}
+
+void PlayerCombat::StartTeleportChase()
+{
+    if (!teleportEnabled_)
+    {
+        return;
+    }
+    Enemy *enemy = pOwner_->GetEnemy();
+    if (!enemy || !enemy->GetAlive())
+    {
+        return;
+    }
+    // 瞬間移動には少量のエネルギーを消費する。足りなければ追撃しない
+    if (!pOwner_->ConsumeEnergy(teleportEnergyCost_))
+    {
+        return;
+    }
+
+    teleportActive_ = true;
+    teleportTimer_ = 0.0f;
+    TeleportAhead(); // 吹き飛ばし＋先回り＋カメラのホールドスナップを行う
+}
+
+void PlayerCombat::RefreshTeleportChase()
+{
+    // 追撃段のヒットで再度大きく吹き飛ばし、その先へ先回りし直す
+    if (!teleportActive_)
+    {
+        return;
+    }
+    teleportTimer_ = 0.0f;
+    TeleportAhead();
+}
+
+void PlayerCombat::EndTeleportChase()
+{
+    if (!teleportActive_)
+    {
+        return;
+    }
+    teleportActive_ = false;
+    pOwner_->SetAlpha(1.0f); // 不透明へ戻す（消える演出の解除）
+
+    // 空中に取り残されたら落下ステートへ移し、棒立ちで浮かないようにする
+    if (!pOwner_->GetIsGrounded())
+    {
+        pOwner_->ChangeState("Air");
+    }
+}
+
+void PlayerCombat::UpdateTeleport(float deltaTime)
+{
+    if (!teleportActive_)
+    {
+        return;
+    }
+
+    Enemy *enemy = pOwner_->GetEnemy();
+    // 敵が死亡/消滅、またはコンボが途切れたら追撃を終了する
+    if (!enemy || !enemy->GetAlive() || !punchCombo_.IsComboActive())
+    {
+        EndTeleportChase();
+        return;
+    }
+
+    teleportTimer_ += deltaTime;
+    if (teleportTimer_ >= teleportPinDuration_)
+    {
+        EndTeleportChase();
+        return;
+    }
+
+    // 先回り地点で待機（動かない）。迎え撃つように敵の方を向き続ける
+    pOwner_->GetVelocity() = {0.0f, 0.0f, 0.0f};
+    pOwner_->GetIsGrounded() = false;
+    pOwner_->Movement().FaceTargetInstant(enemy->GetWorldPosition());
+
+    // 吹き飛ばされてきた敵が攻撃間合いまで到達したら、滑走を止めてその場に留める
+    // （プレイヤーを通り過ぎないように）。次段のヒットで再び吹き飛ばす
+    Hagine::Vector3 toEnemy = enemy->GetWorldPosition() - pOwner_->GetWorldPosition();
+    toEnemy.y = 0.0f;
+    if (toEnemy.Length() <= teleportFollowDistance_)
+    {
+        Hagine::Vector3 vel = enemy->GetVelocity();
+        enemy->SetVelocity({0.0f, vel.y, 0.0f});
+    }
+
+    // 消える演出：瞬間移動直後だけ薄く表示→通常へ戻す
+    teleportVanishTimer_ += deltaTime;
+    if (teleportVanishTimer_ < teleportVanishDuration_)
+    {
+        const float t = teleportVanishTimer_ / teleportVanishDuration_;
+        pOwner_->SetAlpha(0.1f + 0.9f * t);
+    }
+    else
+    {
+        pOwner_->SetAlpha(1.0f);
     }
 }
 
@@ -299,6 +481,7 @@ void PlayerCombat::StartSkillStaging()
     skillCutscene_.Start(pOwner_, pOwner_->GetCamera(), [this] {
         pMakanAttack_ptr_->Activate(pOwner_->GetTransformPtr());
         pOwner_->EmitAction(Player::ActionKind::Special); // 入力表示UI用：必殺技を通知
+        pOwner_->TriggerScreenFlash();                    // 画面白黒＆ブルームのフラッシュ演出
     });
 }
 
@@ -343,12 +526,40 @@ void PlayerCombat::Save(DataHandler *data)
 {
     data->Save("bulletSpeed", B_speed_);
     data->Save("bulletAcce", B_acce_);
+
+    // 瞬間移動コンボ
+    data->Save("tpEnabled", teleportEnabled_);
+    data->Save("tpLaunchStage", teleportLaunchStage_);
+    data->Save("tpSlamStage", teleportSlamStage_);
+    data->Save("tpEnergyCost", teleportEnergyCost_);
+    data->Save("tpAheadDistance", teleportAheadDistance_);
+    data->Save("tpArrivalTime", teleportArrivalTime_);
+    data->Save("tpLaunchUp", teleportLaunchUp_);
+    data->Save("tpSlamKnockback", teleportSlamKnockback_);
+    data->Save("tpFollowDistance", teleportFollowDistance_);
+    data->Save("tpPinDuration", teleportPinDuration_);
+    data->Save("tpVanishDuration", teleportVanishDuration_);
+    data->Save("tpCameraHold", teleportCameraHold_);
 }
 
 void PlayerCombat::Load(DataHandler *data)
 {
     B_speed_ = data->Load<float>("bulletSpeed", 60.0f);
     B_acce_ = data->Load<float>("bulletAcce", 5.0f);
+
+    // 瞬間移動コンボ
+    teleportEnabled_ = data->Load<bool>("tpEnabled", true);
+    teleportLaunchStage_ = data->Load<int>("tpLaunchStage", 5);
+    teleportSlamStage_ = data->Load<int>("tpSlamStage", 8);
+    teleportEnergyCost_ = data->Load<float>("tpEnergyCost", 8.0f);
+    teleportAheadDistance_ = data->Load<float>("tpAheadDistance", 12.0f);
+    teleportArrivalTime_ = data->Load<float>("tpArrivalTime", 0.4f);
+    teleportLaunchUp_ = data->Load<float>("tpLaunchUp", 2.0f);
+    teleportSlamKnockback_ = data->Load<float>("tpSlamKnockback", 45.0f);
+    teleportFollowDistance_ = data->Load<float>("tpFollowDistance", 3.0f);
+    teleportPinDuration_ = data->Load<float>("tpPinDuration", 0.9f);
+    teleportVanishDuration_ = data->Load<float>("tpVanishDuration", 0.15f);
+    teleportCameraHold_ = data->Load<float>("tpCameraHold", 0.3f);
 }
 
 void PlayerCombat::DrawBulletImGui()
@@ -428,4 +639,19 @@ void PlayerCombat::RegisterParams()
     hub->Register("Player", "弾の速度", &B_speed_, {0.1f});
     hub->Register("Player", "弾の加速度", &B_acce_, {0.1f});
     skillCutscene_.RegisterParams("必殺演出(Player)");
+
+    // 瞬間移動コンボ（横吹き飛ばし→先回り瞬間移動→叩きつけ）
+    const char *tp = "瞬間移動コンボ(Player)";
+    hub->Register(tp, "有効", &teleportEnabled_);
+    hub->Register(tp, "瞬間移動を始める段", &teleportLaunchStage_, {1.0f, 1.0f, 8.0f});
+    hub->Register(tp, "叩きつける最終段", &teleportSlamStage_, {1.0f, 1.0f, 8.0f});
+    hub->Register(tp, "消費エネルギー", &teleportEnergyCost_, {0.5f, 0.0f, 100.0f});
+    hub->Register(tp, "吹き飛ばし/先回り距離", &teleportAheadDistance_, {0.5f, 1.0f, 60.0f});
+    hub->Register(tp, "到達時間", &teleportArrivalTime_, {0.01f, 0.05f, 1.5f});
+    hub->Register(tp, "吹き飛ばし上方向成分", &teleportLaunchUp_, {0.1f, 0.0f, 30.0f});
+    hub->Register(tp, "叩きつけ威力", &teleportSlamKnockback_, {0.5f, 0.0f, 200.0f});
+    hub->Register(tp, "攻撃間合い(滑走停止距離)", &teleportFollowDistance_, {0.1f, 0.5f, 15.0f});
+    hub->Register(tp, "追撃保持時間(安全弁)", &teleportPinDuration_, {0.05f, 0.1f, 3.0f});
+    hub->Register(tp, "消える演出時間", &teleportVanishDuration_, {0.01f, 0.0f, 1.0f});
+    hub->Register(tp, "カメラ待機時間", &teleportCameraHold_, {0.01f, 0.0f, 2.0f});
 }

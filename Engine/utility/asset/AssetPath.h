@@ -78,6 +78,14 @@ inline std::string Json(const std::string &rel) { return AppRoot() + "jsons/" + 
 /// <summary>サウンドルート (末尾スラッシュ無し)。</summary>
 inline std::string SoundRoot() { return AppRoot() + "sounds"; }
 
+// --- config (アプリ専用: imgui のレイアウト ini 等) -----------------------
+
+/// <summary>設定ファイルルート (末尾スラッシュ無し)。プロジェクトルート直下の Application/Config。</summary>
+inline std::string ConfigRoot() { return "Application/Config"; }
+
+/// <summary>設定ファイルの実パス。rel は Config ルートからの相対パス (imgui_editor.ini 等)。</summary>
+inline std::string Config(const std::string &rel) { return "Application/Config/" + rel; }
+
 // --- ブラウザ用: 全走査ルート一覧 (エンジン→アプリの順) ------------------
 
 /// <summary>images を全走査するときの物理ルート一覧 (末尾スラッシュ無し)。</summary>

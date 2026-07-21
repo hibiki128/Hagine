@@ -85,6 +85,13 @@ class FollowCamera
     /// <returns>bool: 演出中なら true</returns>
     bool IsSkillCloseUpActive() const { return pSkillCutscene_->IsSkillCloseUpActive(); }
 
+    /// <summary>
+    /// カメラを現在位置に一定時間だけ留めてから、追従先へ補間なしでパッとスナップさせる。
+    /// 瞬間移動コンボで、旧カメラ位置から瞬間移動先のプレイヤーを一瞬見せてから切り替えるのに使う
+    /// </summary>
+    /// <param name="holdDuration">現在位置に留める時間（秒）</param>
+    void HoldThenSnap(float holdDuration) { holdTimer_ = holdDuration; }
+
     /// ===================================================
     /// パーツ向けアクセサ（各パーツが owner 経由で参照する）
     /// ===================================================
@@ -233,4 +240,7 @@ class FollowCamera
 
     float yaw_ = 0.0f;             ///< 現在のヨー角
     float manualYawSpeed_ = 0.04f; ///< 手動回転速度
+
+    // 瞬間移動コンボ用: >0 の間はカメラを現在位置に固定し、0になったら追従を再開してスナップする
+    float holdTimer_ = 0.0f; ///< カメラ固定の残り時間（秒）
 };

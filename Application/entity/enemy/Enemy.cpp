@@ -157,14 +157,17 @@ void Enemy::Update()
         const bool cameraCloseUp = followCamera && followCamera->IsSkillCloseUpActive();
         const bool frozenByOpponentSkill = cameraCloseUp && !combat_->IsBeamStaging();
 
-        // 回転を更新（敵をプレイヤーへ向ける）
-        if (!frozenByOpponentSkill)
+        // 被弾リアクション（ひるみ・吹き飛ばし）中はAIを止めるため、判定用に取得しておく
+        const bool reacting = status_->IsReacting();
+
+        // 回転を更新（敵をプレイヤーへ向ける）。リアクション中は硬直させて向きも固定する
+        if (!frozenByOpponentSkill && !reacting)
         {
             movement_->RotateUpdate();
         }
 
-        // ダミーモードでは自身の攻撃(コンボ)は行わない。カメラワーク中も攻撃させない
-        if (!dummyMode_ && !frozenByOpponentSkill)
+        // ダミーモードでは自身の攻撃(コンボ)は行わない。カメラワーク中・リアクション中も攻撃させない
+        if (!dummyMode_ && !frozenByOpponentSkill && !reacting)
         {
             combat_->ComboUpdate();
         }
@@ -175,11 +178,28 @@ void Enemy::Update()
         // ダメージリアクション処理（高速点滅のみ。傾き(のけぞり)演出は廃止）
         status_->UpdateDamageReact();
 
+        // 被弾リアクション（ひるみ・吹き飛ばし）の状態を進める
+        status_->UpdateReaction();
+
         // ビヘイビアツリーの更新（ダミーモードではAIを動かさない）
         if (frozenByOpponentSkill)
         {
             // プレイヤーの必殺技カメラワーク中は移動・重力ごと完全停止させ、その場に固定する
             movement_->Freeze();
+        }
+        else if (reacting)
+        {
+            // 被弾リアクション中はAI(BT)を止める。
+            // 吹き飛ばし(Blow)はノックバック速度で滑走させる（摩擦なし＝大きく飛ぶ）。
+            // ひるみ(Flinch)は横滑りを抑えるため摩擦を掛けてその場で硬直させる
+            if (status_->IsBlow())
+            {
+                movement_->ApplyGravity(dt);
+            }
+            else
+            {
+                movement_->ApplyDummyFriction(dt);
+            }
         }
         else if (rootNode_ && !dummyMode_)
         {
@@ -196,6 +216,8 @@ void Enemy::Update()
             else
             {
                 movement_->UpdateVelocityEase(dt);
+                // プレイヤーがピンチのときは後退・回り込みを上書きして強制接近する
+                movement_->ApplyPinchApproach(dt);
             }
 
             // 重力処理

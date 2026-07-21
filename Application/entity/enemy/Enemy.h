@@ -138,6 +138,19 @@ class Enemy : public Hagine::BaseObject
     /// <param name="power">ノックバック強度</param>
     void SetKnockback(const Hagine::Vector3 &direction, float power) { status_->SetKnockback(direction, power); }
 
+    /// <summary>
+    /// ノックバック速度を直接指定する（上方成分の固定加算なし）。
+    /// 瞬間移動コンボの最終段で地面へ叩きつける等に使う
+    /// </summary>
+    /// <param name="velocity">適用するノックバック速度</param>
+    void SetKnockbackDirect(const Hagine::Vector3 &velocity) { status_->SetKnockbackDirect(velocity); }
+
+    /// <summary>
+    /// 次に受けるダメージを「吹き飛ばし（Blow）」リアクションとして扱うよう予約する。
+    /// 瞬間移動コンボの吹き飛ばし段のヒット時にコライダーから呼ぶ
+    /// </summary>
+    void RequestBlowReaction() { status_->RequestBlowReaction(); }
+
     // ─── 戦闘（EnemyCombat） ───
     void SetComboAttack(bool flag) { combat_->SetComboAttack(flag); }
 

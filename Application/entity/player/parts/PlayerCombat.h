@@ -111,6 +111,30 @@ class PlayerCombat
     /// </summary>
     void RegisterParams();
 
+    /// ===================================================
+    /// 瞬間移動コンボ（吹き飛ばし→瞬間移動追撃→叩きつけ）
+    /// ===================================================
+
+    /// <summary>瞬間移動追撃中か（Playerの行動ロック判定用）</summary>
+    bool IsTeleporting() const { return teleportActive_; }
+
+    /// <summary>
+    /// 瞬間移動追撃の位置固定・向き・消える演出・カメラ制御を進める（毎フレーム呼ぶ）
+    /// </summary>
+    /// <param name="deltaTime">フレームの経過時間</param>
+    void UpdateTeleport(float deltaTime);
+
+    /// <summary>
+    /// 瞬間移動追撃を開始する（吹き飛ばし段のヒット時）。少量のエネルギーを消費する
+    /// </summary>
+    void StartTeleportChase();
+
+    /// <summary>瞬間移動追撃を継続する（追撃段のヒット時。貼り付き時間を再充填）</summary>
+    void RefreshTeleportChase();
+
+    /// <summary>瞬間移動追撃を終了する（叩きつけ段のヒット時・敵消滅・時間切れ）</summary>
+    void EndTeleportChase();
+
     /// <summary>
     /// このフレームに近接攻撃が発火していれば true を返し、その段名を out に格納する。
     /// 取得すると内部フラグはクリアされる（1発火につき1回だけ true）。入力表示UI用。
@@ -215,4 +239,30 @@ class PlayerCombat
     // 入力表示UI用: 近接攻撃の発火通知（発火コールバックで設定し、Consumeでクリア）
     bool meleeAttackFired_ = false;   ///< このフレームに近接攻撃が発火したか
     std::string lastMeleeAttackName_; ///< 直近に発火した近接攻撃の段名
+
+    /// <summary>
+    /// 敵を横方向へ大きく吹き飛ばし、その先へプレイヤーを先回り瞬間移動させる。
+    /// StartTeleportChase / RefreshTeleportChase から呼ぶ内部処理
+    /// </summary>
+    void TeleportAhead();
+
+    // ─── 瞬間移動コンボの調整パラメータ（GameParamで調整可）───
+    bool teleportEnabled_ = true;          ///< 瞬間移動コンボの有効フラグ
+    int teleportLaunchStage_ = 5;          ///< 大吹き飛ばし＋瞬間移動を始める段（1始まり）
+    int teleportSlamStage_ = 8;            ///< 地面へ叩きつける最終段（1始まり）
+    float teleportEnergyCost_ = 8.0f;      ///< 瞬間移動で消費するエネルギー
+    float teleportAheadDistance_ = 45.0f;  ///< 敵を吹き飛ばす距離＝プレイヤーが先回りする距離（速度=距離/到達時間なので距離を伸ばすほど速く遠くへ飛ぶ）
+    float teleportArrivalTime_ = 0.6f;     ///< 吹き飛ばした敵が先回り地点へ到達するまでの時間（秒。小さいほど速く吹き飛ぶ）
+    float teleportLaunchUp_ = 0.5f;        ///< 吹き飛ばし時の上方向成分（横方向主体・小さめ。大きいと追撃のたびに上へ漂う）
+    float teleportSlamKnockback_ = 45.0f;  ///< 叩きつけ段の下方向ノックバック強度
+    float teleportFollowDistance_ = 3.0f;  ///< 敵がこの距離まで到達したら滑走を止める（攻撃間合い）
+    float teleportPinDuration_ = 0.9f;     ///< 追撃を保つ最大時間（安全弁。次段が来なければ終了）
+    float teleportVanishDuration_ = 0.15f; ///< 消える演出の時間（秒）
+    float teleportCameraHold_ = 0.3f;      ///< カメラを旧位置に留める時間（秒）
+
+    // ─── 瞬間移動コンボの実行状態 ───
+    bool teleportActive_ = false;       ///< 瞬間移動追撃中フラグ
+    float teleportTimer_ = 0.0f;        ///< 最後のヒットからの経過時間
+    float teleportVanishTimer_ = 0.0f;  ///< 消える演出の経過時間
+    Hagine::Vector3 teleportDir_ = {0.0f, 0.0f, 1.0f}; ///< 吹き飛ばし＆先回りの方向（水平）
 };

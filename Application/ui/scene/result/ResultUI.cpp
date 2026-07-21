@@ -356,35 +356,55 @@ void ResultUI::Update()
 
 void ResultUI::UpdateNumberSprites()
 {
-    // 表示用の値を使用(カウントアップアニメーション用)
-    int totalSeconds = static_cast<int>(displayedTime_);
-    int minutes = totalSeconds / kSecondsPerMinute;
-    int seconds = totalSeconds % kSecondsPerMinute;
-
-    // 分の十の位
-    int minTens = minutes / kDigitDivisor;
-    sprites_[kMinTens]->sprite->SetUVPosition({static_cast<float>(minTens) * kUVStep, 0.0f});
-    if (minTens == kZeroValue)
+    if (isGameOver_)
     {
-        sprites_[kMinTens]->sprite->SetAlpha(kAlphaInvisible);
+        // ゲームオーバー時はクリアタイムを "--:--" 表示にする。
+        // 時間4桁のスプライトをダッシュ画像へ一度だけ差し替え、以降はUVを全面表示に固定する。
+        // （コロンはそのまま。カウントアップの数値は時間桁には反映しない）
+        if (!gameOverTimeApplied_)
+        {
+            for (int i : {kMinTens, kMinOnes, kSecTens, kSecOnes})
+            {
+                sprites_[i]->sprite->SetTexturePath(kDashTexturePath);
+                sprites_[i]->sprite->SetUVPosition({0.0f, 0.0f});
+                sprites_[i]->sprite->SetUVSize({1.0f, 1.0f});
+                sprites_[i]->sprite->SetAlpha(kAlphaVisible);
+            }
+            gameOverTimeApplied_ = true;
+        }
     }
     else
     {
-        sprites_[kMinTens]->sprite->SetAlpha(kAlphaVisible);
+        // 表示用の値を使用(カウントアップアニメーション用)
+        int totalSeconds = static_cast<int>(displayedTime_);
+        int minutes = totalSeconds / kSecondsPerMinute;
+        int seconds = totalSeconds % kSecondsPerMinute;
+
+        // 分の十の位
+        int minTens = minutes / kDigitDivisor;
+        sprites_[kMinTens]->sprite->SetUVPosition({static_cast<float>(minTens) * kUVStep, 0.0f});
+        if (minTens == kZeroValue)
+        {
+            sprites_[kMinTens]->sprite->SetAlpha(kAlphaInvisible);
+        }
+        else
+        {
+            sprites_[kMinTens]->sprite->SetAlpha(kAlphaVisible);
+        }
+
+        // 分の一の位
+        int minOnes = minutes % kDigitDivisor;
+        sprites_[kMinOnes]->sprite->SetUVPosition({static_cast<float>(minOnes) * kUVStep, 0.0f});
+        sprites_[kMinOnes]->sprite->SetAlpha(kAlphaVisible);
+
+        // 秒の十の位
+        int secTens = seconds / kDigitDivisor;
+        sprites_[kSecTens]->sprite->SetUVPosition({static_cast<float>(secTens) * kUVStep, 0.0f});
+
+        // 秒の一の位
+        int secOnes = seconds % kDigitDivisor;
+        sprites_[kSecOnes]->sprite->SetUVPosition({static_cast<float>(secOnes) * kUVStep, 0.0f});
     }
-
-    // 分の一の位
-    int minOnes = minutes % kDigitDivisor;
-    sprites_[kMinOnes]->sprite->SetUVPosition({static_cast<float>(minOnes) * kUVStep, 0.0f});
-    sprites_[kMinOnes]->sprite->SetAlpha(kAlphaVisible);
-
-    // 秒の十の位
-    int secTens = seconds / kDigitDivisor;
-    sprites_[kSecTens]->sprite->SetUVPosition({static_cast<float>(secTens) * kUVStep, 0.0f});
-
-    // 秒の一の位
-    int secOnes = seconds % kDigitDivisor;
-    sprites_[kSecOnes]->sprite->SetUVPosition({static_cast<float>(secOnes) * kUVStep, 0.0f});
 
     // HPの各桁を計算(表示用の値を使用)
     int hp = static_cast<int>(displayedHP_);
