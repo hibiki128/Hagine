@@ -52,8 +52,16 @@ void EnemyCombat::Init(Enemy *owner)
         // ビームアクティブ中かつ未ダメージ処理のとき一度だけダメージを与える
         if (other->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && pOwner_->GetTarget())
         {
+            Player *target = pOwner_->GetTarget();
+
+            // 必殺技被弾：ビームの進行方向（敵→プレイヤー）へ大きく吹き飛ばし、
+            // そのまま地面まで落下する大スタンにする。予約はダメージ適用より先に行う
+            Vector3 blowDir = target->GetWorldPosition() - pOwner_->GetWorldPosition();
+            blowDir.y = 0.0f;
+            target->Status().RequestSkillBlowReaction(blowDir);
+
             // 必殺技扱いにして、ガードされた場合はエネルギーを大きく削る
-            pOwner_->GetTarget()->SetDamage(kBeamDamage, false, true);
+            target->SetDamage(kBeamDamage, false, true);
             beamDamageDealt_ = true;
         }
     });
@@ -88,10 +96,28 @@ void EnemyCombat::Init(Enemy *owner)
                 currentAttackDamage_ = damage;
                 currentAttackKnockback_ = knockback;
                 currentAttackDuration_ = duration;
-                if (attackCollider_)
+                if (!attackCollider_)
                 {
-                    attackCollider_->Activate(damage, knockback, duration);
+                    return;
                 }
+
+                // 段番号（GetCurrentComboIndex() は実行中の段の0始まりインデックス）。
+                // 締めの段だけプレイヤーを地面へ叩きつけて吹き飛ばす
+                const int stage = punchCombo_.GetCurrentComboIndex() + 1;
+                EnemyMeleeHitReaction reaction = EnemyMeleeHitReaction::Normal;
+                float kb = knockback;
+                if (blowFinisherStage_ > 0 && stage == blowFinisherStage_)
+                {
+                    reaction = EnemyMeleeHitReaction::Slam;
+                    kb = blowFinisherKnockback_;
+                }
+                else if (blowLaunchStage_ > 0 && stage == blowLaunchStage_)
+                {
+                    reaction = EnemyMeleeHitReaction::Launch;
+                    kb = blowLaunchKnockback_;
+                }
+
+                attackCollider_->Activate(damage, kb, duration, 0.0f, reaction);
             });
 
         comboInitialized_ = true;
@@ -511,6 +537,12 @@ void EnemyCombat::SetVp(ViewProjection *vp)
 void EnemyCombat::RegisterParams()
 {
     beamCutscene_.RegisterParams("必殺演出(Enemy)");
+
+    auto *hub = GameParamHub::GetInstance();
+    hub->Register("Enemy", "コンボ吹き飛ばし段(0で無効)", &blowLaunchStage_, {0.1f, 0.0f, 8.0f});
+    hub->Register("Enemy", "コンボ吹き飛ばし強度", &blowLaunchKnockback_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Enemy", "コンボ叩きつけ段(0で無効)", &blowFinisherStage_, {0.1f, 0.0f, 8.0f});
+    hub->Register("Enemy", "コンボ叩きつけ強度", &blowFinisherKnockback_, {0.5f, 0.0f, 100.0f});
 }
 
 void EnemyCombat::DrawComboImGui()

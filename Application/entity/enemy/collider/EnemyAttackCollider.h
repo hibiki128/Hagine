@@ -10,6 +10,16 @@ class ColliderBase;
 }
 
 /// <summary>
+/// 近接ヒット時のプレイヤーのリアクション種別。コンボの段ごとに切り替える
+/// </summary>
+enum class EnemyMeleeHitReaction
+{
+    Normal, // 通常：前方＋やや上へ吹き飛ばす（ひるみ）
+    Launch, // 前方へ大きく吹き飛ばす（着地するまで行動不能）
+    Slam,   // 下方向へ叩きつける（着地するまで行動不能・復帰後はひるみ無効）
+};
+
+/// <summary>
 /// 敵前方に展開する攻撃判定コライダー
 /// PlayerAttackCollider と対称の設計で、手のモーション（見た目）とは完全に独立して機能する
 /// 攻撃ごとにダメージ・ノックバック・有効時間・遅延を個別設定できる
@@ -48,7 +58,9 @@ class EnemyAttackCollider
     /// <param name="knockbackPower">ノックバックの強さ</param>
     /// <param name="activeDuration">コライダーが有効な時間（秒）</param>
     /// <param name="activateDelay">攻撃開始からコライダーが有効になるまでの遅延（秒）</param>
-    void Activate(float damage, float knockbackPower, float activeDuration, float activateDelay = 0.0f);
+    /// <param name="reaction">ヒット時のプレイヤーリアクション種別</param>
+    void Activate(float damage, float knockbackPower, float activeDuration, float activateDelay = 0.0f,
+                  EnemyMeleeHitReaction reaction = EnemyMeleeHitReaction::Normal);
 
     /// <summary>
     /// 攻撃コライダーを強制無効化する
@@ -110,6 +122,7 @@ class EnemyAttackCollider
     // 現在の攻撃パラメータ
     float currentDamage_ = 0.0f;    // 現在のダメージ
     float currentKnockback_ = 0.0f; // 現在のノックバック
+    EnemyMeleeHitReaction currentReaction_ = EnemyMeleeHitReaction::Normal; // ヒット時のリアクション種別
 
     // タイマー管理
     float activeTimer_ = 0.0f;    // 有効経過時間

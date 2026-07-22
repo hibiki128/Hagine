@@ -6,6 +6,12 @@
 #include "scene/SceneManager.h"
 
 using namespace Hagine;
+
+namespace {
+// 叩きつけ（Slam）時、下方向の強さに対して前方へ流す割合
+constexpr float kSlamHorizontalRatio = 0.3f;
+} // namespace
+
 void EnemyAttackCollider::Init(Enemy *enemy, Player *player)
 {
     pEnemy_ = enemy;
@@ -76,13 +82,15 @@ void EnemyAttackCollider::DrawParticle(const ViewProjection &viewProjection)
 }
 
 void EnemyAttackCollider::Activate(float damage, float knockbackPower,
-                                   float activeDuration, float activateDelay)
+                                   float activeDuration, float activateDelay,
+                                   EnemyMeleeHitReaction reaction)
 {
     // 既存の判定をリセット
     Deactivate();
 
     currentDamage_ = damage;
     currentKnockback_ = knockbackPower;
+    currentReaction_ = reaction;
     activeDuration_ = activeDuration;
     hasHitThisActivation_ = false;
 
@@ -134,12 +142,36 @@ void EnemyAttackCollider::OnCollision(ColliderBase *other)
     // 連続ヒット防止
     hasHitThisActivation_ = true;
 
+    // 吹き飛ばし予約はダメージ適用より先に行う（DamageUpdateで参照されるため）
+    Vector3 knockbackDir = pEnemy_->GetForward();
+    switch (currentReaction_)
+    {
+    case EnemyMeleeHitReaction::Slam:
+    {
+        // 下方向へ叩きつける（前方に少しだけ流しつつ強く下へ）。
+        // 起き上がり直後にそのまま殴られ続けないよう、復帰後はしばらくひるまない
+        Vector3 slamVel = {
+            knockbackDir.x * currentKnockback_ * kSlamHorizontalRatio,
+            -currentKnockback_,
+            knockbackDir.z * currentKnockback_ * kSlamHorizontalRatio,
+        };
+        pPlayer_->RequestBlowReaction(true);
+        pPlayer_->SetKnockbackDirect(slamVel);
+        break;
+    }
+    case EnemyMeleeHitReaction::Launch:
+        // 前方へ大きく吹き飛ばす（着地するまで行動不能）
+        pPlayer_->RequestBlowReaction();
+        pPlayer_->SetKnockback(knockbackDir, currentKnockback_);
+        break;
+    case EnemyMeleeHitReaction::Normal:
+    default:
+        pPlayer_->SetKnockback(knockbackDir, currentKnockback_);
+        break;
+    }
+
     // ダメージ適用
     pPlayer_->SetDamage(currentDamage_);
-
-    // ノックバック適用
-    Vector3 knockbackDir = pEnemy_->GetForward();
-    pPlayer_->SetKnockback(knockbackDir, currentKnockback_);
 
     // ヒットエフェクトの発生
     if (hitEmitter_)

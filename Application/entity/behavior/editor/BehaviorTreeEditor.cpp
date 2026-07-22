@@ -153,6 +153,13 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
             static_cast<int>(nd.param2),
             nd.param3);
         break;
+    case EditorNodeType::ActionMeleeChaseCombo:
+        runtimeNode = std::make_shared<EnemyMeleeChaseComboNode>(
+            nd.param > 0.0f ? nd.param : 6.0f,
+            nd.param2 > 0.0f ? nd.param2 : 4.0f,
+            nd.param3 > 0.0f ? nd.param3 : 0.3f,
+            nd.param4 > 0.0f ? nd.param4 : 28.0f);
+        break;
     case EditorNodeType::ActionBurstShoot:
         runtimeNode = std::make_shared<EnemyBurstShootNode>(
             nd.param > 0.0f ? nd.param : 0.2f,
@@ -267,7 +274,8 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                    nd.type == EditorNodeType::ConditionEnergyHigh ||
                    nd.type == EditorNodeType::ActionGuard ||
                    nd.type == EditorNodeType::ConditionPlayerAttacking ||
-                   nd.type == EditorNodeType::ActionBeamUltimate);
+                   nd.type == EditorNodeType::ActionBeamUltimate ||
+                   nd.type == EditorNodeType::ActionMeleeChaseCombo);
 
     if (!isLeaf)
     {
@@ -595,6 +603,13 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
     {
         Parameter = 1.5f; // 溜め時間(秒)
     }
+    else if (type == EditorNodeType::ActionMeleeChaseCombo)
+    {
+        Parameter = 6.0f;  // 最大継続時間(秒)
+        Parameter2 = 4.0f; // 攻撃を出す距離
+        Parameter3 = 0.3f; // コンボ1段の間隔(秒)
+        Parameter4 = 28.0f; // 追跡速度
+    }
 }
 
 EditorLink::EditorLink(int id, ed::PinId start, ed::PinId end)
@@ -725,6 +740,8 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type)
         return "プレイヤーが攻撃的(Rush/スキル/コンボ中)かチェックする";
     case EditorNodeType::ActionBeamUltimate:
         return "ビーム必殺技: 溜め後にlightningBoltビームを発射 param=溜め時間(秒)";
+    case EditorNodeType::ActionMeleeChaseCombo:
+        return "近接追撃コンボ: 詰めながらコンボを出し切る param=最大時間 param2=攻撃距離 param3=段の間隔 param4=追跡速度";
     default:
         return "説明なし";
     }
@@ -831,6 +848,13 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         break;
     case EditorNodeType::ActionComboFull:
         runtimeNode = std::make_shared<EnemyComboFullNode>(eNode.Parameter > 0.0f ? eNode.Parameter : 0.5f, static_cast<int>(eNode.Parameter2), eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionMeleeChaseCombo:
+        runtimeNode = std::make_shared<EnemyMeleeChaseComboNode>(
+            eNode.Parameter > 0.0f ? eNode.Parameter : 6.0f,
+            eNode.Parameter2 > 0.0f ? eNode.Parameter2 : 4.0f,
+            eNode.Parameter3 > 0.0f ? eNode.Parameter3 : 0.3f,
+            eNode.Parameter4 > 0.0f ? eNode.Parameter4 : 28.0f);
         break;
     case EditorNodeType::ActionBurstShoot:
         runtimeNode = std::make_shared<EnemyBurstShootNode>(eNode.Parameter > 0.0f ? eNode.Parameter : 0.2f, eNode.Parameter2 > 0.0f ? static_cast<int>(eNode.Parameter2) : 3, eNode.Parameter3 > 0.0f ? eNode.Parameter3 : 0.5f, eNode.Parameter4, eNode.Parameter5 >= 1.0f);
@@ -1731,6 +1755,7 @@ void BehaviorTreeEditor::OnImGuiRender()
             addBtn("連射", EditorNodeType::ActionBurstShoot);
             addBtn("コンボ(1段)", EditorNodeType::ActionComboStep);
             addBtn("コンボ(全段)", EditorNodeType::ActionComboFull);
+            addBtn("近接追撃コンボ", EditorNodeType::ActionMeleeChaseCombo);
             addBtn("溜め攻撃", EditorNodeType::ActionChargeAttack);
             addBtn("重スキル(コンボ+連射)", EditorNodeType::ActionUltimate);
             addBtn("ビーム必殺技", EditorNodeType::ActionBeamUltimate);
@@ -2050,6 +2075,14 @@ void BehaviorTreeEditor::DrawNodeParameters(EditorNode &node)
 
     case EditorNodeType::ActionBeamUltimate:
         ImGui::DragFloat("溜め時間(s)", &node.Parameter, 0.05f, 0.0f, 10.0f, "%.2f");
+        break;
+
+    case EditorNodeType::ActionMeleeChaseCombo:
+        ImGui::DragFloat("最大継続時間(s)", &node.Parameter, 0.05f, 0.5f, 20.0f, "%.2f");
+        ImGui::DragFloat("攻撃を出す距離", &node.Parameter2, 0.1f, 1.0f, 30.0f, "%.1f");
+        ImGui::DragFloat("コンボ1段の間隔(s)", &node.Parameter3, 0.02f, 0.05f, 2.0f, "%.2f");
+        ImGui::DragFloat("追跡速度", &node.Parameter4, 0.5f, 1.0f, 80.0f, "%.1f");
+        ImGui::TextDisabled("間合いを外されても追い直してコンボを継続します");
         break;
 
     default:

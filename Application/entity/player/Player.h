@@ -207,6 +207,19 @@ class Player : public Hagine::BaseObject
     /// <param name="power">ノックバック強度</param>
     void SetKnockback(const Hagine::Vector3 &direction, float power) { status_->SetKnockback(direction, power); }
 
+    /// <summary>
+    /// ノックバック速度を直接指定する（上方成分の固定加算なし）。
+    /// 敵コンボの叩きつけ段などに使う
+    /// </summary>
+    /// <param name="velocity">適用するノックバック速度</param>
+    void SetKnockbackDirect(const Hagine::Vector3 &velocity) { status_->SetKnockbackDirect(velocity); }
+
+    /// <summary>
+    /// 次に受けるダメージを「吹き飛ばし（Blow）」リアクションとして扱うよう予約する
+    /// </summary>
+    /// <param name="grantFlinchImmunity">復帰直後にひるみ無効時間を与えるなら true</param>
+    void RequestBlowReaction(bool grantFlinchImmunity = false) { status_->RequestBlowReaction(grantFlinchImmunity); }
+
     /// ===================================================
     /// 入力表示UI用
     /// ===================================================

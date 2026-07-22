@@ -205,8 +205,8 @@ void Player::Update()
 
         status_->DamageUpdate();
 
-        // ひるみ（ヒットスタン）残り時間を進める
-        status_->UpdateHitStun();
+        // 被弾リアクション（ひるみ・吹き飛ばし・必殺技スタン）を進める
+        status_->UpdateReaction();
 
         if (started_ && !isPause_)
         {
@@ -249,13 +249,17 @@ void Player::Update()
                 // 必殺技モーションや死亡時の倒れる向きがずれる）
                 visual_->UpdateFlyLean();
             }
-            else if (status_->IsHitStun())
+            else if (status_->IsReacting())
             {
-                // ひるみ中は行動不能。アニメーションだけ進めて硬直を表現する。
-                // 入力減速が効かないので、横滑りが伸びすぎないよう水平速度を減衰させる
-                Hagine::Vector3 &vel = movement_->GetVelocity();
-                vel.x *= kHitStunHorizontalDamping;
-                vel.z *= kHitStunHorizontalDamping;
+                // 被弾リアクション中は行動不能。アニメーションだけ進めて硬直を表現する。
+                // 吹き飛ばし中の速度制御（減速・落下）は PlayerStatus::UpdateReaction が担当するので、
+                // ここでは横滑りが伸びすぎないようひるみ中だけ水平速度を減衰させる
+                if (!status_->IsBlow())
+                {
+                    Hagine::Vector3 &vel = movement_->GetVelocity();
+                    vel.x *= kHitStunHorizontalDamping;
+                    vel.z *= kHitStunHorizontalDamping;
+                }
                 visual_->UpdateAnimation();
                 visual_->UpdateFlyLean();
             }
