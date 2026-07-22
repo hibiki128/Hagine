@@ -20,6 +20,10 @@ void PlayerVisual::Init(Player *owner)
     // ───────────────────────────────────────────
     animationController_.Initialize(pOwner_->GetObject3d());
 
+    // 射撃モーションは上半身だけに適用する（走りながら撃っても下半身は走行モーションのまま）。
+    // 背骨の根から上（胴・腕・首・頭）が対象で、腰と脚は移動モーション側が担当する
+    animationController_.SetLayerMaskRoot(kUpperBodyRootJoint);
+
     // ループあり：待機・移動など継続する動作
     animationController_.RegisterClip("Idle", "animation/Player/Idle_Ground.gltf", true);
     animationController_.RegisterClip("FlyIdle", "animation/Player/Idle_Flying.gltf", true);
@@ -46,10 +50,12 @@ void PlayerVisual::Init(Player *owner)
     animationController_.RegisterClip("Smash", "animation/Player/Smash.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Shot", "animation/Player/Shot.gltf", false, 1.0f, 0.1f);
 
-    // 被弾リアクション（ひるみ）用のクリップ。被弾ごとにランダムで再生する
+    // 被弾リアクション：ひるみ（Hitting）と吹き飛ばし（BlowBack→着地でBlowAfter）
     animationController_.RegisterClip("Hitting_1", "animation/Player/Hitting_1.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Hitting_2", "animation/Player/Hitting_2.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Hitting_3", "animation/Player/Hitting_3.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("BlowBack", "animation/Player/BlowBack.gltf", true, 1.0f, 0.1f);
+    animationController_.RegisterClip("BlowAfter", "animation/Player/BlowAfter.gltf", false, 1.0f, 0.1f);
 
     // JSONに保存済みの調整値があれば読み込む
     animationController_.LoadClips("AnimationController", "PlayerClips");
@@ -59,20 +65,31 @@ void PlayerVisual::UpdateAnimation()
 {
     // ──────────────────────────────────────────
     // 必殺技（魔貫攻撃）中：発動前演出〜ビーム終了まで一続きの専用モーションを再生
-    // （構え→フレーム30付近で発射→フレーム80で撃ち終わりの構成）
     // ──────────────────────────────────────────
     if (pOwner_->Combat().IsSkillStaging() || pOwner_->GetIsSkillActive())
     {
+        // 全身モーションを見せる場面では射撃の上半身レイヤーを解除する
+        animationController_.StopLayer(kShotLayerFade);
         animationController_.Play("MakanSkill");
         return;
     }
 
     // ──────────────────────────────────────────
-    // ひるみ（ヒットスタン）中：Hitting モーションを再生（コンボ・ステートより優先）
+    // 被弾リアクション：ひるみ / 吹き飛ばし（コンボ・ステートより優先）
     // ──────────────────────────────────────────
-    if (pOwner_->Status().IsHitStun())
+    PlayerStatus &st = pOwner_->Status();
+    if (st.IsReacting())
     {
-        animationController_.Play("Hitting_" + std::to_string(pOwner_->Status().GetFlinchAnimIndex()));
+        animationController_.StopLayer(kShotLayerFade);
+        if (st.IsBlow())
+        {
+            // 吹き飛ばされ中はBlowBack、地面に落ちたらBlowAfter
+            animationController_.Play(st.IsBlowLanded() ? "BlowAfter" : "BlowBack");
+        }
+        else
+        {
+            animationController_.Play("Hitting_" + std::to_string(st.GetFlinchAnimIndex()));
+        }
         return;
     }
 
@@ -84,9 +101,10 @@ void PlayerVisual::UpdateAnimation()
     // ──────────────────────────────────────────
     if (punchCombo.IsComboActive())
     {
-        // GetCurrentComboIndex() は「次に実行する」インデックスを返す。
-        // ExecuteComboAttack() が呼ばれるとインクリメントされるため、
-        // 現在再生中の段 = nextIdx - 1（0 のときは最終段 Slam の後待機中）
+        // 近接は全身モーション（移動もロックされる）。射撃の上半身レイヤーが残っていたら解除する
+        animationController_.StopLayer(kShotLayerFade);
+
+        // GetCurrentComboIndex() は「次に実行する」段なので、再生中の段 = nextIdx - 1
         int nextIdx = punchCombo.GetCurrentComboIndex();
         int comboLen = punchCombo.GetComboLength();
         int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
@@ -109,16 +127,11 @@ void PlayerVisual::UpdateAnimation()
     // ──────────────────────────────────────────
     const std::string stateName = pOwner_->GetCurrentStateName();
 
-    // ──────────────────────────────────────────
-    // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
-    // （発射のたびに PlayShotAnimation() で先頭から再生し直される）。
-    // ただしガード中は防御姿勢を優先する（射撃直後にガードしたとき
-    // ガードアニメが適用されない問題の対策）
-    // ──────────────────────────────────────────
-    if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished() &&
-        stateName != "Guard")
+    // 射撃モーションは上半身レイヤーなので全身クリップの切り替えは続けてよいが、
+    // ガード中は防御姿勢を優先するのでレイヤーを解除する
+    if (stateName == "Guard" && animationController_.IsLayerPlaying())
     {
-        return;
+        animationController_.StopLayer(kShotLayerFade);
     }
 
     if (stateName == "Idle")
@@ -166,9 +179,7 @@ void PlayerVisual::UpdateAnimation()
     }
     else if (stateName == "FlyMove")
     {
-        // 浮遊移動 ― 後退・上昇・下降は Idle_Flying、前進・左右移動は Running_Fly を使う。
-        // 縦移動(|velocity.y| > 閾値)または後退(moveDir == Behind)は、仰向け気味の
-        // Idle_Flying の方がモーションとして自然なため優先する
+        // 浮遊移動 ― 縦移動・後退は仰向け気味の Idle_Flying、前進・左右移動は Running_Fly
         bool verticalMove = std::abs(pOwner_->GetVelocity().y) > kFlyVerticalAnimThreshold;
         bool movingBackward = (pOwner_->GetMoveDirection() == MoveDirection::Behind);
         if (verticalMove || movingBackward)
@@ -204,16 +215,9 @@ void PlayerVisual::PlayDeathAnimation()
 
 void PlayerVisual::PlayShotAnimation()
 {
-    // 同一クリップ再生中の Play() は無視されるため、既に Shot 中なら先頭へ巻き戻して再生し直す
-    if (animationController_.GetCurrentClipName() == "Shot")
-    {
-        animationController_.SetTime(0.0f);
-        animationController_.SetPaused(false); // 再生終了で停止していた場合に再開する
-    }
-    else
-    {
-        animationController_.Play("Shot");
-    }
+    // 上半身レイヤーとして再生する。連射時は PlayLayer 側が先頭へ巻き戻し、
+    // 撃ち終わり（ループなしクリップの終端）でレイヤーは自動的に解除される
+    animationController_.PlayLayer("Shot", kShotLayerFade);
 }
 
 bool PlayerVisual::IsDeathAnimationFinished() const
@@ -225,8 +229,8 @@ bool PlayerVisual::IsDeathAnimationFinished() const
 
 bool PlayerVisual::IsShotAnimationPlaying() const
 {
-    return animationController_.GetCurrentClipName() == "Shot" &&
-           !animationController_.IsFinished();
+    // 上半身レイヤーを使うのは射撃だけなので、レイヤー再生中＝射撃中
+    return animationController_.IsLayerPlaying();
 }
 
 void PlayerVisual::UpdateFlyLean()
@@ -246,9 +250,8 @@ void PlayerVisual::UpdateFlyLean()
         Vector3 horizontalVel = {velocity.x, 0.0f, velocity.z};
         float speed = horizontalVel.Length();
 
-        // 体の「水平」な前方・右方向（ロックオンの上下ピッチを除いた安定フレーム）。
-        // 傾きはこの体の実ワールド軸まわりに作ることで、向きが変わっても
-        // 「後ろへ倒れる」方向が一定になる（ワールド固定軸だと向きでズレる）
+        // 体の水平な前方・右方向（ロックオンの上下ピッチを除いた軸）。
+        // この軸まわりに傾けることで、向きが変わっても倒れる方向が一定になる
         Vector3 fwdAxis = {pOwner_->GetForward().x, 0.0f, pOwner_->GetForward().z};
         Vector3 rightAxis = {pOwner_->GetRight().x, 0.0f, pOwner_->GetRight().z};
         float fwdLen = fwdAxis.Length();

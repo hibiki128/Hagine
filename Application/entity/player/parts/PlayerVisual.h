@@ -94,6 +94,11 @@ class PlayerVisual
 
     static constexpr float kFlyVerticalAnimThreshold = 0.5f; ///< 飛行中、上昇・下降アニメに切り替えるY速度の閾値
 
+    /// 上半身レイヤーの根ジョイント。ここから上（胴・腕・首・頭）が射撃モーションで上書きされ、
+    /// 腰（Hips）と脚は移動モーション側が担当する
+    static constexpr const char *kUpperBodyRootJoint = "mixamorig:Spine";
+    static constexpr float kShotLayerFade = 0.1f; ///< 射撃レイヤーの出入りにかける時間（秒）
+
     Player *pOwner_ = nullptr; ///< 所有者のプレイヤー
 
     Hagine::AnimationController animationController_; ///< アニメーション制御

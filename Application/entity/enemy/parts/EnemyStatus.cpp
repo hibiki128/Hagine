@@ -22,7 +22,10 @@ void EnemyStatus::DamageUpdate()
 
     if (damage_ <= kNoDamage)
     {
-        blowPending_ = false; // ダメージが無いフレームに予約が残らないようにする
+        blowPending_ = false;              // ダメージが無いフレームに予約が残らないようにする
+        blowGrantsFlinchImmunity_ = false; // 予約と同時に付与指定も落とす
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
         // ダメージがなくてもノックバックだけ適用する場合に備えてチェック
         if (hasKnockback_)
         {
@@ -43,15 +46,47 @@ void EnemyStatus::DamageUpdate()
         return;
     }
 
-    // ダメージ計算（ガード時は軽減し、エネルギーを消費する：プレイヤーと同様）
+    // ダメージ計算（ガード時は軽減し、エネルギーを消費する。必殺技は消費量が大きい）
     float actualDamage = damage_;
     if (isGuarding_)
     {
         actualDamage *= kGuardDamageMultiplier;
-        ConsumeEnergy(kGuardEnergyCost);
+        // 残量が足りなくてもゼロまで削る（必殺技のガードを無償にしない）
+        DrainEnergy(damageIsSkill_ ? kGuardSkillEnergyCost : kGuardEnergyCost);
     }
+
+    // 必殺技被弾スタン中は行動できず無防備なので、追撃のダメージを軽減する
+    const bool inSkillBlow = (reactState_ == EnemyReactState::SkillBlow) && !skillBlowPending_;
+    if (inSkillBlow)
+    {
+        actualDamage *= skillBlowDamageMultiplier_;
+    }
+
     HP_ -= actualDamage;
     damage_ = kNoDamage;
+
+    // スタン中の追撃は落下の軌道を乱さないよう、ノックバックもリアクション変更も行わない
+    if (inSkillBlow)
+    {
+        hasKnockback_ = false;
+        pendingKnockback_ = {0.0f, 0.0f, 0.0f};
+        blowPending_ = false;
+        blowGrantsFlinchImmunity_ = false;
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
+        StartDamageReact();
+        return;
+    }
+
+    // 必殺技被弾：吹き飛ばして落下スタンへ移行する（他のリアクションより優先）
+    if (skillBlowPending_)
+    {
+        StartSkillBlow();
+        StartDamageReact();
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
+        return;
+    }
 
     // ノックバック適用（ガード中は軽減）
     if (hasKnockback_)
@@ -86,22 +121,135 @@ void EnemyStatus::DamageUpdate()
             reactState_ = EnemyReactState::Blow;
             blowLanded_ = false;
             blowAfterTimer_ = 0.0f;
-            blowTimer_ = 0.0f; // 空中滞留時の強制復帰タイマーを被弾ごとにリセット
+            blowTimer_ = 0.0f;         // 空中滞留時の強制復帰タイマーを被弾ごとにリセット
+            flinchImmuneTimer_ = 0.0f; // 吹き飛ばし中は無効時間を進めない（復帰時に張り直す）
+            blowImmunityArmed_ = blowGrantsFlinchImmunity_;
         }
-        else
+        else if (flinchImmuneTimer_ <= 0.0f)
         {
-            // ひるみ：時間経過で回復。被弾ごとにアニメをランダム選択
+            // ひるみ：時間経過で回復。被弾ごとにアニメをランダム選択（射撃は近接より短い）
             reactState_ = EnemyReactState::Flinch;
-            reactTimer_ = flinchDuration_;
+            reactTimer_ = damageIsShot_ ? flinchDuration_ * shotFlinchScale_ : flinchDuration_;
             flinchAnimIndex_ = 1 + std::rand() % 3;
         }
     }
     blowPending_ = false;
+    blowGrantsFlinchImmunity_ = false;
+    damageIsShot_ = false;
+    damageIsSkill_ = false;
+}
+
+bool EnemyStatus::ConsumeGuardDeflect()
+{
+    if (!isGuarding_)
+    {
+        return false;
+    }
+    // 弾き返しも通常のガードと同じだけエネルギーを消費する
+    ConsumeEnergy(kGuardEnergyCost);
+    return true;
+}
+
+void EnemyStatus::RequestSkillBlowReaction(const Vector3 &direction)
+{
+    skillBlowPending_ = true;
+
+    Vector3 dir = {direction.x, 0.0f, direction.z};
+    const float len = std::sqrt(dir.x * dir.x + dir.z * dir.z);
+    if (len < 0.001f)
+    {
+        // 方向が取れないときは敵の背面方向へ飛ばす
+        dir = pOwner_->GetForward();
+        dir.y = 0.0f;
+        dir = {-dir.x, 0.0f, -dir.z};
+        const float fallbackLen = std::sqrt(dir.x * dir.x + dir.z * dir.z);
+        if (fallbackLen < 0.001f)
+        {
+            skillBlowDirection_ = {0.0f, 0.0f, 0.0f};
+            return;
+        }
+        dir.x /= fallbackLen;
+        dir.z /= fallbackLen;
+    }
+    else
+    {
+        dir.x /= len;
+        dir.z /= len;
+    }
+    skillBlowDirection_ = dir;
+}
+
+void EnemyStatus::StartSkillBlow()
+{
+    EnemyMovement &mv = pOwner_->Movement();
+
+    reactState_ = EnemyReactState::SkillBlow;
+    skillBlowTimer_ = 0.0f;
+    blowLanded_ = false;
+    blowAfterTimer_ = 0.0f;
+    blowPending_ = false;
+    blowGrantsFlinchImmunity_ = false;
+    skillBlowPending_ = false;
+
+    // 起き上がり直後の連続被弾を防ぐため、復帰後は必ずひるみ無効時間を与える
+    blowImmunityArmed_ = true;
+    flinchImmuneTimer_ = 0.0f;
+
+    // 予約済みのノックバックは使わず、必殺技専用の吹き飛ばし速度で上書きする
+    hasKnockback_ = false;
+    pendingKnockback_ = {0.0f, 0.0f, 0.0f};
+
+    Vector3 &velocity = mv.GetVelocity();
+    velocity.x = skillBlowDirection_.x * skillBlowSpeed_;
+    velocity.z = skillBlowDirection_.z * skillBlowSpeed_;
+    velocity.y = skillBlowRiseSpeed_; // 一度浮かせてから落下させる
+
+    // BTの移動イージング・飛行状態を打ち切り、重力で落ちる状態にする
+    mv.CancelVelocityEase();
+    mv.SetIsFlying(false);
+    mv.GetIsGrounded() = false;
+
+    // 重力加速度が未設定（0）でも必ず落下するようフォールバックを用意する
+    float gravity = std::abs(mv.GetFallSpeed());
+    if (gravity < 0.001f)
+    {
+        gravity = kSkillBlowFallbackGravity;
+    }
+    mv.GetAcceleration().y = -gravity;
+}
+
+void EnemyStatus::RecoverFromBlow(bool grantFlinchImmunity)
+{
+    // 残速度で飛び続けたり上方向へ漂ったりしないよう、速度を消してから戻す
+    reactState_ = EnemyReactState::None;
+    pOwner_->SetVelocity({0.0f, 0.0f, 0.0f});
+
+    if (grantFlinchImmunity)
+    {
+        flinchImmuneTimer_ = flinchImmuneDuration_;
+    }
+    blowImmunityArmed_ = false;
 }
 
 void EnemyStatus::UpdateReaction()
 {
     const float dt = Frame::DeltaTime();
+
+    // ひるみ無効時間の消化
+    if (flinchImmuneTimer_ > 0.0f)
+    {
+        flinchImmuneTimer_ -= dt;
+        if (flinchImmuneTimer_ < 0.0f)
+        {
+            flinchImmuneTimer_ = 0.0f;
+        }
+    }
+
+    if (reactState_ == EnemyReactState::SkillBlow)
+    {
+        UpdateSkillBlow(dt);
+        return;
+    }
 
     if (reactState_ == EnemyReactState::Flinch)
     {
@@ -115,16 +263,11 @@ void EnemyStatus::UpdateReaction()
     {
         if (!blowLanded_)
         {
-            // 空中に取り残されたまま吹き飛ばされっぱなしにならないよう、着地しなくても
-            // 一定時間で強制復帰させる安全策。コンボが続く間は被弾ごとに blowTimer_ が
-            // リセットされるため、殴られ続けている間はこのタイマーで復帰することはない
+            // 空中に取り残されないよう、着地しなくても一定時間で強制復帰させる安全策
             blowTimer_ += dt;
             if (blowTimer_ >= blowMaxDuration_)
             {
-                // 残った吹き飛ばし速度で飛び続けたり、上方向へ漂い続けたりしないよう
-                // 速度を消してから通常状態へ戻す
-                reactState_ = EnemyReactState::None;
-                pOwner_->SetVelocity({0.0f, 0.0f, 0.0f});
+                RecoverFromBlow(blowImmunityArmed_);
                 return;
             }
 
@@ -140,11 +283,43 @@ void EnemyStatus::UpdateReaction()
             blowAfterTimer_ -= dt;
             if (blowAfterTimer_ <= 0.0f)
             {
-                // 復帰時に残速度を消して、横滑りや上方向への漂いを防ぐ
-                reactState_ = EnemyReactState::None;
-                pOwner_->SetVelocity({0.0f, 0.0f, 0.0f});
+                RecoverFromBlow(blowImmunityArmed_);
             }
         }
+    }
+}
+
+void EnemyStatus::UpdateSkillBlow(float deltaTime)
+{
+    Vector3 &velocity = pOwner_->Movement().GetVelocity();
+
+    if (!blowLanded_)
+    {
+        skillBlowTimer_ += deltaTime;
+
+        // 横移動の勢いを保ったまま徐々に減速させる（フレームレート非依存の指数減衰）
+        const float damping = std::pow(skillBlowHorizontalRetain_, deltaTime);
+        velocity.x *= damping;
+        velocity.z *= damping;
+
+        if (pOwner_->GetIsGrounded())
+        {
+            // 地面に落ちたら着地硬直（BlowAfter）へ
+            blowLanded_ = true;
+            blowAfterTimer_ = blowAfterDuration_;
+        }
+        else if (skillBlowTimer_ >= skillBlowMaxDuration_)
+        {
+            // 地形の穴などで落ち続けた場合の安全策
+            RecoverFromBlow(blowImmunityArmed_);
+        }
+        return;
+    }
+
+    blowAfterTimer_ -= deltaTime;
+    if (blowAfterTimer_ <= 0.0f)
+    {
+        RecoverFromBlow(blowImmunityArmed_);
     }
 }
 
@@ -178,6 +353,12 @@ bool EnemyStatus::ConsumeEnergy(float amount)
         return true;
     }
     return false;
+}
+
+void EnemyStatus::DrainEnergy(float amount)
+{
+    energy_ = (energy_ > amount) ? energy_ - amount : 0.0f;
+    timeSinceLastShot_ = kTimerReset;
 }
 
 void EnemyStatus::RecoverEnergy()
@@ -244,7 +425,12 @@ void EnemyStatus::ResetForRevive()
     isDamageReact_ = false;
     reactState_ = EnemyReactState::None;
     blowPending_ = false;
+    blowGrantsFlinchImmunity_ = false;
+    blowImmunityArmed_ = false;
     blowLanded_ = false;
+    skillBlowPending_ = false;
+    skillBlowTimer_ = 0.0f;
+    flinchImmuneTimer_ = 0.0f;
 }
 
 void EnemyStatus::RegisterParams()
@@ -255,6 +441,13 @@ void EnemyStatus::RegisterParams()
     hub->Register("Enemy", "エネルギー回復速度", &energyRecoveryRate_, {0.1f, 0.0f, 50.0f});
     hub->Register("Enemy", "被弾リアクション時間", &damageReactDuration_, {0.05f, 0.0f, 3.0f});
     hub->Register("Enemy", "ひるみ時間", &flinchDuration_, {0.01f, 0.0f, 2.0f});
+    hub->Register("Enemy", "射撃被弾のひるみ倍率", &shotFlinchScale_, {0.01f, 0.0f, 1.0f});
+    hub->Register("Enemy", "吹き飛ばし復帰後のひるみ無効時間", &flinchImmuneDuration_, {0.05f, 0.0f, 5.0f});
     hub->Register("Enemy", "吹き飛ばし着地後硬直", &blowAfterDuration_, {0.01f, 0.0f, 2.0f});
     hub->Register("Enemy", "吹き飛ばし最大時間", &blowMaxDuration_, {0.05f, 0.1f, 5.0f});
+    hub->Register("Enemy", "必殺技被弾の吹き飛び速度", &skillBlowSpeed_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Enemy", "必殺技被弾の浮き上がり速度", &skillBlowRiseSpeed_, {0.5f, 0.0f, 50.0f});
+    hub->Register("Enemy", "必殺技被弾の横速度残存率(1秒)", &skillBlowHorizontalRetain_, {0.01f, 0.001f, 1.0f});
+    hub->Register("Enemy", "必殺技被弾スタン最大時間", &skillBlowMaxDuration_, {0.1f, 0.5f, 10.0f});
+    hub->Register("Enemy", "必殺技被弾中の被ダメージ倍率", &skillBlowDamageMultiplier_, {0.01f, 0.0f, 1.0f});
 }

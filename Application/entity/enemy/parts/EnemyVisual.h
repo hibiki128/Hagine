@@ -71,6 +71,11 @@ class EnemyVisual
     static constexpr float kBackwardDotThreshold = 0.5f;     ///< 後退とみなす（前方ベクトルとの内積）の閾値
     static constexpr float kMinRotationDistance = 0.001f;    ///< 進行方向判定の最小距離
 
+    /// 上半身レイヤーの根ジョイント。ここから上（胴・腕・首・頭）が射撃モーションで上書きされ、
+    /// 腰（Hips）と脚は移動モーション側が担当する
+    static constexpr const char *kUpperBodyRootJoint = "mixamorig:Spine";
+    static constexpr float kShotLayerFade = 0.1f; ///< 射撃レイヤーの出入りにかける時間（秒）
+
     Enemy *pOwner_ = nullptr; ///< 所有者の敵
 
     Hagine::AnimationController animationController_; ///< アニメーション制御（プレイヤーと同一クリップ構成）

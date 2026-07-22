@@ -32,8 +32,7 @@ void Enemy::Init(const std::string objectName)
 {
     BaseObject::Init(objectName);
 
-    // プレイヤーと同じスケルトン付きモデルを使い、同一クリップでアニメーションさせる。
-    // モデル素体のマテリアル色は赤なので、敵はそのまま赤で表示される
+    // プレイヤーと同じスケルトン付きモデルを使い、同一クリップでアニメーションさせる
     BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
     BaseObject::SetOffset({0.0f, kModelOffsetY, 0.0f}); // 描画オフセット（足が地面につくように）
     BaseObject::GetLocalScale() = {4.0f, 4.0f, 4.0f};
@@ -70,6 +69,12 @@ void Enemy::Init(const std::string objectName)
 
     deathStaging_ = std::make_unique<DeathStaging>();
 
+    dashEffect_ = std::make_unique<DashEffect>();
+    dashEffect_->Init();
+
+    footEffect_ = std::make_unique<FootEffect>();
+    footEffect_->Init();
+
     // ─── 各パーツの初期化 ───
     movement_->Init(this);
     status_->Init(this);
@@ -86,6 +91,18 @@ void Enemy::Init(const std::string objectName)
 
 void Enemy::Update()
 {
+    // 移動演出（emitフラグ残留を防ぐため毎フレーム更新する）。
+    // 敵にはダッシュ入力が無いので、風切りは水平速度で判定し、滑らされている間は止める
+    const Vector3 &enemyVelocity = movement_->GetVelocity();
+    const float horizontalSpeed = std::sqrt(enemyVelocity.x * enemyVelocity.x + enemyVelocity.z * enemyVelocity.z);
+    const bool effectActive = isAlive_ && started_ && !isPause_;
+
+    dashEffect_->Update(GetWorldPosition(), enemyVelocity, GetForward(),
+                        effectActive && !status_->IsReacting() && horizontalSpeed > kDashEffectSpeed,
+                        movement_->GetIsGrounded());
+    footEffect_->Update(GetWorldPosition(), enemyVelocity,
+                        movement_->GetIsGrounded(), effectActive);
+
     // 開始フラグが立っており、ポーズ中でなく、ターゲットが生きている場合に更新
     if (started_ && !isPause_ && pTarget_->GetIsAlive())
     {
@@ -116,8 +133,7 @@ void Enemy::Update()
                 // 被弾点滅の途中（透明フレーム）で死ぬと見えないまま固まるため、不透明へ戻す
                 SetAlpha(kAlphaOpaque);
 
-                // 空中（飛行）中の死亡でピッチが残っていると、倒れるモーションや
-                // die.obj の粒子化演出が地面と合わない。ヨーのみ残して直立へ戻す
+                // ピッチが残っていると倒れるモーションが地面と合わないので、ヨーのみ残す
                 Vector3 euler = transform_->quateRotation_.ToEulerAngles();
                 transform_->quateRotation_ = Quaternion::FromEulerAngles({0.0f, euler.y, 0.0f});
 
@@ -128,12 +144,10 @@ void Enemy::Update()
             }
         }
 
-        // 死亡中は行動処理を行わず、死亡アニメーションだけ再生して進める。
-        // 再生し終わった後の粒子化演出は DrawParticle 側で描画する
+        // 死亡中は行動処理を行わず、死亡アニメーションだけ再生して進める
         if (!isAlive_)
         {
-            // 空中で死んだ場合は重力で地面まで落下させる
-            // （倒れるモーション・粒子化演出は地面の上で行う前提のため）
+            // 倒れる演出は地面の上で行う前提なので、空中で死んだら地面まで落下させる
             if (!movement_->GetIsGrounded())
             {
                 movement_->GetVelocity().y += kDeathFallAcceleration * dt;
@@ -149,10 +163,8 @@ void Enemy::Update()
         // ガード中のエフェクト（点滅）
         visual_->UpdateGuardBlink();
 
-        // ─── プレイヤーの必殺技カメラワーク中は完全停止させる ───
-        // カメラワーク（顔アップ演出）中は相手も動けない、という仕様。
-        // ただし自分がビーム発動者の場合(beamCutscene_ がアクティブ)は、照準追従の
-        // 回転を維持したいのでここではロックしない（発動中の停止はBT側が速度0で担保）。
+        // プレイヤーの必殺技カメラワーク中は完全停止させる。
+        // ただし自分がビーム発動者の場合は照準追従の回転を残したいのでロックしない
         FollowCamera *followCamera = pTarget_ ? pTarget_->GetCamera() : nullptr;
         const bool cameraCloseUp = followCamera && followCamera->IsSkillCloseUpActive();
         const bool frozenByOpponentSkill = cameraCloseUp && !combat_->IsBeamStaging();
@@ -189,9 +201,7 @@ void Enemy::Update()
         }
         else if (reacting)
         {
-            // 被弾リアクション中はAI(BT)を止める。
-            // 吹き飛ばし(Blow)はノックバック速度で滑走させる（摩擦なし＝大きく飛ぶ）。
-            // ひるみ(Flinch)は横滑りを抑えるため摩擦を掛けてその場で硬直させる
+            // 被弾リアクション中はAI(BT)を止め、Blowは滑走、Flinchは摩擦でその場に硬直させる
             if (status_->IsBlow())
             {
                 movement_->ApplyGravity(dt);
@@ -206,8 +216,7 @@ void Enemy::Update()
             rootNode_->SetContext(this, pTarget_);
             rootNode_->Tick();
 
-            // ガード中は移動させない（EnemyGuardNode が毎フレーム速度を0にしているため、
-            // ここで移動イージングを適用すると追跡速度で上書きされて動いてしまう）
+            // ガード中に移動イージングを適用すると、追跡速度で上書きされて動いてしまう
             if (status_->IsGuarding())
             {
                 movement_->StopHorizontal();
@@ -248,9 +257,7 @@ void Enemy::Update()
         }
     }
 
-    // ワールドトランスフォームの行列更新は started_ に関わらず毎フレーム実行する。
-    // StartCamera演出中は started_ が false のためゲームロジックはスキップされるが、
-    // 行列が未更新のままだと Draw() に正しい行列が渡らず描画されなくなる。
+    // 行列更新は started_ に関わらず毎フレーム実行する（StartCamera演出中も描画するため）
     BaseObject::Update();
 }
 
@@ -273,13 +280,14 @@ void Enemy::Draw(const ViewProjection &viewProjection)
 
 void Enemy::DrawParticleCompute(const ViewProjection &viewProjection)
 {
+    dashEffect_->DrawCompute(viewProjection);
+    footEffect_->DrawCompute(viewProjection);
     combat_->DrawParticleCompute(viewProjection);
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection)
 {
-    // 死亡アニメーションを再生し終わったら、死亡ポーズメッシュ(die.obj)の
-    // 表面からパーティクルを発生させて粒子化して消える演出を行う
+    // 死亡アニメーションを再生し終わったら、死亡ポーズメッシュから粒子化して消える演出を行う
     if (!isAlive_ && visual_->IsDeathAnimationFinished())
     {
         deathStaging_->Initialize(
@@ -289,6 +297,8 @@ void Enemy::DrawParticle(const ViewProjection &viewProjection)
         deathStaging_->Draw(viewProjection);
     }
 
+    dashEffect_->DrawGraphics(viewProjection);
+    footEffect_->DrawGraphics(viewProjection);
     hitEmitter_->Draw(viewProjection); // CPU emitter
     combat_->DrawParticle(viewProjection);
 }

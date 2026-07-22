@@ -168,6 +168,10 @@ void ComboSystem::Update(float deltaTime)
             }
         }
         ResetCombo();
+
+        // 出し切った直後に1段目から殴り直せてしまわないよう、硬直を入れる。
+        // ResetCombo() がクールダウンを0に戻すため、その後に設定する
+        comboCooldown_ = finishRecovery_;
     }
 
     // タイムアウトによるコンボ終了

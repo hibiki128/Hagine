@@ -52,7 +52,16 @@ void EnemyCombat::Init(Enemy *owner)
         // ビームアクティブ中かつ未ダメージ処理のとき一度だけダメージを与える
         if (other->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && pOwner_->GetTarget())
         {
-            pOwner_->GetTarget()->SetDamage(kBeamDamage);
+            Player *target = pOwner_->GetTarget();
+
+            // 必殺技被弾：ビームの進行方向（敵→プレイヤー）へ大きく吹き飛ばし、
+            // そのまま地面まで落下する大スタンにする。予約はダメージ適用より先に行う
+            Vector3 blowDir = target->GetWorldPosition() - pOwner_->GetWorldPosition();
+            blowDir.y = 0.0f;
+            target->Status().RequestSkillBlowReaction(blowDir);
+
+            // 必殺技扱いにして、ガードされた場合はエネルギーを大きく削る
+            target->SetDamage(kBeamDamage, false, true);
             beamDamageDealt_ = true;
         }
     });
@@ -87,10 +96,28 @@ void EnemyCombat::Init(Enemy *owner)
                 currentAttackDamage_ = damage;
                 currentAttackKnockback_ = knockback;
                 currentAttackDuration_ = duration;
-                if (attackCollider_)
+                if (!attackCollider_)
                 {
-                    attackCollider_->Activate(damage, knockback, duration);
+                    return;
                 }
+
+                // 段番号（GetCurrentComboIndex() は実行中の段の0始まりインデックス）。
+                // 締めの段だけプレイヤーを地面へ叩きつけて吹き飛ばす
+                const int stage = punchCombo_.GetCurrentComboIndex() + 1;
+                EnemyMeleeHitReaction reaction = EnemyMeleeHitReaction::Normal;
+                float kb = knockback;
+                if (blowFinisherStage_ > 0 && stage == blowFinisherStage_)
+                {
+                    reaction = EnemyMeleeHitReaction::Slam;
+                    kb = blowFinisherKnockback_;
+                }
+                else if (blowLaunchStage_ > 0 && stage == blowLaunchStage_)
+                {
+                    reaction = EnemyMeleeHitReaction::Launch;
+                    kb = blowLaunchKnockback_;
+                }
+
+                attackCollider_->Activate(damage, kb, duration, 0.0f, reaction);
             });
 
         comboInitialized_ = true;
@@ -364,9 +391,7 @@ void EnemyCombat::StartBeamStaging()
     // カメラはプレイヤーのフォローカメラを借りて敵の顔に寄せる
     FollowCamera *camera = pOwner_->GetTarget() ? pOwner_->GetTarget()->GetCamera() : nullptr;
 
-    // 演出・遅延中はロックオン（照準追従）を維持し、発動の瞬間に固定する。
-    // ActivateBeam() 内で発射時の quateRotation_ が beamLockedRotation_ に
-    // スナップショットされるため、以降は向きが固定され回避が可能になる
+    // 演出・遅延中は照準追従を維持し、発動の瞬間の向きで固定する（以降は回避が可能になる）
     beamCutscene_.Start(pOwner_, camera, [this] {
         pOwner_->SetIsLockOn(false);
         StopChargeAura();
@@ -402,9 +427,7 @@ void EnemyCombat::UpdateBeam()
     float dt = Frame::DeltaTime();
     beamActiveTime_ += dt;
 
-    // ビーム発射中は transform_->quateRotation_ を発射時の固定向きで上書きする。
-    // OBBコライダーは transform_->quateRotation_ から向きを取るため、
-    // ここで上書きしないと RotateUpdate() によりコライダーがプレイヤーを追従し続ける。
+    // 発射時の固定向きで上書きする。しないとOBBコライダーがプレイヤーを追従し続ける
     pOwner_->GetWorldTransform()->quateRotation_ = beamLockedRotation_;
 
     // ビーム長を前方に伸ばす
@@ -434,9 +457,7 @@ void EnemyCombat::UpdateBeam()
         beamAroundEffect_->SetAuto(true);
         beamSpiralTime_ += dt;
 
-        // クォータニオンからローカル座標系の基底ベクトルを計算する
-        // RotateUpdate が +Z をプレイヤー方向に向けるため、
-        // localForward（+Z 基底）はそのままプレイヤー方向を向く
+        // クォータニオンからローカル基底を計算する（+Z がプレイヤー方向）
         Quaternion q = selfRot;
         Vector3 localRight(
             1.0f - 2.0f * (q.y * q.y + q.z * q.z),
@@ -516,6 +537,12 @@ void EnemyCombat::SetVp(ViewProjection *vp)
 void EnemyCombat::RegisterParams()
 {
     beamCutscene_.RegisterParams("必殺演出(Enemy)");
+
+    auto *hub = GameParamHub::GetInstance();
+    hub->Register("Enemy", "コンボ吹き飛ばし段(0で無効)", &blowLaunchStage_, {0.1f, 0.0f, 8.0f});
+    hub->Register("Enemy", "コンボ吹き飛ばし強度", &blowLaunchKnockback_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Enemy", "コンボ叩きつけ段(0で無効)", &blowFinisherStage_, {0.1f, 0.0f, 8.0f});
+    hub->Register("Enemy", "コンボ叩きつけ強度", &blowFinisherKnockback_, {0.5f, 0.0f, 100.0f});
 }
 
 void EnemyCombat::DrawComboImGui()

@@ -10,6 +10,9 @@
 #include "scene/SceneManager.h"
 #include "browser/ShowFolder.h"
 #ifdef _DEBUG
+#include "utility/debug/imgui/AssetDragDrop.h"
+#include <asset/AssetPath.h>
+#include <graphics/texture/TextureManager.h>
 #include <imgui_internal.h>
 #include <implot.h>
 #endif // DEBUG
@@ -478,13 +481,19 @@ void BaseObject::SaveToJson()
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
+    ObjectDatas_->Save<bool>("isWireframe", isWireframe_);
+    ObjectDatas_->Save<bool>("isRainbow", isRainbow_);
+    ObjectDatas_->Save<bool>("isGizmoSelectable", isGizmoSelectable_);
     if (pParent_)
     {
         ObjectDatas_->Save<std::string>("parentName", pParent_->GetName());
     }
     for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++)
     {
-        texturePaths_.push_back(obj3d_->GetTextureFilePath(i));
+        // 保存のたびに push_back すると texturePaths_ が肥大化するので、サイズを合わせて代入する
+        if (static_cast<int>(texturePaths_.size()) <= i)
+            texturePaths_.resize(i + 1);
+        texturePaths_[i] = obj3d_->GetTextureFilePath(i);
         ObjectDatas_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
         ObjectDatas_->Save("color_" + std::to_string(i), GetColor(i));
     }
@@ -519,6 +528,9 @@ void BaseObject::SceneSaveToJson()
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
+    ObjectDatas_->Save<bool>("isWireframe", isWireframe_);
+    ObjectDatas_->Save<bool>("isRainbow", isRainbow_);
+    ObjectDatas_->Save<bool>("isGizmoSelectable", isGizmoSelectable_);
     if (pParent_)
     {
         ObjectDatas_->Save<std::string>("parentName", pParent_->GetName());
@@ -526,7 +538,10 @@ void BaseObject::SceneSaveToJson()
 
     for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++)
     {
-        texturePaths_.push_back(obj3d_->GetTextureFilePath(i));
+        // 保存のたびに push_back すると texturePaths_ が肥大化するので、サイズを合わせて代入する
+        if (static_cast<int>(texturePaths_.size()) <= i)
+            texturePaths_.resize(i + 1);
+        texturePaths_[i] = obj3d_->GetTextureFilePath(i);
         ObjectDatas_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
         ObjectDatas_->Save("color_" + std::to_string(i), GetColor(i));
     }
@@ -566,6 +581,9 @@ void BaseObject::LoadFromJson()
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::Count);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
+    isWireframe_ = ObjectDatas_->Load<bool>("isWireframe", isWireframe_);
+    isRainbow_ = ObjectDatas_->Load<bool>("isRainbow", isRainbow_);
+    isGizmoSelectable_ = ObjectDatas_->Load<bool>("isGizmoSelectable", isGizmoSelectable_);
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
@@ -640,6 +658,9 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName)
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", type_);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
+    isWireframe_ = ObjectDatas_->Load<bool>("isWireframe", isWireframe_);
+    isRainbow_ = ObjectDatas_->Load<bool>("isRainbow", isRainbow_);
+    isGizmoSelectable_ = ObjectDatas_->Load<bool>("isGizmoSelectable", isGizmoSelectable_);
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
@@ -719,6 +740,11 @@ void BaseObject::SaveMaterials()
         ObjectDatas_->Save<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
         ObjectDatas_->Save<float>(prefix + "proceduralScale", md.proceduralScale);
         ObjectDatas_->Save<float>(prefix + "normalStrength", md.normalStrength);
+
+        // UV（タイリング・オフセット・回転）
+        ObjectDatas_->Save<Vector2>(prefix + "uvSize", md.uvSize);
+        ObjectDatas_->Save<Vector2>(prefix + "uvPosition", md.uvPosition);
+        ObjectDatas_->Save<float>(prefix + "uvRotate", md.uvRotate);
     }
 }
 
@@ -752,6 +778,17 @@ void BaseObject::LoadMaterials()
         md.enableProceduralNormal = ObjectDatas_->Load<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
         md.proceduralScale = ObjectDatas_->Load<float>(prefix + "proceduralScale", md.proceduralScale);
         mat->SetNormalStrength(ObjectDatas_->Load<float>(prefix + "normalStrength", md.normalStrength));
+
+        // UV（タイリング・オフセット・回転）。uvTransform は Draw で毎フレーム組み直される
+        md.uvSize = ObjectDatas_->Load<Vector2>(prefix + "uvSize", md.uvSize);
+        md.uvPosition = ObjectDatas_->Load<Vector2>(prefix + "uvPosition", md.uvPosition);
+        md.uvRotate = ObjectDatas_->Load<float>(prefix + "uvRotate", md.uvRotate);
+
+        // 画像が無いのに有効化されていると albedo を法線として読んでしまうため落とす
+        if (md.enableNormalMap && !md.hasNormalMapTexture)
+        {
+            md.enableNormalMap = false;
+        }
     }
 }
 
@@ -1863,6 +1900,29 @@ void BaseObject::DebugObject()
             ImGui::TreePop();
         }
 
+        // UV（タイリング / オフセット / 回転）
+        if (ImGui::TreeNodeEx("UV##uv", ImGuiTreeNodeFlags_SpanAvailWidth))
+        {
+            if (Material *mat = GetMaterial(static_cast<uint32_t>(selMat)))
+            {
+                MaterialData &md = mat->GetMaterialData();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat2("##uvsize", &md.uvSize.x, 0.05f, 0.01f, 200.0f, "タイリング %.2f");
+                ImGui::SetItemTooltip("大きくするとテクスチャが繰り返される（広い地面の法線マップ等で使う）");
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat2("##uvpos", &md.uvPosition.x, 0.005f, -100.0f, 100.0f, "オフセット %.3f");
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat("##uvrot", &md.uvRotate, 0.01f, -6.28f, 6.28f, "回転 %.2f rad");
+                if (ImGui::SmallButton("UVリセット##uvr"))
+                {
+                    md.uvSize = {1.0f, 1.0f};
+                    md.uvPosition = {0.0f, 0.0f};
+                    md.uvRotate = 0.0f;
+                }
+            }
+            ImGui::TreePop();
+        }
+
         // Blend mode
         if (ImGui::TreeNodeEx("ブレンドモード##bm", ImGuiTreeNodeFlags_SpanAvailWidth))
         {
@@ -1883,9 +1943,56 @@ void BaseObject::DebugObject()
                 ImGui::PopStyleColor();
                 if (md.enableNormalMap)
                 {
+                    // ---- 現在の法線マップ（サムネがそのままD&Dのドロップ先）----
+                    auto *tm = TextureManager::GetInstance();
+                    D3D12_GPU_DESCRIPTOR_HANDLE nmHandle{};
+                    if (md.hasNormalMapTexture && !md.normalMapFilePath.empty())
+                    {
+                        tm->LoadTexture(md.normalMapFilePath); // ロード済みなら即return
+                        nmHandle = tm->GetSrvHandleGPU(AssetPath::Image(md.normalMapFilePath));
+                    }
+                    if (nmHandle.ptr != 0)
+                        ImGui::Image(static_cast<ImTextureID>(nmHandle.ptr), ImVec2(56.0f, 56.0f));
+                    else
+                        ImGui::Button("ここへ\nドロップ", ImVec2(56.0f, 56.0f));
+
+                    std::string dropped;
+                    if (AssetDragDrop::TextureTarget(dropped))
+                    {
+                        mat->SetNormalMap(dropped);
+                        normalMapPath_ = dropped;
+                    }
+                    ImGui::SetItemTooltip("アセットブラウザの画像をドラッグ&ドロップで設定できます");
+
+                    ImGui::SameLine();
+                    ImGui::BeginGroup();
                     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
                     ImGui::Text("map: %s", md.hasNormalMapTexture ? md.normalMapFilePath.c_str() : "(未設定=albedo流用)");
                     ImGui::PopStyleColor();
+                    ImGui::TextDisabled("D&D または下のブラウザで設定");
+                    if (ImGui::SmallButton("クリア##nmclear"))
+                    {
+                        mat->ClearNormalMap();
+                        normalMapPath_.clear();
+                    }
+                    ImGui::EndGroup();
+
+                    // ---- フォルダから選択 ----
+                    if (ImGui::TreeNodeEx("フォルダから選択##nmbrowse", ImGuiTreeNodeFlags_SpanAvailWidth))
+                    {
+                        ShowTextureFile(normalMapPath_, "normalmap");
+                        ImGui::Spacing();
+                        ImGui::BeginDisabled(normalMapPath_.empty());
+                        if (ImGui::SmallButton("適用##nmapply"))
+                            mat->SetNormalMap(normalMapPath_);
+                        ImGui::EndDisabled();
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("選択解除##nmdesel"))
+                            normalMapPath_.clear();
+                        ImGui::SameLine();
+                        ImGui::TextDisabled("選択中: %s", normalMapPath_.empty() ? "(なし)" : normalMapPath_.c_str());
+                        ImGui::TreePop();
+                    }
                 }
 
                 // 手続き的法線（両方ONなら PS は手続き的を優先）

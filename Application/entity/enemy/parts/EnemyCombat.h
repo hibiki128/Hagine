@@ -207,6 +207,13 @@ class EnemyCombat
     float currentAttackKnockback_ = 3.0f; ///< 現在の攻撃ノックバック強度
     float currentAttackDuration_ = 0.25f; ///< 現在の攻撃有効時間
 
+    // ─── コンボの吹き飛ばし段（GameParamで調整可・0で無効）───
+    // 途中の段で吹き飛ばすとコンボが途切れるため、既定では締めの段だけ吹き飛ばす
+    int blowLaunchStage_ = 0;             ///< 前方へ大きく吹き飛ばす段（1始まり）
+    float blowLaunchKnockback_ = 22.0f;   ///< 吹き飛ばし段のノックバック強度
+    int blowFinisherStage_ = 8;           ///< 地面へ叩きつける締めの段（1始まり）
+    float blowFinisherKnockback_ = 30.0f; ///< 叩きつけ段の下方向ノックバック強度
+
     std::unique_ptr<Shake> chargeShake_; ///< シェイク
 
     // 大技演出用CSパーティクル

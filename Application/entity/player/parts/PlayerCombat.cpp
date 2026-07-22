@@ -35,8 +35,7 @@ void PlayerCombat::Init(Player *owner)
     if (!comboInitialized_)
     {
         punchCombo_.SetName("PunchCombo"); // DataHandlerのファイル名に使われる
-        // 攻撃の見た目は本体アニメーション（comboAnimations_）で再生するため、
-        // モーション再生用ターゲットは不要（nullptr）。ダメージ等のパラメータのみ指定する
+        // 見た目は comboAnimations_ で再生するのでモーション用ターゲットは不要（nullptr）
         punchCombo_
             .Add(nullptr, "Jab", 10.0f, 3.0f, 0.25f, 0.08f)
             .Add(nullptr, "Hook", 12.0f, 4.0f, 0.25f, 0.08f)
@@ -47,13 +46,14 @@ void PlayerCombat::Init(Player *owner)
             .Add(nullptr, "Elbow", 20.0f, 8.0f, 0.25f, 0.06f)
             .Add(nullptr, "Slam", 25.0f, 12.0f, 0.35f, 0.12f);
 
+        // 出し切ったあとすぐ1段目から殴り直せないよう、戻りの余韻に加えて入力を止める時間
+        punchCombo_.GetFinishRecovery() = 1.0f;
+
         punchCombo_.LoadAttackParams(); // JSONがあれば値を上書き読み込み
         comboInitialized_ = true;
     }
 
-    // コンボ段ごとのプレイヤー本体アニメーション（適宜差し替え可）
-    // Punch_1〜4 → パンチ系、Kick_1〜3 → キック系で割り振り
-    // 対応するアニメーションがない段は空文字（何も再生しない）
+    // コンボ段ごとのプレイヤー本体アニメーション（空文字の段は何も再生しない）
     comboAnimations_ = {
         "animation/Player/Punch_1.gltf", // 1段目: Jab
         "animation/Player/Punch_2.gltf", // 2段目: Hook
@@ -68,8 +68,7 @@ void PlayerCombat::Init(Player *owner)
     attackCollider_ = std::make_unique<PlayerAttackCollider>();
     attackCollider_->Init(pOwner_);
 
-    // 必殺技モーション（MakanSkill.gltf・30fps）に演出の長さを合わせる。
-    // 顔アップ＋発動遅延の合計 = 発射キーフレーム（30フレーム目 ≒ 1.0秒）
+    // 顔アップ＋発動遅延の合計を必殺技モーションの発射キーフレーム（30フレーム目≒1.0秒）に合わせる
     skillCutscene_.GetCloseUpDuration() = 0.6f;
     skillCutscene_.GetActivationDelay() = 0.4f;
 
@@ -78,13 +77,11 @@ void PlayerCombat::Init(Player *owner)
         [this](float damage, float knockback, float duration, float delay) {
             if (attackCollider_)
             {
-                // 段番号（1始まり）。コールバック時点では GetCurrentComboIndex() が
-                // 実行中の段の0始まりインデックスを指す
+                // 段番号（GetCurrentComboIndex() は実行中の段の0始まりインデックス）
                 const int stage = punchCombo_.GetCurrentComboIndex() + 1;
 
                 // 瞬間移動コンボ：特定段のヒット挙動を切り替える。
-                // Launch/Chase の吹き飛ばし速度は combat 側（TeleportAhead）で設定するため、
-                // ここで渡すノックバック量は使われない（0）。Slam のみ下方向の強度を渡す
+                // Launch/Chase の吹き飛ばし速度は TeleportAhead 側で設定するのでkbは使わない
                 MeleeHitReaction reaction = MeleeHitReaction::Normal;
                 float kb = knockback;
                 if (teleportEnabled_)
@@ -97,8 +94,7 @@ void PlayerCombat::Init(Player *owner)
                     else if (stage == teleportLaunchStage_ &&
                              pOwner_->GetEnergy() >= teleportEnergyCost_)
                     {
-                        // エネルギーが足りるときだけ大吹き飛ばし＋瞬間移動開始。
-                        // 足りない場合は下の通常ヒットに落とし、敵を取り逃さない
+                        // エネルギーが足りるときだけ大吹き飛ばし＋瞬間移動開始
                         reaction = MeleeHitReaction::Launch;
                         kb = 0.0f;
                     }
@@ -111,6 +107,9 @@ void PlayerCombat::Init(Player *owner)
 
                 attackCollider_->Activate(damage, kb, duration, delay, reaction);
             }
+            // 攻撃のたびに少し前へ踏み込む（その場で殴ると当てづらいため）
+            pOwner_->Movement().StartMeleeLunge();
+
             // 入力表示UI用: 実際に発火した近接攻撃の段名を記録する
             // （先行入力バッファ経由の発火もここを通るため取りこぼしがない）
             meleeAttackFired_ = true;
@@ -135,8 +134,7 @@ void PlayerCombat::TeleportAhead()
         return;
     }
 
-    // 吹き飛ばし方向 = プレイヤーが今向いている方向（水平）。ヒット時点ではプレイヤーは
-    // 敵の方を向いているので、敵はこの方向へ大きく吹き飛ぶ
+    // 吹き飛ばし方向 = プレイヤーが今向いている方向（水平）
     Hagine::Vector3 dir = pOwner_->GetForward();
     dir.y = 0.0f;
     if (dir.Length() > 0.001f)
@@ -151,8 +149,7 @@ void PlayerCombat::TeleportAhead()
 
     const Hagine::Vector3 enemyPos = enemy->GetWorldPosition();
 
-    // 敵へ横方向の大きな吹き飛ばし速度を与える（上方向は控えめ）。
-    // arrivalTime 秒で aheadDistance を進む速度にすることで、先回り地点へ丁度到達する
+    // arrivalTime 秒で aheadDistance を進む速度にして、先回り地点へ丁度到達させる
     const float arrival = (teleportArrivalTime_ > 0.001f) ? teleportArrivalTime_ : 0.001f;
     const float speed = teleportAheadDistance_ / arrival;
     enemy->SetVelocity({dir.x * speed, teleportLaunchUp_, dir.z * speed});
@@ -169,8 +166,7 @@ void PlayerCombat::TeleportAhead()
     // 消える演出をやり直す
     teleportVanishTimer_ = 0.0f;
 
-    // カメラを一瞬だけ旧位置に留めてから、瞬間移動先のプレイヤーへパッとスナップさせる。
-    // （吹き飛ばし方向は概ね画面奥なので、旧カメラからでも移動先のプレイヤーが見える）
+    // カメラを一瞬だけ旧位置に留めてから、瞬間移動先のプレイヤーへスナップさせる
     if (pOwner_->GetCamera())
     {
         pOwner_->GetCamera()->HoldThenSnap(teleportCameraHold_);
@@ -253,8 +249,7 @@ void PlayerCombat::UpdateTeleport(float deltaTime)
     pOwner_->GetIsGrounded() = false;
     pOwner_->Movement().FaceTargetInstant(enemy->GetWorldPosition());
 
-    // 吹き飛ばされてきた敵が攻撃間合いまで到達したら、滑走を止めてその場に留める
-    // （プレイヤーを通り過ぎないように）。次段のヒットで再び吹き飛ばす
+    // 敵が攻撃間合いまで到達したら、通り過ぎないよう滑走を止めてその場に留める
     Hagine::Vector3 toEnemy = enemy->GetWorldPosition() - pOwner_->GetWorldPosition();
     toEnemy.y = 0.0f;
     if (toEnemy.Length() <= teleportFollowDistance_)
@@ -278,8 +273,7 @@ void PlayerCombat::UpdateTeleport(float deltaTime)
 
 void PlayerCombat::ComboUpdate()
 {
-    // ガード中・必殺技演出中・射撃モーション中は近接コンボを実行できない
-    // （射撃と近接の同時発動を防ぐ排他。射撃側は Shot() がコンボ中を弾く）
+    // ガード中・必殺技演出中・射撃モーション中は近接コンボを実行できない（射撃との排他）
     if (pOwner_->GetCurrentStateName() != "EnergyCharge" && !IsCharging() &&
         !pOwner_->IsGuarding() && !IsSkillStaging() &&
         !pOwner_->Visual().IsShotAnimationPlaying())
@@ -362,8 +356,7 @@ void PlayerCombat::FireNormalBullet()
 
 void PlayerCombat::Shot()
 {
-    // ガード中・必殺技演出中・近接コンボ中は遠距離射撃を発射できない
-    // （近接と射撃の同時発動を防ぐ排他。既存弾の更新は下で継続する）
+    // ガード中・必殺技演出中・近接コンボ中は発射できない（既存弾の更新は下で継続する）
     if (pOwner_->GetCurrentStateName() != "EnergyCharge" && !isSkillMenu_ &&
         !pOwner_->IsGuarding() && !IsSkillStaging() &&
         !punchCombo_.IsComboActive())
@@ -476,8 +469,7 @@ void PlayerCombat::StartSkillStaging()
     pMakanAttack_ptr_->SetPlayer(pOwner_);
 
     // 入力の時点では撃たず、カメラ顔アップ演出→通常カメラ復帰→遅延の後に発動する。
-    // 遅延中はロックオンによる照準追従が生きており、発動の瞬間の向きで固定される
-    // （MakanAttackSkill::Activate が向きをスナップショットする）
+    // 遅延中も照準追従は生きており、発動の瞬間の向きで固定される
     skillCutscene_.Start(pOwner_, pOwner_->GetCamera(), [this] {
         pMakanAttack_ptr_->Activate(pOwner_->GetTransformPtr());
         pOwner_->EmitAction(Player::ActionKind::Special); // 入力表示UI用：必殺技を通知
@@ -638,6 +630,7 @@ void PlayerCombat::RegisterParams()
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Player", "弾の速度", &B_speed_, {0.1f});
     hub->Register("Player", "弾の加速度", &B_acce_, {0.1f});
+    hub->Register("Player", "コンボ出し切り後の硬直", &punchCombo_.GetFinishRecovery(), {0.05f, 0.0f, 3.0f});
     skillCutscene_.RegisterParams("必殺演出(Player)");
 
     // 瞬間移動コンボ（横吹き飛ばし→先回り瞬間移動→叩きつけ）

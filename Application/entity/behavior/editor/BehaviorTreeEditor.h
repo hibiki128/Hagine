@@ -59,7 +59,9 @@ enum class EditorNodeType
     ActionGuard,              // 35  一定時間ガードして被ダメージを軽減
     ConditionPlayerAttacking, // 36  プレイヤーが攻撃的(脅威)かチェック
     // ===== ビーム必殺技 =====
-    ActionBeamUltimate // 37  溜め→ビーム必殺技 (MakanAttackSkill相当)
+    ActionBeamUltimate, // 37  溜め→ビーム必殺技 (MakanAttackSkill相当)
+    // ===== 近接追撃 =====
+    ActionMeleeChaseCombo // 38  プレイヤーへ詰めながらコンボを出し切る
 };
 
 /// <summary>
@@ -217,7 +219,8 @@ struct EditorNode
                Type == EditorNodeType::ActionChargeAttack ||
                Type == EditorNodeType::ActionUltimate ||
                Type == EditorNodeType::ActionGuard ||
-               Type == EditorNodeType::ActionBeamUltimate;
+               Type == EditorNodeType::ActionBeamUltimate ||
+               Type == EditorNodeType::ActionMeleeChaseCombo;
     }
 
     /// <summary>

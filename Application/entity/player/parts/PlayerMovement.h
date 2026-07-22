@@ -58,6 +58,13 @@ class PlayerMovement
     void UpdateDashState();
 
     /// <summary>
+    /// 近接攻撃の踏み込みを開始する（コンボの各段が発火した瞬間に呼ぶ）
+    /// 敵がいれば敵方向、いなければ正面へ短く前進する。近すぎる場合は
+    /// すり抜け・押し込みを避けるため踏み込まない
+    /// </summary>
+    void StartMeleeLunge();
+
+    /// <summary>
     /// ダッシュ状態をリセットする
     /// </summary>
     void ClearDashState()
@@ -207,6 +214,12 @@ class PlayerMovement
 
     bool canJump_ = false;   ///< ジャンプ可能フラグ
     bool isGrounded_ = true; ///< 接地フラグ
+
+    // ─── 近接攻撃の踏み込み ───
+    // 完全に止まったまま殴ると当てづらいため、各段の発火で少し前へ踏み込む。
+    // 速度は Move() のコンボ中の減衰で数フレームかけて消えるので、短い前進になる
+    float meleeLungeSpeed_ = 18.0f;      ///< 踏み込みの初速
+    float meleeLungeMinDistance_ = 2.5f; ///< この距離より近い敵へは踏み込まない
 
     bool isDashing_ = false;            ///< ダッシュ中フラグ
     float dashInputX_ = 0.0f;           ///< ダッシュ開始時のスティックX入力

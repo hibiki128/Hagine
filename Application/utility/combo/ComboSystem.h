@@ -63,6 +63,10 @@ class ComboSystem
 
     std::string lastAttackName_; // 直近に発火した攻撃の名前（入力表示UI等が参照）
 
+    // 最終段を出し切ってコンボが終了したあとの硬直時間（秒）。
+    // FINAL_RETURN_DELAY（戻りの余韻）が明けてからさらにこの時間だけ次のコンボを受け付けない
+    float finishRecovery_ = 0.5f;
+
     int comboIndex_ = 0;            // 現在のコンボインデックス
     float comboCooldown_ = 0.0f;    // コンボクールダウン
     bool comboStarted_ = false;     // コンボ開始フラグ
@@ -152,6 +156,11 @@ class ComboSystem
     bool IsObjectAttackCompleted(Hagine::BaseObject *target) const;
     bool IsCurrentAttackCompleted() const;
     int GetCurrentComboIndex() const { return comboIndex_; }
+
+    /// <summary>
+    /// コンボを出し切ったあとの硬直時間（秒）への参照。ImGui・パラメータ調整用
+    /// </summary>
+    float &GetFinishRecovery() { return finishRecovery_; }
     int GetComboLength() const { return static_cast<int>(comboData_.size()); }
 
     /// <summary>

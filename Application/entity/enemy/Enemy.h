@@ -1,5 +1,7 @@
 #pragma once
+#include "Application/staging/dash/DashEffect.h"
 #include "Application/staging/death/DeathStaging.h"
+#include "Application/staging/foot/FootEffect.h"
 #include "object/base/BaseObject.h"
 #include "parts/EnemyCombat.h"
 #include "parts/EnemyMovement.h"
@@ -125,7 +127,23 @@ class Enemy : public Hagine::BaseObject
     void SetIsFlying(bool flying) { movement_->SetIsFlying(flying); }
 
     // ─── ステータス（EnemyStatus） ───
-    void SetDamage(float damage) { status_->SetDamage(damage); }
+
+    /// <summary>
+    /// 外部からダメージ量をセット（次のDamageUpdateで処理される）
+    /// </summary>
+    /// <param name="damage">与えるダメージ量</param>
+    /// <param name="isShot">射撃（弾）によるダメージなら true。ひるみが近接より短くなる</param>
+    /// <param name="isSkill">必殺技によるダメージなら true。ガード時のエネルギー消費が大きくなる</param>
+    void SetDamage(float damage, bool isShot = false, bool isSkill = false)
+    {
+        status_->SetDamage(damage, isShot, isSkill);
+    }
+
+    /// <summary>
+    /// ガード中なら弾を弾き返せるかを判定する（成立時はガード分のエネルギーを消費する）
+    /// </summary>
+    /// <returns>bool: 弾き返せたら true</returns>
+    bool ConsumeGuardDeflect() { return status_->ConsumeGuardDeflect(); }
     void SetGuarding(bool guarding) { status_->SetGuarding(guarding); }
     void SetEnergy(float energy) { status_->SetEnergy(energy); }
     void SetEnergyRecoveryRate(float rate) { status_->SetEnergyRecoveryRate(rate); }
@@ -149,7 +167,8 @@ class Enemy : public Hagine::BaseObject
     /// 次に受けるダメージを「吹き飛ばし（Blow）」リアクションとして扱うよう予約する。
     /// 瞬間移動コンボの吹き飛ばし段のヒット時にコライダーから呼ぶ
     /// </summary>
-    void RequestBlowReaction() { status_->RequestBlowReaction(); }
+    /// <param name="grantFlinchImmunity">復帰直後にひるみ無効時間を与えるなら true（叩きつけ段用）</param>
+    void RequestBlowReaction(bool grantFlinchImmunity = false) { status_->RequestBlowReaction(grantFlinchImmunity); }
 
     // ─── 戦闘（EnemyCombat） ───
     void SetComboAttack(bool flag) { combat_->SetComboAttack(flag); }
@@ -260,6 +279,9 @@ class Enemy : public Hagine::BaseObject
     // モデル描画オフセット（地面に足がつくように下げる量。死亡演出の発生位置にも使う）
     static constexpr float kModelOffsetY = -0.75f;
 
+    // 風切り演出を出す水平速度（BTの接近ノードは20〜28、回り込み・後退は10〜12）
+    static constexpr float kDashEffectSpeed = 18.0f;
+
     // 回転・ベクトル定数
     static constexpr float kForwardVectorX = 0.0f;
     static constexpr float kForwardVectorY = 0.0f;
@@ -283,6 +305,8 @@ class Enemy : public Hagine::BaseObject
 
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; ///< ヒットエミッター
     std::unique_ptr<DeathStaging> deathStaging_;          ///< 死亡演出（粒子化して消える）
+    std::unique_ptr<DashEffect> dashEffect_;              ///< 高速移動中の演出（プレイヤーのダッシュと共通）
+    std::unique_ptr<FootEffect> footEffect_;              ///< 着地・走行中の足元の演出
 
     Hagine::OBBCollider *pEnemyCollider_ = nullptr;      ///< 敵コライダー
     Hagine::AABBCollider *pEnemyWallCollider_ = nullptr; ///< 壁用コライダー

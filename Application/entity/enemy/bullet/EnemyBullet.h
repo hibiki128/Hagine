@@ -51,6 +51,12 @@ class EnemyBullet : public Hagine::BaseObject
     /// <param name="collider">衝突したコライダー</param>
     void OnCollisionEnter(Hagine::ColliderBase *collider);
 
+    /// <summary>
+    /// ガードされた弾を、相手の外側斜め上へ弾き返す（ホーミングと加速は打ち切る）
+    /// </summary>
+    /// <param name="guardPosition">ガードした相手の位置</param>
+    void DeflectFrom(const Hagine::Vector3 &guardPosition);
+
     /// ===================================================
     /// Getter
     /// ===================================================
@@ -141,6 +147,13 @@ class EnemyBullet : public Hagine::BaseObject
     static constexpr int kBulletDamage = 1;               // 弾のダメージ値
     static constexpr float kFallbackKillY = -10.0f;       // 地形外へ抜けた弾を消す高さ（保険）
 
+    // ガードで弾き返されたときの挙動
+    static constexpr float kDeflectSpeedRatio = 0.6f; // 弾き返し後に残る速度の割合
+    static constexpr float kDeflectMinSpeed = 25.0f;  // 弾き返し後の最低速度
+    static constexpr float kDeflectUpSpeed = 12.0f;   // 弾き返し時の上方向速度
+    static constexpr float kDeflectBackRatio = 0.5f;  // 弾き返す向きに混ぜる「相手の外側」成分の比率
+    static constexpr float kDeflectLifeTime = 1.0f;   // 弾き返された弾が消えるまでの時間(秒)
+
     static constexpr const char *kHandJointName = "mixamorig:RightHand"; // 発射起点に使う手ジョイント名
     static constexpr float kHandForwardOffset = 0.5f;                    // 手からの前方オフセット距離
 
@@ -152,6 +165,7 @@ class EnemyBullet : public Hagine::BaseObject
     float currentLifeTime_ = 0.0f;      // 現在の生存時間
     bool isAlive_ = true;               // 弾が生きているかどうか
     bool isHit_ = false;                // 衝突判定フラグ
+    bool isDeflected_ = false;          // ガードで弾き返されたか（以降ダメージを与えない）
 
     bool isLockOnBullet_ = false;                      // ロックオン弾かどうか
     float damage_ = static_cast<float>(kBulletDamage); // 弾のダメージ量

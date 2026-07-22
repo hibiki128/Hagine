@@ -121,6 +121,9 @@ void Player::Init(const std::string objectName)
     dashEffect_ = std::make_unique<DashEffect>();
     dashEffect_->Init();
 
+    footEffect_ = std::make_unique<FootEffect>();
+    footEffect_->Init();
+
     deathStaging_ = std::make_unique<DeathStaging>();
 
     // 必殺技の画面白黒フラッシュ演出（ポストエフェクトの Gray + Bloom を利用）
@@ -162,6 +165,11 @@ void Player::Update()
                         isAlive_ && started_ && !isPause_ && dashActive,
                         movement_->GetIsGrounded());
 
+    // 足元の演出（着地の砂煙・走行中の砂煙）も同様に毎フレーム更新する
+    footEffect_->Update(GetWorldPosition(), movement_->GetVelocity(),
+                        movement_->GetIsGrounded(),
+                        isAlive_ && started_ && !isPause_);
+
     if (combat_->IsSkillActive())
     {
         // ビーム発動中も必殺技モーション（発射→フレーム80の撃ち終わりまで）は進める
@@ -197,17 +205,15 @@ void Player::Update()
 
         status_->DamageUpdate();
 
-        // ひるみ（ヒットスタン）残り時間を進める
-        status_->UpdateHitStun();
+        // 被弾リアクション（ひるみ・吹き飛ばし・必殺技スタン）を進める
+        status_->UpdateReaction();
 
         if (started_ && !isPause_)
         {
             status_->RecoverEnergy();
 
-            // ─── 必殺技のカメラ演出中は行動不能にする ───
-            // ・カメラワーク（顔アップ）中: 自分/相手どちらの必殺技でも移動・行動をロックする
-            // ・自分の必殺技演出中（顔アップ後の発動遅延も含む）: 発動が終わるまで自分をロックする
-            //   （相手はカメラワーク終了後に回避できるよう、ここではロックしない）
+            // 必殺技のカメラ演出中は行動不能にする。
+            // 顔アップ中は双方をロックし、発動遅延中は発動者だけをロックする（相手は回避可能）
             const bool cameraCloseUp = FollowCamera_ && FollowCamera_->IsSkillCloseUpActive();
             const bool selfSkillStaging = combat_->IsSkillStaging();
             const bool skillLocked = cameraCloseUp || selfSkillStaging;
@@ -243,23 +249,23 @@ void Player::Update()
                 // 必殺技モーションや死亡時の倒れる向きがずれる）
                 visual_->UpdateFlyLean();
             }
-            else if (status_->IsHitStun())
+            else if (status_->IsReacting())
             {
-                // ─── ひるみ（ヒットスタン）中は行動不能 ───
-                // 攻撃・移動入力・ステート更新は行わない。ノックバック（速度）と重力・
-                // 被弾点滅は下の共通処理で継続するため、アニメーションだけ進めて硬直を表現する。
-                // 入力減速が効かないので、横滑りが伸びすぎないよう水平速度を減衰させる
-                Hagine::Vector3 &vel = movement_->GetVelocity();
-                vel.x *= kHitStunHorizontalDamping;
-                vel.z *= kHitStunHorizontalDamping;
+                // 被弾リアクション中は行動不能。アニメーションだけ進めて硬直を表現する。
+                // 吹き飛ばし中の速度制御（減速・落下）は PlayerStatus::UpdateReaction が担当するので、
+                // ここでは横滑りが伸びすぎないようひるみ中だけ水平速度を減衰させる
+                if (!status_->IsBlow())
+                {
+                    Hagine::Vector3 &vel = movement_->GetVelocity();
+                    vel.x *= kHitStunHorizontalDamping;
+                    vel.z *= kHitStunHorizontalDamping;
+                }
                 visual_->UpdateAnimation();
                 visual_->UpdateFlyLean();
             }
             else if (combat_->IsTeleporting())
             {
-                // ─── 瞬間移動追撃中 ───
-                // 敵に貼り付いて追撃を継続する。移動入力・射撃・ガードは無効化し、
-                // コンボと前方判定だけ進めてフィニッシュ（叩きつけ）まで繋ぐ
+                // 瞬間移動追撃中は移動入力・射撃・ガードを無効化し、コンボだけ進める
                 combat_->UpdateTeleport(dt_);      // 位置固定・向き・消える演出・カメラ制御
                 combat_->UpdateComboAndCollider(); // コンボ継続＋前方判定更新
                 visual_->UpdateAnimation();
@@ -379,6 +385,7 @@ void Player::DrawParticleCompute(const ViewProjection &viewProjection)
 {
     auraEmitter_->DrawCompute(viewProjection);
     dashEffect_->DrawCompute(viewProjection);
+    footEffect_->DrawCompute(viewProjection);
     combat_->DrawParticleCompute(viewProjection);
 }
 
@@ -399,6 +406,7 @@ void Player::DrawParticle(const ViewProjection &viewProjection)
     combat_->DrawChargeParticle(viewProjection);
     auraEmitter_->DrawGraphics(viewProjection);
     dashEffect_->DrawGraphics(viewProjection);
+    footEffect_->DrawGraphics(viewProjection);
     hitEmitter_->Draw(viewProjection); // CPU emitter
 
     combat_->DrawAttackParticles(viewProjection);

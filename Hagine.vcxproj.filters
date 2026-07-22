@@ -100,6 +100,9 @@
     <Filter Include="Application\staging\dash">
       <UniqueIdentifier>{14B7507A-3B1D-836B-52BF-F01321F264ED}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Application\staging\foot">
+      <UniqueIdentifier>{8C41F2D6-5B7A-4E93-A0C2-6D18B4E7F3A9}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Application\staging\screen">
       <UniqueIdentifier>{b7e3c1a4-9f2d-4e6a-8c1b-3f5a7d2e9c04}</UniqueIdentifier>
     </Filter>
@@ -542,6 +545,9 @@
     </ClCompile>
     <ClCompile Include="Application\staging\dash\DashEffect.cpp">
       <Filter>Application\staging\dash</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\staging\foot\FootEffect.cpp">
+      <Filter>Application\staging\foot</Filter>
     </ClCompile>
     <ClCompile Include="Application\staging\screen\ScreenFlash.cpp">
       <Filter>Application\staging\screen</Filter>
@@ -1061,6 +1067,9 @@
     </ClInclude>
     <ClInclude Include="Application\staging\dash\DashEffect.h">
       <Filter>Application\staging\dash</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\staging\foot\FootEffect.h">
+      <Filter>Application\staging\foot</Filter>
     </ClInclude>
     <ClInclude Include="Application\staging\screen\ScreenFlash.h">
       <Filter>Application\staging\screen</Filter>

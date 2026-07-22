@@ -3,6 +3,7 @@
 #include "Application/entity/enemy/Enemy.h"
 #include "Application/entity/player/Player.h"
 #include "Frame.h"
+#include <algorithm>
 #include <iostream>
 
 // ---------------------------------------------------------
@@ -818,6 +819,131 @@ NodeStatus EnemyComboFullNode::OnUpdate()
     }
 
     return NodeStatus::Running;
+}
+
+// ---------------------------------------------------------
+// EnemyMeleeChaseComboNode
+// プレイヤーへ詰めながらコンボを出し切る（間合いを外されたら追い直す）
+// ---------------------------------------------------------
+void EnemyMeleeChaseComboNode::OnEnter()
+{
+    elapsed_ = 0.0f;
+    stepTimer_ = stepInterval_; // 間合い内なら即1段目を出す
+    comboEngaged_ = false;
+
+    if (!pEnemy_)
+        return;
+
+    prevMoveSpeed_ = pEnemy_->GetMoveSpeed();
+    wasFlying_ = pEnemy_->GetIsFlying();
+    active_ = true;
+    pEnemy_->SetIsLockOn(true); // 追跡中は常にプレイヤーを向く
+}
+
+void EnemyMeleeChaseComboNode::Reset()
+{
+    BTNode::Reset();
+    elapsed_ = 0.0f;
+    stepTimer_ = 0.0f;
+    comboEngaged_ = false;
+    RestoreState();
+}
+
+NodeStatus EnemyMeleeChaseComboNode::OnUpdate()
+{
+    if (!pEnemy_ || !pPlayer_)
+        return NodeStatus::Failure;
+
+    const float dt = Frame::DeltaTime();
+    elapsed_ += dt;
+    stepTimer_ += dt;
+
+    // 時間切れ（追いつけない・当てられない場合の打ち切り）
+    if (elapsed_ >= maxDuration_)
+        return NodeStatus::Success;
+
+    Vector3 toTarget = pPlayer_->GetWorldPosition() - pEnemy_->GetWorldPosition();
+    const float heightDiff = toTarget.y;
+    toTarget.y = 0.0f;
+    const float distance = toTarget.Length();
+
+    ChaseVertical(heightDiff);
+
+    // 間合いの外なら詰める。コンボの合間に離されても追いかけ直す
+    if (distance > attackRange_)
+    {
+        pEnemy_->SetMoveSpeed(chaseSpeed_);
+        pEnemy_->MoveToTarget(pPlayer_->GetWorldPosition());
+        return NodeStatus::Running;
+    }
+
+    // 間合いの内側では踏みとどまって殴る
+    pEnemy_->StopMovement();
+
+    // コンボが始まったあとに非アクティブへ戻ったら、出し切った（or 途切れた）ので終了する。
+    // 段数ではなくコンボ側の状態で判定することで、先行入力バッファの分もずれない
+    if (pEnemy_->IsPunchComboActive())
+    {
+        comboEngaged_ = true;
+    }
+    else if (comboEngaged_)
+    {
+        return NodeStatus::Success;
+    }
+
+    if (stepTimer_ >= stepInterval_)
+    {
+        pEnemy_->SetComboAttack(true);
+        stepTimer_ = 0.0f;
+    }
+
+    return NodeStatus::Running;
+}
+
+void EnemyMeleeChaseComboNode::ChaseVertical(float heightDiff)
+{
+    const bool airborne = pEnemy_->GetIsFlying() || !pEnemy_->GetIsGrounded();
+
+    // 地上にいる状態でプレイヤーが十分高い位置にいるなら、飛行へ切り替えて追う
+    if (!airborne)
+    {
+        if (heightDiff <= kFlyChaseHeight)
+            return;
+
+        pEnemy_->SetIsFlying(true);
+        pEnemy_->SetIsGrounded(false);
+        pEnemy_->SetVerticalAcceleration(0.0f);
+    }
+
+    // 高低差に比例した上下速度で相手の高さに合わせる
+    float verticalSpeed = std::clamp(heightDiff * kVerticalGain, -chaseSpeed_, chaseSpeed_);
+    pEnemy_->SetVerticalVelocity(verticalSpeed);
+}
+
+void EnemyMeleeChaseComboNode::OnExit()
+{
+    RestoreState();
+}
+
+void EnemyMeleeChaseComboNode::RestoreState()
+{
+    if (!active_ || !pEnemy_)
+    {
+        active_ = false;
+        return;
+    }
+    active_ = false;
+
+    pEnemy_->SetMoveSpeed(prevMoveSpeed_);
+    pEnemy_->StopMovement();
+
+    // 自分で飛行へ切り替えた場合だけ元に戻す（重力で自然に着地させる）
+    if (!wasFlying_ && pEnemy_->GetIsFlying())
+    {
+        pEnemy_->SetIsFlying(false);
+        float fallSpeed = pEnemy_->GetFallSpeed();
+        pEnemy_->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
+    }
 }
 
 void EnemyBurstShootNode::FireOneBullet()

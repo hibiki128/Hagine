@@ -31,6 +31,9 @@ void Material::Draw(const Vector4 color, bool lighting)
     pMaterialDataGPU_->enableLighting = lighting ? 1 : 0;
 
     materialData_.uvTransform = MakeAffineMatrix({materialData_.uvSize.x, materialData_.uvSize.y, 1.0f}, {0.0f, 0.0f, materialData_.uvRotate}, {materialData_.uvPosition.x, materialData_.uvPosition.y, 0.0f});
+    // 組み立てた UV 行列は毎フレーム GPU へ送る
+    // （送らないと SetUVSize 等の変更が UpdateGPUData を呼ぶまで反映されない）
+    pMaterialDataGPU_->uvTransform = materialData_.uvTransform;
 
     // 法線マッピング関連（ImGui等での変更を毎フレーム反映）
     pMaterialDataGPU_->enableNormalMap = materialData_.enableNormalMap ? 1 : 0;
@@ -145,6 +148,16 @@ void Material::SetNormalMap(const std::string &normalMapPath)
     materialData_.enableNormalMap = true;
     // 手続き的法線とは排他（PS が procedural を優先するため明示的に切る）
     materialData_.enableProceduralNormal = false;
+    UpdateGPUData();
+}
+
+void Material::ClearNormalMap()
+{
+    materialData_.normalMapFilePath.clear();
+    materialData_.normalMapIndex = 0;
+    materialData_.hasNormalMapTexture = false;
+    // 画像が無い状態で有効のままだと albedo を法線として読んでしまうため切る
+    materialData_.enableNormalMap = false;
     UpdateGPUData();
 }
 } // namespace Hagine

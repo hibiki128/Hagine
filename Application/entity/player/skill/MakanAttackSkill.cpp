@@ -196,9 +196,16 @@ void MakanAttackSkill::OnCollisionEnter(ColliderBase *other)
         {
             isAlive_ = false;
 
-            // チャージ度合いに応じたダメージを計算して適用
+            // 必殺技被弾：ビームの進行方向（プレイヤー→敵）へ大きく吹き飛ばし、
+            // そのまま地面まで落下する大スタンにする。予約はダメージ適用より先に行う
+            Enemy *enemy = pPlayer_->GetEnemy();
+            Vector3 blowDir = enemy->GetWorldPosition() - pPlayer_->GetWorldPosition();
+            blowDir.y = 0.0f;
+            enemy->Status().RequestSkillBlowReaction(blowDir);
+
+            // チャージ度合いに応じたダメージを計算して適用（ガードされた場合は必殺技分のエネルギーを削る）
             float damage = 37.5f;
-            pPlayer_->GetEnemy()->SetDamage(damage);
+            enemy->SetDamage(damage, false, true);
         }
     }
 }

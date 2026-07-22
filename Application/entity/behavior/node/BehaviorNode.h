@@ -1195,6 +1195,95 @@ class EnemyComboFullNode : public ContextNode
 };
 
 /// <summary>
+/// 近接追撃コンボノード
+/// プレイヤーへ詰めながらコンボを出し切る。間合いを外されたら追いかけ直すため、
+/// 距離が離れても近接を仕掛け続ける（EnemyComboFullNode はその場で振るだけ）
+/// </summary>
+class EnemyMeleeChaseComboNode : public ContextNode
+{
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
+    /// <param name="maxDuration">最大継続時間（秒）</param>
+    /// <param name="attackRange">攻撃を出す距離（この距離以内で殴る）</param>
+    /// <param name="stepInterval">コンボ1段あたりの間隔（秒）</param>
+    /// <param name="chaseSpeed">追跡時の移動速度</param>
+    EnemyMeleeChaseComboNode(float maxDuration = 6.0f, float attackRange = 4.0f,
+                             float stepInterval = 0.3f, float chaseSpeed = 28.0f)
+        : maxDuration_(maxDuration), attackRange_(attackRange),
+          stepInterval_(stepInterval), chaseSpeed_(chaseSpeed) {}
+
+    /// <summary>
+    /// 状態をリセット
+    /// 別の枝に切り替わって Reset された場合も OnExit は呼ばれないため、
+    /// ここで移動速度・飛行状態を必ず元へ戻す
+    /// </summary>
+    void Reset() override;
+
+  protected:
+    /// ===================================================
+    /// protected method
+    /// ===================================================
+
+    /// <summary>
+    /// ノード開始時の処理
+    /// </summary>
+    void OnEnter() override;
+
+    /// <summary>
+    /// 更新処理
+    /// </summary>
+    /// <returns>NodeStatus: 実行結果</returns>
+    NodeStatus OnUpdate() override;
+
+    /// <summary>
+    /// ノード終了時の処理
+    /// </summary>
+    void OnExit() override;
+
+  private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// 高低差を詰める（プレイヤーが上にいるなら飛行して追う）
+    /// </summary>
+    /// <param name="heightDiff">プレイヤーとの高さの差（正でプレイヤーが上）</param>
+    void ChaseVertical(float heightDiff);
+
+    /// <summary>
+    /// 追跡用に書き換えた移動速度・飛行状態を元へ戻す
+    /// </summary>
+    void RestoreState();
+
+    /// ===================================================
+    /// private variants
+    /// ===================================================
+
+    float maxDuration_;   // 最大継続時間(秒)
+    float attackRange_;   // 攻撃を出す水平距離
+    float stepInterval_;  // コンボ1段の間隔(秒)
+    float chaseSpeed_;    // 追跡時の移動速度
+
+    float elapsed_ = 0.0f;        // 開始からの経過時間
+    float stepTimer_ = 0.0f;      // 直近の攻撃からの経過時間
+    bool comboEngaged_ = false;   // コンボが実際に始まったか（終了判定に使う）
+    float prevMoveSpeed_ = 0.0f;  // 開始前の移動速度（終了時に戻す）
+    bool wasFlying_ = false;      // 開始前の飛行状態（終了時に戻す）
+    bool active_ = false;         // 追跡中フラグ（状態を戻す必要があるか）
+
+    static constexpr float kFlyChaseHeight = 3.0f;     // この高低差を超えたら飛んで追う
+    static constexpr float kVerticalGain = 2.0f;       // 高低差に対する上下速度の比例係数
+    static constexpr float kMinChaseDistance = 0.001f; // 方向計算の下限距離
+};
+
+/// <summary>
 /// 指定弾数を連射するアクションノード
 /// </summary>
 class EnemyBurstShootNode : public ContextNode

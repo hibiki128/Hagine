@@ -1,6 +1,7 @@
 #pragma once
 #include "Application/staging/dash/DashEffect.h"
 #include "Application/staging/death/DeathStaging.h"
+#include "Application/staging/foot/FootEffect.h"
 #include "Application/system/tutorial/TutorialSystem.h"
 #include "data/DataHandler.h"
 #include "GamePad.h"
@@ -185,7 +186,18 @@ class Player : public Hagine::BaseObject
     /// 外部からダメージ量をセット（次のDamageUpdateで処理される）
     /// </summary>
     /// <param name="damage">与えるダメージ量</param>
-    void SetDamage(float damage) { status_->SetDamage(damage); }
+    /// <param name="isShot">射撃（弾）によるダメージなら true。ひるみが近接より短くなる</param>
+    /// <param name="isSkill">必殺技によるダメージなら true。ガード時のエネルギー消費が大きくなる</param>
+    void SetDamage(float damage, bool isShot = false, bool isSkill = false)
+    {
+        status_->SetDamage(damage, isShot, isSkill);
+    }
+
+    /// <summary>
+    /// ガード中なら弾を弾き返せるかを判定する（成立時はガード分のエネルギーを消費する）
+    /// </summary>
+    /// <returns>bool: 弾き返せたら true</returns>
+    bool ConsumeGuardDeflect() { return status_->ConsumeGuardDeflect(); }
 
     /// <summary>
     /// 外部からノックバックを与える
@@ -194,6 +206,19 @@ class Player : public Hagine::BaseObject
     /// <param name="direction">ノックバック方向（正規化済みでなくてもよい）</param>
     /// <param name="power">ノックバック強度</param>
     void SetKnockback(const Hagine::Vector3 &direction, float power) { status_->SetKnockback(direction, power); }
+
+    /// <summary>
+    /// ノックバック速度を直接指定する（上方成分の固定加算なし）。
+    /// 敵コンボの叩きつけ段などに使う
+    /// </summary>
+    /// <param name="velocity">適用するノックバック速度</param>
+    void SetKnockbackDirect(const Hagine::Vector3 &velocity) { status_->SetKnockbackDirect(velocity); }
+
+    /// <summary>
+    /// 次に受けるダメージを「吹き飛ばし（Blow）」リアクションとして扱うよう予約する
+    /// </summary>
+    /// <param name="grantFlinchImmunity">復帰直後にひるみ無効時間を与えるなら true</param>
+    void RequestBlowReaction(bool grantFlinchImmunity = false) { status_->RequestBlowReaction(grantFlinchImmunity); }
 
     /// ===================================================
     /// 入力表示UI用
@@ -360,6 +385,7 @@ class Player : public Hagine::BaseObject
     std::unique_ptr<Hagine::ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;    // 被弾ヒットエミッター
     std::unique_ptr<DashEffect> dashEffect_;                 // ダッシュ中の演出
+    std::unique_ptr<FootEffect> footEffect_;                 // 着地・走行中の足元の演出
     std::unique_ptr<DeathStaging> deathStaging_;             // 死亡演出
     std::unique_ptr<ScreenFlash> screenFlash_;               // 必殺技の画面白黒フラッシュ演出
     std::unique_ptr<Hagine::GamePad> gamePad_;               // ゲームパッド
