@@ -201,6 +201,9 @@
 └── └── ├── death/
 └── └── └── ├── DeathStaging.cpp
 └── └── └── └── DeathStaging.h
+└── └── ├── foot/
+└── └── └── ├── FootEffect.cpp
+└── └── └── └── FootEffect.h
 └── └── ├── result/
 └── └── └── ├── ResultStaging.cpp
 └── └── └── └── ResultStaging.h
@@ -801,6 +804,8 @@ void SparkingFight::LoadGameResources()
     pParticleCSEditor_->AddParticleEmitter("enemyChargeAura");
     pParticleCSEditor_->AddParticleEmitter("AroundField");
     pParticleCSEditor_->AddParticleEmitter("dashWind");
+    pParticleCSEditor_->AddParticleEmitter("landing");
+    pParticleCSEditor_->AddParticleEmitter("running");
 
     // パーティクルフィールド
     pParticleCSFieldManager_->CreateField("GeneratedField", "GeneratedField");
@@ -1311,9 +1316,8 @@ Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *p
         Vector3 enemyPos = pPlayer->GetEnemy()->GetLocalPosition();
         Vector3 toEnemyDir = enemyPos - targetPos;
 
-        // 敵方向をそのまま forward にすると、空中で敵の真上/真下に近づいたとき
-        // forward が垂直に近づいて up との外積が退化し、カメラが暴れる。
-        // ヨー（既に敵方向へ更新済み）＋クランプしたピッチから forward を構築して防ぐ
+        // 敵方向をそのまま forward にすると、敵の真上/真下で up との外積が退化して暴れる。
+        // ヨー＋クランプしたピッチから forward を構築して防ぐ
         float xzLen = std::sqrt(toEnemyDir.x * toEnemyDir.x + toEnemyDir.z * toEnemyDir.z);
         float pitch = std::atan2(toEnemyDir.y, xzLen); // +: 敵が上 / -: 敵が下
         pitch = std::clamp(pitch, -kMaxLockOnPitch, kMaxLockOnPitch);
@@ -3335,6 +3339,13 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
             static_cast<int>(nd.param2),
             nd.param3);
         break;
+    case EditorNodeType::ActionMeleeChaseCombo:
+        runtimeNode = std::make_shared<EnemyMeleeChaseComboNode>(
+            nd.param > 0.0f ? nd.param : 6.0f,
+            nd.param2 > 0.0f ? nd.param2 : 4.0f,
+            nd.param3 > 0.0f ? nd.param3 : 0.3f,
+            nd.param4 > 0.0f ? nd.param4 : 28.0f);
+        break;
     case EditorNodeType::ActionBurstShoot:
         runtimeNode = std::make_shared<EnemyBurstShootNode>(
             nd.param > 0.0f ? nd.param : 0.2f,
@@ -3449,7 +3460,8 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::BuildNodeRecursive(
                    nd.type == EditorNodeType::ConditionEnergyHigh ||
                    nd.type == EditorNodeType::ActionGuard ||
                    nd.type == EditorNodeType::ConditionPlayerAttacking ||
-                   nd.type == EditorNodeType::ActionBeamUltimate);
+                   nd.type == EditorNodeType::ActionBeamUltimate ||
+                   nd.type == EditorNodeType::ActionMeleeChaseCombo);
 
     if (!isLeaf)
     {
@@ -3777,6 +3789,13 @@ EditorNode::EditorNode(int id, const std::string &title, EditorNodeType type)
     {
         Parameter = 1.5f; // 溜め時間(秒)
     }
+    else if (type == EditorNodeType::ActionMeleeChaseCombo)
+    {
+        Parameter = 6.0f;  // 最大継続時間(秒)
+        Parameter2 = 4.0f; // 攻撃を出す距離
+        Parameter3 = 0.3f; // コンボ1段の間隔(秒)
+        Parameter4 = 28.0f; // 追跡速度
+    }
 }
 
 EditorLink::EditorLink(int id, ed::PinId start, ed::PinId end)
@@ -3907,6 +3926,8 @@ const char *BehaviorTreeEditor::GetNodeDescription(EditorNodeType type)
         return "プレイヤーが攻撃的(Rush/スキル/コンボ中)かチェックする";
     case EditorNodeType::ActionBeamUltimate:
         return "ビーム必殺技: 溜め後にlightningBoltビームを発射 param=溜め時間(秒)";
+    case EditorNodeType::ActionMeleeChaseCombo:
+        return "近接追撃コンボ: 詰めながらコンボを出し切る param=最大時間 param2=攻撃距離 param3=段の間隔 param4=追跡速度";
     default:
         return "説明なし";
     }
@@ -4013,6 +4034,13 @@ std::shared_ptr<BTNode> BehaviorTreeEditor::BuildNodeRecursive(int editorNodeId)
         break;
     case EditorNodeType::ActionComboFull:
         runtimeNode = std::make_shared<EnemyComboFullNode>(eNode.Parameter > 0.0f ? eNode.Parameter : 0.5f, static_cast<int>(eNode.Parameter2), eNode.Parameter3);
+        break;
+    case EditorNodeType::ActionMeleeChaseCombo:
+        runtimeNode = std::make_shared<EnemyMeleeChaseComboNode>(
+            eNode.Parameter > 0.0f ? eNode.Parameter : 6.0f,
+            eNode.Parameter2 > 0.0f ? eNode.Parameter2 : 4.0f,
+            eNode.Parameter3 > 0.0f ? eNode.Parameter3 : 0.3f,
+            eNode.Parameter4 > 0.0f ? eNode.Parameter4 : 28.0f);
         break;
     case EditorNodeType::ActionBurstShoot:
         runtimeNode = std::make_shared<EnemyBurstShootNode>(eNode.Parameter > 0.0f ? eNode.Parameter : 0.2f, eNode.Parameter2 > 0.0f ? static_cast<int>(eNode.Parameter2) : 3, eNode.Parameter3 > 0.0f ? eNode.Parameter3 : 0.5f, eNode.Parameter4, eNode.Parameter5 >= 1.0f);
@@ -4913,6 +4941,7 @@ void BehaviorTreeEditor::OnImGuiRender()
             addBtn("連射", EditorNodeType::ActionBurstShoot);
             addBtn("コンボ(1段)", EditorNodeType::ActionComboStep);
             addBtn("コンボ(全段)", EditorNodeType::ActionComboFull);
+            addBtn("近接追撃コンボ", EditorNodeType::ActionMeleeChaseCombo);
             addBtn("溜め攻撃", EditorNodeType::ActionChargeAttack);
             addBtn("重スキル(コンボ+連射)", EditorNodeType::ActionUltimate);
             addBtn("ビーム必殺技", EditorNodeType::ActionBeamUltimate);
@@ -5234,6 +5263,14 @@ void BehaviorTreeEditor::DrawNodeParameters(EditorNode &node)
         ImGui::DragFloat("溜め時間(s)", &node.Parameter, 0.05f, 0.0f, 10.0f, "%.2f");
         break;
 
+    case EditorNodeType::ActionMeleeChaseCombo:
+        ImGui::DragFloat("最大継続時間(s)", &node.Parameter, 0.05f, 0.5f, 20.0f, "%.2f");
+        ImGui::DragFloat("攻撃を出す距離", &node.Parameter2, 0.1f, 1.0f, 30.0f, "%.1f");
+        ImGui::DragFloat("コンボ1段の間隔(s)", &node.Parameter3, 0.02f, 0.05f, 2.0f, "%.2f");
+        ImGui::DragFloat("追跡速度", &node.Parameter4, 0.5f, 1.0f, 80.0f, "%.1f");
+        ImGui::TextDisabled("間合いを外されても追い直してコンボを継続します");
+        break;
+
     default:
         ImGui::TextDisabled("編集可能なパラメータはありません。");
         break;
@@ -5367,7 +5404,9 @@ enum class EditorNodeType
     ActionGuard,              // 35  一定時間ガードして被ダメージを軽減
     ConditionPlayerAttacking, // 36  プレイヤーが攻撃的(脅威)かチェック
     // ===== ビーム必殺技 =====
-    ActionBeamUltimate // 37  溜め→ビーム必殺技 (MakanAttackSkill相当)
+    ActionBeamUltimate, // 37  溜め→ビーム必殺技 (MakanAttackSkill相当)
+    // ===== 近接追撃 =====
+    ActionMeleeChaseCombo // 38  プレイヤーへ詰めながらコンボを出し切る
 };
 
 /// <summary>
@@ -5525,7 +5564,8 @@ struct EditorNode
                Type == EditorNodeType::ActionChargeAttack ||
                Type == EditorNodeType::ActionUltimate ||
                Type == EditorNodeType::ActionGuard ||
-               Type == EditorNodeType::ActionBeamUltimate;
+               Type == EditorNodeType::ActionBeamUltimate ||
+               Type == EditorNodeType::ActionMeleeChaseCombo;
     }
 
     /// <summary>
@@ -5743,6 +5783,7 @@ File Path: Application/entity/behavior/node/BehaviorNode.cpp
 #include "Application/entity/enemy/Enemy.h"
 #include "Application/entity/player/Player.h"
 #include "Frame.h"
+#include <algorithm>
 #include <iostream>
 
 // ---------------------------------------------------------
@@ -6558,6 +6599,131 @@ NodeStatus EnemyComboFullNode::OnUpdate()
     }
 
     return NodeStatus::Running;
+}
+
+// ---------------------------------------------------------
+// EnemyMeleeChaseComboNode
+// プレイヤーへ詰めながらコンボを出し切る（間合いを外されたら追い直す）
+// ---------------------------------------------------------
+void EnemyMeleeChaseComboNode::OnEnter()
+{
+    elapsed_ = 0.0f;
+    stepTimer_ = stepInterval_; // 間合い内なら即1段目を出す
+    comboEngaged_ = false;
+
+    if (!pEnemy_)
+        return;
+
+    prevMoveSpeed_ = pEnemy_->GetMoveSpeed();
+    wasFlying_ = pEnemy_->GetIsFlying();
+    active_ = true;
+    pEnemy_->SetIsLockOn(true); // 追跡中は常にプレイヤーを向く
+}
+
+void EnemyMeleeChaseComboNode::Reset()
+{
+    BTNode::Reset();
+    elapsed_ = 0.0f;
+    stepTimer_ = 0.0f;
+    comboEngaged_ = false;
+    RestoreState();
+}
+
+NodeStatus EnemyMeleeChaseComboNode::OnUpdate()
+{
+    if (!pEnemy_ || !pPlayer_)
+        return NodeStatus::Failure;
+
+    const float dt = Frame::DeltaTime();
+    elapsed_ += dt;
+    stepTimer_ += dt;
+
+    // 時間切れ（追いつけない・当てられない場合の打ち切り）
+    if (elapsed_ >= maxDuration_)
+        return NodeStatus::Success;
+
+    Vector3 toTarget = pPlayer_->GetWorldPosition() - pEnemy_->GetWorldPosition();
+    const float heightDiff = toTarget.y;
+    toTarget.y = 0.0f;
+    const float distance = toTarget.Length();
+
+    ChaseVertical(heightDiff);
+
+    // 間合いの外なら詰める。コンボの合間に離されても追いかけ直す
+    if (distance > attackRange_)
+    {
+        pEnemy_->SetMoveSpeed(chaseSpeed_);
+        pEnemy_->MoveToTarget(pPlayer_->GetWorldPosition());
+        return NodeStatus::Running;
+    }
+
+    // 間合いの内側では踏みとどまって殴る
+    pEnemy_->StopMovement();
+
+    // コンボが始まったあとに非アクティブへ戻ったら、出し切った（or 途切れた）ので終了する。
+    // 段数ではなくコンボ側の状態で判定することで、先行入力バッファの分もずれない
+    if (pEnemy_->IsPunchComboActive())
+    {
+        comboEngaged_ = true;
+    }
+    else if (comboEngaged_)
+    {
+        return NodeStatus::Success;
+    }
+
+    if (stepTimer_ >= stepInterval_)
+    {
+        pEnemy_->SetComboAttack(true);
+        stepTimer_ = 0.0f;
+    }
+
+    return NodeStatus::Running;
+}
+
+void EnemyMeleeChaseComboNode::ChaseVertical(float heightDiff)
+{
+    const bool airborne = pEnemy_->GetIsFlying() || !pEnemy_->GetIsGrounded();
+
+    // 地上にいる状態でプレイヤーが十分高い位置にいるなら、飛行へ切り替えて追う
+    if (!airborne)
+    {
+        if (heightDiff <= kFlyChaseHeight)
+            return;
+
+        pEnemy_->SetIsFlying(true);
+        pEnemy_->SetIsGrounded(false);
+        pEnemy_->SetVerticalAcceleration(0.0f);
+    }
+
+    // 高低差に比例した上下速度で相手の高さに合わせる
+    float verticalSpeed = std::clamp(heightDiff * kVerticalGain, -chaseSpeed_, chaseSpeed_);
+    pEnemy_->SetVerticalVelocity(verticalSpeed);
+}
+
+void EnemyMeleeChaseComboNode::OnExit()
+{
+    RestoreState();
+}
+
+void EnemyMeleeChaseComboNode::RestoreState()
+{
+    if (!active_ || !pEnemy_)
+    {
+        active_ = false;
+        return;
+    }
+    active_ = false;
+
+    pEnemy_->SetMoveSpeed(prevMoveSpeed_);
+    pEnemy_->StopMovement();
+
+    // 自分で飛行へ切り替えた場合だけ元に戻す（重力で自然に着地させる）
+    if (!wasFlying_ && pEnemy_->GetIsFlying())
+    {
+        pEnemy_->SetIsFlying(false);
+        float fallSpeed = pEnemy_->GetFallSpeed();
+        pEnemy_->SetVerticalAcceleration(fallSpeed > 0.0f ? -fallSpeed : fallSpeed);
+    }
 }
 
 void EnemyBurstShootNode::FireOneBullet()
@@ -8221,6 +8387,95 @@ class EnemyComboFullNode : public ContextNode
 };
 
 /// <summary>
+/// 近接追撃コンボノード
+/// プレイヤーへ詰めながらコンボを出し切る。間合いを外されたら追いかけ直すため、
+/// 距離が離れても近接を仕掛け続ける（EnemyComboFullNode はその場で振るだけ）
+/// </summary>
+class EnemyMeleeChaseComboNode : public ContextNode
+{
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
+    /// <param name="maxDuration">最大継続時間（秒）</param>
+    /// <param name="attackRange">攻撃を出す距離（この距離以内で殴る）</param>
+    /// <param name="stepInterval">コンボ1段あたりの間隔（秒）</param>
+    /// <param name="chaseSpeed">追跡時の移動速度</param>
+    EnemyMeleeChaseComboNode(float maxDuration = 6.0f, float attackRange = 4.0f,
+                             float stepInterval = 0.3f, float chaseSpeed = 28.0f)
+        : maxDuration_(maxDuration), attackRange_(attackRange),
+          stepInterval_(stepInterval), chaseSpeed_(chaseSpeed) {}
+
+    /// <summary>
+    /// 状態をリセット
+    /// 別の枝に切り替わって Reset された場合も OnExit は呼ばれないため、
+    /// ここで移動速度・飛行状態を必ず元へ戻す
+    /// </summary>
+    void Reset() override;
+
+  protected:
+    /// ===================================================
+    /// protected method
+    /// ===================================================
+
+    /// <summary>
+    /// ノード開始時の処理
+    /// </summary>
+    void OnEnter() override;
+
+    /// <summary>
+    /// 更新処理
+    /// </summary>
+    /// <returns>NodeStatus: 実行結果</returns>
+    NodeStatus OnUpdate() override;
+
+    /// <summary>
+    /// ノード終了時の処理
+    /// </summary>
+    void OnExit() override;
+
+  private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// 高低差を詰める（プレイヤーが上にいるなら飛行して追う）
+    /// </summary>
+    /// <param name="heightDiff">プレイヤーとの高さの差（正でプレイヤーが上）</param>
+    void ChaseVertical(float heightDiff);
+
+    /// <summary>
+    /// 追跡用に書き換えた移動速度・飛行状態を元へ戻す
+    /// </summary>
+    void RestoreState();
+
+    /// ===================================================
+    /// private variants
+    /// ===================================================
+
+    float maxDuration_;   // 最大継続時間(秒)
+    float attackRange_;   // 攻撃を出す水平距離
+    float stepInterval_;  // コンボ1段の間隔(秒)
+    float chaseSpeed_;    // 追跡時の移動速度
+
+    float elapsed_ = 0.0f;        // 開始からの経過時間
+    float stepTimer_ = 0.0f;      // 直近の攻撃からの経過時間
+    bool comboEngaged_ = false;   // コンボが実際に始まったか（終了判定に使う）
+    float prevMoveSpeed_ = 0.0f;  // 開始前の移動速度（終了時に戻す）
+    bool wasFlying_ = false;      // 開始前の飛行状態（終了時に戻す）
+    bool active_ = false;         // 追跡中フラグ（状態を戻す必要があるか）
+
+    static constexpr float kFlyChaseHeight = 3.0f;     // この高低差を超えたら飛んで追う
+    static constexpr float kVerticalGain = 2.0f;       // 高低差に対する上下速度の比例係数
+    static constexpr float kMinChaseDistance = 0.001f; // 方向計算の下限距離
+};
+
+/// <summary>
 /// 指定弾数を連射するアクションノード
 /// </summary>
 class EnemyBurstShootNode : public ContextNode
@@ -8592,8 +8847,7 @@ void Enemy::Init(const std::string objectName)
 {
     BaseObject::Init(objectName);
 
-    // プレイヤーと同じスケルトン付きモデルを使い、同一クリップでアニメーションさせる。
-    // モデル素体のマテリアル色は赤なので、敵はそのまま赤で表示される
+    // プレイヤーと同じスケルトン付きモデルを使い、同一クリップでアニメーションさせる
     BaseObject::CreateModel("animation/Player/Idle_Ground.gltf");
     BaseObject::SetOffset({0.0f, kModelOffsetY, 0.0f}); // 描画オフセット（足が地面につくように）
     BaseObject::GetLocalScale() = {4.0f, 4.0f, 4.0f};
@@ -8630,6 +8884,12 @@ void Enemy::Init(const std::string objectName)
 
     deathStaging_ = std::make_unique<DeathStaging>();
 
+    dashEffect_ = std::make_unique<DashEffect>();
+    dashEffect_->Init();
+
+    footEffect_ = std::make_unique<FootEffect>();
+    footEffect_->Init();
+
     // ─── 各パーツの初期化 ───
     movement_->Init(this);
     status_->Init(this);
@@ -8646,6 +8906,18 @@ void Enemy::Init(const std::string objectName)
 
 void Enemy::Update()
 {
+    // 移動演出（emitフラグ残留を防ぐため毎フレーム更新する）。
+    // 敵にはダッシュ入力が無いので、風切りは水平速度で判定し、滑らされている間は止める
+    const Vector3 &enemyVelocity = movement_->GetVelocity();
+    const float horizontalSpeed = std::sqrt(enemyVelocity.x * enemyVelocity.x + enemyVelocity.z * enemyVelocity.z);
+    const bool effectActive = isAlive_ && started_ && !isPause_;
+
+    dashEffect_->Update(GetWorldPosition(), enemyVelocity, GetForward(),
+                        effectActive && !status_->IsReacting() && horizontalSpeed > kDashEffectSpeed,
+                        movement_->GetIsGrounded());
+    footEffect_->Update(GetWorldPosition(), enemyVelocity,
+                        movement_->GetIsGrounded(), effectActive);
+
     // 開始フラグが立っており、ポーズ中でなく、ターゲットが生きている場合に更新
     if (started_ && !isPause_ && pTarget_->GetIsAlive())
     {
@@ -8676,8 +8948,7 @@ void Enemy::Update()
                 // 被弾点滅の途中（透明フレーム）で死ぬと見えないまま固まるため、不透明へ戻す
                 SetAlpha(kAlphaOpaque);
 
-                // 空中（飛行）中の死亡でピッチが残っていると、倒れるモーションや
-                // die.obj の粒子化演出が地面と合わない。ヨーのみ残して直立へ戻す
+                // ピッチが残っていると倒れるモーションが地面と合わないので、ヨーのみ残す
                 Vector3 euler = transform_->quateRotation_.ToEulerAngles();
                 transform_->quateRotation_ = Quaternion::FromEulerAngles({0.0f, euler.y, 0.0f});
 
@@ -8688,12 +8959,10 @@ void Enemy::Update()
             }
         }
 
-        // 死亡中は行動処理を行わず、死亡アニメーションだけ再生して進める。
-        // 再生し終わった後の粒子化演出は DrawParticle 側で描画する
+        // 死亡中は行動処理を行わず、死亡アニメーションだけ再生して進める
         if (!isAlive_)
         {
-            // 空中で死んだ場合は重力で地面まで落下させる
-            // （倒れるモーション・粒子化演出は地面の上で行う前提のため）
+            // 倒れる演出は地面の上で行う前提なので、空中で死んだら地面まで落下させる
             if (!movement_->GetIsGrounded())
             {
                 movement_->GetVelocity().y += kDeathFallAcceleration * dt;
@@ -8709,10 +8978,8 @@ void Enemy::Update()
         // ガード中のエフェクト（点滅）
         visual_->UpdateGuardBlink();
 
-        // ─── プレイヤーの必殺技カメラワーク中は完全停止させる ───
-        // カメラワーク（顔アップ演出）中は相手も動けない、という仕様。
-        // ただし自分がビーム発動者の場合(beamCutscene_ がアクティブ)は、照準追従の
-        // 回転を維持したいのでここではロックしない（発動中の停止はBT側が速度0で担保）。
+        // プレイヤーの必殺技カメラワーク中は完全停止させる。
+        // ただし自分がビーム発動者の場合は照準追従の回転を残したいのでロックしない
         FollowCamera *followCamera = pTarget_ ? pTarget_->GetCamera() : nullptr;
         const bool cameraCloseUp = followCamera && followCamera->IsSkillCloseUpActive();
         const bool frozenByOpponentSkill = cameraCloseUp && !combat_->IsBeamStaging();
@@ -8749,9 +9016,7 @@ void Enemy::Update()
         }
         else if (reacting)
         {
-            // 被弾リアクション中はAI(BT)を止める。
-            // 吹き飛ばし(Blow)はノックバック速度で滑走させる（摩擦なし＝大きく飛ぶ）。
-            // ひるみ(Flinch)は横滑りを抑えるため摩擦を掛けてその場で硬直させる
+            // 被弾リアクション中はAI(BT)を止め、Blowは滑走、Flinchは摩擦でその場に硬直させる
             if (status_->IsBlow())
             {
                 movement_->ApplyGravity(dt);
@@ -8766,8 +9031,7 @@ void Enemy::Update()
             rootNode_->SetContext(this, pTarget_);
             rootNode_->Tick();
 
-            // ガード中は移動させない（EnemyGuardNode が毎フレーム速度を0にしているため、
-            // ここで移動イージングを適用すると追跡速度で上書きされて動いてしまう）
+            // ガード中に移動イージングを適用すると、追跡速度で上書きされて動いてしまう
             if (status_->IsGuarding())
             {
                 movement_->StopHorizontal();
@@ -8808,9 +9072,7 @@ void Enemy::Update()
         }
     }
 
-    // ワールドトランスフォームの行列更新は started_ に関わらず毎フレーム実行する。
-    // StartCamera演出中は started_ が false のためゲームロジックはスキップされるが、
-    // 行列が未更新のままだと Draw() に正しい行列が渡らず描画されなくなる。
+    // 行列更新は started_ に関わらず毎フレーム実行する（StartCamera演出中も描画するため）
     BaseObject::Update();
 }
 
@@ -8833,13 +9095,14 @@ void Enemy::Draw(const ViewProjection &viewProjection)
 
 void Enemy::DrawParticleCompute(const ViewProjection &viewProjection)
 {
+    dashEffect_->DrawCompute(viewProjection);
+    footEffect_->DrawCompute(viewProjection);
     combat_->DrawParticleCompute(viewProjection);
 }
 
 void Enemy::DrawParticle(const ViewProjection &viewProjection)
 {
-    // 死亡アニメーションを再生し終わったら、死亡ポーズメッシュ(die.obj)の
-    // 表面からパーティクルを発生させて粒子化して消える演出を行う
+    // 死亡アニメーションを再生し終わったら、死亡ポーズメッシュから粒子化して消える演出を行う
     if (!isAlive_ && visual_->IsDeathAnimationFinished())
     {
         deathStaging_->Initialize(
@@ -8849,6 +9112,8 @@ void Enemy::DrawParticle(const ViewProjection &viewProjection)
         deathStaging_->Draw(viewProjection);
     }
 
+    dashEffect_->DrawGraphics(viewProjection);
+    footEffect_->DrawGraphics(viewProjection);
     hitEmitter_->Draw(viewProjection); // CPU emitter
     combat_->DrawParticle(viewProjection);
 }
@@ -9217,7 +9482,9 @@ Vector3 Enemy::GetPositionBelow(float distance) const { return transform_->trans
 File Path: Application/entity/enemy/Enemy.h
 ============================================================
 #pragma once
+#include "Application/staging/dash/DashEffect.h"
 #include "Application/staging/death/DeathStaging.h"
+#include "Application/staging/foot/FootEffect.h"
 #include "object/base/BaseObject.h"
 #include "parts/EnemyCombat.h"
 #include "parts/EnemyMovement.h"
@@ -9343,7 +9610,23 @@ class Enemy : public Hagine::BaseObject
     void SetIsFlying(bool flying) { movement_->SetIsFlying(flying); }
 
     // ─── ステータス（EnemyStatus） ───
-    void SetDamage(float damage) { status_->SetDamage(damage); }
+
+    /// <summary>
+    /// 外部からダメージ量をセット（次のDamageUpdateで処理される）
+    /// </summary>
+    /// <param name="damage">与えるダメージ量</param>
+    /// <param name="isShot">射撃（弾）によるダメージなら true。ひるみが近接より短くなる</param>
+    /// <param name="isSkill">必殺技によるダメージなら true。ガード時のエネルギー消費が大きくなる</param>
+    void SetDamage(float damage, bool isShot = false, bool isSkill = false)
+    {
+        status_->SetDamage(damage, isShot, isSkill);
+    }
+
+    /// <summary>
+    /// ガード中なら弾を弾き返せるかを判定する（成立時はガード分のエネルギーを消費する）
+    /// </summary>
+    /// <returns>bool: 弾き返せたら true</returns>
+    bool ConsumeGuardDeflect() { return status_->ConsumeGuardDeflect(); }
     void SetGuarding(bool guarding) { status_->SetGuarding(guarding); }
     void SetEnergy(float energy) { status_->SetEnergy(energy); }
     void SetEnergyRecoveryRate(float rate) { status_->SetEnergyRecoveryRate(rate); }
@@ -9367,7 +9650,8 @@ class Enemy : public Hagine::BaseObject
     /// 次に受けるダメージを「吹き飛ばし（Blow）」リアクションとして扱うよう予約する。
     /// 瞬間移動コンボの吹き飛ばし段のヒット時にコライダーから呼ぶ
     /// </summary>
-    void RequestBlowReaction() { status_->RequestBlowReaction(); }
+    /// <param name="grantFlinchImmunity">復帰直後にひるみ無効時間を与えるなら true（叩きつけ段用）</param>
+    void RequestBlowReaction(bool grantFlinchImmunity = false) { status_->RequestBlowReaction(grantFlinchImmunity); }
 
     // ─── 戦闘（EnemyCombat） ───
     void SetComboAttack(bool flag) { combat_->SetComboAttack(flag); }
@@ -9478,6 +9762,9 @@ class Enemy : public Hagine::BaseObject
     // モデル描画オフセット（地面に足がつくように下げる量。死亡演出の発生位置にも使う）
     static constexpr float kModelOffsetY = -0.75f;
 
+    // 風切り演出を出す水平速度（BTの接近ノードは20〜28、回り込み・後退は10〜12）
+    static constexpr float kDashEffectSpeed = 18.0f;
+
     // 回転・ベクトル定数
     static constexpr float kForwardVectorX = 0.0f;
     static constexpr float kForwardVectorY = 0.0f;
@@ -9501,6 +9788,8 @@ class Enemy : public Hagine::BaseObject
 
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_; ///< ヒットエミッター
     std::unique_ptr<DeathStaging> deathStaging_;          ///< 死亡演出（粒子化して消える）
+    std::unique_ptr<DashEffect> dashEffect_;              ///< 高速移動中の演出（プレイヤーのダッシュと共通）
+    std::unique_ptr<FootEffect> footEffect_;              ///< 着地・走行中の足元の演出
 
     Hagine::OBBCollider *pEnemyCollider_ = nullptr;      ///< 敵コライダー
     Hagine::AABBCollider *pEnemyWallCollider_ = nullptr; ///< 壁用コライダー
@@ -9580,8 +9869,7 @@ void EnemyBullet::Update()
         return;
     }
 
-    // 地面との衝突はメッシュコライダーで判定するため、
-    // これは地形の外へ抜け落ちた場合の保険（地形の最低高さより下）
+    // 地面との衝突はメッシュコライダーで判定するので、これは地形外へ抜け落ちた場合の保険
     if (transform_->translation_.y <= kFallbackKillY)
     {
         isAlive_ = false;
@@ -9655,8 +9943,7 @@ void EnemyBullet::DrawParticle(const ViewProjection &viewProjection)
 
 void EnemyBullet::InitTransform(Enemy *enemy)
 {
-    // 手（右手ジョイント）を発射起点にする。
-    // ジョイントが取得できない場合は従来どおり本体位置＋オフセットで代用する
+    // 手（右手ジョイント）を発射起点にする（取得できなければ本体位置＋オフセットで代用）
     std::optional<Vector3> handPos = enemy->GetJointWorldPosition(kHandJointName);
     const bool fromHand = handPos.has_value();
     this->transform_->translation_ = fromHand ? *handPos : enemy->GetLocalPosition();
@@ -9726,13 +10013,64 @@ void EnemyBullet::InitTransform(Enemy *enemy)
     }
 }
 
+void EnemyBullet::DeflectFrom(const Vector3 &guardPosition)
+{
+    isDeflected_ = true;
+    isLockOnBullet_ = false; // 弾かれた弾は追尾しない
+    acce_ = 0.0f;            // これ以上加速もしない
+
+    // ガードした相手から見た外側（水平）方向。真後ろへ返すと撃った本人へ戻ってしまう
+    Vector3 outward = GetWorldPosition() - guardPosition;
+    outward.y = 0.0f;
+    if (outward.Length() > kMinSpeedThreshold)
+    {
+        outward = outward.Normalize();
+    }
+    else
+    {
+        outward = {-velocity_.x, 0.0f, -velocity_.z};
+        outward = (outward.Length() > kMinSpeedThreshold) ? outward.Normalize() : Vector3{0.0f, 0.0f, 1.0f};
+    }
+
+    // 外側方向と直交する水平方向。弾の進行方向に近い側へ流して自然に逸れて見せる
+    Vector3 lateral = {-outward.z, 0.0f, outward.x};
+    if (lateral.x * velocity_.x + lateral.z * velocity_.z < 0.0f)
+    {
+        lateral = {-lateral.x, 0.0f, -lateral.z};
+    }
+
+    Vector3 direction = outward * kDeflectBackRatio + lateral;
+    direction = (direction.Length() > kMinSpeedThreshold) ? direction.Normalize() : outward;
+
+    float speed = GetCurrentSpeed() * kDeflectSpeedRatio;
+    if (speed < kDeflectMinSpeed)
+    {
+        speed = kDeflectMinSpeed;
+    }
+    velocity_ = {direction.x * speed, kDeflectUpSpeed, direction.z * speed};
+
+    // 弾かれたあとは短時間で消滅させる（画面外まで飛び続けさせない）
+    const float deflectDeadline = lifeTime_ - kDeflectLifeTime;
+    if (currentLifeTime_ < deflectDeadline)
+    {
+        currentLifeTime_ = deflectDeadline;
+    }
+}
+
 void EnemyBullet::OnCollisionEnter(ColliderBase *other)
 {
     // プレイヤーに当たった時の処理
-    if (other->GetTag() == "Player" && isAlive_ && pTarget_ && pTarget_->GetAlive())
+    if (other->GetTag() == "Player" && isAlive_ && !isDeflected_ && pTarget_ && pTarget_->GetAlive())
     {
+        // ガード中は弾を外側へ弾き返し、ダメージは完全に無効化する
+        if (pTarget_->ConsumeGuardDeflect())
+        {
+            DeflectFrom(pTarget_->GetWorldPosition());
+            return;
+        }
+
         isHit_ = true;
-        pTarget_->SetDamage(damage_);
+        pTarget_->SetDamage(damage_, true);
     }
 
     // 地形メッシュに当たったら消滅させる（パーティクル終了後に isAlive_ が折れる）
@@ -9797,6 +10135,12 @@ class EnemyBullet : public Hagine::BaseObject
     /// </summary>
     /// <param name="collider">衝突したコライダー</param>
     void OnCollisionEnter(Hagine::ColliderBase *collider);
+
+    /// <summary>
+    /// ガードされた弾を、相手の外側斜め上へ弾き返す（ホーミングと加速は打ち切る）
+    /// </summary>
+    /// <param name="guardPosition">ガードした相手の位置</param>
+    void DeflectFrom(const Hagine::Vector3 &guardPosition);
 
     /// ===================================================
     /// Getter
@@ -9888,6 +10232,13 @@ class EnemyBullet : public Hagine::BaseObject
     static constexpr int kBulletDamage = 1;               // 弾のダメージ値
     static constexpr float kFallbackKillY = -10.0f;       // 地形外へ抜けた弾を消す高さ（保険）
 
+    // ガードで弾き返されたときの挙動
+    static constexpr float kDeflectSpeedRatio = 0.6f; // 弾き返し後に残る速度の割合
+    static constexpr float kDeflectMinSpeed = 25.0f;  // 弾き返し後の最低速度
+    static constexpr float kDeflectUpSpeed = 12.0f;   // 弾き返し時の上方向速度
+    static constexpr float kDeflectBackRatio = 0.5f;  // 弾き返す向きに混ぜる「相手の外側」成分の比率
+    static constexpr float kDeflectLifeTime = 1.0f;   // 弾き返された弾が消えるまでの時間(秒)
+
     static constexpr const char *kHandJointName = "mixamorig:RightHand"; // 発射起点に使う手ジョイント名
     static constexpr float kHandForwardOffset = 0.5f;                    // 手からの前方オフセット距離
 
@@ -9899,6 +10250,7 @@ class EnemyBullet : public Hagine::BaseObject
     float currentLifeTime_ = 0.0f;      // 現在の生存時間
     bool isAlive_ = true;               // 弾が生きているかどうか
     bool isHit_ = false;                // 衝突判定フラグ
+    bool isDeflected_ = false;          // ガードで弾き返されたか（以降ダメージを与えない）
 
     bool isLockOnBullet_ = false;                      // ロックオン弾かどうか
     float damage_ = static_cast<float>(kBulletDamage); // 弾のダメージ量
@@ -9919,6 +10271,12 @@ File Path: Application/entity/enemy/collider/EnemyAttackCollider.cpp
 #include "scene/SceneManager.h"
 
 using namespace Hagine;
+
+namespace {
+// 叩きつけ（Slam）時、下方向の強さに対して前方へ流す割合
+constexpr float kSlamHorizontalRatio = 0.3f;
+} // namespace
+
 void EnemyAttackCollider::Init(Enemy *enemy, Player *player)
 {
     pEnemy_ = enemy;
@@ -9989,13 +10347,15 @@ void EnemyAttackCollider::DrawParticle(const ViewProjection &viewProjection)
 }
 
 void EnemyAttackCollider::Activate(float damage, float knockbackPower,
-                                   float activeDuration, float activateDelay)
+                                   float activeDuration, float activateDelay,
+                                   EnemyMeleeHitReaction reaction)
 {
     // 既存の判定をリセット
     Deactivate();
 
     currentDamage_ = damage;
     currentKnockback_ = knockbackPower;
+    currentReaction_ = reaction;
     activeDuration_ = activeDuration;
     hasHitThisActivation_ = false;
 
@@ -10047,12 +10407,36 @@ void EnemyAttackCollider::OnCollision(ColliderBase *other)
     // 連続ヒット防止
     hasHitThisActivation_ = true;
 
+    // 吹き飛ばし予約はダメージ適用より先に行う（DamageUpdateで参照されるため）
+    Vector3 knockbackDir = pEnemy_->GetForward();
+    switch (currentReaction_)
+    {
+    case EnemyMeleeHitReaction::Slam:
+    {
+        // 下方向へ叩きつける（前方に少しだけ流しつつ強く下へ）。
+        // 起き上がり直後にそのまま殴られ続けないよう、復帰後はしばらくひるまない
+        Vector3 slamVel = {
+            knockbackDir.x * currentKnockback_ * kSlamHorizontalRatio,
+            -currentKnockback_,
+            knockbackDir.z * currentKnockback_ * kSlamHorizontalRatio,
+        };
+        pPlayer_->RequestBlowReaction(true);
+        pPlayer_->SetKnockbackDirect(slamVel);
+        break;
+    }
+    case EnemyMeleeHitReaction::Launch:
+        // 前方へ大きく吹き飛ばす（着地するまで行動不能）
+        pPlayer_->RequestBlowReaction();
+        pPlayer_->SetKnockback(knockbackDir, currentKnockback_);
+        break;
+    case EnemyMeleeHitReaction::Normal:
+    default:
+        pPlayer_->SetKnockback(knockbackDir, currentKnockback_);
+        break;
+    }
+
     // ダメージ適用
     pPlayer_->SetDamage(currentDamage_);
-
-    // ノックバック適用
-    Vector3 knockbackDir = pEnemy_->GetForward();
-    pPlayer_->SetKnockback(knockbackDir, currentKnockback_);
 
     // ヒットエフェクトの発生
     if (hitEmitter_)
@@ -10103,6 +10487,16 @@ class ColliderBase;
 }
 
 /// <summary>
+/// 近接ヒット時のプレイヤーのリアクション種別。コンボの段ごとに切り替える
+/// </summary>
+enum class EnemyMeleeHitReaction
+{
+    Normal, // 通常：前方＋やや上へ吹き飛ばす（ひるみ）
+    Launch, // 前方へ大きく吹き飛ばす（着地するまで行動不能）
+    Slam,   // 下方向へ叩きつける（着地するまで行動不能・復帰後はひるみ無効）
+};
+
+/// <summary>
 /// 敵前方に展開する攻撃判定コライダー
 /// PlayerAttackCollider と対称の設計で、手のモーション（見た目）とは完全に独立して機能する
 /// 攻撃ごとにダメージ・ノックバック・有効時間・遅延を個別設定できる
@@ -10141,7 +10535,9 @@ class EnemyAttackCollider
     /// <param name="knockbackPower">ノックバックの強さ</param>
     /// <param name="activeDuration">コライダーが有効な時間（秒）</param>
     /// <param name="activateDelay">攻撃開始からコライダーが有効になるまでの遅延（秒）</param>
-    void Activate(float damage, float knockbackPower, float activeDuration, float activateDelay = 0.0f);
+    /// <param name="reaction">ヒット時のプレイヤーリアクション種別</param>
+    void Activate(float damage, float knockbackPower, float activeDuration, float activateDelay = 0.0f,
+                  EnemyMeleeHitReaction reaction = EnemyMeleeHitReaction::Normal);
 
     /// <summary>
     /// 攻撃コライダーを強制無効化する
@@ -10203,6 +10599,7 @@ class EnemyAttackCollider
     // 現在の攻撃パラメータ
     float currentDamage_ = 0.0f;    // 現在のダメージ
     float currentKnockback_ = 0.0f; // 現在のノックバック
+    EnemyMeleeHitReaction currentReaction_ = EnemyMeleeHitReaction::Normal; // ヒット時のリアクション種別
 
     // タイマー管理
     float activeTimer_ = 0.0f;    // 有効経過時間
@@ -10282,7 +10679,16 @@ void EnemyCombat::Init(Enemy *owner)
         // ビームアクティブ中かつ未ダメージ処理のとき一度だけダメージを与える
         if (other->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && pOwner_->GetTarget())
         {
-            pOwner_->GetTarget()->SetDamage(kBeamDamage);
+            Player *target = pOwner_->GetTarget();
+
+            // 必殺技被弾：ビームの進行方向（敵→プレイヤー）へ大きく吹き飛ばし、
+            // そのまま地面まで落下する大スタンにする。予約はダメージ適用より先に行う
+            Vector3 blowDir = target->GetWorldPosition() - pOwner_->GetWorldPosition();
+            blowDir.y = 0.0f;
+            target->Status().RequestSkillBlowReaction(blowDir);
+
+            // 必殺技扱いにして、ガードされた場合はエネルギーを大きく削る
+            target->SetDamage(kBeamDamage, false, true);
             beamDamageDealt_ = true;
         }
     });
@@ -10317,10 +10723,28 @@ void EnemyCombat::Init(Enemy *owner)
                 currentAttackDamage_ = damage;
                 currentAttackKnockback_ = knockback;
                 currentAttackDuration_ = duration;
-                if (attackCollider_)
+                if (!attackCollider_)
                 {
-                    attackCollider_->Activate(damage, knockback, duration);
+                    return;
                 }
+
+                // 段番号（GetCurrentComboIndex() は実行中の段の0始まりインデックス）。
+                // 締めの段だけプレイヤーを地面へ叩きつけて吹き飛ばす
+                const int stage = punchCombo_.GetCurrentComboIndex() + 1;
+                EnemyMeleeHitReaction reaction = EnemyMeleeHitReaction::Normal;
+                float kb = knockback;
+                if (blowFinisherStage_ > 0 && stage == blowFinisherStage_)
+                {
+                    reaction = EnemyMeleeHitReaction::Slam;
+                    kb = blowFinisherKnockback_;
+                }
+                else if (blowLaunchStage_ > 0 && stage == blowLaunchStage_)
+                {
+                    reaction = EnemyMeleeHitReaction::Launch;
+                    kb = blowLaunchKnockback_;
+                }
+
+                attackCollider_->Activate(damage, kb, duration, 0.0f, reaction);
             });
 
         comboInitialized_ = true;
@@ -10594,9 +11018,7 @@ void EnemyCombat::StartBeamStaging()
     // カメラはプレイヤーのフォローカメラを借りて敵の顔に寄せる
     FollowCamera *camera = pOwner_->GetTarget() ? pOwner_->GetTarget()->GetCamera() : nullptr;
 
-    // 演出・遅延中はロックオン（照準追従）を維持し、発動の瞬間に固定する。
-    // ActivateBeam() 内で発射時の quateRotation_ が beamLockedRotation_ に
-    // スナップショットされるため、以降は向きが固定され回避が可能になる
+    // 演出・遅延中は照準追従を維持し、発動の瞬間の向きで固定する（以降は回避が可能になる）
     beamCutscene_.Start(pOwner_, camera, [this] {
         pOwner_->SetIsLockOn(false);
         StopChargeAura();
@@ -10632,9 +11054,7 @@ void EnemyCombat::UpdateBeam()
     float dt = Frame::DeltaTime();
     beamActiveTime_ += dt;
 
-    // ビーム発射中は transform_->quateRotation_ を発射時の固定向きで上書きする。
-    // OBBコライダーは transform_->quateRotation_ から向きを取るため、
-    // ここで上書きしないと RotateUpdate() によりコライダーがプレイヤーを追従し続ける。
+    // 発射時の固定向きで上書きする。しないとOBBコライダーがプレイヤーを追従し続ける
     pOwner_->GetWorldTransform()->quateRotation_ = beamLockedRotation_;
 
     // ビーム長を前方に伸ばす
@@ -10664,9 +11084,7 @@ void EnemyCombat::UpdateBeam()
         beamAroundEffect_->SetAuto(true);
         beamSpiralTime_ += dt;
 
-        // クォータニオンからローカル座標系の基底ベクトルを計算する
-        // RotateUpdate が +Z をプレイヤー方向に向けるため、
-        // localForward（+Z 基底）はそのままプレイヤー方向を向く
+        // クォータニオンからローカル基底を計算する（+Z がプレイヤー方向）
         Quaternion q = selfRot;
         Vector3 localRight(
             1.0f - 2.0f * (q.y * q.y + q.z * q.z),
@@ -10746,6 +11164,12 @@ void EnemyCombat::SetVp(ViewProjection *vp)
 void EnemyCombat::RegisterParams()
 {
     beamCutscene_.RegisterParams("必殺演出(Enemy)");
+
+    auto *hub = GameParamHub::GetInstance();
+    hub->Register("Enemy", "コンボ吹き飛ばし段(0で無効)", &blowLaunchStage_, {0.1f, 0.0f, 8.0f});
+    hub->Register("Enemy", "コンボ吹き飛ばし強度", &blowLaunchKnockback_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Enemy", "コンボ叩きつけ段(0で無効)", &blowFinisherStage_, {0.1f, 0.0f, 8.0f});
+    hub->Register("Enemy", "コンボ叩きつけ強度", &blowFinisherKnockback_, {0.5f, 0.0f, 100.0f});
 }
 
 void EnemyCombat::DrawComboImGui()
@@ -10971,6 +11395,13 @@ class EnemyCombat
     float currentAttackDamage_ = 10.0f;   ///< 現在の攻撃ダメージ量
     float currentAttackKnockback_ = 3.0f; ///< 現在の攻撃ノックバック強度
     float currentAttackDuration_ = 0.25f; ///< 現在の攻撃有効時間
+
+    // ─── コンボの吹き飛ばし段（GameParamで調整可・0で無効）───
+    // 途中の段で吹き飛ばすとコンボが途切れるため、既定では締めの段だけ吹き飛ばす
+    int blowLaunchStage_ = 0;             ///< 前方へ大きく吹き飛ばす段（1始まり）
+    float blowLaunchKnockback_ = 22.0f;   ///< 吹き飛ばし段のノックバック強度
+    int blowFinisherStage_ = 8;           ///< 地面へ叩きつける締めの段（1始まり）
+    float blowFinisherKnockback_ = 30.0f; ///< 叩きつけ段の下方向ノックバック強度
 
     std::unique_ptr<Shake> chargeShake_; ///< シェイク
 
@@ -11520,7 +11951,10 @@ void EnemyStatus::DamageUpdate()
 
     if (damage_ <= kNoDamage)
     {
-        blowPending_ = false; // ダメージが無いフレームに予約が残らないようにする
+        blowPending_ = false;              // ダメージが無いフレームに予約が残らないようにする
+        blowGrantsFlinchImmunity_ = false; // 予約と同時に付与指定も落とす
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
         // ダメージがなくてもノックバックだけ適用する場合に備えてチェック
         if (hasKnockback_)
         {
@@ -11541,15 +11975,47 @@ void EnemyStatus::DamageUpdate()
         return;
     }
 
-    // ダメージ計算（ガード時は軽減し、エネルギーを消費する：プレイヤーと同様）
+    // ダメージ計算（ガード時は軽減し、エネルギーを消費する。必殺技は消費量が大きい）
     float actualDamage = damage_;
     if (isGuarding_)
     {
         actualDamage *= kGuardDamageMultiplier;
-        ConsumeEnergy(kGuardEnergyCost);
+        // 残量が足りなくてもゼロまで削る（必殺技のガードを無償にしない）
+        DrainEnergy(damageIsSkill_ ? kGuardSkillEnergyCost : kGuardEnergyCost);
     }
+
+    // 必殺技被弾スタン中は行動できず無防備なので、追撃のダメージを軽減する
+    const bool inSkillBlow = (reactState_ == EnemyReactState::SkillBlow) && !skillBlowPending_;
+    if (inSkillBlow)
+    {
+        actualDamage *= skillBlowDamageMultiplier_;
+    }
+
     HP_ -= actualDamage;
     damage_ = kNoDamage;
+
+    // スタン中の追撃は落下の軌道を乱さないよう、ノックバックもリアクション変更も行わない
+    if (inSkillBlow)
+    {
+        hasKnockback_ = false;
+        pendingKnockback_ = {0.0f, 0.0f, 0.0f};
+        blowPending_ = false;
+        blowGrantsFlinchImmunity_ = false;
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
+        StartDamageReact();
+        return;
+    }
+
+    // 必殺技被弾：吹き飛ばして落下スタンへ移行する（他のリアクションより優先）
+    if (skillBlowPending_)
+    {
+        StartSkillBlow();
+        StartDamageReact();
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
+        return;
+    }
 
     // ノックバック適用（ガード中は軽減）
     if (hasKnockback_)
@@ -11584,22 +12050,135 @@ void EnemyStatus::DamageUpdate()
             reactState_ = EnemyReactState::Blow;
             blowLanded_ = false;
             blowAfterTimer_ = 0.0f;
-            blowTimer_ = 0.0f; // 空中滞留時の強制復帰タイマーを被弾ごとにリセット
+            blowTimer_ = 0.0f;         // 空中滞留時の強制復帰タイマーを被弾ごとにリセット
+            flinchImmuneTimer_ = 0.0f; // 吹き飛ばし中は無効時間を進めない（復帰時に張り直す）
+            blowImmunityArmed_ = blowGrantsFlinchImmunity_;
         }
-        else
+        else if (flinchImmuneTimer_ <= 0.0f)
         {
-            // ひるみ：時間経過で回復。被弾ごとにアニメをランダム選択
+            // ひるみ：時間経過で回復。被弾ごとにアニメをランダム選択（射撃は近接より短い）
             reactState_ = EnemyReactState::Flinch;
-            reactTimer_ = flinchDuration_;
+            reactTimer_ = damageIsShot_ ? flinchDuration_ * shotFlinchScale_ : flinchDuration_;
             flinchAnimIndex_ = 1 + std::rand() % 3;
         }
     }
     blowPending_ = false;
+    blowGrantsFlinchImmunity_ = false;
+    damageIsShot_ = false;
+    damageIsSkill_ = false;
+}
+
+bool EnemyStatus::ConsumeGuardDeflect()
+{
+    if (!isGuarding_)
+    {
+        return false;
+    }
+    // 弾き返しも通常のガードと同じだけエネルギーを消費する
+    ConsumeEnergy(kGuardEnergyCost);
+    return true;
+}
+
+void EnemyStatus::RequestSkillBlowReaction(const Vector3 &direction)
+{
+    skillBlowPending_ = true;
+
+    Vector3 dir = {direction.x, 0.0f, direction.z};
+    const float len = std::sqrt(dir.x * dir.x + dir.z * dir.z);
+    if (len < 0.001f)
+    {
+        // 方向が取れないときは敵の背面方向へ飛ばす
+        dir = pOwner_->GetForward();
+        dir.y = 0.0f;
+        dir = {-dir.x, 0.0f, -dir.z};
+        const float fallbackLen = std::sqrt(dir.x * dir.x + dir.z * dir.z);
+        if (fallbackLen < 0.001f)
+        {
+            skillBlowDirection_ = {0.0f, 0.0f, 0.0f};
+            return;
+        }
+        dir.x /= fallbackLen;
+        dir.z /= fallbackLen;
+    }
+    else
+    {
+        dir.x /= len;
+        dir.z /= len;
+    }
+    skillBlowDirection_ = dir;
+}
+
+void EnemyStatus::StartSkillBlow()
+{
+    EnemyMovement &mv = pOwner_->Movement();
+
+    reactState_ = EnemyReactState::SkillBlow;
+    skillBlowTimer_ = 0.0f;
+    blowLanded_ = false;
+    blowAfterTimer_ = 0.0f;
+    blowPending_ = false;
+    blowGrantsFlinchImmunity_ = false;
+    skillBlowPending_ = false;
+
+    // 起き上がり直後の連続被弾を防ぐため、復帰後は必ずひるみ無効時間を与える
+    blowImmunityArmed_ = true;
+    flinchImmuneTimer_ = 0.0f;
+
+    // 予約済みのノックバックは使わず、必殺技専用の吹き飛ばし速度で上書きする
+    hasKnockback_ = false;
+    pendingKnockback_ = {0.0f, 0.0f, 0.0f};
+
+    Vector3 &velocity = mv.GetVelocity();
+    velocity.x = skillBlowDirection_.x * skillBlowSpeed_;
+    velocity.z = skillBlowDirection_.z * skillBlowSpeed_;
+    velocity.y = skillBlowRiseSpeed_; // 一度浮かせてから落下させる
+
+    // BTの移動イージング・飛行状態を打ち切り、重力で落ちる状態にする
+    mv.CancelVelocityEase();
+    mv.SetIsFlying(false);
+    mv.GetIsGrounded() = false;
+
+    // 重力加速度が未設定（0）でも必ず落下するようフォールバックを用意する
+    float gravity = std::abs(mv.GetFallSpeed());
+    if (gravity < 0.001f)
+    {
+        gravity = kSkillBlowFallbackGravity;
+    }
+    mv.GetAcceleration().y = -gravity;
+}
+
+void EnemyStatus::RecoverFromBlow(bool grantFlinchImmunity)
+{
+    // 残速度で飛び続けたり上方向へ漂ったりしないよう、速度を消してから戻す
+    reactState_ = EnemyReactState::None;
+    pOwner_->SetVelocity({0.0f, 0.0f, 0.0f});
+
+    if (grantFlinchImmunity)
+    {
+        flinchImmuneTimer_ = flinchImmuneDuration_;
+    }
+    blowImmunityArmed_ = false;
 }
 
 void EnemyStatus::UpdateReaction()
 {
     const float dt = Frame::DeltaTime();
+
+    // ひるみ無効時間の消化
+    if (flinchImmuneTimer_ > 0.0f)
+    {
+        flinchImmuneTimer_ -= dt;
+        if (flinchImmuneTimer_ < 0.0f)
+        {
+            flinchImmuneTimer_ = 0.0f;
+        }
+    }
+
+    if (reactState_ == EnemyReactState::SkillBlow)
+    {
+        UpdateSkillBlow(dt);
+        return;
+    }
 
     if (reactState_ == EnemyReactState::Flinch)
     {
@@ -11613,16 +12192,11 @@ void EnemyStatus::UpdateReaction()
     {
         if (!blowLanded_)
         {
-            // 空中に取り残されたまま吹き飛ばされっぱなしにならないよう、着地しなくても
-            // 一定時間で強制復帰させる安全策。コンボが続く間は被弾ごとに blowTimer_ が
-            // リセットされるため、殴られ続けている間はこのタイマーで復帰することはない
+            // 空中に取り残されないよう、着地しなくても一定時間で強制復帰させる安全策
             blowTimer_ += dt;
             if (blowTimer_ >= blowMaxDuration_)
             {
-                // 残った吹き飛ばし速度で飛び続けたり、上方向へ漂い続けたりしないよう
-                // 速度を消してから通常状態へ戻す
-                reactState_ = EnemyReactState::None;
-                pOwner_->SetVelocity({0.0f, 0.0f, 0.0f});
+                RecoverFromBlow(blowImmunityArmed_);
                 return;
             }
 
@@ -11638,11 +12212,43 @@ void EnemyStatus::UpdateReaction()
             blowAfterTimer_ -= dt;
             if (blowAfterTimer_ <= 0.0f)
             {
-                // 復帰時に残速度を消して、横滑りや上方向への漂いを防ぐ
-                reactState_ = EnemyReactState::None;
-                pOwner_->SetVelocity({0.0f, 0.0f, 0.0f});
+                RecoverFromBlow(blowImmunityArmed_);
             }
         }
+    }
+}
+
+void EnemyStatus::UpdateSkillBlow(float deltaTime)
+{
+    Vector3 &velocity = pOwner_->Movement().GetVelocity();
+
+    if (!blowLanded_)
+    {
+        skillBlowTimer_ += deltaTime;
+
+        // 横移動の勢いを保ったまま徐々に減速させる（フレームレート非依存の指数減衰）
+        const float damping = std::pow(skillBlowHorizontalRetain_, deltaTime);
+        velocity.x *= damping;
+        velocity.z *= damping;
+
+        if (pOwner_->GetIsGrounded())
+        {
+            // 地面に落ちたら着地硬直（BlowAfter）へ
+            blowLanded_ = true;
+            blowAfterTimer_ = blowAfterDuration_;
+        }
+        else if (skillBlowTimer_ >= skillBlowMaxDuration_)
+        {
+            // 地形の穴などで落ち続けた場合の安全策
+            RecoverFromBlow(blowImmunityArmed_);
+        }
+        return;
+    }
+
+    blowAfterTimer_ -= deltaTime;
+    if (blowAfterTimer_ <= 0.0f)
+    {
+        RecoverFromBlow(blowImmunityArmed_);
     }
 }
 
@@ -11676,6 +12282,12 @@ bool EnemyStatus::ConsumeEnergy(float amount)
         return true;
     }
     return false;
+}
+
+void EnemyStatus::DrainEnergy(float amount)
+{
+    energy_ = (energy_ > amount) ? energy_ - amount : 0.0f;
+    timeSinceLastShot_ = kTimerReset;
 }
 
 void EnemyStatus::RecoverEnergy()
@@ -11742,7 +12354,12 @@ void EnemyStatus::ResetForRevive()
     isDamageReact_ = false;
     reactState_ = EnemyReactState::None;
     blowPending_ = false;
+    blowGrantsFlinchImmunity_ = false;
+    blowImmunityArmed_ = false;
     blowLanded_ = false;
+    skillBlowPending_ = false;
+    skillBlowTimer_ = 0.0f;
+    flinchImmuneTimer_ = 0.0f;
 }
 
 void EnemyStatus::RegisterParams()
@@ -11753,8 +12370,15 @@ void EnemyStatus::RegisterParams()
     hub->Register("Enemy", "エネルギー回復速度", &energyRecoveryRate_, {0.1f, 0.0f, 50.0f});
     hub->Register("Enemy", "被弾リアクション時間", &damageReactDuration_, {0.05f, 0.0f, 3.0f});
     hub->Register("Enemy", "ひるみ時間", &flinchDuration_, {0.01f, 0.0f, 2.0f});
+    hub->Register("Enemy", "射撃被弾のひるみ倍率", &shotFlinchScale_, {0.01f, 0.0f, 1.0f});
+    hub->Register("Enemy", "吹き飛ばし復帰後のひるみ無効時間", &flinchImmuneDuration_, {0.05f, 0.0f, 5.0f});
     hub->Register("Enemy", "吹き飛ばし着地後硬直", &blowAfterDuration_, {0.01f, 0.0f, 2.0f});
     hub->Register("Enemy", "吹き飛ばし最大時間", &blowMaxDuration_, {0.05f, 0.1f, 5.0f});
+    hub->Register("Enemy", "必殺技被弾の吹き飛び速度", &skillBlowSpeed_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Enemy", "必殺技被弾の浮き上がり速度", &skillBlowRiseSpeed_, {0.5f, 0.0f, 50.0f});
+    hub->Register("Enemy", "必殺技被弾の横速度残存率(1秒)", &skillBlowHorizontalRetain_, {0.01f, 0.001f, 1.0f});
+    hub->Register("Enemy", "必殺技被弾スタン最大時間", &skillBlowMaxDuration_, {0.1f, 0.5f, 10.0f});
+    hub->Register("Enemy", "必殺技被弾中の被ダメージ倍率", &skillBlowDamageMultiplier_, {0.01f, 0.0f, 1.0f});
 }
 
 
@@ -11767,14 +12391,14 @@ File Path: Application/entity/enemy/parts/EnemyStatus.h
 class Enemy;
 
 /// <summary>
-/// 被弾リアクションの状態。
-/// Flinch=ひるみ（その場硬直）、Blow=大きく吹き飛ばされ中（着地でBlowAfterへ）
+/// 被弾リアクションの状態
 /// </summary>
 enum class EnemyReactState
 {
-    None,   // リアクションなし（通常行動可）
-    Flinch, // ひるみ（行動不能・Hittingアニメ）
-    Blow,   // 吹き飛ばし（行動不能・BlowBack→着地でBlowAfter）
+    None,      // リアクションなし（通常行動可）
+    Flinch,    // ひるみ（行動不能・Hittingアニメ）
+    Blow,      // 吹き飛ばし（行動不能・BlowBack→着地でBlowAfter）
+    SkillBlow, // 必殺技被弾スタン（行動不能・横速度を保ったまま減速しつつ落下）
 };
 
 /// <summary>
@@ -11812,9 +12436,21 @@ class EnemyStatus
     bool ConsumeEnergy(float amount);
 
     /// <summary>
+    /// エネルギーを削る処理。残量が足りない場合もゼロまで削り取る
+    /// </summary>
+    /// <param name="amount">削る量</param>
+    void DrainEnergy(float amount);
+
+    /// <summary>
     /// エネルギー回復処理
     /// </summary>
     void RecoverEnergy();
+
+    /// <summary>
+    /// ガード中なら弾を弾き返せるかを判定する（成立時はガード分のエネルギーを消費する）
+    /// </summary>
+    /// <returns>bool: 弾き返せたら true</returns>
+    bool ConsumeGuardDeflect();
 
     /// <summary>
     /// 外部からノックバックを与える
@@ -11839,7 +12475,18 @@ class EnemyStatus
     /// 次に受けるダメージを「吹き飛ばし（Blow）」リアクションとして扱うよう予約する。
     /// 瞬間移動コンボの吹き飛ばし段のヒット時にコライダーから呼ぶ
     /// </summary>
-    void RequestBlowReaction() { blowPending_ = true; }
+    /// <param name="grantFlinchImmunity">復帰直後にひるみ無効時間を与えるなら true（叩きつけ段用）</param>
+    void RequestBlowReaction(bool grantFlinchImmunity = false)
+    {
+        blowPending_ = true;
+        blowGrantsFlinchImmunity_ = grantFlinchImmunity;
+    }
+
+    /// <summary>
+    /// 次に受けるダメージを「必殺技被弾スタン（SkillBlow）」として扱うよう予約する
+    /// </summary>
+    /// <param name="direction">吹き飛ばす水平方向（正規化不要・ゼロなら現在の向きの後方）</param>
+    void RequestSkillBlowReaction(const Hagine::Vector3 &direction);
 
     /// <summary>
     /// 被弾リアクション（ひるみ・吹き飛ばし）の状態を進める（毎フレーム呼ぶ）
@@ -11866,14 +12513,22 @@ class EnemyStatus
 
     /// <summary>被弾リアクション（ひるみ or 吹き飛ばし）中か。true の間はAI(BT)を停止する</summary>
     bool IsReacting() const { return reactState_ != EnemyReactState::None; }
-    /// <summary>吹き飛ばし（Blow）リアクション中か</summary>
-    bool IsBlow() const { return reactState_ == EnemyReactState::Blow; }
+    /// <summary>吹き飛ばし中か（必殺技スタンも含む。重力適用・BlowBackアニメの判定に使う）</summary>
+    bool IsBlow() const
+    {
+        return reactState_ == EnemyReactState::Blow || reactState_ == EnemyReactState::SkillBlow;
+    }
+    /// <summary>必殺技被弾スタン（SkillBlow）中か</summary>
+    bool IsSkillBlow() const { return reactState_ == EnemyReactState::SkillBlow; }
     /// <summary>ひるみ（Flinch）リアクション中か</summary>
     bool IsFlinch() const { return reactState_ == EnemyReactState::Flinch; }
     /// <summary>吹き飛ばし後、地面に着地済みか（BlowAfter再生の判定用）</summary>
     bool IsBlowLanded() const { return blowLanded_; }
     /// <summary>ひるみアニメの番号（1〜3）</summary>
     int GetFlinchAnimIndex() const { return flinchAnimIndex_; }
+
+    /// <summary>ひるみ無効時間中か（吹き飛ばし・必殺技被弾から復帰した直後）</summary>
+    bool IsFlinchImmune() const { return flinchImmuneTimer_ > 0.0f; }
 
     /// ===================================================
     /// ImGui 表示用のパラメータ参照
@@ -11888,7 +12543,19 @@ class EnemyStatus
     /// ===================================================
     void SetHP(float hp) { HP_ = hp; }
     void SetMaxHP(float maxHP) { maxHP_ = maxHP; }
-    void SetDamage(float damage) { damage_ = damage; }
+
+    /// <summary>
+    /// 次のDamageUpdateで処理するダメージを設定する
+    /// </summary>
+    /// <param name="damage">ダメージ量</param>
+    /// <param name="isShot">射撃（弾）によるダメージなら true。ひるみが近接より短くなる</param>
+    /// <param name="isSkill">必殺技によるダメージなら true。ガード時のエネルギー消費が大きくなる</param>
+    void SetDamage(float damage, bool isShot = false, bool isSkill = false)
+    {
+        damage_ = damage;
+        damageIsShot_ = isShot;
+        damageIsSkill_ = isSkill;
+    }
     void SetGuarding(bool guarding) { isGuarding_ = guarding; }
     void SetEnergy(float energy);
     void SetEnergyRecoveryRate(float rate) { energyRecoveryRate_ = rate; }
@@ -11898,6 +12565,27 @@ class EnemyStatus
 
   private:
     /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// 必殺技被弾スタンを開始する（吹き飛ばし速度の設定と落下状態への移行）
+    /// </summary>
+    void StartSkillBlow();
+
+    /// <summary>
+    /// 必殺技被弾スタンの更新（横速度の減速・着地判定）
+    /// </summary>
+    /// <param name="deltaTime">経過時間（秒）</param>
+    void UpdateSkillBlow(float deltaTime);
+
+    /// <summary>
+    /// 大きな吹き飛ばしから通常状態へ復帰させる（残速度を消す）
+    /// </summary>
+    /// <param name="grantFlinchImmunity">ひるみ無効時間を与えるなら true</param>
+    void RecoverFromBlow(bool grantFlinchImmunity);
+
+    /// ===================================================
     /// private variants
     /// ===================================================
 
@@ -11906,7 +12594,8 @@ class EnemyStatus
     static constexpr float kMinHP = 0.0f;
     static constexpr float kTimerReset = 0.0f;
     static constexpr float kGuardDamageMultiplier = 0.15f;
-    static constexpr float kGuardEnergyCost = 4.0f; // ガード中の被弾で消費するエネルギー（プレイヤーと同様）
+    static constexpr float kGuardEnergyCost = 3.0f;       // ガード中の被弾で消費するエネルギー（プレイヤーと同様）
+    static constexpr float kGuardSkillEnergyCost = 15.0f; // ガード中に必殺技を受けた際の消費エネルギー（通常より大きく削る）
 
     // 点滅関連定数
     static constexpr float kDamageBlinkInterval = 0.03f;
@@ -11937,13 +12626,32 @@ class EnemyStatus
     float damageReactTimer_ = 0.0f;    ///< ダメージ反応タイマー
     float damageReactDuration_ = 0.5f; ///< ダメージ反応時間
 
-    // ─── 被弾リアクション（ひるみ・吹き飛ばし）───
-    // リアクション中はBTを停止し、Blowはノックバック速度で滑走、Flinchはその場で硬直する
+    // ─── 被弾リアクション（ひるみ・吹き飛ばし）中はBTを停止する ───
     EnemyReactState reactState_ = EnemyReactState::None; ///< 現在のリアクション状態
     float reactTimer_ = 0.0f;                            ///< ひるみの残り時間
     float flinchDuration_ = 0.5f;                        ///< ひるみ継続時間（秒・コンボ間隔をまたぐ長さ）
+    bool damageIsShot_ = false;                          ///< 処理待ちのダメージが射撃由来か（ひるみを短くする）
+    bool damageIsSkill_ = false;                         ///< 処理待ちのダメージが必殺技由来か（ガード時の消費量を切り替える）
+    float shotFlinchScale_ = 0.5f;                       ///< 射撃被弾時のひるみ時間倍率（近接に対する比率）
     int flinchAnimIndex_ = 1;                            ///< ひるみアニメ番号（1〜3）
     bool blowPending_ = false;                           ///< 次のダメージをBlow扱いにする予約
+    bool blowGrantsFlinchImmunity_ = false;              ///< 予約中のBlowが復帰時にひるみ無効を与えるか
+    bool blowImmunityArmed_ = false;                     ///< 進行中のBlowが復帰時にひるみ無効を与えるか
+
+    // ─── ひるみ無効時間（起き上がり直後に殴られ続けないための猶予。ダメージは通る）───
+    float flinchImmuneTimer_ = 0.0f;    ///< ひるみ無効の残り時間（>0 でひるまない）
+    float flinchImmuneDuration_ = 2.0f; ///< 吹き飛ばし復帰後のひるみ無効時間（秒）
+
+    // ─── 必殺技被弾スタン（SkillBlow）大きく吹き飛ばされて落下し、その間は行動不能 ───
+    bool skillBlowPending_ = false;                     ///< 次のダメージをSkillBlow扱いにする予約
+    Hagine::Vector3 skillBlowDirection_ = {0, 0, 0};    ///< 吹き飛ばす水平方向（正規化済み）
+    float skillBlowTimer_ = 0.0f;                       ///< スタン開始からの経過時間
+    float skillBlowSpeed_ = 35.0f;                      ///< 吹き飛ばしの水平初速
+    float skillBlowRiseSpeed_ = 12.0f;                  ///< 吹き飛ばしの上方初速（この後は落下する）
+    float skillBlowHorizontalRetain_ = 0.12f;           ///< 1秒あたりに残る横速度の割合（小さいほど早く減速）
+    float skillBlowMaxDuration_ = 5.0f;                 ///< 着地しないまま落下し続ける最大時間（秒・安全策）
+    float skillBlowDamageMultiplier_ = 0.2f;            ///< スタン中の被ダメージ倍率（0.2＝80%軽減）
+    static constexpr float kSkillBlowFallbackGravity = 30.0f; ///< 重力加速度が未設定のときに使う値
     bool blowLanded_ = false;                            ///< 吹き飛ばし後に着地したか
     float blowAfterTimer_ = 0.0f;                        ///< 着地後（BlowAfter）の残り硬直時間
     float blowAfterDuration_ = 0.6f;                     ///< 着地後の硬直時間（秒）
@@ -11976,6 +12684,10 @@ void EnemyVisual::Init(Enemy *owner)
     // アニメーションコントローラへクリップを登録（プレイヤーと同一構成）
     // ───────────────────────────────────────────
     animationController_.Initialize(pOwner_->GetObject3d());
+
+    // 射撃モーションは上半身だけに適用する（走りながら撃っても下半身は走行モーションのまま）
+    animationController_.SetLayerMaskRoot(kUpperBodyRootJoint);
+
     animationController_.RegisterClip("Idle", "animation/Player/Idle_Ground.gltf", true);
     animationController_.RegisterClip("FlyIdle", "animation/Player/Idle_Flying.gltf", true);
     animationController_.RegisterClip("Run", "animation/Player/Running.gltf", true);
@@ -12013,10 +12725,11 @@ void EnemyVisual::UpdateAnimation()
 {
     // ──────────────────────────────────────────
     // ビーム必殺技中：発動前演出〜ビーム終了まで一続きの専用モーションを再生
-    // （プレイヤーの必殺技と同じく、構え→フレーム30付近で発射→フレーム80で撃ち終わり）
     // ──────────────────────────────────────────
     if (pOwner_->Combat().IsBeamStaging() || pOwner_->Combat().IsBeamActive())
     {
+        // 全身モーションを見せる場面では射撃の上半身レイヤーを解除する
+        animationController_.StopLayer(kShotLayerFade);
         animationController_.Play("MakanSkill");
         return;
     }
@@ -12027,6 +12740,7 @@ void EnemyVisual::UpdateAnimation()
     EnemyStatus &st = pOwner_->Status();
     if (st.IsReacting())
     {
+        animationController_.StopLayer(kShotLayerFade);
         if (st.IsBlow())
         {
             // 吹き飛ばされ中はBlowBack、地面に落ちたらBlowAfter
@@ -12043,12 +12757,14 @@ void EnemyVisual::UpdateAnimation()
     const std::vector<std::string> &comboAnimations = pOwner_->Combat().GetComboAnimations();
 
     // ──────────────────────────────────────────
-    // コンボ攻撃中：段数に対応したアニメーションを再生（プレイヤーと同じロジック）
-    // GetCurrentComboIndex() は「次に実行する」インデックスなので、
-    // 現在再生中の段 = nextIdx - 1（0 のときは最終段の後）
+    // コンボ攻撃中：段数に対応したアニメーションを再生
+    // GetCurrentComboIndex() は「次に実行する」段なので、再生中の段 = nextIdx - 1
     // ──────────────────────────────────────────
     if (punchCombo.IsComboActive())
     {
+        // 近接は全身モーション。射撃の上半身レイヤーが残っていたら解除する
+        animationController_.StopLayer(kShotLayerFade);
+
         int nextIdx = punchCombo.GetCurrentComboIndex();
         int comboLen = punchCombo.GetComboLength();
         int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
@@ -12065,24 +12781,17 @@ void EnemyVisual::UpdateAnimation()
     }
 
     // ──────────────────────────────────────────
-    // ガード中：Shot（射撃）モーションの再生中でも防御姿勢を優先する。
-    // Shot 判定より後に置くと、射撃直後にガードを始めたとき Shot が
-    // 再生し終わるまでガードアニメが適用されない
+    // ガード中：射撃の上半身レイヤーを解除して防御姿勢を優先する
     // ──────────────────────────────────────────
     if (pOwner_->Status().IsGuarding())
     {
+        animationController_.StopLayer(kShotLayerFade);
         animationController_.Play("Guard");
         return;
     }
 
-    // ──────────────────────────────────────────
-    // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
-    // （発射のたびに PlayShotAnimation() で先頭から再生し直される）
-    // ──────────────────────────────────────────
-    if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished())
-    {
-        return;
-    }
+    // 通常弾の発射モーションは上半身レイヤーで再生されるため、
+    // ここでの全身クリップの切り替えはそのまま続けてよい（下半身は移動モーションを維持する）
 
     // ──────────────────────────────────────────
     // 移動状態でクリップを選択する。
@@ -12104,10 +12813,8 @@ void EnemyVisual::UpdateAnimation()
             return;
         }
 
-        // 「前進／後退」はプレイヤーの位置を基準に判定する。
-        // 敵は常にプレイヤーへ向くため、プレイヤーへ近づく成分が＋＝前進、離れる成分が－＝後退。
-        // 向き(GetForward)はクォータニオン規約の影響でプレイヤーと逆を指すことがあるため、
-        // 実ワールド位置から求めたベクトルで判定する方が確実
+        // 前進／後退はプレイヤーの位置を基準に判定する
+        // （GetForward はクォータニオン規約の影響で逆を指すことがあるため使わない）
         bool movingBackward = false;
         Player *target = pOwner_->GetTarget();
         if (target && hSpeed > kMinRotationDistance)
@@ -12151,16 +12858,9 @@ void EnemyVisual::PlayDeathAnimation()
 
 void EnemyVisual::PlayShotAnimation()
 {
-    // 同一クリップ再生中の Play() は無視されるため、既に Shot 中なら先頭へ巻き戻して再生し直す
-    if (animationController_.GetCurrentClipName() == "Shot")
-    {
-        animationController_.SetTime(0.0f);
-        animationController_.SetPaused(false); // 再生終了で停止していた場合に再開する
-    }
-    else
-    {
-        animationController_.Play("Shot");
-    }
+    // 上半身レイヤーとして再生する。連射時は先頭へ巻き戻され、
+    // 撃ち終わり（ループなしクリップの終端）でレイヤーは自動的に解除される
+    animationController_.PlayLayer("Shot", kShotLayerFade);
 }
 
 bool EnemyVisual::IsDeathAnimationFinished() const
@@ -12268,6 +12968,11 @@ class EnemyVisual
     static constexpr float kMoveAnimMinSpeed = 0.1f;         ///< 待機/移動アニメを切り替える水平速度の閾値
     static constexpr float kBackwardDotThreshold = 0.5f;     ///< 後退とみなす（前方ベクトルとの内積）の閾値
     static constexpr float kMinRotationDistance = 0.001f;    ///< 進行方向判定の最小距離
+
+    /// 上半身レイヤーの根ジョイント。ここから上（胴・腕・首・頭）が射撃モーションで上書きされ、
+    /// 腰（Hips）と脚は移動モーション側が担当する
+    static constexpr const char *kUpperBodyRootJoint = "mixamorig:Spine";
+    static constexpr float kShotLayerFade = 0.1f; ///< 射撃レイヤーの出入りにかける時間（秒）
 
     Enemy *pOwner_ = nullptr; ///< 所有者の敵
 
@@ -12795,6 +13500,9 @@ void Player::Init(const std::string objectName)
     dashEffect_ = std::make_unique<DashEffect>();
     dashEffect_->Init();
 
+    footEffect_ = std::make_unique<FootEffect>();
+    footEffect_->Init();
+
     deathStaging_ = std::make_unique<DeathStaging>();
 
     // 必殺技の画面白黒フラッシュ演出（ポストエフェクトの Gray + Bloom を利用）
@@ -12836,6 +13544,11 @@ void Player::Update()
                         isAlive_ && started_ && !isPause_ && dashActive,
                         movement_->GetIsGrounded());
 
+    // 足元の演出（着地の砂煙・走行中の砂煙）も同様に毎フレーム更新する
+    footEffect_->Update(GetWorldPosition(), movement_->GetVelocity(),
+                        movement_->GetIsGrounded(),
+                        isAlive_ && started_ && !isPause_);
+
     if (combat_->IsSkillActive())
     {
         // ビーム発動中も必殺技モーション（発射→フレーム80の撃ち終わりまで）は進める
@@ -12871,17 +13584,15 @@ void Player::Update()
 
         status_->DamageUpdate();
 
-        // ひるみ（ヒットスタン）残り時間を進める
-        status_->UpdateHitStun();
+        // 被弾リアクション（ひるみ・吹き飛ばし・必殺技スタン）を進める
+        status_->UpdateReaction();
 
         if (started_ && !isPause_)
         {
             status_->RecoverEnergy();
 
-            // ─── 必殺技のカメラ演出中は行動不能にする ───
-            // ・カメラワーク（顔アップ）中: 自分/相手どちらの必殺技でも移動・行動をロックする
-            // ・自分の必殺技演出中（顔アップ後の発動遅延も含む）: 発動が終わるまで自分をロックする
-            //   （相手はカメラワーク終了後に回避できるよう、ここではロックしない）
+            // 必殺技のカメラ演出中は行動不能にする。
+            // 顔アップ中は双方をロックし、発動遅延中は発動者だけをロックする（相手は回避可能）
             const bool cameraCloseUp = FollowCamera_ && FollowCamera_->IsSkillCloseUpActive();
             const bool selfSkillStaging = combat_->IsSkillStaging();
             const bool skillLocked = cameraCloseUp || selfSkillStaging;
@@ -12917,23 +13628,23 @@ void Player::Update()
                 // 必殺技モーションや死亡時の倒れる向きがずれる）
                 visual_->UpdateFlyLean();
             }
-            else if (status_->IsHitStun())
+            else if (status_->IsReacting())
             {
-                // ─── ひるみ（ヒットスタン）中は行動不能 ───
-                // 攻撃・移動入力・ステート更新は行わない。ノックバック（速度）と重力・
-                // 被弾点滅は下の共通処理で継続するため、アニメーションだけ進めて硬直を表現する。
-                // 入力減速が効かないので、横滑りが伸びすぎないよう水平速度を減衰させる
-                Hagine::Vector3 &vel = movement_->GetVelocity();
-                vel.x *= kHitStunHorizontalDamping;
-                vel.z *= kHitStunHorizontalDamping;
+                // 被弾リアクション中は行動不能。アニメーションだけ進めて硬直を表現する。
+                // 吹き飛ばし中の速度制御（減速・落下）は PlayerStatus::UpdateReaction が担当するので、
+                // ここでは横滑りが伸びすぎないようひるみ中だけ水平速度を減衰させる
+                if (!status_->IsBlow())
+                {
+                    Hagine::Vector3 &vel = movement_->GetVelocity();
+                    vel.x *= kHitStunHorizontalDamping;
+                    vel.z *= kHitStunHorizontalDamping;
+                }
                 visual_->UpdateAnimation();
                 visual_->UpdateFlyLean();
             }
             else if (combat_->IsTeleporting())
             {
-                // ─── 瞬間移動追撃中 ───
-                // 敵に貼り付いて追撃を継続する。移動入力・射撃・ガードは無効化し、
-                // コンボと前方判定だけ進めてフィニッシュ（叩きつけ）まで繋ぐ
+                // 瞬間移動追撃中は移動入力・射撃・ガードを無効化し、コンボだけ進める
                 combat_->UpdateTeleport(dt_);      // 位置固定・向き・消える演出・カメラ制御
                 combat_->UpdateComboAndCollider(); // コンボ継続＋前方判定更新
                 visual_->UpdateAnimation();
@@ -13053,6 +13764,7 @@ void Player::DrawParticleCompute(const ViewProjection &viewProjection)
 {
     auraEmitter_->DrawCompute(viewProjection);
     dashEffect_->DrawCompute(viewProjection);
+    footEffect_->DrawCompute(viewProjection);
     combat_->DrawParticleCompute(viewProjection);
 }
 
@@ -13073,6 +13785,7 @@ void Player::DrawParticle(const ViewProjection &viewProjection)
     combat_->DrawChargeParticle(viewProjection);
     auraEmitter_->DrawGraphics(viewProjection);
     dashEffect_->DrawGraphics(viewProjection);
+    footEffect_->DrawGraphics(viewProjection);
     hitEmitter_->Draw(viewProjection); // CPU emitter
 
     combat_->DrawAttackParticles(viewProjection);
@@ -13429,6 +14142,7 @@ File Path: Application/entity/player/Player.h
 #pragma once
 #include "Application/staging/dash/DashEffect.h"
 #include "Application/staging/death/DeathStaging.h"
+#include "Application/staging/foot/FootEffect.h"
 #include "Application/system/tutorial/TutorialSystem.h"
 #include "data/DataHandler.h"
 #include "GamePad.h"
@@ -13613,7 +14327,18 @@ class Player : public Hagine::BaseObject
     /// 外部からダメージ量をセット（次のDamageUpdateで処理される）
     /// </summary>
     /// <param name="damage">与えるダメージ量</param>
-    void SetDamage(float damage) { status_->SetDamage(damage); }
+    /// <param name="isShot">射撃（弾）によるダメージなら true。ひるみが近接より短くなる</param>
+    /// <param name="isSkill">必殺技によるダメージなら true。ガード時のエネルギー消費が大きくなる</param>
+    void SetDamage(float damage, bool isShot = false, bool isSkill = false)
+    {
+        status_->SetDamage(damage, isShot, isSkill);
+    }
+
+    /// <summary>
+    /// ガード中なら弾を弾き返せるかを判定する（成立時はガード分のエネルギーを消費する）
+    /// </summary>
+    /// <returns>bool: 弾き返せたら true</returns>
+    bool ConsumeGuardDeflect() { return status_->ConsumeGuardDeflect(); }
 
     /// <summary>
     /// 外部からノックバックを与える
@@ -13622,6 +14347,19 @@ class Player : public Hagine::BaseObject
     /// <param name="direction">ノックバック方向（正規化済みでなくてもよい）</param>
     /// <param name="power">ノックバック強度</param>
     void SetKnockback(const Hagine::Vector3 &direction, float power) { status_->SetKnockback(direction, power); }
+
+    /// <summary>
+    /// ノックバック速度を直接指定する（上方成分の固定加算なし）。
+    /// 敵コンボの叩きつけ段などに使う
+    /// </summary>
+    /// <param name="velocity">適用するノックバック速度</param>
+    void SetKnockbackDirect(const Hagine::Vector3 &velocity) { status_->SetKnockbackDirect(velocity); }
+
+    /// <summary>
+    /// 次に受けるダメージを「吹き飛ばし（Blow）」リアクションとして扱うよう予約する
+    /// </summary>
+    /// <param name="grantFlinchImmunity">復帰直後にひるみ無効時間を与えるなら true</param>
+    void RequestBlowReaction(bool grantFlinchImmunity = false) { status_->RequestBlowReaction(grantFlinchImmunity); }
 
     /// ===================================================
     /// 入力表示UI用
@@ -13788,6 +14526,7 @@ class Player : public Hagine::BaseObject
     std::unique_ptr<Hagine::ParticleCSEmitter> auraEmitter_; // オーラパーティクル
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;    // 被弾ヒットエミッター
     std::unique_ptr<DashEffect> dashEffect_;                 // ダッシュ中の演出
+    std::unique_ptr<FootEffect> footEffect_;                 // 着地・走行中の足元の演出
     std::unique_ptr<DeathStaging> deathStaging_;             // 死亡演出
     std::unique_ptr<ScreenFlash> screenFlash_;               // 必殺技の画面白黒フラッシュ演出
     std::unique_ptr<Hagine::GamePad> gamePad_;               // ゲームパッド
@@ -13889,8 +14628,7 @@ void PlayerBullet::Update()
         return;
     }
 
-    // 地面との衝突はメッシュコライダーで判定するため、
-    // これは地形の外へ抜け落ちた場合の保険（地形の最低高さより下）
+    // 地面との衝突はメッシュコライダーで判定するので、これは地形外へ抜け落ちた場合の保険
     if (transform_->translation_.y <= kFallbackKillY)
     {
         isAlive_ = false;
@@ -13961,8 +14699,7 @@ void PlayerBullet::DrawParticle(const ViewProjection &viewProjection)
 
 void PlayerBullet::InitTransform(Player *player)
 {
-    // 手（右手ジョイント）を発射起点にする。
-    // ジョイントが取得できない場合は従来どおり本体位置＋オフセットで代用する
+    // 手（右手ジョイント）を発射起点にする（取得できなければ本体位置＋オフセットで代用）
     std::optional<Vector3> handPos = player->GetJointWorldPosition(kHandJointName);
     const bool fromHand = handPos.has_value();
     this->transform_->translation_ = fromHand ? *handPos : player->GetLocalPosition();
@@ -14026,12 +14763,63 @@ void PlayerBullet::InitTransform(Player *player)
     }
 }
 
+void PlayerBullet::DeflectFrom(const Vector3 &guardPosition)
+{
+    isDeflected_ = true;
+    isLockOnBullet_ = false; // 弾かれた弾は追尾しない
+    acce_ = 0.0f;            // これ以上加速もしない
+
+    // ガードした相手から見た外側（水平）方向。真後ろへ返すと撃った本人へ戻ってしまう
+    Vector3 outward = GetWorldPosition() - guardPosition;
+    outward.y = 0.0f;
+    if (outward.Length() > kMinSpeedThreshold)
+    {
+        outward = outward.Normalize();
+    }
+    else
+    {
+        outward = {-velocity_.x, 0.0f, -velocity_.z};
+        outward = (outward.Length() > kMinSpeedThreshold) ? outward.Normalize() : Vector3{0.0f, 0.0f, 1.0f};
+    }
+
+    // 外側方向と直交する水平方向。弾の進行方向に近い側へ流して自然に逸れて見せる
+    Vector3 lateral = {-outward.z, 0.0f, outward.x};
+    if (lateral.x * velocity_.x + lateral.z * velocity_.z < 0.0f)
+    {
+        lateral = {-lateral.x, 0.0f, -lateral.z};
+    }
+
+    Vector3 direction = outward * kDeflectBackRatio + lateral;
+    direction = (direction.Length() > kMinSpeedThreshold) ? direction.Normalize() : outward;
+
+    float speed = GetCurrentSpeed() * kDeflectSpeedRatio;
+    if (speed < kDeflectMinSpeed)
+    {
+        speed = kDeflectMinSpeed;
+    }
+    velocity_ = {direction.x * speed, kDeflectUpSpeed, direction.z * speed};
+
+    // 弾かれたあとは短時間で消滅させる（画面外まで飛び続けさせない）
+    const float deflectDeadline = lifeTime_ - kDeflectLifeTime;
+    if (currentLifeTime_ < deflectDeadline)
+    {
+        currentLifeTime_ = deflectDeadline;
+    }
+}
+
 void PlayerBullet::OnCollisionEnter(ColliderBase *other)
 {
-    if (other->GetTag() == "Enemy" && isAlive_ && pTargetEnemy_->GetAlive())
+    if (other->GetTag() == "Enemy" && isAlive_ && !isDeflected_ && pTargetEnemy_->GetAlive())
     {
+        // ガード中は弾を外側へ弾き返し、ダメージは完全に無効化する
+        if (pTargetEnemy_->ConsumeGuardDeflect())
+        {
+            DeflectFrom(pTargetEnemy_->GetWorldPosition());
+            return;
+        }
+
         isHit_ = true;
-        pTargetEnemy_->SetDamage(kBulletDamage);
+        pTargetEnemy_->SetDamage(kBulletDamage, true);
     }
 
     // 地形メッシュに当たったら消滅させる（パーティクル終了後に isAlive_ が折れる）
@@ -14094,6 +14882,12 @@ class PlayerBullet : public Hagine::BaseObject
     /// </summary>
     /// <param name="collider">衝突したコライダー</param>
     void OnCollisionEnter(Hagine::ColliderBase *collider);
+
+    /// <summary>
+    /// ガードされた弾を、相手の外側斜め上へ弾き返す（ホーミングと加速は打ち切る）
+    /// </summary>
+    /// <param name="guardPosition">ガードした相手の位置</param>
+    void DeflectFrom(const Hagine::Vector3 &guardPosition);
 
     /// <summary>
     /// 弾が生きているかを取得
@@ -14164,6 +14958,13 @@ class PlayerBullet : public Hagine::BaseObject
     static constexpr int kBulletDamage = 1;               // 弾のダメージ値
     static constexpr float kFallbackKillY = -10.0f;       // 地形外へ抜けた弾を消す高さ（保険）
 
+    // ガードで弾き返されたときの挙動
+    static constexpr float kDeflectSpeedRatio = 0.6f; // 弾き返し後に残る速度の割合
+    static constexpr float kDeflectMinSpeed = 25.0f;  // 弾き返し後の最低速度
+    static constexpr float kDeflectUpSpeed = 12.0f;   // 弾き返し時の上方向速度
+    static constexpr float kDeflectBackRatio = 0.5f;  // 弾き返す向きに混ぜる「相手の外側」成分の比率
+    static constexpr float kDeflectLifeTime = 1.0f;   // 弾き返された弾が消えるまでの時間(秒)
+
     static constexpr const char *kHandJointName = "mixamorig:RightHand"; // 発射起点に使う手ジョイント名
     static constexpr float kHandForwardOffset = 0.5f;                    // 手からの前方オフセット距離
 
@@ -14175,6 +14976,7 @@ class PlayerBullet : public Hagine::BaseObject
     float currentLifeTime_ = 0.0f;      // 現在の生存時間
     bool isAlive_ = true;               // 弾が生きているかどうか
     bool isHit_ = false;                // 衝突判定フラグ
+    bool isDeflected_ = false;          // ガードで弾き返されたか（以降ダメージを与えない）
 
     bool isLockOnBullet_ = false;  // ロックオン弾かどうか
     Enemy *pTargetEnemy_ = nullptr; // ターゲットの敵
@@ -14553,9 +15355,9 @@ void ChargeShot::OnCollisionEnterCallback(ColliderBase *other)
         {
             isAlive_ = false;
 
-            // チャージ度合いに応じたダメージを計算して適用
+            // チャージ度合いに応じたダメージを計算して適用（射撃扱い＝ひるみは近接より短い）
             float damage = GetDamage();
-            pPlayer_->GetEnemy()->SetDamage(damage);
+            pPlayer_->GetEnemy()->SetDamage(damage, true);
 
             Reset();
         }
@@ -14930,7 +15732,8 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other)
             -currentKnockback_,
             knockbackDir.z * currentKnockback_ * kSlamHorizontalRatio,
         };
-        pEnemy_->RequestBlowReaction();
+        // 起き上がり直後にそのまま殴られ続けないよう、復帰後はしばらくひるまない
+        pEnemy_->RequestBlowReaction(true);
         pEnemy_->SetKnockbackDirect(slamVel);
         pPlayer_->OnMeleeSlamHit();
         break;
@@ -15177,8 +15980,7 @@ void PlayerCombat::Init(Player *owner)
     if (!comboInitialized_)
     {
         punchCombo_.SetName("PunchCombo"); // DataHandlerのファイル名に使われる
-        // 攻撃の見た目は本体アニメーション（comboAnimations_）で再生するため、
-        // モーション再生用ターゲットは不要（nullptr）。ダメージ等のパラメータのみ指定する
+        // 見た目は comboAnimations_ で再生するのでモーション用ターゲットは不要（nullptr）
         punchCombo_
             .Add(nullptr, "Jab", 10.0f, 3.0f, 0.25f, 0.08f)
             .Add(nullptr, "Hook", 12.0f, 4.0f, 0.25f, 0.08f)
@@ -15189,13 +15991,14 @@ void PlayerCombat::Init(Player *owner)
             .Add(nullptr, "Elbow", 20.0f, 8.0f, 0.25f, 0.06f)
             .Add(nullptr, "Slam", 25.0f, 12.0f, 0.35f, 0.12f);
 
+        // 出し切ったあとすぐ1段目から殴り直せないよう、戻りの余韻に加えて入力を止める時間
+        punchCombo_.GetFinishRecovery() = 1.0f;
+
         punchCombo_.LoadAttackParams(); // JSONがあれば値を上書き読み込み
         comboInitialized_ = true;
     }
 
-    // コンボ段ごとのプレイヤー本体アニメーション（適宜差し替え可）
-    // Punch_1〜4 → パンチ系、Kick_1〜3 → キック系で割り振り
-    // 対応するアニメーションがない段は空文字（何も再生しない）
+    // コンボ段ごとのプレイヤー本体アニメーション（空文字の段は何も再生しない）
     comboAnimations_ = {
         "animation/Player/Punch_1.gltf", // 1段目: Jab
         "animation/Player/Punch_2.gltf", // 2段目: Hook
@@ -15210,8 +16013,7 @@ void PlayerCombat::Init(Player *owner)
     attackCollider_ = std::make_unique<PlayerAttackCollider>();
     attackCollider_->Init(pOwner_);
 
-    // 必殺技モーション（MakanSkill.gltf・30fps）に演出の長さを合わせる。
-    // 顔アップ＋発動遅延の合計 = 発射キーフレーム（30フレーム目 ≒ 1.0秒）
+    // 顔アップ＋発動遅延の合計を必殺技モーションの発射キーフレーム（30フレーム目≒1.0秒）に合わせる
     skillCutscene_.GetCloseUpDuration() = 0.6f;
     skillCutscene_.GetActivationDelay() = 0.4f;
 
@@ -15220,13 +16022,11 @@ void PlayerCombat::Init(Player *owner)
         [this](float damage, float knockback, float duration, float delay) {
             if (attackCollider_)
             {
-                // 段番号（1始まり）。コールバック時点では GetCurrentComboIndex() が
-                // 実行中の段の0始まりインデックスを指す
+                // 段番号（GetCurrentComboIndex() は実行中の段の0始まりインデックス）
                 const int stage = punchCombo_.GetCurrentComboIndex() + 1;
 
                 // 瞬間移動コンボ：特定段のヒット挙動を切り替える。
-                // Launch/Chase の吹き飛ばし速度は combat 側（TeleportAhead）で設定するため、
-                // ここで渡すノックバック量は使われない（0）。Slam のみ下方向の強度を渡す
+                // Launch/Chase の吹き飛ばし速度は TeleportAhead 側で設定するのでkbは使わない
                 MeleeHitReaction reaction = MeleeHitReaction::Normal;
                 float kb = knockback;
                 if (teleportEnabled_)
@@ -15239,8 +16039,7 @@ void PlayerCombat::Init(Player *owner)
                     else if (stage == teleportLaunchStage_ &&
                              pOwner_->GetEnergy() >= teleportEnergyCost_)
                     {
-                        // エネルギーが足りるときだけ大吹き飛ばし＋瞬間移動開始。
-                        // 足りない場合は下の通常ヒットに落とし、敵を取り逃さない
+                        // エネルギーが足りるときだけ大吹き飛ばし＋瞬間移動開始
                         reaction = MeleeHitReaction::Launch;
                         kb = 0.0f;
                     }
@@ -15253,6 +16052,9 @@ void PlayerCombat::Init(Player *owner)
 
                 attackCollider_->Activate(damage, kb, duration, delay, reaction);
             }
+            // 攻撃のたびに少し前へ踏み込む（その場で殴ると当てづらいため）
+            pOwner_->Movement().StartMeleeLunge();
+
             // 入力表示UI用: 実際に発火した近接攻撃の段名を記録する
             // （先行入力バッファ経由の発火もここを通るため取りこぼしがない）
             meleeAttackFired_ = true;
@@ -15277,8 +16079,7 @@ void PlayerCombat::TeleportAhead()
         return;
     }
 
-    // 吹き飛ばし方向 = プレイヤーが今向いている方向（水平）。ヒット時点ではプレイヤーは
-    // 敵の方を向いているので、敵はこの方向へ大きく吹き飛ぶ
+    // 吹き飛ばし方向 = プレイヤーが今向いている方向（水平）
     Hagine::Vector3 dir = pOwner_->GetForward();
     dir.y = 0.0f;
     if (dir.Length() > 0.001f)
@@ -15293,8 +16094,7 @@ void PlayerCombat::TeleportAhead()
 
     const Hagine::Vector3 enemyPos = enemy->GetWorldPosition();
 
-    // 敵へ横方向の大きな吹き飛ばし速度を与える（上方向は控えめ）。
-    // arrivalTime 秒で aheadDistance を進む速度にすることで、先回り地点へ丁度到達する
+    // arrivalTime 秒で aheadDistance を進む速度にして、先回り地点へ丁度到達させる
     const float arrival = (teleportArrivalTime_ > 0.001f) ? teleportArrivalTime_ : 0.001f;
     const float speed = teleportAheadDistance_ / arrival;
     enemy->SetVelocity({dir.x * speed, teleportLaunchUp_, dir.z * speed});
@@ -15311,8 +16111,7 @@ void PlayerCombat::TeleportAhead()
     // 消える演出をやり直す
     teleportVanishTimer_ = 0.0f;
 
-    // カメラを一瞬だけ旧位置に留めてから、瞬間移動先のプレイヤーへパッとスナップさせる。
-    // （吹き飛ばし方向は概ね画面奥なので、旧カメラからでも移動先のプレイヤーが見える）
+    // カメラを一瞬だけ旧位置に留めてから、瞬間移動先のプレイヤーへスナップさせる
     if (pOwner_->GetCamera())
     {
         pOwner_->GetCamera()->HoldThenSnap(teleportCameraHold_);
@@ -15395,8 +16194,7 @@ void PlayerCombat::UpdateTeleport(float deltaTime)
     pOwner_->GetIsGrounded() = false;
     pOwner_->Movement().FaceTargetInstant(enemy->GetWorldPosition());
 
-    // 吹き飛ばされてきた敵が攻撃間合いまで到達したら、滑走を止めてその場に留める
-    // （プレイヤーを通り過ぎないように）。次段のヒットで再び吹き飛ばす
+    // 敵が攻撃間合いまで到達したら、通り過ぎないよう滑走を止めてその場に留める
     Hagine::Vector3 toEnemy = enemy->GetWorldPosition() - pOwner_->GetWorldPosition();
     toEnemy.y = 0.0f;
     if (toEnemy.Length() <= teleportFollowDistance_)
@@ -15420,8 +16218,7 @@ void PlayerCombat::UpdateTeleport(float deltaTime)
 
 void PlayerCombat::ComboUpdate()
 {
-    // ガード中・必殺技演出中・射撃モーション中は近接コンボを実行できない
-    // （射撃と近接の同時発動を防ぐ排他。射撃側は Shot() がコンボ中を弾く）
+    // ガード中・必殺技演出中・射撃モーション中は近接コンボを実行できない（射撃との排他）
     if (pOwner_->GetCurrentStateName() != "EnergyCharge" && !IsCharging() &&
         !pOwner_->IsGuarding() && !IsSkillStaging() &&
         !pOwner_->Visual().IsShotAnimationPlaying())
@@ -15504,8 +16301,7 @@ void PlayerCombat::FireNormalBullet()
 
 void PlayerCombat::Shot()
 {
-    // ガード中・必殺技演出中・近接コンボ中は遠距離射撃を発射できない
-    // （近接と射撃の同時発動を防ぐ排他。既存弾の更新は下で継続する）
+    // ガード中・必殺技演出中・近接コンボ中は発射できない（既存弾の更新は下で継続する）
     if (pOwner_->GetCurrentStateName() != "EnergyCharge" && !isSkillMenu_ &&
         !pOwner_->IsGuarding() && !IsSkillStaging() &&
         !punchCombo_.IsComboActive())
@@ -15618,8 +16414,7 @@ void PlayerCombat::StartSkillStaging()
     pMakanAttack_ptr_->SetPlayer(pOwner_);
 
     // 入力の時点では撃たず、カメラ顔アップ演出→通常カメラ復帰→遅延の後に発動する。
-    // 遅延中はロックオンによる照準追従が生きており、発動の瞬間の向きで固定される
-    // （MakanAttackSkill::Activate が向きをスナップショットする）
+    // 遅延中も照準追従は生きており、発動の瞬間の向きで固定される
     skillCutscene_.Start(pOwner_, pOwner_->GetCamera(), [this] {
         pMakanAttack_ptr_->Activate(pOwner_->GetTransformPtr());
         pOwner_->EmitAction(Player::ActionKind::Special); // 入力表示UI用：必殺技を通知
@@ -15780,6 +16575,7 @@ void PlayerCombat::RegisterParams()
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Player", "弾の速度", &B_speed_, {0.1f});
     hub->Register("Player", "弾の加速度", &B_acce_, {0.1f});
+    hub->Register("Player", "コンボ出し切り後の硬直", &punchCombo_.GetFinishRecovery(), {0.05f, 0.0f, 3.0f});
     skillCutscene_.RegisterParams("必殺演出(Player)");
 
     // 瞬間移動コンボ（横吹き飛ばし→先回り瞬間移動→叩きつけ）
@@ -16104,6 +16900,23 @@ void PlayerMovement::Move()
     Input *input = pOwner_->GetInput();
     const float dt = pOwner_->GetDt();
 
+    // ─── 近接コンボ中はその場で攻撃する（移動入力を受け付けない）───
+    // 射撃は移動しながら撃てるが、近接は踏み込んで殴る動きのため移動と噛み合わない。
+    // 入力を無視するだけだと直前の速度で滑り続けるので、水平速度も減衰させる
+    if (pOwner_->Combat().GetPunchCombo().IsComboActive())
+    {
+        velocity_.x *= kDecelerationFactor;
+        velocity_.z *= kDecelerationFactor;
+        if (std::abs(velocity_.x) < kVelocityStopThreshold)
+            velocity_.x = kVelocityZero;
+        if (std::abs(velocity_.z) < kVelocityStopThreshold)
+            velocity_.z = kVelocityZero;
+
+        // ダッシュ中に殴り始めたとき、攻撃後もダッシュ状態が残らないよう解除する
+        ClearDashState();
+        return;
+    }
+
     if (!gamePad->IsConnected())
     {
         // キーボード入力
@@ -16422,6 +17235,38 @@ void PlayerMovement::FaceTargetInstant(const Vector3 &targetPos)
     pOwner_->GetLocalRotation() = Quaternion::FromMatrix(rotMatrix);
 }
 
+void PlayerMovement::StartMeleeLunge()
+{
+    // 既定は自分の正面方向（敵がいない・ロックオンしていない場合）
+    Vector3 dir = pOwner_->GetForward();
+    dir.y = kYComponentZero;
+
+    if (Enemy *enemy = pOwner_->GetEnemy())
+    {
+        Vector3 toEnemy = enemy->GetWorldPosition() - pOwner_->GetWorldPosition();
+        toEnemy.y = kYComponentZero;
+        const float distance = toEnemy.Length();
+
+        // 密着状態でさらに踏み込むと相手を押し込んだりすり抜けたりするので何もしない
+        if (distance <= meleeLungeMinDistance_)
+        {
+            return;
+        }
+        dir = toEnemy / distance;
+    }
+
+    if (dir.Length() < kMinRotationDistance)
+    {
+        return;
+    }
+    dir = dir.Normalize();
+
+    // 水平速度を踏み込みの初速で上書きする。
+    // このあとは Move()（コンボ中）や Idle ステートの減衰で数フレームかけて止まる
+    velocity_.x = dir.x * meleeLungeSpeed_;
+    velocity_.z = dir.z * meleeLungeSpeed_;
+}
+
 void PlayerMovement::CollisionGround()
 {
     const float dt = pOwner_->GetDt();
@@ -16627,6 +17472,8 @@ void PlayerMovement::Save(DataHandler *data)
     data->Save("jumpSpeed", jumpSpeed_);
     data->Save("maxSpeed", maxSpeed_);
     data->Save("accelRate", accelRate_);
+    data->Save("meleeLungeSpeed", meleeLungeSpeed_);
+    data->Save("meleeLungeMinDistance", meleeLungeMinDistance_);
 }
 
 void PlayerMovement::Load(DataHandler *data)
@@ -16636,6 +17483,8 @@ void PlayerMovement::Load(DataHandler *data)
     jumpSpeed_ = data->Load<float>("jumpSpeed", 10.0f);
     maxSpeed_ = data->Load<float>("maxSpeed", 10.0f);
     accelRate_ = data->Load<float>("accelRate", 15.0f);
+    meleeLungeSpeed_ = data->Load<float>("meleeLungeSpeed", meleeLungeSpeed_);
+    meleeLungeMinDistance_ = data->Load<float>("meleeLungeMinDistance", meleeLungeMinDistance_);
 }
 
 void PlayerMovement::DrawImGui()
@@ -16650,6 +17499,8 @@ void PlayerMovement::DrawImGui()
     ImGui::DragFloat("現在速度", &moveSpeed_, 0.1f, 0.0f, maxSpeed_);
     ImGui::DragFloat("最大速度", &maxSpeed_, 0.1f, 0.0f, 50.0f);
     ImGui::DragFloat("加速率", &accelRate_, 0.1f, 0.0f, 50.0f);
+    ImGui::DragFloat("近接踏み込み速度", &meleeLungeSpeed_, 0.5f, 0.0f, 60.0f);
+    ImGui::DragFloat("近接踏み込み最小距離", &meleeLungeMinDistance_, 0.1f, 0.0f, 20.0f);
     ImGui::Text("現在速度: X=%.2f, Y=%.2f, Z=%.2f",
                 velocity_.x, velocity_.y, velocity_.z);
 #endif // USE_IMGUI
@@ -16660,6 +17511,8 @@ void PlayerMovement::RegisterParams()
     auto *hub = GameParamHub::GetInstance();
     hub->Register("Player", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});
     hub->Register("Player", "加速率", &accelRate_, {0.1f, 0.0f, 50.0f});
+    hub->Register("Player", "近接踏み込み速度", &meleeLungeSpeed_, {0.5f, 0.0f, 60.0f});
+    hub->Register("Player", "近接踏み込み最小距離", &meleeLungeMinDistance_, {0.1f, 0.0f, 20.0f});
     hub->Register("Player", "ジャンプ速度", &jumpSpeed_, {0.1f, 0.0f, 50.0f});
     hub->Register("Player", "落下速度", &fallSpeed_, {0.1f, -20.0f, 0.0f});
 }
@@ -16726,6 +17579,13 @@ class PlayerMovement
     /// ダッシュ継続時間と開始フラグを更新する
     /// </summary>
     void UpdateDashState();
+
+    /// <summary>
+    /// 近接攻撃の踏み込みを開始する（コンボの各段が発火した瞬間に呼ぶ）
+    /// 敵がいれば敵方向、いなければ正面へ短く前進する。近すぎる場合は
+    /// すり抜け・押し込みを避けるため踏み込まない
+    /// </summary>
+    void StartMeleeLunge();
 
     /// <summary>
     /// ダッシュ状態をリセットする
@@ -16878,6 +17738,12 @@ class PlayerMovement
     bool canJump_ = false;   ///< ジャンプ可能フラグ
     bool isGrounded_ = true; ///< 接地フラグ
 
+    // ─── 近接攻撃の踏み込み ───
+    // 完全に止まったまま殴ると当てづらいため、各段の発火で少し前へ踏み込む。
+    // 速度は Move() のコンボ中の減衰で数フレームかけて消えるので、短い前進になる
+    float meleeLungeSpeed_ = 18.0f;      ///< 踏み込みの初速
+    float meleeLungeMinDistance_ = 2.5f; ///< この距離より近い敵へは踏み込まない
+
     bool isDashing_ = false;            ///< ダッシュ中フラグ
     float dashInputX_ = 0.0f;           ///< ダッシュ開始時のスティックX入力
     float dashInputZ_ = 0.0f;           ///< ダッシュ開始時のスティックZ入力
@@ -16910,25 +17776,71 @@ void PlayerStatus::DamageUpdate()
 {
     if (damage_ <= kNoDamage)
     {
+        // ダメージが無いフレームに予約が残らないようにする
+        blowPending_ = false;
+        blowGrantsFlinchImmunity_ = false;
+        skillBlowPending_ = false;
         return;
     }
 
-    // 無敵中はダメージを無視
-    if (isInvincible_)
+    // 無敵中はダメージを無視する。ただし必殺技の被弾（大スタン）だけは通す
+    if (isInvincible_ && !skillBlowPending_)
     {
         damage_ = kNoDamage;
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
+        blowPending_ = false;
+        blowGrantsFlinchImmunity_ = false;
         return;
     }
 
-    // ガード中はダメージ・ノックバックを軽減し、エネルギーを消費する
+    // ガード中はダメージ・ノックバックを軽減し、エネルギーを消費する（必殺技は消費量が大きい）
     float guardMult = isGuarding_ ? guardDamageMultiplier_ : 1.0f;
     if (isGuarding_)
     {
-        ConsumeEnergy(guardEnergyCost_);
+        // 残量が足りなくてもゼロまで削る（必殺技のガードを無償にしない）
+        DrainEnergy(damageIsSkill_ ? guardSkillEnergyCost_ : guardEnergyCost_);
     }
 
-    HP_ -= damage_ * guardMult;
+    // 必殺技被弾スタン中は行動できず無防備なので、追撃のダメージを軽減する
+    const bool inSkillBlow = (reactState_ == PlayerReactState::SkillBlow) && !skillBlowPending_;
+    float actualDamage = damage_ * guardMult;
+    if (inSkillBlow)
+    {
+        actualDamage *= skillBlowDamageMultiplier_;
+    }
+
+    HP_ -= actualDamage;
     damage_ = kNoDamage;
+
+    // ダメージリアクションの開始（点滅のみ）
+    isDamageReact_ = true;
+    damageReactTimer_ = kTimerReset;
+
+    // スタン中の追撃は落下の軌道を乱さないよう、ノックバックもリアクション変更も行わない
+    if (inSkillBlow)
+    {
+        hasKnockback_ = false;
+        knockbackVelocity_ = {0.0f, 0.0f, 0.0f};
+        blowPending_ = false;
+        blowGrantsFlinchImmunity_ = false;
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
+        return;
+    }
+
+    // 無敵時間の開始
+    isInvincible_ = true;
+    invincibleTime_ = kTimerReset;
+
+    // 必殺技被弾：吹き飛ばして落下スタンへ移行する（他のリアクションより優先）
+    if (skillBlowPending_)
+    {
+        StartSkillBlow();
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
+        return;
+    }
 
     if (hasKnockback_)
     {
@@ -16944,32 +17856,222 @@ void PlayerStatus::DamageUpdate()
         knockbackVelocity_ = {0.0f, 0.0f, 0.0f};
     }
 
-    // 無敵時間の開始
-    isInvincible_ = true;
-    invincibleTime_ = kTimerReset;
-
-    // ダメージリアクションの開始（点滅のみ）
-    isDamageReact_ = true;
-    damageReactTimer_ = kTimerReset;
-
-    // ひるみ（ヒットスタン）の開始。ガード成立時は行動不能にしない。
-    // 被弾ごとに時間を再充填し、ひるみアニメをランダムに選び直す
+    // 被弾リアクション（ひるみ・吹き飛ばし）。ガード成立時は行動不能にしない
     if (!isGuarding_)
     {
-        hitStunTimer_ = hitStunDuration_;
-        flinchAnimIndex_ = 1 + std::rand() % 3;
+        if (blowPending_)
+        {
+            // 吹き飛ばし：着地するまでBlowBack、着地でBlowAfterへ
+            reactState_ = PlayerReactState::Blow;
+            blowLanded_ = false;
+            blowAfterTimer_ = 0.0f;
+            blowTimer_ = 0.0f;
+            flinchImmuneTimer_ = 0.0f; // 吹き飛ばし中は無効時間を進めない（復帰時に張り直す）
+            blowImmunityArmed_ = blowGrantsFlinchImmunity_;
+            pOwner_->GetIsGrounded() = false;
+            // ガード・ダッシュ等のステートを抜けて空中扱いにする（復帰時に整合を取る）
+            pOwner_->ChangeState("Air");
+        }
+        else if (flinchImmuneTimer_ <= 0.0f)
+        {
+            // ひるみ：時間経過で回復。被弾ごとにアニメをランダム選択（射撃は近接より短い）
+            reactState_ = PlayerReactState::Flinch;
+            hitStunTimer_ = damageIsShot_ ? hitStunDuration_ * shotFlinchScale_ : hitStunDuration_;
+            flinchAnimIndex_ = 1 + std::rand() % 3;
+        }
+    }
+    blowPending_ = false;
+    blowGrantsFlinchImmunity_ = false;
+    damageIsShot_ = false;
+    damageIsSkill_ = false;
+}
+
+void PlayerStatus::RequestSkillBlowReaction(const Vector3 &direction)
+{
+    skillBlowPending_ = true;
+
+    Vector3 dir = {direction.x, 0.0f, direction.z};
+    const float len = std::sqrt(dir.x * dir.x + dir.z * dir.z);
+    if (len < 0.001f)
+    {
+        // 方向が取れないときはプレイヤーの背面方向へ飛ばす
+        dir = pOwner_->GetForward();
+        dir = {-dir.x, 0.0f, -dir.z};
+        const float fallbackLen = std::sqrt(dir.x * dir.x + dir.z * dir.z);
+        if (fallbackLen < 0.001f)
+        {
+            skillBlowDirection_ = {0.0f, 0.0f, 0.0f};
+            return;
+        }
+        dir.x /= fallbackLen;
+        dir.z /= fallbackLen;
+    }
+    else
+    {
+        dir.x /= len;
+        dir.z /= len;
+    }
+    skillBlowDirection_ = dir;
+}
+
+void PlayerStatus::StartSkillBlow()
+{
+    reactState_ = PlayerReactState::SkillBlow;
+    skillBlowTimer_ = 0.0f;
+    blowLanded_ = false;
+    blowAfterTimer_ = 0.0f;
+    blowPending_ = false;
+    blowGrantsFlinchImmunity_ = false;
+    skillBlowPending_ = false;
+
+    // 起き上がり直後の連続被弾を防ぐため、復帰後は必ずひるみ無効時間を与える
+    blowImmunityArmed_ = true;
+    flinchImmuneTimer_ = 0.0f;
+
+    // 予約済みのノックバックは使わず、必殺技専用の吹き飛ばし速度で上書きする
+    hasKnockback_ = false;
+    knockbackVelocity_ = {0.0f, 0.0f, 0.0f};
+
+    Vector3 &velocity = pOwner_->GetVelocity();
+    velocity.x = skillBlowDirection_.x * skillBlowSpeed_;
+    velocity.z = skillBlowDirection_.z * skillBlowSpeed_;
+    velocity.y = skillBlowRiseSpeed_; // 一度浮かせてから落下させる
+
+    pOwner_->GetIsGrounded() = false;
+    pOwner_->ClearDashState();
+    pOwner_->ChangeState("Air");
+}
+
+void PlayerStatus::UpdateSkillBlow(float deltaTime)
+{
+    Vector3 &velocity = pOwner_->GetVelocity();
+
+    if (!blowLanded_)
+    {
+        skillBlowTimer_ += deltaTime;
+
+        // 横移動の勢いを保ったまま徐々に減速させる（フレームレート非依存の指数減衰）
+        const float damping = std::pow(skillBlowHorizontalRetain_, deltaTime);
+        velocity.x *= damping;
+        velocity.z *= damping;
+        ApplyBlowGravity(deltaTime);
+
+        if (pOwner_->GetIsGrounded())
+        {
+            // 地面に落ちたら着地硬直（BlowAfter）へ
+            blowLanded_ = true;
+            blowAfterTimer_ = blowAfterDuration_;
+        }
+        else if (skillBlowTimer_ >= skillBlowMaxDuration_)
+        {
+            // 地形の穴などで落ち続けた場合の安全策
+            RecoverFromBlow(blowImmunityArmed_);
+        }
+        return;
+    }
+
+    blowAfterTimer_ -= deltaTime;
+    if (blowAfterTimer_ <= 0.0f)
+    {
+        RecoverFromBlow(blowImmunityArmed_);
     }
 }
 
-void PlayerStatus::UpdateHitStun()
+void PlayerStatus::ApplyBlowGravity(float deltaTime)
 {
-    if (hitStunTimer_ > 0.0f)
+    // 吹き飛ばし中はステート更新が止まっているため、ここで落下させる
+    if (!pOwner_->GetIsGrounded())
     {
-        hitStunTimer_ -= pOwner_->GetDt();
-        if (hitStunTimer_ < 0.0f)
+        pOwner_->GetVelocity().y -= blowGravity_ * deltaTime;
+    }
+}
+
+void PlayerStatus::RecoverFromBlow(bool grantFlinchImmunity)
+{
+    // 残速度で滑り続けないよう、速度を消してから通常ステートへ戻す
+    reactState_ = PlayerReactState::None;
+    pOwner_->GetVelocity() = {0.0f, 0.0f, 0.0f};
+    pOwner_->ChangeState(pOwner_->GetIsGrounded() ? "Idle" : "Air");
+
+    if (grantFlinchImmunity)
+    {
+        flinchImmuneTimer_ = flinchImmuneDuration_;
+    }
+    blowImmunityArmed_ = false;
+}
+
+bool PlayerStatus::ConsumeGuardDeflect()
+{
+    if (!isGuarding_)
+    {
+        return false;
+    }
+    // 弾き返しも通常のガードと同じだけエネルギーを消費する
+    ConsumeEnergy(guardEnergyCost_);
+    return true;
+}
+
+void PlayerStatus::UpdateReaction()
+{
+    const float dt = pOwner_->GetDt();
+
+    // ひるみ無効時間の消化
+    if (flinchImmuneTimer_ > 0.0f)
+    {
+        flinchImmuneTimer_ -= dt;
+        if (flinchImmuneTimer_ < 0.0f)
+        {
+            flinchImmuneTimer_ = 0.0f;
+        }
+    }
+
+    if (reactState_ == PlayerReactState::SkillBlow)
+    {
+        UpdateSkillBlow(dt);
+        return;
+    }
+
+    if (reactState_ == PlayerReactState::Flinch)
+    {
+        hitStunTimer_ -= dt;
+        if (hitStunTimer_ <= 0.0f)
         {
             hitStunTimer_ = 0.0f;
+            reactState_ = PlayerReactState::None;
         }
+        return;
+    }
+
+    if (reactState_ != PlayerReactState::Blow)
+    {
+        return;
+    }
+
+    if (!blowLanded_)
+    {
+        ApplyBlowGravity(dt);
+
+        // 空中に取り残されないよう、着地しなくても一定時間で強制復帰させる安全策
+        blowTimer_ += dt;
+        if (blowTimer_ >= blowMaxDuration_)
+        {
+            RecoverFromBlow(blowImmunityArmed_);
+            return;
+        }
+
+        // 吹き飛ばされ中。地面に着いたら着地硬直（BlowAfter）へ
+        if (pOwner_->GetIsGrounded())
+        {
+            blowLanded_ = true;
+            blowAfterTimer_ = blowAfterDuration_;
+        }
+        return;
+    }
+
+    blowAfterTimer_ -= dt;
+    if (blowAfterTimer_ <= 0.0f)
+    {
+        RecoverFromBlow(blowImmunityArmed_);
     }
 }
 
@@ -17020,6 +18122,12 @@ bool PlayerStatus::ConsumeEnergy(float amount)
         return true;
     }
     return false;
+}
+
+void PlayerStatus::DrainEnergy(float amount)
+{
+    energy_ = (energy_ > amount) ? energy_ - amount : 0.0f;
+    timeSinceLastShot_ = kTimerReset;
 }
 
 void PlayerStatus::RecoverEnergy()
@@ -17075,6 +18183,13 @@ void PlayerStatus::SetKnockback(const Vector3 &direction, float power)
     hasKnockback_ = true;
 }
 
+void PlayerStatus::SetKnockbackDirect(const Vector3 &velocity)
+{
+    // 上方成分の固定加算を行わず、指定した速度をそのまま適用する（叩きつけ等に使用）
+    knockbackVelocity_ = velocity;
+    hasKnockback_ = true;
+}
+
 void PlayerStatus::Save(DataHandler *data)
 {
     data->Save("maxEnergy", maxEnergy_);
@@ -17083,6 +18198,7 @@ void PlayerStatus::Save(DataHandler *data)
     data->Save("invincibleDuration", invincibleDuration_);
     data->Save("guardDamageMultiplier", guardDamageMultiplier_);
     data->Save("guardEnergyCost", guardEnergyCost_);
+    data->Save("guardSkillEnergyCost", guardSkillEnergyCost_);
     data->Save("hitStunDuration", hitStunDuration_);
 }
 
@@ -17094,7 +18210,8 @@ void PlayerStatus::Load(DataHandler *data)
     energy_ = maxEnergy_; // 初期化時は最大値
     invincibleDuration_ = data->Load<float>("invincibleDuration", 0.25f);
     guardDamageMultiplier_ = data->Load<float>("guardDamageMultiplier", 0.20f);
-    guardEnergyCost_ = data->Load<float>("guardEnergyCost", 4.0f);
+    guardEnergyCost_ = data->Load<float>("guardEnergyCost", 3.0f);
+    guardSkillEnergyCost_ = data->Load<float>("guardSkillEnergyCost", 15.0f);
     hitStunDuration_ = data->Load<float>("hitStunDuration", 0.5f);
 }
 
@@ -17119,11 +18236,29 @@ void PlayerStatus::DrawImGui()
     ImGui::DragFloat("ガード被ダメ倍率 (0=無敵, 1=無効)", &guardDamageMultiplier_, 0.01f, 0.0f, 1.0f);
     ImGui::Text("  -> 軽減率 %.0f%%", (1.0f - guardDamageMultiplier_) * 100.0f);
     ImGui::DragFloat("ガード時エネルギー消費", &guardEnergyCost_, 0.5f, 0.0f, 100.0f);
+    ImGui::DragFloat("ガード時エネルギー消費(必殺技)", &guardSkillEnergyCost_, 0.5f, 0.0f, 100.0f);
 
     ImGui::Separator();
-    ImGui::Text("ひるみ（ヒットスタン）");
-    ImGui::Text("  現在状態: %s", IsHitStun() ? "ひるみ中" : "-");
+    ImGui::Text("被弾リアクション");
+    const char *reactName = "-";
+    switch (reactState_)
+    {
+    case PlayerReactState::Flinch:
+        reactName = "ひるみ";
+        break;
+    case PlayerReactState::Blow:
+        reactName = blowLanded_ ? "吹き飛ばし(着地後)" : "吹き飛ばし";
+        break;
+    case PlayerReactState::SkillBlow:
+        reactName = blowLanded_ ? "必殺技スタン(着地後)" : "必殺技スタン";
+        break;
+    default:
+        break;
+    }
+    ImGui::Text("  現在状態: %s", reactName);
     ImGui::DragFloat("ひるみ時間", &hitStunDuration_, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("吹き飛ばし着地後硬直", &blowAfterDuration_, 0.01f, 0.0f, 2.0f);
+    ImGui::DragFloat("吹き飛ばし中の落下加速度", &blowGravity_, 0.5f, 1.0f, 100.0f);
 #endif // USE_IMGUI
 }
 
@@ -17138,7 +18273,18 @@ void PlayerStatus::RegisterParams()
     hub->Register("Player", "無敵時間", &invincibleDuration_, {0.01f, 0.0f, 2.0f});
     hub->Register("Player", "ガード被ダメ倍率", &guardDamageMultiplier_, {0.01f, 0.0f, 1.0f});
     hub->Register("Player", "ガード時エネルギー消費", &guardEnergyCost_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Player", "ガード時エネルギー消費(必殺技)", &guardSkillEnergyCost_, {0.5f, 0.0f, 100.0f});
     hub->Register("Player", "ひるみ時間", &hitStunDuration_, {0.01f, 0.0f, 1.0f});
+    hub->Register("Player", "射撃被弾のひるみ倍率", &shotFlinchScale_, {0.01f, 0.0f, 1.0f});
+    hub->Register("Player", "吹き飛ばし復帰後のひるみ無効時間", &flinchImmuneDuration_, {0.05f, 0.0f, 5.0f});
+    hub->Register("Player", "吹き飛ばし着地後硬直", &blowAfterDuration_, {0.01f, 0.0f, 2.0f});
+    hub->Register("Player", "吹き飛ばし最大時間", &blowMaxDuration_, {0.05f, 0.1f, 5.0f});
+    hub->Register("Player", "吹き飛ばし中の落下加速度", &blowGravity_, {0.5f, 1.0f, 100.0f});
+    hub->Register("Player", "必殺技被弾の吹き飛び速度", &skillBlowSpeed_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Player", "必殺技被弾の浮き上がり速度", &skillBlowRiseSpeed_, {0.5f, 0.0f, 50.0f});
+    hub->Register("Player", "必殺技被弾の横速度残存率(1秒)", &skillBlowHorizontalRetain_, {0.01f, 0.001f, 1.0f});
+    hub->Register("Player", "必殺技被弾スタン最大時間", &skillBlowMaxDuration_, {0.1f, 0.5f, 10.0f});
+    hub->Register("Player", "必殺技被弾中の被ダメージ倍率", &skillBlowDamageMultiplier_, {0.01f, 0.0f, 1.0f});
 }
 
 
@@ -17154,8 +18300,19 @@ class DataHandler;
 }
 
 /// <summary>
+/// 被弾リアクションの状態
+/// </summary>
+enum class PlayerReactState
+{
+    None,      // リアクションなし（通常行動可）
+    Flinch,    // ひるみ（行動不能・Hittingアニメ）
+    Blow,      // 吹き飛ばし（行動不能・BlowBack→着地でBlowAfter）
+    SkillBlow, // 必殺技被弾スタン（行動不能・横速度を保ったまま減速しつつ落下）
+};
+
+/// <summary>
 /// プレイヤーのステータスパーツクラス
-/// HP・エネルギー・被ダメージ・無敵時間・ガード・ノックバックを担当する
+/// HP・エネルギー・被ダメージ・無敵時間・ガード・ノックバック・被弾リアクションを担当する
 /// </summary>
 class PlayerStatus
 {
@@ -17181,9 +18338,9 @@ class PlayerStatus
     void InvincibleUpdate();
 
     /// <summary>
-    /// ひるみ（ヒットスタン）時間の更新処理。毎フレーム呼ぶ
+    /// 被弾リアクション（ひるみ・吹き飛ばし・必殺技被弾スタン）の状態を進める（毎フレーム呼ぶ）
     /// </summary>
-    void UpdateHitStun();
+    void UpdateReaction();
 
     /// <summary>
     /// ダメージリアクション（高速点滅）の更新処理
@@ -17198,9 +18355,21 @@ class PlayerStatus
     bool ConsumeEnergy(float amount);
 
     /// <summary>
+    /// エネルギーを削る処理。残量が足りない場合もゼロまで削り取る
+    /// </summary>
+    /// <param name="amount">削る量</param>
+    void DrainEnergy(float amount);
+
+    /// <summary>
     /// エネルギー回復処理
     /// </summary>
     void RecoverEnergy();
+
+    /// <summary>
+    /// ガード中なら弾を弾き返せるかを判定する（成立時はガード分のエネルギーを消費する）
+    /// </summary>
+    /// <returns>bool: 弾き返せたら true</returns>
+    bool ConsumeGuardDeflect();
 
     /// <summary>
     /// 外部からノックバックを与える
@@ -17208,6 +18377,30 @@ class PlayerStatus
     /// <param name="direction">ノックバック方向（正規化済みでなくてもよい）</param>
     /// <param name="power">ノックバック強度</param>
     void SetKnockback(const Hagine::Vector3 &direction, float power);
+
+    /// <summary>
+    /// ノックバック速度を直接指定する（上方成分の固定加算を行わない）。
+    /// 下方向へ叩きつける等、任意方向の吹き飛ばしに使う
+    /// </summary>
+    /// <param name="velocity">適用するノックバック速度</param>
+    void SetKnockbackDirect(const Hagine::Vector3 &velocity);
+
+    /// <summary>
+    /// 次に受けるダメージを「吹き飛ばし（Blow）」リアクションとして扱うよう予約する。
+    /// 敵のコンボ最終段などのヒット時にコライダーから呼ぶ
+    /// </summary>
+    /// <param name="grantFlinchImmunity">復帰直後にひるみ無効時間を与えるなら true</param>
+    void RequestBlowReaction(bool grantFlinchImmunity = false)
+    {
+        blowPending_ = true;
+        blowGrantsFlinchImmunity_ = grantFlinchImmunity;
+    }
+
+    /// <summary>
+    /// 次に受けるダメージを「必殺技被弾スタン（SkillBlow）」として扱うよう予約する
+    /// </summary>
+    /// <param name="direction">吹き飛ばす水平方向（正規化不要・ゼロなら現在の向きの後方）</param>
+    void RequestSkillBlowReaction(const Hagine::Vector3 &direction);
 
     /// <summary>
     /// ステータス関連パラメータを保存する
@@ -17245,8 +18438,26 @@ class PlayerStatus
     bool IsInvincible() const { return isInvincible_; }
     bool IsDamageReact() const { return isDamageReact_; }
 
-    /// <summary>ひるみ（ヒットスタン）中かどうか。true の間はプレイヤーは行動できない</summary>
-    bool IsHitStun() const { return hitStunTimer_ > 0.0f; }
+    /// <summary>被弾リアクション中かどうか。true の間はプレイヤーは行動できない</summary>
+    bool IsReacting() const { return reactState_ != PlayerReactState::None; }
+
+    /// <summary>ひるみ（ヒットスタン）中かどうか</summary>
+    bool IsHitStun() const { return reactState_ == PlayerReactState::Flinch; }
+
+    /// <summary>吹き飛ばし中か（必殺技スタンも含む。BlowBackアニメの判定に使う）</summary>
+    bool IsBlow() const
+    {
+        return reactState_ == PlayerReactState::Blow || reactState_ == PlayerReactState::SkillBlow;
+    }
+
+    /// <summary>必殺技被弾スタン（SkillBlow）中か</summary>
+    bool IsSkillBlow() const { return reactState_ == PlayerReactState::SkillBlow; }
+
+    /// <summary>吹き飛ばし後、地面に着地済みか（BlowAfter再生の判定用）</summary>
+    bool IsBlowLanded() const { return blowLanded_; }
+
+    /// <summary>ひるみ無効時間中か（吹き飛ばし・必殺技被弾から復帰した直後）</summary>
+    bool IsFlinchImmune() const { return flinchImmuneTimer_ > 0.0f; }
 
     /// <summary>ひるみアニメの番号（1〜3）。被弾ごとにランダムで選ばれる</summary>
     int GetFlinchAnimIndex() const { return flinchAnimIndex_; }
@@ -17255,7 +18466,19 @@ class PlayerStatus
     /// Setter
     /// ===================================================
     void SetHP(float hp) { HP_ = hp; }
-    void SetDamage(float damage) { damage_ = damage; }
+
+    /// <summary>
+    /// 次のDamageUpdateで処理するダメージを設定する
+    /// </summary>
+    /// <param name="damage">ダメージ量</param>
+    /// <param name="isShot">射撃（弾）によるダメージなら true。ひるみが近接より短くなる</param>
+    /// <param name="isSkill">必殺技によるダメージなら true。ガード時のエネルギー消費が大きくなる</param>
+    void SetDamage(float damage, bool isShot = false, bool isSkill = false)
+    {
+        damage_ = damage;
+        damageIsShot_ = isShot;
+        damageIsSkill_ = isSkill;
+    }
     void SetGuarding(bool flag) { isGuarding_ = flag; }
     void SetEnergyRecoveryRate(float rate) { energyRecoveryRate_ = rate; }
     void ResetEnergyForTutorial()
@@ -17267,6 +18490,33 @@ class PlayerStatus
     void StopDamageReact();
 
   private:
+    /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// 必殺技被弾スタンを開始する（吹き飛ばし速度の設定と落下状態への移行）
+    /// </summary>
+    void StartSkillBlow();
+
+    /// <summary>
+    /// 必殺技被弾スタンの更新（横速度の減速・着地判定）
+    /// </summary>
+    /// <param name="deltaTime">経過時間（秒）</param>
+    void UpdateSkillBlow(float deltaTime);
+
+    /// <summary>
+    /// 吹き飛ばし中の重力を適用する（ステート更新が止まっている間の落下用）
+    /// </summary>
+    /// <param name="deltaTime">経過時間（秒）</param>
+    void ApplyBlowGravity(float deltaTime);
+
+    /// <summary>
+    /// 大きな吹き飛ばしから通常状態へ復帰させる（残速度を消して待機ステートへ戻す）
+    /// </summary>
+    /// <param name="grantFlinchImmunity">ひるみ無効時間を与えるなら true</param>
+    void RecoverFromBlow(bool grantFlinchImmunity);
+
     /// ===================================================
     /// private variants
     /// ===================================================
@@ -17300,7 +18550,8 @@ class PlayerStatus
 
     bool isGuarding_ = false;             ///< ガード中フラグ
     float guardDamageMultiplier_ = 0.20f; ///< ガード中の被ダメージ倍率（軽減率80%）ImGuiで調整可
-    float guardEnergyCost_ = 4.0f;        ///< ガード中に被弾した際のエネルギー消費量
+    float guardEnergyCost_ = 3.0f;        ///< ガード中に被弾した際のエネルギー消費量
+    float guardSkillEnergyCost_ = 15.0f;  ///< ガード中に必殺技を受けた際のエネルギー消費量（通常より大きく削る）
 
     Hagine::Vector3 knockbackVelocity_ = {0.0f, 0.0f, 0.0f}; ///< 適用待ちノックバック
     bool hasKnockback_ = false;                              ///< ノックバック適用待ちフラグ
@@ -17309,12 +18560,40 @@ class PlayerStatus
     float damageReactTimer_ = 0.0f;    ///< 経過時間
     float damageReactDuration_ = 0.5f; ///< リアクション時間
 
-    // ─── ひるみ（ヒットスタン）───
-    // 通常攻撃を食らった直後、行動不能にする（ガード時は発生しない）。被弾ごとに再充填され、
-    // コンボ間隔をまたいで持続するため、相手のコンボが終わる/途切れるまで食らい続ける
+    // ─── 被弾リアクション（ひるみ・吹き飛ばし）中は行動不能になる ───
+    PlayerReactState reactState_ = PlayerReactState::None; ///< 現在のリアクション状態
     float hitStunTimer_ = 0.0f;     ///< ひるみ残り時間（>0 で行動不能）
     float hitStunDuration_ = 0.5f;  ///< ひるみ継続時間（秒）コンボ間隔をまたぐ長さ。GameParamで調整可
     int flinchAnimIndex_ = 1;       ///< ひるみアニメ番号（1〜3・被弾ごとにランダム）
+
+    bool damageIsShot_ = false;     ///< 処理待ちのダメージが射撃由来か（ひるみを短くする）
+    bool damageIsSkill_ = false;    ///< 処理待ちのダメージが必殺技由来か（ガード時の消費量を切り替える）
+    float shotFlinchScale_ = 0.5f;  ///< 射撃被弾時のひるみ時間倍率（近接に対する比率）
+
+    // ─── 吹き飛ばし（Blow）敵のコンボ最終段などで大きく飛ばされ、着地まで行動不能 ───
+    bool blowPending_ = false;              ///< 次のダメージをBlow扱いにする予約
+    bool blowGrantsFlinchImmunity_ = false; ///< 予約中のBlowが復帰時にひるみ無効を与えるか
+    bool blowImmunityArmed_ = false;        ///< 進行中のBlowが復帰時にひるみ無効を与えるか
+    bool blowLanded_ = false;               ///< 吹き飛ばし後に着地したか
+    float blowTimer_ = 0.0f;                ///< 吹き飛ばし開始からの経過時間（空中滞留時の強制復帰用）
+    float blowMaxDuration_ = 1.2f;          ///< 着地しないまま吹き飛ばし続ける最大時間（秒）
+    float blowAfterTimer_ = 0.0f;           ///< 着地後（BlowAfter）の残り硬直時間
+    float blowAfterDuration_ = 0.6f;        ///< 着地後の硬直時間（秒）
+    float blowGravity_ = 30.0f;             ///< 吹き飛ばし中の落下加速度（通常の落下より強くして滞空を短くする）
+
+    // ─── ひるみ無効時間（起き上がり直後に殴られ続けないための猶予。ダメージは通る）───
+    float flinchImmuneTimer_ = 0.0f;    ///< ひるみ無効の残り時間（>0 でひるまない）
+    float flinchImmuneDuration_ = 2.0f; ///< 吹き飛ばし復帰後のひるみ無効時間（秒）
+
+    // ─── 必殺技被弾スタン（SkillBlow）大きく吹き飛ばされて落下し、その間は行動不能 ───
+    bool skillBlowPending_ = false;                  ///< 次のダメージをSkillBlow扱いにする予約
+    Hagine::Vector3 skillBlowDirection_ = {0, 0, 0}; ///< 吹き飛ばす水平方向（正規化済み）
+    float skillBlowTimer_ = 0.0f;                    ///< スタン開始からの経過時間
+    float skillBlowSpeed_ = 35.0f;                   ///< 吹き飛ばしの水平初速
+    float skillBlowRiseSpeed_ = 12.0f;               ///< 吹き飛ばしの上方初速（この後は落下する）
+    float skillBlowHorizontalRetain_ = 0.12f;        ///< 1秒あたりに残る横速度の割合（小さいほど早く減速）
+    float skillBlowMaxDuration_ = 5.0f;              ///< 着地しないまま落下し続ける最大時間（秒・安全策）
+    float skillBlowDamageMultiplier_ = 0.2f;         ///< スタン中の被ダメージ倍率（0.2＝80%軽減）
 };
 
 
@@ -17343,6 +18622,10 @@ void PlayerVisual::Init(Player *owner)
     // ───────────────────────────────────────────
     animationController_.Initialize(pOwner_->GetObject3d());
 
+    // 射撃モーションは上半身だけに適用する（走りながら撃っても下半身は走行モーションのまま）。
+    // 背骨の根から上（胴・腕・首・頭）が対象で、腰と脚は移動モーション側が担当する
+    animationController_.SetLayerMaskRoot(kUpperBodyRootJoint);
+
     // ループあり：待機・移動など継続する動作
     animationController_.RegisterClip("Idle", "animation/Player/Idle_Ground.gltf", true);
     animationController_.RegisterClip("FlyIdle", "animation/Player/Idle_Flying.gltf", true);
@@ -17369,10 +18652,12 @@ void PlayerVisual::Init(Player *owner)
     animationController_.RegisterClip("Smash", "animation/Player/Smash.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Shot", "animation/Player/Shot.gltf", false, 1.0f, 0.1f);
 
-    // 被弾リアクション（ひるみ）用のクリップ。被弾ごとにランダムで再生する
+    // 被弾リアクション：ひるみ（Hitting）と吹き飛ばし（BlowBack→着地でBlowAfter）
     animationController_.RegisterClip("Hitting_1", "animation/Player/Hitting_1.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Hitting_2", "animation/Player/Hitting_2.gltf", false, 1.0f, 0.1f);
     animationController_.RegisterClip("Hitting_3", "animation/Player/Hitting_3.gltf", false, 1.0f, 0.1f);
+    animationController_.RegisterClip("BlowBack", "animation/Player/BlowBack.gltf", true, 1.0f, 0.1f);
+    animationController_.RegisterClip("BlowAfter", "animation/Player/BlowAfter.gltf", false, 1.0f, 0.1f);
 
     // JSONに保存済みの調整値があれば読み込む
     animationController_.LoadClips("AnimationController", "PlayerClips");
@@ -17382,20 +18667,31 @@ void PlayerVisual::UpdateAnimation()
 {
     // ──────────────────────────────────────────
     // 必殺技（魔貫攻撃）中：発動前演出〜ビーム終了まで一続きの専用モーションを再生
-    // （構え→フレーム30付近で発射→フレーム80で撃ち終わりの構成）
     // ──────────────────────────────────────────
     if (pOwner_->Combat().IsSkillStaging() || pOwner_->GetIsSkillActive())
     {
+        // 全身モーションを見せる場面では射撃の上半身レイヤーを解除する
+        animationController_.StopLayer(kShotLayerFade);
         animationController_.Play("MakanSkill");
         return;
     }
 
     // ──────────────────────────────────────────
-    // ひるみ（ヒットスタン）中：Hitting モーションを再生（コンボ・ステートより優先）
+    // 被弾リアクション：ひるみ / 吹き飛ばし（コンボ・ステートより優先）
     // ──────────────────────────────────────────
-    if (pOwner_->Status().IsHitStun())
+    PlayerStatus &st = pOwner_->Status();
+    if (st.IsReacting())
     {
-        animationController_.Play("Hitting_" + std::to_string(pOwner_->Status().GetFlinchAnimIndex()));
+        animationController_.StopLayer(kShotLayerFade);
+        if (st.IsBlow())
+        {
+            // 吹き飛ばされ中はBlowBack、地面に落ちたらBlowAfter
+            animationController_.Play(st.IsBlowLanded() ? "BlowAfter" : "BlowBack");
+        }
+        else
+        {
+            animationController_.Play("Hitting_" + std::to_string(st.GetFlinchAnimIndex()));
+        }
         return;
     }
 
@@ -17407,9 +18703,10 @@ void PlayerVisual::UpdateAnimation()
     // ──────────────────────────────────────────
     if (punchCombo.IsComboActive())
     {
-        // GetCurrentComboIndex() は「次に実行する」インデックスを返す。
-        // ExecuteComboAttack() が呼ばれるとインクリメントされるため、
-        // 現在再生中の段 = nextIdx - 1（0 のときは最終段 Slam の後待機中）
+        // 近接は全身モーション（移動もロックされる）。射撃の上半身レイヤーが残っていたら解除する
+        animationController_.StopLayer(kShotLayerFade);
+
+        // GetCurrentComboIndex() は「次に実行する」段なので、再生中の段 = nextIdx - 1
         int nextIdx = punchCombo.GetCurrentComboIndex();
         int comboLen = punchCombo.GetComboLength();
         int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
@@ -17432,16 +18729,11 @@ void PlayerVisual::UpdateAnimation()
     // ──────────────────────────────────────────
     const std::string stateName = pOwner_->GetCurrentStateName();
 
-    // ──────────────────────────────────────────
-    // 通常弾の発射モーション中：再生し終わるまでステートによる切り替えで上書きしない
-    // （発射のたびに PlayShotAnimation() で先頭から再生し直される）。
-    // ただしガード中は防御姿勢を優先する（射撃直後にガードしたとき
-    // ガードアニメが適用されない問題の対策）
-    // ──────────────────────────────────────────
-    if (animationController_.GetCurrentClipName() == "Shot" && !animationController_.IsFinished() &&
-        stateName != "Guard")
+    // 射撃モーションは上半身レイヤーなので全身クリップの切り替えは続けてよいが、
+    // ガード中は防御姿勢を優先するのでレイヤーを解除する
+    if (stateName == "Guard" && animationController_.IsLayerPlaying())
     {
-        return;
+        animationController_.StopLayer(kShotLayerFade);
     }
 
     if (stateName == "Idle")
@@ -17489,9 +18781,7 @@ void PlayerVisual::UpdateAnimation()
     }
     else if (stateName == "FlyMove")
     {
-        // 浮遊移動 ― 後退・上昇・下降は Idle_Flying、前進・左右移動は Running_Fly を使う。
-        // 縦移動(|velocity.y| > 閾値)または後退(moveDir == Behind)は、仰向け気味の
-        // Idle_Flying の方がモーションとして自然なため優先する
+        // 浮遊移動 ― 縦移動・後退は仰向け気味の Idle_Flying、前進・左右移動は Running_Fly
         bool verticalMove = std::abs(pOwner_->GetVelocity().y) > kFlyVerticalAnimThreshold;
         bool movingBackward = (pOwner_->GetMoveDirection() == MoveDirection::Behind);
         if (verticalMove || movingBackward)
@@ -17527,16 +18817,9 @@ void PlayerVisual::PlayDeathAnimation()
 
 void PlayerVisual::PlayShotAnimation()
 {
-    // 同一クリップ再生中の Play() は無視されるため、既に Shot 中なら先頭へ巻き戻して再生し直す
-    if (animationController_.GetCurrentClipName() == "Shot")
-    {
-        animationController_.SetTime(0.0f);
-        animationController_.SetPaused(false); // 再生終了で停止していた場合に再開する
-    }
-    else
-    {
-        animationController_.Play("Shot");
-    }
+    // 上半身レイヤーとして再生する。連射時は PlayLayer 側が先頭へ巻き戻し、
+    // 撃ち終わり（ループなしクリップの終端）でレイヤーは自動的に解除される
+    animationController_.PlayLayer("Shot", kShotLayerFade);
 }
 
 bool PlayerVisual::IsDeathAnimationFinished() const
@@ -17548,8 +18831,8 @@ bool PlayerVisual::IsDeathAnimationFinished() const
 
 bool PlayerVisual::IsShotAnimationPlaying() const
 {
-    return animationController_.GetCurrentClipName() == "Shot" &&
-           !animationController_.IsFinished();
+    // 上半身レイヤーを使うのは射撃だけなので、レイヤー再生中＝射撃中
+    return animationController_.IsLayerPlaying();
 }
 
 void PlayerVisual::UpdateFlyLean()
@@ -17569,9 +18852,8 @@ void PlayerVisual::UpdateFlyLean()
         Vector3 horizontalVel = {velocity.x, 0.0f, velocity.z};
         float speed = horizontalVel.Length();
 
-        // 体の「水平」な前方・右方向（ロックオンの上下ピッチを除いた安定フレーム）。
-        // 傾きはこの体の実ワールド軸まわりに作ることで、向きが変わっても
-        // 「後ろへ倒れる」方向が一定になる（ワールド固定軸だと向きでズレる）
+        // 体の水平な前方・右方向（ロックオンの上下ピッチを除いた軸）。
+        // この軸まわりに傾けることで、向きが変わっても倒れる方向が一定になる
         Vector3 fwdAxis = {pOwner_->GetForward().x, 0.0f, pOwner_->GetForward().z};
         Vector3 rightAxis = {pOwner_->GetRight().x, 0.0f, pOwner_->GetRight().z};
         float fwdLen = fwdAxis.Length();
@@ -17785,6 +19067,11 @@ class PlayerVisual
     /// ===================================================
 
     static constexpr float kFlyVerticalAnimThreshold = 0.5f; ///< 飛行中、上昇・下降アニメに切り替えるY速度の閾値
+
+    /// 上半身レイヤーの根ジョイント。ここから上（胴・腕・首・頭）が射撃モーションで上書きされ、
+    /// 腰（Hips）と脚は移動モーション側が担当する
+    static constexpr const char *kUpperBodyRootJoint = "mixamorig:Spine";
+    static constexpr float kShotLayerFade = 0.1f; ///< 射撃レイヤーの出入りにかける時間（秒）
 
     Player *pOwner_ = nullptr; ///< 所有者のプレイヤー
 
@@ -18005,9 +19292,16 @@ void MakanAttackSkill::OnCollisionEnter(ColliderBase *other)
         {
             isAlive_ = false;
 
-            // チャージ度合いに応じたダメージを計算して適用
+            // 必殺技被弾：ビームの進行方向（プレイヤー→敵）へ大きく吹き飛ばし、
+            // そのまま地面まで落下する大スタンにする。予約はダメージ適用より先に行う
+            Enemy *enemy = pPlayer_->GetEnemy();
+            Vector3 blowDir = enemy->GetWorldPosition() - pPlayer_->GetWorldPosition();
+            blowDir.y = 0.0f;
+            enemy->Status().RequestSkillBlowReaction(blowDir);
+
+            // チャージ度合いに応じたダメージを計算して適用（ガードされた場合は必殺技分のエネルギーを削る）
             float damage = 37.5f;
-            pPlayer_->GetEnemy()->SetDamage(damage);
+            enemy->SetDamage(damage, false, true);
         }
     }
 }
@@ -22550,6 +23844,221 @@ class DeathStaging
     bool isStart_ = false; // 開始フラグ
 
     std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_ = nullptr; // 死亡パーティクル
+};
+
+
+============================================================
+File Path: Application/staging/foot/FootEffect.cpp
+============================================================
+#include "FootEffect.h"
+#include <algorithm>
+#include <cmath>
+#include <Frame.h>
+#include <particle/gpu/ParticleCSEditor.h>
+
+using namespace Hagine;
+
+void FootEffect::Init()
+{
+    // 着地の砂煙（接地の瞬間に一度だけ出す）
+    landingEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("landing");
+    if (landingEmitter_)
+    {
+        // 自動発生を切り、着地の瞬間に EmitOnce で単発発生させる
+        landingEmitter_->SetAuto(false);
+    }
+
+    // 走行中の砂煙（走っている間だけ自動発生させる）
+    runEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("running");
+    if (runEmitter_)
+    {
+        runEmitter_->SetAuto(false);
+    }
+}
+
+void FootEffect::Update(const Vector3 &position, const Vector3 &velocity, bool grounded, bool active)
+{
+    // ─── 進行方向（水平成分）を更新する ───
+    Vector3 horizontal = {velocity.x, 0.0f, velocity.z};
+    const float horizontalSpeed = horizontal.Length();
+    if (horizontalSpeed > kDirEpsilon)
+    {
+        lastDir_ = horizontal / horizontalSpeed;
+    }
+
+    // ─── 着地の瞬間を検出する ───
+    // 接地後は velocity.y が 0 に潰されるため、空中にいる間の落下速度を覚えておく
+    if (!grounded)
+    {
+        fallSpeed_ = (velocity.y < 0.0f) ? -velocity.y : 0.0f;
+    }
+    const bool landed = active && grounded && !wasGrounded_ && fallSpeed_ >= kLandingMinFallSpeed;
+    wasGrounded_ = grounded;
+    if (grounded)
+    {
+        fallSpeed_ = 0.0f;
+    }
+
+    if (landingEmitter_)
+    {
+        if (landed)
+        {
+            landingEmitter_->SetTranslate(position + Vector3(0.0f, kLandingOffsetY, 0.0f));
+            landingEmitter_->EmitOnce();
+        }
+        landingEmitter_->Update(); // emitフラグ残留防止のため毎フレーム呼ぶ
+    }
+
+    if (runEmitter_)
+    {
+        // チョン押しで砂煙が出ないよう、kRunStartDelay 秒走り続けて初めて発生させる
+        const bool moving = active && grounded && horizontalSpeed > kRunMinSpeed;
+        runTimer_ = moving ? runTimer_ + Frame::DeltaTime() : 0.0f;
+
+        const bool running = moving && runTimer_ >= kRunStartDelay;
+        if (running)
+        {
+            // 足元の少し後ろから発生させ、進行方向と逆へ砂煙を流す。
+            // 発生速度はワールド空間なので、ここで毎フレーム進行方向から計算する
+            const Vector3 back = -lastDir_;
+            runEmitter_->SetTranslate(position - lastDir_ * kRunBackOffset + Vector3(0.0f, kRunOffsetY, 0.0f));
+
+            // エミッターへは軸ごとの min/max しか渡せないので、「後方へ〜・左右へ±」という
+            // 向き付きの範囲をXZ成分ごとに分解する（左右は後方ベクトルに直交する成分）
+            const float sideX = std::fabs(back.z) * kRunSideSpread;
+            const float sideZ = std::fabs(back.x) * kRunSideSpread;
+            const float backNearX = back.x * kRunSpeedMin;
+            const float backFarX = back.x * kRunSpeedMax;
+            const float backNearZ = back.z * kRunSpeedMin;
+            const float backFarZ = back.z * kRunSpeedMax;
+
+            runEmitter_->SetMinVelocity({(std::min)(backNearX, backFarX) - sideX,
+                                         -kRunUpSpread,
+                                         (std::min)(backNearZ, backFarZ) - sideZ});
+            runEmitter_->SetMaxVelocity({(std::max)(backNearX, backFarX) + sideX,
+                                         kRunUpSpread,
+                                         (std::max)(backNearZ, backFarZ) + sideZ});
+        }
+        runEmitter_->SetAuto(running);
+        runEmitter_->Update(); // emitフラグ残留防止のため毎フレーム呼ぶ
+    }
+}
+
+void FootEffect::DrawCompute(const ViewProjection &vp)
+{
+    if (landingEmitter_)
+    {
+        landingEmitter_->DrawCompute(vp);
+    }
+    if (runEmitter_)
+    {
+        runEmitter_->DrawCompute(vp);
+    }
+}
+
+void FootEffect::DrawGraphics(const ViewProjection &vp)
+{
+    if (landingEmitter_)
+    {
+        landingEmitter_->DrawGraphics(vp);
+    }
+    if (runEmitter_)
+    {
+        runEmitter_->DrawGraphics(vp);
+    }
+}
+
+void FootEffect::DrawImGui()
+{
+    if (landingEmitter_)
+    {
+        landingEmitter_->DrawImGui();
+    }
+    if (runEmitter_)
+    {
+        runEmitter_->DrawImGui();
+    }
+}
+
+
+============================================================
+File Path: Application/staging/foot/FootEffect.h
+============================================================
+#pragma once
+#include <particle/gpu/ParticleCSEmitter.h>
+#include <type/Vector3.h>
+
+/// <summary>
+/// 足元の演出を管理するクラス
+/// ・着地の砂煙（landing）: 空中から接地した瞬間に一度だけ発生させる
+/// ・走行中の砂煙（running）: 接地して走っている間、進行方向と逆へ流し続ける
+/// 発生速度はワールド空間なので、走行側はCPUで毎フレーム進行方向から計算して
+/// エミッターを足元へ追従させながら流し込む。
+/// </summary>
+class FootEffect
+{
+  public:
+    /// ===================================================
+    /// public method
+    /// ===================================================
+
+    /// <summary>
+    /// 初期化（テンプレートからエミッターを生成）
+    /// </summary>
+    void Init();
+
+    /// <summary>
+    /// 更新処理。emitフラグ残留を防ぐため、発生の有無に関わらず毎フレーム呼ぶ
+    /// </summary>
+    /// <param name="position">追従対象のワールド座標（足元基準）</param>
+    /// <param name="velocity">追従対象の速度（進行方向・着地の落下速度に使う）</param>
+    /// <param name="grounded">接地中なら true</param>
+    /// <param name="active">演出を発生させてよい状態なら true（死亡・ポーズ中は false）</param>
+    void Update(const Hagine::Vector3 &position, const Hagine::Vector3 &velocity,
+                bool grounded, bool active);
+
+    /// <summary>
+    /// GPUパーティクルのComputeフェーズ描画
+    /// </summary>
+    /// <param name="vp">ビュープロジェクション</param>
+    void DrawCompute(const Hagine::ViewProjection &vp);
+
+    /// <summary>
+    /// GPUパーティクルのGraphicsフェーズ描画
+    /// </summary>
+    /// <param name="vp">ビュープロジェクション</param>
+    void DrawGraphics(const Hagine::ViewProjection &vp);
+
+    /// <summary>
+    /// ImGuiデバッグ表示（エミッター設定の調整用）
+    /// </summary>
+    void DrawImGui();
+
+  private:
+    /// ===================================================
+    /// private variants
+    /// ===================================================
+
+    // 定数定義
+    static constexpr float kLandingMinFallSpeed = 4.0f; // 着地演出を出す最低落下速度（これ未満の段差は無視）
+    static constexpr float kLandingOffsetY = -1.0f;     // 着地演出の発生位置の高さオフセット（足元へ下げる）
+    static constexpr float kDirEpsilon = 0.001f;        // 進行方向を更新する最低水平速度
+    static constexpr float kRunMinSpeed = 8.0f;         // 走行演出を出す最低水平速度（最大速度20の4割）
+    static constexpr float kRunStartDelay = 0.2f;       // この時間だけ走り続けて初めて発生させる（一瞬の入力を弾く）
+    static constexpr float kRunSpeedMin = 5.0f;         // 砂煙が後方へ流れる最低速度
+    static constexpr float kRunSpeedMax = 7.0f;         // 砂煙が後方へ流れる最高速度
+    static constexpr float kRunSideSpread = 7.0f;       // 砂煙の左右方向のばらつき
+    static constexpr float kRunUpSpread = 1.0f;         // 砂煙の上下方向のばらつき
+    static constexpr float kRunBackOffset = 0.3f;       // 発生位置を進行方向の後ろへずらす距離
+    static constexpr float kRunOffsetY = -1.0f;         // 走行演出の発生位置の高さオフセット（足元へ下げる）
+
+    std::unique_ptr<Hagine::ParticleCSEmitter> landingEmitter_; // 着地の砂煙
+    std::unique_ptr<Hagine::ParticleCSEmitter> runEmitter_;     // 走行中の砂煙
+
+    Hagine::Vector3 lastDir_ = {0.0f, 0.0f, 1.0f}; // 直近の進行方向（水平成分）
+    bool wasGrounded_ = true;                      // 前フレームの接地状態（着地の瞬間の検出用）
+    float fallSpeed_ = 0.0f;                       // 空中での落下速度（着地の強さの判定用・正の値）
+    float runTimer_ = 0.0f;                        // 走り続けている時間（止まるとゼロに戻す）
 };
 
 
@@ -28115,6 +29624,10 @@ void ComboSystem::Update(float deltaTime)
             }
         }
         ResetCombo();
+
+        // 出し切った直後に1段目から殴り直せてしまわないよう、硬直を入れる。
+        // ResetCombo() がクールダウンを0に戻すため、その後に設定する
+        comboCooldown_ = finishRecovery_;
     }
 
     // タイムアウトによるコンボ終了
@@ -28376,6 +29889,10 @@ class ComboSystem
 
     std::string lastAttackName_; // 直近に発火した攻撃の名前（入力表示UI等が参照）
 
+    // 最終段を出し切ってコンボが終了したあとの硬直時間（秒）。
+    // FINAL_RETURN_DELAY（戻りの余韻）が明けてからさらにこの時間だけ次のコンボを受け付けない
+    float finishRecovery_ = 0.5f;
+
     int comboIndex_ = 0;            // 現在のコンボインデックス
     float comboCooldown_ = 0.0f;    // コンボクールダウン
     bool comboStarted_ = false;     // コンボ開始フラグ
@@ -28465,6 +29982,11 @@ class ComboSystem
     bool IsObjectAttackCompleted(Hagine::BaseObject *target) const;
     bool IsCurrentAttackCompleted() const;
     int GetCurrentComboIndex() const { return comboIndex_; }
+
+    /// <summary>
+    /// コンボを出し切ったあとの硬直時間（秒）への参照。ImGui・パラメータ調整用
+    /// </summary>
+    float &GetFinishRecovery() { return finishRecovery_; }
     int GetComboLength() const { return static_cast<int>(comboData_.size()); }
 
     /// <summary>
@@ -29558,9 +31080,7 @@ namespace fs = std::filesystem;
 
 void SpriteManager::Finalize()
 {
-    // 保持している全てのスプライトデータを解放する。
-    // ギズモにはインスタンスへのポインタと SpriteData を捕捉したヒット判定関数が
-    // 登録されているため、必ず登録解除を伴う Clear() 経由で破棄する。
+    // ギズモがインスタンスへのポインタを握っているので、登録解除を伴う Clear() 経由で破棄する
     Clear();
 }
 
@@ -29574,7 +31094,6 @@ void SpriteManager::RegisterSprite(const std::string &name, const std::string &t
                                    transform.anchorPoint, transform.isFlipX, transform.isFlipY);
     spriteData->sprite->SetInstanceCount(transform.instanceCount);
     // 行列は UpdateSpriteInstances が instanceData から毎フレーム構築する
-    //（Sprite::Update 側の単体インスタンス上書きを無効化しないと、インスタンス編集が反映されない）
     spriteData->sprite->SetUseExternalTransforms(true);
     spriteData->sprite->SetUVPosition({0.0f, 0.0f});
     spriteData->sprite->SetUVSize({1.0f, 1.0f});
@@ -29588,6 +31107,7 @@ void SpriteManager::RegisterSprite(const std::string &name, const std::string &t
         spriteData->instanceData[i].rotation = {0.0f, 0.0f, 0.0f};
         spriteData->instanceData[i].isActive = true;
     }
+    spriteData->syncedPosition = transform.position;
 
     sprites_.push_back(std::move(spriteData));
     UpdateSpriteInstances(sprites_.back().get());
@@ -29620,8 +31140,7 @@ void SpriteManager::UnregisterSprite(const std::string &name)
 
 void SpriteManager::DrawAll()
 {
-    // シャドウパス中(D32 DSV)はスプライト(D24 PSO)を描かない。
-    // スプライトは影を落とさないためスキップして良い（深度フォーマット不一致を防ぐ）。
+    // シャドウパス中(D32 DSV)はスプライト(D24 PSO)を描かない（深度フォーマット不一致を防ぐ）
     if (ShadowMap::GetInstance()->IsShadowPassActive())
     {
         return;
@@ -29851,6 +31370,7 @@ void SpriteManager::SetSpritePosition(const std::string &name, const Vector2 &po
             spriteData->instanceData[0].translation.x = position.x;
             spriteData->instanceData[0].translation.y = position.y;
         }
+        spriteData->syncedPosition = position;
     }
 }
 
@@ -29920,11 +31440,8 @@ void SpriteManager::SyncGizmoTarget(SpriteData *spriteData, int instanceIndex)
     gizmo->AddTarget(spriteData->name, translation, nullptr, nullptr, true);
     gizmo->SetScreenSpace(spriteData->name, true, 50.0f);
 
-    // 当たり判定はスプライトの実際の矩形で行う。
-    // translation は矩形の角（アンカー基準）なので、既定の円判定のままだと
-    // 本体をクリックしても選択できない。
-    // spriteData は unique_ptr の指す先なので vector 再確保でもアドレスは不変。
-    // instanceIndex は再確保のたびに SyncGizmoTarget が呼び直されるため値キャプチャで良い。
+    // 当たり判定はスプライトの実際の矩形で行う（translation は矩形の角なので円判定だと掴めない）。
+    // spriteData は unique_ptr の指す先なので vector 再確保でもアドレスは不変
     gizmo->SetScreenHitTest(spriteData->name, [spriteData, instanceIndex](const Vector2 &p) -> bool {
         if (!spriteData->sprite || instanceIndex >= static_cast<int>(spriteData->instanceData.size()))
             return false;
@@ -29969,6 +31486,18 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData)
         return;
 
     spriteData->sprite->SetInstanceCount(static_cast<uint32_t>(spriteData->instanceData.size()));
+
+    // 行列は instanceData 起点で作るため、Sprite::SetPosition の変化分を先頭インスタンスへ反映する
+    const Vector2 basePosition = spriteData->sprite->GetPosition();
+    if (basePosition.x != spriteData->syncedPosition.x || basePosition.y != spriteData->syncedPosition.y)
+    {
+        if (!spriteData->instanceData.empty())
+        {
+            spriteData->instanceData[0].translation.x = basePosition.x;
+            spriteData->instanceData[0].translation.y = basePosition.y;
+        }
+        spriteData->syncedPosition = basePosition;
+    }
 
     // スプライト本体のサイズと回転を取得してインスタンス行列に反映する
     Vector2 spriteSize = spriteData->sprite->GetSize();
@@ -30322,10 +31851,8 @@ void SpriteManager::DrawSpriteManager()
             ImGui::PushID(sp->name.c_str());
             ImGui::Indent(6.0f);
 
-            // ギズモのバインド先を「選択中スプライトの選択中インスタンス」へ追従させる。
-            // instanceData の再確保（追加・削除・Undo復元）で登録済みポインタが無効になるため、
-            // アドレス比較で検出して張り直す。インスタンス編集ツリーが閉じていても追従させたいので、
-            // ここと、要素数が変わりうる追加・削除操作の直後の 2 箇所で呼ぶ。
+            // ギズモのバインド先を選択中インスタンスへ追従させる。
+            // instanceData の再確保で登録済みポインタが無効になるため、アドレス比較で張り直す
             auto syncGizmoToSelection = [&] {
                 if (sp->instanceData.empty())
                     return;
@@ -31170,6 +32697,9 @@ void SpriteManager::RestoreUndoState(const nlohmann::json &state)
             }
         }
 
+        // 復元した instanceData が基準位置の差分反映で上書きされないよう同期を取り直す
+        sp->syncedPosition = sp->sprite->GetPosition();
+
         UpdateSpriteInstances(sp);
     }
 
@@ -31275,6 +32805,7 @@ struct SpriteData
     BlendMode blendMode = BlendMode::Normal;                // ブレンドモード
     bool lockAspectRatio = false;                            // アスペクト比維持フラグ
     std::string drawGroup = "UI";                            // 描画グループ＝描画ステージ（スプライトは既定でUIレイヤー）
+    Vector2 syncedPosition = {0.0f, 0.0f};                   // 先頭インスタンスへ反映済みの基準位置（Sprite::SetPosition の変化検出用）
 
     /// <summary>
     /// コンストラクタ
@@ -32576,6 +34107,39 @@ void AnimationController::Play(const std::string &name)
     paused_ = false;
 }
 
+void AnimationController::PlayLayer(const std::string &name, float fadeDuration)
+{
+    if (!pObject_ || layerMaskRoot_.empty())
+    {
+        return;
+    }
+    auto it = index_.find(name);
+    if (it == index_.end())
+    {
+        return;
+    }
+
+    // レイヤーは専用アニメーターで独立に進むため、通常再生の速度・補間設定は変更しない
+    const AnimationClip &clip = clips_[it->second];
+    pObject_->PlayLayerAnimation(clip.filePath, layerMaskRoot_, clip.loop, fadeDuration);
+    layerClipName_ = name;
+}
+
+void AnimationController::StopLayer(float fadeDuration)
+{
+    if (!pObject_)
+    {
+        return;
+    }
+    pObject_->StopLayerAnimation(fadeDuration);
+    layerClipName_.clear();
+}
+
+bool AnimationController::IsLayerPlaying() const
+{
+    return pObject_ && pObject_->IsLayerAnimationPlaying();
+}
+
 void AnimationController::PlayImmediate(const std::string &name)
 {
     if (!pObject_)
@@ -33159,6 +34723,28 @@ class AnimationController
     bool HasClip(const std::string &name) const;
 
     /// <summary>
+    /// 登録済みクリップを部分レイヤーとして再生する
+    /// SetLayerMaskRoot() で指定したジョイント以下だけがこのクリップで上書きされ、
+    /// それ以外は通常再生中のクリップのまま進む（走りながら撃つ等）。
+    /// 同じクリップの再指定は先頭から再生し直す
+    /// </summary>
+    /// <param name="name">クリップ名</param>
+    /// <param name="fadeDuration">レイヤーの出入りにかける時間（秒）</param>
+    void PlayLayer(const std::string &name, float fadeDuration = 0.1f);
+
+    /// <summary>
+    /// レイヤー再生を解除する
+    /// </summary>
+    /// <param name="fadeDuration">フェードアウトにかける時間（秒）</param>
+    void StopLayer(float fadeDuration = 0.1f);
+
+    /// <summary>
+    /// レイヤー再生中かを取得
+    /// </summary>
+    /// <returns>bool: 再生中なら true</returns>
+    bool IsLayerPlaying() const;
+
+    /// <summary>
     /// ImGuiによる調整・編集UIの描画（ウィンドウは生成せず内容のみ描画）
     /// </summary>
     void DrawImGui();
@@ -33182,6 +34768,13 @@ class AnimationController
     /// Getter
     /// ===================================================
     const std::string &GetCurrentClipName() const { return currentClipName_; }
+
+    /// <summary>
+    /// レイヤー再生中のクリップ名（PlayLayerFile の場合はファイルパス）を取得する。
+    /// 自動解除された場合も名前は残るため、IsLayerPlaying() と併せて判定すること
+    /// </summary>
+    /// <returns>const std::string&: レイヤーのクリップ名</returns>
+    const std::string &GetLayerClipName() const { return layerClipName_; }
     bool IsFinished() const;
     bool IsBlending() const;
     bool IsPaused() const { return paused_; }
@@ -33210,6 +34803,14 @@ class AnimationController
     /// </summary>
     /// <param name="speed">速度倍率</param>
     void SetGlobalSpeed(float speed);
+
+    /// <summary>
+    /// レイヤー再生で上書きする範囲の根ジョイントを設定する
+    /// （例：上半身だけ差し替えるなら背骨の根ジョイント名）。
+    /// 未設定のあいだ PlayLayer() は何もしない
+    /// </summary>
+    /// <param name="jointName">ジョイント名</param>
+    void SetLayerMaskRoot(const std::string &jointName) { layerMaskRoot_ = jointName; }
 
   private:
     /// ===================================================
@@ -33260,6 +34861,8 @@ class AnimationController
     std::unordered_map<std::string, int> index_; // クリップ名 -> clips_ のインデックス
 
     std::string currentClipName_;   // 現在再生中のクリップ名
+    std::string layerClipName_;     // レイヤー再生中のクリップ名
+    std::string layerMaskRoot_;     // レイヤーで上書きする範囲の根ジョイント名（空ならレイヤー無効）
     float currentClipSpeed_ = 1.0f; // 現在クリップ固有の速度（globalSpeed_ と乗算）
     float globalSpeed_ = 1.0f;      // 全体速度倍率
     bool paused_ = false;           // 一時停止中フラグ
@@ -34039,6 +35642,51 @@ void Bone::Update(const Animation &animation, float animationTime)
     // 指定された時間のアニメーションデータをボーンのトランスフォームに適用
     ApplyAnimation(animation, animationTime);
 
+    CalculateMatrices();
+}
+
+void Bone::UpdateLayered(const Animation &baseAnimation, float baseTime,
+                         const Animation &layerAnimation, float layerTime,
+                         const std::vector<uint8_t> &mask, float weight)
+{
+    // まず全身へ基準アニメーション（下半身側＝移動モーション）を適用し、
+    // そのあとマスク対象のジョイントだけレイヤー側で上書きする。
+    // 階層行列の計算は上書き後に一度だけ行えばよい
+    ApplyAnimation(baseAnimation, baseTime);
+    ApplyLayer(layerAnimation, layerTime, mask, weight);
+
+    CalculateMatrices();
+}
+
+std::vector<uint8_t> Bone::MakeSubtreeMask(const std::string &rootJointName) const
+{
+    std::vector<uint8_t> mask(skeleton_.joints.size(), 0);
+
+    auto it = skeleton_.jointMap.find(rootJointName);
+    if (it == skeleton_.jointMap.end())
+    {
+        // 該当ジョイントが無いモデルではマスクが全て0になり、レイヤーは実質無効になる
+        return mask;
+    }
+
+    // 根から子をたどって部分木を立てる
+    std::vector<int32_t> stack{it->second};
+    while (!stack.empty())
+    {
+        const int32_t index = stack.back();
+        stack.pop_back();
+        mask[index] = 1;
+        for (int32_t child : skeleton_.joints[index].children)
+        {
+            stack.push_back(child);
+        }
+    }
+
+    return mask;
+}
+
+void Bone::CalculateMatrices()
+{
     // すべてのJointを更新。
     // 親ジョイントのインデックスが必ず子より小さいため、
     // 配列の順序通りに更新処理を行うことで、依存関係を壊さず正しい階層行列が計算できる
@@ -34144,6 +35792,50 @@ Skeleton Bone::CreateSkeleton(const Node &rootNode)
     return skeleton;
 }
 
+void Bone::ApplyLayer(const Animation &animation, float animationTime,
+                      const std::vector<uint8_t> &mask, float weight)
+{
+    if (weight <= 0.0f)
+    {
+        return;
+    }
+    const float t = (weight >= 1.0f) ? 1.0f : weight;
+
+    for (Joint &joint : skeleton_.joints)
+    {
+        // マスク外（下半身側）のジョイントは基準アニメーションのまま残す
+        if (static_cast<size_t>(joint.index) >= mask.size() || !mask[joint.index])
+        {
+            continue;
+        }
+
+        auto it = animation.nodeAnimations.find(joint.name);
+        if (it == animation.nodeAnimations.end())
+        {
+            continue;
+        }
+
+        const NodeAnimation &nodeAnimation = (*it).second;
+        const Vector3 translate = Animator::CalculateValue(nodeAnimation.translate, animationTime);
+        const Quaternion rotate = Animator::CalculateValue(nodeAnimation.rotate, animationTime);
+        const Vector3 scale = Animator::CalculateValue(nodeAnimation.scale, animationTime);
+
+        if (t >= 1.0f)
+        {
+            joint.transform.translate = translate;
+            joint.transform.rotate = rotate;
+            joint.transform.scale = scale;
+        }
+        else
+        {
+            // レイヤーの出入りで上半身がパキッと切り替わらないよう、重みで基準側と混ぜる
+            joint.transform.translate = Lerp(joint.transform.translate, translate, t);
+            joint.transform.rotate = Quaternion::Slerp(joint.transform.rotate, rotate, t);
+            joint.transform.scale = Lerp(joint.transform.scale, scale, t);
+        }
+    }
+}
+
 void Bone::ApplyAnimation(const Animation &animation, float animationTime)
 {
     // 各ジョイントのアニメーション設定を検索し、補間値を計算して適用
@@ -34191,6 +35883,28 @@ class Bone
     /// <param name="animation">アニメーションデータ</param>
     /// <param name="animationTime">アニメーション時間</param>
     void Update(const Animation &animation, float animationTime);
+
+    /// <summary>
+    /// レイヤー合成付きの更新処理
+    /// 全身へ基準アニメーションを適用したあと、マスクで指定したジョイントだけ
+    /// レイヤーアニメーションで上書きする（上半身だけ別モーションにする用途）
+    /// </summary>
+    /// <param name="baseAnimation">全身に適用する基準アニメーション</param>
+    /// <param name="baseTime">基準アニメーションの再生時間</param>
+    /// <param name="layerAnimation">一部のジョイントへ上書きするアニメーション</param>
+    /// <param name="layerTime">レイヤーアニメーションの再生時間</param>
+    /// <param name="mask">ジョイントインデックスごとの適用フラグ（1で上書き対象）</param>
+    /// <param name="weight">上書きの強さ（0で基準のみ・1で完全にレイヤー）</param>
+    void UpdateLayered(const Animation &baseAnimation, float baseTime,
+                       const Animation &layerAnimation, float layerTime,
+                       const std::vector<uint8_t> &mask, float weight);
+
+    /// <summary>
+    /// 指定ジョイントとその子孫だけを立てたマスクを生成する
+    /// </summary>
+    /// <param name="rootJointName">部分木の根になるジョイント名</param>
+    /// <returns>std::vector&lt;uint8_t&gt;: ジョイント数ぶんのマスク（見つからなければ全て0）</returns>
+    std::vector<uint8_t> MakeSubtreeMask(const std::string &rootJointName) const;
 
     /// <summary>
     /// ジョイントのワールド座標を取得
@@ -34253,6 +35967,21 @@ class Bone
     /// <param name="animationTime">アニメーション時間</param>
     void ApplyAnimation(const Animation &animation, float animationTime);
 
+    /// <summary>
+    /// マスクで指定したジョイントへアニメーションを重ね書きする
+    /// </summary>
+    /// <param name="animation">アニメーションデータ</param>
+    /// <param name="animationTime">アニメーション時間</param>
+    /// <param name="mask">ジョイントインデックスごとの適用フラグ</param>
+    /// <param name="weight">上書きの強さ（0〜1）</param>
+    void ApplyLayer(const Animation &animation, float animationTime,
+                    const std::vector<uint8_t> &mask, float weight);
+
+    /// <summary>
+    /// 現在のジョイントのSRTから階層行列を計算する
+    /// </summary>
+    void CalculateMatrices();
+
   private:
     /// ===================================================
     /// private variables
@@ -34267,6 +35996,8 @@ class Bone
 File Path: Engine/3d/animation/ModelAnimation.cpp
 ============================================================
 #include "ModelAnimation.h"
+#include <algorithm>
+#include <Frame.h>
 
 namespace Hagine {
 void ModelAnimation::Initialize(const std::string &directorypath, const std::string &filename)
@@ -34301,20 +36032,139 @@ void ModelAnimation::Update(bool loop)
     // ボーン情報がある場合は、ボーン階層とスキン（頂点ウェイト）を最新状態に更新
     if (modelData_.hasBones)
     {
+        // レイヤー（上半身だけ差し替える等）の時間と重みを進める
+        if (layerAnimator_)
+        {
+            layerAnimator_->Update(layerLoop_);
+        }
+        UpdateLayerWeight();
+
         // 現在のアニメーションデータと再生時間をボーンに適用し、階層行列を再計算。
         // 補間中のみ合成ポーズの一時オブジェクトを生成し、非補間時は参照渡しにして
         // 毎フレームのアニメーション全体（全ノード・全キーフレーム）のコピーを避ける。
-        if (animator_->IsBlending())
+        Animation blended;
+        const bool isBlending = animator_->IsBlending();
+        if (isBlending)
         {
-            const Animation blended = animator_->GetCurrentAnimation();
-            bone_->Update(blended, animator_->GetAnimationTime());
+            blended = animator_->GetCurrentAnimation();
+        }
+        const Animation &baseAnimation = isBlending ? blended : animator_->GetCurrentAnimationRef();
+
+        if (layerAnimator_ && layerWeight_ > 0.0f)
+        {
+            // レイヤー側も補間中は合成ポーズを作る（コンボの段の繋ぎ）
+            Animation layerBlended;
+            const bool isLayerBlending = layerAnimator_->IsBlending();
+            if (isLayerBlending)
+            {
+                layerBlended = layerAnimator_->GetCurrentAnimation();
+            }
+            const Animation &layerAnimation = isLayerBlending ? layerBlended : layerAnimator_->GetCurrentAnimationRef();
+
+            bone_->UpdateLayered(baseAnimation, animator_->GetAnimationTime(),
+                                 layerAnimation, layerAnimator_->GetAnimationTime(),
+                                 layerMask_, layerWeight_);
         }
         else
         {
-            bone_->Update(animator_->GetCurrentAnimationRef(), animator_->GetAnimationTime());
+            bone_->Update(baseAnimation, animator_->GetAnimationTime());
         }
+
         // 計算されたボーン行列を元に、シェーダーに送るパレット行列を更新
         skin_->Update(bone_->GetSkeleton());
+    }
+}
+
+void ModelAnimation::PlayLayerAnimation(const std::string &directorypath, const std::string &filename,
+                                        const std::string &maskRootJoint, bool loop, float fadeDuration)
+{
+    // ボーンが無いモデル・マスク指定なしではレイヤーを使えない
+    if (!modelData_.hasBones || maskRootJoint.empty())
+    {
+        return;
+    }
+
+    layerLoop_ = loop;
+    layerFadeDuration_ = (fadeDuration > 0.0f) ? fadeDuration : 0.0f;
+    layerTargetWeight_ = 1.0f;
+
+    // マスクは根ジョイントが変わったときだけ作り直す
+    if (layerMaskRootJoint_ != maskRootJoint || layerMask_.empty())
+    {
+        layerMaskRootJoint_ = maskRootJoint;
+        layerMask_ = bone_->MakeSubtreeMask(maskRootJoint);
+    }
+
+    if (layerAnimator_)
+    {
+        if (layerFilename_ == filename)
+        {
+            // 同じモーションの再指定は先頭へ巻き戻して再生し直す（連射での撃ち直し）
+            layerAnimator_->SetAnimationTime(0.0f);
+            layerAnimator_->SetIsAnimation(true);
+        }
+        else
+        {
+            // 別モーションへはアニメーター内で補間する（コンボの段が繋がって見える）
+            layerAnimator_->BlendToAnimation(directorypath, filename, layerFadeDuration_);
+            layerFilename_ = filename;
+        }
+        return;
+    }
+
+    layerAnimator_ = std::make_unique<Animator>();
+    layerAnimator_->SetModelData(modelData_);
+    layerAnimator_->Initialize(directorypath, filename);
+    layerAnimator_->SetSpeed(animator_->GetSpeed());
+    layerFilename_ = filename;
+}
+
+void ModelAnimation::StopLayerAnimation(float fadeDuration)
+{
+    if (!layerAnimator_)
+    {
+        return;
+    }
+    layerFadeDuration_ = (fadeDuration > 0.0f) ? fadeDuration : 0.0f;
+    layerTargetWeight_ = 0.0f;
+}
+
+void ModelAnimation::UpdateLayerWeight()
+{
+    if (!layerAnimator_)
+    {
+        return;
+    }
+
+    // ループしないレイヤーは再生し終わったら自動で解除する（撃ち終わりで通常モーションへ戻す）
+    if (!layerLoop_ && layerAnimator_->IsFinish())
+    {
+        layerTargetWeight_ = 0.0f;
+    }
+
+    // フェード時間ゼロなら即座に目標値へ
+    if (layerFadeDuration_ <= 0.0f)
+    {
+        layerWeight_ = layerTargetWeight_;
+    }
+    else
+    {
+        const float step = Frame::DeltaTime() / layerFadeDuration_;
+        if (layerWeight_ < layerTargetWeight_)
+        {
+            layerWeight_ = (std::min)(layerWeight_ + step, layerTargetWeight_);
+        }
+        else if (layerWeight_ > layerTargetWeight_)
+        {
+            layerWeight_ = (std::max)(layerWeight_ - step, layerTargetWeight_);
+        }
+    }
+
+    // 完全にフェードアウトしたらアニメーターを解放する
+    if (layerTargetWeight_ <= 0.0f && layerWeight_ <= 0.0f)
+    {
+        layerAnimator_.reset();
+        layerFilename_.clear();
     }
 }
 
@@ -34367,6 +36217,38 @@ class ModelAnimation
     void PlayAnimation();
 
     /// <summary>
+    /// レイヤーアニメーション（体の一部だけ差し替えるモーション）を再生する
+    /// 指定ジョイント以下だけがこのアニメーションで上書きされ、残りは通常の
+    /// アニメーションのまま再生される（走りながら撃つ等の上半身差し替え用）。
+    /// 同じファイルを再指定した場合は先頭から再生し直す
+    /// </summary>
+    /// <param name="directorypath">ディレクトリパス</param>
+    /// <param name="filename">アニメーションファイル名</param>
+    /// <param name="maskRootJoint">上書き範囲の根になるジョイント名（この子孫が対象）</param>
+    /// <param name="loop">ループ再生するか（false なら再生終了で自動的に解除する）</param>
+    /// <param name="fadeDuration">レイヤーの出入りにかける時間（秒）</param>
+    void PlayLayerAnimation(const std::string &directorypath, const std::string &filename,
+                            const std::string &maskRootJoint, bool loop, float fadeDuration);
+
+    /// <summary>
+    /// レイヤーアニメーションを解除する（フェードアウトしてから停止）
+    /// </summary>
+    /// <param name="fadeDuration">フェードアウトにかける時間（秒）</param>
+    void StopLayerAnimation(float fadeDuration);
+
+    /// <summary>
+    /// レイヤーアニメーションが再生中か（フェードアウト中は false）
+    /// </summary>
+    /// <returns>bool: 再生中なら true</returns>
+    bool IsLayerPlaying() const { return layerAnimator_ != nullptr && layerTargetWeight_ > 0.0f; }
+
+    /// <summary>
+    /// レイヤー用アニメーターを取得（未再生なら nullptr）
+    /// </summary>
+    /// <returns>Animator*: レイヤー用アニメーター</returns>
+    Animator *GetLayerAnimator() { return layerAnimator_.get(); }
+
+    /// <summary>
     /// Getter
     /// </summary>
     Skeleton GetSkeletonData() { return bone_->GetSkeleton(); }
@@ -34385,6 +36267,16 @@ class ModelAnimation
 
   private:
     /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// レイヤーの重みをフェード目標へ進め、不要になったレイヤーを解放する
+    /// </summary>
+    void UpdateLayerWeight();
+
+  private:
+    /// ===================================================
     /// private variables
     /// ===================================================
 
@@ -34394,6 +36286,16 @@ class ModelAnimation
     std::string directorypath_;          // ディレクトリパス
     std::string filename_;               // ファイル名
     ModelData modelData_;                // モデルデータ
+
+    // ─── レイヤーアニメーション（上半身だけ差し替える等の部分再生）───
+    std::unique_ptr<Animator> layerAnimator_; // レイヤー用アニメーター（未使用時はnullptr）
+    std::vector<uint8_t> layerMask_;          // 上書き対象のジョイントマスク
+    std::string layerFilename_;               // レイヤーで再生中のファイル名
+    std::string layerMaskRootJoint_;          // マスクの根ジョイント名
+    float layerWeight_ = 0.0f;                // 現在のレイヤー適用度（0〜1）
+    float layerTargetWeight_ = 0.0f;          // 目標のレイヤー適用度（解除時は0）
+    float layerFadeDuration_ = 0.1f;          // フェードにかける時間（秒）
+    bool layerLoop_ = false;                  // レイヤーをループ再生するか
 };
 } // namespace Hagine
 
@@ -38658,6 +40560,9 @@ void Material::Draw(const Vector4 color, bool lighting)
     pMaterialDataGPU_->enableLighting = lighting ? 1 : 0;
 
     materialData_.uvTransform = MakeAffineMatrix({materialData_.uvSize.x, materialData_.uvSize.y, 1.0f}, {0.0f, 0.0f, materialData_.uvRotate}, {materialData_.uvPosition.x, materialData_.uvPosition.y, 0.0f});
+    // 組み立てた UV 行列は毎フレーム GPU へ送る
+    // （送らないと SetUVSize 等の変更が UpdateGPUData を呼ぶまで反映されない）
+    pMaterialDataGPU_->uvTransform = materialData_.uvTransform;
 
     // 法線マッピング関連（ImGui等での変更を毎フレーム反映）
     pMaterialDataGPU_->enableNormalMap = materialData_.enableNormalMap ? 1 : 0;
@@ -38774,6 +40679,16 @@ void Material::SetNormalMap(const std::string &normalMapPath)
     materialData_.enableProceduralNormal = false;
     UpdateGPUData();
 }
+
+void Material::ClearNormalMap()
+{
+    materialData_.normalMapFilePath.clear();
+    materialData_.normalMapIndex = 0;
+    materialData_.hasNormalMapTexture = false;
+    // 画像が無い状態で有効のままだと albedo を法線として読んでしまうため切る
+    materialData_.enableNormalMap = false;
+    UpdateGPUData();
+}
 } // namespace Hagine
 
 
@@ -38854,6 +40769,11 @@ class Material
     void SetNormalMap(const std::string &normalMapPath);
 
     /// <summary>
+    /// テクスチャ法線マップの指定を解除する（albedo 流用に戻す）
+    /// </summary>
+    void ClearNormalMap();
+
+    /// <summary>
     /// 法線の強さを設定
     /// </summary>
     void SetNormalStrength(float strength)
@@ -38861,6 +40781,11 @@ class Material
         materialData_.normalStrength = strength;
         UpdateGPUData();
     }
+
+    /// <summary>
+    /// 設定中の法線マップのパスを取得（未設定なら空文字）
+    /// </summary>
+    const std::string &GetNormalMapPath() const { return materialData_.normalMapFilePath; }
 
     /// <summary>
     /// バインド用の法線マップテクスチャインデックスを取得（未設定時は albedo を流用）
@@ -39365,6 +41290,31 @@ void Object3d::SetAnimation(const std::string &animationFileName)
     // 切り替え待機状態にする
     isAnimationSwitchPending_ = true;
     nextAnimationFileName_ = animationFileName;
+}
+
+void Object3d::PlayLayerAnimation(const std::string &animationFileName, const std::string &maskRootJoint,
+                                  bool loop, float fadeDuration)
+{
+    if (!currentModelAnimation_)
+    {
+        return;
+    }
+    currentModelAnimation_->PlayLayerAnimation(AssetPath::ModelsRoot(animationFileName), animationFileName,
+                                               maskRootJoint, loop, fadeDuration);
+}
+
+void Object3d::StopLayerAnimation(float fadeDuration)
+{
+    if (!currentModelAnimation_)
+    {
+        return;
+    }
+    currentModelAnimation_->StopLayerAnimation(fadeDuration);
+}
+
+bool Object3d::IsLayerAnimationPlaying() const
+{
+    return currentModelAnimation_ && currentModelAnimation_->IsLayerPlaying();
 }
 
 void Object3d::AddAnimation(const std::string &fileName, bool loop)
@@ -39937,6 +41887,29 @@ class Object3d
     void SetAnimation(const std::string &animationFileName);
 
     /// <summary>
+    /// 体の一部だけを別モーションで上書きするレイヤー再生を開始する
+    /// （下半身は通常のアニメーション、指定ジョイント以下だけこのモーションになる）
+    /// </summary>
+    /// <param name="animationFileName">アニメーションファイルパス</param>
+    /// <param name="maskRootJoint">上書き範囲の根になるジョイント名</param>
+    /// <param name="loop">ループ再生するか（false なら再生終了で自動解除）</param>
+    /// <param name="fadeDuration">レイヤーの出入りにかける時間（秒）</param>
+    void PlayLayerAnimation(const std::string &animationFileName, const std::string &maskRootJoint,
+                            bool loop = false, float fadeDuration = 0.1f);
+
+    /// <summary>
+    /// レイヤー再生を解除する
+    /// </summary>
+    /// <param name="fadeDuration">フェードアウトにかける時間（秒）</param>
+    void StopLayerAnimation(float fadeDuration = 0.1f);
+
+    /// <summary>
+    /// レイヤー再生中かを取得
+    /// </summary>
+    /// <returns>bool: 再生中なら true</returns>
+    bool IsLayerAnimationPlaying() const;
+
+    /// <summary>
     /// アニメーションの有無
     /// </summary>
     /// <param name="anime"></param>
@@ -40150,6 +42123,9 @@ File Path: Engine/3d/object/base/BaseObject.cpp
 #include "scene/SceneManager.h"
 #include "browser/ShowFolder.h"
 #ifdef _DEBUG
+#include "utility/debug/imgui/AssetDragDrop.h"
+#include <asset/AssetPath.h>
+#include <graphics/texture/TextureManager.h>
 #include <imgui_internal.h>
 #include <implot.h>
 #endif // DEBUG
@@ -40618,13 +42594,19 @@ void BaseObject::SaveToJson()
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
+    ObjectDatas_->Save<bool>("isWireframe", isWireframe_);
+    ObjectDatas_->Save<bool>("isRainbow", isRainbow_);
+    ObjectDatas_->Save<bool>("isGizmoSelectable", isGizmoSelectable_);
     if (pParent_)
     {
         ObjectDatas_->Save<std::string>("parentName", pParent_->GetName());
     }
     for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++)
     {
-        texturePaths_.push_back(obj3d_->GetTextureFilePath(i));
+        // 保存のたびに push_back すると texturePaths_ が肥大化するので、サイズを合わせて代入する
+        if (static_cast<int>(texturePaths_.size()) <= i)
+            texturePaths_.resize(i + 1);
+        texturePaths_[i] = obj3d_->GetTextureFilePath(i);
         ObjectDatas_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
         ObjectDatas_->Save("color_" + std::to_string(i), GetColor(i));
     }
@@ -40659,6 +42641,9 @@ void BaseObject::SceneSaveToJson()
     ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
     ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
     ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
+    ObjectDatas_->Save<bool>("isWireframe", isWireframe_);
+    ObjectDatas_->Save<bool>("isRainbow", isRainbow_);
+    ObjectDatas_->Save<bool>("isGizmoSelectable", isGizmoSelectable_);
     if (pParent_)
     {
         ObjectDatas_->Save<std::string>("parentName", pParent_->GetName());
@@ -40666,7 +42651,10 @@ void BaseObject::SceneSaveToJson()
 
     for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++)
     {
-        texturePaths_.push_back(obj3d_->GetTextureFilePath(i));
+        // 保存のたびに push_back すると texturePaths_ が肥大化するので、サイズを合わせて代入する
+        if (static_cast<int>(texturePaths_.size()) <= i)
+            texturePaths_.resize(i + 1);
+        texturePaths_[i] = obj3d_->GetTextureFilePath(i);
         ObjectDatas_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
         ObjectDatas_->Save("color_" + std::to_string(i), GetColor(i));
     }
@@ -40706,6 +42694,9 @@ void BaseObject::LoadFromJson()
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::Count);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
+    isWireframe_ = ObjectDatas_->Load<bool>("isWireframe", isWireframe_);
+    isRainbow_ = ObjectDatas_->Load<bool>("isRainbow", isRainbow_);
+    isGizmoSelectable_ = ObjectDatas_->Load<bool>("isGizmoSelectable", isGizmoSelectable_);
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
@@ -40780,6 +42771,9 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName)
     type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", type_);
     skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
     isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
+    isWireframe_ = ObjectDatas_->Load<bool>("isWireframe", isWireframe_);
+    isRainbow_ = ObjectDatas_->Load<bool>("isRainbow", isRainbow_);
+    isGizmoSelectable_ = ObjectDatas_->Load<bool>("isGizmoSelectable", isGizmoSelectable_);
     parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
@@ -40859,6 +42853,11 @@ void BaseObject::SaveMaterials()
         ObjectDatas_->Save<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
         ObjectDatas_->Save<float>(prefix + "proceduralScale", md.proceduralScale);
         ObjectDatas_->Save<float>(prefix + "normalStrength", md.normalStrength);
+
+        // UV（タイリング・オフセット・回転）
+        ObjectDatas_->Save<Vector2>(prefix + "uvSize", md.uvSize);
+        ObjectDatas_->Save<Vector2>(prefix + "uvPosition", md.uvPosition);
+        ObjectDatas_->Save<float>(prefix + "uvRotate", md.uvRotate);
     }
 }
 
@@ -40892,6 +42891,17 @@ void BaseObject::LoadMaterials()
         md.enableProceduralNormal = ObjectDatas_->Load<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
         md.proceduralScale = ObjectDatas_->Load<float>(prefix + "proceduralScale", md.proceduralScale);
         mat->SetNormalStrength(ObjectDatas_->Load<float>(prefix + "normalStrength", md.normalStrength));
+
+        // UV（タイリング・オフセット・回転）。uvTransform は Draw で毎フレーム組み直される
+        md.uvSize = ObjectDatas_->Load<Vector2>(prefix + "uvSize", md.uvSize);
+        md.uvPosition = ObjectDatas_->Load<Vector2>(prefix + "uvPosition", md.uvPosition);
+        md.uvRotate = ObjectDatas_->Load<float>(prefix + "uvRotate", md.uvRotate);
+
+        // 画像が無いのに有効化されていると albedo を法線として読んでしまうため落とす
+        if (md.enableNormalMap && !md.hasNormalMapTexture)
+        {
+            md.enableNormalMap = false;
+        }
     }
 }
 
@@ -42003,6 +44013,29 @@ void BaseObject::DebugObject()
             ImGui::TreePop();
         }
 
+        // UV（タイリング / オフセット / 回転）
+        if (ImGui::TreeNodeEx("UV##uv", ImGuiTreeNodeFlags_SpanAvailWidth))
+        {
+            if (Material *mat = GetMaterial(static_cast<uint32_t>(selMat)))
+            {
+                MaterialData &md = mat->GetMaterialData();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat2("##uvsize", &md.uvSize.x, 0.05f, 0.01f, 200.0f, "タイリング %.2f");
+                ImGui::SetItemTooltip("大きくするとテクスチャが繰り返される（広い地面の法線マップ等で使う）");
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat2("##uvpos", &md.uvPosition.x, 0.005f, -100.0f, 100.0f, "オフセット %.3f");
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat("##uvrot", &md.uvRotate, 0.01f, -6.28f, 6.28f, "回転 %.2f rad");
+                if (ImGui::SmallButton("UVリセット##uvr"))
+                {
+                    md.uvSize = {1.0f, 1.0f};
+                    md.uvPosition = {0.0f, 0.0f};
+                    md.uvRotate = 0.0f;
+                }
+            }
+            ImGui::TreePop();
+        }
+
         // Blend mode
         if (ImGui::TreeNodeEx("ブレンドモード##bm", ImGuiTreeNodeFlags_SpanAvailWidth))
         {
@@ -42023,9 +44056,56 @@ void BaseObject::DebugObject()
                 ImGui::PopStyleColor();
                 if (md.enableNormalMap)
                 {
+                    // ---- 現在の法線マップ（サムネがそのままD&Dのドロップ先）----
+                    auto *tm = TextureManager::GetInstance();
+                    D3D12_GPU_DESCRIPTOR_HANDLE nmHandle{};
+                    if (md.hasNormalMapTexture && !md.normalMapFilePath.empty())
+                    {
+                        tm->LoadTexture(md.normalMapFilePath); // ロード済みなら即return
+                        nmHandle = tm->GetSrvHandleGPU(AssetPath::Image(md.normalMapFilePath));
+                    }
+                    if (nmHandle.ptr != 0)
+                        ImGui::Image(static_cast<ImTextureID>(nmHandle.ptr), ImVec2(56.0f, 56.0f));
+                    else
+                        ImGui::Button("ここへ\nドロップ", ImVec2(56.0f, 56.0f));
+
+                    std::string dropped;
+                    if (AssetDragDrop::TextureTarget(dropped))
+                    {
+                        mat->SetNormalMap(dropped);
+                        normalMapPath_ = dropped;
+                    }
+                    ImGui::SetItemTooltip("アセットブラウザの画像をドラッグ&ドロップで設定できます");
+
+                    ImGui::SameLine();
+                    ImGui::BeginGroup();
                     ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
                     ImGui::Text("map: %s", md.hasNormalMapTexture ? md.normalMapFilePath.c_str() : "(未設定=albedo流用)");
                     ImGui::PopStyleColor();
+                    ImGui::TextDisabled("D&D または下のブラウザで設定");
+                    if (ImGui::SmallButton("クリア##nmclear"))
+                    {
+                        mat->ClearNormalMap();
+                        normalMapPath_.clear();
+                    }
+                    ImGui::EndGroup();
+
+                    // ---- フォルダから選択 ----
+                    if (ImGui::TreeNodeEx("フォルダから選択##nmbrowse", ImGuiTreeNodeFlags_SpanAvailWidth))
+                    {
+                        ShowTextureFile(normalMapPath_, "normalmap");
+                        ImGui::Spacing();
+                        ImGui::BeginDisabled(normalMapPath_.empty());
+                        if (ImGui::SmallButton("適用##nmapply"))
+                            mat->SetNormalMap(normalMapPath_);
+                        ImGui::EndDisabled();
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("選択解除##nmdesel"))
+                            normalMapPath_.clear();
+                        ImGui::SameLine();
+                        ImGui::TextDisabled("選択中: %s", normalMapPath_.empty() ? "(なし)" : normalMapPath_.c_str());
+                        ImGui::TreePop();
+                    }
                 }
 
                 // 手続き的法線（両方ONなら PS は手続き的を優先）
@@ -42602,6 +44682,7 @@ class BaseObject
     std::string modelPath_{};
     std::vector<std::string> texturePaths_{};
     std::string texturePath_{};
+    std::string normalMapPath_{}; // 法線マップ選択UIで選ばれた（適用前の）パス
     std::string folderPath_ = "SceneData/Title/ObjectData";
 
     BaseObject *pParent_ = nullptr;
@@ -74238,7 +76319,7 @@ File Path: Engine/utility/browser/ShowFolder.cpp
 #include <vector>
 
 namespace Hagine {
-void ShowTextureFile(std::string &selectedTexturePath)
+void ShowTextureFile(std::string &selectedTexturePath, const char *uiId)
 {
     namespace fs = std::filesystem;
     ImGuiStyle &style = ImGui::GetStyle();
@@ -74246,12 +76327,35 @@ void ShowTextureFile(std::string &selectedTexturePath)
     // images はエンジン(debug)とアプリの 2 ルートに分割されているため、ルートをラジオで切り替える。
     static const char *kRootNamesTex[2] = {"Engine(debug)", "App"};
     static const std::vector<std::string> kRootsTex = AssetPath::ImageScanRoots(); // [0]=エンジン, [1]=アプリ
-    static int rootSelTex = 1; // 既定: App
-    static fs::path currentDirTex = kRootsTex[rootSelTex];
-    static std::string selectedFolderTex;
-    static std::string selectedFileTex;
     static std::unordered_map<std::string, TextureCache> texCache;
-    static ImGuiTextFilter filter;
+
+    // 閲覧状態は UI インスタンス毎に持つ（アルベド用と法線マップ用で独立して辿れるように）
+    struct BrowserState
+    {
+        int rootSel = 1; // 既定: App
+        fs::path currentDir;
+        std::string selectedFolder;
+        std::string selectedFile;
+        ImGuiTextFilter filter;
+        bool initialized = false;
+    };
+    static std::unordered_map<std::string, BrowserState> states;
+
+    BrowserState &state = states[uiId];
+    if (!state.initialized)
+    {
+        state.currentDir = kRootsTex[state.rootSel];
+        state.initialized = true;
+    }
+
+    int &rootSelTex = state.rootSel;
+    fs::path &currentDirTex = state.currentDir;
+    std::string &selectedFolderTex = state.selectedFolder;
+    std::string &selectedFileTex = state.selectedFile;
+    ImGuiTextFilter &filter = state.filter;
+
+    // 同一ウィンドウに複数並べてもウィジェットIDが衝突しないようにする
+    ImGui::PushID(uiId);
 
     // ルート切り替え
     for (int i = 0; i < 2; ++i)
@@ -74477,6 +76581,8 @@ void ShowTextureFile(std::string &selectedTexturePath)
     ImGui::PushStyleColor(ImGuiCol_Text, {0.55f, 0.55f, 0.60f, 1.0f});
     ImGui::Text("Path: %s  |  %zu files", currentDirTex.string().c_str(), files.size());
     ImGui::PopStyleColor();
+
+    ImGui::PopID();
 }
 
 // ============================================================
@@ -75197,7 +77303,10 @@ struct TextureCache
 /// テクスチャファイルの選択UIを表示
 /// </summary>
 /// <param name="selectedTexturePath">選択されたテクスチャパス（出力）</param>
-void ShowTextureFile(std::string &selectedTexturePath);
+/// <param name="uiId">UIインスタンス識別子。同一ウィンドウ内に複数の
+/// ブラウザ（アルベド用・法線マップ用など）を並べる場合に、
+/// 閲覧中フォルダなどの状態とウィジェットIDを分離するために使う</param>
+void ShowTextureFile(std::string &selectedTexturePath, const char *uiId = "default");
 
 /// <summary>
 /// モデルファイルの選択UIを表示
@@ -303256,6 +305365,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\ui\enemy\EnemyUI.cpp" />
     <ClCompile Include="Application\staging\death\DeathStaging.cpp" />
     <ClCompile Include="Application\staging\dash\DashEffect.cpp" />
+    <ClCompile Include="Application\staging\foot\FootEffect.cpp" />
     <ClCompile Include="Application\staging\screen\ScreenFlash.cpp" />
     <ClCompile Include="Application\camera\death\DeathCamera.cpp" />
     <ClCompile Include="Application\entity\player\skill\MakanAttackSkill.cpp" />
@@ -303488,6 +305598,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\ui\enemy\EnemyUI.h" />
     <ClInclude Include="Application\staging\death\DeathStaging.h" />
     <ClInclude Include="Application\staging\dash\DashEffect.h" />
+    <ClInclude Include="Application\staging\foot\FootEffect.h" />
     <ClInclude Include="Application\staging\screen\ScreenFlash.h" />
     <ClInclude Include="Application\camera\death\DeathCamera.h" />
     <ClInclude Include="Application\entity\player\skill\MakanAttackSkill.h" />
@@ -303895,6 +306006,9 @@ File Path: Hagine.vcxproj.filters
     </Filter>
     <Filter Include="Application\staging\dash">
       <UniqueIdentifier>{14B7507A-3B1D-836B-52BF-F01321F264ED}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\staging\foot">
+      <UniqueIdentifier>{8C41F2D6-5B7A-4E93-A0C2-6D18B4E7F3A9}</UniqueIdentifier>
     </Filter>
     <Filter Include="Application\staging\screen">
       <UniqueIdentifier>{b7e3c1a4-9f2d-4e6a-8c1b-3f5a7d2e9c04}</UniqueIdentifier>
@@ -304338,6 +306452,9 @@ File Path: Hagine.vcxproj.filters
     </ClCompile>
     <ClCompile Include="Application\staging\dash\DashEffect.cpp">
       <Filter>Application\staging\dash</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\staging\foot\FootEffect.cpp">
+      <Filter>Application\staging\foot</Filter>
     </ClCompile>
     <ClCompile Include="Application\staging\screen\ScreenFlash.cpp">
       <Filter>Application\staging\screen</Filter>
@@ -304857,6 +306974,9 @@ File Path: Hagine.vcxproj.filters
     </ClInclude>
     <ClInclude Include="Application\staging\dash\DashEffect.h">
       <Filter>Application\staging\dash</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\staging\foot\FootEffect.h">
+      <Filter>Application\staging\foot</Filter>
     </ClInclude>
     <ClInclude Include="Application\staging\screen\ScreenFlash.h">
       <Filter>Application\staging\screen</Filter>
