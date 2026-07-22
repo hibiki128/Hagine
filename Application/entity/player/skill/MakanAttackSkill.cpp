@@ -203,9 +203,9 @@ void MakanAttackSkill::OnCollisionEnter(ColliderBase *other)
             blowDir.y = 0.0f;
             enemy->Status().RequestSkillBlowReaction(blowDir);
 
-            // チャージ度合いに応じたダメージを計算して適用
+            // チャージ度合いに応じたダメージを計算して適用（ガードされた場合は必殺技分のエネルギーを削る）
             float damage = 37.5f;
-            enemy->SetDamage(damage);
+            enemy->SetDamage(damage, false, true);
         }
     }
 }

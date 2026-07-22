@@ -60,7 +60,6 @@ void EnemyVisual::UpdateAnimation()
 {
     // ──────────────────────────────────────────
     // ビーム必殺技中：発動前演出〜ビーム終了まで一続きの専用モーションを再生
-    // （プレイヤーの必殺技と同じく、構え→フレーム30付近で発射→フレーム80で撃ち終わり）
     // ──────────────────────────────────────────
     if (pOwner_->Combat().IsBeamStaging() || pOwner_->Combat().IsBeamActive())
     {
@@ -93,9 +92,8 @@ void EnemyVisual::UpdateAnimation()
     const std::vector<std::string> &comboAnimations = pOwner_->Combat().GetComboAnimations();
 
     // ──────────────────────────────────────────
-    // コンボ攻撃中：段数に対応したアニメーションを再生（プレイヤーと同じロジック）
-    // GetCurrentComboIndex() は「次に実行する」インデックスなので、
-    // 現在再生中の段 = nextIdx - 1（0 のときは最終段の後）
+    // コンボ攻撃中：段数に対応したアニメーションを再生
+    // GetCurrentComboIndex() は「次に実行する」段なので、再生中の段 = nextIdx - 1
     // ──────────────────────────────────────────
     if (punchCombo.IsComboActive())
     {
@@ -150,10 +148,8 @@ void EnemyVisual::UpdateAnimation()
             return;
         }
 
-        // 「前進／後退」はプレイヤーの位置を基準に判定する。
-        // 敵は常にプレイヤーへ向くため、プレイヤーへ近づく成分が＋＝前進、離れる成分が－＝後退。
-        // 向き(GetForward)はクォータニオン規約の影響でプレイヤーと逆を指すことがあるため、
-        // 実ワールド位置から求めたベクトルで判定する方が確実
+        // 前進／後退はプレイヤーの位置を基準に判定する
+        // （GetForward はクォータニオン規約の影響で逆を指すことがあるため使わない）
         bool movingBackward = false;
         Player *target = pOwner_->GetTarget();
         if (target && hSpeed > kMinRotationDistance)

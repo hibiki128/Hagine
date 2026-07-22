@@ -365,9 +365,9 @@ void ChargeShot::OnCollisionEnterCallback(ColliderBase *other)
         {
             isAlive_ = false;
 
-            // チャージ度合いに応じたダメージを計算して適用
+            // チャージ度合いに応じたダメージを計算して適用（射撃扱い＝ひるみは近接より短い）
             float damage = GetDamage();
-            pPlayer_->GetEnemy()->SetDamage(damage);
+            pPlayer_->GetEnemy()->SetDamage(damage, true);
 
             Reset();
         }

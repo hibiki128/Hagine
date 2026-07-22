@@ -51,9 +51,21 @@ class PlayerStatus
     bool ConsumeEnergy(float amount);
 
     /// <summary>
+    /// エネルギーを削る処理。残量が足りない場合もゼロまで削り取る
+    /// </summary>
+    /// <param name="amount">削る量</param>
+    void DrainEnergy(float amount);
+
+    /// <summary>
     /// エネルギー回復処理
     /// </summary>
     void RecoverEnergy();
+
+    /// <summary>
+    /// ガード中なら弾を弾き返せるかを判定する（成立時はガード分のエネルギーを消費する）
+    /// </summary>
+    /// <returns>bool: 弾き返せたら true</returns>
+    bool ConsumeGuardDeflect();
 
     /// <summary>
     /// 外部からノックバックを与える
@@ -108,7 +120,19 @@ class PlayerStatus
     /// Setter
     /// ===================================================
     void SetHP(float hp) { HP_ = hp; }
-    void SetDamage(float damage) { damage_ = damage; }
+
+    /// <summary>
+    /// 次のDamageUpdateで処理するダメージを設定する
+    /// </summary>
+    /// <param name="damage">ダメージ量</param>
+    /// <param name="isShot">射撃（弾）によるダメージなら true。ひるみが近接より短くなる</param>
+    /// <param name="isSkill">必殺技によるダメージなら true。ガード時のエネルギー消費が大きくなる</param>
+    void SetDamage(float damage, bool isShot = false, bool isSkill = false)
+    {
+        damage_ = damage;
+        damageIsShot_ = isShot;
+        damageIsSkill_ = isSkill;
+    }
     void SetGuarding(bool flag) { isGuarding_ = flag; }
     void SetEnergyRecoveryRate(float rate) { energyRecoveryRate_ = rate; }
     void ResetEnergyForTutorial()
@@ -153,7 +177,8 @@ class PlayerStatus
 
     bool isGuarding_ = false;             ///< ガード中フラグ
     float guardDamageMultiplier_ = 0.20f; ///< ガード中の被ダメージ倍率（軽減率80%）ImGuiで調整可
-    float guardEnergyCost_ = 4.0f;        ///< ガード中に被弾した際のエネルギー消費量
+    float guardEnergyCost_ = 3.0f;        ///< ガード中に被弾した際のエネルギー消費量
+    float guardSkillEnergyCost_ = 15.0f;  ///< ガード中に必殺技を受けた際のエネルギー消費量（通常より大きく削る）
 
     Hagine::Vector3 knockbackVelocity_ = {0.0f, 0.0f, 0.0f}; ///< 適用待ちノックバック
     bool hasKnockback_ = false;                              ///< ノックバック適用待ちフラグ
@@ -162,10 +187,12 @@ class PlayerStatus
     float damageReactTimer_ = 0.0f;    ///< 経過時間
     float damageReactDuration_ = 0.5f; ///< リアクション時間
 
-    // ─── ひるみ（ヒットスタン）───
-    // 通常攻撃を食らった直後、行動不能にする（ガード時は発生しない）。被弾ごとに再充填され、
-    // コンボ間隔をまたいで持続するため、相手のコンボが終わる/途切れるまで食らい続ける
+    // ─── ひるみ（ヒットスタン）被弾ごとに再充填され、ガード時は発生しない ───
     float hitStunTimer_ = 0.0f;     ///< ひるみ残り時間（>0 で行動不能）
     float hitStunDuration_ = 0.5f;  ///< ひるみ継続時間（秒）コンボ間隔をまたぐ長さ。GameParamで調整可
     int flinchAnimIndex_ = 1;       ///< ひるみアニメ番号（1〜3・被弾ごとにランダム）
+
+    bool damageIsShot_ = false;     ///< 処理待ちのダメージが射撃由来か（ひるみを短くする）
+    bool damageIsSkill_ = false;    ///< 処理待ちのダメージが必殺技由来か（ガード時の消費量を切り替える）
+    float shotFlinchScale_ = 0.5f;  ///< 射撃被弾時のひるみ時間倍率（近接に対する比率）
 };

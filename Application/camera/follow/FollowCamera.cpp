@@ -147,9 +147,8 @@ Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *p
         Vector3 enemyPos = pPlayer->GetEnemy()->GetLocalPosition();
         Vector3 toEnemyDir = enemyPos - targetPos;
 
-        // 敵方向をそのまま forward にすると、空中で敵の真上/真下に近づいたとき
-        // forward が垂直に近づいて up との外積が退化し、カメラが暴れる。
-        // ヨー（既に敵方向へ更新済み）＋クランプしたピッチから forward を構築して防ぐ
+        // 敵方向をそのまま forward にすると、敵の真上/真下で up との外積が退化して暴れる。
+        // ヨー＋クランプしたピッチから forward を構築して防ぐ
         float xzLen = std::sqrt(toEnemyDir.x * toEnemyDir.x + toEnemyDir.z * toEnemyDir.z);
         float pitch = std::atan2(toEnemyDir.y, xzLen); // +: 敵が上 / -: 敵が下
         pitch = std::clamp(pitch, -kMaxLockOnPitch, kMaxLockOnPitch);

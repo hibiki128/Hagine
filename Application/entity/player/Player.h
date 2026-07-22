@@ -186,7 +186,18 @@ class Player : public Hagine::BaseObject
     /// 外部からダメージ量をセット（次のDamageUpdateで処理される）
     /// </summary>
     /// <param name="damage">与えるダメージ量</param>
-    void SetDamage(float damage) { status_->SetDamage(damage); }
+    /// <param name="isShot">射撃（弾）によるダメージなら true。ひるみが近接より短くなる</param>
+    /// <param name="isSkill">必殺技によるダメージなら true。ガード時のエネルギー消費が大きくなる</param>
+    void SetDamage(float damage, bool isShot = false, bool isSkill = false)
+    {
+        status_->SetDamage(damage, isShot, isSkill);
+    }
+
+    /// <summary>
+    /// ガード中なら弾を弾き返せるかを判定する（成立時はガード分のエネルギーを消費する）
+    /// </summary>
+    /// <returns>bool: 弾き返せたら true</returns>
+    bool ConsumeGuardDeflect() { return status_->ConsumeGuardDeflect(); }
 
     /// <summary>
     /// 外部からノックバックを与える

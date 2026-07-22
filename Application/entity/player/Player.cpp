@@ -212,10 +212,8 @@ void Player::Update()
         {
             status_->RecoverEnergy();
 
-            // ─── 必殺技のカメラ演出中は行動不能にする ───
-            // ・カメラワーク（顔アップ）中: 自分/相手どちらの必殺技でも移動・行動をロックする
-            // ・自分の必殺技演出中（顔アップ後の発動遅延も含む）: 発動が終わるまで自分をロックする
-            //   （相手はカメラワーク終了後に回避できるよう、ここではロックしない）
+            // 必殺技のカメラ演出中は行動不能にする。
+            // 顔アップ中は双方をロックし、発動遅延中は発動者だけをロックする（相手は回避可能）
             const bool cameraCloseUp = FollowCamera_ && FollowCamera_->IsSkillCloseUpActive();
             const bool selfSkillStaging = combat_->IsSkillStaging();
             const bool skillLocked = cameraCloseUp || selfSkillStaging;
@@ -253,9 +251,7 @@ void Player::Update()
             }
             else if (status_->IsHitStun())
             {
-                // ─── ひるみ（ヒットスタン）中は行動不能 ───
-                // 攻撃・移動入力・ステート更新は行わない。ノックバック（速度）と重力・
-                // 被弾点滅は下の共通処理で継続するため、アニメーションだけ進めて硬直を表現する。
+                // ひるみ中は行動不能。アニメーションだけ進めて硬直を表現する。
                 // 入力減速が効かないので、横滑りが伸びすぎないよう水平速度を減衰させる
                 Hagine::Vector3 &vel = movement_->GetVelocity();
                 vel.x *= kHitStunHorizontalDamping;
@@ -265,9 +261,7 @@ void Player::Update()
             }
             else if (combat_->IsTeleporting())
             {
-                // ─── 瞬間移動追撃中 ───
-                // 敵に貼り付いて追撃を継続する。移動入力・射撃・ガードは無効化し、
-                // コンボと前方判定だけ進めてフィニッシュ（叩きつけ）まで繋ぐ
+                // 瞬間移動追撃中は移動入力・射撃・ガードを無効化し、コンボだけ進める
                 combat_->UpdateTeleport(dt_);      // 位置固定・向き・消える演出・カメラ制御
                 combat_->UpdateComboAndCollider(); // コンボ継続＋前方判定更新
                 visual_->UpdateAnimation();

@@ -24,14 +24,17 @@ void PlayerStatus::DamageUpdate()
     if (isInvincible_)
     {
         damage_ = kNoDamage;
+        damageIsShot_ = false;
+        damageIsSkill_ = false;
         return;
     }
 
-    // ガード中はダメージ・ノックバックを軽減し、エネルギーを消費する
+    // ガード中はダメージ・ノックバックを軽減し、エネルギーを消費する（必殺技は消費量が大きい）
     float guardMult = isGuarding_ ? guardDamageMultiplier_ : 1.0f;
     if (isGuarding_)
     {
-        ConsumeEnergy(guardEnergyCost_);
+        // 残量が足りなくてもゼロまで削る（必殺技のガードを無償にしない）
+        DrainEnergy(damageIsSkill_ ? guardSkillEnergyCost_ : guardEnergyCost_);
     }
 
     HP_ -= damage_ * guardMult;
@@ -59,13 +62,26 @@ void PlayerStatus::DamageUpdate()
     isDamageReact_ = true;
     damageReactTimer_ = kTimerReset;
 
-    // ひるみ（ヒットスタン）の開始。ガード成立時は行動不能にしない。
-    // 被弾ごとに時間を再充填し、ひるみアニメをランダムに選び直す
+    // ひるみ（ヒットスタン）の開始。ガード成立時は行動不能にしない
     if (!isGuarding_)
     {
-        hitStunTimer_ = hitStunDuration_;
+        // 被弾ごとに時間を再充填する（射撃は近接より短い）
+        hitStunTimer_ = damageIsShot_ ? hitStunDuration_ * shotFlinchScale_ : hitStunDuration_;
         flinchAnimIndex_ = 1 + std::rand() % 3;
     }
+    damageIsShot_ = false;
+    damageIsSkill_ = false;
+}
+
+bool PlayerStatus::ConsumeGuardDeflect()
+{
+    if (!isGuarding_)
+    {
+        return false;
+    }
+    // 弾き返しも通常のガードと同じだけエネルギーを消費する
+    ConsumeEnergy(guardEnergyCost_);
+    return true;
 }
 
 void PlayerStatus::UpdateHitStun()
@@ -129,6 +145,12 @@ bool PlayerStatus::ConsumeEnergy(float amount)
     return false;
 }
 
+void PlayerStatus::DrainEnergy(float amount)
+{
+    energy_ = (energy_ > amount) ? energy_ - amount : 0.0f;
+    timeSinceLastShot_ = kTimerReset;
+}
+
 void PlayerStatus::RecoverEnergy()
 {
     bool canRecover = false;
@@ -190,6 +212,7 @@ void PlayerStatus::Save(DataHandler *data)
     data->Save("invincibleDuration", invincibleDuration_);
     data->Save("guardDamageMultiplier", guardDamageMultiplier_);
     data->Save("guardEnergyCost", guardEnergyCost_);
+    data->Save("guardSkillEnergyCost", guardSkillEnergyCost_);
     data->Save("hitStunDuration", hitStunDuration_);
 }
 
@@ -201,7 +224,8 @@ void PlayerStatus::Load(DataHandler *data)
     energy_ = maxEnergy_; // 初期化時は最大値
     invincibleDuration_ = data->Load<float>("invincibleDuration", 0.25f);
     guardDamageMultiplier_ = data->Load<float>("guardDamageMultiplier", 0.20f);
-    guardEnergyCost_ = data->Load<float>("guardEnergyCost", 4.0f);
+    guardEnergyCost_ = data->Load<float>("guardEnergyCost", 3.0f);
+    guardSkillEnergyCost_ = data->Load<float>("guardSkillEnergyCost", 15.0f);
     hitStunDuration_ = data->Load<float>("hitStunDuration", 0.5f);
 }
 
@@ -226,6 +250,7 @@ void PlayerStatus::DrawImGui()
     ImGui::DragFloat("ガード被ダメ倍率 (0=無敵, 1=無効)", &guardDamageMultiplier_, 0.01f, 0.0f, 1.0f);
     ImGui::Text("  -> 軽減率 %.0f%%", (1.0f - guardDamageMultiplier_) * 100.0f);
     ImGui::DragFloat("ガード時エネルギー消費", &guardEnergyCost_, 0.5f, 0.0f, 100.0f);
+    ImGui::DragFloat("ガード時エネルギー消費(必殺技)", &guardSkillEnergyCost_, 0.5f, 0.0f, 100.0f);
 
     ImGui::Separator();
     ImGui::Text("ひるみ（ヒットスタン）");
@@ -245,5 +270,7 @@ void PlayerStatus::RegisterParams()
     hub->Register("Player", "無敵時間", &invincibleDuration_, {0.01f, 0.0f, 2.0f});
     hub->Register("Player", "ガード被ダメ倍率", &guardDamageMultiplier_, {0.01f, 0.0f, 1.0f});
     hub->Register("Player", "ガード時エネルギー消費", &guardEnergyCost_, {0.5f, 0.0f, 100.0f});
+    hub->Register("Player", "ガード時エネルギー消費(必殺技)", &guardSkillEnergyCost_, {0.5f, 0.0f, 100.0f});
     hub->Register("Player", "ひるみ時間", &hitStunDuration_, {0.01f, 0.0f, 1.0f});
+    hub->Register("Player", "射撃被弾のひるみ倍率", &shotFlinchScale_, {0.01f, 0.0f, 1.0f});
 }

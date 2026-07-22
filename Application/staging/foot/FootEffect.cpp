@@ -59,10 +59,7 @@ void FootEffect::Update(const Vector3 &position, const Vector3 &velocity, bool g
 
     if (runEmitter_)
     {
-        // 一瞬スティックを倒しただけで砂煙が出ないよう、しきい値を超える速度で
-        // kRunStartDelay 秒走り続けて初めて発生させる（止まったら即リセット）。
-        // 発生間隔のタイマーはエミッター側が自動更新中だけ進むので、
-        // ここで発生を止めている間はチョン押しを何度繰り返しても溜まらない
+        // チョン押しで砂煙が出ないよう、kRunStartDelay 秒走り続けて初めて発生させる
         const bool moving = active && grounded && horizontalSpeed > kRunMinSpeed;
         runTimer_ = moving ? runTimer_ + Frame::DeltaTime() : 0.0f;
 
@@ -74,10 +71,8 @@ void FootEffect::Update(const Vector3 &position, const Vector3 &velocity, bool g
             const Vector3 back = -lastDir_;
             runEmitter_->SetTranslate(position - lastDir_ * kRunBackOffset + Vector3(0.0f, kRunOffsetY, 0.0f));
 
-            // エミッターへは軸ごとの min/max しか渡せないため、「後方へ kRunSpeedMin〜Max・
-            // 左右へ ±kRunSideSpread」という向き付きの範囲を、XZ成分ごとの範囲に分解する。
-            // 左右方向は後方ベクトルに直交する (back.z, -back.x) なので、
-            // 各軸へ乗る左右のばらつきは |back| の反対成分に比例する
+            // エミッターへは軸ごとの min/max しか渡せないので、「後方へ〜・左右へ±」という
+            // 向き付きの範囲をXZ成分ごとに分解する（左右は後方ベクトルに直交する成分）
             const float sideX = std::fabs(back.z) * kRunSideSpread;
             const float sideZ = std::fabs(back.x) * kRunSideSpread;
             const float backNearX = back.x * kRunSpeedMin;

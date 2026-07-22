@@ -156,7 +156,8 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other)
             -currentKnockback_,
             knockbackDir.z * currentKnockback_ * kSlamHorizontalRatio,
         };
-        pEnemy_->RequestBlowReaction();
+        // 起き上がり直後にそのまま殴られ続けないよう、復帰後はしばらくひるまない
+        pEnemy_->RequestBlowReaction(true);
         pEnemy_->SetKnockbackDirect(slamVel);
         pPlayer_->OnMeleeSlamHit();
         break;

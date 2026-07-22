@@ -51,8 +51,7 @@ void EnemyBullet::Update()
         return;
     }
 
-    // 地面との衝突はメッシュコライダーで判定するため、
-    // これは地形の外へ抜け落ちた場合の保険（地形の最低高さより下）
+    // 地面との衝突はメッシュコライダーで判定するので、これは地形外へ抜け落ちた場合の保険
     if (transform_->translation_.y <= kFallbackKillY)
     {
         isAlive_ = false;
@@ -126,8 +125,7 @@ void EnemyBullet::DrawParticle(const ViewProjection &viewProjection)
 
 void EnemyBullet::InitTransform(Enemy *enemy)
 {
-    // 手（右手ジョイント）を発射起点にする。
-    // ジョイントが取得できない場合は従来どおり本体位置＋オフセットで代用する
+    // 手（右手ジョイント）を発射起点にする（取得できなければ本体位置＋オフセットで代用）
     std::optional<Vector3> handPos = enemy->GetJointWorldPosition(kHandJointName);
     const bool fromHand = handPos.has_value();
     this->transform_->translation_ = fromHand ? *handPos : enemy->GetLocalPosition();
@@ -197,13 +195,64 @@ void EnemyBullet::InitTransform(Enemy *enemy)
     }
 }
 
+void EnemyBullet::DeflectFrom(const Vector3 &guardPosition)
+{
+    isDeflected_ = true;
+    isLockOnBullet_ = false; // 弾かれた弾は追尾しない
+    acce_ = 0.0f;            // これ以上加速もしない
+
+    // ガードした相手から見た外側（水平）方向。真後ろへ返すと撃った本人へ戻ってしまう
+    Vector3 outward = GetWorldPosition() - guardPosition;
+    outward.y = 0.0f;
+    if (outward.Length() > kMinSpeedThreshold)
+    {
+        outward = outward.Normalize();
+    }
+    else
+    {
+        outward = {-velocity_.x, 0.0f, -velocity_.z};
+        outward = (outward.Length() > kMinSpeedThreshold) ? outward.Normalize() : Vector3{0.0f, 0.0f, 1.0f};
+    }
+
+    // 外側方向と直交する水平方向。弾の進行方向に近い側へ流して自然に逸れて見せる
+    Vector3 lateral = {-outward.z, 0.0f, outward.x};
+    if (lateral.x * velocity_.x + lateral.z * velocity_.z < 0.0f)
+    {
+        lateral = {-lateral.x, 0.0f, -lateral.z};
+    }
+
+    Vector3 direction = outward * kDeflectBackRatio + lateral;
+    direction = (direction.Length() > kMinSpeedThreshold) ? direction.Normalize() : outward;
+
+    float speed = GetCurrentSpeed() * kDeflectSpeedRatio;
+    if (speed < kDeflectMinSpeed)
+    {
+        speed = kDeflectMinSpeed;
+    }
+    velocity_ = {direction.x * speed, kDeflectUpSpeed, direction.z * speed};
+
+    // 弾かれたあとは短時間で消滅させる（画面外まで飛び続けさせない）
+    const float deflectDeadline = lifeTime_ - kDeflectLifeTime;
+    if (currentLifeTime_ < deflectDeadline)
+    {
+        currentLifeTime_ = deflectDeadline;
+    }
+}
+
 void EnemyBullet::OnCollisionEnter(ColliderBase *other)
 {
     // プレイヤーに当たった時の処理
-    if (other->GetTag() == "Player" && isAlive_ && pTarget_ && pTarget_->GetAlive())
+    if (other->GetTag() == "Player" && isAlive_ && !isDeflected_ && pTarget_ && pTarget_->GetAlive())
     {
+        // ガード中は弾を外側へ弾き返し、ダメージは完全に無効化する
+        if (pTarget_->ConsumeGuardDeflect())
+        {
+            DeflectFrom(pTarget_->GetWorldPosition());
+            return;
+        }
+
         isHit_ = true;
-        pTarget_->SetDamage(damage_);
+        pTarget_->SetDamage(damage_, true);
     }
 
     // 地形メッシュに当たったら消滅させる（パーティクル終了後に isAlive_ が折れる）

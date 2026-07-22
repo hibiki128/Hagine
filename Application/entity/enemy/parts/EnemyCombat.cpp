@@ -52,7 +52,8 @@ void EnemyCombat::Init(Enemy *owner)
         // ビームアクティブ中かつ未ダメージ処理のとき一度だけダメージを与える
         if (other->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && pOwner_->GetTarget())
         {
-            pOwner_->GetTarget()->SetDamage(kBeamDamage);
+            // 必殺技扱いにして、ガードされた場合はエネルギーを大きく削る
+            pOwner_->GetTarget()->SetDamage(kBeamDamage, false, true);
             beamDamageDealt_ = true;
         }
     });
@@ -364,9 +365,7 @@ void EnemyCombat::StartBeamStaging()
     // カメラはプレイヤーのフォローカメラを借りて敵の顔に寄せる
     FollowCamera *camera = pOwner_->GetTarget() ? pOwner_->GetTarget()->GetCamera() : nullptr;
 
-    // 演出・遅延中はロックオン（照準追従）を維持し、発動の瞬間に固定する。
-    // ActivateBeam() 内で発射時の quateRotation_ が beamLockedRotation_ に
-    // スナップショットされるため、以降は向きが固定され回避が可能になる
+    // 演出・遅延中は照準追従を維持し、発動の瞬間の向きで固定する（以降は回避が可能になる）
     beamCutscene_.Start(pOwner_, camera, [this] {
         pOwner_->SetIsLockOn(false);
         StopChargeAura();
@@ -402,9 +401,7 @@ void EnemyCombat::UpdateBeam()
     float dt = Frame::DeltaTime();
     beamActiveTime_ += dt;
 
-    // ビーム発射中は transform_->quateRotation_ を発射時の固定向きで上書きする。
-    // OBBコライダーは transform_->quateRotation_ から向きを取るため、
-    // ここで上書きしないと RotateUpdate() によりコライダーがプレイヤーを追従し続ける。
+    // 発射時の固定向きで上書きする。しないとOBBコライダーがプレイヤーを追従し続ける
     pOwner_->GetWorldTransform()->quateRotation_ = beamLockedRotation_;
 
     // ビーム長を前方に伸ばす
@@ -434,9 +431,7 @@ void EnemyCombat::UpdateBeam()
         beamAroundEffect_->SetAuto(true);
         beamSpiralTime_ += dt;
 
-        // クォータニオンからローカル座標系の基底ベクトルを計算する
-        // RotateUpdate が +Z をプレイヤー方向に向けるため、
-        // localForward（+Z 基底）はそのままプレイヤー方向を向く
+        // クォータニオンからローカル基底を計算する（+Z がプレイヤー方向）
         Quaternion q = selfRot;
         Vector3 localRight(
             1.0f - 2.0f * (q.y * q.y + q.z * q.z),

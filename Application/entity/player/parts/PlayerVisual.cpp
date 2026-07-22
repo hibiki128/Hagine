@@ -63,7 +63,6 @@ void PlayerVisual::UpdateAnimation()
 {
     // ──────────────────────────────────────────
     // 必殺技（魔貫攻撃）中：発動前演出〜ビーム終了まで一続きの専用モーションを再生
-    // （構え→フレーム30付近で発射→フレーム80で撃ち終わりの構成）
     // ──────────────────────────────────────────
     if (pOwner_->Combat().IsSkillStaging() || pOwner_->GetIsSkillActive())
     {
@@ -94,9 +93,7 @@ void PlayerVisual::UpdateAnimation()
         // 近接は全身モーション（移動もロックされる）。射撃の上半身レイヤーが残っていたら解除する
         animationController_.StopLayer(kShotLayerFade);
 
-        // GetCurrentComboIndex() は「次に実行する」インデックスを返す。
-        // ExecuteComboAttack() が呼ばれるとインクリメントされるため、
-        // 現在再生中の段 = nextIdx - 1（0 のときは最終段 Slam の後待機中）
+        // GetCurrentComboIndex() は「次に実行する」段なので、再生中の段 = nextIdx - 1
         int nextIdx = punchCombo.GetCurrentComboIndex();
         int comboLen = punchCombo.GetComboLength();
         int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
@@ -119,9 +116,8 @@ void PlayerVisual::UpdateAnimation()
     // ──────────────────────────────────────────
     const std::string stateName = pOwner_->GetCurrentStateName();
 
-    // 通常弾の発射モーションは上半身レイヤーで再生されるため、
-    // ここでの全身クリップの切り替えはそのまま続けてよい（下半身は移動モーションを維持する）。
-    // ただしガード中は防御姿勢を優先するのでレイヤーを解除する
+    // 射撃モーションは上半身レイヤーなので全身クリップの切り替えは続けてよいが、
+    // ガード中は防御姿勢を優先するのでレイヤーを解除する
     if (stateName == "Guard" && animationController_.IsLayerPlaying())
     {
         animationController_.StopLayer(kShotLayerFade);
@@ -172,9 +168,7 @@ void PlayerVisual::UpdateAnimation()
     }
     else if (stateName == "FlyMove")
     {
-        // 浮遊移動 ― 後退・上昇・下降は Idle_Flying、前進・左右移動は Running_Fly を使う。
-        // 縦移動(|velocity.y| > 閾値)または後退(moveDir == Behind)は、仰向け気味の
-        // Idle_Flying の方がモーションとして自然なため優先する
+        // 浮遊移動 ― 縦移動・後退は仰向け気味の Idle_Flying、前進・左右移動は Running_Fly
         bool verticalMove = std::abs(pOwner_->GetVelocity().y) > kFlyVerticalAnimThreshold;
         bool movingBackward = (pOwner_->GetMoveDirection() == MoveDirection::Behind);
         if (verticalMove || movingBackward)
@@ -245,9 +239,8 @@ void PlayerVisual::UpdateFlyLean()
         Vector3 horizontalVel = {velocity.x, 0.0f, velocity.z};
         float speed = horizontalVel.Length();
 
-        // 体の「水平」な前方・右方向（ロックオンの上下ピッチを除いた安定フレーム）。
-        // 傾きはこの体の実ワールド軸まわりに作ることで、向きが変わっても
-        // 「後ろへ倒れる」方向が一定になる（ワールド固定軸だと向きでズレる）
+        // 体の水平な前方・右方向（ロックオンの上下ピッチを除いた軸）。
+        // この軸まわりに傾けることで、向きが変わっても倒れる方向が一定になる
         Vector3 fwdAxis = {pOwner_->GetForward().x, 0.0f, pOwner_->GetForward().z};
         Vector3 rightAxis = {pOwner_->GetRight().x, 0.0f, pOwner_->GetRight().z};
         float fwdLen = fwdAxis.Length();
