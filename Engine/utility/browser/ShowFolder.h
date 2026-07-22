@@ -20,7 +20,10 @@ struct TextureCache
 /// テクスチャファイルの選択UIを表示
 /// </summary>
 /// <param name="selectedTexturePath">選択されたテクスチャパス（出力）</param>
-void ShowTextureFile(std::string &selectedTexturePath);
+/// <param name="uiId">UIインスタンス識別子。同一ウィンドウ内に複数の
+/// ブラウザ（アルベド用・法線マップ用など）を並べる場合に、
+/// 閲覧中フォルダなどの状態とウィジェットIDを分離するために使う</param>
+void ShowTextureFile(std::string &selectedTexturePath, const char *uiId = "default");
 
 /// <summary>
 /// モデルファイルの選択UIを表示

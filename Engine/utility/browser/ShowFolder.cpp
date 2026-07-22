@@ -14,7 +14,7 @@
 #include <vector>
 
 namespace Hagine {
-void ShowTextureFile(std::string &selectedTexturePath)
+void ShowTextureFile(std::string &selectedTexturePath, const char *uiId)
 {
     namespace fs = std::filesystem;
     ImGuiStyle &style = ImGui::GetStyle();
@@ -22,12 +22,35 @@ void ShowTextureFile(std::string &selectedTexturePath)
     // images はエンジン(debug)とアプリの 2 ルートに分割されているため、ルートをラジオで切り替える。
     static const char *kRootNamesTex[2] = {"Engine(debug)", "App"};
     static const std::vector<std::string> kRootsTex = AssetPath::ImageScanRoots(); // [0]=エンジン, [1]=アプリ
-    static int rootSelTex = 1; // 既定: App
-    static fs::path currentDirTex = kRootsTex[rootSelTex];
-    static std::string selectedFolderTex;
-    static std::string selectedFileTex;
     static std::unordered_map<std::string, TextureCache> texCache;
-    static ImGuiTextFilter filter;
+
+    // 閲覧状態は UI インスタンス毎に持つ（アルベド用と法線マップ用で独立して辿れるように）
+    struct BrowserState
+    {
+        int rootSel = 1; // 既定: App
+        fs::path currentDir;
+        std::string selectedFolder;
+        std::string selectedFile;
+        ImGuiTextFilter filter;
+        bool initialized = false;
+    };
+    static std::unordered_map<std::string, BrowserState> states;
+
+    BrowserState &state = states[uiId];
+    if (!state.initialized)
+    {
+        state.currentDir = kRootsTex[state.rootSel];
+        state.initialized = true;
+    }
+
+    int &rootSelTex = state.rootSel;
+    fs::path &currentDirTex = state.currentDir;
+    std::string &selectedFolderTex = state.selectedFolder;
+    std::string &selectedFileTex = state.selectedFile;
+    ImGuiTextFilter &filter = state.filter;
+
+    // 同一ウィンドウに複数並べてもウィジェットIDが衝突しないようにする
+    ImGui::PushID(uiId);
 
     // ルート切り替え
     for (int i = 0; i < 2; ++i)
@@ -253,6 +276,8 @@ void ShowTextureFile(std::string &selectedTexturePath)
     ImGui::PushStyleColor(ImGuiCol_Text, {0.55f, 0.55f, 0.60f, 1.0f});
     ImGui::Text("Path: %s  |  %zu files", currentDirTex.string().c_str(), files.size());
     ImGui::PopStyleColor();
+
+    ImGui::PopID();
 }
 
 // ============================================================

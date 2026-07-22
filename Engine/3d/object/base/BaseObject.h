@@ -57,6 +57,7 @@ class BaseObject
     std::string modelPath_{};
     std::vector<std::string> texturePaths_{};
     std::string texturePath_{};
+    std::string normalMapPath_{}; // 法線マップ選択UIで選ばれた（適用前の）パス
     std::string folderPath_ = "SceneData/Title/ObjectData";
 
     BaseObject *pParent_ = nullptr;

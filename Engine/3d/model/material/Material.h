@@ -72,6 +72,11 @@ class Material
     void SetNormalMap(const std::string &normalMapPath);
 
     /// <summary>
+    /// テクスチャ法線マップの指定を解除する（albedo 流用に戻す）
+    /// </summary>
+    void ClearNormalMap();
+
+    /// <summary>
     /// 法線の強さを設定
     /// </summary>
     void SetNormalStrength(float strength)
@@ -79,6 +84,11 @@ class Material
         materialData_.normalStrength = strength;
         UpdateGPUData();
     }
+
+    /// <summary>
+    /// 設定中の法線マップのパスを取得（未設定なら空文字）
+    /// </summary>
+    const std::string &GetNormalMapPath() const { return materialData_.normalMapFilePath; }
 
     /// <summary>
     /// バインド用の法線マップテクスチャインデックスを取得（未設定時は albedo を流用）
