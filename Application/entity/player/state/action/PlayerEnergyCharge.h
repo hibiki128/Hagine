@@ -38,13 +38,6 @@ class PlayerEnergyCharge : public PlayerBaseState
     /// <param name="player">プレイヤー参照</param>
     void Exit(Player &player) override;
 
-    /// <summary>
-    /// パーティクル描画処理
-    /// </summary>
-    /// <param name="player">プレイヤー参照</param>
-    /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(Player &player, const Hagine::ViewProjection &viewProjection) override;
-
     float GetChargeRate() { return chargeRate_; }
 
   private:
@@ -59,5 +52,7 @@ class PlayerEnergyCharge : public PlayerBaseState
     float chargeRate_ = kChargeRate;
     float beforeChargeRate_ = kInitialChargeRate;
     std::string beforeState_ = "";
-    std::unique_ptr<Hagine::ParticleCSEmitter> chargeAuraEmitter_; // チャージオーラパーティクル
+    // チャージオーラ。実体は ParticleCSSpawner が所有する（借用ポインタ）。
+    // チャージ開始ごとに Spawn し、終了時に DespawnWhenFinished で自然消滅させる。
+    Hagine::ParticleCSEmitter *chargeAuraEmitter_ = nullptr;
 };

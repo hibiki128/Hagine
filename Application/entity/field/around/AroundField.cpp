@@ -1,5 +1,5 @@
 #include "AroundField.h"
-#include "particle/gpu/ParticleCSEditor.h"
+#include "particle/gpu/ParticleCSSpawner.h"
 
 using namespace Hagine;
 
@@ -26,18 +26,15 @@ void AroundField::Init(const std::string objectName)
     aroundField_->SetTag("CylinderField");
     activeField_ = aroundField_;
 
-    // コンピュートシェーダパーティクルの生成
-    fieldParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("AroundField");
+    // コンピュートシェーダパーティクルの生成。
+    // Spawn したエミッターの更新・描画はエンジンが自動で回すので、
+    // このクラス側で Update / DrawCompute / DrawGraphics を呼ぶ必要はない。
+    fieldParticle_ = ParticleCSSpawner::GetInstance()->Spawn("AroundField");
 }
 
 void AroundField::Update()
 {
-    // パーティクルの更新
-    if (!fieldParticle_->GetActive())
-    {
-        fieldParticle_->SetActive(true);
-    }
-    fieldParticle_->Update();
+    // パーティクルはエンジンが自動で駆動するためここでの更新は不要
 }
 
 void AroundField::Draw(const ViewProjection &viewProjection)
@@ -45,24 +42,16 @@ void AroundField::Draw(const ViewProjection &viewProjection)
     // モデルとしての描画は行わない（パーティクルで表現するため）
 }
 
-void AroundField::DrawParticleCompute(const ViewProjection &viewProjection)
-{
-    fieldParticle_->DrawCompute(viewProjection);
-}
-
-void AroundField::DrawParticle(const ViewProjection &viewProjection)
-{
-    fieldParticle_->DrawGraphics(viewProjection);
-}
-
 void AroundField::Debug()
 {
     // パーティクルのデバッグ用GUI
-    fieldParticle_->DrawImGui();
+    if (fieldParticle_)
+    {
+        fieldParticle_->DrawImGui();
+    }
 }
 
 void AroundField::Finalize()
 {
-    // パーティクルのカウンターをクリア
-    ParticleCSEmitter::ClearNameCounter("AroundField");
+    // 実体は ParticleCSSpawner が所有し、シーン遷移時にまとめて破棄されるため何もしない。
 }

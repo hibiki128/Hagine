@@ -9,11 +9,38 @@
 #include <particle/ParticleCommon.h>
 #include <debug/profiler/GpuProfiler.h>
 #include <random>
-#include <regex>
 #include "../utility/debug/imgui/ImGuizmoManager.h"
 #include "../utility/debug/imgui/ImGuiNotification.h"
+#include <object/base/BaseObject.h>
+#include <transform/WorldTransform.h>
 
 namespace Hagine {
+namespace {
+/// ワールド行列から回転成分だけを取り出す（各行を正規化してスケールを落とす。行ベクトル規約）。
+/// 行0/1/2 がそれぞれ右/上/前のワールド方向になる。
+Matrix4x4 ExtractRotation(const Matrix4x4 &world)
+{
+    Matrix4x4 rot = MakeIdentity4x4();
+    for (int row = 0; row < 3; ++row)
+    {
+        Vector3 axis = {world.m[row][0], world.m[row][1], world.m[row][2]};
+        const float len = axis.Length();
+        if (len > 1e-6f)
+        {
+            axis = axis / len;
+        }
+        else
+        {
+            // 潰れた行はその軸の単位ベクトルで代用（0除算と行列の破綻を避ける）
+            axis = {row == 0 ? 1.0f : 0.0f, row == 1 ? 1.0f : 0.0f, row == 2 ? 1.0f : 0.0f};
+        }
+        rot.m[row][0] = axis.x;
+        rot.m[row][1] = axis.y;
+        rot.m[row][2] = axis.z;
+    }
+    return rot;
+}
+} // namespace
 ParticleCSEmitter::~ParticleCSEmitter()
 {
     // 保有していた独立グループを破棄せず再利用プールへ返却する。
@@ -41,7 +68,9 @@ void ParticleCSEmitter::Initialize(const std::string &name)
     CreateEmitterMeshResource();
     LoadSetting();
 #ifdef _DEBUG
-    if (pEmitterMeshData_)
+    // 実行時に量産されるインスタンス(registerGizmo_=false)は登録しない。
+    // 登録するとエディタ上の同名テンプレートのギズモ対象を奪ってしまう。
+    if (registerGizmo_ && pEmitterMeshData_)
     {
         ImGuizmoManager::GetInstance()->AddTarget(
             name_,
@@ -71,10 +100,69 @@ void ParticleCSEmitter::Initialize(const std::string &name, PrimitiveType primit
     CreateModelEdges();
 }
 
+void ParticleCSEmitter::SetParent(BaseObject *parent)
+{
+    pParentTransform_ = parent ? parent->GetWorldTransform() : nullptr;
+}
+
+void ParticleCSEmitter::ResolveEmitterTransform(const ViewProjection &vp)
+{
+    // カメラのワールド回転。matWorld_ の行0/1/2 が右/上/前のワールド方向。
+    cameraRotation_ = ExtractRotation(vp.matWorld_);
+
+    if (!pEmitterMeshData_)
+        return;
+
+    // ---- 位置 ----
+    Matrix4x4 parentRot = MakeIdentity4x4();
+    if (pParentTransform_)
+    {
+        const Matrix4x4 &pw = pParentTransform_->matWorld_;
+        parentRot = ExtractRotation(pw);
+        const Vector3 parentPos = {pw.m[3][0], pw.m[3][1], pw.m[3][2]};
+        // 親のスケールは意図しない拡大を避けるため乗せない（回転済みオフセットのみ足す）
+        pEmitterMeshData_->translate = parentPos + TransformNormal(localTranslate_, parentRot);
+    }
+
+    // ---- 向き ----
+    if (!billboardEmitter_ && !pParentTransform_)
+    {
+        pEmitterMeshData_->rotation = baseRotation_; // 合成不要（毎フレームの再変換による誤差も避ける）
+        return;
+    }
+
+    // ローカル → 親（またはカメラ）の順に適用する（行ベクトル規約なので行列積もこの順）。
+    // QuaternionToMatrix4x4 と Quaternion::FromMatrix は互いに逆変換なので、
+    // 合成結果をそのままエミッターの回転クォータニオンへ戻せる。
+    // ビルボードONのときは「常にカメラへ正対」が目的なので親の回転は使わない
+    // （位置だけ親に追従し、向きはカメラが決める）。
+    Matrix4x4 resolved = QuaternionToMatrix4x4(baseRotation_);
+    resolved = resolved * (billboardEmitter_ ? cameraRotation_ : parentRot);
+    pEmitterMeshData_->rotation = Quaternion::FromMatrix(resolved).Normalize();
+}
+
+Matrix4x4 ParticleCSEmitter::GetEffectSpaceMatrix(uint32_t effectSpace) const
+{
+    switch (effectSpace)
+    {
+    case 1: // エミッター基準（ビルボードON時はカメラ回転も既に含まれている）
+        return pEmitterMeshData_ ? QuaternionToMatrix4x4(pEmitterMeshData_->rotation) : MakeIdentity4x4();
+    case 2: // ビルボード（カメラの向きに追従）
+        return cameraRotation_;
+    default: // 0 = ワールド固定（従来動作）
+        return MakeIdentity4x4();
+    }
+}
+
 void ParticleCSEmitter::DrawCompute(const ViewProjection &vp)
 {
     if (ShadowMap::GetInstance()->IsShadowPassActive())
         return;
+
+    // 発生源メッシュの位置・向き（親追従＝ビルボード）を Emit/Update のディスパッチより前に確定させる。
+    // グループが空でもワイヤーフレーム表示のために解決しておく。
+    ResolveEmitterTransform(vp);
+
     if (particleGroups_.empty())
         return;
 
@@ -598,8 +686,14 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
 
         ParticleCSSettings *settings = group->GetSettingsData();
 
-        settings->gatherTarget = pEmitterMeshData_->translate + settings->gatherTargetOffset;
-        settings->vortexTarget = pEmitterMeshData_->translate + settings->vortexTargetOffset;
+        // 渦の軸と目標オフセットを「基準空間」からワールドへ解決してから GPU へ渡す。
+        // effectSpace=0(ワールド) では単位行列なので従来と完全に同じ値になる。
+        // 1(エミッター)/2(ビルボード) では軸もオフセットも一緒に回るため、
+        // エミッターやカメラを回しても渦の見え方（＝動き）が変わらない。
+        const Matrix4x4 space = GetEffectSpaceMatrix(settings->effectSpace);
+        settings->gatherTarget = pEmitterMeshData_->translate + TransformNormal(settings->gatherTargetOffset, space);
+        settings->vortexTarget = pEmitterMeshData_->translate + TransformNormal(settings->vortexTargetOffset, space);
+        settings->vortexAxis = TransformNormal(settings->vortexAxisBase, space);
 
         // SoA UAV (u0-u5)
         cl->SetComputeRootDescriptorTable(0, group->GetLifeUavGpu());
@@ -673,43 +767,6 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
     }
 }
 
-std::unique_ptr<ParticleCSEmitter> ParticleCSEmitter::Clone() const
-{
-    auto newEmitter = std::make_unique<ParticleCSEmitter>();
-
-    auto &nameCounter = GetNameCounter();
-    std::string baseName = name_;
-    std::regex suffixRegex("_(\\d+)$");
-    baseName = std::regex_replace(baseName, suffixRegex, "");
-
-    int &counter = nameCounter[baseName];
-    ++counter;
-
-    std::string newName = baseName + "_" + std::to_string(counter);
-
-    newEmitter->Initialize(baseName);
-    newEmitter->SetName(newName);
-#ifdef _DEBUG
-    ImGuizmoManager::GetInstance()->RemoveTarget(baseName);
-    if (newEmitter->pEmitterMeshData_)
-    {
-        ImGuizmoManager::GetInstance()->AddTarget(
-            newName,
-            &newEmitter->pEmitterMeshData_->translate,
-            nullptr,
-            &newEmitter->pEmitterMeshData_->scale,
-            newEmitter->isGizmoSelectable_);
-    }
-#endif
-    newEmitter->LoadCloneSetting();
-    newEmitter->SetActive(this->isActive_);
-    newEmitter->isAuto_ = this->isAuto_;
-    newEmitter->isVisible_ = this->isVisible_;
-
-    *newEmitter->pEmitterMeshData_ = *this->pEmitterMeshData_;
-
-    return newEmitter;
-}
 void ParticleCSEmitter::CreateModelTriangles()
 {
     if (modelData_.meshes.empty())
@@ -969,7 +1026,9 @@ void ParticleCSEmitter::SaveSetting()
     data->Save("frequency", pEmitterMeshData_->frequency);
     data->Save("frequencyTime", pEmitterMeshData_->frequencyTime);
     data->Save<Vector3>("translate", pEmitterMeshData_->translate);
-    data->Save<Quaternion>("rotation", pEmitterMeshData_->rotation);
+    // ビルボード合成前の回転を保存する（pEmitterMeshData_->rotation はカメラを含む解決済みの値）
+    data->Save<Quaternion>("rotation", baseRotation_);
+    data->Save("billboardEmitter", billboardEmitter_);
     data->Save<Vector3>("scale", pEmitterMeshData_->scale);
     data->Save("emitFromSurface", pEmitterMeshData_->emitFromSurface);
     data->Save("modelPath", modelPath_);
@@ -1038,7 +1097,10 @@ void ParticleCSEmitter::SaveSetting()
         data->Save(prefix + "vortexTargetOffset", group->GetSettingsData()->vortexTargetOffset);
         data->Save(prefix + "vortexStrength", group->GetSettingsData()->vortexStrength);
         data->Save(prefix + "enableVortexForTrail", group->GetSettingsData()->enableVortexForTrail);
-        data->Save(prefix + "vortexAxis", group->GetSettingsData()->vortexAxis);
+        // 保存するのは基準空間での軸（vortexAxis は毎フレーム作られる解決済みワールド値）。
+        // キー名は従来どおりなので、旧データ・旧ビルドとそのまま行き来できる。
+        data->Save(prefix + "vortexAxis", group->GetSettingsData()->vortexAxisBase);
+        data->Save(prefix + "effectSpace", group->GetSettingsData()->effectSpace);
 
         data->Save(prefix + "enableAcceleration", group->GetSettingsData()->enableAcceleration);
         data->Save(prefix + "acceleration", group->GetSettingsData()->acceleration);
@@ -1154,7 +1216,9 @@ void ParticleCSEmitter::LoadSetting()
     pEmitterMeshData_->frequency = data->Load("frequency", 0.1f);
     pEmitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
     pEmitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-    pEmitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    baseRotation_ = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    billboardEmitter_ = data->Load("billboardEmitter", false);
+    pEmitterMeshData_->rotation = baseRotation_; // 次の DrawCompute でビルボードが合成される
     pEmitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
     pEmitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
 
@@ -1234,241 +1298,10 @@ void ParticleCSEmitter::LoadSetting()
         settings.vortexTargetOffset = data->Load<Vector3>(prefix + "vortexTargetOffset", {0.0f, 0.0f, 0.0f});
         settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
         settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
-        settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
-
-        settings.enableAcceleration = data->Load<uint32_t>(prefix + "enableAcceleration", 0);
-        settings.acceleration = data->Load<Vector3>(prefix + "acceleration", {0.0f, 0.0f, 0.0f});
-        settings.enableVelocityDamping = data->Load<uint32_t>(prefix + "enableVelocityDamping", 0);
-        settings.velocityDampingFactor = data->Load(prefix + "velocityDampingFactor", 0.0f);
-        settings.enableLifetimeVelocityDamping = data->Load<uint32_t>(prefix + "enableLifetimeVelocityDamping", 0);
-        settings.lifetimeVelocityDampingStart = data->Load(prefix + "lifetimeVelocityDampingStart", 0.0f);
-        settings.enableRadialVelocity = data->Load<uint32_t>(prefix + "enableRadialVelocity", 0);
-        settings.radialVelocityStrength = data->Load(prefix + "radialVelocityStrength", 0.0f);
-        settings.radialVelocityRandomness = data->Load(prefix + "radialVelocityRandomness", 0.0f);
-        settings.radialVelocityCenter = data->Load<Vector3>(prefix + "radialVelocityCenter", {0.0f, 0.0f, 0.0f});
-
-        settings.enableCurlNoise = data->Load<uint32_t>(prefix + "enableCurlNoise", 0);
-        settings.curlNoiseScale = data->Load(prefix + "curlNoiseScale", 1.0f);
-        settings.curlNoiseStrength = data->Load(prefix + "curlNoiseStrength", 1.0f);
-        settings.curlNoiseTimeScale = data->Load(prefix + "curlNoiseTimeScale", 1.0f);
-        settings.curlNoiseOctaves = data->Load<uint32_t>(prefix + "curlNoiseOctaves", 1);
-        settings.curlNoiseAttractStrength = data->Load(prefix + "curlNoiseAttractStrength", 0.0f);
-        settings.curlNoiseBlendMode = data->Load<uint32_t>(prefix + "curlNoiseBlendMode", 0);
-        settings.curlNoisePosRandomStrength = data->Load(prefix + "curlNoisePosRandomStrength", 0.0f);
-        settings.curlNoiseAttractCenter = data->Load<Vector3>(prefix + "curlNoiseAttractCenter", {0.0f, 0.0f, 0.0f});
-
-        // ★ 終了スケール設定のロード
-        settings.enableEndScale = data->Load<uint32_t>(prefix + "enableEndScale", 0);
-        settings.endScaleValue = data->Load<Vector3>(prefix + "endScaleValue", {0.0f, 0.0f, 0.0f});
-
-        // ★ 回転設定のロード
-        settings.enableRandomRotation = data->Load<uint32_t>(prefix + "enableRandomRotation", 0);
-        settings.rotationMin = data->Load<Vector3>(prefix + "rotationMin", {0.0f, 0.0f, 0.0f});
-        settings.rotationMax = data->Load<Vector3>(prefix + "rotationMax", {0.0f, 0.0f, 0.0f});
-        settings.enableRandomAngularVelocity = data->Load<uint32_t>(prefix + "enableRandomAngularVelocity", 0);
-        settings.angularVelocityMin = data->Load<Vector3>(prefix + "angularVelocityMin", {0.0f, 0.0f, 0.0f});
-        settings.angularVelocityMax = data->Load<Vector3>(prefix + "angularVelocityMax", {0.0f, 0.0f, 0.0f});
-
-        group->SetBillboard(data->Load(prefix + "enableBillboard", true));
-
-        // ★ 速度ストレッチ設定のロード
-        group->GetPerView()->enableVelocityStretch = data->Load<uint32_t>(prefix + "enableVelocityStretch", 0);
-        group->GetPerView()->velocityStretchFactor = data->Load(prefix + "velocityStretchFactor", 0.1f);
-
-        // ★ 描画カリング(overdraw対策)設定のロード
-        group->GetPerView()->enableDistanceCull = data->Load<uint32_t>(prefix + "enableDistanceCull", 0);
-        group->GetPerView()->distanceCullStart = data->Load(prefix + "distanceCullStart", 50.0f);
-        group->GetPerView()->distanceCullEnd = data->Load(prefix + "distanceCullEnd", 100.0f);
-        group->GetPerView()->enableSizeClamp = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
-        group->GetPerView()->maxScreenHeight = data->Load(prefix + "maxScreenHeight", 1.0f);
-        group->GetPerView()->minScreenHeight = data->Load(prefix + "minScreenHeight", 0.0f);
-
-        // ★ 中間カラー設定のロード
-        settings.enableMidColor = data->Load<uint32_t>(prefix + "enableMidColor", 0);
-        settings.midColorRatio = data->Load(prefix + "midColorRatio", 0.5f);
-        settings.midColor = data->Load(prefix + "midColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-
-        // ★ タービュランス設定のロード
-        settings.enableTurbulence = data->Load<uint32_t>(prefix + "enableTurbulence", 0);
-        settings.turbulenceStrength = data->Load(prefix + "turbulenceStrength", 1.0f);
-        settings.turbulenceFrequency = data->Load(prefix + "turbulenceFrequency", 2.0f);
-
-        // ★ 音声振動設定のロード（audioAmplitude は実行時注入のエンベロープなので既定のまま）
-        settings.enableAudioVibration = data->Load<uint32_t>(prefix + "enableAudioVibration", 0);
-        settings.audioVibrationStrength = data->Load(prefix + "audioVibrationStrength", 12.0f);
-        settings.audioVibrationSensitivity = data->Load(prefix + "audioVibrationSensitivity", 4.0f);
-        settings.audioVibrationFrequency = data->Load(prefix + "audioVibrationFrequency", 22.0f);
-        settings.audioAttackSharpness = data->Load(prefix + "audioAttackSharpness", 1.8f);
-        settings.audioReleaseRate = data->Load(prefix + "audioReleaseRate", 10.0f);
-
-        // ★ 発生形状設定のロード
-        settings.emitShape = data->Load<uint32_t>(prefix + "emitShape", 0);
-        settings.emitSphereRadius = data->Load(prefix + "emitSphereRadius", 1.0f);
-        settings.emitConeAngle = data->Load(prefix + "emitConeAngle", 0.5236f);
-
-        // ★ カラーグラデーション(N段)設定のロード（有効フラグは settings、ストップは group 側ストレージ）
-        settings.enableColorGradient = data->Load<uint32_t>(prefix + "enableColorGradient", 0);
-        // ★ 寿命カーブ(サイズ/アルファ)の有効フラグ（点は group 側ストレージ）
-        settings.enableSizeCurve = data->Load<uint32_t>(prefix + "enableSizeCurve", 0);
-        settings.enableAlphaCurve = data->Load<uint32_t>(prefix + "enableAlphaCurve", 0);
-
-        group->SetSettingData(settings);
-
-        {
-            int stopCount = data->Load(prefix + "colorStopCount", 0);
-            if (stopCount > 0)
-            {
-                auto &stops = group->GetColorStops();
-                stops.clear();
-                for (int si = 0; si < stopCount; ++si)
-                {
-                    std::string sp = prefix + "colorStop_" + std::to_string(si) + "_";
-                    GradientStop gs;
-                    gs.color = data->Load<Vector4>(sp + "color", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-                    gs.pos = data->Load(sp + "pos", 0.0f);
-                    stops.push_back(gs);
-                }
-                group->MarkColorStopsDirty();
-            }
-            // 寿命カーブの制御点をロード（サイズ/アルファ）。
-            auto loadCurve = [&](const std::string &key, std::vector<CurvePoint> &out) {
-                int cnt = data->Load(prefix + key + "Count", 0);
-                if (cnt <= 0)
-                    return;
-                out.clear();
-                for (int pi = 0; pi < cnt; ++pi)
-                {
-                    std::string pp = prefix + key + "_" + std::to_string(pi) + "_";
-                    CurvePoint cp;
-                    cp.x = data->Load(pp + "x", 0.0f);
-                    cp.y = data->Load(pp + "y", 1.0f);
-                    out.push_back(cp);
-                }
-            };
-            loadCurve("sizeCurve", group->GetSizeCurvePoints());
-            loadCurve("alphaCurve", group->GetAlphaCurvePoints());
-            group->MarkLifeCurvesDirty();
-        }
-        group->SetBlendMode(static_cast<BlendMode>(data->Load<int>(prefix + "blendMode", static_cast<int>(BlendMode::Add))));
-        // 保存済みテクスチャがあれば適用（無ければグループ定義のテクスチャを維持）。
-        // AddParticleGroup がこの group のテクスチャを描画対象の独立グループへ伝播する。
-        {
-            std::string tex = data->Load<std::string>(prefix + "texture", "");
-            if (!tex.empty())
-                group->SetTexture(tex);
-        }
-
-        AddParticleGroup(group);
-    }
-    ImGuiNotification::Post("パーティクル設定を読み込みました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
-}
-
-void ParticleCSEmitter::LoadCloneSetting()
-{
-    std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("ParticleCS", name_);
-    if (!data->Exists())
-    {
-        return;
-    }
-    else
-    {
-        particleGroups_.clear();
-        particleGroupNames_.clear();
-    }
-
-    isAuto_ = data->Load("isAuto", false);
-    isVisible_ = data->Load("isVisible", true);
-    isGizmoSelectable_ = data->Load("isGizmoSelectable", true);
-    drawGroup_ = data->Load<std::string>("drawGroup", "3D");
-    if (drawGroup_ != "UI")
-    {
-        drawGroup_ = "3D"; // 旧データは3D扱いに正規化
-    }
-    pEmitterMeshData_->frequency = data->Load("frequency", 0.1f);
-    pEmitterMeshData_->frequencyTime = data->Load("frequencyTime", 0.0f);
-    pEmitterMeshData_->translate = data->Load<Vector3>("translate", Vector3(0.0f, 0.0f, 0.0f));
-    pEmitterMeshData_->rotation = data->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
-    pEmitterMeshData_->scale = data->Load<Vector3>("scale", Vector3(1.0f, 1.0f, 1.0f));
-    pEmitterMeshData_->emitFromSurface = data->Load<uint32_t>("emitFromSurface", 1);
-
-    modelPath_ = data->Load("modelPath", std::string(""));
-    primitiveType_ = static_cast<PrimitiveType>(data->Load("primitiveType", static_cast<int>(PrimitiveType::None)));
-    // プリミティブ形状パラメータ（LoadPrimitiveModel より前に復元しておくこと）
-    primitiveParams_.divide = static_cast<uint32_t>(data->Load("primitiveDivide", 32));
-    primitiveParams_.heightDivide = static_cast<uint32_t>(data->Load("primitiveHeightDivide", 1));
-    primitiveParams_.ringOuterRadius = data->Load("primitiveRingOuter", 1.0f);
-    primitiveParams_.ringInnerRadius = data->Load("primitiveRingInner", 0.5f);
-    // フィールド影響設定
-    receiveFields_ = data->Load("receiveFields", false);
-    fieldGroupId_ = data->Load("fieldGroupId", -1);
-    emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
-    // 旧キー fieldContactEmitCount は廃止（発生数はフィールド側の接触Emit設定に一本化）
-
-    if (!modelPath_.empty())
-    {
-        LoadModel(modelPath_);
-        CreateModelTriangles();
-        CreateModelEdges();
-    }
-    else if (primitiveType_ != PrimitiveType::None)
-    {
-        LoadPrimitiveModel(primitiveType_);
-        CreateModelTriangles();
-        CreateModelEdges();
-    }
-
-    groupNum_ = data->Load("particleGroupCount", 0);
-    for (int i = 0; i < groupNum_; i++)
-    {
-        std::string prefix = "group_" + std::to_string(i) + "_";
-        std::string groupName = data->Load(prefix + "name", std::string(""));
-
-        auto group = ParticleCSGroupManager::GetInstance()->GetIndependentParticleGroup(groupName);
-        if (!group)
-            continue;
-
-        ParticleCSSettings settings;
-        settings.lifeTimeMin = data->Load(prefix + "minLifetime", 1.0f);
-        settings.lifeTimeMax = data->Load(prefix + "maxLifetime", 1.0f);
-        settings.scaleMin = data->Load(prefix + "minScale", 1.0f);
-        settings.scaleMax = data->Load(prefix + "maxScale", 1.0f);
-        settings.velocityMin = data->Load<Vector3>(prefix + "minVelocity", {0.0f, 0.0f, 0.0f});
-        settings.velocityMax = data->Load<Vector3>(prefix + "maxVelocity", {0.0f, 0.0f, 0.0f});
-        settings.startColor = data->Load(prefix + "startColor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-        settings.endColor = data->Load(prefix + "endColor", Vector4(1.0f, 1.0f, 1.0f, 0.0f));
-        settings.enableLifetimeScale = data->Load<uint32_t>(prefix + "enableLifetimeScale", 0);
-        settings.enableRandomColor = data->Load<uint32_t>(prefix + "enableRandomColor", 0);
-        settings.enableSinScale = data->Load<uint32_t>(prefix + "enableSinScale", 0);
-        settings.sinScaleFrequency = data->Load(prefix + "sinScaleFrequency", 5.0f);
-        settings.sinScaleAmplitude = data->Load(prefix + "sinScaleAmplitude", 0.3f);
-        settings.emitCount = data->Load<uint32_t>(prefix + "emitCount", 10);
-        settings.enableGravity = data->Load<uint32_t>(prefix + "enableGravity", false);
-        settings.gravity = data->Load<Vector3>(prefix + "gravity", {0.0f, 0.0f, 0.0f});
-        settings.maxParticleCount = group->GetMaxParticleCount();
-
-        // ★ トレイル設定のロード
-        settings.enableTrail = data->Load<uint32_t>(prefix + "enableTrail", 0);
-        settings.trailSpawnDistance = data->Load(prefix + "trailSpawnDistance", 0.1f);
-        settings.maxTrailPerParticle = data->Load<uint32_t>(prefix + "maxTrailPerParticle", 5);
-        settings.trailLifeTimeScale = data->Load(prefix + "trailLifeTimeScale", 1.0f);
-        settings.trailScaleMultiplier = data->Load<Vector3>(prefix + "trailScaleMultiplier", {0.8f, 0.8f, 0.8f});
-        settings.trailColorMultiplier = data->Load(prefix + "trailColorMultiplier", Vector4(1.0f, 1.0f, 1.0f, 0.7f));
-        settings.trailVelocityScale = data->Load(prefix + "trailVelocityScale", 0.3f);
-        settings.trailInheritVelocity = data->Load<uint32_t>(prefix + "trailInheritVelocity", 1);
-        settings.trailMinLifeTime = data->Load(prefix + "trailMinLifeTime", 0.5f);
-
-        settings.enableGather = data->Load(prefix + "enableGather", 0);
-        settings.gatherStartRatio = data->Load(prefix + "gatherStartRatio", 0.5f);
-        settings.gatherStrength = data->Load(prefix + "gatherStrength", 1.0f);
-        settings.gatherTarget = data->Load<Vector3>(prefix + "gatherTarget", {0.0f, 0.0f, 0.0f});
-        settings.gatherTargetOffset = data->Load<Vector3>(prefix + "gatherTargetOffset", {0.0f, 0.0f, 0.0f});
-        settings.enableGatherForTrail = data->Load<uint32_t>(prefix + "enableGatherForTrail", 0);
-        settings.enableVortex = data->Load<uint32_t>(prefix + "enableVortex", 0);
-        settings.vortexTarget = data->Load<Vector3>(prefix + "vortexTarget", {0.0f, 0.0f, 0.0f});
-        settings.vortexTargetOffset = data->Load<Vector3>(prefix + "vortexTargetOffset", {0.0f, 0.0f, 0.0f});
-        settings.vortexStrength = data->Load(prefix + "vortexStrength", 1.0f);
-        settings.enableVortexForTrail = data->Load<uint32_t>(prefix + "enableVortexForTrail", 0);
-        settings.vortexAxis = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
+        // "vortexAxis" は基準空間での軸として読む（解決済みの settings.vortexAxis は毎フレーム作り直される）。
+        settings.vortexAxisBase = data->Load<Vector3>(prefix + "vortexAxis", {0.0f, 1.0f, 0.0f});
+        settings.vortexAxis = settings.vortexAxisBase;
+        settings.effectSpace = data->Load<uint32_t>(prefix + "effectSpace", 0);
 
         settings.enableAcceleration = data->Load<uint32_t>(prefix + "enableAcceleration", 0);
         settings.acceleration = data->Load<Vector3>(prefix + "acceleration", {0.0f, 0.0f, 0.0f});
@@ -1626,27 +1459,44 @@ void ParticleCSEmitter::DrawImGui()
                 ImGui::DragFloat("発生間隔##Freq", &pEmitterMeshData_->frequency, 0.001f, 0.001f, 10.0f);
                 ImGui::DragFloat3("エミッタの座標##Translate", &pEmitterMeshData_->translate.x, 0.1f);
 
-                Vector3 currentEuler = pEmitterMeshData_->rotation.ToEulerDegrees();
+                Vector3 currentEuler = baseRotation_.ToEulerDegrees();
                 ImGui::Text("現在の回転: %.1f° %.1f° %.1f°", currentEuler.x, currentEuler.y, currentEuler.z);
 
                 static Vector3 deltaRotation = {0.0f, 0.0f, 0.0f};
                 if (ImGui::DragFloat3("##EmitterRotation", &deltaRotation.x, 0.1f, -10.0f, 10.0f, "%.1f°"))
                 {
-                    Quaternion currentRotation = pEmitterMeshData_->rotation;
+                    Quaternion currentRotation = baseRotation_;
                     Quaternion deltaQuatX = Quaternion::FromAxisAngle(Vector3(1, 0, 0), deltaRotation.x * std::numbers::pi_v<float> / 180.0f);
                     Quaternion deltaQuatY = Quaternion::FromAxisAngle(Vector3(0, 1, 0), deltaRotation.y * std::numbers::pi_v<float> / 180.0f);
                     Quaternion deltaQuatZ = Quaternion::FromAxisAngle(Vector3(0, 0, 1), deltaRotation.z * std::numbers::pi_v<float> / 180.0f);
                     Quaternion deltaQuat = deltaQuatY * deltaQuatX * deltaQuatZ;
                     Quaternion newRotation = currentRotation * deltaQuat;
-                    pEmitterMeshData_->rotation = newRotation.Normalize();
+                    baseRotation_ = newRotation.Normalize();
                     deltaRotation = {0.0f, 0.0f, 0.0f};
                 }
 
                 ImGui::SameLine();
                 if (ImGui::Button("リセット##EmitterRotation"))
                 {
-                    pEmitterMeshData_->rotation = Quaternion::IdentityQuaternion();
+                    baseRotation_ = Quaternion::IdentityQuaternion();
                     deltaRotation = {0.0f, 0.0f, 0.0f};
+                }
+
+                {
+                    bool bb = billboardEmitter_;
+                    if (ImGui::Checkbox("ビルボード（常にカメラへ正対）##EmitterBillboard", &bb))
+                        billboardEmitter_ = bb;
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("発生形状の向きを毎フレームカメラの回転で置き換える。\n"
+                                          "上の回転はカメラ空間でのオフセットとして残る。\n"
+                                          "渦などの「基準空間」を エミッター にしておくと、\n"
+                                          "発生形状と渦の軸が一緒にカメラへ追従して\n"
+                                          "どの角度から見ても同じ動きになる。");
+                    if (billboardEmitter_)
+                    {
+                        Vector3 resolved = pEmitterMeshData_->rotation.ToEulerDegrees();
+                        ImGui::TextDisabled("  解決後: %.1f° %.1f° %.1f°", resolved.x, resolved.y, resolved.z);
+                    }
                 }
 
                 ImGui::DragFloat3("エミッタの大きさ##Scale", &pEmitterMeshData_->scale.x, 0.1f);

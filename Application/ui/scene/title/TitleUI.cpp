@@ -1,5 +1,5 @@
 #include "TitleUI.h"
-#include "particle/gpu/ParticleCSEditor.h"
+#include "particle/gpu/ParticleCSSpawner.h"
 #include "SpriteManager.h"
 #include <Frame.h>
 #include <Input.h>
@@ -13,9 +13,11 @@ using namespace Hagine;
 void TitleUI::Initialize()
 {
 
+    // chargeBullet_ は別システムの CPU パーティクル（従来どおり手動で駆動する）。
+    // chargeEffect_ / playerAura_ は GPU パーティクル（Spawn した実体の更新・描画はエンジンが自動で回す）。
     chargeBullet_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chargeBullet");
-    chargeEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("chargeEmitter");
-    playerAura_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
+    chargeEffect_ = ParticleCSSpawner::GetInstance()->Spawn("chargeEmitter");
+    playerAura_ = ParticleCSSpawner::GetInstance()->Spawn("playerAura");
 
     chargeBullet_->SetPosition(
         {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
@@ -30,6 +32,12 @@ void TitleUI::Initialize()
 
     playerAura_->SetTranslate(BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition());
     playerAura_->SetRotation(BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalRotation());
+
+    // GPUパーティクルはエンジンが毎フレーム自動で駆動する。演出開始まで発生させたくないので、
+    // ここでは発生を止めておき、開始タイミングで SetAuto(true) に切り替える
+    // （旧実装は Update() を呼ぶ/呼ばないで発生を制御していたが、自動駆動では効かないため）。
+    chargeEffect_->SetAuto(false);
+    playerAura_->SetAuto(false);
 
     // 弾を振り下ろすキャラ（cube_2）。ベースモデルの Charge はループ再生されるので、
     // 振り下ろし用の ChargeShot をループ無しで追加登録しておく（発火は RequestStartCinematic）。
@@ -129,8 +137,9 @@ void TitleUI::Update()
     {
         if (!secondMove_)
         {
-            chargeEffect_->Update();
-            playerAura_->Update();
+            // 演出開始タイミングで発生を有効化する（更新・描画はエンジンが自動で回す）
+            chargeEffect_->SetAuto(true);
+            playerAura_->SetAuto(true);
         }
     }
 
@@ -197,9 +206,9 @@ void TitleUI::HidePressStart()
 
 void TitleUI::Draw(ViewProjection &vp_)
 {
+    // chargeEffect_ / playerAura_（GPUパーティクル）はエンジンが自動で描画する。
+    // ここでは別システムの CPU パーティクル（chargeBullet_）だけ描画する。
     chargeBullet_->Draw(vp_);
-    chargeEffect_->Draw(vp_);
-    playerAura_->Draw(vp_);
     cameraMove_ = vp_.GetIsCameraMove();
 }
 

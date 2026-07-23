@@ -32,7 +32,6 @@ class Enemy : public Hagine::BaseObject
     void Update() override;
     void Draw(const Hagine::ViewProjection &viewProjection) override;
     void DrawParticle(const Hagine::ViewProjection &viewProjection);
-    void DrawParticleCompute(const Hagine::ViewProjection &viewProjection);
     void DrawFrustum();
     void Debug();
 

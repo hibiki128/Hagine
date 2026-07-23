@@ -1,16 +1,21 @@
 #include "DashEffect.h"
-#include <particle/gpu/ParticleCSEditor.h>
+#include <particle/gpu/ParticleCSSpawner.h>
 
 using namespace Hagine;
 
 void DashEffect::Init()
 {
-    // 風切りライン（進行方向と逆へ高速で流れるストリーク）
-    windEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("dashWind");
+    // 風切りライン（進行方向と逆へ高速で流れるストリーク）。
+    // Spawn したエミッターの更新・描画はエンジンが自動で回すので、
+    // ここでは毎フレーム発生位置と速度を与えるだけでよい。
+    windEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("dashWind");
 
-    // 生成時のスケールを基準として覚えておく（空中ダッシュ時にこの値へ戻す）
     if (windEmitter_)
     {
+        // dashWind テンプレートは自動発生 ON なので、Spawn 直後に原点で発生してしまう。
+        // ダッシュ中だけ Update で SetAuto(true) にするため、まずは発生を止めておく。
+        windEmitter_->SetAuto(false);
+        // 生成時のスケールを基準として覚えておく（空中ダッシュ時にこの値へ戻す）
         baseWindScale_ = windEmitter_->GetScale();
     }
 }
@@ -56,23 +61,6 @@ void DashEffect::Update(const Vector3 &position, const Vector3 &velocity,
         windEmitter_->SetScale(scale);
 
         windEmitter_->SetAuto(active);
-        windEmitter_->Update(); // emitフラグ残留防止のため毎フレーム呼ぶ
-    }
-}
-
-void DashEffect::DrawCompute(const ViewProjection &vp)
-{
-    if (windEmitter_)
-    {
-        windEmitter_->DrawCompute(vp);
-    }
-}
-
-void DashEffect::DrawGraphics(const ViewProjection &vp)
-{
-    if (windEmitter_)
-    {
-        windEmitter_->DrawGraphics(vp);
     }
 }
 

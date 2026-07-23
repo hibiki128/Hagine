@@ -503,15 +503,7 @@ void PlayerCombat::DrawAttackParticles(const ViewProjection &viewProjection)
         attackCollider_->DrawParticle(viewProjection);
     }
 
-    if (pMakanAttack_ptr_)
-    {
-        pMakanAttack_ptr_->DrawParticle(viewProjection);
-    }
-}
-
-void PlayerCombat::DrawParticleCompute(const ViewProjection &viewProjection)
-{
-    chargeShot_->DrawParticleCompute(viewProjection);
+    // 必殺技ビーム（pMakanAttack_ptr_）は GPU パーティクルで、描画はエンジンが自動で行う。
 }
 
 void PlayerCombat::Save(DataHandler *data)

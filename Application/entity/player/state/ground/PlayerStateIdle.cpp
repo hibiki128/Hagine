@@ -38,6 +38,15 @@ void PlayerStateIdle::Update(Player &player)
         player.GetMoveSpeed() = kMoveSpeedZero;
     }
 
+    // 静止中でも「A → 少し遅れてスティック」でダッシュを開始できるようにする。
+    // Idle は Move() を呼ばないため、ここで A トリガーのダッシュ開始だけを拾って
+    // 実移動を扱う Move ステートへ移す（速度付与・維持は Move の Move() が担当）。
+    if (player.TryStartDash())
+    {
+        player.ChangeState("Move");
+        return;
+    }
+
     if (HasMovementInput(player))
     {
         player.ChangeState("Move");

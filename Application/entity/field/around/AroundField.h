@@ -37,13 +37,6 @@ class AroundField : public Hagine::BaseObject
     void Draw(const Hagine::ViewProjection &viewProjection) override;
 
     /// <summary>
-    /// パーティクルの描画処理
-    /// </summary>
-    /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const Hagine::ViewProjection &viewProjection);
-    void DrawParticleCompute(const Hagine::ViewProjection &viewProjection);
-
-    /// <summary>
     /// デバッグ処理
     /// </summary>
     void Debug();
@@ -64,8 +57,10 @@ class AroundField : public Hagine::BaseObject
     /// private variants
     /// ===================================================
 
-    Hagine::CylinderCollider *aroundField_ = nullptr;                    // 円柱コライダー
-    std::unique_ptr<Hagine::ParticleCSEmitter> fieldParticle_ = nullptr; // フィールドパーティクル
+    Hagine::CylinderCollider *aroundField_ = nullptr; // 円柱コライダー
+    // フィールドパーティクル。実体は ParticleCSSpawner が所有する（借用ポインタ）。
+    // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
+    Hagine::ParticleCSEmitter *fieldParticle_ = nullptr;
 
     static inline const Hagine::CylinderCollider *activeField_ = nullptr; // アクティブシーンのフィールドコライダー
 };

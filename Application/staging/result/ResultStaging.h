@@ -83,8 +83,10 @@ class ResultStaging
     Hagine::BaseObject *RightHand_ = nullptr; // 右手
     Hagine::BaseObject *LeftHand_ = nullptr;  // 左手
 
-    std::vector<std::unique_ptr<Hagine::ParticleCSEmitter>> fireWorks_explosions_; // 花火の爆発パーティクル
-    std::vector<std::unique_ptr<Hagine::ParticleCSEmitter>> fireWorks_trails_;     // 花火の軌跡パーティクル
+    // 花火のパーティクル。実体は ParticleCSSpawner が所有する（借用ポインタ）。
+    // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
+    std::vector<Hagine::ParticleCSEmitter *> fireWorks_explosions_; // 花火の爆発パーティクル
+    std::vector<Hagine::ParticleCSEmitter *> fireWorks_trails_;     // 花火の軌跡パーティクル
 
     bool secondMove_ = false;      // 2つ目の動きフラグ
     bool motionStarted_ = false;   // モーション開始フラグ

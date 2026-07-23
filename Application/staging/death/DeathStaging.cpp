@@ -1,13 +1,20 @@
 #include "DeathStaging.h"
-#include "particle/gpu/ParticleCSEditor.h"
+#include "particle/gpu/ParticleCSSpawner.h"
 #include <Frame.h>
 #include <numbers>
 
 using namespace Hagine;
 DeathStaging::DeathStaging()
 {
-    // die.obj（死亡ポーズメッシュ）の表面から発生するエミッター
-    deathParticle_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("die");
+    // die.obj（死亡ポーズメッシュ）の表面から発生するエミッター。
+    // Spawn したエミッターの更新・描画はエンジンが自動で回す。
+    deathParticle_ = ParticleCSSpawner::GetInstance()->Spawn("die");
+    if (deathParticle_)
+    {
+        // die テンプレートは自動発生 ON なので、Spawn 直後にそのまま原点で発生してしまう。
+        // 死亡演出が始まる（Update で SetAuto(true) される）まで発生を止めておく。
+        deathParticle_->SetAuto(false);
+    }
     isStart_ = false;
 }
 
@@ -25,8 +32,10 @@ void DeathStaging::Update()
 {
     time_ += Frame::DeltaTime();
 
-    // パーティクルの更新
-    deathParticle_->Update();
+    if (!deathParticle_)
+    {
+        return;
+    }
 
     // die.obj は Blender の OBJ 出力既定（前方=-Z）のため、glTF（前方=+Z）から再生される
     // 死亡アニメーションの最終ポーズに対して Y軸180度回転した状態で出力されている。
@@ -60,11 +69,6 @@ void DeathStaging::Update()
 
         isStart_ = true;
     }
-}
-
-void DeathStaging::Draw(const ViewProjection &vp)
-{
-    deathParticle_->Draw(vp);
 }
 
 void DeathStaging::imgui()

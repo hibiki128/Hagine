@@ -206,9 +206,10 @@ class ResultUI
     bool isGameOver_ = false;             // ゲームオーバー経由か（常にGランクにする）
 
     // ゲームオーバー時はクリアタイムを "--:--" 表示にする。number.png にダッシュ字形が
-    // 無いため、時間4桁のスプライトをダッシュ画像へ差し替える（差し替えは一度だけ）
-    static constexpr const char *kDashTexturePath = "Text/lbl_dash.png"; // ダッシュ画像
-    bool gameOverTimeApplied_ = false;                                   // ダッシュ差し替え済みフラグ
+    // 無いため、時間4桁のスプライトをダッシュ画像へ差し替える（差し替えは一度だけ）。
+    // 入力表示UIの "ダッシュ" 文字ラベル(lbl_dash.png)ではなく、専用のダッシュ字形画像を使う。
+    static constexpr const char *kDashTexturePath = "Text/time_dash.png"; // ダッシュ字形（全角ハイフン）画像
+    bool gameOverTimeApplied_ = false;                                    // ダッシュ差し替え済みフラグ
 
     Hagine::Input *pInput_ = nullptr;                     // 入力
     std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr; // ゲームパッド

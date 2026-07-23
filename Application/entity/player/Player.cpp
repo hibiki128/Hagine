@@ -17,7 +17,7 @@
 #include "state/ground/PlayerStateMove.h"
 #include <Application/camera/follow/FollowCamera.h>
 #include <Application/entity/enemy/Enemy.h>
-#include <particle/gpu/ParticleCSEditor.h>
+#include <particle/gpu/ParticleCSSpawner.h>
 #include <particle/ParticleEditor.h>
 #include <utility/debug/param/GameParamHub.h>
 #include <cmath>
@@ -115,7 +115,9 @@ void Player::Init(const std::string objectName)
 
     shake_ = std::make_unique<Shake>();
 
-    auraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
+    // auraEmitter_ は GPU パーティクル（Spawn した実体の更新・描画はエンジンが自動で回す）。
+    // hitEmitter_ は別システムの CPU パーティクルなので従来どおり手動で駆動する。
+    auraEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("playerAura");
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
 
     dashEffect_ = std::make_unique<DashEffect>();
@@ -332,10 +334,12 @@ void Player::Update()
 
         shake_->Update();
 
-        auraEmitter_->SetTranslate({GetWorldPosition().x, GetWorldPosition().y + auraEmitter_->GetScale().y, GetWorldPosition().z});
-        auraEmitter_->SetRotation(-GetWorldRotation());
-        auraEmitter_->Update();
-        auraEmitter_->SetAuto(combat_->IsCharging());
+        if (auraEmitter_)
+        {
+            auraEmitter_->SetTranslate({GetWorldPosition().x, GetWorldPosition().y + auraEmitter_->GetScale().y, GetWorldPosition().z});
+            auraEmitter_->SetRotation(-GetWorldRotation());
+            auraEmitter_->SetAuto(combat_->IsCharging());
+        }
 
         if (status_->GetHP() <= 0.0f)
         {
@@ -381,32 +385,23 @@ void Player::Draw(const ViewProjection &viewProjection)
     combat_->Draw(viewProjection);
 }
 
-void Player::DrawParticleCompute(const ViewProjection &viewProjection)
-{
-    auraEmitter_->DrawCompute(viewProjection);
-    dashEffect_->DrawCompute(viewProjection);
-    footEffect_->DrawCompute(viewProjection);
-    combat_->DrawParticleCompute(viewProjection);
-}
-
 void Player::DrawParticle(const ViewProjection &viewProjection)
 {
 
     // 死亡アニメーションを再生し終わったら、死亡ポーズメッシュ(die.obj)の
-    // 表面からパーティクルを発生させて粒子化して消える演出を行う
+    // 表面からパーティクルを発生させて粒子化して消える演出を行う。
+    // 粒子自体の描画はエンジンが自動で行うため、ここでは発生源の姿勢設定だけ更新する。
     if (!isAlive_ && isDeathStaging_ && visual_->IsDeathAnimationFinished())
     {
         deathStaging_->Initialize(
             GetWorldPosition() + Vector3(0.0f, kModelOffsetY, 0.0f),
             GetWorldRotation(), GetWorldScale(), GetColor());
         deathStaging_->Update();
-        deathStaging_->Draw(viewProjection);
     }
 
+    // オーラ・ダッシュ・足元の GPU パーティクルはエンジンが自動で描画する。
+    // ここでは別システムの CPU パーティクルと各パーツの描画だけ行う。
     combat_->DrawChargeParticle(viewProjection);
-    auraEmitter_->DrawGraphics(viewProjection);
-    dashEffect_->DrawGraphics(viewProjection);
-    footEffect_->DrawGraphics(viewProjection);
     hitEmitter_->Draw(viewProjection); // CPU emitter
 
     combat_->DrawAttackParticles(viewProjection);

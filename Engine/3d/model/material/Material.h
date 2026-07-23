@@ -1,8 +1,8 @@
 #pragma once
 #include "wrl.h"
+#include <d3d12.h>
 #include <model/ModelStructs.h>
 #include <primitive/PrimitiveModel.h>
-#include <d3d12.h>
 
 namespace Hagine {
 class DirectXCommon;
@@ -11,8 +11,7 @@ class DirectXCommon;
 /// マテリアルクラス
 /// テクスチャ、色、ライティング設定を管理する
 /// </summary>
-class Material
-{
+class Material {
   public:
     /// ===================================================
     /// public method
@@ -79,8 +78,7 @@ class Material
     /// <summary>
     /// 法線の強さを設定
     /// </summary>
-    void SetNormalStrength(float strength)
-    {
+    void SetNormalStrength(float strength) {
         materialData_.normalStrength = strength;
         UpdateGPUData();
     }
@@ -93,8 +91,7 @@ class Material
     /// <summary>
     /// バインド用の法線マップテクスチャインデックスを取得（未設定時は albedo を流用）
     /// </summary>
-    uint32_t GetNormalMapIndex() const
-    {
+    uint32_t GetNormalMapIndex() const {
         return materialData_.hasNormalMapTexture ? materialData_.normalMapIndex : materialData_.textureIndex;
     }
 
@@ -126,9 +123,9 @@ class Material
     /// private varians
     /// ===================================================
 
-    DirectXCommon *pDxCommon_ = nullptr;                       // DirectX共通クラス
+    DirectXCommon *pDxCommon_ = nullptr;                      // DirectX共通クラス
     MaterialData materialData_;                               // CPU側マテリアルデータ
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_; // GPUバッファリソース
-    MaterialDataGPU *pMaterialDataGPU_ = nullptr;              // GPUバッファデータポインタ
+    MaterialDataGPU *pMaterialDataGPU_ = nullptr;             // GPUバッファデータポインタ
 };
 } // namespace Hagine

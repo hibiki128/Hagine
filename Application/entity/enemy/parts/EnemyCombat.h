@@ -59,12 +59,6 @@ class EnemyCombat
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const Hagine::ViewProjection &viewProjection);
 
-    /// <summary>
-    /// GPUパーティクルのCompute描画処理（大技演出）
-    /// </summary>
-    /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticleCompute(const Hagine::ViewProjection &viewProjection);
-
     /// <summary>通常弾を1発撃つ</summary>
     void Shot();
 
@@ -216,10 +210,11 @@ class EnemyCombat
 
     std::unique_ptr<Shake> chargeShake_; ///< シェイク
 
-    // 大技演出用CSパーティクル
-    std::unique_ptr<Hagine::ParticleCSEmitter> chargeAura_;       ///< チャージ溜めオーラ (enemyChargeAura)
-    std::unique_ptr<Hagine::ParticleCSEmitter> beamMainEffect_;   ///< ビームメイン演出 (makan_main)
-    std::unique_ptr<Hagine::ParticleCSEmitter> beamAroundEffect_; ///< ビームらせん演出 (makan_around)
+    // 大技演出用CSパーティクル。実体は ParticleCSSpawner が所有する借用ポインタで、
+    // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
+    Hagine::ParticleCSEmitter *chargeAura_ = nullptr;       ///< チャージ溜めオーラ (enemyChargeAura)
+    Hagine::ParticleCSEmitter *beamMainEffect_ = nullptr;   ///< ビームメイン演出 (makan_main)
+    Hagine::ParticleCSEmitter *beamAroundEffect_ = nullptr; ///< ビームらせん演出 (makan_around)
 
     // ビーム必殺技状態
     Hagine::OBBCollider *pBeamCollider_ = nullptr; ///< ビーム判定コライダー（動的にOBBを更新）

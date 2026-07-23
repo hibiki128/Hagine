@@ -2,7 +2,7 @@
 #include "Application/entity/enemy/Enemy.h"
 #include "Application/entity/player/Player.h"
 #include "object/base/BaseObjectManager.h"
-#include "particle/gpu/ParticleCSEditor.h"
+#include "particle/gpu/ParticleCSSpawner.h"
 #include <Frame.h>
 #include <cmath>
 using namespace Hagine;
@@ -18,18 +18,16 @@ void MakanAttackSkill::Init(const std::string objectName)
         this->OnCollisionEnter(other);
     });
 
-    /// メインビーム
-    makanMainEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("makan_main");
+    /// メインビーム（Spawn したエミッターの更新・描画はエンジンが自動で回す）
+    makanMainEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_main");
 
     /// らせん状エミッター
-    makanAroundEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("makan_around");
+    makanAroundEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_around");
 }
 
 void MakanAttackSkill::Update()
 {
     BaseObject::Update();
-    makanMainEffect_->Update();
-    makanAroundEffect_->Update();
 
     if (!isActive_ || !pPlayerTransform_)
     {
@@ -167,24 +165,18 @@ void MakanAttackSkill::Deactivate()
     spiralTime_ = 0.0f;
     pPlayerTransform_ = nullptr;
     pMakanCollider_->SetEnabled(false);
-    makanMainEffect_->SetAuto(false);
-    makanAroundEffect_->SetAuto(false);
+    if (makanMainEffect_)
+    {
+        makanMainEffect_->SetAuto(false);
+    }
+    if (makanAroundEffect_)
+    {
+        makanAroundEffect_->SetAuto(false);
+    }
 }
 
 void MakanAttackSkill::Draw(const ViewProjection &viewProjection)
 {
-}
-
-void MakanAttackSkill::DrawParticle(const ViewProjection &viewProjection)
-{
-    if (makanMainEffect_)
-    {
-        makanMainEffect_->Draw(viewProjection);
-    }
-    if (makanAroundEffect_)
-    {
-        makanAroundEffect_->Draw(viewProjection);
-    }
 }
 
 void MakanAttackSkill::OnCollisionEnter(ColliderBase *other)
@@ -206,6 +198,10 @@ void MakanAttackSkill::OnCollisionEnter(ColliderBase *other)
             // チャージ度合いに応じたダメージを計算して適用（ガードされた場合は必殺技分のエネルギーを削る）
             float damage = 37.5f;
             enemy->SetDamage(damage, false, true);
+
+            // 命中したらビーム演出を終了し、パーティクルの新規発生を止める
+            // （既存の粒子は寿命どおり自然に消える）。判定コライダーも即無効化される。
+            Deactivate();
         }
     }
 }

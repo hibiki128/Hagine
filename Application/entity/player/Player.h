@@ -65,7 +65,6 @@ class Player : public Hagine::BaseObject
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const Hagine::ViewProjection &viewProjection);
-    void DrawParticleCompute(const Hagine::ViewProjection &viewProjection);
 
     /// <summary>
     /// 状態を変更
@@ -126,6 +125,8 @@ class Player : public Hagine::BaseObject
 
     // ─── 移動（PlayerMovement） ───
     void Move() { movement_->Move(); }
+    // Idle 系ステートから A→スティックのダッシュを開始するための転送（開始したら true）
+    bool TryStartDash() { return movement_->TryStartGamepadDash(); }
     void DirectionUpdate() { movement_->DirectionUpdate(); }
     float CalculateShortestRotation(float from, float to) { return movement_->CalculateShortestRotation(from, to); }
     Hagine::Vector3 &GetAcceleration() { return movement_->GetAcceleration(); }
@@ -382,7 +383,9 @@ class Player : public Hagine::BaseObject
 
     std::unique_ptr<Hagine::DataHandler> data_;              // データ管理
     std::unique_ptr<Shake> shake_;                           // シェイク
-    std::unique_ptr<Hagine::ParticleCSEmitter> auraEmitter_; // オーラパーティクル
+    // オーラパーティクル。実体は ParticleCSSpawner が所有する借用ポインタで、
+    // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
+    Hagine::ParticleCSEmitter *auraEmitter_ = nullptr;
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;    // 被弾ヒットエミッター
     std::unique_ptr<DashEffect> dashEffect_;                 // ダッシュ中の演出
     std::unique_ptr<FootEffect> footEffect_;                 // 着地・走行中の足元の演出
