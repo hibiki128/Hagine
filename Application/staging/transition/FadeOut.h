@@ -18,15 +18,12 @@ class FadeOut
     void Initialize();
 
     /// <summary>
-    /// 更新処理
+    /// 更新処理。エミッター（壁）をカメラ正面へ追従配置し、発生・重力・停止を制御する。
+    /// 粒子の更新・描画は ParticleCSSpawner 経由でエンジンが自動で回すため、
+    /// 発生に使う姿勢は描画より前のこの Update で確定させる（1フレーム遅延を防ぐ）。
     /// </summary>
-    void Update();
-
-    /// <summary>
-    /// 描画処理
-    /// </summary>
-    /// <param name="vp">ビュープロジェクション</param>
-    void Draw(const Hagine::ViewProjection &vp);
+    /// <param name="vp">カメラのビュープロジェクション（壁をカメラ正面へ向けるのに使う）</param>
+    void Update(const Hagine::ViewProjection &vp);
 
     /// <summary>
     /// 終了処理
@@ -69,7 +66,9 @@ class FadeOut
     static constexpr float kWallHalfWidth = 3.6f;  // 壁の半分の幅
     static constexpr float kWallHalfHeight = 2.2f; // 壁の半分の高さ
 
-    std::unique_ptr<Hagine::ParticleCSEmitter> fadeOut_ = nullptr; // フェードアウトパーティクル
-    float timer_ = 0.0f;                                           // 経過時間
-    bool isFinish_ = false;                                        // 終了フラグ
+    // フェードアウトパーティクル（壁）。実体は ParticleCSSpawner が所有する（借用ポインタ）。
+    // シーン開始時のリビール演出で、遷移時に Spawner 側でまとめて破棄される。
+    Hagine::ParticleCSEmitter *fadeOut_ = nullptr;
+    float timer_ = 0.0f;   // 経過時間
+    bool isFinish_ = false; // 終了フラグ
 };

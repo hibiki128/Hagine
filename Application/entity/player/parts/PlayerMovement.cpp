@@ -78,18 +78,8 @@ void PlayerMovement::Move()
         // Aボタンのトリガーでダッシュ開始（LTは不要）。
         // すでにダッシュ中の場合は再始動しないため、ダッシュ中のA入力は
         // Rush 側のトリガーとして扱われる（PlayerStateFly* の TryChangeToRush）。
-        if (gamePad->IsTrigger(XINPUT_GAMEPAD_A) && !isDashing_)
-        {
-            dashInputX_ = xInput;
-            dashInputZ_ = zInput;
-            isDashing_ = true;
-            dashStartedThisFrame_ = true;
-            dashDuration_ = 0.0f;
-            // A押下時にスティックがニュートラルなら、猶予時間内に倒せばダッシュ継続を許可。
-            // 既にスティックを倒していれば従来通り即ダッシュ確定（猶予不要）。
-            dashGraceTimer_ = hasStickInput ? 0.0f : kDashGraceTime;
-            pOwner_->EmitAction(Player::ActionKind::Dash); // 入力表示UI用：ダッシュ開始を通知
-        }
+        // 開始判定は Idle 系ステートと共通化するため TryStartGamepadDash に集約している。
+        TryStartGamepadDash();
 
         // 猶予中にスティックを倒したらダッシュを確定（以降は通常の維持判定に従う）。
         // ニュートラルのままなら猶予時間をカウントダウンする。
@@ -184,6 +174,41 @@ void PlayerMovement::Move()
         velocity_.x *= scale;
         velocity_.z *= scale;
     }
+}
+
+bool PlayerMovement::TryStartGamepadDash()
+{
+    GamePad *gamePad = pOwner_->GetGamePad();
+
+    // ゲームパッド未接続、既にダッシュ中、または近接コンボ中は開始しない
+    // （Move() 側もコンボ中はダッシュを開始せず ClearDashState する挙動に合わせる）。
+    if (!gamePad || !gamePad->IsConnected() || isDashing_)
+    {
+        return false;
+    }
+    if (pOwner_->Combat().GetPunchCombo().IsComboActive())
+    {
+        return false;
+    }
+    if (!gamePad->IsTrigger(XINPUT_GAMEPAD_A))
+    {
+        return false;
+    }
+
+    const float xInput = -gamePad->GetLeftStickX();
+    const float zInput = gamePad->GetLeftStickY();
+    const bool hasStickInput = (xInput != kInputZero || zInput != kInputZero);
+
+    dashInputX_ = xInput;
+    dashInputZ_ = zInput;
+    isDashing_ = true;
+    dashStartedThisFrame_ = true;
+    dashDuration_ = 0.0f;
+    // A押下時にスティックがニュートラルなら、猶予時間内に倒せばダッシュ継続を許可。
+    // 既にスティックを倒していれば従来通り即ダッシュ確定（猶予不要）。
+    dashGraceTimer_ = hasStickInput ? 0.0f : kDashGraceTime;
+    pOwner_->EmitAction(Player::ActionKind::Dash); // 入力表示UI用：ダッシュ開始を通知
+    return true;
 }
 
 void PlayerMovement::DirectionUpdate()

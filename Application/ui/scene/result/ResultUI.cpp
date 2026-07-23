@@ -365,7 +365,12 @@ void ResultUI::UpdateNumberSprites()
         {
             for (int i : {kMinTens, kMinOnes, kSecTens, kSecOnes})
             {
+                // SetTexturePath はテクスチャ実寸へリサイズしてしまうため、数字スロットの
+                // 表示サイズを保持しておき、差し替え後に同じ大きさへ戻す（桁がはみ出て
+                // 重ならないようにする）。UVは全面表示にしてダッシュ字形をそのまま出す。
+                Vector2 digitSize = sprites_[i]->sprite->GetSize();
                 sprites_[i]->sprite->SetTexturePath(kDashTexturePath);
+                sprites_[i]->sprite->SetSize(digitSize);
                 sprites_[i]->sprite->SetUVPosition({0.0f, 0.0f});
                 sprites_[i]->sprite->SetUVSize({1.0f, 1.0f});
                 sprites_[i]->sprite->SetAlpha(kAlphaVisible);

@@ -85,20 +85,15 @@ void TrainingScene::Initialize()
     /// ===================================================
     /// DrawSystem 登録
     /// ===================================================
-    // GPU パーティクル Compute フェーズ
-    pDrawSystem_->Register("TrainingScene_Particle_Compute", DrawSystem::kGPUParticleCompute, [this](const ViewProjection &vp) {
-        player_ptr->DrawParticleCompute(vp);
-        enemy_ptr->DrawParticleCompute(vp);
-        aroundField_->DrawParticleCompute(vp);
-    });
+    // GPU パーティクル（ParticleCSSpawner 所有）の Compute/Graphics はエンジンが自動で回すため、
+    // シーン側で Compute フェーズを登録する必要はない。CPU パーティクルは各 DrawParticle 内で描画する。
     pDrawSystem_->Register("TrainingScene_3D", DrawLayer::PreEffect, [this](const ViewProjection &vp) {
         pObjectManager_->Draw(vp);
         pSkyBox_->Draw(vp);
         ground_->Draw(vp);
         aroundField_->Draw(vp);
-        player_ptr->DrawParticle(vp); // Graphics フェーズのみ実行される
+        player_ptr->DrawParticle(vp);
         enemy_ptr->DrawParticle(vp);
-        aroundField_->DrawParticle(vp);
         followCamera_->DrawFrustum();
         enemy_ptr->DrawFrustum();
     });

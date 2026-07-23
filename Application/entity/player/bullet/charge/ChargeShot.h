@@ -39,7 +39,6 @@ class ChargeShot : public Hagine::BaseObject
     /// </summary>
     /// <param name="viewProjection">ビュープロジェクション</param>
     void DrawParticle(const Hagine::ViewProjection &viewProjection);
-    void DrawParticleCompute(const Hagine::ViewProjection &viewProjection);
 
     /// <summary>
     /// ImGui表示
@@ -192,7 +191,10 @@ class ChargeShot : public Hagine::BaseObject
     float offsetMargin_ = kDefaultOffsetMargin;     // オフセット余裕距離
     float verticalOffset_ = kDefaultVerticalOffset; // 垂直方向のオフセット
 
-    std::unique_ptr<Hagine::ParticleCSEmitter> chargeEmitter_;
+    // 溜め演出（GPUパーティクル）。実体は ParticleCSSpawner が所有する借用ポインタ。
+    // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
+    Hagine::ParticleCSEmitter *chargeEmitter_ = nullptr;
+    // 弾本体の演出（別システムの CPU パーティクル）。従来どおりこのクラスが所有・駆動する。
     std::unique_ptr<Hagine::ParticleEmitter> bulletEmitter_;
 
     Hagine::SphereCollider *pBulletCollider_ = nullptr;

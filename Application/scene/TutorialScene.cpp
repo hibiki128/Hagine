@@ -84,25 +84,19 @@ void TutorialScene::Initialize()
     /// ===================================================
     /// DrawSystem 登録
     /// ===================================================
-    // GPU パーティクル Compute フェーズ
-    pDrawSystem_->Register("TutorialScene_Particle_Compute", DrawSystem::kGPUParticleCompute, [this](const ViewProjection &vp) {
-        player_ptr->DrawParticleCompute(vp);
-        enemy_ptr->DrawParticleCompute(vp);
-        aroundField_->DrawParticleCompute(vp);
-    });
+    // GPU パーティクル（ParticleCSSpawner 所有）の Compute/Graphics はエンジンが自動で回すため、
+    // シーン側で Compute フェーズを登録する必要はない。CPU パーティクルは各 DrawParticle 内で描画する。
     pDrawSystem_->Register("TutorialScene_3D", DrawLayer::PreEffect, [this](const ViewProjection &vp) {
         pObjectManager_->Draw(vp);
         pSkyBox_->Draw(vp);
         ground_->Draw(vp);
         aroundField_->Draw(vp);
-        player_ptr->DrawParticle(vp); // Graphics フェーズのみ実行される
+        player_ptr->DrawParticle(vp);
         enemy_ptr->DrawParticle(vp);
-        aroundField_->DrawParticle(vp);
         followCamera_->DrawFrustum();
         enemy_ptr->DrawFrustum();
     });
     pDrawSystem_->Register("TutorialScene_UI", DrawLayer::PostEffect, [this](const ViewProjection &) {
-        fadeOut_->Draw(vp_);
         gameUI_->Draw();
         pSpriteManager_->DrawAll();
         if (sceneStarted_)
@@ -146,7 +140,7 @@ void TutorialScene::Update()
     // 環境オブジェクトの更新
     ground_->Update();
     aroundField_->Update();
-    fadeOut_->Update();
+    fadeOut_->Update(vp_);
     player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
 
     // シャドウマップをプレイヤーに追従

@@ -24,18 +24,39 @@
         "y": 1.0,
         "z": 1.0
     },
+    "isGizmoSelectable": true,
     "isLighting": true,
     "isModelDraw": true,
+    "isRainbow": false,
+    "isWireframe": false,
     "material_0_enableNormalMap": false,
     "material_0_enableProceduralNormal": false,
     "material_0_normalMapPath": "",
     "material_0_normalStrength": 1.0,
     "material_0_proceduralScale": 3.0,
+    "material_0_uvPosition": {
+        "x": 0.0,
+        "y": 0.0
+    },
+    "material_0_uvRotate": 0.0,
+    "material_0_uvSize": {
+        "x": 1.0,
+        "y": 1.0
+    },
     "material_1_enableNormalMap": true,
     "material_1_enableProceduralNormal": false,
     "material_1_normalMapPath": "",
     "material_1_normalStrength": 1.0,
     "material_1_proceduralScale": 3.0,
+    "material_1_uvPosition": {
+        "x": 0.0,
+        "y": 0.0
+    },
+    "material_1_uvRotate": 0.0,
+    "material_1_uvSize": {
+        "x": 1.0,
+        "y": 1.0
+    },
     "modelName": "Field/Ground.obj",
     "objectName": "Ground",
     "parentName": "",

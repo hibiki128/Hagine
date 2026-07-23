@@ -4,7 +4,7 @@
 #include "particle/ParticleEditor.h"
 #include "application/entity/enemy/Enemy.h"
 #include <Frame.h>
-#include <particle/gpu/ParticleCSEditor.h>
+#include <particle/gpu/ParticleCSSpawner.h>
 #include <algorithm>
 #include <cmath>
 
@@ -34,8 +34,16 @@ void ChargeShot::Init(const std::string objectName)
     isFired_ = false;
     scale_ = kInitialScale;
     velocity_ = {0, 0, 0};
-    // 初期位置もリセット
-    chargeEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("chargeEmitter");
+    // 初期位置もリセット。
+    // chargeEmitter_ は GPU パーティクル（Spawn した実体の更新・描画はエンジンが自動で回す）。
+    // bulletEmitter_ は別システムの CPU パーティクルなので従来どおり手動で駆動する。
+    chargeEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("chargeEmitter");
+    if (chargeEmitter_)
+    {
+        // chargeEmitter テンプレートは自動発生 ON なので、Spawn 直後に原点で発生してしまう。
+        // 溜め中だけ Update で SetAuto(true) にするため、まずは発生を止めておく。
+        chargeEmitter_->SetAuto(false);
+    }
     bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chargeBullet");
 }
 
@@ -258,11 +266,9 @@ void ChargeShot::Update()
     }
 
     // チャージ溜め演出(GPUパーティクル)の発生制御。
-    // Update() を毎フレーム呼ばないと emit フラグが前回値のまま残り、
-    // 溜め終了後も演出が消えなくなる。発生の有無に関わらず必ず毎フレーム更新する。
-    // 実際に溜め上げ中(未発射・最大到達前)で、かつロックされていないときだけ発生させる
+    // 実際に溜め上げ中(未発射・最大到達前)で、かつロックされていないときだけ発生させる。
+    // 発生フラグはエンジンが毎フレーム消費するので、ここでは値を与えるだけでよい。
     chargeEmitter_->SetAuto(isCharge_ && !isFired_ && !isMaxScale_ && !isActionLocked_);
-    chargeEmitter_->Update();
 
     // 階層的ワールド変換更新
     BaseObject::UpdateWorldTransformHierarchy();
@@ -298,12 +304,9 @@ void ChargeShot::Reset()
     transform_->translation_ = {0, 0, 0};
 
     // 溜め演出(GPUパーティクル)の新規発生を止める（既存分は自然消滅させる）。
-    // SetAuto(false) 後に一度 Update() して emit フラグを即0へ反映し、
-    // 途中リターン経路でも演出が残留しないようにする
     if (chargeEmitter_)
     {
         chargeEmitter_->SetAuto(false);
-        chargeEmitter_->Update();
     }
 }
 
@@ -324,14 +327,10 @@ void ChargeShot::Draw(const ViewProjection &viewProjection)
     // スケールを反映
     transform_->scale_ = {scale_, scale_, scale_};
 }
-void ChargeShot::DrawParticleCompute(const ViewProjection &viewProjection)
-{
-    chargeEmitter_->DrawCompute(viewProjection);
-}
-
 void ChargeShot::DrawParticle(const ViewProjection &viewProjection)
 {
-    chargeEmitter_->DrawGraphics(viewProjection);
+    // chargeEmitter_（GPUパーティクル）はエンジンが自動で描画する。
+    // ここでは別システムの CPU パーティクル（弾本体）だけ描画する。
     if (!isAlive_)
         return;
     bulletEmitter_->Draw(viewProjection); // CPU emitter

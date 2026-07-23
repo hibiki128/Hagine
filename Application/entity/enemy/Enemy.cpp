@@ -278,27 +278,20 @@ void Enemy::Draw(const ViewProjection &viewProjection)
         return;
 }
 
-void Enemy::DrawParticleCompute(const ViewProjection &viewProjection)
-{
-    dashEffect_->DrawCompute(viewProjection);
-    footEffect_->DrawCompute(viewProjection);
-    combat_->DrawParticleCompute(viewProjection);
-}
-
 void Enemy::DrawParticle(const ViewProjection &viewProjection)
 {
-    // 死亡アニメーションを再生し終わったら、死亡ポーズメッシュから粒子化して消える演出を行う
+    // 死亡アニメーションを再生し終わったら、死亡ポーズメッシュから粒子化して消える演出を行う。
+    // 粒子自体の描画はエンジンが自動で行うため、ここでは発生源の姿勢設定だけ更新する。
     if (!isAlive_ && visual_->IsDeathAnimationFinished())
     {
         deathStaging_->Initialize(
             GetWorldPosition() + Vector3(0.0f, kModelOffsetY, 0.0f),
             BaseObject::GetWorldRotation(), BaseObject::GetWorldScale(), GetColor());
         deathStaging_->Update();
-        deathStaging_->Draw(viewProjection);
     }
 
-    dashEffect_->DrawGraphics(viewProjection);
-    footEffect_->DrawGraphics(viewProjection);
+    // ダッシュ・足元の GPU パーティクルはエンジンが自動で描画する。
+    // ここでは別システムの CPU パーティクルと各パーツの描画だけ行う。
     hitEmitter_->Draw(viewProjection); // CPU emitter
     combat_->DrawParticle(viewProjection);
 }

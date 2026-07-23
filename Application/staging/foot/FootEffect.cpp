@@ -2,14 +2,15 @@
 #include <algorithm>
 #include <cmath>
 #include <Frame.h>
-#include <particle/gpu/ParticleCSEditor.h>
+#include <particle/gpu/ParticleCSSpawner.h>
 
 using namespace Hagine;
 
 void FootEffect::Init()
 {
-    // 着地の砂煙（接地の瞬間に一度だけ出す）
-    landingEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("landing");
+    // 着地の砂煙（接地の瞬間に一度だけ出す）。
+    // Spawn したエミッターの更新・描画はエンジンが自動で回す。
+    landingEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("landing");
     if (landingEmitter_)
     {
         // 自動発生を切り、着地の瞬間に EmitOnce で単発発生させる
@@ -17,7 +18,7 @@ void FootEffect::Init()
     }
 
     // 走行中の砂煙（走っている間だけ自動発生させる）
-    runEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("running");
+    runEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("running");
     if (runEmitter_)
     {
         runEmitter_->SetAuto(false);
@@ -54,7 +55,6 @@ void FootEffect::Update(const Vector3 &position, const Vector3 &velocity, bool g
             landingEmitter_->SetTranslate(position + Vector3(0.0f, kLandingOffsetY, 0.0f));
             landingEmitter_->EmitOnce();
         }
-        landingEmitter_->Update(); // emitフラグ残留防止のため毎フレーム呼ぶ
     }
 
     if (runEmitter_)
@@ -88,31 +88,6 @@ void FootEffect::Update(const Vector3 &position, const Vector3 &velocity, bool g
                                          (std::max)(backNearZ, backFarZ) + sideZ});
         }
         runEmitter_->SetAuto(running);
-        runEmitter_->Update(); // emitフラグ残留防止のため毎フレーム呼ぶ
-    }
-}
-
-void FootEffect::DrawCompute(const ViewProjection &vp)
-{
-    if (landingEmitter_)
-    {
-        landingEmitter_->DrawCompute(vp);
-    }
-    if (runEmitter_)
-    {
-        runEmitter_->DrawCompute(vp);
-    }
-}
-
-void FootEffect::DrawGraphics(const ViewProjection &vp)
-{
-    if (landingEmitter_)
-    {
-        landingEmitter_->DrawGraphics(vp);
-    }
-    if (runEmitter_)
-    {
-        runEmitter_->DrawGraphics(vp);
     }
 }
 

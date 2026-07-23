@@ -57,6 +57,15 @@ void PlayerStateFlyIdle::AirMove(Player &player)
 
 void PlayerStateFlyIdle::ChangeStateLogic(Player &player)
 {
+    // 静止（ホバリング）中でも「A → 少し遅れてスティック」でダッシュを開始できるようにする。
+    // FlyIdle は Move() を呼ばないため、ここで A トリガーのダッシュ開始だけを拾って
+    // 実移動を扱う FlyMove へ移す（開始直後の速度付与・維持は FlyMove の Move() が担当）。
+    if (player.TryStartDash())
+    {
+        player.ChangeState("FlyMove");
+        return;
+    }
+
     TryChangeToRush(player);
 
     if (player.GetCurrentStateName() == "Rush")

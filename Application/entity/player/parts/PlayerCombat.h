@@ -79,12 +79,6 @@ class PlayerCombat
     void DrawAttackParticles(const Hagine::ViewProjection &viewProjection);
 
     /// <summary>
-    /// GPUパーティクルのCompute描画処理
-    /// </summary>
-    /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticleCompute(const Hagine::ViewProjection &viewProjection);
-
-    /// <summary>
     /// 戦闘関連パラメータを保存する
     /// </summary>
     /// <param name="data">保存先のデータハンドラ</param>

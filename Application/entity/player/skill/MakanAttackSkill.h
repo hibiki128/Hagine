@@ -24,12 +24,6 @@ class MakanAttackSkill : public Hagine::BaseObject
     /// <param name="offSet">描画オフセット</param>
     void Draw(const Hagine::ViewProjection &viewProjection) override;
 
-    /// <summary>
-    /// パーティクルの描画処理
-    /// </summary>
-    /// <param name="viewProjection">ビュープロジェクション</param>
-    void DrawParticle(const Hagine::ViewProjection &viewProjection);
-
     void SetPlayer(Player *player) { pPlayer_ = player; }
 
     bool IsActive() const { return isActive_; }
@@ -62,8 +56,10 @@ class MakanAttackSkill : public Hagine::BaseObject
     static constexpr const char *kRightHandJointName = "mixamorig:RightHand"; // 発射起点に使う右手ジョイント名
     static constexpr const char *kLeftHandJointName = "mixamorig:LeftHand";   // 発射起点に使う左手ジョイント名
 
-    std::unique_ptr<Hagine::ParticleCSEmitter> makanMainEffect_{};
-    std::unique_ptr<Hagine::ParticleCSEmitter> makanAroundEffect_{};
+    // ビーム演出。実体は ParticleCSSpawner が所有する（借用ポインタ）。
+    // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
+    Hagine::ParticleCSEmitter *makanMainEffect_ = nullptr;
+    Hagine::ParticleCSEmitter *makanAroundEffect_ = nullptr;
 
     Hagine::OBBCollider *pMakanCollider_ = nullptr;
 

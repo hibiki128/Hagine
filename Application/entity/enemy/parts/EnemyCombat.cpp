@@ -2,8 +2,7 @@
 #include "EnemyCombat.h"
 #include <Application/entity/enemy/Enemy.h>
 #include <Application/entity/player/Player.h>
-#include <particle/gpu/ParticleCSEditor.h>
-#include <particle/gpu/ParticleCSEmitter.h>
+#include <particle/gpu/ParticleCSSpawner.h>
 #include <Application/camera/follow/FollowCamera.h>
 #include <debug/log/Logger.h>
 #include <Frame.h>
@@ -27,12 +26,14 @@ void EnemyCombat::Init(Enemy *owner)
 
     chargeShake_ = std::make_unique<Shake>();
 
+    // 大技演出の GPU パーティクル。Spawn した実体の更新・描画はエンジンが自動で回すので、
+    // ここでは各所で発生（SetAuto）と姿勢だけ設定する。
     // チャージ攻撃演出（enemyChargeAura: 既存の気弾チャージオーラ）
-    chargeAura_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("enemyChargeAura");
+    chargeAura_ = ParticleCSSpawner::GetInstance()->Spawn("enemyChargeAura");
     // ビームメイン演出（プレイヤーの MakanAttackSkill と同じテンプレートを流用）
-    beamMainEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("makan_main");
+    beamMainEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_main");
     // ビームらせん演出
-    beamAroundEffect_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("makan_around");
+    beamAroundEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_around");
 
     // ビーム判定コライダー（初期は無効化）
     pBeamCollider_ = pOwner_->AddOBBCollider("enemy_BeamCollider");
@@ -63,6 +64,10 @@ void EnemyCombat::Init(Enemy *owner)
             // 必殺技扱いにして、ガードされた場合はエネルギーを大きく削る
             target->SetDamage(kBeamDamage, false, true);
             beamDamageDealt_ = true;
+
+            // 命中したらビーム演出を終了し、パーティクルの新規発生を止める
+            // （既存の粒子は寿命どおり自然に消える）。判定コライダーも即無効化される。
+            DeactivateBeam();
         }
     });
 
@@ -187,16 +192,9 @@ void EnemyCombat::UpdateEmitters()
     {
         chargeAura_->SetTranslate(selfPos);
         chargeAura_->SetRotation(-selfRot);
-        chargeAura_->Update();
     }
-    if (beamMainEffect_)
-    {
-        beamMainEffect_->Update();
-    }
-    if (beamAroundEffect_)
-    {
-        beamAroundEffect_->Update();
-    }
+    // beamMainEffect_ / beamAroundEffect_ の更新・描画はエンジンが自動で回すため、
+    // ここでは各所で発生・姿勢を設定するだけでよい。
 }
 
 void EnemyCombat::UpdateBullets()
@@ -218,13 +216,8 @@ void EnemyCombat::UpdateBullets()
 
 void EnemyCombat::DrawParticle(const ViewProjection &viewProjection)
 {
-    // 大技演出（Graphics フェーズ）
-    if (chargeAura_)
-        chargeAura_->DrawGraphics(viewProjection);
-    if (beamMainEffect_)
-        beamMainEffect_->DrawGraphics(viewProjection);
-    if (beamAroundEffect_)
-        beamAroundEffect_->DrawGraphics(viewProjection);
+    // 大技演出（chargeAura_ / beamMainEffect_ / beamAroundEffect_）は GPU パーティクルで、
+    // 描画はエンジンが自動で行う。ここでは別システムの CPU パーティクルだけ描画する。
     // 前方攻撃判定コライダーのヒットエフェクト
     if (attackCollider_)
     {
@@ -234,16 +227,6 @@ void EnemyCombat::DrawParticle(const ViewProjection &viewProjection)
     {
         bullet->DrawParticle(viewProjection);
     }
-}
-
-void EnemyCombat::DrawParticleCompute(const ViewProjection &viewProjection)
-{
-    if (chargeAura_)
-        chargeAura_->DrawCompute(viewProjection);
-    if (beamMainEffect_)
-        beamMainEffect_->DrawCompute(viewProjection);
-    if (beamAroundEffect_)
-        beamAroundEffect_->DrawCompute(viewProjection);
 }
 
 void EnemyCombat::Shot()

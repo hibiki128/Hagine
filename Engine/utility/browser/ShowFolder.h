@@ -8,8 +8,7 @@ namespace Hagine {
 /// <summary>
 /// テクスチャプレビュー用のキャッシュ情報
 /// </summary>
-struct TextureCache
-{
+struct TextureCache {
     uint32_t srvIndex = 0;              // SRVインデックス
     D3D12_GPU_DESCRIPTOR_HANDLE handle; // GPUハンドル
     int width = 0;                      // 幅

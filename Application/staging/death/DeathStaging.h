@@ -33,14 +33,10 @@ class DeathStaging
                     const Hagine::Vector3 &scale, const Hagine::Vector4 &color);
 
     /// <summary>
-    /// 更新
+    /// 更新。発生源メッシュの姿勢・色・重力を設定する。
+    /// 粒子の更新・描画は ParticleCSSpawner 経由でエンジンが自動で回す。
     /// </summary>
     void Update();
-
-    /// <summary>
-    /// 描画
-    /// </summary>
-    void Draw(const Hagine::ViewProjection &vp);
 
     /// <summary>
     /// Getter
@@ -77,5 +73,7 @@ class DeathStaging
 
     bool isStart_ = false; // 開始フラグ
 
-    std::unique_ptr<Hagine::ParticleCSEmitter> deathParticle_ = nullptr; // 死亡パーティクル
+    // 死亡パーティクル。実体は ParticleCSSpawner が所有する（ここは借用ポインタ）。
+    // シーン遷移時に Spawner 側でまとめて破棄されるため、明示的な後始末は不要。
+    Hagine::ParticleCSEmitter *deathParticle_ = nullptr;
 };

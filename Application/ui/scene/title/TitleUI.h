@@ -132,9 +132,11 @@ class TitleUI
     const float kMaxTime_ = kMaxTime; // 最大時間
     float timer_ = 0.0f;              // 汎用タイマー
 
-    std::unique_ptr<Hagine::ParticleEmitter> chargeBullet_ = nullptr;   // チャージ弾パーティクル
-    std::unique_ptr<Hagine::ParticleCSEmitter> chargeEffect_ = nullptr; // チャージエフェクトパーティクル
-    std::unique_ptr<Hagine::ParticleCSEmitter> playerAura_ = nullptr;   // プレイヤーオーラパーティクル
+    std::unique_ptr<Hagine::ParticleEmitter> chargeBullet_ = nullptr; // チャージ弾パーティクル（CPU・従来どおり所有）
+    // 以下は GPU パーティクル。実体は ParticleCSSpawner が所有する借用ポインタで、
+    // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
+    Hagine::ParticleCSEmitter *chargeEffect_ = nullptr; // チャージエフェクトパーティクル
+    Hagine::ParticleCSEmitter *playerAura_ = nullptr;   // プレイヤーオーラパーティクル
     std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr;                // ゲームパッド
 
     // 弾を振り下ろすキャラ（cube_2）。溜め中は Charge をループ再生し、

@@ -1,7 +1,7 @@
 #include "PlayerEnergyCharge.h"
 #include "application/entity/player/Player.h"
 #include <Input.h>
-#include <particle/gpu/ParticleCSEditor.h>
+#include <particle/gpu/ParticleCSSpawner.h>
 
 using namespace Hagine;
 void PlayerEnergyCharge::Enter(Player &player)
@@ -11,15 +11,18 @@ void PlayerEnergyCharge::Enter(Player &player)
     player.GetVelocity() = {kVelocityZero, kVelocityZero, kVelocityZero};
     player.SetEnergyRecoveryRate(chargeRate_);
 
-    chargeAuraEmitter_ = ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("playerAura");
+    // チャージ開始ごとに Spawn する。更新・描画はエンジンが自動で回す。
+    chargeAuraEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("playerAura");
 }
 
 void PlayerEnergyCharge::Update(Player &player)
 {
-    chargeAuraEmitter_->Update();
-    chargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y + chargeAuraEmitter_->GetScale().y - 1.0f, player.GetWorldPosition().z});
-    chargeAuraEmitter_->SetRotation(player.GetWorldRotation());
-    chargeAuraEmitter_->SetAuto(true);
+    if (chargeAuraEmitter_)
+    {
+        chargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y + chargeAuraEmitter_->GetScale().y - 1.0f, player.GetWorldPosition().z});
+        chargeAuraEmitter_->SetRotation(player.GetWorldRotation());
+        chargeAuraEmitter_->SetAuto(true);
+    }
 
     bool chargeRelease = false;
     bool shouldExitCharge = false;
@@ -84,16 +87,11 @@ void PlayerEnergyCharge::Update(Player &player)
 void PlayerEnergyCharge::Exit(Player &player)
 {
     player.SetEnergyRecoveryRate(beforeChargeRate_);
-    chargeAuraEmitter_->SetAuto(false);
-    chargeAuraEmitter_->Update();
-    ParticleCSEmitter::ClearNameCounter("ChargeAura");
-}
-
-void PlayerEnergyCharge::DrawParticle(Player &player, const ViewProjection &viewProjection)
-{
-
+    // 発生を止め、残った粒子が消えたら Spawner が自動で破棄する。
+    // 借用ポインタは無効になるので手放しておく（次のチャージ開始で再 Spawn する）。
     if (chargeAuraEmitter_)
     {
-        chargeAuraEmitter_->Draw(viewProjection);
+        ParticleCSSpawner::GetInstance()->DespawnWhenFinished(chargeAuraEmitter_);
+        chargeAuraEmitter_ = nullptr;
     }
 }

@@ -5,28 +5,24 @@
 #include <graphics/texture/TextureManager.h>
 
 namespace Hagine {
-void Material::Initialize()
-{
+void Material::Initialize() {
     pDxCommon_ = DirectXCommon::GetInstance();
     CreateMaterial();
 }
 
-void Material::LoadTexture()
-{
+void Material::LoadTexture() {
     // テクスチャの読み込み
     TextureManager::GetInstance()->LoadTexture(materialData_.textureFilePath);
     materialData_.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(materialData_.textureFilePath);
 }
 
-void Material::PrimitiveInitialize(const PrimitiveType &type)
-{
+void Material::PrimitiveInitialize(const PrimitiveType &type) {
     materialData_.color = PrimitiveModel::GetInstance()->GetPrimitiveData(type).color;
     materialData_.uvTransform = PrimitiveModel::GetInstance()->GetPrimitiveData(type).uvMatrix;
     materialData_.textureFilePath = "debug/uvChecker.png";
 }
 
-void Material::Draw(const Vector4 color, bool lighting)
-{
+void Material::Draw(const Vector4 color, bool lighting) {
     pMaterialDataGPU_->color = color;
     pMaterialDataGPU_->enableLighting = lighting ? 1 : 0;
 
@@ -47,8 +43,7 @@ void Material::Draw(const Vector4 color, bool lighting)
     SrvManager::GetInstance()->SetGraphicsRootDescriptorTable(2, materialData_.textureIndex);
 }
 
-void Material::SetTexture(const std::string &texturePath)
-{
+void Material::SetTexture(const std::string &texturePath) {
     if (materialData_.textureFilePath == texturePath)
         return;
 
@@ -63,27 +58,23 @@ void Material::SetTexture(const std::string &texturePath)
     UpdateGPUData();
 }
 
-void Material::SetEnvironmentCoefficients(float environmentCoefficients)
-{
+void Material::SetEnvironmentCoefficients(float environmentCoefficients) {
     materialData_.environmentCoefficient = environmentCoefficients;
     UpdateGPUData();
 }
 
-MaterialData Material::LoadMaterialTemplateFile(const std::string &directoryPath, const std::string &filename)
-{
+MaterialData Material::LoadMaterialTemplateFile(const std::string &directoryPath, const std::string &filename) {
     MaterialData materialData;                          // 構築するMaterialData
     std::string line;                                   // ファイルから読んだ1行を格納するもの
     std::ifstream file(directoryPath + "/" + filename); // ファイルを開く
     assert(file.is_open());                             // 開けなかったら止める
-    while (std::getline(file, line))
-    {
+    while (std::getline(file, line)) {
         std::string identifier;
         std::istringstream s(line);
         s >> identifier;
 
         // identifierに応じた処理
-        if (identifier == "map_Kd")
-        {
+        if (identifier == "map_Kd") {
             std::string textureFilename;
             s >> textureFilename;
             // textureFilePath は images ルートからの相対パスで保持する。
@@ -93,16 +84,14 @@ MaterialData Material::LoadMaterialTemplateFile(const std::string &directoryPath
     }
 
     // テクスチャが張られていない場合の処理
-    if (materialData.textureFilePath.empty())
-    {
+    if (materialData.textureFilePath.empty()) {
         materialData.textureFilePath = "debug/white1x1.png";
     }
 
     return materialData;
 }
 
-void Material::CreateMaterial()
-{
+void Material::CreateMaterial() {
     // GPUバッファの作成
     materialResource_ = pDxCommon_->CreateBufferResource(sizeof(MaterialDataGPU));
     materialResource_->Map(0, nullptr, reinterpret_cast<void **>(&pMaterialDataGPU_));
@@ -111,10 +100,8 @@ void Material::CreateMaterial()
     UpdateGPUData();
 }
 
-void Material::UpdateGPUData()
-{
-    if (pMaterialDataGPU_)
-    {
+void Material::UpdateGPUData() {
+    if (pMaterialDataGPU_) {
         pMaterialDataGPU_->color = materialData_.color;
         pMaterialDataGPU_->enableLighting = materialData_.enableLighting ? 1 : 0;
         pMaterialDataGPU_->uvTransform = materialData_.uvTransform;
@@ -127,16 +114,14 @@ void Material::UpdateGPUData()
     }
 }
 
-void Material::SetProceduralNormal(bool enable, float scale, float strength)
-{
+void Material::SetProceduralNormal(bool enable, float scale, float strength) {
     materialData_.enableProceduralNormal = enable;
     materialData_.proceduralScale = scale;
     materialData_.normalStrength = strength;
     UpdateGPUData();
 }
 
-void Material::SetNormalMap(const std::string &normalMapPath)
-{
+void Material::SetNormalMap(const std::string &normalMapPath) {
     if (normalMapPath.empty())
         return;
 
@@ -151,8 +136,7 @@ void Material::SetNormalMap(const std::string &normalMapPath)
     UpdateGPUData();
 }
 
-void Material::ClearNormalMap()
-{
+void Material::ClearNormalMap() {
     materialData_.normalMapFilePath.clear();
     materialData_.normalMapIndex = 0;
     materialData_.hasNormalMapTexture = false;

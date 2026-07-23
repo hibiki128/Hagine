@@ -22,7 +22,8 @@ class DashEffect
     void Init();
 
     /// <summary>
-    /// 更新処理。emitフラグ残留を防ぐため、発生の有無に関わらず毎フレーム呼ぶ
+    /// 更新処理。発生の有無を毎フレーム設定するため、状態に関わらず毎フレーム呼ぶ。
+    /// 生成した粒子の更新・描画は ParticleCSSpawner 経由でエンジンが自動で回す。
     /// </summary>
     /// <param name="position">追従対象のワールド座標（足元基準）</param>
     /// <param name="velocity">追従対象の速度（進行方向の算出に使う）</param>
@@ -31,18 +32,6 @@ class DashEffect
     /// <param name="grounded">接地中なら true（地上ダッシュ）。false なら空中ダッシュ</param>
     void Update(const Hagine::Vector3 &position, const Hagine::Vector3 &velocity,
                 const Hagine::Vector3 &forward, bool active, bool grounded);
-
-    /// <summary>
-    /// GPUパーティクルのComputeフェーズ描画
-    /// </summary>
-    /// <param name="vp">ビュープロジェクション</param>
-    void DrawCompute(const Hagine::ViewProjection &vp);
-
-    /// <summary>
-    /// GPUパーティクルのGraphicsフェーズ描画
-    /// </summary>
-    /// <param name="vp">ビュープロジェクション</param>
-    void DrawGraphics(const Hagine::ViewProjection &vp);
 
     /// <summary>
     /// ImGuiデバッグ表示（エミッター設定の調整用）
@@ -64,7 +53,9 @@ class DashEffect
     static constexpr float kAirDashRiseY = 1.0f;       // 空中ダッシュ時に発生位置をさらに上げる量
     static constexpr float kGroundWindScaleY = 2.5f;   // 地上ダッシュ時のエミッターY方向スケール
 
-    std::unique_ptr<Hagine::ParticleCSEmitter> windEmitter_; // 風切りライン
+    // 風切りライン。実体は ParticleCSSpawner が所有する（ここは借用ポインタ）。
+    // シーン遷移時に Spawner 側でまとめて破棄されるため、明示的な後始末は不要。
+    Hagine::ParticleCSEmitter *windEmitter_ = nullptr;
     Hagine::Vector3 lastDir_ = {0.0f, 0.0f, 1.0f};           // 直近の進行方向
     Hagine::Vector3 baseWindScale_ = {1.0f, 1.0f, 1.0f};     // 生成時のエミッター基準スケール（空中時に戻す用）
 };

@@ -272,6 +272,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSGroup.cpp" />
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSGroupManager.cpp" />
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSEditor.cpp" />
+    <ClCompile Include="Engine\3d\particle\gpu\ParticleCSSpawner.cpp" />
     <ClCompile Include="Engine\2d\SpriteManager.cpp" />
     <ClCompile Include="Application\ui\scene\title\TitleUI.cpp" />
     <ClCompile Include="Application\camera\start\StartCamera.cpp" />
@@ -507,6 +508,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\particle\gpu\ParticleCSGroup.h" />
     <ClInclude Include="Engine\3d\particle\gpu\ParticleCSGroupManager.h" />
     <ClInclude Include="Engine\3d\particle\gpu\ParticleCSEditor.h" />
+    <ClInclude Include="Engine\3d\particle\gpu\ParticleCSSpawner.h" />
     <ClInclude Include="Application\staging\transition\FadeOut.h" />
     <ClInclude Include="Application\entity\player\state\action\PlayerEnergyCharge.h" />
     <ClInclude Include="Engine\input\GamePad.h" />

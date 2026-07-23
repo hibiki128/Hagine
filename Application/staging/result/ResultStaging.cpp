@@ -1,5 +1,5 @@
 #include "ResultStaging.h"
-#include "particle/gpu/ParticleCSEditor.h"
+#include "particle/gpu/ParticleCSSpawner.h"
 #include "edit/motion/MotionEditor.h"
 #include <Frame.h>
 #include <line/DrawLine3D.h>
@@ -21,8 +21,10 @@ void ResultStaging::Initialize()
 
     for (int i = 0; i < fireWorks_count_; ++i)
     {
-        fireWorks_explosions_.push_back(ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("fireWork_explosion"));
-        fireWorks_trails_.push_back(ParticleCSEditor::GetInstance()->CreateEmitterFromTemplate("fireWork_Trail"));
+        // Spawn した実体の更新・描画はエンジンが自動で回すので、
+        // ここでは打ち上げ制御（EmitOnce と発生位置）だけ行えばよい。
+        fireWorks_explosions_.push_back(ParticleCSSpawner::GetInstance()->Spawn("fireWork_explosion"));
+        fireWorks_trails_.push_back(ParticleCSSpawner::GetInstance()->Spawn("fireWork_Trail"));
 
         fireWorks_explosions_[i]->SetAuto(false);
         fireWorks_trails_[i]->SetAuto(false);
@@ -64,13 +66,6 @@ void ResultStaging::Update()
 
     // デバッグ用エリア描画
     DrawFireWorkArea();
-
-    // 全パーティクルの更新
-    for (int i = 0; i < fireWorks_count_; i++)
-    {
-        fireWorks_explosions_[i]->Update();
-        fireWorks_trails_[i]->Update();
-    }
 
     // 花火の打ち上げ制御
     if (fireWorkStarted_)
@@ -148,12 +143,7 @@ void ResultStaging::Update()
 
 void ResultStaging::Draw(const ViewProjection &viewProjection)
 {
-
-    for (int i = 0; i < fireWorks_count_; i++)
-    {
-        fireWorks_explosions_[i]->Draw(viewProjection);
-        fireWorks_trails_[i]->Draw(viewProjection);
-    }
+    // 花火（GPUパーティクル）の描画はエンジンが自動で行うため、ここでは何もしない。
 }
 
 Vector3 ResultStaging::GetRandomPositionInArea()
