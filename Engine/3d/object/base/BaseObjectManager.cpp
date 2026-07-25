@@ -1,4 +1,6 @@
 #include "BaseObjectManager.h"
+#include "SpriteManager.h"
+#include <2d/ui/UIAnimator.h>
 #include <asset/AssetPath.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
 #ifdef _DEBUG
@@ -242,52 +244,16 @@ void BaseObjectManager::ShowParentChildHierarchy()
     if (ImGui::CollapsingHeader("階層エディター", ImGuiTreeNodeFlags_DefaultOpen))
     {
 
-        // 親子付けセクション
+        // 親子付けは下のツリーで直感的に操作する（右クリックメニュー / ドラッグ&ドロップ）
         ImGui::Separator();
-        ImGui::Text("親子付け:");
-
-        static int selectedChild = 0;
-        static int selectedParent = 0;
-
-        std::vector<std::string> objectNames = GetObjectNames();
-
-        if (!objectNames.empty())
-        {
-            std::vector<const char *> objectNamesCStr;
-            for (const auto &name : objectNames)
-            {
-                objectNamesCStr.push_back(name.c_str());
-            }
-
-            ImGui::Text("子オブジェクト:");
-            ImGui::SameLine();
-            ImGui::PushItemWidth(150);
-            ImGui::Combo("##ChildObject", &selectedChild, objectNamesCStr.data(), static_cast<int>(objectNamesCStr.size()));
-            ImGui::PopItemWidth();
-
-            ImGui::Text("親オブジェクト:");
-            ImGui::SameLine();
-            ImGui::PushItemWidth(150);
-            ImGui::Combo("##ParentObject", &selectedParent, objectNamesCStr.data(), static_cast<int>(objectNamesCStr.size()));
-            ImGui::PopItemWidth();
-
-            selectedChild = std::clamp(selectedChild, 0, static_cast<int>(objectNames.size()) - 1);
-            selectedParent = std::clamp(selectedParent, 0, static_cast<int>(objectNames.size()) - 1);
-
-            if (ImGui::Button("親子付け"))
-            {
-                if (selectedChild != selectedParent)
-                {
-                    SetParentChild(objectNames[selectedChild], objectNames[selectedParent]);
-                }
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button("親子解除"))
-            {
-                RemoveParentChild(objectNames[selectedChild]);
-            }
-        }
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.72f, 0.80f, 0.92f, 1.0f));
+        ImGui::TextWrapped("親子付けの操作:");
+        ImGui::PopStyleColor();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.60f, 1.0f));
+        ImGui::BulletText("ノードを右クリック →「親を設定」「親子解除」");
+        ImGui::BulletText("右クリックメニューで「継承(位置/回転/スケール)」も切替可能");
+        ImGui::BulletText("ドラッグして別ノードに重ねても親子付け（余白へドロップで解除）");
+        ImGui::PopStyleColor();
 
         ImGui::Separator();
         ImGui::Text("階層表示:");
@@ -393,6 +359,64 @@ void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth)
         ImGui::EndDragDropTarget();
     }
 
+    // 右クリックメニュー: 親を設定 / 親子解除 / 親のSRT継承設定
+    if (ImGui::BeginPopupContextItem((obj->GetName() + "##ctx").c_str()))
+    {
+        ImGui::TextDisabled("%s", obj->GetName().c_str());
+        ImGui::Separator();
+
+        if (ImGui::BeginMenu("親を設定"))
+        {
+            for (auto &[otherName, other] : objects_)
+            {
+                if (other == obj)
+                    continue;
+                // 循環になる相手（自分の子孫）は候補から除外する
+                bool isDescendant = false;
+                for (BaseObject *p = other; p; p = p->GetParent())
+                {
+                    if (p == obj)
+                    {
+                        isDescendant = true;
+                        break;
+                    }
+                }
+                if (isDescendant)
+                    continue;
+
+                const bool isCurrentParent = (obj->GetParent() == other);
+                if (ImGui::MenuItem(otherName.c_str(), nullptr, isCurrentParent))
+                {
+                    // 実際の付け替えはツリー描画後にまとめて適用する（g_dnd 経由）
+                    g_dndReparentChild = obj->GetName();
+                    g_dndReparentParent = otherName;
+                    g_dndReparentRequested = true;
+                }
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::MenuItem("親子解除", nullptr, false, obj->GetParent() != nullptr))
+        {
+            g_dndReparentChild = obj->GetName();
+            g_dndReparentParent.clear();
+            g_dndReparentRequested = true;
+        }
+
+        // 親がある場合のみ、親のSRTをどこまで継承するかを切り替えられる
+        if (obj->GetParent() && obj->GetWorldTransform())
+        {
+            ImGui::Separator();
+            ImGui::TextDisabled("親の継承 (外すと追従しない)");
+            WorldTransform *t = obj->GetWorldTransform();
+            ImGui::Checkbox("位置を継承##inh", &t->inheritTranslation_);
+            ImGui::Checkbox("回転を継承##inh", &t->inheritRotation_);
+            ImGui::Checkbox("スケールを継承##inh", &t->inheritScale_);
+        }
+
+        ImGui::EndPopup();
+    }
+
     if (nodeOpen)
     {
         // 子オブジェクトを表示
@@ -488,6 +512,15 @@ void BaseObjectManager::LoadAllParentChildRelationships()
         if (child && parent)
         {
             child->SetParent(parent);
+
+            // SRT成分ごとの継承設定を復元する（未保存の古いデータは全継承=trueにフォールバック）
+            if (child->ObjectDatas_ && child->GetWorldTransform())
+            {
+                WorldTransform *ct = child->GetWorldTransform();
+                ct->inheritTranslation_ = child->ObjectDatas_->Load<bool>("inheritTranslation", true);
+                ct->inheritRotation_ = child->ObjectDatas_->Load<bool>("inheritRotation", true);
+                ct->inheritScale_ = child->ObjectDatas_->Load<bool>("inheritScale", true);
+            }
         }
     }
 }
@@ -764,14 +797,33 @@ void BaseObjectManager::DrawSceneSaveModel()
         // テキスト入力欄（sceneName_ を編集）
         ImGui::InputText("シーン名", sceneNameBuffer, IM_ARRAYSIZE(sceneNameBuffer));
 
+        // 保存する内容の選択（オブジェクト以外も一緒に保存できるようにする）
+        ImGui::Separator();
+        ImGui::TextDisabled("保存する内容:");
+        bool objAlways = true;
+        ImGui::BeginDisabled();
+        ImGui::Checkbox("オブジェクト (セーブ対象のみ)", &objAlways);
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("どのオブジェクトを保存するかは下の「セーブ対象管理」で仕分けできます");
+        static bool saveSprites = true;
+        static bool saveUI = true;
+        ImGui::Checkbox("スプライト (全シーン共通)", &saveSprites);
+        ImGui::Checkbox("UIアニメーション (全シーン共通)", &saveUI);
+        ImGui::Separator();
+
         // 横並びに「保存」ボタンと「キャンセル」ボタン
         if (ImGui::Button("保存", ImVec2(120, 0)))
         {
             sceneName_ = sceneNameBuffer; // 入力内容を保存
             std::unique_ptr<DataHandler> datas_ = std::make_unique<DataHandler>("SceneData/" + sceneName_ + "/ObjectDatas", "");
             datas_->DeleteAllJsonsInFolder();
-            SaveAll();                         // 実際の保存処理
+            SaveAll();                         // オブジェクトの保存
             SaveAllParentChildRelationships(); // 親子関係も保存
+            if (saveSprites)
+                SpriteManager::GetInstance()->SaveAllSprites(); // スプライトも保存
+            if (saveUI)
+                UIAnimator::GetInstance()->Save();       // UIアニメーションも保存
             ImGui::CloseCurrentPopup();        // モーダルを閉じる
             sceneName_.clear();                // 入力欄をクリア
         }
@@ -808,12 +860,25 @@ void BaseObjectManager::DrawSceneLoadModel()
         // テキスト入力欄（sceneName_ を編集）
         ImGui::InputText("シーン名", sceneNameBuffer, IM_ARRAYSIZE(sceneNameBuffer));
 
+        // 読み込む内容の選択
+        ImGui::Separator();
+        ImGui::TextDisabled("読み込む内容:");
+        static bool loadSprites = true;
+        static bool loadUI = true;
+        ImGui::Checkbox("スプライトも読み込み", &loadSprites);
+        ImGui::Checkbox("UIアニメーションも読み込み", &loadUI);
+        ImGui::Separator();
+
         // 横並びに「読み込み」ボタンと「キャンセル」ボタン
         if (ImGui::Button("読み込み", ImVec2(120, 0)))
         {
             sceneName_ = sceneNameBuffer;      // 入力内容を保存
-            LoadAll(sceneName_);               // 実際の読み込み処理
+            LoadAll(sceneName_);               // オブジェクトの読み込み
             LoadAllParentChildRelationships(); // 親子関係も読み込み
+            if (loadSprites)
+                SpriteManager::GetInstance()->LoadAllSprites(); // スプライトも読み込み
+            if (loadUI)
+                UIAnimator::GetInstance()->Load();       // UIアニメーションも読み込み
             ImGui::CloseCurrentPopup();        // モーダルを閉じる
             sceneName_.clear();                // 読み込み後はシーン名をクリア
         }

@@ -17,6 +17,20 @@ namespace Hagine {
 class Sprite;
 
 /// <summary>
+/// ギズモ操作対象の大分類。
+/// 型（Type）とは別に、ユーザーが「どの種類を動かすか」を選べるようにするための区分。
+/// フィルタUI・シーン保存の仕分けなどで利用する。
+/// </summary>
+enum class GizmoCategory
+{
+    Object = 0,   // 3Dオブジェクト（BaseObject 等）
+    Sprite = 1,   // 2Dスプライト
+    Particle = 2, // パーティクルエミッター（CPU/GPU）
+};
+// フィルタ配列などのサイズに使う要素数
+inline constexpr int kGizmoCategoryCount = 3;
+
+/// <summary>
 /// ギズモ操作対象を型に依存せず統一的に扱うためのラッパー構造体
 /// BaseObject・WorldTransform・Vector3直接参照・Spriteの各種に対応する
 /// </summary>
@@ -31,6 +45,7 @@ struct GizmoTarget
     };
 
     Type type = Type::BaseObject;
+    GizmoCategory category = GizmoCategory::Object; // 操作対象フィルタ用の大分類
     std::string name;
     bool selectable = true;        // ギズモによる選択を許可するか
     bool isScreenSpace = false;    // スクリーン空間座標（ピクセル単位）かどうか（Sprite用）
@@ -112,6 +127,10 @@ class ImGuizmoManager
 
     bool isMultiSelecting_ = false;
     bool isDrawDebug_ = true;
+
+    // 操作対象フィルタ。GizmoCategory ごとに ON/OFF。
+    // 無効な種類は選択・マウスピック・ギズモ表示・デバッグ描画の対象外になる。
+    bool categoryEnabled_[kGizmoCategoryCount] = {true, true, true};
 
     // カメラのビュープロジェクション
     const ViewProjection *pViewProjection_ = nullptr;
@@ -222,6 +241,22 @@ class ImGuizmoManager
         }
     }
 
+    // 操作対象の大分類を設定する（フィルタUIの分類に反映。AddTarget後に呼ぶ）
+    void SetCategory(const std::string &name, GizmoCategory category)
+    {
+        auto it = transformMap_.find(name);
+        if (it != transformMap_.end())
+        {
+            it->second.category = category;
+        }
+    }
+
+    // 指定分類が操作対象フィルタで有効か
+    bool IsCategoryEnabled(GizmoCategory category) const
+    {
+        return categoryEnabled_[static_cast<int>(category)];
+    }
+
     // ギズモの選択状態を取得
     bool GetSelectable(const std::string &name)
     {
@@ -240,6 +275,8 @@ class ImGuizmoManager
 
   private:
     void ShowSelectedObjectImGui();
+    // 操作対象フィルタで無効化された分類の選択を解除する
+    void PruneSelectionByFilter();
     void HandleMouseSelection(const ImVec2 &scenePosition, const ImVec2 &sceneSize, bool sceneHovered);
     void CycleOverlapSelection();
     // GizmoTarget を受け取ってギズモを表示・操作する

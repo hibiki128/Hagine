@@ -32,6 +32,13 @@ class WorldTransform
     // 親となるワールド変換へのポインタ
     const WorldTransform *pParent_ = nullptr;
 
+    // 親のトランスフォームを成分ごとに継承するか（親子付けの挙動を細かく制御する）。
+    // 3つとも true（既定）なら従来どおり親のワールド行列をそのまま掛ける。
+    // いずれかを false にすると、その成分だけ親に追従しなくなる（例: 位置だけ親に付いていく等）。
+    bool inheritTranslation_ = true; // 親の位置を継承する
+    bool inheritRotation_ = true;    // 親の回転を継承する
+    bool inheritScale_ = true;       // 親のスケールを継承する
+
     WorldTransform();
     ~WorldTransform();
 

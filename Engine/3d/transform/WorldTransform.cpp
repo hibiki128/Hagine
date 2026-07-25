@@ -59,7 +59,21 @@ void WorldTransform::UpdateMatrix()
     // 親があれば親のワールド行列を掛ける
     if (pParent_)
     {
-        matWorld_ = matWorld_ * pParent_->matWorld_;
+        if (inheritTranslation_ && inheritRotation_ && inheritScale_)
+        {
+            // 全成分を継承（従来どおり）
+            matWorld_ = matWorld_ * pParent_->matWorld_;
+        }
+        else
+        {
+            // 継承する成分だけで親行列を組み直して掛ける。
+            // 親のワールドSRTを取り出し、継承しない成分は単位（Sなら1, Rなら無回転, Tなら0）にする。
+            const Vector3 pScale = inheritScale_ ? pParent_->GetWorldScale() : Vector3{1.0f, 1.0f, 1.0f};
+            const Quaternion pRot = inheritRotation_ ? pParent_->GetWorldRotationQuaternion() : Quaternion::IdentityQuaternion();
+            const Vector3 pTrans = inheritTranslation_ ? pParent_->GetWorldPosition() : Vector3{0.0f, 0.0f, 0.0f};
+            const Matrix4x4 filteredParent = MakeAffineMatrix(pScale, pRot, pTrans);
+            matWorld_ = matWorld_ * filteredParent;
+        }
     }
 
     // 定数バッファに転送する

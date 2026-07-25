@@ -1,6 +1,7 @@
 #include "Framework.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include "utility/scene/SceneRegistry.h"
+#include <2d/ui/UIAnimator.h>
 #include <debug/profiler/CpuProfiler.h>
 #include <debug/log/Logger.h>
 #include <Frame.h>
@@ -374,6 +375,11 @@ void Framework::Update()
     {
         HAGINE_CPU_PROFILE("Update/Objects(anim+phys)");
         pBaseObjectManager_->Update();
+    }
+    {
+        // UIトゥイーンの補間とグループ相対位置の反映（スプライト行列構築の前に行う）
+        HAGINE_CPU_PROFILE("Update/UIAnimator");
+        UIAnimator::GetInstance()->Update(Frame::DeltaTime());
     }
     {
         HAGINE_CPU_PROFILE("Update/Sprites");
