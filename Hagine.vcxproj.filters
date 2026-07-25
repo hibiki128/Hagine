@@ -931,6 +931,7 @@
       <Filter>externals\imgui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Engine\2d\ui\UIAnimator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\camera\death\DeathCamera.h">
@@ -1501,6 +1502,7 @@
       <Filter>externals\imgui</Filter>
     </ClInclude>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Engine\2d\ui\UIAnimator.h" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="Engine\EngineAssets\fonts\fa-solid-900.ttf">

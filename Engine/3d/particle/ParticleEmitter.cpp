@@ -37,6 +37,8 @@ void ParticleEmitter::Initialize(std::string name)
 #ifdef _DEBUG
     // WorldTransformのアドレスを渡す
     ImGuizmoManager::GetInstance()->AddTarget(name_, &transform_, isGizmoSelectable_);
+    // WorldTransform単体の既定はObjectなので、パーティクルとして明示的に分類し直す
+    ImGuizmoManager::GetInstance()->SetCategory(name_, GizmoCategory::Particle);
 #endif
 }
 

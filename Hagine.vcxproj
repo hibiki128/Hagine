@@ -22,13 +22,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -286,6 +286,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\ui\tutorial\TutorialUI.cpp" />
     <ClCompile Include="Application\entity\player\state\action\PlayerStateGuard.cpp" />
     <ClCompile Include="Engine\2d\text\TextRenderer.cpp" />
+    <ClCompile Include="Engine\2d\ui\UIAnimator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -530,6 +531,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\system\tutorial\TutorialSystem.h" />
     <ClInclude Include="Application\ui\tutorial\TutorialUI.h" />
     <ClInclude Include="Engine\2d\text\TextRenderer.h" />
+    <ClInclude Include="Engine\2d\ui\UIAnimator.h" />
     <ClInclude Include="Engine\3d\shadow\ShadowMap.h" />
     <ClInclude Include="Engine\render\DrawGroupManager.h" />
   </ItemGroup>

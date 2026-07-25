@@ -1,6 +1,7 @@
 #include "ImGuiManager.h"
 #ifdef _DEBUG
 #include "2d/text/TextRenderer.h"
+#include "2d/ui/UIAnimator.h"
 #include "AssetDragDrop.h"
 #include "DebugUIHelper.h"
 #include "ImGuiNotification.h"
@@ -398,16 +399,15 @@ void ImGuiManager::ShowMainMenu() {
                 }
             }
             ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_CUT " 切り取り", "Ctrl+X")) {
-            }
-            if (ImGui::MenuItem(ICON_FA_COPY " コピー", "Ctrl+C")) {
+            // 選択オブジェクトのコピー/貼り付け/削除（ギズモの選択に対して実行する）
+            if (ImGui::MenuItem(ICON_FA_COPY " 選択オブジェクトをコピー", "Ctrl+C")) {
+                pImGuizmoManager_->CopySelectedObjects();
             }
             if (ImGui::MenuItem(ICON_FA_PASTE " 貼り付け", "Ctrl+V")) {
+                pImGuizmoManager_->PasteObjects();
             }
-            if (ImGui::MenuItem(ICON_FA_TRASH_ALT " 削除", "Delete")) {
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_COG " 環境設定", "Ctrl+,")) {
+            if (ImGui::MenuItem(ICON_FA_TRASH_ALT " 選択オブジェクトを削除", "Delete")) {
+                pImGuizmoManager_->DeleteSelectedObjects();
             }
             ImGui::EndMenu();
         }
@@ -416,38 +416,42 @@ void ImGuiManager::ShowMainMenu() {
         if (ImGui::BeginMenu(ICON_FA_EYE " 表示")) {
             // ウィンドウ表示設定（カテゴリ別にまとめて見やすくする）
             if (ImGui::BeginMenu(ICON_FA_WINDOW_MAXIMIZE " ウィンドウ")) {
-                // チェック付きのトグル行。クリックしてもメニューは閉じない
-                auto windowToggle = [](const char *label, bool &flag) {
+                // チェック付きのトグル行。クリックしてもメニューは閉じない。
+                // ホバーでその窓が何をするものかの説明を出す（初見でも分かるように）。
+                auto windowToggle = [](const char *label, bool &flag, const char *tip) {
                     if (ImGui::Selectable(label, flag, ImGuiSelectableFlags_DontClosePopups))
                         flag = !flag;
+                    if (tip && *tip && ImGui::IsItemHovered())
+                        ImGui::SetTooltip("%s", tip);
                 };
 
                 ImGui::SeparatorText("シーン・オブジェクト");
-                windowToggle(ICON_FA_BOOK_OPEN " シーンビュー", showSceneView_);
-                windowToggle(ICON_FA_CUBE " オブジェクトビュー", showObjectView_);
-                windowToggle(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャ", showHierarchyView_);
-                windowToggle(ICON_FA_ARROWS_ALT " ギズモ", showGizmoView_);
+                windowToggle(ICON_FA_BOOK_OPEN " シーン設定", showSceneView_, "シーン全体の設定（カメラ・背景など）を編集します");
+                windowToggle(ICON_FA_CUBE " オブジェクト設定 (インスペクタ)", showObjectView_, "選択中オブジェクトの詳細（トランスフォーム・マテリアル等）を編集します");
+                windowToggle(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャ (階層)", showHierarchyView_, "シーン内オブジェクトの一覧・選択・親子付けを操作します");
+                windowToggle(ICON_FA_ARROWS_ALT " ギズモ (トランスフォーム)", showGizmoView_, "移動/回転/拡縮の操作と、操作対象の種類フィルタ（オブジェクト/スプライト/パーティクル）");
 
                 ImGui::SeparatorText("アセット・エディタ");
-                windowToggle(ICON_FA_IMAGES " アセットブラウザ", showAssetBrowserView_);
-                windowToggle(ICON_FA_SQUARE " スプライトマネージャ", showSpriteManagerView_);
-                windowToggle(ICON_FA_SHAPES " コライダー", showColliderTagManagerView_);
-                windowToggle(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_);
-                windowToggle(ICON_FA_CODE_BRANCH " モーションエディター", showMotionEditorView_);
+                windowToggle(ICON_FA_IMAGES " アセットブラウザ", showAssetBrowserView_, "画像を一覧表示し、ドラッグでテクスチャに割り当てます");
+                windowToggle(ICON_FA_SQUARE " スプライトマネージャ", showSpriteManagerView_, "2Dスプライトの一覧・編集と、文字スプライトの作成（プレビュー付き）");
+                windowToggle(ICON_FA_PLAY_CIRCLE " UIエディタ", showUIEditorView_, "スプライトのグループ化と、名前付きイージング(トゥイーン)の作成・再生");
+                windowToggle(ICON_FA_SHAPES " コライダー", showColliderTagManagerView_, "当たり判定の確認・調整とタグ管理");
+                windowToggle(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_, "再生中サウンドの確認・音量調整");
+                windowToggle(ICON_FA_CODE_BRANCH " モーションエディター", showMotionEditorView_, "オブジェクトのモーション（アニメーション）を編集します");
 
                 ImGui::SeparatorText("パーティクル");
-                windowToggle(ICON_FA_STAR " パーティクルビュー", showParticleView_);
-                windowToggle(ICON_FA_IMAGE " パーティクルプレビュー", showParticlePreviewView_);
+                windowToggle(ICON_FA_STAR " パーティクル設定", showParticleView_, "パーティクル/フィールドの設定と、シーンへの配置");
+                windowToggle(ICON_FA_IMAGE " パーティクルプレビュー", showParticlePreviewView_, "GPUパーティクルを単体でプレビューします");
 
                 ImGui::SeparatorText("レンダリング");
-                windowToggle(ICON_FA_STAR_OF_DAVID " オフスクリーン", showOfScreenView_);
-                windowToggle(ICON_FA_LIGHTBULB " ライト", showLightView_);
-                windowToggle(ICON_FA_ADJUST " シャドウマップ", showShadowMapView_);
-                windowToggle(ICON_FA_LAYER_GROUP " 描画システム", showDrawSystemView_);
+                windowToggle(ICON_FA_STAR_OF_DAVID " オフスクリーン (ポストエフェクト)", showOfScreenView_, "ポストエフェクト（ブラー・色調・白黒など）の設定");
+                windowToggle(ICON_FA_LIGHTBULB " ライト", showLightView_, "ライティング（平行光・環境光など）の設定");
+                windowToggle(ICON_FA_ADJUST " シャドウマップ", showShadowMapView_, "影の描画設定・デバッグ表示");
+                windowToggle(ICON_FA_LAYER_GROUP " 描画システム", showDrawSystemView_, "描画ステージ/順序などレンダリング全体の設定");
 
                 ImGui::SeparatorText("統計・デバッグ");
-                windowToggle(ICON_FA_DATABASE " FPS統計", showFPSView_);
-                windowToggle(ICON_FA_SLIDERS_H " ゲームパラメータ", showGameParamView_);
+                windowToggle(ICON_FA_DATABASE " 統計 (FPS/プロファイラ/ログ)", showFPSView_, "FPS・処理時間・ログ履歴を表示します");
+                windowToggle(ICON_FA_SLIDERS_H " ゲームパラメータ", showGameParamView_, "コードに登録したパラメータを実行中に調整・保存・仕分けします");
 
                 ImGui::EndMenu();
             }
@@ -683,24 +687,15 @@ void ImGuiManager::ShowMainMenu() {
 
             // 2Dオブジェクト
             if (ImGui::BeginMenu(ICON_FA_SQUARE " 2Dオブジェクト")) {
-                if (ImGui::MenuItem(ICON_FA_SQUARE " スプライト")) {
+                if (ImGui::MenuItem(ICON_FA_SQUARE " スプライト作成")) {
                     pSpriteManager_->ShowSpriteCreationModal();
                 }
-                if (ImGui::MenuItem(ICON_FA_FONT " テキスト")) {
+                if (ImGui::MenuItem(ICON_FA_FONT " 文字スプライト作成")) {
+                    // 文字スプライトの作成UIはスプライトマネージャ窓内に表示される
+                    showSpriteManagerView_ = true;
                 }
-                if (ImGui::MenuItem(ICON_FA_IMAGE " 画像")) {
-                }
-                ImGui::EndMenu();
-            }
-
-            // エフェクト
-            if (ImGui::BeginMenu(ICON_FA_MAGIC " エフェクト")) {
-                if (ImGui::MenuItem(ICON_FA_SNOWFLAKE " パーティクルシステム")) {
-                }
-                if (ImGui::MenuItem(ICON_FA_LIGHTBULB " ライト")) {
-                }
-                if (ImGui::MenuItem(ICON_FA_VIDEO " カメラ")) {
-                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("スプライトマネージャ窓を開きます（そこで文字→画像を生成）");
                 ImGui::EndMenu();
             }
 
@@ -711,8 +706,6 @@ void ImGuiManager::ShowMainMenu() {
         if (ImGui::BeginMenu(ICON_FA_QUESTION_CIRCLE " ヘルプ")) {
             if (ImGui::MenuItem(ICON_FA_KEYBOARD " ショートカット一覧", "F1")) {
                 showShortcutWindow_ = !showShortcutWindow_;
-            }
-            if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE " バージョン情報")) {
             }
             ImGui::EndMenu();
         }
@@ -937,6 +930,14 @@ void ImGuiManager::ShowSpriteManagerWindow() {
     ImGui::End();
 
     TextRenderer::GetInstance()->UpdateImGui();
+}
+
+void ImGuiManager::ShowUIEditorWindow() {
+    if (!showUIEditorView_)
+        return; // 表示しない場合は早期リターン
+
+    // ウィンドウの生成・閉じるボタンは UIAnimator 側に委譲する
+    UIAnimator::GetInstance()->DrawImGui(&showUIEditorView_);
 }
 
 void ImGuiManager::ShowColliderTagManagerWindow() {
@@ -1277,6 +1278,8 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowMotionEditorWindow();
     // スプライトマネージャウィンドウを描画
     ShowSpriteManagerWindow();
+    // UIエディタウィンドウを描画
+    ShowUIEditorWindow();
     // コライダータグマネージャウィンドウを描画
     ShowColliderTagManagerWindow();
     // オーディオマネージャウィンドウを描画
@@ -1769,6 +1772,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showMotionEditorView", showMotionEditorView_);
     data->Save("showShortcutWindow", showShortcutWindow_);
     data->Save("showSpriteManagerView", showSpriteManagerView_);
+    data->Save("showUIEditorView", showUIEditorView_);
     data->Save("showShadowMapView", showShadowMapView_);
     data->Save("showDrawSystemView", showDrawSystemView_);
     data->Save("showAssetBrowserView", showAssetBrowserView_);
@@ -1796,6 +1800,7 @@ void ImGuiManager::LoadFlag() {
     showMotionEditorView_ = data->Load("showMotionEditorView", false);
     showShortcutWindow_ = data->Load("showShortcutWindow", false);
     showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
+    showUIEditorView_ = data->Load("showUIEditorView", false);
     showShadowMapView_ = data->Load("showShadowMapView", true);
     showDrawSystemView_ = data->Load("showDrawSystemView", true);
     showAssetBrowserView_ = data->Load("showAssetBrowserView", false);

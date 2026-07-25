@@ -239,6 +239,7 @@ void ImGuizmoManager::AddTarget(const std::string &name, BaseObject *object, boo
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::BaseObject;
+    target.category = GizmoCategory::Object;
     target.name = name;
     target.baseObject = object;
     target.selectable = selectable;
@@ -259,6 +260,9 @@ void ImGuizmoManager::AddTarget(const std::string &name, WorldTransform *worldTr
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::WorldTransform;
+    // WorldTransform 単体は 3Dオブジェクト扱いを既定とする。
+    // パーティクル等で分類を変えたい場合は AddTarget 後に SetCategory を呼ぶ。
+    target.category = GizmoCategory::Object;
     target.name = name;
     target.worldTransform = worldTransform;
     target.selectable = selectable;
@@ -283,6 +287,9 @@ void ImGuizmoManager::AddTarget(const std::string &name,
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::FreeTransform;
+    // Vector3 直接指定はパーティクルエミッターで多く使われるため既定はParticle。
+    // スプライト等は AddTarget 後に SetCategory で上書きする。
+    target.category = GizmoCategory::Particle;
     target.name = name;
     target.translate = translate;
     target.rotate = rotate;
@@ -304,6 +311,7 @@ void ImGuizmoManager::AddTarget(const std::string &name, Sprite *sprite, bool se
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::Sprite2D;
+    target.category = GizmoCategory::Sprite;
     target.name = name;
     target.position2D = &sprite->GetPositionRef();
     target.selectable = selectable;
@@ -361,6 +369,58 @@ void ImGuizmoManager::imgui()
     ImGui::Checkbox("デバッグ表示する", &isDrawDebug_);
     ImGui::PopStyleColor();
     ImGui::SetItemTooltip("選択中オブジェクトの AABB / スフィア / レイを線で表示します");
+
+    // ---- 操作対象フィルタ ----
+    // 3種類（オブジェクト/スプライト/パーティクル）が同時にあると掴みたい物を選びづらいので、
+    // チェックした種類だけを選択・マウスピック・ギズモ表示・デバッグ描画の対象にする。
+    ImGui::Spacing();
+    SectionHeader("[ 操作対象フィルタ ]", DebugTheme::kAccentGreen);
+    ImGui::TextDisabled("チェックした種類だけ選択・操作できます");
+    bool filterChanged = false;
+    ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
+    filterChanged |= ImGui::Checkbox("オブジェクト", &categoryEnabled_[static_cast<int>(GizmoCategory::Object)]);
+    ImGui::SameLine();
+    filterChanged |= ImGui::Checkbox("スプライト", &categoryEnabled_[static_cast<int>(GizmoCategory::Sprite)]);
+    ImGui::SameLine();
+    filterChanged |= ImGui::Checkbox("パーティクル", &categoryEnabled_[static_cast<int>(GizmoCategory::Particle)]);
+    ImGui::PopStyleColor();
+    // 「この種類だけ」を素早く選べるショートカット
+    if (ImGui::SmallButton("全部##catAll"))
+    {
+        for (bool &e : categoryEnabled_)
+            e = true;
+        filterChanged = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("オブジェクトのみ"))
+    {
+        categoryEnabled_[0] = true;
+        categoryEnabled_[1] = false;
+        categoryEnabled_[2] = false;
+        filterChanged = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("スプライトのみ"))
+    {
+        categoryEnabled_[0] = false;
+        categoryEnabled_[1] = true;
+        categoryEnabled_[2] = false;
+        filterChanged = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("パーティクルのみ"))
+    {
+        categoryEnabled_[0] = false;
+        categoryEnabled_[1] = false;
+        categoryEnabled_[2] = true;
+        filterChanged = true;
+    }
+    if (filterChanged)
+    {
+        // 無効化された種類の選択を解除し、一覧も更新する
+        PruneSelectionByFilter();
+        UpdateFilteredNames();
+    }
 
     ImGui::Spacing();
     SectionHeader("[ 操作モード ]", DebugTheme::kAccentBlue);
@@ -570,6 +630,26 @@ void ImGuizmoManager::ShowSelectedObjectImGui()
     }
 }
 
+// ---- PruneSelectionByFilter -------------------------------------------
+
+// 操作対象フィルタで無効化された分類の名前を選択セットから取り除く。
+// これによりフィルタOFFにした種類のギズモが表示され続けるのを防ぐ。
+void ImGuizmoManager::PruneSelectionByFilter()
+{
+    for (auto it = selectedNames_.begin(); it != selectedNames_.end();)
+    {
+        auto found = transformMap_.find(*it);
+        if (found != transformMap_.end() && !IsCategoryEnabled(found->second.category))
+        {
+            it = selectedNames_.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
 // ---- HandleMouseSelection ---------------------------------------------
 
 // マウスクリック時のレイキャストによる選択判定
@@ -603,6 +683,8 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     {
         const GizmoTarget &target = pair.second;
         if (!target.selectable || !target.isScreenSpace)
+            continue;
+        if (!IsCategoryEnabled(target.category))
             continue;
         if (isMultiSelecting_ && selectedNames_.find(pair.first) != selectedNames_.end())
             continue;
@@ -673,6 +755,8 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
         {
             const GizmoTarget &target = pair.second;
             if (!target.selectable || target.isScreenSpace)
+                continue;
+            if (!IsCategoryEnabled(target.category))
                 continue;
             if (target.type == GizmoTarget::Type::BaseObject)
             {
@@ -1170,7 +1254,12 @@ void ImGuizmoManager::UpdateFilteredNames()
 
     std::vector<std::string> allNames;
     for (const auto &pair : transformMap_)
+    {
+        // 操作対象フィルタで無効化された種類は一覧に出さない
+        if (!IsCategoryEnabled(pair.second.category))
+            continue;
         allNames.push_back(pair.first);
+    }
     std::sort(allNames.begin(), allNames.end());
 
     std::string searchStr = searchBuffer_;
@@ -1212,6 +1301,9 @@ void ImGuizmoManager::DrawDebugRaycast()
 
         // スクリーン空間ターゲットは3Dデバッグ描画対象外
         if (target.isScreenSpace)
+            continue;
+        // 操作対象フィルタで無効化された種類は描画しない（画面の見やすさのため）
+        if (!IsCategoryEnabled(target.category))
             continue;
 
         Matrix4x4 worldMatrix = target.GetWorldMatrix();

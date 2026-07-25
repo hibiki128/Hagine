@@ -377,6 +377,8 @@ void SpriteManager::SyncGizmoTarget(SpriteData *spriteData, int instanceIndex)
 
     gizmo->AddTarget(spriteData->name, translation, nullptr, nullptr, true);
     gizmo->SetScreenSpace(spriteData->name, true, 50.0f);
+    // Vector3直接指定の既定はParticleなので、スプライトとして明示的に分類し直す
+    gizmo->SetCategory(spriteData->name, GizmoCategory::Sprite);
 
     // 当たり判定はスプライトの実際の矩形で行う（translation は矩形の角なので円判定だと掴めない）。
     // spriteData は unique_ptr の指す先なので vector 再確保でもアドレスは不変

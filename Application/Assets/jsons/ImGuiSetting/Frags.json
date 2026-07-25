@@ -24,5 +24,6 @@
     "showSceneView": false,
     "showShadowMapView": false,
     "showShortcutWindow": false,
-    "showSpriteManagerView": false
+    "showSpriteManagerView": false,
+    "showUIEditorView": true
 }

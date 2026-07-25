@@ -333,6 +333,13 @@ void BaseObject::SaveParentChildRelationship() {
         }
     }
     ObjectDatas_->Save<std::vector<std::string>>("childrenNames", childrenNames);
+
+    // 親のSRTをどの成分まで継承するか（親子付けの挙動）も保存する
+    if (transform_) {
+        ObjectDatas_->Save<bool>("inheritTranslation", transform_->inheritTranslation_);
+        ObjectDatas_->Save<bool>("inheritRotation", transform_->inheritRotation_);
+        ObjectDatas_->Save<bool>("inheritScale", transform_->inheritScale_);
+    }
 }
 
 void BaseObject::LoadParentChildRelationship() {
@@ -1124,11 +1131,14 @@ void BaseObject::ImGui() {
 
         ImGui::Separator();
 
-        // ---- 各セクション（保存バーの分だけ高さを残してスクロール領域に収める）----
-        float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
-        ImGui::BeginChild("BaseObjectBody", ImVec2(0, -footer), ImGuiChildFlags_Borders);
+        // ---- 各セクション（枠の下端をドラッグして高さを自由に調整できる。ResizeYの高さはiniに保存される）----
+        ImGui::BeginChild("BaseObjectBody", ImVec2(0, 420.0f),
+                          ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY);
         DebugObject();
         ImGui::EndChild();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("（枠の下端をドラッグすると高さを変えられます）");
+        ImGui::PopStyleColor();
 
         // ---- 保存バー（常に最下部に固定）----
         if (ColoredButton("この設定を全て保存##objsave", {0.20f, 0.45f, 0.20f, 0.80f})) {
@@ -1679,17 +1689,59 @@ void BaseObject::DebugObject() {
             ImGui::TreePop();
         }
 
-        // Texture
+        // Texture（サムネ＋D&D＋フォルダ選択。フォルダ一覧はポップアップに入れてスクロールを奪わない）
         if (ImGui::TreeNodeEx("テクスチャ##tx", ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            ShowTextureFile(texturePath_);
-            ImGui::Spacing();
-            if (ImGui::SmallButton("適用##ta")) {
-                SetTexture(texturePath_, selMat);
-                texturePaths_[selMat] = texturePath_;
+            auto *tm = TextureManager::GetInstance();
+            const std::string curTex =
+                (selMat < static_cast<int>(texturePaths_.size())) ? texturePaths_[selMat] : std::string();
+
+            // 現在のテクスチャのサムネイル（ここへドラッグ&ドロップでも設定できる）
+            D3D12_GPU_DESCRIPTOR_HANDLE texHandle{};
+            if (!curTex.empty()) {
+                tm->LoadTexture(curTex); // ロード済みなら即return
+                texHandle = tm->GetSrvHandleGPU(AssetPath::Image(curTex));
             }
+            if (texHandle.ptr != 0)
+                ImGui::Image(static_cast<ImTextureID>(texHandle.ptr), ImVec2(56.0f, 56.0f));
+            else
+                ImGui::Button("ここへ\nドロップ", ImVec2(56.0f, 56.0f));
+            std::string dropped;
+            if (AssetDragDrop::TextureTarget(dropped)) {
+                SetTexture(dropped, selMat);
+                if (selMat < static_cast<int>(texturePaths_.size()))
+                    texturePaths_[selMat] = dropped;
+                texturePath_ = dropped;
+            }
+            ImGui::SetItemTooltip("アセットブラウザの画像をD&Dで設定できます");
+
+            ImGui::SameLine();
+            ImGui::BeginGroup();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::Text("現在: %s", curTex.empty() ? "(なし)" : curTex.c_str());
+            ImGui::PopStyleColor();
+            if (ImGui::SmallButton("フォルダから選択...##topen"))
+                ImGui::OpenPopup("テクスチャ選択##texpop");
             ImGui::SameLine();
             if (ImGui::SmallButton("クリア##tc"))
                 texturePath_.clear();
+            ImGui::EndGroup();
+
+            // フォルダブラウザは別ウィンドウ（ポップアップ）に置く＝インスペクタ側のスクロールを奪わない
+            ImGui::SetNextWindowSize(ImVec2(540, 480), ImGuiCond_Appearing);
+            if (ImGui::BeginPopup("テクスチャ選択##texpop")) {
+                ShowTextureFile(texturePath_);
+                ImGui::Separator();
+                if (ImGui::Button("適用##ta")) {
+                    SetTexture(texturePath_, selMat);
+                    if (selMat < static_cast<int>(texturePaths_.size()))
+                        texturePaths_[selMat] = texturePath_;
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("閉じる##tclose"))
+                    ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
             ImGui::TreePop();
         }
 
@@ -1760,20 +1812,29 @@ void BaseObject::DebugObject() {
                     }
                     ImGui::EndGroup();
 
-                    // ---- フォルダから選択 ----
-                    if (ImGui::TreeNodeEx("フォルダから選択##nmbrowse", ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                    // ---- フォルダから選択（ポップアップ＝スクロールを奪わない）----
+                    if (ImGui::SmallButton("フォルダから選択...##nmopen"))
+                        ImGui::OpenPopup("法線マップ選択##nmpop");
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("選択中: %s", normalMapPath_.empty() ? "(なし)" : normalMapPath_.c_str());
+
+                    ImGui::SetNextWindowSize(ImVec2(540, 480), ImGuiCond_Appearing);
+                    if (ImGui::BeginPopup("法線マップ選択##nmpop")) {
                         ShowTextureFile(normalMapPath_, "normalmap");
-                        ImGui::Spacing();
+                        ImGui::Separator();
                         ImGui::BeginDisabled(normalMapPath_.empty());
-                        if (ImGui::SmallButton("適用##nmapply"))
+                        if (ImGui::SmallButton("適用##nmapply")) {
                             mat->SetNormalMap(normalMapPath_);
+                            ImGui::CloseCurrentPopup();
+                        }
                         ImGui::EndDisabled();
                         ImGui::SameLine();
                         if (ImGui::SmallButton("選択解除##nmdesel"))
                             normalMapPath_.clear();
                         ImGui::SameLine();
-                        ImGui::TextDisabled("選択中: %s", normalMapPath_.empty() ? "(なし)" : normalMapPath_.c_str());
-                        ImGui::TreePop();
+                        if (ImGui::SmallButton("閉じる##nmclose"))
+                            ImGui::CloseCurrentPopup();
+                        ImGui::EndPopup();
                     }
                 }
 

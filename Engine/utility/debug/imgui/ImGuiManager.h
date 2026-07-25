@@ -159,6 +159,9 @@ class ImGuiManager {
 
     void ShowSpriteManagerWindow();
 
+    // UIエディタ窓（スプライトのグループ管理＋名前付きトゥイーン）
+    void ShowUIEditorWindow();
+
     void ShowColliderTagManagerWindow();
 
     void ShowAudioManagerWindow();
@@ -239,6 +242,7 @@ class ImGuiManager {
     bool showHierarchyView_ = true;
     bool showMotionEditorView_ = true;
     bool showSpriteManagerView_ = true;
+    bool showUIEditorView_ = false; // UIエディタ窓
     bool showColliderTagManagerView_ = false;
     bool showAudioManagerView_ = false;
     bool showShadowMapView_ = true;
