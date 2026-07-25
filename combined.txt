@@ -41,27 +41,28 @@
 └── └── └── ├── ShadowMap/
 └── └── └── ├── Shake/
 └── └── └── ├── SpriteDatas/
-└── └── └── └── Sprites/
-└── └── └──     ├── GameScene/
-└── └── └──     ├── Result/
-└── └── └──     ├── TitleScene/
-└── └── └──     ├── Transition/
-└── └── └──     ├── TutorialFinish/
-└── └── └──     ├── TutorialStep1/
-└── └── └──     ├── TutorialStep10/
-└── └── └──     ├── TutorialStep11/
-└── └── └──     ├── TutorialStep12/
-└── └── └──     ├── TutorialStep13/
-└── └── └──     ├── TutorialStep14/
-└── └── └──     ├── TutorialStep15/
-└── └── └──     ├── TutorialStep2/
-└── └── └──     ├── TutorialStep3/
-└── └── └──     ├── TutorialStep4/
-└── └── └──     ├── TutorialStep5/
-└── └── └──     ├── TutorialStep6/
-└── └── └──     ├── TutorialStep7/
-└── └── └──     ├── TutorialStep8/
-└── └── └──     └── TutorialStep9/
+└── └── └── ├── Sprites/
+└── └── └── └── ├── GameScene/
+└── └── └── └── ├── Result/
+└── └── └── └── ├── TitleScene/
+└── └── └── └── ├── Transition/
+└── └── └── └── ├── TutorialFinish/
+└── └── └── └── ├── TutorialStep1/
+└── └── └── └── ├── TutorialStep10/
+└── └── └── └── ├── TutorialStep11/
+└── └── └── └── ├── TutorialStep12/
+└── └── └── └── ├── TutorialStep13/
+└── └── └── └── ├── TutorialStep14/
+└── └── └── └── ├── TutorialStep15/
+└── └── └── └── ├── TutorialStep2/
+└── └── └── └── ├── TutorialStep3/
+└── └── └── └── ├── TutorialStep4/
+└── └── └── └── ├── TutorialStep5/
+└── └── └── └── ├── TutorialStep6/
+└── └── └── └── ├── TutorialStep7/
+└── └── └── └── ├── TutorialStep8/
+└── └── └── └── └── TutorialStep9/
+└── └── └── └── UI/
 └── └── ├── models/
 └── └── └── ├── Field/
 └── └── └── ├── LevelData/
@@ -262,9 +263,12 @@
 └── └── ├── SpriteManager.cpp
 └── └── ├── SpriteManager.h
 └── └── ├── SpriteStruct.h
-└── └── └── text/
-└── └──     ├── TextRenderer.cpp
-└── └──     └── TextRenderer.h
+└── └── ├── text/
+└── └── └── ├── TextRenderer.cpp
+└── └── └── └── TextRenderer.h
+└── └── └── ui/
+└── └──     ├── UIAnimator.cpp
+└── └──     └── UIAnimator.h
 └── ├── 3d/
 └── └── ├── animation/
 └── └── └── ├── AnimationController.cpp
@@ -31360,6 +31364,8 @@ void SpriteManager::SyncGizmoTarget(SpriteData *spriteData, int instanceIndex)
 
     gizmo->AddTarget(spriteData->name, translation, nullptr, nullptr, true);
     gizmo->SetScreenSpace(spriteData->name, true, 50.0f);
+    // Vector3直接指定の既定はParticleなので、スプライトとして明示的に分類し直す
+    gizmo->SetCategory(spriteData->name, GizmoCategory::Sprite);
 
     // 当たり判定はスプライトの実際の矩形で行う（translation は矩形の角なので円判定だと掴めない）。
     // spriteData は unique_ptr の指す先なので vector 再確保でもアドレスは不変
@@ -33175,6 +33181,11 @@ void TextRenderer::UpdateImGui()
             ImGui::EndDisabled();
         }
 
+        // 入力欄の下にプレビューを表示する
+        DrawPreview(0, fontKeys.empty() ? std::string() : fontKeys[imguiFontIndex_]);
+
+        ImGui::Separator();
+
         const bool canCreate = (imguiSpriteName_[0] != '\0') &&
                                (imguiText_[0] != '\0') &&
                                !fontKeys.empty();
@@ -33273,6 +33284,11 @@ void TextRenderer::UpdateImGui()
             ImGui::EndDisabled();
         }
 
+        // 入力欄の下にプレビューを表示する
+        DrawPreview(1, fontKeys.empty() ? std::string() : fontKeys[imguiAtlasFontIndex_]);
+
+        ImGui::Separator();
+
         const bool canCreate = (imguiAtlasSpriteName_[0] != '\0') &&
                                (imguiAtlasChars_[0] != '\0') &&
                                !fontKeys.empty();
@@ -33309,23 +33325,160 @@ void TextRenderer::UpdateImGui()
 // 非公開メソッド
 // --------------------------------------------------------------------------
 
-std::string TextRenderer::RenderTextToFile(
-    const std::string &spriteName,
+#ifdef _DEBUG
+void TextRenderer::DrawPreview(int mode, const std::string &fontKey)
+{
+    // 文字色をプレビューへ焼き込む（実際の描画はスプライトの色乗算に相当するため見た目が一致する）
+    auto applyTint = [](std::vector<uint8_t> &rgba, const float col[4]) {
+        const float r = std::clamp(col[0], 0.0f, 1.0f);
+        const float g = std::clamp(col[1], 0.0f, 1.0f);
+        const float b = std::clamp(col[2], 0.0f, 1.0f);
+        const float a = std::clamp(col[3], 0.0f, 1.0f);
+        for (size_t i = 0; i + 3 < rgba.size(); i += 4)
+        {
+            rgba[i + 0] = static_cast<uint8_t>(rgba[i + 0] * r);
+            rgba[i + 1] = static_cast<uint8_t>(rgba[i + 1] * g);
+            rgba[i + 2] = static_cast<uint8_t>(rgba[i + 2] * b);
+            rgba[i + 3] = static_cast<uint8_t>(rgba[i + 3] * a);
+        }
+    };
+
+    // 画像をウィンドウ幅・一定高さに収めて等比表示する
+    auto drawImage = [](D3D12_GPU_DESCRIPTOR_HANDLE handle, int w, int h) {
+        if (handle.ptr == 0 || w <= 0 || h <= 0)
+        {
+            ImGui::TextDisabled("（テキストを入力するとプレビューされます）");
+            return;
+        }
+        const float avail = ImGui::GetContentRegionAvail().x;
+        const float maxW = (avail > 16.0f) ? avail : static_cast<float>(w);
+        const float maxH = 160.0f;
+        float dispW = static_cast<float>(w);
+        float dispH = static_cast<float>(h);
+        const float sx = dispW > maxW ? maxW / dispW : 1.0f;
+        const float sy = dispH > maxH ? maxH / dispH : 1.0f;
+        const float s = std::min(sx, sy);
+        dispW *= s;
+        dispH *= s;
+        // 透明部分が分かるよう枠付きで表示する
+        ImGui::Image(static_cast<ImTextureID>(handle.ptr), ImVec2(dispW, dispH),
+                     ImVec2(0, 0), ImVec2(1, 1));
+        ImGui::GetWindowDrawList()->AddRect(
+            ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
+            ImGui::GetColorU32(ImVec4(0.4f, 0.4f, 0.45f, 0.8f)));
+    };
+
+    ImGui::SeparatorText("プレビュー");
+
+    if (mode == 0)
+    {
+        // 入力シグネチャ（テキスト・フォント・色・アウトライン設定）が変わったときだけ再生成する
+        std::string sig = std::string(imguiText_) + "|" + fontKey + "|" +
+                          std::to_string(imguiColor_[0]) + "," + std::to_string(imguiColor_[1]) + "," +
+                          std::to_string(imguiColor_[2]) + "," + std::to_string(imguiColor_[3]) + "|" +
+                          (imguiOutlineEnabled_ ? "1" : "0") + "," + std::to_string(imguiOutlineThickness_) + "," +
+                          std::to_string(imguiOutlineColor_[0]) + "," + std::to_string(imguiOutlineColor_[1]) + "," +
+                          std::to_string(imguiOutlineColor_[2]) + "," + std::to_string(imguiOutlineColor_[3]);
+
+        if (imguiText_[0] == '\0' || fontKey.empty())
+        {
+            textPreviewHandle_.ptr = 0;
+            textPreviewSig_.clear();
+        }
+        else if (sig != textPreviewSig_)
+        {
+            textPreviewSig_ = sig;
+            int w = 0, h = 0;
+            std::vector<uint8_t> rgba = BuildTextRGBA(
+                imguiText_, fontKey, imguiOutlineEnabled_, imguiOutlineThickness_,
+                {imguiOutlineColor_[0], imguiOutlineColor_[1], imguiOutlineColor_[2], imguiOutlineColor_[3]}, w, h);
+            if (!rgba.empty())
+            {
+                applyTint(rgba, imguiColor_);
+                textPreviewHandle_ = TextureManager::GetInstance()->UpdateDynamicTexture("__text_preview__", rgba.data(), w, h);
+                textPreviewWidth_ = w;
+                textPreviewHeight_ = h;
+            }
+            else
+            {
+                textPreviewHandle_.ptr = 0;
+            }
+        }
+
+        drawImage(textPreviewHandle_, textPreviewWidth_, textPreviewHeight_);
+        if (textPreviewHandle_.ptr != 0)
+        {
+            ImGui::TextDisabled("生成サイズ: %d x %d px", textPreviewWidth_, textPreviewHeight_);
+        }
+    }
+    else
+    {
+        std::string sig = std::string(imguiAtlasChars_) + "|" + fontKey + "|" +
+                          std::to_string(imguiAtlasCellWidth_) + "x" + std::to_string(imguiAtlasCellHeight_) + "|" +
+                          std::to_string(imguiAtlasColor_[0]) + "," + std::to_string(imguiAtlasColor_[1]) + "," +
+                          std::to_string(imguiAtlasColor_[2]) + "," + std::to_string(imguiAtlasColor_[3]) + "|" +
+                          (imguiAtlasOutlineEnabled_ ? "1" : "0") + "," + std::to_string(imguiAtlasOutlineThickness_) + "," +
+                          std::to_string(imguiAtlasOutlineColor_[0]) + "," + std::to_string(imguiAtlasOutlineColor_[1]) + "," +
+                          std::to_string(imguiAtlasOutlineColor_[2]) + "," + std::to_string(imguiAtlasOutlineColor_[3]);
+
+        if (imguiAtlasChars_[0] == '\0' || fontKey.empty())
+        {
+            atlasPreviewHandle_.ptr = 0;
+            atlasPreviewSig_.clear();
+        }
+        else if (sig != atlasPreviewSig_)
+        {
+            atlasPreviewSig_ = sig;
+            int w = 0, h = 0;
+            std::vector<uint8_t> rgba = BuildCharacterAtlasRGBA(
+                Utf8ToCodepoints(imguiAtlasChars_), fontKey, imguiAtlasCellWidth_, imguiAtlasCellHeight_,
+                imguiAtlasOutlineEnabled_, imguiAtlasOutlineThickness_,
+                {imguiAtlasOutlineColor_[0], imguiAtlasOutlineColor_[1], imguiAtlasOutlineColor_[2], imguiAtlasOutlineColor_[3]}, w, h);
+            if (!rgba.empty())
+            {
+                applyTint(rgba, imguiAtlasColor_);
+                atlasPreviewHandle_ = TextureManager::GetInstance()->UpdateDynamicTexture("__atlas_preview__", rgba.data(), w, h);
+                atlasPreviewWidth_ = w;
+                atlasPreviewHeight_ = h;
+            }
+            else
+            {
+                atlasPreviewHandle_.ptr = 0;
+            }
+        }
+
+        drawImage(atlasPreviewHandle_, atlasPreviewWidth_, atlasPreviewHeight_);
+        if (atlasPreviewHandle_.ptr != 0)
+        {
+            ImGui::TextDisabled("生成サイズ: %d x %d px", atlasPreviewWidth_, atlasPreviewHeight_);
+        }
+    }
+}
+#endif // _DEBUG
+
+std::vector<uint8_t> TextRenderer::BuildTextRGBA(
     const std::string &text,
     const std::string &fontKey,
     bool outlineEnabled,
     float outlineThickness,
-    Vector4 outlineColor)
+    Vector4 outlineColor,
+    int &outWidth,
+    int &outHeight)
 {
+    outWidth = 0;
+    outHeight = 0;
+
     const TextureManager::FontData *fontData = TextureManager::GetInstance()->GetFontData(fontKey);
-    assert(fontData != nullptr);
-    assert(fontData->ttfBuffer != nullptr);
+    if (fontData == nullptr || fontData->ttfBuffer == nullptr)
+    {
+        return {};
+    }
 
     // stb_truetypeの初期化
     stbtt_fontinfo fontInfo;
     if (!stbtt_InitFont(&fontInfo, fontData->ttfBuffer->data(), 0))
     {
-        assert(0 && "Failed to init font");
+        return {};
     }
 
     float scale = stbtt_ScaleForPixelHeight(&fontInfo, fontData->fontSize);
@@ -33508,6 +33661,24 @@ std::string TextRenderer::RenderTextToFile(
         }
     }
 
+    outWidth = texWidth;
+    outHeight = texHeight;
+    return pixels;
+}
+
+std::string TextRenderer::RenderTextToFile(
+    const std::string &spriteName,
+    const std::string &text,
+    const std::string &fontKey,
+    bool outlineEnabled,
+    float outlineThickness,
+    Vector4 outlineColor)
+{
+    int texWidth = 0;
+    int texHeight = 0;
+    std::vector<uint8_t> pixels = BuildTextRGBA(text, fontKey, outlineEnabled, outlineThickness, outlineColor, texWidth, texHeight);
+    assert(!pixels.empty());
+
     // DirectXTex による PNG 保存処理
     EnsureOutputDirectory();
 
@@ -33542,25 +33713,36 @@ std::string TextRenderer::RenderTextToFile(
     return loadPath;
 }
 
-std::string TextRenderer::RenderCharacterAtlasToFile(
-    const std::string &spriteName,
+std::vector<uint8_t> TextRenderer::BuildCharacterAtlasRGBA(
     const std::vector<uint32_t> &codepoints,
     const std::string &fontKey,
     int cellWidth,
     int cellHeight,
     bool outlineEnabled,
     float outlineThickness,
-    Vector4 outlineColor)
+    Vector4 outlineColor,
+    int &outWidth,
+    int &outHeight)
 {
+    outWidth = 0;
+    outHeight = 0;
+
+    if (codepoints.empty() || cellWidth <= 0 || cellHeight <= 0)
+    {
+        return {};
+    }
+
     const TextureManager::FontData *fontData = TextureManager::GetInstance()->GetFontData(fontKey);
-    assert(fontData != nullptr);
-    assert(fontData->ttfBuffer != nullptr);
+    if (fontData == nullptr || fontData->ttfBuffer == nullptr)
+    {
+        return {};
+    }
 
     // stb_truetypeの初期化
     stbtt_fontinfo fontInfo;
     if (!stbtt_InitFont(&fontInfo, fontData->ttfBuffer->data(), 0))
     {
-        assert(0 && "Failed to init font");
+        return {};
     }
 
     const float scale = stbtt_ScaleForPixelHeight(&fontInfo, fontData->fontSize);
@@ -33726,6 +33908,28 @@ std::string TextRenderer::RenderCharacterAtlasToFile(
         }
     }
 
+    outWidth = atlasWidth;
+    outHeight = atlasHeight;
+    return atlasPixels;
+}
+
+std::string TextRenderer::RenderCharacterAtlasToFile(
+    const std::string &spriteName,
+    const std::vector<uint32_t> &codepoints,
+    const std::string &fontKey,
+    int cellWidth,
+    int cellHeight,
+    bool outlineEnabled,
+    float outlineThickness,
+    Vector4 outlineColor)
+{
+    int atlasWidth = 0;
+    int atlasHeight = 0;
+    std::vector<uint8_t> atlasPixels = BuildCharacterAtlasRGBA(
+        codepoints, fontKey, cellWidth, cellHeight,
+        outlineEnabled, outlineThickness, outlineColor, atlasWidth, atlasHeight);
+    assert(!atlasPixels.empty());
+
     // DirectXTex による PNG 保存処理
     EnsureOutputDirectory();
 
@@ -33870,6 +34074,42 @@ class TextRenderer
 
   private:
     /// <summary>
+    /// フォントアトラスから文字列をサンプリングしてRGBA(8bit×4)のピクセル列を生成する。
+    /// RGBは白固定・Aがグリフのカバレッジで、アウトライン有効時は外周に色を合成する。
+    /// ファイル保存はせずメモリ上のバッファを返す（保存版・プレビュー版で共用する）。
+    /// フォントが無効な場合は空のvectorを返す。
+    /// </summary>
+    std::vector<uint8_t> BuildTextRGBA(
+        const std::string &text,
+        const std::string &fontKey,
+        bool outlineEnabled,
+        float outlineThickness,
+        Vector4 outlineColor,
+        int &outWidth,
+        int &outHeight);
+
+    /// <summary>
+    /// 各文字を固定セルサイズで横並びに配置したアトラスのRGBAピクセル列を生成する。
+    /// ファイル保存はせずメモリ上のバッファを返す（保存版・プレビュー版で共用する）。
+    /// </summary>
+    std::vector<uint8_t> BuildCharacterAtlasRGBA(
+        const std::vector<uint32_t> &codepoints,
+        const std::string &fontKey,
+        int cellWidth,
+        int cellHeight,
+        bool outlineEnabled,
+        float outlineThickness,
+        Vector4 outlineColor,
+        int &outWidth,
+        int &outHeight);
+
+    /// <summary>
+    /// テキスト作成UIにプレビュー画像を表示する。入力が変わったときだけ動的テクスチャを更新する。
+    /// mode 0: テキストスプライト / mode 1: アトラススプライト。
+    /// </summary>
+    void DrawPreview(int mode, const std::string &fontKey);
+
+    /// <summary>
     /// フォントアトラスから文字列をサンプリングしてRGBAテクスチャを生成し、
     /// PNGファイルとして保存してTextureManagerにロードする。
     /// アウトライン設定が有効な場合はグリフの外周にアウトラインを描画する。
@@ -33917,6 +34157,18 @@ class TextRenderer
     float imguiOutlineThickness_ = 2.0f;
     float imguiOutlineColor_[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 
+    // ------------------------------------------------------------------
+    // プレビュー用キャッシュ（入力が変わったときだけ動的テクスチャを更新する）
+    // ------------------------------------------------------------------
+    std::string textPreviewSig_;                          // 直近に生成したテキストプレビューの入力シグネチャ
+    D3D12_GPU_DESCRIPTOR_HANDLE textPreviewHandle_ = {};  // テキストプレビューのGPUハンドル
+    int textPreviewWidth_ = 0;                            // テキストプレビュー画像の幅
+    int textPreviewHeight_ = 0;                           // テキストプレビュー画像の高さ
+    std::string atlasPreviewSig_;                         // 直近に生成したアトラスプレビューの入力シグネチャ
+    D3D12_GPU_DESCRIPTOR_HANDLE atlasPreviewHandle_ = {}; // アトラスプレビューのGPUハンドル
+    int atlasPreviewWidth_ = 0;                           // アトラスプレビュー画像の幅
+    int atlasPreviewHeight_ = 0;                          // アトラスプレビュー画像の高さ
+
     // ImGui入力バッファ（アトラススプライト用）
     char imguiAtlasSpriteName_[128] = {};
     char imguiAtlasChars_[256] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -33929,6 +34181,1011 @@ class TextRenderer
     float imguiAtlasOutlineThickness_ = 2.0f;
     float imguiAtlasOutlineColor_[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 };
+} // namespace Hagine
+
+
+============================================================
+File Path: Engine/2d/ui/UIAnimator.cpp
+============================================================
+#include "UIAnimator.h"
+#include "SpriteManager.h"
+#include <algorithm>
+#include <data/DataHandler.h>
+#ifdef _DEBUG
+#include <imgui.h>
+#include <utility/debug/imgui/ImGuiNotification.h>
+#endif // _DEBUG
+
+namespace Hagine {
+
+#ifdef _DEBUG
+namespace {
+// EasingType の並びに対応する表示名（31種）
+const char *kEasingNames[] = {
+    "Linear",
+    "InSine", "OutSine", "InOutSine",
+    "InQuad", "OutQuad", "InOutQuad",
+    "InCubic", "OutCubic", "InOutCubic",
+    "InQuart", "OutQuart", "InOutQuart",
+    "InQuint", "OutQuint", "InOutQuint",
+    "InCirc", "OutCirc", "InOutCirc",
+    "InExpo", "OutExpo", "InOutExpo",
+    "InBack", "OutBack", "InOutBack",
+    "InElastic", "OutElastic", "InOutElastic",
+    "InBounce", "OutBounce", "InOutBounce"};
+constexpr int kEasingCount = static_cast<int>(sizeof(kEasingNames) / sizeof(kEasingNames[0]));
+
+// UIChannel の並びに対応する表示名（Count は含めない）
+const char *kChannelNames[] = {"位置X", "位置Y", "スケールX", "スケールY", "回転Z", "不透明度"};
+constexpr int kChannelCount = static_cast<int>(UIChannel::Count);
+
+// UITargetKind の並びに対応する表示名
+const char *kKindNames[] = {"スプライト", "グループ"};
+} // namespace
+#endif // _DEBUG
+
+UIAnimator *UIAnimator::GetInstance()
+{
+    static UIAnimator instance;
+    return &instance;
+}
+
+void UIAnimator::Initialize()
+{
+    Load();
+}
+
+void UIAnimator::EnsureLoaded()
+{
+    if (!loaded_)
+    {
+        Load();
+    }
+}
+
+UIClip *UIAnimator::FindClip(const std::string &name)
+{
+    for (auto &c : clips_)
+    {
+        if (c.name == name)
+            return &c;
+    }
+    return nullptr;
+}
+
+UIGroup *UIAnimator::FindGroup(const std::string &name)
+{
+    for (auto &g : groups_)
+    {
+        if (g.name == name)
+            return &g;
+    }
+    return nullptr;
+}
+
+// ===================================================
+// 再生API
+// ===================================================
+
+void UIAnimator::Play(const std::string &clipName)
+{
+    EnsureLoaded();
+    UIClip *clip = FindClip(clipName);
+    if (!clip)
+    {
+#ifdef _DEBUG
+        ImGuiNotification::Post("UIクリップが見つかりません: " + clipName, {0.9f, 0.5f, 0.3f, 1.0f});
+#endif // _DEBUG
+        return;
+    }
+    RewindClip(*clip);
+    clip->playing_ = true;
+}
+
+void UIAnimator::Stop(const std::string &clipName)
+{
+    UIClip *clip = FindClip(clipName);
+    if (clip)
+    {
+        clip->playing_ = false;
+    }
+}
+
+void UIAnimator::StopAll()
+{
+    for (auto &c : clips_)
+    {
+        c.playing_ = false;
+    }
+}
+
+bool UIAnimator::IsPlaying(const std::string &clipName) const
+{
+    for (const auto &c : clips_)
+    {
+        if (c.name == clipName)
+            return c.playing_;
+    }
+    return false;
+}
+
+// ===================================================
+// 更新
+// ===================================================
+
+void UIAnimator::Update(float deltaTime)
+{
+    EnsureLoaded();
+
+    for (auto &clip : clips_)
+    {
+        if (!clip.playing_)
+            continue;
+
+        bool allFinished = true;
+        for (auto &tween : clip.tweens)
+        {
+            UpdateTween(tween, deltaTime);
+            if (!tween.finished_)
+                allFinished = false;
+        }
+
+        if (allFinished)
+        {
+            if (clip.loop)
+                RewindClip(clip);
+            else
+                clip.playing_ = false;
+        }
+    }
+
+    // グループの相対位置をメンバーへ反映（束としてまとまって動く）
+    ApplyGroups();
+}
+
+void UIAnimator::RewindClip(UIClip &clip)
+{
+    for (auto &tween : clip.tweens)
+    {
+        tween.elapsed_ = 0.0f;
+        tween.finished_ = false;
+        tween.resolvedStart_ = tween.fromCurrent
+                                   ? GetChannelValue(tween.targetKind, tween.targetName, tween.channel)
+                                   : tween.startValue;
+    }
+}
+
+void UIAnimator::UpdateTween(UITween &tween, float deltaTime)
+{
+    if (tween.finished_)
+        return;
+
+    tween.elapsed_ += deltaTime;
+    const float t = tween.elapsed_ - tween.delay;
+
+    // 遅延中は初期値を当てておく（開始前のちらつき防止）
+    if (t < 0.0f)
+    {
+        ApplyChannel(tween.targetKind, tween.targetName, tween.channel, tween.resolvedStart_);
+        return;
+    }
+
+    float value;
+    if (tween.duration <= 0.0f)
+    {
+        // 秒数0は即時到達
+        value = tween.endValue;
+        tween.finished_ = true;
+    }
+    else
+    {
+        // ApplyEasing は total を超えると外挿するため、必ず [0,duration] にクランプしてから渡す
+        const float clampedT = std::clamp(t, 0.0f, tween.duration);
+        value = ApplyEasing(tween.easing, tween.resolvedStart_, tween.endValue, clampedT, tween.duration);
+        if (t >= tween.duration)
+            tween.finished_ = true;
+    }
+
+    ApplyChannel(tween.targetKind, tween.targetName, tween.channel, value);
+}
+
+// ===================================================
+// チャンネル値の取得・適用
+// ===================================================
+
+float UIAnimator::GetChannelValue(UITargetKind kind, const std::string &target, UIChannel ch)
+{
+    SpriteManager *sm = SpriteManager::GetInstance();
+
+    if (kind == UITargetKind::Group)
+    {
+        UIGroup *g = FindGroup(target);
+        if (!g)
+            return 0.0f;
+        if (ch == UIChannel::PositionX)
+            return g->origin.x;
+        if (ch == UIChannel::PositionY)
+            return g->origin.y;
+        // その他は先頭メンバーの値を代表値として返す
+        if (!g->members.empty())
+            return GetChannelValue(UITargetKind::Sprite, g->members[0].spriteName, ch);
+        return 0.0f;
+    }
+
+    // スプライト
+    switch (ch)
+    {
+    case UIChannel::PositionX:
+    case UIChannel::PositionY:
+    case UIChannel::ScaleX:
+    case UIChannel::ScaleY:
+    case UIChannel::RotationZ:
+    {
+        InstanceSRT *s = sm->GetInstanceSRT(target, 0);
+        if (!s)
+            return (ch == UIChannel::ScaleX || ch == UIChannel::ScaleY) ? 1.0f : 0.0f;
+        switch (ch)
+        {
+        case UIChannel::PositionX: return s->translation.x;
+        case UIChannel::PositionY: return s->translation.y;
+        case UIChannel::ScaleX:    return s->scale.x;
+        case UIChannel::ScaleY:    return s->scale.y;
+        case UIChannel::RotationZ: return s->rotation.z;
+        default: return 0.0f;
+        }
+    }
+    case UIChannel::Alpha:
+    {
+        SpriteData *d = sm->GetSprite(target);
+        return (d && d->sprite) ? d->sprite->GetColor().w : 1.0f;
+    }
+    default:
+        return 0.0f;
+    }
+}
+
+void UIAnimator::ApplyChannel(UITargetKind kind, const std::string &target, UIChannel ch, float value)
+{
+    SpriteManager *sm = SpriteManager::GetInstance();
+
+    if (kind == UITargetKind::Group)
+    {
+        UIGroup *g = FindGroup(target);
+        if (!g)
+            return;
+        if (ch == UIChannel::PositionX)
+        {
+            g->origin.x = value; // ApplyGroups がメンバーへ反映する
+        }
+        else if (ch == UIChannel::PositionY)
+        {
+            g->origin.y = value;
+        }
+        else
+        {
+            // スケール・回転・不透明度は各メンバーへ同じ値を適用する
+            for (auto &m : g->members)
+                ApplyChannel(UITargetKind::Sprite, m.spriteName, ch, value);
+        }
+        return;
+    }
+
+    // スプライト
+    switch (ch)
+    {
+    case UIChannel::PositionX:
+    {
+        InstanceSRT *s = sm->GetInstanceSRT(target, 0);
+        if (s)
+            sm->SetSpritePosition(target, {value, s->translation.y});
+        break;
+    }
+    case UIChannel::PositionY:
+    {
+        InstanceSRT *s = sm->GetInstanceSRT(target, 0);
+        if (s)
+            sm->SetSpritePosition(target, {s->translation.x, value});
+        break;
+    }
+    case UIChannel::ScaleX:
+    {
+        InstanceSRT *s = sm->GetInstanceSRT(target, 0);
+        if (s)
+        {
+            Vector3 sc = s->scale;
+            sc.x = value;
+            sm->SetInstanceScale(target, 0, sc);
+        }
+        break;
+    }
+    case UIChannel::ScaleY:
+    {
+        InstanceSRT *s = sm->GetInstanceSRT(target, 0);
+        if (s)
+        {
+            Vector3 sc = s->scale;
+            sc.y = value;
+            sm->SetInstanceScale(target, 0, sc);
+        }
+        break;
+    }
+    case UIChannel::RotationZ:
+    {
+        InstanceSRT *s = sm->GetInstanceSRT(target, 0);
+        if (s)
+        {
+            Vector3 r = s->rotation;
+            r.z = value;
+            sm->SetInstanceRotation(target, 0, r);
+        }
+        break;
+    }
+    case UIChannel::Alpha:
+    {
+        SpriteData *d = sm->GetSprite(target);
+        if (d && d->sprite)
+        {
+            Vector4 c = d->sprite->GetColor();
+            c.w = value;
+            sm->SetSpriteColor(target, c);
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void UIAnimator::ApplyGroups()
+{
+    SpriteManager *sm = SpriteManager::GetInstance();
+    for (auto &g : groups_)
+    {
+        for (auto &m : g.members)
+        {
+            const Vector2 pos = {g.origin.x + m.offset.x, g.origin.y + m.offset.y};
+            sm->SetSpritePosition(m.spriteName, pos);
+        }
+    }
+}
+
+// ===================================================
+// 保存・読み込み
+// ===================================================
+
+void UIAnimator::Save()
+{
+    DataHandler data("UI", "UIAnimation");
+
+    json groupsJson = json::array();
+    for (const auto &g : groups_)
+    {
+        json gj;
+        gj["name"] = g.name;
+        gj["origin"] = g.origin;
+        json members = json::array();
+        for (const auto &m : g.members)
+        {
+            json mj;
+            mj["sprite"] = m.spriteName;
+            mj["offset"] = m.offset;
+            members.push_back(mj);
+        }
+        gj["members"] = members;
+        groupsJson.push_back(gj);
+    }
+
+    json clipsJson = json::array();
+    for (const auto &c : clips_)
+    {
+        json cj;
+        cj["name"] = c.name;
+        cj["loop"] = c.loop;
+        json tweens = json::array();
+        for (const auto &t : c.tweens)
+        {
+            json tj;
+            tj["targetKind"] = static_cast<int>(t.targetKind);
+            tj["targetName"] = t.targetName;
+            tj["channel"] = static_cast<int>(t.channel);
+            tj["fromCurrent"] = t.fromCurrent;
+            tj["start"] = t.startValue;
+            tj["end"] = t.endValue;
+            tj["duration"] = t.duration;
+            tj["delay"] = t.delay;
+            tj["easing"] = static_cast<int>(t.easing);
+            tweens.push_back(tj);
+        }
+        cj["tweens"] = tweens;
+        clipsJson.push_back(cj);
+    }
+
+    data.Save("groups", groupsJson);
+    data.Save("clips", clipsJson);
+    data.Flush();
+
+#ifdef _DEBUG
+    ImGuiNotification::Post("UIアニメーションを保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
+#endif // _DEBUG
+}
+
+void UIAnimator::Load()
+{
+    loaded_ = true; // 再入防止（EnsureLoaded から）
+
+    DataHandler data("UI", "UIAnimation");
+
+    groups_.clear();
+    clips_.clear();
+
+    json groupsJson = data.Load<json>("groups", json::array());
+    if (groupsJson.is_array())
+    {
+        for (const auto &gj : groupsJson)
+        {
+            UIGroup g;
+            g.name = gj.value("name", std::string());
+            if (gj.contains("origin"))
+                g.origin = gj.at("origin").get<Vector2>();
+            if (gj.contains("members") && gj.at("members").is_array())
+            {
+                for (const auto &mj : gj.at("members"))
+                {
+                    UIGroupMember m;
+                    m.spriteName = mj.value("sprite", std::string());
+                    if (mj.contains("offset"))
+                        m.offset = mj.at("offset").get<Vector2>();
+                    g.members.push_back(m);
+                }
+            }
+            groups_.push_back(g);
+        }
+    }
+
+    json clipsJson = data.Load<json>("clips", json::array());
+    if (clipsJson.is_array())
+    {
+        for (const auto &cj : clipsJson)
+        {
+            UIClip c;
+            c.name = cj.value("name", std::string());
+            c.loop = cj.value("loop", false);
+            if (cj.contains("tweens") && cj.at("tweens").is_array())
+            {
+                for (const auto &tj : cj.at("tweens"))
+                {
+                    UITween t;
+                    t.targetKind = static_cast<UITargetKind>(tj.value("targetKind", 0));
+                    t.targetName = tj.value("targetName", std::string());
+                    t.channel = static_cast<UIChannel>(tj.value("channel", 0));
+                    t.fromCurrent = tj.value("fromCurrent", false);
+                    t.startValue = tj.value("start", 0.0f);
+                    t.endValue = tj.value("end", 0.0f);
+                    t.duration = tj.value("duration", 0.5f);
+                    t.delay = tj.value("delay", 0.0f);
+                    t.easing = static_cast<EasingType>(tj.value("easing", 0));
+                    c.tweens.push_back(t);
+                }
+            }
+            clips_.push_back(c);
+        }
+    }
+}
+
+#ifdef _DEBUG
+// ===================================================
+// エディタUI
+// ===================================================
+
+namespace {
+// 対象名のコンボ（スプライト名一覧またはグループ名一覧から選ぶ）
+bool TargetNameCombo(const char *label, UITargetKind kind, std::string &target,
+                     const std::vector<UIGroup> &groups)
+{
+    bool changed = false;
+    const char *preview = target.empty() ? "(未選択)" : target.c_str();
+    if (ImGui::BeginCombo(label, preview))
+    {
+        if (kind == UITargetKind::Group)
+        {
+            for (const auto &g : groups)
+            {
+                const bool sel = (g.name == target);
+                if (ImGui::Selectable(g.name.c_str(), sel))
+                {
+                    target = g.name;
+                    changed = true;
+                }
+            }
+        }
+        else
+        {
+            for (SpriteData *sd : SpriteManager::GetInstance()->GetAllSprites())
+            {
+                if (!sd)
+                    continue;
+                const bool sel = (sd->name == target);
+                if (ImGui::Selectable(sd->name.c_str(), sel))
+                {
+                    target = sd->name;
+                    changed = true;
+                }
+            }
+        }
+        ImGui::EndCombo();
+    }
+    return changed;
+}
+} // namespace
+
+void UIAnimator::DrawImGui(bool *open)
+{
+    EnsureLoaded();
+
+    if (!ImGui::Begin("UIエディタ", open, ImGuiWindowFlags_NoFocusOnAppearing))
+    {
+        ImGui::End();
+        return;
+    }
+
+    // 保存・再読み込み
+    if (ImGui::Button("保存"))
+        Save();
+    ImGui::SameLine();
+    if (ImGui::Button("再読み込み"))
+    {
+        loaded_ = false;
+        selectedGroup_ = -1;
+        selectedClip_ = -1;
+        Load();
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("コードからは UIAnimator::Play(\"クリップ名\") で再生");
+
+    ImGui::Separator();
+
+    // このエディタで対象にできるのは SpriteManager に登録済み(所有)のスプライトのみ。
+    // 一覧が空になる主因（未登録・外部所有）を明示して迷わせないようにする。
+    const int spriteCount = static_cast<int>(SpriteManager::GetInstance()->GetAllSprites().size());
+    if (spriteCount == 0)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.75f, 0.40f, 1.0f));
+        ImGui::TextWrapped("対象にできるスプライトがまだありません。ここで扱えるのは『スプライトマネージャ』に登録済み(所有)のスプライトだけです。"
+                           "スプライトマネージャで『スプライト作成』/『文字スプライト作成』を行うか、コードから SpriteManager::RegisterSprite() で登録すると、ここの一覧に出てきます。");
+        ImGui::PopStyleColor();
+    }
+    else
+    {
+        ImGui::TextDisabled("対象にできるスプライト: %d 個 (SpriteManager登録分)", spriteCount);
+    }
+    ImGui::Separator();
+
+    if (ImGui::BeginTabBar("##UIEditorTabs"))
+    {
+        // ============================================================
+        // グループ
+        // ============================================================
+        if (ImGui::BeginTabItem("グループ"))
+        {
+            // 新規作成
+            ImGui::SetNextItemWidth(180);
+            ImGui::InputText("##NewGroupName", newNameBuffer_, sizeof(newNameBuffer_));
+            ImGui::SameLine();
+            if (ImGui::Button("グループ作成") && newNameBuffer_[0] != '\0' && !FindGroup(newNameBuffer_))
+            {
+                UIGroup g;
+                g.name = newNameBuffer_;
+                groups_.push_back(g);
+                selectedGroup_ = static_cast<int>(groups_.size()) - 1;
+                newNameBuffer_[0] = '\0';
+            }
+
+            // グループ一覧
+            ImGui::BeginChild("##GroupList", ImVec2(180, 160), ImGuiChildFlags_Borders);
+            for (int i = 0; i < static_cast<int>(groups_.size()); ++i)
+            {
+                if (ImGui::Selectable(groups_[i].name.c_str(), selectedGroup_ == i))
+                    selectedGroup_ = i;
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+
+            // 選択グループの詳細
+            ImGui::BeginChild("##GroupDetail", ImVec2(0, 160), ImGuiChildFlags_Borders);
+            if (selectedGroup_ >= 0 && selectedGroup_ < static_cast<int>(groups_.size()))
+            {
+                UIGroup &g = groups_[selectedGroup_];
+                ImGui::Text("グループ: %s", g.name.c_str());
+                ImGui::DragFloat2("原点", &g.origin.x, 1.0f);
+                ImGui::TextDisabled("原点を動かすと全メンバーが相対を保って追従します");
+
+                if (ImGui::SmallButton("現在位置を相対値として一括取り込み"))
+                {
+                    for (auto &m : g.members)
+                    {
+                        InstanceSRT *s = SpriteManager::GetInstance()->GetInstanceSRT(m.spriteName, 0);
+                        if (s)
+                            m.offset = {s->translation.x - g.origin.x, s->translation.y - g.origin.y};
+                    }
+                }
+
+                ImGui::Separator();
+                ImGui::Text("メンバー");
+                int removeIndex = -1;
+                for (int mi = 0; mi < static_cast<int>(g.members.size()); ++mi)
+                {
+                    ImGui::PushID(mi);
+                    UIGroupMember &m = g.members[mi];
+                    ImGui::BulletText("%s", m.spriteName.c_str());
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(140);
+                    ImGui::DragFloat2("相対##off", &m.offset.x, 1.0f);
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("削除"))
+                        removeIndex = mi;
+                    ImGui::PopID();
+                }
+                if (removeIndex >= 0)
+                    g.members.erase(g.members.begin() + removeIndex);
+
+                // メンバー追加
+                static std::string addTarget;
+                ImGui::SetNextItemWidth(180);
+                TargetNameCombo("##AddMember", UITargetKind::Sprite, addTarget, groups_);
+                ImGui::SameLine();
+                if (ImGui::Button("メンバー追加") && !addTarget.empty())
+                {
+                    // 既に含まれていなければ追加。現在位置から相対オフセットを自動計算する。
+                    bool exists = false;
+                    for (auto &m : g.members)
+                        if (m.spriteName == addTarget)
+                            exists = true;
+                    if (!exists)
+                    {
+                        UIGroupMember m;
+                        m.spriteName = addTarget;
+                        InstanceSRT *s = SpriteManager::GetInstance()->GetInstanceSRT(addTarget, 0);
+                        if (s)
+                            m.offset = {s->translation.x - g.origin.x, s->translation.y - g.origin.y};
+                        g.members.push_back(m);
+                    }
+                }
+
+                ImGui::Separator();
+                if (ImGui::Button("このグループを削除"))
+                {
+                    groups_.erase(groups_.begin() + selectedGroup_);
+                    selectedGroup_ = -1;
+                }
+            }
+            else
+            {
+                ImGui::TextDisabled("左の一覧からグループを選択、または新規作成してください");
+            }
+            ImGui::EndChild();
+
+            ImGui::EndTabItem();
+        }
+
+        // ============================================================
+        // クリップ
+        // ============================================================
+        if (ImGui::BeginTabItem("クリップ"))
+        {
+            // 新規作成
+            ImGui::SetNextItemWidth(180);
+            ImGui::InputText("##NewClipName", newNameBuffer_, sizeof(newNameBuffer_));
+            ImGui::SameLine();
+            if (ImGui::Button("クリップ作成") && newNameBuffer_[0] != '\0' && !FindClip(newNameBuffer_))
+            {
+                UIClip c;
+                c.name = newNameBuffer_;
+                clips_.push_back(c);
+                selectedClip_ = static_cast<int>(clips_.size()) - 1;
+                newNameBuffer_[0] = '\0';
+            }
+
+            // クリップ一覧
+            ImGui::BeginChild("##ClipList", ImVec2(180, 0), ImGuiChildFlags_Borders);
+            for (int i = 0; i < static_cast<int>(clips_.size()); ++i)
+            {
+                std::string label = clips_[i].name;
+                if (clips_[i].playing_)
+                    label += " ▶";
+                if (ImGui::Selectable((label + "##clip" + std::to_string(i)).c_str(), selectedClip_ == i))
+                    selectedClip_ = i;
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+
+            // 選択クリップの詳細
+            ImGui::BeginChild("##ClipDetail", ImVec2(0, 0), ImGuiChildFlags_Borders);
+            if (selectedClip_ >= 0 && selectedClip_ < static_cast<int>(clips_.size()))
+            {
+                UIClip &c = clips_[selectedClip_];
+                ImGui::Text("クリップ: %s", c.name.c_str());
+                ImGui::Checkbox("ループ", &c.loop);
+                ImGui::SameLine();
+                if (ImGui::Button("▶ 再生"))
+                    Play(c.name);
+                ImGui::SameLine();
+                if (ImGui::Button("■ 停止"))
+                    Stop(c.name);
+                ImGui::SameLine();
+                ImGui::TextDisabled(c.playing_ ? "再生中" : "停止中");
+
+                ImGui::Separator();
+
+                int removeTween = -1;
+                for (int ti = 0; ti < static_cast<int>(c.tweens.size()); ++ti)
+                {
+                    ImGui::PushID(ti);
+                    UITween &t = c.tweens[ti];
+
+                    const char *chName = (static_cast<int>(t.channel) < kChannelCount)
+                                             ? kChannelNames[static_cast<int>(t.channel)]
+                                             : "?";
+                    std::string header = std::to_string(ti + 1) + ": " +
+                                         (t.targetName.empty() ? "(未選択)" : t.targetName) + " / " + chName;
+                    if (ImGui::CollapsingHeader((header + "##tw").c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        // 対象種別
+                        int kind = static_cast<int>(t.targetKind);
+                        if (ImGui::Combo("対象種別", &kind, kKindNames, 2))
+                        {
+                            t.targetKind = static_cast<UITargetKind>(kind);
+                            t.targetName.clear();
+                        }
+                        // 対象名
+                        TargetNameCombo("対象", t.targetKind, t.targetName, groups_);
+                        // プロパティ
+                        int ch = static_cast<int>(t.channel);
+                        if (ImGui::Combo("プロパティ", &ch, kChannelNames, kChannelCount))
+                            t.channel = static_cast<UIChannel>(ch);
+
+                        // 初期値・目標値
+                        ImGui::Checkbox("現在値から開始", &t.fromCurrent);
+                        if (t.fromCurrent)
+                            ImGui::BeginDisabled();
+                        ImGui::DragFloat("初期値", &t.startValue, 0.5f);
+                        if (t.fromCurrent)
+                            ImGui::EndDisabled();
+                        ImGui::DragFloat("目標値", &t.endValue, 0.5f);
+
+                        // 秒数・遅延
+                        ImGui::DragFloat("秒数", &t.duration, 0.01f, 0.0f, 60.0f, "%.2f");
+                        ImGui::DragFloat("遅延", &t.delay, 0.01f, 0.0f, 60.0f, "%.2f");
+
+                        // イージング
+                        int easing = static_cast<int>(t.easing);
+                        if (ImGui::Combo("イージング", &easing, kEasingNames, kEasingCount))
+                            t.easing = static_cast<EasingType>(easing);
+
+                        if (ImGui::SmallButton("このトゥイーンを削除"))
+                            removeTween = ti;
+                    }
+                    ImGui::PopID();
+                }
+                if (removeTween >= 0)
+                    c.tweens.erase(c.tweens.begin() + removeTween);
+
+                ImGui::Separator();
+                if (ImGui::Button("＋ トゥイーン追加"))
+                {
+                    UITween t;
+                    c.tweens.push_back(t);
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("このクリップを削除"))
+                {
+                    clips_.erase(clips_.begin() + selectedClip_);
+                    selectedClip_ = -1;
+                }
+            }
+            else
+            {
+                ImGui::TextDisabled("左の一覧からクリップを選択、または新規作成してください");
+            }
+            ImGui::EndChild();
+
+            ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
+    }
+
+    ImGui::End();
+}
+#endif // _DEBUG
+
+} // namespace Hagine
+
+
+============================================================
+File Path: Engine/2d/ui/UIAnimator.h
+============================================================
+#pragma once
+#include "Easing.h"
+#include <string>
+#include <type/Vector2.h>
+#include <vector>
+
+namespace Hagine {
+
+/// <summary>
+/// トゥイーンの操作対象の種別
+/// </summary>
+enum class UITargetKind
+{
+    Sprite, // 単体スプライト
+    Group,  // スプライトグループ（相対位置を保つ束）
+};
+
+/// <summary>
+/// トゥイーンで動かすプロパティ（1チャンネル＝スカラー値）
+/// </summary>
+enum class UIChannel
+{
+    PositionX, // 位置X（ピクセル）
+    PositionY, // 位置Y（ピクセル）
+    ScaleX,    // スケールX
+    ScaleY,    // スケールY
+    RotationZ, // 回転Z（ラジアン）
+    Alpha,     // 不透明度（0〜1）
+    Count,     // 種類数（配列サイズ用・実チャンネルではない）
+};
+
+/// <summary>
+/// 1本のトゥイーン。対象の1プロパティを 初期値→目標値 へイージング補間する。
+/// </summary>
+struct UITween
+{
+    UITargetKind targetKind = UITargetKind::Sprite; // 対象種別
+    std::string targetName;                         // 対象スプライト名／グループ名
+    UIChannel channel = UIChannel::PositionX;       // 動かすプロパティ
+    bool fromCurrent = false;                       // 再生時点の現在値を初期値にする
+    float startValue = 0.0f;                        // 初期値（fromCurrent=falseのとき使用）
+    float endValue = 0.0f;                          // 目標値
+    float duration = 0.5f;                          // 補間にかける秒数
+    float delay = 0.0f;                             // 再生開始からの遅延秒数
+    EasingType easing = EasingType::Linear;         // イージング種別
+
+    // ---- 実行時状態（保存しない） ----
+    float elapsed_ = 0.0f;       // 遅延込みの経過時間
+    float resolvedStart_ = 0.0f; // 実際に使う初期値（fromCurrent解決後）
+    bool finished_ = false;      // 補間完了フラグ
+};
+
+/// <summary>
+/// 名前付きクリップ。複数トゥイーンの束で、コードから名前で再生する単位。
+/// </summary>
+struct UIClip
+{
+    std::string name;             // クリップ名（Playの引数）
+    std::vector<UITween> tweens;  // 含まれるトゥイーン
+    bool loop = false;            // ループ再生するか
+
+    // ---- 実行時状態 ----
+    bool playing_ = false; // 再生中フラグ
+};
+
+/// <summary>
+/// グループのメンバー（スプライト名と原点からの相対オフセット）
+/// </summary>
+struct UIGroupMember
+{
+    std::string spriteName;         // メンバースプライト名
+    Vector2 offset = {0.0f, 0.0f};  // グループ原点からの相対位置（ピクセル）
+};
+
+/// <summary>
+/// 相対位置を保つスプライトの束。原点を動かすと全メンバーが相対を保って追従する。
+/// </summary>
+struct UIGroup
+{
+    std::string name;                    // グループ名
+    Vector2 origin = {0.0f, 0.0f};       // 原点（基準トランスフォーム）
+    std::vector<UIGroupMember> members;  // メンバー
+};
+
+/// <summary>
+/// UIスプライトのグループ管理と、名前付きトゥイーン（イージング）の再生を担うシングルトン。
+/// エディタで作成した「クリップ」を UIAnimator::Play("名前") でコード側から再生できる。
+/// 毎フレーム Update() を呼ぶことで再生中クリップの補間とグループ相対位置の反映を行う。
+/// </summary>
+class UIAnimator
+{
+  public:
+    /// <summary>
+    /// シングルトンインスタンスを取得
+    /// </summary>
+    static UIAnimator *GetInstance();
+
+    /// <summary>
+    /// 保存済みのグループ・クリップを読み込む（未ロードなら初回に自動で呼ばれる）
+    /// </summary>
+    void Initialize();
+
+    /// <summary>
+    /// 毎フレーム呼ぶ。再生中クリップの補間更新と、全グループの相対位置反映を行う。
+    /// </summary>
+    /// <param name="deltaTime">前フレームからの経過秒数</param>
+    void Update(float deltaTime);
+
+    /// ===================================================
+    /// コードから使う再生API
+    /// ===================================================
+
+    /// <summary>
+    /// 名前でクリップを先頭から再生する
+    /// </summary>
+    void Play(const std::string &clipName);
+
+    /// <summary>
+    /// 指定クリップの再生を止める
+    /// </summary>
+    void Stop(const std::string &clipName);
+
+    /// <summary>
+    /// すべてのクリップの再生を止める
+    /// </summary>
+    void StopAll();
+
+    /// <summary>
+    /// 指定クリップが再生中か
+    /// </summary>
+    bool IsPlaying(const std::string &clipName) const;
+
+    /// ===================================================
+    /// 保存・読み込み
+    /// ===================================================
+    void Save();
+    void Load();
+
+#ifdef _DEBUG
+    /// <summary>
+    /// UIエディタのImGuiを描画する
+    /// </summary>
+    /// <param name="open">ウィンドウの表示フラグ（×ボタンと同期）</param>
+    void DrawImGui(bool *open);
+#endif // _DEBUG
+
+  private:
+    UIAnimator() = default;
+    ~UIAnimator() = default;
+    UIAnimator(const UIAnimator &) = delete;
+    UIAnimator &operator=(const UIAnimator &) = delete;
+
+    UIClip *FindClip(const std::string &name);
+    UIGroup *FindGroup(const std::string &name);
+
+    /// 未ロードなら一度だけ Load() する
+    void EnsureLoaded();
+    /// クリップの再生状態を先頭にリセットし、fromCurrentの初期値を解決する
+    void RewindClip(UIClip &clip);
+    /// 1本のトゥイーンを進めて対象へ反映する
+    void UpdateTween(UITween &tween, float deltaTime);
+    /// チャンネルの現在値を取得（fromCurrent用）
+    float GetChannelValue(UITargetKind kind, const std::string &target, UIChannel ch);
+    /// チャンネルへ値を適用する
+    void ApplyChannel(UITargetKind kind, const std::string &target, UIChannel ch, float value);
+    /// 全グループの相対位置をメンバースプライトへ反映する
+    void ApplyGroups();
+
+  private:
+    std::vector<UIGroup> groups_; // 登録済みグループ
+    std::vector<UIClip> clips_;   // 登録済みクリップ
+    bool loaded_ = false;         // Load済みか
+
+#ifdef _DEBUG
+    int selectedGroup_ = -1;      // エディタで選択中のグループindex
+    int selectedClip_ = -1;       // エディタで選択中のクリップindex
+    char newNameBuffer_[128] = {}; // 新規作成・リネーム用の入力バッファ
+#endif // _DEBUG
+};
+
 } // namespace Hagine
 
 
@@ -42348,6 +43605,13 @@ void BaseObject::SaveParentChildRelationship() {
         }
     }
     ObjectDatas_->Save<std::vector<std::string>>("childrenNames", childrenNames);
+
+    // 親のSRTをどの成分まで継承するか（親子付けの挙動）も保存する
+    if (transform_) {
+        ObjectDatas_->Save<bool>("inheritTranslation", transform_->inheritTranslation_);
+        ObjectDatas_->Save<bool>("inheritRotation", transform_->inheritRotation_);
+        ObjectDatas_->Save<bool>("inheritScale", transform_->inheritScale_);
+    }
 }
 
 void BaseObject::LoadParentChildRelationship() {
@@ -43139,11 +44403,14 @@ void BaseObject::ImGui() {
 
         ImGui::Separator();
 
-        // ---- 各セクション（保存バーの分だけ高さを残してスクロール領域に収める）----
-        float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
-        ImGui::BeginChild("BaseObjectBody", ImVec2(0, -footer), ImGuiChildFlags_Borders);
+        // ---- 各セクション（枠の下端をドラッグして高さを自由に調整できる。ResizeYの高さはiniに保存される）----
+        ImGui::BeginChild("BaseObjectBody", ImVec2(0, 420.0f),
+                          ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY);
         DebugObject();
         ImGui::EndChild();
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+        ImGui::TextUnformatted("（枠の下端をドラッグすると高さを変えられます）");
+        ImGui::PopStyleColor();
 
         // ---- 保存バー（常に最下部に固定）----
         if (ColoredButton("この設定を全て保存##objsave", {0.20f, 0.45f, 0.20f, 0.80f})) {
@@ -43694,17 +44961,59 @@ void BaseObject::DebugObject() {
             ImGui::TreePop();
         }
 
-        // Texture
+        // Texture（サムネ＋D&D＋フォルダ選択。フォルダ一覧はポップアップに入れてスクロールを奪わない）
         if (ImGui::TreeNodeEx("テクスチャ##tx", ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            ShowTextureFile(texturePath_);
-            ImGui::Spacing();
-            if (ImGui::SmallButton("適用##ta")) {
-                SetTexture(texturePath_, selMat);
-                texturePaths_[selMat] = texturePath_;
+            auto *tm = TextureManager::GetInstance();
+            const std::string curTex =
+                (selMat < static_cast<int>(texturePaths_.size())) ? texturePaths_[selMat] : std::string();
+
+            // 現在のテクスチャのサムネイル（ここへドラッグ&ドロップでも設定できる）
+            D3D12_GPU_DESCRIPTOR_HANDLE texHandle{};
+            if (!curTex.empty()) {
+                tm->LoadTexture(curTex); // ロード済みなら即return
+                texHandle = tm->GetSrvHandleGPU(AssetPath::Image(curTex));
             }
+            if (texHandle.ptr != 0)
+                ImGui::Image(static_cast<ImTextureID>(texHandle.ptr), ImVec2(56.0f, 56.0f));
+            else
+                ImGui::Button("ここへ\nドロップ", ImVec2(56.0f, 56.0f));
+            std::string dropped;
+            if (AssetDragDrop::TextureTarget(dropped)) {
+                SetTexture(dropped, selMat);
+                if (selMat < static_cast<int>(texturePaths_.size()))
+                    texturePaths_[selMat] = dropped;
+                texturePath_ = dropped;
+            }
+            ImGui::SetItemTooltip("アセットブラウザの画像をD&Dで設定できます");
+
+            ImGui::SameLine();
+            ImGui::BeginGroup();
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
+            ImGui::Text("現在: %s", curTex.empty() ? "(なし)" : curTex.c_str());
+            ImGui::PopStyleColor();
+            if (ImGui::SmallButton("フォルダから選択...##topen"))
+                ImGui::OpenPopup("テクスチャ選択##texpop");
             ImGui::SameLine();
             if (ImGui::SmallButton("クリア##tc"))
                 texturePath_.clear();
+            ImGui::EndGroup();
+
+            // フォルダブラウザは別ウィンドウ（ポップアップ）に置く＝インスペクタ側のスクロールを奪わない
+            ImGui::SetNextWindowSize(ImVec2(540, 480), ImGuiCond_Appearing);
+            if (ImGui::BeginPopup("テクスチャ選択##texpop")) {
+                ShowTextureFile(texturePath_);
+                ImGui::Separator();
+                if (ImGui::Button("適用##ta")) {
+                    SetTexture(texturePath_, selMat);
+                    if (selMat < static_cast<int>(texturePaths_.size()))
+                        texturePaths_[selMat] = texturePath_;
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("閉じる##tclose"))
+                    ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
             ImGui::TreePop();
         }
 
@@ -43775,20 +45084,29 @@ void BaseObject::DebugObject() {
                     }
                     ImGui::EndGroup();
 
-                    // ---- フォルダから選択 ----
-                    if (ImGui::TreeNodeEx("フォルダから選択##nmbrowse", ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                    // ---- フォルダから選択（ポップアップ＝スクロールを奪わない）----
+                    if (ImGui::SmallButton("フォルダから選択...##nmopen"))
+                        ImGui::OpenPopup("法線マップ選択##nmpop");
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("選択中: %s", normalMapPath_.empty() ? "(なし)" : normalMapPath_.c_str());
+
+                    ImGui::SetNextWindowSize(ImVec2(540, 480), ImGuiCond_Appearing);
+                    if (ImGui::BeginPopup("法線マップ選択##nmpop")) {
                         ShowTextureFile(normalMapPath_, "normalmap");
-                        ImGui::Spacing();
+                        ImGui::Separator();
                         ImGui::BeginDisabled(normalMapPath_.empty());
-                        if (ImGui::SmallButton("適用##nmapply"))
+                        if (ImGui::SmallButton("適用##nmapply")) {
                             mat->SetNormalMap(normalMapPath_);
+                            ImGui::CloseCurrentPopup();
+                        }
                         ImGui::EndDisabled();
                         ImGui::SameLine();
                         if (ImGui::SmallButton("選択解除##nmdesel"))
                             normalMapPath_.clear();
                         ImGui::SameLine();
-                        ImGui::TextDisabled("選択中: %s", normalMapPath_.empty() ? "(なし)" : normalMapPath_.c_str());
-                        ImGui::TreePop();
+                        if (ImGui::SmallButton("閉じる##nmclose"))
+                            ImGui::CloseCurrentPopup();
+                        ImGui::EndPopup();
                     }
                 }
 
@@ -44604,6 +45922,8 @@ class BaseObject {
 File Path: Engine/3d/object/base/BaseObjectManager.cpp
 ============================================================
 #include "BaseObjectManager.h"
+#include "SpriteManager.h"
+#include <2d/ui/UIAnimator.h>
 #include <asset/AssetPath.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
 #ifdef _DEBUG
@@ -44847,52 +46167,16 @@ void BaseObjectManager::ShowParentChildHierarchy()
     if (ImGui::CollapsingHeader("階層エディター", ImGuiTreeNodeFlags_DefaultOpen))
     {
 
-        // 親子付けセクション
+        // 親子付けは下のツリーで直感的に操作する（右クリックメニュー / ドラッグ&ドロップ）
         ImGui::Separator();
-        ImGui::Text("親子付け:");
-
-        static int selectedChild = 0;
-        static int selectedParent = 0;
-
-        std::vector<std::string> objectNames = GetObjectNames();
-
-        if (!objectNames.empty())
-        {
-            std::vector<const char *> objectNamesCStr;
-            for (const auto &name : objectNames)
-            {
-                objectNamesCStr.push_back(name.c_str());
-            }
-
-            ImGui::Text("子オブジェクト:");
-            ImGui::SameLine();
-            ImGui::PushItemWidth(150);
-            ImGui::Combo("##ChildObject", &selectedChild, objectNamesCStr.data(), static_cast<int>(objectNamesCStr.size()));
-            ImGui::PopItemWidth();
-
-            ImGui::Text("親オブジェクト:");
-            ImGui::SameLine();
-            ImGui::PushItemWidth(150);
-            ImGui::Combo("##ParentObject", &selectedParent, objectNamesCStr.data(), static_cast<int>(objectNamesCStr.size()));
-            ImGui::PopItemWidth();
-
-            selectedChild = std::clamp(selectedChild, 0, static_cast<int>(objectNames.size()) - 1);
-            selectedParent = std::clamp(selectedParent, 0, static_cast<int>(objectNames.size()) - 1);
-
-            if (ImGui::Button("親子付け"))
-            {
-                if (selectedChild != selectedParent)
-                {
-                    SetParentChild(objectNames[selectedChild], objectNames[selectedParent]);
-                }
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button("親子解除"))
-            {
-                RemoveParentChild(objectNames[selectedChild]);
-            }
-        }
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.72f, 0.80f, 0.92f, 1.0f));
+        ImGui::TextWrapped("親子付けの操作:");
+        ImGui::PopStyleColor();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.60f, 1.0f));
+        ImGui::BulletText("ノードを右クリック →「親を設定」「親子解除」");
+        ImGui::BulletText("右クリックメニューで「継承(位置/回転/スケール)」も切替可能");
+        ImGui::BulletText("ドラッグして別ノードに重ねても親子付け（余白へドロップで解除）");
+        ImGui::PopStyleColor();
 
         ImGui::Separator();
         ImGui::Text("階層表示:");
@@ -44998,6 +46282,64 @@ void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth)
         ImGui::EndDragDropTarget();
     }
 
+    // 右クリックメニュー: 親を設定 / 親子解除 / 親のSRT継承設定
+    if (ImGui::BeginPopupContextItem((obj->GetName() + "##ctx").c_str()))
+    {
+        ImGui::TextDisabled("%s", obj->GetName().c_str());
+        ImGui::Separator();
+
+        if (ImGui::BeginMenu("親を設定"))
+        {
+            for (auto &[otherName, other] : objects_)
+            {
+                if (other == obj)
+                    continue;
+                // 循環になる相手（自分の子孫）は候補から除外する
+                bool isDescendant = false;
+                for (BaseObject *p = other; p; p = p->GetParent())
+                {
+                    if (p == obj)
+                    {
+                        isDescendant = true;
+                        break;
+                    }
+                }
+                if (isDescendant)
+                    continue;
+
+                const bool isCurrentParent = (obj->GetParent() == other);
+                if (ImGui::MenuItem(otherName.c_str(), nullptr, isCurrentParent))
+                {
+                    // 実際の付け替えはツリー描画後にまとめて適用する（g_dnd 経由）
+                    g_dndReparentChild = obj->GetName();
+                    g_dndReparentParent = otherName;
+                    g_dndReparentRequested = true;
+                }
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::MenuItem("親子解除", nullptr, false, obj->GetParent() != nullptr))
+        {
+            g_dndReparentChild = obj->GetName();
+            g_dndReparentParent.clear();
+            g_dndReparentRequested = true;
+        }
+
+        // 親がある場合のみ、親のSRTをどこまで継承するかを切り替えられる
+        if (obj->GetParent() && obj->GetWorldTransform())
+        {
+            ImGui::Separator();
+            ImGui::TextDisabled("親の継承 (外すと追従しない)");
+            WorldTransform *t = obj->GetWorldTransform();
+            ImGui::Checkbox("位置を継承##inh", &t->inheritTranslation_);
+            ImGui::Checkbox("回転を継承##inh", &t->inheritRotation_);
+            ImGui::Checkbox("スケールを継承##inh", &t->inheritScale_);
+        }
+
+        ImGui::EndPopup();
+    }
+
     if (nodeOpen)
     {
         // 子オブジェクトを表示
@@ -45093,6 +46435,15 @@ void BaseObjectManager::LoadAllParentChildRelationships()
         if (child && parent)
         {
             child->SetParent(parent);
+
+            // SRT成分ごとの継承設定を復元する（未保存の古いデータは全継承=trueにフォールバック）
+            if (child->ObjectDatas_ && child->GetWorldTransform())
+            {
+                WorldTransform *ct = child->GetWorldTransform();
+                ct->inheritTranslation_ = child->ObjectDatas_->Load<bool>("inheritTranslation", true);
+                ct->inheritRotation_ = child->ObjectDatas_->Load<bool>("inheritRotation", true);
+                ct->inheritScale_ = child->ObjectDatas_->Load<bool>("inheritScale", true);
+            }
         }
     }
 }
@@ -45369,14 +46720,33 @@ void BaseObjectManager::DrawSceneSaveModel()
         // テキスト入力欄（sceneName_ を編集）
         ImGui::InputText("シーン名", sceneNameBuffer, IM_ARRAYSIZE(sceneNameBuffer));
 
+        // 保存する内容の選択（オブジェクト以外も一緒に保存できるようにする）
+        ImGui::Separator();
+        ImGui::TextDisabled("保存する内容:");
+        bool objAlways = true;
+        ImGui::BeginDisabled();
+        ImGui::Checkbox("オブジェクト (セーブ対象のみ)", &objAlways);
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("どのオブジェクトを保存するかは下の「セーブ対象管理」で仕分けできます");
+        static bool saveSprites = true;
+        static bool saveUI = true;
+        ImGui::Checkbox("スプライト (全シーン共通)", &saveSprites);
+        ImGui::Checkbox("UIアニメーション (全シーン共通)", &saveUI);
+        ImGui::Separator();
+
         // 横並びに「保存」ボタンと「キャンセル」ボタン
         if (ImGui::Button("保存", ImVec2(120, 0)))
         {
             sceneName_ = sceneNameBuffer; // 入力内容を保存
             std::unique_ptr<DataHandler> datas_ = std::make_unique<DataHandler>("SceneData/" + sceneName_ + "/ObjectDatas", "");
             datas_->DeleteAllJsonsInFolder();
-            SaveAll();                         // 実際の保存処理
+            SaveAll();                         // オブジェクトの保存
             SaveAllParentChildRelationships(); // 親子関係も保存
+            if (saveSprites)
+                SpriteManager::GetInstance()->SaveAllSprites(); // スプライトも保存
+            if (saveUI)
+                UIAnimator::GetInstance()->Save();       // UIアニメーションも保存
             ImGui::CloseCurrentPopup();        // モーダルを閉じる
             sceneName_.clear();                // 入力欄をクリア
         }
@@ -45413,12 +46783,25 @@ void BaseObjectManager::DrawSceneLoadModel()
         // テキスト入力欄（sceneName_ を編集）
         ImGui::InputText("シーン名", sceneNameBuffer, IM_ARRAYSIZE(sceneNameBuffer));
 
+        // 読み込む内容の選択
+        ImGui::Separator();
+        ImGui::TextDisabled("読み込む内容:");
+        static bool loadSprites = true;
+        static bool loadUI = true;
+        ImGui::Checkbox("スプライトも読み込み", &loadSprites);
+        ImGui::Checkbox("UIアニメーションも読み込み", &loadUI);
+        ImGui::Separator();
+
         // 横並びに「読み込み」ボタンと「キャンセル」ボタン
         if (ImGui::Button("読み込み", ImVec2(120, 0)))
         {
             sceneName_ = sceneNameBuffer;      // 入力内容を保存
-            LoadAll(sceneName_);               // 実際の読み込み処理
+            LoadAll(sceneName_);               // オブジェクトの読み込み
             LoadAllParentChildRelationships(); // 親子関係も読み込み
+            if (loadSprites)
+                SpriteManager::GetInstance()->LoadAllSprites(); // スプライトも読み込み
+            if (loadUI)
+                UIAnimator::GetInstance()->Load();       // UIアニメーションも読み込み
             ImGui::CloseCurrentPopup();        // モーダルを閉じる
             sceneName_.clear();                // 読み込み後はシーン名をクリア
         }
@@ -47301,6 +48684,8 @@ void ParticleEmitter::Initialize(std::string name)
 #ifdef _DEBUG
     // WorldTransformのアドレスを渡す
     ImGuizmoManager::GetInstance()->AddTarget(name_, &transform_, isGizmoSelectable_);
+    // WorldTransform単体の既定はObjectなので、パーティクルとして明示的に分類し直す
+    ImGuizmoManager::GetInstance()->SetCategory(name_, GizmoCategory::Particle);
 #endif
 }
 
@@ -62670,7 +64055,21 @@ void WorldTransform::UpdateMatrix()
     // 親があれば親のワールド行列を掛ける
     if (pParent_)
     {
-        matWorld_ = matWorld_ * pParent_->matWorld_;
+        if (inheritTranslation_ && inheritRotation_ && inheritScale_)
+        {
+            // 全成分を継承（従来どおり）
+            matWorld_ = matWorld_ * pParent_->matWorld_;
+        }
+        else
+        {
+            // 継承する成分だけで親行列を組み直して掛ける。
+            // 親のワールドSRTを取り出し、継承しない成分は単位（Sなら1, Rなら無回転, Tなら0）にする。
+            const Vector3 pScale = inheritScale_ ? pParent_->GetWorldScale() : Vector3{1.0f, 1.0f, 1.0f};
+            const Quaternion pRot = inheritRotation_ ? pParent_->GetWorldRotationQuaternion() : Quaternion::IdentityQuaternion();
+            const Vector3 pTrans = inheritTranslation_ ? pParent_->GetWorldPosition() : Vector3{0.0f, 0.0f, 0.0f};
+            const Matrix4x4 filteredParent = MakeAffineMatrix(pScale, pRot, pTrans);
+            matWorld_ = matWorld_ * filteredParent;
+        }
     }
 
     // 定数バッファに転送する
@@ -62847,6 +64246,13 @@ class WorldTransform
     Matrix4x4 matWorld_;
     // 親となるワールド変換へのポインタ
     const WorldTransform *pParent_ = nullptr;
+
+    // 親のトランスフォームを成分ごとに継承するか（親子付けの挙動を細かく制御する）。
+    // 3つとも true（既定）なら従来どおり親のワールド行列をそのまま掛ける。
+    // いずれかを false にすると、その成分だけ親に追従しなくなる（例: 位置だけ親に付いていく等）。
+    bool inheritTranslation_ = true; // 親の位置を継承する
+    bool inheritRotation_ = true;    // 親の回転を継承する
+    bool inheritScale_ = true;       // 親のスケールを継承する
 
     WorldTransform();
     ~WorldTransform();
@@ -66250,6 +67656,7 @@ File Path: Engine/core/Framework.cpp
 #include "Framework.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include "utility/scene/SceneRegistry.h"
+#include <2d/ui/UIAnimator.h>
 #include <debug/profiler/CpuProfiler.h>
 #include <debug/log/Logger.h>
 #include <Frame.h>
@@ -66623,6 +68030,11 @@ void Framework::Update()
     {
         HAGINE_CPU_PROFILE("Update/Objects(anim+phys)");
         pBaseObjectManager_->Update();
+    }
+    {
+        // UIトゥイーンの補間とグループ相対位置の反映（スプライト行列構築の前に行う）
+        HAGINE_CPU_PROFILE("Update/UIAnimator");
+        UIAnimator::GetInstance()->Update(Frame::DeltaTime());
     }
     {
         HAGINE_CPU_PROFILE("Update/Sprites");
@@ -82279,6 +83691,7 @@ File Path: Engine/utility/debug/imgui/ImGuiManager.cpp
 #include "ImGuiManager.h"
 #ifdef _DEBUG
 #include "2d/text/TextRenderer.h"
+#include "2d/ui/UIAnimator.h"
 #include "AssetDragDrop.h"
 #include "DebugUIHelper.h"
 #include "ImGuiNotification.h"
@@ -82676,16 +84089,15 @@ void ImGuiManager::ShowMainMenu() {
                 }
             }
             ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_CUT " 切り取り", "Ctrl+X")) {
-            }
-            if (ImGui::MenuItem(ICON_FA_COPY " コピー", "Ctrl+C")) {
+            // 選択オブジェクトのコピー/貼り付け/削除（ギズモの選択に対して実行する）
+            if (ImGui::MenuItem(ICON_FA_COPY " 選択オブジェクトをコピー", "Ctrl+C")) {
+                pImGuizmoManager_->CopySelectedObjects();
             }
             if (ImGui::MenuItem(ICON_FA_PASTE " 貼り付け", "Ctrl+V")) {
+                pImGuizmoManager_->PasteObjects();
             }
-            if (ImGui::MenuItem(ICON_FA_TRASH_ALT " 削除", "Delete")) {
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem(ICON_FA_COG " 環境設定", "Ctrl+,")) {
+            if (ImGui::MenuItem(ICON_FA_TRASH_ALT " 選択オブジェクトを削除", "Delete")) {
+                pImGuizmoManager_->DeleteSelectedObjects();
             }
             ImGui::EndMenu();
         }
@@ -82694,38 +84106,42 @@ void ImGuiManager::ShowMainMenu() {
         if (ImGui::BeginMenu(ICON_FA_EYE " 表示")) {
             // ウィンドウ表示設定（カテゴリ別にまとめて見やすくする）
             if (ImGui::BeginMenu(ICON_FA_WINDOW_MAXIMIZE " ウィンドウ")) {
-                // チェック付きのトグル行。クリックしてもメニューは閉じない
-                auto windowToggle = [](const char *label, bool &flag) {
+                // チェック付きのトグル行。クリックしてもメニューは閉じない。
+                // ホバーでその窓が何をするものかの説明を出す（初見でも分かるように）。
+                auto windowToggle = [](const char *label, bool &flag, const char *tip) {
                     if (ImGui::Selectable(label, flag, ImGuiSelectableFlags_DontClosePopups))
                         flag = !flag;
+                    if (tip && *tip && ImGui::IsItemHovered())
+                        ImGui::SetTooltip("%s", tip);
                 };
 
                 ImGui::SeparatorText("シーン・オブジェクト");
-                windowToggle(ICON_FA_BOOK_OPEN " シーンビュー", showSceneView_);
-                windowToggle(ICON_FA_CUBE " オブジェクトビュー", showObjectView_);
-                windowToggle(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャ", showHierarchyView_);
-                windowToggle(ICON_FA_ARROWS_ALT " ギズモ", showGizmoView_);
+                windowToggle(ICON_FA_BOOK_OPEN " シーン設定", showSceneView_, "シーン全体の設定（カメラ・背景など）を編集します");
+                windowToggle(ICON_FA_CUBE " オブジェクト設定 (インスペクタ)", showObjectView_, "選択中オブジェクトの詳細（トランスフォーム・マテリアル等）を編集します");
+                windowToggle(ICON_FA_PROJECT_DIAGRAM " オブジェクトマネージャ (階層)", showHierarchyView_, "シーン内オブジェクトの一覧・選択・親子付けを操作します");
+                windowToggle(ICON_FA_ARROWS_ALT " ギズモ (トランスフォーム)", showGizmoView_, "移動/回転/拡縮の操作と、操作対象の種類フィルタ（オブジェクト/スプライト/パーティクル）");
 
                 ImGui::SeparatorText("アセット・エディタ");
-                windowToggle(ICON_FA_IMAGES " アセットブラウザ", showAssetBrowserView_);
-                windowToggle(ICON_FA_SQUARE " スプライトマネージャ", showSpriteManagerView_);
-                windowToggle(ICON_FA_SHAPES " コライダー", showColliderTagManagerView_);
-                windowToggle(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_);
-                windowToggle(ICON_FA_CODE_BRANCH " モーションエディター", showMotionEditorView_);
+                windowToggle(ICON_FA_IMAGES " アセットブラウザ", showAssetBrowserView_, "画像を一覧表示し、ドラッグでテクスチャに割り当てます");
+                windowToggle(ICON_FA_SQUARE " スプライトマネージャ", showSpriteManagerView_, "2Dスプライトの一覧・編集と、文字スプライトの作成（プレビュー付き）");
+                windowToggle(ICON_FA_PLAY_CIRCLE " UIエディタ", showUIEditorView_, "スプライトのグループ化と、名前付きイージング(トゥイーン)の作成・再生");
+                windowToggle(ICON_FA_SHAPES " コライダー", showColliderTagManagerView_, "当たり判定の確認・調整とタグ管理");
+                windowToggle(ICON_FA_BULLHORN " オーディオ", showAudioManagerView_, "再生中サウンドの確認・音量調整");
+                windowToggle(ICON_FA_CODE_BRANCH " モーションエディター", showMotionEditorView_, "オブジェクトのモーション（アニメーション）を編集します");
 
                 ImGui::SeparatorText("パーティクル");
-                windowToggle(ICON_FA_STAR " パーティクルビュー", showParticleView_);
-                windowToggle(ICON_FA_IMAGE " パーティクルプレビュー", showParticlePreviewView_);
+                windowToggle(ICON_FA_STAR " パーティクル設定", showParticleView_, "パーティクル/フィールドの設定と、シーンへの配置");
+                windowToggle(ICON_FA_IMAGE " パーティクルプレビュー", showParticlePreviewView_, "GPUパーティクルを単体でプレビューします");
 
                 ImGui::SeparatorText("レンダリング");
-                windowToggle(ICON_FA_STAR_OF_DAVID " オフスクリーン", showOfScreenView_);
-                windowToggle(ICON_FA_LIGHTBULB " ライト", showLightView_);
-                windowToggle(ICON_FA_ADJUST " シャドウマップ", showShadowMapView_);
-                windowToggle(ICON_FA_LAYER_GROUP " 描画システム", showDrawSystemView_);
+                windowToggle(ICON_FA_STAR_OF_DAVID " オフスクリーン (ポストエフェクト)", showOfScreenView_, "ポストエフェクト（ブラー・色調・白黒など）の設定");
+                windowToggle(ICON_FA_LIGHTBULB " ライト", showLightView_, "ライティング（平行光・環境光など）の設定");
+                windowToggle(ICON_FA_ADJUST " シャドウマップ", showShadowMapView_, "影の描画設定・デバッグ表示");
+                windowToggle(ICON_FA_LAYER_GROUP " 描画システム", showDrawSystemView_, "描画ステージ/順序などレンダリング全体の設定");
 
                 ImGui::SeparatorText("統計・デバッグ");
-                windowToggle(ICON_FA_DATABASE " FPS統計", showFPSView_);
-                windowToggle(ICON_FA_SLIDERS_H " ゲームパラメータ", showGameParamView_);
+                windowToggle(ICON_FA_DATABASE " 統計 (FPS/プロファイラ/ログ)", showFPSView_, "FPS・処理時間・ログ履歴を表示します");
+                windowToggle(ICON_FA_SLIDERS_H " ゲームパラメータ", showGameParamView_, "コードに登録したパラメータを実行中に調整・保存・仕分けします");
 
                 ImGui::EndMenu();
             }
@@ -82961,24 +84377,15 @@ void ImGuiManager::ShowMainMenu() {
 
             // 2Dオブジェクト
             if (ImGui::BeginMenu(ICON_FA_SQUARE " 2Dオブジェクト")) {
-                if (ImGui::MenuItem(ICON_FA_SQUARE " スプライト")) {
+                if (ImGui::MenuItem(ICON_FA_SQUARE " スプライト作成")) {
                     pSpriteManager_->ShowSpriteCreationModal();
                 }
-                if (ImGui::MenuItem(ICON_FA_FONT " テキスト")) {
+                if (ImGui::MenuItem(ICON_FA_FONT " 文字スプライト作成")) {
+                    // 文字スプライトの作成UIはスプライトマネージャ窓内に表示される
+                    showSpriteManagerView_ = true;
                 }
-                if (ImGui::MenuItem(ICON_FA_IMAGE " 画像")) {
-                }
-                ImGui::EndMenu();
-            }
-
-            // エフェクト
-            if (ImGui::BeginMenu(ICON_FA_MAGIC " エフェクト")) {
-                if (ImGui::MenuItem(ICON_FA_SNOWFLAKE " パーティクルシステム")) {
-                }
-                if (ImGui::MenuItem(ICON_FA_LIGHTBULB " ライト")) {
-                }
-                if (ImGui::MenuItem(ICON_FA_VIDEO " カメラ")) {
-                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("スプライトマネージャ窓を開きます（そこで文字→画像を生成）");
                 ImGui::EndMenu();
             }
 
@@ -82989,8 +84396,6 @@ void ImGuiManager::ShowMainMenu() {
         if (ImGui::BeginMenu(ICON_FA_QUESTION_CIRCLE " ヘルプ")) {
             if (ImGui::MenuItem(ICON_FA_KEYBOARD " ショートカット一覧", "F1")) {
                 showShortcutWindow_ = !showShortcutWindow_;
-            }
-            if (ImGui::MenuItem(ICON_FA_INFO_CIRCLE " バージョン情報")) {
             }
             ImGui::EndMenu();
         }
@@ -83215,6 +84620,14 @@ void ImGuiManager::ShowSpriteManagerWindow() {
     ImGui::End();
 
     TextRenderer::GetInstance()->UpdateImGui();
+}
+
+void ImGuiManager::ShowUIEditorWindow() {
+    if (!showUIEditorView_)
+        return; // 表示しない場合は早期リターン
+
+    // ウィンドウの生成・閉じるボタンは UIAnimator 側に委譲する
+    UIAnimator::GetInstance()->DrawImGui(&showUIEditorView_);
 }
 
 void ImGuiManager::ShowColliderTagManagerWindow() {
@@ -83555,6 +84968,8 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     ShowMotionEditorWindow();
     // スプライトマネージャウィンドウを描画
     ShowSpriteManagerWindow();
+    // UIエディタウィンドウを描画
+    ShowUIEditorWindow();
     // コライダータグマネージャウィンドウを描画
     ShowColliderTagManagerWindow();
     // オーディオマネージャウィンドウを描画
@@ -84047,6 +85462,7 @@ void ImGuiManager::SaveFlag() {
     data->Save("showMotionEditorView", showMotionEditorView_);
     data->Save("showShortcutWindow", showShortcutWindow_);
     data->Save("showSpriteManagerView", showSpriteManagerView_);
+    data->Save("showUIEditorView", showUIEditorView_);
     data->Save("showShadowMapView", showShadowMapView_);
     data->Save("showDrawSystemView", showDrawSystemView_);
     data->Save("showAssetBrowserView", showAssetBrowserView_);
@@ -84074,6 +85490,7 @@ void ImGuiManager::LoadFlag() {
     showMotionEditorView_ = data->Load("showMotionEditorView", false);
     showShortcutWindow_ = data->Load("showShortcutWindow", false);
     showSpriteManagerView_ = data->Load("showSpriteManagerView", false);
+    showUIEditorView_ = data->Load("showUIEditorView", false);
     showShadowMapView_ = data->Load("showShadowMapView", true);
     showDrawSystemView_ = data->Load("showDrawSystemView", true);
     showAssetBrowserView_ = data->Load("showAssetBrowserView", false);
@@ -84248,6 +85665,9 @@ class ImGuiManager {
 
     void ShowSpriteManagerWindow();
 
+    // UIエディタ窓（スプライトのグループ管理＋名前付きトゥイーン）
+    void ShowUIEditorWindow();
+
     void ShowColliderTagManagerWindow();
 
     void ShowAudioManagerWindow();
@@ -84328,6 +85748,7 @@ class ImGuiManager {
     bool showHierarchyView_ = true;
     bool showMotionEditorView_ = true;
     bool showSpriteManagerView_ = true;
+    bool showUIEditorView_ = false; // UIエディタ窓
     bool showColliderTagManagerView_ = false;
     bool showAudioManagerView_ = false;
     bool showShadowMapView_ = true;
@@ -84721,6 +86142,7 @@ void ImGuizmoManager::AddTarget(const std::string &name, BaseObject *object, boo
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::BaseObject;
+    target.category = GizmoCategory::Object;
     target.name = name;
     target.baseObject = object;
     target.selectable = selectable;
@@ -84741,6 +86163,9 @@ void ImGuizmoManager::AddTarget(const std::string &name, WorldTransform *worldTr
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::WorldTransform;
+    // WorldTransform 単体は 3Dオブジェクト扱いを既定とする。
+    // パーティクル等で分類を変えたい場合は AddTarget 後に SetCategory を呼ぶ。
+    target.category = GizmoCategory::Object;
     target.name = name;
     target.worldTransform = worldTransform;
     target.selectable = selectable;
@@ -84765,6 +86190,9 @@ void ImGuizmoManager::AddTarget(const std::string &name,
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::FreeTransform;
+    // Vector3 直接指定はパーティクルエミッターで多く使われるため既定はParticle。
+    // スプライト等は AddTarget 後に SetCategory で上書きする。
+    target.category = GizmoCategory::Particle;
     target.name = name;
     target.translate = translate;
     target.rotate = rotate;
@@ -84786,6 +86214,7 @@ void ImGuizmoManager::AddTarget(const std::string &name, Sprite *sprite, bool se
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::Sprite2D;
+    target.category = GizmoCategory::Sprite;
     target.name = name;
     target.position2D = &sprite->GetPositionRef();
     target.selectable = selectable;
@@ -84843,6 +86272,58 @@ void ImGuizmoManager::imgui()
     ImGui::Checkbox("デバッグ表示する", &isDrawDebug_);
     ImGui::PopStyleColor();
     ImGui::SetItemTooltip("選択中オブジェクトの AABB / スフィア / レイを線で表示します");
+
+    // ---- 操作対象フィルタ ----
+    // 3種類（オブジェクト/スプライト/パーティクル）が同時にあると掴みたい物を選びづらいので、
+    // チェックした種類だけを選択・マウスピック・ギズモ表示・デバッグ描画の対象にする。
+    ImGui::Spacing();
+    SectionHeader("[ 操作対象フィルタ ]", DebugTheme::kAccentGreen);
+    ImGui::TextDisabled("チェックした種類だけ選択・操作できます");
+    bool filterChanged = false;
+    ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
+    filterChanged |= ImGui::Checkbox("オブジェクト", &categoryEnabled_[static_cast<int>(GizmoCategory::Object)]);
+    ImGui::SameLine();
+    filterChanged |= ImGui::Checkbox("スプライト", &categoryEnabled_[static_cast<int>(GizmoCategory::Sprite)]);
+    ImGui::SameLine();
+    filterChanged |= ImGui::Checkbox("パーティクル", &categoryEnabled_[static_cast<int>(GizmoCategory::Particle)]);
+    ImGui::PopStyleColor();
+    // 「この種類だけ」を素早く選べるショートカット
+    if (ImGui::SmallButton("全部##catAll"))
+    {
+        for (bool &e : categoryEnabled_)
+            e = true;
+        filterChanged = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("オブジェクトのみ"))
+    {
+        categoryEnabled_[0] = true;
+        categoryEnabled_[1] = false;
+        categoryEnabled_[2] = false;
+        filterChanged = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("スプライトのみ"))
+    {
+        categoryEnabled_[0] = false;
+        categoryEnabled_[1] = true;
+        categoryEnabled_[2] = false;
+        filterChanged = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("パーティクルのみ"))
+    {
+        categoryEnabled_[0] = false;
+        categoryEnabled_[1] = false;
+        categoryEnabled_[2] = true;
+        filterChanged = true;
+    }
+    if (filterChanged)
+    {
+        // 無効化された種類の選択を解除し、一覧も更新する
+        PruneSelectionByFilter();
+        UpdateFilteredNames();
+    }
 
     ImGui::Spacing();
     SectionHeader("[ 操作モード ]", DebugTheme::kAccentBlue);
@@ -85052,6 +86533,26 @@ void ImGuizmoManager::ShowSelectedObjectImGui()
     }
 }
 
+// ---- PruneSelectionByFilter -------------------------------------------
+
+// 操作対象フィルタで無効化された分類の名前を選択セットから取り除く。
+// これによりフィルタOFFにした種類のギズモが表示され続けるのを防ぐ。
+void ImGuizmoManager::PruneSelectionByFilter()
+{
+    for (auto it = selectedNames_.begin(); it != selectedNames_.end();)
+    {
+        auto found = transformMap_.find(*it);
+        if (found != transformMap_.end() && !IsCategoryEnabled(found->second.category))
+        {
+            it = selectedNames_.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
 // ---- HandleMouseSelection ---------------------------------------------
 
 // マウスクリック時のレイキャストによる選択判定
@@ -85085,6 +86586,8 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     {
         const GizmoTarget &target = pair.second;
         if (!target.selectable || !target.isScreenSpace)
+            continue;
+        if (!IsCategoryEnabled(target.category))
             continue;
         if (isMultiSelecting_ && selectedNames_.find(pair.first) != selectedNames_.end())
             continue;
@@ -85155,6 +86658,8 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
         {
             const GizmoTarget &target = pair.second;
             if (!target.selectable || target.isScreenSpace)
+                continue;
+            if (!IsCategoryEnabled(target.category))
                 continue;
             if (target.type == GizmoTarget::Type::BaseObject)
             {
@@ -85652,7 +87157,12 @@ void ImGuizmoManager::UpdateFilteredNames()
 
     std::vector<std::string> allNames;
     for (const auto &pair : transformMap_)
+    {
+        // 操作対象フィルタで無効化された種類は一覧に出さない
+        if (!IsCategoryEnabled(pair.second.category))
+            continue;
         allNames.push_back(pair.first);
+    }
     std::sort(allNames.begin(), allNames.end());
 
     std::string searchStr = searchBuffer_;
@@ -85694,6 +87204,9 @@ void ImGuizmoManager::DrawDebugRaycast()
 
         // スクリーン空間ターゲットは3Dデバッグ描画対象外
         if (target.isScreenSpace)
+            continue;
+        // 操作対象フィルタで無効化された種類は描画しない（画面の見やすさのため）
+        if (!IsCategoryEnabled(target.category))
             continue;
 
         Matrix4x4 worldMatrix = target.GetWorldMatrix();
@@ -85820,6 +87333,20 @@ namespace Hagine {
 class Sprite;
 
 /// <summary>
+/// ギズモ操作対象の大分類。
+/// 型（Type）とは別に、ユーザーが「どの種類を動かすか」を選べるようにするための区分。
+/// フィルタUI・シーン保存の仕分けなどで利用する。
+/// </summary>
+enum class GizmoCategory
+{
+    Object = 0,   // 3Dオブジェクト（BaseObject 等）
+    Sprite = 1,   // 2Dスプライト
+    Particle = 2, // パーティクルエミッター（CPU/GPU）
+};
+// フィルタ配列などのサイズに使う要素数
+inline constexpr int kGizmoCategoryCount = 3;
+
+/// <summary>
 /// ギズモ操作対象を型に依存せず統一的に扱うためのラッパー構造体
 /// BaseObject・WorldTransform・Vector3直接参照・Spriteの各種に対応する
 /// </summary>
@@ -85834,6 +87361,7 @@ struct GizmoTarget
     };
 
     Type type = Type::BaseObject;
+    GizmoCategory category = GizmoCategory::Object; // 操作対象フィルタ用の大分類
     std::string name;
     bool selectable = true;        // ギズモによる選択を許可するか
     bool isScreenSpace = false;    // スクリーン空間座標（ピクセル単位）かどうか（Sprite用）
@@ -85915,6 +87443,10 @@ class ImGuizmoManager
 
     bool isMultiSelecting_ = false;
     bool isDrawDebug_ = true;
+
+    // 操作対象フィルタ。GizmoCategory ごとに ON/OFF。
+    // 無効な種類は選択・マウスピック・ギズモ表示・デバッグ描画の対象外になる。
+    bool categoryEnabled_[kGizmoCategoryCount] = {true, true, true};
 
     // カメラのビュープロジェクション
     const ViewProjection *pViewProjection_ = nullptr;
@@ -86025,6 +87557,22 @@ class ImGuizmoManager
         }
     }
 
+    // 操作対象の大分類を設定する（フィルタUIの分類に反映。AddTarget後に呼ぶ）
+    void SetCategory(const std::string &name, GizmoCategory category)
+    {
+        auto it = transformMap_.find(name);
+        if (it != transformMap_.end())
+        {
+            it->second.category = category;
+        }
+    }
+
+    // 指定分類が操作対象フィルタで有効か
+    bool IsCategoryEnabled(GizmoCategory category) const
+    {
+        return categoryEnabled_[static_cast<int>(category)];
+    }
+
     // ギズモの選択状態を取得
     bool GetSelectable(const std::string &name)
     {
@@ -86043,6 +87591,8 @@ class ImGuizmoManager
 
   private:
     void ShowSelectedObjectImGui();
+    // 操作対象フィルタで無効化された分類の選択を解除する
+    void PruneSelectionByFilter();
     void HandleMouseSelection(const ImVec2 &scenePosition, const ImVec2 &sceneSize, bool sceneHovered);
     void CycleOverlapSelection();
     // GizmoTarget を受け取ってギズモを表示・操作する
@@ -94881,6 +96431,7 @@ File Path: Engine/utility/graphics/texture/TextureManager.cpp
 #include <debug/log/Logger.h>
 #include <string/StringUtility.h>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <vector>
@@ -94960,6 +96511,71 @@ void TextureManager::LoadTexture(const std::string &filePath)
 
     pSrvManager_->CreateSRVforTexture2D(textureData.srvIndex, textureData.resource.Get(), textureData.metadata, UINT(textureData.metadata.mipLevels));
     ImGuiNotification::Post("テクスチャを読み込みました: " + filePath, {0.2f, 0.8f, 0.8f, 1.0f});
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::UpdateDynamicTexture(const std::string &key, const uint8_t *rgba, int width, int height)
+{
+    if (rgba == nullptr || width <= 0 || height <= 0)
+    {
+        return D3D12_GPU_DESCRIPTOR_HANDLE{};
+    }
+
+    // キー初出時のみSRVインデックスを確保する（以降は同じインデックスへ書き直す）
+    auto it = dynamicTextures_.find(key);
+    if (it == dynamicTextures_.end())
+    {
+        assert(pSrvManager_->CanAllocate());
+        TextureData fresh{};
+        fresh.srvIndex = pSrvManager_->Allocate() + kSRVIndexTop;
+        fresh.srvHandleCPU = pSrvManager_->GetCPUDescriptorHandle(fresh.srvIndex);
+        fresh.srvHandleGPU = pSrvManager_->GetGPUDescriptorHandle(fresh.srvIndex);
+        it = dynamicTextures_.emplace(key, std::move(fresh)).first;
+    }
+    TextureData &data = it->second;
+
+    // 直前のリソースはGPUが参照中の可能性があるため、すぐには捨てず数世代保持する
+    if (data.resource)
+        retiredDynamicResources_.push_back(data.resource);
+    if (data.intermediateResource)
+        retiredDynamicResources_.push_back(data.intermediateResource);
+    constexpr size_t kMaxRetired = 8; // NumFramesInFlight より十分大きく取る
+    if (retiredDynamicResources_.size() > kMaxRetired)
+    {
+        retiredDynamicResources_.erase(
+            retiredDynamicResources_.begin(),
+            retiredDynamicResources_.end() - kMaxRetired);
+    }
+
+    // メタデータを手動で組み立てる。スプライトはWIC FORCE_SRGBで読み込まれるため、
+    // 見た目を一致させる目的でプレビューもSRGBとして扱う。
+    DirectX::TexMetadata metadata{};
+    metadata.width = static_cast<size_t>(width);
+    metadata.height = static_cast<size_t>(height);
+    metadata.depth = 1;
+    metadata.arraySize = 1;
+    metadata.mipLevels = 1;
+    metadata.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    metadata.dimension = DirectX::TEX_DIMENSION_TEXTURE2D;
+
+    DirectX::ScratchImage scratchImage{};
+    HRESULT hr = scratchImage.Initialize2D(metadata.format, metadata.width, metadata.height, 1, 1);
+    assert(SUCCEEDED(hr));
+
+    const DirectX::Image *img = scratchImage.GetImages();
+    for (int y = 0; y < height; ++y)
+    {
+        std::memcpy(
+            img->pixels + y * img->rowPitch,
+            rgba + static_cast<size_t>(y) * width * 4,
+            static_cast<size_t>(width) * 4);
+    }
+
+    data.metadata = metadata;
+    data.resource = pDxCommon_->CreateTextureResource(metadata);
+    data.intermediateResource = pDxCommon_->UploadTextureData(data.resource, scratchImage);
+    pSrvManager_->CreateSRVforTexture2D(data.srvIndex, data.resource.Get(), metadata, 1);
+
+    return data.srvHandleGPU;
 }
 
 void TextureManager::LoadFontTexture(const std::string &fontFilePath, float fontSize, int atlasWidth, int atlasHeight)
@@ -95092,6 +96708,14 @@ void TextureManager::Finalize()
         pSrvManager_->Free(pair.second.srvIndex - kSRVIndexTop);
     }
     fontDatas_.clear();
+
+    // 動的テクスチャのSRVインデックスを解放する
+    for (auto &pair : dynamicTextures_)
+    {
+        pSrvManager_->Free(pair.second.srvIndex - kSRVIndexTop);
+    }
+    dynamicTextures_.clear();
+    retiredDynamicResources_.clear();
 }
 
 uint32_t TextureManager::GetTextureIndexByFilePath(const std::string &filePath)
@@ -95317,6 +96941,18 @@ class TextureManager
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU(const std::string &filePath);
 
     /// <summary>
+    /// メモリ上のRGBA(8bit×4)ピクセル列から動的テクスチャを生成／更新する。
+    /// key ごとにSRVインデックスを固定で確保し、以降は同じインデックスへ描画し直す。
+    /// テキストプレビューのように毎フレーム内容が変わる用途向け。
+    /// 返り値はImGui等で使えるGPUデスクリプタハンドル。
+    /// </summary>
+    /// <param name="key">動的テクスチャの識別キー（"__text_preview__" 等）</param>
+    /// <param name="rgba">幅×高さ×4バイトのRGBAピクセル列（先頭行から順に）</param>
+    /// <param name="width">画像の幅（px）</param>
+    /// <param name="height">画像の高さ（px）</param>
+    D3D12_GPU_DESCRIPTOR_HANDLE UpdateDynamicTexture(const std::string &key, const uint8_t *rgba, int width, int height);
+
+    /// <summary>
     /// ファイルパスからテクスチャのメタデータを取得する
     /// </summary>
     const DirectX::TexMetadata &GetMetaData(const std::string &filePath);
@@ -95360,6 +96996,11 @@ class TextureManager
 
     // ファイルパスをキーとするテクスチャデータのマップ
     std::unordered_map<std::string, TextureData> textureDatas_;
+
+    // 動的テクスチャ（メモリから毎回書き換える用途）。キーで固定SRVインデックスを保持する。
+    std::unordered_map<std::string, TextureData> dynamicTextures_;
+    // 動的テクスチャ更新時に差し替えた旧リソースを数世代分保持し、GPU使用中の解放を避ける
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> retiredDynamicResources_;
 
     // MakeFontKey() で生成したキーをキーとするフォントデータのマップ
     std::unordered_map<std::string, FontData> fontDatas_;
@@ -131563,17 +133204,17 @@ File Path: Externals/DirectXTex/DirectXTex_Desktop_2022_Win10.vcxproj
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|X64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|X64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
@@ -208644,13 +210285,13 @@ File Path: Externals/imgui/imgui.vcxproj
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Utility</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -305234,13 +306875,13 @@ File Path: Hagine.vcxproj
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -305498,6 +307139,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\ui\tutorial\TutorialUI.cpp" />
     <ClCompile Include="Application\entity\player\state\action\PlayerStateGuard.cpp" />
     <ClCompile Include="Engine\2d\text\TextRenderer.cpp" />
+    <ClCompile Include="Engine\2d\ui\UIAnimator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -305742,6 +307384,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\system\tutorial\TutorialSystem.h" />
     <ClInclude Include="Application\ui\tutorial\TutorialUI.h" />
     <ClInclude Include="Engine\2d\text\TextRenderer.h" />
+    <ClInclude Include="Engine\2d\ui\UIAnimator.h" />
     <ClInclude Include="Engine\3d\shadow\ShadowMap.h" />
     <ClInclude Include="Engine\render\DrawGroupManager.h" />
   </ItemGroup>
@@ -306845,6 +308488,7 @@ File Path: Hagine.vcxproj.filters
       <Filter>externals\imgui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Engine\2d\ui\UIAnimator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\camera\death\DeathCamera.h">
@@ -307415,6 +309059,7 @@ File Path: Hagine.vcxproj.filters
       <Filter>externals\imgui</Filter>
     </ClInclude>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Engine\2d\ui\UIAnimator.h" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="Engine\EngineAssets\fonts\fa-solid-900.ttf">
