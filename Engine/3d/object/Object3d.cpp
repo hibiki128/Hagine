@@ -9,8 +9,9 @@
 #include "transform/WorldTransform.h"
 #include "cassert"
 #include <Frame.h>
+#include <render/deferred/DeferredRenderer.h>
 #include <shadow/ShadowMap.h>
-#include <line/DrawLine3D.h>
+#include <line/LineRenderer.h>
 #include <MyMath.h>
 #include <type/Matrix4x4.h>
 
@@ -159,6 +160,27 @@ void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &
         DrawShadow(worldTransform);
         return;
     }
+
+    // ── ディファードの振り分け ──
+    // G-Buffer に載せられるのは「不透明かつライティングあり」のものだけ。
+    // 半透明（加算合成など）やライティング無効のものは従来どおり前方描画に残す。
+    DeferredRenderer *deferred = DeferredRenderer::GetInstance();
+    const bool deferredEligible = deferred->IsEnabled() && lighting && useDeferred_ &&
+                                  (blendMode_ == BlendMode::None || blendMode_ == BlendMode::Normal);
+    if (deferred->IsGBufferPassActive())
+    {
+        // G-Buffer パス中: 対象外のものは前方描画のフェーズで描く
+        if (!deferredEligible)
+        {
+            return;
+        }
+    }
+    else if (deferredEligible)
+    {
+        // 前方描画フェーズ: G-Buffer で描き済みなので二重に描かない
+        return;
+    }
+
     objectCommon_->SetBlendMode(blendMode_);
     Update(worldTransform, viewProjection);
 
@@ -169,6 +191,15 @@ void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &
         {
             objectCommon_->skinningDrawCommonSetting();
         }
+    }
+
+    // G-Buffer パス中は PSO だけ差し替える（ルートシグネチャは前方描画と共通なので
+    // 以降のバインド処理は一切変えなくてよい）
+    if (deferred->IsGBufferPassActive())
+    {
+        const bool skinned = pModel_ && pModel_->IsGltf() && pModel_->GetModelData().hasAnimations;
+        PipelineManager::GetInstance()->DrawCommonSetting(
+            skinned ? PipelineType::GBufferSkinning : PipelineType::GBuffer);
     }
 
     // 変換行列設定
@@ -492,22 +523,22 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
         const std::vector<VertexData> &vertices = mesh.vertices;
         const std::vector<uint32_t> &indices = mesh.indices;
 
+        // 三角形ごとに3本積むので本数が多い。シングルトン参照と色詰めはループ外へ出しておく
+        LineRenderer *line = LineRenderer::GetInstance();
+        constexpr uint32_t kWhite = 0xFFFFFFFFu;
+
         auto drawTriangle = [&](const Vector3 &v0, const Vector3 &v1, const Vector3 &v2) {
             if (gamingMode)
             {
-                Vector4 c0 = GetTimeGradientColor(v0);
-                Vector4 c1 = GetTimeGradientColor(v1);
-                Vector4 c2 = GetTimeGradientColor(v2);
-                DrawLine3D::GetInstance()->SetPoints(v0, v1, c0);
-                DrawLine3D::GetInstance()->SetPoints(v1, v2, c1);
-                DrawLine3D::GetInstance()->SetPoints(v2, v0, c2);
+                line->AddLinePacked(v0, v1, PackLineColor(GetTimeGradientColor(v0)));
+                line->AddLinePacked(v1, v2, PackLineColor(GetTimeGradientColor(v1)));
+                line->AddLinePacked(v2, v0, PackLineColor(GetTimeGradientColor(v2)));
             }
             else
             {
-                Vector4 wireframeColor = {1.0f, 1.0f, 1.0f, 1.0f};
-                DrawLine3D::GetInstance()->SetPoints(v0, v1, wireframeColor);
-                DrawLine3D::GetInstance()->SetPoints(v1, v2, wireframeColor);
-                DrawLine3D::GetInstance()->SetPoints(v2, v0, wireframeColor);
+                line->AddLinePacked(v0, v1, kWhite);
+                line->AddLinePacked(v1, v2, kWhite);
+                line->AddLinePacked(v2, v0, kWhite);
             }
         };
 
@@ -570,7 +601,7 @@ void Object3d::DrawSkeleton(const WorldTransform &worldTransform, const ViewProj
         float jointRadius = 0.03f * worldTransform.scale_.x;
 
         Vector4 jointColor = {0.8f, 0.2f, 0.2f, 1.0f};
-        DrawLine3D::GetInstance()->DrawSphere(jointPosition, jointColor, jointRadius, 8);
+        LineRenderer::GetInstance()->AddSphere(jointPosition, jointRadius, jointColor, 8);
 
         if (!joint.parent.has_value())
         {
@@ -663,22 +694,22 @@ void Object3d::DrawArmatureShape(const Vector3 &startPos, const Vector3 &endPos,
             Vector3 p2_2 = pos2 + (right * cosf(angle2) + up * sinf(angle2)) * width2;
 
             // 円周の線
-            DrawLine3D::GetInstance()->SetPoints(p1_1, p1_2, color);
-            DrawLine3D::GetInstance()->SetPoints(p2_1, p2_2, color);
+            LineRenderer::GetInstance()->AddLine(p1_1, p1_2, color);
+            LineRenderer::GetInstance()->AddLine(p2_1, p2_2, color);
 
             // 縦の線（長さ方向）
-            DrawLine3D::GetInstance()->SetPoints(p1_1, p2_1, color);
+            LineRenderer::GetInstance()->AddLine(p1_1, p2_1, color);
 
             // 最後のセグメントの場合、先端を中心点に収束させる
             if (i == lengthSegments - 1)
             {
-                DrawLine3D::GetInstance()->SetPoints(p2_1, endPos, color);
+                LineRenderer::GetInstance()->AddLine(p2_1, endPos, color);
             }
         }
     }
 
     // 基部から中心軸への線も描画（強調用）
-    DrawLine3D::GetInstance()->SetPoints(startPos, endPos, {color.x * 1.2f, color.y * 1.2f, color.z * 1.2f, color.w});
+    LineRenderer::GetInstance()->AddLine(startPos, endPos, {color.x * 1.2f, color.y * 1.2f, color.z * 1.2f, color.w});
 }
 
 void Object3d::SetModel(const std::string &filePath)

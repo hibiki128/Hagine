@@ -74,6 +74,15 @@ class ParticleCSGroup
     // 描画コンパクション: Update が u11 に書く UAV / 描画VS が t0 で読む SRV
     D3D12_GPU_DESCRIPTOR_HANDLE GetRenderCompactUavGpu() const { return soaRenderCompact_.uavHandle.second; }
     uint32_t GetRenderCompactSrvForVSIndex() const { return soaRenderCompact_.srvForVSIndex; }
+    // 粒子光源生成CSがルートSRVで直接読むためのGPUアドレス（詰めた描画データ／生存数）
+    D3D12_GPU_VIRTUAL_ADDRESS GetRenderCompactGpuAddress() const
+    {
+        return soaRenderCompact_.resource ? soaRenderCompact_.resource->GetGPUVirtualAddress() : 0;
+    }
+    D3D12_GPU_VIRTUAL_ADDRESS GetAliveCounterGpuAddress() const
+    {
+        return aliveCounterResource_[alivePhase_] ? aliveCounterResource_[alivePhase_]->GetGPUVirtualAddress() : 0;
+    }
     // SoA: 描画VS が回転グループのみ読む SRV インデックス（t4:Rotation）
     uint32_t GetRotationSrvForVSIndex() const { return soaRotation_.srvForVSIndex; }
     // 生存コンパクション用ハンドル/インデックス（out フェーズ＝今フレームの書込先を返す）

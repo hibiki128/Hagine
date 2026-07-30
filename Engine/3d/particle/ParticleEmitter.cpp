@@ -1,7 +1,8 @@
 #define NOMINMAX
 #include "ParticleEmitter.h"
 #include "Frame.h"
-#include "line/DrawLine3D.h"
+#include "line/LineRenderer.h"
+#include <render/deferred/DeferredRenderer.h>
 #include <shadow/ShadowMap.h>
 
 #include "../utility/debug/imgui/ImGuiNotification.h"
@@ -63,7 +64,9 @@ void ParticleEmitter::UpdateOnce()
 
 void ParticleEmitter::Draw(const ViewProjection &vp_)
 {
-    if (ShadowMap::GetInstance()->IsShadowPassActive())
+    // パーティクルは半透明なのでG-Bufferには載せず、前方描画フェーズで描く
+    if (ShadowMap::GetInstance()->IsShadowPassActive() ||
+        DeferredRenderer::GetInstance()->IsGBufferPassActive())
         return;
     Manager_->SetEmitterCenter(transform_.translation_);
 
@@ -105,7 +108,7 @@ void ParticleEmitter::DrawEmitter()
         std::make_pair(0, 4), std::make_pair(1, 5), std::make_pair(2, 6), std::make_pair(3, 7)};
     for (const auto &edge : edges)
     {
-        DrawLine3D::GetInstance()->SetPoints(worldVertices[edge.first], worldVertices[edge.second]);
+        LineRenderer::GetInstance()->AddLine(worldVertices[edge.first], worldVertices[edge.second], {1.0f, 1.0f, 1.0f, 1.0f});
     }
 }
 

@@ -79,11 +79,10 @@ class SrvManager
     /// <summary>
     /// SRV生成(RenderTexture用)
     /// </summary>
-    /// <param name="srvIndex"></param>
-    /// <param name="pResource"></param>
-    /// <param name="numElements"></param>
-    /// <param name="structureByteStride"></param>
-    void CreateSRVforRenderTexture(uint32_t srvIndex, ID3D12Resource *pResource);
+    /// <param name="srvIndex">SRV番号</param>
+    /// <param name="pResource">対象リソース</param>
+    /// <param name="format">SRVのフォーマット。UNKNOWNならリソース自身のフォーマットを使う</param>
+    void CreateSRVforRenderTexture(uint32_t srvIndex, ID3D12Resource *pResource, DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN);
 
     /// <summary>
     /// SRV生成(Depth用)

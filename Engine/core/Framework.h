@@ -28,7 +28,8 @@
 #include "skybox/SkyBox.h"
 #include "SpriteCommon.h"
 #include "SpriteManager.h"
-#include "line/DrawLine3D.h"
+#include "line/LineRenderer.h"
+#include "render/deferred/DeferredRenderer.h"
 #include "edit/motion/MotionEditor.h"
 #include "utility/loader/csv/CsvLoad.h"
 #include "render/DrawSystem.h"
@@ -99,7 +100,8 @@ class Framework
     Input *pInput_ = nullptr;
     Audio *pAudio_ = nullptr;
     DirectXCommon *pDxCommon_ = nullptr;
-    DrawLine3D *pLine3d_ = nullptr;
+    LineRenderer *pLineRenderer_ = nullptr;
+    DeferredRenderer *pDeferredRenderer_ = nullptr;
     SkyBox *pSkyBox_ = nullptr;
 
     SceneManager *pSceneManager_ = nullptr;

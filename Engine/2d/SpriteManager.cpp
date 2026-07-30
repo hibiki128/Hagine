@@ -7,6 +7,7 @@
 #include "MyMath.h"
 #include <asset/AssetPath.h>
 #include <data/DataHandler.h>
+#include <render/deferred/DeferredRenderer.h>
 #include <shadow/ShadowMap.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
 #include <browser/ShowFolder.h>
@@ -79,7 +80,10 @@ void SpriteManager::UnregisterSprite(const std::string &name)
 void SpriteManager::DrawAll()
 {
     // シャドウパス中(D32 DSV)はスプライト(D24 PSO)を描かない（深度フォーマット不一致を防ぐ）
-    if (ShadowMap::GetInstance()->IsShadowPassActive())
+    // G-Bufferパス中も同様に描かない（不透明のObject3d専用のパスなので、
+    // スプライトは後続の前方描画フェーズで描かれる）
+    if (ShadowMap::GetInstance()->IsShadowPassActive() ||
+        DeferredRenderer::GetInstance()->IsGBufferPassActive())
     {
         return;
     }

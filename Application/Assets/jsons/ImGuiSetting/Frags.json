@@ -9,8 +9,8 @@
     },
     "isEditorMode": true,
     "showAssetBrowserView": false,
-    "showDrawSystemView": false,
-    "showFPSView": false,
+    "showDrawSystemView": true,
+    "showFPSView": true,
     "showGameParamView": false,
     "showGizmoView": true,
     "showHierarchyView": false,
@@ -20,10 +20,10 @@
     "showObjectView": false,
     "showOfScreenView": false,
     "showParticlePreviewView": false,
-    "showParticleView": false,
-    "showSceneView": false,
+    "showParticleView": true,
+    "showSceneView": true,
     "showShadowMapView": false,
     "showShortcutWindow": false,
     "showSpriteManagerView": false,
-    "showUIEditorView": true
+    "showUIEditorView": false
 }

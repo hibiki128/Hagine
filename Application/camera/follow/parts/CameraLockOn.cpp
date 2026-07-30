@@ -5,7 +5,7 @@
 #include <Application/camera/follow/FollowCamera.h>
 #include <Application/entity/enemy/Enemy.h>
 #include <Application/entity/player/Player.h>
-#include <3d/line/DrawLine3D.h>
+#include <3d/line/LineRenderer.h>
 #include <frame/Frame.h>
 #include <algorithm>
 #include <array>
@@ -252,13 +252,13 @@ void CameraLockOn::DrawFrustum()
     // デバッグ描画が有効な場合に視錐台を描画
     if (drawLockOnFrustumDebug_)
     {
-        DrawLockOnFrustum(DrawLine3D::GetInstance());
+        DrawLockOnFrustum(LineRenderer::GetInstance());
     }
 }
 
-void CameraLockOn::DrawLockOnFrustum(DrawLine3D *pDrawLine3D) const
+void CameraLockOn::DrawLockOnFrustum(LineRenderer *pLineRenderer) const
 {
-    if (!pDrawLine3D)
+    if (!pLineRenderer)
     {
         return;
     }
@@ -299,19 +299,19 @@ void CameraLockOn::DrawLockOnFrustum(DrawLine3D *pDrawLine3D) const
     // 面の輪郭を描画
     for (int i = 0; i < 4; ++i)
     {
-        pDrawLine3D->SetPoints(nearCorners[i], nearCorners[(i + 1) % 4], color);
+        pLineRenderer->AddLine(nearCorners[i], nearCorners[(i + 1) % 4], color);
     }
     for (int i = 0; i < 4; ++i)
     {
-        pDrawLine3D->SetPoints(farCorners[i], farCorners[(i + 1) % 4], color);
+        pLineRenderer->AddLine(farCorners[i], farCorners[(i + 1) % 4], color);
     }
     for (int i = 0; i < 4; ++i)
     {
-        pDrawLine3D->SetPoints(nearCorners[i], farCorners[i], color);
+        pLineRenderer->AddLine(nearCorners[i], farCorners[i], color);
     }
 
     // 中心軸の描画
-    pDrawLine3D->SetPoints(origin, origin + forward * lockOnRange_, axisColor);
+    pLineRenderer->AddLine(origin, origin + forward * lockOnRange_, axisColor);
 }
 
 void CameraLockOn::DrawImGui()

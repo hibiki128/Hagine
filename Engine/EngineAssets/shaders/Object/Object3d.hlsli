@@ -1,6 +1,9 @@
 
-#define MAX_POINT_LIGHTS 5
-#define MAX_SPOT_LIGHTS 5
+// 前方描画（定数バッファ経由）のライト枠。
+// ディファードON時はポイントライトを StructuredBuffer から読むためこの枠を使わない。
+// ※ LightGroup.h の MAX_POINT_LIGHTS / MAX_SPOT_LIGHTS と必ず一致させること。
+#define MAX_POINT_LIGHTS 16
+#define MAX_SPOT_LIGHTS 32
 
 struct VertexShaderOutput
 {

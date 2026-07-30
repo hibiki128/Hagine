@@ -204,6 +204,8 @@ class DirectXCommon
     const D3D12_VIEWPORT &GetRenderViewport() const { return viewport_; }
     const D3D12_RECT &GetRenderScissorRect() const { return scissorRect_; }
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetRTVDescriptorHeap() { return rtvManager_->GetHeap(); }
+    /// 深度ステンシルリソースを取得（ディファードのライトカリング／ライティングが読むため）
+    ID3D12Resource *GetDepthStencilResource() { return depthStencilResource_.Get(); }
 
     // ---- 非同期コンピュートキュー API ----
     /// コンピュートコマンドリストを取得

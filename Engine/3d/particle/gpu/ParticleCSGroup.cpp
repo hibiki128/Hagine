@@ -9,7 +9,7 @@
 #include <Frame.h>
 #include <graphics/model/ModelManager.h>
 #include <graphics/pipeline/ComputePipelineManager.h>
-#include <line/DrawLine3D.h>
+#include <line/LineRenderer.h>
 #include <d3dx12.h>
 #ifdef _DEBUG
 #include <implot.h>
@@ -2647,16 +2647,16 @@ void ParticleCSGroup::DrawImGui()
     ImGui::PopItemWidth();
 
     if (pSettingsData_->enableGather)
-        DrawLine3D::GetInstance()->DrawSphere(pSettingsData_->gatherTarget, {1.0f, 0.0f, 1.0f, 1.0f}, 0.1f, 8);
+        LineRenderer::GetInstance()->AddSphere(pSettingsData_->gatherTarget, 0.1f, {1.0f, 0.0f, 1.0f, 1.0f}, 8);
     if (pSettingsData_->enableVortex)
     {
-        DrawLine3D::GetInstance()->DrawSphere(pSettingsData_->vortexTarget, {0.5f, 1.0f, 0.0f, 1.0f}, 0.1f, 8);
+        LineRenderer::GetInstance()->AddSphere(pSettingsData_->vortexTarget, 0.1f, {0.5f, 1.0f, 0.0f, 1.0f}, 8);
         // 解決済みの回転軸（＝渦の向き）。基準空間を変えると、この線がエミッター/カメラに追従する。
         const float axisLen = pSettingsData_->vortexAxis.Length();
         if (axisLen > 1e-6f)
         {
             const Vector3 axis = pSettingsData_->vortexAxis / axisLen;
-            DrawLine3D::GetInstance()->SetPoints(pSettingsData_->vortexTarget - axis,
+            LineRenderer::GetInstance()->AddLine(pSettingsData_->vortexTarget - axis,
                                                  pSettingsData_->vortexTarget + axis,
                                                  {0.5f, 1.0f, 0.0f, 1.0f});
         }

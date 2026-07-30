@@ -54,6 +54,12 @@ enum class PipelineType {
     Skybox,
     GPUParticle,
     ShadowMap,
+    // ディファード: G-Buffer 書き込み。ルートシグネチャは Standard / Skinning と共通で、
+    // ピクセルシェーダーと RTV フォーマットだけを差し替えたもの。
+    GBuffer,
+    GBufferSkinning,
+    // ディファード: 全画面ライティングパス
+    DeferredLighting,
 };
 
 class PipelineManager {
@@ -133,6 +139,15 @@ class PipelineManager {
     void CreateLine3dPipelines();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateLine3dRootSignature();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateLine3dGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
+
+    // ディファード関連
+    void CreateDeferredPipelines();
+    /// <summary>G-Buffer書き込みPSOを作る（ルートシグネチャは Standard / Skinning を流用）</summary>
+    /// <param name="rootSignature">流用するルートシグネチャ</param>
+    /// <param name="skinned">true ならスキニング用の頂点シェーダーを使う</param>
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGBufferGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, bool skinned);
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateDeferredLightingRootSignature();
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateDeferredLightingGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
 
     // スカイボックス関連
     void CreateSkyboxPipelines();

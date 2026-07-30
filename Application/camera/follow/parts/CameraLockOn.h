@@ -5,7 +5,7 @@
 class FollowCamera;
 class Player;
 namespace Hagine {
-class DrawLine3D;
+class LineRenderer;
 }
 
 /// <summary>
@@ -58,8 +58,8 @@ class CameraLockOn
     /// <summary>
     /// 視錐台のデバッグ描画
     /// </summary>
-    /// <param name="pDrawLine3D">ライン描画クラスのポインタ</param>
-    void DrawLockOnFrustum(Hagine::DrawLine3D *pDrawLine3D) const;
+    /// <param name="pLineRenderer">ライン描画クラスのポインタ</param>
+    void DrawLockOnFrustum(Hagine::LineRenderer *pLineRenderer) const;
 
     /// <summary>
     /// ロックオン関連のImGui表示（肩・高さ・イージング・視錐台）

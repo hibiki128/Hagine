@@ -3,7 +3,7 @@
 #include <asset/AssetPath.h>
 #include "../utility/debug/imgui/ImGuizmoManager.h"
 #include <camera/projection/ViewProjection.h>
-#include <line/DrawLine3D.h>
+#include <line/LineRenderer.h>
 #include <particle/ParticleEditor.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
 #include <browser/ShowFolder.h>
@@ -97,12 +97,12 @@ void ParticleCSEditor::BuildPreviewGrid()
 
     // 分割数の上限ぶん（XZ各 (div+1) 本 × 2頂点）を確保。
     const UINT maxVerts = static_cast<UINT>((kPreviewGridMaxDivision_ + 1) * 4);
-    const UINT vbSize = static_cast<UINT>(sizeof(PreviewLineVertex) * maxVerts);
+    const UINT vbSize = static_cast<UINT>(sizeof(LineVertex) * maxVerts);
     previewGridVB_ = dxCommon->CreateBufferResource(vbSize);
     previewGridVB_->Map(0, nullptr, reinterpret_cast<void **>(&pPreviewGridMapped_));
 
     previewGridVBView_.BufferLocation = previewGridVB_->GetGPUVirtualAddress();
-    previewGridVBView_.StrideInBytes = sizeof(PreviewLineVertex);
+    previewGridVBView_.StrideInBytes = sizeof(LineVertex);
     previewGridVBView_.SizeInBytes = vbSize;
 
     RebuildPreviewGridContents();
@@ -112,19 +112,19 @@ void ParticleCSEditor::BuildPreviewGrid()
 void ParticleCSEditor::BuildPreviewWireBuffer()
 {
     DirectXCommon *dxCommon = ParticleCommon::GetInstance()->GetDxCommon();
-    const UINT vbSize = static_cast<UINT>(sizeof(PreviewLineVertex) * kPreviewWireMaxVerts_);
+    const UINT vbSize = static_cast<UINT>(sizeof(LineVertex) * kPreviewWireMaxVerts_);
     previewWireVB_ = dxCommon->CreateBufferResource(vbSize);
     previewWireVB_->Map(0, nullptr, reinterpret_cast<void **>(&pPreviewWireMapped_));
 
     previewWireVBView_.BufferLocation = previewWireVB_->GetGPUVirtualAddress();
-    previewWireVBView_.StrideInBytes = sizeof(PreviewLineVertex);
+    previewWireVBView_.StrideInBytes = sizeof(LineVertex);
     previewWireVBView_.SizeInBytes = vbSize;
     previewWireVertexCount_ = 0;
 }
 
 // 現在のグリッド設定をマップ済みVBへ書き込み、描画頂点数を更新する。
 // カメラ注視点を中心に追従し、線間隔にスナップすることで「ほぼ無限」のグリッドに見せる。
-// 毎フレーム呼ばれる（DrawLine3D と同じ毎フレーム書き換えパターン）。
+// 毎フレーム呼ばれる（LineRenderer と同じ毎フレーム書き換えパターン）。
 void ParticleCSEditor::RebuildPreviewGridContents()
 {
     if (!pPreviewGridMapped_)
@@ -152,12 +152,12 @@ void ParticleCSEditor::RebuildPreviewGridContents()
         float worldX = centerX + offset;
         // X方向の線（Z=worldZ 固定）。ワールド原点(z=0)を通る線を軸色に。
         const Vector4 &cX = (std::fabs(worldZ) < axisEps) ? axisColorX : gridColor;
-        pPreviewGridMapped_[v++] = {{centerX - halfSize, 0.0f, worldZ}, cX};
-        pPreviewGridMapped_[v++] = {{centerX + halfSize, 0.0f, worldZ}, cX};
+        pPreviewGridMapped_[v++] = {{centerX - halfSize, 0.0f, worldZ}, PackLineColor(cX)};
+        pPreviewGridMapped_[v++] = {{centerX + halfSize, 0.0f, worldZ}, PackLineColor(cX)};
         // Z方向の線（X=worldX 固定）。ワールド原点(x=0)を通る線を軸色に。
         const Vector4 &cZ = (std::fabs(worldX) < axisEps) ? axisColorZ : gridColor;
-        pPreviewGridMapped_[v++] = {{worldX, 0.0f, centerZ - halfSize}, cZ};
-        pPreviewGridMapped_[v++] = {{worldX, 0.0f, centerZ + halfSize}, cZ};
+        pPreviewGridMapped_[v++] = {{worldX, 0.0f, centerZ - halfSize}, PackLineColor(cZ)};
+        pPreviewGridMapped_[v++] = {{worldX, 0.0f, centerZ + halfSize}, PackLineColor(cZ)};
     }
     previewGridVertexCount_ = v;
 }
@@ -243,18 +243,19 @@ void ParticleCSEditor::RenderPreview()
     float previewProjScaleY = 1.0f;
     ComputePreviewMatrices(view, viewProj, previewEye, previewProjScaleY);
 
-    // 白グリッドを描画（共有 DrawLine3D の頂点バッファとは衝突しない専用VB＋kLine3d PSO）
+    // 白グリッドを描画（共有 LineRenderer の頂点バッファとは衝突しない専用VB＋Line3d PSO）
     if (previewShowGrid_ && previewGridVertexCount_ > 0)
     {
         *pPreviewLineCBData_ = viewProj;
         PipelineManager::GetInstance()->DrawCommonSetting(PipelineType::Line3d);
         cl->IASetVertexBuffers(0, 1, &previewGridVBView_);
         cl->SetGraphicsRootConstantBufferView(0, previewLineCB_->GetGPUVirtualAddress());
+        LineRenderer::SetDrawConstants(cl, MakeIdentity4x4(), {1.0f, 1.0f, 1.0f, 1.0f});
         cl->DrawInstanced(previewGridVertexCount_, 1, 0, 0);
     }
 
-    // 選択中エミッタのワイヤーフレームをプレビューVPで描画（共有 DrawLine3D は使わず専用VB＋kLine3d PSO）。
-    // DrawEmitter は共有 DrawLine3D に積みシーン側VPで描かれてしまうため、ここで隔離描画する。
+    // 選択中エミッタのワイヤーフレームをプレビューVPで描画（共有 LineRenderer は使わず専用VB＋Line3d PSO）。
+    // DrawEmitter は共有 LineRenderer に積みシーン側VPで描かれてしまうため、ここで隔離描画する。
     if (previewShowEmitterWire_ && !selectedEmitterName_.empty() && pPreviewWireMapped_)
     {
         auto itWire = emitters_.find(selectedEmitterName_);
@@ -268,8 +269,8 @@ void ParticleCSEditor::RenderPreview()
                 {
                     break; // 上限超過分は切り捨て（プレビューのオーバーレイなので許容）
                 }
-                pPreviewWireMapped_[v++] = {s.a, s.color};
-                pPreviewWireMapped_[v++] = {s.b, s.color};
+                pPreviewWireMapped_[v++] = {s.a, PackLineColor(s.color)};
+                pPreviewWireMapped_[v++] = {s.b, PackLineColor(s.color)};
             }
             previewWireVertexCount_ = v;
             if (v > 0)
@@ -278,18 +279,19 @@ void ParticleCSEditor::RenderPreview()
                 PipelineManager::GetInstance()->DrawCommonSetting(PipelineType::Line3d);
                 cl->IASetVertexBuffers(0, 1, &previewWireVBView_);
                 cl->SetGraphicsRootConstantBufferView(0, previewLineCB_->GetGPUVirtualAddress());
+                LineRenderer::SetDrawConstants(cl, MakeIdentity4x4(), {1.0f, 1.0f, 1.0f, 1.0f});
                 cl->DrawInstanced(v, 1, 0, 0);
             }
         }
     }
 
-    // フィールド枠・ギャザー/ボルテックス点など、Update フェーズ(ImGui)で共有 DrawLine3D に
+    // フィールド枠・ギャザー/ボルテックス点など、Update フェーズ(ImGui)で共有 LineRenderer に
     // 積まれたデバッグ線をプレビューVPでも再描画する。この RenderPreview はシーンの
-    // DrawLine3D::Draw(sceneVP)+Reset より前に呼ばれるため、線バッファはまだ生きている。
-    // Reset しないので後段のシーン描画（シーンVP）にも同じ線がそのまま出る。
+    // LineRenderer::Render(sceneVP) より前に呼ばれるため、線バッファはまだ生きている。
+    // リセットしないので後段のシーン描画（シーンVP）にも同じ線がそのまま出る。
     {
         *pPreviewLineCBData_ = viewProj;
-        DrawLine3D::GetInstance()->DrawWithExternalCB(cl, previewLineCB_->GetGPUVirtualAddress());
+        LineRenderer::GetInstance()->RenderWithExternalCamera(cl, previewLineCB_->GetGPUVirtualAddress());
     }
 
     // 選択中エミッタのパーティクルを隔離描画（Compute 済みバッファをプレビューVPで再描画）
@@ -555,6 +557,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name)
 {
     // Create standard sphere emitter
     auto emitter = std::make_unique<ParticleCSEmitter>();
+    emitter->SetPreviewOnly(true); // 編集用インスタンス。プレビュー窓にしか描かないのでシーンを照らさない
     emitter->Initialize(name);
     emitters_[name] = std::move(emitter);
     DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
@@ -565,6 +568,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, const std::st
 {
     // Create model-based emitter
     auto emitter = std::make_unique<ParticleCSEmitter>();
+    emitter->SetPreviewOnly(true); // 編集用インスタンス。プレビュー窓にしか描かないのでシーンを照らさない
     emitter->Initialize(name, modelPath);
     emitters_[name] = std::move(emitter);
     DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録
@@ -575,6 +579,7 @@ void ParticleCSEditor::AddParticleEmitter(const std::string &name, PrimitiveType
 {
     // Create primitive model-based emitter
     auto emitter = std::make_unique<ParticleCSEmitter>();
+    emitter->SetPreviewOnly(true); // 編集用インスタンス。プレビュー窓にしか描かないのでシーンを照らさない
     emitter->Initialize(name, primitiveType);
     emitters_[name] = std::move(emitter);
     DrawGroupManager::GetInstance()->RegisterGroup(emitters_[name]->GetDrawGroup()); // 所属グループを登録

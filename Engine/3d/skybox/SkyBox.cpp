@@ -3,6 +3,7 @@
 #include "graphics/pipeline/PipelineManager.h"
 #include "graphics/srv/SrvManager.h"
 #include "graphics/texture/TextureManager.h"
+#include <render/deferred/DeferredRenderer.h>
 #include <shadow/ShadowMap.h>
 #include <MyMath.h>
 
@@ -60,7 +61,9 @@ void SkyBox::Update(const ViewProjection &viewProjection)
 
 void SkyBox::Draw(const ViewProjection &viewProjection)
 {
-    if (ShadowMap::GetInstance()->IsShadowPassActive())
+    // 空はライティングを受けないのでG-Bufferには載せず、前方描画フェーズで描く
+    if (ShadowMap::GetInstance()->IsShadowPassActive() ||
+        DeferredRenderer::GetInstance()->IsGBufferPassActive())
         return;
     Update(viewProjection);
     ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();

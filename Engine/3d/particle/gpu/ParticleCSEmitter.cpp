@@ -4,10 +4,13 @@
 #include "ParticleCSGroupManager.h"
 #include <graphics/pipeline/ComputePipelineManager.h>
 #include <Frame.h>
-#include <line/DrawLine3D.h>
+#include <light/LightGroup.h>
+#include <line/LineRenderer.h>
+#include <render/deferred/DeferredRenderer.h>
 #include <shadow/ShadowMap.h>
 #include <particle/ParticleCommon.h>
 #include <debug/profiler/GpuProfiler.h>
+#include <algorithm>
 #include <random>
 #include "../utility/debug/imgui/ImGuizmoManager.h"
 #include "../utility/debug/imgui/ImGuiNotification.h"
@@ -41,8 +44,18 @@ Matrix4x4 ExtractRotation(const Matrix4x4 &world)
     return rot;
 }
 } // namespace
+
+std::vector<ParticleCSEmitter *> ParticleCSEmitter::liveEmitters_;
+
+ParticleCSEmitter::ParticleCSEmitter()
+{
+    liveEmitters_.push_back(this);
+}
+
 ParticleCSEmitter::~ParticleCSEmitter()
 {
+    liveEmitters_.erase(std::remove(liveEmitters_.begin(), liveEmitters_.end(), this), liveEmitters_.end());
+
     // 保有していた独立グループを破棄せず再利用プールへ返却する。
     // これにより弾・ヒット等の高頻度スポーンでもバッファが累積しない。
     // 注意: group は Finalize 順序によっては既に破棄済みの場合がある。
@@ -141,6 +154,142 @@ void ParticleCSEmitter::ResolveEmitterTransform(const ViewProjection &vp)
     pEmitterMeshData_->rotation = Quaternion::FromMatrix(resolved).Normalize();
 }
 
+void ParticleCSEmitter::SubmitEmissiveLight()
+{
+    // エディタの編集用エミッターはプレビュー窓にしか描かれないので、ゲームシーンは照らさない
+    if (previewOnly_)
+        return;
+    if (!lightEnabled_ || !isActive_ || !pEmitterMeshData_)
+        return;
+    if (lightIntensity_ <= 0.0f || lightRadius_ <= 0.0f)
+        return;
+
+    if (lightFollowParticles_)
+    {
+        // 撃ち終わった弾がその場で光り続けないよう、粒子が無くなったら消灯する。
+        // 生存数は readback ベースで1〜2フレーム遅延するが、消灯が数フレーム遅れる程度で害はない。
+        const bool emitting = (pEmitterMeshData_->emit != 0);
+        bool anyAlive = false;
+        for (const ParticleCSGroup *group : particleGroups_)
+        {
+            if (group->GetAliveDrawCount() > 0)
+            {
+                anyAlive = true;
+                break;
+            }
+        }
+        if (!emitting && !anyAlive)
+            return;
+    }
+
+    // オフセットはエミッターの向きに追従させる（親に付けた発光位置がずれないように）
+    LightGroup::DynamicPointLightDesc desc;
+    desc.position = pEmitterMeshData_->translate + RotateVector(lightOffset_, pEmitterMeshData_->rotation);
+    desc.color = lightColor_;
+    desc.intensity = lightIntensity_;
+    desc.radius = lightRadius_;
+    desc.decay = lightDecay_;
+    LightGroup::GetInstance()->AddDynamicPointLight(desc);
+}
+
+void ParticleCSEmitter::EnsureParticleLightResource()
+{
+    if (particleLightCBResource_ || !pDxCommon_)
+    {
+        return;
+    }
+    particleLightCBResource_ = pDxCommon_->CreateBufferResource(sizeof(ParticleLightGenConstants));
+    particleLightCBResource_->Map(0, nullptr, reinterpret_cast<void **>(&pParticleLightCBData_));
+    *pParticleLightCBData_ = {};
+}
+
+bool ParticleCSEmitter::SubmitParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *cmdList)
+{
+    // エディタの編集用エミッターはプレビュー窓にしか描かれないので、ゲームシーンは照らさない。
+    // 発生が止まっていても残っている粒子は光らせる（生存0なら下のループが自然に空振りする）。
+    if (previewOnly_ || !particleLightEnabled_ || !cmdList)
+        return false;
+    if (particleGroups_.empty() || particleLightMaxCount_ == 0)
+        return false;
+    if (particleLightIntensity_ <= 0.0f || particleLightRadius_ <= 0.0f)
+        return false;
+
+    EnsureParticleLightResource();
+    if (!pParticleLightCBData_)
+        return false;
+
+    const uint32_t stride = (std::max)(1u, particleLightStride_);
+
+    // 生成パラメータは全グループで共通なので、CBは1本を使い回す
+    ParticleLightGenConstants &cb = *pParticleLightCBData_;
+    cb.particleStride = stride;
+    cb.maxLights = particleLightMaxCount_;
+    cb.bufferCapacity = LightGroup::kMaxBufferedPointLights;
+    cb.useParticleColor = particleLightUseParticleColor_ ? 1u : 0u;
+    cb.lightColor = {particleLightColor_.x, particleLightColor_.y, particleLightColor_.z};
+    cb.intensity = particleLightIntensity_;
+    cb.radius = particleLightRadius_;
+    cb.decay = particleLightDecay_;
+    cb.cullDistance = particleLightCullDistance_;
+    cb.alphaCutoff = 0.02f; // ほぼ消えている粒子は光源にしない
+    cb.cameraPosition = vp.translation_;
+
+    bool dispatched = false;
+    for (ParticleCSGroup *group : particleGroups_)
+    {
+        if (!group)
+            continue;
+        const D3D12_GPU_VIRTUAL_ADDRESS compactAddress = group->GetRenderCompactGpuAddress();
+        const D3D12_GPU_VIRTUAL_ADDRESS aliveCountAddress = group->GetAliveCounterGpuAddress();
+        if (compactAddress == 0 || aliveCountAddress == 0)
+            continue;
+
+        // ディスパッチ数は前フレームに読み戻した生存数から決める（1〜2フレーム遅延）。
+        // 少なく見積もると光源が減るだけ、多く見積もってもシェーダ側が
+        // GPU上の生存数で弾くので、描画と同じくマージンを乗せておく。
+        uint32_t alive = group->GetAliveDrawCount();
+        alive = alive + (alive / 4) + 64;
+        const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
+        if (alive > maxCount)
+            alive = maxCount;
+        if (alive == 0)
+            continue;
+
+        uint32_t lightCount = (alive + stride - 1) / stride;
+        lightCount = (std::min)(lightCount, particleLightMaxCount_);
+        if (lightCount == 0)
+            continue;
+
+        ComputePipelineManager::GetInstance()->DrawCommonSetting(
+            ComputePipelineType::ParticleLightGen, BlendMode::Normal, ShaderMode::None, cmdList);
+
+        LightGroup *lightGroup = LightGroup::GetInstance();
+        cmdList->SetComputeRootConstantBufferView(0, particleLightCBResource_->GetGPUVirtualAddress());
+        cmdList->SetComputeRootShaderResourceView(1, compactAddress);
+        cmdList->SetComputeRootShaderResourceView(2, aliveCountAddress);
+        cmdList->SetComputeRootUnorderedAccessView(3, lightGroup->GetPointLightUavAddress());
+        cmdList->SetComputeRootUnorderedAccessView(4, lightGroup->GetLightCounterAddress());
+
+        constexpr uint32_t kThreadsPerGroup = 64; // ParticleLightGen.CS.hlsl の [numthreads] と一致必須
+        cmdList->Dispatch((lightCount + kThreadsPerGroup - 1) / kThreadsPerGroup, 1, 1);
+        dispatched = true;
+    }
+    return dispatched;
+}
+
+bool ParticleCSEmitter::SubmitAllParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *cmdList)
+{
+    bool dispatched = false;
+    for (ParticleCSEmitter *emitter : liveEmitters_)
+    {
+        if (emitter && emitter->SubmitParticleLights(vp, cmdList))
+        {
+            dispatched = true;
+        }
+    }
+    return dispatched;
+}
+
 Matrix4x4 ParticleCSEmitter::GetEffectSpaceMatrix(uint32_t effectSpace) const
 {
     switch (effectSpace)
@@ -162,6 +311,10 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp)
     // 発生源メッシュの位置・向き（親追従＝ビルボード）を Emit/Update のディスパッチより前に確定させる。
     // グループが空でもワイヤーフレーム表示のために解決しておく。
     ResolveEmitterTransform(vp);
+
+    // 位置が確定した直後に発光を登録する。DrawSystem がこの後
+    // CommitPointLights() を呼ぶので、同じフレームの描画へ反映される。
+    SubmitEmissiveLight();
 
     if (particleGroups_.empty())
         return;
@@ -264,7 +417,9 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp)
 
 void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp)
 {
-    if (ShadowMap::GetInstance()->IsShadowPassActive())
+    // パーティクルは半透明なのでG-Bufferには載せず、前方描画フェーズで描く
+    if (ShadowMap::GetInstance()->IsShadowPassActive() ||
+        DeferredRenderer::GetInstance()->IsGBufferPassActive())
         return;
     if (particleGroups_.empty())
         return;
@@ -469,7 +624,7 @@ void ParticleCSEmitter::DrawEmitter()
         {
             Vector3 v0 = Transformation(edge.v0, transformMatrix);
             Vector3 v1 = Transformation(edge.v1, transformMatrix);
-            DrawLine3D::GetInstance()->SetPoints(v0, v1);
+            LineRenderer::GetInstance()->AddLine(v0, v1, {1.0f, 1.0f, 1.0f, 1.0f});
         }
     }
     else if (!triangleInfoList_.empty())
@@ -481,9 +636,9 @@ void ParticleCSEmitter::DrawEmitter()
             Vector3 v1 = Transformation(tri.v1, transformMatrix);
             Vector3 v2 = Transformation(tri.v2, transformMatrix);
 
-            DrawLine3D::GetInstance()->SetPoints(v0, v1);
-            DrawLine3D::GetInstance()->SetPoints(v1, v2);
-            DrawLine3D::GetInstance()->SetPoints(v2, v0);
+            LineRenderer::GetInstance()->AddLine(v0, v1, {1.0f, 1.0f, 1.0f, 1.0f});
+            LineRenderer::GetInstance()->AddLine(v1, v2, {1.0f, 1.0f, 1.0f, 1.0f});
+            LineRenderer::GetInstance()->AddLine(v2, v0, {1.0f, 1.0f, 1.0f, 1.0f});
         }
     }
     else
@@ -491,7 +646,7 @@ void ParticleCSEmitter::DrawEmitter()
         Vector3 center = pEmitterMeshData_->translate;
         Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f};
         float maxRadius = std::max(std::max(scale.x, scale.y), scale.z);
-        DrawLine3D::GetInstance()->DrawSphere(center, color, maxRadius, 16);
+        LineRenderer::GetInstance()->AddSphere(center, maxRadius, color, 16);
     }
 }
 
@@ -1044,6 +1199,26 @@ void ParticleCSEmitter::SaveSetting()
     data->Save("fieldGroupId", fieldGroupId_);
     data->Save("emitOnlyOnFieldContact", emitOnlyOnFieldContact_);
 
+    // 発光（動的ポイントライト）設定
+    data->Save("lightEnabled", lightEnabled_);
+    data->Save<Vector4>("lightColor", lightColor_);
+    data->Save("lightIntensity", lightIntensity_);
+    data->Save("lightRadius", lightRadius_);
+    data->Save("lightDecay", lightDecay_);
+    data->Save<Vector3>("lightOffset", lightOffset_);
+    data->Save("lightFollowParticles", lightFollowParticles_);
+
+    // 粒子ごとの発光（粒子1個1個を光源にする）設定
+    data->Save("particleLightEnabled", particleLightEnabled_);
+    data->Save("particleLightStride", static_cast<int>(particleLightStride_));
+    data->Save("particleLightMaxCount", static_cast<int>(particleLightMaxCount_));
+    data->Save("particleLightUseParticleColor", particleLightUseParticleColor_);
+    data->Save<Vector4>("particleLightColor", particleLightColor_);
+    data->Save("particleLightIntensity", particleLightIntensity_);
+    data->Save("particleLightRadius", particleLightRadius_);
+    data->Save("particleLightDecay", particleLightDecay_);
+    data->Save("particleLightCullDistance", particleLightCullDistance_);
+
     data->Save("particleGroupCount", static_cast<int>(particleGroups_.size()));
 
     for (int i = 0; i < particleGroups_.size(); i++)
@@ -1234,6 +1409,26 @@ void ParticleCSEmitter::LoadSetting()
     fieldGroupId_ = data->Load("fieldGroupId", -1);
     emitOnlyOnFieldContact_ = data->Load("emitOnlyOnFieldContact", false);
     // 旧キー fieldContactEmitCount は廃止（発生数はフィールド側の接触Emit設定に一本化）
+
+    // 発光（動的ポイントライト）設定。既定OFFなので旧データの見た目は変わらない
+    lightEnabled_ = data->Load("lightEnabled", false);
+    lightColor_ = data->Load<Vector4>("lightColor", Vector4(1.0f, 0.9f, 0.6f, 1.0f));
+    lightIntensity_ = data->Load("lightIntensity", 2.0f);
+    lightRadius_ = data->Load("lightRadius", 8.0f);
+    lightDecay_ = data->Load("lightDecay", 1.0f);
+    lightOffset_ = data->Load<Vector3>("lightOffset", Vector3(0.0f, 0.0f, 0.0f));
+    lightFollowParticles_ = data->Load("lightFollowParticles", true);
+
+    // 粒子ごとの発光。こちらも既定OFFなので旧データの見た目は変わらない
+    particleLightEnabled_ = data->Load("particleLightEnabled", false);
+    particleLightStride_ = static_cast<uint32_t>((std::max)(1, data->Load("particleLightStride", 8)));
+    particleLightMaxCount_ = static_cast<uint32_t>((std::max)(0, data->Load("particleLightMaxCount", 64)));
+    particleLightUseParticleColor_ = data->Load("particleLightUseParticleColor", true);
+    particleLightColor_ = data->Load<Vector4>("particleLightColor", Vector4(1.0f, 0.9f, 0.6f, 1.0f));
+    particleLightIntensity_ = data->Load("particleLightIntensity", 1.0f);
+    particleLightRadius_ = data->Load("particleLightRadius", 3.0f);
+    particleLightDecay_ = data->Load("particleLightDecay", 1.0f);
+    particleLightCullDistance_ = data->Load("particleLightCullDistance", 60.0f);
 
     if (!modelPath_.empty())
     {
@@ -1767,6 +1962,111 @@ void ParticleCSEmitter::DrawImGui()
                     }
 
                     ImGui::Unindent();
+                }
+
+                ImGui::Unindent();
+            }
+
+            ImGui::Separator();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::TextUnformatted("発光（周囲を照らす）");
+            ImGui::PopStyleColor();
+            ImGui::Checkbox("発光する##LightEnabled", &lightEnabled_);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip(
+                    "エミッター位置に点光源を置き、地面やキャラクターを照らします。\n"
+                    "エネルギー弾が周囲を照らすような演出に使えます。\n"
+                    "※ 光源枠はシーンのポイントライトと共有（最大%d個）。\n"
+                    "  溢れた場合はカメラに近く明るいものが優先されます。",
+                    MAX_POINT_LIGHTS);
+            }
+
+            if (lightEnabled_)
+            {
+                ImGui::Indent();
+                ImGui::ColorEdit4("光の色##LightColor", &lightColor_.x, ImGuiColorEditFlags_NoInputs);
+                ImGui::PushItemWidth(160.0f);
+                ImGui::DragFloat("強さ##LightIntensity", &lightIntensity_, 0.05f, 0.0f, 50.0f, "%.2f");
+                ImGui::DragFloat("半径##LightRadius", &lightRadius_, 0.1f, 0.0f, 200.0f, "%.2f");
+                ImGui::DragFloat("減衰##LightDecay", &lightDecay_, 0.05f, 0.0f, 10.0f, "%.2f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("大きいほど光が中心付近に集まります");
+                ImGui::DragFloat3("オフセット##LightOffset", &lightOffset_.x, 0.05f);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("エミッター位置からのずれ。エミッターの向きに追従します");
+                ImGui::PopItemWidth();
+
+                ImGui::Checkbox("粒子が無いときは消灯##LightFollow", &lightFollowParticles_);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip(
+                        "オンだと発生が止まり粒子が消えたところで自動的に消灯します。\n"
+                        "オフにするとエミッターが有効な間ずっと光り続けます。");
+
+                ImGui::Unindent();
+            }
+
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::TextUnformatted("粒子ごとの発光（粒子1個1個が光源になる）");
+            ImGui::PopStyleColor();
+            ImGui::Checkbox("粒子を光源にする##ParticleLightEnabled", &particleLightEnabled_);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip(
+                    "生きている粒子そのものを点光源にして周囲を照らします。\n"
+                    "弾の軌跡に沿って地面が光るような演出に使えます。\n"
+                    "※ ディファードレンダリングがONのときだけ効きます。\n"
+                    "※ 光源が増えるほど重くなるので、間引きと上限で必ず絞ってください。");
+            }
+
+            if (particleLightEnabled_)
+            {
+                ImGui::Indent();
+
+                if (!DeferredRenderer::GetInstance()->IsEnabled())
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.6f, 0.3f, 1.0f));
+                    ImGui::TextWrapped("※ ディファードレンダリングがOFFなので反映されません（描画システムでON）");
+                    ImGui::PopStyleColor();
+                }
+
+                ImGui::PushItemWidth(160.0f);
+                int stride = static_cast<int>(particleLightStride_);
+                if (ImGui::DragInt("間引き##ParticleLightStride", &stride, 0.5f, 1, 1024))
+                {
+                    particleLightStride_ = static_cast<uint32_t>((std::max)(1, stride));
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("この個数ごとに1粒を光源にします。\n1で全粒子（重い）、大きいほど軽くなります。");
+
+                int maxCount = static_cast<int>(particleLightMaxCount_);
+                if (ImGui::DragInt("光源の上限##ParticleLightMax", &maxCount, 1.0f, 0, 2048))
+                {
+                    particleLightMaxCount_ = static_cast<uint32_t>((std::max)(0, maxCount));
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("1グループあたりに作る光源の最大数。\nシーン全体の上限は %u 個です。",
+                                      LightGroup::kMaxBufferedPointLights);
+
+                ImGui::DragFloat("強さ##ParticleLightIntensity", &particleLightIntensity_, 0.02f, 0.0f, 20.0f, "%.2f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("1粒あたりの明るさ。粒子のアルファが掛かるので消え際は自然に暗くなります。");
+                ImGui::DragFloat("半径##ParticleLightRadius", &particleLightRadius_, 0.05f, 0.0f, 50.0f, "%.2f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("1粒あたりの光の届く距離。大きいほど1タイルに乗る光源が増えて重くなります。");
+                ImGui::DragFloat("減衰##ParticleLightDecay", &particleLightDecay_, 0.05f, 0.0f, 10.0f, "%.2f");
+                ImGui::DragFloat("表示距離##ParticleLightCull", &particleLightCullDistance_, 0.5f, 0.0f, 500.0f, "%.1f");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("カメラからこの距離を超える粒子は光源にしません（0で無効）。");
+                ImGui::PopItemWidth();
+
+                ImGui::Checkbox("粒子の色を使う##ParticleLightUseColor", &particleLightUseParticleColor_);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("オンだと粒子の色がそのまま光の色になります。\nオフにすると下の固定色で照らします。");
+                if (!particleLightUseParticleColor_)
+                {
+                    ImGui::ColorEdit4("光の色##ParticleLightColor", &particleLightColor_.x, ImGuiColorEditFlags_NoInputs);
                 }
 
                 ImGui::Unindent();

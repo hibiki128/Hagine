@@ -15,7 +15,9 @@ class RtvManager
 {
   public:
     // RTVの最大数
-    static constexpr uint32_t kMaxRTVCount = 8;
+    // 0,1=バックバッファ / 2=オフスクリーン / 3,4=ピンポン / 5=最終結果 /
+    // 6=パーティクルプレビュー / 8,9,10=G-Buffer（DeferredRenderer）
+    static constexpr uint32_t kMaxRTVCount = 16;
 
     RtvManager() = default;
     ~RtvManager() = default;

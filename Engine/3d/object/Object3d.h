@@ -68,6 +68,7 @@ class Object3d
     std::string modelFilePath_;
     std::unique_ptr<Object3dCommon> objectCommon_;
     BlendMode blendMode_ = BlendMode::None;
+    bool useDeferred_ = true; // ディファードのG-Bufferに載せてよいか
 
     float animationSpeed_ = 1.0f;
     float blendDuration_ = 0.5f;
@@ -205,6 +206,14 @@ class Object3d
     void SetSize(const Vector3 &size_) { this->size_ = size_; }
     void SetModel(const std::string &filePath);
     void SetBlendMode(BlendMode blendMode) { blendMode_ = blendMode; }
+
+    /// <summary>
+    /// ディファードのG-Bufferに載せてよいか。既定true。
+    /// 半透明として見せたいオブジェクト（ブレンドはNormalのままアルファを下げて
+    /// 透かしているものなど）は false にして前方描画へ逃がす。
+    /// </summary>
+    void SetUseDeferred(bool use) { useDeferred_ = use; }
+    bool GetUseDeferred() const { return useDeferred_; }
     void SetColor(Vector4 color, int index = 0) { color_[index].SetColor(color); }
 
     // マルチマテリアル用のsetter
