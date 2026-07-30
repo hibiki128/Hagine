@@ -14,9 +14,9 @@
 
 namespace Hagine {
 
-void AnimationController::Initialize(Object3d *object)
+void AnimationController::Initialize(Object3d *pObject)
 {
-    pObject_ = object;
+    pObject_ = pObject;
     clips_.clear();
     index_.clear();
     currentClipName_.clear();
@@ -211,8 +211,8 @@ Animator *AnimationController::GetAnimator() const
 
 bool AnimationController::IsFinished() const
 {
-    Animator *animator = GetAnimator();
-    return animator ? animator->IsFinish() : false;
+    Animator *pAnimator = GetAnimator();
+    return pAnimator ? pAnimator->IsFinish() : false;
 }
 
 bool AnimationController::IsBlending() const
@@ -222,32 +222,32 @@ bool AnimationController::IsBlending() const
 
 float AnimationController::GetAnimationTime() const
 {
-    Animator *animator = GetAnimator();
-    return animator ? animator->GetAnimationTime() : 0.0f;
+    Animator *pAnimator = GetAnimator();
+    return pAnimator ? pAnimator->GetAnimationTime() : 0.0f;
 }
 
 float AnimationController::GetDuration() const
 {
-    Animator *animator = GetAnimator();
-    return animator ? animator->GetMutableAnimation().duration : 0.0f;
+    Animator *pAnimator = GetAnimator();
+    return pAnimator ? pAnimator->GetMutableAnimation().duration : 0.0f;
 }
 
 void AnimationController::SetPaused(bool paused)
 {
     paused_ = paused;
-    Animator *animator = GetAnimator();
-    if (animator)
+    Animator *pAnimator = GetAnimator();
+    if (pAnimator)
     {
-        animator->SetIsAnimation(!paused);
+        pAnimator->SetIsAnimation(!paused);
     }
 }
 
 void AnimationController::SetTime(float time)
 {
-    Animator *animator = GetAnimator();
-    if (animator)
+    Animator *pAnimator = GetAnimator();
+    if (pAnimator)
     {
-        animator->SetAnimationTime(time);
+        pAnimator->SetAnimationTime(time);
     }
 }
 
@@ -494,8 +494,8 @@ void AnimationController::DrawKeyframeImGui()
         return;
     }
 
-    Animator *animator = GetAnimator();
-    if (!animator)
+    Animator *pAnimator = GetAnimator();
+    if (!pAnimator)
     {
         ImGui::TextDisabled("アニメーターがありません");
         return;
@@ -503,7 +503,7 @@ void AnimationController::DrawKeyframeImGui()
 
     ImGui::TextDisabled("編集は現在再生中クリップに即時反映されます（クリップ切替で元に戻ります）");
 
-    Animation &animation = animator->GetMutableAnimation();
+    Animation &animation = pAnimator->GetMutableAnimation();
     if (animation.nodeAnimations.empty())
     {
         ImGui::TextDisabled("ノードアニメーションがありません");

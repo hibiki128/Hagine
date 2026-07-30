@@ -12,9 +12,9 @@
 
 using namespace Hagine;
 
-void PlayerMovement::Init(Player *owner)
+void PlayerMovement::Init(Player *pOwner)
 {
-    pOwner_ = owner;
+    pOwner_ = pOwner;
     isGrounded_ = true; // 初期状態は地面にいる
 }
 
@@ -23,8 +23,8 @@ void PlayerMovement::Move()
     float xInput = kInputZero;
     float zInput = kInputZero;
 
-    GamePad *gamePad = pOwner_->GetGamePad();
-    Input *input = pOwner_->GetInput();
+    GamePad *pGamePad = pOwner_->GetGamePad();
+    Input *pInput = pOwner_->GetInput();
     const float dt = pOwner_->GetDt();
 
     // ─── 近接コンボ中はその場で攻撃する（移動入力を受け付けない）───
@@ -44,22 +44,22 @@ void PlayerMovement::Move()
         return;
     }
 
-    if (!gamePad->IsConnected())
+    if (!pGamePad->IsConnected())
     {
         // キーボード入力
-        if (input->PushKey(DIK_A))
+        if (pInput->PushKey(DIK_A))
             xInput += kInputValue;
-        if (input->PushKey(DIK_D))
+        if (pInput->PushKey(DIK_D))
             xInput -= kInputValue;
-        if (input->PushKey(DIK_W))
+        if (pInput->PushKey(DIK_W))
             zInput += kInputValue;
-        if (input->PushKey(DIK_S))
+        if (pInput->PushKey(DIK_S))
             zInput -= kInputValue;
         // ダッシュは「Ctrl を押しながら移動しているとき」だけ有効。
         // Ctrl を放した時点、または移動入力が無くなった時点でダッシュ解除する
         // （その場に立ち止まったまま Ctrl 押しっぱなしで演出が続くのを防ぐ）。
         const bool hasMoveInput = (xInput != kInputZero || zInput != kInputZero);
-        isDashing_ = input->PushKey(DIK_LCONTROL) && hasMoveInput;
+        isDashing_ = pInput->PushKey(DIK_LCONTROL) && hasMoveInput;
         if (isDashing_ && !wasDashing_)
         {
             pOwner_->EmitAction(Player::ActionKind::Dash); // 入力表示UI用：ダッシュ開始を通知
@@ -69,8 +69,8 @@ void PlayerMovement::Move()
     else
     {
         // ゲームパッド入力
-        xInput = -gamePad->GetLeftStickX(); // 左スティックX軸
-        zInput = gamePad->GetLeftStickY();  // 左スティックY軸
+        xInput = -pGamePad->GetLeftStickX(); // 左スティックX軸
+        zInput = pGamePad->GetLeftStickY();  // 左スティックY軸
 
         // 左スティックが倒れているか（ダッシュ維持の判定に使う）
         bool hasStickInput = (xInput != kInputZero || zInput != kInputZero);
@@ -117,11 +117,11 @@ void PlayerMovement::Move()
     }
 
     // カメラの方向ベクトル取得
-    FollowCamera *camera = pOwner_->GetCamera();
-    if (!camera)
+    FollowCamera *pCamera = pOwner_->GetCamera();
+    if (!pCamera)
         return;
 
-    float yaw = camera->GetYaw();
+    float yaw = pCamera->GetYaw();
     Vector3 cameraForward = {std::sin(yaw), kYComponentZero, std::cos(yaw)};
     Vector3 cameraRight = {-std::cos(yaw), kYComponentZero, std::sin(yaw)};
 
@@ -155,7 +155,7 @@ void PlayerMovement::Move()
     if (!pOwner_->GetIsLockOn() && moveDir.Length() > 0.001f)
     {
         float targetYaw = std::atan2(-moveDir.x, moveDir.z);
-        Quaternion targetRot = Quaternion::FromEulerAngles({kRotationZero, targetYaw, kRotationZero});
+        Quaternion targetRot = Quaternion::FromEulerAngles({0.0f, targetYaw, 0.0f});
         float rotateSpeed = kPlayerRotationSpeed;
         pOwner_->GetLocalRotation() = Quaternion::Slerp(pOwner_->GetLocalRotation(), targetRot, rotateSpeed * dt);
     }
@@ -178,11 +178,11 @@ void PlayerMovement::Move()
 
 bool PlayerMovement::TryStartGamepadDash()
 {
-    GamePad *gamePad = pOwner_->GetGamePad();
+    GamePad *pGamePad = pOwner_->GetGamePad();
 
     // ゲームパッド未接続、既にダッシュ中、または近接コンボ中は開始しない
     // （Move() 側もコンボ中はダッシュを開始せず ClearDashState する挙動に合わせる）。
-    if (!gamePad || !gamePad->IsConnected() || isDashing_)
+    if (!pGamePad || !pGamePad->IsConnected() || isDashing_)
     {
         return false;
     }
@@ -190,13 +190,13 @@ bool PlayerMovement::TryStartGamepadDash()
     {
         return false;
     }
-    if (!gamePad->IsTrigger(XINPUT_GAMEPAD_A))
+    if (!pGamePad->IsTrigger(XINPUT_GAMEPAD_A))
     {
         return false;
     }
 
-    const float xInput = -gamePad->GetLeftStickX();
-    const float zInput = gamePad->GetLeftStickY();
+    const float xInput = -pGamePad->GetLeftStickX();
+    const float zInput = pGamePad->GetLeftStickY();
     const bool hasStickInput = (xInput != kInputZero || zInput != kInputZero);
 
     dashInputX_ = xInput;
@@ -213,25 +213,25 @@ bool PlayerMovement::TryStartGamepadDash()
 
 void PlayerMovement::DirectionUpdate()
 {
-    GamePad *gamePad = pOwner_->GetGamePad();
-    Input *input = pOwner_->GetInput();
+    GamePad *pGamePad = pOwner_->GetGamePad();
+    Input *pInput = pOwner_->GetInput();
 
-    if (!gamePad->IsConnected())
+    if (!pGamePad->IsConnected())
     {
         // キーボード入力
-        if (input->PushKey(DIK_D))
+        if (pInput->PushKey(DIK_D))
         {
             moveDir_ = MoveDirection::Right;
         }
-        else if (input->PushKey(DIK_A))
+        else if (pInput->PushKey(DIK_A))
         {
             moveDir_ = MoveDirection::Left;
         }
-        else if (input->PushKey(DIK_W))
+        else if (pInput->PushKey(DIK_W))
         {
             moveDir_ = MoveDirection::Forward;
         }
-        else if (input->PushKey(DIK_S))
+        else if (pInput->PushKey(DIK_S))
         {
             moveDir_ = MoveDirection::Behind;
         }
@@ -242,16 +242,16 @@ void PlayerMovement::DirectionUpdate()
         // 方向分類用の X はスティックの符号そのままを使う（右スティック→右アニメ）。
         // Move() の移動計算では cameraRight が -X 基準のため符号を反転しているが、
         // ここは方向分類なので反転しないことでキーボード(D=Right)と左右を一致させる
-        float xInput = gamePad->GetLeftStickX(); // 左スティックX軸
-        float zInput = gamePad->GetLeftStickY(); // 左スティックY軸
+        float xInput = pGamePad->GetLeftStickX(); // 左スティックX軸
+        float zInput = pGamePad->GetLeftStickY(); // 左スティックY軸
 
         // スティック入力から方向を判定
         if (xInput != 0.0f || zInput != 0.0f)
         {
             float angle = std::atan2(xInput, zInput);
 
-            const float PI = std::numbers::pi_v<float>;
-            const float segment = PI / 4.0f; // 45度
+            const float kPi = std::numbers::pi_v<float>;
+            const float segment = kPi / 4.0f; // 45度
 
             if (angle >= -segment && angle < segment)
             {
@@ -285,8 +285,8 @@ void PlayerMovement::DirectionUpdate()
 
 void PlayerMovement::RotateUpdate()
 {
-    GamePad *gamePad = pOwner_->GetGamePad();
-    Input *input = pOwner_->GetInput();
+    GamePad *pGamePad = pOwner_->GetGamePad();
+    Input *pInput = pOwner_->GetInput();
     const float dt = pOwner_->GetDt();
 
     if (pOwner_->GetIsLockOn() && pOwner_->GetEnemy())
@@ -298,13 +298,13 @@ void PlayerMovement::RotateUpdate()
 
             // プレイヤーの正面方向(+Z方向)を敵の方向に向ける
             Vector3 forward = toEnemy;
-            Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ};
+            Vector3 worldUp = kWorldUp;
 
             // forwardとworldUpが平行になる場合の対処
             Vector3 right;
             if (std::abs(forward.Dot(worldUp)) > kParallelThreshold)
             {
-                right = {kRightVectorX, kRightVectorY, kRightVectorZ};
+                right = kWorldRight;
             }
             else
             {
@@ -323,17 +323,17 @@ void PlayerMovement::RotateUpdate()
     }
     else
     {
-        if (!gamePad->IsConnected())
+        if (!pGamePad->IsConnected())
         {
             // キーボード入力（左右矢印キーで手動回転）
             Vector3 euler = pOwner_->GetLocalRotation().ToEulerAngles();
             bool rotationChanged = false;
-            if (input->PushKey(DIK_RIGHT))
+            if (pInput->PushKey(DIK_RIGHT))
             {
                 euler.y -= kManualRotationSpeed;
                 rotationChanged = true;
             }
-            if (input->PushKey(DIK_LEFT))
+            if (pInput->PushKey(DIK_LEFT))
             {
                 euler.y += kManualRotationSpeed;
                 rotationChanged = true;
@@ -346,8 +346,8 @@ void PlayerMovement::RotateUpdate()
         else
         {
             // ゲームパッド入力（右スティックX軸で左右回転）
-            float rightStickX = gamePad->GetRightStickX();
-            float rightStickY = gamePad->GetRightStickY();
+            float rightStickX = pGamePad->GetRightStickX();
+            float rightStickY = pGamePad->GetRightStickY();
 
             if (rightStickX != 0.0f || rightStickY != 0.0f)
             {
@@ -370,12 +370,12 @@ void PlayerMovement::FaceTargetInstant(const Vector3 &targetPos)
     toTarget = toTarget.Normalize();
 
     Vector3 forward = toTarget;
-    Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ};
+    Vector3 worldUp = kWorldUp;
 
     Vector3 right;
     if (std::abs(forward.Dot(worldUp)) > kParallelThreshold)
     {
-        right = {kRightVectorX, kRightVectorY, kRightVectorZ};
+        right = kWorldRight;
     }
     else
     {
@@ -393,9 +393,9 @@ void PlayerMovement::StartMeleeLunge()
     Vector3 dir = pOwner_->GetForward();
     dir.y = kYComponentZero;
 
-    if (Enemy *enemy = pOwner_->GetEnemy())
+    if (Enemy *pEnemy = pOwner_->GetEnemy())
     {
-        Vector3 toEnemy = enemy->GetWorldPosition() - pOwner_->GetWorldPosition();
+        Vector3 toEnemy = pEnemy->GetWorldPosition() - pOwner_->GetWorldPosition();
         toEnemy.y = kYComponentZero;
         const float distance = toEnemy.Length();
 
@@ -572,23 +572,23 @@ const char *PlayerMovement::GetDirectionName(Direction dir)
 
 float PlayerMovement::NormalizeAngle(float angle)
 {
-    const float TWO_PI = 2.0f * std::numbers::pi_v<float>;
+    const float kTwoPi = 2.0f * std::numbers::pi_v<float>;
     while (angle < 0.0f)
-        angle += TWO_PI;
-    while (angle >= TWO_PI)
-        angle -= TWO_PI;
+        angle += kTwoPi;
+    while (angle >= kTwoPi)
+        angle -= kTwoPi;
     return angle;
 }
 
 float PlayerMovement::CalculateShortestRotation(float from, float to)
 {
     float diff = to - from;
-    const float PI = std::numbers::pi_v<float>;
+    const float kPi = std::numbers::pi_v<float>;
 
-    while (diff > PI)
-        diff -= 2.0f * PI;
-    while (diff < -PI)
-        diff += 2.0f * PI;
+    while (diff > kPi)
+        diff -= 2.0f * kPi;
+    while (diff < -kPi)
+        diff += 2.0f * kPi;
 
     return diff;
 }
@@ -617,26 +617,26 @@ float PlayerMovement::GetVelocityMagnitude() const
     return std::sqrt(velocity_.x * velocity_.x + velocity_.y * velocity_.y + velocity_.z * velocity_.z);
 }
 
-void PlayerMovement::Save(DataHandler *data)
+void PlayerMovement::Save(DataHandler *pData)
 {
-    data->Save("fallSpeed", fallSpeed_);
-    data->Save("moveSpeed", moveSpeed_);
-    data->Save("jumpSpeed", jumpSpeed_);
-    data->Save("maxSpeed", maxSpeed_);
-    data->Save("accelRate", accelRate_);
-    data->Save("meleeLungeSpeed", meleeLungeSpeed_);
-    data->Save("meleeLungeMinDistance", meleeLungeMinDistance_);
+    pData->Save("fallSpeed", fallSpeed_);
+    pData->Save("moveSpeed", moveSpeed_);
+    pData->Save("jumpSpeed", jumpSpeed_);
+    pData->Save("maxSpeed", maxSpeed_);
+    pData->Save("accelRate", accelRate_);
+    pData->Save("meleeLungeSpeed", meleeLungeSpeed_);
+    pData->Save("meleeLungeMinDistance", meleeLungeMinDistance_);
 }
 
-void PlayerMovement::Load(DataHandler *data)
+void PlayerMovement::Load(DataHandler *pData)
 {
-    fallSpeed_ = data->Load<float>("fallSpeed", -9.8f);
-    moveSpeed_ = data->Load<float>("moveSpeed", 0.0f);
-    jumpSpeed_ = data->Load<float>("jumpSpeed", 10.0f);
-    maxSpeed_ = data->Load<float>("maxSpeed", 10.0f);
-    accelRate_ = data->Load<float>("accelRate", 15.0f);
-    meleeLungeSpeed_ = data->Load<float>("meleeLungeSpeed", meleeLungeSpeed_);
-    meleeLungeMinDistance_ = data->Load<float>("meleeLungeMinDistance", meleeLungeMinDistance_);
+    fallSpeed_ = pData->Load<float>("fallSpeed", -9.8f);
+    moveSpeed_ = pData->Load<float>("moveSpeed", 0.0f);
+    jumpSpeed_ = pData->Load<float>("jumpSpeed", 10.0f);
+    maxSpeed_ = pData->Load<float>("maxSpeed", 10.0f);
+    accelRate_ = pData->Load<float>("accelRate", 15.0f);
+    meleeLungeSpeed_ = pData->Load<float>("meleeLungeSpeed", meleeLungeSpeed_);
+    meleeLungeMinDistance_ = pData->Load<float>("meleeLungeMinDistance", meleeLungeMinDistance_);
 }
 
 void PlayerMovement::DrawImGui()
@@ -660,11 +660,11 @@ void PlayerMovement::DrawImGui()
 
 void PlayerMovement::RegisterParams()
 {
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register("Player", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});
-    hub->Register("Player", "加速率", &accelRate_, {0.1f, 0.0f, 50.0f});
-    hub->Register("Player", "近接踏み込み速度", &meleeLungeSpeed_, {0.5f, 0.0f, 60.0f});
-    hub->Register("Player", "近接踏み込み最小距離", &meleeLungeMinDistance_, {0.1f, 0.0f, 20.0f});
-    hub->Register("Player", "ジャンプ速度", &jumpSpeed_, {0.1f, 0.0f, 50.0f});
-    hub->Register("Player", "落下速度", &fallSpeed_, {0.1f, -20.0f, 0.0f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register("Player", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});
+    pHub->Register("Player", "加速率", &accelRate_, {0.1f, 0.0f, 50.0f});
+    pHub->Register("Player", "近接踏み込み速度", &meleeLungeSpeed_, {0.5f, 0.0f, 60.0f});
+    pHub->Register("Player", "近接踏み込み最小距離", &meleeLungeMinDistance_, {0.1f, 0.0f, 20.0f});
+    pHub->Register("Player", "ジャンプ速度", &jumpSpeed_, {0.1f, 0.0f, 50.0f});
+    pHub->Register("Player", "落下速度", &fallSpeed_, {0.1f, -20.0f, 0.0f});
 }

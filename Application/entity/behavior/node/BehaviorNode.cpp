@@ -26,7 +26,7 @@ NodeStatus BTNode::Tick()
     return status_;
 }
 void BTNode::AddChild(std::shared_ptr<BTNode> child) {}
-void BTNode::SetContext(Enemy *enemy, Player *player) {}
+void BTNode::SetContext(Enemy *pEnemy, Player *player) {}
 void BTNode::OnEnter() {}
 void BTNode::OnExit() {}
 
@@ -36,12 +36,12 @@ void CompositeNode::AddChild(std::shared_ptr<BTNode> child)
     children_.push_back(child);
 }
 
-void CompositeNode::SetContext(Enemy *enemy, Player *player)
+void CompositeNode::SetContext(Enemy *pEnemy, Player *player)
 {
-    BTNode::SetContext(enemy, player);
+    BTNode::SetContext(pEnemy, player);
     // 全ての子ノードにコンテキストを伝播
     for (auto &child : children_)
-        child->SetContext(enemy, player);
+        child->SetContext(pEnemy, player);
 }
 
 void CompositeNode::OnEnter()

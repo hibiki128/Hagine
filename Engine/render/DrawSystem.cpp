@@ -26,16 +26,16 @@
 #endif
 
 namespace Hagine {
-void DrawSystem::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager,
-                            OffScreen *offscreen, SceneManager *sceneManager,
+void DrawSystem::Initialize(DirectXCommon *pDxCommon, SrvManager *pSrvManager,
+                            OffScreen *pOffScreen, SceneManager *sceneManager,
                             CollisionManager *collision)
 {
-    pDxCommon_ = dxCommon;
-    pSrvManager_ = srvManager;
+    pDxCommon_ = pDxCommon;
+    pSrvManager_ = pSrvManager;
     pSceneManager_ = sceneManager;
     pCollision_ = collision;
 
-    stageOffScreens_[0] = offscreen;
+    stageOffScreens_[0] = pOffScreen;
     nextStageIndex_ = 1;
 }
 
@@ -193,12 +193,12 @@ void DrawSystem::Draw(const ViewProjection &vp)
     if (DeferredRenderer::GetInstance()->IsEnabled())
     {
         HAGINE_CPU_PROFILE("DS/ParticleLights");
-        ID3D12GraphicsCommandList *cmdList = pDxCommon_->GetCommandList().Get();
-        int gpuLightGen = GpuProfiler::GetInstance()->OpenGraphics(cmdList, "ParticleLightGen");
-        lightGroup->BeginGpuLightAppend(cmdList);
-        ParticleCSEmitter::SubmitAllParticleLights(vp, cmdList);
-        lightGroup->EndGpuLightAppend(cmdList);
-        GpuProfiler::GetInstance()->Close(cmdList, gpuLightGen);
+        ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
+        int gpuLightGen = GpuProfiler::GetInstance()->OpenGraphics(pCommandList, "ParticleLightGen");
+        lightGroup->BeginGpuLightAppend(pCommandList);
+        ParticleCSEmitter::SubmitAllParticleLights(vp, pCommandList);
+        lightGroup->EndGpuLightAppend(pCommandList);
+        GpuProfiler::GetInstance()->Close(pCommandList, gpuLightGen);
     }
 
     OffScreen *lastOffScreen = nullptr;
@@ -264,7 +264,7 @@ void DrawSystem::Draw(const ViewProjection &vp)
             ParticleCSSpawner::GetInstance()->DrawGraphics(vp, stageIdx);
 
             // 注: GPUパーティクルエディタのエミッターは「プレビュー窓のみ」で確認する。
-            // 以前はここで DrawAllGraphics(vp) を呼び現在のシーン offscreen にも描画していたが、
+            // 以前はここで DrawAllGraphics(vp) を呼び現在のシーン pOffScreen にも描画していたが、
             // 編集中のパーティクルがゲームシーンに漏れて見えてしまうため撤去。
             // シミュレーション（DrawAllCompute）は上のフェーズで実行済みで、
             // 描画は RenderPreview()（プレビュー専用VP）だけが行う。

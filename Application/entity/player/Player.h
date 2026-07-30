@@ -75,14 +75,14 @@ class Player : public Hagine::BaseObject
     /// <summary>
     /// 当たってる間
     /// </summary>
-    /// <param name="other">衝突したコライダー</param>
-    void OnCollision(Hagine::ColliderBase *other);
+    /// <param name="pOther">衝突したコライダー</param>
+    void OnCollision(Hagine::ColliderBase *pOther);
 
     /// <summary>
     /// 当たった瞬間
     /// </summary>
-    /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnter(Hagine::ColliderBase *other);
+    /// <param name="pOther">衝突したコライダー</param>
+    void OnCollisionEnter(Hagine::ColliderBase *pOther);
 
     /// <summary>
     /// デバッグ処理
@@ -251,7 +251,7 @@ class Player : public Hagine::BaseObject
     /// ===================================================
     Hagine::GamePad *GetGamePad() { return gamePad_.get(); }
     Hagine::Input *GetInput() { return pInput_; }
-    FollowCamera *GetCamera() { return FollowCamera_; }
+    FollowCamera *GetCamera() { return pFollowCamera_; }
     Enemy *GetEnemy() { return pEnemy_; }
     Hagine::Vector3 GetForward() const;
     Hagine::Vector3 GetBackward() const;
@@ -269,7 +269,7 @@ class Player : public Hagine::BaseObject
     bool &GetAlive() { return isAlive_; }
     bool &GetIsLockOn() { return isLockOn_; }
     bool GetIsPause() const { return isPause_; }
-    Hagine::ViewProjection &GetViewProjection() { return *pVp_; }
+    Hagine::ViewProjection &GetViewProjection() { return *pViewProjection_; }
     std::string GetCurrentStateName() const;
     std::string GetPreviewStateName() const { return previousStateName_; }
     TutorialStep GetTutorialStep() const { return tutorialStep_; }
@@ -299,11 +299,11 @@ class Player : public Hagine::BaseObject
     /// ===================================================
     /// Setter
     /// ===================================================
-    void SetCamera(FollowCamera *camera) { FollowCamera_ = camera; }
-    void SetVp(Hagine::ViewProjection *vp);
+    void SetCamera(FollowCamera *pCamera) { pFollowCamera_ = pCamera; }
+    void SetViewProjection(Hagine::ViewProjection *pViewProjection);
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
-    void SetEnemy(Enemy *enemy);
+    void SetEnemy(Enemy *pEnemy);
     void SetIsLockOn(bool flag) { isLockOn_ = flag; }
     void SetIsDeathStaging(bool flag) { isDeathStaging_ = flag; }
     void SetActiveDebugCamera(bool flag) { activeDebugCamera_ = flag; }
@@ -328,19 +328,8 @@ class Player : public Hagine::BaseObject
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
-
-    // 回転・ベクトル定数
-    static constexpr float kForwardVectorX = 0.0f;
-    static constexpr float kForwardVectorY = 0.0f;
-    static constexpr float kForwardVectorZ = -1.0f;
-    static constexpr float kRightVectorX = 1.0f;
-    static constexpr float kRightVectorY = 0.0f;
-    static constexpr float kRightVectorZ = 0.0f;
-    static constexpr float kUpVectorX = 0.0f;
-    static constexpr float kUpVectorY = 1.0f;
-    static constexpr float kUpVectorZ = 0.0f;
 
     // FOV関連定数
     static constexpr float kNormalFov = 45.0f;
@@ -358,7 +347,7 @@ class Player : public Hagine::BaseObject
     std::unique_ptr<PlayerStatus> status_;     // HP・エネルギー・被ダメージ・ガード
     std::unique_ptr<PlayerVisual> visual_;     // アニメーション・飛行リーン
 
-    FollowCamera *FollowCamera_ = nullptr;
+    FollowCamera *pFollowCamera_ = nullptr;
     Enemy *pEnemy_ = nullptr;
 
     float dt_ = 0.0f; // デルタタイム
@@ -385,7 +374,7 @@ class Player : public Hagine::BaseObject
     std::unique_ptr<Shake> shake_;                           // シェイク
     // オーラパーティクル。実体は ParticleCSSpawner が所有する借用ポインタで、
     // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
-    Hagine::ParticleCSEmitter *auraEmitter_ = nullptr;
+    Hagine::ParticleCSEmitter *pAuraEmitter_ = nullptr;
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;    // 被弾ヒットエミッター
     std::unique_ptr<DashEffect> dashEffect_;                 // ダッシュ中の演出
     std::unique_ptr<FootEffect> footEffect_;                 // 着地・走行中の足元の演出
@@ -393,7 +382,7 @@ class Player : public Hagine::BaseObject
     std::unique_ptr<ScreenFlash> screenFlash_;               // 必殺技の画面白黒フラッシュ演出
     std::unique_ptr<Hagine::GamePad> gamePad_;               // ゲームパッド
 
-    Hagine::ViewProjection *pVp_ = nullptr;               // カメラ
+    Hagine::ViewProjection *pViewProjection_ = nullptr;               // カメラ
     Hagine::OBBCollider *pPlayerCollider_ = nullptr;      // コライダー
     Hagine::AABBCollider *pPlayerWallCollider_ = nullptr; // 壁用コライダー
     Hagine::ParticleField *pGeneratedField_ = nullptr;    // 生成するフィールド

@@ -120,7 +120,7 @@ class Material {
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     DirectXCommon *pDxCommon_ = nullptr;                      // DirectX共通クラス

@@ -53,14 +53,14 @@ void Enemy::Init(const std::string objectName)
     pEnemyWallCollider_->AddCollisionMask("PlayerWall");
     pEnemyWallCollider_->SetSize({2.75f, 1000.0f, 2.5f});
 
-    pEnemyCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
-        this->OnCollisionEnter(other);
+    pEnemyCollider_->SetOnCollisionEnter([this](ColliderBase *pOther) {
+        this->OnCollisionEnter(pOther);
     });
-    pEnemyCollider_->SetOnCollision([this](ColliderBase *other) {
-        this->OnCollision(other);
+    pEnemyCollider_->SetOnCollision([this](ColliderBase *pOther) {
+        this->OnCollision(pOther);
     });
-    pEnemyWallCollider_->SetOnCollision([this](ColliderBase *other) {
-        this->OnCollision(other);
+    pEnemyWallCollider_->SetOnCollision([this](ColliderBase *pOther) {
+        this->OnCollision(pOther);
     });
 
     BaseObject::SetColor(Vector4(kColorRed, kColorZero, kColorZero, kColorOpaque));
@@ -134,8 +134,8 @@ void Enemy::Update()
                 SetAlpha(kAlphaOpaque);
 
                 // ピッチが残っていると倒れるモーションが地面と合わないので、ヨーのみ残す
-                Vector3 euler = transform_->quateRotation_.ToEulerAngles();
-                transform_->quateRotation_ = Quaternion::FromEulerAngles({0.0f, euler.y, 0.0f});
+                Vector3 euler = transform_->quaternionRotation_.ToEulerAngles();
+                transform_->quaternionRotation_ = Quaternion::FromEulerAngles({0.0f, euler.y, 0.0f});
 
                 // 空中死亡時は飛行を打ち切り、その場から真下へ落下させて地面の上で倒れさせる
                 movement_->SetIsFlying(false);
@@ -165,8 +165,8 @@ void Enemy::Update()
 
         // プレイヤーの必殺技カメラワーク中は完全停止させる。
         // ただし自分がビーム発動者の場合は照準追従の回転を残したいのでロックしない
-        FollowCamera *followCamera = pTarget_ ? pTarget_->GetCamera() : nullptr;
-        const bool cameraCloseUp = followCamera && followCamera->IsSkillCloseUpActive();
+        FollowCamera *pFollowCamera = pTarget_ ? pTarget_->GetCamera() : nullptr;
+        const bool cameraCloseUp = pFollowCamera && pFollowCamera->IsSkillCloseUpActive();
         const bool frozenByOpponentSkill = cameraCloseUp && !combat_->IsBeamStaging();
 
         // 被弾リアクション（ひるみ・吹き飛ばし）中はAIを止めるため、判定用に取得しておく
@@ -446,40 +446,40 @@ void Enemy::Debug()
 #endif
 }
 
-void Enemy::OnCollisionEnter(ColliderBase *other)
+void Enemy::OnCollisionEnter(ColliderBase *pOther)
 {
-    if (other->GetTag() == "PlayerBullet" ||
-        other->GetTag() == "PlayerChargeBullet" ||
-        other->GetTag() == "Makan")
+    if (pOther->GetTag() == "PlayerBullet" ||
+        pOther->GetTag() == "PlayerChargeBullet" ||
+        pOther->GetTag() == "Makan")
     {
         hitEmitter_->SetPosition(transform_->translation_);
         hitEmitter_->UpdateOnce();
     }
-    if (other->GetTag() == "PlayerChargeBullet" ||
-        other->GetTag() == "Makan")
+    if (pOther->GetTag() == "PlayerChargeBullet" ||
+        pOther->GetTag() == "Makan")
     {
         combat_->StartHitShake();
     }
 
     // 前方攻撃判定（PlayerHand）ヒット時のパーティクル（ダメージ計算はコライダー側）
-    if (other->GetTag() == "PlayerHand")
+    if (pOther->GetTag() == "PlayerHand")
     {
         hitEmitter_->SetPosition(transform_->translation_);
         hitEmitter_->UpdateOnce();
     }
 }
 
-void Enemy::OnCollision(ColliderBase *other)
+void Enemy::OnCollision(ColliderBase *pOther)
 {
     Vector3 &velocity = movement_->GetVelocity();
 
-    if (other->GetTag() == "CylinderField")
+    if (pOther->GetTag() == "CylinderField")
     {
-        if (other->GetType() != ColliderType::Cylinder)
+        if (pOther->GetType() != ColliderType::Cylinder)
             return;
-        auto *cyl = static_cast<CylinderCollider *>(other);
+        auto *pCylinder = static_cast<CylinderCollider *>(pOther);
         Vector3 mtv;
-        if (CollisionManager::GetInstance()->CalculateDepenetrationOBBCylinder(pEnemyCollider_, cyl, mtv))
+        if (CollisionManager::GetInstance()->CalculateDepenetrationOBBCylinder(pEnemyCollider_, pCylinder, mtv))
         {
             transform_->translation_ += mtv;
             Vector3 mtvDir = mtv.Normalize();
@@ -490,11 +490,11 @@ void Enemy::OnCollision(ColliderBase *other)
         return;
     }
 
-    if (other->GetType() != ColliderType::AABB)
+    if (pOther->GetType() != ColliderType::AABB)
         return;
-    auto *otherAABB = static_cast<AABBCollider *>(other);
+    auto *pOtherAABB = static_cast<AABBCollider *>(pOther);
     Vector3 mtv;
-    if (CollisionManager::GetInstance()->CalculateDepenetration(pEnemyWallCollider_, otherAABB, mtv))
+    if (CollisionManager::GetInstance()->CalculateDepenetration(pEnemyWallCollider_, pOtherAABB, mtv))
     {
         if (mtv.Length() < 0.0001f)
             return;
@@ -520,7 +520,7 @@ void Enemy::UpdateFrustumLockOn()
     if (!pTarget_ || isLockOn_)
         return;
 
-    Matrix4x4 rotMat = QuaternionToMatrix4x4(transform_->quateRotation_);
+    Matrix4x4 rotMat = QuaternionToMatrix4x4(transform_->quaternionRotation_);
     const Vector3 origin = transform_->translation_;
     const Vector3 forward = {rotMat.m[2][0], rotMat.m[2][1], rotMat.m[2][2]};
     const Vector3 right = {rotMat.m[0][0], rotMat.m[0][1], rotMat.m[0][2]};
@@ -552,11 +552,11 @@ void Enemy::DrawFrustum()
     if (!drawFrustumDebug_)
         return;
 
-    LineRenderer *drawLine3D = LineRenderer::GetInstance();
-    if (!drawLine3D)
+    LineRenderer *pLineRenderer = LineRenderer::GetInstance();
+    if (!pLineRenderer)
         return;
 
-    Matrix4x4 rotMat = QuaternionToMatrix4x4(transform_->quateRotation_);
+    Matrix4x4 rotMat = QuaternionToMatrix4x4(transform_->quaternionRotation_);
     const Vector3 origin = transform_->translation_;
     const Vector3 forward = {rotMat.m[2][0], rotMat.m[2][1], rotMat.m[2][2]};
     const Vector3 right = {rotMat.m[0][0], rotMat.m[0][1], rotMat.m[0][2]};
@@ -584,20 +584,20 @@ void Enemy::DrawFrustum()
 
     for (int i = 0; i < 4; ++i)
     {
-        drawLine3D->AddLine(nearCorners[i], nearCorners[(i + 1) % 4], color);
-        drawLine3D->AddLine(farCorners[i], farCorners[(i + 1) % 4], color);
+        pLineRenderer->AddLine(nearCorners[i], nearCorners[(i + 1) % 4], color);
+        pLineRenderer->AddLine(farCorners[i], farCorners[(i + 1) % 4], color);
     }
     for (int i = 0; i < 4; ++i)
     {
-        drawLine3D->AddLine(nearCorners[i], farCorners[i], color);
+        pLineRenderer->AddLine(nearCorners[i], farCorners[i], color);
     }
-    drawLine3D->AddLine(origin, origin + forward * frustumLockOnRange_, axisColor);
+    pLineRenderer->AddLine(origin, origin + forward * frustumLockOnRange_, axisColor);
 #endif
 }
 
-void Enemy::SetVp(ViewProjection *vp)
+void Enemy::SetViewProjection(ViewProjection *pViewProjection)
 {
-    combat_->SetVp(vp);
+    combat_->SetViewProjection(pViewProjection);
 }
 
 void Enemy::SetDummy(bool enable)
@@ -629,22 +629,22 @@ void Enemy::Revive()
 Vector3 Enemy::GetForward() const
 {
     return TransformNormal(
-        Vector3(kForwardVectorX, kForwardVectorY, kForwardVectorZ),
-        QuaternionToMatrix4x4(transform_->quateRotation_));
+        -kWorldForward,
+        QuaternionToMatrix4x4(transform_->quaternionRotation_));
 }
 Vector3 Enemy::GetBackward() const { return -GetForward(); }
 Vector3 Enemy::GetRight() const
 {
     return TransformNormal(
-        Vector3(kRightVectorX, kRightVectorY, kRightVectorZ),
-        QuaternionToMatrix4x4(transform_->quateRotation_));
+        kWorldRight,
+        QuaternionToMatrix4x4(transform_->quaternionRotation_));
 }
 Vector3 Enemy::GetLeft() const { return -GetRight(); }
 Vector3 Enemy::GetUp() const
 {
     return TransformNormal(
-        Vector3(kUpVectorX, kUpVectorY, kUpVectorZ),
-        QuaternionToMatrix4x4(transform_->quateRotation_));
+        kWorldUp,
+        QuaternionToMatrix4x4(transform_->quaternionRotation_));
 }
 Vector3 Enemy::GetDown() const { return -GetUp(); }
 

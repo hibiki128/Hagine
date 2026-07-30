@@ -13,9 +13,9 @@
 #endif // _DEBUG
 
 using namespace Hagine;
-void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey)
+void TutorialUI::Initialize(TutorialSystem *pSystem, const std::string &okFontKey)
 {
-    pSystem_ = system;
+    pSystem_ = pSystem;
 
     // 内部状態の初期化
     displayedProgress_ = 0.0f;
@@ -44,13 +44,13 @@ void TutorialUI::Initialize(TutorialSystem *system, const std::string &okFontKey
         {barPosition_.x - borderThickness_, barPosition_.y - borderThickness_},
         {0.0f, 0.0f, 0.0f, 1.0f});
 
-    SkipButtonSprite_.Initialize(
+    skipButtonSprite_.Initialize(
         "UI/skip.png",
         skipButtonPosition_,
         {1.0f, 1.0f, 1.0f, 1.0f},
         {0.5f, 0.5f});
 
-    SkipButtonSprite_.SetSize(skipButtonSize_);
+    skipButtonSprite_.SetSize(skipButtonSize_);
 
     UpdateMeterSprites();
 
@@ -285,11 +285,11 @@ void TutorialUI::UpdateMeterSprites()
 
 void TutorialUI::ApplyAlphaToAllManagedSprites(float alpha)
 {
-    for (SpriteData *sd : SpriteManager::GetInstance()->GetAllSprites())
+    for (SpriteData *pSpriteData : SpriteManager::GetInstance()->GetAllSprites())
     {
-        if (sd && sd->sprite)
+        if (pSpriteData && pSpriteData->sprite)
         {
-            sd->sprite->SetAlpha(alpha);
+            pSpriteData->sprite->SetAlpha(alpha);
         }
     }
 }
@@ -303,8 +303,8 @@ void TutorialUI::Draw()
     barSprite_.SetAlpha(barAlpha_);
     barSprite_.Draw();
 
-    SkipButtonSprite_.SetAlpha(1.0f);
-    SkipButtonSprite_.Draw();
+    skipButtonSprite_.SetAlpha(1.0f);
+    skipButtonSprite_.Draw();
 
     // OK! スプライトの描画
     if (okSpriteReady_ && okAlpha_ > 0.001f)
@@ -443,7 +443,7 @@ void TutorialUI::LoadStepSprites(TutorialStep step)
         return;
     }
 
-    SpriteManager *sm = SpriteManager::GetInstance();
+    SpriteManager *pSpriteManager = SpriteManager::GetInstance();
 
     // 現在のスプライト(D3D12リソース)を破棄する前に GPU の全作業完了を待つ。
     // ダブルバッファのため、前フレームで投入した描画コマンドが古いスプライトの
@@ -452,9 +452,9 @@ void TutorialUI::LoadStepSprites(TutorialStep step)
     // (OBJECT_DELETED_WHILE_STILL_IN_USE)。SceneManager::SceneChange と同じ対策。
     DirectXCommon::GetInstance()->WaitForGPU();
 
-    sm->Clear();
-    sm->SetSaveFolder(folder);
-    sm->LoadAllSprites();
+    pSpriteManager->Clear();
+    pSpriteManager->SetSaveFolder(folder);
+    pSpriteManager->LoadAllSprites();
 }
 
 void TutorialUI::LoadMeterSettings()

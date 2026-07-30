@@ -160,12 +160,12 @@ class ImGuizmoManager
 
     void Finalize();
     void BeginFrame();
-    void SetViewProjection(ViewProjection *vp);
+    void SetViewProjection(ViewProjection *pViewProjection);
 
     // ---- AddTarget オーバーロード群 ----
 
     /// BaseObject を登録する（既存の使い方）
-    void AddTarget(const std::string &name, BaseObject *object, bool selectable = true);
+    void AddTarget(const std::string &name, BaseObject *pObject, bool selectable = true);
 
     /// WorldTransform のみを持つオブジェクトを登録する
     /// imguiCallback を渡すと ImGui 表示をカスタマイズできる
@@ -184,9 +184,9 @@ class ImGuizmoManager
                    std::function<void()> imguiCallback = nullptr);
 
     /// Sprite を登録する（XY 移動のみ、スクリーン空間ピクセル座標）
-    void AddTarget(const std::string &name, Sprite *sprite, bool selectable = true);
+    void AddTarget(const std::string &name, Sprite *pSprite, bool selectable = true);
 
-    void imgui();
+    void DrawImGui();
     // sceneHovered: シーンウィンドウが他のImGuiウィンドウに覆われずホバーされているか。
     //               false のときはクリックによるオブジェクト選択を行わない（誤操作防止）。
     void Update(const ImVec2 &scenePosition, const ImVec2 &sceneSize, bool sceneHovered = true);

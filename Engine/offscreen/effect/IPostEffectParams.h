@@ -16,15 +16,15 @@ class IPostEffectParams
     virtual ~IPostEffectParams() = default;
 
     /// @brief GPUバッファの初期化
-    virtual void Initialize(DirectXCommon *dxCommon) = 0;
+    virtual void Initialize(DirectXCommon *pDxCommon) = 0;
 
     /// @brief このパラメータが対応するシェーダーモードを返す
     virtual ShaderMode GetMode() const = 0;
 
     /// @brief コマンドリストにパラメータをバインドする
-    virtual void Apply(ID3D12GraphicsCommandList *commandList,
-                       SrvManager *srvManager,
-                       DirectXCommon *dxCommon) = 0;
+    virtual void Apply(ID3D12GraphicsCommandList *pCommandList,
+                       SrvManager *pSrvManager,
+                       DirectXCommon *pDxCommon) = 0;
 
     /// @brief ImGuiによるパラメータ編集UI
     virtual void DrawUI() = 0;

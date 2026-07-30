@@ -28,8 +28,8 @@ class EnemyStatus
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="owner">所有者の敵</param>
-    void Init(Enemy *owner);
+    /// <param name="pOwner">所有者の敵</param>
+    void Init(Enemy *pOwner);
 
     /// <summary>
     /// ダメージを受ける処理（ガード軽減・ノックバック適用を含む）
@@ -114,7 +114,7 @@ class EnemyStatus
     /// ===================================================
     /// Getter
     /// ===================================================
-    float GetHP() const { return HP_; }
+    float GetHP() const { return hp_; }
     float GetMaxHP() const { return maxHP_; }
     float &GetEnergy() { return energy_; }
     float GetMaxEnergy() const { return maxEnergy_; }
@@ -146,7 +146,7 @@ class EnemyStatus
     /// ===================================================
     /// ImGui 表示用のパラメータ参照
     /// ===================================================
-    float &GetHPRef() { return HP_; }
+    float &GetHPRef() { return hp_; }
     float &GetMaxHPRef() { return maxHP_; }
     float &GetMaxEnergyRef() { return maxEnergy_; }
     float &GetDamageReactDurationRef() { return damageReactDuration_; }
@@ -154,7 +154,7 @@ class EnemyStatus
     /// ===================================================
     /// Setter
     /// ===================================================
-    void SetHP(float hp) { HP_ = hp; }
+    void SetHP(float hp) { hp_ = hp; }
     void SetMaxHP(float maxHP) { maxHP_ = maxHP; }
 
     /// <summary>
@@ -199,13 +199,12 @@ class EnemyStatus
     void RecoverFromBlow(bool grantFlinchImmunity);
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // ダメージ・HP関連定数
     static constexpr float kNoDamage = 0.0f;
     static constexpr float kMinHP = 0.0f;
-    static constexpr float kTimerReset = 0.0f;
     static constexpr float kGuardDamageMultiplier = 0.15f;
     static constexpr float kGuardEnergyCost = 3.0f;       // ガード中の被弾で消費するエネルギー（プレイヤーと同様）
     static constexpr float kGuardSkillEnergyCost = 15.0f; // ガード中に必殺技を受けた際の消費エネルギー（通常より大きく削る）
@@ -219,7 +218,7 @@ class EnemyStatus
 
     Enemy *pOwner_ = nullptr; ///< 所有者の敵
 
-    float HP_ = 100.0f;    ///< HP
+    float hp_ = 100.0f;    ///< HP
     float maxHP_ = 100.0f; ///< 最大HP
     float damage_ = 0.0f;  ///< 受けるダメージ量
 

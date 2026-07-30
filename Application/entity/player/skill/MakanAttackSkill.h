@@ -32,14 +32,14 @@ class MakanAttackSkill : public Hagine::BaseObject
     /// <summary>
     /// ImGuiでのデバッグ表示
     /// </summary>
-    void DebugImGui();
+    void DrawImGui();
 
   private:
     /// <summary>
     /// 当たってる間
     /// </summary>
-    /// <param name="other"></param>
-    void OnCollisionEnter(Hagine::ColliderBase *other);
+    /// <param name="pOther"></param>
+    void OnCollisionEnter(Hagine::ColliderBase *pOther);
 
     void Deactivate();
 
@@ -58,8 +58,8 @@ class MakanAttackSkill : public Hagine::BaseObject
 
     // ビーム演出。実体は ParticleCSSpawner が所有する（借用ポインタ）。
     // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
-    Hagine::ParticleCSEmitter *makanMainEffect_ = nullptr;
-    Hagine::ParticleCSEmitter *makanAroundEffect_ = nullptr;
+    Hagine::ParticleCSEmitter *pMakanMainEffect_ = nullptr;
+    Hagine::ParticleCSEmitter *pMakanAroundEffect_ = nullptr;
 
     Hagine::OBBCollider *pMakanCollider_ = nullptr;
 

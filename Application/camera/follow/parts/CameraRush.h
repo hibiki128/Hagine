@@ -1,15 +1,15 @@
 #pragma once
+#include "ICameraPart.h"
 #include "Easing.h"
 #include "transform/WorldTransform.h"
 
-class FollowCamera;
 class Player;
 
 /// <summary>
 /// フォローカメラの Rush（突進）専用カメラパーツ
 /// 突進中の遠距離追従と、通常カメラへの復帰補間を担当する
 /// </summary>
-class CameraRush
+class CameraRush : public ICameraPart
 {
   public:
     /// ===================================================
@@ -20,7 +20,7 @@ class CameraRush
     /// 初期化
     /// </summary>
     /// <param name="pOwner">所有者のフォローカメラ</param>
-    void Init(FollowCamera *pOwner) { pOwner_ = pOwner; }
+    void Init(FollowCamera *pOwner) override { pOwner_ = pOwner; }
 
     /// <summary>
     /// Rush（突進）中の専用カメラ制御
@@ -45,15 +45,8 @@ class CameraRush
     /// private variables
     /// ===================================================
 
-    // 閾値・ベクトル定数
-    static constexpr float kVectorZero = 0.0f;          ///< ゼロ値
-    static constexpr float kUpVectorY = 1.0f;           ///< Y軸上方向
+    // 閾値定数
     static constexpr float kParallelThreshold = 0.999f; ///< 平行判定しきい値
-    static constexpr float kTimerReset = 0.0f;          ///< タイマーリセット値
-    static constexpr float kNormalizedValue = 1.0f;     ///< 正規化基準値
-    static constexpr float kMaxBlendValue = 1.0f;       ///< 最大ブレンド値
-    static constexpr float kMaxFollowRate = 1.0f;       ///< 最大追従率
-    static constexpr float kEasingMaxValue = 1.0f;      ///< イージング最大値
 
     // Rush関連の倍率
     static constexpr float kHighDistSpeedMultiplier = 3.0f; ///< 高速追従倍率

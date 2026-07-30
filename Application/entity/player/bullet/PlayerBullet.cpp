@@ -126,8 +126,8 @@ void PlayerBullet::InitTransform(Player *player)
     pCollider_->AddCollisionMask("Enemy");
     pCollider_->AddCollisionMask("Ground");
 
-    pCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
-        this->OnCollisionEnter(other);
+    pCollider_->SetOnCollisionEnter([this](ColliderBase *pOther) {
+        this->OnCollisionEnter(pOther);
     });
 
     pTargetEnemy_ = player->GetEnemy();
@@ -225,9 +225,9 @@ void PlayerBullet::DeflectFrom(const Vector3 &guardPosition)
     }
 }
 
-void PlayerBullet::OnCollisionEnter(ColliderBase *other)
+void PlayerBullet::OnCollisionEnter(ColliderBase *pOther)
 {
-    if (other->GetTag() == "Enemy" && isAlive_ && !isDeflected_ && pTargetEnemy_->GetAlive())
+    if (pOther->GetTag() == "Enemy" && isAlive_ && !isDeflected_ && pTargetEnemy_->GetAlive())
     {
         // ガード中は弾を外側へ弾き返し、ダメージは完全に無効化する
         if (pTargetEnemy_->ConsumeGuardDeflect())
@@ -241,7 +241,7 @@ void PlayerBullet::OnCollisionEnter(ColliderBase *other)
     }
 
     // 地形メッシュに当たったら消滅させる（パーティクル終了後に isAlive_ が折れる）
-    if (other->GetTag() == "Ground" && isAlive_)
+    if (pOther->GetTag() == "Ground" && isAlive_)
     {
         isHit_ = true;
     }

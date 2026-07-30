@@ -25,8 +25,8 @@ bool CameraRush::UpdateRushCamera(Player *pPlayer)
         if (isResumeFromRush_)
             isResumeFromRush_ = false;
         isRushCameraActive_ = false;
-        rushBlendTimer_ = kTimerReset;
-        rushRotationTimer_ = kTimerReset;
+        rushBlendTimer_ = 0.0f;
+        rushRotationTimer_ = 0.0f;
         return false;
     }
 
@@ -46,9 +46,9 @@ bool CameraRush::UpdateRushCamera(Player *pPlayer)
         if (!isResumeFromRush_)
         {
             isResumeFromRush_ = true;
-            rushResumeTimer_ = kTimerReset;
+            rushResumeTimer_ = 0.0f;
             rushCameraPosition_ = worldTransform.translation_;
-            rushCameraRotation_ = worldTransform.quateRotation_;
+            rushCameraRotation_ = worldTransform.quaternionRotation_;
         }
         isRushCameraActive_ = false;
         return false;
@@ -59,7 +59,7 @@ bool CameraRush::UpdateRushCamera(Player *pPlayer)
     {
         isRushCameraActive_ = true;
         rushCameraPosition_ = worldTransform.translation_;
-        rushCameraRotation_ = worldTransform.quateRotation_;
+        rushCameraRotation_ = worldTransform.quaternionRotation_;
     }
 
     Vector3 targetCameraPos = currentPos + rushCameraOffset_;
@@ -70,7 +70,7 @@ bool CameraRush::UpdateRushCamera(Player *pPlayer)
     float dynamicFollowRate = rushCameraFollowRate_;
     if (playerCameraDistance > rushHighDistThreshold_)
     {
-        dynamicFollowRate = std::min(kMaxFollowRate, rushCameraFollowRate_ * kHighDistSpeedMultiplier);
+        dynamicFollowRate = std::min(1.0f, rushCameraFollowRate_ * kHighDistSpeedMultiplier);
     }
     else if (playerCameraDistance > rushMidDistThreshold_)
     {
@@ -79,10 +79,10 @@ bool CameraRush::UpdateRushCamera(Player *pPlayer)
 
     float deltaTime = Frame::DeltaTime();
     rushBlendTimer_ += deltaTime;
-    float t = std::min(rushBlendTimer_ / (kNormalizedValue / dynamicFollowRate), kMaxBlendValue);
+    float t = std::min(rushBlendTimer_ / (1.0f / dynamicFollowRate), kEasingProgressMax);
 
     // 位置の補間実行
-    Vector3 blendedPos = ApplyEasing(rushCameraEasingType_, rushCameraPosition_, targetCameraPos, t, kEasingMaxValue);
+    Vector3 blendedPos = ApplyEasing(rushCameraEasingType_, rushCameraPosition_, targetCameraPos, t, kEasingProgressMax);
     worldTransform.translation_ = blendedPos;
     rushCameraPosition_ = blendedPos;
 
@@ -90,15 +90,15 @@ bool CameraRush::UpdateRushCamera(Player *pPlayer)
     const float yaw = pOwner_->GetYaw();
     Vector3 toEnemy = (pPlayer->GetEnemy()->GetLocalPosition() - worldTransform.translation_).Normalize();
     Vector3 toPlayer = (currentPos - worldTransform.translation_).Normalize();
-    Vector3 blendedDir = ApplyEasing(rushCameraEasingType_, toEnemy, toPlayer, kRushDirectionBlendRatio, kEasingMaxValue).Normalize();
+    Vector3 blendedDir = ApplyEasing(rushCameraEasingType_, toEnemy, toPlayer, kRushDirectionBlendRatio, kEasingProgressMax).Normalize();
 
     Vector3 forward = blendedDir;
-    Vector3 worldUp = {kVectorZero, kUpVectorY, kVectorZero};
+    Vector3 worldUp = kWorldUp;
 
     Vector3 right;
     if (std::abs(forward.Dot(worldUp)) > kParallelThreshold)
     {
-        right = {std::cos(yaw), kVectorZero, -std::sin(yaw)};
+        right = {std::cos(yaw), 0.0f, -std::sin(yaw)};
     }
     else
     {
@@ -110,11 +110,11 @@ bool CameraRush::UpdateRushCamera(Player *pPlayer)
 
     // 回転の補間実行
     rushRotationTimer_ += deltaTime;
-    float rotT = std::min(rushRotationTimer_ / (kNormalizedValue / (dynamicFollowRate * kRotationSpeedMultiplier)), kMaxBlendValue);
-    worldTransform.quateRotation_ = Quaternion::Slerp(
+    float rotT = std::min(rushRotationTimer_ / (1.0f / (dynamicFollowRate * kRotationSpeedMultiplier)), kEasingProgressMax);
+    worldTransform.quaternionRotation_ = Quaternion::Slerp(
         rushCameraRotation_, targetRot,
-        ApplyEasing(rushCameraEasingType_, kVectorZero, kEasingMaxValue, rotT, kEasingMaxValue));
-    rushCameraRotation_ = worldTransform.quateRotation_;
+        ApplyEasing(rushCameraEasingType_, 0.0f, kEasingProgressMax, rotT, kEasingProgressMax));
+    rushCameraRotation_ = worldTransform.quaternionRotation_;
 
     worldTransform.UpdateMatrix();
 
@@ -134,25 +134,25 @@ void CameraRush::ApplyCameraPosition(const Vector3 &cameraPos)
     {
         // Rush演出からの復帰補間実行
         Vector3 targetCameraPos = cameraPos;
-        Quaternion targetCameraRot = worldTransform.quateRotation_;
+        Quaternion targetCameraRot = worldTransform.quaternionRotation_;
 
         rushResumeTimer_ += Frame::DeltaTime();
-        float t = std::min(rushResumeTimer_ / (kNormalizedValue / rushResumeBlendSpeed_), kMaxBlendValue);
+        float t = std::min(rushResumeTimer_ / (1.0f / rushResumeBlendSpeed_), kEasingProgressMax);
 
-        worldTransform.translation_ = ApplyEasing(rushResumeEasingType_, rushCameraPosition_, targetCameraPos, t, kEasingMaxValue);
-        worldTransform.quateRotation_ = Quaternion::Slerp(
+        worldTransform.translation_ = ApplyEasing(rushResumeEasingType_, rushCameraPosition_, targetCameraPos, t, kEasingProgressMax);
+        worldTransform.quaternionRotation_ = Quaternion::Slerp(
             rushCameraRotation_, targetCameraRot,
-            ApplyEasing(rushResumeEasingType_, kVectorZero, kEasingMaxValue, t, kEasingMaxValue));
+            ApplyEasing(rushResumeEasingType_, 0.0f, kEasingProgressMax, t, kEasingProgressMax));
 
         float positionDiff = (worldTransform.translation_ - targetCameraPos).Length();
-        float rotationDiff = std::abs(kNormalizedValue - std::abs(worldTransform.quateRotation_.Dot(targetCameraRot)));
+        float rotationDiff = std::abs(1.0f - std::abs(worldTransform.quaternionRotation_.Dot(targetCameraRot)));
         if (positionDiff < rushPosArrivalThreshold_ && rotationDiff < rushRotationArrivalThreshold_)
         {
             isResumeFromRush_ = false;
         }
 
         rushCameraPosition_ = worldTransform.translation_;
-        rushCameraRotation_ = worldTransform.quateRotation_;
+        rushCameraRotation_ = worldTransform.quaternionRotation_;
     }
     else
     {

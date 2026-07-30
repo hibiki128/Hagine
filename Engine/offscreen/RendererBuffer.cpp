@@ -1,12 +1,12 @@
 #include "RendererBuffer.h"
 
 namespace Hagine {
-void RenderBuffer::Initialize(DirectXCommon *dxCommon, SrvManager *srvManager)
+void RenderBuffer::Initialize(DirectXCommon *pDxCommon, SrvManager *pSrvManager)
 {
-    assert(dxCommon);
-    assert(srvManager);
-    pDxCommon_ = dxCommon;
-    pSrvManager_ = srvManager;
+    assert(pDxCommon);
+    assert(pSrvManager);
+    pDxCommon_ = pDxCommon;
+    pSrvManager_ = pSrvManager;
     CreatePingPongBuffers();
     CreateFinalResultTexture();
 }

@@ -69,6 +69,6 @@ class DemoScene : public Hagine::BaseScene
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 };

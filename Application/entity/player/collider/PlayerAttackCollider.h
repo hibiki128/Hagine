@@ -36,8 +36,8 @@ class PlayerAttackCollider
     /// 初期化
     /// </summary>
     /// <param name="player">プレイヤー参照</param>
-    /// <param name="enemy">敵参照（後でSetEnemyでも設定可）</param>
-    void Init(Player *player, Enemy *enemy = nullptr);
+    /// <param name="pEnemy">敵参照（後でSetEnemyでも設定可）</param>
+    void Init(Player *player, Enemy *pEnemy = nullptr);
 
     /// <summary>
     /// 更新処理（毎フレーム呼び出し必須）
@@ -72,7 +72,7 @@ class PlayerAttackCollider
     /// <summary>
     /// 敵参照を設定
     /// </summary>
-    void SetEnemy(Enemy *enemy) { pEnemy_ = enemy; }
+    void SetEnemy(Enemy *pEnemy) { pEnemy_ = pEnemy; }
 
     /// <summary>
     /// プレイヤー前方へのオフセット距離を設定
@@ -108,10 +108,10 @@ class PlayerAttackCollider
     /// <summary>
     /// 衝突開始時のコールバック
     /// </summary>
-    void OnCollision(Hagine::ColliderBase *other);
+    void OnCollision(Hagine::ColliderBase *pOther);
 
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     Player *pPlayer_ = nullptr;

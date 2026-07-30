@@ -8,9 +8,9 @@
 
 using namespace Hagine;
 
-void PlayerStatus::Init(Player *owner)
+void PlayerStatus::Init(Player *pOwner)
 {
-    pOwner_ = owner;
+    pOwner_ = pOwner;
 }
 
 void PlayerStatus::DamageUpdate()
@@ -51,12 +51,12 @@ void PlayerStatus::DamageUpdate()
         actualDamage *= skillBlowDamageMultiplier_;
     }
 
-    HP_ -= actualDamage;
+    hp_ -= actualDamage;
     damage_ = kNoDamage;
 
     // ダメージリアクションの開始（点滅のみ）
     isDamageReact_ = true;
-    damageReactTimer_ = kTimerReset;
+    damageReactTimer_ = 0.0f;
 
     // スタン中の追撃は落下の軌道を乱さないよう、ノックバックもリアクション変更も行わない
     if (inSkillBlow)
@@ -72,7 +72,7 @@ void PlayerStatus::DamageUpdate()
 
     // 無敵時間の開始
     isInvincible_ = true;
-    invincibleTime_ = kTimerReset;
+    invincibleTime_ = 0.0f;
 
     // 必殺技被弾：吹き飛ばして落下スタンへ移行する（他のリアクションより優先）
     if (skillBlowPending_)
@@ -322,7 +322,7 @@ void PlayerStatus::InvincibleUpdate()
     if (invincibleTime_ >= invincibleDuration_)
     {
         isInvincible_ = false;
-        invincibleTime_ = kTimerReset;
+        invincibleTime_ = 0.0f;
     }
 }
 
@@ -359,7 +359,7 @@ bool PlayerStatus::ConsumeEnergy(float amount)
     if (energy_ >= amount)
     {
         energy_ -= amount;
-        timeSinceLastShot_ = kTimerReset;
+        timeSinceLastShot_ = 0.0f;
         return true;
     }
     return false;
@@ -368,7 +368,7 @@ bool PlayerStatus::ConsumeEnergy(float amount)
 void PlayerStatus::DrainEnergy(float amount)
 {
     energy_ = (energy_ > amount) ? energy_ - amount : 0.0f;
-    timeSinceLastShot_ = kTimerReset;
+    timeSinceLastShot_ = 0.0f;
 }
 
 void PlayerStatus::RecoverEnergy()
@@ -431,29 +431,29 @@ void PlayerStatus::SetKnockbackDirect(const Vector3 &velocity)
     hasKnockback_ = true;
 }
 
-void PlayerStatus::Save(DataHandler *data)
+void PlayerStatus::Save(DataHandler *pData)
 {
-    data->Save("maxEnergy", maxEnergy_);
-    data->Save("energyRecoveryRate", energyRecoveryRate_);
-    data->Save("energyRecoveryDelay", energyRecoveryDelay_);
-    data->Save("invincibleDuration", invincibleDuration_);
-    data->Save("guardDamageMultiplier", guardDamageMultiplier_);
-    data->Save("guardEnergyCost", guardEnergyCost_);
-    data->Save("guardSkillEnergyCost", guardSkillEnergyCost_);
-    data->Save("hitStunDuration", hitStunDuration_);
+    pData->Save("maxEnergy", maxEnergy_);
+    pData->Save("energyRecoveryRate", energyRecoveryRate_);
+    pData->Save("energyRecoveryDelay", energyRecoveryDelay_);
+    pData->Save("invincibleDuration", invincibleDuration_);
+    pData->Save("guardDamageMultiplier", guardDamageMultiplier_);
+    pData->Save("guardEnergyCost", guardEnergyCost_);
+    pData->Save("guardSkillEnergyCost", guardSkillEnergyCost_);
+    pData->Save("hitStunDuration", hitStunDuration_);
 }
 
-void PlayerStatus::Load(DataHandler *data)
+void PlayerStatus::Load(DataHandler *pData)
 {
-    maxEnergy_ = data->Load<float>("maxEnergy", 100.0f);
-    energyRecoveryRate_ = data->Load<float>("energyRecoveryRate", 0.01f);
-    energyRecoveryDelay_ = data->Load<float>("energyRecoveryDelay", 1.0f);
+    maxEnergy_ = pData->Load<float>("maxEnergy", 100.0f);
+    energyRecoveryRate_ = pData->Load<float>("energyRecoveryRate", 0.01f);
+    energyRecoveryDelay_ = pData->Load<float>("energyRecoveryDelay", 1.0f);
     energy_ = maxEnergy_; // 初期化時は最大値
-    invincibleDuration_ = data->Load<float>("invincibleDuration", 0.25f);
-    guardDamageMultiplier_ = data->Load<float>("guardDamageMultiplier", 0.20f);
-    guardEnergyCost_ = data->Load<float>("guardEnergyCost", 3.0f);
-    guardSkillEnergyCost_ = data->Load<float>("guardSkillEnergyCost", 15.0f);
-    hitStunDuration_ = data->Load<float>("hitStunDuration", 0.5f);
+    invincibleDuration_ = pData->Load<float>("invincibleDuration", 0.25f);
+    guardDamageMultiplier_ = pData->Load<float>("guardDamageMultiplier", 0.20f);
+    guardEnergyCost_ = pData->Load<float>("guardEnergyCost", 3.0f);
+    guardSkillEnergyCost_ = pData->Load<float>("guardSkillEnergyCost", 15.0f);
+    hitStunDuration_ = pData->Load<float>("hitStunDuration", 0.5f);
 }
 
 void PlayerStatus::DrawImGui()
@@ -505,25 +505,25 @@ void PlayerStatus::DrawImGui()
 
 void PlayerStatus::RegisterParams()
 {
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register("Player", "HP", static_cast<const float *>(&HP_));
-    hub->Register("Player", "エネルギー", static_cast<const float *>(&energy_));
-    hub->Register("Player", "最大エネルギー", &maxEnergy_, {1.0f, 1.0f, 500.0f});
-    hub->Register("Player", "エネルギー回復速度", &energyRecoveryRate_, {0.1f, 0.0f, 50.0f});
-    hub->Register("Player", "回復開始遅延", &energyRecoveryDelay_, {0.1f, 0.0f, 5.0f});
-    hub->Register("Player", "無敵時間", &invincibleDuration_, {0.01f, 0.0f, 2.0f});
-    hub->Register("Player", "ガード被ダメ倍率", &guardDamageMultiplier_, {0.01f, 0.0f, 1.0f});
-    hub->Register("Player", "ガード時エネルギー消費", &guardEnergyCost_, {0.5f, 0.0f, 100.0f});
-    hub->Register("Player", "ガード時エネルギー消費(必殺技)", &guardSkillEnergyCost_, {0.5f, 0.0f, 100.0f});
-    hub->Register("Player", "ひるみ時間", &hitStunDuration_, {0.01f, 0.0f, 1.0f});
-    hub->Register("Player", "射撃被弾のひるみ倍率", &shotFlinchScale_, {0.01f, 0.0f, 1.0f});
-    hub->Register("Player", "吹き飛ばし復帰後のひるみ無効時間", &flinchImmuneDuration_, {0.05f, 0.0f, 5.0f});
-    hub->Register("Player", "吹き飛ばし着地後硬直", &blowAfterDuration_, {0.01f, 0.0f, 2.0f});
-    hub->Register("Player", "吹き飛ばし最大時間", &blowMaxDuration_, {0.05f, 0.1f, 5.0f});
-    hub->Register("Player", "吹き飛ばし中の落下加速度", &blowGravity_, {0.5f, 1.0f, 100.0f});
-    hub->Register("Player", "必殺技被弾の吹き飛び速度", &skillBlowSpeed_, {0.5f, 0.0f, 100.0f});
-    hub->Register("Player", "必殺技被弾の浮き上がり速度", &skillBlowRiseSpeed_, {0.5f, 0.0f, 50.0f});
-    hub->Register("Player", "必殺技被弾の横速度残存率(1秒)", &skillBlowHorizontalRetain_, {0.01f, 0.001f, 1.0f});
-    hub->Register("Player", "必殺技被弾スタン最大時間", &skillBlowMaxDuration_, {0.1f, 0.5f, 10.0f});
-    hub->Register("Player", "必殺技被弾中の被ダメージ倍率", &skillBlowDamageMultiplier_, {0.01f, 0.0f, 1.0f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register("Player", "HP", static_cast<const float *>(&hp_));
+    pHub->Register("Player", "エネルギー", static_cast<const float *>(&energy_));
+    pHub->Register("Player", "最大エネルギー", &maxEnergy_, {1.0f, 1.0f, 500.0f});
+    pHub->Register("Player", "エネルギー回復速度", &energyRecoveryRate_, {0.1f, 0.0f, 50.0f});
+    pHub->Register("Player", "回復開始遅延", &energyRecoveryDelay_, {0.1f, 0.0f, 5.0f});
+    pHub->Register("Player", "無敵時間", &invincibleDuration_, {0.01f, 0.0f, 2.0f});
+    pHub->Register("Player", "ガード被ダメ倍率", &guardDamageMultiplier_, {0.01f, 0.0f, 1.0f});
+    pHub->Register("Player", "ガード時エネルギー消費", &guardEnergyCost_, {0.5f, 0.0f, 100.0f});
+    pHub->Register("Player", "ガード時エネルギー消費(必殺技)", &guardSkillEnergyCost_, {0.5f, 0.0f, 100.0f});
+    pHub->Register("Player", "ひるみ時間", &hitStunDuration_, {0.01f, 0.0f, 1.0f});
+    pHub->Register("Player", "射撃被弾のひるみ倍率", &shotFlinchScale_, {0.01f, 0.0f, 1.0f});
+    pHub->Register("Player", "吹き飛ばし復帰後のひるみ無効時間", &flinchImmuneDuration_, {0.05f, 0.0f, 5.0f});
+    pHub->Register("Player", "吹き飛ばし着地後硬直", &blowAfterDuration_, {0.01f, 0.0f, 2.0f});
+    pHub->Register("Player", "吹き飛ばし最大時間", &blowMaxDuration_, {0.05f, 0.1f, 5.0f});
+    pHub->Register("Player", "吹き飛ばし中の落下加速度", &blowGravity_, {0.5f, 1.0f, 100.0f});
+    pHub->Register("Player", "必殺技被弾の吹き飛び速度", &skillBlowSpeed_, {0.5f, 0.0f, 100.0f});
+    pHub->Register("Player", "必殺技被弾の浮き上がり速度", &skillBlowRiseSpeed_, {0.5f, 0.0f, 50.0f});
+    pHub->Register("Player", "必殺技被弾の横速度残存率(1秒)", &skillBlowHorizontalRetain_, {0.01f, 0.001f, 1.0f});
+    pHub->Register("Player", "必殺技被弾スタン最大時間", &skillBlowMaxDuration_, {0.1f, 0.5f, 10.0f});
+    pHub->Register("Player", "必殺技被弾中の被ダメージ倍率", &skillBlowDamageMultiplier_, {0.01f, 0.0f, 1.0f});
 }

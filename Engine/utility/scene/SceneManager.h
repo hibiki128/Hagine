@@ -88,7 +88,7 @@ class SceneManager
     void SetHP(float hp) { hp_ = hp; }
     void SetIsGameOver(bool flag) { isGameOver_ = flag; }
 
-    void SetOffScreen(OffScreen *offscreen) { pOffscreen_ = offscreen; }
+    void SetOffScreen(OffScreen *pOffScreen) { pOffscreen_ = pOffScreen; }
 
     /// <summary>
     /// メインのオフスクリーン（ステージ0）を取得する。

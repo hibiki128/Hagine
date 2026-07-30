@@ -82,7 +82,7 @@ class GameScene : public Hagine::BaseScene
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::unique_ptr<Player> player_;             // プレイヤー
@@ -99,8 +99,8 @@ class GameScene : public Hagine::BaseScene
 
     Hagine::SkyBox *pSkyBox_ = nullptr; // スカイボックス
 
-    Enemy *enemy_ptr = nullptr;   // 敵のポインタ（共有用）
-    Player *player_ptr = nullptr; // プレイヤーのポインタ（共有用）
+    Enemy *pEnemy_ = nullptr;   // 敵のポインタ（共有用）
+    Player *pPlayer_ = nullptr; // プレイヤーのポインタ（共有用）
 
     // 死亡カメラ完了からシーン切替までの待機時間(秒)
     // （die アニメーション約2.6秒 → 粒子化演出を見届けるまでの猶予）
@@ -113,8 +113,8 @@ class GameScene : public Hagine::BaseScene
     bool isGameOver_ = false;             // ゲームオーバーフラグ
     bool deathCameraStarted_ = false;     // 死亡時カメラ開始フラグ
     bool testDeathCameraStarted_ = false; // テスト用死亡カメラ開始フラグ
-    float GameOverTimer_ = 0.0f;          // ゲームオーバータイマー
-    float ClearTimer_ = 0.0f;             // クリアタイマー
+    float gameOverTimer_ = 0.0f;          // ゲームオーバータイマー
+    float clearTimer_ = 0.0f;             // クリアタイマー
     float enemyDownTimer_ = 0.0f;         // 敵撃破後の演出待ちタイマー
 
     // ---------- BehaviorTree ----------

@@ -103,7 +103,7 @@ void BaseObject::Draw(const ViewProjection &viewProjection) {
     // 描画専用の位置オフセット・回転オフセットを一時的に適用する。
     // これらは描画時のみ反映し、ゲームプレイで参照する transform_ の値は描画後に元へ戻す
     Vector3 originalPosition = transform_->translation_;
-    Quaternion originalRotation = transform_->quateRotation_;
+    Quaternion originalRotation = transform_->quaternionRotation_;
 
     bool hasOffset = (offSet_.x != 0.0f || offSet_.y != 0.0f || offSet_.z != 0.0f);
     bool applyRenderTransform = hasOffset || applyRenderRotationOffset_;
@@ -113,7 +113,7 @@ void BaseObject::Draw(const ViewProjection &viewProjection) {
 
         if (applyRenderRotationOffset_) {
             // ローカル空間の回転として現在の向きへ合成
-            transform_->quateRotation_ = originalRotation * renderRotationOffset_;
+            transform_->quaternionRotation_ = originalRotation * renderRotationOffset_;
 
             // モデル中心が原点にない場合、回転で位置がずれる。
             // ピボット（回転中心）が固定されるよう平行移動で補正する
@@ -141,7 +141,7 @@ void BaseObject::Draw(const ViewProjection &viewProjection) {
     // 描画専用の変更を元へ戻す
     if (applyRenderTransform) {
         transform_->translation_ = originalPosition;
-        transform_->quateRotation_ = originalRotation;
+        transform_->quaternionRotation_ = originalRotation;
         transform_->UpdateMatrix();
     }
 }
@@ -153,9 +153,9 @@ void BaseObject::UpdateWorldTransformHierarchy() {
     }
     // 子を再帰的に更新
     for (auto it = children_.begin(); it != children_.end();) {
-        BaseObject *child = *it;
-        child->UpdateWorldTransformHierarchy();
-        if (child->pParent_ != this) {
+        BaseObject *pChild = *it;
+        pChild->UpdateWorldTransformHierarchy();
+        if (pChild->pParent_ != this) {
             it = children_.erase(it);
         } else {
             ++it;
@@ -169,12 +169,12 @@ void BaseObject::UpdateHierarchy() {
 
     // 子リストをイテレート
     for (auto it = children_.begin(); it != children_.end();) {
-        auto child = *it;
+        auto pChild = *it;
         // 再帰的に UpdateHierarchy
-        child->UpdateHierarchy();
+        pChild->UpdateHierarchy();
 
         // 子が「DetachParent()」した場合、pParent_ == nullptr になる
-        if (child->GetParent() != this) {
+        if (pChild->GetParent() != this) {
             // リストから削除
             it = children_.erase(it);
         } else {
@@ -203,9 +203,9 @@ void BaseObject::SetParent(BaseObject *parent) {
     parentName_ = pParent_->GetName();
 }
 
-void BaseObject::AddChild(BaseObject *child) {
-    assert(child != nullptr && "AddChild is nullptr");
-    child->SetParent(this);
+void BaseObject::AddChild(BaseObject *pChild) {
+    assert(pChild != nullptr && "AddChild is nullptr");
+    pChild->SetParent(this);
 }
 
 void BaseObject::DetachParent() {
@@ -218,18 +218,18 @@ void BaseObject::DetachParent() {
     }
 }
 
-void BaseObject::DetachChild(BaseObject *child) {
-    if (!child) {
+void BaseObject::DetachChild(BaseObject *pChild) {
+    if (!pChild) {
         return;
     }
-    if (child->pParent_ != this) {
+    if (pChild->pParent_ != this) {
         return;
     }
-    child->pParent_ = nullptr;
-    if (child->transform_) {
-        child->transform_->pParent_ = nullptr;
+    pChild->pParent_ = nullptr;
+    if (pChild->transform_) {
+        pChild->transform_->pParent_ = nullptr;
     }
-    children_.remove(child);
+    children_.remove(pChild);
 }
 
 BaseObject *BaseObject::GetParent() {
@@ -241,9 +241,9 @@ std::list<BaseObject *> *BaseObject::GetChildren() {
 }
 
 BaseObject *BaseObject::GetChildByName(const std::string &name) {
-    for (auto &child : children_) {
-        if (child->objectName_ == name) {
-            return child;
+    for (auto &pChild : children_) {
+        if (pChild->objectName_ == name) {
+            return pChild;
         }
     }
     return nullptr;
@@ -272,9 +272,9 @@ void BaseObject::CreateModel(const std::string modelname) {
     }
 
     // JSONから読み込んだカラー設定を適用
-    if (ObjectDatas_) {
+    if (objectData_) {
         for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++) {
-            SetColor(ObjectDatas_->Load<Vector4>("color_" + std::to_string(i), GetColor(i)), i);
+            SetColor(objectData_->Load<Vector4>("color_" + std::to_string(i), GetColor(i)), i);
         }
     }
 
@@ -308,7 +308,7 @@ void BaseObject::CreatePrimitiveModel(const PrimitiveType &type) {
     // プリミティブモデルを作成
     obj3d_->CreatePrimitiveModel(type_, texturePaths_[0]);
 
-    SetColor(ObjectDatas_->Load<Vector4>("color_" + std::to_string(0), {1.0f, 1.0f, 1.0f, 1.0f}), 0);
+    SetColor(objectData_->Load<Vector4>("color_" + std::to_string(0), {1.0f, 1.0f, 1.0f, 1.0f}), 0);
 
     // マテリアル（ノーマルマップ関連）情報を適用（マテリアル生成後に行う）
     LoadMaterials();
@@ -317,41 +317,41 @@ void BaseObject::CreatePrimitiveModel(const PrimitiveType &type) {
 }
 
 void BaseObject::SaveParentChildRelationship() {
-    if (!ObjectDatas_) {
+    if (!objectData_) {
         return;
     }
 
     // 親の名前を保存
     std::string parentName = pParent_ ? pParent_->GetName() : "";
-    ObjectDatas_->Save<std::string>("parentName", parentName);
+    objectData_->Save<std::string>("parentName", parentName);
 
     // 子の名前リストを保存
     std::vector<std::string> childrenNames;
-    for (const auto &child : children_) {
-        if (child) {
-            childrenNames.push_back(child->GetName());
+    for (const auto &pChild : children_) {
+        if (pChild) {
+            childrenNames.push_back(pChild->GetName());
         }
     }
-    ObjectDatas_->Save<std::vector<std::string>>("childrenNames", childrenNames);
+    objectData_->Save<std::vector<std::string>>("childrenNames", childrenNames);
 
     // 親のSRTをどの成分まで継承するか（親子付けの挙動）も保存する
     if (transform_) {
-        ObjectDatas_->Save<bool>("inheritTranslation", transform_->inheritTranslation_);
-        ObjectDatas_->Save<bool>("inheritRotation", transform_->inheritRotation_);
-        ObjectDatas_->Save<bool>("inheritScale", transform_->inheritScale_);
+        objectData_->Save<bool>("inheritTranslation", transform_->inheritTranslation_);
+        objectData_->Save<bool>("inheritRotation", transform_->inheritRotation_);
+        objectData_->Save<bool>("inheritScale", transform_->inheritScale_);
     }
 }
 
 void BaseObject::LoadParentChildRelationship() {
-    if (!ObjectDatas_) {
+    if (!objectData_) {
         return;
     }
 
     // 親の名前を読み込み（実際の親付けはBaseObjectManagerで行う）
-    std::string parentName = ObjectDatas_->Load<std::string>("parentName", "");
+    std::string parentName = objectData_->Load<std::string>("parentName", "");
 
     // 子の名前リストを読み込み（実際の子付けはBaseObjectManagerで行う）
-    std::vector<std::string> childrenNames = ObjectDatas_->Load<std::vector<std::string>>("childrenNames", std::vector<std::string>());
+    std::vector<std::string> childrenNames = objectData_->Load<std::vector<std::string>>("childrenNames", std::vector<std::string>());
 }
 
 std::string BaseObject::GetParentName() const {
@@ -360,9 +360,9 @@ std::string BaseObject::GetParentName() const {
 
 std::vector<std::string> BaseObject::GetChildrenNames() const {
     std::vector<std::string> names;
-    for (const auto &child : children_) {
-        if (child) {
-            names.push_back(child->GetName());
+    for (const auto &pChild : children_) {
+        if (pChild) {
+            names.push_back(pChild->GetName());
         }
     }
     return names;
@@ -397,40 +397,40 @@ std::optional<Vector3> BaseObject::GetJointWorldPosition(const std::string &join
 
     // 描画時と同じ条件（描画オフセット込み）のワールド行列を組み立てて参照する
     Matrix4x4 worldMatrix = MakeAffineMatrix(
-        transform_->scale_, transform_->quateRotation_, transform_->translation_ + offSet_);
+        transform_->scale_, transform_->quaternionRotation_, transform_->translation_ + offSet_);
     return bone->GetJointWorldPosition(jointName, worldMatrix);
 }
 
 void BaseObject::SaveToJson() {
     // JSONデータを扱うハンドラを作成
     modelPath_ = obj3d_->GetModelFilePath();
-    ObjectDatas_ = std::make_unique<DataHandler>("ObjectDatas", objectName_);
-    ObjectDatas_->Save<std::string>("modelName", modelPath_);
-    ObjectDatas_->Save<std::string>("objectName", objectName_);
-    ObjectDatas_->Save<Vector3>("translation", transform_->translation_);
-    ObjectDatas_->Save<Quaternion>("rotation", transform_->quateRotation_);
-    ObjectDatas_->Save<Vector3>("scale", transform_->scale_);
-    ObjectDatas_->Save<bool>("Lighting", isLighting_);
-    ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
-    ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
-    ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
-    ObjectDatas_->Save<bool>("isWireframe", isWireframe_);
-    ObjectDatas_->Save<bool>("isRainbow", isRainbow_);
-    ObjectDatas_->Save<bool>("isGizmoSelectable", isGizmoSelectable_);
+    objectData_ = std::make_unique<DataHandler>("ObjectDatas", objectName_);
+    objectData_->Save<std::string>("modelName", modelPath_);
+    objectData_->Save<std::string>("objectName", objectName_);
+    objectData_->Save<Vector3>("translation", transform_->translation_);
+    objectData_->Save<Quaternion>("rotation", transform_->quaternionRotation_);
+    objectData_->Save<Vector3>("scale", transform_->scale_);
+    objectData_->Save<bool>("Lighting", isLighting_);
+    objectData_->Save<PrimitiveType>("PrimitiveType", type_);
+    objectData_->Save<bool>("skeletonDraw", skeletonDraw_);
+    objectData_->Save<bool>("isModelDraw", isModelDraw_);
+    objectData_->Save<bool>("isWireframe", isWireframe_);
+    objectData_->Save<bool>("isRainbow", isRainbow_);
+    objectData_->Save<bool>("isGizmoSelectable", isGizmoSelectable_);
     if (pParent_) {
-        ObjectDatas_->Save<std::string>("parentName", pParent_->GetName());
+        objectData_->Save<std::string>("parentName", pParent_->GetName());
     }
     for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++) {
         // 保存のたびに push_back すると texturePaths_ が肥大化するので、サイズを合わせて代入する
         if (static_cast<int>(texturePaths_.size()) <= i)
             texturePaths_.resize(i + 1);
         texturePaths_[i] = obj3d_->GetTextureFilePath(i);
-        ObjectDatas_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
-        ObjectDatas_->Save("color_" + std::to_string(i), GetColor(i));
+        objectData_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
+        objectData_->Save("color_" + std::to_string(i), GetColor(i));
     }
 
-    ObjectDatas_->Save<bool>("isLighting", isLighting_);
-    ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
+    objectData_->Save<bool>("isLighting", isLighting_);
+    objectData_->Save<int>("blendMode", static_cast<int>(blendMode_));
 
     SaveParentChildRelationship();
 
@@ -442,27 +442,27 @@ void BaseObject::SaveToJson() {
 
     // コライダー情報を保存
     SaveColliders();
-    ObjectDatas_->Flush();
+    objectData_->Flush();
 }
 
 void BaseObject::SceneSaveToJson() {
     // JSONデータを扱うハンドラを作成
-    ObjectDatas_ = std::make_unique<DataHandler>(folderPath_, objectName_);
+    objectData_ = std::make_unique<DataHandler>(folderPath_, objectName_);
     modelPath_ = obj3d_->GetModelFilePath();
-    ObjectDatas_->Save<std::string>("modelName", modelPath_);
-    ObjectDatas_->Save<std::string>("objectName", objectName_);
-    ObjectDatas_->Save<Vector3>("translation", transform_->translation_);
-    ObjectDatas_->Save<Quaternion>("rotation", transform_->quateRotation_);
-    ObjectDatas_->Save<Vector3>("scale", transform_->scale_);
-    ObjectDatas_->Save<bool>("Lighting", isLighting_);
-    ObjectDatas_->Save<PrimitiveType>("PrimitiveType", type_);
-    ObjectDatas_->Save<bool>("skeletonDraw", skeletonDraw_);
-    ObjectDatas_->Save<bool>("isModelDraw", isModelDraw_);
-    ObjectDatas_->Save<bool>("isWireframe", isWireframe_);
-    ObjectDatas_->Save<bool>("isRainbow", isRainbow_);
-    ObjectDatas_->Save<bool>("isGizmoSelectable", isGizmoSelectable_);
+    objectData_->Save<std::string>("modelName", modelPath_);
+    objectData_->Save<std::string>("objectName", objectName_);
+    objectData_->Save<Vector3>("translation", transform_->translation_);
+    objectData_->Save<Quaternion>("rotation", transform_->quaternionRotation_);
+    objectData_->Save<Vector3>("scale", transform_->scale_);
+    objectData_->Save<bool>("Lighting", isLighting_);
+    objectData_->Save<PrimitiveType>("PrimitiveType", type_);
+    objectData_->Save<bool>("skeletonDraw", skeletonDraw_);
+    objectData_->Save<bool>("isModelDraw", isModelDraw_);
+    objectData_->Save<bool>("isWireframe", isWireframe_);
+    objectData_->Save<bool>("isRainbow", isRainbow_);
+    objectData_->Save<bool>("isGizmoSelectable", isGizmoSelectable_);
     if (pParent_) {
-        ObjectDatas_->Save<std::string>("parentName", pParent_->GetName());
+        objectData_->Save<std::string>("parentName", pParent_->GetName());
     }
 
     for (int i = 0; i < int(obj3d_->GetMaterialCount()); i++) {
@@ -470,12 +470,12 @@ void BaseObject::SceneSaveToJson() {
         if (static_cast<int>(texturePaths_.size()) <= i)
             texturePaths_.resize(i + 1);
         texturePaths_[i] = obj3d_->GetTextureFilePath(i);
-        ObjectDatas_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
-        ObjectDatas_->Save("color_" + std::to_string(i), GetColor(i));
+        objectData_->Save<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
+        objectData_->Save("color_" + std::to_string(i), GetColor(i));
     }
 
-    ObjectDatas_->Save<bool>("isLighting", isLighting_);
-    ObjectDatas_->Save<int>("blendMode", static_cast<int>(blendMode_));
+    objectData_->Save<bool>("isLighting", isLighting_);
+    objectData_->Save<int>("blendMode", static_cast<int>(blendMode_));
 
     SaveParentChildRelationship();
 
@@ -487,34 +487,34 @@ void BaseObject::SceneSaveToJson() {
 
     // コライダー情報を保存
     SaveColliders();
-    ObjectDatas_->Flush();
+    objectData_->Flush();
 }
 
 void BaseObject::LoadFromJson() {
     // JSONデータを扱うハンドラを作成
-    ObjectDatas_ = std::make_unique<DataHandler>(folderPath_, objectName_);
+    objectData_ = std::make_unique<DataHandler>(folderPath_, objectName_);
 
     // 基本トランスフォームを読み込み
-    transform_->translation_ = ObjectDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
-    transform_->quateRotation_ = ObjectDatas_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
-    transform_->scale_ = ObjectDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
+    transform_->translation_ = objectData_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
+    transform_->quaternionRotation_ = objectData_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    transform_->scale_ = objectData_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
 
     // 読み込んだTRSをワールド行列へ即反映する。
     // 初回の全体更新前にコライダー構築（行列キャッシュ）や位置問い合わせが
     // 行われても、単位行列のままにならないようにする
     transform_->UpdateMatrix();
 
-    isLighting_ = ObjectDatas_->Load<bool>("Lighting", true);
-    type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::Count);
-    skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
-    isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
-    isWireframe_ = ObjectDatas_->Load<bool>("isWireframe", isWireframe_);
-    isRainbow_ = ObjectDatas_->Load<bool>("isRainbow", isRainbow_);
-    isGizmoSelectable_ = ObjectDatas_->Load<bool>("isGizmoSelectable", isGizmoSelectable_);
-    parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
+    isLighting_ = objectData_->Load<bool>("Lighting", true);
+    type_ = objectData_->Load<PrimitiveType>("PrimitiveType", PrimitiveType::Count);
+    skeletonDraw_ = objectData_->Load<bool>("skeletonDraw", false);
+    isModelDraw_ = objectData_->Load<bool>("isModelDraw", true);
+    isWireframe_ = objectData_->Load<bool>("isWireframe", isWireframe_);
+    isRainbow_ = objectData_->Load<bool>("isRainbow", isRainbow_);
+    isGizmoSelectable_ = objectData_->Load<bool>("isGizmoSelectable", isGizmoSelectable_);
+    parentName_ = objectData_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
-    std::string loadedModelPath = ObjectDatas_->Load<std::string>("modelName", "");
+    std::string loadedModelPath = objectData_->Load<std::string>("modelName", "");
     if (!loadedModelPath.empty()) {
         modelPath_ = loadedModelPath;
     }
@@ -525,9 +525,9 @@ void BaseObject::LoadFromJson() {
         isPrimitive_ = true;
         if (texturePaths_.empty()) {
             texturePaths_.resize(1);
-            texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", "debug/uvChecker.png");
+            texturePaths_[0] = objectData_->Load<std::string>("textureName_0", "debug/uvChecker.png");
         } else {
-            texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", texturePaths_[0]);
+            texturePaths_[0] = objectData_->Load<std::string>("textureName_0", texturePaths_[0]);
         }
     } else {
         // 3Dモデルの場合
@@ -536,13 +536,13 @@ void BaseObject::LoadFromJson() {
         if (obj3d_ && obj3d_->GetMaterialCount() > 0) {
             texturePaths_.resize(obj3d_->GetMaterialCount());
             for (int i = 0; i < texturePaths_.size(); i++) {
-                texturePaths_[i] = ObjectDatas_->Load<std::string>("textureName_" + std::to_string(i), "debug/uvChecker.png");
+                texturePaths_[i] = objectData_->Load<std::string>("textureName_" + std::to_string(i), "debug/uvChecker.png");
             }
         }
     }
 
-    isLighting_ = ObjectDatas_->Load<bool>("isLighting", true);
-    blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", int(BlendMode::Normal)));
+    isLighting_ = objectData_->Load<bool>("isLighting", true);
+    blendMode_ = static_cast<BlendMode>(objectData_->Load<int>("blendMode", int(BlendMode::Normal)));
 
     LoadParentChildRelationship();
 
@@ -560,27 +560,27 @@ void BaseObject::LoadFromJson() {
 
 void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
     // JSONデータを扱うハンドラを作成
-    ObjectDatas_ = std::make_unique<DataHandler>(folderPath, jsonName);
+    objectData_ = std::make_unique<DataHandler>(folderPath, jsonName);
 
     // 基本トランスフォームを読み込み
-    transform_->translation_ = ObjectDatas_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
-    transform_->quateRotation_ = ObjectDatas_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
-    transform_->scale_ = ObjectDatas_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
+    transform_->translation_ = objectData_->Load<Vector3>("translation", {0.0f, 0.0f, 0.0f});
+    transform_->quaternionRotation_ = objectData_->Load<Quaternion>("rotation", Quaternion::IdentityQuaternion());
+    transform_->scale_ = objectData_->Load<Vector3>("scale", {1.0f, 1.0f, 1.0f});
 
     // 読み込んだTRSをワールド行列へ即反映する（LoadFromJson() と同じ理由）
     transform_->UpdateMatrix();
 
-    isLighting_ = ObjectDatas_->Load<bool>("Lighting", true);
-    type_ = ObjectDatas_->Load<PrimitiveType>("PrimitiveType", type_);
-    skeletonDraw_ = ObjectDatas_->Load<bool>("skeletonDraw", false);
-    isModelDraw_ = ObjectDatas_->Load<bool>("isModelDraw", true);
-    isWireframe_ = ObjectDatas_->Load<bool>("isWireframe", isWireframe_);
-    isRainbow_ = ObjectDatas_->Load<bool>("isRainbow", isRainbow_);
-    isGizmoSelectable_ = ObjectDatas_->Load<bool>("isGizmoSelectable", isGizmoSelectable_);
-    parentName_ = ObjectDatas_->Load<std::string>("parentName", "");
+    isLighting_ = objectData_->Load<bool>("Lighting", true);
+    type_ = objectData_->Load<PrimitiveType>("PrimitiveType", type_);
+    skeletonDraw_ = objectData_->Load<bool>("skeletonDraw", false);
+    isModelDraw_ = objectData_->Load<bool>("isModelDraw", true);
+    isWireframe_ = objectData_->Load<bool>("isWireframe", isWireframe_);
+    isRainbow_ = objectData_->Load<bool>("isRainbow", isRainbow_);
+    isGizmoSelectable_ = objectData_->Load<bool>("isGizmoSelectable", isGizmoSelectable_);
+    parentName_ = objectData_->Load<std::string>("parentName", "");
 
     // モデルパスをJSONから読み込み（既に設定されている場合は上書きしない）
-    std::string loadedModelPath = ObjectDatas_->Load<std::string>("modelName", "");
+    std::string loadedModelPath = objectData_->Load<std::string>("modelName", "");
     if (!loadedModelPath.empty()) {
         modelPath_ = loadedModelPath;
     }
@@ -591,9 +591,9 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
         isPrimitive_ = true;
         if (texturePaths_.empty()) {
             texturePaths_.resize(1);
-            texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", "debug/uvChecker.png");
+            texturePaths_[0] = objectData_->Load<std::string>("textureName_0", "debug/uvChecker.png");
         } else {
-            texturePaths_[0] = ObjectDatas_->Load<std::string>("textureName_0", texturePaths_[0]);
+            texturePaths_[0] = objectData_->Load<std::string>("textureName_0", texturePaths_[0]);
         }
     } else {
         // 3Dモデルの場合
@@ -602,13 +602,13 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
         if (obj3d_ && obj3d_->GetMaterialCount() > 0) {
             texturePaths_.resize(obj3d_->GetMaterialCount());
             for (int i = 0; i < texturePaths_.size(); i++) {
-                texturePaths_[i] = ObjectDatas_->Load<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
+                texturePaths_[i] = objectData_->Load<std::string>("textureName_" + std::to_string(i), texturePaths_[i]);
             }
         }
     }
 
-    isLighting_ = ObjectDatas_->Load<bool>("isLighting", true);
-    blendMode_ = static_cast<BlendMode>(ObjectDatas_->Load<int>("blendMode", int(BlendMode::Normal)));
+    isLighting_ = objectData_->Load<bool>("isLighting", true);
+    blendMode_ = static_cast<BlendMode>(objectData_->Load<int>("blendMode", int(BlendMode::Normal)));
 
     LoadParentChildRelationship();
 
@@ -625,7 +625,7 @@ void BaseObject::LoadFromJson(std::string folderPath, std::string jsonName) {
 }
 
 void BaseObject::SaveMaterials() {
-    if (!ObjectDatas_ || !obj3d_) {
+    if (!objectData_ || !obj3d_) {
         return;
     }
 
@@ -638,21 +638,21 @@ void BaseObject::SaveMaterials() {
         const MaterialData &md = mat->GetMaterialData();
         std::string prefix = "material_" + std::to_string(i) + "_";
 
-        ObjectDatas_->Save<bool>(prefix + "enableNormalMap", md.enableNormalMap);
-        ObjectDatas_->Save<std::string>(prefix + "normalMapPath", md.hasNormalMapTexture ? md.normalMapFilePath : "");
-        ObjectDatas_->Save<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
-        ObjectDatas_->Save<float>(prefix + "proceduralScale", md.proceduralScale);
-        ObjectDatas_->Save<float>(prefix + "normalStrength", md.normalStrength);
+        objectData_->Save<bool>(prefix + "enableNormalMap", md.enableNormalMap);
+        objectData_->Save<std::string>(prefix + "normalMapPath", md.hasNormalMapTexture ? md.normalMapFilePath : "");
+        objectData_->Save<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
+        objectData_->Save<float>(prefix + "proceduralScale", md.proceduralScale);
+        objectData_->Save<float>(prefix + "normalStrength", md.normalStrength);
 
         // UV（タイリング・オフセット・回転）
-        ObjectDatas_->Save<Vector2>(prefix + "uvSize", md.uvSize);
-        ObjectDatas_->Save<Vector2>(prefix + "uvPosition", md.uvPosition);
-        ObjectDatas_->Save<float>(prefix + "uvRotate", md.uvRotate);
+        objectData_->Save<Vector2>(prefix + "uvSize", md.uvSize);
+        objectData_->Save<Vector2>(prefix + "uvPosition", md.uvPosition);
+        objectData_->Save<float>(prefix + "uvRotate", md.uvRotate);
     }
 }
 
 void BaseObject::LoadMaterials() {
-    if (!ObjectDatas_ || !obj3d_) {
+    if (!objectData_ || !obj3d_) {
         return;
     }
 
@@ -667,33 +667,33 @@ void BaseObject::LoadMaterials() {
         std::string prefix = "material_" + std::to_string(i) + "_";
 
         // 法線マップ画像が保存されていればテクスチャを読み込んで有効化する
-        std::string nmPath = ObjectDatas_->Load<std::string>(prefix + "normalMapPath", "");
+        std::string nmPath = objectData_->Load<std::string>(prefix + "normalMapPath", "");
         if (!nmPath.empty()) {
             mat->SetNormalMap(nmPath);
         }
 
         // フラグ類は SetNormalMap の副作用より保存値を優先する
-        md.enableNormalMap = ObjectDatas_->Load<bool>(prefix + "enableNormalMap", md.enableNormalMap);
-        md.enableProceduralNormal = ObjectDatas_->Load<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
-        md.proceduralScale = ObjectDatas_->Load<float>(prefix + "proceduralScale", md.proceduralScale);
-        mat->SetNormalStrength(ObjectDatas_->Load<float>(prefix + "normalStrength", md.normalStrength));
+        md.enableNormalMap = objectData_->Load<bool>(prefix + "enableNormalMap", md.enableNormalMap);
+        md.enableProceduralNormal = objectData_->Load<bool>(prefix + "enableProceduralNormal", md.enableProceduralNormal);
+        md.proceduralScale = objectData_->Load<float>(prefix + "proceduralScale", md.proceduralScale);
+        mat->SetNormalStrength(objectData_->Load<float>(prefix + "normalStrength", md.normalStrength));
 
         // UV（タイリング・オフセット・回転）。uvTransform は Draw で毎フレーム組み直される
-        md.uvSize = ObjectDatas_->Load<Vector2>(prefix + "uvSize", md.uvSize);
-        md.uvPosition = ObjectDatas_->Load<Vector2>(prefix + "uvPosition", md.uvPosition);
-        md.uvRotate = ObjectDatas_->Load<float>(prefix + "uvRotate", md.uvRotate);
+        md.uvSize = objectData_->Load<Vector2>(prefix + "uvSize", md.uvSize);
+        md.uvPosition = objectData_->Load<Vector2>(prefix + "uvPosition", md.uvPosition);
+        md.uvRotate = objectData_->Load<float>(prefix + "uvRotate", md.uvRotate);
         // 画像未指定のまま有効な状態は albedo 流用として正規の設定なので落とさない
         // （Material::GetNormalMapIndex が albedo を t3 に束ねる）
     }
 }
 
 void BaseObject::SaveColliders() {
-    if (!ObjectDatas_) {
+    if (!objectData_) {
         return;
     }
 
     // コライダー数を保存
-    ObjectDatas_->Save<int>("colliderCount", static_cast<int>(colliders_.size()));
+    objectData_->Save<int>("colliderCount", static_cast<int>(colliders_.size()));
 
     // 各コライダーの情報を保存
     for (size_t i = 0; i < colliders_.size(); ++i) {
@@ -704,43 +704,43 @@ void BaseObject::SaveColliders() {
         std::string prefix = "collider_" + std::to_string(i) + "_";
 
         // 共通情報
-        ObjectDatas_->Save<std::string>(prefix + "name", collider->GetName());
-        ObjectDatas_->Save<int>(prefix + "type", static_cast<int>(collider->GetType()));
-        ObjectDatas_->Save<std::string>(prefix + "tag", collider->GetTag());
-        ObjectDatas_->Save<bool>(prefix + "isEnabled", collider->IsEnabled());
-        ObjectDatas_->Save<bool>(prefix + "isVisible", collider->IsVisible());
+        objectData_->Save<std::string>(prefix + "name", collider->GetName());
+        objectData_->Save<int>(prefix + "type", static_cast<int>(collider->GetType()));
+        objectData_->Save<std::string>(prefix + "tag", collider->GetTag());
+        objectData_->Save<bool>(prefix + "isEnabled", collider->IsEnabled());
+        objectData_->Save<bool>(prefix + "isVisible", collider->IsVisible());
 
         // 衝突マスクを保存
         const auto &mask = collider->GetCollisionMask();
         std::vector<std::string> maskList(mask.begin(), mask.end());
-        ObjectDatas_->Save<std::vector<std::string>>(prefix + "collisionMask", maskList);
+        objectData_->Save<std::vector<std::string>>(prefix + "collisionMask", maskList);
 
         // 型別の詳細情報を保存
         if (auto *sphere = dynamic_cast<SphereCollider *>(collider)) {
-            ObjectDatas_->Save<float>(prefix + "radius", sphere->GetRadius());
-            ObjectDatas_->Save<Vector3>(prefix + "offset", sphere->GetOffset());
+            objectData_->Save<float>(prefix + "radius", sphere->GetRadius());
+            objectData_->Save<Vector3>(prefix + "offset", sphere->GetOffset());
         } else if (auto *aabb = dynamic_cast<AABBCollider *>(collider)) {
-            ObjectDatas_->Save<Vector3>(prefix + "size", aabb->GetSize());
-            ObjectDatas_->Save<Vector3>(prefix + "offset", aabb->GetOffset());
+            objectData_->Save<Vector3>(prefix + "size", aabb->GetSize());
+            objectData_->Save<Vector3>(prefix + "offset", aabb->GetOffset());
         } else if (auto *obb = dynamic_cast<OBBCollider *>(collider)) {
-            ObjectDatas_->Save<Vector3>(prefix + "size", obb->GetSize());
-            ObjectDatas_->Save<Vector3>(prefix + "rotationOffset", obb->GetRotationOffset());
-            ObjectDatas_->Save<Vector3>(prefix + "scaleOffset", obb->GetPositionOffset());
+            objectData_->Save<Vector3>(prefix + "size", obb->GetSize());
+            objectData_->Save<Vector3>(prefix + "rotationOffset", obb->GetRotationOffset());
+            objectData_->Save<Vector3>(prefix + "scaleOffset", obb->GetPositionOffset());
         } else if (auto *cyl = dynamic_cast<CylinderCollider *>(collider)) {
-            ObjectDatas_->Save<float>(prefix + "radius", cyl->GetRadius());
-            ObjectDatas_->Save<float>(prefix + "height", cyl->GetHeight());
-            ObjectDatas_->Save<bool>(prefix + "inward", cyl->IsInward());
+            objectData_->Save<float>(prefix + "radius", cyl->GetRadius());
+            objectData_->Save<float>(prefix + "height", cyl->GetHeight());
+            objectData_->Save<bool>(prefix + "inward", cyl->IsInward());
         } else if (auto *mesh = dynamic_cast<MeshCollider *>(collider)) {
             // メッシュ形状（三角形データ）は保存せず、オブジェクトのモデルから再構築する。
             // ここでは復元に必要な最低限の情報のみ保存する。
-            ObjectDatas_->Save<std::string>(prefix + "sourceModelPath", mesh->GetSourceModelPath());
-            ObjectDatas_->Save<bool>(prefix + "wireframeVisible", mesh->IsWireframeVisible());
+            objectData_->Save<std::string>(prefix + "sourceModelPath", mesh->GetSourceModelPath());
+            objectData_->Save<bool>(prefix + "wireframeVisible", mesh->IsWireframeVisible());
         }
     }
 }
 
 void BaseObject::LoadColliders() {
-    if (!ObjectDatas_) {
+    if (!objectData_) {
         return;
     }
 
@@ -753,7 +753,7 @@ void BaseObject::LoadColliders() {
     colliders_.clear();
 
     // コライダー数を読み込み
-    int colliderCount = ObjectDatas_->Load<int>("colliderCount", 0);
+    int colliderCount = objectData_->Load<int>("colliderCount", 0);
 
     // 各コライダーを読み込んで作成
     for (int i = 0; i < colliderCount; ++i) {
@@ -761,7 +761,7 @@ void BaseObject::LoadColliders() {
 
         // 型を読み込み
         ColliderType type = static_cast<ColliderType>(
-            ObjectDatas_->Load<int>(prefix + "type", 0));
+            objectData_->Load<int>(prefix + "type", 0));
 
         ColliderBase *collider = nullptr;
         std::unique_ptr<ColliderBase> colliderOwner;
@@ -770,42 +770,42 @@ void BaseObject::LoadColliders() {
         switch (type) {
         case ColliderType::Sphere: {
             auto sphere = std::make_unique<SphereCollider>();
-            sphere->SetRadius(ObjectDatas_->Load<float>(prefix + "radius", 1.0f));
-            sphere->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
+            sphere->SetRadius(objectData_->Load<float>(prefix + "radius", 1.0f));
+            sphere->SetOffset(objectData_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
             collider = sphere.get();
             colliderOwner = std::move(sphere);
             break;
         }
         case ColliderType::AABB: {
             auto aabb = std::make_unique<AABBCollider>();
-            aabb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
-            aabb->SetOffset(ObjectDatas_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
+            aabb->SetSize(objectData_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
+            aabb->SetOffset(objectData_->Load<Vector3>(prefix + "offset", {0.0f, 0.0f, 0.0f}));
             collider = aabb.get();
             colliderOwner = std::move(aabb);
             break;
         }
         case ColliderType::OBB: {
             auto obb = std::make_unique<OBBCollider>();
-            obb->SetSize(ObjectDatas_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
-            obb->SetRotationOffset(ObjectDatas_->Load<Vector3>(prefix + "rotationOffset", {0.0f, 0.0f, 0.0f}));
-            obb->SetPositionOffSet(ObjectDatas_->Load<Vector3>(prefix + "scaleOffset", {0.0f, 0.0f, 0.0f}));
+            obb->SetSize(objectData_->Load<Vector3>(prefix + "size", {1.0f, 1.0f, 1.0f}));
+            obb->SetRotationOffset(objectData_->Load<Vector3>(prefix + "rotationOffset", {0.0f, 0.0f, 0.0f}));
+            obb->SetPositionOffSet(objectData_->Load<Vector3>(prefix + "scaleOffset", {0.0f, 0.0f, 0.0f}));
             collider = obb.get();
             colliderOwner = std::move(obb);
             break;
         }
         case ColliderType::Cylinder: {
             auto cyl = std::make_unique<CylinderCollider>();
-            cyl->SetRadius(ObjectDatas_->Load<float>(prefix + "radius", 30.0f));
-            cyl->SetHeight(ObjectDatas_->Load<float>(prefix + "height", 100.0f));
-            cyl->SetInward(ObjectDatas_->Load<bool>(prefix + "inward", true));
+            cyl->SetRadius(objectData_->Load<float>(prefix + "radius", 30.0f));
+            cyl->SetHeight(objectData_->Load<float>(prefix + "height", 100.0f));
+            cyl->SetInward(objectData_->Load<bool>(prefix + "inward", true));
             collider = cyl.get();
             colliderOwner = std::move(cyl);
             break;
         }
         case ColliderType::Mesh: {
             auto mesh = std::make_unique<MeshCollider>();
-            mesh->SetSourceModelPath(ObjectDatas_->Load<std::string>(prefix + "sourceModelPath", modelPath_));
-            mesh->SetWireframeVisible(ObjectDatas_->Load<bool>(prefix + "wireframeVisible", true));
+            mesh->SetSourceModelPath(objectData_->Load<std::string>(prefix + "sourceModelPath", modelPath_));
+            mesh->SetWireframeVisible(objectData_->Load<bool>(prefix + "wireframeVisible", true));
             // 三角形データは保存していないため、オブジェクトのモデルから再構築する
             if (obj3d_) {
                 mesh->SetMatrixGetter([this]() { return this->GetWorldMatrix(); });
@@ -823,14 +823,14 @@ void BaseObject::LoadColliders() {
             continue;
 
         // 共通情報を設定
-        std::string name = ObjectDatas_->Load<std::string>(prefix + "name", objectName_ + "_Collider" + std::to_string(i));
+        std::string name = objectData_->Load<std::string>(prefix + "name", objectName_ + "_Collider" + std::to_string(i));
         collider->SetName(name);
-        collider->SetTag(ObjectDatas_->Load<std::string>(prefix + "tag", "None"));
-        collider->SetEnabled(ObjectDatas_->Load<bool>(prefix + "isEnabled", true));
-        collider->SetVisible(ObjectDatas_->Load<bool>(prefix + "isVisible", true));
+        collider->SetTag(objectData_->Load<std::string>(prefix + "tag", "None"));
+        collider->SetEnabled(objectData_->Load<bool>(prefix + "isEnabled", true));
+        collider->SetVisible(objectData_->Load<bool>(prefix + "isVisible", true));
 
         // 衝突マスクを読み込み
-        auto maskList = ObjectDatas_->Load<std::vector<std::string>>(
+        auto maskList = objectData_->Load<std::vector<std::string>>(
             prefix + "collisionMask",
             std::vector<std::string>());
         for (const auto &maskTag : maskList) {
@@ -1103,7 +1103,7 @@ void BaseObject::DebugCollider() {
 // ============================================================
 //  BaseObject::ImGui  (メインタブ)
 // ============================================================
-void BaseObject::ImGui() {
+void BaseObject::DrawImGui() {
 #ifdef _DEBUG
     if (!ImGui::BeginTabBar(objectName_.c_str()))
         return;
@@ -1371,31 +1371,31 @@ void BaseObject::SetResolveCollision(bool enable) {
 }
 
 void BaseObject::SavePhysics() {
-    if (!ObjectDatas_) {
+    if (!objectData_) {
         return;
     }
-    ObjectDatas_->Save<bool>("rb_enabled", rigidBody_.enabled);
-    ObjectDatas_->Save<bool>("rb_useGravity", rigidBody_.useGravity);
-    ObjectDatas_->Save<float>("rb_mass", rigidBody_.mass);
-    ObjectDatas_->Save<Vector3>("rb_gravity", rigidBody_.gravity);
-    ObjectDatas_->Save<float>("rb_linearDamping", rigidBody_.linearDamping);
-    ObjectDatas_->Save<float>("rb_restitution", rigidBody_.restitution);
-    ObjectDatas_->Save<float>("rb_friction", rigidBody_.friction);
-    ObjectDatas_->Save<bool>("resolveCollision", resolveCollision_);
+    objectData_->Save<bool>("rb_enabled", rigidBody_.enabled);
+    objectData_->Save<bool>("rb_useGravity", rigidBody_.useGravity);
+    objectData_->Save<float>("rb_mass", rigidBody_.mass);
+    objectData_->Save<Vector3>("rb_gravity", rigidBody_.gravity);
+    objectData_->Save<float>("rb_linearDamping", rigidBody_.linearDamping);
+    objectData_->Save<float>("rb_restitution", rigidBody_.restitution);
+    objectData_->Save<float>("rb_friction", rigidBody_.friction);
+    objectData_->Save<bool>("resolveCollision", resolveCollision_);
 }
 
 void BaseObject::LoadPhysics() {
-    if (!ObjectDatas_) {
+    if (!objectData_) {
         return;
     }
-    rigidBody_.enabled = ObjectDatas_->Load<bool>("rb_enabled", false);
-    rigidBody_.useGravity = ObjectDatas_->Load<bool>("rb_useGravity", true);
-    rigidBody_.mass = ObjectDatas_->Load<float>("rb_mass", 1.0f);
-    rigidBody_.gravity = ObjectDatas_->Load<Vector3>("rb_gravity", {0.0f, -9.8f, 0.0f});
-    rigidBody_.linearDamping = ObjectDatas_->Load<float>("rb_linearDamping", 0.05f);
-    rigidBody_.restitution = ObjectDatas_->Load<float>("rb_restitution", 0.0f);
-    rigidBody_.friction = ObjectDatas_->Load<float>("rb_friction", 0.3f);
-    resolveCollision_ = ObjectDatas_->Load<bool>("resolveCollision", false);
+    rigidBody_.enabled = objectData_->Load<bool>("rb_enabled", false);
+    rigidBody_.useGravity = objectData_->Load<bool>("rb_useGravity", true);
+    rigidBody_.mass = objectData_->Load<float>("rb_mass", 1.0f);
+    rigidBody_.gravity = objectData_->Load<Vector3>("rb_gravity", {0.0f, -9.8f, 0.0f});
+    rigidBody_.linearDamping = objectData_->Load<float>("rb_linearDamping", 0.05f);
+    rigidBody_.restitution = objectData_->Load<float>("rb_restitution", 0.0f);
+    rigidBody_.friction = objectData_->Load<float>("rb_friction", 0.3f);
+    resolveCollision_ = objectData_->Load<bool>("resolveCollision", false);
     rigidBody_.velocity = {0.0f, 0.0f, 0.0f}; // 速度はランタイム状態なのでリセット
 }
 

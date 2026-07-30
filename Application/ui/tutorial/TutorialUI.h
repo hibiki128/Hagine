@@ -22,9 +22,9 @@ class TutorialUI
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="system">チュートリアルシステムへのポインタ</param>
+    /// <param name="pSystem">チュートリアルシステムへのポインタ</param>
     /// <param name="okFontKey">OK!表示に使用するフォントキー</param>
-    void Initialize(TutorialSystem *system, const std::string &okFontKey = "");
+    void Initialize(TutorialSystem *pSystem, const std::string &okFontKey = "");
 
     /// <summary>
     /// 更新処理
@@ -162,7 +162,7 @@ class TutorialUI
 
     Hagine::Sprite barSprite_;        // 進捗バー
     Hagine::Sprite frameSprite_;      // バーの枠
-    Hagine::Sprite SkipButtonSprite_; // スキップボタン
+    Hagine::Sprite skipButtonSprite_; // スキップボタン
 
     float barAlpha_ = 1.0f;   // バーのアルファ値
     float frameAlpha_ = 1.0f; // 枠のアルファ値

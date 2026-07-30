@@ -135,7 +135,7 @@ class TitleUI
     std::unique_ptr<Hagine::ParticleEmitter> chargeBullet_ = nullptr; // チャージ弾パーティクル（CPU・従来どおり所有）
     // 以下は GPU パーティクル。実体は ParticleCSSpawner が所有する借用ポインタで、
     // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
-    Hagine::ParticleCSEmitter *chargeEffect_ = nullptr; // チャージエフェクトパーティクル
+    Hagine::ParticleCSEmitter *pChargeEffect_ = nullptr; // チャージエフェクトパーティクル
     Hagine::ParticleCSEmitter *playerAura_ = nullptr;   // プレイヤーオーラパーティクル
     std::unique_ptr<Hagine::GamePad> gamePad_ = nullptr;                // ゲームパッド
 

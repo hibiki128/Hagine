@@ -33,7 +33,7 @@ class FadeOut
     /// <summary>
     /// ImGui表示
     /// </summary>
-    void ImGui();
+    void DrawImGui();
 
     /// <summary>
     /// Getter
@@ -49,7 +49,7 @@ class FadeOut
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 定数定義
@@ -68,7 +68,7 @@ class FadeOut
 
     // フェードアウトパーティクル（壁）。実体は ParticleCSSpawner が所有する（借用ポインタ）。
     // シーン開始時のリビール演出で、遷移時に Spawner 側でまとめて破棄される。
-    Hagine::ParticleCSEmitter *fadeOut_ = nullptr;
+    Hagine::ParticleCSEmitter *pFadeOutEmitter_ = nullptr;
     float timer_ = 0.0f;   // 経過時間
     bool isFinish_ = false; // 終了フラグ
 };

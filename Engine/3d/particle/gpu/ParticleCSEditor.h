@@ -15,7 +15,7 @@ class ParticleCSEditor
 {
   private:
     /// ===================================
-    /// private methods
+    /// private method
     /// ===================================
 
     /// <summary>
@@ -27,7 +27,7 @@ class ParticleCSEditor
 
   private:
     /// ===================================
-    /// private variaus
+    /// private variables
     /// ===================================
 
     std::unordered_map<std::string, std::unique_ptr<ParticleCSEmitter>> emitters_;

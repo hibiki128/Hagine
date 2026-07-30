@@ -23,8 +23,8 @@ class PlayerVisual
     /// <summary>
     /// 初期化（アニメーションクリップの登録を行う）
     /// </summary>
-    /// <param name="owner">所有者のプレイヤー</param>
-    void Init(Player *owner);
+    /// <param name="pOwner">所有者のプレイヤー</param>
+    void Init(Player *pOwner);
 
     /// <summary>
     /// アニメーションの更新
@@ -67,14 +67,14 @@ class PlayerVisual
     /// <summary>
     /// 見た目関連パラメータを保存する
     /// </summary>
-    /// <param name="data">保存先のデータハンドラ</param>
-    void Save(Hagine::DataHandler *data);
+    /// <param name="pData">保存先のデータハンドラ</param>
+    void Save(Hagine::DataHandler *pData);
 
     /// <summary>
     /// 見た目関連パラメータを読み込む
     /// </summary>
-    /// <param name="data">読み込み元のデータハンドラ</param>
-    void Load(Hagine::DataHandler *data);
+    /// <param name="pData">読み込み元のデータハンドラ</param>
+    void Load(Hagine::DataHandler *pData);
 
     /// <summary>
     /// アニメーション・飛行リーンのImGui表示
@@ -89,7 +89,7 @@ class PlayerVisual
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     static constexpr float kFlyVerticalAnimThreshold = 0.5f; ///< 飛行中、上昇・下降アニメに切り替えるY速度の閾値

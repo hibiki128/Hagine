@@ -12,9 +12,9 @@ namespace {
 constexpr float kSlamHorizontalRatio = 0.3f;
 } // namespace
 
-void EnemyAttackCollider::Init(Enemy *enemy, Player *player)
+void EnemyAttackCollider::Init(Enemy *pEnemy, Player *player)
 {
-    pEnemy_ = enemy;
+    pEnemy_ = pEnemy;
     pPlayer_ = player;
 
     // OBBコライダーを生成・設定
@@ -25,8 +25,8 @@ void EnemyAttackCollider::Init(Enemy *enemy, Player *player)
     pCollider_->SetEnabled(false); // 初期状態は無効
 
     // 衝突コールバックの設定
-    pCollider_->SetOnCollision([this](ColliderBase *other) {
-        this->OnCollision(other);
+    pCollider_->SetOnCollision([this](ColliderBase *pOther) {
+        this->OnCollision(pOther);
     });
 
     // ※ AddOBBCollider() の時点で CollisionManager へ登録済みのため、ここで再登録しない
@@ -123,7 +123,7 @@ void EnemyAttackCollider::Deactivate()
     }
 }
 
-void EnemyAttackCollider::OnCollision(ColliderBase *other)
+void EnemyAttackCollider::OnCollision(ColliderBase *pOther)
 {
     // 非アクティブ時や、既にこの回でヒット済みの場合は無視
     if (!isActive_ || hasHitThisActivation_)
@@ -134,7 +134,7 @@ void EnemyAttackCollider::OnCollision(ColliderBase *other)
     {
         return;
     }
-    if (other->GetTag() != "Player")
+    if (pOther->GetTag() != "Player")
     {
         return;
     }

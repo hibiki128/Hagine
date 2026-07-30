@@ -63,7 +63,7 @@ class ResultStaging
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 定数定義
@@ -80,8 +80,8 @@ class ResultStaging
     static constexpr float kLineColorB = 0.0f;             // ライン色(B)
     static constexpr float kLineColorA = 1.0f;             // ライン色(A)
 
-    Hagine::BaseObject *RightHand_ = nullptr; // 右手
-    Hagine::BaseObject *LeftHand_ = nullptr;  // 左手
+    Hagine::BaseObject *pRightHand_ = nullptr; // 右手
+    Hagine::BaseObject *pLeftHand_ = nullptr;  // 左手
 
     // 花火のパーティクル。実体は ParticleCSSpawner が所有する（借用ポインタ）。
     // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。

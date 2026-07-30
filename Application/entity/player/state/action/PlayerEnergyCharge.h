@@ -42,7 +42,7 @@ class PlayerEnergyCharge : public PlayerBaseState
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     static constexpr float kChargeRate = 15.0f;       // エネルギーチャージ速度
@@ -54,5 +54,5 @@ class PlayerEnergyCharge : public PlayerBaseState
     std::string beforeState_ = "";
     // チャージオーラ。実体は ParticleCSSpawner が所有する（借用ポインタ）。
     // チャージ開始ごとに Spawn し、終了時に DespawnWhenFinished で自然消滅させる。
-    Hagine::ParticleCSEmitter *chargeAuraEmitter_ = nullptr;
+    Hagine::ParticleCSEmitter *pChargeAuraEmitter_ = nullptr;
 };

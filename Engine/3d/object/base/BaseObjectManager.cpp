@@ -420,9 +420,9 @@ void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth)
     if (nodeOpen)
     {
         // 子オブジェクトを表示
-        for (BaseObject *child : *obj->GetChildren())
+        for (BaseObject *pChild : *obj->GetChildren())
         {
-            ShowObjectHierarchy(child, depth + 1);
+            ShowObjectHierarchy(pChild, depth + 1);
         }
         ImGui::TreePop();
     }
@@ -431,16 +431,16 @@ void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth)
 
 void BaseObjectManager::SetParentChild(const std::string &childName, const std::string &parentName)
 {
-    BaseObject *child = GetObjectByName(childName);
+    BaseObject *pChild = GetObjectByName(childName);
     BaseObject *parent = GetObjectByName(parentName);
 
-    if (child && parent && child != parent)
+    if (pChild && parent && pChild != parent)
     {
         // 循環参照チェック
         BaseObject *currentParent = parent;
         while (currentParent)
         {
-            if (currentParent == child)
+            if (currentParent == pChild)
             {
                 // 循環参照が発生するため、親子付けを拒否
                 return;
@@ -448,16 +448,16 @@ void BaseObjectManager::SetParentChild(const std::string &childName, const std::
             currentParent = currentParent->GetParent();
         }
 
-        child->SetParent(parent);
+        pChild->SetParent(parent);
     }
 }
 
 void BaseObjectManager::RemoveParentChild(const std::string &childName)
 {
-    BaseObject *child = GetObjectByName(childName);
-    if (child)
+    BaseObject *pChild = GetObjectByName(childName);
+    if (pChild)
     {
-        child->DetachParent();
+        pChild->DetachParent();
     }
 }
 
@@ -487,16 +487,16 @@ void BaseObjectManager::LoadAllParentChildRelationships()
 
     for (auto &[name, obj] : objects_)
     {
-        if (!obj->ObjectDatas_)
+        if (!obj->objectData_)
             continue;
 
-        std::string parentName = obj->ObjectDatas_->Load<std::string>("parentName", "");
+        std::string parentName = obj->objectData_->Load<std::string>("parentName", "");
         if (!parentName.empty())
         {
             parentRelations[name] = parentName;
         }
 
-        std::vector<std::string> childrenNames = obj->ObjectDatas_->Load<std::vector<std::string>>("childrenNames", std::vector<std::string>());
+        std::vector<std::string> childrenNames = obj->objectData_->Load<std::vector<std::string>>("childrenNames", std::vector<std::string>());
         if (!childrenNames.empty())
         {
             childRelations[name] = childrenNames;
@@ -506,20 +506,20 @@ void BaseObjectManager::LoadAllParentChildRelationships()
     // 親子関係を復元
     for (const auto &[childName, parentName] : parentRelations)
     {
-        BaseObject *child = GetObjectByName(childName);
+        BaseObject *pChild = GetObjectByName(childName);
         BaseObject *parent = GetObjectByName(parentName);
 
-        if (child && parent)
+        if (pChild && parent)
         {
-            child->SetParent(parent);
+            pChild->SetParent(parent);
 
             // SRT成分ごとの継承設定を復元する（未保存の古いデータは全継承=trueにフォールバック）
-            if (child->ObjectDatas_ && child->GetWorldTransform())
+            if (pChild->objectData_ && pChild->GetWorldTransform())
             {
-                WorldTransform *ct = child->GetWorldTransform();
-                ct->inheritTranslation_ = child->ObjectDatas_->Load<bool>("inheritTranslation", true);
-                ct->inheritRotation_ = child->ObjectDatas_->Load<bool>("inheritRotation", true);
-                ct->inheritScale_ = child->ObjectDatas_->Load<bool>("inheritScale", true);
+                WorldTransform *ct = pChild->GetWorldTransform();
+                ct->inheritTranslation_ = pChild->objectData_->Load<bool>("inheritTranslation", true);
+                ct->inheritRotation_ = pChild->objectData_->Load<bool>("inheritRotation", true);
+                ct->inheritScale_ = pChild->objectData_->Load<bool>("inheritScale", true);
             }
         }
     }
@@ -1110,30 +1110,30 @@ void BaseObjectManager::LoadObjectFromJson(const std::string &startPath, const s
     Logger::Info("Object loaded: " + objectName + " (" + fullPath + ")");
 }
 
-void BaseObjectManager::RestoreParentChildRelationshipForObject(BaseObject *object)
+void BaseObjectManager::RestoreParentChildRelationshipForObject(BaseObject *pObject)
 {
-    if (!object)
+    if (!pObject)
         return;
 
     // 親の復元
-    std::string parentName = object->GetParentName();
+    std::string parentName = pObject->GetParentName();
     if (!parentName.empty())
     {
         auto it = objects_.find(parentName);
         if (it != objects_.end())
         {
-            object->SetParent(it->second);
+            pObject->SetParent(it->second);
         }
     }
 
     // 子の復元
-    std::vector<std::string> childrenNames = object->GetChildrenNames();
+    std::vector<std::string> childrenNames = pObject->GetChildrenNames();
     for (const std::string &childName : childrenNames)
     {
         auto it = objects_.find(childName);
         if (it != objects_.end())
         {
-            object->AddChild(it->second);
+            pObject->AddChild(it->second);
         }
     }
 }
@@ -1177,7 +1177,7 @@ nlohmann::json BaseObjectManager::CaptureUndoState()
         // トランスフォーム
         const WorldTransform *transform = obj->GetWorldTransform();
         s["scale"] = transform->scale_;
-        s["rotation"] = transform->quateRotation_;
+        s["rotation"] = transform->quaternionRotation_;
         s["translation"] = transform->translation_;
 
         // 親子関係・フラグ類
@@ -1268,7 +1268,7 @@ void BaseObjectManager::RestoreUndoState(const nlohmann::json &state)
         }
         if (s.contains("rotation"))
         {
-            transform->quateRotation_ = s["rotation"].get<Quaternion>();
+            transform->quaternionRotation_ = s["rotation"].get<Quaternion>();
         }
         if (s.contains("translation"))
         {

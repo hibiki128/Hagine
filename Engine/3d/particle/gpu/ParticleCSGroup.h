@@ -33,7 +33,7 @@ class ParticleCSGroup
     static constexpr uint32_t kFullUpdateThreadsPerGroup = 256;
 
     /// ===================================
-    /// public methods
+    /// public method
     /// ===================================
 
     /// <summary>
@@ -52,7 +52,7 @@ class ParticleCSGroup
         Microsoft::WRL::ComPtr<ID3D12Resource> fieldCountResource,
         std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> overrideSrvHandle,
         bool fieldsActive,
-        ID3D12GraphicsCommandList *cmdList = nullptr);
+        ID3D12GraphicsCommandList *pCommandList = nullptr);
 
     // 軽量 Update バリアントを使えるグループか判定する。
     // 重い演出(curl/vortex/gather/turbulence/trail/rotation)が全 OFF かつ
@@ -96,7 +96,7 @@ class ParticleCSGroup
     // 生存リスト ping-pong のフェーズを反転する（毎フレーム先頭で呼び、out/in を入れ替える）。
     void AdvanceAliveFrame() { alivePhase_ ^= 1u; }
     // 生存コンパクションカウンタを 0 にリセットする 1スレッドパス
-    void ResetAliveCounterDispatch(ID3D12GraphicsCommandList *cmdList);
+    void ResetAliveCounterDispatch(ID3D12GraphicsCommandList *pCommandList);
     // 生存数を readback バッファへコピーする（compute キュー上で記録すること）
     void RecordAliveCountReadback(ID3D12GraphicsCommandList *computeCmdList);
     // readback 済みの生存数を CPU へ取り込む（aliveDrawCount_ を更新）
@@ -176,7 +176,7 @@ class ParticleCSGroup
     };
 
     /// ===================================
-    /// private methods
+    /// private method
     /// ===================================
     void Initialize(uint32_t maxParticleCount = 10000);
     void InitParticle();
@@ -205,7 +205,7 @@ class ParticleCSGroup
 
   private:
     /// ===================================
-    /// private variaus
+    /// private variables
     /// ===================================
     // ===== GPUパーティクル SoA バッファ（旧 outputParticleResource_ を機能別に分割） =====
     // 各バッファは Compute(Emit/Update) 用 UAV を持つ。描画VSが読む DrawCore/Rotation のみ
@@ -298,14 +298,14 @@ class ParticleCSGroup
     uint32_t aliveCountSrvIndex_ = 0;
     uint32_t cachedAliveCount_ = 0;
 
-    ID3D12GraphicsCommandList *commandList_{};
+    ID3D12GraphicsCommandList *pCommandList_{};
     ID3D12GraphicsCommandList *computeCommandList_{};
 
     ParticleCommon *particleCommon_{};
     DirectXCommon *pDxCommon_{};
-    SrvManager *srvManager_{};
-    TextureManager *texManager_{};
-    Model *model_{};
+    SrvManager *pSrvManager_{};
+    TextureManager *pTextureManager_{};
+    Model *pModel_{};
     ModelData modelData_{};
     std::string modelFilePath_{};
 

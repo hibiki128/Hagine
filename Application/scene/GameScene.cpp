@@ -1,5 +1,6 @@
 #include "GameScene.h"
 
+#include <Application/camera/follow/FollowCameraFactory.h>
 #include "utility/scene/SceneManager.h"
 #include "edit/motion/MotionEditor.h"
 #include <Frame.h>
@@ -27,7 +28,7 @@ void GameScene::Initialize()
     debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
-    followCamera_ = std::make_unique<FollowCamera>();
+    followCamera_ = FollowCameraFactory::Create();
     startCamera_ = std::make_unique<StartCamera>();
     deathCamera_ = std::make_unique<DeathCamera>();
     ground_ = std::make_unique<Ground>();
@@ -46,7 +47,7 @@ void GameScene::Initialize()
     /// ===================================================
     debugCamera_->Initialize(&vp_);
     player_->Init("player");
-    enemy_->Init("enemy");
+    enemy_->Init("pEnemy");
     ground_->Init("Ground");
     aroundField_->Init("Around_Field");
     followCamera_->Init();
@@ -61,18 +62,18 @@ void GameScene::Initialize()
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
-    player_->SetVp(&vp_);
-    enemy_->SetVp(&vp_);
+    player_->SetViewProjection(&vp_);
+    enemy_->SetViewProjection(&vp_);
     enemy_->SetTarget(player_.get());
 
     /// ===================================================
     /// ポインタ共有
     /// ===================================================
-    enemy_ptr = enemy_.get();
-    player_ptr = player_.get();
+    pEnemy_ = enemy_.get();
+    pPlayer_ = player_.get();
 
-    playerUI_->Init(player_ptr);
-    enemyUI_->Init(enemy_ptr);
+    playerUI_->Init(pPlayer_);
+    enemyUI_->Init(pEnemy_);
 
     /// ===================================================
     /// オブジェクトマネージャに登録（非所有）
@@ -81,7 +82,7 @@ void GameScene::Initialize()
     pObjectManager_->RegisterExternal(enemy_.get());
 
 #ifdef _DEBUG
-    behaviorTreeEditor_->SetDebugTargets(enemy_ptr, player_ptr);
+    behaviorTreeEditor_->SetDebugTargets(pEnemy_, pPlayer_);
 #else
     /// ===================================================
     /// BehaviorTreeのロード
@@ -89,7 +90,7 @@ void GameScene::Initialize()
     behaviorTreeRoot_ = BehaviorTreeLoader::LoadAndBuild(kBTFolder, kBTFileName);
     if (behaviorTreeRoot_)
     {
-        enemy_ptr->SetBehaviorTree(behaviorTreeRoot_);
+        pEnemy_->SetBehaviorTree(behaviorTreeRoot_);
     }
 #endif
 
@@ -113,8 +114,8 @@ void GameScene::Initialize()
         pObjectManager_->Draw(vp);
         pSkyBox_->Draw(vp);
         aroundField_->Draw(vp);
-        player_ptr->DrawParticle(vp);
-        enemy_ptr->DrawParticle(vp);
+        pPlayer_->DrawParticle(vp);
+        pEnemy_->DrawParticle(vp);
         followCamera_->DrawFrustum();
     });
     pDrawSystem_->Register("GameScene_UI", DrawLayer::PostEffect, [this](const ViewProjection &) {
@@ -135,11 +136,11 @@ void GameScene::Finalize()
         fadeOut_->Finalize();
     }
     aroundField_->Finalize();
-    pSceneManager_->SetClearTime(ClearTimer_);
-    pSceneManager_->SetIsGameOver(!player_ptr->GetIsAlive());
-    if (player_ptr->GetIsAlive())
+    pSceneManager_->SetClearTime(clearTimer_);
+    pSceneManager_->SetIsGameOver(!pPlayer_->GetIsAlive());
+    if (pPlayer_->GetIsAlive())
     {
-        pSceneManager_->SetHP(player_ptr->GetHP());
+        pSceneManager_->SetHP(pPlayer_->GetHP());
     }
     else
     {
@@ -167,7 +168,7 @@ void GameScene::Update()
         auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
         if (runtimeRoot)
         {
-            enemy_ptr->SetBehaviorTree(runtimeRoot);
+            pEnemy_->SetBehaviorTree(runtimeRoot);
         }
     }
 #endif
@@ -181,40 +182,40 @@ void GameScene::Update()
     enemyUI_->Update();
 
     // シャドウマップをプレイヤーに追従
-    Vector3 p = player_ptr->GetWorldPosition();
+    Vector3 p = pPlayer_->GetWorldPosition();
     ShadowMap::GetInstance()->SetLightTarget({p.x, 0.0f, p.z});
-    player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
+    pPlayer_->SetActiveDebugCamera(debugCamera_->GetActive());
 
 #ifdef _DEBUG
     // パーティクル遷移中は操作開始しない（遷移中にカメラが動くのを防ぐ）。遷移なしなら即開始
     if (!fadeOut_ || fadeOut_->IsFinish())
     {
-        player_ptr->SetStart(true);
-        enemy_ptr->SetStart(true);
+        pPlayer_->SetStart(true);
+        pEnemy_->SetStart(true);
     }
 #else
     // 開始演出待ち（パーティクル遷移→開始カメラ演出の順に進む）
     if (startCamera_->IsComplete())
     {
-        player_ptr->SetStart(true);
-        enemy_ptr->SetStart(true);
-        if (enemy_ptr->GetIsAlive())
+        pPlayer_->SetStart(true);
+        pEnemy_->SetStart(true);
+        if (pEnemy_->GetIsAlive())
         {
-            ClearTimer_ += Frame::DeltaTime();
+            clearTimer_ += Frame::DeltaTime();
         }
     }
 #endif
 
     // 死亡演出中のモデル非表示
-    if (!player_ptr->GetIsAlive() && deathCamera_->IsHalfway())
+    if (!pPlayer_->GetIsAlive() && deathCamera_->IsHalfway())
     {
-        enemy_ptr->SetIsModelDraw(false);
+        pEnemy_->SetIsModelDraw(false);
     }
 
     // UIの更新
     gameUI_->Update();
-    player_ptr->SetPause(gameUI_->GetIsPause());
-    enemy_ptr->SetPause(gameUI_->GetIsPause());
+    pPlayer_->SetPause(gameUI_->GetIsPause());
+    pEnemy_->SetPause(gameUI_->GetIsPause());
 }
 
 void GameScene::Draw()
@@ -234,9 +235,9 @@ void GameScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->imgui();
-    followCamera_->imgui();
-    startCamera_->imgui();
+    debugCamera_->DrawImGui();
+    followCamera_->DrawImGui();
+    startCamera_->DrawImGui();
     vp_.ShowDebugInfo();
     MotionEditor::GetInstance()->DrawImGui();
 }
@@ -246,8 +247,8 @@ void GameScene::AddObjectSetting()
     /// ===================================================
     /// オブジェクト設定（デバッグ）
     /// ===================================================
-    player_ptr->Debug();
-    enemy_ptr->Debug();
+    pPlayer_->Debug();
+    pEnemy_->Debug();
     enemyUI_->Debug();
 
 #ifdef USE_IMGUI
@@ -265,7 +266,7 @@ void GameScene::AddParticleSetting()
     aroundField_->Debug();
     if (fadeOut_)
     {
-        fadeOut_->ImGui();
+        fadeOut_->DrawImGui();
     }
 }
 
@@ -274,7 +275,7 @@ void GameScene::CameraUpdate()
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    if (player_ptr->GetIsAlive())
+    if (pPlayer_->GetIsAlive())
     {
         if (debugCamera_->GetActive())
         {
@@ -298,7 +299,7 @@ void GameScene::CameraUpdate()
             else if (!startCamera_->IsComplete())
             {
                 startCamera_->Move();
-                startCamera_->SetTargetVp(followCamera_->GetViewProjection());
+                startCamera_->SetTargetViewProjection(followCamera_->GetViewProjection());
                 startCamera_->Update();
                 vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
                 vp_.matView_ = startCamera_->GetViewProjection().matView_;
@@ -321,7 +322,7 @@ void GameScene::CameraUpdate()
         {
             // 空中で死んだ場合は地面まで落下してから倒れるため、
             // カメラの注視点は現在位置ではなく落下先（接地位置）に合わせる
-            Vector3 deathPos = player_ptr->GetWorldPosition();
+            Vector3 deathPos = pPlayer_->GetWorldPosition();
             deathPos.y = Ground::GetStandingY(deathPos.x, deathPos.z);
             deathCamera_->StartEasing(
                 followCamera_->GetViewProjection(),
@@ -340,20 +341,20 @@ void GameScene::ChangeScene()
     /// ===================================================
     /// シーン切り替え
     /// ===================================================
-    if (!player_ptr->GetIsAlive() && deathCamera_->IsComplete())
+    if (!pPlayer_->GetIsAlive() && deathCamera_->IsComplete())
     {
-        GameOverTimer_ += Frame::DeltaTime();
-        player_ptr->SetIsDeathStaging(true);
+        gameOverTimer_ += Frame::DeltaTime();
+        pPlayer_->SetIsDeathStaging(true);
         // 死亡アニメーション(約2.6秒)を再生し終えてから粒子化演出が始まるため、
         // 演出を見届けられるだけの猶予を取ってからシーンを切り替える
-        if (GameOverTimer_ >= kGameOverWaitTime && !isGameOver_)
+        if (gameOverTimer_ >= kGameOverWaitTime && !isGameOver_)
         {
             pSceneManager_->NextSceneReservation("CLEAR");
             isGameOver_ = true;
         }
     }
 
-    if (!enemy_ptr->GetIsAlive())
+    if (!pEnemy_->GetIsAlive())
     {
         // 敵の死亡アニメーション(約2.6秒)→粒子化して消える演出を見届けてから
         // リザルトへ切り替える

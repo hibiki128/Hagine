@@ -8,17 +8,17 @@ using namespace Hagine;
 void StartCamera::Init()
 {
     // ViewProjectionの初期設定
-    vp_.farZ_ = kFarZ;
-    vp_.Initialize("");
-    wt_.Initialize();
+    viewProjection_.farZ_ = kFarZ;
+    viewProjection_.Initialize("");
+    worldTransform_.Initialize();
 
     // 初期角度の設定と初期座標の算出
     angle_ = degreesToRadians(kInitialAngleDegrees);
-    wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
-    wt_.translation_.y = kInitialHeight;
-    wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
+    worldTransform_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
+    worldTransform_.translation_.y = kInitialHeight;
+    worldTransform_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
 
-    wt_.UpdateMatrix();
+    worldTransform_.UpdateMatrix();
 
     // 入力システムの初期化
     pGamePad_ = std::make_unique<GamePad>();
@@ -78,22 +78,22 @@ void StartCamera::Update()
         {
         case 1: // 第1フェーズ：位置と回転のイージング
         {
-            float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
+            float t = std::min(easingTimer_ / easingDuration_, kEasingProgressMax);
 
-            wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, kEasingMaxValue);
-            wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot_, t, kEasingMaxValue);
+            worldTransform_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos_, t, kEasingProgressMax);
+            worldTransform_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot_, t, kEasingProgressMax);
 
-            wt_.UpdateMatrix();
+            worldTransform_.UpdateMatrix();
 
             // ビュープロジェクションへの反映
-            vp_.translation_ = wt_.translation_;
-            vp_.eulerRotation_ = wt_.eulerRotation_;
-            vp_.UpdateMatrix();
+            viewProjection_.translation_ = worldTransform_.translation_;
+            viewProjection_.eulerRotation_ = worldTransform_.eulerRotation_;
+            viewProjection_.UpdateMatrix();
 
-            if (t >= kMaxBlendValue)
+            if (t >= kEasingProgressMax)
             {
                 easingPhase_ = kPhaseWait1;
-                easingTimer_ = kTimerReset;
+                easingTimer_ = 0.0f;
                 isSkipping_ = false;
             }
             break;
@@ -104,9 +104,9 @@ void StartCamera::Update()
             if (easingTimer_ >= waitDuration_)
             {
                 easingPhase_ = kPhaseEasing2;
-                easingTimer_ = kTimerReset;
-                easingStartPos_ = wt_.translation_;
-                easingStartRot_ = wt_.eulerRotation_;
+                easingTimer_ = 0.0f;
+                easingStartPos_ = worldTransform_.translation_;
+                easingStartRot_ = worldTransform_.eulerRotation_;
                 isSkipping_ = false;
             }
             break;
@@ -114,21 +114,21 @@ void StartCamera::Update()
 
         case 3: // 第3フェーズ：第2目標へのイージング
         {
-            float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
+            float t = std::min(easingTimer_ / easingDuration_, kEasingProgressMax);
 
-            wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos2_, t, kEasingMaxValue);
-            wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot2_, t, kEasingMaxValue);
+            worldTransform_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, easingTargetPos2_, t, kEasingProgressMax);
+            worldTransform_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, easingTargetRot2_, t, kEasingProgressMax);
 
-            wt_.UpdateMatrix();
+            worldTransform_.UpdateMatrix();
 
-            vp_.translation_ = wt_.translation_;
-            vp_.eulerRotation_ = wt_.eulerRotation_;
-            vp_.UpdateMatrix();
+            viewProjection_.translation_ = worldTransform_.translation_;
+            viewProjection_.eulerRotation_ = worldTransform_.eulerRotation_;
+            viewProjection_.UpdateMatrix();
 
-            if (t >= kMaxBlendValue)
+            if (t >= kEasingProgressMax)
             {
                 easingPhase_ = kPhaseWait2;
-                easingTimer_ = kTimerReset;
+                easingTimer_ = 0.0f;
                 isSkipping_ = false;
             }
             break;
@@ -139,9 +139,9 @@ void StartCamera::Update()
             if (easingTimer_ >= waitDuration_)
             {
                 easingPhase_ = kPhaseEasing3;
-                easingTimer_ = kTimerReset;
-                easingStartPos_ = wt_.translation_;
-                easingStartRot_ = wt_.eulerRotation_;
+                easingTimer_ = 0.0f;
+                easingStartPos_ = worldTransform_.translation_;
+                easingStartRot_ = worldTransform_.eulerRotation_;
                 isSkipping_ = false;
             }
             break;
@@ -149,21 +149,21 @@ void StartCamera::Update()
 
         case 5: // 第5フェーズ：最終目標（現在のカメラ位置）へのイージング
         {
-            float t = std::min(easingTimer_ / easingDuration_, kMaxBlendValue);
+            float t = std::min(easingTimer_ / easingDuration_, kEasingProgressMax);
 
-            wt_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, targetVp_.translation_, t, kEasingMaxValue);
-            wt_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, targetVp_.eulerRotation_, t, kEasingMaxValue);
+            worldTransform_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, targetViewProjection_.translation_, t, kEasingProgressMax);
+            worldTransform_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, targetViewProjection_.eulerRotation_, t, kEasingProgressMax);
 
-            wt_.UpdateMatrix();
+            worldTransform_.UpdateMatrix();
 
-            vp_.translation_ = wt_.translation_;
-            vp_.eulerRotation_ = wt_.eulerRotation_;
-            vp_.UpdateMatrix();
+            viewProjection_.translation_ = worldTransform_.translation_;
+            viewProjection_.eulerRotation_ = worldTransform_.eulerRotation_;
+            viewProjection_.UpdateMatrix();
 
-            if (t >= kMaxBlendValue)
+            if (t >= kEasingProgressMax)
             {
                 easingPhase_ = kPhaseWait3;
-                easingTimer_ = kTimerReset;
+                easingTimer_ = 0.0f;
                 isSkipping_ = false;
             }
             break;
@@ -186,23 +186,23 @@ void StartCamera::Update()
     }
 
     // 通常時の回転移動処理
-    wt_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
-    wt_.translation_.y = kInitialHeight;
-    wt_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
+    worldTransform_.translation_.x = centerPos_.x + radius_ * std::cos(angle_);
+    worldTransform_.translation_.y = kInitialHeight;
+    worldTransform_.translation_.z = centerPos_.z + radius_ * std::sin(angle_);
 
     // 常に中心点（ターゲット）を注視するように回転を算出
-    Vector3 toCenter = (centerPos_ - wt_.translation_).Normalize();
+    Vector3 toCenter = (centerPos_ - worldTransform_.translation_).Normalize();
     float yaw = std::atan2(toCenter.x, toCenter.z);
     float horizontalDistance = std::sqrt(toCenter.x * toCenter.x + toCenter.z * toCenter.z);
     float pitch = std::atan2(-toCenter.y, horizontalDistance);
 
-    wt_.eulerRotation_ = {pitch, yaw, kZeroRotation};
-    wt_.UpdateMatrix();
+    worldTransform_.eulerRotation_ = {pitch, yaw, kZeroRotation};
+    worldTransform_.UpdateMatrix();
 
     // トランスフォーム情報の反映
-    vp_.translation_ = wt_.translation_;
-    vp_.eulerRotation_ = wt_.eulerRotation_;
-    vp_.UpdateMatrix();
+    viewProjection_.translation_ = worldTransform_.translation_;
+    viewProjection_.eulerRotation_ = worldTransform_.eulerRotation_;
+    viewProjection_.UpdateMatrix();
 }
 
 void StartCamera::Move()
@@ -220,14 +220,14 @@ void StartCamera::Move()
     {
         isEasing_ = true;
         easingPhase_ = kPhaseEasing1;
-        easingTimer_ = kTimerReset;
-        easingStartPos_ = wt_.translation_;
-        easingStartRot_ = wt_.eulerRotation_;
+        easingTimer_ = 0.0f;
+        easingStartPos_ = worldTransform_.translation_;
+        easingStartRot_ = worldTransform_.eulerRotation_;
         isSkipping_ = false;
     }
 }
 
-void StartCamera::imgui()
+void StartCamera::DrawImGui()
 {
 #ifdef USE_IMGUI
     ImGui::Begin("StartCamera");

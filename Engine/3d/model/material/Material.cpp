@@ -37,8 +37,8 @@ void Material::Draw(const Vector4 color, bool lighting) {
     pMaterialDataGPU_->normalStrength = materialData_.normalStrength;
     pMaterialDataGPU_->proceduralScale = materialData_.proceduralScale;
 
-    ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();
-    commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+    ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
+    pCommandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
 
     SrvManager::GetInstance()->SetGraphicsRootDescriptorTable(2, materialData_.textureIndex);
 }

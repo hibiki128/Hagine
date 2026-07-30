@@ -6,10 +6,10 @@
 #include <random>
 
 namespace Hagine {
-void ParticleManager::Initialize(SrvManager *srvManager)
+void ParticleManager::Initialize(SrvManager *pSrvManager)
 {
     pParticleCommon_ = ParticleCommon::GetInstance();
-    pSrvManager_ = srvManager;
+    pSrvManager_ = pSrvManager;
     randomEngine_.seed(seedGenerator_());
 }
 
@@ -136,7 +136,7 @@ void ParticleManager::Update(const ViewProjection &viewProjection)
                 else
                 {
                     particle.transform.eulerRotation_ =
-                        (1.0f - t) * particle.startRote + t * particle.endRote;
+                        (1.0f - t) * particle.startRotate + t * particle.endRotate;
                 }
 
                 if (particleSetting.isAcceMultiply)
@@ -499,8 +499,8 @@ Particle ParticleManager::MakeNewParticle(std::mt19937 &randomEngine_, const Par
     }
     else
     {
-        particle.startRote = setting.startRote;
-        particle.endRote = setting.endRote;
+        particle.startRotate = setting.startRotate;
+        particle.endRotate = setting.endRotate;
     }
 
     if (setting.isRandomColor)

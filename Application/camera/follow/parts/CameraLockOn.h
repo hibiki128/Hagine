@@ -1,8 +1,8 @@
 #pragma once
+#include "ICameraPart.h"
 #include <Easing.h>
 #include <type/Vector3.h>
 
-class FollowCamera;
 class Player;
 namespace Hagine {
 class LineRenderer;
@@ -13,7 +13,7 @@ class LineRenderer;
 /// 肩オフセット・高さオフセット・ロックオン遷移と、視錐台ロックオン（範囲内の敵検出）
 /// および視錐台デバッグ描画を担当する
 /// </summary>
-class CameraLockOn
+class CameraLockOn : public ICameraPart
 {
   public:
     /// ===================================================
@@ -24,7 +24,7 @@ class CameraLockOn
     /// 初期化（肩・高さオフセットの初期化）
     /// </summary>
     /// <param name="pOwner">所有者のフォローカメラ</param>
-    void Init(FollowCamera *pOwner);
+    void Init(FollowCamera *pOwner) override;
 
     /// <summary>
     /// ロックオンの開始/解除フレームに肩オフセットの目標を切り替える
@@ -134,12 +134,6 @@ class CameraLockOn
     static constexpr float kShoulderDiffThreshold = 0.01f;  ///< 肩オフセット誤差許容値
     static constexpr float kHeightDiffThreshold = 0.01f;    ///< 高さ誤差許容値
     static constexpr float kParallelThreshold = 0.999f;     ///< 平行判定しきい値
-
-    // ベクトル・ブレンド定数
-    static constexpr float kVectorZero = 0.0f;     ///< ゼロ値
-    static constexpr float kTimerReset = 0.0f;     ///< タイマーリセット値
-    static constexpr float kMaxBlendValue = 1.0f;  ///< 最大ブレンド値
-    static constexpr float kEasingMaxValue = 1.0f; ///< イージング最大値
 
     // 視錐台ロックオン関連
     static constexpr float kDefaultLockOnRange = 150.0f;                            ///< デフォルトのロックオン射程

@@ -318,13 +318,13 @@ void ImGuiManager::End() {
 }
 
 void ImGuiManager::Draw() {
-    ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();
+    ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
 
     //// デスクリプタヒープの配列をセットするコマンド
     // ID3D12DescriptorHeap *ppHeaps[] = {srvHeap_.Get()};
-    // commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    // pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     //  描画コマンドを発行
-    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pCommandList);
 }
 
 void ImGuiManager::RenderMultiViewport() {
@@ -362,11 +362,11 @@ void ImGuiManager::RebuildGridBatchIfNeeded() {
         vertices.push_back({{offset, 0.0f, gridSize_}, kWhite});
     }
 
-    LineRenderer *line = LineRenderer::GetInstance();
+    LineRenderer *pLine = LineRenderer::GetInstance();
     if (gridBatch_ == kInvalidLineBatch) {
-        gridBatch_ = line->CreateBatch(vertices.data(), static_cast<uint32_t>(vertices.size()));
+        gridBatch_ = pLine->CreateBatch(vertices.data(), static_cast<uint32_t>(vertices.size()));
     } else {
-        line->UpdateBatch(gridBatch_, vertices.data(), static_cast<uint32_t>(vertices.size()));
+        pLine->UpdateBatch(gridBatch_, vertices.data(), static_cast<uint32_t>(vertices.size()));
     }
     builtGridDivision_ = gridDivision_;
     builtGridSize_ = gridSize_;
@@ -890,7 +890,7 @@ void ImGuiManager::ShowStatisticsWindow() {
     ImGui::End();
 }
 
-void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *offscreen) {
+void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *pOffScreen) {
     if (!showOfScreenView_)
         return; // 表示しない場合は早期リターン
 
@@ -898,7 +898,7 @@ void ImGuiManager::ShowOffScreenSettingWindow(OffScreen *offscreen) {
 
     ImGui::Begin("オフスクリーン設定", &showOfScreenView_, flags);
 
-    offscreen->Setting();
+    pOffScreen->Setting();
 
     ImGui::End();
 }
@@ -911,7 +911,7 @@ void ImGuiManager::ShowLightSettingWindow() {
 
     ImGui::Begin("ライト設定", &showLightView_, flags);
 
-    LightGroup::GetInstance()->imgui();
+    LightGroup::GetInstance()->DrawImGui();
 
     ImGui::End();
 }
@@ -924,7 +924,7 @@ void ImGuiManager::ShowGizmoWindow() {
 
     ImGui::Begin("トランスフォームマネージャ", &showGizmoView_, flags);
 
-    pImGuizmoManager_->imgui();
+    pImGuizmoManager_->DrawImGui();
 
     ImGui::End();
 }
@@ -1292,7 +1292,7 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
     ImGui::End();
 }
 
-void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
+void ImGuiManager::ShowMainUI(OffScreen *pOffScreen) {
 
     // ヒエラルキーウィンドウ
     ShowSceneSettingWindow();
@@ -1305,7 +1305,7 @@ void ImGuiManager::ShowMainUI(OffScreen *offscreen) {
     // FPSを描画
     ShowStatisticsWindow();
     // オフスクリーンウィンドウを描画
-    ShowOffScreenSettingWindow(offscreen);
+    ShowOffScreenSettingWindow(pOffScreen);
     // ライトウィンドウを描画
     ShowLightSettingWindow();
     // ギズモウィンドウを描画
@@ -1544,7 +1544,7 @@ static std::string StripDockDataFromIni(const char *src, size_t srcSize) {
         size_t lineEnd = pos;
         while (lineEnd < srcSize && src[lineEnd] != '\n')
             ++lineEnd;
-        // line は src[pos..lineEnd) ('\n' を含まない)
+        // pLine は src[pos..lineEnd) ('\n' を含まない)
         const char *linePtr = src + pos;
         size_t lineLen = lineEnd - pos;
         pos = lineEnd + 1; // 次の行へ

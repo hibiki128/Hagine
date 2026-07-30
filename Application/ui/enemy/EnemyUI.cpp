@@ -2,9 +2,9 @@
 #include "SpriteCommon.h"
 
 using namespace Hagine;
-void EnemyUI::Init(Enemy *enemy)
+void EnemyUI::Init(Enemy *pEnemy)
 {
-    pEnemy_ = enemy;
+    pEnemy_ = pEnemy;
     // HPバーの初期化
     hpBar_ = std::make_unique<Sprite>();
     hpBar_->Initialize("debug/white1x1.png", hpBarPosition_, {kHPBarColorR, kHPBarColorG, kHPBarColorB, kHPBarColorA}, {kAnchorX, kAnchorY});

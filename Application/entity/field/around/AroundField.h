@@ -54,13 +54,13 @@ class AroundField : public Hagine::BaseObject
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
-    Hagine::CylinderCollider *aroundField_ = nullptr; // 円柱コライダー
+    Hagine::CylinderCollider *pAroundFieldCollider_ = nullptr; // 円柱コライダー
     // フィールドパーティクル。実体は ParticleCSSpawner が所有する（借用ポインタ）。
     // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
-    Hagine::ParticleCSEmitter *fieldParticle_ = nullptr;
+    Hagine::ParticleCSEmitter *pFieldParticle_ = nullptr;
 
     static inline const Hagine::CylinderCollider *activeField_ = nullptr; // アクティブシーンのフィールドコライダー
 };

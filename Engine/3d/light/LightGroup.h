@@ -75,7 +75,7 @@ class LightGroup
     /// <summary>
     /// ImGuiによるデバッグ表示
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
     /// <summary>
     /// ライトデータをJSONへ保存
@@ -169,14 +169,14 @@ class LightGroup
     /// CPU側のライトをGPUバッファへ転送し、GPUからの追記を受け付ける状態にする。
     /// 描画コマンドリストで1フレームに1回だけ呼ぶこと。
     /// </summary>
-    /// <param name="cmdList">記録先のコマンドリスト（Direct Queue）</param>
-    void BeginGpuLightAppend(ID3D12GraphicsCommandList *cmdList);
+    /// <param name="pCommandList">記録先のコマンドリスト（Direct Queue）</param>
+    void BeginGpuLightAppend(ID3D12GraphicsCommandList *pCommandList);
 
     /// <summary>
     /// GPUからの追記を締め、カリングCS／ライティングPSが読める状態へ遷移させる。
     /// </summary>
-    /// <param name="cmdList">記録先のコマンドリスト（Direct Queue）</param>
-    void EndGpuLightAppend(ID3D12GraphicsCommandList *cmdList);
+    /// <param name="pCommandList">記録先のコマンドリスト（Direct Queue）</param>
+    void EndGpuLightAppend(ID3D12GraphicsCommandList *pCommandList);
 
     /// <summary>
     /// 粒子光源CSの書き込み先（RWStructuredBuffer&lt;PointLightGPU&gt;）のGPUアドレス
@@ -391,16 +391,16 @@ class LightGroup
     /// <summary>
     /// ポイントライトバッファの状態を遷移させる（現在状態を自分で覚えている）
     /// </summary>
-    /// <param name="cmdList">記録先のコマンドリスト</param>
+    /// <param name="pCommandList">記録先のコマンドリスト</param>
     /// <param name="after">遷移先の状態</param>
-    void TransitionPointLightBuffer(ID3D12GraphicsCommandList *cmdList, D3D12_RESOURCE_STATES after);
+    void TransitionPointLightBuffer(ID3D12GraphicsCommandList *pCommandList, D3D12_RESOURCE_STATES after);
 
     /// <summary>
     /// ライト総数カウンタの状態を遷移させる
     /// </summary>
-    /// <param name="cmdList">記録先のコマンドリスト</param>
+    /// <param name="pCommandList">記録先のコマンドリスト</param>
     /// <param name="after">遷移先の状態</param>
-    void TransitionLightCounter(ID3D12GraphicsCommandList *cmdList, D3D12_RESOURCE_STATES after);
+    void TransitionLightCounter(ID3D12GraphicsCommandList *pCommandList, D3D12_RESOURCE_STATES after);
 
   private:
     // ===================================================
@@ -604,6 +604,6 @@ class LightGroup
     char nameEditBuffer_[128] = "";
     std::string nameEditOwner_;
 
-    std::unique_ptr<DataHandler> DLightData_ = nullptr; // JSONハンドラー
+    std::unique_ptr<DataHandler> lightDataHandler_ = nullptr; // JSONハンドラー
 };
 } // namespace Hagine

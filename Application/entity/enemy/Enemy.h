@@ -35,8 +35,8 @@ class Enemy : public Hagine::BaseObject
     void DrawFrustum();
     void Debug();
 
-    void OnCollisionEnter(Hagine::ColliderBase *collider);
-    void OnCollision(Hagine::ColliderBase *collider);
+    void OnCollisionEnter(Hagine::ColliderBase *pCollider);
+    void OnCollision(Hagine::ColliderBase *pCollider);
     void ComboUpdate() { combat_->ComboUpdate(); }
 
     /// ===================================================
@@ -173,14 +173,14 @@ class Enemy : public Hagine::BaseObject
     void SetComboAttack(bool flag) { combat_->SetComboAttack(flag); }
 
     // ─── 本体 ───
-    void SetVp(Hagine::ViewProjection *vp);
-    void SetTarget(Player *target)
+    void SetViewProjection(Hagine::ViewProjection *pViewProjection);
+    void SetTarget(Player *pTarget)
     {
-        pTarget_ = target;
+        pTarget_ = pTarget;
         // 前方攻撃判定コライダーにもプレイヤーを設定する
         if (combat_->GetAttackCollider())
         {
-            combat_->GetAttackCollider()->SetPlayer(target);
+            combat_->GetAttackCollider()->SetPlayer(pTarget);
         }
     }
     void SetIsLockOn(bool lockOn) { isLockOn_ = lockOn; }
@@ -255,7 +255,7 @@ class Enemy : public Hagine::BaseObject
     void Load();
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 初期化定数
@@ -280,17 +280,6 @@ class Enemy : public Hagine::BaseObject
 
     // 風切り演出を出す水平速度（BTの接近ノードは20〜28、回り込み・後退は10〜12）
     static constexpr float kDashEffectSpeed = 18.0f;
-
-    // 回転・ベクトル定数
-    static constexpr float kForwardVectorX = 0.0f;
-    static constexpr float kForwardVectorY = 0.0f;
-    static constexpr float kForwardVectorZ = -1.0f;
-    static constexpr float kRightVectorX = 1.0f;
-    static constexpr float kRightVectorY = 0.0f;
-    static constexpr float kRightVectorZ = 0.0f;
-    static constexpr float kUpVectorX = 0.0f;
-    static constexpr float kUpVectorY = 1.0f;
-    static constexpr float kUpVectorZ = 0.0f;
 
     // ─── パーツ ───
     std::unique_ptr<EnemyMovement> movement_; ///< 移動・回転・接地

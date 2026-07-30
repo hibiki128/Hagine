@@ -113,6 +113,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Application\camera\follow\FollowCamera.cpp" />
+    <ClCompile Include="Application\camera\follow\FollowCameraFactory.cpp" />
     <ClCompile Include="Application\camera\follow\parts\CameraLockOn.cpp" />
     <ClCompile Include="Application\camera\follow\parts\CameraRush.cpp" />
     <ClCompile Include="Application\camera\follow\parts\CameraSkillCutscene.cpp" />
@@ -155,6 +156,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\utility\asset\AssetPath.cpp" />
     <ClCompile Include="Engine\utility\edit\motion\MotionEditor.cpp" />
     <ClCompile Include="Application\utility\shake\Shake.cpp" />
+    <ClCompile Include="application\utility\combo\ComboDefinition.cpp" />
     <ClCompile Include="application\utility\combo\ComboSystem.cpp" />
     <ClCompile Include="Application\ui\enemy\EnemyUI.cpp" />
     <ClCompile Include="Application\staging\death\DeathStaging.cpp" />
@@ -366,7 +368,9 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\camera\follow\FollowCamera.h" />
+    <ClInclude Include="Application\camera\follow\FollowCameraFactory.h" />
     <ClInclude Include="Application\camera\follow\parts\CameraLockOn.h" />
+    <ClInclude Include="Application\camera\follow\parts\ICameraPart.h" />
     <ClInclude Include="Application\camera\follow\parts\CameraRush.h" />
     <ClInclude Include="Application\camera\follow\parts\CameraSkillCutscene.h" />
     <ClInclude Include="Application\entity\enemy\Enemy.h" />
@@ -411,6 +415,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\utility\debug\imgui\AssetDragDrop.h" />
     <ClInclude Include="Engine\utility\edit\motion\MotionEditor.h" />
     <ClInclude Include="Application\utility\shake\Shake.h" />
+    <ClInclude Include="application\utility\combo\ComboDefinition.h" />
     <ClInclude Include="application\utility\combo\ComboSystem.h" />
     <ClInclude Include="Application\ui\enemy\EnemyUI.h" />
     <ClInclude Include="Application\staging\death\DeathStaging.h" />

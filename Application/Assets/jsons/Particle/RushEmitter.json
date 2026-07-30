@@ -25,7 +25,7 @@
         "y": 1.0,
         "z": 1.0
     },
-    "Burst_endRote": {
+    "Burst_endRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -98,7 +98,7 @@
         "y": 1.0,
         "z": 1.0
     },
-    "Burst_startRote": {
+    "Burst_startRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0

@@ -4,20 +4,20 @@
 
 using namespace Hagine;
 
-void SkillCutscene::Start(BaseObject *performer, FollowCamera *camera, std::function<void()> onActivate)
+void SkillCutscene::Start(BaseObject *pPerformer, FollowCamera *pCamera, std::function<void()> onActivate)
 {
     if (IsActive())
     {
         return;
     }
 
-    pCamera_ = camera;
+    pCamera_ = pCamera;
     onActivate_ = std::move(onActivate);
     timer_ = 0.0f;
 
-    if (pCamera_ && performer)
+    if (pCamera_ && pPerformer)
     {
-        pCamera_->StartSkillCloseUp(performer);
+        pCamera_->StartSkillCloseUp(pPerformer);
         phase_ = Phase::CloseUp;
     }
     else
@@ -79,7 +79,7 @@ void SkillCutscene::Cancel()
 
 void SkillCutscene::RegisterParams(const std::string &owner)
 {
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register(owner, "顔アップ時間(秒)", &closeUpDuration_, {0.05f, 0.1f, 5.0f});
-    hub->Register(owner, "発動遅延(秒)", &activationDelay_, {0.05f, 0.0f, 3.0f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register(owner, "顔アップ時間(秒)", &closeUpDuration_, {0.05f, 0.1f, 5.0f});
+    pHub->Register(owner, "発動遅延(秒)", &activationDelay_, {0.05f, 0.0f, 3.0f});
 }

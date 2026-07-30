@@ -44,12 +44,12 @@ void OBBCollider::DebugDraw(const ViewProjection &viewProjection)
         return;
     }
 
-    LineRenderer *line = LineRenderer::GetInstance();
+    LineRenderer *pLine = LineRenderer::GetInstance();
 
     // 画面外なら線を積まない
     const Vector3 halfSize = cachedOBB_.size;
     const float boundingRadius = halfSize.Length() + (cachedOBB_.scaleCenter - cachedOBB_.rotationCenter).Length();
-    if (!line->IsSphereVisible(cachedOBB_.rotationCenter, boundingRadius))
+    if (!pLine->IsSphereVisible(cachedOBB_.rotationCenter, boundingRadius))
     {
         return;
     }
@@ -76,7 +76,7 @@ void OBBCollider::DebugDraw(const ViewProjection &viewProjection)
     }
 
     const Vector3 corners[8] = {bits[0], bits[1], bits[3], bits[2], bits[4], bits[5], bits[7], bits[6]};
-    line->AddBoxCorners(corners, color_);
+    pLine->AddBoxCorners(corners, color_);
 
     DrawRotationCenter(viewProjection);
 }

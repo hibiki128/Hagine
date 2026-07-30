@@ -42,14 +42,14 @@ class EnemyBullet : public Hagine::BaseObject
     /// <summary>
     /// 敵の情報から弾のトランスフォームを初期化
     /// </summary>
-    /// <param name="enemy">発射した敵のポインタ</param>
-    void InitTransform(Enemy *enemy);
+    /// <param name="pEnemy">発射した敵のポインタ</param>
+    void InitTransform(Enemy *pEnemy);
 
     /// <summary>
     /// 衝突判定時の処理
     /// </summary>
-    /// <param name="collider">衝突したコライダー</param>
-    void OnCollisionEnter(Hagine::ColliderBase *collider);
+    /// <param name="pCollider">衝突したコライダー</param>
+    void OnCollisionEnter(Hagine::ColliderBase *pCollider);
 
     /// <summary>
     /// ガードされた弾を、相手の外側斜め上へ弾き返す（ホーミングと加速は打ち切る）
@@ -130,7 +130,7 @@ class EnemyBullet : public Hagine::BaseObject
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 定数定義

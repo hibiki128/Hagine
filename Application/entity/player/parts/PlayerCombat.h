@@ -31,8 +31,8 @@ class PlayerCombat
     /// <summary>
     /// 初期化（チャージショット・必殺技・コンボ・攻撃コライダーを生成する）
     /// </summary>
-    /// <param name="owner">所有者のプレイヤー</param>
-    void Init(Player *owner);
+    /// <param name="pOwner">所有者のプレイヤー</param>
+    void Init(Player *pOwner);
 
     /// <summary>
     /// 近接コンボと前方攻撃コライダーの更新
@@ -81,14 +81,14 @@ class PlayerCombat
     /// <summary>
     /// 戦闘関連パラメータを保存する
     /// </summary>
-    /// <param name="data">保存先のデータハンドラ</param>
-    void Save(Hagine::DataHandler *data);
+    /// <param name="pData">保存先のデータハンドラ</param>
+    void Save(Hagine::DataHandler *pData);
 
     /// <summary>
     /// 戦闘関連パラメータを読み込む
     /// </summary>
-    /// <param name="data">読み込み元のデータハンドラ</param>
-    void Load(Hagine::DataHandler *data);
+    /// <param name="pData">読み込み元のデータハンドラ</param>
+    void Load(Hagine::DataHandler *pData);
 
     /// <summary>
     /// 弾関連のImGui表示（プレイヤータブ内に置く分）
@@ -151,10 +151,9 @@ class PlayerCombat
     PlayerAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
     ChargeShot *GetChargeShot() { return chargeShot_.get(); }
     ComboSystem &GetPunchCombo() { return punchCombo_; }
-    const std::vector<std::string> &GetComboAnimations() const { return comboAnimations_; }
 
     /// <summary>必殺技（ビーム）が発動中か</summary>
-    bool IsSkillActive() const { return pMakanAttack_ptr_ && pMakanAttack_ptr_->IsActive(); }
+    bool IsSkillActive() const { return pMakanAttack_ && pMakanAttack_->IsActive(); }
 
     /// <summary>必殺技の発動前演出（カメラ演出＋遅延）中か</summary>
     bool IsSkillStaging() const { return skillCutscene_.IsActive(); }
@@ -199,8 +198,14 @@ class PlayerCombat
     void StartSkillStaging();
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
+
+    // コンボ定義（jsons/ComboDefinition 以下のファイル名。拡張子なし）
+    static constexpr const char *kComboDefinitionName = "PunchCombo";
+
+    // ImGuiでアニメーションパスを編集する入力欄のバッファサイズ
+    static constexpr int kAnimationPathBufferSize = 256;
 
     // 弾丸関連定数
     static constexpr float kBulletScale = 0.5f;
@@ -213,16 +218,15 @@ class PlayerCombat
     std::vector<std::unique_ptr<PlayerBullet>> bullets_;   ///< 発射した弾
     std::unique_ptr<ChargeShot> chargeShot_;               ///< チャージショット
     std::unique_ptr<PlayerAttackCollider> attackCollider_; ///< 前方攻撃判定
-    MakanAttackSkill *pMakanAttack_ptr_ = nullptr;          ///< 必殺技（所有権はBaseObjectManager）
+    MakanAttackSkill *pMakanAttack_ = nullptr;          ///< 必殺技（所有権はBaseObjectManager）
 
-    ComboSystem punchCombo_;                   ///< パンチコンボ
-    bool comboInitialized_ = false;            ///< コンボ初期化済みフラグ
-    std::vector<std::string> comboAnimations_; ///< コンボ段ごとのプレイヤー本体アニメーションパス
+    ComboSystem punchCombo_;        ///< パンチコンボ
+    bool comboInitialized_ = false; ///< コンボ初期化済みフラグ
 
     SkillCutscene skillCutscene_; ///< 必殺技の発動前演出（カメラ顔アップ＋発動遅延）
 
-    float B_acce_ = 0.0f;  ///< 弾の加速度
-    float B_speed_ = 0.0f; ///< 弾の速度
+    float bulletAcceleration_ = 0.0f;  ///< 弾の加速度
+    float bulletSpeed_ = 0.0f; ///< 弾の速度
 
     float yButtonHoldTime_ = 0.0f;               ///< Yボタン押下時間
     const float kYButtonChargeThreshold = 0.15f; ///< チャージ判定閾値(秒)

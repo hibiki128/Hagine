@@ -11,10 +11,10 @@
 
 using namespace Hagine;
 
-void InputDisplayUI::Initialize(Player *player, GamePad *gamePad)
+void InputDisplayUI::Initialize(Player *player, GamePad *pGamePad)
 {
     pPlayer_ = player;
-    pGamePad_ = gamePad;
+    pGamePad_ = pGamePad;
     history_.clear();
     glyphs_.clear();
     wasMoving_ = false;
@@ -160,7 +160,7 @@ float InputDisplayUI::SlotAlpha(int slot)
 
 void InputDisplayUI::PollInputs()
 {
-    Input *input = Input::GetInstance();
+    Input *pInput = Input::GetInstance();
     const bool pad = IsGamePad();
 
     // 移動（連続入力なので立ち上がりのみ表示）
@@ -172,8 +172,8 @@ void InputDisplayUI::PollInputs()
     }
     else
     {
-        moving = input->PushKey(DIK_W) || input->PushKey(DIK_A) ||
-                 input->PushKey(DIK_S) || input->PushKey(DIK_D);
+        moving = pInput->PushKey(DIK_W) || pInput->PushKey(DIK_A) ||
+                 pInput->PushKey(DIK_S) || pInput->PushKey(DIK_D);
     }
     if (moving && !wasMoving_)
     {
@@ -182,13 +182,13 @@ void InputDisplayUI::PollInputs()
     wasMoving_ = moving;
 
     // ジャンプ / 飛行
-    if (pad ? pGamePad_->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER) : input->TriggerKey(DIK_SPACE))
+    if (pad ? pGamePad_->IsTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER) : pInput->TriggerKey(DIK_SPACE))
     {
         PushEntry(pad ? "kc_RB" : "kc_SPACE", "lbl_jump");
     }
 
     // 下降
-    if (pad ? pGamePad_->IsRightTriggerTriggered(0.25f) : input->TriggerKey(DIK_LSHIFT))
+    if (pad ? pGamePad_->IsRightTriggerTriggered(0.25f) : pInput->TriggerKey(DIK_LSHIFT))
     {
         PushEntry(pad ? "kc_RT" : "kc_LSHIFT", "lbl_descend");
     }
@@ -341,22 +341,22 @@ void InputDisplayUI::Update()
     panelAlpha_ += (targetAlpha - panelAlpha_) * panelT;
 }
 
-void InputDisplayUI::BindAndDraw(Sprite *sprite, const std::string &path,
+void InputDisplayUI::BindAndDraw(Sprite *pSprite, const std::string &path,
                                  Vector2 size, Vector2 pos, float alpha)
 {
-    if (!sprite)
+    if (!pSprite)
     {
         return;
     }
-    sprite->SetTexturePath(path);
+    pSprite->SetTexturePath(path);
     // テクスチャ切替に伴い、UVを新テクスチャ全体に合わせ直す
     const DirectX::TexMetadata &meta = TextureManager::GetInstance()->GetMetaData(path);
-    sprite->SetTexLeftTop({0.0f, 0.0f});
-    sprite->SetTexSize({static_cast<float>(meta.width), static_cast<float>(meta.height)});
-    sprite->SetSize(size);
-    sprite->SetPosition(pos);
-    sprite->SetAlpha(alpha);
-    sprite->Draw();
+    pSprite->SetTexLeftTop({0.0f, 0.0f});
+    pSprite->SetTexSize({static_cast<float>(meta.width), static_cast<float>(meta.height)});
+    pSprite->SetSize(size);
+    pSprite->SetPosition(pos);
+    pSprite->SetAlpha(alpha);
+    pSprite->Draw();
 }
 
 void InputDisplayUI::Draw()

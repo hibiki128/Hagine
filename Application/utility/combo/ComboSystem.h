@@ -1,7 +1,6 @@
 #pragma once
-#include "data/DataHandler.h"
+#include "ComboDefinition.h"
 #include <functional>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -11,8 +10,9 @@ class BaseObject;
 
 /// <summary>
 /// コンボシステムを管理するクラス
-/// 連続攻撃のシーケンスと時間管理を制御する
-/// 攻撃ごとにダメージ・ノックバック・コライダータイミングを設定可能
+/// 連続攻撃のシーケンスと時間管理を制御する。
+/// 段の並び・ダメージ・ノックバック・判定タイミング・アニメーションといった
+/// データは ComboDefinition（JSON）から読み込み、このクラスは進行だけを担う
 /// </summary>
 class ComboSystem
 {
@@ -22,25 +22,15 @@ class ComboSystem
     /// ===================================================
 
     /// <summary>
-    /// コンボ1段分のデータ
+    /// コンボ1段分の実行時データ（定義データ＋モーション再生対象）
     /// </summary>
     struct ComboData
     {
-        Hagine::BaseObject *target; // モーションを再生するオブジェクト（見た目用）
-        std::string attackData;     // 攻撃モーションのファイル名（Jsonキーとしても使用）
+        Hagine::BaseObject *pTarget = nullptr; // モーションを再生するオブジェクト（見た目用。不要なら nullptr）
+        ComboStepData step;                    // 定義から読み込んだ段データ
 
-        // --- 攻撃パラメータ（ImGuiで調整・セーブ可能）---
-        float damage = 10.0f;                 // ダメージ量
-        float knockbackPower = 3.0f;          // ノックバックの強さ
-        float colliderActiveDuration = 0.25f; // 判定が有効な時間（秒）
-        float colliderActivateDelay = 0.08f;  // 攻撃開始からコライダーが有効になる遅延（秒）
-
-        ComboData(Hagine::BaseObject *obj, const std::string &attack,
-                  float dmg, float knockback,
-                  float duration, float delay)
-            : target(obj), attackData(attack),
-              damage(dmg), knockbackPower(knockback),
-              colliderActiveDuration(duration), colliderActivateDelay(delay) {}
+        ComboData(Hagine::BaseObject *pMotionTarget, const ComboStepData &stepData)
+            : pTarget(pMotionTarget), step(stepData) {}
     };
 
   private:
@@ -52,14 +42,19 @@ class ComboSystem
     void ResetCombo();
     void SaveComboStartPositions();
 
+    /// <summary>
+    /// モーション再生対象をすべてコンボ開始姿勢へ戻す
+    /// </summary>
+    void ReturnAllToComboStart();
+
     /// ===================================================
     /// private variables
     /// ===================================================
 
-    std::string name_ = "DefaultCombo"; // DataHandlerのファイル名に使用
+    ComboDefinition definition_; // 読み込んだコンボ定義（JSONとの受け渡し役）
 
-    std::vector<ComboData> comboData_;                    // コンボデータ配列
-    std::vector<Hagine::BaseObject *> comboStartObjects_; // コンボ開始オブジェクト配列
+    std::vector<ComboData> comboData_;                     // コンボデータ配列
+    std::vector<Hagine::BaseObject *> pComboStartObjects_; // コンボ開始オブジェクト配列
 
     std::string lastAttackName_; // 直近に発火した攻撃の名前（入力表示UI等が参照）
 
@@ -76,17 +71,15 @@ class ComboSystem
     bool inputBuffered_ = false;    // 入力バッファフラグ
     float inputBufferTime_ = 0.0f;  // 入力バッファタイマー
 
-    static const float COMBO_INTERVAL;         // コンボ間隔
-    static const float INPUT_BUFFER_DURATION;  // 入力バッファ有効時間
-    static const float FINAL_RETURN_DELAY;     // 最終攻撃後の戻り遅延
-    static const float COMBO_TIMEOUT_DURATION; // コンボタイムアウト時間
+    static const float kComboInterval;        // コンボ間隔
+    static const float kInputBufferDuration;  // 入力バッファ有効時間
+    static const float kFinalReturnDelay;     // 最終攻撃後の戻り遅延
+    static const float kComboTimeoutDuration; // コンボタイムアウト時間
 
     // 攻撃発火コールバック
     // 引数: damage, knockbackPower, colliderActiveDuration, colliderActivateDelay
     using AttackFiredCallback = std::function<void(float, float, float, float)>;
     AttackFiredCallback onAttackFired_; // 攻撃発火時のコールバック
-
-    std::unique_ptr<Hagine::DataHandler> dataHandler_; // データハンドラ
 
   public:
     /// ===================================================
@@ -97,23 +90,17 @@ class ComboSystem
     ~ComboSystem();
 
     /// <summary>
-    /// このコンボシステムの識別名を設定（DataHandlerのファイル名になる）
-    /// Add()より前に呼ぶこと
+    /// コンボ定義JSON（jsons/ComboDefinition/(ファイル名).json）を読み込んでコンボを構築する
     /// </summary>
-    void SetName(const std::string &name) { name_ = name; }
+    /// <param name="fileName">拡張子を除いたファイル名（"PunchCombo" 等）</param>
+    /// <param name="pMotionTarget">段ごとにモーションを再生するオブジェクト（本体アニメーションで再生する場合は nullptr）</param>
+    /// <returns>bool: 1段以上構築できれば true</returns>
+    bool LoadDefinition(const std::string &fileName, Hagine::BaseObject *pMotionTarget = nullptr);
 
     /// <summary>
-    /// チェーン形式でコンボを追加する
+    /// 現在の攻撃パラメータをコンボ定義JSONへ書き戻す
     /// </summary>
-    /// <param name="target">モーションを再生するオブジェクト（見た目用）</param>
-    /// <param name="attackData">モーションファイル名</param>
-    /// <param name="damage">ダメージ量（デフォルト10.0）</param>
-    /// <param name="knockbackPower">ノックバック強さ（デフォルト3.0）</param>
-    /// <param name="colliderActiveDuration">コライダー有効時間（デフォルト0.25秒）</param>
-    /// <param name="colliderActivateDelay">コライダー有効化遅延（デフォルト0.08秒）</param>
-    ComboSystem &Add(Hagine::BaseObject *target, const std::string &attackData,
-                     float damage = 10.0f, float knockbackPower = 3.0f,
-                     float colliderActiveDuration = 0.25f, float colliderActivateDelay = 0.08f);
+    void SaveDefinition();
 
     /// <summary>
     /// コンボをすべてクリア
@@ -138,22 +125,12 @@ class ComboSystem
     /// </summary>
     void SetOnAttackFired(AttackFiredCallback callback) { onAttackFired_ = callback; }
 
-    /// <summary>
-    /// 攻撃パラメータをJSONに保存
-    /// </summary>
-    void SaveAttackParams();
-
-    /// <summary>
-    /// 攻撃パラメータをJSONから読み込む
-    /// Add() でコンボを登録した後に呼ぶこと
-    /// </summary>
-    void LoadAttackParams();
-
-    /// <summary>
+    /// ===================================================
     /// Getter
-    /// </summary>
+    /// ===================================================
+
     bool IsComboActive() const { return comboStarted_; }
-    bool IsObjectAttackCompleted(Hagine::BaseObject *target) const;
+    bool IsObjectAttackCompleted(Hagine::BaseObject *pTarget) const;
     bool IsCurrentAttackCompleted() const;
     int GetCurrentComboIndex() const { return comboIndex_; }
 
@@ -167,6 +144,31 @@ class ComboSystem
     /// 直近に発火した攻撃段の名前を取得する（"Jab" 等）。入力表示UIが参照する
     /// </summary>
     const std::string &GetCurrentAttackName() const { return lastAttackName_; }
+
+    /// <summary>
+    /// 指定した段の識別名を取得する（"Jab" 等。ImGuiのラベル等に使う）
+    /// </summary>
+    /// <param name="index">段のインデックス（0始まり）</param>
+    /// <returns>const std::string&amp;: 段の識別名（範囲外なら空文字）</returns>
+    const std::string &GetAttackName(int index) const;
+
+    /// <summary>
+    /// 指定した段で再生する本体アニメーションのパスを取得する
+    /// </summary>
+    /// <param name="index">段のインデックス（0始まり）</param>
+    /// <returns>const std::string&amp;: アニメーションのパス（範囲外・未設定なら空文字）</returns>
+    const std::string &GetAnimationPath(int index) const;
+
+    /// ===================================================
+    /// Setter
+    /// ===================================================
+
+    /// <summary>
+    /// 指定した段で再生する本体アニメーションのパスを設定する（ImGuiでの編集用）
+    /// </summary>
+    /// <param name="index">段のインデックス（0始まり）</param>
+    /// <param name="animationPath">アニメーションのパス（空文字なら再生しない）</param>
+    void SetAnimationPath(int index, const std::string &animationPath);
 
 #ifdef _DEBUG
     /// <summary>

@@ -203,11 +203,11 @@ void ParticleCSEmitter::EnsureParticleLightResource()
     *pParticleLightCBData_ = {};
 }
 
-bool ParticleCSEmitter::SubmitParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *cmdList)
+bool ParticleCSEmitter::SubmitParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *pCommandList)
 {
     // エディタの編集用エミッターはプレビュー窓にしか描かれないので、ゲームシーンは照らさない。
     // 発生が止まっていても残っている粒子は光らせる（生存0なら下のループが自然に空振りする）。
-    if (previewOnly_ || !particleLightEnabled_ || !cmdList)
+    if (previewOnly_ || !particleLightEnabled_ || !pCommandList)
         return false;
     if (particleGroups_.empty() || particleLightMaxCount_ == 0)
         return false;
@@ -261,28 +261,28 @@ bool ParticleCSEmitter::SubmitParticleLights(const ViewProjection &vp, ID3D12Gra
             continue;
 
         ComputePipelineManager::GetInstance()->DrawCommonSetting(
-            ComputePipelineType::ParticleLightGen, BlendMode::Normal, ShaderMode::None, cmdList);
+            ComputePipelineType::ParticleLightGen, BlendMode::Normal, ShaderMode::None, pCommandList);
 
         LightGroup *lightGroup = LightGroup::GetInstance();
-        cmdList->SetComputeRootConstantBufferView(0, particleLightCBResource_->GetGPUVirtualAddress());
-        cmdList->SetComputeRootShaderResourceView(1, compactAddress);
-        cmdList->SetComputeRootShaderResourceView(2, aliveCountAddress);
-        cmdList->SetComputeRootUnorderedAccessView(3, lightGroup->GetPointLightUavAddress());
-        cmdList->SetComputeRootUnorderedAccessView(4, lightGroup->GetLightCounterAddress());
+        pCommandList->SetComputeRootConstantBufferView(0, particleLightCBResource_->GetGPUVirtualAddress());
+        pCommandList->SetComputeRootShaderResourceView(1, compactAddress);
+        pCommandList->SetComputeRootShaderResourceView(2, aliveCountAddress);
+        pCommandList->SetComputeRootUnorderedAccessView(3, lightGroup->GetPointLightUavAddress());
+        pCommandList->SetComputeRootUnorderedAccessView(4, lightGroup->GetLightCounterAddress());
 
         constexpr uint32_t kThreadsPerGroup = 64; // ParticleLightGen.CS.hlsl の [numthreads] と一致必須
-        cmdList->Dispatch((lightCount + kThreadsPerGroup - 1) / kThreadsPerGroup, 1, 1);
+        pCommandList->Dispatch((lightCount + kThreadsPerGroup - 1) / kThreadsPerGroup, 1, 1);
         dispatched = true;
     }
     return dispatched;
 }
 
-bool ParticleCSEmitter::SubmitAllParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *cmdList)
+bool ParticleCSEmitter::SubmitAllParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *pCommandList)
 {
     bool dispatched = false;
-    for (ParticleCSEmitter *emitter : liveEmitters_)
+    for (ParticleCSEmitter *pEmitter : liveEmitters_)
     {
-        if (emitter && emitter->SubmitParticleLights(vp, cmdList))
+        if (pEmitter && pEmitter->SubmitParticleLights(vp, pCommandList))
         {
             dispatched = true;
         }
@@ -690,12 +690,12 @@ std::vector<ParticleCSEmitter::WireSegment> ParticleCSEmitter::GetWireframeSegme
         const Vector3 center = pEmitterMeshData_->translate;
         const Vector4 color = {1.0f, 1.0f, 0.0f, 1.0f}; // 黄: 球
         const float r = std::max(std::max(scale.x, scale.y), scale.z);
-        const int N = 24;
+        const int kCircleSegmentCount = 24;
         const float twoPi = 6.28318530718f;
-        for (int i = 0; i < N; ++i)
+        for (int i = 0; i < kCircleSegmentCount; ++i)
         {
-            float a0 = twoPi * static_cast<float>(i) / N;
-            float a1 = twoPi * static_cast<float>(i + 1) / N;
+            float a0 = twoPi * static_cast<float>(i) / kCircleSegmentCount;
+            float a1 = twoPi * static_cast<float>(i + 1) / kCircleSegmentCount;
             float c0 = std::cos(a0), s0 = std::sin(a0);
             float c1 = std::cos(a1), s1 = std::sin(a1);
             segs.push_back({{center.x + c0 * r, center.y + s0 * r, center.z},
@@ -799,13 +799,16 @@ void ParticleCSEmitter::CreateEmitterMeshResource()
     pEmitterMeshData_->emitCountOverride = 0;
 }
 
-void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
+void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *pCommandList)
 {
-    // cmdList が渡された場合はそちら（Compute Queue）を使う
-    ID3D12GraphicsCommandList *cl = cmdList ? cmdList : pCommandList_;
+    // 引数が省略された場合はエミッタ保持のコマンドリストを使う
+    if (pCommandList == nullptr)
+    {
+        pCommandList = pCommandList_;
+    }
     ComputePipelineManager::GetInstance()->DrawCommonSetting(
         ComputePipelineType::Emitter,
-        BlendMode::Normal, ShaderMode::None, cl);
+        BlendMode::Normal, ShaderMode::None, pCommandList);
 
     // フィールド接触Emitモードの発生数は「対象フィールドの今フレームのバースト数合計」。
     // 各フィールドの data.emitSpawnCount には ParticleCSFieldManager::Update() が
@@ -851,40 +854,40 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
         settings->vortexAxis = TransformNormal(settings->vortexAxisBase, space);
 
         // SoA UAV (u0-u5)
-        cl->SetComputeRootDescriptorTable(0, group->GetLifeUavGpu());
-        cl->SetComputeRootDescriptorTable(1, group->GetDrawCoreUavGpu());
-        cl->SetComputeRootDescriptorTable(2, group->GetSimCoreUavGpu());
-        cl->SetComputeRootDescriptorTable(3, group->GetTrailUavGpu());
-        cl->SetComputeRootDescriptorTable(4, group->GetRotationUavGpu());
-        cl->SetComputeRootDescriptorTable(5, group->GetOverrideUavGpu());
+        pCommandList->SetComputeRootDescriptorTable(0, group->GetLifeUavGpu());
+        pCommandList->SetComputeRootDescriptorTable(1, group->GetDrawCoreUavGpu());
+        pCommandList->SetComputeRootDescriptorTable(2, group->GetSimCoreUavGpu());
+        pCommandList->SetComputeRootDescriptorTable(3, group->GetTrailUavGpu());
+        pCommandList->SetComputeRootDescriptorTable(4, group->GetRotationUavGpu());
+        pCommandList->SetComputeRootDescriptorTable(5, group->GetOverrideUavGpu());
         // フリーリスト (u6-u8)
-        cl->SetComputeRootDescriptorTable(6, group->GetFreeListIndexSrvHandle().second);
-        cl->SetComputeRootDescriptorTable(7, group->GetFreeListSrvHandle().second);
-        cl->SetComputeRootDescriptorTable(8, group->GetFreeListTrailIndexSrvHandle().second);
+        pCommandList->SetComputeRootDescriptorTable(6, group->GetFreeListIndexSrvHandle().second);
+        pCommandList->SetComputeRootDescriptorTable(7, group->GetFreeListSrvHandle().second);
+        pCommandList->SetComputeRootDescriptorTable(8, group->GetFreeListTrailIndexSrvHandle().second);
         // 生存リスト間接ディスパッチ (u9-u11): out リスト/カウンタ + renderCompact。
         //   Emit は新規粒子をここへ append する。continue より前に常時バインドしておく。
-        cl->SetComputeRootDescriptorTable(17, group->GetAliveListUavHandle().second);
-        cl->SetComputeRootDescriptorTable(18, group->GetAliveCounterUavHandle().second);
-        cl->SetComputeRootDescriptorTable(19, group->GetRenderCompactUavGpu());
+        pCommandList->SetComputeRootDescriptorTable(17, group->GetAliveListUavHandle().second);
+        pCommandList->SetComputeRootDescriptorTable(18, group->GetAliveCounterUavHandle().second);
+        pCommandList->SetComputeRootDescriptorTable(19, group->GetRenderCompactUavGpu());
         // CBV (b0-b2)。b3:FieldCB はフィールド有無で下の分岐が param 12 に設定する。
-        cl->SetComputeRootConstantBufferView(9, emitterMeshResource_->GetGPUVirtualAddress());
-        cl->SetComputeRootConstantBufferView(10, group->GetPerFrameResource()->GetGPUVirtualAddress());
-        cl->SetComputeRootConstantBufferView(11, group->GetSettingsResource()->GetGPUVirtualAddress());
+        pCommandList->SetComputeRootConstantBufferView(9, emitterMeshResource_->GetGPUVirtualAddress());
+        pCommandList->SetComputeRootConstantBufferView(10, group->GetPerFrameResource()->GetGPUVirtualAddress());
+        pCommandList->SetComputeRootConstantBufferView(11, group->GetSettingsResource()->GetGPUVirtualAddress());
 
         if (pEmitterMeshData_->triangleCount > 0 && triangleInfoResource_ && triangleCDFResource_)
         {
-            cl->SetComputeRootDescriptorTable(13, triangleInfoSrvHandle_.second);
-            cl->SetComputeRootDescriptorTable(14, triangleCDFSrvHandle_.second);
+            pCommandList->SetComputeRootDescriptorTable(13, triangleInfoSrvHandle_.second);
+            pCommandList->SetComputeRootDescriptorTable(14, triangleCDFSrvHandle_.second);
         }
 
         if (pEmitterMeshData_->edgeCount > 0 && edgeInfoResource_)
         {
-            cl->SetComputeRootDescriptorTable(15, edgeInfoSrvHandle_.second);
+            pCommandList->SetComputeRootDescriptorTable(15, edgeInfoSrvHandle_.second);
         }
 
         {
             auto *fieldManager = ParticleCSFieldManager::GetInstance();
-            cl->SetComputeRootDescriptorTable(16, fieldManager->GetFieldsSrvHandle().second);
+            pCommandList->SetComputeRootDescriptorTable(16, fieldManager->GetFieldsSrvHandle().second);
 
             if (emitOnlyOnFieldContact_ && receiveFields_)
             {
@@ -892,23 +895,23 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
                 // （対象フィールド不在・間隔待ちの両方をカバー）
                 if (fieldBurstTotal == 0)
                 {
-                    cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
+                    pCommandList->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
                     continue;
                 }
 
                 // 発生数は pEmitterMeshData_->emitCountOverride(=バースト合計) 経由でシェーダへ渡す。
                 // 各スレッドの担当フィールドはシェーダが emitSpawnCount の累積和で決める。
                 // 寿命は担当フィールドの emitSpawnLifeTime をシェーダ側が per-field で上書きする。
-                cl->SetComputeRootConstantBufferView(12, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
+                pCommandList->SetComputeRootConstantBufferView(12, fieldManager->GetFieldCountResource()->GetGPUVirtualAddress());
 
                 int dispatchCount = (static_cast<int>(fieldBurstTotal) + threadGroupSize_ - 1) / threadGroupSize_;
-                cl->Dispatch(dispatchCount, 1, 1);
+                pCommandList->Dispatch(dispatchCount, 1, 1);
 
                 continue;
             }
             else
             {
-                cl->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
+                pCommandList->SetComputeRootConstantBufferView(12, fieldManager->GetZeroFieldCountResource()->GetGPUVirtualAddress());
             }
         }
 
@@ -918,7 +921,7 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *cmdList)
         }
 
         int dispatchCount = (group->GetSettingsData()->emitCount + threadGroupSize_ - 1) / threadGroupSize_;
-        cl->Dispatch(dispatchCount, 1, 1);
+        pCommandList->Dispatch(dispatchCount, 1, 1);
     }
 }
 

@@ -31,8 +31,8 @@ class PlayerStatus
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="owner">所有者のプレイヤー</param>
-    void Init(Player *owner);
+    /// <param name="pOwner">所有者のプレイヤー</param>
+    void Init(Player *pOwner);
 
     /// <summary>
     /// ダメージを受ける処理
@@ -112,14 +112,14 @@ class PlayerStatus
     /// <summary>
     /// ステータス関連パラメータを保存する
     /// </summary>
-    /// <param name="data">保存先のデータハンドラ</param>
-    void Save(Hagine::DataHandler *data);
+    /// <param name="pData">保存先のデータハンドラ</param>
+    void Save(Hagine::DataHandler *pData);
 
     /// <summary>
     /// ステータス関連パラメータを読み込む
     /// </summary>
-    /// <param name="data">読み込み元のデータハンドラ</param>
-    void Load(Hagine::DataHandler *data);
+    /// <param name="pData">読み込み元のデータハンドラ</param>
+    void Load(Hagine::DataHandler *pData);
 
     /// <summary>
     /// ステータス関連のImGui表示
@@ -134,7 +134,7 @@ class PlayerStatus
     /// ===================================================
     /// Getter
     /// ===================================================
-    float GetHP() const { return HP_; }
+    float GetHP() const { return hp_; }
     float GetMaxHP() const { return maxHP_; }
     float GetEnergy() const { return energy_; }
     float &GetEnergy() { return energy_; }
@@ -172,7 +172,7 @@ class PlayerStatus
     /// ===================================================
     /// Setter
     /// ===================================================
-    void SetHP(float hp) { HP_ = hp; }
+    void SetHP(float hp) { hp_ = hp; }
 
     /// <summary>
     /// 次のDamageUpdateで処理するダメージを設定する
@@ -193,7 +193,7 @@ class PlayerStatus
         energy_ = 0.0f;
         timeSinceLastShot_ = 0.0f; // 回復遅延タイマーもリセット
     }
-    void ResetShotTimer() { timeSinceLastShot_ = kTimerReset; }
+    void ResetShotTimer() { timeSinceLastShot_ = 0.0f; }
     void StopDamageReact();
 
   private:
@@ -225,12 +225,11 @@ class PlayerStatus
     void RecoverFromBlow(bool grantFlinchImmunity);
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // ダメージ・HP関連定数
     static constexpr float kMinHP = 0.0f;
-    static constexpr float kTimerReset = 0.0f;
     static constexpr float kNoDamage = 0.0f;
 
     // 点滅関連定数
@@ -242,7 +241,7 @@ class PlayerStatus
 
     Player *pOwner_ = nullptr; ///< 所有者のプレイヤー
 
-    float HP_ = 100.0f;                ///< 現在HP
+    float hp_ = 100.0f;                ///< 現在HP
     float maxHP_ = 100.0f;             ///< 最大HP
     float energy_ = 100.0f;            ///< 現在のエネルギー
     float maxEnergy_ = 100.0f;         ///< 最大エネルギー

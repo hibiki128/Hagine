@@ -34,9 +34,9 @@ class EnemyAttackCollider
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="enemy">敵参照</param>
+    /// <param name="pEnemy">敵参照</param>
     /// <param name="player">プレイヤー参照（後でSetPlayerでも設定可）</param>
-    void Init(Enemy *enemy, Player *player = nullptr);
+    void Init(Enemy *pEnemy, Player *player = nullptr);
 
     /// <summary>
     /// 更新処理（毎フレーム呼び出し必須）
@@ -106,11 +106,11 @@ class EnemyAttackCollider
     /// <summary>
     /// 衝突時のコールバック
     /// </summary>
-    /// <param name="other">衝突したコライダー</param>
-    void OnCollision(Hagine::ColliderBase *other);
+    /// <param name="pOther">衝突したコライダー</param>
+    void OnCollision(Hagine::ColliderBase *pOther);
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     Enemy *pEnemy_ = nullptr;   // 敵参照

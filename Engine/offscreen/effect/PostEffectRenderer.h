@@ -9,7 +9,7 @@ namespace Hagine {
 class PostEffectRenderer
 {
   public:
-    void Initialize(DirectXCommon *dxCommon, SrvManager *srvManager, PipelineManager *psoManager);
+    void Initialize(DirectXCommon *pDxCommon, SrvManager *pSrvManager, PipelineManager *psoManager);
 
     /// @brief エフェクトチェーンを適用して描画する
     void Draw(PostEffectChain &effectChain, float deltaTime);

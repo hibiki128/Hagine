@@ -163,14 +163,14 @@ void DirectXCommon::PreRenderTexture()
     // 描画先のRTVとDSVを設定する
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvManager_->GetCPUHandle(2);
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvManager_->GetCPUHandle(0);
-    ID3D12GraphicsCommandList *commandList = directCommandList_->Get();
-    commandList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle);
-    commandList->ClearRenderTargetView(rtvHandle, clearColorValue_.Color, 0, nullptr);
+    ID3D12GraphicsCommandList *pCommandList = directCommandList_->Get();
+    pCommandList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle);
+    pCommandList->ClearRenderTargetView(rtvHandle, clearColorValue_.Color, 0, nullptr);
     // 指定した深度で画面全体をクリアする
-    commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+    pCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-    commandList->RSSetViewports(1, &viewport_);       // Viewportを設定
-    commandList->RSSetScissorRects(1, &scissorRect_); // Scissorを設定
+    pCommandList->RSSetViewports(1, &viewport_);       // Viewportを設定
+    pCommandList->RSSetScissorRects(1, &scissorRect_); // Scissorを設定
 }
 
 void DirectXCommon::PreDraw()
@@ -187,12 +187,12 @@ void DirectXCommon::PreDraw()
 
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvManager_->GetCPUHandle(backBufferIndex);
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvManager_->GetCPUHandle(0);
-    ID3D12GraphicsCommandList *commandList = directCommandList_->Get();
-    commandList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle);
-    commandList->ClearRenderTargetView(rtvHandle, clearColorValue_.Color, 0, nullptr);
+    ID3D12GraphicsCommandList *pCommandList = directCommandList_->Get();
+    pCommandList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle);
+    pCommandList->ClearRenderTargetView(rtvHandle, clearColorValue_.Color, 0, nullptr);
 
-    commandList->RSSetViewports(1, &viewport_);
-    commandList->RSSetScissorRects(1, &scissorRect_);
+    pCommandList->RSSetViewports(1, &viewport_);
+    pCommandList->RSSetScissorRects(1, &scissorRect_);
 }
 
 void DirectXCommon::TransitionDepthBarrier()
@@ -207,9 +207,9 @@ void DirectXCommon::PreDrawForEffects()
                       D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     BarrierTransition(offScreenResource_.Get(),
                       D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
-    ID3D12GraphicsCommandList *commandList = directCommandList_->Get();
-    commandList->RSSetViewports(1, &viewport_);
-    commandList->RSSetScissorRects(1, &scissorRect_);
+    ID3D12GraphicsCommandList *pCommandList = directCommandList_->Get();
+    pCommandList->RSSetViewports(1, &viewport_);
+    pCommandList->RSSetScissorRects(1, &scissorRect_);
 }
 
 void DirectXCommon::PostDraw()

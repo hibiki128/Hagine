@@ -26,9 +26,9 @@ void SrvManager::Initialize()
 
 void SrvManager::SetDescriptorHeap()
 {
-    ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();
+    ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
     ID3D12DescriptorHeap *descriptorHeaps[] = {descriptorHeap_.Get()};
-    commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+    pCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 }
 
 void SrvManager::CreateSRVforTexture2D(uint32_t srvIndex, ID3D12Resource *pResource, DirectX::TexMetadata metaData, UINT MipLevels)

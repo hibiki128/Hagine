@@ -37,7 +37,7 @@ class PlayerStateIdle : public PlayerBaseState
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     static constexpr float kGroundPullVelocity = -0.1f;    // 地面への引き付け速度

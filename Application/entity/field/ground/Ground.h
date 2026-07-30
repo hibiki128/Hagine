@@ -71,7 +71,7 @@ class Ground : public Hagine::BaseObject
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     static constexpr float kFallbackSurfaceY = -1.0f; // 地形が無い場合の地表高さ（平地部分の高さ）
@@ -79,7 +79,7 @@ class Ground : public Hagine::BaseObject
     static constexpr float kProbeHeight = 100.0f;     // 高さ問い合わせレイの開始高度
     static constexpr float kProbeLength = 400.0f;     // 高さ問い合わせレイの長さ
 
-    Hagine::MeshCollider *terrainCollider_ = nullptr; // 自身の地形メッシュコライダー
+    Hagine::MeshCollider *pTerrainCollider_ = nullptr; // 自身の地形メッシュコライダー
 
     static inline Hagine::MeshCollider *activeTerrain_ = nullptr; // アクティブシーンの地形コライダー
 };

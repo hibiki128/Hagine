@@ -46,8 +46,8 @@ class PlayerBullet : public Hagine::BaseObject
     /// <summary>
     /// 衝突判定時の処理
     /// </summary>
-    /// <param name="collider">衝突したコライダー</param>
-    void OnCollisionEnter(Hagine::ColliderBase *collider);
+    /// <param name="pCollider">衝突したコライダー</param>
+    void OnCollisionEnter(Hagine::ColliderBase *pCollider);
 
     /// <summary>
     /// ガードされた弾を、相手の外側斜め上へ弾き返す（ホーミングと加速は打ち切る）
@@ -107,7 +107,7 @@ class PlayerBullet : public Hagine::BaseObject
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     // 定数定義

@@ -66,20 +66,20 @@ void SkyBox::Draw(const ViewProjection &viewProjection)
         DeferredRenderer::GetInstance()->IsGBufferPassActive())
         return;
     Update(viewProjection);
-    ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();
+    ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
     pPsoManager_->DrawCommonSetting(PipelineType::Skybox);
 
-    commandList->IASetVertexBuffers(0, 1, &vertexBufferView_);
-    commandList->IASetIndexBuffer(&indexBufferView_);
+    pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView_);
+    pCommandList->IASetIndexBuffer(&indexBufferView_);
 
     // SkyBoxData（ワールド行列）をb0に設定
-    commandList->SetGraphicsRootConstantBufferView(0, skyBoxResource_->GetGPUVirtualAddress());
+    pCommandList->SetGraphicsRootConstantBufferView(0, skyBoxResource_->GetGPUVirtualAddress());
     // CameraData（ビュープロジェクション行列とカメラ位置）をb1に設定
-    commandList->SetGraphicsRootConstantBufferView(1, cameraResource_->GetGPUVirtualAddress());
+    pCommandList->SetGraphicsRootConstantBufferView(1, cameraResource_->GetGPUVirtualAddress());
     // テクスチャをt0に設定
-    commandList->SetGraphicsRootDescriptorTable(2, pSrvManager_->GetGPUDescriptorHandle(textureIndex_));
+    pCommandList->SetGraphicsRootDescriptorTable(2, pSrvManager_->GetGPUDescriptorHandle(textureIndex_));
 
-    commandList->DrawIndexedInstanced(UINT(indices_.size()), 1, 0, 0, 0);
+    pCommandList->DrawIndexedInstanced(UINT(indices_.size()), 1, 0, 0, 0);
 }
 
 void SkyBox::CreateShape()

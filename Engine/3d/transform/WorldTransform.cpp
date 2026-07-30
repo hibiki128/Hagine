@@ -14,7 +14,7 @@ void WorldTransform::Initialize()
     // スケール、回転、平行移動を初期化
     scale_ = {1.0f, 1.0f, 1.0f};
     eulerRotation_ = {0.0f, 0.0f, 0.0f};
-    quateRotation_ = Quaternion::IdentityQuaternion();
+    quaternionRotation_ = Quaternion::IdentityQuaternion();
     translation_ = {0.0f, 0.0f, 0.0f};
     preRotate_ = {0.0f, 0.0f, 0.0f};
 
@@ -85,27 +85,27 @@ void WorldTransform::SetRotationEuler(const Vector3 &eulerAngles)
     eulerRotation_ = eulerAngles;
     if (isUseQuaternion_)
     {
-        quateRotation_ = Quaternion::FromEulerAngles(eulerAngles);
+        quaternionRotation_ = Quaternion::FromEulerAngles(eulerAngles);
     }
 }
 
 void WorldTransform::SetRotationQuaternion(const Quaternion &quaternion)
 {
-    quateRotation_ = quaternion.Normalize();
+    quaternionRotation_ = quaternion.Normalize();
     if (!isUseQuaternion_)
     {
-        eulerRotation_ = quateRotation_.ToEulerAngles();
+        eulerRotation_ = quaternionRotation_.ToEulerAngles();
     }
 }
 
 Vector3 WorldTransform::GetRotationEuler() const
 {
-    return isUseQuaternion_ ? quateRotation_.ToEulerAngles() : eulerRotation_;
+    return isUseQuaternion_ ? quaternionRotation_.ToEulerAngles() : eulerRotation_;
 }
 
 Quaternion WorldTransform::GetRotationQuaternion() const
 {
-    return quateRotation_;
+    return quaternionRotation_;
 }
 
 Vector3 WorldTransform::GetWorldRotationEuler() const
@@ -119,14 +119,14 @@ Quaternion WorldTransform::GetWorldRotationQuaternion() const
     // 親がいない場合はローカル回転をそのまま返す
     if (!pParent_)
     {
-        return quateRotation_;
+        return quaternionRotation_;
     }
 
     // 親のワールド回転を取得
     Quaternion parentWorldRotation = pParent_->GetWorldRotationQuaternion();
 
     // 親の回転 * ローカル回転 でワールド回転を計算
-    return parentWorldRotation * quateRotation_;
+    return parentWorldRotation * quaternionRotation_;
 }
 
 void WorldTransform::UpdateEuler()
@@ -143,7 +143,7 @@ void WorldTransform::UpdateQuaternion()
         RotateQuaternion();
     }
     // クォータニオンから行列を作成
-    matWorld_ = MakeAffineMatrix(scale_, quateRotation_, translation_);
+    matWorld_ = MakeAffineMatrix(scale_, quaternionRotation_, translation_);
     // 回転量計算用変数に挿入
     preRotate_ = eulerRotation_;
 }
@@ -152,12 +152,12 @@ void WorldTransform::RotateQuaternion()
 {
     if (eulerRotation_.x == 0.0f && eulerRotation_.y == 0.0f && eulerRotation_.z == 0.0f)
     {
-        quateRotation_ = Quaternion::IdentityQuaternion();
+        quaternionRotation_ = Quaternion::IdentityQuaternion();
     }
     else
     {
         // オイラー角からクォータニオンに変換
-        quateRotation_ = Quaternion::FromEulerAngles(eulerRotation_);
+        quaternionRotation_ = Quaternion::FromEulerAngles(eulerRotation_);
     }
 }
 

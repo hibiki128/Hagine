@@ -58,13 +58,13 @@ class ResultUI
     /// HPの設定
     /// </summary>
     /// <param name="hp">設定するHP</param>
-    void SetHP(float hp) { HP_ = hp; }
+    void SetHP(float hp) { hp_ = hp; }
 
     /// <summary>
     /// クリアタイムの設定
     /// </summary>
     /// <param name="time">設定するクリアタイム</param>
-    void SetClearTime(float time) { ClearTime_ = time; }
+    void SetClearTime(float time) { clearTime_ = time; }
 
     /// <summary>
     /// ゲームオーバー経由かを設定（ランク計算用。ゲームオーバーは常にGランク）
@@ -201,8 +201,8 @@ class ResultUI
     float displayedTime_ = 0.0f; // 表示中のタイム
     float displayedHP_ = 0.0f;   // 表示中のHP
 
-    float HP_ = kDefaultHP;               // 残り体力
-    float ClearTime_ = kDefaultClearTime; // クリアタイム
+    float hp_ = kDefaultHP;               // 残り体力
+    float clearTime_ = kDefaultClearTime; // クリアタイム
     bool isGameOver_ = false;             // ゲームオーバー経由か（常にGランクにする）
 
     // ゲームオーバー時はクリアタイムを "--:--" 表示にする。number.png にダッシュ字形が

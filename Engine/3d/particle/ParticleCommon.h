@@ -30,7 +30,7 @@ class ParticleCommon
     /// <summary>
     /// 初期化
     /// </summary>
-    void Initialize(DirectXCommon *dxCommon);
+    void Initialize(DirectXCommon *pDxCommon);
 
     /// <summary>
     /// 共通描画処理

@@ -95,7 +95,7 @@ void Object3d::Update(const WorldTransform &worldTransform, const ViewProjection
     }
 
     // ローカル行列を作成
-    Matrix4x4 localMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quateRotation_, worldTransform.translation_);
+    Matrix4x4 localMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quaternionRotation_, worldTransform.translation_);
 
     // ワールド行列を計算（親がいる場合は親の行列と合成）
     Matrix4x4 worldMatrix = localMatrix;
@@ -318,14 +318,14 @@ void Object3d::SetAnimation(const std::string &animationFileName)
         return;
     }
 
-    Animator *animator = currentModelAnimation_->GetAnimator();
-    if (!animator)
+    Animator *pAnimator = currentModelAnimation_->GetAnimator();
+    if (!pAnimator)
     {
         return;
     }
 
     // 現在のファイル名と比較
-    std::string currentFile = animator->GetCurrentFilename();
+    std::string currentFile = pAnimator->GetCurrentFilename();
 
     // 同じアニメーションの場合は何もしない
     if (currentFile == animationFileName && !isAnimationSwitchPending_)
@@ -343,7 +343,7 @@ void Object3d::SetAnimation(const std::string &animationFileName)
     targetLoop_ = GetAnimationLoop(animationFileName);
 
     // 新しいアニメーションへの補間開始
-    animator->BlendToAnimation(AssetPath::ModelsRoot(animationFileName), animationFileName, blendDuration_);
+    pAnimator->BlendToAnimation(AssetPath::ModelsRoot(animationFileName), animationFileName, blendDuration_);
 
     // 切り替え待機状態にする
     isAnimationSwitchPending_ = true;
@@ -524,21 +524,21 @@ void Object3d::DrawWireframe(const WorldTransform &worldTransform, const ViewPro
         const std::vector<uint32_t> &indices = mesh.indices;
 
         // 三角形ごとに3本積むので本数が多い。シングルトン参照と色詰めはループ外へ出しておく
-        LineRenderer *line = LineRenderer::GetInstance();
+        LineRenderer *pLine = LineRenderer::GetInstance();
         constexpr uint32_t kWhite = 0xFFFFFFFFu;
 
         auto drawTriangle = [&](const Vector3 &v0, const Vector3 &v1, const Vector3 &v2) {
             if (gamingMode)
             {
-                line->AddLinePacked(v0, v1, PackLineColor(GetTimeGradientColor(v0)));
-                line->AddLinePacked(v1, v2, PackLineColor(GetTimeGradientColor(v1)));
-                line->AddLinePacked(v2, v0, PackLineColor(GetTimeGradientColor(v2)));
+                pLine->AddLinePacked(v0, v1, PackLineColor(GetTimeGradientColor(v0)));
+                pLine->AddLinePacked(v1, v2, PackLineColor(GetTimeGradientColor(v1)));
+                pLine->AddLinePacked(v2, v0, PackLineColor(GetTimeGradientColor(v2)));
             }
             else
             {
-                line->AddLinePacked(v0, v1, kWhite);
-                line->AddLinePacked(v1, v2, kWhite);
-                line->AddLinePacked(v2, v0, kWhite);
+                pLine->AddLinePacked(v0, v1, kWhite);
+                pLine->AddLinePacked(v1, v2, kWhite);
+                pLine->AddLinePacked(v2, v0, kWhite);
             }
         };
 
@@ -583,7 +583,7 @@ void Object3d::DrawSkeleton(const WorldTransform &worldTransform, const ViewProj
     // モデルに適用されているワールド変換を生成
     Matrix4x4 worldMatrix = MakeAffineMatrix(
         worldTransform.scale_,
-        worldTransform.quateRotation_,
+        worldTransform.quaternionRotation_,
         worldTransform.translation_);
 
     if (worldTransform.pParent_)
@@ -745,7 +745,7 @@ void Object3d::DrawShadow(const WorldTransform &worldTransform)
         skinnedThisFrame_ = true;
     }
 
-    Matrix4x4 localMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quateRotation_, worldTransform.translation_);
+    Matrix4x4 localMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quaternionRotation_, worldTransform.translation_);
     Matrix4x4 worldMatrix = localMatrix;
     if (worldTransform.pParent_)
     {

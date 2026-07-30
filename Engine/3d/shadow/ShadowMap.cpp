@@ -109,7 +109,7 @@ void ShadowMap::CreateShadowSRV()
 
 void ShadowMap::BeginShadowPass()
 {
-    auto *cmdList = pDxCommon_->GetCommandList().Get();
+    auto *pCommandList = pDxCommon_->GetCommandList().Get();
 
     if (currentState_ != D3D12_RESOURCE_STATE_DEPTH_WRITE)
     {
@@ -119,25 +119,25 @@ void ShadowMap::BeginShadowPass()
         barrier.Transition.StateBefore = currentState_;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_DEPTH_WRITE;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        cmdList->ResourceBarrier(1, &barrier);
+        pCommandList->ResourceBarrier(1, &barrier);
     }
     currentState_ = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
     // レンダーターゲットなし + シャドウ DSV
-    cmdList->OMSetRenderTargets(0, nullptr, false, &dsvHandle_);
-    cmdList->ClearDepthStencilView(dsvHandle_, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+    pCommandList->OMSetRenderTargets(0, nullptr, false, &dsvHandle_);
+    pCommandList->ClearDepthStencilView(dsvHandle_, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
     // ビューポート・シザーRect
     D3D12_VIEWPORT vp{};
     vp.Width = static_cast<float>(kShadowMapSize);
     vp.Height = static_cast<float>(kShadowMapSize);
     vp.MaxDepth = 1.0f;
-    cmdList->RSSetViewports(1, &vp);
+    pCommandList->RSSetViewports(1, &vp);
 
     D3D12_RECT sc{};
     sc.right = kShadowMapSize;
     sc.bottom = kShadowMapSize;
-    cmdList->RSSetScissorRects(1, &sc);
+    pCommandList->RSSetScissorRects(1, &sc);
 }
 
 void ShadowMap::EndShadowPass()

@@ -1,6 +1,6 @@
 #pragma once
+#include "ICameraPart.h"
 
-class FollowCamera;
 namespace Hagine {
 class BaseObject;
 }
@@ -9,7 +9,7 @@ class BaseObject;
 /// フォローカメラの必殺技「顔アップ演出」パーツ
 /// 技の使用者の顔前へ回り込み、注視するカメラワークを担当する
 /// </summary>
-class CameraSkillCutscene
+class CameraSkillCutscene : public ICameraPart
 {
   public:
     /// ===================================================
@@ -20,12 +20,12 @@ class CameraSkillCutscene
     /// 初期化（調整パラメータをゲームパラメータHubへ登録する）
     /// </summary>
     /// <param name="pOwner">所有者のフォローカメラ</param>
-    void Init(FollowCamera *pOwner);
+    void Init(FollowCamera *pOwner) override;
 
     /// <summary>
     /// デストラクタ（ゲームパラメータHubからの登録解除）
     /// </summary>
-    ~CameraSkillCutscene();
+    ~CameraSkillCutscene() override;
 
     /// <summary>
     /// 顔アップ演出を開始する
@@ -59,13 +59,9 @@ class CameraSkillCutscene
     /// private variables
     /// ===================================================
 
-    // 閾値・ベクトル定数
+    // 閾値定数
     static constexpr float kEpsilon = 0.001f;           ///< 微小値
     static constexpr float kParallelThreshold = 0.999f; ///< 平行判定しきい値
-    static constexpr float kMaxBlendValue = 1.0f;       ///< 最大ブレンド値
-    static constexpr float kVectorZero = 0.0f;          ///< ゼロ値
-    static constexpr float kUpVectorY = 1.0f;           ///< Y軸上方向
-    static constexpr float kRightVectorX = 1.0f;        ///< X軸右方向
 
     FollowCamera *pOwner_ = nullptr; ///< 所有者のフォローカメラ
 

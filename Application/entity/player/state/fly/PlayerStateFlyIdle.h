@@ -58,7 +58,7 @@ class PlayerStateFlyIdle : public PlayerBaseState
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     static constexpr float kDampingFactor = 0.75f;         // 減衰率

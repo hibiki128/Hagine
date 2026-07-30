@@ -261,10 +261,10 @@ void TextureManager::LoadFontTexture(const std::string &fontFilePath, float font
     ImGuiNotification::Post("フォントテクスチャを読み込みました: " + fontFilePath, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-void TextureManager::Initialize(SrvManager *srvManager)
+void TextureManager::Initialize(SrvManager *pSrvManager)
 {
     pDxCommon_ = DirectXCommon::GetInstance();
-    pSrvManager_ = srvManager;
+    pSrvManager_ = pSrvManager;
     // SRVの数と同数
     textureDatas_.reserve(SrvManager::kMaxSRVCount);
 }

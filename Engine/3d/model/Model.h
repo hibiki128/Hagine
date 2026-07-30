@@ -90,10 +90,10 @@ class Model
     /// <summary>
     /// Setter
     /// </summary>
-    void SetSrv(SrvManager *srvManager) { pSrvManager_ = srvManager; }
-    void SetAnimator(Animator *animator)
+    void SetSrv(SrvManager *pSrvManager) { pSrvManager_ = pSrvManager; }
+    void SetAnimator(Animator *pAnimator)
     {
-        pAnimator_ = animator;
+        pAnimator_ = pAnimator;
         pAnimator_->SetModelData(modelData_);
     }
     void SetSkin(Skin *skin) { pSkin_ = skin; }
@@ -121,7 +121,7 @@ class Model
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     ModelCommon *pModelCommon_;  // モデル共通クラス

@@ -35,8 +35,8 @@ class AnimationController
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="object">制御対象の Object3d（gltfモデルであること）</param>
-    void Initialize(Object3d *object);
+    /// <param name="pObject">制御対象の Object3d（gltfモデルであること）</param>
+    void Initialize(Object3d *pObject);
 
     /// <summary>
     /// クリップを登録する（モデルへの追加とループ設定も行う）

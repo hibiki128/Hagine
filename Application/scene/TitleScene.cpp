@@ -184,7 +184,7 @@ void TitleScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->imgui();
+    debugCamera_->DrawImGui();
     vp_.ShowDebugInfo();
 }
 
@@ -267,7 +267,7 @@ void TitleScene::DrawMenu()
 
     const float dur = kMenuSlideDuration;
 
-    Sprite *sprites[kMenuItemCount] = {menuTutorial_.get(), menuGame_.get(), menuTraining_.get()};
+    Sprite *pSprites[kMenuItemCount] = {menuTutorial_.get(), menuGame_.get(), menuTraining_.get()};
     const Vector2 endPos[kMenuItemCount] = {menuTutorialPos_, menuGamePos_, menuTrainingPos_};
 
     // 各項目を画面右外から最終位置へ OutCubic でスライドイン（後の項目ほど少し遅らせる）
@@ -298,16 +298,16 @@ void TitleScene::DrawMenu()
 
     for (int i = 0; i < kMenuItemCount; ++i)
     {
-        if (!sprites[i])
+        if (!pSprites[i])
         {
             continue;
         }
         // 選択ハイライトを補間値から算出（選択=1.0 / 非選択=0.55 を滑らかに）
         const float dist = std::min(std::abs(menuSelectLerp_ - static_cast<float>(i)), 1.0f);
         const float highlight = 0.55f + 0.45f * (1.0f - dist);
-        sprites[i]->SetPosition(pos[i]);
-        sprites[i]->SetAlpha(highlight * slide[i] * closeFade);
-        sprites[i]->Draw();
+        pSprites[i]->SetPosition(pos[i]);
+        pSprites[i]->SetAlpha(highlight * slide[i] * closeFade);
+        pSprites[i]->Draw();
     }
 
     if (menuCursor_)

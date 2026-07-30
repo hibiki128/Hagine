@@ -417,6 +417,9 @@
     <ClCompile Include="Application\camera\follow\FollowCamera.cpp">
       <Filter>Application\camera\follow</Filter>
     </ClCompile>
+    <ClCompile Include="Application\camera\follow\FollowCameraFactory.cpp">
+      <Filter>Application\camera\follow</Filter>
+    </ClCompile>
     <ClCompile Include="Application\camera\follow\parts\CameraLockOn.cpp">
       <Filter>Application\camera\follow\parts</Filter>
     </ClCompile>
@@ -584,6 +587,9 @@
     </ClCompile>
     <ClCompile Include="Application\ui\tutorial\TutorialUI.cpp">
       <Filter>Application\ui\tutorial</Filter>
+    </ClCompile>
+    <ClCompile Include="application\utility\combo\ComboDefinition.cpp">
+      <Filter>application\utility\combo</Filter>
     </ClCompile>
     <ClCompile Include="application\utility\combo\ComboSystem.cpp">
       <Filter>application\utility\combo</Filter>
@@ -942,6 +948,12 @@
     <ClInclude Include="Application\camera\follow\FollowCamera.h">
       <Filter>Application\camera\follow</Filter>
     </ClInclude>
+    <ClInclude Include="Application\camera\follow\FollowCameraFactory.h">
+      <Filter>Application\camera\follow</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\camera\follow\parts\ICameraPart.h">
+      <Filter>Application\camera\follow\parts</Filter>
+    </ClInclude>
     <ClInclude Include="Application\camera\follow\parts\CameraLockOn.h">
       <Filter>Application\camera\follow\parts</Filter>
     </ClInclude>
@@ -1112,6 +1124,9 @@
     </ClInclude>
     <ClInclude Include="Application\ui\tutorial\TutorialUI.h">
       <Filter>Application\ui\tutorial</Filter>
+    </ClInclude>
+    <ClInclude Include="application\utility\combo\ComboDefinition.h">
+      <Filter>application\utility\combo</Filter>
     </ClInclude>
     <ClInclude Include="application\utility\combo\ComboSystem.h">
       <Filter>application\utility\combo</Filter>

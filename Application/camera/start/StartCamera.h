@@ -33,7 +33,7 @@ class StartCamera
     /// <summary>
     /// デバッグ用のImGui表示
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
     /// <summary>
     /// カメラの入力移動処理
@@ -48,7 +48,7 @@ class StartCamera
     /// ビュープロジェクションを取得
     /// </summary>
     /// <returns>ViewProjection&: ビュープロジェクション参照</returns>
-    Hagine::ViewProjection &GetViewProjection() { return vp_; }
+    Hagine::ViewProjection &GetViewProjection() { return viewProjection_; }
 
     /// <summary>
     /// 演出完了フラグを取得
@@ -64,13 +64,13 @@ class StartCamera
     /// 目標となるビュープロジェクションを設定
     /// </summary>
     /// <param name="vp">コピー元のビュープロジェクション</param>
-    void SetTargetVp(Hagine::ViewProjection &vp)
+    void SetTargetViewProjection(Hagine::ViewProjection &vp)
     {
-        targetVp_.matWorld_ = vp.matWorld_;
-        targetVp_.matView_ = vp.matView_;
-        targetVp_.matProjection_ = vp.matProjection_;
-        targetVp_.translation_ = vp.translation_;
-        targetVp_.eulerRotation_ = vp.eulerRotation_;
+        targetViewProjection_.matWorld_ = vp.matWorld_;
+        targetViewProjection_.matView_ = vp.matView_;
+        targetViewProjection_.matProjection_ = vp.matProjection_;
+        targetViewProjection_.translation_ = vp.translation_;
+        targetViewProjection_.eulerRotation_ = vp.eulerRotation_;
     }
 
   private:
@@ -95,9 +95,6 @@ class StartCamera
     static constexpr float kInitialAngleDegrees = -90.0f; ///< 初期角度
 
     // 数値定数
-    static constexpr float kTimerReset = 0.0f;                         ///< タイマーリセット値
-    static constexpr float kMaxBlendValue = 1.0f;                      ///< 最大ブレンド値
-    static constexpr float kEasingMaxValue = 1.0f;                     ///< イージング最大値
     static constexpr float kZeroRotation = 0.0f;                       ///< 回転ゼロ値
     static constexpr float kHalfPi = 0.5f * std::numbers::pi_v<float>; ///< PI/2
 
@@ -113,9 +110,9 @@ class StartCamera
     // スキップ時のスピード倍率
     static constexpr float kSkipSpeedMultiplier = 5.0f; ///< スキップ倍率
 
-    Hagine::ViewProjection vp_;       ///< ビュープロジェクション
-    Hagine::ViewProjection targetVp_; ///< 目標ビュープロジェクション
-    Hagine::WorldTransform wt_;       ///< ワールドトランスフォーム
+    Hagine::ViewProjection viewProjection_;       ///< ビュープロジェクション
+    Hagine::ViewProjection targetViewProjection_; ///< 目標ビュープロジェクション
+    Hagine::WorldTransform worldTransform_;       ///< ワールドトランスフォーム
 
     float speed_ = 1.5f;                               ///< 回転速度
     float angle_ = 0.0f;                               ///< 現在の角度

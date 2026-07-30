@@ -18,9 +18,9 @@ class RenderBuffer
     /// <summary>
     /// 初期化（ピンポンバッファと最終結果テクスチャを生成）
     /// </summary>
-    /// <param name="dxCommon">DirectX共通処理</param>
-    /// <param name="srvManager">SRVマネージャー</param>
-    void Initialize(DirectXCommon *dxCommon, SrvManager *srvManager);
+    /// <param name="pDxCommon">DirectX共通処理</param>
+    /// <param name="pSrvManager">SRVマネージャー</param>
+    void Initialize(DirectXCommon *pDxCommon, SrvManager *pSrvManager);
 
     /// ===================================================
     /// ピンポンバッファ関連

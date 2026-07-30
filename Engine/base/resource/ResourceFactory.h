@@ -23,8 +23,8 @@ class ResourceFactory
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="device">デバイス</param>
-    void Initialize(DXDevice *device);
+    /// <param name="pDevice">デバイス</param>
+    void Initialize(DXDevice *pDevice);
 
     /// <summary>
     /// 終了処理
@@ -59,10 +59,10 @@ class ResourceFactory
     /// </summary>
     /// <param name="texture">転送先テクスチャ</param>
     /// <param name="mipImages">転送するミップ画像</param>
-    /// <param name="commandList">転送コマンドを積むコマンドリスト</param>
+    /// <param name="pCommandList">転送コマンドを積むコマンドリスト</param>
     /// <returns>中間リソース（転送完了まで保持が必要）</returns>
     [[nodiscard]]
-    Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage &mipImages, ID3D12GraphicsCommandList *commandList);
+    Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage &mipImages, ID3D12GraphicsCommandList *pCommandList);
 
     /// <summary>
     /// ExecuteIndirect(DispatchIndirect) 用のコマンドシグネチャを取得する

@@ -17,12 +17,12 @@
 namespace Hagine {
 namespace PostEffectParamsHelper {
 template <typename T>
-static void CreateConstantBuffer(DirectXCommon *dxCommon,
+static void CreateConstantBuffer(DirectXCommon *pDxCommon,
                                  Microsoft::WRL::ComPtr<ID3D12Resource> &resource,
                                  T **mappedData)
 {
     const UINT64 size = (sizeof(T) + 255) & ~255;
-    resource = dxCommon->CreateBufferResource(size);
+    resource = pDxCommon->CreateBufferResource(size);
     resource->Map(0, nullptr, reinterpret_cast<void **>(mappedData));
 }
 } // namespace PostEffectParamsHelper
@@ -123,15 +123,15 @@ class MonochromeParams : public IPostEffectParams
         float pad[3] = {};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Monochrome; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -171,16 +171,16 @@ class VignetteParams : public IPostEffectParams
         Vector2 center = {0.5f, 0.5f};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Vignette; }
 
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
 
     void DrawUI() override
@@ -231,15 +231,15 @@ class SmoothParams : public IPostEffectParams
         int pad[3] = {};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Smooth; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -271,15 +271,15 @@ class GaussianParams : public IPostEffectParams
         float sigma = 1.0f;
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Gauss; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -320,15 +320,15 @@ class OutlineEdgeParams : public IPostEffectParams
         float pad[3] = {};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Outline; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -360,18 +360,18 @@ class OutlineDepthParams : public IPostEffectParams
         float pad[3] = {};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Depth; }
 
     void SetProjectionInverse(const Matrix4x4 &mat) { pData_->projectionInverse = mat; }
 
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -404,15 +404,15 @@ class RadialBlurParams : public IPostEffectParams
         float pad = 0.0f;
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Blur; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -458,15 +458,15 @@ class CinematicParams : public IPostEffectParams
         float pad[3] = {};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Cinematic; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -514,17 +514,17 @@ class DissolveParams : public IPostEffectParams
         float pad3[3] = {};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
         // ノイズ(マスク)テクスチャを読み込んでおく（未指定なら既定のノイズ画像）
         TextureManager::GetInstance()->LoadTexture(maskTexturePath_);
     }
     ShaderMode GetMode() const override { return ShaderMode::Dissolve; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *srv, DirectXCommon *dxCommon) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *srv, DirectXCommon *pDxCommon) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
         // t1: ノイズ(マスク)テクスチャをバインドする。
         // ルートシグネチャは t0=画面 / b0=パラメータ / t1=マスク の3パラメータ構成。
         if (srv)
@@ -598,16 +598,16 @@ class RandomParams : public IPostEffectParams
         float pad[3] = {};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Random; }
     void UpdateTime(float dt) override { pData_->time += dt; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override {}
     void Save(DataHandler *, const std::string &) const override {}
@@ -640,16 +640,16 @@ class FocusLineParams : public IPostEffectParams
         Vector4 lineColor = {0.0f, 0.0f, 0.0f, 1.0f};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::FocusLine; }
     void UpdateTime(float dt) override { pData_->time += dt; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -706,15 +706,15 @@ class PixelateParams : public IPostEffectParams
         float pad = 0.0f;
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Pixelate; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -764,16 +764,16 @@ class RetroParams : public IPostEffectParams
         float resolutionX = 1280.0f;
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Retro; }
     void UpdateTime(float dt) override { pData_->time += dt; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -829,15 +829,15 @@ class BloomParams : public IPostEffectParams
         Vector2 texelSize = {1.0f / 1280.0f, 1.0f / 720.0f};
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
     }
     ShaderMode GetMode() const override { return ShaderMode::Bloom; }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
-        cmd->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {
@@ -883,9 +883,9 @@ class ShockwaveParams : public IPostEffectParams
         float active = 0.0f;
     };
 
-    void Initialize(DirectXCommon *dxCommon) override
+    void Initialize(DirectXCommon *pDxCommon) override
     {
-        PostEffectParamsHelper::CreateConstantBuffer(dxCommon, resource_, &pData_);
+        PostEffectParamsHelper::CreateConstantBuffer(pDxCommon, resource_, &pData_);
         *pData_ = Data{};
         // フレアテクスチャ読み込み（既ロードなら内部でスキップ）
         TextureManager::GetInstance()->LoadTexture(kFlareTexPath_);
@@ -903,14 +903,14 @@ class ShockwaveParams : public IPostEffectParams
             }
         }
     }
-    void Apply(ID3D12GraphicsCommandList *cmd, SrvManager *, DirectXCommon *) override
+    void Apply(ID3D12GraphicsCommandList *pCommandList, SrvManager *, DirectXCommon *) override
     {
         // 専用RootSig: [0]=srcRT(Renderer側で設定済), [1]=flareTex, [2]=cbuffer
         // GetSrvHandleGPU は内部 prepend しないのでフルパス(＝マップキー)で渡す
         const std::string fullPath = AssetPath::Image(kFlareTexPath_);
         auto flareGpu = TextureManager::GetInstance()->GetSrvHandleGPU(fullPath);
-        cmd->SetGraphicsRootDescriptorTable(1, flareGpu);
-        cmd->SetGraphicsRootConstantBufferView(2, resource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootDescriptorTable(1, flareGpu);
+        pCommandList->SetGraphicsRootConstantBufferView(2, resource_->GetGPUVirtualAddress());
     }
     void DrawUI() override
     {

@@ -14,8 +14,8 @@ void ResultStaging::Initialize()
     /// ポインタ共有
     /// ===================================================
 
-    RightHand_ = BaseObjectManager::GetInstance()->GetObjectByName("sphere_1");
-    LeftHand_ = BaseObjectManager::GetInstance()->GetObjectByName("sphere_2");
+    pRightHand_ = BaseObjectManager::GetInstance()->GetObjectByName("sphere_1");
+    pLeftHand_ = BaseObjectManager::GetInstance()->GetObjectByName("sphere_2");
 
     fireWorkStates_.resize(fireWorks_count_);
 
@@ -36,8 +36,8 @@ void ResultStaging::Initialize()
     /// ===================================================
     /// 登録
     /// ===================================================
-    MotionEditor::GetInstance()->Register(RightHand_);
-    MotionEditor::GetInstance()->Register(LeftHand_);
+    MotionEditor::GetInstance()->Register(pRightHand_);
+    MotionEditor::GetInstance()->Register(pLeftHand_);
 }
 
 void ResultStaging::Update()
@@ -49,18 +49,18 @@ void ResultStaging::Update()
         if (!secondMove_ && !motionStarted_)
         {
             // 最初のパンチモーション
-            MotionEditor::GetInstance()->PlayFromFile(LeftHand_, "LeftPunch");
-            MotionEditor::GetInstance()->PlayFromFile(RightHand_, "RightBack");
+            MotionEditor::GetInstance()->PlayFromFile(pLeftHand_, "LeftPunch");
+            MotionEditor::GetInstance()->PlayFromFile(pRightHand_, "RightBack");
             motionStarted_ = true;
         }
         if (!secondMove_ &&
-            MotionEditor::GetInstance()->IsAttackFinished(LeftHand_) &&
-            MotionEditor::GetInstance()->IsAttackFinished(RightHand_))
+            MotionEditor::GetInstance()->IsAttackFinished(pLeftHand_) &&
+            MotionEditor::GetInstance()->IsAttackFinished(pRightHand_))
         {
             // 2つ目のパンチモーション
             secondMove_ = true;
-            MotionEditor::GetInstance()->PlayFromFile(LeftHand_, "LeftBack");
-            MotionEditor::GetInstance()->PlayFromFile(RightHand_, "RightPunch");
+            MotionEditor::GetInstance()->PlayFromFile(pLeftHand_, "LeftBack");
+            MotionEditor::GetInstance()->PlayFromFile(pRightHand_, "RightPunch");
         }
     }
 

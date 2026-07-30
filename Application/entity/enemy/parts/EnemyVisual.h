@@ -18,8 +18,8 @@ class EnemyVisual
     /// <summary>
     /// 初期化（アニメーションクリップの登録を行う）
     /// </summary>
-    /// <param name="owner">所有者の敵</param>
-    void Init(Enemy *owner);
+    /// <param name="pOwner">所有者の敵</param>
+    void Init(Enemy *pOwner);
 
     /// <summary>
     /// 移動・コンボ・ガード状態に応じてアニメーションクリップを切り替える
@@ -52,7 +52,7 @@ class EnemyVisual
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 色関連定数
