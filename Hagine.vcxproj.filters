@@ -636,7 +636,7 @@
     <ClCompile Include="Engine\3d\light\LightGroup.cpp">
       <Filter>Engine\3d\light</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\3d\line\DrawLine3D.cpp">
+    <ClCompile Include="Engine\3d\line\LineRenderer.cpp">
       <Filter>Engine\3d\line</Filter>
     </ClCompile>
     <ClCompile Include="Engine\3d\model\material\Material.cpp">
@@ -1165,7 +1165,7 @@
     <ClInclude Include="Engine\3d\light\LightGroup.h">
       <Filter>Engine\3d\light</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\3d\line\DrawLine3D.h">
+    <ClInclude Include="Engine\3d\line\LineRenderer.h">
       <Filter>Engine\3d\line</Filter>
     </ClInclude>
     <ClInclude Include="Engine\3d\model\material\Material.h">

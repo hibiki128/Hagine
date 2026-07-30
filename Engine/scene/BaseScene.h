@@ -15,7 +15,7 @@
 #include "SpriteCommon.h"
 #include "SpriteManager.h"
 #include "transform/WorldTransform.h"
-#include "line/DrawLine3D.h"
+#include "line/LineRenderer.h"
 #ifdef _DEBUG
 #include <imgui.h>
 #endif // _DEBUG

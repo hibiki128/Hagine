@@ -4,9 +4,12 @@
 #include "debug/profiler/CpuProfiler.h"
 #include "debug/profiler/GpuProfiler.h"
 #include "data/DataHandler.h"
+#include "deferred/DeferredRenderer.h"
+#include "light/LightGroup.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include "graphics/srv/SrvManager.h"
 #include "particle/ParticleEditor.h"
+#include "particle/gpu/ParticleCSEmitter.h"
 #include "particle/gpu/ParticleCSSpawner.h"
 #include "scene/SceneManager.h"
 #include <shadow/ShadowMap.h>
@@ -16,7 +19,7 @@
 #endif
 #ifdef _DEBUG
 #include "imgui.h"
-#include "line/DrawLine3D.h"
+#include "line/LineRenderer.h"
 #include "utility/debug/imgui/DebugUIHelper.h"
 #include <set>
 #include <vector>
@@ -178,6 +181,26 @@ void DrawSystem::Draw(const ViewProjection &vp)
     }
     std::sort(sortedStages.begin(), sortedStages.end());
 
+    // GPUパーティクルの発光など、Compute フェーズで登録された動的ポイントライトを
+    // ここで定数バッファへ反映する。以降のシーン描画が同じフレームの光を拾える。
+    LightGroup *lightGroup = LightGroup::GetInstance();
+    lightGroup->CommitPointLights();
+
+    // ─── 粒子1個1個の光源化（ディファードON時のみ）───
+    // CPU側のライトをGPUバッファへ転送してから、生存粒子から光源を追記する。
+    // パーティクルの Compute は上で Execute + Wait 済みなので、生存バッファは確定している。
+    // ライトの中身はステージ共通なので、ステージループより前に1回だけ行う。
+    if (DeferredRenderer::GetInstance()->IsEnabled())
+    {
+        HAGINE_CPU_PROFILE("DS/ParticleLights");
+        ID3D12GraphicsCommandList *cmdList = pDxCommon_->GetCommandList().Get();
+        int gpuLightGen = GpuProfiler::GetInstance()->OpenGraphics(cmdList, "ParticleLightGen");
+        lightGroup->BeginGpuLightAppend(cmdList);
+        ParticleCSEmitter::SubmitAllParticleLights(vp, cmdList);
+        lightGroup->EndGpuLightAppend(cmdList);
+        GpuProfiler::GetInstance()->Close(cmdList, gpuLightGen);
+    }
+
     OffScreen *lastOffScreen = nullptr;
 
     // ステージループ（本描画の記録＋ポストエフェクト）を計測。
@@ -197,6 +220,33 @@ void DrawSystem::Draw(const ViewProjection &vp)
             if (lastOffScreen)
             {
                 stageOS->BlitToOffScreen(lastOffScreen->GetFinalResultSrvIndex());
+            }
+
+            DeferredRenderer *deferred = DeferredRenderer::GetInstance();
+
+            // ─── ディファード: G-Buffer パス ───
+            // 不透明の Object3d だけがここに描かれる（Object3d 側がパス状態を見て分岐する）。
+            // スカイボックス・スプライト・パーティクル・線は後段の前方描画へ回る。
+            if (deferred->IsEnabled())
+            {
+                HAGINE_CPU_PROFILE("DS/GBuffer");
+                int gpuGBuffer = GpuProfiler::GetInstance()->OpenGraphics(pDxCommon_->GetCommandList().Get(), "G-Buffer");
+                deferred->BeginGBufferPass(vp);
+                for (auto &entry : entries_)
+                {
+                    if (entry.enabled && entry.stageIndex == stageIdx)
+                    {
+                        entry.draw(vp);
+                    }
+                }
+                deferred->EndGBufferPass();
+                GpuProfiler::GetInstance()->Close(pDxCommon_->GetCommandList().Get(), gpuGBuffer);
+
+                int gpuLighting = GpuProfiler::GetInstance()->OpenGraphics(pDxCommon_->GetCommandList().Get(), "Deferred(cull+lighting)");
+                deferred->CullLights();
+                deferred->RenderLighting();
+                deferred->BeginForwardPass();
+                GpuProfiler::GetInstance()->Close(pDxCommon_->GetCommandList().Get(), gpuLighting);
             }
 
             int gpuScene = GpuProfiler::GetInstance()->OpenGraphics(pDxCommon_->GetCommandList().Get(), "Scene(不透明+UI等)");
@@ -222,8 +272,9 @@ void DrawSystem::Draw(const ViewProjection &vp)
 #ifdef _DEBUG
             if (stageIdx == 0)
             {
-                DrawLine3D::GetInstance()->Draw(vp);
+                // コライダーの線を積んでから描く（旧実装は順序が逆で1フレーム遅れていた）
                 pCollision_->DebugDraw(vp);
+                LineRenderer::GetInstance()->Render(vp);
             }
 #endif
 
@@ -293,6 +344,10 @@ void DrawSystem::UpdateImGui(bool *open)
     // 表示名は日本語、ウィンドウIDは "DrawSystem" のまま（保存済みレイアウトとの互換維持）
     if (ImGui::Begin("描画システム###DrawSystem", open, ImGuiWindowFlags_NoFocusOnAppearing))
     {
+        SectionHeader("[ ディファードレンダリング ]", DebugTheme::kAccentBlue);
+        DeferredRenderer::GetInstance()->DrawImGui();
+        ImGui::Spacing();
+
         SectionHeader("[ 描画エントリ ]", DebugTheme::kAccentBlue);
         ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::Text("登録: %zu 件", entries_.size());

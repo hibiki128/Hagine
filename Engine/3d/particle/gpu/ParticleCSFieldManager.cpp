@@ -1065,7 +1065,7 @@ void ParticleCSFieldManager::DrawFieldGizmos()
 // --- 影響範囲球 ---
 void ParticleCSFieldManager::DrawFieldSphere(const ParticleField &field, const Vector4 &color)
 {
-    DrawLine3D::GetInstance()->DrawSphere(field.data.position, color, field.data.radius, 16);
+    LineRenderer::GetInstance()->AddSphere(field.data.position, field.data.radius, color, 16);
 }
 
 // --- Wind：球内に等間隔で方向矢印を描く ---
@@ -1109,7 +1109,7 @@ void ParticleCSFieldManager::DrawWindArrows(const ParticleField &field, const Ve
 
                 Vector3 from = {center.x + offset.x, center.y + offset.y, center.z + offset.z};
                 Vector3 to = {from.x + dir.x * arrowLen, from.y + dir.y * arrowLen, from.z + dir.z * arrowLen};
-                DrawLine3D::GetInstance()->SetPoints(from, to, color);
+                LineRenderer::GetInstance()->AddLine(from, to, color);
 
                 // 矢頭：dirに垂直な軸で小さな V 字を描く
                 // dir に直交するベクトルを求める
@@ -1132,8 +1132,8 @@ void ParticleCSFieldManager::DrawWindArrows(const ParticleField &field, const Ve
                 Vector3 headBase = {to.x - dir.x * headLen, to.y - dir.y * headLen, to.z - dir.z * headLen};
                 Vector3 h1 = {headBase.x + side.x * headLen * 0.5f, headBase.y + side.y * headLen * 0.5f, headBase.z + side.z * headLen * 0.5f};
                 Vector3 h2 = {headBase.x - side.x * headLen * 0.5f, headBase.y - side.y * headLen * 0.5f, headBase.z - side.z * headLen * 0.5f};
-                DrawLine3D::GetInstance()->SetPoints(to, h1, color);
-                DrawLine3D::GetInstance()->SetPoints(to, h2, color);
+                LineRenderer::GetInstance()->AddLine(to, h1, color);
+                LineRenderer::GetInstance()->AddLine(to, h2, color);
             }
         }
     }
@@ -1173,12 +1173,12 @@ void ParticleCSFieldManager::DrawRadialLines(const ParticleField &field, const V
             if (inward)
             {
                 // 球面 → 中心方向へ（Attract）
-                DrawLine3D::GetInstance()->SetPoints(surface, inner, color);
+                LineRenderer::GetInstance()->AddLine(surface, inner, color);
             }
             else
             {
                 // 中心 → 球面方向へ（Repel）
-                DrawLine3D::GetInstance()->SetPoints(inner, surface, color);
+                LineRenderer::GetInstance()->AddLine(inner, surface, color);
             }
         }
     }
@@ -1255,13 +1255,13 @@ void ParticleCSFieldManager::DrawVortexArcs(const ParticleField &field, const Ve
                 layerCenter.y + layerRadius * (right.y * std::cos(t2) + forward.y * std::sin(t2)),
                 layerCenter.z + layerRadius * (right.z * std::cos(t2) + forward.z * std::sin(t2)),
             };
-            DrawLine3D::GetInstance()->SetPoints(p1, p2, color);
+            LineRenderer::GetInstance()->AddLine(p1, p2, color);
         }
     }
 
     // 回転軸そのものを細い線で表示（軸の方向が分かるように）
     Vector3 axisTop = {center.x + axis.x * r * 0.6f, center.y + axis.y * r * 0.6f, center.z + axis.z * r * 0.6f};
     Vector3 axisBot = {center.x - axis.x * r * 0.6f, center.y - axis.y * r * 0.6f, center.z - axis.z * r * 0.6f};
-    DrawLine3D::GetInstance()->SetPoints(axisBot, axisTop, color);
+    LineRenderer::GetInstance()->AddLine(axisBot, axisTop, color);
 }
 } // namespace Hagine

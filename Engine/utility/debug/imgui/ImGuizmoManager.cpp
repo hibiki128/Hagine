@@ -4,11 +4,12 @@
 #include "ImGuiNotification.h"
 #include "Input.h"
 #include "Sprite.h"
-#include <line/DrawLine3D.h>
+#include <line/LineRenderer.h>
 #include <object/base/BaseObjectManager.h>
 #include <transform/WorldTransform.h>
 #include <edit/undo/UndoRedoManager.h>
 #include "WinApp.h"
+#include <format>
 #include <imgui.h>
 // DebugUIHelper.h は ImVec4 / ImGui:: を使うので imgui.h の後に include する
 #include "DebugUIHelper.h"
@@ -371,49 +372,47 @@ void ImGuizmoManager::imgui()
     ImGui::SetItemTooltip("選択中オブジェクトの AABB / スフィア / レイを線で表示します");
 
     // ---- 操作対象フィルタ ----
-    // 3種類（オブジェクト/スプライト/パーティクル）が同時にあると掴みたい物を選びづらいので、
+    // 4種類（オブジェクト/スプライト/パーティクル/ライト）が同時にあると掴みたい物を選びづらいので、
     // チェックした種類だけを選択・マウスピック・ギズモ表示・デバッグ描画の対象にする。
     ImGui::Spacing();
     SectionHeader("[ 操作対象フィルタ ]", DebugTheme::kAccentGreen);
     ImGui::TextDisabled("チェックした種類だけ選択・操作できます");
     bool filterChanged = false;
+
+    // 分類の表示名。追加時はここと GizmoCategory を対応させる
+    static const char *kCategoryLabels[kGizmoCategoryCount] = {
+        "オブジェクト", "スプライト", "パーティクル", "ライト"};
+
     ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
-    filterChanged |= ImGui::Checkbox("オブジェクト", &categoryEnabled_[static_cast<int>(GizmoCategory::Object)]);
-    ImGui::SameLine();
-    filterChanged |= ImGui::Checkbox("スプライト", &categoryEnabled_[static_cast<int>(GizmoCategory::Sprite)]);
-    ImGui::SameLine();
-    filterChanged |= ImGui::Checkbox("パーティクル", &categoryEnabled_[static_cast<int>(GizmoCategory::Particle)]);
+    for (int i = 0; i < kGizmoCategoryCount; ++i)
+    {
+        if (i > 0)
+            ImGui::SameLine();
+        filterChanged |= ImGui::Checkbox(kCategoryLabels[i], &categoryEnabled_[i]);
+    }
     ImGui::PopStyleColor();
+
     // 「この種類だけ」を素早く選べるショートカット
+    auto SoloCategory = [this](int index) {
+        for (int i = 0; i < kGizmoCategoryCount; ++i)
+            categoryEnabled_[i] = (i == index);
+    };
     if (ImGui::SmallButton("全部##catAll"))
     {
         for (bool &e : categoryEnabled_)
             e = true;
         filterChanged = true;
     }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("オブジェクトのみ"))
+    for (int i = 0; i < kGizmoCategoryCount; ++i)
     {
-        categoryEnabled_[0] = true;
-        categoryEnabled_[1] = false;
-        categoryEnabled_[2] = false;
-        filterChanged = true;
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("スプライトのみ"))
-    {
-        categoryEnabled_[0] = false;
-        categoryEnabled_[1] = true;
-        categoryEnabled_[2] = false;
-        filterChanged = true;
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("パーティクルのみ"))
-    {
-        categoryEnabled_[0] = false;
-        categoryEnabled_[1] = false;
-        categoryEnabled_[2] = true;
-        filterChanged = true;
+        ImGui::SameLine();
+        ImGui::PushID(i);
+        if (ImGui::SmallButton(std::format("{}のみ", kCategoryLabels[i]).c_str()))
+        {
+            SoloCategory(i);
+            filterChanged = true;
+        }
+        ImGui::PopID();
     }
     if (filterChanged)
     {
@@ -1235,14 +1234,15 @@ void ImGuizmoManager::DrawSelectionMarker(const Vector3 &worldPosition)
     Vector3 topFront = markerPos + Vector3(-markerSize, markerSize, markerSize);
     Vector3 topBack = markerPos + Vector3(markerSize, markerSize, markerSize);
 
-    DrawLine3D::GetInstance()->SetPoints(apex, topLeft, markerColor);
-    DrawLine3D::GetInstance()->SetPoints(apex, topRight, markerColor);
-    DrawLine3D::GetInstance()->SetPoints(apex, topFront, markerColor);
-    DrawLine3D::GetInstance()->SetPoints(apex, topBack, markerColor);
-    DrawLine3D::GetInstance()->SetPoints(topLeft, topRight, markerColor);
-    DrawLine3D::GetInstance()->SetPoints(topRight, topBack, markerColor);
-    DrawLine3D::GetInstance()->SetPoints(topBack, topFront, markerColor);
-    DrawLine3D::GetInstance()->SetPoints(topFront, topLeft, markerColor);
+    LineRenderer *line = LineRenderer::GetInstance();
+    line->AddLine(apex, topLeft, markerColor);
+    line->AddLine(apex, topRight, markerColor);
+    line->AddLine(apex, topFront, markerColor);
+    line->AddLine(apex, topBack, markerColor);
+    line->AddLine(topLeft, topRight, markerColor);
+    line->AddLine(topRight, topBack, markerColor);
+    line->AddLine(topBack, topFront, markerColor);
+    line->AddLine(topFront, topLeft, markerColor);
 }
 
 // ---- UpdateFilteredNames ----------------------------------------------
@@ -1293,7 +1293,7 @@ void ImGuizmoManager::DrawDebugRaycast()
 
     Ray currentRay = Input::GetInstance()->GetCurrentRay();
     Vector3 rayEnd = currentRay.origin + (currentRay.direction * currentRay.length);
-    DrawLine3D::GetInstance()->SetPoints(currentRay.origin, rayEnd, {1.0f, 0.0f, 0.0f, 1.0f});
+    LineRenderer::GetInstance()->AddLine(currentRay.origin, rayEnd, {1.0f, 0.0f, 0.0f, 1.0f});
 
     for (const auto &pair : transformMap_)
     {
@@ -1340,21 +1340,8 @@ void ImGuizmoManager::DrawAABBWireframe(const Matrix4x4 &worldMatrix, const Vect
         vertices[i] = Transformation(vertices[i], worldMatrix);
     }
 
-    // 下面
-    DrawLine3D::GetInstance()->SetPoints(vertices[0], vertices[1], color);
-    DrawLine3D::GetInstance()->SetPoints(vertices[1], vertices[2], color);
-    DrawLine3D::GetInstance()->SetPoints(vertices[2], vertices[3], color);
-    DrawLine3D::GetInstance()->SetPoints(vertices[3], vertices[0], color);
-    // 上面
-    DrawLine3D::GetInstance()->SetPoints(vertices[4], vertices[5], color);
-    DrawLine3D::GetInstance()->SetPoints(vertices[5], vertices[6], color);
-    DrawLine3D::GetInstance()->SetPoints(vertices[6], vertices[7], color);
-    DrawLine3D::GetInstance()->SetPoints(vertices[7], vertices[4], color);
-    // 縦
-    DrawLine3D::GetInstance()->SetPoints(vertices[0], vertices[4], color);
-    DrawLine3D::GetInstance()->SetPoints(vertices[1], vertices[5], color);
-    DrawLine3D::GetInstance()->SetPoints(vertices[2], vertices[6], color);
-    DrawLine3D::GetInstance()->SetPoints(vertices[3], vertices[7], color);
+    // vertices は 0-3 が下面、4-7 が対応する上面。AddBoxCorners の並びと一致する
+    LineRenderer::GetInstance()->AddBoxCorners(vertices, color);
 }
 
 // スフィアワイヤーフレームを描画する
@@ -1370,7 +1357,7 @@ void ImGuizmoManager::DrawSphereWireframe(const Matrix4x4 &worldMatrix, const Ve
         sqrt(worldMatrix.m[0][2] * worldMatrix.m[0][2] + worldMatrix.m[1][2] * worldMatrix.m[1][2] + worldMatrix.m[2][2] * worldMatrix.m[2][2])};
     float worldRadius = sphere.radius * std::max({scale.x, scale.y, scale.z});
 
-    DrawLine3D::GetInstance()->DrawSphere(worldCenter, color, worldRadius, 16);
+    LineRenderer::GetInstance()->AddSphere(worldCenter, worldRadius, color, 16);
 }
 
 // GizmoTarget のワールド行列を使ってAABB・スフィアのレイヒット点を描画する
@@ -1389,18 +1376,20 @@ void ImGuizmoManager::TestAndDrawRayHit(const Ray &ray, const GizmoTarget &targe
     bool aabbResult = Input::RayIntersectAABBByMatrix(ray, worldMatrix, aabbHit, aabb);
     bool sphereResult = Input::RayIntersectSphereByMatrix(ray, worldMatrix, sphereHit, sphere);
 
+    LineRenderer *line = LineRenderer::GetInstance();
+
     if (aabbResult)
     {
-        DrawLine3D::GetInstance()->DrawSphere(aabbHit.hitPoint, {0.0f, 1.0f, 0.0f, 1.0f}, 0.05f, 8);
+        line->AddSphere(aabbHit.hitPoint, 0.05f, {0.0f, 1.0f, 0.0f, 1.0f}, 8);
         Vector3 normalEnd = aabbHit.hitPoint + (aabbHit.hitNormal * 0.3f);
-        DrawLine3D::GetInstance()->SetPoints(aabbHit.hitPoint, normalEnd, {0.0f, 1.0f, 0.0f, 1.0f});
+        line->AddLine(aabbHit.hitPoint, normalEnd, {0.0f, 1.0f, 0.0f, 1.0f});
     }
 
     if (sphereResult)
     {
-        DrawLine3D::GetInstance()->DrawSphere(sphereHit.hitPoint, {1.0f, 0.0f, 1.0f, 1.0f}, 0.05f, 8);
+        line->AddSphere(sphereHit.hitPoint, 0.05f, {1.0f, 0.0f, 1.0f, 1.0f}, 8);
         Vector3 normalEnd = sphereHit.hitPoint + (sphereHit.hitNormal * 0.3f);
-        DrawLine3D::GetInstance()->SetPoints(sphereHit.hitPoint, normalEnd, {1.0f, 0.0f, 1.0f, 1.0f});
+        line->AddLine(sphereHit.hitPoint, normalEnd, {1.0f, 0.0f, 1.0f, 1.0f});
     }
 }
 

@@ -85,11 +85,13 @@ void SrvManager::SetGraphicsRootDescriptorTable(UINT RootParameterIndex, uint32_
     pDxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(RootParameterIndex, GetGPUDescriptorHandle(srvIndex));
 }
 
-void SrvManager::CreateSRVforRenderTexture(uint32_t srvIndex, ID3D12Resource *pResource)
+void SrvManager::CreateSRVforRenderTexture(uint32_t srvIndex, ID3D12Resource *pResource, DXGI_FORMAT format)
 {
     // SRVの設定。FormatはResourceと同じにしておく
+    // （指定が無ければリソース自身のフォーマットを使う。G-Bufferのように
+    //   R8G8B8A8_UNORM_SRGB 以外のRTを渡された場合に不一致でエラーになるのを防ぐ）
     D3D12_SHADER_RESOURCE_VIEW_DESC renderTextureSrvDesc{};
-    renderTextureSrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    renderTextureSrvDesc.Format = (format != DXGI_FORMAT_UNKNOWN) ? format : pResource->GetDesc().Format;
     renderTextureSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     renderTextureSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     renderTextureSrvDesc.Texture2D.MipLevels = 1;

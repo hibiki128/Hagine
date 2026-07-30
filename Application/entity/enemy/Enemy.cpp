@@ -4,7 +4,7 @@
 #include "particle/ParticleEditor.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include <Application/camera/follow/FollowCamera.h>
-#include <3d/line/DrawLine3D.h>
+#include <3d/line/LineRenderer.h>
 #include <Frame.h>
 #include <utility/debug/param/GameParamHub.h>
 #include <algorithm>
@@ -552,7 +552,7 @@ void Enemy::DrawFrustum()
     if (!drawFrustumDebug_)
         return;
 
-    DrawLine3D *drawLine3D = DrawLine3D::GetInstance();
+    LineRenderer *drawLine3D = LineRenderer::GetInstance();
     if (!drawLine3D)
         return;
 
@@ -584,14 +584,14 @@ void Enemy::DrawFrustum()
 
     for (int i = 0; i < 4; ++i)
     {
-        drawLine3D->SetPoints(nearCorners[i], nearCorners[(i + 1) % 4], color);
-        drawLine3D->SetPoints(farCorners[i], farCorners[(i + 1) % 4], color);
+        drawLine3D->AddLine(nearCorners[i], nearCorners[(i + 1) % 4], color);
+        drawLine3D->AddLine(farCorners[i], farCorners[(i + 1) % 4], color);
     }
     for (int i = 0; i < 4; ++i)
     {
-        drawLine3D->SetPoints(nearCorners[i], farCorners[i], color);
+        drawLine3D->AddLine(nearCorners[i], farCorners[i], color);
     }
-    drawLine3D->SetPoints(origin, origin + forward * frustumLockOnRange_, axisColor);
+    drawLine3D->AddLine(origin, origin + forward * frustumLockOnRange_, axisColor);
 #endif
 }
 

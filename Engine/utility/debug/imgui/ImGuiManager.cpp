@@ -28,7 +28,7 @@
 #include <icon/IconsFontAwesome5.h>
 #include <imgui_impl_dx12.h>
 #include <implot.h>
-#include <line/DrawLine3D.h>
+#include <line/LineRenderer.h>
 #include <map>
 #include <particle/gpu/ParticleCSFieldManager.h>
 #include <particle/gpu/ParticleCSSpawner.h>
@@ -338,9 +338,47 @@ void ImGuiManager::RenderMultiViewport() {
     ImGui::RenderPlatformWindowsDefault();
 }
 
+void ImGuiManager::RebuildGridBatchIfNeeded() {
+    if (gridBatch_ != kInvalidLineBatch && builtGridDivision_ == gridDivision_ && builtGridSize_ == gridSize_) {
+        return;
+    }
+    if (gridDivision_ <= 0 || gridSize_ <= 0.0f) {
+        return;
+    }
+
+    // Y=0のローカル座標で格子を作る（既定は分割1000＝2002本。毎フレーム積み直すと重い）
+    const float interval = (gridSize_ * 2.0f) / static_cast<float>(gridDivision_);
+    constexpr uint32_t kWhite = 0xFFFFFFFFu;
+
+    std::vector<LineVertex> vertices;
+    vertices.reserve(static_cast<size_t>(gridDivision_ + 1) * 4);
+    for (int i = 0; i <= gridDivision_; ++i) {
+        const float offset = -gridSize_ + static_cast<float>(i) * interval;
+        // X方向の線（Zを移動）
+        vertices.push_back({{-gridSize_, 0.0f, offset}, kWhite});
+        vertices.push_back({{gridSize_, 0.0f, offset}, kWhite});
+        // Z方向の線（Xを移動）
+        vertices.push_back({{offset, 0.0f, -gridSize_}, kWhite});
+        vertices.push_back({{offset, 0.0f, gridSize_}, kWhite});
+    }
+
+    LineRenderer *line = LineRenderer::GetInstance();
+    if (gridBatch_ == kInvalidLineBatch) {
+        gridBatch_ = line->CreateBatch(vertices.data(), static_cast<uint32_t>(vertices.size()));
+    } else {
+        line->UpdateBatch(gridBatch_, vertices.data(), static_cast<uint32_t>(vertices.size()));
+    }
+    builtGridDivision_ = gridDivision_;
+    builtGridSize_ = gridSize_;
+}
+
 void ImGuiManager::UpdateIni() {
     if (showGrid_) {
-        DrawLine3D::GetInstance()->DrawGrid(gridY_, gridDivision_, gridSize_, gridColor_);
+        RebuildGridBatchIfNeeded();
+        if (gridBatch_ != kInvalidLineBatch) {
+            // バッチはY=0のローカル座標。Y位置はワールド行列、色はtintで差し替える
+            LineRenderer::GetInstance()->SubmitBatch(gridBatch_, MakeTranslateMatrix({0.0f, gridY_, 0.0f}), gridColor_);
+        }
     }
     if (!isShowMainUI_) {
         SwitchToGameMode();

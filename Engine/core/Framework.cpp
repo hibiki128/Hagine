@@ -165,10 +165,10 @@ void Framework::Initialize()
 #endif // _DEBUG
     ///------------------------
 
-    ///-------DrawLine3D-------
-    pLine3d_ = DrawLine3D::GetInstance();
-    pLine3d_->Initialize();
-    ///------------------------
+    ///-------LineRenderer-------
+    pLineRenderer_ = LineRenderer::GetInstance();
+    pLineRenderer_->Initialize();
+    ///--------------------------
 
     ///-------SkyBox-------
     pSkyBox_ = SkyBox::GetInstance();
@@ -177,6 +177,12 @@ void Framework::Initialize()
     ///--------LightGroup------------
     pLightGroup_ = LightGroup::GetInstance();
     pLightGroup_->Initialize();
+    ///------------------------------
+
+    ///-------DeferredRenderer-------
+    // SrvManager / PipelineManager / LightGroup の初期化後に行う
+    pDeferredRenderer_ = DeferredRenderer::GetInstance();
+    pDeferredRenderer_->Initialize();
     ///------------------------------
 
     ///-------ParticleEditor-------
@@ -254,7 +260,8 @@ void Framework::Finalize()
 #endif
     shortcutManager_->Finalize();
     pSpriteManager_->Finalize();
-    pLine3d_->Finalize();
+    pLineRenderer_->Finalize();
+    pDeferredRenderer_->Finalize();
     pSkyBox_->Finalize();
     ShadowMap::GetInstance()->Finalize();
     pSrvManager_->Finalize();
@@ -363,6 +370,19 @@ void Framework::Update()
 
     /// deltaTimeの更新
     Frame::Update();
+
+    // 線の積み上げをリセットし、視錐台カリング用の平面を更新する。
+    // このフレーム中に積まれた線は、DrawSystem の Render で一括描画される。
+    // （カリングには前フレームのカメラ行列を使う。1フレームぶんの遅れはデバッグ線では問題にならない）
+    if (BaseScene *currentScene = pSceneManager_->GetBaseScene())
+    {
+        pLineRenderer_->BeginFrame(*currentScene->GetViewProjection());
+    }
+
+    // 動的ポイントライト（GPUパーティクルの発光など）の登録もフレーム単位。
+    // 実際の登録は描画フェーズのエミッター更新中に行われ、DrawSystem が
+    // シーン描画の直前に CommitPointLights() で定数バッファへ反映する。
+    pLightGroup_->ClearDynamicPointLights();
 
     {
         HAGINE_CPU_PROFILE("Update/ParticleField");

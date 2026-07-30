@@ -4,7 +4,7 @@
 #include "imgui.h"
 #endif // _DEBUG
 #include "MyMath.h"
-#include <line/DrawLine3D.h>
+#include <line/LineRenderer.h>
 
 namespace Hagine {
 const float MotionEditor::ATTACK_END_INTERVAL = 0.1f;
@@ -644,7 +644,7 @@ void MotionEditor::DrawControlPoints()
     if (!motion.target || !motion.useCatmullRom || motion.controlPoints.empty())
         return;
 
-    DrawLine3D *drawLine = DrawLine3D::GetInstance();
+    LineRenderer *drawLine = LineRenderer::GetInstance();
     const float sphereSize = 0.4f;
 
     Vector3 basePos = (motion.currentTime == 0.0f) ? motion.target->GetLocalPosition() : motion.basePos;
@@ -667,7 +667,7 @@ void MotionEditor::DrawControlPoints()
             color.z = std::min(color.z + 0.5f, 1.0f);
         }
 
-        drawLine->DrawSphere(worldPos, color, sphereSize, 8);
+        drawLine->AddSphere(worldPos, sphereSize, color, 8);
     }
 }
 
@@ -680,7 +680,7 @@ void MotionEditor::DrawCatmullRomCurve()
     if (!motion.target || !motion.useCatmullRom || motion.controlPoints.size() < 2)
         return;
 
-    DrawLine3D *drawLine = DrawLine3D::GetInstance();
+    LineRenderer *drawLine = LineRenderer::GetInstance();
     const Vector4 curveColor = {1.0f, 0.5f, 0.0f, 1.0f};
     const int resolution = 100;
 
@@ -692,7 +692,7 @@ void MotionEditor::DrawCatmullRomCurve()
     {
         float t = static_cast<float>(i) / resolution;
         Vector3 currentWorldPoint = TransformLocalControlPointToWorld(motion.target, basePos + CatmullRomInterpolation(motion.controlPoints, t));
-        drawLine->SetPoints(prevWorldPoint, currentWorldPoint, curveColor);
+        drawLine->AddLine(prevWorldPoint, currentWorldPoint, curveColor);
         prevWorldPoint = currentWorldPoint;
     }
 }

@@ -26,9 +26,10 @@ enum class GizmoCategory
     Object = 0,   // 3Dオブジェクト（BaseObject 等）
     Sprite = 1,   // 2Dスプライト
     Particle = 2, // パーティクルエミッター（CPU/GPU）
+    Light = 3,    // 光源（LightGroup のポイント／スポットライト）
 };
 // フィルタ配列などのサイズに使う要素数
-inline constexpr int kGizmoCategoryCount = 3;
+inline constexpr int kGizmoCategoryCount = 4;
 
 /// <summary>
 /// ギズモ操作対象を型に依存せず統一的に扱うためのラッパー構造体
@@ -130,7 +131,7 @@ class ImGuizmoManager
 
     // 操作対象フィルタ。GizmoCategory ごとに ON/OFF。
     // 無効な種類は選択・マウスピック・ギズモ表示・デバッグ描画の対象外になる。
-    bool categoryEnabled_[kGizmoCategoryCount] = {true, true, true};
+    bool categoryEnabled_[kGizmoCategoryCount] = {true, true, true, true};
 
     // カメラのビュープロジェクション
     const ViewProjection *pViewProjection_ = nullptr;
@@ -255,6 +256,35 @@ class ImGuizmoManager
     bool IsCategoryEnabled(GizmoCategory category) const
     {
         return categoryEnabled_[static_cast<int>(category)];
+    }
+
+    /// <summary>
+    /// 指定した名前だけを選択状態にする（他ウィンドウの一覧とギズモ選択を同期させる用途）
+    /// </summary>
+    /// <param name="name">選択する登録名。未登録なら選択を解除する</param>
+    void SelectOnly(const std::string &name)
+    {
+        selectedNames_.clear();
+        if (transformMap_.find(name) != transformMap_.end())
+        {
+            selectedNames_.insert(name);
+        }
+    }
+
+    /// <summary>
+    /// 指定した名前が選択されているか
+    /// </summary>
+    bool IsSelected(const std::string &name) const
+    {
+        return selectedNames_.find(name) != selectedNames_.end();
+    }
+
+    /// <summary>
+    /// 指定した名前が登録済みか
+    /// </summary>
+    bool HasTarget(const std::string &name) const
+    {
+        return transformMap_.find(name) != transformMap_.end();
     }
 
     // ギズモの選択状態を取得

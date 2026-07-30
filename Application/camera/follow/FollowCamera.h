@@ -10,7 +10,7 @@
 
 class Player;
 namespace Hagine {
-class DrawLine3D;
+class LineRenderer;
 class BaseObject;
 } // namespace Hagine
 
@@ -65,8 +65,8 @@ class FollowCamera
     /// <summary>
     /// 視錐台のデバッグ描画
     /// </summary>
-    /// <param name="pDrawLine3D">ライン描画クラスのポインタ</param>
-    void DrawLockOnFrustum(Hagine::DrawLine3D *pDrawLine3D) const { pLockOn_->DrawLockOnFrustum(pDrawLine3D); }
+    /// <param name="pLineRenderer">ライン描画クラスのポインタ</param>
+    void DrawLockOnFrustum(Hagine::LineRenderer *pLineRenderer) const { pLockOn_->DrawLockOnFrustum(pLineRenderer); }
 
     /// <summary>
     /// 必殺技の顔アップ演出を開始する

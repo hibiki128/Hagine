@@ -1,6 +1,6 @@
 #define NOMINMAX
 #include "Input.h"
-#include <line/DrawLine3D.h>
+#include <line/LineRenderer.h>
 #include <assert.h>
 
 #pragma comment(lib, "dinput8.lib")

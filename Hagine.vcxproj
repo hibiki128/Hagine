@@ -204,7 +204,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\animation\Animator.cpp" />
     <ClCompile Include="Engine\3d\camera\debug\DebugCamera.cpp" />
     <ClCompile Include="Engine\3d\light\LightGroup.cpp" />
-    <ClCompile Include="Engine\3d\line\DrawLine3D.cpp" />
+    <ClCompile Include="Engine\3d\line\LineRenderer.cpp" />
+    <ClCompile Include="Engine\render\deferred\DeferredRenderer.cpp" />
     <ClCompile Include="Engine\frame\Frame.cpp" />
     <ClCompile Include="Engine\input\Mouse.cpp" />
     <ClCompile Include="Engine\utility\collider\CollisionManager.cpp" />
@@ -298,6 +299,26 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
     <None Include="Engine\EngineAssets\shaders\line\Line3d.hlsli">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Engine\EngineAssets\shaders\Deferred\Deferred.hlsli">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Engine\EngineAssets\shaders\Deferred\GBuffer.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Engine\EngineAssets\shaders\Deferred\DeferredLighting.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Engine\EngineAssets\shaders\Deferred\LightCulling.CS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Engine\EngineAssets\shaders\Deferred\ParticleLightGen.CS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
@@ -451,7 +472,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\animation\Animator.h" />
     <ClInclude Include="Engine\3d\camera\debug\DebugCamera.h" />
     <ClInclude Include="Engine\3d\light\LightGroup.h" />
-    <ClInclude Include="Engine\3d\line\DrawLine3D.h" />
+    <ClInclude Include="Engine\3d\line\LineRenderer.h" />
+    <ClInclude Include="Engine\render\deferred\DeferredRenderer.h" />
     <ClInclude Include="Engine\3d\model\ModelStructs.h" />
     <ClInclude Include="Engine\frame\Frame.h" />
     <ClInclude Include="Engine\input\Mouse.h" />

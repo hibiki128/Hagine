@@ -82,7 +82,7 @@ void ShadowMap::Finalize()
     }
     if (srvIndex_ != UINT32_MAX)
     {
-        pSrvManager_->Free(srvIndex_);
+        pSrvManager_->Free(srvIndex_ - 1); // +1 規約なので予約番号へ戻してから解放する
         srvIndex_ = UINT32_MAX;
     }
     depthResource_.Reset();
@@ -92,7 +92,9 @@ void ShadowMap::Finalize()
 
 void ShadowMap::CreateShadowSRV()
 {
-    srvIndex_ = pSrvManager_->Allocate();
+    // エンジン共通の +1 規約（予約 r → 実書き込みは r+1）に従う。
+    // 付けないと直前に +1 で確保したリソースのディスクリプタを上書きしてしまう
+    srvIndex_ = pSrvManager_->Allocate() + 1;
 
     D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
     srvDesc.Format = DXGI_FORMAT_R32_FLOAT;

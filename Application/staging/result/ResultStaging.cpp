@@ -2,7 +2,7 @@
 #include "particle/gpu/ParticleCSSpawner.h"
 #include "edit/motion/MotionEditor.h"
 #include <Frame.h>
-#include <line/DrawLine3D.h>
+#include <line/LineRenderer.h>
 #include <object/base/BaseObjectManager.h>
 #include <random>
 
@@ -207,22 +207,22 @@ void ResultStaging::DrawFireWorkArea()
     Vector4 lineColor = {kLineColorR, kLineColorG, kLineColorB, kLineColorA}; // オレンジ色
 
     // 底面の4本
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[0], worldVertices[1], lineColor);
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[1], worldVertices[5], lineColor);
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[5], worldVertices[4], lineColor);
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[4], worldVertices[0], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[0], worldVertices[1], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[1], worldVertices[5], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[5], worldVertices[4], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[4], worldVertices[0], lineColor);
 
     // 上面の4本
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[3], worldVertices[2], lineColor);
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[2], worldVertices[6], lineColor);
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[6], worldVertices[7], lineColor);
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[7], worldVertices[3], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[3], worldVertices[2], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[2], worldVertices[6], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[6], worldVertices[7], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[7], worldVertices[3], lineColor);
 
     // 縦の4本
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[0], worldVertices[3], lineColor);
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[1], worldVertices[2], lineColor);
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[5], worldVertices[6], lineColor);
-    DrawLine3D::GetInstance()->SetPoints(worldVertices[4], worldVertices[7], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[0], worldVertices[3], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[1], worldVertices[2], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[5], worldVertices[6], lineColor);
+    LineRenderer::GetInstance()->AddLine(worldVertices[4], worldVertices[7], lineColor);
 }
 
 void ResultStaging::DrawImGui()

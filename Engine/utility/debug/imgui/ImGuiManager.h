@@ -257,6 +257,17 @@ class ImGuiManager {
     float gridSize_ = 5000.0f;
     Vector4 gridColor_ = {0.5f, 0.5f, 0.5f, 1.0f}; // グレー
 
+    // グリッドは形が変わらないので静的バッチとしてGPUへ常駐させる。
+    // 分割数・サイズが変わったときだけ作り直し、Y座標と色は描画時に差し替える。
+    LineBatchId gridBatch_ = kInvalidLineBatch;
+    int builtGridDivision_ = -1;
+    float builtGridSize_ = -1.0f;
+
+    /// <summary>
+    /// グリッドの静的バッチを必要なら作り直す
+    /// </summary>
+    void RebuildGridBatchIfNeeded();
+
     BaseObjectManager *pBaseObjectManager_ = nullptr;
     SpriteManager *pSpriteManager_ = nullptr;
     Audio *pAudio_ = nullptr;
