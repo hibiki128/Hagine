@@ -245,7 +245,7 @@
     },
     "particleLightCullDistance": 60.0,
     "particleLightDecay": 1.0,
-    "particleLightEnabled": true,
+    "particleLightEnabled": false,
     "particleLightIntensity": 0.75,
     "particleLightMaxCount": 6500,
     "particleLightRadius": 1.5,
