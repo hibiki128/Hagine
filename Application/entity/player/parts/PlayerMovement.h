@@ -21,8 +21,8 @@ class PlayerMovement
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="owner">所有者のプレイヤー</param>
-    void Init(Player *owner);
+    /// <param name="pOwner">所有者のプレイヤー</param>
+    void Init(Player *pOwner);
 
     /// <summary>
     /// 移動処理
@@ -120,14 +120,14 @@ class PlayerMovement
     /// <summary>
     /// 移動関連パラメータを保存する
     /// </summary>
-    /// <param name="data">保存先のデータハンドラ</param>
-    void Save(Hagine::DataHandler *data);
+    /// <param name="pData">保存先のデータハンドラ</param>
+    void Save(Hagine::DataHandler *pData);
 
     /// <summary>
     /// 移動関連パラメータを読み込む
     /// </summary>
-    /// <param name="data">読み込み元のデータハンドラ</param>
-    void Load(Hagine::DataHandler *data);
+    /// <param name="pData">読み込み元のデータハンドラ</param>
+    void Load(Hagine::DataHandler *pData);
 
     /// <summary>
     /// 移動関連のImGui表示
@@ -175,17 +175,8 @@ class PlayerMovement
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
-
-    // 回転・ベクトル定数
-    static constexpr float kRotationZero = 0.0f;
-    static constexpr float kRightVectorX = 1.0f;
-    static constexpr float kRightVectorY = 0.0f;
-    static constexpr float kRightVectorZ = 0.0f;
-    static constexpr float kUpVectorX = 0.0f;
-    static constexpr float kUpVectorY = 1.0f;
-    static constexpr float kUpVectorZ = 0.0f;
 
     // 速度・移動関連定数
     static constexpr float kMaxFallVelocity = -40.0f;

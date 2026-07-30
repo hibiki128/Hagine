@@ -10,9 +10,9 @@
 
 using namespace Hagine;
 
-void EnemyStatus::Init(Enemy *owner)
+void EnemyStatus::Init(Enemy *pOwner)
 {
-    pOwner_ = owner;
+    pOwner_ = pOwner;
 }
 
 void EnemyStatus::DamageUpdate()
@@ -62,7 +62,7 @@ void EnemyStatus::DamageUpdate()
         actualDamage *= skillBlowDamageMultiplier_;
     }
 
-    HP_ -= actualDamage;
+    hp_ -= actualDamage;
     damage_ = kNoDamage;
 
     // スタン中の追撃は落下の軌道を乱さないよう、ノックバックもリアクション変更も行わない
@@ -349,7 +349,7 @@ bool EnemyStatus::ConsumeEnergy(float amount)
     if (energy_ >= amount)
     {
         energy_ -= amount;
-        timeSinceLastShot_ = kTimerReset;
+        timeSinceLastShot_ = 0.0f;
         return true;
     }
     return false;
@@ -358,7 +358,7 @@ bool EnemyStatus::ConsumeEnergy(float amount)
 void EnemyStatus::DrainEnergy(float amount)
 {
     energy_ = (energy_ > amount) ? energy_ - amount : 0.0f;
-    timeSinceLastShot_ = kTimerReset;
+    timeSinceLastShot_ = 0.0f;
 }
 
 void EnemyStatus::RecoverEnergy()
@@ -408,7 +408,7 @@ void EnemyStatus::SetKnockbackDirect(const Vector3 &velocity)
 void EnemyStatus::StartDamageReact()
 {
     isDamageReact_ = true;
-    damageReactTimer_ = kTimerReset;
+    damageReactTimer_ = 0.0f;
 }
 
 void EnemyStatus::SetEnergy(float energy)
@@ -418,7 +418,7 @@ void EnemyStatus::SetEnergy(float energy)
 
 void EnemyStatus::ResetForRevive()
 {
-    HP_ = maxHP_;
+    hp_ = maxHP_;
     energy_ = maxEnergy_;
     hasKnockback_ = false;
     pendingKnockback_ = {0.0f, 0.0f, 0.0f};
@@ -435,19 +435,19 @@ void EnemyStatus::ResetForRevive()
 
 void EnemyStatus::RegisterParams()
 {
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register("Enemy", "HP", static_cast<const float *>(&HP_));
-    hub->Register("Enemy", "エネルギー", static_cast<const float *>(&energy_));
-    hub->Register("Enemy", "エネルギー回復速度", &energyRecoveryRate_, {0.1f, 0.0f, 50.0f});
-    hub->Register("Enemy", "被弾リアクション時間", &damageReactDuration_, {0.05f, 0.0f, 3.0f});
-    hub->Register("Enemy", "ひるみ時間", &flinchDuration_, {0.01f, 0.0f, 2.0f});
-    hub->Register("Enemy", "射撃被弾のひるみ倍率", &shotFlinchScale_, {0.01f, 0.0f, 1.0f});
-    hub->Register("Enemy", "吹き飛ばし復帰後のひるみ無効時間", &flinchImmuneDuration_, {0.05f, 0.0f, 5.0f});
-    hub->Register("Enemy", "吹き飛ばし着地後硬直", &blowAfterDuration_, {0.01f, 0.0f, 2.0f});
-    hub->Register("Enemy", "吹き飛ばし最大時間", &blowMaxDuration_, {0.05f, 0.1f, 5.0f});
-    hub->Register("Enemy", "必殺技被弾の吹き飛び速度", &skillBlowSpeed_, {0.5f, 0.0f, 100.0f});
-    hub->Register("Enemy", "必殺技被弾の浮き上がり速度", &skillBlowRiseSpeed_, {0.5f, 0.0f, 50.0f});
-    hub->Register("Enemy", "必殺技被弾の横速度残存率(1秒)", &skillBlowHorizontalRetain_, {0.01f, 0.001f, 1.0f});
-    hub->Register("Enemy", "必殺技被弾スタン最大時間", &skillBlowMaxDuration_, {0.1f, 0.5f, 10.0f});
-    hub->Register("Enemy", "必殺技被弾中の被ダメージ倍率", &skillBlowDamageMultiplier_, {0.01f, 0.0f, 1.0f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register("Enemy", "HP", static_cast<const float *>(&hp_));
+    pHub->Register("Enemy", "エネルギー", static_cast<const float *>(&energy_));
+    pHub->Register("Enemy", "エネルギー回復速度", &energyRecoveryRate_, {0.1f, 0.0f, 50.0f});
+    pHub->Register("Enemy", "被弾リアクション時間", &damageReactDuration_, {0.05f, 0.0f, 3.0f});
+    pHub->Register("Enemy", "ひるみ時間", &flinchDuration_, {0.01f, 0.0f, 2.0f});
+    pHub->Register("Enemy", "射撃被弾のひるみ倍率", &shotFlinchScale_, {0.01f, 0.0f, 1.0f});
+    pHub->Register("Enemy", "吹き飛ばし復帰後のひるみ無効時間", &flinchImmuneDuration_, {0.05f, 0.0f, 5.0f});
+    pHub->Register("Enemy", "吹き飛ばし着地後硬直", &blowAfterDuration_, {0.01f, 0.0f, 2.0f});
+    pHub->Register("Enemy", "吹き飛ばし最大時間", &blowMaxDuration_, {0.05f, 0.1f, 5.0f});
+    pHub->Register("Enemy", "必殺技被弾の吹き飛び速度", &skillBlowSpeed_, {0.5f, 0.0f, 100.0f});
+    pHub->Register("Enemy", "必殺技被弾の浮き上がり速度", &skillBlowRiseSpeed_, {0.5f, 0.0f, 50.0f});
+    pHub->Register("Enemy", "必殺技被弾の横速度残存率(1秒)", &skillBlowHorizontalRetain_, {0.01f, 0.001f, 1.0f});
+    pHub->Register("Enemy", "必殺技被弾スタン最大時間", &skillBlowMaxDuration_, {0.1f, 0.5f, 10.0f});
+    pHub->Register("Enemy", "必殺技被弾中の被ダメージ倍率", &skillBlowDamageMultiplier_, {0.01f, 0.0f, 1.0f});
 }

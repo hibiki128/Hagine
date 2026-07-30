@@ -8,12 +8,12 @@ DeathStaging::DeathStaging()
 {
     // die.obj（死亡ポーズメッシュ）の表面から発生するエミッター。
     // Spawn したエミッターの更新・描画はエンジンが自動で回す。
-    deathParticle_ = ParticleCSSpawner::GetInstance()->Spawn("die");
-    if (deathParticle_)
+    pDeathParticle_ = ParticleCSSpawner::GetInstance()->Spawn("die");
+    if (pDeathParticle_)
     {
         // die テンプレートは自動発生 ON なので、Spawn 直後にそのまま原点で発生してしまう。
         // 死亡演出が始まる（Update で SetAuto(true) される）まで発生を止めておく。
-        deathParticle_->SetAuto(false);
+        pDeathParticle_->SetAuto(false);
     }
     isStart_ = false;
 }
@@ -32,7 +32,7 @@ void DeathStaging::Update()
 {
     time_ += Frame::DeltaTime();
 
-    if (!deathParticle_)
+    if (!pDeathParticle_)
     {
         return;
     }
@@ -46,31 +46,31 @@ void DeathStaging::Update()
     // 一定時間内は発生源メッシュを死亡ポーズへ重ね、色を体色に合わせて発生させる
     if (time_ <= kParticleActiveTime)
     {
-        deathParticle_->SetTranslate(position_);
-        deathParticle_->SetRotation(rotation_ * kDieObjYawFix);
-        deathParticle_->SetScale(scale_);
-        deathParticle_->SetStartColor(color_);
-        deathParticle_->SetEndColor({color_.x, color_.y, color_.z, kAlphaZero});
-        deathParticle_->SetAuto(true);
+        pDeathParticle_->SetTranslate(position_);
+        pDeathParticle_->SetRotation(rotation_ * kDieObjYawFix);
+        pDeathParticle_->SetScale(scale_);
+        pDeathParticle_->SetStartColor(color_);
+        pDeathParticle_->SetEndColor({color_.x, color_.y, color_.z, kAlphaZero});
+        pDeathParticle_->SetAuto(true);
     }
     else
     {
         // 時間経過後はパーティクルの自動発生を停止
-        deathParticle_->SetAuto(false);
+        pDeathParticle_->SetAuto(false);
     }
 
     // 重力の影響を開始
     if (time_ >= kGravityStartTime)
     {
-        deathParticle_->SetEnableGravity(true);
-        deathParticle_->SetEnableLifeTimeScale(true);
-        deathParticle_->SetMaxVelocity({kMaxVelocityX, kMaxVelocityY, kMaxVelocityZ});
-        deathParticle_->SetMinVelocity({kMinVelocityX, kMinVelocityY, kMinVelocityZ});
+        pDeathParticle_->SetEnableGravity(true);
+        pDeathParticle_->SetEnableLifeTimeScale(true);
+        pDeathParticle_->SetMaxVelocity({kMaxVelocityX, kMaxVelocityY, kMaxVelocityZ});
+        pDeathParticle_->SetMinVelocity({kMinVelocityX, kMinVelocityY, kMinVelocityZ});
 
         isStart_ = true;
     }
 }
 
-void DeathStaging::imgui()
+void DeathStaging::DrawImGui()
 {
 }

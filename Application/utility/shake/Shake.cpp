@@ -82,7 +82,7 @@ void Shake::SaveSettings(std::string jsonName)
     ImGuiNotification::Post("シェイク設定を保存しました: " + jsonName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
-void Shake::imgui()
+void Shake::DrawImGui()
 {
 #ifdef _DEBUG
     if (ImGui::Begin("シェイク設定"))

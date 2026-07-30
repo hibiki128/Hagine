@@ -275,11 +275,11 @@ class BehaviorTreeEditor
     /// <summary>
     /// デバッグ対象を設定
     /// </summary>
-    /// <param name="enemy">敵オブジェクト</param>
+    /// <param name="pEnemy">敵オブジェクト</param>
     /// <param name="player">プレイヤーオブジェクト</param>
-    void SetDebugTargets(Enemy *enemy, Player *player)
+    void SetDebugTargets(Enemy *pEnemy, Player *player)
     {
-        pDebugEnemy_ = enemy;
+        pDebugEnemy_ = pEnemy;
         pDebugPlayer_ = player;
     }
 
@@ -390,7 +390,7 @@ class BehaviorTreeEditor
     void DrawNodeParameters(EditorNode &node);
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     ax::NodeEditor::EditorContext *pContext_ = nullptr; // エディタコンテキスト

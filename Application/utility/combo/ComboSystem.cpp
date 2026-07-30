@@ -1,31 +1,39 @@
 #include "ComboSystem.h"
 #include "edit/motion/MotionEditor.h"
-#include "utility/debug/imgui/ImGuiNotification.h"
 #include "object/base/BaseObject.h"
+#include "utility/debug/imgui/ImGuiNotification.h"
 #include <algorithm>
 
 #ifdef _DEBUG
 #include "imgui.h"
 #endif
 
-// 定数定義
 using namespace Hagine;
+
+namespace {
+// 範囲外アクセス時に返す空文字（参照を返すゲッター用）
+const std::string kEmptyString;
+} // namespace
+
+/// ===================================================
+/// 定数定義
+/// ===================================================
 
 // ある段を繰り出してから次の段を受け付けるまでのクールダウン（秒）。
 // この間にコンボ入力されても即発動はせず、先行入力としてバッファされる
-const float ComboSystem::COMBO_INTERVAL = 0.45f;
+const float ComboSystem::kComboInterval = 0.45f;
 
 // クールダウン中に行われた先行入力を保持する有効時間（秒）。
 // この時間内であればクールダウンが明けた瞬間に次の段が自動発動する
-const float ComboSystem::INPUT_BUFFER_DURATION = 0.4f;
+const float ComboSystem::kInputBufferDuration = 0.4f;
 
 // 最終段を出し切ってから開始姿勢へ戻すまでの待機時間（秒）。
 // フィニッシュモーションを見せる余韻として確保する
-const float ComboSystem::FINAL_RETURN_DELAY = 0.5f;
+const float ComboSystem::kFinalReturnDelay = 0.5f;
 
 // コンボ継続中に次の入力が来ないまま経過すると、コンボを打ち切って
 // 開始姿勢へ戻すまでの放置タイムアウト時間（秒）
-const float ComboSystem::COMBO_TIMEOUT_DURATION = 0.5f;
+const float ComboSystem::kComboTimeoutDuration = 0.5f;
 
 ComboSystem::ComboSystem()
     : comboIndex_(0), comboCooldown_(0.0f), comboStarted_(false),
@@ -39,75 +47,87 @@ ComboSystem::~ComboSystem()
     Clear();
 }
 
-ComboSystem &ComboSystem::Add(BaseObject *target, const std::string &attackData,
-                              float damage, float knockbackPower,
-                              float colliderActiveDuration, float colliderActivateDelay)
+bool ComboSystem::LoadDefinition(const std::string &fileName, BaseObject *pMotionTarget)
 {
-    // コンボデータの追加
-    comboData_.emplace_back(target, attackData,
-                            damage, knockbackPower,
-                            colliderActiveDuration, colliderActivateDelay);
+    Clear();
 
-    // 開始オブジェクトの登録
-    if (target != nullptr)
+    if (!definition_.Load(fileName))
     {
-        auto it = std::find(comboStartObjects_.begin(), comboStartObjects_.end(), target);
-        if (it == comboStartObjects_.end())
-        {
-            comboStartObjects_.push_back(target);
-        }
+        return false;
     }
 
-    return *this;
+    // 段の並び・パラメータはすべて定義データ側が持つ。ここでは実行用に写すだけ
+    for (const ComboStepData &step : definition_.GetSteps())
+    {
+        comboData_.emplace_back(pMotionTarget, step);
+    }
+
+    finishRecovery_ = definition_.GetFinishRecovery();
+
+    // モーション再生対象があれば、開始姿勢を戻すためのオブジェクトとして登録する
+    if (pMotionTarget != nullptr)
+    {
+        pComboStartObjects_.push_back(pMotionTarget);
+    }
+
+    return true;
+}
+
+void ComboSystem::SaveDefinition()
+{
+    // ImGuiで調整した実行時の値を定義データへ書き戻してから保存する
+    std::vector<ComboStepData> &steps = definition_.GetSteps();
+    const size_t stepCount = (std::min)(steps.size(), comboData_.size());
+    for (size_t i = 0; i < stepCount; ++i)
+    {
+        steps[i] = comboData_[i].step;
+    }
+    definition_.SetFinishRecovery(finishRecovery_);
+
+    if (definition_.Save())
+    {
+        ImGuiNotification::Post("コンボ定義を保存しました: " + definition_.GetFileName(),
+                                {0.2f, 0.8f, 0.2f, 1.0f});
+    }
+    else
+    {
+        ImGuiNotification::Post("コンボ定義の保存に失敗しました: " + definition_.GetFileName(),
+                                {0.9f, 0.3f, 0.3f, 1.0f});
+    }
 }
 
 void ComboSystem::Clear()
 {
     comboData_.clear();
-    comboStartObjects_.clear();
+    pComboStartObjects_.clear();
     ResetCombo();
 }
 
-void ComboSystem::SaveAttackParams()
+const std::string &ComboSystem::GetAttackName(int index) const
 {
-    if (!dataHandler_)
+    if (index < 0 || index >= static_cast<int>(comboData_.size()))
     {
-        dataHandler_ = std::make_unique<DataHandler>("ComboSystem", name_);
+        return kEmptyString;
     }
-
-    // 各コンボ段のパラメータを保存
-    for (size_t i = 0; i < comboData_.size(); ++i)
-    {
-        const ComboData &cd = comboData_[i];
-        const std::string key = cd.attackData;
-
-        dataHandler_->Save(key + "_damage", cd.damage);
-        dataHandler_->Save(key + "_knockback", cd.knockbackPower);
-        dataHandler_->Save(key + "_duration", cd.colliderActiveDuration);
-        dataHandler_->Save(key + "_delay", cd.colliderActivateDelay);
-    }
-    ImGuiNotification::Post("コンボパラメータを保存しました: " + name_, {0.2f, 0.8f, 0.2f, 1.0f});
+    return comboData_[index].step.attackName;
 }
 
-void ComboSystem::LoadAttackParams()
+const std::string &ComboSystem::GetAnimationPath(int index) const
 {
-    if (!dataHandler_)
+    if (index < 0 || index >= static_cast<int>(comboData_.size()))
     {
-        dataHandler_ = std::make_unique<DataHandler>("ComboSystem", name_);
+        return kEmptyString;
     }
+    return comboData_[index].step.animationPath;
+}
 
-    // 各コンボ段のパラメータをロード
-    for (size_t i = 0; i < comboData_.size(); ++i)
+void ComboSystem::SetAnimationPath(int index, const std::string &animationPath)
+{
+    if (index < 0 || index >= static_cast<int>(comboData_.size()))
     {
-        ComboData &cd = comboData_[i];
-        const std::string key = cd.attackData;
-
-        cd.damage = dataHandler_->Load<float>(key + "_damage", cd.damage);
-        cd.knockbackPower = dataHandler_->Load<float>(key + "_knockback", cd.knockbackPower);
-        cd.colliderActiveDuration = dataHandler_->Load<float>(key + "_duration", cd.colliderActiveDuration);
-        cd.colliderActivateDelay = dataHandler_->Load<float>(key + "_delay", cd.colliderActivateDelay);
+        return;
     }
-    ImGuiNotification::Post("コンボパラメータを読み込みました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
+    comboData_[index].step.animationPath = animationPath;
 }
 
 bool ComboSystem::TryExecuteCombo()
@@ -128,7 +148,7 @@ bool ComboSystem::TryExecuteCombo()
         if (comboStarted_)
         {
             inputBuffered_ = true;
-            inputBufferTime_ = INPUT_BUFFER_DURATION;
+            inputBufferTime_ = kInputBufferDuration;
         }
         return false;
     }
@@ -160,13 +180,7 @@ void ComboSystem::Update(float deltaTime)
     // 最終攻撃後の戻り
     if (waitingForReturn_ && returnDelay_ <= 0.0f)
     {
-        for (BaseObject *obj : comboStartObjects_)
-        {
-            if (obj != nullptr)
-            {
-                MotionEditor::GetInstance()->ReturnToComboStart(obj);
-            }
-        }
+        ReturnAllToComboStart();
         ResetCombo();
 
         // 出し切った直後に1段目から殴り直せてしまわないよう、硬直を入れる。
@@ -178,15 +192,9 @@ void ComboSystem::Update(float deltaTime)
     if (comboStarted_ && !waitingForReturn_ && !attackExecuted)
     {
         comboTimeout_ += deltaTime;
-        if (comboTimeout_ >= COMBO_TIMEOUT_DURATION)
+        if (comboTimeout_ >= kComboTimeoutDuration)
         {
-            for (BaseObject *obj : comboStartObjects_)
-            {
-                if (obj != nullptr)
-                {
-                    MotionEditor::GetInstance()->ReturnToComboStart(obj);
-                }
-            }
+            ReturnAllToComboStart();
             ResetCombo();
         }
     }
@@ -200,57 +208,53 @@ void ComboSystem::ExecuteComboAttack()
     }
 
     const ComboData &currentCombo = comboData_[comboIndex_];
-    BaseObject *currentTarget = currentCombo.target;
+    BaseObject *pCurrentTarget = currentCombo.pTarget;
 
     // 以前の攻撃が終了していたら戻す
     if (comboIndex_ > 0)
     {
         for (int i = comboIndex_ - 1; i >= 0; i--)
         {
-            BaseObject *prevTarget = comboData_[i].target;
-            if (prevTarget && prevTarget == currentTarget)
+            BaseObject *pPrevTarget = comboData_[i].pTarget;
+            if (pPrevTarget && pPrevTarget == pCurrentTarget)
             {
-                if (MotionEditor::GetInstance()->IsAttackFinishedWithInterval(prevTarget))
+                if (MotionEditor::GetInstance()->IsAttackFinishedWithInterval(pPrevTarget))
                 {
-                    MotionEditor::GetInstance()->ReturnToComboStart(prevTarget);
-                    MotionEditor::GetInstance()->ClearAttackEndInterval(prevTarget);
+                    MotionEditor::GetInstance()->ReturnToComboStart(pPrevTarget);
+                    MotionEditor::GetInstance()->ClearAttackEndInterval(pPrevTarget);
                 }
                 break;
             }
         }
     }
 
-    comboCooldown_ = COMBO_INTERVAL;
+    comboCooldown_ = kComboInterval;
 
     // 今まさに発火した攻撃の名前を記録する（発火コールバックから参照できるよう先に確定）
-    lastAttackName_ = currentCombo.attackData;
+    lastAttackName_ = currentCombo.step.attackName;
 
     if (!comboStarted_)
     {
         SaveComboStartPositions();
         comboStarted_ = true;
-        comboTimeout_ = 0.0f;
     }
-    else
-    {
-        comboTimeout_ = 0.0f;
-    }
+    comboTimeout_ = 0.0f;
 
     // 攻撃発火コールバック実行
     if (onAttackFired_)
     {
         onAttackFired_(
-            currentCombo.damage,
-            currentCombo.knockbackPower,
-            currentCombo.colliderActiveDuration,
-            currentCombo.colliderActivateDelay);
+            currentCombo.step.damage,
+            currentCombo.step.knockbackPower,
+            currentCombo.step.colliderActiveDuration,
+            currentCombo.step.colliderActivateDelay);
     }
 
     // モーション再生
-    if (currentTarget != nullptr && !currentCombo.attackData.empty())
+    if (pCurrentTarget != nullptr && !currentCombo.step.attackName.empty())
     {
-        MotionEditor::GetInstance()->Stop(currentTarget->GetName());
-        MotionEditor::GetInstance()->PlayFromFile(currentTarget, currentCombo.attackData);
+        MotionEditor::GetInstance()->Stop(pCurrentTarget->GetName());
+        MotionEditor::GetInstance()->PlayFromFile(pCurrentTarget, currentCombo.step.attackName);
     }
 
     comboIndex_++;
@@ -258,7 +262,7 @@ void ComboSystem::ExecuteComboAttack()
     if (comboIndex_ >= static_cast<int>(comboData_.size()))
     {
         waitingForReturn_ = true;
-        returnDelay_ = FINAL_RETURN_DELAY;
+        returnDelay_ = kFinalReturnDelay;
         comboIndex_ = 0;
     }
 }
@@ -276,22 +280,33 @@ void ComboSystem::ResetCombo()
 
 void ComboSystem::SaveComboStartPositions()
 {
-    for (BaseObject *obj : comboStartObjects_)
+    for (BaseObject *pObject : pComboStartObjects_)
     {
-        if (obj != nullptr)
+        if (pObject != nullptr)
         {
-            MotionEditor::GetInstance()->SetComboStartPosition(obj);
+            MotionEditor::GetInstance()->SetComboStartPosition(pObject);
         }
     }
 }
 
-bool ComboSystem::IsObjectAttackCompleted(BaseObject *target) const
+void ComboSystem::ReturnAllToComboStart()
 {
-    if (!target)
+    for (BaseObject *pObject : pComboStartObjects_)
+    {
+        if (pObject != nullptr)
+        {
+            MotionEditor::GetInstance()->ReturnToComboStart(pObject);
+        }
+    }
+}
+
+bool ComboSystem::IsObjectAttackCompleted(BaseObject *pTarget) const
+{
+    if (!pTarget)
     {
         return true;
     }
-    return !MotionEditor::GetInstance()->IsAttackFinishedWithInterval(target);
+    return !MotionEditor::GetInstance()->IsAttackFinishedWithInterval(pTarget);
 }
 
 bool ComboSystem::IsCurrentAttackCompleted() const
@@ -301,7 +316,7 @@ bool ComboSystem::IsCurrentAttackCompleted() const
         return true;
     }
     const ComboData &prevCombo = comboData_[comboIndex_ - 1];
-    return !IsObjectAttackCompleted(prevCombo.target);
+    return !IsObjectAttackCompleted(prevCombo.pTarget);
 }
 
 #ifdef _DEBUG
@@ -313,7 +328,7 @@ void ComboSystem::DrawImGui()
         return;
     }
 
-    ImGui::Text("コンボ名: %s", name_.c_str());
+    ImGui::Text("コンボ名: %s", definition_.GetFileName().c_str());
     ImGui::Text("現在のインデックス: %d / %d",
                 comboIndex_, static_cast<int>(comboData_.size()));
     ImGui::Separator();
@@ -321,12 +336,11 @@ void ComboSystem::DrawImGui()
     // 攻撃パラメータ編集
     for (size_t i = 0; i < comboData_.size(); ++i)
     {
-        ComboData &cd = comboData_[i];
+        ComboStepData &step = comboData_[i].step;
 
-        std::string nodeLabel = std::to_string(i + 1) + "段目: " + cd.attackData;
+        std::string nodeLabel = std::to_string(i + 1) + "段目: " + step.attackName;
         if (ImGui::TreeNodeEx(nodeLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
         {
-
             if (comboStarted_ && comboIndex_ > 0 &&
                 static_cast<int>(i) == comboIndex_ - 1)
             {
@@ -335,11 +349,11 @@ void ComboSystem::DrawImGui()
 
             ImGui::PushID(static_cast<int>(i));
 
-            ImGui::DragFloat("ダメージ##dmg", &cd.damage, 0.01f);
-            ImGui::DragFloat("ノックバック##kb", &cd.knockbackPower, 0.01f);
+            ImGui::DragFloat("ダメージ##dmg", &step.damage, 0.01f);
+            ImGui::DragFloat("ノックバック##kb", &step.knockbackPower, 0.01f);
             ImGui::Separator();
-            ImGui::DragFloat("判定有効時間(秒)##dur", &cd.colliderActiveDuration, 0.01f);
-            ImGui::DragFloat("判定開始遅延(秒)##dly", &cd.colliderActivateDelay, 0.01f);
+            ImGui::DragFloat("判定有効時間(秒)##dur", &step.colliderActiveDuration, 0.01f);
+            ImGui::DragFloat("判定開始遅延(秒)##dly", &step.colliderActivateDelay, 0.01f);
 
             ImGui::PopID();
             ImGui::TreePop();
@@ -350,17 +364,19 @@ void ComboSystem::DrawImGui()
     ImGui::Spacing();
 
     // セーブ/ロード
-    if (ImGui::Button("全攻撃パラメータを保存", ImVec2(200.0f, 0.0f)))
+    if (ImGui::Button("コンボ定義を保存", ImVec2(200.0f, 0.0f)))
     {
-        SaveAttackParams();
+        SaveDefinition();
     }
     ImGui::SameLine();
     if (ImGui::Button("再読み込み", ImVec2(120.0f, 0.0f)))
     {
-        LoadAttackParams();
+        // 現在のモーション再生対象を保ったまま定義を読み直す
+        BaseObject *pMotionTarget = comboData_.empty() ? nullptr : comboData_.front().pTarget;
+        LoadDefinition(definition_.GetFileName(), pMotionTarget);
     }
 
     ImGui::Spacing();
-    ImGui::TextDisabled("保存先: ComboSystem/%s.json", name_.c_str());
+    ImGui::TextDisabled("保存先: ComboDefinition/%s.json", definition_.GetFileName().c_str());
 }
 #endif

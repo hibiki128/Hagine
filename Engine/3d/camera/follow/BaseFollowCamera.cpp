@@ -32,7 +32,7 @@ void BaseFollowCamera::Update()
 
         // カメラがターゲットを向くための回転角度(Y軸)を算出
         Vector3 lookAt = targetPosition - worldTransform_.translation_;
-        worldTransform_.quateRotation_.y = std::atan2(lookAt.x, lookAt.z);
+        worldTransform_.quaternionRotation_.y = std::atan2(lookAt.x, lookAt.z);
 
         // ワールド行列の再計算
         worldTransform_.UpdateMatrix();
@@ -40,14 +40,14 @@ void BaseFollowCamera::Update()
 
     // 自身の変換状態をビュープロジェクションに反映
     viewProjection_.translation_ = worldTransform_.translation_;
-    viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
+    viewProjection_.quaternionRotation_ = worldTransform_.quaternionRotation_;
     viewProjection_.matWorld_ = worldTransform_.matWorld_;
 
     // ビュー行列の最終計算
     viewProjection_.UpdateMatrix();
 }
 
-void BaseFollowCamera::imgui()
+void BaseFollowCamera::DrawImGui()
 {
 #ifdef USE_IMGUI
     ImGui::Begin("FollowCamera");

@@ -65,7 +65,7 @@ void DemoScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->imgui();
+    debugCamera_->DrawImGui();
     vp_.ShowDebugInfo();
 }
 

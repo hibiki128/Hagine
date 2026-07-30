@@ -8,10 +8,10 @@ void ParticleCommon::Finalize()
     pComputePsoManager_ = nullptr;
 }
 
-void ParticleCommon::Initialize(DirectXCommon *dxCommon)
+void ParticleCommon::Initialize(DirectXCommon *pDxCommon)
 {
-    assert(dxCommon);
-    pDxCommon_ = dxCommon;
+    assert(pDxCommon);
+    pDxCommon_ = pDxCommon;
     pPsoManager_ = PipelineManager::GetInstance();
     pComputePsoManager_ = ComputePipelineManager::GetInstance();
 }

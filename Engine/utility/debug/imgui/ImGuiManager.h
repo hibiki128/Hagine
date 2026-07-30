@@ -73,7 +73,7 @@ class ImGuiManager {
     /// <summary>
     /// メインUI表示
     /// </summary>
-    void ShowMainUI(OffScreen *offscreen);
+    void ShowMainUI(OffScreen *pOffScreen);
 
     /// <summary>
     /// メニュー表示
@@ -147,7 +147,7 @@ class ImGuiManager {
 
     void ShowStatisticsWindow();
 
-    void ShowOffScreenSettingWindow(OffScreen *offscreen);
+    void ShowOffScreenSettingWindow(OffScreen *pOffScreen);
 
     void ShowLightSettingWindow();
 
@@ -193,7 +193,7 @@ class ImGuiManager {
 
   private:
     /// ====================================
-    /// private variaus
+    /// private variables
     /// ====================================
 
     std::string dockLayoutBackup_;

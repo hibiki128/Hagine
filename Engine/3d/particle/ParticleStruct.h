@@ -576,8 +576,8 @@ struct ParticleSetting
     Vector3 particleEndScale{};
     Vector3 startAcce{};
     Vector3 endAcce{};
-    Vector3 startRote{};
-    Vector3 endRote{};
+    Vector3 startRotate{};
+    Vector3 endRotate{};
     Vector3 rotateVelocityMin{};
     Vector3 rotateVelocityMax{};
     Vector3 allScaleMax{};
@@ -648,8 +648,8 @@ struct Particle
     Vector3 endScale{};
     Vector3 startAcce{};
     Vector3 endAcce{};
-    Vector3 startRote{};
-    Vector3 endRote{};
+    Vector3 startRotate{};
+    Vector3 endRotate{};
     Vector3 rotateVelocity{};
     Vector3 fixedDirection{};
     Vector4 color{};     // 色

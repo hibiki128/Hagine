@@ -8,9 +8,9 @@ void ComputePipelineManager::Finalize()
     rootSignatures_.clear();
 }
 
-void ComputePipelineManager::Initialize(DirectXCommon *dxCommon)
+void ComputePipelineManager::Initialize(DirectXCommon *pDxCommon)
 {
-    pDxCommon_ = dxCommon;
+    pDxCommon_ = pDxCommon;
 
     CreateAllPipelines();
 }
@@ -41,14 +41,18 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::GetRootSigna
     return rootSignatures_[key];
 }
 
-void ComputePipelineManager::DrawCommonSetting(ComputePipelineType type, BlendMode blendMode, ShaderMode shaderMode, ID3D12GraphicsCommandList *cmdList)
+void ComputePipelineManager::DrawCommonSetting(ComputePipelineType type, BlendMode blendMode, ShaderMode shaderMode, ID3D12GraphicsCommandList *pCommandList)
 {
     auto pipeline = GetPipeline(type, blendMode, shaderMode);
     auto rootSignature = GetRootSignature(type, shaderMode);
 
-    ID3D12GraphicsCommandList *commandList = cmdList ? cmdList : pDxCommon_->GetCommandList().Get();
-    commandList->SetPipelineState(pipeline.Get());
-    commandList->SetComputeRootSignature(rootSignature.Get());
+    // 引数が省略された場合はメインのコマンドリストを使う
+    if (pCommandList == nullptr)
+    {
+        pCommandList = pDxCommon_->GetCommandList().Get();
+    }
+    pCommandList->SetPipelineState(pipeline.Get());
+    pCommandList->SetComputeRootSignature(rootSignature.Get());
 }
 
 void ComputePipelineManager::CreateSkinningPipelines()
@@ -184,11 +188,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateLightC
     descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -262,11 +266,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreatePartic
     descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -385,11 +389,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateSkinni
     descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -402,14 +406,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipelineManager::CreateSkinni
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
-    IDxcBlob *computerShaderBlob = nullptr;
-    computerShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Skinning/Skinning.CS.hlsl", L"cs_6_0");
-    assert(computerShaderBlob != nullptr);
+    IDxcBlob *pComputeShaderBlob = nullptr;
+    pComputeShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Skinning/Skinning.CS.hlsl", L"cs_6_0");
+    assert(pComputeShaderBlob != nullptr);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
     computePipelineStateDesc.CS = {
-        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
-        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+        .pShaderBytecode = pComputeShaderBlob->GetBufferPointer(),
+        .BytecodeLength = pComputeShaderBlob->GetBufferSize(),
     };
     computePipelineStateDesc.pRootSignature = rootSignature.Get();
     HRESULT hr = pDxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
@@ -484,11 +488,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateInitPa
     descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -501,14 +505,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipelineManager::CreateInitPa
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
-    IDxcBlob *computerShaderBlob = nullptr;
-    computerShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/InitParticle.CS.hlsl", L"cs_6_0");
-    assert(computerShaderBlob != nullptr);
+    IDxcBlob *pComputeShaderBlob = nullptr;
+    pComputeShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/InitParticle.CS.hlsl", L"cs_6_0");
+    assert(pComputeShaderBlob != nullptr);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
     computePipelineStateDesc.CS = {
-        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
-        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+        .pShaderBytecode = pComputeShaderBlob->GetBufferPointer(),
+        .BytecodeLength = pComputeShaderBlob->GetBufferSize(),
     };
     computePipelineStateDesc.pRootSignature = rootSignature.Get();
     HRESULT hr = pDxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
@@ -588,11 +592,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateEmitte
     descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -605,14 +609,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipelineManager::CreateEmitte
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
-    IDxcBlob *computerShaderBlob = nullptr;
-    computerShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/EmitParticle.CS.hlsl", L"cs_6_0");
-    assert(computerShaderBlob != nullptr);
+    IDxcBlob *pComputeShaderBlob = nullptr;
+    pComputeShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/EmitParticle.CS.hlsl", L"cs_6_0");
+    assert(pComputeShaderBlob != nullptr);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
     computePipelineStateDesc.CS = {
-        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
-        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+        .pShaderBytecode = pComputeShaderBlob->GetBufferPointer(),
+        .BytecodeLength = pComputeShaderBlob->GetBufferSize(),
     };
     computePipelineStateDesc.pRootSignature = rootSignature.Get();
     HRESULT hr = pDxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
@@ -708,11 +712,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateUpdate
     descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -725,14 +729,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipelineManager::CreateUpdate
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
-    IDxcBlob *computerShaderBlob = nullptr;
-    computerShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/UpdateParticle.CS.hlsl", L"cs_6_0");
-    assert(computerShaderBlob != nullptr);
+    IDxcBlob *pComputeShaderBlob = nullptr;
+    pComputeShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/UpdateParticle.CS.hlsl", L"cs_6_0");
+    assert(pComputeShaderBlob != nullptr);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
     computePipelineStateDesc.CS = {
-        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
-        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+        .pShaderBytecode = pComputeShaderBlob->GetBufferPointer(),
+        .BytecodeLength = pComputeShaderBlob->GetBufferSize(),
     };
     computePipelineStateDesc.pRootSignature = rootSignature.Get();
     HRESULT hr = pDxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
@@ -745,14 +749,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipelineManager::CreateUpdate
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
-    IDxcBlob *computerShaderBlob = nullptr;
-    computerShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/UpdateParticleLite.CS.hlsl", L"cs_6_0");
-    assert(computerShaderBlob != nullptr);
+    IDxcBlob *pComputeShaderBlob = nullptr;
+    pComputeShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/UpdateParticleLite.CS.hlsl", L"cs_6_0");
+    assert(pComputeShaderBlob != nullptr);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
     computePipelineStateDesc.CS = {
-        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
-        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+        .pShaderBytecode = pComputeShaderBlob->GetBufferPointer(),
+        .BytecodeLength = pComputeShaderBlob->GetBufferSize(),
     };
     computePipelineStateDesc.pRootSignature = rootSignature.Get();
     HRESULT hr = pDxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
@@ -791,11 +795,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateResetA
     descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -808,14 +812,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipelineManager::CreateResetA
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
-    IDxcBlob *computerShaderBlob = nullptr;
-    computerShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/ResetArgs.CS.hlsl", L"cs_6_0");
-    assert(computerShaderBlob != nullptr);
+    IDxcBlob *pComputeShaderBlob = nullptr;
+    pComputeShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/ResetArgs.CS.hlsl", L"cs_6_0");
+    assert(pComputeShaderBlob != nullptr);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
     computePipelineStateDesc.CS = {
-        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
-        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+        .pShaderBytecode = pComputeShaderBlob->GetBufferPointer(),
+        .BytecodeLength = pComputeShaderBlob->GetBufferSize(),
     };
     computePipelineStateDesc.pRootSignature = rootSignature.Get();
     HRESULT hr = pDxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
@@ -868,11 +872,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateCountR
     descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -885,14 +889,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ComputePipelineManager::CreateCountG
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
-    IDxcBlob *computerShaderBlob = nullptr;
-    computerShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/CountParticle.CS.hlsl", L"cs_6_0");
-    assert(computerShaderBlob != nullptr);
+    IDxcBlob *pComputeShaderBlob = nullptr;
+    pComputeShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/CountParticle.CS.hlsl", L"cs_6_0");
+    assert(pComputeShaderBlob != nullptr);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
     computePipelineStateDesc.CS = {
-        .pShaderBytecode = computerShaderBlob->GetBufferPointer(),
-        .BytecodeLength = computerShaderBlob->GetBufferSize(),
+        .pShaderBytecode = pComputeShaderBlob->GetBufferPointer(),
+        .BytecodeLength = pComputeShaderBlob->GetBufferSize(),
     };
     computePipelineStateDesc.pRootSignature = rootSignature.Get();
     HRESULT hr = pDxCommon_->GetDevice()->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));

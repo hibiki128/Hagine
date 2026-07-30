@@ -25,8 +25,8 @@ void ChargeShot::Init(const std::string objectName)
     pBulletCollider_->SetRadius(scale_);
     pBulletCollider_->SetEnabled(false);
 
-    pBulletCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
-        this->OnCollisionEnterCallback(other);
+    pBulletCollider_->SetOnCollisionEnter([this](ColliderBase *pOther) {
+        this->OnCollisionEnterCallback(pOther);
     });
 
     isAlive_ = false;
@@ -35,21 +35,21 @@ void ChargeShot::Init(const std::string objectName)
     scale_ = kInitialScale;
     velocity_ = {0, 0, 0};
     // 初期位置もリセット。
-    // chargeEmitter_ は GPU パーティクル（Spawn した実体の更新・描画はエンジンが自動で回す）。
+    // pChargeEmitter_ は GPU パーティクル（Spawn した実体の更新・描画はエンジンが自動で回す）。
     // bulletEmitter_ は別システムの CPU パーティクルなので従来どおり手動で駆動する。
-    chargeEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("chargeEmitter");
-    if (chargeEmitter_)
+    pChargeEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("chargeEmitter");
+    if (pChargeEmitter_)
     {
         // chargeEmitter テンプレートは自動発生 ON なので、Spawn 直後に原点で発生してしまう。
         // 溜め中だけ Update で SetAuto(true) にするため、まずは発生を止めておく。
-        chargeEmitter_->SetAuto(false);
+        pChargeEmitter_->SetAuto(false);
     }
     bulletEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chargeBullet");
 }
 
 void ChargeShot::Update()
 {
-    Input *input = Input::GetInstance();
+    Input *pInput = Input::GetInstance();
 
     if (isAlive_)
     {
@@ -82,8 +82,8 @@ void ChargeShot::Update()
     if (!pPlayer_->GetGamePad()->IsConnected())
     {
         // キーボード入力
-        chargeHold = input->PushKey(DIK_K);
-        chargeRelease = input->ReleaseMomentKey(DIK_K);
+        chargeHold = pInput->PushKey(DIK_K);
+        chargeRelease = pInput->ReleaseMomentKey(DIK_K);
     }
     else
     {
@@ -112,7 +112,7 @@ void ChargeShot::Update()
         // まだ溜めていない状態。
         // スキルメニュー中(LT長押しで必殺技を照準している間)は溜めを開始しない。
         // ここを分けないと、必殺技発動のYボタン押下で溜めロジックへ入り、
-        // チャージ演出(chargeEmitter_)が誤って発生してしまう
+        // チャージ演出(pChargeEmitter_)が誤って発生してしまう
         if (!isSkillMenu_ && chargeHold)
         {
             // チャージ開始判定：ボタンが押され続けている時間を計測
@@ -255,7 +255,7 @@ void ChargeShot::Update()
             }
 
             // エミッター位置も更新
-            chargeEmitter_->SetTranslate(transform_->translation_);
+            pChargeEmitter_->SetTranslate(transform_->translation_);
 
             // 溜め中(未発射)は当たり判定を持たせない
             if (pBulletCollider_)
@@ -268,7 +268,7 @@ void ChargeShot::Update()
     // チャージ溜め演出(GPUパーティクル)の発生制御。
     // 実際に溜め上げ中(未発射・最大到達前)で、かつロックされていないときだけ発生させる。
     // 発生フラグはエンジンが毎フレーム消費するので、ここでは値を与えるだけでよい。
-    chargeEmitter_->SetAuto(isCharge_ && !isFired_ && !isMaxScale_ && !isActionLocked_);
+    pChargeEmitter_->SetAuto(isCharge_ && !isFired_ && !isMaxScale_ && !isActionLocked_);
 
     // 階層的ワールド変換更新
     BaseObject::UpdateWorldTransformHierarchy();
@@ -304,9 +304,9 @@ void ChargeShot::Reset()
     transform_->translation_ = {0, 0, 0};
 
     // 溜め演出(GPUパーティクル)の新規発生を止める（既存分は自然消滅させる）。
-    if (chargeEmitter_)
+    if (pChargeEmitter_)
     {
-        chargeEmitter_->SetAuto(false);
+        pChargeEmitter_->SetAuto(false);
     }
 }
 
@@ -336,11 +336,11 @@ void ChargeShot::DrawParticle(const ViewProjection &viewProjection)
     bulletEmitter_->Draw(viewProjection); // CPU emitter
 }
 
-void ChargeShot::imgui()
+void ChargeShot::DrawImGui()
 {
 }
 
-void ChargeShot::OnCollisionEnterCallback(ColliderBase *other)
+void ChargeShot::OnCollisionEnterCallback(ColliderBase *pOther)
 {
     // 発射済みの弾のみ命中扱いにする。
     // 溜め中(未発射)の弾は当たり判定を無効化しているが、念のためここでも弾く
@@ -350,14 +350,14 @@ void ChargeShot::OnCollisionEnterCallback(ColliderBase *other)
     }
 
     // 地形メッシュに当たったら消滅させる
-    if (other->GetTag() == "Ground")
+    if (pOther->GetTag() == "Ground")
     {
         Reset();
         return;
     }
 
     // Enemyタグを持つコライダーと衝突した場合
-    if (other->GetTag() == "Enemy")
+    if (pOther->GetTag() == "Enemy")
     {
         // プレイヤーの敵が存在し、生きている場合
         if (pPlayer_ && pPlayer_->GetEnemy() && pPlayer_->GetEnemy()->GetAlive())

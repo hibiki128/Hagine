@@ -23,7 +23,7 @@ class ParticleCSEmitter
 
   public:
     /// ==============================================
-    /// public methods
+    /// public method
     /// ==============================================
 
     /// <summary>
@@ -345,9 +345,9 @@ class ParticleCSEmitter
     /// DrawSystem が1フレームに1回だけ呼ぶ。
     /// </summary>
     /// <param name="vp">このフレームのビュープロジェクション</param>
-    /// <param name="cmdList">記録先のコマンドリスト（Direct Queue）</param>
+    /// <param name="pCommandList">記録先のコマンドリスト（Direct Queue）</param>
     /// <returns>bool: 1つでもディスパッチを記録したか</returns>
-    static bool SubmitAllParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *cmdList);
+    static bool SubmitAllParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *pCommandList);
 
     // フィールド接触部分にのみ発生するモード
     // true  = enableEmitSpawn フィールドと接触しているエミッター表面にのみEmitする。
@@ -410,7 +410,7 @@ class ParticleCSEmitter
 
   private:
     /// ==============================================
-    /// private methods
+    /// private method
     /// ==============================================
 
     /// <summary>
@@ -426,8 +426,8 @@ class ParticleCSEmitter
     /// <summary>
     /// Emitのコンピュートをディスパッチする（全グループ・kEmitter PSO）。
     /// </summary>
-    /// <param name="cmdList">使用するコマンドリスト（省略時は既定）</param>
-    void EmitterDisPatch(ID3D12GraphicsCommandList *cmdList = nullptr);
+    /// <param name="pCommandList">使用するコマンドリスト（省略時は既定）</param>
+    void EmitterDisPatch(ID3D12GraphicsCommandList *pCommandList = nullptr);
 
     /// <summary>
     /// 発生源メッシュの位置と向き（CB の translate / rotation）を解決する。
@@ -455,9 +455,9 @@ class ParticleCSEmitter
     /// このエミッターの生存粒子から光源を生成するコンピュートパスを記録する。
     /// </summary>
     /// <param name="vp">ビュープロジェクション（距離カリングのカメラ位置に使う）</param>
-    /// <param name="cmdList">記録先のコマンドリスト</param>
+    /// <param name="pCommandList">記録先のコマンドリスト</param>
     /// <returns>bool: ディスパッチを記録したか</returns>
-    bool SubmitParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *cmdList);
+    bool SubmitParticleLights(const ViewProjection &vp, ID3D12GraphicsCommandList *pCommandList);
 
     /// <summary>
     /// 粒子光源の生成パラメータ用定数バッファを必要になった時点で生成する

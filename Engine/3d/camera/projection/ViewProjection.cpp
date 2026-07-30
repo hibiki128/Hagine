@@ -58,7 +58,7 @@ void ViewProjection::UpdateMatrix()
             easingTime_ = easingDuration_;
             translation_ = targetTranslation_;
             eulerRotation_ = targetEulerRotation_;
-            quateRotation_ = targetQuaternionRotation_;
+            quaternionRotation_ = targetQuaternionRotation_;
             isEasing_ = false;
         }
         else
@@ -66,7 +66,7 @@ void ViewProjection::UpdateMatrix()
             // 経過時間に基づき、イージング関数を適用して現在値を補間
             translation_ = ApplyEasing(currentEasingType_, startTranslation_, targetTranslation_, easingTime_, easingDuration_);
             eulerRotation_ = ApplyEasing(currentEasingType_, startEulerRotation_, targetEulerRotation_, easingTime_, easingDuration_);
-            quateRotation_ = ApplyEasing(currentEasingType_, startQuaternionRotation_, targetQuaternionRotation_, easingTime_, easingDuration_);
+            quaternionRotation_ = ApplyEasing(currentEasingType_, startQuaternionRotation_, targetQuaternionRotation_, easingTime_, easingDuration_);
         }
     }
 
@@ -94,7 +94,7 @@ void ViewProjection::UpdateViewMatrix()
     // クォータニオンまたはオイラー角の選択に基づいてアフィン行列を生成
     if (isUseQuaternion_)
     {
-        worldMatrix = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, quateRotation_, translation_);
+        worldMatrix = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, quaternionRotation_, translation_);
     }
     else
     {
@@ -125,13 +125,13 @@ void ViewProjection::EaseCameraMove(EasingType easeType, const std::string &json
     // (目標値は後続のLoad()処理で設定されることを想定)
     startTranslation_ = translation_;
     startEulerRotation_ = eulerRotation_;
-    startQuaternionRotation_ = quateRotation_;
+    startQuaternionRotation_ = quaternionRotation_;
 
     // JSONから目標値を読み込み
     std::unique_ptr<DataHandler> data = std::make_unique<DataHandler>("Camera", jsonName);
     targetTranslation_ = data->Load<Vector3>("translation", translation_);
     targetEulerRotation_ = data->Load<Vector3>("eulerRotation", eulerRotation_);
-    targetQuaternionRotation_ = data->Load("quateRotation", quateRotation_);
+    targetQuaternionRotation_ = data->Load("quaternionRotation", quaternionRotation_);
 
     // イージング設定
     currentEasingType_ = easeType;
@@ -187,7 +187,7 @@ void ViewProjection::ShowDebugInfo()
                 ImGui::PopStyleColor();
                 ImGui::SetNextItemWidth(-1);
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.42f, 0.66f, 0.68f, 0.12f});
-                ImGui::DragFloat4("##vpquat", &quateRotation_.x, 0.01f, -1.f, 1.f, "%.3f");
+                ImGui::DragFloat4("##vpquat", &quaternionRotation_.x, 0.01f, -1.f, 1.f, "%.3f");
                 ImGui::PopStyleColor();
 
                 float d = 180.f / std::numbers::pi_v<float>;
@@ -214,8 +214,8 @@ void ViewProjection::ShowDebugInfo()
 
                 ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
                 ImGui::Text("  Quat (ref)  %.3f  %.3f  %.3f  %.3f",
-                            quateRotation_.x, quateRotation_.y,
-                            quateRotation_.z, quateRotation_.w);
+                            quaternionRotation_.x, quaternionRotation_.y,
+                            quaternionRotation_.z, quaternionRotation_.w);
                 ImGui::PopStyleColor();
             }
 
@@ -531,7 +531,7 @@ void ViewProjection::ShowDebugInfo()
                 auto tmp = std::make_unique<DataHandler>("Camera", "TempOrigin");
                 tmp->Save("translation", Vector3{0.f, 0.f, -10.f});
                 tmp->Save("eulerRotation", Vector3{0.f, 0.f, 0.f});
-                tmp->Save("quateRotation", Quaternion::IdentityQuaternion());
+                tmp->Save("quaternionRotation", Quaternion::IdentityQuaternion());
                 EaseCameraMove(static_cast<EasingType>(easeType), "TempOrigin", dur);
             }
 
@@ -561,7 +561,7 @@ void ViewProjection::Save(std::string jsonFile)
     data->Save("nearZ", nearZ_);
     data->Save("farZ", farZ_);
     data->Save("aspectRatio", aspectRatio);
-    data->Save("quateRotation", quateRotation_);
+    data->Save("quaternionRotation", quaternionRotation_);
     ImGuiNotification::Post("カメラ設定を保存しました: " + jsonFile, {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
@@ -577,7 +577,7 @@ void ViewProjection::Load(std::string jsonFile)
     matWorld_ = data->Load("matWorld", MakeIdentity4x4());
     translation_ = data->Load<Vector3>("translation", {0.0f, 0.0f, -10.0f});
     eulerRotation_ = data->Load<Vector3>("eulerRotation", {0.0f, 0.0f, 0.0f});
-    quateRotation_ = data->Load("quateRotation", Quaternion::IdentityQuaternion());
+    quaternionRotation_ = data->Load("quaternionRotation", Quaternion::IdentityQuaternion());
     isUseQuaternion_ = data->Load("isUseQuaternion", true);
     fovAngleY_ = data->Load("fov", fovAngleY_);
     nearZ_ = data->Load("nearZ", nearZ_);

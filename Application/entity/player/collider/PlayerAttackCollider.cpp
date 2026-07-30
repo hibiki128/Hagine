@@ -12,10 +12,10 @@ namespace {
 constexpr float kSlamHorizontalRatio = 0.3f;
 } // namespace
 
-void PlayerAttackCollider::Init(Player *player, Enemy *enemy)
+void PlayerAttackCollider::Init(Player *player, Enemy *pEnemy)
 {
     pPlayer_ = player;
-    pEnemy_ = enemy;
+    pEnemy_ = pEnemy;
 
     // OBBコライダー（プレイヤーの向きに追従して前方へ判定を出す）
     pCollider_ = pPlayer_->AddOBBCollider("PlayerAttackFront");
@@ -24,8 +24,8 @@ void PlayerAttackCollider::Init(Player *player, Enemy *enemy)
     pCollider_->SetEnabled(false); // 初期は無効
 
     // 衝突開始コールバック
-    pCollider_->SetOnCollision([this](ColliderBase *other) {
-        this->OnCollision(other);
+    pCollider_->SetOnCollision([this](ColliderBase *pOther) {
+        this->OnCollision(pOther);
     });
 
     // AddOBBCollider() で登録済みのため再登録しない（二重登録防止）
@@ -121,7 +121,7 @@ void PlayerAttackCollider::Deactivate()
     }
 }
 
-void PlayerAttackCollider::OnCollision(ColliderBase *other)
+void PlayerAttackCollider::OnCollision(ColliderBase *pOther)
 {
     // アクティブでない場合・すでにこのアクティブ中にヒット済みの場合は無視
     if (!isActive_ || hasHitThisActivation_)
@@ -132,7 +132,7 @@ void PlayerAttackCollider::OnCollision(ColliderBase *other)
     {
         return;
     }
-    if (other->GetTag() != "Enemy")
+    if (pOther->GetTag() != "Enemy")
     {
         return;
     }

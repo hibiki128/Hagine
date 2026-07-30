@@ -64,7 +64,7 @@ class PlayerStateFlyMove : public PlayerBaseState
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     static constexpr float kFlyAcceleration = 30.0f;       // 飛行加速度

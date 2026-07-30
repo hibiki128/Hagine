@@ -75,16 +75,16 @@ void Player::Init(const std::string objectName)
     pPlayerWallCollider_->AddCollisionMask("EnemyWall");
     pPlayerWallCollider_->SetSize({2.75f, 1000.0f, 2.5f});
 
-    pPlayerCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
-        this->OnCollisionEnter(other);
+    pPlayerCollider_->SetOnCollisionEnter([this](ColliderBase *pOther) {
+        this->OnCollisionEnter(pOther);
     });
 
-    pPlayerCollider_->SetOnCollision([this](ColliderBase *other) {
-        this->OnCollision(other);
+    pPlayerCollider_->SetOnCollision([this](ColliderBase *pOther) {
+        this->OnCollision(pOther);
     });
 
-    pPlayerWallCollider_->SetOnCollision([this](ColliderBase *other) {
-        this->OnCollision(other);
+    pPlayerWallCollider_->SetOnCollision([this](ColliderBase *pOther) {
+        this->OnCollision(pOther);
     });
 
     states_["Idle"] = std::make_unique<PlayerStateIdle>();
@@ -115,9 +115,9 @@ void Player::Init(const std::string objectName)
 
     shake_ = std::make_unique<Shake>();
 
-    // auraEmitter_ は GPU パーティクル（Spawn した実体の更新・描画はエンジンが自動で回す）。
+    // pAuraEmitter_ は GPU パーティクル（Spawn した実体の更新・描画はエンジンが自動で回す）。
     // hitEmitter_ は別システムの CPU パーティクルなので従来どおり手動で駆動する。
-    auraEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("playerAura");
+    pAuraEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("playerAura");
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("smokeEmitter");
 
     dashEffect_ = std::make_unique<DashEffect>();
@@ -216,7 +216,7 @@ void Player::Update()
 
             // 必殺技のカメラ演出中は行動不能にする。
             // 顔アップ中は双方をロックし、発動遅延中は発動者だけをロックする（相手は回避可能）
-            const bool cameraCloseUp = FollowCamera_ && FollowCamera_->IsSkillCloseUpActive();
+            const bool cameraCloseUp = pFollowCamera_ && pFollowCamera_->IsSkillCloseUpActive();
             const bool selfSkillStaging = combat_->IsSkillStaging();
             const bool skillLocked = cameraCloseUp || selfSkillStaging;
 
@@ -325,7 +325,7 @@ void Player::Update()
 
         // 現在のFOVを滑らかに補間してカメラに適用
         currentFov_ += (targetFov_ - currentFov_) * fovLerpSpeed_ * dt_;
-        FollowCamera_->SetCameraFov(currentFov_);
+        pFollowCamera_->SetCameraFov(currentFov_);
 
         // 落下速度の制限と接地判定・位置更新
         movement_->CollisionGround();
@@ -334,11 +334,11 @@ void Player::Update()
 
         shake_->Update();
 
-        if (auraEmitter_)
+        if (pAuraEmitter_)
         {
-            auraEmitter_->SetTranslate({GetWorldPosition().x, GetWorldPosition().y + auraEmitter_->GetScale().y, GetWorldPosition().z});
-            auraEmitter_->SetRotation(-GetWorldRotation());
-            auraEmitter_->SetAuto(combat_->IsCharging());
+            pAuraEmitter_->SetTranslate({GetWorldPosition().x, GetWorldPosition().y + pAuraEmitter_->GetScale().y, GetWorldPosition().z});
+            pAuraEmitter_->SetRotation(-GetWorldRotation());
+            pAuraEmitter_->SetAuto(combat_->IsCharging());
         }
 
         if (status_->GetHP() <= 0.0f)
@@ -349,13 +349,13 @@ void Player::Update()
                 status_->StopDamageReact();
 
                 // 飛行リーンの描画回転オフセットが残っていると、死亡アニメーションの
-                // 倒れる向きが本来の向き（quateRotation_）からずれ、粒子化演出と合わなくなる
+                // 倒れる向きが本来の向き（quaternionRotation_）からずれ、粒子化演出と合わなくなる
                 ClearRenderRotationOffset();
 
                 // 空中（飛行）中の死亡でピッチが残っていると、倒れるモーションや
                 // die.obj の粒子化演出が地面と合わない。ヨーのみ残して直立へ戻す
-                Vector3 euler = transform_->quateRotation_.ToEulerAngles();
-                transform_->quateRotation_ = Quaternion::FromEulerAngles({0.0f, euler.y, 0.0f});
+                Vector3 euler = transform_->quaternionRotation_.ToEulerAngles();
+                transform_->quaternionRotation_ = Quaternion::FromEulerAngles({0.0f, euler.y, 0.0f});
 
                 // 死亡後は水平移動を止め、その場で真下に落下させる
                 movement_->GetVelocity().x = 0.0f;
@@ -445,20 +445,20 @@ void Player::ChangeState(const std::string &stateName)
     }
 }
 
-void Player::OnCollision(ColliderBase *other)
+void Player::OnCollision(ColliderBase *pOther)
 {
     Vector3 &velocity = movement_->GetVelocity();
 
     // フィールド円柱との押し戻し
-    if (other->GetTag() == "CylinderField")
+    if (pOther->GetTag() == "CylinderField")
     {
-        if (other->GetType() != ColliderType::Cylinder)
+        if (pOther->GetType() != ColliderType::Cylinder)
         {
             return;
         }
-        auto *cyl = static_cast<CylinderCollider *>(other);
+        auto *pCylinder = static_cast<CylinderCollider *>(pOther);
         Vector3 mtv;
-        if (CollisionManager::GetInstance()->CalculateDepenetrationOBBCylinder(pPlayerCollider_, cyl, mtv))
+        if (CollisionManager::GetInstance()->CalculateDepenetrationOBBCylinder(pPlayerCollider_, pCylinder, mtv))
         {
             transform_->translation_ += mtv;
             Vector3 mtvDir = mtv.Normalize();
@@ -472,13 +472,13 @@ void Player::OnCollision(ColliderBase *other)
     }
 
     // PlayerWall との押し戻し（AABB）
-    if (other->GetType() != ColliderType::AABB)
+    if (pOther->GetType() != ColliderType::AABB)
     {
         return;
     }
-    auto *otherAABB = static_cast<AABBCollider *>(other);
+    auto *pOtherAABB = static_cast<AABBCollider *>(pOther);
     Vector3 mtv;
-    if (CollisionManager::GetInstance()->CalculateDepenetration(pPlayerWallCollider_, otherAABB, mtv))
+    if (CollisionManager::GetInstance()->CalculateDepenetration(pPlayerWallCollider_, pOtherAABB, mtv))
     {
         if (mtv.Length() < 0.0001f)
         {
@@ -494,9 +494,9 @@ void Player::OnCollision(ColliderBase *other)
     }
 }
 
-void Player::OnCollisionEnter(ColliderBase *other)
+void Player::OnCollisionEnter(ColliderBase *pOther)
 {
-    if (other->GetTag() == "EnemyBullet")
+    if (pOther->GetTag() == "EnemyBullet")
     {
         hitEmitter_->SetPosition(transform_->translation_);
         hitEmitter_->UpdateOnce();
@@ -560,10 +560,10 @@ void Player::Debug()
         ImGui::EndTabBar();
     }
 
-    shake_->imgui();
+    shake_->DrawImGui();
     if (!isAlive_)
     {
-        deathStaging_->imgui();
+        deathStaging_->DrawImGui();
     }
 
     // コンボ・必殺技関連
@@ -698,13 +698,13 @@ Vector3 Player::GetForward() const { return -GetBackward(); }
 Vector3 Player::GetBackward() const
 {
     // クォータニオンから前方向ベクトルを計算（Z軸の負方向が前方向）
-    return TransformNormal(Vector3(kForwardVectorX, kForwardVectorY, kForwardVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
+    return TransformNormal(-kWorldForward, QuaternionToMatrix4x4(transform_->quaternionRotation_));
 }
 
 Vector3 Player::GetRight() const
 {
     // クォータニオンから右方向ベクトルを計算（X軸の正方向が右方向）
-    return TransformNormal(Vector3(kRightVectorX, kRightVectorY, kRightVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
+    return TransformNormal(kWorldRight, QuaternionToMatrix4x4(transform_->quaternionRotation_));
 }
 
 Vector3 Player::GetLeft() const { return -GetRight(); }
@@ -712,7 +712,7 @@ Vector3 Player::GetLeft() const { return -GetRight(); }
 Vector3 Player::GetUp() const
 {
     // クォータニオンから上方向ベクトルを計算（Y軸の正方向が上方向）
-    return TransformNormal(Vector3(kUpVectorX, kUpVectorY, kUpVectorZ), QuaternionToMatrix4x4(transform_->quateRotation_));
+    return TransformNormal(kWorldUp, QuaternionToMatrix4x4(transform_->quaternionRotation_));
 }
 
 Vector3 Player::GetDown() const { return -GetUp(); }
@@ -724,18 +724,18 @@ Vector3 Player::GetPositionLeft(float distance) const { return transform_->trans
 Vector3 Player::GetPositionAbove(float distance) const { return transform_->translation_ + GetUp() * distance; }
 Vector3 Player::GetPositionBelow(float distance) const { return transform_->translation_ + GetDown() * distance; }
 
-void Player::SetVp(ViewProjection *vp)
+void Player::SetViewProjection(ViewProjection *pViewProjection)
 {
-    pVp_ = vp;
-    shake_->Initialize(pVp_);
+    pViewProjection_ = pViewProjection;
+    shake_->Initialize(pViewProjection_);
 }
 
-void Player::SetEnemy(Enemy *enemy)
+void Player::SetEnemy(Enemy *pEnemy)
 {
-    pEnemy_ = enemy;
+    pEnemy_ = pEnemy;
     if (combat_->GetAttackCollider())
     {
-        combat_->GetAttackCollider()->SetEnemy(enemy);
+        combat_->GetAttackCollider()->SetEnemy(pEnemy);
     }
 }
 

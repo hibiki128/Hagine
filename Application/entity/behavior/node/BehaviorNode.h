@@ -54,9 +54,9 @@ class BTNode
     /// <summary>
     /// コンテキスト（敵・プレイヤー）を設定
     /// </summary>
-    /// <param name="enemy">敵オブジェクト</param>
+    /// <param name="pEnemy">敵オブジェクト</param>
     /// <param name="player">プレイヤーオブジェクト</param>
-    virtual void SetContext(Enemy *enemy, Player *player);
+    virtual void SetContext(Enemy *pEnemy, Player *player);
 
   protected:
     /// ===================================================
@@ -95,16 +95,16 @@ class ContextNode : public BTNode
     /// <summary>
     /// コンテキスト（敵・プレイヤー）を設定
     /// </summary>
-    /// <param name="enemy">敵オブジェクト</param>
+    /// <param name="pEnemy">敵オブジェクト</param>
     /// <param name="player">プレイヤーオブジェクト</param>
-    void SetContext(Enemy *enemy, Player *player) override
+    void SetContext(Enemy *pEnemy, Player *player) override
     {
-        pEnemy_ = enemy;
+        pEnemy_ = pEnemy;
         pPlayer_ = player;
     }
 
     /// ===================================================
-    /// protected variants
+    /// protected variables
     /// ===================================================
     Enemy *pEnemy_ = nullptr;   // 敵オブジェクトへのポインタ
     Player *pPlayer_ = nullptr; // プレイヤーオブジェクトへのポインタ
@@ -129,9 +129,9 @@ class CompositeNode : public BTNode
     /// <summary>
     /// コンテキストを設定
     /// </summary>
-    /// <param name="enemy">敵オブジェクト</param>
+    /// <param name="pEnemy">敵オブジェクト</param>
     /// <param name="player">プレイヤーオブジェクト</param>
-    void SetContext(Enemy *enemy, Player *player) override;
+    void SetContext(Enemy *pEnemy, Player *player) override;
 
     /// <summary>
     /// 状態をリセット
@@ -157,7 +157,7 @@ class CompositeNode : public BTNode
     void OnEnter() override;
 
     /// ===================================================
-    /// protected variants
+    /// protected variables
     /// ===================================================
     std::vector<std::shared_ptr<BTNode>> children_; // 子ノードのリスト
     int currentChildIndex_ = 0;                     // 現在実行中の子ノードのインデックス
@@ -224,7 +224,7 @@ class TimedActionNode : public ContextNode
     virtual void SetupAction() {}
 
     /// ===================================================
-    /// protected variants
+    /// protected variables
     /// ===================================================
     float minTime_;               // 最小実行時間
     float maxTime_;               // 最大実行時間
@@ -269,7 +269,7 @@ class WeightDecoratorNode : public CompositeNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     float weight_ = 1.0f; // 重みの値
 };
@@ -297,7 +297,7 @@ class RandomSelectorNode : public CompositeNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     int selectedChildIndex_ = -1; // 選択された子のインデックス
 };
@@ -397,7 +397,7 @@ class RunActionNode : public BTNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     int counter_;  // 経過フレームカウンター
     int duration_; // 実行フレーム数
@@ -443,7 +443,7 @@ class IsPlayerCloseNode : public ContextNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     float minDist_; // 判定の最小距離
     float maxDist_; // 判定の最大距離
@@ -484,7 +484,7 @@ class IsHealthLowNode : public ContextNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     float thresholdPercentage_; // HP比率の閾値
 };
@@ -518,7 +518,7 @@ class IsEnergyLowNode : public ContextNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     float thresholdPercentage_; // エネルギー比率の閾値
 };
@@ -600,7 +600,7 @@ class IsPlayerStateNode : public ContextNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     std::string stateName_; // チェックするステート名
 };
@@ -1051,7 +1051,7 @@ class EnemyShootNode : public ContextNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     float cooldown_;       // 発射後の待機時間(秒)
     float timer_ = 0.0f;   // 経過時間
@@ -1128,7 +1128,7 @@ class EnemyComboStepNode : public ContextNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     float stepDuration_;   // 1段階の実行時間(秒)
     float comboInterval_;  // コンボ間隔オーバーライド
@@ -1184,7 +1184,7 @@ class EnemyComboFullNode : public ContextNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     float stepDuration_;       // 1段あたりの実行時間(秒)
     int maxSteps_;             // 最大段数
@@ -1263,7 +1263,7 @@ class EnemyMeleeChaseComboNode : public ContextNode
     void RestoreState();
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     float maxDuration_;   // 最大継続時間(秒)
@@ -1347,7 +1347,7 @@ class EnemyBurstShootNode : public ContextNode
     void FireOneBullet();
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     enum class Phase
     {
@@ -1416,7 +1416,7 @@ class EnemyEnergyChargeNode : public ContextNode
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
     float chargeRateMultiplier_;        // チャージ速度の倍率
     float targetRatio_;                 // 目標エネルギー比率

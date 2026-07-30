@@ -32,7 +32,7 @@ class PlayerStateMove : public PlayerBaseState
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     static constexpr float kMinInitialSpeed = 2.0f;     // 最小初期速度

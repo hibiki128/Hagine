@@ -110,18 +110,18 @@ class LineRenderer
     /// GPUパーティクルのプレビュー窓など、別カメラで同じ線を再表示するために使う。
     /// RT・ビューポート・ディスクリプタヒープは呼び出し側で設定済みであること。
     /// </summary>
-    /// <param name="commandList">記録先コマンドリスト</param>
+    /// <param name="pCommandList">記録先コマンドリスト</param>
     /// <param name="viewProjCB">viewProject行列を格納した定数バッファのGPUアドレス</param>
-    void RenderWithExternalCamera(ID3D12GraphicsCommandList *commandList, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB);
+    void RenderWithExternalCamera(ID3D12GraphicsCommandList *pCommandList, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB);
 
     /// <summary>
     /// Line3d パイプラインを直接使う外部コード向けに、ルート定数（ワールド行列＋乗算色）を設定する。
     /// このパイプラインで描く前に必ず1回呼ぶ必要がある。
     /// </summary>
-    /// <param name="commandList">記録先コマンドリスト</param>
+    /// <param name="pCommandList">記録先コマンドリスト</param>
     /// <param name="world">ワールド行列</param>
     /// <param name="tint">頂点色に乗算する色</param>
-    static void SetDrawConstants(ID3D12GraphicsCommandList *commandList, const Matrix4x4 &world, const Vector4 &tint);
+    static void SetDrawConstants(ID3D12GraphicsCommandList *pCommandList, const Matrix4x4 &world, const Vector4 &tint);
 
     /// ===================================================
     /// 動的線の積み上げ
@@ -381,9 +381,9 @@ class LineRenderer
     /// <summary>
     /// 描画コマンドを記録する共通処理
     /// </summary>
-    /// <param name="commandList">記録先コマンドリスト</param>
+    /// <param name="pCommandList">記録先コマンドリスト</param>
     /// <param name="viewProjCB">ビュープロジェクション定数バッファのGPUアドレス</param>
-    void RecordDrawCommands(ID3D12GraphicsCommandList *commandList, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB);
+    void RecordDrawCommands(ID3D12GraphicsCommandList *pCommandList, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB);
 
     /// <summary>
     /// ビュープロジェクション行列から視錐台6平面を抽出する

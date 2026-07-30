@@ -11,9 +11,9 @@
 
 using namespace Hagine;
 
-void EnemyVisual::Init(Enemy *owner)
+void EnemyVisual::Init(Enemy *pOwner)
 {
-    pOwner_ = owner;
+    pOwner_ = pOwner;
 
     // ───────────────────────────────────────────
     // アニメーションコントローラへクリップを登録（プレイヤーと同一構成）
@@ -89,7 +89,6 @@ void EnemyVisual::UpdateAnimation()
     }
 
     ComboSystem &punchCombo = pOwner_->Combat().GetPunchCombo();
-    const std::vector<std::string> &comboAnimations = pOwner_->Combat().GetComboAnimations();
 
     // ──────────────────────────────────────────
     // コンボ攻撃中：段数に対応したアニメーションを再生
@@ -104,13 +103,11 @@ void EnemyVisual::UpdateAnimation()
         int comboLen = punchCombo.GetComboLength();
         int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
 
-        if (animIdx >= 0 && animIdx < static_cast<int>(comboAnimations.size()))
+        // アニメーションのパスもコンボ定義（JSON）が持つ
+        const std::string &path = punchCombo.GetAnimationPath(animIdx);
+        if (!path.empty())
         {
-            const std::string &path = comboAnimations[animIdx];
-            if (!path.empty())
-            {
-                animationController_.PlayFile(path, false, 1.0f, 0.1f);
-            }
+            animationController_.PlayFile(path, false, 1.0f, 0.1f);
         }
         return; // 攻撃中は以降の判定をスキップ
     }
@@ -151,10 +148,10 @@ void EnemyVisual::UpdateAnimation()
         // 前進／後退はプレイヤーの位置を基準に判定する
         // （GetForward はクォータニオン規約の影響で逆を指すことがあるため使わない）
         bool movingBackward = false;
-        Player *target = pOwner_->GetTarget();
-        if (target && hSpeed > kMinRotationDistance)
+        Player *pTarget = pOwner_->GetTarget();
+        if (pTarget && hSpeed > kMinRotationDistance)
         {
-            Vector3 toPlayer = target->GetWorldPosition() - pOwner_->GetWorldPosition();
+            Vector3 toPlayer = pTarget->GetWorldPosition() - pOwner_->GetWorldPosition();
             toPlayer.y = 0.0f;
             float toLen = toPlayer.Length();
             if (toLen > kMinRotationDistance)

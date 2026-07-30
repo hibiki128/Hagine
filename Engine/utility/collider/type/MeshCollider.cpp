@@ -627,15 +627,15 @@ void MeshCollider::DebugDraw(const ViewProjection &viewProjection)
     if (wireframeBatch_ == kInvalidLineBatch)
         return;
 
-    LineRenderer *line = LineRenderer::GetInstance();
+    LineRenderer *pLine = LineRenderer::GetInstance();
 
     // 画面外なら描画予約自体を省く
     const Vector3 worldCenter = Transformation(localBoundingCenter_, cachedWorld_);
-    if (!line->IsSphereVisible(worldCenter, localBoundingRadius_ * cachedScale_))
+    if (!pLine->IsSphereVisible(worldCenter, localBoundingRadius_ * cachedScale_))
         return;
 
     // 頂点は白なので tint がそのまま線の色になる（当たり判定の色変化に追従する）
-    line->SubmitBatch(wireframeBatch_, cachedWorld_, color_);
+    pLine->SubmitBatch(wireframeBatch_, cachedWorld_, color_);
 }
 
 void MeshCollider::SaveToJson()

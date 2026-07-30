@@ -38,23 +38,23 @@ bool CameraSkillCutscene::UpdateSkillCloseUp()
     // 対象の正面方向（+Z基準）。演出中も対象が照準追従で回るため毎フレーム取り直す
     const Vector3 basePos = pSkillCloseUpTarget_->GetWorldPosition();
     Matrix4x4 rotMat = QuaternionToMatrix4x4(pSkillCloseUpTarget_->GetLocalRotation());
-    Vector3 forward = TransformNormal(Vector3(kVectorZero, kVectorZero, 1.0f), rotMat);
+    Vector3 forward = TransformNormal(kWorldForward, rotMat);
 
     // 回り込みは水平面で行い、高さは顔オフセットで合わせる
-    forward.y = kVectorZero;
+    forward.y = 0.0f;
     if (forward.Length() < kEpsilon)
     {
-        forward = {kVectorZero, kVectorZero, 1.0f};
+        forward = kWorldForward;
     }
     forward = forward.Normalize();
 
-    const Vector3 facePos = basePos + Vector3(kVectorZero, closeUpFaceHeight_, kVectorZero);
+    const Vector3 facePos = basePos + Vector3(0.0f, closeUpFaceHeight_, 0.0f);
     const Vector3 goalPos = facePos + forward * closeUpDistance_;
 
     WorldTransform &wt = pOwner_->GetCameraWorldTransform();
 
     // 現在位置から目標へ指数補間で回り込む（目標が動いても滑らかに追従する）
-    float t = std::min(closeUpApproachSpeed_ * deltaTime, kMaxBlendValue);
+    float t = std::min(closeUpApproachSpeed_ * deltaTime, kEasingProgressMax);
     wt.translation_ += (goalPos - wt.translation_) * t;
 
     // 常に顔を注視する
@@ -62,19 +62,19 @@ bool CameraSkillCutscene::UpdateSkillCloseUp()
     if (look.Length() > kEpsilon)
     {
         look = look.Normalize();
-        Vector3 worldUp = {kVectorZero, kUpVectorY, kVectorZero};
+        Vector3 worldUp = kWorldUp;
 
         Vector3 right;
         if (std::abs(look.Dot(worldUp)) > kParallelThreshold)
         {
-            right = {kRightVectorX, kVectorZero, kVectorZero};
+            right = kWorldRight;
         }
         else
         {
             right = (worldUp.Cross(look)).Normalize();
         }
         Vector3 up = (look.Cross(right)).Normalize();
-        wt.quateRotation_ = Quaternion::FromMatrix(MakeRotateMatrix(right, up, look));
+        wt.quaternionRotation_ = Quaternion::FromMatrix(MakeRotateMatrix(right, up, look));
     }
 
     wt.UpdateMatrix();

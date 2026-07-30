@@ -16,7 +16,7 @@ void DebugCamera::Initialize(ViewProjection *pViewProjection)
     translation_ = pViewProjection->translation_;
     isUseQuaternion_ = pViewProjection->isUseQuaternion_;
     eulerRotation_ = pViewProjection->eulerRotation_;
-    quateRotation_ = pViewProjection->quateRotation_;
+    quaternionRotation_ = pViewProjection->quaternionRotation_;
     matRot_ = MakeIdentity4x4();
     isActive_ = false;
     lockCamera_ = false;
@@ -43,7 +43,7 @@ void DebugCamera::Update()
         {
             cameraMatrix = MakeAffineMatrix(
                 {1.0f, 1.0f, 1.0f},
-                quateRotation_,
+                quaternionRotation_,
                 translation_);
         }
         else
@@ -59,7 +59,7 @@ void DebugCamera::Update()
         pViewProjection_->matView_ = Inverse(cameraMatrix);
         pViewProjection_->translation_ = translation_;
         pViewProjection_->eulerRotation_ = eulerRotation_;
-        pViewProjection_->quateRotation_ = quateRotation_;
+        pViewProjection_->quaternionRotation_ = quaternionRotation_;
         pViewProjection_->isUseQuaternion_ = isUseQuaternion_;
 
         // 投影行列の再計算
@@ -81,7 +81,7 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
     Matrix4x4 matRot;
     if (isUseQuaternion_)
     {
-        matRot = QuaternionToMatrix4x4(quateRotation_);
+        matRot = QuaternionToMatrix4x4(quaternionRotation_);
     }
     else
     {
@@ -158,11 +158,11 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
             Quaternion yawRotation = Quaternion::FromAxisAngle({0, 1, 0}, deltaX * mouseSensitivity_);
             Quaternion pitchRotation = Quaternion::FromAxisAngle({1, 0, 0}, deltaY * mouseSensitivity_);
 
-            quateRotation_ = yawRotation * pitchRotation * quateRotation_;
-            quateRotation_ = quateRotation_.Normalize();
+            quaternionRotation_ = yawRotation * pitchRotation * quaternionRotation_;
+            quaternionRotation_ = quaternionRotation_.Normalize();
 
             // 参考用にオイラー角も更新
-            eulerRotation_ = quateRotation_.ToEulerAngles();
+            eulerRotation_ = quaternionRotation_.ToEulerAngles();
         }
         else
         {
@@ -175,7 +175,7 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
             cameraRotate.x = std::clamp(cameraRotate.x, -pi_2, pi_2);
 
             // 参考用にクォータニオンも更新
-            quateRotation_ = Quaternion::FromEulerAngles(eulerRotation_);
+            quaternionRotation_ = Quaternion::FromEulerAngles(eulerRotation_);
         }
 
         clickPosition = currentMousePos;
@@ -186,7 +186,7 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
     }
 }
 
-void DebugCamera::imgui()
+void DebugCamera::DrawImGui()
 {
 #ifdef _DEBUG
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
@@ -303,7 +303,7 @@ void DebugCamera::imgui()
             ImGui::PopStyleColor();
             ImGui::SetNextItemWidth(-1);
             ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.42f, 0.66f, 0.68f, 0.12f});
-            ImGui::DragFloat4("##camquat", &quateRotation_.x, 0.01f, -1.f, 1.f, "%.3f");
+            ImGui::DragFloat4("##camquat", &quaternionRotation_.x, 0.01f, -1.f, 1.f, "%.3f");
             ImGui::PopStyleColor();
 
             ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
@@ -331,8 +331,8 @@ void DebugCamera::imgui()
 
             ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
             ImGui::Text("  Quat (ref)  %.3f  %.3f  %.3f  %.3f",
-                        quateRotation_.x, quateRotation_.y,
-                        quateRotation_.z, quateRotation_.w);
+                        quaternionRotation_.x, quaternionRotation_.y,
+                        quaternionRotation_.z, quaternionRotation_.w);
             ImGui::PopStyleColor();
         }
 
@@ -343,7 +343,7 @@ void DebugCamera::imgui()
         if (ImGui::SmallButton("回転リセット##crrst"))
         {
             eulerRotation_ = {};
-            quateRotation_ = Quaternion::IdentityQuaternion();
+            quaternionRotation_ = Quaternion::IdentityQuaternion();
         }
 
         ImGui::Unindent(6.0f);

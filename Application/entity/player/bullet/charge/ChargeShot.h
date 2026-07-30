@@ -43,13 +43,13 @@ class ChargeShot : public Hagine::BaseObject
     /// <summary>
     /// ImGui表示
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
     /// <summary>
     /// 衝突判定時の処理
     /// </summary>
-    /// <param name="other">衝突したコライダー</param>
-    void OnCollisionEnterCallback(Hagine::ColliderBase *other);
+    /// <param name="pOther">衝突したコライダー</param>
+    void OnCollisionEnterCallback(Hagine::ColliderBase *pOther);
 
     /// <summary>
     /// 生存状態を取得
@@ -146,7 +146,7 @@ class ChargeShot : public Hagine::BaseObject
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     // 定数定義
@@ -193,7 +193,7 @@ class ChargeShot : public Hagine::BaseObject
 
     // 溜め演出（GPUパーティクル）。実体は ParticleCSSpawner が所有する借用ポインタ。
     // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
-    Hagine::ParticleCSEmitter *chargeEmitter_ = nullptr;
+    Hagine::ParticleCSEmitter *pChargeEmitter_ = nullptr;
     // 弾本体の演出（別システムの CPU パーティクル）。従来どおりこのクラスが所有・駆動する。
     std::unique_ptr<Hagine::ParticleEmitter> bulletEmitter_;
 

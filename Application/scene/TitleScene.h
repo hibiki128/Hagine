@@ -92,7 +92,7 @@ class TitleScene : public Hagine::BaseScene
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     /// タイトル進行フェーズ

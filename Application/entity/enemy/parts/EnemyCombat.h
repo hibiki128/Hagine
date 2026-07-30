@@ -34,8 +34,8 @@ class EnemyCombat
     /// <summary>
     /// 初期化（弾・コンボ・攻撃コライダー・大技演出エミッタ・ビーム判定を生成する）
     /// </summary>
-    /// <param name="owner">所有者の敵</param>
-    void Init(Enemy *owner);
+    /// <param name="pOwner">所有者の敵</param>
+    void Init(Enemy *pOwner);
 
     /// <summary>
     /// 近接コンボと前方攻撃コライダーの更新
@@ -99,7 +99,7 @@ class EnemyCombat
     /// <summary>
     /// シェイク初期化（ビュープロジェクション設定）
     /// </summary>
-    void SetVp(Hagine::ViewProjection *vp);
+    void SetViewProjection(Hagine::ViewProjection *pViewProjection);
 
     /// <summary>
     /// 被弾ヒット時のシェイクを開始する（強化弾・必殺技被弾用）
@@ -127,7 +127,6 @@ class EnemyCombat
     /// ===================================================
     EnemyAttackCollider *GetAttackCollider() { return attackCollider_.get(); }
     ComboSystem &GetPunchCombo() { return punchCombo_; }
-    const std::vector<std::string> &GetComboAnimations() const { return comboAnimations_; }
     int GetPunchComboLength() const { return punchCombo_.GetComboLength(); }
     bool IsPunchComboActive() const { return punchCombo_.IsComboActive(); }
     float GetCurrentAttackDamage() const { return currentAttackDamage_; }
@@ -158,8 +157,11 @@ class EnemyCombat
     Hagine::Vector3 GetBeamOrigin();
 
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
+
+    // コンボ定義（jsons/ComboDefinition 以下のファイル名。拡張子なし）
+    static constexpr const char *kComboDefinitionName = "EnemyPunchCombo";
 
     // 弾丸関連定数
     static constexpr float kBulletScale = 0.5f;
@@ -191,10 +193,9 @@ class EnemyCombat
     // 前方攻撃判定コライダー（PlayerAttackColliderと対称の設計）
     std::unique_ptr<EnemyAttackCollider> attackCollider_; ///< 攻撃コライダー
 
-    ComboSystem punchCombo_;                   ///< パンチコンボシステム
-    bool comboInitialized_ = false;            ///< コンボ初期化済みフラグ
-    bool isComboAttack_ = false;               ///< コンボ攻撃中フラグ
-    std::vector<std::string> comboAnimations_; ///< コンボ段ごとの本体アニメーションパス
+    ComboSystem punchCombo_;        ///< パンチコンボシステム
+    bool comboInitialized_ = false; ///< コンボ初期化済みフラグ
+    bool isComboAttack_ = false;    ///< コンボ攻撃中フラグ
 
     // コンボ攻撃パラメータ（ComboSystemのコールバックで更新）
     float currentAttackDamage_ = 10.0f;   ///< 現在の攻撃ダメージ量
@@ -212,9 +213,9 @@ class EnemyCombat
 
     // 大技演出用CSパーティクル。実体は ParticleCSSpawner が所有する借用ポインタで、
     // 更新・描画はエンジンが自動で回し、シーン遷移時にまとめて破棄される。
-    Hagine::ParticleCSEmitter *chargeAura_ = nullptr;       ///< チャージ溜めオーラ (enemyChargeAura)
-    Hagine::ParticleCSEmitter *beamMainEffect_ = nullptr;   ///< ビームメイン演出 (makan_main)
-    Hagine::ParticleCSEmitter *beamAroundEffect_ = nullptr; ///< ビームらせん演出 (makan_around)
+    Hagine::ParticleCSEmitter *pChargeAura_ = nullptr;       ///< チャージ溜めオーラ (enemyChargeAura)
+    Hagine::ParticleCSEmitter *pBeamMainEffect_ = nullptr;   ///< ビームメイン演出 (makan_main)
+    Hagine::ParticleCSEmitter *pBeamAroundEffect_ = nullptr; ///< ビームらせん演出 (makan_around)
 
     // ビーム必殺技状態
     Hagine::OBBCollider *pBeamCollider_ = nullptr; ///< ビーム判定コライダー（動的にOBBを更新）

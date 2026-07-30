@@ -17,18 +17,18 @@ void AABBCollider::DebugDraw(const ViewProjection &viewProjection)
         return;
     }
 
-    LineRenderer *line = LineRenderer::GetInstance();
+    LineRenderer *pLine = LineRenderer::GetInstance();
 
     // 画面外なら線を積まない
     const Vector3 center = (cachedAABB_.min + cachedAABB_.max) * 0.5f;
     const Vector3 extent = (cachedAABB_.max - cachedAABB_.min) * 0.5f;
     const float boundingRadius = extent.Length();
-    if (!line->IsSphereVisible(center, boundingRadius))
+    if (!pLine->IsSphereVisible(center, boundingRadius))
     {
         return;
     }
 
-    line->AddBox(cachedAABB_.min, cachedAABB_.max, color_);
+    pLine->AddBox(cachedAABB_.min, cachedAABB_.max, color_);
 }
 
 void AABBCollider::SaveToJson()

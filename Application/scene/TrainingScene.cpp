@@ -1,4 +1,5 @@
 #include "TrainingScene.h"
+#include <Application/camera/follow/FollowCameraFactory.h>
 #include "utility/scene/SceneManager.h"
 #include <Frame.h>
 #include <shadow/ShadowMap.h>
@@ -16,7 +17,7 @@ void TrainingScene::Initialize()
     debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
-    followCamera_ = std::make_unique<FollowCamera>();
+    followCamera_ = FollowCameraFactory::Create();
     ground_ = std::make_unique<Ground>();
     pSkyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
@@ -31,7 +32,7 @@ void TrainingScene::Initialize()
     /// ===================================================
     debugCamera_->Initialize(&vp_);
     player_->Init("player");
-    enemy_->Init("enemy");
+    enemy_->Init("pEnemy");
     ground_->Init("Ground");
     aroundField_->Init("Around_Field");
     followCamera_->Init();
@@ -45,19 +46,19 @@ void TrainingScene::Initialize()
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
-    player_->SetVp(&vp_);
-    enemy_->SetVp(&vp_);
+    player_->SetViewProjection(&vp_);
+    enemy_->SetViewProjection(&vp_);
     enemy_->SetTarget(player_.get());
     ground_->GetLighting() = false;
 
     /// ===================================================
     /// ポインタ共有
     /// ===================================================
-    enemy_ptr = enemy_.get();
-    player_ptr = player_.get();
+    pEnemy_ = enemy_.get();
+    pPlayer_ = player_.get();
 
-    playerUI_->Init(player_ptr);
-    enemyUI_->Init(enemy_ptr);
+    playerUI_->Init(pPlayer_);
+    enemyUI_->Init(pEnemy_);
 
     /// ===================================================
     /// オブジェクトマネージャに登録（非所有）
@@ -68,19 +69,19 @@ void TrainingScene::Initialize()
     /// ===================================================
     /// ダミー敵の設定：AI停止・常時表示・被弾のみ有効・HP0で復活
     /// ===================================================
-    enemy_ptr->SetDummy(true);
-    enemy_ptr->SetStart(true);
-    enemy_ptr->GetAlive() = true;
+    pEnemy_->SetDummy(true);
+    pEnemy_->SetStart(true);
+    pEnemy_->GetAlive() = true;
 
     /// ===================================================
     /// プレイヤーを操作可能にする
     /// ===================================================
-    player_ptr->SetStart(true);
+    pPlayer_->SetStart(true);
 
     /// ===================================================
     /// 入力表示UI
     /// ===================================================
-    inputDisplay_->Initialize(player_ptr, gamePad_.get());
+    inputDisplay_->Initialize(pPlayer_, gamePad_.get());
 
     /// ===================================================
     /// DrawSystem 登録
@@ -92,10 +93,10 @@ void TrainingScene::Initialize()
         pSkyBox_->Draw(vp);
         ground_->Draw(vp);
         aroundField_->Draw(vp);
-        player_ptr->DrawParticle(vp);
-        enemy_ptr->DrawParticle(vp);
+        pPlayer_->DrawParticle(vp);
+        pEnemy_->DrawParticle(vp);
         followCamera_->DrawFrustum();
-        enemy_ptr->DrawFrustum();
+        pEnemy_->DrawFrustum();
     });
     pDrawSystem_->Register("TrainingScene_UI", DrawLayer::PostEffect, [this](const ViewProjection &) {
         gameUI_->Draw();
@@ -131,10 +132,10 @@ void TrainingScene::Update()
     // 環境オブジェクトの更新
     ground_->Update();
     aroundField_->Update();
-    player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
+    pPlayer_->SetActiveDebugCamera(debugCamera_->GetActive());
 
     // シャドウマップをプレイヤーに追従
-    Vector3 p = player_ptr->GetWorldPosition();
+    Vector3 p = pPlayer_->GetWorldPosition();
     ShadowMap::GetInstance()->SetLightTarget({p.x, 0.0f, p.z});
 
     // 入力の更新
@@ -142,8 +143,8 @@ void TrainingScene::Update()
     gameUI_->Update();
 
     // ポーズ状態をプレイヤー・敵へ伝搬する（伝えないとポーズ中も行動し続ける）
-    player_ptr->SetPause(gameUI_->GetIsPause());
-    enemy_ptr->SetPause(gameUI_->GetIsPause());
+    pPlayer_->SetPause(gameUI_->GetIsPause());
+    pEnemy_->SetPause(gameUI_->GetIsPause());
 
     // UIの更新
     playerUI_->Update();
@@ -170,8 +171,8 @@ void TrainingScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->imgui();
-    followCamera_->imgui();
+    debugCamera_->DrawImGui();
+    followCamera_->DrawImGui();
     vp_.ShowDebugInfo();
 }
 
@@ -180,8 +181,8 @@ void TrainingScene::AddObjectSetting()
     /// ===================================================
     /// オブジェクト設定（デバッグ）
     /// ===================================================
-    player_ptr->Debug();
-    enemy_ptr->Debug();
+    pPlayer_->Debug();
+    pEnemy_->Debug();
     enemyUI_->Debug();
 }
 

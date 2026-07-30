@@ -24,10 +24,10 @@ class SkillCutscene
     /// カメラ顔アップ（closeUpDuration_）→通常カメラへ即復帰→
     /// activationDelay_ 経過後に onActivate を1回呼ぶ
     /// </summary>
-    /// <param name="performer">技の使用者（このモデルの顔にカメラが寄る）</param>
-    /// <param name="camera">演出に使うフォローカメラ（nullptr なら遅延のみ）</param>
+    /// <param name="pPerformer">技の使用者（このモデルの顔にカメラが寄る）</param>
+    /// <param name="pCamera">演出に使うフォローカメラ（nullptr なら遅延のみ）</param>
     /// <param name="onActivate">発動処理コールバック</param>
-    void Start(Hagine::BaseObject *performer, FollowCamera *camera, std::function<void()> onActivate);
+    void Start(Hagine::BaseObject *pPerformer, FollowCamera *pCamera, std::function<void()> onActivate);
 
     /// <summary>
     /// 更新処理（所有者の Update から毎フレーム呼ぶ）
@@ -60,7 +60,7 @@ class SkillCutscene
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     /// <summary>演出の進行フェーズ</summary>

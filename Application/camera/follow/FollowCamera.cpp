@@ -1,5 +1,8 @@
 #define NOMINMAX
 #include "FollowCamera.h"
+#include "parts/CameraLockOn.h"
+#include "parts/CameraRush.h"
+#include "parts/CameraSkillCutscene.h"
 #include <Frame.h>
 #include <Input.h>
 #include <Application/entity/enemy/Enemy.h>
@@ -11,11 +14,14 @@
 
 using namespace Hagine;
 
-FollowCamera::FollowCamera()
+FollowCamera::FollowCamera(std::unique_ptr<CameraLockOn> pLockOn,
+                           std::unique_ptr<CameraRush> pRush,
+                           std::unique_ptr<CameraSkillCutscene> pSkillCutscene)
+    : pLockOn_(std::move(pLockOn)),
+      pRush_(std::move(pRush)),
+      pSkillCutscene_(std::move(pSkillCutscene))
 {
-    pLockOn_ = std::make_unique<CameraLockOn>();
-    pRush_ = std::make_unique<CameraRush>();
-    pSkillCutscene_ = std::make_unique<CameraSkillCutscene>();
+    // パーツの生成は行わない（注入されたものを受け取るだけ）
 }
 
 FollowCamera::~FollowCamera()
@@ -131,8 +137,7 @@ void FollowCamera::Move()
         // ゲームパッドによる手動回転
         if (pPlayer)
         {
-            const float stickSensitivity = 0.05f;
-            yaw_ += pGamePad->GetRightStickX() * stickSensitivity;
+            yaw_ += pGamePad->GetRightStickX() * kStickYawSensitivity;
         }
     }
 }
@@ -156,11 +161,11 @@ Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *p
         Vector3 forward = {std::sin(yaw_) * std::cos(pitch),
                            std::sin(pitch),
                            std::cos(yaw_) * std::cos(pitch)};
-        Vector3 right = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
+        Vector3 right = {std::cos(yaw_), 0.0f, -std::sin(yaw_)};
         Vector3 up = (forward.Cross(right)).Normalize();
 
         Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
-        worldTransform_.quateRotation_ = Quaternion::FromMatrix(rotMatrix);
+        worldTransform_.quaternionRotation_ = Quaternion::FromMatrix(rotMatrix);
 
         // 各種オフセットの反映
         cameraPos = targetPos - forward * std::abs(cameraOffset_.z);
@@ -173,9 +178,9 @@ Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *p
         cameraPos.x = targetPos.x + std::sin(yaw_) * cameraOffset_.z;
         cameraPos.z = targetPos.z + std::cos(yaw_) * cameraOffset_.z;
         cameraPos.y = targetPos.y + cameraOffset_.y;
-        worldTransform_.quateRotation_ = Quaternion::FromEulerAngles({kVectorZero, -yaw_, kVectorZero});
+        worldTransform_.quaternionRotation_ = Quaternion::FromEulerAngles({0.0f, -yaw_, 0.0f});
 
-        Vector3 right = {std::cos(yaw_), kVectorZero, -std::sin(yaw_)};
+        Vector3 right = {std::cos(yaw_), 0.0f, -std::sin(yaw_)};
         cameraPos += right * pLockOn_->GetShoulderOffsetX();
     }
 
@@ -186,7 +191,7 @@ void FollowCamera::ApplyToViewProjection()
 {
     viewProjection_.translation_ = worldTransform_.translation_;
     viewProjection_.isUseQuaternion_ = true;
-    viewProjection_.quateRotation_ = worldTransform_.quateRotation_;
+    viewProjection_.quaternionRotation_ = worldTransform_.quaternionRotation_;
     viewProjection_.UpdateMatrix();
 }
 
@@ -212,14 +217,14 @@ void FollowCamera::ResolveCameraCollision()
 void FollowCamera::ResolveFieldCollision(Vector3 &cameraPos)
 {
     // ─── AroundField 円柱境界の内側へクランプ ───
-    const CylinderCollider *field = AroundField::GetFieldCollider();
-    if (!field)
+    const CylinderCollider *pField = AroundField::GetFieldCollider();
+    if (!pField)
     {
         return;
     }
 
-    const Vector3 center = field->GetCenterPosition();
-    const float maxRadius = field->GetRadius() - kFieldClampMargin;
+    const Vector3 center = pField->GetCenterPosition();
+    const float maxRadius = pField->GetRadius() - kFieldClampMargin;
 
     Vector3 horizontal = {cameraPos.x - center.x, 0.0f, cameraPos.z - center.z};
     float dist = horizontal.Length();
@@ -230,7 +235,7 @@ void FollowCamera::ResolveFieldCollision(Vector3 &cameraPos)
         cameraPos.z = center.z + horizontal.z * scale;
     }
 
-    const float halfHeight = field->GetHeight() * 0.5f;
+    const float halfHeight = pField->GetHeight() * 0.5f;
     cameraPos.y = std::clamp(cameraPos.y,
                              center.y - halfHeight + kFieldClampMargin,
                              center.y + halfHeight - kFieldClampMargin);
@@ -239,8 +244,8 @@ void FollowCamera::ResolveFieldCollision(Vector3 &cameraPos)
 void FollowCamera::ResolveTerrainCollision(Vector3 &cameraPos)
 {
     // ─── 地形メッシュとの遮蔽・めり込み解消 ───
-    MeshCollider *terrain = Ground::GetTerrainCollider();
-    if (!terrain)
+    MeshCollider *pTerrain = Ground::GetTerrainCollider();
+    if (!pTerrain)
     {
         return;
     }
@@ -257,7 +262,7 @@ void FollowCamera::ResolveTerrainCollision(Vector3 &cameraPos)
         Vector3 dir = toCamera / distance;
         float hitDistance = 0.0f;
         Vector3 hitNormal;
-        if (terrain->Raycast(pivot, dir, distance, hitDistance, hitNormal))
+        if (pTerrain->Raycast(pivot, dir, distance, hitDistance, hitNormal))
         {
             float clamped = (std::max)(hitDistance - kCameraCollisionMargin, kCameraMinDistance);
             cameraPos = pivot + dir * clamped;
@@ -272,7 +277,82 @@ void FollowCamera::ResolveTerrainCollision(Vector3 &cameraPos)
     }
 }
 
-void FollowCamera::imgui()
+/// ===================================================
+/// パーツへの委譲（ファサードの窓口）
+/// ヘッダーではパーツを前方宣言のみに留めるため、実体はここで定義する
+/// ===================================================
+
+void FollowCamera::DrawFrustum()
+{
+    pLockOn_->DrawFrustum();
+}
+
+void FollowCamera::UpdateFrustumLockOn()
+{
+    pLockOn_->UpdateFrustumLockOn();
+}
+
+void FollowCamera::DrawLockOnFrustum(LineRenderer *pLineRenderer) const
+{
+    pLockOn_->DrawLockOnFrustum(pLineRenderer);
+}
+
+void FollowCamera::StartSkillCloseUp(BaseObject *pPerformer)
+{
+    pSkillCutscene_->StartSkillCloseUp(pPerformer);
+}
+
+void FollowCamera::EndSkillCloseUp()
+{
+    pSkillCutscene_->EndSkillCloseUp();
+}
+
+bool FollowCamera::IsSkillCloseUpActive() const
+{
+    return pSkillCutscene_->IsSkillCloseUpActive();
+}
+
+float FollowCamera::GetLockOnRange() const
+{
+    return pLockOn_->GetLockOnRange();
+}
+
+float FollowCamera::GetLockOnHalfFovH() const
+{
+    return pLockOn_->GetLockOnHalfFovH();
+}
+
+float FollowCamera::GetLockOnHalfFovV() const
+{
+    return pLockOn_->GetLockOnHalfFovV();
+}
+
+bool FollowCamera::GetDrawLockOnFrustumDebug() const
+{
+    return pLockOn_->GetDrawLockOnFrustumDebug();
+}
+
+void FollowCamera::SetLockOnRange(float range)
+{
+    pLockOn_->SetLockOnRange(range);
+}
+
+void FollowCamera::SetLockOnHalfFovH(float radian)
+{
+    pLockOn_->SetLockOnHalfFovH(radian);
+}
+
+void FollowCamera::SetLockOnHalfFovV(float radian)
+{
+    pLockOn_->SetLockOnHalfFovV(radian);
+}
+
+void FollowCamera::SetDrawLockOnFrustumDebug(bool isDraw)
+{
+    pLockOn_->SetDrawLockOnFrustumDebug(isDraw);
+}
+
+void FollowCamera::DrawImGui()
 {
 #ifdef USE_IMGUI
     ImGui::Begin("FollowCamera");

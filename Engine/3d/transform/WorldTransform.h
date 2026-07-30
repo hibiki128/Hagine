@@ -23,7 +23,7 @@ class WorldTransform
     // ローカル回転（オイラー角用）
     Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};
     // ローカル回転（クォータニオン）
-    Quaternion quateRotation_ = Quaternion::IdentityQuaternion();
+    Quaternion quaternionRotation_ = Quaternion::IdentityQuaternion();
     // ローカル座標
     Vector3 translation_ = {0.0f, 0.0f, 0.0f};
 
@@ -95,7 +95,7 @@ class WorldTransform
 
     // ローカル座標の取得
     Vector3 GetLocalPosition() const { return translation_; }
-    Quaternion GetLocalRotation() const { return quateRotation_; }
+    Quaternion GetLocalRotation() const { return quaternionRotation_; }
     Vector3 GetLocalScale() const { return scale_; }
 
     // ワールド座標の取得（位置、回転、スケール）

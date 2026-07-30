@@ -79,9 +79,9 @@ void DeferredRenderer::CreateResources(uint32_t width, uint32_t height)
     tileCountX_ = (width_ + kTileSize - 1) / kTileSize;
     tileCountY_ = (height_ + kTileSize - 1) / kTileSize;
 
-    ID3D12Device *device = pDxCommon_->GetDevice().Get();
+    ID3D12Device *pDevice = pDxCommon_->GetDevice().Get();
     D3D12_CPU_DESCRIPTOR_HANDLE rtvStart = pDxCommon_->GetRTVDescriptorHeap()->GetCPUDescriptorHandleForHeapStart();
-    const UINT rtvSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    const UINT rtvSize = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     for (uint32_t i = 0; i < kGBufferCount; ++i)
     {
@@ -102,7 +102,7 @@ void DeferredRenderer::CreateResources(uint32_t width, uint32_t height)
         rtvDesc.Format = kGBufferFormats[i];
         rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
         target.rtvHandle.ptr = rtvStart.ptr + static_cast<SIZE_T>(kGBufferRtvSlot + i) * rtvSize;
-        device->CreateRenderTargetView(target.resource.Get(), &rtvDesc, target.rtvHandle);
+        pDevice->CreateRenderTargetView(target.resource.Get(), &rtvDesc, target.rtvHandle);
 
         // SRV
         pSrvManager_->CreateSRVforRenderTexture(target.srvIndex, target.resource.Get(), kGBufferFormats[i]);
@@ -171,7 +171,7 @@ void DeferredRenderer::BeginGBufferPass(const ViewProjection &viewProjection)
     EnsureResolution();
     UpdateConstants(viewProjection);
 
-    ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();
+    ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
 
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[kGBufferCount]{};
     for (uint32_t i = 0; i < kGBufferCount; ++i)
@@ -182,17 +182,17 @@ void DeferredRenderer::BeginGBufferPass(const ViewProjection &viewProjection)
 
     // 深度は PreRenderTexture 側で既にクリア済み。ここでは G-Buffer だけを消す
     const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = pDxCommon_->GetDSVCPUDescriptorHandle(0);
-    commandList->OMSetRenderTargets(kGBufferCount, rtvHandles, false, &dsvHandle);
+    pCommandList->OMSetRenderTargets(kGBufferCount, rtvHandles, false, &dsvHandle);
     for (uint32_t i = 0; i < kGBufferCount; ++i)
     {
-        commandList->ClearRenderTargetView(rtvHandles[i], kGBufferClearColors[i], 0, nullptr);
+        pCommandList->ClearRenderTargetView(rtvHandles[i], kGBufferClearColors[i], 0, nullptr);
     }
 
     // 背景合成(Blit)でビューポートが変わっている可能性があるので設定し直す
     const D3D12_VIEWPORT viewport = pDxCommon_->GetRenderViewport();
     const D3D12_RECT scissorRect = pDxCommon_->GetRenderScissorRect();
-    commandList->RSSetViewports(1, &viewport);
-    commandList->RSSetScissorRects(1, &scissorRect);
+    pCommandList->RSSetViewports(1, &viewport);
+    pCommandList->RSSetScissorRects(1, &scissorRect);
 
     gBufferPassActive_ = true;
 }
@@ -222,7 +222,7 @@ void DeferredRenderer::CullLights()
         return;
     }
 
-    ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();
+    ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
     pSrvManager_->SetDescriptorHeap();
 
     if (tileLightState_ != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
@@ -233,16 +233,16 @@ void DeferredRenderer::CullLights()
 
     // Direct Queue 上で実行する（G-Buffer の深度に依存するため非同期にはしない）
     ComputePipelineManager::GetInstance()->DrawCommonSetting(
-        ComputePipelineType::LightCulling, BlendMode::Normal, ShaderMode::None, commandList);
+        ComputePipelineType::LightCulling, BlendMode::Normal, ShaderMode::None, pCommandList);
 
-    commandList->SetComputeRootConstantBufferView(0, constantBuffer_->GetGPUVirtualAddress());
-    commandList->SetComputeRootDescriptorTable(1, pSrvManager_->GetGPUDescriptorHandle(pDxCommon_->GetDepthSrvIndex()));
-    commandList->SetComputeRootShaderResourceView(2, LightGroup::GetInstance()->GetPointLightBufferAddress());
-    commandList->SetComputeRootDescriptorTable(3, pSrvManager_->GetGPUDescriptorHandle(tileLightUavIndex_));
+    pCommandList->SetComputeRootConstantBufferView(0, constantBuffer_->GetGPUVirtualAddress());
+    pCommandList->SetComputeRootDescriptorTable(1, pSrvManager_->GetGPUDescriptorHandle(pDxCommon_->GetDepthSrvIndex()));
+    pCommandList->SetComputeRootShaderResourceView(2, LightGroup::GetInstance()->GetPointLightBufferAddress());
+    pCommandList->SetComputeRootDescriptorTable(3, pSrvManager_->GetGPUDescriptorHandle(tileLightUavIndex_));
     // 粒子光源を含む総数はGPU側のカウンタしか知らないので、CSにそれを読ませる
-    commandList->SetComputeRootShaderResourceView(4, LightGroup::GetInstance()->GetLightCounterAddress());
+    pCommandList->SetComputeRootShaderResourceView(4, LightGroup::GetInstance()->GetLightCounterAddress());
 
-    commandList->Dispatch(tileCountX_, tileCountY_, 1);
+    pCommandList->Dispatch(tileCountX_, tileCountY_, 1);
 
     // ライティングパスが SRV として読むので遷移させる
     pDxCommon_->BarrierTransition(tileLightBuffer_.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
@@ -257,27 +257,27 @@ void DeferredRenderer::RenderLighting()
         return;
     }
 
-    ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();
+    ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
 
     // オフスクリーンRTだけをバインドする（深度はSRVとして読むので深度書き込みなし）
     const D3D12_CPU_DESCRIPTOR_HANDLE offScreenRtv = pDxCommon_->GetRTVCPUDescriptorHandle(2);
-    commandList->OMSetRenderTargets(1, &offScreenRtv, false, nullptr);
+    pCommandList->OMSetRenderTargets(1, &offScreenRtv, false, nullptr);
 
     // 背景合成(Blit)などでビューポートが変わっている可能性があるので設定し直す
     const D3D12_VIEWPORT viewport = pDxCommon_->GetRenderViewport();
     const D3D12_RECT scissorRect = pDxCommon_->GetRenderScissorRect();
-    commandList->RSSetViewports(1, &viewport);
-    commandList->RSSetScissorRects(1, &scissorRect);
+    pCommandList->RSSetViewports(1, &viewport);
+    pCommandList->RSSetScissorRects(1, &scissorRect);
 
     pPsoManager_->DrawCommonSetting(PipelineType::DeferredLighting);
 
     LightGroup *lightGroup = LightGroup::GetInstance();
     ShadowMap *shadowMap = ShadowMap::GetInstance();
 
-    commandList->SetGraphicsRootConstantBufferView(0, constantBuffer_->GetGPUVirtualAddress());
-    commandList->SetGraphicsRootConstantBufferView(1, lightGroup->GetDirectionalLightAddress());
-    commandList->SetGraphicsRootConstantBufferView(2, lightGroup->GetSpotLightsAddress());
-    commandList->SetGraphicsRootConstantBufferView(3, shadowMap->GetShadowDataGpuAddress());
+    pCommandList->SetGraphicsRootConstantBufferView(0, constantBuffer_->GetGPUVirtualAddress());
+    pCommandList->SetGraphicsRootConstantBufferView(1, lightGroup->GetDirectionalLightAddress());
+    pCommandList->SetGraphicsRootConstantBufferView(2, lightGroup->GetSpotLightsAddress());
+    pCommandList->SetGraphicsRootConstantBufferView(3, shadowMap->GetShadowDataGpuAddress());
 
     pSrvManager_->SetGraphicsRootDescriptorTable(4, gBuffers_[0].srvIndex);
     pSrvManager_->SetGraphicsRootDescriptorTable(5, gBuffers_[1].srvIndex);
@@ -286,11 +286,11 @@ void DeferredRenderer::RenderLighting()
     pSrvManager_->SetGraphicsRootDescriptorTable(8, shadowMap->GetShadowSrvIndex());
     pSrvManager_->SetGraphicsRootDescriptorTable(9, SkyBox::GetInstance()->GetTextureIndex());
 
-    commandList->SetGraphicsRootShaderResourceView(10, lightGroup->GetPointLightBufferAddress());
-    commandList->SetGraphicsRootShaderResourceView(11, tileLightBuffer_->GetGPUVirtualAddress());
+    pCommandList->SetGraphicsRootShaderResourceView(10, lightGroup->GetPointLightBufferAddress());
+    pCommandList->SetGraphicsRootShaderResourceView(11, tileLightBuffer_->GetGPUVirtualAddress());
 
     // 全画面三角形（頂点バッファ不要）
-    commandList->DrawInstanced(3, 1, 0, 0);
+    pCommandList->DrawInstanced(3, 1, 0, 0);
 }
 
 void DeferredRenderer::BeginForwardPass()
@@ -306,15 +306,15 @@ void DeferredRenderer::BeginForwardPass()
                                   D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
                                   D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-    ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();
+    ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
     const D3D12_CPU_DESCRIPTOR_HANDLE offScreenRtv = pDxCommon_->GetRTVCPUDescriptorHandle(2);
     const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = pDxCommon_->GetDSVCPUDescriptorHandle(0);
-    commandList->OMSetRenderTargets(1, &offScreenRtv, false, &dsvHandle);
+    pCommandList->OMSetRenderTargets(1, &offScreenRtv, false, &dsvHandle);
 
     const D3D12_VIEWPORT viewport = pDxCommon_->GetRenderViewport();
     const D3D12_RECT scissorRect = pDxCommon_->GetRenderScissorRect();
-    commandList->RSSetViewports(1, &viewport);
-    commandList->RSSetScissorRects(1, &scissorRect);
+    pCommandList->RSSetViewports(1, &viewport);
+    pCommandList->RSSetScissorRects(1, &scissorRect);
 }
 
 void DeferredRenderer::DrawImGui()

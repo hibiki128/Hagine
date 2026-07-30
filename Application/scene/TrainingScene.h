@@ -97,6 +97,6 @@ class TrainingScene : public Hagine::BaseScene
     std::unique_ptr<Hagine::GamePad> gamePad_;     // ゲームパッド
 
     Hagine::SkyBox *pSkyBox_ = nullptr; // スカイボックス
-    Enemy *enemy_ptr = nullptr;        // ダミー敵のポインタ（非所有）
-    Player *player_ptr = nullptr;      // プレイヤーのポインタ（非所有）
+    Enemy *pEnemy_ = nullptr;        // ダミー敵のポインタ（非所有）
+    Player *pPlayer_ = nullptr;      // プレイヤーのポインタ（非所有）
 };

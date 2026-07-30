@@ -8,10 +8,10 @@ using namespace Hagine;
 void PlayerStateRush::Enter(Player &player)
 {
     // ロックオン中の敵への突撃経路を計算
-    Enemy *enemy = player.GetEnemy();
-    if (enemy && player.GetIsLockOn())
+    Enemy *pEnemy = player.GetEnemy();
+    if (pEnemy && player.GetIsLockOn())
     {
-        targetPosition_ = enemy->GetPositionBehind(distance_);
+        targetPosition_ = pEnemy->GetPositionBehind(distance_);
         startPosition_ = player.GetTransform().translation_;
 
         CalculateArcPath(startPosition_, targetPosition_, player);
@@ -119,8 +119,8 @@ Quaternion PlayerStateRush::LookRotation(const Vector3 &forward, const Vector3 &
 
 void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &targetPos, Player &player)
 {
-    Enemy *enemy = player.GetEnemy();
-    Vector3 enemyPos = enemy->GetTransform().translation_;
+    Enemy *pEnemy = player.GetEnemy();
+    Vector3 enemyPos = pEnemy->GetTransform().translation_;
 
     Vector3 toTarget = targetPos - startPos;
     float distance = toTarget.Length();
@@ -128,9 +128,9 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
     Vector3 midPoint = (startPos + targetPos) * kMidPointFactor;
 
     // 敵の座標系を取得
-    Vector3 enemyRight = enemy->GetRight();
-    Vector3 enemyUp = enemy->GetUp();
-    Vector3 enemyForward = enemy->GetForward();
+    Vector3 enemyRight = pEnemy->GetRight();
+    Vector3 enemyUp = pEnemy->GetUp();
+    Vector3 enemyForward = pEnemy->GetForward();
 
     Vector3 playerToEnemy = (enemyPos - startPos).Normalize();
 
@@ -140,10 +140,10 @@ void PlayerStateRush::CalculateArcPath(const Vector3 &startPos, const Vector3 &t
     float arcHeight = distance * kArcHeightFactor;
     float sideOffset = distance * kSideOffsetFactor;
 
-    Vector3 controlDirection = Vector3(kVectorZero, kVectorZero, kVectorZero);
+    Vector3 controlDirection = kVector3Zero;
 
     // 横方向のオフセット（敵の左右に応じて調整）
-    controlDirection += enemyRight * (rightDot > kVectorZero ? -sideOffset : sideOffset);
+    controlDirection += enemyRight * (rightDot > 0.0f ? -sideOffset : sideOffset);
 
     // 高さ方向のオフセット（上下の位置関係に応じて調整）
     if (upDot > kUpDotHighThreshold)
@@ -241,14 +241,14 @@ Vector3 PlayerStateRush::CalculateMovementDirection(float progress, Player &play
 
 void PlayerStateRush::UpdateRotation(Player &player)
 {
-    if (rushDirection_.Length() > kVectorZero)
+    if (rushDirection_.Length() > 0.0f)
     {
         Vector3 forward = rushDirection_;
-        Vector3 up = {kVectorZero, kUpVectorY, kVectorZero};
+        Vector3 up = kWorldUp;
 
         Quaternion targetRotation = LookRotation(forward, up);
         player.GetWorldRotation() = Slerp(
-            player.GetTransform().quateRotation_,
+            player.GetTransform().quaternionRotation_,
             targetRotation,
             rotationSpeed_ * player.GetDt());
     }

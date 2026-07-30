@@ -25,7 +25,7 @@ class ParticleEditor
 {
   private:
     /// ===================================================
-    /// private method / variants
+    /// private method / variables
     /// ===================================================
 
     /// <summary>

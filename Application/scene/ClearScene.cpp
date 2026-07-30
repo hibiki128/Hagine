@@ -53,9 +53,9 @@ void ClearScene::Initialize()
     // モデルのみ差し替える（コライダー・親子関係は再読込しない）
     if (isGameOver_)
     {
-        if (BaseObject *resultChara = pObjectManager_->GetObjectByName("cube_1"))
+        if (BaseObject *pResultChara = pObjectManager_->GetObjectByName("cube_1"))
         {
-            resultChara->SetModel("animation/Player/Loser.gltf");
+            pResultChara->SetModel("animation/Player/Loser.gltf");
         }
     }
 
@@ -142,7 +142,7 @@ void ClearScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->imgui();
+    debugCamera_->DrawImGui();
     vp_.ShowDebugInfo();
 
     // 演出のデバッグ

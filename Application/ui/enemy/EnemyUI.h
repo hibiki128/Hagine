@@ -16,8 +16,8 @@ class EnemyUI
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="enemy">参照する敵のポインタ</param>
-    void Init(Enemy *enemy);
+    /// <param name="pEnemy">参照する敵のポインタ</param>
+    void Init(Enemy *pEnemy);
 
     /// <summary>
     /// 更新処理
@@ -41,7 +41,7 @@ class EnemyUI
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 定数定義

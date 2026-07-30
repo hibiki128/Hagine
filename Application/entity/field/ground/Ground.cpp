@@ -8,7 +8,7 @@ Ground::~Ground()
 {
     // 自身がアクティブ地形として登録されている場合のみ解除する
     // （シーン切替時に新旧の Ground が同時に存在しても壊れないようにする）
-    if (activeTerrain_ == terrainCollider_)
+    if (activeTerrain_ == pTerrainCollider_)
     {
         activeTerrain_ = nullptr;
     }
@@ -33,24 +33,24 @@ void Ground::Init(const std::string className)
     // （プレイヤー・敵の接地、弾の消滅、カメラの遮蔽判定に使う）
     // 保存済みJSONから既に復元されている場合はそれを再利用する
     // （終了時の自動保存→起動時の復元で毎回コライダーが増殖するのを防ぐ）
-    for (auto &collider : GetColliders())
+    for (auto &pCollider : GetColliders())
     {
-        if (collider && collider->GetType() == ColliderType::Mesh)
+        if (pCollider && pCollider->GetType() == ColliderType::Mesh)
         {
-            terrainCollider_ = static_cast<MeshCollider *>(collider.get());
+            pTerrainCollider_ = static_cast<MeshCollider *>(pCollider.get());
             break;
         }
     }
-    if (!terrainCollider_)
+    if (!pTerrainCollider_)
     {
-        terrainCollider_ = AddMeshCollider("Ground_Mesh");
+        pTerrainCollider_ = AddMeshCollider("Ground_Mesh");
     }
-    terrainCollider_->SetTag("Ground");
+    pTerrainCollider_->SetTag("Ground");
 
     // JSON復元されたコライダーは行列確定前に構築されているため、
     // ここでワールド行列キャッシュを最新化してから問い合わせに使う
-    terrainCollider_->UpdateWorldTransform();
-    activeTerrain_ = terrainCollider_;
+    pTerrainCollider_->UpdateWorldTransform();
+    activeTerrain_ = pTerrainCollider_;
 
     BaseObjectManager::GetInstance()->RegisterExternal(this);
 }

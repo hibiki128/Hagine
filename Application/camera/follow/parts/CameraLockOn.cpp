@@ -18,13 +18,13 @@ void CameraLockOn::Init(FollowCamera *pOwner)
     pOwner_ = pOwner;
 
     // 肩オフセットの初期化
-    shoulderOffsetTarget_ = {kVectorZero, kVectorZero, kVectorZero};
-    shoulderOffsetCurrent_ = {kVectorZero, kVectorZero, kVectorZero};
+    shoulderOffsetTarget_ = kVector3Zero;
+    shoulderOffsetCurrent_ = kVector3Zero;
     wasLockedOn_ = false;
     isResettingShoulderOffset_ = false;
-    shoulderResetTimer_ = kTimerReset;
-    shoulderLerpTimer_ = kTimerReset;
-    shoulderLerpStartValue_ = kTimerReset;
+    shoulderResetTimer_ = 0.0f;
+    shoulderLerpTimer_ = 0.0f;
+    shoulderLerpStartValue_ = 0.0f;
 
     // 高さオフセットの初期化
     lockOnHeightOffsetCurrent_ = lockOnGroundedHeight_;
@@ -37,9 +37,9 @@ void CameraLockOn::UpdateLockOnTransition(bool isCurrentlyLockedOn)
     {
         // ロックオン解除：肩オフセットを中央へ戻す演出を開始
         isResettingShoulderOffset_ = true;
-        shoulderResetTimer_ = kTimerReset;
+        shoulderResetTimer_ = 0.0f;
         shoulderOffsetStart_ = shoulderOffsetCurrent_;
-        shoulderOffsetTarget_ = {kVectorZero, kVectorZero, kVectorZero};
+        shoulderOffsetTarget_ = kVector3Zero;
     }
     else if (!wasLockedOn_ && isCurrentlyLockedOn)
     {
@@ -57,7 +57,7 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *pPlayer, const Vector3 
 
     // 敵方向へヨー角を更新し、その向きに対する横方向速度を求める
     float yaw = UpdateYawTowardEnemy(targetPos, enemyPos);
-    Vector3 cameraRightDir = {std::cos(yaw), kVectorZero, -std::sin(yaw)};
+    Vector3 cameraRightDir = {std::cos(yaw), 0.0f, -std::sin(yaw)};
     float lateralVelocity = velocity.x * cameraRightDir.x + velocity.z * cameraRightDir.z;
 
     // 移動入力があるときだけ横方向に応じて肩オフセットを切り替える
@@ -73,7 +73,7 @@ void CameraLockOn::UpdateLockOnShoulderAndHeight(Player *pPlayer, const Vector3 
 float CameraLockOn::UpdateYawTowardEnemy(const Vector3 &targetPos, const Vector3 &enemyPos)
 {
     Vector3 toEnemyDir = enemyPos - targetPos;
-    Vector3 toEnemyDirXZ = {toEnemyDir.x, kVectorZero, toEnemyDir.z};
+    Vector3 toEnemyDirXZ = {toEnemyDir.x, 0.0f, toEnemyDir.z};
     float lengthXZ = toEnemyDirXZ.Length();
 
     float yaw = pOwner_->GetYaw();
@@ -113,7 +113,7 @@ void CameraLockOn::UpdateShoulderOffsetTarget(float lateralVelocity)
 
     if (std::abs(newTarget - shoulderOffsetTarget_.x) > kShoulderTargetThreshold)
     {
-        shoulderLerpTimer_ = kTimerReset;
+        shoulderLerpTimer_ = 0.0f;
         shoulderLerpStartValue_ = shoulderOffsetCurrent_.x;
     }
 
@@ -150,10 +150,10 @@ void CameraLockOn::UpdateShoulderOffset()
     {
         // 解除時の戻り演出
         shoulderResetTimer_ += Frame::DeltaTime();
-        float t = std::min(shoulderResetTimer_ / shoulderResetDuration_, kMaxBlendValue);
-        shoulderOffsetCurrent_ = ApplyEasing(shoulderResetEasingType_, shoulderOffsetStart_, shoulderOffsetTarget_, t, kEasingMaxValue);
+        float t = std::min(shoulderResetTimer_ / shoulderResetDuration_, kEasingProgressMax);
+        shoulderOffsetCurrent_ = ApplyEasing(shoulderResetEasingType_, shoulderOffsetStart_, shoulderOffsetTarget_, t, kEasingProgressMax);
 
-        if (t >= kMaxBlendValue)
+        if (t >= kEasingProgressMax)
         {
             isResettingShoulderOffset_ = false;
         }
@@ -171,8 +171,8 @@ void CameraLockOn::UpdateShoulderOffset()
         }
         else
         {
-            float t = std::min(lerpSpeed, kMaxBlendValue);
-            shoulderOffsetCurrent_.x += diff * ApplyEasing(shoulderEasingType_, kVectorZero, kEasingMaxValue, t, kEasingMaxValue);
+            float t = std::min(lerpSpeed, kEasingProgressMax);
+            shoulderOffsetCurrent_.x += diff * ApplyEasing(shoulderEasingType_, 0.0f, kEasingProgressMax, t, kEasingProgressMax);
         }
     }
 }
@@ -191,14 +191,14 @@ bool CameraLockOn::IsPointInLockOnFrustum(const Vector3 &point) const
     }
 
     // カメラのローカル座標系を取得
-    Matrix4x4 rotMat = QuaternionToMatrix4x4(worldTransform.quateRotation_);
+    Matrix4x4 rotMat = QuaternionToMatrix4x4(worldTransform.quaternionRotation_);
     const Vector3 forward = {rotMat.m[2][0], rotMat.m[2][1], rotMat.m[2][2]};
     const Vector3 right = {rotMat.m[0][0], rotMat.m[0][1], rotMat.m[0][2]};
     const Vector3 up = {rotMat.m[1][0], rotMat.m[1][1], rotMat.m[1][2]};
 
     // 前方判定（カメラの背面にあれば除外）
     float dotF = toTarget.Dot(forward);
-    if (dotF <= kVectorZero)
+    if (dotF <= 0.0f)
     {
         return false;
     }
@@ -270,7 +270,7 @@ void CameraLockOn::DrawLockOnFrustum(LineRenderer *pLineRenderer) const
     const Vector3 origin = worldTransform.translation_;
 
     // カメラのローカル軸情報を取得
-    Matrix4x4 rotMat = QuaternionToMatrix4x4(worldTransform.quateRotation_);
+    Matrix4x4 rotMat = QuaternionToMatrix4x4(worldTransform.quaternionRotation_);
     const Vector3 forward = {rotMat.m[2][0], rotMat.m[2][1], rotMat.m[2][2]};
     const Vector3 right = {rotMat.m[0][0], rotMat.m[0][1], rotMat.m[0][2]};
     const Vector3 up = {rotMat.m[1][0], rotMat.m[1][1], rotMat.m[1][2]};

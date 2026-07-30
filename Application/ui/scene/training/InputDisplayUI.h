@@ -26,8 +26,8 @@ class InputDisplayUI
     /// 初期化。グリフ・ラベルの文字画像とスプライトプールを生成する。
     /// </summary>
     /// <param name="player">近接攻撃名の取得・入力デバイス判定に使用</param>
-    /// <param name="gamePad">入力検出に使うゲームパッド（シーン側で毎フレーム更新済みのもの）</param>
-    void Initialize(Player *player, Hagine::GamePad *gamePad);
+    /// <param name="pGamePad">入力検出に使うゲームパッド（シーン側で毎フレーム更新済みのもの）</param>
+    void Initialize(Player *player, Hagine::GamePad *pGamePad);
 
     /// <summary>更新（入力検出＋履歴アニメーション）</summary>
     void Update();
@@ -80,7 +80,7 @@ class InputDisplayUI
     void RegisterButton(const std::string &key, const std::string &texturePath, float size);
 
     /// <summary>プールのスプライトにテクスチャ・サイズ・位置・アルファを設定して描画する</summary>
-    void BindAndDraw(Hagine::Sprite *sprite, const std::string &path,
+    void BindAndDraw(Hagine::Sprite *pSprite, const std::string &path,
                      Hagine::Vector2 size, Hagine::Vector2 pos, float alpha);
 
     bool HasGlyph(const std::string &key) const { return glyphs_.count(key) != 0; }

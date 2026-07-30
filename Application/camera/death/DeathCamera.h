@@ -4,6 +4,8 @@
 
 /// <summary>
 /// プレイヤー死亡時のカメラ演出を行うクラス
+/// 「イージング進捗の計算」「トランスフォームの補間」「ビューへの反映」「注視回転の算出」を
+/// それぞれ独立したメソッドに分けている
 /// </summary>
 class DeathCamera
 {
@@ -25,14 +27,14 @@ class DeathCamera
     /// <summary>
     /// イージング演出の開始
     /// </summary>
-    /// <param name="currentVp">現在のViewProjection</param>
+    /// <param name="currentViewProjection">現在のViewProjection</param>
     /// <param name="targetPosition">プレイヤーの位置</param>
-    void StartEasing(const Hagine::ViewProjection &currentVp, const Hagine::Vector3 &targetPosition);
+    void StartEasing(const Hagine::ViewProjection &currentViewProjection, const Hagine::Vector3 &targetPosition);
 
     /// <summary>
     /// デバッグ用のImGui表示
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
     /// ===================================================
     /// Getter
@@ -41,8 +43,8 @@ class DeathCamera
     /// <summary>
     /// ビュープロジェクションを取得
     /// </summary>
-    /// <returns>ViewProjection&: ビュープロジェクション参照</returns>
-    Hagine::ViewProjection &GetViewProjection() { return vp_; }
+    /// <returns>ViewProjection&amp;: ビュープロジェクション参照</returns>
+    Hagine::ViewProjection &GetViewProjection() { return viewProjection_; }
 
     /// <summary>
     /// イージング完了フラグを取得
@@ -58,29 +60,52 @@ class DeathCamera
 
   private:
     /// ===================================================
+    /// private method
+    /// ===================================================
+
+    /// <summary>
+    /// タイマーを進め、0〜1に収めたイージング進捗を返す
+    /// </summary>
+    /// <returns>float: イージング進捗（0.0〜1.0）</returns>
+    float AdvanceEasingProgress();
+
+    /// <summary>
+    /// 進捗に応じて位置・回転を補間し、ワールドトランスフォームへ適用する
+    /// </summary>
+    /// <param name="progress">イージング進捗（0.0〜1.0）</param>
+    void ApplyEasedTransform(float progress);
+
+    /// <summary>
+    /// ワールドトランスフォームの内容をビュープロジェクションへ反映する
+    /// </summary>
+    void ApplyToViewProjection();
+
+    /// <summary>
+    /// 指定位置から注視点を向く回転を算出する
+    /// </summary>
+    /// <param name="eyePosition">カメラの位置</param>
+    /// <param name="lookAtPosition">注視点</param>
+    /// <returns>Quaternion: 注視点を向く回転</returns>
+    static Hagine::Quaternion CalcLookAtRotation(const Hagine::Vector3 &eyePosition,
+                                                const Hagine::Vector3 &lookAtPosition);
+
+    /// ===================================================
     /// private variables
     /// ===================================================
 
     // カメラ設定
-    static constexpr float kFarZ = 1100.0f; // 描画距離の遠面
+    static constexpr float kFarZ = 1100.0f; ///< 描画距離の遠面
 
-    // イージング設定
-    static constexpr float kHalfwayRatio = 0.5f;       // 中間地点の割合
-    static constexpr float kEasingEndThreshold = 1.0f; // イージング終了しきい値
-    static constexpr float kEasingMaxValue = 1.0f;     // イージングの最大値
-    static constexpr float kTimerReset = 0.0f;         // タイマーリセット値
+    // イージング進捗（0.0で開始、1.0で完了）
+    static constexpr float kEasingStart = 0.0f;    ///< 進捗の下限（開始）
+    static constexpr float kEasingComplete = 1.0f; ///< 進捗の上限（完了）
+    static constexpr float kHalfwayRatio = 0.5f;   ///< 中間地点と判定する進捗の割合
 
-    // ベクトル設定
-    static constexpr float kParallelThreshold = 0.999f; // 平行判定のしきい値
-    static constexpr float kUpVectorX = 0.0f;           // 上方向ベクトルのX成分
-    static constexpr float kUpVectorY = 1.0f;           // 上方向ベクトルのY成分
-    static constexpr float kUpVectorZ = 0.0f;           // 上方向ベクトルのZ成分
-    static constexpr float kRightVectorX = 1.0f;        // 右方向ベクトルのX成分
-    static constexpr float kRightVectorY = 0.0f;        // 右方向ベクトルのY成分
-    static constexpr float kRightVectorZ = 0.0f;        // 右方向ベクトルのZ成分
+    // 注視回転の算出に使うしきい値（基準ベクトルは Hagine::kWorldUp / kWorldRight を使う）
+    static constexpr float kParallelThreshold = 0.999f; ///< 上方向と平行とみなす内積のしきい値
 
-    Hagine::ViewProjection vp_; ///< ビュープロジェクション
-    Hagine::WorldTransform wt_; ///< ワールドトランスフォーム
+    Hagine::ViewProjection viewProjection_; ///< ビュープロジェクション
+    Hagine::WorldTransform worldTransform_; ///< ワールドトランスフォーム
 
     bool isEasing_ = false;       ///< イージング中フラグ
     bool isComplete_ = false;     ///< 完了フラグ

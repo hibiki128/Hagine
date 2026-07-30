@@ -76,7 +76,7 @@ void Model::Update()
     {
         pSkin_->UpdateInputVertices(modelData_);
 
-        ID3D12GraphicsCommandList *commandList = pModelCommon_->GetDxCommon()->GetCommandList().Get();
+        ID3D12GraphicsCommandList *pCommandList = pModelCommon_->GetDxCommon()->GetCommandList().Get();
 
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Transition.pResource = pSkin_->GetOutputVertexResource();
@@ -88,16 +88,16 @@ void Model::Update()
             barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
             barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-            commandList->ResourceBarrier(1, &barrier);
+            pCommandList->ResourceBarrier(1, &barrier);
         }
 
-        pSkin_->ExecuteSkinning(commandList);
+        pSkin_->ExecuteSkinning(pCommandList);
 
         // UAV → VERTEX
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-        commandList->ResourceBarrier(1, &barrier);
+        pCommandList->ResourceBarrier(1, &barrier);
 
         skinOutputInVertexState_ = true;
     }
@@ -105,7 +105,7 @@ void Model::Update()
 
 void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect)
 {
-    ID3D12GraphicsCommandList *commandList = pModelCommon_->GetDxCommon()->GetCommandList().Get();
+    ID3D12GraphicsCommandList *pCommandList = pModelCommon_->GetDxCommon()->GetCommandList().Get();
 
     INT vertexOffset = 0;
 
@@ -121,14 +121,14 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
 
         // インデックスバッファ設定
         D3D12_INDEX_BUFFER_VIEW indexBufferView = currentMesh->GetIndexBufferView();
-        commandList->IASetIndexBuffer(&indexBufferView);
+        pCommandList->IASetIndexBuffer(&indexBufferView);
 
         // 頂点バッファ設定 - アニメーション有無で使用するバッファを切り替え
         if (isGltf_ && pAnimator_ && modelData_.hasAnimations && modelData_.hasBones)
         {
             // スキニング後の頂点バッファのみを使用
             D3D12_VERTEX_BUFFER_VIEW vbv = pSkin_->GetOutputVertexBufferView();
-            commandList->IASetVertexBuffers(0, 1, &vbv);
+            pCommandList->IASetVertexBuffers(0, 1, &vbv);
 
             // パレット情報をシェーダーに渡す（必要に応じて）
             pSrvManager_->SetGraphicsRootDescriptorTable(8, pSkin_->GetPaletteSrvIndex());
@@ -138,10 +138,10 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
         {
             // 元の頂点バッファを使用
             D3D12_VERTEX_BUFFER_VIEW vbv = currentMesh->GetVertexBufferView();
-            commandList->IASetVertexBuffers(0, 1, &vbv);
+            pCommandList->IASetVertexBuffers(0, 1, &vbv);
         }
 
-        commandList->SetGraphicsRootDescriptorTable(7, pSrvManager_->GetGPUDescriptorHandle(SkyBox::GetInstance()->GetTextureIndex()));
+        pCommandList->SetGraphicsRootDescriptorTable(7, pSrvManager_->GetGPUDescriptorHandle(SkyBox::GetInstance()->GetTextureIndex()));
 
         // シャドウマップ・ノーマルマップをバインド
         {
@@ -150,7 +150,7 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
             uint32_t shadowSrvSlot = isSkinned ? 9 : 8;
             uint32_t shadowDataSlot = isSkinned ? 10 : 9;
             pSrvManager_->SetGraphicsRootDescriptorTable(shadowSrvSlot, shadowMap->GetShadowSrvIndex());
-            commandList->SetGraphicsRootConstantBufferView(shadowDataSlot, shadowMap->GetShadowDataGpuAddress());
+            pCommandList->SetGraphicsRootConstantBufferView(shadowDataSlot, shadowMap->GetShadowDataGpuAddress());
 
             // ノーマルマップ SRV (t3)。未設定マテリアルでも albedo を束ねて常に有効にする
             uint32_t normalMapSlot = isSkinned ? 11 : 10;
@@ -171,37 +171,37 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
         currentMaterial->Draw(color[materialIndex].GetColor(), lighting);
 
         // 描画コール
-        commandList->DrawIndexedInstanced(
+        pCommandList->DrawIndexedInstanced(
             UINT(modelData_.meshes[meshIndex].indices.size()), 1, 0, vertexOffset, 0);
     }
 }
 
 void Model::DrawShadow()
 {
-    ID3D12GraphicsCommandList *commandList = pModelCommon_->GetDxCommon()->GetCommandList().Get();
+    ID3D12GraphicsCommandList *pCommandList = pModelCommon_->GetDxCommon()->GetCommandList().Get();
 
     for (size_t meshIndex = 0; meshIndex < meshes_.size(); ++meshIndex)
     {
         Mesh *currentMesh = meshes_[meshIndex].get();
 
         D3D12_INDEX_BUFFER_VIEW indexBufferView = currentMesh->GetIndexBufferView();
-        commandList->IASetIndexBuffer(&indexBufferView);
+        pCommandList->IASetIndexBuffer(&indexBufferView);
 
         INT vertexOffset = 0;
         if (isGltf_ && pAnimator_ && modelData_.hasAnimations && modelData_.hasBones)
         {
             D3D12_VERTEX_BUFFER_VIEW vbv = pSkin_->GetOutputVertexBufferView();
-            commandList->IASetVertexBuffers(0, 1, &vbv);
+            pCommandList->IASetVertexBuffers(0, 1, &vbv);
             vertexOffset = static_cast<INT>(pSkin_->GetMeshVertexOffset(meshIndex));
             skinOutputInVertexState_ = true;
         }
         else
         {
             D3D12_VERTEX_BUFFER_VIEW vbv = currentMesh->GetVertexBufferView();
-            commandList->IASetVertexBuffers(0, 1, &vbv);
+            pCommandList->IASetVertexBuffers(0, 1, &vbv);
         }
 
-        commandList->DrawIndexedInstanced(
+        pCommandList->DrawIndexedInstanced(
             UINT(modelData_.meshes[meshIndex].indices.size()), 1, 0, vertexOffset, 0);
     }
 }
@@ -268,10 +268,10 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
     // メッシュの処理
     for (uint32_t meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex)
     {
-        aiMesh *mesh = scene->mMeshes[meshIndex];
-        assert(mesh->HasNormals()); // 法線がないMeshは今回は非対応（これは残す）
+        aiMesh *pMesh = scene->mMeshes[meshIndex];
+        assert(pMesh->HasNormals()); // 法線がないMeshは今回は非対応（これは残す）
 
-        if (mesh->HasBones())
+        if (pMesh->HasBones())
         {
             modelData.hasBones = true;
         }
@@ -281,15 +281,15 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
         }
 
         MeshData &currentMesh = modelData.meshes[meshIndex];
-        currentMesh.vertices.resize(mesh->mNumVertices);
+        currentMesh.vertices.resize(pMesh->mNumVertices);
 
-        bool hasTexcoord = mesh->HasTextureCoords(0); // Texcoordの有無を確認
+        bool hasTexcoord = pMesh->HasTextureCoords(0); // Texcoordの有無を確認
 
         // 頂点データの処理
-        for (uint32_t vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex)
+        for (uint32_t vertexIndex = 0; vertexIndex < pMesh->mNumVertices; ++vertexIndex)
         {
-            aiVector3D &position = mesh->mVertices[vertexIndex];
-            aiVector3D &normal = mesh->mNormals[vertexIndex];
+            aiVector3D &position = pMesh->mVertices[vertexIndex];
+            aiVector3D &normal = pMesh->mNormals[vertexIndex];
 
             // 右手系→左手系変換
             currentMesh.vertices[vertexIndex].position = {-position.x, position.y, position.z, 1.0f};
@@ -297,7 +297,7 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
 
             if (hasTexcoord)
             {
-                aiVector3D &texcoord = mesh->mTextureCoords[0][vertexIndex];
+                aiVector3D &texcoord = pMesh->mTextureCoords[0][vertexIndex];
                 currentMesh.vertices[vertexIndex].texcoord = {texcoord.x, texcoord.y};
             }
             else
@@ -308,9 +308,9 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
         }
 
         // インデックスの処理
-        for (uint32_t faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex)
+        for (uint32_t faceIndex = 0; faceIndex < pMesh->mNumFaces; ++faceIndex)
         {
-            aiFace &face = mesh->mFaces[faceIndex];
+            aiFace &face = pMesh->mFaces[faceIndex];
             assert(face.mNumIndices == 3); // トライアングルのみ対応
             for (uint32_t element = 0; element < face.mNumIndices; ++element)
             {
@@ -320,9 +320,9 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
         }
 
         // スキニング情報の処理（各メッシュごとに）
-        for (uint32_t boneIndex = 0; boneIndex < mesh->mNumBones; ++boneIndex)
+        for (uint32_t boneIndex = 0; boneIndex < pMesh->mNumBones; ++boneIndex)
         {
-            aiBone *bone = mesh->mBones[boneIndex];
+            aiBone *bone = pMesh->mBones[boneIndex];
             std::string jointName = bone->mName.C_Str();
 
             // キーを "メッシュインデックス:ジョイント名" にしてメッシュごとに独立管理
@@ -359,7 +359,7 @@ ModelData Model::LoadModelFile(const std::string &directoryPath, const std::stri
         }
 
         // メッシュに関連するマテリアルインデックスを保存
-        currentMesh.materialIndex = mesh->mMaterialIndex;
+        currentMesh.materialIndex = pMesh->mMaterialIndex;
     }
 
     // マテリアル配列のサイズを事前に確保

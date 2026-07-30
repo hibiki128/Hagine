@@ -30,7 +30,7 @@ class DebugCamera
     /// <summary>
     /// ImGuiによるデバッグ表示
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
     /// <summary>
     /// カメラのアクティブ状態を取得
@@ -67,7 +67,7 @@ class DebugCamera
     ViewProjection *pViewProjection_{};                            // 対象のビュープロジェクション
     Vector2 mouse_{};                                             // 現在のマウス座標
     Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                  // オイラー角による回転
-    Quaternion quateRotation_ = Quaternion::IdentityQuaternion(); // クォータニオンによる回転
+    Quaternion quaternionRotation_ = Quaternion::IdentityQuaternion(); // クォータニオンによる回転
     Matrix4x4 rotateXYZMatrix_{};                                 // XYZ回転行列
     Matrix4x4 matRotDelta_{};                                     // 回転差分行列
     float mouseSensitivity_ = 0.003f;                             // マウスの感度

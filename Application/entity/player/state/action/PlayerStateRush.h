@@ -115,7 +115,7 @@ class PlayerStateRush : public PlayerBaseState
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     static constexpr float kMidPointFactor = 0.5f;         // 中点計算係数
@@ -130,8 +130,6 @@ class PlayerStateRush : public PlayerBaseState
     static constexpr float kTwoFactor = 2.0f;              // ベジェ曲線の2倍係数
     static constexpr float kProgressIncrement = 0.01f;     // 進捗増分
     static constexpr float kMaxProgress = 1.0f;            // 最大進捗
-    static constexpr float kUpVectorY = 1.0f;              // 上方向ベクトルY成分
-    static constexpr float kVectorZero = 0.0f;             // ベクトル成分ゼロ
 
     // 行列インデックス定数
     static constexpr int kMatrixRow0 = 0;

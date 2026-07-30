@@ -20,8 +20,8 @@ class EnemyMovement
     /// <summary>
     /// 初期化（移動パラメータの初期値設定）
     /// </summary>
-    /// <param name="owner">所有者の敵</param>
-    void Init(Enemy *owner);
+    /// <param name="pOwner">所有者の敵</param>
+    void Init(Enemy *pOwner);
 
     /// <summary>
     /// ターゲットへ向かって移動を開始する（速度イージング）
@@ -145,16 +145,8 @@ class EnemyMovement
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
-
-    // 回転・ベクトル定数
-    static constexpr float kRightVectorX = 1.0f;
-    static constexpr float kRightVectorY = 0.0f;
-    static constexpr float kRightVectorZ = 0.0f;
-    static constexpr float kUpVectorX = 0.0f;
-    static constexpr float kUpVectorY = 1.0f;
-    static constexpr float kUpVectorZ = 0.0f;
 
     // 距離・閾値定数
     static constexpr float kMinRotationDistance = 0.001f;

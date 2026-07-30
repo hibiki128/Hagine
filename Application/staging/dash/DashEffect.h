@@ -40,7 +40,7 @@ class DashEffect
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 定数定義
@@ -55,7 +55,7 @@ class DashEffect
 
     // 風切りライン。実体は ParticleCSSpawner が所有する（ここは借用ポインタ）。
     // シーン遷移時に Spawner 側でまとめて破棄されるため、明示的な後始末は不要。
-    Hagine::ParticleCSEmitter *windEmitter_ = nullptr;
+    Hagine::ParticleCSEmitter *pWindEmitter_ = nullptr;
     Hagine::Vector3 lastDir_ = {0.0f, 0.0f, 1.0f};           // 直近の進行方向
     Hagine::Vector3 baseWindScale_ = {1.0f, 1.0f, 1.0f};     // 生成時のエミッター基準スケール（空中時に戻す用）
 };

@@ -10,9 +10,9 @@
 
 using namespace Hagine;
 
-void PlayerVisual::Init(Player *owner)
+void PlayerVisual::Init(Player *pOwner)
 {
-    pOwner_ = owner;
+    pOwner_ = pOwner;
 
     // ───────────────────────────────────────────
     // アニメーションコントローラへ全クリップを登録する
@@ -94,7 +94,6 @@ void PlayerVisual::UpdateAnimation()
     }
 
     ComboSystem &punchCombo = pOwner_->Combat().GetPunchCombo();
-    const std::vector<std::string> &comboAnimations = pOwner_->Combat().GetComboAnimations();
 
     // ──────────────────────────────────────────
     // コンボ攻撃中：段数に対応したアニメーションを再生
@@ -109,16 +108,14 @@ void PlayerVisual::UpdateAnimation()
         int comboLen = punchCombo.GetComboLength();
         int animIdx = (nextIdx == 0) ? (comboLen - 1) : (nextIdx - 1);
 
-        if (animIdx >= 0 && animIdx < static_cast<int>(comboAnimations.size()))
+        // アニメーションのパスもコンボ定義（JSON）が持つ
+        const std::string &path = punchCombo.GetAnimationPath(animIdx);
+        if (!path.empty())
         {
-            const std::string &path = comboAnimations[animIdx];
-            if (!path.empty())
-            {
-                // 攻撃モーションはループ無し・短い補間でテンポよく切り替える
-                animationController_.PlayFile(path, false, 1.0f, 0.1f);
-            }
-            // else: 該当段のアニメーションが未設定（空文字）なので何もしない
+            // 攻撃モーションはループ無し・短い補間でテンポよく切り替える
+            animationController_.PlayFile(path, false, 1.0f, 0.1f);
         }
+        // 空文字の段はアニメーション未設定なので何も再生しない
         return; // 攻撃中は以降のステート判定をスキップ
     }
 
@@ -299,26 +296,26 @@ void PlayerVisual::UpdateFlyLean()
     pOwner_->SetRenderRotationOffset(flyLeanRotation_, flyLeanPivot_);
 }
 
-void PlayerVisual::Save(DataHandler *data)
+void PlayerVisual::Save(DataHandler *pData)
 {
-    data->Save("flyLeanEnabled", flyLeanEnabled_ ? 1 : 0);
-    data->Save("flyLeanMaxFwdPitchDeg", flyLeanMaxFwdPitchDeg_);
-    data->Save("flyLeanMaxBackPitchDeg", flyLeanMaxBackPitchDeg_);
-    data->Save("flyLeanMaxSideDeg", flyLeanMaxSideDeg_);
-    data->Save("flyLeanRefSpeed", flyLeanRefSpeed_);
-    data->Save("flyLeanResponse", flyLeanResponse_);
-    data->Save("flyLeanPivot", flyLeanPivot_);
+    pData->Save("flyLeanEnabled", flyLeanEnabled_ ? 1 : 0);
+    pData->Save("flyLeanMaxFwdPitchDeg", flyLeanMaxFwdPitchDeg_);
+    pData->Save("flyLeanMaxBackPitchDeg", flyLeanMaxBackPitchDeg_);
+    pData->Save("flyLeanMaxSideDeg", flyLeanMaxSideDeg_);
+    pData->Save("flyLeanRefSpeed", flyLeanRefSpeed_);
+    pData->Save("flyLeanResponse", flyLeanResponse_);
+    pData->Save("flyLeanPivot", flyLeanPivot_);
 }
 
-void PlayerVisual::Load(DataHandler *data)
+void PlayerVisual::Load(DataHandler *pData)
 {
-    flyLeanEnabled_ = data->Load<int>("flyLeanEnabled", flyLeanEnabled_ ? 1 : 0) != 0;
-    flyLeanMaxFwdPitchDeg_ = data->Load<float>("flyLeanMaxFwdPitchDeg", flyLeanMaxFwdPitchDeg_);
-    flyLeanMaxBackPitchDeg_ = data->Load<float>("flyLeanMaxBackPitchDeg", flyLeanMaxBackPitchDeg_);
-    flyLeanMaxSideDeg_ = data->Load<float>("flyLeanMaxSideDeg", flyLeanMaxSideDeg_);
-    flyLeanRefSpeed_ = data->Load<float>("flyLeanRefSpeed", flyLeanRefSpeed_);
-    flyLeanResponse_ = data->Load<float>("flyLeanResponse", flyLeanResponse_);
-    flyLeanPivot_ = data->Load<Hagine::Vector3>("flyLeanPivot", flyLeanPivot_);
+    flyLeanEnabled_ = pData->Load<int>("flyLeanEnabled", flyLeanEnabled_ ? 1 : 0) != 0;
+    flyLeanMaxFwdPitchDeg_ = pData->Load<float>("flyLeanMaxFwdPitchDeg", flyLeanMaxFwdPitchDeg_);
+    flyLeanMaxBackPitchDeg_ = pData->Load<float>("flyLeanMaxBackPitchDeg", flyLeanMaxBackPitchDeg_);
+    flyLeanMaxSideDeg_ = pData->Load<float>("flyLeanMaxSideDeg", flyLeanMaxSideDeg_);
+    flyLeanRefSpeed_ = pData->Load<float>("flyLeanRefSpeed", flyLeanRefSpeed_);
+    flyLeanResponse_ = pData->Load<float>("flyLeanResponse", flyLeanResponse_);
+    flyLeanPivot_ = pData->Load<Hagine::Vector3>("flyLeanPivot", flyLeanPivot_);
 }
 
 void PlayerVisual::DrawImGui(const std::function<void()> &onSave)
@@ -356,12 +353,12 @@ void PlayerVisual::DrawImGui(const std::function<void()> &onSave)
 
 void PlayerVisual::RegisterParams()
 {
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register("Player", "飛行リーン有効", &flyLeanEnabled_);
-    hub->Register("Player", "リーン前傾最大角(度)", &flyLeanMaxFwdPitchDeg_, {0.5f, 0.0f, 90.0f});
-    hub->Register("Player", "リーン仰け反り最大角(度)", &flyLeanMaxBackPitchDeg_, {0.5f, 0.0f, 90.0f});
-    hub->Register("Player", "リーン横ヨー最大角(度)", &flyLeanMaxSideDeg_, {0.5f, 0.0f, 90.0f});
-    hub->Register("Player", "リーン基準速度", &flyLeanRefSpeed_, {0.1f, 0.1f, 30.0f});
-    hub->Register("Player", "リーン追従速度", &flyLeanResponse_, {0.1f, 0.1f, 30.0f});
-    hub->Register("Player", "リーン回転中心", &flyLeanPivot_, {0.05f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register("Player", "飛行リーン有効", &flyLeanEnabled_);
+    pHub->Register("Player", "リーン前傾最大角(度)", &flyLeanMaxFwdPitchDeg_, {0.5f, 0.0f, 90.0f});
+    pHub->Register("Player", "リーン仰け反り最大角(度)", &flyLeanMaxBackPitchDeg_, {0.5f, 0.0f, 90.0f});
+    pHub->Register("Player", "リーン横ヨー最大角(度)", &flyLeanMaxSideDeg_, {0.5f, 0.0f, 90.0f});
+    pHub->Register("Player", "リーン基準速度", &flyLeanRefSpeed_, {0.1f, 0.1f, 30.0f});
+    pHub->Register("Player", "リーン追従速度", &flyLeanResponse_, {0.1f, 0.1f, 30.0f});
+    pHub->Register("Player", "リーン回転中心", &flyLeanPivot_, {0.05f});
 }

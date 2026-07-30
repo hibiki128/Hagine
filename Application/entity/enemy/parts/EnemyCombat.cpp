@@ -20,20 +20,20 @@ EnemyCombat::~EnemyCombat()
     GameParamHub::GetInstance()->Unregister("必殺演出(Enemy)");
 }
 
-void EnemyCombat::Init(Enemy *owner)
+void EnemyCombat::Init(Enemy *pOwner)
 {
-    pOwner_ = owner;
+    pOwner_ = pOwner;
 
     chargeShake_ = std::make_unique<Shake>();
 
     // 大技演出の GPU パーティクル。Spawn した実体の更新・描画はエンジンが自動で回すので、
     // ここでは各所で発生（SetAuto）と姿勢だけ設定する。
     // チャージ攻撃演出（enemyChargeAura: 既存の気弾チャージオーラ）
-    chargeAura_ = ParticleCSSpawner::GetInstance()->Spawn("enemyChargeAura");
+    pChargeAura_ = ParticleCSSpawner::GetInstance()->Spawn("enemyChargeAura");
     // ビームメイン演出（プレイヤーの MakanAttackSkill と同じテンプレートを流用）
-    beamMainEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_main");
+    pBeamMainEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_main");
     // ビームらせん演出
-    beamAroundEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_around");
+    pBeamAroundEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_around");
 
     // ビーム判定コライダー（初期は無効化）
     pBeamCollider_ = pOwner_->AddOBBCollider("enemy_BeamCollider");
@@ -49,20 +49,20 @@ void EnemyCombat::Init(Enemy *owner)
     // 顔アップ＋発動遅延の合計 = 発射キーフレーム（30フレーム目 ≒ 1.0秒）
     beamCutscene_.GetCloseUpDuration() = 0.6f;
     beamCutscene_.GetActivationDelay() = 0.4f;
-    pBeamCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
+    pBeamCollider_->SetOnCollisionEnter([this](ColliderBase *pOther) {
         // ビームアクティブ中かつ未ダメージ処理のとき一度だけダメージを与える
-        if (other->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && pOwner_->GetTarget())
+        if (pOther->GetTag() == "Player" && beamActive_ && !beamDamageDealt_ && pOwner_->GetTarget())
         {
-            Player *target = pOwner_->GetTarget();
+            Player *pTarget = pOwner_->GetTarget();
 
             // 必殺技被弾：ビームの進行方向（敵→プレイヤー）へ大きく吹き飛ばし、
             // そのまま地面まで落下する大スタンにする。予約はダメージ適用より先に行う
-            Vector3 blowDir = target->GetWorldPosition() - pOwner_->GetWorldPosition();
+            Vector3 blowDir = pTarget->GetWorldPosition() - pOwner_->GetWorldPosition();
             blowDir.y = 0.0f;
-            target->Status().RequestSkillBlowReaction(blowDir);
+            pTarget->Status().RequestSkillBlowReaction(blowDir);
 
             // 必殺技扱いにして、ガードされた場合はエネルギーを大きく削る
-            target->SetDamage(kBeamDamage, false, true);
+            pTarget->SetDamage(kBeamDamage, false, true);
             beamDamageDealt_ = true;
 
             // 命中したらビーム演出を終了し、パーティクルの新規発生を止める
@@ -75,25 +75,13 @@ void EnemyCombat::Init(Enemy *owner)
     attackCollider_ = std::make_unique<EnemyAttackCollider>();
     attackCollider_->Init(pOwner_);
 
-    // コンボ登録（ダメージ・ノックバックはImGuiで調整・セーブ可能）
+    // コンボ登録（段の並び・ダメージ・ノックバック・アニメーションは
+    // jsons/ComboDefinition/EnemyPunchCombo.json が持つ。ImGuiで調整して同ファイルへ保存できる）
     if (!comboInitialized_)
     {
-        punchCombo_.SetName("EnemyPunchCombo"); // DataHandlerのファイル名
-
-        // 攻撃の見た目は本体アニメーション（comboAnimations_）で再生するため、
-        // モーション再生用ターゲットは不要（nullptr）。ダメージ等のパラメータのみ指定する
-        punchCombo_
-            .Add(nullptr, "Jab", 8.0f, 2.0f, 0.25f, 0.08f)
-            .Add(nullptr, "Hook", 10.0f, 3.0f, 0.25f, 0.08f)
-            .Add(nullptr, "Cross", 10.0f, 3.0f, 0.25f, 0.08f)
-            .Add(nullptr, "Uppercut", 12.0f, 5.0f, 0.30f, 0.10f)
-            .Add(nullptr, "Overhand", 12.0f, 5.0f, 0.30f, 0.10f)
-            .Add(nullptr, "Swing", 14.0f, 6.0f, 0.30f, 0.10f)
-            .Add(nullptr, "Elbow", 16.0f, 7.0f, 0.25f, 0.06f)
-            .Add(nullptr, "Slam", 20.0f, 10.0f, 0.35f, 0.12f);
-
-        // JSONがあれば保存済みの値で上書き
-        punchCombo_.LoadAttackParams();
+        // 攻撃の見た目は本体アニメーション（定義の animationPath）で再生するため、
+        // モーション再生用ターゲットは指定しない（nullptr）
+        punchCombo_.LoadDefinition(kComboDefinitionName);
 
         // 攻撃発火時にダメージ・ノックバックを保存し、前方コライダーを有効化する
         punchCombo_.SetOnAttackFired(
@@ -127,18 +115,6 @@ void EnemyCombat::Init(Enemy *owner)
 
         comboInitialized_ = true;
     }
-
-    // コンボ段ごとの本体アニメーション（プレイヤーと同じ割り当て：パンチ4段＋キック3段＋叩きつけ）
-    comboAnimations_ = {
-        "animation/Player/Punch_1.gltf", // 1段目: Jab
-        "animation/Player/Punch_2.gltf", // 2段目: Hook
-        "animation/Player/Punch_3.gltf", // 3段目: Cross
-        "animation/Player/Punch_4.gltf", // 4段目: Uppercut
-        "animation/Player/Kick_1.gltf",  // 5段目: Overhand
-        "animation/Player/Kick_2.gltf",  // 6段目: Swing
-        "animation/Player/Kick_3.gltf",  // 7段目: Elbow
-        "animation/Player/Smash.gltf",   // 8段目: Slam
-    };
 }
 
 void EnemyCombat::ComboUpdate()
@@ -188,12 +164,12 @@ void EnemyCombat::UpdateEmitters()
 {
     Vector3 selfPos = pOwner_->GetWorldPosition();
     Quaternion selfRot = pOwner_->GetLocalRotation();
-    if (chargeAura_)
+    if (pChargeAura_)
     {
-        chargeAura_->SetTranslate(selfPos);
-        chargeAura_->SetRotation(-selfRot);
+        pChargeAura_->SetTranslate(selfPos);
+        pChargeAura_->SetRotation(-selfRot);
     }
-    // beamMainEffect_ / beamAroundEffect_ の更新・描画はエンジンが自動で回すため、
+    // pBeamMainEffect_ / pBeamAroundEffect_ の更新・描画はエンジンが自動で回すため、
     // ここでは各所で発生・姿勢を設定するだけでよい。
 }
 
@@ -216,7 +192,7 @@ void EnemyCombat::UpdateBullets()
 
 void EnemyCombat::DrawParticle(const ViewProjection &viewProjection)
 {
-    // 大技演出（chargeAura_ / beamMainEffect_ / beamAroundEffect_）は GPU パーティクルで、
+    // 大技演出（pChargeAura_ / pBeamMainEffect_ / beamAroundEffect_）は GPU パーティクルで、
     // 描画はエンジンが自動で行う。ここでは別システムの CPU パーティクルだけ描画する。
     // 前方攻撃判定コライダーのヒットエフェクト
     if (attackCollider_)
@@ -293,10 +269,10 @@ void EnemyCombat::PerformAttack()
 
 void EnemyCombat::StartChargeAura()
 {
-    if (chargeAura_)
+    if (pChargeAura_)
     {
-        chargeAura_->SetTranslate(pOwner_->GetWorldPosition());
-        chargeAura_->SetAuto(true);
+        pChargeAura_->SetTranslate(pOwner_->GetWorldPosition());
+        pChargeAura_->SetAuto(true);
     }
     if (chargeShake_)
     {
@@ -306,8 +282,8 @@ void EnemyCombat::StartChargeAura()
 
 void EnemyCombat::StopChargeAura()
 {
-    if (chargeAura_)
-        chargeAura_->SetAuto(false);
+    if (pChargeAura_)
+        pChargeAura_->SetAuto(false);
 }
 
 void EnemyCombat::FireChargeBlast()
@@ -358,10 +334,10 @@ void EnemyCombat::ActivateBeam()
     // ターゲット追従（ホーミング）を防ぐ。
     beamLockedRotation_ = pOwner_->GetLocalRotation();
 
-    if (beamMainEffect_)
-        beamMainEffect_->SetAuto(true);
-    if (beamAroundEffect_)
-        beamAroundEffect_->SetAuto(true);
+    if (pBeamMainEffect_)
+        pBeamMainEffect_->SetAuto(true);
+    if (pBeamAroundEffect_)
+        pBeamAroundEffect_->SetAuto(true);
     if (chargeShake_)
         chargeShake_->StartShake();
 }
@@ -372,10 +348,10 @@ void EnemyCombat::StartBeamStaging()
         return;
 
     // カメラはプレイヤーのフォローカメラを借りて敵の顔に寄せる
-    FollowCamera *camera = pOwner_->GetTarget() ? pOwner_->GetTarget()->GetCamera() : nullptr;
+    FollowCamera *pCamera = pOwner_->GetTarget() ? pOwner_->GetTarget()->GetCamera() : nullptr;
 
     // 演出・遅延中は照準追従を維持し、発動の瞬間の向きで固定する（以降は回避が可能になる）
-    beamCutscene_.Start(pOwner_, camera, [this] {
+    beamCutscene_.Start(pOwner_, pCamera, [this] {
         pOwner_->SetIsLockOn(false);
         StopChargeAura();
         ActivateBeam();
@@ -394,10 +370,10 @@ void EnemyCombat::DeactivateBeam()
     beamActiveTime_ = 0.0f;
     beamSpiralTime_ = 0.0f;
 
-    if (beamMainEffect_)
-        beamMainEffect_->SetAuto(false);
-    if (beamAroundEffect_)
-        beamAroundEffect_->SetAuto(false); // 新規発生を止める（既存パーティクルは自然消滅）
+    if (pBeamMainEffect_)
+        pBeamMainEffect_->SetAuto(false);
+    if (pBeamAroundEffect_)
+        pBeamAroundEffect_->SetAuto(false); // 新規発生を止める（既存パーティクルは自然消滅）
     if (pBeamCollider_)
         pBeamCollider_->SetEnabled(false); // 判定を即無効化（ダメージは止める）
 }
@@ -411,7 +387,7 @@ void EnemyCombat::UpdateBeam()
     beamActiveTime_ += dt;
 
     // 発射時の固定向きで上書きする。しないとOBBコライダーがプレイヤーを追従し続ける
-    pOwner_->GetWorldTransform()->quateRotation_ = beamLockedRotation_;
+    pOwner_->GetWorldTransform()->quaternionRotation_ = beamLockedRotation_;
 
     // ビーム長を前方に伸ばす
     beamLength_ += kBeamExtendSpeed * dt;
@@ -425,19 +401,19 @@ void EnemyCombat::UpdateBeam()
 
     // メインビームエミッタの設定（MakanAttackSkill と同じアプローチ）
     // SetScale の Z 成分でビームの長さを制御し、SetAnchorPoint でビームの起点を調整する
-    if (beamMainEffect_)
+    if (pBeamMainEffect_)
     {
-        beamMainEffect_->SetAuto(true);
-        beamMainEffect_->SetScale(Vector3(0.0f, 0.0f, beamLength_));
-        beamMainEffect_->SetAnchorPoint(Vector3(0.5f, 0.5f, 0.75f));
-        beamMainEffect_->SetTranslate(selfPos);
-        beamMainEffect_->SetRotation(selfRot);
+        pBeamMainEffect_->SetAuto(true);
+        pBeamMainEffect_->SetScale(Vector3(0.0f, 0.0f, beamLength_));
+        pBeamMainEffect_->SetAnchorPoint(Vector3(0.5f, 0.5f, 0.75f));
+        pBeamMainEffect_->SetTranslate(selfPos);
+        pBeamMainEffect_->SetRotation(selfRot);
     }
 
     // らせん状エミッタの設定（MakanAttackSkill と同じアプローチ）
-    if (beamAroundEffect_)
+    if (pBeamAroundEffect_)
     {
-        beamAroundEffect_->SetAuto(true);
+        pBeamAroundEffect_->SetAuto(true);
         beamSpiralTime_ += dt;
 
         // クォータニオンからローカル基底を計算する（+Z がプレイヤー方向）
@@ -469,8 +445,8 @@ void EnemyCombat::UpdateBeam()
                                localUp * (std::sin(angle) * beamSpiralRadius_);
 
         Vector3 emitterPos = selfPos + localForward * forwardDistance + spiralOffset;
-        beamAroundEffect_->SetTranslate(emitterPos);
-        beamAroundEffect_->SetScale(Vector3(0.3f, 0.3f, 0.3f));
+        pBeamAroundEffect_->SetTranslate(emitterPos);
+        pBeamAroundEffect_->SetScale(Vector3(0.3f, 0.3f, 0.3f));
     }
 
     // OBBコライダーをビーム形状に更新する
@@ -512,20 +488,20 @@ Vector3 EnemyCombat::GetBeamOrigin()
     return origin;
 }
 
-void EnemyCombat::SetVp(ViewProjection *vp)
+void EnemyCombat::SetViewProjection(ViewProjection *pViewProjection)
 {
-    chargeShake_->Initialize(vp, "chargehit");
+    chargeShake_->Initialize(pViewProjection, "chargehit");
 }
 
 void EnemyCombat::RegisterParams()
 {
     beamCutscene_.RegisterParams("必殺演出(Enemy)");
 
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register("Enemy", "コンボ吹き飛ばし段(0で無効)", &blowLaunchStage_, {0.1f, 0.0f, 8.0f});
-    hub->Register("Enemy", "コンボ吹き飛ばし強度", &blowLaunchKnockback_, {0.5f, 0.0f, 100.0f});
-    hub->Register("Enemy", "コンボ叩きつけ段(0で無効)", &blowFinisherStage_, {0.1f, 0.0f, 8.0f});
-    hub->Register("Enemy", "コンボ叩きつけ強度", &blowFinisherKnockback_, {0.5f, 0.0f, 100.0f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register("Enemy", "コンボ吹き飛ばし段(0で無効)", &blowLaunchStage_, {0.1f, 0.0f, 8.0f});
+    pHub->Register("Enemy", "コンボ吹き飛ばし強度", &blowLaunchKnockback_, {0.5f, 0.0f, 100.0f});
+    pHub->Register("Enemy", "コンボ叩きつけ段(0で無効)", &blowFinisherStage_, {0.1f, 0.0f, 8.0f});
+    pHub->Register("Enemy", "コンボ叩きつけ強度", &blowFinisherKnockback_, {0.5f, 0.0f, 100.0f});
 }
 
 void EnemyCombat::DrawComboImGui()

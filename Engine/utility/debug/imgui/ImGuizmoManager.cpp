@@ -146,7 +146,7 @@ void GizmoTarget::ShowImGui()
     case Type::BaseObject:
         if (baseObject)
         {
-            baseObject->ImGui();
+            baseObject->DrawImGui();
         }
         break;
 
@@ -228,21 +228,21 @@ void ImGuizmoManager::BeginFrame()
     ImGuizmo::BeginFrame();
 }
 
-void ImGuizmoManager::SetViewProjection(ViewProjection *vp)
+void ImGuizmoManager::SetViewProjection(ViewProjection *pViewProjection)
 {
-    pViewProjection_ = vp;
+    pViewProjection_ = pViewProjection;
 }
 
 // ---- AddTarget オーバーロード群 ----------------------------------------
 
 // BaseObject を登録する
-void ImGuizmoManager::AddTarget(const std::string &name, BaseObject *object, bool selectable)
+void ImGuizmoManager::AddTarget(const std::string &name, BaseObject *pObject, bool selectable)
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::BaseObject;
     target.category = GizmoCategory::Object;
     target.name = name;
-    target.baseObject = object;
+    target.baseObject = pObject;
     target.selectable = selectable;
     transformMap_[name] = target;
 
@@ -308,13 +308,13 @@ void ImGuizmoManager::AddTarget(const std::string &name,
 }
 
 // Sprite を登録する（スクリーン空間 XY のみ操作）
-void ImGuizmoManager::AddTarget(const std::string &name, Sprite *sprite, bool selectable)
+void ImGuizmoManager::AddTarget(const std::string &name, Sprite *pSprite, bool selectable)
 {
     GizmoTarget target;
     target.type = GizmoTarget::Type::Sprite2D;
     target.category = GizmoCategory::Sprite;
     target.name = name;
-    target.position2D = &sprite->GetPositionRef();
+    target.position2D = &pSprite->GetPositionRef();
     target.selectable = selectable;
     target.isScreenSpace = true;
     target.screenHitRadius = 50.0f;
@@ -361,7 +361,7 @@ std::vector<BaseObject *> ImGuizmoManager::GetSelectedTargets()
 
 // ---- imgui ------------------------------------------------------------
 
-void ImGuizmoManager::imgui()
+void ImGuizmoManager::DrawImGui()
 {
     if (!pViewProjection_)
         return;
@@ -1234,15 +1234,15 @@ void ImGuizmoManager::DrawSelectionMarker(const Vector3 &worldPosition)
     Vector3 topFront = markerPos + Vector3(-markerSize, markerSize, markerSize);
     Vector3 topBack = markerPos + Vector3(markerSize, markerSize, markerSize);
 
-    LineRenderer *line = LineRenderer::GetInstance();
-    line->AddLine(apex, topLeft, markerColor);
-    line->AddLine(apex, topRight, markerColor);
-    line->AddLine(apex, topFront, markerColor);
-    line->AddLine(apex, topBack, markerColor);
-    line->AddLine(topLeft, topRight, markerColor);
-    line->AddLine(topRight, topBack, markerColor);
-    line->AddLine(topBack, topFront, markerColor);
-    line->AddLine(topFront, topLeft, markerColor);
+    LineRenderer *pLine = LineRenderer::GetInstance();
+    pLine->AddLine(apex, topLeft, markerColor);
+    pLine->AddLine(apex, topRight, markerColor);
+    pLine->AddLine(apex, topFront, markerColor);
+    pLine->AddLine(apex, topBack, markerColor);
+    pLine->AddLine(topLeft, topRight, markerColor);
+    pLine->AddLine(topRight, topBack, markerColor);
+    pLine->AddLine(topBack, topFront, markerColor);
+    pLine->AddLine(topFront, topLeft, markerColor);
 }
 
 // ---- UpdateFilteredNames ----------------------------------------------
@@ -1376,20 +1376,20 @@ void ImGuizmoManager::TestAndDrawRayHit(const Ray &ray, const GizmoTarget &targe
     bool aabbResult = Input::RayIntersectAABBByMatrix(ray, worldMatrix, aabbHit, aabb);
     bool sphereResult = Input::RayIntersectSphereByMatrix(ray, worldMatrix, sphereHit, sphere);
 
-    LineRenderer *line = LineRenderer::GetInstance();
+    LineRenderer *pLine = LineRenderer::GetInstance();
 
     if (aabbResult)
     {
-        line->AddSphere(aabbHit.hitPoint, 0.05f, {0.0f, 1.0f, 0.0f, 1.0f}, 8);
+        pLine->AddSphere(aabbHit.hitPoint, 0.05f, {0.0f, 1.0f, 0.0f, 1.0f}, 8);
         Vector3 normalEnd = aabbHit.hitPoint + (aabbHit.hitNormal * 0.3f);
-        line->AddLine(aabbHit.hitPoint, normalEnd, {0.0f, 1.0f, 0.0f, 1.0f});
+        pLine->AddLine(aabbHit.hitPoint, normalEnd, {0.0f, 1.0f, 0.0f, 1.0f});
     }
 
     if (sphereResult)
     {
-        line->AddSphere(sphereHit.hitPoint, 0.05f, {1.0f, 0.0f, 1.0f, 1.0f}, 8);
+        pLine->AddSphere(sphereHit.hitPoint, 0.05f, {1.0f, 0.0f, 1.0f, 1.0f}, 8);
         Vector3 normalEnd = sphereHit.hitPoint + (sphereHit.hitNormal * 0.3f);
-        line->AddLine(sphereHit.hitPoint, normalEnd, {1.0f, 0.0f, 1.0f, 1.0f});
+        pLine->AddLine(sphereHit.hitPoint, normalEnd, {1.0f, 0.0f, 1.0f, 1.0f});
     }
 }
 

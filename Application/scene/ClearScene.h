@@ -75,7 +75,7 @@ class ClearScene : public Hagine::BaseScene
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     std::unique_ptr<Ground> ground_;                     // 地面

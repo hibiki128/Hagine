@@ -1151,13 +1151,13 @@ void ParticleCSFieldManager::DrawRadialLines(const ParticleField &field, const V
     // 正二十面体の頂点方向（12方向）を均一配置の代わりに球面上を均等サンプル
     const int stacks = 4;
     const int slices = 8;
-    const float PI = 3.1415926535f;
+    const float kPi = 3.1415926535f;
     for (int si = 0; si < stacks; ++si)
     {
-        float theta = PI * (si + 0.5f) / stacks; // 0 〜 π
+        float theta = kPi * (si + 0.5f) / stacks; // 0 〜 π
         for (int sj = 0; sj < slices; ++sj)
         {
-            float phi = 2.0f * PI * sj / slices;
+            float phi = 2.0f * kPi * sj / slices;
             Vector3 dir = {
                 std::sin(theta) * std::cos(phi),
                 std::cos(theta),
@@ -1227,7 +1227,7 @@ void ParticleCSFieldManager::DrawVortexArcs(const ParticleField &field, const Ve
     // 高さ方向の異なる3段に円弧を描く
     const int arcLayers = 3;
     const int arcSegments = 24;
-    const float PI = 3.1415926535f;
+    const float kPi = 3.1415926535f;
     for (int layer = 0; layer < arcLayers; ++layer)
     {
         // 各段を軸方向にオフセット（-r*0.5 〜 r*0.5）
@@ -1238,12 +1238,12 @@ void ParticleCSFieldManager::DrawVortexArcs(const ParticleField &field, const Ve
             center.z + axis.z * heightOffset,
         };
         // 段ごとに半径を変えて円錐状に見せる
-        float layerRadius = r * (0.5f + 0.5f * std::sin(PI * layer / (arcLayers - 1)));
+        float layerRadius = r * (0.5f + 0.5f * std::sin(kPi * layer / (arcLayers - 1)));
 
         for (int seg = 0; seg < arcSegments; ++seg)
         {
-            float t1 = sign * 2.0f * PI * turns * seg / arcSegments;
-            float t2 = sign * 2.0f * PI * turns * (seg + 1) / arcSegments;
+            float t1 = sign * 2.0f * kPi * turns * seg / arcSegments;
+            float t2 = sign * 2.0f * kPi * turns * (seg + 1) / arcSegments;
 
             Vector3 p1 = {
                 layerCenter.x + layerRadius * (right.x * std::cos(t1) + forward.x * std::sin(t1)),

@@ -21,16 +21,16 @@ class SkyBox;
 class BaseObject {
   public:
     /// ===================================================
-    /// public variaus
+    /// public variables
     /// ===================================================
 
-    std::unique_ptr<DataHandler> ObjectDatas_{};
+    std::unique_ptr<DataHandler> objectData_{};
     std::unique_ptr<DataHandler> AnimaDatas_{};
     virtual ~BaseObject();
 
   protected:
     /// ===================================================
-    /// protected variaus
+    /// protected variables
     /// ===================================================
 
     // モデル配列データ
@@ -82,7 +82,7 @@ class BaseObject {
     virtual void CreateModel(const std::string modelname);
     virtual void CreatePrimitiveModel(const PrimitiveType &type);
 
-    virtual void ImGui();
+    virtual void DrawImGui();
 
     SphereCollider *AddSphereCollider(const std::string &name = "");
     AABBCollider *AddAABBCollider(const std::string &name = "");
@@ -109,11 +109,11 @@ class BaseObject {
 
     void SetParent(BaseObject *parent);
 
-    void AddChild(BaseObject *child);
+    void AddChild(BaseObject *pChild);
 
     void DetachParent();
 
-    void DetachChild(BaseObject *child);
+    void DetachChild(BaseObject *pChild);
 
     BaseObject *GetParent();
 
@@ -153,7 +153,7 @@ class BaseObject {
     Object3d *GetObject3d() { return obj3d_.get(); }
     PrimitiveType GetPrimitiveType() { return type_; }
     Vector3 &GetLocalPosition() { return transform_->translation_; }
-    Quaternion &GetLocalRotation() { return transform_->quateRotation_; }
+    Quaternion &GetLocalRotation() { return transform_->quaternionRotation_; }
     Vector3 &GetLocalScale() { return transform_->scale_; }
     Vector3 GetWorldPosition();
     Quaternion GetWorldRotation();
@@ -284,14 +284,14 @@ class BaseObject {
 
     // --- 物理 ---
     /// <summary>衝突相手に対して押し出し（＋リジッドボディなら速度補正）を適用する</summary>
-    void ResolveCollisionWith(ColliderBase *self, ColliderBase *other);
+    void ResolveCollisionWith(ColliderBase *self, ColliderBase *pOther);
     /// <summary>全コライダーの OnCollision に押し出しコールバックを仕込む</summary>
     void InstallResolveCallbacks();
     /// <summary>全コライダーの OnCollision をクリアする</summary>
     void ClearResolveCallbacks();
-    /// <summary>物理パラメータを ObjectDatas_ へ保存</summary>
+    /// <summary>物理パラメータを objectData_ へ保存</summary>
     void SavePhysics();
-    /// <summary>物理パラメータを ObjectDatas_ から読み込み</summary>
+    /// <summary>物理パラメータを objectData_ から読み込み</summary>
     void LoadPhysics();
 
     bool shouldSave_ = true;

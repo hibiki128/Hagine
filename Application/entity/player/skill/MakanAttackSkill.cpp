@@ -14,15 +14,15 @@ void MakanAttackSkill::Init(const std::string objectName)
     pMakanCollider_->SetTag("Makan");
     pMakanCollider_->AddCollisionMask("Enemy");
 
-    pMakanCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
-        this->OnCollisionEnter(other);
+    pMakanCollider_->SetOnCollisionEnter([this](ColliderBase *pOther) {
+        this->OnCollisionEnter(pOther);
     });
 
     /// メインビーム（Spawn したエミッターの更新・描画はエンジンが自動で回す）
-    makanMainEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_main");
+    pMakanMainEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_main");
 
     /// らせん状エミッター
-    makanAroundEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_around");
+    pMakanAroundEffect_ = ParticleCSSpawner::GetInstance()->Spawn("makan_around");
 }
 
 void MakanAttackSkill::Update()
@@ -44,7 +44,7 @@ void MakanAttackSkill::Update()
 
     // 発射起点は手（右手ジョイント）に追従させる。向きは発動時のまま固定
     transform_->translation_ = GetBeamOrigin();
-    transform_->quateRotation_ = lockedRotation_; // 発動時の向きで固定（発動後は追従しない）
+    transform_->quaternionRotation_ = lockedRotation_; // 発動時の向きで固定（発動後は追従しない）
 
     // コライダー設定
     pMakanCollider_->SetEnabled(true);
@@ -52,19 +52,19 @@ void MakanAttackSkill::Update()
     pMakanCollider_->SetAnchorPoint(Vector3(0.5f, 0.5f, 1.0f));
 
     // メインビーム設定
-    if (makanMainEffect_)
+    if (pMakanMainEffect_)
     {
-        makanMainEffect_->SetAuto(true);
-        makanMainEffect_->SetScale(Vector3(0.0f, 0.0f, currentLength_));
-        makanMainEffect_->SetAnchorPoint(Vector3(0.5f, 0.5f, 0.75f));
-        makanMainEffect_->SetTranslate(transform_->translation_);
-        makanMainEffect_->SetRotation(lockedRotation_);
+        pMakanMainEffect_->SetAuto(true);
+        pMakanMainEffect_->SetScale(Vector3(0.0f, 0.0f, currentLength_));
+        pMakanMainEffect_->SetAnchorPoint(Vector3(0.5f, 0.5f, 0.75f));
+        pMakanMainEffect_->SetTranslate(transform_->translation_);
+        pMakanMainEffect_->SetRotation(lockedRotation_);
     }
 
     // らせん状エミッター（新しいアプローチ）
-    if (makanAroundEffect_)
+    if (pMakanAroundEffect_)
     {
-        makanAroundEffect_->SetAuto(true);
+        pMakanAroundEffect_->SetAuto(true);
         spiralTime_ += Frame::DeltaTime();
 
         // 発動時に固定した向きのローカル座標系の基底ベクトルを直接計算
@@ -107,8 +107,8 @@ void MakanAttackSkill::Update()
                              localForward * forwardDistance +
                              spiralOffset;
 
-        makanAroundEffect_->SetTranslate(emitterPos);
-        makanAroundEffect_->SetScale(Vector3(0.3f, 0.3f, 0.3f));
+        pMakanAroundEffect_->SetTranslate(emitterPos);
+        pMakanAroundEffect_->SetScale(Vector3(0.3f, 0.3f, 0.3f));
     }
 
     // 持続時間チェック
@@ -151,7 +151,7 @@ void MakanAttackSkill::Activate(WorldTransform *playerTransform)
     isActive_ = true;
     pPlayerTransform_ = playerTransform;
     // 発動の瞬間の向きをスナップショットして固定する（発動後のホーミング防止）
-    lockedRotation_ = playerTransform->quateRotation_;
+    lockedRotation_ = playerTransform->quaternionRotation_;
     currentLength_ = 0.0f;
     activeTime_ = 0.0f;
     spiralTime_ = 0.0f;
@@ -165,13 +165,13 @@ void MakanAttackSkill::Deactivate()
     spiralTime_ = 0.0f;
     pPlayerTransform_ = nullptr;
     pMakanCollider_->SetEnabled(false);
-    if (makanMainEffect_)
+    if (pMakanMainEffect_)
     {
-        makanMainEffect_->SetAuto(false);
+        pMakanMainEffect_->SetAuto(false);
     }
-    if (makanAroundEffect_)
+    if (pMakanAroundEffect_)
     {
-        makanAroundEffect_->SetAuto(false);
+        pMakanAroundEffect_->SetAuto(false);
     }
 }
 
@@ -179,9 +179,9 @@ void MakanAttackSkill::Draw(const ViewProjection &viewProjection)
 {
 }
 
-void MakanAttackSkill::OnCollisionEnter(ColliderBase *other)
+void MakanAttackSkill::OnCollisionEnter(ColliderBase *pOther)
 {
-    if (other->GetTag() == "Enemy")
+    if (pOther->GetTag() == "Enemy")
     {
         // プレイヤーの敵が存在し、生きている場合
         if (pPlayer_ && pPlayer_->GetEnemy() && pPlayer_->GetEnemy()->GetAlive())
@@ -190,14 +190,14 @@ void MakanAttackSkill::OnCollisionEnter(ColliderBase *other)
 
             // 必殺技被弾：ビームの進行方向（プレイヤー→敵）へ大きく吹き飛ばし、
             // そのまま地面まで落下する大スタンにする。予約はダメージ適用より先に行う
-            Enemy *enemy = pPlayer_->GetEnemy();
-            Vector3 blowDir = enemy->GetWorldPosition() - pPlayer_->GetWorldPosition();
+            Enemy *pEnemy = pPlayer_->GetEnemy();
+            Vector3 blowDir = pEnemy->GetWorldPosition() - pPlayer_->GetWorldPosition();
             blowDir.y = 0.0f;
-            enemy->Status().RequestSkillBlowReaction(blowDir);
+            pEnemy->Status().RequestSkillBlowReaction(blowDir);
 
             // チャージ度合いに応じたダメージを計算して適用（ガードされた場合は必殺技分のエネルギーを削る）
             float damage = 37.5f;
-            enemy->SetDamage(damage, false, true);
+            pEnemy->SetDamage(damage, false, true);
 
             // 命中したらビーム演出を終了し、パーティクルの新規発生を止める
             // （既存の粒子は寿命どおり自然に消える）。判定コライダーも即無効化される。
@@ -206,7 +206,7 @@ void MakanAttackSkill::OnCollisionEnter(ColliderBase *other)
     }
 }
 
-void MakanAttackSkill::DebugImGui()
+void MakanAttackSkill::DrawImGui()
 {
 #ifdef _DEBUG
 
@@ -233,13 +233,13 @@ void MakanAttackSkill::DebugImGui()
                         pPlayerTransform_->translation_.y,
                         pPlayerTransform_->translation_.z);
             ImGui::Text("Rotation: (%.2f, %.2f, %.2f, %.2f)",
-                        pPlayerTransform_->quateRotation_.x,
-                        pPlayerTransform_->quateRotation_.y,
-                        pPlayerTransform_->quateRotation_.z,
-                        pPlayerTransform_->quateRotation_.w);
+                        pPlayerTransform_->quaternionRotation_.x,
+                        pPlayerTransform_->quaternionRotation_.y,
+                        pPlayerTransform_->quaternionRotation_.z,
+                        pPlayerTransform_->quaternionRotation_.w);
 
             // ローカル座標系の基底ベクトル計算
-            Quaternion q = pPlayerTransform_->quateRotation_;
+            Quaternion q = pPlayerTransform_->quaternionRotation_;
             Vector3 localRight(
                 1.0f - 2.0f * (q.y * q.y + q.z * q.z),
                 2.0f * (q.x * q.y + q.w * q.z),
@@ -259,13 +259,13 @@ void MakanAttackSkill::DebugImGui()
             ImGui::Text("Up:      (%.2f, %.2f, %.2f)", localUp.x, localUp.y, localUp.z);
             ImGui::Text("Forward: (%.2f, %.2f, %.2f)", localForward.x, localForward.y, localForward.z);
 
-            if (makanAroundEffect_)
+            if (pMakanAroundEffect_)
             {
                 ImGui::Separator();
                 ImGui::Text("Spiral Emitter Position: (%.2f, %.2f, %.2f)",
-                            makanAroundEffect_->GetTranslate().x,
-                            makanAroundEffect_->GetTranslate().y,
-                            makanAroundEffect_->GetTranslate().z);
+                            pMakanAroundEffect_->GetTranslate().x,
+                            pMakanAroundEffect_->GetTranslate().y,
+                            pMakanAroundEffect_->GetTranslate().z);
             }
         }
 

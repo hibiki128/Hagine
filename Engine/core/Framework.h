@@ -84,7 +84,7 @@ class Framework
     virtual bool IsEndRequest() { return endRequest_; }
 
   protected:
-    D3DResourceLeakChecker LeakChecker_;
+    D3DResourceLeakChecker leakChecker_;
 
     // ---- Framework が所有するインスタンス（生成・寿命を管理し、必要な所へ注入する）----
     std::unique_ptr<WinApp> winApp_;

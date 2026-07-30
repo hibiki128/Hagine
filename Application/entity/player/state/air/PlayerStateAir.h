@@ -37,7 +37,7 @@ class PlayerStateAir : public PlayerBaseState
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
     static constexpr float kInitialElapsedTime = 0.0f; // 初期経過時間
     static constexpr float kMaxDeltaTime = 1.0f;       // 最大デルタタイム

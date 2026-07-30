@@ -1,14 +1,13 @@
 #pragma once
 #include <camera/projection/ViewProjection.h>
-#include <Easing.h>
-#include <Application/camera/follow/parts/CameraLockOn.h>
-#include <Application/camera/follow/parts/CameraRush.h>
-#include <Application/camera/follow/parts/CameraSkillCutscene.h>
 #include <transform/WorldTransform.h>
 #include <memory>
 #include <numbers>
 
 class Player;
+class CameraLockOn;
+class CameraRush;
+class CameraSkillCutscene;
 namespace Hagine {
 class LineRenderer;
 class BaseObject;
@@ -17,7 +16,9 @@ class BaseObject;
 /// <summary>
 /// ターゲットを追従するカメラクラス
 /// 基本追従・手動ヨー回転・行列反映を本体が担い、ロックオン（肩・高さ・視錐台）・
-/// Rush（突進）・必殺技の顔アップ演出は各パーツ（Parts/）が担当するファサード
+/// Rush（突進）・必殺技の顔アップ演出は各パーツ（parts/）が担当するファサード。
+/// パーツは外部から注入される（生成は FollowCameraFactory の責務）ため、
+/// このクラスはパーツの生成方法を知らない
 /// </summary>
 class FollowCamera
 {
@@ -27,9 +28,15 @@ class FollowCamera
     /// ===================================================
 
     /// <summary>
-    /// コンストラクタ（パーツを生成する）
+    /// コンストラクタ（パーツを外部から受け取る＝依存性の注入）
+    /// 生成は FollowCameraFactory::Create() を使うこと
     /// </summary>
-    FollowCamera();
+    /// <param name="pLockOn">ロックオンパーツ</param>
+    /// <param name="pRush">Rush（突進）カメラパーツ</param>
+    /// <param name="pSkillCutscene">必殺技の顔アップ演出パーツ</param>
+    FollowCamera(std::unique_ptr<CameraLockOn> pLockOn,
+                 std::unique_ptr<CameraRush> pRush,
+                 std::unique_ptr<CameraSkillCutscene> pSkillCutscene);
 
     /// <summary>
     /// デストラクタ
@@ -49,41 +56,41 @@ class FollowCamera
     /// <summary>
     /// デバッグ用のImGui表示
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
     /// <summary>
     /// 視錐台の描画
     /// </summary>
-    void DrawFrustum() { pLockOn_->DrawFrustum(); }
+    void DrawFrustum();
 
     /// <summary>
     /// 視錐台ロックオンの更新処理
     /// 視錐台内に敵が入った際、自動的にロックオンを試みる
     /// </summary>
-    void UpdateFrustumLockOn() { pLockOn_->UpdateFrustumLockOn(); }
+    void UpdateFrustumLockOn();
 
     /// <summary>
     /// 視錐台のデバッグ描画
     /// </summary>
     /// <param name="pLineRenderer">ライン描画クラスのポインタ</param>
-    void DrawLockOnFrustum(Hagine::LineRenderer *pLineRenderer) const { pLockOn_->DrawLockOnFrustum(pLineRenderer); }
+    void DrawLockOnFrustum(Hagine::LineRenderer *pLineRenderer) const;
 
     /// <summary>
     /// 必殺技の顔アップ演出を開始する
     /// </summary>
     /// <param name="pPerformer">技の使用者（プレイヤー/敵どちらでも可）</param>
-    void StartSkillCloseUp(Hagine::BaseObject *pPerformer) { pSkillCutscene_->StartSkillCloseUp(pPerformer); }
+    void StartSkillCloseUp(Hagine::BaseObject *pPerformer);
 
     /// <summary>
     /// 必殺技の顔アップ演出を終了する（次フレームから通常カメラへ補間なしで即復帰）
     /// </summary>
-    void EndSkillCloseUp() { pSkillCutscene_->EndSkillCloseUp(); }
+    void EndSkillCloseUp();
 
     /// <summary>
     /// 顔アップ演出中かどうか
     /// </summary>
     /// <returns>bool: 演出中なら true</returns>
-    bool IsSkillCloseUpActive() const { return pSkillCutscene_->IsSkillCloseUpActive(); }
+    bool IsSkillCloseUpActive() const;
 
     /// <summary>
     /// カメラを現在位置に一定時間だけ留めてから、追従先へ補間なしでパッとスナップさせる。
@@ -93,7 +100,7 @@ class FollowCamera
     void HoldThenSnap(float holdDuration) { holdTimer_ = holdDuration; }
 
     /// ===================================================
-    /// パーツ向けアクセサ（各パーツが owner 経由で参照する）
+    /// パーツ向けアクセサ（各パーツが pOwner 経由で参照する）
     /// ===================================================
 
     /// <summary>カメラのワールドトランスフォームを取得</summary>
@@ -123,22 +130,22 @@ class FollowCamera
     /// ===================================================
 
     /// <summary>ヨー角を取得</summary>
-    float GetYaw() { return yaw_; }
+    float GetYaw() const { return yaw_; }
 
     /// <summary>ビュープロジェクションを取得</summary>
     Hagine::ViewProjection &GetViewProjection() { return viewProjection_; }
 
     /// <summary>ロックオン有効距離を取得</summary>
-    float GetLockOnRange() const { return pLockOn_->GetLockOnRange(); }
+    float GetLockOnRange() const;
 
     /// <summary>ロックオン水平半角を取得</summary>
-    float GetLockOnHalfFovH() const { return pLockOn_->GetLockOnHalfFovH(); }
+    float GetLockOnHalfFovH() const;
 
     /// <summary>ロックオン垂直半角を取得</summary>
-    float GetLockOnHalfFovV() const { return pLockOn_->GetLockOnHalfFovV(); }
+    float GetLockOnHalfFovV() const;
 
     /// <summary>視錐台デバッグ描画フラグを取得</summary>
-    bool GetDrawLockOnFrustumDebug() const { return pLockOn_->GetDrawLockOnFrustumDebug(); }
+    bool GetDrawLockOnFrustumDebug() const;
 
     /// ===================================================
     /// Setter
@@ -156,16 +163,20 @@ class FollowCamera
     }
 
     /// <summary>ロックオン有効距離を設定</summary>
-    void SetLockOnRange(float range) { pLockOn_->SetLockOnRange(range); }
+    /// <param name="range">ロックオン有効距離</param>
+    void SetLockOnRange(float range);
 
     /// <summary>ロックオン水平半角を設定</summary>
-    void SetLockOnHalfFovH(float rad) { pLockOn_->SetLockOnHalfFovH(rad); }
+    /// <param name="radian">水平視野角の半分（ラジアン）</param>
+    void SetLockOnHalfFovH(float radian);
 
     /// <summary>ロックオン垂直半角を設定</summary>
-    void SetLockOnHalfFovV(float rad) { pLockOn_->SetLockOnHalfFovV(rad); }
+    /// <param name="radian">垂直視野角の半分（ラジアン）</param>
+    void SetLockOnHalfFovV(float radian);
 
     /// <summary>視錐台デバッグ描画フラグを設定</summary>
-    void SetDrawLockOnFrustumDebug(bool flag) { pLockOn_->SetDrawLockOnFrustumDebug(flag); }
+    /// <param name="isDraw">描画するなら true</param>
+    void SetDrawLockOnFrustumDebug(bool isDraw);
 
   private:
     /// ===================================================
@@ -214,19 +225,19 @@ class FollowCamera
     static constexpr float kFieldClampMargin = 2.0f;      ///< フィールド円柱境界からの内側マージン
 
     // 閾値定数
-    static constexpr float kEpsilon = 0.001f; ///< 微小値
+    static constexpr float kEpsilon = 0.001f; ///< ゼロ除算を避けるための微小値
 
     // ロックオンカメラのピッチ上限（敵の真上/真下付近で forward が垂直になり
     // up ベクトルが退化してカメラが暴れるのを防ぐ）
     static constexpr float kMaxLockOnPitch = 60.0f * std::numbers::pi_v<float> / 180.0f;
 
-    // ベクトル定数
-    static constexpr float kVectorZero = 0.0f; ///< ゼロ値
-
     // 初期値
     static constexpr float kInitialYaw = 0.0f; ///< 初期ヨー角
 
-    // ─── パーツ ───
+    // 手動回転の入力感度
+    static constexpr float kStickYawSensitivity = 0.05f; ///< 右スティックによるヨー回転感度
+
+    // ─── パーツ（生成は FollowCameraFactory、所有はこのクラス）───
     std::unique_ptr<CameraLockOn> pLockOn_;               ///< 肩・高さ・視錐台ロックオン
     std::unique_ptr<CameraRush> pRush_;                   ///< Rush（突進）専用カメラ
     std::unique_ptr<CameraSkillCutscene> pSkillCutscene_; ///< 必殺技の顔アップ演出
@@ -236,7 +247,7 @@ class FollowCamera
 
     Player *pTarget_ = nullptr; ///< 追従対象のプレイヤー
 
-    Hagine::Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f}; ///< ベース of カメラオフセット
+    Hagine::Vector3 cameraOffset_ = {0.0f, 5.0f, -25.0f}; ///< 追従の基準となるカメラオフセット
 
     float yaw_ = 0.0f;             ///< 現在のヨー角
     float manualYawSpeed_ = 0.04f; ///< 手動回転速度

@@ -10,9 +10,9 @@ void PipelineManager::Finalize()
     rootSignatures_.clear();
 }
 
-void PipelineManager::Initialize(DirectXCommon *dxCommon)
+void PipelineManager::Initialize(DirectXCommon *pDxCommon)
 {
-    pDxCommon_ = dxCommon;
+    pDxCommon_ = pDxCommon;
 
     CreateAllPipelines();
 }
@@ -60,16 +60,16 @@ void PipelineManager::DrawCommonSetting(PipelineType type, BlendMode blendMode, 
     auto rootSignature = GetRootSignature(type, shaderMode);
 
     // グラフィックスコマンドリストにパイプラインとルートシグネチャを設定
-    ID3D12GraphicsCommandList *commandList = pDxCommon_->GetCommandList().Get();
-    commandList->SetPipelineState(pipeline.Get());
-    commandList->SetGraphicsRootSignature(rootSignature.Get());
+    ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
+    pCommandList->SetPipelineState(pipeline.Get());
+    pCommandList->SetGraphicsRootSignature(rootSignature.Get());
     if (type == PipelineType::Line3d)
     {
-        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+        pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
     }
     else
     {
-        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     }
 }
 
@@ -292,8 +292,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGBufferGraphi
 
     const std::wstring vsPath = skinned ? (shaderPath + L"shaders/Skinning/Skinning.VS.hlsl")
                                         : (shaderPath + L"shaders/Object/Object3d.VS.hlsl");
-    IDxcBlob *vertexShaderBlob = pDxCommon_->CompileShader(vsPath, L"vs_6_0");
-    assert(vertexShaderBlob != nullptr);
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(vsPath, L"vs_6_0");
+    assert(pVertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Deferred/GBuffer.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
@@ -307,7 +307,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGBufferGraphi
     D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
     desc.pRootSignature = rootSignature.Get();
     desc.InputLayout = inputLayoutDesc;
-    desc.VS = {vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize()};
+    desc.VS = {pVertexShaderBlob->GetBufferPointer(), pVertexShaderBlob->GetBufferSize()};
     desc.PS = {pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize()};
     desc.BlendState = blendDesc;
     desc.RasterizerState = rasterizerDesc;
@@ -403,11 +403,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateDeferredLight
     descriptionRootSignature.NumStaticSamplers = _countof(staticSamplers);
 
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    HRESULT hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    HRESULT hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -429,8 +429,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateDeferredLight
     rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
-    IDxcBlob *vertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/OffScreen/FullScreen.VS.hlsl", L"vs_6_0");
-    assert(vertexShaderBlob != nullptr);
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/OffScreen/FullScreen.VS.hlsl", L"vs_6_0");
+    assert(pVertexShaderBlob != nullptr);
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Deferred/DeferredLighting.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
 
@@ -441,7 +441,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateDeferredLight
     D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
     desc.pRootSignature = rootSignature.Get();
     desc.InputLayout = {nullptr, 0};
-    desc.VS = {vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize()};
+    desc.VS = {pVertexShaderBlob->GetBufferPointer(), pVertexShaderBlob->GetBufferSize()};
     desc.PS = {pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize()};
     desc.BlendState = blendDesc;
     desc.RasterizerState = rasterizerDesc;
@@ -624,11 +624,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateRootSignature
 
     // シリアライズしてパイナリする
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -713,8 +713,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGraphicsPipel
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Object/Object3d.VS.hlsl", L"vs_6_0");
-    assert(vertexShaderBlob != nullptr);
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Object/Object3d.VS.hlsl", L"vs_6_0");
+    assert(pVertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Object/Object3d.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
@@ -732,8 +732,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGraphicsPipel
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
     graphicsPipelineStateDesc.pRootSignature = rootSignature.Get(); // RootSignature
     graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;        // InputLayout
-    graphicsPipelineStateDesc.VS = {vertexShaderBlob->GetBufferPointer(),
-                                    vertexShaderBlob->GetBufferSize()}; // vertexShader
+    graphicsPipelineStateDesc.VS = {pVertexShaderBlob->GetBufferPointer(),
+                                    pVertexShaderBlob->GetBufferSize()}; // vertexShader
     graphicsPipelineStateDesc.PS = {pixelShaderBlob->GetBufferPointer(),
                                     pixelShaderBlob->GetBufferSize()}; // PixelShader
     graphicsPipelineStateDesc.BlendState = blendDesc;                  // BlendState
@@ -893,11 +893,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateGPUParticleRo
 
     // シリアライズしてパイナリする
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     // パイナリを元に生成
@@ -982,8 +982,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGPUParticleGr
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/ParticleCS.VS.hlsl", L"vs_6_0");
-    assert(vertexShaderBlob != nullptr);
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/ParticleCS.VS.hlsl", L"vs_6_0");
+    assert(pVertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/CSParticle/ParticleCS.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
@@ -1001,8 +1001,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGPUParticleGr
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
     graphicsPipelineStateDesc.pRootSignature = rootSignature.Get(); // RootSignature
     graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;        // InputLayout
-    graphicsPipelineStateDesc.VS = {vertexShaderBlob->GetBufferPointer(),
-                                    vertexShaderBlob->GetBufferSize()}; // vertexShader
+    graphicsPipelineStateDesc.VS = {pVertexShaderBlob->GetBufferPointer(),
+                                    pVertexShaderBlob->GetBufferSize()}; // vertexShader
     graphicsPipelineStateDesc.PS = {pixelShaderBlob->GetBufferPointer(),
                                     pixelShaderBlob->GetBufferSize()}; // PixelShader
     graphicsPipelineStateDesc.BlendState = blendDesc;                  // BlendState
@@ -1085,11 +1085,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateParticleRootS
 
     // シリアライズしてパイナリする
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     // パイナリを元に生成
@@ -1174,8 +1174,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateParticleGraph
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/Particle.VS.hlsl", L"vs_6_0");
-    assert(vertexShaderBlob != nullptr);
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/Particle.VS.hlsl", L"vs_6_0");
+    assert(pVertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Particle/Particle.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
@@ -1193,8 +1193,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateParticleGraph
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
     graphicsPipelineStateDesc.pRootSignature = rootSignature.Get(); // RootSignature
     graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;        // InputLayout
-    graphicsPipelineStateDesc.VS = {vertexShaderBlob->GetBufferPointer(),
-                                    vertexShaderBlob->GetBufferSize()}; // vertexShader
+    graphicsPipelineStateDesc.VS = {pVertexShaderBlob->GetBufferPointer(),
+                                    pVertexShaderBlob->GetBufferSize()}; // vertexShader
     graphicsPipelineStateDesc.PS = {pixelShaderBlob->GetBufferPointer(),
                                     pixelShaderBlob->GetBufferSize()}; // PixelShader
     graphicsPipelineStateDesc.BlendState = blendDesc;                  // BlendState
@@ -1279,11 +1279,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateSpriteRootSig
 
     // シリアライズしてパイナリする
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -1363,8 +1363,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateSpriteGraphic
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Sprite/Sprite.VS.hlsl", L"vs_6_0");
-    assert(vertexShaderBlob != nullptr);
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Sprite/Sprite.VS.hlsl", L"vs_6_0");
+    assert(pVertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Sprite/Sprite.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
@@ -1382,8 +1382,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateSpriteGraphic
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
     graphicsPipelineStateDesc.pRootSignature = rootSignature.Get(); // RootSignature
     graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;        // InputLayout
-    graphicsPipelineStateDesc.VS = {vertexShaderBlob->GetBufferPointer(),
-                                    vertexShaderBlob->GetBufferSize()}; // vertexShader
+    graphicsPipelineStateDesc.VS = {pVertexShaderBlob->GetBufferPointer(),
+                                    pVertexShaderBlob->GetBufferSize()}; // vertexShader
     graphicsPipelineStateDesc.PS = {pixelShaderBlob->GetBufferPointer(),
                                     pixelShaderBlob->GetBufferSize()}; // PixelShader
     graphicsPipelineStateDesc.BlendState = blendDesc;                  // BlendState
@@ -1644,11 +1644,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateSkinningRootS
 
     // シリアライズしてバイナリにする
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -1708,8 +1708,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateSkinningGraph
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Skinning/Skinning.VS.hlsl", L"vs_6_0");
-    assert(vertexShaderBlob != nullptr);
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Skinning/Skinning.VS.hlsl", L"vs_6_0");
+    assert(pVertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Object/Object3d.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
@@ -1727,8 +1727,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateSkinningGraph
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
     graphicsPipelineStateDesc.pRootSignature = rootSignature.Get(); // RootSignature
     graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;        // InputLayout
-    graphicsPipelineStateDesc.VS = {vertexShaderBlob->GetBufferPointer(),
-                                    vertexShaderBlob->GetBufferSize()}; // vertexShader
+    graphicsPipelineStateDesc.VS = {pVertexShaderBlob->GetBufferPointer(),
+                                    pVertexShaderBlob->GetBufferSize()}; // vertexShader
     graphicsPipelineStateDesc.PS = {pixelShaderBlob->GetBufferPointer(),
                                     pixelShaderBlob->GetBufferSize()}; // PixelShader
     graphicsPipelineStateDesc.BlendState = blendDesc;                  // BlendState
@@ -1789,11 +1789,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateLine3dRootSig
 
     // シリアライズしてパイナリする
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
     hr = pDxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(),
@@ -1840,8 +1840,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateLine3dGraphic
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
     // Shaderをコンパイルする
-    IDxcBlob *vertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Line/Line3d.VS.hlsl", L"vs_6_0");
-    assert(vertexShaderBlob != nullptr);
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Line/Line3d.VS.hlsl", L"vs_6_0");
+    assert(pVertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Line/Line3d.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
@@ -1859,8 +1859,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateLine3dGraphic
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
     graphicsPipelineStateDesc.pRootSignature = rootSignature.Get(); // RootSignature
     graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;        // InputLayout
-    graphicsPipelineStateDesc.VS = {vertexShaderBlob->GetBufferPointer(),
-                                    vertexShaderBlob->GetBufferSize()}; // vertexShader
+    graphicsPipelineStateDesc.VS = {pVertexShaderBlob->GetBufferPointer(),
+                                    pVertexShaderBlob->GetBufferSize()}; // vertexShader
     graphicsPipelineStateDesc.PS = {pixelShaderBlob->GetBufferPointer(),
                                     pixelShaderBlob->GetBufferSize()}; // PixelShader
     graphicsPipelineStateDesc.BlendState = blendDesc;                  // BlendState
@@ -1950,11 +1950,11 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateSkyboxRootSig
 
     // シリアライズしてバイナリ化
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+        Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         assert(false);
     }
 
@@ -1965,8 +1965,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateSkyboxRootSig
     // リソースを解放
     if (signatureBlob)
         signatureBlob->Release();
-    if (errorBlob)
-        errorBlob->Release();
+    if (pErrorBlob)
+        pErrorBlob->Release();
 
     return rootSignature;
 }
@@ -2006,8 +2006,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateSkyboxGraphic
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
     // Shaderをコンパイル
-    IDxcBlob *vertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Skybox/Skybox.VS.hlsl", L"vs_6_0");
-    assert(vertexShaderBlob != nullptr);
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Skybox/Skybox.VS.hlsl", L"vs_6_0");
+    assert(pVertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Skybox/Skybox.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
@@ -2022,7 +2022,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateSkyboxGraphic
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
     graphicsPipelineStateDesc.pRootSignature = rootSignature.Get();
     graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;
-    graphicsPipelineStateDesc.VS = {vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize()};
+    graphicsPipelineStateDesc.VS = {pVertexShaderBlob->GetBufferPointer(), pVertexShaderBlob->GetBufferSize()};
     graphicsPipelineStateDesc.PS = {pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize()};
     graphicsPipelineStateDesc.BlendState = blendDesc;
     graphicsPipelineStateDesc.RasterizerState = rasterizerDesc;
@@ -2146,13 +2146,13 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateDepthRootSign
 
     // RootSignatureのシリアライズと作成
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        if (errorBlob)
+        if (pErrorBlob)
         {
-            Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+            Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         }
         assert(false);
     }
@@ -2233,13 +2233,13 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateDissolveRootS
 
     // RootSignatureのシリアライズと作成
     ID3DBlob *signatureBlob = nullptr;
-    ID3DBlob *errorBlob = nullptr;
-    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    ID3DBlob *pErrorBlob = nullptr;
+    hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &pErrorBlob);
     if (FAILED(hr))
     {
-        if (errorBlob)
+        if (pErrorBlob)
         {
-            Logger::Log(reinterpret_cast<char *>(errorBlob->GetBufferPointer()));
+            Logger::Log(reinterpret_cast<char *>(pErrorBlob->GetBufferPointer()));
         }
         assert(false);
     }

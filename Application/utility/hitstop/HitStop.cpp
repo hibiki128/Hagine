@@ -63,7 +63,7 @@ void HitStop::SaveSettings()
     ImGuiNotification::Post("ヒットストップ設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
 }
 
-void HitStop::imgui()
+void HitStop::DrawImGui()
 {
 #ifdef _DEBUG
     if (ImGui::Begin("ヒットストップ設定"))

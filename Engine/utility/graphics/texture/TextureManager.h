@@ -51,7 +51,7 @@ class TextureManager
     /// <summary>
     /// 初期化
     /// </summary>
-    void Initialize(SrvManager *srvManager);
+    void Initialize(SrvManager *pSrvManager);
 
     /// <summary>
     /// シングルトンインスタンスの取得

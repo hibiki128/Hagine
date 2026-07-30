@@ -5,56 +5,56 @@
 #include <d3d12.h>
 
 namespace Hagine {
-void PostEffectParameters::Initialize(DirectXCommon *dxCommon)
+void PostEffectParameters::Initialize(DirectXCommon *pDxCommon)
 {
-    pDxCommon_ = dxCommon;
+    pDxCommon_ = pDxCommon;
     TextureManager::GetInstance()->LoadTexture(texPath_);
     CreateAllBuffers();
 }
 
-void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCommandList *commandList,
-                                               SrvManager *srvManager, DirectXCommon *dxCommon)
+void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCommandList *pCommandList,
+                                               SrvManager *pSrvManager, DirectXCommon *pDxCommon)
 {
     switch (mode)
     {
     case ShaderMode::Vignette:
-        commandList->SetGraphicsRootConstantBufferView(1, vignetteResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, vignetteResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Smooth:
-        commandList->SetGraphicsRootConstantBufferView(1, smoothResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, smoothResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Gauss:
-        commandList->SetGraphicsRootConstantBufferView(1, gaussianResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, gaussianResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Depth:
         pDepthData_->projectionInverse = Inverse(projectionInverse_);
-        commandList->SetGraphicsRootConstantBufferView(1, depthResource_->GetGPUVirtualAddress());
-        commandList->SetGraphicsRootDescriptorTable(2, dxCommon->GetDepthGPUHandle());
+        pCommandList->SetGraphicsRootConstantBufferView(1, depthResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootDescriptorTable(2, pDxCommon->GetDepthGPUHandle());
         break;
     case ShaderMode::Blur:
-        commandList->SetGraphicsRootConstantBufferView(1, radialResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, radialResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Cinematic:
-        commandList->SetGraphicsRootConstantBufferView(1, cinematicResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, cinematicResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Dissolve:
-        commandList->SetGraphicsRootConstantBufferView(1, dissolveResource_->GetGPUVirtualAddress());
-        srvManager->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(texPath_));
+        pCommandList->SetGraphicsRootConstantBufferView(1, dissolveResource_->GetGPUVirtualAddress());
+        pSrvManager->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(texPath_));
         break;
     case ShaderMode::Random:
-        commandList->SetGraphicsRootConstantBufferView(1, randomResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, randomResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::FocusLine:
-        commandList->SetGraphicsRootConstantBufferView(1, focusLineResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, focusLineResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Pixelate:
-        commandList->SetGraphicsRootConstantBufferView(1, pixelateResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, pixelateResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Bloom:
-        commandList->SetGraphicsRootConstantBufferView(1, bloomResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, bloomResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Retro:
-        commandList->SetGraphicsRootConstantBufferView(1, retroResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(1, retroResource_->GetGPUVirtualAddress());
         break;
     }
 }

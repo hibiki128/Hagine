@@ -12,10 +12,10 @@ namespace Hagine {
 void OffScreen::Initialize()
 {
     pDxCommon_ = DirectXCommon::GetInstance();
-    SrvManager *srvManager = SrvManager::GetInstance();
+    SrvManager *pSrvManager = SrvManager::GetInstance();
     PipelineManager *psoManager = PipelineManager::GetInstance();
 
-    renderer_.Initialize(pDxCommon_, srvManager, psoManager);
+    renderer_.Initialize(pDxCommon_, pSrvManager, psoManager);
 
     // エフェクトチェーンとDirectXCommonのポインタを渡して初期化
     dataManager_.Initialize(&effectChain_, pDxCommon_);

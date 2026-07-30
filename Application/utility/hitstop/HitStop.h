@@ -34,7 +34,7 @@ class HitStop
     /// <summary>
     /// ImGui表示
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
     /// <summary>
     /// Getter
@@ -58,7 +58,7 @@ class HitStop
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     float stopDuration_ = 0.1f; // 停止時間（秒）

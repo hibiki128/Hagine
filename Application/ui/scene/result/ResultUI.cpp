@@ -100,7 +100,7 @@ bool ResultUI::CheckSkipInput()
 void ResultUI::SkipTimeAnimation()
 {
     // クリアタイムのカウントアップを即座に完了
-    displayedTime_ = ClearTime_;
+    displayedTime_ = clearTime_;
     animTimer_ = kAnimDuration;
     numberAnimState_ = kWaitingForHP;
     delayTimer_ = 0.0f;
@@ -123,7 +123,7 @@ void ResultUI::SkipHPAnimation()
     }
 
     // HPのカウントアップを即座に完了
-    displayedHP_ = HP_;
+    displayedHP_ = hp_;
     animTimer_ = kAnimDuration;
     numberAnimState_ = kFinished;
     delayTimer_ = 0.0f;
@@ -309,13 +309,13 @@ void ResultUI::Update()
         if (t >= kNormalizeValue)
         {
             t = kNormalizeValue;
-            displayedTime_ = ClearTime_;
+            displayedTime_ = clearTime_;
             numberAnimState_ = kWaitingForHP;
             delayTimer_ = 0.0f;
         }
         else
         {
-            displayedTime_ = ClearTime_ * t;
+            displayedTime_ = clearTime_ * t;
         }
     }
     else if (numberAnimState_ == kAnimatingHP)
@@ -326,13 +326,13 @@ void ResultUI::Update()
         if (t >= kNormalizeValue)
         {
             t = kNormalizeValue;
-            displayedHP_ = HP_;
+            displayedHP_ = hp_;
             numberAnimState_ = kFinished;
             delayTimer_ = 0.0f;
         }
         else
         {
-            displayedHP_ = HP_ * t;
+            displayedHP_ = hp_ * t;
         }
     }
 
@@ -470,8 +470,8 @@ int ResultUI::CalculateRankIndex() const
     }
 
     // タイム（早いほど高い）とHP（多いほど高い）を半々で合成した0~1のスコア
-    float timeScore = kNormalizeValue - std::clamp((ClearTime_ - kRankBestTime) / (kRankWorstTime - kRankBestTime), 0.0f, 1.0f);
-    float hpScore = std::clamp(HP_ / kRankMaxHP, 0.0f, 1.0f);
+    float timeScore = kNormalizeValue - std::clamp((clearTime_ - kRankBestTime) / (kRankWorstTime - kRankBestTime), 0.0f, 1.0f);
+    float hpScore = std::clamp(hp_ / kRankMaxHP, 0.0f, 1.0f);
     float total = timeScore * 0.5f + hpScore * 0.5f;
 
     // クリア時はF以上（Gにはならない）。スコアの高い順に S, A, B, C, D, E, F

@@ -38,7 +38,7 @@ class FootEffect
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 定数定義
@@ -56,8 +56,8 @@ class FootEffect
 
     // 着地/走行の砂煙。実体は ParticleCSSpawner が所有する（ここは借用ポインタ）。
     // シーン遷移時に Spawner 側でまとめて破棄されるため、明示的な後始末は不要。
-    Hagine::ParticleCSEmitter *landingEmitter_ = nullptr; // 着地の砂煙
-    Hagine::ParticleCSEmitter *runEmitter_ = nullptr;     // 走行中の砂煙
+    Hagine::ParticleCSEmitter *pLandingEmitter_ = nullptr; // 着地の砂煙
+    Hagine::ParticleCSEmitter *pRunEmitter_ = nullptr;     // 走行中の砂煙
 
     Hagine::Vector3 lastDir_ = {0.0f, 0.0f, 1.0f}; // 直近の進行方向（水平成分）
     bool wasGrounded_ = true;                      // 前フレームの接地状態（着地の瞬間の検出用）

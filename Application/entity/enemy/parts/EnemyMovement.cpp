@@ -10,9 +10,9 @@
 
 using namespace Hagine;
 
-void EnemyMovement::Init(Enemy *owner)
+void EnemyMovement::Init(Enemy *pOwner)
 {
-    pOwner_ = owner;
+    pOwner_ = pOwner;
 
     // 移動パラメータ
     moveSpeed_ = 5.0f;
@@ -81,19 +81,19 @@ void EnemyMovement::RotateUpdate()
     if (!pOwner_->GetIsLockOn() || !pOwner_->GetTarget())
         return;
 
-    WorldTransform *transform = pOwner_->GetWorldTransform();
+    WorldTransform *pTransform = pOwner_->GetWorldTransform();
     Vector3 toTarget = pOwner_->GetTarget()->GetWorldPosition() - pOwner_->GetWorldPosition();
     if (toTarget.Length() < kMinRotationDistance)
         return;
 
     toTarget = toTarget.Normalize();
     Vector3 forward = toTarget;
-    Vector3 worldUp = {kUpVectorX, kUpVectorY, kUpVectorZ};
+    Vector3 worldUp = kWorldUp;
     Vector3 right;
 
     if (std::abs(forward.Dot(worldUp)) > kParallelThreshold)
     {
-        right = {kRightVectorX, kRightVectorY, kRightVectorZ};
+        right = kWorldRight;
     }
     else
     {
@@ -104,31 +104,31 @@ void EnemyMovement::RotateUpdate()
     Matrix4x4 rotMatrix = MakeRotateMatrix(right, up, forward);
     Quaternion targetRot = Quaternion::FromMatrix(rotMatrix);
 
-    transform->quateRotation_ = Quaternion::Slerp(
-        transform->quateRotation_, targetRot, kRotationSpeed * Frame::DeltaTime());
+    pTransform->quaternionRotation_ = Quaternion::Slerp(
+        pTransform->quaternionRotation_, targetRot, kRotationSpeed * Frame::DeltaTime());
 }
 
 void EnemyMovement::CollisionGround()
 {
-    WorldTransform *transform = pOwner_->GetWorldTransform();
-    float nextY = transform->translation_.y + velocity_.y * Frame::DeltaTime();
+    WorldTransform *pTransform = pOwner_->GetWorldTransform();
+    float nextY = pTransform->translation_.y + velocity_.y * Frame::DeltaTime();
 
-    transform->translation_.x += velocity_.x * Frame::DeltaTime();
-    transform->translation_.z += velocity_.z * Frame::DeltaTime();
+    pTransform->translation_.x += velocity_.x * Frame::DeltaTime();
+    pTransform->translation_.z += velocity_.z * Frame::DeltaTime();
 
     // 移動後のXZ位置における接地レベル（地形メッシュの表面高さ＋立ちオフセット）
-    const float groundLevel = Ground::GetStandingY(transform->translation_.x, transform->translation_.z);
+    const float groundLevel = Ground::GetStandingY(pTransform->translation_.x, pTransform->translation_.z);
 
     if (isFlying_)
     {
         // 飛行中でも地形には潜らないよう接地レベルでクランプする
-        transform->translation_.y = (std::max)(nextY, groundLevel);
+        pTransform->translation_.y = (std::max)(nextY, groundLevel);
         return;
     }
 
     if (nextY <= groundLevel)
     {
-        transform->translation_.y = groundLevel;
+        pTransform->translation_.y = groundLevel;
         if (!isGrounded_)
         {
             velocity_.y = kVelocityZero;
@@ -138,12 +138,12 @@ void EnemyMovement::CollisionGround()
     else if (isGrounded_ && velocity_.y <= kVelocityZero && nextY - groundLevel <= kGroundSnapDistance)
     {
         // 下り坂で毎フレーム接地が外れてガタつかないよう、僅かな段差は地面に吸着させる
-        transform->translation_.y = groundLevel;
+        pTransform->translation_.y = groundLevel;
         velocity_.y = kVelocityZero;
     }
     else
     {
-        transform->translation_.y = nextY;
+        pTransform->translation_.y = nextY;
         isGrounded_ = false;
     }
 }
@@ -199,26 +199,26 @@ void EnemyMovement::ApplyPinchApproach(float /*deltaTime*/)
     {
         return;
     }
-    Player *target = pOwner_->GetTarget();
-    if (!target || !target->GetAlive())
+    Player *pTarget = pOwner_->GetTarget();
+    if (!pTarget || !pTarget->GetAlive())
     {
         return;
     }
 
     // プレイヤーHP比率がピンチ閾値未満のときだけ発動する
-    const float maxHP = target->GetMaxHP();
+    const float maxHP = pTarget->GetMaxHP();
     if (maxHP <= 0.0f)
     {
         return;
     }
-    const float hpRatio = target->GetHP() / maxHP;
+    const float hpRatio = pTarget->GetHP() / maxHP;
     if (hpRatio >= pinchThreshold_)
     {
         return;
     }
 
     // XZ平面上の距離。近づき切っている（攻撃レンジ内）なら詰めを止めてBTに任せる
-    Vector3 toTarget = target->GetWorldPosition() - pOwner_->GetWorldTransform()->translation_;
+    Vector3 toTarget = pTarget->GetWorldPosition() - pOwner_->GetWorldTransform()->translation_;
     toTarget.y = 0.0f;
     const float distance = toTarget.Length();
     if (distance <= pinchCloseDistance_)
@@ -272,15 +272,15 @@ void EnemyMovement::ResetMotion()
 
 void EnemyMovement::RegisterParams()
 {
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register("Enemy", "移動速度", &moveSpeed_, {0.1f, 0.0f, 50.0f});
-    hub->Register("Enemy", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});
-    hub->Register("Enemy", "加速率", &accelRate_, {0.1f, 0.0f, 50.0f});
-    hub->Register("Enemy", "ジャンプ速度", &jumpSpeed_, {0.1f, 0.0f, 50.0f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register("Enemy", "移動速度", &moveSpeed_, {0.1f, 0.0f, 50.0f});
+    pHub->Register("Enemy", "最大速度", &maxSpeed_, {0.1f, 0.0f, 50.0f});
+    pHub->Register("Enemy", "加速率", &accelRate_, {0.1f, 0.0f, 50.0f});
+    pHub->Register("Enemy", "ジャンプ速度", &jumpSpeed_, {0.1f, 0.0f, 50.0f});
 
     // ピンチ時の積極接近
-    hub->Register("Enemy", "ピンチ接近有効", &pinchAggressionEnabled_);
-    hub->Register("Enemy", "ピンチ判定HP比率", &pinchThreshold_, {0.01f, 0.0f, 1.0f});
-    hub->Register("Enemy", "ピンチ接近停止距離", &pinchCloseDistance_, {0.1f, 0.0f, 30.0f});
-    hub->Register("Enemy", "ピンチ接近速度倍率", &pinchSpeedMul_, {0.05f, 0.5f, 5.0f});
+    pHub->Register("Enemy", "ピンチ接近有効", &pinchAggressionEnabled_);
+    pHub->Register("Enemy", "ピンチ判定HP比率", &pinchThreshold_, {0.01f, 0.0f, 1.0f});
+    pHub->Register("Enemy", "ピンチ接近停止距離", &pinchCloseDistance_, {0.1f, 0.0f, 30.0f});
+    pHub->Register("Enemy", "ピンチ接近速度倍率", &pinchSpeedMul_, {0.05f, 0.5f, 5.0f});
 }

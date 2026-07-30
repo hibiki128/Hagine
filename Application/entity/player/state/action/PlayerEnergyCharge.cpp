@@ -12,16 +12,16 @@ void PlayerEnergyCharge::Enter(Player &player)
     player.SetEnergyRecoveryRate(chargeRate_);
 
     // チャージ開始ごとに Spawn する。更新・描画はエンジンが自動で回す。
-    chargeAuraEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("playerAura");
+    pChargeAuraEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("playerAura");
 }
 
 void PlayerEnergyCharge::Update(Player &player)
 {
-    if (chargeAuraEmitter_)
+    if (pChargeAuraEmitter_)
     {
-        chargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y + chargeAuraEmitter_->GetScale().y - 1.0f, player.GetWorldPosition().z});
-        chargeAuraEmitter_->SetRotation(player.GetWorldRotation());
-        chargeAuraEmitter_->SetAuto(true);
+        pChargeAuraEmitter_->SetTranslate({player.GetWorldPosition().x, player.GetWorldPosition().y + pChargeAuraEmitter_->GetScale().y - 1.0f, player.GetWorldPosition().z});
+        pChargeAuraEmitter_->SetRotation(player.GetWorldRotation());
+        pChargeAuraEmitter_->SetAuto(true);
     }
 
     bool chargeRelease = false;
@@ -89,9 +89,9 @@ void PlayerEnergyCharge::Exit(Player &player)
     player.SetEnergyRecoveryRate(beforeChargeRate_);
     // 発生を止め、残った粒子が消えたら Spawner が自動で破棄する。
     // 借用ポインタは無効になるので手放しておく（次のチャージ開始で再 Spawn する）。
-    if (chargeAuraEmitter_)
+    if (pChargeAuraEmitter_)
     {
-        ParticleCSSpawner::GetInstance()->DespawnWhenFinished(chargeAuraEmitter_);
-        chargeAuraEmitter_ = nullptr;
+        ParticleCSSpawner::GetInstance()->DespawnWhenFinished(pChargeAuraEmitter_);
+        pChargeAuraEmitter_ = nullptr;
     }
 }

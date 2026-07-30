@@ -107,8 +107,8 @@ class TutorialScene : public Hagine::BaseScene
     std::unique_ptr<TutorialUI> tutorialUI_;         // チュートリアルUI
 
     Hagine::SkyBox *pSkyBox_ = nullptr; // スカイボックス
-    Enemy *enemy_ptr = nullptr;        // 敵のポインタ
-    Player *player_ptr = nullptr;      // プレイヤーのポインタ
+    Enemy *pEnemy_ = nullptr;        // 敵のポインタ
+    Player *pPlayer_ = nullptr;      // プレイヤーのポインタ
 
     bool sceneStarted_ = false; // 遅延終了フラグ（パーティクル遷移完了で立つ）
 };

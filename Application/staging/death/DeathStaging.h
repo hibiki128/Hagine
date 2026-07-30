@@ -46,11 +46,11 @@ class DeathStaging
     /// <summary>
     /// ImGui描画
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     // 定数定義
@@ -75,5 +75,5 @@ class DeathStaging
 
     // 死亡パーティクル。実体は ParticleCSSpawner が所有する（ここは借用ポインタ）。
     // シーン遷移時に Spawner 側でまとめて破棄されるため、明示的な後始末は不要。
-    Hagine::ParticleCSEmitter *deathParticle_ = nullptr;
+    Hagine::ParticleCSEmitter *pDeathParticle_ = nullptr;
 };

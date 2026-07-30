@@ -1626,31 +1626,31 @@ void BehaviorTreeEditor::OnImGuiRender()
         if (isRunning_)
         {
             // リンク起点ノードを検索
-            const EditorNode *srcNode = nullptr;
+            const EditorNode *pSrcNode = nullptr;
             for (const auto &n : nodes_)
             {
                 if (n.OutputPinID == link.StartPinID ||
                     n.SuccessPinID == link.StartPinID ||
                     n.FailurePinID == link.StartPinID)
                 {
-                    srcNode = &n;
+                    pSrcNode = &n;
                     break;
                 }
-                if (!srcNode)
+                if (!pSrcNode)
                 {
                     for (const auto &wo : n.WeightedOutputs)
                     {
                         if (wo.PinID == link.StartPinID)
                         {
-                            srcNode = &n;
+                            pSrcNode = &n;
                             break;
                         }
                     }
                 }
             }
-            if (srcNode)
+            if (pSrcNode)
             {
-                const int srcId = static_cast<int>(srcNode->ID.Get());
+                const int srcId = static_cast<int>(pSrcNode->ID.Get());
                 auto it = nodeInstanceMap_.find(srcId);
                 if (it != nodeInstanceMap_.end() && it->second)
                 {
@@ -1800,7 +1800,7 @@ void BehaviorTreeEditor::DrawInspectorPanel()
     selectedNodes.resize(std::max(1, selCount));
     const int n = ed::GetSelectedNodes(selectedNodes.data(), static_cast<int>(selectedNodes.size()));
 
-    EditorNode *target = nullptr;
+    EditorNode *pTarget = nullptr;
     if (n > 0)
     {
         const int selId = static_cast<int>(selectedNodes[0].Get());
@@ -1808,13 +1808,13 @@ void BehaviorTreeEditor::DrawInspectorPanel()
         {
             if (static_cast<int>(node.ID.Get()) == selId)
             {
-                target = &node;
+                pTarget = &node;
                 break;
             }
         }
     }
 
-    if (!target)
+    if (!pTarget)
     {
         ImGui::TextDisabled("ノードが選択されていません。");
         ImGui::Spacing();
@@ -1826,17 +1826,17 @@ void BehaviorTreeEditor::DrawInspectorPanel()
     // ── ヘッダー（タイトル・種別・説明） ─────────────────
     const char *catLabel;
     ImVec4 catColor;
-    if (target->IsConditionNode())
+    if (pTarget->IsConditionNode())
     {
         catLabel = "条件ノード";
         catColor = ImVec4(0.80f, 0.72f, 0.92f, 1.0f);
     }
-    else if (target->IsActionNode())
+    else if (pTarget->IsActionNode())
     {
         catLabel = "アクションノード";
         catColor = ImVec4(0.62f, 0.83f, 0.66f, 1.0f);
     }
-    else if (target->IsWeightNode())
+    else if (pTarget->IsWeightNode())
     {
         catLabel = "デコレータ";
         catColor = ImVec4(0.56f, 0.70f, 0.88f, 1.0f);
@@ -1847,18 +1847,18 @@ void BehaviorTreeEditor::DrawInspectorPanel()
         catColor = ImVec4(0.56f, 0.70f, 0.88f, 1.0f);
     }
 
-    ImGui::TextColored(catColor, "%s", target->Title.c_str());
-    ImGui::TextDisabled("種別: %s  (ID:%d)", catLabel, static_cast<int>(target->ID.Get()));
+    ImGui::TextColored(catColor, "%s", pTarget->Title.c_str());
+    ImGui::TextDisabled("種別: %s  (ID:%d)", catLabel, static_cast<int>(pTarget->ID.Get()));
     ImGui::Spacing();
     ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextDisabled("%s", GetNodeDescription(target->Type));
+    ImGui::TextDisabled("%s", GetNodeDescription(pTarget->Type));
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
 
     // ── パラメータ編集 ───────────────────────────────────
-    DrawNodeParameters(*target);
+    DrawNodeParameters(*pTarget);
 
     // ── 実行中は編集内容を反映するための再ビルドを提供 ──
     if (isRunning_)

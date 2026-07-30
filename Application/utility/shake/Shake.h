@@ -34,7 +34,7 @@ class Shake
     /// <summary>
     /// ImGui表示
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
     /// <summary>
     /// 揺れを開始
@@ -60,7 +60,7 @@ class Shake
 
   private:
     /// ===================================================
-    /// private varians
+    /// private variables
     /// ===================================================
 
     Hagine::ViewProjection *pViewProjection_ = nullptr; // ビュープロジェクション

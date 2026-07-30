@@ -9,7 +9,7 @@ namespace Hagine {
 class PostEffectParamsFactory
 {
   public:
-    static std::unique_ptr<IPostEffectParams> Create(ShaderMode mode, DirectXCommon *dxCommon)
+    static std::unique_ptr<IPostEffectParams> Create(ShaderMode mode, DirectXCommon *pDxCommon)
     {
         std::unique_ptr<IPostEffectParams> params;
 
@@ -72,7 +72,7 @@ class PostEffectParamsFactory
             break;
         }
 
-        params->Initialize(dxCommon);
+        params->Initialize(pDxCommon);
         return params;
     }
 };

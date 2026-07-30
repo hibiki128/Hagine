@@ -14,16 +14,16 @@ void TitleUI::Initialize()
 {
 
     // chargeBullet_ は別システムの CPU パーティクル（従来どおり手動で駆動する）。
-    // chargeEffect_ / playerAura_ は GPU パーティクル（Spawn した実体の更新・描画はエンジンが自動で回す）。
+    // pChargeEffect_ / playerAura_ は GPU パーティクル（Spawn した実体の更新・描画はエンジンが自動で回す）。
     chargeBullet_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("chargeBullet");
-    chargeEffect_ = ParticleCSSpawner::GetInstance()->Spawn("chargeEmitter");
+    pChargeEffect_ = ParticleCSSpawner::GetInstance()->Spawn("chargeEmitter");
     playerAura_ = ParticleCSSpawner::GetInstance()->Spawn("playerAura");
 
     chargeBullet_->SetPosition(
         {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + kPlayerPositionOffsetY,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});
-    chargeEffect_->SetTranslate(
+    pChargeEffect_->SetTranslate(
         {BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().x,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().y + kPlayerPositionOffsetY,
          BaseObjectManager::GetInstance()->GetObjectByName("cube_2")->GetLocalPosition().z});
@@ -36,7 +36,7 @@ void TitleUI::Initialize()
     // GPUパーティクルはエンジンが毎フレーム自動で駆動する。演出開始まで発生させたくないので、
     // ここでは発生を止めておき、開始タイミングで SetAuto(true) に切り替える
     // （旧実装は Update() を呼ぶ/呼ばないで発生を制御していたが、自動駆動では効かないため）。
-    chargeEffect_->SetAuto(false);
+    pChargeEffect_->SetAuto(false);
     playerAura_->SetAuto(false);
 
     // 弾を振り下ろすキャラ（cube_2）。ベースモデルの Charge はループ再生されるので、
@@ -138,7 +138,7 @@ void TitleUI::Update()
         if (!secondMove_)
         {
             // 演出開始タイミングで発生を有効化する（更新・描画はエンジンが自動で回す）
-            chargeEffect_->SetAuto(true);
+            pChargeEffect_->SetAuto(true);
             playerAura_->SetAuto(true);
         }
     }
@@ -206,7 +206,7 @@ void TitleUI::HidePressStart()
 
 void TitleUI::Draw(ViewProjection &vp_)
 {
-    // chargeEffect_ / playerAura_（GPUパーティクル）はエンジンが自動で描画する。
+    // pChargeEffect_ / playerAura_（GPUパーティクル）はエンジンが自動で描画する。
     // ここでは別システムの CPU パーティクル（chargeBullet_）だけ描画する。
     chargeBullet_->Draw(vp_);
     cameraMove_ = vp_.GetIsCameraMove();

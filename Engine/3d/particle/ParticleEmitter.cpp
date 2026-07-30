@@ -25,14 +25,14 @@ void ParticleEmitter::Initialize(std::string name)
         name_ = name;
         datas_ = std::make_unique<DataHandler>("Particle", name);
         LoadFromJson();
-        Manager_ = std::make_unique<ParticleManager>();
-        Manager_->Initialize(SrvManager::GetInstance());
+        particleManager_ = std::make_unique<ParticleManager>();
+        particleManager_->Initialize(SrvManager::GetInstance());
         LoadParticleGroup();
         datas_ = std::make_unique<DataHandler>("Particle", name);
     }
     SyncSettingsToTransform();
     lastTranslation_ = transform_.translation_;
-    lastRotation_ = transform_.quateRotation_;
+    lastRotation_ = transform_.quaternionRotation_;
     lastScale_ = transform_.scale_;
     ImGuiNotification::Post("パーティクルエミッターを初期化しました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
 #ifdef _DEBUG
@@ -68,17 +68,17 @@ void ParticleEmitter::Draw(const ViewProjection &vp_)
     if (ShadowMap::GetInstance()->IsShadowPassActive() ||
         DeferredRenderer::GetInstance()->IsGBufferPassActive())
         return;
-    Manager_->SetEmitterCenter(transform_.translation_);
+    particleManager_->SetEmitterCenter(transform_.translation_);
 
     transform_.UpdateMatrix();
-    if (Manager_)
+    if (particleManager_)
     {
-        Manager_->Update(vp_);
-        Manager_->Draw();
+        particleManager_->Update(vp_);
+        particleManager_->Draw();
     }
     DrawEmitter();
 
-    size_t activeCount = Manager_->GetActiveParticleCount();
+    size_t activeCount = particleManager_->GetActiveParticleCount();
     ParticleEditor::GetInstance()->SetExternalParticleCount(name_, activeCount);
 }
 
@@ -97,7 +97,7 @@ void ParticleEmitter::DrawEmitter()
         Vector3{-1.0f, 1.0f, 1.0f},
         Vector3{1.0f, 1.0f, 1.0f}};
     std::array<Vector3, 8> worldVertices;
-    Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scale_, transform_.quateRotation_, transform_.translation_);
+    Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scale_, transform_.quaternionRotation_, transform_.translation_);
     for (size_t i = 0; i < localVertices.size(); i++)
     {
         worldVertices[i] = Transformation(localVertices[i], worldMatrix);
@@ -114,22 +114,22 @@ void ParticleEmitter::DrawEmitter()
 
 void ParticleEmitter::SyncSettingsToTransform()
 {
-    if (!Manager_)
+    if (!particleManager_)
         return;
     for (auto &[groupName, setting] : particleSettings_)
     {
         setting.translate = transform_.translation_;
-        setting.rotation = transform_.quateRotation_.ToEulerAngles();
+        setting.rotation = transform_.quaternionRotation_.ToEulerAngles();
         setting.scale = transform_.scale_;
-        Manager_->SetParticleSetting(groupName, setting);
+        particleManager_->SetParticleSetting(groupName, setting);
     }
 }
 
 void ParticleEmitter::EmitInternal()
 {
-    if (Manager_)
+    if (particleManager_)
     {
-        Manager_->Emit();
+        particleManager_->Emit();
     }
 }
 
@@ -142,7 +142,7 @@ void ParticleEmitter::Emit()
 void ParticleEmitter::SaveToJson()
 {
     datas_->Save("emitterTranslation", transform_.translation_);
-    datas_->Save("emitterRotation", transform_.quateRotation_);
+    datas_->Save("emitterRotation", transform_.quaternionRotation_);
     datas_->Save("emitterScale", transform_.scale_);
     datas_->Save("GroupNames", particleGroupNames_);
     datas_->Save("emitFrequency", emitFrequency_);
@@ -169,8 +169,8 @@ void ParticleEmitter::SaveToJson()
         datas_->Save(groupName + "_endScale", setting.particleEndScale);
         datas_->Save(groupName + "_startAcce", setting.startAcce);
         datas_->Save(groupName + "_endAcce", setting.endAcce);
-        datas_->Save(groupName + "_startRote", setting.startRote);
-        datas_->Save(groupName + "_endRote", setting.endRote);
+        datas_->Save(groupName + "_startRotate", setting.startRotate);
+        datas_->Save(groupName + "_endRotate", setting.endRotate);
         datas_->Save(groupName + "_rotateStartMax", setting.rotateStartMax);
         datas_->Save(groupName + "_rotateStartMin", setting.rotateStartMin);
         datas_->Save(groupName + "_rotateVelocityMin", setting.rotateVelocityMin);
@@ -206,7 +206,7 @@ void ParticleEmitter::SaveToJson()
         datas_->Save(groupName + "_startColor", setting.startColor);
         datas_->Save(groupName + "_endColor", setting.endColor);
         datas_->Save(groupName + "_blendMode", setting.blendMode);
-        Manager_->SetParticleSetting(groupName, setting);
+        particleManager_->SetParticleSetting(groupName, setting);
     }
     ImGuiNotification::Post("パーティクルデータを保存しました: " + name_, {0.2f, 0.8f, 0.2f, 1.0f});
 }
@@ -214,7 +214,7 @@ void ParticleEmitter::SaveToJson()
 void ParticleEmitter::LoadFromJson()
 {
     transform_.translation_ = datas_->Load<Vector3>("emitterTranslation", {0, 0, 0});
-    transform_.quateRotation_ = datas_->Load<Quaternion>("emitterRotation", Quaternion::IdentityQuaternion());
+    transform_.quaternionRotation_ = datas_->Load<Quaternion>("emitterRotation", Quaternion::IdentityQuaternion());
     transform_.scale_ = datas_->Load<Vector3>("emitterScale", {1, 1, 1});
     particleGroupNames_ = datas_->Load<std::vector<std::string>>("GroupNames", {});
     emitFrequency_ = datas_->Load<float>("emitFrequency", 0.1f);
@@ -247,8 +247,8 @@ void ParticleEmitter::LoadFromJson()
         setting.particleEndScale = datas_->Load<Vector3>(groupName + "_endScale", {0, 0, 0});
         setting.startAcce = datas_->Load<Vector3>(groupName + "_startAcce", {1, 1, 1});
         setting.endAcce = datas_->Load<Vector3>(groupName + "_endAcce", {1, 1, 1});
-        setting.startRote = datas_->Load<Vector3>(groupName + "_startRote", {0, 0, 0});
-        setting.endRote = datas_->Load<Vector3>(groupName + "_endRote", {0, 0, 0});
+        setting.startRotate = datas_->Load<Vector3>(groupName + "_startRotate", {0, 0, 0});
+        setting.endRotate = datas_->Load<Vector3>(groupName + "_endRotate", {0, 0, 0});
         setting.rotateStartMax = datas_->Load<Vector3>(groupName + "_rotateStartMax", {0, 0, 0});
         setting.rotateStartMin = datas_->Load<Vector3>(groupName + "_rotateStartMin", {0, 0, 0});
         setting.rotateVelocityMin = datas_->Load<Vector3>(groupName + "_rotateVelocityMin", {-0.07f, -0.07f, -0.07f});
@@ -319,8 +319,8 @@ ParticleSetting ParticleEmitter::DefaultSetting()
     setting.particleEndScale = {0, 0, 0};
     setting.startAcce = {1, 1, 1};
     setting.endAcce = {1, 1, 1};
-    setting.startRote = {0, 0, 0};
-    setting.endRote = {0, 0, 0};
+    setting.startRotate = {0, 0, 0};
+    setting.endRotate = {0, 0, 0};
     setting.rotateStartMax = {0, 0, 0};
     setting.rotateStartMin = {0, 0, 0};
     setting.rotateVelocityMin = {-0.07f, -0.07f, -0.07f};
@@ -359,10 +359,10 @@ ParticleSetting ParticleEmitter::DefaultSetting()
 void ParticleEmitter::DebugParticleData()
 {
 #ifdef USE_IMGUI
-    if (!Manager_)
+    if (!particleManager_)
         return;
 
-    std::vector<std::string> groupNames = Manager_->GetParticleGroupsName();
+    std::vector<std::string> groupNames = particleManager_->GetParticleGroupsName();
     if (selectedGroupIndex_ >= groupNames.size())
     {
         selectedGroupIndex_ = std::max(0, static_cast<int>(groupNames.size()) - 1);
@@ -405,14 +405,14 @@ void ParticleEmitter::DebugParticleData()
                 ImGui::TableNextColumn();
                 ImGui::SetNextItemWidth(-1);
                 float rotationDegrees[3] = {
-                    radiansToDegrees(transform_.quateRotation_.x),
-                    radiansToDegrees(transform_.quateRotation_.y),
-                    radiansToDegrees(transform_.quateRotation_.z)};
+                    radiansToDegrees(transform_.quaternionRotation_.x),
+                    radiansToDegrees(transform_.quaternionRotation_.y),
+                    radiansToDegrees(transform_.quaternionRotation_.z)};
                 if (ImGui::DragFloat3("##rot", rotationDegrees, 0.1f, -360.0f, 360.0f, "%.1f"))
                 {
-                    transform_.quateRotation_.x = degreesToRadians(rotationDegrees[0]);
-                    transform_.quateRotation_.y = degreesToRadians(rotationDegrees[1]);
-                    transform_.quateRotation_.z = degreesToRadians(rotationDegrees[2]);
+                    transform_.quaternionRotation_.x = degreesToRadians(rotationDegrees[0]);
+                    transform_.quaternionRotation_.y = degreesToRadians(rotationDegrees[1]);
+                    transform_.quaternionRotation_.z = degreesToRadians(rotationDegrees[2]);
                 }
 
                 ImGui::TableNextRow();
@@ -551,24 +551,24 @@ void ParticleEmitter::DebugParticleData()
                 if (!setting.isRandomRotate)
                 {
                     float startRotationDegrees[3] = {
-                        radiansToDegrees(setting.startRote.x),
-                        radiansToDegrees(setting.startRote.y),
-                        radiansToDegrees(setting.startRote.z)};
+                        radiansToDegrees(setting.startRotate.x),
+                        radiansToDegrees(setting.startRotate.y),
+                        radiansToDegrees(setting.startRotate.z)};
                     float endRotationDegrees[3] = {
-                        radiansToDegrees(setting.endRote.x),
-                        radiansToDegrees(setting.endRote.y),
-                        radiansToDegrees(setting.endRote.z)};
+                        radiansToDegrees(setting.endRotate.x),
+                        radiansToDegrees(setting.endRotate.y),
+                        radiansToDegrees(setting.endRotate.z)};
                     if (ImGui::DragFloat3("最初", startRotationDegrees, 0.1f))
                     {
-                        setting.startRote.x = degreesToRadians(startRotationDegrees[0]);
-                        setting.startRote.y = degreesToRadians(startRotationDegrees[1]);
-                        setting.startRote.z = degreesToRadians(startRotationDegrees[2]);
+                        setting.startRotate.x = degreesToRadians(startRotationDegrees[0]);
+                        setting.startRotate.y = degreesToRadians(startRotationDegrees[1]);
+                        setting.startRotate.z = degreesToRadians(startRotationDegrees[2]);
                     }
                     if (ImGui::DragFloat3("最後", endRotationDegrees, 0.1f))
                     {
-                        setting.endRote.x = degreesToRadians(endRotationDegrees[0]);
-                        setting.endRote.y = degreesToRadians(endRotationDegrees[1]);
-                        setting.endRote.z = degreesToRadians(endRotationDegrees[2]);
+                        setting.endRotate.x = degreesToRadians(endRotationDegrees[0]);
+                        setting.endRotate.y = degreesToRadians(endRotationDegrees[1]);
+                        setting.endRotate.z = degreesToRadians(endRotationDegrees[2]);
                     }
                 }
                 if (setting.isRandomRotate)
@@ -760,9 +760,9 @@ void ParticleEmitter::DebugParticleData()
         std::vector<std::string> attachedNames;
         std::vector<const char *> attachedItems;
 
-        for (const auto &group : allGroups)
+        for (const auto &pGroup : allGroups)
         {
-            const std::string &name = group->GetGroupName();
+            const std::string &name = pGroup->GetGroupName();
             if (emitterGroupNames.contains(name))
             {
                 attachedNames.push_back(name);
@@ -828,11 +828,11 @@ void ParticleEmitter::DebugParticleData()
 
                     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
                     {
-                        ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(availableNames[i]);
-                        if (group)
+                        ParticleGroup *pGroup = ParticleGroupManager::GetInstance()->GetParticleGroup(availableNames[i]);
+                        if (pGroup)
                         {
-                            AddParticleGroup(group);
-                            particleGroupNames_ = Manager_->GetParticleGroupsName();
+                            AddParticleGroup(pGroup);
+                            particleGroupNames_ = particleManager_->GetParticleGroupsName();
                         }
                         leftSelected.clear();
                     }
@@ -874,11 +874,11 @@ void ParticleEmitter::DebugParticleData()
             for (auto it = leftSelected.rbegin(); it != leftSelected.rend(); ++it)
             {
                 int idx = *it;
-                ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(availableNames[idx]);
-                if (group)
+                ParticleGroup *pGroup = ParticleGroupManager::GetInstance()->GetParticleGroup(availableNames[idx]);
+                if (pGroup)
                 {
-                    AddParticleGroup(group);
-                    particleGroupNames_ = Manager_->GetParticleGroupsName();
+                    AddParticleGroup(pGroup);
+                    particleGroupNames_ = particleManager_->GetParticleGroupsName();
                     ++moved;
                 }
             }
@@ -899,7 +899,7 @@ void ParticleEmitter::DebugParticleData()
             {
                 int idx = *it;
                 RemoveParticleGroup(attachedNames[idx]);
-                particleGroupNames_ = Manager_->GetParticleGroupsName();
+                particleGroupNames_ = particleManager_->GetParticleGroupsName();
                 ++moved;
             }
             rightSelected.clear();
@@ -941,7 +941,7 @@ void ParticleEmitter::DebugParticleData()
                     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
                     {
                         RemoveParticleGroup(attachedNames[i]);
-                        particleGroupNames_ = Manager_->GetParticleGroupsName();
+                        particleGroupNames_ = particleManager_->GetParticleGroupsName();
                         rightSelected.clear();
                     }
                 }
@@ -971,18 +971,18 @@ void ParticleEmitter::DebugParticleData()
         // ドロップ確定をまとめて反映する
         if (!dndAttachName.empty())
         {
-            ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(dndAttachName);
-            if (group)
+            ParticleGroup *pGroup = ParticleGroupManager::GetInstance()->GetParticleGroup(dndAttachName);
+            if (pGroup)
             {
-                AddParticleGroup(group);
-                particleGroupNames_ = Manager_->GetParticleGroupsName();
+                AddParticleGroup(pGroup);
+                particleGroupNames_ = particleManager_->GetParticleGroupsName();
                 ImGuiNotification::Post("グループをアタッチしました: " + dndAttachName, {0.45f, 0.68f, 0.52f, 1.0f});
             }
         }
         if (!dndDetachName.empty())
         {
             RemoveParticleGroup(dndDetachName);
-            particleGroupNames_ = Manager_->GetParticleGroupsName();
+            particleGroupNames_ = particleManager_->GetParticleGroupsName();
             ImGuiNotification::Post("グループを解除しました: " + dndDetachName, {0.82f, 0.58f, 0.36f, 1.0f});
         }
 
@@ -1039,7 +1039,7 @@ void ParticleEmitter::DebugParticleData()
 void ParticleEmitter::Debug()
 {
 #ifdef _DEBUG
-    if (!name_.empty() && Manager_)
+    if (!name_.empty() && particleManager_)
     {
         DebugParticleData();
     }
@@ -1049,7 +1049,7 @@ void ParticleEmitter::Debug()
 
 bool ParticleEmitter::IsAllParticlesComplete()
 {
-    return Manager_->IsAllParticlesComplete();
+    return particleManager_->IsAllParticlesComplete();
 }
 
 void ParticleEmitter::AddParticleGroup(ParticleGroup *particleGroup)
@@ -1071,7 +1071,7 @@ void ParticleEmitter::AddParticleGroup(ParticleGroup *particleGroup)
         particleSettings_[groupName] = DefaultSetting();
     }
 
-    Manager_->AddParticleGroup(independentGroup);
+    particleManager_->AddParticleGroup(independentGroup);
 }
 
 std::unique_ptr<ParticleEmitter> ParticleEmitter::Clone() const
@@ -1091,15 +1091,15 @@ std::unique_ptr<ParticleEmitter> ParticleEmitter::Clone() const
     newEmitter->lastRotation_ = this->lastRotation_;
     newEmitter->lastScale_ = this->lastScale_;
 
-    newEmitter->Manager_ = std::make_unique<ParticleManager>();
-    newEmitter->Manager_->Initialize(SrvManager::GetInstance());
+    newEmitter->particleManager_ = std::make_unique<ParticleManager>();
+    newEmitter->particleManager_->Initialize(SrvManager::GetInstance());
 
     for (const auto &groupName : particleGroupNames_)
     {
-        ParticleGroup *group = ParticleGroupManager::GetInstance()->GetParticleGroup(groupName);
-        if (group)
+        ParticleGroup *pGroup = ParticleGroupManager::GetInstance()->GetParticleGroup(groupName);
+        if (pGroup)
         {
-            newEmitter->AddParticleGroup(group);
+            newEmitter->AddParticleGroup(pGroup);
         }
     }
     return newEmitter;
@@ -1110,9 +1110,9 @@ void ParticleEmitter::SetTrailEnabled(const std::string &groupName, bool enabled
     if (particleSettings_.find(groupName) != particleSettings_.end())
     {
         particleSettings_[groupName].enableTrail = enabled;
-        if (Manager_)
+        if (particleManager_)
         {
-            Manager_->SetTrailEnabled(groupName, enabled);
+            particleManager_->SetTrailEnabled(groupName, enabled);
         }
     }
 }
@@ -1130,9 +1130,9 @@ void ParticleEmitter::SetMaxTrailParticles(const std::string &groupName, int max
     if (particleSettings_.find(groupName) != particleSettings_.end())
     {
         particleSettings_[groupName].maxTrailParticles = maxTrails;
-        if (Manager_)
+        if (particleManager_)
         {
-            Manager_->SetTrailSettings(groupName,
+            particleManager_->SetTrailSettings(groupName,
                                        particleSettings_[groupName].trailSpawnInterval, maxTrails);
         }
     }
@@ -1202,7 +1202,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
     maxTrailParticles, gatherStartRatio, gatherStrength, trailSpawnInterval, trailLifeScale,
     lifeTimeMin, lifeTimeMax, gravity, alphaMin, alphaMax, scaleMin, scaleMax, trailVelocityScale,
     translate, rotation, scale, velocityMin, velocityMax, particleStartScale, particleEndScale,
-    startAcce, endAcce, startRote, endRote, rotateVelocityMin, rotateVelocityMax,
+    startAcce, endAcce, startRotate, endRotate, rotateVelocityMin, rotateVelocityMax,
     allScaleMax, allScaleMin, rotateStartMax, rotateStartMin, trailScaleMultiplier,
     startColor, endColor, trailColorMultiplier, count,
     enableTrail, trailInheritVelocity, isRandomColor, isBillboard, isBillboardX, isBillboardY, isBillboardZ,
@@ -1218,7 +1218,7 @@ nlohmann::json ParticleEmitter::CaptureUndoState() const
     s["isAuto"] = isAuto_;
     s["drawGroup"] = drawGroup_;
     s["translation"] = transform_.translation_;
-    s["rotation"] = transform_.quateRotation_;
+    s["rotation"] = transform_.quaternionRotation_;
     s["scale"] = transform_.scale_;
 
     json groups = json::object();
@@ -1249,7 +1249,7 @@ void ParticleEmitter::RestoreUndoState(const nlohmann::json &state)
     }
     if (state.contains("rotation"))
     {
-        transform_.quateRotation_ = state["rotation"].get<Quaternion>();
+        transform_.quaternionRotation_ = state["rotation"].get<Quaternion>();
     }
     if (state.contains("scale"))
     {

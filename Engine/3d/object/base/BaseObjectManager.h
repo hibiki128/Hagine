@@ -69,14 +69,14 @@ class BaseObjectManager
     /// <summary>
     /// 非所有でオブジェクトを登録（シーンが unique_ptr を保持したまま登録する）
     /// </summary>
-    /// <param name="obj">登録するオブジェクト</param>
-    void RegisterExternal(BaseObject *obj);
+    /// <param name="pObject">登録するオブジェクト</param>
+    void RegisterExternal(BaseObject *pObject);
 
     /// <summary>
     /// 非所有登録したオブジェクトを登録解除
     /// </summary>
-    /// <param name="obj">解除するオブジェクト</param>
-    void UnregisterExternal(BaseObject *obj);
+    /// <param name="pObject">解除するオブジェクト</param>
+    void UnregisterExternal(BaseObject *pObject);
 
     /// <summary>
     /// 全オブジェクトの更新
@@ -149,9 +149,9 @@ class BaseObjectManager
     /// <summary>
     /// 指定オブジェクトを起点に階層を再帰表示
     /// </summary>
-    /// <param name="obj">表示の起点オブジェクト</param>
+    /// <param name="pObject">表示の起点オブジェクト</param>
     /// <param name="depth">階層の深さ</param>
-    void ShowObjectHierarchy(BaseObject *obj, int depth);
+    void ShowObjectHierarchy(BaseObject *pObject, int depth);
 
     /// <summary>
     /// 親子関係を設定
@@ -267,8 +267,8 @@ class BaseObjectManager
     /// <summary>
     /// 指定オブジェクトの親子関係を復元
     /// </summary>
-    /// <param name="object">対象オブジェクト</param>
-    void RestoreParentChildRelationshipForObject(BaseObject *object);
+    /// <param name="pObject">対象オブジェクト</param>
+    void RestoreParentChildRelationshipForObject(BaseObject *pObject);
 
     /// <summary>
     /// オブジェクトを生成して追加

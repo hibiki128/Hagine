@@ -11,17 +11,17 @@ void FadeOut::Initialize()
     // パーティクルエミッターの生成と初期設定。
     // Spawn したエミッターの更新・描画はエンジンが自動で回すので、
     // ここでは初期発生と壁サイズだけ与え、配置は Update でカメラ正面へ追従させる。
-    fadeOut_ = ParticleCSSpawner::GetInstance()->Spawn("FadeOut");
+    pFadeOutEmitter_ = ParticleCSSpawner::GetInstance()->Spawn("FadeOut");
     timer_ = 0.0f;
 
-    if (fadeOut_)
+    if (pFadeOutEmitter_)
     {
-        fadeOut_->SetAuto(true);
+        pFadeOutEmitter_->SetAuto(true);
         // 壁のサイズを画面を覆える大きさに設定（配置は Update でカメラ正面に毎フレーム追従）
-        fadeOut_->SetScale({kWallHalfWidth, kWallHalfHeight, 1.0f});
+        pFadeOutEmitter_->SetScale({kWallHalfWidth, kWallHalfHeight, 1.0f});
         // 画面全体を覆うリビール演出なので、ポストエフェクト後・最前面で合成される
         // UI レイヤーに描画する（旧実装も UI 段階で描いていた。既定は "3D" ステージ）。
-        fadeOut_->SetDrawGroup("UI");
+        pFadeOutEmitter_->SetDrawGroup("UI");
     }
 
     // シーントランジションの使用を有効化
@@ -33,7 +33,7 @@ void FadeOut::Update(const ViewProjection &vp)
     // 経過時間を加算
     timer_ += kDeltaTime;
 
-    if (fadeOut_)
+    if (pFadeOutEmitter_)
     {
         // パーティクル発生中は、エミッター（長方形の壁）をカメラの真正面に追従配置して
         // 画面全体を確実に覆う（ワールド固定配置だとシーンごとのカメラ位置で隙間が出る）。
@@ -54,8 +54,8 @@ void FadeOut::Update(const ViewProjection &vp)
                 //   スタートカメラのような見下ろしピッチでは上下に隙間が出る）
                 float yaw = std::atan2(forward.x, forward.z);
                 float pitch = std::asin(std::clamp(-forward.y, -1.0f, 1.0f));
-                fadeOut_->SetTranslate(camPos + forward * kCameraDistance);
-                fadeOut_->SetRotation(Quaternion::FromEulerAnglesSafe({pitch, yaw, 0.0f}).Conjugate());
+                pFadeOutEmitter_->SetTranslate(camPos + forward * kCameraDistance);
+                pFadeOutEmitter_->SetRotation(Quaternion::FromEulerAnglesSafe({pitch, yaw, 0.0f}).Conjugate());
             }
         }
 
@@ -65,13 +65,13 @@ void FadeOut::Update(const ViewProjection &vp)
         //  フェードアウトする違和感の原因になっていた）
         if (timer_ >= kSpriteDrawTime)
         {
-            fadeOut_->SetEnableGravity(true);
+            pFadeOutEmitter_->SetEnableGravity(true);
         }
 
         // パーティクルの自動発生を停止
         if (timer_ >= kParticleStopTime)
         {
-            fadeOut_->SetAuto(false);
+            pFadeOutEmitter_->SetAuto(false);
         }
     }
 
@@ -87,11 +87,11 @@ void FadeOut::Finalize()
     // 実体は ParticleCSSpawner が所有し、シーン遷移時にまとめて破棄されるため何もしない。
 }
 
-void FadeOut::ImGui()
+void FadeOut::DrawImGui()
 {
     // デバッグ用のImGui描画
-    if (fadeOut_)
+    if (pFadeOutEmitter_)
     {
-        fadeOut_->DrawImGui();
+        pFadeOutEmitter_->DrawImGui();
     }
 }

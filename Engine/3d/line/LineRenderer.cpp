@@ -456,18 +456,18 @@ void LineRenderer::UpdateCameraBuffer(const ViewProjection &viewProjection)
     *pCameraData_ = viewProjection.matView_ * viewProjection.matProjection_;
 }
 
-void LineRenderer::SetDrawConstants(ID3D12GraphicsCommandList *commandList, const Matrix4x4 &world, const Vector4 &tint)
+void LineRenderer::SetDrawConstants(ID3D12GraphicsCommandList *pCommandList, const Matrix4x4 &world, const Vector4 &tint)
 {
     DrawConstants constants{};
     constants.world = world;
     constants.tint = tint;
-    commandList->SetGraphicsRoot32BitConstants(1, kDrawConstantsDwords, &constants, 0);
+    pCommandList->SetGraphicsRoot32BitConstants(1, kDrawConstantsDwords, &constants, 0);
 }
 
-void LineRenderer::RecordDrawCommands(ID3D12GraphicsCommandList *commandList, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB)
+void LineRenderer::RecordDrawCommands(ID3D12GraphicsCommandList *pCommandList, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB)
 {
     pPsoManager_->DrawCommonSetting(PipelineType::Line3d);
-    commandList->SetGraphicsRootConstantBufferView(0, viewProjCB);
+    pCommandList->SetGraphicsRootConstantBufferView(0, viewProjCB);
 
     // ── 動的線 ──
     if (lineCount_ > 0)
@@ -485,9 +485,9 @@ void LineRenderer::RecordDrawCommands(ID3D12GraphicsCommandList *commandList, D3
             D3D12_VERTEX_BUFFER_VIEW view = slot.view;
             view.SizeInBytes = vertexCount * static_cast<UINT>(sizeof(LineVertex));
 
-            SetDrawConstants(commandList, MakeIdentity4x4(), {1.0f, 1.0f, 1.0f, 1.0f});
-            commandList->IASetVertexBuffers(0, 1, &view);
-            commandList->DrawInstanced(vertexCount, 1, 0, 0);
+            SetDrawConstants(pCommandList, MakeIdentity4x4(), {1.0f, 1.0f, 1.0f, 1.0f});
+            pCommandList->IASetVertexBuffers(0, 1, &view);
+            pCommandList->DrawInstanced(vertexCount, 1, 0, 0);
         }
     }
 
@@ -501,11 +501,11 @@ void LineRenderer::RecordDrawCommands(ID3D12GraphicsCommandList *commandList, D3
         }
         const StaticBatch &batch = it->second;
 
-        SetDrawConstants(commandList, submission.world, submission.tint);
+        SetDrawConstants(pCommandList, submission.world, submission.tint);
 
         D3D12_VERTEX_BUFFER_VIEW view = batch.view;
-        commandList->IASetVertexBuffers(0, 1, &view);
-        commandList->DrawInstanced(batch.vertexCount, 1, 0, 0);
+        pCommandList->IASetVertexBuffers(0, 1, &view);
+        pCommandList->DrawInstanced(batch.vertexCount, 1, 0, 0);
     }
 }
 
@@ -525,7 +525,7 @@ void LineRenderer::Render(const ViewProjection &viewProjection)
     batchSubmissions_.clear();
 }
 
-void LineRenderer::RenderWithExternalCamera(ID3D12GraphicsCommandList *commandList, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB)
+void LineRenderer::RenderWithExternalCamera(ID3D12GraphicsCommandList *pCommandList, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB)
 {
     if (lineCount_ == 0 && batchSubmissions_.empty())
     {
@@ -533,6 +533,6 @@ void LineRenderer::RenderWithExternalCamera(ID3D12GraphicsCommandList *commandLi
     }
     // リセットしない: この後の Render(sceneVP) が同じ線をシーンVPで描画してリセットする。
     // 同じリングスロットへ2回memcpyすることになるが、内容は同一なので問題ない。
-    RecordDrawCommands(commandList, viewProjCB);
+    RecordDrawCommands(pCommandList, viewProjCB);
 }
 } // namespace Hagine

@@ -96,7 +96,7 @@ void LightGroup::Finalize()
     pointLights_.clear();
     spotLights_.clear();
     dynamicPointLights_.clear();
-    DLightData_.reset();
+    lightDataHandler_.reset();
 }
 
 void LightGroup::Initialize()
@@ -385,7 +385,7 @@ void LightGroup::CreatePointLightBuffer()
                                                      IID_PPV_ARGS(&lightCounterReadbackResource_));
 }
 
-void LightGroup::TransitionPointLightBuffer(ID3D12GraphicsCommandList *cmdList, D3D12_RESOURCE_STATES after)
+void LightGroup::TransitionPointLightBuffer(ID3D12GraphicsCommandList *pCommandList, D3D12_RESOURCE_STATES after)
 {
     if (!pointLightBufferResource_ || pointLightBufferState_ == after)
     {
@@ -397,11 +397,11 @@ void LightGroup::TransitionPointLightBuffer(ID3D12GraphicsCommandList *cmdList, 
     barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     barrier.Transition.StateBefore = pointLightBufferState_;
     barrier.Transition.StateAfter = after;
-    cmdList->ResourceBarrier(1, &barrier);
+    pCommandList->ResourceBarrier(1, &barrier);
     pointLightBufferState_ = after;
 }
 
-void LightGroup::TransitionLightCounter(ID3D12GraphicsCommandList *cmdList, D3D12_RESOURCE_STATES after)
+void LightGroup::TransitionLightCounter(ID3D12GraphicsCommandList *pCommandList, D3D12_RESOURCE_STATES after)
 {
     if (!lightCounterResource_ || lightCounterState_ == after)
     {
@@ -413,13 +413,13 @@ void LightGroup::TransitionLightCounter(ID3D12GraphicsCommandList *cmdList, D3D1
     barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     barrier.Transition.StateBefore = lightCounterState_;
     barrier.Transition.StateAfter = after;
-    cmdList->ResourceBarrier(1, &barrier);
+    pCommandList->ResourceBarrier(1, &barrier);
     lightCounterState_ = after;
 }
 
-void LightGroup::BeginGpuLightAppend(ID3D12GraphicsCommandList *cmdList)
+void LightGroup::BeginGpuLightAppend(ID3D12GraphicsCommandList *pCommandList)
 {
-    if (!cmdList || !pointLightBufferResource_ || !lightCounterResource_)
+    if (!pCommandList || !pointLightBufferResource_ || !lightCounterResource_)
     {
         return;
     }
@@ -440,24 +440,24 @@ void LightGroup::BeginGpuLightAppend(ID3D12GraphicsCommandList *cmdList)
     // CPU分をGPUバッファの先頭へ転送する。GPUはこの後ろへ追記する
     *pLightCounterUploadData_ = pointLightBufferCount_;
 
-    TransitionPointLightBuffer(cmdList, D3D12_RESOURCE_STATE_COPY_DEST);
-    TransitionLightCounter(cmdList, D3D12_RESOURCE_STATE_COPY_DEST);
+    TransitionPointLightBuffer(pCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
+    TransitionLightCounter(pCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
 
     if (pointLightBufferCount_ > 0)
     {
-        cmdList->CopyBufferRegion(pointLightBufferResource_.Get(), 0, pointLightUploadResource_.Get(), 0,
+        pCommandList->CopyBufferRegion(pointLightBufferResource_.Get(), 0, pointLightUploadResource_.Get(), 0,
                                   sizeof(PointLightGPU) * pointLightBufferCount_);
     }
-    cmdList->CopyBufferRegion(lightCounterResource_.Get(), 0, lightCounterUploadResource_.Get(), 0, sizeof(uint32_t));
+    pCommandList->CopyBufferRegion(lightCounterResource_.Get(), 0, lightCounterUploadResource_.Get(), 0, sizeof(uint32_t));
 
     // 粒子光源CSが追記できる状態にする
-    TransitionPointLightBuffer(cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    TransitionLightCounter(cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    TransitionPointLightBuffer(pCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    TransitionLightCounter(pCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 }
 
-void LightGroup::EndGpuLightAppend(ID3D12GraphicsCommandList *cmdList)
+void LightGroup::EndGpuLightAppend(ID3D12GraphicsCommandList *pCommandList)
 {
-    if (!cmdList || !pointLightBufferResource_ || !lightCounterResource_)
+    if (!pCommandList || !pointLightBufferResource_ || !lightCounterResource_)
     {
         return;
     }
@@ -465,15 +465,15 @@ void LightGroup::EndGpuLightAppend(ID3D12GraphicsCommandList *cmdList)
     // 統計用にライト総数を読み戻す（次フレームの Begin で取り込む）
     if (lightCounterReadbackResource_)
     {
-        TransitionLightCounter(cmdList, D3D12_RESOURCE_STATE_COPY_SOURCE);
-        cmdList->CopyBufferRegion(lightCounterReadbackResource_.Get(), 0, lightCounterResource_.Get(), 0, sizeof(uint32_t));
+        TransitionLightCounter(pCommandList, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        pCommandList->CopyBufferRegion(lightCounterReadbackResource_.Get(), 0, lightCounterResource_.Get(), 0, sizeof(uint32_t));
     }
 
     // カリングCS（非ピクセル）とライティングPS（ピクセル）の両方から読むので合成状態にする
     const D3D12_RESOURCE_STATES readState =
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    TransitionPointLightBuffer(cmdList, readState);
-    TransitionLightCounter(cmdList, readState);
+    TransitionPointLightBuffer(pCommandList, readState);
+    TransitionLightCounter(pCommandList, readState);
 }
 
 void LightGroup::UploadPointLightBuffer()
@@ -805,7 +805,7 @@ void LightGroup::SyncSelectionToGizmo()
 // ImGui
 // ===================================================
 
-void LightGroup::imgui()
+void LightGroup::DrawImGui()
 {
 #ifdef USE_IMGUI
 #ifdef _DEBUG

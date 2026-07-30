@@ -27,8 +27,8 @@ class RtvManager
     /// <summary>
     /// 初期化（RTV用デスクリプタヒープの生成）
     /// </summary>
-    /// <param name="device">デバイス</param>
-    void Initialize(DXDevice *device);
+    /// <param name="pDevice">デバイス</param>
+    void Initialize(DXDevice *pDevice);
 
     /// <summary>
     /// 終了処理

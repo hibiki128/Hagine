@@ -20,8 +20,8 @@ void ScreenFlash::Initialize()
     {
         return;
     }
-    OffScreen *os = FetchOffScreen();
-    if (!os)
+    OffScreen *pOffScreen = FetchOffScreen();
+    if (!pOffScreen)
     {
         return;
     }
@@ -29,20 +29,20 @@ void ScreenFlash::Initialize()
     // 既存スロットがあれば再利用（多重確保を防ぐ）。無ければ空きスロットへ追加する。
     // 適用順はスロット番号順なので、Monochrome → Bloom → Blur の順に追加して
     // 「白黒二値化 → 明るい所をブルーム → ラジアルブラー」の順で適用する
-    monoSlot_ = os->FindEffectSlotByName(kMonoName);
+    monoSlot_ = pOffScreen->FindEffectSlotByName(kMonoName);
     if (monoSlot_ < 0)
     {
-        monoSlot_ = os->AddEffect(ShaderMode::Monochrome, kMonoName);
+        monoSlot_ = pOffScreen->AddEffect(ShaderMode::Monochrome, kMonoName);
     }
-    bloomSlot_ = os->FindEffectSlotByName(kBloomName);
+    bloomSlot_ = pOffScreen->FindEffectSlotByName(kBloomName);
     if (bloomSlot_ < 0)
     {
-        bloomSlot_ = os->AddEffect(ShaderMode::Bloom, kBloomName);
+        bloomSlot_ = pOffScreen->AddEffect(ShaderMode::Bloom, kBloomName);
     }
-    blurSlot_ = os->FindEffectSlotByName(kBlurName);
+    blurSlot_ = pOffScreen->FindEffectSlotByName(kBlurName);
     if (blurSlot_ < 0)
     {
-        blurSlot_ = os->AddEffect(ShaderMode::Blur, kBlurName);
+        blurSlot_ = pOffScreen->AddEffect(ShaderMode::Blur, kBlurName);
     }
 
     // 各エフェクトのパラメータを反映
@@ -55,36 +55,36 @@ void ScreenFlash::Initialize()
 
 void ScreenFlash::ApplyParams()
 {
-    OffScreen *os = FetchOffScreen();
-    if (!os)
+    OffScreen *pOffScreen = FetchOffScreen();
+    if (!pOffScreen)
     {
         return;
     }
     // 白黒二値化の閾値
-    if (auto *mono = os->GetEffectParams<MonochromeParams>(monoSlot_))
+    if (auto *pMonochromeParams = pOffScreen->GetEffectParams<MonochromeParams>(monoSlot_))
     {
-        mono->GetData()->threshold = monoThreshold_;
+        pMonochromeParams->GetData()->threshold = monoThreshold_;
     }
     // ブルーム
-    if (auto *bloom = os->GetEffectParams<BloomParams>(bloomSlot_))
+    if (auto *pBloomParams = pOffScreen->GetEffectParams<BloomParams>(bloomSlot_))
     {
-        bloom->GetData()->threshold = bloomThreshold_;
-        bloom->GetData()->intensity = bloomIntensity_;
+        pBloomParams->GetData()->threshold = bloomThreshold_;
+        pBloomParams->GetData()->intensity = bloomIntensity_;
     }
     // ラジアルブラー（中心固定・ブラー幅のみ調整）
-    if (auto *blur = os->GetEffectParams<RadialBlurParams>(blurSlot_))
+    if (auto *pRadialBlurParams = pOffScreen->GetEffectParams<RadialBlurParams>(blurSlot_))
     {
-        blur->GetData()->blurWidth = blurWidth_;
+        pRadialBlurParams->GetData()->blurWidth = blurWidth_;
     }
 }
 
 void ScreenFlash::Finalize()
 {
-    if (OffScreen *os = FetchOffScreen())
+    if (OffScreen *pOffScreen = FetchOffScreen())
     {
-        os->RemoveAllEffectsByName(kMonoName);
-        os->RemoveAllEffectsByName(kBloomName);
-        os->RemoveAllEffectsByName(kBlurName);
+        pOffScreen->RemoveAllEffectsByName(kMonoName);
+        pOffScreen->RemoveAllEffectsByName(kBloomName);
+        pOffScreen->RemoveAllEffectsByName(kBlurName);
     }
     monoSlot_ = -1;
     bloomSlot_ = -1;
@@ -154,33 +154,33 @@ void ScreenFlash::Update(float deltaTime)
 
 void ScreenFlash::SetEffectsEnabled(bool enabled)
 {
-    OffScreen *os = FetchOffScreen();
-    if (!os)
+    OffScreen *pOffScreen = FetchOffScreen();
+    if (!pOffScreen)
     {
         return;
     }
     if (monoSlot_ >= 0)
     {
-        os->SetEffectEnabled(monoSlot_, enabled);
+        pOffScreen->SetEffectEnabled(monoSlot_, enabled);
     }
     if (bloomSlot_ >= 0)
     {
-        os->SetEffectEnabled(bloomSlot_, enabled);
+        pOffScreen->SetEffectEnabled(bloomSlot_, enabled);
     }
     if (blurSlot_ >= 0)
     {
-        os->SetEffectEnabled(blurSlot_, enabled);
+        pOffScreen->SetEffectEnabled(blurSlot_, enabled);
     }
 }
 
 void ScreenFlash::RegisterParams(const std::string &owner)
 {
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register(owner, "必殺白黒点灯時間", &onDuration_, {0.01f, 0.0f, 1.0f});
-    hub->Register(owner, "必殺白黒間隔時間", &gapDuration_, {0.01f, 0.0f, 1.0f});
-    hub->Register(owner, "必殺白黒明滅回数", &flashCount_, {1.0f, 1.0f, 10.0f});
-    hub->Register(owner, "必殺白黒二値化閾値", &monoThreshold_, {0.01f, 0.0f, 1.0f});
-    hub->Register(owner, "必殺ブルーム閾値", &bloomThreshold_, {0.01f, 0.0f, 1.0f});
-    hub->Register(owner, "必殺ブルーム強度", &bloomIntensity_, {0.05f, 0.0f, 5.0f});
-    hub->Register(owner, "必殺ブラー幅", &blurWidth_, {0.001f, 0.0f, 0.2f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register(owner, "必殺白黒点灯時間", &onDuration_, {0.01f, 0.0f, 1.0f});
+    pHub->Register(owner, "必殺白黒間隔時間", &gapDuration_, {0.01f, 0.0f, 1.0f});
+    pHub->Register(owner, "必殺白黒明滅回数", &flashCount_, {1.0f, 1.0f, 10.0f});
+    pHub->Register(owner, "必殺白黒二値化閾値", &monoThreshold_, {0.01f, 0.0f, 1.0f});
+    pHub->Register(owner, "必殺ブルーム閾値", &bloomThreshold_, {0.01f, 0.0f, 1.0f});
+    pHub->Register(owner, "必殺ブルーム強度", &bloomIntensity_, {0.05f, 0.0f, 5.0f});
+    pHub->Register(owner, "必殺ブラー幅", &blurWidth_, {0.001f, 0.0f, 0.2f});
 }

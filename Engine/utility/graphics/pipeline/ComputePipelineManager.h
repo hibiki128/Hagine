@@ -41,7 +41,7 @@ class ComputePipelineManager {
     /// <summary>
     /// 初期化
     /// </summary>
-    void Initialize(DirectXCommon *dxCommon);
+    void Initialize(DirectXCommon *pDxCommon);
 
     /// <summary>
     /// パイプラインの取得
@@ -55,11 +55,11 @@ class ComputePipelineManager {
 
     /// <summary>
     /// 描画に必要な共通設定を行う
-    /// cmdList が nullptr の場合は Direct Queue のコマンドリストを使用する
+    /// pCommandList が nullptr の場合は Direct Queue のコマンドリストを使用する
     /// </summary>
     void DrawCommonSetting(ComputePipelineType type, BlendMode blendMode = BlendMode::Normal,
                            ShaderMode shaderMode = ShaderMode::None,
-                           ID3D12GraphicsCommandList *cmdList = nullptr);
+                           ID3D12GraphicsCommandList *pCommandList = nullptr);
 
   private:
     // 内部パイプライン作成メソッド

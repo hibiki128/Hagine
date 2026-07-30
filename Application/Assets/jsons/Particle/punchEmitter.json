@@ -28,7 +28,7 @@
         "y": 1.0,
         "z": 1.0
     },
-    "directionTest_endRote": {
+    "directionTest_endRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -101,7 +101,7 @@
         "y": 1.0,
         "z": 1.0
     },
-    "directionTest_startRote": {
+    "directionTest_startRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -187,7 +187,7 @@
         "y": 0.43529412150382996,
         "z": 0.003921568859368563
     },
-    "punchHit_endRote": {
+    "punchHit_endRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -260,7 +260,7 @@
         "y": 0.43645089864730835,
         "z": 0.0042552947998046875
     },
-    "punchHit_startRote": {
+    "punchHit_startRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0

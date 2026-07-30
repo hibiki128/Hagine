@@ -203,7 +203,7 @@ class TutorialSystem
 
   private:
     /// ===================================================
-    /// private variants
+    /// private variables
     /// ===================================================
 
     Player *pPlayer_ = nullptr;       // プレイヤー

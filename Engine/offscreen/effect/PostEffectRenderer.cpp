@@ -1,12 +1,12 @@
 #include "PostEffectRenderer.h"
 
 namespace Hagine {
-void PostEffectRenderer::Initialize(DirectXCommon *dxCommon,
-                                    SrvManager *srvManager,
+void PostEffectRenderer::Initialize(DirectXCommon *pDxCommon,
+                                    SrvManager *pSrvManager,
                                     PipelineManager *psoManager)
 {
-    pDxCommon_ = dxCommon;
-    pSrvManager_ = srvManager;
+    pDxCommon_ = pDxCommon;
+    pSrvManager_ = pSrvManager;
     pPsoManager_ = psoManager;
 
     renderBuffer_.Initialize(pDxCommon_, pSrvManager_);
@@ -98,11 +98,11 @@ void PostEffectRenderer::DrawWithoutCopy(PostEffectChain &effectChain, float del
 
 void PostEffectRenderer::BeginCompositePass()
 {
-    auto *cmdList = pDxCommon_->GetCommandList().Get();
+    auto *pCommandList = pDxCommon_->GetCommandList().Get();
     pDxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
                                  D3D12_RESOURCE_STATE_GENERIC_READ,
                                  D3D12_RESOURCE_STATE_RENDER_TARGET);
-    cmdList->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
+    pCommandList->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
 }
 
 void PostEffectRenderer::EndCompositePass()
@@ -114,33 +114,33 @@ void PostEffectRenderer::EndCompositePass()
 
 void PostEffectRenderer::BlitToOffScreen(D3D12_GPU_DESCRIPTOR_HANDLE srcSrv)
 {
-    auto *cmdList = pDxCommon_->GetCommandList().Get();
+    auto *pCommandList = pDxCommon_->GetCommandList().Get();
     // PreRenderTexture() によりオフスクリーンは既に RENDER_TARGET 状態
     D3D12_CPU_DESCRIPTOR_HANDLE offScreenRtv = pDxCommon_->GetRTVCPUDescriptorHandle(2);
-    cmdList->OMSetRenderTargets(1, &offScreenRtv, false, &dsvHandle_);
+    pCommandList->OMSetRenderTargets(1, &offScreenRtv, false, &dsvHandle_);
     pPsoManager_->DrawCommonSetting(PipelineType::Render, BlendMode::Normal, ShaderMode::None);
-    cmdList->SetGraphicsRootDescriptorTable(0, srcSrv);
-    cmdList->DrawInstanced(3, 1, 0, 0);
+    pCommandList->SetGraphicsRootDescriptorTable(0, srcSrv);
+    pCommandList->DrawInstanced(3, 1, 0, 0);
     // オフスクリーンは RENDER_TARGET のまま（以降の3D描画のため）
 }
 
 void PostEffectRenderer::DrawToFinalResult()
 {
-    auto *cmdList = pDxCommon_->GetCommandList().Get();
+    auto *pCommandList = pDxCommon_->GetCommandList().Get();
 
     pDxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
                                  D3D12_RESOURCE_STATE_GENERIC_READ,
                                  D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-    cmdList->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
+    pCommandList->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
 
     D3D12_CLEAR_VALUE cv = pDxCommon_->GetClearColorValue();
     const float clearColor[4] = {cv.Color[0], cv.Color[1], cv.Color[2], cv.Color[3]};
-    cmdList->ClearRenderTargetView(finalResultRtvHandle_, clearColor, 0, nullptr);
+    pCommandList->ClearRenderTargetView(finalResultRtvHandle_, clearColor, 0, nullptr);
 
     pPsoManager_->DrawCommonSetting(PipelineType::Render, BlendMode::Normal, ShaderMode::None);
-    cmdList->SetGraphicsRootDescriptorTable(0, pDxCommon_->GetOffScreenGPUHandle());
-    cmdList->DrawInstanced(3, 1, 0, 0);
+    pCommandList->SetGraphicsRootDescriptorTable(0, pDxCommon_->GetOffScreenGPUHandle());
+    pCommandList->DrawInstanced(3, 1, 0, 0);
 
     pDxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
                                  D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -149,26 +149,26 @@ void PostEffectRenderer::DrawToFinalResult()
 
 void PostEffectRenderer::CopyFinalResultToBackBuffer()
 {
-    auto *cmdList = pDxCommon_->GetCommandList().Get();
+    auto *pCommandList = pDxCommon_->GetCommandList().Get();
 
     UINT backBufferIndex = pDxCommon_->GetSwapChain()->GetCurrentBackBufferIndex();
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = pDxCommon_->GetRTVCPUDescriptorHandle(backBufferIndex);
 
     // バックバッファは実ウィンドウサイズなので、仮想解像度の深度バッファは束縛しない
     // （このパスは深度不使用。サイズ不一致の検証エラーも防ぐ）
-    cmdList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
+    pCommandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
 
     // レターボックス込みの最終合成用ビューポートで仮想解像度→実ウィンドウサイズへ拡縮する
-    cmdList->RSSetViewports(1, &pDxCommon_->GetPresentViewport());
-    cmdList->RSSetScissorRects(1, &pDxCommon_->GetPresentScissorRect());
+    pCommandList->RSSetViewports(1, &pDxCommon_->GetPresentViewport());
+    pCommandList->RSSetScissorRects(1, &pDxCommon_->GetPresentScissorRect());
 
     pPsoManager_->DrawCommonSetting(PipelineType::Render, BlendMode::Normal, ShaderMode::None);
-    cmdList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetFinalResultSrvHandleGPU());
-    cmdList->DrawInstanced(3, 1, 0, 0);
+    pCommandList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetFinalResultSrvHandleGPU());
+    pCommandList->DrawInstanced(3, 1, 0, 0);
 
     // 後続の描画（次フレームのオフスクリーンパス等）のためにレンダリング用ビューポートへ戻す
-    cmdList->RSSetViewports(1, &pDxCommon_->GetRenderViewport());
-    cmdList->RSSetScissorRects(1, &pDxCommon_->GetRenderScissorRect());
+    pCommandList->RSSetViewports(1, &pDxCommon_->GetRenderViewport());
+    pCommandList->RSSetScissorRects(1, &pDxCommon_->GetRenderScissorRect());
 }
 
 void PostEffectRenderer::DrawSingleEffect(const EffectSlot &slot,
@@ -177,7 +177,7 @@ void PostEffectRenderer::DrawSingleEffect(const EffectSlot &slot,
                                           int outputRtvIndex)
 {
     assert(slot.occupied && slot.params);
-    auto *cmdList = pDxCommon_->GetCommandList().Get();
+    auto *pCommandList = pDxCommon_->GetCommandList().Get();
 
     D3D12_CLEAR_VALUE cv = pDxCommon_->GetClearColorValue();
     const float clearColor[4] = {cv.Color[0], cv.Color[1], cv.Color[2], cv.Color[3]};
@@ -189,8 +189,8 @@ void PostEffectRenderer::DrawSingleEffect(const EffectSlot &slot,
         pDxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
                                      D3D12_RESOURCE_STATE_GENERIC_READ,
                                      D3D12_RESOURCE_STATE_RENDER_TARGET);
-        cmdList->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
-        cmdList->ClearRenderTargetView(finalResultRtvHandle_, clearColor, 0, nullptr);
+        pCommandList->OMSetRenderTargets(1, &finalResultRtvHandle_, false, &dsvHandle_);
+        pCommandList->ClearRenderTargetView(finalResultRtvHandle_, clearColor, 0, nullptr);
     }
     else
     {
@@ -199,35 +199,35 @@ void PostEffectRenderer::DrawSingleEffect(const EffectSlot &slot,
         pDxCommon_->BarrierTransition(renderBuffer_.GetPingPongResource(outputRtvIndex).Get(),
                                      D3D12_RESOURCE_STATE_GENERIC_READ,
                                      D3D12_RESOURCE_STATE_RENDER_TARGET);
-        cmdList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle_);
-        cmdList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+        pCommandList->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle_);
+        pCommandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
     }
 
     // --- パイプライン & シェーダーパラメータ設定 ---
     ShaderMode mode = slot.params->GetMode();
     pPsoManager_->DrawCommonSetting(PipelineType::Render, BlendMode::Normal, mode);
-    slot.params->Apply(cmdList, pSrvManager_, pDxCommon_);
+    slot.params->Apply(pCommandList, pSrvManager_, pDxCommon_);
 
     // --- 入力テクスチャの設定 ---
     if (isFirstInput)
     {
-        cmdList->SetGraphicsRootDescriptorTable(0, pDxCommon_->GetOffScreenGPUHandle());
+        pCommandList->SetGraphicsRootDescriptorTable(0, pDxCommon_->GetOffScreenGPUHandle());
     }
     else
     {
         if (inputPingPong >= 0 && inputPingPong < renderBuffer_.GetPingPongBufferCount())
         {
-            cmdList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetPingPongSrvHandleGPU(inputPingPong));
+            pCommandList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetPingPongSrvHandleGPU(inputPingPong));
         }
         else
         {
             // フォールバック
-            cmdList->SetGraphicsRootDescriptorTable(0, pDxCommon_->GetOffScreenGPUHandle());
+            pCommandList->SetGraphicsRootDescriptorTable(0, pDxCommon_->GetOffScreenGPUHandle());
         }
     }
 
     // --- 描画 ---
-    cmdList->DrawInstanced(3, 1, 0, 0);
+    pCommandList->DrawInstanced(3, 1, 0, 0);
 
     // --- バリア遷移（読み取り可能状態へ戻す）---
     if (outputRtvIndex == -2)

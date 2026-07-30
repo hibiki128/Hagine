@@ -1,4 +1,5 @@
 #include "TutorialScene.h"
+#include <Application/camera/follow/FollowCameraFactory.h>
 #include "utility/scene/SceneManager.h"
 #include "edit/motion/MotionEditor.h"
 #include <Frame.h>
@@ -17,7 +18,7 @@ void TutorialScene::Initialize()
     debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
-    followCamera_ = std::make_unique<FollowCamera>();
+    followCamera_ = FollowCameraFactory::Create();
     ground_ = std::make_unique<Ground>();
     pSkyBox_ = SkyBox::GetInstance();
     playerUI_ = std::make_unique<PlayerUI>();
@@ -34,7 +35,7 @@ void TutorialScene::Initialize()
     /// ===================================================
     debugCamera_->Initialize(&vp_);
     player_->Init("player");
-    enemy_->Init("enemy");
+    enemy_->Init("pEnemy");
     ground_->Init("Ground");
     aroundField_->Init("Around_Field");
     followCamera_->Init();
@@ -48,8 +49,8 @@ void TutorialScene::Initialize()
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
-    player_->SetVp(&vp_);
-    enemy_->SetVp(&vp_);
+    player_->SetViewProjection(&vp_);
+    enemy_->SetViewProjection(&vp_);
     enemy_->SetTarget(player_.get());
     ground_->GetLighting() = false;
     gameUI_->SetIsTutorial(true);
@@ -57,11 +58,11 @@ void TutorialScene::Initialize()
     /// ===================================================
     /// ポインタ共有
     /// ===================================================
-    enemy_ptr = enemy_.get();
-    player_ptr = player_.get();
+    pEnemy_ = enemy_.get();
+    pPlayer_ = player_.get();
 
-    playerUI_->Init(player_ptr);
-    enemyUI_->Init(enemy_ptr);
+    playerUI_->Init(pPlayer_);
+    enemyUI_->Init(pEnemy_);
 
     /// ===================================================
     /// オブジェクトマネージャに登録（非所有）
@@ -72,12 +73,12 @@ void TutorialScene::Initialize()
     /// ===================================================
     /// エネミーを非表示にする
     /// ===================================================
-    enemy_ptr->GetAlive() = false;
+    pEnemy_->GetAlive() = false;
 
     /// ===================================================
     /// チュートリアルシステム初期化
     /// ===================================================
-    tutorialSystem_->Initialize(player_ptr);
+    tutorialSystem_->Initialize(pPlayer_);
     tutorialUI_->Initialize(tutorialSystem_.get());
     fadeOut_->Initialize();
 
@@ -91,10 +92,10 @@ void TutorialScene::Initialize()
         pSkyBox_->Draw(vp);
         ground_->Draw(vp);
         aroundField_->Draw(vp);
-        player_ptr->DrawParticle(vp);
-        enemy_ptr->DrawParticle(vp);
+        pPlayer_->DrawParticle(vp);
+        pEnemy_->DrawParticle(vp);
         followCamera_->DrawFrustum();
-        enemy_ptr->DrawFrustum();
+        pEnemy_->DrawFrustum();
     });
     pDrawSystem_->Register("TutorialScene_UI", DrawLayer::PostEffect, [this](const ViewProjection &) {
         gameUI_->Draw();
@@ -118,9 +119,9 @@ void TutorialScene::Finalize()
 
     fadeOut_->Finalize();
     aroundField_->Finalize();
-    if (player_ptr->GetIsAlive())
+    if (pPlayer_->GetIsAlive())
     {
-        pSceneManager_->SetHP(player_ptr->GetHP());
+        pSceneManager_->SetHP(pPlayer_->GetHP());
     }
     BaseScene::Finalize();
 }
@@ -141,10 +142,10 @@ void TutorialScene::Update()
     ground_->Update();
     aroundField_->Update();
     fadeOut_->Update(vp_);
-    player_ptr->SetActiveDebugCamera(debugCamera_->GetActive());
+    pPlayer_->SetActiveDebugCamera(debugCamera_->GetActive());
 
     // シャドウマップをプレイヤーに追従
-    Vector3 p = player_ptr->GetWorldPosition();
+    Vector3 p = pPlayer_->GetWorldPosition();
     ShadowMap::GetInstance()->SetLightTarget({p.x, 0.0f, p.z});
 
     // 入力の更新
@@ -164,7 +165,7 @@ void TutorialScene::Update()
     }
 
     // 遅延経過後の更新
-    player_ptr->SetStart(sceneStarted_);
+    pPlayer_->SetStart(sceneStarted_);
     playerUI_->Update();
     enemyUI_->Update();
 
@@ -176,7 +177,7 @@ void TutorialScene::Update()
         tutorialUI_->Update(dt);
 
         // プレイヤーに現在のステップを通知
-        player_ptr->SetTutorialStep(tutorialSystem_->GetCurrentStep());
+        pPlayer_->SetTutorialStep(tutorialSystem_->GetCurrentStep());
 
         // 敵の出現/消滅リクエストを処理
         HandleEnemySpawnRequest();
@@ -200,8 +201,8 @@ void TutorialScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->imgui();
-    followCamera_->imgui();
+    debugCamera_->DrawImGui();
+    followCamera_->DrawImGui();
     vp_.ShowDebugInfo();
     MotionEditor::GetInstance()->DrawImGui();
     tutorialSystem_->DrawImGui();
@@ -212,8 +213,8 @@ void TutorialScene::AddObjectSetting()
     /// ===================================================
     /// オブジェクト設定（デバッグ）
     /// ===================================================
-    player_ptr->Debug();
-    enemy_ptr->Debug();
+    pPlayer_->Debug();
+    pEnemy_->Debug();
     enemyUI_->Debug();
     tutorialUI_->DrawImGui();
 }
@@ -223,7 +224,7 @@ void TutorialScene::AddParticleSetting()
     /// ===================================================
     /// パーティクル設定（デバッグ）
     /// ===================================================
-    fadeOut_->ImGui();
+    fadeOut_->DrawImGui();
 }
 
 void TutorialScene::CameraUpdate()
@@ -231,7 +232,7 @@ void TutorialScene::CameraUpdate()
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    if (player_ptr->GetIsAlive())
+    if (pPlayer_->GetIsAlive())
     {
         if (debugCamera_->GetActive())
         {
@@ -281,13 +282,13 @@ void TutorialScene::HandleEnemySpawnRequest()
     /// ===================================================
     if (tutorialSystem_->ShouldSpawnEnemy())
     {
-        enemy_ptr->GetAlive() = true;
+        pEnemy_->GetAlive() = true;
         tutorialSystem_->ConsumeSpawnRequest();
     }
 
     if (tutorialSystem_->ShouldDespawnEnemy())
     {
-        enemy_ptr->GetAlive() = false;
+        pEnemy_->GetAlive() = false;
         tutorialSystem_->ConsumeDespawnRequest();
     }
 }

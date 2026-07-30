@@ -29,7 +29,7 @@
         "y": 1.0,
         "z": 0.9363316297531128
     },
-    "chargeAround_endRote": {
+    "chargeAround_endRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -102,7 +102,7 @@
         "y": 1.0,
         "z": 0.5591397285461426
     },
-    "chargeAround_startRote": {
+    "chargeAround_startRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -168,7 +168,7 @@
         "y": 0.3261649012565613,
         "z": 0.2946005165576935
     },
-    "chargeBullet_endRote": {
+    "chargeBullet_endRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -241,7 +241,7 @@
         "y": 0.8960573673248291,
         "z": 0.6845356225967407
     },
-    "chargeBullet_startRote": {
+    "chargeBullet_startRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0

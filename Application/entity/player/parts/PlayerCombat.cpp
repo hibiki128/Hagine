@@ -18,9 +18,9 @@ PlayerCombat::~PlayerCombat()
 {
 }
 
-void PlayerCombat::Init(Player *owner)
+void PlayerCombat::Init(Player *pOwner)
 {
-    pOwner_ = owner;
+    pOwner_ = pOwner;
 
     chargeShot_ = std::make_unique<ChargeShot>();
     chargeShot_->SetPlayer(pOwner_);
@@ -29,41 +29,17 @@ void PlayerCombat::Init(Player *owner)
     // 必殺技はBaseObjectManagerが所有し、こちらは生ポインタで操作する
     auto makanAttack = std::make_unique<MakanAttackSkill>();
     makanAttack->Init("makanAttack");
-    pMakanAttack_ptr_ = makanAttack.get();
+    pMakanAttack_ = makanAttack.get();
     BaseObjectManager::GetInstance()->AddObject(std::move(makanAttack));
 
     if (!comboInitialized_)
     {
-        punchCombo_.SetName("PunchCombo"); // DataHandlerのファイル名に使われる
-        // 見た目は comboAnimations_ で再生するのでモーション用ターゲットは不要（nullptr）
-        punchCombo_
-            .Add(nullptr, "Jab", 10.0f, 3.0f, 0.25f, 0.08f)
-            .Add(nullptr, "Hook", 12.0f, 4.0f, 0.25f, 0.08f)
-            .Add(nullptr, "Cross", 12.0f, 4.0f, 0.25f, 0.08f)
-            .Add(nullptr, "Uppercut", 15.0f, 6.0f, 0.30f, 0.10f)
-            .Add(nullptr, "Overhand", 15.0f, 6.0f, 0.30f, 0.10f)
-            .Add(nullptr, "Swing", 18.0f, 7.0f, 0.30f, 0.10f)
-            .Add(nullptr, "Elbow", 20.0f, 8.0f, 0.25f, 0.06f)
-            .Add(nullptr, "Slam", 25.0f, 12.0f, 0.35f, 0.12f);
-
-        // 出し切ったあとすぐ1段目から殴り直せないよう、戻りの余韻に加えて入力を止める時間
-        punchCombo_.GetFinishRecovery() = 1.0f;
-
-        punchCombo_.LoadAttackParams(); // JSONがあれば値を上書き読み込み
+        // 段の並び・ダメージ・ノックバック・判定タイミング・アニメーションはすべて
+        // jsons/ComboDefinition/PunchCombo.json が持つ。
+        // 見た目は本体アニメーションで再生するのでモーション用ターゲットは指定しない（nullptr）
+        punchCombo_.LoadDefinition(kComboDefinitionName);
         comboInitialized_ = true;
     }
-
-    // コンボ段ごとのプレイヤー本体アニメーション（空文字の段は何も再生しない）
-    comboAnimations_ = {
-        "animation/Player/Punch_1.gltf", // 1段目: Jab
-        "animation/Player/Punch_2.gltf", // 2段目: Hook
-        "animation/Player/Punch_3.gltf", // 3段目: Cross
-        "animation/Player/Punch_4.gltf", // 4段目: Uppercut
-        "animation/Player/Kick_1.gltf",  // 5段目: Overhand
-        "animation/Player/Kick_2.gltf",  // 6段目: Swing
-        "animation/Player/Kick_3.gltf",  // 7段目: Elbow
-        "animation/Player/Smash.gltf",   // 8段目: Slam
-    };
 
     attackCollider_ = std::make_unique<PlayerAttackCollider>();
     attackCollider_->Init(pOwner_);
@@ -128,8 +104,8 @@ void PlayerCombat::UpdateComboAndCollider()
 
 void PlayerCombat::TeleportAhead()
 {
-    Enemy *enemy = pOwner_->GetEnemy();
-    if (!enemy)
+    Enemy *pEnemy = pOwner_->GetEnemy();
+    if (!pEnemy)
     {
         return;
     }
@@ -147,13 +123,13 @@ void PlayerCombat::TeleportAhead()
     }
     teleportDir_ = dir;
 
-    const Hagine::Vector3 enemyPos = enemy->GetWorldPosition();
+    const Hagine::Vector3 enemyPos = pEnemy->GetWorldPosition();
 
     // arrivalTime 秒で aheadDistance を進む速度にして、先回り地点へ丁度到達させる
     const float arrival = (teleportArrivalTime_ > 0.001f) ? teleportArrivalTime_ : 0.001f;
     const float speed = teleportAheadDistance_ / arrival;
-    enemy->SetVelocity({dir.x * speed, teleportLaunchUp_, dir.z * speed});
-    enemy->Movement().CancelVelocityEase(); // BTの速度イージングに吹き飛ばし速度を上書きされないように
+    pEnemy->SetVelocity({dir.x * speed, teleportLaunchUp_, dir.z * speed});
+    pEnemy->Movement().CancelVelocityEase(); // BTの速度イージングに吹き飛ばし速度を上書きされないように
 
     // プレイヤーは吹き飛ぶ方向の先へ先回り瞬間移動する。敵はこの地点へ吹き飛ばされてくる
     Hagine::Vector3 aheadPos = enemyPos + dir * teleportAheadDistance_;
@@ -179,8 +155,8 @@ void PlayerCombat::StartTeleportChase()
     {
         return;
     }
-    Enemy *enemy = pOwner_->GetEnemy();
-    if (!enemy || !enemy->GetAlive())
+    Enemy *pEnemy = pOwner_->GetEnemy();
+    if (!pEnemy || !pEnemy->GetAlive())
     {
         return;
     }
@@ -229,9 +205,9 @@ void PlayerCombat::UpdateTeleport(float deltaTime)
         return;
     }
 
-    Enemy *enemy = pOwner_->GetEnemy();
+    Enemy *pEnemy = pOwner_->GetEnemy();
     // 敵が死亡/消滅、またはコンボが途切れたら追撃を終了する
-    if (!enemy || !enemy->GetAlive() || !punchCombo_.IsComboActive())
+    if (!pEnemy || !pEnemy->GetAlive() || !punchCombo_.IsComboActive())
     {
         EndTeleportChase();
         return;
@@ -247,15 +223,15 @@ void PlayerCombat::UpdateTeleport(float deltaTime)
     // 先回り地点で待機（動かない）。迎え撃つように敵の方を向き続ける
     pOwner_->GetVelocity() = {0.0f, 0.0f, 0.0f};
     pOwner_->GetIsGrounded() = false;
-    pOwner_->Movement().FaceTargetInstant(enemy->GetWorldPosition());
+    pOwner_->Movement().FaceTargetInstant(pEnemy->GetWorldPosition());
 
     // 敵が攻撃間合いまで到達したら、通り過ぎないよう滑走を止めてその場に留める
-    Hagine::Vector3 toEnemy = enemy->GetWorldPosition() - pOwner_->GetWorldPosition();
+    Hagine::Vector3 toEnemy = pEnemy->GetWorldPosition() - pOwner_->GetWorldPosition();
     toEnemy.y = 0.0f;
     if (toEnemy.Length() <= teleportFollowDistance_)
     {
-        Hagine::Vector3 vel = enemy->GetVelocity();
-        enemy->SetVelocity({0.0f, vel.y, 0.0f});
+        Hagine::Vector3 vel = pEnemy->GetVelocity();
+        pEnemy->SetVelocity({0.0f, vel.y, 0.0f});
     }
 
     // 消える演出：瞬間移動直後だけ薄く表示→通常へ戻す
@@ -406,8 +382,8 @@ void PlayerCombat::Shot()
     for (auto it = bullets_.begin(); it != bullets_.end();)
     {
         (*it)->Update();
-        (*it)->SetSpeed(B_speed_);
-        (*it)->SetAcce(B_acce_);
+        (*it)->SetSpeed(bulletSpeed_);
+        (*it)->SetAcce(bulletAcceleration_);
         (*it)->UpdateWorldTransformHierarchy();
 
         if (!(*it)->IsAlive())
@@ -452,7 +428,7 @@ void PlayerCombat::SkillShot()
     }
 
     // 既に発動中・演出中なら何もしない
-    if (!pMakanAttack_ptr_ || pMakanAttack_ptr_->IsActive() || skillCutscene_.IsActive())
+    if (!pMakanAttack_ || pMakanAttack_->IsActive() || skillCutscene_.IsActive())
     {
         return;
     }
@@ -466,12 +442,12 @@ void PlayerCombat::SkillShot()
 
 void PlayerCombat::StartSkillStaging()
 {
-    pMakanAttack_ptr_->SetPlayer(pOwner_);
+    pMakanAttack_->SetPlayer(pOwner_);
 
     // 入力の時点では撃たず、カメラ顔アップ演出→通常カメラ復帰→遅延の後に発動する。
     // 遅延中も照準追従は生きており、発動の瞬間の向きで固定される
     skillCutscene_.Start(pOwner_, pOwner_->GetCamera(), [this] {
-        pMakanAttack_ptr_->Activate(pOwner_->GetTransformPtr());
+        pMakanAttack_->Activate(pOwner_->GetTransformPtr());
         pOwner_->EmitAction(Player::ActionKind::Special); // 入力表示UI用：必殺技を通知
         pOwner_->TriggerScreenFlash();                    // 画面白黒＆ブルームのフラッシュ演出
     });
@@ -506,60 +482,60 @@ void PlayerCombat::DrawAttackParticles(const ViewProjection &viewProjection)
     // 必殺技ビーム（pMakanAttack_ptr_）は GPU パーティクルで、描画はエンジンが自動で行う。
 }
 
-void PlayerCombat::Save(DataHandler *data)
+void PlayerCombat::Save(DataHandler *pData)
 {
-    data->Save("bulletSpeed", B_speed_);
-    data->Save("bulletAcce", B_acce_);
+    pData->Save("bulletSpeed", bulletSpeed_);
+    pData->Save("bulletAcce", bulletAcceleration_);
 
     // 瞬間移動コンボ
-    data->Save("tpEnabled", teleportEnabled_);
-    data->Save("tpLaunchStage", teleportLaunchStage_);
-    data->Save("tpSlamStage", teleportSlamStage_);
-    data->Save("tpEnergyCost", teleportEnergyCost_);
-    data->Save("tpAheadDistance", teleportAheadDistance_);
-    data->Save("tpArrivalTime", teleportArrivalTime_);
-    data->Save("tpLaunchUp", teleportLaunchUp_);
-    data->Save("tpSlamKnockback", teleportSlamKnockback_);
-    data->Save("tpFollowDistance", teleportFollowDistance_);
-    data->Save("tpPinDuration", teleportPinDuration_);
-    data->Save("tpVanishDuration", teleportVanishDuration_);
-    data->Save("tpCameraHold", teleportCameraHold_);
+    pData->Save("tpEnabled", teleportEnabled_);
+    pData->Save("tpLaunchStage", teleportLaunchStage_);
+    pData->Save("tpSlamStage", teleportSlamStage_);
+    pData->Save("tpEnergyCost", teleportEnergyCost_);
+    pData->Save("tpAheadDistance", teleportAheadDistance_);
+    pData->Save("tpArrivalTime", teleportArrivalTime_);
+    pData->Save("tpLaunchUp", teleportLaunchUp_);
+    pData->Save("tpSlamKnockback", teleportSlamKnockback_);
+    pData->Save("tpFollowDistance", teleportFollowDistance_);
+    pData->Save("tpPinDuration", teleportPinDuration_);
+    pData->Save("tpVanishDuration", teleportVanishDuration_);
+    pData->Save("tpCameraHold", teleportCameraHold_);
 }
 
-void PlayerCombat::Load(DataHandler *data)
+void PlayerCombat::Load(DataHandler *pData)
 {
-    B_speed_ = data->Load<float>("bulletSpeed", 60.0f);
-    B_acce_ = data->Load<float>("bulletAcce", 5.0f);
+    bulletSpeed_ = pData->Load<float>("bulletSpeed", 60.0f);
+    bulletAcceleration_ = pData->Load<float>("bulletAcce", 5.0f);
 
     // 瞬間移動コンボ
-    teleportEnabled_ = data->Load<bool>("tpEnabled", true);
-    teleportLaunchStage_ = data->Load<int>("tpLaunchStage", 5);
-    teleportSlamStage_ = data->Load<int>("tpSlamStage", 8);
-    teleportEnergyCost_ = data->Load<float>("tpEnergyCost", 8.0f);
-    teleportAheadDistance_ = data->Load<float>("tpAheadDistance", 12.0f);
-    teleportArrivalTime_ = data->Load<float>("tpArrivalTime", 0.4f);
-    teleportLaunchUp_ = data->Load<float>("tpLaunchUp", 2.0f);
-    teleportSlamKnockback_ = data->Load<float>("tpSlamKnockback", 45.0f);
-    teleportFollowDistance_ = data->Load<float>("tpFollowDistance", 3.0f);
-    teleportPinDuration_ = data->Load<float>("tpPinDuration", 0.9f);
-    teleportVanishDuration_ = data->Load<float>("tpVanishDuration", 0.15f);
-    teleportCameraHold_ = data->Load<float>("tpCameraHold", 0.3f);
+    teleportEnabled_ = pData->Load<bool>("tpEnabled", true);
+    teleportLaunchStage_ = pData->Load<int>("tpLaunchStage", 5);
+    teleportSlamStage_ = pData->Load<int>("tpSlamStage", 8);
+    teleportEnergyCost_ = pData->Load<float>("tpEnergyCost", 8.0f);
+    teleportAheadDistance_ = pData->Load<float>("tpAheadDistance", 12.0f);
+    teleportArrivalTime_ = pData->Load<float>("tpArrivalTime", 0.4f);
+    teleportLaunchUp_ = pData->Load<float>("tpLaunchUp", 2.0f);
+    teleportSlamKnockback_ = pData->Load<float>("tpSlamKnockback", 45.0f);
+    teleportFollowDistance_ = pData->Load<float>("tpFollowDistance", 3.0f);
+    teleportPinDuration_ = pData->Load<float>("tpPinDuration", 0.9f);
+    teleportVanishDuration_ = pData->Load<float>("tpVanishDuration", 0.15f);
+    teleportCameraHold_ = pData->Load<float>("tpCameraHold", 0.3f);
 }
 
 void PlayerCombat::DrawBulletImGui()
 {
 #ifdef USE_IMGUI
-    ImGui::DragFloat("弾の速度", &B_speed_, 0.1f);
-    ImGui::DragFloat("弾の加速度", &B_acce_, 0.1f);
+    ImGui::DragFloat("弾の速度", &bulletSpeed_, 0.1f);
+    ImGui::DragFloat("弾の加速度", &bulletAcceleration_, 0.1f);
 #endif // USE_IMGUI
 }
 
 void PlayerCombat::DrawImGui()
 {
 #ifdef USE_IMGUI
-    if (pMakanAttack_ptr_)
+    if (pMakanAttack_)
     {
-        pMakanAttack_ptr_->DebugImGui();
+        pMakanAttack_->DrawImGui();
     }
 
     if (ImGui::CollapsingHeader("コンボパラメータ"))
@@ -568,25 +544,18 @@ void PlayerCombat::DrawImGui()
     }
 
     // ─── コンボアニメーション割り当て ───
+    // 段のラベル・パスはコンボ定義（JSON）から取得する。編集結果はコンボパラメータの
+    // 「コンボ定義を保存」で同じJSONへ書き戻される
     if (ImGui::CollapsingHeader("コンボアニメーション割り当て"))
     {
-        static const char *kComboLabels[] = {
-            "1段目: Jab",
-            "2段目: Hook",
-            "3段目: Cross",
-            "4段目: Uppercut",
-            "5段目: Overhand",
-            "6段目: Swing",
-            "7段目: Elbow",
-            "8段目: Slam",
-        };
-
         ImGui::TextDisabled("空白のままにすると、その段はアニメーションを変更しません");
         ImGui::Spacing();
 
-        for (int i = 0; i < static_cast<int>(comboAnimations_.size()); ++i)
+        for (int i = 0; i < punchCombo_.GetComboLength(); ++i)
         {
             ImGui::PushID(i);
+
+            const std::string stageLabel = std::to_string(i + 1) + "段目: " + punchCombo_.GetAttackName(i);
 
             // 現在実行中の段をハイライト
             bool isCurrentStage = punchCombo_.IsComboActive() &&
@@ -595,19 +564,20 @@ void PlayerCombat::DrawImGui()
                                         : punchCombo_.GetCurrentComboIndex() - 1) == i);
             if (isCurrentStage)
             {
-                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), ">>> %s", kComboLabels[i]);
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), ">>> %s", stageLabel.c_str());
             }
             else
             {
-                ImGui::Text("%s", kComboLabels[i]);
+                ImGui::Text("%s", stageLabel.c_str());
             }
 
-            char buf[256] = {};
-            snprintf(buf, sizeof(buf), "%s", comboAnimations_[i].c_str());
+            char animationPathBuffer[kAnimationPathBufferSize] = {};
+            snprintf(animationPathBuffer, sizeof(animationPathBuffer), "%s",
+                     punchCombo_.GetAnimationPath(i).c_str());
             ImGui::SetNextItemWidth(380.0f);
-            if (ImGui::InputText("##animPath", buf, sizeof(buf)))
+            if (ImGui::InputText("##animPath", animationPathBuffer, sizeof(animationPathBuffer)))
             {
-                comboAnimations_[i] = buf;
+                punchCombo_.SetAnimationPath(i, animationPathBuffer);
             }
 
             ImGui::PopID();
@@ -619,24 +589,24 @@ void PlayerCombat::DrawImGui()
 
 void PlayerCombat::RegisterParams()
 {
-    auto *hub = GameParamHub::GetInstance();
-    hub->Register("Player", "弾の速度", &B_speed_, {0.1f});
-    hub->Register("Player", "弾の加速度", &B_acce_, {0.1f});
-    hub->Register("Player", "コンボ出し切り後の硬直", &punchCombo_.GetFinishRecovery(), {0.05f, 0.0f, 3.0f});
+    auto *pHub = GameParamHub::GetInstance();
+    pHub->Register("Player", "弾の速度", &bulletSpeed_, {0.1f});
+    pHub->Register("Player", "弾の加速度", &bulletAcceleration_, {0.1f});
+    pHub->Register("Player", "コンボ出し切り後の硬直", &punchCombo_.GetFinishRecovery(), {0.05f, 0.0f, 3.0f});
     skillCutscene_.RegisterParams("必殺演出(Player)");
 
     // 瞬間移動コンボ（横吹き飛ばし→先回り瞬間移動→叩きつけ）
     const char *tp = "瞬間移動コンボ(Player)";
-    hub->Register(tp, "有効", &teleportEnabled_);
-    hub->Register(tp, "瞬間移動を始める段", &teleportLaunchStage_, {1.0f, 1.0f, 8.0f});
-    hub->Register(tp, "叩きつける最終段", &teleportSlamStage_, {1.0f, 1.0f, 8.0f});
-    hub->Register(tp, "消費エネルギー", &teleportEnergyCost_, {0.5f, 0.0f, 100.0f});
-    hub->Register(tp, "吹き飛ばし/先回り距離", &teleportAheadDistance_, {0.5f, 1.0f, 60.0f});
-    hub->Register(tp, "到達時間", &teleportArrivalTime_, {0.01f, 0.05f, 1.5f});
-    hub->Register(tp, "吹き飛ばし上方向成分", &teleportLaunchUp_, {0.1f, 0.0f, 30.0f});
-    hub->Register(tp, "叩きつけ威力", &teleportSlamKnockback_, {0.5f, 0.0f, 200.0f});
-    hub->Register(tp, "攻撃間合い(滑走停止距離)", &teleportFollowDistance_, {0.1f, 0.5f, 15.0f});
-    hub->Register(tp, "追撃保持時間(安全弁)", &teleportPinDuration_, {0.05f, 0.1f, 3.0f});
-    hub->Register(tp, "消える演出時間", &teleportVanishDuration_, {0.01f, 0.0f, 1.0f});
-    hub->Register(tp, "カメラ待機時間", &teleportCameraHold_, {0.01f, 0.0f, 2.0f});
+    pHub->Register(tp, "有効", &teleportEnabled_);
+    pHub->Register(tp, "瞬間移動を始める段", &teleportLaunchStage_, {1.0f, 1.0f, 8.0f});
+    pHub->Register(tp, "叩きつける最終段", &teleportSlamStage_, {1.0f, 1.0f, 8.0f});
+    pHub->Register(tp, "消費エネルギー", &teleportEnergyCost_, {0.5f, 0.0f, 100.0f});
+    pHub->Register(tp, "吹き飛ばし/先回り距離", &teleportAheadDistance_, {0.5f, 1.0f, 60.0f});
+    pHub->Register(tp, "到達時間", &teleportArrivalTime_, {0.01f, 0.05f, 1.5f});
+    pHub->Register(tp, "吹き飛ばし上方向成分", &teleportLaunchUp_, {0.1f, 0.0f, 30.0f});
+    pHub->Register(tp, "叩きつけ威力", &teleportSlamKnockback_, {0.5f, 0.0f, 200.0f});
+    pHub->Register(tp, "攻撃間合い(滑走停止距離)", &teleportFollowDistance_, {0.1f, 0.5f, 15.0f});
+    pHub->Register(tp, "追撃保持時間(安全弁)", &teleportPinDuration_, {0.05f, 0.1f, 3.0f});
+    pHub->Register(tp, "消える演出時間", &teleportVanishDuration_, {0.01f, 0.0f, 1.0f});
+    pHub->Register(tp, "カメラ待機時間", &teleportCameraHold_, {0.01f, 0.0f, 2.0f});
 }

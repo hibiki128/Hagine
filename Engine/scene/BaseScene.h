@@ -74,7 +74,7 @@ class BaseScene
 
     virtual void SetSceneManager(SceneManager *sceneManager) { pSceneManager_ = sceneManager; }
 
-    void SetOffScreen(OffScreen *offscreen) { pOffScreen_ = offscreen; }
+    void SetOffScreen(OffScreen *pOffScreen) { pOffScreen_ = pOffScreen; }
     void SetDrawSystem(DrawSystem *drawSystem) { pDrawSystem_ = drawSystem; }
     void SetWinApp(WinApp *winApp) { pWinApp_ = winApp; }
 
@@ -102,7 +102,7 @@ class BaseScene
     BaseObjectManager *pObjectManager_ = nullptr;
     DrawSystem *pDrawSystem_ = nullptr;
 
-    float ClearTime_ = 0.0f;
-    float HP_ = 0.0f;
+    float clearTime_ = 0.0f;
+    float hp_ = 0.0f;
 };
 } // namespace Hagine

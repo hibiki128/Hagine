@@ -28,7 +28,7 @@
         "y": 0.10752677917480469,
         "z": 1.0
     },
-    "bullet_endRote": {
+    "bullet_endRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
@@ -101,7 +101,7 @@
         "y": 1.0,
         "z": 0.9544069766998291
     },
-    "bullet_startRote": {
+    "bullet_startRotate": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0

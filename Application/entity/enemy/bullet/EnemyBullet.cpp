@@ -123,12 +123,12 @@ void EnemyBullet::DrawParticle(const ViewProjection &viewProjection)
     }
 }
 
-void EnemyBullet::InitTransform(Enemy *enemy)
+void EnemyBullet::InitTransform(Enemy *pEnemy)
 {
     // 手（右手ジョイント）を発射起点にする（取得できなければ本体位置＋オフセットで代用）
-    std::optional<Vector3> handPos = enemy->GetJointWorldPosition(kHandJointName);
+    std::optional<Vector3> handPos = pEnemy->GetJointWorldPosition(kHandJointName);
     const bool fromHand = handPos.has_value();
-    this->transform_->translation_ = fromHand ? *handPos : enemy->GetLocalPosition();
+    this->transform_->translation_ = fromHand ? *handPos : pEnemy->GetLocalPosition();
 
     // コライダーの設定
     pCollider_ = AddSphereCollider("enemy_bullet");
@@ -136,20 +136,20 @@ void EnemyBullet::InitTransform(Enemy *enemy)
     pCollider_->AddCollisionMask("Player");
     pCollider_->AddCollisionMask("Ground");
 
-    pCollider_->SetOnCollisionEnter([this](ColliderBase *other) {
-        this->OnCollisionEnter(other);
+    pCollider_->SetOnCollisionEnter([this](ColliderBase *pOther) {
+        this->OnCollisionEnter(pOther);
     });
 
-    pTarget_ = enemy->GetTarget();
+    pTarget_ = pEnemy->GetTarget();
 
     // ロックオン状態ならターゲットへ向ける
-    if (enemy->GetIsLockOn() && enemy->GetTarget())
+    if (pEnemy->GetIsLockOn() && pEnemy->GetTarget())
     {
         isLockOnBullet_ = true;
 
         // 発射起点（手）からターゲットへ向けて狙う
         Vector3 spawnPos = this->transform_->translation_;
-        Vector3 enemyPos = {enemy->GetTarget()->GetLocalPosition().x, enemy->GetTarget()->GetLocalPosition().y + kHomingHeightOffset, enemy->GetTarget()->GetLocalPosition().z};
+        Vector3 enemyPos = {pEnemy->GetTarget()->GetLocalPosition().x, pEnemy->GetTarget()->GetLocalPosition().y + kHomingHeightOffset, pEnemy->GetTarget()->GetLocalPosition().z};
 
         Vector3 direction = enemyPos - spawnPos;
 
@@ -172,7 +172,7 @@ void EnemyBullet::InitTransform(Enemy *enemy)
         // 非ロックオン時は敵の正面方向へ
         isLockOnBullet_ = false;
 
-        Quaternion rot = enemy->GetLocalRotation();
+        Quaternion rot = pEnemy->GetLocalRotation();
         Vector3 baseForward = Vector3(0.0f, 0.0f, 1.0f);
         Vector3 direction = rot * baseForward;
 
@@ -239,10 +239,10 @@ void EnemyBullet::DeflectFrom(const Vector3 &guardPosition)
     }
 }
 
-void EnemyBullet::OnCollisionEnter(ColliderBase *other)
+void EnemyBullet::OnCollisionEnter(ColliderBase *pOther)
 {
     // プレイヤーに当たった時の処理
-    if (other->GetTag() == "Player" && isAlive_ && !isDeflected_ && pTarget_ && pTarget_->GetAlive())
+    if (pOther->GetTag() == "Player" && isAlive_ && !isDeflected_ && pTarget_ && pTarget_->GetAlive())
     {
         // ガード中は弾を外側へ弾き返し、ダメージは完全に無効化する
         if (pTarget_->ConsumeGuardDeflect())
@@ -256,7 +256,7 @@ void EnemyBullet::OnCollisionEnter(ColliderBase *other)
     }
 
     // 地形メッシュに当たったら消滅させる（パーティクル終了後に isAlive_ が折れる）
-    if (other->GetTag() == "Ground" && isAlive_)
+    if (pOther->GetTag() == "Ground" && isAlive_)
     {
         isHit_ = true;
     }

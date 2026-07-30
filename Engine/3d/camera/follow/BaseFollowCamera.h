@@ -27,7 +27,7 @@ class BaseFollowCamera
     /// <summary>
     /// ImGuiによるデバッグ表示
     /// </summary>
-    void imgui();
+    void DrawImGui();
 
     /// <summary>
     /// ヨー角を取得

@@ -1,0 +1,69 @@
+{
+    "finishRecovery": 1.0,
+    "steps": [
+        {
+            "attackName": "Jab",
+            "animationPath": "animation/Player/Punch_1.gltf",
+            "damage": 1.0,
+            "knockbackPower": 0.0,
+            "colliderActiveDuration": 0.25,
+            "colliderActivateDelay": 0.08
+        },
+        {
+            "attackName": "Hook",
+            "animationPath": "animation/Player/Punch_2.gltf",
+            "damage": 1.0,
+            "knockbackPower": 0.0,
+            "colliderActiveDuration": 0.25,
+            "colliderActivateDelay": 0.08
+        },
+        {
+            "attackName": "Cross",
+            "animationPath": "animation/Player/Punch_3.gltf",
+            "damage": 1.1,
+            "knockbackPower": 0.0,
+            "colliderActiveDuration": 0.25,
+            "colliderActivateDelay": 0.08
+        },
+        {
+            "attackName": "Uppercut",
+            "animationPath": "animation/Player/Punch_4.gltf",
+            "damage": 1.2,
+            "knockbackPower": 0.0,
+            "colliderActiveDuration": 0.3,
+            "colliderActivateDelay": 0.1
+        },
+        {
+            "attackName": "Overhand",
+            "animationPath": "animation/Player/Kick_1.gltf",
+            "damage": 1.5,
+            "knockbackPower": 0.0,
+            "colliderActiveDuration": 0.3,
+            "colliderActivateDelay": 0.1
+        },
+        {
+            "attackName": "Swing",
+            "animationPath": "animation/Player/Kick_2.gltf",
+            "damage": 1.75,
+            "knockbackPower": 0.0,
+            "colliderActiveDuration": 0.3,
+            "colliderActivateDelay": 0.1
+        },
+        {
+            "attackName": "Elbow",
+            "animationPath": "animation/Player/Kick_3.gltf",
+            "damage": 1.9,
+            "knockbackPower": 0.0,
+            "colliderActiveDuration": 0.25,
+            "colliderActivateDelay": 0.06
+        },
+        {
+            "attackName": "Slam",
+            "animationPath": "animation/Player/Smash.gltf",
+            "damage": 2.25,
+            "knockbackPower": 0.0,
+            "colliderActiveDuration": 0.35,
+            "colliderActivateDelay": 0.12
+        }
+    ]
+}
