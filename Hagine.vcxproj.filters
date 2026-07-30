@@ -932,6 +932,8 @@
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\2d\ui\UIAnimator.cpp" />
+    <ClCompile Include="Engine\render\deferred\DeferredRenderer.cpp" />
+    <ClCompile Include="Engine\utility\asset\AssetPath.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\camera\death\DeathCamera.h">
@@ -1503,6 +1505,7 @@
     </ClInclude>
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\2d\ui\UIAnimator.h" />
+    <ClInclude Include="Engine\render\deferred\DeferredRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="Engine\EngineAssets\fonts\fa-solid-900.ttf">
@@ -1663,6 +1666,11 @@
       <Filter>Engine\EngineAssets\shaders\Sprite</Filter>
     </None>
     <None Include="README.md" />
+    <None Include="Engine\EngineAssets\shaders\Deferred\Deferred.hlsli" />
+    <None Include="Engine\EngineAssets\shaders\Deferred\GBuffer.PS.hlsl" />
+    <None Include="Engine\EngineAssets\shaders\Deferred\DeferredLighting.PS.hlsl" />
+    <None Include="Engine\EngineAssets\shaders\Deferred\LightCulling.CS.hlsl" />
+    <None Include="Engine\EngineAssets\shaders\Deferred\ParticleLightGen.CS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Hagine.rc" />
