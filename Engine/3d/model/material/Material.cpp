@@ -140,8 +140,7 @@ void Material::ClearNormalMap() {
     materialData_.normalMapFilePath.clear();
     materialData_.normalMapIndex = 0;
     materialData_.hasNormalMapTexture = false;
-    // 画像が無い状態で有効のままだと albedo を法線として読んでしまうため切る
-    materialData_.enableNormalMap = false;
+    // enableNormalMap は落とさない。画像未指定のまま有効なら albedo を法線として流用する
     UpdateGPUData();
 }
 } // namespace Hagine
