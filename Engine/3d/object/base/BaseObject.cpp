@@ -682,11 +682,8 @@ void BaseObject::LoadMaterials() {
         md.uvSize = ObjectDatas_->Load<Vector2>(prefix + "uvSize", md.uvSize);
         md.uvPosition = ObjectDatas_->Load<Vector2>(prefix + "uvPosition", md.uvPosition);
         md.uvRotate = ObjectDatas_->Load<float>(prefix + "uvRotate", md.uvRotate);
-
-        // 画像が無いのに有効化されていると albedo を法線として読んでしまうため落とす
-        if (md.enableNormalMap && !md.hasNormalMapTexture) {
-            md.enableNormalMap = false;
-        }
+        // 画像未指定のまま有効な状態は albedo 流用として正規の設定なので落とさない
+        // （Material::GetNormalMapIndex が albedo を t3 に束ねる）
     }
 }
 
