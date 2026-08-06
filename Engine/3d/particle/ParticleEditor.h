@@ -130,8 +130,17 @@ class ParticleEditor
     /// <param name="count">パーティクル数</param>
     void SetExternalParticleCount(const std::string &name, size_t count);
 
-    /// <summary>シーン全体のパーティクル数を集計</summary>
+    /// <summary>シーン全体のパーティクル数を集計（ImGui表示）</summary>
     void SceneParticleCount();
+
+    /// <summary>
+    /// 今シーンに出ている CPU パーティクルの総数を取得する。
+    /// 各 ParticleEmitter が毎フレーム SetExternalParticleCount で報告した数の合計なので、
+    /// エディタに登録していないゲーム側のエミッターも含まれる（1フレーム遅延）。
+    /// ※ GPU パーティクル（ParticleCS）は ParticleCSEmitter::GetSceneAliveParticleCount() で取る。
+    /// </summary>
+    /// <returns>size_t: 生存パーティクル総数</returns>
+    size_t GetSceneParticleCount() const;
 
     /// <summary>フレームごとの統計を更新</summary>
     void UpdateFrameStats();

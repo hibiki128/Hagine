@@ -10,11 +10,11 @@ void DemoScene::Initialize()
     /// 初期化
     /// ===================================================
     BaseScene::Initialize();
-    vp_.Initialize("DemoCamera");
+    camera_->Load("DemoCamera");
     pLightGroup_->LoadLightData("DemoLight");
 
     debugCamera_ = std::make_unique<DebugCamera>();
-    debugCamera_->Initialize(&vp_);
+    debugCamera_->Initialize();
 
     /// ===================================================
     /// DrawSystem 登録
@@ -66,7 +66,7 @@ void DemoScene::AddSceneSetting()
     /// シーン設定（デバッグ）
     /// ===================================================
     debugCamera_->DrawImGui();
-    vp_.ShowDebugInfo();
+    camera_->ShowDebugWindow();
 }
 
 void DemoScene::AddObjectSetting()
@@ -88,14 +88,8 @@ void DemoScene::CameraUpdate()
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    if (debugCamera_->GetActive())
-    {
-        debugCamera_->Update();
-    }
-    else
-    {
-        vp_.UpdateMatrix();
-    }
+    // カメラの行列更新は CameraManager がまとめて行うので、ここでは操作だけ渡す
+    debugCamera_->Update();
 }
 
 void DemoScene::ChangeScene()

@@ -8,6 +8,7 @@
 #include "Object3dCommon.h"
 #include "transform/WorldTransform.h"
 #include "cassert"
+#include <cstring>
 #include <Frame.h>
 #include <render/deferred/DeferredRenderer.h>
 #include <shadow/ShadowMap.h>
@@ -727,6 +728,162 @@ void Object3d::SetModel(const std::string &filePath)
         pModel_->SetBone(currentModelAnimation_->GetBone());
         pModel_->SetSkin(currentModelAnimation_->GetSkin());
     }
+}
+
+bool Object3d::CanBatchInstanced() const
+{
+    if (!pModel_)
+    {
+        return false;
+    }
+    // スキニングは「スキニング結果の頂点バッファ」がモデル側の1本しかないため、
+    // 同じモデルを参照する複数オブジェクトを1回の描画にまとめると全員同じポーズになる。
+    if (pModel_->GetModelData().hasAnimations)
+    {
+        return false;
+    }
+    // マテリアルが1つも無い（＝バインドできない）ものは対象外
+    if (materials_.empty() || color_.empty())
+    {
+        return false;
+    }
+    return true;
+}
+
+bool Object3d::ShouldDrawInCurrentPass(bool lighting) const
+{
+    if (ShadowMap::GetInstance()->IsShadowPassActive())
+    {
+        return true; // 影パスは全オブジェクトが対象
+    }
+    // Draw() の振り分けと同じ: G-Buffer に載せられるのは不透明かつライティングありのものだけ。
+    DeferredRenderer *deferred = DeferredRenderer::GetInstance();
+    const bool deferredEligible = deferred->IsEnabled() && lighting && useDeferred_ &&
+                                  (blendMode_ == BlendMode::None || blendMode_ == BlendMode::Normal);
+    if (deferred->IsGBufferPassActive())
+    {
+        return deferredEligible;
+    }
+    // 前方描画フェーズ: G-Buffer で描き済みのものは描かない
+    return !deferredEligible;
+}
+
+size_t Object3d::ComputeBatchSignature(bool reflect, bool lighting) const
+{
+    size_t hash = 0;
+    auto mix = [&hash](size_t value) {
+        hash ^= value + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    };
+
+    // 頂点/インデックスバッファが同一であること＝同じモデル実体であること
+    mix(std::hash<const void *>{}(pModel_));
+    mix(static_cast<size_t>(blendMode_));
+    mix(lighting ? 1u : 0u);
+    mix(reflect ? 1u : 0u);
+    mix(useDeferred_ ? 1u : 0u);
+    // マテリアルは1本の定数バッファとテクスチャを共有するので全て一致している必要がある
+    for (const auto &material : materials_)
+    {
+        mix(material->ComputeDrawSignature());
+    }
+    // 色は「マテリアルが1つのときだけ」インスタンスごとに渡せる（頂点シェーダーの instanceColor は
+    // 個体単位でマテリアル単位ではないため）。複数マテリアルの場合は色も一致していないとまとめられない。
+    if (!UsesInstanceColor())
+    {
+        for (const auto &objColor : color_)
+        {
+            const Vector4 c = objColor.GetColor();
+            auto mixFloat = [&mix](float value) {
+                uint32_t bits = 0;
+                std::memcpy(&bits, &value, sizeof(bits));
+                mix(static_cast<size_t>(bits));
+            };
+            mixFloat(c.x);
+            mixFloat(c.y);
+            mixFloat(c.z);
+            mixFloat(c.w);
+        }
+    }
+    return hash;
+}
+
+void Object3d::BuildInstanceMatrices(const WorldTransform &worldTransform, const ViewProjection &viewProjection,
+                                     Matrix4x4 &outWVP, Matrix4x4 &outWorld,
+                                     Matrix4x4 &outWorldInverseTranspose, Matrix4x4 &outLightWVP) const
+{
+    // Update() の非アニメーション経路と同じ計算（バッチ対象はアニメーション無しに限定済み）
+    Matrix4x4 localMatrix = MakeAffineMatrix(worldTransform.scale_, worldTransform.quaternionRotation_, worldTransform.translation_);
+    Matrix4x4 worldMatrix = localMatrix;
+    if (worldTransform.pParent_)
+    {
+        worldMatrix = localMatrix * worldTransform.pParent_->matWorld_;
+    }
+
+    outWorld = worldMatrix;
+    outWVP = worldMatrix * (viewProjection.matView_ * viewProjection.matProjection_);
+    outWorldInverseTranspose = Transpose(Inverse(worldMatrix));
+    outLightWVP = worldMatrix * ShadowMap::GetInstance()->GetLightViewProjection();
+}
+
+void Object3d::DrawInstancedBatch(D3D12_GPU_VIRTUAL_ADDRESS instanceBufferAddress, uint32_t instanceCount,
+                                  const ViewProjection &viewProjection, bool reflect, bool lighting)
+{
+    if (!pModel_ || instanceCount == 0)
+    {
+        return;
+    }
+
+    DeferredRenderer *deferred = DeferredRenderer::GetInstance();
+    const bool gBufferPass = deferred->IsGBufferPassActive();
+
+    // PSO は頂点シェーダーだけがインスタンシング版のもの。ルートシグネチャは通常描画と共有なので、
+    // 以降のバインド（マテリアル・ライト・シャドウ）は Draw() とまったく同じでよい。
+    PipelineManager::GetInstance()->DrawCommonSetting(
+        gBufferPass ? PipelineType::GBufferInstanced : PipelineType::StandardInstanced,
+        gBufferPass ? BlendMode::Normal : blendMode_);
+
+    // インスタンスデータ（変換行列＋個体色）をルートSRVで直接指す
+    pDxCommon_->GetCommandList()->SetGraphicsRootShaderResourceView(11, instanceBufferAddress);
+
+    if (pLightGroup_)
+    {
+        pLightGroup_->Update(viewProjection);
+        pLightGroup_->Draw();
+    }
+
+    if (UsesInstanceColor())
+    {
+        // 個体色はインスタンスバッファ側で乗算するので、マテリアル定数バッファの色は白にしておく。
+        // （こうしないとバッチ代表の色が全インスタンスに二重で掛かる）
+        // ObjColor は値の取り出ししか使われないので GPU リソースの初期化は不要。
+        if (instanceWhiteColors_.size() != color_.size())
+        {
+            instanceWhiteColors_.assign(color_.size(), ObjColor{});
+            for (auto &objColor : instanceWhiteColors_)
+            {
+                objColor.SetColor({1.0f, 1.0f, 1.0f, 1.0f});
+            }
+        }
+        pModel_->Draw(materials_, instanceWhiteColors_, lighting, reflect, instanceCount);
+    }
+    else
+    {
+        // 複数マテリアルのときは色までバッチキーに含めて一致させているので、そのまま送ってよい
+        // （インスタンス側の色は白）。
+        pModel_->Draw(materials_, color_, lighting, reflect, instanceCount);
+    }
+}
+
+void Object3d::DrawShadowInstancedBatch(D3D12_GPU_VIRTUAL_ADDRESS instanceBufferAddress, uint32_t instanceCount)
+{
+    if (!pModel_ || instanceCount == 0)
+    {
+        return;
+    }
+    PipelineManager::GetInstance()->DrawCommonSetting(PipelineType::ShadowMapInstanced);
+    // シャドウ用ルートシグネチャの param1 = インスタンスデータ SRV(t0)
+    pDxCommon_->GetCommandList()->SetGraphicsRootShaderResourceView(1, instanceBufferAddress);
+    pModel_->DrawShadow(instanceCount);
 }
 
 void Object3d::DrawShadow(const WorldTransform &worldTransform)

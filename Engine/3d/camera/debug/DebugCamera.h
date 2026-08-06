@@ -1,5 +1,5 @@
 #pragma once
-#include <camera/projection/ViewProjection.h>
+#include <camera/Camera.h>
 #include <type/Matrix4x4.h>
 #include <type/Vector2.h>
 #include <type/Vector3.h>
@@ -17,10 +17,10 @@ class DebugCamera
     // ===================================================
 
     /// <summary>
-    /// 初期化
+    /// 初期化。デバッグ用のカメラを CameraManager へ登録する。
+    /// 有効にするとそのカメラへ切り替わり、無効に戻すと元のカメラへ戻る。
     /// </summary>
-    /// <param name="pViewProjection">対象 of ビュープロジェクション</param>
-    void Initialize(ViewProjection *pViewProjection);
+    void Initialize();
 
     /// <summary>
     /// 更新処理
@@ -64,7 +64,9 @@ class DebugCamera
     // メンバ変数
     // ===================================================
 
-    ViewProjection *pViewProjection_{};                            // 対象のビュープロジェクション
+    Camera *pCamera_ = nullptr;         // デバッグ操作を反映するカメラ（CameraManager が所有）
+    Camera *pPreviousCamera_ = nullptr; // 有効化する直前までアクティブだったカメラ（戻る先）
+    bool wasActive_ = false;            // 前フレームのアクティブ状態（切り替わりの検出用）
     Vector2 mouse_{};                                             // 現在のマウス座標
     Vector3 eulerRotation_ = {0.0f, 0.0f, 0.0f};                  // オイラー角による回転
     Quaternion quaternionRotation_ = Quaternion::IdentityQuaternion(); // クォータニオンによる回転

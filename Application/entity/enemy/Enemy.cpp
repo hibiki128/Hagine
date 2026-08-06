@@ -595,9 +595,9 @@ void Enemy::DrawFrustum()
 #endif
 }
 
-void Enemy::SetViewProjection(ViewProjection *pViewProjection)
+void Enemy::InitializeShake()
 {
-    combat_->SetViewProjection(pViewProjection);
+    combat_->InitializeShake();
 }
 
 void Enemy::SetDummy(bool enable)

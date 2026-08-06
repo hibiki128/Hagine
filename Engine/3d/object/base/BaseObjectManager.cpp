@@ -8,6 +8,7 @@
 #include "ImGuizmo.h"
 #endif // _DEBUG
 #include "edit/motion/MotionEditor.h"
+#include "object/Object3dInstancing.h"
 #include <debug/log/Logger.h>
 #include <browser/ShowFolder.h>
 #include "render/DrawGroupManager.h"
@@ -83,10 +84,16 @@ void BaseObjectManager::Update()
 
 void BaseObjectManager::Draw(const ViewProjection &viewProjection)
 {
+    // 同じモデルを参照するオブジェクトを1回の描画にまとめる。
+    // ここで囲んだ範囲の BaseObject::Draw がバッチャへ積み、Flush でまとめて描く。
+    // 積めなかったもの（スキニング・半透明・ワイヤーフレーム等）はその場で従来どおり描かれる。
+    Object3dInstancing *instancing = Object3dInstancing::GetInstance();
+    instancing->Begin();
     for (auto &[name, obj] : objects_)
     {
         obj->Draw(viewProjection);
     }
+    instancing->Flush(viewProjection);
 }
 
 void BaseObjectManager::UpdateImGui()

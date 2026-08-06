@@ -170,6 +170,9 @@ class ImGuiManager {
 
     void ShowDrawSystemWindow();
 
+    // カメラ窓（登録カメラの一覧・切り替え・各カメラの設定）
+    void ShowCameraWindow();
+
     // アセットブラウザ窓（images ルートをサムネ一覧表示、各サムネをD&Dのドラッグ元にする）
     void ShowAssetBrowserWindow();
 
@@ -247,6 +250,7 @@ class ImGuiManager {
     bool showAudioManagerView_ = false;
     bool showShadowMapView_ = true;
     bool showDrawSystemView_ = true;
+    bool showCameraView_ = false; // カメラ窓
     bool showGameParamView_ = true;     // ゲームパラメータHub窓
     bool showAssetBrowserView_ = false; // アセットブラウザ窓
 

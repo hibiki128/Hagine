@@ -12,7 +12,7 @@ void ClearScene::Initialize()
     /// 初期化
     /// ===================================================
     BaseScene::Initialize();
-    vp_.translation_ = {0.0f, 0.0f, -30.0f};
+    camera_->SetPosition({0.0f, 0.0f, -30.0f});
 
     /// ===================================================
     /// ロード
@@ -33,10 +33,10 @@ void ClearScene::Initialize()
     /// ===================================================
     /// 初期化
     /// ===================================================
-    debugCamera_->Initialize(&vp_);
+    debugCamera_->Initialize();
     ground_->Init("Ground");
     pSkyBox_->Initialize("game/skybox.dds");
-    vp_.Initialize("P_StartCamera");
+    camera_->Load("P_StartCamera");
     resultStaging_->Initialize();
     resultUI_->Initialize();
     ground_->GetLighting() = true;
@@ -101,7 +101,7 @@ void ClearScene::Update()
     CameraUpdate();
 
     // カメラ演出終了後の処理
-    if (!vp_.GetIsCameraMove() && cameraStart_)
+    if (!camera_->IsCameraWorkPlaying() && cameraStart_)
     {
         resultUI_->SetIsStartEasing(true);
 
@@ -143,7 +143,7 @@ void ClearScene::AddSceneSetting()
     /// シーン設定（デバッグ）
     /// ===================================================
     debugCamera_->DrawImGui();
-    vp_.ShowDebugInfo();
+    camera_->ShowDebugWindow();
 
     // 演出のデバッグ
     resultStaging_->DrawImGui();
@@ -171,21 +171,14 @@ void ClearScene::CameraUpdate()
     currentCameraStartTimer_ += Frame::DeltaTime();
     if (currentCameraStartTimer_ > cameraStartTimer_ && !cameraStart_)
     {
-        // カメラのイージング開始
-        vp_.EaseCameraMove(EasingType::InCubic, "P_EndCamera", 1.5f);
+        // カメラのイージング開始（保存しておいた構図へ寄せる）
+        camera_->EaseToSaved("P_EndCamera", 1.5f, EasingType::InCubic);
         cameraStart_ = true;
         resultStaging_->SetStartEasing(true);
     }
 
-    // デバッグカメラまたは通常カメラの更新
-    if (debugCamera_->GetActive())
-    {
-        debugCamera_->Update();
-    }
-    else
-    {
-        vp_.UpdateMatrix();
-    }
+    // カメラの行列更新は CameraManager がまとめて行うので、ここでは操作だけ渡す
+    debugCamera_->Update();
 }
 
 void ClearScene::ChangeScene()

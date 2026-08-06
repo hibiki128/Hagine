@@ -1,6 +1,7 @@
 #include "SceneManager.h"
 #include <DirectXCommon.h>
 #include <SpriteManager.h>
+#include <camera/CameraManager.h>
 #include <cassert>
 #include <particle/gpu/ParticleCSSpawner.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
@@ -50,6 +51,10 @@ void SceneManager::Update() {
 
     if (scene_) {
         scene_->Update();
+
+        // 全カメラの更新と、描画へ渡す出力の作り直し（アクティブカメラ or 切り替え補間の結果）。
+        // シーンが描画で使う ViewProjection はこの出力そのものなので、行列のコピーは要らない。
+        CameraManager::GetInstance()->Update();
     }
 }
 
@@ -126,6 +131,8 @@ void SceneManager::SceneChange() {
             ParticleCSSpawner::GetInstance()->ClearSceneScoped();
             BaseObjectManager::GetInstance()->RemoveAllObjects();
             SpriteManager::GetInstance()->Clear();
+            // 旧シーンが登録したカメラを破棄する（新シーンへ持ち越さない）
+            CameraManager::GetInstance()->Clear();
 #ifndef _DEBUG
             ParticleCSGroupManager::GetInstance()->ClearIndependentGroups();
 #endif // _DEBUG

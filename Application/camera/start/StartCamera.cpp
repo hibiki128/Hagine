@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "StartCamera.h"
+#include <camera/CameraManager.h>
 #include <Frame.h>
 #include <GamePad.h>
 #include <Input.h>
@@ -7,9 +8,9 @@
 using namespace Hagine;
 void StartCamera::Init()
 {
-    // ViewProjectionの初期設定
-    viewProjection_.farZ_ = kFarZ;
-    viewProjection_.Initialize("");
+    // カメラ本体は CameraManager が所有する
+    pCamera_ = CameraManager::GetInstance()->Create("スタートカメラ");
+    pCamera_->SetClipRange(0.1f, kFarZ);
     worldTransform_.Initialize();
 
     // 初期角度の設定と初期座標の算出
@@ -86,9 +87,7 @@ void StartCamera::Update()
             worldTransform_.UpdateMatrix();
 
             // ビュープロジェクションへの反映
-            viewProjection_.translation_ = worldTransform_.translation_;
-            viewProjection_.eulerRotation_ = worldTransform_.eulerRotation_;
-            viewProjection_.UpdateMatrix();
+            ApplyToCamera();
 
             if (t >= kEasingProgressMax)
             {
@@ -121,9 +120,7 @@ void StartCamera::Update()
 
             worldTransform_.UpdateMatrix();
 
-            viewProjection_.translation_ = worldTransform_.translation_;
-            viewProjection_.eulerRotation_ = worldTransform_.eulerRotation_;
-            viewProjection_.UpdateMatrix();
+            ApplyToCamera();
 
             if (t >= kEasingProgressMax)
             {
@@ -151,14 +148,12 @@ void StartCamera::Update()
         {
             float t = std::min(easingTimer_ / easingDuration_, kEasingProgressMax);
 
-            worldTransform_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, targetViewProjection_.translation_, t, kEasingProgressMax);
-            worldTransform_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, targetViewProjection_.eulerRotation_, t, kEasingProgressMax);
+            worldTransform_.translation_ = ApplyEasing(EasingType::InOutQuad, easingStartPos_, targetPosition_, t, kEasingProgressMax);
+            worldTransform_.eulerRotation_ = ApplyEasing(EasingType::InOutQuad, easingStartRot_, targetRotation_, t, kEasingProgressMax);
 
             worldTransform_.UpdateMatrix();
 
-            viewProjection_.translation_ = worldTransform_.translation_;
-            viewProjection_.eulerRotation_ = worldTransform_.eulerRotation_;
-            viewProjection_.UpdateMatrix();
+            ApplyToCamera();
 
             if (t >= kEasingProgressMax)
             {
@@ -200,9 +195,18 @@ void StartCamera::Update()
     worldTransform_.UpdateMatrix();
 
     // トランスフォーム情報の反映
-    viewProjection_.translation_ = worldTransform_.translation_;
-    viewProjection_.eulerRotation_ = worldTransform_.eulerRotation_;
-    viewProjection_.UpdateMatrix();
+    ApplyToCamera();
+}
+
+void StartCamera::ApplyToCamera()
+{
+    // 計算した位置・向きをカメラへ渡す（行列の生成はカメラ側が行う）
+    if (!pCamera_)
+    {
+        return;
+    }
+    pCamera_->SetPosition(worldTransform_.translation_);
+    pCamera_->SetRotation(worldTransform_.eulerRotation_);
 }
 
 void StartCamera::Move()

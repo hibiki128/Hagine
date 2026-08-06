@@ -5,6 +5,8 @@
 #include <debug/profiler/CpuProfiler.h>
 #include <debug/log/Logger.h>
 #include <Frame.h>
+#include <camera/CameraManager.h>
+#include <object/Object3dInstancing.h>
 #include <particle/gpu/ParticleCSSpawner.h>
 #include <shadow/ShadowMap.h>
 #include <iterator>
@@ -276,6 +278,8 @@ void Framework::Finalize()
     modelCommon_->Finalize();
 
     pBaseObjectManager_->Finalize();
+    CameraManager::GetInstance()->Finalize();      // カメラが持つ定数バッファの解放
+    Object3dInstancing::GetInstance()->Finalize(); // インスタンシング用アップロードバッファの解放
     pDxCommon_->Finalize();
 }
 

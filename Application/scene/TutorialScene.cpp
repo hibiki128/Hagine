@@ -33,7 +33,7 @@ void TutorialScene::Initialize()
     /// ===================================================
     /// 初期化
     /// ===================================================
-    debugCamera_->Initialize(&vp_);
+    debugCamera_->Initialize();
     player_->Init("player");
     enemy_->Init("pEnemy");
     ground_->Init("Ground");
@@ -49,8 +49,8 @@ void TutorialScene::Initialize()
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
-    player_->SetViewProjection(&vp_);
-    enemy_->SetViewProjection(&vp_);
+    player_->InitializeShake();
+    enemy_->InitializeShake();
     enemy_->SetTarget(player_.get());
     ground_->GetLighting() = false;
     gameUI_->SetIsTutorial(true);
@@ -141,7 +141,7 @@ void TutorialScene::Update()
     // 環境オブジェクトの更新
     ground_->Update();
     aroundField_->Update();
-    fadeOut_->Update(vp_);
+    fadeOut_->Update(vp());
     pPlayer_->SetActiveDebugCamera(debugCamera_->GetActive());
 
     // シャドウマップをプレイヤーに追従
@@ -203,7 +203,7 @@ void TutorialScene::AddSceneSetting()
     /// ===================================================
     debugCamera_->DrawImGui();
     followCamera_->DrawImGui();
-    vp_.ShowDebugInfo();
+    camera_->ShowDebugWindow();
     MotionEditor::GetInstance()->DrawImGui();
     tutorialSystem_->DrawImGui();
 }
@@ -232,19 +232,12 @@ void TutorialScene::CameraUpdate()
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    if (pPlayer_->GetIsAlive())
+    // どのカメラで描くかは CameraManager のアクティブ切り替えで決める
+    debugCamera_->Update(); // 有効中は自動でデバッグカメラへ切り替わる
+    if (pPlayer_->GetIsAlive() && !debugCamera_->GetActive())
     {
-        if (debugCamera_->GetActive())
-        {
-            debugCamera_->Update();
-        }
-        else
-        {
-            followCamera_->Update();
-            vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
-            vp_.matView_ = followCamera_->GetViewProjection().matView_;
-            vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
-        }
+        followCamera_->Update();
+        pCameraManager_->SetActive(followCamera_->GetCamera());
     }
 }
 

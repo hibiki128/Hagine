@@ -1,6 +1,7 @@
 #pragma once
 #include "particle/gpu/ParticleCSEmitter.h"
 #include <GamePad.h>
+#include <camera/Camera.h>
 #include <particle/ParticleEmitter.h>
 #include <SpriteManager.h>
 #include <memory>
@@ -33,8 +34,8 @@ class TitleUI
     /// <summary>
     /// 描画処理
     /// </summary>
-    /// <param name="vp_">ビュープロジェクション</param>
-    void Draw(Hagine::ViewProjection &vp_);
+    /// <param name="camera">描画に使うカメラ</param>
+    void Draw(Hagine::Camera &camera);
 
     /// <summary>
     /// 完了したかを取得

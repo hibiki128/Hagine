@@ -200,6 +200,29 @@ void ComboSystem::Update(float deltaTime)
     }
 }
 
+void ComboSystem::Interrupt()
+{
+    if (!comboStarted_)
+    {
+        return;
+    }
+    ReturnAllToComboStart();
+    ResetCombo();
+
+    // 出し切ったときと同じ硬直を入れる（ResetCombo がクールダウンを0に戻すため、その後に設定する）
+    comboCooldown_ = finishRecovery_;
+}
+
+int ComboSystem::GetExecutedStepCount() const
+{
+    if (!comboStarted_)
+    {
+        return 0;
+    }
+    // 最終段を出すと comboIndex_ は0へ折り返し、代わりに waitingForReturn_ が立つ
+    return waitingForReturn_ ? static_cast<int>(comboData_.size()) : comboIndex_;
+}
+
 void ComboSystem::ExecuteComboAttack()
 {
     if (comboIndex_ >= static_cast<int>(comboData_.size()))

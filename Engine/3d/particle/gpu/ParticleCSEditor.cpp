@@ -338,6 +338,8 @@ void ParticleCSEditor::RenderPreview()
 
         // プレビューカメラの view / projection から CPU 用 ViewProjection を組む
         // （matView_ でビルボード、matView_×matProjection_ で WVP が決まる）。
+        // ここは「行列を描画APIへ渡すだけの入れ物」でカメラ状態は持たない（定数バッファも作らない）。
+        // カメラとして扱うものは Camera クラスが持つ。
         ViewProjection cpuVP;
         cpuVP.matView_ = view;
         const float fovY = 45.0f * 3.14159265358979323846f / 180.0f;
@@ -767,33 +769,45 @@ void ParticleCSEditor::ShowGPUParticleStatistics()
 #ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("GPUパーティクル統計"))
     {
+        // 生存中の全エミッター（エディタ登録・Spawner 生成・ゲームクラス所有）が対象。
+        // エディタのプレビュー専用エミッターはゲーム画面に出ていないので別枠で表示する。
+        const auto allStats = ParticleCSEmitter::GetAllEmitterStatistics(true);
 
-        // エミッター名ごとに集計
-        std::map<std::string, size_t> emitterStats;
-        size_t grandTotal = 0;
-
-        for (const auto &[name, emitter] : emitters_)
+        // エミッター名ごとに合算（同じテンプレートを複数出したときは1行にまとめる）
+        std::map<std::string, size_t> sceneStats;
+        size_t sceneTotal = 0;
+        size_t previewTotal = 0;
+        size_t sceneEmitterCount = 0;
+        for (const auto &stat : allStats)
         {
-            if (!emitter)
+            if (stat.previewOnly)
+            {
+                previewTotal += stat.aliveCount;
                 continue;
-
-            size_t emitterTotal = emitter->GetTotalAliveParticles();
-
-            emitterStats[name] = emitterTotal;
-            grandTotal += emitterTotal;
+            }
+            sceneStats[stat.emitterName] += stat.aliveCount;
+            sceneTotal += stat.aliveCount;
+            ++sceneEmitterCount;
         }
 
-        // ヘッダー情報
-        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "合計: %zu個", grandTotal);
+        // ヘッダー情報（シーンに出ている数）
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "シーン合計: %zu個", sceneTotal);
         ImGui::SameLine();
-        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(%zu種類)", emitterStats.size());
+        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(エミッター %zu 個)", sceneEmitterCount);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Spawn で実行時に出したものも含めた、今シーンに出ている総数です\n"
+                              "（GPUからの読み戻しなので1〜2フレーム遅延します）");
+        if (previewTotal > 0)
+        {
+            ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.60f, 1.0f), "プレビュー窓: %zu個（画面には出ていない）", previewTotal);
+        }
 
-        if (!emitterStats.empty())
+        if (!sceneStats.empty())
         {
             ImGui::Separator();
 
             // エミッターごとに表示
-            for (const auto &[emitterName, count] : emitterStats)
+            for (const auto &[emitterName, count] : sceneStats)
             {
                 ImGui::Bullet();
                 ImGui::SameLine();

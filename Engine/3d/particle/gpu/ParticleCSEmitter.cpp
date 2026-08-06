@@ -239,9 +239,11 @@ bool ParticleCSEmitter::SubmitParticleLights(const ViewProjection &vp, ID3D12Gra
     {
         if (!group)
             continue;
+        // 光源化は描画リスト(gRenderCompact)を読むので、長さも描画リスト長(可視カウンタ)を使う。
+        // ＝視錐台カリングが有効なら画面外の粒子は光源にならない（画面に効かない光源を省く）。
         const D3D12_GPU_VIRTUAL_ADDRESS compactAddress = group->GetRenderCompactGpuAddress();
-        const D3D12_GPU_VIRTUAL_ADDRESS aliveCountAddress = group->GetAliveCounterGpuAddress();
-        if (compactAddress == 0 || aliveCountAddress == 0)
+        const D3D12_GPU_VIRTUAL_ADDRESS visibleCountAddress = group->GetVisibleCounterGpuAddress();
+        if (compactAddress == 0 || visibleCountAddress == 0)
             continue;
 
         // ディスパッチ数は前フレームに読み戻した生存数から決める（1〜2フレーム遅延）。
@@ -266,7 +268,7 @@ bool ParticleCSEmitter::SubmitParticleLights(const ViewProjection &vp, ID3D12Gra
         LightGroup *lightGroup = LightGroup::GetInstance();
         pCommandList->SetComputeRootConstantBufferView(0, particleLightCBResource_->GetGPUVirtualAddress());
         pCommandList->SetComputeRootShaderResourceView(1, compactAddress);
-        pCommandList->SetComputeRootShaderResourceView(2, aliveCountAddress);
+        pCommandList->SetComputeRootShaderResourceView(2, visibleCountAddress);
         pCommandList->SetComputeRootUnorderedAccessView(3, lightGroup->GetPointLightUavAddress());
         pCommandList->SetComputeRootUnorderedAccessView(4, lightGroup->GetLightCounterAddress());
 
@@ -374,6 +376,9 @@ void ParticleCSEmitter::DrawCompute(const ViewProjection &vp)
         // その粒子のトレイル状態（lastTrailPosition 等）が未初期化になる
         // （花火が偶にトレイル無しで打ち上がる不具合の原因）
         group->EnsureUpdateOptionalBuffers(fieldsActive);
+        // エディタの編集用エミッターはプレビュー窓（＝別カメラ）にしか描かないので、
+        // シーンカメラの視錐台でカリングすると編集中の粒子が消える。ここで抑止する。
+        group->SetFrustumCullSuppressed(previewOnly_);
         group->Update(vp);
         group->AdvanceAliveFrame();
         group->ResetAliveCounterDispatch(computeCmdList);
@@ -431,20 +436,14 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp)
     {
         // 旧 CountParticle 全Nディスパッチは廃止（生存数は aliveCounter に統合）
 
-        // 生存数を読み戻し、描画 instanceCount を決定する。
-        // VS 側で instanceId >= 実生存数 を確実にカリングするため、
-        // ここでは生存数概算＋マージンで instance を発行する。
+        // 生存数の読み戻しは統計・Update のディスパッチ本数見積り用（描画数の決定には使わない）。
+        // 描画は GPU 駆動（ExecuteIndirect）で、instanceCount は VRAM 上のカウンタから直接読む。
         group->FetchAliveDrawCount();
-        const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
-        uint32_t drawCount = group->GetAliveDrawCount();
-        drawCount = drawCount + (drawCount / 4) + 256; // 急増分のマージン
-        if (drawCount > maxCount)
+        // 引数バッファへ一度も書き込みが記録されていないなら描画しない（未初期化引数の実行防止）。
+        // 生成直後の1フレームだけで、そのとき粒子は0個なので見た目に影響はない。
+        if (!group->IsDrawArgsReady())
         {
-            drawCount = maxCount;
-        }
-        if (drawCount == 0)
-        {
-            continue; // 生存ゼロなら描画スキップ
+            continue;
         }
 
         pParticleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
@@ -460,14 +459,27 @@ void ParticleCSEmitter::DrawGraphics(const ViewProjection &vp)
             pSrvManager_->SetGraphicsRootDescriptorTable(1, group->GetRenderCompactSrvForVSIndex());
             pSrvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
             pCommandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
-            // 生存コンパクション SRV (t2: aliveList, t3: aliveCount)
-            pSrvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
-            pSrvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
+            // 描画リスト SRV (t2: renderSlot=描画順->slot, t3: visibleCount=描画リスト長)
+            pSrvManager_->SetGraphicsRootDescriptorTable(4, group->GetRenderSlotSrvForVSIndex());
+            pSrvManager_->SetGraphicsRootDescriptorTable(5, group->GetVisibleCounterSrvForVSIndex());
             pSrvManager_->SetGraphicsRootDescriptorTable(6, group->GetRotationSrvForVSIndex());
-            pCommandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
+            ExecuteIndirectDraw(group, meshIndex);
         }
     }
     GpuProfiler::GetInstance()->Close(pCommandList_, drawSpan);
+}
+
+void ParticleCSEmitter::ExecuteIndirectDraw(ParticleCSGroup *group, size_t meshIndex)
+{
+    // GPU版 DrawInstance: 「今何個描くか」は引数バッファ内の InstanceCount（Compute が
+    // GPU 上のカウンタからコピーした値）が決める。CPU は固定の描画命令を投げるだけ。
+    ID3D12CommandSignature *signature = pParticleCommon_->GetDrawIndexedCommandSignature();
+    if (!signature)
+    {
+        return;
+    }
+    const UINT64 argsOffset = static_cast<UINT64>(ParticleCSGroup::kDrawArgsStride) * meshIndex;
+    pCommandList_->ExecuteIndirect(signature, 1, group->GetDrawArgsResource(), argsOffset, nullptr, 0);
 }
 
 void ParticleCSEmitter::Draw(const ViewProjection &vp)
@@ -514,16 +526,9 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
             previewPerView->enableBillboard = gpv->enableBillboard;
         }
         group->FetchAliveDrawCount();
-        const uint32_t maxCount = group->GetSettingsData()->maxParticleCount;
-        uint32_t drawCount = group->GetAliveDrawCount();
-        drawCount = drawCount + (drawCount / 4) + 256; // 急増分のマージン
-        if (drawCount > maxCount)
+        if (!group->IsDrawArgsReady())
         {
-            drawCount = maxCount;
-        }
-        if (drawCount == 0)
-        {
-            continue;
+            continue; // 引数バッファ未初期化（生成直後の1フレーム）
         }
 
         pParticleCommon_->GPUDrawCommonSetting(group->GetParticleGroupData().blendMode);
@@ -540,10 +545,10 @@ void ParticleCSEmitter::DrawGraphicsForPreview(D3D12_GPU_VIRTUAL_ADDRESS perView
             pSrvManager_->SetGraphicsRootDescriptorTable(1, group->GetRenderCompactSrvForVSIndex());
             pSrvManager_->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(group->GetParticleGroupData().materials[meshIndex].textureFilePath));
             pCommandList_->SetGraphicsRootConstantBufferView(3, group->GetMaterialResource()->GetGPUVirtualAddress());
-            pSrvManager_->SetGraphicsRootDescriptorTable(4, group->GetAliveListSrvForVSIndex());
-            pSrvManager_->SetGraphicsRootDescriptorTable(5, group->GetAliveCounterSrvForVSIndex());
+            pSrvManager_->SetGraphicsRootDescriptorTable(4, group->GetRenderSlotSrvForVSIndex());
+            pSrvManager_->SetGraphicsRootDescriptorTable(5, group->GetVisibleCounterSrvForVSIndex());
             pSrvManager_->SetGraphicsRootDescriptorTable(6, group->GetRotationSrvForVSIndex());
-            pCommandList_->DrawIndexedInstanced(UINT(meshes[meshIndex].indices.size()), drawCount, 0, 0, 0);
+            ExecuteIndirectDraw(group, meshIndex);
         }
     }
     GpuProfiler::GetInstance()->Close(pCommandList_, drawSpan);
@@ -869,6 +874,9 @@ void ParticleCSEmitter::EmitterDisPatch(ID3D12GraphicsCommandList *pCommandList)
         pCommandList->SetComputeRootDescriptorTable(17, group->GetAliveListUavHandle().second);
         pCommandList->SetComputeRootDescriptorTable(18, group->GetAliveCounterUavHandle().second);
         pCommandList->SetComputeRootDescriptorTable(19, group->GetRenderCompactUavGpu());
+        // 視錐台カリング後の描画リスト (u12:可視カウンタ / u13:描画順->slot index)
+        pCommandList->SetComputeRootDescriptorTable(20, group->GetVisibleCounterUavHandle().second);
+        pCommandList->SetComputeRootDescriptorTable(21, group->GetRenderSlotUavGpu());
         // CBV (b0-b2)。b3:FieldCB はフィールド有無で下の分岐が param 12 に設定する。
         pCommandList->SetComputeRootConstantBufferView(9, emitterMeshResource_->GetGPUVirtualAddress());
         pCommandList->SetComputeRootConstantBufferView(10, group->GetPerFrameResource()->GetGPUVirtualAddress());
@@ -1158,6 +1166,51 @@ size_t ParticleCSEmitter::GetTotalAliveParticles()
     return total;
 }
 
+size_t ParticleCSEmitter::GetSceneAliveParticleCount()
+{
+    // liveEmitters_ は生成/破棄で自動的に出入りするので、エディタ登録・Spawner 生成・
+    // ゲームクラス所有のどれでも漏れなく数えられる。
+    size_t total = 0;
+    for (ParticleCSEmitter *pEmitter : liveEmitters_)
+    {
+        if (!pEmitter || pEmitter->previewOnly_)
+            continue; // プレビュー窓専用はゲーム画面に出ていないので数えない
+        total += pEmitter->GetTotalAliveParticles();
+    }
+    return total;
+}
+
+size_t ParticleCSEmitter::GetAllAliveParticleCount()
+{
+    size_t total = 0;
+    for (ParticleCSEmitter *pEmitter : liveEmitters_)
+    {
+        if (!pEmitter)
+            continue;
+        total += pEmitter->GetTotalAliveParticles();
+    }
+    return total;
+}
+
+std::vector<ParticleCSEmitter::EmitterStatistics> ParticleCSEmitter::GetAllEmitterStatistics(bool includePreviewOnly)
+{
+    std::vector<EmitterStatistics> stats;
+    stats.reserve(liveEmitters_.size());
+    for (ParticleCSEmitter *pEmitter : liveEmitters_)
+    {
+        if (!pEmitter)
+            continue;
+        if (!includePreviewOnly && pEmitter->previewOnly_)
+            continue;
+        EmitterStatistics stat;
+        stat.emitterName = pEmitter->GetName();
+        stat.aliveCount = pEmitter->GetTotalAliveParticles();
+        stat.previewOnly = pEmitter->previewOnly_;
+        stats.push_back(std::move(stat));
+    }
+    return stats;
+}
+
 std::vector<ParticleCSEmitter::GroupStatistics> ParticleCSEmitter::GetGroupStatistics()
 {
     std::vector<GroupStatistics> stats;
@@ -1326,6 +1379,9 @@ void ParticleCSEmitter::SaveSetting()
         data->Save(prefix + "enableSizeClamp", group->GetPerView()->enableSizeClamp);
         data->Save(prefix + "maxScreenHeight", group->GetPerView()->maxScreenHeight);
         data->Save(prefix + "minScreenHeight", group->GetPerView()->minScreenHeight);
+
+        // ★ GPU駆動の視錐台カリング（既定ON。切ると画面外の粒子も描画リストに載る）
+        data->Save(prefix + "enableFrustumCull", static_cast<uint32_t>(group->IsFrustumCullEnabled() ? 1 : 0));
 
         // ★ 中間カラー設定の保存
         data->Save(prefix + "enableMidColor", group->GetSettingsData()->enableMidColor);
@@ -1547,6 +1603,9 @@ void ParticleCSEmitter::LoadSetting()
         group->GetPerView()->enableSizeClamp = data->Load<uint32_t>(prefix + "enableSizeClamp", 0);
         group->GetPerView()->maxScreenHeight = data->Load(prefix + "maxScreenHeight", 1.0f);
         group->GetPerView()->minScreenHeight = data->Load(prefix + "minScreenHeight", 0.0f);
+
+        // ★ GPU駆動の視錐台カリング（キーが無い既存Jsonは既定ON＝軽量化が効いた状態）
+        group->SetFrustumCullEnabled(data->Load<uint32_t>(prefix + "enableFrustumCull", 1) != 0);
 
         // ★ 中間カラー設定のロード
         settings.enableMidColor = data->Load<uint32_t>(prefix + "enableMidColor", 0);

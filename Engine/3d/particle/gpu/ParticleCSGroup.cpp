@@ -114,6 +114,7 @@ ParticleCSGroupData ParticleCSGroup::CreateParticleGroup(const std::string &grou
     modelData_ = pModel_->GetModelData();
     CreateVertexResource();
     CreateIndexResource();
+    CreateDrawArgsResources(); // GPU駆動描画(ExecuteIndirect)の引数バッファ（メッシュ確定後）
     // マテリアルが複数ある場合は最初のものを使う
     particleGroupData_.materials.clear();
     if (texturePath.empty())
@@ -158,6 +159,7 @@ ParticleCSGroupData ParticleCSGroup::CreatePrimitiveParticleGroup(const std::str
     modelData_ = pModel_->GetModelData();
     CreateVertexResource();
     CreateIndexResource();
+    CreateDrawArgsResources(); // GPU駆動描画(ExecuteIndirect)の引数バッファ（メッシュ確定後）
     // マテリアルが複数ある場合は最初のものを使う
     particleGroupData_.materials.clear();
     if (texturePath.empty())
@@ -302,6 +304,9 @@ void ParticleCSGroup::UpdateParticleCSDisPatch(
     const uint32_t inIdx = alivePhase_ ^ 1u;
     pCommandList->SetComputeRootDescriptorTable(17, pSrvManager_->GetGPUDescriptorHandle(aliveListSrvForVSIndex_[inIdx]));
     pCommandList->SetComputeRootDescriptorTable(18, pSrvManager_->GetGPUDescriptorHandle(aliveCounterSrvForVSIndex_[inIdx]));
+    // 視錐台カリング後の描画リスト (u12:可視カウンタ / u13:描画順->slot index)
+    pCommandList->SetComputeRootDescriptorTable(19, visibleCounterUavHandle_.second);
+    pCommandList->SetComputeRootDescriptorTable(20, soaRenderSlot_.uavHandle.second);
 
     // 軽量版・フル版ともスレッドグループ256（Ampere の常駐1536上限で占有率を上げる狙い）。
     // 各シェーダの [numthreads] と一致必須（Lite=UpdateParticleLite / Full=UpdateParticle）。
@@ -343,12 +348,17 @@ void ParticleCSGroup::ResetAliveCounterDispatch(ID3D12GraphicsCommandList *pComm
     // out フェーズのカウンタを 0 にリセットする。
     pCommandList->SetComputeRootDescriptorTable(0, aliveCounterUavHandle_[alivePhase_].second);
     pCommandList->Dispatch(1, 1, 1);
+    // 描画リスト(視錐台カリング後)のカウンタも同じパスで 0 に戻す。
+    pCommandList->SetComputeRootDescriptorTable(0, visibleCounterUavHandle_.second);
+    pCommandList->Dispatch(1, 1, 1);
 
-    // リセット完了を Update の InterlockedAdd より前に保証する
-    D3D12_RESOURCE_BARRIER uavBarrier{};
-    uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-    uavBarrier.UAV.pResource = aliveCounterResource_[alivePhase_].Get();
-    pCommandList->ResourceBarrier(1, &uavBarrier);
+    // リセット完了を Emit/Update の InterlockedAdd より前に保証する
+    D3D12_RESOURCE_BARRIER uavBarriers[2] = {};
+    uavBarriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    uavBarriers[0].UAV.pResource = aliveCounterResource_[alivePhase_].Get();
+    uavBarriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    uavBarriers[1].UAV.pResource = visibleCounterResource_.Get();
+    pCommandList->ResourceBarrier(2, uavBarriers);
 }
 
 void ParticleCSGroup::RecordAliveCountReadback(ID3D12GraphicsCommandList *computeCmdList)
@@ -379,6 +389,59 @@ void ParticleCSGroup::RecordAliveCountReadback(ID3D12GraphicsCommandList *comput
         D3D12_RESOURCE_STATE_COPY_SOURCE,
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     pCommandList->ResourceBarrier(1, &toUAV);
+
+    // ---- GPU駆動描画: 引数バッファの InstanceCount を GPU カウンタで上書きする ----
+    //   コピー元は「描画リスト長＝視錐台カリングを通った数」。CPU 読み戻し値
+    //   （1〜2F遅延＋マージン）を使わないので、画面外の粒子ぶんの頂点シェーダも起動しない。
+    //   drawArgsResource_ は COMMON のままにして COPY_DEST への暗黙昇格に任せる
+    //   （バッファは ExecuteCommandLists 完了で COMMON へ減衰するので、direct キューでは
+    //     INDIRECT_ARGUMENT へ昇格して ExecuteIndirect が読める）。
+    if (drawArgsResource_)
+    {
+        ID3D12Resource *visibleRes = visibleCounterResource_.Get();
+        // Emit/Update の append 完了を保証してからコピー状態へ移す
+        D3D12_RESOURCE_BARRIER visUavBarrier{};
+        visUavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        visUavBarrier.UAV.pResource = visibleRes;
+        pCommandList->ResourceBarrier(1, &visUavBarrier);
+
+        auto visToCopy = CD3DX12_RESOURCE_BARRIER::Transition(
+            visibleRes,
+            D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+            D3D12_RESOURCE_STATE_COPY_SOURCE);
+        pCommandList->ResourceBarrier(1, &visToCopy);
+
+        // 固定部（IndexCountPerInstance / Start*）は初回だけコピーする。
+        // InstanceCount(オフセット+4) を跨がない2区間に分けるので、下のカウンタコピーと
+        // 書き込み範囲が重ならない（コピー同士の順序に依存しない）。
+        if (!drawArgsStaticUploaded_)
+        {
+            for (uint32_t i = 0; i < drawArgsCount_; ++i)
+            {
+                const UINT64 base = static_cast<UINT64>(kDrawArgsStride) * i;
+                pCommandList->CopyBufferRegion(drawArgsResource_.Get(), base,
+                                               drawArgsUploadResource_.Get(), base,
+                                               sizeof(uint32_t)); // IndexCountPerInstance
+                pCommandList->CopyBufferRegion(drawArgsResource_.Get(), base + sizeof(uint32_t) * 2,
+                                               drawArgsUploadResource_.Get(), base + sizeof(uint32_t) * 2,
+                                               sizeof(uint32_t) * 3); // Start*/BaseVertex
+            }
+            drawArgsStaticUploaded_ = true;
+        }
+        for (uint32_t i = 0; i < drawArgsCount_; ++i)
+        {
+            const UINT64 dstOffset = static_cast<UINT64>(kDrawArgsStride) * i + sizeof(uint32_t);
+            pCommandList->CopyBufferRegion(drawArgsResource_.Get(), dstOffset,
+                                           visibleRes, 0, sizeof(uint32_t)); // InstanceCount
+        }
+        drawArgsReady_ = true;
+
+        auto visToUAV = CD3DX12_RESOURCE_BARRIER::Transition(
+            visibleRes,
+            D3D12_RESOURCE_STATE_COPY_SOURCE,
+            D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        pCommandList->ResourceBarrier(1, &visToUAV);
+    }
 }
 
 void ParticleCSGroup::FetchAliveDrawCount()
@@ -461,7 +524,57 @@ void ParticleCSGroup::Update(const ViewProjection &vp)
         pPerViewData_->billboardMatrix = MakeIdentity4x4();
     }
 
+    // ---- GPU駆動の視錐台カリング用パラメータ（Compute が読む定数バッファへ）----
+    // 平面は「描画に使う viewProjection」から抽出するので、カリング判定と実際の
+    // 射影結果が食い違わない。プレビュー窓は別カメラで同じバッファを描くため抑止する。
+    pSettingsData_->enableFrustumCull =
+        (!frustumCullSuppressed_ && frustumCullEnabled_) ? 1u : 0u;
+    // 粒子半径 = max(scale) × モデル頂点の広がり（+ わずかな安全マージン）
+    pSettingsData_->frustumRadiusScale = modelLocalRadius_ * 1.05f;
+    // 速度ストレッチで伸びるぶんを半径に反映（OFF なら 0＝膨らませない）
+    pSettingsData_->frustumStretchFactor =
+        (pPerViewData_->enableVelocityStretch != 0) ? pPerViewData_->velocityStretchFactor : 0.0f;
+    ExtractFrustumPlanes(pPerViewData_->viewProjection, pSettingsData_->frustumPlanes);
+
     CopyDebugDataToReadback();
+}
+
+void ParticleCSGroup::ExtractFrustumPlanes(const Matrix4x4 &viewProjection, Vector4 outPlanes[6])
+{
+    // 行ベクトル規約 (clip = v * VP) の Gribb/Hartmann 抽出。
+    //   clip.x > -clip.w （左）… v・(col0 + col3) > 0 という具合に、列の和/差が平面になる。
+    //   D3D の深度は 0〜1 なので near は col2 単体、far は col3 - col2。
+    const auto &m = viewProjection.m;
+    auto col = [&m](int c) {
+        return Vector4(m[0][c], m[1][c], m[2][c], m[3][c]);
+    };
+    const Vector4 c0 = col(0);
+    const Vector4 c1 = col(1);
+    const Vector4 c2 = col(2);
+    const Vector4 c3 = col(3);
+
+    Vector4 planes[6] = {
+        {c3.x + c0.x, c3.y + c0.y, c3.z + c0.z, c3.w + c0.w}, // left
+        {c3.x - c0.x, c3.y - c0.y, c3.z - c0.z, c3.w - c0.w}, // right
+        {c3.x + c1.x, c3.y + c1.y, c3.z + c1.z, c3.w + c1.w}, // bottom
+        {c3.x - c1.x, c3.y - c1.y, c3.z - c1.z, c3.w - c1.w}, // top
+        {c2.x, c2.y, c2.z, c2.w},                             // near
+        {c3.x - c2.x, c3.y - c2.y, c3.z - c2.z, c3.w - c2.w}, // far
+    };
+
+    // 半径との比較を「距離」で行うために法線を単位化する
+    for (int i = 0; i < 6; ++i)
+    {
+        const float len = std::sqrt(planes[i].x * planes[i].x + planes[i].y * planes[i].y + planes[i].z * planes[i].z);
+        if (len > 1e-6f)
+        {
+            planes[i].x /= len;
+            planes[i].y /= len;
+            planes[i].z /= len;
+            planes[i].w /= len;
+        }
+        outPlanes[i] = planes[i];
+    }
 }
 
 void ParticleCSGroup::AllocateSoABuffer(SoABuffer &buf, uint32_t count)
@@ -511,6 +624,9 @@ void ParticleCSGroup::CreateParticleSoABuffers()
     initSoA(soaOverride_, sizeof(CSParticleOverride), false, 1);
     // 描画コンパクション: 詰めた描画データ(DrawCore形式)。Update u11(UAV) / 描画VS t0(SRV)。常時必要。
     initSoA(soaRenderCompact_, sizeof(CSParticleDrawCore), true, maxCount);
+    // 描画順 -> 実 slot index。回転グループだけが gRotation を引くのに使うので、
+    // Trail/Rotation/Override と同じく「使うグループだけ」後から本確保する。
+    initSoA(soaRenderSlot_, sizeof(uint32_t), true, 1); // 描画VS t2(回転グループのみ)
 }
 
 void ParticleCSGroup::EnsureUpdateOptionalBuffers(bool fieldsActive)
@@ -530,6 +646,9 @@ void ParticleCSGroup::EnsureUpdateOptionalBuffers(bool fieldsActive)
         AllocateSoABuffer(soaRotation_, maxCount);
     if (needOverride && soaOverride_.allocatedCount < maxCount)
         AllocateSoABuffer(soaOverride_, maxCount);
+    // 描画順->slot index は回転グループだけが読む（VS の enableRotation と同じ条件）。
+    if (needRotation && soaRenderSlot_.allocatedCount < maxCount)
+        AllocateSoABuffer(soaRenderSlot_, maxCount);
 }
 
 void ParticleCSGroup::CreatePerViewResource()
@@ -577,6 +696,16 @@ void ParticleCSGroup::CreateVertexResource()
     {
         allVertices.insert(allVertices.end(), mesh.vertices.begin(), mesh.vertices.end());
     }
+    // 視錐台カリング用: モデルのローカル境界半径（原点からの最遠頂点）。
+    // 粒子の世界半径 = max(scale) × この値 になるので、板ポリでも球でも同じ式で包める。
+    float maxLenSq = 0.0f;
+    for (const auto &v : allVertices)
+    {
+        const float lenSq = v.position.x * v.position.x + v.position.y * v.position.y + v.position.z * v.position.z;
+        maxLenSq = (std::max)(maxLenSq, lenSq);
+    }
+    modelLocalRadius_ = (maxLenSq > 0.0f) ? std::sqrt(maxLenSq) : 1.0f;
+
     vertexResource_ = pDxCommon_->CreateBufferResource(sizeof(VertexData) * allVertices.size());
     vertexBufferView_.BufferLocation = vertexResource_->GetGPUVirtualAddress();
     vertexBufferView_.SizeInBytes = UINT(sizeof(VertexData) * allVertices.size());
@@ -942,6 +1071,20 @@ void ParticleCSGroup::CreateAliveListResources()
         pSrvManager_->CreateSRVforStructuredBuffer(aliveCounterSrvForVSIndex_[i], aliveCounterResource_[i].Get(), 1, sizeof(uint32_t));
     }
 
+    // --- visibleCounter: 描画リスト長（視錐台カリング後）のアトミックカウンタ ---
+    // UAV: compute u12 / SRV: VS t3 / ExecuteIndirect の instanceCount のコピー元。
+    // 生存リストと違い当フレーム限りの値なので ping-pong しない。
+    visibleCounterResource_ = pDxCommon_->CreateBufferResource(sizeof(uint32_t), true);
+    visibleCounterResource_->SetName(L"VisibleCounter");
+
+    visibleCounterUavIndex_ = pSrvManager_->Allocate() + 1;
+    visibleCounterUavHandle_.first = pSrvManager_->GetCPUDescriptorHandle(visibleCounterUavIndex_);
+    visibleCounterUavHandle_.second = pSrvManager_->GetGPUDescriptorHandle(visibleCounterUavIndex_);
+    pSrvManager_->CreateUAVStructuredBuffer(visibleCounterUavIndex_, visibleCounterResource_.Get(), 1, sizeof(uint32_t));
+
+    visibleCounterSrvForVSIndex_ = pSrvManager_->Allocate() + 1;
+    pSrvManager_->CreateSRVforStructuredBuffer(visibleCounterSrvForVSIndex_, visibleCounterResource_.Get(), 1, sizeof(uint32_t));
+
     // CPU 読み取り用 Readback バッファ（out からコピーする共有 1個）
     D3D12_HEAP_PROPERTIES readbackHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
     D3D12_RESOURCE_DESC readbackDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint32_t));
@@ -953,6 +1096,52 @@ void ParticleCSGroup::CreateAliveListResources()
         nullptr,
         IID_PPV_ARGS(&aliveCounterReadbackResource_));
     aliveCounterReadbackResource_->SetName(L"AliveCounter_Readback");
+}
+
+void ParticleCSGroup::CreateDrawArgsResources()
+{
+    // GPU駆動描画(DrawInstanceIndirect)の引数バッファ。
+    //   固定部(IndexCountPerInstance / Start*) は CPU が一度だけ書き、
+    //   InstanceCount(オフセット+4) だけを毎フレーム GPU 上のカウンタからコピーする。
+    //   → 描画数の決定に CPU 読み戻しが要らなくなる（1〜2F遅延＋マージン発行の解消）。
+    drawArgsCount_ = static_cast<uint32_t>(modelData_.meshes.size());
+    if (drawArgsCount_ == 0)
+    {
+        drawArgsCount_ = 1;
+    }
+    const size_t argsBytes = static_cast<size_t>(kDrawArgsStride) * drawArgsCount_;
+
+    // 引数バッファ本体（DEFAULT ヒープ）。状態は COMMON のまま扱う（暗黙昇格/減衰に任せる）。
+    D3D12_HEAP_PROPERTIES defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    D3D12_RESOURCE_DESC argsDesc = CD3DX12_RESOURCE_DESC::Buffer(argsBytes);
+    pDxCommon_->GetDevice()->CreateCommittedResource(
+        &defaultHeapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &argsDesc,
+        D3D12_RESOURCE_STATE_COMMON,
+        nullptr,
+        IID_PPV_ARGS(&drawArgsResource_));
+    drawArgsResource_->SetName(L"ParticleDrawArgs_Indirect");
+
+    // 固定部の種（UPLOAD ヒープ）。作成時に書いたら以降 CPU は触らない（GPU との競合なし）。
+    drawArgsUploadResource_ = pDxCommon_->CreateBufferResource(argsBytes);
+    D3D12_DRAW_INDEXED_ARGUMENTS *pArgs = nullptr;
+    drawArgsUploadResource_->Map(0, nullptr, reinterpret_cast<void **>(&pArgs));
+    for (uint32_t i = 0; i < drawArgsCount_; ++i)
+    {
+        const uint32_t indexCount = (i < modelData_.meshes.size())
+                                        ? static_cast<uint32_t>(modelData_.meshes[i].indices.size())
+                                        : 0u;
+        pArgs[i].IndexCountPerInstance = indexCount;
+        pArgs[i].InstanceCount = 0; // 実値は毎フレーム GPU カウンタからコピーされる
+        pArgs[i].StartIndexLocation = 0;
+        pArgs[i].BaseVertexLocation = 0;
+        pArgs[i].StartInstanceLocation = 0;
+    }
+    drawArgsUploadResource_->Unmap(0, nullptr);
+
+    drawArgsStaticUploaded_ = false;
+    drawArgsReady_ = false;
 }
 
 void ParticleCSGroup::CountAliveParticles()
@@ -1207,6 +1396,22 @@ void ParticleCSGroup::DrawImGui()
                               "                   Z=(0,0,1) なら常に画面と平行に渦が回る。");
         ImGui::PopID();
     };
+
+    // ---- GPU駆動の視錐台カリング（常設・既定ON）----
+    // 画面に映らない粒子を描画リストから外し、ExecuteIndirect の instanceCount を減らす。
+    // シミュレーションは続くので、切り替えても粒子の動きは変わらない（見えるかどうかだけ）。
+    {
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.4f, 0.9f, 0.6f, 1.0f));
+        bool cull = frustumCullEnabled_;
+        if (ImGui::Checkbox("視錐台カリング(GPU)", &cull))
+            frustumCullEnabled_ = cull;
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("画面外の粒子を描画リストから外します（頂点シェーダも起動しません）。\n"
+                              "シミュレーションは続くので動きは変わりません。\n"
+                              "※ プレビュー窓は別カメラなので自動的に無効化されます。");
+    }
+    ImGui::Spacing();
 
     // =======================================================
     // 1. 出現・寿命・サイズ（赤系）【コア・常設】

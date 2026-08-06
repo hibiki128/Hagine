@@ -242,6 +242,11 @@ void PipelineManager::CreateDeferredPipelines()
     pipelines_[MakePipelineKey(PipelineType::GBuffer, BlendMode::Normal, ShaderMode::None)] =
         CreateGBufferGraphicsPipeline(standardRootSignature, false);
 
+    // インスタンシング版の G-Buffer 書き込み（頂点シェーダーだけ差し替え）
+    rootSignatures_[MakeRootSignatureKey(PipelineType::GBufferInstanced, ShaderMode::None)] = standardRootSignature;
+    pipelines_[MakePipelineKey(PipelineType::GBufferInstanced, BlendMode::Normal, ShaderMode::None)] =
+        CreateGBufferGraphicsPipeline(standardRootSignature, false, true);
+
     auto skinningRootSignature = GetRootSignature(PipelineType::Skinning, ShaderMode::None);
     rootSignatures_[MakeRootSignatureKey(PipelineType::GBufferSkinning, ShaderMode::None)] = skinningRootSignature;
     pipelines_[MakePipelineKey(PipelineType::GBufferSkinning, BlendMode::Normal, ShaderMode::None)] =
@@ -254,7 +259,7 @@ void PipelineManager::CreateDeferredPipelines()
         CreateDeferredLightingGraphicsPipeline(lightingRootSignature);
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGBufferGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, bool skinned)
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGBufferGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, bool skinned, bool instanced)
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
@@ -290,8 +295,9 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGBufferGraphi
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
-    const std::wstring vsPath = skinned ? (shaderPath + L"shaders/Skinning/Skinning.VS.hlsl")
-                                        : (shaderPath + L"shaders/Object/Object3d.VS.hlsl");
+    const std::wstring vsPath = skinned    ? (shaderPath + L"shaders/Skinning/Skinning.VS.hlsl")
+                                : instanced ? (shaderPath + L"shaders/Object/Object3dInstanced.VS.hlsl")
+                                            : (shaderPath + L"shaders/Object/Object3d.VS.hlsl");
     IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(vsPath, L"vs_6_0");
     assert(pVertexShaderBlob != nullptr);
 
@@ -472,6 +478,16 @@ void PipelineManager::CreateStandardPipelines()
         auto pipeline = CreateGraphicsPipeline(rootSignature, blendMode);
         pipelines_[MakePipelineKey(PipelineType::Standard, blendMode, ShaderMode::None)] = pipeline;
     }
+
+    // インスタンシング版（頂点シェーダーだけ差し替え・ルートシグネチャは共有）。
+    // 同じモデルを参照するオブジェクトを1回の DrawIndexedInstanced でまとめて描く。
+    rootSignatures_[MakeRootSignatureKey(PipelineType::StandardInstanced, ShaderMode::None)] = rootSignature;
+    for (int i = 0; i <= static_cast<int>(BlendMode::Screen); i++)
+    {
+        BlendMode blendMode = static_cast<BlendMode>(i);
+        pipelines_[MakePipelineKey(PipelineType::StandardInstanced, blendMode, ShaderMode::None)] =
+            CreateGraphicsPipeline(rootSignature, blendMode, true);
+    }
 }
 
 // スプライトパイプラインの作成
@@ -554,7 +570,9 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateRootSignature
 
     // RootParameter作成。複数設定できるので配列。
     // 末尾に t3(ノーマルマップ) を追加。既存 index(0..9) は変更しない。
-    D3D12_ROOT_PARAMETER rootParameters[11] = {};
+    // さらに末尾へ t4(インスタンスデータ) を追加。通常の頂点シェーダーは参照しないので、
+    // バインドしなくても従来どおり動く（インスタンシング版 VS だけが読む）。
+    D3D12_ROOT_PARAMETER rootParameters[12] = {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;                   // CBVを使う
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;                // VertexShaderで使う
     rootParameters[0].Descriptor.ShaderRegister = 0;                                   // レジスタ番号0とバインド
@@ -595,6 +613,13 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateRootSignature
     rootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[10].DescriptorTable.pDescriptorRanges = normalMapDescriptorRange;
     rootParameters[10].DescriptorTable.NumDescriptorRanges = _countof(normalMapDescriptorRange);
+    // インスタンスデータ SRV (t4) - param 11
+    // ディスクリプタを介さないルートSRVにして、1本のバッファの途中アドレスを
+    // バッチごとに指すだけで切り替えられるようにする（ディスクリプタ確保が不要）。
+    rootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+    rootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[11].Descriptor.ShaderRegister = 4; // t4
+    rootParameters[11].Descriptor.RegisterSpace = 0;
 
     descriptionRootSignature.pParameters = rootParameters;
     descriptionRootSignature.NumParameters = _countof(rootParameters);
@@ -638,7 +663,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateRootSignature
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGraphicsPipeline(
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode)
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode, bool instanced)
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
     HRESULT hr;
@@ -702,9 +727,15 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGraphicsPipel
         break;
     }
 
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    // アルファは「書き込み先の値をそのまま保つ」。
+    // ソースのアルファで上書きすると、半透明を描いた画素だけレンダーターゲットのアルファが
+    // 1未満になり、エディタでシーンを ImGui::Image 表示したときに
+    // ImGui がそのアルファで背景と合成してクリア色が透けて見えてしまう。
+    // 色の合成は上の DestBlend 側で完結しているので、アルファを書き換える必要はない
+    // （パーティクル系のパイプラインは元々この設定になっている）
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ZERO;
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ONE;
 
     // RasterizerStateの設定
     D3D12_RASTERIZER_DESC rasterizerDesc{};
@@ -712,8 +743,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateGraphicsPipel
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     // 三角形の中を塗りつぶす
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-    // Shaderをコンパイルする
-    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Object/Object3d.VS.hlsl", L"vs_6_0");
+    // Shaderをコンパイルする（インスタンシング版は頂点シェーダーだけ差し替える）
+    const std::wstring vsPath = instanced ? (shaderPath + L"shaders/Object/Object3dInstanced.VS.hlsl")
+                                          : (shaderPath + L"shaders/Object/Object3d.VS.hlsl");
+    IDxcBlob *pVertexShaderBlob = pDxCommon_->CompileShader(vsPath, L"vs_6_0");
     assert(pVertexShaderBlob != nullptr);
 
     IDxcBlob *pixelShaderBlob = pDxCommon_->CompileShader(shaderPath + L"shaders/Object/Object3d.PS.hlsl", L"ps_6_0");
@@ -811,14 +844,14 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateGPUParticleRo
     descriptorRangeForInstancing[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;                              // SRVを使う
     descriptorRangeForInstancing[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // Offsetを自動計算
 
-    // ★ t2: 生存コンパクションの aliveList (VertexShaderで使用)
+    // ★ t2: 描画リストの renderSlot（描画順 -> 実 slot index。回転グループのみ参照）
     D3D12_DESCRIPTOR_RANGE descriptorRangeAliveList[1] = {};
     descriptorRangeAliveList[0].BaseShaderRegister = 2; // register(t2)
     descriptorRangeAliveList[0].NumDescriptors = 1;
     descriptorRangeAliveList[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     descriptorRangeAliveList[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    // ★ t3: 生存数カウンタ (VertexShaderで使用、instanceId カリング用)
+    // ★ t3: 描画リスト長カウンタ（視錐台カリング後＝ExecuteIndirect の instanceCount と同値）
     D3D12_DESCRIPTOR_RANGE descriptorRangeAliveCount[1] = {};
     descriptorRangeAliveCount[0].BaseShaderRegister = 3; // register(t3)
     descriptorRangeAliveCount[0].NumDescriptors = 1;
@@ -857,13 +890,13 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateGPUParticleRo
     rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[3].Descriptor.ShaderRegister = 1; // register(b1)
 
-    // ★ t2: 生存コンパクションの aliveList (VertexShaderで使用)
+    // ★ t2: 描画リストの renderSlot (VertexShaderで使用)
     rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[4].DescriptorTable.pDescriptorRanges = descriptorRangeAliveList;
     rootParameters[4].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeAliveList);
 
-    // ★ t3: 生存数カウンタ (VertexShaderで使用)
+    // ★ t3: 描画リスト長カウンタ (VertexShaderで使用)
     rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[5].DescriptorTable.pDescriptorRanges = descriptorRangeAliveCount;
@@ -1352,9 +1385,15 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateSpriteGraphic
         break;
     }
 
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    // アルファは「書き込み先の値をそのまま保つ」。
+    // ソースのアルファで上書きすると、半透明を描いた画素だけレンダーターゲットのアルファが
+    // 1未満になり、エディタでシーンを ImGui::Image 表示したときに
+    // ImGui がそのアルファで背景と合成してクリア色が透けて見えてしまう。
+    // 色の合成は上の DestBlend 側で完結しているので、アルファを書き換える必要はない
+    // （パーティクル系のパイプラインは元々この設定になっている）
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ZERO;
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ONE;
 
     // RasterizerStateの設定
     D3D12_RASTERIZER_DESC rasterizerDesc{};
@@ -1697,9 +1736,15 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateSkinningGraph
     blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
     blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
     blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    // アルファは「書き込み先の値をそのまま保つ」。
+    // ソースのアルファで上書きすると、半透明を描いた画素だけレンダーターゲットのアルファが
+    // 1未満になり、エディタでシーンを ImGui::Image 表示したときに
+    // ImGui がそのアルファで背景と合成してクリア色が透けて見えてしまう。
+    // 色の合成は上の DestBlend 側で完結しているので、アルファを書き換える必要はない
+    // （パーティクル系のパイプラインは元々この設定になっている）
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ZERO;
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ONE;
 
     // RasterizerStateの設定
     D3D12_RASTERIZER_DESC rasterizerDesc{};
@@ -1829,9 +1874,15 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateLine3dGraphic
     blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
     blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
     blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    // アルファは「書き込み先の値をそのまま保つ」。
+    // ソースのアルファで上書きすると、半透明を描いた画素だけレンダーターゲットのアルファが
+    // 1未満になり、エディタでシーンを ImGui::Image 表示したときに
+    // ImGui がそのアルファで背景と合成してクリア色が透けて見えてしまう。
+    // 色の合成は上の DestBlend 側で完結しているので、アルファを書き換える必要はない
+    // （パーティクル系のパイプラインは元々この設定になっている）
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ZERO;
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ONE;
 
     // RasterizerStateの設定
     D3D12_RASTERIZER_DESC rasterizerDesc{};
@@ -1996,9 +2047,15 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateSkyboxGraphic
     blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
     blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
     blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    // アルファは「書き込み先の値をそのまま保つ」。
+    // ソースのアルファで上書きすると、半透明を描いた画素だけレンダーターゲットのアルファが
+    // 1未満になり、エディタでシーンを ImGui::Image 表示したときに
+    // ImGui がそのアルファで背景と合成してクリア色が透けて見えてしまう。
+    // 色の合成は上の DestBlend 側で完結しているので、アルファを書き換える必要はない
+    // （パーティクル系のパイプラインは元々この設定になっている）
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ZERO;
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ONE;
 
     // RasterizerStateの設定
     D3D12_RASTERIZER_DESC rasterizerDesc{};
@@ -2336,16 +2393,27 @@ void PipelineManager::CreateShadowMapPipelines()
 
     auto pipeline = CreateShadowMapGraphicsPipeline(rootSignature);
     pipelines_[MakePipelineKey(PipelineType::ShadowMap, BlendMode::Normal, ShaderMode::None)] = pipeline;
+
+    // インスタンシング版（頂点シェーダーだけ差し替え・ルートシグネチャは共有）
+    rootSignatures_[MakeRootSignatureKey(PipelineType::ShadowMapInstanced, ShaderMode::None)] = rootSignature;
+    pipelines_[MakePipelineKey(PipelineType::ShadowMapInstanced, BlendMode::Normal, ShaderMode::None)] =
+        CreateShadowMapGraphicsPipeline(rootSignature, true);
 }
 
 Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateShadowMapRootSignature()
 {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
 
-    D3D12_ROOT_PARAMETER rootParameters[1] = {};
+    // param0 = 変換行列CB(b0, 通常描画) / param1 = インスタンスデータSRV(t0, インスタンシング描画)
+    // どちらの頂点シェーダーも同じルートシグネチャで動くよう両方を持たせる。
+    D3D12_ROOT_PARAMETER rootParameters[2] = {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[0].Descriptor.ShaderRegister = 0; // b0
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[1].Descriptor.ShaderRegister = 0; // t0
+    rootParameters[1].Descriptor.RegisterSpace = 0;
 
     D3D12_ROOT_SIGNATURE_DESC desc{};
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -2364,7 +2432,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateShadowMapRoot
     return rootSignature;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateShadowMapGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateShadowMapGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, bool instanced)
 {
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState;
 
@@ -2385,7 +2453,9 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateShadowMapGrap
     inputLayoutDesc.pInputElementDescs = inputElementDescs;
     inputLayoutDesc.NumElements = _countof(inputElementDescs);
 
-    IDxcBlob *vs = pDxCommon_->CompileShader(shaderPath + L"shaders/Shadow/ShadowMap.VS.hlsl", L"vs_6_0");
+    const std::wstring shadowVsPath = instanced ? (shaderPath + L"shaders/Shadow/ShadowMapInstanced.VS.hlsl")
+                                                : (shaderPath + L"shaders/Shadow/ShadowMap.VS.hlsl");
+    IDxcBlob *vs = pDxCommon_->CompileShader(shadowVsPath, L"vs_6_0");
     assert(vs != nullptr);
 
     D3D12_RASTERIZER_DESC rasterizerDesc{};

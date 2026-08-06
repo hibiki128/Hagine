@@ -250,10 +250,20 @@ void ParticleEditor::DebugAll()
 //     return nullptr;
 // }
 
+size_t ParticleEditor::GetSceneParticleCount() const
+{
+    size_t total = 0;
+    for (const auto &[name, stats] : displayStats_)
+    {
+        total += stats.count;
+    }
+    return total;
+}
+
 void ParticleEditor::SceneParticleCount()
 {
 #ifdef USE_IMGUI
-    if (ImGui::CollapsingHeader("パーティクル統計"))
+    if (ImGui::CollapsingHeader("パーティクル統計(CPU)"))
     {
         size_t grandTotal = 0;
         size_t totalInstances = 0;

@@ -41,7 +41,8 @@ class PlayerBullet : public Hagine::BaseObject
     /// プレイヤーの情報から弾のトランスフォームを初期化
     /// </summary>
     /// <param name="player">プレイヤーのポインタ</param>
-    void InitTransform(Player *player);
+    /// <param name="forceHoming">ロックオンしていなくても追尾させるなら true（コンボ派生技の連射用）</param>
+    void InitTransform(Player *player, bool forceHoming = false);
 
     /// <summary>
     /// 衝突判定時の処理

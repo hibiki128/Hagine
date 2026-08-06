@@ -6,6 +6,7 @@
 #include "debug/profiler/CpuProfiler.h"
 #include "frame/Frame.h"
 #include "model/material/Material.h"
+#include "object/Object3dInstancing.h"
 #include "scene/SceneManager.h"
 #include "utility/debug/imgui/DebugUIHelper.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
@@ -132,8 +133,16 @@ void BaseObject::Draw(const ViewProjection &viewProjection) {
         obj3d_->DrawSkeleton(*transform_, viewProjection);
     }
     if (!isWireframe_) {
-        // オブジェクトの描画
-        obj3d_->Draw(*transform_, viewProjection, reflect_, isLighting_, isModelDraw_);
+        // 同じモデルを参照するオブジェクトをまとめて描くため、まずバッチャへ積んでみる。
+        // 積めた場合は BaseObjectManager::Draw の Flush でまとめて描かれる。
+        // （収集中でない・スキニング・半透明などで積めなければ従来どおり1体ずつ描く）
+        const bool batched = isModelDraw_ &&
+                             Object3dInstancing::GetInstance()->TrySubmit(
+                                 obj3d_.get(), *transform_, viewProjection, reflect_, isLighting_);
+        if (!batched) {
+            // オブジェクトの描画
+            obj3d_->Draw(*transform_, viewProjection, reflect_, isLighting_, isModelDraw_);
+        }
     } else {
         obj3d_->DrawWireframe(*transform_, viewProjection, isRainbow_);
     }

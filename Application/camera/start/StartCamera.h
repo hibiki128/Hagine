@@ -1,5 +1,5 @@
 #pragma once
-#include <camera/projection/ViewProjection.h>
+#include <camera/Camera.h>
 #include <transform/WorldTransform.h>
 
 // 前方宣言
@@ -45,10 +45,16 @@ class StartCamera
     /// ===================================================
 
     /// <summary>
-    /// ビュープロジェクションを取得
+    /// カメラを取得（所有は CameraManager）
+    /// </summary>
+    /// <returns>Camera*: カメラ</returns>
+    Hagine::Camera *GetCamera() const { return pCamera_; }
+
+    /// <summary>
+    /// ビュープロジェクションを取得（描画へ渡す用）
     /// </summary>
     /// <returns>ViewProjection&: ビュープロジェクション参照</returns>
-    Hagine::ViewProjection &GetViewProjection() { return viewProjection_; }
+    Hagine::ViewProjection &GetViewProjection() { return pCamera_->GetViewProjection(); }
 
     /// <summary>
     /// 演出完了フラグを取得
@@ -61,16 +67,13 @@ class StartCamera
     /// ===================================================
 
     /// <summary>
-    /// 目標となるビュープロジェクションを設定
+    /// 演出の最終目標となるカメラを設定（この構図へ寄せて終わる）
     /// </summary>
-    /// <param name="vp">コピー元のビュープロジェクション</param>
-    void SetTargetViewProjection(Hagine::ViewProjection &vp)
+    /// <param name="camera">目標のカメラ</param>
+    void SetTargetCamera(const Hagine::Camera &camera)
     {
-        targetViewProjection_.matWorld_ = vp.matWorld_;
-        targetViewProjection_.matView_ = vp.matView_;
-        targetViewProjection_.matProjection_ = vp.matProjection_;
-        targetViewProjection_.translation_ = vp.translation_;
-        targetViewProjection_.eulerRotation_ = vp.eulerRotation_;
+        targetPosition_ = camera.GetPosition();
+        targetRotation_ = camera.GetRotation();
     }
 
   private:
@@ -83,6 +86,11 @@ class StartCamera
     /// </summary>
     /// <returns>bool: 入力があればtrue</returns>
     bool CheckSkipInput();
+
+    /// <summary>
+    /// 計算したトランスフォームをカメラへ反映する
+    /// </summary>
+    void ApplyToCamera();
 
   private:
     /// ===================================================
@@ -110,9 +118,10 @@ class StartCamera
     // スキップ時のスピード倍率
     static constexpr float kSkipSpeedMultiplier = 5.0f; ///< スキップ倍率
 
-    Hagine::ViewProjection viewProjection_;       ///< ビュープロジェクション
-    Hagine::ViewProjection targetViewProjection_; ///< 目標ビュープロジェクション
-    Hagine::WorldTransform worldTransform_;       ///< ワールドトランスフォーム
+    Hagine::Camera *pCamera_ = nullptr;     ///< カメラ本体（所有は CameraManager）
+    Hagine::Vector3 targetPosition_{};      ///< 演出の最終目標位置
+    Hagine::Vector3 targetRotation_{};      ///< 演出の最終目標の向き
+    Hagine::WorldTransform worldTransform_; ///< ワールドトランスフォーム
 
     float speed_ = 1.5f;                               ///< 回転速度
     float angle_ = 0.0f;                               ///< 現在の角度

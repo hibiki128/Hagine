@@ -19,8 +19,7 @@ void GameScene::Initialize()
     /// ===================================================
     BaseScene::Initialize();
     pLightGroup_->LoadLightData("GameLight");
-    vp_.Initialize();
-    vp_.translation_ = {0.0f, 0.0f, -30.0f};
+    camera_->SetPosition({0.0f, 0.0f, -30.0f});
 
     /// ===================================================
     /// インスタンス生成
@@ -45,7 +44,7 @@ void GameScene::Initialize()
     /// ===================================================
     /// 初期化
     /// ===================================================
-    debugCamera_->Initialize(&vp_);
+    debugCamera_->Initialize();
     player_->Init("player");
     enemy_->Init("pEnemy");
     ground_->Init("Ground");
@@ -62,8 +61,8 @@ void GameScene::Initialize()
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
-    player_->SetViewProjection(&vp_);
-    enemy_->SetViewProjection(&vp_);
+    player_->InitializeShake();
+    enemy_->InitializeShake();
     enemy_->SetTarget(player_.get());
 
     /// ===================================================
@@ -176,7 +175,7 @@ void GameScene::Update()
     aroundField_->Update();
     if (fadeOut_)
     {
-        fadeOut_->Update(vp_);
+        fadeOut_->Update(vp());
     }
     playerUI_->Update();
     enemyUI_->Update();
@@ -238,7 +237,7 @@ void GameScene::AddSceneSetting()
     debugCamera_->DrawImGui();
     followCamera_->DrawImGui();
     startCamera_->DrawImGui();
-    vp_.ShowDebugInfo();
+    camera_->ShowDebugWindow();
     MotionEditor::GetInstance()->DrawImGui();
 }
 
@@ -275,13 +274,13 @@ void GameScene::CameraUpdate()
     /// ===================================================
     /// カメラ更新
     /// ===================================================
+    // どのカメラで描くかは CameraManager のアクティブ切り替えで決める
+    // （行列のコピーは不要。アクティブなカメラがそのまま描画に使われる）
+    debugCamera_->Update(); // 有効中は自動でデバッグカメラへ切り替わる
+
     if (pPlayer_->GetIsAlive())
     {
-        if (debugCamera_->GetActive())
-        {
-            debugCamera_->Update();
-        }
-        else
+        if (!debugCamera_->GetActive())
         {
             followCamera_->Update();
 #ifndef _DEBUG
@@ -292,25 +291,19 @@ void GameScene::CameraUpdate()
             if (fadeOut_ && !fadeOut_->IsCameraStartReady())
             {
                 startCamera_->Update(); // Move()を呼ばないため初期位置に静止したまま
-                vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
-                vp_.matView_ = startCamera_->GetViewProjection().matView_;
-                vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
+                pCameraManager_->SetActive(startCamera_->GetCamera());
             }
             else if (!startCamera_->IsComplete())
             {
                 startCamera_->Move();
-                startCamera_->SetTargetViewProjection(followCamera_->GetViewProjection());
+                startCamera_->SetTargetCamera(*followCamera_->GetCamera());
                 startCamera_->Update();
-                vp_.matWorld_ = startCamera_->GetViewProjection().matWorld_;
-                vp_.matView_ = startCamera_->GetViewProjection().matView_;
-                vp_.matProjection_ = startCamera_->GetViewProjection().matProjection_;
+                pCameraManager_->SetActive(startCamera_->GetCamera());
             }
             else
             {
 #endif
-                vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
-                vp_.matView_ = followCamera_->GetViewProjection().matView_;
-                vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
+                pCameraManager_->SetActive(followCamera_->GetCamera());
 #ifndef _DEBUG
             }
 #endif
@@ -324,15 +317,14 @@ void GameScene::CameraUpdate()
             // カメラの注視点は現在位置ではなく落下先（接地位置）に合わせる
             Vector3 deathPos = pPlayer_->GetWorldPosition();
             deathPos.y = Ground::GetStandingY(deathPos.x, deathPos.z);
-            deathCamera_->StartEasing(
-                followCamera_->GetViewProjection(),
-                deathPos);
+            deathCamera_->StartEasing(*followCamera_->GetCamera(), deathPos);
             deathCameraStarted_ = true;
         }
         deathCamera_->Update();
-        vp_.matWorld_ = deathCamera_->GetViewProjection().matWorld_;
-        vp_.matView_ = deathCamera_->GetViewProjection().matView_;
-        vp_.matProjection_ = deathCamera_->GetViewProjection().matProjection_;
+        if (!debugCamera_->GetActive())
+        {
+            pCameraManager_->SetActive(deathCamera_->GetCamera());
+        }
     }
 }
 

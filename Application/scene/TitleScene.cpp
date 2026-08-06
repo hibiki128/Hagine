@@ -19,14 +19,14 @@ void TitleScene::Initialize()
     /// ===================================================
     BaseScene::Initialize();
     pLightGroup_->LoadLightData("TitleScene");
-    vp_.eulerRotation_ = {
+    camera_->SetRotation({
         degreesToRadians(26.3f),
         degreesToRadians(-122.7f),
-        degreesToRadians(0.0f)};
-    vp_.Initialize("CurrentCamera");
+        degreesToRadians(0.0f)});
+    camera_->Load("CurrentCamera");
     pObjectManager_->LoadAll("TitleScene");
     debugCamera_ = std::make_unique<DebugCamera>();
-    debugCamera_->Initialize(&vp_);
+    debugCamera_->Initialize();
     pSkyBox_ = SkyBox::GetInstance();
     pSkyBox_->Initialize("game/skybox.dds");
 
@@ -49,7 +49,7 @@ void TitleScene::Initialize()
     pDrawSystem_->Register("TitleScene_3D", DrawLayer::PreEffect, [this](const ViewProjection &vp) {
         pSkyBox_->Draw(vp);
         pObjectManager_->Draw(vp);
-        titleUI_->Draw(vp_);
+        titleUI_->Draw(*camera_);
     });
     pDrawSystem_->Register("TitleScene_UI", DrawLayer::PostEffect, [this](const ViewProjection &) {
         pSpriteManager_->DrawAll();
@@ -86,7 +86,7 @@ void TitleScene::Update()
     // 一定時間経過後にカメラを移動
     if (time_ >= kMaxTime_ && !firstMove_)
     {
-        vp_.EaseCameraMove(EasingType::InCubic, "TitleMovedCamera", 1.0f);
+        camera_->EaseToSaved("TitleMovedCamera", 1.0f, EasingType::InCubic);
         firstMove_ = true;
     }
 
@@ -95,7 +95,7 @@ void TitleScene::Update()
     {
     case TitlePhase::WaitStart:
         // Press Start でメニューを開く
-        if (time_ >= 3.0f && !vp_.GetIsCameraMove() && PressStartInput())
+        if (time_ >= 3.0f && !camera_->IsCameraWorkPlaying() && PressStartInput())
         {
             titlePhase_ = TitlePhase::Menu;
             menuIndex_ = 0;
@@ -151,7 +151,7 @@ void TitleScene::Update()
                 // チュートリアル / ゲーム: カメラ演出→トランジションなしで遷移
                 // （遷移先シーン側のパーティクル遷移で画面が現れる）
                 cinematicNextScene_ = (menuIndex_ == kMenuIndexTutorial) ? "TUTORIAL" : "GAME";
-                vp_.EaseCameraMove(EasingType::InQuint, "EnemyEyeCamera", 1.0f);
+                camera_->EaseToSaved("EnemyEyeCamera", 1.0f, EasingType::InQuint);
                 titleUI_->RequestStartCinematic();
                 secondMove_ = true;
                 titlePhase_ = TitlePhase::Cinematic;
@@ -185,7 +185,7 @@ void TitleScene::AddSceneSetting()
     /// シーン設定（デバッグ）
     /// ===================================================
     debugCamera_->DrawImGui();
-    vp_.ShowDebugInfo();
+    camera_->ShowDebugWindow();
 }
 
 void TitleScene::AddObjectSetting()
@@ -217,7 +217,7 @@ void TitleScene::ChangeScene()
     /// シーン切り替え（開始演出の完了を待って遷移）
     /// ===================================================
     if (titlePhase_ == TitlePhase::Cinematic &&
-        !vp_.GetIsCameraMove() && titleUI_->GetIsFinish())
+        !camera_->IsCameraWorkPlaying() && titleUI_->GetIsFinish())
     {
         pSceneManager_->GetSceneTransition()->SetUseTransition(false);
         pSceneManager_->NextSceneReservation(cinematicNextScene_);

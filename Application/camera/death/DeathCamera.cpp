@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "DeathCamera.h"
+#include <camera/CameraManager.h>
 #include <Frame.h>
 #include <algorithm>
 
@@ -7,9 +8,9 @@ using namespace Hagine;
 
 void DeathCamera::Init()
 {
-    // ViewProjectionの初期設定
-    viewProjection_.farZ_ = kFarZ;
-    viewProjection_.Initialize("");
+    // カメラ本体は CameraManager が所有する
+    pCamera_ = CameraManager::GetInstance()->Create("死亡演出カメラ");
+    pCamera_->SetClipRange(0.1f, kFarZ);
 
     // WorldTransformの初期化
     worldTransform_.Initialize();
@@ -63,10 +64,13 @@ void DeathCamera::ApplyEasedTransform(float progress)
 
 void DeathCamera::ApplyToViewProjection()
 {
-    viewProjection_.translation_ = worldTransform_.translation_;
-    viewProjection_.isUseQuaternion_ = true;
-    viewProjection_.quaternionRotation_ = worldTransform_.quaternionRotation_;
-    viewProjection_.UpdateMatrix();
+    // 計算した位置・向きをカメラへ渡す（行列の生成はカメラ側が行う）
+    if (!pCamera_)
+    {
+        return;
+    }
+    pCamera_->SetPosition(worldTransform_.translation_);
+    pCamera_->SetQuaternion(worldTransform_.quaternionRotation_);
 }
 
 Quaternion DeathCamera::CalcLookAtRotation(const Vector3 &eyePosition, const Vector3 &lookAtPosition)
@@ -87,7 +91,7 @@ Quaternion DeathCamera::CalcLookAtRotation(const Vector3 &eyePosition, const Vec
     return Quaternion::FromMatrix(rotateMatrix);
 }
 
-void DeathCamera::StartEasing(const ViewProjection &currentViewProjection, const Vector3 &targetPosition)
+void DeathCamera::StartEasing(const Camera &currentCamera, const Vector3 &targetPosition)
 {
     // 各種フラグのリセットとタイマーの初期化
     isEasing_ = true;
@@ -96,10 +100,8 @@ void DeathCamera::StartEasing(const ViewProjection &currentViewProjection, const
     easingTimer_ = kEasingStart;
 
     // 現在のカメラ状態を保存（開始地点の設定）
-    easingStartPos_ = currentViewProjection.translation_;
-    easingStartRot_ = currentViewProjection.isUseQuaternion_
-                          ? currentViewProjection.quaternionRotation_
-                          : Quaternion::FromEulerAngles(currentViewProjection.eulerRotation_);
+    easingStartPos_ = currentCamera.GetPosition();
+    easingStartRot_ = currentCamera.GetRotationQuaternion();
 
     // 目標位置（プレイヤーの正面やや斜め上）と、そこから対象を注視する回転
     easingTargetPos_ = targetPosition + cameraOffset_;

@@ -30,7 +30,7 @@ void TrainingScene::Initialize()
     /// ===================================================
     /// 初期化
     /// ===================================================
-    debugCamera_->Initialize(&vp_);
+    debugCamera_->Initialize();
     player_->Init("player");
     enemy_->Init("pEnemy");
     ground_->Init("Ground");
@@ -46,8 +46,8 @@ void TrainingScene::Initialize()
     followCamera_->SetPlayer(player_.get());
     player_->SetCamera(followCamera_.get());
     player_->SetEnemy(enemy_.get());
-    player_->SetViewProjection(&vp_);
-    enemy_->SetViewProjection(&vp_);
+    player_->InitializeShake();
+    enemy_->InitializeShake();
     enemy_->SetTarget(player_.get());
     ground_->GetLighting() = false;
 
@@ -173,7 +173,7 @@ void TrainingScene::AddSceneSetting()
     /// ===================================================
     debugCamera_->DrawImGui();
     followCamera_->DrawImGui();
-    vp_.ShowDebugInfo();
+    camera_->ShowDebugWindow();
 }
 
 void TrainingScene::AddObjectSetting()
@@ -199,16 +199,12 @@ void TrainingScene::CameraUpdate()
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    if (debugCamera_->GetActive())
-    {
-        debugCamera_->Update();
-    }
-    else
+    // どのカメラで描くかは CameraManager のアクティブ切り替えで決める
+    debugCamera_->Update(); // 有効中は自動でデバッグカメラへ切り替わる
+    if (!debugCamera_->GetActive())
     {
         followCamera_->Update();
-        vp_.matWorld_ = followCamera_->GetViewProjection().matWorld_;
-        vp_.matView_ = followCamera_->GetViewProjection().matView_;
-        vp_.matProjection_ = followCamera_->GetViewProjection().matProjection_;
+        pCameraManager_->SetActive(followCamera_->GetCamera());
     }
 }
 

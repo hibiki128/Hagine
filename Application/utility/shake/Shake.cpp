@@ -1,13 +1,13 @@
 #include "Shake.h"
+#include <camera/CameraManager.h>
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include <filesystem>
 #include <MyMath.h>
 #include <random>
 
 using namespace Hagine;
-void Shake::Initialize(ViewProjection *viewProjection, std::string jsonName)
+void Shake::Initialize(std::string jsonName)
 {
-    pViewProjection_ = viewProjection;
     // 設定ファイルが指定されていれば読み込む
     if (!jsonName.empty())
     {
@@ -17,11 +17,20 @@ void Shake::Initialize(ViewProjection *viewProjection, std::string jsonName)
 
 void Shake::Update()
 {
-    // 揺れ中でなければ処理しない
-    if (!isShaking_)
+    // 揺らす対象は「今描画に使われているカメラ」。切り替わっても追従できるよう毎フレーム引く。
+    Camera *pCamera = CameraManager::GetInstance()->GetActive();
+    if (!pCamera)
+    {
         return;
+    }
 
-    // 指定間隔で揺れ処理を実行
+    // 揺れ中でなければ、前フレームのずれを消して処理しない
+    if (!isShaking_)
+    {
+        return;
+    }
+
+    // 指定間隔で揺れの値を作り直す（間隔外は直前の値を維持する）
     if (currentFrame_ % shakeInterval_ == 0 && currentFrame_ < shakeDuration_)
     {
         std::random_device rd;
@@ -30,21 +39,21 @@ void Shake::Update()
         std::uniform_real_distribution<float> distY(shakeMin_.y, shakeMax_.y);
         std::uniform_real_distribution<float> distRot(rotationShakeMin_, rotationShakeMax_);
 
-        Vector3 shakeOffset = {distX(gen), distY(gen), 0.0f};
-        float rotationOffset = distRot(gen);
-
-        // ビュー行列に揺れを加算
-        pViewProjection_->matView_.m[3][0] += shakeOffset.x;
-        pViewProjection_->matView_.m[3][1] += shakeOffset.y;
-        pViewProjection_->matView_.m[3][2] += shakeOffset.z;
-        pViewProjection_->matView_ = MakeRotateXMatrix(rotationOffset) * pViewProjection_->matView_;
+        currentOffset_ = {distX(gen), distY(gen), 0.0f};
+        currentRotationOffset_ = distRot(gen);
     }
+
+    // カメラへ「今フレームのずれ」として渡す（カメラの位置・向きは動かさない）
+    pCamera->SetExternalOffset(currentOffset_, currentRotationOffset_);
 
     // フレーム経過処理
     currentFrame_++;
     if (currentFrame_ >= shakeDuration_)
     {
         isShaking_ = false;
+        currentOffset_ = {0.0f, 0.0f, 0.0f};
+        currentRotationOffset_ = 0.0f;
+        pCamera->SetExternalOffset(currentOffset_, currentRotationOffset_); // ずれを元に戻す
     }
 }
 
@@ -65,6 +74,13 @@ void Shake::LoadSettings(std::string jsonName)
     rotationShakeMax_ = dataHandler_->Load<float>("rotationShakeMax", 0);
     shakeInterval_ = dataHandler_->Load<int>("shakeInterval", 0);
     shakeDuration_ = dataHandler_->Load<int>("shakeDuration", 0);
+
+    // 設定ファイルが無い・壊れている場合の既定値は0で、そのままだと
+    // Update() の剰余算がゼロ除算になるため最小値を保証する
+    if (shakeInterval_ < 1)
+    {
+        shakeInterval_ = 1;
+    }
     ImGuiNotification::Post("シェイク設定を読み込みました: " + jsonName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 

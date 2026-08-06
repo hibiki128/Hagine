@@ -67,6 +67,9 @@
     <Filter Include="Application\entity\player\collider">
       <UniqueIdentifier>{616F6492-9378-A361-AC04-AADCE617B917}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Application\entity\player\finisher">
+      <UniqueIdentifier>{2F4C5A81-7B60-4A3E-9D12-6C8E4B1D0A57}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Application\entity\player\parts">
       <UniqueIdentifier>{90B723BB-C883-3762-5C57-81C7E2E9E910}</UniqueIdentifier>
     </Filter>
@@ -96,6 +99,9 @@
     </Filter>
     <Filter Include="Application\staging">
       <UniqueIdentifier>{3245DFBF-7CA6-46CF-0D37-2FAFAC3EA3B5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Application\staging\crack">
+      <UniqueIdentifier>{6A1D93C4-08F5-4B27-8E3A-51C7D2094F6B}</UniqueIdentifier>
     </Filter>
     <Filter Include="Application\staging\dash">
       <UniqueIdentifier>{14B7507A-3B1D-836B-52BF-F01321F264ED}</UniqueIdentifier>
@@ -429,6 +435,9 @@
     <ClCompile Include="Application\camera\follow\parts\CameraSkillCutscene.cpp">
       <Filter>Application\camera\follow\parts</Filter>
     </ClCompile>
+    <ClCompile Include="Application\camera\follow\parts\CameraFinisher.cpp">
+      <Filter>Application\camera\follow\parts</Filter>
+    </ClCompile>
     <ClCompile Include="Application\camera\start\StartCamera.cpp">
       <Filter>Application\camera\start</Filter>
     </ClCompile>
@@ -476,6 +485,9 @@
     </ClCompile>
     <ClCompile Include="Application\entity\player\collider\PlayerAttackCollider.cpp">
       <Filter>Application\entity\player\collider</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\entity\player\finisher\ComboFinisher.cpp">
+      <Filter>Application\entity\player\finisher</Filter>
     </ClCompile>
     <ClCompile Include="Application\entity\player\parts\PlayerCombat.cpp">
       <Filter>Application\entity\player\parts</Filter>
@@ -548,6 +560,9 @@
     </ClCompile>
     <ClCompile Include="Application\staging\dash\DashEffect.cpp">
       <Filter>Application\staging\dash</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\staging\crack\GroundCrack.cpp">
+      <Filter>Application\staging\crack</Filter>
     </ClCompile>
     <ClCompile Include="Application\staging\foot\FootEffect.cpp">
       <Filter>Application\staging\foot</Filter>
@@ -630,6 +645,12 @@
     <ClCompile Include="Engine\3d\animation\Skin.cpp">
       <Filter>Engine\3d\animation</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\3d\camera\Camera.cpp">
+      <Filter>Engine\3d\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\camera\CameraManager.cpp">
+      <Filter>Engine\3d\camera</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\3d\camera\debug\DebugCamera.cpp">
       <Filter>Engine\3d\camera\debug</Filter>
     </ClCompile>
@@ -667,6 +688,9 @@
       <Filter>Engine\3d\object</Filter>
     </ClCompile>
     <ClCompile Include="Engine\3d\object\Object3dCommon.cpp">
+      <Filter>Engine\3d\object</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\object\Object3dInstancing.cpp">
       <Filter>Engine\3d\object</Filter>
     </ClCompile>
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSEditor.cpp">
@@ -963,6 +987,9 @@
     <ClInclude Include="Application\camera\follow\parts\CameraSkillCutscene.h">
       <Filter>Application\camera\follow\parts</Filter>
     </ClInclude>
+    <ClInclude Include="Application\camera\follow\parts\CameraFinisher.h">
+      <Filter>Application\camera\follow\parts</Filter>
+    </ClInclude>
     <ClInclude Include="Application\camera\start\StartCamera.h">
       <Filter>Application\camera\start</Filter>
     </ClInclude>
@@ -1010,6 +1037,9 @@
     </ClInclude>
     <ClInclude Include="Application\entity\player\collider\PlayerAttackCollider.h">
       <Filter>Application\entity\player\collider</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\entity\player\finisher\ComboFinisher.h">
+      <Filter>Application\entity\player\finisher</Filter>
     </ClInclude>
     <ClInclude Include="Application\entity\player\parts\PlayerCombat.h">
       <Filter>Application\entity\player\parts</Filter>
@@ -1085,6 +1115,9 @@
     </ClInclude>
     <ClInclude Include="Application\staging\dash\DashEffect.h">
       <Filter>Application\staging\dash</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\staging\crack\GroundCrack.h">
+      <Filter>Application\staging\crack</Filter>
     </ClInclude>
     <ClInclude Include="Application\staging\foot\FootEffect.h">
       <Filter>Application\staging\foot</Filter>
@@ -1170,6 +1203,12 @@
     <ClInclude Include="Engine\3d\animation\Skin.h">
       <Filter>Engine\3d\animation</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\3d\camera\Camera.h">
+      <Filter>Engine\3d\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\3d\camera\CameraManager.h">
+      <Filter>Engine\3d\camera</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\3d\camera\debug\DebugCamera.h">
       <Filter>Engine\3d\camera\debug</Filter>
     </ClInclude>
@@ -1210,6 +1249,9 @@
       <Filter>Engine\3d\object</Filter>
     </ClInclude>
     <ClInclude Include="Engine\3d\object\Object3dCommon.h">
+      <Filter>Engine\3d\object</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\3d\object\Object3dInstancing.h">
       <Filter>Engine\3d\object</Filter>
     </ClInclude>
     <ClInclude Include="Engine\3d\particle\gpu\ParticleCSEditor.h">

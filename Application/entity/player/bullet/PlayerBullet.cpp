@@ -115,7 +115,7 @@ void PlayerBullet::DrawParticle(const ViewProjection &viewProjection)
     }
 }
 
-void PlayerBullet::InitTransform(Player *player)
+void PlayerBullet::InitTransform(Player *player, bool forceHoming)
 {
     // 手（右手ジョイント）を発射起点にする（取得できなければ本体位置＋オフセットで代用）
     std::optional<Vector3> handPos = player->GetJointWorldPosition(kHandJointName);
@@ -131,7 +131,7 @@ void PlayerBullet::InitTransform(Player *player)
     });
 
     pTargetEnemy_ = player->GetEnemy();
-    if (player->GetIsLockOn() && player->GetEnemy())
+    if ((player->GetIsLockOn() || forceHoming) && player->GetEnemy())
     {
         isLockOnBullet_ = true;
 

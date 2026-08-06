@@ -99,7 +99,12 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     const float4 materialSample = gMaterialTex.Load(int3(pixel, 0));
 
     const float3 albedo = albedoSample.rgb;
-    const float alpha = albedoSample.a;
+
+    // このパスは不透明ジオメトリを合成した結果を書き出す（ブレンドは無効なので、
+    // ここで出したアルファがそのままレンダーターゲットに残る）。
+    // アルベドのアルファ（被弾点滅などでマテリアル側が下げている値）を書き出すと、
+    // エディタでシーンを ImGui::Image 表示したときにクリア色が透けて見えるため、常に不透明にする
+    const float outputAlpha = 1.0f;
     const float3 normal = normalize(normalSample.xyz);
     const float shininess = normalSample.w;
     const float environmentCoefficient = materialSample.r * DEFERRED_ENV_COEFF_RANGE;
@@ -130,7 +135,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     if (!enableLighting)
     {
         // ライティング無効のマテリアルはアルベドをそのまま出す（影だけ乗る）
-        return float4(albedo * shadowFactor, alpha);
+        return float4(albedo * shadowFactor, outputAlpha);
     }
 
     float3 color = float3(0.0f, 0.0f, 0.0f);
@@ -245,5 +250,5 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float4 environmentColor = gEnvironmentTexture.Sample(gSampler, reflectedVector);
     color += environmentColor.rgb * environmentCoefficient;
 
-    return float4(color, alpha);
+    return float4(color, outputAlpha);
 }

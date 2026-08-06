@@ -1,5 +1,5 @@
 #pragma once
-#include <camera/projection/ViewProjection.h>
+#include <camera/Camera.h>
 #ifdef _DEBUG
 #include "imgui.h"
 #endif // _DEBUG
@@ -22,9 +22,12 @@ class Shake
     /// <summary>
     /// 初期化
     /// </summary>
-    /// <param name="viewProjection">ビュープロジェクションのポインタ</param>
+    /// <remarks>
+    /// 揺らす対象は「今描画に使われているカメラ」なので指定しない。
+    /// カメラが切り替わっても常に画面が揺れる。
+    /// </remarks>
     /// <param name="jsonName">設定ファイル名</param>
-    void Initialize(Hagine::ViewProjection *viewProjection, std::string jsonName = {});
+    void Initialize(std::string jsonName = {});
 
     /// <summary>
     /// 更新処理
@@ -63,7 +66,8 @@ class Shake
     /// private variables
     /// ===================================================
 
-    Hagine::ViewProjection *pViewProjection_ = nullptr; // ビュープロジェクション
+    Hagine::Vector3 currentOffset_{};    // 今フレームの位置のずれ
+    float currentRotationOffset_ = 0.0f; // 今フレームの傾き
 
     Hagine::Vector2 shakeMin_ = {-0.5f, -0.5f}; // 揺れ最小値
     Hagine::Vector2 shakeMax_ = {0.5f, 0.5f};   // 揺れ最大値

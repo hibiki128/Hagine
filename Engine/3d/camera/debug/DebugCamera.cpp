@@ -1,6 +1,7 @@
 #include "DebugCamera.h"
 #include <DirectXCommon.h>
 #include <Input.h>
+#include <camera/CameraManager.h>
 #include <Mymath.h>
 #ifdef _DEBUG
 #include <imgui.h>
@@ -10,13 +11,18 @@
 #include <algorithm>
 
 namespace Hagine {
-void DebugCamera::Initialize(ViewProjection *pViewProjection)
+void DebugCamera::Initialize()
 {
-    pViewProjection_ = pViewProjection;
-    translation_ = pViewProjection->translation_;
-    isUseQuaternion_ = pViewProjection->isUseQuaternion_;
-    eulerRotation_ = pViewProjection->eulerRotation_;
-    quaternionRotation_ = pViewProjection->quaternionRotation_;
+    // デバッグ専用のカメラを1台登録しておく。有効化されたときだけこのカメラへ切り替える。
+    CameraManager *cameraManager = CameraManager::GetInstance();
+    pCamera_ = cameraManager->Create("デバッグカメラ");
+    pPreviousCamera_ = nullptr;
+    wasActive_ = false;
+
+    translation_ = pCamera_->GetPosition();
+    eulerRotation_ = pCamera_->GetRotation();
+    quaternionRotation_ = pCamera_->GetQuaternion();
+    isUseQuaternion_ = false;
     matRot_ = MakeIdentity4x4();
     isActive_ = false;
     lockCamera_ = false;
@@ -27,6 +33,36 @@ void DebugCamera::Initialize(ViewProjection *pViewProjection)
 
 void DebugCamera::Update()
 {
+    if (!pCamera_)
+    {
+        return; // Initialize 前
+    }
+    CameraManager *cameraManager = CameraManager::GetInstance();
+
+    // 有効/無効が切り替わった瞬間だけカメラを差し替える
+    if (isActive_ != wasActive_)
+    {
+        if (isActive_)
+        {
+            // 直前のカメラを覚えておき、その構図から操作を始める（切り替えた瞬間に視点が飛ばない）
+            pPreviousCamera_ = cameraManager->GetActive();
+            if (pPreviousCamera_ && pPreviousCamera_ != pCamera_)
+            {
+                pCamera_->CopyStateFrom(*pPreviousCamera_);
+                translation_ = pCamera_->GetPosition();
+                eulerRotation_ = pCamera_->GetRotation();
+                quaternionRotation_ = pCamera_->GetQuaternion();
+            }
+            cameraManager->SetActive(pCamera_);
+        }
+        else if (pPreviousCamera_)
+        {
+            cameraManager->SetActive(pPreviousCamera_); // 元のカメラへ戻す
+            pPreviousCamera_ = nullptr;
+        }
+        wasActive_ = isActive_;
+    }
+
     // アクティブ時のみデバッグ操作を適用
     if (isActive_)
     {
@@ -36,42 +72,16 @@ void DebugCamera::Update()
             CameraMove(eulerRotation_, translation_, mouse_);
         }
 
-        Matrix4x4 cameraMatrix;
-
-        // 回転の定義形式に応じて行列を生成
+        // 操作結果をカメラへ反映する（行列の生成はカメラ側が行う）
+        pCamera_->SetPosition(translation_);
         if (isUseQuaternion_)
         {
-            cameraMatrix = MakeAffineMatrix(
-                {1.0f, 1.0f, 1.0f},
-                quaternionRotation_,
-                translation_);
+            pCamera_->SetQuaternion(quaternionRotation_);
         }
         else
         {
-            cameraMatrix = MakeAffineMatrix(
-                {1.0f, 1.0f, 1.0f},
-                eulerRotation_,
-                translation_);
+            pCamera_->SetRotation(eulerRotation_);
         }
-
-        // ビュープロジェクションの状態を更新
-        pViewProjection_->matWorld_ = cameraMatrix;
-        pViewProjection_->matView_ = Inverse(cameraMatrix);
-        pViewProjection_->translation_ = translation_;
-        pViewProjection_->eulerRotation_ = eulerRotation_;
-        pViewProjection_->quaternionRotation_ = quaternionRotation_;
-        pViewProjection_->isUseQuaternion_ = isUseQuaternion_;
-
-        // 投影行列の再計算
-        pViewProjection_->matProjection_ = MakePerspectiveFovMatrix(
-            45.0f * std::numbers::pi_v<float> / 180.0f,
-            float(WinApp::GetVirtualWidth()) / float(WinApp::GetVirtualHeight()),
-            0.1f, 1000.0f);
-    }
-    else
-    {
-        // 非アクティブ時は通常更新
-        pViewProjection_->UpdateMatrix();
     }
 }
 

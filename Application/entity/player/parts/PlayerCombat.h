@@ -1,6 +1,7 @@
 #pragma once
 #include "Application/entity/player/bullet/PlayerBullet.h"
 #include "Application/entity/player/collider/PlayerAttackCollider.h"
+#include "Application/entity/player/finisher/ComboFinisher.h"
 #include "Application/entity/player/skill/MakanAttackSkill.h"
 #include "Application/utility/cutscene/SkillCutscene.h"
 #include <application/utility/combo/ComboSystem.h>
@@ -35,9 +36,16 @@ class PlayerCombat
     void Init(Player *pOwner);
 
     /// <summary>
-    /// 近接コンボと前方攻撃コライダーの更新
+    /// 近接コンボの進行と入力判定の更新
     /// </summary>
-    void UpdateComboAndCollider();
+    void UpdateCombo();
+
+    /// <summary>
+    /// 前方攻撃コライダーの更新（判定の有効時間・遅延とヒット時のカメラシェイク）
+    /// 攻撃できない状況でもシェイクを進める必要があるため、毎フレーム呼ぶ
+    /// （途中で止めるとカメラのずれが戻らず、画面がずれたまま固まる）
+    /// </summary>
+    void UpdateAttackCollider();
 
     /// <summary>
     /// チャージショットの更新（入力表示UI用の通知も行う）
@@ -50,9 +58,17 @@ class PlayerCombat
     void UpdateSkillCutscene();
 
     /// <summary>
-    /// 射撃処理（弾の発射入力判定と既存弾の更新）
+    /// 射撃処理（弾の発射入力判定）
+    /// 近接コンボ中の入力はコンボ派生技の発動に振り分けられる
     /// </summary>
     void Shot();
+
+    /// <summary>
+    /// 発射済みの弾の更新と消滅判定
+    /// 発射できない状況（被弾リアクション中・派生技の演出中など）でも飛んでいる弾は
+    /// 進み続ける必要があるため、Shot() とは分けて毎フレーム呼ぶ
+    /// </summary>
+    void UpdateBullets();
 
     /// <summary>
     /// 必殺技（魔貫攻撃）の発動入力判定
@@ -129,6 +145,28 @@ class PlayerCombat
     /// <summary>瞬間移動追撃を終了する（叩きつけ段のヒット時・敵消滅・時間切れ）</summary>
     void EndTeleportChase();
 
+    /// ===================================================
+    /// コンボ派生技（近接コンボ中の射撃入力で出る演出付きの技）
+    /// ===================================================
+
+    /// <summary>
+    /// コンボ派生技の進行とクールダウンを進める（毎フレーム呼ぶ）
+    /// </summary>
+    /// <param name="deltaTime">フレームの経過時間</param>
+    void UpdateFinisher(float deltaTime) { finisher_.Update(deltaTime); }
+
+    /// <summary>コンボ派生技が発動中か（Playerの行動ロック判定用）</summary>
+    bool IsFinisherActive() const { return finisher_.IsActive(); }
+
+    /// <summary>コンボ派生技を中断する（被弾時などに呼ぶ）</summary>
+    void CancelFinisher() { finisher_.Cancel(); }
+
+    /// <summary>
+    /// コンボ派生技中に再生する全身アニメーションのクリップ名を取得する
+    /// </summary>
+    /// <returns>const std::string&amp;: クリップ名（未発動なら空文字）</returns>
+    const std::string &GetFinisherAnimationClip() const { return finisher_.GetAnimationClip(); }
+
     /// <summary>
     /// このフレームに近接攻撃が発火していれば true を返し、その段名を out に格納する。
     /// 取得すると内部フラグはクリアされる（1発火につき1回だけ true）。入力表示UI用。
@@ -190,7 +228,21 @@ class PlayerCombat
     /// <summary>
     /// 通常弾を1発生成して発射する
     /// </summary>
-    void FireNormalBullet();
+    /// <param name="forceHoming">ロックオンしていなくても追尾させるなら true（派生技の連射用）</param>
+    void FireNormalBullet(bool forceHoming = false);
+
+    /// <summary>
+    /// 射撃ボタンが押された瞬間かどうかを判定する
+    /// （キーボードはトリガー、ゲームパッドはYボタンの短押し離しで発火）
+    /// </summary>
+    /// <returns>bool: 押された瞬間なら true</returns>
+    bool IsShotTriggered();
+
+    /// <summary>
+    /// 射撃入力の1回分を処理する。
+    /// 近接コンボ中ならコンボ派生技へ、そうでなければ通常弾の発射へ振り分ける
+    /// </summary>
+    void HandleShotInput();
 
     /// <summary>
     /// 必殺技の発動前演出を開始する（エネルギー消費済みの前提）
@@ -222,6 +274,8 @@ class PlayerCombat
 
     ComboSystem punchCombo_;        ///< パンチコンボ
     bool comboInitialized_ = false; ///< コンボ初期化済みフラグ
+
+    ComboFinisher finisher_; ///< 近接コンボからの派生技（演出付き）
 
     SkillCutscene skillCutscene_; ///< 必殺技の発動前演出（カメラ顔アップ＋発動遅延）
 

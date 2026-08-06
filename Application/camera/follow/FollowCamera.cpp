@@ -1,5 +1,7 @@
 #define NOMINMAX
 #include "FollowCamera.h"
+#include <camera/CameraManager.h>
+#include "parts/CameraFinisher.h"
 #include "parts/CameraLockOn.h"
 #include "parts/CameraRush.h"
 #include "parts/CameraSkillCutscene.h"
@@ -16,10 +18,12 @@ using namespace Hagine;
 
 FollowCamera::FollowCamera(std::unique_ptr<CameraLockOn> pLockOn,
                            std::unique_ptr<CameraRush> pRush,
-                           std::unique_ptr<CameraSkillCutscene> pSkillCutscene)
+                           std::unique_ptr<CameraSkillCutscene> pSkillCutscene,
+                           std::unique_ptr<CameraFinisher> pFinisher)
     : pLockOn_(std::move(pLockOn)),
       pRush_(std::move(pRush)),
-      pSkillCutscene_(std::move(pSkillCutscene))
+      pSkillCutscene_(std::move(pSkillCutscene)),
+      pFinisher_(std::move(pFinisher))
 {
     // パーツの生成は行わない（注入されたものを受け取るだけ）
 }
@@ -31,9 +35,9 @@ FollowCamera::~FollowCamera()
 
 void FollowCamera::Init()
 {
-    // ViewProjectionの初期設定
-    viewProjection_.farZ_ = kFarZ;
-    viewProjection_.Initialize("");
+    // カメラ本体は CameraManager が所有する（名前で切り替え・ブレンドできるようにするため）
+    pCamera_ = Hagine::CameraManager::GetInstance()->Create("追従カメラ");
+    pCamera_->SetClipRange(0.1f, kFarZ);
     worldTransform_.Initialize();
     yaw_ = kInitialYaw;
 
@@ -41,6 +45,7 @@ void FollowCamera::Init()
     pLockOn_->Init(this);
     pRush_->Init(this);
     pSkillCutscene_->Init(this);
+    pFinisher_->Init(this);
 }
 
 void FollowCamera::Update()
@@ -51,6 +56,12 @@ void FollowCamera::Update()
 
     // 必殺技の顔アップ演出中は専用処理でカメラを確定する
     if (pSkillCutscene_->UpdateSkillCloseUp())
+    {
+        return;
+    }
+
+    // コンボ派生技の演出中も専用処理でカメラを確定する（通常追従・カメラ固定より優先）
+    if (pFinisher_->UpdateFinisherCamera())
     {
         return;
     }
@@ -189,10 +200,9 @@ Vector3 FollowCamera::ComputeCameraTransform(bool isCurrentlyLockedOn, Player *p
 
 void FollowCamera::ApplyToViewProjection()
 {
-    viewProjection_.translation_ = worldTransform_.translation_;
-    viewProjection_.isUseQuaternion_ = true;
-    viewProjection_.quaternionRotation_ = worldTransform_.quaternionRotation_;
-    viewProjection_.UpdateMatrix();
+    // 計算した位置・向きをカメラへ渡す（行列の生成はカメラ側が行う）
+    pCamera_->SetPosition(worldTransform_.translation_);
+    pCamera_->SetQuaternion(worldTransform_.quaternionRotation_);
 }
 
 void FollowCamera::ResolveCameraCollision()
@@ -312,6 +322,34 @@ bool FollowCamera::IsSkillCloseUpActive() const
     return pSkillCutscene_->IsSkillCloseUpActive();
 }
 
+void FollowCamera::StartFinisherCamera(BaseObject *pPerformer, BaseObject *pTarget,
+                                       FinisherCameraStyle style)
+{
+    // 演出カメラへ切り替えるので、瞬間移動コンボのカメラ固定は解除しておく
+    holdTimer_ = 0.0f;
+    pFinisher_->Start(pPerformer, pTarget, style);
+}
+
+void FollowCamera::SetFinisherCameraStyle(FinisherCameraStyle style, bool isCut)
+{
+    pFinisher_->SetStyle(style, isCut);
+}
+
+void FollowCamera::SetFinisherCameraRoll(float degrees)
+{
+    pFinisher_->SetRoll(degrees);
+}
+
+void FollowCamera::EndFinisherCamera()
+{
+    pFinisher_->Stop();
+}
+
+bool FollowCamera::IsFinisherCameraActive() const
+{
+    return pFinisher_->IsActive();
+}
+
 float FollowCamera::GetLockOnRange() const
 {
     return pLockOn_->GetLockOnRange();
@@ -357,7 +395,10 @@ void FollowCamera::DrawImGui()
 #ifdef USE_IMGUI
     ImGui::Begin("FollowCamera");
     ImGui::DragFloat3("wt position", &worldTransform_.translation_.x, 0.1f);
-    ImGui::DragFloat3("vp position", &viewProjection_.translation_.x, 0.1f);
+    if (pCamera_)
+    {
+        pCamera_->DrawImGui();
+    }
 
     // ロックオン（肩・高さ・イージング・視錐台）
     pLockOn_->DrawImGui();
@@ -367,6 +408,9 @@ void FollowCamera::DrawImGui()
 
     // 必殺技の顔アップ演出
     pSkillCutscene_->DrawImGui();
+
+    // コンボ派生技の演出カメラ
+    pFinisher_->DrawImGui();
 
     ImGui::End();
 #endif

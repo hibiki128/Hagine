@@ -1,5 +1,5 @@
 #pragma once
-#include <camera/projection/ViewProjection.h>
+#include <camera/Camera.h>
 #include <transform/WorldTransform.h>
 #include <memory>
 #include <numbers>
@@ -8,6 +8,8 @@ class Player;
 class CameraLockOn;
 class CameraRush;
 class CameraSkillCutscene;
+class CameraFinisher;
+enum class FinisherCameraStyle;
 namespace Hagine {
 class LineRenderer;
 class BaseObject;
@@ -34,9 +36,11 @@ class FollowCamera
     /// <param name="pLockOn">ロックオンパーツ</param>
     /// <param name="pRush">Rush（突進）カメラパーツ</param>
     /// <param name="pSkillCutscene">必殺技の顔アップ演出パーツ</param>
+    /// <param name="pFinisher">コンボ派生技の演出カメラパーツ</param>
     FollowCamera(std::unique_ptr<CameraLockOn> pLockOn,
                  std::unique_ptr<CameraRush> pRush,
-                 std::unique_ptr<CameraSkillCutscene> pSkillCutscene);
+                 std::unique_ptr<CameraSkillCutscene> pSkillCutscene,
+                 std::unique_ptr<CameraFinisher> pFinisher);
 
     /// <summary>
     /// デストラクタ
@@ -100,6 +104,40 @@ class FollowCamera
     void HoldThenSnap(float holdDuration) { holdTimer_ = holdDuration; }
 
     /// ===================================================
+    /// コンボ派生技（フィニッシャー）の演出カメラ
+    /// ===================================================
+
+    /// <summary>
+    /// コンボ派生技の演出カメラを開始する
+    /// </summary>
+    /// <param name="pPerformer">技の使用者</param>
+    /// <param name="pTarget">技を受ける相手</param>
+    /// <param name="style">開始時のアングル種別</param>
+    void StartFinisherCamera(Hagine::BaseObject *pPerformer, Hagine::BaseObject *pTarget,
+                             FinisherCameraStyle style);
+
+    /// <summary>
+    /// 演出カメラのアングル種別を切り替える（技のフェーズ切り替えで呼ぶ）
+    /// </summary>
+    /// <param name="style">切り替え先のアングル種別</param>
+    /// <param name="isCut">true なら補間せず瞬時に切り替える（カット割り）</param>
+    void SetFinisherCameraStyle(FinisherCameraStyle style, bool isCut = false);
+
+    /// <summary>
+    /// 演出カメラの画面の傾き（ダッチアングル）を設定する
+    /// </summary>
+    /// <param name="degrees">傾き角（度）</param>
+    void SetFinisherCameraRoll(float degrees);
+
+    /// <summary>
+    /// 演出カメラを終了して通常追従へ戻す
+    /// </summary>
+    void EndFinisherCamera();
+
+    /// <summary>演出カメラが有効かどうか</summary>
+    bool IsFinisherCameraActive() const;
+
+    /// ===================================================
     /// パーツ向けアクセサ（各パーツが pOwner 経由で参照する）
     /// ===================================================
 
@@ -132,8 +170,11 @@ class FollowCamera
     /// <summary>ヨー角を取得</summary>
     float GetYaw() const { return yaw_; }
 
-    /// <summary>ビュープロジェクションを取得</summary>
-    Hagine::ViewProjection &GetViewProjection() { return viewProjection_; }
+    /// <summary>カメラを取得（所有は CameraManager）</summary>
+    Hagine::Camera *GetCamera() const { return pCamera_; }
+
+    /// <summary>ビュープロジェクションを取得（描画へ渡す用）</summary>
+    Hagine::ViewProjection &GetViewProjection() { return pCamera_->GetViewProjection(); }
 
     /// <summary>ロックオン有効距離を取得</summary>
     float GetLockOnRange() const;
@@ -159,7 +200,7 @@ class FollowCamera
     /// <param name="fov">視野角（度数）</param>
     void SetCameraFov(float fov)
     {
-        viewProjection_.fovAngleY_ = fov * std::numbers::pi_v<float> / 180.0f;
+        pCamera_->SetFovYDegrees(fov);
     }
 
     /// <summary>ロックオン有効距離を設定</summary>
@@ -241,8 +282,9 @@ class FollowCamera
     std::unique_ptr<CameraLockOn> pLockOn_;               ///< 肩・高さ・視錐台ロックオン
     std::unique_ptr<CameraRush> pRush_;                   ///< Rush（突進）専用カメラ
     std::unique_ptr<CameraSkillCutscene> pSkillCutscene_; ///< 必殺技の顔アップ演出
+    std::unique_ptr<CameraFinisher> pFinisher_;           ///< コンボ派生技の演出カメラ
 
-    Hagine::ViewProjection viewProjection_; ///< ビュープロジェクション
+    Hagine::Camera *pCamera_ = nullptr; ///< カメラ本体（所有は CameraManager）
     Hagine::WorldTransform worldTransform_; ///< ワールドトランスフォーム
 
     Player *pTarget_ = nullptr; ///< 追従対象のプレイヤー

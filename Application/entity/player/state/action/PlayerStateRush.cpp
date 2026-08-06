@@ -30,7 +30,7 @@ void PlayerStateRush::Enter(Player &player)
 
     // カメラシェイクとパーティクルの初期化
     shake_ = std::make_unique<Shake>();
-    shake_->Initialize(&player.GetViewProjection(), "RushShake");
+    shake_->Initialize("RushShake");
     shake_->StartShake();
     rushEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("RushEmitter");
 

@@ -60,6 +60,12 @@ enum class PipelineType {
     GBufferSkinning,
     // ディファード: 全画面ライティングパス
     DeferredLighting,
+    // 同じモデルを参照するオブジェクトをまとめて描くインスタンシング版。
+    // ルートシグネチャは対応する非インスタンシング版と共有し（末尾のルートSRVだけ追加で使う）、
+    // 頂点シェーダーだけを差し替えたもの。
+    StandardInstanced,
+    GBufferInstanced,
+    ShadowMapInstanced,
 };
 
 class PipelineManager {
@@ -108,7 +114,8 @@ class PipelineManager {
     // 標準パイプライン関連
     void CreateStandardPipelines();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode);
+    /// <param name="instanced">true でインスタンシング版の頂点シェーダーを使う（他は同一）</param>
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, BlendMode blendMode, bool instanced = false);
 
     // パーティクル関連
     void CreateParticlePipelines();
@@ -144,8 +151,11 @@ class PipelineManager {
     void CreateDeferredPipelines();
     /// <summary>G-Buffer書き込みPSOを作る（ルートシグネチャは Standard / Skinning を流用）</summary>
     /// <param name="rootSignature">流用するルートシグネチャ</param>
+    /// <param name="skinned">スキニング版の頂点シェーダーを使うか</param>
+    /// <param name="instanced">インスタンシング版の頂点シェーダーを使うか</param>
+    /// <param name="rootSignature">流用するルートシグネチャ</param>
     /// <param name="skinned">true ならスキニング用の頂点シェーダーを使う</param>
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGBufferGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, bool skinned);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGBufferGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, bool skinned, bool instanced = false);
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateDeferredLightingRootSignature();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateDeferredLightingGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
 
@@ -157,7 +167,7 @@ class PipelineManager {
     // シャドウマップ関連
     void CreateShadowMapPipelines();
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateShadowMapRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateShadowMapGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateShadowMapGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, bool instanced = false);
 
     // シェーダーモード別のルートシグネチャ作成
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateBaseRootSignature();

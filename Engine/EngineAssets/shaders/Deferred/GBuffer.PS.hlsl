@@ -93,7 +93,8 @@ float3 ProceduralTangentNormal(float2 worldXZ, float scale, float strength)
 GBufferOutput main(VertexShaderOutput input)
 {
     float4 transformedUV = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
-    float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
+    // インスタンシング描画の個体色を畳み込む（通常描画は白なので従来と同じ）
+    float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy) * input.instanceColor;
 
     // 前方描画と同じく、アルファが完全に0の画素は捨てる（深度も書かない）
     float4 baseColor = gMaterial.color * textureColor;

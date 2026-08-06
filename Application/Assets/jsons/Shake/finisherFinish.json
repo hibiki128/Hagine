@@ -1,0 +1,14 @@
+{
+    "rotationShakeMax": 0.012,
+    "rotationShakeMin": -0.012,
+    "shakeDuration": 16,
+    "shakeInterval": 1,
+    "shakeMax": {
+        "x": 0.3499999940395355,
+        "y": 0.3499999940395355
+    },
+    "shakeMin": {
+        "x": -0.3499999940395355,
+        "y": -0.3499999940395355
+    }
+}

@@ -119,6 +119,12 @@ class ComboSystem
     void Update(float deltaTime);
 
     /// <summary>
+    /// コンボを途中で打ち切る（派生技へ移行したとき等に呼ぶ）。
+    /// 開始姿勢へ戻したうえで、出し切ったときと同じ硬直を入れて即再開できないようにする
+    /// </summary>
+    void Interrupt();
+
+    /// <summary>
     /// 攻撃発火時のコールバックを設定する
     /// PlayerAttackCollider::Activate(...) を呼び出すのに使う
     /// callback(damage, knockbackPower, colliderActiveDuration, colliderActivateDelay)
@@ -130,6 +136,14 @@ class ComboSystem
     /// ===================================================
 
     bool IsComboActive() const { return comboStarted_; }
+
+    /// <summary>
+    /// 現在のコンボで実際に繰り出した段数を取得する（1段目を出したら1）。
+    /// GetCurrentComboIndex() は最終段で0へ折り返すため、段数の判定にはこちらを使う
+    /// </summary>
+    /// <returns>int: 繰り出した段数（コンボ中でなければ0）</returns>
+    int GetExecutedStepCount() const;
+
     bool IsObjectAttackCompleted(Hagine::BaseObject *pTarget) const;
     bool IsCurrentAttackCompleted() const;
     int GetCurrentComboIndex() const { return comboIndex_; }

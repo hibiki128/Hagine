@@ -97,9 +97,9 @@ class EnemyCombat
     bool IsBeamStaging() const { return beamCutscene_.IsActive(); }
 
     /// <summary>
-    /// シェイク初期化（ビュープロジェクション設定）
+    /// カメラシェイクを使えるようにする（対象は常にアクティブなカメラ）
     /// </summary>
-    void SetViewProjection(Hagine::ViewProjection *pViewProjection);
+    void InitializeShake();
 
     /// <summary>
     /// 被弾ヒット時のシェイクを開始する（強化弾・必殺技被弾用）

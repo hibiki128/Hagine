@@ -1,6 +1,7 @@
 #include "Material.h"
 
 #include "fstream"
+#include <cstring>
 #include <graphics/srv/SrvManager.h>
 #include <graphics/texture/TextureManager.h>
 
@@ -20,6 +21,36 @@ void Material::PrimitiveInitialize(const PrimitiveType &type) {
     materialData_.color = PrimitiveModel::GetInstance()->GetPrimitiveData(type).color;
     materialData_.uvTransform = PrimitiveModel::GetInstance()->GetPrimitiveData(type).uvMatrix;
     materialData_.textureFilePath = "debug/uvChecker.png";
+}
+
+size_t Material::ComputeDrawSignature() const {
+    // Draw() が定数バッファへ書き込む値と、バインドするテクスチャを混ぜ込む。
+    // color / enableLighting は呼び出し側（色はインスタンスごと・ライティングはバッチキー）で
+    // 扱うのでここには含めない。environmentCoefficient も reflect フラグから決まるので除外。
+    size_t hash = 0;
+    auto mix = [&hash](size_t value) {
+        // boost::hash_combine と同じ混ぜ方
+        hash ^= value + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    };
+    auto mixFloat = [&mix](float value) {
+        uint32_t bits = 0;
+        std::memcpy(&bits, &value, sizeof(bits));
+        mix(static_cast<size_t>(bits));
+    };
+
+    mix(materialData_.textureIndex);
+    mix(GetNormalMapIndex());
+    mixFloat(materialData_.shininess);
+    mixFloat(materialData_.uvPosition.x);
+    mixFloat(materialData_.uvPosition.y);
+    mixFloat(materialData_.uvSize.x);
+    mixFloat(materialData_.uvSize.y);
+    mixFloat(materialData_.uvRotate);
+    mix(materialData_.enableNormalMap ? 1u : 0u);
+    mix(materialData_.enableProceduralNormal ? 1u : 0u);
+    mixFloat(materialData_.normalStrength);
+    mixFloat(materialData_.proceduralScale);
+    return hash;
 }
 
 void Material::Draw(const Vector4 color, bool lighting) {

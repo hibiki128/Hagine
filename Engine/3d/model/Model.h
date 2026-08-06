@@ -71,12 +71,14 @@ class Model
     /// <param name="color">色配列</param>
     /// <param name="lighting">ライティング有効フラグ</param>
     /// <param name="reflect">反射有効フラグ</param>
-    void Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect);
+    /// <param name="instanceCount">インスタンス数（1より大きいとインスタンシング描画になる）</param>
+    void Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect, uint32_t instanceCount = 1);
 
     /// <summary>
     /// シャドウパス描画（深度のみ書き込む）
     /// </summary>
-    void DrawShadow();
+    /// <param name="instanceCount">インスタンス数（1より大きいとインスタンシング描画になる）</param>
+    void DrawShadow(uint32_t instanceCount = 1);
 
     /// <summary>
     /// Getter

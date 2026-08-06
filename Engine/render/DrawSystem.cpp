@@ -6,6 +6,7 @@
 #include "data/DataHandler.h"
 #include "deferred/DeferredRenderer.h"
 #include "light/LightGroup.h"
+#include "object/Object3dInstancing.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include "graphics/srv/SrvManager.h"
 #include "particle/ParticleEditor.h"
@@ -112,6 +113,10 @@ void DrawSystem::Draw(const ViewProjection &vp)
 {
     // GPU プロファイラ: フレーム先頭で ring を進め、過去フレームの結果を取り込む
     GpuProfiler::GetInstance()->BeginFrame();
+
+    // オブジェクトのインスタンシング描画: インスタンスバッファの書き込み位置をフレーム先頭で戻す。
+    // 影 / G-Buffer / 前方描画で内容が違うので、1フレーム内では領域を使い回さない。
+    Object3dInstancing::GetInstance()->BeginFrame();
 
     // ─── GPU パーティクル Compute フェーズ（全エミッターを一括実行して Direct Queue に Wait 挿入）───
     {

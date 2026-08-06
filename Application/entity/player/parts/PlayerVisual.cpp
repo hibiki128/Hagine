@@ -75,6 +75,20 @@ void PlayerVisual::UpdateAnimation()
     }
 
     // ──────────────────────────────────────────
+    // コンボ派生技：フェーズごとに技側が指定したクリップを再生する
+    // （コンボは中断済みだが、連射フェーズでは射撃の上半身レイヤーを重ねる）
+    // ──────────────────────────────────────────
+    if (pOwner_->Combat().IsFinisherActive())
+    {
+        const std::string &finisherClip = pOwner_->Combat().GetFinisherAnimationClip();
+        if (!finisherClip.empty())
+        {
+            animationController_.Play(finisherClip);
+        }
+        return;
+    }
+
+    // ──────────────────────────────────────────
     // 被弾リアクション：ひるみ / 吹き飛ばし（コンボ・ステートより優先）
     // ──────────────────────────────────────────
     PlayerStatus &st = pOwner_->Status();

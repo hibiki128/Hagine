@@ -1,4 +1,5 @@
 #pragma once
+#include "Application/staging/crack/GroundCrack.h"
 #include "Application/staging/dash/DashEffect.h"
 #include "Application/staging/death/DeathStaging.h"
 #include "Application/staging/foot/FootEffect.h"
@@ -269,7 +270,6 @@ class Player : public Hagine::BaseObject
     bool &GetAlive() { return isAlive_; }
     bool &GetIsLockOn() { return isLockOn_; }
     bool GetIsPause() const { return isPause_; }
-    Hagine::ViewProjection &GetViewProjection() { return *pViewProjection_; }
     std::string GetCurrentStateName() const;
     std::string GetPreviewStateName() const { return previousStateName_; }
     TutorialStep GetTutorialStep() const { return tutorialStep_; }
@@ -282,6 +282,14 @@ class Player : public Hagine::BaseObject
     /// 必殺技のビーム発射コールバックから呼ばれる
     /// </summary>
     void TriggerScreenFlash();
+
+    /// <summary>
+    /// 叩きつけた相手が地面に到達した瞬間に地割れを出すよう予約する。
+    /// 叩きつけの発生時に、プレイヤー側・敵側どちらの叩きつけからも呼ぶ
+    /// （地割れの実体はプレイヤーが1つだけ持ち、双方の叩きつけで使い回す）
+    /// </summary>
+    /// <param name="pTarget">叩きつけられた対象（着地を監視する）</param>
+    void RequestGroundCrack(Hagine::BaseObject *pTarget) { groundCrack_->RequestOnLanding(pTarget); }
 
     /// ===================================================
     /// 瞬間移動コンボ（PlayerAttackCollider のヒット時コールバック）
@@ -300,7 +308,8 @@ class Player : public Hagine::BaseObject
     /// Setter
     /// ===================================================
     void SetCamera(FollowCamera *pCamera) { pFollowCamera_ = pCamera; }
-    void SetViewProjection(Hagine::ViewProjection *pViewProjection);
+    /// <summary>カメラシェイクを使えるようにする（対象は常にアクティブなカメラ）</summary>
+    void InitializeShake();
     void SetStart(bool flag) { started_ = flag; }
     void SetPause(bool flag) { isPause_ = flag; }
     void SetEnemy(Enemy *pEnemy);
@@ -378,11 +387,11 @@ class Player : public Hagine::BaseObject
     std::unique_ptr<Hagine::ParticleEmitter> hitEmitter_;    // 被弾ヒットエミッター
     std::unique_ptr<DashEffect> dashEffect_;                 // ダッシュ中の演出
     std::unique_ptr<FootEffect> footEffect_;                 // 着地・走行中の足元の演出
+    std::unique_ptr<GroundCrack> groundCrack_;               // 叩きつけで地面に走る地割れ
     std::unique_ptr<DeathStaging> deathStaging_;             // 死亡演出
     std::unique_ptr<ScreenFlash> screenFlash_;               // 必殺技の画面白黒フラッシュ演出
     std::unique_ptr<Hagine::GamePad> gamePad_;               // ゲームパッド
 
-    Hagine::ViewProjection *pViewProjection_ = nullptr;               // カメラ
     Hagine::OBBCollider *pPlayerCollider_ = nullptr;      // コライダー
     Hagine::AABBCollider *pPlayerWallCollider_ = nullptr; // 壁用コライダー
     Hagine::ParticleField *pGeneratedField_ = nullptr;    // 生成するフィールド

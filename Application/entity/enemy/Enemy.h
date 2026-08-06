@@ -173,7 +173,8 @@ class Enemy : public Hagine::BaseObject
     void SetComboAttack(bool flag) { combat_->SetComboAttack(flag); }
 
     // ─── 本体 ───
-    void SetViewProjection(Hagine::ViewProjection *pViewProjection);
+    /// <summary>カメラシェイクを使えるようにする（対象は常にアクティブなカメラ）</summary>
+    void InitializeShake();
     void SetTarget(Player *pTarget)
     {
         pTarget_ = pTarget;

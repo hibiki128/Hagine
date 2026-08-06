@@ -488,9 +488,10 @@ Vector3 EnemyCombat::GetBeamOrigin()
     return origin;
 }
 
-void EnemyCombat::SetViewProjection(ViewProjection *pViewProjection)
+void EnemyCombat::InitializeShake()
 {
-    chargeShake_->Initialize(pViewProjection, "chargehit");
+    // 揺らす対象は「今描画に使われているカメラ」なので、ここでカメラを渡す必要はない
+    chargeShake_->Initialize("chargehit");
 }
 
 void EnemyCombat::RegisterParams()

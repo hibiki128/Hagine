@@ -119,6 +119,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\camera\follow\parts\CameraLockOn.cpp" />
     <ClCompile Include="Application\camera\follow\parts\CameraRush.cpp" />
     <ClCompile Include="Application\camera\follow\parts\CameraSkillCutscene.cpp" />
+    <ClCompile Include="Application\camera\follow\parts\CameraFinisher.cpp" />
     <ClCompile Include="Application\entity\enemy\Enemy.cpp" />
     <ClCompile Include="Application\entity\enemy\parts\EnemyCombat.cpp" />
     <ClCompile Include="Application\entity\enemy\parts\EnemyMovement.cpp" />
@@ -129,6 +130,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Application\entity\player\bullet\charge\ChargeShot.cpp" />
     <ClCompile Include="Application\entity\player\bullet\PlayerBullet.cpp" />
     <ClCompile Include="Application\entity\player\Player.cpp" />
+    <ClCompile Include="Application\entity\player\finisher\ComboFinisher.cpp" />
+    <ClCompile Include="Application\staging\crack\GroundCrack.cpp" />
     <ClCompile Include="Application\entity\player\parts\PlayerCombat.cpp" />
     <ClCompile Include="Application\entity\player\parts\PlayerMovement.cpp" />
     <ClCompile Include="Application\entity\player\parts\PlayerStatus.cpp" />
@@ -207,6 +210,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\animation\ModelAnimation.cpp" />
     <ClCompile Include="Engine\3d\animation\Bone.cpp" />
     <ClCompile Include="Engine\3d\animation\Animator.cpp" />
+    <ClCompile Include="Engine\3d\camera\Camera.cpp" />
+    <ClCompile Include="Engine\3d\camera\CameraManager.cpp" />
     <ClCompile Include="Engine\3d\camera\debug\DebugCamera.cpp" />
     <ClCompile Include="Engine\3d\light\LightGroup.cpp" />
     <ClCompile Include="Engine\3d\line\LineRenderer.cpp" />
@@ -251,6 +256,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\utility\graphics\model\ModelManager.cpp" />
     <ClCompile Include="Engine\3d\object\Object3d.cpp" />
     <ClCompile Include="Engine\3d\object\Object3dCommon.cpp" />
+    <ClCompile Include="Engine\3d\object\Object3dInstancing.cpp" />
     <ClCompile Include="Engine\2d\Sprite.cpp" />
     <ClCompile Include="Engine\2d\SpriteCommon.cpp" />
     <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManager.cpp" />
@@ -375,6 +381,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\camera\follow\parts\ICameraPart.h" />
     <ClInclude Include="Application\camera\follow\parts\CameraRush.h" />
     <ClInclude Include="Application\camera\follow\parts\CameraSkillCutscene.h" />
+    <ClInclude Include="Application\camera\follow\parts\CameraFinisher.h" />
     <ClInclude Include="Application\entity\enemy\Enemy.h" />
     <ClInclude Include="Application\entity\enemy\parts\EnemyCombat.h" />
     <ClInclude Include="Application\entity\enemy\parts\EnemyMovement.h" />
@@ -385,6 +392,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Application\entity\player\bullet\charge\ChargeShot.h" />
     <ClInclude Include="Application\entity\player\bullet\PlayerBullet.h" />
     <ClInclude Include="Application\entity\player\Player.h" />
+    <ClInclude Include="Application\entity\player\finisher\ComboFinisher.h" />
+    <ClInclude Include="Application\staging\crack\GroundCrack.h" />
     <ClInclude Include="Application\entity\player\parts\PlayerCombat.h" />
     <ClInclude Include="Application\entity\player\parts\PlayerMovement.h" />
     <ClInclude Include="Application\entity\player\parts\PlayerStatus.h" />
@@ -478,6 +487,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\animation\ModelAnimation.h" />
     <ClInclude Include="Engine\3d\animation\Bone.h" />
     <ClInclude Include="Engine\3d\animation\Animator.h" />
+    <ClInclude Include="Engine\3d\camera\Camera.h" />
+    <ClInclude Include="Engine\3d\camera\CameraManager.h" />
     <ClInclude Include="Engine\3d\camera\debug\DebugCamera.h" />
     <ClInclude Include="Engine\3d\light\LightGroup.h" />
     <ClInclude Include="Engine\3d\line\LineRenderer.h" />
@@ -513,6 +524,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\utility\graphics\model\ModelManager.h" />
     <ClInclude Include="Engine\3d\object\Object3d.h" />
     <ClInclude Include="Engine\3d\object\Object3dCommon.h" />
+    <ClInclude Include="Engine\3d\object\Object3dInstancing.h" />
     <ClInclude Include="Engine\2d\Sprite.h" />
     <ClInclude Include="Engine\2d\SpriteCommon.h" />
     <ClInclude Include="Engine\utility\graphics\pipeline\PipelineManager.h" />

@@ -408,6 +408,41 @@ class ParticleCSEmitter
     // 全グループの統計を取得
     std::vector<GroupStatistics> GetGroupStatistics();
 
+    /// ==============================================
+    /// シーン全体の集計（生存中の全エミッターが対象）
+    ///   エディタに登録したものだけでなく、ParticleCSSpawner::Spawn で実行時に出したものや
+    ///   ゲームクラスが自前で持っているものも含めて数える。
+    /// ==============================================
+
+    /// <summary>エミッター1つぶんの統計</summary>
+    struct EmitterStatistics
+    {
+        std::string emitterName; // エミッター名
+        size_t aliveCount;       // 生存パーティクル数
+        bool previewOnly;        // エディタのプレビュー窓専用（ゲーム画面には出ていない）
+    };
+
+    /// <summary>
+    /// 今シーンに出ている GPU パーティクルの総数を取得する。
+    /// エディタのプレビュー専用エミッターは含めない（ゲーム画面に出ている数）。
+    /// ※ 生存数は GPU からの読み戻しなので1〜2フレーム遅延する。
+    /// </summary>
+    /// <returns>size_t: 生存パーティクル総数</returns>
+    static size_t GetSceneAliveParticleCount();
+
+    /// <summary>
+    /// プレビュー専用も含めた全エミッターの生存パーティクル総数を取得する
+    /// </summary>
+    /// <returns>size_t: 生存パーティクル総数</returns>
+    static size_t GetAllAliveParticleCount();
+
+    /// <summary>
+    /// 生存中の全エミッターの統計を取得する（内訳表示・デバッグ用）
+    /// </summary>
+    /// <param name="includePreviewOnly">エディタのプレビュー専用エミッターも含めるか</param>
+    /// <returns>std::vector&lt;EmitterStatistics&gt;: エミッターごとの統計</returns>
+    static std::vector<EmitterStatistics> GetAllEmitterStatistics(bool includePreviewOnly = false);
+
   private:
     /// ==============================================
     /// private method
@@ -463,6 +498,14 @@ class ParticleCSEmitter
     /// 粒子光源の生成パラメータ用定数バッファを必要になった時点で生成する
     /// </summary>
     void EnsureParticleLightResource();
+
+    /// <summary>
+    /// GPU駆動描画（DrawInstanceIndirect）を1メッシュぶん発行する。
+    /// 描画数は引数バッファ内の InstanceCount（Compute が GPU カウンタからコピー）が決める。
+    /// </summary>
+    /// <param name="group">対象グループ</param>
+    /// <param name="meshIndex">メッシュ番号（引数バッファ内のオフセットに対応）</param>
+    void ExecuteIndirectDraw(ParticleCSGroup *group, size_t meshIndex);
 
   public:
     /// ---- バッチ非同期コンピュート用 2フェーズ API ----

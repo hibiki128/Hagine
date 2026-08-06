@@ -44,6 +44,10 @@ void PlayerCombat::Init(Player *pOwner)
     attackCollider_ = std::make_unique<PlayerAttackCollider>();
     attackCollider_->Init(pOwner_);
 
+    // コンボ派生技。連射フェーズはこちらの弾生成を借りる（エネルギーは発動時に一括で消費済み）
+    finisher_.Init(pOwner_);
+    finisher_.SetFireBulletCallback([this] { FireNormalBullet(true); });
+
     // 顔アップ＋発動遅延の合計を必殺技モーションの発射キーフレーム（30フレーム目≒1.0秒）に合わせる
     skillCutscene_.GetCloseUpDuration() = 0.6f;
     skillCutscene_.GetActivationDelay() = 0.4f;
@@ -93,9 +97,13 @@ void PlayerCombat::Init(Player *pOwner)
         });
 }
 
-void PlayerCombat::UpdateComboAndCollider()
+void PlayerCombat::UpdateCombo()
 {
     ComboUpdate();
+}
+
+void PlayerCombat::UpdateAttackCollider()
+{
     if (attackCollider_)
     {
         attackCollider_->Update(pOwner_->GetDt());
@@ -315,12 +323,12 @@ void PlayerCombat::SetChargeActionLocked(bool locked)
     }
 }
 
-void PlayerCombat::FireNormalBullet()
+void PlayerCombat::FireNormalBullet(bool forceHoming)
 {
     std::string bulletName = "PlayerBullet_" + std::to_string(bullets_.size());
     auto bullet = std::make_unique<PlayerBullet>();
     bullet->Init(bulletName);
-    bullet->InitTransform(pOwner_);
+    bullet->InitTransform(pOwner_, forceHoming);
     bullet->GetLocalScale() = {kBulletScale, kBulletScale, kBulletScale};
     bullet->SetColliderRadius(kBulletColliderRadius);
     bullets_.push_back(std::move(bullet));
@@ -330,55 +338,83 @@ void PlayerCombat::FireNormalBullet()
     pOwner_->EmitAction(Player::ActionKind::NormalShot); // 入力表示UI用：通常射撃を通知
 }
 
-void PlayerCombat::Shot()
+bool PlayerCombat::IsShotTriggered()
 {
-    // ガード中・必殺技演出中・近接コンボ中は発射できない（既存弾の更新は下で継続する）
-    if (pOwner_->GetCurrentStateName() != "EnergyCharge" && !isSkillMenu_ &&
-        !pOwner_->IsGuarding() && !IsSkillStaging() &&
-        !punchCombo_.IsComboActive())
+    if (!pOwner_->GetGamePad()->IsConnected())
     {
-        if (!pOwner_->GetGamePad()->IsConnected())
-        {
-            // キーボード入力
-            if (pOwner_->GetInput()->TriggerKey(DIK_J))
-            {
-                if (pOwner_->ConsumeEnergy(kNormalShotEnergyCost))
-                {
-                    FireNormalBullet();
-                }
-            }
-        }
-        else
-        {
-            // ゲームパッド入力 - Yボタンの押下時間を計測
-            if (pOwner_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y) && !isSkillMenu_)
-            {
-                yButtonHoldTime_ += pOwner_->GetDt();
-            }
-
-            // Yボタンが離された瞬間、長押し判定閾値未満なら通常弾を発射
-            if (pOwner_->GetGamePad()->IsRelease(XINPUT_GAMEPAD_Y) && !isSkillMenu_)
-            {
-                if (yButtonHoldTime_ < kYButtonChargeThreshold)
-                {
-                    if (pOwner_->ConsumeEnergy(kNormalShotEnergyCost))
-                    {
-                        FireNormalBullet();
-                    }
-                }
-
-                yButtonHoldTime_ = 0.0f; // 押下時間をリセット
-            }
-
-            // Yボタンが押されていない時はタイマーをリセット
-            if (!pOwner_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y))
-            {
-                yButtonHoldTime_ = 0.0f;
-            }
-        }
+        // キーボード入力
+        return pOwner_->GetInput()->TriggerKey(DIK_J);
     }
 
-    // 弾の更新と生存チェック
+    // ゲームパッド入力 - Yボタンの押下時間を計測
+    if (pOwner_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y) && !isSkillMenu_)
+    {
+        yButtonHoldTime_ += pOwner_->GetDt();
+    }
+
+    bool triggered = false;
+
+    // Yボタンが離された瞬間、長押し判定閾値未満なら射撃入力として扱う
+    if (pOwner_->GetGamePad()->IsRelease(XINPUT_GAMEPAD_Y) && !isSkillMenu_)
+    {
+        triggered = (yButtonHoldTime_ < kYButtonChargeThreshold);
+        yButtonHoldTime_ = 0.0f; // 押下時間をリセット
+    }
+
+    // Yボタンが押されていない時はタイマーをリセット
+    if (!pOwner_->GetGamePad()->IsPress(XINPUT_GAMEPAD_Y))
+    {
+        yButtonHoldTime_ = 0.0f;
+    }
+
+    return triggered;
+}
+
+void PlayerCombat::HandleShotInput()
+{
+    // 近接コンボ中の射撃入力は、通常弾ではなく段数に応じたコンボ派生技へ振り分ける。
+    // 段数不足・エネルギー不足・クールダウン中などで出せなければ何も起きない
+    // （コンボ中に通常弾が漏れて出ると、近接と射撃の排他が崩れるため）
+    if (punchCombo_.IsComboActive())
+    {
+        if (finisher_.TryStart(punchCombo_.GetExecutedStepCount()))
+        {
+            // 派生技へ移行するので、コンボ・出しかけの攻撃判定・瞬間移動追撃は畳んでおく
+            punchCombo_.Interrupt();
+            if (attackCollider_)
+            {
+                attackCollider_->Deactivate();
+            }
+            EndTeleportChase();
+        }
+        return;
+    }
+
+    if (pOwner_->ConsumeEnergy(kNormalShotEnergyCost))
+    {
+        FireNormalBullet();
+    }
+}
+
+void PlayerCombat::Shot()
+{
+    // ガード中・必殺技演出中は発射できない（既存弾の更新は下で継続する）。
+    // 近接コンボ中はコンボ派生技の入力として受け付ける
+    if (pOwner_->GetCurrentStateName() != "EnergyCharge" && !isSkillMenu_ &&
+        !pOwner_->IsGuarding() && !IsSkillStaging())
+    {
+        if (IsShotTriggered())
+        {
+            HandleShotInput();
+        }
+    }
+}
+
+void PlayerCombat::UpdateBullets()
+{
+    // 弾の更新と生存チェック。
+    // 発射できない状況（被弾リアクション中・派生技の演出中など）でも飛んでいる弾は
+    // 進み続ける必要があるため、射撃入力の処理とは切り離して毎フレーム呼ぶ
     for (auto it = bullets_.begin(); it != bullets_.end();)
     {
         (*it)->Update();
@@ -500,6 +536,9 @@ void PlayerCombat::Save(DataHandler *pData)
     pData->Save("tpPinDuration", teleportPinDuration_);
     pData->Save("tpVanishDuration", teleportVanishDuration_);
     pData->Save("tpCameraHold", teleportCameraHold_);
+
+    // コンボ派生技
+    finisher_.Save(pData);
 }
 
 void PlayerCombat::Load(DataHandler *pData)
@@ -520,6 +559,9 @@ void PlayerCombat::Load(DataHandler *pData)
     teleportPinDuration_ = pData->Load<float>("tpPinDuration", 0.9f);
     teleportVanishDuration_ = pData->Load<float>("tpVanishDuration", 0.15f);
     teleportCameraHold_ = pData->Load<float>("tpCameraHold", 0.3f);
+
+    // コンボ派生技
+    finisher_.Load(pData);
 }
 
 void PlayerCombat::DrawBulletImGui()
@@ -542,6 +584,9 @@ void PlayerCombat::DrawImGui()
     {
         punchCombo_.DrawImGui();
     }
+
+    // ─── コンボ派生技（近接コンボ中の射撃入力で出る技）───
+    finisher_.DrawImGui();
 
     // ─── コンボアニメーション割り当て ───
     // 段のラベル・パスはコンボ定義（JSON）から取得する。編集結果はコンボパラメータの
@@ -609,4 +654,7 @@ void PlayerCombat::RegisterParams()
     pHub->Register(tp, "追撃保持時間(安全弁)", &teleportPinDuration_, {0.05f, 0.1f, 3.0f});
     pHub->Register(tp, "消える演出時間", &teleportVanishDuration_, {0.01f, 0.0f, 1.0f});
     pHub->Register(tp, "カメラ待機時間", &teleportCameraHold_, {0.01f, 0.0f, 2.0f});
+
+    // コンボ派生技（近接コンボ中の射撃入力で出る技）
+    finisher_.RegisterParams();
 }

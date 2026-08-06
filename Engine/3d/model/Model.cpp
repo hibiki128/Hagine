@@ -103,7 +103,7 @@ void Model::Update()
     }
 }
 
-void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect)
+void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::vector<ObjColor> &color, bool lighting, bool reflect, uint32_t instanceCount)
 {
     ID3D12GraphicsCommandList *pCommandList = pModelCommon_->GetDxCommon()->GetCommandList().Get();
 
@@ -170,13 +170,13 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
         // マテリアル描画
         currentMaterial->Draw(color[materialIndex].GetColor(), lighting);
 
-        // 描画コール
+        // 描画コール（instanceCount>1 なら同じモデルをまとめて描くインスタンシング描画）
         pCommandList->DrawIndexedInstanced(
-            UINT(modelData_.meshes[meshIndex].indices.size()), 1, 0, vertexOffset, 0);
+            UINT(modelData_.meshes[meshIndex].indices.size()), instanceCount, 0, vertexOffset, 0);
     }
 }
 
-void Model::DrawShadow()
+void Model::DrawShadow(uint32_t instanceCount)
 {
     ID3D12GraphicsCommandList *pCommandList = pModelCommon_->GetDxCommon()->GetCommandList().Get();
 
@@ -202,7 +202,7 @@ void Model::DrawShadow()
         }
 
         pCommandList->DrawIndexedInstanced(
-            UINT(modelData_.meshes[meshIndex].indices.size()), 1, 0, vertexOffset, 0);
+            UINT(modelData_.meshes[meshIndex].indices.size()), instanceCount, 0, vertexOffset, 0);
     }
 }
 

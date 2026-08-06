@@ -35,8 +35,7 @@ void EnemyAttackCollider::Init(Enemy *pEnemy, Player *player)
     // ヒットエフェクト・カメラシェイク初期化
     hitEmitter_ = ParticleEditor::GetInstance()->CreateEmitterFromTemplate("punchEmitter");
     shake_ = std::make_unique<Shake>();
-    shake_->Initialize(
-        SceneManager::GetInstance()->GetBaseScene()->GetViewProjection(), "punchHit");
+    shake_->Initialize("punchHit");
 }
 
 void EnemyAttackCollider::Update(float deltaTime)
@@ -157,6 +156,9 @@ void EnemyAttackCollider::OnCollision(ColliderBase *pOther)
         };
         pPlayer_->RequestBlowReaction(true);
         pPlayer_->SetKnockbackDirect(slamVel);
+
+        // 叩きつけられたプレイヤーが地面に到達した瞬間に地割れを出す
+        pPlayer_->RequestGroundCrack(pPlayer_);
         break;
     }
     case EnemyMeleeHitReaction::Launch:

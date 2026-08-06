@@ -6,7 +6,7 @@
     "fieldContactEmitCount": 1000,
     "fieldGroupId": -1,
     "frequency": 0.0010000000474974513,
-    "frequencyTime": 677.4669189453125,
+    "frequencyTime": 875.0625,
     "group_0_acceleration": {
         "x": 0.0,
         "y": 0.0,
@@ -64,7 +64,7 @@
     "group_0_distanceCullStart": 0.0,
     "group_0_effectSpace": 0,
     "group_0_emitConeAngle": 0.0,
-    "group_0_emitCount": 100,
+    "group_0_emitCount": 180000,
     "group_0_emitShape": 0,
     "group_0_emitSphereRadius": 0.0,
     "group_0_enableAcceleration": 0,
@@ -75,17 +75,18 @@
     "group_0_enableCurlNoise": 0,
     "group_0_enableDistanceCull": 0,
     "group_0_enableEndScale": 0,
+    "group_0_enableFrustumCull": 1,
     "group_0_enableGather": 0,
     "group_0_enableGatherForTrail": 0,
     "group_0_enableGravity": 0,
-    "group_0_enableLifetimeScale": 1,
+    "group_0_enableLifetimeScale": 0,
     "group_0_enableLifetimeVelocityDamping": 0,
     "group_0_enableMidColor": 0,
     "group_0_enableRadialVelocity": 0,
     "group_0_enableRandomAngularVelocity": 0,
     "group_0_enableRandomColor": 1,
     "group_0_enableRandomRotation": 0,
-    "group_0_enableSinScale": 1,
+    "group_0_enableSinScale": 0,
     "group_0_enableSizeClamp": 0,
     "group_0_enableSizeCurve": 0,
     "group_0_enableTrail": 0,
@@ -124,13 +125,13 @@
     },
     "group_0_lifetimeVelocityDampingStart": 0.5,
     "group_0_maxLifetime": 1.0,
-    "group_0_maxScale": 0.05000000074505806,
+    "group_0_maxScale": 0.5,
     "group_0_maxScreenHeight": 0.0,
     "group_0_maxTrailPerParticle": 5,
     "group_0_maxVelocity": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
     },
     "group_0_midColor": {
         "w": 0.0,
@@ -140,12 +141,12 @@
     },
     "group_0_midColorRatio": 0.0,
     "group_0_minLifetime": 1.0,
-    "group_0_minScale": 0.019999999552965164,
+    "group_0_minScale": 0.25,
     "group_0_minScreenHeight": 0.0,
     "group_0_minVelocity": {
-        "x": -1.0,
-        "y": -1.0,
-        "z": -1.0
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
     },
     "group_0_name": "test",
     "group_0_radialVelocityCenter": {
@@ -244,7 +245,7 @@
     },
     "particleLightCullDistance": 60.0,
     "particleLightDecay": 1.0,
-    "particleLightEnabled": true,
+    "particleLightEnabled": false,
     "particleLightIntensity": 0.75,
     "particleLightMaxCount": 6200,
     "particleLightRadius": 0.75,
@@ -263,9 +264,9 @@
         "z": 0.0
     },
     "scale": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
+        "x": 100.0,
+        "y": 100.0,
+        "z": 100.0
     },
     "translate": {
         "x": 0.0,

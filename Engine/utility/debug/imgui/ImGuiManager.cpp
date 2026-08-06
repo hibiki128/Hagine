@@ -12,6 +12,8 @@
 #include "graphics/texture/TextureManager.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
+#include "camera/CameraManager.h"
+#include "object/Object3dInstancing.h"
 #include "object/base/BaseObject.h"
 #include "offscreen/OffScreen.h"
 #include "scene/SceneManager.h"
@@ -482,6 +484,7 @@ void ImGuiManager::ShowMainMenu() {
                 windowToggle(ICON_FA_IMAGE " パーティクルプレビュー", showParticlePreviewView_, "GPUパーティクルを単体でプレビューします");
 
                 ImGui::SeparatorText("レンダリング");
+                windowToggle(ICON_FA_VIDEO " カメラ", showCameraView_, "登録カメラの一覧・切り替え・位置/画角の設定");
                 windowToggle(ICON_FA_STAR_OF_DAVID " オフスクリーン (ポストエフェクト)", showOfScreenView_, "ポストエフェクト（ブラー・色調・白黒など）の設定");
                 windowToggle(ICON_FA_LIGHTBULB " ライト", showLightView_, "ライティング（平行光・環境光など）の設定");
                 windowToggle(ICON_FA_ADJUST " シャドウマップ", showShadowMapView_, "影の描画設定・デバッグ表示");
@@ -842,6 +845,20 @@ void ImGuiManager::ShowStatisticsWindow() {
 
     ParticleCSEditor::GetInstance()->ShowGPUParticleStatistics();
 
+    // オブジェクトのインスタンシング描画（同じモデルを参照するものをまとめた結果）
+    ImGui::Separator();
+    if (ImGui::CollapsingHeader("インスタンシング描画")) {
+        Object3dInstancing *instancing = Object3dInstancing::GetInstance();
+        bool enabled = instancing->IsEnabled();
+        if (ImGui::Checkbox("有効##instancing", &enabled))
+            instancing->SetEnabled(enabled);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("同じモデルを参照するオブジェクトを1回の描画にまとめます。\n"
+                              "OFF にすると従来どおり1体ずつ描画します（見た目は変わりません）");
+        ImGui::Text("バッチ数: %u  /  インスタンス数: %u", instancing->GetLastBatchCount(), instancing->GetLastInstanceCount());
+        ImGui::Text("減らせた描画コール: %u", instancing->GetLastMergedDrawCount());
+    }
+
     ImGui::Separator();
     CpuProfiler::GetInstance()->DrawImGui();
 
@@ -1022,6 +1039,16 @@ void ImGuiManager::ShowShadowMapWindow() {
 
     // ウィンドウの生成・閉じるボタンは ShadowMap 側に委譲する
     ShadowMap::GetInstance()->UpdateImGui(&showShadowMapView_);
+}
+
+void ImGuiManager::ShowCameraWindow() {
+    if (!showCameraView_)
+        return; // 表示しない場合は早期リターン
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
+    ImGui::Begin("カメラ", &showCameraView_, flags);
+    CameraManager::GetInstance()->DrawImGui();
+    ImGui::End();
 }
 
 void ImGuiManager::ShowDrawSystemWindow() {
@@ -1326,6 +1353,8 @@ void ImGuiManager::ShowMainUI(OffScreen *pOffScreen) {
     ShowShadowMapWindow();
     // 描画システム設定ウィンドウを描画
     ShowDrawSystemWindow();
+    // カメラ窓を描画
+    ShowCameraWindow();
     // アセットブラウザ窓を描画
     ShowAssetBrowserWindow();
     // ゲームパラメータHub窓を描画

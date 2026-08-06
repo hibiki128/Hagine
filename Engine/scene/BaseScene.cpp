@@ -10,6 +10,30 @@ void BaseScene::Initialize()
     pPtCSEditor_ = ParticleCSEditor::GetInstance();
     pSpriteManager_ = SpriteManager::GetInstance();
     pObjectManager_ = BaseObjectManager::GetInstance();
+    pCameraManager_ = CameraManager::GetInstance();
+
+    // シーンのメインカメラ。最初の1台なので自動的にアクティブになる。
+    camera_ = pCameraManager_->Create("メインカメラ");
+}
+
+ViewProjection &BaseScene::vp()
+{
+    // 派生シーンが BaseScene::Initialize を呼んでいない場合に備えて用意しておく
+    if (!pCameraManager_)
+    {
+        pCameraManager_ = CameraManager::GetInstance();
+    }
+    if (!camera_)
+    {
+        camera_ = pCameraManager_->Create("メインカメラ");
+    }
+    // 描画には「今アクティブなカメラ」のビュープロジェクションを使う。
+    // カメラ切り替えの補間中はその補間結果になる。
+    if (const ViewProjection *active = pCameraManager_->GetActiveViewProjection())
+    {
+        return const_cast<ViewProjection &>(*active);
+    }
+    return camera_->GetViewProjection();
 }
 
 void BaseScene::Finalize()
@@ -64,10 +88,10 @@ void BaseScene::DrawParticleEditorUI()
 void BaseScene::DrawAllObjects()
 {
     pSpriteManager_->DrawAll();
-    pObjectManager_->Draw(vp_);
+    pObjectManager_->Draw(vp());
 
-    pPtEditor_->DrawAll(vp_);
-    pPtCSEditor_->DrawAll(vp_);
+    pPtEditor_->DrawAll(vp());
+    pPtCSEditor_->DrawAll(vp());
 }
 
 } // namespace Hagine

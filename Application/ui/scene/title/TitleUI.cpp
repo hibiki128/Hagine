@@ -204,12 +204,12 @@ void TitleUI::HidePressStart()
     }
 }
 
-void TitleUI::Draw(ViewProjection &vp_)
+void TitleUI::Draw(Camera &camera)
 {
     // pChargeEffect_ / playerAura_（GPUパーティクル）はエンジンが自動で描画する。
     // ここでは別システムの CPU パーティクル（chargeBullet_）だけ描画する。
-    chargeBullet_->Draw(vp_);
-    cameraMove_ = vp_.GetIsCameraMove();
+    chargeBullet_->Draw(camera.GetViewProjection());
+    cameraMove_ = camera.IsCameraWorkPlaying();
 }
 
 #ifdef _DEBUG

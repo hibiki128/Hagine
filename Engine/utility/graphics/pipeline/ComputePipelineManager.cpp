@@ -530,13 +530,14 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateEmitte
 
     // SoA UAV (u0-u5: Life/DrawCore/SimCore/Trail/Rotation/Override)
     //   + フリーリスト UAV (u6-u8)
-    //   + 生存リスト間接ディスパッチ UAV (u9:AliveList out / u10:AliveCounter out / u11:RenderCompact) = 計12本。
-    D3D12_DESCRIPTOR_RANGE uavRanges[12] = {};
-    for (UINT i = 0; i < 12; ++i)
+    //   + 生存リスト間接ディスパッチ UAV (u9:AliveList out / u10:AliveCounter out / u11:RenderCompact)
+    //   + GPU駆動カリング UAV (u12:VisibleCounter / u13:RenderSlot) = 計14本。
+    D3D12_DESCRIPTOR_RANGE uavRanges[14] = {};
+    for (UINT i = 0; i < 14; ++i)
     {
         uavRanges[i].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
         uavRanges[i].NumDescriptors = 1;
-        uavRanges[i].BaseShaderRegister = i; // u0..u11
+        uavRanges[i].BaseShaderRegister = i; // u0..u13
         uavRanges[i].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
     }
     // SRV (t0:TriangleInfo / t1:TriangleCDF / t2:EdgeInfo / t3:ParticleField)
@@ -549,12 +550,13 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateEmitte
         srvRanges[i].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
     }
 
-    // スロット対応（既存 param 番号は不変。新規 u9-u11 を末尾 17-19 に追加）:
+    // スロット対応（既存 param 番号は不変。新規は末尾へ追加）:
     //   [0..8]   u0..u8 (SoA6本 + フリーリスト3本)
     //   [9..12]  b0..b3 (EmitterMesh / PerFrame / Settings / FieldCB)
     //   [13..16] t0..t3 (TriangleInfo / TriangleCDF / EdgeInfo / ParticleField)
     //   [17..19] u9..u11 (AliveList out / AliveCounter out / RenderCompact) ★生存リスト間接ディスパッチ
-    D3D12_ROOT_PARAMETER rootParameters[20] = {};
+    //   [20..21] u12..u13 (VisibleCounter / RenderSlot) ★GPU駆動の視錐台カリング
+    D3D12_ROOT_PARAMETER rootParameters[22] = {};
     for (UINT i = 0; i < 9; ++i)
     {
         rootParameters[i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -576,10 +578,10 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateEmitte
         rootParameters[13 + i].DescriptorTable.NumDescriptorRanges = 1;
         rootParameters[13 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     }
-    for (UINT i = 0; i < 3; ++i)
+    for (UINT i = 0; i < 5; ++i)
     {
         rootParameters[17 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        rootParameters[17 + i].DescriptorTable.pDescriptorRanges = &uavRanges[9 + i]; // u9..u11
+        rootParameters[17 + i].DescriptorTable.pDescriptorRanges = &uavRanges[9 + i]; // u9..u13
         rootParameters[17 + i].DescriptorTable.NumDescriptorRanges = 1;
         rootParameters[17 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     }
@@ -656,13 +658,14 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateUpdate
 
     // SoA UAV (u0-u5: Life/DrawCore/SimCore/Trail/Rotation/Override)
     //   + フリーリスト UAV (u6-u8) + 生存コンパクション UAV (u9-u10)
-    //   + 描画コンパクション UAV (u11: gRenderCompact) = 計12本。
-    D3D12_DESCRIPTOR_RANGE uavRanges[12] = {};
-    for (UINT i = 0; i < 12; ++i)
+    //   + 描画コンパクション UAV (u11: gRenderCompact)
+    //   + GPU駆動カリング UAV (u12: VisibleCounter / u13: RenderSlot) = 計14本。
+    D3D12_DESCRIPTOR_RANGE uavRanges[14] = {};
+    for (UINT i = 0; i < 14; ++i)
     {
         uavRanges[i].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
         uavRanges[i].NumDescriptors = 1;
-        uavRanges[i].BaseShaderRegister = i; // u0..u11
+        uavRanges[i].BaseShaderRegister = i; // u0..u13
         uavRanges[i].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
     }
     // SRV (t0:gFields / t1:gFieldsOverride / t2:gAliveListIn / t3:gAliveCounterIn)
@@ -681,7 +684,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateUpdate
     //   [12..14] b0..b2  (PerFrame / Settings / FieldCB)
     //   [15..16] t0..t1  (Fields / FieldsOverride)
     //   [17..18] t2..t3  (AliveListIn / AliveCounterIn) ★生存リスト間接ディスパッチの入力
-    D3D12_ROOT_PARAMETER rootParameters[19] = {};
+    //   [19..20] u12..u13 (VisibleCounter / RenderSlot) ★GPU駆動の視錐台カリング
+    D3D12_ROOT_PARAMETER rootParameters[21] = {};
     for (UINT i = 0; i < 12; ++i)
     {
         rootParameters[i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -702,6 +706,13 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> ComputePipelineManager::CreateUpdate
         rootParameters[15 + i].DescriptorTable.pDescriptorRanges = &srvRanges[i];
         rootParameters[15 + i].DescriptorTable.NumDescriptorRanges = 1;
         rootParameters[15 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    }
+    for (UINT i = 0; i < 2; ++i)
+    {
+        rootParameters[19 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        rootParameters[19 + i].DescriptorTable.pDescriptorRanges = &uavRanges[12 + i]; // u12..u13
+        rootParameters[19 + i].DescriptorTable.NumDescriptorRanges = 1;
+        rootParameters[19 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     }
 
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature = {};

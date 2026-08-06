@@ -44,6 +44,8 @@ Player::~Player()
     GameParamHub::GetInstance()->Unregister("Player");
     GameParamHub::GetInstance()->Unregister("必殺演出(Player)");
     GameParamHub::GetInstance()->Unregister("瞬間移動コンボ(Player)");
+    GameParamHub::GetInstance()->Unregister("コンボ派生技(Player)");
+    GameParamHub::GetInstance()->Unregister(GroundCrack::kParamOwner);
 }
 
 void Player::Init(const std::string objectName)
@@ -126,6 +128,11 @@ void Player::Init(const std::string objectName)
     footEffect_ = std::make_unique<FootEffect>();
     footEffect_->Init();
 
+    // 叩きつけの地割れ。プレイヤー側・敵側どちらの叩きつけからも使うため、
+    // 実体はプレイヤーが1つだけ持ち、双方から RequestGroundCrack() で予約する
+    groundCrack_ = std::make_unique<GroundCrack>();
+    groundCrack_->Init();
+
     deathStaging_ = std::make_unique<DeathStaging>();
 
     // 必殺技の画面白黒フラッシュ演出（ポストエフェクトの Gray + Bloom を利用）
@@ -140,6 +147,7 @@ void Player::Init(const std::string objectName)
     combat_->RegisterParams();
     visual_->RegisterParams();
     screenFlash_->RegisterParams("Player");
+    groundCrack_->RegisterParams();
 }
 
 void Player::Update()
@@ -171,6 +179,13 @@ void Player::Update()
     footEffect_->Update(GetWorldPosition(), movement_->GetVelocity(),
                         movement_->GetIsGrounded(),
                         isAlive_ && started_ && !isPause_);
+
+    // 叩きつけの地割れ（着地監視とフェード）。必殺技のビーム発動中も消えていく必要があるので、
+    // 下の早期リターンより前でここで更新する。ポーズ中だけは進めない
+    if (started_ && !isPause_)
+    {
+        groundCrack_->Update(dt_);
+    }
 
     if (combat_->IsSkillActive())
     {
@@ -214,6 +229,18 @@ void Player::Update()
         {
             status_->RecoverEnergy();
 
+            // コンボ派生技は進行とクールダウンを常に進める必要があるため、
+            // 下の行動分岐より先に、分岐に関係なく毎フレーム更新する
+            combat_->UpdateFinisher(dt_);
+
+            // 発射済みの弾も行動分岐に関係なく飛び続ける
+            // （被弾リアクション中や派生技の演出中に空中で止まらないようにする）
+            combat_->UpdateBullets();
+
+            // 攻撃判定のタイマーとヒット時のカメラシェイクも分岐に関係なく進める
+            // （途中で止めるとカメラのずれが戻らず、画面がずれたまま固まる）
+            combat_->UpdateAttackCollider();
+
             // 必殺技のカメラ演出中は行動不能にする。
             // 顔アップ中は双方をロックし、発動遅延中は発動者だけをロックする（相手は回避可能）
             const bool cameraCloseUp = pFollowCamera_ && pFollowCamera_->IsSkillCloseUpActive();
@@ -253,6 +280,9 @@ void Player::Update()
             }
             else if (status_->IsReacting())
             {
+                // 被弾したらコンボ派生技は中断する（演出中に殴られても続行させない）
+                combat_->CancelFinisher();
+
                 // 被弾リアクション中は行動不能。アニメーションだけ進めて硬直を表現する。
                 // 吹き飛ばし中の速度制御（減速・落下）は PlayerStatus::UpdateReaction が担当するので、
                 // ここでは横滑りが伸びすぎないようひるみ中だけ水平速度を減衰させる
@@ -265,17 +295,28 @@ void Player::Update()
                 visual_->UpdateAnimation();
                 visual_->UpdateFlyLean();
             }
+            else if (combat_->IsFinisherActive())
+            {
+                // コンボ派生技の演出中は移動・射撃・ガードをすべて無効化する。
+                // 位置・向き・敵への干渉・カメラは UpdateFinisher が制御済み
+                visual_->UpdateAnimation();
+                visual_->UpdateFlyLean();
+            }
             else if (combat_->IsTeleporting())
             {
                 // 瞬間移動追撃中は移動入力・射撃・ガードを無効化し、コンボだけ進める
-                combat_->UpdateTeleport(dt_);      // 位置固定・向き・消える演出・カメラ制御
-                combat_->UpdateComboAndCollider(); // コンボ継続＋前方判定更新
+                combat_->UpdateTeleport(dt_); // 位置固定・向き・消える演出・カメラ制御
+                combat_->UpdateCombo();       // コンボ継続（前方判定の更新は分岐の外で行う）
+
+                // 追撃中の射撃入力はコンボ派生技への移行として受け付ける
+                // （通常弾は撃てない。追撃をそのまま派手な締めへ繋げられるようにする）
+                combat_->Shot();
                 visual_->UpdateAnimation();
                 visual_->UpdateFlyLean();
             }
             else
             {
-                combat_->UpdateComboAndCollider();
+                combat_->UpdateCombo();
 
                 movement_->UpdateDashState();
 
@@ -345,6 +386,9 @@ void Player::Update()
         {
             if (isAlive_)
             {
+                // 死亡で行動が止まるため、進行中のコンボ派生技を畳んでカメラを通常へ戻す
+                combat_->CancelFinisher();
+
                 // ダメージリアクション中なら即座に終了させる
                 status_->StopDamageReact();
 
@@ -377,6 +421,9 @@ void Player::Update()
 
 void Player::Draw(const ViewProjection &viewProjection)
 {
+    // 地割れのデカールは BaseObjectManager へ登録済みなので、ここでは描かない
+    // （マネージャの通常経路で描かれる）
+
     if (deathStaging_->GetIsStart())
     {
         return;
@@ -569,6 +616,9 @@ void Player::Debug()
     // コンボ・必殺技関連
     combat_->DrawImGui();
 
+    // 叩きつけの地割れ（テスト発生と発生状況の確認）
+    groundCrack_->DrawImGui(GetWorldPosition());
+
     // アニメーション・飛行リーン関連
     visual_->DrawImGui([this] { Save(); });
 
@@ -724,10 +774,10 @@ Vector3 Player::GetPositionLeft(float distance) const { return transform_->trans
 Vector3 Player::GetPositionAbove(float distance) const { return transform_->translation_ + GetUp() * distance; }
 Vector3 Player::GetPositionBelow(float distance) const { return transform_->translation_ + GetDown() * distance; }
 
-void Player::SetViewProjection(ViewProjection *pViewProjection)
+void Player::InitializeShake()
 {
-    pViewProjection_ = pViewProjection;
-    shake_->Initialize(pViewProjection_);
+    // 揺らす対象は「今描画に使われているカメラ」なので、ここでカメラを渡す必要はない
+    shake_->Initialize();
 }
 
 void Player::SetEnemy(Enemy *pEnemy)

@@ -1,5 +1,5 @@
 #pragma once
-#include <camera/projection/ViewProjection.h>
+#include <camera/Camera.h>
 #include <transform/WorldTransform.h>
 
 /// <summary>
@@ -27,9 +27,9 @@ class DeathCamera
     /// <summary>
     /// イージング演出の開始
     /// </summary>
-    /// <param name="currentViewProjection">現在のViewProjection</param>
+    /// <param name="currentCamera">開始地点にする現在のカメラ</param>
     /// <param name="targetPosition">プレイヤーの位置</param>
-    void StartEasing(const Hagine::ViewProjection &currentViewProjection, const Hagine::Vector3 &targetPosition);
+    void StartEasing(const Hagine::Camera &currentCamera, const Hagine::Vector3 &targetPosition);
 
     /// <summary>
     /// デバッグ用のImGui表示
@@ -41,10 +41,16 @@ class DeathCamera
     /// ===================================================
 
     /// <summary>
-    /// ビュープロジェクションを取得
+    /// カメラを取得（所有は CameraManager）
+    /// </summary>
+    /// <returns>Camera*: カメラ</returns>
+    Hagine::Camera *GetCamera() const { return pCamera_; }
+
+    /// <summary>
+    /// ビュープロジェクションを取得（描画へ渡す用）
     /// </summary>
     /// <returns>ViewProjection&amp;: ビュープロジェクション参照</returns>
-    Hagine::ViewProjection &GetViewProjection() { return viewProjection_; }
+    Hagine::ViewProjection &GetViewProjection() { return pCamera_->GetViewProjection(); }
 
     /// <summary>
     /// イージング完了フラグを取得
@@ -104,7 +110,7 @@ class DeathCamera
     // 注視回転の算出に使うしきい値（基準ベクトルは Hagine::kWorldUp / kWorldRight を使う）
     static constexpr float kParallelThreshold = 0.999f; ///< 上方向と平行とみなす内積のしきい値
 
-    Hagine::ViewProjection viewProjection_; ///< ビュープロジェクション
+    Hagine::Camera *pCamera_ = nullptr;     ///< カメラ本体（所有は CameraManager）
     Hagine::WorldTransform worldTransform_; ///< ワールドトランスフォーム
 
     bool isEasing_ = false;       ///< イージング中フラグ
