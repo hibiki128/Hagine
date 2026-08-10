@@ -255,19 +255,41 @@ void ShowTextureFile(std::string &selectedTexturePath, const char *uiId) {
 // ============================================================
 // ShowModelFile  (BeginChild 高さ固定化)
 // ============================================================
-void ShowModelFile(std::string &selectedModelPath) {
+void ShowModelFile(std::string &selectedModelPath, const char *uiId) {
     namespace fs = std::filesystem;
     ImGuiStyle &style = ImGui::GetStyle();
 
     // models はエンジン(debug)とアプリの 2 ルートに分割されているため、ルートをラジオで切り替える。
     static const char *kRootNamesModel[2] = {"Engine(debug)", "App"};
     static const std::vector<std::string> kRootsModel = AssetPath::ModelScanRoots(); // [0]=エンジン, [1]=アプリ
-    static int rootSelModel = 1;                                                     // 既定: App
-    static fs::path currentDirModel = kRootsModel[rootSelModel];
-    static std::string selectedFolderModel;
-    static std::string selectedFileModel;
-    static ImGuiTextFilter filter;
-    static bool showDetails = true;
+
+    // 閲覧状態は UI インスタンス毎に持つ（アセットブラウザと生成モーダルで独立して辿れるように）
+    struct BrowserState {
+        int rootSel = 1; // 既定: App
+        fs::path currentDir;
+        std::string selectedFolder;
+        std::string selectedFile;
+        ImGuiTextFilter filter;
+        bool showDetails = true;
+        bool initialized = false;
+    };
+    static std::unordered_map<std::string, BrowserState> states;
+
+    BrowserState &state = states[uiId];
+    if (!state.initialized) {
+        state.currentDir = kRootsModel[state.rootSel];
+        state.initialized = true;
+    }
+
+    int &rootSelModel = state.rootSel;
+    fs::path &currentDirModel = state.currentDir;
+    std::string &selectedFolderModel = state.selectedFolder;
+    std::string &selectedFileModel = state.selectedFile;
+    ImGuiTextFilter &filter = state.filter;
+    bool &showDetails = state.showDetails;
+
+    // 同一ウィンドウに複数並べてもウィジェットIDが衝突しないようにする
+    ImGui::PushID(uiId);
 
     // ルート切り替え
     for (int i = 0; i < 2; ++i) {
@@ -413,6 +435,8 @@ void ShowModelFile(std::string &selectedModelPath) {
                         selectedFileModel = file;
                         selectedModelPath = getRelPath(file);
                     }
+                    // シーンウィンドウへドラッグするとその場に配置できる
+                    AssetDragDrop::ModelSource(getRelPath(file));
                     ImGui::NextColumn();
                     ImGui::TextUnformatted(ext.c_str());
                     ImGui::NextColumn();
@@ -433,6 +457,8 @@ void ShowModelFile(std::string &selectedModelPath) {
                         selectedFileModel = file;
                         selectedModelPath = getRelPath(file);
                     }
+                    // シーンウィンドウへドラッグするとその場に配置できる
+                    AssetDragDrop::ModelSource(getRelPath(file));
                     ImGui::PopID();
                     ImGui::PopStyleColor();
                     std::string name = file.size() > 12 ? file.substr(0, 9) + "..." : file;
@@ -453,6 +479,8 @@ void ShowModelFile(std::string &selectedModelPath) {
     if (!selectedFileModel.empty())
         ImGui::Text("Selected: %s", selectedModelPath.c_str());
     ImGui::PopStyleColor();
+
+    ImGui::PopID();
 }
 
 // ============================================================

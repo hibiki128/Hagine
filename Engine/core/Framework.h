@@ -11,6 +11,7 @@
 #include "offscreen/OffScreen.h"
 #include "graphics/model/ModelManager.h"
 #include "graphics/pipeline/ComputePipelineManager.h"
+#include "graphics/pipeline/ComputeEffectPipeline.h"
 #include "graphics/pipeline/PipelineManager.h"
 #include "graphics/srv/SrvManager.h"
 #include "graphics/texture/TextureManager.h"

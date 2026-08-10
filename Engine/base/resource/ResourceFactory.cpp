@@ -101,7 +101,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> ResourceFactory::CreateTextureResource(co
     return resource;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> ResourceFactory::CreateRenderTextureResource(uint32_t width, uint32_t height, DXGI_FORMAT format, D3D12_CLEAR_VALUE color)
+Microsoft::WRL::ComPtr<ID3D12Resource> ResourceFactory::CreateRenderTextureResource(uint32_t width, uint32_t height, DXGI_FORMAT format, D3D12_CLEAR_VALUE color, bool allowUAV)
 {
     D3D12_RESOURCE_DESC resourceDesc{};
     resourceDesc.Width = width;
@@ -113,6 +113,12 @@ Microsoft::WRL::ComPtr<ID3D12Resource> ResourceFactory::CreateRenderTextureResou
     resourceDesc.SampleDesc.Quality = 0;
     resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    // コンピュートシェーダーから書き込む場合は UAV を許可する。
+    // ※ sRGB フォーマットには UAV を作れないので、呼び出し側は非sRGBを指定すること。
+    if (allowUAV)
+    {
+        resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    }
     resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 
     D3D12_HEAP_PROPERTIES heapProperties{};

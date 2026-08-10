@@ -128,6 +128,24 @@ class BaseObjectManager
     void OpenSceneLoadModal();
 
     /// <summary>
+    /// モデルパスからオブジェクトを生成して追加する
+    /// 名前はモデルのファイル名から自動で付け、重複したら連番を振る
+    /// </summary>
+    /// <param name="modelPath">モデルの相対パス（models ルート基準）</param>
+    /// <param name="position">配置するローカル座標</param>
+    /// <returns>BaseObject*: 生成されたオブジェクト（失敗時は nullptr）</returns>
+    BaseObject *CreateObjectFromModel(const std::string &modelPath, const Vector3 &position);
+
+    /// <summary>
+    /// プリミティブ形状のオブジェクトを生成して追加する
+    /// 名前は自動で一意化され、配置は現在のカメラ前方になる
+    /// </summary>
+    /// <param name="type">プリミティブの種類</param>
+    /// <param name="baseName">名前の元（例: "cube"）</param>
+    /// <returns>BaseObject*: 生成されたオブジェクト</returns>
+    BaseObject *CreatePrimitiveObject(PrimitiveType type, const std::string &baseName);
+
+    /// <summary>
     /// オブジェクト生成モーダルを開く
     /// </summary>
     void OpenObjectCreationModal();
@@ -171,6 +189,13 @@ class BaseObjectManager
     /// </summary>
     /// <returns>std::vector&lt;std::string&gt;: オブジェクト名一覧</returns>
     std::vector<std::string> GetObjectNames() const;
+
+    /// <summary>
+    /// 登録済みオブジェクト名を名前順に並べて取得する
+    /// 内部が unordered_map なので、一覧UIの並びを安定させたい場合はこちらを使う
+    /// </summary>
+    /// <returns>std::vector&lt;std::string&gt;: 名前順のオブジェクト名一覧</returns>
+    std::vector<std::string> GetSortedObjectNames() const;
 
     /// <summary>
     /// 全オブジェクトの親子関係を保存
@@ -269,6 +294,21 @@ class BaseObjectManager
     /// </summary>
     /// <param name="pObject">対象オブジェクト</param>
     void RestoreParentChildRelationshipForObject(BaseObject *pObject);
+
+    /// <summary>
+    /// 登録済みの名前と衝突しないオブジェクト名を作る（衝突時は _1, _2 … と連番を振る）
+    /// </summary>
+    /// <param name="baseName">希望する名前</param>
+    /// <returns>std::string: 一意なオブジェクト名</returns>
+    std::string MakeUniqueObjectName(const std::string &baseName) const;
+
+    /// <summary>
+    /// 破棄・登録解除の直前に、他マネージャが持つこのオブジェクトへの参照を落とす
+    /// （ギズモの操作対象・モーションエディタの登録）
+    /// </summary>
+    /// <param name="pObject">対象オブジェクト</param>
+    /// <param name="name">登録名</param>
+    void DetachRegistrations(BaseObject *pObject, const std::string &name);
 
     /// <summary>
     /// オブジェクトを生成して追加

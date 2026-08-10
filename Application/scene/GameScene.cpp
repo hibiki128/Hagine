@@ -24,7 +24,6 @@ void GameScene::Initialize()
     /// ===================================================
     /// インスタンス生成
     /// ===================================================
-    debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
     followCamera_ = FollowCameraFactory::Create();
@@ -44,7 +43,6 @@ void GameScene::Initialize()
     /// ===================================================
     /// 初期化
     /// ===================================================
-    debugCamera_->Initialize();
     player_->Init("player");
     enemy_->Init("pEnemy");
     ground_->Init("Ground");
@@ -183,7 +181,7 @@ void GameScene::Update()
     // シャドウマップをプレイヤーに追従
     Vector3 p = pPlayer_->GetWorldPosition();
     ShadowMap::GetInstance()->SetLightTarget({p.x, 0.0f, p.z});
-    pPlayer_->SetActiveDebugCamera(debugCamera_->GetActive());
+    pPlayer_->SetActiveDebugCamera(IsDebugCameraActive());
 
 #ifdef _DEBUG
     // パーティクル遷移中は操作開始しない（遷移中にカメラが動くのを防ぐ）。遷移なしなら即開始
@@ -234,7 +232,7 @@ void GameScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->DrawImGui();
+    DrawDebugCameraImGui();
     followCamera_->DrawImGui();
     startCamera_->DrawImGui();
     camera_->ShowDebugWindow();
@@ -276,11 +274,11 @@ void GameScene::CameraUpdate()
     /// ===================================================
     // どのカメラで描くかは CameraManager のアクティブ切り替えで決める
     // （行列のコピーは不要。アクティブなカメラがそのまま描画に使われる）
-    debugCamera_->Update(); // 有効中は自動でデバッグカメラへ切り替わる
+    UpdateDebugCamera(); // 有効中は自動でデバッグカメラへ切り替わる
 
     if (pPlayer_->GetIsAlive())
     {
-        if (!debugCamera_->GetActive())
+        if (!IsDebugCameraActive())
         {
             followCamera_->Update();
 #ifndef _DEBUG
@@ -321,7 +319,7 @@ void GameScene::CameraUpdate()
             deathCameraStarted_ = true;
         }
         deathCamera_->Update();
-        if (!debugCamera_->GetActive())
+        if (!IsDebugCameraActive())
         {
             pCameraManager_->SetActive(deathCamera_->GetCamera());
         }

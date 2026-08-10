@@ -14,6 +14,44 @@ void BaseScene::Initialize()
 
     // シーンのメインカメラ。最初の1台なので自動的にアクティブになる。
     camera_ = pCameraManager_->Create("メインカメラ");
+
+    // デバッグカメラは全シーン共通の仕組みなので、生成と初期化はここでまとめて行う。
+    // 派生シーン側では UpdateDebugCamera() / DrawDebugCameraImGui() を呼ぶだけでよい。
+    debugCamera_ = std::make_unique<DebugCamera>();
+    debugCamera_->Initialize();
+}
+
+void BaseScene::UpdateDebugCamera()
+{
+    if (debugCamera_)
+    {
+        // 有効中は自動でデバッグカメラへ切り替わる
+        debugCamera_->Update();
+    }
+}
+
+void BaseScene::DrawDebugCameraImGui()
+{
+    if (debugCamera_)
+    {
+        debugCamera_->DrawImGui();
+    }
+}
+
+bool BaseScene::IsDebugCameraActive() const
+{
+    return debugCamera_ && debugCamera_->GetActive();
+}
+
+bool BaseScene::ToggleDebugCamera()
+{
+    if (!debugCamera_)
+    {
+        return false;
+    }
+    const bool next = !debugCamera_->GetActive();
+    debugCamera_->SetActive(next);
+    return next;
 }
 
 ViewProjection &BaseScene::vp()

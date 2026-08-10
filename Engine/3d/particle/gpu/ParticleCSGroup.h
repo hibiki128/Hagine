@@ -135,7 +135,8 @@ class ParticleCSGroup
     Microsoft::WRL::ComPtr<ID3D12Resource> GetSettingsResource() const { return settingsResource_; }
     D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() const { return indexBufferView_; }
     D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const { return vertexBufferView_; }
-    ModelData GetModelData() const { return modelData_; }
+    // ModelData は頂点配列を抱えるので値返しにしない（参照するたびにフルコピーが走る）
+    const ModelData &GetModelData() const { return modelData_; }
     PerFrame *GetPerFrameData() const { return pPerFrameData_; }
     uint32_t GetMaxParticleCount() const { return pSettingsData_->maxParticleCount; }
     ParticleCSSettings *GetSettingsData() const { return pSettingsData_; }

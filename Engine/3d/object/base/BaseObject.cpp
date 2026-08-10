@@ -391,6 +391,14 @@ Vector3 BaseObject::GetWorldScale() {
     return transform_->GetWorldScale();
 }
 
+// モデルのローカル空間AABBを取得（マウス選択やフォーカスで実サイズを使うため）
+AABB BaseObject::GetLocalBounds() const {
+    if (obj3d_ && obj3d_->GetModel()) {
+        return obj3d_->GetModel()->GetLocalBounds();
+    }
+    return AABB{{-1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}};
+}
+
 std::optional<Vector3> BaseObject::GetJointWorldPosition(const std::string &jointName) {
     if (!obj3d_) {
         return std::nullopt;
@@ -1947,9 +1955,13 @@ void BaseObject::DebugObject() {
         ImGui::SetItemTooltip("形状を選んで追加。当たって押し返す挙動は『物理』セクションで設定する");
 
         if (ImGui::BeginPopup("AddColliderPopup##acp")) {
+            // 既定の衝突マスクはゲーム側が ColliderTagManager に設定したものを使う
+            // （エンジンが "Player" 等のゲーム固有タグを直接知らないようにするため）
             auto makeDefault = [](auto *c) {
                 c->SetTag("Environment");
-                c->AddCollisionMask("Player");
+                for (const std::string &mask : ColliderTagManager::GetInstance()->GetDefaultCollisionMasks()) {
+                    c->AddCollisionMask(mask);
+                }
             };
             if (ImGui::MenuItem("Sphere")) {
                 auto *c = AddSphereCollider();

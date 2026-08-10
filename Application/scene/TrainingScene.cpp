@@ -14,7 +14,6 @@ void TrainingScene::Initialize()
     /// ===================================================
     BaseScene::Initialize();
     pLightGroup_->LoadLightData("GameLight");
-    debugCamera_ = std::make_unique<DebugCamera>();
     player_ = std::make_unique<Player>();
     enemy_ = std::make_unique<Enemy>();
     followCamera_ = FollowCameraFactory::Create();
@@ -30,7 +29,6 @@ void TrainingScene::Initialize()
     /// ===================================================
     /// 初期化
     /// ===================================================
-    debugCamera_->Initialize();
     player_->Init("player");
     enemy_->Init("pEnemy");
     ground_->Init("Ground");
@@ -132,7 +130,7 @@ void TrainingScene::Update()
     // 環境オブジェクトの更新
     ground_->Update();
     aroundField_->Update();
-    pPlayer_->SetActiveDebugCamera(debugCamera_->GetActive());
+    pPlayer_->SetActiveDebugCamera(IsDebugCameraActive());
 
     // シャドウマップをプレイヤーに追従
     Vector3 p = pPlayer_->GetWorldPosition();
@@ -171,7 +169,7 @@ void TrainingScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->DrawImGui();
+    DrawDebugCameraImGui();
     followCamera_->DrawImGui();
     camera_->ShowDebugWindow();
 }
@@ -200,8 +198,8 @@ void TrainingScene::CameraUpdate()
     /// カメラ更新
     /// ===================================================
     // どのカメラで描くかは CameraManager のアクティブ切り替えで決める
-    debugCamera_->Update(); // 有効中は自動でデバッグカメラへ切り替わる
-    if (!debugCamera_->GetActive())
+    UpdateDebugCamera(); // 有効中は自動でデバッグカメラへ切り替わる
+    if (!IsDebugCameraActive())
     {
         followCamera_->Update();
         pCameraManager_->SetActive(followCamera_->GetCamera());

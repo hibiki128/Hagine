@@ -106,6 +106,36 @@ void MotionEditor::Register(BaseObject *pObject)
     ImGuiNotification::Post("モーションエディタに登録しました: " + name, {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
+void MotionEditor::Unregister(BaseObject *pObject)
+{
+    if (!pObject)
+        return;
+
+    // 名前ではなく実体で引く。改名されていても取り残しが出ないようにするため。
+    for (auto it = motions_.begin(); it != motions_.end();)
+    {
+        if (it->second.pTarget == pObject)
+        {
+            if (selectedName_ == it->first)
+            {
+                selectedName_.clear();
+                selectedControlPoint_ = -1;
+            }
+            it = motions_.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    // 攻撃モーションの進行状態もオブジェクト単位で持っているので一緒に落とす
+    comboStartPositions_.erase(pObject);
+    comboStartRotations_.erase(pObject);
+    comboStartScales_.erase(pObject);
+    attackEndIntervals_.erase(pObject);
+}
+
 void MotionEditor::CleanupFinishedTemporaryMotions()
 {
     auto it = motions_.begin();

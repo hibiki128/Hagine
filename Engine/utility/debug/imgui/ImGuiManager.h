@@ -176,6 +176,12 @@ class ImGuiManager {
     // アセットブラウザ窓（images ルートをサムネ一覧表示、各サムネをD&Dのドラッグ元にする）
     void ShowAssetBrowserWindow();
 
+    /// <summary>
+    /// アセットブラウザの画像タブ（サムネイル一覧）を描画する
+    /// ウィンドウの Begin/End は呼び出し元が行う
+    /// </summary>
+    void ShowImageAssetGrid();
+
     // ゲームパラメータHub窓（コード登録済みパラメータを実行中に仕分け・調整する）
     void ShowGameParamWindow();
 
@@ -218,15 +224,9 @@ class ImGuiManager {
     ImVec2 sceneSizeForRay_ = {}; // 仮想解像度座標系（レイ計算用）
 
 #endif // USE_IMGUI
-    int cubeCount_ = 0;
-    int sphereCount_ = 0;
-    int planeCount_ = 0;
-    int cylinderCount_ = 0;
-    int ringCount_ = 0;
-    int triangleCount_ = 0;
-    int capsuleCount_ = 0;
-    int pyramidCount_ = 0;
-    int coneCount_ = 0;
+    // プリミティブごとの連番カウンタは廃止。
+    // 名前の一意化は BaseObjectManager::MakeUniqueObjectName が行う
+    // （カウンタ方式は読み込み後の既存名と衝突しうるため）。
 
     // エンジンのウィンドウを描画するフラグ
     // 重いUIコンポーネントの表示状態管理

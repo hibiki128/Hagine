@@ -137,6 +137,162 @@ void GizmoTarget::ApplyTranslationDelta(const Vector3 &delta)
     }
 }
 
+namespace {
+// アフィン行列をスケール・回転・平行移動へ分解する。
+// この行列規約は行ベクトル（v * M）なので、各行が基底ベクトルになる。
+void DecomposeAffine(const Matrix4x4 &matrix, Vector3 &scale, Quaternion &rotation, Vector3 &translation)
+{
+    translation = {matrix.m[3][0], matrix.m[3][1], matrix.m[3][2]};
+
+    Vector3 axis[3] = {
+        {matrix.m[0][0], matrix.m[0][1], matrix.m[0][2]},
+        {matrix.m[1][0], matrix.m[1][1], matrix.m[1][2]},
+        {matrix.m[2][0], matrix.m[2][1], matrix.m[2][2]}};
+
+    float length[3] = {axis[0].Length(), axis[1].Length(), axis[2].Length()};
+
+    // 左手系で行列式が負なら鏡映が入っている。X軸のスケールを負にして回転成分から追い出す。
+    const Vector3 cross = axis[0].Cross(axis[1]);
+    if (cross.Dot(axis[2]) < 0.0f)
+    {
+        length[0] = -length[0];
+        axis[0] = axis[0] * -1.0f;
+    }
+
+    scale = {length[0], length[1], length[2]};
+
+    // スケール0の軸は方向が求まらないので、その軸だけ単位行列の行を使う
+    constexpr float kEpsilon = 1e-6f;
+    Matrix4x4 rotationMatrix = MakeIdentity4x4();
+    for (int row = 0; row < 3; ++row)
+    {
+        const float absLength = std::abs(length[row]);
+        if (absLength <= kEpsilon)
+        {
+            continue;
+        }
+        rotationMatrix.m[row][0] = axis[row].x / absLength;
+        rotationMatrix.m[row][1] = axis[row].y / absLength;
+        rotationMatrix.m[row][2] = axis[row].z / absLength;
+    }
+
+    rotation = Quaternion::FromMatrix(rotationMatrix).Normalize();
+}
+
+// 親を持つ WorldTransform について、親側のワールド行列（継承フラグ反映済み）を返す。
+// UpdateMatrix と同じ組み立てにしないと、ワールド→ローカル変換がずれる。
+Matrix4x4 BuildInheritedParentMatrix(const WorldTransform &transform)
+{
+    const WorldTransform *pParent = transform.pParent_;
+    if (!pParent)
+    {
+        return MakeIdentity4x4();
+    }
+    if (transform.inheritTranslation_ && transform.inheritRotation_ && transform.inheritScale_)
+    {
+        return pParent->matWorld_;
+    }
+    const Vector3 parentScale = transform.inheritScale_ ? pParent->GetWorldScale() : Vector3{1.0f, 1.0f, 1.0f};
+    const Quaternion parentRotation = transform.inheritRotation_ ? pParent->GetWorldRotationQuaternion() : Quaternion::IdentityQuaternion();
+    const Vector3 parentTranslation = transform.inheritTranslation_ ? pParent->GetWorldPosition() : Vector3{0.0f, 0.0f, 0.0f};
+    return MakeAffineMatrix(parentScale, parentRotation, parentTranslation);
+}
+
+// ワールド行列を WorldTransform のローカル成分へ書き戻す
+void ApplyWorldMatrixToTransform(WorldTransform &transform, const Matrix4x4 &worldMatrix)
+{
+    // 親がいる場合は親のぶんを打ち消してローカル成分に戻す
+    Matrix4x4 localMatrix = worldMatrix;
+    if (transform.pParent_)
+    {
+        localMatrix = worldMatrix * Inverse(BuildInheritedParentMatrix(transform));
+    }
+
+    Vector3 scale{};
+    Quaternion rotation{};
+    Vector3 translation{};
+    DecomposeAffine(localMatrix, scale, rotation, translation);
+
+    transform.scale_ = scale;
+    transform.translation_ = translation;
+    // SetRotationQuaternion はオイラー角モードのときだけ eulerRotation_ を更新するので、
+    // クォータニオンモードでは UpdateQuaternion のオイラー再変換に巻き込まれない。
+    transform.SetRotationQuaternion(rotation);
+    transform.UpdateMatrix();
+}
+} // namespace
+
+// ギズモ操作後のワールド行列を各型へ反映する
+void GizmoTarget::ApplyWorldMatrix(const Matrix4x4 &worldMatrix)
+{
+    // スクリーン空間は XY 平行移動しか意味を持たないので、従来どおりデルタ適用に落とす
+    if (isScreenSpace)
+    {
+        const Vector3 current = GetWorldPosition();
+        ApplyTranslationDelta({worldMatrix.m[3][0] - current.x, worldMatrix.m[3][1] - current.y, 0.0f});
+        return;
+    }
+
+    switch (type)
+    {
+    case Type::BaseObject:
+        if (baseObject && baseObject->GetWorldTransform())
+        {
+            ApplyWorldMatrixToTransform(*baseObject->GetWorldTransform(), worldMatrix);
+            // 子オブジェクトのワールド行列も追従させる
+            baseObject->UpdateWorldTransformHierarchy();
+        }
+        break;
+
+    case Type::WorldTransform:
+        if (worldTransform)
+        {
+            ApplyWorldMatrixToTransform(*worldTransform, worldMatrix);
+        }
+        break;
+
+    case Type::FreeTransform:
+        if (translate)
+        {
+            Vector3 decomposedScale{};
+            Quaternion decomposedRotation{};
+            Vector3 decomposedTranslation{};
+            DecomposeAffine(worldMatrix, decomposedScale, decomposedRotation, decomposedTranslation);
+
+            *translate = decomposedTranslation;
+            // rotate / scale は持っていない対象もあるので、あるものだけ書き込む
+            if (rotate)
+            {
+                *rotate = decomposedRotation.ToEulerAngles();
+            }
+            if (scale)
+            {
+                *scale = decomposedScale;
+            }
+        }
+        break;
+
+    case Type::Sprite2D:
+        if (position2D)
+        {
+            position2D->x = worldMatrix.m[3][0];
+            position2D->y = worldMatrix.m[3][1];
+        }
+        break;
+    }
+}
+
+// マウス選択・フォーカス用のローカル空間AABBを返す
+AABB GizmoTarget::GetLocalBounds() const
+{
+    if (type == Type::BaseObject && baseObject)
+    {
+        return baseObject->GetLocalBounds();
+    }
+    // BaseObject 以外（エミッター・ライト等）は実体の形が無いので、掴める大きさの箱を返す
+    return AABB{{-1.3f, -1.3f, -1.3f}, {1.3f, 1.3f, 1.3f}};
+}
+
 // ImGui で変換詳細を表示する
 // imguiCallback が設定されている場合はそちらを優先する
 void GizmoTarget::ShowImGui()
@@ -220,7 +376,7 @@ void ImGuizmoManager::Finalize()
 {
     transformMap_.clear();
     selectedNames_.clear();
-    copiedObjects_.clear();
+    copiedNames_.clear();
 }
 
 void ImGuizmoManager::BeginFrame()
@@ -247,11 +403,6 @@ void ImGuizmoManager::AddTarget(const std::string &name, BaseObject *pObject, bo
     transformMap_[name] = target;
 
     UpdateFilteredNames();
-
-    if (selectedNames_.empty())
-    {
-        selectedNames_.insert(name);
-    }
 }
 
 // WorldTransform のみを持つオブジェクトを登録する
@@ -271,11 +422,6 @@ void ImGuizmoManager::AddTarget(const std::string &name, WorldTransform *worldTr
     transformMap_[name] = target;
 
     UpdateFilteredNames();
-
-    if (selectedNames_.empty())
-    {
-        selectedNames_.insert(name);
-    }
 }
 
 // Vector3 ポインタを直接指定して登録する（Sprite・ParticleEmitter など）
@@ -300,11 +446,6 @@ void ImGuizmoManager::AddTarget(const std::string &name,
     transformMap_[name] = target;
 
     UpdateFilteredNames();
-
-    if (selectedNames_.empty())
-    {
-        selectedNames_.insert(name);
-    }
 }
 
 // Sprite を登録する（スクリーン空間 XY のみ操作）
@@ -321,11 +462,6 @@ void ImGuizmoManager::AddTarget(const std::string &name, Sprite *pSprite, bool s
     transformMap_[name] = target;
 
     UpdateFilteredNames();
-
-    if (selectedNames_.empty())
-    {
-        selectedNames_.insert(name);
-    }
 }
 
 // ---- 選択オブジェクト取得（BaseObject 互換用）---------------------------
@@ -370,6 +506,35 @@ void ImGuizmoManager::DrawImGui()
     ImGui::Checkbox("デバッグ表示する", &isDrawDebug_);
     ImGui::PopStyleColor();
     ImGui::SetItemTooltip("選択中オブジェクトの AABB / スフィア / レイを線で表示します");
+
+    if (isDrawDebug_)
+    {
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
+        ImGui::Checkbox("選択中のみ", &debugSelectedOnly_);
+        ImGui::SameLine();
+        ImGui::Checkbox("AABB", &showDebugAABB_);
+        ImGui::SameLine();
+        ImGui::Checkbox("スフィア", &showDebugSphere_);
+        ImGui::SameLine();
+        ImGui::Checkbox("レイ", &showDebugHitPoints_);
+        ImGui::PopStyleColor();
+        ImGui::Unindent();
+    }
+
+    // ---- 操作説明 ----
+    ImGui::Spacing();
+    if (ImGui::CollapsingHeader("[ ショートカット ]"))
+    {
+        ImGui::BulletText("1 / 2 / 3 : 移動 / 回転 / スケール");
+        ImGui::BulletText("4 : ローカル ⇔ ワールド 切替");
+        ImGui::BulletText("5 : スナップ ON/OFF （Shift 押下中は一時反転）");
+        ImGui::BulletText("F : 選択オブジェクトへ視点を寄せる");
+        ImGui::BulletText("Tab : 重なったオブジェクトを順に選択");
+        ImGui::BulletText("Ctrl+D : 複製 / Ctrl+C・Ctrl+V : コピー・貼り付け");
+        ImGui::BulletText("空ドラッグ : 矩形選択（Ctrl 併用で選択に追加）");
+        ImGui::TextDisabled("※ シーンウィンドウにマウスがある時だけ効きます");
+    }
 
     // ---- 操作対象フィルタ ----
     // 4種類（オブジェクト/スプライト/パーティクル/ライト）が同時にあると掴みたい物を選びづらいので、
@@ -443,6 +608,74 @@ void ImGuizmoManager::DrawImGui()
     if (ImGui::RadioButton("ワールド", currentMode_ == ImGuizmo::WORLD))
         currentMode_ = ImGuizmo::WORLD;
     ImGui::PopStyleColor();
+
+    ImGui::Spacing();
+    SectionHeader("[ スナップ（グリッド吸着）]", DebugTheme::kAccentYellow);
+    ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentYellow);
+    ImGui::Checkbox("スナップを使う", &useSnap_);
+    ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("操作量を刻み幅に丸めます。Shift 押下中はこの設定が一時的に反転します");
+
+    ImGui::SetNextItemWidth(120.0f);
+    ImGui::DragFloat("移動の刻み", &snapTranslate_, 0.05f, 0.01f, 100.0f, "%.2f");
+    ImGui::SameLine();
+    // 等間隔に並べるときによく使う刻みをワンタッチで
+    if (ImGui::SmallButton("0.5##snapT"))
+        snapTranslate_ = 0.5f;
+    ImGui::SameLine();
+    if (ImGui::SmallButton("1##snapT"))
+        snapTranslate_ = 1.0f;
+    ImGui::SameLine();
+    if (ImGui::SmallButton("5##snapT"))
+        snapTranslate_ = 5.0f;
+
+    ImGui::SetNextItemWidth(120.0f);
+    ImGui::DragFloat("回転の刻み(度)", &snapRotateDegree_, 1.0f, 1.0f, 180.0f, "%.0f");
+    ImGui::SameLine();
+    if (ImGui::SmallButton("15##snapR"))
+        snapRotateDegree_ = 15.0f;
+    ImGui::SameLine();
+    if (ImGui::SmallButton("45##snapR"))
+        snapRotateDegree_ = 45.0f;
+    ImGui::SameLine();
+    if (ImGui::SmallButton("90##snapR"))
+        snapRotateDegree_ = 90.0f;
+
+    ImGui::SetNextItemWidth(120.0f);
+    ImGui::DragFloat("拡縮の刻み", &snapScale_, 0.01f, 0.01f, 10.0f, "%.2f");
+
+    ImGui::Spacing();
+    SectionHeader("[ 整列・配置 ]", DebugTheme::kAccentPurple);
+    ImGui::TextDisabled("選択中のオブジェクトをまとめて並べます");
+
+    static const char *kAxisLabels[3] = {"X", "Y", "Z"};
+    // 軸ごとに「最小 / 中央 / 最大 に揃える」を並べる
+    for (int axis = 0; axis < 3; ++axis)
+    {
+        ImGui::PushID(axis);
+        ImGui::TextUnformatted(kAxisLabels[axis]);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("最小##align"))
+            AlignSelected(axis, AlignMode::Min);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("中央##align"))
+            AlignSelected(axis, AlignMode::Center);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("最大##align"))
+            AlignSelected(axis, AlignMode::Max);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("等間隔##dist"))
+            DistributeSelected(axis);
+        ImGui::PopID();
+    }
+    ImGui::SetItemTooltip("等間隔は両端をそのままに、間のオブジェクトを均等な位置へ動かします（3つ以上必要）");
+
+    if (ImGui::Button("地面に接地##snapGround", ImVec2(-1, 0)))
+    {
+        SnapSelectedToGround();
+    }
+    ImGui::SetItemTooltip("選択中のオブジェクトを、真下にある他のオブジェクトの上面へ落とします\n"
+                          "（下に何も無ければ Y=0 へ）");
 
     ImGui::Separator();
 
@@ -531,9 +764,12 @@ void ImGuizmoManager::DrawImGui()
         auto it = transformMap_.find(*selectedNames_.begin());
         if (it != transformMap_.end() && it->second.type == GizmoTarget::Type::BaseObject)
         {
+            if (ImGui::Button("複製 (Ctrl+D)", ImVec2(-1, 30)))
+                DuplicateSelectedObjects();
+            ImGui::SetItemTooltip("選択中のオブジェクトをその場で複製し、複製したほうを選択状態にします");
             if (ImGui::Button("コピー", ImVec2(-1, 30)))
                 CopySelectedObjects();
-            if (!copiedObjects_.empty())
+            if (!copiedNames_.empty())
             {
                 if (ImGui::Button("ペースト", ImVec2(-1, 30)))
                     PasteObjects();
@@ -586,13 +822,16 @@ void ImGuizmoManager::Update(const ImVec2 &scenePosition, const ImVec2 &sceneSiz
 
     if (!ImGuizmo::IsUsing())
     {
+        // 矩形選択のドラッグ判定を先に回す。
+        // しきい値未満のドラッグはクリック扱いになり、下の単体選択がそのまま働く。
+        HandleBoxSelection(scenePosition, sceneSize, sceneHovered);
         HandleMouseSelection(scenePosition, sceneSize, sceneHovered);
-
-        // Tab キーで重複オブジェクトをサイクル選択
-        if (Input::GetInstance()->TriggerKey(DIK_TAB) && overlapCandidates_.size() > 1)
-        {
-            CycleOverlapSelection();
-        }
+        HandleHotkeys(sceneHovered);
+    }
+    else
+    {
+        // ギズモ操作に入ったら矩形選択は取り消す（枠が出しっぱなしにならないように）
+        isBoxSelecting_ = false;
     }
 
     DrawSelectedObjectHighlight();
@@ -660,9 +899,11 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     bool isInScene = (mousePos.x >= scenePosition.x && mousePos.x <= scenePosition.x + sceneSize.x &&
                       mousePos.y >= scenePosition.y && mousePos.y <= scenePosition.y + sceneSize.y);
 
-    // 他の ImGui ウィンドウがシーンに重なっている上でのクリックは無視（誤選択防止）
-    if (!sceneHovered || ImGuizmo::IsUsing() || !isInScene || !Input::IsTriggerMouse(0) || !pViewProjection_)
+    // 他の ImGui ウィンドウがシーンに重なっている上でのクリックは無視（誤選択防止）。
+    // 選択の確定は「押した瞬間」ではなく「ドラッグせずに離した瞬間」（HandleBoxSelection が判定）。
+    if (!sceneHovered || ImGuizmo::IsUsing() || !isInScene || !clickSelectRequested_ || !pViewProjection_)
         return;
+    clickSelectRequested_ = false;
 
     bool isCtrlPressed = Input::GetInstance()->PushKey(DIK_LCONTROL);
     std::string pickedName;
@@ -743,13 +984,6 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
         };
         std::vector<HitCandidate> candidates;
 
-        AABB defaultAABB;
-        defaultAABB.min = {-1.3f, -1.3f, -1.3f};
-        defaultAABB.max = {1.3f, 1.3f, 1.3f};
-        Sphere defaultSphere;
-        defaultSphere.center = {0.0f, 0.0f, 0.0f};
-        defaultSphere.radius = 1.3f;
-
         for (const auto &pair : transformMap_)
         {
             const GizmoTarget &target = pair.second;
@@ -765,13 +999,13 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
             if (isMultiSelecting_ && selectedNames_.find(pair.first) != selectedNames_.end())
                 continue;
 
+            // モデルの実形状（ローカルAABB）で判定する。
+            // 固定サイズの箱で判定していた頃は、地面のような平たいモデルや
+            // 細長いモデルで「見た目と掴める場所がずれる」ことになっていた。
+            const AABB localBounds = target.GetLocalBounds();
             Matrix4x4 worldMatrix = target.GetWorldMatrix();
             RayHitInfo currentHit;
-            bool hit = Input::RayIntersectAABBByMatrix(currentRay, worldMatrix, currentHit, defaultAABB);
-            if (!hit)
-            {
-                hit = Input::RayIntersectSphereByMatrix(currentRay, worldMatrix, currentHit, defaultSphere);
-            }
+            bool hit = Input::RayIntersectAABBByMatrix(currentRay, worldMatrix, currentHit, localBounds);
 
             if (hit)
             {
@@ -851,6 +1085,498 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
     }
 }
 
+// シーンウィンドウ上でだけ効くギズモ操作のホットキー。
+// デバッグカメラが WASD を使うため、移動キーと衝突しないキーだけを割り当てている。
+void ImGuizmoManager::HandleHotkeys(bool sceneHovered)
+{
+    // 文字入力中やシーン以外のウィンドウを触っている間は誤爆させない
+    if (!sceneHovered || ImGui::GetIO().WantTextInput)
+    {
+        return;
+    }
+
+    Input *input = Input::GetInstance();
+
+    // Ctrl 併用のショートカット（コピー等）と食い合わないよう、単独押しのときだけ反応させる
+    const bool ctrlHeld = input->PushKey(DIK_LCONTROL) || input->PushKey(DIK_RCONTROL);
+
+    if (input->TriggerKey(DIK_TAB) && overlapCandidates_.size() > 1)
+    {
+        CycleOverlapSelection();
+    }
+
+    if (ctrlHeld)
+    {
+        return;
+    }
+
+    if (input->TriggerKey(DIK_1))
+    {
+        currentOperation_ = ImGuizmo::TRANSLATE;
+    }
+    if (input->TriggerKey(DIK_2))
+    {
+        currentOperation_ = ImGuizmo::ROTATE;
+    }
+    if (input->TriggerKey(DIK_3))
+    {
+        currentOperation_ = ImGuizmo::SCALE;
+    }
+    if (input->TriggerKey(DIK_4))
+    {
+        currentMode_ = (currentMode_ == ImGuizmo::LOCAL) ? ImGuizmo::WORLD : ImGuizmo::LOCAL;
+        ImGuiNotification::Post(currentMode_ == ImGuizmo::LOCAL ? "座標系: ローカル" : "座標系: ワールド",
+                                {0.42f, 0.66f, 0.68f, 1.0f});
+    }
+    if (input->TriggerKey(DIK_5))
+    {
+        useSnap_ = !useSnap_;
+        ImGuiNotification::Post(useSnap_ ? "スナップ: ON" : "スナップ: OFF", {0.45f, 0.68f, 0.52f, 1.0f});
+    }
+    if (input->TriggerKey(DIK_F))
+    {
+        RequestFocusOnSelection();
+    }
+}
+
+// 選択中ターゲットの重心と大きさからフォーカス要求を立てる
+void ImGuizmoManager::RequestFocusOnSelection()
+{
+    Vector3 center = {0.0f, 0.0f, 0.0f};
+    float radius = 0.0f;
+    int count = 0;
+
+    for (const std::string &name : selectedNames_)
+    {
+        auto it = transformMap_.find(name);
+        if (it == transformMap_.end() || it->second.isScreenSpace)
+        {
+            continue;
+        }
+        const GizmoTarget &target = it->second;
+        center = center + target.GetWorldPosition();
+        ++count;
+
+        // ローカルAABBにワールドスケールを掛けて、画面に収まる距離の目安にする
+        const AABB bounds = target.GetLocalBounds();
+        const Matrix4x4 world = target.GetWorldMatrix();
+        const Vector3 worldScale = {
+            Vector3{world.m[0][0], world.m[0][1], world.m[0][2]}.Length(),
+            Vector3{world.m[1][0], world.m[1][1], world.m[1][2]}.Length(),
+            Vector3{world.m[2][0], world.m[2][1], world.m[2][2]}.Length()};
+        const Vector3 halfExtent = {
+            (bounds.max.x - bounds.min.x) * 0.5f * worldScale.x,
+            (bounds.max.y - bounds.min.y) * 0.5f * worldScale.y,
+            (bounds.max.z - bounds.min.z) * 0.5f * worldScale.z};
+        radius = (std::max)(radius, halfExtent.Length());
+    }
+
+    if (count == 0)
+    {
+        ImGuiNotification::Post("フォーカスする対象が選択されていません", {0.82f, 0.58f, 0.36f, 1.0f});
+        return;
+    }
+
+    focusTarget_ = center / static_cast<float>(count);
+    focusRadius_ = (std::max)(radius, 0.5f);
+    focusRequested_ = true;
+}
+
+// フォーカス要求を取り出す（DebugCamera から毎フレーム呼ばれる）
+bool ImGuizmoManager::ConsumeFocusRequest(Vector3 &outTarget, float &outRadius)
+{
+    if (!focusRequested_)
+    {
+        return false;
+    }
+    outTarget = focusTarget_;
+    outRadius = focusRadius_;
+    focusRequested_ = false;
+    return true;
+}
+
+// 新規オブジェクトの既定配置位置（カメラ前方）を返す
+Vector3 ImGuizmoManager::GetSpawnPosition(float distance) const
+{
+    if (!pViewProjection_)
+    {
+        return {0.0f, 0.0f, 0.0f};
+    }
+
+    // カメラのワールド行列は行ベクトル規約なので、3行目が位置・2行目がZ軸（視線方向）
+    const Matrix4x4 &cameraWorld = pViewProjection_->matWorld_;
+    const Vector3 cameraPosition = {cameraWorld.m[3][0], cameraWorld.m[3][1], cameraWorld.m[3][2]};
+    const Vector3 forward = Vector3{cameraWorld.m[2][0], cameraWorld.m[2][1], cameraWorld.m[2][2]}.Normalize();
+
+    Vector3 spawn = cameraPosition + forward * distance;
+
+    // スナップ中はグリッドに乗せて出す（並べる作業の初手がずれない）
+    if (useSnap_ && snapTranslate_ > 0.0f)
+    {
+        spawn.x = std::round(spawn.x / snapTranslate_) * snapTranslate_;
+        spawn.y = std::round(spawn.y / snapTranslate_) * snapTranslate_;
+        spawn.z = std::round(spawn.z / snapTranslate_) * snapTranslate_;
+    }
+    return spawn;
+}
+
+// ---- 矩形（ラバーバンド）選択 ------------------------------------------
+
+void ImGuizmoManager::HandleBoxSelection(const ImVec2 &scenePosition, const ImVec2 &sceneSize, bool sceneHovered)
+{
+    ImGuiIO &io = ImGui::GetIO();
+    const ImVec2 mousePos = io.MousePos;
+    const bool isInScene = (mousePos.x >= scenePosition.x && mousePos.x <= scenePosition.x + sceneSize.x &&
+                            mousePos.y >= scenePosition.y && mousePos.y <= scenePosition.y + sceneSize.y);
+
+    clickSelectRequested_ = false;
+
+    // ギズモの上で押した場合はギズモ操作を優先する
+    if (!isBoxSelecting_)
+    {
+        if (sceneHovered && isInScene && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGuizmo::IsOver())
+        {
+            isBoxSelecting_ = true;
+            boxSelectStart_ = mousePos;
+        }
+        return;
+    }
+
+    // ドラッグ中は枠を描く。シーンウィンドウの前面に出したいので前景の描画リストを使う。
+    const ImVec2 rectMin = {(std::min)(boxSelectStart_.x, mousePos.x), (std::min)(boxSelectStart_.y, mousePos.y)};
+    const ImVec2 rectMax = {(std::max)(boxSelectStart_.x, mousePos.x), (std::max)(boxSelectStart_.y, mousePos.y)};
+    const float dragWidth = rectMax.x - rectMin.x;
+    const float dragHeight = rectMax.y - rectMin.y;
+    const bool isDragEnough = (dragWidth >= kBoxSelectThreshold || dragHeight >= kBoxSelectThreshold);
+
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+    {
+        if (isDragEnough)
+        {
+            ImDrawList *drawList = ImGui::GetForegroundDrawList();
+            drawList->AddRectFilled(rectMin, rectMax, IM_COL32(90, 150, 220, 40));
+            drawList->AddRect(rectMin, rectMax, IM_COL32(120, 190, 255, 220));
+        }
+        return;
+    }
+
+    // ボタンを離した：しきい値を超えていれば矩形選択として確定する。
+    // 超えていない場合は「クリックだった」ことにして単体選択へ渡す。
+    if (isDragEnough)
+    {
+        SelectInsideScreenRect(rectMin, rectMax, scenePosition, sceneSize, io.KeyCtrl);
+    }
+    else
+    {
+        clickSelectRequested_ = true;
+    }
+    isBoxSelecting_ = false;
+}
+
+void ImGuizmoManager::SelectInsideScreenRect(const ImVec2 &rectMin, const ImVec2 &rectMax,
+                                             const ImVec2 &scenePosition, const ImVec2 &sceneSize, bool additive)
+{
+    if (!additive)
+    {
+        selectedNames_.clear();
+    }
+
+    size_t hitCount = 0;
+    for (const auto &[name, target] : transformMap_)
+    {
+        if (!target.selectable || !IsCategoryEnabled(target.category))
+        {
+            continue;
+        }
+        if (target.type == GizmoTarget::Type::BaseObject &&
+            (!target.baseObject || !target.baseObject->IsGizmoSelectable()))
+        {
+            continue;
+        }
+
+        // スクリーン空間（スプライト）は仮想解像度座標なので、シーン矩形へ写してから判定する
+        ImVec2 screenPoint;
+        if (target.isScreenSpace)
+        {
+            const Vector3 position = target.GetWorldPosition();
+            screenPoint.x = scenePosition.x + (position.x / static_cast<float>(WinApp::GetVirtualWidth())) * sceneSize.x;
+            screenPoint.y = scenePosition.y + (position.y / static_cast<float>(WinApp::GetVirtualHeight())) * sceneSize.y;
+        }
+        else
+        {
+            Vector3 projected;
+            if (!WorldToScreen(target.GetWorldPosition(), projected, scenePosition, sceneSize))
+            {
+                continue; // カメラの後ろにある
+            }
+            screenPoint = {projected.x, projected.y};
+        }
+
+        if (screenPoint.x >= rectMin.x && screenPoint.x <= rectMax.x &&
+            screenPoint.y >= rectMin.y && screenPoint.y <= rectMax.y)
+        {
+            selectedNames_.insert(name);
+            ++hitCount;
+        }
+    }
+
+    // 重なり候補は矩形選択では意味を持たないので畳んでおく
+    overlapCandidates_.clear();
+    overlapCycleIndex_ = 0;
+    isMultiSelecting_ = selectedNames_.size() > 1;
+
+    ImGuiNotification::Post("矩形選択: " + std::to_string(hitCount) + "個", {0.4f, 0.8f, 1.0f, 1.0f});
+}
+
+// ---- 整列・等間隔配置・地面スナップ ------------------------------------
+
+namespace {
+// ボタン1発で完了する一括操作を Undo 履歴へ積むためのヘルパー。
+// ImGuiUndoTracker は「ウィジェット編集ジェスチャ」を追う仕組みなので、
+// こうした即時実行のコマンドは Copy/Paste と同様に明示的に Push する。
+template <typename Operation>
+void RunAsUndoableCommand(const std::string &label, Operation &&operation)
+{
+    nlohmann::json before = BaseObjectManager::GetInstance()->CaptureUndoState();
+    operation();
+    nlohmann::json after = BaseObjectManager::GetInstance()->CaptureUndoState();
+    if (before == after)
+    {
+        return; // 何も変わらなかったら履歴を汚さない
+    }
+    auto [diffBefore, diffAfter] = MakeTopLevelJsonDiff(before, after);
+    UndoRedoManager::GetInstance()->Push(std::make_unique<JsonStateCommand>(
+        label, std::move(diffBefore), std::move(diffAfter),
+        [](const nlohmann::json &s) { BaseObjectManager::GetInstance()->RestoreUndoState(s); }));
+}
+} // namespace
+
+std::vector<GizmoTarget *> ImGuizmoManager::CollectMovableSelection()
+{
+    std::vector<GizmoTarget *> targets;
+    for (const std::string &name : selectedNames_)
+    {
+        auto it = transformMap_.find(name);
+        if (it == transformMap_.end() || it->second.isScreenSpace)
+        {
+            continue; // スプライトは3D整列の対象外
+        }
+        targets.push_back(&it->second);
+    }
+    // 並びが実行のたびに変わらないよう名前順に固定する（等間隔配置の結果を安定させるため）
+    std::sort(targets.begin(), targets.end(),
+              [](const GizmoTarget *lhs, const GizmoTarget *rhs) { return lhs->name < rhs->name; });
+    return targets;
+}
+
+void ImGuizmoManager::SetTargetWorldPosition(GizmoTarget &target, const Vector3 &worldPosition)
+{
+    // ワールド行列の平行移動成分だけ差し替えて適用する。
+    // ApplyWorldMatrix が親のぶんを打ち消してくれるので、親子付けされていても正しく動く。
+    Matrix4x4 worldMatrix = target.GetWorldMatrix();
+    worldMatrix.m[3][0] = worldPosition.x;
+    worldMatrix.m[3][1] = worldPosition.y;
+    worldMatrix.m[3][2] = worldPosition.z;
+    target.ApplyWorldMatrix(worldMatrix);
+}
+
+void ImGuizmoManager::AlignSelected(int axis, AlignMode mode)
+{
+    if (axis < 0 || axis > 2)
+    {
+        return;
+    }
+    std::vector<GizmoTarget *> targets = CollectMovableSelection();
+    if (targets.size() < 2)
+    {
+        ImGuiNotification::Post("整列するには2つ以上選択してください", {0.82f, 0.58f, 0.36f, 1.0f});
+        return;
+    }
+
+    auto axisOf = [axis](const Vector3 &v) { return (&v.x)[axis]; };
+
+    float minValue = axisOf(targets.front()->GetWorldPosition());
+    float maxValue = minValue;
+    float sum = 0.0f;
+    for (const GizmoTarget *target : targets)
+    {
+        const float value = axisOf(target->GetWorldPosition());
+        minValue = (std::min)(minValue, value);
+        maxValue = (std::max)(maxValue, value);
+        sum += value;
+    }
+
+    float alignedValue = minValue;
+    switch (mode)
+    {
+    case AlignMode::Min:
+        alignedValue = minValue;
+        break;
+    case AlignMode::Center:
+        alignedValue = sum / static_cast<float>(targets.size());
+        break;
+    case AlignMode::Max:
+        alignedValue = maxValue;
+        break;
+    }
+
+    RunAsUndoableCommand("整列", [&] {
+        for (GizmoTarget *target : targets)
+        {
+            Vector3 position = target->GetWorldPosition();
+            (&position.x)[axis] = alignedValue;
+            SetTargetWorldPosition(*target, position);
+        }
+    });
+
+    static const char *kAxisNames[3] = {"X", "Y", "Z"};
+    ImGuiNotification::Post(std::string("整列しました (") + kAxisNames[axis] + ")", {0.45f, 0.68f, 0.52f, 1.0f});
+}
+
+void ImGuizmoManager::DistributeSelected(int axis)
+{
+    if (axis < 0 || axis > 2)
+    {
+        return;
+    }
+    std::vector<GizmoTarget *> targets = CollectMovableSelection();
+    if (targets.size() < 3)
+    {
+        ImGuiNotification::Post("等間隔にするには3つ以上選択してください", {0.82f, 0.58f, 0.36f, 1.0f});
+        return;
+    }
+
+    // 対象軸の座標順に並べ替えてから、両端の間を均等割りする
+    std::sort(targets.begin(), targets.end(), [axis](const GizmoTarget *lhs, const GizmoTarget *rhs) {
+        const Vector3 lhsPos = lhs->GetWorldPosition();
+        const Vector3 rhsPos = rhs->GetWorldPosition();
+        return (&lhsPos.x)[axis] < (&rhsPos.x)[axis];
+    });
+
+    const Vector3 firstPos = targets.front()->GetWorldPosition();
+    const Vector3 lastPos = targets.back()->GetWorldPosition();
+    const float begin = (&firstPos.x)[axis];
+    const float end = (&lastPos.x)[axis];
+    const float step = (end - begin) / static_cast<float>(targets.size() - 1);
+
+    RunAsUndoableCommand("等間隔配置", [&] {
+        // 両端は動かさない
+        for (size_t i = 1; i + 1 < targets.size(); ++i)
+        {
+            Vector3 position = targets[i]->GetWorldPosition();
+            (&position.x)[axis] = begin + step * static_cast<float>(i);
+            SetTargetWorldPosition(*targets[i], position);
+        }
+    });
+
+    static const char *kAxisNames[3] = {"X", "Y", "Z"};
+    ImGuiNotification::Post(std::string("等間隔に並べました (") + kAxisNames[axis] + ")", {0.45f, 0.68f, 0.52f, 1.0f});
+}
+
+void ImGuizmoManager::SnapSelectedToGround()
+{
+    std::vector<GizmoTarget *> targets = CollectMovableSelection();
+    if (targets.empty())
+    {
+        ImGuiNotification::Post("接地させる対象が選択されていません", {0.82f, 0.58f, 0.36f, 1.0f});
+        return;
+    }
+
+    // 選択されているものどうしでぶつからないよう、選択外のオブジェクトだけを床候補にする
+    std::vector<const GizmoTarget *> groundCandidates;
+    for (const auto &[name, target] : transformMap_)
+    {
+        if (target.isScreenSpace || target.type != GizmoTarget::Type::BaseObject || !target.baseObject)
+        {
+            continue;
+        }
+        if (selectedNames_.find(name) != selectedNames_.end())
+        {
+            continue;
+        }
+        groundCandidates.push_back(&target);
+    }
+
+    // 対象1つを真下の地面へ落とす
+    auto snapOne = [&](GizmoTarget &target) {
+        const Vector3 position = target.GetWorldPosition();
+
+        // オブジェクトの底面がどれだけ下にあるかを求める（原点が足元でないモデルへの対応）
+        const AABB localBounds = target.GetLocalBounds();
+        const Matrix4x4 worldMatrix = target.GetWorldMatrix();
+        const float scaleY = Vector3{worldMatrix.m[1][0], worldMatrix.m[1][1], worldMatrix.m[1][2]}.Length();
+        const float bottomOffset = localBounds.min.y * scaleY;
+
+        // 十分上から真下へレイを飛ばす（すでにめり込んでいる場合も拾えるように）
+        Ray downRay;
+        downRay.origin = {position.x, position.y + 1000.0f, position.z};
+        downRay.direction = {0.0f, -1.0f, 0.0f};
+        downRay.length = 100000.0f;
+
+        bool found = false;
+        float highestHitY = 0.0f;
+        for (const GizmoTarget *candidate : groundCandidates)
+        {
+            RayHitInfo hit;
+            if (!Input::RayIntersectAABBByMatrix(downRay, candidate->GetWorldMatrix(), hit, candidate->GetLocalBounds()))
+            {
+                continue;
+            }
+            // 上から撃っているので、一番高い交点がその地点の地面になる
+            if (!found || hit.hitPoint.y > highestHitY)
+            {
+                highestHitY = hit.hitPoint.y;
+                found = true;
+            }
+        }
+
+        // 何も無ければ Y=0 の地面へ落とす
+        const float groundY = found ? highestHitY : 0.0f;
+        SetTargetWorldPosition(target, {position.x, groundY - bottomOffset, position.z});
+    };
+
+    RunAsUndoableCommand("地面へ接地", [&] {
+        for (GizmoTarget *target : targets)
+        {
+            snapOne(*target);
+        }
+    });
+
+    ImGuiNotification::Post("地面に接地させました: " + std::to_string(targets.size()) + "個", {0.45f, 0.68f, 0.52f, 1.0f});
+}
+
+// マウスカーソルの指す先（地面との交点）を返す
+Vector3 ImGuizmoManager::GetSpawnPositionUnderCursor(float fallbackDistance) const
+{
+    const Ray ray = Input::GetInstance()->GetCurrentRay();
+
+    // ray.length == 0 はシーン外を指している（Input::CreateRayFromMouse の無効レイ）
+    if (ray.length > 0.0f)
+    {
+        // 地面（Y=0平面）との交点を求める。真横を向いている場合は交わらない扱いにする。
+        constexpr float kEpsilon = 1e-4f;
+        if (std::abs(ray.direction.y) > kEpsilon)
+        {
+            const float distance = -ray.origin.y / ray.direction.y;
+            // カメラの後ろ側や遠すぎる交点は使わない（地平線の彼方に飛ばさないため）
+            if (distance > 0.0f && distance <= ray.length)
+            {
+                Vector3 hit = ray.origin + ray.direction * distance;
+                if (useSnap_ && snapTranslate_ > 0.0f)
+                {
+                    hit.x = std::round(hit.x / snapTranslate_) * snapTranslate_;
+                    hit.y = std::round(hit.y / snapTranslate_) * snapTranslate_;
+                    hit.z = std::round(hit.z / snapTranslate_) * snapTranslate_;
+                }
+                return hit;
+            }
+        }
+    }
+
+    // 地面が拾えないときはカメラ前方へ置く
+    return GetSpawnPosition(fallbackDistance);
+}
+
 // Tab キーで重複候補をサイクルして次のオブジェクトを選択する
 void ImGuizmoManager::CycleOverlapSelection()
 {
@@ -881,23 +1607,76 @@ void ImGuizmoManager::DisplayGizmo(const ImVec2 &scenePosition, const ImVec2 &sc
     if (selectedTargets.empty())
         return;
 
+    // 親と子を同時に選んでいる場合に、子を先に動かすと親の移動で二重にずれる。
+    // 必ず親から順に適用できるよう、階層の浅い順に並べておく。
+    std::stable_sort(selectedTargets.begin(), selectedTargets.end(),
+                     [](const GizmoTarget *lhs, const GizmoTarget *rhs) {
+                         auto depthOf = [](const GizmoTarget *target) {
+                             const WorldTransform *transform = nullptr;
+                             if (target->type == GizmoTarget::Type::BaseObject && target->baseObject)
+                             {
+                                 transform = target->baseObject->GetWorldTransform();
+                             }
+                             else if (target->type == GizmoTarget::Type::WorldTransform)
+                             {
+                                 transform = target->worldTransform;
+                             }
+                             int depth = 0;
+                             for (const WorldTransform *node = transform; node && node->pParent_; node = node->pParent_)
+                             {
+                                 ++depth;
+                             }
+                             return depth;
+                         };
+                         return depthOf(lhs) < depthOf(rhs);
+                     });
+
     // 選択中にスクリーン空間（Sprite）が含まれるか確認
     // ※ 3Dオブジェクトとスプライトを同時選択した場合は動作が未定義
     bool anyScreenSpace = std::any_of(selectedTargets.begin(), selectedTargets.end(),
                                       [](const GizmoTarget *t) { return t->isScreenSpace; });
 
-    // 選択中ターゲットの重心位置を求め、ギズモ表示用仮想行列を生成
-    Vector3 centerPos = {0.0f, 0.0f, 0.0f};
-    for (GizmoTarget *target : selectedTargets)
-    {
-        centerPos = centerPos + target->GetWorldPosition();
-    }
-    centerPos = centerPos / static_cast<float>(selectedTargets.size());
+    // ギズモを置く基準行列（ピボット）を決める。
+    // ・単一選択の3D対象 … その対象のワールド行列そのもの
+    //   （回転・拡縮がその場で効き、「ローカル」座標系もオブジェクトの向きを向く）
+    // ・複数選択／スクリーン空間 … 重心位置の無回転行列を共通ピボットにする
+    // スケール0の軸があるオブジェクトの行列をそのまま渡すと、ImGuizmo 内部の逆行列計算が
+    // 破綻して座標が NaN になる。その場合は重心ピボットへ逃がす。
+    auto isDegenerate = [](const Matrix4x4 &matrix) {
+        constexpr float kEpsilon = 1e-5f;
+        for (int row = 0; row < 3; ++row)
+        {
+            if (Vector3{matrix.m[row][0], matrix.m[row][1], matrix.m[row][2]}.Length() <= kEpsilon)
+            {
+                return true;
+            }
+        }
+        return false;
+    };
 
-    Matrix4x4 centerMatrix = MakeIdentity4x4();
-    centerMatrix.m[3][0] = centerPos.x;
-    centerMatrix.m[3][1] = centerPos.y;
-    centerMatrix.m[3][2] = centerPos.z;
+    const bool useTargetMatrix = (selectedTargets.size() == 1 && !anyScreenSpace &&
+                                  !isDegenerate(selectedTargets[0]->GetWorldMatrix()));
+
+    Matrix4x4 pivotMatrix;
+    if (useTargetMatrix)
+    {
+        pivotMatrix = selectedTargets[0]->GetWorldMatrix();
+    }
+    else
+    {
+        Vector3 centerPos = {0.0f, 0.0f, 0.0f};
+        for (GizmoTarget *target : selectedTargets)
+        {
+            centerPos = centerPos + target->GetWorldPosition();
+        }
+        centerPos = centerPos / static_cast<float>(selectedTargets.size());
+
+        pivotMatrix = MakeIdentity4x4();
+        pivotMatrix.m[3][0] = centerPos.x;
+        pivotMatrix.m[3][1] = centerPos.y;
+        pivotMatrix.m[3][2] = centerPos.z;
+    }
+    const Matrix4x4 centerMatrix = pivotMatrix;
 
     float matrixArray[16];
     for (int i = 0; i < 4; ++i)
@@ -952,23 +1731,61 @@ void ImGuizmoManager::DisplayGizmo(const ImVec2 &scenePosition, const ImVec2 &sc
     // Manipulate が描画前に return し、ギズモが一切表示されない。
     ImGuizmo::SetOrthographic(anyScreenSpace);
 
-    if (ImGuizmo::Manipulate(viewArray, projArray, effectiveOp, currentMode_, matrixArray))
+    // スナップ値は操作モードごとに意味が変わる（移動=距離 / 回転=度 / 拡縮=倍率）。
+    // Shift 押下中は設定を一時的に反転させ、ON時の微調整・OFF時の一時吸着を両立させる。
+    const bool shiftHeld = ImGui::GetIO().KeyShift;
+    const bool snapActive = (useSnap_ != shiftHeld) && !anyScreenSpace;
+    float snapValues[3] = {snapTranslate_, snapTranslate_, snapTranslate_};
+    if (currentOperation_ == ImGuizmo::ROTATE)
+    {
+        snapValues[0] = snapValues[1] = snapValues[2] = snapRotateDegree_;
+    }
+    else if (currentOperation_ == ImGuizmo::SCALE)
+    {
+        snapValues[0] = snapValues[1] = snapValues[2] = snapScale_;
+    }
+
+    if (ImGuizmo::Manipulate(viewArray, projArray, effectiveOp, currentMode_, matrixArray,
+                             nullptr, snapActive ? snapValues : nullptr))
     {
         Matrix4x4 newMatrix;
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)
                 newMatrix.m[i][j] = matrixArray[i * 4 + j];
 
-        // 操作によって生じたデルタを全選択ターゲットに適用する
-        // スクリーン空間の場合、deltaPos はピクセル単位になるので直接加算できる
-        Vector3 deltaPos = {
-            newMatrix.m[3][0] - centerMatrix.m[3][0],
-            newMatrix.m[3][1] - centerMatrix.m[3][1],
-            newMatrix.m[3][2] - centerMatrix.m[3][2]};
-
-        for (GizmoTarget *target : selectedTargets)
+        if (useTargetMatrix)
         {
-            target->ApplyTranslationDelta(deltaPos);
+            // 単一選択はギズモの結果をそのまま反映する（余計な行列演算を挟まず誤差を出さない）
+            selectedTargets[0]->ApplyWorldMatrix(newMatrix);
+        }
+        else
+        {
+            // 複数選択はピボット基準の差分を全員に掛ける。
+            // 行ベクトル規約なので「ピボット空間へ戻す → 新しいピボットへ乗せ直す」の順に掛ける。
+            const Matrix4x4 pivotDelta = Inverse(centerMatrix) * newMatrix;
+
+            // 親と子を同時に選んでいる場合、親を先に動かすと子のワールド行列が更新されてしまい、
+            // その後に子へ差分を掛けると二重に効いてしまう。適用前に全員の行列を控えておく。
+            std::vector<Matrix4x4> beforeMatrices;
+            beforeMatrices.reserve(selectedTargets.size());
+            for (const GizmoTarget *target : selectedTargets)
+            {
+                beforeMatrices.push_back(target->GetWorldMatrix());
+            }
+
+            for (size_t i = 0; i < selectedTargets.size(); ++i)
+            {
+                GizmoTarget *target = selectedTargets[i];
+                if (target->isScreenSpace)
+                {
+                    // スクリーン空間はピクセル単位の XY 平行移動のみ
+                    target->ApplyTranslationDelta({newMatrix.m[3][0] - centerMatrix.m[3][0],
+                                                   newMatrix.m[3][1] - centerMatrix.m[3][1],
+                                                   0.0f});
+                    continue;
+                }
+                target->ApplyWorldMatrix(beforeMatrices[i] * pivotDelta);
+            }
         }
     }
 }
@@ -1082,21 +1899,76 @@ std::string ImGuizmoManager::GenerateUniqueName(const std::string &baseName)
 // 選択中の BaseObject をコピーバッファに保存する（非 BaseObject はスキップ）
 void ImGuizmoManager::CopySelectedObjects()
 {
-    copiedObjects_.clear();
+    copiedNames_.clear();
     for (const std::string &name : selectedNames_)
     {
         auto it = transformMap_.find(name);
         if (it != transformMap_.end() && it->second.type == GizmoTarget::Type::BaseObject)
         {
-            copiedObjects_.push_back(it->second.baseObject);
+            copiedNames_.push_back(name);
         }
     }
+    if (!copiedNames_.empty())
+    {
+        ImGuiNotification::Post("コピーしました: " + std::to_string(copiedNames_.size()) + "個",
+                                {0.4f, 0.8f, 1.0f, 1.0f});
+    }
+}
+
+// BaseObject を複製して BaseObjectManager へ追加する（貼り付け・複製の共通処理）
+std::string ImGuizmoManager::CloneObject(BaseObject *pSource, const Vector3 &offset)
+{
+    if (!pSource)
+        return {};
+
+    // 名前は先に決める。Init 前に確定させないと DataHandler が元の名前で作られてしまう
+    const std::string uniqueName = GenerateUniqueName(pSource->GetName());
+
+    std::unique_ptr<BaseObject> newObject = std::make_unique<BaseObject>();
+    newObject->SetPrimitive(pSource->IsPrimitive());
+    newObject->Init(uniqueName);
+
+    if (!pSource->GetModelPath().empty())
+    {
+        newObject->CreateModel(pSource->GetModelPath());
+    }
+    else if (pSource->GetPrimitiveType() != PrimitiveType::Count)
+    {
+        newObject->CreatePrimitiveModel(pSource->GetPrimitiveType());
+    }
+    else
+    {
+        return {}; // モデルもプリミティブも無いものは複製できない
+    }
+
+    // マテリアルごとのテクスチャ・色を全て引き継ぐ
+    // （0番だけコピーしていた頃は、複数マテリアルのモデルで見た目が変わってしまっていた）
+    const int materialCount = newObject->GetObject3d() ? static_cast<int>(newObject->GetObject3d()->GetMaterialCount()) : 0;
+    const int textureCount = pSource->IsPrimitive() ? (materialCount > 0 ? 1 : 0) : materialCount;
+    for (int i = 0; i < textureCount; ++i)
+    {
+        newObject->SetTexture(pSource->GetTexturePath(i), i);
+    }
+    for (int i = 0; i < materialCount; ++i)
+    {
+        newObject->SetColor(pSource->GetColor(i), i);
+    }
+
+    newObject->GetLocalPosition() = pSource->GetLocalPosition() + offset;
+    newObject->GetLocalRotation() = pSource->GetLocalRotation();
+    newObject->GetLocalScale() = pSource->GetLocalScale();
+    newObject->GetLighting() = pSource->GetLighting();
+    newObject->SetShouldSave(pSource->GetShouldSave());
+
+    // AddObject → RegisterExternal 内でギズモへの登録も行われる
+    BaseObjectManager::GetInstance()->AddObject(std::move(newObject));
+    return uniqueName;
 }
 
 // コピー済み BaseObject を複製して BaseObjectManager に追加する
 void ImGuizmoManager::PasteObjects()
 {
-    if (copiedObjects_.empty())
+    if (copiedNames_.empty())
         return;
 
     // ショートカット起点の操作はImGuiの編集ジェスチャに乗らないため、明示的にUndo履歴へ積む
@@ -1104,48 +1976,24 @@ void ImGuizmoManager::PasteObjects()
 
     selectedNames_.clear();
 
-    for (BaseObject *copiedObj : copiedObjects_)
+    for (const std::string &copiedName : copiedNames_)
     {
-        std::unique_ptr<BaseObject> newObject = std::make_unique<BaseObject>();
-        newObject->SetPrimitive(copiedObj->IsPrimitive());
-        newObject->Init(copiedObj->GetName());
-
-        if (!copiedObj->GetModelPath().empty())
+        // コピー後に元が消えている可能性があるので、貼り付け時に引き直す
+        BaseObject *copiedObj = BaseObjectManager::GetInstance()->GetObjectByName(copiedName);
+        const std::string uniqueName = CloneObject(copiedObj, {1.0f, 0.0f, 0.0f});
+        if (!uniqueName.empty())
         {
-            newObject->CreateModel(copiedObj->GetModelPath());
+            selectedNames_.insert(uniqueName);
         }
-        else if (copiedObj->GetPrimitiveType() != PrimitiveType::Count)
-        {
-            newObject->CreatePrimitiveModel(copiedObj->GetPrimitiveType());
-        }
-
-        if (!copiedObj->GetTexturePath().empty())
-        {
-            newObject->SetTexture(copiedObj->GetTexturePath());
-        }
-
-        newObject->GetLocalPosition() = copiedObj->GetLocalPosition();
-        newObject->GetLocalRotation() = copiedObj->GetLocalRotation();
-        newObject->GetLocalScale() = copiedObj->GetLocalScale();
-        newObject->GetLocalPosition().x += 1.0f;
-        newObject->GetLighting() = copiedObj->GetLighting();
-        newObject->SetColor(copiedObj->GetColor());
-
-        std::string uniqueName = GenerateUniqueName(copiedObj->GetName());
-        newObject->GetName() = uniqueName;
-
-        BaseObjectManager::GetInstance()->AddObject(std::move(newObject));
-
-        BaseObject *addedObject = BaseObjectManager::GetInstance()->GetObjectByName(uniqueName);
-        if (addedObject)
-        {
-            AddTarget(uniqueName, addedObject);
-        }
-
-        selectedNames_.insert(uniqueName);
     }
 
-    copiedObjects_.clear();
+    if (selectedNames_.empty())
+    {
+        ImGuiNotification::Post("貼り付け元のオブジェクトが見つかりませんでした", {0.82f, 0.58f, 0.36f, 1.0f});
+        return;
+    }
+
+    // 連続で貼り付けられるようコピーバッファは保持する（従来はここで消えていた）
 
     // 貼り付け操作をUndo履歴へ積む
     {
@@ -1159,6 +2007,38 @@ void ImGuizmoManager::PasteObjects()
     ImGuiNotification::Post("オブジェクトを貼り付けました", {0.4f, 0.8f, 1.0f, 1.0f});
 }
 
+// 選択中の BaseObject をその場で複製し、複製後を選択状態にする
+void ImGuizmoManager::DuplicateSelectedObjects()
+{
+    // 複製元を先に確定させる。複製すると transformMap_ が増えるため、走査中に追加すると壊れる
+    std::vector<BaseObject *> sources = GetSelectedTargets();
+    if (sources.empty())
+        return;
+
+    nlohmann::json undoBefore = BaseObjectManager::GetInstance()->CaptureUndoState();
+
+    selectedNames_.clear();
+    for (BaseObject *source : sources)
+    {
+        const std::string uniqueName = CloneObject(source, {0.0f, 0.0f, 0.0f});
+        if (!uniqueName.empty())
+        {
+            selectedNames_.insert(uniqueName);
+        }
+    }
+
+    {
+        nlohmann::json undoAfter = BaseObjectManager::GetInstance()->CaptureUndoState();
+        auto [diffBefore, diffAfter] = MakeTopLevelJsonDiff(undoBefore, undoAfter);
+        UndoRedoManager::GetInstance()->Push(std::make_unique<JsonStateCommand>(
+            "オブジェクト複製", std::move(diffBefore), std::move(diffAfter),
+            [](const nlohmann::json &s) { BaseObjectManager::GetInstance()->RestoreUndoState(s); }));
+    }
+
+    ImGuiNotification::Post("オブジェクトを複製しました: " + std::to_string(sources.size()) + "個",
+                            {0.4f, 0.8f, 1.0f, 1.0f});
+}
+
 // 選択中の全エントリを削除する
 // BaseObject の場合は BaseObjectManager からも削除する
 void ImGuizmoManager::DeleteSelectedObjects()
@@ -1169,15 +2049,22 @@ void ImGuizmoManager::DeleteSelectedObjects()
     // ショートカット起点の操作はImGuiの編集ジェスチャに乗らないため、明示的にUndo履歴へ積む
     nlohmann::json undoBefore = BaseObjectManager::GetInstance()->CaptureUndoState();
 
-    size_t count = selectedNames_.size();
-    for (const std::string &name : selectedNames_)
+    // selectedNames_ を走査しながら消すと、削除経路が選択集合に触った時点で壊れる。
+    // 先に対象名を確定させてから消す。
+    const std::vector<std::string> targets(selectedNames_.begin(), selectedNames_.end());
+    const size_t count = targets.size();
+    for (const std::string &name : targets)
     {
         auto it = transformMap_.find(name);
         if (it != transformMap_.end() && it->second.type == GizmoTarget::Type::BaseObject)
         {
+            // RemoveObject 側でギズモ・モーションエディタからの登録解除も行われる
             BaseObjectManager::GetInstance()->RemoveObject(name);
         }
         transformMap_.erase(name);
+
+        // 消えたオブジェクトをコピーバッファに残さない
+        copiedNames_.erase(std::remove(copiedNames_.begin(), copiedNames_.end(), name), copiedNames_.end());
     }
 
     // 削除操作をUndo履歴へ積む
@@ -1190,12 +2077,12 @@ void ImGuizmoManager::DeleteSelectedObjects()
     }
 
     UpdateFilteredNames();
+    // 削除後に別のオブジェクトを勝手に選ぶと、続けて Delete を押したときに
+    // 意図しないものを消してしまうので、選択は空のままにする
     selectedNames_.clear();
+    overlapCandidates_.clear();
+    overlapCycleIndex_ = 0;
 
-    if (!transformMap_.empty())
-    {
-        selectedNames_.insert(transformMap_.begin()->first);
-    }
     ImGuiNotification::Post("選択オブジェクトを削除しました: " + std::to_string(count) + "個", {0.9f, 0.7f, 0.2f, 1.0f});
 }
 
@@ -1292,8 +2179,11 @@ void ImGuizmoManager::DrawDebugRaycast()
         return;
 
     Ray currentRay = Input::GetInstance()->GetCurrentRay();
-    Vector3 rayEnd = currentRay.origin + (currentRay.direction * currentRay.length);
-    LineRenderer::GetInstance()->AddLine(currentRay.origin, rayEnd, {1.0f, 0.0f, 0.0f, 1.0f});
+    if (showDebugHitPoints_)
+    {
+        Vector3 rayEnd = currentRay.origin + (currentRay.direction * currentRay.length);
+        LineRenderer::GetInstance()->AddLine(currentRay.origin, rayEnd, {1.0f, 0.0f, 0.0f, 1.0f});
+    }
 
     for (const auto &pair : transformMap_)
     {
@@ -1306,24 +2196,29 @@ void ImGuizmoManager::DrawDebugRaycast()
         if (!IsCategoryEnabled(target.category))
             continue;
 
-        Matrix4x4 worldMatrix = target.GetWorldMatrix();
         bool isSelected = selectedNames_.find(pair.first) != selectedNames_.end();
+        // 全オブジェクトぶんの枠を出すと配置作業中の画面が線だらけになるので、
+        // 既定では選択中のものだけ描く
+        if (debugSelectedOnly_ && !isSelected)
+            continue;
+
+        Matrix4x4 worldMatrix = target.GetWorldMatrix();
+        const AABB localBounds = target.GetLocalBounds();
         Vector4 aabbColor = isSelected ? Vector4{1.0f, 1.0f, 0.0f, 1.0f} : Vector4{0.0f, 0.0f, 1.0f, 1.0f};
         Vector4 sphereColor = isSelected ? Vector4{1.0f, 0.5f, 0.0f, 1.0f} : Vector4{1.0f, 0.0f, 1.0f, 1.0f};
 
-        DrawAABBWireframe(worldMatrix, aabbColor);
-        DrawSphereWireframe(worldMatrix, sphereColor);
-        TestAndDrawRayHit(currentRay, target);
+        if (showDebugAABB_)
+            DrawAABBWireframe(worldMatrix, localBounds, aabbColor);
+        if (showDebugSphere_)
+            DrawSphereWireframe(worldMatrix, localBounds, sphereColor);
+        if (showDebugHitPoints_)
+            TestAndDrawRayHit(currentRay, target);
     }
 }
 
 // ローカル空間のAABBをワールド変換してワイヤーフレームを描画する
-void ImGuizmoManager::DrawAABBWireframe(const Matrix4x4 &worldMatrix, const Vector4 &color)
+void ImGuizmoManager::DrawAABBWireframe(const Matrix4x4 &worldMatrix, const AABB &aabb, const Vector4 &color)
 {
-    AABB aabb;
-    aabb.min = {-1.3f, -1.3f, -1.3f};
-    aabb.max = {1.3f, 1.3f, 1.3f};
-
     Vector3 vertices[8] = {
         {aabb.min.x, aabb.min.y, aabb.min.z},
         {aabb.max.x, aabb.min.y, aabb.min.z},
@@ -1344,53 +2239,49 @@ void ImGuizmoManager::DrawAABBWireframe(const Matrix4x4 &worldMatrix, const Vect
     LineRenderer::GetInstance()->AddBoxCorners(vertices, color);
 }
 
-// スフィアワイヤーフレームを描画する
-void ImGuizmoManager::DrawSphereWireframe(const Matrix4x4 &worldMatrix, const Vector4 &color)
+// ローカルAABBに外接するスフィアのワイヤーフレームを描画する
+void ImGuizmoManager::DrawSphereWireframe(const Matrix4x4 &worldMatrix, const AABB &localBounds, const Vector4 &color)
 {
-    Sphere sphere{};
+    const Vector3 localCenter = {
+        (localBounds.max.x + localBounds.min.x) * 0.5f,
+        (localBounds.max.y + localBounds.min.y) * 0.5f,
+        (localBounds.max.z + localBounds.min.z) * 0.5f};
+    const Vector3 localHalfExtent = {
+        (localBounds.max.x - localBounds.min.x) * 0.5f,
+        (localBounds.max.y - localBounds.min.y) * 0.5f,
+        (localBounds.max.z - localBounds.min.z) * 0.5f};
 
-    Vector3 worldCenter = Transformation(sphere.center, worldMatrix);
+    Vector3 worldCenter = Transformation(localCenter, worldMatrix);
 
+    // 行ベクトル規約なので各行が基底ベクトル。その長さがワールドスケールになる
     Vector3 scale = {
-        sqrt(worldMatrix.m[0][0] * worldMatrix.m[0][0] + worldMatrix.m[1][0] * worldMatrix.m[1][0] + worldMatrix.m[2][0] * worldMatrix.m[2][0]),
-        sqrt(worldMatrix.m[0][1] * worldMatrix.m[0][1] + worldMatrix.m[1][1] * worldMatrix.m[1][1] + worldMatrix.m[2][1] * worldMatrix.m[2][1]),
-        sqrt(worldMatrix.m[0][2] * worldMatrix.m[0][2] + worldMatrix.m[1][2] * worldMatrix.m[1][2] + worldMatrix.m[2][2] * worldMatrix.m[2][2])};
-    float worldRadius = sphere.radius * std::max({scale.x, scale.y, scale.z});
+        Vector3{worldMatrix.m[0][0], worldMatrix.m[0][1], worldMatrix.m[0][2]}.Length(),
+        Vector3{worldMatrix.m[1][0], worldMatrix.m[1][1], worldMatrix.m[1][2]}.Length(),
+        Vector3{worldMatrix.m[2][0], worldMatrix.m[2][1], worldMatrix.m[2][2]}.Length()};
+    float worldRadius = Vector3{localHalfExtent.x * scale.x,
+                                localHalfExtent.y * scale.y,
+                                localHalfExtent.z * scale.z}
+                            .Length();
 
     LineRenderer::GetInstance()->AddSphere(worldCenter, worldRadius, color, 16);
 }
 
-// GizmoTarget のワールド行列を使ってAABB・スフィアのレイヒット点を描画する
+// GizmoTarget のワールド行列を使ってAABBのレイヒット点を描画する
 void ImGuizmoManager::TestAndDrawRayHit(const Ray &ray, const GizmoTarget &target)
 {
     Matrix4x4 worldMatrix = target.GetWorldMatrix();
+    const AABB aabb = target.GetLocalBounds();
 
-    AABB aabb;
-    aabb.min = {-1.3f, -1.3f, -1.3f};
-    aabb.max = {1.3f, 1.3f, 1.3f};
-    Sphere sphere;
-    sphere.center = {0.0f, 0.0f, 0.0f};
-    sphere.radius = 1.3f;
-
-    RayHitInfo aabbHit, sphereHit;
-    bool aabbResult = Input::RayIntersectAABBByMatrix(ray, worldMatrix, aabbHit, aabb);
-    bool sphereResult = Input::RayIntersectSphereByMatrix(ray, worldMatrix, sphereHit, sphere);
+    RayHitInfo aabbHit;
+    if (!Input::RayIntersectAABBByMatrix(ray, worldMatrix, aabbHit, aabb))
+    {
+        return;
+    }
 
     LineRenderer *pLine = LineRenderer::GetInstance();
-
-    if (aabbResult)
-    {
-        pLine->AddSphere(aabbHit.hitPoint, 0.05f, {0.0f, 1.0f, 0.0f, 1.0f}, 8);
-        Vector3 normalEnd = aabbHit.hitPoint + (aabbHit.hitNormal * 0.3f);
-        pLine->AddLine(aabbHit.hitPoint, normalEnd, {0.0f, 1.0f, 0.0f, 1.0f});
-    }
-
-    if (sphereResult)
-    {
-        pLine->AddSphere(sphereHit.hitPoint, 0.05f, {1.0f, 0.0f, 1.0f, 1.0f}, 8);
-        Vector3 normalEnd = sphereHit.hitPoint + (sphereHit.hitNormal * 0.3f);
-        pLine->AddLine(sphereHit.hitPoint, normalEnd, {1.0f, 0.0f, 1.0f, 1.0f});
-    }
+    pLine->AddSphere(aabbHit.hitPoint, 0.05f, {0.0f, 1.0f, 0.0f, 1.0f}, 8);
+    Vector3 normalEnd = aabbHit.hitPoint + (aabbHit.hitNormal * 0.3f);
+    pLine->AddLine(aabbHit.hitPoint, normalEnd, {0.0f, 1.0f, 0.0f, 1.0f});
 }
 
 } // namespace Hagine

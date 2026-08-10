@@ -5,6 +5,7 @@
 #include "fstream"
 #include "MyMath.h"
 #include "sstream"
+#include <algorithm>
 #include <debug/log/Logger.h>
 #include <shadow/ShadowMap.h>
 #include <skybox/SkyBox.h>
@@ -35,6 +36,8 @@ void Model::CreateModel(const std::string &directorypath, const std::string &fil
         meshes_[i]->GetMeshData() = modelData_.meshes[i];
         meshes_[i]->Initialize();
     }
+
+    CalcLocalBounds();
 }
 
 void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath)
@@ -53,6 +56,8 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath)
 
     // メッシュのマテリアルインデックスを設定
     modelData_.meshes[0].materialIndex = 0;
+
+    CalcLocalBounds();
 }
 
 void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath, const PrimitiveParams &params)
@@ -68,6 +73,61 @@ void Model::CreatePrimitiveModel(const PrimitiveType &type, std::string texPath,
 
     modelData_.meshes[0] = meshes_[0]->GetMeshData();
     modelData_.meshes[0].materialIndex = 0;
+
+    CalcLocalBounds();
+}
+
+void Model::CalcLocalBounds()
+{
+    bool hasVertex = false;
+    Vector3 minPoint = {0.0f, 0.0f, 0.0f};
+    Vector3 maxPoint = {0.0f, 0.0f, 0.0f};
+
+    for (const MeshData &mesh : modelData_.meshes)
+    {
+        for (const VertexData &vertex : mesh.vertices)
+        {
+            const Vector3 position = {vertex.position.x, vertex.position.y, vertex.position.z};
+            if (!hasVertex)
+            {
+                minPoint = position;
+                maxPoint = position;
+                hasVertex = true;
+                continue;
+            }
+            minPoint.x = (std::min)(minPoint.x, position.x);
+            minPoint.y = (std::min)(minPoint.y, position.y);
+            minPoint.z = (std::min)(minPoint.z, position.z);
+            maxPoint.x = (std::max)(maxPoint.x, position.x);
+            maxPoint.y = (std::max)(maxPoint.y, position.y);
+            maxPoint.z = (std::max)(maxPoint.z, position.z);
+        }
+    }
+
+    if (!hasVertex)
+    {
+        // 頂点が取れないモデルは選択判定が消えないよう単位サイズにしておく
+        localBounds_ = {{-1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}};
+        return;
+    }
+
+    // 板ポリのように厚みが0の軸があるとレイが当たらないので、最低限の厚みを持たせる
+    constexpr float kMinHalfExtent = 0.01f;
+    float halfExtent[3] = {
+        (maxPoint.x - minPoint.x) * 0.5f,
+        (maxPoint.y - minPoint.y) * 0.5f,
+        (maxPoint.z - minPoint.z) * 0.5f};
+    float center[3] = {
+        (maxPoint.x + minPoint.x) * 0.5f,
+        (maxPoint.y + minPoint.y) * 0.5f,
+        (maxPoint.z + minPoint.z) * 0.5f};
+    for (int axis = 0; axis < 3; ++axis)
+    {
+        halfExtent[axis] = (std::max)(halfExtent[axis], kMinHalfExtent);
+    }
+
+    localBounds_.min = {center[0] - halfExtent[0], center[1] - halfExtent[1], center[2] - halfExtent[2]};
+    localBounds_.max = {center[0] + halfExtent[0], center[1] + halfExtent[1], center[2] + halfExtent[2]};
 }
 
 void Model::Update()

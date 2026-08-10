@@ -219,6 +219,12 @@ class AnimationController
     std::unordered_map<std::string, int> index_; // クリップ名 -> clips_ のインデックス
 
     std::string currentClipName_;   // 現在再生中のクリップ名
+
+    // クリップ設定の保存先。SaveClips / LoadClips を呼んだときに覚え、
+    // エディタの保存・読込ボタンから同じ場所を使う。
+    // （エンジンがゲーム固有のファイル名を決め打ちしないため。既定値は無害な汎用名）
+    std::string clipsFolder_ = "AnimationController";
+    std::string clipsFile_ = "Clips";
     std::string layerClipName_;     // レイヤー再生中のクリップ名
     std::string layerMaskRoot_;     // レイヤーで上書きする範囲の根ジョイント名（空ならレイヤー無効）
     float currentClipSpeed_ = 1.0f; // 現在クリップ固有の速度（globalSpeed_ と乗算）

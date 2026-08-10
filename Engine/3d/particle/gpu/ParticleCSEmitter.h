@@ -653,6 +653,9 @@ class ParticleCSEmitter
 
     // ImGuizmo へ登録するか（実行時インスタンスは false。Initialize より前に決めること）
     bool registerGizmo_ = true;
+    // 実際に ImGuizmo へ登録済みか。デストラクタでの解除判定に使う
+    // （registerGizmo_ は Initialize 後にも変更されうるので、そちらは判定に使えない）
+    bool gizmoRegistered_ = false;
 
     // ---- 発光（動的ポイントライト）----
     bool lightEnabled_ = false;                       // 発光するか

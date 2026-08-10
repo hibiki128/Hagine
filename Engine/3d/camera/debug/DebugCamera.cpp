@@ -6,6 +6,7 @@
 #ifdef _DEBUG
 #include <imgui.h>
 #include <implot.h>
+#include <utility/debug/imgui/ImGuizmoManager.h>
 #endif
 #include <utility/debug/imgui/DebugUIHelper.h>
 #include <algorithm>
@@ -71,6 +72,22 @@ void DebugCamera::Update()
         {
             CameraMove(eulerRotation_, translation_, mouse_);
         }
+
+#ifdef _DEBUG
+        // ギズモ側の F キー（選択オブジェクトへ寄る）要求を処理する。
+        // 向きは変えず、対象が画面に収まる距離まで前後させるだけにして視点が飛ばないようにする。
+        Vector3 focusTarget{};
+        float focusRadius = 1.0f;
+        if (ImGuizmoManager::GetInstance()->ConsumeFocusRequest(focusTarget, focusRadius))
+        {
+            Matrix4x4 matRot = isUseQuaternion_
+                                   ? QuaternionToMatrix4x4(quaternionRotation_)
+                                   : MakeRotateXMatrix(eulerRotation_.x) * MakeRotateYMatrix(eulerRotation_.y);
+            // CameraMove の forward は {0,0,-2} 方向なので、視線方向はその反対になる
+            Vector3 viewDirection = TransformNormal({0.0f, 0.0f, 1.0f}, matRot).Normalize();
+            translation_ = focusTarget - viewDirection * (focusRadius * 3.0f + 2.0f);
+        }
+#endif // _DEBUG
 
         // 操作結果をカメラへ反映する（行列の生成はカメラ側が行う）
         pCamera_->SetPosition(translation_);

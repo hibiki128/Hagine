@@ -25,8 +25,6 @@ void TitleScene::Initialize()
         degreesToRadians(0.0f)});
     camera_->Load("CurrentCamera");
     pObjectManager_->LoadAll("TitleScene");
-    debugCamera_ = std::make_unique<DebugCamera>();
-    debugCamera_->Initialize();
     pSkyBox_ = SkyBox::GetInstance();
     pSkyBox_->Initialize("game/skybox.dds");
 
@@ -184,7 +182,7 @@ void TitleScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->DrawImGui();
+    DrawDebugCameraImGui();
     camera_->ShowDebugWindow();
 }
 
@@ -208,7 +206,7 @@ void TitleScene::CameraUpdate()
     /// ===================================================
     /// カメラ更新
     /// ===================================================
-    debugCamera_->Update();
+    UpdateDebugCamera();
 }
 
 void TitleScene::ChangeScene()

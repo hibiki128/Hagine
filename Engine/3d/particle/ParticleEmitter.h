@@ -32,6 +32,12 @@ class ParticleEmitter
     ParticleEmitter();
 
     /// <summary>
+    /// デストラクタ
+    /// ImGuizmo には transform_ への生ポインタを渡しているため、破棄時に必ず登録を解除する
+    /// </summary>
+    ~ParticleEmitter();
+
+    /// <summary>
     /// 初期化
     /// </summary>
     /// <param name="name">エミッター名</param>
@@ -326,6 +332,7 @@ class ParticleEmitter
     bool isActive_ = false;         // アクティブフラグ
     bool isAuto_ = false;           // 自動発生フラグ
     bool isGizmoSelectable_ = true; // ギズモ選択可能フラグ
+    bool gizmoRegistered_ = false;  // ImGuizmo へ登録済みか（デストラクタでの解除判定に使う）
 
     std::string name_;             // パーティクルの名前
     std::string drawGroup_ = "3D"; // 描画グループ＝描画ステージ（既定は3D）

@@ -66,6 +66,9 @@ class PostEffectParamsFactory
         case ShaderMode::Monochrome:
             params = std::make_unique<MonochromeParams>();
             break;
+        case ShaderMode::DepthOfField:
+            params = std::make_unique<DepthOfFieldParams>();
+            break;
         default:
             assert(false && "未対応のShaderModeです。PostEffectParamsFactory::Createにcaseを追加してください。");
             params = std::make_unique<NoneParams>();

@@ -147,7 +147,16 @@ class BaseObject {
     std::string &GetName() { return objectName_; }
     std::string &GetModelPath() { return modelPath_; }
     bool &GetIsModelDraw() { return isModelDraw_; }
-    std::string &GetTexturePath(int index = 0) { return texturePaths_[index]; }
+    // 範囲外を引かれても落ちないよう、足りなければ伸ばしてから返す
+    std::string &GetTexturePath(int index = 0) {
+        if (index < 0) {
+            index = 0;
+        }
+        if (texturePaths_.size() <= static_cast<size_t>(index)) {
+            texturePaths_.resize(static_cast<size_t>(index) + 1);
+        }
+        return texturePaths_[index];
+    }
     std::string GetParentName() const;
     std::vector<std::string> GetChildrenNames() const;
     Object3d *GetObject3d() { return obj3d_.get(); }
@@ -159,6 +168,14 @@ class BaseObject {
     Quaternion GetWorldRotation();
     Vector3 GetWorldScale();
     Matrix4x4 GetWorldMatrix() { return transform_->matWorld_; }
+
+    /// <summary>
+    /// モデルのローカル空間AABBを取得する（ワールド行列を掛ける前の実際の広がり）
+    /// モデル未設定のときは単位サイズのボックスを返す
+    /// </summary>
+    /// <returns>AABB: ローカル空間の境界ボックス</returns>
+    AABB GetLocalBounds() const;
+
     bool AnimaIsFinish() { return obj3d_->IsFinish(); }
     bool &GetLighting() { return isLighting_; }
     bool GetShouldSave() const { return shouldSave_; }
@@ -179,6 +196,10 @@ class BaseObject {
             return; // ファイルパスが空なら何もしない
         }
         obj3d_->SetTexture(filePath, index);
+        // マテリアル数より texturePaths_ が短いモデルもあるので、足りなければ伸ばしてから書く
+        if (texturePaths_.size() <= index) {
+            texturePaths_.resize(static_cast<size_t>(index) + 1);
+        }
         texturePaths_[index] = filePath;
     }
     void SetModel(std::unique_ptr<Object3d> obj) {

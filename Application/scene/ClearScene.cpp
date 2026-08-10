@@ -23,7 +23,6 @@ void ClearScene::Initialize()
     /// ===================================================
     /// インスタンス生成
     /// ===================================================
-    debugCamera_ = std::make_unique<DebugCamera>();
     ground_ = std::make_unique<Ground>();
     resultStaging_ = std::make_unique<ResultStaging>();
     resultUI_ = std::make_unique<ResultUI>();
@@ -33,7 +32,6 @@ void ClearScene::Initialize()
     /// ===================================================
     /// 初期化
     /// ===================================================
-    debugCamera_->Initialize();
     ground_->Init("Ground");
     pSkyBox_->Initialize("game/skybox.dds");
     camera_->Load("P_StartCamera");
@@ -142,7 +140,7 @@ void ClearScene::AddSceneSetting()
     /// ===================================================
     /// シーン設定（デバッグ）
     /// ===================================================
-    debugCamera_->DrawImGui();
+    DrawDebugCameraImGui();
     camera_->ShowDebugWindow();
 
     // 演出のデバッグ
@@ -178,7 +176,7 @@ void ClearScene::CameraUpdate()
     }
 
     // カメラの行列更新は CameraManager がまとめて行うので、ここでは操作だけ渡す
-    debugCamera_->Update();
+    UpdateDebugCamera();
 }
 
 void ClearScene::ChangeScene()

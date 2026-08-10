@@ -83,8 +83,17 @@ class Model
     /// <summary>
     /// Getter
     /// </summary>
-    ModelData GetModelData() { return modelData_; }
+    // ModelData は全メッシュの頂点配列を抱えるため、値返しにすると
+    // 参照するたびにフルコピーが走る。必ず参照で受けること。
+    const ModelData &GetModelData() const { return modelData_; }
     bool IsGltf() { return isGltf_; }
+
+    /// <summary>
+    /// モデルのローカル空間AABBを取得する（ワールド行列を掛ける前の実際の広がり）
+    /// マウス選択のレイ判定や視点フォーカスなど、モデルの実サイズが要る場所で使う
+    /// </summary>
+    /// <returns>const AABB&: ローカル空間の境界ボックス</returns>
+    const AABB &GetLocalBounds() const { return localBounds_; }
     size_t GetMeshCount() const { return meshes_.size(); }
     Mesh *GetMesh(uint32_t index) { return (index < meshes_.size()) ? meshes_[index].get() : nullptr; }
     Animator *GetAnimator() { return pAnimator_; }
@@ -121,6 +130,12 @@ class Model
     /// <returns>Node: 変換したノードデータ</returns>
     static Node ReadNode(aiNode *node);
 
+    /// <summary>
+    /// 全メッシュの頂点からローカル空間AABBを計算して localBounds_ に格納する
+    /// 頂点が無い場合は単位サイズのボックスにフォールバックする
+    /// </summary>
+    void CalcLocalBounds();
+
   private:
     /// ===================================================
     /// private variables
@@ -133,6 +148,9 @@ class Model
     std::string directorypath_; // ディレクトリパス
     bool isGltf_;               // GLTFフォーマットフラグ
     Matrix4x4 localMatrix_;     // ローカル行列
+
+    // ローカル空間の境界ボックス（モデル読み込み時に頂点から算出）
+    AABB localBounds_ = {{-1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}};
 
     // マルチメッシュ対応
     std::vector<std::unique_ptr<Mesh>> meshes_; // メッシュ配列

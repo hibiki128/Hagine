@@ -17,6 +17,20 @@
 namespace Hagine {
 ParticleEmitter::ParticleEmitter() {}
 
+ParticleEmitter::~ParticleEmitter()
+{
+#ifdef _DEBUG
+    // ギズモには transform_（メンバ）のアドレスを渡しているので、
+    // 解除し忘れると破棄後のメモリを掴んだままになる。
+    // 同名で登録し直されている場合は相手の登録を消さない。
+    if (gizmoRegistered_)
+    {
+        ImGuizmoManager::GetInstance()->RemoveTargetIfOwnedBy(name_, &transform_);
+        gizmoRegistered_ = false;
+    }
+#endif // _DEBUG
+}
+
 void ParticleEmitter::Initialize(std::string name)
 {
     transform_.Initialize();
@@ -40,6 +54,7 @@ void ParticleEmitter::Initialize(std::string name)
     ImGuizmoManager::GetInstance()->AddTarget(name_, &transform_, isGizmoSelectable_);
     // WorldTransform単体の既定はObjectなので、パーティクルとして明示的に分類し直す
     ImGuizmoManager::GetInstance()->SetCategory(name_, GizmoCategory::Particle);
+    gizmoRegistered_ = true;
 #endif
 }
 

@@ -17,36 +17,49 @@ namespace Hagine {
 void BaseObjectManager::Finalize()
 {
     RemoveAllObjects();
+
+    // 外部登録（シーンが unique_ptr を持つゲームエンティティ）の参照も落とす。
+    // 実体を破棄するのはシーン側なので、ここでは参照を切るだけにする。
+    for (auto &[name, obj] : objects_)
+    {
+        DetachRegistrations(obj, name);
+    }
+    objects_.clear();
 }
 
 void BaseObjectManager::RemoveAllObjects()
 {
-    // 親子関係をすべてクリア
-    for (auto &[name, obj] : objects_)
+    // 消すのは「このマネージャが所有しているオブジェクト」だけ。
+    // RegisterExternal で登録された、シーンが所有するゲームエンティティ（Player 等）まで
+    // 消してしまうと更新・描画の対象から外れてしまう。
+    //
+    // 以前はここで objects_ を丸ごと clear し、さらに ImGuizmoManager::DeleteTarget()
+    // （＝全操作対象を消す）を呼んでいたため、「オブジェクト全削除」やシーン読み込みのたびに
+    // スプライト・ライト・パーティクルのギズモ登録まで巻き添えで消えていた。
+    std::vector<std::string> ownedNames;
+    ownedNames.reserve(ownedObjects_.size());
+    for (const auto &[name, owned] : ownedObjects_)
     {
-        if (obj)
-        {
-            obj->SetParent(nullptr);
-        }
+        ownedNames.push_back(name);
     }
 
-    objects_.clear();
-    ownedObjects_.clear();
-
-#ifdef _DEBUG
-    ImGuizmoManager::GetInstance()->DeleteTarget();
-#endif
+    // RemoveObject が親子関係の解除・各マネージャからの登録解除まで面倒を見る
+    for (const std::string &name : ownedNames)
+    {
+        RemoveObject(name);
+    }
 }
 
 void BaseObjectManager::RemoveObjectByName(const std::string &name)
 {
-    auto it = objects_.find(name);
-    if (it != objects_.end())
+    // 削除処理の本体は RemoveObject に一本化する
+    // （以前は親子関係の解除を行わない別実装になっていて、解放済みの親を掴んだ子が残っていた）
+    if (objects_.find(name) == objects_.end())
     {
-        ImGuiNotification::Post("オブジェクトを削除しました: " + name, {0.9f, 0.7f, 0.2f, 1.0f});
-        objects_.erase(it);
-        ownedObjects_.erase(name);
+        return;
     }
+    RemoveObject(name);
+    ImGuiNotification::Post("オブジェクトを削除しました: " + name, {0.9f, 0.7f, 0.2f, 1.0f});
 }
 
 void BaseObjectManager::RegisterExternal(BaseObject *obj)
@@ -62,7 +75,27 @@ void BaseObjectManager::RegisterExternal(BaseObject *obj)
 
 void BaseObjectManager::UnregisterExternal(BaseObject *obj)
 {
+    if (!obj)
+    {
+        return;
+    }
+    DetachRegistrations(obj, obj->GetName());
     objects_.erase(obj->GetName());
+}
+
+// 破棄・登録解除の直前に、他マネージャが持つこのオブジェクトへの参照を全て落とす。
+// これを忘れると解放済みポインタが編集UI側に残り、次にそれを触った時に落ちる。
+void BaseObjectManager::DetachRegistrations(BaseObject *obj, const std::string &name)
+{
+#ifdef _DEBUG
+    ImGuizmoManager::GetInstance()->RemoveTarget(name);
+#else
+    (void)name;
+#endif
+    if (obj)
+    {
+        MotionEditor::GetInstance()->Unregister(obj);
+    }
 }
 
 void BaseObjectManager::AddObject(std::unique_ptr<BaseObject> baseObject)
@@ -192,8 +225,28 @@ void BaseObjectManager::LoadAll(std::string sceneName)
     ImGuiNotification::Post("シーンを読み込みました: " + sceneName, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
+std::string BaseObjectManager::MakeUniqueObjectName(const std::string &baseName) const
+{
+    if (objects_.find(baseName) == objects_.end())
+    {
+        return baseName;
+    }
+    // 同名があったら連番を振る。番号が埋まっていても空きが見つかるまで進める
+    for (int index = 1;; ++index)
+    {
+        const std::string candidate = baseName + "_" + std::to_string(index);
+        if (objects_.find(candidate) == objects_.end())
+        {
+            return candidate;
+        }
+    }
+}
+
 void BaseObjectManager::CreateObject(std::string objectName, std::string modelPath, std::string texturePath)
 {
+    // 同名オブジェクトを作ると unordered_map のキーが衝突して片方が行方不明になるため、必ず一意にする
+    objectName = MakeUniqueObjectName(objectName);
+
     std::unique_ptr<BaseObject> newObject = std::make_unique<BaseObject>();
     newObject->Init(objectName);
     newObject->CreateModel(modelPath);
@@ -201,8 +254,49 @@ void BaseObjectManager::CreateObject(std::string objectName, std::string modelPa
     {
         newObject->SetTexture(texturePath, i);
     }
+#ifdef _DEBUG
+    // 原点に出すと毎回カメラを原点まで戻す羽目になるので、今見ている場所の前に出す
+    newObject->GetLocalPosition() = ImGuizmoManager::GetInstance()->GetSpawnPosition();
+#endif // _DEBUG
     this->AddObject(std::move(newObject));
     ImGuiNotification::Post("オブジェクトを作成しました: " + objectName, {0.2f, 0.8f, 0.2f, 1.0f});
+}
+
+BaseObject *BaseObjectManager::CreateObjectFromModel(const std::string &modelPath, const Vector3 &position)
+{
+    if (modelPath.empty())
+    {
+        return nullptr;
+    }
+
+    // 名前はモデルのファイル名（拡張子なし）を元にする
+    const std::string name = MakeUniqueObjectName(std::filesystem::path(modelPath).stem().string());
+
+    std::unique_ptr<BaseObject> newObject = std::make_unique<BaseObject>();
+    newObject->Init(name);
+    newObject->CreateModel(modelPath);
+    newObject->GetLocalPosition() = position;
+
+    this->AddObject(std::move(newObject));
+    ImGuiNotification::Post("オブジェクトを配置しました: " + name, {0.2f, 0.8f, 0.2f, 1.0f});
+    return GetObjectByName(name);
+}
+
+BaseObject *BaseObjectManager::CreatePrimitiveObject(PrimitiveType type, const std::string &baseName)
+{
+    const std::string name = MakeUniqueObjectName(baseName);
+
+    std::unique_ptr<BaseObject> newObject = std::make_unique<BaseObject>();
+    newObject->SetPrimitive(true);
+    newObject->Init(name);
+    newObject->CreatePrimitiveModel(type);
+#ifdef _DEBUG
+    // 原点ではなく今見ている場所の前に出す
+    newObject->GetLocalPosition() = ImGuizmoManager::GetInstance()->GetSpawnPosition();
+#endif // _DEBUG
+
+    this->AddObject(std::move(newObject));
+    return GetObjectByName(name);
 }
 
 BaseObject *BaseObjectManager::GetObjectByName(const std::string &name)
@@ -271,9 +365,12 @@ void BaseObjectManager::ShowParentChildHierarchy()
         // 階層構造を表示
         ImGui::BeginChild("HierarchyView", ImVec2(0, 300), ImGuiChildFlags_Borders);
 
-        for (auto &[name, obj] : objects_)
+        // objects_ は unordered_map なので、そのまま回すと並び順がハッシュ順（実質ランダム）になり、
+        // オブジェクトを増減させるたびに一覧の位置が変わってしまう。名前順に並べて安定させる。
+        for (const std::string &name : GetSortedObjectNames())
         {
-            if (!obj->GetParent())
+            BaseObject *obj = GetObjectByName(name);
+            if (obj && !obj->GetParent())
             { // ルートオブジェクトのみ表示
                 ShowObjectHierarchy(obj, 0);
             }
@@ -374,9 +471,10 @@ void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth)
 
         if (ImGui::BeginMenu("親を設定"))
         {
-            for (auto &[otherName, other] : objects_)
+            for (const std::string &otherName : GetSortedObjectNames())
             {
-                if (other == obj)
+                BaseObject *other = GetObjectByName(otherName);
+                if (!other || other == obj)
                     continue;
                 // 循環になる相手（自分の子孫）は候補から除外する
                 bool isDescendant = false;
@@ -471,10 +569,18 @@ void BaseObjectManager::RemoveParentChild(const std::string &childName)
 std::vector<std::string> BaseObjectManager::GetObjectNames() const
 {
     std::vector<std::string> names;
+    names.reserve(objects_.size());
     for (const auto &[name, obj] : objects_)
     {
         names.push_back(name);
     }
+    return names;
+}
+
+std::vector<std::string> BaseObjectManager::GetSortedObjectNames() const
+{
+    std::vector<std::string> names = GetObjectNames();
+    std::sort(names.begin(), names.end());
     return names;
 }
 
@@ -541,20 +647,21 @@ void BaseObjectManager::RemoveObject(const std::string &name)
 
         if (targetObject)
         {
-            // 子供の親解除
-            for (auto &pair : objects_)
+            // 子の親子付けを解除する。
+            // children_ を直接辿るので、マネージャに未登録の子も取りこぼさない
+            // （取りこぼすと、破棄済みの親を指したままの WorldTransform::pParent_ が残る）。
+            // DetachParent() が親の children_ から自分を外すのでループは必ず終わる。
+            std::list<BaseObject *> *children = targetObject->GetChildren();
+            while (children && !children->empty())
             {
-                BaseObject *obj = pair.second;
-                if (obj && obj->GetParent() == targetObject)
-                {
-                    obj->DetachParent();
-                }
+                children->front()->DetachParent();
             }
 
             // 親からの解除
             targetObject->DetachParent();
         }
 
+        DetachRegistrations(targetObject, name);
         objects_.erase(it);
         ownedObjects_.erase(name);
     }
@@ -570,9 +677,14 @@ void BaseObjectManager::ShowSaveTargetManager()
         std::vector<std::string> saveTargets;
         std::vector<std::string> nonSaveTargets;
 
-        // オブジェクトを分類
-        for (const auto &[name, obj] : objects_)
+        // オブジェクトを分類（unordered_map をそのまま回すと並びが毎回変わるので名前順で見る）
+        for (const std::string &name : GetSortedObjectNames())
         {
+            BaseObject *obj = GetObjectByName(name);
+            if (!obj)
+            {
+                continue;
+            }
             if (obj->GetShouldSave())
             {
                 saveTargets.push_back(name);
@@ -787,19 +899,21 @@ void BaseObjectManager::RemoveFromSaveTargets(const std::string &objectName)
 void BaseObjectManager::DrawSceneSaveModel()
 {
 #ifdef _DEBUG
+    static char sceneNameBuffer[128] = "";
+
     // メニューから呼び出された場合のモーダル表示
     if (showSceneSaveModal_)
     {
         ImGui::OpenPopup("シーン保存");
         showSceneSaveModal_ = false;
+        // 上書き保存が大半なので、編集中のシーン名を初期値として入れておく
+        strncpy_s(sceneNameBuffer, sceneName_.c_str(), _TRUNCATE);
     }
 
     // モーダルウィンドウ（中央に表示、背景は自動で薄暗くなる）
     if (ImGui::BeginPopupModal("シーン保存", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::Text("シーンの名前を入力してください");
-
-        static char sceneNameBuffer[128] = "";
 
         // テキスト入力欄（sceneName_ を編集）
         ImGui::InputText("シーン名", sceneNameBuffer, IM_ARRAYSIZE(sceneNameBuffer));
@@ -830,9 +944,10 @@ void BaseObjectManager::DrawSceneSaveModel()
             if (saveSprites)
                 SpriteManager::GetInstance()->SaveAllSprites(); // スプライトも保存
             if (saveUI)
-                UIAnimator::GetInstance()->Save();       // UIアニメーションも保存
-            ImGui::CloseCurrentPopup();        // モーダルを閉じる
-            sceneName_.clear();                // 入力欄をクリア
+                UIAnimator::GetInstance()->Save(); // UIアニメーションも保存
+            ImGui::CloseCurrentPopup();           // モーダルを閉じる
+            // sceneName_ は「今どのシーンを編集しているか」を保持する変数なので、
+            // 保存後にクリアしてはいけない（次の SaveAll が SceneData//ObjectDatas に書いてしまう）
         }
 
         ImGui::SameLine();
@@ -851,18 +966,19 @@ void BaseObjectManager::DrawSceneSaveModel()
 void BaseObjectManager::DrawSceneLoadModel()
 {
 #ifdef _DEBUG
+    static char sceneNameBuffer[128] = "";
+
     // メニューから呼び出された場合のモーダル表示
     if (showSceneLoadModal_)
     {
         ImGui::OpenPopup("シーン読み込み");
         showSceneLoadModal_ = false;
+        strncpy_s(sceneNameBuffer, sceneName_.c_str(), _TRUNCATE);
     }
 
     if (ImGui::BeginPopupModal("シーン読み込み", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::Text("シーンの名前を入力してください");
-
-        static char sceneNameBuffer[128] = "";
 
         // テキスト入力欄（sceneName_ を編集）
         ImGui::InputText("シーン名", sceneNameBuffer, IM_ARRAYSIZE(sceneNameBuffer));
@@ -879,15 +995,14 @@ void BaseObjectManager::DrawSceneLoadModel()
         // 横並びに「読み込み」ボタンと「キャンセル」ボタン
         if (ImGui::Button("読み込み", ImVec2(120, 0)))
         {
-            sceneName_ = sceneNameBuffer;      // 入力内容を保存
-            LoadAll(sceneName_);               // オブジェクトの読み込み
-            LoadAllParentChildRelationships(); // 親子関係も読み込み
+            sceneName_ = sceneNameBuffer; // 入力内容を保存
+            LoadAll(sceneName_);          // オブジェクトの読み込み（親子関係の復元も内部で行う）
             if (loadSprites)
                 SpriteManager::GetInstance()->LoadAllSprites(); // スプライトも読み込み
             if (loadUI)
-                UIAnimator::GetInstance()->Load();       // UIアニメーションも読み込み
-            ImGui::CloseCurrentPopup();        // モーダルを閉じる
-            sceneName_.clear();                // 読み込み後はシーン名をクリア
+                UIAnimator::GetInstance()->Load(); // UIアニメーションも読み込み
+            ImGui::CloseCurrentPopup();           // モーダルを閉じる
+            // 読み込んだシーン名はそのまま保持する（次の保存先がこのシーンになる）
         }
 
         ImGui::SameLine();
@@ -928,8 +1043,18 @@ void BaseObjectManager::DrawObjectCreationModel()
         // モデルファイル選択セクション
         ImGui::Text("モデルファイル選択:");
         ImGui::BeginChild("ModelFileSelector", ImVec2(600, 300), true);
-        ShowModelFile(modelPath_);
+        ShowModelFile(modelPath_, "objectCreate");
         ImGui::EndChild();
+
+        // モデルを選んだらオブジェクト名を自動で埋める。
+        // 名前は後から変えられるので、毎回手打ちさせない方が置く作業が速い。
+        static std::string lastAutoFilledModel;
+        if (!modelPath_.empty() && modelPath_ != lastAutoFilledModel)
+        {
+            lastAutoFilledModel = modelPath_;
+            const std::string suggested = MakeUniqueObjectName(std::filesystem::path(modelPath_).stem().string());
+            strncpy_s(objectNameBuffer, suggested.c_str(), _TRUNCATE);
+        }
 
         ImGui::Separator();
 
@@ -1148,12 +1273,10 @@ void BaseObjectManager::RestoreParentChildRelationshipForObject(BaseObject *pObj
 void BaseObjectManager::DrawHierarchyEditor()
 {
 #ifdef _DEBUG
-    ImGui::Begin("オブジェクトマネージャ");
-
+    // ウィンドウの Begin/End は呼び出し元（ImGuiManager::ShowHierarchyWindow）が行う。
+    // ここで再度 Begin すると同名ウィンドウが入れ子になる。
     ShowParentChildHierarchy();
     ShowSaveTargetManager();
-
-    ImGui::End();
 #endif // _DEBUG
 }
 

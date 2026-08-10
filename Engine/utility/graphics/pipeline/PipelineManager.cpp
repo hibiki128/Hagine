@@ -173,7 +173,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateCommonRootSig
     return rootSig;
 }
 
-Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateFullScreenPostEffectPipeline(const std::wstring &psPath, Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature)
+Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateFullScreenPostEffectPipeline(const std::wstring &psPath, Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, DXGI_FORMAT rtvFormat)
 {
     IDxcBlob *vs = pDxCommon_->CompileShader(shaderPath + L"shaders/OffScreen/FullScreen.VS.hlsl", L"vs_6_0");
     IDxcBlob *ps = pDxCommon_->CompileShader(psPath.c_str(), L"ps_6_0");
@@ -189,7 +189,9 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateFullScreenPos
     desc.DepthStencilState.DepthEnable = FALSE;
     desc.DepthStencilState.StencilEnable = FALSE;
     desc.NumRenderTargets = 1;
-    desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    // 書き込み先の実フォーマットと一致させる必要がある。
+    // ポストエフェクトのチェーン内はリニアFP16、バックバッファへの最終合成だけ sRGB。
+    desc.RTVFormats[0] = rtvFormat;
     desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     desc.SampleDesc.Count = 1;
     desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
@@ -521,6 +523,18 @@ void PipelineManager::CreateRenderPipelines()
         // パイプラインを作成し、マップに格納
         auto pipeline = CreateRenderGraphicsPipeline(rootSignature, shaderMode);
         pipelines_[MakePipelineKey(PipelineType::Render, BlendMode::Normal, shaderMode)] = pipeline;
+    }
+
+    // バックバッファへの最終合成用。
+    // チェーン内(リニアFP16)とバックバッファ(sRGB)でフォーマットが違うので、
+    // 同じ CopyImage シェーダーでも別PSOが必要になる。
+    // ルートシグネチャは None と同じもの（テクスチャ1枚）を使い回す。
+    {
+        auto rootSignature = rootSignatures_[MakeRootSignatureKey(PipelineType::Render, ShaderMode::None)];
+        rootSignatures_[MakeRootSignatureKey(PipelineType::PresentCopy, ShaderMode::None)] = rootSignature;
+        pipelines_[MakePipelineKey(PipelineType::PresentCopy, BlendMode::Normal, ShaderMode::None)] =
+            CreateFullScreenPostEffectPipeline(shaderPath + L"shaders/OffScreen/CopyImage.PS.hlsl",
+                                               rootSignature, kBackBufferFormat);
     }
 }
 
@@ -1485,6 +1499,10 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> PipelineManager::CreateRenderRootSig
         return CreateShockwaveRootSignature();
     case ShaderMode::Monochrome:
         return CreateMonochromeRootSignature();
+    case ShaderMode::DepthOfField:
+        // コンピュートシェーダー専用。PS版は無いので、PS側は素通しのものを割り当てておく
+        // （CS生成に失敗したときに何も表示されなくなるのを防ぐフォールバック）。
+        return CreateBaseRootSignature();
     default:
         return CreateBaseRootSignature();
     }
@@ -1531,6 +1549,9 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineManager::CreateRenderGraphic
         return CreateShockwaveGraphicsPipeline(rootSignature);
     case ShaderMode::Monochrome:
         return CreateMonochromeGraphicsPipeline(rootSignature);
+    case ShaderMode::DepthOfField:
+        // コンピュートシェーダー専用のため、PS版は素通し（CopyImage）でフォールバックする
+        return CreateNoneGraphicsPipeline(rootSignature);
     default:
         return CreateNoneGraphicsPipeline(rootSignature);
     }

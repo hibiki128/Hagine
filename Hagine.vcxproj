@@ -260,6 +260,8 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\2d\Sprite.cpp" />
     <ClCompile Include="Engine\2d\SpriteCommon.cpp" />
     <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManager.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\ShaderRootSignature.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\ComputeEffectPipeline.cpp" />
     <ClCompile Include="Engine\utility\graphics\srv\SrvManager.cpp" />
     <ClCompile Include="Engine\utility\scene\SceneManager.cpp" />
     <ClCompile Include="Engine\utility\string\StringUtility.cpp" />

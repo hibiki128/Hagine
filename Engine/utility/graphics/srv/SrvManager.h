@@ -103,6 +103,15 @@ class SrvManager
     void CreateUAVStructuredBuffer(uint32_t srvIndex, ID3D12Resource *pResource, UINT numElements, UINT structureByteStride);
 
     /// <summary>
+    /// 2Dテクスチャ用のUAVを作る（コンピュートシェーダーの書き込み先）
+    /// ※ sRGB フォーマットには UAV を作れないので、リソースは非sRGBで生成しておくこと
+    /// </summary>
+    /// <param name="srvIndex">デスクリプタの番号</param>
+    /// <param name="pResource">対象リソース</param>
+    /// <param name="format">ビューのフォーマット</param>
+    void CreateUAVforTexture2D(uint32_t srvIndex, ID3D12Resource *pResource, DXGI_FORMAT format);
+
+    /// <summary>
     /// インデックス割り当て
     /// </summary>
     /// <returns></returns>

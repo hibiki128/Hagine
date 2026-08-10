@@ -47,7 +47,7 @@ class ResourceFactory
     /// <summary>
     /// レンダーテクスチャリソースを作成する
     /// </summary>
-    Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(uint32_t width, uint32_t height, DXGI_FORMAT format, D3D12_CLEAR_VALUE color);
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(uint32_t width, uint32_t height, DXGI_FORMAT format, D3D12_CLEAR_VALUE color, bool allowUAV = false);
 
     /// <summary>
     /// 深度ステンシルリソースを作成する（DEPTH_WRITE 状態で返る）

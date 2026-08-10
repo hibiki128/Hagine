@@ -117,8 +117,10 @@ void LightGroup::Update(const ViewProjection &viewProjection)
     pDirectionalLightData_->active = isDirectionalLight_;
 
 #ifdef _DEBUG
-    // シーン切り替えや「オブジェクト全削除」で ImGuizmoManager::DeleteTarget() が呼ばれると
-    // 登録が丸ごと消えるので、消えていたら黙って登録し直す（先頭1件だけ見れば足りる）
+    // ImGuizmoManager 側の登録が失われていたら（Finalize 後の再初期化など）登録し直す。
+    // 先頭1件の有無だけ見れば足りる。
+    // ※ かつては3Dオブジェクトの一括削除でも巻き添えで消えていたが、そちらは
+    //    BaseObjectManager が自分の登録だけを外すようになったため起きなくなっている。
     if (!gizmoNames_.empty() && !ImGuizmoManager::GetInstance()->HasTarget(gizmoNames_.front()))
     {
         SyncGizmoTargets();

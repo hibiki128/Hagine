@@ -83,6 +83,33 @@ class BaseScene
 
     void DrawAllObjects();
 
+    /// ===================================================
+    /// デバッグカメラ
+    /// 生成・初期化は BaseScene::Initialize が行うので、派生シーンはこれらを呼ぶだけでよい
+    /// ===================================================
+
+    /// <summary>
+    /// デバッグカメラを更新する（有効中は自動でデバッグカメラへ切り替わる）
+    /// </summary>
+    void UpdateDebugCamera();
+
+    /// <summary>
+    /// デバッグカメラの設定UIを描画する
+    /// </summary>
+    void DrawDebugCameraImGui();
+
+    /// <summary>
+    /// デバッグカメラが有効か（有効中はゲーム側のカメラ制御を止めるなどの判断に使う）
+    /// </summary>
+    /// <returns>bool: 有効なら true</returns>
+    bool IsDebugCameraActive() const;
+
+    /// <summary>
+    /// デバッグカメラの有効／無効を切り替える（F3 のショートカットから呼ばれる）
+    /// </summary>
+    /// <returns>bool: 切り替え後の状態</returns>
+    bool ToggleDebugCamera();
+
     /// <summary>
     /// 描画へ渡すビュープロジェクションを取得する（今アクティブなカメラのもの）
     /// </summary>

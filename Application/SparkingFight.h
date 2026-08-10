@@ -30,6 +30,12 @@ class SparkingFight : public Hagine::Framework
 
   private:
     /// <summary>
+    /// このゲームで使うコライダータグと既定の衝突マスクを登録する
+    /// エンジンはゲーム固有のタグ名を持たないので、ゲーム側から与える必要がある
+    /// </summary>
+    void RegisterColliderTags();
+
+    /// <summary>
     /// ゲーム固有リソースの読み込み（パーティクルエミッター・フィールド）
     /// </summary>
     void LoadGameResources();

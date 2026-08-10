@@ -178,19 +178,21 @@ Quaternion WorldTransform::GetWorldRotation() const
 
     // スケールを除去した回転行列を作成
     Vector3 scale = GetWorldScale();
-    Matrix4x4 rotationMatrix = m;
+    Matrix4x4 rotationMatrix = MakeIdentity4x4();
 
-    // スケールを正規化
-    for (int i = 0; i < 3; i++)
+    // この行列規約は行ベクトル（v * M）なので、基底ベクトルは「行」に入っている。
+    // GetWorldScale も行の長さからスケールを求めているので、正規化も行単位で行う。
+    const float axisLength[3] = {scale.x, scale.y, scale.z};
+    for (int row = 0; row < 3; row++)
     {
-        for (int j = 0; j < 3; j++)
+        // スケール0の軸は方向が定まらないので、単位行列の行をそのまま使う
+        if (std::abs(axisLength[row]) <= 1e-6f)
         {
-            if (i == 0)
-                rotationMatrix.m[j][i] /= scale.x;
-            else if (i == 1)
-                rotationMatrix.m[j][i] /= scale.y;
-            else if (i == 2)
-                rotationMatrix.m[j][i] /= scale.z;
+            continue;
+        }
+        for (int column = 0; column < 3; column++)
+        {
+            rotationMatrix.m[row][column] = m.m[row][column] / axisLength[row];
         }
     }
 

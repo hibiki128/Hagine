@@ -12,12 +12,40 @@ void SparkingFight::Initialize()
 
     Framework::Initialize();
     Framework::LoadResource();
+    RegisterColliderTags();
     LoadGameResources();
     Framework::PlaySounds();
     Framework::RegisterShortcutKey();
 
     // 最初のシーンを予約（シーンは各 .cpp の REGISTER_SCENE で自己登録済み）
     pSceneManager_->NextSceneReservation("TITLE");
+}
+
+void SparkingFight::RegisterColliderTags()
+{
+    // このゲームで使うコライダータグ。
+    // エンジン側は "None" / "Environment" しか知らないので、ゲーム固有の名前はここで登録する。
+    // 登録しておかないと、コライダー設定UIのタグ候補に出てこない。
+    ColliderTagManager *tagManager = ColliderTagManager::GetInstance();
+    tagManager->RegisterGameTags({
+        "Player",
+        "Enemy",
+        "Projectile",
+        "Makan",
+        "PlayerBullet",
+        "PlayerChargeBullet",
+        "PlayerHand",
+        "EnemyBullet",
+        "EnemyHand",
+        "PlayerWall",
+        "EnemyWall",
+        "CylinderField",
+        "Ground",
+    });
+
+    // エディタで置いた地形・障害物が既定で何と当たるか。
+    // 「環境オブジェクトはプレイヤーと敵を止める」というのはゲーム側の決めごとなので、ここで指定する。
+    tagManager->SetDefaultCollisionMasks({"Player", "Enemy"});
 }
 
 void SparkingFight::LoadGameResources()

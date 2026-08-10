@@ -126,6 +126,17 @@ void SrvManager::CreateUAVStructuredBuffer(uint32_t srvIndex, ID3D12Resource *pR
     pDxCommon_->GetDevice()->CreateUnorderedAccessView(pResource, nullptr, &uavDesc, GetCPUDescriptorHandle(srvIndex));
 }
 
+void SrvManager::CreateUAVforTexture2D(uint32_t srvIndex, ID3D12Resource *pResource, DXGI_FORMAT format)
+{
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+    uavDesc.Format = format;
+    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+    uavDesc.Texture2D.MipSlice = 0;
+    uavDesc.Texture2D.PlaneSlice = 0;
+
+    pDxCommon_->GetDevice()->CreateUnorderedAccessView(pResource, nullptr, &uavDesc, GetCPUDescriptorHandle(srvIndex));
+}
+
 uint32_t SrvManager::Allocate()
 {
     // 空きインデックスがあれば、それを使用

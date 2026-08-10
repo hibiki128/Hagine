@@ -23,6 +23,15 @@ enum class BlendMode {
     Screen,
 };
 
+// ポストエフェクトのチェーン内で使うレンダーターゲットのフォーマット。
+// リニア空間のFP16にしている理由:
+//   ・sRGB フォーマットには UAV を作れず、コンピュートシェーダーで書けない
+//   ・8bit だとエフェクトを重ねるたびに階調が落ちる（ブラー・ブルーム・DoFで顕著）
+// sRGB へのエンコードはバックバッファへの最終合成時にハードウェアが行う。
+inline constexpr DXGI_FORMAT kPostEffectChainFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
+// バックバッファのフォーマット（最終合成先）
+inline constexpr DXGI_FORMAT kBackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+
 enum class ShaderMode {
     None,
     Gray,
@@ -40,7 +49,8 @@ enum class ShaderMode {
     Bloom,
     Retro,
     Shockwave,
-    Monochrome, // 完全な白黒（明度で白or黒に二値化）
+    Monochrome,    // 完全な白黒（明度で白or黒に二値化）
+    DepthOfField,  // 被写界深度（コンピュートシェーダー専用）
     Count,
 };
 
@@ -66,6 +76,10 @@ enum class PipelineType {
     StandardInstanced,
     GBufferInstanced,
     ShadowMapInstanced,
+    // ポストエフェクトの最終結果をバックバッファへ写すためだけのパイプライン。
+    // チェーン内はリニアFP16、バックバッファは sRGB とフォーマットが違うため、
+    // 同じ CopyImage シェーダーでも PSO を分ける必要がある。
+    PresentCopy,
 };
 
 class PipelineManager {
@@ -224,7 +238,14 @@ class PipelineManager {
 
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateCommonRootSignature(bool hasCBV);
 
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateFullScreenPostEffectPipeline(const std::wstring &psPath, Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
+    /// <summary>
+    /// 全画面ポストエフェクト用のパイプラインを作る
+    /// </summary>
+    /// <param name="psPath">ピクセルシェーダーのパス</param>
+    /// <param name="rootSignature">ルートシグネチャ</param>
+    /// <param name="rtvFormat">書き込み先のフォーマット。チェーン内はリニアFP16、
+    /// バックバッファへの最終合成のみ sRGB を指定する</param>
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateFullScreenPostEffectPipeline(const std::wstring &psPath, Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, DXGI_FORMAT rtvFormat = kPostEffectChainFormat);
 
     D3D12_DEPTH_STENCIL_DESC SettingDepthStencilDesc(bool depth);
 };

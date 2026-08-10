@@ -3,6 +3,7 @@
 #include "2d/text/TextRenderer.h"
 #include "2d/ui/UIAnimator.h"
 #include "AssetDragDrop.h"
+#include <browser/ShowFolder.h>
 #include "DebugUIHelper.h"
 #include "ImGuiNotification.h"
 #include "ImGuizmo.h"
@@ -621,105 +622,38 @@ void ImGuiManager::ShowMainMenu() {
 
             // 3Dオブジェクト
             if (ImGui::BeginMenu(ICON_FA_CUBE " 3Dオブジェクト")) {
-                if (ImGui::MenuItem(ICON_FA_CUBE " キューブ")) {
-                    std::string name = "cube_" + std::to_string(++cubeCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "cube_" + std::to_string(++cubeCount_);
+                // 生成の中身（名前の一意化・カメラ前方への配置）は BaseObjectManager 側に持たせ、
+                // ここは「どの形状をどのラベルで出すか」の表だけにしておく
+                struct PrimitiveMenuEntry {
+                    const char *label;
+                    PrimitiveType type;
+                    const char *baseName;
+                };
+                static const PrimitiveMenuEntry kPrimitiveEntries[] = {
+                    {ICON_FA_CUBE " キューブ", PrimitiveType::Cube, "cube"},
+                    {ICON_FA_CIRCLE " 球体", PrimitiveType::Sphere, "sphere"},
+                    {ICON_FA_CUBE " 平面", PrimitiveType::Plane, "plane"},
+                    {ICON_FA_CIRCLE " シリンダー", PrimitiveType::Cylinder, "cylinder"},
+                    {ICON_FA_RING " リング", PrimitiveType::Ring, "ring"},
+                    {ICON_FA_CARET_UP " 三角形", PrimitiveType::Triangle, "triangle"},
+                    {ICON_FA_MOUNTAIN " ピラミッド", PrimitiveType::Pyramid, "pyramid"},
+                    {ICON_FA_CHART_AREA " 円柱", PrimitiveType::Cone, "cone"},
+                };
+                for (const PrimitiveMenuEntry &entry : kPrimitiveEntries) {
+                    if (ImGui::MenuItem(entry.label)) {
+                        BaseObject *created = pBaseObjectManager_->CreatePrimitiveObject(entry.type, entry.baseName);
+                        // 出した直後に触れるよう、生成したものを選択状態にする
+                        if (created) {
+                            pImGuizmoManager_->SelectOnly(created->GetName());
+                        }
                     }
-                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
-                    object->SetPrimitive(true);
-                    object->Init(name);
-                    object->CreatePrimitiveModel(PrimitiveType::Cube);
-                    pBaseObjectManager_->AddObject(std::move(object));
-                }
-
-                if (ImGui::MenuItem(ICON_FA_CIRCLE " 球体")) {
-                    std::string name = "sphere_" + std::to_string(++sphereCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "sphere_" + std::to_string(++sphereCount_);
-                    }
-                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
-                    object->SetPrimitive(true);
-                    object->Init(name);
-                    object->CreatePrimitiveModel(PrimitiveType::Sphere);
-                    pBaseObjectManager_->AddObject(std::move(object));
-                }
-
-                if (ImGui::MenuItem(ICON_FA_CUBE " 平面")) {
-                    std::string name = "plane_" + std::to_string(++planeCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "plane_" + std::to_string(++planeCount_);
-                    }
-                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
-                    object->SetPrimitive(true);
-                    object->Init(name);
-                    object->CreatePrimitiveModel(PrimitiveType::Plane);
-                    pBaseObjectManager_->AddObject(std::move(object));
-                }
-
-                if (ImGui::MenuItem(ICON_FA_CIRCLE " シリンダー")) {
-                    std::string name = "cylinder_" + std::to_string(++cylinderCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "cylinder_" + std::to_string(++cylinderCount_);
-                    }
-                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
-                    object->SetPrimitive(true);
-                    object->Init(name);
-                    object->CreatePrimitiveModel(PrimitiveType::Cylinder);
-                    pBaseObjectManager_->AddObject(std::move(object));
-                }
-
-                if (ImGui::MenuItem(ICON_FA_RING " リング")) {
-                    std::string name = "ring_" + std::to_string(++ringCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "ring_" + std::to_string(++ringCount_);
-                    }
-                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
-                    object->SetPrimitive(true);
-                    object->Init(name);
-                    object->CreatePrimitiveModel(PrimitiveType::Ring);
-                    pBaseObjectManager_->AddObject(std::move(object));
-                }
-
-                if (ImGui::MenuItem(ICON_FA_CARET_UP " 三角形")) {
-                    std::string name = "triangle_" + std::to_string(++triangleCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "triangle_" + std::to_string(++triangleCount_);
-                    }
-                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
-                    object->SetPrimitive(true);
-                    object->Init(name);
-                    object->CreatePrimitiveModel(PrimitiveType::Triangle);
-                    pBaseObjectManager_->AddObject(std::move(object));
-                }
-
-                if (ImGui::MenuItem(ICON_FA_MOUNTAIN " ピラミッド")) {
-                    std::string name = "pyramid_" + std::to_string(++pyramidCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "pyramid_" + std::to_string(++pyramidCount_);
-                    }
-                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
-                    object->SetPrimitive(true);
-                    object->Init(name);
-                    object->CreatePrimitiveModel(PrimitiveType::Pyramid);
-                    pBaseObjectManager_->AddObject(std::move(object));
-                }
-
-                if (ImGui::MenuItem(ICON_FA_CHART_AREA " 円柱")) {
-                    std::string name = "cone_" + std::to_string(++coneCount_);
-                    if (BaseObjectManager::GetInstance()->GetObjectByName(name)) {
-                        name = "cone_" + std::to_string(++coneCount_);
-                    }
-                    std::unique_ptr<BaseObject> object = std::make_unique<BaseObject>();
-                    object->SetPrimitive(true);
-                    object->Init(name);
-                    object->CreatePrimitiveModel(PrimitiveType::Cone);
-                    pBaseObjectManager_->AddObject(std::move(object));
                 }
 
                 if (ImGui::MenuItem(ICON_FA_TRASH_ALT " オブジェクト全削除")) {
+                    // RemoveAllObjects が自分の登録だけを解除する。
+                    // ここで DeleteTarget()（＝全操作対象を消す）を呼ぶと、スプライト・ライト・
+                    // パーティクルのギズモ登録まで巻き添えで消えてしまう。
                     pBaseObjectManager_->RemoveAllObjects();
-                    pImGuizmoManager_->DeleteTarget();
                     ImGuiNotification::Post("全オブジェクトを削除しました", {0.9f, 0.7f, 0.2f, 1.0f});
                 }
 
@@ -1068,6 +1002,27 @@ void ImGuiManager::ShowAssetBrowserWindow() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoFocusOnAppearing;
     ImGui::Begin("アセットブラウザ", &showAssetBrowserView_, flags);
 
+    // 画像とモデルをタブで切り替える。
+    // モデルタブの一覧はシーンウィンドウへのドラッグ&ドロップ配置に対応している。
+    if (ImGui::BeginTabBar("##AssetTabs")) {
+        if (ImGui::BeginTabItem("モデル")) {
+            ImGui::TextDisabled("モデルをシーンウィンドウへドラッグすると、その場に配置されます");
+            ImGui::Separator();
+            static std::string assetBrowserModelPath;
+            ShowModelFile(assetBrowserModelPath, "assetBrowser");
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("画像")) {
+            ShowImageAssetGrid();
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
+
+    ImGui::End();
+}
+
+void ImGuiManager::ShowImageAssetGrid() {
     // images ルート配下の画像を列挙（初回スキャン + 再スキャン）。
     // textureFilePath 規約に合わせ base からの相対パス('/'区切り)で保持し、
     // 親フォルダごとにまとめる（map のキーがフォルダ＝表示順もフォルダ順になる）。
@@ -1183,7 +1138,6 @@ void ImGuiManager::ShowAssetBrowserWindow() {
     }
 
     ImGui::EndChild();
-    ImGui::End();
 }
 
 void ImGuiManager::FixAspectRatio() {
@@ -1290,6 +1244,20 @@ void ImGuiManager::ShowSceneWindow(OffScreen *offScreen, const std::string &scen
         static_cast<ImTextureID>(SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex).ptr),
         sceneTextureSize_, ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f),
         backgroundColor);
+
+    // アセットブラウザからモデルをドラッグしてきたら、カーソルの指す位置に配置する。
+    // 「生成モーダルで名前とパスを入力 → 原点に出る → 探しに行く」の往復を省くための導線。
+    {
+        std::string droppedModelPath;
+        if (AssetDragDrop::ModelTarget(droppedModelPath)) {
+            BaseObject *created = pBaseObjectManager_->CreateObjectFromModel(
+                droppedModelPath, pImGuizmoManager_->GetSpawnPositionUnderCursor());
+            if (created) {
+                // 置いた直後にそのまま動かせるよう選択状態にする
+                pImGuizmoManager_->SelectOnly(created->GetName());
+            }
+        }
+    }
 
     // ImGuizmo 用のシーン位置（ImGui 座標系）。マルチビューポート時はスクリーン全体座標になる。
     actualScenePos_ = ImVec2(
@@ -1696,6 +1664,12 @@ void ImGuiManager::ShowHelpWindow() {
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  ショートカット一覧（この画面）");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("F1");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
                 ImGui::Text("  デバッグカメラ切り替え");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("F3");
@@ -1743,6 +1717,12 @@ void ImGuiManager::ShowHelpWindow() {
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("Ctrl + Shift + N");
 
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  保存済みオブジェクト読み込み");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("Ctrl + Shift + M");
+
                 // シーン切り替え
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
@@ -1750,35 +1730,18 @@ void ImGuiManager::ShowHelpWindow() {
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("");
 
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("  タイトルシーン");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("Ctrl + 1");
-
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("  セレクトシーン");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("Ctrl + 2");
-
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("  ゲームシーン");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("Ctrl + 3");
-
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("  クリアシーン");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("Ctrl + 4");
-
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("  デモシーン");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("Ctrl + 5");
+                // シーン名を直書きすると増減のたびに実際の割り当てとずれるので、
+                // Framework::RegisterShortcutKey と同じ SceneRegistry の順番から生成する
+                {
+                    const std::vector<std::string> registeredScenes = SceneRegistry::GetInstance()->GetSceneNames();
+                    for (size_t i = 0; i < registeredScenes.size() && i < 9; ++i) {
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("  %s", registeredScenes[i].c_str());
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Text("Ctrl + %zu", i + 1);
+                    }
+                }
 
                 // オブジェクト操作
                 ImGui::TableNextRow();
@@ -1786,6 +1749,18 @@ void ImGuiManager::ShowHelpWindow() {
                 ImGui::TextColored(ImVec4(0.8f, 0.9f, 1.0f, 1.0f), ICON_FA_CUBES " 選択オブジェクト操作");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  元に戻す");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("Ctrl + Z");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  やり直す");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("Ctrl + Y");
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
@@ -1801,9 +1776,43 @@ void ImGuiManager::ShowHelpWindow() {
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  オブジェクト複製");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("Ctrl + D");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
                 ImGui::Text("  オブジェクト削除");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("Delete");
+
+                // ギズモ操作（シーンウィンドウにマウスがある間のみ有効）
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextColored(ImVec4(0.8f, 0.9f, 1.0f, 1.0f), ICON_FA_ARROWS_ALT " ギズモ操作 (シーン上)");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("");
+
+                struct GizmoShortcutRow {
+                    const char *label;
+                    const char *key;
+                };
+                static const GizmoShortcutRow kGizmoShortcuts[] = {
+                    {"  移動 / 回転 / スケール", "1 / 2 / 3"},
+                    {"  ローカル ⇔ ワールド", "4"},
+                    {"  スナップ ON/OFF", "5"},
+                    {"  スナップを一時反転", "Shift (押している間)"},
+                    {"  選択オブジェクトへ寄る", "F"},
+                    {"  重なった物を順に選択", "Tab"},
+                    {"  矩形選択（Ctrlで追加選択）", "空きスペースをドラッグ"},
+                };
+                for (const GizmoShortcutRow &row : kGizmoShortcuts) {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted(row.label);
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::TextUnformatted(row.key);
+                }
 
                 ImGui::EndTable();
             }

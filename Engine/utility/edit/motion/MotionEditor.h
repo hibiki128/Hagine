@@ -125,6 +125,13 @@ class MotionEditor
     void Register(Hagine::BaseObject *pObject);
 
     /// <summary>
+    /// オブジェクトの登録を解除する
+    /// 解除しないと破棄済みオブジェクトへのポインタが残り、再生・編集時に不正アクセスになる
+    /// </summary>
+    /// <param name="pObject">解除するオブジェクト</param>
+    void Unregister(Hagine::BaseObject *pObject);
+
+    /// <summary>
     /// 更新処理
     /// </summary>
     /// <param name="deltaTime">フレームの経過時間</param>

@@ -106,6 +106,13 @@ void Framework::Initialize()
     pComputePipelineManager_->Initialize(pDxCommon_);
     ///-------------------------------------
 
+    ///-----------ComputeEffectPipeline-----------
+    // コンピュートシェーダー版ポストエフェクトのパイプライン置き場。
+    // ルートシグネチャはシェーダーのリフレクションから自動生成されるので、
+    // ここでは初期化だけしておけばよい（PSOは初回使用時に作られてキャッシュされる）。
+    ComputeEffectPipeline::GetInstance()->Initialize(pDxCommon_);
+    ///-------------------------------------------
+
     ///-----------TextureManager----------
     pTextureManager_ = TextureManager::GetInstance();
     pTextureManager_->Initialize(pSrvManager_);
@@ -246,6 +253,7 @@ void Framework::Finalize()
     winApp_->Finalize();
     pPipeLineManager_->Finalize();
     pComputePipelineManager_->Finalize();
+    ComputeEffectPipeline::GetInstance()->Finalize();
     pTextureManager_->Finalize();
     pModelManager_->Finalize();
     pPrimitiveModel_->Finalize();
@@ -292,6 +300,19 @@ void Framework::RegisterShortcutKey()
 #ifdef _DEBUG
     shortcutManager_->RegisterShortcut("ShowShortcuts", DIK_F1, [this]() {
         imGuiManager_->SetShortcutWindow(true);
+    });
+    // デバッグカメラ切り替え（シーン設定ウィンドウのチェックボックスと同じ操作）
+    shortcutManager_->RegisterShortcut("DebugCamera", DIK_F3, [this]() {
+        BaseScene *currentScene = pSceneManager_->GetBaseScene();
+        if (!currentScene)
+        {
+            return;
+        }
+        const bool active = currentScene->ToggleDebugCamera();
+        ImGuiNotification::Post(active ? "デバッグカメラ: ON (WASD/Space/Shift・右ドラッグで回転)"
+                                       : "デバッグカメラ: OFF",
+                                active ? Vector4{0.45f, 0.68f, 0.52f, 1.0f}
+                                       : Vector4{0.55f, 0.55f, 0.60f, 1.0f});
     });
     // オブジェクトロード
     shortcutManager_->RegisterShortcut("ObjectLoad", {DIK_LSHIFT, DIK_LCONTROL, DIK_M}, [this]() {
@@ -360,6 +381,10 @@ void Framework::RegisterShortcutKey()
     // ペースト
     shortcutManager_->RegisterShortcut("Paste", {DIK_LCONTROL, DIK_V}, [this]() {
         pImGuizmoManager_->PasteObjects();
+    });
+    // 複製（コピーバッファを経由せずその場で増やす。並べる作業はこちらの方が速い）
+    shortcutManager_->RegisterShortcut("Duplicate", {DIK_LCONTROL, DIK_D}, [this]() {
+        pImGuizmoManager_->DuplicateSelectedObjects();
     });
     // デリート
     shortcutManager_->RegisterShortcut("Delete", DIK_DELETE, [this]() {

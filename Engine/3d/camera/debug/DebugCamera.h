@@ -37,6 +37,14 @@ class DebugCamera
     /// </summary>
     bool GetActive() { return isActive_; }
 
+    /// <summary>
+    /// カメラのアクティブ状態を設定する
+    /// 有効にするとデバッグカメラへ、無効に戻すと元のカメラへ切り替わる
+    /// （実際の切り替えは Update で行われる）
+    /// </summary>
+    /// <param name="active">有効にするか</param>
+    void SetActive(bool active) { isActive_ = active; }
+
   public:
     // ===================================================
     // 公開メンバ変数

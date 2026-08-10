@@ -175,9 +175,12 @@ void DirectXCommon::PreRenderTexture()
 
 void DirectXCommon::PreDraw()
 {
-    // 深度リソースをピクセルシェーダーリソースとして読み取る準備
+    // 深度リソースをシェーダーから読み取る準備。
+    // ピクセルシェーダー（深度アウトラインのPS版など）とコンピュートシェーダー
+    // （CS版のポストエフェクト）の両方から読むので、読み取り状態を両方立てておく。
+    // NON_PIXEL を落とすと、コンピュートから読んだ時点で状態違反になる。
     BarrierTransition(depthStencilResource_.Get(),
-                      D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                      D3D12_RESOURCE_STATE_DEPTH_WRITE, kDepthReadState);
     BarrierTransition(offScreenResource_.Get(),
                       D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
 
@@ -197,14 +200,14 @@ void DirectXCommon::PreDraw()
 
 void DirectXCommon::TransitionDepthBarrier()
 {
-    BarrierTransition(depthStencilResource_.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+    BarrierTransition(depthStencilResource_.Get(), kDepthReadState, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 }
 
 void DirectXCommon::PreDrawForEffects()
 {
     // マルチステージ用: バックバッファは既に遷移済みなので深度とオフスクリーンのみ遷移
     BarrierTransition(depthStencilResource_.Get(),
-                      D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                      D3D12_RESOURCE_STATE_DEPTH_WRITE, kDepthReadState);
     BarrierTransition(offScreenResource_.Get(),
                       D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
     ID3D12GraphicsCommandList *pCommandList = directCommandList_->Get();
@@ -414,6 +417,12 @@ IDxcBlob *DirectXCommon::CompileShader(const std::wstring &filePath, const wchar
     return shaderCompiler_->Compile(filePath, profile);
 }
 
+IDxcBlob *DirectXCommon::CompileShaderWithReflection(const std::wstring &filePath, const wchar_t *profile,
+                                                     ID3D12ShaderReflection **ppReflection)
+{
+    return shaderCompiler_->CompileWithReflection(filePath, profile, ppReflection);
+}
+
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_t sizeInBytes, bool isUAV)
 {
     return resourceFactory_->CreateBufferResource(sizeInBytes, isUAV);
@@ -424,9 +433,9 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(cons
     return resourceFactory_->CreateTextureResource(metadata);
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateRenderTextureResource(uint32_t width, uint32_t height, DXGI_FORMAT format, D3D12_CLEAR_VALUE color)
+Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateRenderTextureResource(uint32_t width, uint32_t height, DXGI_FORMAT format, D3D12_CLEAR_VALUE color, bool allowUAV)
 {
-    return resourceFactory_->CreateRenderTextureResource(width, height, format, color);
+    return resourceFactory_->CreateRenderTextureResource(width, height, format, color, allowUAV);
 }
 
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateAdditionalDepthResource(int32_t width, int32_t height)
