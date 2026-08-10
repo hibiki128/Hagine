@@ -1,5 +1,5 @@
 #pragma once
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 
 #include "imgui.h"
 #include "ImGuizmo.h"
@@ -490,4 +490,4 @@ class ImGuizmoManager
 };
 
 } // namespace Hagine
-#endif // _DEBUG
+#endif // USE_IMGUI

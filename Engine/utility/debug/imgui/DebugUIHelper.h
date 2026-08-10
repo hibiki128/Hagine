@@ -4,7 +4,7 @@
 //  ImGui 1.92.4 + ImGuizmo + ImPlot
 //  * ASCII only  -- no environment-dependent characters
 // ============================================================
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 
 // 回転ノブ（imgui-knobs）。imgui.h を使うため、本ヘッダは imgui.h の後に include する前提。
 #include <imgui-knobs.h>
@@ -77,20 +77,27 @@ static void ReadOnlyRow(const char *label, const char *fmt, ...)
 // ------------------------------------------------------------
 static void StatusBadge(const char *text, ImVec4 color)
 {
-    ImVec2 p = ImGui::GetCursorScreenPos();
-    ImVec2 ts = ImGui::CalcTextSize(text);
-    float pad = 4.0f;
-    ImVec2 br = {p.x + ts.x + pad * 2.f, p.y + ts.y + pad};
+    // 以前は枠の高さを「文字高 + 4px」しか取らず、さらに ImGui::TextUnformatted で
+    // 文字を描いていたため、行のベースライン調整が入ると文字が枠から下へはみ出していた。
+    // ここでは上下に同じだけ余白を取り、文字は描画リストへ直接置いてズレを無くしている。
+    const ImVec2 textSize = ImGui::CalcTextSize(text);
+    const float padX = 6.0f;
+    const float padY = 3.0f;
+    const ImVec2 badgeSize = {textSize.x + padX * 2.0f, textSize.y + padY * 2.0f};
+
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    const ImVec2 bottomRight = {pos.x + badgeSize.x, pos.y + badgeSize.y};
+
     ImDrawList *dl = ImGui::GetWindowDrawList();
     ImVec4 bg = color;
     bg.w = 0.20f;
-    dl->AddRectFilled(p, br, ImGui::ColorConvertFloat4ToU32(bg), 3.0f);
-    dl->AddRect(p, br, ImGui::ColorConvertFloat4ToU32(color), 3.0f, 0, 1.0f);
-    ImGui::SetCursorScreenPos({p.x + pad, p.y + pad * 0.5f});
-    ImGui::PushStyleColor(ImGuiCol_Text, color);
-    ImGui::TextUnformatted(text);
-    ImGui::PopStyleColor();
-    ImGui::SetCursorScreenPos({p.x, br.y + 2.0f});
+    dl->AddRectFilled(pos, bottomRight, ImGui::ColorConvertFloat4ToU32(bg), 3.0f);
+    dl->AddRect(pos, bottomRight, ImGui::ColorConvertFloat4ToU32(color), 3.0f, 0, 1.0f);
+    dl->AddText({pos.x + padX, pos.y + padY}, ImGui::ColorConvertFloat4ToU32(color), text);
+
+    // カーソルを手で動かさず、バッジの大きさをレイアウトへ申告する。
+    // こうすると SameLine や折り返しが他のウィジェットと同じように効く。
+    ImGui::Dummy(badgeSize);
 }
 
 // ------------------------------------------------------------
@@ -177,4 +184,4 @@ static bool ThemedKnob(const char *label, float *v,
     return changed;
 }
 } // namespace Hagine
-#endif // _DEBUG
+#endif // USE_IMGUI

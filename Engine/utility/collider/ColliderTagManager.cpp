@@ -1,6 +1,6 @@
 #include "ColliderTagManager.h"
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <imgui.h>
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include "utility/debug/imgui/DebugUIHelper.h"

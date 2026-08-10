@@ -65,7 +65,7 @@ void HitStop::SaveSettings()
 
 void HitStop::DrawImGui()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (ImGui::Begin("ヒットストップ設定"))
     {
         // 停止時間のスライダー

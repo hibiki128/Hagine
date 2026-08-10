@@ -11,7 +11,7 @@
 #include <graphics/pipeline/ComputePipelineManager.h>
 #include <line/LineRenderer.h>
 #include <d3dx12.h>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <implot.h>
 #endif // DEBUG
 #ifdef USE_IMGUI

@@ -51,7 +51,7 @@ void SpriteManager::RegisterSprite(const std::string &name, const std::string &t
     sprites_.push_back(std::move(spriteData));
     UpdateSpriteInstances(sprites_.back().get());
     DrawGroupManager::GetInstance()->RegisterGroup(sprites_.back()->drawGroup); // 所属グループを登録
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // instanceData[0].translation の xy をギズモで直接編集できるよう登録
     SyncGizmoTarget(sprites_.back().get(), 0);
 #endif
@@ -68,7 +68,7 @@ void SpriteManager::UnregisterSprite(const std::string &name)
 
     if (it != sprites_.end())
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGuizmoManager::GetInstance()->RemoveTarget(name);
         gizmoBound_.erase(name);
 #endif
@@ -154,9 +154,9 @@ void SpriteManager::UpdateAll(float deltaTime)
 
 void SpriteManager::UpdateImGui()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     DrawSpriteCreationModal();
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 std::string SpriteManager::GetTextureFilePath(const std::string &name)
@@ -349,7 +349,7 @@ void SpriteManager::SetUpdateFunction(const std::string &name, std::function<voi
 
 void SpriteManager::Clear()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     for (auto &sp : sprites_)
     {
         if (sp)
@@ -361,7 +361,7 @@ void SpriteManager::Clear()
     externalSprites_.clear();
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 void SpriteManager::SyncGizmoTarget(SpriteData *spriteData, int instanceIndex)
 {
     if (!spriteData)
@@ -421,7 +421,7 @@ void SpriteManager::SyncGizmoTarget(SpriteData *spriteData, int instanceIndex)
 
     gizmoBound_[spriteData->name] = translation;
 }
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData)
 {
@@ -487,7 +487,7 @@ void SpriteManager::UpdateSpriteInstances(SpriteData *spriteData)
 
 void SpriteManager::DrawSpriteCreationModal()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (showSpriteCreationModal_)
     {
         ImGui::OpenPopup("スプライト生成##modal");
@@ -651,12 +651,12 @@ void SpriteManager::DrawSpriteCreationModal()
     }
 
     ImGui::PopStyleVar(3);
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void SpriteManager::DrawSpriteManager()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // このウィンドウでの編集ジェスチャをUndo履歴として追跡する
     undoTracker_.Begin([this] { return CaptureUndoState(); });
 
@@ -1244,7 +1244,7 @@ void SpriteManager::DrawSpriteManager()
         "スプライト編集",
         [this] { return CaptureUndoState(); },
         [](const nlohmann::json &s) { SpriteManager::GetInstance()->RestoreUndoState(s); });
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void SpriteManager::SetSaveFolder(const std::string &folderName)
@@ -1459,7 +1459,7 @@ void SpriteManager::LoadAllSprites()
     ImGuiNotification::Post("スプライトデータを読み込みました: " + saveFolder_, {0.2f, 0.8f, 0.8f, 1.0f});
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 // -------------------------------------------------------
 // Undo/Redo 用の状態キャプチャ・復元
 // -------------------------------------------------------
@@ -1677,5 +1677,5 @@ void SpriteManager::RestoreUndoState(const nlohmann::json &state)
         sprites_ = std::move(reordered);
     }
 }
-#endif // _DEBUG
+#endif // USE_IMGUI
 } // namespace Hagine

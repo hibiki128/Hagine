@@ -3,9 +3,9 @@
 #include <Input.h>
 #include <algorithm>
 #include <cassert>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <implot.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 // ステップ設定テーブル（TutorialStep の順序と 1:1 対応させること）
 using namespace Hagine;
@@ -463,7 +463,7 @@ bool TutorialSystem::IsRangedTrigger() const
 
 void TutorialSystem::DrawImGui()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ステップ番号→日本語名のテーブル（TutorialStep の順序と 1:1 対応）
     static const char *kStepNames[static_cast<int>(TutorialStep::StepCount)] = {
         "01. 地上移動",           // Move
@@ -609,5 +609,5 @@ void TutorialSystem::DrawImGui()
     }
 
     ImGui::End();
-#endif // _DEBUG
+#endif // USE_IMGUI
 }

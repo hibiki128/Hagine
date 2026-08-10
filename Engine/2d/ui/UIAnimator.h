@@ -136,13 +136,13 @@ class UIAnimator
     void Save();
     void Load();
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     /// <summary>
     /// UIエディタのImGuiを描画する
     /// </summary>
     /// <param name="open">ウィンドウの表示フラグ（×ボタンと同期）</param>
     void DrawImGui(bool *open);
-#endif // _DEBUG
+#endif // USE_IMGUI
 
   private:
     UIAnimator() = default;
@@ -171,11 +171,11 @@ class UIAnimator
     std::vector<UIClip> clips_;   // 登録済みクリップ
     bool loaded_ = false;         // Load済みか
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     int selectedGroup_ = -1;      // エディタで選択中のグループindex
     int selectedClip_ = -1;       // エディタで選択中のクリップindex
     char newNameBuffer_[128] = {}; // 新規作成・リネーム用の入力バッファ
-#endif // _DEBUG
+#endif // USE_IMGUI
 };
 
 } // namespace Hagine

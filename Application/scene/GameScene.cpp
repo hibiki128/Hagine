@@ -36,7 +36,7 @@ void GameScene::Initialize()
     gameUI_ = std::make_unique<GameUI>();
     aroundField_ = std::make_unique<AroundField>();
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     behaviorTreeEditor_ = std::make_unique<BehaviorTreeEditor>();
 #endif
 
@@ -78,7 +78,7 @@ void GameScene::Initialize()
     pObjectManager_->RegisterExternal(player_.get());
     pObjectManager_->RegisterExternal(enemy_.get());
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     behaviorTreeEditor_->SetDebugTargets(pEnemy_, pPlayer_);
 #else
     /// ===================================================
@@ -159,7 +159,7 @@ void GameScene::Update()
     // シーン切り替えの更新
     ChangeScene();
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ビヘイビアツリーの更新
     {
         auto runtimeRoot = behaviorTreeEditor_->GetRuntimeRoot();
@@ -183,7 +183,7 @@ void GameScene::Update()
     ShadowMap::GetInstance()->SetLightTarget({p.x, 0.0f, p.z});
     pPlayer_->SetActiveDebugCamera(IsDebugCameraActive());
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // パーティクル遷移中は操作開始しない（遷移中にカメラが動くのを防ぐ）。遷移なしなら即開始
     if (!fadeOut_ || fadeOut_->IsFinish())
     {
@@ -281,7 +281,7 @@ void GameScene::CameraUpdate()
         if (!IsDebugCameraActive())
         {
             followCamera_->Update();
-#ifndef _DEBUG
+#ifndef USE_IMGUI
             // パーティクル遷移中はスタートカメラの初期視点で静止する。
             // 遷移パーティクル（長方形）はカメラ正面に追従配置されるため、
             // スタートカメラ初期位置の正面にパーティクルが発生し、
@@ -302,7 +302,7 @@ void GameScene::CameraUpdate()
             {
 #endif
                 pCameraManager_->SetActive(followCamera_->GetCamera());
-#ifndef _DEBUG
+#ifndef USE_IMGUI
             }
 #endif
         }

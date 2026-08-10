@@ -1,4 +1,4 @@
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #define IMGUI_DEFINE_MATH_OPERATORS
 #define NOMINMAX
 #include "ShowFolder.h"
@@ -884,4 +884,4 @@ void ShowGltfFile(std::string &selectedGltfPath) {
 }
 
 } // namespace Hagine
-#endif // _DEBUG
+#endif // USE_IMGUI

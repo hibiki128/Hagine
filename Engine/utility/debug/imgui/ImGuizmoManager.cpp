@@ -1,5 +1,5 @@
 #define NOMINMAX
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "ImGuizmoManager.h"
 #include "ImGuiNotification.h"
 #include "Input.h"
@@ -892,7 +892,7 @@ void ImGuizmoManager::PruneSelectionByFilter()
 
 // マウスクリック時のレイキャストによる選択判定
 // BaseObject/WorldTransform/FreeTransform すべての型に対応するため
-// 行列版の RayIntersectAABBByMatrix を使用する
+// 行列版の RayIntersectOBBByMatrix を使用する（回転した対象でも形どおりに当たる）
 void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const ImVec2 &sceneSize, bool sceneHovered)
 {
     ImVec2 mousePos = ImGui::GetMousePos();
@@ -1005,7 +1005,7 @@ void ImGuizmoManager::HandleMouseSelection(const ImVec2 &scenePosition, const Im
             const AABB localBounds = target.GetLocalBounds();
             Matrix4x4 worldMatrix = target.GetWorldMatrix();
             RayHitInfo currentHit;
-            bool hit = Input::RayIntersectAABBByMatrix(currentRay, worldMatrix, currentHit, localBounds);
+            bool hit = Input::RayIntersectOBBByMatrix(currentRay, worldMatrix, currentHit, localBounds);
 
             if (hit)
             {
@@ -1518,7 +1518,7 @@ void ImGuizmoManager::SnapSelectedToGround()
         for (const GizmoTarget *candidate : groundCandidates)
         {
             RayHitInfo hit;
-            if (!Input::RayIntersectAABBByMatrix(downRay, candidate->GetWorldMatrix(), hit, candidate->GetLocalBounds()))
+            if (!Input::RayIntersectOBBByMatrix(downRay, candidate->GetWorldMatrix(), hit, candidate->GetLocalBounds()))
             {
                 continue;
             }
@@ -2273,7 +2273,7 @@ void ImGuizmoManager::TestAndDrawRayHit(const Ray &ray, const GizmoTarget &targe
     const AABB aabb = target.GetLocalBounds();
 
     RayHitInfo aabbHit;
-    if (!Input::RayIntersectAABBByMatrix(ray, worldMatrix, aabbHit, aabb))
+    if (!Input::RayIntersectOBBByMatrix(ray, worldMatrix, aabbHit, aabb))
     {
         return;
     }
@@ -2285,4 +2285,4 @@ void ImGuizmoManager::TestAndDrawRayHit(const Ray &ray, const GizmoTarget &targe
 }
 
 } // namespace Hagine
-#endif // _DEBUG
+#endif // USE_IMGUI

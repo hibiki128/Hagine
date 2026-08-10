@@ -208,7 +208,7 @@ void MakanAttackSkill::OnCollisionEnter(ColliderBase *pOther)
 
 void MakanAttackSkill::DrawImGui()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 
     if (ImGui::TreeNode("MakanAttackSkill Debug"))
     {
@@ -271,5 +271,5 @@ void MakanAttackSkill::DrawImGui()
 
         ImGui::TreePop();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }

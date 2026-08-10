@@ -54,7 +54,7 @@ class TitleUI
     /// </summary>
     void HidePressStart();
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     /// <summary>
     /// ImGuiデバッグ表示
     /// </summary>

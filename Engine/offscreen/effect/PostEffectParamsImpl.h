@@ -8,7 +8,7 @@
 #include <asset/AssetPath.h>
 #include <algorithm>
 #include <cmath>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
 #include "utility/debug/imgui/AssetDragDrop.h" // テクスチャのD&D設定（ドロップ先）
 #endif
@@ -50,7 +50,7 @@ struct ComputeData
 
 } // namespace PostEffectParamsHelper
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 namespace PostEffectParamsHelper {
 /// <summary>
 /// テクスチャ選択UI（サムネ表示＋アセットブラウザからのドラッグ&ドロップ受け）。
@@ -158,7 +158,7 @@ class MonochromeParams : public IPostEffectParams
     }
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGui::DragFloat("白黒の閾値", &pData_->threshold, 0.01f, 0.0f, 1.0f);
 #endif
     }
@@ -208,7 +208,7 @@ class VignetteParams : public IPostEffectParams
 
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         // ビネットの各パラメータ調整（強度・形状・位置）
         ImGui::DragFloat("強度", &pData_->strength, 0.01f, 0.0f, 3.0f);
         ImGui::DragFloat("半径", &pData_->radius, 0.01f, 0.0f, 2.0f);
@@ -297,7 +297,7 @@ class SmoothParams : public IPostEffectParams
 
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         // カーネルサイズは奇数のみ有効なのでステップを2に設定
         ImGui::DragInt("カーネルサイズ", &pData_->kernelSize, 2, 3, PostEffectParamsHelper::SeparableBlur::kMaxRadius * 2 + 1);
         ImGui::TextDisabled("コンピュートシェーダーで横→縦の2パス実行");
@@ -416,7 +416,7 @@ class GaussianParams : public IPostEffectParams
 
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         // カーネルサイズは奇数のみ有効なのでステップを2に設定
         ImGui::DragInt("カーネルサイズ", &pData_->kernelSize, 2, 3, kMaxRadius * 2 + 1);
         ImGui::DragFloat("シグマ", &pData_->sigma, 0.01f, 0.1f, 10.0f);
@@ -521,7 +521,7 @@ class OutlineEdgeParams : public IPostEffectParams
     }
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGui::DragFloat("エッジ強度", &pData_->edgeStrength, 0.01f, 0.0f, 5.0f);
 #endif
     }
@@ -601,7 +601,7 @@ class OutlineDepthParams : public IPostEffectParams
 
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGui::ColorEdit3("輪郭の色", &pComputeData_->outlineColor.x);
         ImGui::DragFloat("輪郭の濃さ", &pComputeData_->outlineColor.w, 0.01f, 0.0f, 1.0f);
         ImGui::DragFloat("しきい値", &pComputeData_->threshold, 0.001f, 0.001f, 0.5f, "%.3f");
@@ -688,7 +688,7 @@ class DepthOfFieldParams : public IPostEffectParams
 
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGui::DragFloat("ピント距離", &pComputeData_->focusDistance, 0.5f, 0.1f, 500.0f);
         ImGui::SetItemTooltip("カメラからこの距離にある物にピントが合います");
         ImGui::DragFloat("ピントの幅", &pComputeData_->focusRange, 0.5f, 0.0f, 200.0f);
@@ -746,7 +746,7 @@ class RadialBlurParams : public IPostEffectParams
     }
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         // 中心座標はUV空間（0-1）、ブラー幅は視覚的に有効な範囲に制限
         ImGui::DragFloat2("中心", &pData_->center.x, 0.01f, 0.0f, 1.0f);
         ImGui::DragFloat("ブラー幅", &pData_->blurWidth, 0.001f, 0.0f, 0.2f);
@@ -800,7 +800,7 @@ class CinematicParams : public IPostEffectParams
     }
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGui::DragFloat("コントラスト", &pData_->contrast, 0.01f, 0.0f, 3.0f);
         ImGui::DragFloat("彩度", &pData_->saturation, 0.01f, 0.0f, 3.0f);
         ImGui::DragFloat("明度", &pData_->brightness, 0.01f, 0.0f, 3.0f);
@@ -866,7 +866,7 @@ class DissolveParams : public IPostEffectParams
     }
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGui::DragFloat("閾値", &pData_->threshold, 0.01f, 0.0f, 1.0f);
         ImGui::DragFloat("エッジ幅", &pData_->edgeWidth, 0.001f, 0.0f, 0.5f);
         ImGui::ColorEdit3("エッジカラー", &pData_->edgeColor.x);
@@ -983,7 +983,7 @@ class FocusLineParams : public IPostEffectParams
     }
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         // 線の本数・形状パラメータ
         ImGui::DragFloat("線の数", &pData_->lines, 1.0f, 10.0f, 500.0f);
         ImGui::DragFloat("線幅", &pData_->width, 0.001f, 0.001f, 0.1f);
@@ -1048,7 +1048,7 @@ class PixelateParams : public IPostEffectParams
     }
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         // ブロックサイズはピクセル単位、中心座標はUV空間（0-1）
         ImGui::DragFloat("ブロックサイズ", &pData_->blockSize, 0.001f, 0.001f, 1.0f);
         ImGui::DragFloat("中心X", &pData_->centerX, 0.01f, 0.0f, 1.0f);
@@ -1107,7 +1107,7 @@ class RetroParams : public IPostEffectParams
     }
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGui::SliderFloat("ピクセルサイズ", &pData_->pixelSize, 1.0f, 32.0f);
         ImGui::SliderFloat("減色レベル", &pData_->colorLevels, 2.0f, 32.0f);
         ImGui::SliderFloat("スキャンライン強度", &pData_->scanlineIntensity, 0.0f, 1.0f);
@@ -1216,7 +1216,7 @@ class BloomParams : public IPostEffectParams
 
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         // 閾値は輝度の下限カット（0-1）、強度はブルーム量
         ImGui::DragFloat("閾値", &pData_->threshold, 0.01f, 0.0f, 1.0f);
         ImGui::DragFloat("強度", &pData_->intensity, 0.01f, 0.0f, 5.0f);
@@ -1296,7 +1296,7 @@ class ShockwaveParams : public IPostEffectParams
     }
     void DrawUI() override
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGui::SliderFloat2("中心(UV)", &pData_->center.x, 0.0f, 1.0f);
         ImGui::SliderFloat("持続時間", &pData_->duration, 0.1f, 2.0f);
         ImGui::SliderFloat("フラッシュ強度", &pData_->amplitude, 0.0f, 8.0f, "%.2f");

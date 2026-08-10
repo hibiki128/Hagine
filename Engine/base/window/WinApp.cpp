@@ -11,13 +11,13 @@ namespace Hagine {
 // ウィンドウプロシージャ
 LRESULT CALLBACK WinApp::WindowProc(HWND hwnd_, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ImGui用ウィンドウプロシージャ呼び出し
     if (ImGui_ImplWin32_WndProcHandler(hwnd_, msg, wparam, lparam))
     {
         return true;
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
        // メッセージに応じてゲーム固有の処理を行う
     switch (msg)
     {

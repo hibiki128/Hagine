@@ -121,7 +121,7 @@ class CollisionManager
     /// <returns>bool: めり込みがあれば true</returns>
     bool CalculateDepenetrationOBBCylinder(OBBCollider *obb, CylinderCollider *cylinder, Vector3 &outMTV);
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     /// <summary>
     /// タグの追加・削除UI（タグ管理タブ）
     /// </summary>
@@ -232,7 +232,7 @@ class CollisionManager
 
     bool isVisible_ = false; // コライダーのデバッグ表示フラグ（全体）
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ColliderBase *pInspectorSelected_ = nullptr; // インスペクタで選択中のコライダー
 #endif
 };

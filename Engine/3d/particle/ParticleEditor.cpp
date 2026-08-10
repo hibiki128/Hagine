@@ -1,13 +1,16 @@
 #define NOMINMAX
 #include "ParticleEditor.h"
+#ifdef USE_IMGUI
+#include <edit/play/PlayModeManager.h>
+#endif
 #include <asset/AssetPath.h>
 #include "debug/imgui/ImGuiManager.h"
 #include <utility/debug/imgui/ImGuiNotification.h>
 #include "render/DrawGroupManager.h"
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "browser/ShowFolder.h"
 #include "ImGuizmo.h"
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 namespace Hagine {
 void ParticleEditor::Finalize()
@@ -121,11 +124,19 @@ void ParticleEditor::UpdateFrameStats()
 
 void ParticleEditor::DrawAll(const ViewProjection &vp_)
 {
+    // 自動エミッターの発生はゲーム世界の更新なので、一時停止・停止中は進めない。
+    // 描画はそのまま行う（止めた瞬間の粒が画面に残る）。
+#ifdef USE_IMGUI
+    const bool updateEmitters = PlayModeManager::GetInstance()->ShouldUpdateGame();
+#else
+    const bool updateEmitters = true;
+#endif // USE_IMGUI
+
     for (auto &[name, emitter] : emitters_)
     {
         if (emitter)
         {
-            if (emitter->GetIsAuto())
+            if (updateEmitters && emitter->GetIsAuto())
             {
                 emitter->Update();
             }
@@ -529,9 +540,9 @@ void ParticleEditor::ShowImGuiEditor()
                     // テクスチャ選択セクション (緑色)
                     if (ColoredCollapsingHeader("テクスチャ選択", 3))
                     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
                         ShowTextureFile(localTexturePath_);
-#endif // _DEBUG
+#endif // USE_IMGUI
                     }
 
                     // パーティクルグループ作成ボタン
@@ -565,9 +576,9 @@ void ParticleEditor::ShowImGuiEditor()
                     // テクスチャ選択セクション (オレンジ色)
                     if (ColoredCollapsingHeader("テクスチャ選択", 5))
                     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
                         ShowTextureFile(localTexturePath_);
-#endif // _DEBUG
+#endif // USE_IMGUI
                     }
 
                     // パーティクルグループ作成ボタン
@@ -713,7 +724,7 @@ std::vector<std::string> ParticleEditor::GetJsonFiles()
     return jsonFiles;
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 // -------------------------------------------------------
 // Undo/Redo 用の状態キャプチャ・復元
 // -------------------------------------------------------
@@ -751,5 +762,5 @@ void ParticleEditor::RestoreUndoState(const nlohmann::json &state)
         }
     }
 }
-#endif // _DEBUG
+#endif // USE_IMGUI
 } // namespace Hagine

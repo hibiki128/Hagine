@@ -8,9 +8,9 @@
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include <graphics/texture/TextureManager.h>
 #include <algorithm>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <imgui.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 using namespace Hagine;
 void TutorialUI::Initialize(TutorialSystem *pSystem, const std::string &okFontKey)
@@ -326,7 +326,7 @@ void TutorialUI::Finalize()
 
 void TutorialUI::DrawImGui()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ImGui::SetNextWindowSize(ImVec2(400.0f, 0.0f), ImGuiCond_Once);
     if (!ImGui::Begin("チュートリアル UI 設定"))
     {
@@ -397,7 +397,7 @@ void TutorialUI::DrawImGui()
     }
 
     ImGui::End();
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 const char *TutorialUI::GetFolderNameForStep(TutorialStep step) const

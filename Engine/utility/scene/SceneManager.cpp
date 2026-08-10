@@ -5,9 +5,10 @@
 #include <cassert>
 #include <particle/gpu/ParticleCSSpawner.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <edit/undo/UndoRedoManager.h>
-#endif // _DEBUG
+#include <edit/play/PlayModeManager.h>
+#endif // USE_IMGUI
 
 namespace Hagine {
 SceneManager::~SceneManager() {
@@ -50,7 +51,14 @@ void SceneManager::Update() {
     }
 
     if (scene_) {
-        scene_->Update();
+        // 一時停止・停止中はゲームロジックを進めない。
+        // カメラ更新は止めない（止めるとデバッグカメラも動かせなくなるため）。
+#ifdef USE_IMGUI
+        if (PlayModeManager::GetInstance()->ShouldUpdateGame())
+#endif // USE_IMGUI
+        {
+            scene_->Update();
+        }
 
         // 全カメラの更新と、描画へ渡す出力の作り直し（アクティブカメラ or 切り替え補間の結果）。
         // シーンが描画で使う ViewProjection はこの出力そのものなので、行列のコピーは要らない。
@@ -71,14 +79,14 @@ void SceneManager::DrawForOffScreen() {
 }
 
 void SceneManager::SceneSelection(const std::string &sceneName) {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (!pTransition_->IsEnd() && pTransition_->FadeInStart()) {
         return;
     }
     pTransition_->Reset();
     nextScene_ = SceneRegistry::GetInstance()->Create(sceneName);
     pTransition_->SetFadeInStart(true);
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void SceneManager::DrawTransition() {
@@ -133,14 +141,17 @@ void SceneManager::SceneChange() {
             SpriteManager::GetInstance()->Clear();
             // 旧シーンが登録したカメラを破棄する（新シーンへ持ち越さない）
             CameraManager::GetInstance()->Clear();
-#ifndef _DEBUG
+#ifndef USE_IMGUI
             ParticleCSGroupManager::GetInstance()->ClearIndependentGroups();
-#endif // _DEBUG
-#ifdef _DEBUG
+#endif // USE_IMGUI
+#ifdef USE_IMGUI
             // 旧シーンの編集履歴は新シーンでは無効（Undoで旧シーンのオブジェクトを
             // 再生成してしまう事故を防ぐため、シーン切替時に全履歴を破棄する）
             UndoRedoManager::GetInstance()->Clear();
-#endif // _DEBUG
+            // 再生モードのスナップショットも同じ理由で捨てる
+            // （残すと停止時に旧シーンのオブジェクトが新シーンへ復元される）
+            PlayModeManager::GetInstance()->OnSceneChanged();
+#endif // USE_IMGUI
         }
 
         // 旧シーンの描画エントリをすべて削除（ダングリングラムダ呼び出し防止）

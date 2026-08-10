@@ -1,4 +1,7 @@
 #include "DrawSystem.h"
+#ifdef USE_IMGUI
+#include <edit/play/PlayModeManager.h>
+#endif
 #include "DirectXCommon.h"
 #include "collider/CollisionManager.h"
 #include "debug/profiler/CpuProfiler.h"
@@ -15,10 +18,10 @@
 #include "scene/SceneManager.h"
 #include <shadow/ShadowMap.h>
 #include <algorithm>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "particle/gpu/ParticleCSEditor.h"
 #endif
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
 #include "line/LineRenderer.h"
 #include "utility/debug/imgui/DebugUIHelper.h"
@@ -128,16 +131,24 @@ void DrawSystem::Draw(const ViewProjection &vp)
                 entry.draw(vp);
             }
         }
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         // GPUパーティクルエディタのエミッターをシーン非依存でシミュレートする。
         // 描画はプレビュー窓(RenderPreview)の専用VPだけが行うためゲームシーンには漏れない。
         // （Compute=シミュレーションのみここで実行。Graphics はプレビューに隔離済み）
         ParticleCSEditor::GetInstance()->DrawAllCompute(vp);
 #endif
         // 実行時にシーンへ置かれた GPU パーティクル（ParticleCSSpawner 所有）。
-        // エディタのものと違いゲーム画面にも描画するので、_DEBUG に閉じず常に実行する。
+        // エディタのものと違いゲーム画面にも描画するので、USE_IMGUI に閉じず常に実行する。
         // ここで登録不要にしているのは、シーン遷移で entries_ が Clear() されるため。
-        ParticleCSSpawner::GetInstance()->DrawCompute(vp);
+        //
+        // これはゲーム世界のシミュレーションなので、一時停止・停止中は進めない
+        // （止めないと発生・移動が続いてしまう。描画は別なので見た目は止まったまま残る）。
+#ifdef USE_IMGUI
+        if (PlayModeManager::GetInstance()->ShouldUpdateGame())
+#endif // USE_IMGUI
+        {
+            ParticleCSSpawner::GetInstance()->DrawCompute(vp);
+        }
 
         // Compute スパンを Execute 前に resolve（リストが閉じる前に記録する必要がある）
         GpuProfiler::GetInstance()->ResolveCompute(pDxCommon_->GetComputeCommandList().Get());
@@ -147,7 +158,7 @@ void DrawSystem::Draw(const ViewProjection &vp)
         pDxCommon_->WaitForComputeOnDirectQueue();
     }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ─── GPUパーティクル プレビュー窓を描画（Compute 完了後・ステージ束ね前）───
     // Compute 済みの生存バッファを VS 読み取り可能な状態のままプレビューVPで再描画する。
     // 後段のステージループ(PreRenderTexture)がオフスクリーンRTと全画面ビューポートを束ね直すため復元不要。
@@ -274,7 +285,7 @@ void DrawSystem::Draw(const ViewProjection &vp)
             // シミュレーション（DrawAllCompute）は上のフェーズで実行済みで、
             // 描画は RenderPreview()（プレビュー専用VP）だけが行う。
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
             if (stageIdx == 0)
             {
                 // コライダーの線を積んでから描く（旧実装は順序が逆で1フレーム遅れていた）
@@ -345,7 +356,7 @@ void DrawSystem::Draw(const ViewProjection &vp)
 
 void DrawSystem::UpdateImGui(bool *open)
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // 表示名は日本語、ウィンドウIDは "DrawSystem" のまま（保存済みレイアウトとの互換維持）
     if (ImGui::Begin("描画システム###DrawSystem", open, ImGuiWindowFlags_NoFocusOnAppearing))
     {

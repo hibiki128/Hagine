@@ -4,7 +4,7 @@
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include <algorithm>
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
 #endif
 
@@ -342,7 +342,7 @@ bool ComboSystem::IsCurrentAttackCompleted() const
     return !IsObjectAttackCompleted(prevCombo.pTarget);
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 void ComboSystem::DrawImGui()
 {
     if (comboData_.empty())

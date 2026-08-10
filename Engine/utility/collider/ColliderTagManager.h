@@ -139,7 +139,7 @@ class ColliderTagManager
         return false;
     }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     /// <summary>
     /// ImGuiでタグ管理UIを表示
     /// </summary>

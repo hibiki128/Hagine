@@ -1,8 +1,9 @@
 #include "ImGuiManager.h"
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "2d/text/TextRenderer.h"
 #include "2d/ui/UIAnimator.h"
 #include "AssetDragDrop.h"
+#include <edit/play/PlayModeManager.h>
 #include <browser/ShowFolder.h>
 #include "DebugUIHelper.h"
 #include "ImGuiNotification.h"
@@ -37,10 +38,10 @@
 #include <particle/gpu/ParticleCSSpawner.h>
 #include <render/DrawSystem.h>
 #include <shadow/ShadowMap.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 namespace Hagine {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 
 namespace {
 // ImGui DX12 バックエンド（マルチビューポート対応の新API）がSRVデスクリプタを
@@ -703,6 +704,10 @@ void ImGuiManager::ShowMainMenu() {
             ImGui::EndMenu();
         }
 
+        // 再生 / 一時停止 / コマ送り / 停止。常に見える位置に置きたいのでメニューバーの右側へ。
+        ImGui::SameLine(0.0f, 24.0f);
+        PlayModeManager::GetInstance()->DrawToolbar();
+
         ImGui::EndMainMenuBar();
     }
 }
@@ -1362,10 +1367,10 @@ void ImGuiManager::ShowDockSpace() {
     ImGui::End();
 }
 
-#endif //_DEBUG
+#endif // USE_IMGUI
 
 void ImGuiManager::DisplayFPS() {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("FPS")) {
 
         // 履歴サイズ（フレーム数）
@@ -1479,7 +1484,7 @@ void ImGuiManager::DisplayFPS() {
 
         ImPlot::PopStyleColor(2);
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 // 現在のDockレイアウトを保存
@@ -1509,9 +1514,9 @@ void ImGuiManager::SwitchToEditorMode() {
         SaveCurrentLayout(); // 現在のゲームモードレイアウトを保存
         isEditorMode_ = true;
         LoadLayoutForCurrentMode(); // エディターモードのレイアウトをロード
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGuiNotification::Post("エディターモードに切り替えました", {0.4f, 0.8f, 1.0f, 1.0f});
-#endif // _DEBUG
+#endif // USE_IMGUI
     }
 }
 
@@ -1521,9 +1526,9 @@ void ImGuiManager::SwitchToGameMode() {
         SaveCurrentLayout(); // 現在のエディターモードレイアウトを保存
         isEditorMode_ = false;
         LoadLayoutForCurrentMode(); // ゲームモードのレイアウトをロード
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGuiNotification::Post("ゲームモードに切り替えました", {0.4f, 0.8f, 1.0f, 1.0f});
-#endif // _DEBUG
+#endif // USE_IMGUI
     }
 }
 
@@ -1642,7 +1647,7 @@ void ImGuiManager::LoadLayoutForCurrentMode() {
 }
 
 void ImGuiManager::ShowHelpWindow() {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 
     // ショートカット一覧ウィンドウの表示
     if (showShortcutWindow_) {
@@ -1667,6 +1672,18 @@ void ImGuiManager::ShowHelpWindow() {
                 ImGui::Text("  ショートカット一覧（この画面）");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("F1");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  再生 / 一時停止");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("Ctrl + P");
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("  停止（再生前の状態へ戻す）");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("Ctrl + Shift + P");
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
@@ -1829,7 +1846,7 @@ void ImGuiManager::ShowHelpWindow() {
         }
         ImGui::End();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void ImGuiManager::SaveFlag() {
@@ -1855,9 +1872,9 @@ void ImGuiManager::SaveFlag() {
     data->Save("showGameParamView", showGameParamView_);
     data->Save("isEditorMode", isEditorMode_);
     data->Save("gridColor", gridColor_);
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ImGuiNotification::Post("UI設定を保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void ImGuiManager::LoadFlag() {

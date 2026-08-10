@@ -6,11 +6,11 @@
 #include <cstring>
 #include <fstream>
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
 #include "utility/debug/imgui/DebugUIHelper.h"
 #include <implot.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 namespace Hagine {
 
@@ -445,7 +445,7 @@ float Audio::GetCurrentAmplitude() const
     return maxAmp;
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 void Audio::DebugBuildWaveform(uint32_t index)
 {
     debugWaveformIndex_ = static_cast<int>(index);
@@ -525,7 +525,7 @@ void Audio::DebugBuildWaveform(uint32_t index)
         debugWaveformMax_[b] = mx;
     }
 }
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 //==============================================================================
 // Debug() 本体
@@ -533,7 +533,7 @@ void Audio::DebugBuildWaveform(uint32_t index)
 
 void Audio::Debug()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ── マスター音量 ──
     SectionHeader("[ マスター ]", DebugTheme::kAccentBlue);
     {
@@ -795,6 +795,6 @@ void Audio::Debug()
         ImGuiNotification::Post("すべての再生を停止しました", {0.82f, 0.58f, 0.36f, 1.0f});
     }
     ImGui::PopStyleColor(2);
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 } // namespace Hagine

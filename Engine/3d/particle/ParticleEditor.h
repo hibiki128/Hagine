@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "ParticleStruct.h"
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <edit/undo/ImGuiUndoTracker.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 namespace Hagine {
 
@@ -183,7 +183,7 @@ class ParticleEditor
     /// <returns>ParticleEmitter*</returns>
     ParticleEmitter *GetEmitterByName(const std::string &name);
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     /// <summary>
     /// Undo用: 全エミッターの編集可能状態をJSON化する（トップレベル = エミッター名 → 状態）
     /// </summary>
@@ -201,6 +201,6 @@ class ParticleEditor
     ImGuiUndoTracker undoTracker_; // パーティクルエディタUIのUndoトラッカー
 
   public:
-#endif // _DEBUG
+#endif // USE_IMGUI
 };
 } // namespace Hagine

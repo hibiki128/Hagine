@@ -6,7 +6,7 @@
 #include "Frame.h"
 #include "cmath"
 #include "MyMath.h"
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <implot.h>
 #endif
 #include <type/Vector2.h>

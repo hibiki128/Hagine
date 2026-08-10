@@ -5,7 +5,7 @@
 #include <Input.h>
 #include <object/base/BaseObjectManager.h>
 #include <particle/ParticleEditor.h>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
 #endif
 
@@ -212,7 +212,7 @@ void TitleUI::Draw(Camera &camera)
     cameraMove_ = camera.IsCameraWorkPlaying();
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 void TitleUI::DrawImGui()
 {
     ImGui::Begin("TitleUI Debug");

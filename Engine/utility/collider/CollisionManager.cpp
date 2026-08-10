@@ -1,7 +1,7 @@
 #include "collider/CollisionManager.h"
 #include "MyMath.h"
 #include <algorithm>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <imgui.h>
 #include <string>
 #include <vector>
@@ -11,7 +11,7 @@
 
 namespace Hagine {
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 namespace {
 /// <summary>コライダー種別を日本語名に変換する</summary>
 const char *ColliderTypeName(ColliderType type)
@@ -663,7 +663,7 @@ void CollisionManager::DebugDraw(const ViewProjection &viewProjection)
     }
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 void CollisionManager::ImGuiColliderInspector()
 {
     // ── 全体操作 ──

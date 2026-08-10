@@ -10,7 +10,7 @@
 #include "scene/SceneManager.h"
 #include "utility/debug/imgui/DebugUIHelper.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "utility/debug/imgui/AssetDragDrop.h"
 #include <asset/AssetPath.h>
 #include <graphics/texture/TextureManager.h>
@@ -20,7 +20,7 @@
 
 namespace Hagine {
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 namespace {
 /// <summary>テーマのアクセント色から3状態の色を作り、折りたたみヘッダーを描く</summary>
 /// <param name="label">ヘッダーラベル（## でID付与可）</param>
@@ -61,7 +61,7 @@ bool ColoredButton(const char *label, ImVec4 base, float width = -1.0f) {
     return hit;
 }
 } // namespace
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 BaseObject::~BaseObject() {
     // 非所有(RegisterExternal)でマネージャに登録されている場合、所有者(シーン等)が
@@ -877,7 +877,7 @@ void BaseObject::AnimaLoadFromJson() {
 }
 
 void BaseObject::DebugCollider() {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (colliders_.empty()) {
         ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::TextUnformatted("  コライダーなし");
@@ -1121,7 +1121,7 @@ void BaseObject::DebugCollider() {
 //  BaseObject::ImGui  (メインタブ)
 // ============================================================
 void BaseObject::DrawImGui() {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (!ImGui::BeginTabBar(objectName_.c_str()))
         return;
 
@@ -1169,7 +1169,7 @@ void BaseObject::DrawImGui() {
         ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 namespace {
@@ -1417,7 +1417,7 @@ void BaseObject::LoadPhysics() {
 }
 
 void BaseObject::DebugObject() {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 3));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
@@ -2087,11 +2087,11 @@ void BaseObject::DebugObject() {
     }
 
     ImGui::PopStyleVar(4);
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void BaseObject::DrawScaleEaseImGui() {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // EasingType enum（0〜30）＋ Vector3 Amplitude 拡張（31〜33）の表示名
     // 31 = InElasticAmplitude, 32 = OutElasticAmplitude, 33 = InOutElasticAmplitude
     static const char *kModeNames[] = {
@@ -2271,7 +2271,7 @@ void BaseObject::DrawScaleEaseImGui() {
 }
 
 void BaseObject::ShowFileSelector() {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ShowFolder の GLTF ブラウザで選択パスを保持する
     // 選択確定後に「適用」ボタンで SetAnimation を呼び出す
     static std::string selectedGltfPath;
@@ -2288,11 +2288,11 @@ void BaseObject::ShowFileSelector() {
         }
         ImGui::PopStyleColor(2);
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void BaseObject::ShowBlendModeCombo(BlendMode &currentMode) {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 
     // コンボボックスに表示する項目（日本語）
     static const char *blendModeItems[] = {
@@ -2312,6 +2312,6 @@ void BaseObject::ShowBlendModeCombo(BlendMode &currentMode) {
         // ユーザーが選択を変更したときに反映
         currentMode = static_cast<BlendMode>(currentIndex);
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 } // namespace Hagine

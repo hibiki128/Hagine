@@ -1,8 +1,8 @@
 #pragma once
 #include <camera/Camera.h>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
-#endif // _DEBUG
+#endif // USE_IMGUI
 #include "utility/data/DataHandler.h"
 #include "json.hpp"
 #include <fstream>

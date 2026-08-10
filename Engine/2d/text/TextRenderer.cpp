@@ -7,9 +7,9 @@
 #include <string/StringUtility.h>
 #include <DirectXTex/DirectXTex.h>
 #include <imgui/imstb_truetype.h>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <imgui.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 #include <string/StringUtility.h>
 #include <algorithm>
 #include <cassert>
@@ -149,7 +149,7 @@ void TextRenderer::CreateCharacterAtlasSprite(
 
 void TextRenderer::UpdateImGui()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (!ImGui::Begin("テキストレンダラー (TextRenderer)", nullptr, ImGuiWindowFlags_NoFocusOnAppearing))
     {
         ImGui::End();
@@ -359,14 +359,14 @@ void TextRenderer::UpdateImGui()
     }
 
     ImGui::End();
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 // --------------------------------------------------------------------------
 // 非公開メソッド
 // --------------------------------------------------------------------------
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 void TextRenderer::DrawPreview(int mode, const std::string &fontKey)
 {
     // 文字色をプレビューへ焼き込む（実際の描画はスプライトの色乗算に相当するため見た目が一致する）
@@ -495,7 +495,7 @@ void TextRenderer::DrawPreview(int mode, const std::string &fontKey)
         }
     }
 }
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 std::vector<uint8_t> TextRenderer::BuildTextRGBA(
     const std::string &text,

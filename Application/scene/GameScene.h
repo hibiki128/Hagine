@@ -118,7 +118,7 @@ class GameScene : public Hagine::BaseScene
     float enemyDownTimer_ = 0.0f;         // 敵撃破後の演出待ちタイマー
 
     // ---------- BehaviorTree ----------
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     std::unique_ptr<BehaviorTreeEditor> behaviorTreeEditor_; // ビヘイビアツリーエディタ
 #endif
     std::shared_ptr<BTNode> behaviorTreeRoot_; // ビヘイビアツリールート

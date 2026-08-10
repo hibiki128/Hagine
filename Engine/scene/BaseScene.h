@@ -17,9 +17,9 @@
 #include "SpriteManager.h"
 #include "transform/WorldTransform.h"
 #include "line/LineRenderer.h"
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <imgui.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 #include <OffScreen.h>
 #include "SpriteManager.h"
 #include "object/base/BaseObjectManager.h"

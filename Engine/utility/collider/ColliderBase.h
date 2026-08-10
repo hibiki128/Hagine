@@ -305,7 +305,7 @@ class ColliderBase
     void SetRotationGetter(std::function<Quaternion()> func) { getRotationFunc_ = func; }
 
     bool isRegistered_ = false; // 登録済みフラグ
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     /// <summary>
     /// ImGuiでタグ設定UIを表示
     /// </summary>

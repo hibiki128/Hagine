@@ -2,7 +2,7 @@
 #include "DirectXCommon.h"
 #include <Frame.h>
 #include <format>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
 #include "utility/debug/imgui/DebugUIHelper.h"
@@ -149,7 +149,7 @@ void OffScreen::LoadData(const std::string &fileName)
 
 void OffScreen::Setting()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     const char *shaderModeItems[] = {
         "なし", "グレイ", "ビネット", "スムース", "ガウス",
         "アウトライン(エッジ検出)", "アウトライン(深度ベース)",

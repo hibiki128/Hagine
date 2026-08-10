@@ -2,14 +2,14 @@
 #include "SpriteManager.h"
 #include <algorithm>
 #include <data/DataHandler.h>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <imgui.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 namespace Hagine {
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 namespace {
 // EasingType の並びに対応する表示名（31種）
 const char *kEasingNames[] = {
@@ -33,7 +33,7 @@ constexpr int kChannelCount = static_cast<int>(UIChannel::Count);
 // UITargetKind の並びに対応する表示名
 const char *kKindNames[] = {"スプライト", "グループ"};
 } // namespace
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 UIAnimator *UIAnimator::GetInstance()
 {
@@ -84,9 +84,9 @@ void UIAnimator::Play(const std::string &clipName)
     UIClip *clip = FindClip(clipName);
     if (!clip)
     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         ImGuiNotification::Post("UIクリップが見つかりません: " + clipName, {0.9f, 0.5f, 0.3f, 1.0f});
-#endif // _DEBUG
+#endif // USE_IMGUI
         return;
     }
     RewindClip(*clip);
@@ -415,9 +415,9 @@ void UIAnimator::Save()
     data.Save("clips", clipsJson);
     data.Flush();
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ImGuiNotification::Post("UIアニメーションを保存しました", {0.2f, 0.8f, 0.2f, 1.0f});
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void UIAnimator::Load()
@@ -483,7 +483,7 @@ void UIAnimator::Load()
     }
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 // ===================================================
 // エディタUI
 // ===================================================
@@ -809,6 +809,6 @@ void UIAnimator::DrawImGui(bool *open)
 
     ImGui::End();
 }
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 } // namespace Hagine

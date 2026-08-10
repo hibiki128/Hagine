@@ -1228,9 +1228,9 @@ void ParticleCSEditor::ShowImGuiEditor()
                     // グループ用テクスチャ選択セクション (緑色)
                     if (ColoredCollapsingHeader("テクスチャ選択##GroupModel", 3))
                     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
                         ShowTextureFile(localTexturePath_);
-#endif // _DEBUG
+#endif // USE_IMGUI
                     }
 
                     if (localMaxParticleCount_ == 0)
@@ -1274,9 +1274,9 @@ void ParticleCSEditor::ShowImGuiEditor()
                     // グループ用テクスチャ選択セクション (オレンジ色)
                     if (ColoredCollapsingHeader("テクスチャ選択##GroupPrimitive", 5))
                     {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
                         ShowTextureFile(localTexturePath_);
-#endif // _DEBUG
+#endif // USE_IMGUI
                     }
 
                     if (localMaxParticleCount_ == 0)

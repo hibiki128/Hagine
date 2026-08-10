@@ -3,10 +3,10 @@
 #include <2d/ui/UIAnimator.h>
 #include <asset/AssetPath.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "debug/imgui/ImGuizmoManager.h"
 #include "ImGuizmo.h"
-#endif // _DEBUG
+#endif // USE_IMGUI
 #include "edit/motion/MotionEditor.h"
 #include "object/Object3dInstancing.h"
 #include <debug/log/Logger.h>
@@ -65,7 +65,7 @@ void BaseObjectManager::RemoveObjectByName(const std::string &name)
 void BaseObjectManager::RegisterExternal(BaseObject *obj)
 {
     const std::string &name = obj->GetName();
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ImGuizmoManager::GetInstance()->AddTarget(name, obj);
 #endif
     MotionEditor::GetInstance()->Register(obj);
@@ -87,7 +87,7 @@ void BaseObjectManager::UnregisterExternal(BaseObject *obj)
 // これを忘れると解放済みポインタが編集UI側に残り、次にそれを触った時に落ちる。
 void BaseObjectManager::DetachRegistrations(BaseObject *obj, const std::string &name)
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ImGuizmoManager::GetInstance()->RemoveTarget(name);
 #else
     (void)name;
@@ -131,7 +131,7 @@ void BaseObjectManager::Draw(const ViewProjection &viewProjection)
 
 void BaseObjectManager::UpdateImGui()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // オブジェクトへの編集ジェスチャ（ImGuiウィジェット・ギズモドラッグ）をUndo履歴として追跡する
     undoTracker_.Begin([this] { return CaptureUndoState(); });
 
@@ -145,7 +145,7 @@ void BaseObjectManager::UpdateImGui()
         [this] { return CaptureUndoState(); },
         [](const nlohmann::json &s) { BaseObjectManager::GetInstance()->RestoreUndoState(s); },
         ImGuizmo::IsUsing());
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void BaseObjectManager::SaveAll()
@@ -254,10 +254,10 @@ void BaseObjectManager::CreateObject(std::string objectName, std::string modelPa
     {
         newObject->SetTexture(texturePath, i);
     }
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // 原点に出すと毎回カメラを原点まで戻す羽目になるので、今見ている場所の前に出す
     newObject->GetLocalPosition() = ImGuizmoManager::GetInstance()->GetSpawnPosition();
-#endif // _DEBUG
+#endif // USE_IMGUI
     this->AddObject(std::move(newObject));
     ImGuiNotification::Post("オブジェクトを作成しました: " + objectName, {0.2f, 0.8f, 0.2f, 1.0f});
 }
@@ -290,10 +290,10 @@ BaseObject *BaseObjectManager::CreatePrimitiveObject(PrimitiveType type, const s
     newObject->SetPrimitive(true);
     newObject->Init(name);
     newObject->CreatePrimitiveModel(type);
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // 原点ではなく今見ている場所の前に出す
     newObject->GetLocalPosition() = ImGuizmoManager::GetInstance()->GetSpawnPosition();
-#endif // _DEBUG
+#endif // USE_IMGUI
 
     this->AddObject(std::move(newObject));
     return GetObjectByName(name);
@@ -340,7 +340,7 @@ bool g_dndReparentRequested = false;
 
 void BaseObjectManager::ShowParentChildHierarchy()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 
     if (ImGui::CollapsingHeader("階層エディター", ImGuiTreeNodeFlags_DefaultOpen))
     {
@@ -419,12 +419,12 @@ void BaseObjectManager::ShowParentChildHierarchy()
             g_dndReparentParent.clear();
         }
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth)
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 
     if (!obj)
         return;
@@ -531,7 +531,7 @@ void BaseObjectManager::ShowObjectHierarchy(BaseObject *obj, int depth)
         }
         ImGui::TreePop();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void BaseObjectManager::SetParentChild(const std::string &childName, const std::string &parentName)
@@ -669,7 +669,7 @@ void BaseObjectManager::RemoveObject(const std::string &name)
 
 void BaseObjectManager::ShowSaveTargetManager()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("セーブ対象管理##SaveTargetManagement", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Spacing();
@@ -875,7 +875,7 @@ void BaseObjectManager::ShowSaveTargetManager()
         ImGui::TextWrapped("操作: Ctrlキー + クリックで複数選択, ダブルクリックで追加/削除");
         ImGui::PopStyleColor();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 void BaseObjectManager::AddToSaveTargets(const std::string &objectName)
 {
@@ -898,7 +898,7 @@ void BaseObjectManager::RemoveFromSaveTargets(const std::string &objectName)
 // シーン保存モーダルの描画
 void BaseObjectManager::DrawSceneSaveModel()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     static char sceneNameBuffer[128] = "";
 
     // メニューから呼び出された場合のモーダル表示
@@ -959,13 +959,13 @@ void BaseObjectManager::DrawSceneSaveModel()
 
         ImGui::EndPopup();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 // シーン読み込みモーダルの描画
 void BaseObjectManager::DrawSceneLoadModel()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     static char sceneNameBuffer[128] = "";
 
     // メニューから呼び出された場合のモーダル表示
@@ -1014,13 +1014,13 @@ void BaseObjectManager::DrawSceneLoadModel()
 
         ImGui::EndPopup();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 // オブジェクト生成モーダルの描画
 void BaseObjectManager::DrawObjectCreationModel()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // メニューから呼び出された場合のモーダル表示
     if (showObjectCreationModal_)
     {
@@ -1132,12 +1132,12 @@ void BaseObjectManager::DrawObjectCreationModel()
 
         ImGui::EndPopup();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void BaseObjectManager::DrawObjectLoadModel()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // メニューから呼び出された場合のモーダル表示
     if (showObjectLoadModal_)
     {
@@ -1212,7 +1212,7 @@ void BaseObjectManager::DrawObjectLoadModel()
         }
         ImGui::EndPopup();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void BaseObjectManager::LoadObjectFromJson(const std::string &startPath, const std::string &objectName)
@@ -1272,15 +1272,15 @@ void BaseObjectManager::RestoreParentChildRelationshipForObject(BaseObject *pObj
 
 void BaseObjectManager::DrawHierarchyEditor()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ウィンドウの Begin/End は呼び出し元（ImGuiManager::ShowHierarchyWindow）が行う。
     // ここで再度 Begin すると同名ウィンドウが入れ子になる。
     ShowParentChildHierarchy();
     ShowSaveTargetManager();
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 // -------------------------------------------------------
 // Undo/Redo 用の状態キャプチャ・復元
 // -------------------------------------------------------
@@ -1463,5 +1463,5 @@ void BaseObjectManager::RestoreUndoState(const nlohmann::json &state)
         }
     }
 }
-#endif // _DEBUG
+#endif // USE_IMGUI
 } // namespace Hagine

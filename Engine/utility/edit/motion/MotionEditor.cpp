@@ -1,8 +1,8 @@
 #include "MotionEditor.h"
 #include "utility/debug/imgui/ImGuiNotification.h"
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
-#endif // _DEBUG
+#endif // USE_IMGUI
 #include "MyMath.h"
 #include <line/LineRenderer.h>
 

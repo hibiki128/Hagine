@@ -130,7 +130,7 @@ class BehaviorTreeLoader
 // ============================================================
 // エディタ (Debugビルド専用)
 // ============================================================
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
 #include "imgui_node_editor.h"
 #include <nlohmann/json.hpp>
@@ -428,4 +428,4 @@ class BehaviorTreeEditor
     bool isSingleTesting_ = false;                     // 単体テスト実行中フラグ
 };
 
-#endif // _DEBUG
+#endif // USE_IMGUI

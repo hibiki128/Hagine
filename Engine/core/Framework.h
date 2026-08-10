@@ -1,13 +1,14 @@
 #pragma once
 #include "DirectXCommon.h"
-#ifdef _DEBUG
-#endif // _DEBUG
+#ifdef USE_IMGUI
+#endif // USE_IMGUI
 #include "Audio.h"
 #include "collider/CollisionManager.h"
 #include "debug/imgui/ImGuiManager.h"
 #include "debug/imgui/ImGuizmoManager.h"
 #include "debug/leak/D3DResourceLeakChecker.h"
 #include "edit/shortcut/ShortcutManager.h"
+#include "edit/play/PlayModeManager.h"
 #include "offscreen/OffScreen.h"
 #include "graphics/model/ModelManager.h"
 #include "graphics/pipeline/ComputePipelineManager.h"

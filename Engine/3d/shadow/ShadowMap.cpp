@@ -6,7 +6,7 @@
 #include "light/LightGroup.h"
 #include <cmath>
 #include <MyMath.h>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
 #include "utility/debug/imgui/DebugUIHelper.h"
 #endif
@@ -232,7 +232,7 @@ D3D12_GPU_VIRTUAL_ADDRESS ShadowMap::GetShadowDataGpuAddress() const
 
 void ShadowMap::UpdateImGui(bool *open)
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ラベル列を作って次の列に全幅ウィジェットを置く準備をする
     auto label = [](const char *text) {
         ImGui::TableNextRow();

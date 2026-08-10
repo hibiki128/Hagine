@@ -257,7 +257,7 @@ void PostEffectParameters::LoadParameters(DataHandler *dataHandler)
 
 void PostEffectParameters::DrawParameterUI(ShaderMode mode)
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     switch (mode)
     {
     case ShaderMode::Vignette:
@@ -362,7 +362,7 @@ void PostEffectParameters::DrawParameterUI(ShaderMode mode)
         }
         break;
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void PostEffectParameters::CreateAllBuffers()

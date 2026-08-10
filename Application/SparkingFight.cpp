@@ -87,14 +87,14 @@ void SparkingFight::Finalize()
 void SparkingFight::Update()
 {
     // フレーム先頭：前フレームの計測結果を確定し、当フレームの計測を開始する
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     CpuProfiler::GetInstance()->BeginFrame();
 #endif
 
     Framework::Update();
 
     // -----ゲーム固有の処理-----
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     {
         HAGINE_CPU_PROFILE("Update/ImGuiUI(build)");
         if (imGuiManager_->GetEditorMode())
@@ -120,10 +120,10 @@ void SparkingFight::Update()
         imGuiManager_->ShowMainUI(offscreen_.get());
         imGuiManager_->End();
     }
-#endif // _DEBUG
-#ifndef _DEBUG
+#endif // USE_IMGUI
+#ifndef USE_IMGUI
     pInput_->UpdateRay(*pSceneManager_->GetBaseScene()->GetViewProjection(), {Vector2(0, 0), Vector2(float(WinApp::GetVirtualWidth()), float(WinApp::GetVirtualHeight()))});
-#endif // _DEBUG
+#endif // USE_IMGUI
 
     {
         HAGINE_CPU_PROFILE("Update/MotionEditor");
@@ -140,12 +140,12 @@ void SparkingFight::Draw()
         pDrawSystem_->Draw(*pSceneManager_->GetBaseScene()->GetViewProjection());
     }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     {
         HAGINE_CPU_PROFILE("Draw/ImGuiRender");
         imGuiManager_->Draw();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 
     {
         // PostDraw は Present(VSync)・FPS固定スリープ・GPU完了待ちを含む。
@@ -154,11 +154,11 @@ void SparkingFight::Draw()
         pDxCommon_->PostDraw();
     }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     {
         HAGINE_CPU_PROFILE("Draw/MultiViewport");
         // メインの Present 後に、独立OSウィンドウへ切り離したImGuiウィンドウを描画する
         imGuiManager_->RenderMultiViewport();
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }

@@ -3,7 +3,7 @@
 #include "ParticleManager.h"
 #include "transform/WorldTransform.h"
 #include <string>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
 #endif
 
@@ -241,7 +241,7 @@ class ParticleEmitter
         return particleManager_ ? particleManager_->GetActiveParticleCount() : 0;
     }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     /// <summary>
     /// Undo用: エミッターの編集可能状態（トランスフォーム・フラグ・全グループ設定）をJSON化する
     /// </summary>
@@ -253,7 +253,7 @@ class ParticleEmitter
     /// </summary>
     /// <param name="state">適用する状態JSON</param>
     void RestoreUndoState(const nlohmann::json &state);
-#endif // _DEBUG
+#endif // USE_IMGUI
 
     // パーティクルマネージャーへのアクセス（デバッグ用）
     ParticleManager *GetParticleManager() const

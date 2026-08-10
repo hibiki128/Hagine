@@ -3,7 +3,7 @@
 #include <Input.h>
 #include <camera/CameraManager.h>
 #include <Mymath.h>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <imgui.h>
 #include <implot.h>
 #include <utility/debug/imgui/ImGuizmoManager.h>
@@ -73,7 +73,7 @@ void DebugCamera::Update()
             CameraMove(eulerRotation_, translation_, mouse_);
         }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
         // ギズモ側の F キー（選択オブジェクトへ寄る）要求を処理する。
         // 向きは変えず、対象が画面に収まる距離まで前後させるだけにして視点が飛ばないようにする。
         Vector3 focusTarget{};
@@ -87,7 +87,7 @@ void DebugCamera::Update()
             Vector3 viewDirection = TransformNormal({0.0f, 0.0f, 1.0f}, matRot).Normalize();
             translation_ = focusTarget - viewDirection * (focusRadius * 3.0f + 2.0f);
         }
-#endif // _DEBUG
+#endif // USE_IMGUI
 
         // 操作結果をカメラへ反映する（行列の生成はカメラ側が行う）
         pCamera_->SetPosition(translation_);
@@ -215,7 +215,7 @@ void DebugCamera::CameraMove(Vector3 &cameraRotate, Vector3 &cameraTranslate, Ve
 
 void DebugCamera::DrawImGui()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 3));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
@@ -497,6 +497,6 @@ void DebugCamera::DrawImGui()
 
     ImGui::EndChild();
     ImGui::PopStyleVar(3);
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 } // namespace Hagine

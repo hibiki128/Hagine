@@ -456,7 +456,7 @@ std::shared_ptr<BTNode> BehaviorTreeLoader::LoadAndBuild(
     return root;
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "Input.h"
 #include <browser/ShowFolder.h>
 #include <imgui_internal.h>

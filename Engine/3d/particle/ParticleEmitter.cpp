@@ -19,7 +19,7 @@ ParticleEmitter::ParticleEmitter() {}
 
 ParticleEmitter::~ParticleEmitter()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ギズモには transform_（メンバ）のアドレスを渡しているので、
     // 解除し忘れると破棄後のメモリを掴んだままになる。
     // 同名で登録し直されている場合は相手の登録を消さない。
@@ -28,7 +28,7 @@ ParticleEmitter::~ParticleEmitter()
         ImGuizmoManager::GetInstance()->RemoveTargetIfOwnedBy(name_, &transform_);
         gizmoRegistered_ = false;
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void ParticleEmitter::Initialize(std::string name)
@@ -49,7 +49,7 @@ void ParticleEmitter::Initialize(std::string name)
     lastRotation_ = transform_.quaternionRotation_;
     lastScale_ = transform_.scale_;
     ImGuiNotification::Post("パーティクルエミッターを初期化しました: " + name_, {0.2f, 0.8f, 0.8f, 1.0f});
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // WorldTransformのアドレスを渡す
     ImGuizmoManager::GetInstance()->AddTarget(name_, &transform_, isGizmoSelectable_);
     // WorldTransform単体の既定はObjectなので、パーティクルとして明示的に分類し直す
@@ -444,7 +444,7 @@ void ParticleEmitter::DebugParticleData()
             ImGui::PushStyleColor(ImGuiCol_CheckMark, DebugTheme::kAccentGreen);
             ImGui::Checkbox("表示", &isVisible_);
             ImGui::PopStyleColor();
-#ifdef _DEBUG
+#ifdef USE_IMGUI
             ImGui::SameLine();
             if (ImGui::Checkbox("ギズモ選択", &isGizmoSelectable_))
             {
@@ -1053,7 +1053,7 @@ void ParticleEmitter::DebugParticleData()
 
 void ParticleEmitter::Debug()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (!name_.empty() && particleManager_)
     {
         DebugParticleData();
@@ -1206,7 +1206,7 @@ void ParticleEmitter::ShowBlendModeCombo(BlendMode &currentMode)
 #endif // USE_IMGUI
 }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 // -------------------------------------------------------
 // Undo/Redo 用の状態キャプチャ・復元
 // -------------------------------------------------------
@@ -1286,5 +1286,5 @@ void ParticleEmitter::RestoreUndoState(const nlohmann::json &state)
         }
     }
 }
-#endif // _DEBUG
+#endif // USE_IMGUI
 } // namespace Hagine

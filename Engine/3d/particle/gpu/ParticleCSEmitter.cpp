@@ -56,7 +56,7 @@ ParticleCSEmitter::~ParticleCSEmitter()
 {
     liveEmitters_.erase(std::remove(liveEmitters_.begin(), liveEmitters_.end(), this), liveEmitters_.end());
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ギズモには pEmitterMeshData_ の中身への生ポインタを渡しているので、
     // 解除し忘れると破棄後のメモリを掴んだままになる。
     // 同名で登録し直されている場合（テンプレートを開き直した等）は相手の登録を消さない。
@@ -65,7 +65,7 @@ ParticleCSEmitter::~ParticleCSEmitter()
         ImGuizmoManager::GetInstance()->RemoveTargetIfOwnedBy(name_, &pEmitterMeshData_->translate);
     }
     gizmoRegistered_ = false;
-#endif // _DEBUG
+#endif // USE_IMGUI
 
     // 保有していた独立グループを破棄せず再利用プールへ返却する。
     // これにより弾・ヒット等の高頻度スポーンでもバッファが累積しない。
@@ -91,7 +91,7 @@ void ParticleCSEmitter::Initialize(const std::string &name)
     name_ = name;
     CreateEmitterMeshResource();
     LoadSetting();
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // 実行時に量産されるインスタンス(registerGizmo_=false)は登録しない。
     // 登録するとエディタ上の同名テンプレートのギズモ対象を奪ってしまう。
     if (registerGizmo_ && pEmitterMeshData_)

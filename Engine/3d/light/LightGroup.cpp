@@ -11,7 +11,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <utility/debug/imgui/ImGuizmoManager.h>
 #endif
 
@@ -116,7 +116,7 @@ void LightGroup::Update(const ViewProjection &viewProjection)
 
     pDirectionalLightData_->active = isDirectionalLight_;
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // ImGuizmoManager 側の登録が失われていたら（Finalize 後の再初期化など）登録し直す。
     // 先頭1件の有無だけ見れば足りる。
     // ※ かつては3Dオブジェクトの一括削除でも巻き添えで消えていたが、そちらは
@@ -734,7 +734,7 @@ std::string LightGroup::SpotAimGizmoName(int index) const
 
 void LightGroup::UnregisterGizmoTargets()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ImGuizmoManager *gizmo = ImGuizmoManager::GetInstance();
     for (const std::string &name : gizmoNames_)
     {
@@ -746,7 +746,7 @@ void LightGroup::UnregisterGizmoTargets()
 
 void LightGroup::SyncGizmoTargets()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // std::vector の再確保でポインタが変わるため、登録は毎回作り直す
     UnregisterGizmoTargets();
 
@@ -782,7 +782,7 @@ void LightGroup::SyncGizmoTargets()
 
 void LightGroup::SyncSelectionToGizmo()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (!syncGizmoSelection_)
         return;
 
@@ -810,7 +810,7 @@ void LightGroup::SyncSelectionToGizmo()
 void LightGroup::DrawImGui()
 {
 #ifdef USE_IMGUI
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     // シーン上でライトのギズモを掴んだら、一覧の選択もそちらへ合わせる。
     // 毎フレーム全走査すると重いので「今の選択がまだ生きているか」を先に見て早期に抜ける。
     if (syncGizmoSelection_)
@@ -846,7 +846,7 @@ void LightGroup::DrawImGui()
             }
         }
     }
-#endif // _DEBUG
+#endif // USE_IMGUI
 
     DrawStatusHeader();
 
@@ -865,7 +865,7 @@ void LightGroup::DrawImGui()
     ImGui::SetItemTooltip("一覧で選んだ光源をシーン上のギズモでも選択します。\nギズモ側で掴んだときは一覧の選択が追従します");
     ImGui::PopStyleColor();
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (syncGizmoSelection_ && !ImGuizmoManager::GetInstance()->IsCategoryEnabled(GizmoCategory::Light))
     {
         ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentOrange);

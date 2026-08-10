@@ -100,7 +100,7 @@ void Shake::SaveSettings(std::string jsonName)
 
 void Shake::DrawImGui()
 {
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (ImGui::Begin("シェイク設定"))
     {
         ImGui::DragFloat2("揺れの最小値", &shakeMin_.x, 0.01f);

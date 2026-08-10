@@ -10,10 +10,10 @@
 #include <particle/gpu/ParticleCSSpawner.h>
 #include <shadow/ShadowMap.h>
 #include <iterator>
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <edit/undo/UndoRedoManager.h>
 #include <imgui.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 
 namespace Hagine {
 void Framework::Run()
@@ -72,17 +72,17 @@ void Framework::Initialize()
     ///---------------------------------
 
     /// ---------ImGuizmo---------
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     pImGuizmoManager_ = ImGuizmoManager::GetInstance();
-#endif // _DEBUG
+#endif // USE_IMGUI
        /// -----------------------
 
     /// ---------ImGui---------
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     imGuiManager_ = std::make_unique<ImGuiManager>();
     imGuiManager_->Initialize(winApp_.get(), pImGuizmoManager_);
     imGuiManager_->GetIsShowMainUI() = true;
-#endif // _DEBUG
+#endif // USE_IMGUI
        /// -----------------------
 
     // offscreenのSRV作成
@@ -169,9 +169,9 @@ void Framework::Initialize()
     pDrawSystem_ = std::make_unique<DrawSystem>();
     pDrawSystem_->Initialize(pDxCommon_, pSrvManager_, offscreen_.get(), pSceneManager_, pCollisionManager_);
     pSceneManager_->SetDrawSystem(pDrawSystem_.get());
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     imGuiManager_->SetDrawSystem(pDrawSystem_.get());
-#endif // _DEBUG
+#endif // USE_IMGUI
     ///------------------------
 
     ///-------LineRenderer-------
@@ -264,7 +264,7 @@ void Framework::Finalize()
     pParticleCSGroupManager_->Finalize();
     csvLoad_->Finalize();
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     imGuiManager_->Finalize();
     pImGuizmoManager_->Finalize();
 #endif
@@ -297,9 +297,25 @@ void Framework::RegisterShortcutKey()
     shortcutManager_->RegisterShortcut("FullScreen", DIK_F11, [this]() {
         winApp_->ToggleFullScreen();
     });
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     shortcutManager_->RegisterShortcut("ShowShortcuts", DIK_F1, [this]() {
         imGuiManager_->SetShortcutWindow(true);
+    });
+    // 再生 / 一時停止のトグル（Unity の Ctrl+P 相当）
+    shortcutManager_->RegisterShortcut("PlayPause", {DIK_LCONTROL, DIK_P}, []() {
+        PlayModeManager *playMode = PlayModeManager::GetInstance();
+        if (playMode->IsPlaying())
+        {
+            playMode->Pause();
+        }
+        else
+        {
+            playMode->Play();
+        }
+    });
+    // 停止（再生前の状態へ戻す）
+    shortcutManager_->RegisterShortcut("PlayStop", {DIK_LCONTROL, DIK_LSHIFT, DIK_P}, []() {
+        PlayModeManager::GetInstance()->Stop();
     });
     // デバッグカメラ切り替え（シーン設定ウィンドウのチェックボックスと同じ操作）
     shortcutManager_->RegisterShortcut("DebugCamera", DIK_F3, [this]() {
@@ -391,7 +407,7 @@ void Framework::RegisterShortcutKey()
         pImGuizmoManager_->DeleteSelectedObjects();
     });
 
-#endif // _DEBUG
+#endif // USE_IMGUI
 }
 
 void Framework::Update()
@@ -413,6 +429,15 @@ void Framework::Update()
     // シーン描画の直前に CommitPointLights() で定数バッファへ反映する。
     pLightGroup_->ClearDynamicPointLights();
 
+    // 一時停止・停止中に進めない「ゲーム世界」の更新かどうか。
+    // 描画・エディタ・カメラ・トランスフォーム伝播は止めない（編集を続けられるようにするため）。
+#ifdef USE_IMGUI
+    const bool updateGameWorld = PlayModeManager::GetInstance()->ShouldUpdateGame();
+#else
+    const bool updateGameWorld = true;
+#endif // USE_IMGUI
+
+    if (updateGameWorld)
     {
         HAGINE_CPU_PROFILE("Update/ParticleField");
         pParticleCSFieldManager_->Update();
@@ -434,6 +459,7 @@ void Framework::Update()
         HAGINE_CPU_PROFILE("Update/Sprites");
         pSpriteManager_->UpdateAll(Frame::DeltaTime());
     }
+    if (updateGameWorld)
     {
         HAGINE_CPU_PROFILE("Update/Collision");
         pCollisionManager_->Update();
@@ -448,6 +474,11 @@ void Framework::Update()
         shortcutManager_->Update();
         endRequest_ = winApp_->ProcessMessage();
     }
+
+#ifdef USE_IMGUI
+    // コマ送りの1フレームをここで消費する
+    PlayModeManager::GetInstance()->EndFrame();
+#endif // USE_IMGUI
 
     // ウィンドウサイズが変わっていたらスワップチェーンを追従させる
     // （内部レンダリング解像度は固定のまま、最終合成時に拡縮される）

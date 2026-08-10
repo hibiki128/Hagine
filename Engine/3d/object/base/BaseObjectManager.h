@@ -1,9 +1,9 @@
 #pragma once
 #include "object/base/BaseObject.h"
 #include "unordered_map"
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include <edit/undo/ImGuiUndoTracker.h>
-#endif // _DEBUG
+#endif // USE_IMGUI
 namespace Hagine {
 
 /// <summary>
@@ -228,7 +228,7 @@ class BaseObjectManager
     /// <returns>名前 → オブジェクトのマップ（読み取り専用）</returns>
     const std::unordered_map<std::string, BaseObject *> &GetObjects() const { return objects_; }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     /// <summary>
     /// Undo用: 所有オブジェクトの編集可能状態をJSON化する（トップレベル = 名前 → 状態）
     /// 対象は所有オブジェクトのみ（シーン所有のゲームエンティティはゲームロジックが
@@ -243,7 +243,7 @@ class BaseObjectManager
     /// </summary>
     /// <param name="state">適用する状態JSON</param>
     void RestoreUndoState(const nlohmann::json &state);
-#endif // _DEBUG
+#endif // USE_IMGUI
 
   private:
     /// ===================================================
@@ -339,7 +339,7 @@ class BaseObjectManager
     bool showObjectCreationModal_ = false; // オブジェクト生成モーダル表示フラグ
     bool showObjectLoadModal_ = false;     // オブジェクト読み込みモーダル表示フラグ
     std::string selectedJsonPath_;         // 選択中のJsonパス
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     ImGuiUndoTracker undoTracker_; // オブジェクト編集のUndoトラッカー
 #endif                             // _DEBUG
 };

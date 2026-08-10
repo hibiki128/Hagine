@@ -1,7 +1,7 @@
 #pragma once
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 #include "imgui.h"
-#endif // _DEBUG
+#endif // USE_IMGUI
 #include "json.hpp"
 #include <fstream>
 

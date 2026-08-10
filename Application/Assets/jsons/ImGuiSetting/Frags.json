@@ -10,7 +10,7 @@
     "isEditorMode": true,
     "showAssetBrowserView": false,
     "showDrawSystemView": false,
-    "showFPSView": false,
+    "showFPSView": true,
     "showGameParamView": false,
     "showGizmoView": false,
     "showHierarchyView": false,

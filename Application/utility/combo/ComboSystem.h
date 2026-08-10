@@ -184,7 +184,7 @@ class ComboSystem
     /// <param name="animationPath">アニメーションのパス（空文字なら再生しない）</param>
     void SetAnimationPath(int index, const std::string &animationPath);
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     /// <summary>
     /// ImGuiによる攻撃パラメータ調整UI
     /// 各攻撃のダメージ・ノックバック・コライダータイミングを調整してセーブできる
