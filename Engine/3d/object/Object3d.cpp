@@ -203,8 +203,14 @@ void Object3d::Draw(const WorldTransform &worldTransform, const ViewProjection &
             skinned ? PipelineType::GBufferSkinning : PipelineType::GBuffer);
     }
 
-    // 変換行列設定
-    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResource_->GetGPUVirtualAddress());
+    // 変換行列設定（頂点シェーダーの b0）
+    {
+        const ShaderRootSignature *rootSignature = PipelineManager::GetInstance()->GetCurrentRootSignature();
+        assert(rootSignature && "オブジェクト描画のルートシグネチャが未生成です");
+        pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+            rootSignature->GetCbvIndex(0, D3D12_SHADER_VISIBILITY_VERTEX),
+            transformationMatrixResource_->GetGPUVirtualAddress());
+    }
 
     // ライティング設定
     if (pLightGroup_)
@@ -842,8 +848,13 @@ void Object3d::DrawInstancedBatch(D3D12_GPU_VIRTUAL_ADDRESS instanceBufferAddres
         gBufferPass ? PipelineType::GBufferInstanced : PipelineType::StandardInstanced,
         gBufferPass ? BlendMode::Normal : blendMode_);
 
-    // インスタンスデータ（変換行列＋個体色）をルートSRVで直接指す
-    pDxCommon_->GetCommandList()->SetGraphicsRootShaderResourceView(11, instanceBufferAddress);
+    // インスタンスデータ（変換行列＋個体色）をルートSRV(t4)で直接指す
+    {
+        const ShaderRootSignature *rootSignature = PipelineManager::GetInstance()->GetCurrentRootSignature();
+        assert(rootSignature && "インスタンシング描画のルートシグネチャが未生成です");
+        pDxCommon_->GetCommandList()->SetGraphicsRootShaderResourceView(
+            rootSignature->GetSrvIndex(4, D3D12_SHADER_VISIBILITY_VERTEX), instanceBufferAddress);
+    }
 
     if (pLightGroup_)
     {
@@ -881,8 +892,13 @@ void Object3d::DrawShadowInstancedBatch(D3D12_GPU_VIRTUAL_ADDRESS instanceBuffer
         return;
     }
     PipelineManager::GetInstance()->DrawCommonSetting(PipelineType::ShadowMapInstanced);
-    // シャドウ用ルートシグネチャの param1 = インスタンスデータ SRV(t0)
-    pDxCommon_->GetCommandList()->SetGraphicsRootShaderResourceView(1, instanceBufferAddress);
+    // シャドウ用ルートシグネチャの t0 = インスタンスデータ SRV。
+    // 番号はリフレクション由来なのでレジスタ番号で引く
+    const ShaderRootSignature *shadowRootSignature =
+        PipelineManager::GetInstance()->GetReflectedRootSignature(PipelineType::ShadowMap);
+    assert(shadowRootSignature && "シャドウマップのルートシグネチャが未生成です");
+    pDxCommon_->GetCommandList()->SetGraphicsRootShaderResourceView(shadowRootSignature->GetSrvIndex(0),
+                                                                   instanceBufferAddress);
     pModel_->DrawShadow(instanceCount);
 }
 
@@ -923,7 +939,12 @@ void Object3d::DrawShadow(const WorldTransform &worldTransform)
     }
 
     PipelineManager::GetInstance()->DrawCommonSetting(PipelineType::ShadowMap);
-    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(0, transformationMatrixResource_->GetGPUVirtualAddress());
+    {
+        const ShaderRootSignature *rootSignature = PipelineManager::GetInstance()->GetCurrentRootSignature();
+        assert(rootSignature && "シャドウマップのルートシグネチャが未生成です");
+        pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+            rootSignature->GetCbvIndex(0), transformationMatrixResource_->GetGPUVirtualAddress());
+    }
 
     if (pModel_)
     {

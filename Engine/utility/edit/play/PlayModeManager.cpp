@@ -3,10 +3,41 @@
 #include "SpriteManager.h"
 #include <imgui.h>
 #include <object/base/BaseObjectManager.h>
+#include <scene/SceneManager.h>
 #include <utility/debug/imgui/DebugUIHelper.h>
 #include <utility/debug/imgui/ImGuiNotification.h>
 
 namespace Hagine {
+namespace {
+
+/// <summary>
+/// スナップショットに無いキーを null（＝削除）として足した JSON を作る。
+///
+/// RestoreUndoState は差分適用なので、スナップショットに書いていないものには触れない。
+/// シーンを作り直すと JSON から「保存済みのオブジェクト」が復活するため、
+/// 「再生を押した時点では消していた物」がそのまま残ってしまう。それを消すための補正。
+/// </summary>
+/// <param name="baseline">再生前のスナップショット</param>
+/// <param name="current">作り直した直後の状態</param>
+/// <returns>nlohmann::json: 削除指示を足したスナップショット</returns>
+nlohmann::json MergeRemovals(const nlohmann::json &baseline, const nlohmann::json &current)
+{
+    nlohmann::json merged = baseline;
+    if (!merged.is_object() || !current.is_object())
+    {
+        return merged;
+    }
+    for (auto it = current.begin(); it != current.end(); ++it)
+    {
+        if (!merged.contains(it.key()))
+        {
+            merged[it.key()] = nullptr;
+        }
+    }
+    return merged;
+}
+
+} // namespace
 
 void PlayModeManager::CaptureBaseline()
 {
@@ -34,8 +65,12 @@ void PlayModeManager::RestoreBaseline()
     {
         return;
     }
-    BaseObjectManager::GetInstance()->RestoreUndoState(objectBaseline_);
-    SpriteManager::GetInstance()->RestoreUndoState(spriteBaseline_);
+    BaseObjectManager *objectManager = BaseObjectManager::GetInstance();
+    SpriteManager *spriteManager = SpriteManager::GetInstance();
+
+    // 今ある物とスナップショットを突き合わせ、余分な物には削除指示を付けてから適用する
+    objectManager->RestoreUndoState(MergeRemovals(objectBaseline_, objectManager->CaptureUndoState()));
+    spriteManager->RestoreUndoState(MergeRemovals(spriteBaseline_, spriteManager->CaptureUndoState()));
 }
 
 void PlayModeManager::Play()
@@ -83,7 +118,22 @@ void PlayModeManager::Stop()
     }
     state_ = State::Editing;
     stepRequested_ = false;
-    RestoreBaseline();
+
+    // 起動直後は既定が Playing なので、再生を押さずに停止するとスナップショットが無い。
+    // ここで控えておかないと、次のシーン作り直しで未保存の編集ごと消えてしまう。
+    if (!hasBaseline_)
+    {
+        CaptureBaseline();
+    }
+
+    // シーンを作り直してから、控えたスナップショットを重ねる。
+    // 作り直しでプレイヤー・敵が初期状態に戻り、上から適用することで未保存の編集が残る
+    if (!SceneManager::GetInstance()->RequestSceneRebuild([this] { RestoreBaseline(); }))
+    {
+        // 作り直せないシーンでは、配置オブジェクトとスプライトだけ戻す
+        RestoreBaseline();
+    }
+
     ImGuiNotification::Post("停止（再生前の状態へ戻しました）", {0.42f, 0.66f, 0.68f, 1.0f});
 }
 
@@ -133,8 +183,8 @@ void PlayModeManager::DrawToolbar()
         Stop();
     }
     ImGui::EndDisabled();
-    ImGui::SetItemTooltip("更新を止め、再生を押した時点の配置へ戻します\n"
-                          "（戻るのは配置オブジェクトとスプライト。プレイヤー等はシーン再読み込みで戻ります）");
+    ImGui::SetItemTooltip("更新を止め、再生を押した時点へ戻します\n"
+                          "（シーンを作り直したうえで、保存していない配置の編集も戻します）");
 
     ImGui::SameLine();
     const char *label = isPlaying ? "再生中" : (state_ == State::Paused ? "一時停止" : "停止中");

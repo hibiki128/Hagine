@@ -10,6 +10,7 @@
 #ifdef USE_IMGUI
 #include "browser/ShowFolder.h"
 #include "ImGuizmo.h"
+#include "utility/debug/imgui/DebugUIHelper.h"
 #endif // USE_IMGUI
 
 namespace Hagine {
@@ -287,9 +288,9 @@ void ParticleEditor::SceneParticleCount()
         }
 
         // ヘッダー情報（くすみ色で控えめに）
-        ImGui::TextColored(ImVec4(0.80f, 0.72f, 0.42f, 1.0f), "合計: %zu個", grandTotal);
+        ImGui::TextColored(DebugTheme::kAccentYellow, "合計: %zu個", grandTotal);
         ImGui::SameLine();
-        ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.60f, 1.0f), "(%zu種類)", displayStats_.size());
+        ImGui::TextColored(DebugTheme::kTextDim, "(%zu種類)", displayStats_.size());
 
         if (!displayStats_.empty())
         {
@@ -300,7 +301,7 @@ void ParticleEditor::SceneParticleCount()
             {
                 ImGui::Bullet();
                 ImGui::SameLine();
-                ImGui::TextColored(ImVec4(0.45f, 0.60f, 0.78f, 1.0f), "%s", name.c_str());
+                ImGui::TextColored(DebugTheme::kAccentBlue, "%s", name.c_str());
                 ImGui::SameLine();
                 ImGui::Text(": %zu", stats.count);
 
@@ -308,13 +309,13 @@ void ParticleEditor::SceneParticleCount()
                 if (stats.instanceCount > 1)
                 {
                     ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.60f, 1.0f), "×%zu", stats.instanceCount);
+                    ImGui::TextColored(DebugTheme::kTextDim, "×%zu", stats.instanceCount);
                 }
             }
         }
         else
         {
-            ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.60f, 1.0f), "エミッターなし");
+            ImGui::TextColored(DebugTheme::kTextDim, "エミッターなし");
         }
     }
 #endif // USE_IMGUI

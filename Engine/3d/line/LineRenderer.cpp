@@ -461,13 +461,19 @@ void LineRenderer::SetDrawConstants(ID3D12GraphicsCommandList *pCommandList, con
     DrawConstants constants{};
     constants.world = world;
     constants.tint = tint;
-    pCommandList->SetGraphicsRoot32BitConstants(1, kDrawConstantsDwords, &constants, 0);
+    // （static 関数なのでインスタンスの pPsoManager_ ではなくシングルトンから取る）
+    const ShaderRootSignature *rootSignature =
+        PipelineManager::GetInstance()->GetReflectedRootSignature(PipelineType::Line3d);
+    assert(rootSignature && "3Dラインのルートシグネチャが未生成です");
+    pCommandList->SetGraphicsRoot32BitConstants(rootSignature->GetCbvIndex(1), kDrawConstantsDwords, &constants, 0);
 }
 
 void LineRenderer::RecordDrawCommands(ID3D12GraphicsCommandList *pCommandList, D3D12_GPU_VIRTUAL_ADDRESS viewProjCB)
 {
     pPsoManager_->DrawCommonSetting(PipelineType::Line3d);
-    pCommandList->SetGraphicsRootConstantBufferView(0, viewProjCB);
+    const ShaderRootSignature *rootSignature = pPsoManager_->GetReflectedRootSignature(PipelineType::Line3d);
+    assert(rootSignature && "3Dラインのルートシグネチャが未生成です");
+    pCommandList->SetGraphicsRootConstantBufferView(rootSignature->GetCbvIndex(0), viewProjCB);
 
     // ── 動的線 ──
     if (lineCount_ > 0)

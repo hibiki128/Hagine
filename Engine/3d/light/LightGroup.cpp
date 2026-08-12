@@ -142,13 +142,21 @@ void LightGroup::Update(const ViewProjection &viewProjection)
 void LightGroup::Draw()
 {
     // DirectionalLight用のCBufferの場所を設定
-    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(3, directionalLightResource_->GetGPUVirtualAddress());
+    // 通常描画・スキニング・G-Buffer で番号が違うのでレジスタ番号で引く
+    const ShaderRootSignature *rootSignature = PipelineManager::GetInstance()->GetCurrentRootSignature();
+    assert(rootSignature && "ライトを使うパイプラインのルートシグネチャが未生成です");
 
-    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(4, cameraForGPUResource_->GetGPUVirtualAddress());
+    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+        rootSignature->GetCbvIndex(1, D3D12_SHADER_VISIBILITY_PIXEL), directionalLightResource_->GetGPUVirtualAddress());
 
-    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(5, pointLightsResource_->GetGPUVirtualAddress());
+    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+        rootSignature->GetCbvIndex(2, D3D12_SHADER_VISIBILITY_PIXEL), cameraForGPUResource_->GetGPUVirtualAddress());
 
-    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(6, spotLightsResource_->GetGPUVirtualAddress());
+    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+        rootSignature->GetCbvIndex(3, D3D12_SHADER_VISIBILITY_PIXEL), pointLightsResource_->GetGPUVirtualAddress());
+
+    pDxCommon_->GetCommandList()->SetGraphicsRootConstantBufferView(
+        rootSignature->GetCbvIndex(4, D3D12_SHADER_VISIBILITY_PIXEL), spotLightsResource_->GetGPUVirtualAddress());
 }
 
 // ===================================================

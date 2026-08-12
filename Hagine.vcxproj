@@ -233,6 +233,10 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\utility\collider\type\CylinderCollider.cpp" />
     <ClCompile Include="Engine\3d\camera\follow\BaseFollowCamera.cpp" />
     <ClCompile Include="Engine\3d\object\base\BaseObject.cpp" />
+    <ClCompile Include="Engine\3d\object\base\BaseObjectSerialize.cpp" />
+    <ClCompile Include="Engine\3d\object\base\BaseObjectImGuiCollider.cpp" />
+    <ClCompile Include="Engine\3d\object\base\BaseObjectImGui.cpp" />
+    <ClCompile Include="Engine\3d\object\base\BaseObjectCollider.cpp" />
     <ClCompile Include="Engine\3d\particle\ParticleStruct.cpp" />
     <ClCompile Include="Engine\3d\transform\ObjColor.cpp" />
     <ClCompile Include="Engine\math\Easing.cpp" />
@@ -256,6 +260,11 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3d\particle\ParticleGroup.cpp" />
     <ClCompile Include="Engine\3d\particle\ParticleGroupManager.cpp" />
     <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManager.cpp" />
+    <ClCompile Include="Engine\utility\debug\imgui\GizmoTarget.cpp" />
+    <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManagerUI.cpp" />
+    <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManagerSelection.cpp" />
+    <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManagerEdit.cpp" />
+    <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManagerDraw.cpp" />
     <ClCompile Include="Engine\utility\loader\csv\CsvLoad.cpp" />
     <ClCompile Include="externals\imgui\ImGuizmo.cpp" />
     <ClCompile Include="Engine\3d\model\material\Material.cpp" />
@@ -314,6 +323,12 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\2d\Sprite.cpp" />
     <ClCompile Include="Engine\2d\SpriteCommon.cpp" />
     <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManager.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerObject3d.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerDeferred.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerParticle.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerSprite.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerPostEffect.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerShadowSky.cpp" />
     <ClCompile Include="Engine\utility\edit\play\PlayModeManager.cpp" />
     <ClCompile Include="Engine\utility\graphics\pipeline\ShaderRootSignature.cpp" />
     <ClCompile Include="Engine\utility\graphics\pipeline\ComputeEffectPipeline.cpp" />
@@ -338,7 +353,10 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="application\entity\player\state\action\PlayerStateRush.cpp" />
     <ClCompile Include="Application\ui\player\PlayerUI.cpp" />
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSEmitter.cpp" />
+    <ClCompile Include="Engine\3d\particle\gpu\ParticleCSEmitterSerialize.cpp" />
+    <ClCompile Include="Engine\3d\particle\gpu\ParticleCSEmitterImGui.cpp" />
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSGroup.cpp" />
+    <ClCompile Include="Engine\3d\particle\gpu\ParticleCSGroupImGui.cpp" />
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSGroupManager.cpp" />
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSEditor.cpp" />
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSSpawner.cpp" />
@@ -550,6 +568,7 @@ copy "$(WindowsSdkDIr)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3d\particle\ParticleGroup.h" />
     <ClInclude Include="Engine\3d\particle\ParticleGroupManager.h" />
     <ClInclude Include="Engine\utility\debug\imgui\ImGuizmoManager.h" />
+    <ClInclude Include="Engine\utility\graphics\pipeline\ShaderRootSignature.h" />
     <ClInclude Include="Engine\utility\loader\csv\CsvLoad.h" />
     <ClInclude Include="externals\imgui\ImGuizmo.h" />
     <ClInclude Include="Engine\3d\model\material\Material.h" />

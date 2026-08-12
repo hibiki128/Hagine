@@ -4,6 +4,7 @@
 #include <algorithm>
 #ifdef USE_IMGUI
 #include <imgui.h>
+#include "utility/debug/imgui/DebugUIHelper.h"
 #endif // USE_IMGUI
 
 namespace Hagine {
@@ -250,7 +251,7 @@ void CameraManager::DrawImGui()
 
     if (cameras_.empty())
     {
-        ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.60f, 1.0f),
+        ImGui::TextColored(DebugTheme::kTextDim,
                            "カメラ未登録（上の入力欄か CameraManager::Create で追加できます）");
         return;
     }

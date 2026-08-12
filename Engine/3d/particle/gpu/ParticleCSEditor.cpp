@@ -2,6 +2,8 @@
 #include "ParticleCSEditor.h"
 #include <asset/AssetPath.h>
 #include "../utility/debug/imgui/ImGuizmoManager.h"
+// DebugUIHelper.h は ImGui:: を使うので imgui.h（ImGuizmoManager.h 経由）の後に include する
+#include "../utility/debug/imgui/DebugUIHelper.h"
 #include <camera/projection/ViewProjection.h>
 #include <line/LineRenderer.h>
 #include <particle/ParticleEditor.h>
@@ -249,7 +251,10 @@ void ParticleCSEditor::RenderPreview()
         *pPreviewLineCBData_ = viewProj;
         PipelineManager::GetInstance()->DrawCommonSetting(PipelineType::Line3d);
         pCommandList->IASetVertexBuffers(0, 1, &previewGridVBView_);
-        pCommandList->SetGraphicsRootConstantBufferView(0, previewLineCB_->GetGPUVirtualAddress());
+        const ShaderRootSignature *lineRS =
+            PipelineManager::GetInstance()->GetReflectedRootSignature(PipelineType::Line3d);
+        assert(lineRS && "3Dラインのルートシグネチャが未生成です");
+        pCommandList->SetGraphicsRootConstantBufferView(lineRS->GetCbvIndex(0), previewLineCB_->GetGPUVirtualAddress());
         LineRenderer::SetDrawConstants(pCommandList, MakeIdentity4x4(), {1.0f, 1.0f, 1.0f, 1.0f});
         pCommandList->DrawInstanced(previewGridVertexCount_, 1, 0, 0);
     }
@@ -278,7 +283,10 @@ void ParticleCSEditor::RenderPreview()
                 *pPreviewLineCBData_ = viewProj;
                 PipelineManager::GetInstance()->DrawCommonSetting(PipelineType::Line3d);
                 pCommandList->IASetVertexBuffers(0, 1, &previewWireVBView_);
-                pCommandList->SetGraphicsRootConstantBufferView(0, previewLineCB_->GetGPUVirtualAddress());
+                const ShaderRootSignature *lineRS =
+                    PipelineManager::GetInstance()->GetReflectedRootSignature(PipelineType::Line3d);
+                assert(lineRS && "3Dラインのルートシグネチャが未生成です");
+                pCommandList->SetGraphicsRootConstantBufferView(lineRS->GetCbvIndex(0), previewLineCB_->GetGPUVirtualAddress());
                 LineRenderer::SetDrawConstants(pCommandList, MakeIdentity4x4(), {1.0f, 1.0f, 1.0f, 1.0f});
                 pCommandList->DrawInstanced(v, 1, 0, 0);
             }
@@ -799,7 +807,7 @@ void ParticleCSEditor::ShowGPUParticleStatistics()
                               "（GPUからの読み戻しなので1〜2フレーム遅延します）");
         if (previewTotal > 0)
         {
-            ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.60f, 1.0f), "プレビュー窓: %zu個（画面には出ていない）", previewTotal);
+            ImGui::TextColored(DebugTheme::kTextDim, "プレビュー窓: %zu個（画面には出ていない）", previewTotal);
         }
 
         if (!sceneStats.empty())

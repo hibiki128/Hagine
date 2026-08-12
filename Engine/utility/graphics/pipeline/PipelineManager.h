@@ -1,11 +1,13 @@
 #pragma once
 #include "d3d12.h"
+#include "ShaderRootSignature.h"
 #include "string/stringUtility.h"
 #include "wrl.h"
 #include <Asset/AssetPath.h>
 #include <DirectXCommon.h>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace Hagine {
 enum class BlendMode {
@@ -121,7 +123,71 @@ class PipelineManager {
     /// </summary>
     void DrawCommonSetting(PipelineType type, BlendMode blendMode = BlendMode::Normal, ShaderMode shaderMode = ShaderMode::None);
 
+    /// <summary>
+    /// リフレクションから生成したルートシグネチャの情報を取得する。
+    ///
+    /// 描画側は `SetGraphicsRootConstantBufferView(0, ...)` のように番号を直書きせず、
+    /// ここで得た ShaderRootSignature の GetCbvIndex("b番号") 等を経由して番号を引くこと。
+    /// DXC は使われていないリソースをリフレクションから落とすため、
+    /// シェーダーを編集するとルートパラメータの並びが変わりうる。
+    /// </summary>
+    /// <param name="type">パイプライン種別</param>
+    /// <param name="shaderMode">シェーダーモード</param>
+    /// <returns>const ShaderRootSignature*: リフレクションから生成していない種別では nullptr</returns>
+    const ShaderRootSignature *GetReflectedRootSignature(PipelineType type,
+                                                         ShaderMode shaderMode = ShaderMode::None) const;
+
+    /// <summary>
+    /// 直近の DrawCommonSetting でバインドしたルートシグネチャの情報を取得する。
+    ///
+    /// Material や LightGroup のように「複数のパイプラインから共有される描画コード」は、
+    /// どのパイプラインで描かれているかを知らなくてよいようにこちらを使う。
+    /// </summary>
+    /// <returns>const ShaderRootSignature*: リフレクションから生成していないパイプラインでは nullptr</returns>
+    const ShaderRootSignature *GetCurrentRootSignature() const { return pCurrentRootSignature_; }
+
   private:
+    /// <summary>
+    /// リフレクション用にコンパイルするシェーダー1本ぶんの指定
+    /// </summary>
+    struct ShaderStageFile
+    {
+        std::wstring path;                                            // shaders ルートからの相対パスを含む完全パス
+        const wchar_t *profile = L"vs_6_0";                           // コンパイルプロファイル
+        D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL; // このステージの可視性
+    };
+
+    /// <summary>
+    /// 複数のシェーダーをコンパイルし、そのリフレクションからルートシグネチャを生成して登録する。
+    /// 同じルートシグネチャを共有する派生シェーダー（インスタンシング版など）も一緒に渡すこと。
+    /// 渡し漏れると、そのシェーダーだけが使うレジスタがルートシグネチャから欠ける。
+    /// </summary>
+    /// <param name="type">登録先のパイプライン種別</param>
+    /// <param name="shaderMode">登録先のシェーダーモード</param>
+    /// <param name="shaders">対象シェーダー</param>
+    /// <param name="options">生成時の指定</param>
+    /// <returns>生成したルートシグネチャ（失敗時は nullptr）</returns>
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> BuildReflectedRootSignature(
+        PipelineType type, ShaderMode shaderMode,
+        const std::vector<ShaderStageFile> &shaders,
+        const ShaderRootSignature::BuildOptions &options);
+
+    /// <summary>
+    /// 生成済みのリフレクション情報を別のパイプライン種別へも紐づける。
+    /// ルートシグネチャを共有する派生（G-Buffer版・インスタンシング版など）に使う。
+    /// </summary>
+    /// <param name="from">コピー元の種別</param>
+    /// <param name="to">コピー先の種別</param>
+    void AliasReflectedRootSignature(PipelineType from, PipelineType to);
+
+    /// <summary>
+    /// 頂点シェーダーをコンパイルし、入力レイアウトをリフレクションから組み立てる
+    /// </summary>
+    /// <param name="path">頂点シェーダーの完全パス</param>
+    /// <param name="outLayout">組み立てた入力レイアウトの受け取り先（PSO生成まで生かしておくこと）</param>
+    /// <returns>IDxcBlob*: コンパイル済みバイナリ（呼び出し側が Release すること）</returns>
+    IDxcBlob *CompileVertexShaderWithLayout(const std::wstring &path, ShaderInputLayout &outLayout);
+
     // 内部パイプライン作成メソッド
     void CreateAllPipelines();
 
@@ -183,43 +249,12 @@ class PipelineManager {
     Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateShadowMapRootSignature();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateShadowMapGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, bool instanced = false);
 
-    // シェーダーモード別のルートシグネチャ作成
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateBaseRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateGrayRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateVignetteRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateSmoothRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateGaussRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateOutlineRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateDepthRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateBlurRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateCinematicRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateDissolveRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRandomRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateFocusLineRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreatePixelateRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateBloomRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRetroRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateShockwaveRootSignature();
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateMonochromeRootSignature();
-
-    // シェーダーモード別のパイプライン作成
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateNoneGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGrayGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateVignetteGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateSmoothGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGaussGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateOutlineGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateDepthGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateBlurGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateCinematicGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateDissolveGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateRandomGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateFocusLineGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreatePixelateGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateBloomGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateRetroGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateShockwaveGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateMonochromeGraphicsPipeline(Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature);
+    /// <summary>
+    /// シェーダーモードに対応するポストエフェクトのピクセルシェーダーのパスを返す
+    /// </summary>
+    /// <param name="shaderMode">シェーダーモード</param>
+    /// <returns>std::wstring: ピクセルシェーダーの完全パス</returns>
+    std::wstring GetPostEffectPixelShaderPath(ShaderMode shaderMode) const;
 
   private:
     DirectXCommon *pDxCommon_;
@@ -229,14 +264,15 @@ class PipelineManager {
     // パイプラインとルートシグネチャの格納用マップ
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_;
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12RootSignature>> rootSignatures_;
+    // リフレクションから生成したものは、ルートパラメータ番号を引けるようにこちらへも入れる
+    std::unordered_map<std::string, ShaderRootSignature> reflectedRootSignatures_;
+    // 直近に DrawCommonSetting でバインドしたもの（reflectedRootSignatures_ の要素を指す）
+    const ShaderRootSignature *pCurrentRootSignature_ = nullptr;
 
     // キー文字列を生成するヘルパー関数
-    std::string MakePipelineKey(PipelineType type, BlendMode blendMode, ShaderMode shaderMode);
-    std::string MakeRootSignatureKey(PipelineType type, ShaderMode shaderMode);
+    std::string MakePipelineKey(PipelineType type, BlendMode blendMode, ShaderMode shaderMode) const;
+    std::string MakeRootSignatureKey(PipelineType type, ShaderMode shaderMode) const;
 
-    D3D12_STATIC_SAMPLER_DESC CreateCommonSamplerDesc();
-
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateCommonRootSignature(bool hasCBV);
 
     /// <summary>
     /// 全画面ポストエフェクト用のパイプラインを作る
@@ -247,6 +283,5 @@ class PipelineManager {
     /// バックバッファへの最終合成のみ sRGB を指定する</param>
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateFullScreenPostEffectPipeline(const std::wstring &psPath, Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature, DXGI_FORMAT rtvFormat = kPostEffectChainFormat);
 
-    D3D12_DEPTH_STENCIL_DESC SettingDepthStencilDesc(bool depth);
 };
 } // namespace Hagine

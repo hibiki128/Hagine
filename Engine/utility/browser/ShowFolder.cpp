@@ -9,6 +9,7 @@
 #include <graphics/texture/TextureManager.h>
 #include <icon/IconsFontAwesome5.h>
 #include <imgui.h>
+#include "utility/debug/imgui/DebugUIHelper.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -63,9 +64,7 @@ void ShowTextureFile(std::string &selectedTexturePath, const char *uiId) {
 
     // パンくずリスト
     {
-        ImGui::PushStyleColor(ImGuiCol_Button, {0.0f, 0.0f, 0.0f, 0.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.3f, 0.3f, 0.3f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, {0.5f, 0.5f, 0.5f, 0.8f});
+        ScopedButtonColors breadcrumb(DebugTheme::kButtonGhost, DebugTheme::kButtonGhostHover);
 
         fs::path tmpPath = baseDirTex;
         if (ImGui::Button("home##texhome")) {
@@ -85,7 +84,6 @@ void ShowTextureFile(std::string &selectedTexturePath, const char *uiId) {
                 }
             }
         }
-        ImGui::PopStyleColor(3);
         ImGui::Separator();
     }
 
@@ -130,17 +128,14 @@ void ShowTextureFile(std::string &selectedTexturePath, const char *uiId) {
 
     // フォルダ
     if (!folders.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Header, {0.3f, 0.3f, 0.7f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.4f, 0.4f, 0.8f, 0.6f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.5f, 0.5f, 0.9f, 0.7f});
-        if (ImGui::CollapsingHeader("Folders##texfolders", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ThemedHeader("Folders##texfolders", DebugTheme::kAccentBlue, true)) {
             ImGui::Indent(10.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                                 ImVec2(style.ItemSpacing.x, 8.0f));
             for (auto &folder : folders) {
                 if (!filter.PassFilter(folder.c_str()))
                     continue;
-                ImGui::PushStyleColor(ImGuiCol_Text, {1.0f, 0.9f, 0.4f, 1.0f});
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentYellow);
                 ImGui::TextUnformatted(ICON_FA_FOLDER);
                 ImGui::PopStyleColor();
                 ImGui::SameLine();
@@ -164,15 +159,11 @@ void ShowTextureFile(std::string &selectedTexturePath, const char *uiId) {
             ImGui::PopStyleVar();
             ImGui::Unindent(10.0f);
         }
-        ImGui::PopStyleColor(3);
     }
 
     // テクスチャファイル（グリッド）
     if (!files.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Header, {0.3f, 0.7f, 0.3f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.4f, 0.8f, 0.4f, 0.6f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.5f, 0.9f, 0.5f, 0.7f});
-        if (ImGui::CollapsingHeader("Textures##texfiles", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ThemedHeader("Textures##texfiles", DebugTheme::kAccentGreen, true)) {
             ImGui::Indent(10.0f);
 
             const float kCell = 140.0f; // プレビューサイズを拡大
@@ -239,13 +230,12 @@ void ShowTextureFile(std::string &selectedTexturePath, const char *uiId) {
             ImGui::Columns(1);
             ImGui::Unindent(10.0f);
         }
-        ImGui::PopStyleColor(3);
     }
 
     ImGui::EndChild();
 
     ImGui::Separator();
-    ImGui::PushStyleColor(ImGuiCol_Text, {0.55f, 0.55f, 0.60f, 1.0f});
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
     ImGui::Text("Path: %s  |  %zu files", currentDirTex.string().c_str(), files.size());
     ImGui::PopStyleColor();
 
@@ -304,9 +294,7 @@ void ShowModelFile(std::string &selectedModelPath, const char *uiId) {
     const fs::path baseDirModel = kRootsModel[rootSelModel];
 
     {
-        ImGui::PushStyleColor(ImGuiCol_Button, {0.0f, 0.0f, 0.0f, 0.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.3f, 0.3f, 0.3f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, {0.5f, 0.5f, 0.5f, 0.8f});
+        ScopedButtonColors breadcrumb(DebugTheme::kButtonGhost, DebugTheme::kButtonGhostHover);
         fs::path tmpPath = baseDirModel;
         if (ImGui::Button("home##mdlhome")) {
             currentDirModel = baseDirModel;
@@ -325,7 +313,6 @@ void ShowModelFile(std::string &selectedModelPath, const char *uiId) {
                 }
             }
         }
-        ImGui::PopStyleColor(3);
         ImGui::Separator();
     }
 
@@ -358,16 +345,13 @@ void ShowModelFile(std::string &selectedModelPath, const char *uiId) {
                       ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
     if (!folders.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Header, {0.3f, 0.3f, 0.7f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.4f, 0.4f, 0.8f, 0.6f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.5f, 0.5f, 0.9f, 0.7f});
-        if (ImGui::CollapsingHeader("Folders##mdlfolders", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ThemedHeader("Folders##mdlfolders", DebugTheme::kAccentBlue, true)) {
             ImGui::Indent(10.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, 8.0f));
             for (auto &folder : folders) {
                 if (!filter.PassFilter(folder.c_str()))
                     continue;
-                ImGui::PushStyleColor(ImGuiCol_Text, {1.0f, 0.9f, 0.4f, 1.0f});
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentYellow);
                 ImGui::TextUnformatted(ICON_FA_FOLDER);
                 ImGui::PopStyleColor();
                 ImGui::SameLine();
@@ -391,14 +375,10 @@ void ShowModelFile(std::string &selectedModelPath, const char *uiId) {
             ImGui::PopStyleVar();
             ImGui::Unindent(10.0f);
         }
-        ImGui::PopStyleColor(3);
     }
 
     if (!files.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Header, {0.7f, 0.3f, 0.3f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.8f, 0.4f, 0.4f, 0.6f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.9f, 0.5f, 0.5f, 0.7f});
-        if (ImGui::CollapsingHeader("Model Files##mdlfiles", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ThemedHeader("Model Files##mdlfiles", DebugTheme::kAccentRed, true)) {
             ImGui::Indent(10.0f);
 
             auto getColor = [](const std::string &ext) -> ImVec4 {
@@ -469,12 +449,11 @@ void ShowModelFile(std::string &selectedModelPath, const char *uiId) {
             }
             ImGui::Unindent(10.0f);
         }
-        ImGui::PopStyleColor(3);
     }
 
     ImGui::EndChild();
     ImGui::Separator();
-    ImGui::PushStyleColor(ImGuiCol_Text, {0.55f, 0.55f, 0.60f, 1.0f});
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
     ImGui::Text("Path: %s  |  %zu files", currentDirModel.string().c_str(), files.size());
     if (!selectedFileModel.empty())
         ImGui::Text("Selected: %s", selectedModelPath.c_str());
@@ -498,9 +477,7 @@ void ShowJsonFile(std::string &selectedJsonPath, std::string &startPath) {
     static bool showDetails = true;
 
     {
-        ImGui::PushStyleColor(ImGuiCol_Button, {0.0f, 0.0f, 0.0f, 0.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.3f, 0.3f, 0.3f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, {0.5f, 0.5f, 0.5f, 0.8f});
+        ScopedButtonColors breadcrumb(DebugTheme::kButtonGhost, DebugTheme::kButtonGhostHover);
         fs::path tmpPath = baseDirJson;
         if (ImGui::Button("home##jsonhome")) {
             currentDirJson = baseDirJson;
@@ -519,7 +496,6 @@ void ShowJsonFile(std::string &selectedJsonPath, std::string &startPath) {
                 }
             }
         }
-        ImGui::PopStyleColor(3);
         ImGui::Separator();
     }
 
@@ -551,16 +527,13 @@ void ShowJsonFile(std::string &selectedJsonPath, std::string &startPath) {
                       ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
     if (!folders.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Header, {0.3f, 0.3f, 0.7f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.4f, 0.4f, 0.8f, 0.6f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.5f, 0.5f, 0.9f, 0.7f});
-        if (ImGui::CollapsingHeader("Folders##jsonfolders", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ThemedHeader("Folders##jsonfolders", DebugTheme::kAccentBlue, true)) {
             ImGui::Indent(10.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, 8.0f));
             for (auto &folder : folders) {
                 if (!filter.PassFilter(folder.c_str()))
                     continue;
-                ImGui::PushStyleColor(ImGuiCol_Text, {1.0f, 0.9f, 0.4f, 1.0f});
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentYellow);
                 ImGui::TextUnformatted(ICON_FA_FOLDER);
                 ImGui::PopStyleColor();
                 ImGui::SameLine();
@@ -584,14 +557,10 @@ void ShowJsonFile(std::string &selectedJsonPath, std::string &startPath) {
             ImGui::PopStyleVar();
             ImGui::Unindent(10.0f);
         }
-        ImGui::PopStyleColor(3);
     }
 
     if (!files.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Header, {0.3f, 0.7f, 0.7f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.4f, 0.8f, 0.8f, 0.6f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.5f, 0.9f, 0.9f, 0.7f});
-        if (ImGui::CollapsingHeader("JSON Files##jsonfiles", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ThemedHeader("JSON Files##jsonfiles", DebugTheme::kAccentCyan, true)) {
             ImGui::Indent(10.0f);
 
             auto getIconColor = [](const std::string &ext) -> ImVec4 {
@@ -660,12 +629,11 @@ void ShowJsonFile(std::string &selectedJsonPath, std::string &startPath) {
             }
             ImGui::Unindent(10.0f);
         }
-        ImGui::PopStyleColor(3);
     }
 
     ImGui::EndChild();
     ImGui::Separator();
-    ImGui::PushStyleColor(ImGuiCol_Text, {0.55f, 0.55f, 0.60f, 1.0f});
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
     ImGui::Text("Path: %s  |  %zu files", currentDirJson.string().c_str(), files.size());
     if (!selectedFileJson.empty())
         ImGui::Text("Selected: %s", selectedJsonPath.c_str());
@@ -692,9 +660,7 @@ void ShowGltfFile(std::string &selectedGltfPath) {
 
     // パンくずリスト（home → サブフォルダ順に並ぶ）
     {
-        ImGui::PushStyleColor(ImGuiCol_Button, {0.0f, 0.0f, 0.0f, 0.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {0.3f, 0.3f, 0.3f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, {0.5f, 0.5f, 0.5f, 0.8f});
+        ScopedButtonColors breadcrumb(DebugTheme::kButtonGhost, DebugTheme::kButtonGhostHover);
 
         fs::path tmpPath = baseDirGltf;
         if (ImGui::Button("home##gltfhome")) {
@@ -714,7 +680,6 @@ void ShowGltfFile(std::string &selectedGltfPath) {
                 }
             }
         }
-        ImGui::PopStyleColor(3);
         ImGui::Separator();
     }
 
@@ -749,16 +714,13 @@ void ShowGltfFile(std::string &selectedGltfPath) {
 
     // フォルダ一覧セクション
     if (!folders.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Header, {0.3f, 0.3f, 0.7f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.4f, 0.4f, 0.8f, 0.6f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.5f, 0.5f, 0.9f, 0.7f});
-        if (ImGui::CollapsingHeader("Folders##gltffolders", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ThemedHeader("Folders##gltffolders", DebugTheme::kAccentBlue, true)) {
             ImGui::Indent(10.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, 8.0f));
             for (auto &folder : folders) {
                 if (!filter.PassFilter(folder.c_str()))
                     continue;
-                ImGui::PushStyleColor(ImGuiCol_Text, {1.0f, 0.9f, 0.4f, 1.0f});
+                ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kAccentYellow);
                 ImGui::TextUnformatted(ICON_FA_FOLDER);
                 ImGui::PopStyleColor();
                 ImGui::SameLine();
@@ -782,16 +744,12 @@ void ShowGltfFile(std::string &selectedGltfPath) {
             ImGui::PopStyleVar();
             ImGui::Unindent(10.0f);
         }
-        ImGui::PopStyleColor(3);
     }
 
     // アニメーションファイル一覧セクション
     if (!files.empty()) {
         // 紫系：モデル（赤）・テクスチャ（緑）・JSON（青緑）と被らない色
-        ImGui::PushStyleColor(ImGuiCol_Header, {0.5f, 0.3f, 0.7f, 0.5f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.6f, 0.4f, 0.8f, 0.6f});
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive, {0.7f, 0.5f, 0.9f, 0.7f});
-        if (ImGui::CollapsingHeader("Animation Files##gltffiles", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ThemedHeader("Animation Files##gltffiles", DebugTheme::kAccentPurple, true)) {
             ImGui::Indent(10.0f);
 
             // 拡張子ごとのアイコン色（.gltf = 水色 / .glb = 薄紫）
@@ -869,14 +827,13 @@ void ShowGltfFile(std::string &selectedGltfPath) {
             }
             ImGui::Unindent(10.0f);
         }
-        ImGui::PopStyleColor(3);
     }
 
     ImGui::EndChild();
 
     // ステータスバー（現在のディレクトリ・ファイル数・選択中パス）
     ImGui::Separator();
-    ImGui::PushStyleColor(ImGuiCol_Text, {0.55f, 0.55f, 0.60f, 1.0f});
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
     ImGui::Text("Path: %s  |  %zu files", currentDirGltf.string().c_str(), files.size());
     if (!selectedFileGltf.empty())
         ImGui::Text("Selected: %s", selectedGltfPath.c_str());

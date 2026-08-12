@@ -8,6 +8,7 @@
 
 #ifdef USE_IMGUI
 #include <imgui.h>
+#include "utility/debug/imgui/DebugUIHelper.h"
 #endif
 
 #pragma pack(push, 1)
@@ -472,7 +473,7 @@ void ParticleCSFieldManager::DrawImGui()
     ImGui::PopStyleColor();
 
     // ヘッダー情報
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
     ImGui::Text("フィールド数: %d / %d", static_cast<int>(fields_.size()), kMaxFields);
     ImGui::PopStyleColor();
     ImGui::Separator();
@@ -583,7 +584,7 @@ void ParticleCSFieldManager::DrawImGui()
             ImGui::Separator();
 
             // フィールドタイプ選択
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
             ImGui::TextUnformatted("フィールド種類");
             ImGui::PopStyleColor();
 
@@ -598,7 +599,7 @@ void ParticleCSFieldManager::DrawImGui()
             ImGui::Separator();
 
             // 位置・範囲
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
             ImGui::TextUnformatted("位置・影響範囲");
             ImGui::PopStyleColor();
 
@@ -612,7 +613,7 @@ void ParticleCSFieldManager::DrawImGui()
             ImGui::Separator();
 
             // タイプ別パラメータ
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
             ImGui::TextUnformatted("フィールドパラメータ");
             ImGui::PopStyleColor();
 
@@ -638,7 +639,7 @@ void ParticleCSFieldManager::DrawImGui()
             // -----------------------------------------------
             // 寿命ドレイン
             // -----------------------------------------------
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
             ImGui::TextUnformatted("寿命ドレイン");
             ImGui::PopStyleColor();
 
@@ -661,7 +662,7 @@ void ParticleCSFieldManager::DrawImGui()
             // -----------------------------------------------
             // トレイル強制生成
             // -----------------------------------------------
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
             ImGui::TextUnformatted("トレイル強制生成");
             ImGui::PopStyleColor();
 
@@ -684,7 +685,7 @@ void ParticleCSFieldManager::DrawImGui()
             // -----------------------------------------------
             // カラー乗算
             // -----------------------------------------------
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
             ImGui::TextUnformatted("カラー乗算");
             ImGui::PopStyleColor();
 
@@ -708,7 +709,7 @@ void ParticleCSFieldManager::DrawImGui()
             // -----------------------------------------------
             // 一度きり設定上書き
             // -----------------------------------------------
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
             ImGui::TextUnformatted("一度きり設定上書き");
             ImGui::PopStyleColor();
             ImGui::SameLine();
@@ -730,7 +731,7 @@ void ParticleCSFieldManager::DrawImGui()
             ImGui::Separator();
 
             // --- 接触Emit ---
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
             ImGui::TextUnformatted("接触Emit");
             ImGui::PopStyleColor();
             ImGui::SameLine();
@@ -797,7 +798,7 @@ void ParticleCSFieldManager::DrawImGui()
             ImGui::Separator();
 
             // --- グループID ---
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
             ImGui::TextUnformatted("グループID");
             ImGui::PopStyleColor();
             ImGui::SameLine();
@@ -841,7 +842,7 @@ void ParticleCSFieldManager::DrawImGui()
     // -----------------------------------------------
     ImGui::Spacing();
     ImGui::Separator();
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.56f, 0.69f, 0.86f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextCaption);
     ImGui::TextUnformatted("デバッグ表示");
     ImGui::PopStyleColor();
     ImGui::Checkbox("ギズモ表示##gizmo", &showGizmos_);

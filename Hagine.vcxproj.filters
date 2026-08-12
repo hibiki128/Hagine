@@ -681,6 +681,18 @@
     <ClCompile Include="Engine\3d\object\base\BaseObject.cpp">
       <Filter>Engine\3d\object\base</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\3d\object\base\BaseObjectSerialize.cpp">
+      <Filter>Engine\3d\object\base</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\object\base\BaseObjectImGuiCollider.cpp">
+      <Filter>Engine\3d\object\base</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\object\base\BaseObjectImGui.cpp">
+      <Filter>Engine\3d\object\base</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\object\base\BaseObjectCollider.cpp">
+      <Filter>Engine\3d\object\base</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\3d\object\base\BaseObjectManager.cpp">
       <Filter>Engine\3d\object\base</Filter>
     </ClCompile>
@@ -702,10 +714,19 @@
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSEmitter.cpp">
       <Filter>Engine\3d\particle\gpu</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\3d\particle\gpu\ParticleCSEmitterSerialize.cpp">
+      <Filter>Engine\3d\particle\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\particle\gpu\ParticleCSEmitterImGui.cpp">
+      <Filter>Engine\3d\particle\gpu</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSFieldManager.cpp">
       <Filter>Engine\3d\particle\gpu</Filter>
     </ClCompile>
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSGroup.cpp">
+      <Filter>Engine\3d\particle\gpu</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\3d\particle\gpu\ParticleCSGroupImGui.cpp">
       <Filter>Engine\3d\particle\gpu</Filter>
     </ClCompile>
     <ClCompile Include="Engine\3d\particle\gpu\ParticleCSGroupManager.cpp">
@@ -870,6 +891,21 @@
     <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManager.cpp">
       <Filter>Engine\utility\debug\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\utility\debug\imgui\GizmoTarget.cpp">
+      <Filter>Engine\utility\debug\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManagerUI.cpp">
+      <Filter>Engine\utility\debug\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManagerSelection.cpp">
+      <Filter>Engine\utility\debug\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManagerEdit.cpp">
+      <Filter>Engine\utility\debug\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\debug\imgui\ImGuizmoManagerDraw.cpp">
+      <Filter>Engine\utility\debug\imgui</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\utility\debug\leak\D3DResourceLeakChecker.cpp">
       <Filter>Engine\utility\debug\leak</Filter>
     </ClCompile>
@@ -907,6 +943,24 @@
       <Filter>Engine\utility\graphics\pipeline</Filter>
     </ClCompile>
     <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManager.cpp">
+      <Filter>Engine\utility\graphics\pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerObject3d.cpp">
+      <Filter>Engine\utility\graphics\pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerDeferred.cpp">
+      <Filter>Engine\utility\graphics\pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerParticle.cpp">
+      <Filter>Engine\utility\graphics\pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerSprite.cpp">
+      <Filter>Engine\utility\graphics\pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerPostEffect.cpp">
+      <Filter>Engine\utility\graphics\pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\utility\graphics\pipeline\PipelineManagerShadowSky.cpp">
       <Filter>Engine\utility\graphics\pipeline</Filter>
     </ClCompile>
     <ClCompile Include="Engine\utility\graphics\rtv\RtvManager.cpp">
@@ -964,6 +1018,9 @@
     <ClCompile Include="Engine\2d\ui\UIAnimator.cpp" />
     <ClCompile Include="Engine\render\deferred\DeferredRenderer.cpp" />
     <ClCompile Include="Engine\utility\asset\AssetPath.cpp" />
+    <ClCompile Include="Engine\utility\edit\play\PlayModeManager.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\ShaderRootSignature.cpp" />
+    <ClCompile Include="Engine\utility\graphics\pipeline\ComputeEffectPipeline.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application\camera\death\DeathCamera.h">
@@ -1563,6 +1620,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="Engine\2d\ui\UIAnimator.h" />
     <ClInclude Include="Engine\render\deferred\DeferredRenderer.h" />
+    <ClInclude Include="Engine\utility\graphics\pipeline\ShaderRootSignature.h" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="Engine\EngineAssets\fonts\fa-solid-900.ttf">

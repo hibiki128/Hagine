@@ -274,7 +274,7 @@ void PostEffectRenderer::ResolveChainToFinalResult(int srcPingPong)
     // 書き込み先が sRGB なので、チェーン内用(FP16)とは別のPSOを使う。
     // リニア→sRGB の変換はレンダーターゲット側のフォーマットが行う。
     pPsoManager_->DrawCommonSetting(PipelineType::PresentCopy, BlendMode::Normal, ShaderMode::None);
-    pCommandList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetPingPongSrvHandleGPU(srcPingPong));
+    pCommandList->SetGraphicsRootDescriptorTable(pPsoManager_->GetCurrentRootSignature()->GetSrvIndex(0), renderBuffer_.GetPingPongSrvHandleGPU(srcPingPong));
     pCommandList->DrawInstanced(3, 1, 0, 0);
 
     pDxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
@@ -325,7 +325,7 @@ void PostEffectRenderer::BlitToOffScreen(D3D12_GPU_DESCRIPTOR_HANDLE srcSrv)
     pCommandList->OMSetRenderTargets(1, &offScreenRtv, false, &dsvHandle_);
     // オフスクリーンは sRGB なので、チェーン内用(FP16)ではなく PresentCopy を使う
     pPsoManager_->DrawCommonSetting(PipelineType::PresentCopy, BlendMode::Normal, ShaderMode::None);
-    pCommandList->SetGraphicsRootDescriptorTable(0, srcSrv);
+    pCommandList->SetGraphicsRootDescriptorTable(pPsoManager_->GetCurrentRootSignature()->GetSrvIndex(0), srcSrv);
     pCommandList->DrawInstanced(3, 1, 0, 0);
     // オフスクリーンは RENDER_TARGET のまま（以降の3D描画のため）
 }
@@ -346,7 +346,7 @@ void PostEffectRenderer::DrawToFinalResult()
 
     // 書き込み先が sRGB の最終結果テクスチャなので、チェーン内用(FP16)ではなく PresentCopy を使う
     pPsoManager_->DrawCommonSetting(PipelineType::PresentCopy, BlendMode::Normal, ShaderMode::None);
-    pCommandList->SetGraphicsRootDescriptorTable(0, pDxCommon_->GetOffScreenGPUHandle());
+    pCommandList->SetGraphicsRootDescriptorTable(pPsoManager_->GetCurrentRootSignature()->GetSrvIndex(0), pDxCommon_->GetOffScreenGPUHandle());
     pCommandList->DrawInstanced(3, 1, 0, 0);
 
     pDxCommon_->BarrierTransition(renderBuffer_.GetFinalResultResource().Get(),
@@ -372,7 +372,7 @@ void PostEffectRenderer::CopyFinalResultToBackBuffer()
     // チェーン内はリニアFP16、バックバッファは sRGB とフォーマットが違うため、
     // ここだけ専用のパイプライン（PresentCopy）を使う。sRGBへのエンコードはRTVが行う。
     pPsoManager_->DrawCommonSetting(PipelineType::PresentCopy, BlendMode::Normal, ShaderMode::None);
-    pCommandList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetFinalResultSrvHandleGPU());
+    pCommandList->SetGraphicsRootDescriptorTable(pPsoManager_->GetCurrentRootSignature()->GetSrvIndex(0), renderBuffer_.GetFinalResultSrvHandleGPU());
     pCommandList->DrawInstanced(3, 1, 0, 0);
 
     // 後続の描画（次フレームのオフスクリーンパス等）のためにレンダリング用ビューポートへ戻す
@@ -410,18 +410,18 @@ void PostEffectRenderer::DrawSingleEffect(const EffectSlot &slot,
     // --- 入力テクスチャの設定 ---
     if (isFirstInput)
     {
-        pCommandList->SetGraphicsRootDescriptorTable(0, pDxCommon_->GetOffScreenGPUHandle());
+        pCommandList->SetGraphicsRootDescriptorTable(pPsoManager_->GetCurrentRootSignature()->GetSrvIndex(0), pDxCommon_->GetOffScreenGPUHandle());
     }
     else
     {
         if (inputPingPong >= 0 && inputPingPong < renderBuffer_.GetPingPongBufferCount())
         {
-            pCommandList->SetGraphicsRootDescriptorTable(0, renderBuffer_.GetPingPongSrvHandleGPU(inputPingPong));
+            pCommandList->SetGraphicsRootDescriptorTable(pPsoManager_->GetCurrentRootSignature()->GetSrvIndex(0), renderBuffer_.GetPingPongSrvHandleGPU(inputPingPong));
         }
         else
         {
             // フォールバック
-            pCommandList->SetGraphicsRootDescriptorTable(0, pDxCommon_->GetOffScreenGPUHandle());
+            pCommandList->SetGraphicsRootDescriptorTable(pPsoManager_->GetCurrentRootSignature()->GetSrvIndex(0), pDxCommon_->GetOffScreenGPUHandle());
         }
     }
 

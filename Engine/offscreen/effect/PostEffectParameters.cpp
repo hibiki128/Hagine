@@ -15,46 +15,51 @@ void PostEffectParameters::Initialize(DirectXCommon *pDxCommon)
 void PostEffectParameters::SetShaderParameters(ShaderMode mode, ID3D12GraphicsCommandList *pCommandList,
                                                SrvManager *pSrvManager, DirectXCommon *pDxCommon)
 {
+    // b0 = 各エフェクトのパラメータ、t1 = 深度やノイズテクスチャ
+    const ShaderRootSignature *postEffectRS =
+        PipelineManager::GetInstance()->GetReflectedRootSignature(PipelineType::Render, mode);
+    assert(postEffectRS && "ポストエフェクトのルートシグネチャが未生成です");
+
     switch (mode)
     {
     case ShaderMode::Vignette:
-        pCommandList->SetGraphicsRootConstantBufferView(1, vignetteResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), vignetteResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Smooth:
-        pCommandList->SetGraphicsRootConstantBufferView(1, smoothResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), smoothResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Gauss:
-        pCommandList->SetGraphicsRootConstantBufferView(1, gaussianResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), gaussianResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Depth:
         pDepthData_->projectionInverse = Inverse(projectionInverse_);
-        pCommandList->SetGraphicsRootConstantBufferView(1, depthResource_->GetGPUVirtualAddress());
-        pCommandList->SetGraphicsRootDescriptorTable(2, pDxCommon->GetDepthGPUHandle());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), depthResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootDescriptorTable(postEffectRS->GetSrvIndex(1), pDxCommon->GetDepthGPUHandle());
         break;
     case ShaderMode::Blur:
-        pCommandList->SetGraphicsRootConstantBufferView(1, radialResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), radialResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Cinematic:
-        pCommandList->SetGraphicsRootConstantBufferView(1, cinematicResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), cinematicResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Dissolve:
-        pCommandList->SetGraphicsRootConstantBufferView(1, dissolveResource_->GetGPUVirtualAddress());
-        pSrvManager->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetTextureIndexByFilePath(texPath_));
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), dissolveResource_->GetGPUVirtualAddress());
+        pSrvManager->SetGraphicsRootDescriptorTable(postEffectRS->GetSrvIndex(1), TextureManager::GetInstance()->GetTextureIndexByFilePath(texPath_));
         break;
     case ShaderMode::Random:
-        pCommandList->SetGraphicsRootConstantBufferView(1, randomResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), randomResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::FocusLine:
-        pCommandList->SetGraphicsRootConstantBufferView(1, focusLineResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), focusLineResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Pixelate:
-        pCommandList->SetGraphicsRootConstantBufferView(1, pixelateResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), pixelateResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Bloom:
-        pCommandList->SetGraphicsRootConstantBufferView(1, bloomResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), bloomResource_->GetGPUVirtualAddress());
         break;
     case ShaderMode::Retro:
-        pCommandList->SetGraphicsRootConstantBufferView(1, retroResource_->GetGPUVirtualAddress());
+        pCommandList->SetGraphicsRootConstantBufferView(postEffectRS->GetCbvIndex(0), retroResource_->GetGPUVirtualAddress());
         break;
     }
 }

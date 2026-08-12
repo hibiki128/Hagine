@@ -167,6 +167,11 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
 {
     ID3D12GraphicsCommandList *pCommandList = pModelCommon_->GetDxCommon()->GetCommandList().Get();
 
+    // 通常描画・スキニング・G-Buffer のどれで呼ばれても、
+    // 今バインドされているルートシグネチャからレジスタ番号で引けばよい
+    const ShaderRootSignature *rootSignature = PipelineManager::GetInstance()->GetCurrentRootSignature();
+    assert(rootSignature && "モデルを描くパイプラインのルートシグネチャが未生成です");
+
     INT vertexOffset = 0;
 
     for (size_t meshIndex = 0; meshIndex < meshes_.size(); ++meshIndex)
@@ -190,8 +195,9 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
             D3D12_VERTEX_BUFFER_VIEW vbv = pSkin_->GetOutputVertexBufferView();
             pCommandList->IASetVertexBuffers(0, 1, &vbv);
 
-            // パレット情報をシェーダーに渡す（必要に応じて）
-            pSrvManager_->SetGraphicsRootDescriptorTable(8, pSkin_->GetPaletteSrvIndex());
+            // パレット情報をシェーダーに渡す（頂点シェーダーの t0）
+            pSrvManager_->SetGraphicsRootDescriptorTable(
+                rootSignature->GetSrvIndex(0, D3D12_SHADER_VISIBILITY_VERTEX), pSkin_->GetPaletteSrvIndex());
             vertexOffset = static_cast<INT>(pSkin_->GetMeshVertexOffset(meshIndex));
         }
         else
@@ -201,20 +207,23 @@ void Model::Draw(const std::vector<std::unique_ptr<Material>> &materials, std::v
             pCommandList->IASetVertexBuffers(0, 1, &vbv);
         }
 
-        pCommandList->SetGraphicsRootDescriptorTable(7, pSrvManager_->GetGPUDescriptorHandle(SkyBox::GetInstance()->GetTextureIndex()));
+        // 環境マップ（t1）
+        pCommandList->SetGraphicsRootDescriptorTable(
+            rootSignature->GetSrvIndex(1, D3D12_SHADER_VISIBILITY_PIXEL),
+            pSrvManager_->GetGPUDescriptorHandle(SkyBox::GetInstance()->GetTextureIndex()));
 
-        // シャドウマップ・ノーマルマップをバインド
+        // シャドウマップ・ノーマルマップをバインド。
+        // スロット番号は通常描画とスキニングで違うが、レジスタ番号は同じなので引き方は共通でよい
         {
             ShadowMap *shadowMap = ShadowMap::GetInstance();
-            bool isSkinned = isGltf_ && pAnimator_ && modelData_.hasAnimations && modelData_.hasBones;
-            uint32_t shadowSrvSlot = isSkinned ? 9 : 8;
-            uint32_t shadowDataSlot = isSkinned ? 10 : 9;
-            pSrvManager_->SetGraphicsRootDescriptorTable(shadowSrvSlot, shadowMap->GetShadowSrvIndex());
-            pCommandList->SetGraphicsRootConstantBufferView(shadowDataSlot, shadowMap->GetShadowDataGpuAddress());
+            pSrvManager_->SetGraphicsRootDescriptorTable(
+                rootSignature->GetSrvIndex(2, D3D12_SHADER_VISIBILITY_PIXEL), shadowMap->GetShadowSrvIndex());
+            pCommandList->SetGraphicsRootConstantBufferView(
+                rootSignature->GetCbvIndex(5, D3D12_SHADER_VISIBILITY_PIXEL), shadowMap->GetShadowDataGpuAddress());
 
             // ノーマルマップ SRV (t3)。未設定マテリアルでも albedo を束ねて常に有効にする
-            uint32_t normalMapSlot = isSkinned ? 11 : 10;
-            pSrvManager_->SetGraphicsRootDescriptorTable(normalMapSlot, currentMaterial->GetNormalMapIndex());
+            pSrvManager_->SetGraphicsRootDescriptorTable(
+                rootSignature->GetSrvIndex(3, D3D12_SHADER_VISIBILITY_PIXEL), currentMaterial->GetNormalMapIndex());
         }
 
         if (reflect)

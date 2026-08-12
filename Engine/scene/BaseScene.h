@@ -111,6 +111,13 @@ class BaseScene
     bool ToggleDebugCamera();
 
     /// <summary>
+    /// デバッグカメラを取得する。
+    /// シーンを作り直すときに編集中の視点を引き継ぐ用途で使う
+    /// </summary>
+    /// <returns>DebugCamera*: 未生成なら nullptr</returns>
+    DebugCamera *GetDebugCamera() const { return debugCamera_.get(); }
+
+    /// <summary>
     /// 描画へ渡すビュープロジェクションを取得する（今アクティブなカメラのもの）
     /// </summary>
     ViewProjection *GetViewProjection() { return &vp(); }

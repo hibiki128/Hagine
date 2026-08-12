@@ -72,12 +72,15 @@ void SkyBox::Draw(const ViewProjection &viewProjection)
     pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView_);
     pCommandList->IASetIndexBuffer(&indexBufferView_);
 
-    // SkyBoxData（ワールド行列）をb0に設定
-    pCommandList->SetGraphicsRootConstantBufferView(0, skyBoxResource_->GetGPUVirtualAddress());
-    // CameraData（ビュープロジェクション行列とカメラ位置）をb1に設定
-    pCommandList->SetGraphicsRootConstantBufferView(1, cameraResource_->GetGPUVirtualAddress());
-    // テクスチャをt0に設定
-    pCommandList->SetGraphicsRootDescriptorTable(2, pSrvManager_->GetGPUDescriptorHandle(textureIndex_));
+    const ShaderRootSignature *rootSignature = pPsoManager_->GetReflectedRootSignature(PipelineType::Skybox);
+    assert(rootSignature && "スカイボックスのルートシグネチャが未生成です");
+
+    // SkyBoxData（ワールド行列）を b0 に設定
+    pCommandList->SetGraphicsRootConstantBufferView(rootSignature->GetCbvIndex(0), skyBoxResource_->GetGPUVirtualAddress());
+    // CameraData（ビュープロジェクション行列とカメラ位置）を b1 に設定
+    pCommandList->SetGraphicsRootConstantBufferView(rootSignature->GetCbvIndex(1), cameraResource_->GetGPUVirtualAddress());
+    // テクスチャを t0 に設定
+    pCommandList->SetGraphicsRootDescriptorTable(rootSignature->GetSrvIndex(0), pSrvManager_->GetGPUDescriptorHandle(textureIndex_));
 
     pCommandList->DrawIndexedInstanced(UINT(indices_.size()), 1, 0, 0, 0);
 }

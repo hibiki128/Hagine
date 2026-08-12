@@ -6,6 +6,7 @@
 #ifdef USE_IMGUI
 #include "debug/imgui/ImGuizmoManager.h"
 #include "ImGuizmo.h"
+#include "utility/debug/imgui/DebugUIHelper.h"
 #endif // USE_IMGUI
 #include "edit/motion/MotionEditor.h"
 #include "object/Object3dInstancing.h"
@@ -350,7 +351,7 @@ void BaseObjectManager::ShowParentChildHierarchy()
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.72f, 0.80f, 0.92f, 1.0f));
         ImGui::TextWrapped("親子付けの操作:");
         ImGui::PopStyleColor();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.60f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::BulletText("ノードを右クリック →「親を設定」「親子解除」");
         ImGui::BulletText("右クリックメニューで「継承(位置/回転/スケール)」も切替可能");
         ImGui::BulletText("ドラッグして別ノードに重ねても親子付け（余白へドロップで解除）");
@@ -358,7 +359,7 @@ void BaseObjectManager::ShowParentChildHierarchy()
 
         ImGui::Separator();
         ImGui::Text("階層表示:");
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.60f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::TextUnformatted("（ノードをドラッグして別ノードに重ねると親子付け / 余白へドロップで解除）");
         ImGui::PopStyleColor();
 
@@ -771,21 +772,12 @@ void BaseObjectManager::ShowSaveTargetManager()
         // 垂直中央揃えのためのスペース調整
         ImGui::Dummy(ImVec2(0, 60));
 
-        bool canMoveRight = !leftSelected.empty();
-        if (!canMoveRight)
-        {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-        }
-        else
-        {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.40f, 0.30f, 0.85f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.28f, 0.50f, 0.38f, 0.95f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.32f, 0.58f, 0.44f, 1.0f));
-        }
-
-        if (ImGui::Button("追加 >>##SaveAddButton", ImVec2(buttonWidth, 30)) && canMoveRight)
+        // 選択が無いときは地味な色にして「押しても動かない」ことを見た目で伝える
+        const bool canMoveRight = !leftSelected.empty();
+        const ImVec2 moveButtonSize(buttonWidth, 30.0f);
+        const bool addPressed = canMoveRight ? ConfirmButton("追加 >>##SaveAddButton", moveButtonSize)
+                                             : NeutralButton("追加 >>##SaveAddButton", moveButtonSize);
+        if (addPressed && canMoveRight)
         {
             for (int idx : leftSelected)
             {
@@ -794,23 +786,10 @@ void BaseObjectManager::ShowSaveTargetManager()
             leftSelected.clear();
         }
 
-        ImGui::PopStyleColor(3);
-
-        bool canMoveLeft = !rightSelected.empty();
-        if (!canMoveLeft)
-        {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
-        }
-        else
-        {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.46f, 0.24f, 0.24f, 0.85f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.58f, 0.30f, 0.30f, 0.95f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.66f, 0.36f, 0.36f, 1.0f));
-        }
-
-        if (ImGui::Button("<< 削除##SaveRemoveButton", ImVec2(buttonWidth, 30)) && canMoveLeft)
+        const bool canMoveLeft = !rightSelected.empty();
+        const bool removePressed = canMoveLeft ? DangerButton("<< 削除##SaveRemoveButton", moveButtonSize)
+                                               : NeutralButton("<< 削除##SaveRemoveButton", moveButtonSize);
+        if (removePressed && canMoveLeft)
         {
             for (int idx : rightSelected)
             {
@@ -819,7 +798,6 @@ void BaseObjectManager::ShowSaveTargetManager()
             rightSelected.clear();
         }
 
-        ImGui::PopStyleColor(3);
         ImGui::EndGroup();
 
         ImGui::SameLine();
@@ -1075,32 +1053,20 @@ void BaseObjectManager::DrawObjectCreationModel()
         // 生成ボタンとキャンセルボタン
         bool canCreate = strlen(objectNameBuffer) > 0 && !modelPath_.empty();
 
-        if (!canCreate)
+        // 名前とモデルが揃うまでは確定色にしない
+        const bool createPressed = canCreate ? ConfirmButton("生成", ImVec2(120, 0))
+                                             : NeutralButton("生成", ImVec2(120, 0));
+        if (createPressed && canCreate)
         {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-        }
+            objectName_ = objectNameBuffer;
+            CreateObject(objectName_, modelPath_, texturePath_);
 
-        if (ImGui::Button("生成", ImVec2(120, 0)))
-        {
-            if (canCreate)
-            {
-                objectName_ = objectNameBuffer;
-                CreateObject(objectName_, modelPath_, texturePath_);
+            // 入力欄とパスをリセット
+            memset(objectNameBuffer, 0, sizeof(objectNameBuffer));
+            modelPath_ = "";
+            texturePath_ = "";
 
-                // 入力欄とパスをリセット
-                memset(objectNameBuffer, 0, sizeof(objectNameBuffer));
-                modelPath_ = "";
-                texturePath_ = "";
-
-                ImGui::CloseCurrentPopup();
-            }
-        }
-
-        if (!canCreate)
-        {
-            ImGui::PopStyleColor(3);
+            ImGui::CloseCurrentPopup();
         }
 
         ImGui::SameLine();
@@ -1172,29 +1138,18 @@ void BaseObjectManager::DrawObjectLoadModel()
         ImGui::Separator();
 
         // 読み込みボタンとキャンセルボタン
-        bool canLoad = !selectedJsonPath_.empty();
-        if (!canLoad)
+        const bool canLoad = !selectedJsonPath_.empty();
+        const bool loadPressed = canLoad ? ConfirmButton("読み込み", ImVec2(120, 0))
+                                         : NeutralButton("読み込み", ImVec2(120, 0));
+        if (loadPressed && canLoad)
         {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-        }
-        if (ImGui::Button("読み込み", ImVec2(120, 0)))
-        {
-            if (canLoad)
-            {
-                LoadObjectFromJson(startPath, autoObjectName);
-                // パスをリセット
-                selectedJsonPath_ = "";
-                ImGui::CloseCurrentPopup();
-            }
-        }
-        if (!canLoad)
-        {
-            ImGui::PopStyleColor(3);
+            LoadObjectFromJson(startPath, autoObjectName);
+            // パスをリセット
+            selectedJsonPath_ = "";
+            ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("キャンセル", ImVec2(120, 0)))
+        if (NeutralButton("キャンセル", ImVec2(120, 0)))
         {
             // パスをリセット
             selectedJsonPath_ = "";

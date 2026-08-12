@@ -838,7 +838,7 @@ void ImGuiManager::ShowStatisticsWindow() {
         }
         ImGui::EndChild();
 
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.60f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, DebugTheme::kTextDim);
         ImGui::Text("%d 件表示 / 全 %d 件", shown, static_cast<int>(history.size()));
         ImGui::PopStyleColor();
     }

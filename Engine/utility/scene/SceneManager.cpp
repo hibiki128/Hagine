@@ -34,6 +34,21 @@ void SceneManager::Finalize() {
 }
 
 void SceneManager::Update() {
+#ifdef USE_IMGUI
+    // Play モードの停止から予約された「シーンの作り直し」をここで消化する。
+    // 予約元（ImGui のツールバー・ショートカット）は前フレームの途中なので、
+    // シーンを安全に捨てられるフレーム先頭まで遅らせている。
+    if (rebuildRequested_) {
+        rebuildRequested_ = false;
+        // シーン切り替えが予約されているならそちらが優先（作り直す意味が無い）
+        if (nextScene_) {
+            onSceneRebuilt_ = nullptr;
+        } else {
+            RebuildCurrentScene();
+        }
+    }
+#endif // USE_IMGUI
+
     // 次のシーンの予約があるなら
     if (nextScene_) {
         if (!firstChange_) {
@@ -52,13 +67,18 @@ void SceneManager::Update() {
 
     if (scene_) {
         // 一時停止・停止中はゲームロジックを進めない。
-        // カメラ更新は止めない（止めるとデバッグカメラも動かせなくなるため）。
 #ifdef USE_IMGUI
-        if (PlayModeManager::GetInstance()->ShouldUpdateGame())
-#endif // USE_IMGUI
-        {
+        if (PlayModeManager::GetInstance()->ShouldUpdateGame()) {
             scene_->Update();
+        } else {
+            // ゲームを止めていてもデバッグカメラだけは動かす（止めると見回せなくなる）。
+            // 各シーンは Update の中で UpdateDebugCamera を呼んでいるので、
+            // Update を飛ばすこの経路でだけ代わりに呼ぶ。二重呼び出しにはならない。
+            scene_->UpdateDebugCamera();
         }
+#else
+        scene_->Update();
+#endif // USE_IMGUI
 
         // 全カメラの更新と、描画へ渡す出力の作り直し（アクティブカメラ or 切り替え補間の結果）。
         // シーンが描画で使う ViewProjection はこの出力そのものなので、行列のコピーは要らない。
@@ -83,8 +103,19 @@ void SceneManager::SceneSelection(const std::string &sceneName) {
     if (!pTransition_->IsEnd() && pTransition_->FadeInStart()) {
         return;
     }
+    std::unique_ptr<BaseScene> selected = SceneRegistry::GetInstance()->Create(sceneName);
+    if (!selected) {
+        return; // 未登録のシーン名。今のシーンは壊さない
+    }
     pTransition_->Reset();
-    nextScene_ = SceneRegistry::GetInstance()->Create(sceneName);
+    nextScene_ = std::move(selected);
+    // 各種参照の注入を忘れると、シーンの Initialize が nullptr の DrawSystem を触って落ちる
+    nextScene_->SetOffScreen(pOffscreen_);
+    nextScene_->SetDrawSystem(pDrawSystem_);
+    nextScene_->SetWinApp(pWinApp_);
+    // 現在のシーン名を更新しないと、シーンウィンドウの表示名や
+    // 停止時のシーン作り直しが「前のシーン」を指したままになる
+    currentSceneName_ = sceneName;
     pTransition_->SetFadeInStart(true);
 #endif // USE_IMGUI
 }
@@ -168,4 +199,82 @@ void SceneManager::SceneChange() {
         ImGuiNotification::Post("シーンを切り替えました: " + currentSceneName_, {0.4f, 0.8f, 1.0f, 1.0f});
     }
 }
+
+#ifdef USE_IMGUI
+bool SceneManager::RequestSceneRebuild(std::function<void()> onRebuilt) {
+    if (!scene_ || currentSceneName_.empty()) {
+        return false;
+    }
+    // 作り直せない名前なら予約せず知らせる（呼び出し元が別の手段へ切り替えられるように）
+    if (!SceneRegistry::GetInstance()->Contains(currentSceneName_)) {
+        return false;
+    }
+    rebuildRequested_ = true;
+    onSceneRebuilt_ = std::move(onRebuilt);
+    return true;
+}
+
+void SceneManager::RebuildCurrentScene() {
+    // 先に新しいシーンを作っておく。ここで失敗しても今のシーンを壊さずに済む
+    std::unique_ptr<BaseScene> rebuilt = SceneRegistry::GetInstance()->Create(currentSceneName_);
+    if (!rebuilt) {
+        onSceneRebuilt_ = nullptr;
+        return;
+    }
+
+    // デバッグカメラはシーンが持っているので作り直しで初期位置に戻ってしまう。
+    // 編集中の視点が飛ぶと停止のたびに置き直すことになるため、控えて引き継ぐ。
+    bool debugCameraActive = false;
+    Vector3 debugCameraRotation{};
+    Vector3 debugCameraTranslation{};
+    if (DebugCamera *debugCamera = scene_->GetDebugCamera()) {
+        debugCameraActive = debugCamera->GetActive();
+        debugCameraRotation = debugCamera->rotation_;
+        debugCameraTranslation = debugCamera->translation_;
+    }
+
+    // ---- 旧シーンの破棄（順序は SceneChange と同じ）----
+    // GPU が旧シーンのリソースを参照したまま解放しないよう、完了を待ってから捨てる
+    DirectXCommon::GetInstance()->WaitForGPU();
+    scene_->Finalize();
+    scene_.reset();
+    // 実行時配置の GPU パーティクルはオブジェクト破棄より前に片付ける
+    // （親子付けしたエミッターが破棄済み BaseObject を指したままになるのを防ぐ）
+    ParticleCSSpawner::GetInstance()->ClearSceneScoped();
+    BaseObjectManager::GetInstance()->RemoveAllObjects();
+    SpriteManager::GetInstance()->Clear();
+    CameraManager::GetInstance()->Clear();
+    // 旧シーンの描画エントリをすべて削除（ダングリングラムダ呼び出し防止）
+    if (pDrawSystem_) {
+        pDrawSystem_->Clear();
+    }
+    // シーン切替と違い Undo 履歴は残す。作り直しても同名のオブジェクトが並ぶだけで、
+    // 履歴の中身は「名前 → 状態JSON」なのでポインタが宙に浮くことはない。
+
+    // ---- 同じシーンを作り直す ----
+    scene_ = std::move(rebuilt);
+    scene_->SetOffScreen(pOffscreen_);
+    scene_->SetDrawSystem(pDrawSystem_);
+    scene_->SetWinApp(pWinApp_);
+    scene_->SetSceneManager(this);
+    scene_->Initialize();
+
+    // 控えておいた視点を新しいデバッグカメラへ移す。
+    // 有効化の実際の切り替え（アクティブカメラの差し替え）は DebugCamera::Update が行う。
+    if (DebugCamera *debugCamera = scene_->GetDebugCamera()) {
+        debugCamera->rotation_ = debugCameraRotation;
+        debugCamera->translation_ = debugCameraTranslation;
+        debugCamera->SetActive(debugCameraActive);
+    }
+
+    // ---- 作り直した後に重ねる処理 ----
+    // ここまでで JSON 由来の「保存済みの状態」に戻っているので、
+    // 未保存の編集はこのコールバックで上から適用してもらう。
+    if (onSceneRebuilt_) {
+        std::function<void()> callback = std::move(onSceneRebuilt_);
+        onSceneRebuilt_ = nullptr;
+        callback();
+    }
+}
+#endif // USE_IMGUI
 } // namespace Hagine

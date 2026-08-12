@@ -246,11 +246,7 @@ void DebugCamera::DrawImGui()
     // ====================================================
     // [1] Position / Rotation
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderBlue);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.60f, 0.78f, 0.35f});
-    bool posOpen = ImGui::CollapsingHeader("位置 / 回転##campr",
-                                           ImGuiTreeNodeFlags_DefaultOpen);
-    ImGui::PopStyleColor(2);
+    const bool posOpen = ThemedHeader("位置 / 回転##campr", DebugTheme::kAccentBlue, true);
 
     if (posOpen)
     {
@@ -265,9 +261,7 @@ void DebugCamera::DrawImGui()
                      DebugTheme::kBgBlue);
 
         // 位置履歴グラフ
-        ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgBlue);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.60f, 0.78f, 0.20f});
-        if (ImGui::CollapsingHeader("位置履歴 (グラフ)##camhist"))
+        if (ThemedHeader("位置履歴 (グラフ)##camhist", DebugTheme::kAccentBlue))
         {
             constexpr int kN = 100;
             static float hx[kN]{}, hy[kN]{}, hz[kN]{};
@@ -310,7 +304,6 @@ void DebugCamera::DrawImGui()
             }
             ImPlot::PopStyleColor();
         }
-        ImGui::PopStyleColor(2);
 
         ImGui::Spacing();
 
@@ -380,11 +373,7 @@ void DebugCamera::DrawImGui()
     // ====================================================
     // [2] Move Speed
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderOrange);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.82f, 0.58f, 0.36f, 0.35f});
-    bool moveOpen = ImGui::CollapsingHeader("移動速度##cammv",
-                                            ImGuiTreeNodeFlags_DefaultOpen);
-    ImGui::PopStyleColor(2);
+    const bool moveOpen = ThemedHeader("移動速度##cammv", DebugTheme::kAccentOrange, true);
 
     if (moveOpen)
     {
@@ -423,11 +412,7 @@ void DebugCamera::DrawImGui()
     // ====================================================
     // [3] Input / Control
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kHeaderPurple);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.62f, 0.50f, 0.74f, 0.35f});
-    bool ctrlOpen = ImGui::CollapsingHeader("入力 / 操作##camctl",
-                                            ImGuiTreeNodeFlags_DefaultOpen);
-    ImGui::PopStyleColor(2);
+    const bool ctrlOpen = ThemedHeader("入力 / 操作##camctl", DebugTheme::kAccentPurple, true);
 
     if (ctrlOpen)
     {
@@ -478,10 +463,7 @@ void DebugCamera::DrawImGui()
     // ====================================================
     // [4] Status (compact read-only table)
     // ====================================================
-    ImGui::PushStyleColor(ImGuiCol_Header, DebugTheme::kBgGreen);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, {0.45f, 0.68f, 0.52f, 0.20f});
-    bool stOpen = ImGui::CollapsingHeader("ステータス##camst");
-    ImGui::PopStyleColor(2);
+    const bool stOpen = ThemedHeader("ステータス##camst", DebugTheme::kAccentGreen);
 
     if (stOpen)
     {

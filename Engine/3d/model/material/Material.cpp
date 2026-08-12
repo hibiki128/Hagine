@@ -69,9 +69,16 @@ void Material::Draw(const Vector4 color, bool lighting) {
     pMaterialDataGPU_->proceduralScale = materialData_.proceduralScale;
 
     ID3D12GraphicsCommandList *pCommandList = pDxCommon_->GetCommandList().Get();
-    pCommandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
 
-    SrvManager::GetInstance()->SetGraphicsRootDescriptorTable(2, materialData_.textureIndex);
+    // 通常描画・スキニング・G-Buffer など複数のパイプラインから呼ばれるので、
+    // 今バインドされているルートシグネチャからレジスタ番号で引く
+    const ShaderRootSignature *rootSignature = PipelineManager::GetInstance()->GetCurrentRootSignature();
+    assert(rootSignature && "マテリアルを使うパイプラインのルートシグネチャが未生成です");
+
+    pCommandList->SetGraphicsRootConstantBufferView(
+        rootSignature->GetCbvIndex(0, D3D12_SHADER_VISIBILITY_PIXEL), materialResource_->GetGPUVirtualAddress());
+    SrvManager::GetInstance()->SetGraphicsRootDescriptorTable(
+        rootSignature->GetSrvIndex(0, D3D12_SHADER_VISIBILITY_PIXEL), materialData_.textureIndex);
 }
 
 void Material::SetTexture(const std::string &texturePath) {

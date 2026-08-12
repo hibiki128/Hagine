@@ -274,20 +274,23 @@ void DeferredRenderer::RenderLighting()
     LightGroup *lightGroup = LightGroup::GetInstance();
     ShadowMap *shadowMap = ShadowMap::GetInstance();
 
-    pCommandList->SetGraphicsRootConstantBufferView(0, constantBuffer_->GetGPUVirtualAddress());
-    pCommandList->SetGraphicsRootConstantBufferView(1, lightGroup->GetDirectionalLightAddress());
-    pCommandList->SetGraphicsRootConstantBufferView(2, lightGroup->GetSpotLightsAddress());
-    pCommandList->SetGraphicsRootConstantBufferView(3, shadowMap->GetShadowDataGpuAddress());
+    const ShaderRootSignature *rootSignature = PipelineManager::GetInstance()->GetCurrentRootSignature();
+    assert(rootSignature && "ディファードライティングのルートシグネチャが未生成です");
 
-    pSrvManager_->SetGraphicsRootDescriptorTable(4, gBuffers_[0].srvIndex);
-    pSrvManager_->SetGraphicsRootDescriptorTable(5, gBuffers_[1].srvIndex);
-    pSrvManager_->SetGraphicsRootDescriptorTable(6, gBuffers_[2].srvIndex);
-    pSrvManager_->SetGraphicsRootDescriptorTable(7, pDxCommon_->GetDepthSrvIndex());
-    pSrvManager_->SetGraphicsRootDescriptorTable(8, shadowMap->GetShadowSrvIndex());
-    pSrvManager_->SetGraphicsRootDescriptorTable(9, SkyBox::GetInstance()->GetTextureIndex());
+    pCommandList->SetGraphicsRootConstantBufferView(rootSignature->GetCbvIndex(0), constantBuffer_->GetGPUVirtualAddress());
+    pCommandList->SetGraphicsRootConstantBufferView(rootSignature->GetCbvIndex(1), lightGroup->GetDirectionalLightAddress());
+    pCommandList->SetGraphicsRootConstantBufferView(rootSignature->GetCbvIndex(2), lightGroup->GetSpotLightsAddress());
+    pCommandList->SetGraphicsRootConstantBufferView(rootSignature->GetCbvIndex(3), shadowMap->GetShadowDataGpuAddress());
 
-    pCommandList->SetGraphicsRootShaderResourceView(10, lightGroup->GetPointLightBufferAddress());
-    pCommandList->SetGraphicsRootShaderResourceView(11, tileLightBuffer_->GetGPUVirtualAddress());
+    pSrvManager_->SetGraphicsRootDescriptorTable(rootSignature->GetSrvIndex(0), gBuffers_[0].srvIndex);
+    pSrvManager_->SetGraphicsRootDescriptorTable(rootSignature->GetSrvIndex(1), gBuffers_[1].srvIndex);
+    pSrvManager_->SetGraphicsRootDescriptorTable(rootSignature->GetSrvIndex(2), gBuffers_[2].srvIndex);
+    pSrvManager_->SetGraphicsRootDescriptorTable(rootSignature->GetSrvIndex(3), pDxCommon_->GetDepthSrvIndex());
+    pSrvManager_->SetGraphicsRootDescriptorTable(rootSignature->GetSrvIndex(4), shadowMap->GetShadowSrvIndex());
+    pSrvManager_->SetGraphicsRootDescriptorTable(rootSignature->GetSrvIndex(5), SkyBox::GetInstance()->GetTextureIndex());
+
+    pCommandList->SetGraphicsRootShaderResourceView(rootSignature->GetSrvIndex(6), lightGroup->GetPointLightBufferAddress());
+    pCommandList->SetGraphicsRootShaderResourceView(rootSignature->GetSrvIndex(7), tileLightBuffer_->GetGPUVirtualAddress());
 
     // 全画面三角形（頂点バッファ不要）
     pCommandList->DrawInstanced(3, 1, 0, 0);
